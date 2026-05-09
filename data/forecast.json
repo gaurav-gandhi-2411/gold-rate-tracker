@@ -1,11 +1,13 @@
 {
-  "predicted_at": "2026-05-09T13:40:05.288707+00:00",
+  "predicted_at": "2026-05-09T19:13:30.333972+00:00",
   "target_time": "2026-05-10T00:00:00+00:00",
-  "predicted_22k": 13834,
-  "lower": 13678,
-  "upper": 14357,
-  "model_version": "lgbm-v1-3a75393a",
+  "predicted_22k": 14050,
+  "lower": 13943,
+  "upper": 14200,
+  "model_version": "lgbm-v1-aae7e831",
   "training_rows": 428,
-  "real_readings_count": 2,
+  "feature_count": 19,
+  "macro_features_used": false,
+  "real_readings_count": 3,
   "warmup": true
 }
