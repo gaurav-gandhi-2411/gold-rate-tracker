@@ -1,0 +1,17 @@
+macro:
+  tickers:
+    - INR=X
+    - GC=F
+    - ^TNX
+    - DX-Y.NYB
+    - ^BSESN
+    - ^VIX
+  cache_path: data/macro_cache.parquet
+  history_days: 730
+
+features:
+  lags: [1, 2, 3, 4, 7, 30]
+  rolling_windows: [7, 30]
+  use_macro: true
+  use_regime: true
+  use_calendar: true

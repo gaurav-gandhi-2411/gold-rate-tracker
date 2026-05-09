@@ -1,0 +1,4 @@
+forecast_horizon_days: 1
+quantile_levels: [0.1, 0.5, 0.9]
+write_explanation: true
+write_commentary: true

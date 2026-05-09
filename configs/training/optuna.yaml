@@ -1,0 +1,7 @@
+n_trials:
+  lightgbm: 100
+  tft: 50
+  nbeats: 50
+study_name: ${model.name}-${now:%Y-%m-%d}
+storage: sqlite:///models/local/optuna/${model.name}.db
+direction: minimize

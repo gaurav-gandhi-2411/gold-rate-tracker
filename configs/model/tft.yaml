@@ -1,0 +1,24 @@
+name: tft
+_target_: ml.models.tft.TFTForecaster
+params:
+  input_chunk_length: 30
+  output_chunk_length: 1
+  hidden_size: 32
+  lstm_layers: 1
+  num_attention_heads: 2
+  dropout: 0.1
+  batch_size: 32
+  n_epochs: 200
+  optimizer_kwargs:
+    lr: 0.0001
+  loss_fn: l1
+  random_state: 42
+trainer:
+  accelerator: gpu
+  devices: 1
+  precision: "16-mixed"
+  enable_progress_bar: true
+early_stopping:
+  monitor: val_loss
+  patience: 10
+  min_delta: 0.0001

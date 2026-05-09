@@ -1,0 +1,9 @@
+mlflow:
+  experiment_training: gold-rate-training
+  experiment_backtest: gold-rate-backtests
+  experiment_inference: gold-rate-inference
+  # Port 5001: avoids conflict with other local MLflow instances on 5000.
+  # Override with MLFLOW_TRACKING_URI env var.
+  tracking_uri: ${oc.env:MLFLOW_TRACKING_URI,http://localhost:5001}
+tags:
+  project: gold-rate-tracker
