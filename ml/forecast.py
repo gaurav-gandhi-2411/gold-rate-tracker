@@ -31,7 +31,14 @@ warnings.filterwarnings("ignore", message="X does not have valid feature names")
 # Allow `python ml/forecast.py` from repo root
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
-from ml.features import FEATURE_COLS, build_feature_matrix, get_predict_row, get_train_Xy
+from ml.features import (
+    ALL_FEATURE_COLS,
+    FEATURE_COLS,
+    build_feature_matrix,
+    get_predict_row,
+    get_train_Xy,
+)
+from ml.macro import load_macro_features
 
 DATA_DIR = Path(__file__).parent.parent / "data"
 MODEL_VERSION = "lgbm-v1"
@@ -168,16 +175,32 @@ def _make_lgb(objective: str, alpha: float | None = None):
     return lgb.LGBMRegressor(**params)
 
 
-def train_predict(df: pd.DataFrame):
+def train_predict(df: pd.DataFrame, macro_df=None):
     """
-    Train mean + quantile models on all available data, then return predictions
-    for the next reading.
+    Train mean + quantile LightGBM models on all available data and return
+    predictions for the next reading.
+
+    When macro_df is supplied, ALL_FEATURE_COLS (43 features) are used;
+    otherwise falls back to the base FEATURE_COLS (19 features).
 
     Returns (predicted_delta_mean, predicted_delta_p10, predicted_delta_p90,
-             current_22k, features_df)
+             current_22k, features_df, feature_cols_used)
     """
-    feat_df = build_feature_matrix(df)
-    X_train, y_train = get_train_Xy(feat_df)
+    feat_df = build_feature_matrix(df, macro_df=macro_df)
+
+    # Choose feature set: extended when macro data is available
+    if macro_df is not None:
+        feature_cols = ALL_FEATURE_COLS
+    else:
+        feature_cols = FEATURE_COLS
+
+    X_train, y_train = get_train_Xy(feat_df, feature_cols=feature_cols)
+
+    # If macro features caused too many rows to be dropped, fall back to base
+    if len(X_train) < 10 and macro_df is not None:
+        print("  Macro features reduced training rows too much — falling back to base features")
+        feature_cols = FEATURE_COLS
+        X_train, y_train = get_train_Xy(feat_df, feature_cols=feature_cols)
 
     if len(X_train) < 10:
         raise RuntimeError(f"Too few training rows ({len(X_train)}); need ≥10")
@@ -186,27 +209,37 @@ def train_predict(df: pd.DataFrame):
     m_mean = _make_lgb("regression")
     m_mean.fit(X_train, y_train)
 
-    # Quantile models for the confidence interval
+    # Quantile models for the 80% confidence interval
     m_p10 = _make_lgb("quantile", alpha=0.10)
     m_p10.fit(X_train, y_train)
 
     m_p90 = _make_lgb("quantile", alpha=0.90)
     m_p90.fit(X_train, y_train)
 
-    x_pred, _ = get_predict_row(feat_df)
+    x_pred, _ = get_predict_row(feat_df, feature_cols=feature_cols)
     if x_pred is None:
-        raise RuntimeError("Cannot build prediction row — not enough history in the data")
+        # Prediction row has NaN macro features — fall back to base features
+        if macro_df is not None and feature_cols == ALL_FEATURE_COLS:
+            print("  Prediction row missing macro features — falling back to base features")
+            feature_cols = FEATURE_COLS
+            X_train, y_train = get_train_Xy(feat_df, feature_cols=feature_cols)
+            m_mean = _make_lgb("regression"); m_mean.fit(X_train, y_train)
+            m_p10  = _make_lgb("quantile", alpha=0.10); m_p10.fit(X_train, y_train)
+            m_p90  = _make_lgb("quantile", alpha=0.90); m_p90.fit(X_train, y_train)
+            x_pred, _ = get_predict_row(feat_df, feature_cols=feature_cols)
+        if x_pred is None:
+            raise RuntimeError("Cannot build prediction row — not enough history in the data")
 
     delta_mean = float(m_mean.predict(x_pred)[0])
-    delta_p10 = float(m_p10.predict(x_pred)[0])
-    delta_p90 = float(m_p90.predict(x_pred)[0])
+    delta_p10  = float(m_p10.predict(x_pred)[0])
+    delta_p90  = float(m_p90.predict(x_pred)[0])
 
-    # Ensure p10 <= mean <= p90 (quantile models can sometimes invert)
+    # Ensure p10 <= mean <= p90 (quantile models can sometimes cross)
     delta_p10 = min(delta_p10, delta_mean)
     delta_p90 = max(delta_p90, delta_mean)
 
     current_22k = float(df.iloc[-1]["22k"])
-    return delta_mean, delta_p10, delta_p90, current_22k, feat_df
+    return delta_mean, delta_p10, delta_p90, current_22k, feat_df, feature_cols
 
 
 def _target_time(now: datetime | None = None) -> datetime:
@@ -223,13 +256,29 @@ def _model_hash(X: pd.DataFrame, y: pd.Series) -> str:
 
 def main():
     df = load_combined_history()
-    delta_mean, delta_p10, delta_p90, current_22k, feat_df = train_predict(df)
+
+    # Load macro features — graceful fallback if cache absent or stale
+    macro_df = None
+    try:
+        macro_df = load_macro_features()
+        if macro_df is not None:
+            print(f"Macro features loaded: {len(macro_df)} rows, "
+                  f"{macro_df.index.min().date()} to {macro_df.index.max().date()}")
+        else:
+            print("Macro cache not found — using base features only")
+    except Exception as exc:
+        print(f"Could not load macro features ({exc}) — using base features only")
+
+    delta_mean, delta_p10, delta_p90, current_22k, feat_df, feature_cols = train_predict(
+        df, macro_df=macro_df
+    )
+    macro_used = macro_df is not None and len(feature_cols) > len(FEATURE_COLS)
 
     predicted_22k = round(current_22k + delta_mean)
     lower = round(current_22k + delta_p10)
     upper = round(current_22k + delta_p90)
 
-    X_train, y_train = get_train_Xy(feat_df)
+    X_train, y_train = get_train_Xy(feat_df, feature_cols=feature_cols)
     version = f"{MODEL_VERSION}-{_model_hash(X_train, y_train)}"
 
     predicted_at = datetime.now(timezone.utc)
@@ -246,13 +295,17 @@ def main():
         "upper": upper,
         "model_version": version,
         "training_rows": len(X_train),
+        "feature_count": len(feature_cols),
+        "macro_features_used": macro_used,
         "real_readings_count": real_readings_count,
         "warmup": real_readings_count < 56,
     }
 
     DATA_DIR.mkdir(exist_ok=True)
     (DATA_DIR / "forecast.json").write_text(json.dumps(result, indent=2) + "\n")
-    print(f"Forecast written: 22K=Rs.{predicted_22k} [Rs.{lower}-Rs.{upper}] (trained on {len(X_train)} rows)")
+    macro_note = f", {len(feature_cols)} features (macro={'yes' if macro_used else 'no'})"
+    print(f"Forecast written: 22K=Rs.{predicted_22k} [Rs.{lower}-Rs.{upper}] "
+          f"(trained on {len(X_train)} rows{macro_note})")
 
 
 if __name__ == "__main__":

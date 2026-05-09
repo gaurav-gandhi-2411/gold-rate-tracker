@@ -7,3 +7,5 @@ requests>=2.31
 pyyaml>=6.0
 lxml>=4.9
 pytest>=7.4
+yfinance>=0.2.40
+pyarrow>=13.0

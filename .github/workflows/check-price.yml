@@ -58,6 +58,10 @@ jobs:
       - name: Install ML dependencies
         run: pip install -q -r ml/requirements.txt
 
+      - name: Fetch macro features
+        continue-on-error: true
+        run: python ml/macro.py
+
       - name: Run forecast
         continue-on-error: true
         run: python ml/forecast.py

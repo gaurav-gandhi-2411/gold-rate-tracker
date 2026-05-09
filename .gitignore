@@ -8,3 +8,5 @@ node_modules/
 __pycache__/
 *.pyc
 .claude/
+data/macro_cache.parquet
+models/local/
