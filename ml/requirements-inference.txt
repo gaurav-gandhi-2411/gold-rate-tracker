@@ -1,0 +1,16 @@
+# Inference-only dependencies — used in CI (no PyTorch, no MLflow).
+# Mirrors ml/requirements.txt but adds structlog for structured logging.
+
+lightgbm>=4.0
+onnxruntime>=1.16.0
+hmmlearn>=0.3.0
+structlog==24.4.0
+pandas>=2.0
+numpy>=1.24
+scikit-learn>=1.3
+pyarrow>=13.0
+yfinance>=0.2.40
+requests>=2.31
+pyyaml>=6.0
+joblib>=1.3
+lxml>=4.9
