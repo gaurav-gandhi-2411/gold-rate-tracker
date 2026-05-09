@@ -6,7 +6,8 @@
   "type": "module",
   "scripts": {
     "scrape": "node scrape.js",
-    "update": "node update-and-notify.js"
+    "update": "node update-and-notify.js",
+    "test": "node --test ../tests/test_scrape.js"
   },
   "dependencies": {
     "playwright": "^1.48.0"

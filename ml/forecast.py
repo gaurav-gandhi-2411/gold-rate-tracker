@@ -59,12 +59,59 @@ def _load_json(path: Path) -> list:
         return []
 
 
+def _calibrate_seed(seed_entries: list[dict], live_daily_entries: list[dict]) -> list[dict]:
+    """
+    Scale seed 22k/24k/18k so the tail of the seed matches the head of live data.
+
+    scale_factor = mean(first min(3) real readings)
+                 / mean(last min(3) seed readings on or before the first real date)
+
+    Returns a new list of dicts — does not modify inputs.
+    """
+    if not seed_entries or not live_daily_entries:
+        return list(seed_entries) if seed_entries else []
+
+    seed_df = pd.DataFrame(seed_entries).copy()
+    live_df = pd.DataFrame(live_daily_entries).copy()
+
+    seed_df["ts_parsed"] = pd.to_datetime(seed_df["timestamp"], utc=True)
+    live_df["ts_parsed"] = pd.to_datetime(live_df["timestamp"], utc=True)
+
+    live_sorted = live_df.sort_values("ts_parsed")
+    first_real_date = live_sorted["ts_parsed"].iloc[0].date()
+
+    seed_before = seed_df[seed_df["ts_parsed"].dt.date <= first_real_date].tail(3)
+    if seed_before.empty or "22k" not in seed_before.columns:
+        return seed_df.drop(columns=["ts_parsed"]).to_dict("records")
+
+    n = min(3, len(live_sorted))
+    seed_mean = float(seed_before["22k"].mean())
+    real_mean = float(live_sorted.head(n)["22k"].mean())
+
+    if seed_mean <= 0:
+        return seed_df.drop(columns=["ts_parsed"]).to_dict("records")
+
+    scale_factor = real_mean / seed_mean
+    print(
+        f"Calibrated seed: scale_factor={scale_factor:.4f}, applied to {len(seed_df)} seed rows "
+        f"(seed tail mean: Rs.{seed_mean:.0f}, live head mean: Rs.{real_mean:.0f})"
+    )
+
+    seed_df = seed_df.drop(columns=["ts_parsed"])
+    for col in ("22k", "24k", "18k"):
+        if col in seed_df.columns:
+            seed_df[col] = (seed_df[col] * scale_factor).round().astype(int)
+
+    return seed_df.to_dict("records")
+
+
 def load_combined_history() -> pd.DataFrame:
     """
     Merge seed + scraped data, resampled to one reading per UTC day.
 
     prices.json is resampled to daily (last reading per UTC day) before
     concatenation with seed. On overlapping dates, prices.json wins.
+    Seed values are calibrated to match the live data at the boundary.
     """
     seed_entries = _load_json(DATA_DIR / "history_seed.json")
     live_entries = _load_json(DATA_DIR / "prices.json")
@@ -81,8 +128,9 @@ def load_combined_history() -> pd.DataFrame:
         ldf = ldf.sort_values("ts_parsed").drop_duplicates(subset=["utc_date"], keep="last")
         live_daily = ldf.drop(columns=["ts_parsed", "utc_date"]).to_dict("records")
 
-    # Concat seed first, live after; sort + dedup with keep="last" so live wins
-    combined = list(seed_entries) + live_daily
+    # Calibrate seed to live boundary, then concat (live wins on overlap)
+    calibrated_seed = _calibrate_seed(seed_entries or [], live_daily)
+    combined = calibrated_seed + live_daily
     df = pd.DataFrame(combined)
     df["ts_parsed"] = pd.to_datetime(df["timestamp"], utc=True)
     df["utc_date"] = df["ts_parsed"].dt.date

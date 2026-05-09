@@ -209,12 +209,38 @@ function renderChart(readings, range) {
   });
 }
 
+function fmtIST(iso) {
+  if (!iso) return "—";
+  try {
+    return new Intl.DateTimeFormat("en-IN", {
+      timeZone: "Asia/Kolkata",
+      day: "numeric", month: "short", year: "numeric",
+      hour: "2-digit", minute: "2-digit", hour12: true,
+    }).format(new Date(iso));
+  } catch (_) {
+    return iso;
+  }
+}
+
+function fmtISTTime(iso) {
+  if (!iso) return "—";
+  try {
+    return new Intl.DateTimeFormat("en-IN", {
+      timeZone: "Asia/Kolkata",
+      hour: "2-digit", minute: "2-digit", hour12: true,
+    }).format(new Date(iso));
+  } catch (_) {
+    return iso;
+  }
+}
+
 function renderForecast(fc) {
-  const section = document.getElementById("forecast-section");
-  const priceEl = document.getElementById("forecast-price");
-  const warmupEl = document.getElementById("forecast-warmup");
-  const intervalEl = document.getElementById("forecast-interval");
-  const forEl = document.getElementById("forecast-for");
+  const section     = document.getElementById("forecast-section");
+  const priceEl     = document.getElementById("forecast-price");
+  const warmupEl    = document.getElementById("forecast-warmup");
+  const intervalEl  = document.getElementById("forecast-interval");
+  const targetEl    = document.getElementById("forecast-target");
+  const generatedEl = document.getElementById("forecast-generated");
 
   if (!fc || typeof fc.predicted_22k !== "number") {
     section.hidden = true;
@@ -240,7 +266,13 @@ function renderForecast(fc) {
     intervalEl.textContent = "";
   }
 
-  forEl.textContent = fc.target_time ? `for ~${fmtDateShort(fc.target_time)}` : "";
+  targetEl.textContent = fc.target_time
+    ? `For ${fmtIST(fc.target_time)}`
+    : "";
+  generatedEl.textContent = fc.predicted_at
+    ? `Generated ${fmtISTTime(fc.predicted_at)} IST`
+    : "";
+
   section.hidden = false;
 }
 

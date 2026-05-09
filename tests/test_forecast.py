@@ -7,7 +7,7 @@ from datetime import datetime, timedelta, timezone
 import pytest
 
 import ml.forecast as fc
-from ml.forecast import _target_time, load_combined_history
+from ml.forecast import _calibrate_seed, _target_time, load_combined_history
 
 
 # ---------------------------------------------------------------------------
@@ -119,7 +119,7 @@ def test_overlap_live_wins_over_seed(tmp_path, monkeypatch):
 
 
 def test_non_overlapping_dates_concatenated(tmp_path, monkeypatch):
-    """Distinct dates from seed and live are both present."""
+    """Distinct dates from seed and live are both present; seed is calibrated."""
     seed = [_entry("2026-05-07T00:00:00.000Z", 9000, "seed")]
     prices = [_entry("2026-05-09T18:00:00.000Z", 9100, "live")]
 
@@ -129,7 +129,9 @@ def test_non_overlapping_dates_concatenated(tmp_path, monkeypatch):
 
     df = load_combined_history()
     assert len(df) == 2
-    assert list(df["22k"]) == [9000, 9100]
+    # Seed is calibrated to match live: 9000 * (9100/9000) ≈ 9100
+    assert abs(df.iloc[0]["22k"] - 9100) <= 1  # calibrated seed
+    assert df.iloc[1]["22k"] == 9100             # live unchanged
 
 
 def test_no_data_raises(tmp_path, monkeypatch):
@@ -166,3 +168,52 @@ def test_result_sorted_by_date(tmp_path, monkeypatch):
 
     df = load_combined_history()
     assert list(df["22k"]) == [8900, 9000]
+
+
+# ---------------------------------------------------------------------------
+# _calibrate_seed tests
+# ---------------------------------------------------------------------------
+
+def test_calibrate_seed_scale_factor():
+    """3 seed rows at 15000, 1 real row at 14000 → scale_factor = 14000/15000."""
+    seed = [
+        _entry("2026-05-07T00:00:00.000Z", 15000, "seed"),
+        _entry("2026-05-08T00:00:00.000Z", 15000, "seed"),
+        _entry("2026-05-09T00:00:00.000Z", 15000, "seed"),
+    ]
+    live = [_entry("2026-05-09T18:00:00.000Z", 14000, "live")]
+
+    calibrated = _calibrate_seed(seed, live)
+
+    assert len(calibrated) == 3
+    for entry in calibrated:
+        assert abs(entry["22k"] - 14000) <= 1, f"Expected ~14000, got {entry['22k']}"
+
+
+def test_calibrate_seed_series_transitions_smoothly():
+    """After calibration the last seed value should equal the first live value (within ±1)."""
+    seed = [_entry("2026-05-09T00:00:00.000Z", 15000, "seed")]
+    live = [_entry("2026-05-09T18:00:00.000Z", 14000, "live")]
+
+    calibrated = _calibrate_seed(seed, live)
+    assert abs(calibrated[-1]["22k"] - live[0]["22k"]) <= 1
+
+
+def test_calibrate_seed_no_live_returns_unchanged():
+    """With no live data, seed is returned unchanged."""
+    seed = [_entry("2026-05-09T00:00:00.000Z", 15000, "seed")]
+    calibrated = _calibrate_seed(seed, [])
+    assert calibrated[0]["22k"] == 15000
+
+
+def test_calibrate_seed_all_karats_scaled():
+    """Calibration applies to 22k, 24k, and 18k consistently."""
+    seed = [_entry("2026-05-08T00:00:00.000Z", 15000, "seed")]
+    live = [_entry("2026-05-09T18:00:00.000Z", 14000, "live")]
+
+    calibrated = _calibrate_seed(seed, live)
+    e = calibrated[0]
+    # All three karats should be scaled by the same factor
+    assert abs(e["22k"] - 14000) <= 1
+    # 24k and 18k should still maintain rough karat ratios
+    assert e["24k"] > e["22k"] > e["18k"]

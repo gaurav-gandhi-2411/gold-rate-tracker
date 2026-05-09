@@ -1,0 +1,70 @@
+<!doctype html>
+<html lang="en">
+<head><meta charset="utf-8"><title>Tanishq Gold Rate – Test Fixture</title></head>
+<body>
+<!--
+  Minimal fixture capturing the two DOM structures that scrape.js depends on.
+  Real values as of 2026-05-09:
+    22K = ₹14010/g, 24K = ₹15284/g, 18K = ₹11463/g
+  Extracted from the live Tanishq page using scripts/inspect-tanishq.js.
+-->
+
+<!-- Section 1: 22K grammage table (main rate widget) -->
+<div class="table-responsive goldrate-table-responsive">
+  <table class="table goldrate-table fixedhgt goldrate-table-22kt">
+    <thead>
+      <tr><th>Grammage</th><th>Today</th><th>Yesterday</th></tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td>1 G</td>
+        <td>₹ 14010
+          <div class="pricechange-value green">
+            <span class="difference-rate">-30</span>
+          </div>
+        </td>
+        <td>₹ 14040</td>
+      </tr>
+      <tr>
+        <td>8 G</td>
+        <td>₹ 112,080</td>
+        <td>₹ 112,320</td>
+      </tr>
+    </tbody>
+  </table>
+</div>
+
+<!-- Section 2: Gold Rate History table — all karats via data-* attributes -->
+<div class="table-responsive goldrate-history-table-responsive">
+  <table class="table goldrate-table goldrate-history-table">
+    <thead>
+      <tr><th>Date</th><th>Rate</th></tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td>09-05-2026</td>
+        <td>₹
+          <span id="goldpurity-rate" class="goldpurity-rate"
+                data-goldrate22kt="14010"
+                data-goldrate24kt="15284"
+                data-goldrate18kt="11463">
+            14010
+          </span>
+        </td>
+      </tr>
+      <tr>
+        <td>08-05-2026</td>
+        <td>₹
+          <span class="goldpurity-rate"
+                data-goldrate22kt="14040"
+                data-goldrate24kt="15316"
+                data-goldrate18kt="11487">
+            14040
+          </span>
+        </td>
+      </tr>
+    </tbody>
+  </table>
+</div>
+</body>
+</html>

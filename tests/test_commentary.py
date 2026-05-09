@@ -65,34 +65,41 @@ MOCK_NOTE = "Gold prices are steady near ₹7,180 per gram. The model expects li
 
 class TestBuildUserMessage:
     def test_returns_non_empty_string(self):
-        msg = build_user_message(SAMPLE_PRICES, SAMPLE_FORECAST, SAMPLE_BACKTEST)
+        msg = build_user_message(SAMPLE_PRICES, SAMPLE_PRICES, SAMPLE_FORECAST, SAMPLE_BACKTEST)
         assert isinstance(msg, str)
         assert len(msg) > 50
 
     def test_contains_latest_price(self):
-        msg = build_user_message(SAMPLE_PRICES, SAMPLE_FORECAST, SAMPLE_BACKTEST)
+        msg = build_user_message(SAMPLE_PRICES, SAMPLE_PRICES, SAMPLE_FORECAST, SAMPLE_BACKTEST)
         assert "7180" in msg or "7,180" in msg
 
     def test_contains_forecast_price(self):
-        msg = build_user_message(SAMPLE_PRICES, SAMPLE_FORECAST, SAMPLE_BACKTEST)
+        msg = build_user_message(SAMPLE_PRICES, SAMPLE_PRICES, SAMPLE_FORECAST, SAMPLE_BACKTEST)
         assert "7190" in msg or "7,190" in msg
 
     def test_contains_interval(self):
-        msg = build_user_message(SAMPLE_PRICES, SAMPLE_FORECAST, SAMPLE_BACKTEST)
+        msg = build_user_message(SAMPLE_PRICES, SAMPLE_PRICES, SAMPLE_FORECAST, SAMPLE_BACKTEST)
         assert "7100" in msg and "7280" in msg
 
     def test_contains_backtest_mae(self):
-        msg = build_user_message(SAMPLE_PRICES, SAMPLE_FORECAST, SAMPLE_BACKTEST)
+        msg = build_user_message(SAMPLE_PRICES, SAMPLE_PRICES, SAMPLE_FORECAST, SAMPLE_BACKTEST)
         assert "142.5" in msg
 
     def test_no_forecast_graceful(self):
-        msg = build_user_message(SAMPLE_PRICES, None, None)
+        msg = build_user_message(SAMPLE_PRICES, SAMPLE_PRICES, None, None)
         assert isinstance(msg, str)
         assert len(msg) > 20
 
     def test_empty_prices_graceful(self):
-        msg = build_user_message([], SAMPLE_FORECAST, None)
+        msg = build_user_message([], [], SAMPLE_FORECAST, None)
         assert isinstance(msg, str)
+
+    def test_insufficient_real_data_marks_stats_unavailable(self):
+        """With < 4 real readings, short-term stats should be marked as insufficient."""
+        few_real = SAMPLE_PRICES[:2]  # only 2 real readings
+        msg = build_user_message(few_real, SAMPLE_PRICES, SAMPLE_FORECAST, SAMPLE_BACKTEST)
+        assert "sufficient_for_short_term_stats: false" in msg
+        assert "N/A" in msg  # delta should be N/A
 
 
 # ---------------------------------------------------------------------------

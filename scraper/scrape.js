@@ -1,9 +1,9 @@
 // scrape.js
-// Loads the Tanishq gold rate page in a real headless browser (gets past the 403
-// that simple HTTP fetches hit), then extracts 22K, 24K, and 18K rates per gram.
+// Loads the Tanishq gold rate page in a real headless browser and extracts
+// 22K, 24K, and 18K rates per gram using DOM data attributes.
 //
 // Output: prints a single JSON line to stdout, e.g.
-//   {"timestamp":"2026-05-09T08:00:00.000Z","22k":6450,"24k":7036,"18k":5278}
+//   {"timestamp":"2026-05-09T08:00:00.000Z","22k":14010,"24k":15284,"18k":11463}
 //
 // On failure it exits non-zero so the GitHub Action fails loudly instead of
 // silently writing bad data.
@@ -12,16 +12,82 @@ import { chromium } from "playwright";
 
 const URL = "https://www.tanishq.co.in/gold-rate.html?lang=en_IN";
 
-// Helper: pull the first integer (with optional commas) out of a string.
-function extractRupees(text) {
-  if (!text) return null;
-  // Match Indian number formats: 6,450 or 6450 or ₹ 6,450.00
-  const match = text.replace(/,/g, "").match(/(\d{4,6})(?:\.\d+)?/);
-  if (!match) return null;
-  const n = parseInt(match[1], 10);
-  // Sanity check: gold per gram is realistically between ₹2000 and ₹20000
-  if (n < 2000 || n > 20000) return null;
-  return n;
+// Validation thresholds (per gram, INR)
+const RANGE_MIN = 2000;
+const RANGE_MAX = 25000;
+const RATIO_22_24_MIN = 0.905;  // theoretical 91.67%, allow ±1%
+const RATIO_22_24_MAX = 0.925;
+const RATIO_18_24_MIN = 0.73;   // theoretical 75%, allow ±2%
+const RATIO_18_24_MAX = 0.77;
+
+/**
+ * Extract gold rates from the Tanishq page using the `data-goldrate*`
+ * attributes on the `span#goldpurity-rate` element in the history table.
+ * These attributes carry all three karats independently — no regex or
+ * arithmetic needed.
+ *
+ * @returns {{ rate22: number, rate24: number, rate18: number }}
+ */
+async function extractRates(page) {
+  // Wait for the rate widget to appear (JS-rendered after page load)
+  await page.waitForSelector("span.goldpurity-rate[data-goldrate22kt]", {
+    timeout: 30000,
+  });
+
+  const rates = await page.evaluate(() => {
+    const el = document.querySelector("span.goldpurity-rate[data-goldrate22kt]");
+    if (!el) return null;
+    return {
+      rate22: parseInt(el.dataset.goldrate22kt, 10),
+      rate24: parseInt(el.dataset.goldrate24kt, 10),
+      rate18: parseInt(el.dataset.goldrate18kt, 10),
+    };
+  });
+
+  if (!rates) throw new Error("goldpurity-rate element not found after waiting");
+  return rates;
+}
+
+/**
+ * Validate extracted rates. Throws with a descriptive message if any check
+ * fails so the workflow fails visibly rather than silently writing bad data.
+ */
+function validate(rate22, rate24, rate18) {
+  const fail = (msg) => {
+    throw new Error(
+      `Rate validation failed: ${msg}\n` +
+        `  Extracted: 22K=₹${rate22}, 24K=₹${rate24}, 18K=₹${rate18}`
+    );
+  };
+
+  // Range check
+  for (const [label, val] of [["22K", rate22], ["24K", rate24], ["18K", rate18]]) {
+    if (!Number.isFinite(val) || val < RANGE_MIN || val > RANGE_MAX) {
+      fail(`${label}=₹${val} is outside ₹${RANGE_MIN}–₹${RANGE_MAX}`);
+    }
+  }
+
+  // Strict ordering
+  if (!(rate18 < rate22 && rate22 < rate24)) {
+    fail(`expected 18K < 22K < 24K but got ${rate18} < ${rate22} < ${rate24}`);
+  }
+
+  // Karat ratio checks
+  const r22_24 = rate22 / rate24;
+  const r18_24 = rate18 / rate24;
+
+  if (r22_24 < RATIO_22_24_MIN || r22_24 > RATIO_22_24_MAX) {
+    fail(
+      `22K/24K ratio ${r22_24.toFixed(4)} outside [${RATIO_22_24_MIN}, ${RATIO_22_24_MAX}]`
+    );
+  }
+  if (r18_24 < RATIO_18_24_MIN || r18_24 > RATIO_18_24_MAX) {
+    fail(
+      `18K/24K ratio ${r18_24.toFixed(4)} outside [${RATIO_18_24_MIN}, ${RATIO_18_24_MAX}]`
+    );
+  }
+
+  return { r22_24, r18_24 };
 }
 
 async function scrape() {
@@ -42,37 +108,9 @@ async function scrape() {
 
   try {
     await page.goto(URL, { waitUntil: "domcontentloaded", timeout: 60000 });
-    // Tanishq's rate widget loads via JS. Give it generous time.
-    await page.waitForTimeout(5000);
 
-    // Strategy: extract everything, then parse with regex.
-    // The page lays out rates as labeled chunks like "22 KT" / "₹ 6,450"
-    // somewhere near each other. We grab the full rendered text and parse.
-    const bodyText = await page.evaluate(() => document.body.innerText);
-
-    // Look for patterns like "22 KT" or "22KT" or "22 Karat" followed by a price.
-    // We allow up to 200 characters of slop between the label and the price
-    // because the page might render them in adjacent cards.
-    const findRate = (karat) => {
-      const pattern = new RegExp(
-        `${karat}\\s*(?:KT|K|Karat|Carat|कैरट)[\\s\\S]{0,200}?(?:₹|Rs\\.?|INR)?\\s*(\\d{1,2}[,]?\\d{3})`,
-        "i"
-      );
-      const m = bodyText.match(pattern);
-      return m ? extractRupees(m[1]) : null;
-    };
-
-    const rate22 = findRate(22);
-    const rate24 = findRate(24);
-    const rate18 = findRate(18);
-
-    if (!rate22) {
-      // Dump page text to stderr so the workflow log shows what we got.
-      console.error("=== PAGE TEXT (first 2000 chars) ===");
-      console.error(bodyText.slice(0, 2000));
-      console.error("=== END PAGE TEXT ===");
-      throw new Error("Could not parse 22K rate from Tanishq page");
-    }
+    const { rate22, rate24, rate18 } = await extractRates(page);
+    const { r22_24, r18_24 } = validate(rate22, rate24, rate18);
 
     const result = {
       timestamp: new Date().toISOString(),
@@ -82,8 +120,23 @@ async function scrape() {
       source: URL,
     };
 
-    // Single JSON line for easy capture in shell.
+    process.stderr.write(
+      `22K: ₹${rate22.toLocaleString("en-IN")}\n` +
+      `24K: ₹${rate24.toLocaleString("en-IN")}\n` +
+      `18K: ₹${rate18.toLocaleString("en-IN")}\n` +
+      `ratios: 22/24=${r22_24.toFixed(3)} ✓, 18/24=${r18_24.toFixed(3)} ✓\n`
+    );
+
     console.log(JSON.stringify(result));
+  } catch (err) {
+    // Dump page text to help diagnose future breakages
+    try {
+      const bodyText = await page.evaluate(() => document.body.innerText);
+      process.stderr.write("\n=== PAGE TEXT (first 3000 chars) ===\n");
+      process.stderr.write(bodyText.slice(0, 3000));
+      process.stderr.write("\n=== END PAGE TEXT ===\n");
+    } catch (_) {}
+    throw err;
   } finally {
     await browser.close();
   }
