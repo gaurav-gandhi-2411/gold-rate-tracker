@@ -11,7 +11,7 @@ permissions:
   contents: write # needed so the action can commit prices.json back to the repo
 
 concurrency:
-  group: gold-price
+  group: gold-price-update
   cancel-in-progress: false
 
 jobs:

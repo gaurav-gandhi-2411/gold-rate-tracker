@@ -1,5 +1,11 @@
 # Gold Rate Tracker
 
+[![Check Gold Price](https://github.com/gaurav-gandhi-2411/gold-rate-tracker/actions/workflows/check-price.yml/badge.svg)](https://github.com/gaurav-gandhi-2411/gold-rate-tracker/actions/workflows/check-price.yml)
+[![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
+[![Python 3.12](https://img.shields.io/badge/python-3.12-blue.svg)](https://www.python.org/downloads/)
+[![Node 20](https://img.shields.io/badge/node-20-green.svg)](https://nodejs.org/)
+[![Tests](https://img.shields.io/badge/tests-56%20passing-brightgreen.svg)](tests/)
+
 A free, open-source app that scrapes the [Tanishq gold rate page](https://www.tanishq.co.in/gold-rate.html?lang=en_IN) every 6 hours, charts the trend, pushes a phone notification when the **22K** rate **drops by ₹100 or more**, forecasts the next reading with a LightGBM model, and surfaces a short LLM-written market note.
 
 - **Frontend:** Progressive Web App (installs to iOS & Android home screen)
