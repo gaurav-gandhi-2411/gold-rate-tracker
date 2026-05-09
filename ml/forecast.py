@@ -39,6 +39,7 @@ from ml.features import (
     get_train_Xy,
 )
 from ml.macro import load_macro_features
+from ml.regime import REGIME_FEATURE_COLS, add_regime_to_macro
 
 DATA_DIR = Path(__file__).parent.parent / "data"
 MODEL_VERSION = "lgbm-v1"
@@ -188,9 +189,12 @@ def train_predict(df: pd.DataFrame, macro_df=None):
     """
     feat_df = build_feature_matrix(df, macro_df=macro_df)
 
-    # Choose feature set: extended when macro data is available
+    # Choose feature set: extended when macro data is available.
+    # Regime is included dynamically when add_regime_to_macro ran successfully.
     if macro_df is not None:
-        feature_cols = ALL_FEATURE_COLS
+        feature_cols = list(ALL_FEATURE_COLS)
+        if all(c in feat_df.columns for c in REGIME_FEATURE_COLS):
+            feature_cols = feature_cols + REGIME_FEATURE_COLS
     else:
         feature_cols = FEATURE_COLS
 
@@ -218,9 +222,9 @@ def train_predict(df: pd.DataFrame, macro_df=None):
 
     x_pred, _ = get_predict_row(feat_df, feature_cols=feature_cols)
     if x_pred is None:
-        # Prediction row has NaN macro features — fall back to base features
-        if macro_df is not None and feature_cols == ALL_FEATURE_COLS:
-            print("  Prediction row missing macro features — falling back to base features")
+        # Prediction row has NaN macro/regime features — fall back to base features
+        if macro_df is not None and feature_cols != FEATURE_COLS:
+            print("  Prediction row missing macro/regime features — falling back to base features")
             feature_cols = FEATURE_COLS
             X_train, y_train = get_train_Xy(feat_df, feature_cols=feature_cols)
             m_mean = _make_lgb("regression"); m_mean.fit(X_train, y_train)
@@ -268,6 +272,18 @@ def main():
             print("Macro cache not found — using base features only")
     except Exception as exc:
         print(f"Could not load macro features ({exc}) — using base features only")
+
+    # Fit HMM regime model and add 'regime' column to macro_df
+    if macro_df is not None:
+        try:
+            macro_df = add_regime_to_macro(macro_df)
+            n_labeled = int(macro_df["regime"].notna().sum())
+            n_low  = int((macro_df["regime"] == 0).sum())
+            n_high = int((macro_df["regime"] == 1).sum())
+            print(f"Regime model fitted: {n_labeled} dates labeled "
+                  f"(low-vol={n_low}, high-vol={n_high})")
+        except Exception as exc:
+            print(f"Regime detection skipped ({exc})")
 
     delta_mean, delta_p10, delta_p90, current_22k, feat_df, feature_cols = train_predict(
         df, macro_df=macro_df
