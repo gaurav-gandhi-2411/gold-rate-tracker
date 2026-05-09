@@ -197,7 +197,7 @@ The cron only fires every 6 hours. To get a first reading immediately:
 
 ## Troubleshooting
 
-- **Scraper fails with "Could not parse 22K rate":** Tanishq changed their page structure. Open the failed Action run, look at the `=== PAGE TEXT ===` dump, and adjust the regex in `scraper/scrape.js`.
+- **Scraper fails with "Could not find goldpurity-rate element":** Tanishq changed their page structure. Open the failed Action run, look at the `=== PAGE TEXT ===` dump in stderr, find the new element that holds the karat rates, and update the selector in `scraper/scrape.js`.
 - **No notifications arriving:** make sure `NTFY_TOPIC` is set with no URL prefix, you subscribed to the exact topic, and a price actually dropped by ≥₹100.
 - **Chart is empty:** wait for ≥2 readings (every 6h, or trigger manually), or check that `data/prices.json` is populated.
 - **Forecast section missing:** check GitHub Actions logs for the "Run forecast" step. The step is `continue-on-error: true` so it won't break the scrape.
@@ -205,4 +205,4 @@ The cron only fires every 6 hours. To get a first reading immediately:
 
 ## License
 
-MIT — do whatever you like with it.
+[MIT](LICENSE) — do whatever you like with it.
