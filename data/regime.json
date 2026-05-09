@@ -1,0 +1,25 @@
+{
+  "as_of": "2026-05-08",
+  "generated_at": "2026-05-09T18:44:26.143845+00:00",
+  "state": 0,
+  "label": "low-vol",
+  "probability": 0.9705,
+  "days_in_regime": 4,
+  "transition_probability": 0.078,
+  "emission": {
+    "low_vol": {
+      "mean_pct": 0.1494,
+      "std_pct": 0.8748
+    },
+    "high_vol": {
+      "mean_pct": -0.4077,
+      "std_pct": 3.1008
+    }
+  },
+  "transition_matrix": {
+    "low_vol_to_low_vol": 0.922,
+    "low_vol_to_high_vol": 0.078,
+    "high_vol_to_high_vol": 0.3189,
+    "high_vol_to_low_vol": 0.6811
+  }
+}

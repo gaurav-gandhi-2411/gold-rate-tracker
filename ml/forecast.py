@@ -39,7 +39,7 @@ from ml.features import (
     get_train_Xy,
 )
 from ml.macro import load_macro_features
-from ml.regime import REGIME_FEATURE_COLS, add_regime_to_macro
+from ml.regime import REGIME_FEATURE_COLS, add_regime_to_macro, fit_regime_model, write_regime_json
 
 DATA_DIR = Path(__file__).parent.parent / "data"
 MODEL_VERSION = "lgbm-v1"
@@ -273,15 +273,24 @@ def main():
     except Exception as exc:
         print(f"Could not load macro features ({exc}) — using base features only")
 
-    # Fit HMM regime model and add 'regime' column to macro_df
+    # Fit HMM regime model, add 'regime' column to macro_df, write regime.json
     if macro_df is not None:
         try:
+            regime_model, regime_perm = fit_regime_model(macro_df)
             macro_df = add_regime_to_macro(macro_df)
             n_labeled = int(macro_df["regime"].notna().sum())
             n_low  = int((macro_df["regime"] == 0).sum())
             n_high = int((macro_df["regime"] == 1).sum())
             print(f"Regime model fitted: {n_labeled} dates labeled "
                   f"(low-vol={n_low}, high-vol={n_high})")
+            regime_info = write_regime_json(
+                regime_model, regime_perm, macro_df,
+                DATA_DIR / "regime.json",
+            )
+            print(f"Regime JSON written: state={regime_info['state']} "
+                  f"({regime_info['label']}), "
+                  f"P={regime_info['probability']:.3f}, "
+                  f"days_in_regime={regime_info['days_in_regime']}")
         except Exception as exc:
             print(f"Regime detection skipped ({exc})")
 

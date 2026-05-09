@@ -16,6 +16,10 @@ Usage (from ml/forecast.py):
 
 from __future__ import annotations
 
+import json
+from datetime import datetime, timezone
+from pathlib import Path
+
 import numpy as np
 import pandas as pd
 
@@ -127,3 +131,88 @@ def add_regime_to_macro(macro_df: pd.DataFrame) -> pd.DataFrame:
     macro["regime"] = np.nan
     macro.loc[valid_idx, "regime"] = canonical
     return macro
+
+
+def write_regime_json(model, perm: np.ndarray, macro_df: pd.DataFrame,
+                      out_path: Path) -> dict:
+    """
+    Compute current-regime diagnostics and write data/regime.json.
+
+    Schema
+    ------
+    {
+      "as_of":                  "<ISO date of latest macro row>",
+      "generated_at":           "<ISO UTC timestamp>",
+      "state":                  0 | 1,
+      "label":                  "low-vol" | "high-vol",
+      "probability":            float,   # P(current state | all observations)
+      "days_in_regime":         int,     # consecutive days in this state
+      "transition_probability": float,   # P(switch to other state next day)
+      "emission": {
+        "low_vol":  {"mean_pct": float, "std_pct": float},
+        "high_vol": {"mean_pct": float, "std_pct": float}
+      },
+      "transition_matrix": {
+        "low_vol_to_low_vol":   float,
+        "low_vol_to_high_vol":  float,
+        "high_vol_to_high_vol": float,
+        "high_vol_to_low_vol":  float
+      }
+    }
+    """
+    X, valid_idx = _log_returns(macro_df)
+    hmm_states = model.predict(X)
+    posteriors = model.predict_proba(X)   # shape (n, N_STATES) in HMM state space
+    canonical  = perm[hmm_states]
+
+    current_hmm   = int(hmm_states[-1])
+    current_canon = int(canonical[-1])
+    current_label = "low-vol" if current_canon == 0 else "high-vol"
+    current_prob  = float(posteriors[-1, current_hmm])
+
+    # Consecutive days in current canonical state
+    streak = 1
+    for s in reversed(canonical[:-1].tolist()):
+        if int(s) == current_canon:
+            streak += 1
+        else:
+            break
+
+    # Identify which HMM state index maps to each canonical label
+    low_hmm  = int(np.where(perm == 0)[0][0])
+    high_hmm = int(np.where(perm == 1)[0][0])
+
+    # Emission std: robust to covars_ shape change in hmmlearn 0.3.x
+    variances = np.asarray(model.covars_).reshape(N_STATES, -1)[:, 0]
+    stds  = np.sqrt(variances)
+    means = model.means_.ravel()
+
+    result = {
+        "as_of":      str(valid_idx[-1].date()),
+        "generated_at": datetime.now(timezone.utc).isoformat(),
+        "state":      current_canon,
+        "label":      current_label,
+        "probability": round(current_prob, 4),
+        "days_in_regime": streak,
+        "transition_probability": round(float(model.transmat_[current_hmm, 1 - current_hmm]), 4),
+        "emission": {
+            "low_vol":  {
+                "mean_pct": round(float(means[low_hmm])  * 100, 4),
+                "std_pct":  round(float(stds[low_hmm])   * 100, 4),
+            },
+            "high_vol": {
+                "mean_pct": round(float(means[high_hmm]) * 100, 4),
+                "std_pct":  round(float(stds[high_hmm])  * 100, 4),
+            },
+        },
+        "transition_matrix": {
+            "low_vol_to_low_vol":   round(float(model.transmat_[low_hmm,  low_hmm]),  4),
+            "low_vol_to_high_vol":  round(float(model.transmat_[low_hmm,  high_hmm]), 4),
+            "high_vol_to_high_vol": round(float(model.transmat_[high_hmm, high_hmm]), 4),
+            "high_vol_to_low_vol":  round(float(model.transmat_[high_hmm, low_hmm]),  4),
+        },
+    }
+
+    out_path.parent.mkdir(parents=True, exist_ok=True)
+    out_path.write_text(json.dumps(result, indent=2) + "\n")
+    return result

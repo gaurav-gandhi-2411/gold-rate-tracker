@@ -76,7 +76,7 @@ jobs:
         run: |
           git config user.name "gold-rate-bot"
           git config user.email "actions@users.noreply.github.com"
-          git add data/prices.json data/forecast.json data/commentary.json
+          git add data/prices.json data/forecast.json data/commentary.json data/regime.json
           if git diff --staged --quiet; then
             echo "No changes to commit."
           else
