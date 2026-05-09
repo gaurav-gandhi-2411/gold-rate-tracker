@@ -40,6 +40,7 @@ from ml.features import (
 )
 from ml.macro import load_macro_features
 from ml.regime import REGIME_FEATURE_COLS, add_regime_to_macro, fit_regime_model, write_regime_json
+from ml.nbeats_infer import load_nbeats_session, predict_nbeats_delta
 
 DATA_DIR = Path(__file__).parent.parent / "data"
 MODEL_VERSION = "lgbm-v1"
@@ -306,6 +307,20 @@ def main():
     X_train, y_train = get_train_Xy(feat_df, feature_cols=feature_cols)
     version = f"{MODEL_VERSION}-{_model_hash(X_train, y_train)}"
 
+    # N-BEATS point estimate (supplementary; ensemble weighting in Phase D)
+    nbeats_delta = None
+    nbeats_available = False
+    try:
+        nbeats_sess = load_nbeats_session()
+        if nbeats_sess is not None:
+            nbeats_delta = predict_nbeats_delta(nbeats_sess, df)
+            if nbeats_delta is not None:
+                nbeats_available = True
+                print(f"N-BEATS delta: Rs.{nbeats_delta:+.1f}  "
+                      f"(LightGBM: Rs.{delta_mean:+.1f})")
+    except Exception as exc:
+        print(f"N-BEATS inference skipped ({exc})")
+
     predicted_at = datetime.now(timezone.utc)
     target_time = _target_time(predicted_at)
     assert target_time > predicted_at, "target_time must be in the future"
@@ -322,6 +337,8 @@ def main():
         "training_rows": len(X_train),
         "feature_count": len(feature_cols),
         "macro_features_used": macro_used,
+        "nbeats_available": nbeats_available,
+        "nbeats_delta": round(nbeats_delta, 1) if nbeats_delta is not None else None,
         "real_readings_count": real_readings_count,
         "warmup": real_readings_count < 56,
     }
@@ -329,8 +346,9 @@ def main():
     DATA_DIR.mkdir(exist_ok=True)
     (DATA_DIR / "forecast.json").write_text(json.dumps(result, indent=2) + "\n")
     macro_note = f", {len(feature_cols)} features (macro={'yes' if macro_used else 'no'})"
+    nbeats_note = f", nbeats=Rs.{nbeats_delta:+.1f}" if nbeats_available else ""
     print(f"Forecast written: 22K=Rs.{predicted_22k} [Rs.{lower}-Rs.{upper}] "
-          f"(trained on {len(X_train)} rows{macro_note})")
+          f"(trained on {len(X_train)} rows{macro_note}{nbeats_note})")
 
 
 if __name__ == "__main__":
