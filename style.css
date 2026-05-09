@@ -237,6 +237,138 @@ main {
 .history .delta-flat { color: var(--cream-mute); }
 .history td.empty { text-align: center; color: var(--cream-mute); padding: 30px; }
 
+/* ---------- Commentary card ---------- */
+.commentary-section { margin-bottom: clamp(32px, 6vw, 56px); }
+.commentary-card {
+  background: var(--surface-2);
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  padding: 20px 24px;
+}
+.commentary-label {
+  font-size: 11px;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--gold);
+  margin: 0 0 10px;
+}
+.commentary-text {
+  font-style: italic;
+  font-size: 15px;
+  line-height: 1.65;
+  color: var(--cream-dim);
+  margin: 0 0 8px;
+}
+.commentary-meta {
+  font-size: 11px;
+  color: var(--cream-mute);
+  letter-spacing: 0.04em;
+  margin: 0;
+}
+
+/* ---------- Forecast card ---------- */
+.forecast-section { margin-bottom: clamp(40px, 8vw, 72px); }
+.forecast-section h2 {
+  font-size: clamp(22px, 3.5vw, 32px);
+  margin-bottom: 18px;
+}
+.forecast-card {
+  background: var(--surface);
+  border: 1px dashed var(--gold-soft);
+  border-radius: 16px;
+  padding: 22px 24px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+}
+.forecast-label {
+  font-size: 11px;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--cream-mute);
+  margin-bottom: 10px;
+}
+.forecast-price {
+  font-family: var(--display);
+  font-size: clamp(32px, 6vw, 56px);
+  font-weight: 500;
+  letter-spacing: -0.02em;
+  color: var(--cream);
+  font-variant-numeric: tabular-nums;
+  line-height: 1;
+}
+.forecast-price .rupee { color: var(--gold); font-style: italic; margin-right: 0.05em; }
+.forecast-warmup {
+  margin-top: 6px;
+  font-size: 11px;
+  color: var(--cream-mute);
+  letter-spacing: 0.03em;
+}
+.forecast-interval {
+  margin-top: 8px;
+  font-size: 13px;
+  color: var(--cream-mute);
+  font-variant-numeric: tabular-nums;
+}
+.forecast-interval .rupee { color: var(--gold); font-style: italic; }
+.forecast-meta {
+  font-size: 12px;
+  color: var(--cream-mute);
+  letter-spacing: 0.04em;
+  text-align: right;
+  flex-shrink: 0;
+}
+
+/* ---------- Model performance ---------- */
+.model-section { margin-bottom: 60px; }
+.model-section h2 {
+  font-size: clamp(22px, 3.5vw, 32px);
+  margin-bottom: 18px;
+}
+.model-cards {
+  display: grid;
+  gap: 12px;
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  margin-bottom: 16px;
+}
+.model-stat {
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  padding: 16px 18px;
+}
+.model-stat-label {
+  font-size: 11px;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--cream-mute);
+  margin-bottom: 8px;
+}
+.model-stat-value {
+  font-family: var(--display);
+  font-size: 28px;
+  font-weight: 500;
+  color: var(--cream);
+  font-variant-numeric: tabular-nums;
+  line-height: 1.1;
+}
+.model-stat-sub {
+  margin-top: 4px;
+  font-size: 11px;
+  color: var(--cream-mute);
+}
+.model-note {
+  font-size: 12px;
+  color: var(--cream-mute);
+  line-height: 1.6;
+  margin: 0;
+  padding: 14px 16px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: var(--surface);
+}
+
 /* ---------- Footer ---------- */
 .site-footer {
   border-top: 1px solid var(--line);
@@ -253,4 +385,7 @@ main {
   .chart-wrap { height: 260px; padding: 14px; }
   .history th, .history td { padding: 12px 14px; font-size: 13px; }
   .rate-card .rate { font-size: 32px; }
+  .forecast-card { flex-direction: column; align-items: flex-start; }
+  .forecast-meta { text-align: left; }
+  .forecast-price { font-size: 36px; }
 }

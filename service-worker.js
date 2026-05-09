@@ -1,5 +1,5 @@
 // service-worker.js
-const VERSION = "v1";
+const VERSION = "v2";
 const SHELL_CACHE = `gold-shell-${VERSION}`;
 
 const SHELL_FILES = [
@@ -10,6 +10,14 @@ const SHELL_FILES = [
   "./manifest.webmanifest",
   "./icons/icon-192.png",
   "./icons/icon-512.png",
+];
+
+// All JSON data files get network-first treatment (same as prices.json).
+const DATA_FILES = [
+  "prices.json",
+  "forecast.json",
+  "backtest.json",
+  "commentary.json",
 ];
 
 self.addEventListener("install", (e) => {
@@ -31,12 +39,17 @@ self.addEventListener("activate", (e) => {
   self.clients.claim();
 });
 
+function isDataFile(url) {
+  return DATA_FILES.some(
+    (f) => url.pathname.endsWith(`/${f}`) || url.pathname.endsWith(`data/${f}`)
+  );
+}
+
 self.addEventListener("fetch", (e) => {
   const url = new URL(e.request.url);
-  const isData = url.pathname.endsWith("/prices.json") || url.pathname.endsWith("data/prices.json");
 
-  if (isData) {
-    // Network-first for the data file, fall back to cache when offline.
+  if (isDataFile(url)) {
+    // Network-first for all data files; fall back to cache when offline.
     e.respondWith(
       fetch(e.request)
         .then((res) => {

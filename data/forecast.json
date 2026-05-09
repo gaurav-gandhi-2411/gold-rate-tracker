@@ -1,0 +1,11 @@
+{
+  "predicted_at": "2026-05-09T10:07:34.243649+00:00",
+  "target_time": "2026-05-10T00:00:00+00:00",
+  "predicted_22k": 15172,
+  "lower": 14992,
+  "upper": 15351,
+  "model_version": "lgbm-v1-dcdb4441",
+  "training_rows": 427,
+  "real_readings_count": 0,
+  "warmup": true
+}

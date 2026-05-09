@@ -65,6 +65,31 @@
         </article>
       </section>
 
+      <!-- Today's market note (LLM commentary) -->
+      <section class="commentary-section" id="commentary-section" hidden>
+        <div class="commentary-card">
+          <p class="commentary-label">Today's note</p>
+          <p class="commentary-text" id="commentary-text">—</p>
+          <p class="commentary-meta" id="commentary-meta"></p>
+        </div>
+      </section>
+
+      <!-- Forecast card -->
+      <section class="forecast-section" id="forecast-section" hidden>
+        <h2>Forecast</h2>
+        <div class="forecast-card">
+          <div class="forecast-main">
+            <div class="forecast-label">Next reading estimate</div>
+            <div class="forecast-price" id="forecast-price">—</div>
+            <div class="forecast-warmup" id="forecast-warmup" hidden></div>
+            <div class="forecast-interval" id="forecast-interval"></div>
+          </div>
+          <div class="forecast-meta">
+            <span id="forecast-for"></span>
+          </div>
+        </div>
+      </section>
+
       <section class="chart-section">
         <div class="chart-header">
           <h2>Trend</h2>
@@ -99,10 +124,38 @@
         </div>
       </section>
 
+      <!-- Model performance (backtest stats) -->
+      <section class="model-section" id="model-section" hidden>
+        <h2>Model performance</h2>
+        <div class="model-cards">
+          <div class="model-stat">
+            <div class="model-stat-label">MAE (90-day backtest)</div>
+            <div class="model-stat-value" id="model-mae">—</div>
+            <div class="model-stat-sub" id="model-mae-vs"></div>
+          </div>
+          <div class="model-stat">
+            <div class="model-stat-label">Direction accuracy</div>
+            <div class="model-stat-value" id="model-dir">—</div>
+            <div class="model-stat-sub" id="model-dir-vs"></div>
+          </div>
+          <div class="model-stat">
+            <div class="model-stat-label">Folds</div>
+            <div class="model-stat-value" id="model-folds">—</div>
+            <div class="model-stat-sub">walk-forward</div>
+          </div>
+        </div>
+        <p class="model-note">
+          LightGBM regressor trained on differenced 22K target (delta, not level).
+          Naive baseline = predict last value unchanged.
+          Not financial advice — model trained on estimated seed data.
+        </p>
+      </section>
+
       <footer class="site-footer">
         <p>
           Source: <a href="https://www.tanishq.co.in/gold-rate.html?lang=en_IN" target="_blank" rel="noopener">Tanishq</a>.
           Updated every 6 hours via GitHub Actions.
+          Seed data estimated from Yahoo Finance (GC=F × INR=X).
         </p>
         <p class="muted">Not financial advice. Rates are indicative.</p>
       </footer>

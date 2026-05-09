@@ -1,6 +1,9 @@
 // app.js — fetches prices.json and renders the UI.
 
 const DATA_URL = "data/prices.json";
+const FORECAST_URL = "data/forecast.json";
+const BACKTEST_URL = "data/backtest.json";
+const COMMENTARY_URL = "data/commentary.json";
 
 const fmtINR = (n) =>
   typeof n === "number"
@@ -28,15 +31,26 @@ function fmtDate(iso) {
   });
 }
 
+function fmtDateShort(iso) {
+  if (!iso) return "—";
+  const d = new Date(iso);
+  return d.toLocaleString("en-IN", {
+    day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit",
+  });
+}
+
 let chart = null;
 let allReadings = [];
 
-async function load() {
+async function loadJSON(url) {
   // Cache-bust so we always get the latest committed JSON.
-  const res = await fetch(`${DATA_URL}?t=${Date.now()}`);
-  if (!res.ok) throw new Error("Failed to load prices.json");
-  const data = await res.json();
-  // Ensure ascending by timestamp.
+  const res = await fetch(`${url}?t=${Date.now()}`);
+  if (!res.ok) throw new Error(`HTTP ${res.status} for ${url}`);
+  return res.json();
+}
+
+async function load() {
+  const data = await loadJSON(DATA_URL);
   data.sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp));
   return data;
 }
@@ -195,6 +209,100 @@ function renderChart(readings, range) {
   });
 }
 
+function renderForecast(fc) {
+  const section = document.getElementById("forecast-section");
+  const priceEl = document.getElementById("forecast-price");
+  const warmupEl = document.getElementById("forecast-warmup");
+  const intervalEl = document.getElementById("forecast-interval");
+  const forEl = document.getElementById("forecast-for");
+
+  if (!fc || typeof fc.predicted_22k !== "number") {
+    section.hidden = true;
+    return;
+  }
+
+  priceEl.innerHTML = rupee(fc.predicted_22k);
+
+  if (fc.warmup) {
+    const needed = Math.max(0, 56 - (fc.real_readings_count || 0));
+    warmupEl.textContent =
+      `\u{1F4CA} Calibrating · forecast may differ from live until ~${needed} more readings`;
+    warmupEl.hidden = false;
+  } else {
+    warmupEl.hidden = true;
+  }
+
+  const hasInterval = typeof fc.lower === "number" && typeof fc.upper === "number";
+  if (hasInterval) {
+    intervalEl.innerHTML =
+      `80% interval: <span class="rupee">₹</span>${fmtINR(fc.lower)} – <span class="rupee">₹</span>${fmtINR(fc.upper)}`;
+  } else {
+    intervalEl.textContent = "";
+  }
+
+  forEl.textContent = fc.target_time ? `for ~${fmtDateShort(fc.target_time)}` : "";
+  section.hidden = false;
+}
+
+function renderCommentary(entries) {
+  const section = document.getElementById("commentary-section");
+  const textEl = document.getElementById("commentary-text");
+  const metaEl = document.getElementById("commentary-meta");
+
+  if (!Array.isArray(entries) || entries.length === 0) {
+    section.hidden = true;
+    return;
+  }
+
+  const latest = entries[entries.length - 1];
+  if (!latest || !latest.text) {
+    section.hidden = true;
+    return;
+  }
+
+  textEl.textContent = latest.text;
+  metaEl.textContent = latest.ts ? fmtRelative(latest.ts) : "";
+  section.hidden = false;
+}
+
+function renderModelStats(bt) {
+  const section = document.getElementById("model-section");
+
+  if (!bt || !bt.model) {
+    section.hidden = true;
+    return;
+  }
+
+  const m = bt.model;
+  const b = bt.baseline;
+
+  const maeEl = document.getElementById("model-mae");
+  const maeVsEl = document.getElementById("model-mae-vs");
+  const dirEl = document.getElementById("model-dir");
+  const dirVsEl = document.getElementById("model-dir-vs");
+  const foldsEl = document.getElementById("model-folds");
+
+  maeEl.textContent = typeof m.mae === "number" ? `₹${fmtINR(m.mae)}` : "—";
+  if (b && typeof b.mae === "number" && typeof m.mae === "number") {
+    const diff = Math.abs(m.mae - b.mae);
+    const sign = m.mae <= b.mae ? "−" : "+";
+    maeVsEl.textContent = `${sign}₹${fmtINR(diff)} vs naive`;
+  }
+
+  dirEl.textContent =
+    typeof m.direction_acc === "number"
+      ? `${Math.round(m.direction_acc * 100)}%`
+      : "—";
+  if (b && typeof b.direction_acc === "number") {
+    const diff = Math.round((m.direction_acc - b.direction_acc) * 100);
+    const sign = diff >= 0 ? "+" : "";
+    dirVsEl.textContent = `${sign}${diff}pp vs naive`;
+  }
+
+  foldsEl.textContent = typeof bt.folds === "number" ? bt.folds : "—";
+  section.hidden = false;
+}
+
 function bindRangeToggle() {
   const buttons = document.querySelectorAll(".range-toggle button");
   buttons.forEach((btn) => {
@@ -208,6 +316,8 @@ function bindRangeToggle() {
 
 (async function init() {
   bindRangeToggle();
+
+  // Load prices (required)
   try {
     allReadings = await load();
   } catch (err) {
@@ -221,4 +331,15 @@ function bindRangeToggle() {
   renderHero(allReadings);
   renderHistory(allReadings);
   renderChart(allReadings, "7");
+
+  // Load ML/LLM data (all optional — degrade gracefully on any failure)
+  const [fc, bt, commentary] = await Promise.allSettled([
+    loadJSON(FORECAST_URL),
+    loadJSON(BACKTEST_URL),
+    loadJSON(COMMENTARY_URL),
+  ]);
+
+  renderForecast(fc.status === "fulfilled" ? fc.value : null);
+  renderModelStats(bt.status === "fulfilled" ? bt.value : null);
+  renderCommentary(commentary.status === "fulfilled" ? commentary.value : null);
 })();
