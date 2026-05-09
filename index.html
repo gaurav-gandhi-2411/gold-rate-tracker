@@ -1,0 +1,121 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <title>Gold Rate</title>
+    <meta name="description" content="Live gold rate tracker, 22K / 24K / 18K, with trend charts." />
+
+    <!-- PWA -->
+    <link rel="manifest" href="manifest.webmanifest" />
+    <meta name="theme-color" content="#0e0c0a" />
+    <link rel="apple-touch-icon" href="icons/icon-192.png" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <meta name="apple-mobile-web-app-title" content="Gold" />
+
+    <!-- Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,700&family=DM+Sans:wght@400;500;700&display=swap"
+      rel="stylesheet"
+    />
+
+    <link rel="stylesheet" href="style.css" />
+  </head>
+  <body>
+    <!-- Subtle grain overlay for depth -->
+    <div class="grain" aria-hidden="true"></div>
+
+    <main>
+      <header class="topbar">
+        <div class="logo">
+          <span class="logo-mark">Au</span>
+          <span class="logo-text">Gold Rate</span>
+        </div>
+        <div class="updated" id="updated">—</div>
+      </header>
+
+      <section class="hero">
+        <p class="eyebrow">22 Karat · per gram</p>
+        <h1 class="price" id="hero-price">—</h1>
+        <div class="change" id="hero-change" hidden>
+          <span class="arrow"></span>
+          <span class="amount"></span>
+          <span class="vs">vs previous reading</span>
+        </div>
+      </section>
+
+      <section class="rate-cards">
+        <article class="rate-card primary">
+          <header>22 KT</header>
+          <div class="rate" id="rate-22">—</div>
+          <footer>22 parts gold · 2 parts alloy</footer>
+        </article>
+        <article class="rate-card">
+          <header>24 KT</header>
+          <div class="rate" id="rate-24">—</div>
+          <footer>99.9% pure</footer>
+        </article>
+        <article class="rate-card">
+          <header>18 KT</header>
+          <div class="rate" id="rate-18">—</div>
+          <footer>75% pure</footer>
+        </article>
+      </section>
+
+      <section class="chart-section">
+        <div class="chart-header">
+          <h2>Trend</h2>
+          <div class="range-toggle" role="tablist">
+            <button data-range="7" class="active" role="tab">7d</button>
+            <button data-range="30" role="tab">30d</button>
+            <button data-range="all" role="tab">All</button>
+          </div>
+        </div>
+        <div class="chart-wrap">
+          <canvas id="chart"></canvas>
+        </div>
+      </section>
+
+      <section class="history-section">
+        <h2>History</h2>
+        <div class="history-wrap">
+          <table class="history">
+            <thead>
+              <tr>
+                <th>When</th>
+                <th class="num">22K</th>
+                <th class="num">24K</th>
+                <th class="num">18K</th>
+                <th class="num">Δ 22K</th>
+              </tr>
+            </thead>
+            <tbody id="history-body">
+              <tr><td colspan="5" class="empty">Loading…</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <footer class="site-footer">
+        <p>
+          Source: <a href="https://www.tanishq.co.in/gold-rate.html?lang=en_IN" target="_blank" rel="noopener">Tanishq</a>.
+          Updated every 6 hours via GitHub Actions.
+        </p>
+        <p class="muted">Not financial advice. Rates are indicative.</p>
+      </footer>
+    </main>
+
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.6/dist/chart.umd.min.js"></script>
+    <script src="app.js" defer></script>
+    <script>
+      if ("serviceWorker" in navigator) {
+        window.addEventListener("load", () => {
+          navigator.serviceWorker.register("service-worker.js").catch(() => {});
+        });
+      }
+    </script>
+  </body>
+</html>

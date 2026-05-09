@@ -1,0 +1,14 @@
+{
+  "name": "gold-rate-scraper",
+  "version": "1.0.0",
+  "description": "Scrapes Tanishq gold rates and updates prices.json",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "scrape": "node scrape.js",
+    "update": "node update-and-notify.js"
+  },
+  "dependencies": {
+    "playwright": "^1.48.0"
+  }
+}

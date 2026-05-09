@@ -1,0 +1,9 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(New-Item -ItemType Directory -Force -Path \"C:\\\\Users\\\\gaura\\\\ml-projects\\\\gold-rate-tracker\\\\ml\")",
+      "Bash(Out-Null)",
+      "Bash(New-Item -ItemType Directory -Force -Path \"C:\\\\Users\\\\gaura\\\\ml-projects\\\\gold-rate-tracker\\\\tests\")"
+    ]
+  }
+}
