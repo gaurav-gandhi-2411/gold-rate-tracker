@@ -10,3 +10,5 @@ __pycache__/
 .claude/
 data/macro_cache.parquet
 models/local/
+mlruns/
+mlflow-db/

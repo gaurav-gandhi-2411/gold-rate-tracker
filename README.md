@@ -138,6 +138,21 @@ Run `python ml/backtest.py` to generate `data/backtest.json` with full walk-forw
 
 The naive baseline (predict last value unchanged, delta = 0) often has lower MAE than the model on small datasets — this is expected and honest. Gold prices exhibit near-random-walk behaviour over short horizons, so "predict no change" is a hard baseline to beat. The model's advantage, where it exists, tends to be in directional accuracy.
 
+## Local development stack
+
+MLflow tracks all training runs locally. The stack runs in Docker and takes about 10 seconds to start.
+
+```bash
+docker compose up -d        # Start MLflow (port 5001)
+docker compose ps           # Verify container is healthy
+docker compose logs -f mlflow  # Tail logs
+docker compose down         # Stop
+```
+
+**MLflow UI at http://localhost:5001.** Backend is SQLite (`mlflow-db/mlflow.db`), artifacts on local volume (`mlruns/`). Both are gitignored — they never leave your machine.
+
+> **Port note:** This project uses port 5001 so it coexists with other local MLflow instances on 5000. Override with `MLFLOW_PORT=5000 docker compose up -d` if needed.
+
 ## Setup (≈15 minutes)
 
 ### 1. Create the repo
