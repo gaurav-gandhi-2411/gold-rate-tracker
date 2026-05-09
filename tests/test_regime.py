@@ -17,7 +17,6 @@ from __future__ import annotations
 import numpy as np
 import pandas as pd
 import pytest
-
 from ml.regime import (
     MIN_ROWS,
     N_STATES,
@@ -26,10 +25,10 @@ from ml.regime import (
     fit_regime_model,
 )
 
-
 # ---------------------------------------------------------------------------
 # Shared test fixtures
 # ---------------------------------------------------------------------------
+
 
 def _make_two_regime_macro(n_low: int = 200, n_high: int = 100) -> pd.DataFrame:
     """
@@ -44,19 +43,19 @@ def _make_two_regime_macro(n_low: int = 200, n_high: int = 100) -> pd.DataFrame:
     n = n_low + n_high
     dates = pd.date_range("2024-01-01", periods=n, freq="D", tz="UTC")
 
-    low_rets  = rng.normal(0.0002, 0.003, n_low)
+    low_rets = rng.normal(0.0002, 0.003, n_low)
     high_rets = rng.normal(0.0000, 0.020, n_high)
-    all_rets  = np.concatenate([low_rets, high_rets])
+    all_rets = np.concatenate([low_rets, high_rets])
     gold = 3000.0 * np.exp(np.cumsum(all_rets))
 
     return pd.DataFrame(
         {
-            "gold_usd":     gold,
-            "usd_inr":      rng.uniform(83.0,   85.0,   n),
-            "us_10y_yield": rng.uniform(4.0,    4.5,    n),
-            "dxy":          rng.uniform(100.0,  106.0,  n),
-            "sensex":       rng.uniform(70000., 80000., n),
-            "vix":          rng.uniform(12.0,   25.0,   n),
+            "gold_usd": gold,
+            "usd_inr": rng.uniform(83.0, 85.0, n),
+            "us_10y_yield": rng.uniform(4.0, 4.5, n),
+            "dxy": rng.uniform(100.0, 106.0, n),
+            "sensex": rng.uniform(70000.0, 80000.0, n),
+            "vix": rng.uniform(12.0, 25.0, n),
         },
         index=dates,
     )
@@ -68,6 +67,7 @@ _MACRO_DF = _make_two_regime_macro()
 # ---------------------------------------------------------------------------
 # 1. TestFitRegimeModel
 # ---------------------------------------------------------------------------
+
 
 class TestFitRegimeModel:
     def test_returns_model_and_perm(self):
@@ -93,7 +93,7 @@ class TestFitRegimeModel:
         # covars_ shape varies by hmmlearn version; flatten robustly
         variances = np.asarray(model.covars_).reshape(N_STATES, -1)[:, 0]
         stds = np.sqrt(variances)
-        low_vol_hmm  = int(np.where(perm == 0)[0][0])
+        low_vol_hmm = int(np.where(perm == 0)[0][0])
         high_vol_hmm = int(np.where(perm == 1)[0][0])
         assert stds[low_vol_hmm] < stds[high_vol_hmm], (
             f"Low-vol std ({stds[low_vol_hmm]:.5f}) must be < "
@@ -106,17 +106,18 @@ class TestFitRegimeModel:
         mostly as regime 1.  We accept ≥ 60% correct to allow for boundary
         smoothing by the HMM.
         """
-        n_low, n_high = 200, 100
+        n_high = 100
         model, perm = fit_regime_model(_MACRO_DF)
         from ml.regime import _log_returns
+
         X, valid_idx = _log_returns(_MACRO_DF)
         hmm_states = model.predict(X)
         canonical = perm[hmm_states]
         high_vol_labels = canonical[-n_high:]
         frac_correct = (high_vol_labels == 1).mean()
-        assert frac_correct >= 0.60, (
-            f"Only {frac_correct:.1%} of injected high-vol rows labeled as high-vol"
-        )
+        assert (
+            frac_correct >= 0.60
+        ), f"Only {frac_correct:.1%} of injected high-vol rows labeled as high-vol"
 
     def test_too_few_rows_raises_runtime_error(self):
         tiny = _make_two_regime_macro(n_low=5, n_high=5)
@@ -126,6 +127,7 @@ class TestFitRegimeModel:
     def test_model_predict_returns_integer_states(self):
         model, _ = fit_regime_model(_MACRO_DF)
         from ml.regime import _log_returns
+
         X, _ = _log_returns(_MACRO_DF)
         states = model.predict(X)
         assert states.dtype in (np.int32, np.int64, int)
@@ -135,6 +137,7 @@ class TestFitRegimeModel:
 # ---------------------------------------------------------------------------
 # 2. TestAddRegimeToMacro
 # ---------------------------------------------------------------------------
+
 
 class TestAddRegimeToMacro:
     def test_adds_regime_column(self):
@@ -154,9 +157,9 @@ class TestAddRegimeToMacro:
     def test_non_first_rows_mostly_labeled(self):
         result = add_regime_to_macro(_MACRO_DF)
         labeled = result["regime"].iloc[1:].notna().sum()
-        assert labeled >= len(_MACRO_DF) - 2, (
-            f"Expected almost all rows labeled; got {labeled}/{len(_MACRO_DF)-1}"
-        )
+        assert (
+            labeled >= len(_MACRO_DF) - 2
+        ), f"Expected almost all rows labeled; got {labeled}/{len(_MACRO_DF)-1}"
 
     def test_preserves_existing_columns(self):
         result = add_regime_to_macro(_MACRO_DF)
@@ -184,6 +187,7 @@ class TestAddRegimeToMacro:
 # ---------------------------------------------------------------------------
 # 3. TestRegimeConstants
 # ---------------------------------------------------------------------------
+
 
 class TestRegimeConstants:
     def test_regime_feature_cols_contains_regime(self):

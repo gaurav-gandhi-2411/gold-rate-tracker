@@ -15,15 +15,12 @@ Test groups:
 
 from __future__ import annotations
 
-import json
-from pathlib import Path
-from unittest.mock import MagicMock, patch
+from unittest.mock import patch
 
+import ml.macro as macro_mod
 import numpy as np
 import pandas as pd
 import pytest
-
-import ml.macro as macro_mod
 from ml.features import (
     ALL_FEATURE_COLS,
     FEATURE_COLS,
@@ -33,13 +30,12 @@ from ml.features import (
     get_train_Xy,
 )
 
-
 # ---------------------------------------------------------------------------
 # Helpers
 # ---------------------------------------------------------------------------
 
 _MOCK_START = "2026-03-01"
-_MOCK_END   = "2026-05-09"
+_MOCK_END = "2026-05-09"
 
 
 def _make_yf_response(start: str = _MOCK_START, end: str = _MOCK_END) -> pd.DataFrame:
@@ -54,41 +50,45 @@ def _make_yf_response(start: str = _MOCK_START, end: str = _MOCK_END) -> pd.Data
     columns = pd.MultiIndex.from_product([["Close"], tickers])
 
     data = {
-        ("Close", "INR=X"):    rng.uniform(83.0, 85.0, len(dates)),
-        ("Close", "GC=F"):     rng.uniform(2300., 2400., len(dates)),
-        ("Close", "^TNX"):     rng.uniform(4.0, 5.0, len(dates)),
-        ("Close", "DX-Y.NYB"): rng.uniform(100., 106., len(dates)),
-        ("Close", "^BSESN"):   rng.uniform(73000., 77000., len(dates)),
-        ("Close", "^VIX"):     rng.uniform(12., 25., len(dates)),
+        ("Close", "INR=X"): rng.uniform(83.0, 85.0, len(dates)),
+        ("Close", "GC=F"): rng.uniform(2300.0, 2400.0, len(dates)),
+        ("Close", "^TNX"): rng.uniform(4.0, 5.0, len(dates)),
+        ("Close", "DX-Y.NYB"): rng.uniform(100.0, 106.0, len(dates)),
+        ("Close", "^BSESN"): rng.uniform(73000.0, 77000.0, len(dates)),
+        ("Close", "^VIX"): rng.uniform(12.0, 25.0, len(dates)),
     }
     return pd.DataFrame(data, index=dates, columns=columns)
 
 
 def _make_gold_df(n: int = 60, start: str = "2026-03-01") -> pd.DataFrame:
     """Small synthetic gold price DataFrame for feature integration tests."""
-    import datetime as dt
     rng = np.random.default_rng(99)
     t0 = pd.Timestamp(start, tz="UTC")
     timestamps = [t0 + pd.Timedelta(days=i) for i in range(n)]
     prices = 14000 + rng.integers(-300, 301, size=n).cumsum()
     prices = np.clip(prices, 9000, 20000)
-    return pd.DataFrame({
-        "timestamp": [t.isoformat() for t in timestamps],
-        "22k": prices.tolist(),
-        "24k": (prices * 24 / 22).round().astype(int).tolist(),
-        "18k": (prices * 18 / 22).round().astype(int).tolist(),
-    })
+    return pd.DataFrame(
+        {
+            "timestamp": [t.isoformat() for t in timestamps],
+            "22k": prices.tolist(),
+            "24k": (prices * 24 / 22).round().astype(int).tolist(),
+            "18k": (prices * 18 / 22).round().astype(int).tolist(),
+        }
+    )
 
 
 # ---------------------------------------------------------------------------
 # 1. TestFetchMacroFeatures
 # ---------------------------------------------------------------------------
 
+
 class TestFetchMacroFeatures:
     @patch("ml.macro.yf.download")
     def test_returns_dataframe(self, mock_dl, tmp_path):
         mock_dl.return_value = _make_yf_response()
-        df = macro_mod.fetch_macro_features(_MOCK_START, _MOCK_END, cache_path=tmp_path / "c.parquet")
+        df = macro_mod.fetch_macro_features(
+            _MOCK_START, _MOCK_END, cache_path=tmp_path / "c.parquet"
+        )
         assert isinstance(df, pd.DataFrame)
         assert len(df) > 0
 
@@ -96,10 +96,20 @@ class TestFetchMacroFeatures:
     def test_schema_has_all_required_columns(self, mock_dl, tmp_path):
         """Every MACRO_FEATURE_COLS base column (excluding lags) must be present."""
         mock_dl.return_value = _make_yf_response()
-        df = macro_mod.fetch_macro_features(_MOCK_START, _MOCK_END, cache_path=tmp_path / "c.parquet")
+        df = macro_mod.fetch_macro_features(
+            _MOCK_START, _MOCK_END, cache_path=tmp_path / "c.parquet"
+        )
         expected = [
-            "usd_inr", "gold_usd", "us_10y_yield", "dxy", "sensex", "vix_level",
-            "usd_inr_change_1d", "gold_usd_change_1d", "gold_usd_5d_vol", "sensex_5d_return",
+            "usd_inr",
+            "gold_usd",
+            "us_10y_yield",
+            "dxy",
+            "sensex",
+            "vix_level",
+            "usd_inr_change_1d",
+            "gold_usd_change_1d",
+            "gold_usd_5d_vol",
+            "sensex_5d_return",
         ]
         missing = [c for c in expected if c not in df.columns]
         assert not missing, f"Missing columns: {missing}"
@@ -114,7 +124,9 @@ class TestFetchMacroFeatures:
     @patch("ml.macro.yf.download")
     def test_index_is_utc_datetime(self, mock_dl, tmp_path):
         mock_dl.return_value = _make_yf_response()
-        df = macro_mod.fetch_macro_features(_MOCK_START, _MOCK_END, cache_path=tmp_path / "c.parquet")
+        df = macro_mod.fetch_macro_features(
+            _MOCK_START, _MOCK_END, cache_path=tmp_path / "c.parquet"
+        )
         assert isinstance(df.index, pd.DatetimeIndex)
         assert df.index.tz is not None, "Index must be timezone-aware (UTC)"
 
@@ -140,12 +152,15 @@ class TestFetchMacroFeatures:
     def test_empty_response_raises(self, mock_dl, tmp_path):
         mock_dl.return_value = pd.DataFrame()
         with pytest.raises(RuntimeError, match="empty DataFrame"):
-            macro_mod.fetch_macro_features(_MOCK_START, _MOCK_END, cache_path=tmp_path / "c.parquet")
+            macro_mod.fetch_macro_features(
+                _MOCK_START, _MOCK_END, cache_path=tmp_path / "c.parquet"
+            )
 
 
 # ---------------------------------------------------------------------------
 # 2. TestLoadMacroFeatures
 # ---------------------------------------------------------------------------
+
 
 class TestLoadMacroFeatures:
     @patch("ml.macro.yf.download")
@@ -175,6 +190,7 @@ class TestLoadMacroFeatures:
 # 3. TestForwardFill — weekend gaps must be filled
 # ---------------------------------------------------------------------------
 
+
 class TestForwardFill:
     def _make_sparse_response(self) -> pd.DataFrame:
         """Response with only Monday/Wednesday/Friday rows (simulates gaps)."""
@@ -186,7 +202,7 @@ class TestForwardFill:
         arr = np.where(
             np.isin(dates.dayofweek, [0, 2, 4]),  # Mon, Wed, Fri
             rng.uniform(83, 85, len(dates)),
-            np.nan
+            np.nan,
         )
         data = {col: arr for col in columns}
         return pd.DataFrame(data, index=dates, columns=columns)
@@ -195,7 +211,9 @@ class TestForwardFill:
     def test_no_nan_in_usd_inr_after_ffill(self, mock_dl, tmp_path):
         """After forward-fill, usd_inr should have no NaN (sparse input → filled)."""
         mock_dl.return_value = self._make_sparse_response()
-        df = macro_mod.fetch_macro_features(_MOCK_START, _MOCK_END, cache_path=tmp_path / "c.parquet")
+        df = macro_mod.fetch_macro_features(
+            _MOCK_START, _MOCK_END, cache_path=tmp_path / "c.parquet"
+        )
         nan_count = df["usd_inr"].isna().sum()
         # First row may be NaN if the series started on a non-trading day; accept ≤1
         assert nan_count <= 1, f"Too many NaN after ffill: {nan_count}"
@@ -204,7 +222,9 @@ class TestForwardFill:
     def test_ffill_propagates_to_weekend(self, mock_dl, tmp_path):
         """A Saturday row should carry the Friday close value (no NaN)."""
         mock_dl.return_value = self._make_sparse_response()
-        df = macro_mod.fetch_macro_features(_MOCK_START, _MOCK_END, cache_path=tmp_path / "c.parquet")
+        df = macro_mod.fetch_macro_features(
+            _MOCK_START, _MOCK_END, cache_path=tmp_path / "c.parquet"
+        )
         saturdays = df[df.index.dayofweek == 5]
         if len(saturdays) > 0:
             assert saturdays["usd_inr"].notna().all(), "Saturday rows should be forward-filled"
@@ -214,29 +234,35 @@ class TestForwardFill:
 # 4. TestDerivedFeatures — sanity check on derived columns
 # ---------------------------------------------------------------------------
 
+
 class TestDerivedFeatures:
     @patch("ml.macro.yf.download")
     def test_daily_usd_inr_change_small(self, mock_dl, tmp_path):
         """Daily % change in USD/INR should be < 5% in normal conditions."""
         mock_dl.return_value = _make_yf_response()
-        df = macro_mod.fetch_macro_features(_MOCK_START, _MOCK_END, cache_path=tmp_path / "c.parquet")
+        df = macro_mod.fetch_macro_features(
+            _MOCK_START, _MOCK_END, cache_path=tmp_path / "c.parquet"
+        )
         changes = df["usd_inr_change_1d"].dropna().abs()
         assert (changes < 0.05).all(), f"Unexpectedly large USD/INR daily move: {changes.max():.4f}"
 
     @patch("ml.macro.yf.download")
     def test_gold_5d_vol_non_negative(self, mock_dl, tmp_path):
         mock_dl.return_value = _make_yf_response()
-        df = macro_mod.fetch_macro_features(_MOCK_START, _MOCK_END, cache_path=tmp_path / "c.parquet")
+        df = macro_mod.fetch_macro_features(
+            _MOCK_START, _MOCK_END, cache_path=tmp_path / "c.parquet"
+        )
         vol = df["gold_usd_5d_vol"].dropna()
         assert (vol >= 0).all(), "Volatility must be non-negative"
 
     @patch("ml.macro.yf.download")
     def test_vix_level_same_as_vix(self, mock_dl, tmp_path):
         mock_dl.return_value = _make_yf_response()
-        df = macro_mod.fetch_macro_features(_MOCK_START, _MOCK_END, cache_path=tmp_path / "c.parquet")
+        df = macro_mod.fetch_macro_features(
+            _MOCK_START, _MOCK_END, cache_path=tmp_path / "c.parquet"
+        )
         pd.testing.assert_series_equal(
-            df["vix"], df["vix_level"], check_names=False,
-            obj="vix_level must equal vix"
+            df["vix"], df["vix_level"], check_names=False, obj="vix_level must equal vix"
         )
 
 
@@ -244,12 +270,15 @@ class TestDerivedFeatures:
 # 5. TestMacroIntegration — build_feature_matrix(df, macro_df=macro_df)
 # ---------------------------------------------------------------------------
 
+
 class TestMacroIntegration:
     @patch("ml.macro.yf.download")
     def test_macro_columns_present_in_feature_matrix(self, mock_dl, tmp_path):
         """When macro_df is passed, MACRO_FEATURE_COLS appear in the feature matrix."""
         mock_dl.return_value = _make_yf_response()
-        macro_df = macro_mod.fetch_macro_features(_MOCK_START, _MOCK_END, cache_path=tmp_path / "c.parquet")
+        macro_df = macro_mod.fetch_macro_features(
+            _MOCK_START, _MOCK_END, cache_path=tmp_path / "c.parquet"
+        )
 
         gold_df = _make_gold_df()
         feat = build_feature_matrix(gold_df, macro_df=macro_df)
@@ -273,7 +302,9 @@ class TestMacroIntegration:
         the previous calendar day.
         """
         mock_dl.return_value = _make_yf_response()
-        macro_df = macro_mod.fetch_macro_features(_MOCK_START, _MOCK_END, cache_path=tmp_path / "c.parquet")
+        macro_df = macro_mod.fetch_macro_features(
+            _MOCK_START, _MOCK_END, cache_path=tmp_path / "c.parquet"
+        )
 
         gold_df = _make_gold_df(n=50, start="2026-03-10")
         feat = build_feature_matrix(gold_df, macro_df=macro_df)
@@ -288,17 +319,19 @@ class TestMacroIntegration:
             if macro_at_prev.empty:
                 continue
             expected_lag1 = float(macro_at_prev["usd_inr"].iloc[-1])
-            actual_lag1   = float(row["usd_inr_lag_1"])
-            assert abs(actual_lag1 - expected_lag1) < 1e-6, (
-                f"usd_inr_lag_1 mismatch: got {actual_lag1}, expected {expected_lag1}"
-            )
+            actual_lag1 = float(row["usd_inr_lag_1"])
+            assert (
+                abs(actual_lag1 - expected_lag1) < 1e-6
+            ), f"usd_inr_lag_1 mismatch: got {actual_lag1}, expected {expected_lag1}"
             break  # one verified row is sufficient for this test
 
     @patch("ml.macro.yf.download")
     def test_all_feature_cols_present_in_feature_matrix(self, mock_dl, tmp_path):
         """ALL_FEATURE_COLS must all be present when macro_df is provided."""
         mock_dl.return_value = _make_yf_response()
-        macro_df = macro_mod.fetch_macro_features(_MOCK_START, _MOCK_END, cache_path=tmp_path / "c.parquet")
+        macro_df = macro_mod.fetch_macro_features(
+            _MOCK_START, _MOCK_END, cache_path=tmp_path / "c.parquet"
+        )
 
         gold_df = _make_gold_df(n=70, start="2026-03-05")
         feat = build_feature_matrix(gold_df, macro_df=macro_df)
@@ -311,12 +344,15 @@ class TestMacroIntegration:
 # 6. TestGetTrainXyWithMacro — end-to-end training with macro features
 # ---------------------------------------------------------------------------
 
+
 class TestGetTrainXyWithMacro:
     @patch("ml.macro.yf.download")
     def test_training_rows_returned_with_macro(self, mock_dl, tmp_path):
         """get_train_Xy with ALL_FEATURE_COLS should return non-empty training set."""
         mock_dl.return_value = _make_yf_response()
-        macro_df = macro_mod.fetch_macro_features(_MOCK_START, _MOCK_END, cache_path=tmp_path / "c.parquet")
+        macro_df = macro_mod.fetch_macro_features(
+            _MOCK_START, _MOCK_END, cache_path=tmp_path / "c.parquet"
+        )
 
         gold_df = _make_gold_df(n=70, start="2026-03-10")
         feat = build_feature_matrix(gold_df, macro_df=macro_df)
@@ -330,7 +366,9 @@ class TestGetTrainXyWithMacro:
     def test_predict_row_shape_with_macro(self, mock_dl, tmp_path):
         """get_predict_row with ALL_FEATURE_COLS returns correct shape."""
         mock_dl.return_value = _make_yf_response()
-        macro_df = macro_mod.fetch_macro_features(_MOCK_START, _MOCK_END, cache_path=tmp_path / "c.parquet")
+        macro_df = macro_mod.fetch_macro_features(
+            _MOCK_START, _MOCK_END, cache_path=tmp_path / "c.parquet"
+        )
 
         gold_df = _make_gold_df(n=70, start="2026-03-10")
         feat = build_feature_matrix(gold_df, macro_df=macro_df)

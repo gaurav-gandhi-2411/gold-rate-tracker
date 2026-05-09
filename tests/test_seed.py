@@ -1,8 +1,6 @@
 """Tests for ml/seed_history.py — compute_rates() unit tests."""
 
-import pytest
 from ml.seed_history import INDIA_RETAIL_PREMIUM, TROY_OZ_TO_GRAM, compute_rates
-
 
 # Fixture: GC=F = $3000.00/oz, USD/INR = 84.00
 # base_24k = 3000 * 84 / 31.1035 * 1.15

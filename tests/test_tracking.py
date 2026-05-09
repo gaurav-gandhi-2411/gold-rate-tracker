@@ -3,11 +3,10 @@
 from __future__ import annotations
 
 import os
-from unittest.mock import MagicMock, patch
+from unittest.mock import patch
 
 import pytest
 import requests
-
 from ml.tracking import (
     MLflowRunHandle,
     MLflowTracker,
@@ -21,6 +20,7 @@ MLFLOW_URI = "http://localhost:5001"
 # ---------------------------------------------------------------------------
 # get_tracking_uri
 # ---------------------------------------------------------------------------
+
 
 def test_get_tracking_uri_default():
     env = {k: v for k, v in os.environ.items() if k != "MLFLOW_TRACKING_URI"}
@@ -39,6 +39,7 @@ def test_get_tracking_uri_respects_env_var():
 # is_mlflow_reachable
 # ---------------------------------------------------------------------------
 
+
 def test_is_mlflow_reachable_closed_port():
     # Port 1 is never open; should return False quickly
     assert is_mlflow_reachable("http://127.0.0.1:1", timeout=0.5) is False
@@ -56,8 +57,10 @@ def test_is_mlflow_reachable_unreachable_host():
 # MLflowTracker — disabled (no-op) mode
 # ---------------------------------------------------------------------------
 
+
 def test_tracker_disabled_skips_mlflow_setup():
     import mlflow
+
     with (
         patch.object(mlflow, "set_tracking_uri") as mock_uri,
         patch.object(mlflow, "set_experiment") as mock_exp,
@@ -77,6 +80,7 @@ def test_tracker_disabled_run_yields_noop_handle():
 
 def test_tracker_disabled_run_noop_does_not_start_mlflow_run():
     import mlflow
+
     tracker = MLflowTracker("test-exp", enabled=False)
     with patch.object(mlflow, "start_run") as mock_start:
         with tracker.run("my-run"):
@@ -88,8 +92,10 @@ def test_tracker_disabled_run_noop_does_not_start_mlflow_run():
 # MLflowRunHandle — no-op when active=False
 # ---------------------------------------------------------------------------
 
+
 def test_run_handle_inactive_log_params_no_call():
     import mlflow
+
     handle = MLflowRunHandle(active=False)
     with patch.object(mlflow, "log_params") as mock_fn:
         handle.log_params({"lr": 0.001})
@@ -98,6 +104,7 @@ def test_run_handle_inactive_log_params_no_call():
 
 def test_run_handle_inactive_log_metrics_no_call():
     import mlflow
+
     handle = MLflowRunHandle(active=False)
     with patch.object(mlflow, "log_metrics") as mock_fn:
         handle.log_metrics({"val_loss": 1.23})
@@ -106,6 +113,7 @@ def test_run_handle_inactive_log_metrics_no_call():
 
 def test_run_handle_inactive_set_tags_no_call():
     import mlflow
+
     handle = MLflowRunHandle(active=False)
     with patch.object(mlflow, "set_tags") as mock_fn:
         handle.set_tags({"model": "nbeats"})
@@ -113,8 +121,10 @@ def test_run_handle_inactive_set_tags_no_call():
 
 
 def test_run_handle_inactive_log_artifact_no_call():
-    import mlflow
     from pathlib import Path
+
+    import mlflow
+
     handle = MLflowRunHandle(active=False)
     with patch.object(mlflow, "log_artifact") as mock_fn:
         handle.log_artifact(Path("some/file.json"))
@@ -124,6 +134,7 @@ def test_run_handle_inactive_log_artifact_no_call():
 # ---------------------------------------------------------------------------
 # Integration test — requires MLflow at localhost:5001
 # ---------------------------------------------------------------------------
+
 
 @pytest.mark.integration
 def test_integration_log_and_retrieve_run():

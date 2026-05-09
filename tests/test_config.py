@@ -5,15 +5,13 @@ from __future__ import annotations
 import os
 from unittest.mock import patch
 
-import pytest
-from omegaconf import DictConfig
-
 from ml.config import config_to_dict, flatten_for_mlflow, load_config
-
+from omegaconf import DictConfig
 
 # ---------------------------------------------------------------------------
 # load_config basic
 # ---------------------------------------------------------------------------
+
 
 def test_load_config_returns_dictconfig():
     cfg = load_config()
@@ -45,6 +43,7 @@ def test_load_config_default_model_is_ensemble():
 # load_config overrides
 # ---------------------------------------------------------------------------
 
+
 def test_load_config_override_model_lightgbm():
     cfg = load_config(overrides=["model=lightgbm"])
     assert cfg.model.name == "lightgbm"
@@ -68,6 +67,7 @@ def test_load_config_override_model_nbeats():
 # config_to_dict
 # ---------------------------------------------------------------------------
 
+
 def test_config_to_dict_returns_plain_dict():
     cfg = load_config()
     d = config_to_dict(cfg)
@@ -87,6 +87,7 @@ def test_config_to_dict_resolves_env_var():
 # ---------------------------------------------------------------------------
 # flatten_for_mlflow
 # ---------------------------------------------------------------------------
+
 
 def test_flatten_for_mlflow_dot_separated():
     nested = {"model": {"params": {"lr": 0.001, "batch_size": 32}}}

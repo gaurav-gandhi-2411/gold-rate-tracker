@@ -18,10 +18,9 @@ import hashlib
 import json
 import sys
 import warnings
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 from pathlib import Path
 
-import numpy as np
 import pandas as pd
 
 # LightGBM prediction with a numpy array triggers a cosmetic sklearn warning
@@ -39,8 +38,8 @@ from ml.features import (
     get_train_Xy,
 )
 from ml.macro import load_macro_features
-from ml.regime import REGIME_FEATURE_COLS, add_regime_to_macro, fit_regime_model, write_regime_json
 from ml.nbeats_infer import load_nbeats_session, predict_nbeats_delta
+from ml.regime import REGIME_FEATURE_COLS, add_regime_to_macro, fit_regime_model, write_regime_json
 
 DATA_DIR = Path(__file__).parent.parent / "data"
 MODEL_VERSION = "lgbm-v1"
@@ -159,11 +158,7 @@ def load_all_data() -> pd.DataFrame:
         raise RuntimeError("No data found in history_seed.json or prices.json")
     df = pd.DataFrame(entries)
     df["ts_parsed"] = pd.to_datetime(df["timestamp"], utc=True)
-    df = (
-        df.sort_values("ts_parsed")
-        .drop_duplicates(subset=["ts_parsed"])
-        .reset_index(drop=True)
-    )
+    df = df.sort_values("ts_parsed").drop_duplicates(subset=["ts_parsed"]).reset_index(drop=True)
     return df
 
 
@@ -228,16 +223,19 @@ def train_predict(df: pd.DataFrame, macro_df=None):
             print("  Prediction row missing macro/regime features — falling back to base features")
             feature_cols = FEATURE_COLS
             X_train, y_train = get_train_Xy(feat_df, feature_cols=feature_cols)
-            m_mean = _make_lgb("regression"); m_mean.fit(X_train, y_train)
-            m_p10  = _make_lgb("quantile", alpha=0.10); m_p10.fit(X_train, y_train)
-            m_p90  = _make_lgb("quantile", alpha=0.90); m_p90.fit(X_train, y_train)
+            m_mean = _make_lgb("regression")
+            m_mean.fit(X_train, y_train)
+            m_p10 = _make_lgb("quantile", alpha=0.10)
+            m_p10.fit(X_train, y_train)
+            m_p90 = _make_lgb("quantile", alpha=0.90)
+            m_p90.fit(X_train, y_train)
             x_pred, _ = get_predict_row(feat_df, feature_cols=feature_cols)
         if x_pred is None:
             raise RuntimeError("Cannot build prediction row — not enough history in the data")
 
     delta_mean = float(m_mean.predict(x_pred)[0])
-    delta_p10  = float(m_p10.predict(x_pred)[0])
-    delta_p90  = float(m_p90.predict(x_pred)[0])
+    delta_p10 = float(m_p10.predict(x_pred)[0])
+    delta_p90 = float(m_p90.predict(x_pred)[0])
 
     # Ensure p10 <= mean <= p90 (quantile models can sometimes cross)
     delta_p10 = min(delta_p10, delta_mean)
@@ -250,7 +248,7 @@ def train_predict(df: pd.DataFrame, macro_df=None):
 def _target_time(now: datetime | None = None) -> datetime:
     """Return tomorrow midnight UTC — guaranteed to be strictly in the future."""
     if now is None:
-        now = datetime.now(timezone.utc)
+        now = datetime.now(UTC)
     return (now + timedelta(days=1)).replace(hour=0, minute=0, second=0, microsecond=0)
 
 
@@ -267,8 +265,10 @@ def main():
     try:
         macro_df = load_macro_features()
         if macro_df is not None:
-            print(f"Macro features loaded: {len(macro_df)} rows, "
-                  f"{macro_df.index.min().date()} to {macro_df.index.max().date()}")
+            print(
+                f"Macro features loaded: {len(macro_df)} rows, "
+                f"{macro_df.index.min().date()} to {macro_df.index.max().date()}"
+            )
         else:
             print("Macro cache not found — using base features only")
     except Exception as exc:
@@ -280,18 +280,24 @@ def main():
             regime_model, regime_perm = fit_regime_model(macro_df)
             macro_df = add_regime_to_macro(macro_df)
             n_labeled = int(macro_df["regime"].notna().sum())
-            n_low  = int((macro_df["regime"] == 0).sum())
+            n_low = int((macro_df["regime"] == 0).sum())
             n_high = int((macro_df["regime"] == 1).sum())
-            print(f"Regime model fitted: {n_labeled} dates labeled "
-                  f"(low-vol={n_low}, high-vol={n_high})")
+            print(
+                f"Regime model fitted: {n_labeled} dates labeled "
+                f"(low-vol={n_low}, high-vol={n_high})"
+            )
             regime_info = write_regime_json(
-                regime_model, regime_perm, macro_df,
+                regime_model,
+                regime_perm,
+                macro_df,
                 DATA_DIR / "regime.json",
             )
-            print(f"Regime JSON written: state={regime_info['state']} "
-                  f"({regime_info['label']}), "
-                  f"P={regime_info['probability']:.3f}, "
-                  f"days_in_regime={regime_info['days_in_regime']}")
+            print(
+                f"Regime JSON written: state={regime_info['state']} "
+                f"({regime_info['label']}), "
+                f"P={regime_info['probability']:.3f}, "
+                f"days_in_regime={regime_info['days_in_regime']}"
+            )
         except Exception as exc:
             print(f"Regime detection skipped ({exc})")
 
@@ -316,12 +322,13 @@ def main():
             nbeats_delta = predict_nbeats_delta(nbeats_sess, df)
             if nbeats_delta is not None:
                 nbeats_available = True
-                print(f"N-BEATS delta: Rs.{nbeats_delta:+.1f}  "
-                      f"(LightGBM: Rs.{delta_mean:+.1f})")
+                print(
+                    f"N-BEATS delta: Rs.{nbeats_delta:+.1f}  " f"(LightGBM: Rs.{delta_mean:+.1f})"
+                )
     except Exception as exc:
         print(f"N-BEATS inference skipped ({exc})")
 
-    predicted_at = datetime.now(timezone.utc)
+    predicted_at = datetime.now(UTC)
     target_time = _target_time(predicted_at)
     assert target_time > predicted_at, "target_time must be in the future"
 
@@ -347,8 +354,10 @@ def main():
     (DATA_DIR / "forecast.json").write_text(json.dumps(result, indent=2) + "\n")
     macro_note = f", {len(feature_cols)} features (macro={'yes' if macro_used else 'no'})"
     nbeats_note = f", nbeats=Rs.{nbeats_delta:+.1f}" if nbeats_available else ""
-    print(f"Forecast written: 22K=Rs.{predicted_22k} [Rs.{lower}-Rs.{upper}] "
-          f"(trained on {len(X_train)} rows{macro_note}{nbeats_note})")
+    print(
+        f"Forecast written: 22K=Rs.{predicted_22k} [Rs.{lower}-Rs.{upper}] "
+        f"(trained on {len(X_train)} rows{macro_note}{nbeats_note})"
+    )
 
 
 if __name__ == "__main__":

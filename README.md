@@ -53,7 +53,7 @@ A free, open-source app that scrapes the [Tanishq gold rate page](https://www.ta
 
 The forecaster is a **LightGBM regressor** trained to predict the *delta* of the next 22K reading (i.e., how much the price will move, not the price level). Differenced targets are more stationary, which makes the learning problem easier on small datasets.
 
-**Why LightGBM and not LSTM/Transformer?**  
+**Why LightGBM and not LSTM/Transformer?**
 We have ~500 daily readings at deployment time and will accumulate one new reading every 6 hours. Deep sequence models need thousands of examples to generalise; on this volume, gradient-boosted trees are demonstrably more reliable and are much faster to train (< 1 second per run, so we can retrain from scratch on every scrape without caching a model artefact).
 
 **Features**

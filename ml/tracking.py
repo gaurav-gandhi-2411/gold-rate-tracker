@@ -10,9 +10,10 @@ from __future__ import annotations
 
 import os
 import socket
+from collections.abc import Iterator
 from contextlib import contextmanager
 from pathlib import Path
-from typing import Any, Iterator
+from typing import Any
 
 import mlflow
 import structlog
@@ -78,7 +79,7 @@ class MLflowTracker:
         run_name: str,
         tags: dict[str, Any] | None = None,
         nested: bool = False,
-    ) -> Iterator["MLflowRunHandle"]:
+    ) -> Iterator[MLflowRunHandle]:
         """Context manager. If MLflow is disabled, yields a no-op handle."""
         if not self.enabled:
             yield MLflowRunHandle(active=False)
@@ -132,9 +133,8 @@ class MLflowRunHandle:
 def get_git_sha() -> str:
     """Return short git SHA for tagging runs."""
     import subprocess
+
     try:
-        return subprocess.check_output(
-            ["git", "rev-parse", "--short", "HEAD"], text=True
-        ).strip()
+        return subprocess.check_output(["git", "rev-parse", "--short", "HEAD"], text=True).strip()
     except (subprocess.CalledProcessError, FileNotFoundError):
         return "unknown"

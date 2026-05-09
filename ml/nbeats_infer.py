@@ -36,10 +36,12 @@ def load_nbeats_session(path: Path = ONNX_PATH):
         return None
     try:
         import onnxruntime as ort
+
         opts = ort.SessionOptions()
-        opts.log_severity_level = 3          # suppress INFO/WARNING noise
+        opts.log_severity_level = 3  # suppress INFO/WARNING noise
         return ort.InferenceSession(
-            str(path), sess_options=opts,
+            str(path),
+            sess_options=opts,
             providers=["CPUExecutionProvider"],
         )
     except Exception as exc:
@@ -47,8 +49,7 @@ def load_nbeats_session(path: Path = ONNX_PATH):
         return None
 
 
-def predict_nbeats_delta(session, df: "pd.DataFrame",
-                         lookback: int = LOOKBACK) -> float | None:
+def predict_nbeats_delta(session, df: pd.DataFrame, lookback: int = LOOKBACK) -> float | None:
     """
     Run N-BEATS inference on the last `lookback` price deltas in df.
 

@@ -2,17 +2,16 @@
 
 import json
 import random
-from datetime import datetime, timedelta, timezone
-
-import pytest
+from datetime import UTC, datetime, timedelta
 
 import ml.forecast as fc
+import pytest
 from ml.forecast import _calibrate_seed, _target_time, load_combined_history
-
 
 # ---------------------------------------------------------------------------
 # _target_time tests
 # ---------------------------------------------------------------------------
+
 
 def test_target_time_always_future():
     """target_time() must be strictly future for 100 random 'now' timestamps."""
@@ -21,13 +20,13 @@ def test_target_time_always_future():
         hour = rng.randint(0, 23)
         minute = rng.randint(0, 59)
         second = rng.randint(0, 59)
-        now = datetime(2026, 5, 9, hour, minute, second, tzinfo=timezone.utc)
+        now = datetime(2026, 5, 9, hour, minute, second, tzinfo=UTC)
         target = _target_time(now)
         assert target > now, f"target_time {target} not after now {now}"
 
 
 def test_target_time_is_midnight():
-    now = datetime(2026, 5, 9, 14, 30, 45, tzinfo=timezone.utc)
+    now = datetime(2026, 5, 9, 14, 30, 45, tzinfo=UTC)
     target = _target_time(now)
     assert target.hour == 0
     assert target.minute == 0
@@ -36,23 +35,23 @@ def test_target_time_is_midnight():
 
 
 def test_target_time_is_next_day():
-    now = datetime(2026, 5, 9, 12, 0, 0, tzinfo=timezone.utc)
+    now = datetime(2026, 5, 9, 12, 0, 0, tzinfo=UTC)
     target = _target_time(now)
     assert target.date() == (now + timedelta(days=1)).date()
 
 
 def test_target_time_midnight_edge():
     """Even at 23:59:59 the target is the following day's midnight."""
-    now = datetime(2026, 5, 9, 23, 59, 59, tzinfo=timezone.utc)
+    now = datetime(2026, 5, 9, 23, 59, 59, tzinfo=UTC)
     target = _target_time(now)
     assert target > now
     assert target.date() == datetime(2026, 5, 10).date()
 
 
 def test_target_time_default_uses_utc_now():
-    before = datetime.now(timezone.utc)
+    before = datetime.now(UTC)
     target = _target_time()
-    after = datetime.now(timezone.utc)
+    after = datetime.now(UTC)
     # target should be after 'before' and after 'after' (it's tomorrow midnight)
     assert target > before
     assert target > after
@@ -61,6 +60,7 @@ def test_target_time_default_uses_utc_now():
 # ---------------------------------------------------------------------------
 # load_combined_history tests
 # ---------------------------------------------------------------------------
+
 
 def _entry(ts: str, price: int, source: str = "test") -> dict:
     return {
@@ -131,7 +131,7 @@ def test_non_overlapping_dates_concatenated(tmp_path, monkeypatch):
     assert len(df) == 2
     # Seed is calibrated to match live: 9000 * (9100/9000) ≈ 9100
     assert abs(df.iloc[0]["22k"] - 9100) <= 1  # calibrated seed
-    assert df.iloc[1]["22k"] == 9100             # live unchanged
+    assert df.iloc[1]["22k"] == 9100  # live unchanged
 
 
 def test_no_data_raises(tmp_path, monkeypatch):
@@ -173,6 +173,7 @@ def test_result_sorted_by_date(tmp_path, monkeypatch):
 # ---------------------------------------------------------------------------
 # _calibrate_seed tests
 # ---------------------------------------------------------------------------
+
 
 def test_calibrate_seed_scale_factor():
     """3 seed rows at 15000, 1 real row at 14000 → scale_factor = 14000/15000."""

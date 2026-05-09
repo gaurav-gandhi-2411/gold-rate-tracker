@@ -4,3 +4,54 @@ testpaths = ["tests"]
 markers = [
     "integration: requires external services (MLflow, etc.)",
 ]
+addopts = "-v --strict-markers"
+
+[tool.ruff]
+line-length = 100
+target-version = "py311"
+src = ["ml", "tests"]
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I", "N", "UP", "B", "SIM", "RUF"]
+ignore = [
+    "E501",   # line length: handled by formatter
+    "E402",   # module-level import not at top: intentional sys.path pattern in runnable scripts
+    "N802",   # function name should be lowercase: get_train_Xy is a public API, can't rename
+    "N806",   # variable in function should be lowercase: ML convention (X, X_train, y)
+    "N803",   # argument name should be lowercase: ML convention (X argument)
+    "N812",   # lowercase imported as non-lowercase: standard PyTorch idiom (import F)
+    "UP038",  # isinstance union syntax: avoid changing existing call sites
+    "RUF002", # docstring contains ambiguous char: Greek/math notation (α, σ) is intentional
+    "RUF003", # comment contains ambiguous char: en-dash notation (1–7) is intentional
+    "SIM108", # use ternary operator: existing code style, not a bug
+]
+
+[tool.ruff.lint.per-file-ignores]
+"tests/*" = ["B011"]                      # assert allowed in tests
+"notebooks/*" = ["E402", "F401"]
+"ml/nbeats.py" = ["F401", "F821"]         # F: PyTorch idiom; pd: type-stub only, no runtime import
+"ml/nbeats_infer.py" = ["F821"]           # pd used in type annotation only
+
+[tool.mypy]
+python_version = "3.11"
+strict = false
+ignore_missing_imports = true
+warn_unused_ignores = false               # existing code has # type: ignore comments; don't flag them
+files = ["ml"]
+
+# Pre-existing files with type issues that predate mypy enforcement — skip for now.
+# New ml/ files (tracking.py, logging_setup.py, config.py) are checked by default.
+[[tool.mypy.overrides]]
+module = [
+    "ml.features",
+    "ml.forecast",
+    "ml.macro",
+    "ml.regime",
+    "ml.nbeats",
+    "ml.nbeats_infer",
+    "ml.train_nbeats",
+    "ml.backtest",
+    "ml.seed_history",
+    "ml.commentary",
+]
+ignore_errors = true

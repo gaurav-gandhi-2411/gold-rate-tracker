@@ -18,7 +18,6 @@ data is available.
 from __future__ import annotations
 
 from datetime import date
-from typing import Optional
 
 import numpy as np
 import pandas as pd
@@ -78,11 +77,21 @@ MACRO_FEATURE_COLS: list[str] = [
     "gold_usd_5d_vol",
     "sensex_5d_return",
     # USD/INR 1–7 day lags
-    "usd_inr_lag_1", "usd_inr_lag_2", "usd_inr_lag_3",
-    "usd_inr_lag_4", "usd_inr_lag_5", "usd_inr_lag_6", "usd_inr_lag_7",
+    "usd_inr_lag_1",
+    "usd_inr_lag_2",
+    "usd_inr_lag_3",
+    "usd_inr_lag_4",
+    "usd_inr_lag_5",
+    "usd_inr_lag_6",
+    "usd_inr_lag_7",
     # Gold-USD 1–7 day lags
-    "gold_usd_lag_1", "gold_usd_lag_2", "gold_usd_lag_3",
-    "gold_usd_lag_4", "gold_usd_lag_5", "gold_usd_lag_6", "gold_usd_lag_7",
+    "gold_usd_lag_1",
+    "gold_usd_lag_2",
+    "gold_usd_lag_3",
+    "gold_usd_lag_4",
+    "gold_usd_lag_5",
+    "gold_usd_lag_6",
+    "gold_usd_lag_7",
 ]
 
 # Convenience alias: full feature set when macro data is available.
@@ -139,11 +148,7 @@ def add_macro_features(feat_df: pd.DataFrame, macro_df: pd.DataFrame) -> pd.Data
 
     # Extract date from feature matrix timestamps for the join key
     feat = feat_df.copy()
-    feat["_join_date"] = (
-        pd.to_datetime(feat["ts"], utc=True)
-        .dt.normalize()
-        .dt.tz_localize(None)
-    )
+    feat["_join_date"] = pd.to_datetime(feat["ts"], utc=True).dt.normalize().dt.tz_localize(None)
 
     # Reset macro index to a column, then merge on the date key
     macro_reset = macro.reset_index().rename(columns={"index": "_join_date"})
@@ -154,7 +159,7 @@ def add_macro_features(feat_df: pd.DataFrame, macro_df: pd.DataFrame) -> pd.Data
 
 def build_feature_matrix(
     df: pd.DataFrame,
-    macro_df: Optional[pd.DataFrame] = None,
+    macro_df: pd.DataFrame | None = None,
 ) -> pd.DataFrame:
     """
     Compute features for every row in df.
@@ -204,7 +209,7 @@ def build_feature_matrix(
     df["roll_7d_max"] = r7.max().values
 
     # --- Calendar features ---
-    df["dow"] = df["ts"].dt.dayofweek    # 0=Mon … 6=Sun
+    df["dow"] = df["ts"].dt.dayofweek  # 0=Mon … 6=Sun
     df["hour"] = df["ts"].dt.hour
     df["dom"] = df["ts"].dt.day
     df["month"] = df["ts"].dt.month
@@ -214,9 +219,7 @@ def build_feature_matrix(
     df["akshaya_tritiya"] = dates.apply(
         lambda d: int(_is_festival_window(d, _AKSHAYA_TRITIYA))
     ).astype(int)
-    df["dhanteras"] = dates.apply(
-        lambda d: int(_is_festival_window(d, _DHANTERAS))
-    ).astype(int)
+    df["dhanteras"] = dates.apply(lambda d: int(_is_festival_window(d, _DHANTERAS))).astype(int)
 
     # --- Readings since last drop of ≥₹100 ---
     drop_flag = (df["prev_delta"] <= -100).fillna(False)
@@ -242,7 +245,7 @@ def build_feature_matrix(
 
 def get_train_Xy(
     features_df: pd.DataFrame,
-    feature_cols: Optional[list[str]] = None,
+    feature_cols: list[str] | None = None,
 ):
     """
     Return (X, y) for supervised training: rows where all feature columns AND
@@ -267,7 +270,7 @@ def get_train_Xy(
 
 def get_predict_row(
     features_df: pd.DataFrame,
-    feature_cols: Optional[list[str]] = None,
+    feature_cols: list[str] | None = None,
 ):
     """
     Return the last row's feature vector for inference.

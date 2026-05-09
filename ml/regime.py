@@ -17,7 +17,7 @@ Usage (from ml/forecast.py):
 from __future__ import annotations
 
 import json
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
 
 import numpy as np
@@ -25,7 +25,7 @@ import pandas as pd
 
 N_STATES = 2
 N_ITER = 200
-MIN_ROWS = 30   # minimum log-return observations needed to fit HMM
+MIN_ROWS = 30  # minimum log-return observations needed to fit HMM
 
 REGIME_FEATURE_COLS: list[str] = ["regime"]
 
@@ -33,6 +33,7 @@ REGIME_FEATURE_COLS: list[str] = ["regime"]
 # ---------------------------------------------------------------------------
 # Internal helpers
 # ---------------------------------------------------------------------------
+
 
 def _log_returns(macro_df: pd.DataFrame) -> tuple[np.ndarray, pd.Index]:
     """
@@ -51,6 +52,7 @@ def _log_returns(macro_df: pd.DataFrame) -> tuple[np.ndarray, pd.Index]:
 # Public API
 # ---------------------------------------------------------------------------
 
+
 def fit_regime_model(macro_df: pd.DataFrame) -> tuple:
     """
     Fit a 2-state GaussianHMM on gold_usd log-returns.
@@ -68,15 +70,12 @@ def fit_regime_model(macro_df: pd.DataFrame) -> tuple:
         from hmmlearn.hmm import GaussianHMM
     except ImportError as exc:
         raise ImportError(
-            "hmmlearn is required for regime detection. "
-            "Install it with: pip install hmmlearn"
+            "hmmlearn is required for regime detection. " "Install it with: pip install hmmlearn"
         ) from exc
 
     X, _ = _log_returns(macro_df)
     if len(X) < MIN_ROWS:
-        raise RuntimeError(
-            f"Need at least {MIN_ROWS} log-return rows to fit HMM; got {len(X)}"
-        )
+        raise RuntimeError(f"Need at least {MIN_ROWS} log-return rows to fit HMM; got {len(X)}")
 
     model = GaussianHMM(
         n_components=N_STATES,
@@ -95,8 +94,8 @@ def fit_regime_model(macro_df: pd.DataFrame) -> tuple:
     # Flatten each state's covariance block and take element [0] so this
     # works regardless of shape, for 1-dimensional gold log-return input.
     variances = np.asarray(model.covars_).reshape(N_STATES, -1)[:, 0]
-    stds = np.sqrt(variances)             # shape (N_STATES,)
-    order = np.argsort(stds).tolist()     # plain list of ints — safe indexing
+    stds = np.sqrt(variances)  # shape (N_STATES,)
+    order = np.argsort(stds).tolist()  # plain list of ints — safe indexing
     perm = np.empty(N_STATES, dtype=int)
     for canonical, hmm_state in enumerate(order):
         perm[int(hmm_state)] = canonical
@@ -133,8 +132,7 @@ def add_regime_to_macro(macro_df: pd.DataFrame) -> pd.DataFrame:
     return macro
 
 
-def write_regime_json(model, perm: np.ndarray, macro_df: pd.DataFrame,
-                      out_path: Path) -> dict:
+def write_regime_json(model, perm: np.ndarray, macro_df: pd.DataFrame, out_path: Path) -> dict:
     """
     Compute current-regime diagnostics and write data/regime.json.
 
@@ -162,13 +160,13 @@ def write_regime_json(model, perm: np.ndarray, macro_df: pd.DataFrame,
     """
     X, valid_idx = _log_returns(macro_df)
     hmm_states = model.predict(X)
-    posteriors = model.predict_proba(X)   # shape (n, N_STATES) in HMM state space
-    canonical  = perm[hmm_states]
+    posteriors = model.predict_proba(X)  # shape (n, N_STATES) in HMM state space
+    canonical = perm[hmm_states]
 
-    current_hmm   = int(hmm_states[-1])
+    current_hmm = int(hmm_states[-1])
     current_canon = int(canonical[-1])
     current_label = "low-vol" if current_canon == 0 else "high-vol"
-    current_prob  = float(posteriors[-1, current_hmm])
+    current_prob = float(posteriors[-1, current_hmm])
 
     # Consecutive days in current canonical state
     streak = 1
@@ -179,37 +177,37 @@ def write_regime_json(model, perm: np.ndarray, macro_df: pd.DataFrame,
             break
 
     # Identify which HMM state index maps to each canonical label
-    low_hmm  = int(np.where(perm == 0)[0][0])
+    low_hmm = int(np.where(perm == 0)[0][0])
     high_hmm = int(np.where(perm == 1)[0][0])
 
     # Emission std: robust to covars_ shape change in hmmlearn 0.3.x
     variances = np.asarray(model.covars_).reshape(N_STATES, -1)[:, 0]
-    stds  = np.sqrt(variances)
+    stds = np.sqrt(variances)
     means = model.means_.ravel()
 
     result = {
-        "as_of":      str(valid_idx[-1].date()),
-        "generated_at": datetime.now(timezone.utc).isoformat(),
-        "state":      current_canon,
-        "label":      current_label,
+        "as_of": str(valid_idx[-1].date()),
+        "generated_at": datetime.now(UTC).isoformat(),
+        "state": current_canon,
+        "label": current_label,
         "probability": round(current_prob, 4),
         "days_in_regime": streak,
         "transition_probability": round(float(model.transmat_[current_hmm, 1 - current_hmm]), 4),
         "emission": {
-            "low_vol":  {
-                "mean_pct": round(float(means[low_hmm])  * 100, 4),
-                "std_pct":  round(float(stds[low_hmm])   * 100, 4),
+            "low_vol": {
+                "mean_pct": round(float(means[low_hmm]) * 100, 4),
+                "std_pct": round(float(stds[low_hmm]) * 100, 4),
             },
             "high_vol": {
                 "mean_pct": round(float(means[high_hmm]) * 100, 4),
-                "std_pct":  round(float(stds[high_hmm])  * 100, 4),
+                "std_pct": round(float(stds[high_hmm]) * 100, 4),
             },
         },
         "transition_matrix": {
-            "low_vol_to_low_vol":   round(float(model.transmat_[low_hmm,  low_hmm]),  4),
-            "low_vol_to_high_vol":  round(float(model.transmat_[low_hmm,  high_hmm]), 4),
+            "low_vol_to_low_vol": round(float(model.transmat_[low_hmm, low_hmm]), 4),
+            "low_vol_to_high_vol": round(float(model.transmat_[low_hmm, high_hmm]), 4),
             "high_vol_to_high_vol": round(float(model.transmat_[high_hmm, high_hmm]), 4),
-            "high_vol_to_low_vol":  round(float(model.transmat_[high_hmm, low_hmm]),  4),
+            "high_vol_to_low_vol": round(float(model.transmat_[high_hmm, low_hmm]), 4),
         },
     }
 

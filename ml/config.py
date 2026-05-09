@@ -4,6 +4,7 @@ Usage from a script:
     from ml.config import load_config
     cfg = load_config(overrides=["model=lightgbm"])
 """
+
 from __future__ import annotations
 
 from pathlib import Path

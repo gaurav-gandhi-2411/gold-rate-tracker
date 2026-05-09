@@ -12,12 +12,7 @@ Tests:
 from __future__ import annotations
 
 import json
-import os
-import tempfile
-from pathlib import Path
 from unittest.mock import MagicMock, patch
-
-import pytest
 
 from ml.commentary import (
     MAX_COMMENTARY_ENTRIES,
@@ -63,6 +58,7 @@ MOCK_NOTE = "Gold prices are steady near ₹7,180 per gram. The model expects li
 # build_user_message
 # ---------------------------------------------------------------------------
 
+
 class TestBuildUserMessage:
     def test_returns_non_empty_string(self):
         msg = build_user_message(SAMPLE_PRICES, SAMPLE_PRICES, SAMPLE_FORECAST, SAMPLE_BACKTEST)
@@ -106,6 +102,7 @@ class TestBuildUserMessage:
 # append_commentary
 # ---------------------------------------------------------------------------
 
+
 class TestAppendCommentary:
     def _make_entry(self, text: str = MOCK_NOTE, idx: int = 0) -> dict:
         return {
@@ -117,6 +114,7 @@ class TestAppendCommentary:
 
     def test_creates_file_if_missing(self, tmp_path, monkeypatch):
         import ml.commentary as comm
+
         monkeypatch.setattr(comm, "DATA_DIR", tmp_path)
         entry = self._make_entry()
         append_commentary(entry)
@@ -126,10 +124,9 @@ class TestAppendCommentary:
 
     def test_appends_to_existing(self, tmp_path, monkeypatch):
         import ml.commentary as comm
+
         monkeypatch.setattr(comm, "DATA_DIR", tmp_path)
-        (tmp_path / "commentary.json").write_text(
-            json.dumps([self._make_entry(idx=0)])
-        )
+        (tmp_path / "commentary.json").write_text(json.dumps([self._make_entry(idx=0)]))
         append_commentary(self._make_entry(text="Second note", idx=1))
         out = json.loads((tmp_path / "commentary.json").read_text())
         assert len(out) == 2
@@ -137,6 +134,7 @@ class TestAppendCommentary:
 
     def test_rolling_capped_at_max(self, tmp_path, monkeypatch):
         import ml.commentary as comm
+
         monkeypatch.setattr(comm, "DATA_DIR", tmp_path)
         # Pre-fill with MAX entries
         existing = [self._make_entry(idx=i) for i in range(MAX_COMMENTARY_ENTRIES)]
@@ -148,6 +146,7 @@ class TestAppendCommentary:
 
     def test_schema_has_required_keys(self, tmp_path, monkeypatch):
         import ml.commentary as comm
+
         monkeypatch.setattr(comm, "DATA_DIR", tmp_path)
         entry = {
             "ts": "2026-05-09T12:00:00Z",
@@ -165,14 +164,13 @@ class TestAppendCommentary:
 # call_groq (mocked)
 # ---------------------------------------------------------------------------
 
+
 class TestCallGroq:
     @patch("ml.commentary.requests.post")
     def test_returns_note_text(self, mock_post):
         mock_resp = MagicMock()
         mock_resp.status_code = 200
-        mock_resp.json.return_value = {
-            "choices": [{"message": {"content": MOCK_NOTE}}]
-        }
+        mock_resp.json.return_value = {"choices": [{"message": {"content": MOCK_NOTE}}]}
         mock_resp.raise_for_status = MagicMock()
         mock_post.return_value = mock_resp
 
@@ -211,10 +209,12 @@ class TestCallGroq:
 # End-to-end main() (fully mocked)
 # ---------------------------------------------------------------------------
 
+
 class TestMain:
     @patch("ml.commentary.requests.post")
     def test_main_appends_entry(self, mock_post, tmp_path, monkeypatch):
         import ml.commentary as comm
+
         monkeypatch.setattr(comm, "DATA_DIR", tmp_path)
         monkeypatch.setenv("GROQ_API_KEY", "test-key")
 

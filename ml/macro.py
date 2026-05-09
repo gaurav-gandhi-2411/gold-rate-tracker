@@ -22,13 +22,11 @@ The cache is NOT committed to the repo — it is regenerated on every CI run by 
 
 from __future__ import annotations
 
-import json
 import sys
 import time
 import warnings
-from datetime import date, datetime, timedelta
+from datetime import date, timedelta
 from pathlib import Path
-from typing import Optional
 
 import numpy as np
 import pandas as pd
@@ -47,12 +45,12 @@ CACHE_PATH = DATA_DIR / "macro_cache.parquet"
 
 # Map internal column names → Yahoo Finance ticker symbols
 TICKER_MAP: dict[str, str] = {
-    "usd_inr":     "INR=X",
-    "gold_usd":    "GC=F",
+    "usd_inr": "INR=X",
+    "gold_usd": "GC=F",
     "us_10y_yield": "^TNX",
-    "dxy":         "DX-Y.NYB",
-    "sensex":      "^BSESN",
-    "vix":         "^VIX",
+    "dxy": "DX-Y.NYB",
+    "sensex": "^BSESN",
+    "vix": "^VIX",
 }
 
 # Calendar days of history to fetch on first run (cold start)
@@ -62,6 +60,7 @@ _DEFAULT_LOOKBACK_DAYS = 760  # ~2 years plus buffer
 # ---------------------------------------------------------------------------
 # Internal helpers
 # ---------------------------------------------------------------------------
+
 
 def _download_with_retry(
     tickers: list[str],
@@ -89,7 +88,7 @@ def _download_with_retry(
         except Exception as exc:
             last_exc = exc
             if attempt < max_retries - 1:
-                wait = backoff ** attempt
+                wait = backoff**attempt
                 print(
                     f"yfinance attempt {attempt + 1}/{max_retries} failed ({exc}); "
                     f"retrying in {wait:.0f}s"
@@ -173,6 +172,7 @@ def _derive_features(df: pd.DataFrame) -> pd.DataFrame:
 # Public API
 # ---------------------------------------------------------------------------
 
+
 def fetch_macro_features(
     start_date: str,
     end_date: str,
@@ -207,9 +207,7 @@ def fetch_macro_features(
     raw.index = pd.to_datetime(raw.index, utc=True)
 
     # Expand to a full daily calendar (fills weekend/holiday gaps for reindex)
-    full_idx = pd.date_range(
-        start=raw.index.min(), end=raw.index.max(), freq="D", tz="UTC"
-    )
+    full_idx = pd.date_range(start=raw.index.min(), end=raw.index.max(), freq="D", tz="UTC")
     raw = raw.reindex(full_idx)
 
     # Extract close prices into named columns
@@ -255,7 +253,7 @@ def update_macro_cache(
     return fetch_macro_features(start, end, cache_path=cache_path)
 
 
-def load_macro_features(cache_path: Path = CACHE_PATH) -> Optional[pd.DataFrame]:
+def load_macro_features(cache_path: Path = CACHE_PATH) -> pd.DataFrame | None:
     """
     Load cached macro features from Parquet.
 
@@ -277,6 +275,7 @@ def load_macro_features(cache_path: Path = CACHE_PATH) -> Optional[pd.DataFrame]
 # CLI entry point
 # ---------------------------------------------------------------------------
 
+
 def main() -> None:
     full = "--full" in sys.argv
     if full:
@@ -288,15 +287,18 @@ def main() -> None:
     else:
         df = update_macro_cache()
 
-    print(
-        f"\nCache: {len(df)} rows  |  "
-        f"{df.index.min().date()} to {df.index.max().date()}"
-    )
+    print(f"\nCache: {len(df)} rows  |  " f"{df.index.min().date()} to {df.index.max().date()}")
 
     display_cols = [
-        "usd_inr", "gold_usd", "us_10y_yield", "dxy",
-        "vix_level", "usd_inr_change_1d", "gold_usd_change_1d",
-        "gold_usd_5d_vol", "sensex_5d_return",
+        "usd_inr",
+        "gold_usd",
+        "us_10y_yield",
+        "dxy",
+        "vix_level",
+        "usd_inr_change_1d",
+        "gold_usd_change_1d",
+        "gold_usd_5d_vol",
+        "sensex_5d_return",
     ]
     print("\nLast 7 rows:")
     print(df[[c for c in display_cols if c in df.columns]].tail(7).round(4).to_string())

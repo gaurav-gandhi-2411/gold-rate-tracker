@@ -39,7 +39,7 @@ from __future__ import annotations
 import json
 import sys
 import time
-from datetime import datetime, timezone
+from datetime import datetime
 from io import StringIO
 from pathlib import Path
 
@@ -58,7 +58,7 @@ HEADERS = {
     "Accept-Language": "en-IN,en;q=0.9",
 }
 
-INDIA_RETAIL_PREMIUM = 1.15   # ~10% import duty + 3% GST + ~2% margin
+INDIA_RETAIL_PREMIUM = 1.15  # ~10% import duty + 3% GST + ~2% margin
 TROY_OZ_TO_GRAM = 31.1035
 
 
@@ -82,6 +82,7 @@ def compute_rates(gold_usd_per_oz: float, usd_inr: float) -> dict:
 # ---------------------------------------------------------------------------
 # Source 1: goodreturns.in
 # ---------------------------------------------------------------------------
+
 
 def _try_goodreturns() -> list[dict] | None:
     url = "https://www.goodreturns.in/gold-rates/"
@@ -131,6 +132,7 @@ def _try_goodreturns() -> list[dict] | None:
 # Source 2: goldpriceindia.in
 # ---------------------------------------------------------------------------
 
+
 def _try_goldpriceindia() -> list[dict] | None:
     url = "https://goldpriceindia.in/gold-rate-history.html"
     print(f"Trying {url} ...")
@@ -179,11 +181,11 @@ def _try_goldpriceindia() -> list[dict] | None:
 # Source 3: Yahoo Finance (ESTIMATED)
 # ---------------------------------------------------------------------------
 
+
 def _yf_daily(symbol: str, period: str = "2y") -> pd.DataFrame | None:
     """Download daily OHLCV from Yahoo Finance chart API."""
     url = (
-        f"https://query1.finance.yahoo.com/v8/finance/chart/{symbol}"
-        f"?interval=1d&range={period}"
+        f"https://query1.finance.yahoo.com/v8/finance/chart/{symbol}" f"?interval=1d&range={period}"
     )
     try:
         resp = requests.get(url, headers=HEADERS, timeout=20)
@@ -255,10 +257,11 @@ def _try_yahoo_finance() -> list[dict] | None:
 # Shared helper
 # ---------------------------------------------------------------------------
 
+
 def _rows_to_entries(dates: pd.Series, prices22k: pd.Series, source: str) -> list[dict]:
     """Convert aligned date/price series to JSON-schema entries."""
     entries = []
-    for d, p22 in zip(dates, prices22k):
+    for d, p22 in zip(dates, prices22k, strict=False):
         if pd.isna(d) or pd.isna(p22):
             continue
         p22 = int(round(float(p22)))
@@ -292,6 +295,7 @@ def _rows_to_entries(dates: pd.Series, prices22k: pd.Series, source: str) -> lis
 # Main
 # ---------------------------------------------------------------------------
 
+
 def main():
     DATA_DIR.mkdir(exist_ok=True)
 
@@ -314,8 +318,7 @@ def main():
     # Span check
     dates = [e["timestamp"] for e in entries]
     span_days = (
-        datetime.fromisoformat(dates[-1].rstrip("Z"))
-        - datetime.fromisoformat(dates[0].rstrip("Z"))
+        datetime.fromisoformat(dates[-1].rstrip("Z")) - datetime.fromisoformat(dates[0].rstrip("Z"))
     ).days
 
     print(f"\nTotal entries : {len(entries)}")

@@ -1,5 +1,7 @@
 """Configure structlog once, used by all ml/ modules."""
+
 import logging
+
 import structlog
 
 
@@ -28,5 +30,6 @@ def configure_logging(level: str = "INFO", json_output: bool = False) -> None:
 def configure_for_environment() -> None:
     """Detect env and configure logging appropriately. JSON in CI, console locally."""
     import os
+
     in_ci = os.environ.get("CI", "").lower() == "true"
     configure_logging(json_output=in_ci)

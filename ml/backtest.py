@@ -71,9 +71,7 @@ def run_backtest(df: pd.DataFrame) -> dict:
 
     # Indices to predict on: all rows in the backtest window except the last
     # (because we need row i+1 as the actual outcome)
-    test_indices = df.index[
-        (df["ts_parsed"] >= cutoff_ts) & (df.index < len(df) - 1)
-    ].tolist()
+    test_indices = df.index[(df["ts_parsed"] >= cutoff_ts) & (df.index < len(df) - 1)].tolist()
 
     if len(test_indices) < 5:
         raise RuntimeError(
@@ -157,8 +155,12 @@ def main():
 
     m = result["model"]
     b = result["baseline"]
-    print(f"\nModel   -- MAE: Rs.{m['mae']:.1f}  MAPE: {m['mape']:.2f}%  Dir-acc: {m['direction_acc']*100:.1f}%")
-    print(f"Baseline-- MAE: Rs.{b['mae']:.1f}  MAPE: {b['mape']:.2f}%  Dir-acc: {b['direction_acc']*100:.1f}%")
+    print(
+        f"\nModel   -- MAE: Rs.{m['mae']:.1f}  MAPE: {m['mape']:.2f}%  Dir-acc: {m['direction_acc']*100:.1f}%"
+    )
+    print(
+        f"Baseline-- MAE: Rs.{b['mae']:.1f}  MAPE: {b['mape']:.2f}%  Dir-acc: {b['direction_acc']*100:.1f}%"
+    )
 
     DATA_DIR.mkdir(exist_ok=True)
     (DATA_DIR / "backtest.json").write_text(json.dumps(result, indent=2) + "\n")

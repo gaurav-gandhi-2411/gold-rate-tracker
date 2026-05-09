@@ -80,7 +80,7 @@ def build_user_message(
 
     # Latest price from real data if available, else from combined history
     real_sorted = sorted(real_prices, key=lambda x: x.get("timestamp", ""))
-    all_sorted  = sorted(all_prices,  key=lambda x: x.get("timestamp", ""))
+    all_sorted = sorted(all_prices, key=lambda x: x.get("timestamp", ""))
 
     sufficient = len(real_prices) >= 4
     latest = real_sorted[-1] if real_sorted else (all_sorted[-1] if all_sorted else {})
@@ -88,7 +88,7 @@ def build_user_message(
     p22 = latest.get("22k", "N/A")
     p24 = latest.get("24k", "N/A")
     p18 = latest.get("18k", "N/A")
-    ts  = latest.get("timestamp", "unknown")
+    ts = latest.get("timestamp", "unknown")
 
     def _delta(days: int) -> str:
         if not sufficient or not real_sorted:
@@ -113,7 +113,8 @@ def build_user_message(
     try:
         cutoff_90 = (pd.Timestamp(ts, tz="UTC") - pd.Timedelta(days=90)).isoformat()
         prices_90d = [
-            r["22k"] for r in all_sorted
+            r["22k"]
+            for r in all_sorted
             if r.get("timestamp", "") >= cutoff_90 and isinstance(r.get("22k"), (int, float))
         ]
     except Exception:
@@ -140,14 +141,15 @@ def build_user_message(
 
     # Forecast stats
     fc_price = forecast.get("predicted_22k", "N/A") if forecast else "N/A"
-    fc_lower  = forecast.get("lower",  "N/A") if forecast else "N/A"
-    fc_upper  = forecast.get("upper",  "N/A") if forecast else "N/A"
-    fc_time   = forecast.get("target_time", "N/A") if forecast else "N/A"
+    fc_lower = forecast.get("lower", "N/A") if forecast else "N/A"
+    fc_upper = forecast.get("upper", "N/A") if forecast else "N/A"
+    fc_time = forecast.get("target_time", "N/A") if forecast else "N/A"
 
     # Festival flags
     near_akshaya = near_dhanteras = "no"
     try:
         from ml.features import _AKSHAYA_TRITIYA, _DHANTERAS, _is_festival_window
+
         d = pd.Timestamp(ts, tz="UTC").date()
         if _is_festival_window(d, _AKSHAYA_TRITIYA):
             near_akshaya = "yes"
@@ -235,6 +237,7 @@ def main():
     # all_prices: calibrated seed + live — used for 90d percentile context
     try:
         from ml.forecast import load_combined_history
+
         all_df = load_combined_history()
         all_prices = all_df[["timestamp", "22k", "24k", "18k"]].to_dict("records")
     except Exception:
