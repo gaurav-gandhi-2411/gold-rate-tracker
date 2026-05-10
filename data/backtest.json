@@ -1,365 +1,371 @@
 {
-  "generated_at": "2026-05-09T09:54:16.154653+00:00",
+  "generated_at": "2026-05-10T05:39:09.988087+00:00",
   "backtest_days": 90,
-  "folds": 58,
+  "folds": 59,
   "model": {
-    "mae": 283.43,
-    "mape": 1.8653,
-    "direction_acc": 0.4828
+    "mae": 247.36,
+    "mape": 1.7502,
+    "direction_acc": 0.5424
   },
   "baseline": {
-    "mae": 204.29,
-    "mape": 1.3545,
-    "direction_acc": 0.0
+    "mae": 186.41,
+    "mape": 1.3276,
+    "direction_acc": 0.0169
   },
   "predictions": [
     {
-      "ts": "2026-02-09T00:00:00.000Z",
-      "actual": 15403.0,
-      "predicted": 15754.41,
-      "baseline": 15507.0
-    },
-    {
       "ts": "2026-02-10T00:00:00.000Z",
-      "actual": 15571.0,
-      "predicted": 15602.78,
-      "baseline": 15403.0
+      "actual": 14499.0,
+      "predicted": 14550.41,
+      "baseline": 14342.0
     },
     {
       "ts": "2026-02-11T00:00:00.000Z",
-      "actual": 15142.0,
-      "predicted": 15311.47,
-      "baseline": 15571.0
+      "actual": 14099.0,
+      "predicted": 13952.92,
+      "baseline": 14499.0
     },
     {
       "ts": "2026-02-12T00:00:00.000Z",
-      "actual": 15415.0,
-      "predicted": 15324.48,
-      "baseline": 15142.0
+      "actual": 14353.0,
+      "predicted": 14255.96,
+      "baseline": 14099.0
     },
     {
       "ts": "2026-02-13T00:00:00.000Z",
-      "actual": 15024.0,
-      "predicted": 15121.11,
-      "baseline": 15415.0
+      "actual": 13989.0,
+      "predicted": 14118.09,
+      "baseline": 14353.0
     },
     {
       "ts": "2026-02-17T00:00:00.000Z",
-      "actual": 15316.0,
-      "predicted": 15193.82,
-      "baseline": 15024.0
+      "actual": 14261.0,
+      "predicted": 14158.66,
+      "baseline": 13989.0
     },
     {
       "ts": "2026-02-18T00:00:00.000Z",
-      "actual": 15312.0,
-      "predicted": 14910.94,
-      "baseline": 15316.0
+      "actual": 14257.0,
+      "predicted": 13929.83,
+      "baseline": 14261.0
     },
     {
       "ts": "2026-02-19T00:00:00.000Z",
-      "actual": 15611.0,
-      "predicted": 15228.62,
-      "baseline": 15312.0
+      "actual": 14536.0,
+      "predicted": 14210.81,
+      "baseline": 14257.0
     },
     {
       "ts": "2026-02-20T00:00:00.000Z",
-      "actual": 16004.0,
-      "predicted": 15135.97,
-      "baseline": 15611.0
+      "actual": 14902.0,
+      "predicted": 14070.13,
+      "baseline": 14536.0
     },
     {
       "ts": "2026-02-23T00:00:00.000Z",
-      "actual": 15905.0,
-      "predicted": 15898.34,
-      "baseline": 16004.0
+      "actual": 14810.0,
+      "predicted": 14914.85,
+      "baseline": 14902.0
     },
     {
       "ts": "2026-02-24T00:00:00.000Z",
-      "actual": 16043.0,
-      "predicted": 15716.68,
-      "baseline": 15905.0
+      "actual": 14938.0,
+      "predicted": 14640.38,
+      "baseline": 14810.0
     },
     {
       "ts": "2026-02-25T00:00:00.000Z",
-      "actual": 15957.0,
-      "predicted": 15386.04,
-      "baseline": 16043.0
+      "actual": 14858.0,
+      "predicted": 14111.11,
+      "baseline": 14938.0
     },
     {
       "ts": "2026-02-26T00:00:00.000Z",
-      "actual": 16133.0,
-      "predicted": 15607.23,
-      "baseline": 15957.0
+      "actual": 15022.0,
+      "predicted": 14506.33,
+      "baseline": 14858.0
     },
     {
       "ts": "2026-02-27T00:00:00.000Z",
-      "actual": 16343.0,
-      "predicted": 15625.22,
-      "baseline": 16133.0
+      "actual": 15217.0,
+      "predicted": 14526.46,
+      "baseline": 15022.0
     },
     {
       "ts": "2026-03-02T00:00:00.000Z",
-      "actual": 15850.0,
-      "predicted": 16318.34,
-      "baseline": 16343.0
+      "actual": 14758.0,
+      "predicted": 14976.85,
+      "baseline": 15217.0
     },
     {
       "ts": "2026-03-03T00:00:00.000Z",
-      "actual": 15967.0,
-      "predicted": 15968.46,
-      "baseline": 15850.0
+      "actual": 14867.0,
+      "predicted": 14845.81,
+      "baseline": 14758.0
     },
     {
       "ts": "2026-03-04T00:00:00.000Z",
-      "actual": 15815.0,
-      "predicted": 15716.99,
-      "baseline": 15967.0
+      "actual": 14726.0,
+      "predicted": 14591.87,
+      "baseline": 14867.0
     },
     {
       "ts": "2026-03-05T00:00:00.000Z",
-      "actual": 16009.0,
-      "predicted": 15960.34,
-      "baseline": 15815.0
+      "actual": 14906.0,
+      "predicted": 14934.65,
+      "baseline": 14726.0
     },
     {
       "ts": "2026-03-06T00:00:00.000Z",
-      "actual": 15865.0,
-      "predicted": 15928.77,
-      "baseline": 16009.0
+      "actual": 14772.0,
+      "predicted": 14757.43,
+      "baseline": 14906.0
     },
     {
       "ts": "2026-03-09T00:00:00.000Z",
-      "actual": 16169.0,
-      "predicted": 15726.28,
-      "baseline": 15865.0
+      "actual": 15055.0,
+      "predicted": 14710.85,
+      "baseline": 14772.0
     },
     {
       "ts": "2026-03-10T00:00:00.000Z",
-      "actual": 16141.0,
-      "predicted": 16189.64,
-      "baseline": 16169.0
+      "actual": 15029.0,
+      "predicted": 15057.22,
+      "baseline": 15055.0
     },
     {
       "ts": "2026-03-11T00:00:00.000Z",
-      "actual": 15991.0,
-      "predicted": 16279.43,
-      "baseline": 16141.0
+      "actual": 14890.0,
+      "predicted": 14918.44,
+      "baseline": 15029.0
     },
     {
       "ts": "2026-03-12T00:00:00.000Z",
-      "actual": 15821.0,
-      "predicted": 15864.4,
-      "baseline": 15991.0
+      "actual": 14731.0,
+      "predicted": 14828.27,
+      "baseline": 14890.0
     },
     {
       "ts": "2026-03-13T00:00:00.000Z",
-      "actual": 15667.0,
-      "predicted": 16458.12,
-      "baseline": 15821.0
+      "actual": 14588.0,
+      "predicted": 15251.32,
+      "baseline": 14731.0
     },
     {
       "ts": "2026-03-16T00:00:00.000Z",
-      "actual": 15641.0,
-      "predicted": 16136.58,
-      "baseline": 15667.0
+      "actual": 14564.0,
+      "predicted": 15040.66,
+      "baseline": 14588.0
     },
     {
       "ts": "2026-03-17T00:00:00.000Z",
-      "actual": 15312.0,
-      "predicted": 15773.39,
-      "baseline": 15641.0
+      "actual": 14257.0,
+      "predicted": 14684.99,
+      "baseline": 14564.0
     },
     {
       "ts": "2026-03-18T00:00:00.000Z",
-      "actual": 14540.0,
-      "predicted": 15562.48,
-      "baseline": 15312.0
+      "actual": 13539.0,
+      "predicted": 14503.0,
+      "baseline": 14257.0
     },
     {
       "ts": "2026-03-19T00:00:00.000Z",
-      "actual": 14419.0,
-      "predicted": 14591.95,
-      "baseline": 14540.0
+      "actual": 13426.0,
+      "predicted": 13626.75,
+      "baseline": 13539.0
     },
     {
       "ts": "2026-03-20T00:00:00.000Z",
-      "actual": 14015.0,
-      "predicted": 14475.81,
-      "baseline": 14419.0
+      "actual": 13050.0,
+      "predicted": 13506.6,
+      "baseline": 13426.0
     },
     {
       "ts": "2026-03-23T00:00:00.000Z",
-      "actual": 13903.0,
-      "predicted": 14090.88,
-      "baseline": 14015.0
+      "actual": 12945.0,
+      "predicted": 13148.27,
+      "baseline": 13050.0
     },
     {
       "ts": "2026-03-24T00:00:00.000Z",
-      "actual": 14541.0,
-      "predicted": 13730.64,
-      "baseline": 13903.0
+      "actual": 13539.0,
+      "predicted": 12754.42,
+      "baseline": 12945.0
     },
     {
       "ts": "2026-03-25T00:00:00.000Z",
-      "actual": 14043.0,
-      "predicted": 14459.03,
-      "baseline": 14541.0
+      "actual": 13076.0,
+      "predicted": 13450.81,
+      "baseline": 13539.0
     },
     {
       "ts": "2026-03-26T00:00:00.000Z",
-      "actual": 14358.0,
-      "predicted": 14298.39,
-      "baseline": 14043.0
+      "actual": 13369.0,
+      "predicted": 13333.88,
+      "baseline": 13076.0
     },
     {
       "ts": "2026-03-27T00:00:00.000Z",
-      "actual": 14474.0,
-      "predicted": 14229.04,
-      "baseline": 14358.0
+      "actual": 13477.0,
+      "predicted": 13322.28,
+      "baseline": 13369.0
     },
     {
       "ts": "2026-03-30T00:00:00.000Z",
-      "actual": 14725.0,
-      "predicted": 14454.27,
-      "baseline": 14474.0
+      "actual": 13711.0,
+      "predicted": 13516.13,
+      "baseline": 13477.0
     },
     {
       "ts": "2026-03-31T00:00:00.000Z",
-      "actual": 15019.0,
-      "predicted": 14689.41,
-      "baseline": 14725.0
+      "actual": 13985.0,
+      "predicted": 13754.28,
+      "baseline": 13711.0
     },
     {
       "ts": "2026-04-01T00:00:00.000Z",
-      "actual": 14657.0,
-      "predicted": 15070.21,
-      "baseline": 15019.0
+      "actual": 13647.0,
+      "predicted": 14061.58,
+      "baseline": 13985.0
     },
     {
       "ts": "2026-04-02T00:00:00.000Z",
-      "actual": 14649.0,
-      "predicted": 15030.63,
-      "baseline": 14657.0
+      "actual": 13640.0,
+      "predicted": 13979.9,
+      "baseline": 13647.0
     },
     {
       "ts": "2026-04-06T00:00:00.000Z",
-      "actual": 14657.0,
-      "predicted": 14890.71,
-      "baseline": 14649.0
+      "actual": 13647.0,
+      "predicted": 13874.28,
+      "baseline": 13640.0
     },
     {
       "ts": "2026-04-07T00:00:00.000Z",
-      "actual": 14854.0,
-      "predicted": 14800.53,
-      "baseline": 14657.0
+      "actual": 13831.0,
+      "predicted": 13727.45,
+      "baseline": 13647.0
     },
     {
       "ts": "2026-04-08T00:00:00.000Z",
-      "actual": 15019.0,
-      "predicted": 14931.77,
-      "baseline": 14854.0
+      "actual": 13985.0,
+      "predicted": 13888.87,
+      "baseline": 13831.0
     },
     {
       "ts": "2026-04-09T00:00:00.000Z",
-      "actual": 15261.0,
-      "predicted": 15027.41,
-      "baseline": 15019.0
+      "actual": 14210.0,
+      "predicted": 14018.94,
+      "baseline": 13985.0
     },
     {
       "ts": "2026-04-13T00:00:00.000Z",
-      "actual": 15235.0,
-      "predicted": 15270.8,
-      "baseline": 15261.0
+      "actual": 14186.0,
+      "predicted": 14195.48,
+      "baseline": 14210.0
     },
     {
       "ts": "2026-04-14T00:00:00.000Z",
-      "actual": 15192.0,
-      "predicted": 15568.83,
-      "baseline": 15235.0
+      "actual": 14146.0,
+      "predicted": 14391.77,
+      "baseline": 14186.0
     },
     {
       "ts": "2026-04-15T00:00:00.000Z",
-      "actual": 15091.0,
-      "predicted": 15451.81,
-      "baseline": 15192.0
+      "actual": 14052.0,
+      "predicted": 14366.57,
+      "baseline": 14146.0
     },
     {
       "ts": "2026-04-16T00:00:00.000Z",
-      "actual": 15170.0,
-      "predicted": 15387.67,
-      "baseline": 15091.0
+      "actual": 14125.0,
+      "predicted": 14255.45,
+      "baseline": 14052.0
     },
     {
       "ts": "2026-04-20T00:00:00.000Z",
-      "actual": 14908.0,
-      "predicted": 15225.3,
-      "baseline": 15170.0
+      "actual": 13881.0,
+      "predicted": 14116.49,
+      "baseline": 14125.0
     },
     {
       "ts": "2026-04-21T00:00:00.000Z",
-      "actual": 15045.0,
-      "predicted": 15000.54,
-      "baseline": 14908.0
+      "actual": 14009.0,
+      "predicted": 13969.43,
+      "baseline": 13881.0
     },
     {
       "ts": "2026-04-22T00:00:00.000Z",
-      "actual": 15008.0,
-      "predicted": 14832.5,
-      "baseline": 15045.0
+      "actual": 13974.0,
+      "predicted": 13867.46,
+      "baseline": 14009.0
     },
     {
       "ts": "2026-04-23T00:00:00.000Z",
-      "actual": 14936.0,
-      "predicted": 15189.61,
-      "baseline": 15008.0
+      "actual": 13907.0,
+      "predicted": 14176.98,
+      "baseline": 13974.0
     },
     {
       "ts": "2026-04-27T00:00:00.000Z",
-      "actual": 14728.0,
-      "predicted": 14990.64,
-      "baseline": 14936.0
+      "actual": 13714.0,
+      "predicted": 13964.16,
+      "baseline": 13907.0
     },
     {
       "ts": "2026-04-28T00:00:00.000Z",
-      "actual": 14622.0,
-      "predicted": 14881.83,
-      "baseline": 14728.0
+      "actual": 13615.0,
+      "predicted": 13838.03,
+      "baseline": 13714.0
     },
     {
       "ts": "2026-04-29T00:00:00.000Z",
-      "actual": 14821.0,
-      "predicted": 14625.77,
-      "baseline": 14622.0
+      "actual": 13800.0,
+      "predicted": 13615.99,
+      "baseline": 13615.0
     },
     {
       "ts": "2026-04-30T00:00:00.000Z",
-      "actual": 14591.0,
-      "predicted": 14844.62,
-      "baseline": 14821.0
+      "actual": 13586.0,
+      "predicted": 13854.54,
+      "baseline": 13800.0
     },
     {
       "ts": "2026-05-04T00:00:00.000Z",
-      "actual": 14697.0,
-      "predicted": 14724.0,
-      "baseline": 14591.0
+      "actual": 13685.0,
+      "predicted": 13712.23,
+      "baseline": 13586.0
     },
     {
       "ts": "2026-05-05T00:00:00.000Z",
-      "actual": 15012.0,
-      "predicted": 14748.88,
-      "baseline": 14697.0
+      "actual": 13978.0,
+      "predicted": 13730.96,
+      "baseline": 13685.0
     },
     {
       "ts": "2026-05-06T00:00:00.000Z",
-      "actual": 15013.0,
-      "predicted": 15089.93,
-      "baseline": 15012.0
+      "actual": 13979.0,
+      "predicted": 14050.98,
+      "baseline": 13978.0
     },
     {
       "ts": "2026-05-07T00:00:00.000Z",
-      "actual": 15114.0,
-      "predicted": 15086.83,
-      "baseline": 15013.0
+      "actual": 14073.0,
+      "predicted": 14062.08,
+      "baseline": 13979.0
+    },
+    {
+      "ts": "2026-05-08T00:00:00.000Z",
+      "actual": 14010.0,
+      "predicted": 14087.75,
+      "baseline": 14073.0
+    },
+    {
+      "ts": "2026-05-09T19:12:59.179Z",
+      "actual": 14010.0,
+      "predicted": 14070.59,
+      "baseline": 14010.0
     }
   ]
 }
