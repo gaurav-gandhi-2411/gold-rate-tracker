@@ -54,9 +54,7 @@
       "Bash(make help *)",
       "Bash(curl -s \"http://localhost:5001/api/2.0/mlflow/runs/get?run_id=1f7e805fdf0d4dd29a82b7f1cdd70729\")",
       "Bash(git pull *)",
-      "Bash(git stash *)",
-      "Bash(git checkout *)",
-      "Bash(GIT_EDITOR=true git rebase *)"
+      "Bash(git stash *)"
     ]
   }
 }
