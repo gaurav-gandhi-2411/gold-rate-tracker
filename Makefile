@@ -1,3 +1,6 @@
+# Force UTF-8 stdout on Windows so MLflow's emoji output (🏃) doesn't crash CP1252 terminals.
+export PYTHONUTF8 := 1
+
 .PHONY: help mlflow-up mlflow-down mlflow-logs train-lgbm train-tft train-nbeats \
         train-all inference-test test test-integration lint format clean \
         setup-train setup-inference
