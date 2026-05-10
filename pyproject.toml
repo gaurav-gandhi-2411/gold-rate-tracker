@@ -54,6 +54,8 @@ module = [
     "ml.seed_history",
     "ml.commentary",
     "ml.models.tft",
+    "ml.models.nbeats",
     "ml.training.train_tft",
+    "ml.training.train_nbeats",
 ]
 ignore_errors = true
