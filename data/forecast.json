@@ -1,5 +1,5 @@
 {
-  "predicted_at": "2026-05-10T08:17:00.209605+00:00",
+  "predicted_at": "2026-05-10T13:42:56.166934+00:00",
   "target_time": "2026-05-11T00:00:00+00:00",
   "predicted_22k": 14105,
   "lower": 13966,
@@ -8,6 +8,6 @@
   "training_rows": 429,
   "feature_count": 19,
   "macro_features_used": false,
-  "real_readings_count": 5,
+  "real_readings_count": 6,
   "warmup": true
 }
