@@ -16,5 +16,11 @@
     "text": "Only 4 real readings collected so far, trend metrics are limited. The model expects a price around Rs.14105 in the next reading. Recent price is at the 48.3th percentile in the last 90 days.",
     "model": "llama-3.3-70b-versatile",
     "prompt_hash": "53d76546cf91"
+  },
+  {
+    "ts": "2026-05-10T08:17:01Z",
+    "text": "The gold price is at Rs.14010. Recent data is limited, with only 5 real readings collected so far. The model expects a price around Rs.14105 for the next reading.",
+    "model": "llama-3.3-70b-versatile",
+    "prompt_hash": "751b1e621143"
   }
 ]

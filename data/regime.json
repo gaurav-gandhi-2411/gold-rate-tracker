@@ -1,25 +1,25 @@
 {
   "as_of": "2026-05-08",
-  "generated_at": "2026-05-10T03:54:21.817296+00:00",
+  "generated_at": "2026-05-10T08:16:59.935192+00:00",
   "state": 0,
   "label": "low-vol",
-  "probability": 0.9705,
+  "probability": 0.9678,
   "days_in_regime": 4,
-  "transition_probability": 0.0782,
+  "transition_probability": 0.0781,
   "emission": {
     "low_vol": {
-      "mean_pct": 0.1509,
-      "std_pct": 0.8749
+      "mean_pct": 0.1512,
+      "std_pct": 0.8753
     },
     "high_vol": {
-      "mean_pct": -0.4105,
-      "std_pct": 3.1004
+      "mean_pct": -0.4114,
+      "std_pct": 3.1014
     }
   },
   "transition_matrix": {
-    "low_vol_to_low_vol": 0.9218,
-    "low_vol_to_high_vol": 0.0782,
-    "high_vol_to_high_vol": 0.3183,
-    "high_vol_to_low_vol": 0.6817
+    "low_vol_to_low_vol": 0.9219,
+    "low_vol_to_high_vol": 0.0781,
+    "high_vol_to_high_vol": 0.3182,
+    "high_vol_to_low_vol": 0.6818
   }
 }
