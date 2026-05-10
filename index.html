@@ -28,6 +28,11 @@
     <!-- Subtle grain overlay for depth -->
     <div class="grain" aria-hidden="true"></div>
 
+    <!-- Sticky freshness pill — always visible at top on mobile -->
+    <div class="freshness-pill" aria-live="polite">
+      <span class="updated" id="updated-pill">—</span>
+    </div>
+
     <main>
       <header class="topbar">
         <div class="logo">
@@ -88,6 +93,10 @@
             <div class="forecast-target" id="forecast-target"></div>
             <div class="forecast-generated" id="forecast-generated"></div>
           </div>
+          <details class="forecast-why" id="forecast-why" hidden>
+            <summary>Why this estimate?</summary>
+            <div class="forecast-why-body" id="forecast-why-body"></div>
+          </details>
         </div>
       </section>
 

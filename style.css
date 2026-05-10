@@ -388,13 +388,139 @@ main {
 .site-footer p { margin: 0 0 6px; }
 .site-footer .muted { color: var(--cream-mute); font-size: 12px; }
 
-/* ---------- Responsive ---------- */
+/* ---------- Safe-area insets (notch / home-indicator) ---------- */
+body {
+  padding-top: env(safe-area-inset-top);
+  padding-left: env(safe-area-inset-left);
+  padding-right: env(safe-area-inset-right);
+  padding-bottom: env(safe-area-inset-bottom);
+}
+
+/* ---------- Sticky freshness pill ---------- */
+.freshness-pill {
+  position: sticky;
+  top: env(safe-area-inset-top, 0px);
+  z-index: 10;
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  padding: 6px clamp(20px, 5vw, 56px);
+  background: rgba(14, 12, 10, 0.88);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  border-bottom: 1px solid var(--line);
+  margin: 0 calc(-1 * clamp(20px, 5vw, 56px));
+  pointer-events: none;
+}
+.freshness-pill .updated {
+  font-size: 11px;
+  color: var(--cream-mute);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+/* ---------- Forecast "Why?" accordion ---------- */
+.forecast-why {
+  width: 100%;
+  margin-top: 14px;
+  border-top: 1px solid var(--line);
+  padding-top: 10px;
+}
+.forecast-why summary {
+  list-style: none;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--cream-mute);
+  min-height: 44px;
+  user-select: none;
+}
+.forecast-why summary::-webkit-details-marker { display: none; }
+.forecast-why summary::after {
+  content: "›";
+  font-size: 18px;
+  line-height: 1;
+  transform: rotate(90deg);
+  transition: transform 0.2s;
+  display: inline-block;
+}
+.forecast-why[open] summary::after { transform: rotate(270deg); }
+.forecast-why-body {
+  padding-top: 10px;
+  font-size: 13px;
+  color: var(--cream-dim);
+  line-height: 1.6;
+}
+
+/* ---------- Responsive: ≤540px ---------- */
 @media (max-width: 540px) {
-  .topbar .updated { font-size: 10px; }
   .chart-wrap { height: 260px; padding: 14px; }
-  .history th, .history td { padding: 12px 14px; font-size: 13px; }
   .rate-card .rate { font-size: 32px; }
   .forecast-card { flex-direction: column; align-items: flex-start; }
   .forecast-meta { text-align: left; }
   .forecast-price { font-size: 36px; }
+  .commentary-text { font-size: 15px; }
+}
+
+/* ---------- Responsive: mobile-first (≤600px) ---------- */
+@media (max-width: 600px) {
+  /* Hero price: save vertical space */
+  .price { font-size: clamp(56px, 16vw, 180px); }
+
+  /* Rate cards: 2-column, 18K full-width bottom row */
+  .rate-cards { grid-template-columns: 1fr 1fr; }
+  .rate-cards .rate-card:first-child  { order: 1; }
+  .rate-cards .rate-card:nth-child(2) { order: 2; }
+  .rate-cards .rate-card:nth-child(3) { order: 3; grid-column: 1 / -1; }
+
+  /* History table → card list */
+  .history thead { display: none; }
+  .history tbody tr {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 2px 12px;
+    padding: 16px;
+    border-bottom: 1px solid var(--line);
+  }
+  .history tbody tr:last-child { border-bottom: 0; }
+  .history td {
+    display: block;
+    padding: 0;
+    border: 0;
+    font-size: 14px;
+  }
+  .history td:first-child {
+    grid-column: 1 / -1;
+    font-weight: 500;
+    font-size: 13px;
+    color: var(--cream-mute);
+    margin-bottom: 6px;
+  }
+  .history td.num { text-align: right; }
+  .history td.empty { grid-column: 1 / -1; text-align: center; padding: 30px 0; }
+
+  /* Chart range buttons: Apple HIG 44px tap target */
+  .range-toggle button { padding: 10px 16px; min-height: 44px; min-width: 44px; }
+
+  /* Commentary min size */
+  .commentary-text { font-size: 15px; }
+
+  /* Logo mark tap target */
+  .logo-mark { width: 44px; height: 44px; }
+  .topbar .updated { font-size: 10px; }
+}
+
+/* ---------- Reduced motion ---------- */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
 }

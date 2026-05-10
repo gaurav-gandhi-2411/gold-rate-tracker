@@ -76,7 +76,10 @@ function renderHero(readings) {
   r22.innerHTML = rupee(latest["22k"]);
   r24.innerHTML = rupee(latest["24k"]);
   r18.innerHTML = rupee(latest["18k"]);
-  updated.textContent = `Updated ${fmtRelative(latest.timestamp)}`;
+  const freshText = `Updated ${fmtRelative(latest.timestamp)}`;
+  updated.textContent = freshText;
+  const pill = document.getElementById("updated-pill");
+  if (pill) pill.textContent = freshText;
 
   if (prev && typeof prev["22k"] === "number") {
     const delta = latest["22k"] - prev["22k"];
@@ -241,6 +244,8 @@ function renderForecast(fc) {
   const intervalEl  = document.getElementById("forecast-interval");
   const targetEl    = document.getElementById("forecast-target");
   const generatedEl = document.getElementById("forecast-generated");
+  const whyEl       = document.getElementById("forecast-why");
+  const whyBodyEl   = document.getElementById("forecast-why-body");
 
   if (!fc || typeof fc.predicted_22k !== "number") {
     section.hidden = true;
@@ -272,6 +277,13 @@ function renderForecast(fc) {
   generatedEl.textContent = fc.predicted_at
     ? `Generated ${fmtISTTime(fc.predicted_at)} IST`
     : "";
+
+  if (whyEl && whyBodyEl && fc.explanation) {
+    whyBodyEl.textContent = fc.explanation;
+    whyEl.hidden = false;
+  } else if (whyEl) {
+    whyEl.hidden = true;
+  }
 
   section.hidden = false;
 }
