@@ -5,6 +5,7 @@ Usage:
     python -m ml.training.train_tft model.params.hidden_size=64
     python -m ml.training.train_tft training.max_epochs=10 model.trainer.precision=32
 """
+
 from __future__ import annotations
 
 import argparse
@@ -27,6 +28,7 @@ from ml.macro import load_macro_features
 from ml.models.tft import TFTForecaster
 from ml.regime import add_regime_to_macro
 from ml.tracking import MLflowTracker, get_git_sha
+from ml.training.callbacks import GPUStepCallback
 from ml.training.utils import gpu_snapshot, verify_pytorch_onnx_parity
 
 
@@ -88,8 +90,10 @@ def run_training(cfg: object) -> dict:
 
         # --- Fit ---
         log.info("tft.fit.start", n_history=len(history))
+        logs_dir = ROOT / "logs"
+        gpu_cb = GPUStepCallback("tft", logs_dir, run_ts=version)
         forecaster = TFTForecaster(cfg)
-        train_meta = forecaster.fit(history, macro)
+        train_meta = forecaster.fit(history, macro, extra_callbacks=[gpu_cb])
         forecaster._version = version
 
         log.info(
@@ -101,6 +105,7 @@ def run_training(cfg: object) -> dict:
             wall_clock_s=train_meta["wall_clock_s"],
         )
 
+        gpu_summary = gpu_cb.summary()
         run.log_metrics(
             {
                 "val_mae_rupees": float(train_meta["val_mae"]),
@@ -112,8 +117,10 @@ def run_training(cfg: object) -> dict:
                 "n_val": float(train_meta["n_val"]),
                 "model_beats_naive": float(train_meta["beats_naive"]),
                 "feature_count": float(train_meta["feature_count"]),
+                **{k: float(v) for k, v in gpu_summary.items()},
             }
         )
+        log.info("tft.gpu.summary", **gpu_summary)
 
         # --- Save native checkpoint ---
         local_dir = ROOT / "models" / "local" / "tft" / f"v{version}"
@@ -146,11 +153,13 @@ def run_training(cfg: object) -> dict:
         run.log_metrics({"onnx_max_abs_diff": parity["max_abs_diff"]})
 
         # --- Save GPU utilization log ---
-        logs_dir = ROOT / "logs"
         logs_dir.mkdir(exist_ok=True)
         gpu_log_path = logs_dir / "gpu-utilization-tft.txt"
         gpu_log_path.write_text(json.dumps(gpu_info, indent=2))
         run.log_artifact(gpu_log_path)
+        if gpu_cb.csv_path.exists():
+            run.log_artifact(gpu_cb.csv_path, artifact_path="gpu")
+            log.info("tft.gpu.csv.logged", path=str(gpu_cb.csv_path), steps=len(gpu_cb._rows))
 
         # --- Metadata JSON ---
         meta = {
@@ -180,7 +189,7 @@ def main() -> None:
         help="Hydra overrides, e.g. model.params.hidden_size=64 training.max_epochs=10",
     )
     args = parser.parse_args()
-    cfg = load_config(overrides=["model=tft"] + args.overrides)
+    cfg = load_config(overrides=["model=tft", *args.overrides])
     run_training(cfg)
 
 

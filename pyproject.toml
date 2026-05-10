@@ -53,5 +53,7 @@ module = [
     "ml.backtest",
     "ml.seed_history",
     "ml.commentary",
+    "ml.models.tft",
+    "ml.training.train_tft",
 ]
 ignore_errors = true

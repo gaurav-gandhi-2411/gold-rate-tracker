@@ -1,4 +1,5 @@
 """TFTForecaster: darts TFTModel with QuantileRegression likelihood."""
+
 from __future__ import annotations
 
 import json
@@ -147,9 +148,9 @@ class TFTForecaster(BaseForecaster):
             random_state=int(p.random_state),
         )
 
-    def _get_trainer_kwargs(self, extra_callbacks: list) -> dict:
+    def _get_trainer_kwargs(self, extra_callbacks: list | None = None) -> dict:
         t = self._p("model", "trainer")
-        base = dict(enable_progress_bar=True, callbacks=extra_callbacks)
+        base = dict(enable_progress_bar=True, callbacks=extra_callbacks or [])
         if t is None:
             base["accelerator"] = "cpu"
             return base
@@ -218,9 +219,7 @@ class TFTForecaster(BaseForecaster):
 
         # Future covariates: calendar + regime, extended 1 step past last target date
         fut_idx = full_idx.append(
-            pd.date_range(
-                full_idx[-1] + pd.Timedelta("1D"), periods=1, freq="D", tz="UTC"
-            )
+            pd.date_range(full_idx[-1] + pd.Timedelta("1D"), periods=1, freq="D", tz="UTC")
         )
         regime_series: pd.Series | None = None
         if macro is not None and "regime" in macro.columns:
@@ -246,9 +245,7 @@ class TFTForecaster(BaseForecaster):
             past_arr = np.zeros((len(full_idx), len(PAST_COV_COLS)), dtype=np.float32)
             for j, col in enumerate(PAST_COV_COLS):
                 if col in m.columns:
-                    past_arr[:, j] = (
-                        m[col].reindex(target_naive, method="ffill").fillna(0.0).values
-                    )
+                    past_arr[:, j] = m[col].reindex(target_naive, method="ffill").fillna(0.0).values
             past_cov_ts = TimeSeries.from_dataframe(
                 pd.DataFrame(past_arr, index=full_idx, columns=PAST_COV_COLS)
             )
@@ -260,7 +257,11 @@ class TFTForecaster(BaseForecaster):
     # ------------------------------------------------------------------
 
     def fit(
-        self, history: pd.DataFrame, macro: pd.DataFrame | None = None, **kwargs: Any
+        self,
+        history: pd.DataFrame,
+        macro: pd.DataFrame | None = None,
+        extra_callbacks: list | None = None,
+        **kwargs: Any,
     ) -> dict[str, Any]:
         if not _DEPS_AVAILABLE:
             raise ImportError("darts and pytorch-lightning are required for TFTForecaster.")
@@ -295,10 +296,11 @@ class TFTForecaster(BaseForecaster):
             mode="min",
         )
 
+        all_callbacks = [self._metrics, early_stop] + (extra_callbacks or [])
         self._darts_model = TFTModel(
             **self._get_model_params(),
             likelihood=QuantileRegression(quantiles=[0.1, 0.5, 0.9]),
-            pl_trainer_kwargs=self._get_trainer_kwargs([self._metrics, early_stop]),
+            pl_trainer_kwargs=self._get_trainer_kwargs(all_callbacks),
         )
 
         self._darts_model.fit(
@@ -323,9 +325,7 @@ class TFTForecaster(BaseForecaster):
 
         # Val MAE approximation: normalized val loss scaled back to Rs.
         best_val_loss = self._metrics.best_val_loss
-        val_mae_rs = (
-            float(best_val_loss * normalizer.std) if best_val_loss < 1e9 else float("nan")
-        )
+        val_mae_rs = float(best_val_loss * normalizer.std) if best_val_loss < 1e9 else float("nan")
 
         # Naive MAE: predict prev day's price
         prices_arr = prices_daily.values
@@ -344,9 +344,7 @@ class TFTForecaster(BaseForecaster):
             "feature_count": (self._n_past_total or 0) + (self._n_future_total or 0),
         }
 
-    def predict(
-        self, history: pd.DataFrame, macro: pd.DataFrame | None = None
-    ) -> ForecastResult:
+    def predict(self, history: pd.DataFrame, macro: pd.DataFrame | None = None) -> ForecastResult:
         if self._darts_model is None or self._normalizer is None:
             raise RuntimeError("Call fit() before predict().")
 
@@ -373,9 +371,7 @@ class TFTForecaster(BaseForecaster):
         from datetime import UTC, datetime, timedelta
 
         now = datetime.now(UTC)
-        target_time = (now + timedelta(days=1)).replace(
-            hour=0, minute=0, second=0, microsecond=0
-        )
+        target_time = (now + timedelta(days=1)).replace(hour=0, minute=0, second=0, microsecond=0)
 
         return ForecastResult(
             point=round(q50 - current_price, 2),
@@ -465,7 +461,7 @@ class TFTForecaster(BaseForecaster):
         (dir / "shape_meta.json").write_text(json.dumps(meta, indent=2))
 
     @classmethod
-    def load_native(cls, dir: Path) -> "TFTForecaster":
+    def load_native(cls, dir: Path) -> TFTForecaster:
         import functools
 
         import torch
