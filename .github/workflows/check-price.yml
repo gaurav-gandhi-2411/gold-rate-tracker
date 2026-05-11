@@ -6,12 +6,24 @@ on:
     # 05:30, 11:30, 17:30, 23:30 IST. Adjust if you want different IST times.
     - cron: "0 */6 * * *"
   workflow_dispatch: # allows manual run from the Actions tab
+  push:
+    branches: [master]
+    paths:
+      - "ml/inference.py"
+      - "ml/models/**"
+      - "ml/features.py"
+      - "ml/macro.py"
+      - "ml/regime.py"
+      - "models/production/**"
+      - "data/history_seed.json"
+      - "scraper/**"
+      - ".github/workflows/check-price.yml"
 
 permissions:
   contents: write # needed so the action can commit prices.json back to the repo
 
 concurrency:
-  group: gold-price-update
+  group: check-price
   cancel-in-progress: false
 
 jobs:
