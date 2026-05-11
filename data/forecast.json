@@ -1,5 +1,5 @@
 {
-  "predicted_at": "2026-05-11T09:53:41.226555+00:00",
+  "predicted_at": "2026-05-11T15:26:40.759478+00:00",
   "target_time": "2026-05-12T00:00:00+00:00",
   "predicted_22k": 14076,
   "lower": 14040,
@@ -10,7 +10,7 @@
   "macro_features_used": true,
   "nbeats_available": true,
   "nbeats_delta": 102.3,
-  "real_readings_count": 10,
+  "real_readings_count": 11,
   "warmup": true,
   "ensemble": {
     "method": "uniform",
@@ -23,7 +23,7 @@
   "models": {
     "lgbm": {
       "delta": 29.8,
-      "lower": -88.2,
+      "lower": -99.5,
       "upper": 238.7
     },
     "tft": {
