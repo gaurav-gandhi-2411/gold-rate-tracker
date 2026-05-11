@@ -16,7 +16,7 @@ params:
 trainer:
   accelerator: gpu
   devices: 1
-  precision: "16-mixed"
+  precision: "bf16-mixed"  # fp16 overflows TFT attention mask (-1e9); bf16 has fp32 range
   enable_progress_bar: true
 early_stopping:
   monitor: val_loss
