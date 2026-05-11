@@ -8,8 +8,8 @@ Direction: **Editorial refined** — dark + gold, FT-Weekend / Patek Philippe vi
 
 | # | Decision | Resolution | Phase |
 |---|----------|------------|-------|
-| D1 | Forecast card border | **Solid gold (`--gold-soft`), same as primary rate card.** 22K rate card demoted to `--line-strong` border (retains gold background gradient). Only one gold-bordered card visible at a time. | U3 |
-| D2 | Section order | **Commentary after forecast** (rate cards → forecast → commentary → drift). Forecast is the primary actionable item; commentary contextualizes it. | U3 |
+| D1 | Forecast card border | **Keep dashed (`border: 1px dashed var(--gold-soft)`).** The dashed line is a deliberate uncertainty signal — a forecast is not a fact. Every other card in the UI uses a solid border; the single dashed exception makes the card's provisional nature legible without any copy. Changing to solid would make it visually identical to a rate card, conflating a prediction with a measurement. | U3 |
+| D2 | Section order | **Commentary before forecast** (rate cards → commentary → forecast → chart → drift). Commentary sets the scene; forecast is the conclusion the reader arrives at. Drift moves below the chart — it's diagnostic, not primary. | U3 |
 | D3 | Hero clamp | **`clamp(56px, 16vw, 160px)`** — cap hits at 1000px viewport. 16vw at 768px = 123px (more measured on iPad than 153px from 20vw). | U2 |
 
 ---
@@ -34,7 +34,7 @@ Direction: **Editorial refined** — dark + gold, FT-Weekend / Patek Philippe vi
 
 /* Accent */
 --gold:       #c8a456   /* primary accent, headings, links */
---gold-soft:  #b69248   /* card border on forecast card (U3); was primary rate card */
+--gold-soft:  #b69248   /* forecast card dashed border — deliberate uncertainty signal */
 --gold-glow:  rgba(200,164,86,0.18)  /* shadow / ambient glow */
 
 /* Semantic */

@@ -59,14 +59,14 @@ async function load() {
 function renderHero(readings) {
   const heroPrice = document.getElementById("hero-price");
   const heroChange = document.getElementById("hero-change");
-  const updated = document.getElementById("updated");
   const r22 = document.getElementById("rate-22");
   const r24 = document.getElementById("rate-24");
   const r18 = document.getElementById("rate-18");
 
   if (readings.length === 0) {
     heroPrice.innerHTML = "—";
-    updated.textContent = "Awaiting first reading";
+    const pill = document.getElementById("updated-pill");
+    if (pill) pill.textContent = "Awaiting first reading";
     return;
   }
 
@@ -78,7 +78,6 @@ function renderHero(readings) {
   r24.innerHTML = rupee(latest["24k"]);
   r18.innerHTML = rupee(latest["18k"]);
   const freshText = `Updated ${fmtRelative(latest.timestamp)}`;
-  updated.textContent = freshText;
   const pill = document.getElementById("updated-pill");
   if (pill) pill.textContent = freshText;
 
@@ -123,6 +122,17 @@ function renderHistory(readings) {
       </tr>`;
     })
     .join("");
+
+  const showAllBtn = document.getElementById("history-show-all");
+  const wrap = document.querySelector(".history-wrap");
+  if (showAllBtn && rows.length > 0) {
+    showAllBtn.textContent = `Show all (${rows.length})`;
+    showAllBtn.onclick = () => {
+      const expanded = wrap.style.maxHeight === "none";
+      wrap.style.maxHeight = expanded ? "" : "none";
+      showAllBtn.textContent = expanded ? `Show all (${rows.length})` : "Show less";
+    };
+  }
 }
 
 function renderChart(readings, range) {
@@ -194,7 +204,7 @@ function renderChart(readings, range) {
           ticks: {
             color: cream,
             maxTicksLimit: 6,
-            font: { family: "DM Sans" },
+            font: { family: "DM Sans", size: 11 },
           },
           grid: { color: "transparent" },
           border: { color: line },
@@ -202,7 +212,7 @@ function renderChart(readings, range) {
         y: {
           ticks: {
             color: cream,
-            font: { family: "DM Sans" },
+            font: { family: "DM Sans", size: 11 },
             callback: (v) => "₹" + fmtINR(v),
           },
           grid: { color: line },
@@ -420,7 +430,8 @@ function bindRangeToggle() {
   } catch (err) {
     console.error(err);
     document.getElementById("hero-price").textContent = "Error";
-    document.getElementById("updated").textContent = "Could not load data";
+    const errPill = document.getElementById("updated-pill");
+    if (errPill) errPill.textContent = "Could not load data";
     document.getElementById("history-body").innerHTML =
       `<tr><td colspan="5" class="empty">Failed to load prices.json. If you just deployed, run the workflow once from the Actions tab.</td></tr>`;
     return;

@@ -39,7 +39,6 @@
           <span class="logo-mark">Au</span>
           <span class="logo-text">Gold Rate</span>
         </div>
-        <div class="updated" id="updated">—</div>
       </header>
 
       <section class="hero">
@@ -100,26 +99,6 @@
         </div>
       </section>
 
-      <!-- Live performance card: rolling MAE vs training baseline -->
-      <section class="live-perf-section" id="live-perf-section" hidden>
-        <h2>Live performance</h2>
-        <div class="live-perf-cards">
-          <div class="live-perf-stat">
-            <div class="live-perf-label">Rolling 7-day MAE</div>
-            <div class="live-perf-value" id="perf-rolling-mae">—</div>
-          </div>
-          <div class="live-perf-stat">
-            <div class="live-perf-label">Training baseline MAE</div>
-            <div class="live-perf-value" id="perf-baseline-mae">—</div>
-          </div>
-          <div class="live-perf-stat">
-            <div class="live-perf-label">Drift ratio</div>
-            <div class="live-perf-value" id="perf-drift-ratio">—</div>
-            <div class="live-perf-sub" id="perf-drift-sub"></div>
-          </div>
-        </div>
-      </section>
-
       <section class="chart-section">
         <div class="chart-header">
           <h2>Trend</h2>
@@ -131,6 +110,27 @@
         </div>
         <div class="chart-wrap">
           <canvas id="chart"></canvas>
+        </div>
+      </section>
+
+      <!-- Model drift card: rolling MAE vs training baseline -->
+      <section class="live-perf-section" id="live-perf-section" hidden>
+        <h2>Model drift</h2>
+        <p class="live-perf-subtitle">This week's forecast accuracy vs training baseline</p>
+        <div class="live-perf-cards">
+          <div class="live-perf-stat">
+            <div class="live-perf-label">7-day error (MAE)</div>
+            <div class="live-perf-value" id="perf-rolling-mae">—</div>
+          </div>
+          <div class="live-perf-stat">
+            <div class="live-perf-label">Baseline error (MAE)</div>
+            <div class="live-perf-value" id="perf-baseline-mae">—</div>
+          </div>
+          <div class="live-perf-stat">
+            <div class="live-perf-label">Drift ratio</div>
+            <div class="live-perf-value" id="perf-drift-ratio">—</div>
+            <div class="live-perf-sub" id="perf-drift-sub"></div>
+          </div>
         </div>
       </section>
 
@@ -152,6 +152,7 @@
             </tbody>
           </table>
         </div>
+        <button class="history-show-all" id="history-show-all"></button>
       </section>
 
       <!-- Model performance (backtest stats) -->
