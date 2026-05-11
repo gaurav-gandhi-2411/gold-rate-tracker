@@ -4,27 +4,37 @@ Direction: **Editorial refined** — dark + gold, FT-Weekend / Patek Philippe vi
 
 ---
 
+## Resolved decisions
+
+| # | Decision | Resolution | Phase |
+|---|----------|------------|-------|
+| D1 | Forecast card border | **Solid gold (`--gold-soft`), same as primary rate card.** 22K rate card demoted to `--line-strong` border (retains gold background gradient). Only one gold-bordered card visible at a time. | U3 |
+| D2 | Section order | **Commentary after forecast** (rate cards → forecast → commentary → drift). Forecast is the primary actionable item; commentary contextualizes it. | U3 |
+| D3 | Hero clamp | **`clamp(56px, 16vw, 160px)`** — cap hits at 1000px viewport. 16vw at 768px = 123px (more measured on iPad than 153px from 20vw). | U2 |
+
+---
+
 ## 1. Color tokens
 
-### Current tokens (keep all, adjust one)
+### Applied tokens
 
 ```css
 /* Backgrounds — dark warm near-black */
 --ink:        #0e0c0a   /* page background */
---ink-2:      #14110d   /* defined but unused in CSS — consider removing */
+--ink-2:      #14110d   /* defined but unused — candidate for removal */
 --surface:    #1c1a16   /* default card background */
 --surface-2:  #24211c   /* elevated card (commentary) */
 --line:       #2e2a23   /* divider / card border */
---line-strong: #3d3830  /* defined, not currently used — reserve for active states */
+--line-strong: #3d3830  /* stronger divider — reserved for U2 rate card border */
 
 /* Text — warm cream scale */
 --cream:      #f5ede0   /* primary text */
 --cream-dim:  #c8bfae   /* secondary text, table body */
---cream-mute: #8a8273   /* labels, metadata, captions */
+--cream-mute: #9a9282   /* labels, metadata, captions — lifted from #8a8273 for WCAG AA */
 
 /* Accent */
 --gold:       #c8a456   /* primary accent, headings, links */
---gold-soft:  #b69248   /* card border on primary card */
+--gold-soft:  #b69248   /* card border on forecast card (U3); was primary rate card */
 --gold-glow:  rgba(200,164,86,0.18)  /* shadow / ambient glow */
 
 /* Semantic */
@@ -32,29 +42,41 @@ Direction: **Editorial refined** — dark + gold, FT-Weekend / Patek Philippe vi
 --down:       #6a9a72   /* sage — price decrease */
 ```
 
-### WCAG contrast ratios
+### WCAG contrast ratios — `--cream-mute` calibration
 
-All ratios computed against the background the token appears on most. Relative luminance method (WCAG 2.1).
+`--cream-mute` was `#8a8273` (L≈0.253). Lifted to `#9a9282` (L≈0.290) in U1.  
+Ratios are relative luminance method (WCAG 2.1); marked *(approx)* — verify with a browser contrast tool.
 
-| Token | Hex | Background | Background hex | Ratio | AA (4.5:1 normal / 3:1 large) | AAA (7:1) |
-|-------|-----|------------|----------------|-------|-------------------------------|-----------|
-| `--cream` | #f5ede0 | `--ink` | #0e0c0a | **16.1:1** | ✓✓✓ | ✓ |
-| `--cream-dim` | #c8bfae | `--surface` | #1c1a16 | **9.5:1** | ✓✓✓ | ✓ |
-| `--cream-mute` | #8a8273 | `--surface` | #1c1a16 | **4.77:1** | ✓ (marginal) | ✗ |
-| `--cream-mute` | #8a8273 | `--surface-2` | #24211c | **4.33:1** | **✗ FAIL** at 11px | ✗ |
-| `--cream-mute` | #8a8273 | `--ink` | #0e0c0a | **5.32:1** | ✓ | ✗ |
-| `--gold` | #c8a456 | `--ink` | #0e0c0a | **8.19:1** | ✓✓✓ | ✓ |
-| `--gold` | #c8a456 | `--surface` | #1c1a16 | **7.34:1** | ✓✓✓ | ✓ |
-| `--gold` | #c8a456 | `--surface-2` | #24211c | **6.66:1** | ✓✓✓ | ✗ |
-| `--ink` | #0e0c0a | `--gold` | #c8a456 | **8.19:1** | ✓✓✓ (button text) | ✓ |
-| `--up` | #c66a4b | `--ink` | #0e0c0a | **5.22:1** | ✓ | ✗ |
-| `--down` | #6a9a72 | `--ink` | #0e0c0a | **6.15:1** | ✓✓✓ | ✗ |
+**Old value `#8a8273`:**
 
-**One fix required:** `--cream-mute` on `--surface-2` fails AA at 11–12px. Commentary card uses `--surface-2` for its background and `--cream-mute` for the "TODAY'S NOTE" label (11px) and meta timestamp (11px).
+| Background | Bg hex | Ratio | AA at 11px (needs 4.5:1) |
+|------------|--------|-------|--------------------------|
+| `--surface` | #1c1a16 | 4.77:1 | ✓ marginal |
+| `--surface-2` | #24211c | 4.33:1 | **✗ FAIL** |
+| `--ink` | #0e0c0a | 5.32:1 | ✓ |
 
-**Fix:** Lighten `--cream-mute` slightly — from `#8a8273` to `#968e7e`. Revised contrast on surface-2 ≈ 5.1:1 (passes). Contrast on surface ≈ 5.5:1 (still passes). Verify with a contrast checker before applying.
+**New value `#9a9282`** *(applied in U1)*:
 
-Alternatively, use `--cream-dim` for labels in cards that use `--surface-2` background. That token has 9.5:1 on surface and would pass comfortably everywhere.
+| Background | Bg hex | Ratio | AA at 11px (needs 4.5:1) |
+|------------|--------|-------|--------------------------|
+| `--surface` | #1c1a16 | **5.35:1** *(approx)* | ✓ |
+| `--surface-2` | #24211c | **4.86:1** *(approx)* | ✓ |
+| `--ink` | #0e0c0a | **5.98:1** *(approx)* | ✓ |
+
+Target was ~5.5:1 on `--surface`; achieved ~5.35:1. This is 0.15 below target but well above the 4.5:1 AA floor. Aesthetic check: #9a9282 is a warm medium gray, consistent with the warm-dark palette. Verdict: keep. If a future contrast audit using a calibrated tool measures lower than 4.5:1, the fallback is #9d9585 which hits ~5.57:1 on surface.
+
+**All other tokens** (unchanged from audit):
+
+| Token | Hex | Background | Ratio | AA | AAA |
+|-------|-----|------------|-------|----|-----|
+| `--cream` | #f5ede0 | `--ink` | **16.1:1** | ✓✓✓ | ✓ |
+| `--cream-dim` | #c8bfae | `--surface` | **9.5:1** | ✓✓✓ | ✓ |
+| `--gold` | #c8a456 | `--ink` | **8.19:1** | ✓✓✓ | ✓ |
+| `--gold` | #c8a456 | `--surface` | **7.34:1** | ✓✓✓ | ✓ |
+| `--gold` | #c8a456 | `--surface-2` | **6.66:1** | ✓✓✓ | ✗ |
+| `--ink` | #0e0c0a | `--gold` | **8.19:1** | ✓✓✓ | ✓ |
+| `--up` | #c66a4b | `--ink` | **5.22:1** | ✓ | ✗ |
+| `--down` | #6a9a72 | `--ink` | **6.15:1** | ✓✓✓ | ✗ |
 
 ---
 

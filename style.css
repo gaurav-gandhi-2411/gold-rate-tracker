@@ -9,7 +9,7 @@
 
   --cream: #f5ede0;
   --cream-dim: #c8bfae;
-  --cream-mute: #8a8273;
+  --cream-mute: #9a9282;   /* was #8a8273; lifted for WCAG AA on --surface-2 */
 
   --gold: #c8a456;
   --gold-soft: #b69248;
@@ -20,6 +20,35 @@
 
   --display: "Fraunces", "Cormorant Garamond", Georgia, serif;
   --sans: "DM Sans", system-ui, -apple-system, sans-serif;
+
+  /* ---------- Spacing scale (8px base) ---------- */
+  --space-1:  4px;
+  --space-2:  8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 20px;
+  --space-6: 24px;
+  --space-7: 32px;
+  --space-8: 48px;
+  --space-9: 64px;
+  --space-10: 80px;
+
+  /* ---------- Type scale (Major Third, anchored at 16px) ---------- */
+  --ts-xs:   11px;
+  --ts-sm:   13px;
+  --ts-base: 16px;
+  --ts-md:   20px;
+  --ts-lg:   24px;
+  --ts-xl:   32px;
+  --ts-2xl:  40px;
+  --ts-3xl:  56px;
+  --ts-hero: 96px;
+  --ts-disp: 160px;
+
+  /* ---------- Radius scale ---------- */
+  --radius-sm: 10px;   /* prose/note blocks */
+  --radius-md: 12px;   /* stat chips */
+  --radius-lg: 16px;   /* primary cards */
 }
 
 /* ---------- Reset ---------- */
@@ -34,6 +63,7 @@ body {
   -webkit-font-smoothing: antialiased;
   text-rendering: optimizeLegibility;
   min-height: 100vh;
+  min-height: 100dvh;
   background-image:
     radial-gradient(1100px 600px at 90% -10%, rgba(200,164,86,0.08), transparent 60%),
     radial-gradient(900px 500px at -10% 110%, rgba(200,164,86,0.04), transparent 70%);
@@ -102,6 +132,7 @@ main {
   letter-spacing: -0.04em;
   color: var(--cream);
   font-variant-numeric: tabular-nums;
+  font-feature-settings: "tnum" 1, "lnum" 1;
 }
 .price .rupee {
   color: var(--gold);
@@ -160,6 +191,7 @@ main {
   letter-spacing: -0.02em;
   color: var(--cream);
   font-variant-numeric: tabular-nums;
+  font-feature-settings: "tnum" 1, "lnum" 1;
   line-height: 1;
 }
 .rate-card .rate .rupee { color: var(--gold); font-style: italic; margin-right: 0.05em; }
@@ -219,6 +251,7 @@ main {
   width: 100%; border-collapse: collapse;
   font-size: 14px;
   font-variant-numeric: tabular-nums;
+  font-feature-settings: "tnum" 1, "lnum" 1;
 }
 .history th, .history td {
   padding: 14px 18px;
@@ -296,6 +329,7 @@ main {
   letter-spacing: -0.02em;
   color: var(--cream);
   font-variant-numeric: tabular-nums;
+  font-feature-settings: "tnum" 1, "lnum" 1;
   line-height: 1;
 }
 .forecast-price .rupee { color: var(--gold); font-style: italic; margin-right: 0.05em; }
@@ -460,7 +494,7 @@ body {
 .live-perf-section { margin-bottom: clamp(40px, 8vw, 72px); }
 .live-perf-section h2 {
   font-family: var(--display);
-  font-size: clamp(18px, 3vw, 22px);
+  font-size: clamp(22px, 3.5vw, 32px);
   font-weight: 500;
   color: var(--cream);
   margin: 0 0 16px;
