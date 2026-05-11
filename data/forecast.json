@@ -1,5 +1,5 @@
 {
-  "predicted_at": "2026-05-11T16:58:15.737062+00:00",
+  "predicted_at": "2026-05-11T17:00:03.368944+00:00",
   "target_time": "2026-05-12T00:00:00+00:00",
   "predicted_22k": 14073,
   "lower": 14007,
@@ -10,7 +10,7 @@
   "macro_features_used": true,
   "nbeats_available": true,
   "nbeats_delta": 102.3,
-  "real_readings_count": 12,
+  "real_readings_count": 13,
   "warmup": true,
   "ensemble": {
     "method": "inverse_mae",
