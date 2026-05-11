@@ -25,6 +25,7 @@ if hasattr(sys.stdout, "reconfigure"):
     sys.stdout.reconfigure(encoding="utf-8")
 
 from ml.config import config_to_dict, flatten_for_mlflow, load_config
+from ml.promotion import _PROMOTION_THRESHOLD
 from ml.forecast import load_combined_history
 from ml.logging_setup import configure_for_environment
 from ml.macro import load_macro_features
@@ -127,6 +128,51 @@ def run_training(cfg: object) -> dict:
         run.log_artifact(meta_path)
 
         log.info("lgbm.training.complete", run_id=run.run_id, version=version)
+
+        # --- Champion/challenger promotion ---
+        if tracker.enabled and run.run_id:
+            try:
+                from ml.promotion import (
+                    evaluate_promotion,
+                    promote,
+                    register_candidate,
+                )
+
+                candidate_version = register_candidate(
+                    "lgbm", run.run_id, float(train_meta["val_mae"])
+                )
+                result = evaluate_promotion(
+                    "lgbm", run.run_id, float(train_meta["val_mae"])
+                )
+
+                promotion_tags: dict = {
+                    "promotion.decision": "PROMOTED" if result.promoted else "REJECTED",
+                    "promotion.reason": result.reason,
+                    "promotion.candidate_version": str(candidate_version),
+                    "promotion.threshold": str(_PROMOTION_THRESHOLD),
+                }
+                if result.production_mae is not None:
+                    promotion_tags["promotion.production_mae"] = str(result.production_mae)
+                run.set_tags(promotion_tags)
+
+                if result.promoted:
+                    promote("lgbm", candidate_version)
+                    log.info(
+                        "lgbm.promoted",
+                        version=candidate_version,
+                        candidate_mae=result.candidate_mae,
+                        reason=result.reason,
+                    )
+                else:
+                    log.info(
+                        "lgbm.rejected",
+                        candidate_mae=result.candidate_mae,
+                        production_mae=result.production_mae,
+                        reason=result.reason,
+                    )
+
+            except Exception as exc:
+                log.warning("lgbm.promotion.skipped", error=str(exc))
 
     return meta
 
