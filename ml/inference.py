@@ -345,49 +345,63 @@ def main() -> None:
     else:
         print("LightGBM model not found — skipping")
 
-    # --- Performance-filtered ensemble ---
-    # TEMPORARY: hard exclusion filter pending Phase D's proper inverse-MAE weighting.
-    # Currently filters out models with val_mae > 3× the best.
-    # See ADR 008 (to be written in Phase D) for the long-term design.
-    _FILTER_MULTIPLIER = 3.0
+    # --- Dynamic inverse-MAE ensemble (ADR 008) ---
+    from ml.ensemble import compute_weights, save_ensemble_config
+
     model_maes = _load_model_maes()
-    best_mae = min(model_maes.values()) if model_maes else float("inf")
-    mae_threshold = best_mae * _FILTER_MULTIPLIER
 
-    candidates = [
-        ("lgbm", lgbm_delta),
-        ("tft", tft_delta),
-        ("nbeats", nbeats_delta),
-    ]
-    excluded_models: list[str] = []
-    available_deltas: list[float] = []
-    for model_name, delta in candidates:
-        if delta is None:
-            continue
-        model_mae = model_maes.get(model_name, float("inf"))
-        if model_mae > mae_threshold:
-            excluded_models.append(model_name)
-            print(
-                f"Performance filter: excluding {model_name} "
-                f"(val_mae={model_mae:.1f} > threshold={mae_threshold:.1f})"
-            )
-        else:
-            available_deltas.append(delta)
+    # Build predictions for every model that succeeded inference.
+    # LightGBM exposes q10/q90; TFT and N-BEATS use their point prediction for
+    # both CI bounds (no quantile ONNX outputs available from those architectures).
+    available_preds: dict[str, tuple[float, float, float]] = {}  # model → (point, q10, q90)
+    if lgbm_delta is not None:
+        lo = lgbm_p10 if lgbm_p10 is not None else lgbm_delta
+        hi = lgbm_p90 if lgbm_p90 is not None else lgbm_delta
+        available_preds["lgbm"] = (lgbm_delta, lo, hi)
+    if tft_delta is not None:
+        available_preds["tft"] = (tft_delta, tft_delta, tft_delta)
+    if nbeats_delta is not None:
+        available_preds["nbeats"] = (nbeats_delta, nbeats_delta, nbeats_delta)
 
-    if not available_deltas:
-        raise RuntimeError("All models failed or were filtered — cannot produce ensemble forecast")
+    if not available_preds:
+        raise RuntimeError("All models failed inference — cannot produce ensemble forecast")
 
-    ensemble_delta = float(np.mean(available_deltas))
-    n_models = len(available_deltas)
+    available_maes = {m: model_maes.get(m, float("inf")) for m in available_preds}
+    weights = compute_weights(available_maes)
 
-    # Ensemble CI: span the range of available model predictions so the
-    # interval always contains the ensemble point estimate.
-    ensemble_lower = min(available_deltas)
-    ensemble_upper = max(available_deltas)
+    save_ensemble_config(weights, available_maes, PROD_DIR / "ensemble-config.json")
+
+    n_models = sum(1 for w in weights.values() if w > 0)
+    excluded_models = [m for m, w in weights.items() if w == 0.0]
+
+    if n_models == 0:
+        raise RuntimeError("All models were hard-excluded from the ensemble — cannot produce forecast")
+
+    for m in excluded_models:
+        best_model = min(available_maes, key=available_maes.get)
+        print(
+            f"Ensemble: hard-excluding {m} "
+            f"(val_mae={available_maes[m]:.1f} > "
+            f"{available_maes[best_model]:.1f}×5 threshold)"
+        )
+
+    # Weight-weighted point prediction and CI
+    ensemble_delta = sum(weights[m] * pt for m, (pt, lo, hi) in available_preds.items())
+    ensemble_lower = sum(weights[m] * lo for m, (pt, lo, hi) in available_preds.items())
+    ensemble_upper = sum(weights[m] * hi for m, (pt, lo, hi) in available_preds.items())
 
     predicted_22k = round(current_22k + ensemble_delta)
     lower = round(current_22k + ensemble_lower)
     upper = round(current_22k + ensemble_upper)
+
+    print(
+        f"Ensemble ({n_models} models, inverse-MAE): "
+        f"22K=Rs.{predicted_22k} [{lower}-{upper}]"
+    )
+    for m, (pt, lo, hi) in available_preds.items():
+        w = weights[m]
+        status = "EXCLUDED" if w == 0.0 else f"w={w:.3f}"
+        print(f"  {m}: delta={pt:+.1f} [{lo:+.1f}/{hi:+.1f}]  {status}")
 
     predicted_at = datetime.now(UTC)
     target_time = (predicted_at + timedelta(days=1)).replace(
@@ -404,7 +418,7 @@ def main() -> None:
         "predicted_22k": predicted_22k,
         "lower": lower,
         "upper": upper,
-        "model_version": "ensemble-3m",
+        "model_version": "ensemble-inv-mae",
         "training_rows": 0,
         "feature_count": len(feature_cols_used),
         "macro_features_used": macro_df is not None,
@@ -413,10 +427,10 @@ def main() -> None:
         "real_readings_count": real_readings_count,
         "warmup": real_readings_count < 56,
         "ensemble": {
-            "method": "uniform",
+            "method": "inverse_mae",
             "n_models": n_models,
             "excluded_models": excluded_models,
-            "mae_threshold": round(mae_threshold, 2) if model_maes else None,
+            "weights": {m: round(w, 6) for m, w in weights.items()},
         },
         "models": {
             "lgbm": (
@@ -424,20 +438,35 @@ def main() -> None:
                     "delta": round(lgbm_delta, 1),
                     "lower": round(lgbm_p10, 1),
                     "upper": round(lgbm_p90, 1),
+                    "weight": round(weights.get("lgbm", 0.0), 6),
                 }
                 if lgbm_delta is not None
                 else None
             ),
-            "tft": ({"delta": round(tft_delta, 1)} if tft_delta is not None else None),
-            "nbeats": ({"delta": round(nbeats_delta, 1)} if nbeats_delta is not None else None),
+            "tft": (
+                {
+                    "delta": round(tft_delta, 1),
+                    "weight": round(weights.get("tft", 0.0), 6),
+                }
+                if tft_delta is not None
+                else None
+            ),
+            "nbeats": (
+                {
+                    "delta": round(nbeats_delta, 1),
+                    "weight": round(weights.get("nbeats", 0.0), 6),
+                }
+                if nbeats_delta is not None
+                else None
+            ),
         },
     }
 
     DATA_DIR.mkdir(exist_ok=True)
     (DATA_DIR / "forecast.json").write_text(json.dumps(result, indent=2) + "\n")
     print(
-        f"Ensemble forecast: 22K=Rs.{predicted_22k} [{lower}-{upper}] "
-        f"({n_models} models, uniform weight)"
+        f"Forecast written: 22K=Rs.{predicted_22k} [{lower}-{upper}] "
+        f"({n_models} active models)"
     )
 
 
