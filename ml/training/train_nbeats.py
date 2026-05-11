@@ -21,6 +21,14 @@ import structlog
 ROOT = Path(__file__).resolve().parent.parent.parent
 sys.path.insert(0, str(ROOT))
 
+# UTF-8 stdout so MLflow's emoji log lines don't crash on narrow Windows consoles.
+if hasattr(sys.stdout, "reconfigure"):
+    sys.stdout.reconfigure(encoding="utf-8")
+
+import torch
+
+torch.set_float32_matmul_precision("high")
+
 from ml.config import config_to_dict, flatten_for_mlflow, load_config
 from ml.forecast import load_combined_history
 from ml.logging_setup import configure_for_environment
