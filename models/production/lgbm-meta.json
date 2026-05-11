@@ -1,0 +1,15 @@
+{
+  "best_epoch": 1,
+  "epochs_run": 500,
+  "val_mae": 225.65,
+  "val_mape": 0.0,
+  "naive_mae": 223.86,
+  "beats_naive": false,
+  "n_train": 361,
+  "n_val": 63,
+  "wall_clock_s": 0.2,
+  "feature_count": 44,
+  "model_version": "20260511-011456-f381424",
+  "trained_at": "2026-05-11T01:14:57.275102+00:00",
+  "git_sha": "f381424"
+}

@@ -6,10 +6,9 @@ Architecture: Generic N-BEATS with doubly-residual stacking.
   Output: (batch, 1)        — normalised next-day delta prediction
 
 The caller is responsible for normalisation/denormalisation.
-See ml/nbeats_infer.py for the inference wrapper that handles this.
 
-Training:  python ml/train_nbeats.py   (requires torch; uses GPU if available)
-Inference: ml/nbeats_infer.py          (requires onnxruntime only — no torch)
+Training:  python -m ml.training.train_nbeats  (requires torch; uses GPU if available)
+Inference: ml/inference.py                     (requires onnxruntime only — no torch)
 """
 
 from __future__ import annotations

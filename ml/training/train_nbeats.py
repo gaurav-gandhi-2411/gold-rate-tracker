@@ -11,6 +11,7 @@ from __future__ import annotations
 import argparse
 import hashlib
 import json
+import shutil
 import sys
 from datetime import UTC, datetime
 from pathlib import Path
@@ -123,6 +124,12 @@ def run_training(cfg: object) -> dict:
         forecaster.save_native(local_dir)
         log.info("nbeats.checkpoint.saved", path=str(local_dir))
         run.log_artifacts(local_dir, artifact_path="native")
+
+        # Copy normalizer to production so inference.py can load it without torch
+        shutil.copy(
+            local_dir / "normalizer.json", ROOT / "models" / "production" / "normalizer.json"
+        )
+        log.info("nbeats.normalizer.copied")
 
         # --- ONNX export ---
         onnx_path = ROOT / "models" / "production" / "nbeats.onnx"

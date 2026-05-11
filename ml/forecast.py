@@ -37,9 +37,7 @@ from ml.features import (
     get_predict_row,
     get_train_Xy,
 )
-from ml.macro import load_macro_features
-from ml.nbeats_infer import load_nbeats_session, predict_nbeats_delta
-from ml.regime import REGIME_FEATURE_COLS, add_regime_to_macro, fit_regime_model, write_regime_json
+from ml.regime import REGIME_FEATURE_COLS
 
 DATA_DIR = Path(__file__).parent.parent / "data"
 MODEL_VERSION = "lgbm-v1"
@@ -258,106 +256,9 @@ def _model_hash(X: pd.DataFrame, y: pd.Series) -> str:
 
 
 def main():
-    df = load_combined_history()
+    from ml.inference import main as _inference_main
 
-    # Load macro features — graceful fallback if cache absent or stale
-    macro_df = None
-    try:
-        macro_df = load_macro_features()
-        if macro_df is not None:
-            print(
-                f"Macro features loaded: {len(macro_df)} rows, "
-                f"{macro_df.index.min().date()} to {macro_df.index.max().date()}"
-            )
-        else:
-            print("Macro cache not found — using base features only")
-    except Exception as exc:
-        print(f"Could not load macro features ({exc}) — using base features only")
-
-    # Fit HMM regime model, add 'regime' column to macro_df, write regime.json
-    if macro_df is not None:
-        try:
-            regime_model, regime_perm = fit_regime_model(macro_df)
-            macro_df = add_regime_to_macro(macro_df)
-            n_labeled = int(macro_df["regime"].notna().sum())
-            n_low = int((macro_df["regime"] == 0).sum())
-            n_high = int((macro_df["regime"] == 1).sum())
-            print(
-                f"Regime model fitted: {n_labeled} dates labeled "
-                f"(low-vol={n_low}, high-vol={n_high})"
-            )
-            regime_info = write_regime_json(
-                regime_model,
-                regime_perm,
-                macro_df,
-                DATA_DIR / "regime.json",
-            )
-            print(
-                f"Regime JSON written: state={regime_info['state']} "
-                f"({regime_info['label']}), "
-                f"P={regime_info['probability']:.3f}, "
-                f"days_in_regime={regime_info['days_in_regime']}"
-            )
-        except Exception as exc:
-            print(f"Regime detection skipped ({exc})")
-
-    delta_mean, delta_p10, delta_p90, current_22k, feat_df, feature_cols = train_predict(
-        df, macro_df=macro_df
-    )
-    macro_used = macro_df is not None and len(feature_cols) > len(FEATURE_COLS)
-
-    predicted_22k = round(current_22k + delta_mean)
-    lower = round(current_22k + delta_p10)
-    upper = round(current_22k + delta_p90)
-
-    X_train, y_train = get_train_Xy(feat_df, feature_cols=feature_cols)
-    version = f"{MODEL_VERSION}-{_model_hash(X_train, y_train)}"
-
-    # N-BEATS point estimate (supplementary; ensemble weighting in Phase D)
-    nbeats_delta = None
-    nbeats_available = False
-    try:
-        nbeats_sess = load_nbeats_session()
-        if nbeats_sess is not None:
-            nbeats_delta = predict_nbeats_delta(nbeats_sess, df)
-            if nbeats_delta is not None:
-                nbeats_available = True
-                print(
-                    f"N-BEATS delta: Rs.{nbeats_delta:+.1f}  " f"(LightGBM: Rs.{delta_mean:+.1f})"
-                )
-    except Exception as exc:
-        print(f"N-BEATS inference skipped ({exc})")
-
-    predicted_at = datetime.now(UTC)
-    target_time = _target_time(predicted_at)
-    assert target_time > predicted_at, "target_time must be in the future"
-
-    real_readings_count = len(_load_json(DATA_DIR / "prices.json"))
-
-    result = {
-        "predicted_at": predicted_at.isoformat(),
-        "target_time": target_time.isoformat(),
-        "predicted_22k": predicted_22k,
-        "lower": lower,
-        "upper": upper,
-        "model_version": version,
-        "training_rows": len(X_train),
-        "feature_count": len(feature_cols),
-        "macro_features_used": macro_used,
-        "nbeats_available": nbeats_available,
-        "nbeats_delta": round(nbeats_delta, 1) if nbeats_delta is not None else None,
-        "real_readings_count": real_readings_count,
-        "warmup": real_readings_count < 56,
-    }
-
-    DATA_DIR.mkdir(exist_ok=True)
-    (DATA_DIR / "forecast.json").write_text(json.dumps(result, indent=2) + "\n")
-    macro_note = f", {len(feature_cols)} features (macro={'yes' if macro_used else 'no'})"
-    nbeats_note = f", nbeats=Rs.{nbeats_delta:+.1f}" if nbeats_available else ""
-    print(
-        f"Forecast written: 22K=Rs.{predicted_22k} [Rs.{lower}-Rs.{upper}] "
-        f"(trained on {len(X_train)} rows{macro_note}{nbeats_note})"
-    )
+    _inference_main()
 
 
 if __name__ == "__main__":
