@@ -38,7 +38,67 @@ def _data_hash(history_len: int, macro_len: int) -> str:
     return hashlib.md5(f"{history_len}-{macro_len}".encode()).hexdigest()[:8]
 
 
-def run_training(cfg: object) -> dict:
+def _query_sweep_params(cfg: object) -> tuple[list[str], str]:
+    """Query MLflow for best params from the most recent Optuna LightGBM sweep.
+
+    Returns (hydra_overrides, params_source). Falls back to ([], "config_defaults")
+    when MLflow is unreachable or no sweep run exists.
+    """
+    try:
+        import mlflow
+        from ml.tracking import get_tracking_uri, is_mlflow_reachable
+
+        uri = get_tracking_uri()
+        if not is_mlflow_reachable(uri):
+            return [], "config_defaults"
+
+        mlflow.set_tracking_uri(uri)
+        client = mlflow.tracking.MlflowClient()
+
+        experiment_name = cfg.tracking.mlflow.experiment_training
+        exp = client.get_experiment_by_name(experiment_name)
+        if exp is None:
+            return [], "config_defaults"
+
+        runs = client.search_runs(
+            experiment_ids=[exp.experiment_id],
+            filter_string="tags.sweep_type = 'optuna' AND tags.model = 'lightgbm'",
+            order_by=["start_time DESC"],
+            max_results=1,
+        )
+        if not runs:
+            return [], "config_defaults"
+
+        best_run = runs[0]
+        best_params = {
+            k[len("best."):]: v
+            for k, v in best_run.data.params.items()
+            if k.startswith("best.")
+        }
+        if not best_params:
+            return [], "config_defaults"
+
+        _FLOAT_PARAMS = {"learning_rate", "feature_fraction", "bagging_fraction"}
+        _INT_PARAMS = {"num_leaves", "bagging_freq"}
+
+        overrides = []
+        for k, v in best_params.items():
+            if k in _FLOAT_PARAMS:
+                overrides.append(f"model.params.{k}={float(v)}")
+            elif k in _INT_PARAMS:
+                overrides.append(f"model.params.{k}={int(float(v))}")
+
+        if not overrides:
+            return [], "config_defaults"
+
+        return overrides, f"sweep/{best_run.info.run_id[:8]}"
+
+    except Exception as exc:
+        structlog.get_logger().warning("lgbm.sweep_params.query_failed", error=str(exc))
+        return [], "config_defaults"
+
+
+def run_training(cfg: object, params_source: str = "config_defaults") -> dict:
     """Main training logic. Separated from main() so tests can call it directly."""
     configure_for_environment()
     log = structlog.get_logger()
@@ -69,6 +129,7 @@ def run_training(cfg: object) -> dict:
             "model": "lightgbm",
             "git_sha": git_sha,
             "data_hash": _data_hash(len(history), len(macro) if macro is not None else 0),
+            "training.params_source": params_source,
         },
     ) as run:
         run.log_params(flat_params)
@@ -186,8 +247,18 @@ def main() -> None:
         help="Hydra overrides, e.g. model.params.num_iterations=200",
     )
     args = parser.parse_args()
-    cfg = load_config(overrides=["model=lightgbm", *args.overrides])
-    run_training(cfg)
+    base_cfg = load_config(overrides=["model=lightgbm", *args.overrides])
+    sweep_overrides, params_source = _query_sweep_params(base_cfg)
+    if sweep_overrides:
+        structlog.get_logger().info(
+            "lgbm.sweep_params.applied",
+            source=params_source,
+            overrides=sweep_overrides,
+        )
+        cfg = load_config(overrides=["model=lightgbm", *args.overrides, *sweep_overrides])
+    else:
+        cfg = base_cfg
+    run_training(cfg, params_source=params_source)
 
 
 if __name__ == "__main__":

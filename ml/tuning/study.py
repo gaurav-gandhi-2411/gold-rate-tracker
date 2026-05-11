@@ -227,4 +227,11 @@ def run_study(
 
         study.optimize(objective, n_trials=n_trials)
 
+        # Log best params to parent run so train_lgbm.py can query them
+        try:
+            _parent_run.log_params({f"best.{k}": v for k, v in study.best_params.items()})
+            _parent_run.log_metrics({"best_val_mae": study.best_value})
+        except Exception:
+            pass
+
     return study

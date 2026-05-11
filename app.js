@@ -4,6 +4,7 @@ const DATA_URL = "data/prices.json";
 const FORECAST_URL = "data/forecast.json";
 const BACKTEST_URL = "data/backtest.json";
 const COMMENTARY_URL = "data/commentary.json";
+const DRIFT_URL = "data/drift_metrics.json";
 
 const fmtINR = (n) =>
   typeof n === "number"
@@ -347,6 +348,58 @@ function renderModelStats(bt) {
   section.hidden = false;
 }
 
+function renderLivePerf(entries) {
+  const section = document.getElementById("live-perf-section");
+  if (!Array.isArray(entries) || entries.length === 0) {
+    section.hidden = true;
+    return;
+  }
+
+  const now = Date.now();
+  const cutoff7d = now - 7 * 24 * 3600 * 1000;
+  const recent = entries.filter(
+    (e) => e.residual != null && new Date(e.ts).getTime() >= cutoff7d
+  );
+
+  const rollingMae =
+    recent.length > 0
+      ? recent.reduce((s, e) => s + Math.abs(e.residual), 0) / recent.length
+      : null;
+
+  // baseline_mae from most recent entry that has it
+  const withBaseline = [...entries].reverse().find((e) => e.baseline_mae != null);
+  const baselineMae = withBaseline ? withBaseline.baseline_mae : null;
+
+  const rollingEl = document.getElementById("perf-rolling-mae");
+  const baselineEl = document.getElementById("perf-baseline-mae");
+  const ratioEl = document.getElementById("perf-drift-ratio");
+  const subEl = document.getElementById("perf-drift-sub");
+
+  rollingEl.textContent = rollingMae != null ? `₹${fmtINR(Math.round(rollingMae))}` : "—";
+  baselineEl.textContent = baselineMae != null ? `₹${fmtINR(Math.round(baselineMae))}` : "—";
+
+  if (rollingMae != null && baselineMae != null && baselineMae > 0) {
+    const ratio = rollingMae / baselineMae;
+    ratioEl.textContent = ratio.toFixed(2);
+    ratioEl.className = "live-perf-value";
+    if (ratio < 1.0) {
+      ratioEl.classList.add("drift-green");
+      subEl.textContent = "on track";
+    } else if (ratio <= 1.5) {
+      ratioEl.classList.add("drift-yellow");
+      subEl.textContent = "watch";
+    } else {
+      ratioEl.classList.add("drift-red");
+      subEl.textContent = "retraining recommended";
+    }
+  } else {
+    ratioEl.textContent = "—";
+    subEl.textContent = "";
+  }
+
+  section.hidden = false;
+}
+
 function bindRangeToggle() {
   const buttons = document.querySelectorAll(".range-toggle button");
   buttons.forEach((btn) => {
@@ -377,13 +430,15 @@ function bindRangeToggle() {
   renderChart(allReadings, "7");
 
   // Load ML/LLM data (all optional — degrade gracefully on any failure)
-  const [fc, bt, commentary] = await Promise.allSettled([
+  const [fc, bt, commentary, drift] = await Promise.allSettled([
     loadJSON(FORECAST_URL),
     loadJSON(BACKTEST_URL),
     loadJSON(COMMENTARY_URL),
+    loadJSON(DRIFT_URL),
   ]);
 
   renderForecast(fc.status === "fulfilled" ? fc.value : null);
+  renderLivePerf(drift.status === "fulfilled" ? drift.value : null);
   renderModelStats(bt.status === "fulfilled" ? bt.value : null);
   renderCommentary(commentary.status === "fulfilled" ? commentary.value : null);
 })();
