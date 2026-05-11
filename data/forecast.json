@@ -1,8 +1,8 @@
 {
-  "predicted_at": "2026-05-11T18:47:02.082202+00:00",
+  "predicted_at": "2026-05-11T19:00:09.860236+00:00",
   "target_time": "2026-05-12T00:00:00+00:00",
   "predicted_22k": 14073,
-  "lower": 14008,
+  "lower": 14009,
   "upper": 14186,
   "model_version": "ensemble-inv-mae",
   "training_rows": 0,
@@ -10,7 +10,7 @@
   "macro_features_used": true,
   "nbeats_available": true,
   "nbeats_delta": 102.3,
-  "real_readings_count": 14,
+  "real_readings_count": 15,
   "warmup": true,
   "ensemble": {
     "method": "inverse_mae",
@@ -27,7 +27,7 @@
   "models": {
     "lgbm": {
       "delta": 29.8,
-      "lower": -90.4,
+      "lower": -88.0,
       "upper": 238.7,
       "weight": 0.54345
     },
