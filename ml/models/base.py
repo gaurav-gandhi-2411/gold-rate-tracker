@@ -1,4 +1,5 @@
 """Common forecaster interface and shared utilities."""
+
 from __future__ import annotations
 
 from abc import ABC, abstractmethod
@@ -42,5 +43,5 @@ class BaseForecaster(ABC):
 
     @classmethod
     @abstractmethod
-    def load_native(cls, dir: Path) -> "BaseForecaster":
+    def load_native(cls, dir: Path) -> BaseForecaster:
         """Reload from native checkpoint."""

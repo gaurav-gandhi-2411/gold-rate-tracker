@@ -4,6 +4,7 @@ Unit/integration tests for ml/models/tft.py and ml/training/train_tft.py.
 All tests use CPU and tiny architectures — no GPU required.
 darts + pytorch-lightning must be installed for these tests to run.
 """
+
 from __future__ import annotations
 
 import numpy as np
@@ -191,7 +192,6 @@ class TestTFTOnnxExport:
 
     def test_onnx_is_valid_model(self, tmp_path):
         import onnx
-
         from ml.models.tft import TFTForecaster
 
         cfg = _tiny_cfg()
@@ -204,7 +204,6 @@ class TestTFTOnnxExport:
 
     def test_onnx_runnable_via_onnxruntime(self, tmp_path):
         import onnxruntime as ort
-
         from ml.models.tft import TFTForecaster
 
         cfg = _tiny_cfg()
@@ -310,7 +309,6 @@ class TestTFTSaveLoadRoundTrip:
 
 class TestTFTNormalizerIntegration:
     def test_normalizer_denormalize_recovers_original_scale(self):
-        from ml.models.tft import TFTForecaster
         from ml.training.utils import TargetNormalizer
 
         history = _make_history(60)

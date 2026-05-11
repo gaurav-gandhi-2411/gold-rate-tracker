@@ -14,9 +14,7 @@ from typing import Any
 
 import pandas as pd
 import pytest
-
 from ml.models.base import BaseForecaster, ForecastResult
-
 
 # ---------------------------------------------------------------------------
 # 1. ForecastResult
@@ -99,7 +97,7 @@ class _ConcreteForecaster(BaseForecaster):
         pass
 
     @classmethod
-    def load_native(cls, dir: Path) -> "_ConcreteForecaster":
+    def load_native(cls, dir: Path) -> _ConcreteForecaster:
         return cls()
 
 

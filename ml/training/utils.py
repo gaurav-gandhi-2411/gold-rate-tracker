@@ -1,4 +1,5 @@
 """Shared utilities for training: target normalizer, parity check, GPU monitor."""
+
 from __future__ import annotations
 
 import json
@@ -28,11 +29,11 @@ class TargetNormalizer:
         path.write_text(json.dumps(asdict(self), indent=2))
 
     @classmethod
-    def load(cls, path: Path) -> "TargetNormalizer":
+    def load(cls, path: Path) -> TargetNormalizer:
         return cls(**json.loads(path.read_text()))
 
     @classmethod
-    def fit(cls, y: np.ndarray) -> "TargetNormalizer":
+    def fit(cls, y: np.ndarray) -> TargetNormalizer:
         return cls(mean=float(y.mean()), std=float(y.std()), fitted_on_n=len(y))
 
 
