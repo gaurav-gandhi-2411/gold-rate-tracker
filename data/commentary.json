@@ -94,5 +94,11 @@
     "text": "The gold price is at Rs.13990. It is at the 45th percentile in the last 90 days. The model expects a price around Rs.14073 next.",
     "model": "llama-3.3-70b-versatile",
     "prompt_hash": "e610506a144d"
+  },
+  {
+    "ts": "2026-05-11T19:57:18Z",
+    "text": "The gold price is at Rs.13990. It is at the 45th percentile in the last 90 days. The model expects a price around Rs.14073 next.",
+    "model": "llama-3.3-70b-versatile",
+    "prompt_hash": "b8cc30fbce6f"
   }
 ]
