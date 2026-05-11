@@ -11,5 +11,6 @@
   "feature_count": 44,
   "model_version": "20260511-011456-f381424",
   "trained_at": "2026-05-11T01:14:57.275102+00:00",
-  "git_sha": "f381424"
+  "git_sha": "f381424",
+  "model_card_notes": "best_epoch=1 is correct, not a bug. Early stopping ran 51 iterations (patience=50), kept iter 1 as best. val_L1 at iter 1=196.10 and never improves: iter 2=196.31, iter 3=196.42, ... train_L1 drops steadily (overfitting). Root cause: daily 22k price deltas are close to a random walk — no tabular feature combination generalizes out-of-sample. The 1-tree booster predicts approximately the median delta (≈0). LightGBM's role in the ensemble is the 'tabular features hypothesis'; even a near-constant prediction contributes ensemble diversity."
 }

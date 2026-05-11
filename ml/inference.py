@@ -213,6 +213,29 @@ def _run_lgbm(x_pred: np.ndarray) -> tuple[float, float, float]:
 
 
 # ------------------------------------------------------------------
+# Model performance helpers
+# ------------------------------------------------------------------
+
+
+def _load_model_maes() -> dict[str, float]:
+    """Load val_mae from each model's production meta JSON."""
+    maes: dict[str, float] = {}
+    for model, fname in [
+        ("lgbm", "lgbm-meta.json"),
+        ("tft", "tft-meta.json"),
+        ("nbeats", "nbeats-meta.json"),
+    ]:
+        path = PROD_DIR / fname
+        if path.exists():
+            try:
+                data = json.loads(path.read_text())
+                maes[model] = float(data.get("val_mae", float("inf")))
+            except Exception:
+                pass
+    return maes
+
+
+# ------------------------------------------------------------------
 # Main entry point
 # ------------------------------------------------------------------
 
@@ -322,10 +345,37 @@ def main() -> None:
     else:
         print("LightGBM model not found — skipping")
 
-    # --- Uniform-weighted ensemble ---
-    available_deltas = [d for d in [lgbm_delta, tft_delta, nbeats_delta] if d is not None]
+    # --- Performance-filtered ensemble ---
+    # TEMPORARY: hard exclusion filter pending Phase D's proper inverse-MAE weighting.
+    # Currently filters out models with val_mae > 3× the best.
+    # See ADR 008 (to be written in Phase D) for the long-term design.
+    _FILTER_MULTIPLIER = 3.0
+    model_maes = _load_model_maes()
+    best_mae = min(model_maes.values()) if model_maes else float("inf")
+    mae_threshold = best_mae * _FILTER_MULTIPLIER
+
+    candidates = [
+        ("lgbm", lgbm_delta),
+        ("tft", tft_delta),
+        ("nbeats", nbeats_delta),
+    ]
+    excluded_models: list[str] = []
+    available_deltas: list[float] = []
+    for model_name, delta in candidates:
+        if delta is None:
+            continue
+        model_mae = model_maes.get(model_name, float("inf"))
+        if model_mae > mae_threshold:
+            excluded_models.append(model_name)
+            print(
+                f"Performance filter: excluding {model_name} "
+                f"(val_mae={model_mae:.1f} > threshold={mae_threshold:.1f})"
+            )
+        else:
+            available_deltas.append(delta)
+
     if not available_deltas:
-        raise RuntimeError("All models failed — cannot produce ensemble forecast")
+        raise RuntimeError("All models failed or were filtered — cannot produce ensemble forecast")
 
     ensemble_delta = float(np.mean(available_deltas))
     n_models = len(available_deltas)
@@ -362,7 +412,12 @@ def main() -> None:
         "nbeats_delta": round(nbeats_delta, 1) if nbeats_delta is not None else None,
         "real_readings_count": real_readings_count,
         "warmup": real_readings_count < 56,
-        "ensemble": {"method": "uniform", "n_models": n_models},
+        "ensemble": {
+            "method": "uniform",
+            "n_models": n_models,
+            "excluded_models": excluded_models,
+            "mae_threshold": round(mae_threshold, 2) if model_maes else None,
+        },
         "models": {
             "lgbm": (
                 {
