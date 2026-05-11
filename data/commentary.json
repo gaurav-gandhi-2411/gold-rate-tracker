@@ -46,5 +46,11 @@
     "text": "The gold price is at Rs.14010. Recent data is limited, with only 7 real readings collected so far. The model expects a price of around Rs.14078 for the next reading.",
     "model": "llama-3.3-70b-versatile",
     "prompt_hash": "af444f68c9bd"
+  },
+  {
+    "ts": "2026-05-11T01:58:14Z",
+    "text": "The gold price is at Rs.14010 for 22K. Recent data is limited, with only 8 real readings collected. The model expects a price around Rs.14078 for the next reading.",
+    "model": "llama-3.3-70b-versatile",
+    "prompt_hash": "16512b04189e"
   }
 ]
