@@ -11,7 +11,13 @@ from typing import Any
 import numpy as np
 import pandas as pd
 
-from ml.features import ALL_FEATURE_COLS, FEATURE_COLS, build_feature_matrix, get_predict_row, get_train_Xy
+from ml.features import (
+    ALL_FEATURE_COLS,
+    FEATURE_COLS,
+    build_feature_matrix,
+    get_predict_row,
+    get_train_Xy,
+)
 from ml.models.base import BaseForecaster, ForecastResult
 
 try:
@@ -132,7 +138,9 @@ class LightGBMForecaster(BaseForecaster):
         val_mae = float(np.mean(np.abs(pred_val - y_val)))
         naive_mae = float(np.mean(np.abs(y_val.values)))  # predict delta=0 baseline
 
-        best_epoch = int(m_mean.best_iteration_) if m_mean.best_iteration_ else int(m_mean.n_estimators)
+        best_epoch = (
+            int(m_mean.best_iteration_) if m_mean.best_iteration_ else int(m_mean.n_estimators)
+        )
 
         return {
             "best_epoch": best_epoch,

@@ -114,9 +114,7 @@ def _build_tft_inputs(
     This must match the concatenation order in darts' TFT internal model.
     """
     past_idx = prices_daily.index[-_ICL:]
-    tomorrow_idx = pd.DatetimeIndex(
-        [past_idx[-1] + pd.Timedelta("1D")], tz=past_idx.tz
-    )
+    tomorrow_idx = pd.DatetimeIndex([past_idx[-1] + pd.Timedelta("1D")], tz=past_idx.tz)
 
     # Column 0: normalized prices
     prices = prices_daily.values[-_ICL:].astype(np.float32)
@@ -256,9 +254,7 @@ def main() -> None:
         freq="D",
         tz="UTC",
     )
-    prices_daily = (
-        df.set_index("ts")["22k"].astype(float).reindex(full_idx, method="ffill")
-    )
+    prices_daily = df.set_index("ts")["22k"].astype(float).reindex(full_idx, method="ffill")
     current_22k = float(prices_daily.iloc[-1])
 
     # --- TFT inference (requires macro for meaningful predictions) ---
@@ -350,11 +346,7 @@ def main() -> None:
     assert target_time > predicted_at, "target_time must be in the future"
 
     prices_path = DATA_DIR / "prices.json"
-    real_readings_count = (
-        len(json.loads(prices_path.read_text()))
-        if prices_path.exists()
-        else 0
-    )
+    real_readings_count = len(json.loads(prices_path.read_text())) if prices_path.exists() else 0
 
     result: dict = {
         "predicted_at": predicted_at.isoformat(),
@@ -381,12 +373,8 @@ def main() -> None:
                 if lgbm_delta is not None
                 else None
             ),
-            "tft": (
-                {"delta": round(tft_delta, 1)} if tft_delta is not None else None
-            ),
-            "nbeats": (
-                {"delta": round(nbeats_delta, 1)} if nbeats_delta is not None else None
-            ),
+            "tft": ({"delta": round(tft_delta, 1)} if tft_delta is not None else None),
+            "nbeats": ({"delta": round(nbeats_delta, 1)} if nbeats_delta is not None else None),
         },
     }
 

@@ -55,7 +55,10 @@ module = [
     "ml.commentary",
     "ml.models.tft",
     "ml.models.nbeats",
+    "ml.models.lgbm",
     "ml.training.train_tft",
     "ml.training.train_nbeats",
+    "ml.training.train_lgbm",
+    "ml.inference",
 ]
 ignore_errors = true
