@@ -1,3 +1,6 @@
+# N-BEATS is trained UNIVARIATELY (target series only).
+# This is a deliberate architectural choice — see docs/adr/007-nbeats-univariate-design.md.
+# Do not add past_covariates or future_covariates here; if you want multivariate, that's TFT's job.
 name: nbeats
 _target_: ml.models.nbeats.NBeatsForecaster
 params:
