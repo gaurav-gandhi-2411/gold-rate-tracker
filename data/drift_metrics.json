@@ -1,0 +1,22 @@
+[
+  {
+    "ts": "2026-05-11T16:58:13.586582+00:00",
+    "target_time": "2026-05-12T00:00:00+00:00",
+    "actual_ts": "2026-05-11T16:57:46.361Z",
+    "actual_22k": 13990.0,
+    "forecast_22k": 14076.0,
+    "residual": -86.0,
+    "model_version": "ensemble-3m",
+    "baseline_mae": 225.65
+  },
+  {
+    "ts": "2026-05-11T17:00:01.373824+00:00",
+    "target_time": "2026-05-12T00:00:00+00:00",
+    "actual_ts": "2026-05-11T16:59:35.450Z",
+    "actual_22k": 13990.0,
+    "forecast_22k": 14073.0,
+    "residual": -83.0,
+    "model_version": "ensemble-inv-mae",
+    "baseline_mae": 225.65
+  }
+]
