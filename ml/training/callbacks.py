@@ -61,6 +61,18 @@ class GPUStepCallback(pl.Callback):
         except Exception:
             return 0.0
 
+    def teardown(self, trainer: Any, pl_module: Any, stage: str | None = None) -> None:
+        """Release pynvml handle so the callback is picklable after training."""
+        if self._nvml_ok:
+            try:
+                import pynvml
+
+                pynvml.nvmlShutdown()
+            except Exception:
+                pass
+        self._nvml_handle = None
+        self._nvml_ok = False
+
     def on_train_batch_end(
         self, trainer: Any, pl_module: Any, outputs: Any, batch: Any, batch_idx: int
     ) -> None:
