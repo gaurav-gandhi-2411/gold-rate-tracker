@@ -78,7 +78,7 @@ jobs:
         continue-on-error: true
         env:
           NTFY_TOPIC: ${{ secrets.NTFY_TOPIC }}
-          DRIFT_THRESHOLD: "0.5"
+          DRIFT_THRESHOLD: "0.3"
         run: python -m ml.drift
 
       - name: Run forecast
