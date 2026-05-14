@@ -1,3110 +1,3110 @@
 [
   {
-    "timestamp": "2024-05-09T00:00:00.000Z",
-    "22k": 6597,
-    "24k": 7196,
-    "18k": 5397,
-    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*1.15"
-  },
-  {
-    "timestamp": "2024-05-13T00:00:00.000Z",
-    "22k": 6612,
-    "24k": 7213,
-    "18k": 5409,
-    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*1.15"
-  },
-  {
     "timestamp": "2024-05-14T00:00:00.000Z",
     "22k": 6662,
     "24k": 7268,
     "18k": 5451,
-    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*1.15"
+    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*time-varying-premium"
   },
   {
     "timestamp": "2024-05-15T00:00:00.000Z",
     "22k": 6752,
     "24k": 7366,
     "18k": 5525,
-    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*1.15"
+    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*time-varying-premium"
   },
   {
     "timestamp": "2024-05-16T00:00:00.000Z",
     "22k": 6733,
     "24k": 7345,
     "18k": 5509,
-    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*1.15"
+    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*time-varying-premium"
   },
   {
     "timestamp": "2024-05-20T00:00:00.000Z",
     "22k": 6873,
     "24k": 7497,
     "18k": 5623,
-    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*1.15"
+    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*time-varying-premium"
   },
   {
     "timestamp": "2024-05-21T00:00:00.000Z",
     "22k": 6838,
     "24k": 7460,
     "18k": 5595,
-    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*1.15"
+    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*time-varying-premium"
   },
   {
     "timestamp": "2024-05-22T00:00:00.000Z",
     "22k": 6743,
     "24k": 7356,
     "18k": 5517,
-    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*1.15"
+    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*time-varying-premium"
   },
   {
     "timestamp": "2024-05-23T00:00:00.000Z",
     "22k": 6591,
     "24k": 7190,
     "18k": 5393,
-    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*1.15"
+    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*time-varying-premium"
   },
   {
     "timestamp": "2024-05-28T00:00:00.000Z",
     "22k": 6642,
     "24k": 7246,
     "18k": 5434,
-    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*1.15"
+    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*time-varying-premium"
   },
   {
     "timestamp": "2024-05-29T00:00:00.000Z",
     "22k": 6612,
     "24k": 7214,
     "18k": 5410,
-    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*1.15"
+    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*time-varying-premium"
   },
   {
     "timestamp": "2024-05-30T00:00:00.000Z",
     "22k": 6616,
     "24k": 7218,
     "18k": 5413,
-    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*1.15"
+    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*time-varying-premium"
   },
   {
     "timestamp": "2024-06-03T00:00:00.000Z",
     "22k": 6609,
     "24k": 7209,
     "18k": 5407,
-    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*1.15"
+    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*time-varying-premium"
   },
   {
     "timestamp": "2024-06-04T00:00:00.000Z",
     "22k": 6591,
     "24k": 7191,
     "18k": 5393,
-    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*1.15"
+    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*time-varying-premium"
   },
   {
     "timestamp": "2024-06-05T00:00:00.000Z",
     "22k": 6653,
     "24k": 7257,
     "18k": 5443,
-    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*1.15"
+    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*time-varying-premium"
   },
   {
     "timestamp": "2024-06-06T00:00:00.000Z",
     "22k": 6706,
     "24k": 7315,
     "18k": 5487,
-    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*1.15"
+    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*time-varying-premium"
   },
   {
     "timestamp": "2024-06-10T00:00:00.000Z",
     "22k": 6533,
     "24k": 7127,
     "18k": 5345,
-    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*1.15"
+    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*time-varying-premium"
   },
   {
     "timestamp": "2024-06-11T00:00:00.000Z",
     "22k": 6538,
     "24k": 7132,
     "18k": 5349,
-    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*1.15"
+    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*time-varying-premium"
   },
   {
     "timestamp": "2024-06-12T00:00:00.000Z",
     "22k": 6614,
     "24k": 7215,
     "18k": 5411,
-    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*1.15"
+    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*time-varying-premium"
   },
   {
     "timestamp": "2024-06-13T00:00:00.000Z",
     "22k": 6511,
     "24k": 7103,
     "18k": 5327,
-    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*1.15"
+    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*time-varying-premium"
   },
   {
     "timestamp": "2024-06-17T00:00:00.000Z",
     "22k": 6545,
     "24k": 7140,
     "18k": 5355,
-    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*1.15"
+    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*time-varying-premium"
   },
   {
     "timestamp": "2024-06-18T00:00:00.000Z",
     "22k": 6585,
     "24k": 7184,
     "18k": 5388,
-    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*1.15"
+    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*time-varying-premium"
   },
   {
     "timestamp": "2024-06-20T00:00:00.000Z",
     "22k": 6669,
     "24k": 7276,
     "18k": 5457,
-    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*1.15"
+    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*time-varying-premium"
   },
   {
     "timestamp": "2024-06-24T00:00:00.000Z",
     "22k": 6591,
     "24k": 7190,
     "18k": 5392,
-    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*1.15"
+    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*time-varying-premium"
   },
   {
     "timestamp": "2024-06-25T00:00:00.000Z",
     "22k": 6549,
     "24k": 7145,
     "18k": 5358,
-    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*1.15"
+    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*time-varying-premium"
   },
   {
     "timestamp": "2024-06-26T00:00:00.000Z",
     "22k": 6513,
     "24k": 7105,
     "18k": 5329,
-    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*1.15"
+    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*time-varying-premium"
   },
   {
     "timestamp": "2024-06-27T00:00:00.000Z",
     "22k": 6574,
     "24k": 7172,
     "18k": 5379,
-    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*1.15"
+    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*time-varying-premium"
   },
   {
     "timestamp": "2024-07-01T00:00:00.000Z",
     "22k": 6582,
     "24k": 7181,
     "18k": 5386,
-    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*1.15"
+    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*time-varying-premium"
   },
   {
     "timestamp": "2024-07-02T00:00:00.000Z",
     "22k": 6572,
     "24k": 7170,
     "18k": 5377,
-    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*1.15"
+    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*time-varying-premium"
   },
   {
     "timestamp": "2024-07-03T00:00:00.000Z",
     "22k": 6678,
     "24k": 7285,
     "18k": 5463,
-    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*1.15"
+    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*time-varying-premium"
   },
   {
     "timestamp": "2024-07-08T00:00:00.000Z",
     "22k": 6662,
     "24k": 7267,
     "18k": 5451,
-    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*1.15"
+    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*time-varying-premium"
   },
   {
     "timestamp": "2024-07-09T00:00:00.000Z",
     "22k": 6679,
     "24k": 7286,
     "18k": 5464,
-    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*1.15"
+    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*time-varying-premium"
   },
   {
     "timestamp": "2024-07-10T00:00:00.000Z",
     "22k": 6713,
     "24k": 7323,
     "18k": 5492,
-    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*1.15"
+    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*time-varying-premium"
   },
   {
     "timestamp": "2024-07-11T00:00:00.000Z",
     "22k": 6836,
     "24k": 7457,
     "18k": 5593,
-    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*1.15"
+    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*time-varying-premium"
   },
   {
     "timestamp": "2024-07-15T00:00:00.000Z",
     "22k": 6864,
     "24k": 7488,
     "18k": 5616,
-    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*1.15"
+    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*time-varying-premium"
   },
   {
     "timestamp": "2024-07-16T00:00:00.000Z",
     "22k": 6971,
     "24k": 7605,
     "18k": 5704,
-    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*1.15"
+    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*time-varying-premium"
   },
   {
     "timestamp": "2024-07-17T00:00:00.000Z",
     "22k": 6953,
     "24k": 7585,
     "18k": 5689,
-    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*1.15"
+    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*time-varying-premium"
   },
   {
     "timestamp": "2024-07-18T00:00:00.000Z",
     "22k": 6953,
     "24k": 7585,
     "18k": 5689,
-    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*1.15"
+    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*time-varying-premium"
   },
   {
     "timestamp": "2024-07-22T00:00:00.000Z",
     "22k": 6783,
     "24k": 7400,
     "18k": 5550,
-    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*1.15"
+    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*time-varying-premium"
   },
   {
     "timestamp": "2024-07-23T00:00:00.000Z",
-    "22k": 6822,
-    "24k": 7442,
-    "18k": 5582,
-    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*1.15"
+    "22k": 6585,
+    "24k": 7183,
+    "18k": 5387,
+    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*time-varying-premium"
   },
   {
     "timestamp": "2024-07-24T00:00:00.000Z",
-    "22k": 6850,
-    "24k": 7472,
-    "18k": 5604,
-    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*1.15"
+    "22k": 6611,
+    "24k": 7212,
+    "18k": 5409,
+    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*time-varying-premium"
   },
   {
     "timestamp": "2024-07-25T00:00:00.000Z",
-    "22k": 6675,
-    "24k": 7282,
-    "18k": 5461,
-    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*1.15"
+    "22k": 6443,
+    "24k": 7028,
+    "18k": 5271,
+    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*time-varying-premium"
   },
   {
     "timestamp": "2024-07-29T00:00:00.000Z",
-    "22k": 6748,
-    "24k": 7361,
-    "18k": 5521,
-    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*1.15"
+    "22k": 6513,
+    "24k": 7105,
+    "18k": 5329,
+    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*time-varying-premium"
   },
   {
     "timestamp": "2024-07-30T00:00:00.000Z",
-    "22k": 6826,
-    "24k": 7446,
-    "18k": 5585,
-    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*1.15"
+    "22k": 6588,
+    "24k": 7187,
+    "18k": 5390,
+    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*time-varying-premium"
   },
   {
     "timestamp": "2024-07-31T00:00:00.000Z",
-    "22k": 6885,
-    "24k": 7511,
-    "18k": 5633,
-    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*1.15"
+    "22k": 6645,
+    "24k": 7250,
+    "18k": 5437,
+    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*time-varying-premium"
   },
   {
     "timestamp": "2024-08-01T00:00:00.000Z",
-    "22k": 6911,
-    "24k": 7539,
-    "18k": 5655,
-    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*1.15"
+    "22k": 6671,
+    "24k": 7277,
+    "18k": 5458,
+    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*time-varying-premium"
   },
   {
     "timestamp": "2024-08-05T00:00:00.000Z",
-    "22k": 6838,
-    "24k": 7459,
-    "18k": 5595,
-    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*1.15"
+    "22k": 6600,
+    "24k": 7200,
+    "18k": 5400,
+    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*time-varying-premium"
   },
   {
     "timestamp": "2024-08-06T00:00:00.000Z",
-    "22k": 6796,
-    "24k": 7414,
-    "18k": 5561,
-    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*1.15"
+    "22k": 6560,
+    "24k": 7156,
+    "18k": 5367,
+    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*time-varying-premium"
   },
   {
     "timestamp": "2024-08-07T00:00:00.000Z",
-    "22k": 6801,
-    "24k": 7419,
-    "18k": 5564,
-    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*1.15"
+    "22k": 6564,
+    "24k": 7161,
+    "18k": 5371,
+    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*time-varying-premium"
   },
   {
     "timestamp": "2024-08-08T00:00:00.000Z",
-    "22k": 6895,
-    "24k": 7522,
-    "18k": 5641,
-    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*1.15"
+    "22k": 6655,
+    "24k": 7260,
+    "18k": 5445,
+    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*time-varying-premium"
   },
   {
     "timestamp": "2024-08-12T00:00:00.000Z",
-    "22k": 7001,
-    "24k": 7638,
-    "18k": 5728,
-    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*1.15"
+    "22k": 6758,
+    "24k": 7372,
+    "18k": 5529,
+    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*time-varying-premium"
   },
   {
     "timestamp": "2024-08-13T00:00:00.000Z",
-    "22k": 7013,
-    "24k": 7650,
-    "18k": 5738,
-    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*1.15"
+    "22k": 6769,
+    "24k": 7384,
+    "18k": 5538,
+    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*time-varying-premium"
   },
   {
     "timestamp": "2024-08-14T00:00:00.000Z",
-    "22k": 6942,
-    "24k": 7574,
-    "18k": 5680,
-    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*1.15"
+    "22k": 6701,
+    "24k": 7310,
+    "18k": 5483,
+    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*time-varying-premium"
   },
   {
     "timestamp": "2024-08-15T00:00:00.000Z",
-    "22k": 6980,
-    "24k": 7614,
-    "18k": 5711,
-    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*1.15"
+    "22k": 6737,
+    "24k": 7349,
+    "18k": 5512,
+    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*time-varying-premium"
   },
   {
     "timestamp": "2024-08-19T00:00:00.000Z",
-    "22k": 7112,
-    "24k": 7759,
-    "18k": 5819,
-    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*1.15"
+    "22k": 6865,
+    "24k": 7489,
+    "18k": 5617,
+    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*time-varying-premium"
   },
   {
     "timestamp": "2024-08-20T00:00:00.000Z",
-    "22k": 7131,
-    "24k": 7779,
-    "18k": 5834,
-    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*1.15"
+    "22k": 6883,
+    "24k": 7508,
+    "18k": 5631,
+    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*time-varying-premium"
   },
   {
     "timestamp": "2024-08-21T00:00:00.000Z",
-    "22k": 7132,
-    "24k": 7780,
-    "18k": 5835,
-    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*1.15"
+    "22k": 6884,
+    "24k": 7510,
+    "18k": 5632,
+    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*time-varying-premium"
   },
   {
     "timestamp": "2024-08-22T00:00:00.000Z",
-    "22k": 7052,
-    "24k": 7693,
-    "18k": 5770,
-    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*1.15"
+    "22k": 6807,
+    "24k": 7426,
+    "18k": 5569,
+    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*time-varying-premium"
   },
   {
     "timestamp": "2024-08-26T00:00:00.000Z",
-    "22k": 7158,
-    "24k": 7809,
-    "18k": 5856,
-    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*1.15"
+    "22k": 6909,
+    "24k": 7537,
+    "18k": 5653,
+    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*time-varying-premium"
   },
   {
     "timestamp": "2024-08-27T00:00:00.000Z",
-    "22k": 7156,
-    "24k": 7807,
-    "18k": 5855,
-    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*1.15"
+    "22k": 6907,
+    "24k": 7535,
+    "18k": 5651,
+    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*time-varying-premium"
   },
   {
     "timestamp": "2024-08-28T00:00:00.000Z",
-    "22k": 7115,
-    "24k": 7762,
-    "18k": 5822,
-    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*1.15"
+    "22k": 6868,
+    "24k": 7492,
+    "18k": 5619,
+    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*time-varying-premium"
   },
   {
     "timestamp": "2024-08-29T00:00:00.000Z",
-    "22k": 7182,
-    "24k": 7834,
-    "18k": 5876,
-    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*1.15"
+    "22k": 6932,
+    "24k": 7562,
+    "18k": 5671,
+    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*time-varying-premium"
   },
   {
     "timestamp": "2024-09-03T00:00:00.000Z",
-    "22k": 7084,
-    "24k": 7728,
-    "18k": 5796,
-    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*1.15"
+    "22k": 6838,
+    "24k": 7460,
+    "18k": 5595,
+    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*time-varying-premium"
   },
   {
     "timestamp": "2024-09-04T00:00:00.000Z",
-    "22k": 7097,
-    "24k": 7742,
-    "18k": 5807,
-    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*1.15"
+    "22k": 6850,
+    "24k": 7473,
+    "18k": 5605,
+    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*time-varying-premium"
   },
   {
     "timestamp": "2024-09-05T00:00:00.000Z",
-    "22k": 7148,
-    "24k": 7798,
-    "18k": 5849,
-    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*1.15"
+    "22k": 6900,
+    "24k": 7527,
+    "18k": 5645,
+    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*time-varying-premium"
   },
   {
     "timestamp": "2024-09-09T00:00:00.000Z",
-    "22k": 7121,
-    "24k": 7768,
-    "18k": 5826,
-    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*1.15"
+    "22k": 6873,
+    "24k": 7498,
+    "18k": 5624,
+    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*time-varying-premium"
   },
   {
     "timestamp": "2024-09-10T00:00:00.000Z",
-    "22k": 7151,
-    "24k": 7801,
-    "18k": 5851,
-    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*1.15"
+    "22k": 6902,
+    "24k": 7530,
+    "18k": 5647,
+    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*time-varying-premium"
   },
   {
     "timestamp": "2024-09-11T00:00:00.000Z",
-    "22k": 7151,
-    "24k": 7801,
-    "18k": 5851,
-    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*1.15"
+    "22k": 6902,
+    "24k": 7530,
+    "18k": 5647,
+    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*time-varying-premium"
   },
   {
     "timestamp": "2024-09-12T00:00:00.000Z",
-    "22k": 7257,
-    "24k": 7917,
-    "18k": 5938,
-    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*1.15"
+    "22k": 7005,
+    "24k": 7642,
+    "18k": 5731,
+    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*time-varying-premium"
   },
   {
     "timestamp": "2024-09-16T00:00:00.000Z",
-    "22k": 7336,
-    "24k": 8003,
-    "18k": 6002,
-    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*1.15"
+    "22k": 7081,
+    "24k": 7725,
+    "18k": 5794,
+    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*time-varying-premium"
   },
   {
     "timestamp": "2024-09-17T00:00:00.000Z",
-    "22k": 7280,
-    "24k": 7942,
-    "18k": 5957,
-    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*1.15"
+    "22k": 7027,
+    "24k": 7666,
+    "18k": 5750,
+    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*time-varying-premium"
   },
   {
     "timestamp": "2024-09-18T00:00:00.000Z",
-    "22k": 7292,
-    "24k": 7955,
-    "18k": 5966,
-    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*1.15"
+    "22k": 7038,
+    "24k": 7678,
+    "18k": 5758,
+    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*time-varying-premium"
   },
   {
     "timestamp": "2024-09-19T00:00:00.000Z",
-    "22k": 7334,
-    "24k": 8001,
-    "18k": 6001,
-    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*1.15"
+    "22k": 7079,
+    "24k": 7723,
+    "18k": 5792,
+    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*time-varying-premium"
   },
   {
     "timestamp": "2024-09-23T00:00:00.000Z",
-    "22k": 7438,
-    "24k": 8115,
-    "18k": 6086,
-    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*1.15"
+    "22k": 7180,
+    "24k": 7832,
+    "18k": 5874,
+    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*time-varying-premium"
   },
   {
     "timestamp": "2024-09-24T00:00:00.000Z",
-    "22k": 7509,
-    "24k": 8192,
-    "18k": 6144,
-    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*1.15"
+    "22k": 7248,
+    "24k": 7907,
+    "18k": 5930,
+    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*time-varying-premium"
   },
   {
     "timestamp": "2024-09-25T00:00:00.000Z",
-    "22k": 7537,
-    "24k": 8222,
-    "18k": 6166,
-    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*1.15"
+    "22k": 7275,
+    "24k": 7936,
+    "18k": 5952,
+    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*time-varying-premium"
   },
   {
     "timestamp": "2024-09-26T00:00:00.000Z",
-    "22k": 7566,
-    "24k": 8254,
-    "18k": 6191,
-    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*1.15"
+    "22k": 7303,
+    "24k": 7967,
+    "18k": 5975,
+    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*time-varying-premium"
   },
   {
     "timestamp": "2024-09-30T00:00:00.000Z",
-    "22k": 7489,
-    "24k": 8170,
-    "18k": 6128,
-    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*1.15"
+    "22k": 7229,
+    "24k": 7886,
+    "18k": 5915,
+    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*time-varying-premium"
   },
   {
     "timestamp": "2024-10-01T00:00:00.000Z",
-    "22k": 7582,
-    "24k": 8271,
-    "18k": 6204,
-    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*1.15"
+    "22k": 7318,
+    "24k": 7984,
+    "18k": 5988,
+    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*time-varying-premium"
   },
   {
     "timestamp": "2024-10-02T00:00:00.000Z",
-    "22k": 7529,
-    "24k": 8213,
-    "18k": 6160,
-    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*1.15"
+    "22k": 7267,
+    "24k": 7928,
+    "18k": 5946,
+    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*time-varying-premium"
   },
   {
     "timestamp": "2024-10-03T00:00:00.000Z",
-    "22k": 7565,
-    "24k": 8253,
-    "18k": 6190,
-    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*1.15"
+    "22k": 7302,
+    "24k": 7966,
+    "18k": 5975,
+    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*time-varying-premium"
   },
   {
     "timestamp": "2024-10-07T00:00:00.000Z",
-    "22k": 7526,
-    "24k": 8211,
-    "18k": 6158,
-    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*1.15"
+    "22k": 7265,
+    "24k": 7925,
+    "18k": 5944,
+    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*time-varying-premium"
   },
   {
     "timestamp": "2024-10-08T00:00:00.000Z",
-    "22k": 7437,
-    "24k": 8113,
-    "18k": 6085,
-    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*1.15"
+    "22k": 7179,
+    "24k": 7831,
+    "18k": 5873,
+    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*time-varying-premium"
   },
   {
     "timestamp": "2024-10-09T00:00:00.000Z",
-    "22k": 7414,
-    "24k": 8088,
-    "18k": 6066,
-    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*1.15"
+    "22k": 7156,
+    "24k": 7807,
+    "18k": 5855,
+    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*time-varying-premium"
   },
   {
     "timestamp": "2024-10-10T00:00:00.000Z",
-    "22k": 7456,
-    "24k": 8134,
-    "18k": 6100,
-    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*1.15"
+    "22k": 7197,
+    "24k": 7851,
+    "18k": 5888,
+    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*time-varying-premium"
   },
   {
     "timestamp": "2024-10-14T00:00:00.000Z",
-    "22k": 7542,
-    "24k": 8228,
-    "18k": 6171,
-    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*1.15"
+    "22k": 7280,
+    "24k": 7942,
+    "18k": 5956,
+    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*time-varying-premium"
   },
   {
     "timestamp": "2024-10-15T00:00:00.000Z",
-    "22k": 7582,
-    "24k": 8271,
-    "18k": 6203,
-    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*1.15"
+    "22k": 7318,
+    "24k": 7984,
+    "18k": 5988,
+    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*time-varying-premium"
   },
   {
     "timestamp": "2024-10-16T00:00:00.000Z",
-    "22k": 7616,
-    "24k": 8309,
-    "18k": 6232,
-    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*1.15"
+    "22k": 7351,
+    "24k": 8020,
+    "18k": 6015,
+    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*time-varying-premium"
   },
   {
     "timestamp": "2024-10-17T00:00:00.000Z",
-    "22k": 7666,
-    "24k": 8363,
-    "18k": 6272,
-    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*1.15"
+    "22k": 7399,
+    "24k": 8072,
+    "18k": 6054,
+    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*time-varying-premium"
   },
   {
     "timestamp": "2024-10-21T00:00:00.000Z",
-    "22k": 7759,
-    "24k": 8465,
-    "18k": 6349,
-    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*1.15"
+    "22k": 7489,
+    "24k": 8170,
+    "18k": 6128,
+    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*time-varying-premium"
   },
   {
     "timestamp": "2024-10-22T00:00:00.000Z",
-    "22k": 7820,
-    "24k": 8531,
-    "18k": 6399,
-    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*1.15"
+    "22k": 7548,
+    "24k": 8235,
+    "18k": 6176,
+    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*time-varying-premium"
   },
   {
     "timestamp": "2024-10-23T00:00:00.000Z",
-    "22k": 7734,
-    "24k": 8437,
-    "18k": 6328,
-    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*1.15"
+    "22k": 7465,
+    "24k": 8144,
+    "18k": 6108,
+    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*time-varying-premium"
   },
   {
     "timestamp": "2024-10-24T00:00:00.000Z",
-    "22k": 7794,
-    "24k": 8502,
-    "18k": 6377,
-    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*1.15"
+    "22k": 7523,
+    "24k": 8206,
+    "18k": 6155,
+    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*time-varying-premium"
   },
   {
     "timestamp": "2024-10-28T00:00:00.000Z",
-    "22k": 7818,
-    "24k": 8529,
-    "18k": 6397,
-    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*1.15"
-  },
-  {
-    "timestamp": "2024-10-29T00:00:00.000Z",
-    "22k": 7891,
-    "24k": 8609,
-    "18k": 6456,
-    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*1.15"
-  },
-  {
-    "timestamp": "2024-10-30T00:00:00.000Z",
-    "22k": 7947,
-    "24k": 8670,
-    "18k": 6502,
-    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*1.15"
-  },
-  {
-    "timestamp": "2024-10-31T00:00:00.000Z",
-    "22k": 7804,
-    "24k": 8514,
-    "18k": 6385,
-    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*1.15"
-  },
-  {
-    "timestamp": "2024-11-01T00:00:00.000Z",
-    "22k": 7805,
-    "24k": 8515,
-    "18k": 6386,
-    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*1.15"
-  },
-  {
-    "timestamp": "2024-11-04T00:00:00.000Z",
-    "22k": 7802,
-    "24k": 8511,
-    "18k": 6383,
-    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*1.15"
-  },
-  {
-    "timestamp": "2024-11-05T00:00:00.000Z",
-    "22k": 7816,
-    "24k": 8526,
-    "18k": 6395,
-    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*1.15"
-  },
-  {
-    "timestamp": "2024-11-06T00:00:00.000Z",
-    "22k": 7605,
-    "24k": 8296,
-    "18k": 6222,
-    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*1.15"
-  },
-  {
-    "timestamp": "2024-11-07T00:00:00.000Z",
-    "22k": 7705,
-    "24k": 8406,
-    "18k": 6304,
-    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*1.15"
-  },
-  {
-    "timestamp": "2024-11-08T00:00:00.000Z",
-    "22k": 7679,
-    "24k": 8377,
-    "18k": 6283,
-    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*1.15"
-  },
-  {
-    "timestamp": "2024-11-11T00:00:00.000Z",
-    "22k": 7468,
-    "24k": 8147,
-    "18k": 6110,
-    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*1.15"
-  },
-  {
-    "timestamp": "2024-11-12T00:00:00.000Z",
-    "22k": 7437,
-    "24k": 8113,
-    "18k": 6085,
-    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*1.15"
-  },
-  {
-    "timestamp": "2024-11-13T00:00:00.000Z",
-    "22k": 7382,
-    "24k": 8053,
-    "18k": 6040,
-    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*1.15"
-  },
-  {
-    "timestamp": "2024-11-14T00:00:00.000Z",
-    "22k": 7348,
-    "24k": 8016,
-    "18k": 6012,
-    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*1.15"
-  },
-  {
-    "timestamp": "2024-11-15T00:00:00.000Z",
-    "22k": 7346,
-    "24k": 8013,
-    "18k": 6010,
-    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*1.15"
-  },
-  {
-    "timestamp": "2024-11-18T00:00:00.000Z",
-    "22k": 7474,
-    "24k": 8154,
-    "18k": 6115,
-    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*1.15"
-  },
-  {
-    "timestamp": "2024-11-19T00:00:00.000Z",
-    "22k": 7515,
-    "24k": 8198,
-    "18k": 6148,
-    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*1.15"
-  },
-  {
-    "timestamp": "2024-11-20T00:00:00.000Z",
-    "22k": 7575,
-    "24k": 8264,
-    "18k": 6198,
-    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*1.15"
-  },
-  {
-    "timestamp": "2024-11-21T00:00:00.000Z",
-    "22k": 7642,
-    "24k": 8337,
-    "18k": 6253,
-    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*1.15"
-  },
-  {
-    "timestamp": "2024-11-22T00:00:00.000Z",
-    "22k": 7760,
-    "24k": 8465,
-    "18k": 6349,
-    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*1.15"
-  },
-  {
-    "timestamp": "2024-11-25T00:00:00.000Z",
-    "22k": 7489,
-    "24k": 8169,
-    "18k": 6127,
-    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*1.15"
-  },
-  {
-    "timestamp": "2024-11-26T00:00:00.000Z",
-    "22k": 7493,
-    "24k": 8175,
-    "18k": 6131,
-    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*1.15"
-  },
-  {
-    "timestamp": "2024-11-27T00:00:00.000Z",
     "22k": 7546,
     "24k": 8232,
     "18k": 6174,
-    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*1.15"
+    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*time-varying-premium"
   },
   {
-    "timestamp": "2024-11-29T00:00:00.000Z",
-    "22k": 7607,
-    "24k": 8298,
-    "18k": 6224,
-    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*1.15"
-  },
-  {
-    "timestamp": "2024-12-02T00:00:00.000Z",
-    "22k": 7551,
-    "24k": 8238,
-    "18k": 6178,
-    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*1.15"
-  },
-  {
-    "timestamp": "2024-12-03T00:00:00.000Z",
-    "22k": 7595,
-    "24k": 8286,
-    "18k": 6214,
-    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*1.15"
-  },
-  {
-    "timestamp": "2024-12-04T00:00:00.000Z",
+    "timestamp": "2024-10-29T00:00:00.000Z",
     "22k": 7617,
     "24k": 8309,
     "18k": 6232,
-    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*1.15"
+    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*time-varying-premium"
+  },
+  {
+    "timestamp": "2024-10-30T00:00:00.000Z",
+    "22k": 7671,
+    "24k": 8368,
+    "18k": 6276,
+    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*time-varying-premium"
+  },
+  {
+    "timestamp": "2024-10-31T00:00:00.000Z",
+    "22k": 7533,
+    "24k": 8217,
+    "18k": 6163,
+    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*time-varying-premium"
+  },
+  {
+    "timestamp": "2024-11-01T00:00:00.000Z",
+    "22k": 7534,
+    "24k": 8219,
+    "18k": 6164,
+    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*time-varying-premium"
+  },
+  {
+    "timestamp": "2024-11-04T00:00:00.000Z",
+    "22k": 7531,
+    "24k": 8215,
+    "18k": 6161,
+    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*time-varying-premium"
+  },
+  {
+    "timestamp": "2024-11-05T00:00:00.000Z",
+    "22k": 7544,
+    "24k": 8230,
+    "18k": 6172,
+    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*time-varying-premium"
+  },
+  {
+    "timestamp": "2024-11-06T00:00:00.000Z",
+    "22k": 7341,
+    "24k": 8008,
+    "18k": 6006,
+    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*time-varying-premium"
+  },
+  {
+    "timestamp": "2024-11-07T00:00:00.000Z",
+    "22k": 7437,
+    "24k": 8113,
+    "18k": 6085,
+    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*time-varying-premium"
+  },
+  {
+    "timestamp": "2024-11-08T00:00:00.000Z",
+    "22k": 7412,
+    "24k": 8086,
+    "18k": 6064,
+    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*time-varying-premium"
+  },
+  {
+    "timestamp": "2024-11-11T00:00:00.000Z",
+    "22k": 7208,
+    "24k": 7863,
+    "18k": 5898,
+    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*time-varying-premium"
+  },
+  {
+    "timestamp": "2024-11-12T00:00:00.000Z",
+    "22k": 7178,
+    "24k": 7831,
+    "18k": 5873,
+    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*time-varying-premium"
+  },
+  {
+    "timestamp": "2024-11-13T00:00:00.000Z",
+    "22k": 7125,
+    "24k": 7773,
+    "18k": 5830,
+    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*time-varying-premium"
+  },
+  {
+    "timestamp": "2024-11-14T00:00:00.000Z",
+    "22k": 7093,
+    "24k": 7738,
+    "18k": 5803,
+    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*time-varying-premium"
+  },
+  {
+    "timestamp": "2024-11-15T00:00:00.000Z",
+    "22k": 7090,
+    "24k": 7735,
+    "18k": 5801,
+    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*time-varying-premium"
+  },
+  {
+    "timestamp": "2024-11-18T00:00:00.000Z",
+    "22k": 7215,
+    "24k": 7870,
+    "18k": 5903,
+    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*time-varying-premium"
+  },
+  {
+    "timestamp": "2024-11-19T00:00:00.000Z",
+    "22k": 7253,
+    "24k": 7913,
+    "18k": 5935,
+    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*time-varying-premium"
+  },
+  {
+    "timestamp": "2024-11-20T00:00:00.000Z",
+    "22k": 7311,
+    "24k": 7976,
+    "18k": 5982,
+    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*time-varying-premium"
+  },
+  {
+    "timestamp": "2024-11-21T00:00:00.000Z",
+    "22k": 7376,
+    "24k": 8047,
+    "18k": 6035,
+    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*time-varying-premium"
+  },
+  {
+    "timestamp": "2024-11-22T00:00:00.000Z",
+    "22k": 7490,
+    "24k": 8171,
+    "18k": 6128,
+    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*time-varying-premium"
+  },
+  {
+    "timestamp": "2024-11-25T00:00:00.000Z",
+    "22k": 7228,
+    "24k": 7885,
+    "18k": 5914,
+    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*time-varying-premium"
+  },
+  {
+    "timestamp": "2024-11-26T00:00:00.000Z",
+    "22k": 7233,
+    "24k": 7890,
+    "18k": 5918,
+    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*time-varying-premium"
+  },
+  {
+    "timestamp": "2024-11-27T00:00:00.000Z",
+    "22k": 7284,
+    "24k": 7946,
+    "18k": 5959,
+    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*time-varying-premium"
+  },
+  {
+    "timestamp": "2024-11-29T00:00:00.000Z",
+    "22k": 7342,
+    "24k": 8010,
+    "18k": 6007,
+    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*time-varying-premium"
+  },
+  {
+    "timestamp": "2024-12-02T00:00:00.000Z",
+    "22k": 7289,
+    "24k": 7951,
+    "18k": 5963,
+    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*time-varying-premium"
+  },
+  {
+    "timestamp": "2024-12-03T00:00:00.000Z",
+    "22k": 7331,
+    "24k": 7998,
+    "18k": 5998,
+    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*time-varying-premium"
+  },
+  {
+    "timestamp": "2024-12-04T00:00:00.000Z",
+    "22k": 7352,
+    "24k": 8020,
+    "18k": 6015,
+    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*time-varying-premium"
   },
   {
     "timestamp": "2024-12-05T00:00:00.000Z",
-    "22k": 7541,
-    "24k": 8226,
-    "18k": 6170,
-    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*1.15"
+    "22k": 7278,
+    "24k": 7940,
+    "18k": 5955,
+    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*time-varying-premium"
   },
   {
     "timestamp": "2024-12-06T00:00:00.000Z",
-    "22k": 7573,
-    "24k": 8262,
-    "18k": 6196,
-    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*1.15"
+    "22k": 7310,
+    "24k": 7974,
+    "18k": 5981,
+    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*time-varying-premium"
   },
   {
     "timestamp": "2024-12-09T00:00:00.000Z",
-    "22k": 7647,
-    "24k": 8342,
-    "18k": 6257,
-    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*1.15"
+    "22k": 7381,
+    "24k": 8052,
+    "18k": 6039,
+    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*time-varying-premium"
   },
   {
     "timestamp": "2024-12-10T00:00:00.000Z",
-    "22k": 7757,
-    "24k": 8463,
-    "18k": 6347,
-    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*1.15"
+    "22k": 7488,
+    "24k": 8168,
+    "18k": 6126,
+    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*time-varying-premium"
   },
   {
     "timestamp": "2024-12-11T00:00:00.000Z",
-    "22k": 7864,
-    "24k": 8579,
-    "18k": 6434,
-    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*1.15"
+    "22k": 7590,
+    "24k": 8280,
+    "18k": 6210,
+    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*time-varying-premium"
   },
   {
     "timestamp": "2024-12-12T00:00:00.000Z",
-    "22k": 7729,
-    "24k": 8432,
-    "18k": 6324,
-    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*1.15"
+    "22k": 7460,
+    "24k": 8139,
+    "18k": 6104,
+    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*time-varying-premium"
   },
   {
     "timestamp": "2024-12-13T00:00:00.000Z",
-    "22k": 7637,
-    "24k": 8331,
-    "18k": 6248,
-    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*1.15"
+    "22k": 7371,
+    "24k": 8042,
+    "18k": 6031,
+    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*time-varying-premium"
   },
   {
     "timestamp": "2024-12-16T00:00:00.000Z",
-    "22k": 7620,
-    "24k": 8313,
-    "18k": 6235,
-    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*1.15"
+    "22k": 7355,
+    "24k": 8024,
+    "18k": 6018,
+    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*time-varying-premium"
   },
   {
     "timestamp": "2024-12-17T00:00:00.000Z",
-    "22k": 7611,
-    "24k": 8303,
-    "18k": 6227,
-    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*1.15"
+    "22k": 7346,
+    "24k": 8014,
+    "18k": 6010,
+    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*time-varying-premium"
   },
   {
     "timestamp": "2024-12-18T00:00:00.000Z",
-    "22k": 7588,
-    "24k": 8278,
-    "18k": 6208,
-    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*1.15"
+    "22k": 7324,
+    "24k": 7990,
+    "18k": 5992,
+    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*time-varying-premium"
   },
   {
     "timestamp": "2024-12-19T00:00:00.000Z",
-    "22k": 7482,
-    "24k": 8162,
-    "18k": 6122,
-    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*1.15"
+    "22k": 7222,
+    "24k": 7879,
+    "18k": 5909,
+    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*time-varying-premium"
   },
   {
     "timestamp": "2024-12-20T00:00:00.000Z",
-    "22k": 7598,
-    "24k": 8288,
-    "18k": 6216,
-    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*1.15"
+    "22k": 7333,
+    "24k": 8000,
+    "18k": 6000,
+    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*time-varying-premium"
   },
   {
     "timestamp": "2024-12-23T00:00:00.000Z",
-    "22k": 7521,
-    "24k": 8204,
-    "18k": 6153,
-    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*1.15"
+    "22k": 7259,
+    "24k": 7919,
+    "18k": 5939,
+    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*time-varying-premium"
   },
   {
     "timestamp": "2024-12-24T00:00:00.000Z",
-    "22k": 7557,
-    "24k": 8244,
-    "18k": 6183,
-    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*1.15"
+    "22k": 7294,
+    "24k": 7957,
+    "18k": 5968,
+    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*time-varying-premium"
   },
   {
     "timestamp": "2024-12-26T00:00:00.000Z",
-    "22k": 7639,
-    "24k": 8333,
-    "18k": 6250,
-    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*1.15"
+    "22k": 7373,
+    "24k": 8044,
+    "18k": 6033,
+    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*time-varying-premium"
   },
   {
     "timestamp": "2024-12-27T00:00:00.000Z",
-    "22k": 7563,
-    "24k": 8250,
-    "18k": 6188,
-    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*1.15"
+    "22k": 7300,
+    "24k": 7963,
+    "18k": 5973,
+    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*time-varying-premium"
   },
   {
     "timestamp": "2024-12-30T00:00:00.000Z",
-    "22k": 7542,
-    "24k": 8227,
-    "18k": 6171,
-    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*1.15"
+    "22k": 7280,
+    "24k": 7941,
+    "18k": 5956,
+    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*time-varying-premium"
   },
   {
     "timestamp": "2024-12-31T00:00:00.000Z",
-    "22k": 7644,
-    "24k": 8339,
-    "18k": 6255,
-    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*1.15"
+    "22k": 7379,
+    "24k": 8049,
+    "18k": 6037,
+    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*time-varying-premium"
   },
   {
     "timestamp": "2025-01-02T00:00:00.000Z",
-    "22k": 7731,
-    "24k": 8433,
-    "18k": 6325,
-    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*1.15"
+    "22k": 7462,
+    "24k": 8140,
+    "18k": 6105,
+    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*time-varying-premium"
   },
   {
     "timestamp": "2025-01-03T00:00:00.000Z",
-    "22k": 7692,
-    "24k": 8391,
-    "18k": 6293,
-    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*1.15"
+    "22k": 7424,
+    "24k": 8099,
+    "18k": 6074,
+    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*time-varying-premium"
   },
   {
     "timestamp": "2025-01-06T00:00:00.000Z",
-    "22k": 7669,
-    "24k": 8366,
-    "18k": 6274,
-    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*1.15"
+    "22k": 7402,
+    "24k": 8075,
+    "18k": 6056,
+    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*time-varying-premium"
   },
   {
     "timestamp": "2025-01-07T00:00:00.000Z",
-    "22k": 7715,
-    "24k": 8416,
-    "18k": 6312,
-    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*1.15"
+    "22k": 7446,
+    "24k": 8123,
+    "18k": 6093,
+    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*time-varying-premium"
   },
   {
     "timestamp": "2025-01-08T00:00:00.000Z",
-    "22k": 7749,
-    "24k": 8453,
-    "18k": 6340,
-    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*1.15"
+    "22k": 7479,
+    "24k": 8159,
+    "18k": 6119,
+    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*time-varying-premium"
   },
   {
     "timestamp": "2025-01-09T00:00:00.000Z",
-    "22k": 7814,
-    "24k": 8525,
-    "18k": 6393,
-    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*1.15"
+    "22k": 7542,
+    "24k": 8228,
+    "18k": 6171,
+    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*time-varying-premium"
   },
   {
     "timestamp": "2025-01-10T00:00:00.000Z",
-    "22k": 7887,
-    "24k": 8604,
-    "18k": 6453,
-    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*1.15"
+    "22k": 7613,
+    "24k": 8305,
+    "18k": 6229,
+    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*time-varying-premium"
   },
   {
     "timestamp": "2025-01-13T00:00:00.000Z",
-    "22k": 7810,
-    "24k": 8520,
-    "18k": 6390,
-    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*1.15"
+    "22k": 7538,
+    "24k": 8223,
+    "18k": 6167,
+    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*time-varying-premium"
   },
   {
     "timestamp": "2025-01-14T00:00:00.000Z",
-    "22k": 7863,
-    "24k": 8578,
-    "18k": 6434,
-    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*1.15"
+    "22k": 7590,
+    "24k": 8280,
+    "18k": 6210,
+    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*time-varying-premium"
   },
   {
     "timestamp": "2025-01-15T00:00:00.000Z",
-    "22k": 7955,
-    "24k": 8679,
-    "18k": 6509,
-    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*1.15"
+    "22k": 7679,
+    "24k": 8377,
+    "18k": 6283,
+    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*time-varying-premium"
   },
   {
     "timestamp": "2025-01-16T00:00:00.000Z",
-    "22k": 8045,
-    "24k": 8777,
-    "18k": 6582,
-    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*1.15"
+    "22k": 7765,
+    "24k": 8471,
+    "18k": 6353,
+    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*time-varying-premium"
   },
   {
     "timestamp": "2025-01-17T00:00:00.000Z",
-    "22k": 8055,
-    "24k": 8788,
-    "18k": 6591,
-    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*1.15"
+    "22k": 7775,
+    "24k": 8482,
+    "18k": 6361,
+    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*time-varying-premium"
   },
   {
     "timestamp": "2025-01-21T00:00:00.000Z",
-    "22k": 8050,
-    "24k": 8782,
-    "18k": 6586,
-    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*1.15"
+    "22k": 7770,
+    "24k": 8476,
+    "18k": 6357,
+    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*time-varying-premium"
   },
   {
     "timestamp": "2025-01-22T00:00:00.000Z",
-    "22k": 8109,
-    "24k": 8846,
-    "18k": 6635,
-    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*1.15"
+    "22k": 7827,
+    "24k": 8539,
+    "18k": 6404,
+    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*time-varying-premium"
   },
   {
     "timestamp": "2025-01-23T00:00:00.000Z",
-    "22k": 8098,
-    "24k": 8834,
-    "18k": 6626,
-    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*1.15"
+    "22k": 7816,
+    "24k": 8527,
+    "18k": 6395,
+    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*time-varying-premium"
   },
   {
     "timestamp": "2025-01-24T00:00:00.000Z",
-    "22k": 8137,
-    "24k": 8876,
-    "18k": 6657,
-    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*1.15"
+    "22k": 7854,
+    "24k": 8567,
+    "18k": 6426,
+    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*time-varying-premium"
   },
   {
     "timestamp": "2025-01-27T00:00:00.000Z",
-    "22k": 7998,
-    "24k": 8725,
-    "18k": 6544,
-    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*1.15"
+    "22k": 7720,
+    "24k": 8422,
+    "18k": 6316,
+    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*time-varying-premium"
   },
   {
     "timestamp": "2025-01-28T00:00:00.000Z",
-    "22k": 8108,
-    "24k": 8846,
-    "18k": 6634,
-    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*1.15"
+    "22k": 7826,
+    "24k": 8538,
+    "18k": 6403,
+    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*time-varying-premium"
   },
   {
     "timestamp": "2025-01-29T00:00:00.000Z",
-    "22k": 8126,
-    "24k": 8865,
-    "18k": 6649,
-    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*1.15"
+    "22k": 7843,
+    "24k": 8556,
+    "18k": 6417,
+    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*time-varying-premium"
   },
   {
     "timestamp": "2025-01-30T00:00:00.000Z",
-    "22k": 8290,
-    "24k": 9043,
-    "18k": 6782,
-    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*1.15"
+    "22k": 8001,
+    "24k": 8729,
+    "18k": 6546,
+    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*time-varying-premium"
   },
   {
     "timestamp": "2025-01-31T00:00:00.000Z",
-    "22k": 8259,
-    "24k": 9010,
-    "18k": 6758,
-    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*1.15"
+    "22k": 7972,
+    "24k": 8697,
+    "18k": 6523,
+    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*time-varying-premium"
   },
   {
     "timestamp": "2025-02-03T00:00:00.000Z",
-    "22k": 8313,
-    "24k": 9069,
-    "18k": 6802,
-    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*1.15"
+    "22k": 8024,
+    "24k": 8754,
+    "18k": 6565,
+    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*time-varying-premium"
   },
   {
     "timestamp": "2025-02-04T00:00:00.000Z",
-    "22k": 8408,
-    "24k": 9172,
-    "18k": 6879,
-    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*1.15"
+    "22k": 8115,
+    "24k": 8853,
+    "18k": 6640,
+    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*time-varying-premium"
   },
   {
     "timestamp": "2025-02-05T00:00:00.000Z",
-    "22k": 8480,
-    "24k": 9251,
-    "18k": 6938,
-    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*1.15"
+    "22k": 8185,
+    "24k": 8929,
+    "18k": 6697,
+    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*time-varying-premium"
   },
   {
     "timestamp": "2025-02-06T00:00:00.000Z",
-    "22k": 8454,
-    "24k": 9222,
-    "18k": 6917,
-    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*1.15"
+    "22k": 8160,
+    "24k": 8901,
+    "18k": 6676,
+    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*time-varying-premium"
   },
   {
     "timestamp": "2025-02-07T00:00:00.000Z",
-    "22k": 8512,
-    "24k": 9286,
-    "18k": 6964,
-    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*1.15"
+    "22k": 8216,
+    "24k": 8963,
+    "18k": 6722,
+    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*time-varying-premium"
   },
   {
     "timestamp": "2025-02-10T00:00:00.000Z",
-    "22k": 8644,
-    "24k": 9430,
-    "18k": 7072,
-    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*1.15"
+    "22k": 8343,
+    "24k": 9102,
+    "18k": 6826,
+    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*time-varying-premium"
   },
   {
     "timestamp": "2025-02-11T00:00:00.000Z",
-    "22k": 8636,
-    "24k": 9421,
-    "18k": 7066,
-    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*1.15"
+    "22k": 8336,
+    "24k": 9094,
+    "18k": 6820,
+    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*time-varying-premium"
   },
   {
     "timestamp": "2025-02-12T00:00:00.000Z",
-    "22k": 8559,
-    "24k": 9337,
-    "18k": 7003,
-    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*1.15"
+    "22k": 8261,
+    "24k": 9012,
+    "18k": 6759,
+    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*time-varying-premium"
   },
   {
     "timestamp": "2025-02-13T00:00:00.000Z",
-    "22k": 8615,
-    "24k": 9398,
-    "18k": 7049,
-    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*1.15"
+    "22k": 8315,
+    "24k": 9071,
+    "18k": 6803,
+    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*time-varying-premium"
   },
   {
     "timestamp": "2025-02-14T00:00:00.000Z",
-    "22k": 8479,
-    "24k": 9249,
-    "18k": 6937,
-    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*1.15"
+    "22k": 8184,
+    "24k": 8928,
+    "18k": 6696,
+    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*time-varying-premium"
   },
   {
     "timestamp": "2025-02-18T00:00:00.000Z",
-    "22k": 8630,
-    "24k": 9414,
-    "18k": 7061,
-    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*1.15"
+    "22k": 8330,
+    "24k": 9087,
+    "18k": 6815,
+    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*time-varying-premium"
   },
   {
     "timestamp": "2025-02-19T00:00:00.000Z",
-    "22k": 8597,
-    "24k": 9379,
-    "18k": 7034,
-    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*1.15"
+    "22k": 8298,
+    "24k": 9052,
+    "18k": 6789,
+    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*time-varying-premium"
   },
   {
     "timestamp": "2025-02-20T00:00:00.000Z",
-    "22k": 8656,
-    "24k": 9443,
-    "18k": 7082,
-    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*1.15"
+    "22k": 8355,
+    "24k": 9115,
+    "18k": 6836,
+    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*time-varying-premium"
   },
   {
     "timestamp": "2025-02-21T00:00:00.000Z",
-    "22k": 8607,
-    "24k": 9390,
-    "18k": 7042,
-    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*1.15"
+    "22k": 8308,
+    "24k": 9063,
+    "18k": 6797,
+    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*time-varying-premium"
   },
   {
     "timestamp": "2025-02-24T00:00:00.000Z",
-    "22k": 8645,
-    "24k": 9431,
-    "18k": 7073,
-    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*1.15"
+    "22k": 8345,
+    "24k": 9103,
+    "18k": 6827,
+    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*time-varying-premium"
   },
   {
     "timestamp": "2025-02-25T00:00:00.000Z",
-    "22k": 8534,
-    "24k": 9310,
-    "18k": 6982,
-    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*1.15"
+    "22k": 8237,
+    "24k": 8986,
+    "18k": 6739,
+    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*time-varying-premium"
   },
   {
     "timestamp": "2025-02-26T00:00:00.000Z",
-    "22k": 8609,
-    "24k": 9391,
-    "18k": 7043,
-    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*1.15"
+    "22k": 8309,
+    "24k": 9065,
+    "18k": 6798,
+    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*time-varying-premium"
   },
   {
     "timestamp": "2025-02-27T00:00:00.000Z",
-    "22k": 8517,
-    "24k": 9292,
-    "18k": 6969,
-    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*1.15"
+    "22k": 8221,
+    "24k": 8968,
+    "18k": 6726,
+    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*time-varying-premium"
   },
   {
     "timestamp": "2025-02-28T00:00:00.000Z",
-    "22k": 8396,
-    "24k": 9159,
-    "18k": 6870,
-    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*1.15"
+    "22k": 8104,
+    "24k": 8841,
+    "18k": 6631,
+    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*time-varying-premium"
   },
   {
     "timestamp": "2025-03-03T00:00:00.000Z",
-    "22k": 8568,
-    "24k": 9346,
-    "18k": 7010,
-    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*1.15"
+    "22k": 8270,
+    "24k": 9021,
+    "18k": 6766,
+    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*time-varying-premium"
   },
   {
     "timestamp": "2025-03-04T00:00:00.000Z",
-    "22k": 8612,
-    "24k": 9395,
-    "18k": 7046,
-    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*1.15"
+    "22k": 8312,
+    "24k": 9068,
+    "18k": 6801,
+    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*time-varying-premium"
   },
   {
     "timestamp": "2025-03-05T00:00:00.000Z",
-    "22k": 8618,
-    "24k": 9401,
-    "18k": 7051,
-    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*1.15"
+    "22k": 8318,
+    "24k": 9074,
+    "18k": 6805,
+    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*time-varying-premium"
   },
   {
     "timestamp": "2025-03-06T00:00:00.000Z",
-    "22k": 8589,
-    "24k": 9370,
-    "18k": 7027,
-    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*1.15"
+    "22k": 8290,
+    "24k": 9044,
+    "18k": 6783,
+    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*time-varying-premium"
   },
   {
     "timestamp": "2025-03-07T00:00:00.000Z",
-    "22k": 8578,
-    "24k": 9357,
-    "18k": 7018,
-    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*1.15"
+    "22k": 8279,
+    "24k": 9032,
+    "18k": 6774,
+    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*time-varying-premium"
   },
   {
     "timestamp": "2025-03-10T00:00:00.000Z",
-    "22k": 8532,
-    "24k": 9307,
-    "18k": 6980,
-    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*1.15"
+    "22k": 8235,
+    "24k": 8984,
+    "18k": 6738,
+    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*time-varying-premium"
   },
   {
     "timestamp": "2025-03-11T00:00:00.000Z",
-    "22k": 8624,
-    "24k": 9408,
-    "18k": 7056,
-    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*1.15"
+    "22k": 8324,
+    "24k": 9081,
+    "18k": 6811,
+    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*time-varying-premium"
   },
   {
     "timestamp": "2025-03-12T00:00:00.000Z",
-    "22k": 8686,
-    "24k": 9476,
-    "18k": 7107,
-    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*1.15"
+    "22k": 8384,
+    "24k": 9146,
+    "18k": 6860,
+    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*time-varying-premium"
   },
   {
     "timestamp": "2025-03-13T00:00:00.000Z",
-    "22k": 8834,
-    "24k": 9637,
-    "18k": 7228,
-    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*1.15"
+    "22k": 8527,
+    "24k": 9302,
+    "18k": 6976,
+    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*time-varying-premium"
   },
   {
     "timestamp": "2025-03-14T00:00:00.000Z",
-    "22k": 8822,
-    "24k": 9624,
-    "18k": 7218,
-    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*1.15"
+    "22k": 8515,
+    "24k": 9289,
+    "18k": 6967,
+    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*time-varying-premium"
   },
   {
     "timestamp": "2025-03-17T00:00:00.000Z",
-    "22k": 8840,
-    "24k": 9643,
-    "18k": 7232,
-    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*1.15"
+    "22k": 8532,
+    "24k": 9308,
+    "18k": 6981,
+    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*time-varying-premium"
   },
   {
     "timestamp": "2025-03-18T00:00:00.000Z",
-    "22k": 8941,
-    "24k": 9754,
-    "18k": 7315,
-    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*1.15"
+    "22k": 8630,
+    "24k": 9414,
+    "18k": 7061,
+    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*time-varying-premium"
   },
   {
     "timestamp": "2025-03-19T00:00:00.000Z",
-    "22k": 8908,
-    "24k": 9718,
-    "18k": 7288,
-    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*1.15"
+    "22k": 8598,
+    "24k": 9380,
+    "18k": 7035,
+    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*time-varying-premium"
   },
   {
     "timestamp": "2025-03-20T00:00:00.000Z",
-    "22k": 8896,
-    "24k": 9704,
-    "18k": 7278,
-    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*1.15"
+    "22k": 8586,
+    "24k": 9367,
+    "18k": 7025,
+    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*time-varying-premium"
   },
   {
     "timestamp": "2025-03-21T00:00:00.000Z",
-    "22k": 8832,
-    "24k": 9634,
-    "18k": 7226,
-    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*1.15"
+    "22k": 8524,
+    "24k": 9299,
+    "18k": 6975,
+    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*time-varying-premium"
   },
   {
     "timestamp": "2025-03-24T00:00:00.000Z",
-    "22k": 8781,
-    "24k": 9579,
-    "18k": 7184,
-    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*1.15"
+    "22k": 8476,
+    "24k": 9246,
+    "18k": 6935,
+    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*time-varying-premium"
   },
   {
     "timestamp": "2025-03-25T00:00:00.000Z",
-    "22k": 8765,
-    "24k": 9562,
-    "18k": 7172,
-    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*1.15"
+    "22k": 8460,
+    "24k": 9230,
+    "18k": 6922,
+    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*time-varying-premium"
   },
   {
     "timestamp": "2025-03-26T00:00:00.000Z",
-    "22k": 8763,
-    "24k": 9560,
-    "18k": 7170,
-    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*1.15"
+    "22k": 8458,
+    "24k": 9227,
+    "18k": 6920,
+    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*time-varying-premium"
   },
   {
     "timestamp": "2025-03-27T00:00:00.000Z",
-    "22k": 8930,
-    "24k": 9741,
-    "18k": 7306,
-    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*1.15"
+    "22k": 8619,
+    "24k": 9403,
+    "18k": 7052,
+    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*time-varying-premium"
   },
   {
     "timestamp": "2025-03-28T00:00:00.000Z",
-    "22k": 8964,
-    "24k": 9779,
-    "18k": 7335,
-    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*1.15"
+    "22k": 8653,
+    "24k": 9439,
+    "18k": 7079,
+    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*time-varying-premium"
   },
   {
     "timestamp": "2025-03-31T00:00:00.000Z",
-    "22k": 9046,
-    "24k": 9868,
-    "18k": 7401,
-    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*1.15"
+    "22k": 8731,
+    "24k": 9525,
+    "18k": 7144,
+    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*time-varying-premium"
   },
   {
     "timestamp": "2025-04-01T00:00:00.000Z",
-    "22k": 9050,
-    "24k": 9872,
-    "18k": 7404,
-    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*1.15"
+    "22k": 8735,
+    "24k": 9529,
+    "18k": 7147,
+    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*time-varying-premium"
   },
   {
     "timestamp": "2025-04-02T00:00:00.000Z",
-    "22k": 9115,
-    "24k": 9943,
-    "18k": 7458,
-    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*1.15"
+    "22k": 8798,
+    "24k": 9598,
+    "18k": 7198,
+    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*time-varying-premium"
   },
   {
     "timestamp": "2025-04-03T00:00:00.000Z",
-    "22k": 8952,
-    "24k": 9765,
-    "18k": 7324,
-    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*1.15"
+    "22k": 8640,
+    "24k": 9426,
+    "18k": 7069,
+    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*time-varying-premium"
   },
   {
     "timestamp": "2025-04-07T00:00:00.000Z",
-    "22k": 8605,
-    "24k": 9387,
-    "18k": 7040,
-    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*1.15"
+    "22k": 8306,
+    "24k": 9061,
+    "18k": 6796,
+    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*time-varying-premium"
   },
   {
     "timestamp": "2025-04-08T00:00:00.000Z",
-    "22k": 8696,
-    "24k": 9486,
-    "18k": 7115,
-    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*1.15"
+    "22k": 8393,
+    "24k": 9156,
+    "18k": 6867,
+    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*time-varying-premium"
   },
   {
     "timestamp": "2025-04-09T00:00:00.000Z",
-    "22k": 8931,
-    "24k": 9742,
-    "18k": 7307,
-    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*1.15"
+    "22k": 8620,
+    "24k": 9404,
+    "18k": 7053,
+    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*time-varying-premium"
   },
   {
     "timestamp": "2025-04-10T00:00:00.000Z",
-    "22k": 9224,
-    "24k": 10063,
-    "18k": 7547,
-    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*1.15"
+    "22k": 8904,
+    "24k": 9713,
+    "18k": 7285,
+    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*time-varying-premium"
   },
   {
     "timestamp": "2025-04-14T00:00:00.000Z",
-    "22k": 9346,
-    "24k": 10196,
-    "18k": 7647,
-    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*1.15"
+    "22k": 9021,
+    "24k": 9841,
+    "18k": 7381,
+    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*time-varying-premium"
   },
   {
     "timestamp": "2025-04-15T00:00:00.000Z",
-    "22k": 9352,
-    "24k": 10202,
-    "18k": 7651,
-    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*1.15"
+    "22k": 9027,
+    "24k": 9847,
+    "18k": 7385,
+    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*time-varying-premium"
   },
   {
     "timestamp": "2025-04-16T00:00:00.000Z",
-    "22k": 9653,
-    "24k": 10531,
-    "18k": 7898,
-    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*1.15"
+    "22k": 9318,
+    "24k": 10165,
+    "18k": 7623,
+    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*time-varying-premium"
   },
   {
     "timestamp": "2025-04-21T00:00:00.000Z",
-    "22k": 9831,
-    "24k": 10725,
-    "18k": 8044,
-    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*1.15"
+    "22k": 9489,
+    "24k": 10352,
+    "18k": 7764,
+    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*time-varying-premium"
   },
   {
     "timestamp": "2025-04-22T00:00:00.000Z",
-    "22k": 9824,
-    "24k": 10717,
-    "18k": 8038,
-    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*1.15"
+    "22k": 9482,
+    "24k": 10344,
+    "18k": 7758,
+    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*time-varying-premium"
   },
   {
     "timestamp": "2025-04-23T00:00:00.000Z",
-    "22k": 9494,
-    "24k": 10357,
-    "18k": 7768,
-    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*1.15"
+    "22k": 9164,
+    "24k": 9997,
+    "18k": 7498,
+    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*time-varying-premium"
   },
   {
     "timestamp": "2025-04-24T00:00:00.000Z",
-    "22k": 9628,
-    "24k": 10503,
-    "18k": 7877,
-    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*1.15"
+    "22k": 9293,
+    "24k": 10138,
+    "18k": 7603,
+    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*time-varying-premium"
   },
   {
     "timestamp": "2025-04-28T00:00:00.000Z",
-    "22k": 9619,
-    "24k": 10493,
-    "18k": 7870,
-    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*1.15"
+    "22k": 9284,
+    "24k": 10128,
+    "18k": 7596,
+    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*time-varying-premium"
   },
   {
     "timestamp": "2025-04-29T00:00:00.000Z",
-    "22k": 9580,
-    "24k": 10451,
-    "18k": 7838,
-    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*1.15"
+    "22k": 9247,
+    "24k": 10088,
+    "18k": 7566,
+    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*time-varying-premium"
   },
   {
     "timestamp": "2025-04-30T00:00:00.000Z",
-    "22k": 9469,
-    "24k": 10329,
-    "18k": 7747,
-    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*1.15"
+    "22k": 9139,
+    "24k": 9970,
+    "18k": 7478,
+    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*time-varying-premium"
   },
   {
     "timestamp": "2025-05-01T00:00:00.000Z",
-    "22k": 9214,
-    "24k": 10052,
-    "18k": 7539,
-    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*1.15"
+    "22k": 8894,
+    "24k": 9703,
+    "18k": 7277,
+    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*time-varying-premium"
   },
   {
     "timestamp": "2025-05-05T00:00:00.000Z",
-    "22k": 9452,
-    "24k": 10311,
-    "18k": 7733,
-    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*1.15"
+    "22k": 9123,
+    "24k": 9952,
+    "18k": 7464,
+    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*time-varying-premium"
   },
   {
     "timestamp": "2025-05-06T00:00:00.000Z",
-    "22k": 9804,
-    "24k": 10695,
-    "18k": 8021,
-    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*1.15"
+    "22k": 9463,
+    "24k": 10323,
+    "18k": 7742,
+    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*time-varying-premium"
   },
   {
     "timestamp": "2025-05-07T00:00:00.000Z",
-    "22k": 9720,
-    "24k": 10604,
-    "18k": 7953,
-    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*1.15"
+    "22k": 9382,
+    "24k": 10235,
+    "18k": 7676,
+    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*time-varying-premium"
   },
   {
     "timestamp": "2025-05-08T00:00:00.000Z",
-    "22k": 9618,
-    "24k": 10492,
-    "18k": 7869,
-    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*1.15"
+    "22k": 9283,
+    "24k": 10127,
+    "18k": 7595,
+    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*time-varying-premium"
   },
   {
     "timestamp": "2025-05-12T00:00:00.000Z",
-    "22k": 9273,
-    "24k": 10116,
-    "18k": 7587,
-    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*1.15"
+    "22k": 8950,
+    "24k": 9764,
+    "18k": 7323,
+    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*time-varying-premium"
   },
   {
     "timestamp": "2025-05-13T00:00:00.000Z",
-    "22k": 9341,
-    "24k": 10191,
-    "18k": 7643,
-    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*1.15"
+    "22k": 9016,
+    "24k": 9836,
+    "18k": 7377,
+    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*time-varying-premium"
   },
   {
     "timestamp": "2025-05-14T00:00:00.000Z",
-    "22k": 9218,
-    "24k": 10056,
-    "18k": 7542,
-    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*1.15"
+    "22k": 8897,
+    "24k": 9706,
+    "18k": 7279,
+    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*time-varying-premium"
   },
   {
     "timestamp": "2025-05-15T00:00:00.000Z",
-    "22k": 9327,
-    "24k": 10175,
-    "18k": 7631,
-    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*1.15"
+    "22k": 9002,
+    "24k": 9821,
+    "18k": 7366,
+    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*time-varying-premium"
   },
   {
     "timestamp": "2025-05-19T00:00:00.000Z",
-    "22k": 9343,
-    "24k": 10192,
-    "18k": 7644,
-    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*1.15"
+    "22k": 9018,
+    "24k": 9837,
+    "18k": 7378,
+    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*time-varying-premium"
   },
   {
     "timestamp": "2025-05-20T00:00:00.000Z",
-    "22k": 9510,
-    "24k": 10374,
-    "18k": 7781,
-    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*1.15"
+    "22k": 9179,
+    "24k": 10013,
+    "18k": 7510,
+    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*time-varying-premium"
   },
   {
     "timestamp": "2025-05-21T00:00:00.000Z",
-    "22k": 9601,
-    "24k": 10474,
-    "18k": 7855,
-    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*1.15"
+    "22k": 9267,
+    "24k": 10109,
+    "18k": 7582,
+    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*time-varying-premium"
   },
   {
     "timestamp": "2025-05-22T00:00:00.000Z",
-    "22k": 9593,
-    "24k": 10465,
-    "18k": 7849,
-    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*1.15"
+    "22k": 9260,
+    "24k": 10101,
+    "18k": 7576,
+    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*time-varying-premium"
   },
   {
     "timestamp": "2025-05-27T00:00:00.000Z",
-    "22k": 9544,
-    "24k": 10412,
-    "18k": 7809,
-    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*1.15"
+    "22k": 9213,
+    "24k": 10050,
+    "18k": 7538,
+    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*time-varying-premium"
   },
   {
     "timestamp": "2025-05-28T00:00:00.000Z",
-    "22k": 9531,
-    "24k": 10398,
-    "18k": 7798,
-    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*1.15"
+    "22k": 9200,
+    "24k": 10036,
+    "18k": 7527,
+    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*time-varying-premium"
   },
   {
     "timestamp": "2025-05-29T00:00:00.000Z",
-    "22k": 9597,
-    "24k": 10469,
-    "18k": 7852,
-    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*1.15"
+    "22k": 9263,
+    "24k": 10105,
+    "18k": 7579,
+    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*time-varying-premium"
   },
   {
     "timestamp": "2025-06-02T00:00:00.000Z",
-    "22k": 9752,
-    "24k": 10638,
-    "18k": 7979,
-    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*1.15"
+    "22k": 9413,
+    "24k": 10268,
+    "18k": 7701,
+    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*time-varying-premium"
   },
   {
     "timestamp": "2025-06-03T00:00:00.000Z",
-    "22k": 9732,
-    "24k": 10617,
-    "18k": 7962,
-    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*1.15"
+    "22k": 9393,
+    "24k": 10247,
+    "18k": 7685,
+    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*time-varying-premium"
   },
   {
     "timestamp": "2025-06-04T00:00:00.000Z",
-    "22k": 9822,
-    "24k": 10715,
-    "18k": 8036,
-    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*1.15"
+    "22k": 9480,
+    "24k": 10342,
+    "18k": 7757,
+    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*time-varying-premium"
   },
   {
     "timestamp": "2025-06-05T00:00:00.000Z",
-    "22k": 9752,
-    "24k": 10639,
-    "18k": 7979,
-    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*1.15"
+    "22k": 9413,
+    "24k": 10269,
+    "18k": 7702,
+    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*time-varying-premium"
   },
   {
     "timestamp": "2025-06-09T00:00:00.000Z",
-    "22k": 9685,
-    "24k": 10565,
-    "18k": 7924,
-    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*1.15"
+    "22k": 9348,
+    "24k": 10198,
+    "18k": 7648,
+    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*time-varying-premium"
   },
   {
     "timestamp": "2025-06-10T00:00:00.000Z",
-    "22k": 9640,
-    "24k": 10517,
-    "18k": 7888,
-    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*1.15"
+    "22k": 9305,
+    "24k": 10151,
+    "18k": 7613,
+    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*time-varying-premium"
   },
   {
     "timestamp": "2025-06-11T00:00:00.000Z",
-    "22k": 9621,
-    "24k": 10496,
-    "18k": 7872,
-    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*1.15"
+    "22k": 9286,
+    "24k": 10131,
+    "18k": 7598,
+    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*time-varying-premium"
   },
   {
     "timestamp": "2025-06-12T00:00:00.000Z",
-    "22k": 9819,
-    "24k": 10711,
-    "18k": 8033,
-    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*1.15"
+    "22k": 9477,
+    "24k": 10339,
+    "18k": 7754,
+    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*time-varying-premium"
   },
   {
     "timestamp": "2025-06-16T00:00:00.000Z",
-    "22k": 9912,
-    "24k": 10813,
-    "18k": 8109,
-    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*1.15"
+    "22k": 9567,
+    "24k": 10437,
+    "18k": 7827,
+    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*time-varying-premium"
   },
   {
     "timestamp": "2025-06-17T00:00:00.000Z",
-    "22k": 9913,
-    "24k": 10814,
-    "18k": 8110,
-    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*1.15"
+    "22k": 9568,
+    "24k": 10438,
+    "18k": 7828,
+    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*time-varying-premium"
   },
   {
     "timestamp": "2025-06-18T00:00:00.000Z",
-    "22k": 9951,
-    "24k": 10855,
-    "18k": 8142,
-    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*1.15"
+    "22k": 9605,
+    "24k": 10478,
+    "18k": 7858,
+    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*time-varying-premium"
   },
   {
     "timestamp": "2025-06-23T00:00:00.000Z",
-    "22k": 9872,
-    "24k": 10769,
-    "18k": 8077,
-    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*1.15"
+    "22k": 9528,
+    "24k": 10395,
+    "18k": 7796,
+    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*time-varying-premium"
   },
   {
     "timestamp": "2025-06-24T00:00:00.000Z",
-    "22k": 9659,
-    "24k": 10537,
-    "18k": 7903,
-    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*1.15"
+    "22k": 9323,
+    "24k": 10170,
+    "18k": 7628,
+    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*time-varying-premium"
   },
   {
     "timestamp": "2025-06-25T00:00:00.000Z",
-    "22k": 9698,
-    "24k": 10580,
-    "18k": 7935,
-    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*1.15"
+    "22k": 9361,
+    "24k": 10212,
+    "18k": 7659,
+    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*time-varying-premium"
   },
   {
     "timestamp": "2025-06-26T00:00:00.000Z",
-    "22k": 9679,
-    "24k": 10558,
-    "18k": 7919,
-    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*1.15"
+    "22k": 9342,
+    "24k": 10191,
+    "18k": 7643,
+    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*time-varying-premium"
   },
   {
     "timestamp": "2025-06-30T00:00:00.000Z",
-    "22k": 9570,
-    "24k": 10440,
-    "18k": 7830,
-    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*1.15"
+    "22k": 9237,
+    "24k": 10077,
+    "18k": 7558,
+    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*time-varying-premium"
   },
   {
     "timestamp": "2025-07-01T00:00:00.000Z",
-    "22k": 9685,
-    "24k": 10566,
-    "18k": 7924,
-    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*1.15"
+    "22k": 9348,
+    "24k": 10198,
+    "18k": 7649,
+    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*time-varying-premium"
   },
   {
     "timestamp": "2025-07-02T00:00:00.000Z",
-    "22k": 9724,
-    "24k": 10608,
-    "18k": 7956,
-    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*1.15"
+    "22k": 9386,
+    "24k": 10239,
+    "18k": 7679,
+    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*time-varying-premium"
   },
   {
     "timestamp": "2025-07-03T00:00:00.000Z",
-    "22k": 9634,
-    "24k": 10510,
-    "18k": 7882,
-    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*1.15"
+    "22k": 9299,
+    "24k": 10144,
+    "18k": 7608,
+    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*time-varying-premium"
   },
   {
     "timestamp": "2025-07-07T00:00:00.000Z",
-    "22k": 9700,
-    "24k": 10582,
-    "18k": 7937,
-    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*1.15"
+    "22k": 9363,
+    "24k": 10214,
+    "18k": 7661,
+    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*time-varying-premium"
   },
   {
     "timestamp": "2025-07-08T00:00:00.000Z",
-    "22k": 9606,
-    "24k": 10480,
-    "18k": 7860,
-    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*1.15"
+    "22k": 9272,
+    "24k": 10115,
+    "18k": 7586,
+    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*time-varying-premium"
   },
   {
     "timestamp": "2025-07-09T00:00:00.000Z",
-    "22k": 9620,
-    "24k": 10494,
-    "18k": 7871,
-    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*1.15"
+    "22k": 9285,
+    "24k": 10129,
+    "18k": 7597,
+    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*time-varying-premium"
   },
   {
     "timestamp": "2025-07-10T00:00:00.000Z",
-    "22k": 9640,
-    "24k": 10516,
-    "18k": 7887,
-    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*1.15"
+    "22k": 9304,
+    "24k": 10150,
+    "18k": 7613,
+    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*time-varying-premium"
   },
   {
     "timestamp": "2025-07-14T00:00:00.000Z",
-    "22k": 9765,
-    "24k": 10653,
-    "18k": 7990,
-    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*1.15"
+    "22k": 9425,
+    "24k": 10282,
+    "18k": 7712,
+    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*time-varying-premium"
   },
   {
     "timestamp": "2025-07-15T00:00:00.000Z",
-    "22k": 9705,
-    "24k": 10587,
-    "18k": 7940,
-    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*1.15"
+    "22k": 9367,
+    "24k": 10219,
+    "18k": 7664,
+    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*time-varying-premium"
   },
   {
     "timestamp": "2025-07-16T00:00:00.000Z",
-    "22k": 9759,
-    "24k": 10646,
-    "18k": 7984,
-    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*1.15"
+    "22k": 9419,
+    "24k": 10275,
+    "18k": 7707,
+    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*time-varying-premium"
   },
   {
     "timestamp": "2025-07-17T00:00:00.000Z",
-    "22k": 9741,
-    "24k": 10626,
-    "18k": 7970,
-    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*1.15"
+    "22k": 9402,
+    "24k": 10257,
+    "18k": 7693,
+    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*time-varying-premium"
   },
   {
     "timestamp": "2025-07-21T00:00:00.000Z",
-    "22k": 9938,
-    "24k": 10842,
-    "18k": 8131,
-    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*1.15"
+    "22k": 9592,
+    "24k": 10465,
+    "18k": 7848,
+    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*time-varying-premium"
   },
   {
     "timestamp": "2025-07-22T00:00:00.000Z",
-    "22k": 10064,
-    "24k": 10979,
-    "18k": 8234,
-    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*1.15"
+    "22k": 9714,
+    "24k": 10597,
+    "18k": 7948,
+    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*time-varying-premium"
   },
   {
     "timestamp": "2025-07-23T00:00:00.000Z",
-    "22k": 9939,
-    "24k": 10842,
-    "18k": 8132,
-    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*1.15"
+    "22k": 9593,
+    "24k": 10465,
+    "18k": 7849,
+    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*time-varying-premium"
   },
   {
     "timestamp": "2025-07-24T00:00:00.000Z",
-    "22k": 9875,
-    "24k": 10772,
-    "18k": 8079,
-    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*1.15"
+    "22k": 9531,
+    "24k": 10398,
+    "18k": 7798,
+    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*time-varying-premium"
   },
   {
     "timestamp": "2025-07-28T00:00:00.000Z",
-    "22k": 9732,
-    "24k": 10617,
-    "18k": 7963,
-    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*1.15"
+    "22k": 9394,
+    "24k": 10248,
+    "18k": 7686,
+    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*time-varying-premium"
   },
   {
     "timestamp": "2025-07-29T00:00:00.000Z",
-    "22k": 9807,
-    "24k": 10698,
-    "18k": 8024,
-    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*1.15"
+    "22k": 9465,
+    "24k": 10326,
+    "18k": 7744,
+    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*time-varying-premium"
   },
   {
     "timestamp": "2025-07-30T00:00:00.000Z",
-    "22k": 9798,
-    "24k": 10689,
-    "18k": 8016,
-    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*1.15"
+    "22k": 9457,
+    "24k": 10317,
+    "18k": 7738,
+    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*time-varying-premium"
   },
   {
     "timestamp": "2025-07-31T00:00:00.000Z",
-    "22k": 9765,
-    "24k": 10653,
-    "18k": 7990,
-    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*1.15"
+    "22k": 9425,
+    "24k": 10282,
+    "18k": 7712,
+    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*time-varying-premium"
   },
   {
     "timestamp": "2025-08-04T00:00:00.000Z",
-    "22k": 10052,
-    "24k": 10966,
-    "18k": 8224,
-    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*1.15"
+    "22k": 9702,
+    "24k": 10584,
+    "18k": 7938,
+    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*time-varying-premium"
   },
   {
     "timestamp": "2025-08-05T00:00:00.000Z",
-    "22k": 10055,
-    "24k": 10969,
-    "18k": 8227,
-    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*1.15"
+    "22k": 9705,
+    "24k": 10587,
+    "18k": 7941,
+    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*time-varying-premium"
   },
   {
     "timestamp": "2025-08-06T00:00:00.000Z",
-    "22k": 10054,
-    "24k": 10968,
-    "18k": 8226,
-    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*1.15"
+    "22k": 9704,
+    "24k": 10586,
+    "18k": 7940,
+    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*time-varying-premium"
   },
   {
     "timestamp": "2025-08-07T00:00:00.000Z",
-    "22k": 10076,
-    "24k": 10992,
-    "18k": 8244,
-    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*1.15"
+    "22k": 9726,
+    "24k": 10610,
+    "18k": 7957,
+    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*time-varying-premium"
   },
   {
     "timestamp": "2025-08-11T00:00:00.000Z",
-    "22k": 9963,
-    "24k": 10868,
-    "18k": 8151,
-    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*1.15"
+    "22k": 9616,
+    "24k": 10490,
+    "18k": 7868,
+    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*time-varying-premium"
   },
   {
     "timestamp": "2025-08-12T00:00:00.000Z",
-    "22k": 9942,
-    "24k": 10846,
-    "18k": 8135,
-    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*1.15"
+    "22k": 9596,
+    "24k": 10469,
+    "18k": 7852,
+    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*time-varying-premium"
   },
   {
     "timestamp": "2025-08-13T00:00:00.000Z",
-    "22k": 9955,
-    "24k": 10860,
-    "18k": 8145,
-    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*1.15"
+    "22k": 9609,
+    "24k": 10482,
+    "18k": 7862,
+    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*time-varying-premium"
   },
   {
     "timestamp": "2025-08-14T00:00:00.000Z",
-    "22k": 9912,
-    "24k": 10814,
-    "18k": 8110,
-    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*1.15"
+    "22k": 9568,
+    "24k": 10437,
+    "18k": 7828,
+    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*time-varying-premium"
   },
   {
     "timestamp": "2025-08-18T00:00:00.000Z",
-    "22k": 9857,
-    "24k": 10753,
-    "18k": 8065,
-    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*1.15"
+    "22k": 9514,
+    "24k": 10379,
+    "18k": 7784,
+    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*time-varying-premium"
   },
   {
     "timestamp": "2025-08-19T00:00:00.000Z",
-    "22k": 9779,
-    "24k": 10668,
-    "18k": 8001,
-    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*1.15"
+    "22k": 9439,
+    "24k": 10297,
+    "18k": 7723,
+    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*time-varying-premium"
   },
   {
     "timestamp": "2025-08-20T00:00:00.000Z",
-    "22k": 9860,
-    "24k": 10757,
-    "18k": 8068,
-    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*1.15"
+    "22k": 9518,
+    "24k": 10383,
+    "18k": 7787,
+    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*time-varying-premium"
   },
   {
     "timestamp": "2025-08-21T00:00:00.000Z",
-    "22k": 9872,
-    "24k": 10770,
-    "18k": 8077,
-    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*1.15"
+    "22k": 9529,
+    "24k": 10395,
+    "18k": 7796,
+    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*time-varying-premium"
   },
   {
     "timestamp": "2025-08-25T00:00:00.000Z",
-    "22k": 10018,
-    "24k": 10928,
-    "18k": 8196,
-    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*1.15"
+    "22k": 9669,
+    "24k": 10548,
+    "18k": 7911,
+    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*time-varying-premium"
   },
   {
     "timestamp": "2025-08-26T00:00:00.000Z",
-    "22k": 10061,
-    "24k": 10975,
-    "18k": 8231,
-    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*1.15"
+    "22k": 9711,
+    "24k": 10594,
+    "18k": 7945,
+    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*time-varying-premium"
   },
   {
     "timestamp": "2025-08-27T00:00:00.000Z",
-    "22k": 10115,
-    "24k": 11034,
-    "18k": 8276,
-    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*1.15"
+    "22k": 9763,
+    "24k": 10651,
+    "18k": 7988,
+    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*time-varying-premium"
   },
   {
     "timestamp": "2025-08-28T00:00:00.000Z",
-    "22k": 10188,
-    "24k": 11114,
-    "18k": 8336,
-    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*1.15"
+    "22k": 9834,
+    "24k": 10728,
+    "18k": 8046,
+    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*time-varying-premium"
   },
   {
     "timestamp": "2025-09-02T00:00:00.000Z",
-    "22k": 10586,
-    "24k": 11548,
-    "18k": 8661,
-    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*1.15"
+    "22k": 10218,
+    "24k": 11147,
+    "18k": 8360,
+    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*time-varying-premium"
   },
   {
     "timestamp": "2025-09-03T00:00:00.000Z",
-    "22k": 10726,
-    "24k": 11701,
-    "18k": 8776,
-    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*1.15"
+    "22k": 10353,
+    "24k": 11294,
+    "18k": 8470,
+    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*time-varying-premium"
   },
   {
     "timestamp": "2025-09-04T00:00:00.000Z",
-    "22k": 10658,
-    "24k": 11627,
-    "18k": 8720,
-    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*1.15"
+    "22k": 10288,
+    "24k": 11223,
+    "18k": 8417,
+    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*time-varying-premium"
   },
   {
     "timestamp": "2025-09-08T00:00:00.000Z",
-    "22k": 10848,
-    "24k": 11834,
-    "18k": 8876,
-    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*1.15"
+    "22k": 10471,
+    "24k": 11423,
+    "18k": 8567,
+    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*time-varying-premium"
   },
   {
     "timestamp": "2025-09-09T00:00:00.000Z",
-    "22k": 10893,
-    "24k": 11883,
-    "18k": 8913,
-    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*1.15"
+    "22k": 10514,
+    "24k": 11470,
+    "18k": 8603,
+    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*time-varying-premium"
   },
   {
     "timestamp": "2025-09-10T00:00:00.000Z",
-    "22k": 10874,
-    "24k": 11862,
-    "18k": 8897,
-    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*1.15"
+    "22k": 10495,
+    "24k": 11450,
+    "18k": 8587,
+    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*time-varying-premium"
   },
   {
     "timestamp": "2025-09-11T00:00:00.000Z",
-    "22k": 10880,
-    "24k": 11869,
-    "18k": 8902,
-    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*1.15"
+    "22k": 10502,
+    "24k": 11456,
+    "18k": 8592,
+    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*time-varying-premium"
   },
   {
     "timestamp": "2025-09-15T00:00:00.000Z",
-    "22k": 10998,
-    "24k": 11997,
-    "18k": 8998,
-    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*1.15"
+    "22k": 10615,
+    "24k": 11580,
+    "18k": 8685,
+    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*time-varying-premium"
   },
   {
     "timestamp": "2025-09-16T00:00:00.000Z",
-    "22k": 10988,
-    "24k": 11987,
-    "18k": 8990,
-    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*1.15"
+    "22k": 10606,
+    "24k": 11570,
+    "18k": 8677,
+    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*time-varying-premium"
   },
   {
     "timestamp": "2025-09-17T00:00:00.000Z",
-    "22k": 10970,
-    "24k": 11967,
-    "18k": 8975,
-    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*1.15"
+    "22k": 10588,
+    "24k": 11551,
+    "18k": 8663,
+    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*time-varying-premium"
   },
   {
     "timestamp": "2025-09-18T00:00:00.000Z",
-    "22k": 10893,
-    "24k": 11883,
-    "18k": 8912,
-    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*1.15"
+    "22k": 10514,
+    "24k": 11470,
+    "18k": 8602,
+    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*time-varying-premium"
   },
   {
     "timestamp": "2025-09-22T00:00:00.000Z",
-    "22k": 11195,
-    "24k": 12213,
-    "18k": 9160,
-    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*1.15"
+    "22k": 10806,
+    "24k": 11788,
+    "18k": 8841,
+    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*time-varying-premium"
   },
   {
     "timestamp": "2025-09-23T00:00:00.000Z",
-    "22k": 11379,
-    "24k": 12414,
-    "18k": 9310,
-    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*1.15"
+    "22k": 10983,
+    "24k": 11982,
+    "18k": 8986,
+    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*time-varying-premium"
   },
   {
     "timestamp": "2025-09-24T00:00:00.000Z",
-    "22k": 11230,
-    "24k": 12250,
-    "18k": 9188,
-    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*1.15"
+    "22k": 10839,
+    "24k": 11824,
+    "18k": 8868,
+    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*time-varying-premium"
   },
   {
     "timestamp": "2025-09-25T00:00:00.000Z",
-    "22k": 11243,
-    "24k": 12265,
-    "18k": 9199,
-    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*1.15"
+    "22k": 10852,
+    "24k": 11839,
+    "18k": 8879,
+    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*time-varying-premium"
   },
   {
     "timestamp": "2025-09-29T00:00:00.000Z",
-    "22k": 11487,
-    "24k": 12531,
-    "18k": 9399,
-    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*1.15"
+    "22k": 11088,
+    "24k": 12096,
+    "18k": 9072,
+    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*time-varying-premium"
   },
   {
     "timestamp": "2025-09-30T00:00:00.000Z",
-    "22k": 11565,
-    "24k": 12616,
-    "18k": 9462,
-    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*1.15"
+    "22k": 11162,
+    "24k": 12177,
+    "18k": 9133,
+    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*time-varying-premium"
   },
   {
     "timestamp": "2025-10-01T00:00:00.000Z",
-    "22k": 11624,
-    "24k": 12681,
-    "18k": 9511,
-    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*1.15"
+    "22k": 11220,
+    "24k": 12240,
+    "18k": 9180,
+    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*time-varying-premium"
   },
   {
     "timestamp": "2025-10-02T00:00:00.000Z",
-    "22k": 11546,
-    "24k": 12595,
-    "18k": 9446,
-    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*1.15"
+    "22k": 11144,
+    "24k": 12157,
+    "18k": 9118,
+    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*time-varying-premium"
   },
   {
     "timestamp": "2025-10-06T00:00:00.000Z",
-    "22k": 11873,
-    "24k": 12952,
-    "18k": 9714,
-    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*1.15"
+    "22k": 11460,
+    "24k": 12502,
+    "18k": 9376,
+    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*time-varying-premium"
   },
   {
     "timestamp": "2025-10-07T00:00:00.000Z",
-    "22k": 11960,
-    "24k": 13048,
-    "18k": 9786,
-    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*1.15"
+    "22k": 11544,
+    "24k": 12594,
+    "18k": 9445,
+    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*time-varying-premium"
   },
   {
     "timestamp": "2025-10-08T00:00:00.000Z",
-    "22k": 12166,
-    "24k": 13272,
-    "18k": 9954,
-    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*1.15"
+    "22k": 11743,
+    "24k": 12810,
+    "18k": 9608,
+    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*time-varying-premium"
   },
   {
     "timestamp": "2025-10-09T00:00:00.000Z",
-    "22k": 11886,
-    "24k": 12966,
-    "18k": 9725,
-    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*1.15"
+    "22k": 11472,
+    "24k": 12515,
+    "18k": 9386,
+    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*time-varying-premium"
   },
   {
     "timestamp": "2025-10-13T00:00:00.000Z",
-    "22k": 12347,
-    "24k": 13469,
-    "18k": 10102,
-    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*1.15"
+    "22k": 11917,
+    "24k": 13001,
+    "18k": 9750,
+    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*time-varying-premium"
   },
   {
     "timestamp": "2025-10-14T00:00:00.000Z",
-    "22k": 12453,
-    "24k": 13586,
-    "18k": 10189,
-    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*1.15"
+    "22k": 12020,
+    "24k": 13113,
+    "18k": 9835,
+    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*time-varying-premium"
   },
   {
     "timestamp": "2025-10-15T00:00:00.000Z",
-    "22k": 12431,
-    "24k": 13561,
-    "18k": 10171,
-    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*1.15"
+    "22k": 11998,
+    "24k": 13089,
+    "18k": 9817,
+    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*time-varying-premium"
   },
   {
     "timestamp": "2025-10-16T00:00:00.000Z",
-    "22k": 12764,
-    "24k": 13925,
-    "18k": 10444,
-    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*1.15"
+    "22k": 12320,
+    "24k": 13440,
+    "18k": 10080,
+    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*time-varying-premium"
   },
   {
     "timestamp": "2025-10-20T00:00:00.000Z",
-    "22k": 12916,
-    "24k": 14090,
-    "18k": 10567,
-    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*1.15"
+    "22k": 12466,
+    "24k": 13600,
+    "18k": 10200,
+    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*time-varying-premium"
   },
   {
     "timestamp": "2025-10-21T00:00:00.000Z",
-    "22k": 12192,
-    "24k": 13300,
-    "18k": 9975,
-    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*1.15"
+    "22k": 11768,
+    "24k": 12838,
+    "18k": 9628,
+    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*time-varying-premium"
   },
   {
     "timestamp": "2025-10-22T00:00:00.000Z",
-    "22k": 12027,
-    "24k": 13120,
-    "18k": 9840,
-    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*1.15"
+    "22k": 11609,
+    "24k": 12664,
+    "18k": 9498,
+    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*time-varying-premium"
   },
   {
     "timestamp": "2025-10-23T00:00:00.000Z",
-    "22k": 12273,
-    "24k": 13389,
-    "18k": 10042,
-    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*1.15"
+    "22k": 11847,
+    "24k": 12924,
+    "18k": 9693,
+    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*time-varying-premium"
   },
   {
     "timestamp": "2025-10-27T00:00:00.000Z",
-    "22k": 11913,
-    "24k": 12995,
-    "18k": 9747,
-    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*1.15"
+    "22k": 11498,
+    "24k": 12543,
+    "18k": 9408,
+    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*time-varying-premium"
   },
   {
     "timestamp": "2025-10-28T00:00:00.000Z",
-    "22k": 11859,
-    "24k": 12937,
-    "18k": 9703,
-    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*1.15"
+    "22k": 11447,
+    "24k": 12487,
+    "18k": 9365,
+    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*time-varying-premium"
   },
   {
     "timestamp": "2025-10-29T00:00:00.000Z",
-    "22k": 11912,
-    "24k": 12995,
-    "18k": 9746,
-    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*1.15"
+    "22k": 11498,
+    "24k": 12543,
+    "18k": 9407,
+    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*time-varying-premium"
   },
   {
     "timestamp": "2025-10-30T00:00:00.000Z",
-    "22k": 11981,
-    "24k": 13070,
-    "18k": 9802,
-    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*1.15"
+    "22k": 11564,
+    "24k": 12615,
+    "18k": 9462,
+    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*time-varying-premium"
   },
   {
     "timestamp": "2025-10-31T00:00:00.000Z",
-    "22k": 11963,
-    "24k": 13050,
-    "18k": 9788,
-    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*1.15"
+    "22k": 11547,
+    "24k": 12596,
+    "18k": 9447,
+    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*time-varying-premium"
   },
   {
     "timestamp": "2025-11-03T00:00:00.000Z",
-    "22k": 12036,
-    "24k": 13130,
-    "18k": 9848,
-    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*1.15"
+    "22k": 11617,
+    "24k": 12674,
+    "18k": 9505,
+    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*time-varying-premium"
   },
   {
     "timestamp": "2025-11-04T00:00:00.000Z",
-    "22k": 11871,
-    "24k": 12950,
-    "18k": 9713,
-    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*1.15"
+    "22k": 11458,
+    "24k": 12500,
+    "18k": 9375,
+    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*time-varying-premium"
   },
   {
     "timestamp": "2025-11-05T00:00:00.000Z",
-    "22k": 11970,
-    "24k": 13058,
-    "18k": 9794,
-    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*1.15"
+    "22k": 11554,
+    "24k": 12604,
+    "18k": 9453,
+    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*time-varying-premium"
   },
   {
     "timestamp": "2025-11-06T00:00:00.000Z",
-    "22k": 11945,
-    "24k": 13031,
-    "18k": 9773,
-    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*1.15"
+    "22k": 11530,
+    "24k": 12578,
+    "18k": 9433,
+    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*time-varying-premium"
   },
   {
     "timestamp": "2025-11-07T00:00:00.000Z",
-    "22k": 12019,
-    "24k": 13112,
-    "18k": 9834,
-    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*1.15"
+    "22k": 11601,
+    "24k": 12656,
+    "18k": 9492,
+    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*time-varying-premium"
   },
   {
     "timestamp": "2025-11-10T00:00:00.000Z",
-    "22k": 12355,
-    "24k": 13478,
-    "18k": 10109,
-    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*1.15"
+    "22k": 11925,
+    "24k": 13010,
+    "18k": 9757,
+    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*time-varying-premium"
   },
   {
     "timestamp": "2025-11-11T00:00:00.000Z",
-    "22k": 12347,
-    "24k": 13469,
-    "18k": 10102,
-    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*1.15"
+    "22k": 11918,
+    "24k": 13001,
+    "18k": 9751,
+    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*time-varying-premium"
   },
   {
     "timestamp": "2025-11-12T00:00:00.000Z",
-    "22k": 12606,
-    "24k": 13752,
-    "18k": 10314,
-    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*1.15"
+    "22k": 12168,
+    "24k": 13274,
+    "18k": 9955,
+    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*time-varying-premium"
   },
   {
     "timestamp": "2025-11-13T00:00:00.000Z",
-    "22k": 12572,
-    "24k": 13715,
-    "18k": 10286,
-    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*1.15"
+    "22k": 12135,
+    "24k": 13238,
+    "18k": 9928,
+    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*time-varying-premium"
   },
   {
     "timestamp": "2025-11-14T00:00:00.000Z",
-    "22k": 12304,
-    "24k": 13423,
-    "18k": 10067,
-    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*1.15"
+    "22k": 11876,
+    "24k": 12956,
+    "18k": 9717,
+    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*time-varying-premium"
   },
   {
     "timestamp": "2025-11-17T00:00:00.000Z",
-    "22k": 12228,
-    "24k": 13339,
-    "18k": 10005,
-    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*1.15"
+    "22k": 11802,
+    "24k": 12875,
+    "18k": 9657,
+    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*time-varying-premium"
   },
   {
     "timestamp": "2025-11-18T00:00:00.000Z",
-    "22k": 12200,
-    "24k": 13310,
-    "18k": 9982,
-    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*1.15"
+    "22k": 11776,
+    "24k": 12847,
+    "18k": 9635,
+    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*time-varying-premium"
   },
   {
     "timestamp": "2025-11-19T00:00:00.000Z",
-    "22k": 12239,
-    "24k": 13351,
-    "18k": 10014,
-    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*1.15"
+    "22k": 11813,
+    "24k": 12887,
+    "18k": 9665,
+    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*time-varying-premium"
   },
   {
     "timestamp": "2025-11-20T00:00:00.000Z",
-    "22k": 12166,
-    "24k": 13272,
-    "18k": 9954,
-    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*1.15"
+    "22k": 11742,
+    "24k": 12810,
+    "18k": 9607,
+    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*time-varying-premium"
   },
   {
     "timestamp": "2025-11-21T00:00:00.000Z",
-    "22k": 12254,
-    "24k": 13369,
-    "18k": 10026,
-    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*1.15"
+    "22k": 11828,
+    "24k": 12904,
+    "18k": 9678,
+    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*time-varying-premium"
   },
   {
     "timestamp": "2025-11-24T00:00:00.000Z",
-    "22k": 12431,
-    "24k": 13561,
-    "18k": 10171,
-    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*1.15"
+    "22k": 11998,
+    "24k": 13089,
+    "18k": 9817,
+    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*time-varying-premium"
   },
   {
     "timestamp": "2025-11-25T00:00:00.000Z",
-    "22k": 12506,
-    "24k": 13643,
-    "18k": 10232,
-    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*1.15"
+    "22k": 12071,
+    "24k": 13169,
+    "18k": 9876,
+    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*time-varying-premium"
   },
   {
     "timestamp": "2025-11-26T00:00:00.000Z",
-    "22k": 12585,
-    "24k": 13729,
-    "18k": 10297,
-    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*1.15"
+    "22k": 12147,
+    "24k": 13252,
+    "18k": 9939,
+    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*time-varying-premium"
   },
   {
     "timestamp": "2025-11-28T00:00:00.000Z",
-    "22k": 12776,
-    "24k": 13938,
-    "18k": 10453,
-    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*1.15"
+    "22k": 12332,
+    "24k": 13453,
+    "18k": 10090,
+    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*time-varying-premium"
   },
   {
     "timestamp": "2025-12-01T00:00:00.000Z",
-    "22k": 12838,
-    "24k": 14005,
-    "18k": 10504,
-    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*1.15"
+    "22k": 12391,
+    "24k": 13518,
+    "18k": 10138,
+    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*time-varying-premium"
   },
   {
     "timestamp": "2025-12-02T00:00:00.000Z",
-    "22k": 12715,
-    "24k": 13871,
-    "18k": 10404,
-    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*1.15"
+    "22k": 12273,
+    "24k": 13389,
+    "18k": 10042,
+    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*time-varying-premium"
   },
   {
     "timestamp": "2025-12-03T00:00:00.000Z",
-    "22k": 12797,
-    "24k": 13961,
-    "18k": 10471,
-    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*1.15"
+    "22k": 12352,
+    "24k": 13475,
+    "18k": 10106,
+    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*time-varying-premium"
   },
   {
     "timestamp": "2025-12-04T00:00:00.000Z",
-    "22k": 12872,
-    "24k": 14042,
-    "18k": 10531,
-    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*1.15"
+    "22k": 12424,
+    "24k": 13553,
+    "18k": 10165,
+    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*time-varying-premium"
   },
   {
     "timestamp": "2025-12-05T00:00:00.000Z",
-    "22k": 12827,
-    "24k": 13993,
-    "18k": 10495,
-    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*1.15"
+    "22k": 12381,
+    "24k": 13507,
+    "18k": 10130,
+    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*time-varying-premium"
   },
   {
     "timestamp": "2025-12-08T00:00:00.000Z",
-    "22k": 12763,
-    "24k": 13924,
-    "18k": 10443,
-    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*1.15"
+    "22k": 12319,
+    "24k": 13439,
+    "18k": 10080,
+    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*time-varying-premium"
   },
   {
     "timestamp": "2025-12-09T00:00:00.000Z",
-    "22k": 12850,
-    "24k": 14018,
-    "18k": 10514,
-    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*1.15"
+    "22k": 12403,
+    "24k": 13531,
+    "18k": 10148,
+    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*time-varying-premium"
   },
   {
     "timestamp": "2025-12-10T00:00:00.000Z",
-    "22k": 12788,
-    "24k": 13951,
-    "18k": 10463,
-    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*1.15"
+    "22k": 12344,
+    "24k": 13466,
+    "18k": 10099,
+    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*time-varying-premium"
   },
   {
     "timestamp": "2025-12-11T00:00:00.000Z",
-    "22k": 13042,
-    "24k": 14228,
-    "18k": 10671,
-    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*1.15"
+    "22k": 12588,
+    "24k": 13733,
+    "18k": 10300,
+    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*time-varying-premium"
   },
   {
     "timestamp": "2025-12-12T00:00:00.000Z",
-    "22k": 13153,
-    "24k": 14349,
-    "18k": 10762,
-    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*1.15"
+    "22k": 12696,
+    "24k": 13850,
+    "18k": 10388,
+    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*time-varying-premium"
   },
   {
     "timestamp": "2025-12-15T00:00:00.000Z",
-    "22k": 13221,
-    "24k": 14423,
-    "18k": 10817,
-    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*1.15"
+    "22k": 12761,
+    "24k": 13921,
+    "18k": 10441,
+    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*time-varying-premium"
   },
   {
     "timestamp": "2025-12-16T00:00:00.000Z",
-    "22k": 13243,
-    "24k": 14447,
-    "18k": 10835,
-    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*1.15"
+    "22k": 12783,
+    "24k": 13945,
+    "18k": 10459,
+    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*time-varying-premium"
   },
   {
     "timestamp": "2025-12-17T00:00:00.000Z",
-    "22k": 13401,
-    "24k": 14619,
-    "18k": 10964,
-    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*1.15"
+    "22k": 12935,
+    "24k": 14111,
+    "18k": 10583,
+    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*time-varying-premium"
   },
   {
     "timestamp": "2025-12-18T00:00:00.000Z",
-    "22k": 13298,
-    "24k": 14506,
-    "18k": 10880,
-    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*1.15"
+    "22k": 12835,
+    "24k": 14002,
+    "18k": 10501,
+    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*time-varying-premium"
   },
   {
     "timestamp": "2025-12-19T00:00:00.000Z",
-    "22k": 13341,
-    "24k": 14554,
-    "18k": 10916,
-    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*1.15"
+    "22k": 12877,
+    "24k": 14048,
+    "18k": 10536,
+    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*time-varying-premium"
   },
   {
     "timestamp": "2025-12-22T00:00:00.000Z",
-    "22k": 13493,
-    "24k": 14719,
-    "18k": 11039,
-    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*1.15"
+    "22k": 13023,
+    "24k": 14207,
+    "18k": 10655,
+    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*time-varying-premium"
   },
   {
     "timestamp": "2025-12-23T00:00:00.000Z",
-    "22k": 13614,
-    "24k": 14851,
-    "18k": 11138,
-    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*1.15"
+    "22k": 13140,
+    "24k": 14335,
+    "18k": 10751,
+    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*time-varying-premium"
   },
   {
     "timestamp": "2025-12-24T00:00:00.000Z",
-    "22k": 13592,
-    "24k": 14828,
-    "18k": 11121,
-    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*1.15"
+    "22k": 13120,
+    "24k": 14312,
+    "18k": 10734,
+    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*time-varying-premium"
   },
   {
     "timestamp": "2025-12-26T00:00:00.000Z",
-    "22k": 13831,
-    "24k": 15089,
-    "18k": 11317,
-    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*1.15"
+    "22k": 13350,
+    "24k": 14564,
+    "18k": 10923,
+    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*time-varying-premium"
   },
   {
     "timestamp": "2025-12-29T00:00:00.000Z",
-    "22k": 13168,
-    "24k": 14365,
-    "18k": 10774,
-    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*1.15"
+    "22k": 12710,
+    "24k": 13865,
+    "18k": 10399,
+    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*time-varying-premium"
   },
   {
     "timestamp": "2025-12-30T00:00:00.000Z",
-    "22k": 13315,
-    "24k": 14526,
-    "18k": 10894,
-    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*1.15"
+    "22k": 12852,
+    "24k": 14021,
+    "18k": 10515,
+    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*time-varying-premium"
   },
   {
     "timestamp": "2025-12-31T00:00:00.000Z",
-    "22k": 13161,
-    "24k": 14357,
-    "18k": 10768,
-    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*1.15"
+    "22k": 12703,
+    "24k": 13858,
+    "18k": 10393,
+    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*time-varying-premium"
   },
   {
     "timestamp": "2026-01-02T00:00:00.000Z",
-    "22k": 13155,
-    "24k": 14351,
-    "18k": 10763,
-    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*1.15"
+    "22k": 12697,
+    "24k": 13851,
+    "18k": 10389,
+    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*time-varying-premium"
   },
   {
     "timestamp": "2026-01-05T00:00:00.000Z",
-    "22k": 13535,
-    "24k": 14765,
-    "18k": 11074,
-    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*1.15"
+    "22k": 13064,
+    "24k": 14252,
+    "18k": 10689,
+    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*time-varying-premium"
   },
   {
     "timestamp": "2026-01-06T00:00:00.000Z",
-    "22k": 13707,
-    "24k": 14954,
-    "18k": 11215,
-    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*1.15"
+    "22k": 13231,
+    "24k": 14433,
+    "18k": 10825,
+    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*time-varying-premium"
   },
   {
     "timestamp": "2026-01-07T00:00:00.000Z",
-    "22k": 13597,
-    "24k": 14833,
-    "18k": 11125,
-    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*1.15"
+    "22k": 13124,
+    "24k": 14317,
+    "18k": 10738,
+    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*time-varying-premium"
   },
   {
     "timestamp": "2026-01-08T00:00:00.000Z",
-    "22k": 13552,
-    "24k": 14785,
-    "18k": 11088,
-    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*1.15"
+    "22k": 13081,
+    "24k": 14270,
+    "18k": 10703,
+    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*time-varying-premium"
   },
   {
     "timestamp": "2026-01-09T00:00:00.000Z",
-    "22k": 13682,
-    "24k": 14926,
-    "18k": 11195,
-    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*1.15"
+    "22k": 13206,
+    "24k": 14407,
+    "18k": 10805,
+    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*time-varying-premium"
   },
   {
     "timestamp": "2026-01-12T00:00:00.000Z",
-    "22k": 14081,
-    "24k": 15361,
-    "18k": 11521,
-    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*1.15"
+    "22k": 13592,
+    "24k": 14827,
+    "18k": 11120,
+    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*time-varying-premium"
   },
   {
     "timestamp": "2026-01-13T00:00:00.000Z",
-    "22k": 14019,
-    "24k": 15294,
-    "18k": 11470,
-    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*1.15"
+    "22k": 13531,
+    "24k": 14762,
+    "18k": 11071,
+    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*time-varying-premium"
   },
   {
     "timestamp": "2026-01-14T00:00:00.000Z",
-    "22k": 14154,
-    "24k": 15441,
-    "18k": 11581,
-    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*1.15"
+    "22k": 13662,
+    "24k": 14904,
+    "18k": 11178,
+    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*time-varying-premium"
   },
   {
     "timestamp": "2026-01-15T00:00:00.000Z",
-    "22k": 14110,
-    "24k": 15392,
-    "18k": 11544,
-    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*1.15"
+    "22k": 13619,
+    "24k": 14857,
+    "18k": 11143,
+    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*time-varying-premium"
   },
   {
     "timestamp": "2026-01-16T00:00:00.000Z",
-    "22k": 14052,
-    "24k": 15330,
-    "18k": 11497,
-    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*1.15"
+    "22k": 13563,
+    "24k": 14796,
+    "18k": 11097,
+    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*time-varying-premium"
   },
   {
     "timestamp": "2026-01-20T00:00:00.000Z",
-    "22k": 14664,
-    "24k": 15997,
-    "18k": 11998,
-    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*1.15"
+    "22k": 14154,
+    "24k": 15441,
+    "18k": 11581,
+    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*time-varying-premium"
   },
   {
     "timestamp": "2026-01-21T00:00:00.000Z",
-    "22k": 14922,
-    "24k": 16278,
-    "18k": 12209,
-    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*1.15"
+    "22k": 14403,
+    "24k": 15712,
+    "18k": 11784,
+    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*time-varying-premium"
   },
   {
     "timestamp": "2026-01-22T00:00:00.000Z",
-    "22k": 15229,
-    "24k": 16613,
-    "18k": 12460,
-    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*1.15"
+    "22k": 14699,
+    "24k": 16036,
+    "18k": 12027,
+    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*time-varying-premium"
   },
   {
     "timestamp": "2026-01-23T00:00:00.000Z",
-    "22k": 15442,
-    "24k": 16846,
-    "18k": 12634,
-    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*1.15"
+    "22k": 14905,
+    "24k": 16260,
+    "18k": 12195,
+    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*time-varying-premium"
   },
   {
     "timestamp": "2026-01-26T00:00:00.000Z",
-    "22k": 15753,
-    "24k": 17185,
-    "18k": 12889,
-    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*1.15"
+    "22k": 15205,
+    "24k": 16587,
+    "18k": 12441,
+    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*time-varying-premium"
   },
   {
     "timestamp": "2026-01-27T00:00:00.000Z",
-    "22k": 15790,
-    "24k": 17226,
-    "18k": 12919,
-    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*1.15"
+    "22k": 15241,
+    "24k": 16626,
+    "18k": 12470,
+    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*time-varying-premium"
   },
   {
     "timestamp": "2026-01-28T00:00:00.000Z",
-    "22k": 16447,
-    "24k": 17942,
-    "18k": 13457,
-    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*1.15"
+    "22k": 15875,
+    "24k": 17318,
+    "18k": 12989,
+    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*time-varying-premium"
   },
   {
     "timestamp": "2026-01-29T00:00:00.000Z",
-    "22k": 16591,
-    "24k": 18099,
-    "18k": 13574,
-    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*1.15"
+    "22k": 16014,
+    "24k": 17469,
+    "18k": 13102,
+    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*time-varying-premium"
   },
   {
     "timestamp": "2026-01-30T00:00:00.000Z",
-    "22k": 14663,
-    "24k": 15997,
-    "18k": 11997,
-    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*1.15"
+    "22k": 14153,
+    "24k": 15440,
+    "18k": 11580,
+    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*time-varying-premium"
   },
   {
     "timestamp": "2026-02-02T00:00:00.000Z",
-    "22k": 14364,
-    "24k": 15670,
-    "18k": 11753,
-    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*1.15"
+    "22k": 13865,
+    "24k": 15125,
+    "18k": 11344,
+    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*time-varying-premium"
   },
   {
     "timestamp": "2026-02-03T00:00:00.000Z",
-    "22k": 14999,
-    "24k": 16362,
-    "18k": 12272,
-    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*1.15"
+    "22k": 14477,
+    "24k": 15793,
+    "18k": 11845,
+    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*time-varying-premium"
   },
   {
     "timestamp": "2026-02-04T00:00:00.000Z",
-    "22k": 15079,
-    "24k": 16450,
-    "18k": 12338,
-    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*1.15"
+    "22k": 14555,
+    "24k": 15878,
+    "18k": 11908,
+    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*time-varying-premium"
   },
   {
     "timestamp": "2026-02-05T00:00:00.000Z",
-    "22k": 14849,
-    "24k": 16199,
-    "18k": 12149,
-    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*1.15"
+    "22k": 14333,
+    "24k": 15636,
+    "18k": 11727,
+    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*time-varying-premium"
   },
   {
     "timestamp": "2026-02-06T00:00:00.000Z",
-    "22k": 15155,
-    "24k": 16533,
-    "18k": 12400,
-    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*1.15"
+    "22k": 14628,
+    "24k": 15958,
+    "18k": 11969,
+    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*time-varying-premium"
   },
   {
     "timestamp": "2026-02-09T00:00:00.000Z",
-    "22k": 15507,
-    "24k": 16917,
-    "18k": 12688,
-    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*1.15"
+    "22k": 14968,
+    "24k": 16329,
+    "18k": 12247,
+    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*time-varying-premium"
   },
   {
     "timestamp": "2026-02-10T00:00:00.000Z",
-    "22k": 15403,
-    "24k": 16803,
-    "18k": 12602,
-    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*1.15"
+    "22k": 14867,
+    "24k": 16218,
+    "18k": 12164,
+    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*time-varying-premium"
   },
   {
     "timestamp": "2026-02-11T00:00:00.000Z",
-    "22k": 15571,
-    "24k": 16986,
-    "18k": 12740,
-    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*1.15"
+    "22k": 15029,
+    "24k": 16396,
+    "18k": 12297,
+    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*time-varying-premium"
   },
   {
     "timestamp": "2026-02-12T00:00:00.000Z",
-    "22k": 15142,
-    "24k": 16518,
-    "18k": 12389,
-    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*1.15"
+    "22k": 14615,
+    "24k": 15943,
+    "18k": 11958,
+    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*time-varying-premium"
   },
   {
     "timestamp": "2026-02-13T00:00:00.000Z",
-    "22k": 15415,
-    "24k": 16816,
-    "18k": 12612,
-    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*1.15"
+    "22k": 14878,
+    "24k": 16231,
+    "18k": 12173,
+    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*time-varying-premium"
   },
   {
     "timestamp": "2026-02-17T00:00:00.000Z",
-    "22k": 15024,
-    "24k": 16390,
-    "18k": 12292,
-    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*1.15"
+    "22k": 14501,
+    "24k": 15820,
+    "18k": 11865,
+    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*time-varying-premium"
   },
   {
     "timestamp": "2026-02-18T00:00:00.000Z",
-    "22k": 15316,
-    "24k": 16709,
-    "18k": 12531,
-    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*1.15"
+    "22k": 14783,
+    "24k": 16127,
+    "18k": 12096,
+    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*time-varying-premium"
   },
   {
     "timestamp": "2026-02-19T00:00:00.000Z",
-    "22k": 15312,
-    "24k": 16704,
-    "18k": 12528,
-    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*1.15"
+    "22k": 14779,
+    "24k": 16123,
+    "18k": 12092,
+    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*time-varying-premium"
   },
   {
     "timestamp": "2026-02-20T00:00:00.000Z",
-    "22k": 15611,
-    "24k": 17030,
-    "18k": 12773,
-    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*1.15"
+    "22k": 15068,
+    "24k": 16438,
+    "18k": 12328,
+    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*time-varying-premium"
   },
   {
     "timestamp": "2026-02-23T00:00:00.000Z",
-    "22k": 16004,
-    "24k": 17459,
-    "18k": 13094,
-    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*1.15"
+    "22k": 15447,
+    "24k": 16852,
+    "18k": 12639,
+    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*time-varying-premium"
   },
   {
     "timestamp": "2026-02-24T00:00:00.000Z",
-    "22k": 15905,
-    "24k": 17351,
-    "18k": 13013,
-    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*1.15"
+    "22k": 15352,
+    "24k": 16747,
+    "18k": 12561,
+    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*time-varying-premium"
   },
   {
     "timestamp": "2026-02-25T00:00:00.000Z",
-    "22k": 16043,
-    "24k": 17502,
-    "18k": 13126,
-    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*1.15"
+    "22k": 15485,
+    "24k": 16893,
+    "18k": 12670,
+    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*time-varying-premium"
   },
   {
     "timestamp": "2026-02-26T00:00:00.000Z",
-    "22k": 15957,
-    "24k": 17407,
-    "18k": 13056,
-    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*1.15"
+    "22k": 15402,
+    "24k": 16802,
+    "18k": 12601,
+    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*time-varying-premium"
   },
   {
     "timestamp": "2026-02-27T00:00:00.000Z",
-    "22k": 16133,
-    "24k": 17600,
-    "18k": 13200,
-    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*1.15"
+    "22k": 15572,
+    "24k": 16988,
+    "18k": 12741,
+    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*time-varying-premium"
   },
   {
     "timestamp": "2026-03-02T00:00:00.000Z",
-    "22k": 16343,
-    "24k": 17829,
-    "18k": 13372,
-    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*1.15"
+    "22k": 15775,
+    "24k": 17209,
+    "18k": 12907,
+    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*time-varying-premium"
   },
   {
     "timestamp": "2026-03-03T00:00:00.000Z",
-    "22k": 15850,
-    "24k": 17291,
-    "18k": 12968,
-    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*1.15"
+    "22k": 15298,
+    "24k": 16689,
+    "18k": 12517,
+    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*time-varying-premium"
   },
   {
     "timestamp": "2026-03-04T00:00:00.000Z",
-    "22k": 15967,
-    "24k": 17418,
-    "18k": 13064,
-    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*1.15"
+    "22k": 15411,
+    "24k": 16812,
+    "18k": 12609,
+    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*time-varying-premium"
   },
   {
     "timestamp": "2026-03-05T00:00:00.000Z",
-    "22k": 15815,
-    "24k": 17253,
-    "18k": 12940,
-    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*1.15"
+    "22k": 15265,
+    "24k": 16653,
+    "18k": 12490,
+    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*time-varying-premium"
   },
   {
     "timestamp": "2026-03-06T00:00:00.000Z",
-    "22k": 16009,
-    "24k": 17464,
-    "18k": 13098,
-    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*1.15"
+    "22k": 15452,
+    "24k": 16857,
+    "18k": 12643,
+    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*time-varying-premium"
   },
   {
     "timestamp": "2026-03-09T00:00:00.000Z",
-    "22k": 15865,
-    "24k": 17307,
-    "18k": 12980,
-    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*1.15"
+    "22k": 15313,
+    "24k": 16705,
+    "18k": 12529,
+    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*time-varying-premium"
   },
   {
     "timestamp": "2026-03-10T00:00:00.000Z",
-    "22k": 16169,
-    "24k": 17638,
-    "18k": 13229,
-    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*1.15"
+    "22k": 15606,
+    "24k": 17025,
+    "18k": 12769,
+    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*time-varying-premium"
   },
   {
     "timestamp": "2026-03-11T00:00:00.000Z",
-    "22k": 16141,
-    "24k": 17609,
-    "18k": 13207,
-    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*1.15"
+    "22k": 15580,
+    "24k": 16996,
+    "18k": 12747,
+    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*time-varying-premium"
   },
   {
     "timestamp": "2026-03-12T00:00:00.000Z",
-    "22k": 15991,
-    "24k": 17445,
-    "18k": 13084,
-    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*1.15"
+    "22k": 15435,
+    "24k": 16838,
+    "18k": 12629,
+    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*time-varying-premium"
   },
   {
     "timestamp": "2026-03-13T00:00:00.000Z",
-    "22k": 15821,
-    "24k": 17259,
-    "18k": 12944,
-    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*1.15"
+    "22k": 15271,
+    "24k": 16659,
+    "18k": 12494,
+    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*time-varying-premium"
   },
   {
     "timestamp": "2026-03-16T00:00:00.000Z",
-    "22k": 15667,
-    "24k": 17091,
-    "18k": 12819,
-    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*1.15"
+    "22k": 15122,
+    "24k": 16497,
+    "18k": 12373,
+    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*time-varying-premium"
   },
   {
     "timestamp": "2026-03-17T00:00:00.000Z",
-    "22k": 15641,
-    "24k": 17063,
-    "18k": 12798,
-    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*1.15"
+    "22k": 15097,
+    "24k": 16470,
+    "18k": 12352,
+    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*time-varying-premium"
   },
   {
     "timestamp": "2026-03-18T00:00:00.000Z",
-    "22k": 15312,
-    "24k": 16704,
-    "18k": 12528,
-    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*1.15"
+    "22k": 14779,
+    "24k": 16123,
+    "18k": 12092,
+    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*time-varying-premium"
   },
   {
     "timestamp": "2026-03-19T00:00:00.000Z",
-    "22k": 14540,
-    "24k": 15862,
-    "18k": 11896,
-    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*1.15"
+    "22k": 14034,
+    "24k": 15310,
+    "18k": 11482,
+    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*time-varying-premium"
   },
   {
     "timestamp": "2026-03-20T00:00:00.000Z",
-    "22k": 14419,
-    "24k": 15729,
-    "18k": 11797,
-    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*1.15"
+    "22k": 13917,
+    "24k": 15182,
+    "18k": 11387,
+    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*time-varying-premium"
   },
   {
     "timestamp": "2026-03-23T00:00:00.000Z",
-    "22k": 14015,
-    "24k": 15289,
-    "18k": 11467,
-    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*1.15"
+    "22k": 13528,
+    "24k": 14758,
+    "18k": 11068,
+    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*time-varying-premium"
   },
   {
     "timestamp": "2026-03-24T00:00:00.000Z",
-    "22k": 13903,
-    "24k": 15167,
-    "18k": 11375,
-    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*1.15"
+    "22k": 13419,
+    "24k": 14639,
+    "18k": 10979,
+    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*time-varying-premium"
   },
   {
     "timestamp": "2026-03-25T00:00:00.000Z",
-    "22k": 14541,
-    "24k": 15863,
-    "18k": 11897,
-    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*1.15"
+    "22k": 14035,
+    "24k": 15311,
+    "18k": 11484,
+    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*time-varying-premium"
   },
   {
     "timestamp": "2026-03-26T00:00:00.000Z",
-    "22k": 14043,
-    "24k": 15319,
-    "18k": 11489,
-    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*1.15"
+    "22k": 13554,
+    "24k": 14786,
+    "18k": 11090,
+    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*time-varying-premium"
   },
   {
     "timestamp": "2026-03-27T00:00:00.000Z",
-    "22k": 14358,
-    "24k": 15663,
-    "18k": 11747,
-    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*1.15"
+    "22k": 13859,
+    "24k": 15119,
+    "18k": 11339,
+    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*time-varying-premium"
   },
   {
     "timestamp": "2026-03-30T00:00:00.000Z",
-    "22k": 14474,
-    "24k": 15790,
-    "18k": 11842,
-    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*1.15"
+    "22k": 13970,
+    "24k": 15240,
+    "18k": 11430,
+    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*time-varying-premium"
   },
   {
     "timestamp": "2026-03-31T00:00:00.000Z",
-    "22k": 14725,
-    "24k": 16064,
-    "18k": 12048,
-    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*1.15"
+    "22k": 14213,
+    "24k": 15505,
+    "18k": 11629,
+    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*time-varying-premium"
   },
   {
     "timestamp": "2026-04-01T00:00:00.000Z",
-    "22k": 15019,
-    "24k": 16384,
-    "18k": 12288,
-    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*1.15"
+    "22k": 14496,
+    "24k": 15814,
+    "18k": 11861,
+    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*time-varying-premium"
   },
   {
     "timestamp": "2026-04-02T00:00:00.000Z",
-    "22k": 14657,
-    "24k": 15990,
-    "18k": 11992,
-    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*1.15"
+    "22k": 14147,
+    "24k": 15434,
+    "18k": 11575,
+    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*time-varying-premium"
   },
   {
     "timestamp": "2026-04-06T00:00:00.000Z",
-    "22k": 14649,
-    "24k": 15981,
-    "18k": 11986,
-    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*1.15"
+    "22k": 14140,
+    "24k": 15425,
+    "18k": 11569,
+    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*time-varying-premium"
   },
   {
     "timestamp": "2026-04-07T00:00:00.000Z",
-    "22k": 14657,
-    "24k": 15989,
-    "18k": 11992,
-    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*1.15"
+    "22k": 14147,
+    "24k": 15433,
+    "18k": 11575,
+    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*time-varying-premium"
   },
   {
     "timestamp": "2026-04-08T00:00:00.000Z",
-    "22k": 14854,
-    "24k": 16204,
-    "18k": 12153,
-    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*1.15"
+    "22k": 14337,
+    "24k": 15640,
+    "18k": 11730,
+    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*time-varying-premium"
   },
   {
     "timestamp": "2026-04-09T00:00:00.000Z",
-    "22k": 15019,
-    "24k": 16384,
-    "18k": 12288,
-    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*1.15"
+    "22k": 14496,
+    "24k": 15814,
+    "18k": 11861,
+    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*time-varying-premium"
   },
   {
     "timestamp": "2026-04-13T00:00:00.000Z",
-    "22k": 15261,
-    "24k": 16648,
-    "18k": 12486,
-    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*1.15"
+    "22k": 14730,
+    "24k": 16069,
+    "18k": 12052,
+    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*time-varying-premium"
   },
   {
     "timestamp": "2026-04-14T00:00:00.000Z",
-    "22k": 15235,
-    "24k": 16620,
-    "18k": 12465,
-    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*1.15"
+    "22k": 14705,
+    "24k": 16042,
+    "18k": 12032,
+    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*time-varying-premium"
   },
   {
     "timestamp": "2026-04-15T00:00:00.000Z",
-    "22k": 15192,
-    "24k": 16574,
-    "18k": 12430,
-    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*1.15"
+    "22k": 14664,
+    "24k": 15997,
+    "18k": 11998,
+    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*time-varying-premium"
   },
   {
     "timestamp": "2026-04-16T00:00:00.000Z",
-    "22k": 15091,
-    "24k": 16463,
-    "18k": 12347,
-    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*1.15"
+    "22k": 14566,
+    "24k": 15891,
+    "18k": 11918,
+    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*time-varying-premium"
   },
   {
     "timestamp": "2026-04-20T00:00:00.000Z",
-    "22k": 15170,
-    "24k": 16550,
-    "18k": 12412,
-    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*1.15"
+    "22k": 14643,
+    "24k": 15974,
+    "18k": 11980,
+    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*time-varying-premium"
   },
   {
     "timestamp": "2026-04-21T00:00:00.000Z",
-    "22k": 14908,
-    "24k": 16264,
-    "18k": 12198,
-    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*1.15"
+    "22k": 14390,
+    "24k": 15698,
+    "18k": 11774,
+    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*time-varying-premium"
   },
   {
     "timestamp": "2026-04-22T00:00:00.000Z",
-    "22k": 15045,
-    "24k": 16413,
-    "18k": 12310,
-    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*1.15"
+    "22k": 14522,
+    "24k": 15842,
+    "18k": 11881,
+    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*time-varying-premium"
   },
   {
     "timestamp": "2026-04-23T00:00:00.000Z",
-    "22k": 15008,
-    "24k": 16372,
-    "18k": 12279,
-    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*1.15"
+    "22k": 14486,
+    "24k": 15803,
+    "18k": 11852,
+    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*time-varying-premium"
   },
   {
     "timestamp": "2026-04-27T00:00:00.000Z",
-    "22k": 14936,
-    "24k": 16294,
-    "18k": 12221,
-    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*1.15"
+    "22k": 14417,
+    "24k": 15727,
+    "18k": 11795,
+    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*time-varying-premium"
   },
   {
     "timestamp": "2026-04-28T00:00:00.000Z",
-    "22k": 14728,
-    "24k": 16067,
-    "18k": 12050,
-    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*1.15"
+    "22k": 14216,
+    "24k": 15508,
+    "18k": 11631,
+    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*time-varying-premium"
   },
   {
     "timestamp": "2026-04-29T00:00:00.000Z",
-    "22k": 14622,
-    "24k": 15951,
-    "18k": 11963,
-    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*1.15"
+    "22k": 14113,
+    "24k": 15396,
+    "18k": 11547,
+    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*time-varying-premium"
   },
   {
     "timestamp": "2026-04-30T00:00:00.000Z",
-    "22k": 14821,
-    "24k": 16168,
-    "18k": 12126,
-    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*1.15"
+    "22k": 14305,
+    "24k": 15606,
+    "18k": 11704,
+    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*time-varying-premium"
   },
   {
     "timestamp": "2026-05-04T00:00:00.000Z",
-    "22k": 14591,
-    "24k": 15918,
-    "18k": 11938,
-    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*1.15"
+    "22k": 14084,
+    "24k": 15364,
+    "18k": 11523,
+    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*time-varying-premium"
   },
   {
     "timestamp": "2026-05-05T00:00:00.000Z",
-    "22k": 14697,
-    "24k": 16033,
-    "18k": 12025,
-    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*1.15"
+    "22k": 14186,
+    "24k": 15475,
+    "18k": 11606,
+    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*time-varying-premium"
   },
   {
     "timestamp": "2026-05-06T00:00:00.000Z",
-    "22k": 15012,
-    "24k": 16377,
-    "18k": 12283,
-    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*1.15"
+    "22k": 14490,
+    "24k": 15808,
+    "18k": 11856,
+    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*time-varying-premium"
   },
   {
     "timestamp": "2026-05-07T00:00:00.000Z",
-    "22k": 15013,
-    "24k": 16378,
-    "18k": 12284,
-    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*1.15"
+    "22k": 14491,
+    "24k": 15808,
+    "18k": 11856,
+    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*time-varying-premium"
   },
   {
-    "timestamp": "2026-05-08T00:00:00.000Z",
-    "22k": 15114,
-    "24k": 16488,
-    "18k": 12366,
-    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*1.15"
+    "timestamp": "2026-05-11T00:00:00.000Z",
+    "22k": 14725,
+    "24k": 16064,
+    "18k": 12048,
+    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*time-varying-premium"
+  },
+  {
+    "timestamp": "2026-05-12T00:00:00.000Z",
+    "22k": 14634,
+    "24k": 15964,
+    "18k": 11973,
+    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*time-varying-premium"
+  },
+  {
+    "timestamp": "2026-05-14T00:00:00.000Z",
+    "22k": 14688,
+    "24k": 16024,
+    "18k": 12018,
+    "source": "yahoo-finance-estimated-GC=F*INR=X/31.1035*time-varying-premium"
   }
 ]

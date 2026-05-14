@@ -11,15 +11,17 @@ Data sources tried in order:
 
 3. Yahoo Finance ESTIMATED (primary working source) —
    Downloads GC=F (Gold Futures, USD/troy oz) and INR=X (USD/INR spot) via
-   Yahoo Finance chart API, then computes:
+   Yahoo Finance chart API, then computes a per-date retail premium (see
+   _retail_premium_for_date). Formula:
 
-     price_22k_inr_per_gram = GC_close * USDINR_close / 31.1035 * (22/24) * 1.15
+     price_22k_inr_per_gram = GC_close * USDINR_close / 31.1035 * (22/24) * premium(date)
 
-   The factor 1.15 approximates India's ~15% retail premium over international
-   spot price (10% import duty + 3% GST + ~2% dealer margin). THIS IS AN
-   ESTIMATE — see README "Data sources" for disclosure. The estimated prices
-   are realistic for bootstrapping the ML model but should NOT be used as
-   ground-truth retail rates.
+   Pre-2024-07-23:  premium = 1.15  (10% duty + 3% GST + ~2% margin)
+   Post-2024-07-23: premium = 1.11  (6% duty + 3% GST + ~2% margin)
+
+   THIS IS AN ESTIMATE — see README "Data sources" for disclosure. The
+   estimated prices are realistic for bootstrapping the ML model but should
+   NOT be used as ground-truth retail rates.
 
    Yahoo Finance API endpoint (public, no auth):
      https://query1.finance.yahoo.com/v8/finance/chart/<SYMBOL>?interval=1d&range=2y
@@ -39,7 +41,7 @@ from __future__ import annotations
 import json
 import sys
 import time
-from datetime import datetime
+from datetime import date, datetime
 from io import StringIO
 from pathlib import Path
 
@@ -58,11 +60,24 @@ HEADERS = {
     "Accept-Language": "en-IN,en;q=0.9",
 }
 
-INDIA_RETAIL_PREMIUM = 1.15  # ~10% import duty + 3% GST + ~2% margin
 TROY_OZ_TO_GRAM = 31.1035
 
+# India Union Budget 2024-07-23 cut gold import duty from 12.5% → 6%.
+# This changes the effective retail premium over international spot:
+#   Pre-break:  10% duty + 3% GST + ~2% margin ≈ 1.15
+#   Post-break:  6% duty + 3% GST + ~2% margin ≈ 1.11
+# Validation: on 2026-05-13 with GC=F=$4,701 and USD/INR=95.75, the 1.11
+# factor gives ₹14,725/10g for 22K vs IBJA's published ₹14,762 (0.25% gap).
+# The residual 0.25% is handled by _calibrate_seed in ml/forecast.py.
+IMPORT_DUTY_BREAK_DATE = date(2024, 7, 23)
 
-def compute_rates(gold_usd_per_oz: float, usd_inr: float) -> dict:
+
+def _retail_premium_for_date(d: date) -> float:
+    """Return the estimated retail premium factor for a given date."""
+    return 1.11 if d >= IMPORT_DUTY_BREAK_DATE else 1.15
+
+
+def compute_rates(gold_usd_per_oz: float, usd_inr: float, for_date: date | None = None) -> dict:
     """
     Compute estimated Indian retail gold prices from international spot + FX.
 
@@ -71,7 +86,8 @@ def compute_rates(gold_usd_per_oz: float, usd_inr: float) -> dict:
 
     Returns dict with keys '22k', '24k', '18k' (INR per gram, int).
     """
-    base_24k = gold_usd_per_oz * usd_inr / TROY_OZ_TO_GRAM * INDIA_RETAIL_PREMIUM
+    premium = _retail_premium_for_date(for_date) if for_date is not None else 1.15
+    base_24k = gold_usd_per_oz * usd_inr / TROY_OZ_TO_GRAM * premium
     return {
         "24k": int(round(base_24k)),
         "22k": int(round(base_24k * 22 / 24)),
@@ -210,13 +226,12 @@ def _try_yahoo_finance() -> list[dict] | None:
     GC=F  = Gold Futures (USD/troy oz, continuous front-month contract)
     INR=X = USD/INR spot rate
 
-    Formula:
-      price_22k = GC_close * USDINR_close / 31.1035 * (22/24) * 1.15
+    Uses a time-varying retail premium via _retail_premium_for_date():
+      Pre-2024-07-23:  1.15 (10% duty + 3% GST + ~2% margin)
+      Post-2024-07-23: 1.11 (6% duty + 3% GST + ~2% margin)
 
-    The 1.15 premium approximates India's import duty (~10%) + GST (3%) +
-    typical dealer margin (~2%). This is an ESTIMATE — real retail prices
-    differ by city, jeweller, and making-charge structure.
-    See README 'Data sources' for disclosure.
+    This is an ESTIMATE — real retail prices differ by city, jeweller, and
+    making-charge structure. See README 'Data sources' for disclosure.
     """
     print("Trying Yahoo Finance fallback (GC=F + INR=X — ESTIMATED) ...")
     gc = _yf_daily("GC=F")
@@ -229,10 +244,11 @@ def _try_yahoo_finance() -> list[dict] | None:
         print(f"  Yahoo Finance: only {len(merged)} overlapping rows")
         return None
 
-    source = "yahoo-finance-estimated-GC=F*INR=X/31.1035*1.15"
+    source = "yahoo-finance-estimated-GC=F*INR=X/31.1035*time-varying-premium"
     entries = []
     for _, row in merged.iterrows():
-        rates = compute_rates(float(row["close_gc"]), float(row["close_inr"]))
+        row_date = row["date"] if isinstance(row["date"], date) else row["date"].date()
+        rates = compute_rates(float(row["close_gc"]), float(row["close_inr"]), for_date=row_date)
         if not (3000 <= rates["22k"] <= 20000):
             continue
         ts = pd.Timestamp(row["date"], tz="UTC")

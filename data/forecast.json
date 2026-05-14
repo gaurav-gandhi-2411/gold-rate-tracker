@@ -1,9 +1,9 @@
 {
-  "predicted_at": "2026-05-14T13:23:54.394282+00:00",
+  "predicted_at": "2026-05-14T14:06:21.156512+00:00",
   "target_time": "2026-05-15T00:00:00+00:00",
   "predicted_22k": 14965,
-  "lower": 14788,
-  "upper": 15235,
+  "lower": 14791,
+  "upper": 15236,
   "model_version": "lgbm-only",
   "training_rows": 361,
   "feature_count": 44,
@@ -30,8 +30,8 @@
   "models": {
     "lgbm": {
       "delta": 29.8,
-      "lower": -147.1,
-      "upper": 299.9,
+      "lower": -143.6,
+      "upper": 301.4,
       "weight": 1.0
     }
   }
