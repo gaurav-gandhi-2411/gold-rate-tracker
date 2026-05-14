@@ -111,17 +111,42 @@ After Session B. Can slot before or after Session C — notification logic doesn
 
 ---
 
-## Phase 2 — Session C: IBJA seed replacement (~2–3 hours)
+## ✓ Phase 2 — Session C: IBJA seed replacement (2026-05-14, partially complete)
 
-Replace synthetic Yahoo-derived seed history with real IBJA daily rates:
-- Re-run seed_history.py targeting ibjarates.com for 2 years of real Indian retail reference rates
-- Fixes the 1.15× multiplier miscalibration from the July 2024 import duty regime change
-- Highest-leverage ML improvement — do this before any model retraining
-- Note: Tanishq backfill (Phase 1C) and IBJA reseed are complementary: different sources, different date ranges
+**Original goal:** Replace Yahoo-derived seed with 2 years of real IBJA daily rates.
+
+**Phase 0 investigation result:** Not feasible as specified. IBJA exposes only 4 dates on the main page and a 30-day PDF (binary FlateDecode format, not readily parseable). No JSON/REST API. Historical access beyond 30 days requires a paid subscription. goodreturns.in and goldpriceindia.in are both blocked (403 / ECONNREFUSED). The premise that IBJA had free 2-year historical access was incorrect.
+
+**What was applied (Option A — partial fix):**
+- `IMPORT_DUTY_BREAK_DATE = date(2024, 7, 23)` added to `ml/seed_history.py`
+- `_retail_premium_for_date(d)` replaces the fixed `INDIA_RETAIL_PREMIUM = 1.15`
+  - Pre-break: 1.15 (10% duty + 3% GST + 2% margin)
+  - Post-break: 1.11 (6% duty + 3% GST + 2% margin)
+- Validated: 1.11 gives ₹14,725 vs IBJA actual ₹14,762 on 2026-05-13 (0.25% gap)
+- `data/history_seed.json` regenerated: pre-break unchanged, post-break ~3.48% lower
+- Old seed archived as `data/history_seed_v1_uniform_premium.json`
+- Calibration scale_factor: 0.9727 (was ~0.943) — less distortion on 2024 pre-break data
+- Forecast unchanged (14,965): calibration was already handling absolute level; structural improvement is in training data shape
+- 6 new tests added for time-varying premium boundary conditions
+- Commit: `d6ed924`
+
+**Remaining gap:** The 0.25% residual is handled by `_calibrate_seed`. The seed is still synthetic (Yahoo Finance estimated), not real IBJA data. The data quality improvement is real but narrow.
 
 ---
 
-## Phase 3 — Metrics infrastructure
+## Session C.2 — IBJA PDF accumulation (long-term, monthly cadence, ~2h setup + 5 min/month)
+
+Build a `pdfplumber`-based parser for IBJA's 30-day PDF. Run once per month to accumulate
+real IBJA reference rates. After 24 months the seed can be fully replaced.
+
+- New script: `ml/ibja_pdf_ingest.py` — fetch the current 30-day PDF, extract rate table, merge into a running `data/ibja_historical.json` (separate from history_seed.json)
+- PDF URL pattern: `https://ibjarates.com/UploadedFiles/30DaysPdf/Pdf_5587_YYYYMMDD...` — filename encodes a generation timestamp, not predictable. Workflow must fetch the live page first, extract the current PDF href, then download.
+- Fields to capture: date, 916 PM (22K), 999 PM (24K), 750 PM (18K)
+- Not urgent — Option B (passive Tanishq readings accumulation) handles short-term data quality on its own timeline. Prioritise only if retrain is imminent and IBJA corpus would materially help.
+
+---
+
+## Phase 3 — Metrics infrastructure (next session)
 
 Define and compute three metrics:
 - **Decision accuracy (primary):** when model says "wait (price drops ≥₹100 in next 5 days)," was it right?
