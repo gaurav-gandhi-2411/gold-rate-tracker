@@ -1,5 +1,180 @@
 [
   {
+    "timestamp": "2026-04-14T06:30:00.000Z",
+    "22k": 14150,
+    "24k": 15436,
+    "18k": 11577,
+    "source": "https://www.tanishq.co.in/gold-rate.html?lang=en_IN (history backfill)"
+  },
+  {
+    "timestamp": "2026-04-15T06:30:00.000Z",
+    "22k": 14280,
+    "24k": 15578,
+    "18k": 11684,
+    "source": "https://www.tanishq.co.in/gold-rate.html?lang=en_IN (history backfill)"
+  },
+  {
+    "timestamp": "2026-04-16T06:30:00.000Z",
+    "22k": 14300,
+    "24k": 15600,
+    "18k": 11700,
+    "source": "https://www.tanishq.co.in/gold-rate.html?lang=en_IN (history backfill)"
+  },
+  {
+    "timestamp": "2026-04-17T06:30:00.000Z",
+    "22k": 14175,
+    "24k": 15464,
+    "18k": 11598,
+    "source": "https://www.tanishq.co.in/gold-rate.html?lang=en_IN (history backfill)"
+  },
+  {
+    "timestamp": "2026-04-18T06:30:00.000Z",
+    "22k": 14320,
+    "24k": 15622,
+    "18k": 11716,
+    "source": "https://www.tanishq.co.in/gold-rate.html?lang=en_IN (history backfill)"
+  },
+  {
+    "timestamp": "2026-04-19T06:30:00.000Z",
+    "22k": 14320,
+    "24k": 15622,
+    "18k": 11716,
+    "source": "https://www.tanishq.co.in/gold-rate.html?lang=en_IN (history backfill)"
+  },
+  {
+    "timestamp": "2026-04-20T06:30:00.000Z",
+    "22k": 14275,
+    "24k": 15573,
+    "18k": 11680,
+    "source": "https://www.tanishq.co.in/gold-rate.html?lang=en_IN (history backfill)"
+  },
+  {
+    "timestamp": "2026-04-21T06:30:00.000Z",
+    "22k": 14275,
+    "24k": 15573,
+    "18k": 11680,
+    "source": "https://www.tanishq.co.in/gold-rate.html?lang=en_IN (history backfill)"
+  },
+  {
+    "timestamp": "2026-04-22T06:30:00.000Z",
+    "22k": 14225,
+    "24k": 15518,
+    "18k": 11639,
+    "source": "https://www.tanishq.co.in/gold-rate.html?lang=en_IN (history backfill)"
+  },
+  {
+    "timestamp": "2026-04-23T06:30:00.000Z",
+    "22k": 14115,
+    "24k": 15398,
+    "18k": 11549,
+    "source": "https://www.tanishq.co.in/gold-rate.html?lang=en_IN (history backfill)"
+  },
+  {
+    "timestamp": "2026-04-24T06:30:00.000Z",
+    "22k": 14060,
+    "24k": 15338,
+    "18k": 11504,
+    "source": "https://www.tanishq.co.in/gold-rate.html?lang=en_IN (history backfill)"
+  },
+  {
+    "timestamp": "2026-04-25T06:30:00.000Z",
+    "22k": 14160,
+    "24k": 15447,
+    "18k": 11585,
+    "source": "https://www.tanishq.co.in/gold-rate.html?lang=en_IN (history backfill)"
+  },
+  {
+    "timestamp": "2026-04-26T06:30:00.000Z",
+    "22k": 14160,
+    "24k": 15447,
+    "18k": 11585,
+    "source": "https://www.tanishq.co.in/gold-rate.html?lang=en_IN (history backfill)"
+  },
+  {
+    "timestamp": "2026-04-27T06:30:00.000Z",
+    "22k": 14195,
+    "24k": 15485,
+    "18k": 11614,
+    "source": "https://www.tanishq.co.in/gold-rate.html?lang=en_IN (history backfill)"
+  },
+  {
+    "timestamp": "2026-04-28T06:30:00.000Z",
+    "22k": 13915,
+    "24k": 15180,
+    "18k": 11385,
+    "source": "https://www.tanishq.co.in/gold-rate.html?lang=en_IN (history backfill)"
+  },
+  {
+    "timestamp": "2026-04-29T06:30:00.000Z",
+    "22k": 13915,
+    "24k": 15180,
+    "18k": 11385,
+    "source": "https://www.tanishq.co.in/gold-rate.html?lang=en_IN (history backfill)"
+  },
+  {
+    "timestamp": "2026-04-30T06:30:00.000Z",
+    "22k": 14040,
+    "24k": 15316,
+    "18k": 11487,
+    "source": "https://www.tanishq.co.in/gold-rate.html?lang=en_IN (history backfill)"
+  },
+  {
+    "timestamp": "2026-05-01T06:30:00.000Z",
+    "22k": 13795,
+    "24k": 15049,
+    "18k": 11287,
+    "source": "https://www.tanishq.co.in/gold-rate.html?lang=en_IN (history backfill)"
+  },
+  {
+    "timestamp": "2026-05-02T06:30:00.000Z",
+    "22k": 13875,
+    "24k": 15136,
+    "18k": 11352,
+    "source": "https://www.tanishq.co.in/gold-rate.html?lang=en_IN (history backfill)"
+  },
+  {
+    "timestamp": "2026-05-03T06:30:00.000Z",
+    "22k": 13875,
+    "24k": 15136,
+    "18k": 11352,
+    "source": "https://www.tanishq.co.in/gold-rate.html?lang=en_IN (history backfill)"
+  },
+  {
+    "timestamp": "2026-05-04T06:30:00.000Z",
+    "22k": 13775,
+    "24k": 15027,
+    "18k": 11270,
+    "source": "https://www.tanishq.co.in/gold-rate.html?lang=en_IN (history backfill)"
+  },
+  {
+    "timestamp": "2026-05-05T06:30:00.000Z",
+    "22k": 13715,
+    "24k": 14962,
+    "18k": 11221,
+    "source": "https://www.tanishq.co.in/gold-rate.html?lang=en_IN (history backfill)"
+  },
+  {
+    "timestamp": "2026-05-06T06:30:00.000Z",
+    "22k": 13990,
+    "24k": 15262,
+    "18k": 11446,
+    "source": "https://www.tanishq.co.in/gold-rate.html?lang=en_IN (history backfill)"
+  },
+  {
+    "timestamp": "2026-05-07T06:30:00.000Z",
+    "22k": 14070,
+    "24k": 15349,
+    "18k": 11512,
+    "source": "https://www.tanishq.co.in/gold-rate.html?lang=en_IN (history backfill)"
+  },
+  {
+    "timestamp": "2026-05-08T06:30:00.000Z",
+    "22k": 14040,
+    "24k": 15316,
+    "18k": 11487,
+    "source": "https://www.tanishq.co.in/gold-rate.html?lang=en_IN (history backfill)"
+  },
+  {
     "timestamp": "2026-05-09T19:12:59.179Z",
     "22k": 14010,
     "24k": 15284,
