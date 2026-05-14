@@ -1,21 +1,12 @@
 # Deferred Work
 
-## Session plan — Operational cleanup (~45 min)
+## ✓ Completed — Operational cleanup (2026-05-14)
 
-### 1. Merge PR #2 + #3 (actions/checkout + setup-node v4→v6)
-- Both skip v5 entirely (Dependabot jumped straight to v6)
-- **checkout v6:** persist-credentials now stored under `$RUNNER_TEMP` instead of git config — requires runner ≥v2.329.0. Verify GitHub-hosted runners are on this version before merging.
-- **setup-node v6:** limits automatic caching to npm only (v5 introduced auto-detection via `packageManager` field in package.json). Verify our lint.yml and check-price.yml still cache as expected.
-- Merge one at a time, watch Lint between. Coordinated bump across check-price.yml, lint.yml, and any other workflow using them. Deadline: June 2, 2026.
-
-### 2. Roadmap item #4: bot push rebase guard in check-price.yml
-- Add `git pull --rebase origin master` before the bot's push step
-- Prevents push rejection when a manual push lands between scheduled runs
-- Self-resolves the manual `git pull origin master && git push` workaround used this session
-
-### 3. PR #15 (pyarrow >=13→>=24) — revisit if time permits
-- Skip if no CVE has dropped on pyarrow <24 since last check
-- If revisiting: test parquet round-trip with ml/macro.py cache files before merging (spans 11 major Apache Arrow releases)
+- **PR #2 (checkout v4→v6):** merged. Runner 2.334.0 ≥ 2.329.0. All three workflows updated. Validated by scheduled bot run 0a63a65.
+- **PR #3 (setup-node v4→v6):** merged. All steps green including npm install + playwright. Explicit `cache: "npm"` config unaffected by v6 auto-caching change.
+- **Roadmap #4 (rebase guard):** `git pull --rebase origin master` added between `git commit` and `git push` in check-price.yml's "Commit updated data files" step. Commit `4fef06e`. Validated live — first post-fix path-triggered run: Commit step green.
+- **Observed failure mode:** The pre-fix `workflow_dispatch` run showed the exact race the guard fixes — bot committed locally, scheduled run pushed in between, push rejected. Now resolved.
+- **weekly-backtest.yml:** has the same push pattern without the rebase guard. Not fixed — out of scope. Consider applying same fix if the weekly run starts failing on push.
 
 ---
 
