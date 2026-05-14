@@ -15,6 +15,9 @@
 - #12, #13: Re-introduce N-BEATS / TFT via champion-challenger gated on real-readings count.
 - #14: GROQ key rotation reminder (quarterly).
 
+## Deferred ML migrations
+- MLflow 3.x migration: rewrite promotion.py and test_promotion.py to use registered-model aliases instead of stages. Removes deprecated API (transition_model_version_stage, get_latest_versions(stages=...)). Estimated effort: 1 focused session. Reason for deferral: out of scope of security cleanup; requires test rewrite.
+
 ## Behavior notes for CC in future sessions
 - When a git command fails (rebase, push, etc.): surface the failure and propose alternative. Do NOT silently switch strategies (e.g. rebase → merge fallback).
 - Diagnostic ranking: pull actual logs before ranking hypotheses. The May 2026 stale-scraper diagnostic put "workflow disabled" and "IP block" above the actual cause (₹ symbol in HTTP header at update-and-notify.js:47), which was visible in the Actions log all along.
