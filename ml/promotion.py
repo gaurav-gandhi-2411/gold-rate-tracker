@@ -25,6 +25,7 @@ import sys
 from dataclasses import dataclass, field
 from datetime import UTC, datetime
 from pathlib import Path
+from typing import TypedDict
 
 import mlflow
 import structlog
@@ -44,6 +45,12 @@ _MODEL_NAMES: dict[str, str] = {
 }
 
 _PROMOTION_THRESHOLD: float = 0.98  # candidate must be < production × this
+
+
+class _ModelBootstrapCfg(TypedDict):
+    name: str
+    meta: str
+    artifacts: list[str]
 
 
 # ---------------------------------------------------------------------------
@@ -230,9 +237,7 @@ def rollback(model_key: str, target_version: int | None = None) -> None:
     if target_version is None:
         archived = client.get_latest_versions(model_name, stages=["Archived"])
         if not archived:
-            raise RuntimeError(
-                f"No archived versions found for {model_name} — cannot roll back"
-            )
+            raise RuntimeError(f"No archived versions found for {model_name} — cannot roll back")
         target_version = max(int(v.version) for v in archived)
 
     client.transition_model_version_stage(
@@ -262,7 +267,7 @@ def bootstrap_register(
     mlflow.set_experiment(experiment_name)
     client = MlflowClient()
 
-    models_cfg = {
+    models_cfg: dict[str, _ModelBootstrapCfg] = {
         "lgbm": {
             "name": _MODEL_NAMES["lgbm"],
             "meta": "lgbm-meta.json",
@@ -297,11 +302,13 @@ def bootstrap_register(
         print(f"  Registering {model_name} (val_mae={val_mae})...")
 
         with mlflow.start_run(run_name=f"bootstrap-{model_key}") as run:
-            mlflow.set_tags({
-                "model": model_key,
-                "bootstrap": "true",
-                "source": "production_meta_json",
-            })
+            mlflow.set_tags(
+                {
+                    "model": model_key,
+                    "bootstrap": "true",
+                    "source": "production_meta_json",
+                }
+            )
             mlflow.log_metrics({"val_mae_rupees": val_mae})
             mlflow.log_params({"source": "bootstrap", "val_mae": val_mae})
 
@@ -357,6 +364,7 @@ if __name__ == "__main__":
 
     if args.cmd == "bootstrap":
         from ml.logging_setup import configure_for_environment
+
         configure_for_environment()
         print("Bootstrapping MLflow Model Registry...")
         bootstrap_register(
