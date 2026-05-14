@@ -110,11 +110,15 @@ jobs:
           GROQ_API_KEY: ${{ secrets.GROQ_API_KEY }}
         run: python ml/commentary.py
 
+      - name: Record prediction metrics
+        continue-on-error: true
+        run: python -m ml.metrics --record
+
       - name: Commit updated data files
         run: |
           git config user.name "gold-rate-bot"
           git config user.email "actions@users.noreply.github.com"
-          git add data/prices.json data/forecast.json data/commentary.json data/regime.json data/drift_metrics.json || true
+          git add data/prices.json data/forecast.json data/commentary.json data/regime.json data/drift_metrics.json data/metrics_history.json || true
           git add models/production/nbeats.onnx 2>/dev/null || true
           if git diff --staged --quiet; then
             echo "No changes to commit."

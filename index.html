@@ -100,6 +100,32 @@
         </div>
       </section>
 
+      <!-- Model accuracy card (real-data track) -->
+      <section class="accuracy-section" id="accuracy-section" hidden>
+        <h2>Model accuracy <span class="accuracy-track-badge">real-data track</span></h2>
+        <div class="accuracy-collecting" id="accuracy-collecting" hidden>
+          Collecting metrics — first decision-accuracy result in ~5 trading days.
+        </div>
+        <div class="accuracy-cards" id="accuracy-cards" hidden>
+          <div class="accuracy-stat" id="accuracy-decision-stat" hidden>
+            <div class="accuracy-stat-label">Decision accuracy</div>
+            <div class="accuracy-stat-value" id="accuracy-decision-value">—</div>
+            <div class="accuracy-stat-sub" id="accuracy-decision-n"></div>
+          </div>
+          <div class="accuracy-stat">
+            <div class="accuracy-stat-label">Mean error (MAE)</div>
+            <div class="accuracy-stat-value" id="accuracy-mae-value">—</div>
+            <div class="accuracy-stat-sub" id="accuracy-mae-n"></div>
+          </div>
+          <div class="accuracy-stat">
+            <div class="accuracy-stat-label">Direction correct</div>
+            <div class="accuracy-stat-value" id="accuracy-dir-value">—</div>
+            <div class="accuracy-stat-sub" id="accuracy-dir-n"></div>
+          </div>
+        </div>
+        <p class="accuracy-window" id="accuracy-window"></p>
+      </section>
+
       <section class="chart-section">
         <div class="chart-header">
           <h2>Trend</h2>

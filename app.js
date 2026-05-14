@@ -5,6 +5,7 @@ const FORECAST_URL = "data/forecast.json";
 const BACKTEST_URL = "data/backtest.json";
 const COMMENTARY_URL = "data/commentary.json";
 const DRIFT_URL = "data/drift_metrics.json";
+const METRICS_URL = "data/metrics_history.json";
 
 const fmtINR = (n) =>
   typeof n === "number"
@@ -433,6 +434,93 @@ function renderLivePerf(entries) {
   section.hidden = false;
 }
 
+function renderAccuracy(entries) {
+  const section      = document.getElementById("accuracy-section");
+  const collectingEl = document.getElementById("accuracy-collecting");
+  const cardsEl      = document.getElementById("accuracy-cards");
+  const windowEl     = document.getElementById("accuracy-window");
+
+  if (!Array.isArray(entries) || entries.length === 0) {
+    section.hidden = true;
+    return;
+  }
+
+  const WINDOW_DAYS = 30;
+  const cutoff = new Date(Date.now() - WINDOW_DAYS * 86400 * 1000);
+
+  const resolved = entries.filter((e) =>
+    e.outcome !== "pending" && e.outcome != null &&
+    new Date(e.decision_date) >= cutoff
+  );
+
+  // Decision accuracy (wait decisions only)
+  const waitResolved = resolved.filter((e) => e.decision === "wait");
+  const nWait = waitResolved.length;
+  const nCorrect = waitResolved.filter((e) => e.outcome === "correct").length;
+  const decisionAcc = nWait > 0 ? nCorrect / nWait : null;
+
+  // MAE
+  const maeEntries = resolved.filter(
+    (e) => typeof e.actual_next_22k === "number" && typeof e.predicted_22k === "number"
+  );
+  const nMae = maeEntries.length;
+  const mae = nMae > 0
+    ? maeEntries.reduce((s, e) => s + Math.abs(e.predicted_22k - e.actual_next_22k), 0) / nMae
+    : null;
+
+  // Directional accuracy
+  const dirEntries = maeEntries.filter(
+    (e) => typeof e.current_22k === "number" && typeof e.delta === "number"
+  );
+  const nDir = dirEntries.length;
+  const dirAcc = nDir > 0
+    ? dirEntries.filter((e) => (e.actual_next_22k - e.current_22k) * e.delta > 0).length / nDir
+    : null;
+
+  const hasAnyResolved = resolved.length > 0;
+  const hasAnyMae = nMae > 0;
+
+  if (!hasAnyResolved && !hasAnyMae) {
+    collectingEl.hidden = false;
+    cardsEl.hidden = true;
+    section.hidden = false;
+    windowEl.textContent = "";
+    return;
+  }
+
+  collectingEl.hidden = true;
+  cardsEl.hidden = false;
+
+  // Decision accuracy stat
+  const decStatEl = document.getElementById("accuracy-decision-stat");
+  const decValEl  = document.getElementById("accuracy-decision-value");
+  const decNEl    = document.getElementById("accuracy-decision-n");
+  if (decisionAcc !== null) {
+    decValEl.textContent = `${Math.round(decisionAcc * 100)}%`;
+    decNEl.textContent = `n=${nWait} wait signals`;
+    decStatEl.hidden = false;
+  } else {
+    decValEl.textContent = "—";
+    decNEl.textContent = nWait === 0 ? "no wait signals yet" : "";
+    decStatEl.hidden = false;
+  }
+
+  // MAE stat
+  document.getElementById("accuracy-mae-value").textContent =
+    mae !== null ? `₹${fmtINR(Math.round(mae))}` : "—";
+  document.getElementById("accuracy-mae-n").textContent =
+    nMae > 0 ? `n=${nMae}` : "collecting";
+
+  // Directional stat
+  document.getElementById("accuracy-dir-value").textContent =
+    dirAcc !== null ? `${Math.round(dirAcc * 100)}%` : "—";
+  document.getElementById("accuracy-dir-n").textContent =
+    nDir > 0 ? `n=${nDir}` : "collecting";
+
+  windowEl.textContent = `Rolling ${WINDOW_DAYS}-day window · ${resolved.length} resolved predictions`;
+  section.hidden = false;
+}
+
 function bindRangeToggle() {
   const buttons = document.querySelectorAll(".range-toggle button");
   buttons.forEach((btn) => {
@@ -464,14 +552,16 @@ function bindRangeToggle() {
   renderChart(allReadings, "7");
 
   // Load ML/LLM data (all optional — degrade gracefully on any failure)
-  const [fc, bt, commentary, drift] = await Promise.allSettled([
+  const [fc, bt, commentary, drift, metrics] = await Promise.allSettled([
     loadJSON(FORECAST_URL),
     loadJSON(BACKTEST_URL),
     loadJSON(COMMENTARY_URL),
     loadJSON(DRIFT_URL),
+    loadJSON(METRICS_URL),
   ]);
 
   renderForecast(fc.status === "fulfilled" ? fc.value : null);
+  renderAccuracy(metrics.status === "fulfilled" ? metrics.value : null);
   renderLivePerf(drift.status === "fulfilled" ? drift.value : null);
   renderModelStats(bt.status === "fulfilled" ? bt.value : null);
   renderCommentary(commentary.status === "fulfilled" ? commentary.value : null);
