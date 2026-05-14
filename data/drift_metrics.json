@@ -148,5 +148,45 @@
     "residual": 161.0,
     "model_version": "ensemble-inv-mae",
     "baseline_mae": 225.65
+  },
+  {
+    "ts": "2026-05-14T08:48:42.060881+00:00",
+    "target_time": "2026-05-15T00:00:00+00:00",
+    "actual_ts": "2026-05-14T08:48:15.615Z",
+    "actual_22k": 14845.0,
+    "forecast_22k": 14684.0,
+    "residual": 161.0,
+    "model_version": "ensemble-inv-mae",
+    "baseline_mae": 225.65
+  },
+  {
+    "ts": "2026-05-14T10:55:54.496655+00:00",
+    "target_time": "2026-05-15T00:00:00+00:00",
+    "actual_ts": "2026-05-14T10:55:24.980Z",
+    "actual_22k": 14845.0,
+    "forecast_22k": 14684.0,
+    "residual": 161.0,
+    "model_version": "ensemble-inv-mae",
+    "baseline_mae": 225.65
+  },
+  {
+    "ts": "2026-05-14T11:49:34.399635+00:00",
+    "target_time": "2026-05-15T00:00:00+00:00",
+    "actual_ts": "2026-05-14T11:49:06.587Z",
+    "actual_22k": 14845.0,
+    "forecast_22k": 14684.0,
+    "residual": 161.0,
+    "model_version": "ensemble-inv-mae",
+    "baseline_mae": 225.65
+  },
+  {
+    "ts": "2026-05-14T11:59:44.542308+00:00",
+    "target_time": "2026-05-15T00:00:00+00:00",
+    "actual_ts": "2026-05-14T11:59:14.289Z",
+    "actual_22k": 14845.0,
+    "forecast_22k": 14684.0,
+    "residual": 161.0,
+    "model_version": "ensemble-inv-mae",
+    "baseline_mae": 225.65
   }
 ]
