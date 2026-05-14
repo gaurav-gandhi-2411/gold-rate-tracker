@@ -459,6 +459,14 @@ body {
   letter-spacing: 0.06em;
   text-transform: uppercase;
 }
+.freshness-pill .updated.freshness--warn  { color: var(--gold); }
+.freshness-pill .updated.freshness--stale { color: var(--up); }
+.freshness-sub {
+  display: block;
+  font-size: 10px;
+  letter-spacing: 0.04em;
+  margin-top: 1px;
+}
 
 /* ---------- Forecast "Why?" accordion ---------- */
 .forecast-why {

@@ -77,9 +77,22 @@ function renderHero(readings) {
   r22.innerHTML = rupee(latest["22k"]);
   r24.innerHTML = rupee(latest["24k"]);
   r18.innerHTML = rupee(latest["18k"]);
-  const freshText = `Updated ${fmtRelative(latest.timestamp)}`;
+  const ageH = (Date.now() - new Date(latest.timestamp).getTime()) / 3_600_000;
   const pill = document.getElementById("updated-pill");
-  if (pill) pill.textContent = freshText;
+  if (pill) {
+    pill.classList.remove("freshness--warn", "freshness--stale");
+    if (ageH >= 8) {
+      pill.classList.add("freshness--stale");
+      pill.innerHTML =
+        `Data stale — last updated ${fmtRelative(latest.timestamp)}` +
+        `<span class="freshness-sub">Scraper may be down</span>`;
+    } else if (ageH >= 6) {
+      pill.classList.add("freshness--warn");
+      pill.textContent = `Updated ${fmtRelative(latest.timestamp)}`;
+    } else {
+      pill.textContent = `Updated ${fmtRelative(latest.timestamp)}`;
+    }
+  }
 
   if (prev && typeof prev["22k"] === "number") {
     const delta = latest["22k"] - prev["22k"];
