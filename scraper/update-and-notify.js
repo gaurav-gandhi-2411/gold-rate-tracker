@@ -64,6 +64,13 @@ function fmt(n) {
   return "₹" + n.toLocaleString("en-IN");
 }
 
+// HTTP headers must be ASCII (ByteString per the Fetch spec). The ₹ symbol
+// (U+20B9, decimal 8377) is non-ASCII and causes a TypeError in fetch().
+// Use this only for values placed in header fields; fmt() is fine in the body.
+function fmtHdr(n) {
+  return "Rs." + n.toLocaleString("en-IN");
+}
+
 async function main() {
   const stdin = await readStdin();
   if (!stdin) throw new Error("No scrape data on stdin");
@@ -98,7 +105,7 @@ async function main() {
   if (delta < 0 && Math.abs(delta) >= DROP_THRESHOLD) {
     const drop = Math.abs(delta);
     await sendNtfy({
-      title: `Gold 22K dropped ${fmt(drop)}`,
+      title: `Gold 22K dropped ${fmtHdr(drop)}`,
       message:
         `22K is now ${fmt(reading["22k"])} per gram\n` +
         `Previous: ${fmt(lastEntry["22k"])} (${new Date(lastEntry.timestamp).toLocaleString("en-IN")})\n` +
