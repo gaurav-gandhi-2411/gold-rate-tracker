@@ -1,7 +1,0 @@
-# Local training dependencies — NOT installed in CI.
-# Install manually before running ml/train_nbeats.py.
-#
-# PyTorch: install the CUDA-appropriate build from https://pytorch.org/
-#   e.g. pip install torch --index-url https://download.pytorch.org/whl/cu124
-torch>=2.0
-onnx>=1.16
