@@ -23,6 +23,7 @@ import os
 import sys
 from datetime import date, datetime, timedelta, timezone
 from pathlib import Path
+from zoneinfo import ZoneInfo
 
 DATA_DIR = Path(__file__).parent.parent / "data"
 PRICES_PATH = DATA_DIR / "prices.json"
@@ -37,9 +38,9 @@ PRICE_MOVE_PCT = 0.02   # T1: ≥2% single-day move
 BAND_30D = 50           # T2/T3: ±₹50 from 30-day low/high
 FIVE_DAY_PCT = 0.03     # T4: ≥3% 5-day cumulative move
 
-# IST = UTC + 5:30. Use an explicit timedelta, not a string offset, so the
-# conversion is visible in code rather than hidden behind a magic ±N hours.
-IST_OFFSET = timedelta(hours=5, minutes=30)
+# Asia/Kolkata from the system tz database — direction is explicit and any
+# future DST adoption would be handled automatically (no manual ±5:30 arithmetic).
+_KOLKATA = ZoneInfo("Asia/Kolkata")
 
 SUMMARY_SYSTEM_PROMPT = (
     "You write very short daily summaries for an Indian retail gold price tracker. "
@@ -55,14 +56,14 @@ SUMMARY_SYSTEM_PROMPT = (
 
 
 def _ist_date(ts: datetime) -> date:
-    """Convert a UTC datetime to its IST calendar date (UTC + 5:30).
+    """Convert a UTC datetime to its IST calendar date via Asia/Kolkata.
 
-    This is an explicit IST conversion — NOT a '24-hour lookback'.
-    A reading timestamped 22:00 UTC = 03:30 IST next calendar day.
-    A reading timestamped 16:30 UTC = 22:00 IST = same calendar day.
-    Always use this function when comparing against IST calendar dates.
+    NOT a '24-hour lookback'. Examples:
+      22:00 UTC → 03:30 IST next calendar day (IST date = tomorrow)
+      16:30 UTC → 22:00 IST same calendar day (IST date = today)
+    Always use this function; never add/subtract raw hour offsets.
     """
-    return (ts.astimezone(timezone.utc) + IST_OFFSET).date()
+    return ts.astimezone(_KOLKATA).date()
 
 
 def _parse_ts(s: str) -> datetime:
