@@ -50,17 +50,56 @@ The backfill is trivial (30 min) and multiplies our real-data corpus 5×. Not a 
 
 ---
 
-## Phase 1C — Tanishq history backfill (~30 min, bolt-on to Session B)
+## ✓ Phase 1C — Tanishq history backfill (2026-05-14)
 
-Write a one-shot backfill script:
-- Load `tanishq.co.in/gold-rate.html`, collect ALL `span.goldpurity-rate[data-goldrate22kt]` elements (same DOM as live scraper)
-- Pair with dates from `table.goldrate-history-table` rows
-- Use noon IST (06:30 UTC) as the canonical timestamp for each daily reading
-- Deduplicate against existing prices.json entries by date before merging
-- Write merged result back to prices.json
-- Adds 25 net new real daily readings to the corpus
+- Script: `scraper/backfill-history.js` (one-shot, not wired into CI)
+- Merged 25 net new daily readings (2026-04-14 → 2026-05-08) into prices.json
+- prices.json: 31 → 56 rows; 6 → 31 unique dates (5× corpus expansion)
+- Backfilled entries carry `source: "...?lang=en_IN (history backfill)"` for auditability
+- Idempotent — second run inserts 0 entries ✓
+- Weekend carry-forward observed: Tanishq holds Friday rate through weekends. Real behaviour, not a bug. Relevant for metrics phase — don't penalize direction errors on weekends.
+- Commit: `da001d9`
 
-**Format note:** Tanishq history does NOT include a `source` field per row. Either omit it (prices.json entries from the bot do include `source`) or set `"source": "tanishq-history-backfill"` to distinguish from live readings.
+---
+
+## Session B.5 — Smart daily notification (~45 min)
+
+Goal: 4pm IST cron (10:30 UTC) that sends a push notification only when something interesting happened, with LLM-curated commentary. Most days produce no notification — preserves alert-fatigue hygiene.
+
+#### Trigger rules (notify if ANY are true)
+
+- Price moved ≥ 2% from previous day's 22K reading
+- Today's 22K is at or within ₹50 of the 30-day low
+- Today's 22K is at or within ₹50 of the 30-day high
+- 5-day cumulative move ≥ 3% in either direction
+- First reading after a 24h+ scrape gap ("we're back online, here's where we are")
+
+If multiple triggers fire, mention all of them in the LLM prompt — commentary is richer for it.
+
+Threshold note: 2% / ₹50 / 3% are first-guess values. Revisit after ~2 weeks of running — goal is ~3–4 notifications per week, not daily.
+
+#### Implementation
+
+- New script: `ml/daily_summary.py`
+- New workflow: `.github/workflows/daily-summary.yml` on cron `30 10 * * *` (10:30 UTC = 4pm IST)
+- Reads `data/prices.json` + `data/forecast.json`; computes triggers; exits 0 silently if none fire
+- If trigger fires: build structured context (today/yesterday price, 7-day avg, 30-day low/high, which triggers fired) → Groq prompt (1–2 sentences, ≤200 chars, factual, no emojis, no financial advice) → ntfy push
+- ntfy Title: ASCII-only summary ("Gold 22K at 30-day low" or "Gold 22K +2.1% today"). ₹-in-header bug pattern: reuse `fmtHdr` approach from `scraper/update-and-notify.js`
+- Idempotent: marker file `data/last_summary.json` with date + content hash; do not send twice on same day with same data
+
+#### Constraints
+
+- Reuse Groq integration from `ml/commentary.py`; reuse `NTFY_TOPIC` secret
+- `continue-on-error` on LLM call; ntfy alert if workflow itself crashes (same hardening as check-price.yml)
+- Unit tests for trigger logic against synthetic price series; mock Groq in CI
+
+#### Out of scope
+
+- Adjustable thresholds in UI; multiple LLM providers; per-user preferences; historical backtest of what would have fired
+
+#### Scheduling
+
+After Session B. Can slot before or after Session C — notification logic doesn't depend on data quality.
 
 ---
 
