@@ -25,11 +25,11 @@ if hasattr(sys.stdout, "reconfigure"):
     sys.stdout.reconfigure(encoding="utf-8")
 
 from ml.config import config_to_dict, flatten_for_mlflow, load_config
-from ml.promotion import _PROMOTION_THRESHOLD
 from ml.forecast import load_combined_history
 from ml.logging_setup import configure_for_environment
 from ml.macro import load_macro_features
 from ml.models.lgbm import LightGBMForecaster
+from ml.promotion import _PROMOTION_THRESHOLD
 from ml.regime import add_regime_to_macro
 from ml.tracking import MLflowTracker, get_git_sha
 
@@ -46,6 +46,7 @@ def _query_sweep_params(cfg: object) -> tuple[list[str], str]:
     """
     try:
         import mlflow
+
         from ml.tracking import get_tracking_uri, is_mlflow_reachable
 
         uri = get_tracking_uri()
@@ -71,9 +72,7 @@ def _query_sweep_params(cfg: object) -> tuple[list[str], str]:
 
         best_run = runs[0]
         best_params = {
-            k[len("best."):]: v
-            for k, v in best_run.data.params.items()
-            if k.startswith("best.")
+            k[len("best.") :]: v for k, v in best_run.data.params.items() if k.startswith("best.")
         }
         if not best_params:
             return [], "config_defaults"
@@ -202,9 +201,7 @@ def run_training(cfg: object, params_source: str = "config_defaults") -> dict:
                 candidate_version = register_candidate(
                     "lgbm", run.run_id, float(train_meta["val_mae"])
                 )
-                result = evaluate_promotion(
-                    "lgbm", run.run_id, float(train_meta["val_mae"])
-                )
+                result = evaluate_promotion("lgbm", run.run_id, float(train_meta["val_mae"]))
 
                 promotion_tags: dict = {
                     "promotion.decision": "PROMOTED" if result.promoted else "REJECTED",

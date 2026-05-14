@@ -42,17 +42,11 @@ def _sample_params(trial: optuna.Trial, model_name: str, search_space_cfg) -> di
                 param_name, float(spec.low), float(spec.high), log=True
             )
         elif ptype == "float":
-            params[param_name] = trial.suggest_float(
-                param_name, float(spec.low), float(spec.high)
-            )
+            params[param_name] = trial.suggest_float(param_name, float(spec.low), float(spec.high))
         elif ptype == "int":
-            params[param_name] = trial.suggest_int(
-                param_name, int(spec.low), int(spec.high)
-            )
+            params[param_name] = trial.suggest_int(param_name, int(spec.low), int(spec.high))
         elif ptype == "categorical":
-            params[param_name] = trial.suggest_categorical(
-                param_name, list(spec.choices)
-            )
+            params[param_name] = trial.suggest_categorical(param_name, list(spec.choices))
         else:
             raise ValueError(f"Unknown search space param type: {ptype!r}")
 

@@ -7,10 +7,8 @@ from unittest.mock import MagicMock, patch
 
 import numpy as np
 import pandas as pd
-import pytest
+from ml.tuning.study import run_study
 from omegaconf import OmegaConf
-
-from ml.tuning.study import _sample_params, run_study
 
 # ---------------------------------------------------------------------------
 # Fixtures / helpers
@@ -86,10 +84,7 @@ def test_best_params_within_search_space(tmp_path):
     from omegaconf import OmegaConf
 
     optuna_cfg = OmegaConf.load(
-        (
-            __file__[: __file__.rfind("tests")]
-            + "configs/training/optuna.yaml"
-        ).replace("\\", "/")
+        (__file__[: __file__.rfind("tests")] + "configs/training/optuna.yaml").replace("\\", "/")
     )
     space = optuna_cfg.search_spaces.lightgbm
 
@@ -110,17 +105,17 @@ def test_best_params_within_search_space(tmp_path):
         val = params[param_name]
 
         if ptype in ("log_float", "float"):
-            assert float(spec.low) <= val <= float(spec.high), (
-                f"{param_name}={val} outside [{spec.low}, {spec.high}]"
-            )
+            assert (
+                float(spec.low) <= val <= float(spec.high)
+            ), f"{param_name}={val} outside [{spec.low}, {spec.high}]"
         elif ptype == "int":
-            assert int(spec.low) <= int(val) <= int(spec.high), (
-                f"{param_name}={val} outside [{spec.low}, {spec.high}]"
-            )
+            assert (
+                int(spec.low) <= int(val) <= int(spec.high)
+            ), f"{param_name}={val} outside [{spec.low}, {spec.high}]"
         elif ptype == "categorical":
-            assert val in list(spec.choices), (
-                f"{param_name}={val!r} not in choices {list(spec.choices)}"
-            )
+            assert val in list(
+                spec.choices
+            ), f"{param_name}={val!r} not in choices {list(spec.choices)}"
 
 
 # ---------------------------------------------------------------------------
@@ -170,9 +165,9 @@ def test_mlflow_nested_runs_logged(tmp_path):
     parent_calls = [c for c in start_run_calls if not c]
     nested_calls = [c for c in start_run_calls if c]
     assert len(parent_calls) == 1, f"Expected 1 parent run, got {len(parent_calls)}"
-    assert len(nested_calls) == n_trials, (
-        f"Expected {n_trials} nested runs, got {len(nested_calls)}"
-    )
+    assert (
+        len(nested_calls) == n_trials
+    ), f"Expected {n_trials} nested runs, got {len(nested_calls)}"
     assert len(start_run_calls) == n_trials + 1
 
 
@@ -207,9 +202,9 @@ def test_reproducibility(tmp_path):
     ):
         study_b = run_study(**kwargs, _storage_override=storage_b)
 
-    assert study_a.best_params == study_b.best_params, (
-        f"Best params differ:\n  A={study_a.best_params}\n  B={study_b.best_params}"
-    )
-    assert abs(study_a.best_value - study_b.best_value) < 1e-6, (
-        f"Best values differ: {study_a.best_value} vs {study_b.best_value}"
-    )
+    assert (
+        study_a.best_params == study_b.best_params
+    ), f"Best params differ:\n  A={study_a.best_params}\n  B={study_b.best_params}"
+    assert (
+        abs(study_a.best_value - study_b.best_value) < 1e-6
+    ), f"Best values differ: {study_a.best_value} vs {study_b.best_value}"

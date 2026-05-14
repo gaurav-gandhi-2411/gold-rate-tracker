@@ -3,11 +3,8 @@
 from __future__ import annotations
 
 import json
-import math
 
-import pytest
 from ml.ensemble import _EXCLUSION_MULTIPLIER, _FLOOR_WEIGHT, compute_weights, save_ensemble_config
-
 
 # ---------------------------------------------------------------------------
 # 1. Weights sum to 1
@@ -44,9 +41,9 @@ def test_weights_sum_to_one_all_similar():
 def test_better_mae_model_gets_higher_weight():
     maes = {"a": 100.0, "b": 300.0}
     weights = compute_weights(maes)
-    assert weights["a"] > weights["b"], (
-        f"Lower-MAE model should have higher weight: a={weights['a']:.4f} b={weights['b']:.4f}"
-    )
+    assert (
+        weights["a"] > weights["b"]
+    ), f"Lower-MAE model should have higher weight: a={weights['a']:.4f} b={weights['b']:.4f}"
 
 
 def test_weight_monotonic_with_mae():
@@ -99,9 +96,9 @@ def test_floor_raises_low_weight_model():
     assert natural_c < _FLOOR_WEIGHT, "Precondition: c's natural weight is below floor"
 
     weights = compute_weights(maes)
-    assert weights["c"] > natural_c, (
-        f"Floor should raise c's weight above natural {natural_c:.4f}, got {weights['c']:.4f}"
-    )
+    assert (
+        weights["c"] > natural_c
+    ), f"Floor should raise c's weight above natural {natural_c:.4f}, got {weights['c']:.4f}"
     assert weights["c"] > 0.0
     # Renorm slightly reduces the final value below 0.1, but it must be above the natural weight
     assert weights["c"] < 0.12  # sanity upper bound
@@ -187,7 +184,5 @@ def test_save_ensemble_config(tmp_path):
     assert config["models"]["tft"]["excluded"] is True
     assert config["models"]["lgbm"]["excluded"] is False
     # lgbm + nbeats weights should sum to ≈1
-    active_sum = sum(
-        v["weight"] for v in config["models"].values() if not v["excluded"]
-    )
+    active_sum = sum(v["weight"] for v in config["models"].values() if not v["excluded"])
     assert abs(active_sum - 1.0) < 1e-4

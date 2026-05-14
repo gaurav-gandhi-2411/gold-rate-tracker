@@ -1,7 +1,7 @@
 # UI Audit — Before Screenshots
 
-Audit date: 2026-05-12  
-Screenshots: `docs/screenshots/before/`  
+Audit date: 2026-05-12
+Screenshots: `docs/screenshots/before/`
 Method: Playwright headless Chromium, iOS UA for ≤430px viewports, deviceScaleFactor 2× on mobile
 
 ---

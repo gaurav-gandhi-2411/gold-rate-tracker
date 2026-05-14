@@ -1,13 +1,13 @@
 # UI Implementation Plan
 
-Direction: editorial refined — dark + gold, tighten and refine.  
-Prerequisite: review and approve this plan before any code changes.  
+Direction: editorial refined — dark + gold, tighten and refine.
+Prerequisite: review and approve this plan before any code changes.
 Each phase: self-contained PR, no breaking changes to data contract or JS logic.
 
 ---
 
 ## Phase U1 — Foundation
-**Theme:** CSS custom properties for scale and spacing. No visual changes visible to users except the one contrast fix.  
+**Theme:** CSS custom properties for scale and spacing. No visual changes visible to users except the one contrast fix.
 **Estimated diff:** ~80 lines changed in `style.css`, no HTML changes.
 
 ### What changes
@@ -32,7 +32,7 @@ Each phase: self-contained PR, no breaking changes to data contract or JS logic.
    ```
 
 4. **Fix `--cream-mute` contrast** (WCAG AA failure — [A1]):
-   Change `--cream-mute: #8a8273` → `--cream-mute: #968e7e`  
+   Change `--cream-mute: #8a8273` → `--cream-mute: #968e7e`
    Rationale: brings contrast on `--surface-2` from 4.33:1 to ~5.1:1. Passes AA at 11px.
 
 5. **Fix `min-height: 100vh` → `100dvh`** ([A3]):
@@ -61,7 +61,7 @@ Each phase: self-contained PR, no breaking changes to data contract or JS logic.
 ---
 
 ## Phase U2 — Hero + rate cards
-**Theme:** The above-fold experience. Everything a user sees before scrolling on their primary device (390×844).  
+**Theme:** The above-fold experience. Everything a user sees before scrolling on their primary device (390×844).
 **Estimated diff:** ~60 lines in `style.css`, minor HTML attribute changes (no new elements).
 
 ### What changes
@@ -119,7 +119,7 @@ Each phase: self-contained PR, no breaking changes to data contract or JS logic.
 ---
 
 ## Phase U3 — Forecast + drift + commentary cards
-**Theme:** The "so what?" section. Reordering + relabeling.  
+**Theme:** The "so what?" section. Reordering + relabeling.
 **Estimated diff:** ~40 lines CSS, significant HTML reorder, minor app.js change.
 
 ### What changes
@@ -140,7 +140,7 @@ Each phase: self-contained PR, no breaking changes to data contract or JS logic.
 3. **Add context to drift stat labels** ([A10]):
    Current labels: "Rolling 7-day MAE", "Training baseline MAE", "Drift ratio". These are accurate but require ML knowledge.
    Revised labels (keep uppercase style, add parenthetical):
-   - "7-day error (MAE)" 
+   - "7-day error (MAE)"
    - "Baseline error (MAE)"
    - "Drift ratio"
    Add a single subtitle line below the h2: "How far off the model's forecasts have been this week vs training."
@@ -177,7 +177,7 @@ Each phase: self-contained PR, no breaking changes to data contract or JS logic.
 ---
 
 ## Phase U4 — Chart + history
-**Theme:** Data-dense sections. Make them readable without overwhelming.  
+**Theme:** Data-dense sections. Make them readable without overwhelming.
 **Estimated diff:** ~50 lines CSS, minor HTML for history scroll container.
 
 ### What changes
@@ -242,7 +242,7 @@ Each phase: self-contained PR, no breaking changes to data contract or JS logic.
 ---
 
 ## Phase U5 — Footer + safe areas + iOS polish
-**Theme:** Final fit and finish. Everything that requires real-device testing.  
+**Theme:** Final fit and finish. Everything that requires real-device testing.
 **Estimated diff:** ~30 lines CSS, 0 JS changes.
 
 ### What changes

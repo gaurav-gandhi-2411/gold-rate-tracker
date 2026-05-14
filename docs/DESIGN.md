@@ -44,7 +44,7 @@ Direction: **Editorial refined** — dark + gold, FT-Weekend / Patek Philippe vi
 
 ### WCAG contrast ratios — `--cream-mute` calibration
 
-`--cream-mute` was `#8a8273` (L≈0.253). Lifted to `#9a9282` (L≈0.290) in U1.  
+`--cream-mute` was `#8a8273` (L≈0.253). Lifted to `#9a9282` (L≈0.290) in U1.
 Ratios are relative luminance method (WCAG 2.1); marked *(approx)* — verify with a browser contrast tool.
 
 **Old value `#8a8273`:**
@@ -300,8 +300,8 @@ min-height: 100dvh;
 
 ### Dynamic Island — `env(safe-area-inset-top)`
 
-iPhone 14 Pro / 15 / 15 Pro: `env(safe-area-inset-top)` = 59px (Dynamic Island)  
-iPhone 12 / 13 / 14: `env(safe-area-inset-top)` = 47px (notch)  
+iPhone 14 Pro / 15 / 15 Pro: `env(safe-area-inset-top)` = 59px (Dynamic Island)
+iPhone 12 / 13 / 14: `env(safe-area-inset-top)` = 47px (notch)
 iPhone SE: `env(safe-area-inset-top)` = 20px (status bar only)
 
 Current code correctly applies `padding-top: env(safe-area-inset-top)` on `body` and `top: env(safe-area-inset-top, 0px)` on `.freshness-pill`. **This should work correctly** but requires real-device verification on the iPhone 15 given the reported mismatch (see audit A3/iPhone 15 section).
