@@ -292,9 +292,25 @@ def main() -> None:
 
     lgbm_meta_path = PROD_DIR / "lgbm-meta.json"
     training_rows = 0
+    val_mae: float | None = None
+    naive_mae: float | None = None
     if lgbm_meta_path.exists():
         with contextlib.suppress(Exception):
-            training_rows = int(json.loads(lgbm_meta_path.read_text()).get("n_train", 0))
+            _meta = json.loads(lgbm_meta_path.read_text())
+            training_rows = int(_meta.get("n_train", 0))
+            val_mae = _meta.get("val_mae")
+            naive_mae = _meta.get("naive_mae")
+
+    if val_mae is not None and naive_mae is not None and naive_mae > 0:
+        _ratio = val_mae / naive_mae
+        if _ratio < 0.99:
+            model_status = "beating_naive"
+        elif _ratio <= 1.01:
+            model_status = "matching_naive"
+        else:
+            model_status = "trailing_naive"
+    else:
+        model_status = "unknown"
 
     # TFT and N-BEATS gated until real corpus is large enough (Phase 6)
     print(
@@ -372,6 +388,10 @@ def main() -> None:
         "nbeats_delta": None,
         "real_readings_count": real_readings_count,
         "warmup": real_readings_count < MIN_REAL_READINGS_FOR_WARMUP_CLEAR,
+        "val_mae": round(val_mae, 1) if val_mae is not None else None,
+        "naive_mae": round(naive_mae, 1) if naive_mae is not None else None,
+        "model_status": model_status,
+        "min_readings_for_model_improvement": 200,
         "ensemble": {
             "method": "lgbm_only",
             "n_models": 1,

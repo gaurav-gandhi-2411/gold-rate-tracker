@@ -298,6 +298,24 @@ function renderForecast(fc) {
     warmupEl.hidden = true;
   }
 
+  const modelStatusEl = document.getElementById("model-status-banner");
+  if (modelStatusEl) {
+    const status = fc.model_status;
+    if (status && status !== "beating_naive" && status !== "unknown") {
+      const vMae  = fc.val_mae   != null ? Math.round(fc.val_mae)   : "—";
+      const nMae  = fc.naive_mae != null ? Math.round(fc.naive_mae) : "—";
+      const target = fc.min_readings_for_model_improvement ?? 200;
+      const daysEst = Math.ceil(Math.max(0, target - current) / 4);
+      modelStatusEl.textContent =
+        `Model: LightGBM val_mae ${vMae} vs naive ${nMae}. ` +
+        `Improvement gated on real-data accumulation ` +
+        `(target: ${target} readings, ~${daysEst} days).`;
+      modelStatusEl.hidden = false;
+    } else {
+      modelStatusEl.hidden = true;
+    }
+  }
+
   const hasInterval = typeof fc.lower === "number" && typeof fc.upper === "number";
   if (hasInterval) {
     intervalEl.innerHTML =

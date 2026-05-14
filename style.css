@@ -537,6 +537,17 @@ body {
   border-bottom: 1px solid rgba(200, 140, 30, 0.25);
   margin-bottom: 2px;
 }
+.model-status-banner {
+  flex: 0 0 100%;
+  text-align: center;
+  padding: 5px 0 7px;
+  font-size: 11px;
+  font-family: var(--sans);
+  color: rgba(212, 168, 39, 0.7);
+  letter-spacing: 0.04em;
+  border-bottom: 1px solid rgba(200, 140, 30, 0.15);
+  margin-bottom: 2px;
+}
 .freshness-pill .updated {
   font-size: 11px;
   color: var(--cream-mute);
