@@ -36,17 +36,25 @@ The backfill is trivial (30 min) and multiplies our real-data corpus 5×. Not a 
 
 ---
 
-## Phase 1B — Session B: Model simplification (~1 hour)
+## ✓ Phase 1B — Session B: Model simplification (2026-05-14)
 
-1. **Roadmap #5: drop TFT + N-BEATS from prod inference (ml/inference.py)**
-   - Skip TFT and N-BEATS branches entirely in the hot path
-   - Keep training code, model files, champion/challenger plumbing intact
-   - Add constant: `MIN_READINGS_FOR_DEEP_MODELS = 1000`
-   - Update tests to reflect LightGBM-only inference
+1. **Roadmap #5 (B1): Drop TFT + N-BEATS from prod inference (ml/inference.py)**
+   - `MIN_REAL_READINGS_FOR_NBEATS = 1000`, `MIN_REAL_READINGS_FOR_TFT = 2000`, `MIN_REAL_READINGS_FOR_WARMUP_CLEAR = 30` added as module-level constants
+   - TFT and N-BEATS removed from hot path; both print gate message and skip
+   - LightGBM-only CI from p10/p90 quantile models
+   - `training_rows` fixed: was hardcoded 0, now read from `lgbm-meta.json` (`n_train=361`)
+   - `warmup` threshold fixed: was hardcoded `< 56`, now `real_readings_count < 30`
+   - New forecast.json schema: `model_version=lgbm-only`, `nbeats_available=false`, `ensemble.method=lgbm_only`, `excluded_reason=data_gate`, thresholds self-documented in JSON
+   - Commit: `306d5ad`
 
-2. **Roadmap #10: warmup banner in UI**
-   - Show banner when `forecast.json.warmup === true`
-   - UI-only, no inference changes
+2. **Roadmap #10 (B2): Warmup banner in UI**
+   - `#warmup-banner` added inside `.freshness-pill` (flex-wrap: wrap → full-width row above updated span)
+   - Banner: "⚠ Model in warmup — predictions unreliable until N+ real readings collected. Current: X."
+   - Threshold and current count read from `fc.ensemble.min_readings_for_warmup_clear` and `fc.real_readings_count`; fallback to 30
+   - Existing `forecast-warmup` card element also updated to use dynamic threshold
+   - Commit: `4ee4af0`
+
+**Validation:** CI run `253af6e` produced correct lgbm-only forecast.json: `training_rows=361`, `warmup=false` (58 real readings ≥ 30), all new ensemble fields present.
 
 ---
 
