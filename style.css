@@ -440,6 +440,7 @@ body {
   top: env(safe-area-inset-top, 0px);
   z-index: 10;
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
   justify-content: flex-end;
   padding: 6px clamp(20px, 5vw, 56px);
@@ -452,6 +453,19 @@ body {
   margin-left:  calc(-1 * clamp(20px, 5vw, 56px) - env(safe-area-inset-left,  0px));
   margin-right: calc(-1 * clamp(20px, 5vw, 56px) - env(safe-area-inset-right, 0px));
   pointer-events: none;
+}
+
+/* ---------- Warmup banner (inside freshness pill) ---------- */
+.warmup-banner {
+  flex: 0 0 100%;
+  text-align: center;
+  padding: 5px 0 7px;
+  font-size: 11px;
+  font-family: var(--sans);
+  color: #d4a827;
+  letter-spacing: 0.04em;
+  border-bottom: 1px solid rgba(200, 140, 30, 0.25);
+  margin-bottom: 2px;
 }
 .freshness-pill .updated {
   font-size: 11px;

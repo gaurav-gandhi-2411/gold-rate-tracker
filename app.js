@@ -265,6 +265,7 @@ function renderForecast(fc) {
   const section     = document.getElementById("forecast-section");
   const priceEl     = document.getElementById("forecast-price");
   const warmupEl    = document.getElementById("forecast-warmup");
+  const bannerEl    = document.getElementById("warmup-banner");
   const intervalEl  = document.getElementById("forecast-interval");
   const targetEl    = document.getElementById("forecast-target");
   const generatedEl = document.getElementById("forecast-generated");
@@ -278,12 +279,21 @@ function renderForecast(fc) {
 
   priceEl.innerHTML = rupee(fc.predicted_22k);
 
+  const threshold = fc.ensemble?.min_readings_for_warmup_clear ?? 30;
+  const current   = fc.real_readings_count || 0;
+
   if (fc.warmup) {
-    const needed = Math.max(0, 56 - (fc.real_readings_count || 0));
+    if (bannerEl) {
+      bannerEl.textContent =
+        `⚠ Model in warmup — predictions unreliable until ${threshold}+ real readings collected. Current: ${current}.`;
+      bannerEl.hidden = false;
+    }
+    const needed = Math.max(0, threshold - current);
     warmupEl.textContent =
       `\u{1F4CA} Calibrating · forecast may differ from live until ~${needed} more readings`;
     warmupEl.hidden = false;
   } else {
+    if (bannerEl) bannerEl.hidden = true;
     warmupEl.hidden = true;
   }
 
