@@ -2,19 +2,15 @@
 
 from __future__ import annotations
 
-from unittest.mock import MagicMock, call, patch
+from unittest.mock import MagicMock, patch
 
 import pytest
-
 from ml.promotion import (
-    PromotionResult,
-    _MODEL_NAMES,
     _PROMOTION_THRESHOLD,
     evaluate_promotion,
     promote,
     rollback,
 )
-
 
 # ---------------------------------------------------------------------------
 # Helpers
@@ -130,9 +126,9 @@ def test_reject_exactly_2pct():
     with _patch_client([_mock_version("1", production_mae)]):
         result = evaluate_promotion("lgbm", "run-boundary", candidate_mae)
 
-    assert result.promoted is False, (
-        f"Exactly {_PROMOTION_THRESHOLD*100}% improvement should be REJECTED (strict <)"
-    )
+    assert (
+        result.promoted is False
+    ), f"Exactly {_PROMOTION_THRESHOLD*100}% improvement should be REJECTED (strict <)"
 
 
 # ---------------------------------------------------------------------------
@@ -162,9 +158,11 @@ def test_registry_unreachable_raises():
         def get_latest_versions(self, *args, **kwargs):
             raise ConnectionError("server down")
 
-    with patch("ml.promotion.MlflowClient", return_value=BrokenClient()):
-        with pytest.raises(RuntimeError, match="unreachable"):
-            evaluate_promotion("lgbm", "run-offline", 100.0)
+    with (
+        patch("ml.promotion.MlflowClient", return_value=BrokenClient()),
+        pytest.raises(RuntimeError, match="unreachable"),
+    ):
+        evaluate_promotion("lgbm", "run-offline", 100.0)
 
 
 # ---------------------------------------------------------------------------
@@ -229,9 +227,11 @@ def test_rollback_raises_if_no_archived():
     mock_client = MagicMock()
     mock_client.get_latest_versions.return_value = []
 
-    with patch("ml.promotion.MlflowClient", return_value=mock_client):
-        with pytest.raises(RuntimeError, match="No archived versions"):
-            rollback("lgbm")
+    with (
+        patch("ml.promotion.MlflowClient", return_value=mock_client),
+        pytest.raises(RuntimeError, match="No archived versions"),
+    ):
+        rollback("lgbm")
 
 
 # ---------------------------------------------------------------------------

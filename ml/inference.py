@@ -375,14 +375,16 @@ def main() -> None:
     excluded_models = [m for m, w in weights.items() if w == 0.0]
 
     if n_models == 0:
-        raise RuntimeError("All models were hard-excluded from the ensemble — cannot produce forecast")
+        raise RuntimeError(
+            "All models were hard-excluded from the ensemble — cannot produce forecast"
+        )
 
     for m in excluded_models:
         best_model = min(available_maes, key=available_maes.get)
         print(
             f"Ensemble: hard-excluding {m} "
             f"(val_mae={available_maes[m]:.1f} > "
-            f"{available_maes[best_model]:.1f}×5 threshold)"
+            f"{available_maes[best_model]:.1f}*5 threshold)"
         )
 
     # Weight-weighted point prediction and CI
@@ -395,8 +397,7 @@ def main() -> None:
     upper = round(current_22k + ensemble_upper)
 
     print(
-        f"Ensemble ({n_models} models, inverse-MAE): "
-        f"22K=Rs.{predicted_22k} [{lower}-{upper}]"
+        f"Ensemble ({n_models} models, inverse-MAE): " f"22K=Rs.{predicted_22k} [{lower}-{upper}]"
     )
     for m, (pt, lo, hi) in available_preds.items():
         w = weights[m]
@@ -465,8 +466,7 @@ def main() -> None:
     DATA_DIR.mkdir(exist_ok=True)
     (DATA_DIR / "forecast.json").write_text(json.dumps(result, indent=2) + "\n")
     print(
-        f"Forecast written: 22K=Rs.{predicted_22k} [{lower}-{upper}] "
-        f"({n_models} active models)"
+        f"Forecast written: 22K=Rs.{predicted_22k} [{lower}-{upper}] " f"({n_models} active models)"
     )
 
 
