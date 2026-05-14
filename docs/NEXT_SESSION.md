@@ -70,44 +70,17 @@ The backfill is trivial (30 min) and multiplies our real-data corpus 5×. Not a 
 
 ---
 
-## Session B.5 — Smart daily notification (~45 min)
+## ✓ Session B.5 — Smart daily notification (2026-05-14)
 
-Goal: 4pm IST cron (10:30 UTC) that sends a push notification only when something interesting happened, with LLM-curated commentary. Most days produce no notification — preserves alert-fatigue hygiene.
-
-#### Trigger rules (notify if ANY are true)
-
-- Price moved ≥ 2% from previous day's 22K reading
-- Today's 22K is at or within ₹50 of the 30-day low
-- Today's 22K is at or within ₹50 of the 30-day high
-- 5-day cumulative move ≥ 3% in either direction
-- First reading after a 24h+ scrape gap ("we're back online, here's where we are")
-
-If multiple triggers fire, mention all of them in the LLM prompt — commentary is richer for it.
-
-Threshold note: 2% / ₹50 / 3% are first-guess values. Revisit after ~2 weeks of running — goal is ~3–4 notifications per week, not daily.
-
-#### Implementation
-
-- New script: `ml/daily_summary.py`
-- New workflow: `.github/workflows/daily-summary.yml` on cron `30 10 * * *` (10:30 UTC = 4pm IST)
-- Reads `data/prices.json` + `data/forecast.json`; computes triggers; exits 0 silently if none fire
-- If trigger fires: build structured context (today/yesterday price, 7-day avg, 30-day low/high, which triggers fired) → Groq prompt (1–2 sentences, ≤200 chars, factual, no emojis, no financial advice) → ntfy push
-- ntfy Title: ASCII-only summary ("Gold 22K at 30-day low" or "Gold 22K +2.1% today"). ₹-in-header bug pattern: reuse `fmtHdr` approach from `scraper/update-and-notify.js`
-- Idempotent: marker file `data/last_summary.json` with date + content hash; do not send twice on same day with same data
-
-#### Constraints
-
-- Reuse Groq integration from `ml/commentary.py`; reuse `NTFY_TOPIC` secret
-- `continue-on-error` on LLM call; ntfy alert if workflow itself crashes (same hardening as check-price.yml)
-- Unit tests for trigger logic against synthetic price series; mock Groq in CI
-
-#### Out of scope
-
-- Adjustable thresholds in UI; multiple LLM providers; per-user preferences; historical backtest of what would have fired
-
-#### Scheduling
-
-After Session B. Can slot before or after Session C — notification logic doesn't depend on data quality.
+- Script: `ml/daily_summary.py` — 5 triggers (T1 ≥2% daily, T2/T3 ±₹50 from 30d low/high, T4 ≥3% 5-day, T5 scrape gap); Groq commentary with template fallback; idempotency via `data/last_summary.json`
+- Workflow: `.github/workflows/daily-summary.yml` — cron `30 10 * * *` (10:30 UTC = 4pm IST); `workflow_dispatch` for manual trigger; rebase guard before push; failure alert step
+- IST date handling: `ZoneInfo("Asia/Kolkata")` throughout — not manual `timedelta(hours=5, minutes=30)`
+- ASCII-only ntfy headers: `Rs.XX,XXX` format (`_fmt_inr_ascii`) — ₹ symbol (U+20B9) is non-ASCII and raises TypeError in HTTP headers
+- 39 tests in `tests/test_daily_summary.py`, all passing
+- Smoke test confirmed end-to-end: T3 triggered (BAND_30D=100 temporarily), Groq commentary delivered, ntfy push received on phone
+- BAND_30D reverted to 50 after smoke test
+- Commits: `a27eace` (implementation), `ead1a5e` (zoneinfo fix), `6b6a308` (smoke test BAND_30D), this commit (revert)
+- Threshold tuning note: revisit ~2026-05-28; goal ~3–4 notifications/week. If T3 fires every other day, tighten to ±30. See `docs/DAILY_SUMMARY_DESIGN.md` for calibration rationale.
 
 ---
 
