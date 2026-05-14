@@ -65,6 +65,8 @@ class LightGBMForecaster(BaseForecaster):
             feature_fraction=float(p.feature_fraction) if p else 0.9,
             subsample=float(p.bagging_fraction) if p else 0.8,
             subsample_freq=int(p.bagging_freq) if p else 5,
+            min_child_samples=int(p.min_data_in_leaf) if p and hasattr(p, "min_data_in_leaf") and p.min_data_in_leaf is not None else 20,
+            reg_lambda=float(p.lambda_l2) if p and hasattr(p, "lambda_l2") and p.lambda_l2 is not None else 0.0,
             random_state=42,
             verbose=-1,
         )

@@ -47,7 +47,7 @@ def test_load_config_default_model_is_ensemble():
 def test_load_config_override_model_lightgbm():
     cfg = load_config(overrides=["model=lightgbm"])
     assert cfg.model.name == "lightgbm"
-    assert cfg.model.params.num_leaves == 31
+    assert cfg.model.params.num_leaves == 16
 
 
 def test_load_config_override_model_tft():

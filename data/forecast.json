@@ -1,20 +1,20 @@
 {
-  "predicted_at": "2026-05-14T16:57:09.909202+00:00",
+  "predicted_at": "2026-05-14T19:43:25.787718+00:00",
   "target_time": "2026-05-15T00:00:00+00:00",
-  "predicted_22k": 14965,
-  "lower": 14791,
-  "upper": 15236,
+  "predicted_22k": 14962,
+  "lower": 14761,
+  "upper": 15210,
   "model_version": "lgbm-only",
-  "training_rows": 361,
+  "training_rows": 367,
   "feature_count": 44,
   "macro_features_used": true,
   "nbeats_available": false,
   "nbeats_delta": null,
   "real_readings_count": 61,
   "warmup": false,
-  "val_mae": 225.7,
-  "naive_mae": 223.9,
-  "model_status": "matching_naive",
+  "val_mae": 184.4,
+  "naive_mae": 181.1,
+  "model_status": "trailing_naive",
   "min_readings_for_model_improvement": 200,
   "ensemble": {
     "method": "lgbm_only",
@@ -33,9 +33,9 @@
   },
   "models": {
     "lgbm": {
-      "delta": 29.8,
-      "lower": -143.6,
-      "upper": 301.4,
+      "delta": 26.9,
+      "lower": -173.7,
+      "upper": 275.3,
       "weight": 1.0
     }
   }

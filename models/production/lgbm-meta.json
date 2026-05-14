@@ -1,15 +1,15 @@
 {
   "best_epoch": 1,
-  "epochs_run": 500,
-  "val_mae": 225.65,
+  "epochs_run": 2000,
+  "val_mae": 184.43,
   "val_mape": 0.0,
-  "naive_mae": 223.86,
+  "naive_mae": 181.09,
   "beats_naive": false,
-  "n_train": 361,
-  "n_val": 63,
+  "n_train": 367,
+  "n_val": 64,
   "wall_clock_s": 0.2,
   "feature_count": 44,
-  "model_version": "20260511-023627-9c0190c",
-  "trained_at": "2026-05-11T02:36:28.184644+00:00",
-  "git_sha": "9c0190c"
+  "model_version": "20260514-194301-5c0b5b6",
+  "trained_at": "2026-05-14T19:43:02.060291+00:00",
+  "git_sha": "5c0b5b6"
 }

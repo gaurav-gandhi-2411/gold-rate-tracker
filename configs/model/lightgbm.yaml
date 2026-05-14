@@ -2,12 +2,14 @@ name: lightgbm
 _target_: ml.models.lightgbm.LightGBMForecaster
 params:
   objective: regression_l1
-  num_leaves: 31
-  learning_rate: 0.05
-  feature_fraction: 0.9
-  bagging_fraction: 0.8
-  bagging_freq: 5
-  num_iterations: 500
-  early_stopping_round: 50
+  num_leaves: 16           # was 31: simpler trees; min_data_in_leaf already caps depth
+  learning_rate: 0.02      # was 0.05: smaller steps for noisy delta target
+  feature_fraction: 0.6    # was 0.9: actual column subsampling (was ~no-op at 0.9×44)
+  bagging_fraction: 0.7    # was 0.8: slightly more row diversity
+  bagging_freq: 1          # was 5: bag every round at this learning rate
+  num_iterations: 2000     # was 500: scaled up to compensate for lower lr
+  early_stopping_round: 100  # was 50: scaled proportionally to lr reduction
+  min_data_in_leaf: 40     # was unset (lgbm default 20): ~11% of train rows per leaf
+  lambda_l2: 1.0           # was unset (lgbm default 0.0): L2 regularization for small data
   verbose: -1
 quantile_alphas: [0.1, 0.9]
