@@ -9,7 +9,7 @@
 # Core ML
 lightgbm>=4.0
 darts>=0.26
-onnx>=1.16
+onnx>=1.21.0
 
 # Experiment tracking
 mlflow-skinny==2.22.5
