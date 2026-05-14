@@ -2,7 +2,7 @@
 
 ## Operational fixes
 - Roadmap item #4: `git pull --rebase` before bot push step in check-price.yml — prevent bot push conflicts when I push between scheduled runs
-- actions/checkout@v4 and actions/setup-node@v4 deprecated — bump to v5 before June 2, 2026. Coordinated bump across check-price.yml, lint.yml, and any other workflow using them.
+- actions/checkout@v4 and actions/setup-node@v4 deprecated — bump to **v6** before June 2, 2026. Coordinated bump across check-price.yml, lint.yml, and any other workflow using them. NOTE: Dependabot PRs #2 and #3 target v4→v6 directly, skipping v5 entirely. Review v5 and v6 changelogs before merging: checkout v6 changes persist-credentials storage location (requires runner ≥v2.329.0); setup-node v6 limits automatic caching to npm only.
 
 ## ML improvements (from Phase 2 plan)
 - #5: Drop TFT + N-BEATS from prod ensemble. Keep training code and model files. Add data gate: re-introduce via champion/challenger when real_readings_count >= 1000 (N-BEATS) and >= 2000 (TFT).
