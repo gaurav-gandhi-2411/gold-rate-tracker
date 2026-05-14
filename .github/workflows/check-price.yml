@@ -51,7 +51,9 @@ jobs:
         run: npx playwright install --with-deps chromium
 
       - name: Scrape Tanishq and update prices.json
+        id: scrape
         working-directory: scraper
+        continue-on-error: true
         env:
           NTFY_TOPIC: ${{ secrets.NTFY_TOPIC }}
           DROP_THRESHOLD: "100"
@@ -59,6 +61,23 @@ jobs:
           set -e
           node scrape.js | tee /tmp/reading.json
           cat /tmp/reading.json | node update-and-notify.js
+
+      - name: Alert on scraper failure
+        if: steps.scrape.outcome == 'failure'
+        continue-on-error: true
+        env:
+          NTFY_TOPIC: ${{ secrets.NTFY_TOPIC }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: |
+          # ntfy headers must be ASCII-only — the ₹ bug (Fix 1) must not be
+          # reintroduced here. No currency symbols in any header value.
+          [ -z "${NTFY_TOPIC}" ] && echo "NTFY_TOPIC not set — skipping alert." && exit 0
+          curl -s \
+            -H "Title: Gold Tracker: Scraper Down" \
+            -H "Priority: high" \
+            -H "Tags: warning" \
+            -d "Tanishq scraper failed. Check logs: ${RUN_URL}" \
+            "https://ntfy.sh/${NTFY_TOPIC}" || true
 
       - name: Set up Python
         uses: actions/setup-python@v5
@@ -103,3 +122,52 @@ jobs:
             git commit -m "chore: update gold prices and forecast [skip ci]"
             git push
           fi
+
+      - name: Staleness guard
+        if: always()
+        continue-on-error: true
+        env:
+          NTFY_TOPIC: ${{ secrets.NTFY_TOPIC }}
+        run: |
+          # Use Python for UTC date math — bash date -d arithmetic is not portable.
+          # Timestamps in prices.json are UTC ISO-8601 with Z suffix; replace Z
+          # with +00:00 so fromisoformat() works on Python 3.7–3.10 (pre-3.11 fix).
+          # ntfy headers must be ASCII-only (see Fix 1 for the ₹ bug this avoids).
+          python3 -c '
+          import json, os, sys
+          from datetime import datetime, timezone
+          try:
+              with open("data/prices.json") as f:
+                  data = json.load(f)
+              ts = datetime.fromisoformat(data[-1]["timestamp"].replace("Z", "+00:00"))
+              age_h = (datetime.now(timezone.utc) - ts).total_seconds() / 3600
+          except Exception as e:
+              print("Cannot read prices.json:", e)
+              age_h = 999
+          print(f"Last reading age: {age_h:.1f}h")
+          if age_h <= 8:
+              print("Fresh — no staleness alert.")
+              sys.exit(0)
+          topic = os.environ.get("NTFY_TOPIC", "")
+          if not topic:
+              print("NTFY_TOPIC not set — skipping staleness alert.")
+              sys.exit(0)
+          hours = int(age_h)
+          import urllib.request
+          body = f"Last reading is {hours}h old. Scraper may be failing.".encode()
+          req = urllib.request.Request(
+              f"https://ntfy.sh/{topic}",
+              data=body,
+              method="POST",
+              headers={
+                  "Title": f"Gold Tracker: data stale ({hours}h)",
+                  "Priority": "high",
+                  "Tags": "warning",
+              },
+          )
+          try:
+              urllib.request.urlopen(req)
+              print(f"Staleness alert sent ({hours}h old).")
+          except Exception as e:
+              print(f"Failed to send staleness alert: {e}")
+          ' || true
