@@ -146,15 +146,23 @@ real IBJA reference rates. After 24 months the seed can be fully replaced.
 
 ---
 
-## Phase 3 — Metrics infrastructure (next session)
+## ✓ Phase 3 — Metrics infrastructure (2026-05-14)
 
-Define and compute three metrics:
-- **Decision accuracy (primary):** when model says "wait (price drops ≥₹100 in next 5 days)," was it right?
-- **MAE (academic):** kept for transparency, not optimisation target
-- **Directional accuracy (academic):** up/down direction vs naive
+Design (Phase 3A) and implementation (Phase 3B) complete. Commits: `b9fd135` (design doc), `0ac925e` (implementation).
 
-Two evaluation tracks: synthetic backtest (sanity), real-data track (trust).
-Surface decision accuracy in UI (replaces or supplements current backtest card).
+**What was built:**
+- `ml/metrics.py`: `compute_decision` (Rule A delta≤-100), `resolve_outcome` (5-trading-day window, carry-forward exclusion), `aggregate_metrics` (decision accuracy, MAE, directional), `record_prediction` (idempotent daily write), `resolve_pending` (weekly resolution)
+- `data/metrics_history.json`: accumulates pending entries daily; resolved weekly
+- `check-price.yml`: `python -m ml.metrics --record` after commentary step
+- `weekly-backtest.yml`: `python -m ml.metrics --resolve` before commit
+- UI accuracy card: client-side aggregation from metrics_history.json; "collecting" state until first resolved entry
+- `tests/test_metrics.py`: 17 tests, all passing; 257 total
+
+**Key decisions (see docs/METRICS_DESIGN.md for full rationale):**
+- Rule A: `delta ≤ -100` → "wait". Threshold revisit: ₹20,000+ or 5 years from 2026-05-14.
+- No bootstrap: LightGBM retrains from scratch on every inference — retrospective eval measures memorization.
+- No pre-aggregated summary file: UI computes client-side from metrics_history.json directly.
+- actual_next_22k stored in each entry on resolution so UI needs only metrics_history.json.
 
 ---
 
