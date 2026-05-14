@@ -158,5 +158,15 @@
     "residual": 161.0,
     "model_version": "ensemble-inv-mae",
     "baseline_mae": 225.65
+  },
+  {
+    "ts": "2026-05-14T10:55:54.496655+00:00",
+    "target_time": "2026-05-15T00:00:00+00:00",
+    "actual_ts": "2026-05-14T10:55:24.980Z",
+    "actual_22k": 14845.0,
+    "forecast_22k": 14684.0,
+    "residual": 161.0,
+    "model_version": "ensemble-inv-mae",
+    "baseline_mae": 225.65
   }
 ]
