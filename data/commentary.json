@@ -100,5 +100,41 @@
     "text": "The gold price is at Rs.13990. It is at the 45th percentile in the last 90 days. The model expects a price around Rs.14073 next.",
     "model": "llama-3.3-70b-versatile",
     "prompt_hash": "b8cc30fbce6f"
+  },
+  {
+    "ts": "2026-05-12T03:48:49Z",
+    "text": "The gold price is at Rs.13990. Recent data shows it's at the 46.7th percentile in the last 90 days. The model expects a price around Rs.14066 next.",
+    "model": "llama-3.3-70b-versatile",
+    "prompt_hash": "0902b20e70dc"
+  },
+  {
+    "ts": "2026-05-12T08:49:32Z",
+    "text": "The gold price is at Rs.14160. It is at the 60th percentile in the last 90 days. The model expects a price around Rs.14063 tomorrow.",
+    "model": "llama-3.3-70b-versatile",
+    "prompt_hash": "0a255068f133"
+  },
+  {
+    "ts": "2026-05-12T14:43:30Z",
+    "text": "The gold price is at Rs.14160. Recent data shows it's at the 60th percentile in the last 90 days. The model expects a price around Rs.14063 tomorrow.",
+    "model": "llama-3.3-70b-versatile",
+    "prompt_hash": "6c985b3dd500"
+  },
+  {
+    "ts": "2026-05-12T20:02:46Z",
+    "text": "The Indian retail gold price has risen by 1.07% over the past 3 days, with the current 22K price at Rs.14160. The model expects a slight decrease to Rs.14063 in the next reading. Recent price movements have been relatively stable.",
+    "model": "llama-3.3-70b-versatile",
+    "prompt_hash": "6e74b790f8b3"
+  },
+  {
+    "ts": "2026-05-13T03:57:40Z",
+    "text": "The 22K gold price has risen by 1.07% over the past 3 days, reaching Rs.14160. The model expects a slight increase to Rs.14176 in the next reading. Recent price movements have been relatively stable.",
+    "model": "llama-3.3-70b-versatile",
+    "prompt_hash": "b3066b49df81"
+  },
+  {
+    "ts": "2026-05-13T08:53:26Z",
+    "text": "The 22K gold price has risen by 6.60% over the past 3 days, reaching Rs.14935. The model expects a lower price in the next reading, with a point estimate of Rs.14176. Recent price movements are being tracked for patterns.",
+    "model": "llama-3.3-70b-versatile",
+    "prompt_hash": "7056de531b77"
   }
 ]
