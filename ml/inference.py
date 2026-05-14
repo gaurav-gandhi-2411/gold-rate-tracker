@@ -1,9 +1,9 @@
-"""CPU-only ensemble inference.
+"""CPU-only LightGBM inference.
 
-Loads tft.onnx, nbeats.onnx, and lgbm.txt from models/production/ and produces
-a uniform-weighted ensemble forecast written to data/forecast.json.
-
-No torch dependency — ONNX models run via onnxruntime, LightGBM via its native API.
+Loads lgbm.txt from models/production/ and produces a forecast written to
+data/forecast.json. TFT and N-BEATS are gated behind real-readings thresholds
+and skipped until the corpus is large enough. ONNX helpers are kept for
+future reintroduction (Phase 6).
 
 Usage:
     python -m ml.inference
@@ -24,6 +24,11 @@ sys.path.insert(0, str(ROOT))
 
 PROD_DIR = ROOT / "models" / "production"
 DATA_DIR = ROOT / "data"
+
+# Real-data corpus thresholds for deep model reintroduction (Phase 6)
+MIN_REAL_READINGS_FOR_NBEATS = 1000
+MIN_REAL_READINGS_FOR_TFT = 2000
+MIN_REAL_READINGS_FOR_WARMUP_CLEAR = 30
 
 # Must match TFTForecaster training: PAST_COV_COLS and FUTURE_COV_COLS order
 _PAST_COV_COLS = [
@@ -280,35 +285,25 @@ def main() -> None:
     prices_daily = df.set_index("ts")["22k"].astype(float).reindex(full_idx, method="ffill")
     current_22k = float(prices_daily.iloc[-1])
 
-    # --- TFT inference (requires macro for meaningful predictions) ---
-    tft_delta: float | None = None
-    if (PROD_DIR / "tft.onnx").exists() and macro_df is not None:
-        try:
-            past_in, fut_in = _build_tft_inputs(prices_daily, macro_df, mean, std)
-            tft_norm = _run_onnx_tft(past_in, fut_in)
-            tft_price = float(tft_norm * std + mean)
-            tft_delta = tft_price - current_22k
-            print(f"TFT delta: Rs.{tft_delta:+.1f}")
-        except Exception as exc:
-            print(f"TFT inference failed ({exc})")
-    elif not (PROD_DIR / "tft.onnx").exists():
-        print("TFT ONNX not found — skipping")
-    else:
-        print("TFT skipped — macro unavailable")
+    prices_path = DATA_DIR / "prices.json"
+    real_readings_count = len(json.loads(prices_path.read_text())) if prices_path.exists() else 0
 
-    # --- N-BEATS inference ---
-    nbeats_delta: float | None = None
-    if (PROD_DIR / "nbeats.onnx").exists():
-        try:
-            past_in_nb = _build_nbeats_input(prices_daily, mean, std)
-            nb_norm = _run_onnx_nbeats(past_in_nb)
-            nb_price = float(nb_norm * std + mean)
-            nbeats_delta = nb_price - current_22k
-            print(f"N-BEATS delta: Rs.{nbeats_delta:+.1f}")
-        except Exception as exc:
-            print(f"N-BEATS inference failed ({exc})")
-    else:
-        print("N-BEATS ONNX not found — skipping")
+    import contextlib
+
+    lgbm_meta_path = PROD_DIR / "lgbm-meta.json"
+    training_rows = 0
+    if lgbm_meta_path.exists():
+        with contextlib.suppress(Exception):
+            training_rows = int(json.loads(lgbm_meta_path.read_text()).get("n_train", 0))
+
+    # TFT and N-BEATS gated until real corpus is large enough (Phase 6)
+    print(
+        f"TFT gated — need {MIN_REAL_READINGS_FOR_TFT} real readings (have {real_readings_count})"
+    )
+    print(
+        f"N-BEATS gated — need {MIN_REAL_READINGS_FOR_NBEATS} real readings"
+        f" (have {real_readings_count})"
+    )
 
     # --- LightGBM inference ---
     lgbm_delta: float | None = None
@@ -345,64 +340,17 @@ def main() -> None:
     else:
         print("LightGBM model not found — skipping")
 
-    # --- Dynamic inverse-MAE ensemble (ADR 008) ---
-    from ml.ensemble import compute_weights, save_ensemble_config
+    # --- LightGBM-only forecast ---
+    if lgbm_delta is None:
+        raise RuntimeError("LightGBM inference failed — cannot produce forecast")
 
-    model_maes = _load_model_maes()
+    lo = lgbm_p10 if lgbm_p10 is not None else lgbm_delta
+    hi = lgbm_p90 if lgbm_p90 is not None else lgbm_delta
+    predicted_22k = round(current_22k + lgbm_delta)
+    lower = round(current_22k + lo)
+    upper = round(current_22k + hi)
 
-    # Build predictions for every model that succeeded inference.
-    # LightGBM exposes q10/q90; TFT and N-BEATS use their point prediction for
-    # both CI bounds (no quantile ONNX outputs available from those architectures).
-    available_preds: dict[str, tuple[float, float, float]] = {}  # model → (point, q10, q90)
-    if lgbm_delta is not None:
-        lo = lgbm_p10 if lgbm_p10 is not None else lgbm_delta
-        hi = lgbm_p90 if lgbm_p90 is not None else lgbm_delta
-        available_preds["lgbm"] = (lgbm_delta, lo, hi)
-    if tft_delta is not None:
-        available_preds["tft"] = (tft_delta, tft_delta, tft_delta)
-    if nbeats_delta is not None:
-        available_preds["nbeats"] = (nbeats_delta, nbeats_delta, nbeats_delta)
-
-    if not available_preds:
-        raise RuntimeError("All models failed inference — cannot produce ensemble forecast")
-
-    available_maes = {m: model_maes.get(m, float("inf")) for m in available_preds}
-    weights = compute_weights(available_maes)
-
-    save_ensemble_config(weights, available_maes, PROD_DIR / "ensemble-config.json")
-
-    n_models = sum(1 for w in weights.values() if w > 0)
-    excluded_models = [m for m, w in weights.items() if w == 0.0]
-
-    if n_models == 0:
-        raise RuntimeError(
-            "All models were hard-excluded from the ensemble — cannot produce forecast"
-        )
-
-    for m in excluded_models:
-        best_model = min(available_maes, key=available_maes.get)
-        print(
-            f"Ensemble: hard-excluding {m} "
-            f"(val_mae={available_maes[m]:.1f} > "
-            f"{available_maes[best_model]:.1f}*5 threshold)"
-        )
-
-    # Weight-weighted point prediction and CI
-    ensemble_delta = sum(weights[m] * pt for m, (pt, lo, hi) in available_preds.items())
-    ensemble_lower = sum(weights[m] * lo for m, (pt, lo, hi) in available_preds.items())
-    ensemble_upper = sum(weights[m] * hi for m, (pt, lo, hi) in available_preds.items())
-
-    predicted_22k = round(current_22k + ensemble_delta)
-    lower = round(current_22k + ensemble_lower)
-    upper = round(current_22k + ensemble_upper)
-
-    print(
-        f"Ensemble ({n_models} models, inverse-MAE): " f"22K=Rs.{predicted_22k} [{lower}-{upper}]"
-    )
-    for m, (pt, lo, hi) in available_preds.items():
-        w = weights[m]
-        status = "EXCLUDED" if w == 0.0 else f"w={w:.3f}"
-        print(f"  {m}: delta={pt:+.1f} [{lo:+.1f}/{hi:+.1f}]  {status}")
+    print(f"LightGBM-only forecast: 22K=Rs.{predicted_22k} [{lower}-{upper}]")
 
     predicted_at = datetime.now(UTC)
     target_time = (predicted_at + timedelta(days=1)).replace(
@@ -410,64 +358,43 @@ def main() -> None:
     )
     assert target_time > predicted_at, "target_time must be in the future"
 
-    prices_path = DATA_DIR / "prices.json"
-    real_readings_count = len(json.loads(prices_path.read_text())) if prices_path.exists() else 0
-
     result: dict = {
         "predicted_at": predicted_at.isoformat(),
         "target_time": target_time.isoformat(),
         "predicted_22k": predicted_22k,
         "lower": lower,
         "upper": upper,
-        "model_version": "ensemble-inv-mae",
-        "training_rows": 0,
+        "model_version": "lgbm-only",
+        "training_rows": training_rows,
         "feature_count": len(feature_cols_used),
         "macro_features_used": macro_df is not None,
-        "nbeats_available": nbeats_delta is not None,
-        "nbeats_delta": round(nbeats_delta, 1) if nbeats_delta is not None else None,
+        "nbeats_available": False,
+        "nbeats_delta": None,
         "real_readings_count": real_readings_count,
-        "warmup": real_readings_count < 56,
+        "warmup": real_readings_count < MIN_REAL_READINGS_FOR_WARMUP_CLEAR,
         "ensemble": {
-            "method": "inverse_mae",
-            "n_models": n_models,
-            "excluded_models": excluded_models,
-            "weights": {m: round(w, 6) for m, w in weights.items()},
+            "method": "lgbm_only",
+            "n_models": 1,
+            "excluded_models": ["tft", "nbeats"],
+            "excluded_reason": "data_gate",
+            "min_readings_for_nbeats": MIN_REAL_READINGS_FOR_NBEATS,
+            "min_readings_for_tft": MIN_REAL_READINGS_FOR_TFT,
+            "min_readings_for_warmup_clear": MIN_REAL_READINGS_FOR_WARMUP_CLEAR,
+            "weights": {"lgbm": 1.0},
         },
         "models": {
-            "lgbm": (
-                {
-                    "delta": round(lgbm_delta, 1),
-                    "lower": round(lgbm_p10, 1),
-                    "upper": round(lgbm_p90, 1),
-                    "weight": round(weights.get("lgbm", 0.0), 6),
-                }
-                if lgbm_delta is not None
-                else None
-            ),
-            "tft": (
-                {
-                    "delta": round(tft_delta, 1),
-                    "weight": round(weights.get("tft", 0.0), 6),
-                }
-                if tft_delta is not None
-                else None
-            ),
-            "nbeats": (
-                {
-                    "delta": round(nbeats_delta, 1),
-                    "weight": round(weights.get("nbeats", 0.0), 6),
-                }
-                if nbeats_delta is not None
-                else None
-            ),
+            "lgbm": {
+                "delta": round(lgbm_delta, 1),
+                "lower": round(lo, 1),
+                "upper": round(hi, 1),
+                "weight": 1.0,
+            },
         },
     }
 
     DATA_DIR.mkdir(exist_ok=True)
     (DATA_DIR / "forecast.json").write_text(json.dumps(result, indent=2) + "\n")
-    print(
-        f"Forecast written: 22K=Rs.{predicted_22k} [{lower}-{upper}] " f"({n_models} active models)"
-    )
+    print(f"Forecast written: 22K=Rs.{predicted_22k} [{lower}-{upper}] (lgbm-only)")
 
 
 if __name__ == "__main__":
