@@ -15,6 +15,9 @@
 - #12, #13: Re-introduce N-BEATS / TFT via champion-challenger gated on real-readings count.
 - #14: GROQ key rotation reminder (quarterly).
 
+## Held Dependabot PRs
+- PR #15: pyarrow >=13.0→>=24.0.0. Spans 11 major releases, no CVE forcing urgency, parquet round-trip untested. Revisit when: (a) a security advisory lands on pyarrow <24, or (b) we have time to test parquet read/write across the version jump on real data files.
+
 ## Deferred ML migrations
 - MLflow 3.x migration: rewrite promotion.py and test_promotion.py to use registered-model aliases instead of stages. Removes deprecated API (transition_model_version_stage, get_latest_versions(stages=...)). Estimated effort: 1 focused session. Reason for deferral: out of scope of security cleanup; requires test rewrite.
 
