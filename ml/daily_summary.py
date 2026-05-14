@@ -35,7 +35,7 @@ GROQ_MODEL = "llama-3.3-70b-versatile"
 # Trigger thresholds — first-guess values, tune empirically after ~2 weeks.
 # See docs/DAILY_SUMMARY_DESIGN.md for calibration analysis.
 PRICE_MOVE_PCT = 0.02   # T1: ≥2% single-day move
-BAND_30D = 50           # T2/T3: ±₹50 from 30-day low/high
+BAND_30D = 100          # T2/T3: SMOKE TEST — revert to 50 after workflow_dispatch
 FIVE_DAY_PCT = 0.03     # T4: ≥3% 5-day cumulative move
 
 # Asia/Kolkata from the system tz database — direction is explicit and any
