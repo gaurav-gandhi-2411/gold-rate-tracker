@@ -1,27 +1,30 @@
 {
-  "predicted_at": "2026-05-14T13:07:36.897697+00:00",
+  "predicted_at": "2026-05-14T13:23:54.394282+00:00",
   "target_time": "2026-05-15T00:00:00+00:00",
-  "predicted_22k": 14703,
-  "lower": 14607,
-  "upper": 14850,
-  "model_version": "ensemble-inv-mae",
-  "training_rows": 0,
+  "predicted_22k": 14965,
+  "lower": 14788,
+  "upper": 15235,
+  "model_version": "lgbm-only",
+  "training_rows": 361,
   "feature_count": 44,
   "macro_features_used": true,
-  "nbeats_available": true,
-  "nbeats_delta": -544.1,
-  "real_readings_count": 57,
+  "nbeats_available": false,
+  "nbeats_delta": null,
+  "real_readings_count": 58,
   "warmup": false,
   "ensemble": {
-    "method": "inverse_mae",
-    "n_models": 2,
+    "method": "lgbm_only",
+    "n_models": 1,
     "excluded_models": [
-      "tft"
+      "tft",
+      "nbeats"
     ],
+    "excluded_reason": "data_gate",
+    "min_readings_for_nbeats": 1000,
+    "min_readings_for_tft": 2000,
+    "min_readings_for_warmup_clear": 30,
     "weights": {
-      "tft": 0.0,
-      "lgbm": 0.54345,
-      "nbeats": 0.45655
+      "lgbm": 1.0
     }
   },
   "models": {
@@ -29,15 +32,7 @@
       "delta": 29.8,
       "lower": -147.1,
       "upper": 299.9,
-      "weight": 0.54345
-    },
-    "tft": {
-      "delta": -1629.6,
-      "weight": 0.0
-    },
-    "nbeats": {
-      "delta": -544.1,
-      "weight": 0.45655
+      "weight": 1.0
     }
   }
 }
