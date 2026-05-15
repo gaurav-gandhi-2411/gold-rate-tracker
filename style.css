@@ -43,11 +43,11 @@
   --verdict-unknown-text:   var(--cream-mute);
 
   /* Comparison card sentiments */
-  --cmp-good-bg:     rgba(106, 154, 114, 0.12);
+  --cmp-good-bg:     rgba(106, 154, 114, 0.22);
   --cmp-good-border: rgba(106, 154, 114, 0.30);
   --cmp-good-text:   #9ED8AA;
 
-  --cmp-caution-bg:     rgba(212, 147, 42, 0.10);
+  --cmp-caution-bg:     rgba(212, 147, 42, 0.20);
   --cmp-caution-border: rgba(212, 147, 42, 0.28);
   --cmp-caution-text:   #E8C87A;
 
@@ -712,6 +712,7 @@ main {
 .skel-change  { height: 28px; width: 120px; border-radius: 999px; }
 .skel-verdict { height: 72px; width: 100%; border-radius: var(--radius-lg); }
 .skel-spark   { height: 56px; width: 100%; }
+.hero-skeleton[hidden] { display: none; }
 
 /* ═══════════════════════════════════════════════════════════════
    RESPONSIVE — mobile card history ≤640px

@@ -396,11 +396,11 @@ function renderComparisons(readings) {
     lowCard.dataset.sentiment = "neutral";
   } else if (cmp.vsLow === 0) {
     lowVal.textContent        = "at low";
-    lowSub.textContent        = `${cmp.spanDays}d period low`;
+    lowSub.textContent        = `30d period low`;
     lowCard.dataset.sentiment = "good";
   } else {
     lowVal.textContent        = `+₹${fmtINR(cmp.vsLow)}`;
-    lowSub.textContent        = `above ${cmp.spanDays}d low`;
+    lowSub.textContent        = `above 30d low`;
     lowCard.dataset.sentiment = cmp.vsLow < 300 ? "neutral" : "caution";
   }
 
