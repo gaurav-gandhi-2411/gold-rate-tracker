@@ -1,15 +1,19 @@
 {
-  "best_epoch": 1,
-  "epochs_run": 2000,
-  "val_mae": 184.43,
-  "val_mape": 0.0,
-  "naive_mae": 181.09,
-  "beats_naive": false,
-  "n_train": 367,
-  "n_val": 64,
-  "wall_clock_s": 0.2,
-  "feature_count": 44,
-  "model_version": "20260514-194301-5c0b5b6",
-  "trained_at": "2026-05-14T19:43:02.060291+00:00",
-  "git_sha": "5c0b5b6"
+  "n_train": 453,
+  "n_val": 90,
+  "feature_cols": [
+    "lag_1",
+    "lag_7d",
+    "roll_7d_mean",
+    "roll_30d_mean",
+    "gold_usd",
+    "usd_inr",
+    "regime",
+    "dow"
+  ],
+  "feature_set": "minimal_v2",
+  "val_mae": 207.22,
+  "naive_mae": 208.19,
+  "conformal_pi_half": 293.59,
+  "updated_at": "2026-05-15T11:48:46.816565+00:00"
 }

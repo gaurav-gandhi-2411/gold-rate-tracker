@@ -1,42 +1,47 @@
 {
-  "predicted_at": "2026-05-15T08:57:38.421108+00:00",
+  "predicted_at": "2026-05-15T11:48:46.817388+00:00",
   "target_time": "2026-05-16T00:00:00+00:00",
-  "predicted_22k": 14872,
-  "lower": 14703,
-  "upper": 15127,
-  "model_version": "lgbm-only",
-  "training_rows": 367,
-  "feature_count": 44,
+  "predicted_22k": 14729,
+  "lower": 14435,
+  "upper": 15023,
+  "model_version": "lgbm-minimal_v2",
+  "training_rows": 453,
+  "feature_count": 8,
+  "feature_set": "minimal_v2",
   "macro_features_used": true,
+  "real_readings_count": 65,
+  "warmup": true,
+  "val_mae": 207.2,
+  "naive_mae": 208.2,
+  "model_status": "matching_naive",
+  "lgbm_pred_raw": 18.1,
+  "naive_pred_raw": 0.0,
+  "blend_weight_lgbm": 0.501,
+  "blend_weight_naive": 0.499,
+  "conformal_pi_half": 293.6,
+  "pi_coverage_80_empirical": 0.8,
+  "pi_coverage_80_calibrated": 0.8,
+  "seed_calibration_scale": 0.9727,
   "nbeats_available": false,
   "nbeats_delta": null,
-  "real_readings_count": 65,
-  "warmup": false,
-  "val_mae": 184.4,
-  "naive_mae": 181.1,
-  "model_status": "trailing_naive",
   "min_readings_for_model_improvement": 200,
   "ensemble": {
-    "method": "lgbm_only",
-    "n_models": 1,
-    "excluded_models": [
-      "tft",
-      "nbeats"
-    ],
-    "excluded_reason": "data_gate",
+    "method": "naive_blend",
+    "n_models": 2,
+    "lgbm_weight": 0.501,
+    "naive_weight": 0.499,
     "min_readings_for_nbeats": 1000,
     "min_readings_for_tft": 2000,
-    "min_readings_for_warmup_clear": 30,
-    "weights": {
-      "lgbm": 1.0
-    }
+    "min_readings_for_warmup_clear": 100
   },
   "models": {
     "lgbm": {
-      "delta": 26.9,
-      "lower": -142.4,
-      "upper": 282.2,
-      "weight": 1.0
+      "delta": 18.1,
+      "weight": 0.501
+    },
+    "naive": {
+      "delta": 0.0,
+      "weight": 0.499
     }
   }
 }

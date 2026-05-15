@@ -10,6 +10,7 @@ macro:
   history_days: 730
 
 features:
+  active_set: "minimal_v2"  # "minimal_v2" = 8 features (45:1 row/feat ratio); "full_v1" = 44 features
   lags: [1, 2, 3, 4, 7, 30]
   rolling_windows: [7, 30]
   use_macro: true

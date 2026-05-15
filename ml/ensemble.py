@@ -18,6 +18,7 @@ from pathlib import Path
 
 _FLOOR_WEIGHT: float = 0.1
 _EXCLUSION_MULTIPLIER: float = 5.0
+_EPS: float = 1.0  # added to MAE before inversion to prevent blowup when MAE ≈ 0
 
 
 def compute_weights(maes: dict[str, float]) -> dict[str, float]:
@@ -44,7 +45,7 @@ def compute_weights(maes: dict[str, float]) -> dict[str, float]:
     if not non_excluded:
         return {m: 0.0 for m in maes}
 
-    raw = {m: 1.0 / mae for m, mae in non_excluded.items()}
+    raw = {m: 1.0 / (mae + _EPS) for m, mae in non_excluded.items()}
     total_raw = sum(raw.values())
     if total_raw == 0.0:
         return {m: 0.0 for m in maes}

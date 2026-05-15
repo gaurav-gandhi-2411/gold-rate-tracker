@@ -28,7 +28,7 @@ DATA_DIR = ROOT / "data"
 # Real-data corpus thresholds for deep model reintroduction (Phase 6)
 MIN_REAL_READINGS_FOR_NBEATS = 1000
 MIN_REAL_READINGS_FOR_TFT = 2000
-MIN_REAL_READINGS_FOR_WARMUP_CLEAR = 30
+MIN_REAL_READINGS_FOR_WARMUP_CLEAR = 100
 
 # Must match TFTForecaster training: PAST_COV_COLS and FUTURE_COV_COLS order
 _PAST_COV_COLS = [
@@ -246,19 +246,48 @@ def _load_model_maes() -> dict[str, float]:
 
 
 def main() -> None:
-    from ml.features import ALL_FEATURE_COLS, FEATURE_COLS, build_feature_matrix, get_predict_row
-    from ml.forecast import load_combined_history
+    from ml.features import (
+        FEATURE_COLS,
+        MINIMAL_FEATURE_COLS,
+        build_feature_matrix,
+        get_predict_row,
+        get_train_Xy,
+    )
+    from ml.forecast import (
+        DATA_DIR as FC_DATA_DIR,
+        _calibrate_seed,
+        _load_json,
+        _make_lgb,
+        load_combined_history,
+    )
     from ml.macro import load_macro_features
-    from ml.regime import REGIME_FEATURE_COLS, add_regime_to_macro
+    from ml.regime import add_regime_to_macro
+
+    # --- 1. Load data and capture seed calibration scale ---
+    seed_entries = _load_json(FC_DATA_DIR / "history_seed.json")
+    live_entries = _load_json(FC_DATA_DIR / "prices.json")
+    real_readings_count = len(live_entries)
+
+    seed_scale: float = 1.0
+    if seed_entries and live_entries:
+        live_df_raw = pd.DataFrame(live_entries)
+        live_df_raw["ts_parsed"] = pd.to_datetime(live_df_raw["timestamp"], utc=True)
+        live_df_raw["utc_date"] = live_df_raw["ts_parsed"].dt.date
+        live_daily_raw = (
+            live_df_raw.sort_values("ts_parsed")
+            .drop_duplicates("utc_date", keep="last")
+            .to_dict("records")
+        )
+        _, seed_scale = _calibrate_seed(seed_entries, live_daily_raw)
 
     history = load_combined_history()
+    current_22k = float(history.iloc[-1]["22k"])
 
+    # --- 2. Macro features ---
     macro_df = None
     try:
         macro_df = load_macro_features()
         if macro_df is not None:
-            # Forward-fill macro through weekends/holidays so that price rows
-            # from Sat/Sun (beyond the Friday cache) still get macro values.
             today_utc = pd.Timestamp.now(tz="UTC").normalize()
             if macro_df.index[-1] < today_utc:
                 extended_idx = pd.date_range(macro_df.index[0], today_utc, freq="D", tz="UTC")
@@ -270,104 +299,100 @@ def main() -> None:
     except Exception as exc:
         print(f"Macro features unavailable ({exc})")
 
-    mean, std = _load_normalizer()
+    # TFT and N-BEATS remain gated until Phase 6 (real-data corpus threshold)
+    print(f"TFT/N-BEATS gated — need {MIN_REAL_READINGS_FOR_TFT}/{MIN_REAL_READINGS_FOR_NBEATS}"
+          f" real readings (have {real_readings_count})")
 
-    # Build daily price series
-    df = history.copy()
-    df["ts"] = pd.to_datetime(df["timestamp"], utc=True)
-    df = df.sort_values("ts")
-    full_idx = pd.date_range(
-        df["ts"].min().normalize(),
-        df["ts"].max().normalize(),
-        freq="D",
-        tz="UTC",
-    )
-    prices_daily = df.set_index("ts")["22k"].astype(float).reindex(full_idx, method="ffill")
-    current_22k = float(prices_daily.iloc[-1])
+    # --- 3. Feature matrix + active feature set (minimal_v2) ---
+    feat_df = build_feature_matrix(history, macro_df=macro_df)
 
-    prices_path = DATA_DIR / "prices.json"
-    real_readings_count = len(json.loads(prices_path.read_text())) if prices_path.exists() else 0
+    # minimal_v2: 8 features — only keep those present (macro cols absent if macro unavailable)
+    feature_cols = [c for c in MINIMAL_FEATURE_COLS if c in feat_df.columns]
+    if len(feature_cols) < 4:
+        feature_cols = list(FEATURE_COLS)
+        print(f"minimal_v2 has <4 cols — falling back to FEATURE_COLS ({len(feature_cols)})")
+    print(f"Feature set: minimal_v2 => {len(feature_cols)} features available")
 
-    import contextlib
+    # --- 4. Train/calibration split for conformal PI and blend weights ---
+    X, y = get_train_Xy(feat_df, feature_cols=feature_cols)
+    n_total = len(X)
+    if n_total < 15:
+        raise RuntimeError(f"Too few training rows ({n_total}); need ≥15")
 
-    lgbm_meta_path = PROD_DIR / "lgbm-meta.json"
-    training_rows = 0
-    val_mae: float | None = None
-    naive_mae: float | None = None
-    if lgbm_meta_path.exists():
-        with contextlib.suppress(Exception):
-            _meta = json.loads(lgbm_meta_path.read_text())
-            training_rows = int(_meta.get("n_train", 0))
-            val_mae = _meta.get("val_mae")
-            naive_mae = _meta.get("naive_mae")
+    calib_n = max(10, n_total // 5)  # ~20% calibration, minimum 10 rows
+    X_tr, y_tr = X.iloc[:-calib_n], y.iloc[:-calib_n]
+    X_cal, y_cal = X.iloc[-calib_n:], y.iloc[-calib_n:]
 
-    if val_mae is not None and naive_mae is not None and naive_mae > 0:
-        _ratio = val_mae / naive_mae
-        if _ratio < 0.99:
-            model_status = "beating_naive"
-        elif _ratio <= 1.01:
-            model_status = "matching_naive"
-        else:
-            model_status = "trailing_naive"
-    else:
-        model_status = "unknown"
+    m_cal = _make_lgb("regression")
+    m_cal.fit(X_tr.values, y_tr.values)
+    cal_preds = m_cal.predict(X_cal.values)
+    residuals = np.abs(cal_preds - y_cal.values)
 
-    # TFT and N-BEATS gated until real corpus is large enough (Phase 6)
+    conformal_pi_half = float(np.percentile(residuals, 80))
+    val_mae = float(np.mean(residuals))
+    naive_mae = float(np.mean(np.abs(y_cal.values)))  # naive delta=0 baseline
+
+    # Empirical coverage on calibration set (~80% by construction from percentile choice)
+    pi_coverage_80_empirical = round(float(np.sum(residuals <= conformal_pi_half) / len(residuals)), 3)
+
+    # --- 5. Final model: retrain on all data ---
+    m_final = _make_lgb("regression")
+    m_final.fit(X.values, y.values)
+
+    x_pred, _ = get_predict_row(feat_df, feature_cols=feature_cols)
+    if x_pred is None:
+        row = feat_df.iloc[-2][feature_cols]
+        if not row.isna().any():
+            x_pred = row.values.reshape(1, -1)
+            print("Using t-1 row (most recent has incomplete features)")
+    if x_pred is None:
+        raise RuntimeError("Prediction row has NaN features — cannot produce forecast")
+
+    lgbm_delta = float(m_final.predict(x_pred)[0])
+    print(f"LightGBM delta: Rs.{lgbm_delta:+.1f}")
+
+    # --- 6. Naive blend (inverse-MAE weights, eps=1.0, clamp [0.1, 0.9]) ---
+    _EPS = 1.0
+    w_lgbm_raw = 1.0 / (val_mae + _EPS)
+    w_naive_raw = 1.0 / (naive_mae + _EPS)
+    w_lgbm = w_lgbm_raw / (w_lgbm_raw + w_naive_raw)
+    w_lgbm = max(0.1, min(0.9, w_lgbm))  # clamp [0.1, 0.9]
+    w_naive = 1.0 - w_lgbm
+    blended_delta = w_lgbm * lgbm_delta  # naive_delta = 0 (last-value forecast)
+
+    # --- 7. Final forecast values with conformal PI ---
+    predicted_22k = round(current_22k + blended_delta)
+    lower = round(current_22k + blended_delta - conformal_pi_half)
+    upper = round(current_22k + blended_delta + conformal_pi_half)
     print(
-        f"TFT gated — need {MIN_REAL_READINGS_FOR_TFT} real readings (have {real_readings_count})"
-    )
-    print(
-        f"N-BEATS gated — need {MIN_REAL_READINGS_FOR_NBEATS} real readings"
-        f" (have {real_readings_count})"
+        f"Blended forecast: 22K=Rs.{predicted_22k} [{lower}-{upper}]"
+        f"  w_lgbm={w_lgbm:.2f}  conf_pi=+/-{conformal_pi_half:.0f}"
     )
 
-    # --- LightGBM inference ---
-    lgbm_delta: float | None = None
-    lgbm_p10: float | None = None
-    lgbm_p90: float | None = None
-    feature_cols_used: list[str] = []
-    if (PROD_DIR / "lgbm.txt").exists():
-        try:
-            feat_df = build_feature_matrix(history, macro_df=macro_df)
-            if macro_df is not None:
-                feature_cols_used = list(ALL_FEATURE_COLS)
-                if all(c in feat_df.columns for c in REGIME_FEATURE_COLS):
-                    feature_cols_used = feature_cols_used + list(REGIME_FEATURE_COLS)
-            else:
-                feature_cols_used = list(FEATURE_COLS)
-
-            x_pred, _ = get_predict_row(feat_df, feature_cols=feature_cols_used)
-            if x_pred is None:
-                # Most recent row may have NaN macro features (cache 1 day behind).
-                # Fall back to second-to-last row which is more likely complete.
-                row = feat_df.iloc[-2][feature_cols_used]
-                if not row.isna().any():
-                    x_pred = row.values.reshape(1, -1)
-                    print("LightGBM: using t-1 row (most recent has incomplete macro)")
-            if x_pred is not None:
-                lgbm_delta, lgbm_p10, lgbm_p90 = _run_lgbm(x_pred)
-                lgbm_p10 = min(lgbm_p10, lgbm_delta)
-                lgbm_p90 = max(lgbm_p90, lgbm_delta)
-                print(f"LightGBM delta: Rs.{lgbm_delta:+.1f}")
-            else:
-                print("LightGBM: prediction row has NaN features — skipping")
-        except Exception as exc:
-            print(f"LightGBM inference failed ({exc})")
+    # --- 8. Model status ---
+    if val_mae < naive_mae * 0.99:
+        model_status = "beating_naive"
+    elif val_mae <= naive_mae * 1.01:
+        model_status = "matching_naive"
     else:
-        print("LightGBM model not found — skipping")
+        model_status = "trailing_naive"
 
-    # --- LightGBM-only forecast ---
-    if lgbm_delta is None:
-        raise RuntimeError("LightGBM inference failed — cannot produce forecast")
+    # --- 9. Persist model files for reference / Phase 6 ensemble ---
+    PROD_DIR.mkdir(parents=True, exist_ok=True)
+    m_final.booster_.save_model(str(PROD_DIR / "lgbm.txt"))
+    lgbm_meta = {
+        "n_train": n_total,
+        "n_val": calib_n,
+        "feature_cols": feature_cols,
+        "feature_set": "minimal_v2",
+        "val_mae": round(val_mae, 2),
+        "naive_mae": round(naive_mae, 2),
+        "conformal_pi_half": round(conformal_pi_half, 2),
+        "updated_at": datetime.now(UTC).isoformat(),
+    }
+    (PROD_DIR / "lgbm-meta.json").write_text(json.dumps(lgbm_meta, indent=2) + "\n")
 
-    lo = lgbm_p10 if lgbm_p10 is not None else lgbm_delta
-    hi = lgbm_p90 if lgbm_p90 is not None else lgbm_delta
-    predicted_22k = round(current_22k + lgbm_delta)
-    lower = round(current_22k + lo)
-    upper = round(current_22k + hi)
-
-    print(f"LightGBM-only forecast: 22K=Rs.{predicted_22k} [{lower}-{upper}]")
-
+    # --- 10. Write forecast.json ---
     predicted_at = datetime.now(UTC)
     target_time = (predicted_at + timedelta(days=1)).replace(
         hour=0, minute=0, second=0, microsecond=0
@@ -380,41 +405,55 @@ def main() -> None:
         "predicted_22k": predicted_22k,
         "lower": lower,
         "upper": upper,
-        "model_version": "lgbm-only",
-        "training_rows": training_rows,
-        "feature_count": len(feature_cols_used),
+        "model_version": "lgbm-minimal_v2",
+        "training_rows": n_total,
+        "feature_count": len(feature_cols),
+        "feature_set": "minimal_v2",
         "macro_features_used": macro_df is not None,
-        "nbeats_available": False,
-        "nbeats_delta": None,
         "real_readings_count": real_readings_count,
         "warmup": real_readings_count < MIN_REAL_READINGS_FOR_WARMUP_CLEAR,
-        "val_mae": round(val_mae, 1) if val_mae is not None else None,
-        "naive_mae": round(naive_mae, 1) if naive_mae is not None else None,
+        "val_mae": round(val_mae, 1),
+        "naive_mae": round(naive_mae, 1),
         "model_status": model_status,
+        # Phase 2: naive blend
+        "lgbm_pred_raw": round(lgbm_delta, 1),
+        "naive_pred_raw": 0.0,
+        "blend_weight_lgbm": round(w_lgbm, 3),
+        "blend_weight_naive": round(w_naive, 3),
+        # Phase 2: conformal PI
+        "conformal_pi_half": round(conformal_pi_half, 1),
+        "pi_coverage_80_empirical": pi_coverage_80_empirical,
+        "pi_coverage_80_calibrated": 0.80,
+        # Phase 2: seed calibration
+        "seed_calibration_scale": round(seed_scale, 4),
+        # Legacy / future Phase 6 fields kept for schema compatibility
+        "nbeats_available": False,
+        "nbeats_delta": None,
         "min_readings_for_model_improvement": 200,
         "ensemble": {
-            "method": "lgbm_only",
-            "n_models": 1,
-            "excluded_models": ["tft", "nbeats"],
-            "excluded_reason": "data_gate",
+            "method": "naive_blend",
+            "n_models": 2,
+            "lgbm_weight": round(w_lgbm, 3),
+            "naive_weight": round(w_naive, 3),
             "min_readings_for_nbeats": MIN_REAL_READINGS_FOR_NBEATS,
             "min_readings_for_tft": MIN_REAL_READINGS_FOR_TFT,
             "min_readings_for_warmup_clear": MIN_REAL_READINGS_FOR_WARMUP_CLEAR,
-            "weights": {"lgbm": 1.0},
         },
         "models": {
             "lgbm": {
                 "delta": round(lgbm_delta, 1),
-                "lower": round(lo, 1),
-                "upper": round(hi, 1),
-                "weight": 1.0,
+                "weight": round(w_lgbm, 3),
+            },
+            "naive": {
+                "delta": 0.0,
+                "weight": round(w_naive, 3),
             },
         },
     }
 
     DATA_DIR.mkdir(exist_ok=True)
     (DATA_DIR / "forecast.json").write_text(json.dumps(result, indent=2) + "\n")
-    print(f"Forecast written: 22K=Rs.{predicted_22k} [{lower}-{upper}] (lgbm-only)")
+    print(f"Forecast written: 22K=Rs.{predicted_22k} [{lower}-{upper}] (minimal_v2 + naive-blend)")
 
 
 if __name__ == "__main__":

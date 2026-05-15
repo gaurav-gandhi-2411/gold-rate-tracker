@@ -10,6 +10,73 @@ Versioning: [Semantic Versioning](https://semver.org/).
 
 ---
 
+## [0.4.0] — 2026-05-15 — Phase 2: Model simplification & honest forecast
+
+ML-only changes. No changes to `index.html`, `app.js`, `style.css`, or manifest.
+All `data/*.json` schemas remain backward-compatible (new fields only).
+
+### Added
+
+- **`MINIMAL_FEATURE_COLS`** in `ml/features.py` — 8-feature set (`lag_1`, `lag_7d`,
+  `roll_7d_mean`, `roll_30d_mean`, `gold_usd`, `usd_inr`, `regime`, `dow`) at
+  45:1 row/feature ratio vs prior 8.3:1 (44 features on 367 rows).
+- **`roll_30d_mean`** added to `build_feature_matrix()` — 30-day rolling mean,
+  right-aligned on UTC calendar date. Required by minimal_v2 feature set.
+- **`features.active_set: "minimal_v2"`** in `configs/data/default.yaml` — config
+  flag selecting the active feature set; `"full_v1"` retains the old 44-feature path.
+- **Naive-blend safety net** in `ml/inference.py` — blends LightGBM and naive
+  (delta=0) forecasts using rolling inverse-MAE weights (eps=1.0, clamp [0.1, 0.9]).
+  Surfaces `blend_weight_lgbm`, `blend_weight_naive`, `lgbm_pred_raw`,
+  `naive_pred_raw` in `forecast.json`.
+- **Conformal PI calibration** in `ml/inference.py` — holds back last ~20% of
+  training rows as calibration set; sets PI = blended_pred ± 80th-percentile
+  of `|residual|` on that set. Surfaces `conformal_pi_half`,
+  `pi_coverage_80_empirical`, `pi_coverage_80_calibrated` in `forecast.json`.
+- **`seed_calibration_scale`** in `forecast.json` — the multiplicative factor
+  applied to seed data at the boundary with live data (via `_calibrate_seed`).
+- **`test_calibrate_seed_scale_in_range`** in `tests/test_forecast.py` — asserts
+  `scale_factor` in `[0.85, 1.15]` for realistic seed-to-live divergence.
+- **Inline model retraining** in `ml/inference.py` — model retrains on all data
+  at each 6h CI run using `minimal_v2` feature set; saves refreshed `lgbm.txt`
+  and `lgbm-meta.json` to `models/production/`.
+
+### Changed
+
+- **`ml/inference.py:main()`** restructured — replaces load-pre-trained-model path
+  with inline train+calibrate+predict path. TFT/N-BEATS helpers kept for Phase 6.
+- **`ml/forecast.py:_calibrate_seed()`** now returns `(list[dict], float)` tuple.
+  `load_combined_history()` unpacks and ignores the scale; scale threaded through
+  `inference.py` explicitly.
+- **`ml/ensemble.py:compute_weights()`** — added `_EPS = 1.0` to MAE before
+  inversion, preventing near-zero division blow-up (issue #11).
+- **`ml/backtest.py`** updated to use `MINIMAL_FEATURE_COLS` and accept optional
+  `macro_df`; loads macro once and passes per fold.
+- **`MIN_REAL_READINGS_FOR_WARMUP_CLEAR`** raised from 30 → 100 in `ml/inference.py`
+  to reflect the larger real-data corpus needed before the warmup flag clears.
+
+### Backtest comparison (walk-forward, last 90 days)
+
+| Metric          | full_v1 (44 feat) | minimal_v2 (8 feat) |
+|-----------------|------------------:|--------------------:|
+| Model MAE (Rs)  |           247.36  |               237.2 |
+| Model MAPE      |            1.75%  |               1.64% |
+| Dir-accuracy    |           54.24%  |               49.3% |
+| Baseline MAE    |           186.41  |               165.6 |
+| Folds           |               59  |                  69 |
+
+### Honest assessment
+
+The model still **trails the naive baseline** on MAE (237 vs 166). Reducing features
+cut the overfit penalty (247 → 237) but did not close the gap. The naive-blend
+safety net means the live forecast now hedges toward last-value (w_lgbm ≈ 0.50 at
+first run), capping the worst-case downside. Conformal PI is wide (~±294) and
+honest — coverage equals 80% by construction on the calibration set. Direction
+accuracy (49%) is near coin-flip; the model has learned no durable directional
+signal at daily granularity with 65 real readings. Improvement requires either
+more data (>200 real readings) or a different signal source.
+
+---
+
 ## [0.3.0] — 2026-05-15 — Phase 1: UI overhaul ("Should I buy today?")
 
 Frontend-only reframe from ML report card to buyer-facing verdict. No changes to
@@ -166,6 +233,8 @@ Initial working release: LightGBM forecaster, Groq LLM commentary, ensemble
 weighting, champion/challenger model gate, live drift monitoring, GitHub Actions
 pipeline, PWA manifest.
 
-[Unreleased]: https://github.com/gaurav-gandhi-2411/gold-rate-tracker/compare/v0.2.0...HEAD
+[Unreleased]: https://github.com/gaurav-gandhi-2411/gold-rate-tracker/compare/v0.4.0...HEAD
+[0.4.0]: https://github.com/gaurav-gandhi-2411/gold-rate-tracker/compare/v0.3.0...v0.4.0
+[0.3.0]: https://github.com/gaurav-gandhi-2411/gold-rate-tracker/compare/v0.2.0...v0.3.0
 [0.2.0]: https://github.com/gaurav-gandhi-2411/gold-rate-tracker/compare/v0.1.0...v0.2.0
 [0.1.0]: https://github.com/gaurav-gandhi-2411/gold-rate-tracker/releases/tag/v0.1.0

@@ -184,7 +184,7 @@ def test_calibrate_seed_scale_factor():
     ]
     live = [_entry("2026-05-09T18:00:00.000Z", 14000, "live")]
 
-    calibrated = _calibrate_seed(seed, live)
+    calibrated, _scale = _calibrate_seed(seed, live)
 
     assert len(calibrated) == 3
     for entry in calibrated:
@@ -196,15 +196,16 @@ def test_calibrate_seed_series_transitions_smoothly():
     seed = [_entry("2026-05-09T00:00:00.000Z", 15000, "seed")]
     live = [_entry("2026-05-09T18:00:00.000Z", 14000, "live")]
 
-    calibrated = _calibrate_seed(seed, live)
+    calibrated, _scale = _calibrate_seed(seed, live)
     assert abs(calibrated[-1]["22k"] - live[0]["22k"]) <= 1
 
 
 def test_calibrate_seed_no_live_returns_unchanged():
     """With no live data, seed is returned unchanged."""
     seed = [_entry("2026-05-09T00:00:00.000Z", 15000, "seed")]
-    calibrated = _calibrate_seed(seed, [])
+    calibrated, scale = _calibrate_seed(seed, [])
     assert calibrated[0]["22k"] == 15000
+    assert scale == 1.0
 
 
 def test_calibrate_seed_all_karats_scaled():
@@ -212,9 +213,21 @@ def test_calibrate_seed_all_karats_scaled():
     seed = [_entry("2026-05-08T00:00:00.000Z", 15000, "seed")]
     live = [_entry("2026-05-09T18:00:00.000Z", 14000, "live")]
 
-    calibrated = _calibrate_seed(seed, live)
+    calibrated, _scale = _calibrate_seed(seed, live)
     e = calibrated[0]
     # All three karats should be scaled by the same factor
     assert abs(e["22k"] - 14000) <= 1
     # 24k and 18k should still maintain rough karat ratios
     assert e["24k"] > e["22k"] > e["18k"]
+
+
+def test_calibrate_seed_scale_in_range():
+    """scale_factor should be in [0.85, 1.15] for realistic live-to-seed divergence."""
+    seed = [
+        _entry("2026-05-07T00:00:00.000Z", 9000, "seed"),
+        _entry("2026-05-08T00:00:00.000Z", 9050, "seed"),
+        _entry("2026-05-09T00:00:00.000Z", 9100, "seed"),
+    ]
+    live = [_entry("2026-05-09T18:00:00.000Z", 9200, "live")]
+    _, scale = _calibrate_seed(seed, live)
+    assert 0.85 <= scale <= 1.15, f"scale_factor {scale:.4f} out of expected range [0.85, 1.15]"

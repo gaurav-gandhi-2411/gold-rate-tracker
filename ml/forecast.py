@@ -65,17 +65,20 @@ def _load_json(path: Path) -> list:
         return []
 
 
-def _calibrate_seed(seed_entries: list[dict], live_daily_entries: list[dict]) -> list[dict]:
+def _calibrate_seed(
+    seed_entries: list[dict], live_daily_entries: list[dict]
+) -> tuple[list[dict], float]:
     """
     Scale seed 22k/24k/18k so the tail of the seed matches the head of live data.
 
     scale_factor = mean(first min(3) real readings)
                  / mean(last min(3) seed readings on or before the first real date)
 
-    Returns a new list of dicts — does not modify inputs.
+    Returns (calibrated_list, scale_factor). scale_factor=1.0 when no calibration
+    is applied (no live data, or insufficient overlap).
     """
     if not seed_entries or not live_daily_entries:
-        return list(seed_entries) if seed_entries else []
+        return list(seed_entries) if seed_entries else [], 1.0
 
     seed_df = pd.DataFrame(seed_entries).copy()
     live_df = pd.DataFrame(live_daily_entries).copy()
@@ -88,14 +91,14 @@ def _calibrate_seed(seed_entries: list[dict], live_daily_entries: list[dict]) ->
 
     seed_before = seed_df[seed_df["ts_parsed"].dt.date <= first_real_date].tail(3)
     if seed_before.empty or "22k" not in seed_before.columns:
-        return seed_df.drop(columns=["ts_parsed"]).to_dict("records")
+        return seed_df.drop(columns=["ts_parsed"]).to_dict("records"), 1.0
 
     n = min(3, len(live_sorted))
     seed_mean = float(seed_before["22k"].mean())
     real_mean = float(live_sorted.head(n)["22k"].mean())
 
     if seed_mean <= 0:
-        return seed_df.drop(columns=["ts_parsed"]).to_dict("records")
+        return seed_df.drop(columns=["ts_parsed"]).to_dict("records"), 1.0
 
     scale_factor = real_mean / seed_mean
     print(
@@ -108,7 +111,7 @@ def _calibrate_seed(seed_entries: list[dict], live_daily_entries: list[dict]) ->
         if col in seed_df.columns:
             seed_df[col] = (seed_df[col] * scale_factor).round().astype(int)
 
-    return seed_df.to_dict("records")
+    return seed_df.to_dict("records"), scale_factor
 
 
 def load_combined_history() -> pd.DataFrame:
@@ -135,7 +138,7 @@ def load_combined_history() -> pd.DataFrame:
         live_daily = ldf.drop(columns=["ts_parsed", "utc_date"]).to_dict("records")
 
     # Calibrate seed to live boundary, then concat (live wins on overlap)
-    calibrated_seed = _calibrate_seed(seed_entries or [], live_daily)
+    calibrated_seed, _scale = _calibrate_seed(seed_entries or [], live_daily)
     combined = calibrated_seed + live_daily
     df = pd.DataFrame(combined)
     df["ts_parsed"] = pd.to_datetime(df["timestamp"], utc=True)

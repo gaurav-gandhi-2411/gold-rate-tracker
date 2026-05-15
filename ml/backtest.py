@@ -33,7 +33,7 @@ warnings.filterwarnings("ignore", message="X does not have valid feature names")
 
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
-from ml.features import FEATURE_COLS, build_feature_matrix, get_train_Xy
+from ml.features import MINIMAL_FEATURE_COLS, build_feature_matrix, get_train_Xy
 from ml.forecast import _make_lgb, load_combined_history
 
 DATA_DIR = Path(__file__).parent.parent / "data"
@@ -60,8 +60,13 @@ def _direction_acc(actuals: np.ndarray, predictions: np.ndarray, prevs: np.ndarr
     return round(float(np.mean(actual_dir == pred_dir)), 4)
 
 
-def run_backtest(df: pd.DataFrame) -> dict:
-    """Execute the walk-forward backtest. Returns the full result dict."""
+def run_backtest(df: pd.DataFrame, macro_df=None) -> dict:
+    """Execute the walk-forward backtest. Returns the full result dict.
+
+    Uses MINIMAL_FEATURE_COLS (minimal_v2 feature set). macro_df is optional;
+    macro-dependent features (gold_usd, usd_inr, regime) are included when
+    available, otherwise only the base subset is used.
+    """
     df = df.copy()
     df["ts_parsed"] = pd.to_datetime(df["timestamp"], utc=True)
     df = df.sort_values("ts_parsed").reset_index(drop=True)
@@ -78,7 +83,8 @@ def run_backtest(df: pd.DataFrame) -> dict:
             f"Only {len(test_indices)} test folds in last {BACKTEST_DAYS} days — need ≥5"
         )
 
-    print(f"Walk-forward backtest: {len(test_indices)} folds over last {BACKTEST_DAYS} days")
+    print(f"Walk-forward backtest: {len(test_indices)} folds over last {BACKTEST_DAYS} days"
+          f"  feature_set=minimal_v2  macro={'yes' if macro_df is not None else 'no'}")  # noqa: E501
 
     predictions_out = []
     model_actuals, model_preds, baseline_preds, prevs = [], [], [], []
@@ -89,20 +95,21 @@ def run_backtest(df: pd.DataFrame) -> dict:
         if len(train_df) < 10:
             continue  # not enough history for this fold
 
-        feat_train = build_feature_matrix(train_df)
-        X_train, y_train = get_train_Xy(feat_train)
+        feat_train = build_feature_matrix(train_df, macro_df=macro_df)
+        feature_cols = [c for c in MINIMAL_FEATURE_COLS if c in feat_train.columns]
+        X_train, y_train = get_train_Xy(feat_train, feature_cols=feature_cols)
         if len(X_train) < 10:
             continue
 
         # Build features for the test row (test_row_i) using data up to test_row_i
         test_df = df.iloc[: test_row_i + 1].copy()
-        feat_test = build_feature_matrix(test_df)
-        x_row = feat_test.iloc[-1][FEATURE_COLS]
+        feat_test = build_feature_matrix(test_df, macro_df=macro_df)
+        x_row = feat_test.iloc[-1][feature_cols]
         if x_row.isna().any():
             continue
 
         model = _make_lgb("regression")
-        model.fit(X_train, y_train)
+        model.fit(X_train.values, y_train.values)
 
         predicted_delta = float(model.predict(x_row.values.reshape(1, -1))[0])
 
@@ -151,7 +158,25 @@ def run_backtest(df: pd.DataFrame) -> dict:
 
 def main():
     df = load_combined_history()
-    result = run_backtest(df)
+
+    macro_df = None
+    try:
+        from ml.macro import load_macro_features
+        from ml.regime import add_regime_to_macro
+
+        macro_df = load_macro_features()
+        if macro_df is not None:
+            import pandas as pd
+
+            today_utc = pd.Timestamp.now(tz="UTC").normalize()
+            if macro_df.index[-1] < today_utc:
+                extended_idx = pd.date_range(macro_df.index[0], today_utc, freq="D", tz="UTC")
+                macro_df = macro_df.reindex(extended_idx, method="ffill")
+            macro_df = add_regime_to_macro(macro_df)
+    except Exception as exc:
+        print(f"Macro unavailable — backtest uses base features only ({exc})")
+
+    result = run_backtest(df, macro_df=macro_df)
 
     m = result["model"]
     b = result["baseline"]

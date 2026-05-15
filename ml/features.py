@@ -97,6 +97,20 @@ MACRO_FEATURE_COLS: list[str] = [
 # Convenience alias: full feature set when macro data is available.
 ALL_FEATURE_COLS: list[str] = FEATURE_COLS + MACRO_FEATURE_COLS
 
+# Minimal feature set for low-data regime.
+# 367 rows ÷ 8 features = 45:1 row/feature ratio vs prior 8.3:1 (44 features).
+# macro_gc_f → gold_usd, macro_inr_x → usd_inr (column names from MACRO_FEATURE_COLS).
+MINIMAL_FEATURE_COLS: list[str] = [
+    "lag_1",
+    "lag_7d",
+    "roll_7d_mean",
+    "roll_30d_mean",
+    "gold_usd",
+    "usd_inr",
+    "regime",
+    "dow",
+]
+
 
 def _is_festival_window(d: date, festival_dates: list, window: int = 3) -> bool:
     return any(abs((d - fd).days) <= window for fd in festival_dates)
@@ -207,6 +221,10 @@ def build_feature_matrix(
     df["roll_7d_std"] = r7.std(ddof=1).fillna(0.0).values
     df["roll_7d_min"] = r7.min().values
     df["roll_7d_max"] = r7.max().values
+
+    # 30-day rolling mean (used by MINIMAL_FEATURE_COLS / minimal_v2 feature set)
+    r30 = df_idx["22k"].astype(float).rolling("30D", min_periods=1)
+    df["roll_30d_mean"] = r30.mean().values
 
     # --- Calendar features ---
     df["dow"] = df["ts"].dt.dayofweek  # 0=Mon … 6=Sun
