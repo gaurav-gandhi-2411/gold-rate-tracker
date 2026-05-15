@@ -6,6 +6,17 @@
     <title>Gold Rate · Should I buy today?</title>
     <meta name="description" content="Live 22K gold rate from Tanishq with a buyer-focused verdict: trending up, flat, or down." />
 
+    <!-- OG / social sharing -->
+    <meta property="og:title" content="Gold Rate · Should I buy today?" />
+    <meta property="og:description" content="Live 22K gold rate from Tanishq with a buyer-focused verdict." />
+    <meta property="og:image" content="https://gaurav-gandhi-2411.github.io/gold-rate-tracker/og.png" />
+    <meta property="og:type" content="website" />
+    <meta property="og:url" content="https://gaurav-gandhi-2411.github.io/gold-rate-tracker/" />
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content="Gold Rate · Should I buy today?" />
+    <meta name="twitter:description" content="Live 22K gold rate from Tanishq with a buyer-focused verdict." />
+    <meta name="twitter:image" content="https://gaurav-gandhi-2411.github.io/gold-rate-tracker/og.png" />
+
     <!-- PWA -->
     <link rel="manifest" href="manifest.webmanifest" />
     <meta name="theme-color" content="#1A1612" />
@@ -183,6 +194,20 @@
         <p class="muted">Not financial advice. Rates are indicative.</p>
       </footer>
     </main>
+
+    <!-- Sentry error tracking — replace the placeholder DSN with the one from sentry.io
+         (Project Settings → Client Keys → DSN). The site will work normally without it. -->
+    <script src="https://cdn.jsdelivr.net/npm/@sentry/browser@7/build/bundle.min.js" crossorigin="anonymous"></script>
+    <script>
+      if (typeof Sentry !== "undefined") {
+        Sentry.init({
+          dsn: "https://PLACEHOLDER@o000000.ingest.sentry.io/0000000", // TODO: replace with your project DSN
+          sampleRate: 1.0,        // capture every error event
+          tracesSampleRate: 0.0,  // no performance tracing (not needed)
+          environment: "production",
+        });
+      }
+    </script>
 
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.6/dist/chart.umd.min.js"></script>
     <script src="app.js" defer></script>

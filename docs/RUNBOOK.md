@@ -176,6 +176,38 @@ expected values in `scraper/test_scrape.js`.
 
 ---
 
+## Custom domain (deferred)
+
+No domain has been purchased. Steps to add one when ready:
+
+1. **Buy the domain on Cloudflare** (~₹800/yr for a `.in` domain; this is the only paid component of the whole stack). Cloudflare is preferred over other registrars because DNS propagation is fast and the management UI is clean.
+
+2. **Add a CNAME record in Cloudflare DNS:**
+   - Type: `CNAME`
+   - Name: `@` (or `www`, depending on preference)
+   - Target: `gaurav-gandhi-2411.github.io`
+   - Proxy status: **DNS only** (grey cloud) — GitHub Pages requires direct CNAME, not Cloudflare proxy
+
+3. **Add a `CNAME` file to the repo root** containing only the bare domain, e.g.:
+   ```
+   goldrate.in
+   ```
+   Commit and push. GitHub Pages reads this file to configure the custom domain.
+
+4. **Enable HTTPS in GitHub Pages settings:**
+   - Settings → Pages → Custom domain → enter domain → Save
+   - Wait ~10 minutes for DNS propagation
+   - Tick **Enforce HTTPS** — GitHub provisions a free Let's Encrypt certificate automatically
+
+5. **Update the OG image URL** in `index.html` from the GitHub Pages URL to the custom domain once it's live:
+   ```html
+   <meta property="og:image" content="https://goldrate.in/og.png" />
+   ```
+
+Nothing to configure in this repo until the domain is purchased.
+
+---
+
 ## Known constraints
 
 - MLflow runs locally only (port 5001). CI inference is CPU-only via ONNX; no tracking in CI.

@@ -756,6 +756,7 @@ function bindRangeToggle() {
   try {
     allReadings = await load();
   } catch (err) {
+    if (typeof Sentry !== "undefined") Sentry.captureException(err, { extra: { url: DATA_URL } });
     console.error(err);
     const skelEl = document.getElementById("hero-skeleton");
     if (skelEl) skelEl.hidden = true;
@@ -767,7 +768,10 @@ function bindRangeToggle() {
   }
 
   // Forecast loads in parallel — needed for verdict.
-  const fcPromise = loadJSON(FORECAST_URL).catch(() => null);
+  const fcPromise = loadJSON(FORECAST_URL).catch(err => {
+    if (typeof Sentry !== "undefined") Sentry.captureException(err, { extra: { url: FORECAST_URL } });
+    return null;
+  });
 
   // Render everything that doesn't need forecast immediately.
   renderFreshness(allReadings);
@@ -786,6 +790,14 @@ function bindRangeToggle() {
     loadJSON(COMMENTARY_URL),
     loadJSON(DRIFT_URL),
   ]);
+
+  // Report any optional-fetch failures so silent pipeline breaks surface in Sentry.
+  if (typeof Sentry !== "undefined") {
+    const optionalUrls = [BACKTEST_URL, COMMENTARY_URL, DRIFT_URL];
+    [bt, commentary, drift].forEach((r, i) => {
+      if (r.status === "rejected") Sentry.captureException(r.reason, { extra: { url: optionalUrls[i] } });
+    });
+  }
 
   renderCommentary(commentary.status === "fulfilled" ? commentary.value : null);
   renderMethodology(

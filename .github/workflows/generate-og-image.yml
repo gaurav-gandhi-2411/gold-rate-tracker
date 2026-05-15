@@ -1,0 +1,60 @@
+name: Generate OG Image
+
+# Runs after each successful check-price run so og.png always reflects
+# the latest price and verdict. The PNG is committed to the master branch
+# at /og.png, which GitHub Pages serves at the root URL — that's the same
+# path referenced in the og:image meta tag in index.html.
+#
+# Cache-busting: social platforms (Twitter, WhatsApp, Slack) cache OG images
+# by URL. Because the URL is static (og.png), they re-fetch on their own
+# schedule (typically every 7 days). Force a re-fetch on specific shares via
+# Twitter Card Validator or Facebook Sharing Debugger.
+
+on:
+  workflow_run:
+    workflows: ["Check Gold Price"]
+    types: [completed]
+
+permissions:
+  contents: write
+
+jobs:
+  generate:
+    # Only run when the upstream workflow succeeded
+    if: ${{ github.event.workflow_run.conclusion == 'success' }}
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Install Playwright
+        run: |
+          npm install --save-dev playwright
+          npx playwright install chromium --with-deps
+
+      - name: Serve site locally
+        run: python3 -m http.server 8080 &
+
+      - name: Wait for server
+        run: |
+          for i in $(seq 1 10); do
+            curl -sf http://localhost:8080/og.html > /dev/null && break || sleep 1
+          done
+
+      - name: Screenshot OG page
+        run: node scripts/screenshot-og.mjs http://localhost:8080
+
+      - name: Commit og.png
+        run: |
+          git config user.name  gold-rate-bot
+          git config user.email gold-rate-bot@users.noreply.github.com
+          git pull --rebase origin master
+          git add og.png
+          git diff --cached --quiet \
+            && echo "og.png unchanged, skipping commit" \
+            || git commit -m "chore: refresh OG image [skip ci]"
+          git push

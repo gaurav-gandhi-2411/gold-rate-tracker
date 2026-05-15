@@ -10,6 +10,72 @@ Versioning: [Semantic Versioning](https://semver.org/).
 
 ---
 
+## [0.6.0] — 2026-05-15 — Phase 4: Ship (monitoring, error tracking, OG image)
+
+Operational layer: UptimeRobot monitoring docs, Sentry browser error tracking,
+auto-generated OG social image, deferred-domain runbook, and README polish.
+No model changes, no frontend logic changes, no CI data pipeline changes.
+
+### Added
+
+- **OG / Twitter meta tags** in `index.html` — `og:title`, `og:description`,
+  `og:image`, `og:type`, `og:url`, `twitter:card`, `twitter:title`,
+  `twitter:description`, `twitter:image`. Image URL points to `/og.png` on
+  the GitHub Pages domain.
+- **Sentry browser SDK** in `index.html` — loaded from
+  `cdn.jsdelivr.net/npm/@sentry/browser@7/build/bundle.min.js`. Initialised
+  with `sampleRate: 1.0`, `tracesSampleRate: 0.0`, `environment: "production"`.
+  Placeholder DSN documented with a `// TODO:` comment; site degrades silently
+  if DSN is not replaced (all calls guarded by `typeof Sentry !== 'undefined'`).
+- **Sentry captureException** calls in `app.js` at three fetch error paths:
+  (a) critical prices fetch failure, (b) forecast fetch failure (with URL
+  context before null-return), (c) optional data batch (backtest, commentary,
+  drift) — rejected results reported individually with URL context.
+- **`og.html`** — self-contained 1200×630 OG card page. Fetches
+  `data/prices.json` + `data/forecast.json`, computes verdict with the same
+  three-bucket rules as `app.js`, renders price (large, gold serif), verdict
+  badge, SVG sparkline, and site URL. Sets `data-loaded="true"` on `<body>`
+  when rendering is complete (used by Playwright to know when to screenshot).
+- **`scripts/screenshot-og.mjs`** — Playwright script that serves the site,
+  waits for `data-loaded`, and saves `og.png` at 1200×630. Accepts an optional
+  base URL argument (`node scripts/screenshot-og.mjs http://localhost:8080`).
+- **`.github/workflows/generate-og-image.yml`** — triggered by
+  `workflow_run` on each successful `check-price.yml` run. Installs Playwright,
+  serves the repo with Python `http.server`, screenshots `og.html`, and commits
+  `og.png` to master with `[skip ci]`. Uses `git pull --rebase` before push
+  (same guard as `weekly-backtest.yml`) to prevent non-fast-forward rejections.
+- **Monitoring section** in `README.md` — documents the three UptimeRobot
+  monitors (site uptime, forecast.json keyword, prices.json keyword) and the
+  ntfy.sh webhook alert channel.
+- **Error tracking section** in `README.md` — documents how to activate Sentry
+  by replacing the placeholder DSN.
+- **Honesty section** in `README.md` — states current model vs naive status,
+  naive-blend behaviour, and quarterly review schedule. Includes "Not financial
+  advice" disclaimer.
+- **Custom domain (deferred)** section in `docs/RUNBOOK.md` — step-by-step
+  instructions to buy a domain on Cloudflare, configure CNAME, add `CNAME`
+  file to repo, and enable HTTPS in GitHub Pages. No purchase made.
+
+### Changed
+
+- **README.md** — full rewrite under 200 lines. Replaced mermaid diagram with
+  3-bullet "How it works" text. Removed verbose MLflow tracking section and
+  detailed features table (content lives in docs/). Kept setup, tweaking,
+  troubleshooting, and ADR links. Added live URL prominently in the header.
+
+### Notes
+
+- `og.png` does not exist in the repo until the first successful
+  `generate-og-image.yml` run (triggers automatically after the next
+  `check-price.yml` success).
+- Social platforms cache OG images by URL. To force a re-fetch after the image
+  is first generated, use the Twitter Card Validator or Facebook Sharing
+  Debugger (links in README troubleshooting section).
+- Sentry is fully inert until the placeholder DSN is replaced. No events are
+  sent to Sentry during this time.
+
+---
+
 ## [0.5.0] — 2026-05-15 — Phase 3: Production hardening
 
 Pipeline monitoring, safety nets, and operational docs. No model changes, no
@@ -363,7 +429,10 @@ Initial working release: LightGBM forecaster, Groq LLM commentary, ensemble
 weighting, champion/challenger model gate, live drift monitoring, GitHub Actions
 pipeline, PWA manifest.
 
-[Unreleased]: https://github.com/gaurav-gandhi-2411/gold-rate-tracker/compare/v0.4.0...HEAD
+[Unreleased]: https://github.com/gaurav-gandhi-2411/gold-rate-tracker/compare/v0.6.0...HEAD
+[0.6.0]: https://github.com/gaurav-gandhi-2411/gold-rate-tracker/compare/v0.5.0...v0.6.0
+[0.5.0]: https://github.com/gaurav-gandhi-2411/gold-rate-tracker/compare/v0.4.1...v0.5.0
+[0.4.1]: https://github.com/gaurav-gandhi-2411/gold-rate-tracker/compare/v0.4.0...v0.4.1
 [0.4.0]: https://github.com/gaurav-gandhi-2411/gold-rate-tracker/compare/v0.3.0...v0.4.0
 [0.3.0]: https://github.com/gaurav-gandhi-2411/gold-rate-tracker/compare/v0.2.0...v0.3.0
 [0.2.0]: https://github.com/gaurav-gandhi-2411/gold-rate-tracker/compare/v0.1.0...v0.2.0

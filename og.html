@@ -1,0 +1,304 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=1200" />
+    <title>Gold Rate OG Card</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,700&family=DM+Sans:wght@400;500&display=swap" rel="stylesheet" />
+    <style>
+      *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+      body {
+        width: 1200px;
+        height: 630px;
+        overflow: hidden;
+        background: #1A1612;
+        color: #F5EFE4;
+        font-family: 'DM Sans', system-ui, sans-serif;
+        display: flex;
+        flex-direction: column;
+        padding: 56px 72px;
+        position: relative;
+      }
+
+      /* Subtle grain texture */
+      body::before {
+        content: '';
+        position: absolute;
+        inset: 0;
+        background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='300' height='300'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.65' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='300' height='300' filter='url(%23n)' opacity='0.04'/%3E%3C/svg%3E");
+        pointer-events: none;
+      }
+
+      /* Top row: site name + URL */
+      .og-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 32px;
+      }
+      .og-site-name {
+        font-family: 'Fraunces', serif;
+        font-size: 22px;
+        color: #D4932A;
+        letter-spacing: 0.01em;
+      }
+      .og-site-url {
+        font-size: 15px;
+        color: #8a7a6a;
+      }
+
+      /* Body: price left, sparkline right */
+      .og-body {
+        display: flex;
+        align-items: flex-start;
+        gap: 64px;
+        flex: 1;
+      }
+      .og-left { flex: 1; display: flex; flex-direction: column; gap: 16px; }
+
+      .og-eyebrow {
+        font-size: 18px;
+        color: #9a8a7a;
+        letter-spacing: 0.05em;
+        text-transform: uppercase;
+      }
+
+      .og-price {
+        font-family: 'Fraunces', serif;
+        font-size: 120px;
+        line-height: 1;
+        color: #D4932A;
+        letter-spacing: -0.02em;
+      }
+      .og-price .rupee { font-size: 64px; vertical-align: 0.18em; opacity: 0.7; }
+
+      .og-karat {
+        font-size: 22px;
+        color: #9a8a7a;
+        margin-top: -4px;
+      }
+
+      .og-verdict {
+        display: inline-flex;
+        align-items: center;
+        gap: 10px;
+        padding: 10px 20px;
+        border-radius: 8px;
+        font-size: 22px;
+        font-weight: 500;
+        margin-top: 8px;
+        width: fit-content;
+      }
+      .og-verdict[data-type="down"]    { background: #1a2e1a; color: #6dbb7a; border: 1.5px solid #2d5c2d; }
+      .og-verdict[data-type="up"]      { background: #2e1a1a; color: #e07a7a; border: 1.5px solid #5c2d2d; }
+      .og-verdict[data-type="flat"]    { background: #2a2510; color: #c4a84a; border: 1.5px solid #554820; }
+      .og-verdict[data-type="unknown"] { background: #201c18; color: #9a8a7a; border: 1.5px solid #3a3028; }
+
+      .og-verdict-icon { font-size: 20px; }
+
+      .og-right {
+        width: 340px;
+        display: flex;
+        flex-direction: column;
+        gap: 16px;
+        padding-top: 8px;
+      }
+
+      .og-spark-label {
+        font-size: 14px;
+        color: #8a7a6a;
+        text-transform: uppercase;
+        letter-spacing: 0.08em;
+      }
+
+      .og-sparkline {
+        width: 100%;
+        height: 120px;
+        display: block;
+      }
+
+      .og-spark-range {
+        font-size: 13px;
+        color: #8a7a6a;
+        display: flex;
+        justify-content: space-between;
+      }
+
+      .og-updated {
+        font-size: 14px;
+        color: #8a7a6a;
+        margin-top: auto;
+      }
+
+      /* Footer */
+      .og-footer {
+        font-size: 14px;
+        color: #5a4f44;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-top: 24px;
+        padding-top: 16px;
+        border-top: 1px solid #2a2218;
+      }
+
+      #loading {
+        position: absolute;
+        inset: 0;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background: #1A1612;
+        font-size: 24px;
+        color: #5a4f44;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="loading">Loading…</div>
+
+    <div id="og-card" style="display:none; width:100%; height:100%; flex-direction:column;">
+      <div class="og-header">
+        <span class="og-site-name">Gold Rate</span>
+        <span class="og-site-url">gaurav-gandhi-2411.github.io/gold-rate-tracker</span>
+      </div>
+
+      <div class="og-body">
+        <div class="og-left">
+          <div class="og-eyebrow">Should I buy today?</div>
+          <div class="og-price" id="og-price"><span class="rupee">₹</span><span id="og-price-num">—</span></div>
+          <div class="og-karat">22K gold · per gram · Tanishq Bengaluru</div>
+          <div class="og-verdict" id="og-verdict" data-type="unknown">
+            <span class="og-verdict-icon" id="og-verdict-icon">○</span>
+            <span id="og-verdict-text">—</span>
+          </div>
+        </div>
+
+        <div class="og-right">
+          <div class="og-spark-label">7-day trend</div>
+          <svg class="og-sparkline" id="og-sparkline"
+               viewBox="0 0 340 120"
+               preserveAspectRatio="none"
+               role="img" aria-label="7-day price sparkline">
+          </svg>
+          <div class="og-spark-range">
+            <span id="og-spark-min">—</span>
+            <span id="og-spark-max">—</span>
+          </div>
+          <div class="og-updated" id="og-updated"></div>
+        </div>
+      </div>
+
+      <div class="og-footer">
+        <span id="og-reading-count">—</span>
+        <span>Not financial advice · Rates indicative</span>
+      </div>
+    </div>
+
+    <script>
+      const fmtINR = n => typeof n === "number"
+        ? n.toLocaleString("en-IN", { maximumFractionDigits: 0 })
+        : "—";
+
+      function computeVerdict(prices, forecast) {
+        const SLOPE_THRESHOLD = 100;
+        if (!prices || prices.length < 2) return { type: "unknown", icon: "○", text: "Not enough data yet" };
+
+        const now = Date.now();
+        const sevenDaysAgo = now - 7 * 86400e3;
+        const recent = prices.filter(p => new Date(p.timestamp).getTime() >= sevenDaysAgo);
+        if (recent.length < 2) return { type: "flat", icon: "◈", text: "Roughly flat — buy when convenient" };
+
+        const oldest = recent[0].price_22k;
+        const latest = recent[recent.length - 1].price_22k;
+        const slope = latest - oldest;
+
+        const fcDir = forecast?.predicted_22k != null ? (forecast.predicted_22k > latest ? 1 : -1) : 0;
+        const avg30 = prices.slice(-40).reduce((s, p) => s + p.price_22k, 0) / Math.min(40, prices.length);
+
+        if (slope < -SLOPE_THRESHOLD && (fcDir < 0 || latest < avg30)) {
+          return { type: "down", icon: "↓", text: "Trending down — no rush to buy" };
+        }
+        if (slope > SLOPE_THRESHOLD && (fcDir > 0 || latest > avg30)) {
+          return { type: "up", icon: "↑", text: "Trending up — consider buying sooner" };
+        }
+        return { type: "flat", icon: "◈", text: "Roughly flat — buy when convenient" };
+      }
+
+      function drawSparkline(prices, type) {
+        const svg = document.getElementById("og-sparkline");
+        const W = 340, H = 120, PAD = 8;
+        const vals = prices.map(p => p.price_22k);
+        const minV = Math.min(...vals);
+        const maxV = Math.max(...vals);
+        const range = maxV - minV || 1;
+
+        const pts = vals.map((v, i) => {
+          const x = PAD + (i / (vals.length - 1)) * (W - 2 * PAD);
+          const y = H - PAD - ((v - minV) / range) * (H - 2 * PAD);
+          return `${x.toFixed(1)},${y.toFixed(1)}`;
+        }).join(" ");
+
+        const colors = { down: "#6dbb7a", up: "#e07a7a", flat: "#c4a84a", unknown: "#9a8a7a" };
+        const fillColors = { down: "#1a3a1a", up: "#3a1a1a", flat: "#3a3010", unknown: "#2a2218" };
+        const stroke = colors[type] || colors.flat;
+        const fill = fillColors[type] || fillColors.flat;
+
+        const lastPt = pts.split(" ").at(-1).split(",");
+        const closePath = `${W - PAD},${H} ${PAD},${H}`;
+
+        svg.innerHTML = `
+          <polygon points="${pts} ${closePath}" fill="${fill}" opacity="0.5"/>
+          <polyline points="${pts}" fill="none" stroke="${stroke}" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round"/>
+          <circle cx="${lastPt[0]}" cy="${lastPt[1]}" r="4" fill="${stroke}"/>
+        `;
+
+        document.getElementById("og-spark-min").textContent = "₹" + fmtINR(minV);
+        document.getElementById("og-spark-max").textContent = "₹" + fmtINR(maxV);
+      }
+
+      async function render() {
+        try {
+          const t = Date.now();
+          const [prices, forecast] = await Promise.all([
+            fetch(`data/prices.json?t=${t}`).then(r => r.json()),
+            fetch(`data/forecast.json?t=${t}`).then(r => r.json()).catch(() => null),
+          ]);
+          prices.sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp));
+
+          const latest = prices[prices.length - 1];
+          const sevenDaysAgo = Date.now() - 7 * 86400e3;
+          const spark7 = prices.filter(p => new Date(p.timestamp).getTime() >= sevenDaysAgo);
+
+          document.getElementById("og-price-num").textContent = fmtINR(latest.price_22k);
+
+          const v = computeVerdict(prices, forecast);
+          const verdictEl = document.getElementById("og-verdict");
+          verdictEl.setAttribute("data-type", v.type);
+          document.getElementById("og-verdict-icon").textContent = v.icon;
+          document.getElementById("og-verdict-text").textContent = v.text;
+
+          if (spark7.length >= 2) drawSparkline(spark7, v.type);
+
+          const age = Math.round((Date.now() - new Date(latest.timestamp).getTime()) / 3600e3);
+          document.getElementById("og-updated").textContent = `Updated ${age}h ago`;
+          document.getElementById("og-reading-count").textContent =
+            `${prices.length} readings since Apr 2026`;
+
+          document.getElementById("loading").style.display = "none";
+          const card = document.getElementById("og-card");
+          card.style.display = "flex";
+        } catch (err) {
+          document.getElementById("loading").textContent = "Error: " + err.message;
+        } finally {
+          document.body.setAttribute("data-loaded", "true");
+        }
+      }
+
+      render();
+    </script>
+  </body>
+</html>
