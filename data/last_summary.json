@@ -1,7 +1,7 @@
 {
-  "date": "2026-05-14",
+  "date": "2026-05-15",
   "triggers_fired": [
-    "near_30d_high"
+    "five_day_move"
   ],
-  "price_22k": 14845
+  "price_22k": 14720
 }
