@@ -93,6 +93,36 @@ jobs:
         continue-on-error: true
         run: python ml/macro.py
 
+      - name: Check macro cache age
+        run: |
+          python3 -c '
+          import json, sys
+          from pathlib import Path
+          status_path = Path("data/macro_status.json")
+          if not status_path.exists():
+              print("macro_status.json not found -- skipping age check")
+              sys.exit(0)
+          status = json.loads(status_path.read_text())
+          age = status.get("cache_age_days")
+          fail_threshold = status.get("fail_threshold_days", 14)
+          if age is None:
+              print("Macro cache does not exist -- skipping age check")
+              sys.exit(0)
+          print(f"Macro cache age: {age:.2f} days (fail threshold: {fail_threshold}d)")
+          fc_path = Path("data/forecast.json")
+          if fc_path.exists():
+              try:
+                  fc = json.loads(fc_path.read_text())
+                  fc["macro_cache_age_days"] = age
+                  fc_path.write_text(json.dumps(fc, indent=2) + "\n")
+                  print(f"Patched macro_cache_age_days={age} into forecast.json")
+              except Exception as e:
+                  print(f"Warning: could not patch forecast.json: {e}")
+          if age > fail_threshold:
+              print(f"ERROR: Macro cache is {age:.1f} days old (>{fail_threshold}d). Macro features are stale.")
+              sys.exit(1)
+          '
+
       - name: Check forecast drift
         continue-on-error: true
         env:
@@ -103,6 +133,54 @@ jobs:
       - name: Run forecast
         continue-on-error: true
         run: python ml/forecast.py
+
+      - name: Forecast staleness monitor
+        continue-on-error: true
+        env:
+          NTFY_TOPIC: ${{ secrets.NTFY_TOPIC }}
+        run: |
+          python3 -c '
+          import json, os, sys
+          from datetime import datetime, timezone
+          from pathlib import Path
+          try:
+              fc = json.loads(Path("data/forecast.json").read_text())
+              predicted_at = fc.get("predicted_at", "")
+              if not predicted_at:
+                  print("No predicted_at in forecast.json -- skipping staleness check")
+                  sys.exit(0)
+              ts = datetime.fromisoformat(predicted_at.replace("Z", "+00:00"))
+              age_h = (datetime.now(timezone.utc) - ts).total_seconds() / 3600
+          except Exception as e:
+              print(f"Cannot read forecast.json: {e}")
+              sys.exit(0)
+          print(f"Forecast age: {age_h:.1f}h")
+          if age_h <= 18:
+              print("Forecast is fresh -- no alert.")
+              sys.exit(0)
+          topic = os.environ.get("NTFY_TOPIC", "")
+          if not topic:
+              print("NTFY_TOPIC not set -- skipping staleness alert.")
+              sys.exit(0)
+          hours = int(age_h)
+          import urllib.request
+          body = f"Forecast is {hours}h old. Check the CI run for errors.".encode()
+          req = urllib.request.Request(
+              f"https://ntfy.sh/{topic}",
+              data=body,
+              method="POST",
+              headers={
+                  "Title": f"Gold Tracker: forecast stale ({hours}h)",
+                  "Priority": "high",
+                  "Tags": "warning",
+              },
+          )
+          try:
+              urllib.request.urlopen(req)
+              print(f"Forecast staleness alert sent ({hours}h old).")
+          except Exception as e:
+              print(f"Failed to send alert: {e}")
+          ' || true
 
       - name: Run commentary
         continue-on-error: true

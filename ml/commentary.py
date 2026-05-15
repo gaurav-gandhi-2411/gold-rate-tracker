@@ -225,6 +225,24 @@ def append_commentary(entry: dict):
     path.write_text(json.dumps(entries, indent=2) + "\n")
 
 
+def _commentary_age_hours(ts_str: str) -> float:
+    """Return age in hours of a commentary entry given its 'ts' field."""
+    try:
+        ts = time.mktime(time.strptime(ts_str, "%Y-%m-%dT%H:%M:%SZ"))
+        return (time.time() - ts) / 3600
+    except Exception:
+        return 0.0
+
+
+def _last_good_commentary() -> dict | None:
+    """Return the most recent commentary.json entry, or None if unavailable."""
+    path = DATA_DIR / "commentary.json"
+    entries = _load_json(path)
+    if not isinstance(entries, list) or not entries:
+        return None
+    return entries[-1]
+
+
 def main():
     api_key = os.environ.get("GROQ_API_KEY", "").strip()
     if not api_key:
@@ -250,19 +268,36 @@ def main():
         print("No price data available — skipping commentary")
         sys.exit(0)
 
+    note_text = None
+    prompt_hash = None
     try:
         user_msg = build_user_message(real_prices, all_prices, forecast, backtest)
         prompt_hash = hashlib.md5(user_msg.encode()).hexdigest()[:12]
         note_text = call_groq(api_key, user_msg)
+        if not note_text:
+            raise ValueError("Groq returned empty response")
     except Exception as exc:
-        print(f"Groq API error: {exc} — skipping commentary")
+        print(f"Groq API error: {exc} — falling back to last commentary")
+        last = _last_good_commentary()
+        if last:
+            age_h = _commentary_age_hours(last.get("ts", ""))
+            # Re-surface the last good entry with updated staleness metadata
+            fallback = dict(last)
+            fallback["commentary_age_hours"] = round(age_h, 1)
+            fallback["fallback"] = True
+            append_commentary(fallback)
+            print(f"Fallback commentary appended (age={age_h:.1f}h): {last.get('text','')[:60]}…")
+        else:
+            print("No prior commentary to fall back to — skipping")
         sys.exit(0)
 
+    now_str = time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())
     entry = {
-        "ts": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
+        "ts": now_str,
         "text": note_text,
         "model": GROQ_MODEL,
         "prompt_hash": prompt_hash,
+        "commentary_age_hours": 0.0,
     }
     append_commentary(entry)
     print(f"Commentary appended: {note_text[:80]}…")

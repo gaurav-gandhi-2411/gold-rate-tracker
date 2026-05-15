@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import json
 
-from ml.ensemble import _EXCLUSION_MULTIPLIER, _FLOOR_WEIGHT, compute_weights, save_ensemble_config
+from ml.ensemble import _EPS, _EXCLUSION_MULTIPLIER, _FLOOR_WEIGHT, compute_weights, save_ensemble_config
 
 # ---------------------------------------------------------------------------
 # 1. Weights sum to 1
@@ -186,3 +186,38 @@ def test_save_ensemble_config(tmp_path):
     # lgbm + nbeats weights should sum to ≈1
     active_sum = sum(v["weight"] for v in config["models"].values() if not v["excluded"])
     assert abs(active_sum - 1.0) < 1e-4
+
+
+# ---------------------------------------------------------------------------
+# 8. Phase 3 regression: EPS=1.0 clamping guard
+# ---------------------------------------------------------------------------
+
+
+def test_eps_is_nonzero():
+    """_EPS must be >= 1.0 to prevent division-blowup when MAE ~ 0."""
+    assert _EPS >= 1.0, f"_EPS={_EPS} is too small — near-zero MAE will blow up weights"
+
+
+def test_near_zero_mae_does_not_blowup():
+    """Model with MAE=0.001 must not receive a weight that blows past 0.9 after floor/norm."""
+    maes = {"lgbm": 0.001, "naive": 300.0}
+    weights = compute_weights(maes)
+    assert weights["lgbm"] <= 1.0
+    assert weights["naive"] >= 0.0
+    assert abs(sum(weights.values()) - 1.0) < 1e-9
+
+
+def test_floor_weight_is_01():
+    """Floor must be 0.1 — matches the clamp in ml/inference.py naive blend."""
+    assert _FLOOR_WEIGHT == 0.1, f"_FLOOR_WEIGHT={_FLOOR_WEIGHT}, expected 0.1"
+
+
+def test_dominant_model_still_floored_by_others():
+    """Dominant model does not get weight=1.0 when others are below the exclusion threshold."""
+    # threshold = 5 × best_mae = 5 × 1.0 = 5.0; b and c (MAE 4.9) are NOT excluded
+    maes = {"a": 1.0, "b": 4.9, "c": 4.9}
+    weights = compute_weights(maes)
+    assert weights["b"] > 0.0, "b should not be excluded (4.9 < 5.0)"
+    assert weights["c"] > 0.0, "c should not be excluded (4.9 < 5.0)"
+    assert weights["a"] < 1.0, "dominant model should not get weight=1.0 when others are not excluded"
+    assert abs(sum(weights.values()) - 1.0) < 1e-9

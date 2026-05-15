@@ -253,22 +253,55 @@ def update_macro_cache(
     return fetch_macro_features(start, end, cache_path=cache_path)
 
 
+_MACRO_WARN_DAYS = 7    # log WARNING if cache is older than this
+_MACRO_STATUS_PATH = DATA_DIR / "macro_status.json"
+
+
 def load_macro_features(cache_path: Path = CACHE_PATH) -> pd.DataFrame | None:
     """
     Load cached macro features from Parquet.
 
     Returns None if the cache does not exist or cannot be parsed.
     The returned DataFrame has a UTC DatetimeIndex (daily rows).
+
+    Side-effect: writes data/macro_status.json with cache_age_days so the
+    CI step can patch macro_cache_age_days into forecast.json and fail when
+    the cache is stale beyond the 14-day hard threshold.
     """
     if not cache_path.exists():
+        _write_macro_status(None)
         return None
     try:
+        import stat as _stat
+
+        mtime = cache_path.stat().st_mtime
+        age_days = (time.time() - mtime) / 86400
+        _write_macro_status(age_days)
+        if age_days > _MACRO_WARN_DAYS:
+            print(
+                f"WARNING: macro cache is {age_days:.1f} days old "
+                f"(threshold: {_MACRO_WARN_DAYS}d). Macro features may be stale."
+            )
         df = pd.read_parquet(cache_path)
         df.index = pd.to_datetime(df.index, utc=True)
         return df
     except Exception as exc:
         print(f"Warning: could not load macro cache ({exc})")
         return None
+
+
+def _write_macro_status(age_days: float | None) -> None:
+    """Write data/macro_status.json with cache age for CI consumption."""
+    import json as _json
+
+    DATA_DIR.mkdir(exist_ok=True)
+    status = {
+        "cache_age_days": round(age_days, 2) if age_days is not None else None,
+        "cache_exists": age_days is not None,
+        "warn_threshold_days": _MACRO_WARN_DAYS,
+        "fail_threshold_days": 14,
+    }
+    _MACRO_STATUS_PATH.write_text(_json.dumps(status, indent=2) + "\n")
 
 
 # ---------------------------------------------------------------------------

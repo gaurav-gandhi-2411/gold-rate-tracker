@@ -10,6 +10,65 @@ Versioning: [Semantic Versioning](https://semver.org/).
 
 ---
 
+## [0.5.0] — 2026-05-15 — Phase 3: Production hardening
+
+Pipeline monitoring, safety nets, and operational docs. No model changes, no
+feature changes, no UI redesign beyond the single forecast staleness banner.
+
+### Added
+
+- **Forecast staleness banner** — amber banner in `index.html`/`app.js`/`style.css`
+  shown when `forecast.json`'s `predicted_at` is >18h old. Hides automatically
+  once CI delivers a fresh forecast.
+- **Forecast staleness CI monitor** — "Forecast staleness monitor" step in
+  `check-price.yml` sends ntfy.sh alert when forecast age >18h.
+- **Macro cache age CI guard** — "Check macro cache age" step in `check-price.yml`
+  reads `data/macro_status.json` (written by `load_macro_features()`), patches
+  `macro_cache_age_days` into `data/forecast.json`, and fails CI (non-zero exit)
+  if `cache_age_days > 14`. Logs WARNING if >7d.
+- **`data/macro_status.json`** — written by `ml/macro.py:load_macro_features()`;
+  fields: `cache_age_days`, `cache_exists`, `warn_threshold_days=7`,
+  `fail_threshold_days=14`.
+- **Groq commentary fallback** — `ml/commentary.py` now falls back to the last
+  good commentary.json entry (with `commentary_age_hours` + `fallback: true` fields)
+  instead of writing nothing on API failure.
+- **Weekly-backtest rebase guard** — `git pull --rebase origin master` before
+  `git push` in `weekly-backtest.yml` prevents non-fast-forward rejections when
+  `check-price.yml` commits concurrently.
+- **Ensemble EPS regression tests** — 4 new tests in `tests/test_ensemble.py`
+  guard `_EPS >= 1.0`, near-zero MAE weight clamping, `_FLOOR_WEIGHT == 0.1`,
+  and dominant-model floor invariant.
+- **XSS safety audit comments** — inline comments at all 7 `innerHTML` sites in
+  `app.js` confirm no LLM/external data reaches innerHTML.
+- **`.gitattributes`** — marks `models/**/*.txt` and `models/**/*.onnx` as binary,
+  preventing git CRLF conversion from corrupting LightGBM model files (KI-001).
+- **`docs/KNOWN_ISSUES.md`** — documents KI-001 (STATUS_STACK_BUFFER_OVERRUN root
+  cause, fix, and verification steps).
+- **`tests/test_model_load.py`** — regression tests asserting no CRLF in model
+  files and `lgb.Booster()` loads >0 trees for all production `.txt` models.
+- **`scraper-canary.yml`** — weekly cron (Mon 03:00 UTC) runs Playwright against
+  live Tanishq page; sends ntfy alert + opens GitHub issue on failure.
+- **Canary checks in `scraper/test_scrape.js`** — 3 additional test cases: price
+  in range, 22K/24K ratio, 18K/24K ratio (mirrors `scrape.js` validation thresholds).
+- **`docs/RUNBOOK.md`** — Phase 3 ops sections: staleness alert guide, manual
+  scraper re-run, roll-back bad `forecast.json` commit, contact/escalation via ntfy.sh.
+
+### Calendar reminders — quarterly model honesty check
+
+The minimal_v2 feature set was validated at ~120 real readings (as of 2026-05-15).
+Re-run the Phase 2.5a A/B/C comparison when data volume increases:
+
+- **~2026-07-15** (~200 real readings) — first re-run; decision may flip if
+  macro features become more informative with more data.
+- **Quarterly thereafter** — re-run `python ml/compare_feature_sets.py` and
+  update this CHANGELOG with the outcome. If minimal_v2 still wins, no action.
+  If a larger set wins by >3 pp dir-acc on |Δ|>₹50, update `active_set` in
+  `configs/data/default.yaml` and retrain.
+
+Command: `python ml/compare_feature_sets.py`
+
+---
+
 ## [0.4.1] — 2026-05-15 — Phase 2.5a: Feature-set A/B/C comparison
 
 Honest scoreboard for three candidate feature sets under identical bd602a6

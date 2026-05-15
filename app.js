@@ -229,6 +229,18 @@ function computeComparisons(readings) {
 
 // ─── RENDERERS ────────────────────────────────────────────────────────────────
 
+function renderStaleBanner(forecast) {
+  const banner = document.getElementById("stale-banner");
+  if (!banner) return;
+  if (!forecast || !forecast.predicted_at) return;
+  const ageH = (Date.now() - new Date(forecast.predicted_at).getTime()) / 3_600_000;
+  if (ageH > 18) {
+    const hours = Math.round(ageH);
+    banner.textContent = `Forecast is ${hours}h old — last updated ${fmtRelative(forecast.predicted_at)}. Predictions may be outdated.`;
+    banner.hidden = false;
+  }
+}
+
 function renderFreshness(readings) {
   const pill = document.getElementById("freshness-pill");
   if (!pill) return;
@@ -267,7 +279,7 @@ function renderHero(readings, forecast) {
   if (eyeEl)  eyeEl.hidden  = false;
 
   if (readings.length === 0) {
-    priceEl.innerHTML = "—";
+    priceEl.innerHTML = "—"; // XSS-safe: static literal string, no external data
     priceEl.hidden    = false;
     if (verdictEl) {
       document.getElementById("verdict-icon").textContent    = "○";
@@ -280,10 +292,11 @@ function renderHero(readings, forecast) {
   }
 
   const latest = readings[readings.length - 1];
+  // XSS-safe: rupee() wraps a number with fmtINR (toLocaleString); numbers cannot contain HTML
   priceEl.innerHTML = rupee(latest["22k"]);
   priceEl.hidden    = false;
 
-  // Other karat prices
+  // Other karat prices — same as above, rupee() on a number is injection-proof
   const r24 = document.getElementById("rate-24");
   const r18 = document.getElementById("rate-18");
   if (r24) r24.innerHTML = rupee(latest["24k"]);
@@ -343,6 +356,8 @@ function renderSparkline(readings) {
 
   svgEl.setAttribute("aria-label",
     `7-day price trend: ${trendDown ? "down" : "up"} ₹${fmtINR(Math.abs(Math.round(netChange)))}`);
+  // XSS-safe: all interpolated values are derived from numeric price data
+  // (coords = toFixed(1) floats, fillClr/lineClr = hardcoded rgba/hex literals).
   svgEl.innerHTML = `
     <path d="${fillPath}" fill="${fillClr}" stroke="none"/>
     <polyline points="${coords.join(" ")}" fill="none" stroke="${lineClr}"
@@ -522,14 +537,15 @@ function renderHistory(readings) {
   const EMPTY_CARDS = `<li class="hcard-empty">No readings yet.</li>`;
 
   if (readings.length === 0) {
-    tbody.innerHTML    = EMPTY_TABLE;
-    cardList.innerHTML = EMPTY_CARDS;
+    tbody.innerHTML    = EMPTY_TABLE;    // XSS-safe: static template, no external data
+    cardList.innerHTML = EMPTY_CARDS;   // XSS-safe: static template, no external data
     return;
   }
 
   const rows = [...readings].reverse().slice(0, 50);
 
-  // Desktop table rows
+  // XSS-safe: all interpolated values are numbers (fmtINR/rupee) or date strings
+  // from prices.json; Groq/LLM output never reaches this template.
   tbody.innerHTML = rows.map((r, i) => {
     const next = rows[i + 1];
     let deltaCell = `<span class="delta-flat">—</span>`;
@@ -548,7 +564,7 @@ function renderHistory(readings) {
     </tr>`;
   }).join("");
 
-  // Mobile card list
+  // XSS-safe: same as desktop table above — numbers and dates only, no LLM data
   cardList.innerHTML = rows.map((r, i) => {
     const next = rows[i + 1];
     let deltaHtml = "";
@@ -713,6 +729,9 @@ function renderMethodology(fc, bt, drift) {
     `);
   }
 
+  // XSS-safe: parts[] contains only hardcoded HTML templates with numeric/boolean
+  // values from forecast.json and backtest.json. Groq commentary is NEVER included
+  // here — it is rendered via textContent in renderCommentary() (line ~427).
   body.innerHTML = parts.join("");
 }
 
@@ -759,6 +778,7 @@ function bindRangeToggle() {
   // Await forecast, then render hero (hides skeleton, shows verdict).
   const fc = await fcPromise;
   renderHero(allReadings, fc);
+  renderStaleBanner(fc);
 
   // Remaining optional data (all gracefully degrade on failure).
   const [bt, commentary, drift] = await Promise.allSettled([

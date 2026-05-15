@@ -187,6 +187,27 @@ main {
 }
 
 /* ═══════════════════════════════════════════════════════════════
+   FORECAST STALENESS BANNER
+═══════════════════════════════════════════════════════════════ */
+.stale-banner {
+  width: 100%;
+  padding: 10px 20px;
+  background: rgba(180, 120, 30, 0.18);
+  border-bottom: 1px solid rgba(180, 120, 30, 0.35);
+  color: #c8922a;
+  font-size: var(--ts-xs);
+  font-family: var(--sans);
+  text-align: center;
+  letter-spacing: 0.03em;
+}
+@media (prefers-color-scheme: light) {
+  .stale-banner {
+    background: rgba(180, 120, 30, 0.10);
+    color: #9a6a10;
+  }
+}
+
+/* ═══════════════════════════════════════════════════════════════
    2. HERO CARD
 ═══════════════════════════════════════════════════════════════ */
 .hero-card {

@@ -1,0 +1,85 @@
+name: Scraper DOM Canary
+
+on:
+  schedule:
+    - cron: "0 3 * * 1" # Monday 03:00 UTC
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  issues: write
+
+concurrency:
+  group: scraper-canary
+  cancel-in-progress: false
+
+jobs:
+  canary:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version: "20"
+          cache: "npm"
+          cache-dependency-path: scraper/package-lock.json
+
+      - name: Install scraper dependencies
+        working-directory: scraper
+        run: npm ci || npm install
+
+      - name: Install Playwright browsers
+        working-directory: scraper
+        run: npx playwright install --with-deps chromium
+
+      - name: Run fixture DOM tests
+        working-directory: scraper
+        run: node --test test_scrape.js
+
+      - name: Live DOM canary (Tanishq page)
+        id: canary
+        working-directory: scraper
+        # Run scrape.js but discard the output — we only care about the exit code.
+        # scrape.js validates: selector exists, prices in range, 22/24 & 18/24 ratios.
+        # A non-zero exit means the DOM changed or the page is broken.
+        run: node scrape.js > /dev/null
+
+      - name: Alert on canary failure
+        if: failure() && steps.canary.outcome == 'failure'
+        continue-on-error: true
+        env:
+          NTFY_TOPIC: ${{ secrets.NTFY_TOPIC }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          REPO: ${{ github.repository }}
+        run: |
+          # ntfy alert — ASCII-only headers
+          [ -z "${NTFY_TOPIC}" ] && echo "NTFY_TOPIC not set — skipping ntfy alert." || \
+          curl -s \
+            -H "Title: Gold Tracker: Scraper DOM broken" \
+            -H "Priority: urgent" \
+            -H "Tags: rotating_light" \
+            -d "Tanishq DOM canary failed. The selector or page structure may have changed. Check: ${RUN_URL}" \
+            "https://ntfy.sh/${NTFY_TOPIC}" || true
+
+          # Open a GitHub issue so it doesn't get lost
+          gh issue create \
+            --repo "${REPO}" \
+            --title "Scraper DOM canary failed $(date -u +%Y-%m-%d)" \
+            --body "The weekly scraper DOM canary failed. The Tanishq page selector or page structure may have changed.
+
+**Run:** ${RUN_URL}
+
+**What to check:**
+1. Open https://www.tanishq.co.in/gold-rate.html and inspect \`span.goldpurity-rate[data-goldrate22kt]\`
+2. Check if the page redirects or requires login
+3. Verify gold prices are in range (2000–25000 INR/g)
+4. Update \`scraper/scrape.js\` selector if needed
+
+See \`docs/RUNBOOK.md\` for full resolution steps." \
+            --label "bug" || true

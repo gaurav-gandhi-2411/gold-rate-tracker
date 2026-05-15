@@ -7,9 +7,12 @@ Operational procedures for gold-rate-tracker.
 1. [Local development setup](#local-development-setup)
 2. [How to retrain](#how-to-retrain)
 3. [How to roll back a bad production model](#how-to-roll-back-a-bad-production-model)
-4. [How to add a new feature](#how-to-add-a-new-feature)
-5. [How to investigate a CI failure](#how-to-investigate-a-ci-failure)
-6. [Known constraints](#known-constraints)
+4. [How to roll back a bad forecast.json commit](#how-to-roll-back-a-bad-forecastjson-commit)
+5. [How to add a new feature](#how-to-add-a-new-feature)
+6. [How to investigate a CI failure](#how-to-investigate-a-ci-failure)
+7. [Staleness alerts — interpretation and response](#staleness-alerts--interpretation-and-response)
+8. [Manual scraper re-run](#manual-scraper-re-run)
+9. [Known constraints](#known-constraints)
 
 ---
 
@@ -75,6 +78,27 @@ git push
 
 ---
 
+## How to roll back a bad forecast.json commit
+
+`data/forecast.json` is committed by the `gold-rate-bot` CI user every 6 hours. If a forecast
+commit contains bad data (e.g. NaN price, wrong karatage), roll it back without re-running CI:
+
+```bash
+# 1. Find the bad bot commit
+git log --oneline data/forecast.json | head -5
+
+# 2. Revert it (non-destructive — creates a new revert commit)
+git revert <bad-commit-sha> --no-edit
+
+# 3. Push — the live site picks up the reverted forecast.json within minutes
+git push
+```
+
+If the forecast is stuck stale (>18h old), the amber banner on the site will appear automatically.
+The next successful CI run will replace `forecast.json` and hide the banner.
+
+---
+
 ## How to add a new feature
 
 1. Add feature logic to `ml/features.py` (follow the existing pattern in `build_feature_matrix()`).
@@ -95,6 +119,60 @@ git push
    - **Macro step:** yfinance rate-limited or ticker changed. Check `ml/macro.py` ticker list and `data/macro_cache.parquet` freshness.
    - **Forecast step:** ONNX schema mismatch after a bad model promotion. Roll back `models/production/` (see above).
    - **Commentary step:** `GROQ_API_KEY` secret expired or Groq rate limit hit. Step is `continue-on-error: true` so it won't block scraping.
+
+---
+
+## Staleness alerts — interpretation and response
+
+You may receive ntfy.sh alerts with the following titles. Here is what each means and what to do.
+
+| Alert title | Meaning | Action |
+|---|---|---|
+| `Gold Tracker: data stale (Xh)` | `prices.json` last reading is >8h old | Check the scraper step in the last CI run |
+| `Gold Tracker: forecast stale (Xh)` | `forecast.json` predicted_at is >18h old | Check the forecast/macro steps in the last CI run |
+| `Gold Tracker: Scraper Down` | Scraper step exited non-zero | Check DOM structure on Tanishq site; see [Manual scraper re-run](#manual-scraper-re-run) |
+| `Gold Tracker: Scraper DOM broken` | Weekly canary failed against live page | DOM may have changed; update selector in `scraper/scrape.js` |
+| `Gold Tracker: data stale (Xh)` from Staleness guard | prices.json age >8h after full workflow | Usually same root cause as scraper failure |
+
+**Macro cache stale (CI fails with age >14d):**  
+The "Check macro cache age" CI step will fail the run (not `continue-on-error`) if `data/macro_status.json`
+reports `cache_age_days > 14`. This blocks the forecast commit. To recover:
+
+```bash
+# Manually trigger the macro fetch
+python ml/macro.py --full
+git add data/macro_cache.parquet   # not committed normally; trigger via workflow instead
+# Or: trigger check-price.yml manually from the Actions tab — it will re-fetch macro data
+```
+
+**Forecast amber banner visible on site:**  
+The banner in `index.html` shows when `forecast.json`'s `predicted_at` field is >18h old.
+It hides automatically once CI successfully updates `forecast.json`. No manual action needed
+unless the banner persists for >24h (then check CI).
+
+---
+
+## Manual scraper re-run
+
+To re-scrape outside the 6-hour schedule (e.g. after fixing a broken selector):
+
+1. Go to **Actions** → **Check Gold Price** → **Run workflow** (top-right button).
+2. This triggers the full pipeline: scrape → macro → forecast → commentary → commit.
+
+To test the scraper locally:
+
+```bash
+cd scraper
+npm ci
+npx playwright install chromium
+node scrape.js          # prints JSON to stdout; non-zero exit = failure
+node --test test_scrape.js   # fixture-based DOM tests
+```
+
+If the selector is broken, open the Tanishq gold rate page, inspect
+`span.goldpurity-rate[data-goldrate22kt]`, and update the selector in `scraper/scrape.js`.
+Then update `tests/fixtures/tanishq_sample.html` with the new page structure and update the
+expected values in `scraper/test_scrape.js`.
 
 ---
 

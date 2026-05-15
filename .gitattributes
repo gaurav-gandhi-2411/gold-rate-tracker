@@ -1,0 +1,8 @@
+# Prevent git CRLF conversion from corrupting LightGBM model text files.
+# LightGBM's parser fails with "Model format error, expect a tree here"
+# when LF line endings in *.txt model files are silently converted to CRLF
+# by git on Windows (core.autocrlf=true). Marking these as binary disables
+# the conversion — this is the root cause of the STATUS_STACK_BUFFER_OVERRUN
+# CI failure observed on the Windows dev machine.
+models/**/*.txt  binary
+models/**/*.onnx binary
