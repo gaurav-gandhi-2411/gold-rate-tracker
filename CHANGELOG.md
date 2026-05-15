@@ -10,6 +10,75 @@ Versioning: [Semantic Versioning](https://semver.org/).
 
 ---
 
+## [0.3.0] — 2026-05-15 — Phase 1: UI overhaul ("Should I buy today?")
+
+Frontend-only reframe from ML report card to buyer-facing verdict. No changes to
+`ml/`, `scraper/`, `.github/workflows/`, or any `data/*.json` schemas.
+No new fields added to `forecast.json`.
+
+### Added
+
+- **`computeVerdict(prices, forecast)`** in `app.js` — deterministic three-bucket
+  classification (down / flat / up) using 7-day slope ±₹100 threshold confirmed
+  by a second signal (forecast direction or 30d mean deviation). Documented with
+  inline comments explaining each bucket and the dual-signal rationale.
+- **Verdict banner** — most prominent new element inside the hero card. Shows
+  icon + headline + 1-sentence reason. Color-coded: green (down/buyer-favorable),
+  amber (flat), red (up/buyer-unfavorable). `data-type` attribute drives CSS.
+- **7-day SVG sparkline** — pure SVG (no Chart.js), 300×56 viewBox, polyline +
+  gradient fill, color-matched to trend direction. Includes `aria-label` with
+  direction and ₹ change for screen readers.
+- **Decision-anchored comparison cards** — 3-up grid: vs 7d avg, vs 30d avg,
+  vs period low. `data-sentiment` attribute (good / caution / neutral) drives
+  color. All values derived from `prices.json` — no new data files.
+- **"Today's change"** in hero — compared to earliest IST-day reading (not just
+  previous reading), with ↑/↓ arrow, amount, and "today" label.
+- **Compact karat strip** — 24K and 18K displayed as a lean 2-up grid beneath
+  comparison cards. Replaces the old 3-card rate section.
+- **Methodology `<details>` accordion** — all ML content (verdict rules, forecast
+  point estimate + PI, backtest stats, live drift, model status banners) moved
+  inside. Keyboard-accessible by default (`<details>/<summary>`).
+- **Mobile history card list** — at <640px, table is hidden and a `<ul>` of
+  cards replaces it: timestamp left, 22K price right (serif), delta below. No
+  horizontal scroll.
+- **Utility row** (sticky top) — freshness pill on left with three states:
+  green "Updated Xm ago", amber "Stale — Xh ago", red "Stuck — Xh+ ago".
+  Location label "Bengaluru · Tanishq retail" on right.
+- **Skeleton shimmer** — 5 placeholder elements animate while hero data loads,
+  hidden once `renderHero` fires.
+- **Commentary always visible** — card never hidden. Shows last good commentary
+  with "(from Xh ago · may be stale)" label in red if >12h old. `textContent`
+  (not `innerHTML`) used to prevent XSS from LLM output.
+
+### Changed
+
+- **Palette** — full umber-gold spectrum: `--ink` → `#1A1612`, `--gold` →
+  `#D4932A` (dark mode), hero price now gold-coloured not cream. Light mode
+  overrides via `@media (prefers-color-scheme: light)` with `--gold-deep: #633806`.
+- **Section order** — Utility row → Hero (price + today's change + verdict +
+  sparkline) → Comparison cards → Karat strip → Commentary → Chart → History →
+  Methodology accordion → Footer.
+- **Chart restyled** — updated gold line `#D4932A`, grid `#3A3028`, tooltip bg
+  `#241E16` to match new palette.
+- **All ML jargon removed from default view** — "walk-forward", "HMM regime",
+  "ensemble-inv-mae", "real-data track", "model drift 7d MAE" only appear inside
+  the methodology accordion.
+- **`renderCommentary`** always renders (no `hidden = true` fallback).
+- **Range-toggle buttons** — `aria-selected` attribute updated on click for
+  screen reader state.
+
+### Removed
+
+- Old rate-cards 3-up section (22K/24K/18K equal grid) — 22K moved to hero,
+  24K/18K moved to karat strip.
+- Forecast section as standalone visible card — moved into methodology accordion.
+- Model accuracy, model performance, model drift as always-visible sections —
+  all moved into methodology accordion.
+- Warmup banner and model-status banner from sticky utility row — both now live
+  inside methodology accordion.
+
+---
+
 ## [0.2.0] — 2026-05-12
 
 Full UI redesign across five phases (U1–U5). No changes to the data pipeline,

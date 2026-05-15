@@ -1,11 +1,11 @@
-// app.js — fetches prices.json and renders the UI.
+// app.js — Buyer-focused gold rate tracker.
 
-const DATA_URL = "data/prices.json";
-const FORECAST_URL = "data/forecast.json";
-const BACKTEST_URL = "data/backtest.json";
+const DATA_URL      = "data/prices.json";
+const FORECAST_URL  = "data/forecast.json";
+const BACKTEST_URL  = "data/backtest.json";
 const COMMENTARY_URL = "data/commentary.json";
-const DRIFT_URL = "data/drift_metrics.json";
-const METRICS_URL = "data/metrics_history.json";
+const DRIFT_URL     = "data/drift_metrics.json";
+const METRICS_URL   = "data/metrics_history.json";
 
 const fmtINR = (n) =>
   typeof n === "number"
@@ -18,222 +18,17 @@ function rupee(n) {
 }
 
 function fmtRelative(iso) {
-  const d = new Date(iso);
+  const d    = new Date(iso);
   const diff = (Date.now() - d.getTime()) / 1000;
-  if (diff < 60) return "just now";
-  if (diff < 3600) return `${Math.round(diff / 60)} min ago`;
-  if (diff < 86400) return `${Math.round(diff / 3600)} h ago`;
-  return `${Math.round(diff / 86400)} d ago`;
+  if (diff < 60)    return "just now";
+  if (diff < 3600)  return `${Math.round(diff / 60)} min ago`;
+  if (diff < 86400) return `${Math.round(diff / 3600)}h ago`;
+  return `${Math.round(diff / 86400)}d ago`;
 }
 
 function fmtDate(iso) {
-  const d = new Date(iso);
-  return d.toLocaleString("en-IN", {
+  return new Date(iso).toLocaleString("en-IN", {
     day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit",
-  });
-}
-
-function fmtDateShort(iso) {
-  if (!iso) return "—";
-  const d = new Date(iso);
-  return d.toLocaleString("en-IN", {
-    day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit",
-  });
-}
-
-let chart = null;
-let allReadings = [];
-
-async function loadJSON(url) {
-  // Cache-bust so we always get the latest committed JSON.
-  const res = await fetch(`${url}?t=${Date.now()}`);
-  if (!res.ok) throw new Error(`HTTP ${res.status} for ${url}`);
-  return res.json();
-}
-
-async function load() {
-  const data = await loadJSON(DATA_URL);
-  data.sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp));
-  return data;
-}
-
-function renderHero(readings) {
-  const heroPrice = document.getElementById("hero-price");
-  const heroChange = document.getElementById("hero-change");
-  const r22 = document.getElementById("rate-22");
-  const r24 = document.getElementById("rate-24");
-  const r18 = document.getElementById("rate-18");
-
-  if (readings.length === 0) {
-    heroPrice.innerHTML = "—";
-    const pill = document.getElementById("updated-pill");
-    if (pill) pill.textContent = "Awaiting first reading";
-    return;
-  }
-
-  const latest = readings[readings.length - 1];
-  const prev = readings.length > 1 ? readings[readings.length - 2] : null;
-
-  heroPrice.innerHTML = rupee(latest["22k"]);
-  r22.innerHTML = rupee(latest["22k"]);
-  r24.innerHTML = rupee(latest["24k"]);
-  r18.innerHTML = rupee(latest["18k"]);
-  const ageH = (Date.now() - new Date(latest.timestamp).getTime()) / 3_600_000;
-  const pill = document.getElementById("updated-pill");
-  if (pill) {
-    pill.classList.remove("freshness--warn", "freshness--stale");
-    if (ageH >= 8) {
-      pill.classList.add("freshness--stale");
-      pill.innerHTML =
-        `Data stale — last updated ${fmtRelative(latest.timestamp)}` +
-        `<span class="freshness-sub">Scraper may be down</span>`;
-    } else if (ageH >= 6) {
-      pill.classList.add("freshness--warn");
-      pill.textContent = `Updated ${fmtRelative(latest.timestamp)}`;
-    } else {
-      pill.textContent = `Updated ${fmtRelative(latest.timestamp)}`;
-    }
-  }
-
-  if (prev && typeof prev["22k"] === "number") {
-    const delta = latest["22k"] - prev["22k"];
-    const dir = delta > 0 ? "up" : delta < 0 ? "down" : "flat";
-    heroChange.hidden = false;
-    heroChange.dataset.direction = dir;
-    heroChange.querySelector(".amount").textContent =
-      delta === 0 ? "no change" : `₹${fmtINR(Math.abs(delta))}`;
-  } else {
-    heroChange.hidden = true;
-  }
-}
-
-function renderHistory(readings) {
-  const tbody = document.getElementById("history-body");
-  if (readings.length === 0) {
-    tbody.innerHTML =
-      `<tr><td colspan="5" class="empty">No readings yet. The bot will populate this soon.</td></tr>`;
-    return;
-  }
-
-  // Show newest first, capped at 50 rows.
-  const rows = [...readings].reverse().slice(0, 50);
-  tbody.innerHTML = rows
-    .map((r, i) => {
-      const next = rows[i + 1]; // older entry (since reversed)
-      let deltaCell = '<span class="delta-flat">—</span>';
-      if (next && typeof next["22k"] === "number" && typeof r["22k"] === "number") {
-        const d = r["22k"] - next["22k"];
-        if (d > 0)      deltaCell = `<span class="delta-up">+₹${fmtINR(d)}</span>`;
-        else if (d < 0) deltaCell = `<span class="delta-down">−₹${fmtINR(Math.abs(d))}</span>`;
-        else            deltaCell = `<span class="delta-flat">±0</span>`;
-      }
-      return `<tr>
-        <td>${fmtDate(r.timestamp)}</td>
-        <td class="num">${rupee(r["22k"])}</td>
-        <td class="num">${rupee(r["24k"])}</td>
-        <td class="num">${rupee(r["18k"])}</td>
-        <td class="num">${deltaCell}</td>
-      </tr>`;
-    })
-    .join("");
-
-  const showAllBtn = document.getElementById("history-show-all");
-  const wrap = document.querySelector(".history-wrap");
-  if (showAllBtn && rows.length > 0) {
-    showAllBtn.textContent = `Show all (${rows.length})`;
-    showAllBtn.onclick = () => {
-      const expanded = wrap.style.maxHeight === "none";
-      wrap.style.maxHeight = expanded ? "" : "none";
-      showAllBtn.textContent = expanded ? `Show all (${rows.length})` : "Show less";
-    };
-  }
-}
-
-function renderChart(readings, range) {
-  let filtered = readings;
-  if (range !== "all") {
-    const days = parseInt(range, 10);
-    const cutoff = Date.now() - days * 86400 * 1000;
-    filtered = readings.filter((r) => new Date(r.timestamp).getTime() >= cutoff);
-  }
-
-  const labels = filtered.map((r) => fmtDate(r.timestamp));
-  const data22 = filtered.map((r) => r["22k"]);
-
-  const css = getComputedStyle(document.body);
-  const gold = css.getPropertyValue("--gold").trim() || "#c8a456";
-  const cream = css.getPropertyValue("--cream-mute").trim() || "#8a8273";
-  const line = css.getPropertyValue("--line").trim() || "#2e2a23";
-
-  const ctx = document.getElementById("chart");
-
-  if (chart) chart.destroy();
-
-  // Gradient fill under the line.
-  const c2d = ctx.getContext("2d");
-  const gradient = c2d.createLinearGradient(0, 0, 0, ctx.height || 320);
-  gradient.addColorStop(0, "rgba(200,164,86,0.28)");
-  gradient.addColorStop(1, "rgba(200,164,86,0.00)");
-
-  chart = new Chart(ctx, {
-    type: "line",
-    data: {
-      labels,
-      datasets: [
-        {
-          label: "22K (₹/g)",
-          data: data22,
-          borderColor: gold,
-          backgroundColor: gradient,
-          fill: true,
-          borderWidth: 2,
-          pointRadius: filtered.length > 30 ? 0 : 3,
-          pointBackgroundColor: gold,
-          pointBorderWidth: 0,
-          tension: 0.3,
-          spanGaps: true,
-        },
-      ],
-    },
-    options: {
-      responsive: true,
-      maintainAspectRatio: false,
-      interaction: { mode: "index", intersect: false },
-      plugins: {
-        legend: { display: false },
-        tooltip: {
-          backgroundColor: "#14110d",
-          borderColor: line,
-          borderWidth: 1,
-          titleColor: cream,
-          bodyColor: "#f5ede0",
-          padding: 12,
-          callbacks: {
-            label: (ctx) => `22K: ₹${fmtINR(ctx.parsed.y)}`,
-          },
-        },
-      },
-      scales: {
-        x: {
-          ticks: {
-            color: cream,
-            maxTicksLimit: 6,
-            font: { family: "DM Sans", size: 11 },
-          },
-          grid: { color: "transparent" },
-          border: { color: line },
-        },
-        y: {
-          ticks: {
-            color: cream,
-            font: { family: "DM Sans", size: 11 },
-            callback: (v) => "₹" + fmtINR(v),
-          },
-          grid: { color: line },
-          border: { display: false },
-        },
-      },
-    },
   });
 }
 
@@ -245,342 +40,737 @@ function fmtIST(iso) {
       day: "numeric", month: "short", year: "numeric",
       hour: "2-digit", minute: "2-digit", hour12: true,
     }).format(new Date(iso));
-  } catch (_) {
-    return iso;
+  } catch (_) { return iso; }
+}
+
+let chart       = null;
+let allReadings = [];
+
+async function loadJSON(url) {
+  const res = await fetch(`${url}?t=${Date.now()}`);
+  if (!res.ok) throw new Error(`HTTP ${res.status} for ${url}`);
+  return res.json();
+}
+
+async function load() {
+  const data = await loadJSON(DATA_URL);
+  data.sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp));
+  return data;
+}
+
+// ─── VERDICT ──────────────────────────────────────────────────────────────────
+
+/**
+ * Compute a buyer-facing verdict from price history and forecast.
+ * Returns { type, headline, reason, icon } where type is:
+ *   "down"    — prices falling, no rush
+ *   "up"      — prices rising, consider acting sooner
+ *   "flat"    — no strong signal
+ *   "unknown" — insufficient data
+ *
+ * THREE-BUCKET RULES (deterministic):
+ *
+ * TRENDING_DOWN → "Trending down — no rush to buy"
+ *   Condition: 7-day slope < −₹100
+ *              AND (forecast below current  OR  current below 30d avg)
+ *   Why two signals: a single 7-day slope can be noisy (festival spikes,
+ *   weekend data gaps). A confirming signal from forecast or 30d mean
+ *   reduces false alarms that would mislead buyers.
+ *   Interpretation: prices are falling; buyer benefits from waiting.
+ *
+ * TRENDING_UP → "Trending up — consider buying sooner"
+ *   Condition: 7-day slope > +₹100
+ *              AND (forecast above current  OR  current above 30d avg)
+ *   Interpretation: prices are rising; better to act before further increases.
+ *
+ * FLAT → "Roughly flat — buy when convenient"  (DEFAULT)
+ *   Condition: slope within ±₹100, OR the two signals conflict.
+ *   Interpretation: no directional pressure; timing is not critical.
+ */
+function computeVerdict(prices, forecast) {
+  const SLOPE_THRESHOLD = 100; // ₹ change over 7 days to count as a trend
+
+  if (!prices || prices.length < 2) {
+    return {
+      type: "unknown",
+      icon: "○",
+      headline: "Not enough data yet",
+      reason: "Check back once more price readings are collected.",
+    };
+  }
+
+  const now     = Date.now();
+  const current = prices[prices.length - 1]["22k"];
+
+  // 7-day slope: oldest reading within the last 7 days vs current.
+  const ms7d    = 7 * 24 * 3600 * 1000;
+  const within7d = prices.filter(p => now - new Date(p.timestamp).getTime() <= ms7d);
+  const ref7d    = within7d.length > 1
+    ? within7d[0]
+    : prices[Math.max(0, prices.length - 5)];
+  const slope7d  = current - ref7d["22k"];
+
+  // 30-day average.
+  const within30d = prices.filter(p => now - new Date(p.timestamp).getTime() <= 30 * 24 * 3600 * 1000);
+  const avg30d    = within30d.length > 0
+    ? Math.round(within30d.reduce((s, p) => s + p["22k"], 0) / within30d.length)
+    : current;
+  const vsAvg30d  = current - avg30d;
+
+  // Forecast direction (0 if unavailable).
+  const forecastDelta = (forecast && typeof forecast.predicted_22k === "number")
+    ? forecast.predicted_22k - current
+    : 0;
+
+  // ── Classify ──
+  if (slope7d < -SLOPE_THRESHOLD && (forecastDelta < 0 || vsAvg30d < 0)) {
+    const absDelta = fmtINR(Math.abs(Math.round(slope7d)));
+    const avgNote  = vsAvg30d < 0
+      ? ` and ₹${fmtINR(Math.abs(vsAvg30d))} below the 30-day average`
+      : "";
+    return {
+      type: "down",
+      icon: "✓",
+      headline: "Trending down — no rush to buy",
+      reason: `Prices have slipped ₹${absDelta} over the last 7 days${avgNote}.`,
+    };
+  }
+
+  if (slope7d > SLOPE_THRESHOLD && (forecastDelta > 0 || vsAvg30d > 0)) {
+    const delta   = fmtINR(Math.round(slope7d));
+    const avgNote = vsAvg30d > 0
+      ? `, now ₹${fmtINR(Math.abs(vsAvg30d))} above the 30-day average`
+      : "";
+    return {
+      type: "up",
+      icon: "⚡",
+      headline: "Trending up — consider buying sooner",
+      reason: `Prices have risen ₹${delta} over the last 7 days${avgNote}.`,
+    };
+  }
+
+  // Flat — describe magnitude of stability.
+  const absSlope    = Math.abs(Math.round(slope7d));
+  const dirWord     = slope7d > 0 ? "edged up" : slope7d < 0 ? "edged down" : "unchanged";
+  const stableDesc  = absSlope < 20
+    ? "virtually flat"
+    : `${dirWord} ₹${fmtINR(absSlope)}`;
+  return {
+    type: "flat",
+    icon: "◉",
+    headline: "Roughly flat — buy when convenient",
+    reason: `Prices are ${stableDesc} over the last 7 days. No strong signal either way.`,
+  };
+}
+
+// ─── TODAY'S CHANGE ────────────────────────────────────────────────────────────
+
+function computeTodayChange(readings) {
+  if (readings.length < 2) return null;
+  const latest   = readings[readings.length - 1];
+  const istDay   = (iso) =>
+    new Date(iso).toLocaleDateString("en-IN", { timeZone: "Asia/Kolkata" });
+  const todayKey = istDay(latest.timestamp);
+
+  // Walk backward to find the index of the earliest reading of today (IST).
+  let earliestTodayIdx = -1;
+  for (let i = readings.length - 1; i >= 0; i--) {
+    if (istDay(readings[i].timestamp) === todayKey) {
+      earliestTodayIdx = i;
+    } else {
+      break;
+    }
+  }
+
+  const earliestToday = earliestTodayIdx >= 0 ? readings[earliestTodayIdx] : null;
+
+  // If today has only one reading or we couldn't find an earlier one, use readings[-2].
+  if (!earliestToday || earliestToday === latest) {
+    return latest["22k"] - readings[readings.length - 2]["22k"];
+  }
+
+  // Sanity guard: if today's first reading differs from the reading immediately before
+  // it (yesterday's close) by more than 3%, treat it as a potential scraper anomaly —
+  // a bad opening reading would make "today's change" wildly misleading. Fall back to
+  // comparing latest against readings[-2] (the reading right before latest), which is
+  // recent and not subject to the same day-boundary artifact.
+  if (earliestTodayIdx > 0) {
+    const prevClose = readings[earliestTodayIdx - 1];
+    const pctChange = Math.abs(earliestToday["22k"] - prevClose["22k"]) / prevClose["22k"];
+    if (pctChange > 0.03) {
+      return latest["22k"] - readings[readings.length - 2]["22k"];
+    }
+  }
+
+  return latest["22k"] - earliestToday["22k"];
+}
+
+// ─── COMPARISON CARD VALUES ───────────────────────────────────────────────────
+
+function computeComparisons(readings) {
+  if (readings.length === 0) return null;
+  const now     = Date.now();
+  const current = readings[readings.length - 1]["22k"];
+  const avg     = (arr) => Math.round(arr.reduce((s, v) => s + v, 0) / arr.length);
+  const p22     = (r) => r["22k"];
+
+  const prices7d  = readings.filter(r => now - new Date(r.timestamp).getTime() <= 7 * 86400e3).map(p22);
+  const prices30d = readings.filter(r => now - new Date(r.timestamp).getTime() <= 30 * 86400e3).map(p22);
+  const pricesAll = readings.map(p22);
+  const spanDays  = Math.round((now - new Date(readings[0].timestamp).getTime()) / 86400e3);
+
+  return {
+    vs7d:     prices7d.length  > 1 ? current - avg(prices7d)       : null,
+    vs30d:    prices30d.length > 1 ? current - avg(prices30d)      : null,
+    vsLow:    pricesAll.length > 0 ? current - Math.min(...pricesAll) : null,
+    spanDays,
+  };
+}
+
+// ─── RENDERERS ────────────────────────────────────────────────────────────────
+
+function renderFreshness(readings) {
+  const pill = document.getElementById("freshness-pill");
+  if (!pill) return;
+  if (readings.length === 0) {
+    pill.textContent = "Awaiting first reading";
+    pill.className   = "freshness-pill";
+    return;
+  }
+  const latest = readings[readings.length - 1];
+  const ageH   = (Date.now() - new Date(latest.timestamp).getTime()) / 3_600_000;
+  const rel    = fmtRelative(latest.timestamp);
+  pill.classList.remove("freshness--ok", "freshness--warn", "freshness--stale");
+  if (ageH >= 18) {
+    pill.className   = "freshness-pill freshness--stale";
+    pill.textContent = `Stuck — ${rel}`;
+    pill.setAttribute("aria-label", `Data stuck, last updated ${rel}`);
+  } else if (ageH >= 8) {
+    pill.className   = "freshness-pill freshness--warn";
+    pill.textContent = `Stale — ${rel}`;
+    pill.setAttribute("aria-label", `Data stale, last updated ${rel}`);
+  } else {
+    pill.className   = "freshness-pill freshness--ok";
+    pill.textContent = `Updated ${rel}`;
+    pill.setAttribute("aria-label", `Updated ${rel}`);
   }
 }
 
-function fmtISTTime(iso) {
-  if (!iso) return "—";
-  try {
-    return new Intl.DateTimeFormat("en-IN", {
-      timeZone: "Asia/Kolkata",
-      hour: "2-digit", minute: "2-digit", hour12: true,
-    }).format(new Date(iso));
-  } catch (_) {
-    return iso;
-  }
-}
+function renderHero(readings, forecast) {
+  const skelEl    = document.getElementById("hero-skeleton");
+  const eyeEl     = document.getElementById("hero-eyebrow");
+  const priceEl   = document.getElementById("hero-price");
+  const changeEl  = document.getElementById("hero-change");
+  const verdictEl = document.getElementById("verdict-banner");
 
-function renderForecast(fc) {
-  const section     = document.getElementById("forecast-section");
-  const priceEl     = document.getElementById("forecast-price");
-  const warmupEl    = document.getElementById("forecast-warmup");
-  const bannerEl    = document.getElementById("warmup-banner");
-  const intervalEl  = document.getElementById("forecast-interval");
-  const targetEl    = document.getElementById("forecast-target");
-  const generatedEl = document.getElementById("forecast-generated");
-  const whyEl       = document.getElementById("forecast-why");
-  const whyBodyEl   = document.getElementById("forecast-why-body");
+  if (skelEl) skelEl.hidden = true;
+  if (eyeEl)  eyeEl.hidden  = false;
 
-  if (!fc || typeof fc.predicted_22k !== "number") {
-    section.hidden = true;
+  if (readings.length === 0) {
+    priceEl.innerHTML = "—";
+    priceEl.hidden    = false;
+    if (verdictEl) {
+      document.getElementById("verdict-icon").textContent    = "○";
+      document.getElementById("verdict-headline").textContent = "Not enough data yet";
+      document.getElementById("verdict-reason").textContent  = "Awaiting first price reading.";
+      verdictEl.dataset.type = "unknown";
+      verdictEl.hidden       = false;
+    }
     return;
   }
 
-  priceEl.innerHTML = rupee(fc.predicted_22k);
+  const latest = readings[readings.length - 1];
+  priceEl.innerHTML = rupee(latest["22k"]);
+  priceEl.hidden    = false;
 
-  const threshold = fc.ensemble?.min_readings_for_warmup_clear ?? 30;
-  const current   = fc.real_readings_count || 0;
+  // Other karat prices
+  const r24 = document.getElementById("rate-24");
+  const r18 = document.getElementById("rate-18");
+  if (r24) r24.innerHTML = rupee(latest["24k"]);
+  if (r18) r18.innerHTML = rupee(latest["18k"]);
 
-  if (fc.warmup) {
-    if (bannerEl) {
-      bannerEl.textContent =
-        `⚠ Model in warmup — predictions unreliable until ${threshold}+ real readings collected. Current: ${current}.`;
-      bannerEl.hidden = false;
-    }
-    const needed = Math.max(0, threshold - current);
-    warmupEl.textContent =
-      `\u{1F4CA} Calibrating · forecast may differ from live until ~${needed} more readings`;
-    warmupEl.hidden = false;
-  } else {
-    if (bannerEl) bannerEl.hidden = true;
-    warmupEl.hidden = true;
+  // Today's change
+  const todayDelta = computeTodayChange(readings);
+  if (todayDelta !== null) {
+    const dir    = todayDelta > 0 ? "up" : todayDelta < 0 ? "down" : "flat";
+    const arrow  = dir === "up" ? "↑" : dir === "down" ? "↓" : "→";
+    const sign   = dir === "up" ? "+" : dir === "down" ? "−" : "";
+    changeEl.dataset.direction = dir;
+    changeEl.querySelector(".hero-change-arrow").textContent  = arrow;
+    changeEl.querySelector(".hero-change-amount").textContent =
+      todayDelta === 0 ? "no change" : `${sign}₹${fmtINR(Math.abs(todayDelta))}`;
+    changeEl.hidden = false;
   }
 
-  const modelStatusEl = document.getElementById("model-status-banner");
-  if (modelStatusEl) {
-    const status = fc.model_status;
-    if (status && status !== "beating_naive" && status !== "unknown") {
-      const vMae  = fc.val_mae   != null ? Math.round(fc.val_mae)   : "—";
-      const nMae  = fc.naive_mae != null ? Math.round(fc.naive_mae) : "—";
-      const target = fc.min_readings_for_model_improvement ?? 200;
-      const daysEst = Math.ceil(Math.max(0, target - current) / 4);
-      modelStatusEl.textContent =
-        `Model: LightGBM val_mae ${vMae} vs naive ${nMae}. ` +
-        `Improvement gated on real-data accumulation ` +
-        `(target: ${target} readings, ~${daysEst} days).`;
-      modelStatusEl.hidden = false;
+  // Verdict
+  const verdict = computeVerdict(readings, forecast);
+  document.getElementById("verdict-icon").textContent    = verdict.icon;
+  document.getElementById("verdict-headline").textContent = verdict.headline;
+  document.getElementById("verdict-reason").textContent  = verdict.reason;
+  verdictEl.dataset.type = verdict.type;
+  verdictEl.hidden       = false;
+
+  renderSparkline(readings);
+}
+
+function renderSparkline(readings) {
+  const wrap    = document.getElementById("sparkline-wrap");
+  const svgEl   = document.getElementById("sparkline");
+  const rangeEl = document.getElementById("sparkline-range");
+
+  const now  = Date.now();
+  const pts  = readings.filter(r => now - new Date(r.timestamp).getTime() <= 7 * 86400e3);
+  if (pts.length < 2) { wrap.hidden = true; return; }
+
+  const prices = pts.map(p => p["22k"]);
+  const min22k = Math.min(...prices);
+  const max22k = Math.max(...prices);
+  const span   = max22k - min22k || 1;
+
+  const W = 300, H = 56, PX = 2, PY = 6;
+  const toX = (i) => PX + (i / (prices.length - 1)) * (W - 2 * PX);
+  const toY = (p) => PY + (1 - (p - min22k) / span) * (H - 2 * PY);
+
+  const coords   = prices.map((p, i) => `${toX(i).toFixed(1)},${toY(p).toFixed(1)}`);
+  const firstX   = coords[0].split(",")[0];
+  const lastX    = coords[coords.length - 1].split(",")[0];
+  const fillPath = `M ${coords[0]} L ${coords.slice(1).join(" L ")} L ${lastX},${H} L ${firstX},${H} Z`;
+
+  const trendDown = prices[prices.length - 1] <= prices[0];
+  const lineClr   = trendDown ? "#7BC48A" : "#E8896A";
+  const fillClr   = trendDown ? "rgba(123,196,138,0.18)" : "rgba(232,137,106,0.15)";
+  const netChange = prices[prices.length - 1] - prices[0];
+
+  svgEl.setAttribute("aria-label",
+    `7-day price trend: ${trendDown ? "down" : "up"} ₹${fmtINR(Math.abs(Math.round(netChange)))}`);
+  svgEl.innerHTML = `
+    <path d="${fillPath}" fill="${fillClr}" stroke="none"/>
+    <polyline points="${coords.join(" ")}" fill="none" stroke="${lineClr}"
+              stroke-width="1.5" stroke-linejoin="round" stroke-linecap="round"/>
+  `;
+
+  rangeEl.textContent = `Low ₹${fmtINR(min22k)} · High ₹${fmtINR(max22k)}`;
+  wrap.hidden = false;
+}
+
+function renderComparisons(readings) {
+  const section = document.getElementById("comparison-section");
+  const cmp     = computeComparisons(readings);
+  if (!cmp || readings.length < 2) { section.hidden = true; return; }
+
+  function setCard(valueId, subId, cardId, delta, avgLabel, nullNote) {
+    const valEl  = document.getElementById(valueId);
+    const subEl  = document.getElementById(subId);
+    const card   = document.getElementById(cardId);
+    if (delta === null) {
+      valEl.textContent        = "—";
+      subEl.textContent        = nullNote || "";
+      card.dataset.sentiment   = "neutral";
+      return;
+    }
+    const abs = fmtINR(Math.abs(delta));
+    if (delta < 0) {
+      valEl.textContent      = `−₹${abs}`;
+      subEl.textContent      = `cheaper than ${avgLabel}`;
+      card.dataset.sentiment = "good";
+    } else if (delta > 0) {
+      valEl.textContent      = `+₹${abs}`;
+      subEl.textContent      = `pricier than ${avgLabel}`;
+      card.dataset.sentiment = "caution";
     } else {
-      modelStatusEl.hidden = true;
+      valEl.textContent      = "at avg";
+      subEl.textContent      = avgLabel;
+      card.dataset.sentiment = "neutral";
     }
   }
 
-  const hasInterval = typeof fc.lower === "number" && typeof fc.upper === "number";
-  if (hasInterval) {
-    intervalEl.innerHTML =
-      `80% interval: <span class="rupee">₹</span>${fmtINR(fc.lower)} – <span class="rupee">₹</span>${fmtINR(fc.upper)}`;
+  setCard("cmp-7d-value",  "cmp-7d-sub",  "cmp-7d",  cmp.vs7d,  "7d avg",  "not enough data");
+  setCard("cmp-30d-value", "cmp-30d-sub", "cmp-30d", cmp.vs30d, "30d avg", "not enough data");
+
+  const lowVal  = document.getElementById("cmp-low-value");
+  const lowSub  = document.getElementById("cmp-low-sub");
+  const lowCard = document.getElementById("cmp-low");
+  if (cmp.vsLow === null) {
+    lowVal.textContent        = "—";
+    lowSub.textContent        = "";
+    lowCard.dataset.sentiment = "neutral";
+  } else if (cmp.vsLow === 0) {
+    lowVal.textContent        = "at low";
+    lowSub.textContent        = `${cmp.spanDays}d period low`;
+    lowCard.dataset.sentiment = "good";
   } else {
-    intervalEl.textContent = "";
-  }
-
-  targetEl.textContent = fc.target_time
-    ? `For ${fmtIST(fc.target_time)}`
-    : "";
-  generatedEl.textContent = fc.predicted_at
-    ? `Generated ${fmtISTTime(fc.predicted_at)} IST`
-    : "";
-
-  if (whyEl && whyBodyEl && fc.explanation) {
-    whyBodyEl.textContent = fc.explanation;
-    whyEl.hidden = false;
-  } else if (whyEl) {
-    whyEl.hidden = true;
+    lowVal.textContent        = `+₹${fmtINR(cmp.vsLow)}`;
+    lowSub.textContent        = `above ${cmp.spanDays}d low`;
+    lowCard.dataset.sentiment = cmp.vsLow < 300 ? "neutral" : "caution";
   }
 
   section.hidden = false;
 }
 
 function renderCommentary(entries) {
-  const section = document.getElementById("commentary-section");
   const textEl = document.getElementById("commentary-text");
   const metaEl = document.getElementById("commentary-meta");
+  if (!textEl) return;
 
   if (!Array.isArray(entries) || entries.length === 0) {
-    section.hidden = true;
+    textEl.textContent = "Commentary not yet available. Check back after the next price update.";
+    metaEl.textContent = "";
     return;
   }
-
   const latest = entries[entries.length - 1];
   if (!latest || !latest.text) {
-    section.hidden = true;
+    textEl.textContent = "Commentary unavailable.";
+    metaEl.textContent = "";
     return;
   }
 
+  // textContent (not innerHTML) prevents XSS from LLM output.
   textEl.textContent = latest.text;
-  metaEl.textContent = latest.ts ? fmtRelative(latest.ts) : "";
-  section.hidden = false;
+
+  const ageH = latest.ts
+    ? (Date.now() - new Date(latest.ts).getTime()) / 3_600_000
+    : 0;
+
+  if (ageH > 12) {
+    metaEl.textContent = `From ${fmtRelative(latest.ts)} · may be stale`;
+    metaEl.classList.add("commentary-meta--stale");
+  } else {
+    metaEl.textContent = latest.ts ? fmtRelative(latest.ts) : "";
+    metaEl.classList.remove("commentary-meta--stale");
+  }
 }
 
-function renderModelStats(bt) {
-  const section = document.getElementById("model-section");
+function renderChart(readings, range) {
+  let filtered = readings;
+  if (range !== "all") {
+    const cutoff = Date.now() - parseInt(range, 10) * 86400 * 1000;
+    filtered     = readings.filter(r => new Date(r.timestamp).getTime() >= cutoff);
+  }
+  const labels = filtered.map(r => fmtDate(r.timestamp));
+  const data22 = filtered.map(r => r["22k"]);
 
-  if (!bt || !bt.model) {
-    section.hidden = true;
+  const goldLine  = "#D4932A";
+  const axisColor = "#9a9282";
+  const gridColor = "#3A3028";
+  const ctx       = document.getElementById("chart");
+
+  if (chart) chart.destroy();
+  const c2d      = ctx.getContext("2d");
+  const gradient = c2d.createLinearGradient(0, 0, 0, ctx.height || 320);
+  gradient.addColorStop(0, "rgba(212,147,42,0.30)");
+  gradient.addColorStop(1, "rgba(212,147,42,0.00)");
+
+  chart = new Chart(ctx, {
+    type: "line",
+    data: {
+      labels,
+      datasets: [{
+        label: "22K (₹/g)",
+        data: data22,
+        borderColor: goldLine,
+        backgroundColor: gradient,
+        fill: true,
+        borderWidth: 2,
+        pointRadius: filtered.length > 30 ? 0 : 3,
+        pointBackgroundColor: goldLine,
+        pointBorderWidth: 0,
+        tension: 0.3,
+        spanGaps: true,
+      }],
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      interaction: { mode: "index", intersect: false },
+      plugins: {
+        legend: { display: false },
+        tooltip: {
+          backgroundColor: "#241E16",
+          borderColor: gridColor,
+          borderWidth: 1,
+          titleColor: axisColor,
+          bodyColor: "#F5EDE0",
+          padding: 12,
+          callbacks: {
+            label: (c) => `22K: ₹${fmtINR(c.parsed.y)}`,
+          },
+        },
+      },
+      scales: {
+        x: {
+          ticks:  { color: axisColor, maxTicksLimit: 6, font: { family: "DM Sans", size: 11 } },
+          grid:   { color: "transparent" },
+          border: { color: gridColor },
+        },
+        y: {
+          ticks:  { color: axisColor, font: { family: "DM Sans", size: 11 }, callback: (v) => "₹" + fmtINR(v) },
+          grid:   { color: gridColor },
+          border: { display: false },
+        },
+      },
+    },
+  });
+}
+
+function renderHistory(readings) {
+  const tbody    = document.getElementById("history-body");
+  const cardList = document.getElementById("history-cards");
+  const showBtn  = document.getElementById("history-show-all");
+  const wrap     = document.getElementById("history-wrap");
+
+  const EMPTY_TABLE = `<tr><td colspan="5" class="empty">No readings yet.</td></tr>`;
+  const EMPTY_CARDS = `<li class="hcard-empty">No readings yet.</li>`;
+
+  if (readings.length === 0) {
+    tbody.innerHTML    = EMPTY_TABLE;
+    cardList.innerHTML = EMPTY_CARDS;
     return;
   }
 
-  const m = bt.model;
-  const b = bt.baseline;
+  const rows = [...readings].reverse().slice(0, 50);
 
-  const maeEl = document.getElementById("model-mae");
-  const maeVsEl = document.getElementById("model-mae-vs");
-  const dirEl = document.getElementById("model-dir");
-  const dirVsEl = document.getElementById("model-dir-vs");
-  const foldsEl = document.getElementById("model-folds");
-
-  maeEl.textContent = typeof m.mae === "number" ? `₹${fmtINR(m.mae)}` : "—";
-  if (b && typeof b.mae === "number" && typeof m.mae === "number") {
-    const diff = Math.abs(m.mae - b.mae);
-    const sign = m.mae <= b.mae ? "−" : "+";
-    maeVsEl.textContent = `${sign}₹${fmtINR(diff)} vs naive`;
-  }
-
-  dirEl.textContent =
-    typeof m.direction_acc === "number"
-      ? `${Math.round(m.direction_acc * 100)}%`
-      : "—";
-  if (b && typeof b.direction_acc === "number") {
-    const diff = Math.round((m.direction_acc - b.direction_acc) * 100);
-    const sign = diff >= 0 ? "+" : "";
-    dirVsEl.textContent = `${sign}${diff}pp vs naive`;
-  }
-
-  foldsEl.textContent = typeof bt.folds === "number" ? bt.folds : "—";
-  section.hidden = false;
-}
-
-function renderLivePerf(entries) {
-  const section = document.getElementById("live-perf-section");
-  if (!Array.isArray(entries) || entries.length === 0) {
-    section.hidden = true;
-    return;
-  }
-
-  const now = Date.now();
-  const cutoff7d = now - 7 * 24 * 3600 * 1000;
-  const recent = entries.filter(
-    (e) => e.residual != null && new Date(e.ts).getTime() >= cutoff7d
-  );
-
-  const rollingMae =
-    recent.length > 0
-      ? recent.reduce((s, e) => s + Math.abs(e.residual), 0) / recent.length
-      : null;
-
-  // baseline_mae from most recent entry that has it
-  const withBaseline = [...entries].reverse().find((e) => e.baseline_mae != null);
-  const baselineMae = withBaseline ? withBaseline.baseline_mae : null;
-
-  const rollingEl = document.getElementById("perf-rolling-mae");
-  const baselineEl = document.getElementById("perf-baseline-mae");
-  const ratioEl = document.getElementById("perf-drift-ratio");
-  const subEl = document.getElementById("perf-drift-sub");
-
-  rollingEl.textContent = rollingMae != null ? `₹${fmtINR(Math.round(rollingMae))}` : "—";
-  baselineEl.textContent = baselineMae != null ? `₹${fmtINR(Math.round(baselineMae))}` : "—";
-
-  if (rollingMae != null && baselineMae != null && baselineMae > 0) {
-    const ratio = rollingMae / baselineMae;
-    ratioEl.textContent = ratio.toFixed(2);
-    ratioEl.className = "live-perf-value";
-    if (ratio < 1.0) {
-      ratioEl.classList.add("drift-green");
-      subEl.textContent = "on track";
-    } else if (ratio <= 1.5) {
-      ratioEl.classList.add("drift-yellow");
-      subEl.textContent = "watch";
-    } else {
-      ratioEl.classList.add("drift-red");
-      subEl.textContent = "retraining recommended";
+  // Desktop table rows
+  tbody.innerHTML = rows.map((r, i) => {
+    const next = rows[i + 1];
+    let deltaCell = `<span class="delta-flat">—</span>`;
+    if (next && typeof next["22k"] === "number") {
+      const d = r["22k"] - next["22k"];
+      if (d > 0)      deltaCell = `<span class="delta-up">+₹${fmtINR(d)}</span>`;
+      else if (d < 0) deltaCell = `<span class="delta-down">−₹${fmtINR(Math.abs(d))}</span>`;
+      else            deltaCell = `<span class="delta-flat">±0</span>`;
     }
-  } else {
-    ratioEl.textContent = "—";
-    subEl.textContent = "";
-  }
+    return `<tr>
+      <td>${fmtDate(r.timestamp)}</td>
+      <td class="num">${rupee(r["22k"])}</td>
+      <td class="num">${rupee(r["24k"])}</td>
+      <td class="num">${rupee(r["18k"])}</td>
+      <td class="num">${deltaCell}</td>
+    </tr>`;
+  }).join("");
 
-  section.hidden = false;
+  // Mobile card list
+  cardList.innerHTML = rows.map((r, i) => {
+    const next = rows[i + 1];
+    let deltaHtml = "";
+    if (next && typeof next["22k"] === "number") {
+      const d = r["22k"] - next["22k"];
+      if (d > 0)      deltaHtml = `<span class="hcard-delta hcard-delta--up">↑ ₹${fmtINR(d)}</span>`;
+      else if (d < 0) deltaHtml = `<span class="hcard-delta hcard-delta--down">↓ ₹${fmtINR(Math.abs(d))}</span>`;
+      else            deltaHtml = `<span class="hcard-delta hcard-delta--flat">±0</span>`;
+    }
+    return `<li class="history-card">
+      <span class="hcard-time">${fmtDate(r.timestamp)}</span>
+      <span class="hcard-price">${rupee(r["22k"])}</span>
+      ${deltaHtml}
+    </li>`;
+  }).join("");
+
+  // Show-all toggle
+  if (showBtn) {
+    showBtn.hidden    = false;
+    showBtn.textContent = `Show all (${rows.length})`;
+    showBtn.onclick   = () => {
+      const expanded = wrap.classList.toggle("history--expanded");
+      showBtn.textContent = expanded ? "Show less" : `Show all (${rows.length})`;
+    };
+  }
 }
 
-function renderAccuracy(entries) {
-  const section      = document.getElementById("accuracy-section");
-  const collectingEl = document.getElementById("accuracy-collecting");
-  const cardsEl      = document.getElementById("accuracy-cards");
-  const windowEl     = document.getElementById("accuracy-window");
+function renderMethodology(fc, bt, drift) {
+  const body = document.getElementById("methodology-body");
+  if (!body) return;
 
-  if (!Array.isArray(entries) || entries.length === 0) {
-    section.hidden = true;
-    return;
+  const parts = [];
+
+  // Verdict rule explanation
+  parts.push(`
+    <div class="meth-section">
+      <h3 class="meth-heading">Verdict rules</h3>
+      <p class="meth-text">Three deterministic buckets. Requires a 7-day slope beyond ±₹100 <em>plus</em> one confirming signal (forecast direction or 30-day mean) to avoid single-noise false alarms.</p>
+      <ul class="meth-list">
+        <li><strong>Trending down:</strong> 7d slope &lt; −₹100 AND (forecast below current OR current below 30d avg)</li>
+        <li><strong>Trending up:</strong> 7d slope &gt; +₹100 AND (forecast above current OR current above 30d avg)</li>
+        <li><strong>Roughly flat:</strong> everything else — slope within ±₹100 or signals conflict</li>
+      </ul>
+    </div>
+  `);
+
+  // Model status banners (warmup / trailing)
+  if (fc) {
+    const threshold = fc.ensemble?.min_readings_for_warmup_clear ?? 30;
+    const realCount = fc.real_readings_count || 0;
+    if (fc.warmup) {
+      parts.push(`
+        <div class="meth-banner meth-banner--warn">
+          ⚠ Model in warmup — forecast unreliable until ${threshold}+ real readings collected.
+          Current: ${realCount} (${Math.max(0, threshold - realCount)} more needed).
+        </div>
+      `);
+    }
+    if (fc.model_status && fc.model_status !== "beating_naive" && fc.model_status !== "unknown") {
+      const vMae = fc.val_mae  != null ? `₹${fmtINR(Math.round(fc.val_mae))}`  : "—";
+      const nMae = fc.naive_mae != null ? `₹${fmtINR(Math.round(fc.naive_mae))}` : "—";
+      const gate = fc.min_readings_for_model_improvement ?? 200;
+      parts.push(`
+        <div class="meth-banner meth-banner--info">
+          Model trailing naive baseline (val MAE ${vMae} vs naive ${nMae}).
+          Improvement gated on ${gate}+ real readings (current: ${realCount}).
+        </div>
+      `);
+    }
   }
 
-  const WINDOW_DAYS = 30;
-  const cutoff = new Date(Date.now() - WINDOW_DAYS * 86400 * 1000);
-
-  const resolved = entries.filter((e) =>
-    e.outcome !== "pending" && e.outcome != null &&
-    new Date(e.decision_date) >= cutoff
-  );
-
-  // Decision accuracy (wait decisions only)
-  const waitResolved = resolved.filter((e) => e.decision === "wait");
-  const nWait = waitResolved.length;
-  const nCorrect = waitResolved.filter((e) => e.outcome === "correct").length;
-  const decisionAcc = nWait > 0 ? nCorrect / nWait : null;
-
-  // MAE
-  const maeEntries = resolved.filter(
-    (e) => typeof e.actual_next_22k === "number" && typeof e.predicted_22k === "number"
-  );
-  const nMae = maeEntries.length;
-  const mae = nMae > 0
-    ? maeEntries.reduce((s, e) => s + Math.abs(e.predicted_22k - e.actual_next_22k), 0) / nMae
-    : null;
-
-  // Directional accuracy
-  const dirEntries = maeEntries.filter(
-    (e) => typeof e.current_22k === "number" && typeof e.delta === "number"
-  );
-  const nDir = dirEntries.length;
-  const dirAcc = nDir > 0
-    ? dirEntries.filter((e) => (e.actual_next_22k - e.current_22k) * e.delta > 0).length / nDir
-    : null;
-
-  const hasAnyResolved = resolved.length > 0;
-  const hasAnyMae = nMae > 0;
-
-  if (!hasAnyResolved && !hasAnyMae) {
-    collectingEl.hidden = false;
-    cardsEl.hidden = true;
-    section.hidden = false;
-    windowEl.textContent = "";
-    return;
+  // Forecast details
+  if (fc && typeof fc.predicted_22k === "number") {
+    const hasPI = typeof fc.lower === "number" && typeof fc.upper === "number";
+    parts.push(`
+      <div class="meth-section">
+        <h3 class="meth-heading">Next-day forecast (LightGBM)</h3>
+        <div class="meth-stats">
+          <div class="meth-stat">
+            <div class="meth-stat-label">22K estimate</div>
+            <div class="meth-stat-value">₹${fmtINR(fc.predicted_22k)}</div>
+            ${hasPI ? `<div class="meth-stat-sub">80% PI: ₹${fmtINR(fc.lower)} – ₹${fmtINR(fc.upper)}</div>` : ""}
+          </div>
+          <div class="meth-stat">
+            <div class="meth-stat-label">Training rows</div>
+            <div class="meth-stat-value">${fc.training_rows ?? "—"}</div>
+            <div class="meth-stat-sub">${fc.real_readings_count ?? 0} real · ${(fc.training_rows ?? 0) - (fc.real_readings_count ?? 0)} seed</div>
+          </div>
+          <div class="meth-stat">
+            <div class="meth-stat-label">Features</div>
+            <div class="meth-stat-value">${fc.feature_count ?? "—"}</div>
+            <div class="meth-stat-sub">model: ${fc.model_version ?? "—"}</div>
+          </div>
+        </div>
+        ${fc.target_time ? `<p class="meth-text" style="margin-top:8px">Target: ${fmtIST(fc.target_time)}</p>` : ""}
+      </div>
+    `);
   }
 
-  collectingEl.hidden = true;
-  cardsEl.hidden = false;
-
-  // Decision accuracy stat
-  const decStatEl = document.getElementById("accuracy-decision-stat");
-  const decValEl  = document.getElementById("accuracy-decision-value");
-  const decNEl    = document.getElementById("accuracy-decision-n");
-  if (decisionAcc !== null) {
-    decValEl.textContent = `${Math.round(decisionAcc * 100)}%`;
-    decNEl.textContent = `n=${nWait} wait signals`;
-    decStatEl.hidden = false;
-  } else {
-    decValEl.textContent = "—";
-    decNEl.textContent = nWait === 0 ? "no wait signals yet" : "";
-    decStatEl.hidden = false;
+  // Backtest stats
+  if (bt && bt.model) {
+    const m       = bt.model;
+    const b       = bt.baseline;
+    const maeDiff = b ? Math.round(m.mae - b.mae)                              : null;
+    const dirDiff = b ? Math.round((m.direction_acc - b.direction_acc) * 100)  : null;
+    parts.push(`
+      <div class="meth-section">
+        <h3 class="meth-heading">90-day walk-forward backtest (${bt.folds ?? "—"} folds)</h3>
+        <div class="meth-stats">
+          <div class="meth-stat">
+            <div class="meth-stat-label">MAE</div>
+            <div class="meth-stat-value">₹${fmtINR(Math.round(m.mae))}</div>
+            ${maeDiff !== null ? `<div class="meth-stat-sub">${maeDiff >= 0 ? "+" : ""}₹${fmtINR(Math.abs(maeDiff))} vs naive (₹${fmtINR(Math.round(b.mae))})</div>` : ""}
+          </div>
+          <div class="meth-stat">
+            <div class="meth-stat-label">Direction</div>
+            <div class="meth-stat-value">${Math.round(m.direction_acc * 100)}%</div>
+            ${dirDiff !== null ? `<div class="meth-stat-sub">${dirDiff >= 0 ? "+" : ""}${dirDiff}pp vs naive (${Math.round(b.direction_acc * 100)}%)</div>` : ""}
+          </div>
+          <div class="meth-stat">
+            <div class="meth-stat-label">MAPE</div>
+            <div class="meth-stat-value">${m.mape != null ? m.mape.toFixed(2) + "%" : "—"}</div>
+          </div>
+        </div>
+        <p class="meth-note">Naive baseline = predict last value unchanged. Not financial advice. Model partially trained on estimated seed data.</p>
+      </div>
+    `);
   }
 
-  // MAE stat
-  document.getElementById("accuracy-mae-value").textContent =
-    mae !== null ? `₹${fmtINR(Math.round(mae))}` : "—";
-  document.getElementById("accuracy-mae-n").textContent =
-    nMae > 0 ? `n=${nMae}` : "collecting";
+  // Live drift
+  if (Array.isArray(drift) && drift.length > 0) {
+    const now      = Date.now();
+    const recent7d = drift.filter(e => e.residual != null && now - new Date(e.ts).getTime() <= 7 * 86400e3);
+    const rolling  = recent7d.length > 0
+      ? Math.round(recent7d.reduce((s, e) => s + Math.abs(e.residual), 0) / recent7d.length)
+      : null;
+    const withBase = [...drift].reverse().find(e => e.baseline_mae != null);
+    const baseMae  = withBase ? Math.round(withBase.baseline_mae) : null;
+    const ratio    = rolling != null && baseMae ? (rolling / baseMae).toFixed(2) : null;
+    const ratioLabel = ratio
+      ? (parseFloat(ratio) < 1 ? "on track" : parseFloat(ratio) <= 1.5 ? "watch" : "retraining recommended")
+      : "";
+    parts.push(`
+      <div class="meth-section">
+        <h3 class="meth-heading">Live forecast accuracy (7-day rolling)</h3>
+        <div class="meth-stats">
+          <div class="meth-stat">
+            <div class="meth-stat-label">Rolling MAE</div>
+            <div class="meth-stat-value">${rolling != null ? "₹" + fmtINR(rolling) : "—"}</div>
+          </div>
+          <div class="meth-stat">
+            <div class="meth-stat-label">Baseline MAE</div>
+            <div class="meth-stat-value">${baseMae != null ? "₹" + fmtINR(baseMae) : "—"}</div>
+          </div>
+          <div class="meth-stat">
+            <div class="meth-stat-label">Drift ratio</div>
+            <div class="meth-stat-value">${ratio ?? "—"}</div>
+            <div class="meth-stat-sub">${ratioLabel}</div>
+          </div>
+        </div>
+      </div>
+    `);
+  }
 
-  // Directional stat
-  document.getElementById("accuracy-dir-value").textContent =
-    dirAcc !== null ? `${Math.round(dirAcc * 100)}%` : "—";
-  document.getElementById("accuracy-dir-n").textContent =
-    nDir > 0 ? `n=${nDir}` : "collecting";
-
-  windowEl.textContent = `Rolling ${WINDOW_DAYS}-day window · ${resolved.length} resolved predictions`;
-  section.hidden = false;
+  body.innerHTML = parts.join("");
 }
 
 function bindRangeToggle() {
   const buttons = document.querySelectorAll(".range-toggle button");
-  buttons.forEach((btn) => {
+  buttons.forEach(btn => {
     btn.addEventListener("click", () => {
-      buttons.forEach((b) => b.classList.remove("active"));
+      buttons.forEach(b => { b.classList.remove("active"); b.setAttribute("aria-selected", "false"); });
       btn.classList.add("active");
+      btn.setAttribute("aria-selected", "true");
       renderChart(allReadings, btn.dataset.range);
     });
   });
 }
 
+// ─── INIT ─────────────────────────────────────────────────────────────────────
+
 (async function init() {
   bindRangeToggle();
 
-  // Load prices (required)
+  // Load prices (critical path)
   try {
     allReadings = await load();
   } catch (err) {
     console.error(err);
-    document.getElementById("hero-price").textContent = "Error";
-    const errPill = document.getElementById("updated-pill");
-    if (errPill) errPill.textContent = "Could not load data";
-    document.getElementById("history-body").innerHTML =
-      `<tr><td colspan="5" class="empty">Failed to load prices.json. If you just deployed, run the workflow once from the Actions tab.</td></tr>`;
+    const skelEl = document.getElementById("hero-skeleton");
+    if (skelEl) skelEl.hidden = true;
+    const priceEl = document.getElementById("hero-price");
+    if (priceEl) { priceEl.textContent = "Error loading data"; priceEl.hidden = false; }
+    document.getElementById("commentary-text").textContent =
+      "Could not load price data. If you just deployed, run the workflow once from the Actions tab.";
     return;
   }
-  renderHero(allReadings);
+
+  // Forecast loads in parallel — needed for verdict.
+  const fcPromise = loadJSON(FORECAST_URL).catch(() => null);
+
+  // Render everything that doesn't need forecast immediately.
+  renderFreshness(allReadings);
+  renderComparisons(allReadings);
   renderHistory(allReadings);
   renderChart(allReadings, "7");
 
-  // Load ML/LLM data (all optional — degrade gracefully on any failure)
-  const [fc, bt, commentary, drift, metrics] = await Promise.allSettled([
-    loadJSON(FORECAST_URL),
+  // Await forecast, then render hero (hides skeleton, shows verdict).
+  const fc = await fcPromise;
+  renderHero(allReadings, fc);
+
+  // Remaining optional data (all gracefully degrade on failure).
+  const [bt, commentary, drift] = await Promise.allSettled([
     loadJSON(BACKTEST_URL),
     loadJSON(COMMENTARY_URL),
     loadJSON(DRIFT_URL),
-    loadJSON(METRICS_URL),
   ]);
 
-  renderForecast(fc.status === "fulfilled" ? fc.value : null);
-  renderAccuracy(metrics.status === "fulfilled" ? metrics.value : null);
-  renderLivePerf(drift.status === "fulfilled" ? drift.value : null);
-  renderModelStats(bt.status === "fulfilled" ? bt.value : null);
   renderCommentary(commentary.status === "fulfilled" ? commentary.value : null);
+  renderMethodology(
+    fc,
+    bt.status        === "fulfilled" ? bt.value        : null,
+    drift.status     === "fulfilled" ? drift.value     : null,
+  );
 })();

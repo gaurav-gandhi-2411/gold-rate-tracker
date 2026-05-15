@@ -3,12 +3,12 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-    <title>Gold Rate</title>
-    <meta name="description" content="Live gold rate tracker, 22K / 24K / 18K, with trend charts." />
+    <title>Gold Rate · Should I buy today?</title>
+    <meta name="description" content="Live 22K gold rate from Tanishq with a buyer-focused verdict: trending up, flat, or down." />
 
     <!-- PWA -->
     <link rel="manifest" href="manifest.webmanifest" />
-    <meta name="theme-color" content="#0e0c0a" />
+    <meta name="theme-color" content="#1A1612" />
     <link rel="apple-touch-icon" href="icons/icon-192.png" />
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
@@ -17,199 +17,160 @@
     <!-- Fonts -->
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <link
-      href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,700&family=DM+Sans:wght@400;500;700&display=swap"
-      rel="stylesheet"
-    />
-
+    <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,700&family=DM+Sans:wght@400;500;700&display=swap" rel="stylesheet" />
     <link rel="stylesheet" href="style.css" />
   </head>
   <body>
-    <!-- Subtle grain overlay for depth -->
     <div class="grain" aria-hidden="true"></div>
 
-    <!-- Sticky freshness pill — always visible at top on mobile -->
-    <div class="freshness-pill" aria-live="polite">
-      <div id="warmup-banner" class="warmup-banner" hidden></div>
-      <div id="model-status-banner" class="model-status-banner" hidden></div>
-      <span class="updated" id="updated-pill">—</span>
+    <!-- 1. UTILITY ROW — sticky top -->
+    <div class="utility-row" id="utility-row" aria-live="polite">
+      <span class="freshness-pill" id="freshness-pill">—</span>
+      <span class="location-label" aria-label="Data source">Bengaluru · Tanishq retail</span>
     </div>
 
     <main>
-      <header class="topbar">
-        <div class="logo">
-          <span class="logo-mark">Au</span>
-          <span class="logo-text">Gold Rate</span>
-        </div>
-      </header>
+      <!-- 2. HERO CARD -->
+      <section class="hero-card" aria-label="Current 22K gold price and buying verdict">
 
-      <section class="hero">
-        <p class="eyebrow">22 Karat · per gram</p>
-        <h1 class="price" id="hero-price">—</h1>
-        <div class="change" id="hero-change" hidden>
-          <span class="arrow"></span>
-          <span class="amount"></span>
-          <span class="vs">vs previous reading</span>
+        <!-- Skeleton shown while loading -->
+        <div class="hero-skeleton" id="hero-skeleton" aria-hidden="true">
+          <div class="skel skel-eyebrow"></div>
+          <div class="skel skel-price"></div>
+          <div class="skel skel-change"></div>
+          <div class="skel skel-verdict"></div>
+          <div class="skel skel-spark"></div>
+        </div>
+
+        <p class="eyebrow" id="hero-eyebrow" hidden>22K gold · per gram</p>
+        <h1 class="hero-price" id="hero-price" hidden>—</h1>
+
+        <div class="hero-change" id="hero-change" hidden aria-live="polite">
+          <span class="hero-change-arrow" aria-hidden="true"></span>
+          <span class="hero-change-amount"></span>
+          <span class="hero-change-label">today</span>
+        </div>
+
+        <!-- VERDICT BANNER -->
+        <div class="verdict-banner" id="verdict-banner" hidden role="status" aria-live="polite">
+          <div class="verdict-header">
+            <span class="verdict-icon" id="verdict-icon" aria-hidden="true"></span>
+            <span class="verdict-headline" id="verdict-headline"></span>
+          </div>
+          <p class="verdict-reason" id="verdict-reason"></p>
+        </div>
+
+        <!-- 7-day SVG sparkline -->
+        <div class="sparkline-wrap" id="sparkline-wrap" hidden>
+          <span class="sparkline-label-left">7 days</span>
+          <svg class="sparkline" id="sparkline"
+               viewBox="0 0 300 56"
+               preserveAspectRatio="none"
+               role="img"
+               aria-label="7-day price trend">
+          </svg>
+          <span class="sparkline-label-right" id="sparkline-range"></span>
         </div>
       </section>
 
-      <section class="rate-cards">
-        <article class="rate-card primary">
-          <header>22 KT</header>
-          <div class="rate" id="rate-22">—</div>
-          <footer>22 parts gold · 2 parts alloy</footer>
-        </article>
-        <article class="rate-card">
-          <header>24 KT</header>
-          <div class="rate" id="rate-24">—</div>
-          <footer>99.9% pure</footer>
-        </article>
-        <article class="rate-card">
-          <header>18 KT</header>
-          <div class="rate" id="rate-18">—</div>
-          <footer>75% pure</footer>
-        </article>
+      <!-- 3. COMPARISON CARDS -->
+      <section class="comparison-section" id="comparison-section" hidden
+               aria-label="How today's price compares to recent averages">
+        <div class="comparison-cards">
+          <div class="comparison-card" id="cmp-7d">
+            <div class="cmp-label">vs 7-day avg</div>
+            <div class="cmp-value" id="cmp-7d-value">—</div>
+            <div class="cmp-sub" id="cmp-7d-sub"></div>
+          </div>
+          <div class="comparison-card" id="cmp-30d">
+            <div class="cmp-label">vs 30-day avg</div>
+            <div class="cmp-value" id="cmp-30d-value">—</div>
+            <div class="cmp-sub" id="cmp-30d-sub"></div>
+          </div>
+          <div class="comparison-card" id="cmp-low">
+            <div class="cmp-label">vs period low</div>
+            <div class="cmp-value" id="cmp-low-value">—</div>
+            <div class="cmp-sub" id="cmp-low-sub"></div>
+          </div>
+        </div>
       </section>
 
-      <!-- Today's market note (LLM commentary) -->
-      <section class="commentary-section" id="commentary-section" hidden>
+      <!-- 4. OTHER KARATS — compact strip -->
+      <section class="karat-strip" aria-label="24K and 18K gold prices">
+        <div class="karat-card">
+          <span class="karat-label">24 KT</span>
+          <span class="karat-price" id="rate-24">—</span>
+          <span class="karat-sub">per gram · 99.9% pure</span>
+        </div>
+        <div class="karat-card">
+          <span class="karat-label">18 KT</span>
+          <span class="karat-price" id="rate-18">—</span>
+          <span class="karat-sub">per gram · 75% pure</span>
+        </div>
+      </section>
+
+      <!-- 5. COMMENTARY CARD — always visible -->
+      <section class="commentary-section" aria-label="Market commentary">
         <div class="commentary-card">
-          <p class="commentary-label">Today's note</p>
-          <p class="commentary-text" id="commentary-text">—</p>
+          <p class="commentary-eyebrow">
+            <span aria-hidden="true">✨</span> Today's read
+          </p>
+          <p class="commentary-text" id="commentary-text">Loading…</p>
           <p class="commentary-meta" id="commentary-meta"></p>
         </div>
       </section>
 
-      <!-- Forecast card -->
-      <section class="forecast-section" id="forecast-section" hidden>
-        <h2>Forecast</h2>
-        <div class="forecast-card">
-          <div class="forecast-main">
-            <div class="forecast-label">22K estimate · next midnight UTC (5:30 AM IST)</div>
-            <div class="forecast-price" id="forecast-price">—</div>
-            <div class="forecast-warmup" id="forecast-warmup" hidden></div>
-            <div class="forecast-interval" id="forecast-interval"></div>
-          </div>
-          <div class="forecast-meta">
-            <div class="forecast-target" id="forecast-target"></div>
-            <div class="forecast-generated" id="forecast-generated"></div>
-          </div>
-          <details class="forecast-why" id="forecast-why" hidden>
-            <summary>Why this estimate?</summary>
-            <div class="forecast-why-body" id="forecast-why-body"></div>
-          </details>
-        </div>
-      </section>
-
-      <!-- Model accuracy card (real-data track) -->
-      <section class="accuracy-section" id="accuracy-section" hidden>
-        <h2>Model accuracy <span class="accuracy-track-badge">real-data track</span></h2>
-        <div class="accuracy-collecting" id="accuracy-collecting" hidden>
-          Collecting metrics — first decision-accuracy result in ~5 trading days.
-        </div>
-        <div class="accuracy-cards" id="accuracy-cards" hidden>
-          <div class="accuracy-stat" id="accuracy-decision-stat" hidden>
-            <div class="accuracy-stat-label">Decision accuracy</div>
-            <div class="accuracy-stat-value" id="accuracy-decision-value">—</div>
-            <div class="accuracy-stat-sub" id="accuracy-decision-n"></div>
-          </div>
-          <div class="accuracy-stat">
-            <div class="accuracy-stat-label">Mean error (MAE)</div>
-            <div class="accuracy-stat-value" id="accuracy-mae-value">—</div>
-            <div class="accuracy-stat-sub" id="accuracy-mae-n"></div>
-          </div>
-          <div class="accuracy-stat">
-            <div class="accuracy-stat-label">Direction correct</div>
-            <div class="accuracy-stat-value" id="accuracy-dir-value">—</div>
-            <div class="accuracy-stat-sub" id="accuracy-dir-n"></div>
-          </div>
-        </div>
-        <p class="accuracy-window" id="accuracy-window"></p>
-      </section>
-
-      <section class="chart-section">
+      <!-- 6. FULL TREND CHART -->
+      <section class="chart-section" aria-label="Price trend chart">
         <div class="chart-header">
-          <h2>Trend</h2>
-          <div class="range-toggle" role="tablist">
-            <button data-range="7" class="active" role="tab">7d</button>
-            <button data-range="30" role="tab">30d</button>
-            <button data-range="all" role="tab">All</button>
+          <h2>Price trend</h2>
+          <div class="range-toggle" role="tablist" aria-label="Chart time range">
+            <button data-range="7" class="active" role="tab" aria-selected="true">7d</button>
+            <button data-range="30" role="tab" aria-selected="false">30d</button>
+            <button data-range="all" role="tab" aria-selected="false">All</button>
           </div>
         </div>
         <div class="chart-wrap">
-          <canvas id="chart"></canvas>
+          <canvas id="chart" role="img" aria-label="Gold price trend chart"></canvas>
         </div>
       </section>
 
-      <!-- Model drift card: rolling MAE vs training baseline -->
-      <section class="live-perf-section" id="live-perf-section" hidden>
-        <h2>Model drift</h2>
-        <p class="live-perf-subtitle">This week's forecast accuracy vs training baseline</p>
-        <div class="live-perf-cards">
-          <div class="live-perf-stat">
-            <div class="live-perf-label">7-day error (MAE)</div>
-            <div class="live-perf-value" id="perf-rolling-mae">—</div>
-          </div>
-          <div class="live-perf-stat">
-            <div class="live-perf-label">Baseline error (MAE)</div>
-            <div class="live-perf-value" id="perf-baseline-mae">—</div>
-          </div>
-          <div class="live-perf-stat">
-            <div class="live-perf-label">Drift ratio</div>
-            <div class="live-perf-value" id="perf-drift-ratio">—</div>
-            <div class="live-perf-sub" id="perf-drift-sub"></div>
-          </div>
-        </div>
-      </section>
-
-      <section class="history-section">
+      <!-- 7. HISTORY -->
+      <section class="history-section" aria-label="Price history">
         <h2>History</h2>
-        <div class="history-wrap">
-          <table class="history">
+        <div class="history-wrap" id="history-wrap">
+          <!-- Desktop table (≥640px) -->
+          <table class="history history-table">
             <thead>
               <tr>
-                <th>When</th>
-                <th class="num">22K</th>
-                <th class="num">24K</th>
-                <th class="num">18K</th>
-                <th class="num">Δ 22K</th>
+                <th scope="col">When</th>
+                <th scope="col" class="num">22K</th>
+                <th scope="col" class="num">24K</th>
+                <th scope="col" class="num">18K</th>
+                <th scope="col" class="num">Δ 22K</th>
               </tr>
             </thead>
             <tbody id="history-body">
               <tr><td colspan="5" class="empty">Loading…</td></tr>
             </tbody>
           </table>
+          <!-- Mobile card list (<640px) -->
+          <ul class="history-cards" id="history-cards" aria-label="Price readings"></ul>
         </div>
-        <button class="history-show-all" id="history-show-all"></button>
+        <button class="history-show-all" id="history-show-all" hidden></button>
       </section>
 
-      <!-- Model performance (backtest stats) -->
-      <section class="model-section" id="model-section" hidden>
-        <h2>Model performance</h2>
-        <div class="model-cards">
-          <div class="model-stat">
-            <div class="model-stat-label">MAE (90-day backtest)</div>
-            <div class="model-stat-value" id="model-mae">—</div>
-            <div class="model-stat-sub" id="model-mae-vs"></div>
-          </div>
-          <div class="model-stat">
-            <div class="model-stat-label">Direction accuracy</div>
-            <div class="model-stat-value" id="model-dir">—</div>
-            <div class="model-stat-sub" id="model-dir-vs"></div>
-          </div>
-          <div class="model-stat">
-            <div class="model-stat-label">Folds</div>
-            <div class="model-stat-value" id="model-folds">—</div>
-            <div class="model-stat-sub">walk-forward</div>
-          </div>
+      <!-- 8. METHODOLOGY ACCORDION -->
+      <details class="methodology" id="methodology">
+        <summary class="methodology-summary">
+          How this verdict is calculated · model accuracy · backtest
+        </summary>
+        <div class="methodology-body" id="methodology-body">
+          <p class="meth-loading">Loading model details…</p>
         </div>
-        <p class="model-note">
-          LightGBM regressor trained on differenced 22K target (delta, not level).
-          Naive baseline = predict last value unchanged.
-          Not financial advice — model trained on estimated seed data.
-        </p>
-      </section>
+      </details>
 
+      <!-- 9. FOOTER -->
       <footer class="site-footer">
         <p>
           Source: <a href="https://www.tanishq.co.in/gold-rate.html?lang=en_IN" target="_blank" rel="noopener">Tanishq</a>.
