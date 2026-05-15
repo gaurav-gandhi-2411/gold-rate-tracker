@@ -54,6 +54,23 @@ _LGB_BASE = dict(
     verbose=-1,
 )
 
+# bd602a6 regularized params for small-data regime (num_leaves=16, lr=0.02,
+# min_data_in_leaf=40, lambda_l2=1.0). n_estimators=500 approximates the
+# effective budget of 2000 iters + early_stop=100 without a validation split.
+_LGB_TUNED = dict(
+    n_estimators=500,
+    max_depth=4,
+    learning_rate=0.02,
+    num_leaves=16,
+    min_child_samples=40,
+    colsample_bytree=0.6,
+    subsample=0.7,
+    subsample_freq=1,
+    reg_lambda=1.0,
+    random_state=42,
+    verbose=-1,
+)
+
 
 def _load_json(path: Path) -> list:
     if not path.exists():
@@ -168,6 +185,16 @@ def _make_lgb(objective: str, alpha: float | None = None):
     import lightgbm as lgb  # lazy import so import error surfaces clearly
 
     params = dict(**_LGB_BASE, objective=objective)
+    if alpha is not None:
+        params["alpha"] = alpha
+    return lgb.LGBMRegressor(**params)
+
+
+def _make_lgb_tuned(objective: str, alpha: float | None = None):
+    """LGBMRegressor with bd602a6 regularization params (for backtest comparison)."""
+    import lightgbm as lgb
+
+    params = dict(**_LGB_TUNED, objective=objective)
     if alpha is not None:
         params["alpha"] = alpha
     return lgb.LGBMRegressor(**params)

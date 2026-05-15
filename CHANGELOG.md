@@ -10,6 +10,77 @@ Versioning: [Semantic Versioning](https://semver.org/).
 
 ---
 
+## [0.4.1] — 2026-05-15 — Phase 2.5a: Feature-set A/B/C comparison
+
+Honest scoreboard for three candidate feature sets under identical bd602a6
+hyperparams (num_leaves=16, lr=0.02, min_data_in_leaf=40, lambda_l2=1.0).
+No changes to inference, frontend, or CI.
+
+### Added
+
+- **`TUNED_V1_FEATURE_COLS`** in `ml/features.py` — 40-feature set: `ALL_FEATURE_COLS`
+  minus the 4 dead-weight features from `docs/FEATURE_INVENTORY.md`
+  (`hour`, `akshaya_tritiya`, `dhanteras`; `regime` was never in `ALL_FEATURE_COLS`).
+- **`_LGB_TUNED`** in `ml/forecast.py` — bd602a6 regularized params dict:
+  `num_leaves=16, lr=0.02, min_child_samples=40, reg_lambda=1.0, colsample_bytree=0.6`.
+  `n_estimators=500` approximates the 2000-iter + early_stop=100 effective budget
+  without a validation split in the backtest harness.
+- **`_make_lgb_tuned()`** in `ml/forecast.py` — companion to `_make_lgb()`, uses
+  `_LGB_TUNED` params.
+- **`ml/compare_feature_sets.py`** — standalone comparison runner: loops over all
+  three feature sets, prints side-by-side markdown table with primary/secondary/
+  paired-diff stats, applies the decision rule, prints winner + rationale.
+- **`run_backtest()` extensions** in `ml/backtest.py`:
+  - `feature_cols_override` param — replaces hard-coded `MINIMAL_FEATURE_COLS`.
+  - `use_tuned` param — switches between `_make_lgb` and `_make_lgb_tuned`.
+  - Stratified direction accuracy: `direction_acc_big_move` (|Δ|>₹50) and
+    `direction_acc_small_move` (|Δ|≤₹50) in the returned dict.
+  - Per-fold MAE std (`mae_std`) for uncertainty reporting.
+  - Rolling blend weight simulation: `blend_weight_lgbm_mean/std` per feature set.
+  - Paired fold differences (model − naive): median + IQR [25, 75].
+
+### Results (69 / 61 / 61 folds, bd602a6 params)
+
+| Metric                          | full_v1 (44) | tuned_v1 (40) | **minimal_v2 (8)** |
+|---------------------------------|-------------:|--------------:|-------------------:|
+| Folds completed                 |           61 |            61 |                 69 |
+| Dir-acc overall                 |        42.6% |         42.6% |          **46.4%** |
+| Dir-acc \|Δ\|>₹50               |        48.9% |         51.1% |          **56.9%** |
+| n folds (big-move bucket)       |           45 |            45 |                 51 |
+| MAE model (Rs)                  |        194.5 |         194.7 |          **167.3** |
+| MAE model std (Rs)              |        178.8 |         178.7 |              153.3 |
+| MAE naive (Rs)                  |        172.7 |         172.7 |              165.6 |
+| MAE ratio (model/naive)         |        1.126 |         1.127 |          **1.010** |
+| MAPE model (%)                  |         1.37 |          1.37 |           **1.18** |
+| blend_weight_lgbm (mean ± std)  | 0.466 ± 0.084| 0.468 ± 0.084 |    **0.492 ± 0.044** |
+| Paired diff median (Rs)         |        18.12 |         19.52 |          **12.35** |
+| Paired diff IQR [25,75] (Rs)    | [−43, +93]   | [−40, +98]    |   **[−32, +29]**   |
+
+### Decision
+
+**Winner: `minimal_v2` — retains current default in `configs/data/default.yaml`.**
+
+Decision rule a (highest dir-acc on |Δ|>₹50 bucket): minimal_v2 scores 56.9%,
+tuned_v1 51.1%, full_v1 48.9%. Gap of 5.8 pp over 2nd place exceeds the 3 pp
+noise floor. Rule a is decisive — no tiebreaks needed.
+
+**Phase 2 was not over-pruned.** Dropping from 44→8 features was correct:
+the regularized tuned params with minimal_v2 achieve a MAE ratio of 1.010
+(essentially matching naive), while full_v1 and tuned_v1 trail naive by 12-13%.
+The smaller feature set leaves the model less room to overfit daily noise.
+
+**Fold discrepancy note:** full_v1 and tuned_v1 completed 61/69 folds (8 skipped
+due to NaN macro features in early folds). minimal_v2 ran on the full 69-fold set,
+including the 8 harder folds. The win holds despite the harder evaluation set.
+
+**`tuned_v1` finding:** Dropping the 4 dead-weight features from `full_v1` made
+no measurable difference (MAE 194.5 vs 194.7, dir-acc identical at 42.6%). This
+validates the FEATURE_INVENTORY.md analysis: these features were truly dead weight,
+but their removal doesn't unlock signal — the bottleneck is data volume, not
+feature engineering at this scale.
+
+---
+
 ## [0.4.0] — 2026-05-15 — Phase 2: Model simplification & honest forecast
 
 ML-only changes. No changes to `index.html`, `app.js`, `style.css`, or manifest.

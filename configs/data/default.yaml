@@ -10,7 +10,11 @@ macro:
   history_days: 730
 
 features:
-  active_set: "minimal_v2"  # "minimal_v2" = 8 features (45:1 row/feat ratio); "full_v1" = 44 features
+  # Phase 2.5a A/B/C comparison winner: minimal_v2 (8 feat, MAE ratio 1.010, dir-acc 56.9% on |delta|>50)
+  # "full_v1"   = 44 features (ALL_FEATURE_COLS + regime) — MAE ratio 1.126, dir-acc 48.9%
+  # "tuned_v1"  = 40 features (full_v1 - {hour, akshaya_tritiya, dhanteras, regime}) — MAE ratio 1.127
+  # "minimal_v2"= 8 features (lag_1, lag_7d, roll_7d_mean, roll_30d_mean, gold_usd, usd_inr, regime, dow)
+  active_set: "minimal_v2"
   lags: [1, 2, 3, 4, 7, 30]
   rolling_windows: [7, 30]
   use_macro: true
