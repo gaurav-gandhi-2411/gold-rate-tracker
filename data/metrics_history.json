@@ -17,5 +17,24 @@
     "track": "real",
     "model_version": "lgbm-only",
     "real_readings_count": 61
+  },
+  {
+    "decision_date": "2026-05-15",
+    "predicted_at": "2026-05-15T04:00:53.527073+00:00",
+    "current_22k": 14845,
+    "predicted_22k": 14872,
+    "delta": 27.0,
+    "lower": 14693,
+    "upper": 15120,
+    "decision": "neutral",
+    "outcome_window_days": 5,
+    "outcome_resolved_at": null,
+    "outcome": "pending",
+    "min_future_price": null,
+    "actual_next_22k": null,
+    "drop_threshold": 100.0,
+    "track": "real",
+    "model_version": "lgbm-only",
+    "real_readings_count": 64
   }
 ]
