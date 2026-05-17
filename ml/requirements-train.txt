@@ -8,7 +8,7 @@
 
 # Core ML
 lightgbm>=4.0
-darts>=0.26
+darts>=0.44.1
 onnx>=1.21.0
 
 # Experiment tracking
