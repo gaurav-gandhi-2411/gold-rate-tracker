@@ -1,9 +1,6 @@
 """Tests for ml/metrics.py."""
 
-from datetime import datetime, timezone
 from pathlib import Path
-
-import pytest
 
 from ml.metrics import (
     DROP_THRESHOLD,
@@ -12,7 +9,6 @@ from ml.metrics import (
     compute_decision,
     record_prediction,
     resolve_outcome,
-    resolve_pending,
 )
 
 # ---------------------------------------------------------------------------
@@ -96,14 +92,16 @@ def test_decision_buy_now_boundary():
 def test_outcome_correct():
     """5 future prices with min ≤ current - 100 → correct."""
     entry = _entry(decision_date="2026-05-01", current_22k=14845, decision="wait")
-    prices = _prices([
-        ("2026-05-01", 14845),
-        ("2026-05-02", 14700),  # drop of 145 — correct
-        ("2026-05-03", 14720),
-        ("2026-05-04", 14750),
-        ("2026-05-05", 14780),
-        ("2026-05-06", 14800),
-    ])
+    prices = _prices(
+        [
+            ("2026-05-01", 14845),
+            ("2026-05-02", 14700),  # drop of 145 — correct
+            ("2026-05-03", 14720),
+            ("2026-05-04", 14750),
+            ("2026-05-05", 14780),
+            ("2026-05-06", 14800),
+        ]
+    )
     result = resolve_outcome(entry, prices)
     assert result["outcome"] == "correct"
     assert result["min_future_price"] == 14700
@@ -112,14 +110,16 @@ def test_outcome_correct():
 def test_outcome_incorrect():
     """5 future prices all > current - 100 → incorrect."""
     entry = _entry(decision_date="2026-05-01", current_22k=14845, decision="wait")
-    prices = _prices([
-        ("2026-05-01", 14845),
-        ("2026-05-02", 14800),
-        ("2026-05-03", 14810),
-        ("2026-05-04", 14820),
-        ("2026-05-05", 14830),
-        ("2026-05-06", 14840),
-    ])
+    prices = _prices(
+        [
+            ("2026-05-01", 14845),
+            ("2026-05-02", 14800),
+            ("2026-05-03", 14810),
+            ("2026-05-04", 14820),
+            ("2026-05-05", 14830),
+            ("2026-05-06", 14840),
+        ]
+    )
     result = resolve_outcome(entry, prices)
     assert result["outcome"] == "incorrect"
     assert result["min_future_price"] == 14800
@@ -128,11 +128,13 @@ def test_outcome_incorrect():
 def test_outcome_pending():
     """Fewer than 5 future prices → stays pending."""
     entry = _entry(decision_date="2026-05-01", current_22k=14845, decision="wait")
-    prices = _prices([
-        ("2026-05-01", 14845),
-        ("2026-05-02", 14700),
-        ("2026-05-03", 14720),
-    ])
+    prices = _prices(
+        [
+            ("2026-05-01", 14845),
+            ("2026-05-02", 14700),
+            ("2026-05-03", 14720),
+        ]
+    )
     result = resolve_outcome(entry, prices)
     assert result["outcome"] == "pending"
 
@@ -141,16 +143,18 @@ def test_weekend_skipped():
     """Saturday/Sunday carry-forward entries are excluded from the outcome window."""
     entry = _entry(decision_date="2026-05-08", current_22k=14845, decision="wait")
     # 2026-05-08 is a Friday. Weekend prices carry forward.
-    prices = _prices([
-        ("2026-05-08", 14845),   # Friday — decision date
-        ("2026-05-09", 14845),   # Saturday carry-forward — must be EXCLUDED
-        ("2026-05-10", 14845),   # Sunday carry-forward — must be EXCLUDED
-        ("2026-05-11", 14900),   # Monday — trading day 1
-        ("2026-05-12", 14910),   # Tuesday — trading day 2
-        ("2026-05-13", 14920),   # Wednesday — trading day 3
-        ("2026-05-14", 14930),   # Thursday — trading day 4
-        ("2026-05-15", 14940),   # Friday — trading day 5
-    ])
+    prices = _prices(
+        [
+            ("2026-05-08", 14845),  # Friday — decision date
+            ("2026-05-09", 14845),  # Saturday carry-forward — must be EXCLUDED
+            ("2026-05-10", 14845),  # Sunday carry-forward — must be EXCLUDED
+            ("2026-05-11", 14900),  # Monday — trading day 1
+            ("2026-05-12", 14910),  # Tuesday — trading day 2
+            ("2026-05-13", 14920),  # Wednesday — trading day 3
+            ("2026-05-14", 14930),  # Thursday — trading day 4
+            ("2026-05-15", 14940),  # Friday — trading day 5
+        ]
+    )
     result = resolve_outcome(entry, prices)
     # All 5 trading-day prices are > 14845 - 100 = 14745 → incorrect
     assert result["outcome"] == "incorrect"
@@ -185,7 +189,9 @@ def test_idempotency(tmp_path: Path):
     forecast_path = tmp_path / "forecast.json"
     forecast_path.write_text(__import__("json").dumps(forecast))
 
-    prices_data = [{"timestamp": "2026-05-14T06:30:00.000Z", "22k": 14845, "24k": 16000, "18k": 12000}]
+    prices_data = [
+        {"timestamp": "2026-05-14T06:30:00.000Z", "22k": 14845, "24k": 16000, "18k": 12000}
+    ]
     prices_path = tmp_path / "prices.json"
     prices_path.write_text(__import__("json").dumps(prices_data))
 
@@ -198,6 +204,7 @@ def test_idempotency(tmp_path: Path):
     assert r2 is False
 
     import json
+
     entries = json.loads(out_path.read_text())
     assert len(entries) == 1
 
@@ -246,7 +253,7 @@ def test_aggregate_mae():
     """MAE computed from all resolved entries with actual_next_22k."""
     entries = [
         _resolved_entry("2026-05-01", 14845, 14945, 14900, "neutral", "resolved"),  # |45|
-        _resolved_entry("2026-05-02", 14845, 14645, 14545, "wait", "correct"),      # |100|
+        _resolved_entry("2026-05-02", 14845, 14645, 14545, "wait", "correct"),  # |100|
     ]
     result = aggregate_metrics(entries, window_days=365)
     assert result["n_mae"] == 2
@@ -256,9 +263,15 @@ def test_aggregate_mae():
 def test_aggregate_directional():
     """Directional accuracy: correct if sign(delta) == sign(actual change)."""
     entries = [
-        _resolved_entry("2026-05-01", 14845, 14945, 14950, "buy_now", "resolved"),  # delta+, actual+ → correct
-        _resolved_entry("2026-05-02", 14845, 14945, 14800, "buy_now", "resolved"),  # delta+, actual- → wrong
-        _resolved_entry("2026-05-03", 14845, 14645, 14700, "wait", "incorrect"),    # delta-, actual- → correct
+        _resolved_entry(
+            "2026-05-01", 14845, 14945, 14950, "buy_now", "resolved"
+        ),  # delta+, actual+ → correct
+        _resolved_entry(
+            "2026-05-02", 14845, 14945, 14800, "buy_now", "resolved"
+        ),  # delta+, actual- → wrong
+        _resolved_entry(
+            "2026-05-03", 14845, 14645, 14700, "wait", "incorrect"
+        ),  # delta-, actual- → correct
     ]
     result = aggregate_metrics(entries, window_days=365)
     assert result["n_dir"] == 3

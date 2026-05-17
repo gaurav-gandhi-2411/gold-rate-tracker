@@ -134,7 +134,7 @@ You may receive ntfy.sh alerts with the following titles. Here is what each mean
 | `Gold Tracker: Scraper DOM broken` | Weekly canary failed against live page | DOM may have changed; update selector in `scraper/scrape.js` |
 | `Gold Tracker: data stale (Xh)` from Staleness guard | prices.json age >8h after full workflow | Usually same root cause as scraper failure |
 
-**Macro cache stale (CI fails with age >14d):**  
+**Macro cache stale (CI fails with age >14d):**
 The "Check macro cache age" CI step will fail the run (not `continue-on-error`) if `data/macro_status.json`
 reports `cache_age_days > 14`. This blocks the forecast commit. To recover:
 
@@ -145,7 +145,7 @@ git add data/macro_cache.parquet   # not committed normally; trigger via workflo
 # Or: trigger check-price.yml manually from the Actions tab — it will re-fetch macro data
 ```
 
-**Forecast amber banner visible on site:**  
+**Forecast amber banner visible on site:**
 The banner in `index.html` shows when `forecast.json`'s `predicted_at` field is >18h old.
 It hides automatically once CI successfully updates `forecast.json`. No manual action needed
 unless the banner persists for >24h (then check CI).

@@ -2,22 +2,17 @@
 
 from __future__ import annotations
 
-import json
-from datetime import date, datetime, timedelta, timezone
+from datetime import UTC, date, datetime
 from pathlib import Path
 from unittest.mock import MagicMock, patch
 
 import pytest
-
 from ml.daily_summary import (
     BAND_30D,
-    FIVE_DAY_PCT,
-    PRICE_MOVE_PCT,
     _build_title,
     _fmt_inr_ascii,
     _is_already_sent,
     _ist_date,
-    _latest_for_ist_date,
     _mark_sent,
     _template_commentary,
     call_groq_summary,
@@ -32,14 +27,19 @@ from ml.daily_summary import (
 _BASE_UTC_TIME = "T06:00:00.000Z"
 
 # "Now" during all trigger tests: 10:30 UTC = 16:00 IST (daily summary runs at this time).
-_NOW_UTC = datetime(2026, 5, 14, 10, 30, tzinfo=timezone.utc)
+_NOW_UTC = datetime(2026, 5, 14, 10, 30, tzinfo=UTC)
 _TODAY_IST = date(2026, 5, 14)
 _YESTERDAY_IST = date(2026, 5, 13)
 
 
 def _p(d: str, price: int) -> dict:
     """Build a minimal price entry at 06:00 UTC on the given date."""
-    return {"timestamp": f"{d}{_BASE_UTC_TIME}", "22k": price, "24k": price + 1000, "18k": price - 1000}
+    return {
+        "timestamp": f"{d}{_BASE_UTC_TIME}",
+        "22k": price,
+        "24k": price + 1000,
+        "18k": price - 1000,
+    }
 
 
 def _prices(*pairs: tuple[str, int]) -> list[dict]:
@@ -53,19 +53,19 @@ def _prices(*pairs: tuple[str, int]) -> list[dict]:
 
 def test_ist_date_midday():
     """10:30 UTC = 16:00 IST — same calendar date."""
-    ts = datetime(2026, 5, 14, 10, 30, tzinfo=timezone.utc)
+    ts = datetime(2026, 5, 14, 10, 30, tzinfo=UTC)
     assert _ist_date(ts) == date(2026, 5, 14)
 
 
 def test_ist_date_late_night_utc():
     """22:00 UTC = 03:30 IST next day."""
-    ts = datetime(2026, 5, 13, 22, 0, tzinfo=timezone.utc)
+    ts = datetime(2026, 5, 13, 22, 0, tzinfo=UTC)
     assert _ist_date(ts) == date(2026, 5, 14)
 
 
 def test_ist_date_early_morning_utc():
     """00:00 UTC = 05:30 IST same day."""
-    ts = datetime(2026, 5, 14, 0, 0, tzinfo=timezone.utc)
+    ts = datetime(2026, 5, 14, 0, 0, tzinfo=UTC)
     assert _ist_date(ts) == date(2026, 5, 14)
 
 
@@ -239,7 +239,7 @@ def test_no_triggers_on_stable_prices():
     The window is strictly after Apr 14, so Apr 15 onwards is evaluated.
     """
     prices = (
-        [_p("2026-04-15", 13800)]   # 30d low anchor
+        [_p("2026-04-15", 13800)]  # 30d low anchor
         + [_p(f"2026-04-{d:02d}", 14200) for d in range(16, 30)]
         + [_p("2026-04-30", 14600)]  # 30d high anchor
         + _prices(("2026-05-13", 14200), ("2026-05-14", 14210))  # small stable move
@@ -270,7 +270,7 @@ def test_multiple_triggers_simultaneously():
         ("2026-05-12", 14160),
         ("2026-05-13", 14935),  # +5.5% vs May 12, +6.4% vs 5 days ago
     )
-    now = datetime(2026, 5, 13, 10, 30, tzinfo=timezone.utc)
+    now = datetime(2026, 5, 13, 10, 30, tzinfo=UTC)
     triggers, _ = check_triggers(prices, now)
     assert "price_move" in triggers
     assert "five_day_move" in triggers
@@ -358,7 +358,13 @@ def test_title_scrape_gap():
 
 def test_title_is_ascii():
     """Titles must not contain non-ASCII characters (HTTP header constraint)."""
-    for triggers in [["near_30d_high"], ["near_30d_low"], ["price_move"], ["five_day_move"], ["scrape_gap"]]:
+    for triggers in [
+        ["near_30d_high"],
+        ["near_30d_low"],
+        ["price_move"],
+        ["five_day_move"],
+        ["scrape_gap"],
+    ]:
         title = _build_title(triggers, _stats())
         assert title.isascii(), f"Non-ASCII in title for triggers={triggers}: {title!r}"
 
@@ -387,9 +393,14 @@ def test_fmt_inr_ascii_format():
 
 def test_idempotency_not_sent(tmp_path: Path):
     path = tmp_path / "last_summary.json"
-    assert not _is_already_sent.__wrapped__(date(2026, 5, 14)) if hasattr(_is_already_sent, "__wrapped__") else True
+    assert (
+        not _is_already_sent.__wrapped__(date(2026, 5, 14))
+        if hasattr(_is_already_sent, "__wrapped__")
+        else True
+    )
     # Without a file, should return False
     import ml.daily_summary as ds
+
     original = ds.LAST_SUMMARY_PATH
     ds.LAST_SUMMARY_PATH = path
     try:
@@ -400,6 +411,7 @@ def test_idempotency_not_sent(tmp_path: Path):
 
 def test_idempotency_mark_and_check(tmp_path: Path):
     import ml.daily_summary as ds
+
     original = ds.LAST_SUMMARY_PATH
     ds.LAST_SUMMARY_PATH = tmp_path / "last_summary.json"
     try:
@@ -427,7 +439,11 @@ def test_groq_call_returns_text():
 
     with patch("ml.daily_summary.call_groq_summary") as mock_call:
         mock_call.return_value = "Gold rose 5.5% today."
-        result = call_groq_summary.__wrapped__("fake-key", ["price_move"], _stats()) if hasattr(call_groq_summary, "__wrapped__") else mock_call("fake-key", ["price_move"], _stats())
+        result = (
+            call_groq_summary.__wrapped__("fake-key", ["price_move"], _stats())
+            if hasattr(call_groq_summary, "__wrapped__")
+            else mock_call("fake-key", ["price_move"], _stats())
+        )
 
     assert "Gold" in result or "fake" in str(mock_call.call_args)
 
@@ -436,9 +452,7 @@ def test_groq_mocked_integration():
     """Full call_groq_summary with mocked requests.post."""
     mock_resp = MagicMock()
     mock_resp.raise_for_status.return_value = None
-    mock_resp.json.return_value = {
-        "choices": [{"message": {"content": "Gold 22K up 5.5% today."}}]
-    }
+    mock_resp.json.return_value = {"choices": [{"message": {"content": "Gold 22K up 5.5% today."}}]}
 
     with patch("requests.post", return_value=mock_resp):
         result = call_groq_summary("test-key", ["price_move"], _stats())

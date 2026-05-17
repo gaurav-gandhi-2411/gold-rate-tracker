@@ -1,8 +1,8 @@
 # Feature Importance Audit — 2026-05-14
 
-Model: production LightGBM (`models/production/lgbm.txt`, `lgbm-p10.txt`, `lgbm-p90.txt`)  
-Training corpus: 361 rows (seed + 61 real Tanishq readings)  
-Feature set: 44 (19 base + 24 macro + 1 regime)  
+Model: production LightGBM (`models/production/lgbm.txt`, `lgbm-p10.txt`, `lgbm-p90.txt`)
+Training corpus: 361 rows (seed + 61 real Tanishq readings)
+Feature set: 44 (19 base + 24 macro + 1 regime)
 meta.json: `best_epoch=1`, `val_mae=225.65`, `naive_mae=223.86`, `beats_naive=false`
 
 ---

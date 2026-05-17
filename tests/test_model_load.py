@@ -7,8 +7,9 @@ but this test guards against the corruption being reintroduced.
 
 from __future__ import annotations
 
-import pytest
 from pathlib import Path
+
+import pytest
 
 MODELS_DIR = Path(__file__).parent.parent / "models" / "production"
 MODEL_FILES = ["lgbm.txt", "lgbm-p10.txt", "lgbm-p90.txt"]
@@ -41,6 +42,4 @@ def test_model_loads_nonzero_trees(model_file: str):
     if path.read_bytes().count(b"\r\n") > 0:
         pytest.skip(f"{model_file} has CRLF — skipping load test to avoid crash (KI-001)")
     booster = lgb.Booster(model_file=str(path))
-    assert booster.num_trees() > 0, (
-        f"{model_file} loaded 0 trees — likely CRLF corruption (KI-001)"
-    )
+    assert booster.num_trees() > 0, f"{model_file} loaded 0 trees — likely CRLF corruption (KI-001)"

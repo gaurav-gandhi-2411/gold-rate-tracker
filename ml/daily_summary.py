@@ -21,7 +21,7 @@ from __future__ import annotations
 import json
 import os
 import sys
-from datetime import date, datetime, timedelta, timezone
+from datetime import UTC, date, datetime, timedelta
 from pathlib import Path
 from zoneinfo import ZoneInfo
 
@@ -34,9 +34,9 @@ GROQ_MODEL = "llama-3.3-70b-versatile"
 
 # Trigger thresholds — first-guess values, tune empirically after ~2 weeks.
 # See docs/DAILY_SUMMARY_DESIGN.md for calibration analysis.
-PRICE_MOVE_PCT = 0.02   # T1: ≥2% single-day move
-BAND_30D = 50           # T2/T3: ±₹50 from 30-day low/high
-FIVE_DAY_PCT = 0.03     # T4: ≥3% 5-day cumulative move
+PRICE_MOVE_PCT = 0.02  # T1: ≥2% single-day move
+BAND_30D = 50  # T2/T3: ±₹50 from 30-day low/high
+FIVE_DAY_PCT = 0.03  # T4: ≥3% 5-day cumulative move
 
 # Asia/Kolkata from the system tz database — direction is explicit and any
 # future DST adoption would be handled automatically (no manual ±5:30 arithmetic).
@@ -152,9 +152,7 @@ def check_triggers(prices: list[dict], now_utc: datetime) -> tuple[list[str], di
             fired.append("five_day_move")
 
     # T5: no readings from yesterday's IST date → first reading after gap
-    today_readings = [
-        r for r in prices if _ist_date(_parse_ts(r["timestamp"])) == today_ist
-    ]
+    today_readings = [r for r in prices if _ist_date(_parse_ts(r["timestamp"])) == today_ist]
     yesterday_readings = [
         r for r in prices if _ist_date(_parse_ts(r["timestamp"])) == yesterday_ist
     ]
@@ -354,7 +352,7 @@ def main() -> None:
     api_key = os.environ.get("GROQ_API_KEY", "").strip()
     ntfy_topic = os.environ.get("NTFY_TOPIC", "").strip()
 
-    now_utc = datetime.now(timezone.utc)
+    now_utc = datetime.now(UTC)
     today_ist = _ist_date(now_utc)
 
     if not PRICES_PATH.exists():
