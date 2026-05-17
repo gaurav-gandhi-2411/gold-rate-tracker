@@ -73,13 +73,13 @@ jobs:
             --title "Scraper DOM canary failed $(date -u +%Y-%m-%d)" \
             --body "The weekly scraper DOM canary failed. The Tanishq page selector or page structure may have changed.
 
-**Run:** ${RUN_URL}
+          **Run:** ${RUN_URL}
 
-**What to check:**
-1. Open https://www.tanishq.co.in/gold-rate.html and inspect \`span.goldpurity-rate[data-goldrate22kt]\`
-2. Check if the page redirects or requires login
-3. Verify gold prices are in range (2000–25000 INR/g)
-4. Update \`scraper/scrape.js\` selector if needed
+          **What to check:**
+          1. Open https://www.tanishq.co.in/gold-rate.html and inspect \`span.goldpurity-rate[data-goldrate22kt]\`
+          2. Check if the page redirects or requires login
+          3. Verify gold prices are in range (2000–25000 INR/g)
+          4. Update \`scraper/scrape.js\` selector if needed
 
-See \`docs/RUNBOOK.md\` for full resolution steps." \
+          See \`docs/RUNBOOK.md\` for full resolution steps." \
             --label "bug" || true

@@ -52,8 +52,8 @@ jobs:
         run: |
           git config user.name  gold-rate-bot
           git config user.email gold-rate-bot@users.noreply.github.com
-          git pull --rebase origin master
           git add og.png
+          git pull --rebase origin master
           git diff --cached --quiet \
             && echo "og.png unchanged, skipping commit" \
             || git commit -m "chore: refresh OG image [skip ci]"
