@@ -1,24 +1,24 @@
 {
-  "predicted_at": "2026-05-15T18:16:49.642733+00:00",
-  "target_time": "2026-05-16T00:00:00+00:00",
-  "predicted_22k": 14585,
-  "lower": 14284,
-  "upper": 14886,
+  "predicted_at": "2026-05-17T08:15:53.516789+00:00",
+  "target_time": "2026-05-18T00:00:00+00:00",
+  "predicted_22k": 14410,
+  "lower": 14120,
+  "upper": 14700,
   "model_version": "lgbm-minimal_v2",
-  "training_rows": 453,
+  "training_rows": 454,
   "feature_count": 8,
   "feature_set": "minimal_v2",
   "macro_features_used": true,
-  "real_readings_count": 66,
+  "real_readings_count": 67,
   "warmup": true,
-  "val_mae": 209.0,
-  "naive_mae": 209.6,
+  "val_mae": 210.8,
+  "naive_mae": 211.2,
   "model_status": "matching_naive",
-  "lgbm_pred_raw": -20.0,
+  "lgbm_pred_raw": 30.0,
   "naive_pred_raw": 0.0,
-  "blend_weight_lgbm": 0.501,
-  "blend_weight_naive": 0.499,
-  "conformal_pi_half": 300.7,
+  "blend_weight_lgbm": 0.5,
+  "blend_weight_naive": 0.5,
+  "conformal_pi_half": 290.4,
   "pi_coverage_80_empirical": 0.8,
   "pi_coverage_80_calibrated": 0.8,
   "seed_calibration_scale": 0.9727,
@@ -28,20 +28,20 @@
   "ensemble": {
     "method": "naive_blend",
     "n_models": 2,
-    "lgbm_weight": 0.501,
-    "naive_weight": 0.499,
+    "lgbm_weight": 0.5,
+    "naive_weight": 0.5,
     "min_readings_for_nbeats": 1000,
     "min_readings_for_tft": 2000,
     "min_readings_for_warmup_clear": 100
   },
   "models": {
     "lgbm": {
-      "delta": -20.0,
-      "weight": 0.501
+      "delta": 30.0,
+      "weight": 0.5
     },
     "naive": {
       "delta": 0.0,
-      "weight": 0.499
+      "weight": 0.5
     }
   }
 }
