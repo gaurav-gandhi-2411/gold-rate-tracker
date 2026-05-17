@@ -7,7 +7,7 @@
 #   pip install -r ml/requirements-train.txt
 
 # Core ML
-lightgbm>=4.0
+lightgbm>=4.6.0
 darts>=0.26
 onnx>=1.21.0
 
