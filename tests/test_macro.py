@@ -46,7 +46,7 @@ def _make_yf_response(start: str = _MOCK_START, end: str = _MOCK_END) -> pd.Data
     dates = pd.date_range(start, end, freq="B", tz="UTC")  # business days only
     rng = np.random.default_rng(42)
 
-    tickers = ["INR=X", "GC=F", "^TNX", "DX-Y.NYB", "^BSESN", "^VIX"]
+    tickers = ["INR=X", "GC=F", "^TNX", "DX-Y.NYB", "^BSESN", "^VIX", "^INDIAVIX"]
     columns = pd.MultiIndex.from_product([["Close"], tickers])
 
     data = {
@@ -56,6 +56,7 @@ def _make_yf_response(start: str = _MOCK_START, end: str = _MOCK_END) -> pd.Data
         ("Close", "DX-Y.NYB"): rng.uniform(100.0, 106.0, len(dates)),
         ("Close", "^BSESN"): rng.uniform(73000.0, 77000.0, len(dates)),
         ("Close", "^VIX"): rng.uniform(12.0, 25.0, len(dates)),
+        ("Close", "^INDIAVIX"): rng.uniform(10.0, 30.0, len(dates)),
     }
     return pd.DataFrame(data, index=dates, columns=columns)
 
@@ -106,6 +107,7 @@ class TestFetchMacroFeatures:
             "dxy",
             "sensex",
             "vix_level",
+            "india_vix_level",
             "usd_inr_change_1d",
             "gold_usd_change_1d",
             "gold_usd_5d_vol",

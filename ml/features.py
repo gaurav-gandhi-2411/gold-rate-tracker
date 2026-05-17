@@ -62,7 +62,7 @@ FEATURE_COLS: list[str] = [
 ]
 
 # Macro-economic features added when a macro DataFrame is provided.
-# 6 raw spot levels (forward-filled daily) + 4 derived + 14 lags = 24 features.
+# 7 raw spot levels (forward-filled daily) + 4 derived + 14 lags = 25 features.
 MACRO_FEATURE_COLS: list[str] = [
     # Spot levels
     "usd_inr",
@@ -71,6 +71,7 @@ MACRO_FEATURE_COLS: list[str] = [
     "dxy",
     "sensex",
     "vix_level",
+    "india_vix_level",
     # Derived rates-of-change / volatility
     "usd_inr_change_1d",
     "gold_usd_change_1d",
@@ -100,14 +101,13 @@ ALL_FEATURE_COLS: list[str] = FEATURE_COLS + MACRO_FEATURE_COLS
 # Tuned feature set: full_v1 minus the 4 dead-weight features identified in
 # docs/FEATURE_INVENTORY.md (hour, akshaya_tritiya, dhanteras — regime is not
 # in ALL_FEATURE_COLS so omitting it has no effect here).
-# 43 ALL_FEATURE_COLS - 3 dead-weight = 40 active features.
+# 44 ALL_FEATURE_COLS - 3 dead-weight = 41 active features.
 TUNED_V1_FEATURE_COLS: list[str] = [
     c for c in ALL_FEATURE_COLS
     if c not in {"hour", "akshaya_tritiya", "dhanteras"}
 ]
 
 # Minimal feature set for low-data regime.
-# 367 rows ÷ 8 features = 45:1 row/feature ratio vs prior 8.3:1 (44 features).
 # macro_gc_f → gold_usd, macro_inr_x → usd_inr (column names from MACRO_FEATURE_COLS).
 MINIMAL_FEATURE_COLS: list[str] = [
     "lag_1",
@@ -116,6 +116,7 @@ MINIMAL_FEATURE_COLS: list[str] = [
     "roll_30d_mean",
     "gold_usd",
     "usd_inr",
+    "india_vix_level",
     "regime",
     "dow",
 ]

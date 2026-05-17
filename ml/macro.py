@@ -7,7 +7,8 @@ Tickers fetched daily from Yahoo Finance:
   ^TNX     — US 10-year Treasury yield (%)
   DX-Y.NYB — US Dollar Index (DXY)
   ^BSESN   — BSE Sensex
-  ^VIX     — CBOE Volatility Index
+  ^VIX     — CBOE Volatility Index (US)
+  ^INDIAVIX — NSE India VIX (domestic equity volatility)
 
 Usage (from repo root):
     python ml/macro.py          # incremental update — appends last 14 days to cache
@@ -51,6 +52,7 @@ TICKER_MAP: dict[str, str] = {
     "dxy": "DX-Y.NYB",
     "sensex": "^BSESN",
     "vix": "^VIX",
+    "india_vix": "^INDIAVIX",
 }
 
 # Calendar days of history to fetch on first run (cold start)
@@ -153,6 +155,8 @@ def _derive_features(df: pd.DataFrame) -> pd.DataFrame:
 
     # vix_level is the cleaned VIX series (same values, clearer name for features)
     df["vix_level"] = df["vix"]
+    # india_vix_level mirrors the pattern of vix_level for consistent feature naming
+    df["india_vix_level"] = df["india_vix"]
 
     # Daily % changes
     df["usd_inr_change_1d"] = df["usd_inr"].pct_change(1)
@@ -328,6 +332,7 @@ def main() -> None:
         "us_10y_yield",
         "dxy",
         "vix_level",
+        "india_vix_level",
         "usd_inr_change_1d",
         "gold_usd_change_1d",
         "gold_usd_5d_vol",
