@@ -182,12 +182,24 @@ Already confirmed as implemented (no action needed):
 
 ---
 
-## Phase 5 — Tier 3 macro audit + adds
+## ✓ Phase 5 — Tier 3 macro audit + adds (2026-05-17)
 
-- Feature importance audit: drop dead-weight features from ml/macro.py
-- Add: India 10Y government bond yield
-- Add: India VIX (if accessible)
-- Add: DGFT monthly gold import volume (if accessible)
+**Macro dead-weight audit:** All 24 MACRO_FEATURE_COLS are ACTIVE (split ≥ 1 in at
+least one model). Nothing to drop from ml/macro.py. The 4 dead-weight features
+(hour, akshaya_tritiya, dhanteras, regime) are in FEATURE_COLS — gated until
+real_readings_count ≥ 200 (~2026-07-15).
+
+**India VIX (`^INDIAVIX`):** ✓ Accessible via yfinance. Added as `india_vix_level`
+to TICKER_MAP, MACRO_FEATURE_COLS (25 features, was 24), and MINIMAL_FEATURE_COLS
+(9 features, was 8). Commit: `04183fa`.
+
+**India 10Y government bond yield:** ✗ Not accessible via yfinance. Exhaustively
+tested: ^INTEN, IN10Y=RR, 0IN10YT=RR, IN10YT=RR, GIND10YR.NS, IN10Y.NS,
+GSEC10.NS, IN10YG=XX, ^INBMK10Y, GSBW10Y=RR, INR10Y=RRPS, GSEC10YR.BO — all
+return 404 or no data. No free API path identified; requires paid data vendor.
+
+**DGFT monthly gold import volume:** ✗ Not accessible via free API. Data published
+as PDF/Excel on dgft.gov.in only; no JSON/REST endpoint.
 
 ---
 
