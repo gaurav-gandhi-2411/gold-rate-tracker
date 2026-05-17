@@ -1,5 +1,5 @@
 {
-  "predicted_at": "2026-05-17T16:21:27.915549+00:00",
+  "predicted_at": "2026-05-17T19:03:53.144665+00:00",
   "target_time": "2026-05-18T00:00:00+00:00",
   "predicted_22k": 14410,
   "lower": 14120,
@@ -9,7 +9,7 @@
   "feature_count": 8,
   "feature_set": "minimal_v2",
   "macro_features_used": true,
-  "real_readings_count": 71,
+  "real_readings_count": 72,
   "warmup": true,
   "val_mae": 210.8,
   "naive_mae": 211.2,
