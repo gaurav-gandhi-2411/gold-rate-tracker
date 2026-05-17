@@ -3,7 +3,7 @@
 
 lightgbm>=4.0
 onnxruntime>=1.16.0
-hmmlearn>=0.3.0
+hmmlearn>=0.3.3
 structlog==24.4.0
 pandas>=2.0
 numpy>=1.24
