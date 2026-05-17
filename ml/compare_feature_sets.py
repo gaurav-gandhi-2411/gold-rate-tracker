@@ -14,7 +14,6 @@ from __future__ import annotations
 import sys
 from pathlib import Path
 
-import numpy as np
 import pandas as pd
 
 sys.path.insert(0, str(Path(__file__).parent.parent))
@@ -27,9 +26,9 @@ from ml.forecast import load_combined_history
 FULL_V1_CANDIDATE = ALL_FEATURE_COLS + ["regime"]
 
 FEATURE_SETS = {
-    "full_v1":    (FULL_V1_CANDIDATE,    "full_v1 (44 feat)"),
-    "tuned_v1":   (TUNED_V1_FEATURE_COLS, "tuned_v1 (40 feat)"),
-    "minimal_v2": (MINIMAL_FEATURE_COLS,  "minimal_v2 (8 feat)"),
+    "full_v1": (FULL_V1_CANDIDATE, "full_v1 (44 feat)"),
+    "tuned_v1": (TUNED_V1_FEATURE_COLS, "tuned_v1 (40 feat)"),
+    "minimal_v2": (MINIMAL_FEATURE_COLS, "minimal_v2 (8 feat)"),
 }
 
 
@@ -65,8 +64,9 @@ def main() -> None:
     results: dict[str, dict] = {}
     for key, (cols, label) in FEATURE_SETS.items():
         print(f"\n{'='*60}")
-        r = run_backtest(df, macro_df=macro_df, feature_cols_override=cols,
-                         use_tuned=True, label=label)
+        r = run_backtest(
+            df, macro_df=macro_df, feature_cols_override=cols, use_tuned=True, label=label
+        )
         results[key] = r
         m = r["model"]
         print(
@@ -101,48 +101,47 @@ def main() -> None:
             obj = obj[p]
         return obj
 
-    row("Folds",
-        [str(_get(k, "folds")) for k in keys])
+    row("Folds", [str(_get(k, "folds")) for k in keys])
 
-    row("",  ["", "", ""])
+    row("", ["", "", ""])
 
     row("=== PRIMARY ===", ["", "", ""])
-    row("Dir-acc overall",
-        [_pct(_get(k, "model", "direction_acc")) for k in keys])
-    row("Dir-acc |delta|>Rs50",
-        [_pct(_get(k, "model", "direction_acc_big_move")) for k in keys])
-    row("  n folds (big move)",
-        [str(_get(k, "model", "n_big_move_folds")) for k in keys])
-    row("Dir-acc |delta|<=Rs50",
-        [_pct(_get(k, "model", "direction_acc_small_move")) for k in keys])
-    row("  n folds (small move)",
-        [str(_get(k, "model", "n_small_move_folds")) for k in keys])
+    row("Dir-acc overall", [_pct(_get(k, "model", "direction_acc")) for k in keys])
+    row("Dir-acc |delta|>Rs50", [_pct(_get(k, "model", "direction_acc_big_move")) for k in keys])
+    row("  n folds (big move)", [str(_get(k, "model", "n_big_move_folds")) for k in keys])
+    row("Dir-acc |delta|<=Rs50", [_pct(_get(k, "model", "direction_acc_small_move")) for k in keys])
+    row("  n folds (small move)", [str(_get(k, "model", "n_small_move_folds")) for k in keys])
 
     row("", ["", "", ""])
     row("=== SECONDARY ===", ["", "", ""])
-    row("MAE model (Rs)",
-        [_rs(_get(k, "model", "mae")) for k in keys])
-    row("MAE model std (Rs)",
-        [_rs(_get(k, "model", "mae_std")) for k in keys])
-    row("MAE naive (Rs)",
-        [_rs(_get(k, "baseline", "mae")) for k in keys])
-    row("MAE ratio (model/naive)",
-        [f"{_get(k, 'model', 'mae') / _get(k, 'baseline', 'mae'):.3f}" for k in keys])
-    row("MAPE model (%)",
-        [f"{_get(k, 'model', 'mape'):.2f}%" for k in keys])
-    row("blend_weight_lgbm mean",
-        [f"{_get(k, 'model', 'blend_weight_lgbm_mean'):.3f}" for k in keys])
-    row("blend_weight_lgbm std",
-        [f"{_get(k, 'model', 'blend_weight_lgbm_std'):.3f}" for k in keys])
+    row("MAE model (Rs)", [_rs(_get(k, "model", "mae")) for k in keys])
+    row("MAE model std (Rs)", [_rs(_get(k, "model", "mae_std")) for k in keys])
+    row("MAE naive (Rs)", [_rs(_get(k, "baseline", "mae")) for k in keys])
+    row(
+        "MAE ratio (model/naive)",
+        [f"{_get(k, 'model', 'mae') / _get(k, 'baseline', 'mae'):.3f}" for k in keys],
+    )
+    row("MAPE model (%)", [f"{_get(k, 'model', 'mape'):.2f}%" for k in keys])
+    row(
+        "blend_weight_lgbm mean",
+        [f"{_get(k, 'model', 'blend_weight_lgbm_mean'):.3f}" for k in keys],
+    )
+    row("blend_weight_lgbm std", [f"{_get(k, 'model', 'blend_weight_lgbm_std'):.3f}" for k in keys])
 
     row("", ["", "", ""])
     row("=== PAIRED DIFFS (model-naive) ===", ["", "", ""])
-    row("Paired err diff median (Rs)",
-        [str(_get(k, "paired_diff_model_minus_baseline", "median")) for k in keys])
-    row("Paired err diff IQR [25,75] (Rs)",
-        [f"[{_get(k,'paired_diff_model_minus_baseline','iqr_25')}, "
-         f"{_get(k,'paired_diff_model_minus_baseline','iqr_75')}]"
-         for k in keys])
+    row(
+        "Paired err diff median (Rs)",
+        [str(_get(k, "paired_diff_model_minus_baseline", "median")) for k in keys],
+    )
+    row(
+        "Paired err diff IQR [25,75] (Rs)",
+        [
+            f"[{_get(k,'paired_diff_model_minus_baseline','iqr_25')}, "
+            f"{_get(k,'paired_diff_model_minus_baseline','iqr_75')}]"
+            for k in keys
+        ],
+    )
 
     # -----------------------------------------------------------------------
     # Decision
@@ -180,19 +179,25 @@ def main() -> None:
     within_noise_a = _noise_threshold(big_acc, margin=0.03)
     within_noise_b = _noise_threshold(overall_acc, margin=0.02)
 
-    print(f"  a) |delta|>50 dir-acc: ", end="")
+    print("  a) |delta|>50 dir-acc: ", end="")
     for k in keys:
         marker = " <-- best" if k == best_big else ""
         print(f"  {FEATURE_SETS[k][1].split('(')[0].strip()}: {_pct(big_acc[k])}{marker}", end="")
-    print(f"\n     Gap best vs 2nd: {gap_a*100:.1f}pp  {'[within noise <3pp]' if within_noise_a else ''}")
+    print(
+        f"\n     Gap best vs 2nd: {gap_a*100:.1f}pp  {'[within noise <3pp]' if within_noise_a else ''}"
+    )
 
-    print(f"  b) Overall dir-acc:   ", end="")
+    print("  b) Overall dir-acc:   ", end="")
     for k in keys:
         marker = " <-- best" if k == best_overall else ""
-        print(f"  {FEATURE_SETS[k][1].split('(')[0].strip()}: {_pct(overall_acc[k])}{marker}", end="")
-    print(f"\n     Gap best vs 2nd: {gap_b*100:.1f}pp  {'[within noise <2pp]' if within_noise_b else ''}")
+        print(
+            f"  {FEATURE_SETS[k][1].split('(')[0].strip()}: {_pct(overall_acc[k])}{marker}", end=""
+        )
+    print(
+        f"\n     Gap best vs 2nd: {gap_b*100:.1f}pp  {'[within noise <2pp]' if within_noise_b else ''}"
+    )
 
-    print(f"  c) MAE: ", end="")
+    print("  c) MAE: ", end="")
     for k in keys:
         marker = " <-- lowest" if k == best_mae else ""
         print(f"  {FEATURE_SETS[k][1].split('(')[0].strip()}: {_rs(mae_val[k])}{marker}", end="")
@@ -230,7 +235,9 @@ def main() -> None:
     blend_flags = {k: _get(k, "model", "blend_weight_lgbm_mean") <= 0.15 for k in keys}
     for k, flagged in blend_flags.items():
         if flagged:
-            print(f"  FLAG: {FEATURE_SETS[k][1]} blend_weight={_get(k,'model','blend_weight_lgbm_mean'):.3f} -- near 0.1 floor (red flag).")
+            print(
+                f"  FLAG: {FEATURE_SETS[k][1]} blend_weight={_get(k,'model','blend_weight_lgbm_mean'):.3f} -- near 0.1 floor (red flag)."
+            )
 
     print("\nDone.")
     return winner, results

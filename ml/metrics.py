@@ -24,7 +24,7 @@ from __future__ import annotations
 
 import argparse
 import json
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 from pathlib import Path
 
 DATA_DIR = Path(__file__).parent.parent / "data"
@@ -104,7 +104,7 @@ def resolve_outcome(entry: dict, prices: list[dict]) -> dict:
         entry["actual_next_22k"] = actual_next
 
     decision = entry.get("decision", "neutral")
-    now_str = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
+    now_str = datetime.now(UTC).strftime("%Y-%m-%dT%H:%M:%SZ")
 
     if decision == "wait":
         if len(window) < OUTCOME_WINDOW:
@@ -113,7 +113,9 @@ def resolve_outcome(entry: dict, prices: list[dict]) -> dict:
         entry["min_future_price"] = min_price
         entry["outcome_resolved_at"] = now_str
         threshold = float(entry.get("drop_threshold", DROP_THRESHOLD))
-        entry["outcome"] = "correct" if min_price <= entry["current_22k"] - threshold else "incorrect"
+        entry["outcome"] = (
+            "correct" if min_price <= entry["current_22k"] - threshold else "incorrect"
+        )
     else:
         # neutral/buy_now: mark resolved once we have next-day price for MAE
         if actual_next is not None:
@@ -128,12 +130,12 @@ def aggregate_metrics(entries: list[dict], window_days: int = 30) -> dict:
     Compute decision_accuracy, MAE, directional_accuracy from resolved entries
     within the last window_days. None values mean insufficient data.
     """
-    cutoff = (datetime.now(timezone.utc) - timedelta(days=window_days)).strftime("%Y-%m-%d")
+    cutoff = (datetime.now(UTC) - timedelta(days=window_days)).strftime("%Y-%m-%d")
 
     resolved = [
-        e for e in entries
-        if e.get("outcome") not in ("pending", None)
-        and e.get("decision_date", "") >= cutoff
+        e
+        for e in entries
+        if e.get("outcome") not in ("pending", None) and e.get("decision_date", "") >= cutoff
     ]
 
     wait_resolved = [e for e in resolved if e.get("decision") == "wait"]
@@ -146,7 +148,8 @@ def aggregate_metrics(entries: list[dict], window_days: int = 30) -> dict:
         decision_accuracy = None
 
     mae_entries = [
-        e for e in resolved
+        e
+        for e in resolved
         if isinstance(e.get("actual_next_22k"), (int, float))
         and isinstance(e.get("predicted_22k"), (int, float))
     ]
@@ -158,7 +161,8 @@ def aggregate_metrics(entries: list[dict], window_days: int = 30) -> dict:
         mae = None
 
     dir_entries = [
-        e for e in mae_entries
+        e
+        for e in mae_entries
         if isinstance(e.get("current_22k"), (int, float))
         and isinstance(e.get("delta"), (int, float))
     ]
@@ -166,8 +170,7 @@ def aggregate_metrics(entries: list[dict], window_days: int = 30) -> dict:
     directional_accuracy: float | None
     if n_dir > 0:
         n_correct_dir = sum(
-            1 for e in dir_entries
-            if (e["actual_next_22k"] - e["current_22k"]) * e["delta"] > 0
+            1 for e in dir_entries if (e["actual_next_22k"] - e["current_22k"]) * e["delta"] > 0
         )
         directional_accuracy = n_correct_dir / n_dir
     else:
@@ -212,7 +215,7 @@ def record_prediction(
 
     current_22k = prices[-1]["22k"]
     delta = float(predicted_22k - current_22k)
-    decision_date = datetime.now(timezone.utc).strftime("%Y-%m-%d")
+    decision_date = datetime.now(UTC).strftime("%Y-%m-%d")
 
     existing: list[dict] = []
     if out_path.exists():

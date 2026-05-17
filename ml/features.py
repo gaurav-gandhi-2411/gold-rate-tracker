@@ -102,8 +102,7 @@ ALL_FEATURE_COLS: list[str] = FEATURE_COLS + MACRO_FEATURE_COLS
 # in ALL_FEATURE_COLS so omitting it has no effect here).
 # 43 ALL_FEATURE_COLS - 3 dead-weight = 40 active features.
 TUNED_V1_FEATURE_COLS: list[str] = [
-    c for c in ALL_FEATURE_COLS
-    if c not in {"hour", "akshaya_tritiya", "dhanteras"}
+    c for c in ALL_FEATURE_COLS if c not in {"hour", "akshaya_tritiya", "dhanteras"}
 ]
 
 # Minimal feature set for low-data regime.

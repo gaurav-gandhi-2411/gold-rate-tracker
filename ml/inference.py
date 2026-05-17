@@ -255,6 +255,8 @@ def main() -> None:
     )
     from ml.forecast import (
         DATA_DIR as FC_DATA_DIR,
+    )
+    from ml.forecast import (
         _calibrate_seed,
         _load_json,
         _make_lgb,
@@ -300,8 +302,10 @@ def main() -> None:
         print(f"Macro features unavailable ({exc})")
 
     # TFT and N-BEATS remain gated until Phase 6 (real-data corpus threshold)
-    print(f"TFT/N-BEATS gated — need {MIN_REAL_READINGS_FOR_TFT}/{MIN_REAL_READINGS_FOR_NBEATS}"
-          f" real readings (have {real_readings_count})")
+    print(
+        f"TFT/N-BEATS gated — need {MIN_REAL_READINGS_FOR_TFT}/{MIN_REAL_READINGS_FOR_NBEATS}"
+        f" real readings (have {real_readings_count})"
+    )
 
     # --- 3. Feature matrix + active feature set (minimal_v2) ---
     feat_df = build_feature_matrix(history, macro_df=macro_df)
@@ -333,7 +337,9 @@ def main() -> None:
     naive_mae = float(np.mean(np.abs(y_cal.values)))  # naive delta=0 baseline
 
     # Empirical coverage on calibration set (~80% by construction from percentile choice)
-    pi_coverage_80_empirical = round(float(np.sum(residuals <= conformal_pi_half) / len(residuals)), 3)
+    pi_coverage_80_empirical = round(
+        float(np.sum(residuals <= conformal_pi_half) / len(residuals)), 3
+    )
 
     # --- 5. Final model: retrain on all data ---
     m_final = _make_lgb("regression")

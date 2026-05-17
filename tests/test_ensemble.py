@@ -4,7 +4,13 @@ from __future__ import annotations
 
 import json
 
-from ml.ensemble import _EPS, _EXCLUSION_MULTIPLIER, _FLOOR_WEIGHT, compute_weights, save_ensemble_config
+from ml.ensemble import (
+    _EPS,
+    _EXCLUSION_MULTIPLIER,
+    _FLOOR_WEIGHT,
+    compute_weights,
+    save_ensemble_config,
+)
 
 # ---------------------------------------------------------------------------
 # 1. Weights sum to 1
@@ -219,5 +225,7 @@ def test_dominant_model_still_floored_by_others():
     weights = compute_weights(maes)
     assert weights["b"] > 0.0, "b should not be excluded (4.9 < 5.0)"
     assert weights["c"] > 0.0, "c should not be excluded (4.9 < 5.0)"
-    assert weights["a"] < 1.0, "dominant model should not get weight=1.0 when others are not excluded"
+    assert (
+        weights["a"] < 1.0
+    ), "dominant model should not get weight=1.0 when others are not excluded"
     assert abs(sum(weights.values()) - 1.0) < 1e-9

@@ -106,7 +106,9 @@ def run_backtest(
             continue
 
         feat_train = build_feature_matrix(train_df, macro_df=macro_df)
-        candidate_cols = feature_cols_override if feature_cols_override is not None else MINIMAL_FEATURE_COLS
+        candidate_cols = (
+            feature_cols_override if feature_cols_override is not None else MINIMAL_FEATURE_COLS
+        )
         feature_cols = [c for c in candidate_cols if c in feat_train.columns]
         X_train, y_train = get_train_Xy(feat_train, feature_cols=feature_cols)
         if len(X_train) < 10:
@@ -200,7 +202,9 @@ def run_backtest(
     model_metrics["blend_weight_lgbm_std"] = round(float(blend_arr.std()), 4)
 
     baseline_metrics = _metrics(actuals_arr, np.array(baseline_preds))
-    baseline_metrics["direction_acc"] = _direction_acc(actuals_arr, np.array(baseline_preds), prevs_arr)
+    baseline_metrics["direction_acc"] = _direction_acc(
+        actuals_arr, np.array(baseline_preds), prevs_arr
+    )
 
     # Paired differences (model - baseline) for IQR comparison
     paired_diff = lgbm_errs - naive_errs

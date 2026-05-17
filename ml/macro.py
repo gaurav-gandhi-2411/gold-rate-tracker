@@ -253,7 +253,7 @@ def update_macro_cache(
     return fetch_macro_features(start, end, cache_path=cache_path)
 
 
-_MACRO_WARN_DAYS = 7    # log WARNING if cache is older than this
+_MACRO_WARN_DAYS = 7  # log WARNING if cache is older than this
 _MACRO_STATUS_PATH = DATA_DIR / "macro_status.json"
 
 
@@ -272,8 +272,6 @@ def load_macro_features(cache_path: Path = CACHE_PATH) -> pd.DataFrame | None:
         _write_macro_status(None)
         return None
     try:
-        import stat as _stat
-
         mtime = cache_path.stat().st_mtime
         age_days = (time.time() - mtime) / 86400
         _write_macro_status(age_days)
