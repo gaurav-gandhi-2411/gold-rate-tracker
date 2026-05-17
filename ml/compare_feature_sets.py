@@ -23,7 +23,7 @@ from ml.features import ALL_FEATURE_COLS, MINIMAL_FEATURE_COLS, TUNED_V1_FEATURE
 from ml.forecast import load_combined_history
 
 # full_v1 = ALL_FEATURE_COLS (43) + regime if available in the feature matrix
-FULL_V1_CANDIDATE = ALL_FEATURE_COLS + ["regime"]
+FULL_V1_CANDIDATE = [*ALL_FEATURE_COLS, "regime"]
 
 FEATURE_SETS = {
     "full_v1": (FULL_V1_CANDIDATE, "full_v1 (44 feat)"),
@@ -88,7 +88,7 @@ def main() -> None:
     print("=" * 72)
 
     col_w = 18
-    hdr = f"{'Metric':<28}" + "".join(f"{l:>{col_w}}" for l in labels)
+    hdr = f"{'Metric':<28}" + "".join(f"{label:>{col_w}}" for label in labels)
     print(hdr)
     print("-" * (28 + col_w * 3))
 
@@ -157,7 +157,6 @@ def main() -> None:
     big_acc = {k: _get(k, "model", "direction_acc_big_move") or 0.0 for k in keys}
     overall_acc = {k: _get(k, "model", "direction_acc") for k in keys}
     mae_val = {k: _get(k, "model", "mae") for k in keys}
-    n_feat = {"full_v1": 44, "tuned_v1": 40, "minimal_v2": 8}
 
     def _noise_threshold(scores: dict[str, float], margin: float = 0.02) -> bool:
         vals = list(scores.values())
@@ -240,7 +239,6 @@ def main() -> None:
             )
 
     print("\nDone.")
-    return winner, results
 
 
 if __name__ == "__main__":
