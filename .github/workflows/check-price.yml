@@ -92,7 +92,10 @@ jobs:
       - name: Install ML dependencies
         run: |
           pip install -q uv
-          uv pip install --system -r ml/requirements-inference.lock
+          uv pip install --system \
+            --extra-index-url https://download.pytorch.org/whl/cpu \
+            --index-strategy unsafe-best-match \
+            -r ml/requirements-inference.lock
 
       - name: Fetch macro features
         continue-on-error: true
