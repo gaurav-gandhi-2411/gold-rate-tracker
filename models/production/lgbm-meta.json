@@ -12,8 +12,8 @@
     "dow"
   ],
   "feature_set": "minimal_v2",
-  "val_mae": 208.43,
-  "naive_mae": 208.87,
+  "val_mae": 208.98,
+  "naive_mae": 209.42,
   "conformal_pi_half": 287.81,
-  "updated_at": "2026-05-18T02:52:03.735151+00:00"
+  "updated_at": "2026-05-18T09:54:12.226870+00:00"
 }
