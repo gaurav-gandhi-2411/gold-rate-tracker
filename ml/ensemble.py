@@ -4,7 +4,7 @@ Two-tier design (see ADR 008):
 - Primary: inverse-MAE weights with floor 0.1. No model is fully sidelined
   when it retains any predictive signal (graceful degradation).
 - Safety valve: hard exclusion when a model's MAE > 5× the best model's MAE.
-  This fires only on catastrophic failure (e.g., TFT after training instability).
+  This fires only on catastrophic failure (e.g., extreme MAE regression after retraining).
 
 In normal operation every model participates; the floor prevents the weakest
 model from being squeezed below 10% before renormalisation.

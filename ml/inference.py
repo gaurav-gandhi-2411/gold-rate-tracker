@@ -1,9 +1,9 @@
 """CPU-only LightGBM inference.
 
 Loads lgbm.txt from models/production/ and produces a forecast written to
-data/forecast.json. TFT and N-BEATS are gated behind real-readings thresholds
-and skipped until the corpus is large enough. ONNX helpers are kept for
-future reintroduction (Phase 6).
+data/forecast.json. TFT and N-BEATS have been retired (PR B); the synthetic
+seed corpus has been archived to archive/ and is loaded for calibration
+continuity until PR H replaces the legacy path entirely.
 
 Usage:
     python -m ml.inference
@@ -25,179 +25,7 @@ sys.path.insert(0, str(ROOT))
 PROD_DIR = ROOT / "models" / "production"
 DATA_DIR = ROOT / "data"
 
-# Real-data corpus thresholds for deep model reintroduction (Phase 6)
-MIN_REAL_READINGS_FOR_NBEATS = 1000
-MIN_REAL_READINGS_FOR_TFT = 2000
 MIN_REAL_READINGS_FOR_WARMUP_CLEAR = 100
-
-# Must match TFTForecaster training: PAST_COV_COLS and FUTURE_COV_COLS order
-_PAST_COV_COLS = [
-    "usd_inr",
-    "gold_usd",
-    "us_10y_yield",
-    "dxy",
-    "sensex",
-    "vix_level",
-    "usd_inr_change_1d",
-    "gold_usd_change_1d",
-    "gold_usd_5d_vol",
-    "sensex_5d_return",
-]
-_FUTURE_COV_COLS = ["dow", "dom", "month", "akshaya_tritiya", "dhanteras", "regime"]
-_ICL = 30  # input_chunk_length (must match tft.yaml / nbeats.yaml)
-
-
-# ------------------------------------------------------------------
-# Normalizer
-# ------------------------------------------------------------------
-
-
-def _load_normalizer() -> tuple[float, float]:
-    """Load z-score params from models/production/normalizer.json.
-
-    Falls back to scanning local checkpoints if production copy is missing.
-    """
-    path = PROD_DIR / "normalizer.json"
-    if not path.exists():
-        for model in ("nbeats", "tft"):
-            for d in sorted((ROOT / "models" / "local" / model).glob("v*"), reverse=True):
-                p = d / "normalizer.json"
-                if p.exists():
-                    path = p
-                    break
-            if path.exists():
-                break
-    data = json.loads(path.read_text())
-    return float(data["mean"]), float(data["std"])
-
-
-# ------------------------------------------------------------------
-# Calendar helpers
-# ------------------------------------------------------------------
-
-
-def _calendar_array(timestamps: pd.DatetimeIndex, regime_series: pd.Series | None) -> np.ndarray:
-    """Build FUTURE_COV_COLS array for the given timestamps."""
-    from ml.features import _AKSHAYA_TRITIYA, _DHANTERAS, _is_festival_window
-
-    n = len(timestamps)
-    arr = np.zeros((n, len(_FUTURE_COV_COLS)), dtype=np.float32)
-    for i, ts in enumerate(timestamps):
-        d = ts.date()
-        arr[i, 0] = float(ts.dayofweek)
-        arr[i, 1] = float(ts.day)
-        arr[i, 2] = float(ts.month)
-        arr[i, 3] = float(_is_festival_window(d, _AKSHAYA_TRITIYA))
-        arr[i, 4] = float(_is_festival_window(d, _DHANTERAS))
-
-    if regime_series is not None:
-        rs = regime_series.copy()
-        if rs.index.tz is not None:
-            rs.index = rs.index.normalize().tz_localize(None)
-        else:
-            rs.index = rs.index.normalize()
-        ts_naive = timestamps.normalize().tz_localize(None)
-        arr[:, 5] = rs.reindex(ts_naive, method="ffill").fillna(0.0).values.astype(np.float32)
-
-    return arr
-
-
-# ------------------------------------------------------------------
-# TFT input construction
-# ------------------------------------------------------------------
-
-
-def _build_tft_inputs(
-    prices_daily: pd.Series,
-    macro_df: pd.DataFrame | None,
-    mean: float,
-    std: float,
-) -> tuple[np.ndarray, np.ndarray]:
-    """Build past_input (1, ICL, 17) and future_input (1, 1, 6) for TFT ONNX.
-
-    past_input channel layout: [normalized_price | past_cov×10 | calendar×6]
-    This must match the concatenation order in darts' TFT internal model.
-    """
-    past_idx = prices_daily.index[-_ICL:]
-    tomorrow_idx = pd.DatetimeIndex([past_idx[-1] + pd.Timedelta("1D")], tz=past_idx.tz)
-
-    # Column 0: normalized prices
-    prices = prices_daily.values[-_ICL:].astype(np.float32)
-    norm_prices = ((prices - mean) / std).reshape(_ICL, 1)
-
-    # Columns 1-10: macro past covariates (forward-filled to past_idx dates)
-    if macro_df is not None:
-        m = macro_df.copy()
-        if m.index.tz is not None:
-            m.index = m.index.normalize().tz_localize(None)
-        else:
-            m.index = m.index.normalize()
-        idx_naive = past_idx.normalize().tz_localize(None)
-        past_macro = np.zeros((_ICL, len(_PAST_COV_COLS)), dtype=np.float32)
-        for j, col in enumerate(_PAST_COV_COLS):
-            if col in m.columns:
-                past_macro[:, j] = m[col].reindex(idx_naive, method="ffill").fillna(0.0).values
-    else:
-        past_macro = np.zeros((_ICL, len(_PAST_COV_COLS)), dtype=np.float32)
-
-    # Columns 11-16: historic future covariates (calendar over past window)
-    regime_series = (
-        macro_df["regime"].dropna()
-        if macro_df is not None and "regime" in macro_df.columns
-        else None
-    )
-    cal_hist = _calendar_array(past_idx, regime_series)  # (ICL, 6)
-    cal_tomorrow = _calendar_array(tomorrow_idx, regime_series)  # (1, 6)
-
-    past_input = np.concatenate([norm_prices, past_macro, cal_hist], axis=1)  # (ICL, 17)
-    past_input = past_input.reshape(1, _ICL, 17).astype(np.float32)  # (1, 30, 17)
-    future_input = cal_tomorrow.reshape(1, 1, 6).astype(np.float32)  # (1, 1, 6)
-
-    return past_input, future_input
-
-
-# ------------------------------------------------------------------
-# N-BEATS input construction
-# ------------------------------------------------------------------
-
-
-def _build_nbeats_input(prices_daily: pd.Series, mean: float, std: float) -> np.ndarray:
-    """Build past_input (1, ICL, 1) for N-BEATS ONNX."""
-    prices = prices_daily.values[-_ICL:].astype(np.float32)
-    norm_prices = (prices - mean) / std
-    return norm_prices.reshape(1, _ICL, 1)
-
-
-# ------------------------------------------------------------------
-# ONNX runners
-# ------------------------------------------------------------------
-
-
-def _run_onnx_tft(past_input: np.ndarray, future_input: np.ndarray) -> float:
-    import onnxruntime as ort
-
-    opts = ort.SessionOptions()
-    opts.log_severity_level = 3
-    sess = ort.InferenceSession(
-        str(PROD_DIR / "tft.onnx"), sess_options=opts, providers=["CPUExecutionProvider"]
-    )
-    result = sess.run(
-        ["point_estimate"],
-        {"past_input": past_input, "future_input": future_input},
-    )
-    return float(result[0][0, 0])  # normalized scalar
-
-
-def _run_onnx_nbeats(past_input: np.ndarray) -> float:
-    import onnxruntime as ort
-
-    opts = ort.SessionOptions()
-    opts.log_severity_level = 3
-    sess = ort.InferenceSession(
-        str(PROD_DIR / "nbeats.onnx"), sess_options=opts, providers=["CPUExecutionProvider"]
-    )
-    result = sess.run(["point_estimate"], {"past_input": past_input})
-    return float(result[0][0, 0])  # normalized scalar
 
 
 # ------------------------------------------------------------------
@@ -218,29 +46,6 @@ def _run_lgbm(x_pred: np.ndarray) -> tuple[float, float, float]:
 
 
 # ------------------------------------------------------------------
-# Model performance helpers
-# ------------------------------------------------------------------
-
-
-def _load_model_maes() -> dict[str, float]:
-    """Load val_mae from each model's production meta JSON."""
-    maes: dict[str, float] = {}
-    for model, fname in [
-        ("lgbm", "lgbm-meta.json"),
-        ("tft", "tft-meta.json"),
-        ("nbeats", "nbeats-meta.json"),
-    ]:
-        path = PROD_DIR / fname
-        if path.exists():
-            try:
-                data = json.loads(path.read_text())
-                maes[model] = float(data.get("val_mae", float("inf")))
-            except Exception:
-                pass
-    return maes
-
-
-# ------------------------------------------------------------------
 # Main entry point
 # ------------------------------------------------------------------
 
@@ -254,19 +59,21 @@ def main() -> None:
         get_train_Xy,
     )
     from ml.forecast import (
-        DATA_DIR as FC_DATA_DIR,
-    )
-    from ml.forecast import (
+        ARCHIVE_SEED_PATH,
         _calibrate_seed,
         _load_json,
         _make_lgb,
         load_combined_history,
     )
+    from ml.forecast import (
+        DATA_DIR as FC_DATA_DIR,
+    )
     from ml.macro import load_macro_features
     from ml.regime import add_regime_to_macro
 
     # --- 1. Load data and capture seed calibration scale ---
-    seed_entries = _load_json(FC_DATA_DIR / "history_seed.json")
+    # Deprecated: loading synthetic seed from archive/ — legacy path removed in PR H
+    seed_entries = _load_json(ARCHIVE_SEED_PATH)
     live_entries = _load_json(FC_DATA_DIR / "prices.json")
     real_readings_count = len(live_entries)
 
@@ -300,12 +107,6 @@ def main() -> None:
             print("Macro cache absent — using base features only")
     except Exception as exc:
         print(f"Macro features unavailable ({exc})")
-
-    # TFT and N-BEATS remain gated until Phase 6 (real-data corpus threshold)
-    print(
-        f"TFT/N-BEATS gated — need {MIN_REAL_READINGS_FOR_TFT}/{MIN_REAL_READINGS_FOR_NBEATS}"
-        f" real readings (have {real_readings_count})"
-    )
 
     # --- 3. Feature matrix + active feature set (minimal_v2) ---
     feat_df = build_feature_matrix(history, macro_df=macro_df)
@@ -432,17 +233,11 @@ def main() -> None:
         "pi_coverage_80_calibrated": 0.80,
         # Phase 2: seed calibration
         "seed_calibration_scale": round(seed_scale, 4),
-        # Legacy / future Phase 6 fields kept for schema compatibility
-        "nbeats_available": False,
-        "nbeats_delta": None,
-        "min_readings_for_model_improvement": 200,
         "ensemble": {
             "method": "naive_blend",
             "n_models": 2,
             "lgbm_weight": round(w_lgbm, 3),
             "naive_weight": round(w_naive, 3),
-            "min_readings_for_nbeats": MIN_REAL_READINGS_FOR_NBEATS,
-            "min_readings_for_tft": MIN_REAL_READINGS_FOR_TFT,
             "min_readings_for_warmup_clear": MIN_REAL_READINGS_FOR_WARMUP_CLEAR,
         },
         "models": {

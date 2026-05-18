@@ -151,7 +151,7 @@ def run_study(
     Returns the completed study with best_params and best_value populated.
 
     Args:
-        model_name: One of "lightgbm", "tft", "nbeats".
+        model_name: One of "lightgbm".
         cfg: Hydra DictConfig (needs project.seed and tracking.mlflow.experiment_training).
         n_trials: Number of Optuna trials to run.
         _storage_override: Internal — override SQLite path (used in tests).

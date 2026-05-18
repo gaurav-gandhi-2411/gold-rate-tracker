@@ -39,8 +39,6 @@ log = structlog.get_logger()
 
 _MODEL_NAMES: dict[str, str] = {
     "lgbm": "gold-rate-lgbm",
-    "tft": "gold-rate-tft",
-    "nbeats": "gold-rate-nbeats",
     "ensemble": "gold-rate-ensemble",
 }
 
@@ -272,16 +270,6 @@ def bootstrap_register(
             "name": _MODEL_NAMES["lgbm"],
             "meta": "lgbm-meta.json",
             "artifacts": ["lgbm.txt", "lgbm-p10.txt", "lgbm-p90.txt"],
-        },
-        "tft": {
-            "name": _MODEL_NAMES["tft"],
-            "meta": "tft-meta.json",
-            "artifacts": ["tft.onnx"],
-        },
-        "nbeats": {
-            "name": _MODEL_NAMES["nbeats"],
-            "meta": "nbeats-meta.json",
-            "artifacts": ["nbeats.onnx"],
         },
     }
 

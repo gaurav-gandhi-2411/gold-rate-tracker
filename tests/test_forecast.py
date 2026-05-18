@@ -81,6 +81,7 @@ def test_four_readings_same_day_gives_one_row(tmp_path, monkeypatch):
         _entry("2026-05-09T18:00:00.000Z", 9030),
     ]
     monkeypatch.setattr(fc, "DATA_DIR", tmp_path)
+    monkeypatch.setattr(fc, "ARCHIVE_SEED_PATH", tmp_path / "history_seed.json")
     (tmp_path / "prices.json").write_text(json.dumps(prices))
     (tmp_path / "history_seed.json").write_text("[]")
 
@@ -97,6 +98,7 @@ def test_last_reading_of_day_wins(tmp_path, monkeypatch):
         _entry("2026-05-09T12:00:00.000Z", 9500),
     ]
     monkeypatch.setattr(fc, "DATA_DIR", tmp_path)
+    monkeypatch.setattr(fc, "ARCHIVE_SEED_PATH", tmp_path / "history_seed.json")
     (tmp_path / "prices.json").write_text(json.dumps(prices))
     (tmp_path / "history_seed.json").write_text("[]")
 
@@ -110,6 +112,7 @@ def test_overlap_live_wins_over_seed(tmp_path, monkeypatch):
     prices = [_entry("2026-05-09T18:00:00.000Z", 9100, "live")]
 
     monkeypatch.setattr(fc, "DATA_DIR", tmp_path)
+    monkeypatch.setattr(fc, "ARCHIVE_SEED_PATH", tmp_path / "history_seed.json")
     (tmp_path / "history_seed.json").write_text(json.dumps(seed))
     (tmp_path / "prices.json").write_text(json.dumps(prices))
 
@@ -124,6 +127,7 @@ def test_non_overlapping_dates_concatenated(tmp_path, monkeypatch):
     prices = [_entry("2026-05-09T18:00:00.000Z", 9100, "live")]
 
     monkeypatch.setattr(fc, "DATA_DIR", tmp_path)
+    monkeypatch.setattr(fc, "ARCHIVE_SEED_PATH", tmp_path / "history_seed.json")
     (tmp_path / "history_seed.json").write_text(json.dumps(seed))
     (tmp_path / "prices.json").write_text(json.dumps(prices))
 
@@ -136,6 +140,7 @@ def test_non_overlapping_dates_concatenated(tmp_path, monkeypatch):
 
 def test_no_data_raises(tmp_path, monkeypatch):
     monkeypatch.setattr(fc, "DATA_DIR", tmp_path)
+    monkeypatch.setattr(fc, "ARCHIVE_SEED_PATH", tmp_path / "history_seed.json")
     (tmp_path / "history_seed.json").write_text("[]")
     (tmp_path / "prices.json").write_text("[]")
 
@@ -148,6 +153,7 @@ def test_seed_only_works(tmp_path, monkeypatch):
     seed = [_entry("2026-05-09T00:00:00.000Z", 9000, "seed")]
 
     monkeypatch.setattr(fc, "DATA_DIR", tmp_path)
+    monkeypatch.setattr(fc, "ARCHIVE_SEED_PATH", tmp_path / "history_seed.json")
     (tmp_path / "history_seed.json").write_text(json.dumps(seed))
     # prices.json absent
 
@@ -163,6 +169,7 @@ def test_result_sorted_by_date(tmp_path, monkeypatch):
         _entry("2026-05-05T00:00:00.000Z", 8900, "seed"),
     ]
     monkeypatch.setattr(fc, "DATA_DIR", tmp_path)
+    monkeypatch.setattr(fc, "ARCHIVE_SEED_PATH", tmp_path / "history_seed.json")
     (tmp_path / "history_seed.json").write_text(json.dumps(seed))
     (tmp_path / "prices.json").write_text("[]")
 
