@@ -20,3 +20,14 @@ jobs:
         run: pip install -q -r ml/requirements.txt
       - name: Run smoke tests
         run: pytest tests/test_inference_main.py -m smoke -v
+      # Training-deps tests (config, promotion, tracking, tuning) excluded — they need
+      # hydra/mlflow/optuna which are training-only deps not in the inference lockfile.
+      # A future CI job will run these with training deps installed.
+      - name: Run full pytest suite
+        run: |
+          pytest \
+            --ignore=tests/test_config.py \
+            --ignore=tests/test_promotion.py \
+            --ignore=tests/test_tracking.py \
+            --ignore=tests/test_tuning.py \
+            tests/ -v
