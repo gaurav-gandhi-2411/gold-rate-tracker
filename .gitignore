@@ -11,6 +11,7 @@ __pycache__/
 .claude/
 .claude/settings.local.json
 data/macro_cache.parquet
+data/ibja_rates.parquet
 models/local/
 models/production/ensemble-config.json
 mlruns/

@@ -749,7 +749,8 @@ Each PR is independently mergeable. CI remains green after every merge. `FORECAS
 |------|----------|-------|-------------------|
 | Model 34.6% worse than naive on backtest (MAE ₹225.33 vs ₹167.36, 69 folds) | Blocker | Consultant | Chronos-Bolt pivot approved; new h=5 backtest will establish new baseline |
 | 86% synthetic training data | Major | GG (resolved) | Resolved: synthetic seed dropped. Real-only corpus from PR B onward |
-| IBJA robots.txt unverified — may block scraper | Major | CC | Must verify `ibja.co/robots.txt` (primary) and `ibjarates.com/robots.txt` (fallback) before PR C; document findings in PR C description; fallback plan is MCX series |
+| IBJA robots.txt | Minor | CC (resolved) | Verified PR C: `ibja.co` allows all crawlers (only /cgi-bin/ disallowed); `ibjarates.com` returns HTTP 404 (no restrictions). Both domains clear to scrape. |
+| MCX Bhavcopy has no direct URL | Minor | CC (resolved) | Verified PR C: MCX requires Selenium browser automation; no static CSV download URL exists. yfinance `GC=F` used as substitute for both B1 backfill and B2 daily append. |
 | Chronos-Bolt CPU latency unverified on Actions runner | Major | CC | Timing probe in PR E; fallback is `num_samples=1` deterministic mode |
 | PyTorch cold-start CI overhead (~3 min) | Minor | CC | `actions/cache` in PR E; confirmed as acceptable |
 | Unpinned deps (yfinance schema risk) | Major | CC | Lockfile added in PR A |

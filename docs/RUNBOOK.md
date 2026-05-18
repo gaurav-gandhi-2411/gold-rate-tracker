@@ -39,6 +39,30 @@ pre-commit install
 
 ---
 
+## MCX gold backfill (one-time setup)
+
+`data/mcx_gold.parquet` stores historical GC=F (COMEX gold front-month) closes.
+It is committed to the repo (Option A — backfill reproducibility). CI appends
+today's close via `python -m ml.mcx append` on every 6h run.
+
+To seed the parquet from a clean clone, or to extend historical depth:
+
+```bash
+# Pull GC=F history from 2024-01-01 onward (adjust start date as needed)
+python -m ml.mcx backfill --start 2024-01-01
+
+# Commit the resulting parquet
+git add data/mcx_gold.parquet
+git commit -m "chore: seed MCX gold parquet from GC=F history"
+git push
+```
+
+Note: MCX India's Bhavcopy CSV requires Selenium browser automation (no direct
+URL template). yfinance `GC=F` is used as the data source for both B1 (backfill)
+and B2 (daily CI append). `GC=F` prices are in USD/troy oz (COMEX).
+
+---
+
 ## Regenerating the inference dependency lockfile
 
 `ml/requirements-inference.lock` pins every transitive dependency used in CI. Regenerate it
