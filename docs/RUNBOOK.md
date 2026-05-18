@@ -39,6 +39,21 @@ pre-commit install
 
 ---
 
+## Regenerating the inference dependency lockfile
+
+`ml/requirements-inference.lock` pins every transitive dependency used in CI. Regenerate it
+whenever `ml/requirements.txt` changes:
+
+```bash
+pip install uv
+uv pip compile ml/requirements.txt --output-file ml/requirements-inference.lock --python-version 3.12
+```
+
+Commit the updated `.lock` file. The lockfile is the source of truth for `check-price.yml`;
+`ml/requirements.txt` remains the human-edited input.
+
+---
+
 ## How to retrain
 
 ```powershell
