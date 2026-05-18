@@ -286,7 +286,7 @@ def main():
             fallback["commentary_age_hours"] = round(age_h, 1)
             fallback["fallback"] = True
             append_commentary(fallback)
-            print(f"Fallback commentary appended (age={age_h:.1f}h): {last.get('text','')[:60]}…")
+            print(f"Fallback commentary appended (age={age_h:.1f}h): {last.get('text', '')[:60]}…")
         else:
             print("No prior commentary to fall back to — skipping")
         sys.exit(0)

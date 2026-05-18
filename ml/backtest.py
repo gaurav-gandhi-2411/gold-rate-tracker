@@ -249,10 +249,10 @@ def main():
     m = result["model"]
     b = result["baseline"]
     print(
-        f"\nModel   -- MAE: Rs.{m['mae']:.1f}  MAPE: {m['mape']:.2f}%  Dir-acc: {m['direction_acc']*100:.1f}%"
+        f"\nModel   -- MAE: Rs.{m['mae']:.1f}  MAPE: {m['mape']:.2f}%  Dir-acc: {m['direction_acc'] * 100:.1f}%"
     )
     print(
-        f"Baseline-- MAE: Rs.{b['mae']:.1f}  MAPE: {b['mape']:.2f}%  Dir-acc: {b['direction_acc']*100:.1f}%"
+        f"Baseline-- MAE: Rs.{b['mae']:.1f}  MAPE: {b['mape']:.2f}%  Dir-acc: {b['direction_acc'] * 100:.1f}%"
     )
 
     DATA_DIR.mkdir(exist_ok=True)
