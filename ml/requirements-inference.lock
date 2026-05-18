@@ -7,11 +7,17 @@ certifi==2026.4.22
     #   curl-cffi
     #   requests
 cffi==2.0.0
-    # via curl-cffi
+    # via
+    #   cryptography
+    #   curl-cffi
 charset-normalizer==3.4.7
-    # via requests
+    # via
+    #   pdfminer-six
+    #   requests
 colorama==0.4.6
     # via pytest
+cryptography==48.0.0
+    # via pdfminer-six
 curl-cffi==0.15.0
     # via yfinance
 flatbuffers==25.12.19
@@ -58,8 +64,14 @@ pandas==3.0.3
     # via
     #   -r ml/requirements.txt
     #   yfinance
+pdfminer-six==20251230
+    # via pdfplumber
+pdfplumber==0.11.9
+    # via -r ml/requirements.txt
 peewee==4.0.5
     # via yfinance
+pillow==12.2.0
+    # via pdfplumber
 platformdirs==4.9.6
     # via yfinance
 pluggy==1.6.0
@@ -76,6 +88,8 @@ pygments==2.20.0
     # via
     #   pytest
     #   rich
+pypdfium2==5.8.0
+    # via pdfplumber
 pytest==9.0.3
     # via -r ml/requirements.txt
 python-dateutil==2.9.0.post0

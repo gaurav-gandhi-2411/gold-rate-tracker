@@ -14,6 +14,7 @@ on:
       - "ml/features.py"
       - "ml/macro.py"
       - "ml/regime.py"
+      - "ml/ibja.py"
       - "models/production/**"
       - "archive/history_seed_synthetic.json"
       - "scraper/**"
@@ -189,6 +190,10 @@ jobs:
         env:
           GROQ_API_KEY: ${{ secrets.GROQ_API_KEY }}
         run: python ml/commentary.py
+
+      - name: Append IBJA rates
+        continue-on-error: true
+        run: python -m ml.ibja
 
       - name: Record prediction metrics
         continue-on-error: true

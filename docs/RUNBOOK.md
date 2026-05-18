@@ -39,6 +39,40 @@ pre-commit install
 
 ---
 
+## IBJA 30-day PDF backfill (one-time setup and monthly refresh)
+
+`data/ibja_rates.parquet` accumulates IBJA daily AM/PM rates via two paths:
+
+1. **Live daily scrape** (`check-price.yml`, every 6h): `python -m ml.ibja append`
+   appends today's rates from `ibjarates.com/` if not already present.
+
+2. **30-day PDF backfill** (`monthly-ibja-backfill.yml`, 1st of each month):
+   `python -m ml.ibja backfill` fetches the live ibjarates.com HTML, extracts
+   the dynamic PDF URL (`UploadedFiles/30DaysPdf/Pdf_XXXX_timestamp.pdf`),
+   downloads and parses with pdfplumber, and appends any rows not already in
+   the parquet. Idempotent — re-running appends nothing if already current.
+
+To run the backfill manually from a clean clone:
+
+```bash
+# Run once after first checkout to seed recent 30 days
+python -m ml.ibja backfill
+
+# Or trigger from the Actions tab:
+# Actions → Monthly IBJA PDF Backfill → Run workflow
+```
+
+The monthly workflow also commits the updated parquet automatically. No manual
+commit required for scheduled runs.
+
+**Tier 3 deep historical backfill (deferred):** Coverage beyond 30 days requires
+either the Wayback Machine PDF extraction path (103 archived ibjarates.com
+snapshots 2022–2026, each with a 30-day PDF link) or a paid IBJA API subscription
+(`indiagoldratesapi.com`). Decision deferred to post-PR E based on Chronos
+performance. See §3.7 risks in PROGRESS.md.
+
+---
+
 ## Regenerating the inference dependency lockfile
 
 `ml/requirements-inference.lock` pins every transitive dependency used in CI. Regenerate it
