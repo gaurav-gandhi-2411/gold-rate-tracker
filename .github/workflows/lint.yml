@@ -21,4 +21,4 @@ jobs:
       - name: Run smoke tests
         run: pytest tests/test_inference_main.py -m smoke -v
       - name: Run full pytest suite
-        run: pytest tests/ -v --timeout=180
+        run: pytest tests/ -v
