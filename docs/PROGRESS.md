@@ -138,7 +138,15 @@ With 71 overlap readings (2026-04-14 to 2026-05-17), fit a robust regression: `t
 
 > **Note:** No MCX-to-IBJA basis adjustment is needed. The calibration layer is purely IBJA-916-PM → Tanishq-22K. See §3.1.6 for the removed MCX basis section.
 
-> **⚠️ Pre-Phase-3 verification task (before PR D):** Print one current Tanishq scrape value next to the same-day IBJA-916-PM rate. Confirm whether Tanishq displays the price **pre-GST or post-GST**. If post-GST (3% already included), the premium_factor will be ~1.01–1.05 (making charges only). If pre-GST, the premium_factor will be ~1.04–1.08. Document the finding in the PR D description and hardcode the correct interpretation as a comment in `ml/calibration.py`.
+> **GST verification (completed PR D, 2026-05-19):** Tanishq displays **PRE-GST** price.
+> Empirical sample over 21 aligned trading days (2026-04-17 to 2026-05-18):
+> - Median ratio `tanishq_22k / ibja_916_pm_per_gram` = **1.017** (std = 0.015).
+> - Spot check 2026-05-18: tanishq_22k = ₹14,345/g, ibja_916_pm = ₹14,448.9/g, ratio = 0.993
+>   (depressed by a 2% IBJA drop that Tanishq had not yet propagated; median is representative).
+> - Low-ratio outliers (2026-05-13: 0.960, 2026-05-18: 0.993) occur when IBJA moves sharply
+>   intraday and Tanishq's published rate lags by one session. HuberRegressor handles these.
+> - **Conclusion:** The calibration captures **markup only** (~1.7% over IBJA-916-PM). No GST component.
+>   Expected `premium_factor` ≈ 1.01–1.03 once fit on 30+ pairs (not 1.04–1.08 as initially estimated).
 
 - **Fit:** `sklearn.linear_model.HuberRegressor` on (ibja_916_pm, tanishq_22k) pairs aligned by UTC date. HuberRegressor is robust to the occasional outlier caused by Tanishq promotional pricing or GST recalculation events — these would inflate OLS slope estimates.
 - **Residual monitoring:** After every refit, compute `residual_std = std(tanishq_22k - predicted)`. Log this value to `data/calibration.json`. If `residual_std` at next refit is > 2× the baseline value from the initial fit, log a WARNING (printed to stdout; visible in CI logs). This signals calibration drift worth investigating.
@@ -610,7 +618,7 @@ Each PR is independently mergeable. CI remains green after every merge. `FORECAS
 | **PR A** | `fix: engineering hygiene baseline` | Add `tests/test_inference_main.py`; add `ml/requirements-inference.lock`; add gitleaks to pre-commit; remove WANDB from `.env` note | None — additive only | None |
 | **PR B** | `chore: retire TFT/N-BEATS and archive synthetic seed` | Delete ONNX artifacts + TFT/N-BEATS source + tests; simplify `ml/inference.py` (remove TFT/N-BEATS dead paths L34–240); archive `data/history_seed.json`; draft ADR 010 | `inference.py` code shrinks; CI unaffected (TFT/N-BEATS were already gated) | None needed — already gated |
 | **PR C** | `feat(data): IBJA data layer (single-series)` | Add `ml/ibja.py` (live scrape + PDF backfill); add `monthly-ibja-backfill.yml`; update `.gitignore`; add IBJA fetch step in `check-price.yml`; add `tests/test_ibja.py` (14 existing + 15 new backfill tests). `ml/mcx.py` and `ml/basis.py` NOT added — see incident log. | IBJA fetch step added to CI; monthly PDF backfill workflow added; no inference change | `FORECAST_ENGINE=legacy` (default) |
-| **PR D** | `feat(ml): Tanishq-vs-IBJA calibration layer` | Add `ml/calibration.py`; `data/calibration.json` bootstrapped from 71 overlap readings; add `tests/test_calibration.py` | No inference change | `FORECAST_ENGINE=legacy` |
+| **PR D** | `feat(ml): Tanishq-vs-IBJA calibration layer` | Add `ml/calibration.py` (HuberRegressor, fit/apply/save/load/should_refit); `data/calibration.json` stub (`valid: false` — 21/30 pairs at merge); add `tests/test_calibration.py` (21 tests); GST verified: PRE-GST, median ratio 1.017 | No inference change | `FORECAST_ENGINE=legacy` |
 | **PR E** | `feat(ml): Chronos-Bolt-Tiny inference path (flag off)` | Add `ml/chronos_forecast.py`; update `ml/inference.py` with `FORECAST_ENGINE=chronos` branch; update `forecast.json` schema (backward-compatible aliases); add HF model cache step in CI; update `tests/test_inference_main.py` for both paths; draft ADR 009 | Chronos installed in CI but **not called** (`FORECAST_ENGINE=legacy`); CI timing probe logged | `FORECAST_ENGINE=legacy` |
 | **PR F** | `feat(ml): walk-forward backtest at h=5` | Rewrite `ml/backtest.py` for h=5 Chronos protocol; update `ml/metrics.py` for 5d decision rule; run new backtest, commit `data/backtest.json`; update `weekly-backtest.yml` | Backtest results updated in CI | N/A |
 | **PR G** | `feat: notification system` | Add `ml/notifications.py`, `tests/test_notifications.py`; wire into `check-price.yml`; disable `daily_summary.yml` + mark `daily_summary.py` deprecated; draft ADR 011 | New ntfy alerts begin firing | `FORECAST_ENGINE=legacy` |
@@ -677,6 +685,7 @@ Each PR is independently mergeable. CI remains green after every merge. `FORECAS
 | 2026-05-19 | IBJA primary URL corrected to ibjarates.com | CC (evidence audit) | ibja.co cannot yield both AM and PM in one request; ibjarates.com is the only source with dual AM/PM. See incident log. |
 | 2026-05-19 | MCX + basis.py dropped from plan | Consultant (approval) | No automated INR MCX source without Selenium; single-series IBJA strategy eliminates basis adjustment entirely |
 | 2026-05-18 | IBJA primary URL = ibja.co (official) | Consultant | ibjarates.com is a third-party aggregator; ibja.co is the authoritative source |
+| 2026-05-19 | Calibration model = HuberRegressor (not OLS), epsilon=1.35 | CC (PR D) | OLS inflated by lag artefacts when IBJA moves sharply (e.g. 2026-05-13: ratio 0.960, 2026-05-18: 0.993); HuberRegressor clips these with default epsilon. Verified empirically in outlier test. |
 | 2026-05-18 | Calibration model = HuberRegressor (not OLS) | Consultant | OLS is sensitive to Tanishq promotional outliers; HuberRegressor is robust to occasional spread deviations |
 | 2026-05-18 | Chronos context = 365d baseline / 730d upgrade | Consultant | 60d was insufficient for seasonal signal; 365d captures full annual demand cycle |
 | 2026-05-18 | MCX backfill = 730 days (B1 one-time) + yfinance daily (B2 ongoing) | Consultant (Q2) | Clear role split: B1 for depth, B2 for currency; avoids hammering Bhavcopy portal daily |
@@ -738,7 +747,7 @@ Architectural pivot: single-series IBJA-916-PM forecasting. MCX dropped entirely
 - **Honest-baseline ADR:** `docs/adr/005-honest-baseline-reporting.md`.
 - **Warmup flag:** `forecast.json:warmup = true` while `real_readings_count < 100`; also gates T1/T2 notifications.
 - **Production model artifacts (post-pivot):** `models/production/lgbm.txt` (legacy, kept until PR H); ONNX artifacts deleted in PR B.
-- **Calibration layer:** `ml/calibration.py` + `data/calibration.json` — HuberRegressor(ibja_916_pm, tanishq_22k) from 71 overlap readings. Premium factor ≈ 1.04–1.08 (post-GST) or 1.01–1.05 (pre-GST — verify before PR D).
+- **Calibration layer:** `ml/calibration.py` + `data/calibration.json` — HuberRegressor(ibja_916_pm_per_g → tanishq_22k_per_g). Tanishq displays PRE-GST (verified 2026-05-19); median ratio 1.017 over 21 pairs. `data/calibration.json` is `valid: false` at PR D merge (21/30 pairs); activates when 30 pairs accumulate (~9 more trading days).
 - **FORECAST_ENGINE flag:** env var in `check-price.yml`; `legacy` = LightGBM (safe default); `chronos` = Chronos-Bolt (active from PR H).
 - **Chronos-Bolt-Tiny:** `amazon/chronos-bolt-tiny` on HuggingFace; 9M params; 8.65 MB weights; installed via `pip install chronos-forecasting` (requires torch CPU-only wheel first).
 - **IBJA:** India Bullion and Jewellers Association; 916-PM rate = daily closing 22K benchmark in INR/g. Primary modeled series.
