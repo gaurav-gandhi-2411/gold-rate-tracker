@@ -6,9 +6,10 @@ import json
 import math
 from datetime import UTC, datetime, timedelta
 
+import pytest
+
 import ml.forecast as fc
 import ml.inference as inf
-import pytest
 
 
 def _make_prices(n_days: int, base_price: int = 9500) -> list[dict]:
@@ -80,9 +81,10 @@ def test_inference_main_produces_valid_forecast(tmp_path, monkeypatch):
     # rounding can shift the boundary by ±1, so |diff| ≤ 2 is the correct tolerance.
     half_upper = upper - predicted
     half_lower = predicted - lower
-    assert (
-        abs(half_upper - half_lower) <= 2
-    ), f"PI asymmetric beyond rounding tolerance: upper-pred={half_upper}, pred-lower={half_lower}"
+    assert abs(half_upper - half_lower) <= 2, (
+        f"PI asymmetric beyond rounding tolerance: "
+        f"upper-pred={half_upper}, pred-lower={half_lower}"
+    )
 
     # All output values are positive finite numbers
     for key in ("predicted_22k", "val_mae", "naive_mae", "lower", "upper"):
@@ -92,8 +94,6 @@ def test_inference_main_produces_valid_forecast(tmp_path, monkeypatch):
         assert val > 0, f"{key} must be positive: {val}"
 
     # model_status must be a recognised value
-    assert result["model_status"] in {
-        "beating_naive",
-        "matching_naive",
-        "trailing_naive",
-    }, f"Unknown model_status: {result['model_status']!r}"
+    assert result["model_status"] in {"beating_naive", "matching_naive", "trailing_naive"}, (
+        f"Unknown model_status: {result['model_status']!r}"
+    )

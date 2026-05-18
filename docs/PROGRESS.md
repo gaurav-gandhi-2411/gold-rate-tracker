@@ -759,6 +759,7 @@ Each PR is independently mergeable. CI remains green after every merge. `FORECAS
 | Sentry DSN placeholder not activated | Minor | GG | Unchanged; Sentry not required for Phase 3 |
 | ADR 006 numbering gap | Minor | GG | Pending; ADRs 009–011 drafted in Phase 3 PRs |
 | 4 training-deps tests skipped in CI (config, promotion, tracking, tuning) | Minor | CC | Add training-CI job in future PR (post-Phase 3) |
+| structlog not in ml/requirements.txt (inference lockfile) | Minor | CC | Resolve in PR D or earlier; basicConfig used as fallback in ml/inference.py |
 
 ---
 
