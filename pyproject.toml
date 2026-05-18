@@ -30,8 +30,6 @@ ignore = [
 [tool.ruff.lint.per-file-ignores]
 "tests/*" = ["B011"]                      # assert allowed in tests
 "notebooks/*" = ["E402", "F401"]
-"ml/nbeats.py" = ["F401", "F821"]         # F: PyTorch idiom; pd: type-stub only, no runtime import
-"ml/nbeats_infer.py" = ["F821"]           # pd used in type annotation only
 
 [tool.mypy]
 python_version = "3.11"
@@ -48,17 +46,9 @@ module = [
     "ml.forecast",
     "ml.macro",
     "ml.regime",
-    "ml.nbeats",
-    "ml.nbeats_infer",
-    "ml.train_nbeats",
     "ml.backtest",
-    "ml.seed_history",
     "ml.commentary",
-    "ml.models.tft",
-    "ml.models.nbeats",
     "ml.models.lgbm",
-    "ml.training.train_tft",
-    "ml.training.train_nbeats",
     "ml.training.train_lgbm",
     "ml.inference",
 ]

@@ -6,23 +6,9 @@ search_spaces:
     feature_fraction: {type: float, low: 0.5, high: 1.0}
     bagging_fraction: {type: float, low: 0.5, high: 1.0}
     bagging_freq: {type: int, low: 0, high: 10}
-  tft:
-    hidden_size: {type: categorical, choices: [16, 32, 64, 128]}
-    num_attention_heads: {type: categorical, choices: [2, 4, 8]}
-    dropout: {type: float, low: 0.0, high: 0.3}
-    hidden_continuous_size: {type: categorical, choices: [8, 16, 32]}
-    learning_rate: {type: log_float, low: 0.00005, high: 0.001}
-  nbeats:
-    num_stacks: {type: int, low: 1, high: 4}
-    num_blocks: {type: int, low: 2, high: 5}
-    num_layers: {type: int, low: 2, high: 5}
-    layer_widths: {type: categorical, choices: [64, 128, 256, 512]}
-    learning_rate: {type: log_float, low: 0.00005, high: 0.001}
 
 n_trials:
   lightgbm: 100
-  tft: 25
-  nbeats: 25
 
 walk_forward:
   holdout_days: 90

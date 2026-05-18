@@ -4,7 +4,7 @@ forecast.py — Train LightGBM and write data/forecast.json.
 Usage (from repo root):
     python ml/forecast.py
 
-Reads:  data/history_seed.json (if present) + data/prices.json
+Reads:  archive/history_seed_synthetic.json (deprecated synthetic seed) + data/prices.json
 Writes: data/forecast.json
 
 The model predicts the *delta* of the next 22K reading (differenced target is
@@ -39,7 +39,10 @@ from ml.features import (
 )
 from ml.regime import REGIME_FEATURE_COLS
 
-DATA_DIR = Path(__file__).parent.parent / "data"
+ROOT = Path(__file__).resolve().parent.parent
+DATA_DIR = ROOT / "data"
+# Deprecated synthetic seed path — removed in PR H when legacy inference path retires.
+ARCHIVE_SEED_PATH = ROOT / "archive" / "history_seed_synthetic.json"
 MODEL_VERSION = "lgbm-v1"
 
 _LGB_BASE = dict(
@@ -139,7 +142,7 @@ def load_combined_history() -> pd.DataFrame:
     concatenation with seed. On overlapping dates, prices.json wins.
     Seed values are calibrated to match the live data at the boundary.
     """
-    seed_entries = _load_json(DATA_DIR / "history_seed.json")
+    seed_entries = _load_json(ARCHIVE_SEED_PATH)
     live_entries = _load_json(DATA_DIR / "prices.json")
 
     if not seed_entries and not live_entries:
@@ -171,7 +174,7 @@ def load_combined_history() -> pd.DataFrame:
 
 def load_all_data() -> pd.DataFrame:
     """Merge seed + scraped data, sort, deduplicate by timestamp."""
-    entries = _load_json(DATA_DIR / "history_seed.json") + _load_json(DATA_DIR / "prices.json")
+    entries = _load_json(ARCHIVE_SEED_PATH) + _load_json(DATA_DIR / "prices.json")
     if not entries:
         raise RuntimeError("No data found in history_seed.json or prices.json")
     df = pd.DataFrame(entries)

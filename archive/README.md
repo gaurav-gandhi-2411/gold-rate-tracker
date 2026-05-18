@@ -1,0 +1,1 @@
+Deprecated artifacts retained for reference. Not used by any live code path. See docs/adr/010-drop-synthetic-seed.md for rationale.

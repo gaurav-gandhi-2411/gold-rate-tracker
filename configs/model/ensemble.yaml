@@ -1,8 +1,6 @@
 name: ensemble
 members:
   - lightgbm
-  - tft
-  - nbeats
 weights_strategy: inverse_mae
 weight_floor: 0.1
 holdout_days: 90
