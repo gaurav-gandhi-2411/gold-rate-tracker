@@ -1,11 +1,5 @@
 [
   {
-    "ts": "2026-05-12T20:02:46Z",
-    "text": "The Indian retail gold price has risen by 1.07% over the past 3 days, with the current 22K price at Rs.14160. The model expects a slight decrease to Rs.14063 in the next reading. Recent price movements have been relatively stable.",
-    "model": "llama-3.3-70b-versatile",
-    "prompt_hash": "6e74b790f8b3"
-  },
-  {
     "ts": "2026-05-13T03:57:40Z",
     "text": "The 22K gold price has risen by 1.07% over the past 3 days, reaching Rs.14160. The model expects a slight increase to Rs.14176 in the next reading. Recent price movements have been relatively stable.",
     "model": "llama-3.3-70b-versatile",
@@ -186,6 +180,13 @@
     "text": "The 22K gold price has decreased by 2.55% over the past 3 days, but is up 2.54% over the past week, currently at the 64.8th percentile in the last 90 days. The model expects a stable price. Recent fluctuations have occurred near the Akshaya Tritiya window.",
     "model": "llama-3.3-70b-versatile",
     "prompt_hash": "e45f318cdceb",
+    "commentary_age_hours": 0.0
+  },
+  {
+    "ts": "2026-05-18T15:20:40Z",
+    "text": "The 22K gold price has decreased by 2.55% over the past 3 days, but is up 2.54% over the past week. The model expects the price to remain around Rs.14345. Recent price movements show a drop of over Rs.100 occurred recently.",
+    "model": "llama-3.3-70b-versatile",
+    "prompt_hash": "0fb170b01f94",
     "commentary_age_hours": 0.0
   }
 ]
