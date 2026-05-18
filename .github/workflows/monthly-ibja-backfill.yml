@@ -1,0 +1,55 @@
+name: Monthly IBJA PDF Backfill
+
+# Runs on the 1st of each month at 04:00 UTC to extend the IBJA parquet with
+# the previous 30 days of AM/PM rates from ibjarates.com's rolling PDF archive.
+# Kept separate from check-price.yml so the 6h cron is not burdened with the
+# extra HTTP fetch + pdfplumber parse on every cycle.
+on:
+  schedule:
+    - cron: "0 4 1 * *"
+  workflow_dispatch: # allows manual trigger from the Actions tab
+
+permissions:
+  contents: write
+
+concurrency:
+  group: monthly-ibja-backfill
+  cancel-in-progress: false
+
+jobs:
+  backfill:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6
+
+      - name: Set up Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: "3.12"
+          cache: "pip"
+          cache-dependency-path: ml/requirements-inference.lock
+
+      - name: Install ML dependencies
+        run: |
+          pip install -q uv
+          uv pip install --system -r ml/requirements-inference.lock
+
+      - name: Run IBJA PDF backfill
+        continue-on-error: true
+        run: python -m ml.ibja backfill
+
+      - name: Commit updated parquet
+        run: |
+          git config user.name "gold-rate-bot"
+          git config user.email "actions@users.noreply.github.com"
+          git add data/ibja_rates.parquet 2>/dev/null || true
+          if git diff --staged --quiet; then
+            echo "No new IBJA rows to commit."
+          else
+            git commit -m "chore: monthly IBJA PDF backfill [skip ci]"
+            git pull --rebase --autostash origin master
+            git push
+          fi

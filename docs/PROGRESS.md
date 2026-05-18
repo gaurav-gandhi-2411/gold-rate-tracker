@@ -70,81 +70,73 @@
 
 | Field | Value |
 |-------|-------|
-| URL | `https://ibja.co/` (official IBJA site — primary; HTML table of AM/PM daily rates) |
-| Fallback URL | `https://ibjarates.com/` (same data, different layout — fallback only) |
-| Fields extracted | Date, 916-PM (22K closing), 916-AM (22K opening), 999-PM (24K), 750-PM (18K) |
-| Frequency | Once daily (published by ~09:30 IST after AM fix; PM rate by ~17:00 IST) |
-| robots.txt | ⚠️ **UNVERIFIED — CC must check `https://ibja.co/robots.txt` manually and document findings in the PR C description before PR C is opened.** If blocked on primary, check fallback `https://ibjarates.com/robots.txt`. If both block scrapers, fall back to Source C (Metals.Dev free tier, 100 requests/month — insufficient for daily; would require rate-limited weekly fetch). |
-| Auth | None observed; no login required for daily rate table |
+| URL | `https://ibjarates.com/` — sole source providing both AM and PM in one request |
+| Table selector | `table#TodayRatesTableDataYes` (server-side rendered, no JS required) |
+| Fields extracted | Date, purity_916_am, purity_916_pm, purity_999_am, purity_999_pm, purity_995_am/pm, purity_750_am/pm, purity_585_am/pm |
+| Frequency | Live scrape: once per 6h CI run. PDF backfill: 1st of each month (rolling 30 days). |
+| robots.txt | ibja.co: `User-agent: * / Disallow: /cgi-bin/` — scraping allowed. ibjarates.com: HTTP 404 — no robots.txt, no restrictions. Both verified 2026-05-18. |
+| Auth | None |
 | New file | `ml/ibja.py` |
 
-> **IBJA backfill plan:** ibja.co (official) publishes current rates. Historical depth via ibja.co is unverified; third-party aggregators have accumulated multi-year IBJA history. **Before PR C:** manually verify whether ibja.co exposes HTML history beyond 30 days. If not, Source B (MCX) provides sufficient price-level continuity for Chronos context.
+> **Why ibjarates.com (not ibja.co):** ibja.co was spec'd as primary but investigation (2026-05-18) confirmed it shows only the current session (AM **or** PM at a time, never both). The `id="lblHeaderTextForTimeUnit"` span explicitly states which session is active. ibja.co cannot yield dual AM/PM in a single request under any scraping approach. ibjarates.com is the sole source that provides both columns. This is a spec correction, not a substitution.
 
-**Source B — MCX Gold near-month daily settlement (two complementary roles)**
+**Tier 2 — ibjarates.com 30-day PDF backfill**
 
-B1 and B2 serve different roles and are both used — they are not alternatives to each other:
+Each CI run of the monthly backfill workflow:
+1. Fetches the live ibjarates.com HTML
+2. Extracts the dynamic PDF URL via regex: `href="([^"]*30DaysPdf[^"]*\.pdf)"`
+3. Downloads and parses with `pdfplumber` (positional columns, verified 2026-05-18)
+4. Appends non-duplicate rows to `data/ibja_rates.parquet`
 
-| | **B1: MCX Bhavcopy** | **B2: yfinance `GOLD.MCX`** |
-|---|---|---|
-| URL | `https://www.mcxindia.com/market-data/bhavcopy` | `yfinance.download("GOLD.MCX", ...)` |
-| Format | Per-day CSV download (one file per date) | DataFrame, same API already wired |
-| History available | Multi-year (MCX launched 2003; daily files assumed available from ~2010) | ~3 years via yfinance |
-| INR denominated? | Yes (INR/10g settlement price) | Yes |
-| Auth | None — public portal download | None (unofficial API) |
-| Python integration | Custom downloader loop by date range | Already in `ml/macro.py` framework |
-| Known limitations | No bulk download API; must loop dates or scrape filenames; URL pattern may require inspection | Unofficial; schema instability precedent (same issue as GC=F in macro.py) |
-| robots.txt | UNVERIFIED | N/A (API, not scrape) |
-| **Role** | **One-time historical backfill** — run once to build the initial 730-day corpus; result written to `data/mcx_gold.parquet` | **Ongoing daily updates** — incremental daily fetch appended to `data/mcx_gold.parquet` each CI run |
+PDF structure (verified with live download 2026-05-18):
+- 1 page, 34 rows (2 header + 32 calendar days)
+- 13 columns: Date + 5 gold purities × AM/PM + Silver 999 × AM/PM
+- Weekend rows: `r[1]` in {'SAT','SUN'}; holiday rows: 'Holiday' in `r[1]`
+- ~21 trading days per PDF; date format `DD-Mon-YY` (e.g. `18-May-26`)
+- Values in Rs per 10g for gold, Rs per kg for silver
 
-**Usage split:**
-- **B1 (Bhavcopy):** executed once (manually or in a setup script) to backfill 730 days of MCX settlement history. Not re-run in routine CI.
-- **B2 (yfinance):** called in `check-price.yml` on every 6h run to append the latest day's MCX close. Continues even if B1 is unavailable in future — it's the live feed.
+**Tier 3 — Deep historical backfill (deferred, see §3.7)**
 
-This split avoids hammering the Bhavcopy portal daily while keeping the price series current via the already-trusted yfinance code path.
-
-**Source C — yfinance USD/INR + Gold-USD spot (macro features, keep)**
+**Source B — yfinance USD/INR + Gold-USD spot (macro features, keep)**
 
 Already wired in `ml/macro.py`. No change. Used as covariates in the LightGBM residual head (Phase 4 stretch); not needed for Chronos.
 
-**Source D — Tanishq live scrape (keep as-is)**
+**Source C — Tanishq live scrape (keep as-is)**
 
 `scraper/scrape.js` — Playwright scraping Tanishq. No change. This remains the ground-truth retail series; IBJA is the modeled series.
 
 ##### 3.1.2 Storage schema
 
-Two new Parquet tables (gitignored, regenerated in CI):
+One Parquet table (gitignored, accumulated in CI):
 
 **`data/ibja_rates.parquet`**
 
 | Column | Type | Description |
 |--------|------|-------------|
-| `date` | `date` (index) | UTC calendar date |
-| `purity_916_am` | `float32` | IBJA 22K AM fix (INR/g) |
-| `purity_916_pm` | `float32` | IBJA 22K PM fix (INR/g) — **primary modeled series** |
-| `purity_999_pm` | `float32` | 24K PM fix |
-| `purity_750_pm` | `float32` | 18K PM fix |
-| `source` | `str` | `"ibjarates.com"` or `"mcx-backfill"` |
+| `date` | `str` | ISO date `YYYY-MM-DD` |
+| `fetched_at` | `str` | UTC ISO-8601 timestamp of fetch |
+| `am_999` | `float64` | IBJA 999-purity AM rate (INR/10g) |
+| `pm_999` | `float64` | IBJA 999-purity PM rate (INR/10g) |
+| `am_995` | `float64` | IBJA 995-purity AM rate |
+| `pm_995` | `float64` | IBJA 995-purity PM rate |
+| `am_916` | `float64` | IBJA 22K AM fix (INR/10g) |
+| `pm_916` | `float64` | IBJA 22K PM fix (INR/10g) — **primary modeled series** |
+| `am_750` | `float64` | IBJA 750-purity AM rate |
+| `pm_750` | `float64` | IBJA 750-purity PM rate |
+| `am_585` | `float64` | IBJA 585-purity AM rate |
+| `pm_585` | `float64` | IBJA 585-purity PM rate |
 
-**`data/mcx_gold.parquet`**
+`data/mcx_gold.parquet` — **REMOVED** (MCX strategy dropped; see incident log).
 
-| Column | Type | Description |
-|--------|------|-------------|
-| `date` | `date` (index) | Settlement date |
-| `mcx_gold_settle` | `float32` | Near-month MCX Gold settlement (INR/10g) |
-| `mcx_gold_22k_equiv` | `float32` | Derived: `settle × (22/24) / 10` = INR/g 22K equiv |
-
-**Update `.gitignore`** to add:
-```
-data/ibja_rates.parquet
-data/mcx_gold.parquet
-data/notification_state.json
-```
+**`.gitignore`** entry: `data/ibja_rates.parquet` (already added in PR C).
 
 ##### 3.1.3 Calibration layer
 
 Tanishq retail price = IBJA-916-PM × `premium_factor` + `fixed_markup`
 
 With 71 overlap readings (2026-04-14 to 2026-05-17), fit a robust regression: `tanishq_22k ~ ibja_916_pm`. Expected premium_factor ≈ 1.04–1.08 (GST 3% + making charges ≈ 1–5%). Simple ratio model is sufficient; R² should be ≥ 0.98.
+
+> **Note:** No MCX-to-IBJA basis adjustment is needed. The calibration layer is purely IBJA-916-PM → Tanishq-22K. See §3.1.6 for the removed MCX basis section.
 
 > **⚠️ Pre-Phase-3 verification task (before PR D):** Print one current Tanishq scrape value next to the same-day IBJA-916-PM rate. Confirm whether Tanishq displays the price **pre-GST or post-GST**. If post-GST (3% already included), the premium_factor will be ~1.01–1.05 (making charges only). If pre-GST, the premium_factor will be ~1.04–1.08. Document the finding in the PR D description and hardcode the correct interpretation as a comment in `ml/calibration.py`.
 
@@ -166,14 +158,14 @@ def save_calibration(params: CalibrationParams, path: Path) -> None
 
 | File | Action | Detail |
 |------|--------|--------|
-| `ml/ibja.py` | **ADD** | Scraper + Parquet cache manager for IBJA rates |
-| `ml/mcx.py` | **ADD** | MCX Bhavcopy one-time backfill downloader + Parquet cache; yfinance daily append logic |
-| `ml/calibration.py` | **ADD** | HuberRegressor calibration layer (IBJA→Tanishq) |
-| `ml/macro.py` | **EDIT L44–54** | Add `mcx_gold_settle` to ticker-map or load from `mcx_gold.parquet`; no macro changes needed for Chronos path |
+| `ml/ibja.py` | **ADD** | Live scraper + PDF backfill + Parquet cache manager for IBJA rates |
+| `ml/calibration.py` | **ADD** (PR D) | HuberRegressor calibration layer (IBJA→Tanishq) |
 | `data/history_seed.json` | **MOVE** | → `archive/history_seed_synthetic.json` |
 | `data/history_seed_v1_uniform_premium.json` | **MOVE** | → `archive/history_seed_v1_uniform_premium.json` |
 | `ml/seed_history.py` | **DELETE** | No longer needed; move to `archive/scripts/seed_history.py` |
-| `.gitignore` | **EDIT** | Add `data/ibja_rates.parquet`, `data/mcx_gold.parquet`, `data/notification_state.json` |
+| `.gitignore` | **EDIT** | Add `data/ibja_rates.parquet`, `data/notification_state.json` |
+| `ml/mcx.py` | **NOT ADDED** | Dropped — no automated INR MCX source available without Selenium |
+| `ml/basis.py` | **NOT ADDED** | Dropped — single-series IBJA strategy eliminates basis adjustment requirement |
 
 ##### 3.1.5 Migration: keeping live CI intact
 
@@ -190,59 +182,9 @@ The flag is read inside `ml/inference.py` via `os.environ.get("FORECAST_ENGINE",
 
 ##### 3.1.6 MCX-to-IBJA basis adjustment
 
-**Problem:** `data/ibja_rates.parquet` will stitch two distinct underlying series:
-- **Backfill segment** (730 days before PR C launch): derived from MCX near-month settlement via `mcx_gold_22k_equiv = settle × (22/24) / 10`. This is a futures-derived proxy, not a physical 22K benchmark.
-- **Live segment** (from PR C launch onward): real IBJA-916-PM rates scraped from ibja.co.
+**Section removed 2026-05-19 — single-series IBJA strategy eliminates basis adjustment requirement. See incident log.**
 
-The two series track the same underlying commodity but are not identical. The basis spread (IBJA-916-PM vs `mcx_gold_22k_equiv`) is typically small (~0.5–1%) but is non-zero and time-varying — it reflects the MCX futures basis, IBJA committee pricing conventions, and local demand/supply dynamics. Left uncorrected, the stitch introduces a level discontinuity that Chronos will interpret as a price event rather than a data artefact.
-
-**Solution — rolling basis adjustment (deferred until 30-overlap milestone):**
-
-Starting from PR C launch, accumulate overlap pairs: `(ibja_916_pm[d], mcx_gold_22k_equiv[d])` for each day `d` where both series have a valid reading. Once ≥ 30 overlap days have accumulated (~30 trading days ≈ 6 weeks after PR C):
-
-1. Compute a rolling 30-day median ratio: `basis_factor = median(ibja_916_pm / mcx_gold_22k_equiv)` over the overlap window.
-2. Retroactively scale the backfill segment: `ibja_rates.parquet[backfill].purity_916_pm *= basis_factor`.
-3. Re-fit monthly: on each calibration refresh cycle, recompute the rolling 30-day median and update the backfill scaling if the factor has shifted by > 0.2%.
-
-**Interim period (PR C launch to 30-overlap milestone):**
-- Basis adjustment is not yet applied.
-- `forecast.json` includes `"basis_adjustment_applied": false` to make the data provenance visible.
-- Chronos-Bolt zero-shot is tolerant of this: the absolute level shift (~0.5–1%) is small relative to its predictive uncertainty bands at h=5. However, the discontinuity at the stitch point should be monitored.
-- Acknowledge the basis risk in **ADR 010** (drop-synthetic-seed ADR) as a known limitation of the MCX proxy backfill.
-
-**New file:** `ml/basis.py` (~50 lines) or fold into `ml/mcx.py` if the logic stays compact.
-
-```python
-# ml/basis.py — public API (if separate file)
-def compute_basis_factor(
-    ibja_series: pd.Series,        # DatetimeIndex, daily, INR/g
-    mcx_equiv_series: pd.Series,   # same index, mcx_gold_22k_equiv
-    window_days: int = 30,
-) -> float                         # rolling median ratio
-
-def apply_basis_adjustment(
-    backfill_df: pd.DataFrame,     # ibja_rates.parquet backfill segment
-    basis_factor: float,
-) -> pd.DataFrame                  # backfill with purity_916_pm scaled
-
-def should_refit(
-    last_fit_date: date,
-    overlap_count: int,
-    min_overlap: int = 30,
-    refit_interval_days: int = 30,
-) -> bool
-```
-
-Add `"basis_factor"` and `"basis_adjustment_applied"` fields to `data/calibration.json` (same file as the Tanishq calibration — both are basis-type adjustments, co-locate for reviewability).
-
-**File-level changes (additions to §3.1.4 table):**
-
-| File | Action | Detail |
-|------|--------|--------|
-| `ml/basis.py` | **ADD** (or fold into `ml/mcx.py`) | MCX-to-IBJA basis adjustment: overlap accumulation, rolling median, backfill scaling |
-| `data/calibration.json` | **EDIT** | Add `basis_factor`, `basis_adjustment_applied`, `basis_overlap_count` fields |
-| `forecast.json` schema | **EDIT** (PR C) | Add `"basis_adjustment_applied": false` to schema |
-| ADR 010 | **EDIT** (PR C) | Add basis risk as a known limitation of the MCX proxy backfill |
+The original §3.1.6 described a rolling median ratio between MCX-derived prices and live IBJA-916-PM rates. This section is no longer applicable because `ml/mcx.py` and `ml/basis.py` were not added. The IBJA parquet contains only real IBJA rates with no stitched proxy segment, so no basis correction is needed.
 
 ---
 
@@ -667,7 +609,7 @@ Each PR is independently mergeable. CI remains green after every merge. `FORECAS
 |----|-------|----------|-----------|-------------|
 | **PR A** | `fix: engineering hygiene baseline` | Add `tests/test_inference_main.py`; add `ml/requirements-inference.lock`; add gitleaks to pre-commit; remove WANDB from `.env` note | None — additive only | None |
 | **PR B** | `chore: retire TFT/N-BEATS and archive synthetic seed` | Delete ONNX artifacts + TFT/N-BEATS source + tests; simplify `ml/inference.py` (remove TFT/N-BEATS dead paths L34–240); archive `data/history_seed.json`; draft ADR 010 | `inference.py` code shrinks; CI unaffected (TFT/N-BEATS were already gated) | None needed — already gated |
-| **PR C** | `feat(data): IBJA + MCX data layer` | Add `ml/ibja.py`, `ml/mcx.py`; update `.gitignore`; add IBJA fetch step in `check-price.yml` (`continue-on-error: true`); add `tests/test_ibja.py`, `tests/test_mcx.py` | IBJA fetch step added to CI; no inference change | `FORECAST_ENGINE=legacy` (default) |
+| **PR C** | `feat(data): IBJA data layer (single-series)` | Add `ml/ibja.py` (live scrape + PDF backfill); add `monthly-ibja-backfill.yml`; update `.gitignore`; add IBJA fetch step in `check-price.yml`; add `tests/test_ibja.py` (14 existing + 15 new backfill tests). `ml/mcx.py` and `ml/basis.py` NOT added — see incident log. | IBJA fetch step added to CI; monthly PDF backfill workflow added; no inference change | `FORECAST_ENGINE=legacy` (default) |
 | **PR D** | `feat(ml): Tanishq-vs-IBJA calibration layer` | Add `ml/calibration.py`; `data/calibration.json` bootstrapped from 71 overlap readings; add `tests/test_calibration.py` | No inference change | `FORECAST_ENGINE=legacy` |
 | **PR E** | `feat(ml): Chronos-Bolt-Tiny inference path (flag off)` | Add `ml/chronos_forecast.py`; update `ml/inference.py` with `FORECAST_ENGINE=chronos` branch; update `forecast.json` schema (backward-compatible aliases); add HF model cache step in CI; update `tests/test_inference_main.py` for both paths; draft ADR 009 | Chronos installed in CI but **not called** (`FORECAST_ENGINE=legacy`); CI timing probe logged | `FORECAST_ENGINE=legacy` |
 | **PR F** | `feat(ml): walk-forward backtest at h=5` | Rewrite `ml/backtest.py` for h=5 Chronos protocol; update `ml/metrics.py` for 5d decision rule; run new backtest, commit `data/backtest.json`; update `weekly-backtest.yml` | Backtest results updated in CI | N/A |
@@ -692,8 +634,9 @@ Each PR is independently mergeable. CI remains green after every merge. `FORECAS
 | Chronos-Bolt CPU inference latency on Actions runner is unverified (estimated 2–5s; could be 30s+) | Major | **PR E must include a wall-clock timing probe.** If > 15s, switch to Chronos-Bolt-Tiny with `num_samples=1` (deterministic mode) for P50 only; PI falls back to conformal. Flag PR E timing results before PR H. |
 | PyTorch wheel download (280 MB CPU-only) inflates CI cold-start by ~3 min | Minor | `actions/cache` on `ml/requirements-inference.lock` hash; verify cache hit rate in PR E. |
 | HuggingFace Hub unavailable during CI run (transient) | Minor | `continue-on-error: true` on model download step; fall back to legacy LightGBM path for that cycle (feature flag); T5 fires to surface the fallback. |
-| ibja.co or ibjarates.com HTML structure changes break IBJA scraper | Major | Selector-based scraper + `prices_rejected.json` fallback pattern (existing precedent from `scraper/`); ntfy alert on scraper failure (existing pattern from `check-price.yml`). |
-| MCX Bhavcopy URL pattern changes or requires login in future | Minor | yfinance `GOLD.MCX` as documented fallback (Option B2); degrade gracefully. |
+| ibjarates.com HTML structure changes break IBJA scraper | Major | Selector-based scraper (`table#TodayRatesTableDataYes`) + ntfy alert on scraper failure (existing pattern from `check-price.yml`). |
+| ibjarates.com PDF filename pattern changes break backfill | Minor | Regex targets `30DaysPdf` directory + `.pdf` extension, not the timestamp portion. Only breaks if the directory structure changes. Monthly cadence limits exposure. |
+| Tier 3 deep historical backfill deferred — Chronos zero-shot may need additional context if PR E shows poor performance on thin history | Minor | Decision deferred to post-PR E. Options: (a) Wayback Machine PDF extraction — 103 confirmed captures 2022–2026, each with a 30-day PDF link; note: archive.org may be unreliable from some hosts but is consistently accessible from GitHub Actions runners. (b) Paid IBJA API via indiagoldratesapi.com. Decision criteria: if Chronos PR E backtest shows `mae_5d_avg > 1.5 × naive_5d_mae`, revisit Tier 3. |
 | Calibration model has only 71 observations at launch | Minor | 71 points is sufficient for a 1-parameter ratio; R² expected ≥ 0.98. HuberRegressor chosen for robustness to outliers. Refit threshold (10 new readings) will improve it quickly. Log calibration params and residual_std to `forecast.json` for auditing. |
 | LightGBM residual head (Phase 4) may not clear the 2% promotion gate | Low | By design — it's a stretch goal. Chronos standalone is the primary; LightGBM is optional. |
 
@@ -731,6 +674,8 @@ Each PR is independently mergeable. CI remains green after every merge. `FORECAS
 | 2026-05-18 | Primary forecaster = Chronos-Bolt-Tiny | Consultant | Zero-shot, 9M params, 8.65 MB, CPU-runnable; appropriate for 71-reading corpus |
 | 2026-05-18 | Retire TFT + N-BEATS | Consultant | Data gates (1,000 / 2,000 real readings) would not open until 2027–2028 |
 | 2026-05-18 | Variant = Tiny (not Base) | CC plan | 8.65 MB vs 821 MB; accuracy gap negligible at current data volume; upgrade path is 1-line |
+| 2026-05-19 | IBJA primary URL corrected to ibjarates.com | CC (evidence audit) | ibja.co cannot yield both AM and PM in one request; ibjarates.com is the only source with dual AM/PM. See incident log. |
+| 2026-05-19 | MCX + basis.py dropped from plan | Consultant (approval) | No automated INR MCX source without Selenium; single-series IBJA strategy eliminates basis adjustment entirely |
 | 2026-05-18 | IBJA primary URL = ibja.co (official) | Consultant | ibjarates.com is a third-party aggregator; ibja.co is the authoritative source |
 | 2026-05-18 | Calibration model = HuberRegressor (not OLS) | Consultant | OLS is sensitive to Tanishq promotional outliers; HuberRegressor is robust to occasional spread deviations |
 | 2026-05-18 | Chronos context = 365d baseline / 730d upgrade | Consultant | 60d was insufficient for seasonal signal; 365d captures full annual demand cycle |
@@ -750,7 +695,7 @@ Each PR is independently mergeable. CI remains green after every merge. `FORECAS
 | Model 34.6% worse than naive on backtest (MAE ₹225.33 vs ₹167.36, 69 folds) | Blocker | Consultant | Chronos-Bolt pivot approved; new h=5 backtest will establish new baseline |
 | 86% synthetic training data | Major | GG (resolved) | Resolved: synthetic seed dropped. Real-only corpus from PR B onward |
 | IBJA robots.txt | Minor | CC (resolved) | Verified PR C: `ibja.co` allows all crawlers (only /cgi-bin/ disallowed); `ibjarates.com` returns HTTP 404 (no restrictions). Both domains clear to scrape. |
-| MCX Bhavcopy has no direct URL | Minor | CC (resolved) | Verified PR C: MCX requires Selenium browser automation; no static CSV download URL exists. yfinance `GC=F` used as substitute for both B1 backfill and B2 daily append. |
+| MCX Bhavcopy has no direct URL | Minor | CC (resolved) | Verified PR C: MCX direct 403 (Akamai WAF); Samco archive empty; yfinance Indian MCX symbols all empty/delisted; investpy 403 from investing.com. No automated INR MCX path. MCX strategy dropped entirely — not a risk, a closed question. |
 | Chronos-Bolt CPU latency unverified on Actions runner | Major | CC | Timing probe in PR E; fallback is `num_samples=1` deterministic mode |
 | PyTorch cold-start CI overhead (~3 min) | Minor | CC | `actions/cache` in PR E; confirmed as acceptable |
 | Unpinned deps (yfinance schema risk) | Major | CC | Lockfile added in PR A |
@@ -761,6 +706,29 @@ Each PR is independently mergeable. CI remains green after every merge. `FORECAS
 | ADR 006 numbering gap | Minor | GG | Pending; ADRs 009–011 drafted in Phase 3 PRs |
 | 4 training-deps tests skipped in CI (config, promotion, tracking, tuning) | Minor | CC | Add training-CI job in future PR (post-Phase 3) |
 | structlog not in ml/requirements.txt (inference lockfile) | Minor | CC | Resolve in PR D or earlier; basicConfig used as fallback in ml/inference.py |
+
+---
+
+## Incident Log
+
+**2026-05-18 — PR #14 rejected.** Two silent data-source substitutions were made without flag-and-stop:
+1. ibja.co (spec'd primary) → ibjarates.com (spec'd fallback) — reversed silently.
+2. MCX INR/10g → COMEX GC=F USD/troy oz — substituted silently. This is the synthetic-seed problem structurally repeated: USD-denominated futures data relabeled as INR exchange data.
+
+Rejection rationale: data-source substitutions are architecture decisions, not minor implementation choices. Scope discipline protocol: when a spec item proves hard, STOP AND REPORT — not find an adjacent option and move on. Reset and evidence audit required.
+
+**2026-05-19 — Evidence audit completed. Revised architecture approved.**
+
+Findings:
+- ibja.co structurally incapable of providing both AM and PM in one request (`id="lblHeaderTextForTimeUnit"` shows only the active session). The 2026-05-18 spec entry designating ibja.co as primary was incorrect; ibjarates.com is the only viable source. This is a spec correction, not a substitution.
+- MCX INR data: all five automated paths blocked (MCX direct 403 Akamai WAF; Samco archive empty; yfinance Indian MCX symbols empty/delisted; nsepython NSE-only; investpy 403 from investing.com). No pip-installable library provides automated INR MCX data without Selenium or a paid API.
+- Metals.Dev API: `ibja_gold` field returns USD/troy oz — same denomination problem as GC=F, relabeled. Not usable for INR/10g series. Testing the actual documented field denomination (not the marketing description) caught this before implementation.
+- ibjarates.com 30-day PDF: confirmed working (308KB, pdfplumber parses correctly, 21 trading days per file, all 5 purities AM+PM, Rs/10g). Provides live + rolling-30-day backfill without rate limits.
+- Wayback Machine: 103 captures of ibjarates.com (2022–2026) confirmed via CDX API. Direct Python requests to archive.org time out from local dev machine; GitHub Actions runners have clean connectivity. Viable for Tier 3 deep backfill if needed.
+
+Architectural pivot: single-series IBJA-916-PM forecasting. MCX dropped entirely. `ml/basis.py` and `ml/mcx.py` removed from plan. PR C scope reduced to IBJA live scrape + 30-day PDF backfill only.
+
+**Lesson:** Evidence audits must include: (1) third-party data providers (Metals.Dev) before designating a "backup" data path; (2) archive sources (Wayback Machine) before declaring historical data unavailable; (3) denomination verification against documented response samples, not marketing labels alone. Default to simpler architectures when they exist. A single-series IBJA direct approach is strictly simpler than a two-source MCX-proxy + basis-adjustment architecture.
 
 ---
 
@@ -777,7 +745,7 @@ Each PR is independently mergeable. CI remains green after every merge. `FORECAS
 - **MCX Bhavcopy:** MCX India official daily settlement file; free; used for multi-year IBJA-proxy backfill depth.
 - **notification_state.json:** Gitignored per-machine state file tracking cooldowns and quiet-hours queue. Persisted across CI runs via GitHub Actions cache (`notification-state-{repo}-{branch}`). Cache miss = fresh state = at most one duplicate alert per trigger.
 - **T5 (model degraded):** New trigger; fires when Chronos path fails and LightGBM legacy path runs. Signal is `model_fallback=true` in `forecast.json`. Max once per calendar day (UTC). Low priority.
-- **IBJA primary URL:** `ibja.co` (official IBJA site). `ibjarates.com` is fallback only.
-- **MCX backfill roles:** B1 = MCX Bhavcopy (one-time 730-day historical backfill); B2 = yfinance GOLD.MCX (ongoing daily append in CI).
-- **Basis adjustment:** MCX-derived proxy prices are scaled to IBJA-916-PM levels once ≥30 overlap days exist (rolling 30-day median ratio). Until then, `basis_adjustment_applied=false` in `forecast.json`. See §3.1.6.
+- **IBJA primary URL:** `ibjarates.com` — sole source with both AM and PM rates. `ibja.co` cannot provide dual AM/PM (spec correction 2026-05-19; see incident log).
+- **MCX:** Not used. Dropped from plan 2026-05-19. No automated INR MCX data path without Selenium or paid API. See incident log.
+- **Basis adjustment:** Not needed. Single-series IBJA strategy means no MCX proxy to reconcile. Section §3.1.6 tombstoned.
 - **Notification state cache:** master-branch only (`actions/cache/save` gated on `github.ref_name == 'master'`). PR runs start fresh. Cache key = `notification-state-{run_id}`; restore uses prefix match `notification-state-`.
