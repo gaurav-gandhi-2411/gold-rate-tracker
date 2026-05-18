@@ -1,0 +1,56 @@
+{
+  "probed_at": "2026-05-18T19:46:13.562108+00:00",
+  "status": "success",
+  "wall_clock_ms": {
+    "pipeline_load": 19515,
+    "forecast": 51,
+    "calibration": 0,
+    "total": 19624
+  },
+  "ibja_context_days": 21,
+  "ibja_last_date": "2026-05-18",
+  "ibja_last_value": 14448.9,
+  "horizon": 5,
+  "ibja_forecast": [
+    {
+      "day": 1,
+      "date": "2026-05-19",
+      "p10": 14038.8,
+      "p50": 14374.83,
+      "p90": 14800.39
+    },
+    {
+      "day": 2,
+      "date": "2026-05-20",
+      "p10": 13923.01,
+      "p50": 14317.69,
+      "p90": 14839.55
+    },
+    {
+      "day": 3,
+      "date": "2026-05-21",
+      "p10": 13833.02,
+      "p50": 14242.87,
+      "p90": 14832.0
+    },
+    {
+      "day": 4,
+      "date": "2026-05-22",
+      "p10": 13760.35,
+      "p50": 14176.61,
+      "p90": 14810.34
+    },
+    {
+      "day": 5,
+      "date": "2026-05-23",
+      "p10": 13699.67,
+      "p50": 14118.69,
+      "p90": 14806.24
+    }
+  ],
+  "calibration_applied": false,
+  "calibration_valid": false,
+  "tanishq_forecast": null,
+  "model_version": "amazon/chronos-bolt-tiny@a0e552de",
+  "schema_version": 1
+}

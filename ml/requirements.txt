@@ -12,3 +12,4 @@ yfinance>=0.2.40
 pyarrow>=13.0
 hmmlearn>=0.3.0
 onnxruntime>=1.16.0
+chronos-forecasting>=2.2.0

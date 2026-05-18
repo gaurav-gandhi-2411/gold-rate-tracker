@@ -80,7 +80,11 @@ whenever `ml/requirements.txt` changes:
 
 ```bash
 pip install uv
-uv pip compile ml/requirements.txt --output-file ml/requirements-inference.lock --python-version 3.12
+uv pip compile ml/requirements.txt \
+  --extra-index-url https://download.pytorch.org/whl/cpu \
+  --index-strategy unsafe-best-match \
+  --output-file ml/requirements-inference.lock \
+  --python-version 3.12
 ```
 
 Commit the updated `.lock` file. The lockfile is the source of truth for `check-price.yml`;
