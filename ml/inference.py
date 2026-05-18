@@ -54,6 +54,7 @@ def _run_lgbm(x_pred: np.ndarray) -> tuple[float, float, float]:
 
 
 def main() -> None:
+    logging.basicConfig(level=logging.INFO, format="%(levelname)s %(name)s: %(message)s")
     from ml.features import (
         FEATURE_COLS,
         MINIMAL_FEATURE_COLS,
