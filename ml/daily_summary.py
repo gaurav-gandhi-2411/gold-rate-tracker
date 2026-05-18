@@ -133,7 +133,7 @@ def check_triggers(prices: list[dict], now_utc: datetime) -> tuple[list[str], di
     pct_1d: float | None = None
     if yesterday_reading:
         pct_1d = (today_price - yesterday_reading["22k"]) / yesterday_reading["22k"]
-        if pct_1d is not None and abs(pct_1d) >= PRICE_MOVE_PCT:
+        if abs(pct_1d) >= PRICE_MOVE_PCT:
             fired.append("price_move")
 
     # T2: within ±BAND_30D of 30-day low
@@ -148,7 +148,7 @@ def check_triggers(prices: list[dict], now_utc: datetime) -> tuple[list[str], di
     pct_5d: float | None = None
     if five_ago_reading:
         pct_5d = (today_price - five_ago_reading["22k"]) / five_ago_reading["22k"]
-        if pct_5d is not None and abs(pct_5d) >= FIVE_DAY_PCT:
+        if abs(pct_5d) >= FIVE_DAY_PCT:
             fired.append("five_day_move")
 
     # T5: no readings from yesterday's IST date → first reading after gap
