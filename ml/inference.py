@@ -12,6 +12,7 @@ Usage:
 from __future__ import annotations
 
 import json
+import logging
 import sys
 from datetime import UTC, datetime, timedelta
 from pathlib import Path
@@ -24,6 +25,8 @@ sys.path.insert(0, str(ROOT))
 
 PROD_DIR = ROOT / "models" / "production"
 DATA_DIR = ROOT / "data"
+
+logger = logging.getLogger(__name__)
 
 MIN_REAL_READINGS_FOR_WARMUP_CLEAR = 100
 
@@ -73,7 +76,10 @@ def main() -> None:
 
     # --- 1. Load data and capture seed calibration scale ---
     # Deprecated: loading synthetic seed from archive/ — legacy path removed in PR H
+    logger.info("Loading legacy synthetic seed from archive/ — to be removed in PR H")
     seed_entries = _load_json(ARCHIVE_SEED_PATH)
+    if not seed_entries:
+        logger.warning("Archive seed not found — training on live data only (71 rows)")
     live_entries = _load_json(FC_DATA_DIR / "prices.json")
     real_readings_count = len(live_entries)
 
