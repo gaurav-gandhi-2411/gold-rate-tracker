@@ -1,6 +1,6 @@
 {
-  "n_train": 454,
-  "n_val": 90,
+  "n_train": 455,
+  "n_val": 91,
   "feature_cols": [
     "lag_1",
     "lag_7d",
@@ -12,8 +12,8 @@
     "dow"
   ],
   "feature_set": "minimal_v2",
-  "val_mae": 210.83,
-  "naive_mae": 211.19,
-  "conformal_pi_half": 290.37,
-  "updated_at": "2026-05-17T16:21:27.915358+00:00"
+  "val_mae": 208.98,
+  "naive_mae": 209.42,
+  "conformal_pi_half": 287.81,
+  "updated_at": "2026-05-18T16:08:24.373356+00:00"
 }
