@@ -188,6 +188,62 @@ The flag is read inside `ml/inference.py` via `os.environ.get("FORECAST_ENGINE",
 1. `forecast.json` is written with `"model_fallback": true` (field added to schema in PR E).
 2. The next `check-price.yml` step that calls `ml/notifications.py` reads `model_fallback=true` and fires **T5** (see §3.4.2). This ensures silent fallbacks are surfaced as a low-priority alert within the same CI cycle.
 
+##### 3.1.6 MCX-to-IBJA basis adjustment
+
+**Problem:** `data/ibja_rates.parquet` will stitch two distinct underlying series:
+- **Backfill segment** (730 days before PR C launch): derived from MCX near-month settlement via `mcx_gold_22k_equiv = settle × (22/24) / 10`. This is a futures-derived proxy, not a physical 22K benchmark.
+- **Live segment** (from PR C launch onward): real IBJA-916-PM rates scraped from ibja.co.
+
+The two series track the same underlying commodity but are not identical. The basis spread (IBJA-916-PM vs `mcx_gold_22k_equiv`) is typically small (~0.5–1%) but is non-zero and time-varying — it reflects the MCX futures basis, IBJA committee pricing conventions, and local demand/supply dynamics. Left uncorrected, the stitch introduces a level discontinuity that Chronos will interpret as a price event rather than a data artefact.
+
+**Solution — rolling basis adjustment (deferred until 30-overlap milestone):**
+
+Starting from PR C launch, accumulate overlap pairs: `(ibja_916_pm[d], mcx_gold_22k_equiv[d])` for each day `d` where both series have a valid reading. Once ≥ 30 overlap days have accumulated (~30 trading days ≈ 6 weeks after PR C):
+
+1. Compute a rolling 30-day median ratio: `basis_factor = median(ibja_916_pm / mcx_gold_22k_equiv)` over the overlap window.
+2. Retroactively scale the backfill segment: `ibja_rates.parquet[backfill].purity_916_pm *= basis_factor`.
+3. Re-fit monthly: on each calibration refresh cycle, recompute the rolling 30-day median and update the backfill scaling if the factor has shifted by > 0.2%.
+
+**Interim period (PR C launch to 30-overlap milestone):**
+- Basis adjustment is not yet applied.
+- `forecast.json` includes `"basis_adjustment_applied": false` to make the data provenance visible.
+- Chronos-Bolt zero-shot is tolerant of this: the absolute level shift (~0.5–1%) is small relative to its predictive uncertainty bands at h=5. However, the discontinuity at the stitch point should be monitored.
+- Acknowledge the basis risk in **ADR 010** (drop-synthetic-seed ADR) as a known limitation of the MCX proxy backfill.
+
+**New file:** `ml/basis.py` (~50 lines) or fold into `ml/mcx.py` if the logic stays compact.
+
+```python
+# ml/basis.py — public API (if separate file)
+def compute_basis_factor(
+    ibja_series: pd.Series,        # DatetimeIndex, daily, INR/g
+    mcx_equiv_series: pd.Series,   # same index, mcx_gold_22k_equiv
+    window_days: int = 30,
+) -> float                         # rolling median ratio
+
+def apply_basis_adjustment(
+    backfill_df: pd.DataFrame,     # ibja_rates.parquet backfill segment
+    basis_factor: float,
+) -> pd.DataFrame                  # backfill with purity_916_pm scaled
+
+def should_refit(
+    last_fit_date: date,
+    overlap_count: int,
+    min_overlap: int = 30,
+    refit_interval_days: int = 30,
+) -> bool
+```
+
+Add `"basis_factor"` and `"basis_adjustment_applied"` fields to `data/calibration.json` (same file as the Tanishq calibration — both are basis-type adjustments, co-locate for reviewability).
+
+**File-level changes (additions to §3.1.4 table):**
+
+| File | Action | Detail |
+|------|--------|--------|
+| `ml/basis.py` | **ADD** (or fold into `ml/mcx.py`) | MCX-to-IBJA basis adjustment: overlap accumulation, rolling median, backfill scaling |
+| `data/calibration.json` | **EDIT** | Add `basis_factor`, `basis_adjustment_applied`, `basis_overlap_count` fields |
+| `forecast.json` schema | **EDIT** (PR C) | Add `"basis_adjustment_applied": false` to schema |
+| ADR 010 | **EDIT** (PR C) | Add basis risk as a known limitation of the MCX proxy backfill |
+
 ---
 
 #### 3.2 Model Pivot — Chronos-Bolt Primary
@@ -261,7 +317,8 @@ The revision is read at inference time: `ChronosBoltPipeline.from_pretrained("am
   "val_mae_5d": null,
   "naive_mae_5d": null,
   "ibja_context_days": 365,
-  "model_fallback": false
+  "model_fallback": false,
+  "basis_adjustment_applied": false
 }
 ```
 
@@ -483,11 +540,11 @@ class NotificationState:
 | **T2** Predicted 5d rise | `max(forecast p50 h1..5) ≥ current_22k + 100` AND `max(forecast p10 h1..5) > current_22k` AND `warmup=false` AND **`backtest_mae_5d_avg ≤ naive_mae_5d`** AND **`backtest_fold_count ≥ 60`** | default (3) | 24h | 1 | `rise,chart_with_upwards_trend` | No |
 | **T3** Actual large move | `abs(current_22k − prev_22k) ≥ 150` (any price reading; model-agnostic) | urgent (5) if `abs Δ ≥ 300` else high (4) | 4h | 2 | `warning,chart_with_upwards_trend` | No |
 | **T4** Weekly digest | Sunday 18:00 IST ± 30 min window | low (2) | 168h | 1 (unlimited vs T1–T3) | `newspaper,white_flower` | Yes — send at 18:00 IST regardless of quiet hours |
-| **T5** Model degraded | `model_fallback=true` in `forecast.json` (Chronos path failed; legacy LightGBM ran instead) | low (2) | No fixed cooldown — max **once per calendar day** (fire on first occurrence per UTC date only) | N/A | `warning,rotating_light` | No |
+| **T5** Model degraded | `model_fallback=true` in `forecast.json` (Chronos path failed; legacy LightGBM ran instead) | low (2) | No fixed cooldown — max **once per IST calendar day** (fire on first occurrence per IST date only) | N/A | `warning,rotating_light` | No |
 
 > **T1/T2 gating rationale:** The tighter gate (`≤ naive_mae_5d` vs the previous `< 1.5 × naive_mae_5d`) ensures T1/T2 only fire when the model is actually beating naive — not merely within 50% above it. The `backtest_fold_count ≥ 60` requirement ensures gating is based on a statistically meaningful backtest window (≥60 fold-days), not an early-run estimate with high variance.
 
-> **T5 gating rationale:** T5 has no fixed cooldown because the failure condition (`model_fallback=true`) is already transient — it only appears in `forecast.json` for one CI cycle. The calendar-day dedup prevents T5 from firing on every 6h run during a prolonged outage. T5 does not count toward the T1–T3 combined cap of 3 per 24h.
+> **T5 gating rationale:** T5 has no fixed cooldown because the failure condition (`model_fallback=true`) is already transient — it only appears in `forecast.json` for one CI cycle. The IST calendar-day dedup prevents T5 from firing on every 6h run during a prolonged outage (consistent with IST timezone used by T1–T4). T5 does not count toward the T1–T3 combined cap of 3 per 24h.
 
 **Anti-spam:** T1 + T2 + T3 combined max = **3 per rolling 24h window**. T4 is exempt and does not count toward this cap.
 
@@ -501,31 +558,39 @@ class NotificationState:
 
 **GitHub Actions cache (primary persistence mechanism):**
 
-The state file is persisted across CI runs via `actions/cache`. Without this, cooldowns would reset on every fresh checkout and T1/T2/T3 could fire multiple times per day.
+The state file is persisted across CI runs via separate `actions/cache/restore` and `actions/cache/save` steps. The composite `actions/cache@v4` action cannot overwrite an existing key — using the same key for both restore and save would freeze state at the first run. The correct pattern keys each save on `run_id` and uses a prefix match to restore the most recent entry:
 
 ```yaml
 # In check-price.yml — restore before notifications step
 - name: Restore notification state
-  uses: actions/cache@v4
+  uses: actions/cache/restore@v4
   with:
     path: data/notification_state.json
-    key: notification-state-${{ github.repository }}-${{ github.ref_name }}
+    key: notification-state-${{ github.run_id }}
+    restore-keys: |
+      notification-state-
 
-# ... notifications step runs here, writes data/notification_state.json ...
+# ... notifications step runs here, modifies data/notification_state.json ...
 
 # In check-price.yml — save after notifications step
 - name: Save notification state
-  uses: actions/cache@v4
+  uses: actions/cache/save@v4
+  if: always() && github.ref_name == 'master'
   with:
     path: data/notification_state.json
-    key: notification-state-${{ github.repository }}-${{ github.ref_name }}
+    key: notification-state-${{ github.run_id }}
 ```
 
-> **Note:** `actions/cache` does not support updating an existing key within the same workflow run. The recommended pattern is: restore with the same key (which will hit on subsequent runs) and save unconditionally — the cache API accepts overwrites for the same key on re-save.
+**How it works:**
+- Each run writes a new cache entry keyed on `run_id` (unique per run). On the next run, `restore-keys: notification-state-` prefix-matches and restores the most recently saved entry.
+- Save is gated on `github.ref_name == 'master'`. PR runs and feature branches treat state as a cache miss and start fresh — no cross-PR state poisoning (e.g., a PR test run cannot corrupt the production cooldown timestamps).
+- `if: always()` ensures state is saved even if the notifications step itself exits non-zero (partial send, network error).
 
-**Save trigger:** After every `check_triggers()` + `send_pending()` call (i.e., at the end of every CI notifications step). Always save, even if no alerts fired — the `last_sent` timestamps and quiet-hours queue must persist.
+**Notification state cache is master-branch only.** PR runs treat state as cache-miss and start fresh. This is intentional: PR CI runs should not inherit or mutate production alert state.
 
-**Cache miss behaviour (cold runner or cache eviction):** Treat as fresh state — no cooldowns enforced. Worst case: at most one duplicate alert per trigger per cache eviction event. This is acceptable; cache eviction on GitHub Actions is infrequent (7-day LRU by default). Log `"notification_state: cache miss, starting fresh"` to stdout on first run.
+**Save trigger:** Always save after the notifications step completes, even if no alerts fired — the `last_sent` timestamps and quiet-hours queue must persist for cooldowns to function.
+
+**Cache miss behaviour (cold runner, cache eviction after 7 days of inactivity, or non-master branch):** Treat as fresh state — no cooldowns enforced. Worst case: at most one duplicate alert per trigger per eviction event. Log `"notification_state: cache miss, starting fresh"` to stdout on first run.
 
 **Schema (`data/notification_state.json`):**
 ```json
@@ -533,12 +598,12 @@ The state file is persisted across CI runs via `actions/cache`. Without this, co
   "last_sent": {"T1": "2026-05-18T14:00:00+05:30", "T4": "2026-05-17T18:00:00+05:30"},
   "queued": [],
   "sent_today_triggers": ["T3"],
-  "t5_last_fired_date": "2026-05-18",
+  "t5_last_fired_date_ist": "2026-05-18",
   "schema_version": 1
 }
 ```
 
-> `t5_last_fired_date` (UTC calendar date string) is the dedup key for T5's once-per-day constraint. If `t5_last_fired_date == today_utc`, T5 is suppressed regardless of `model_fallback` state.
+> `t5_last_fired_date_ist` (IST calendar date string `YYYY-MM-DD`) is the dedup key for T5's once-per-IST-day constraint. If `t5_last_fired_date_ist == today_ist`, T5 is suppressed regardless of `model_fallback` state.
 
 ##### 3.4.4 ntfy payload format
 
@@ -711,3 +776,5 @@ Each PR is independently mergeable. CI remains green after every merge. `FORECAS
 - **T5 (model degraded):** New trigger; fires when Chronos path fails and LightGBM legacy path runs. Signal is `model_fallback=true` in `forecast.json`. Max once per calendar day (UTC). Low priority.
 - **IBJA primary URL:** `ibja.co` (official IBJA site). `ibjarates.com` is fallback only.
 - **MCX backfill roles:** B1 = MCX Bhavcopy (one-time 730-day historical backfill); B2 = yfinance GOLD.MCX (ongoing daily append in CI).
+- **Basis adjustment:** MCX-derived proxy prices are scaled to IBJA-916-PM levels once ≥30 overlap days exist (rolling 30-day median ratio). Until then, `basis_adjustment_applied=false` in `forecast.json`. See §3.1.6.
+- **Notification state cache:** master-branch only (`actions/cache/save` gated on `github.ref_name == 'master'`). PR runs start fresh. Cache key = `notification-state-{run_id}`; restore uses prefix match `notification-state-`.
