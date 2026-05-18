@@ -16,3 +16,7 @@ jobs:
           python-version: "3.11"
       - run: pip install pre-commit
       - run: pre-commit run --all-files
+      - name: Install ML dependencies
+        run: pip install -q -r ml/requirements.txt
+      - name: Run smoke tests
+        run: pytest tests/test_inference_main.py -m smoke -v

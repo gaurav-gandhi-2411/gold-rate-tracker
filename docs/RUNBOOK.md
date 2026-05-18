@@ -39,6 +39,21 @@ pre-commit install
 
 ---
 
+## Regenerating the inference dependency lockfile
+
+`ml/requirements-inference.lock` pins every transitive dependency used in CI. Regenerate it
+whenever `ml/requirements.txt` changes:
+
+```bash
+pip install uv
+uv pip compile ml/requirements.txt --output-file ml/requirements-inference.lock --python-version 3.12
+```
+
+Commit the updated `.lock` file. The lockfile is the source of truth for `check-price.yml`;
+`ml/requirements.txt` remains the human-edited input.
+
+---
+
 ## How to retrain
 
 ```powershell
@@ -215,3 +230,4 @@ Nothing to configure in this repo until the domain is purchased.
 - GitHub Actions inference venv has no PyTorch or MLflow — only `onnxruntime` for neural model inference.
 - Gold prices exhibit near-random-walk behaviour; the model may not beat the naive baseline on MAE. This is documented honestly in the README and in `models/production/*-meta.json`.
 - `models/local/` is gitignored — PyTorch `.pt` checkpoints and Optuna DBs stay on your machine.
+- WANDB is **not wired** in this project. The `.env` file previously contained `WANDB_API_KEY`, `WANDB_ENTITY`, and `WANDB_PROJECT` stubs which have been removed (Phase 1 audit confirmed no `wandb` imports anywhere in the codebase). Do not re-add these without a tracking ADR.
