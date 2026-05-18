@@ -6,10 +6,9 @@ import json
 import math
 from datetime import UTC, datetime, timedelta
 
-import pytest
-
 import ml.forecast as fc
 import ml.inference as inf
+import pytest
 
 
 def _make_prices(n_days: int, base_price: int = 9500) -> list[dict]:
