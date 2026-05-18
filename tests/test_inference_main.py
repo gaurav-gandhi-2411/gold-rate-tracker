@@ -81,8 +81,7 @@ def test_inference_main_produces_valid_forecast(tmp_path, monkeypatch):
     half_upper = upper - predicted
     half_lower = predicted - lower
     assert abs(half_upper - half_lower) <= 2, (
-        f"PI asymmetric beyond rounding tolerance: "
-        f"upper-pred={half_upper}, pred-lower={half_lower}"
+        f"PI asymmetric beyond rounding tolerance: upper-pred={half_upper}, pred-lower={half_lower}"
     )
 
     # All output values are positive finite numbers
