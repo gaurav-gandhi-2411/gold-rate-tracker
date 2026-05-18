@@ -148,6 +148,8 @@ With 71 overlap readings (2026-04-14 to 2026-05-17), fit a robust regression: `t
 > - **Conclusion:** The calibration captures **markup only** (~1.7% over IBJA-916-PM). No GST component.
 >   Expected `premium_factor` ≈ 1.01–1.03 once fit on 30+ pairs (not 1.04–1.08 as initially estimated).
 
+> **Time-of-day alignment note (follow-up candidate, post-PR E):** Time-of-day alignment between Tanishq scrapes (10/16/22/04 IST) and IBJA fixes (AM ~09:30 IST, PM ~17:00 IST) is unaddressed in the initial calibration. Current implementation pairs by UTC date. Refinement candidate for a hardening PR after PR E: pair each Tanishq snapshot with the most-recent-available IBJA fix at that IST timestamp.
+
 - **Fit:** `sklearn.linear_model.HuberRegressor` on (ibja_916_pm, tanishq_22k) pairs aligned by UTC date. HuberRegressor is robust to the occasional outlier caused by Tanishq promotional pricing or GST recalculation events — these would inflate OLS slope estimates.
 - **Residual monitoring:** After every refit, compute `residual_std = std(tanishq_22k - predicted)`. Log this value to `data/calibration.json`. If `residual_std` at next refit is > 2× the baseline value from the initial fit, log a WARNING (printed to stdout; visible in CI logs). This signals calibration drift worth investigating.
 - **Refresh cadence:** Refit when 10+ new overlap readings have accumulated since last fit. Fit cached in `data/calibration.json` (committed; small).
@@ -683,6 +685,7 @@ Each PR is independently mergeable. CI remains green after every merge. `FORECAS
 | 2026-05-18 | Retire TFT + N-BEATS | Consultant | Data gates (1,000 / 2,000 real readings) would not open until 2027–2028 |
 | 2026-05-18 | Variant = Tiny (not Base) | CC plan | 8.65 MB vs 821 MB; accuracy gap negligible at current data volume; upgrade path is 1-line |
 | 2026-05-19 | IBJA primary URL corrected to ibjarates.com | CC (evidence audit) | ibja.co cannot yield both AM and PM in one request; ibjarates.com is the only source with dual AM/PM. See incident log. |
+| 2026-05-19 | Initial calibration uses UTC-date pairing; time-of-day refinement deferred | Consultant | Calibration machinery is correct in isolation; pairing precision can be improved after PR E validates the end-to-end forecast → calibration pipeline. |
 | 2026-05-19 | MCX + basis.py dropped from plan | Consultant (approval) | No automated INR MCX source without Selenium; single-series IBJA strategy eliminates basis adjustment entirely |
 | 2026-05-18 | IBJA primary URL = ibja.co (official) | Consultant | ibjarates.com is a third-party aggregator; ibja.co is the authoritative source |
 | 2026-05-19 | Calibration model = HuberRegressor (not OLS), epsilon=1.35 | CC (PR D) | OLS inflated by lag artefacts when IBJA moves sharply (e.g. 2026-05-13: ratio 0.960, 2026-05-18: 0.993); HuberRegressor clips these with default epsilon. Verified empirically in outlier test. |
@@ -715,6 +718,7 @@ Each PR is independently mergeable. CI remains green after every merge. `FORECAS
 | ADR 006 numbering gap | Minor | GG | Pending; ADRs 009–011 drafted in Phase 3 PRs |
 | 4 training-deps tests fail on local pytest (test_config TFT/N-BEATS overrides, test_promotion sign convention) | Minor | CC | Pre-existing on master; gated in CI via --ignore; fix when training CI job is added |
 | structlog not in ml/requirements.txt (inference lockfile) | Minor | CC | Resolve in PR D or earlier; basicConfig used as fallback in ml/inference.py |
+| Tanishq–IBJA markup ratio shows high day-to-day variance (median 1.017, std 0.015; spot 0.993 vs median 1.017 = 2.4pp swing) — calibration noise will widen Tanishq PI bands. Investigate in PR E. | Minor | CC | Monitor residual_std after PR E goes live |
 
 ---
 
