@@ -675,8 +675,8 @@ Each PR is independently mergeable. CI remains green after every merge. `FORECAS
 | **PR E** | `feat(ml): Chronos-Bolt-Tiny inference path (probe-on, legacy-active)` | Add `ml/chronos_forecast.py` (load/forecast_ibja/chronos_to_tanishq/run_probe); add HF model cache + probe step in `check-price.yml`; add `tests/test_chronos_forecast.py` (17 mocked tests + 1 integration); add ADR 009; update `ml/requirements.txt` + lockfile (torch CPU-only); `data/chronos_probe.json` written each CI cycle | `ml/inference.py` untouched; `forecast.json` untouched; probe writes only `chronos_probe.json` | `FORECAST_ENGINE=legacy` |
 | **PR F** | `feat(ml): walk-forward backtest at h=5` ✅ | Rewrite `ml/backtest.py` for h=5 Chronos protocol; update `ml/metrics.py` for 5d decision rule; run new backtest (9 folds, 21 rows), commit `data/backtest.json`; update `weekly-backtest.yml`. Results: Chronos MAE 5d avg Rs.319 vs Naive Rs.305 (4.6% worse). `insufficient_evidence=false`, `wilcoxon_p=0.1641`. See PR F verdict. | Backtest results updated in CI | N/A |
 | **PR F.5** | `feat(data): Wayback Machine IBJA backfill` ✅ | Add `scripts/wayback_ibja_backfill.py` (Mode A HTML + Mode B PDF); extend `data/ibja_rates.parquet` 21→177 rows. Re-run backtest: 165 folds, Chronos MAE Rs.275 vs Naive Rs.249 (10.4% worse), Wilcoxon p=0.0089. Wayback ceiling reached (103 CDX captures fully processed). See §3.1.7. | `data/ibja_rates.parquet` extended to 177 rows | N/A |
-| **PR G** | `feat: notification system` | Add `ml/notifications.py`, `tests/test_notifications.py`; wire into `check-price.yml`; disable `daily_summary.yml` + mark `daily_summary.py` deprecated; draft ADR 011 | New ntfy alerts begin firing | `FORECAST_ENGINE=legacy` |
-| **PR H** | `feat(ml): flip to Chronos + final cleanup` | Set `FORECAST_ENGINE=chronos` in `check-price.yml`; delete `ml/regime.py`, `ml/forecast.py`, `ml/compare_feature_sets.py`, `ml/seed_history.py`, `ml/daily_summary.py`, `ml/tuning/study.py`, `tests/test_regime.py`, `tests/test_daily_summary.py`; delete TFT/N-BEATS configs; update README architecture section | **Chronos becomes live production path** | Flag becomes permanent; variable removed |
+| **PR G** | `feat: notification system` *(rescoped — see §3.8)* | Add `ml/notifications.py`, `tests/test_notifications.py`; wire into `check-price.yml`; disable `daily_summary.yml` + mark `daily_summary.py` deprecated; draft ADR 011. **Revised:** T1/T2 triggers use Chronos *directional* signal (`chronos_lean` from `chronos_probe.json`), not Chronos level forecast. | New ntfy alerts begin firing | `FORECAST_ENGINE=legacy` |
+| **PR H** | ~~`feat(ml): flip to Chronos + final cleanup`~~ **REPURPOSED (§3.8):** `feat(ml): naive-headline production path + legacy cleanup` | ~~Set `FORECAST_ENGINE=chronos`.~~ **New scope:** Naive flat-hold writes `predicted_22k` via calibration layer (IBJA-916-PM × `premium_factor`); Chronos probe stays parallel writing `chronos_probe.json`. Delete `ml/regime.py`, `ml/forecast.py`, legacy LightGBM artifacts, TFT/N-BEATS configs. Draft ADR 012. Update README: honest about naive being the production forecast. | **Naive becomes live production path; LightGBM/TFT/N-BEATS removed** | `FORECAST_ENGINE` variable removed; naive path hard-coded |
 
 **Ordering constraints:**
 - PR B must land before PR C (archive seed before IBJA goes live to avoid dual-source confusion).
@@ -714,6 +714,60 @@ Each PR is independently mergeable. CI remains green after every merge. `FORECAS
 
 5. ✅ **LightGBM residual head gate (Phase 4):** **Gate confirmed: `0.80 ≤ mae_chronos / naive_mae_5d ≤ 1.00`.** Attempt the residual head only when Chronos is beating naive (ratio ≤ 1.00) but within 20% of naive (ratio ≥ 0.80) — i.e., beating naive but with headroom to improve. If Chronos achieves ratio < 0.80 (>20% better than naive), residual head is unnecessary. If ratio > 1.00 (Chronos worse than naive), the residual head is not the right fix — revisit context window or model choice first. This gate is reflected in §3.2.4.
 
+#### 3.8 Strategic re-scope (2026-05-19)
+
+**Trigger:** PR F.5 165-fold walk-forward backtest (Wilcoxon p=0.0089).
+
+**Evidence:**
+
+| Metric | Chronos | Naive |
+|--------|---------|-------|
+| MAE 5d avg | Rs.275.5 | Rs.249.5 |
+| Gap | **10.4% worse** (statistically significant) | — |
+| Direction acc (h=5) | 55.8% | 50.0% |
+| PI 80 coverage | 87.0% | — (not applicable) |
+
+**Interpretation:** Chronos-Bolt-Tiny has a mean-reversion prior that loses to flat-hold on a strongly trending series (IBJA-916-PM ~Rs.85k → Rs.145k over 2025-2026). MAE magnitude signal is poor — Chronos consistently predicts less price movement than actually occurs. Direction accuracy at 55.8% is statistically non-trivial (p < 0.001 vs 50%) but below the 65%+ threshold needed to be practically actionable in a notification context without excessive false alerts.
+
+**Decision: do NOT promote Chronos to production forecast value.**
+
+The original PR H goal ("flip `FORECAST_ENGINE=chronos`, Chronos writes `predicted_22k` to `forecast.json`") is **canceled**. Chronos is retained but re-scoped.
+
+**Re-scoped PR G and PR H:**
+
+| PR | Original scope | Revised scope |
+|----|---------------|---------------|
+| **PR G** | Notification system — uses Chronos forecast magnitude for T1/T2 triggers | Notification system — uses Chronos *directionally* (predicted direction at h=5) for T1/T2 gating; magnitude thresholds unchanged but signal comes from direction rather than level |
+| **PR H** | Flip `FORECAST_ENGINE=chronos`; Chronos writes `predicted_22k` | **REPURPOSED:** Simplify production path to "naive headline + Chronos directional companion". Naive (flat-hold) writes `predicted_22k`; Chronos writes `chronos_probe.json` (already happening). Delete legacy LightGBM and TFT/N-BEATS artifacts. ADR 012 documents the decision. |
+
+**New production forecast contract:**
+
+```
+predicted_22k  = current_ibja_916_pm_per_g × calibration_factor  (naive, flat-hold)
+lower, upper   = conformal PI from rolling naive MAE errors
+chronos_lean   = chronos p50 direction signal (up/flat/down) at h=5
+```
+
+The `warmup` flag remains in `forecast.json` until 100 real readings. T1/T2 notifications gate on both `warmup=false` AND `chronos_lean` matching the direction threshold (prevents firing on flat/ambiguous signals).
+
+**Rationale:** ADR 005 (honest-baseline reporting) taken to its logical conclusion — when the baseline beats all tested candidates with statistical significance, the baseline IS the model for the metric that matters (MAE). Direction accuracy retains Chronos's only demonstrated advantage. This is honest product behaviour: the PWA shows the current price as forecast (correct given mean-reversion prior's failure), Chronos directional lean surfaces as confidence context for alert decisions.
+
+**Chronos retained for:**
+1. Directional signal gating in T1/T2 notification triggers (55.8% dir acc > 50% chance)
+2. PI width input: Chronos p10–p90 spread as a confidence indicator in `chronos_probe.json`
+3. Weekly backtest target: promote to `predicted_22k` if ≥250-row backtest shows Chronos beats naive at p < 0.05
+
+**Phase 4 upgrade paths (if MAE-beating becomes a priority):**
+
+| Candidate | Rationale |
+|-----------|-----------|
+| Chronos-2 multivariate (USD/INR + Gold-USD covariates) | Addresses mean-reversion bias by providing macro trend context; available on HuggingFace |
+| LightGBM residual head on Chronos p50 | Corrects systematic over-smoothing without retraining a full model; low data requirement |
+| Detrend → forecast → retrend pipeline | Manual trend decomposition before feeding Chronos; removes the mean-reversion conflict |
+| h=1 horizon target | 1-day MAE may be tractable where 5-day is not; simplifies the prediction problem significantly |
+
+**ADR:** `docs/adr/012-naive-headline-chronos-companion.md` — see §3.8 decision log entry.
+
 ---
 
 ### Phase 4 — Build  ⏸️ NOT STARTED
@@ -746,6 +800,7 @@ Each PR is independently mergeable. CI remains green after every merge. `FORECAS
 | 2026-05-19 | data/ibja_rates.parquet un-gitignored, committed as reference data | CC (post-hoc) | CI runs need historical context that can't be regenerated from live append alone; same pattern as the prior MCX-parquet decision. 21-row seed (2026-04-24 to 2026-05-18) committed in PR E. |
 | 2026-05-19 | Walk-forward backtest uses expanding window, step=1 day, min_context=8 | CC (PR F) | Expanding window accumulates all available IBJA history per fold — appropriate for zero-shot Chronos which benefits from longer context. Step=1 day produces maximum fold count from thin history (9 folds from 21 rows). |
 | 2026-05-19 | Wayback backfill used Mode A (HTML parse) for Run 2, not Mode AB | CC (PR F.5) | Mode B (PDF) was used in Run 1 and yielded 83 rows from 2025-2026 PDFs. Mode A HTML parsing failed for all captures in Run 1 because the old parser only handled 3-col format (`table#TodayRatesTableDataYes`); 2022-2023 archives use a 4-col format (Metal\|Purity\|AM\|PM). Run 2 ran Mode A only after the 4-col parser was added. Mode AB was not re-run because 2022-2024 PDFs were not archived in Wayback, so Mode B would yield nothing new and double the fetch time. |
+| 2026-05-19 | Naive becomes production forecast value; Chronos becomes directional signal companion | Consultant | 165-fold walk-forward (PR F.5) shows Chronos-Bolt-Tiny 10.4% worse than naive on MAE 5d avg (p=0.0089). Direction acc 55.8% retained as notification signal. ADR 005 honest-baseline taken to its conclusion: when the baseline beats all candidates with statistical significance, the baseline IS the production model for that metric. See §3.8 and ADR 012. |
 | 2026-05-18 | Chronos context = 365d baseline / 730d upgrade | Consultant | 60d was insufficient for seasonal signal; 365d captures full annual demand cycle |
 | 2026-05-18 | MCX backfill = 730 days (B1 one-time) + yfinance daily (B2 ongoing) | Consultant (Q2) | Clear role split: B1 for depth, B2 for currency; avoids hammering Bhavcopy portal daily |
 | 2026-05-18 | T1 replaces drop_threshold=100 alert; T3 is new (observed moves) | Consultant (Q3) | No parallel alerts; retire drop_threshold=100 config variable in PR G |
@@ -809,7 +864,7 @@ Architectural pivot: single-series IBJA-916-PM forecasting. MCX dropped entirely
 - **Warmup flag:** `forecast.json:warmup = true` while `real_readings_count < 100`; also gates T1/T2 notifications.
 - **Production model artifacts (post-pivot):** `models/production/lgbm.txt` (legacy, kept until PR H); ONNX artifacts deleted in PR B.
 - **Calibration layer:** `ml/calibration.py` + `data/calibration.json` — HuberRegressor(ibja_916_pm_per_g → tanishq_22k_per_g). Tanishq displays PRE-GST (verified 2026-05-19); median ratio 1.017 over 21 pairs. `data/calibration.json` is `valid: false` at PR D merge (21/30 pairs); activates when 30 pairs accumulate (~9 more trading days).
-- **FORECAST_ENGINE flag:** env var in `check-price.yml`; `legacy` = LightGBM (safe default); `chronos` = Chronos-Bolt (active from PR H).
+- **FORECAST_ENGINE flag:** env var in `check-price.yml`; `legacy` = LightGBM (safe default); `chronos` = Chronos-Bolt (original PR H plan, **canceled per §3.8**). PR H now hard-codes naive path; variable removed.
 - **Chronos-Bolt-Tiny:** `amazon/chronos-bolt-tiny` on HuggingFace; 9M params; 8.65 MB weights; installed via `pip install chronos-forecasting` (requires torch CPU-only wheel first).
 - **IBJA:** India Bullion and Jewellers Association; 916-PM rate = daily closing 22K benchmark in INR/g. Primary modeled series.
 - **MCX Bhavcopy:** MCX India official daily settlement file; free; used for multi-year IBJA-proxy backfill depth.
