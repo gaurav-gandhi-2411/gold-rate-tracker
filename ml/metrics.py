@@ -27,6 +27,8 @@ import json
 from datetime import UTC, datetime, timedelta
 from pathlib import Path
 
+import numpy as np
+
 DATA_DIR = Path(__file__).parent.parent / "data"
 METRICS_PATH = DATA_DIR / "metrics_history.json"
 PRICES_PATH = DATA_DIR / "prices.json"
@@ -308,3 +310,141 @@ def main() -> None:
 
 if __name__ == "__main__":
     main()
+
+
+# ============================================================
+# h=5 backtest metric functions (added for PR F walk-forward)
+# ============================================================
+
+
+def compute_mae_per_horizon(
+    actuals: np.ndarray,
+    preds: np.ndarray,
+) -> list[float]:
+    """MAE at each horizon step.
+
+    Parameters
+    ----------
+    actuals, preds : (n_folds, horizon) float arrays.
+    """
+    actuals = np.asarray(actuals, dtype=float)
+    preds = np.asarray(preds, dtype=float)
+    return [float(np.mean(np.abs(actuals[:, h] - preds[:, h]))) for h in range(actuals.shape[1])]
+
+
+def compute_dir_acc_h5(
+    context_lasts: np.ndarray,
+    p50_h5: np.ndarray,
+    actuals_h5: np.ndarray,
+) -> float:
+    """Direction accuracy at h=5.
+
+    Fraction of folds where sign(p50_h5 - context_last) == sign(actual_h5 - context_last).
+    Folds where actual_h5 == context_last (zero actual move) are counted as wrong.
+    """
+    context_lasts = np.asarray(context_lasts, dtype=float)
+    p50_h5 = np.asarray(p50_h5, dtype=float)
+    actuals_h5 = np.asarray(actuals_h5, dtype=float)
+    pred_dir = np.sign(p50_h5 - context_lasts)
+    actual_dir = np.sign(actuals_h5 - context_lasts)
+    correct = (pred_dir == actual_dir) & (actual_dir != 0)
+    if len(correct) == 0:
+        return 0.0
+    return float(np.mean(correct))
+
+
+def compute_pi_coverage(
+    actuals: np.ndarray,
+    p10: np.ndarray,
+    p90: np.ndarray,
+) -> list[float]:
+    """80% PI coverage per horizon step (fraction of actuals in [p10, p90]).
+
+    Returns list of length horizon.
+    """
+    actuals = np.asarray(actuals, dtype=float)
+    p10 = np.asarray(p10, dtype=float)
+    p90 = np.asarray(p90, dtype=float)
+    return [
+        float(np.mean((actuals[:, h] >= p10[:, h]) & (actuals[:, h] <= p90[:, h])))
+        for h in range(actuals.shape[1])
+    ]
+
+
+def compute_decision_accuracy_h5(
+    context_lasts: np.ndarray,
+    p50_all_h: np.ndarray,
+    actuals_all_h: np.ndarray,
+    threshold: float = 100.0,
+) -> dict:
+    """Decision accuracy: when min(Chronos p50 h1..5) predicts a >=threshold drop,
+    how often does min(actual h1..5) also drop >=threshold from context_last?
+
+    Returns dict with precision, recall, and supporting counts.
+    """
+    context_lasts = np.asarray(context_lasts, dtype=float)
+    p50_all_h = np.asarray(p50_all_h, dtype=float)
+    actuals_all_h = np.asarray(actuals_all_h, dtype=float)
+
+    predicted_drop = np.min(p50_all_h, axis=1) <= context_lasts - threshold
+    actual_drop = np.min(actuals_all_h, axis=1) <= context_lasts - threshold
+
+    n_predicted = int(np.sum(predicted_drop))
+    n_actual_when_predicted = int(np.sum(actual_drop & predicted_drop))
+    n_actual_total = int(np.sum(actual_drop))
+
+    precision: float | None = (
+        n_actual_when_predicted / n_predicted if n_predicted > 0 else None
+    )
+    recall: float | None = (
+        n_actual_when_predicted / n_actual_total if n_actual_total > 0 else None
+    )
+
+    return {
+        "n_chronos_predicted_100_drop": n_predicted,
+        "n_actual_100_drop_when_predicted": n_actual_when_predicted,
+        "precision": round(precision, 4) if precision is not None else None,
+        "n_actual_100_drops_total": n_actual_total,
+        "recall": round(recall, 4) if recall is not None else None,
+    }
+
+
+def compute_peak_timing_error(
+    p50_all_h: np.ndarray,
+    actuals_all_h: np.ndarray,
+) -> float | None:
+    """Median |argmin(p50_h1..5) - argmin(actual_h1..5)| in days over all folds.
+
+    Returns None if no folds.
+    """
+    p50_all_h = np.asarray(p50_all_h, dtype=float)
+    actuals_all_h = np.asarray(actuals_all_h, dtype=float)
+    if len(p50_all_h) == 0:
+        return None
+    errors = [
+        abs(int(np.argmin(p50_all_h[i])) - int(np.argmin(actuals_all_h[i])))
+        for i in range(len(p50_all_h))
+    ]
+    return float(np.median(errors))
+
+
+def compute_wilcoxon_p(paired_diffs: list[float]) -> float | None:
+    """Wilcoxon signed-rank test (two-tailed) on paired MAE differences.
+
+    paired_diffs[i] = mae_chronos_fold_i - mae_naive_fold_i.
+    Negative median means Chronos wins on average.
+    Returns p-value, or None if n < 6 or scipy unavailable.
+    """
+    if len(paired_diffs) < 6:
+        return None
+    try:
+        from scipy.stats import wilcoxon
+
+        diffs = np.asarray(paired_diffs, dtype=float)
+        nonzero = diffs[diffs != 0]
+        if len(nonzero) == 0:
+            return 1.0
+        _, p = wilcoxon(nonzero)
+        return round(float(p), 4)
+    except ImportError:
+        return None
