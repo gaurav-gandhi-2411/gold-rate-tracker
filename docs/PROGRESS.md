@@ -711,6 +711,29 @@ Each PR is independently mergeable. CI remains green after every merge. `FORECAS
 
 ---
 
+#### 3.9 Appendix — Prompt Caching Audit (Post-PR G)  ✅ COMPLETE — 2026-05-19
+
+**Scope:** Evaluate all LLM call sites for Anthropic prompt caching or Groq KV-cache eligibility.
+**Branch:** `feat/prompt-caching-batch-paths` | **ADR:** `docs/adr/013-prompt-caching-scope.md`
+
+**Verdict: Do not apply caching to the live path.** Three independent failure criteria, all failing:
+
+| Criterion | `ml/commentary.py:call_groq()` | `ml/daily_summary.py:call_groq_summary()` |
+|-----------|-------------------------------|------------------------------------------|
+| Provider | Groq (not Anthropic) | Groq — DEPRECATED |
+| Prompt tokens | ~280 (min 1024) | ~150 (min 1024) |
+| Cadence vs TTL | 6h cadence vs 1h Groq TTL | Daily vs 1h Groq TTL |
+
+**Deliverables:**
+- `ml/llm_cache_helpers.py` — three helpers: `build_cached_system_prompt`, `estimate_groq_cache_eligibility`, `should_use_cache_for_batch` (three failure-reason branches)
+- `tests/test_llm_cache_helpers.py` — 16 tests including five boundary cases for `should_use_cache_for_batch`
+- `docs/adr/013-prompt-caching-scope.md` — NO decision with three failure criteria and three re-evaluation triggers
+- Docstrings on both Groq call sites referencing ADR 013 by file path
+
+**Re-evaluation triggers:** (1) Claude migration, (2) batch backfill path in Phase 4, (3) system prompt growth to ≥1024 tokens.
+
+---
+
 #### 3.7 Risks & Open Questions
 
 **New risks introduced by the pivot:**
@@ -781,6 +804,8 @@ Each PR is independently mergeable. CI remains green after every merge. `FORECAS
 | 2026-05-19 | Naive flat-hold is the production headline forecast (ADR 012) | CC (evidence) | 165-fold backtest (p=0.0089): Chronos 10.4% worse than naive. Deploying Chronos as headline would violate ADR 005. Naive is declared explicitly. Promotion criterion: ≥250 rows, Chronos beats naive, p<0.05. |
 | 2026-05-19 | T1/T2 triggers re-scoped to directional signal + momentum agreement (PR G) | CC (ADR 012 consequence) | T1/T2 no longer gate on Chronos level forecast vs naive MAE. Instead: chronos_lean ≥0.5% + 7d momentum agreement + rolling-30f dir_acc ≥0.55. Title makes clear "directional signal, not price forecast." Dir acc last-30f = 0.633 at PR G merge. |
 | 2026-05-19 | daily_summary.py deprecated and disabled in CI (PR G) | CC | Superseded by ml/notifications.py with revised T1–T5 triggers. Deleted in PR H. |
+| 2026-05-19 | Notification state persistence verified across master CI cycles | CC | Run 26096369659 (workflow_dispatch): Restore step matched prefix key notification-state-26095145270; T2 in cooldown (state survived round-trip); Save wrote new key notification-state-26096369659. Cache restore-keys prefix match confirmed working. |
+| 2026-05-19 | Prompt caching NOT applied to live Groq path (ADR 013) | CC | Three failure criteria: wrong provider (Groq, not Anthropic), below token minimum (~280 vs 1024), cadence outside TTL (6h vs 1h). Forward-looking helpers in ml/llm_cache_helpers.py; re-evaluated when Claude migration, batch backfill, or prompt size growth triggers occur. |
 
 ---
 
