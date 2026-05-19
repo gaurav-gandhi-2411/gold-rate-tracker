@@ -1,17 +1,5 @@
 [
   {
-    "ts": "2026-05-14T05:29:15Z",
-    "text": "The 22K gold price has risen by 5.96% over the past 3 days, reaching Rs.14845. The model expects a slight decrease, with a point estimate of Rs.14684. Recent price movements are near the 82nd percentile of the last 90 days.",
-    "model": "llama-3.3-70b-versatile",
-    "prompt_hash": "fe416fdf93cf"
-  },
-  {
-    "ts": "2026-05-14T06:45:48Z",
-    "text": "The 22K gold price has risen by 5.96% over the past 3 days, reaching Rs.14845. The model expects a slight decrease, with a point estimate of Rs.14684. Recent price movements are near the 82nd percentile of the last 90 days.",
-    "model": "llama-3.3-70b-versatile",
-    "prompt_hash": "5d8284be887b"
-  },
-  {
     "ts": "2026-05-14T08:24:40Z",
     "text": "The 22K gold price has risen by 5.96% over the past 3 days, reaching Rs.14845. The model expects a slight decrease to around Rs.14684 in the next reading. Recent price movements have been notable.",
     "model": "llama-3.3-70b-versatile",
@@ -190,6 +178,20 @@
     "text": "The 22K gold price is at Rs.14420, with a 3-day decline of 1.20% and a 7-day gain of 1.84%. The model expects a price around Rs.14534 in the next reading. Recent price movements have been moderate.",
     "model": "llama-3.3-70b-versatile",
     "prompt_hash": "f119a39ab0df",
+    "commentary_age_hours": 0.0
+  },
+  {
+    "ts": "2026-05-19T11:48:36Z",
+    "text": "The 22K gold price is at Rs.14420, with a 3-day decline of 1.20% and a 7-day gain of 1.84%. The model expects a point estimate of Rs.14534 for the next reading. Recent price movements show a 70.4th percentile in the last 90 days.",
+    "model": "llama-3.3-70b-versatile",
+    "prompt_hash": "7d9995d5e64d",
+    "commentary_age_hours": 0.0
+  },
+  {
+    "ts": "2026-05-19T12:13:51Z",
+    "text": "The 22K gold price is at Rs.14420, with a 3-day decline of 1.20% and a 7-day increase of 1.84%. The model expects a point estimate of Rs.14534 for the next reading. Recent price movements show a 70.4th percentile in the last 90 days.",
+    "model": "llama-3.3-70b-versatile",
+    "prompt_hash": "7ce33cd54650",
     "commentary_age_hours": 0.0
   }
 ]

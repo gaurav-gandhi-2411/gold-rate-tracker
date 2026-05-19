@@ -246,7 +246,17 @@ def _template_commentary(triggers: list[str], stats: dict) -> str:
 
 
 def call_groq_summary(api_key: str, triggers: list[str], stats: dict) -> str:
-    """Call Groq for a 1-2 sentence daily summary. Returns text or raises."""
+    """Call Groq for a 1-2 sentence daily summary. Returns text or raises.
+
+    PROMPT CACHING NOTE — why caching is not applied here
+    (full analysis in docs/adr/013-prompt-caching-scope.md):
+
+    This function is DEPRECATED (superseded by ml/notifications.py, PR G 2026-05-19)
+    and will be deleted in PR H. Caching analysis is moot for a deleted path, but
+    documented for completeness: provider is Groq, prompt is ~150 tokens (well below
+    the 1024-token Groq KV-cache minimum), and the daily cadence sits outside the
+    ~1-hour Groq cache TTL. No caching would have applied.
+    """
     import requests  # local import — only needed when LLM path is taken
 
     p = stats["today_price"]
