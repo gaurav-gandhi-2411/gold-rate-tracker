@@ -54,9 +54,18 @@ _PURITY_MAP = {
 }
 
 _SCHEMA_COLS = [
-    "date", "fetched_at",
-    "am_999", "pm_999", "am_995", "pm_995",
-    "am_916", "pm_916", "am_750", "pm_750", "am_585", "pm_585",
+    "date",
+    "fetched_at",
+    "am_999",
+    "pm_999",
+    "am_995",
+    "pm_995",
+    "am_916",
+    "pm_916",
+    "am_750",
+    "pm_750",
+    "am_585",
+    "pm_585",
 ]
 
 
@@ -80,16 +89,14 @@ def get_cdx_captures(from_date: str = "20220101") -> list[dict]:
         "limit": "2000",
     }
     logger.info("CDX: querying ibjarates.com captures %s to %s", from_date, to_date)
-    resp = requests.get(
-        _WAYBACK_CDX, params=params, headers={"User-Agent": _UA}, timeout=60
-    )
+    resp = requests.get(_WAYBACK_CDX, params=params, headers={"User-Agent": _UA}, timeout=60)
     resp.raise_for_status()
     data = resp.json()
     if not data or len(data) < 2:
         logger.warning("CDX: no captures found")
         return []
     header = data[0]
-    captures = [dict(zip(header, row)) for row in data[1:]]
+    captures = [dict(zip(header, row, strict=True)) for row in data[1:]]
     logger.info("CDX: %d unique-day captures found", len(captures))
     return captures
 
@@ -110,7 +117,7 @@ def _wayback_get(ts: str, target_url: str) -> bytes | None:
         try:
             resp = requests.get(wb_url, headers=headers, timeout=_TIMEOUT, allow_redirects=True)
             if resp.status_code == 429:
-                wait = _DELAY * (2 ** attempt)
+                wait = _DELAY * (2**attempt)
                 logger.warning("Wayback 429 — sleeping %.0fs", wait)
                 time.sleep(wait)
                 continue
@@ -249,7 +256,7 @@ def _try_parse_df_4col(df: pd.DataFrame, date_iso: str, fetched_at: str) -> dict
     if df.shape[1] < 4:
         return None
     df.columns = [str(c).strip() for c in df.columns]
-    metal_col = df.columns[0]   # "Gold" or "Silver"
+    metal_col = df.columns[0]  # "Gold" or "Silver"
     purity_col = df.columns[1]  # 999, 995, 916, 750, 585
     am_col = df.columns[2]
     pm_col = df.columns[3]
@@ -401,14 +408,18 @@ def run_backfill(mode: str = "ab", dry_run: bool = False) -> dict:
         if (i + 1) % 10 == 0:
             logger.info(
                 "Progress: %d/%d captures, %d rows collected so far",
-                i + 1, len(captures), len(all_new_rows),
+                i + 1,
+                len(captures),
+                len(all_new_rows),
             )
 
         time.sleep(_DELAY)
 
     logger.info(
         "Collection complete: %d rows from %d captures (%d failures)",
-        len(all_new_rows), n_processed, len(failures),
+        len(all_new_rows),
+        n_processed,
+        len(failures),
     )
 
     if not all_new_rows:
