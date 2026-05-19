@@ -224,6 +224,27 @@ jobs:
           git pull --rebase --autostash origin "${GITHUB_REF_NAME}"
           git push
 
+      - name: Restore notification state
+        uses: actions/cache/restore@v4
+        with:
+          path: data/notification_state.json
+          key: notification-state-${{ github.run_id }}
+          restore-keys: |
+            notification-state-
+
+      - name: Run notifications
+        continue-on-error: true
+        env:
+          NTFY_TOPIC: ${{ secrets.NTFY_TOPIC }}
+        run: python -m ml.notifications
+
+      - name: Save notification state
+        uses: actions/cache/save@v4
+        if: always() && github.ref_name == 'master'
+        with:
+          path: data/notification_state.json
+          key: notification-state-${{ github.run_id }}
+
       - name: Record prediction metrics
         continue-on-error: true
         run: python -m ml.metrics --record

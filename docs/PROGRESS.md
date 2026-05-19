@@ -675,7 +675,7 @@ Each PR is independently mergeable. CI remains green after every merge. `FORECAS
 | **PR E** | `feat(ml): Chronos-Bolt-Tiny inference path (probe-on, legacy-active)` | Add `ml/chronos_forecast.py` (load/forecast_ibja/chronos_to_tanishq/run_probe); add HF model cache + probe step in `check-price.yml`; add `tests/test_chronos_forecast.py` (17 mocked tests + 1 integration); add ADR 009; update `ml/requirements.txt` + lockfile (torch CPU-only); `data/chronos_probe.json` written each CI cycle | `ml/inference.py` untouched; `forecast.json` untouched; probe writes only `chronos_probe.json` | `FORECAST_ENGINE=legacy` |
 | **PR F** | `feat(ml): walk-forward backtest at h=5` ✅ | Rewrite `ml/backtest.py` for h=5 Chronos protocol; update `ml/metrics.py` for 5d decision rule; run new backtest (9 folds, 21 rows), commit `data/backtest.json`; update `weekly-backtest.yml`. Results: Chronos MAE 5d avg Rs.319 vs Naive Rs.305 (4.6% worse). `insufficient_evidence=false`, `wilcoxon_p=0.1641`. See PR F verdict. | Backtest results updated in CI | N/A |
 | **PR F.5** | `feat(data): Wayback Machine IBJA backfill` ✅ | Add `scripts/wayback_ibja_backfill.py` (Mode A HTML + Mode B PDF); extend `data/ibja_rates.parquet` 21→177 rows. Re-run backtest: 165 folds, Chronos MAE Rs.275 vs Naive Rs.249 (10.4% worse), Wilcoxon p=0.0089. Wayback ceiling reached (103 CDX captures fully processed). See §3.1.7. | `data/ibja_rates.parquet` extended to 177 rows | N/A |
-| **PR G** | `feat: notification system` | Add `ml/notifications.py`, `tests/test_notifications.py`; wire into `check-price.yml`; disable `daily_summary.yml` + mark `daily_summary.py` deprecated; draft ADR 011 | New ntfy alerts begin firing | `FORECAST_ENGINE=legacy` |
+| **PR G** | `feat: notification system` ✅ | Add `ml/notifications.py`, `tests/test_notifications.py`, `docs/adr/011-notification-design.md`, `docs/adr/012-naive-headline-chronos-companion.md`; wire into `check-price.yml` (restore/run/save notification state); disable `daily_summary.yml` (if: false) + mark `daily_summary.py` deprecated. T1/T2 use Chronos directional signal (dir_acc gate ≥0.55, lean ≥0.5%, momentum agreement). Dir acc last-30f: 0.633. | New ntfy alerts begin firing; daily_summary.yml disabled | `FORECAST_ENGINE=legacy` |
 | **PR H** | `feat(ml): flip to Chronos + final cleanup` | Set `FORECAST_ENGINE=chronos` in `check-price.yml`; delete `ml/regime.py`, `ml/forecast.py`, `ml/compare_feature_sets.py`, `ml/seed_history.py`, `ml/daily_summary.py`, `ml/tuning/study.py`, `tests/test_regime.py`, `tests/test_daily_summary.py`; delete TFT/N-BEATS configs; update README architecture section | **Chronos becomes live production path** | Flag becomes permanent; variable removed |
 
 **Ordering constraints:**
@@ -683,6 +683,31 @@ Each PR is independently mergeable. CI remains green after every merge. `FORECAS
 - PR D must land before PR E (calibration must exist before Chronos path can produce Tanishq-level output).
 - **PR F depends on PR E** (the h=5 walk-forward backtest calls the Chronos inference path directly; the `ml/chronos_forecast.py` module added in PR E must exist before PR F's backtest rewrite can be tested end-to-end).
 - PR E must land before PR H (Chronos path must be in the codebase, timing-validated, and CI entry point updated before the flag is flipped).
+
+---
+
+#### 3.8 Strategic Re-scope: Naive as Headline, Chronos as Directional Companion
+
+**Trigger:** PR F.5 backtest results (165 folds, Wilcoxon p=0.0089).
+
+**Evidence table:**
+
+| Metric | Value |
+|--------|-------|
+| MAE Chronos (165 folds) | Rs.275.5 |
+| MAE Naive (165 folds) | Rs.249.5 |
+| Gap | Chronos 10.4% worse |
+| Statistical significance | p = 0.0089 (significant) |
+| Direction accuracy h=5 | 55.8% (last 30 folds: 63.3%) |
+| Wayback ceiling | 177 rows (103 CDX captures fully processed) |
+
+**Decision (ADR 012, 2026-05-19):** Naive flat-hold becomes the production headline forecast. Chronos is retained as a directional companion only — `chronos_probe.json` continues to be written each CI cycle as input for T1/T2 notification triggers.
+
+**Revised PR G:** T1/T2 triggers use Chronos directional signal (`chronos_lean` from `chronos_probe.json`) gated on rolling 30-fold direction accuracy ≥ 0.55, not Chronos level forecast. Title language is explicit: "Model and momentum both lean [DOWN/UP] over next 5d."
+
+**Revised PR H:** Naive path write to `predicted_22k` becomes explicit. Legacy LightGBM, `ml/daily_summary.py`, and dead-weight files deleted. Chronos probe continues running as directional companion.
+
+**Phase 4 upgrade path (Chronos to headline):** Promotion criterion: ≥250-row backtest, `mae_5d_avg_chronos < mae_5d_avg_naive`, Wilcoxon p < 0.05. Expected data availability: 2026-09 to 2026-10.
 
 ---
 
@@ -753,6 +778,9 @@ Each PR is independently mergeable. CI remains green after every merge. `FORECAS
 | 2026-05-18 | Residual head gate = 0.80 ≤ mae_chronos/naive ≤ 1.00 | Consultant (Q5) | Residual head only when beating naive but with headroom; if ratio < 0.80, standalone Chronos is sufficient |
 | 2026-05-18 | Add T5 (model degraded) trigger | Consultant (critical fix) | Silent Chronos failures must surface as low-priority ntfy; model_fallback=true in forecast.json is the signal |
 | 2026-05-18 | T1/T2 gate = ≤ naive_mae AND fold_count ≥ 60 | Consultant (medium fix) | Previous 1.5× threshold was too loose; new gate requires model to actually beat naive |
+| 2026-05-19 | Naive flat-hold is the production headline forecast (ADR 012) | CC (evidence) | 165-fold backtest (p=0.0089): Chronos 10.4% worse than naive. Deploying Chronos as headline would violate ADR 005. Naive is declared explicitly. Promotion criterion: ≥250 rows, Chronos beats naive, p<0.05. |
+| 2026-05-19 | T1/T2 triggers re-scoped to directional signal + momentum agreement (PR G) | CC (ADR 012 consequence) | T1/T2 no longer gate on Chronos level forecast vs naive MAE. Instead: chronos_lean ≥0.5% + 7d momentum agreement + rolling-30f dir_acc ≥0.55. Title makes clear "directional signal, not price forecast." Dir acc last-30f = 0.633 at PR G merge. |
+| 2026-05-19 | daily_summary.py deprecated and disabled in CI (PR G) | CC | Superseded by ml/notifications.py with revised T1–T5 triggers. Deleted in PR H. |
 
 ---
 
