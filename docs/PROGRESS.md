@@ -196,6 +196,51 @@ The flag is read inside `ml/inference.py` via `os.environ.get("FORECAST_ENGINE",
 
 The original §3.1.6 described a rolling median ratio between MCX-derived prices and live IBJA-916-PM rates. This section is no longer applicable because `ml/mcx.py` and `ml/basis.py` were not added. The IBJA parquet contains only real IBJA rates with no stitched proxy segment, so no basis correction is needed.
 
+##### 3.1.7 Wayback Machine deep backfill (PR F.5) ✅ COMPLETE — 2026-05-19
+
+**Goal:** Extend `data/ibja_rates.parquet` from 21 rows to 200+ via archived ibjarates.com captures, to produce a statistically meaningful h=5 backtest.
+
+**Script:** `scripts/wayback_ibja_backfill.py` (one-shot; idempotent; branch `feat/pr-f5-wayback-ibja-backfill`)
+
+**Two extraction modes:**
+
+| Mode | Method | Yield | Notes |
+|------|--------|-------|-------|
+| A | Parse archived HTML snapshot (one row per capture) | ~73 new rows from 2022-2024 CDX captures | Required multi-strategy parser: 3-col (`table#TodayRatesTableDataYes`, 2024+) and 4-col (Metal\|Purity\|AM\|PM with Gold-only filter, 2022-2023). 10 failures (2 WinError 10061, 8 HTML parse). |
+| B | Extract embedded 30-day PDF URL → fetch archived PDF → pdfplumber | ~83 rows from 2025-2026 PDFs | Only post-2025 PDFs were archived in Wayback. Used in Run 1 (prior context). |
+
+**Run 1 (Mode AB, prior context):** Rows 21 → 104 (+83 via Mode B PDFs, 2025-2026). Mode A returned 0 rows — old parser couldn't handle 4-col format.
+
+**Run 2 (Mode A only, 2026-05-19):** Rows 104 → 177 (+73 via fixed Mode A HTML parser, 2022-2024 + early-2025 + 2026-Q1).
+
+**Final parquet state (177 rows):**
+
+```
+Date range:  2022-01-19 to 2026-05-18
+Dense runs:  2025-04-15–2025-06-03 (34 rows), 2025-07-07–2025-08-08 (25 rows),
+             2025-11-17–2025-12-16 (22 rows), 2026-04-17–2026-05-18 (21 rows)
+Sparse:      2022-2024 (1-8 rows/month); max calendar gap 123 days
+```
+
+**Backtest re-run on 177 rows (165 folds):**
+
+| Metric | Value |
+|--------|-------|
+| MAE Chronos | Rs.275.5 |
+| MAE Naive | Rs.249.5 |
+| Chronos vs Naive | **10.4% worse** |
+| Wilcoxon p | **0.0089** (statistically significant) |
+| Direction acc (h=5) | 55.8% (naive: 50%) |
+| PI 80 coverage | 87.0% |
+| Sub-30-context folds (22) | Chronos Rs.72 vs Naive Rs.76 (**Chronos slightly better**) |
+| ≥30-context folds (143) | Chronos Rs.307 vs Naive Rs.276 (**Chronos 11.1% worse**) |
+
+**Verdict:** Chronos-Bolt-Tiny does not outperform naive hold on IBJA-916-PM at any context size tested. The strong 2025-2026 uptrend (~Rs.85,000 → Rs.145,000) makes flat-hold very competitive. Directional accuracy at 55.8% shows weak but non-zero signal.
+
+**Known limitation:** 2022-2024 rows are sparse (1-8/month); folds spanning that data have "h=5 actuals" separated by weeks, not days — the nominal horizon assumption is violated. Both Chronos and naive face identical conditions, so the relative comparison remains valid; absolute MAE values are not interpretable as 5-calendar-day errors for those folds.
+
+**Ceiling reached:** Wayback CDX has 103 unique-day captures for `ibjarates.com/` (2022-2026). All have been processed. 2022-2024 PDFs were not archived. 177 rows is effectively the Wayback ceiling for this source.
+
 ---
 
 #### 3.2 Model Pivot — Chronos-Bolt Primary
@@ -629,6 +674,7 @@ Each PR is independently mergeable. CI remains green after every merge. `FORECAS
 | **PR D** | `feat(ml): Tanishq-vs-IBJA calibration layer` | Add `ml/calibration.py` (HuberRegressor, fit/apply/save/load/should_refit); `data/calibration.json` stub (`valid: false` — 21/30 pairs at merge); add `tests/test_calibration.py` (21 tests); GST verified: PRE-GST, median ratio 1.017 | No inference change | `FORECAST_ENGINE=legacy` |
 | **PR E** | `feat(ml): Chronos-Bolt-Tiny inference path (probe-on, legacy-active)` | Add `ml/chronos_forecast.py` (load/forecast_ibja/chronos_to_tanishq/run_probe); add HF model cache + probe step in `check-price.yml`; add `tests/test_chronos_forecast.py` (17 mocked tests + 1 integration); add ADR 009; update `ml/requirements.txt` + lockfile (torch CPU-only); `data/chronos_probe.json` written each CI cycle | `ml/inference.py` untouched; `forecast.json` untouched; probe writes only `chronos_probe.json` | `FORECAST_ENGINE=legacy` |
 | **PR F** | `feat(ml): walk-forward backtest at h=5` ✅ | Rewrite `ml/backtest.py` for h=5 Chronos protocol; update `ml/metrics.py` for 5d decision rule; run new backtest (9 folds, 21 rows), commit `data/backtest.json`; update `weekly-backtest.yml`. Results: Chronos MAE 5d avg Rs.319 vs Naive Rs.305 (4.6% worse). `insufficient_evidence=false`, `wilcoxon_p=0.1641`. See PR F verdict. | Backtest results updated in CI | N/A |
+| **PR F.5** | `feat(data): Wayback Machine IBJA backfill` ✅ | Add `scripts/wayback_ibja_backfill.py` (Mode A HTML + Mode B PDF); extend `data/ibja_rates.parquet` 21→177 rows. Re-run backtest: 165 folds, Chronos MAE Rs.275 vs Naive Rs.249 (10.4% worse), Wilcoxon p=0.0089. Wayback ceiling reached (103 CDX captures fully processed). See §3.1.7. | `data/ibja_rates.parquet` extended to 177 rows | N/A |
 | **PR G** | `feat: notification system` | Add `ml/notifications.py`, `tests/test_notifications.py`; wire into `check-price.yml`; disable `daily_summary.yml` + mark `daily_summary.py` deprecated; draft ADR 011 | New ntfy alerts begin firing | `FORECAST_ENGINE=legacy` |
 | **PR H** | `feat(ml): flip to Chronos + final cleanup` | Set `FORECAST_ENGINE=chronos` in `check-price.yml`; delete `ml/regime.py`, `ml/forecast.py`, `ml/compare_feature_sets.py`, `ml/seed_history.py`, `ml/daily_summary.py`, `ml/tuning/study.py`, `tests/test_regime.py`, `tests/test_daily_summary.py`; delete TFT/N-BEATS configs; update README architecture section | **Chronos becomes live production path** | Flag becomes permanent; variable removed |
 
@@ -699,6 +745,7 @@ Each PR is independently mergeable. CI remains green after every merge. `FORECAS
 | 2026-05-19 | Chronos-Bolt-Tiny selected as primary forecaster; probe-only in PR E | CC (ADR 009) | Zero-shot; no training data required at current data volume (~25–30 real readings). Probe path validates load→forecast→calibration→JSON before live-forecast flip in PR H. See ADR 009 for full alternatives analysis. |
 | 2026-05-19 | data/ibja_rates.parquet un-gitignored, committed as reference data | CC (post-hoc) | CI runs need historical context that can't be regenerated from live append alone; same pattern as the prior MCX-parquet decision. 21-row seed (2026-04-24 to 2026-05-18) committed in PR E. |
 | 2026-05-19 | Walk-forward backtest uses expanding window, step=1 day, min_context=8 | CC (PR F) | Expanding window accumulates all available IBJA history per fold — appropriate for zero-shot Chronos which benefits from longer context. Step=1 day produces maximum fold count from thin history (9 folds from 21 rows). |
+| 2026-05-19 | Wayback backfill used Mode A (HTML parse) for Run 2, not Mode AB | CC (PR F.5) | Mode B (PDF) was used in Run 1 and yielded 83 rows from 2025-2026 PDFs. Mode A HTML parsing failed for all captures in Run 1 because the old parser only handled 3-col format (`table#TodayRatesTableDataYes`); 2022-2023 archives use a 4-col format (Metal\|Purity\|AM\|PM). Run 2 ran Mode A only after the 4-col parser was added. Mode AB was not re-run because 2022-2024 PDFs were not archived in Wayback, so Mode B would yield nothing new and double the fetch time. |
 | 2026-05-18 | Chronos context = 365d baseline / 730d upgrade | Consultant | 60d was insufficient for seasonal signal; 365d captures full annual demand cycle |
 | 2026-05-18 | MCX backfill = 730 days (B1 one-time) + yfinance daily (B2 ongoing) | Consultant (Q2) | Clear role split: B1 for depth, B2 for currency; avoids hammering Bhavcopy portal daily |
 | 2026-05-18 | T1 replaces drop_threshold=100 alert; T3 is new (observed moves) | Consultant (Q3) | No parallel alerts; retire drop_threshold=100 config variable in PR G |
@@ -728,7 +775,7 @@ Each PR is independently mergeable. CI remains green after every merge. `FORECAS
 | 4 training-deps tests fail on local pytest (test_config TFT/N-BEATS overrides, test_promotion sign convention) | Minor | CC | Pre-existing on master; gated in CI via --ignore; fix when training CI job is added |
 | structlog not in ml/requirements.txt (inference lockfile) | Minor | CC | Resolve in PR D or earlier; basicConfig used as fallback in ml/inference.py |
 | Tanishq–IBJA markup ratio shows high day-to-day variance (median 1.017, std 0.015; spot 0.993 vs median 1.017 = 2.4pp swing) — calibration noise will widen Tanishq PI bands. Investigate in PR E. | Minor | CC | Monitor residual_std after PR E goes live |
-| PR F backtest thin-sample limitation: 9 folds from 21 IBJA rows (all sub-30-context). Chronos MAE Rs.319 vs naive Rs.305 (4.6% worse); wilcoxon p=0.1641 (not significant). Results are directional only until 30+ folds accumulate. Re-evaluate when ibja_rates.parquet exceeds 35 rows (~9 more trading days). | Minor | CC | weekly-backtest.yml reruns automatically each Sunday; `insufficient_evidence=false` but `n_folds_sub_30_context=9/9` flags thin history in backtest.json |
+| ~~PR F backtest thin-sample limitation: 9 folds from 21 IBJA rows (all sub-30-context). Chronos MAE Rs.319 vs naive Rs.305 (4.6% worse); wilcoxon p=0.1641 (not significant). Results are directional only until 30+ folds accumulate.~~ **RESOLVED PR F.5 (2026-05-19):** 177 rows, 165 folds (143 with ≥30 context). Wilcoxon p=0.0089. Chronos statistically significantly worse than naive (10.4% gap). Wayback ceiling reached. | Minor | CC (resolved) | Backtest now has statistical power. Verdict: Chronos trails naive; directional accuracy (55.8%) is the only positive signal. |
 
 ---
 
