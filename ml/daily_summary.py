@@ -1,4 +1,7 @@
 """
+DEPRECATED: ml/daily_summary.py is superseded by ml/notifications.py (PR G, 2026-05-19).
+Disabled in daily-summary.yml; deleted in PR H with legacy LightGBM cleanup.
+
 daily_summary.py — Smart daily gold rate notification.
 
 Runs at 10:30 UTC (4:00 PM IST) via .github/workflows/daily-summary.yml.

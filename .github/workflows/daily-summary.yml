@@ -14,6 +14,10 @@ concurrency:
 
 jobs:
   summarize:
+    # DEPRECATED: ml/daily_summary.py replaced by ml/notifications.py (PR G, 2026-05-19).
+    # Job-level if: false skips the entire job (shows as "skipped" in Actions UI).
+    # Entire workflow deleted in PR H alongside legacy LightGBM cleanup.
+    if: false
     runs-on: ubuntu-latest
     timeout-minutes: 10
 
@@ -46,7 +50,6 @@ jobs:
           NTFY_TOPIC: ${{ secrets.NTFY_TOPIC }}
           RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
         run: |
-          # ASCII-only headers — do not add currency symbols here (see update-and-notify.js fmtHdr)
           [ -z "${NTFY_TOPIC}" ] && echo "NTFY_TOPIC not set — skipping alert." && exit 0
           curl -s \
             -H "Title: Gold Tracker: Daily Summary Failed" \
