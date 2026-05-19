@@ -15,6 +15,8 @@ on:
       - "ml/macro.py"
       - "ml/regime.py"
       - "ml/ibja.py"
+      - "ml/chronos_forecast.py"
+      - "ml/calibration.py"
       - "models/production/**"
       - "archive/history_seed_synthetic.json"
       - "scraper/**"
@@ -90,7 +92,10 @@ jobs:
       - name: Install ML dependencies
         run: |
           pip install -q uv
-          uv pip install --system -r ml/requirements-inference.lock
+          uv pip install --system \
+            --extra-index-url https://download.pytorch.org/whl/cpu \
+            --index-strategy unsafe-best-match \
+            -r ml/requirements-inference.lock
 
       - name: Fetch macro features
         continue-on-error: true
@@ -195,6 +200,30 @@ jobs:
         continue-on-error: true
         run: python -m ml.ibja
 
+      - name: Cache Chronos model weights
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/huggingface/hub
+          key: chronos-bolt-tiny-${{ env.CHRONOS_BOLT_TINY_REVISION }}
+        env:
+          CHRONOS_BOLT_TINY_REVISION: a0e552de83495b5c28c14c71c374f3e33280b340
+
+      - name: Run Chronos probe
+        continue-on-error: true
+        env:
+          CHRONOS_BOLT_TINY_REVISION: a0e552de83495b5c28c14c71c374f3e33280b340
+        run: python -m ml.chronos_forecast --probe
+
+      - name: Commit Chronos probe data
+        continue-on-error: true
+        run: |
+          git config user.name "gold-rate-bot"
+          git config user.email "actions@users.noreply.github.com"
+          git add data/chronos_probe.json || true
+          git diff --staged --quiet || git commit -m "chore: update chronos probe [skip ci]"
+          git pull --rebase --autostash origin "${GITHUB_REF_NAME}"
+          git push
+
       - name: Record prediction metrics
         continue-on-error: true
         run: python -m ml.metrics --record
@@ -203,13 +232,13 @@ jobs:
         run: |
           git config user.name "gold-rate-bot"
           git config user.email "actions@users.noreply.github.com"
-          git add data/prices.json data/forecast.json data/commentary.json data/regime.json data/drift_metrics.json data/metrics_history.json || true
+          git add data/prices.json data/forecast.json data/commentary.json data/regime.json data/drift_metrics.json data/metrics_history.json data/ibja_rates.parquet || true
           git add models/production/lgbm.txt models/production/lgbm-meta.json 2>/dev/null || true
           if git diff --staged --quiet; then
             echo "No changes to commit."
           else
             git commit -m "chore: update gold prices and forecast [skip ci]"
-            git pull --rebase --autostash origin master
+            git pull --rebase --autostash origin "${GITHUB_REF_NAME}"
             git push
           fi
 

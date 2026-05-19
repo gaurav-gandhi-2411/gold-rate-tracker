@@ -107,7 +107,7 @@ Already wired in `ml/macro.py`. No change. Used as covariates in the LightGBM re
 
 ##### 3.1.2 Storage schema
 
-One Parquet table (gitignored, accumulated in CI):
+One Parquet table (committed, reference data, ~10–20 KB; updated each CI cycle):
 
 **`data/ibja_rates.parquet`**
 
@@ -128,7 +128,7 @@ One Parquet table (gitignored, accumulated in CI):
 
 `data/mcx_gold.parquet` — **REMOVED** (MCX strategy dropped; see incident log).
 
-**`.gitignore`** entry: `data/ibja_rates.parquet` (already added in PR C).
+> **Storage decision (PR E, post-hoc):** `data/ibja_rates.parquet` was initially gitignored (§3.1.4 plan). Un-gitignored in PR E after CI had no historical IBJA context (only 1 row — the live append). Historical context cannot be regenerated from live scrape alone; a 21-row seed committed to the repo gives Chronos meaningful context immediately. Same architectural pattern as the prior MCX-parquet decision (PR C). See Decision Log 2026-05-19.
 
 ##### 3.1.3 Calibration layer
 
@@ -173,7 +173,7 @@ def save_calibration(params: CalibrationParams, path: Path) -> None
 | `data/history_seed.json` | **MOVE** | → `archive/history_seed_synthetic.json` |
 | `data/history_seed_v1_uniform_premium.json` | **MOVE** | → `archive/history_seed_v1_uniform_premium.json` |
 | `ml/seed_history.py` | **DELETE** | No longer needed; move to `archive/scripts/seed_history.py` |
-| `.gitignore` | **EDIT** | Add `data/ibja_rates.parquet`, `data/notification_state.json` |
+| `.gitignore` | **EDIT** | Add `data/notification_state.json`; `data/ibja_rates.parquet` removed from .gitignore in PR E (reference data, committed) |
 | `ml/mcx.py` | **NOT ADDED** | Dropped — no automated INR MCX source available without Selenium |
 | `ml/basis.py` | **NOT ADDED** | Dropped — single-series IBJA strategy eliminates basis adjustment requirement |
 
@@ -319,6 +319,12 @@ def chronos_to_tanishq(
 ```
 
 Cold start (first run after PR 5): ~35s download (8.65 MB) + ~3 min torch install. Subsequent runs: <5s cache restore.
+
+> **Context handling adapted (PR E, 2026-05-19):** IBJA history at PR E merge is ~25–30 daily readings (21 from PDF backfill + days since PR C). The original plan assumed 365d context; that target is reached when daily IBJA accumulation catches up (~10–11 months). Chronos-Bolt is robust to short context; no truncation or padding applied. Minimum context enforced at 8 observations (`ValueError` below). Full 365d context per original plan reached gradually as the parquet accumulates.
+>
+> **Pinned revision (PR E):** `a0e552de83495b5c28c14c71c374f3e33280b340` (HuggingFace, last modified 2025-11-21). Update SHA in a dedicated chore commit when backtest confirms improvement.
+>
+> **Probe-only mode (PR E → PR H):** `run_probe()` writes `data/chronos_probe.json` each CI cycle. `forecast.json` unchanged. `FORECAST_ENGINE=legacy` until PR H. See ADR 009.
 
 ##### 3.2.4 Residual head (Phase 4 stretch — NOT in Phase 3 scope)
 
@@ -621,7 +627,7 @@ Each PR is independently mergeable. CI remains green after every merge. `FORECAS
 | **PR B** | `chore: retire TFT/N-BEATS and archive synthetic seed` | Delete ONNX artifacts + TFT/N-BEATS source + tests; simplify `ml/inference.py` (remove TFT/N-BEATS dead paths L34–240); archive `data/history_seed.json`; draft ADR 010 | `inference.py` code shrinks; CI unaffected (TFT/N-BEATS were already gated) | None needed — already gated |
 | **PR C** | `feat(data): IBJA data layer (single-series)` | Add `ml/ibja.py` (live scrape + PDF backfill); add `monthly-ibja-backfill.yml`; update `.gitignore`; add IBJA fetch step in `check-price.yml`; add `tests/test_ibja.py` (14 existing + 15 new backfill tests). `ml/mcx.py` and `ml/basis.py` NOT added — see incident log. | IBJA fetch step added to CI; monthly PDF backfill workflow added; no inference change | `FORECAST_ENGINE=legacy` (default) |
 | **PR D** | `feat(ml): Tanishq-vs-IBJA calibration layer` | Add `ml/calibration.py` (HuberRegressor, fit/apply/save/load/should_refit); `data/calibration.json` stub (`valid: false` — 21/30 pairs at merge); add `tests/test_calibration.py` (21 tests); GST verified: PRE-GST, median ratio 1.017 | No inference change | `FORECAST_ENGINE=legacy` |
-| **PR E** | `feat(ml): Chronos-Bolt-Tiny inference path (flag off)` | Add `ml/chronos_forecast.py`; update `ml/inference.py` with `FORECAST_ENGINE=chronos` branch; update `forecast.json` schema (backward-compatible aliases); add HF model cache step in CI; update `tests/test_inference_main.py` for both paths; draft ADR 009 | Chronos installed in CI but **not called** (`FORECAST_ENGINE=legacy`); CI timing probe logged | `FORECAST_ENGINE=legacy` |
+| **PR E** | `feat(ml): Chronos-Bolt-Tiny inference path (probe-on, legacy-active)` | Add `ml/chronos_forecast.py` (load/forecast_ibja/chronos_to_tanishq/run_probe); add HF model cache + probe step in `check-price.yml`; add `tests/test_chronos_forecast.py` (17 mocked tests + 1 integration); add ADR 009; update `ml/requirements.txt` + lockfile (torch CPU-only); `data/chronos_probe.json` written each CI cycle | `ml/inference.py` untouched; `forecast.json` untouched; probe writes only `chronos_probe.json` | `FORECAST_ENGINE=legacy` |
 | **PR F** | `feat(ml): walk-forward backtest at h=5` | Rewrite `ml/backtest.py` for h=5 Chronos protocol; update `ml/metrics.py` for 5d decision rule; run new backtest, commit `data/backtest.json`; update `weekly-backtest.yml` | Backtest results updated in CI | N/A |
 | **PR G** | `feat: notification system` | Add `ml/notifications.py`, `tests/test_notifications.py`; wire into `check-price.yml`; disable `daily_summary.yml` + mark `daily_summary.py` deprecated; draft ADR 011 | New ntfy alerts begin firing | `FORECAST_ENGINE=legacy` |
 | **PR H** | `feat(ml): flip to Chronos + final cleanup` | Set `FORECAST_ENGINE=chronos` in `check-price.yml`; delete `ml/regime.py`, `ml/forecast.py`, `ml/compare_feature_sets.py`, `ml/seed_history.py`, `ml/daily_summary.py`, `ml/tuning/study.py`, `tests/test_regime.py`, `tests/test_daily_summary.py`; delete TFT/N-BEATS configs; update README architecture section | **Chronos becomes live production path** | Flag becomes permanent; variable removed |
@@ -690,6 +696,8 @@ Each PR is independently mergeable. CI remains green after every merge. `FORECAS
 | 2026-05-18 | IBJA primary URL = ibja.co (official) | Consultant | ibjarates.com is a third-party aggregator; ibja.co is the authoritative source |
 | 2026-05-19 | Calibration model = HuberRegressor (not OLS), epsilon=1.35 | CC (PR D) | OLS inflated by lag artefacts when IBJA moves sharply (e.g. 2026-05-13: ratio 0.960, 2026-05-18: 0.993); HuberRegressor clips these with default epsilon. Verified empirically in outlier test. |
 | 2026-05-18 | Calibration model = HuberRegressor (not OLS) | Consultant | OLS is sensitive to Tanishq promotional outliers; HuberRegressor is robust to occasional spread deviations |
+| 2026-05-19 | Chronos-Bolt-Tiny selected as primary forecaster; probe-only in PR E | CC (ADR 009) | Zero-shot; no training data required at current data volume (~25–30 real readings). Probe path validates load→forecast→calibration→JSON before live-forecast flip in PR H. See ADR 009 for full alternatives analysis. |
+| 2026-05-19 | data/ibja_rates.parquet un-gitignored, committed as reference data | CC (post-hoc) | CI runs need historical context that can't be regenerated from live append alone; same pattern as the prior MCX-parquet decision. 21-row seed (2026-04-24 to 2026-05-18) committed in PR E. |
 | 2026-05-18 | Chronos context = 365d baseline / 730d upgrade | Consultant | 60d was insufficient for seasonal signal; 365d captures full annual demand cycle |
 | 2026-05-18 | MCX backfill = 730 days (B1 one-time) + yfinance daily (B2 ongoing) | Consultant (Q2) | Clear role split: B1 for depth, B2 for currency; avoids hammering Bhavcopy portal daily |
 | 2026-05-18 | T1 replaces drop_threshold=100 alert; T3 is new (observed moves) | Consultant (Q3) | No parallel alerts; retire drop_threshold=100 config variable in PR G |
@@ -762,3 +770,11 @@ Architectural pivot: single-series IBJA-916-PM forecasting. MCX dropped entirely
 - **MCX:** Not used. Dropped from plan 2026-05-19. No automated INR MCX data path without Selenium or paid API. See incident log.
 - **Basis adjustment:** Not needed. Single-series IBJA strategy means no MCX proxy to reconcile. Section §3.1.6 tombstoned.
 - **Notification state cache:** master-branch only (`actions/cache/save` gated on `github.ref_name == 'master'`). PR runs start fresh. Cache key = `notification-state-{run_id}`; restore uses prefix match `notification-state-`.
+
+---
+
+## Calendar Reminders
+
+| Date | Action |
+|------|--------|
+| 2026-05-25 | Verify Chronos falsifiable bet from PR E probe: predicted IBJA-916-PM = 14,118.69 INR/g on 2026-05-23 (−2.29% vs last value 14,448.9); naive predicts 14,448.9 (flat). Check `data/ibja_rates.parquet` for the 2026-05-23 PM rate. `df[df["date"] == "2026-05-23"][["date", "ibja_916_pm_per_gram"]]` |
