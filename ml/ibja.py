@@ -84,7 +84,7 @@ def fetch_ibja_daily() -> dict[str, float]:
         logger.warning("ibja: expected >=3 columns, got %d", df.shape[1])
         return {}
 
-    df.columns = [str(c).strip() for c in df.columns]
+    df.columns = pd.Index([str(c).strip() for c in df.columns])
     purity_col, am_col, pm_col = df.columns[0], df.columns[1], df.columns[2]
 
     result: dict[str, float] = {}
@@ -130,15 +130,18 @@ def load_ibja_parquet(path: Path | None = None) -> pd.DataFrame:
     return pd.read_parquet(p)
 
 
-def append_ibja_today(path: Path | None = None) -> bool:
+def append_ibja_today(path: Path | None = None) -> bool | None:
     """Fetch today's IBJA rates and append to the parquet store.
 
-    Returns True if a new row was appended, False on failure or duplicate.
+    Returns:
+        True   — new row appended
+        False  — already in parquet (no-op, not an error)
+        None   — fetch failed; parquet not updated
     """
     rates = fetch_ibja_daily()
     if not rates:
         logger.warning("ibja: no rates fetched — parquet not updated")
-        return False
+        return None
 
     today = date.today().isoformat()
     existing = load_ibja_parquet(path)
@@ -305,4 +308,6 @@ if __name__ == "__main__":
         n = backfill_ibja_from_pdf()
         raise SystemExit(0 if n >= 0 else 1)
     else:
-        raise SystemExit(0 if append_ibja_today() else 1)
+        # True (appended) and False (already present) are both success — exit 0.
+        # None means fetch failed — exit 1.
+        raise SystemExit(0 if append_ibja_today() is not None else 1)

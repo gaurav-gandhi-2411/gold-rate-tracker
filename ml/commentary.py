@@ -267,14 +267,7 @@ def main():
     # real_prices: only live Tanishq readings — used for short-term deltas
     real_prices = _load_json(DATA_DIR / "prices.json") or []
 
-    # all_prices: calibrated seed + live — used for 90d percentile context
-    try:
-        from ml.forecast import load_combined_history
-
-        all_df = load_combined_history()
-        all_prices = all_df[["timestamp", "22k", "24k", "18k"]].to_dict("records")
-    except Exception:
-        all_prices = real_prices  # fallback if seed missing
+    all_prices = real_prices
 
     forecast = _load_json(DATA_DIR / "forecast.json")
     backtest = _load_json(DATA_DIR / "backtest.json")
@@ -301,7 +294,7 @@ def main():
             fallback["commentary_age_hours"] = round(age_h, 1)
             fallback["fallback"] = True
             append_commentary(fallback)
-            print(f"Fallback commentary appended (age={age_h:.1f}h): {last.get('text','')[:60]}…")
+            print(f"Fallback commentary appended (age={age_h:.1f}h): {last.get('text', '')[:60]}…")
         else:
             print("No prior commentary to fall back to — skipping")
         sys.exit(0)

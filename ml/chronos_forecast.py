@@ -219,13 +219,13 @@ def run_probe(
 
     probe["ibja_forecast"] = [
         {
-            "day": i + 1,
+            "day": idx + 1,
             "date": row["date"],
             "p10": round(row["p10"], 2),
             "p50": round(row["p50"], 2),
             "p90": round(row["p90"], 2),
         }
-        for i, row in ibja_fc.iterrows()
+        for idx, (_, row) in enumerate(ibja_fc.iterrows())
     ]
 
     # --- Calibration ---
@@ -236,13 +236,13 @@ def run_probe(
             probe["calibration_applied"] = True
             probe["tanishq_forecast"] = [
                 {
-                    "day": i + 1,
+                    "day": idx + 1,
                     "date": row["date"],
                     "p10": round(row["p10"], 2),
                     "p50": round(row["p50"], 2),
                     "p90": round(row["p90"], 2),
                 }
-                for i, row in tanishq_fc.iterrows()
+                for idx, (_, row) in enumerate(tanishq_fc.iterrows())
             ]
         except Exception as exc:
             logger.warning("chronos_probe: calibration application failed: %s", exc)
