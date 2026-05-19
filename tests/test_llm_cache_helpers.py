@@ -23,25 +23,30 @@ from ml.llm_cache_helpers import (
 
 
 class TestBuildCachedSystemPrompt:
-    def test_returns_dict_with_required_keys(self):
-        block = build_cached_system_prompt("You are a gold price analyst.")
-        assert isinstance(block, dict)
+    def test_build_cached_system_prompt_5m(self):
+        block = build_cached_system_prompt("You are a gold price analyst.", ttl="5m")
         assert block["type"] == "text"
         assert block["cache_control"] == {"type": "ephemeral"}
-        assert "_ttl_seconds" in block
+        assert "ttl" not in block["cache_control"]
+        assert "_ttl_seconds" not in block
+
+    def test_build_cached_system_prompt_1h(self):
+        block = build_cached_system_prompt("You are a gold price analyst.", ttl="1h")
+        assert block["cache_control"]["type"] == "ephemeral"
+        assert block["cache_control"]["ttl"] == "1h"
+
+    def test_build_cached_system_prompt_invalid_ttl(self):
+        with pytest.raises(ValueError, match="ttl must be"):
+            build_cached_system_prompt("text", ttl="30m")
+
+    def test_default_ttl_is_5m(self):
+        block = build_cached_system_prompt("text")
+        assert "ttl" not in block["cache_control"]
 
     def test_text_is_preserved(self):
         text = "System prompt with special chars: ₹, Rs., gold 22K."
         block = build_cached_system_prompt(text)
         assert block["text"] == text
-
-    def test_default_ttl(self):
-        block = build_cached_system_prompt("text")
-        assert block["_ttl_seconds"] == _ANTHROPIC_CACHE_TTL_SECONDS
-
-    def test_custom_ttl(self):
-        block = build_cached_system_prompt("text", ttl=600)
-        assert block["_ttl_seconds"] == 600
 
     def test_empty_string_accepted(self):
         block = build_cached_system_prompt("")

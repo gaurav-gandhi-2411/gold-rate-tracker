@@ -36,9 +36,10 @@ _ANTHROPIC_MIN_CACHE_TOKENS: int = 1_024
 # Source: Groq docs — prefix caching activates at ≥1024 tokens.
 _GROQ_MIN_CACHE_TOKENS: int = 1_024
 
-# Anthropic prompt cache TTL (seconds).  After this window the cache entry is evicted.
-# Source: Anthropic docs — "Cache entries have a 5-minute TTL."
-_ANTHROPIC_CACHE_TTL_SECONDS: int = 300  # 5 minutes
+# Anthropic prompt cache TTL — used by should_use_cache_for_batch batch-duration gate.
+# "5m" default maps to 300s; "1h" extended TTL maps to 3600s.
+# Source: Anthropic docs — two supported TTL tiers for cache_control.
+_ANTHROPIC_CACHE_TTL_SECONDS: int = 300  # 5-minute default tier
 
 # Groq automatic KV-cache TTL (seconds).
 # Source: Groq docs — "prefix caching has a ~1-hour TTL."
@@ -55,48 +56,39 @@ _MIN_CALLS_FOR_CACHE_BENEFIT: int = 2
 # ---------------------------------------------------------------------------
 
 
-def build_cached_system_prompt(text: str, ttl: int = _ANTHROPIC_CACHE_TTL_SECONDS) -> dict:
+def build_cached_system_prompt(text: str, ttl: str = "5m") -> dict:
     """Return an Anthropic messages-API system prompt block with cache_control.
 
-    Args:
-        text: System prompt text.  Must be ≥1024 tokens for caching to take effect
-              (the API accepts shorter blocks but does not cache them).
-        ttl:  Cache TTL hint in seconds.  Anthropic currently only supports the
-              default 5-minute (300 s) TTL; this parameter is accepted for forward
-              compatibility and documented in the returned payload but is not sent
-              to the API.  Pass a custom value only when Anthropic adds multi-TTL
-              support.
+    ttl: "5m" (default, also the API default when omitted) or "1h" (extended cache,
+    2x base input price per the Anthropic docs).
 
-    Returns:
-        A dict suitable for the ``system`` field of an Anthropic API request::
+    Returns a single content block dict suitable for inclusion in the system list::
 
-            {
-                "type": "text",
-                "text": "<system prompt text>",
-                "cache_control": {"type": "ephemeral"},
-                "_ttl_seconds": 300,   # informational; not sent to the API
-            }
+        {"type": "text", "text": <text>, "cache_control": {"type": "ephemeral"}}
+
+    For "1h" TTL the cache_control includes ``{"ttl": "1h"}``.
+
+    Caller wraps in a list for the API: ``system=[build_cached_system_prompt(...)]``.
 
     Example (Claude SDK)::
 
         import anthropic
         client = anthropic.Anthropic()
-        sys_block = build_cached_system_prompt(SYSTEM_PROMPT)
         resp = client.messages.create(
             model="claude-opus-4-7-20251101",
-            system=[sys_block],
+            system=[build_cached_system_prompt(SYSTEM_PROMPT)],
             messages=[{"role": "user", "content": user_msg}],
         )
 
     See docs/adr/013-prompt-caching-scope.md for why this is not wired into the
     live Groq path.
     """
-    return {
-        "type": "text",
-        "text": text,
-        "cache_control": {"type": "ephemeral"},
-        "_ttl_seconds": ttl,
-    }
+    if ttl not in ("5m", "1h"):
+        raise ValueError(f"ttl must be '5m' or '1h', got {ttl!r}")
+    cache_control: dict = {"type": "ephemeral"}
+    if ttl == "1h":
+        cache_control["ttl"] = "1h"
+    return {"type": "text", "text": text, "cache_control": cache_control}
 
 
 # ---------------------------------------------------------------------------
