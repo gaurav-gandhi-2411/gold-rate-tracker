@@ -1,42 +1,52 @@
 {
-  "predicted_at": "2026-05-19T14:51:45.448673+00:00",
-  "target_time": "2026-05-20T00:00:00+00:00",
-  "predicted_22k": 14546,
-  "lower": 14146,
-  "upper": 14947,
-  "model_version": "lgbm-minimal_v2",
-  "training_rows": 456,
-  "feature_count": 8,
-  "feature_set": "minimal_v2",
-  "macro_features_used": true,
-  "real_readings_count": 81,
-  "warmup": true,
-  "val_mae": 261.2,
-  "naive_mae": 203.9,
-  "model_status": "trailing_naive",
-  "lgbm_pred_raw": 288.1,
-  "naive_pred_raw": 0.0,
-  "blend_weight_lgbm": 0.439,
-  "blend_weight_naive": 0.561,
-  "conformal_pi_half": 400.5,
-  "pi_coverage_80_empirical": 0.802,
-  "pi_coverage_80_calibrated": 0.8,
-  "seed_calibration_scale": 0.9727,
-  "ensemble": {
-    "method": "naive_blend",
-    "n_models": 2,
-    "lgbm_weight": 0.439,
-    "naive_weight": 0.561,
-    "min_readings_for_warmup_clear": 100
+  "predicted_at": "2026-05-19T19:00:05.767293+00:00",
+  "target_window": "5d",
+  "headline": {
+    "method": "naive_flat_hold",
+    "predicted_22k": 14420,
+    "lower": 13484,
+    "upper": 15356,
+    "conformal_pi_half": 935.7,
+    "naive_mae_recent_30": 566.9
   },
-  "models": {
-    "lgbm": {
-      "delta": 288.1,
-      "weight": 0.439
-    },
-    "naive": {
-      "delta": 0.0,
-      "weight": 0.561
-    }
-  }
+  "chronos_companion": {
+    "status": "success",
+    "lean_direction": "up",
+    "lean_strength_pct": 2.645,
+    "direction_acc_30f": 0.633,
+    "horizon_p10": [
+      14145.27,
+      14032.22,
+      13958.51,
+      13926.26,
+      13905.03
+    ],
+    "horizon_p50": [
+      14770.41,
+      14771.25,
+      14831.02,
+      14907.0,
+      14987.27
+    ],
+    "horizon_p90": [
+      15413.18,
+      15508.04,
+      15667.38,
+      15825.61,
+      15993.34
+    ],
+    "model_version": "amazon/chronos-bolt-tiny@a0e552de",
+    "calibration_applied": false
+  },
+  "real_readings_count": 82,
+  "current_22k": 14420,
+  "scraped_at": "2026-05-19T18:59:43.174Z",
+  "model_fallback": false,
+  "predicted_22k": 14420,
+  "lower": 13484,
+  "upper": 15356,
+  "target_time": "2026-05-20T00:00:00+00:00",
+  "model_status": "naive_headline",
+  "model_version": "naive_flat_hold",
+  "warmup": false
 }
