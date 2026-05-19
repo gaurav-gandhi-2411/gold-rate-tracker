@@ -2,6 +2,8 @@
 
 from pathlib import Path
 
+import numpy as np
+
 from ml.metrics import (
     DROP_THRESHOLD,
     OUTCOME_WINDOW,
@@ -298,3 +300,168 @@ def test_aggregate_no_wait_decisions():
     assert result["decision_accuracy"] is None
     assert result["n_wait_resolved"] == 0
     assert result["mae"] is not None
+
+
+# ============================================================
+# h=5 metric functions (PR F)
+# ============================================================
+
+
+def test_mae_per_horizon_basic():
+    """MAE computed correctly per horizon step."""
+    from ml.metrics import compute_mae_per_horizon
+
+    actuals = np.array([[10.0, 20.0, 30.0], [10.0, 20.0, 30.0]])
+    preds = np.array([[12.0, 18.0, 33.0], [8.0, 22.0, 27.0]])
+    mae = compute_mae_per_horizon(actuals, preds)
+    assert abs(mae[0] - 2.0) < 1e-6   # mean(|12-10|, |8-10|)
+    assert abs(mae[1] - 2.0) < 1e-6   # mean(|18-20|, |22-20|)
+    assert abs(mae[2] - 3.0) < 1e-6   # mean(|33-30|, |27-30|)
+
+
+def test_mae_per_horizon_perfect():
+    """Perfect forecast → MAE = 0 at every step."""
+    from ml.metrics import compute_mae_per_horizon
+
+    m = np.ones((5, 5)) * 14000.0
+    assert all(v == 0.0 for v in compute_mae_per_horizon(m, m))
+
+
+def test_dir_acc_h5_all_correct():
+    """All folds have correct directional prediction → 1.0."""
+    from ml.metrics import compute_dir_acc_h5
+
+    context_lasts = np.array([100.0, 100.0, 100.0])
+    p50_h5 = np.array([110.0, 90.0, 105.0])   # +, -, +
+    actuals_h5 = np.array([115.0, 85.0, 108.0])  # +, -, +
+    assert compute_dir_acc_h5(context_lasts, p50_h5, actuals_h5) == 1.0
+
+
+def test_dir_acc_h5_all_wrong():
+    """All folds have wrong directional prediction → 0.0."""
+    from ml.metrics import compute_dir_acc_h5
+
+    context_lasts = np.array([100.0, 100.0])
+    p50_h5 = np.array([110.0, 90.0])   # predicted up, predicted down
+    actuals_h5 = np.array([90.0, 110.0])   # actual down, actual up
+    assert compute_dir_acc_h5(context_lasts, p50_h5, actuals_h5) == 0.0
+
+
+def test_dir_acc_h5_zero_actual_move_counted_wrong():
+    """Folds where actual_h5 == context_last (zero move) are counted as wrong."""
+    from ml.metrics import compute_dir_acc_h5
+
+    context_lasts = np.array([100.0])
+    p50_h5 = np.array([110.0])   # predicted up
+    actuals_h5 = np.array([100.0])  # actual no move → zero → wrong
+    assert compute_dir_acc_h5(context_lasts, p50_h5, actuals_h5) == 0.0
+
+
+def test_pi_coverage_all_inside():
+    """All actuals inside [p10, p90] → coverage 1.0 at every step."""
+    from ml.metrics import compute_pi_coverage
+
+    n, h = 5, 3
+    actuals = np.full((n, h), 100.0)
+    p10 = np.full((n, h), 90.0)
+    p90 = np.full((n, h), 110.0)
+    cov = compute_pi_coverage(actuals, p10, p90)
+    assert all(v == 1.0 for v in cov)
+
+
+def test_pi_coverage_all_outside():
+    """All actuals outside [p10, p90] → coverage 0.0 at every step."""
+    from ml.metrics import compute_pi_coverage
+
+    n, h = 4, 2
+    actuals = np.full((n, h), 200.0)
+    p10 = np.full((n, h), 90.0)
+    p90 = np.full((n, h), 110.0)
+    cov = compute_pi_coverage(actuals, p10, p90)
+    assert all(v == 0.0 for v in cov)
+
+
+def test_decision_accuracy_h5_zero_predicted():
+    """No predicted drops → n_predicted=0, precision=None, recall=0.0 (missed all actual drops)."""
+    from ml.metrics import compute_decision_accuracy_h5
+
+    context_lasts = np.array([14000.0, 14000.0])
+    # p50 never drops 100 from context_last (14000 - 100 = 13900)
+    p50 = np.array([[14050.0] * 5, [14020.0] * 5])
+    actuals = np.array([[13800.0] * 5, [13700.0] * 5])  # actual big drops
+    result = compute_decision_accuracy_h5(context_lasts, p50, actuals)
+    assert result["n_chronos_predicted_100_drop"] == 0
+    assert result["precision"] is None
+    assert result["recall"] == 0.0  # 0 TP / 2 actual drops = 0, not undefined
+    assert result["n_actual_100_drops_total"] == 2  # both had actual drops
+
+
+def test_decision_accuracy_h5_zero_actual():
+    """Predicted drops but no actual drops → recall=None (no actual drops total)."""
+    from ml.metrics import compute_decision_accuracy_h5
+
+    context_lasts = np.array([14000.0, 14000.0])
+    p50 = np.array([[13800.0] * 5, [13850.0] * 5])   # both predict big drops
+    actuals = np.array([[14100.0] * 5, [14050.0] * 5])  # no actual drops
+    result = compute_decision_accuracy_h5(context_lasts, p50, actuals)
+    assert result["n_chronos_predicted_100_drop"] == 2
+    assert result["n_actual_100_drop_when_predicted"] == 0
+    assert result["precision"] == 0.0
+    assert result["n_actual_100_drops_total"] == 0
+    assert result["recall"] is None
+
+
+def test_decision_accuracy_h5_perfect():
+    """Every predicted drop is an actual drop → precision=1.0, recall=1.0."""
+    from ml.metrics import compute_decision_accuracy_h5
+
+    context_lasts = np.array([14000.0, 14000.0])
+    p50 = np.array([[13800.0] * 5, [13850.0] * 5])   # both predict drops >=100
+    actuals = np.array([[13700.0] * 5, [13750.0] * 5])  # both have actual drops >=100
+    result = compute_decision_accuracy_h5(context_lasts, p50, actuals)
+    assert result["precision"] == 1.0
+    assert result["recall"] == 1.0
+
+
+def test_peak_timing_error_zero():
+    """When argmin(p50) == argmin(actual) for every fold → median error = 0."""
+    from ml.metrics import compute_peak_timing_error
+
+    # Both p50 and actuals have their minimum at index 0 in every fold
+    p50 = np.array([[1.0, 5.0, 5.0, 5.0, 5.0], [2.0, 5.0, 5.0, 5.0, 5.0]])
+    actuals = np.array([[1.5, 5.0, 5.0, 5.0, 5.0], [2.5, 5.0, 5.0, 5.0, 5.0]])
+    assert compute_peak_timing_error(p50, actuals) == 0.0
+
+
+def test_peak_timing_error_nonzero():
+    """Predictable off-by-one in trough timing → median error = 1."""
+    from ml.metrics import compute_peak_timing_error
+
+    # p50 minimum at index 0; actual minimum at index 1
+    p50 = np.array([[1.0, 5.0, 5.0, 5.0, 5.0], [1.0, 5.0, 5.0, 5.0, 5.0]])
+    actuals = np.array([[5.0, 1.5, 5.0, 5.0, 5.0], [5.0, 1.5, 5.0, 5.0, 5.0]])
+    assert compute_peak_timing_error(p50, actuals) == 1.0
+
+
+def test_peak_timing_error_empty():
+    """Empty arrays → None."""
+    from ml.metrics import compute_peak_timing_error
+
+    result = compute_peak_timing_error(np.zeros((0, 5)), np.zeros((0, 5)))
+    assert result is None
+
+
+def test_wilcoxon_p_null_when_n_lt_6():
+    """Returns None when fewer than 6 paired diffs."""
+    from ml.metrics import compute_wilcoxon_p
+
+    assert compute_wilcoxon_p([1.0, 2.0, -1.0]) is None
+    assert compute_wilcoxon_p([]) is None
+
+
+def test_wilcoxon_p_all_zeros():
+    """All-zero diffs → p-value 1.0 (no systematic difference)."""
+    from ml.metrics import compute_wilcoxon_p
+
+    result = compute_wilcoxon_p([0.0] * 10)
+    assert result == 1.0

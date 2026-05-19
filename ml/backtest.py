@@ -1,263 +1,252 @@
-"""
-backtest.py — Walk-forward 90-day backtest of the LightGBM forecaster.
+"""Walk-forward backtest at h=5 comparing Chronos-Bolt-Tiny against naive_5d.
 
 Usage (from repo root):
-    python ml/backtest.py
+    python -m ml.backtest --run      # run backtest, write data/backtest.json
+    python -m ml.backtest --report   # print headline from data/backtest.json
 
-Reads:  data/history_seed.json + data/prices.json
-Writes: data/backtest.json
-
-Walk-forward protocol:
-  - For each reading t in the last 90 calendar days (except the very last):
-    - Train on ALL readings strictly before t
-    - Predict delta for t → t+1
-    - Actual = price[t+1]
-    - Baseline = price[t]  (naive "predict last value" / delta=0)
-  - Report MAE, MAPE, direction-accuracy for model and baseline.
-
-The model does NOT need to beat the naive baseline on this data volume —
-reporting both honestly is the point.
+Walk-forward protocol (expanding window, no leakage):
+  - Minimum context: 8 rows (Chronos minimum, same as _MIN_CONTEXT_DAYS).
+  - Step: 1 day forward per fold.
+  - Horizon: h=1..5 calendar days.
+  - Fold included only when all 5 actuals exist.
+  - Naive baseline: flat hold at context's last value for all 5 steps.
+  - Pipeline loaded once outside the fold loop.
 """
 
 from __future__ import annotations
 
+import argparse
 import json
-import sys
-import warnings
+import logging
 from pathlib import Path
 
 import numpy as np
 import pandas as pd
 
-warnings.filterwarnings("ignore", message="X does not have valid feature names")
+from ml.chronos_forecast import (
+    CHRONOS_BOLT_TINY_REVISION,
+    _MIN_CONTEXT_DAYS,
+    forecast_ibja,
+    load_chronos_pipeline,
+)
+from ml.metrics import (
+    compute_decision_accuracy_h5,
+    compute_dir_acc_h5,
+    compute_mae_per_horizon,
+    compute_peak_timing_error,
+    compute_pi_coverage,
+    compute_wilcoxon_p,
+)
 
-sys.path.insert(0, str(Path(__file__).parent.parent))
+ROOT = Path(__file__).resolve().parent.parent
+DATA_DIR = ROOT / "data"
+IBJA_PARQUET = DATA_DIR / "ibja_rates.parquet"
+BACKTEST_JSON = DATA_DIR / "backtest.json"
 
-from ml.features import MINIMAL_FEATURE_COLS, build_feature_matrix, get_train_Xy
-from ml.forecast import _make_lgb, _make_lgb_tuned, load_combined_history
-
-DATA_DIR = Path(__file__).parent.parent / "data"
-BACKTEST_DAYS = 90
-
-_EPS = 1.0  # same eps used in inference.py blending
+_HORIZON = 5
+logger = logging.getLogger(__name__)
 
 
-def _metrics(actuals: np.ndarray, predictions: np.ndarray) -> dict:
-    actuals = np.asarray(actuals, dtype=float)
-    predictions = np.asarray(predictions, dtype=float)
-    mae = float(np.mean(np.abs(actuals - predictions)))
-    mape = float(np.mean(np.abs((actuals - predictions) / actuals)) * 100)
-    return {"mae": round(mae, 2), "mape": round(mape, 4)}
-
-
-def _direction_acc(actuals: np.ndarray, predictions: np.ndarray, prevs: np.ndarray) -> float:
-    actual_dir = np.sign(np.asarray(actuals) - np.asarray(prevs))
-    pred_dir = np.sign(np.asarray(predictions) - np.asarray(prevs))
-    return round(float(np.mean(actual_dir == pred_dir)), 4)
+def load_ibja_series(parquet_path: Path = IBJA_PARQUET) -> pd.Series:
+    """Load IBJA-916-PM daily series as INR/g, sorted ascending, non-null."""
+    df = pd.read_parquet(parquet_path)
+    df = df.sort_values("date").dropna(subset=["pm_916"])
+    return df.set_index("date")["pm_916"] / 10.0
 
 
 def run_backtest(
-    df: pd.DataFrame,
-    macro_df=None,
-    feature_cols_override: list[str] | None = None,
-    use_tuned: bool = False,
-    label: str = "minimal_v2",
+    ibja_series: pd.Series,
+    pipeline,
+    horizon: int = _HORIZON,
+    min_context: int = _MIN_CONTEXT_DAYS,
 ) -> dict:
-    """Execute the walk-forward backtest. Returns the full result dict.
+    """Execute walk-forward backtest. Returns result dict; caller writes to disk.
+
+    No leakage: each fold's context window strictly precedes its actuals window.
+    Load the pipeline once before calling — it is expensive to load per-fold.
 
     Parameters
     ----------
-    feature_cols_override : list[str], optional
-        Feature columns to use. Defaults to MINIMAL_FEATURE_COLS (minimal_v2).
-    use_tuned : bool
-        Use bd602a6 regularized hyperparams (_make_lgb_tuned) when True.
-    label : str
-        Feature set name surfaced in print output.
+    ibja_series : date-indexed daily Series, values in INR/g.
+    pipeline    : ChronosBoltPipeline (pre-loaded).
+    horizon     : forecast steps per fold (default 5).
+    min_context : minimum rows required for first fold context (default 8).
     """
-    df = df.copy()
-    df["ts_parsed"] = pd.to_datetime(df["timestamp"], utc=True)
-    df = df.sort_values("ts_parsed").reset_index(drop=True)
+    n = len(ibja_series)
+    folds: list[dict] = []
 
-    last_ts = df["ts_parsed"].iloc[-1]
-    cutoff_ts = last_ts - pd.Timedelta(days=BACKTEST_DAYS)
+    for context_end_idx in range(min_context - 1, n - horizon):
+        context = ibja_series.iloc[: context_end_idx + 1]
+        actuals_slice = ibja_series.iloc[context_end_idx + 1 : context_end_idx + 1 + horizon]
 
-    test_indices = df.index[(df["ts_parsed"] >= cutoff_ts) & (df.index < len(df) - 1)].tolist()
+        if len(actuals_slice) < horizon:
+            break
 
-    if len(test_indices) < 5:
-        raise RuntimeError(
-            f"Only {len(test_indices)} test folds in last {BACKTEST_DAYS} days — need >=5"
+        # Leakage invariant: last context date strictly before first actuals date.
+        assert context.index[-1] < actuals_slice.index[0], (
+            f"leakage: context ends {context.index[-1]}, actuals start {actuals_slice.index[0]}"
         )
 
-    make_model = _make_lgb_tuned if use_tuned else _make_lgb
-    print(
-        f"Walk-forward backtest: {len(test_indices)} folds  "
-        f"feature_set={label}  params={'tuned' if use_tuned else 'base'}  "
-        f"macro={'yes' if macro_df is not None else 'no'}"
-    )
+        actuals = actuals_slice.values.tolist()
+        context_last = float(context.iloc[-1])
+        naive = [context_last] * horizon
 
-    predictions_out = []
-    model_actuals, model_preds, baseline_preds, prevs = [], [], [], []
-    fold_lgbm_errors: list[float] = []
-    fold_naive_errors: list[float] = []
-
-    for fold_idx, test_row_i in enumerate(test_indices):
-        train_df = df.iloc[:test_row_i].copy()
-        if len(train_df) < 10:
+        try:
+            fc_df = forecast_ibja(pipeline, context, horizon=horizon)
+        except Exception as exc:
+            logger.warning("backtest fold %d forecast failed: %s", len(folds), exc)
             continue
 
-        feat_train = build_feature_matrix(train_df, macro_df=macro_df)
-        candidate_cols = (
-            feature_cols_override if feature_cols_override is not None else MINIMAL_FEATURE_COLS
-        )
-        feature_cols = [c for c in candidate_cols if c in feat_train.columns]
-        X_train, y_train = get_train_Xy(feat_train, feature_cols=feature_cols)
-        if len(X_train) < 10:
-            continue
+        p10 = fc_df["p10"].tolist()
+        p50 = fc_df["p50"].tolist()
+        p90 = fc_df["p90"].tolist()
 
-        test_df = df.iloc[: test_row_i + 1].copy()
-        feat_test = build_feature_matrix(test_df, macro_df=macro_df)
-        x_row = feat_test.iloc[-1][feature_cols]
-        if x_row.isna().any():
-            continue
+        mae_chronos_per_h = [round(abs(p50[h] - actuals[h]), 2) for h in range(horizon)]
+        mae_naive_per_h = [round(abs(naive[h] - actuals[h]), 2) for h in range(horizon)]
+        in_pi_80 = [p10[h] <= actuals[h] <= p90[h] for h in range(horizon)]
 
-        model = make_model("regression")
-        model.fit(X_train.values, y_train.values)
-
-        predicted_delta = float(model.predict(x_row.values.reshape(1, -1))[0])
-
-        current_price = float(df.iloc[test_row_i]["22k"])
-        next_price = float(df.iloc[test_row_i + 1]["22k"])
-        ts_str = df.iloc[test_row_i]["timestamp"]
-
-        predicted_price = current_price + predicted_delta
-        baseline_price = current_price
-
-        lgbm_err = abs(predicted_price - next_price)
-        naive_err = abs(baseline_price - next_price)
-        fold_lgbm_errors.append(lgbm_err)
-        fold_naive_errors.append(naive_err)
-
-        model_actuals.append(next_price)
-        model_preds.append(predicted_price)
-        baseline_preds.append(baseline_price)
-        prevs.append(current_price)
-
-        predictions_out.append(
+        folds.append(
             {
-                "ts": ts_str,
-                "actual": next_price,
-                "predicted": round(predicted_price, 2),
-                "baseline": baseline_price,
+                "fold_id": len(folds),
+                "context_end_date": str(context.index[-1]),
+                "context_size": len(context),
+                "actuals": [round(v, 2) for v in actuals],
+                "chronos_p10": [round(v, 2) for v in p10],
+                "chronos_p50": [round(v, 2) for v in p50],
+                "chronos_p90": [round(v, 2) for v in p90],
+                "naive": [round(v, 2) for v in naive],
+                "mae_chronos_per_h": mae_chronos_per_h,
+                "mae_naive_per_h": mae_naive_per_h,
+                "in_pi_80": in_pi_80,
+                "sub_30_context": len(context) < 30,
             }
         )
 
-        if (fold_idx + 1) % 10 == 0:
-            print(f"  fold {fold_idx + 1}/{len(test_indices)}")
+    if not folds:
+        raise RuntimeError(
+            f"No valid backtest folds — need at least {min_context + horizon} IBJA rows, "
+            f"got {n}."
+        )
 
-    if not model_actuals:
-        raise RuntimeError("No valid folds completed")
+    # --- Aggregate ---
+    actuals_m = np.array([f["actuals"] for f in folds])           # (n_folds, horizon)
+    p50_m = np.array([f["chronos_p50"] for f in folds])            # (n_folds, horizon)
+    p10_m = np.array([f["chronos_p10"] for f in folds])            # (n_folds, horizon)
+    p90_m = np.array([f["chronos_p90"] for f in folds])            # (n_folds, horizon)
+    naive_m = np.array([f["naive"] for f in folds])                # (n_folds, horizon)
+    context_lasts = np.array([f["naive"][0] for f in folds])       # (n_folds,)
+    mae_c_per_fold = np.array([f["mae_chronos_per_h"] for f in folds]).mean(axis=1)
+    mae_n_per_fold = np.array([f["mae_naive_per_h"] for f in folds]).mean(axis=1)
 
-    actuals_arr = np.array(model_actuals)
-    preds_arr = np.array(model_preds)
-    prevs_arr = np.array(prevs)
-    lgbm_errs = np.array(fold_lgbm_errors)
-    naive_errs = np.array(fold_naive_errors)
+    mae_chronos_ph = compute_mae_per_horizon(actuals_m, p50_m)
+    mae_naive_ph = compute_mae_per_horizon(actuals_m, naive_m)
+    mae_5d_avg_chronos = float(np.mean(mae_chronos_ph))
+    mae_5d_avg_naive = float(np.mean(mae_naive_ph))
 
-    # --- Stratified direction accuracy by |actual delta| ---
-    actual_deltas = actuals_arr - prevs_arr
-    big_move_mask = np.abs(actual_deltas) > 50
-    small_move_mask = ~big_move_mask
+    dir_acc = compute_dir_acc_h5(context_lasts, p50_m[:, -1], actuals_m[:, -1])
+    pi_cov = compute_pi_coverage(actuals_m, p10_m, p90_m)
+    decision_acc = compute_decision_accuracy_h5(context_lasts, p50_m, actuals_m)
+    peak_err = compute_peak_timing_error(p50_m, actuals_m)
 
-    def _dir_acc_subset(mask: np.ndarray) -> float | None:
-        if mask.sum() == 0:
-            return None
-        return round(float(_direction_acc(actuals_arr[mask], preds_arr[mask], prevs_arr[mask])), 4)
-
-    dir_acc_big = _dir_acc_subset(big_move_mask)
-    dir_acc_small = _dir_acc_subset(small_move_mask)
-
-    # --- Rolling blend weight: simulate live inverse-MAE blend per fold ---
-    # For fold i, use errors from folds max(0, i-4)..i (rolling 5-fold window).
-    blend_weights: list[float] = []
-    for i in range(len(lgbm_errs)):
-        window_start = max(0, i - 4)
-        w_lgbm_mae = float(np.mean(lgbm_errs[window_start : i + 1]))
-        w_naive_mae = float(np.mean(naive_errs[window_start : i + 1]))
-        w_raw = 1.0 / (w_lgbm_mae + _EPS)
-        n_raw = 1.0 / (w_naive_mae + _EPS)
-        w = max(0.1, min(0.9, w_raw / (w_raw + n_raw)))
-        blend_weights.append(w)
-
-    blend_arr = np.array(blend_weights)
-
-    # --- Per-fold MAE std for uncertainty reporting ---
-    model_metrics = _metrics(actuals_arr, preds_arr)
-    model_metrics["mae_std"] = round(float(np.std(lgbm_errs)), 2)
-    model_metrics["direction_acc"] = _direction_acc(actuals_arr, preds_arr, prevs_arr)
-    model_metrics["direction_acc_big_move"] = dir_acc_big
-    model_metrics["direction_acc_small_move"] = dir_acc_small
-    model_metrics["n_big_move_folds"] = int(big_move_mask.sum())
-    model_metrics["n_small_move_folds"] = int(small_move_mask.sum())
-    model_metrics["blend_weight_lgbm_mean"] = round(float(blend_arr.mean()), 4)
-    model_metrics["blend_weight_lgbm_std"] = round(float(blend_arr.std()), 4)
-
-    baseline_metrics = _metrics(actuals_arr, np.array(baseline_preds))
-    baseline_metrics["direction_acc"] = _direction_acc(
-        actuals_arr, np.array(baseline_preds), prevs_arr
-    )
-
-    # Paired differences (model - baseline) for IQR comparison
-    paired_diff = lgbm_errs - naive_errs
-    pair_stats = {
-        "median": round(float(np.median(paired_diff)), 2),
-        "iqr_25": round(float(np.percentile(paired_diff, 25)), 2),
-        "iqr_75": round(float(np.percentile(paired_diff, 75)), 2),
-    }
+    paired_diffs = (mae_c_per_fold - mae_n_per_fold).tolist()
+    paired_diff_median = round(float(np.median(paired_diffs)), 2)
+    n_folds = len(folds)
+    wilcoxon_p = compute_wilcoxon_p(paired_diffs) if n_folds >= 6 else None
 
     return {
-        "generated_at": pd.Timestamp.utcnow().isoformat(),
-        "backtest_days": BACKTEST_DAYS,
-        "folds": len(predictions_out),
-        "feature_set": label,
-        "model": model_metrics,
-        "baseline": baseline_metrics,
-        "paired_diff_model_minus_baseline": pair_stats,
-        "predictions": predictions_out,
+        "backtest_run_at": pd.Timestamp.utcnow().isoformat(),
+        "n_folds": n_folds,
+        "n_folds_sub_30_context": int(np.sum([f["sub_30_context"] for f in folds])),
+        "horizon": horizon,
+        "model_version": f"amazon/chronos-bolt-tiny@{CHRONOS_BOLT_TINY_REVISION[:8]}",
+        "mae_5d_avg_chronos": round(mae_5d_avg_chronos, 2),
+        "mae_5d_avg_naive": round(mae_5d_avg_naive, 2),
+        "mae_chronos_per_h": [round(v, 2) for v in mae_chronos_ph],
+        "mae_naive_per_h": [round(v, 2) for v in mae_naive_ph],
+        "dir_acc_5d_chronos": round(dir_acc, 4),
+        "dir_acc_5d_naive": 0.5,
+        "pi_coverage_80_per_h": [round(v, 4) for v in pi_cov],
+        "pi_coverage_80_5d_avg": round(float(np.mean(pi_cov)), 4),
+        "decision_acc": decision_acc,
+        "peak_timing_err_days_median": peak_err,
+        "paired_diff_median": paired_diff_median,
+        "wilcoxon_signed_rank_p": wilcoxon_p,
+        "insufficient_evidence": n_folds < 6,
+        "folds": folds,
     }
 
 
-def main():
-    df = load_combined_history()
+def _print_report(result: dict) -> None:
+    n = result["n_folds"]
+    mc = result["mae_5d_avg_chronos"]
+    mn = result["mae_5d_avg_naive"]
+    pct = (mn - mc) / mn * 100 if mn > 0 else 0.0
+    direction = "better" if mc < mn else "worse"
+    mph_c = result["mae_chronos_per_h"]
+    mph_n = result["mae_naive_per_h"]
+    da = result["dir_acc_5d_chronos"]
+    pi = result["pi_coverage_80_5d_avg"]
+    da_obj = result["decision_acc"]
+    prec = da_obj["precision"]
+    rec = da_obj["recall"]
+    wp = result["wilcoxon_signed_rank_p"]
+    insuf = result.get("insufficient_evidence", False)
 
-    macro_df = None
-    try:
-        from ml.macro import load_macro_features
-        from ml.regime import add_regime_to_macro
+    print(f"\nChronos vs naive (h=5 walk-forward, n folds = {n}):")
+    print(f"  MAE 5d avg:  Chronos Rs.{mc:.1f}  Naive Rs.{mn:.1f}  (Chronos {abs(pct):.1f}% {direction})")
+    h_str = "  ".join(f"h{i+1}=Rs.{mph_c[i]:.0f}/Rs.{mph_n[i]:.0f}" for i in range(len(mph_c)))
+    print(f"  Per-horizon (chronos/naive): {h_str}")
+    print(f"  Direction acc (h=5): Chronos {da*100:.1f}%  Naive 50.0%")
+    print(f"  PI 80 coverage (avg): {pi*100:.1f}%  (target 80%)")
+    prec_s = f"{prec*100:.1f}%" if prec is not None else "N/A"
+    rec_s = f"{rec*100:.1f}%" if rec is not None else "N/A"
+    print(f"  Decision precision: {prec_s}  Recall: {rec_s}")
+    if insuf:
+        print(f"  NOTE: n={n} folds — insufficient_evidence: true (sub-30 context, directional only)")
+    if wp is not None:
+        print(f"  Paired Wilcoxon p: {wp:.4f}")
+    else:
+        print(f"  Paired Wilcoxon p: null (n={n}; scipy unavailable or n<6)")
+    print()
 
-        macro_df = load_macro_features()
-        if macro_df is not None:
-            today_utc = pd.Timestamp.now(tz="UTC").normalize()
-            if macro_df.index[-1] < today_utc:
-                extended_idx = pd.date_range(macro_df.index[0], today_utc, freq="D", tz="UTC")
-                macro_df = macro_df.reindex(extended_idx, method="ffill")
-            macro_df = add_regime_to_macro(macro_df)
-    except Exception as exc:
-        print(f"Macro unavailable -- backtest uses base features only ({exc})")
 
-    result = run_backtest(df, macro_df=macro_df)
-
-    m = result["model"]
-    b = result["baseline"]
-    print(
-        f"\nModel   -- MAE: Rs.{m['mae']:.1f}  MAPE: {m['mape']:.2f}%  Dir-acc: {m['direction_acc']*100:.1f}%"
+def main() -> None:
+    logging.basicConfig(level=logging.INFO, format="%(levelname)s %(name)s: %(message)s")
+    parser = argparse.ArgumentParser(description="Walk-forward h=5 backtest (Chronos vs naive)")
+    group = parser.add_mutually_exclusive_group(required=True)
+    group.add_argument("--run", action="store_true", help="Run backtest, write data/backtest.json")
+    group.add_argument(
+        "--report", action="store_true", help="Print headline from data/backtest.json"
     )
-    print(
-        f"Baseline-- MAE: Rs.{b['mae']:.1f}  MAPE: {b['mape']:.2f}%  Dir-acc: {b['direction_acc']*100:.1f}%"
-    )
+    args = parser.parse_args()
+
+    if args.report:
+        if not BACKTEST_JSON.exists():
+            print("data/backtest.json not found — run --run first.")
+            raise SystemExit(1)
+        result = json.loads(BACKTEST_JSON.read_text())
+        _print_report(result)
+        raise SystemExit(0)
+
+    # --run path
+    if not IBJA_PARQUET.exists():
+        print(f"IBJA parquet not found at {IBJA_PARQUET}")
+        raise SystemExit(1)
+
+    ibja_series = load_ibja_series()
+    n = len(ibja_series)
+    print(f"IBJA series: {n} rows  ({ibja_series.index[0]} to {ibja_series.index[-1]})")
+
+    print("Loading Chronos pipeline...")
+    pipeline = load_chronos_pipeline()
+    print("Pipeline loaded. Running walk-forward folds...")
+
+    result = run_backtest(ibja_series, pipeline)
+    _print_report(result)
 
     DATA_DIR.mkdir(exist_ok=True)
-    (DATA_DIR / "backtest.json").write_text(json.dumps(result, indent=2) + "\n")
-    print(f"\nBacktest written ({result['folds']} folds).")
+    BACKTEST_JSON.write_text(json.dumps(result, indent=2) + "\n")
+    print(f"Backtest written to {BACKTEST_JSON} ({result['n_folds']} folds).")
 
 
 if __name__ == "__main__":
