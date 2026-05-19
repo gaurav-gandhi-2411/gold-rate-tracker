@@ -448,5 +448,23 @@
     "residual": -114.0,
     "model_version": "lgbm-minimal_v2",
     "baseline_mae": 262.22
+  },
+  {
+    "ts": "2026-05-19T19:00:05.563676+00:00",
+    "target_time": "2026-05-20T00:00:00+00:00",
+    "actual_ts": "2026-05-19T18:59:43.174Z",
+    "actual_22k": 14420.0,
+    "forecast_22k": 14546.0,
+    "residual": -126.0,
+    "model_version": "lgbm-minimal_v2"
+  },
+  {
+    "ts": "2026-05-19T19:01:46.231344+00:00",
+    "target_time": "2026-05-20T00:00:00+00:00",
+    "actual_ts": "2026-05-19T19:01:28.625Z",
+    "actual_22k": 14420.0,
+    "forecast_22k": 14420.0,
+    "residual": 0.0,
+    "model_version": "naive_flat_hold"
   }
 ]
