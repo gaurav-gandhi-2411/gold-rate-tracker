@@ -781,6 +781,7 @@ Each PR is independently mergeable. CI remains green after every merge. `FORECAS
 | 2026-05-19 | Naive flat-hold is the production headline forecast (ADR 012) | CC (evidence) | 165-fold backtest (p=0.0089): Chronos 10.4% worse than naive. Deploying Chronos as headline would violate ADR 005. Naive is declared explicitly. Promotion criterion: ≥250 rows, Chronos beats naive, p<0.05. |
 | 2026-05-19 | T1/T2 triggers re-scoped to directional signal + momentum agreement (PR G) | CC (ADR 012 consequence) | T1/T2 no longer gate on Chronos level forecast vs naive MAE. Instead: chronos_lean ≥0.5% + 7d momentum agreement + rolling-30f dir_acc ≥0.55. Title makes clear "directional signal, not price forecast." Dir acc last-30f = 0.633 at PR G merge. |
 | 2026-05-19 | daily_summary.py deprecated and disabled in CI (PR G) | CC | Superseded by ml/notifications.py with revised T1–T5 triggers. Deleted in PR H. |
+| 2026-05-19 | Notification state persistence verified across master CI cycles | CC | Run 26096369659 (workflow_dispatch): Restore step matched prefix key notification-state-26095145270; T2 in cooldown (state survived round-trip); Save wrote new key notification-state-26096369659. Cache restore-keys prefix match confirmed working. |
 
 ---
 
