@@ -1,5 +1,5 @@
 {
-  "n_train": 455,
+  "n_train": 456,
   "n_val": 91,
   "feature_cols": [
     "lag_1",
@@ -12,8 +12,8 @@
     "dow"
   ],
   "feature_set": "minimal_v2",
-  "val_mae": 208.98,
-  "naive_mae": 209.42,
-  "conformal_pi_half": 287.81,
-  "updated_at": "2026-05-18T19:41:13.165134+00:00"
+  "val_mae": 263.05,
+  "naive_mae": 203.1,
+  "conformal_pi_half": 391.9,
+  "updated_at": "2026-05-19T02:48:40.129737+00:00"
 }

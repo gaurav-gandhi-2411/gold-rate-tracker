@@ -388,5 +388,15 @@
     "residual": 0.0,
     "model_version": "lgbm-minimal_v2",
     "baseline_mae": 208.98
+  },
+  {
+    "ts": "2026-05-19T02:48:36.189919+00:00",
+    "target_time": "2026-05-19T00:00:00+00:00",
+    "actual_ts": "2026-05-19T02:48:23.677Z",
+    "actual_22k": 14345.0,
+    "forecast_22k": 14345.0,
+    "residual": 0.0,
+    "model_version": "lgbm-minimal_v2",
+    "baseline_mae": 208.98
   }
 ]
