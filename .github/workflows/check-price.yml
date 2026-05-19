@@ -232,7 +232,7 @@ jobs:
         run: |
           git config user.name "gold-rate-bot"
           git config user.email "actions@users.noreply.github.com"
-          git add data/prices.json data/forecast.json data/commentary.json data/regime.json data/drift_metrics.json data/metrics_history.json || true
+          git add data/prices.json data/forecast.json data/commentary.json data/regime.json data/drift_metrics.json data/metrics_history.json data/ibja_rates.parquet || true
           git add models/production/lgbm.txt models/production/lgbm-meta.json 2>/dev/null || true
           if git diff --staged --quiet; then
             echo "No changes to commit."
