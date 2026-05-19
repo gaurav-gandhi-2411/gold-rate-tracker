@@ -83,9 +83,9 @@ def run_backtest(
             break
 
         # Leakage invariant: last context date strictly before first actuals date.
-        assert context.index[-1] < actuals_slice.index[0], (
-            f"leakage: context ends {context.index[-1]}, actuals start {actuals_slice.index[0]}"
-        )
+        assert (
+            context.index[-1] < actuals_slice.index[0]
+        ), f"leakage: context ends {context.index[-1]}, actuals start {actuals_slice.index[0]}"
 
         actuals = actuals_slice.values.tolist()
         context_last = float(context.iloc[-1])
