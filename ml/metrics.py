@@ -393,12 +393,8 @@ def compute_decision_accuracy_h5(
     n_actual_when_predicted = int(np.sum(actual_drop & predicted_drop))
     n_actual_total = int(np.sum(actual_drop))
 
-    precision: float | None = (
-        n_actual_when_predicted / n_predicted if n_predicted > 0 else None
-    )
-    recall: float | None = (
-        n_actual_when_predicted / n_actual_total if n_actual_total > 0 else None
-    )
+    precision: float | None = n_actual_when_predicted / n_predicted if n_predicted > 0 else None
+    recall: float | None = n_actual_when_predicted / n_actual_total if n_actual_total > 0 else None
 
     return {
         "n_chronos_predicted_100_drop": n_predicted,

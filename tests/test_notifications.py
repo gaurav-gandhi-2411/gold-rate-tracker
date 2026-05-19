@@ -1,24 +1,20 @@
 """Tests for ml/notifications.py — trigger logic, state management, and ntfy dispatch."""
+
 from __future__ import annotations
 
-import json
 from datetime import UTC, datetime, timedelta
 from pathlib import Path
 from unittest.mock import MagicMock
 from zoneinfo import ZoneInfo
 
-import pytest
-
 from ml.notifications import (
     NotificationState,
     PendingAlert,
-    _in_cooldown,
     _is_quiet_hours,
     _release_queued,
     check_triggers,
     compute_chronos_lean,
     compute_dir_acc_30f,
-    compute_recent_momentum,
     load_state,
     queue_for_quiet_hours,
     save_state,
@@ -112,7 +108,12 @@ def _backtest_accurate(n_folds: int = 30) -> dict:
         }
         for _ in range(n_folds)
     ]
-    return {"n_folds": n_folds, "mae_5d_avg_chronos": 275.0, "mae_5d_avg_naive": 249.0, "folds": folds}
+    return {
+        "n_folds": n_folds,
+        "mae_5d_avg_chronos": 275.0,
+        "mae_5d_avg_naive": 249.0,
+        "folds": folds,
+    }
 
 
 def _backtest_inaccurate(n_folds: int = 30) -> dict:
@@ -125,7 +126,12 @@ def _backtest_inaccurate(n_folds: int = 30) -> dict:
         }
         for _ in range(n_folds)
     ]
-    return {"n_folds": n_folds, "mae_5d_avg_chronos": 300.0, "mae_5d_avg_naive": 249.0, "folds": folds}
+    return {
+        "n_folds": n_folds,
+        "mae_5d_avg_chronos": 300.0,
+        "mae_5d_avg_naive": 249.0,
+        "folds": folds,
+    }
 
 
 def _forecast(warmup: bool = False, model_fallback: bool = False) -> dict:
@@ -315,8 +321,20 @@ def test_t2_blocked_probe_failure():
 def test_t3_fires_large_move():
     base_ts = datetime(2026, 5, 19, 6, 0, 0, tzinfo=UTC)
     prices = [
-        {"timestamp": base_ts.isoformat().replace("+00:00", "Z"), "22k": 14000, "24k": 14500, "18k": 13500, "source": "test"},
-        {"timestamp": (base_ts + timedelta(hours=6)).isoformat().replace("+00:00", "Z"), "22k": 14200, "24k": 14700, "18k": 13700, "source": "test"},
+        {
+            "timestamp": base_ts.isoformat().replace("+00:00", "Z"),
+            "22k": 14000,
+            "24k": 14500,
+            "18k": 13500,
+            "source": "test",
+        },
+        {
+            "timestamp": (base_ts + timedelta(hours=6)).isoformat().replace("+00:00", "Z"),
+            "22k": 14200,
+            "24k": 14700,
+            "18k": 13700,
+            "source": "test",
+        },
     ]
     alerts = check_triggers(
         _forecast(),
@@ -335,11 +353,28 @@ def test_t3_fires_large_move():
 def test_t3_no_fire_small_move():
     base_ts = datetime(2026, 5, 19, 6, 0, 0, tzinfo=UTC)
     prices = [
-        {"timestamp": base_ts.isoformat().replace("+00:00", "Z"), "22k": 14000, "24k": 14500, "18k": 13500, "source": "test"},
-        {"timestamp": (base_ts + timedelta(hours=6)).isoformat().replace("+00:00", "Z"), "22k": 14100, "24k": 14600, "18k": 13600, "source": "test"},
+        {
+            "timestamp": base_ts.isoformat().replace("+00:00", "Z"),
+            "22k": 14000,
+            "24k": 14500,
+            "18k": 13500,
+            "source": "test",
+        },
+        {
+            "timestamp": (base_ts + timedelta(hours=6)).isoformat().replace("+00:00", "Z"),
+            "22k": 14100,
+            "24k": 14600,
+            "18k": 13600,
+            "source": "test",
+        },
     ]
     alerts = check_triggers(
-        _forecast(), _probe(), prices, _backtest_accurate(), NotificationState(), _ist(2026, 5, 19, 14, 0)
+        _forecast(),
+        _probe(),
+        prices,
+        _backtest_accurate(),
+        NotificationState(),
+        _ist(2026, 5, 19, 14, 0),
     )
     assert all(a.trigger_id != "T3" for a in alerts)
 
@@ -370,7 +405,12 @@ def test_t4_fires_sunday_1800():
 
 def test_t4_no_fire_non_sunday():
     alerts = check_triggers(
-        _forecast(), _probe(), _prices_flat(), _backtest_accurate(), NotificationState(), _ist(2026, 5, 19, 18, 15)
+        _forecast(),
+        _probe(),
+        _prices_flat(),
+        _backtest_accurate(),
+        NotificationState(),
+        _ist(2026, 5, 19, 18, 15),
     )
     assert all(a.trigger_id != "T4" for a in alerts)
 
@@ -563,11 +603,18 @@ def test_ntfy_no_send_without_topic(monkeypatch):
 def test_state_round_trip(tmp_path: Path):
     state = NotificationState(
         last_sent={"T1": "2026-05-19T10:00:00+00:00", "T4": "2026-05-17T18:00:00+05:30"},
-        queued=[{
-            "trigger_id": "T3", "title": "Test", "body": "B", "priority": 4,
-            "tags": ["warning"], "click_url": "https://x.com",
-            "queued_at": "2026-05-19T22:30:00+05:30", "bypass_quiet": False,
-        }],
+        queued=[
+            {
+                "trigger_id": "T3",
+                "title": "Test",
+                "body": "B",
+                "priority": 4,
+                "tags": ["warning"],
+                "click_url": "https://x.com",
+                "queued_at": "2026-05-19T22:30:00+05:30",
+                "bypass_quiet": False,
+            }
+        ],
         sent_today=[{"trigger_id": "T1", "sent_at": "2026-05-19T10:00:00+00:00"}],
         last_t5_ist_date="2026-05-19",
     )

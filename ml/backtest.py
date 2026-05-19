@@ -24,8 +24,8 @@ import numpy as np
 import pandas as pd
 
 from ml.chronos_forecast import (
-    CHRONOS_BOLT_TINY_REVISION,
     _MIN_CONTEXT_DAYS,
+    CHRONOS_BOLT_TINY_REVISION,
     forecast_ibja,
     load_chronos_pipeline,
 )
@@ -124,17 +124,16 @@ def run_backtest(
 
     if not folds:
         raise RuntimeError(
-            f"No valid backtest folds — need at least {min_context + horizon} IBJA rows, "
-            f"got {n}."
+            f"No valid backtest folds — need at least {min_context + horizon} IBJA rows, got {n}."
         )
 
     # --- Aggregate ---
-    actuals_m = np.array([f["actuals"] for f in folds])           # (n_folds, horizon)
-    p50_m = np.array([f["chronos_p50"] for f in folds])            # (n_folds, horizon)
-    p10_m = np.array([f["chronos_p10"] for f in folds])            # (n_folds, horizon)
-    p90_m = np.array([f["chronos_p90"] for f in folds])            # (n_folds, horizon)
-    naive_m = np.array([f["naive"] for f in folds])                # (n_folds, horizon)
-    context_lasts = np.array([f["naive"][0] for f in folds])       # (n_folds,)
+    actuals_m = np.array([f["actuals"] for f in folds])  # (n_folds, horizon)
+    p50_m = np.array([f["chronos_p50"] for f in folds])  # (n_folds, horizon)
+    p10_m = np.array([f["chronos_p10"] for f in folds])  # (n_folds, horizon)
+    p90_m = np.array([f["chronos_p90"] for f in folds])  # (n_folds, horizon)
+    naive_m = np.array([f["naive"] for f in folds])  # (n_folds, horizon)
+    context_lasts = np.array([f["naive"][0] for f in folds])  # (n_folds,)
     mae_c_per_fold = np.array([f["mae_chronos_per_h"] for f in folds]).mean(axis=1)
     mae_n_per_fold = np.array([f["mae_naive_per_h"] for f in folds]).mean(axis=1)
 
@@ -193,16 +192,20 @@ def _print_report(result: dict) -> None:
     insuf = result.get("insufficient_evidence", False)
 
     print(f"\nChronos vs naive (h=5 walk-forward, n folds = {n}):")
-    print(f"  MAE 5d avg:  Chronos Rs.{mc:.1f}  Naive Rs.{mn:.1f}  (Chronos {abs(pct):.1f}% {direction})")
-    h_str = "  ".join(f"h{i+1}=Rs.{mph_c[i]:.0f}/Rs.{mph_n[i]:.0f}" for i in range(len(mph_c)))
+    print(
+        f"  MAE 5d avg:  Chronos Rs.{mc:.1f}  Naive Rs.{mn:.1f}  (Chronos {abs(pct):.1f}% {direction})"
+    )
+    h_str = "  ".join(f"h{i + 1}=Rs.{mph_c[i]:.0f}/Rs.{mph_n[i]:.0f}" for i in range(len(mph_c)))
     print(f"  Per-horizon (chronos/naive): {h_str}")
-    print(f"  Direction acc (h=5): Chronos {da*100:.1f}%  Naive 50.0%")
-    print(f"  PI 80 coverage (avg): {pi*100:.1f}%  (target 80%)")
-    prec_s = f"{prec*100:.1f}%" if prec is not None else "N/A"
-    rec_s = f"{rec*100:.1f}%" if rec is not None else "N/A"
+    print(f"  Direction acc (h=5): Chronos {da * 100:.1f}%  Naive 50.0%")
+    print(f"  PI 80 coverage (avg): {pi * 100:.1f}%  (target 80%)")
+    prec_s = f"{prec * 100:.1f}%" if prec is not None else "N/A"
+    rec_s = f"{rec * 100:.1f}%" if rec is not None else "N/A"
     print(f"  Decision precision: {prec_s}  Recall: {rec_s}")
     if insuf:
-        print(f"  NOTE: n={n} folds — insufficient_evidence: true (sub-30 context, directional only)")
+        print(
+            f"  NOTE: n={n} folds — insufficient_evidence: true (sub-30 context, directional only)"
+        )
     if wp is not None:
         print(f"  Paired Wilcoxon p: {wp:.4f}")
     else:

@@ -320,9 +320,9 @@ class TestMacroIntegration:
                 continue
             expected_lag1 = float(macro_at_prev["usd_inr"].iloc[-1])
             actual_lag1 = float(row["usd_inr_lag_1"])
-            assert (
-                abs(actual_lag1 - expected_lag1) < 1e-6
-            ), f"usd_inr_lag_1 mismatch: got {actual_lag1}, expected {expected_lag1}"
+            assert abs(actual_lag1 - expected_lag1) < 1e-6, (
+                f"usd_inr_lag_1 mismatch: got {actual_lag1}, expected {expected_lag1}"
+            )
             break  # one verified row is sufficient for this test
 
     @patch("ml.macro.yf.download")
@@ -356,7 +356,7 @@ class TestGetTrainXyWithMacro:
 
         gold_df = _make_gold_df(n=70, start="2026-03-10")
         feat = build_feature_matrix(gold_df, macro_df=macro_df)
-        X, y = get_train_Xy(feat, feature_cols=ALL_FEATURE_COLS)
+        X, _y = get_train_Xy(feat, feature_cols=ALL_FEATURE_COLS)
 
         assert len(X) > 0, "No training rows returned with macro features"
         assert X.shape[1] == len(ALL_FEATURE_COLS)
@@ -381,6 +381,6 @@ class TestGetTrainXyWithMacro:
         """Backward compat: get_train_Xy() with default args must still work."""
         gold_df = _make_gold_df(n=60, start="2026-03-01")
         feat = build_feature_matrix(gold_df)  # no macro
-        X, y = get_train_Xy(feat)  # no feature_cols arg
+        X, _y = get_train_Xy(feat)  # no feature_cols arg
         assert X.shape[1] == len(FEATURE_COLS), "Base FEATURE_COLS count changed"
         assert not X.isnull().any().any()

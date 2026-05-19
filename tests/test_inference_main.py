@@ -6,9 +6,8 @@ import json
 import math
 from datetime import UTC, datetime, timedelta
 
-import pytest
-
 import ml.inference as inf
+import pytest
 
 
 def _make_prices(n: int, base: int = 14400) -> list[dict]:
@@ -17,8 +16,8 @@ def _make_prices(n: int, base: int = 14400) -> list[dict]:
         {
             "timestamp": (start + timedelta(days=i)).strftime("%Y-%m-%dT%H:%M:%S.000Z"),
             "22k": base + (i % 7) * 20,
-            "24k": int(round((base + (i % 7) * 20) * 24 / 22)),
-            "18k": int(round((base + (i % 7) * 20) * 18 / 22)),
+            "24k": round((base + (i % 7) * 20) * 24 / 22),
+            "18k": round((base + (i % 7) * 20) * 18 / 22),
             "source": "smoke-test",
         }
         for i in range(n)
@@ -32,14 +31,16 @@ def _make_backtest(n_folds: int = 35) -> dict:
         base = 14000.0 + i * 10
         naive_val = [base] * 5
         actuals = [base + (j + 1) * 50 for j in range(5)]
-        folds.append({
-            "fold_id": i,
-            "context_end_date": f"2026-01-{(i % 28) + 1:02d}",
-            "context_size": 30 + i,
-            "actuals": actuals,
-            "chronos_p50": [base + (j + 1) * 60 for j in range(5)],
-            "naive": naive_val,
-        })
+        folds.append(
+            {
+                "fold_id": i,
+                "context_end_date": f"2026-01-{(i % 28) + 1:02d}",
+                "context_size": 30 + i,
+                "actuals": actuals,
+                "chronos_p50": [base + (j + 1) * 60 for j in range(5)],
+                "naive": naive_val,
+            }
+        )
     return {
         "n_folds": n_folds,
         "mae_5d_avg_naive": 249.5,
@@ -54,8 +55,7 @@ def _make_probe(status: str = "success") -> dict:
         "status": "success",
         "ibja_last_value": 14450.0,
         "ibja_forecast": [
-            {"day": d, "p10": 14200.0, "p50": 14600.0 + d * 50, "p90": 14900.0}
-            for d in range(1, 6)
+            {"day": d, "p10": 14200.0, "p50": 14600.0 + d * 50, "p90": 14900.0} for d in range(1, 6)
         ],
         "model_version": "amazon/chronos-bolt-tiny@a0e552de",
         "schema_version": 1,
@@ -77,8 +77,17 @@ def test_inference_main_produces_valid_forecast(tmp_path, monkeypatch):
     fc = json.loads((tmp_path / "forecast.json").read_text())
 
     # Top-level aliases
-    for key in ("predicted_22k", "lower", "upper", "predicted_at", "target_time",
-                "model_status", "model_version", "warmup", "real_readings_count"):
+    for key in (
+        "predicted_22k",
+        "lower",
+        "upper",
+        "predicted_at",
+        "target_time",
+        "model_status",
+        "model_version",
+        "warmup",
+        "real_readings_count",
+    ):
         assert key in fc, f"Missing top-level key: {key}"
 
     # PI ordering via aliases
@@ -169,11 +178,15 @@ def test_inference_calibration_applied(tmp_path, monkeypatch):
     (tmp_path / "prices.json").write_text(json.dumps(_make_prices(20)))
     (tmp_path / "backtest.json").write_text(json.dumps(_make_backtest(35)))
     (tmp_path / "chronos_probe.json").write_text(json.dumps(_make_probe("success")))
-    (tmp_path / "calibration.json").write_text(json.dumps({
-        "valid": True,
-        "slope": 1.02,
-        "intercept": 150.0,
-    }))
+    (tmp_path / "calibration.json").write_text(
+        json.dumps(
+            {
+                "valid": True,
+                "slope": 1.02,
+                "intercept": 150.0,
+            }
+        )
+    )
 
     inf.main()
 
@@ -194,10 +207,12 @@ def test_compute_conformal_pi_uses_last_30_folds():
     for i in range(50):
         error = 100.0 if i >= 20 else 1000.0
         base = 14000.0
-        folds.append({
-            "actuals": [base, base, base, base, base + error],
-            "naive": [base, base, base, base, base],
-        })
+        folds.append(
+            {
+                "actuals": [base, base, base, base, base + error],
+                "naive": [base, base, base, base, base],
+            }
+        )
     bt = {"n_folds": 50, "mae_5d_avg_naive": 249.5, "folds": folds}
 
     pi_half, mae = inf._compute_conformal_pi(bt)

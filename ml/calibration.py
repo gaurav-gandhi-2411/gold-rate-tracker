@@ -68,8 +68,7 @@ def fit_calibration(
 
     if len(merged) < _MIN_FIT_OBSERVATIONS:
         raise ValueError(
-            f"fit_calibration requires >= {_MIN_FIT_OBSERVATIONS} overlap days; "
-            f"got {len(merged)}"
+            f"fit_calibration requires >= {_MIN_FIT_OBSERVATIONS} overlap days; got {len(merged)}"
         )
 
     X = merged["ibja_per_g"].to_numpy().reshape(-1, 1)

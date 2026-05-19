@@ -318,7 +318,7 @@ def main() -> None:
     else:
         df = update_macro_cache()
 
-    print(f"\nCache: {len(df)} rows  |  " f"{df.index.min().date()} to {df.index.max().date()}")
+    print(f"\nCache: {len(df)} rows  |  {df.index.min().date()} to {df.index.max().date()}")
 
     display_cols = [
         "usd_inr",
