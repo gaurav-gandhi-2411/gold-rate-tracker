@@ -107,7 +107,7 @@ Already wired in `ml/macro.py`. No change. Used as covariates in the LightGBM re
 
 ##### 3.1.2 Storage schema
 
-One Parquet table (gitignored, accumulated in CI):
+One Parquet table (committed, reference data, ~10–20 KB; updated each CI cycle):
 
 **`data/ibja_rates.parquet`**
 
@@ -128,7 +128,7 @@ One Parquet table (gitignored, accumulated in CI):
 
 `data/mcx_gold.parquet` — **REMOVED** (MCX strategy dropped; see incident log).
 
-**`.gitignore`** entry: `data/ibja_rates.parquet` (already added in PR C).
+> **Storage decision (PR E, post-hoc):** `data/ibja_rates.parquet` was initially gitignored (§3.1.4 plan). Un-gitignored in PR E after CI had no historical IBJA context (only 1 row — the live append). Historical context cannot be regenerated from live scrape alone; a 21-row seed committed to the repo gives Chronos meaningful context immediately. Same architectural pattern as the prior MCX-parquet decision (PR C). See Decision Log 2026-05-19.
 
 ##### 3.1.3 Calibration layer
 
@@ -173,7 +173,7 @@ def save_calibration(params: CalibrationParams, path: Path) -> None
 | `data/history_seed.json` | **MOVE** | → `archive/history_seed_synthetic.json` |
 | `data/history_seed_v1_uniform_premium.json` | **MOVE** | → `archive/history_seed_v1_uniform_premium.json` |
 | `ml/seed_history.py` | **DELETE** | No longer needed; move to `archive/scripts/seed_history.py` |
-| `.gitignore` | **EDIT** | Add `data/ibja_rates.parquet`, `data/notification_state.json` |
+| `.gitignore` | **EDIT** | Add `data/notification_state.json`; `data/ibja_rates.parquet` removed from .gitignore in PR E (reference data, committed) |
 | `ml/mcx.py` | **NOT ADDED** | Dropped — no automated INR MCX source available without Selenium |
 | `ml/basis.py` | **NOT ADDED** | Dropped — single-series IBJA strategy eliminates basis adjustment requirement |
 
@@ -697,6 +697,7 @@ Each PR is independently mergeable. CI remains green after every merge. `FORECAS
 | 2026-05-19 | Calibration model = HuberRegressor (not OLS), epsilon=1.35 | CC (PR D) | OLS inflated by lag artefacts when IBJA moves sharply (e.g. 2026-05-13: ratio 0.960, 2026-05-18: 0.993); HuberRegressor clips these with default epsilon. Verified empirically in outlier test. |
 | 2026-05-18 | Calibration model = HuberRegressor (not OLS) | Consultant | OLS is sensitive to Tanishq promotional outliers; HuberRegressor is robust to occasional spread deviations |
 | 2026-05-19 | Chronos-Bolt-Tiny selected as primary forecaster; probe-only in PR E | CC (ADR 009) | Zero-shot; no training data required at current data volume (~25–30 real readings). Probe path validates load→forecast→calibration→JSON before live-forecast flip in PR H. See ADR 009 for full alternatives analysis. |
+| 2026-05-19 | data/ibja_rates.parquet un-gitignored, committed as reference data | CC (post-hoc) | CI runs need historical context that can't be regenerated from live append alone; same pattern as the prior MCX-parquet decision. 21-row seed (2026-04-24 to 2026-05-18) committed in PR E. |
 | 2026-05-18 | Chronos context = 365d baseline / 730d upgrade | Consultant | 60d was insufficient for seasonal signal; 365d captures full annual demand cycle |
 | 2026-05-18 | MCX backfill = 730 days (B1 one-time) + yfinance daily (B2 ongoing) | Consultant (Q2) | Clear role split: B1 for depth, B2 for currency; avoids hammering Bhavcopy portal daily |
 | 2026-05-18 | T1 replaces drop_threshold=100 alert; T3 is new (observed moves) | Consultant (Q3) | No parallel alerts; retire drop_threshold=100 config variable in PR G |
@@ -769,3 +770,11 @@ Architectural pivot: single-series IBJA-916-PM forecasting. MCX dropped entirely
 - **MCX:** Not used. Dropped from plan 2026-05-19. No automated INR MCX data path without Selenium or paid API. See incident log.
 - **Basis adjustment:** Not needed. Single-series IBJA strategy means no MCX proxy to reconcile. Section §3.1.6 tombstoned.
 - **Notification state cache:** master-branch only (`actions/cache/save` gated on `github.ref_name == 'master'`). PR runs start fresh. Cache key = `notification-state-{run_id}`; restore uses prefix match `notification-state-`.
+
+---
+
+## Calendar Reminders
+
+| Date | Action |
+|------|--------|
+| 2026-05-25 | Verify Chronos falsifiable bet from PR E probe: predicted IBJA-916-PM = 14,118.69 INR/g on 2026-05-23 (−2.29% vs last value 14,448.9); naive predicts 14,448.9 (flat). Check `data/ibja_rates.parquet` for the 2026-05-23 PM rate. `df[df["date"] == "2026-05-23"][["date", "ibja_916_pm_per_gram"]]` |
