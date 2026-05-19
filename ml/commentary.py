@@ -194,7 +194,22 @@ def build_user_message(
 
 
 def call_groq(api_key: str, user_message: str) -> str:
-    """Call Groq chat completions. Returns the note text or raises."""
+    """Call Groq chat completions. Returns the note text or raises.
+
+    PROMPT CACHING NOTE — why caching is not applied here
+    (full analysis in docs/adr/013-prompt-caching-scope.md):
+
+    Provider: Groq (llama-3.3-70b-versatile). Groq applies prefix KV-caching
+    automatically; no client-side cache_control is available or needed.
+    However, automatic caching requires ≥1024 prompt tokens and a repeated
+    prefix within ~1 hour. This call site fails both gates:
+      - Prompt size: system (~80 tokens) + user message (~200 tokens) ≈ 280 tokens
+        — well below the 1024-token minimum.
+      - Cadence: runs every 6 hours — far outside the ~1-hour Groq cache TTL.
+    Anthropic prompt caching is also inapplicable: the live path uses Groq, not
+    a Claude model. Migrate to Claude AND grow the system prompt to ≥1024 tokens
+    before wiring cache_control here.
+    """
     headers = {
         "Authorization": f"Bearer {api_key}",
         "Content-Type": "application/json",
