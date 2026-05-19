@@ -268,7 +268,11 @@ def _check_t1(
         return None
     if probe.get("status") != "success":
         return None
-    if forecast.get("warmup", True):
+    # Gate on ≥30 backtest folds, not on forecast.json's warmup flag — the
+    # warmup field is written by the legacy LightGBM path and will not exist
+    # post-PR-H. n_folds is written by ml/backtest.py, independent of the
+    # inference path.
+    if backtest.get("n_folds", 0) < 30:
         return None
     direction, strength = compute_chronos_lean(probe)
     if direction != "down" or strength < 0.5:
@@ -305,7 +309,7 @@ def _check_t2(
         return None
     if probe.get("status") != "success":
         return None
-    if forecast.get("warmup", True):
+    if backtest.get("n_folds", 0) < 30:
         return None
     direction, strength = compute_chronos_lean(probe)
     if direction != "up" or strength < 0.5:
@@ -608,7 +612,8 @@ def main() -> None:
         print(f"Dir acc 30f:  {dir_acc:.3f}  (gate: >= 0.55)")
         print(f"Chronos lean: {lean_dir} ({lean_str:.2f}%)")
         print(f"Momentum 7d:  {mom_dir} ({mom_pct:+.2f}%)")
-        print(f"Warmup:       {forecast.get('warmup', '?')}")
+        n_folds = backtest.get("n_folds", 0)
+        print(f"n_folds:      {n_folds}  (T1/T2 gate: >= 30)")
         print(f"\nTriggers fired ({len(new_alerts)}):")
         if new_alerts:
             for a in new_alerts:

@@ -202,12 +202,13 @@ def test_t1_fires():
     assert "Rs." in t1.body
 
 
-def test_t1_blocked_warmup():
+def test_t1_blocked_insufficient_folds():
+    # n_folds < 30 blocks T1 regardless of other conditions — post-PR-H safe gate
     alerts = check_triggers(
-        _forecast(warmup=True),
+        _forecast(warmup=False),
         _probe_down(strength_pct=1.0),
         _prices_down(),
-        _backtest_accurate(30),
+        _backtest_accurate(n_folds=10),  # only 10 folds — below gate
         NotificationState(),
         _ist(2026, 5, 19, 14, 0),
     )
