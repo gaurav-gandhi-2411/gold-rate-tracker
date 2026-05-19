@@ -13,7 +13,7 @@ onnx>=1.21.0
 
 # Experiment tracking
 mlflow-skinny==2.22.5
-structlog==24.4.0
+structlog==25.5.0
 
 # Config management
 hydra-core==1.3.2
