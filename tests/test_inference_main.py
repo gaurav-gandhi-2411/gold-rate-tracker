@@ -126,7 +126,7 @@ def test_inference_probe_failed(tmp_path, monkeypatch):
     monkeypatch.setattr(inf, "DATA_DIR", tmp_path)
 
     (tmp_path / "prices.json").write_text(json.dumps(_make_prices(20)))
-    (tmp_path / "backtest.json").write_text(json.dumps(_make_backtest(10)))
+    (tmp_path / "backtest.json").write_text(json.dumps(_make_backtest(35)))
     (tmp_path / "chronos_probe.json").write_text(json.dumps(_make_probe("failed")))
     (tmp_path / "calibration.json").write_text(json.dumps({"valid": False}))
 
@@ -145,7 +145,7 @@ def test_inference_probe_failed(tmp_path, monkeypatch):
 
 @pytest.mark.smoke
 def test_inference_no_backtest(tmp_path, monkeypatch):
-    """When backtest.json is missing, conformal PI falls back to default mae * 1.5."""
+    """When backtest.json is missing, writes insufficient_backtest_history — no fabricated PI."""
     monkeypatch.setattr(inf, "DATA_DIR", tmp_path)
 
     (tmp_path / "prices.json").write_text(json.dumps(_make_prices(10)))
@@ -154,10 +154,11 @@ def test_inference_no_backtest(tmp_path, monkeypatch):
     inf.main()
 
     fc = json.loads((tmp_path / "forecast.json").read_text())
-    hl = fc["headline"]
-    # Fallback: default mae_5d_avg_naive=300.0 * 1.5 = 450.0
-    assert hl["conformal_pi_half"] == 450.0
-    assert hl["lower"] < hl["predicted_22k"] < hl["upper"]
+    assert fc["model_status"] == "insufficient_backtest_history"
+    assert fc["predicted_22k"] > 0
+    assert fc["lower"] is None
+    assert fc["upper"] is None
+    assert "headline" not in fc
 
 
 @pytest.mark.smoke
@@ -166,7 +167,7 @@ def test_inference_calibration_applied(tmp_path, monkeypatch):
     monkeypatch.setattr(inf, "DATA_DIR", tmp_path)
 
     (tmp_path / "prices.json").write_text(json.dumps(_make_prices(20)))
-    (tmp_path / "backtest.json").write_text(json.dumps(_make_backtest(10)))
+    (tmp_path / "backtest.json").write_text(json.dumps(_make_backtest(35)))
     (tmp_path / "chronos_probe.json").write_text(json.dumps(_make_probe("success")))
     (tmp_path / "calibration.json").write_text(json.dumps({
         "valid": True,

@@ -41,6 +41,10 @@ logger = logging.getLogger(__name__)
 _CONFORMAL_PCT: int = 80
 # Number of recent backtest folds used for conformal PI and naive_mae_recent computation.
 _CONFORMAL_FOLDS: int = 30
+# Minimum valid fold errors required for a reliable 80th-percentile estimate.
+# Below this threshold the PI estimate has too much variance to be useful; the
+# caller writes model_status="insufficient_backtest_history" instead of a fake band.
+_MIN_CONFORMAL_FOLDS: int = 30
 
 
 def _load_json(path: Path) -> dict | list | None:
@@ -52,11 +56,12 @@ def _load_json(path: Path) -> dict | list | None:
         return None
 
 
-def _compute_conformal_pi(backtest: dict) -> tuple[float, float]:
+def _compute_conformal_pi(backtest: dict) -> tuple[float, float] | None:
     """80th-percentile conformal PI from the last 30 folds' naive h=5 absolute errors.
 
-    Returns (conformal_pi_half, naive_mae_recent_30).
-    Falls back to aggregate naive MAE x 1.5 when fold-level data is unavailable.
+    Returns (conformal_pi_half, naive_mae_recent_30), or None when fewer than
+    _MIN_CONFORMAL_FOLDS valid fold errors are available.  None signals the caller
+    to write model_status='insufficient_backtest_history' rather than a fabricated PI.
     """
     folds: list[dict] = backtest.get("folds", [])
     recent = folds[-_CONFORMAL_FOLDS:]
@@ -68,9 +73,8 @@ def _compute_conformal_pi(backtest: dict) -> tuple[float, float]:
         if len(actuals) >= 5 and len(naive) >= 5:
             errors.append(abs(actuals[4] - naive[4]))
 
-    if not errors:
-        fallback_mae = float(backtest.get("mae_5d_avg_naive", 300.0))
-        return round(fallback_mae * 1.5, 1), round(fallback_mae, 1)
+    if len(errors) < _MIN_CONFORMAL_FOLDS:
+        return None
 
     arr = np.array(errors)
     return round(float(np.percentile(arr, _CONFORMAL_PCT)), 1), round(float(np.mean(arr)), 1)
@@ -153,7 +157,37 @@ def main() -> None:
 
     # 2. Conformal PI from backtest naive errors
     backtest: dict = _load_json(DATA_DIR / "backtest.json") or {}
-    conformal_pi_half, naive_mae_recent_30 = _compute_conformal_pi(backtest)
+    pi_result = _compute_conformal_pi(backtest)
+    if pi_result is None:
+        fold_count = len(backtest.get("folds", []))
+        logger.warning(
+            "Insufficient backtest fold data (%d valid folds, need %d); "
+            "writing model_status=insufficient_backtest_history",
+            fold_count, _MIN_CONFORMAL_FOLDS,
+        )
+        predicted_at = datetime.now(UTC)
+        target_time = (predicted_at + timedelta(days=1)).replace(
+            hour=0, minute=0, second=0, microsecond=0
+        )
+        result: dict = {
+            "predicted_at": predicted_at.isoformat(),
+            "target_window": "5d",
+            "real_readings_count": real_readings_count,
+            "current_22k": current_22k,
+            "scraped_at": scraped_at,
+            "model_status": "insufficient_backtest_history",
+            "model_version": "naive_flat_hold",
+            "model_fallback": False,
+            "warmup": False,
+            "predicted_22k": current_22k,
+            "lower": None,
+            "upper": None,
+            "target_time": target_time.isoformat(),
+        }
+        DATA_DIR.mkdir(exist_ok=True)
+        (DATA_DIR / "forecast.json").write_text(json.dumps(result, indent=2) + "\n")
+        return
+    conformal_pi_half, naive_mae_recent_30 = pi_result
     logger.info("Conformal PI half=Rs.%.1f  naive_mae_recent_30=%.1f", conformal_pi_half, naive_mae_recent_30)
 
     # 3. Headline: naive flat-hold
