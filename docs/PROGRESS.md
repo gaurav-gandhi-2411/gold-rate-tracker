@@ -60,7 +60,7 @@
 
 ---
 
-### Phase 3 — Implementation Plan  🟡 IN REVIEW — 2026-05-18
+### Phase 3 — Implementation Plan  ✅ COMPLETE — 2026-05-19
 
 #### 3.1 Data Layer Rebuild
 
@@ -734,6 +734,12 @@ Each PR is independently mergeable. CI remains green after every merge. `FORECAS
 
 ---
 
+#### 3.10 Phase 3 Retrospective  ✅ COMPLETE — 2026-05-19
+
+Phase 3 began as "find the best magnitude predictor" — a Chronos-Bolt-Tiny model that would outperform the naive flat-hold baseline on IBJA-916-PM 5-day forecasting. The 165-fold walk-forward backtest (p=0.0089) delivered an unambiguous verdict: Chronos is 10.4% worse than naive. Rather than deploying a worse model, Phase 3 pivoted to "find the best honest forecaster" — naming the naive flat-hold explicitly as the production headline, retaining Chronos only for its verified directional signal (55.8% direction accuracy, 63.3% on the last 30 folds). The production stack that emerged from this evidence-driven pivot is simpler, faster, and honest by construction: nine PRs merged, six ADRs enacted (009–014), all legacy LightGBM infrastructure deleted, and a live notification system with verified state persistence across CI cycles. The promotion criterion for Chronos to graduate to headline forecaster is concrete and testable at ≥250 IBJA rows (~2026-09 to 2026-10).
+
+---
+
 #### 3.7 Risks & Open Questions
 
 **New risks introduced by the pivot:**
@@ -765,7 +771,7 @@ Each PR is independently mergeable. CI remains green after every merge. `FORECAS
 ---
 
 ### Phase 4 — Build  ⏸️ NOT STARTED
-*Previously Phase 3. Will begin after Phase 3 plan is approved by consultant and GG.*
+*Will begin when IBJA parquet reaches ≥250 rows (~2026-09) and Chronos beats naive on re-run backtest. Entry criterion: promotion criterion in ADR 012 met.*
 
 ### Phase 5 — Validate  ⏸️ NOT STARTED
 
@@ -806,6 +812,8 @@ Each PR is independently mergeable. CI remains green after every merge. `FORECAS
 | 2026-05-19 | daily_summary.py deprecated and disabled in CI (PR G) | CC | Superseded by ml/notifications.py with revised T1–T5 triggers. Deleted in PR H. |
 | 2026-05-19 | Notification state persistence verified across master CI cycles | CC | Run 26096369659 (workflow_dispatch): Restore step matched prefix key notification-state-26095145270; T2 in cooldown (state survived round-trip); Save wrote new key notification-state-26096369659. Cache restore-keys prefix match confirmed working. |
 | 2026-05-19 | Prompt caching NOT applied to live Groq path (ADR 013) | CC | Three failure criteria: wrong provider (Groq, not Anthropic), below token minimum (~280 vs 1024), cadence outside TTL (6h vs 1h). Forward-looking helpers in ml/llm_cache_helpers.py; re-evaluated when Claude migration, batch backfill, or prompt size growth triggers occur. |
+| 2026-05-19 | Notification state persistence verified on scheduled cron run (run 26105096443) | CC | Scheduled run restored state from key notification-state-26096369659 (prefix match from prior workflow_dispatch run); saved new key notification-state-26105096443. Full save→restore cycle confirmed on genuine cron trigger. |
+| 2026-05-19 | Phase 3 complete — production = naive headline + Chronos directional companion (ADR 014) | CC | All nine Phase 3 PRs merged. Naive flat-hold is the explicit production forecast; Chronos retained for directional signal only. LightGBM and all associated training infrastructure deleted. Promotion criterion: ≥250 IBJA rows, Chronos beats naive, Wilcoxon p<0.05 (~2026-09). |
 
 ---
 
@@ -813,16 +821,16 @@ Each PR is independently mergeable. CI remains green after every merge. `FORECAS
 
 | Risk | Severity | Owner | Mitigation status |
 |------|----------|-------|-------------------|
-| Model 34.6% worse than naive on backtest (MAE ₹225.33 vs ₹167.36, 69 folds) | Blocker | Consultant | Chronos-Bolt pivot approved; new h=5 backtest will establish new baseline |
-| 86% synthetic training data | Major | GG (resolved) | Resolved: synthetic seed dropped. Real-only corpus from PR B onward |
+| ~~Model 34.6% worse than naive on backtest (MAE ₹225.33 vs ₹167.36, 69 folds)~~ **RESOLVED PR H (2026-05-19):** Naive flat-hold named explicitly as production headline (ADR 012). LightGBM deleted. | Blocker | CC (resolved) | Resolved: naive IS the production forecast; LightGBM deleted in PR H. |
+| ~~86% synthetic training data~~ **RESOLVED PR B:** | Major | GG (resolved) | Resolved: synthetic seed dropped. Real-only corpus from PR B onward |
 | IBJA robots.txt | Minor | CC (resolved) | Verified PR C: `ibja.co` allows all crawlers (only /cgi-bin/ disallowed); `ibjarates.com` returns HTTP 404 (no restrictions). Both domains clear to scrape. |
 | MCX Bhavcopy has no direct URL | Minor | CC (resolved) | Verified PR C: MCX direct 403 (Akamai WAF); Samco archive empty; yfinance Indian MCX symbols all empty/delisted; investpy 403 from investing.com. No automated INR MCX path. MCX strategy dropped entirely — not a risk, a closed question. |
 | Chronos-Bolt CPU latency unverified on Actions runner | Major | CC | Timing probe in PR E; fallback is `num_samples=1` deterministic mode |
 | PyTorch cold-start CI overhead (~3 min) | Minor | CC | `actions/cache` in PR E; confirmed as acceptable |
 | Unpinned deps (yfinance schema risk) | Major | CC | Lockfile added in PR A |
-| `inference.py` has no dedicated test | Major | CC | Smoke test added in PR A |
+| ~~`inference.py` has no dedicated test~~ **RESOLVED PR A + PR H:** | Major | CC (resolved) | Smoke tests added in PR A; fully rewritten for naive path in PR H (5 smoke tests). |
 | WANDB env vars stale in `.env` | Minor | CC | Remove in PR A (local .env change only; gitignored) |
-| Regime feature dead-weight | Minor | CC | Resolved: `ml/regime.py` deleted in PR H |
+| ~~Regime feature dead-weight~~ **RESOLVED PR H:** | Minor | CC (resolved) | Resolved: `ml/regime.py` deleted in PR H |
 | Sentry DSN placeholder not activated | Minor | GG | Unchanged; Sentry not required for Phase 3 |
 | ADR 006 numbering gap | Minor | GG | Pending; ADRs 009–011 drafted in Phase 3 PRs |
 | 4 training-deps tests fail on local pytest (test_config TFT/N-BEATS overrides, test_promotion sign convention) | Minor | CC | Pre-existing on master; gated in CI via --ignore; fix when training CI job is added |
