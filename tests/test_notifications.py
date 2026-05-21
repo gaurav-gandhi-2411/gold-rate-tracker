@@ -501,7 +501,23 @@ def test_quiet_hours_queues_t1():
     assert state.queued[0]["trigger_id"] == "T1"
 
 
-def test_release_queued_returns_and_clears():
+def test_release_queued_returns_and_clears(monkeypatch):
+    # Freeze ml.notifications.datetime so the 12-hour cutoff is stable regardless of
+    # wall-clock date.  queued_at is 2026-05-19 23:30 IST; freeze "now" to 1h later
+    # (2026-05-20 00:30 IST = 2026-05-19 19:00 UTC) so the entry is well within the
+    # 12-hour window.
+    from datetime import UTC
+    from datetime import datetime as _real_datetime
+
+    _frozen_now_utc = _ist(2026, 5, 20, 0, 30).astimezone(UTC)
+
+    class _FakeDatetime(_real_datetime):
+        @classmethod
+        def now(cls, tz=None):  # type: ignore[override]
+            return _frozen_now_utc if tz is UTC else _real_datetime.now(tz)
+
+    monkeypatch.setattr("ml.notifications.datetime", _FakeDatetime)
+
     state = NotificationState()
     now_ist = _ist(2026, 5, 19, 23, 30)
     alert = PendingAlert(
