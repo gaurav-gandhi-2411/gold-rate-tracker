@@ -1,5 +1,5 @@
 {
-  "predicted_at": "2026-05-20T20:10:08.787207+00:00",
+  "predicted_at": "2026-05-21T02:52:02.854111+00:00",
   "target_window": "5d",
   "headline": {
     "method": "naive_flat_hold",
@@ -38,14 +38,14 @@
     "model_version": "amazon/chronos-bolt-tiny@a0e552de",
     "calibration_applied": false
   },
-  "real_readings_count": 87,
+  "real_readings_count": 88,
   "current_22k": 14660,
-  "scraped_at": "2026-05-20T20:09:49.644Z",
+  "scraped_at": "2026-05-21T02:51:46.708Z",
   "model_fallback": false,
   "predicted_22k": 14660,
   "lower": 13724,
   "upper": 15596,
-  "target_time": "2026-05-21T00:00:00+00:00",
+  "target_time": "2026-05-22T00:00:00+00:00",
   "model_status": "naive_headline",
   "model_version": "naive_flat_hold",
   "warmup": false
