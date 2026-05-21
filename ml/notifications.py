@@ -32,10 +32,10 @@ STATE_PATH = DATA_DIR / "notification_state.json"
 IST = ZoneInfo("Asia/Kolkata")
 _NTFY_BASE = "https://ntfy.sh"
 _CLICK_URL = "https://gaurav-gandhi-2411.github.io/gold-rate-tracker/"
-_QUIET_START_H = 22        # 22:00 IST
-_QUIET_END_H = 7           # 07:00 IST
-_MAX_QUEUE_AGE_H = 12      # discard queued alerts older than this
-_MAX_T123_PER_24H = 3      # T1+T2+T3 combined cap
+_QUIET_START_H = 22  # 22:00 IST
+_QUIET_END_H = 7  # 07:00 IST
+_MAX_QUEUE_AGE_H = 12  # discard queued alerts older than this
+_MAX_T123_PER_24H = 3  # T1+T2+T3 combined cap
 
 SCHEMA_VERSION = 1
 
@@ -55,7 +55,7 @@ class PendingAlert:
     priority: int
     tags: list[str]
     click_url: str
-    queued_at: str      # ISO8601 datetime string (IST timezone)
+    queued_at: str  # ISO8601 datetime string (IST timezone)
     bypass_quiet: bool
 
     def to_dict(self) -> dict:
@@ -69,7 +69,7 @@ class PendingAlert:
 @dataclass
 class SentAlert:
     trigger_id: str
-    sent_at: str        # ISO8601 datetime string (UTC)
+    sent_at: str  # ISO8601 datetime string (UTC)
     title: str
     success: bool
 
@@ -157,8 +157,7 @@ def _count_sent(
     """Count sends for the given trigger IDs within the past window_hours."""
     cutoff = (datetime.now(UTC) - timedelta(hours=window_hours)).isoformat()
     return sum(
-        1 for s in state.sent_today
-        if s["trigger_id"] in trigger_ids and s["sent_at"] >= cutoff
+        1 for s in state.sent_today if s["trigger_id"] in trigger_ids and s["sent_at"] >= cutoff
     )
 
 
@@ -241,9 +240,10 @@ def compute_dir_acc_30f(backtest: dict) -> float:
         return 0.0
     recent = folds[-30:]
     correct = sum(
-        1 for fold in recent
-        if (fold["chronos_p50"][-1] - fold["naive"][0])
-        * (fold["actuals"][-1] - fold["naive"][0]) > 0
+        1
+        for fold in recent
+        if (fold["chronos_p50"][-1] - fold["naive"][0]) * (fold["actuals"][-1] - fold["naive"][0])
+        > 0
     )
     return correct / len(recent)
 
@@ -363,7 +363,9 @@ def _check_t3(
         f"22K moved from Rs.{prev} to Rs.{current} ({pct:+.1f}%). "
         "Model-agnostic price alert. Check the dashboard for context."
     )
-    return _make_alert("T3", title, body, priority, ["warning", "chart_with_upwards_trend"], now_ist)
+    return _make_alert(
+        "T3", title, body, priority, ["warning", "chart_with_upwards_trend"], now_ist
+    )
 
 
 def _check_t4(
@@ -409,7 +411,9 @@ def _check_t4(
         f"Backtest ({n_folds} folds): Chronos MAE Rs.{mae_c:.0f} vs Naive Rs.{mae_n:.0f}."
         + (extra or " See dashboard for full context.")
     )
-    return _make_alert("T4", title, body, 2, ["newspaper", "white_flower"], now_ist, bypass_quiet=True)
+    return _make_alert(
+        "T4", title, body, 2, ["newspaper", "white_flower"], now_ist, bypass_quiet=True
+    )
 
 
 def _check_t5(
@@ -429,10 +433,10 @@ def _check_t5(
     if state.last_t5_ist_date == today_ist:
         return None
     if fallback:
-        title = "Gold forecast: Chronos failed, LightGBM fallback active"
+        title = "Gold forecast: inference path failed"
         body = (
-            "Chronos path failed this CI cycle. LightGBM legacy fallback is running. "
-            "Check CI logs for root cause."
+            "Chronos probe failed and model_fallback is set. "
+            "Forecast may be stale. Check CI logs for root cause."
         )
     else:
         title = "Gold forecast: Chronos probe failed"
@@ -519,12 +523,14 @@ def send_pending(
         else:
             logger.warning("Failed to send %s", alert.trigger_id)
 
-        sent.append(SentAlert(
-            trigger_id=alert.trigger_id,
-            sent_at=sent_at,
-            title=alert.title,
-            success=success,
-        ))
+        sent.append(
+            SentAlert(
+                trigger_id=alert.trigger_id,
+                sent_at=sent_at,
+                title=alert.title,
+                success=success,
+            )
+        )
 
     return sent
 
@@ -575,11 +581,14 @@ def main() -> None:
     logging.basicConfig(level=logging.INFO, format="%(levelname)s: %(message)s")
     parser = argparse.ArgumentParser(description="Gold rate notification system (T1-T5)")
     parser.add_argument(
-        "--simulate", action="store_true",
+        "--simulate",
+        action="store_true",
         help="Evaluate triggers and print results without sending or saving state",
     )
     parser.add_argument(
-        "--state-path", type=Path, default=STATE_PATH,
+        "--state-path",
+        type=Path,
+        default=STATE_PATH,
         help="Path to notification_state.json (default: data/notification_state.json)",
     )
     args = parser.parse_args()
@@ -607,7 +616,7 @@ def main() -> None:
         dir_acc = compute_dir_acc_30f(backtest)
         lean_dir, lean_str = compute_chronos_lean(probe)
         mom_dir, mom_pct = compute_recent_momentum(prices)
-        print(f"\n=== Notification Simulation ===")
+        print("\n=== Notification Simulation ===")
         print(f"Now IST:      {now_ist.strftime('%Y-%m-%d %H:%M')} (quiet hours: {in_quiet})")
         print(f"Dir acc 30f:  {dir_acc:.3f}  (gate: >= 0.55)")
         print(f"Chronos lean: {lean_dir} ({lean_str:.2f}%)")

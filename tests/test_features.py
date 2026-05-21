@@ -60,7 +60,7 @@ class TestLagNoLeakage:
             if pd.notna(lag1):
                 assert (
                     lag1 == prices[i - 1]
-                ), f"Row {i}: lag_1={lag1} but price[{i-1}]={prices[i-1]}"
+                ), f"Row {i}: lag_1={lag1} but price[{i - 1}]={prices[i - 1]}"
 
     def test_lag4_equals_price_four_steps_back(self):
         df = make_df(n=40)
@@ -71,7 +71,7 @@ class TestLagNoLeakage:
             if pd.notna(lag4):
                 assert (
                     lag4 == prices[i - 4]
-                ), f"Row {i}: lag_4={lag4} but price[{i-4}]={prices[i-4]}"
+                ), f"Row {i}: lag_4={lag4} but price[{i - 4}]={prices[i - 4]}"
 
     def test_first_row_lags_are_nan(self):
         df = make_df(n=20)
@@ -238,6 +238,6 @@ class TestGetTrainXy:
 
         df = make_df(n=60)  # enough history for all lags
         feat = build_feature_matrix(df)
-        x_arr, x_row = get_predict_row(feat)
+        x_arr, _x_row = get_predict_row(feat)
         if x_arr is not None:
             assert x_arr.shape == (1, len(FEATURE_COLS))

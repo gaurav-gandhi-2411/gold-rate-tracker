@@ -152,7 +152,9 @@ def main() -> None:
     real_readings_count = len(prices)
     logger.info(
         "Current 22K: Rs.%d  scraped=%s  readings=%d",
-        current_22k, scraped_at, real_readings_count,
+        current_22k,
+        scraped_at,
+        real_readings_count,
     )
 
     # 2. Conformal PI from backtest naive errors
@@ -163,7 +165,8 @@ def main() -> None:
         logger.warning(
             "Insufficient backtest fold data (%d valid folds, need %d); "
             "writing model_status=insufficient_backtest_history",
-            fold_count, _MIN_CONFORMAL_FOLDS,
+            fold_count,
+            _MIN_CONFORMAL_FOLDS,
         )
         predicted_at = datetime.now(UTC)
         target_time = (predicted_at + timedelta(days=1)).replace(
@@ -188,7 +191,11 @@ def main() -> None:
         (DATA_DIR / "forecast.json").write_text(json.dumps(result, indent=2) + "\n")
         return
     conformal_pi_half, naive_mae_recent_30 = pi_result
-    logger.info("Conformal PI half=Rs.%.1f  naive_mae_recent_30=%.1f", conformal_pi_half, naive_mae_recent_30)
+    logger.info(
+        "Conformal PI half=Rs.%.1f  naive_mae_recent_30=%.1f",
+        conformal_pi_half,
+        naive_mae_recent_30,
+    )
 
     # 3. Headline: naive flat-hold
     predicted_22k = current_22k
@@ -240,7 +247,9 @@ def main() -> None:
     (DATA_DIR / "forecast.json").write_text(json.dumps(result, indent=2) + "\n")
     logger.info(
         "Forecast written: Rs.%d [%d-%d]  lean=%s  dir_acc=%s",
-        predicted_22k, lower, upper,
+        predicted_22k,
+        lower,
+        upper,
         chronos_companion.get("lean_direction"),
         chronos_companion.get("direction_acc_30f"),
     )

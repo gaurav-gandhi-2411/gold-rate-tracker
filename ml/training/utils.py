@@ -52,7 +52,7 @@ def compute_metrics(y_true: np.ndarray, y_pred: np.ndarray) -> dict[str, float]:
         "mape": float(pct_err.mean() * 100),
         "rmse": float(np.sqrt(((y_true - y_pred) ** 2).mean())),
         "direction_accuracy": float(direction_correct),
-        "n_samples": int(len(y_true)),
+        "n_samples": len(y_true),
     }
 
 
