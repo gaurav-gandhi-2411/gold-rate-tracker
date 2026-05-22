@@ -279,8 +279,12 @@ def _check_t1(
     # inference path.
     if backtest.get("n_folds", 0) < 30:
         return None
-    direction, strength = compute_chronos_lean(probe)
-    if direction != "down" or strength < 0.5:
+    _direction, strength = compute_chronos_lean(probe)
+    majority_dir = probe.get("majority_direction")
+    consensus = probe.get("direction_consensus", 0.0)
+    # Phi4: gate on multi-sample majority consensus (>= 0.6) instead of single-sample direction.
+    # strength check stays — it's an independent magnitude threshold.
+    if majority_dir != "down" or consensus < 0.6 or strength < 0.5:
         return None
     mom_dir, mom_pct = compute_recent_momentum(prices)
     if mom_dir != "down":
@@ -293,6 +297,7 @@ def _check_t1(
         f"22K spot Rs.{current}. "
         f"Last 7d trend: {mom_pct:+.1f}%. "
         f"Chronos lean: {strength:.1f}% over 5d. "
+        f"Consensus: {consensus:.0%}. "
         "This is a directional signal, not a price forecast. "
         "Check the dashboard for full context."
     )
@@ -316,8 +321,12 @@ def _check_t2(
         return None
     if backtest.get("n_folds", 0) < 30:
         return None
-    direction, strength = compute_chronos_lean(probe)
-    if direction != "up" or strength < 0.5:
+    _direction, strength = compute_chronos_lean(probe)
+    majority_dir = probe.get("majority_direction")
+    consensus = probe.get("direction_consensus", 0.0)
+    # Phi4: gate on multi-sample majority consensus (>= 0.6) instead of single-sample direction.
+    # strength check stays — it's an independent magnitude threshold.
+    if majority_dir != "up" or consensus < 0.6 or strength < 0.5:
         return None
     mom_dir, mom_pct = compute_recent_momentum(prices)
     if mom_dir != "up":
@@ -330,6 +339,7 @@ def _check_t2(
         f"22K spot Rs.{current}. "
         f"Last 7d trend: {mom_pct:+.1f}%. "
         f"Chronos lean: {strength:.1f}% over 5d. "
+        f"Consensus: {consensus:.0%}. "
         "This is a directional signal, not a price forecast. "
         "Check the dashboard for full context."
     )
