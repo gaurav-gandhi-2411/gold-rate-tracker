@@ -1,5 +1,5 @@
 {
-  "predicted_at": "2026-05-22T14:30:07.165928+00:00",
+  "predicted_at": "2026-05-22T19:29:17.823410+00:00",
   "target_window": "5d",
   "headline": {
     "method": "naive_flat_hold",
@@ -39,9 +39,9 @@
     "calibration_applied": false,
     "calibration_just_unlocked": false
   },
-  "real_readings_count": 96,
+  "real_readings_count": 97,
   "current_22k": 14665,
-  "scraped_at": "2026-05-22T14:29:48.183Z",
+  "scraped_at": "2026-05-22T19:28:59.951Z",
   "model_fallback": false,
   "predicted_22k": 14665,
   "lower": 13729,
