@@ -261,7 +261,7 @@ def run_probe(
 
 def _write_probe(probe: dict, path: Path) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_text(json.dumps(probe, indent=2))
+    path.write_text(json.dumps(probe, indent=2) + "\n")
 
 
 if __name__ == "__main__":
