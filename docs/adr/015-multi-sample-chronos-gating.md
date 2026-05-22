@@ -55,9 +55,13 @@ collecting 5 independent forecast DataFrames.
   still rejecting all tie cases.
 
 **Wall-clock budget:**
-- 5 calls x ~13ms per call = ~65ms inference.
-- Model load ~1s (cached after first download).
-- Total < 2s, well within the current 6h cron cadence.
+- Probe wall-clock measured at probe-run time: pipeline_load ~7.5s (local Windows) / ~10s (Ubuntu CI),
+  forecast ~100ms for 5 samples (was ~15ms for 1). Total ~7.7s local / ~10s CI.
+- The pre-Phi4 baseline (committed `chronos_probe.json` written by CI cron on 2026-05-21) showed
+  pipeline_load=9893ms, forecast=15ms, total=9932ms -- so the dominant cost is model deserialization,
+  not inference. Phi4's incremental cost is ~85ms of additional forecast time; the absolute <2s budget
+  mentioned in spec.md was based on the spec author's assumption of ~1s model load, which is not what
+  we observe in practice.
 
 **Schema bump:**
 - `schema_version` incremented from 1 to 2.
@@ -77,11 +81,19 @@ collecting 5 independent forecast DataFrames.
   samples agree on direction."
 - `sample_directions` array is logged in `chronos_probe.json` and provides an audit trail
   for observed consensus rates over time. This data will inform future threshold tuning.
-- No change to the 6-hour cron cadence; wall-clock budget is maintained.
+- The ~10s total wall-clock is dominated by model_load (pipeline_load=9893ms in the pre-Phi4 baseline
+  committed on 2026-05-21). This cost is pre-existing and not introduced by Phi4.
+- Phi4 itself adds ~85ms of additional forecast inference (5 samples vs 1 sample). This is negligible
+  relative to the ~10s model-load baseline.
+- The 6-hour cron cadence makes a ~10s probe operationally fine; there is no SLA concern.
+- Follow-up: the pipeline_load cost was never empirically measured before this PR. Future investigation
+  may find that switching from torch.load-based deserialization to safetensors lazy loading, or
+  pre-caching the pipeline at module import, could reduce cold-start latency. This is out of scope
+  for Phi4.
 
 **Negative:**
-- 5x inference cost per probe cycle (65ms vs 13ms for forecast alone). Still within the
-  2s total budget; model load dominates.
+- 5x inference cost per probe cycle (~100ms vs ~15ms for forecast alone). The dominant cost remains
+  model_load (~10s), which is unchanged by Phi4.
 - T1/T2 may suppress notifications for real moves when Chronos is genuinely uncertain
   (e.g., 3-of-5 disagree at a trend inflection). This false-negative risk is accepted:
   in a notification context, false positives are more damaging than false negatives.
