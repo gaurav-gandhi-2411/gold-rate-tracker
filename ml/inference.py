@@ -32,6 +32,8 @@ from pathlib import Path
 
 import numpy as np
 
+from ml.notifications import NotificationState
+
 ROOT = Path(__file__).resolve().parent.parent
 DATA_DIR = ROOT / "data"
 
@@ -84,11 +86,15 @@ def _build_chronos_companion(
     probe: dict,
     backtest: dict,
     calibration: dict,
+    notification_state: NotificationState | None = None,
 ) -> dict:
     """Build the chronos_companion block from probe + backtest + calibration.
 
     Applies IBJA->Tanishq calibration to horizon arrays when calibration.valid is True
     and the probe succeeded. Calibration is currently a stub (21/30 pairs; valid=False).
+
+    notification_state: optional NotificationState used to compute calibration_just_unlocked.
+        True when calibration is newly valid and T6 has never fired (last_t6_fired_date_ist=="").
     """
     from ml.notifications import compute_chronos_lean, compute_dir_acc_30f
 
@@ -103,6 +109,7 @@ def _build_chronos_companion(
             "horizon_p90": None,
             "model_version": probe.get("model_version"),
             "calibration_applied": False,
+            "calibration_just_unlocked": False,
         }
 
     lean_direction_raw, lean_strength_pct = compute_chronos_lean(probe)
@@ -126,6 +133,12 @@ def _build_chronos_companion(
             horizon_p90 = [cal(v) for v in horizon_p90] if horizon_p90 else None
             cal_applied = True
 
+    calibration_just_unlocked = (
+        bool(calibration.get("valid"))
+        and notification_state is not None
+        and notification_state.last_t6_fired_date_ist == ""
+    )
+
     return {
         "status": "success",
         "lean_direction": lean_direction,
@@ -136,6 +149,7 @@ def _build_chronos_companion(
         "horizon_p90": horizon_p90,
         "model_version": probe.get("model_version"),
         "calibration_applied": cal_applied,
+        "calibration_just_unlocked": calibration_just_unlocked,
     }
 
 
@@ -213,7 +227,10 @@ def main() -> None:
     # 4. Chronos companion (read from probe; never call Chronos directly)
     probe: dict = _load_json(DATA_DIR / "chronos_probe.json") or {}
     calibration: dict = _load_json(DATA_DIR / "calibration.json") or {}
-    chronos_companion = _build_chronos_companion(probe, backtest, calibration)
+    from ml.notifications import STATE_PATH, load_state
+
+    notification_state = load_state(STATE_PATH)
+    chronos_companion = _build_chronos_companion(probe, backtest, calibration, notification_state)
     model_fallback = probe.get("status") != "success"
 
     # 5. Timestamps

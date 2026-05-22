@@ -27,6 +27,7 @@ FORECAST_JSON = DATA_DIR / "forecast.json"
 PROBE_JSON = DATA_DIR / "chronos_probe.json"
 PRICES_JSON = DATA_DIR / "prices.json"
 BACKTEST_JSON = DATA_DIR / "backtest.json"
+CALIBRATION_JSON = DATA_DIR / "calibration.json"
 STATE_PATH = DATA_DIR / "notification_state.json"
 
 IST = ZoneInfo("Asia/Kolkata")
@@ -85,6 +86,8 @@ class NotificationState:
     sent_today: list[dict] = field(default_factory=list)
     # IST date YYYY-MM-DD of last T5 send (once-per-day dedup)
     last_t5_ist_date: str = ""
+    # IST date YYYY-MM-DD of when T6 first fired (calibration unlocked notification — fires once ever)
+    last_t6_fired_date_ist: str = ""
 
 
 # ---------------------------------------------------------------------------
@@ -104,6 +107,7 @@ def load_state(path: Path = STATE_PATH) -> NotificationState:
             queued=raw.get("queued", []),
             sent_today=raw.get("sent_today", []),
             last_t5_ist_date=raw.get("last_t5_ist_date", ""),
+            last_t6_fired_date_ist=raw.get("last_t6_fired_date_ist", ""),
         )
     except Exception as exc:
         logger.warning("Could not load notification state (%s) — using fresh state.", exc)
@@ -119,6 +123,7 @@ def save_state(state: NotificationState, path: Path = STATE_PATH) -> None:
         "queued": state.queued,
         "sent_today": state.sent_today,
         "last_t5_ist_date": state.last_t5_ist_date,
+        "last_t6_fired_date_ist": state.last_t6_fired_date_ist,
     }
     path.write_text(json.dumps(data, indent=2) + "\n", encoding="utf-8")
 
@@ -447,6 +452,33 @@ def _check_t5(
     return _make_alert("T5", title, body, 2, ["warning", "rotating_light"], now_ist)
 
 
+def _check_t6(
+    calibration: dict | None,
+    state: NotificationState,
+    now_ist: datetime,
+) -> PendingAlert | None:
+    """T6 — Calibration unlocked: fires once ever when calibration.valid first becomes True.
+
+    Fires at most once per lifetime (deduped via state.last_t6_fired_date_ist).
+    Priority 3 (informational). ASCII-only body.
+    """
+    if not calibration:
+        return None
+    if not calibration.get("valid"):
+        return None
+    # Already fired previously — covers both same-day repeat and lifetime-already-fired
+    if state.last_t6_fired_date_ist:
+        return None
+    n_obs = calibration.get("n_observations", 0)
+    title = "Gold forecast: calibration unlocked"
+    body = (
+        f"IBJA->Tanishq calibration achieved {n_obs} overlap pairs (>=30). "
+        "Chronos directional companion is now calibrated to Tanishq units. "
+        "See dashboard."
+    )
+    return _make_alert("T6", title, body, 3, ["unlock", "white_check_mark"], now_ist)
+
+
 # ---------------------------------------------------------------------------
 # Public API
 # ---------------------------------------------------------------------------
@@ -459,18 +491,25 @@ def check_triggers(
     backtest: dict,
     state: NotificationState,
     now_ist: datetime,
+    calibration: dict | None = None,
 ) -> list[PendingAlert]:
-    """Evaluate all triggers; return new alerts for this call.
+    """Evaluate all triggers (T1–T6); return new alerts for this call.
 
     Cooldowns and combined caps are enforced here.  Quiet-hours queuing and
     delivery of previously queued alerts is the caller's responsibility (see
     queue_for_quiet_hours and the main() orchestration).
+
+    calibration: optional dict from calibration.json. When provided and valid,
+        triggers T6 (calibration-unlocked, fires once ever).
     """
     alerts: list[PendingAlert] = []
     for fn in (_check_t1, _check_t2, _check_t3, _check_t4, _check_t5):
         alert = fn(forecast, probe, prices, backtest, state, now_ist)
         if alert is not None:
             alerts.append(alert)
+    t6 = _check_t6(calibration, state, now_ist)
+    if t6 is not None:
+        alerts.append(t6)
     return alerts
 
 
@@ -519,6 +558,8 @@ def send_pending(
             state.sent_today.append({"trigger_id": alert.trigger_id, "sent_at": sent_at})
             if alert.trigger_id == "T5":
                 state.last_t5_ist_date = now_ist.strftime("%Y-%m-%d")
+            if alert.trigger_id == "T6":
+                state.last_t6_fired_date_ist = now_ist.strftime("%Y-%m-%d")
             logger.info("Sent %s: %s", alert.trigger_id, alert.title)
         else:
             logger.warning("Failed to send %s", alert.trigger_id)
@@ -603,13 +644,16 @@ def main() -> None:
     probe = _load(PROBE_JSON, {"status": "missing"})
     prices = _load(PRICES_JSON, [])
     backtest = _load(BACKTEST_JSON, {})
+    calibration = _load(CALIBRATION_JSON, {}) or {}
     state = load_state(args.state_path)
     now_ist = datetime.now(IST)
 
     # Prune stale entries before trigger evaluation
     _prune_sent_today(state)
 
-    new_alerts = check_triggers(forecast, probe, prices, backtest, state, now_ist)
+    new_alerts = check_triggers(
+        forecast, probe, prices, backtest, state, now_ist, calibration=calibration
+    )
 
     if args.simulate:
         in_quiet = _is_quiet_hours(now_ist)

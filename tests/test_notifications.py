@@ -659,3 +659,119 @@ def test_load_state_corrupt_json(tmp_path: Path):
     path.write_text("not valid json", encoding="utf-8")
     state = load_state(path)
     assert state.last_sent == {}
+
+
+# ---------------------------------------------------------------------------
+# T6 — Calibration unlocked
+# ---------------------------------------------------------------------------
+
+
+def test_check_triggers_backward_compat_no_calibration_kwarg():
+    """Calling check_triggers without the new calibration kwarg must work identically to before."""
+    state = NotificationState()
+    now_ist = _ist(2026, 5, 19, 14, 0)
+    forecast = {"model_fallback": False}
+    probe = {"status": "success"}
+    prices = _prices_flat()
+    backtest = _backtest_accurate(30)
+    # Old-style call (no calibration kwarg)
+    alerts_old = check_triggers(forecast, probe, prices, backtest, state, now_ist)
+    # New-style call with calibration=None
+    alerts_new = check_triggers(forecast, probe, prices, backtest, state, now_ist, calibration=None)
+    assert [a.trigger_id for a in alerts_old] == [a.trigger_id for a in alerts_new]
+
+
+def test_t6_fires_when_calibration_valid_first_time():
+    state = NotificationState()  # last_t6_fired_date_ist == ""
+    now_ist = _ist(2026, 6, 2, 14, 0)
+    calibration = {"valid": True, "n_observations": 30}
+    alerts = check_triggers(
+        {"model_fallback": False},
+        {"status": "success"},
+        _prices_flat(),
+        _backtest_accurate(30),
+        state,
+        now_ist,
+        calibration=calibration,
+    )
+    t6 = [a for a in alerts if a.trigger_id == "T6"]
+    assert len(t6) == 1
+    assert "calibration" in t6[0].title.lower()
+
+
+def test_t6_skips_when_calibration_invalid():
+    state = NotificationState()
+    now_ist = _ist(2026, 6, 2, 14, 0)
+    calibration = {"valid": False, "n_observations": 21}
+    alerts = check_triggers(
+        {"model_fallback": False},
+        {"status": "success"},
+        _prices_flat(),
+        _backtest_accurate(30),
+        state,
+        now_ist,
+        calibration=calibration,
+    )
+    assert not any(a.trigger_id == "T6" for a in alerts)
+
+
+def test_t6_skips_when_already_fired():
+    state = NotificationState(last_t6_fired_date_ist="2026-06-02")
+    now_ist = _ist(2026, 6, 3, 14, 0)  # next day, still valid calibration
+    calibration = {"valid": True, "n_observations": 31}
+    alerts = check_triggers(
+        {"model_fallback": False},
+        {"status": "success"},
+        _prices_flat(),
+        _backtest_accurate(30),
+        state,
+        now_ist,
+        calibration=calibration,
+    )
+    assert not any(a.trigger_id == "T6" for a in alerts)
+
+
+def test_send_pending_sets_last_t6_fired_date_ist(monkeypatch):
+    """send_pending sets last_t6_fired_date_ist when T6 is successfully sent."""
+    mock_resp = MagicMock()
+    mock_resp.status = 200
+    mock_resp.__enter__ = MagicMock(return_value=mock_resp)
+    mock_resp.__exit__ = MagicMock(return_value=False)
+
+    monkeypatch.setattr("urllib.request.urlopen", lambda req, timeout=None: mock_resp)
+    monkeypatch.setenv("NTFY_TOPIC", "test-gold-topic")
+
+    now_ist = _ist(2026, 6, 2, 14, 0)
+    alert = PendingAlert(
+        trigger_id="T6",
+        title="Gold forecast: calibration unlocked",
+        body="IBJA->Tanishq calibration achieved 30 overlap pairs (>=30). See dashboard.",
+        priority=3,
+        tags=["unlock", "white_check_mark"],
+        click_url="https://gaurav-gandhi-2411.github.io/gold-rate-tracker/",
+        queued_at=now_ist.isoformat(),
+        bypass_quiet=False,
+    )
+    state = NotificationState()
+    assert state.last_t6_fired_date_ist == ""
+
+    sent = send_pending([alert], state, now_ist)
+
+    assert len(sent) == 1
+    assert sent[0].success is True
+    assert state.last_t6_fired_date_ist == now_ist.strftime("%Y-%m-%d")
+
+
+def test_state_round_trip_includes_t6_field(tmp_path: Path):
+    """NotificationState with last_t6_fired_date_ist survives a save/load cycle."""
+    state = NotificationState(
+        last_t5_ist_date="2026-06-01",
+        last_t6_fired_date_ist="2026-06-02",
+    )
+    path = tmp_path / "notification_state.json"
+    save_state(state, path)
+
+    loaded = load_state(path)
+    assert loaded.last_t6_fired_date_ist == "2026-06-02"
+    assert loaded.last_t5_ist_date == "2026-06-01"
+    assert loaded.schema_version == 1
