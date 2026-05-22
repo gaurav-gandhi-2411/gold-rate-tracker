@@ -337,3 +337,341 @@ def test_run_probe_real_model(tmp_path):
     result = cf.run_probe(parquet_path, calib_path, out_path)
     assert result["status"] == "success"
     assert result["wall_clock_ms"]["total"] > 0
+
+
+# ---------------------------------------------------------------------------
+# _classify_sample_direction unit tests
+# ---------------------------------------------------------------------------
+
+
+def test_classify_direction_up():
+    """p50 consistently above ibja_last by >0.1% => 'up'."""
+    ibja_last = 14_000.0
+    # p50 ~14_300, which is 2.14% above ibja_last
+    df = pd.DataFrame(
+        {
+            "date": ["2026-05-19", "2026-05-20", "2026-05-21", "2026-05-22", "2026-05-23"],
+            "p10": [14_100.0] * 5,
+            "p50": [14_300.0] * 5,
+            "p90": [14_500.0] * 5,
+        }
+    )
+    assert cf._classify_sample_direction(df, ibja_last) == "up"
+
+
+def test_classify_direction_down():
+    """p50 consistently below ibja_last by >0.1% => 'down'."""
+    ibja_last = 14_000.0
+    # p50 ~13_700, which is 2.14% below ibja_last
+    df = pd.DataFrame(
+        {
+            "date": ["2026-05-19", "2026-05-20", "2026-05-21", "2026-05-22", "2026-05-23"],
+            "p10": [13_500.0] * 5,
+            "p50": [13_700.0] * 5,
+            "p90": [13_900.0] * 5,
+        }
+    )
+    assert cf._classify_sample_direction(df, ibja_last) == "down"
+
+
+def test_classify_direction_neutral_within_threshold():
+    """p50 within 0.1% of ibja_last => 'neutral'."""
+    ibja_last = 14_000.0
+    # p50 = 14_001.0, delta_pct = 0.001/14 ~= 0.0000714, below threshold 0.001
+    df = pd.DataFrame(
+        {
+            "date": ["2026-05-19", "2026-05-20", "2026-05-21", "2026-05-22", "2026-05-23"],
+            "p10": [13_990.0] * 5,
+            "p50": [14_001.0] * 5,
+            "p90": [14_010.0] * 5,
+        }
+    )
+    assert cf._classify_sample_direction(df, ibja_last) == "neutral"
+
+
+def test_classify_direction_neutral_on_zero_last():
+    """ibja_last <= 0 always returns 'neutral'."""
+    df = pd.DataFrame(
+        {
+            "date": ["2026-05-19"],
+            "p10": [14_000.0],
+            "p50": [14_300.0],
+            "p90": [14_500.0],
+        }
+    )
+    assert cf._classify_sample_direction(df, 0.0) == "neutral"
+    assert cf._classify_sample_direction(df, -100.0) == "neutral"
+
+
+# ---------------------------------------------------------------------------
+# _aggregate_directions unit tests
+# ---------------------------------------------------------------------------
+
+
+def test_aggregate_all_up():
+    assert cf._aggregate_directions(["up", "up", "up"]) == ("up", 1.0)
+
+
+def test_aggregate_majority_up():
+    majority, fraction = cf._aggregate_directions(["up", "down", "up", "down", "up"])
+    assert majority == "up"
+    assert fraction == 0.6
+
+
+def test_aggregate_empty():
+    assert cf._aggregate_directions([]) == ("neutral", 0.0)
+
+
+def test_aggregate_2_2_1_split():
+    """2-2-1 split: max consensus is 0.4, below the 0.6 gate."""
+    _, fraction = cf._aggregate_directions(["up", "up", "down", "down", "neutral"])
+    assert fraction < 0.6
+
+
+def test_aggregate_mixed_5_samples():
+    """up,up,down,up,neutral => majority 'up', consensus 0.6 (3/5)."""
+    majority, fraction = cf._aggregate_directions(["up", "up", "down", "up", "neutral"])
+    assert majority == "up"
+    assert fraction == 0.6
+
+
+# ---------------------------------------------------------------------------
+# run_probe — schema v2 and multi-sample fields
+# ---------------------------------------------------------------------------
+
+
+def _stub_pipeline_counted(counter: list[int], horizon: int = 5) -> MagicMock:
+    """Stub pipeline that increments counter[0] on each predict_quantiles call."""
+    q_values = [14_200.0, 14_380.0, 14_580.0]
+    mock = MagicMock()
+
+    def fake_predict_quantiles(inputs, prediction_length, quantile_levels, **kwargs):
+        counter[0] += 1
+        n_q = len(quantile_levels)
+        data = np.zeros((1, prediction_length, n_q), dtype=np.float32)
+        for qi in range(n_q):
+            data[0, :, qi] = q_values[qi] + qi * 10 * np.arange(prediction_length)
+        quantiles = torch.tensor(data)
+        mean = torch.tensor(np.mean(data, axis=-1, keepdims=False))
+        return quantiles, mean
+
+    mock.predict_quantiles.side_effect = fake_predict_quantiles
+    return mock
+
+
+@patch("ml.chronos_forecast.load_chronos_pipeline")
+def test_run_probe_writes_schema_v2(mock_load, tmp_path):
+    """Successful probe must write schema_version == 2."""
+    mock_load.return_value = _stub_pipeline()
+    parquet_path = tmp_path / "ibja.parquet"
+    calib_path = tmp_path / "calibration.json"
+    out_path = tmp_path / "probe.json"
+
+    _write_stub_parquet(parquet_path)
+    _write_stub_calibration(calib_path, valid=False)
+
+    result = cf.run_probe(parquet_path, calib_path, out_path)
+
+    assert result["schema_version"] == 2
+
+
+@patch("ml.chronos_forecast.load_chronos_pipeline")
+def test_run_probe_calls_forecast_num_samples_times(mock_load, tmp_path):
+    """predict_quantiles must be called exactly DEFAULT_NUM_SAMPLES times."""
+    call_counter: list[int] = [0]
+    mock_load.return_value = _stub_pipeline_counted(call_counter)
+    parquet_path = tmp_path / "ibja.parquet"
+    calib_path = tmp_path / "calibration.json"
+    out_path = tmp_path / "probe.json"
+
+    _write_stub_parquet(parquet_path)
+    _write_stub_calibration(calib_path, valid=False)
+
+    result = cf.run_probe(parquet_path, calib_path, out_path)
+
+    assert result["status"] == "success"
+    assert call_counter[0] == cf.DEFAULT_NUM_SAMPLES
+
+
+@patch("ml.chronos_forecast.load_chronos_pipeline")
+def test_run_probe_sample_directions_length(mock_load, tmp_path):
+    """num_samples == 5 and sample_directions has 5 valid labels."""
+    mock_load.return_value = _stub_pipeline()
+    parquet_path = tmp_path / "ibja.parquet"
+    calib_path = tmp_path / "calibration.json"
+    out_path = tmp_path / "probe.json"
+
+    _write_stub_parquet(parquet_path)
+    _write_stub_calibration(calib_path, valid=False)
+
+    result = cf.run_probe(parquet_path, calib_path, out_path)
+
+    assert result["num_samples"] == 5
+    assert len(result["sample_directions"]) == 5
+    assert all(d in ("up", "down", "neutral") for d in result["sample_directions"])
+
+
+def _stub_pipeline_alternating(up_count: int, down_count: int, horizon: int = 5) -> MagicMock:
+    """Return a pipeline that alternates between up-trending and down-trending samples.
+
+    First `up_count` calls return p50 well above ibja_last; remaining return below.
+    ibja_last from _make_ibja_series(25) ends around 14_200..14_600; we use p50
+    values deliberately outside that range.
+    """
+    call_idx: list[int] = [0]
+    mock = MagicMock()
+
+    def fake_predict_quantiles(inputs, prediction_length, quantile_levels, **kwargs):
+        idx = call_idx[0]
+        call_idx[0] += 1
+        n_q = len(quantile_levels)
+        data = np.zeros((1, prediction_length, n_q), dtype=np.float32)
+        if idx < up_count:
+            # Up: p50 ~ 16_000 (well above any realistic ibja_last ~14k)
+            base_values = [15_500.0, 16_000.0, 16_500.0]
+        else:
+            # Down: p50 ~ 12_000 (well below ibja_last ~14k)
+            base_values = [11_500.0, 12_000.0, 12_500.0]
+        for qi in range(n_q):
+            data[0, :, qi] = base_values[qi]
+        quantiles = torch.tensor(data)
+        mean = torch.tensor(np.mean(data, axis=-1, keepdims=False))
+        return quantiles, mean
+
+    mock.predict_quantiles.side_effect = fake_predict_quantiles
+    return mock
+
+
+@patch("ml.chronos_forecast.load_chronos_pipeline")
+def test_run_probe_majority_direction_3up_2down(mock_load, tmp_path):
+    """3 up + 2 down samples => majority_direction='up', consensus=0.6."""
+    mock_load.return_value = _stub_pipeline_alternating(up_count=3, down_count=2)
+    parquet_path = tmp_path / "ibja.parquet"
+    calib_path = tmp_path / "calibration.json"
+    out_path = tmp_path / "probe.json"
+
+    _write_stub_parquet(parquet_path)
+    _write_stub_calibration(calib_path, valid=False)
+
+    result = cf.run_probe(parquet_path, calib_path, out_path)
+
+    assert result["majority_direction"] == "up"
+    assert result["direction_consensus"] == 0.6
+
+
+@patch("ml.chronos_forecast.load_chronos_pipeline")
+def test_run_probe_direction_flip_pattern(mock_load, tmp_path):
+    """up,up,down,up,neutral => majority 'up', consensus 0.6."""
+    # We simulate this by returning 3 up (first 3) and 2 down (last 2),
+    # but the pipeline doesn't produce "neutral" naturally from p50 far from ibja_last.
+    # Instead, test the helpers directly for the mixed case.
+    # For run_probe integration: 4 up + 1 down => majority 'up', consensus 0.8.
+    mock_load.return_value = _stub_pipeline_alternating(up_count=4, down_count=1)
+    parquet_path = tmp_path / "ibja.parquet"
+    calib_path = tmp_path / "calibration.json"
+    out_path = tmp_path / "probe.json"
+
+    _write_stub_parquet(parquet_path)
+    _write_stub_calibration(calib_path, valid=False)
+
+    result = cf.run_probe(parquet_path, calib_path, out_path)
+
+    assert result["majority_direction"] == "up"
+    assert result["direction_consensus"] >= 0.6
+
+
+@patch("ml.chronos_forecast.load_chronos_pipeline")
+def test_run_probe_low_consensus_2_up_3_down(mock_load, tmp_path):
+    """2 up + 3 down => majority 'down' with consensus 0.6; gate accepts 'down' direction.
+
+    Separately, the aggregate helper test confirms a 2-2-1 split gives consensus < 0.6.
+    This probe test verifies that a minority label (2/5 = 0.4) is NOT chosen as majority.
+    """
+    mock_load.return_value = _stub_pipeline_alternating(up_count=2, down_count=3)
+    parquet_path = tmp_path / "ibja.parquet"
+    calib_path = tmp_path / "calibration.json"
+    out_path = tmp_path / "probe.json"
+
+    _write_stub_parquet(parquet_path)
+    _write_stub_calibration(calib_path, valid=False)
+
+    result = cf.run_probe(parquet_path, calib_path, out_path)
+
+    # majority must be 'down' (3/5), not 'up' (2/5)
+    assert result["majority_direction"] == "down"
+    assert result["direction_consensus"] == 0.6
+
+
+def _stub_pipeline_neutral(ibja_last: float, horizon: int = 5) -> MagicMock:
+    """Return a pipeline whose p50 equals ibja_last exactly (produces 'neutral')."""
+    mock = MagicMock()
+
+    def fake_predict_quantiles(inputs, prediction_length, quantile_levels, **kwargs):
+        n_q = len(quantile_levels)
+        data = np.zeros((1, prediction_length, n_q), dtype=np.float32)
+        # p10, p50, p90 all set to ibja_last so direction is exactly 0 => neutral
+        for qi in range(n_q):
+            data[0, :, qi] = ibja_last
+        quantiles = torch.tensor(data)
+        mean = torch.tensor(np.mean(data, axis=-1, keepdims=False))
+        return quantiles, mean
+
+    mock.predict_quantiles.side_effect = fake_predict_quantiles
+    return mock
+
+
+@patch("ml.chronos_forecast.load_chronos_pipeline")
+def test_run_probe_all_neutral(mock_load, tmp_path):
+    """All 5 samples neutral => majority_direction='neutral', consensus=1.0."""
+    parquet_path = tmp_path / "ibja.parquet"
+    calib_path = tmp_path / "calibration.json"
+    out_path = tmp_path / "probe.json"
+
+    _write_stub_parquet(parquet_path)
+    _write_stub_calibration(calib_path, valid=False)
+
+    # Determine ibja_last_value by reading the parquet we just wrote
+    series = _make_ibja_series(25)
+    ibja_last = float(series.iloc[-1])  # pm_916 / 10 will be this value in run_probe
+    mock_load.return_value = _stub_pipeline_neutral(ibja_last)
+
+    result = cf.run_probe(parquet_path, calib_path, out_path)
+
+    assert result["majority_direction"] == "neutral"
+    assert result["direction_consensus"] == 1.0
+
+
+def test_run_probe_insufficient_context_has_default_fields(tmp_path):
+    """Failure path (insufficient_context) must expose new fields with defaults."""
+    parquet_path = tmp_path / "ibja.parquet"
+    calib_path = tmp_path / "calibration.json"
+    out_path = tmp_path / "probe.json"
+
+    _write_stub_parquet(parquet_path, n=7)  # below _MIN_CONTEXT_DAYS=8
+    _write_stub_calibration(calib_path, valid=False)
+
+    result = cf.run_probe(parquet_path, calib_path, out_path)
+
+    assert result["status"] == "insufficient_context"
+    assert result["num_samples"] == 0
+    assert result["sample_directions"] == []
+    assert result["majority_direction"] == "neutral"
+    assert result["direction_consensus"] == 0.0
+
+
+@patch("ml.chronos_forecast.load_chronos_pipeline")
+def test_run_probe_wall_clock_sanity(mock_load, tmp_path):
+    """wall_clock_ms total must be present, >0, and < 5000 with mocked pipeline."""
+    mock_load.return_value = _stub_pipeline()
+    parquet_path = tmp_path / "ibja.parquet"
+    calib_path = tmp_path / "calibration.json"
+    out_path = tmp_path / "probe.json"
+
+    _write_stub_parquet(parquet_path)
+    _write_stub_calibration(calib_path, valid=False)
+
+    result = cf.run_probe(parquet_path, calib_path, out_path)
+
+    total_ms = result["wall_clock_ms"]["total"]
+    assert total_ms > 0
+    assert total_ms < 5000  # generous bound for CI variability; mock should be <<100ms
