@@ -1,12 +1,5 @@
 [
   {
-    "ts": "2026-05-19T09:35:58Z",
-    "text": "The 22K gold price is at Rs.14420, with a 3-day decline of 1.20% and a 7-day gain of 1.84%. The model expects a price around Rs.14534 in the next reading. Recent price movements have been moderate.",
-    "model": "llama-3.3-70b-versatile",
-    "prompt_hash": "f119a39ab0df",
-    "commentary_age_hours": 0.0
-  },
-  {
     "ts": "2026-05-19T11:48:36Z",
     "text": "The 22K gold price is at Rs.14420, with a 3-day decline of 1.20% and a 7-day gain of 1.84%. The model expects a point estimate of Rs.14534 for the next reading. Recent price movements show a 70.4th percentile in the last 90 days.",
     "model": "llama-3.3-70b-versatile",
@@ -207,6 +200,13 @@
     "text": "The 22K gold price is at Rs.14625, with a 3-day decrease of 0.54% and a 7-day increase of 1.60%. The model expects the next reading to be around Rs.14625.",
     "model": "llama-3.3-70b-versatile",
     "prompt_hash": "8fc7ea09017a",
+    "commentary_age_hours": 0.0
+  },
+  {
+    "ts": "2026-05-25T09:57:51Z",
+    "text": "The 22K gold price is at Rs.14655, with a 7-day increase of 1.81%. The model expects the next reading to be around Rs.14655, with an 80% interval of Rs.13719 to Rs.15591.",
+    "model": "llama-3.3-70b-versatile",
+    "prompt_hash": "c3d2e9b0a00f",
     "commentary_age_hours": 0.0
   }
 ]
