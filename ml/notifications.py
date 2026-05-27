@@ -88,6 +88,8 @@ class NotificationState:
     last_t5_ist_date: str = ""
     # IST date YYYY-MM-DD of when T6 first fired (calibration unlocked notification — fires once ever)
     last_t6_fired_date_ist: str = ""
+    last_t4_fired_ist_date: str = ""  # IST date YYYY-MM-DD of last T4 fire (dedup)
+    last_t7_fired_ist_date: str = ""  # IST date YYYY-MM-DD of last T7 fire (dedup)
 
 
 # ---------------------------------------------------------------------------
@@ -108,6 +110,8 @@ def load_state(path: Path = STATE_PATH) -> NotificationState:
             sent_today=raw.get("sent_today", []),
             last_t5_ist_date=raw.get("last_t5_ist_date", ""),
             last_t6_fired_date_ist=raw.get("last_t6_fired_date_ist", ""),
+            last_t4_fired_ist_date=raw.get("last_t4_fired_ist_date", ""),
+            last_t7_fired_ist_date=raw.get("last_t7_fired_ist_date", ""),
         )
     except Exception as exc:
         logger.warning("Could not load notification state (%s) — using fresh state.", exc)
@@ -124,6 +128,8 @@ def save_state(state: NotificationState, path: Path = STATE_PATH) -> None:
         "sent_today": state.sent_today,
         "last_t5_ist_date": state.last_t5_ist_date,
         "last_t6_fired_date_ist": state.last_t6_fired_date_ist,
+        "last_t4_fired_ist_date": state.last_t4_fired_ist_date,
+        "last_t7_fired_ist_date": state.last_t7_fired_ist_date,
     }
     path.write_text(json.dumps(data, indent=2) + "\n", encoding="utf-8")
 
@@ -391,14 +397,28 @@ def _check_t4(
     state: NotificationState,
     now_ist: datetime,
 ) -> PendingAlert | None:
-    """T4 — Weekly digest: Sunday 18:00 IST ±30 min. Bypasses quiet hours."""
-    if _in_cooldown("T4", state, 168.0):
+    """T4 — Weekly digest: Sunday at or after 17:00 IST. Missed-recovery fires on Monday.
+
+    Deduped by IST date (last_t4_fired_ist_date). Bypasses quiet hours.
+    """
+    today_ist = now_ist.strftime("%Y-%m-%d")
+
+    if now_ist.weekday() == 6:  # Sunday
+        if now_ist.hour < 17:
+            return None
+        if state.last_t4_fired_ist_date == today_ist:
+            return None
+        title_prefix = ""
+    elif now_ist.weekday() == 0:  # Monday — missed-recovery
+        prior_sunday = (now_ist - timedelta(days=1)).strftime("%Y-%m-%d")
+        if state.last_t4_fired_ist_date == prior_sunday:
+            return None  # Sunday already got a T4
+        if state.last_t4_fired_ist_date == today_ist:
+            return None  # Already fired today
+        title_prefix = "[Delayed] "
+    else:
         return None
-    if now_ist.weekday() != 6:  # Sunday
-        return None
-    minutes_from_1800 = (now_ist.hour - 18) * 60 + now_ist.minute
-    if not (-30 <= minutes_from_1800 <= 30):
-        return None
+
     current = prices[-1]["22k"] if prices else 0
     n_folds = backtest.get("n_folds", 0)
     mae_c = backtest.get("mae_5d_avg_chronos", 0.0)
@@ -409,7 +429,6 @@ def _check_t4(
         verdict = f"Model {(mae_c - mae_n) / mae_n * 100:.0f}% above naive MAE"
     else:
         verdict = "Backtest pending"
-    # Use any available commentary as enrichment
     extra = ""
     commentary_path = DATA_DIR / "commentary.json"
     if commentary_path.exists():
@@ -420,7 +439,7 @@ def _check_t4(
                 extra = " " + snippet
         except Exception:
             pass
-    title = f"Gold Weekly: {verdict} (22K: Rs.{current})"
+    title = f"{title_prefix}Gold Weekly: {verdict} (22K: Rs.{current})"
     body = (
         f"22K spot: Rs.{current}. "
         f"Backtest ({n_folds} folds): Chronos MAE Rs.{mae_c:.0f} vs Naive Rs.{mae_n:.0f}."
@@ -489,6 +508,46 @@ def _check_t6(
     return _make_alert("T6", title, body, 3, ["unlock", "white_check_mark"], now_ist)
 
 
+def _check_t7(
+    forecast: dict,
+    probe: dict,
+    prices: list[dict],
+    backtest: dict,
+    state: NotificationState,
+    now_ist: datetime,
+) -> PendingAlert | None:
+    """T7 — System-alive floor: fires on the first CI run of the day when >=3 IST days
+
+    have elapsed since last T7. Skips silently when Chronos probe failed (T5 covers that).
+    Does NOT count toward the T1+T2+T3 combined 3-per-24h cap.
+    """
+    if probe.get("status") != "success":
+        return None
+
+    today_ist = now_ist.strftime("%Y-%m-%d")
+    if state.last_t7_fired_ist_date == today_ist:
+        return None  # Already fired today
+
+    if state.last_t7_fired_ist_date:
+        last_date = datetime.strptime(state.last_t7_fired_ist_date, "%Y-%m-%d").date()
+        today_date = now_ist.date()
+        if (today_date - last_date).days < 3:
+            return None
+
+    current = prices[-1]["22k"] if prices else 0
+    lean_dir, _ = compute_chronos_lean(probe)
+    _mom_dir, mom_pct = compute_recent_momentum(prices)
+    dir_acc = compute_dir_acc_30f(backtest)
+    title = f"Gold daily check: 22K Rs.{current}"
+    body = (
+        f"22K spot Rs.{current}. "
+        f"7d trend: {mom_pct:+.1f}%. "
+        f"Model lean: {lean_dir} (dir acc {dir_acc:.0%} on recent folds). "
+        "System healthy."
+    )
+    return _make_alert("T7", title, body, 2, ["robot", "white_check_mark"], now_ist)
+
+
 # ---------------------------------------------------------------------------
 # Public API
 # ---------------------------------------------------------------------------
@@ -513,7 +572,7 @@ def check_triggers(
         triggers T6 (calibration-unlocked, fires once ever).
     """
     alerts: list[PendingAlert] = []
-    for fn in (_check_t1, _check_t2, _check_t3, _check_t4, _check_t5):
+    for fn in (_check_t1, _check_t2, _check_t3, _check_t4, _check_t5, _check_t7):
         alert = fn(forecast, probe, prices, backtest, state, now_ist)
         if alert is not None:
             alerts.append(alert)
@@ -570,6 +629,10 @@ def send_pending(
                 state.last_t5_ist_date = now_ist.strftime("%Y-%m-%d")
             if alert.trigger_id == "T6":
                 state.last_t6_fired_date_ist = now_ist.strftime("%Y-%m-%d")
+            if alert.trigger_id == "T4":
+                state.last_t4_fired_ist_date = now_ist.strftime("%Y-%m-%d")
+            if alert.trigger_id == "T7":
+                state.last_t7_fired_ist_date = now_ist.strftime("%Y-%m-%d")
             logger.info("Sent %s: %s", alert.trigger_id, alert.title)
         else:
             logger.warning("Failed to send %s", alert.trigger_id)
@@ -630,7 +693,7 @@ def main() -> None:
     import argparse
 
     logging.basicConfig(level=logging.INFO, format="%(levelname)s: %(message)s")
-    parser = argparse.ArgumentParser(description="Gold rate notification system (T1-T5)")
+    parser = argparse.ArgumentParser(description="Gold rate notification system (T1-T7)")
     parser.add_argument(
         "--simulate",
         action="store_true",
