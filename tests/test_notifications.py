@@ -427,14 +427,253 @@ def test_t4_no_fire_non_sunday():
     assert all(a.trigger_id != "T4" for a in alerts)
 
 
-def test_t4_no_fire_outside_window():
-    # Sunday but 20:00 IST is outside ±30min window from 18:00
+def test_t4_fires_sunday_late_run():
+    # Sunday 20:00 IST — old code blocked this (outside ±30 min window), new code fires it
     now_ist = _ist(2026, 5, 17, 20, 0)
     assert now_ist.weekday() == 6
     alerts = check_triggers(
         _forecast(), _probe(), _prices_flat(), _backtest_accurate(), NotificationState(), now_ist
     )
+    ids = [a.trigger_id for a in alerts]
+    assert "T4" in ids
+
+
+def test_t4_no_fire_sunday_before_1700():
+    now_ist = _ist(2026, 5, 17, 16, 59)
+    assert now_ist.weekday() == 6
+    alerts = check_triggers(
+        _forecast(), _probe(), _prices_flat(), _backtest_accurate(), NotificationState(), now_ist
+    )
     assert all(a.trigger_id != "T4" for a in alerts)
+
+
+def test_t4_no_fire_sunday_already_fired_today():
+    state = NotificationState(last_t4_fired_ist_date="2026-05-17")
+    now_ist = _ist(2026, 5, 17, 19, 0)
+    assert now_ist.weekday() == 6
+    alerts = check_triggers(
+        _forecast(), _probe(), _prices_flat(), _backtest_accurate(), state, now_ist
+    )
+    assert all(a.trigger_id != "T4" for a in alerts)
+
+
+def test_t4_monday_recovery_fires():
+    # Monday 08:00 IST, T4 never fired on prior Sunday
+    state = NotificationState(last_t4_fired_ist_date="")
+    now_ist = _ist(2026, 5, 18, 8, 0)  # 2026-05-18 is Monday (day after May 17 Sunday)
+    assert now_ist.weekday() == 0
+    alerts = check_triggers(
+        _forecast(), _probe(), _prices_flat(), _backtest_accurate(), state, now_ist
+    )
+    t4 = [a for a in alerts if a.trigger_id == "T4"]
+    assert len(t4) == 1
+    assert t4[0].title.startswith("[Delayed]")
+
+
+def test_t4_monday_recovery_skips_if_sunday_fired():
+    # Monday 08:00 IST, but Sunday already got a T4
+    state = NotificationState(last_t4_fired_ist_date="2026-05-17")  # prior Sunday
+    now_ist = _ist(2026, 5, 18, 8, 0)  # Monday
+    assert now_ist.weekday() == 0
+    alerts = check_triggers(
+        _forecast(), _probe(), _prices_flat(), _backtest_accurate(), state, now_ist
+    )
+    assert all(a.trigger_id != "T4" for a in alerts)
+
+
+def test_send_pending_sets_last_t4_fired_ist_date(monkeypatch):
+    mock_resp = MagicMock()
+    mock_resp.status = 200
+    mock_resp.__enter__ = MagicMock(return_value=mock_resp)
+    mock_resp.__exit__ = MagicMock(return_value=False)
+    monkeypatch.setattr("urllib.request.urlopen", lambda req, timeout=None: mock_resp)
+    monkeypatch.setenv("NTFY_TOPIC", "test-gold-topic")
+
+    now_ist = _ist(2026, 5, 17, 18, 0)
+    alert = PendingAlert(
+        trigger_id="T4",
+        title="Gold Weekly: Model beating naive (22K: Rs.14420)",
+        body="22K spot: Rs.14420. Backtest (30 folds): Chronos MAE Rs.275 vs Naive Rs.249. See dashboard.",
+        priority=2,
+        tags=["newspaper", "white_flower"],
+        click_url="https://gaurav-gandhi-2411.github.io/gold-rate-tracker/",
+        queued_at=now_ist.isoformat(),
+        bypass_quiet=True,
+    )
+    state = NotificationState()
+    assert state.last_t4_fired_ist_date == ""
+
+    send_pending([alert], state, now_ist)
+
+    assert state.last_t4_fired_ist_date == "2026-05-17"
+
+
+# ---------------------------------------------------------------------------
+# T7 — System-alive floor
+# ---------------------------------------------------------------------------
+
+
+def test_t7_fires_first_ever_run():
+    # last_t7_fired_ist_date = "" → fires immediately (never fired before)
+    state = NotificationState()
+    alerts = check_triggers(
+        _forecast(),
+        _probe_up(),
+        _prices_up(),
+        _backtest_accurate(),
+        state,
+        _ist(2026, 5, 17, 14, 0),
+    )
+    assert any(a.trigger_id == "T7" for a in alerts)
+
+
+def test_t7_fires_after_3_days():
+    state = NotificationState(last_t7_fired_ist_date="2026-05-14")
+    now_ist = _ist(2026, 5, 17, 14, 0)  # 3 days after May 14
+    alerts = check_triggers(
+        _forecast(), _probe_up(), _prices_up(), _backtest_accurate(), state, now_ist
+    )
+    assert any(a.trigger_id == "T7" for a in alerts)
+
+
+def test_t7_no_fire_day_1():
+    state = NotificationState(last_t7_fired_ist_date="2026-05-17")
+    now_ist = _ist(2026, 5, 18, 14, 0)  # 1 day after
+    alerts = check_triggers(
+        _forecast(), _probe_up(), _prices_up(), _backtest_accurate(), state, now_ist
+    )
+    assert all(a.trigger_id != "T7" for a in alerts)
+
+
+def test_t7_no_fire_day_2():
+    state = NotificationState(last_t7_fired_ist_date="2026-05-15")
+    now_ist = _ist(2026, 5, 17, 14, 0)  # 2 days after
+    alerts = check_triggers(
+        _forecast(), _probe_up(), _prices_up(), _backtest_accurate(), state, now_ist
+    )
+    assert all(a.trigger_id != "T7" for a in alerts)
+
+
+def test_t7_no_fire_probe_failed():
+    state = NotificationState()
+    alerts = check_triggers(
+        _forecast(),
+        _probe(status="failed"),
+        _prices_flat(),
+        _backtest_accurate(),
+        state,
+        _ist(2026, 5, 17, 14, 0),
+    )
+    assert all(a.trigger_id != "T7" for a in alerts)
+
+
+def test_t7_no_fire_already_fired_today():
+    state = NotificationState(last_t7_fired_ist_date="2026-05-17")
+    now_ist = _ist(2026, 5, 17, 18, 0)  # same IST date
+    alerts = check_triggers(
+        _forecast(), _probe_up(), _prices_up(), _backtest_accurate(), state, now_ist
+    )
+    assert all(a.trigger_id != "T7" for a in alerts)
+
+
+def test_t7_priority_2():
+    state = NotificationState()
+    alerts = check_triggers(
+        _forecast(),
+        _probe_up(),
+        _prices_up(),
+        _backtest_accurate(),
+        state,
+        _ist(2026, 5, 17, 14, 0),
+    )
+    t7 = [a for a in alerts if a.trigger_id == "T7"]
+    assert len(t7) == 1
+    assert t7[0].priority == 2
+
+
+def test_t7_body_contains_expected_fields():
+    state = NotificationState()
+    alerts = check_triggers(
+        _forecast(),
+        _probe_up(strength_pct=1.0),
+        _prices_up(),
+        _backtest_accurate(),
+        state,
+        _ist(2026, 5, 17, 14, 0),
+    )
+    t7 = next(a for a in alerts if a.trigger_id == "T7")
+    assert "Rs." in t7.body
+    assert "trend:" in t7.body
+    assert "lean:" in t7.body
+    assert "dir acc" in t7.body
+    assert "System healthy" in t7.body
+
+
+def test_t7_not_counted_in_t123_cap():
+    # T1+T2+T3 combined cap is already at max; T7 should still fire
+    state = NotificationState()
+    # Fill up the sent_today cap with 3 T1/T2/T3 entries
+    now_utc = datetime.now(UTC).isoformat()
+    state.sent_today = [
+        {"trigger_id": "T1", "sent_at": now_utc},
+        {"trigger_id": "T2", "sent_at": now_utc},
+        {"trigger_id": "T3", "sent_at": now_utc},
+    ]
+    # Also set cooldowns so T1/T2/T3 themselves don't re-fire
+    state.last_sent["T1"] = now_utc
+    state.last_sent["T2"] = now_utc
+    state.last_sent["T3"] = now_utc
+
+    alerts = check_triggers(
+        _forecast(),
+        _probe_up(strength_pct=1.0),
+        _prices_up(),
+        _backtest_accurate(),
+        state,
+        _ist(2026, 5, 17, 14, 0),
+    )
+    assert any(a.trigger_id == "T7" for a in alerts), "T7 must fire even when T1/T2/T3 cap is full"
+
+
+def test_send_pending_sets_last_t7_fired_ist_date(monkeypatch):
+    mock_resp = MagicMock()
+    mock_resp.status = 200
+    mock_resp.__enter__ = MagicMock(return_value=mock_resp)
+    mock_resp.__exit__ = MagicMock(return_value=False)
+    monkeypatch.setattr("urllib.request.urlopen", lambda req, timeout=None: mock_resp)
+    monkeypatch.setenv("NTFY_TOPIC", "test-gold-topic")
+
+    now_ist = _ist(2026, 5, 17, 14, 0)
+    alert = PendingAlert(
+        trigger_id="T7",
+        title="Gold daily check: 22K Rs.14420",
+        body="22K spot Rs.14420. 7d trend: +0.7%. Model lean: up (dir acc 100% on recent folds). System healthy.",
+        priority=2,
+        tags=["robot", "white_check_mark"],
+        click_url="https://gaurav-gandhi-2411.github.io/gold-rate-tracker/",
+        queued_at=now_ist.isoformat(),
+        bypass_quiet=False,
+    )
+    state = NotificationState()
+    assert state.last_t7_fired_ist_date == ""
+
+    send_pending([alert], state, now_ist)
+
+    assert state.last_t7_fired_ist_date == "2026-05-17"
+
+
+def test_state_round_trip_new_t4_t7_fields(tmp_path: Path):
+    state = NotificationState(
+        last_t4_fired_ist_date="2026-05-17",
+        last_t7_fired_ist_date="2026-05-15",
+    )
+    path = tmp_path / "notification_state.json"
+    save_state(state, path)
+
+    loaded = load_state(path)
+    assert loaded.last_t4_fired_ist_date == "2026-05-17"
+    assert loaded.last_t7_fired_ist_date == "2026-05-15"
+    assert loaded.schema_version == 1
 
 
 # ---------------------------------------------------------------------------
