@@ -32,10 +32,10 @@ STATE_PATH = DATA_DIR / "notification_state.json"
 IST = ZoneInfo("Asia/Kolkata")
 _NTFY_BASE = "https://ntfy.sh"
 _CLICK_URL = "https://gaurav-gandhi-2411.github.io/gold-rate-tracker/"
-_QUIET_START_H = 22        # 22:00 IST
-_QUIET_END_H = 7           # 07:00 IST
-_MAX_QUEUE_AGE_H = 12      # discard queued alerts older than this
-_MAX_T123_PER_24H = 3      # T1+T2+T3 combined cap
+_QUIET_START_H = 22  # 22:00 IST
+_QUIET_END_H = 7  # 07:00 IST
+_MAX_QUEUE_AGE_H = 12  # discard queued alerts older than this
+_MAX_T123_PER_24H = 3  # T1+T2+T3 combined cap
 
 SCHEMA_VERSION = 1
 
@@ -55,7 +55,7 @@ class PendingAlert:
     priority: int
     tags: list[str]
     click_url: str
-    queued_at: str      # ISO8601 datetime string (IST timezone)
+    queued_at: str  # ISO8601 datetime string (IST timezone)
     bypass_quiet: bool
 
     def to_dict(self) -> dict:
@@ -69,7 +69,7 @@ class PendingAlert:
 @dataclass
 class SentAlert:
     trigger_id: str
-    sent_at: str        # ISO8601 datetime string (UTC)
+    sent_at: str  # ISO8601 datetime string (UTC)
     title: str
     success: bool
 
@@ -85,6 +85,8 @@ class NotificationState:
     sent_today: list[dict] = field(default_factory=list)
     # IST date YYYY-MM-DD of last T5 send (once-per-day dedup)
     last_t5_ist_date: str = ""
+    last_t4_fired_ist_date: str = ""  # IST date YYYY-MM-DD of last T4 fire (dedup)
+    last_t7_fired_ist_date: str = ""  # IST date YYYY-MM-DD of last T7 fire (dedup)
 
 
 # ---------------------------------------------------------------------------
@@ -104,6 +106,8 @@ def load_state(path: Path = STATE_PATH) -> NotificationState:
             queued=raw.get("queued", []),
             sent_today=raw.get("sent_today", []),
             last_t5_ist_date=raw.get("last_t5_ist_date", ""),
+            last_t4_fired_ist_date=raw.get("last_t4_fired_ist_date", ""),
+            last_t7_fired_ist_date=raw.get("last_t7_fired_ist_date", ""),
         )
     except Exception as exc:
         logger.warning("Could not load notification state (%s) — using fresh state.", exc)
@@ -119,6 +123,8 @@ def save_state(state: NotificationState, path: Path = STATE_PATH) -> None:
         "queued": state.queued,
         "sent_today": state.sent_today,
         "last_t5_ist_date": state.last_t5_ist_date,
+        "last_t4_fired_ist_date": state.last_t4_fired_ist_date,
+        "last_t7_fired_ist_date": state.last_t7_fired_ist_date,
     }
     path.write_text(json.dumps(data, indent=2) + "\n", encoding="utf-8")
 
@@ -157,8 +163,7 @@ def _count_sent(
     """Count sends for the given trigger IDs within the past window_hours."""
     cutoff = (datetime.now(UTC) - timedelta(hours=window_hours)).isoformat()
     return sum(
-        1 for s in state.sent_today
-        if s["trigger_id"] in trigger_ids and s["sent_at"] >= cutoff
+        1 for s in state.sent_today if s["trigger_id"] in trigger_ids and s["sent_at"] >= cutoff
     )
 
 
@@ -241,9 +246,10 @@ def compute_dir_acc_30f(backtest: dict) -> float:
         return 0.0
     recent = folds[-30:]
     correct = sum(
-        1 for fold in recent
-        if (fold["chronos_p50"][-1] - fold["naive"][0])
-        * (fold["actuals"][-1] - fold["naive"][0]) > 0
+        1
+        for fold in recent
+        if (fold["chronos_p50"][-1] - fold["naive"][0]) * (fold["actuals"][-1] - fold["naive"][0])
+        > 0
     )
     return correct / len(recent)
 
@@ -363,7 +369,9 @@ def _check_t3(
         f"22K moved from Rs.{prev} to Rs.{current} ({pct:+.1f}%). "
         "Model-agnostic price alert. Check the dashboard for context."
     )
-    return _make_alert("T3", title, body, priority, ["warning", "chart_with_upwards_trend"], now_ist)
+    return _make_alert(
+        "T3", title, body, priority, ["warning", "chart_with_upwards_trend"], now_ist
+    )
 
 
 def _check_t4(
@@ -374,14 +382,28 @@ def _check_t4(
     state: NotificationState,
     now_ist: datetime,
 ) -> PendingAlert | None:
-    """T4 — Weekly digest: Sunday 18:00 IST ±30 min. Bypasses quiet hours."""
-    if _in_cooldown("T4", state, 168.0):
+    """T4 — Weekly digest: Sunday at or after 17:00 IST. Missed-recovery fires on Monday.
+
+    Deduped by IST date (last_t4_fired_ist_date). Bypasses quiet hours.
+    """
+    today_ist = now_ist.strftime("%Y-%m-%d")
+
+    if now_ist.weekday() == 6:  # Sunday
+        if now_ist.hour < 17:
+            return None
+        if state.last_t4_fired_ist_date == today_ist:
+            return None
+        title_prefix = ""
+    elif now_ist.weekday() == 0:  # Monday — missed-recovery
+        prior_sunday = (now_ist - timedelta(days=1)).strftime("%Y-%m-%d")
+        if state.last_t4_fired_ist_date == prior_sunday:
+            return None  # Sunday already got a T4
+        if state.last_t4_fired_ist_date == today_ist:
+            return None  # Already fired today
+        title_prefix = "[Delayed] "
+    else:
         return None
-    if now_ist.weekday() != 6:  # Sunday
-        return None
-    minutes_from_1800 = (now_ist.hour - 18) * 60 + now_ist.minute
-    if not (-30 <= minutes_from_1800 <= 30):
-        return None
+
     current = prices[-1]["22k"] if prices else 0
     n_folds = backtest.get("n_folds", 0)
     mae_c = backtest.get("mae_5d_avg_chronos", 0.0)
@@ -392,7 +414,6 @@ def _check_t4(
         verdict = f"Model {(mae_c - mae_n) / mae_n * 100:.0f}% above naive MAE"
     else:
         verdict = "Backtest pending"
-    # Use any available commentary as enrichment
     extra = ""
     commentary_path = DATA_DIR / "commentary.json"
     if commentary_path.exists():
@@ -403,13 +424,15 @@ def _check_t4(
                 extra = " " + snippet
         except Exception:
             pass
-    title = f"Gold Weekly: {verdict} (22K: Rs.{current})"
+    title = f"{title_prefix}Gold Weekly: {verdict} (22K: Rs.{current})"
     body = (
         f"22K spot: Rs.{current}. "
         f"Backtest ({n_folds} folds): Chronos MAE Rs.{mae_c:.0f} vs Naive Rs.{mae_n:.0f}."
         + (extra or " See dashboard for full context.")
     )
-    return _make_alert("T4", title, body, 2, ["newspaper", "white_flower"], now_ist, bypass_quiet=True)
+    return _make_alert(
+        "T4", title, body, 2, ["newspaper", "white_flower"], now_ist, bypass_quiet=True
+    )
 
 
 def _check_t5(
@@ -443,6 +466,46 @@ def _check_t5(
     return _make_alert("T5", title, body, 2, ["warning", "rotating_light"], now_ist)
 
 
+def _check_t7(
+    forecast: dict,
+    probe: dict,
+    prices: list[dict],
+    backtest: dict,
+    state: NotificationState,
+    now_ist: datetime,
+) -> PendingAlert | None:
+    """T7 — System-alive floor: fires on the first CI run of the day when >=3 IST days
+
+    have elapsed since last T7. Skips silently when Chronos probe failed (T5 covers that).
+    Does NOT count toward the T1+T2+T3 combined 3-per-24h cap.
+    """
+    if probe.get("status") != "success":
+        return None
+
+    today_ist = now_ist.strftime("%Y-%m-%d")
+    if state.last_t7_fired_ist_date == today_ist:
+        return None  # Already fired today
+
+    if state.last_t7_fired_ist_date:
+        last_date = datetime.strptime(state.last_t7_fired_ist_date, "%Y-%m-%d").date()
+        today_date = now_ist.date()
+        if (today_date - last_date).days < 3:
+            return None
+
+    current = prices[-1]["22k"] if prices else 0
+    lean_dir, _ = compute_chronos_lean(probe)
+    _mom_dir, mom_pct = compute_recent_momentum(prices)
+    dir_acc = compute_dir_acc_30f(backtest)
+    title = f"Gold daily check: 22K Rs.{current}"
+    body = (
+        f"22K spot Rs.{current}. "
+        f"7d trend: {mom_pct:+.1f}%. "
+        f"Model lean: {lean_dir} (dir acc {dir_acc:.0%} on recent folds). "
+        "System healthy."
+    )
+    return _make_alert("T7", title, body, 2, ["robot", "white_check_mark"], now_ist)
+
+
 # ---------------------------------------------------------------------------
 # Public API
 # ---------------------------------------------------------------------------
@@ -463,7 +526,7 @@ def check_triggers(
     queue_for_quiet_hours and the main() orchestration).
     """
     alerts: list[PendingAlert] = []
-    for fn in (_check_t1, _check_t2, _check_t3, _check_t4, _check_t5):
+    for fn in (_check_t1, _check_t2, _check_t3, _check_t4, _check_t5, _check_t7):
         alert = fn(forecast, probe, prices, backtest, state, now_ist)
         if alert is not None:
             alerts.append(alert)
@@ -515,16 +578,22 @@ def send_pending(
             state.sent_today.append({"trigger_id": alert.trigger_id, "sent_at": sent_at})
             if alert.trigger_id == "T5":
                 state.last_t5_ist_date = now_ist.strftime("%Y-%m-%d")
+            if alert.trigger_id == "T4":
+                state.last_t4_fired_ist_date = now_ist.strftime("%Y-%m-%d")
+            if alert.trigger_id == "T7":
+                state.last_t7_fired_ist_date = now_ist.strftime("%Y-%m-%d")
             logger.info("Sent %s: %s", alert.trigger_id, alert.title)
         else:
             logger.warning("Failed to send %s", alert.trigger_id)
 
-        sent.append(SentAlert(
-            trigger_id=alert.trigger_id,
-            sent_at=sent_at,
-            title=alert.title,
-            success=success,
-        ))
+        sent.append(
+            SentAlert(
+                trigger_id=alert.trigger_id,
+                sent_at=sent_at,
+                title=alert.title,
+                success=success,
+            )
+        )
 
     return sent
 
@@ -573,13 +642,16 @@ def main() -> None:
     import argparse
 
     logging.basicConfig(level=logging.INFO, format="%(levelname)s: %(message)s")
-    parser = argparse.ArgumentParser(description="Gold rate notification system (T1-T5)")
+    parser = argparse.ArgumentParser(description="Gold rate notification system (T1-T7)")
     parser.add_argument(
-        "--simulate", action="store_true",
+        "--simulate",
+        action="store_true",
         help="Evaluate triggers and print results without sending or saving state",
     )
     parser.add_argument(
-        "--state-path", type=Path, default=STATE_PATH,
+        "--state-path",
+        type=Path,
+        default=STATE_PATH,
         help="Path to notification_state.json (default: data/notification_state.json)",
     )
     args = parser.parse_args()
@@ -607,7 +679,7 @@ def main() -> None:
         dir_acc = compute_dir_acc_30f(backtest)
         lean_dir, lean_str = compute_chronos_lean(probe)
         mom_dir, mom_pct = compute_recent_momentum(prices)
-        print(f"\n=== Notification Simulation ===")
+        print("\n=== Notification Simulation ===")
         print(f"Now IST:      {now_ist.strftime('%Y-%m-%d %H:%M')} (quiet hours: {in_quiet})")
         print(f"Dir acc 30f:  {dir_acc:.3f}  (gate: >= 0.55)")
         print(f"Chronos lean: {lean_dir} ({lean_str:.2f}%)")
