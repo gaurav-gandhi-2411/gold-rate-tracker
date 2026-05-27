@@ -31,8 +31,11 @@ CHRONOS_BOLT_TINY_MODEL_ID = "amazon/chronos-bolt-tiny"
 CHRONOS_BOLT_TINY_REVISION = "a0e552de83495b5c28c14c71c374f3e33280b340"
 
 DEFAULT_HORIZON = 5
+DEFAULT_NUM_SAMPLES = 5
 DEFAULT_QUANTILES = [0.1, 0.5, 0.9]
 _MIN_CONTEXT_DAYS = 8
+_DIRECTION_NEUTRAL_THRESHOLD = 0.001  # |delta|/ibja_last below this is "neutral"
+_CONSENSUS_GATE = 0.6  # documented threshold; used by notifications, here for reference only
 
 logger = logging.getLogger(__name__)
 
@@ -120,6 +123,42 @@ def chronos_to_tanishq(
     return result
 
 
+def _classify_sample_direction(
+    forecast_df: pd.DataFrame,
+    ibja_last: float,
+) -> str:
+    """Return 'up' | 'down' | 'neutral' for one sample trajectory.
+
+    Direction is sign(median(p50_across_horizon) - ibja_last). When the magnitude
+    is below _DIRECTION_NEUTRAL_THRESHOLD, returns 'neutral'.
+    """
+    from statistics import median
+
+    if ibja_last <= 0:
+        return "neutral"
+    med_p50 = median(forecast_df["p50"].tolist())
+    delta_pct = (med_p50 - ibja_last) / ibja_last
+    if abs(delta_pct) < _DIRECTION_NEUTRAL_THRESHOLD:
+        return "neutral"
+    return "down" if delta_pct < 0 else "up"
+
+
+def _aggregate_directions(directions: list[str]) -> tuple[str, float]:
+    """Return (majority_direction, consensus_fraction) from a list of per-sample directions.
+
+    majority_direction is the most-frequent label (ties resolved by Counter's
+    insertion-order preference, which is deterministic given input order).
+    consensus_fraction is count(majority) / len(directions).
+    """
+    from collections import Counter
+
+    if not directions:
+        return "neutral", 0.0
+    counter = Counter(directions)
+    majority, count = counter.most_common(1)[0]
+    return majority, round(count / len(directions), 3)
+
+
 def run_probe(
     ibja_parquet_path: Path | None = None,
     calibration_json_path: Path | None = None,
@@ -149,7 +188,11 @@ def run_probe(
         "calibration_valid": False,
         "tanishq_forecast": None,
         "model_version": f"{CHRONOS_BOLT_TINY_MODEL_ID}@{CHRONOS_BOLT_TINY_REVISION[:8]}",
-        "schema_version": 1,
+        "schema_version": 2,
+        "num_samples": 0,
+        "sample_directions": [],
+        "majority_direction": "neutral",
+        "direction_consensus": 0.0,
     }
 
     t_total_start = time.monotonic()
@@ -204,10 +247,12 @@ def run_probe(
         return probe
     probe["wall_clock_ms"]["pipeline_load"] = int((time.monotonic() - t_load) * 1000)
 
-    # --- Forecast ---
+    # --- Forecast 5 independent samples ---
     t_fc = time.monotonic()
+    sample_forecasts: list[pd.DataFrame] = []
     try:
-        ibja_fc = forecast_ibja(pipeline, ibja_series)
+        for _ in range(DEFAULT_NUM_SAMPLES):
+            sample_forecasts.append(forecast_ibja(pipeline, ibja_series))
     except Exception as exc:
         logger.error("chronos_probe: forecast failed: %s", exc)
         probe["status"] = "forecast_failed"
@@ -216,6 +261,9 @@ def run_probe(
         _write_probe(probe, out_path)
         return probe
     probe["wall_clock_ms"]["forecast"] = int((time.monotonic() - t_fc) * 1000)
+
+    # Use first sample for the existing ibja_forecast field (back-compat with consumers)
+    ibja_fc = sample_forecasts[0]
 
     probe["ibja_forecast"] = [
         {
@@ -227,6 +275,17 @@ def run_probe(
         }
         for idx, (_, row) in enumerate(ibja_fc.iterrows())
     ]
+
+    # --- Per-sample direction analysis (Phi4) ---
+    ibja_last_value: float = (
+        float(probe["ibja_last_value"]) if probe.get("ibja_last_value") else 0.0
+    )
+    sample_directions = [_classify_sample_direction(df, ibja_last_value) for df in sample_forecasts]
+    majority, consensus = _aggregate_directions(sample_directions)
+    probe["num_samples"] = DEFAULT_NUM_SAMPLES
+    probe["sample_directions"] = sample_directions
+    probe["majority_direction"] = majority
+    probe["direction_consensus"] = consensus
 
     # --- Calibration ---
     t_calib = time.monotonic()
