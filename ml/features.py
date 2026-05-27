@@ -115,7 +115,6 @@ MINIMAL_FEATURE_COLS: list[str] = [
     "roll_30d_mean",
     "gold_usd",
     "usd_inr",
-    "regime",
     "dow",
 ]
 

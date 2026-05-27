@@ -1,24 +1,20 @@
 """Tests for ml/notifications.py — trigger logic, state management, and ntfy dispatch."""
+
 from __future__ import annotations
 
-import json
 from datetime import UTC, datetime, timedelta
 from pathlib import Path
 from unittest.mock import MagicMock
 from zoneinfo import ZoneInfo
 
-import pytest
-
 from ml.notifications import (
     NotificationState,
     PendingAlert,
-    _in_cooldown,
     _is_quiet_hours,
     _release_queued,
     check_triggers,
     compute_chronos_lean,
     compute_dir_acc_30f,
-    compute_recent_momentum,
     load_state,
     queue_for_quiet_hours,
     save_state,
@@ -52,12 +48,24 @@ def _probe(status: str = "success", last: float = 14000.0, p50_list: list | None
 
 def _probe_down(last: float = 14000.0, strength_pct: float = 1.0) -> dict:
     p50 = last * (1 - strength_pct / 100)
-    return _probe(last=last, p50_list=[p50] * 5)
+    probe = _probe(last=last, p50_list=[p50] * 5)
+    # v2 schema fields: unanimous down consensus so existing T1 tests keep their semantics.
+    probe["majority_direction"] = "down"
+    probe["direction_consensus"] = 1.0
+    probe["num_samples"] = 5
+    probe["sample_directions"] = ["down"] * 5
+    return probe
 
 
 def _probe_up(last: float = 14000.0, strength_pct: float = 1.0) -> dict:
     p50 = last * (1 + strength_pct / 100)
-    return _probe(last=last, p50_list=[p50] * 5)
+    probe = _probe(last=last, p50_list=[p50] * 5)
+    # v2 schema fields: unanimous up consensus so existing T2 tests keep their semantics.
+    probe["majority_direction"] = "up"
+    probe["direction_consensus"] = 1.0
+    probe["num_samples"] = 5
+    probe["sample_directions"] = ["up"] * 5
+    return probe
 
 
 def _prices_down(n: int = 10, base: int = 14500, step: int = 100) -> list[dict]:
@@ -112,7 +120,12 @@ def _backtest_accurate(n_folds: int = 30) -> dict:
         }
         for _ in range(n_folds)
     ]
-    return {"n_folds": n_folds, "mae_5d_avg_chronos": 275.0, "mae_5d_avg_naive": 249.0, "folds": folds}
+    return {
+        "n_folds": n_folds,
+        "mae_5d_avg_chronos": 275.0,
+        "mae_5d_avg_naive": 249.0,
+        "folds": folds,
+    }
 
 
 def _backtest_inaccurate(n_folds: int = 30) -> dict:
@@ -125,7 +138,12 @@ def _backtest_inaccurate(n_folds: int = 30) -> dict:
         }
         for _ in range(n_folds)
     ]
-    return {"n_folds": n_folds, "mae_5d_avg_chronos": 300.0, "mae_5d_avg_naive": 249.0, "folds": folds}
+    return {
+        "n_folds": n_folds,
+        "mae_5d_avg_chronos": 300.0,
+        "mae_5d_avg_naive": 249.0,
+        "folds": folds,
+    }
 
 
 def _forecast(warmup: bool = False, model_fallback: bool = False) -> dict:
@@ -315,8 +333,20 @@ def test_t2_blocked_probe_failure():
 def test_t3_fires_large_move():
     base_ts = datetime(2026, 5, 19, 6, 0, 0, tzinfo=UTC)
     prices = [
-        {"timestamp": base_ts.isoformat().replace("+00:00", "Z"), "22k": 14000, "24k": 14500, "18k": 13500, "source": "test"},
-        {"timestamp": (base_ts + timedelta(hours=6)).isoformat().replace("+00:00", "Z"), "22k": 14200, "24k": 14700, "18k": 13700, "source": "test"},
+        {
+            "timestamp": base_ts.isoformat().replace("+00:00", "Z"),
+            "22k": 14000,
+            "24k": 14500,
+            "18k": 13500,
+            "source": "test",
+        },
+        {
+            "timestamp": (base_ts + timedelta(hours=6)).isoformat().replace("+00:00", "Z"),
+            "22k": 14200,
+            "24k": 14700,
+            "18k": 13700,
+            "source": "test",
+        },
     ]
     alerts = check_triggers(
         _forecast(),
@@ -335,11 +365,28 @@ def test_t3_fires_large_move():
 def test_t3_no_fire_small_move():
     base_ts = datetime(2026, 5, 19, 6, 0, 0, tzinfo=UTC)
     prices = [
-        {"timestamp": base_ts.isoformat().replace("+00:00", "Z"), "22k": 14000, "24k": 14500, "18k": 13500, "source": "test"},
-        {"timestamp": (base_ts + timedelta(hours=6)).isoformat().replace("+00:00", "Z"), "22k": 14100, "24k": 14600, "18k": 13600, "source": "test"},
+        {
+            "timestamp": base_ts.isoformat().replace("+00:00", "Z"),
+            "22k": 14000,
+            "24k": 14500,
+            "18k": 13500,
+            "source": "test",
+        },
+        {
+            "timestamp": (base_ts + timedelta(hours=6)).isoformat().replace("+00:00", "Z"),
+            "22k": 14100,
+            "24k": 14600,
+            "18k": 13600,
+            "source": "test",
+        },
     ]
     alerts = check_triggers(
-        _forecast(), _probe(), prices, _backtest_accurate(), NotificationState(), _ist(2026, 5, 19, 14, 0)
+        _forecast(),
+        _probe(),
+        prices,
+        _backtest_accurate(),
+        NotificationState(),
+        _ist(2026, 5, 19, 14, 0),
     )
     assert all(a.trigger_id != "T3" for a in alerts)
 
@@ -370,7 +417,12 @@ def test_t4_fires_sunday_1800():
 
 def test_t4_no_fire_non_sunday():
     alerts = check_triggers(
-        _forecast(), _probe(), _prices_flat(), _backtest_accurate(), NotificationState(), _ist(2026, 5, 19, 18, 15)
+        _forecast(),
+        _probe(),
+        _prices_flat(),
+        _backtest_accurate(),
+        NotificationState(),
+        _ist(2026, 5, 19, 18, 15),
     )
     assert all(a.trigger_id != "T4" for a in alerts)
 
@@ -461,7 +513,23 @@ def test_quiet_hours_queues_t1():
     assert state.queued[0]["trigger_id"] == "T1"
 
 
-def test_release_queued_returns_and_clears():
+def test_release_queued_returns_and_clears(monkeypatch):
+    # Freeze ml.notifications.datetime so the 12-hour cutoff is stable regardless of
+    # wall-clock date.  queued_at is 2026-05-19 23:30 IST; freeze "now" to 1h later
+    # (2026-05-20 00:30 IST = 2026-05-19 19:00 UTC) so the entry is well within the
+    # 12-hour window.
+    from datetime import UTC
+    from datetime import datetime as _real_datetime
+
+    _frozen_now_utc = _ist(2026, 5, 20, 0, 30).astimezone(UTC)
+
+    class _FakeDatetime(_real_datetime):
+        @classmethod
+        def now(cls, tz=None):  # type: ignore[override]
+            return _frozen_now_utc if tz is UTC else _real_datetime.now(tz)
+
+    monkeypatch.setattr("ml.notifications.datetime", _FakeDatetime)
+
     state = NotificationState()
     now_ist = _ist(2026, 5, 19, 23, 30)
     alert = PendingAlert(
@@ -563,11 +631,18 @@ def test_ntfy_no_send_without_topic(monkeypatch):
 def test_state_round_trip(tmp_path: Path):
     state = NotificationState(
         last_sent={"T1": "2026-05-19T10:00:00+00:00", "T4": "2026-05-17T18:00:00+05:30"},
-        queued=[{
-            "trigger_id": "T3", "title": "Test", "body": "B", "priority": 4,
-            "tags": ["warning"], "click_url": "https://x.com",
-            "queued_at": "2026-05-19T22:30:00+05:30", "bypass_quiet": False,
-        }],
+        queued=[
+            {
+                "trigger_id": "T3",
+                "title": "Test",
+                "body": "B",
+                "priority": 4,
+                "tags": ["warning"],
+                "click_url": "https://x.com",
+                "queued_at": "2026-05-19T22:30:00+05:30",
+                "bypass_quiet": False,
+            }
+        ],
         sent_today=[{"trigger_id": "T1", "sent_at": "2026-05-19T10:00:00+00:00"}],
         last_t5_ist_date="2026-05-19",
     )
@@ -596,3 +671,355 @@ def test_load_state_corrupt_json(tmp_path: Path):
     path.write_text("not valid json", encoding="utf-8")
     state = load_state(path)
     assert state.last_sent == {}
+
+
+# ---------------------------------------------------------------------------
+# T6 — Calibration unlocked
+# ---------------------------------------------------------------------------
+
+
+def test_check_triggers_backward_compat_no_calibration_kwarg():
+    """Calling check_triggers without the new calibration kwarg must work identically to before."""
+    state = NotificationState()
+    now_ist = _ist(2026, 5, 19, 14, 0)
+    forecast = {"model_fallback": False}
+    probe = {"status": "success"}
+    prices = _prices_flat()
+    backtest = _backtest_accurate(30)
+    # Old-style call (no calibration kwarg)
+    alerts_old = check_triggers(forecast, probe, prices, backtest, state, now_ist)
+    # New-style call with calibration=None
+    alerts_new = check_triggers(forecast, probe, prices, backtest, state, now_ist, calibration=None)
+    assert [a.trigger_id for a in alerts_old] == [a.trigger_id for a in alerts_new]
+
+
+def test_t6_fires_when_calibration_valid_first_time():
+    state = NotificationState()  # last_t6_fired_date_ist == ""
+    now_ist = _ist(2026, 6, 2, 14, 0)
+    calibration = {"valid": True, "n_observations": 30}
+    alerts = check_triggers(
+        {"model_fallback": False},
+        {"status": "success"},
+        _prices_flat(),
+        _backtest_accurate(30),
+        state,
+        now_ist,
+        calibration=calibration,
+    )
+    t6 = [a for a in alerts if a.trigger_id == "T6"]
+    assert len(t6) == 1
+    assert "calibration" in t6[0].title.lower()
+
+
+def test_t6_skips_when_calibration_invalid():
+    state = NotificationState()
+    now_ist = _ist(2026, 6, 2, 14, 0)
+    calibration = {"valid": False, "n_observations": 21}
+    alerts = check_triggers(
+        {"model_fallback": False},
+        {"status": "success"},
+        _prices_flat(),
+        _backtest_accurate(30),
+        state,
+        now_ist,
+        calibration=calibration,
+    )
+    assert not any(a.trigger_id == "T6" for a in alerts)
+
+
+def test_t6_skips_when_already_fired():
+    state = NotificationState(last_t6_fired_date_ist="2026-06-02")
+    now_ist = _ist(2026, 6, 3, 14, 0)  # next day, still valid calibration
+    calibration = {"valid": True, "n_observations": 31}
+    alerts = check_triggers(
+        {"model_fallback": False},
+        {"status": "success"},
+        _prices_flat(),
+        _backtest_accurate(30),
+        state,
+        now_ist,
+        calibration=calibration,
+    )
+    assert not any(a.trigger_id == "T6" for a in alerts)
+
+
+def test_send_pending_sets_last_t6_fired_date_ist(monkeypatch):
+    """send_pending sets last_t6_fired_date_ist when T6 is successfully sent."""
+    mock_resp = MagicMock()
+    mock_resp.status = 200
+    mock_resp.__enter__ = MagicMock(return_value=mock_resp)
+    mock_resp.__exit__ = MagicMock(return_value=False)
+
+    monkeypatch.setattr("urllib.request.urlopen", lambda req, timeout=None: mock_resp)
+    monkeypatch.setenv("NTFY_TOPIC", "test-gold-topic")
+
+    now_ist = _ist(2026, 6, 2, 14, 0)
+    alert = PendingAlert(
+        trigger_id="T6",
+        title="Gold forecast: calibration unlocked",
+        body="IBJA->Tanishq calibration achieved 30 overlap pairs (>=30). See dashboard.",
+        priority=3,
+        tags=["unlock", "white_check_mark"],
+        click_url="https://gaurav-gandhi-2411.github.io/gold-rate-tracker/",
+        queued_at=now_ist.isoformat(),
+        bypass_quiet=False,
+    )
+    state = NotificationState()
+    assert state.last_t6_fired_date_ist == ""
+
+    sent = send_pending([alert], state, now_ist)
+
+    assert len(sent) == 1
+    assert sent[0].success is True
+    assert state.last_t6_fired_date_ist == now_ist.strftime("%Y-%m-%d")
+
+
+def test_state_round_trip_includes_t6_field(tmp_path: Path):
+    """NotificationState with last_t6_fired_date_ist survives a save/load cycle."""
+    state = NotificationState(
+        last_t5_ist_date="2026-06-01",
+        last_t6_fired_date_ist="2026-06-02",
+    )
+    path = tmp_path / "notification_state.json"
+    save_state(state, path)
+
+    loaded = load_state(path)
+    assert loaded.last_t6_fired_date_ist == "2026-06-02"
+    assert loaded.last_t5_ist_date == "2026-06-01"
+    assert loaded.schema_version == 1
+
+
+# ---------------------------------------------------------------------------
+# Phi4 pass 2/2 — T1/T2 consensus gate (PR Phi4)
+# ---------------------------------------------------------------------------
+
+
+def _probe_v2_down(
+    last: float = 14000.0,
+    strength_pct: float = 1.0,
+    majority_direction: str = "down",
+    direction_consensus: float = 1.0,
+    num_samples: int = 5,
+) -> dict:
+    """Build a v2-schema probe dict with explicit majority_direction / direction_consensus."""
+    p50 = last * (1 - strength_pct / 100)
+    probe = _probe(last=last, p50_list=[p50] * 5)
+    probe["majority_direction"] = majority_direction
+    probe["direction_consensus"] = direction_consensus
+    probe["num_samples"] = num_samples
+    probe["sample_directions"] = [majority_direction] * num_samples
+    return probe
+
+
+def _probe_v2_up(
+    last: float = 14000.0,
+    strength_pct: float = 1.0,
+    majority_direction: str = "up",
+    direction_consensus: float = 1.0,
+    num_samples: int = 5,
+) -> dict:
+    """Build a v2-schema probe dict with explicit majority_direction / direction_consensus."""
+    p50 = last * (1 + strength_pct / 100)
+    probe = _probe(last=last, p50_list=[p50] * 5)
+    probe["majority_direction"] = majority_direction
+    probe["direction_consensus"] = direction_consensus
+    probe["num_samples"] = num_samples
+    probe["sample_directions"] = [majority_direction] * num_samples
+    return probe
+
+
+# --- T1 consensus gate tests ---
+
+
+def test_t1_fires_majority_down_consensus_0_6():
+    """(a) T1 fires when majority=down and consensus exactly 0.6."""
+    alerts = check_triggers(
+        _forecast(warmup=False),
+        _probe_v2_down(strength_pct=1.0, direction_consensus=0.6),
+        _prices_down(),
+        _backtest_accurate(30),
+        NotificationState(),
+        _ist(2026, 5, 19, 14, 0),
+    )
+    t1 = [a for a in alerts if a.trigger_id == "T1"]
+    assert len(t1) == 1, "T1 must fire at consensus=0.6"
+
+
+def test_t1_fires_majority_down_consensus_1_0():
+    """(b) T1 fires when majority=down and consensus=1.0 (5-of-5 unanimous)."""
+    alerts = check_triggers(
+        _forecast(warmup=False),
+        _probe_v2_down(strength_pct=1.0, direction_consensus=1.0),
+        _prices_down(),
+        _backtest_accurate(30),
+        NotificationState(),
+        _ist(2026, 5, 19, 14, 0),
+    )
+    t1 = [a for a in alerts if a.trigger_id == "T1"]
+    assert len(t1) == 1, "T1 must fire at consensus=1.0"
+
+
+def test_t1_skips_majority_down_consensus_0_4():
+    """(c) T1 skips when majority=down but consensus only 0.4 (2-of-5)."""
+    alerts = check_triggers(
+        _forecast(warmup=False),
+        _probe_v2_down(strength_pct=1.0, direction_consensus=0.4),
+        _prices_down(),
+        _backtest_accurate(30),
+        NotificationState(),
+        _ist(2026, 5, 19, 14, 0),
+    )
+    assert all(a.trigger_id != "T1" for a in alerts), "T1 must NOT fire at consensus=0.4"
+
+
+def test_t1_skips_majority_up_high_consensus():
+    """(d) T1 skips when majority=up even with consensus=1.0 (wrong direction)."""
+    alerts = check_triggers(
+        _forecast(warmup=False),
+        _probe_v2_down(
+            strength_pct=1.0,
+            majority_direction="up",
+            direction_consensus=1.0,
+        ),
+        _prices_down(),
+        _backtest_accurate(30),
+        NotificationState(),
+        _ist(2026, 5, 19, 14, 0),
+    )
+    assert all(a.trigger_id != "T1" for a in alerts), "T1 must NOT fire when majority_direction=up"
+
+
+def test_t1_skips_missing_majority_direction_v1_schema():
+    """(e) T1 skips on v1-schema probe with no majority_direction field (backward-compat)."""
+    # Build a probe WITHOUT majority_direction — simulates a v1-schema probe file.
+    probe = _probe(last=14000.0, p50_list=[14000.0 * (1 - 1.0 / 100)] * 5)
+    # Deliberately do NOT add majority_direction or direction_consensus.
+    assert "majority_direction" not in probe
+
+    alerts = check_triggers(
+        _forecast(warmup=False),
+        probe,
+        _prices_down(),
+        _backtest_accurate(30),
+        NotificationState(),
+        _ist(2026, 5, 19, 14, 0),
+    )
+    assert all(
+        a.trigger_id != "T1" for a in alerts
+    ), "T1 must NOT fire when majority_direction is absent (v1 schema back-compat)"
+
+
+def test_t1_skips_majority_neutral():
+    """(f) T1 skips when majority=neutral (even with consensus=1.0)."""
+    alerts = check_triggers(
+        _forecast(warmup=False),
+        _probe_v2_down(
+            strength_pct=1.0,
+            majority_direction="neutral",
+            direction_consensus=1.0,
+        ),
+        _prices_down(),
+        _backtest_accurate(30),
+        NotificationState(),
+        _ist(2026, 5, 19, 14, 0),
+    )
+    assert all(
+        a.trigger_id != "T1" for a in alerts
+    ), "T1 must NOT fire when majority_direction=neutral"
+
+
+def test_t1_skips_when_strength_too_low_despite_full_consensus():
+    """(h) T1 skips when strength < 0.5% even with perfect consensus — gates are independent."""
+    alerts = check_triggers(
+        _forecast(warmup=False),
+        _probe_v2_down(strength_pct=0.3, direction_consensus=1.0),
+        _prices_down(),
+        _backtest_accurate(30),
+        NotificationState(),
+        _ist(2026, 5, 19, 14, 0),
+    )
+    assert all(
+        a.trigger_id != "T1" for a in alerts
+    ), "T1 must NOT fire when strength=0.3% (below 0.5% gate)"
+
+
+# --- T2 consensus gate tests (mirror of T1) ---
+
+
+def test_t2_fires_majority_up_consensus_0_6():
+    """(g-1) T2 fires when majority=up and consensus exactly 0.6."""
+    alerts = check_triggers(
+        _forecast(warmup=False),
+        _probe_v2_up(strength_pct=1.0, direction_consensus=0.6),
+        _prices_up(),
+        _backtest_accurate(30),
+        NotificationState(),
+        _ist(2026, 5, 19, 14, 0),
+    )
+    t2 = [a for a in alerts if a.trigger_id == "T2"]
+    assert len(t2) == 1, "T2 must fire at consensus=0.6"
+
+
+def test_t2_skips_majority_down_high_consensus():
+    """(g-2) T2 skips when majority=down even with consensus=1.0."""
+    alerts = check_triggers(
+        _forecast(warmup=False),
+        _probe_v2_up(
+            strength_pct=1.0,
+            majority_direction="down",
+            direction_consensus=1.0,
+        ),
+        _prices_up(),
+        _backtest_accurate(30),
+        NotificationState(),
+        _ist(2026, 5, 19, 14, 0),
+    )
+    assert all(
+        a.trigger_id != "T2" for a in alerts
+    ), "T2 must NOT fire when majority_direction=down"
+
+
+def test_t2_skips_majority_up_consensus_0_4():
+    """(g-3) T2 skips when majority=up but consensus only 0.4."""
+    alerts = check_triggers(
+        _forecast(warmup=False),
+        _probe_v2_up(strength_pct=1.0, direction_consensus=0.4),
+        _prices_up(),
+        _backtest_accurate(30),
+        NotificationState(),
+        _ist(2026, 5, 19, 14, 0),
+    )
+    assert all(a.trigger_id != "T2" for a in alerts), "T2 must NOT fire at consensus=0.4"
+
+
+def test_t2_skips_missing_majority_direction_v1_schema():
+    """(g-4) T2 skips on v1-schema probe with no majority_direction field (backward-compat)."""
+    probe = _probe(last=14000.0, p50_list=[14000.0 * (1 + 1.0 / 100)] * 5)
+    assert "majority_direction" not in probe
+
+    alerts = check_triggers(
+        _forecast(warmup=False),
+        probe,
+        _prices_up(),
+        _backtest_accurate(30),
+        NotificationState(),
+        _ist(2026, 5, 19, 14, 0),
+    )
+    assert all(
+        a.trigger_id != "T2" for a in alerts
+    ), "T2 must NOT fire when majority_direction is absent (v1 schema back-compat)"
+
+
+def test_t2_skips_when_strength_too_low_despite_full_consensus():
+    """(g-5) T2 skips when strength < 0.5% even with perfect consensus."""
+    alerts = check_triggers(
+        _forecast(warmup=False),
+        _probe_v2_up(strength_pct=0.3, direction_consensus=1.0),
+        _prices_up(),
+        _backtest_accurate(30),
+        NotificationState(),
+        _ist(2026, 5, 19, 14, 0),
+    )
+    assert all(
+        a.trigger_id != "T2" for a in alerts
+    ), "T2 must NOT fire when strength=0.3% (below 0.5% gate)"

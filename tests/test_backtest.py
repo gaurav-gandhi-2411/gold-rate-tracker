@@ -2,13 +2,10 @@
 
 from __future__ import annotations
 
-from unittest.mock import patch
-
 import numpy as np
 import pandas as pd
 import pytest
 import torch
-
 
 # ---------------------------------------------------------------------------
 # Helpers
@@ -108,9 +105,6 @@ def test_no_leakage():
     result = run_backtest(series, pipeline, horizon=5, min_context=8)
 
     for fold in result["folds"]:
-        context_end = fold["context_end_date"]
-        # actuals cover the 5 days after context_end_date
-        # context_end must be strictly before those dates
         # We verify context_end_date is the (fold_id + min_context - 1)th date
         assert fold["context_size"] == fold["fold_id"] + 8
         assert fold["context_size"] < 20  # strictly inside the series

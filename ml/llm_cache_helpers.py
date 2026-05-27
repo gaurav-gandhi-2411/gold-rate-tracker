@@ -210,7 +210,9 @@ def should_use_cache_for_batch(
     See docs/adr/013-prompt-caching-scope.md for the full caching-scope analysis.
     """
     # Branch 1: below minimum token count
-    min_tokens = _ANTHROPIC_MIN_CACHE_TOKENS if "claude" in model.lower() else _GROQ_MIN_CACHE_TOKENS
+    min_tokens = (
+        _ANTHROPIC_MIN_CACHE_TOKENS if "claude" in model.lower() else _GROQ_MIN_CACHE_TOKENS
+    )
     if prompt_tokens < min_tokens:
         return BatchCacheResult(
             decision="skip_cache",

@@ -90,7 +90,7 @@ def test_fit_partial_date_overlap():
     """fit_calibration uses only matched dates — non-overlapping rows are ignored."""
     ibja_df, tanishq_df = _make_overlap_df(n=40)
     # Shift first 5 ibja rows to dates that don't exist in tanishq
-    ibja_df.loc[:4, "date"] = [f"2020-01-0{i+1}" for i in range(5)]
+    ibja_df.loc[:4, "date"] = [f"2020-01-0{i + 1}" for i in range(5)]
     # 35 overlap days remain — should still succeed
     params = cal.fit_calibration(ibja_df, tanishq_df)
     assert params.n_observations == 35

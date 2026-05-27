@@ -106,7 +106,7 @@ class TestBuildUserMessage:
 class TestAppendCommentary:
     def _make_entry(self, text: str = MOCK_NOTE, idx: int = 0) -> dict:
         return {
-            "ts": f"2026-05-0{idx+1}T00:00:00Z",
+            "ts": f"2026-05-0{idx + 1}T00:00:00Z",
             "text": text,
             "model": "llama-3.3-70b-versatile",
             "prompt_hash": f"abc{idx:09d}",

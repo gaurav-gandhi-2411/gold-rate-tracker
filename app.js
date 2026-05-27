@@ -611,85 +611,88 @@ function renderMethodology(fc, bt, drift) {
     </div>
   `);
 
-  // Model status banners (warmup / trailing)
-  if (fc) {
-    const threshold = fc.ensemble?.min_readings_for_warmup_clear ?? 30;
-    const realCount = fc.real_readings_count || 0;
-    if (fc.warmup) {
-      parts.push(`
-        <div class="meth-banner meth-banner--warn">
-          ⚠ Model in warmup — forecast unreliable until ${threshold}+ real readings collected.
-          Current: ${realCount} (${Math.max(0, threshold - realCount)} more needed).
-        </div>
-      `);
-    }
-    if (fc.model_status && fc.model_status !== "beating_naive" && fc.model_status !== "unknown") {
-      const vMae = fc.val_mae  != null ? `₹${fmtINR(Math.round(fc.val_mae))}`  : "—";
-      const nMae = fc.naive_mae != null ? `₹${fmtINR(Math.round(fc.naive_mae))}` : "—";
-      const gate = fc.min_readings_for_model_improvement ?? 200;
-      parts.push(`
-        <div class="meth-banner meth-banner--info">
-          Model trailing naive baseline (val MAE ${vMae} vs naive ${nMae}).
-          Improvement gated on ${gate}+ real readings (current: ${realCount}).
-        </div>
-      `);
-    }
-  }
-
   // Forecast details
-  if (fc && typeof fc.predicted_22k === "number") {
-    const hasPI = typeof fc.lower === "number" && typeof fc.upper === "number";
+  if (fc && typeof (fc.headline?.predicted_22k ?? fc.predicted_22k) === "number") {
+    const pred22k = fc.headline?.predicted_22k ?? fc.predicted_22k;
+    const lower   = fc.headline?.lower ?? fc.lower;
+    const upper   = fc.headline?.upper ?? fc.upper;
+    const hasPI   = typeof lower === "number" && typeof upper === "number";
     parts.push(`
       <div class="meth-section">
-        <h3 class="meth-heading">Next-day forecast (LightGBM)</h3>
+        <h3 class="meth-heading">5-day forecast (naive flat-hold)</h3>
         <div class="meth-stats">
           <div class="meth-stat">
             <div class="meth-stat-label">22K estimate</div>
-            <div class="meth-stat-value">₹${fmtINR(fc.predicted_22k)}</div>
-            ${hasPI ? `<div class="meth-stat-sub">80% PI: ₹${fmtINR(fc.lower)} – ₹${fmtINR(fc.upper)}</div>` : ""}
+            <div class="meth-stat-value">₹${fmtINR(pred22k)}</div>
+            ${hasPI ? `<div class="meth-stat-sub">80% PI: ₹${fmtINR(lower)} – ₹${fmtINR(upper)}</div>` : ""}
           </div>
           <div class="meth-stat">
-            <div class="meth-stat-label">Training rows</div>
-            <div class="meth-stat-value">${fc.training_rows ?? "—"}</div>
-            <div class="meth-stat-sub">${fc.real_readings_count ?? 0} real · ${(fc.training_rows ?? 0) - (fc.real_readings_count ?? 0)} seed</div>
-          </div>
-          <div class="meth-stat">
-            <div class="meth-stat-label">Features</div>
-            <div class="meth-stat-value">${fc.feature_count ?? "—"}</div>
-            <div class="meth-stat-sub">model: ${fc.model_version ?? "—"}</div>
+            <div class="meth-stat-label">Method</div>
+            <div class="meth-stat-value">Naive flat-hold</div>
+            <div class="meth-stat-sub">PI from conformal 80% of last 30 naive errors</div>
           </div>
         </div>
         ${fc.target_time ? `<p class="meth-text" style="margin-top:8px">Target: ${fmtIST(fc.target_time)}</p>` : ""}
+        <p class="meth-text" style="margin-top:12px">These prediction intervals are intentionally wide: they cover a 5-day window using the 80th percentile of recent naive 5-day errors (conformal PI per ADR 014), not a single-day forecast.</p>
       </div>
     `);
   }
 
-  // Backtest stats
-  if (bt && bt.model) {
-    const m       = bt.model;
-    const b       = bt.baseline;
-    const maeDiff = b ? Math.round(m.mae - b.mae)                              : null;
-    const dirDiff = b ? Math.round((m.direction_acc - b.direction_acc) * 100)  : null;
+  // Chronos directional companion
+  if (fc?.chronos_companion?.status === "success") {
+    const cc = fc.chronos_companion;
     parts.push(`
       <div class="meth-section">
-        <h3 class="meth-heading">90-day walk-forward backtest (${bt.folds ?? "—"} folds)</h3>
+        <h3 class="meth-heading">Chronos directional signal (companion)</h3>
+        <div class="meth-stats">
+          <div class="meth-stat">
+            <div class="meth-stat-label">5d lean</div>
+            <div class="meth-stat-value">${cc.lean_direction || "—"}</div>
+            <div class="meth-stat-sub">±${cc.lean_strength_pct.toFixed(1)}% magnitude</div>
+          </div>
+          <div class="meth-stat">
+            <div class="meth-stat-label">Direction accuracy (last 30 folds)</div>
+            <div class="meth-stat-value">${(cc.direction_acc_30f * 100).toFixed(1)}%</div>
+            <div class="meth-stat-sub">naive baseline: 50%</div>
+          </div>
+          <div class="meth-stat">
+            <div class="meth-stat-label">Calibration</div>
+            <div class="meth-stat-value">${cc.calibration_applied ? "applied" : "pending"}</div>
+            <div class="meth-stat-sub">${cc.model_version}</div>
+          </div>
+        </div>
+        <p class="meth-note">Directional signal only — Chronos lean does not change the headline prediction. Used to gate notifications when momentum confirms direction.</p>
+      </div>
+    `);
+  } else if (fc?.chronos_companion?.status === "failed") {
+    parts.push(`<p class="meth-text">Chronos signal unavailable.</p>`);
+  }
+
+  // Backtest stats
+  if (bt && typeof bt.mae_5d_avg_chronos === "number") {
+    const maeDiff = Math.round(bt.mae_5d_avg_chronos - bt.mae_5d_avg_naive);
+    const dirDiff = Math.round((bt.dir_acc_5d_chronos - bt.dir_acc_5d_naive) * 100);
+    parts.push(`
+      <div class="meth-section">
+        <h3 class="meth-heading">Walk-forward backtest (h=5) (${bt.n_folds ?? "—"} folds)</h3>
         <div class="meth-stats">
           <div class="meth-stat">
             <div class="meth-stat-label">MAE</div>
-            <div class="meth-stat-value">₹${fmtINR(Math.round(m.mae))}</div>
-            ${maeDiff !== null ? `<div class="meth-stat-sub">${maeDiff >= 0 ? "+" : ""}₹${fmtINR(Math.abs(maeDiff))} vs naive (₹${fmtINR(Math.round(b.mae))})</div>` : ""}
+            <div class="meth-stat-value">₹${fmtINR(Math.round(bt.mae_5d_avg_chronos))}</div>
+            <div class="meth-stat-sub">${maeDiff >= 0 ? "+" : ""}₹${fmtINR(Math.abs(maeDiff))} vs naive (₹${fmtINR(Math.round(bt.mae_5d_avg_naive))})</div>
           </div>
           <div class="meth-stat">
             <div class="meth-stat-label">Direction</div>
-            <div class="meth-stat-value">${Math.round(m.direction_acc * 100)}%</div>
-            ${dirDiff !== null ? `<div class="meth-stat-sub">${dirDiff >= 0 ? "+" : ""}${dirDiff}pp vs naive (${Math.round(b.direction_acc * 100)}%)</div>` : ""}
+            <div class="meth-stat-value">${Math.round(bt.dir_acc_5d_chronos * 100)}%</div>
+            <div class="meth-stat-sub">${dirDiff >= 0 ? "+" : ""}${dirDiff}pp vs naive (${Math.round(bt.dir_acc_5d_naive * 100)}%)</div>
           </div>
           <div class="meth-stat">
-            <div class="meth-stat-label">MAPE</div>
-            <div class="meth-stat-value">${m.mape != null ? m.mape.toFixed(2) + "%" : "—"}</div>
+            <div class="meth-stat-label">Wilcoxon p</div>
+            <div class="meth-stat-value">${bt.wilcoxon_signed_rank_p != null ? bt.wilcoxon_signed_rank_p.toFixed(4) : "—"}</div>
+            <div class="meth-stat-sub">paired test, model vs naive</div>
           </div>
         </div>
-        <p class="meth-note">Naive baseline = predict last value unchanged. Not financial advice. Model partially trained on estimated seed data.</p>
+        <p class="meth-note">Naive baseline = predict last value unchanged. Per ADR 012, naive beats Chronos on 5d MAE (Wilcoxon p=0.0089 over 165 folds); naive is the production headline. Chronos kept as a directional companion.</p>
       </div>
     `);
   }

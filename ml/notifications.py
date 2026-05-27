@@ -27,15 +27,16 @@ FORECAST_JSON = DATA_DIR / "forecast.json"
 PROBE_JSON = DATA_DIR / "chronos_probe.json"
 PRICES_JSON = DATA_DIR / "prices.json"
 BACKTEST_JSON = DATA_DIR / "backtest.json"
+CALIBRATION_JSON = DATA_DIR / "calibration.json"
 STATE_PATH = DATA_DIR / "notification_state.json"
 
 IST = ZoneInfo("Asia/Kolkata")
 _NTFY_BASE = "https://ntfy.sh"
 _CLICK_URL = "https://gaurav-gandhi-2411.github.io/gold-rate-tracker/"
-_QUIET_START_H = 22        # 22:00 IST
-_QUIET_END_H = 7           # 07:00 IST
-_MAX_QUEUE_AGE_H = 12      # discard queued alerts older than this
-_MAX_T123_PER_24H = 3      # T1+T2+T3 combined cap
+_QUIET_START_H = 22  # 22:00 IST
+_QUIET_END_H = 7  # 07:00 IST
+_MAX_QUEUE_AGE_H = 12  # discard queued alerts older than this
+_MAX_T123_PER_24H = 3  # T1+T2+T3 combined cap
 
 SCHEMA_VERSION = 1
 
@@ -55,7 +56,7 @@ class PendingAlert:
     priority: int
     tags: list[str]
     click_url: str
-    queued_at: str      # ISO8601 datetime string (IST timezone)
+    queued_at: str  # ISO8601 datetime string (IST timezone)
     bypass_quiet: bool
 
     def to_dict(self) -> dict:
@@ -69,7 +70,7 @@ class PendingAlert:
 @dataclass
 class SentAlert:
     trigger_id: str
-    sent_at: str        # ISO8601 datetime string (UTC)
+    sent_at: str  # ISO8601 datetime string (UTC)
     title: str
     success: bool
 
@@ -85,6 +86,8 @@ class NotificationState:
     sent_today: list[dict] = field(default_factory=list)
     # IST date YYYY-MM-DD of last T5 send (once-per-day dedup)
     last_t5_ist_date: str = ""
+    # IST date YYYY-MM-DD of when T6 first fired (calibration unlocked notification — fires once ever)
+    last_t6_fired_date_ist: str = ""
 
 
 # ---------------------------------------------------------------------------
@@ -104,6 +107,7 @@ def load_state(path: Path = STATE_PATH) -> NotificationState:
             queued=raw.get("queued", []),
             sent_today=raw.get("sent_today", []),
             last_t5_ist_date=raw.get("last_t5_ist_date", ""),
+            last_t6_fired_date_ist=raw.get("last_t6_fired_date_ist", ""),
         )
     except Exception as exc:
         logger.warning("Could not load notification state (%s) — using fresh state.", exc)
@@ -119,6 +123,7 @@ def save_state(state: NotificationState, path: Path = STATE_PATH) -> None:
         "queued": state.queued,
         "sent_today": state.sent_today,
         "last_t5_ist_date": state.last_t5_ist_date,
+        "last_t6_fired_date_ist": state.last_t6_fired_date_ist,
     }
     path.write_text(json.dumps(data, indent=2) + "\n", encoding="utf-8")
 
@@ -157,8 +162,7 @@ def _count_sent(
     """Count sends for the given trigger IDs within the past window_hours."""
     cutoff = (datetime.now(UTC) - timedelta(hours=window_hours)).isoformat()
     return sum(
-        1 for s in state.sent_today
-        if s["trigger_id"] in trigger_ids and s["sent_at"] >= cutoff
+        1 for s in state.sent_today if s["trigger_id"] in trigger_ids and s["sent_at"] >= cutoff
     )
 
 
@@ -241,9 +245,10 @@ def compute_dir_acc_30f(backtest: dict) -> float:
         return 0.0
     recent = folds[-30:]
     correct = sum(
-        1 for fold in recent
-        if (fold["chronos_p50"][-1] - fold["naive"][0])
-        * (fold["actuals"][-1] - fold["naive"][0]) > 0
+        1
+        for fold in recent
+        if (fold["chronos_p50"][-1] - fold["naive"][0]) * (fold["actuals"][-1] - fold["naive"][0])
+        > 0
     )
     return correct / len(recent)
 
@@ -274,8 +279,12 @@ def _check_t1(
     # inference path.
     if backtest.get("n_folds", 0) < 30:
         return None
-    direction, strength = compute_chronos_lean(probe)
-    if direction != "down" or strength < 0.5:
+    _direction, strength = compute_chronos_lean(probe)
+    majority_dir = probe.get("majority_direction")
+    consensus = probe.get("direction_consensus", 0.0)
+    # Phi4: gate on multi-sample majority consensus (>= 0.6) instead of single-sample direction.
+    # strength check stays — it's an independent magnitude threshold.
+    if majority_dir != "down" or consensus < 0.6 or strength < 0.5:
         return None
     mom_dir, mom_pct = compute_recent_momentum(prices)
     if mom_dir != "down":
@@ -288,6 +297,7 @@ def _check_t1(
         f"22K spot Rs.{current}. "
         f"Last 7d trend: {mom_pct:+.1f}%. "
         f"Chronos lean: {strength:.1f}% over 5d. "
+        f"Consensus: {consensus:.0%}. "
         "This is a directional signal, not a price forecast. "
         "Check the dashboard for full context."
     )
@@ -311,8 +321,12 @@ def _check_t2(
         return None
     if backtest.get("n_folds", 0) < 30:
         return None
-    direction, strength = compute_chronos_lean(probe)
-    if direction != "up" or strength < 0.5:
+    _direction, strength = compute_chronos_lean(probe)
+    majority_dir = probe.get("majority_direction")
+    consensus = probe.get("direction_consensus", 0.0)
+    # Phi4: gate on multi-sample majority consensus (>= 0.6) instead of single-sample direction.
+    # strength check stays — it's an independent magnitude threshold.
+    if majority_dir != "up" or consensus < 0.6 or strength < 0.5:
         return None
     mom_dir, mom_pct = compute_recent_momentum(prices)
     if mom_dir != "up":
@@ -325,6 +339,7 @@ def _check_t2(
         f"22K spot Rs.{current}. "
         f"Last 7d trend: {mom_pct:+.1f}%. "
         f"Chronos lean: {strength:.1f}% over 5d. "
+        f"Consensus: {consensus:.0%}. "
         "This is a directional signal, not a price forecast. "
         "Check the dashboard for full context."
     )
@@ -363,7 +378,9 @@ def _check_t3(
         f"22K moved from Rs.{prev} to Rs.{current} ({pct:+.1f}%). "
         "Model-agnostic price alert. Check the dashboard for context."
     )
-    return _make_alert("T3", title, body, priority, ["warning", "chart_with_upwards_trend"], now_ist)
+    return _make_alert(
+        "T3", title, body, priority, ["warning", "chart_with_upwards_trend"], now_ist
+    )
 
 
 def _check_t4(
@@ -409,7 +426,9 @@ def _check_t4(
         f"Backtest ({n_folds} folds): Chronos MAE Rs.{mae_c:.0f} vs Naive Rs.{mae_n:.0f}."
         + (extra or " See dashboard for full context.")
     )
-    return _make_alert("T4", title, body, 2, ["newspaper", "white_flower"], now_ist, bypass_quiet=True)
+    return _make_alert(
+        "T4", title, body, 2, ["newspaper", "white_flower"], now_ist, bypass_quiet=True
+    )
 
 
 def _check_t5(
@@ -429,10 +448,10 @@ def _check_t5(
     if state.last_t5_ist_date == today_ist:
         return None
     if fallback:
-        title = "Gold forecast: Chronos failed, LightGBM fallback active"
+        title = "Gold forecast: inference path failed"
         body = (
-            "Chronos path failed this CI cycle. LightGBM legacy fallback is running. "
-            "Check CI logs for root cause."
+            "Chronos probe failed and model_fallback is set. "
+            "Forecast may be stale. Check CI logs for root cause."
         )
     else:
         title = "Gold forecast: Chronos probe failed"
@@ -441,6 +460,33 @@ def _check_t5(
             "Directional signal unavailable. Check CI logs."
         )
     return _make_alert("T5", title, body, 2, ["warning", "rotating_light"], now_ist)
+
+
+def _check_t6(
+    calibration: dict | None,
+    state: NotificationState,
+    now_ist: datetime,
+) -> PendingAlert | None:
+    """T6 — Calibration unlocked: fires once ever when calibration.valid first becomes True.
+
+    Fires at most once per lifetime (deduped via state.last_t6_fired_date_ist).
+    Priority 3 (informational). ASCII-only body.
+    """
+    if not calibration:
+        return None
+    if not calibration.get("valid"):
+        return None
+    # Already fired previously — covers both same-day repeat and lifetime-already-fired
+    if state.last_t6_fired_date_ist:
+        return None
+    n_obs = calibration.get("n_observations", 0)
+    title = "Gold forecast: calibration unlocked"
+    body = (
+        f"IBJA->Tanishq calibration achieved {n_obs} overlap pairs (>=30). "
+        "Chronos directional companion is now calibrated to Tanishq units. "
+        "See dashboard."
+    )
+    return _make_alert("T6", title, body, 3, ["unlock", "white_check_mark"], now_ist)
 
 
 # ---------------------------------------------------------------------------
@@ -455,18 +501,25 @@ def check_triggers(
     backtest: dict,
     state: NotificationState,
     now_ist: datetime,
+    calibration: dict | None = None,
 ) -> list[PendingAlert]:
-    """Evaluate all triggers; return new alerts for this call.
+    """Evaluate all triggers (T1–T6); return new alerts for this call.
 
     Cooldowns and combined caps are enforced here.  Quiet-hours queuing and
     delivery of previously queued alerts is the caller's responsibility (see
     queue_for_quiet_hours and the main() orchestration).
+
+    calibration: optional dict from calibration.json. When provided and valid,
+        triggers T6 (calibration-unlocked, fires once ever).
     """
     alerts: list[PendingAlert] = []
     for fn in (_check_t1, _check_t2, _check_t3, _check_t4, _check_t5):
         alert = fn(forecast, probe, prices, backtest, state, now_ist)
         if alert is not None:
             alerts.append(alert)
+    t6 = _check_t6(calibration, state, now_ist)
+    if t6 is not None:
+        alerts.append(t6)
     return alerts
 
 
@@ -515,16 +568,20 @@ def send_pending(
             state.sent_today.append({"trigger_id": alert.trigger_id, "sent_at": sent_at})
             if alert.trigger_id == "T5":
                 state.last_t5_ist_date = now_ist.strftime("%Y-%m-%d")
+            if alert.trigger_id == "T6":
+                state.last_t6_fired_date_ist = now_ist.strftime("%Y-%m-%d")
             logger.info("Sent %s: %s", alert.trigger_id, alert.title)
         else:
             logger.warning("Failed to send %s", alert.trigger_id)
 
-        sent.append(SentAlert(
-            trigger_id=alert.trigger_id,
-            sent_at=sent_at,
-            title=alert.title,
-            success=success,
-        ))
+        sent.append(
+            SentAlert(
+                trigger_id=alert.trigger_id,
+                sent_at=sent_at,
+                title=alert.title,
+                success=success,
+            )
+        )
 
     return sent
 
@@ -575,11 +632,14 @@ def main() -> None:
     logging.basicConfig(level=logging.INFO, format="%(levelname)s: %(message)s")
     parser = argparse.ArgumentParser(description="Gold rate notification system (T1-T5)")
     parser.add_argument(
-        "--simulate", action="store_true",
+        "--simulate",
+        action="store_true",
         help="Evaluate triggers and print results without sending or saving state",
     )
     parser.add_argument(
-        "--state-path", type=Path, default=STATE_PATH,
+        "--state-path",
+        type=Path,
+        default=STATE_PATH,
         help="Path to notification_state.json (default: data/notification_state.json)",
     )
     args = parser.parse_args()
@@ -594,20 +654,23 @@ def main() -> None:
     probe = _load(PROBE_JSON, {"status": "missing"})
     prices = _load(PRICES_JSON, [])
     backtest = _load(BACKTEST_JSON, {})
+    calibration = _load(CALIBRATION_JSON, {}) or {}
     state = load_state(args.state_path)
     now_ist = datetime.now(IST)
 
     # Prune stale entries before trigger evaluation
     _prune_sent_today(state)
 
-    new_alerts = check_triggers(forecast, probe, prices, backtest, state, now_ist)
+    new_alerts = check_triggers(
+        forecast, probe, prices, backtest, state, now_ist, calibration=calibration
+    )
 
     if args.simulate:
         in_quiet = _is_quiet_hours(now_ist)
         dir_acc = compute_dir_acc_30f(backtest)
         lean_dir, lean_str = compute_chronos_lean(probe)
         mom_dir, mom_pct = compute_recent_momentum(prices)
-        print(f"\n=== Notification Simulation ===")
+        print("\n=== Notification Simulation ===")
         print(f"Now IST:      {now_ist.strftime('%Y-%m-%d %H:%M')} (quiet hours: {in_quiet})")
         print(f"Dir acc 30f:  {dir_acc:.3f}  (gate: >= 0.55)")
         print(f"Chronos lean: {lean_dir} ({lean_str:.2f}%)")

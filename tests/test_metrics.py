@@ -3,7 +3,6 @@
 from pathlib import Path
 
 import numpy as np
-
 from ml.metrics import (
     DROP_THRESHOLD,
     OUTCOME_WINDOW,
@@ -314,9 +313,9 @@ def test_mae_per_horizon_basic():
     actuals = np.array([[10.0, 20.0, 30.0], [10.0, 20.0, 30.0]])
     preds = np.array([[12.0, 18.0, 33.0], [8.0, 22.0, 27.0]])
     mae = compute_mae_per_horizon(actuals, preds)
-    assert abs(mae[0] - 2.0) < 1e-6   # mean(|12-10|, |8-10|)
-    assert abs(mae[1] - 2.0) < 1e-6   # mean(|18-20|, |22-20|)
-    assert abs(mae[2] - 3.0) < 1e-6   # mean(|33-30|, |27-30|)
+    assert abs(mae[0] - 2.0) < 1e-6  # mean(|12-10|, |8-10|)
+    assert abs(mae[1] - 2.0) < 1e-6  # mean(|18-20|, |22-20|)
+    assert abs(mae[2] - 3.0) < 1e-6  # mean(|33-30|, |27-30|)
 
 
 def test_mae_per_horizon_perfect():
@@ -332,7 +331,7 @@ def test_dir_acc_h5_all_correct():
     from ml.metrics import compute_dir_acc_h5
 
     context_lasts = np.array([100.0, 100.0, 100.0])
-    p50_h5 = np.array([110.0, 90.0, 105.0])   # +, -, +
+    p50_h5 = np.array([110.0, 90.0, 105.0])  # +, -, +
     actuals_h5 = np.array([115.0, 85.0, 108.0])  # +, -, +
     assert compute_dir_acc_h5(context_lasts, p50_h5, actuals_h5) == 1.0
 
@@ -342,8 +341,8 @@ def test_dir_acc_h5_all_wrong():
     from ml.metrics import compute_dir_acc_h5
 
     context_lasts = np.array([100.0, 100.0])
-    p50_h5 = np.array([110.0, 90.0])   # predicted up, predicted down
-    actuals_h5 = np.array([90.0, 110.0])   # actual down, actual up
+    p50_h5 = np.array([110.0, 90.0])  # predicted up, predicted down
+    actuals_h5 = np.array([90.0, 110.0])  # actual down, actual up
     assert compute_dir_acc_h5(context_lasts, p50_h5, actuals_h5) == 0.0
 
 
@@ -352,7 +351,7 @@ def test_dir_acc_h5_zero_actual_move_counted_wrong():
     from ml.metrics import compute_dir_acc_h5
 
     context_lasts = np.array([100.0])
-    p50_h5 = np.array([110.0])   # predicted up
+    p50_h5 = np.array([110.0])  # predicted up
     actuals_h5 = np.array([100.0])  # actual no move → zero → wrong
     assert compute_dir_acc_h5(context_lasts, p50_h5, actuals_h5) == 0.0
 
@@ -401,7 +400,7 @@ def test_decision_accuracy_h5_zero_actual():
     from ml.metrics import compute_decision_accuracy_h5
 
     context_lasts = np.array([14000.0, 14000.0])
-    p50 = np.array([[13800.0] * 5, [13850.0] * 5])   # both predict big drops
+    p50 = np.array([[13800.0] * 5, [13850.0] * 5])  # both predict big drops
     actuals = np.array([[14100.0] * 5, [14050.0] * 5])  # no actual drops
     result = compute_decision_accuracy_h5(context_lasts, p50, actuals)
     assert result["n_chronos_predicted_100_drop"] == 2
@@ -416,7 +415,7 @@ def test_decision_accuracy_h5_perfect():
     from ml.metrics import compute_decision_accuracy_h5
 
     context_lasts = np.array([14000.0, 14000.0])
-    p50 = np.array([[13800.0] * 5, [13850.0] * 5])   # both predict drops >=100
+    p50 = np.array([[13800.0] * 5, [13850.0] * 5])  # both predict drops >=100
     actuals = np.array([[13700.0] * 5, [13750.0] * 5])  # both have actual drops >=100
     result = compute_decision_accuracy_h5(context_lasts, p50, actuals)
     assert result["precision"] == 1.0

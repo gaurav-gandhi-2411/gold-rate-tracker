@@ -136,11 +136,11 @@ def test_append_does_not_duplicate(tmp_path, monkeypatch):
     assert len(pd.read_parquet(p)) == 1
 
 
-def test_append_returns_false_on_fetch_failure(tmp_path, monkeypatch):
+def test_append_returns_none_on_fetch_failure(tmp_path, monkeypatch):
     monkeypatch.setattr("time.sleep", lambda _: None)
     monkeypatch.setattr(ibja, "_get_with_retry", lambda _h: None)
     p = tmp_path / "ibja.parquet"
-    assert ibja.append_ibja_today(p) is False
+    assert ibja.append_ibja_today(p) is None
     assert not p.exists()
 
 
