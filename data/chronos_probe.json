@@ -1,11 +1,11 @@
 {
-  "probed_at": "2026-05-27T15:29:21.353193+00:00",
+  "probed_at": "2026-05-27T19:02:13.368931+00:00",
   "status": "success",
   "wall_clock_ms": {
-    "pipeline_load": 10427,
-    "forecast": 17,
+    "pipeline_load": 9112,
+    "forecast": 66,
     "calibration": 0,
-    "total": 10467
+    "total": 9197
   },
   "ibja_context_days": 177,
   "ibja_last_date": "2026-05-18",
@@ -52,5 +52,15 @@
   "calibration_valid": false,
   "tanishq_forecast": null,
   "model_version": "amazon/chronos-bolt-tiny@a0e552de",
-  "schema_version": 1
+  "schema_version": 2,
+  "num_samples": 5,
+  "sample_directions": [
+    "up",
+    "up",
+    "up",
+    "up",
+    "up"
+  ],
+  "majority_direction": "up",
+  "direction_consensus": 1.0
 }
