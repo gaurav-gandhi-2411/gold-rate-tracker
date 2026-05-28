@@ -10,6 +10,7 @@ from datetime import UTC, datetime, timedelta
 from unittest.mock import MagicMock
 from zoneinfo import ZoneInfo
 
+import pytest
 from ml.inference import _build_chronos_companion
 from ml.notifications import (
     NotificationState,
@@ -238,3 +239,43 @@ def test_t6_same_day_rerun_dedup(monkeypatch):
         forecast, probe, prices, backtest, state, next_day, calibration=calibration
     )
     assert not any(a.trigger_id == "T6" for a in alerts_run3)
+
+
+def test_companion_propagates_v2_probe_fields():
+    """majority_direction and direction_consensus from a v2 probe propagate to companion."""
+    probe = _probe_success()
+    probe["majority_direction"] = "up"
+    probe["direction_consensus"] = 0.8
+    backtest = _backtest_accurate(30)
+    calibration = _calibration_invalid()
+
+    result = _build_chronos_companion(probe, backtest, calibration, None)
+
+    assert result["majority_direction"] == "up"
+    assert result["direction_consensus"] == pytest.approx(0.8)
+    assert result["status"] == "success"
+
+
+def test_companion_v2_fields_default_on_missing_probe_fields():
+    """When probe lacks v2 fields, companion defaults to neutral/0.0."""
+    probe = _probe_success()  # no majority_direction or direction_consensus keys
+    backtest = _backtest_accurate(30)
+    calibration = _calibration_invalid()
+
+    result = _build_chronos_companion(probe, backtest, calibration, None)
+
+    assert result["majority_direction"] == "neutral"
+    assert result["direction_consensus"] == 0.0
+
+
+def test_companion_failed_probe_has_default_v2_fields():
+    """Failed probe early-return dict includes majority_direction and direction_consensus."""
+    probe = {"status": "failed"}
+    backtest = _backtest_accurate(30)
+    calibration = _calibration_invalid()
+
+    result = _build_chronos_companion(probe, backtest, calibration, None)
+
+    assert result["status"] == "failed"
+    assert result["majority_direction"] == "neutral"
+    assert result["direction_consensus"] == 0.0

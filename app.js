@@ -455,6 +455,67 @@ function renderCommentary(entries) {
   }
 }
 
+function renderModelSignal(fc) {
+  const section = document.getElementById("model-signal-section");
+  if (!section) return;
+
+  const cc = fc?.chronos_companion;
+  if (!cc || cc.status !== "success") {
+    section.hidden = true;
+    return;
+  }
+
+  const dir        = cc.lean_direction ?? "neutral";
+  const arrow      = dir === "up" ? "▲" : dir === "down" ? "▼" : "—";
+  const arrowColor = dir === "up" ? "var(--up)" : dir === "down" ? "var(--down)" : "var(--cream-mute)";
+  const dirLabel   = dir === "up" ? "Up" : dir === "down" ? "Down" : "Neutral";
+
+  const strength = typeof cc.lean_strength_pct === "number"
+    ? cc.lean_strength_pct.toFixed(1) + "%"
+    : "—";
+  const dirAcc = typeof cc.direction_acc_30f === "number"
+    ? Math.round(cc.direction_acc_30f * 100) + "%"
+    : "—";
+
+  // num_samples assumed 5 per Φ4 spec (not propagated to companion block separately)
+  let consensusText = "—";
+  if (typeof cc.direction_consensus === "number" && typeof cc.majority_direction === "string") {
+    const numSamples     = 5;
+    const majorityCount  = Math.round(cc.direction_consensus * numSamples);
+    consensusText        = `${majorityCount} of ${numSamples} samples agree`;
+  }
+
+  const calTag = cc.calibration_applied
+    ? "Calibrated to retail"
+    : "Uncalibrated (gate at 30 IBJA-Tanishq pairs)";
+
+  const body = document.getElementById("model-signal-body");
+  // XSS-safe: all interpolated values are numbers, booleans, or hardcoded label strings
+  // derived from forecast.json. No external text or LLM content reaches this template.
+  body.innerHTML = `
+    <div class="meth-stats">
+      <div class="meth-stat">
+        <div class="meth-stat-label">5-day lean</div>
+        <div class="meth-stat-value" style="color:${arrowColor}">${arrow} ${dirLabel}</div>
+        <div class="meth-stat-sub">Strength: ${strength}</div>
+      </div>
+      <div class="meth-stat">
+        <div class="meth-stat-label">Direction accuracy</div>
+        <div class="meth-stat-value">${dirAcc}</div>
+        <div class="meth-stat-sub">last 30 folds · naive: 50%</div>
+      </div>
+      <div class="meth-stat">
+        <div class="meth-stat-label">Consensus</div>
+        <div class="meth-stat-value">${consensusText}</div>
+        <div class="meth-stat-sub">${calTag}</div>
+      </div>
+    </div>
+    <p class="meth-note" style="margin-top:8px">Status notification at least every 3 days (T7). Directional signal only — does not change the headline price prediction.</p>
+  `;
+
+  section.hidden = false;
+}
+
 function renderChart(readings, range) {
   let filtered = readings;
   if (range !== "all") {
@@ -786,6 +847,7 @@ function bindRangeToggle() {
   const fc = await fcPromise;
   renderHero(allReadings, fc);
   renderStaleBanner(fc);
+  renderModelSignal(fc);
 
   // Remaining optional data (all gracefully degrade on failure).
   const [bt, commentary, drift] = await Promise.allSettled([

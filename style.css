@@ -461,6 +461,7 @@ main {
 /* ═══════════════════════════════════════════════════════════════
    6. TREND CHART
 ═══════════════════════════════════════════════════════════════ */
+.model-signal-section { margin-bottom: clamp(var(--space-7), 8vw, var(--space-8)); }
 .chart-section { margin-bottom: clamp(var(--space-7), 8vw, var(--space-8)); }
 .chart-header {
   display: flex;
