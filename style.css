@@ -505,7 +505,10 @@ main {
 .range-toggle button:hover { color: var(--cream); }
 .range-toggle button.active { background: var(--gold); color: var(--ink); }
 .chart-wrap {
-  padding: var(--space-3) var(--space-1);
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-lg);
+  padding: var(--space-5);
   aspect-ratio: 16 / 5;
 }
 
@@ -824,7 +827,7 @@ main {
   .comparison-cards .comparison-card:last-child { grid-column: 1 / -1; }
 
   /* Chart */
-  .chart-wrap { aspect-ratio: 3 / 2; padding: var(--space-2) var(--space-1); }
+  .chart-wrap { aspect-ratio: 3 / 2; padding: var(--space-4); }
   .range-toggle button { padding: 10px 16px; min-height: 44px; min-width: 44px; }
 
   /* Karat strip stays 2-col — no change needed */
