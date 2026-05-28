@@ -827,7 +827,7 @@ Mobile-first visual redesign targeting iPhone 14 Plus (428×926). User explicitl
 
 **Visual verification (Pass 3):** All 15 criteria pass at 428×926 (iPhone 14 Plus), 768×1024 (tablet), 1280×900 (desktop). No regressions on wider viewports. Borderless chart verdict confirmed "open and intentional" at all three widths.
 
-**Files changed:** `index.html` (Syne font import), `style.css` (13 targeted changes — 120 insertions), `app.js` (4 render function rewrites — 112 insertions). Zero backend files touched (`ml/`, `data/*.json`, `.github/workflows/`, `scraper/`). Lint CI: pending (PR Ψ2B #N).
+**Files changed:** `index.html` (Syne font import), `style.css` (13 targeted changes — 120 insertions), `app.js` (4 render function rewrites — 112 insertions). Zero backend files touched (`ml/`, `data/*.json`, `.github/workflows/`, `scraper/`). Lint CI: pass (2m41s). Merge commit: pending (#40).
 
 ### Phase 5 — Validate  ⏸️ NOT STARTED
 
