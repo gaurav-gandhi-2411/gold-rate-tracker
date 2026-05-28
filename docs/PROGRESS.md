@@ -807,6 +807,28 @@ Fixes the user-facing bug where the Chronos directional signal (lean direction, 
 
 **Visual verification:** Playwright headless screenshot confirmed `#model-signal-section hidden: false`, direction accuracy visible, "63%" value present, "Model signal" heading visible, lean direction "▲ Up" visible, history table 50 rows unaffected. Console errors: pre-existing Sentry CDN 404 (jsdelivr), identical pre/post Ψ2A, guarded by `if (typeof Sentry !== "undefined")`. Lint CI: pass (2m44s). Test count: 307 passed (290+ baseline + 3 new, 0 regressions). Merge commit: pending (#39).
 
+#### 4.6 PR Ψ2B — UI/UX modernization sprint (2026-05-29)
+
+Mobile-first visual redesign targeting iPhone 14 Plus (428×926). User explicitly disliked the History section and Price Trend chart; both were kept but redesigned. All data wiring, backend schemas, and buyer-perspective color semantics (terracotta=up=bad, sage=down=good) preserved unchanged.
+
+**Three-pass execution:** Pass 1 produced a design direction proposal in session (visual audit of current PWA at 428/768/1280px via Playwright, study of tanishq.co.in/gold-rate.html reference site). Consultant approved with two adjustments: keep desktop history table 5-column, skip Today/Yesterday column (delta already covers it). Pass 2 implemented. Pass 3 verified all 15 criteria via Playwright screenshots at all three viewports.
+
+**Design direction: "Signal over Noise."** Two distinct typographic voices: Fraunces (variable optical size, keeps) for price numbers — editorial warmth. Syne 700 (added via Google Fonts CDN) for section headings — architectural/geometric clarity. DM Sans continues for body text. Three-tier hierarchy eliminates the generic "everything is one font" look.
+
+**Palette:** Dark mode `--gold` brightened from `#D4932A` to `#E09B2E` (crisper amber at 160px display size). `--surface-alt: #1C1710` added for desktop table alternating rows. All existing terracotta/sage semantic tokens unchanged. Sparkline SVG colors corrected to match CSS tokens (`--up`/`--down`) which were previously mismatched (#7BC48A vs #6a9a72 etc).
+
+**History redesign (user's primary complaint):** Mobile: eliminated the `max-height: 420px; overflow: hidden auto` scroll-within-scroll container. New date-grouped timeline groups readings by IST calendar day with Syne uppercase dividers ("THU, 29 MAY · 4 READINGS"). Shows 3 days by default; "Show N more days" re-renders inline. Each card: time | price | delta in horizontal flex row — no 2-column grid. Desktop: kept all 5 columns (When/22K/24K/18K/Δ22K) per consultant direction; added alternating row tinting with `--surface-alt`. Column width tuned (first column 40%→35%). Today/Yesterday column from Tanishq reference study excluded — delta column already covers it, 6th column would crowd the table.
+
+**Chart redesign (user's primary complaint):** Mobile aspect ratio fixed from `4/3` (571px tall) to `3/2` (259px tall) — eliminates the chart dominating >60% of viewport. Full-bleed treatment: removed `background`, `border`, `border-radius` from `.chart-wrap` on all viewports. Pass 3 verdict: "open and intentional" (not "detached and floating") — the gold line's visual weight + section heading + range toggle buttons provide sufficient framing without a card box. Gold line brighter (`#E09B2E`), thicker (2→2.5px), gradient opacity 0.30→0.40.
+
+**Model signal redesign:** Replaced the repurposed `.meth-stats` grid (which made the signal look like methodology accordion overflow) with a dedicated `.signal-card` component. Left-border accent in `--up` (terracotta) or `--down` (sage) per lean direction. Syne 700 bold heading for the direction label (Up/Down), Fraunces for the arrow glyph. Stats row: direction accuracy · consensus count · calibration status in a single `flex-wrap` line. Methodology accordion still contains the full Chronos stats grid (unchanged).
+
+**Stale data indicator:** `:has(.freshness--stale)` on `.utility-row` adds a terracotta background wash when data is >8h old. Previously this was invisible muted-gray micro-text for the most actionable warning on the page.
+
+**Visual verification (Pass 3):** All 15 criteria pass at 428×926 (iPhone 14 Plus), 768×1024 (tablet), 1280×900 (desktop). No regressions on wider viewports. Borderless chart verdict confirmed "open and intentional" at all three widths.
+
+**Files changed:** `index.html` (Syne font import), `style.css` (13 targeted changes — 120 insertions), `app.js` (4 render function rewrites — 112 insertions). Zero backend files touched (`ml/`, `data/*.json`, `.github/workflows/`, `scraper/`). Lint CI: pass (2m41s). Merge commit: pending (#40).
+
 ### Phase 5 — Validate  ⏸️ NOT STARTED
 
 ### Phase 6 — Promote  ⏸️ NOT STARTED
@@ -856,6 +878,7 @@ Fixes the user-facing bug where the Chronos directional signal (lean direction, 
 | 2026-05-28 | PR Ψ2A — majority_direction/direction_consensus propagated to forecast.json.chronos_companion | CC (diagnosis-driven expansion) | Fields were in chronos_probe.json (Φ4) but not forwarded to forecast.json by inference.py._build_chronos_companion(). PWA uses forecast.json as sole data source; propagation was the clean fix vs loading a second JSON. Approved as in-scope expansion after Pass 1 diagnosis. |
 | 2026-05-28 | PR Ψ2A — Chronos companion section moved to always-visible page flow (#39) | CC | Root cause was render target inside collapsed <details> accordion. Fixed by adding #model-signal-section to main page flow between commentary and chart. Methodology accordion details retained. |
 | 2026-05-28 | PR E falsifiable bet resolved — Chronos lost | CC (evidence) | Bet placed at PR E merge (2026-05-19): Chronos predicted IBJA-916-PM = 14,118.69 INR/g on 2026-05-23 (−2.29% vs 14,448.9 baseline); naive predicted flat at 14,448.9. Actual outcome: price moved UP through the observation window. Chronos predicted a 2.29% drop; price rose instead. Verdict: Chronos lost cleanly. No impact on production routing — naive is already the declared headline (ADR 012). Consistent with the 165-fold backtest result (Chronos 10.4% worse than naive, p=0.0089). |
+| 2026-05-29 | Ψ2B chart border restored — full-bleed treatment detached in context | CC (reversibility criterion) | Pass 3 initial screenshots confirmed "open and intentional" for the chart in isolation. Pre-merge contextual screenshot (consultant requirement: chart with adjacent sections in same frame) showed chart floating between two bordered sections — signal card above, history card below. Without its own container the chart read as a broken component, not an editorial choice. Per pre-approved reversibility criterion ("don't ship a worse aesthetic to chase a more-modern one"), border/background/border-radius restored. Mobile 3/2 aspect ratio kept. |
 
 ---
 
