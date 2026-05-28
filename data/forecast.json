@@ -1,5 +1,5 @@
 {
-  "predicted_at": "2026-05-27T20:41:06.039592+00:00",
+  "predicted_at": "2026-05-28T02:43:43.667122+00:00",
   "target_window": "5d",
   "headline": {
     "method": "naive_flat_hold",
@@ -39,14 +39,14 @@
     "calibration_applied": false,
     "calibration_just_unlocked": false
   },
-  "real_readings_count": 114,
+  "real_readings_count": 115,
   "current_22k": 14420,
-  "scraped_at": "2026-05-27T20:40:47.086Z",
+  "scraped_at": "2026-05-28T02:43:26.090Z",
   "model_fallback": false,
   "predicted_22k": 14420,
   "lower": 13484,
   "upper": 15356,
-  "target_time": "2026-05-28T00:00:00+00:00",
+  "target_time": "2026-05-29T00:00:00+00:00",
   "model_status": "naive_headline",
   "model_version": "naive_flat_hold",
   "warmup": false
