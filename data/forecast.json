@@ -1,5 +1,5 @@
 {
-  "predicted_at": "2026-05-28T15:41:30.435299+00:00",
+  "predicted_at": "2026-05-28T19:20:26.157026+00:00",
   "target_window": "5d",
   "headline": {
     "method": "naive_flat_hold",
@@ -37,7 +37,9 @@
     ],
     "model_version": "amazon/chronos-bolt-tiny@a0e552de",
     "calibration_applied": false,
-    "calibration_just_unlocked": false
+    "calibration_just_unlocked": false,
+    "majority_direction": "up",
+    "direction_consensus": 1.0
   },
   "real_readings_count": 116,
   "current_22k": 14350,
