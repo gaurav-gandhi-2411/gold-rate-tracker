@@ -350,8 +350,8 @@ function renderSparkline(readings) {
   const fillPath = `M ${coords[0]} L ${coords.slice(1).join(" L ")} L ${lastX},${H} L ${firstX},${H} Z`;
 
   const trendDown = prices[prices.length - 1] <= prices[0];
-  const lineClr   = trendDown ? "#7BC48A" : "#E8896A";
-  const fillClr   = trendDown ? "rgba(123,196,138,0.18)" : "rgba(232,137,106,0.15)";
+  const lineClr   = trendDown ? "#6a9a72" : "#c66a4b";
+  const fillClr   = trendDown ? "rgba(106,154,114,0.18)" : "rgba(198,106,75,0.15)";
   const netChange = prices[prices.length - 1] - prices[0];
 
   svgEl.setAttribute("aria-label",
@@ -465,52 +465,47 @@ function renderModelSignal(fc) {
     return;
   }
 
-  const dir        = cc.lean_direction ?? "neutral";
-  const arrow      = dir === "up" ? "▲" : dir === "down" ? "▼" : "—";
-  const arrowColor = dir === "up" ? "var(--up)" : dir === "down" ? "var(--down)" : "var(--cream-mute)";
-  const dirLabel   = dir === "up" ? "Up" : dir === "down" ? "Down" : "Neutral";
+  const dir       = cc.lean_direction ?? "neutral";
+  const arrow     = dir === "up" ? "▲" : dir === "down" ? "▼" : "—";
+  const dirLabel  = dir === "up" ? "Up" : dir === "down" ? "Down" : "Neutral";
+  const cardClass = dir === "up" ? "signal-card--up" : dir === "down" ? "signal-card--down" : "";
 
   const strength = typeof cc.lean_strength_pct === "number"
-    ? cc.lean_strength_pct.toFixed(1) + "%"
-    : "—";
+    ? `${cc.lean_strength_pct.toFixed(1)}% lean`
+    : "";
   const dirAcc = typeof cc.direction_acc_30f === "number"
-    ? Math.round(cc.direction_acc_30f * 100) + "%"
+    ? `${Math.round(cc.direction_acc_30f * 100)}% direction accuracy (30f)`
     : "—";
 
-  // num_samples assumed 5 per Φ4 spec (not propagated to companion block separately)
   let consensusText = "—";
   if (typeof cc.direction_consensus === "number" && typeof cc.majority_direction === "string") {
-    const numSamples     = 5;
-    const majorityCount  = Math.round(cc.direction_consensus * numSamples);
-    consensusText        = `${majorityCount} of ${numSamples} samples agree`;
+    const majorityCount = Math.round(cc.direction_consensus * 5);
+    consensusText = `${majorityCount} of 5 samples agree`;
   }
 
   const calTag = cc.calibration_applied
-    ? "Calibrated to retail"
-    : "Uncalibrated (gate at 30 IBJA-Tanishq pairs)";
+    ? "Calibrated"
+    : "Uncalibrated (gate at 30 pairs)";
 
   const body = document.getElementById("model-signal-body");
   // XSS-safe: all interpolated values are numbers, booleans, or hardcoded label strings
   // derived from forecast.json. No external text or LLM content reaches this template.
   body.innerHTML = `
-    <div class="meth-stats">
-      <div class="meth-stat">
-        <div class="meth-stat-label">5-day lean</div>
-        <div class="meth-stat-value" style="color:${arrowColor}">${arrow} ${dirLabel}</div>
-        <div class="meth-stat-sub">Strength: ${strength}</div>
+    <div class="signal-card ${cardClass}">
+      <div class="signal-direction-row">
+        <span class="signal-arrow">${arrow}</span>
+        <span class="signal-label">${dirLabel}</span>
+        ${strength ? `<span class="signal-strength">${strength}</span>` : ""}
       </div>
-      <div class="meth-stat">
-        <div class="meth-stat-label">Direction accuracy</div>
-        <div class="meth-stat-value">${dirAcc}</div>
-        <div class="meth-stat-sub">last 30 folds · naive: 50%</div>
+      <div class="signal-stats-row">
+        <span>${dirAcc}</span>
+        <span class="signal-dot">·</span>
+        <span>${consensusText}</span>
+        <span class="signal-dot">·</span>
+        <span>${calTag}</span>
       </div>
-      <div class="meth-stat">
-        <div class="meth-stat-label">Consensus</div>
-        <div class="meth-stat-value">${consensusText}</div>
-        <div class="meth-stat-sub">${calTag}</div>
-      </div>
+      <p class="signal-note">Directional signal only — does not change the headline price prediction. System status updated at least every 3 days.</p>
     </div>
-    <p class="meth-note" style="margin-top:8px">Status notification at least every 3 days (T7). Directional signal only — does not change the headline price prediction.</p>
   `;
 
   section.hidden = false;
@@ -525,7 +520,7 @@ function renderChart(readings, range) {
   const labels = filtered.map(r => fmtDate(r.timestamp));
   const data22 = filtered.map(r => r["22k"]);
 
-  const goldLine  = "#D4932A";
+  const goldLine  = "#E09B2E";
   const axisColor = "#9a9282";
   const gridColor = "#3A3028";
   const ctx       = document.getElementById("chart");
@@ -533,8 +528,8 @@ function renderChart(readings, range) {
   if (chart) chart.destroy();
   const c2d      = ctx.getContext("2d");
   const gradient = c2d.createLinearGradient(0, 0, 0, ctx.height || 320);
-  gradient.addColorStop(0, "rgba(212,147,42,0.30)");
-  gradient.addColorStop(1, "rgba(212,147,42,0.00)");
+  gradient.addColorStop(0, "rgba(224,155,46,0.40)");
+  gradient.addColorStop(1, "rgba(224,155,46,0.00)");
 
   chart = new Chart(ctx, {
     type: "line",
@@ -546,7 +541,7 @@ function renderChart(readings, range) {
         borderColor: goldLine,
         backgroundColor: gradient,
         fill: true,
-        borderWidth: 2,
+        borderWidth: 2.5,
         pointRadius: filtered.length > 30 ? 0 : 3,
         pointBackgroundColor: goldLine,
         pointBorderWidth: 0,
@@ -574,7 +569,7 @@ function renderChart(readings, range) {
       },
       scales: {
         x: {
-          ticks:  { color: axisColor, maxTicksLimit: 6, font: { family: "DM Sans", size: 11 } },
+          ticks:  { color: axisColor, maxTicksLimit: 5, autoSkip: true, font: { family: "DM Sans", size: 11 } },
           grid:   { color: "transparent" },
           border: { color: gridColor },
         },
@@ -592,7 +587,6 @@ function renderHistory(readings) {
   const tbody    = document.getElementById("history-body");
   const cardList = document.getElementById("history-cards");
   const showBtn  = document.getElementById("history-show-all");
-  const wrap     = document.getElementById("history-wrap");
 
   const EMPTY_TABLE = `<tr><td colspan="5" class="empty">No readings yet.</td></tr>`;
   const EMPTY_CARDS = `<li class="hcard-empty">No readings yet.</li>`;
@@ -600,11 +594,13 @@ function renderHistory(readings) {
   if (readings.length === 0) {
     tbody.innerHTML    = EMPTY_TABLE;    // XSS-safe: static template, no external data
     cardList.innerHTML = EMPTY_CARDS;   // XSS-safe: static template, no external data
+    if (showBtn) showBtn.hidden = true;
     return;
   }
 
   const rows = [...readings].reverse().slice(0, 50);
 
+  // ── Desktop table (unchanged from pre-Ψ2B) ──────────────────────────────────
   // XSS-safe: all interpolated values are numbers (fmtINR/rupee) or date strings
   // from prices.json; Groq/LLM output never reaches this template.
   tbody.innerHTML = rows.map((r, i) => {
@@ -625,31 +621,89 @@ function renderHistory(readings) {
     </tr>`;
   }).join("");
 
-  // XSS-safe: same as desktop table above — numbers and dates only, no LLM data
-  cardList.innerHTML = rows.map((r, i) => {
-    const next = rows[i + 1];
-    let deltaHtml = "";
-    if (next && typeof next["22k"] === "number") {
-      const d = r["22k"] - next["22k"];
-      if (d > 0)      deltaHtml = `<span class="hcard-delta hcard-delta--up">↑ ₹${fmtINR(d)}</span>`;
-      else if (d < 0) deltaHtml = `<span class="hcard-delta hcard-delta--down">↓ ₹${fmtINR(Math.abs(d))}</span>`;
-      else            deltaHtml = `<span class="hcard-delta hcard-delta--flat">±0</span>`;
-    }
-    return `<li class="history-card">
-      <span class="hcard-time">${fmtDate(r.timestamp)}</span>
-      <span class="hcard-price">${rupee(r["22k"])}</span>
-      ${deltaHtml}
-    </li>`;
-  }).join("");
+  // ── Mobile card list — date-grouped timeline (Ψ2B) ──────────────────────────
+  const VISIBLE_DAYS = 3;
 
-  // Show-all toggle
+  // Returns "29/5/2026" style key for grouping by IST calendar date
+  function getISTDateKey(iso) {
+    return new Date(iso).toLocaleDateString("en-IN", { timeZone: "Asia/Kolkata" });
+  }
+
+  // Returns "Thu, 29 May" for the date divider label
+  function getISTDateLabel(iso) {
+    return new Intl.DateTimeFormat("en-IN", {
+      timeZone: "Asia/Kolkata", weekday: "short", day: "numeric", month: "short",
+    }).format(new Date(iso));
+  }
+
+  // Returns "1:00 pm" for the card time
+  function formatISTTime(iso) {
+    return new Intl.DateTimeFormat("en-IN", {
+      timeZone: "Asia/Kolkata", hour: "numeric", minute: "2-digit", hour12: true,
+    }).format(new Date(iso)).toLowerCase();
+  }
+
+  // Group rows (newest-first) by IST calendar date
+  const grouped = [];
+  let currentGroup = null;
+  rows.forEach((r, rowIndex) => {
+    const key = getISTDateKey(r.timestamp);
+    if (!currentGroup || currentGroup.key !== key) {
+      currentGroup = { key, label: getISTDateLabel(r.timestamp), items: [] };
+      grouped.push(currentGroup);
+    }
+    currentGroup.items.push({ r, rowIndex });
+  });
+
+  // Build HTML for a slice of groups; delta uses rows[] for cross-day continuity
+  function buildGroupsHtml(groups) {
+    // XSS-safe: formatISTTime, rupee(), fmtINR all produce safe output from numeric/date data
+    return groups.map((group) => {
+      const plural  = group.items.length !== 1 ? "s" : "";
+      const divider = `<li class="hdate-divider">${group.label} · ${group.items.length} reading${plural}</li>`;
+      const cards   = group.items.map(({ r, rowIndex: i }) => {
+        const next = rows[i + 1];
+        let deltaHtml = "";
+        if (next && typeof next["22k"] === "number") {
+          const d = r["22k"] - next["22k"];
+          if (d > 0)      deltaHtml = `<span class="hcard-delta hcard-delta--up">↑ +₹${fmtINR(d)}</span>`;
+          else if (d < 0) deltaHtml = `<span class="hcard-delta hcard-delta--down">↓ −₹${fmtINR(Math.abs(d))}</span>`;
+          else            deltaHtml = `<span class="hcard-delta hcard-delta--flat">±0</span>`;
+        }
+        return `<li class="history-card">
+          <span class="hcard-time">${formatISTTime(r.timestamp)}</span>
+          <span class="hcard-price">${rupee(r["22k"])}</span>
+          ${deltaHtml}
+        </li>`;
+      }).join("");
+      return divider + cards;
+    }).join("");
+  }
+
+  // Render initial VISIBLE_DAYS days
+  cardList.innerHTML = buildGroupsHtml(grouped.slice(0, VISIBLE_DAYS));
+
+  // Show-more button (visible on mobile only via CSS display:none / display:block)
+  const hiddenDayCount = Math.max(0, grouped.length - VISIBLE_DAYS);
   if (showBtn) {
-    showBtn.hidden    = false;
-    showBtn.textContent = `Show all (${rows.length})`;
-    showBtn.onclick   = () => {
-      const expanded = wrap.classList.toggle("history--expanded");
-      showBtn.textContent = expanded ? "Show less" : `Show all (${rows.length})`;
-    };
+    if (hiddenDayCount > 0) {
+      showBtn.hidden = false;
+      const moreLabel = `Show ${hiddenDayCount} more day${hiddenDayCount !== 1 ? "s" : ""}`;
+      showBtn.textContent = moreLabel;
+      let isExpanded = false;
+      showBtn.onclick = () => {
+        isExpanded = !isExpanded;
+        if (isExpanded) {
+          cardList.innerHTML = buildGroupsHtml(grouped);
+          showBtn.textContent = "Show less";
+        } else {
+          cardList.innerHTML = buildGroupsHtml(grouped.slice(0, VISIBLE_DAYS));
+          showBtn.textContent = moreLabel;
+        }
+      };
+    } else {
+      showBtn.hidden = true;
+    }
   }
 }
 
