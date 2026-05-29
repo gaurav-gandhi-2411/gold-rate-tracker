@@ -1094,9 +1094,17 @@ main {
   flex-shrink: 0;
 }
 
-/* Desktop: slightly more generous nav — still fixed-bottom but proportional */
-@media (min-width: 641px) {
+/* Tablet: slightly larger nav items */
+@media (min-width: 641px) and (max-width: 899px) {
   .bottom-nav-item { font-size: 11px; padding: 12px 8px 10px; }
+}
+
+/* Desktop ≥900px: hide bottom nav — desktop users have scroll/keyboard;
+   a full-width fixed bar reads as broken-mobile at this width. */
+@media (min-width: 900px) {
+  .bottom-nav { display: none; }
+  /* Restore original main bottom padding (no nav to clear) */
+  main { padding-bottom: calc(var(--space-7) + env(safe-area-inset-bottom, 0px)); }
 }
 
 /* ═══════════════════════════════════════════════════════════════
