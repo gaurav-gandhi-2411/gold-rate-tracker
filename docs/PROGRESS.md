@@ -829,6 +829,20 @@ Mobile-first visual redesign targeting iPhone 14 Plus (428×926). User explicitl
 
 **Files changed:** `index.html` (Syne font import), `style.css` (13 targeted changes — 120 insertions), `app.js` (4 render function rewrites — 112 insertions). Zero backend files touched (`ml/`, `data/*.json`, `.github/workflows/`, `scraper/`). Lint CI: pass (2m41s). Merge commit: pending (#40).
 
+#### 4.7 PR Ψ2C — Design polish (2026-05-29)
+
+Three targeted fixes closing out the Ψ2 series. Files changed: `app.js` (delta rendering, both mobile and desktop paths), `style.css` (chart padding, delta opacity). Zero backend files touched.
+
+**Chart internal padding (Item 1):** `.chart-wrap` padding reduced from `20px` all sides to `12px 20px` desktop / `8px 16px` mobile. Chart canvas now fills ~90% of card height instead of ~60%; breathing room matches the page's existing card rhythm. Verified at iPhone 14 Plus, 768px, 1280px.
+
+**Zero-delta de-emphasis (Item 2):** Zero-delta rows previously rendered `±0` in `--cream-mute` at full opacity — visually identical to "no data available" placeholders, read as broken. Changed to `·` (mid-dot) at `opacity: 0.45`. Applied in both mobile date-grouped history cards and desktop table Δ22K column. De-emphasis is intentional and clearly distinct from real deltas.
+
+**Arrow+sign redundancy (Item 3):** Mobile history cards showed `↑ +₹70` / `↓ −₹70` (arrow and sign both present). Desktop table showed `+₹70` / `−₹70` (sign only, no arrow). Applied Option A (keep arrow, drop sign) consistently across both rendering paths: `↑ ₹70` / `↓ ₹70` everywhere. Arrow is the direction signal; compact ₹ without the redundant sign.
+
+Lint CI: pass (2m46s). Merge commit: pending (#41).
+
+**Ψ2 series COMPLETE.** Ψ2A (Chronos companion visibility), Ψ2B (UI/UX modernization), Ψ2C (polish) — all three closed.
+
 ### Phase 5 — Validate  ⏸️ NOT STARTED
 
 ### Phase 6 — Promote  ⏸️ NOT STARTED
@@ -879,6 +893,7 @@ Mobile-first visual redesign targeting iPhone 14 Plus (428×926). User explicitl
 | 2026-05-28 | PR Ψ2A — Chronos companion section moved to always-visible page flow (#39) | CC | Root cause was render target inside collapsed <details> accordion. Fixed by adding #model-signal-section to main page flow between commentary and chart. Methodology accordion details retained. |
 | 2026-05-28 | PR E falsifiable bet resolved — Chronos lost | CC (evidence) | Bet placed at PR E merge (2026-05-19): Chronos predicted IBJA-916-PM = 14,118.69 INR/g on 2026-05-23 (−2.29% vs 14,448.9 baseline); naive predicted flat at 14,448.9. Actual outcome: price moved UP through the observation window. Chronos predicted a 2.29% drop; price rose instead. Verdict: Chronos lost cleanly. No impact on production routing — naive is already the declared headline (ADR 012). Consistent with the 165-fold backtest result (Chronos 10.4% worse than naive, p=0.0089). |
 | 2026-05-29 | Ψ2B chart border restored — full-bleed treatment detached in context | CC (reversibility criterion) | Pass 3 initial screenshots confirmed "open and intentional" for the chart in isolation. Pre-merge contextual screenshot (consultant requirement: chart with adjacent sections in same frame) showed chart floating between two bordered sections — signal card above, history card below. Without its own container the chart read as a broken component, not an editorial choice. Per pre-approved reversibility criterion ("don't ship a worse aesthetic to chase a more-modern one"), border/background/border-radius restored. Mobile 3/2 aspect ratio kept. |
+| 2026-05-29 | PR Ψ2C — chart padding, zero-delta, arrow-sign redundancy merged (#41) | CC | Three targeted polish fixes: (1) chart-wrap padding reduced so canvas fills ~90% of card height; (2) zero-delta rendered as `·` at opacity 0.45 vs `±0` at full opacity (read as broken); (3) delta arrows applied consistently across mobile cards and desktop table with sign dropped (Option A). Lint CI pass 2m46s. Ψ2 series complete. |
 
 ---
 

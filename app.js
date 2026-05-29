@@ -608,9 +608,9 @@ function renderHistory(readings) {
     let deltaCell = `<span class="delta-flat">—</span>`;
     if (next && typeof next["22k"] === "number") {
       const d = r["22k"] - next["22k"];
-      if (d > 0)      deltaCell = `<span class="delta-up">+₹${fmtINR(d)}</span>`;
-      else if (d < 0) deltaCell = `<span class="delta-down">−₹${fmtINR(Math.abs(d))}</span>`;
-      else            deltaCell = `<span class="delta-flat">±0</span>`;
+      if (d > 0)      deltaCell = `<span class="delta-up">↑ ₹${fmtINR(d)}</span>`;
+      else if (d < 0) deltaCell = `<span class="delta-down">↓ ₹${fmtINR(Math.abs(d))}</span>`;
+      else            deltaCell = `<span class="delta-flat">·</span>`;
     }
     return `<tr>
       <td>${fmtDate(r.timestamp)}</td>
@@ -666,9 +666,9 @@ function renderHistory(readings) {
         let deltaHtml = "";
         if (next && typeof next["22k"] === "number") {
           const d = r["22k"] - next["22k"];
-          if (d > 0)      deltaHtml = `<span class="hcard-delta hcard-delta--up">↑ +₹${fmtINR(d)}</span>`;
-          else if (d < 0) deltaHtml = `<span class="hcard-delta hcard-delta--down">↓ −₹${fmtINR(Math.abs(d))}</span>`;
-          else            deltaHtml = `<span class="hcard-delta hcard-delta--flat">±0</span>`;
+          if (d > 0)      deltaHtml = `<span class="hcard-delta hcard-delta--up">↑ ₹${fmtINR(d)}</span>`;
+          else if (d < 0) deltaHtml = `<span class="hcard-delta hcard-delta--down">↓ ₹${fmtINR(Math.abs(d))}</span>`;
+          else            deltaHtml = `<span class="hcard-delta hcard-delta--flat">·</span>`;
         }
         return `<li class="history-card">
           <span class="hcard-time">${formatISTTime(r.timestamp)}</span>
