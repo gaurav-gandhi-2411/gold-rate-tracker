@@ -236,8 +236,9 @@ main {
 }
 .refresh-btn:active,
 .pwa-help-btn:active { color: var(--gold); }
-/* Author-side display overrides the UA [hidden]{display:none}; restore it. */
-.pwa-help-btn[hidden] { display: none !important; }
+/* Author-side display overrides the UA [hidden]{display:none}; restore both. */
+.pwa-help-btn[hidden]   { display: none !important; }
+.pwa-help-panel[hidden] { display: none !important; }
 
 @keyframes refresh-spin {
   to { transform: rotate(360deg); }
