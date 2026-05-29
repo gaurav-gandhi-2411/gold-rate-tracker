@@ -202,6 +202,8 @@ These earned their place across nine PRs. They are NOT visible in the code.
 
 12. **ASCII-safe ntfy payloads.** No ₹; use `Rs.`.
 
+13. **PR squash-merge commit messages MUST NOT carry `[skip ci]` in the body.** GitHub respects `[skip ci]` platform-wide for push events with no per-workflow override (verified PR Ψ3A diagnosis). To avoid suppressing master Lint on merge, strip `[skip ci]` from the squash body before confirming the merge — use `gh pr merge --squash --subject "..." --body "..."` with the body explicitly cleaned. The daily 06:00 UTC schedule in `lint.yml` is a backstop, not a substitute for this discipline.
+
 ## Open questions (things to verify when implementing)
 
 - **Φ4 wall-clock budget on GH Actions runner.** Multi-sample probe `num_samples=5` extrapolating from local 13ms = ~65ms inference + 1 model load. Audit assumed <2s. Validate empirically in CI before merging the schema bump.

@@ -160,6 +160,8 @@ main {
   backdrop-filter: blur(8px);
   -webkit-backdrop-filter: blur(8px);
   border-bottom: 1px solid var(--line);
+  /* Shadow separates the strip from scrolling content below it */
+  box-shadow: 0 1px 8px rgba(0, 0, 0, 0.28);
   /* Bleed to viewport edges */
   margin-left:  calc(-1 * clamp(20px, 5vw, 56px) - env(safe-area-inset-left,  0px));
   margin-right: calc(-1 * clamp(20px, 5vw, 56px) - env(safe-area-inset-right, 0px));
@@ -170,12 +172,19 @@ main {
 }
 
 .utility-row:has(.freshness--stale) {
-  background: rgba(198, 106, 75, 0.18);
-  border-bottom-color: rgba(198, 106, 75, 0.45);
+  /* Layered: opaque --ink base + 28% terracotta tint overlay.
+     Previous 0.18 alpha made the strip nearly transparent — text scrolled visibly underneath. */
+  background:
+    linear-gradient(rgba(198, 106, 75, 0.28), rgba(198, 106, 75, 0.28)),
+    var(--ink);
+  border-bottom-color: rgba(198, 106, 75, 0.60);
 }
 .utility-row:has(.freshness--warn) {
-  background: rgba(212, 147, 42, 0.12);
-  border-bottom-color: rgba(212, 147, 42, 0.32);
+  /* Same pattern: opaque --ink base + 22% gold tint overlay. */
+  background:
+    linear-gradient(rgba(212, 147, 42, 0.22), rgba(212, 147, 42, 0.22)),
+    var(--ink);
+  border-bottom-color: rgba(212, 147, 42, 0.45);
 }
 
 .freshness-pill {
