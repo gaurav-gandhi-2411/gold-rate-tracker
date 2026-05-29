@@ -508,7 +508,7 @@ main {
   background: var(--surface);
   border: 1px solid var(--line);
   border-radius: var(--radius-lg);
-  padding: var(--space-5);
+  padding: var(--space-3) var(--space-5);
   aspect-ratio: 16 / 5;
 }
 
@@ -556,7 +556,7 @@ main {
 .history-table .rupee { color: var(--gold); font-style: italic; }
 .delta-up   { color: var(--up);        }
 .delta-down { color: var(--down);      }
-.delta-flat { color: var(--cream-mute); }
+.delta-flat { color: var(--cream-mute); opacity: 0.45; }
 .empty { text-align: center; color: var(--cream-mute); padding: 30px !important; }
 
 /* Show-all button */
@@ -813,7 +813,7 @@ main {
   }
   .hcard-delta--up   { color: var(--up);   }
   .hcard-delta--down { color: var(--down); }
-  .hcard-delta--flat { color: var(--cream-mute); }
+  .hcard-delta--flat { color: var(--cream-mute); opacity: 0.45; }
   .hcard-empty {
     padding: 30px;
     text-align: center;
@@ -827,7 +827,7 @@ main {
   .comparison-cards .comparison-card:last-child { grid-column: 1 / -1; }
 
   /* Chart */
-  .chart-wrap { aspect-ratio: 3 / 2; padding: var(--space-4); }
+  .chart-wrap { aspect-ratio: 3 / 2; padding: var(--space-2) var(--space-4); }
   .range-toggle button { padding: 10px 16px; min-height: 44px; min-width: 44px; }
 
   /* Karat strip stays 2-col — no change needed */
