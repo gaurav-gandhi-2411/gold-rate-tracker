@@ -5,6 +5,15 @@ on:
     branches: [main, master]
   pull_request:
     branches: [main, master]
+  # Daily backstop: GitHub Actions [skip ci] only suppresses push/pull_request events.
+  # If a squash-merge commit carries [skip ci] in its body (e.g., a docs commit from
+  # a PR branch), the push-triggered run is skipped. The schedule trigger runs regardless
+  # of any commit message annotation, ensuring Lint always executes on master.
+  # Bot cron commits (chronos probe, gold prices) still skip the push-triggered run as
+  # intended — only the daily backstop catches any resulting drift.
+  schedule:
+    - cron: '0 6 * * *'   # 06:00 UTC daily (11:30 IST) — between bot cron windows
+  workflow_dispatch:
 
 jobs:
   lint:

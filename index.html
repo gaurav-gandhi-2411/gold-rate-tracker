@@ -221,7 +221,22 @@
     <script>
       if ("serviceWorker" in navigator) {
         window.addEventListener("load", () => {
-          navigator.serviceWorker.register("service-worker.js").catch(() => {});
+          navigator.serviceWorker.register("service-worker.js").then((registration) => {
+            // Force the browser to re-check service-worker.js on every page load.
+            // Without this, browsers cache the SW file itself for up to 24h, delaying
+            // detection of new deploys.
+            registration.update();
+
+            // When a new SW takes over (skipWaiting fires), reload once to serve
+            // fresh shell assets. The `refreshing` guard prevents reload loops if
+            // a misbehaving SW triggers controllerchange repeatedly.
+            let refreshing = false;
+            navigator.serviceWorker.addEventListener("controllerchange", () => {
+              if (refreshing) return;
+              refreshing = true;
+              window.location.reload();
+            });
+          }).catch(() => {});
         });
       }
     </script>
