@@ -20,7 +20,7 @@
     <!-- PWA -->
     <link rel="manifest" href="manifest.webmanifest" />
     <meta name="theme-color" content="#1A1612" />
-    <link rel="apple-touch-icon" href="icons/icon-192.png" />
+    <link rel="apple-touch-icon" sizes="180x180" href="icons/icon-192.png" />
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
     <meta name="apple-mobile-web-app-title" content="Gold" />
@@ -37,7 +37,17 @@
     <!-- 1. UTILITY ROW — sticky top -->
     <div class="utility-row" id="utility-row" aria-live="polite">
       <span class="freshness-pill" id="freshness-pill">—</span>
-      <span class="location-label" aria-label="Data source">Bengaluru · Tanishq retail</span>
+      <div class="utility-right">
+        <span class="location-label" aria-label="Data source">Bengaluru · Tanishq retail</span>
+        <button class="refresh-btn" id="refresh-btn" aria-label="Refresh data" title="Refresh data">↻</button>
+        <button class="pwa-help-btn" id="pwa-help-btn" aria-label="About auto-refresh on iPhone" title="About auto-refresh" hidden>?</button>
+      </div>
+    </div>
+
+    <!-- D5: iOS standalone help panel — JS reveals in standalone mode only -->
+    <div class="pwa-help-panel" id="pwa-help-panel" hidden>
+      <p>iOS limits how often home-screen apps update in the background. Tap <strong>↻</strong> to fetch the latest readings. If data remains stuck, open the App Switcher (swipe up, hold), swipe this app away, and reopen from Home Screen — that forces a full reload.</p>
+      <button class="pwa-help-close" id="pwa-help-close" aria-label="Dismiss">✕</button>
     </div>
 
     <!-- Forecast staleness banner — hidden by default, shown by app.js when forecast is >18h old -->
@@ -196,7 +206,6 @@
         <p>
           Source: <a href="https://www.tanishq.co.in/gold-rate.html?lang=en_IN" target="_blank" rel="noopener">Tanishq</a>.
           Updated every 6 hours via GitHub Actions.
-          Seed data estimated from Yahoo Finance (GC=F × INR=X).
         </p>
         <p class="muted">Not financial advice. Rates are indicative.</p>
       </footer>
@@ -222,20 +231,37 @@
       if ("serviceWorker" in navigator) {
         window.addEventListener("load", () => {
           navigator.serviceWorker.register("service-worker.js").then((registration) => {
-            // Force the browser to re-check service-worker.js on every page load.
-            // Without this, browsers cache the SW file itself for up to 24h, delaying
-            // detection of new deploys.
+            // Force SW byte-check on every page load (bypasses 24h browser SW cache).
             registration.update();
 
-            // When a new SW takes over (skipWaiting fires), reload once to serve
-            // fresh shell assets. The `refreshing` guard prevents reload loops if
-            // a misbehaving SW triggers controllerchange repeatedly.
+            // D1: visibilitychange fix for iOS standalone.
+            // In standalone mode the page stays loaded when backgrounded — `load`
+            // does not re-fire on foreground. This fires on every return from
+            // background, giving the suspended SW a chance to byte-check
+            // service-worker.js and pick up new deploys.
+            document.addEventListener("visibilitychange", () => {
+              if (document.visibilityState === "visible") {
+                registration.update().catch(() => {});
+              }
+            });
+
+            // D2: Belt-and-suspenders — re-check every 30 min while foregrounded.
+            // NOTE: iOS freezes timers during process suspension, so this only fires
+            // when the app is continuously open. D1 handles the common
+            // return-from-background case; D2 catches "app left open for 30+ min".
+            setInterval(() => {
+              registration.update().catch(() => {});
+            }, 30 * 60 * 1000);
+
+            // When a new SW takes control (skipWaiting fires), reload once for
+            // fresh shell assets. `refreshing` guard prevents reload loops.
             let refreshing = false;
             navigator.serviceWorker.addEventListener("controllerchange", () => {
               if (refreshing) return;
               refreshing = true;
               window.location.reload();
             });
+
           }).catch(() => {});
         });
       }

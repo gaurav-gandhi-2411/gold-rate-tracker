@@ -7,6 +7,14 @@ const COMMENTARY_URL = "data/commentary.json";
 const DRIFT_URL     = "data/drift_metrics.json";
 const METRICS_URL   = "data/metrics_history.json";
 
+// D4: True when running as an installed PWA launched from the home screen.
+// navigator.standalone is iOS WebKit's proprietary flag (true/false/undefined).
+// matchMedia display-mode:standalone is the W3C standard (patchy on older iOS).
+// OR'ing both gives best cross-platform coverage without false positives.
+const IS_STANDALONE =
+  window.matchMedia("(display-mode: standalone)").matches ||
+  window.navigator.standalone === true;
+
 const fmtINR = (n) =>
   typeof n === "number"
     ? n.toLocaleString("en-IN", { maximumFractionDigits: 0 })
@@ -43,8 +51,10 @@ function fmtIST(iso) {
   } catch (_) { return iso; }
 }
 
-let chart       = null;
-let allReadings = [];
+let chart            = null;
+let allReadings      = [];
+let currentRange     = "7";   // tracks active chart tab for refreshData()
+let pwaHelpDismissed = false; // D5: set true when user taps ✕; survives re-renders
 
 async function loadJSON(url) {
   const res = await fetch(`${url}?t=${Date.now()}`);
@@ -265,6 +275,13 @@ function renderFreshness(readings) {
     pill.className   = "freshness-pill freshness--ok";
     pill.textContent = `Updated ${rel}`;
     pill.setAttribute("aria-label", `Updated ${rel}`);
+  }
+
+  // D5: Auto-open iOS help panel when standalone + data is ≥ 12h stale,
+  // but only if the user hasn't dismissed it this session (FIX 1).
+  if (IS_STANDALONE && ageH >= 12 && !pwaHelpDismissed) {
+    const panel = document.getElementById("pwa-help-panel");
+    if (panel) panel.hidden = false;
   }
 }
 
@@ -853,6 +870,30 @@ function renderMethodology(fc, bt, drift) {
   body.innerHTML = parts.join("");
 }
 
+// D3: Lightweight data re-fetch — prices + forecast only.
+// Assigns to a local `fresh` first (FIX 2): allReadings is only committed
+// after both fetches resolve, keeping state consistent on partial failure.
+async function refreshData() {
+  const btn = document.getElementById("refresh-btn");
+  if (btn) { btn.classList.add("refresh-btn--spinning"); btn.disabled = true; }
+  try {
+    const fresh = await load();
+    const fc    = await loadJSON(FORECAST_URL).catch(() => null);
+    allReadings  = fresh;
+    renderFreshness(allReadings);
+    renderComparisons(allReadings);
+    renderHistory(allReadings);
+    renderChart(allReadings, currentRange);
+    renderHero(allReadings, fc);
+    renderStaleBanner(fc);
+    renderModelSignal(fc);
+  } catch (err) {
+    console.error("Refresh failed:", err);
+  } finally {
+    if (btn) { btn.classList.remove("refresh-btn--spinning"); btn.disabled = false; }
+  }
+}
+
 function bindRangeToggle() {
   const buttons = document.querySelectorAll(".range-toggle button");
   buttons.forEach(btn => {
@@ -860,7 +901,8 @@ function bindRangeToggle() {
       buttons.forEach(b => { b.classList.remove("active"); b.setAttribute("aria-selected", "false"); });
       btn.classList.add("active");
       btn.setAttribute("aria-selected", "true");
-      renderChart(allReadings, btn.dataset.range);
+      currentRange = btn.dataset.range;
+      renderChart(allReadings, currentRange);
     });
   });
 }
@@ -869,6 +911,32 @@ function bindRangeToggle() {
 
 (async function init() {
   bindRangeToggle();
+
+  // D3: Refresh button — works in both browser and standalone mode.
+  const refreshBtn = document.getElementById("refresh-btn");
+  if (refreshBtn) refreshBtn.addEventListener("click", refreshData);
+
+  // D4/D5: iOS help panel — revealed only in standalone mode.
+  const helpBtn   = document.getElementById("pwa-help-btn");
+  const helpPanel = document.getElementById("pwa-help-panel");
+  const helpClose = document.getElementById("pwa-help-close");
+
+  if (IS_STANDALONE) {
+    if (helpBtn) {
+      helpBtn.hidden = false;
+      helpBtn.addEventListener("click", () => {
+        if (helpPanel) helpPanel.hidden = !helpPanel.hidden;
+      });
+    }
+    if (helpClose) {
+      // ✕ sets the dismissed flag (FIX 1) — auto-open won't re-fire this session.
+      // Manual ? toggle does not set the flag; only explicit dismissal does.
+      helpClose.addEventListener("click", () => {
+        pwaHelpDismissed = true;
+        if (helpPanel) helpPanel.hidden = true;
+      });
+    }
+  }
 
   // Load prices (critical path)
   try {
