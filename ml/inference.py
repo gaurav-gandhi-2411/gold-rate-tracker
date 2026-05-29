@@ -110,6 +110,8 @@ def _build_chronos_companion(
             "model_version": probe.get("model_version"),
             "calibration_applied": False,
             "calibration_just_unlocked": False,
+            "majority_direction": "neutral",
+            "direction_consensus": 0.0,
         }
 
     lean_direction_raw, lean_strength_pct = compute_chronos_lean(probe)
@@ -150,6 +152,8 @@ def _build_chronos_companion(
         "model_version": probe.get("model_version"),
         "calibration_applied": cal_applied,
         "calibration_just_unlocked": calibration_just_unlocked,
+        "majority_direction": probe.get("majority_direction", "neutral"),
+        "direction_consensus": float(probe.get("direction_consensus") or 0.0),
     }
 
 
