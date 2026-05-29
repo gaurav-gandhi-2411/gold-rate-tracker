@@ -114,7 +114,7 @@ body {
   text-rendering: optimizeLegibility;
   min-height: 100vh;
   min-height: 100dvh;
-  padding-top:   env(safe-area-inset-top);
+  padding-top:   env(safe-area-inset-top, 0px);
   padding-left:  env(safe-area-inset-left);
   padding-right: env(safe-area-inset-right);
   background-image:
@@ -206,6 +206,75 @@ main {
   letter-spacing: 0.04em;
   text-align: right;
   white-space: nowrap;
+}
+
+/* ─── UTILITY RIGHT CLUSTER (refresh + help buttons) ────────────────────── */
+.utility-right {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.refresh-btn,
+.pwa-help-btn {
+  background: none;
+  border: none;
+  color: var(--cream-mute);
+  font-size: 15px;
+  line-height: 1;
+  padding: 4px;
+  cursor: pointer;
+  width: 28px;
+  height: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  -webkit-tap-highlight-color: transparent;
+  touch-action: manipulation;
+  flex-shrink: 0;
+}
+.refresh-btn:active,
+.pwa-help-btn:active { color: var(--gold); }
+/* Author-side display overrides the UA [hidden]{display:none}; restore both. */
+.pwa-help-btn[hidden]   { display: none !important; }
+.pwa-help-panel[hidden] { display: none !important; }
+
+@keyframes refresh-spin {
+  to { transform: rotate(360deg); }
+}
+.refresh-btn--spinning {
+  animation: refresh-spin 0.8s linear infinite;
+  pointer-events: none;
+  color: var(--gold);
+}
+
+/* ─── PWA HELP PANEL (D5 — iOS standalone only) ─────────────────────────── */
+.pwa-help-panel {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 10px clamp(20px, 5vw, 56px);
+  background: rgba(212, 147, 42, 0.10);
+  border-bottom: 1px solid rgba(212, 147, 42, 0.22);
+}
+.pwa-help-panel p {
+  margin: 0;
+  flex: 1;
+  font-size: var(--ts-xs);
+  color: var(--cream-dim);
+  line-height: 1.55;
+}
+.pwa-help-close {
+  background: none;
+  border: none;
+  color: var(--cream-mute);
+  font-size: 11px;
+  cursor: pointer;
+  padding: 2px 4px;
+  flex-shrink: 0;
+  margin-top: 1px;
+  -webkit-tap-highlight-color: transparent;
 }
 
 /* ═══════════════════════════════════════════════════════════════

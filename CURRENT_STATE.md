@@ -160,6 +160,7 @@ gold-rate-tracker/
 - Synthetic `GC=F × INR=X × premium` training seed → 92% synthetic, archived
 - TFT / N-BEATS as Chronos alternatives → data threshold too far
 - ibja.co as primary IBJA source → cannot return both AM and PM in one HTTP call
+- iOS standalone PWA does not provide developer-controllable 100%-reliable update mechanism. SW lifecycle in standalone mode is platform-controlled — iOS aggressively suspends service workers when backgrounded. Maximum achievable without user action: `registration.update()` on load + `visibilitychange` listener + 30-min periodic check (timers are frozen during suspension, so the interval only fires while foregrounded). When auto-update fails, the platform-level workaround is: open App Switcher (swipe up, hold), swipe the app away, reopen from Home Screen. Implemented in Ψ3B with tap-to-refresh affordance and in-app guidance.
 
 ## Current CI / test state
 
