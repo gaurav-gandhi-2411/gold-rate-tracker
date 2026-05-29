@@ -34,11 +34,13 @@
   <body>
     <div class="grain" aria-hidden="true"></div>
 
-    <!-- 1. UTILITY ROW — sticky top -->
-    <div class="utility-row" id="utility-row" aria-live="polite">
-      <span class="freshness-pill" id="freshness-pill">—</span>
-      <div class="utility-right">
-        <span class="location-label" aria-label="Data source">Bengaluru · Tanishq retail</span>
+    <!-- 1. APP HEADER — sticky top -->
+    <div class="app-header" id="utility-row" aria-live="polite">
+      <div class="app-header-left">
+        <span class="app-title">Gold</span>
+      </div>
+      <div class="app-header-right">
+        <span class="freshness-pill" id="freshness-pill">—</span>
         <button class="refresh-btn" id="refresh-btn" aria-label="Refresh data" title="Refresh data">↻</button>
         <button class="pwa-help-btn" id="pwa-help-btn" aria-label="About auto-refresh on iPhone" title="About auto-refresh" hidden>?</button>
       </div>
@@ -55,7 +57,7 @@
 
     <main>
       <!-- 2. HERO CARD -->
-      <section class="hero-card" aria-label="Current 22K gold price and buying verdict">
+      <section class="hero-card" id="section-home" aria-label="Current 22K gold price and buying verdict">
 
         <!-- Skeleton shown while loading -->
         <div class="hero-skeleton" id="hero-skeleton" aria-hidden="true">
@@ -68,6 +70,7 @@
 
         <p class="eyebrow" id="hero-eyebrow" hidden>22K gold · per gram</p>
         <h1 class="hero-price" id="hero-price" hidden>—</h1>
+        <p class="hero-location" id="hero-location" hidden>Bengaluru · Tanishq retail</p>
 
         <div class="hero-change" id="hero-change" hidden aria-live="polite">
           <span class="hero-change-arrow" aria-hidden="true"></span>
@@ -152,7 +155,7 @@
       </section>
 
       <!-- 6. FULL TREND CHART -->
-      <section class="chart-section" aria-label="Price trend chart">
+      <section class="chart-section" id="section-trend" aria-label="Price trend chart">
         <div class="chart-header">
           <h2>Price trend</h2>
           <div class="range-toggle" role="tablist" aria-label="Chart time range">
@@ -167,7 +170,7 @@
       </section>
 
       <!-- 7. HISTORY -->
-      <section class="history-section" aria-label="Price history">
+      <section class="history-section" id="section-history" aria-label="Price history">
         <h2>History</h2>
         <div class="history-wrap" id="history-wrap">
           <!-- Desktop table (≥640px) -->
@@ -192,7 +195,7 @@
       </section>
 
       <!-- 8. METHODOLOGY ACCORDION -->
-      <details class="methodology" id="methodology">
+      <details class="methodology" id="section-info">
         <summary class="methodology-summary">
           How this verdict is calculated · model accuracy · backtest
         </summary>
@@ -210,6 +213,34 @@
         <p class="muted">Not financial advice. Rates are indicative.</p>
       </footer>
     </main>
+
+    <!-- BOTTOM NAV — scroll-anchor style, Option B (single page preserved) -->
+    <nav class="bottom-nav" aria-label="Page sections">
+      <a class="bottom-nav-item active" href="#section-home" data-section="section-home" aria-current="page">
+        <span class="bottom-nav-icon" aria-hidden="true">
+          <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round" stroke-linecap="round"><path d="M3 12L12 4l9 8"/><path d="M5 10v9a1 1 0 001 1h4v-5h4v5h4a1 1 0 001-1v-9"/></svg>
+        </span>
+        <span class="bottom-nav-label">Home</span>
+      </a>
+      <a class="bottom-nav-item" href="#section-trend" data-section="section-trend" aria-current="false">
+        <span class="bottom-nav-icon" aria-hidden="true">
+          <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round" stroke-linecap="round"><polyline points="22 7 13.5 15.5 8.5 10.5 2 17"/><polyline points="16 7 22 7 22 13"/></svg>
+        </span>
+        <span class="bottom-nav-label">Trend</span>
+      </a>
+      <a class="bottom-nav-item" href="#section-history" data-section="section-history" aria-current="false">
+        <span class="bottom-nav-icon" aria-hidden="true">
+          <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round" stroke-linecap="round"><circle cx="12" cy="12" r="9"/><polyline points="12 7 12 12 15 15"/></svg>
+        </span>
+        <span class="bottom-nav-label">History</span>
+      </a>
+      <a class="bottom-nav-item" href="#section-info" data-section="section-info" aria-current="false">
+        <span class="bottom-nav-icon" aria-hidden="true">
+          <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round" stroke-linecap="round"><circle cx="12" cy="12" r="9"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8" stroke-width="2.4"/></svg>
+        </span>
+        <span class="bottom-nav-label">Info</span>
+      </a>
+    </nav>
 
     <!-- Sentry error tracking — replace the placeholder DSN with the one from sentry.io
          (Project Settings → Client Keys → DSN). The site will work normally without it. -->
