@@ -7,6 +7,9 @@
 // 4. index.html → registration.update() on load forces an immediate SW byte-check;
 //    controllerchange listener reloads the page so new shell assets are served.
 // Updating ONE of these without the others reintroduces stale-cache symptoms.
+// See also CURRENT_STATE.md norm #13: squash-merge commits must not carry [skip ci]
+// in the body — a [skip ci] merge skips master Lint for up to ~24h (only the daily
+// 06:00 UTC schedule backstop in lint.yml recovers it).
 
 const VERSION = "v3-20260530-a";
 const SHELL_CACHE = `gold-shell-${VERSION}`;
