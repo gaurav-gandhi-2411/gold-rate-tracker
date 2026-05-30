@@ -35,14 +35,20 @@ MAX_COMMENTARY_ENTRIES = 30
 
 SYSTEM_PROMPT = (
     "You write factual one-paragraph market notes for an Indian retail gold price tracker. "
-    "You write 2 to 3 sentences, under 60 words total, in plain calm English. "
-    "You may mention recent moves, notable patterns, and what the model expects, "
-    "but you must never give buy/sell/hold advice, never make confident predictions, "
-    "and never use hype words like 'soaring', 'plunging', 'bullish', 'bearish'. "
-    "If the data shows nothing notable, say so plainly. "
+    "Write 2 to 3 sentences, under 80 words total, in plain calm English. "
+    "FRAMING RULES: "
+    "(1) The 'Naive baseline' value in the data equals the current price — it is NOT a model prediction. "
+    "Never say 'the model's point estimate is Rs.X' or 'the model predicts Rs.X'. "
+    "(2) When directional_signal_available is true, lead with the Chronos directional signal: "
+    "mention the lean direction, its recent accuracy (e.g. '63% on recent data'), "
+    "and whether samples agree strongly (e.g. '5 of 5 samples') or are split. "
+    "Frame it as a lean, not a certainty — ~63% accuracy is better than a coin flip, not a guarantee. "
+    "(3) When directional_signal_available is false, skip the directional signal entirely. "
+    "Do NOT fabricate a lean or direction. "
+    "(4) You may mention recent price moves and the 90-day price percentile for buyer context. "
+    "Never give buy/sell/hold advice. Never use hype words like 'soaring', 'plunging', 'bullish', 'bearish'. "
     "IMPORTANT: When sufficient_for_short_term_stats is false, do NOT mention 3-day or "
-    "7-day price changes — instead acknowledge the warmup state, e.g. 'Only N real readings "
-    "collected so far; trend metrics will be available after ~14 days of data.' "
+    "7-day price changes — instead note that trend metrics will be available after ~14 days of data. "
     "Output the note text only, no preamble."
 )
 
@@ -139,11 +145,10 @@ def build_user_message(
         except Exception:
             days_since_drop = "N/A"
 
-    # Forecast stats
+    # Forecast stats (naive flat-hold baseline)
     fc_price = forecast.get("predicted_22k", "N/A") if forecast else "N/A"
     fc_lower = forecast.get("lower", "N/A") if forecast else "N/A"
     fc_upper = forecast.get("upper", "N/A") if forecast else "N/A"
-    fc_time = forecast.get("target_time", "N/A") if forecast else "N/A"
 
     # Festival flags
     near_akshaya = near_dhanteras = "no"
@@ -164,6 +169,29 @@ def build_user_message(
         bt_mae = f"Rs.{backtest['model'].get('mae', 'N/A')}"
         bt_dir = f"{backtest['model'].get('direction_acc', 0) * 100:.1f}%"
 
+    # Chronos companion directional signal
+    companion: dict = {}
+    if forecast:
+        companion = forecast.get("chronos_companion") or {}
+    companion_status = companion.get("status", "unknown")
+    companion_available = companion_status == "success"
+    if companion_available:
+        _lean_dir = companion.get("lean_direction", "N/A")
+        _lean_pct = companion.get("lean_strength_pct")
+        _dir_acc = companion.get("direction_acc_30f")
+        _majority = companion.get("majority_direction", "N/A")
+        _consensus = companion.get("direction_consensus")
+        lean_str = (
+            f"{_lean_dir} ({_lean_pct:.1f}% from current)"
+            if isinstance(_lean_pct, (int, float))
+            else str(_lean_dir)
+        )
+        dir_acc_str = f"{_dir_acc * 100:.0f}%" if isinstance(_dir_acc, (int, float)) else "N/A"
+        consensus_count = round(_consensus * 5) if isinstance(_consensus, (int, float)) else "?"
+        consensus_str = f"{consensus_count}/5 samples agree on {_majority}"
+    else:
+        lean_str = dir_acc_str = consensus_str = "N/A"
+
     lines = [
         f"sufficient_for_short_term_stats: {'true' if sufficient else 'false'}",
         f"real_readings_count: {len(real_prices)}",
@@ -176,10 +204,15 @@ def build_user_message(
         f"  7-day delta : {_delta(7)}",
         f"  Price percentile in last 90 days (calibrated history): {pctile}th",
         "",
-        "Forecast (next reading):",
-        f"  Point estimate : Rs.{fc_price}",
+        "Forecast context (naive flat-hold baseline — predicts no change; equals current price):",
+        f"  Naive baseline : Rs.{fc_price} (= current price; no directional signal from this number)",
         f"  80% interval   : Rs.{fc_lower} - Rs.{fc_upper}",
-        f"  Target time    : {fc_time}",
+        "",
+        "Directional signal (Chronos) — treat separately from naive baseline:",
+        f"  directional_signal_available: {'true' if companion_available else 'false'}",
+        f"  Lean            : {lean_str}",
+        f"  Direction acc. (last 30 folds): {dir_acc_str}",
+        f"  Consensus       : {consensus_str}",
         "",
         "Notable patterns:",
         f"  Days since last >=Rs.100 drop : {days_since_drop}",
