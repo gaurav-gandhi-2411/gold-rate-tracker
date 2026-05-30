@@ -1144,9 +1144,9 @@ def test_t1_skips_missing_majority_direction_v1_schema():
         NotificationState(),
         _ist(2026, 5, 19, 14, 0),
     )
-    assert all(a.trigger_id != "T1" for a in alerts), (
-        "T1 must NOT fire when majority_direction is absent (v1 schema back-compat)"
-    )
+    assert all(
+        a.trigger_id != "T1" for a in alerts
+    ), "T1 must NOT fire when majority_direction is absent (v1 schema back-compat)"
 
 
 def test_t1_skips_majority_neutral():
@@ -1163,9 +1163,9 @@ def test_t1_skips_majority_neutral():
         NotificationState(),
         _ist(2026, 5, 19, 14, 0),
     )
-    assert all(a.trigger_id != "T1" for a in alerts), (
-        "T1 must NOT fire when majority_direction=neutral"
-    )
+    assert all(
+        a.trigger_id != "T1" for a in alerts
+    ), "T1 must NOT fire when majority_direction=neutral"
 
 
 def test_t1_skips_when_strength_too_low_despite_full_consensus():
@@ -1178,9 +1178,9 @@ def test_t1_skips_when_strength_too_low_despite_full_consensus():
         NotificationState(),
         _ist(2026, 5, 19, 14, 0),
     )
-    assert all(a.trigger_id != "T1" for a in alerts), (
-        "T1 must NOT fire when strength=0.3% (below 0.5% gate)"
-    )
+    assert all(
+        a.trigger_id != "T1" for a in alerts
+    ), "T1 must NOT fire when strength=0.3% (below 0.5% gate)"
 
 
 # --- T2 consensus gate tests (mirror of T1) ---
@@ -1214,9 +1214,9 @@ def test_t2_skips_majority_down_high_consensus():
         NotificationState(),
         _ist(2026, 5, 19, 14, 0),
     )
-    assert all(a.trigger_id != "T2" for a in alerts), (
-        "T2 must NOT fire when majority_direction=down"
-    )
+    assert all(
+        a.trigger_id != "T2" for a in alerts
+    ), "T2 must NOT fire when majority_direction=down"
 
 
 def test_t2_skips_majority_up_consensus_0_4():
@@ -1245,9 +1245,9 @@ def test_t2_skips_missing_majority_direction_v1_schema():
         NotificationState(),
         _ist(2026, 5, 19, 14, 0),
     )
-    assert all(a.trigger_id != "T2" for a in alerts), (
-        "T2 must NOT fire when majority_direction is absent (v1 schema back-compat)"
-    )
+    assert all(
+        a.trigger_id != "T2" for a in alerts
+    ), "T2 must NOT fire when majority_direction is absent (v1 schema back-compat)"
 
 
 def test_t2_skips_when_strength_too_low_despite_full_consensus():
@@ -1260,9 +1260,9 @@ def test_t2_skips_when_strength_too_low_despite_full_consensus():
         NotificationState(),
         _ist(2026, 5, 19, 14, 0),
     )
-    assert all(a.trigger_id != "T2" for a in alerts), (
-        "T2 must NOT fire when strength=0.3% (below 0.5% gate)"
-    )
+    assert all(
+        a.trigger_id != "T2" for a in alerts
+    ), "T2 must NOT fire when strength=0.3% (below 0.5% gate)"
 
 
 # ---------------------------------------------------------------------------
@@ -1748,9 +1748,9 @@ def test_t8_not_counted_in_t123_cap():
         state,
         _ist(2026, 5, 19, 10, 0),
     )
-    assert any(a.trigger_id == "T8_MORNING" for a in alerts), (
-        "T8_MORNING must fire even when T1/T2/T3 cap is full"
-    )
+    assert any(
+        a.trigger_id == "T8_MORNING" for a in alerts
+    ), "T8_MORNING must fire even when T1/T2/T3 cap is full"
 
 
 # --- send_pending stamps T8 state dates ---
