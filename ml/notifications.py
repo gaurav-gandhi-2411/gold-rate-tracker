@@ -602,13 +602,13 @@ def _build_t8_content(
 
     if scenario == "rose":
         title = f"Gold {session}: Rs.{current} (up Rs.{delta_abs})"
-        body = f"Gold rose today — Rs.{current} (up Rs.{delta_abs} from yesterday)."
+        body = f"Gold rose today - Rs.{current} (up Rs.{delta_abs} from yesterday)."
     elif scenario == "dropped":
         title = f"Gold {session}: Rs.{current} (down Rs.{delta_abs})"
-        body = f"Gold dropped today — Rs.{current} (down Rs.{delta_abs} from yesterday)."
+        body = f"Gold dropped today - Rs.{current} (down Rs.{delta_abs} from yesterday)."
     else:
         title = f"Gold {session}: Rs.{current}"
-        body = f"Gold held steady today — Rs.{current}."
+        body = f"Gold held steady today - Rs.{current}."
 
     # Optional directional hint: only when chronos_companion is available (norm #4 — honest framing)
     companion = forecast.get("chronos_companion", {})
