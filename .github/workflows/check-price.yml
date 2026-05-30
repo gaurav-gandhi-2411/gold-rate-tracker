@@ -241,8 +241,26 @@ jobs:
           NTFY_TOPIC: ${{ secrets.NTFY_TOPIC }}
         run: |
           cat > /tmp/pipeline_test.py << 'PYEOF'
-          import sys
+          import os, sys
           sys.path.insert(0, '.')
+
+          # --- Length / whitespace audit (no secret content printed) ---
+          topic = os.environ.get("NTFY_TOPIC", "")
+          EXPECTED_LEN = 18  # len("gold-msgg-7k2x9p4r")
+          actual_len = len(topic)
+          print(f"NTFY_TOPIC length  : {actual_len}")
+          print(f"Expected length    : {EXPECTED_LEN}")
+          print(f"Length match       : {actual_len == EXPECTED_LEN}")
+          print(f"Stripped length    : {len(topic.strip())} (differs => leading/trailing whitespace)")
+          print(f"Ends with \\n (0x0a): {topic.endswith(chr(10))}")
+          print(f"Ends with \\r (0x0d): {topic.endswith(chr(13))}")
+          print(f"Ends with space    : {topic.endswith(' ')}")
+          if actual_len > EXPECTED_LEN:
+              extra = topic[EXPECTED_LEN:]
+              print(f"Extra chars after pos 18: {repr(extra)}")
+          print()
+
+          # --- Send test via real send_pending path ---
           from ml.notifications import PendingAlert, NotificationState, send_pending
           from datetime import datetime
           from zoneinfo import ZoneInfo
