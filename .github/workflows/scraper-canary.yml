@@ -4,6 +4,12 @@ on:
   schedule:
     - cron: "0 3 * * 1" # Monday 03:00 UTC
   workflow_dispatch:
+  pull_request:
+    branches: [master]
+    paths:
+      - "scraper/**"
+      - "tests/fixtures/tanishq_sample.html"
+      - "tests/fixtures/cf_challenge.html"
 
 permissions:
   contents: read
@@ -41,8 +47,15 @@ jobs:
         working-directory: scraper
         run: node --test test_scrape.js
 
+      - name: Run scraper hardening tests (mock HTTP, no live network)
+        working-directory: scraper
+        run: node --test test_scraper_hardening.mjs
+
       - name: Live DOM canary (Tanishq page)
         id: canary
+        # Live network call — skip on pull_request to avoid external dependency in PR CI.
+        # Hardening tests (above) cover all mock-testable failure modes on every PR.
+        if: github.event_name != 'pull_request'
         working-directory: scraper
         # Run scrape.js but discard the output — we only care about the exit code.
         # scrape.js validates: selector exists, prices in range, 22/24 & 18/24 ratios.
