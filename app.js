@@ -56,6 +56,18 @@ let allReadings      = [];
 let currentRange     = "7";   // tracks active chart tab for refreshData()
 let pwaHelpDismissed = false; // D5: set true when user taps ✕; survives re-renders
 
+// Ψ3C.2: stagger card-enter animation across a list of elements.
+// Forces a reflow between remove/add so the animation restarts each time.
+function staggerEnter(elements, step = 30) {
+  elements.forEach((el, i) => {
+    if (!el) return;
+    el.classList.remove("card-enter");
+    void el.offsetWidth; // reflow triggers animation restart
+    el.style.animationDelay = `${i * step}ms`;
+    el.classList.add("card-enter");
+  });
+}
+
 async function loadJSON(url) {
   const res = await fetch(`${url}?t=${Date.now()}`);
   if (!res.ok) throw new Error(`HTTP ${res.status} for ${url}`);
@@ -889,6 +901,12 @@ async function refreshData() {
     renderHero(allReadings, fc);
     renderStaleBanner(fc);
     renderModelSignal(fc);
+    // Ψ3C.2: stagger visible data cards to confirm refresh visually
+    staggerEnter([
+      document.getElementById("comparison-section"),
+      document.querySelector(".karat-strip"),
+      document.getElementById("model-signal-section"),
+    ]);
   } catch (err) {
     console.error("Refresh failed:", err);
   } finally {
@@ -900,11 +918,24 @@ function bindRangeToggle() {
   const buttons = document.querySelectorAll(".range-toggle button");
   buttons.forEach(btn => {
     btn.addEventListener("click", () => {
+      if (btn.classList.contains("active")) return; // already selected — no-op
       buttons.forEach(b => { b.classList.remove("active"); b.setAttribute("aria-selected", "false"); });
       btn.classList.add("active");
       btn.setAttribute("aria-selected", "true");
       currentRange = btn.dataset.range;
-      renderChart(allReadings, currentRange);
+      // Ψ3C.2: chart fade — fade out 150ms, render new data, fade in 200ms
+      const wrap = document.querySelector(".chart-wrap");
+      if (wrap) {
+        wrap.classList.add("chart-fade-out");
+        setTimeout(() => {
+          renderChart(allReadings, currentRange);
+          wrap.classList.remove("chart-fade-out");
+          wrap.classList.add("chart-fade-in");
+          wrap.addEventListener("animationend", () => wrap.classList.remove("chart-fade-in"), { once: true });
+        }, 150);
+      } else {
+        renderChart(allReadings, currentRange);
+      }
     });
   });
 }
@@ -975,11 +1006,105 @@ function initBottomNav() {
   updateActiveNav(); // set initial state
 }
 
+// ─── PULL-TO-REFRESH — Ψ3C.2 ────────────────────────────────────────────────
+//
+// Gesture: touch at scrollY=0 and drag down ≥60px → call refreshData().
+// iOS risk: overscroll-behavior-y:none only works Safari 16+; older iOS still
+// rubber-bands. Real-device test required. Fallback: ↻ button still works.
+//
+// Safety rules (per spec):
+//   - preventDefault() ONLY when actively pulling (deltaY > 0 AND scrollY === 0)
+//   - overscroll-behavior-y:none (html.ptr-pulling class) ONLY during active pull
+//   - No haptics (navigator.vibrate unreliable on iOS) — visual feedback only
+
+function initPullToRefresh() {
+  const indicator = document.getElementById("pull-indicator");
+  const mainEl    = document.querySelector("main");
+  if (!indicator || !mainEl) return;
+
+  const THRESHOLD = 60; // px — minimum pull distance to trigger refresh
+
+  let startY    = 0;
+  let isPulling = false;
+
+  function endPull(doRefresh) {
+    isPulling = false;
+    startY    = 0;
+    document.documentElement.classList.remove("ptr-pulling");
+
+    // Snap main back with a spring-like transition
+    mainEl.style.transition = "transform 300ms ease-out";
+    mainEl.style.transform  = "";
+    mainEl.addEventListener("transitionend", () => { mainEl.style.transition = ""; }, { once: true });
+
+    if (doRefresh) {
+      indicator.classList.add("pull-indicator--loading");
+      indicator.querySelector(".pull-icon").textContent = "↻";
+      refreshData().finally(() => {
+        indicator.style.opacity = "0";
+        indicator.classList.remove("pull-indicator--loading", "pull-indicator--ready");
+      });
+    } else {
+      indicator.style.opacity = "0";
+      indicator.classList.remove("pull-indicator--ready");
+    }
+  }
+
+  document.addEventListener("touchstart", (e) => {
+    if (window.scrollY > 2) return; // only arm when at scroll top
+    startY    = e.touches[0].clientY;
+    isPulling = false;
+  }, { passive: true });
+
+  document.addEventListener("touchmove", (e) => {
+    if (!startY) return;
+    if (window.scrollY > 2) { startY = 0; return; } // scrolled away — disarm
+
+    const deltaY = e.touches[0].clientY - startY;
+    if (deltaY <= 0) {
+      if (isPulling) endPull(false); // reversed direction — cancel
+      return;
+    }
+
+    // Active pull: prevent native scroll/rubber-band for this gesture
+    e.preventDefault();
+
+    if (!isPulling) {
+      isPulling = true;
+      document.documentElement.classList.add("ptr-pulling");
+    }
+
+    // Dampen the translation: user moves 2px → content moves 1px (max 60px)
+    const translatePx = Math.min(deltaY * 0.5, THRESHOLD);
+    mainEl.style.transform = `translateY(${translatePx}px)`;
+
+    const ratio = Math.min(deltaY / THRESHOLD, 1);
+    indicator.style.opacity = String(ratio);
+
+    if (ratio >= 1) {
+      if (!indicator.classList.contains("pull-indicator--ready")) {
+        indicator.classList.add("pull-indicator--ready");
+        indicator.querySelector(".pull-icon").textContent = "↻"; // release cue
+      }
+    } else {
+      indicator.classList.remove("pull-indicator--ready");
+      indicator.querySelector(".pull-icon").textContent = "↓";
+    }
+  }, { passive: false }); // passive: false required to call preventDefault()
+
+  document.addEventListener("touchend", (e) => {
+    if (!isPulling) return;
+    const releaseY = e.changedTouches[0]?.clientY ?? (startY + 0);
+    endPull(releaseY - startY >= THRESHOLD);
+  }, { passive: true });
+}
+
 // ─── INIT ─────────────────────────────────────────────────────────────────────
 
 (async function init() {
   bindRangeToggle();
   initBottomNav();
+  initPullToRefresh();
 
   // Ambient header: add elevation (.scrolled → border + shadow) only when content
   // is scrolling under the header. Passive listener — no layout work on scroll.

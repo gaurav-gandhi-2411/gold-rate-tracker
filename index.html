@@ -34,6 +34,12 @@
   <body>
     <div class="grain" aria-hidden="true"></div>
 
+    <!-- PULL-TO-REFRESH indicator — Ψ3C.2 — created above app-header so it's
+         revealed in the gap when <main> translates down during a pull gesture -->
+    <div class="pull-indicator" id="pull-indicator" aria-hidden="true">
+      <span class="pull-icon">↓</span>
+    </div>
+
     <!-- 1. APP HEADER — sticky top -->
     <div class="app-header" id="utility-row" aria-live="polite">
       <div class="app-header-left">
