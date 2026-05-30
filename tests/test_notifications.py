@@ -10,6 +10,7 @@ from zoneinfo import ZoneInfo
 from ml.notifications import (
     NotificationState,
     PendingAlert,
+    _get_prior_day_price,
     _is_quiet_hours,
     _release_queued,
     check_triggers,
@@ -1262,3 +1263,551 @@ def test_t2_skips_when_strength_too_low_despite_full_consensus():
     assert all(
         a.trigger_id != "T2" for a in alerts
     ), "T2 must NOT fire when strength=0.3% (below 0.5% gate)"
+
+
+# ---------------------------------------------------------------------------
+# T8 — Daily plain-language digest (morning + evening)
+# ---------------------------------------------------------------------------
+# Test now: _ist(2026, 5, 19, ...).  Prices from _prices_up(n=10) / _prices_down(n=10)
+# span 2026-05-10 → 2026-05-19 UTC (= IST same date at 15:30).
+# At test time 2026-05-19 14:00 IST:
+#   today_ist = 2026-05-19
+#   current  = reading at 2026-05-19T10:00Z (index 9)
+#   prior    = last reading before May 19 IST = 2026-05-18T10:00Z (index 8)
+
+
+def _forecast_with_companion(lean_direction: str = "up") -> dict:
+    return {
+        "warmup": False,
+        "model_fallback": False,
+        "predicted_22k": 14420,
+        "chronos_companion": {
+            "status": "success",
+            "lean_direction": lean_direction,
+            "lean_strength_pct": 1.5,
+            "direction_acc_30f": 0.633,
+        },
+    }
+
+
+def _forecast_companion_failed() -> dict:
+    return {
+        "warmup": False,
+        "model_fallback": False,
+        "predicted_22k": 14420,
+        "chronos_companion": {"status": "failed"},
+    }
+
+
+# --- T8_MORNING timing ---
+
+
+def test_t8_morning_fires_at_threshold():
+    """T8_MORNING fires on first run at/after 08:00 IST."""
+    alerts = check_triggers(
+        _forecast(),
+        _probe(),
+        _prices_up(n=10),
+        _backtest_accurate(),
+        NotificationState(),
+        _ist(2026, 5, 19, 10, 0),  # 10:00 IST ≥ 08:00 threshold
+    )
+    assert any(a.trigger_id == "T8_MORNING" for a in alerts)
+
+
+def test_t8_morning_no_fire_before_threshold():
+    """T8_MORNING does NOT fire before 08:00 IST (cron-drift safety)."""
+    alerts = check_triggers(
+        _forecast(),
+        _probe(),
+        _prices_up(n=10),
+        _backtest_accurate(),
+        NotificationState(),
+        _ist(2026, 5, 19, 4, 0),  # 04:00 IST < 08:00 threshold
+    )
+    assert all(a.trigger_id != "T8_MORNING" for a in alerts)
+
+
+def test_t8_morning_fires_even_with_drift():
+    """T8_MORNING fires at 11:30 IST (simulated cron drift past 08:00)."""
+    alerts = check_triggers(
+        _forecast(),
+        _probe(),
+        _prices_up(n=10),
+        _backtest_accurate(),
+        NotificationState(),
+        _ist(2026, 5, 19, 11, 30),  # drifted run, still fires
+    )
+    assert any(a.trigger_id == "T8_MORNING" for a in alerts)
+
+
+def test_t8_morning_dedup_no_double_fire():
+    """T8_MORNING fires at most once per IST day."""
+    state = NotificationState(last_t8_morning_ist_date="2026-05-19")
+    alerts = check_triggers(
+        _forecast(),
+        _probe(),
+        _prices_up(n=10),
+        _backtest_accurate(),
+        state,
+        _ist(2026, 5, 19, 16, 0),  # second run same IST day
+    )
+    assert all(a.trigger_id != "T8_MORNING" for a in alerts)
+
+
+def test_t8_morning_fires_next_day_after_dedup():
+    """T8_MORNING fires again the next IST day."""
+    state = NotificationState(last_t8_morning_ist_date="2026-05-19")
+    now_ist = _ist(2026, 5, 20, 10, 0)  # next day
+    # Need prices covering May 20 as current day
+    from datetime import UTC as _UTC
+
+    base_ts = datetime(2026, 5, 10, 10, 0, 0, tzinfo=_UTC)
+    prices_11d = [
+        {
+            "timestamp": (base_ts + timedelta(days=i)).isoformat().replace("+00:00", "Z"),
+            "22k": 13500 + i * 100,
+            "24k": 14000 + i * 100,
+            "18k": 13000 + i * 100,
+            "source": "test",
+        }
+        for i in range(11)  # through May 20
+    ]
+    alerts = check_triggers(
+        _forecast(),
+        _probe(),
+        prices_11d,
+        _backtest_accurate(),
+        state,
+        now_ist,
+    )
+    assert any(a.trigger_id == "T8_MORNING" for a in alerts)
+
+
+# --- T8_EVENING timing ---
+
+
+def test_t8_evening_fires_at_threshold():
+    """T8_EVENING fires on first run at/after 18:00 IST."""
+    alerts = check_triggers(
+        _forecast(),
+        _probe(),
+        _prices_up(n=10),
+        _backtest_accurate(),
+        NotificationState(),
+        _ist(2026, 5, 19, 22, 0),  # 22:00 IST cron, first after 18:00 threshold
+    )
+    assert any(a.trigger_id == "T8_EVENING" for a in alerts)
+
+
+def test_t8_evening_no_fire_before_threshold():
+    """T8_EVENING does NOT fire before 18:00 IST."""
+    alerts = check_triggers(
+        _forecast(),
+        _probe(),
+        _prices_up(n=10),
+        _backtest_accurate(),
+        NotificationState(),
+        _ist(2026, 5, 19, 16, 0),  # 16:00 IST < 18:00 threshold
+    )
+    assert all(a.trigger_id != "T8_EVENING" for a in alerts)
+
+
+def test_t8_evening_dedup_no_double_fire():
+    """T8_EVENING fires at most once per IST day."""
+    state = NotificationState(last_t8_evening_ist_date="2026-05-19")
+    alerts = check_triggers(
+        _forecast(),
+        _probe(),
+        _prices_up(n=10),
+        _backtest_accurate(),
+        state,
+        _ist(2026, 5, 19, 22, 0),
+    )
+    assert all(a.trigger_id != "T8_EVENING" for a in alerts)
+
+
+def test_t8_evening_bypass_quiet_true():
+    """T8_EVENING has bypass_quiet=True (22:00 IST cron is quiet-hours boundary)."""
+    alerts = check_triggers(
+        _forecast(),
+        _probe(),
+        _prices_up(n=10),
+        _backtest_accurate(),
+        NotificationState(),
+        _ist(2026, 5, 19, 22, 0),
+    )
+    t8e = [a for a in alerts if a.trigger_id == "T8_EVENING"]
+    assert len(t8e) == 1
+    assert t8e[0].bypass_quiet is True
+
+
+def test_t8_morning_bypass_quiet_false():
+    """T8_MORNING has bypass_quiet=False (10:00 IST cron is outside quiet hours)."""
+    alerts = check_triggers(
+        _forecast(),
+        _probe(),
+        _prices_up(n=10),
+        _backtest_accurate(),
+        NotificationState(),
+        _ist(2026, 5, 19, 10, 0),
+    )
+    t8m = [a for a in alerts if a.trigger_id == "T8_MORNING"]
+    assert len(t8m) == 1
+    assert t8m[0].bypass_quiet is False
+
+
+# --- Both morning and evening fire on the same IST day ---
+
+
+def test_t8_morning_and_evening_both_fire_same_day():
+    """T8_MORNING and T8_EVENING both fire on the same day (independent dedup)."""
+    # Morning fires at 10:00, evening fires at 22:00 — test the 22:00 run after morning ran
+    state = NotificationState(last_t8_morning_ist_date="2026-05-19")  # morning already fired
+    alerts = check_triggers(
+        _forecast(),
+        _probe(),
+        _prices_up(n=10),
+        _backtest_accurate(),
+        state,
+        _ist(2026, 5, 19, 22, 0),  # 22:00 IST: morning blocked (dedup), evening fires
+    )
+    morning_alerts = [a for a in alerts if a.trigger_id == "T8_MORNING"]
+    evening_alerts = [a for a in alerts if a.trigger_id == "T8_EVENING"]
+    assert len(morning_alerts) == 0, "T8_MORNING already fired today — should be blocked"
+    assert len(evening_alerts) == 1, "T8_EVENING should fire on same day as morning"
+
+
+# --- Three price scenarios ---
+
+
+def test_t8_scenario_rose():
+    """Rose scenario: message contains 'rose' and the up amount. ASCII-safe."""
+    # _prices_up(n=10) at _ist(2026,5,19,14): current=14400, prior=14300, delta=+100
+    alerts = check_triggers(
+        _forecast(),
+        _probe(),
+        _prices_up(n=10),
+        _backtest_accurate(),
+        NotificationState(),
+        _ist(2026, 5, 19, 10, 0),
+    )
+    t8m = next(a for a in alerts if a.trigger_id == "T8_MORNING")
+    assert "rose" in t8m.body
+    assert "up Rs.100" in t8m.body
+    assert "₹" not in t8m.body
+    assert "Rs." in t8m.body
+
+
+def test_t8_scenario_dropped():
+    """Dropped scenario: message contains 'dropped' and the down amount. ASCII-safe."""
+    # _prices_down(n=10) at _ist(2026,5,19,14): current=13600, prior=13700, delta=-100
+    alerts = check_triggers(
+        _forecast(),
+        _probe(),
+        _prices_down(n=10),
+        _backtest_accurate(),
+        NotificationState(),
+        _ist(2026, 5, 19, 10, 0),
+    )
+    t8m = next(a for a in alerts if a.trigger_id == "T8_MORNING")
+    assert "dropped" in t8m.body
+    assert "down Rs.100" in t8m.body
+    assert "₹" not in t8m.body
+    assert "Rs." in t8m.body
+
+
+def test_t8_scenario_flat():
+    """Flat scenario: message contains 'held steady'. ASCII-safe."""
+    # _prices_flat(n=3): all prices = 14000; at May 19, prior is May 12 = 14000, delta = 0
+    alerts = check_triggers(
+        _forecast(),
+        _probe(),
+        _prices_flat(n=3),
+        _backtest_accurate(),
+        NotificationState(),
+        _ist(2026, 5, 19, 10, 0),
+    )
+    t8m = next(a for a in alerts if a.trigger_id == "T8_MORNING")
+    assert "held steady" in t8m.body
+    assert "₹" not in t8m.body
+    assert "Rs." in t8m.body
+
+
+# --- Directional hint ---
+
+
+def test_t8_hint_included_when_companion_success_up():
+    """Directional hint appended when chronos_companion status=success and lean=up."""
+    alerts = check_triggers(
+        _forecast_with_companion(lean_direction="up"),
+        _probe(),
+        _prices_up(n=10),
+        _backtest_accurate(),
+        NotificationState(),
+        _ist(2026, 5, 19, 10, 0),
+    )
+    t8m = next(a for a in alerts if a.trigger_id == "T8_MORNING")
+    assert "edge up" in t8m.body
+    # norm #4: no "will"
+    assert " will " not in t8m.body
+
+
+def test_t8_hint_included_when_companion_success_down():
+    """Directional hint appended when chronos_companion status=success and lean=down."""
+    alerts = check_triggers(
+        _forecast_with_companion(lean_direction="down"),
+        _probe(),
+        _prices_up(n=10),
+        _backtest_accurate(),
+        NotificationState(),
+        _ist(2026, 5, 19, 10, 0),
+    )
+    t8m = next(a for a in alerts if a.trigger_id == "T8_MORNING")
+    assert "ease" in t8m.body
+    assert " will " not in t8m.body
+
+
+def test_t8_hint_omitted_when_probe_failed():
+    """Directional hint OMITTED when chronos_companion status=failed (no fabrication)."""
+    alerts = check_triggers(
+        _forecast_companion_failed(),
+        _probe(),
+        _prices_up(n=10),
+        _backtest_accurate(),
+        NotificationState(),
+        _ist(2026, 5, 19, 10, 0),
+    )
+    t8m = next(a for a in alerts if a.trigger_id == "T8_MORNING")
+    # No directional hint phrases should appear
+    assert "edge up" not in t8m.body
+    assert "ease" not in t8m.body
+    assert "likely" not in t8m.body
+
+
+def test_t8_hint_omitted_when_no_companion_block():
+    """Directional hint OMITTED when forecast has no chronos_companion key."""
+    alerts = check_triggers(
+        _forecast(),  # no chronos_companion key
+        _probe(),
+        _prices_up(n=10),
+        _backtest_accurate(),
+        NotificationState(),
+        _ist(2026, 5, 19, 10, 0),
+    )
+    t8m = next(a for a in alerts if a.trigger_id == "T8_MORNING")
+    assert "edge up" not in t8m.body
+    assert "ease" not in t8m.body
+
+
+def test_t8_hint_omitted_when_lean_flat():
+    """Directional hint OMITTED when lean_direction=flat (no direction to report)."""
+    fc = _forecast_with_companion(lean_direction="flat")
+    alerts = check_triggers(
+        fc,
+        _probe(),
+        _prices_up(n=10),
+        _backtest_accurate(),
+        NotificationState(),
+        _ist(2026, 5, 19, 10, 0),
+    )
+    t8m = next(a for a in alerts if a.trigger_id == "T8_MORNING")
+    assert "edge up" not in t8m.body
+    assert "ease" not in t8m.body
+
+
+# --- ASCII-safe ---
+
+
+def test_t8_ascii_safe_no_rupee_symbol():
+    """T8 messages never contain the ₹ symbol (norm #12)."""
+    for prices in (_prices_up(n=10), _prices_down(n=10), _prices_flat(n=3)):
+        alerts = check_triggers(
+            _forecast_with_companion("up"),
+            _probe(),
+            prices,
+            _backtest_accurate(),
+            NotificationState(),
+            _ist(2026, 5, 19, 10, 0),
+        )
+        for a in alerts:
+            if a.trigger_id.startswith("T8"):
+                assert "₹" not in a.title, f"₹ found in {a.trigger_id} title"
+                assert "₹" not in a.body, f"₹ found in {a.trigger_id} body"
+                assert "Rs." in a.body, f"Rs. missing from {a.trigger_id} body"
+
+
+# --- Priority ---
+
+
+def test_t8_priority_2():
+    """T8_MORNING and T8_EVENING are priority 2 (informational)."""
+    alerts = check_triggers(
+        _forecast(),
+        _probe(),
+        _prices_up(n=10),
+        _backtest_accurate(),
+        NotificationState(),
+        _ist(2026, 5, 19, 22, 0),  # triggers both when no dedup set
+    )
+    for a in alerts:
+        if a.trigger_id.startswith("T8"):
+            assert a.priority == 2, f"{a.trigger_id} should be priority 2"
+
+
+# --- T8 does NOT count toward T1+T2+T3 anti-spam cap ---
+
+
+def test_t8_not_counted_in_t123_cap():
+    """T8 fires even when the T1+T2+T3 combined cap is saturated."""
+    state = NotificationState()
+    now_utc = datetime.now(UTC).isoformat()
+    state.sent_today = [
+        {"trigger_id": "T1", "sent_at": now_utc},
+        {"trigger_id": "T2", "sent_at": now_utc},
+        {"trigger_id": "T3", "sent_at": now_utc},
+    ]
+    state.last_sent["T1"] = now_utc
+    state.last_sent["T2"] = now_utc
+    state.last_sent["T3"] = now_utc
+
+    alerts = check_triggers(
+        _forecast(),
+        _probe(),
+        _prices_up(n=10),
+        _backtest_accurate(),
+        state,
+        _ist(2026, 5, 19, 10, 0),
+    )
+    assert any(
+        a.trigger_id == "T8_MORNING" for a in alerts
+    ), "T8_MORNING must fire even when T1/T2/T3 cap is full"
+
+
+# --- send_pending stamps T8 state dates ---
+
+
+def test_send_pending_sets_t8_morning_date(monkeypatch):
+    mock_resp = MagicMock()
+    mock_resp.status = 200
+    mock_resp.__enter__ = MagicMock(return_value=mock_resp)
+    mock_resp.__exit__ = MagicMock(return_value=False)
+    monkeypatch.setattr("urllib.request.urlopen", lambda req, timeout=None: mock_resp)
+    monkeypatch.setenv("NTFY_TOPIC", "test-gold-topic")
+
+    now_ist = _ist(2026, 5, 19, 10, 0)
+    alert = PendingAlert(
+        trigger_id="T8_MORNING",
+        title="Gold morning: Rs.14400 (up Rs.100)",
+        body="Gold rose today — Rs.14400 (up Rs.100 from yesterday).",
+        priority=2,
+        tags=["bell"],
+        click_url="https://gaurav-gandhi-2411.github.io/gold-rate-tracker/",
+        queued_at=now_ist.isoformat(),
+        bypass_quiet=False,
+    )
+    state = NotificationState()
+    assert state.last_t8_morning_ist_date == ""
+
+    send_pending([alert], state, now_ist)
+
+    assert state.last_t8_morning_ist_date == "2026-05-19"
+
+
+def test_send_pending_sets_t8_evening_date(monkeypatch):
+    mock_resp = MagicMock()
+    mock_resp.status = 200
+    mock_resp.__enter__ = MagicMock(return_value=mock_resp)
+    mock_resp.__exit__ = MagicMock(return_value=False)
+    monkeypatch.setattr("urllib.request.urlopen", lambda req, timeout=None: mock_resp)
+    monkeypatch.setenv("NTFY_TOPIC", "test-gold-topic")
+
+    now_ist = _ist(2026, 5, 19, 22, 0)
+    alert = PendingAlert(
+        trigger_id="T8_EVENING",
+        title="Gold evening: Rs.14400 (up Rs.100)",
+        body="Gold rose today — Rs.14400 (up Rs.100 from yesterday).",
+        priority=2,
+        tags=["bell"],
+        click_url="https://gaurav-gandhi-2411.github.io/gold-rate-tracker/",
+        queued_at=now_ist.isoformat(),
+        bypass_quiet=True,
+    )
+    state = NotificationState()
+    assert state.last_t8_evening_ist_date == ""
+
+    send_pending([alert], state, now_ist)
+
+    assert state.last_t8_evening_ist_date == "2026-05-19"
+
+
+# --- Backward-compat: old state without T8 fields loads cleanly ---
+
+
+def test_t8_backward_compat_old_state_loads(tmp_path: Path):
+    """State file without last_t8_* fields loads with empty-string defaults."""
+    old_state_json = {
+        "schema_version": 1,
+        "last_sent": {},
+        "queued": [],
+        "sent_today": [],
+        "last_t5_ist_date": "",
+        "last_t6_fired_date_ist": "",
+        "last_t4_fired_ist_date": "2026-05-17",
+        "last_t7_fired_ist_date": "2026-05-15",
+        # deliberately absent: last_t8_morning_ist_date, last_t8_evening_ist_date
+    }
+    path = tmp_path / "old_notification_state.json"
+    import json as _json
+
+    path.write_text(_json.dumps(old_state_json), encoding="utf-8")
+
+    loaded = load_state(path)
+    assert loaded.last_t8_morning_ist_date == ""
+    assert loaded.last_t8_evening_ist_date == ""
+    assert loaded.last_t4_fired_ist_date == "2026-05-17"  # existing fields preserved
+
+
+def test_t8_state_round_trip(tmp_path: Path):
+    """T8 state fields survive a full save/load cycle."""
+    state = NotificationState(
+        last_t8_morning_ist_date="2026-05-30",
+        last_t8_evening_ist_date="2026-05-30",
+    )
+    path = tmp_path / "notification_state.json"
+    save_state(state, path)
+
+    loaded = load_state(path)
+    assert loaded.last_t8_morning_ist_date == "2026-05-30"
+    assert loaded.last_t8_evening_ist_date == "2026-05-30"
+
+
+# --- _get_prior_day_price helper ---
+
+
+def test_get_prior_day_price_returns_most_recent_prior():
+    """_get_prior_day_price returns last reading from the day before now_ist."""
+    # _prices_up(10) creates readings May 10–19.
+    # At May 19 14:00 IST → prior = May 18 reading (base + 8*100 = 14300)
+    prices = _prices_up(n=10)
+    result = _get_prior_day_price(prices, _ist(2026, 5, 19, 14, 0))
+    assert result == 14300  # 13500 + 8 * 100
+
+
+def test_get_prior_day_price_returns_none_when_no_prior():
+    """_get_prior_day_price returns None when all readings are from today or future."""
+    from datetime import UTC as _UTC
+
+    # All readings from today (May 19)
+    today_ts = datetime(2026, 5, 19, 10, 0, 0, tzinfo=_UTC)  # = 15:30 IST May 19
+    prices = [
+        {
+            "timestamp": today_ts.isoformat().replace("+00:00", "Z"),
+            "22k": 14400,
+            "24k": 14900,
+            "18k": 13900,
+            "source": "test",
+        }
+    ]
+    result = _get_prior_day_price(prices, _ist(2026, 5, 19, 14, 0))
+    assert result is None
