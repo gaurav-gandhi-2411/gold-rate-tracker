@@ -43,6 +43,25 @@ SAMPLE_FORECAST = {
     "training_rows": 312,
 }
 
+SAMPLE_FORECAST_WITH_COMPANION = {
+    **SAMPLE_FORECAST,
+    "chronos_companion": {
+        "status": "success",
+        "lean_direction": "up",
+        "lean_strength_pct": 2.645,
+        "direction_acc_30f": 0.633,
+        "majority_direction": "up",
+        "direction_consensus": 1.0,
+    },
+}
+
+SAMPLE_FORECAST_WITH_FAILED_COMPANION = {
+    **SAMPLE_FORECAST,
+    "chronos_companion": {
+        "status": "failed",
+    },
+}
+
 SAMPLE_BACKTEST = {
     "generated_at": "2026-05-04T02:00:00.000Z",
     "backtest_days": 90,
@@ -71,7 +90,30 @@ class TestBuildUserMessage:
 
     def test_contains_forecast_price(self):
         msg = build_user_message(SAMPLE_PRICES, SAMPLE_PRICES, SAMPLE_FORECAST, SAMPLE_BACKTEST)
+        # Naive baseline value is still present (honest framing)
         assert "7190" in msg or "7,190" in msg
+        # Must NOT use the old misleading "Point estimate" label
+        assert "Point estimate" not in msg
+        # Must use honest flat-hold framing
+        assert "Naive baseline" in msg
+
+    def test_contains_chronos_directional_signal_when_present(self):
+        """Chronos companion fields reach the prompt when status=success."""
+        msg = build_user_message(
+            SAMPLE_PRICES, SAMPLE_PRICES, SAMPLE_FORECAST_WITH_COMPANION, SAMPLE_BACKTEST
+        )
+        assert "directional_signal_available: true" in msg
+        assert "63%" in msg  # direction_acc_30f (0.633 → "63%")
+        assert "5/5" in msg  # consensus (1.0 × 5 = 5 samples)
+        assert "up" in msg  # lean_direction
+
+    def test_skips_directional_when_probe_failed(self):
+        """When companion status != success, directional fields are N/A; no lean fabricated."""
+        msg = build_user_message(
+            SAMPLE_PRICES, SAMPLE_PRICES, SAMPLE_FORECAST_WITH_FAILED_COMPANION, SAMPLE_BACKTEST
+        )
+        assert "directional_signal_available: false" in msg
+        assert "directional_signal_available: true" not in msg
 
     def test_contains_interval(self):
         msg = build_user_message(SAMPLE_PRICES, SAMPLE_PRICES, SAMPLE_FORECAST, SAMPLE_BACKTEST)
