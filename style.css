@@ -114,7 +114,7 @@ body {
   text-rendering: optimizeLegibility;
   min-height: 100vh;
   min-height: 100dvh;
-  padding-top:   env(safe-area-inset-top, 0px);
+  /* Safe-area top is absorbed by .app-header (Ψ3C.1b) — body only handles sides */
   padding-left:  env(safe-area-inset-left);
   padding-right: env(safe-area-inset-right);
   background-image:
@@ -154,46 +154,47 @@ main {
 }
 
 /* ═══════════════════════════════════════════════════════════════
-   1. APP HEADER — sticky top chrome (Ψ3C.1: was utility-row ~28px, now ~52px)
+   1. APP HEADER — ambient at rest, elevation on scroll (Ψ3C.1b)
+   Absorbs safe-area-inset-top so status-bar zone + nav bar are one
+   continuous surface. Fully opaque — no bleed-through on scroll.
+   Negative margins removed; header is a <body> child at natural width.
 ═══════════════════════════════════════════════════════════════ */
 .app-header {
   position: sticky;
-  top: env(safe-area-inset-top, 0px);
+  top: 0;
   z-index: 10;
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 12px;
-  min-height: 52px;
-  padding: 0 clamp(20px, 5vw, 56px);
-  background: rgba(26, 22, 18, 0.90);
-  backdrop-filter: blur(8px);
-  -webkit-backdrop-filter: blur(8px);
+  /* padding-top absorbs status-bar zone; min-height includes it so the
+     background covers the full area from screen top through nav bar. */
+  min-height: calc(52px + env(safe-area-inset-top, 0px));
+  padding: env(safe-area-inset-top, 0px) clamp(20px, 5vw, 56px) 0;
+  background: var(--ink);
+  /* At rest: no border, no shadow — merges with page. JS adds .scrolled
+     when scrollY > 0, which applies elevation (border + shadow). */
+}
+
+.app-header.scrolled {
   border-bottom: 1px solid var(--line);
-  /* Shadow separates the header from scrolling content below it */
   box-shadow: 0 1px 8px rgba(0, 0, 0, 0.28);
-  /* Bleed to viewport edges */
-  margin-left:  calc(-1 * clamp(20px, 5vw, 56px) - env(safe-area-inset-left,  0px));
-  margin-right: calc(-1 * clamp(20px, 5vw, 56px) - env(safe-area-inset-right, 0px));
 }
 
-@media (prefers-color-scheme: light) {
-  .app-header { background: rgba(251, 247, 238, 0.92); }
-}
-
+/* Freshness alert states always show a tinted border (alert indicator). */
 .app-header:has(.freshness--stale) {
-  /* Layered: opaque --ink base + 28% terracotta tint overlay. */
+  /* Opaque --ink base + 28% terracotta tint overlay. */
   background:
     linear-gradient(rgba(198, 106, 75, 0.28), rgba(198, 106, 75, 0.28)),
     var(--ink);
-  border-bottom-color: rgba(198, 106, 75, 0.60);
+  border-bottom: 1px solid rgba(198, 106, 75, 0.60);
 }
 .app-header:has(.freshness--warn) {
   /* Opaque --ink base + 22% gold tint overlay. */
   background:
     linear-gradient(rgba(212, 147, 42, 0.22), rgba(212, 147, 42, 0.22)),
     var(--ink);
-  border-bottom-color: rgba(212, 147, 42, 0.45);
+  border-bottom: 1px solid rgba(212, 147, 42, 0.45);
 }
 
 /* ─── APP HEADER LAYOUT ───────────────────────────────────────────────────── */

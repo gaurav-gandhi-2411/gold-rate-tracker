@@ -903,6 +903,30 @@ Phase 1 of 3 in the Ψ3C app-feel sprint. Files changed: `index.html`, `style.cs
 
 **Ψ3C sprint status.** Phase 1 of 3 complete. Phase 2 (Ψ3C.2): motion/transitions, tap feedback, :active scale, pull-to-refresh. Phase 3 (Ψ3C.3): interactive chart, tap-to-reveal price, chart/history dedup, chart timeframe relabel, extended skeletons.
 
+#### 4.11 PR Ψ3C.1b — App header ambient fix: opaque, aligned, elevation-on-scroll (2026-05-30)
+
+Focused fix for the "floating strip between words" reported after Ψ3C.1. Files changed: `style.css`, `app.js`, `service-worker.js`. Zero backend files, schemas, data files, or CI workflows touched.
+
+**Diagnosis (Pass 1).** Three compounding bugs identified via Playwright computed-style capture + screenshots at iPhone 14 Plus (428×926) dark mode: (1) Semi-transparent bleed-through: `rgba(26,22,18,0.90)` + `backdrop-filter:blur(8px)` — the large amber price text was visibly bleeding through the 10% opacity gap when scrolled behind the header, making the header a floating strip over the price words. (2) Negative-margin overflow: header was a `<body>` child (outside `<main>`) but retained margins from when it was inside `<main>`; result was `header.x = -21.4`, `width = 471px` on a 428px viewport — "Gold" title at screen edge (x=0), all content below indented 21px. (3) Two-band standalone effect: `body { padding-top: env(safe-area-inset-top) }` created a visible blank zone above the header, making it read as a strip at the bottom of a large dark zone rather than integrated chrome.
+
+**Direction C (approved): ambient header — merges with page at rest, elevation on scroll.**
+
+**Safe-area absorbed into header.** Removed `body { padding-top: env(safe-area-inset-top) }`; added `padding-top: env(safe-area-inset-top, 0px)` and `min-height: calc(52px + env(safe-area-inset-top, 0px))` to `.app-header`. The header background now fills from screen top through the nav bar — one continuous dark chrome surface in standalone mode. Content position after the header is unchanged (net y offset is identical).
+
+**Fully opaque background.** `background: var(--ink)` (no alpha); `backdrop-filter` removed. Zero bleed-through regardless of scroll position. Light-mode `@media` override removed — `var(--ink)` already resolves to the light cream value via the `:root` token override in the light-mode block.
+
+**Negative-margin overflow fixed.** Removed `margin-left/right: calc(-1 * clamp(...) - env(...))`. Header is now `x=0, width=428px` (was `x=-21.4, w=471px`). Padding `clamp(20px, 5vw, 56px)` on each side aligns "Gold" title (x=21.4) with all hero content below (x=21.4) — confirmed via computed `getBoundingClientRect`.
+
+**Ambient elevation.** No `border-bottom` / `box-shadow` at rest — header merges with page, only content ("Gold", freshness badge, buttons) is visible. Passive scroll listener (`scrollY > 0`) toggles `.scrolled` class on `#utility-row`; `.scrolled` applies `border-bottom: 1px solid var(--line)` + `box-shadow: 0 1px 8px rgba(0,0,0,0.28)` — elevation appears only when content is actually under the header. Initial state set on mount (handles pages loaded at non-zero scroll).
+
+**Freshness alert border fix.** Stale/warn states changed from `border-bottom-color: ...` to `border-bottom: 1px solid ...` (the base rule no longer declares a border; changing only the color had no effect). Alert states always show their tinted border as a visible indicator regardless of scroll position.
+
+**HEADER_H scrollspy fix.** Changed hardcoded `const HEADER_H = 52` to `document.getElementById("utility-row")?.getBoundingClientRect().height ?? 52` — reads actual computed height so the scrollspy trigger is accurate in standalone mode where the header is taller.
+
+**SW VERSION bump.** `v5-20260530-c` → `v6-20260530-d`. Shell assets `style.css`, `app.js`, `service-worker.js` changed; per cache invalidation contract a VERSION bump is required.
+
+**Verification (norm #14).** All computed values confirmed via Playwright `getComputedStyle()` + `getBoundingClientRect()`. Key measurements after fix: `header.x=0.0`, `header.w=428`, `Gold.x=21.4`, `Eyebrow.x=21.4` (aligned), `backgroundColor=rgb(26,22,18)` (solid), `backdropFilter=none`, `.scrolled=false` at rest / `true` at 90px scroll. Regression at 768px and 1280px: header correct at both breakpoints. Lint CI: pass (2m45s). PR #46.
+
 ### Phase 5 — Validate  ⏸️ NOT STARTED
 
 ### Phase 6 — Promote  ⏸️ NOT STARTED
@@ -959,6 +983,7 @@ Phase 1 of 3 in the Ψ3C app-feel sprint. Files changed: `index.html`, `style.cs
 | 2026-05-30 | Option D for [skip ci] handling proven technically infeasible; accepted daily-schedule + discipline norm as closest achievable fix (PR Ψ3A) | CC | GitHub Actions [skip ci] is platform-wide per-commit for push events — no per-workflow override exists. Daily schedule (06:00 UTC) + workflow_dispatch added to lint.yml as defense-in-depth backstop. CURRENT_STATE.md norm #13 added: PR squash-merge commit messages must not carry [skip ci] in the body; use `gh pr merge --squash --subject ... --body ...` with body explicitly cleaned. Residual gap: up to ~24h delay if a [skip ci] commit reaches master before the schedule fires. |
 | 2026-05-30 | Ψ3C.1 — Option B (scroll-anchors) over Option A (tab panels) for bottom nav | GG (approved pre-PR) | Option A splits content into hidden tab panels; breaks the glanceable single-page experience where price, verdict, and sparkline coexist above the fold. Option B keeps the single scrolling document; bottom nav adds thumb-reachable chrome without restructuring content. Scroll-anchors also preserve browser back/forward and allow sections to be seen in combination. |
 | 2026-05-30 | Ψ3C.1 — bottom nav hidden at ≥900px (desktop), not full-width or constrained column | CC (post-PR fix on consultant flag) | Full-width fixed bottom bar at 1280px reads as broken-mobile, not intentional-desktop. Constrained 980px centered island (Option b) is also awkward — visible dead zones on both sides. Desktop users have mouse/keyboard scroll; bottom nav adds no navigational value. Cleanest choice: hide with `display:none` at ≥900px. |
+| 2026-05-30 | Ψ3C.1b — Direction C (ambient header) over A (solid+safe-area) or B (frosted glass) | GG (approved post-diagnosis) | Diagnosis screenshots showed price text bleeding through 90%-opacity header at mid-scroll — the "strip between words". Direction C (borderless at rest, elevation on scroll) removes the strip feeling entirely by merging the header with the page at rest; elevation appears only when needed. Direction A would also fix bleed-through but retains a permanent dividing line; Direction B keeps transparency and risks continued bleed-through at lower opacity. Native iOS pattern (Mail/Settings ambient header) is the closest analogue. |
 
 ---
 
