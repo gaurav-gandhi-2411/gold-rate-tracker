@@ -5,7 +5,12 @@ on:
     # Every 6 hours, at minute 0 (UTC). India is UTC+5:30, so this fires at
     # 05:30, 11:30, 17:30, 23:30 IST. Adjust if you want different IST times.
     - cron: "0 */6 * * *"
-  workflow_dispatch: # allows manual run from the Actions tab
+  workflow_dispatch:
+    inputs:
+      pipeline_test:
+        description: 'Send a one-shot CI->ntfy delivery test (temporary diagnostic, remove after use)'
+        required: false
+        default: 'false'
   push:
     branches: [master]
     paths:
@@ -228,6 +233,36 @@ jobs:
           key: notification-state-${{ github.run_id }}
           restore-keys: |
             notification-state-
+
+      - name: Pipeline delivery test (TEMPORARY — remove after verification)
+        if: inputs.pipeline_test == 'true'
+        continue-on-error: true
+        env:
+          NTFY_TOPIC: ${{ secrets.NTFY_TOPIC }}
+        run: |
+          cat > /tmp/pipeline_test.py << 'PYEOF'
+          import sys
+          sys.path.insert(0, '.')
+          from ml.notifications import PendingAlert, NotificationState, send_pending
+          from datetime import datetime
+          from zoneinfo import ZoneInfo
+          now_ist = datetime.now(ZoneInfo("Asia/Kolkata"))
+          alert = PendingAlert(
+              trigger_id="PIPELINE_TEST",
+              title="Gold pipeline test - CI send path check",
+              body="CI runner send_pending path confirmed. T8_EVENING will use this exact path tonight.",
+              priority=3,
+              tags=["robot"],
+              click_url="https://gaurav-gandhi-2411.github.io/gold-rate-tracker/",
+              queued_at=now_ist.isoformat(),
+              bypass_quiet=True,
+          )
+          state = NotificationState()
+          sent = send_pending([alert], state, now_ist)
+          for s in sent:
+              print(f"[{'OK' if s.success else 'FAILED'}] {s.trigger_id}: {s.title}")
+          PYEOF
+          python /tmp/pipeline_test.py
 
       - name: Run notifications
         continue-on-error: true
