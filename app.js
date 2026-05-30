@@ -258,7 +258,7 @@ function renderStaleBanner(forecast) {
   const ageH = (Date.now() - new Date(forecast.predicted_at).getTime()) / 3_600_000;
   if (ageH > 18) {
     const hours = Math.round(ageH);
-    banner.textContent = `Forecast is ${hours}h old — last updated ${fmtRelative(forecast.predicted_at)}. Predictions may be outdated.`;
+    banner.textContent = `Prices last updated ${fmtRelative(forecast.predicted_at)} — data may not reflect the current rate.`;
     banner.hidden = false;
   }
 }
@@ -277,8 +277,8 @@ function renderFreshness(readings) {
   pill.classList.remove("freshness--ok", "freshness--warn", "freshness--stale");
   if (ageH >= 18) {
     pill.className   = "freshness-pill freshness--stale";
-    pill.textContent = `Stuck · ${rel}`;
-    pill.setAttribute("aria-label", `Data stuck, last updated ${rel}`);
+    pill.textContent = `Not updating · ${rel}`;
+    pill.setAttribute("aria-label", `Not updating, last updated ${rel}`);
   } else if (ageH >= 8) {
     pill.className   = "freshness-pill freshness--warn";
     pill.textContent = `Stale · ${rel}`;
@@ -502,21 +502,16 @@ function renderModelSignal(fc) {
   const cardClass = dir === "up" ? "signal-card--up" : dir === "down" ? "signal-card--down" : "";
 
   const strength = typeof cc.lean_strength_pct === "number"
-    ? `${cc.lean_strength_pct.toFixed(1)}% lean`
+    ? `~${cc.lean_strength_pct.toFixed(1)}% expected move`
     : "";
   const dirAcc = typeof cc.direction_acc_30f === "number"
-    ? `${Math.round(cc.direction_acc_30f * 100)}% direction accuracy (30f)`
+    ? `Right about ${Math.round(cc.direction_acc_30f * 100)}% of the time recently`
     : "—";
 
   let consensusText = "—";
-  if (typeof cc.direction_consensus === "number" && typeof cc.majority_direction === "string") {
-    const majorityCount = Math.round(cc.direction_consensus * 5);
-    consensusText = `${majorityCount} of 5 samples agree`;
+  if (typeof cc.direction_consensus === "number") {
+    consensusText = cc.direction_consensus >= 0.8 ? "Consistent signal" : "Mixed signal";
   }
-
-  const calTag = cc.calibration_applied
-    ? "Calibrated"
-    : "Uncalibrated (gate at 30 pairs)";
 
   const body = document.getElementById("model-signal-body");
   // XSS-safe: all interpolated values are numbers, booleans, or hardcoded label strings
@@ -532,10 +527,8 @@ function renderModelSignal(fc) {
         <span>${dirAcc}</span>
         <span class="signal-dot">·</span>
         <span>${consensusText}</span>
-        <span class="signal-dot">·</span>
-        <span>${calTag}</span>
       </div>
-      <p class="signal-note">Directional signal only — does not change the headline price prediction. System status updated at least every 3 days.</p>
+      <p class="signal-note">A guide for which way prices may move — not a guarantee. Updated at least every 3 days.</p>
     </div>
   `;
 
@@ -748,11 +741,11 @@ function renderMethodology(fc, bt, drift) {
   parts.push(`
     <div class="meth-section">
       <h3 class="meth-heading">Verdict rules</h3>
-      <p class="meth-text">Three deterministic buckets. Requires a 7-day slope beyond ±₹100 <em>plus</em> one confirming signal (forecast direction or 30-day mean) to avoid single-noise false alarms.</p>
+      <p class="meth-text">Three simple cases — each needs two things to agree to avoid reacting to a single unusual reading.</p>
       <ul class="meth-list">
-        <li><strong>Trending down:</strong> 7d slope &lt; −₹100 AND (forecast below current OR current below 30d avg)</li>
-        <li><strong>Trending up:</strong> 7d slope &gt; +₹100 AND (forecast above current OR current above 30d avg)</li>
-        <li><strong>Roughly flat:</strong> everything else — slope within ±₹100 or signals conflict</li>
+        <li><strong>Trending down:</strong> price has fallen more than ₹100 over 7 days, and the forecast or 30-day average agrees</li>
+        <li><strong>Trending up:</strong> price has risen more than ₹100 over 7 days, and the forecast or 30-day average agrees</li>
+        <li><strong>Roughly flat:</strong> everything else — movement within ±₹100 or the two checks disagree</li>
       </ul>
     </div>
   `);
@@ -765,21 +758,21 @@ function renderMethodology(fc, bt, drift) {
     const hasPI   = typeof lower === "number" && typeof upper === "number";
     parts.push(`
       <div class="meth-section">
-        <h3 class="meth-heading">5-day forecast (naive flat-hold)</h3>
+        <h3 class="meth-heading">5-day expected range</h3>
         <div class="meth-stats">
           <div class="meth-stat">
             <div class="meth-stat-label">22K estimate</div>
             <div class="meth-stat-value">₹${fmtINR(pred22k)}</div>
-            ${hasPI ? `<div class="meth-stat-sub">80% PI: ₹${fmtINR(lower)} – ₹${fmtINR(upper)}</div>` : ""}
+            ${hasPI ? `<div class="meth-stat-sub">80% range: ₹${fmtINR(lower)} – ₹${fmtINR(upper)}</div>` : ""}
           </div>
           <div class="meth-stat">
             <div class="meth-stat-label">Method</div>
-            <div class="meth-stat-value">Naive flat-hold</div>
-            <div class="meth-stat-sub">PI from conformal 80% of last 30 naive errors</div>
+            <div class="meth-stat-value">Predict no change</div>
+            <div class="meth-stat-sub">Range covers 80% of typical 5-day swings</div>
           </div>
         </div>
         ${fc.target_time ? `<p class="meth-text" style="margin-top:8px">Target: ${fmtIST(fc.target_time)}</p>` : ""}
-        <p class="meth-text" style="margin-top:12px">These prediction intervals are intentionally wide: they cover a 5-day window using the 80th percentile of recent naive 5-day errors (conformal PI per ADR 014), not a single-day forecast.</p>
+        <p class="meth-text" style="margin-top:12px">This price range is intentionally wide — it covers the whole 5-day window, not just tomorrow. The range is based on how much prices have typically swung over 5 days in recent history.</p>
       </div>
     `);
   }
@@ -789,29 +782,29 @@ function renderMethodology(fc, bt, drift) {
     const cc = fc.chronos_companion;
     parts.push(`
       <div class="meth-section">
-        <h3 class="meth-heading">Chronos directional signal (companion)</h3>
+        <h3 class="meth-heading">Direction signal</h3>
         <div class="meth-stats">
           <div class="meth-stat">
-            <div class="meth-stat-label">5d lean</div>
+            <div class="meth-stat-label">Direction</div>
             <div class="meth-stat-value">${cc.lean_direction || "—"}</div>
-            <div class="meth-stat-sub">±${cc.lean_strength_pct.toFixed(1)}% magnitude</div>
+            <div class="meth-stat-sub">±${cc.lean_strength_pct.toFixed(1)}% expected move</div>
           </div>
           <div class="meth-stat">
-            <div class="meth-stat-label">Direction accuracy (last 30 folds)</div>
+            <div class="meth-stat-label">Recent accuracy</div>
             <div class="meth-stat-value">${(cc.direction_acc_30f * 100).toFixed(1)}%</div>
-            <div class="meth-stat-sub">naive baseline: 50%</div>
+            <div class="meth-stat-sub">random guessing: 50%</div>
           </div>
           <div class="meth-stat">
-            <div class="meth-stat-label">Calibration</div>
-            <div class="meth-stat-value">${cc.calibration_applied ? "applied" : "pending"}</div>
-            <div class="meth-stat-sub">${cc.model_version}</div>
+            <div class="meth-stat-label">Adjusted to Tanishq prices</div>
+            <div class="meth-stat-value">${cc.calibration_applied ? "Yes" : "Not yet"}</div>
+            ${!cc.calibration_applied ? `<div class="meth-stat-sub">activates after 30 days of data</div>` : `<div class="meth-stat-sub">${cc.model_version}</div>`}
           </div>
         </div>
-        <p class="meth-note">Directional signal only — Chronos lean does not change the headline prediction. Used to gate notifications when momentum confirms direction.</p>
+        <p class="meth-note">This shows which way prices may move — it doesn't change the headline price shown. When the signal is strong and consistent, it may trigger a price-move notification.</p>
       </div>
     `);
   } else if (fc?.chronos_companion?.status === "failed") {
-    parts.push(`<p class="meth-text">Chronos signal unavailable.</p>`);
+    parts.push(`<p class="meth-text">Direction signal unavailable this cycle.</p>`);
   }
 
   // Backtest stats
@@ -820,25 +813,25 @@ function renderMethodology(fc, bt, drift) {
     const dirDiff = Math.round((bt.dir_acc_5d_chronos - bt.dir_acc_5d_naive) * 100);
     parts.push(`
       <div class="meth-section">
-        <h3 class="meth-heading">Walk-forward backtest (h=5) (${bt.n_folds ?? "—"} folds)</h3>
+        <h3 class="meth-heading">Historical accuracy check — ${bt.n_folds ?? "—"} periods, 5-day horizon</h3>
         <div class="meth-stats">
           <div class="meth-stat">
-            <div class="meth-stat-label">MAE</div>
+            <div class="meth-stat-label">Avg. price error</div>
             <div class="meth-stat-value">₹${fmtINR(Math.round(bt.mae_5d_avg_chronos))}</div>
-            <div class="meth-stat-sub">${maeDiff >= 0 ? "+" : ""}₹${fmtINR(Math.abs(maeDiff))} vs naive (₹${fmtINR(Math.round(bt.mae_5d_avg_naive))})</div>
+            <div class="meth-stat-sub">${maeDiff >= 0 ? "+" : ""}₹${fmtINR(Math.abs(maeDiff))} vs predict-no-change (₹${fmtINR(Math.round(bt.mae_5d_avg_naive))})</div>
           </div>
           <div class="meth-stat">
             <div class="meth-stat-label">Direction</div>
             <div class="meth-stat-value">${Math.round(bt.dir_acc_5d_chronos * 100)}%</div>
-            <div class="meth-stat-sub">${dirDiff >= 0 ? "+" : ""}${dirDiff}pp vs naive (${Math.round(bt.dir_acc_5d_naive * 100)}%)</div>
+            <div class="meth-stat-sub">${dirDiff >= 0 ? "+" : ""}${dirDiff}pp vs predict-no-change (${Math.round(bt.dir_acc_5d_naive * 100)}%)</div>
           </div>
           <div class="meth-stat">
-            <div class="meth-stat-label">Wilcoxon p</div>
+            <div class="meth-stat-label">Statistical significance</div>
             <div class="meth-stat-value">${bt.wilcoxon_signed_rank_p != null ? bt.wilcoxon_signed_rank_p.toFixed(4) : "—"}</div>
-            <div class="meth-stat-sub">paired test, model vs naive</div>
+            <div class="meth-stat-sub">paired comparison test</div>
           </div>
         </div>
-        <p class="meth-note">Naive baseline = predict last value unchanged. Per ADR 012, naive beats Chronos on 5d MAE (Wilcoxon p=0.0089 over 165 folds); naive is the production headline. Chronos kept as a directional companion.</p>
+        <p class="meth-note">'Predict no change' means: assume today's price holds for the next 5 days. The direction-tracking signal currently performs slightly worse than this simple approach on overall accuracy — so we use predict-no-change for the headline figure and the direction signal only as a guide.</p>
       </div>
     `);
   }
@@ -858,20 +851,20 @@ function renderMethodology(fc, bt, drift) {
       : "";
     parts.push(`
       <div class="meth-section">
-        <h3 class="meth-heading">Live forecast accuracy (7-day rolling)</h3>
+        <h3 class="meth-heading">Forecast accuracy — last 7 days</h3>
         <div class="meth-stats">
           <div class="meth-stat">
-            <div class="meth-stat-label">Rolling MAE</div>
+            <div class="meth-stat-label">Recent avg. error</div>
             <div class="meth-stat-value">${rolling != null ? "₹" + fmtINR(rolling) : "—"}</div>
           </div>
           <div class="meth-stat">
-            <div class="meth-stat-label">Baseline MAE</div>
+            <div class="meth-stat-label">Historical avg. error</div>
             <div class="meth-stat-value">${baseMae != null ? "₹" + fmtINR(baseMae) : "—"}</div>
           </div>
           <div class="meth-stat">
-            <div class="meth-stat-label">Drift ratio</div>
+            <div class="meth-stat-label">Accuracy drift</div>
             <div class="meth-stat-value">${ratio ?? "—"}</div>
-            <div class="meth-stat-sub">${ratioLabel}</div>
+            <div class="meth-stat-sub">${ratioLabel === "retraining recommended" ? "may need recalibration" : ratioLabel}</div>
           </div>
         </div>
       </div>

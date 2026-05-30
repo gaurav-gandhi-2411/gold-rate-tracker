@@ -54,7 +54,7 @@
 
     <!-- D5: iOS standalone help panel — JS reveals in standalone mode only -->
     <div class="pwa-help-panel" id="pwa-help-panel" hidden>
-      <p>iOS limits how often home-screen apps update in the background. Tap <strong>↻</strong> to fetch the latest readings. If data remains stuck, open the App Switcher (swipe up, hold), swipe this app away, and reopen from Home Screen — that forces a full reload.</p>
+      <p>iOS limits how often home-screen apps update in the background. Tap <strong>↻</strong> to get the latest prices. If prices remain stuck, open the App Switcher (swipe up, hold), swipe this app away, and reopen from Home Screen — that forces a full reload.</p>
       <button class="pwa-help-close" id="pwa-help-close" aria-label="Dismiss">✕</button>
     </div>
 
@@ -121,7 +121,7 @@
             <div class="cmp-sub" id="cmp-30d-sub"></div>
           </div>
           <div class="comparison-card" id="cmp-low">
-            <div class="cmp-label">vs period low</div>
+            <div class="cmp-label">vs 30-day low</div>
             <div class="cmp-value" id="cmp-low-value">—</div>
             <div class="cmp-sub" id="cmp-low-sub"></div>
           </div>
@@ -155,8 +155,8 @@
 
       <!-- 5b. MODEL SIGNAL — Chronos directional companion, always visible -->
       <section class="model-signal-section" id="model-signal-section" hidden
-               aria-label="Chronos model signal">
-        <h2>Model signal</h2>
+               aria-label="5-day price outlook">
+        <h2>5-day outlook</h2>
         <div class="model-signal-body" id="model-signal-body"></div>
       </section>
 
@@ -203,7 +203,7 @@
       <!-- 8. METHODOLOGY ACCORDION -->
       <details class="methodology" id="section-info">
         <summary class="methodology-summary">
-          How this verdict is calculated · model accuracy · backtest
+          How this works · how accurate the signal is · historical checks
         </summary>
         <div class="methodology-body" id="methodology-body">
           <p class="meth-loading">Loading model details…</p>
