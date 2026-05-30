@@ -38,8 +38,10 @@ _QUIET_END_H = 7  # 07:00 IST
 _MAX_QUEUE_AGE_H = 12  # discard queued alerts older than this
 _MAX_T123_PER_24H = 3  # T1+T2+T3 combined cap
 
-_T8_MORNING_THRESHOLD_H = 8  # IST: fire T8_MORNING on first run at/after 08:00 → ~10:00 cron
-_T8_EVENING_THRESHOLD_H = 18  # IST: fire T8_EVENING on first run at/after 18:00 → ~22:00 cron
+_T8_MORNING_THRESHOLD_H = 8  # IST lower bound: fire T8_MORNING at/after 08:00
+_T8_MORNING_UPPER_H = 14  # IST upper bound: suppress T8_MORNING at/after 14:00
+_T8_EVENING_THRESHOLD_H = 18  # IST lower bound: fire T8_EVENING at/after 18:00
+_T8_EVENING_UPPER_H = 22  # IST upper bound: suppress T8_EVENING at/after 22:00 (quiet-hours start)
 _T8_FLAT_THRESHOLD_RS = 25  # abs(delta) < this → "held steady" scenario
 
 SCHEMA_VERSION = 1
@@ -631,12 +633,17 @@ def _check_t8_morning(
     state: NotificationState,
     now_ist: datetime,
 ) -> PendingAlert | None:
-    """T8_MORNING — plain daily digest at first CI run at/after 08:00 IST. Once per IST day.
+    """T8_MORNING — plain daily digest at first CI run in 08:00–13:59 IST. Once per IST day.
 
-    Fires on the ~10:00 IST cron (first run after the 08:00 threshold).
+    Window [_T8_MORNING_THRESHOLD_H, _T8_MORNING_UPPER_H) covers the UTC-00 and UTC-06 crons
+    (observed IST: ~08:09 and ~13:52 with typical 2-3h GH Actions drift). The upper bound
+    prevents this trigger from firing or queuing if a late-night run is the first after 08:00
+    on a fresh-state restart (e.g. initial deployment or cache eviction).
     Does NOT count toward the T1+T2+T3 combined anti-spam cap.
     """
     if now_ist.hour < _T8_MORNING_THRESHOLD_H:
+        return None
+    if now_ist.hour >= _T8_MORNING_UPPER_H:
         return None
     today_ist = now_ist.strftime("%Y-%m-%d")
     if state.last_t8_morning_ist_date == today_ist:
@@ -658,14 +665,18 @@ def _check_t8_evening(
     state: NotificationState,
     now_ist: datetime,
 ) -> PendingAlert | None:
-    """T8_EVENING — plain daily digest at first CI run at/after 18:00 IST. Once per IST day.
+    """T8_EVENING — plain daily digest at first CI run in 18:00–21:59 IST. Once per IST day.
 
-    Fires on the ~22:00 IST cron (first run after the 18:00 threshold).
-    bypass_quiet=True because the 22:00 IST cron falls at the quiet-hours boundary (22:00–07:00);
-    queuing the evening digest until morning would collide with T8_MORNING.
+    Window [_T8_EVENING_THRESHOLD_H, _T8_EVENING_UPPER_H) covers the UTC-12 cron (observed IST:
+    ~18:48 with typical 1-3h GH Actions drift). The upper bound keeps the trigger inside the
+    clean 18-21 IST window — fully outside quiet hours — so bypass_quiet is belt-and-suspenders
+    rather than a routine path. Without the upper bound, a late-night run on a fresh-state restart
+    would compute T8_EVENING at hour >= 22 and queue it, colliding with the next T8_MORNING.
     Does NOT count toward the T1+T2+T3 combined anti-spam cap.
     """
     if now_ist.hour < _T8_EVENING_THRESHOLD_H:
+        return None
+    if now_ist.hour >= _T8_EVENING_UPPER_H:
         return None
     today_ist = now_ist.strftime("%Y-%m-%d")
     if state.last_t8_evening_ist_date == today_ist:
