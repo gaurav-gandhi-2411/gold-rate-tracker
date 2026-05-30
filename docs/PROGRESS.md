@@ -901,6 +901,8 @@ Phase 1 of 3 in the Ψ3C app-feel sprint. Files changed: `index.html`, `style.cs
 
 **Verification.** Playwright headless screenshots at 428×926 (iPhone 14 Plus), 768×1024 (tablet), 1280×900 (desktop). Scrollspy: section-home → section-trend → section-history all update correctly on scroll. Footer clearance: footer.bottom=846, nav.top=865 at bottom of page (footer fully above nav). Desktop: `bottom-nav visible=false`, `main padding-bottom=32px`. Lint CI: pass (2m44s, run 26668222716). pages-build-deployment: success. Merge commit: `4362bd7`.
 
+**Post-ship defect (fixed in §4.11 / Ψ3C.1b).** Restructuring `.utility-row` → `.app-header` moved the element from inside `<main>` to a direct `<body>` child, but three rules were inherited unchanged from the `<main>`-interior assumption: (1) negative margins intended to bleed the header edge-to-edge within `<main>`'s side padding — outside `<main>` they overflowed the viewport by 21px each side and placed "Gold" at x=0 instead of x=21.4; (2) `background: rgba(..., 0.90)` + `backdrop-filter` — the 10% transparency made the price text visible through the header when scrolled; (3) `body { padding-top: env(safe-area-inset-top) }` with `header { top: env(safe-area-inset-top) }` — in standalone mode this produced a two-band gap (body padding strip + header strip) above the content. All three fixed in Ψ3C.1b (commit `996ff85`).
+
 **Ψ3C sprint status.** Phase 1 of 3 complete. Phase 2 (Ψ3C.2): motion/transitions, tap feedback, :active scale, pull-to-refresh. Phase 3 (Ψ3C.3): interactive chart, tap-to-reveal price, chart/history dedup, chart timeframe relabel, extended skeletons.
 
 #### 4.11 PR Ψ3C.1b — App header ambient fix: opaque, aligned, elevation-on-scroll (2026-05-30)
