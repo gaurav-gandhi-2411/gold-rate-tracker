@@ -992,6 +992,37 @@ Framing check: No "Chronos" ✓ · No "percentile" ✓ · No "samples" ✓ · Di
 
 **Lesson.** Copy is a consumer of the model architecture and should be audited alongside it. The Ψ3C-fix PR (§4.12) fixed commentary framing bugs; this PR completes the sweep by updating every surface a user reads. Plain language and honest framing are not in tension: "right about 6 times out of 10" is more concrete than "63% accuracy" and equally honest.
 
+#### 4.15 PR Ψ3C-notify — T8 twice-daily plain-language gold digest (2026-05-30)
+
+New T8_MORNING and T8_EVENING triggers added to `ml/notifications.py`. Backend-only PR. Merge commit `0372d9c`. PR #50.
+
+**Motivation.** The existing T1-T7 triggers are conditional and ML-gated — they don't fire reliably every day. Non-technical family users and the owner (who invests in gold) had no guaranteed daily price update. T8 provides: (1) a plain-language daily price report, (2) a system-health signal (if neither T8 fires, something is wrong), and (3) an optional directional lean for the gold investor.
+
+**Design: three scenarios.** Price move vs prior IST day's last reading, ±Rs.25 flat threshold:
+- Rose: `Gold rose today - Rs.14490 (up Rs.100 from yesterday).`
+- Dropped: `Gold dropped today - Rs.14340 (down Rs.50 from yesterday).`
+- Flat: `Gold held steady today - Rs.14440.`
+
+**Optional directional hint (norm #4 — honest framing).** When `forecast.chronos_companion.status == success`:
+- lean_direction=up: `Prices look likely to edge up a little in the next few days.`
+- lean_direction=down: `The next few days may ease a little.`
+- lean_direction=flat or status != success: hint omitted entirely. No fabrication.
+
+**Cron-drift aware (Ψ1 T4 lesson).** IST-date dedup pattern, not clock-window:
+- T8_MORNING: fires on first CI run where `now_ist.hour >= 8`. Catches ~10:00 IST cron.
+- T8_EVENING: fires on first CI run where `now_ist.hour >= 18`. Catches ~22:00 IST cron.
+- Two new state fields: `last_t8_morning_ist_date`, `last_t8_evening_ist_date`. Old state files load cleanly (default to "").
+
+**bypass_quiet rationale for T8_EVENING.** The only cron at/after 18:00 IST is the ~22:00 IST cron, which falls exactly at the quiet-hours boundary (22:00–07:00 IST). Without bypass, the evening digest queues until morning and arrives concurrently with T8_MORNING — defeating the "twice daily" guarantee. `bypass_quiet=True` mirrors T4's pattern (both are guaranteed periodic sends, not conditional alerts).
+
+**Anti-spam.** T8 does NOT count toward the T1+T2+T3 combined 3-per-24h cap. Priority 2 (informational). Coexists with T1-T7 — all prior triggers unchanged.
+
+**ASCII-safe.** Titles and bodies fully ASCII (Rs. not ₹, plain hyphens not em-dashes). Consistent with existing T1-T7 message style (norm #12).
+
+**Tests.** +28 new (93 notification tests, 337 full suite, 0 regressions). All T8 verification criteria from spec covered: threshold timing, cron-drift fire-on-first-run, dedup, both sessions same IST day, three scenarios, hint on/off, fabrication prevention, ASCII-safe, backward-compat, state round-trip, send_pending stamping, T8 exempt from cap.
+
+**Lint CI.** pass (2m45s). Master Lint + pages-build-deployment both green post-merge.
+
 ---
 
 ### Phase 5 — Validate  ⏸️ NOT STARTED
