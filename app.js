@@ -938,7 +938,8 @@ function initBottomNav() {
   // Scrollspy: set active nav item as the user scrolls.
   // Strategy: last section whose top edge is ≤ (scrollY + HEADER_H + threshold).
   // requestAnimationFrame throttles scroll handler to one update per frame.
-  const HEADER_H = 52;
+  // Read actual header height so standalone mode (taller header) is accounted for.
+  const HEADER_H = document.getElementById("utility-row")?.getBoundingClientRect().height ?? 52;
   const THRESHOLD = 24; // px below header before marking a section active
 
   const sectionEls = NAV_SECTIONS
@@ -979,6 +980,15 @@ function initBottomNav() {
 (async function init() {
   bindRangeToggle();
   initBottomNav();
+
+  // Ambient header: add elevation (.scrolled → border + shadow) only when content
+  // is scrolling under the header. Passive listener — no layout work on scroll.
+  const appHeader = document.getElementById("utility-row");
+  if (appHeader) {
+    const onScroll = () => appHeader.classList.toggle("scrolled", window.scrollY > 0);
+    window.addEventListener("scroll", onScroll, { passive: true });
+    onScroll(); // set initial state for pages loaded at non-zero scroll position
+  }
 
   // D3: Refresh button — works in both browser and standalone mode.
   const refreshBtn = document.getElementById("refresh-btn");
