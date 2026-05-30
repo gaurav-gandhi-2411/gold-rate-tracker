@@ -1,12 +1,5 @@
 [
   {
-    "ts": "2026-05-25T14:46:35Z",
-    "text": "The 22K gold price is at Rs.14655, with a 7-day increase of 1.81%. The model expects the next reading to be around Rs.14655, with an 80% interval of Rs.13719 to Rs.15591.",
-    "model": "llama-3.3-70b-versatile",
-    "prompt_hash": "b0a6dc732e4c",
-    "commentary_age_hours": 0.0
-  },
-  {
     "ts": "2026-05-25T19:23:37Z",
     "text": "The 22K gold price is at Rs.14655, with a 7-day increase of 2.16%. The model expects the next reading to be around Rs.14655, with an 80% interval of Rs.13719 to Rs.15591.",
     "model": "llama-3.3-70b-versatile",
@@ -205,6 +198,13 @@
   {
     "ts": "2026-05-30T19:06:43Z",
     "text": "The current gold price is around average for the past few months. Prices look likely to edge up a little, and this signal tends to be right more often than not, about 6 times out of 10, with a consistent signal from our data.",
+    "model": "llama-3.3-70b-versatile",
+    "prompt_hash": "dc2820a98783",
+    "commentary_age_hours": 0.0
+  },
+  {
+    "ts": "2026-05-30T22:26:37Z",
+    "text": "The current gold price is around average for the past few months. Prices look likely to edge up a little, and this signal tends to be right more often than not, about 6 times out of 10, with a consistent signal from all sources.",
     "model": "llama-3.3-70b-versatile",
     "prompt_hash": "dc2820a98783",
     "commentary_age_hours": 0.0
