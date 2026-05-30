@@ -1341,8 +1341,34 @@ def test_t8_morning_fires_even_with_drift():
     assert any(a.trigger_id == "T8_MORNING" for a in alerts)
 
 
+def test_t8_morning_upper_bound_blocks_hour22():
+    """T8_MORNING does NOT fire at hour >= 14 (upper bound blocks late/night runs)."""
+    alerts = check_triggers(
+        _forecast(),
+        _probe(),
+        _prices_up(n=10),
+        _backtest_accurate(),
+        NotificationState(),  # fresh state — dedup would not block this
+        _ist(2026, 5, 19, 22, 0),  # hour=22 satisfies >= 8 lower bound but fails < 14 upper
+    )
+    assert all(a.trigger_id != "T8_MORNING" for a in alerts)
+
+
+def test_t8_morning_upper_bound_edge_hour13_fires():
+    """T8_MORNING fires at hour=13 (just inside the 8-13 window)."""
+    alerts = check_triggers(
+        _forecast(),
+        _probe(),
+        _prices_up(n=10),
+        _backtest_accurate(),
+        NotificationState(),
+        _ist(2026, 5, 19, 13, 0),  # hour=13, last in-window hour
+    )
+    assert any(a.trigger_id == "T8_MORNING" for a in alerts)
+
+
 def test_t8_morning_dedup_no_double_fire():
-    """T8_MORNING fires at most once per IST day."""
+    """T8_MORNING fires at most once per IST day (dedup blocks in-window repeat)."""
     state = NotificationState(last_t8_morning_ist_date="2026-05-19")
     alerts = check_triggers(
         _forecast(),
@@ -1350,7 +1376,7 @@ def test_t8_morning_dedup_no_double_fire():
         _prices_up(n=10),
         _backtest_accurate(),
         state,
-        _ist(2026, 5, 19, 16, 0),  # second run same IST day
+        _ist(2026, 5, 19, 10, 0),  # second in-window run same IST day — dedup blocks it
     )
     assert all(a.trigger_id != "T8_MORNING" for a in alerts)
 
@@ -1388,14 +1414,14 @@ def test_t8_morning_fires_next_day_after_dedup():
 
 
 def test_t8_evening_fires_at_threshold():
-    """T8_EVENING fires on first run at/after 18:00 IST."""
+    """T8_EVENING fires on first run at/after 18:00 IST (within the 18-21 window)."""
     alerts = check_triggers(
         _forecast(),
         _probe(),
         _prices_up(n=10),
         _backtest_accurate(),
         NotificationState(),
-        _ist(2026, 5, 19, 22, 0),  # 22:00 IST cron, first after 18:00 threshold
+        _ist(2026, 5, 19, 18, 0),  # 18:00 IST — lower bound, inside window
     )
     assert any(a.trigger_id == "T8_EVENING" for a in alerts)
 
@@ -1413,8 +1439,34 @@ def test_t8_evening_no_fire_before_threshold():
     assert all(a.trigger_id != "T8_EVENING" for a in alerts)
 
 
+def test_t8_evening_upper_bound_blocks_hour23():
+    """T8_EVENING does NOT fire at hour >= 22 (upper bound keeps it outside quiet hours)."""
+    alerts = check_triggers(
+        _forecast(),
+        _probe(),
+        _prices_up(n=10),
+        _backtest_accurate(),
+        NotificationState(),  # fresh state — dedup would not block this
+        _ist(2026, 5, 19, 23, 0),  # hour=23 satisfies >= 18 lower bound but fails < 22 upper
+    )
+    assert all(a.trigger_id != "T8_EVENING" for a in alerts)
+
+
+def test_t8_evening_upper_bound_edge_hour21_fires():
+    """T8_EVENING fires at hour=21 (just inside the 18-21 window)."""
+    alerts = check_triggers(
+        _forecast(),
+        _probe(),
+        _prices_up(n=10),
+        _backtest_accurate(),
+        NotificationState(),
+        _ist(2026, 5, 19, 21, 0),  # hour=21, last in-window hour
+    )
+    assert any(a.trigger_id == "T8_EVENING" for a in alerts)
+
+
 def test_t8_evening_dedup_no_double_fire():
-    """T8_EVENING fires at most once per IST day."""
+    """T8_EVENING fires at most once per IST day (dedup blocks in-window repeat)."""
     state = NotificationState(last_t8_evening_ist_date="2026-05-19")
     alerts = check_triggers(
         _forecast(),
@@ -1422,20 +1474,25 @@ def test_t8_evening_dedup_no_double_fire():
         _prices_up(n=10),
         _backtest_accurate(),
         state,
-        _ist(2026, 5, 19, 22, 0),
+        _ist(2026, 5, 19, 19, 0),  # in-window second run same IST day — dedup blocks it
     )
     assert all(a.trigger_id != "T8_EVENING" for a in alerts)
 
 
 def test_t8_evening_bypass_quiet_true():
-    """T8_EVENING has bypass_quiet=True (22:00 IST cron is quiet-hours boundary)."""
+    """T8_EVENING has bypass_quiet=True — belt-and-suspenders for extreme drift past 22:00.
+
+    The window bound (_T8_EVENING_UPPER_H=22) means T8_EVENING fires in the clean 18-21
+    window (outside quiet hours) in normal operation. bypass_quiet=True is a safety net
+    for the rare case where the evening cron drifts past 22:00 IST.
+    """
     alerts = check_triggers(
         _forecast(),
         _probe(),
         _prices_up(n=10),
         _backtest_accurate(),
         NotificationState(),
-        _ist(2026, 5, 19, 22, 0),
+        _ist(2026, 5, 19, 19, 0),  # in-window: 19:00 IST, well before quiet hours
     )
     t8e = [a for a in alerts if a.trigger_id == "T8_EVENING"]
     assert len(t8e) == 1
@@ -1462,7 +1519,7 @@ def test_t8_morning_bypass_quiet_false():
 
 def test_t8_morning_and_evening_both_fire_same_day():
     """T8_MORNING and T8_EVENING both fire on the same day (independent dedup)."""
-    # Morning fires at 10:00, evening fires at 22:00 — test the 22:00 run after morning ran
+    # Simulate the UTC-12 cron at ~19:00 IST after morning already ran at ~10:00 IST.
     state = NotificationState(last_t8_morning_ist_date="2026-05-19")  # morning already fired
     alerts = check_triggers(
         _forecast(),
@@ -1470,7 +1527,7 @@ def test_t8_morning_and_evening_both_fire_same_day():
         _prices_up(n=10),
         _backtest_accurate(),
         state,
-        _ist(2026, 5, 19, 22, 0),  # 22:00 IST: morning blocked (dedup), evening fires
+        _ist(2026, 5, 19, 19, 0),  # 19:00 IST: morning blocked (dedup), evening fires
     )
     morning_alerts = [a for a in alerts if a.trigger_id == "T8_MORNING"]
     evening_alerts = [a for a in alerts if a.trigger_id == "T8_EVENING"]
@@ -1642,17 +1699,29 @@ def test_t8_ascii_safe_no_rupee_symbol():
 
 def test_t8_priority_2():
     """T8_MORNING and T8_EVENING are priority 2 (informational)."""
-    alerts = check_triggers(
+    # Morning and evening windows don't overlap; check each trigger's priority separately.
+    morning_alerts = check_triggers(
         _forecast(),
         _probe(),
         _prices_up(n=10),
         _backtest_accurate(),
         NotificationState(),
-        _ist(2026, 5, 19, 22, 0),  # triggers both when no dedup set
+        _ist(2026, 5, 19, 10, 0),  # in morning window
     )
-    for a in alerts:
-        if a.trigger_id.startswith("T8"):
-            assert a.priority == 2, f"{a.trigger_id} should be priority 2"
+    evening_alerts = check_triggers(
+        _forecast(),
+        _probe(),
+        _prices_up(n=10),
+        _backtest_accurate(),
+        NotificationState(),
+        _ist(2026, 5, 19, 19, 0),  # in evening window
+    )
+    t8m = next((a for a in morning_alerts if a.trigger_id == "T8_MORNING"), None)
+    t8e = next((a for a in evening_alerts if a.trigger_id == "T8_EVENING"), None)
+    assert t8m is not None, "T8_MORNING should fire in morning window"
+    assert t8e is not None, "T8_EVENING should fire in evening window"
+    assert t8m.priority == 2, "T8_MORNING should be priority 2"
+    assert t8e.priority == 2, "T8_EVENING should be priority 2"
 
 
 # --- T8 does NOT count toward T1+T2+T3 anti-spam cap ---
