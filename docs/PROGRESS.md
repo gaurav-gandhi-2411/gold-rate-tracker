@@ -941,7 +941,11 @@ Two bundled items: commentary framing bug (Item 1) + app-header copy (Item 3). M
 
 **Lesson.** Norm #15 added to CURRENT_STATE.md: when an architecture pivot changes what a data field means, audit ALL consumers (PWA, commentary, notifications, drift). The Chronos companion reached the PWA in Ψ2A but not commentary until this PR, 8 PRs later.
 
-**Commentary framing verification — PENDING.** GROQ_API_KEY is a CI secret; live commentary cannot be generated locally. Rebuilt user message confirmed correct from live `forecast.json` (naive baseline labeled "= current price; no directional signal", companion present with directional_signal_available: true, Lean: up (2.6%), Direction acc.: 63%, Consensus: 5/5 agree on up). `check-price.yml` manually triggered post-merge to regenerate. Actual LLM phrasing to be pasted here once available. Verification gate: phrasing must not overstate the lean or present naive as a forecast.
+**Commentary framing verification — PASSED (2026-05-30T11:31:56Z).** `check-price.yml` manually triggered post-merge (run 26682692035, 1m53s, all steps ✓). Actual generated text from `llama-3.3-70b-versatile`:
+
+> "The Chronos signal leans up with 63% recent accuracy and 5 of 5 samples in agreement, while the current 22K gold price is Rs.14440, at the 59th percentile in the last 90 days. The price has decreased by 1.16% over the past 3 days and 1.26% over the past 7 days."
+
+Framing check: leads with directional signal ✓ · names 63% accuracy ✓ · names 5/5 consensus ✓ · current price labeled as current price (not "point estimate") ✓ · no magnitude prediction ✓ · buyer context (percentile + recent moves) ✓ · no buy/sell advice ✓.
 
 ---
 
