@@ -38,6 +38,10 @@ _QUIET_END_H = 7  # 07:00 IST
 _MAX_QUEUE_AGE_H = 12  # discard queued alerts older than this
 _MAX_T123_PER_24H = 3  # T1+T2+T3 combined cap
 
+_T8_MORNING_THRESHOLD_H = 8  # IST: fire T8_MORNING on first run at/after 08:00 → ~10:00 cron
+_T8_EVENING_THRESHOLD_H = 18  # IST: fire T8_EVENING on first run at/after 18:00 → ~22:00 cron
+_T8_FLAT_THRESHOLD_RS = 25  # abs(delta) < this → "held steady" scenario
+
 SCHEMA_VERSION = 1
 
 logger = logging.getLogger(__name__)
@@ -90,6 +94,8 @@ class NotificationState:
     last_t6_fired_date_ist: str = ""
     last_t4_fired_ist_date: str = ""  # IST date YYYY-MM-DD of last T4 fire (dedup)
     last_t7_fired_ist_date: str = ""  # IST date YYYY-MM-DD of last T7 fire (dedup)
+    last_t8_morning_ist_date: str = ""  # IST date YYYY-MM-DD of last T8_MORNING send (dedup)
+    last_t8_evening_ist_date: str = ""  # IST date YYYY-MM-DD of last T8_EVENING send (dedup)
 
 
 # ---------------------------------------------------------------------------
@@ -112,6 +118,8 @@ def load_state(path: Path = STATE_PATH) -> NotificationState:
             last_t6_fired_date_ist=raw.get("last_t6_fired_date_ist", ""),
             last_t4_fired_ist_date=raw.get("last_t4_fired_ist_date", ""),
             last_t7_fired_ist_date=raw.get("last_t7_fired_ist_date", ""),
+            last_t8_morning_ist_date=raw.get("last_t8_morning_ist_date", ""),
+            last_t8_evening_ist_date=raw.get("last_t8_evening_ist_date", ""),
         )
     except Exception as exc:
         logger.warning("Could not load notification state (%s) — using fresh state.", exc)
@@ -130,6 +138,8 @@ def save_state(state: NotificationState, path: Path = STATE_PATH) -> None:
         "last_t6_fired_date_ist": state.last_t6_fired_date_ist,
         "last_t4_fired_ist_date": state.last_t4_fired_ist_date,
         "last_t7_fired_ist_date": state.last_t7_fired_ist_date,
+        "last_t8_morning_ist_date": state.last_t8_morning_ist_date,
+        "last_t8_evening_ist_date": state.last_t8_evening_ist_date,
     }
     path.write_text(json.dumps(data, indent=2) + "\n", encoding="utf-8")
 
@@ -549,6 +559,127 @@ def _check_t7(
 
 
 # ---------------------------------------------------------------------------
+# T8 helpers
+# ---------------------------------------------------------------------------
+
+
+def _get_prior_day_price(prices: list[dict], now_ist: datetime) -> int | None:
+    """Return the most recent Tanishq 22K price from the IST calendar day before today."""
+    today_ist_date = now_ist.date()
+    prior: list[tuple[datetime, int]] = []
+    for p in prices:
+        ts_str = p["timestamp"].replace("Z", "+00:00")
+        ts_ist = datetime.fromisoformat(ts_str).astimezone(IST)
+        if ts_ist.date() < today_ist_date:
+            prior.append((ts_ist, int(p["22k"])))
+    if not prior:
+        return None
+    prior.sort(key=lambda x: x[0])
+    return prior[-1][1]
+
+
+def _build_t8_content(
+    current: int,
+    prior: int | None,
+    forecast: dict,
+    session: str,
+) -> tuple[str, str]:
+    """Build (title, body) for a T8 daily digest notification.
+
+    ASCII-safe throughout (Rs. not Rs symbol). Plain language (norm #12).
+    Honest framing on directional hint (norm #4): lean, not certainty; no "will".
+    """
+    delta = (current - prior) if prior is not None else 0
+
+    if prior is None or abs(delta) < _T8_FLAT_THRESHOLD_RS:
+        scenario = "steady"
+    elif delta > 0:
+        scenario = "rose"
+    else:
+        scenario = "dropped"
+
+    delta_abs = abs(delta)
+
+    if scenario == "rose":
+        title = f"Gold {session}: Rs.{current} (up Rs.{delta_abs})"
+        body = f"Gold rose today — Rs.{current} (up Rs.{delta_abs} from yesterday)."
+    elif scenario == "dropped":
+        title = f"Gold {session}: Rs.{current} (down Rs.{delta_abs})"
+        body = f"Gold dropped today — Rs.{current} (down Rs.{delta_abs} from yesterday)."
+    else:
+        title = f"Gold {session}: Rs.{current}"
+        body = f"Gold held steady today — Rs.{current}."
+
+    # Optional directional hint: only when chronos_companion is available (norm #4 — honest framing)
+    companion = forecast.get("chronos_companion", {})
+    if companion.get("status") == "success":
+        lean = companion.get("lean_direction", "flat")
+        if lean == "up":
+            body += " Prices look likely to edge up a little in the next few days."
+        elif lean == "down":
+            body += " The next few days may ease a little."
+        # lean == "flat" or missing → no hint (don't fabricate a direction)
+
+    return title, body
+
+
+def _check_t8_morning(
+    forecast: dict,
+    probe: dict,
+    prices: list[dict],
+    backtest: dict,
+    state: NotificationState,
+    now_ist: datetime,
+) -> PendingAlert | None:
+    """T8_MORNING — plain daily digest at first CI run at/after 08:00 IST. Once per IST day.
+
+    Fires on the ~10:00 IST cron (first run after the 08:00 threshold).
+    Does NOT count toward the T1+T2+T3 combined anti-spam cap.
+    """
+    if now_ist.hour < _T8_MORNING_THRESHOLD_H:
+        return None
+    today_ist = now_ist.strftime("%Y-%m-%d")
+    if state.last_t8_morning_ist_date == today_ist:
+        return None
+    if not prices:
+        return None
+    sorted_p = sorted(prices, key=lambda p: p["timestamp"])
+    current = int(sorted_p[-1]["22k"])
+    prior = _get_prior_day_price(prices, now_ist)
+    title, body = _build_t8_content(current, prior, forecast, "morning")
+    return _make_alert("T8_MORNING", title, body, 2, ["bell"], now_ist, bypass_quiet=False)
+
+
+def _check_t8_evening(
+    forecast: dict,
+    probe: dict,
+    prices: list[dict],
+    backtest: dict,
+    state: NotificationState,
+    now_ist: datetime,
+) -> PendingAlert | None:
+    """T8_EVENING — plain daily digest at first CI run at/after 18:00 IST. Once per IST day.
+
+    Fires on the ~22:00 IST cron (first run after the 18:00 threshold).
+    bypass_quiet=True because the 22:00 IST cron falls at the quiet-hours boundary (22:00–07:00);
+    queuing the evening digest until morning would collide with T8_MORNING.
+    Does NOT count toward the T1+T2+T3 combined anti-spam cap.
+    """
+    if now_ist.hour < _T8_EVENING_THRESHOLD_H:
+        return None
+    today_ist = now_ist.strftime("%Y-%m-%d")
+    if state.last_t8_evening_ist_date == today_ist:
+        return None
+    if not prices:
+        return None
+    sorted_p = sorted(prices, key=lambda p: p["timestamp"])
+    current = int(sorted_p[-1]["22k"])
+    prior = _get_prior_day_price(prices, now_ist)
+    title, body = _build_t8_content(current, prior, forecast, "evening")
+    return _make_alert("T8_EVENING", title, body, 2, ["bell"], now_ist, bypass_quiet=True)
+
+
+# ---------------------------------------------------------------------------
 # Public API
 # ---------------------------------------------------------------------------
 
@@ -562,11 +693,14 @@ def check_triggers(
     now_ist: datetime,
     calibration: dict | None = None,
 ) -> list[PendingAlert]:
-    """Evaluate all triggers (T1–T6); return new alerts for this call.
+    """Evaluate all triggers (T1–T8); return new alerts for this call.
 
     Cooldowns and combined caps are enforced here.  Quiet-hours queuing and
     delivery of previously queued alerts is the caller's responsibility (see
     queue_for_quiet_hours and the main() orchestration).
+
+    T8_MORNING and T8_EVENING are guaranteed daily digests; they do NOT count
+    toward the T1+T2+T3 combined anti-spam cap.
 
     calibration: optional dict from calibration.json. When provided and valid,
         triggers T6 (calibration-unlocked, fires once ever).
@@ -579,6 +713,10 @@ def check_triggers(
     t6 = _check_t6(calibration, state, now_ist)
     if t6 is not None:
         alerts.append(t6)
+    for fn in (_check_t8_morning, _check_t8_evening):
+        alert = fn(forecast, probe, prices, backtest, state, now_ist)
+        if alert is not None:
+            alerts.append(alert)
     return alerts
 
 
@@ -633,6 +771,10 @@ def send_pending(
                 state.last_t4_fired_ist_date = now_ist.strftime("%Y-%m-%d")
             if alert.trigger_id == "T7":
                 state.last_t7_fired_ist_date = now_ist.strftime("%Y-%m-%d")
+            if alert.trigger_id == "T8_MORNING":
+                state.last_t8_morning_ist_date = now_ist.strftime("%Y-%m-%d")
+            if alert.trigger_id == "T8_EVENING":
+                state.last_t8_evening_ist_date = now_ist.strftime("%Y-%m-%d")
             logger.info("Sent %s: %s", alert.trigger_id, alert.title)
         else:
             logger.warning("Failed to send %s", alert.trigger_id)
@@ -693,7 +835,7 @@ def main() -> None:
     import argparse
 
     logging.basicConfig(level=logging.INFO, format="%(levelname)s: %(message)s")
-    parser = argparse.ArgumentParser(description="Gold rate notification system (T1-T7)")
+    parser = argparse.ArgumentParser(description="Gold rate notification system (T1-T8)")
     parser.add_argument(
         "--simulate",
         action="store_true",
