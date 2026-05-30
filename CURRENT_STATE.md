@@ -207,6 +207,8 @@ These earned their place across nine PRs. They are NOT visible in the code.
 
 14. **Visibility/visual-state claims must be verified via computed style (`getComputedStyle().display`) or rendered screenshot — NEVER via DOM attribute presence (`el.hidden`).** The `hidden` attribute and visual visibility are independent: `el.hidden === true` AND `getComputedStyle(el).display === "flex"` can hold simultaneously when an author-side `display` rule overrides the UA `[hidden]{display:none}`. This bug class shipped twice (`.pwa-help-btn` fixed in Ψ3B pre-PR; `.pwa-help-panel` missed in Ψ3B, caught in Ψ3B-hotfix) before this norm was formalized.
 
+15. **When an architecture pivot changes what a data field means, audit ALL consumers — not just the primary consumer.** The Chronos companion block (`forecast.chronos_companion`) was added in Ψ2A for the PWA but `ml/commentary.py` was never updated alongside it. `commentary.py` predated the naive-headline pivot (ADR 012) and kept reading `predicted_22k` with a "Point estimate" label — presenting the naive flat-hold baseline as a model forecast. Fixed in Ψ3C-fix (PR #47), 8 PRs after the pivot. Consumer audit checklist: `app.js` (PWA), `ml/commentary.py`, `ml/notifications.py`, `ml/drift.py`. When a new block is added to `forecast.json`, grep for all callers of `forecast.get()` / `forecast["..."]` before closing the PR.
+
 ## Open questions (things to verify when implementing)
 
 - **Φ4 wall-clock budget on GH Actions runner.** Multi-sample probe `num_samples=5` extrapolating from local 13ms = ~65ms inference + 1 model load. Audit assumed <2s. Validate empirically in CI before merging the schema bump.

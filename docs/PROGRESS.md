@@ -929,6 +929,22 @@ Focused fix for the "floating strip between words" reported after Ψ3C.1. Files 
 
 **Verification (norm #14).** All computed values confirmed via Playwright `getComputedStyle()` + `getBoundingClientRect()`. Key measurements after fix: `header.x=0.0`, `header.w=428`, `Gold.x=21.4`, `Eyebrow.x=21.4` (aligned), `backgroundColor=rgb(26,22,18)` (solid), `backdropFilter=none`, `.scrolled=false` at rest / `true` at 90px scroll. Regression at 768px and 1280px: header correct at both breakpoints. Lint CI: pass (2m45s). PR #46.
 
+#### 4.12 PR Ψ3C-fix — Commentary correctness: Chronos directional signal + honest framing (2026-05-30)
+
+Two bundled items: commentary framing bug (Item 1) + app-header copy (Item 3). Merge commit: `7504c09`. PR #47.
+
+**Root cause (diagnosed in session).** `ml/commentary.py:build_user_message()` read `forecast.get("predicted_22k")` — the naive flat-hold prediction, which equals the current price by definition — and labeled it `"Point estimate"` in the Groq prompt. The LLM reproduced "The model's point estimate for the next reading is Rs.14440" — which is today's price. The `chronos_companion` block (lean_direction, direction_acc_30f, majority_direction, direction_consensus) was never extracted or passed to the prompt; the 63.3% direction accuracy and 5/5 consensus were invisible to the LLM. Both bugs trace to `commentary.py` predating the naive-headline pivot (ADR 012, PR H) and never being updated alongside it.
+
+**Fix.** `build_user_message()` now extracts `forecast.chronos_companion` and passes all directional fields as a separate "Directional signal (Chronos)" block with a `directional_signal_available: true/false` gate. `status != "success"` → all fields `"N/A"` — LLM cannot fabricate a lean when the probe failed. Naive baseline relabeled `"= current price; no directional signal from this number"`. SYSTEM_PROMPT rewritten to prohibit "point estimate" language, lead with directional lean when available, frame accuracy honestly ("63% is a lean, not a guarantee"). Tests: +3 new (companion present, probe failed, Point-estimate-not-in-msg regression guard). 309 total, 0 regressions. Lint CI: pass (2m38s).
+
+**Item 3.** `index.html` app-title: "Gold" → "Gold · Bengaluru". SW VERSION `v6-20260530-d` → `v7-20260530-e`.
+
+**Lesson.** Norm #15 added to CURRENT_STATE.md: when an architecture pivot changes what a data field means, audit ALL consumers (PWA, commentary, notifications, drift). The Chronos companion reached the PWA in Ψ2A but not commentary until this PR, 8 PRs later.
+
+**Commentary framing verification — PENDING.** GROQ_API_KEY is a CI secret; live commentary cannot be generated locally. Rebuilt user message confirmed correct from live `forecast.json` (naive baseline labeled "= current price; no directional signal", companion present with directional_signal_available: true, Lean: up (2.6%), Direction acc.: 63%, Consensus: 5/5 agree on up). `check-price.yml` manually triggered post-merge to regenerate. Actual LLM phrasing to be pasted here once available. Verification gate: phrasing must not overstate the lean or present naive as a forecast.
+
+---
+
 ### Phase 5 — Validate  ⏸️ NOT STARTED
 
 ### Phase 6 — Promote  ⏸️ NOT STARTED
