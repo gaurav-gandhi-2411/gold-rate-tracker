@@ -1023,6 +1023,28 @@ New T8_MORNING and T8_EVENING triggers added to `ml/notifications.py`. Backend-o
 
 **Lint CI.** pass (2m45s). Master Lint + pages-build-deployment both green post-merge.
 
+#### 4.16 PR Ψ3C-notify-fix — T8 time-window bounds: close fresh-state dedup gap (2026-05-31)
+
+Hardening fix for T8 triggers. Backend-only, no shell assets, no SW bump. Merge commit `db2d129`. PR #51.
+
+**Root cause (diagnosed post-Ψ3C-notify).** Both `_check_t8_morning` and `_check_t8_evening` had only a lower-bound hour check (`>= 8` and `>= 18` respectively). In steady state the IST-date dedup (`last_t8_morning_ist_date == today_ist`) is the only guard against late-night runs computing and queuing T8_MORNING. On a fresh-state restart — initial deployment or cache eviction — the dedup is empty, so a 23:33 IST run satisfies `hour=23 >= 8`, queues T8_MORNING (quiet hours, bypass_quiet=False), and causes a double-send the next morning when both the queued alert and a fresh morning alert release together. The same gap existed on T8_EVENING: without an upper bound, hour 22/23 satisfied `>= 18`, and bypass_quiet=True sent it in quiet hours on any fresh-state restart. This is exactly what happened at the Ψ3C-notify initial deployment (23:33 IST push-triggered run, fresh state): T8_MORNING queued, T8_EVENING sent correctly (bypass_quiet), but T8_MORNING would have double-fired the next morning.
+
+**Fix.** Added explicit upper bounds to both triggers:
+- `_T8_MORNING_UPPER_H = 14`: T8_MORNING window is `8 <= hour < 14` IST.
+- `_T8_EVENING_UPPER_H = 22`: T8_EVENING window is `18 <= hour < 22` IST.
+
+Both windows sit fully outside quiet hours (22:00–07:00 IST). The upper bounds close the fresh-state gap: a 23:33 IST run now returns None from both checks regardless of dedup state.
+
+**Observed cron fit.** UTC-00/UTC-06 crons land at ~08:09/13:52 IST with observed 2-3h drift — both inside the morning window (< 14). UTC-12 cron lands at ~18:48 IST with 1-3h drift — inside the evening window (< 22). The extreme-drift edge case: if the UTC-12 cron drifts past 22:00 IST (would require >4.5h drift; max observed was 1h 18m), T8_EVENING returns None at the upper bound and silently skips that day. This is the correct failure mode — a missed evening digest is better than routinely firing in quiet hours.
+
+**bypass_quiet now belt-and-suspenders.** With the evening window bounded to 18-21 IST, T8_EVENING fires in clean hours in all observed cron conditions. `bypass_quiet=True` is retained as a safety net for extreme drift past 22:00, but it is no longer a routine path.
+
+**Note on the one-time double-morning (2026-05-31).** The initial Ψ3C-notify deployment ran at 23:33 IST and queued T8_MORNING in the cache. This fix closes the gap for all future fresh-state restarts but cannot affect the already-queued alert in saved state — the double-send on the morning of 2026-05-31 was expected and is not a fix failure.
+
+**Tests.** +4 new bound cases (morning hour=22 fresh-state → None, morning edge hour=13 → fires, evening hour=23 fresh-state → None, evening edge hour=21 → fires). 6 existing tests corrected: 3 were hard failures at hour=22 for evening assertions; 3 were passing-for-wrong-reason (out-of-window hour tested dedup gate but upper bound caught it first). All corrections were input-hour adjustments; no assertions were weakened. 341 total tests pass, 0 regressions.
+
+**Lint CI.** pass (2m43s on PR branch, 2m43s on master post-merge). All steps green.
+
 ---
 
 ### Phase 5 — Validate  ⏸️ NOT STARTED
