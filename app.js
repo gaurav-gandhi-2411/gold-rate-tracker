@@ -265,15 +265,15 @@ function renderFreshness(readings) {
   pill.classList.remove("freshness--ok", "freshness--warn", "freshness--stale");
   if (ageH >= 18) {
     pill.className   = "freshness-pill freshness--stale";
-    pill.textContent = `Stuck — ${rel}`;
+    pill.textContent = `Stuck · ${rel}`;
     pill.setAttribute("aria-label", `Data stuck, last updated ${rel}`);
   } else if (ageH >= 8) {
     pill.className   = "freshness-pill freshness--warn";
-    pill.textContent = `Stale — ${rel}`;
+    pill.textContent = `Stale · ${rel}`;
     pill.setAttribute("aria-label", `Data stale, last updated ${rel}`);
   } else {
     pill.className   = "freshness-pill freshness--ok";
-    pill.textContent = `Updated ${rel}`;
+    pill.textContent = rel;
     pill.setAttribute("aria-label", `Updated ${rel}`);
   }
 
@@ -294,6 +294,8 @@ function renderHero(readings, forecast) {
 
   if (skelEl) skelEl.hidden = true;
   if (eyeEl)  eyeEl.hidden  = false;
+  const locEl = document.getElementById("hero-location");
+  if (locEl) locEl.hidden = false;
 
   if (readings.length === 0) {
     priceEl.innerHTML = "—"; // XSS-safe: static literal string, no external data
@@ -907,10 +909,76 @@ function bindRangeToggle() {
   });
 }
 
+// ─── BOTTOM NAV SCROLLSPY ─────────────────────────────────────────────────────
+// Option B: scroll-anchor nav. IntersectionObserver tracks which section is in view.
+// Click handler uses scrollIntoView({behavior:"smooth"}); CSS scroll-margin-top handles
+// the fixed header offset so sections don't slide under it.
+
+const NAV_SECTIONS = [
+  "section-home",
+  "section-trend",
+  "section-history",
+  "section-info",
+];
+
+function initBottomNav() {
+  const navItems = document.querySelectorAll(".bottom-nav-item");
+
+  // Click: prevent default anchor jump, use smooth scrollIntoView instead.
+  // CSS scroll-margin-top on each section accounts for the 52px header.
+  navItems.forEach(item => {
+    item.addEventListener("click", (e) => {
+      e.preventDefault();
+      const sectionId = item.dataset.section;
+      const el = document.getElementById(sectionId);
+      if (el) el.scrollIntoView({ behavior: "smooth", block: "start" });
+    });
+  });
+
+  // Scrollspy: set active nav item as the user scrolls.
+  // Strategy: last section whose top edge is ≤ (scrollY + HEADER_H + threshold).
+  // requestAnimationFrame throttles scroll handler to one update per frame.
+  const HEADER_H = 52;
+  const THRESHOLD = 24; // px below header before marking a section active
+
+  const sectionEls = NAV_SECTIONS
+    .map(id => document.getElementById(id))
+    .filter(Boolean);
+
+  function updateActiveNav() {
+    const scrollY = window.scrollY;
+    const trigger = scrollY + HEADER_H + THRESHOLD;
+    let activeId = sectionEls[0]?.id;
+
+    for (const el of sectionEls) {
+      // getBoundingClientRect().top + scrollY = element's offset from document top
+      const elTop = el.getBoundingClientRect().top + scrollY;
+      if (elTop <= trigger) activeId = el.id;
+    }
+
+    navItems.forEach(item => {
+      const isActive = item.dataset.section === activeId;
+      item.classList.toggle("active", isActive);
+      item.setAttribute("aria-current", isActive ? "page" : "false");
+    });
+  }
+
+  let ticking = false;
+  window.addEventListener("scroll", () => {
+    if (!ticking) {
+      requestAnimationFrame(() => { updateActiveNav(); ticking = false; });
+      ticking = true;
+    }
+  }, { passive: true });
+
+  updateActiveNav(); // set initial state
+}
+
 // ─── INIT ─────────────────────────────────────────────────────────────────────
 
 (async function init() {
   bindRangeToggle();
+  initBottomNav();
 
   // D3: Refresh button — works in both browser and standalone mode.
   const refreshBtn = document.getElementById("refresh-btn");

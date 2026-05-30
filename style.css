@@ -140,14 +140,23 @@ main {
   position: relative; z-index: 2;
   max-width: 980px;
   margin: 0 auto;
+  /* Bottom padding clears the fixed bottom-nav (56px) + safe area + breathing room */
   padding: clamp(20px, 4vw, 48px) clamp(20px, 5vw, 56px)
-           calc(var(--space-7) + env(safe-area-inset-bottom, 0px));
+           calc(80px + env(safe-area-inset-bottom, 0px));
+}
+
+/* Scroll offset so sections don't hide under the sticky header when anchor-scrolled */
+#section-home,
+#section-trend,
+#section-history,
+#section-info {
+  scroll-margin-top: calc(52px + env(safe-area-inset-top, 0px) + 8px);
 }
 
 /* ═══════════════════════════════════════════════════════════════
-   1. UTILITY ROW — sticky freshness + location
+   1. APP HEADER — sticky top chrome (Ψ3C.1: was utility-row ~28px, now ~52px)
 ═══════════════════════════════════════════════════════════════ */
-.utility-row {
+.app-header {
   position: sticky;
   top: env(safe-area-inset-top, 0px);
   z-index: 10;
@@ -155,12 +164,13 @@ main {
   align-items: center;
   justify-content: space-between;
   gap: 12px;
-  padding: 7px clamp(20px, 5vw, 56px);
+  min-height: 52px;
+  padding: 0 clamp(20px, 5vw, 56px);
   background: rgba(26, 22, 18, 0.90);
   backdrop-filter: blur(8px);
   -webkit-backdrop-filter: blur(8px);
   border-bottom: 1px solid var(--line);
-  /* Shadow separates the strip from scrolling content below it */
+  /* Shadow separates the header from scrolling content below it */
   box-shadow: 0 1px 8px rgba(0, 0, 0, 0.28);
   /* Bleed to viewport edges */
   margin-left:  calc(-1 * clamp(20px, 5vw, 56px) - env(safe-area-inset-left,  0px));
@@ -168,23 +178,44 @@ main {
 }
 
 @media (prefers-color-scheme: light) {
-  .utility-row { background: rgba(251, 247, 238, 0.92); }
+  .app-header { background: rgba(251, 247, 238, 0.92); }
 }
 
-.utility-row:has(.freshness--stale) {
-  /* Layered: opaque --ink base + 28% terracotta tint overlay.
-     Previous 0.18 alpha made the strip nearly transparent — text scrolled visibly underneath. */
+.app-header:has(.freshness--stale) {
+  /* Layered: opaque --ink base + 28% terracotta tint overlay. */
   background:
     linear-gradient(rgba(198, 106, 75, 0.28), rgba(198, 106, 75, 0.28)),
     var(--ink);
   border-bottom-color: rgba(198, 106, 75, 0.60);
 }
-.utility-row:has(.freshness--warn) {
-  /* Same pattern: opaque --ink base + 22% gold tint overlay. */
+.app-header:has(.freshness--warn) {
+  /* Opaque --ink base + 22% gold tint overlay. */
   background:
     linear-gradient(rgba(212, 147, 42, 0.22), rgba(212, 147, 42, 0.22)),
     var(--ink);
   border-bottom-color: rgba(212, 147, 42, 0.45);
+}
+
+/* ─── APP HEADER LAYOUT ───────────────────────────────────────────────────── */
+.app-header-left {
+  display: flex;
+  align-items: center;
+  flex-shrink: 0;
+}
+
+.app-title {
+  font-family: var(--display);
+  font-size: 20px;
+  font-weight: 500;
+  letter-spacing: -0.01em;
+  color: var(--gold);
+  line-height: 1;
+}
+
+.app-header-right {
+  display: flex;
+  align-items: center;
+  gap: 6px;
 }
 
 .freshness-pill {
@@ -200,19 +231,13 @@ main {
 .freshness-pill.freshness--warn  { color: var(--gold); }
 .freshness-pill.freshness--stale { color: var(--up); font-weight: 700; }
 
-.location-label {
+/* ─── HERO LOCATION — relocated from header to hero area (Ψ3C.1) ─────────── */
+.hero-location {
+  margin: -4px 0 var(--space-3);
   font-size: var(--ts-xs);
   color: var(--cream-mute);
-  letter-spacing: 0.04em;
-  text-align: right;
-  white-space: nowrap;
-}
-
-/* ─── UTILITY RIGHT CLUSTER (refresh + help buttons) ────────────────────── */
-.utility-right {
-  display: flex;
-  align-items: center;
-  gap: 8px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
 }
 
 .refresh-btn,
@@ -236,9 +261,12 @@ main {
 }
 .refresh-btn:active,
 .pwa-help-btn:active { color: var(--gold); }
-/* Author-side display overrides the UA [hidden]{display:none}; restore both. */
+/* Author-side display overrides the UA [hidden]{display:none}; restore all. */
 .pwa-help-btn[hidden]   { display: none !important; }
 .pwa-help-panel[hidden] { display: none !important; }
+/* Ψ3C.1 latent bug fixes (norm #14): inline-flex/flex defeats UA [hidden] rule */
+.hero-change[hidden]    { display: none !important; }
+.sparkline-wrap[hidden] { display: none !important; }
 
 @keyframes refresh-spin {
   to { transform: rotate(360deg); }
@@ -1001,6 +1029,82 @@ main {
   font-size: var(--ts-xs);
   color: var(--cream-mute);
   line-height: 1.55;
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   BOTTOM NAV — scroll-anchor style (Ψ3C.1)
+═══════════════════════════════════════════════════════════════ */
+.bottom-nav {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  z-index: 10;
+  display: flex;
+  align-items: stretch;
+  background: rgba(26, 22, 18, 0.94);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border-top: 1px solid var(--line);
+  /* Safe area: extends background under home indicator */
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+  box-shadow: 0 -1px 12px rgba(0, 0, 0, 0.30);
+}
+
+@media (prefers-color-scheme: light) {
+  .bottom-nav { background: rgba(251, 247, 238, 0.94); }
+}
+
+.bottom-nav-item {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 3px;
+  padding: 10px 4px 8px;
+  min-height: 56px;
+  text-decoration: none;
+  color: var(--cream-mute);
+  font-family: var(--sans);
+  font-size: 10px;
+  font-weight: 500;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  -webkit-tap-highlight-color: transparent;
+  touch-action: manipulation;
+  /* Active indicator: thin top-border in gold */
+  border-top: 2px solid transparent;
+  transition: color 0.18s;
+}
+
+.bottom-nav-item:hover { color: var(--cream); text-decoration: none; }
+
+.bottom-nav-item.active {
+  color: var(--gold);
+  border-top-color: var(--gold);
+}
+
+.bottom-nav-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  flex-shrink: 0;
+}
+
+/* Tablet: slightly larger nav items */
+@media (min-width: 641px) and (max-width: 899px) {
+  .bottom-nav-item { font-size: 11px; padding: 12px 8px 10px; }
+}
+
+/* Desktop ≥900px: hide bottom nav — desktop users have scroll/keyboard;
+   a full-width fixed bar reads as broken-mobile at this width. */
+@media (min-width: 900px) {
+  .bottom-nav { display: none; }
+  /* Restore original main bottom padding (no nav to clear) */
+  main { padding-bottom: calc(var(--space-7) + env(safe-area-inset-bottom, 0px)); }
 }
 
 /* ═══════════════════════════════════════════════════════════════
