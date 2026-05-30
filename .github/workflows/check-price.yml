@@ -81,17 +81,19 @@ jobs:
           # Sustained failures (>12h) are handed off to the staleness guard below
           # to prevent alert flooding — 8 ntfy per 24h for a single CF IP-block
           # causes alert fatigue. See ADR 016.
-          DATA_AGE_H=$(python3 -c "
-import json, sys
-from datetime import datetime, timezone
-try:
-    p = json.load(open('data/prices.json'))
-    ts = datetime.fromisoformat(p[-1]['timestamp'].replace('Z', '+00:00'))
-    age = (datetime.now(timezone.utc) - ts).total_seconds() / 3600
-    print(f'{age:.1f}')
-except Exception:
-    print('0')
-" 2>/dev/null || echo "0")
+          # Python code is indented at YAML block level so YAML strips leading spaces
+          # correctly — do not de-indent these lines.
+          DATA_AGE_H=$(python3 -c '
+          import json, sys
+          from datetime import datetime, timezone
+          try:
+              p = json.load(open("data/prices.json"))
+              ts = datetime.fromisoformat(p[-1]["timestamp"].replace("Z", "+00:00"))
+              age = (datetime.now(timezone.utc) - ts).total_seconds() / 3600
+              print(f"{age:.1f}")
+          except Exception:
+              print("0")
+          ' 2>/dev/null || echo "0")
 
           if python3 -c "import sys; sys.exit(0 if float('${DATA_AGE_H}') <= 12 else 1)" 2>/dev/null; then
             echo "Data age ${DATA_AGE_H}h — first/second failure, sending scraper-down alert."

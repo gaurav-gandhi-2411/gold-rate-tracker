@@ -1,7 +1,9 @@
 # ADR 016 — Tanishq Scraper Hardening (Retry, CF Detection, Fingerprint, Alert Dedup)
 
-**Status:** Accepted  
-**Date:** 2026-05-31  
+**Status:** Accepted
+
+**Date:** 2026-05-31
+
 **Deciders:** GG (owner), CC (implementor)
 
 ---
@@ -122,20 +124,20 @@ IBJA-derived rather than directly scraped?).
 
 ## Alternatives considered
 
-**Stealth Playwright plugins (playwright-extra + puppeteer-stealth):**  
+**Stealth Playwright plugins (playwright-extra + puppeteer-stealth):**
 Rejected. These plugins add complexity, have inconsistent maintenance, and are well-known
 to CF — they fight an adversarial system that actively patches against them. Scope creep
 relative to the marginal gain.
 
-**Proxy rotation (residential proxies):**  
+**Proxy rotation (residential proxies):**
 Rejected. Monthly cost, added latency, third-party dependency. Breaks the ₹0/month
 free-tier constraint.
 
-**Switching to an unofficial API endpoint:**  
+**Switching to an unofficial API endpoint:**
 Dead end explored in the original Phase 3 audit. The Tanishq site has no public API.
 DOM scraping is the only available path.
 
-**Alert rate-limiting via `actions/cache` state:**  
+**Alert rate-limiting via `actions/cache` state:**
 Considered but rejected in favour of the simpler `prices.json` age check (H4a) and
 `GITHUB_ENV` flag (H4b). No new external state required; logic is readable inline in the
 YAML.
