@@ -1,5 +1,5 @@
 {
-  "predicted_at": "2026-05-29T20:15:02.981474+00:00",
+  "predicted_at": "2026-05-30T00:02:14.706789+00:00",
   "target_window": "5d",
   "headline": {
     "method": "naive_flat_hold",
@@ -48,7 +48,7 @@
   "predicted_22k": 14495,
   "lower": 13559,
   "upper": 15431,
-  "target_time": "2026-05-30T00:00:00+00:00",
+  "target_time": "2026-05-31T00:00:00+00:00",
   "model_status": "naive_headline",
   "model_version": "naive_flat_hold",
   "warmup": false
