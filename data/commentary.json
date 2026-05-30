@@ -1,12 +1,5 @@
 [
   {
-    "ts": "2026-05-24T08:24:35Z",
-    "text": "The Indian retail gold price has been steady, with a 3-day decline of 0.24% and a 7-day gain of 1.60%. The model expects the next reading to be around Rs.14625. Recent price movements show a 70.6th percentile in the last 90 days.",
-    "model": "llama-3.3-70b-versatile",
-    "prompt_hash": "5c546bd89d9f",
-    "commentary_age_hours": 0.0
-  },
-  {
     "ts": "2026-05-24T13:16:16Z",
     "text": "The 22K gold price is at Rs.14625, with a 3-day decline of 0.54% and a 7-day gain of 1.60%. The model's point estimate for the next reading is Rs.14625.",
     "model": "llama-3.3-70b-versatile",
@@ -205,6 +198,13 @@
   {
     "ts": "2026-05-30T11:31:56Z",
     "text": "The Chronos signal leans up with 63% recent accuracy and 5 of 5 samples in agreement, while the current 22K gold price is Rs.14440, at the 59th percentile in the last 90 days. The price has decreased by 1.16% over the past 3 days and 1.26% over the past 7 days.",
+    "model": "llama-3.3-70b-versatile",
+    "prompt_hash": "4a5f9a5607e3",
+    "commentary_age_hours": 0.0
+  },
+  {
+    "ts": "2026-05-30T13:20:27Z",
+    "text": "The gold price is at Rs.14440, with a 59th percentile ranking over the last 90 days. Chronos indicates a lean towards an upward direction, with 63% recent accuracy and 5 of 5 samples in agreement. The price has decreased by 1.16% over the past 3 days.",
     "model": "llama-3.3-70b-versatile",
     "prompt_hash": "4a5f9a5607e3",
     "commentary_age_hours": 0.0
