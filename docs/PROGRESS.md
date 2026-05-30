@@ -965,6 +965,33 @@ Phase 2 of 3 in the Ψ3C app-feel sprint. Files changed: `index.html`, `style.cs
 
 **Verification (Playwright headless, 19/19 checks pass).** iPhone 14 Plus (428×926): tap feedback transitions present on buttons/cards ✓ · range-toggle equal-width buttons + transparent inactive background ✓ · chart-fade-out class fires on range switch ✓ · pull indicator fixed-positioned, opacity:0 at rest, becomes visible on gesture ✓ · refreshData fires (spinner observed) on 80px simulated pull ✓ · prefers-reduced-motion: duration → ~0ms ✓. Desktop 1280px: bottom-nav hidden, no layout break ✓. 768px: tap feedback present ✓.
 
+#### 4.14 PR Ψ3C-copy — Plain-language copy sweep for non-technical users (2026-05-30)
+
+Phase 3 of 3 in the Ψ3C sprint. Files changed: `ml/commentary.py`, `app.js`, `index.html`, `service-worker.js`. Zero backend files, schemas, data files, or CI workflows touched. Merge commit `1b1f979`. PR #49.
+
+**Principle.** The ML sophistication stays in the system; plain words go in the UI; honest framing is preserved. Users are non-technical family members — terms like "Chronos signal", "63% direction accuracy (30f)", "5 of 5 samples", "59th percentile", "naive flat-hold", "conformal PI", and "Walk-forward backtest" belong in engineering docs, not in text a buyer reads.
+
+**SYSTEM_PROMPT rewrite (`ml/commentary.py`).** The previous SYSTEM_PROMPT instructed the LLM to produce ML jargon verbatim ("Chronos signal", "63% on recent data", "5 of 5 samples", "59th percentile"). New SYSTEM_PROMPT bans those terms and instructs plain-language framing: reliability described as "right about 6 times out of 10", direction described as "prices look likely to edge up a little", price level as "around average for the past few months". Honesty preserved: "lean or guide, not a certainty", "never say prices 'will' rise or fall".
+
+**Verified LLM output (real run 2026-05-30T17:17:58Z, `llama-3.3-70b-versatile`):**
+> "The current gold price is around average for the past few months. Prices look likely to edge up a little, and this signal tends to be right more often than not, about 6 times out of 10, with a consistent signal from all sources. Gold has been down a little over the past week."
+
+Framing check: No "Chronos" ✓ · No "percentile" ✓ · No "samples" ✓ · Direction as lean ✓ · Reliability in plain fractions ✓ · No "will rise/fall" ✓ · No buy/sell advice ✓.
+
+**Model signal section (`app.js`, `index.html`).** "Model signal" → "5-day outlook". Stats row: "63% direction accuracy (30f)" → "Right about 63% of the time recently"; "5 of 5 samples agree" → "Consistent signal" / "Mixed signal" (≥80% threshold); calibration tag dropped from always-visible card (kept in methodology accordion with plain label). Note: "Directional signal only…" → "A guide for which way prices may move — not a guarantee."
+
+**Methodology accordion (`app.js`).** Summary/entry point: "How this verdict is calculated · model accuracy · backtest" → "How this works · how accurate the signal is · historical checks". Inside: "naive flat-hold" → "Predict no change"; "PI from conformal 80% of last 30 naive errors" → "Range covers 80% of typical 5-day swings"; "Chronos directional signal (companion)" → "Direction signal"; "Direction accuracy (last 30 folds)" → "Recent accuracy", "naive baseline: 50%" → "random guessing: 50%"; "Calibration" → "Adjusted to Tanishq prices"; "Walk-forward backtest (h=5) (N folds)" → "Historical accuracy check — N periods, 5-day horizon"; "MAE" → "Avg. price error"; "+₹X vs naive" → "+₹X vs predict-no-change"; "Wilcoxon p" → "Statistical significance"; backtest note rewritten to plain English with honesty preserved ("performs slightly worse than this simple approach").
+
+**Freshness / stale / iOS.** "Stuck" → "Not updating"; stale banner reworded to "Prices last updated {rel} — data may not reflect the current rate."; iOS help panel "fetch the latest readings" → "get the latest prices".
+
+**Comparison cards.** "vs period low" → "vs 30-day low" (aligns with the sub-text which already said "30d low").
+
+**SW VERSION bump.** `v8-20260530-f` → `v9-20260530-g`. Shell assets `index.html`, `app.js` changed.
+
+**Tests.** 309/309 pass, 0 regressions. Commentary tests: 18/18 pass — no test changes needed (tests assert on user-message structure and Groq API call shape, not SYSTEM_PROMPT prose; the one SYSTEM_PROMPT check `"buy/sell" in content` still passes).
+
+**Lesson.** Copy is a consumer of the model architecture and should be audited alongside it. The Ψ3C-fix PR (§4.12) fixed commentary framing bugs; this PR completes the sweep by updating every surface a user reads. Plain language and honest framing are not in tension: "right about 6 times out of 10" is more concrete than "63% accuracy" and equally honest.
+
 ---
 
 ### Phase 5 — Validate  ⏸️ NOT STARTED
