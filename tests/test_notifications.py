@@ -13,6 +13,7 @@ from ml.notifications import (
     _get_prior_day_price,
     _is_quiet_hours,
     _release_queued,
+    _stamp_ist_dedup,
     check_triggers,
     compute_chronos_lean,
     compute_dir_acc_30f,
@@ -493,8 +494,8 @@ def test_send_pending_sets_last_t4_fired_ist_date(monkeypatch):
     now_ist = _ist(2026, 5, 17, 18, 0)
     alert = PendingAlert(
         trigger_id="T4",
-        title="Gold Weekly: Model beating naive (22K: Rs.14420)",
-        body="22K spot: Rs.14420. Backtest (30 folds): Chronos MAE Rs.275 vs Naive Rs.249. See dashboard.",
+        title="Gold Weekly: 22K Rs.14420",
+        body="Gold 22K: Rs.14420. Check the app for the latest read.",
         priority=2,
         tags=["newspaper", "white_flower"],
         click_url="https://gaurav-gandhi-2411.github.io/gold-rate-tracker/",
@@ -604,10 +605,12 @@ def test_t7_body_contains_expected_fields():
     )
     t7 = next(a for a in alerts if a.trigger_id == "T7")
     assert "Rs." in t7.body
-    assert "trend:" in t7.body
-    assert "lean:" in t7.body
-    assert "dir acc" in t7.body
-    assert "System healthy" in t7.body
+    assert "this week" in t7.body  # week-trend description
+    assert "System working normally" in t7.body
+    # Plain language: no jargon in T7 body
+    assert "dir acc" not in t7.body
+    assert "lean:" not in t7.body
+    assert "folds" not in t7.body
 
 
 def test_t7_not_counted_in_t123_cap():
@@ -647,8 +650,8 @@ def test_send_pending_sets_last_t7_fired_ist_date(monkeypatch):
     now_ist = _ist(2026, 5, 17, 14, 0)
     alert = PendingAlert(
         trigger_id="T7",
-        title="Gold daily check: 22K Rs.14420",
-        body="22K spot Rs.14420. 7d trend: +0.7%. Model lean: up (dir acc 100% on recent folds). System healthy.",
+        title="Gold daily check: Rs.14420",
+        body="Gold 22K: Rs.14420. Up 0.7% this week. Prices may edge up a little. System working normally.",
         priority=2,
         tags=["robot", "white_check_mark"],
         click_url="https://gaurav-gandhi-2411.github.io/gold-rate-tracker/",
@@ -661,6 +664,68 @@ def test_send_pending_sets_last_t7_fired_ist_date(monkeypatch):
     send_pending([alert], state, now_ist)
 
     assert state.last_t7_fired_ist_date == "2026-05-17"
+
+
+def test_stamp_ist_dedup_t7_on_queue(tmp_path):
+    """T7 queued during quiet hours must stamp last_t7_fired_ist_date immediately.
+
+    Without the stamp-on-queue fix, a second CI run during quiet hours would see
+    an un-stamped state, re-generate T7, and add another copy to the queue.
+    """
+    state = NotificationState()
+    now_ist = _ist(2026, 5, 20, 23, 30)  # 23:30 IST — quiet hours
+
+    assert state.last_t7_fired_ist_date == ""
+    _stamp_ist_dedup("T7", state, now_ist)
+    assert state.last_t7_fired_ist_date == "2026-05-20"
+
+
+def test_t7_does_not_accumulate_in_queue_across_quiet_runs():
+    """Simulate two consecutive quiet-hours CI runs.  T7 should only appear once
+    in the queue even though the dedup stamp was not set by an actual send.
+
+    Before the fix: both runs would generate T7 (un-stamped state) and the queue
+    would hold two copies. After the fix: the first run stamps the date; the second
+    run sees today's date and returns None from _check_t7.
+    """
+    state = NotificationState()
+
+    # Run 1: 23:30 IST on Day 1 — T7 eligible (no prior stamp)
+    now_ist_r1 = _ist(2026, 5, 20, 23, 30)
+    alerts_r1 = check_triggers(
+        _forecast(),
+        _probe_up(strength_pct=1.0),
+        _prices_up(),
+        _backtest_accurate(),
+        state,
+        now_ist_r1,
+    )
+    t7_r1 = [a for a in alerts_r1 if a.trigger_id == "T7"]
+    assert len(t7_r1) == 1, "T7 must fire on first quiet run"
+
+    # Simulate quiet-hours queuing (what main() does) — this stamps the dedup
+    for alert in t7_r1:
+        state = queue_for_quiet_hours([alert], state)
+        _stamp_ist_dedup(alert.trigger_id, state, now_ist_r1)
+
+    assert state.last_t7_fired_ist_date == "2026-05-20"
+    assert len(state.queued) == 1
+
+    # Run 2: 05:30 IST on Day 2 — same calendar date IST stamp → T7 must NOT fire again
+    now_ist_r2 = _ist(2026, 5, 21, 5, 30)
+    alerts_r2 = check_triggers(
+        _forecast(),
+        _probe_up(strength_pct=1.0),
+        _prices_up(),
+        _backtest_accurate(),
+        state,
+        now_ist_r2,
+    )
+    t7_r2 = [a for a in alerts_r2 if a.trigger_id == "T7"]
+    assert len(t7_r2) == 0, "T7 must NOT re-fire on second quiet run — stamp set by first run"
+
+    # Queue must still hold exactly 1 T7 (not accumulating)
+    assert len(state.queued) == 1
 
 
 def test_state_round_trip_new_t4_t7_fields(tmp_path: Path):
