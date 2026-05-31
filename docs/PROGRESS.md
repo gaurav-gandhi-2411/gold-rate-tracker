@@ -1132,6 +1132,42 @@ Backend-only. No model changes. No shell assets. No SW bump. Addresses three gap
 
 ---
 
+#### 4.20 PR #55 — Notification dedup-on-queue + plain-language T1-T7 + commentary jargon blocklist (2026-05-31)
+
+Backend-only. No shell assets, no SW bump. Merge commit `9969c01`.
+
+**Root cause: T7 accumulated up to 8 duplicate copies per delivery.** `last_t7_fired_ist_date` was only stamped in `send_pending` on successful delivery. Each CI run during quiet hours saw an un-stamped state, re-generated T7, and appended another copy to the queue. The first non-quiet morning run released all copies at once.
+
+**Fix: stamp at queue time.** New `_stamp_ist_dedup(trigger_id, state, now_ist)` helper called in `main()` immediately after `queue_for_quiet_hours`. Stamps T4, T5, T6, T7, T8 IST-date fields when an alert is queued during quiet hours. `send_pending` still overwrites the stamp on actual delivery, so the cadence gate is always measured from delivery time, not queue time. Same structural fix covers all IST-date-deduped triggers with `bypass_quiet=False`.
+
+**Dedup-on-failed-delivery behavior (stated explicitly).** If a queued alert is stamped at queue time and release-time delivery fails (ntfy returns error), the stamp stays (from queue date). For T7 (3-day cadence), a failed delivery defers the next T7 by 3 days from the stamp date, not one day. T8 twice-daily + health-check covers the same-day gap. Acceptable; no rollback on failure.
+
+**Plain-language rewrites: T1–T7.** All user-facing notification bodies rewritten to match the non-technical family standard already established for T8 and the PWA. Jargon terms removed from every body: "Chronos", "naive MAE", "backtest", "dir acc", "folds", "model_fallback", "Model-agnostic", "percentile". Honest framing preserved throughout (norm #4): T1/T2 say "lean, not a certainty", T7 says "may edge up a little" / "may ease a little". T6 (calibration unlocked) is owner-facing; technical language retained.
+
+**Commentary jargon blocklist hardening.** T4 (weekly digest) body includes a Groq LLM commentary snippet via `commentary.json`. The existing SYSTEM_PROMPT blocked "Chronos", "model", "baseline" but not "naive", "MAE", "backtest", "folds", "fold", "Wilcoxon" — all terms that appear in the structured data passed to the LLM. Added all six to the NEVER USE list. `test_system_prompt_blocks_technical_jargon` added to pin the complete list.
+
+**Tests.** +2 dedup-on-queue (unit: stamp fires at queue time; integration: no accumulation across two quiet-hours runs) + 1 commentary blocklist. 359 Python tests total, 0 regressions. Lint CI: pass (3m2s). Squash commit body: clean (no `[skip ci]`).
+
+---
+
+#### 4.21 PR #56 — 4h cadence, IBJA pm_916 upsert (unblocks calibration), vsLow 30d fix, drop magnitude from outlook card (2026-05-31)
+
+Backend + PWA + CI. SW VERSION bump v9→v10 (`"v10-20260601-a"`). Merge commit `2f1bbec`.
+
+**IBJA upsert fix — the actual calibration-unblock.** `append_ibja_today` was write-once per date. Early CI runs (~05:30 IST, before ~17:00 IST PM publication) wrote today's row with `pm_916=NaN`. All subsequent runs for the same date hit the "today already in parquet" path and skipped. The 4h cadence alone would NOT have helped — write-once logic blocked the post-PM-fix 17:30 run regardless of frequency. Fix: if the stored row has null `pm_916` AND the fresh fetch has a valid value, update the row in-place. Logged as "updated pm_916 for YYYY-MM-DD (was null, now X.X)". Each 17:30 IST run now fills in the PM rate → ~1 valid calibration pair per trading day → ETA for 30 valid pairs (calibration unlock): ~2026-06-12.
+
+**4h scrape cadence.** `0 */6 * * *` → `0 */4 * * *`. 6 runs/day. More recovery opportunities against Cloudflare transient blocks; fresher data. The post-PM-fix window at ~17:30 IST is now covered by the 14:00 UTC slot in addition to the existing 18:00 UTC slot.
+
+**vsLow bug fix.** `computeComparisons` used `Math.min(...pricesAll)` (all-time low) for the "vs 30-day low" comparison card. Label had been updated to "vs 30-day low" in Ψ3C-copy (PR #49) but the code was not updated alongside the label. Fix: `Math.min(...prices30d)`. The previously reported `vs30d=-1` (below asking price) was actually correct data; the bug was vsLow using the all-time low as denominator.
+
+**Drop magnitude from 5-day outlook card.** `~X.X% expected move` removed from the primary signal card. Direction + accuracy + confidence are sufficient for family buyers; percentage magnitude was jargon in the main page flow. The % remains visible in the methodology accordion.
+
+**Proving test for IBJA upsert.** `test_append_upsert_fills_null_pm916_when_fresh_fetch_has_value`: Step 1 writes AM-only row (pm_916 absent/NaN); Step 2 simulates post-PM-fix run; asserts result=True, 1 row total, pm_916=144490.0. Companion guard `test_append_skips_when_pm916_already_present` confirms no double-write when pm_916 is already valid. Both pass. 5 JS comparison tests added covering vsLow, vs7d, vs30d, vs90d, vs1y.
+
+**Tests.** 359 Python tests pass. 5 new JS comparison tests pass (`node --test tests/test_comparisons.js`). Lint CI: pass (2m40s on PR branch, 2m43s on master post-merge). Check Gold Price: success. pages-build-deployment: success. Squash commit body: clean (no `[skip ci]`). Both branches deleted post-merge.
+
+---
+
 ### Phase 5 — Validate  ⏸️ NOT STARTED
 
 ### Phase 6 — Promote  ⏸️ NOT STARTED
