@@ -1101,6 +1101,41 @@ All 4 existing fixture DOM tests (`scraper/test_scrape.js`) and 8 pure-function 
 
 ---
 
+#### 4.18 PR Ψ3C.3 — Interactive chart, display-only dedup, extended skeletons (2026-05-31)
+
+Final phase of the Ψ3C app-feel sprint. Files changed: `app.js`, `index.html`, `style.css`, `service-worker.js`, `tests/test_dedup.js` (new). Zero backend files, schemas, data files, or CI workflows touched.
+
+**A. Display-only dedup (critical data contract).**
+
+Two pure functions added to `app.js`:
+- `dedupReadings(readings)` — collapses consecutive identical 22k readings into display groups `{ reading, endTimestamp, count }`. Non-consecutive identical values (price returns after moving) remain separate display events. Called in `renderHistory()` with a spread copy; `allReadings` is never mutated.
+- `dedupForChart(readings)` — for each run of consecutive identical 22k values, emits the first and last timestamps as two chart points (or one if single-reading run). Combined with `stepped:'before'` on the Chart.js dataset, flat holds render as horizontal segments followed by a vertical step to the new price. The "diagonal between two distant identical points" pattern cannot occur.
+
+History rendering: latest group shows "Since {firstOccurrenceDate}" (when the price last changed), older spans show "{startDate} – {endDate}" (chronological, oldest first). The freshness pill ("checked {N} ago") and the history latest row ("Since {date}") are complementary, not contradictory — norm #4.
+
+`prices.json` is untouched. ML pipeline reads it directly and never passes through any app.js code.
+
+**B. Interactive chart callout.**
+
+`CALLOUT_PLUGIN` (Chart.js `afterDraw`) draws a persistent gold-bordered callout (₹price + date/time) and vertical dashed hairline at the tapped/clicked data point. `chartPinnedIndex` (module-level) persists until dismissed. Second tap on same index dismisses; click outside canvas dismisses via document click handler. Works with the stepped/deduped chart from Part A.
+
+**C. Extended skeletons.**
+
+Commentary, 5-day outlook, and history sections show shimmer placeholders during initial data load. Skeletons use the existing `.skel` animation class; `prefers-reduced-motion` covered by the global `*, *::before, *::after` suppresser in `style.css`. Visibility confirmed via `getComputedStyle().display` in Playwright (norm #14).
+
+**Tests.** 11 new dedup unit tests in `tests/test_dedup.js` (pure-function, `node --test`): consecutive collapse, non-consecutive NOT collapsed, single reading, all-identical, all-distinct, empty, mixed runs; plus 4 chart-dedup cases. 40 total JS tests pass (11 new + 9 scrape pure-function + 4 DOM fixture + 16 hardening). Zero regressions.
+
+**Verification (norm #14).**
+- Playwright iPhone 14 Plus (428×926): initial skeleton screenshot (commentary, outlook, history shimmer visible); after-load screenshot (skeletons hidden, prices rendered); 30d chart stepped-line screenshot (flat holds clearly horizontal, no diagonals); tap-to-reveal callout screenshot (gold box with price + date + dashed hairline); dismissed screenshot (callout gone). All three skeleton elements confirmed `display: none` post-load via `getComputedStyle()`.
+- 768px and 1280px regression screenshots: clean layout at both breakpoints.
+- Desktop history table at 1280px: "Since 30 May", span rows in chronological date format.
+
+**SW version.** Bumped to `v10-20260531-psi3c3` (shell assets changed).
+
+**Lint CI.** pass (2m52s on PR branch). PR #53.
+
+---
+
 ### Phase 5 — Validate  ⏸️ NOT STARTED
 
 ### Phase 6 — Promote  ⏸️ NOT STARTED
