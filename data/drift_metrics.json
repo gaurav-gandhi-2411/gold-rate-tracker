@@ -844,5 +844,14 @@
     "forecast_22k": 14440.0,
     "residual": 0.0,
     "model_version": "naive_flat_hold"
+  },
+  {
+    "ts": "2026-05-31T02:58:02.356352+00:00",
+    "target_time": "2026-06-01T00:00:00+00:00",
+    "actual_ts": "2026-05-31T02:57:46.298Z",
+    "actual_22k": 14440.0,
+    "forecast_22k": 14440.0,
+    "residual": 0.0,
+    "model_version": "naive_flat_hold"
   }
 ]
