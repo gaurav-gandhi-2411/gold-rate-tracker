@@ -136,3 +136,134 @@ def should_refit(
 ) -> bool:
     """Return True when 10 or more new aligned pairs have accumulated since last fit."""
     return (current_overlap_count - last_fit_observations) >= _REFIT_NEW_PAIRS
+
+
+def run_refit_if_needed(data_dir: Path | None = None) -> bool:
+    """Check current overlap pair count and refit calibration if warranted.
+
+    Triggers on two conditions:
+    - Initial unlock: calibration not yet valid AND overlap_count >= 30.
+    - Periodic refit: calibration already valid AND 10+ new pairs since last fit.
+
+    Returns True if a refit was performed, False if skipped.
+    Raises on refit failure so the CI step exits non-zero.
+    """
+    _data = data_dir or DATA_DIR
+    ibja_path = _data / "ibja_rates.parquet"
+    prices_path = _data / "prices.json"
+    cal_path = _data / "calibration.json"
+
+    try:
+        with open(cal_path) as f:
+            calib: dict = json.load(f)
+    except FileNotFoundError:
+        calib = {}
+    except Exception as exc:
+        logger.error("run_refit_if_needed: could not read calibration.json: %s", exc)
+        calib = {}
+
+    if not ibja_path.exists():
+        logger.info("run_refit_if_needed: ibja_rates.parquet not found — skipping")
+        return False
+
+    try:
+        import pandas as pd  # noqa: PLC0415
+
+        ibja_df = pd.read_parquet(ibja_path)
+    except Exception as exc:
+        logger.error("run_refit_if_needed: could not read ibja_rates.parquet: %s", exc)
+        return False
+
+    if not prices_path.exists():
+        logger.info("run_refit_if_needed: prices.json not found — skipping")
+        return False
+
+    try:
+        with open(prices_path) as f:
+            prices_raw = json.load(f)
+    except Exception as exc:
+        logger.error("run_refit_if_needed: could not read prices.json: %s", exc)
+        return False
+
+    if not isinstance(prices_raw, list) or not prices_raw:
+        logger.info("run_refit_if_needed: prices.json is empty — skipping")
+        return False
+
+    # Build tanishq_df: one reading per UTC calendar day (take last reading if multiple).
+    # Timestamps in prices.json are UTC ISO-8601; first 10 chars give YYYY-MM-DD.
+    rows = [
+        {"date": r["timestamp"][:10], "22k": float(r["22k"])}
+        for r in prices_raw
+        if r.get("timestamp") and r.get("22k") is not None
+    ]
+    if not rows:
+        logger.info("run_refit_if_needed: no valid readings in prices.json — skipping")
+        return False
+
+    import pandas as pd  # noqa: PLC0415
+
+    tanishq_df = (
+        pd.DataFrame(rows)
+        .sort_values("date")
+        .groupby("date")
+        .last()
+        .reset_index()
+    )
+
+    ibja_dates = set(ibja_df["date"].dropna().tolist())
+    tanishq_dates = set(tanishq_df["date"].tolist())
+    overlap_count = len(ibja_dates & tanishq_dates)
+    logger.info("run_refit_if_needed: %d overlap pairs available", overlap_count)
+
+    if overlap_count < _MIN_FIT_OBSERVATIONS:
+        logger.info(
+            "run_refit_if_needed: %d < %d overlap pairs — skipping refit",
+            overlap_count,
+            _MIN_FIT_OBSERVATIONS,
+        )
+        return False
+
+    last_fit_observations = int(calib.get("n_observations") or 0)
+    cal_valid = bool(calib.get("valid", False))
+    try:
+        last_fit_date = date.fromisoformat(calib.get("fit_date", "2000-01-01"))
+    except ValueError:
+        last_fit_date = date(2000, 1, 1)
+
+    # Initial unlock: valid=False but threshold reached.
+    # Periodic refit: valid=True and enough new pairs have accumulated.
+    needs_refit = (not cal_valid and overlap_count >= _MIN_FIT_OBSERVATIONS) or should_refit(
+        last_fit_date, overlap_count, last_fit_observations
+    )
+
+    if not needs_refit:
+        logger.info(
+            "run_refit_if_needed: no refit needed (overlap=%d, last_fit_n=%d, valid=%s)",
+            overlap_count,
+            last_fit_observations,
+            cal_valid,
+        )
+        return False
+
+    logger.info(
+        "run_refit_if_needed: refitting (overlap=%d, last_fit_n=%d, valid=%s)",
+        overlap_count,
+        last_fit_observations,
+        cal_valid,
+    )
+    params = fit_calibration(ibja_df, tanishq_df)
+    save_calibration(params, path=cal_path)
+    logger.info(
+        "run_refit_if_needed: complete — n=%d slope=%.4f intercept=%.2f r2=%.4f residual_std=%.2f",
+        params.n_observations,
+        params.slope,
+        params.intercept,
+        params.r_squared,
+        params.residual_std,
+    )
+    return True
+
+
+if __name__ == "__main__":
+    logging.basicConfig(level=logging.INFO, format="%(levelname)s %(name)s: %(message)s")
+    run_refit_if_needed()

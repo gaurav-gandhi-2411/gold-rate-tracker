@@ -11,7 +11,17 @@ __pycache__/
 .claude/
 .claude/settings.local.json
 data/macro_cache.parquet
+data/macro_status.json
+data/*.pdf
 models/local/
 models/production/ensemble-config.json
 mlruns/
 mlflow-db/
+# UI-sprint one-off debug/screenshot scripts and images
+scraper/screenshot-*.mjs
+scraper/debug-*.mjs
+scraper/verify-*.mjs
+scraper/spinner-check.mjs
+scraper/visual-audit.mjs
+scraper/*.png
+scripts/screenshot_*.mjs

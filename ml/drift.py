@@ -23,6 +23,7 @@ DATA_DIR = ROOT / "data"
 DRIFT_METRICS_PATH = DATA_DIR / "drift_metrics.json"
 FORECAST_PATH = DATA_DIR / "forecast.json"
 PRICES_PATH = DATA_DIR / "prices.json"
+BACKTEST_PATH = DATA_DIR / "backtest.json"
 
 _30_DAYS = timedelta(days=30)
 _7_DAYS = timedelta(days=7)
@@ -98,6 +99,15 @@ def run_drift_check() -> dict | None:
         print(f"drift: entry for {actual_ts} already recorded — skipping")
         return None
 
+    # Read current backtest naive MAE to anchor the drift ratio display in the PWA.
+    # Written as baseline_mae so app.js can compute rolling_mae / baseline_mae.
+    backtest = _load_json(BACKTEST_PATH, {})
+    naive_mae_baseline = (
+        float(backtest["mae_5d_avg_naive"])
+        if isinstance(backtest, dict) and backtest.get("mae_5d_avg_naive") is not None
+        else None
+    )
+
     new_entry: dict = {
         "ts": now.isoformat(),
         "target_time": target_time_str,
@@ -107,6 +117,8 @@ def run_drift_check() -> dict | None:
         "residual": residual,
         "model_version": model_version,
     }
+    if naive_mae_baseline is not None:
+        new_entry["baseline_mae"] = round(naive_mae_baseline, 2)
 
     entries.append(new_entry)
 

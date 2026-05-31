@@ -257,3 +257,173 @@ def test_should_refit_true_more_than_ten():
 
 def test_should_refit_boundary_exactly_ten():
     assert cal.should_refit(date(2026, 4, 1), 40, 30) is True
+
+
+# ---------------------------------------------------------------------------
+# run_refit_if_needed
+# ---------------------------------------------------------------------------
+
+
+def _write_stub_calibration(path, valid=False, n_observations=21, fit_date="2026-05-19"):
+    payload = {
+        "slope": None,
+        "intercept": None,
+        "fit_date": fit_date,
+        "n_observations": n_observations,
+        "residual_std": None,
+        "r_squared": None,
+        "huber_epsilon": 1.35,
+        "valid": valid,
+        "schema_version": 1,
+    }
+    path.write_text(json.dumps(payload))
+
+
+def _write_ibja_parquet(path, dates):
+    import pandas as pd
+
+    ibja_per_g = [14000.0 + i * 10 for i in range(len(dates))]
+    df = pd.DataFrame(
+        {
+            "date": dates,
+            "pm_916": [v * 10 for v in ibja_per_g],
+        }
+    )
+    df.to_parquet(path, index=False)
+
+
+def _write_prices_json(path, dates):
+    readings = [
+        {"timestamp": f"{d}T12:00:00.000Z", "22k": 14000.0 + i * 10, "24k": 15000.0}
+        for i, d in enumerate(dates)
+    ]
+    path.write_text(json.dumps(readings))
+
+
+def _iso_dates(n: int, start: str = "2026-01-02") -> list[str]:
+    base = pd.Timestamp(start)
+    return [str((base + pd.Timedelta(days=i)).date()) for i in range(n)]
+
+
+def test_run_refit_skips_when_fewer_than_30_overlap_pairs(tmp_path):
+    """No refit when overlap < 30."""
+    dates_29 = _iso_dates(29)
+    _write_ibja_parquet(tmp_path / "ibja_rates.parquet", dates_29)
+    _write_prices_json(tmp_path / "prices.json", dates_29)
+    _write_stub_calibration(tmp_path / "calibration.json", valid=False, n_observations=0)
+
+    result = cal.run_refit_if_needed(data_dir=tmp_path)
+
+    assert result is False
+    loaded = json.loads((tmp_path / "calibration.json").read_text())
+    assert loaded["valid"] is False
+
+
+def test_run_refit_initial_unlock_at_exactly_30_pairs(tmp_path):
+    """Initial unlock: valid=False + overlap=30 triggers refit, flips valid=True."""
+    dates_30 = _iso_dates(30)
+    _write_ibja_parquet(tmp_path / "ibja_rates.parquet", dates_30)
+    _write_prices_json(tmp_path / "prices.json", dates_30)
+    _write_stub_calibration(tmp_path / "calibration.json", valid=False, n_observations=21)
+
+    result = cal.run_refit_if_needed(data_dir=tmp_path)
+
+    assert result is True
+    loaded = json.loads((tmp_path / "calibration.json").read_text())
+    assert loaded["valid"] is True
+    assert loaded["n_observations"] == 30
+    assert loaded["slope"] is not None
+    assert loaded["intercept"] is not None
+
+
+def test_run_refit_periodic_refit_at_ten_new_pairs(tmp_path):
+    """Periodic refit: valid=True but 10+ new pairs since last fit."""
+    dates_31 = _iso_dates(31)
+    _write_ibja_parquet(tmp_path / "ibja_rates.parquet", dates_31)
+    _write_prices_json(tmp_path / "prices.json", dates_31)
+    # Last fit was at n_observations=21; 31-21=10 >= 10 → should_refit
+    _write_stub_calibration(tmp_path / "calibration.json", valid=True, n_observations=21)
+
+    result = cal.run_refit_if_needed(data_dir=tmp_path)
+
+    assert result is True
+    loaded = json.loads((tmp_path / "calibration.json").read_text())
+    assert loaded["valid"] is True
+    assert loaded["n_observations"] == 31
+
+
+def test_run_refit_skips_when_valid_and_insufficient_new_pairs(tmp_path):
+    """No refit when valid=True but fewer than 10 new pairs."""
+    dates_29 = _iso_dates(29)
+    _write_ibja_parquet(tmp_path / "ibja_rates.parquet", dates_29)
+    _write_prices_json(tmp_path / "prices.json", dates_29)
+    # 29-21=8 new pairs < 10; valid already True
+    _write_stub_calibration(tmp_path / "calibration.json", valid=True, n_observations=21)
+
+    # Overlap=29 < 30 → early exit (below threshold), so result is False regardless
+    result = cal.run_refit_if_needed(data_dir=tmp_path)
+
+    assert result is False
+
+
+def test_run_refit_skips_valid_true_and_low_new_pairs_above_threshold(tmp_path):
+    """No refit when valid=True, overlap>=30, but fewer than 10 new pairs."""
+    dates_35 = _iso_dates(35)
+    _write_ibja_parquet(tmp_path / "ibja_rates.parquet", dates_35)
+    _write_prices_json(tmp_path / "prices.json", dates_35)
+    # 35-30=5 new pairs < 10
+    _write_stub_calibration(tmp_path / "calibration.json", valid=True, n_observations=30)
+
+    result = cal.run_refit_if_needed(data_dir=tmp_path)
+
+    assert result is False
+    loaded = json.loads((tmp_path / "calibration.json").read_text())
+    assert loaded["n_observations"] == 30  # unchanged
+
+
+def test_run_refit_handles_missing_ibja_parquet(tmp_path):
+    """Gracefully skips when ibja_rates.parquet is absent."""
+    _write_prices_json(tmp_path / "prices.json", _iso_dates(35))
+    _write_stub_calibration(tmp_path / "calibration.json", valid=False, n_observations=0)
+
+    result = cal.run_refit_if_needed(data_dir=tmp_path)
+
+    assert result is False
+
+
+def test_run_refit_handles_missing_prices_json(tmp_path):
+    """Gracefully skips when prices.json is absent."""
+    _write_ibja_parquet(tmp_path / "ibja_rates.parquet", _iso_dates(35))
+    _write_stub_calibration(tmp_path / "calibration.json", valid=False, n_observations=0)
+
+    result = cal.run_refit_if_needed(data_dir=tmp_path)
+
+    assert result is False
+
+
+def test_run_refit_handles_missing_calibration_json(tmp_path):
+    """Gracefully starts from empty calibration when calibration.json is absent."""
+    dates_30 = _iso_dates(30)
+    _write_ibja_parquet(tmp_path / "ibja_rates.parquet", dates_30)
+    _write_prices_json(tmp_path / "prices.json", dates_30)
+    # No calibration.json — treated as valid=False, n_observations=0
+
+    result = cal.run_refit_if_needed(data_dir=tmp_path)
+
+    assert result is True
+    loaded = json.loads((tmp_path / "calibration.json").read_text())
+    assert loaded["valid"] is True
+
+
+def test_run_refit_no_partial_overlap_still_counts_correctly(tmp_path):
+    """Only overlapping dates count; non-overlapping IBJA/Tanishq rows are ignored."""
+    # 35 IBJA dates; only first 28 match Tanishq → 28 overlap < 30 → no refit
+    ibja_dates = _iso_dates(35, start="2026-01-02")
+    tanishq_dates = _iso_dates(28, start="2026-01-02")  # first 28 only
+    _write_ibja_parquet(tmp_path / "ibja_rates.parquet", ibja_dates)
+    _write_prices_json(tmp_path / "prices.json", tanishq_dates)
+    _write_stub_calibration(tmp_path / "calibration.json", valid=False, n_observations=0)
+
+    result = cal.run_refit_if_needed(data_dir=tmp_path)
+
+    assert result is False

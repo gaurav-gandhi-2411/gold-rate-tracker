@@ -91,7 +91,9 @@ def _build_chronos_companion(
     """Build the chronos_companion block from probe + backtest + calibration.
 
     Applies IBJA->Tanishq calibration to horizon arrays when calibration.valid is True
-    and the probe succeeded. Calibration is currently a stub (21/30 pairs; valid=False).
+    and the probe succeeded. Calibration is refitted automatically by ml/calibration.py
+    (run after IBJA append each CI cycle); valid flips to True once 30 overlap pairs
+    accumulate, after which horizon arrays are expressed in Tanishq retail units.
 
     notification_state: optional NotificationState used to compute calibration_just_unlocked.
         True when calibration is newly valid and T6 has never fired (last_t6_fired_date_ist=="").
