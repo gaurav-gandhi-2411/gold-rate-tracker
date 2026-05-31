@@ -1101,6 +1101,37 @@ All 4 existing fixture DOM tests (`scraper/test_scrape.js`) and 8 pure-function 
 
 ---
 
+#### 4.19 PR Φ5 — Calibration refit wiring, probe staleness fix, drift baseline_mae (2026-06-01)
+
+Backend-only. No model changes. No shell assets. No SW bump. Addresses three gaps identified in the 2026-05-31 modelling assessment.
+
+**Root cause: calibration wiring never added.** `fit_calibration()` was tested but never called from any CI step. `check-price.yml` had no calibration refit step. The "self-flip at 30 pairs" described in CURRENT_STATE.md and ADR 014 was documented but not implemented. calibration.json was frozen at its Phase 3 stub (valid=false, n_observations=21, fit_date=2026-05-19) even as the overlap pair count grew to 29.
+
+**Fix 1 — Calibration refit step.** New `run_refit_if_needed()` function added to `ml/calibration.py`, exposed as `python -m ml.calibration`. Added as a CI step after `Append IBJA rates` and before `Run Chronos probe`. Logic: fires on initial unlock (valid=False AND overlap>=30) OR periodic refit (valid=True AND ≥10 new pairs since last fit). With 29 pairs at PR open, unlock expected on the next CI run after the 30th pair accumulates (~2026-06-02).
+
+**Consumer path trace (flag-and-stop, verified before implementation):**
+- CI refit → `calibration.json` valid=true ✓ (new step)
+- `inference.py:_build_chronos_companion()` checks `calibration.get("valid")`, applies `slope*v+intercept` to horizon arrays, sets `calibration_applied: true` ✓ (pre-existing lines 128–136)
+- `forecast.json.chronos_companion` carries calibrated arrays ✓ (pre-existing)
+- `app.js` displays `cc.calibration_applied ? "Yes" : "Not yet"` ✓ (pre-existing line 975)
+- `notifications.py:_check_t6()` reads calibration.json directly, fires T6 once-ever ✓ (pre-existing; fires in same run as refit, one run before inference sees valid=True)
+
+**Fix 2 — Probe staleness.** Removed the intermediate `Commit Chronos probe data` step (which ran between the probe and the main data commit, creating a race condition that left probe.json 13 days stale). `data/chronos_probe.json` added to the main end-of-run git add list alongside `data/calibration.json`. One-run lag for probe data (probe from run N used by inference in run N+1) is unchanged; the race is eliminated.
+
+**Fix 3 — drift baseline_mae.** New drift entries now include `baseline_mae: bt["mae_5d_avg_naive"]` from `data/backtest.json`. `app.js` "Accuracy drift" ratio was using the legacy LightGBM entry's `225.65` (all post-naive entries lacked the field). Correct value: `249.53` (naive MAE from 165-fold backtest). Legacy entries age out within 30 days regardless.
+
+**IBJA 2026-05-28 gap.** One-off Thursday scrape miss (not a market holiday, no systematic pattern). Noted; no action.
+
+**H5 un-blocked (future decision only).** ADR 016 deferred the IBJA-calibrated fallback reading because "invalid calibration = noise." Once calibration flips valid=true, that deferral is no longer in force. H5 is now a legitimate option; flagged in ADR 017, not implemented here.
+
+**ADR 012 re-confirmed.** Modelling assessment: naive still wins (165 folds, Chronos +10.4% worse, p=0.0089). Last-30-fold h=5 gap narrowed to +3.3% (directionally interesting, not statistically actionable). ADR 012 promotion criterion: ≥250 IBJA rows, Chronos beats naive, p<0.05 — ETA Aug–Sep 2026. No model changes made or warranted.
+
+**Tests.** +9 `run_refit_if_needed` tests (test_calibration.py) + 5 drift baseline_mae tests (test_drift.py, new file). 355 total Python tests pass. 9 pure-function JS tests pass.
+
+**Files changed:** `ml/calibration.py`, `ml/drift.py`, `ml/inference.py` (stale comment), `.github/workflows/check-price.yml`, `CURRENT_STATE.md`, `tests/test_calibration.py`, `tests/test_drift.py` (new), `docs/adr/0017-calibration-refit-wiring.md` (new), `docs/MODELLING_ASSESSMENT_2026-05-31.md` (new, read-only assessment record).
+
+---
+
 ### Phase 5 — Validate  ⏸️ NOT STARTED
 
 ### Phase 6 — Promote  ⏸️ NOT STARTED
@@ -1158,6 +1189,9 @@ All 4 existing fixture DOM tests (`scraper/test_scrape.js`) and 8 pure-function 
 | 2026-05-30 | Ψ3C.1 — Option B (scroll-anchors) over Option A (tab panels) for bottom nav | GG (approved pre-PR) | Option A splits content into hidden tab panels; breaks the glanceable single-page experience where price, verdict, and sparkline coexist above the fold. Option B keeps the single scrolling document; bottom nav adds thumb-reachable chrome without restructuring content. Scroll-anchors also preserve browser back/forward and allow sections to be seen in combination. |
 | 2026-05-30 | Ψ3C.1 — bottom nav hidden at ≥900px (desktop), not full-width or constrained column | CC (post-PR fix on consultant flag) | Full-width fixed bottom bar at 1280px reads as broken-mobile, not intentional-desktop. Constrained 980px centered island (Option b) is also awkward — visible dead zones on both sides. Desktop users have mouse/keyboard scroll; bottom nav adds no navigational value. Cleanest choice: hide with `display:none` at ≥900px. |
 | 2026-05-30 | Ψ3C.1b — Direction C (ambient header) over A (solid+safe-area) or B (frosted glass) | GG (approved post-diagnosis) | Diagnosis screenshots showed price text bleeding through 90%-opacity header at mid-scroll — the "strip between words". Direction C (borderless at rest, elevation on scroll) removes the strip feeling entirely by merging the header with the page at rest; elevation appears only when needed. Direction A would also fix bleed-through but retains a permanent dividing line; Direction B keeps transparency and risks continued bleed-through at lower opacity. Native iOS pattern (Mail/Settings ambient header) is the closest analogue. |
+| 2026-05-31 | Modelling assessment: ADR 012 confirmed, calibration wiring bug found | Consultant + GG | Read-only assessment (docs/MODELLING_ASSESSMENT_2026-05-31.md) confirmed: naive still wins (165 folds, Chronos +10.4%, p=0.0089), no model change warranted. Calibration wiring bug: fit_calibration() never called in CI. Approved targeted fix: wire refit, fix probe staleness, add baseline_mae to drift (no model changes). |
+| 2026-06-01 | PR Φ5 — calibration refit wired; fit triggers at ≥30 pairs (initial unlock) or ≥10 new pairs (periodic refit) | CC (ADR 017) | run_refit_if_needed() added to calibration.py, called from CI after IBJA append. Probe commit consolidated into main data commit (fixes staleness race). drift.py writes baseline_mae per entry. 29/30 pairs at merge; unlock expected 2026-06-02. |
+| 2026-06-01 | H5 (IBJA-calibrated fallback reading) now un-blocked — future decision only | CC | ADR 016 deferred H5 because "invalid calibration = noise." Once calibration flips valid=true (ADR 017 PR Φ5), that rationale expires. H5 evaluation deferred to a dedicated ADR when calibration is confirmed stable in production. |
 
 ---
 

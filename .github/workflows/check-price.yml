@@ -225,6 +225,10 @@ jobs:
         continue-on-error: true
         run: python -m ml.ibja
 
+      - name: Refit calibration if needed
+        continue-on-error: true
+        run: python -m ml.calibration
+
       - name: Cache Chronos model weights
         uses: actions/cache@v4
         with:
@@ -238,16 +242,6 @@ jobs:
         env:
           CHRONOS_BOLT_TINY_REVISION: a0e552de83495b5c28c14c71c374f3e33280b340
         run: python -m ml.chronos_forecast --probe
-
-      - name: Commit Chronos probe data
-        continue-on-error: true
-        run: |
-          git config user.name "gold-rate-bot"
-          git config user.email "actions@users.noreply.github.com"
-          git add data/chronos_probe.json || true
-          git diff --staged --quiet || git commit -m "chore: update chronos probe [skip ci]"
-          git pull --rebase --autostash origin "${GITHUB_REF_NAME}"
-          git push
 
       - name: Restore notification state
         uses: actions/cache/restore@v4
@@ -278,7 +272,7 @@ jobs:
         run: |
           git config user.name "gold-rate-bot"
           git config user.email "actions@users.noreply.github.com"
-          git add data/prices.json data/forecast.json data/commentary.json data/drift_metrics.json data/metrics_history.json data/ibja_rates.parquet || true
+          git add data/prices.json data/forecast.json data/commentary.json data/drift_metrics.json data/metrics_history.json data/ibja_rates.parquet data/chronos_probe.json data/calibration.json || true
           if git diff --staged --quiet; then
             echo "No changes to commit."
           else

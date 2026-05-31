@@ -83,14 +83,14 @@ gold-rate-tracker/
 | `ml/inference.py` | Writes `data/forecast.json` every 6h | PWA reads its output directly. Schema changes are user-visible. Backward-compat aliases (`predicted_22k`, `lower`, `upper` at top level) must persist until PWA migrates. |
 | `ml/chronos_forecast.py` | Writes `data/chronos_probe.json` | Both inference and notifications consume this schema. `num_samples` controls forecast stochasticity. |
 | `ml/notifications.py` | Trigger evaluation + state management | State persists across CI runs via `actions/cache` (prefix-match on `notification-state-`). Cooldowns, anti-spam, quiet hours all live here. |
-| `ml/calibration.py` | Maps IBJA→Tanishq via HuberRegressor | `data/calibration.json` has `valid: bool`. Flips to `true` at 30 overlap pairs (currently 21). When it flips, inference applies calibration. |
+| `ml/calibration.py` | Maps IBJA→Tanishq via HuberRegressor | `data/calibration.json` has `valid: bool`. Flips to `true` at 30 overlap pairs via the `run_refit_if_needed()` step in CI (added ADR 017). When it flips, inference applies calibration to Chronos horizon arrays. |
 | `ml/ibja.py` | Live scrape + 30-day PDF backfill | Sole source of IBJA-916-PM history. Single point of failure for the model's context. |
 | `ml/backtest.py` | Walk-forward h=5 backtest, weekly cron | Produces `data/backtest.json` that feeds `naive_mae_recent_30` into inference and `direction_acc_30f` into notification gating. |
 | `data/forecast.json` | PWA reads this every page load | Schema IS the PWA contract. Structured blocks (`headline`, `chronos_companion`) are canonical; top-level aliases are backward-compat shims. |
 | `data/chronos_probe.json` | Inference reads this for companion block | If probe fails, inference still runs (writes `chronos_companion.status: "failed"`); T5 fires once per IST day. |
 | `data/notification_state.json` | Anti-spam state | Gitignored; cached via `actions/cache/restore@v4` + `save@v4` with `notification-state-${run_id}` key and `notification-state-` restore-keys prefix. Master branch only. |
-| `data/calibration.json` | Calibration gate | `valid: false` until 30 IBJA-Tanishq overlap days. Don't manually flip; the fit function handles it. |
-| `.github/workflows/check-price.yml` | 6h production cron | Step ORDER is load-bearing: scrape → ibja-append → chronos-probe → notification-restore → inference → notification-evaluate → notification-save → commit. |
+| `data/calibration.json` | Calibration gate | `valid: false` until 30 IBJA-Tanishq overlap days. Don't manually flip; `run_refit_if_needed()` in CI handles it (ADR 017). |
+| `.github/workflows/check-price.yml` | 6h production cron | Step ORDER is load-bearing: scrape → ibja-append → **calibration-refit** → chronos-probe → notification-restore → inference → notification-evaluate → notification-save → commit. |
 | `app.js` | PWA logic | Currently reads stale schema (Φ2 fixes this). Any JS error breaks the live site. |
 | `docs/PROGRESS.md` | Engagement record + Risks Register + Decision Log | Append-only. Don't rewrite history. |
 
@@ -146,7 +146,7 @@ gold-rate-tracker/
 **Currently noisy but accepted:**
 - `pytest` locally without ignore flags shows 9 failures in training-deps test files. CI uses ignores; clean. Local devs need the same flags.
 - IBJA PM rate sometimes `NaN` if CI runs before ~17:00 IST publication. Inference falls back to most recent complete PM row.
-- `data/calibration.json` shows `valid: false` until 30 overlap pairs (currently 21). Self-flips. No action needed.
+- `data/calibration.json` shows `valid: false` until 30 overlap pairs (currently 29, threshold 30). Refitted automatically by the `Refit calibration if needed` CI step (added ADR 017). Unlock expected on 2026-06-02/03.
 - Chronos forecasts can flip direction between consecutive runs. Stochastic sampling. **Addressed in Φ4 (PR #35) with 5-sample majority consensus; T1/T2 gate on direction_consensus ≥ 0.6.**
 
 **Dead ends already explored — do NOT re-investigate:**
