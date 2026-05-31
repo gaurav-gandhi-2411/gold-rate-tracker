@@ -55,6 +55,7 @@ let chart            = null;
 let allReadings      = [];
 let currentRange     = "7";   // tracks active chart tab for refreshData()
 let pwaHelpDismissed = false; // D5: set true when user taps ✕; survives re-renders
+let chartPinnedIndex = null;  // Ψ3C.3: index of tapped chart point; null = no callout
 
 // Ψ3C.2: stagger card-enter animation across a list of elements.
 // Forces a reflow between remove/add so the animation restarts each time.
@@ -66,6 +67,61 @@ function staggerEnter(elements, step = 30) {
     el.style.animationDelay = `${i * step}ms`;
     el.classList.add("card-enter");
   });
+}
+
+// ─── DISPLAY-ONLY DEDUP (Ψ3C.3) ─────────────────────────────────────────────
+// prices.json is NEVER modified. ML pipeline reads it directly.
+// These functions are rendering transforms only; allReadings is untouched.
+
+/**
+ * Collapse consecutive identical 22k readings into display groups.
+ * Non-consecutive identical values (price returns after moving) get
+ * separate groups — they are distinct price events.
+ * Returns: Array<{ reading, endTimestamp, count }>
+ */
+function dedupReadings(readings) {
+  if (readings.length === 0) return [];
+  const groups = [];
+  let g = { reading: readings[0], endTimestamp: readings[0].timestamp, count: 1 };
+  for (let i = 1; i < readings.length; i++) {
+    if (readings[i]["22k"] === g.reading["22k"]) {
+      g.endTimestamp = readings[i].timestamp;
+      g.count++;
+    } else {
+      groups.push(g);
+      g = { reading: readings[i], endTimestamp: readings[i].timestamp, count: 1 };
+    }
+  }
+  groups.push(g);
+  return groups;
+}
+
+/**
+ * Dedup readings for chart display.
+ * For each run of consecutive identical 22k values, emits:
+ *   - Single-reading run: one point
+ *   - Multi-reading run: two points (start + end timestamp, same price)
+ *     so that stepped:'before' draws the full hold duration as a flat segment.
+ * Returns: Array of reading objects (subset of input, never modified).
+ */
+function dedupForChart(readings) {
+  if (readings.length === 0) return [];
+  const pts = [];
+  let runStart = readings[0];
+  let runEnd   = readings[0];
+  for (let i = 1; i < readings.length; i++) {
+    if (readings[i]["22k"] === runStart["22k"]) {
+      runEnd = readings[i];
+    } else {
+      pts.push(runStart);
+      if (runEnd !== runStart) pts.push(runEnd);
+      runStart = readings[i];
+      runEnd   = readings[i];
+    }
+  }
+  pts.push(runStart);
+  if (runEnd !== runStart) pts.push(runEnd);
+  return pts;
 }
 
 async function loadJSON(url) {
@@ -458,6 +514,12 @@ function renderCommentary(entries) {
   const metaEl = document.getElementById("commentary-meta");
   if (!textEl) return;
 
+  // Ψ3C.3: hide skeleton, show actual commentary card content
+  const skelEl = document.getElementById("commentary-skeleton");
+  if (skelEl) skelEl.hidden = true;
+  textEl.hidden = false;
+  if (metaEl) metaEl.hidden = false;
+
   if (!Array.isArray(entries) || entries.length === 0) {
     textEl.textContent = "Commentary not yet available. Check back after the next price update.";
     metaEl.textContent = "";
@@ -489,6 +551,10 @@ function renderCommentary(entries) {
 function renderModelSignal(fc) {
   const section = document.getElementById("model-signal-section");
   if (!section) return;
+
+  // Ψ3C.3: always hide skeleton; actual content or section hide happens below
+  const skelEl = document.getElementById("model-signal-skeleton");
+  if (skelEl) skelEl.hidden = true;
 
   const cc = fc?.chronos_companion;
   if (!cc || cc.status !== "success") {
@@ -535,14 +601,97 @@ function renderModelSignal(fc) {
   section.hidden = false;
 }
 
+// Ψ3C.3: persistent tap-to-reveal price callout, drawn via Chart.js afterDraw.
+// chartPinnedIndex (module-level) is set by the onClick handler.
+const CALLOUT_PLUGIN = {
+  id: "psi3c3Callout",
+  afterDraw(ch) {
+    if (chartPinnedIndex === null) return;
+    const meta = ch.getDatasetMeta(0);
+    const dp   = meta.data[chartPinnedIndex];
+    if (!dp) return;
+
+    const { ctx, chartArea } = ch;
+    const x     = dp.x;
+    const label = ch.data.labels[chartPinnedIndex] || "";
+    const value = ch.data.datasets[0].data[chartPinnedIndex];
+
+    ctx.save();
+
+    // Vertical hairline
+    ctx.strokeStyle = "rgba(224,155,46,0.50)";
+    ctx.lineWidth   = 1;
+    ctx.setLineDash([4, 4]);
+    ctx.beginPath();
+    ctx.moveTo(x, chartArea.top);
+    ctx.lineTo(x, chartArea.bottom);
+    ctx.stroke();
+    ctx.setLineDash([]);
+
+    // Measure text for box sizing
+    ctx.font = "bold 13px DM Sans, system-ui, sans-serif";
+    const pw = ctx.measureText(`₹${fmtINR(value)}`).width;
+    ctx.font = "11px DM Sans, system-ui, sans-serif";
+    const dw  = ctx.measureText(label).width;
+    const bW  = Math.max(pw, dw) + 24;
+    const bH  = 40;
+    const bR  = 7;
+
+    // Clamp so box stays inside chart bounds
+    let bx = x - bW / 2;
+    bx = Math.max(chartArea.left, Math.min(bx, chartArea.right - bW));
+    const by = chartArea.top + 4;
+
+    // Box background
+    ctx.beginPath();
+    ctx.moveTo(bx + bR, by);
+    ctx.lineTo(bx + bW - bR, by);
+    ctx.quadraticCurveTo(bx + bW, by, bx + bW, by + bR);
+    ctx.lineTo(bx + bW, by + bH - bR);
+    ctx.quadraticCurveTo(bx + bW, by + bH, bx + bW - bR, by + bH);
+    ctx.lineTo(bx + bR, by + bH);
+    ctx.quadraticCurveTo(bx, by + bH, bx, by + bH - bR);
+    ctx.lineTo(bx, by + bR);
+    ctx.quadraticCurveTo(bx, by, bx + bR, by);
+    ctx.closePath();
+    ctx.fillStyle   = "#241E16";
+    ctx.fill();
+    ctx.strokeStyle = "#E09B2E";
+    ctx.lineWidth   = 1;
+    ctx.stroke();
+
+    // Price text
+    ctx.fillStyle   = "#E09B2E";
+    ctx.font        = "bold 13px DM Sans, system-ui, sans-serif";
+    ctx.textAlign   = "center";
+    ctx.textBaseline = "alphabetic";
+    ctx.fillText(`₹${fmtINR(value)}`, bx + bW / 2, by + 16);
+
+    // Date text
+    ctx.fillStyle = "#9A9282";
+    ctx.font      = "11px DM Sans, system-ui, sans-serif";
+    ctx.fillText(label, bx + bW / 2, by + 31);
+
+    ctx.restore();
+  },
+};
+
 function renderChart(readings, range) {
+  // Reset callout when chart is rebuilt (range change or refresh)
+  chartPinnedIndex = null;
+
   let filtered = readings;
   if (range !== "all") {
     const cutoff = Date.now() - parseInt(range, 10) * 86400 * 1000;
     filtered     = readings.filter(r => new Date(r.timestamp).getTime() >= cutoff);
   }
-  const labels = filtered.map(r => fmtDate(r.timestamp));
-  const data22 = filtered.map(r => r["22k"]);
+
+  // Ψ3C.3: deduplicate consecutive-identical prices for display only.
+  // The stepped line renders flat holds as horizontal segments followed by
+  // a vertical step — no misleading diagonal between distant identical points.
+  const chartPts = dedupForChart(filtered);
+  const labels   = chartPts.map(r => fmtDate(r.timestamp));
+  const data22   = chartPts.map(r => r["22k"]);
 
   const goldLine  = "#E09B2E";
   const axisColor = "#9a9282";
@@ -566,10 +715,12 @@ function renderChart(readings, range) {
         backgroundColor: gradient,
         fill: true,
         borderWidth: 2.5,
-        pointRadius: filtered.length > 30 ? 0 : 3,
+        pointRadius: chartPts.length > 30 ? 0 : 3,
+        pointHoverRadius: 5,
         pointBackgroundColor: goldLine,
         pointBorderWidth: 0,
-        tension: 0.3,
+        tension: 0,
+        stepped: "before",  // flat hold → horizontal segment, then vertical step
         spanGaps: true,
       }],
     },
@@ -577,6 +728,16 @@ function renderChart(readings, range) {
       responsive: true,
       maintainAspectRatio: false,
       interaction: { mode: "index", intersect: false },
+      onClick: (event, elements) => {
+        if (elements.length > 0) {
+          const idx = elements[0].index;
+          // Second tap on same point dismisses; different point moves callout
+          chartPinnedIndex = (chartPinnedIndex === idx) ? null : idx;
+        } else {
+          chartPinnedIndex = null;
+        }
+        chart.update("none");
+      },
       plugins: {
         legend: { display: false },
         tooltip: {
@@ -590,6 +751,7 @@ function renderChart(readings, range) {
             label: (c) => `22K: ₹${fmtINR(c.parsed.y)}`,
           },
         },
+        psi3c3Callout: {},
       },
       scales: {
         x: {
@@ -604,13 +766,25 @@ function renderChart(readings, range) {
         },
       },
     },
+    plugins: [CALLOUT_PLUGIN],
   });
+}
+
+// Ψ3C.3: short date label — "29 May" (IST)
+function fmtDateShort(iso) {
+  return new Intl.DateTimeFormat("en-IN", {
+    timeZone: "Asia/Kolkata", day: "numeric", month: "short",
+  }).format(new Date(iso));
 }
 
 function renderHistory(readings) {
   const tbody    = document.getElementById("history-body");
   const cardList = document.getElementById("history-cards");
   const showBtn  = document.getElementById("history-show-all");
+  const skelEl   = document.getElementById("history-skeleton");
+
+  // Hide skeleton as soon as we start rendering (even if empty)
+  if (skelEl) skelEl.hidden = true;
 
   const EMPTY_TABLE = `<tr><td colspan="5" class="empty">No readings yet.</td></tr>`;
   const EMPTY_CARDS = `<li class="hcard-empty">No readings yet.</li>`;
@@ -622,44 +796,51 @@ function renderHistory(readings) {
     return;
   }
 
-  const rows = [...readings].reverse().slice(0, 50);
+  // Ψ3C.3: dedup for display. Input array (allReadings) is never modified.
+  // groups[0] is the LATEST price event (newest-first after reverse).
+  const allGroups = dedupReadings([...readings].reverse());
 
-  // ── Desktop table (unchanged from pre-Ψ2B) ──────────────────────────────────
-  // XSS-safe: all interpolated values are numbers (fmtINR/rupee) or date strings
-  // from prices.json; Groq/LLM output never reaches this template.
-  tbody.innerHTML = rows.map((r, i) => {
-    const next = rows[i + 1];
+  // Cap at 50 display groups (enough history without bloating the DOM).
+  const groups = allGroups.slice(0, 50);
+
+  // ── Desktop table ────────────────────────────────────────────────────────────
+  // XSS-safe: all interpolated values are numbers (fmtINR/rupee), date strings,
+  // or static literals. LLM/external content never reaches this template.
+  tbody.innerHTML = groups.map((g, i) => {
+    const nextGroup = groups[i + 1];
     let deltaCell = `<span class="delta-flat">—</span>`;
-    if (next && typeof next["22k"] === "number") {
-      const d = r["22k"] - next["22k"];
+    if (nextGroup) {
+      const d = g.reading["22k"] - nextGroup.reading["22k"];
       if (d > 0)      deltaCell = `<span class="delta-up">↑ ₹${fmtINR(d)}</span>`;
       else if (d < 0) deltaCell = `<span class="delta-down">↓ ₹${fmtINR(Math.abs(d))}</span>`;
       else            deltaCell = `<span class="delta-flat">·</span>`;
     }
+
+    // "When" wording: single reading = date+time; span = date range or "since".
+    // Note: because readings are reversed before dedup, g.reading.timestamp is the
+    // NEWEST reading in the run and g.endTimestamp is the OLDEST (first occurrence).
+    let whenCell;
+    if (g.count === 1) {
+      whenCell = fmtDate(g.reading.timestamp);
+    } else if (i === 0) {
+      // Latest group: "since {first occurrence}" while freshness pill shows last check.
+      whenCell = `Since ${fmtDateShort(g.endTimestamp)}`;
+    } else {
+      // Older spans: oldest–newest (chronological order).
+      whenCell = `${fmtDateShort(g.endTimestamp)} – ${fmtDateShort(g.reading.timestamp)}`;
+    }
+
     return `<tr>
-      <td>${fmtDate(r.timestamp)}</td>
-      <td class="num">${rupee(r["22k"])}</td>
-      <td class="num">${rupee(r["24k"])}</td>
-      <td class="num">${rupee(r["18k"])}</td>
+      <td>${whenCell}</td>
+      <td class="num">${rupee(g.reading["22k"])}</td>
+      <td class="num">${rupee(g.reading["24k"])}</td>
+      <td class="num">${rupee(g.reading["18k"])}</td>
       <td class="num">${deltaCell}</td>
     </tr>`;
   }).join("");
 
-  // ── Mobile card list — date-grouped timeline (Ψ2B) ──────────────────────────
-  const VISIBLE_DAYS = 3;
-
-  // Returns "29/5/2026" style key for grouping by IST calendar date
-  function getISTDateKey(iso) {
-    return new Date(iso).toLocaleDateString("en-IN", { timeZone: "Asia/Kolkata" });
-  }
-
-  // Returns "Thu, 29 May" for the date divider label
-  function getISTDateLabel(iso) {
-    return new Intl.DateTimeFormat("en-IN", {
-      timeZone: "Asia/Kolkata", weekday: "short", day: "numeric", month: "short",
-    }).format(new Date(iso));
-  }
-
+  // ── Mobile card list — dedup-grouped (Ψ3C.3) ────────────────────────────────
+  // Each dedup group becomes a card. Spans render as "held May 28–30".
   // Returns "1:00 pm" for the card time
   function formatISTTime(iso) {
     return new Intl.DateTimeFormat("en-IN", {
@@ -667,63 +848,58 @@ function renderHistory(readings) {
     }).format(new Date(iso)).toLowerCase();
   }
 
-  // Group rows (newest-first) by IST calendar date
-  const grouped = [];
-  let currentGroup = null;
-  rows.forEach((r, rowIndex) => {
-    const key = getISTDateKey(r.timestamp);
-    if (!currentGroup || currentGroup.key !== key) {
-      currentGroup = { key, label: getISTDateLabel(r.timestamp), items: [] };
-      grouped.push(currentGroup);
-    }
-    currentGroup.items.push({ r, rowIndex });
-  });
+  const VISIBLE_GROUPS = 8;
 
-  // Build HTML for a slice of groups; delta uses rows[] for cross-day continuity
-  function buildGroupsHtml(groups) {
-    // XSS-safe: formatISTTime, rupee(), fmtINR all produce safe output from numeric/date data
-    return groups.map((group) => {
-      const plural  = group.items.length !== 1 ? "s" : "";
-      const divider = `<li class="hdate-divider">${group.label} · ${group.items.length} reading${plural}</li>`;
-      const cards   = group.items.map(({ r, rowIndex: i }) => {
-        const next = rows[i + 1];
-        let deltaHtml = "";
-        if (next && typeof next["22k"] === "number") {
-          const d = r["22k"] - next["22k"];
-          if (d > 0)      deltaHtml = `<span class="hcard-delta hcard-delta--up">↑ ₹${fmtINR(d)}</span>`;
-          else if (d < 0) deltaHtml = `<span class="hcard-delta hcard-delta--down">↓ ₹${fmtINR(Math.abs(d))}</span>`;
-          else            deltaHtml = `<span class="hcard-delta hcard-delta--flat">·</span>`;
-        }
-        return `<li class="history-card">
-          <span class="hcard-time">${formatISTTime(r.timestamp)}</span>
-          <span class="hcard-price">${rupee(r["22k"])}</span>
-          ${deltaHtml}
-        </li>`;
-      }).join("");
-      return divider + cards;
+  // Build card HTML for groups[start..start+count].
+  // nextGroup always references groups[absIdx+1] so deltas are correct across pages.
+  function buildCardsHtml(start, count) {
+    // XSS-safe: all interpolated values are numbers or date strings from prices.json
+    return groups.slice(start, start + count).map((g, relIdx) => {
+      const absIdx   = start + relIdx;
+      const nextGroup = groups[absIdx + 1];
+      let deltaHtml = "";
+      if (nextGroup) {
+        const d = g.reading["22k"] - nextGroup.reading["22k"];
+        if (d > 0)      deltaHtml = `<span class="hcard-delta hcard-delta--up">↑ ₹${fmtINR(d)}</span>`;
+        else if (d < 0) deltaHtml = `<span class="hcard-delta hcard-delta--down">↓ ₹${fmtINR(Math.abs(d))}</span>`;
+      }
+
+      // Label for the card: single reading → time; span → date range or "since".
+      // g.reading.timestamp = NEWEST reading in run (reversed dedup order).
+      // g.endTimestamp      = OLDEST reading in run (when price first changed).
+      let timeLabel;
+      if (g.count === 1) {
+        timeLabel = formatISTTime(g.reading.timestamp);
+      } else if (absIdx === 0) {
+        // Latest group: "since {first occurrence}" — price hasn't changed since then
+        timeLabel = `Since ${fmtDateShort(g.endTimestamp)}`;
+      } else {
+        // Older spans: oldest–newest (chronological).
+        timeLabel = `${fmtDateShort(g.endTimestamp)}–${fmtDateShort(g.reading.timestamp)}`;
+      }
+
+      return `<li class="history-card">
+        <span class="hcard-time">${timeLabel}</span>
+        <span class="hcard-price">${rupee(g.reading["22k"])}</span>
+        ${deltaHtml}
+      </li>`;
     }).join("");
   }
 
-  // Render initial VISIBLE_DAYS days
-  cardList.innerHTML = buildGroupsHtml(grouped.slice(0, VISIBLE_DAYS));
+  cardList.innerHTML = buildCardsHtml(0, VISIBLE_GROUPS);
 
   // Show-more button (visible on mobile only via CSS display:none / display:block)
-  const hiddenDayCount = Math.max(0, grouped.length - VISIBLE_DAYS);
+  const hiddenCount = Math.max(0, groups.length - VISIBLE_GROUPS);
   if (showBtn) {
-    if (hiddenDayCount > 0) {
+    if (hiddenCount > 0) {
       showBtn.hidden = false;
-      const moreLabel = `Show ${hiddenDayCount} more day${hiddenDayCount !== 1 ? "s" : ""}`;
+      const moreLabel = `Show ${hiddenCount} more`;
       showBtn.textContent = moreLabel;
       let isExpanded = false;
       showBtn.onclick = () => {
         isExpanded = !isExpanded;
-        if (isExpanded) {
-          cardList.innerHTML = buildGroupsHtml(grouped);
-          showBtn.textContent = "Show less";
-        } else {
-          cardList.innerHTML = buildGroupsHtml(grouped.slice(0, VISIBLE_DAYS));
-          showBtn.textContent = moreLabel;
-        }
+        cardList.innerHTML = buildCardsHtml(0, isExpanded ? groups.length : VISIBLE_GROUPS);
+        showBtn.textContent = isExpanded ? "Show less" : moreLabel;
       };
     } else {
       showBtn.hidden = true;
@@ -1111,6 +1287,15 @@ function initPullToRefresh() {
   // D3: Refresh button — works in both browser and standalone mode.
   const refreshBtn = document.getElementById("refresh-btn");
   if (refreshBtn) refreshBtn.addEventListener("click", refreshData);
+
+  // Ψ3C.3: dismiss chart callout when tapping outside the chart canvas
+  const chartCanvas = document.getElementById("chart");
+  document.addEventListener("click", (e) => {
+    if (chartCanvas && e.target !== chartCanvas && chartPinnedIndex !== null) {
+      chartPinnedIndex = null;
+      if (chart) chart.update("none");
+    }
+  }, { passive: true, capture: false });
 
   // D4/D5: iOS help panel — revealed only in standalone mode.
   const helpBtn   = document.getElementById("pwa-help-btn");

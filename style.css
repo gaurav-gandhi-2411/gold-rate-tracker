@@ -890,6 +890,42 @@ main {
 .skel-spark   { height: 56px; width: 100%; }
 .hero-skeleton[hidden] { display: none; }
 
+/* Ψ3C.3 — extended skeleton shapes */
+
+/* Commentary */
+.commentary-skeleton {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  margin-bottom: var(--space-2);
+}
+.commentary-skeleton[hidden] { display: none; }
+.skel-commentary-line       { height: 14px; width: 100%; }
+.skel-commentary-line--med  { width: 78%; }
+.skel-commentary-short      { height: 11px; width: 120px; margin-top: 2px; }
+
+/* Model signal */
+.model-signal-skeleton[hidden] { display: none; }
+.skel-signal-direction { height: 36px; width: 160px; }
+.skel-signal-stats     { height: 12px; width: 220px; margin-top: var(--space-2); }
+
+/* History */
+.history-skeleton {
+  padding: var(--space-2) 0;
+  border-bottom: 1px solid var(--line);
+}
+.history-skeleton[hidden] { display: none; }
+.skel-history-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14px var(--space-5);
+  border-bottom: 1px solid var(--line);
+}
+.skel-history-row:last-child { border-bottom: 0; }
+.skel-history-when  { height: 13px; width: 120px; }
+.skel-history-price { height: 13px; width: 80px; }
+
 /* ═══════════════════════════════════════════════════════════════
    RESPONSIVE — mobile card history ≤640px
 ═══════════════════════════════════════════════════════════════ */

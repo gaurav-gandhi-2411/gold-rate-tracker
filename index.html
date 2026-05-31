@@ -148,15 +148,29 @@
           <p class="commentary-eyebrow">
             <span aria-hidden="true">✨</span> Today's read
           </p>
-          <p class="commentary-text" id="commentary-text">Loading…</p>
-          <p class="commentary-meta" id="commentary-meta"></p>
+          <!-- Ψ3C.3: skeleton shown while commentary loads -->
+          <div class="commentary-skeleton" id="commentary-skeleton" aria-hidden="true">
+            <div class="skel skel-commentary-line"></div>
+            <div class="skel skel-commentary-line skel-commentary-line--med"></div>
+            <div class="skel skel-commentary-short"></div>
+          </div>
+          <p class="commentary-text" id="commentary-text" hidden></p>
+          <p class="commentary-meta" id="commentary-meta" hidden></p>
         </div>
       </section>
 
-      <!-- 5b. MODEL SIGNAL — Chronos directional companion, always visible -->
-      <section class="model-signal-section" id="model-signal-section" hidden
+      <!-- 5b. MODEL SIGNAL — Chronos directional companion -->
+      <!-- Ψ3C.3: not hidden initially; shows skeleton while forecast loads -->
+      <section class="model-signal-section" id="model-signal-section"
                aria-label="5-day price outlook">
         <h2>5-day outlook</h2>
+        <!-- Skeleton shown while forecast data loads -->
+        <div class="model-signal-skeleton" id="model-signal-skeleton" aria-hidden="true">
+          <div class="signal-card">
+            <div class="skel skel-signal-direction"></div>
+            <div class="skel skel-signal-stats"></div>
+          </div>
+        </div>
         <div class="model-signal-body" id="model-signal-body"></div>
       </section>
 
@@ -179,6 +193,12 @@
       <section class="history-section" id="section-history" aria-label="Price history">
         <h2>History</h2>
         <div class="history-wrap" id="history-wrap">
+          <!-- Ψ3C.3: skeleton shown while history loads -->
+          <div class="history-skeleton" id="history-skeleton" aria-hidden="true">
+            <div class="skel-history-row"><div class="skel skel-history-when"></div><div class="skel skel-history-price"></div></div>
+            <div class="skel-history-row"><div class="skel skel-history-when"></div><div class="skel skel-history-price"></div></div>
+            <div class="skel-history-row"><div class="skel skel-history-when"></div><div class="skel skel-history-price"></div></div>
+          </div>
           <!-- Desktop table (≥640px) -->
           <table class="history history-table">
             <thead>
@@ -190,9 +210,7 @@
                 <th scope="col" class="num">Δ 22K</th>
               </tr>
             </thead>
-            <tbody id="history-body">
-              <tr><td colspan="5" class="empty">Loading…</td></tr>
-            </tbody>
+            <tbody id="history-body"></tbody>
           </table>
           <!-- Mobile card list (<640px) -->
           <ul class="history-cards" id="history-cards" aria-label="Price readings"></ul>
