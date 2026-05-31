@@ -53,6 +53,7 @@ SYSTEM_PROMPT = (
     "'near the lower end recently'. Never use the word 'percentile'. "
     "(5) You may mention recent price moves in plain terms: 'down a little over the past week'. "
     "NEVER USE these words or phrases: 'Chronos', 'model', 'baseline', 'samples', 'percentile', "
+    "'naive', 'MAE', 'backtest', 'folds', 'fold', 'Wilcoxon', "
     "'bullish', 'bearish', 'soaring', 'plunging'. "
     "Never give buy/sell/hold advice. "
     "IMPORTANT: When sufficient_for_short_term_stats is false, do NOT mention 3-day or "
