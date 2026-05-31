@@ -1045,6 +1045,56 @@ Both windows sit fully outside quiet hours (22:00–07:00 IST). The upper bounds
 
 **Lint CI.** pass (2m43s on PR branch, 2m43s on master post-merge). All steps green.
 
+#### 4.17 PR fix/scraper-hardening — Scraper hardening: retry, CF detection, fingerprint, alert dedup (2026-05-31)
+
+Addresses the observed Cloudflare Bot Management blocking pattern that produced **34 gaps >9h across 124 readings (~27% of expected data points)** including a 24.5h gap (4 consecutive failed runs). Backend + CI workflow + tests only. No shell assets touched, no SW bump.
+
+**Diagnosis (Pass 1).** Full failure mode catalog enumerated:
+
+| FM | Mode | Prior handling | Retryable? |
+|----|------|---------------|------------|
+| FM-1 | CF bot challenge | 30s waitForSelector timeout → exit 1 | Yes (transient) |
+| FM-2 | Selector drift | waitForSelector timeout OR validate() → exit 1 | No (persistent) |
+| FM-3 | Slow load / nav timeout | page.goto/waitForSelector timeout → exit 1 | Yes |
+| FM-4 | Network error (DNS, connection refused) | page.goto throws → exit 1 | Yes |
+| FM-5 | Partial load (widget absent) | waitForSelector timeout → exit 1 | Yes |
+| FM-6 | Malformed / out-of-range price | validate() throws with descriptive message → exit 1 | No |
+| FM-7 | Site down / maintenance page | waitForSelector timeout → exit 1 | No |
+| FM-8 | Playwright crash | throws → exit 1 | No |
+
+**Prior robustness gaps:** zero retry logic (single attempt), no CF challenge detection (30s wasted per CF block), stale UA (Chrome/124), missing timezone/Accept-Language, alert flooding (7–8 ntfy per 24h sustained CF block with no dedup between scraper-down alert and staleness guard).
+
+**H1 — Retry with backoff (`scraper/scrape.js`).** `scrapeWithRetry()` wraps `scrapeAttempt()` with 3 attempts and 5s/15s backoff. Each retry creates a fresh `browser.newContext()` (new cookie slate, rotated fingerprint). Error tagging: navigation errors and CF blocks are `{ retryable: true }`; `waitForSelector` timeout and `validate()` failures are non-retryable. **Honest framing (see ADR 016):** retry reduces TRANSIENT CF challenges; it does not defeat IP-level blocking. The next 6h cron on a fresh runner IP remains the backstop for sustained IP blocks.
+
+**H2 — CF challenge detection (`scraper/scrape.js`).** `isCloudflareChallenge(page)` checks page title (`"Just a moment..."` / `"Attention Required"`) and first 1000 chars of body for CF markers (`cf-challenge`, `_cf_chl_`, `cf-browser-verification`). Runs in <100ms after `page.goto()` succeeds, saving the 30s `waitForSelector` timeout per blocked attempt and making the 3-retry budget feasible.
+
+**H3 — Fingerprint hardening (`scraper/scrape.js`).** UA updated Chrome/124→Chrome/136 (current stable at implementation; comment added for periodic bump). `timezoneId: "Asia/Kolkata"` added (CI defaults UTC). `extraHTTPHeaders: { "Accept-Language": "en-IN,en;q=0.9" }`. Viewport rotates per attempt (1280×800, 1366×768, 1440×900). No stealth plugins or proxy rotation — out of scope, losing game.
+
+**H4 — Alert dedup (`.github/workflows/check-price.yml`).** Two changes: (1) `Alert on scraper failure` step now checks `prices.json` last-entry age — fires ntfy only if age ≤12h (first/second failure); beyond 12h, staleness guard handles sustained-failure alerting. (2) `Alert on scraper failure` writes `SCRAPER_DOWN_THIS_RUN=true` to `$GITHUB_ENV`; `Staleness guard` reads this flag and skips its own ntfy send if set. Net effect: 7–8 ntfy per 24h CF block → at most 3. No new external state mechanism needed.
+
+**H5 deferred.** IBJA-calibrated fallback reading rejected: calibration `valid: false` (21/30 pairs), invalid calibration is noise, honest gap beats noisy reading. Revisit when calibration flips — see ADR 016.
+
+**Tests (`scraper/test_scraper_hardening.mjs`).** 14 new tests (norm #11 — local HTTP mock server, no live network):
+- FM-1: CF challenge attempt 1 → succeeds attempt 2 (mock server returns CF HTML then gold rate HTML)
+- FM-1: 3× CF challenge → all retries exhausted → throws
+- FM-1+FM-3: success-after-retry returns correct result object
+- FM-2: selector absent → fails, 1 request only (not retried); SCRAPER_SELECTOR_TIMEOUT_MS=300ms keeps test fast
+- FM-6: malformed price (empty attribute) → validate throws, not retried
+- FM-6: out-of-range price → validate throws, not retried
+- H2 unit: `isCloudflareChallenge()` detects CF title — true
+- H2 unit: `isCloudflareChallenge()` returns false for normal Tanishq page
+- H4a: age ≤12h → alert allowed (2 tests)
+- H4b: SCRAPER_DOWN_THIS_RUN set → staleness ntfy skipped (2 tests)
+- validate(): pure-function regression (NaN, below-min, ordering violation)
+
+All 4 existing fixture DOM tests (`scraper/test_scrape.js`) and 8 pure-function tests (`tests/test_scrape.js`) continue to pass.
+
+**`scraper-canary.yml` update.** Added `pull_request: paths: [scraper/**, tests/fixtures/...]` trigger so hardening tests run on every PR touching scraper code. Live DOM canary step guarded with `if: github.event_name != 'pull_request'` — no external network calls in PR CI. Tests run in order: fixture DOM tests → hardening tests → live canary (schedule/manual only).
+
+**ADR 016.** `docs/adr/0016-scraper-hardening.md` records: error taxonomy (retryable vs. not), honest framing of retry limitations, H3 scope constraint (no arms race), H4 dedup mechanism, H5 deferral rationale, alternatives considered (stealth plugins, proxies, unofficial APIs, YAML-cache state). Re-evaluation triggers: gap rate >15% after 4 weeks; calibration flips valid; UA >2 major versions behind Chrome stable.
+
+**Files changed:** `scraper/scrape.js`, `.github/workflows/check-price.yml`, `.github/workflows/scraper-canary.yml`, `scraper/test_scraper_hardening.mjs` (new), `tests/fixtures/cf_challenge.html` (new), `docs/adr/0016-scraper-hardening.md` (new).
+
 ---
 
 ### Phase 5 — Validate  ⏸️ NOT STARTED
