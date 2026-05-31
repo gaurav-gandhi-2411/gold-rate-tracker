@@ -124,9 +124,9 @@ def test_fit_huber_less_sensitive_to_outliers_than_ols():
 
     huber_error = abs(huber_params.slope - true_slope)
     ols_error = abs(ols_slope - true_slope)
-    assert (
-        huber_error < ols_error
-    ), f"Huber slope error {huber_error:.4f} not less than OLS error {ols_error:.4f}"
+    assert huber_error < ols_error, (
+        f"Huber slope error {huber_error:.4f} not less than OLS error {ols_error:.4f}"
+    )
 
 
 def test_fit_stores_huber_epsilon():

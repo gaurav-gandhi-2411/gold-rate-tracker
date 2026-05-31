@@ -1,6 +1,6 @@
 # ADR 017 — Calibration Refit Wiring and CI Integration
 
-**Status:** Accepted 2026-06-01  
+**Status:** Accepted 2026-06-01
 **Author:** Gaurav Gandhi / CC
 
 ---

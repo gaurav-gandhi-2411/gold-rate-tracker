@@ -3,20 +3,19 @@
 from __future__ import annotations
 
 import json
-from datetime import datetime, timezone
 from pathlib import Path
 
-import pytest
-
 import ml.drift as drift
-
+import pytest
 
 # ---------------------------------------------------------------------------
 # Helpers
 # ---------------------------------------------------------------------------
 
 
-def _write_forecast(path: Path, predicted_22k: float = 14400.0, model_version: str = "naive_flat_hold") -> None:
+def _write_forecast(
+    path: Path, predicted_22k: float = 14400.0, model_version: str = "naive_flat_hold"
+) -> None:
     payload = {
         "predicted_at": "2026-05-30T00:00:00+00:00",
         "target_time": "2026-05-31T00:00:00+00:00",
@@ -26,7 +25,9 @@ def _write_forecast(path: Path, predicted_22k: float = 14400.0, model_version: s
     path.write_text(json.dumps(payload))
 
 
-def _write_prices(path: Path, price_22k: float = 14450.0, timestamp: str = "2026-05-31T06:00:00.000Z") -> None:
+def _write_prices(
+    path: Path, price_22k: float = 14450.0, timestamp: str = "2026-05-31T06:00:00.000Z"
+) -> None:
     path.write_text(json.dumps([{"timestamp": timestamp, "22k": price_22k}]))
 
 

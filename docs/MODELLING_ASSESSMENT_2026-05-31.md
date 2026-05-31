@@ -1,7 +1,7 @@
 # Modelling Assessment — 2026-05-31
 
-**Status:** Read-only diagnosis. No code or data changes.  
-**Purpose:** Assess where model/data stand after the Ψ3C UI sprint.  
+**Status:** Read-only diagnosis. No code or data changes.
+**Purpose:** Assess where model/data stand after the Ψ3C UI sprint.
 **Awaiting:** Consultant + GG direction before any implementation.
 
 ---

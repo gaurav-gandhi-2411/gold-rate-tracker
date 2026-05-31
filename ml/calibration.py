@@ -167,7 +167,7 @@ def run_refit_if_needed(data_dir: Path | None = None) -> bool:
         return False
 
     try:
-        import pandas as pd  # noqa: PLC0415
+        import pandas as pd
 
         ibja_df = pd.read_parquet(ibja_path)
     except Exception as exc:
@@ -200,15 +200,9 @@ def run_refit_if_needed(data_dir: Path | None = None) -> bool:
         logger.info("run_refit_if_needed: no valid readings in prices.json — skipping")
         return False
 
-    import pandas as pd  # noqa: PLC0415
+    import pandas as pd
 
-    tanishq_df = (
-        pd.DataFrame(rows)
-        .sort_values("date")
-        .groupby("date")
-        .last()
-        .reset_index()
-    )
+    tanishq_df = pd.DataFrame(rows).sort_values("date").groupby("date").last().reset_index()
 
     ibja_dates = set(ibja_df["date"].dropna().tolist())
     tanishq_dates = set(tanishq_df["date"].tolist())
