@@ -147,8 +147,7 @@ gold-rate-tracker/
 - `pytest` locally without ignore flags shows 9 failures in training-deps test files. CI uses ignores; clean. Local devs need the same flags.
 - IBJA PM rate sometimes `NaN` if CI runs before ~17:00 IST publication. Inference falls back to most recent complete PM row.
 - `data/calibration.json` shows `valid: false` until 30 overlap pairs (currently 21). Self-flips. No action needed.
-- Chronos forecasts can flip direction between consecutive runs (PR E observed: DOWN 2.29% → UP 3.73% in 24h on same context). Stochastic sampling. **Φ4 addresses this with multi-sample consensus.**
-- PWA shows stale fields ("val MAE —", "LightGBM" attribution). **Φ2 fixes this.**
+- Chronos forecasts can flip direction between consecutive runs. Stochastic sampling. **Addressed in Φ4 (PR #35) with 5-sample majority consensus; T1/T2 gate on direction_consensus ≥ 0.6.**
 
 **Dead ends already explored — do NOT re-investigate:**
 - MCX Bhavcopy direct download → Akamai WAF blocks
@@ -166,14 +165,12 @@ gold-rate-tracker/
 
 | Item | Status |
 |---|---|
-| Lint workflow (ruff + ruff-format + mypy + pytest) | **Pending Φ1 merge** (PR #30). Was RED on master post-PR-H; Φ1 fixes 3 mypy errors, ruff-format pass, removes dead test files. |
-| pytest with CI ignores | Green on master pre-Φ1 (270 pass) |
-| pytest local without ignores | 9 failures, all in training-deps files. Pre-engagement, accepted. |
-| check-price.yml | Green every 6h run |
-| weekly-backtest.yml | Green; last run on PR F.5 day (2026-05-19) |
-| notification state cache chain | Verified unbroken across PR H merge |
-
-**The orchestrator must verify Φ1 has been merged before starting this sprint.** If master Lint is still red, escalate immediately.
+| Lint workflow (ruff + ruff-format + mypy + pytest) | Green on master (PR #52 merge, 2026-05-31). 341 Python tests pass. |
+| JS scraper tests | Green: 9 pure-function (tests/test_scrape.js) + 4 Playwright fixture DOM (scraper/test_scrape.js) + 16 hardening mock-HTTP (scraper/test_scraper_hardening.mjs). |
+| check-price.yml | Green on master post-PR #52 merge. Scraper hardened with 3-attempt retry. |
+| scraper-canary.yml | Now triggers on PR push to scraper/** paths (live DOM canary guarded to schedule/manual). |
+| weekly-backtest.yml | Green; last run 2026-05-19 (PR F.5). |
+| notification state cache chain | Verified unbroken across PR H merge, T4/T7/T8 additions (PRs Ψ1, Ψ3C-notify). |
 
 ## Discipline norms (the orchestrator must inherit these)
 
@@ -208,6 +205,8 @@ These earned their place across nine PRs. They are NOT visible in the code.
 14. **Visibility/visual-state claims must be verified via computed style (`getComputedStyle().display`) or rendered screenshot — NEVER via DOM attribute presence (`el.hidden`).** The `hidden` attribute and visual visibility are independent: `el.hidden === true` AND `getComputedStyle(el).display === "flex"` can hold simultaneously when an author-side `display` rule overrides the UA `[hidden]{display:none}`. This bug class shipped twice (`.pwa-help-btn` fixed in Ψ3B pre-PR; `.pwa-help-panel` missed in Ψ3B, caught in Ψ3B-hotfix) before this norm was formalized.
 
 15. **When an architecture pivot changes what a data field means, audit ALL consumers — not just the primary consumer.** The Chronos companion block (`forecast.chronos_companion`) was added in Ψ2A for the PWA but `ml/commentary.py` was never updated alongside it. `commentary.py` predated the naive-headline pivot (ADR 012) and kept reading `predicted_22k` with a "Point estimate" label — presenting the naive flat-hold baseline as a model forecast. Fixed in Ψ3C-fix (PR #47), 8 PRs after the pivot. Consumer audit checklist: `app.js` (PWA), `ml/commentary.py`, `ml/notifications.py`, `ml/drift.py`. When a new block is added to `forecast.json`, grep for all callers of `forecast.get()` / `forecast["..."]` before closing the PR.
+
+16. **An alert channel must be verified end-to-end (delivery confirmed), not just wired.** The scraper-down `curl` in `check-price.yml` uses `|| true`, meaning any ntfy delivery failure — wrong topic, unsubscribed topic, network error — is silently swallowed. For weeks, scraper failures fired the alert step (CI log showed it ran) but the alert never reached anyone because NTFY_TOPIC was misconfigured. The CI step reporting OK is NOT the same as the alert being delivered. Lesson: whenever a new alert path is added, verify receipt end-to-end (send a test notification to the actual device/channel and confirm arrival) before treating the path as operational. `[OK] ≠ delivered.`
 
 ## Open questions (things to verify when implementing)
 
