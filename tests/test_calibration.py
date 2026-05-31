@@ -427,3 +427,27 @@ def test_run_refit_no_partial_overlap_still_counts_correctly(tmp_path):
     result = cal.run_refit_if_needed(data_dir=tmp_path)
 
     assert result is False
+
+
+def test_run_refit_excludes_null_pm916_from_overlap_count(tmp_path):
+    """Rows with null pm_916 do not count toward overlap — avoids triggering a refit
+    that fit_calibration() would reject with ValueError (< 30 valid pairs)."""
+    dates_30 = _iso_dates(30)
+    # Write IBJA parquet where the last 9 rows have pm_916=NaN (live-append pattern)
+    ibja_per_g = [14000.0 + i * 10 for i in range(30)]
+    rows = []
+    for i, d in enumerate(dates_30):
+        pm_val = ibja_per_g[i] * 10 if i < 21 else float("nan")
+        rows.append({"date": d, "pm_916": pm_val})
+    ibja_df = pd.DataFrame(rows)
+    ibja_df.to_parquet(tmp_path / "ibja_rates.parquet", index=False)
+
+    _write_prices_json(tmp_path / "prices.json", dates_30)
+    _write_stub_calibration(tmp_path / "calibration.json", valid=False, n_observations=0)
+
+    # Effective overlap = 21 (only non-null rows); 21 < 30 → no refit
+    result = cal.run_refit_if_needed(data_dir=tmp_path)
+
+    assert result is False
+    loaded = json.loads((tmp_path / "calibration.json").read_text())
+    assert loaded["valid"] is False  # calibration must NOT have flipped

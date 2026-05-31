@@ -146,7 +146,7 @@ gold-rate-tracker/
 **Currently noisy but accepted:**
 - `pytest` locally without ignore flags shows 9 failures in training-deps test files. CI uses ignores; clean. Local devs need the same flags.
 - IBJA PM rate sometimes `NaN` if CI runs before ~17:00 IST publication. Inference falls back to most recent complete PM row.
-- `data/calibration.json` shows `valid: false` until 30 overlap pairs (currently 29, threshold 30). Refitted automatically by the `Refit calibration if needed` CI step (added ADR 017). Unlock expected on 2026-06-02/03.
+- `data/calibration.json` shows `valid: false` until 30 valid overlap pairs (pm_916 non-null). Currently 21 valid pairs (max valid IBJA date: 2026-05-18; live-append rows since then all have pm_916=NaN because CI runs at 10:30/16:30 IST, before the ~17:00 IST PM fix). Refitted automatically by the `Refit calibration if needed` CI step (added ADR 017). ETA: ~9 more valid pairs (~2026-06-12 at 1 valid pair/trading day from 22:30/04:30 IST crons).
 - Chronos forecasts can flip direction between consecutive runs. Stochastic sampling. **Addressed in Φ4 (PR #35) with 5-sample majority consensus; T1/T2 gate on direction_consensus ≥ 0.6.**
 
 **Dead ends already explored — do NOT re-investigate:**

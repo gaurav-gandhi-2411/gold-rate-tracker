@@ -204,10 +204,13 @@ def run_refit_if_needed(data_dir: Path | None = None) -> bool:
 
     tanishq_df = pd.DataFrame(rows).sort_values("date").groupby("date").last().reset_index()
 
-    ibja_dates = set(ibja_df["date"].dropna().tolist())
+    # Only count IBJA dates where pm_916 is non-null — null rows are dropped by
+    # fit_calibration's dropna(), so including them would trigger a refit that
+    # then raises ValueError("requires >= 30 overlap days; got N<30").
+    ibja_valid_dates = set(ibja_df.loc[ibja_df["pm_916"].notna(), "date"].tolist())
     tanishq_dates = set(tanishq_df["date"].tolist())
-    overlap_count = len(ibja_dates & tanishq_dates)
-    logger.info("run_refit_if_needed: %d overlap pairs available", overlap_count)
+    overlap_count = len(ibja_valid_dates & tanishq_dates)
+    logger.info("run_refit_if_needed: %d valid overlap pairs (pm_916 non-null)", overlap_count)
 
     if overlap_count < _MIN_FIT_OBSERVATIONS:
         logger.info(
