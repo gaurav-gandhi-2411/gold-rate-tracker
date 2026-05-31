@@ -1093,6 +1093,10 @@ All 4 existing fixture DOM tests (`scraper/test_scrape.js`) and 8 pure-function 
 
 **ADR 016.** `docs/adr/0016-scraper-hardening.md` records: error taxonomy (retryable vs. not), honest framing of retry limitations, H3 scope constraint (no arms race), H4 dedup mechanism, H5 deferral rationale, alternatives considered (stealth plugins, proxies, unofficial APIs, YAML-cache state). Re-evaluation triggers: gap rate >15% after 4 weeks; calibration flips valid; UA >2 major versions behind Chrome stable.
 
+**Expected gap-rate improvement (honest estimate).** Transient CF JS-challenges (short gaps that clear in the next run) should auto-recover within 2 retries. Sustained IP-level blocks (all 3 retries hit the same blocked IP) still produce a gap — the next 6h cron is still the backstop. Conservative estimate: gap rate ~27% → ~10–15% for the total observed failures. Not a guarantee; depends on the actual mix of transient vs. sustained CF blocks in production.
+
+**CI budget edge to monitor.** Worst case when all 3 retries hit navigation timeouts: 60s + 5s + 60s + 15s + 60s ≈ 200s (3.3 min) scrape step. The job `timeout-minutes: 20` accommodates this with ~4.5 min to spare given typical 8–12 min for remaining steps. Edge case: if 3× nav timeouts AND cold pip/HF cache, budget is tight. Mitigation: reduce `NAV_TIMEOUT_MS` from 60s to 30s if observed in production (one-constant change).
+
 **Files changed:** `scraper/scrape.js`, `.github/workflows/check-price.yml`, `.github/workflows/scraper-canary.yml`, `scraper/test_scraper_hardening.mjs` (new), `tests/fixtures/cf_challenge.html` (new), `docs/adr/0016-scraper-hardening.md` (new).
 
 ---
