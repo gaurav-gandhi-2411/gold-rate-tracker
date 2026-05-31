@@ -156,6 +156,66 @@ def test_append_preserves_existing_rows(tmp_path, monkeypatch):
     assert "2026-05-01" in df["date"].values
 
 
+# HTML fixture: AM rates present but PM column is blank (pre-PM-fix scrape)
+_IBJA_HTML_AM_ONLY = """\
+<html><body>
+<table>
+  <thead><tr><th>Purity</th><th>AM</th><th>PM</th></tr></thead>
+  <tbody>
+    <tr><td>Gold 999</td><td>157821</td><td>---</td></tr>
+    <tr><td>Gold 995</td><td>157189</td><td>---</td></tr>
+    <tr><td>Gold 916</td><td>144564</td><td>---</td></tr>
+    <tr><td>Gold 750</td><td>118366</td><td>---</td></tr>
+    <tr><td>Gold 585</td><td>92325</td><td>---</td></tr>
+  </tbody>
+</table>
+</body></html>
+"""
+
+
+def test_append_upsert_fills_null_pm916_when_fresh_fetch_has_value(tmp_path, monkeypatch):
+    """If today's row exists with pm_916=NaN and a later fetch has a valid pm_916,
+    append_ibja_today must UPDATE the row (upsert) rather than skip.
+
+    This is the fix for the pm_916=NaN accumulation: early CI runs (pre-PM-fix)
+    write null pm_916; post-PM-fix runs now fill it in. Without the upsert, valid
+    calibration pairs would never accumulate and calibration would stay locked.
+    """
+    monkeypatch.setattr("time.sleep", lambda _: None)
+    p = tmp_path / "ibja.parquet"
+
+    # Step 1: early-morning run — AM-only HTML → pm_916 absent from rates dict.
+    # The row is written with NaN pm_916 (column missing from rates).
+    monkeypatch.setattr(ibja, "_get_with_retry", lambda _h: _IBJA_HTML_AM_ONLY)
+    result_am = ibja.append_ibja_today(p)
+    assert result_am is True
+    df_am = pd.read_parquet(p)
+    assert len(df_am) == 1
+    assert pd.isna(df_am.iloc[0].get("pm_916", float("nan")))
+
+    # Step 2: post-PM-fix run — full HTML → pm_916 present.
+    # append_ibja_today must detect today's row has null pm_916 and update it.
+    monkeypatch.setattr(ibja, "_get_with_retry", lambda _h: _IBJA_HTML)
+    result_pm = ibja.append_ibja_today(p)
+    assert result_pm is True  # returns True = row updated
+    df_pm = pd.read_parquet(p)
+    assert len(df_pm) == 1  # still only one row for today
+    assert not pd.isna(df_pm.iloc[0]["pm_916"])
+    assert df_pm.iloc[0]["pm_916"] == 144490.0  # value from _IBJA_HTML
+
+
+def test_append_skips_when_pm916_already_present(tmp_path, monkeypatch):
+    """If today's row already has a valid pm_916, skip (no double-write)."""
+    monkeypatch.setattr("time.sleep", lambda _: None)
+    monkeypatch.setattr(ibja, "_get_with_retry", lambda _h: _IBJA_HTML)
+    p = tmp_path / "ibja.parquet"
+    ibja.append_ibja_today(p)
+    # Second call: pm_916 is already present — must skip
+    result = ibja.append_ibja_today(p)
+    assert result is False
+    assert len(pd.read_parquet(p)) == 1
+
+
 # ---------------------------------------------------------------------------
 # Fixtures for backfill_ibja_from_pdf tests
 # ---------------------------------------------------------------------------

@@ -131,11 +131,18 @@ def load_ibja_parquet(path: Path | None = None) -> pd.DataFrame:
 
 
 def append_ibja_today(path: Path | None = None) -> bool | None:
-    """Fetch today's IBJA rates and append to the parquet store.
+    """Fetch today's IBJA rates and append (or update) the parquet store.
+
+    The PM fix publishes at ~17:00 IST; the AM fix at ~09:30 IST.  Early CI
+    runs (pre-AM) may write today's row with null rates.  When a fresh fetch
+    has a valid pm_916 and the stored row has a null pm_916, the existing row
+    is updated in-place so that post-PM-fix runs fill in the complete data.
+    Without this upsert, the write-once skip would leave pm_916 null forever,
+    blocking calibration from accumulating valid overlap pairs.
 
     Returns:
-        True   — new row appended
-        False  — already in parquet (no-op, not an error)
+        True   — new row appended or existing row updated with PM rate
+        False  — already in parquet and up to date (no-op, not an error)
         None   — fetch failed; parquet not updated
     """
     rates = fetch_ibja_daily()
@@ -147,6 +154,26 @@ def append_ibja_today(path: Path | None = None) -> bool | None:
     existing = load_ibja_parquet(path)
 
     if not existing.empty and "date" in existing.columns and today in existing["date"].values:
+        # Row exists — check if pm_916 is null and the new fetch has a valid value.
+        # The pm_916 column may not exist at all if a pre-AM-fix run only wrote am_ data.
+        new_pm = rates.get("pm_916")
+        if "pm_916" in existing.columns:
+            existing_pm_series = existing.loc[existing["date"] == today, "pm_916"]
+            existing_pm_null = existing_pm_series.empty or pd.isna(existing_pm_series.iloc[0])
+        else:
+            existing_pm_null = True  # column absent → treat as null
+
+        if new_pm is not None and not pd.isna(new_pm) and existing_pm_null:
+            # Upsert: write all rates from the fresh fetch into the existing row,
+            # adding new columns (e.g. pm_916) if they weren't present before.
+            for col, val in rates.items():
+                existing.loc[existing["date"] == today, col] = val
+            existing.loc[existing["date"] == today, "fetched_at"] = datetime.now(UTC).isoformat()
+            p = path or IBJA_PARQUET
+            p.parent.mkdir(parents=True, exist_ok=True)
+            existing.to_parquet(p, index=False)
+            logger.info("ibja: updated pm_916 for %s (was null, now %.1f)", today, new_pm)
+            return True
         logger.info("ibja: %s already in parquet — skipping", today)
         return False
 
