@@ -1,18 +1,46 @@
 # gold-rate-tracker — Current State for Orchestrator Handoff
 
-*Snapshot as of 2026-05-20. Maintained for context that isn't in the code. The repo itself shows what exists; this document explains why.*
+*Snapshot as of 2026-05-31. Maintained for context that isn't in the code. The repo itself shows what exists; this document explains why.*
+
+---
+
+## RESUME HERE — Open time-gated items (as of 2026-05-31)
+
+Four items need attention at defined future dates. A new session can pick up directly here.
+
+**(a) Calibration unlock ~2026-06-12 — highest priority.**
+The first-ever automatic flip of `calibration.json` to `valid: true`. Trigger: `run_refit_if_needed()` detects ≥30 valid overlap pairs in CI (currently accumulating at ~1/trading day via the IBJA pm_916 upsert fix, PR #56). What to verify the day it fires:
+- CI log shows "refitting… n=30 slope=X.XX intercept=Y.Y"
+- T6 ntfy notification "Gold forecast: calibration unlocked" arrives on device (norm #16)
+- `data/calibration.json` has `valid: true` with real slope/intercept
+- Dashboard "Adjusted to Tanishq prices" shows "Yes"
+- `data/forecast.json` `chronos_companion.calibration_applied` is `true`
+
+The full chain is pre-verified by `tests/test_calibration_unlock_chain.py` (commit `cf6fc78`). If anything fails, check that test first.
+
+**(b) Scraper gap-rate trend post-4h-cadence (~2026-06-28).**
+Baseline: 27% gap rate (34 gaps >9h across 124 readings). ADR 016 re-evaluation trigger is >15% sustained over 4 weeks. Check CI run history at ~2026-06-28 and record in Decision Log.
+
+**(c) H5 calibrated fallback — decision needed post-unlock.**
+ADR 016 deferred the IBJA-calibrated price fallback because calibration was invalid ("invalid calibration = noise"). Once item (a) resolves, H5 becomes a legitimate option (flagged in ADR 017). No code needed until (a) resolves; flag to consultant for a decision at that point.
+
+**(d) ntfy topic rotation — low-stakes, deferred.**
+Topic `gold-msgg-7k2x9p4r` was exposed in this engagement. Fresh topic `gold-r4k9x2mj8vqt` is suggested. User steps: update NTFY_TOPIC GitHub secret (no trailing whitespace), subscribe phone to new topic, unsubscribe old. No code change required. Verify delivery via next scheduled T8 notification (norm #16). The topic lives only in the GitHub secret — grep confirmed zero hardcoded references in the repo.
+
+---
 
 ## Project goal
 
-Free-tier gold price tracker for Indian retail (Tanishq 22K). Live scrape every 6h, 5-day forecast trajectory, ntfy directional alerts, GitHub Pages PWA. Production architecture is **naive flat-hold as headline + Chronos-Bolt-Tiny as directional companion** per ADR 012 — the model does not beat naive on magnitude at current data scale, so naive IS the production prediction. Chronos's verified direction signal (55.8% accuracy, 63.3% on last-30 folds) gates notifications.
+Free-tier gold price tracker for Indian retail (Tanishq 22K). Live scrape every 4h, 5-day forecast trajectory, ntfy directional alerts, GitHub Pages PWA. Production architecture is **naive flat-hold as headline + Chronos-Bolt-Tiny as directional companion** per ADR 012 — the model does not beat naive on magnitude at current data scale, so naive IS the production prediction. Chronos's verified direction signal (55.8% accuracy, 63.3% on last-30 folds) gates notifications.
 
 ## Production architecture (one-paragraph + diagram)
 
 ```
-[GitHub Actions cron, every 6h at 10/16/22/04 IST]
+[GitHub Actions cron, 0 */4 * * * UTC → ~05:30/09:30/13:30/17:30/21:30/01:30 IST]
         ↓
-[Tanishq scrape]──→ data/prices.json
-[IBJA scrape]────→ data/ibja_rates.parquet
+[Tanishq scrape — 3-attempt retry, CF detection (ADR 016)]──→ data/prices.json
+[IBJA scrape — upsert pm_916 when post-PM-fix run has value]─→ data/ibja_rates.parquet
+[ml.calibration — refit if ≥30 overlap pairs (ADR 017)]─────→ data/calibration.json
 [macro fetch]────→ data/macro_cache.parquet (gitignored)
         ↓
 [ml.chronos_forecast --probe]
@@ -23,7 +51,8 @@ Free-tier gold price tracker for Indian retail (Tanishq 22K). Live scrape every 
    writes data/forecast.json (naive headline + chronos companion)
         ↓
 [ml.notifications]
-   T1..T5 evaluated, ntfy sent if conditions met, state cached via actions/cache
+   T1..T8 evaluated, ntfy sent if conditions met, state cached via actions/cache
+   Quiet hours 22:00–07:00 IST: alerts queued + stamped (PR #55 dedup fix)
         ↓
 [git commit + push] → GitHub Pages PWA serves data/*.json
 ```
@@ -64,7 +93,7 @@ gold-rate-tracker/
 ├── tests/
 │   └── fixtures/                ← Real PDF, HTML samples
 ├── .github/workflows/
-│   ├── check-price.yml          ← LOAD-BEARING 6h production loop
+│   ├── check-price.yml          ← LOAD-BEARING 4h production loop
 │   ├── lint.yml                 ← ruff + ruff-format + mypy + full pytest
 │   ├── weekly-backtest.yml
 │   ├── monthly-ibja-backfill.yml
@@ -80,7 +109,7 @@ gold-rate-tracker/
 
 | File | What it does | Why don't casually touch |
 |---|---|---|
-| `ml/inference.py` | Writes `data/forecast.json` every 6h | PWA reads its output directly. Schema changes are user-visible. Backward-compat aliases (`predicted_22k`, `lower`, `upper` at top level) must persist until PWA migrates. |
+| `ml/inference.py` | Writes `data/forecast.json` every 4h | PWA reads its output directly. Schema changes are user-visible. Backward-compat aliases (`predicted_22k`, `lower`, `upper` at top level) must persist until PWA migrates. |
 | `ml/chronos_forecast.py` | Writes `data/chronos_probe.json` | Both inference and notifications consume this schema. `num_samples` controls forecast stochasticity. |
 | `ml/notifications.py` | Trigger evaluation + state management | State persists across CI runs via `actions/cache` (prefix-match on `notification-state-`). Cooldowns, anti-spam, quiet hours all live here. |
 | `ml/calibration.py` | Maps IBJA→Tanishq via HuberRegressor | `data/calibration.json` has `valid: bool`. Flips to `true` at 30 overlap pairs via the `run_refit_if_needed()` step in CI (added ADR 017). When it flips, inference applies calibration to Chronos horizon arrays. |
@@ -90,8 +119,8 @@ gold-rate-tracker/
 | `data/chronos_probe.json` | Inference reads this for companion block | If probe fails, inference still runs (writes `chronos_companion.status: "failed"`); T5 fires once per IST day. |
 | `data/notification_state.json` | Anti-spam state | Gitignored; cached via `actions/cache/restore@v4` + `save@v4` with `notification-state-${run_id}` key and `notification-state-` restore-keys prefix. Master branch only. |
 | `data/calibration.json` | Calibration gate | `valid: false` until 30 IBJA-Tanishq overlap days. Don't manually flip; `run_refit_if_needed()` in CI handles it (ADR 017). |
-| `.github/workflows/check-price.yml` | 6h production cron | Step ORDER is load-bearing: scrape → ibja-append → **calibration-refit** → chronos-probe → notification-restore → inference → notification-evaluate → notification-save → commit. |
-| `app.js` | PWA logic | Currently reads stale schema (Φ2 fixes this). Any JS error breaks the live site. |
+| `.github/workflows/check-price.yml` | 4h production cron | Step ORDER is load-bearing: scrape → ibja-append (upsert) → **calibration-refit** → chronos-probe → notification-restore → inference → notification-evaluate → notification-save → commit. |
+| `app.js` | PWA logic | Reads current schema (Φ2 migrated; Ψ3C redesigned). Any JS error breaks the live site. |
 | `docs/PROGRESS.md` | Engagement record + Risks Register + Decision Log | Append-only. Don't rewrite history. |
 
 ## Key conventions
@@ -117,8 +146,10 @@ gold-rate-tracker/
 **Notifications:**
 - ASCII-only titles (no ₹; use `Rs.`)
 - Priority 4/5 actionable, 2/3 informational
-- Quiet hours 22:00–07:00 IST, queue or drop if >12h old
-- Cooldown enforced via `notification_state.json`
+- Quiet hours 22:00–07:00 IST; alerts queued during quiet hours are stamped immediately on queue (PR #55 dedup fix) to prevent accumulation across consecutive CI runs
+- T1–T5 conditional/ML-gated; T6 once-ever (calibration unlock); T7 3-day floor; T8 twice-daily digest
+- All user-facing bodies plain-language (no ML jargon) as of PR #55; T6 body is owner-facing, retains technical language
+- Commentary SYSTEM_PROMPT blocks: 'Chronos', 'model', 'baseline', 'naive', 'MAE', 'backtest', 'folds', 'fold', 'Wilcoxon' (pinned by `test_system_prompt_blocks_technical_jargon`)
 
 **Schemas:**
 - `forecast.json`: top-level aliases + `headline` block + `chronos_companion` block
@@ -136,7 +167,7 @@ gold-rate-tracker/
 | Chronos-Bolt-Tiny (not Base) | 8.65MB / 13ms inference; quality difference negligible at our context length | ADR 009 |
 | HuberRegressor for calibration | Robust to occasional Tanishq promotional outliers | PROGRESS.md §3.1.3 |
 | GH Actions cache for notification state | Free, persistent, prefix-match recovery; alternatives noisier | ADR 011 |
-| No prompt caching on live LLM | Wrong provider (Groq), wrong size (<1024 tokens), wrong cadence (6h > 1h TTL) | ADR 013 |
+| No prompt caching on live LLM | Wrong provider (Groq), wrong size (<1024 tokens), wrong cadence (4h > 1h TTL) | ADR 013 |
 | ibjarates.com primary (not ibja.co) | ibja.co structurally cannot return AM+PM in one request | PROGRESS.md §3.1 |
 | TFT/N-BEATS retired | Required 2000/1000 readings; data accumulation timeline ~years | ADR 009 |
 | Fail-fast conformal PI (no fabricated default) | A 1.5× multiplier on an unverified constant is still fabrication | ADR 014 |
@@ -145,9 +176,18 @@ gold-rate-tracker/
 
 **Currently noisy but accepted:**
 - `pytest` locally without ignore flags shows 9 failures in training-deps test files. CI uses ignores; clean. Local devs need the same flags.
-- IBJA PM rate sometimes `NaN` if CI runs before ~17:00 IST publication. Inference falls back to most recent complete PM row.
-- `data/calibration.json` shows `valid: false` until 30 valid overlap pairs (pm_916 non-null). Currently 21 valid pairs (max valid IBJA date: 2026-05-18; live-append rows since then all have pm_916=NaN because CI runs at 10:30/16:30 IST, before the ~17:00 IST PM fix). Refitted automatically by the `Refit calibration if needed` CI step (added ADR 017). ETA: ~9 more valid pairs (~2026-06-12 at 1 valid pair/trading day from 22:30/04:30 IST crons).
+- IBJA PM rate sometimes `NaN` on early-morning CI runs (before ~17:00 IST publication). The upsert fix (PR #56) captures the PM value on the post-17:00 run; inference falls back to the most recent complete PM row until then. This is expected and accepted.
+- `data/calibration.json` shows `valid: false` until 30 valid overlap pairs (pm_916 non-null). Currently accumulating at ~1 pair/trading day via the IBJA upsert fix. ETA for unlock: ~2026-06-12 (see RESUME HERE section). Refitted automatically by `run_refit_if_needed()` in CI (ADR 017). Do NOT manually flip `valid`.
 - Chronos forecasts can flip direction between consecutive runs. Stochastic sampling. **Addressed in Φ4 (PR #35) with 5-sample majority consensus; T1/T2 gate on direction_consensus ≥ 0.6.**
+
+**Recurring pattern — "computed-but-never-wired" bugs:**
+This codebase has produced four instances of code that was tested in isolation but never connected to the live CI cycle:
+1. `commentary.py` consumer miss — never updated after the naive-headline pivot (ADR 012); kept labelling the baseline as "model forecast" for 8 PRs. Fixed Ψ3C-fix. Now guarded by `test_system_prompt_blocks_technical_jargon`.
+2. `calibration.py` refit never called — `fit_calibration()` existed and was tested for weeks before `run_refit_if_needed()` was wired into `check-price.yml`. Fixed Φ5.
+3. IBJA PM-fix capture blocked — write-once `append_ibja_today` silently kept pm_916=NaN after the first early-morning write; the 4h cadence alone would not have helped. Fixed PR #56.
+4. ntfy topic — only lives in GitHub secret (correct), but delivery was never verified end-to-end until flagged this session (norm #16 gap).
+
+Prevention going forward: norm #15 (consumer audit), norm #16 (delivery verification), and `tests/test_calibration_unlock_chain.py` proving tests before the calibration unlock fires.
 
 **Dead ends already explored — do NOT re-investigate:**
 - MCX Bhavcopy direct download → Akamai WAF blocks
@@ -155,7 +195,7 @@ gold-rate-tracker/
 - nsepython / nsetools for MCX → out of scope, NSE only
 - investpy for MCX → HTTP 403, library unmaintained
 - Metals.Dev API for IBJA → returns USD/troy oz, not INR/g (wrong denomination)
-- Migrating to Claude API for prompt caching → cost/benefit fails at 6h cadence
+- Migrating to Claude API for prompt caching → cost/benefit fails at 4h cadence (ADR 013)
 - Synthetic `GC=F × INR=X × premium` training seed → 92% synthetic, archived
 - TFT / N-BEATS as Chronos alternatives → data threshold too far
 - ibja.co as primary IBJA source → cannot return both AM and PM in one HTTP call
@@ -165,16 +205,17 @@ gold-rate-tracker/
 
 | Item | Status |
 |---|---|
-| Lint workflow (ruff + ruff-format + mypy + pytest) | Green on master (PR #52 merge, 2026-05-31). 341 Python tests pass. |
-| JS scraper tests | Green: 9 pure-function (tests/test_scrape.js) + 4 Playwright fixture DOM (scraper/test_scrape.js) + 16 hardening mock-HTTP (scraper/test_scraper_hardening.mjs). |
-| check-price.yml | Green on master post-PR #52 merge. Scraper hardened with 3-attempt retry. |
-| scraper-canary.yml | Now triggers on PR push to scraper/** paths (live DOM canary guarded to schedule/manual). |
-| weekly-backtest.yml | Green; last run 2026-05-19 (PR F.5). |
-| notification state cache chain | Verified unbroken across PR H merge, T4/T7/T8 additions (PRs Ψ1, Ψ3C-notify). |
+| Lint workflow (ruff + ruff-format + mypy + pytest) | Green on master (commit `cf6fc78`, 2026-05-31). **365 Python tests pass.** |
+| JS tests | Green: 9 pure-function (tests/test_scrape.js) + 4 Playwright fixture DOM (scraper/test_scrape.js) + 16 hardening mock-HTTP (scraper/test_scraper_hardening.mjs) + 5 comparison cards (tests/test_comparisons.js). |
+| check-price.yml | Green on master. 4h cadence. Scraper hardened with 3-attempt retry + CF detection (ADR 016). Calibration-refit step wired (ADR 017). IBJA upsert captures post-PM-fix rates. |
+| scraper-canary.yml | Triggers on PR push to scraper/** paths (live DOM canary guarded to schedule/manual). |
+| weekly-backtest.yml | Green; last run 2026-05-19. |
+| notification state cache chain | Verified unbroken. T1-T8 all covered. Dedup-on-queue fix (PR #55) prevents quiet-hours accumulation for all IST-date-deduped triggers. |
+| Calibration unlock chain | Pre-verified via `tests/test_calibration_unlock_chain.py` (4 tests, 6 links asserted end-to-end). Will fire for real ~2026-06-12. |
 
 ## Discipline norms (the orchestrator must inherit these)
 
-These earned their place across nine PRs. They are NOT visible in the code.
+These earned their place across PRs #1–56. They are NOT visible in the code.
 
 1. **Flag-and-stop on plan deviations.** When the executor encounters a constraint that contradicts the spec — a file isn't where expected, a dependency conflicts, a "bug fix" requires a design decision — STOP and report to the orchestrator. The orchestrator escalates to the user. Do not silently substitute, even if the right answer feels obvious. This rule was violated three times in Phase 3 (linter auto-fix outside scope, MCX→COMEX substitution, gitignore reversal); each was acknowledged after the fact. Don't repeat.
 
@@ -210,12 +251,12 @@ These earned their place across nine PRs. They are NOT visible in the code.
 
 ## Open questions (things to verify when implementing)
 
-- **Φ4 wall-clock budget on GH Actions runner.** Multi-sample probe `num_samples=5` extrapolating from local 13ms = ~65ms inference + 1 model load. Audit assumed <2s. Validate empirically in CI before merging the schema bump.
+- **Φ4 wall-clock budget on GH Actions runner.** ✅ RESOLVED — ADR 015. Actual probe wall-clock ~10s (dominated by model deserialization, not forecast compute). 5-sample probe adds ~75ms; 6h cadence makes this operationally fine.
 
-- **Calibration flip detection (Φ3) without race conditions.** The flip can happen mid-CI-cycle. Recommendation: idempotent T6 firing with daily IST dedup (mirrors T5 pattern). Avoids needing to cache prior-run state.
+- **Calibration flip detection without race conditions.** ✅ RESOLVED — ADR 017. `run_refit_if_needed()` is idempotent; T6 uses IST-date dedup (mirrors T5). Wired into CI. Race-free.
 
-- **PI band explanation copy in PWA.** Exact phrasing is subjective. Suggested: "These bands are 5-day prediction intervals. They are intentionally wide because the model predicts a 5-day window, not a single day." Adjust as needed.
+- **PI band explanation copy in PWA.** ✅ RESOLVED — Ψ3C-copy (PR #49) rewrote methodology accordion to plain language: "Range covers 80% of typical 5-day swings."
 
-- **Φ2's PWA test gap.** No Playwright or browser-test infrastructure exists. Validation is currently manual ("open the live site, check console"). Acceptable for this sprint; consider adding Playwright in a future hygiene PR.
+- **Φ2's PWA test gap.** ⏸️ STILL OPEN — No Playwright or browser-test infrastructure exists. Validation remains manual (open live site, check console). Acceptable for current phase; consider adding headless browser tests in a future hygiene PR.
 
-- **The PR E falsifiable bet resolves 2026-05-23.** Current partial data (1 of 5 days): price moved UP, Chronos predicted DOWN. Worth recording the final outcome in PROGRESS.md Decision Log when the window closes.
+- **Scraper gap-rate post-hardening.** ⏸️ CHECK ~2026-06-28 — Baseline was 27% gap rate. ADR 016 trigger: >15% sustained over 4 weeks. Compare CI run history at that date.
