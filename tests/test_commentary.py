@@ -16,6 +16,7 @@ from unittest.mock import MagicMock, patch
 
 from ml.commentary import (
     MAX_COMMENTARY_ENTRIES,
+    SYSTEM_PROMPT,
     append_commentary,
     build_user_message,
     call_groq,
@@ -200,6 +201,23 @@ class TestAppendCommentary:
         out = json.loads((tmp_path / "commentary.json").read_text())
         for key in ("ts", "text", "model", "prompt_hash"):
             assert key in out[0], f"Missing key '{key}' in commentary entry"
+
+
+# ---------------------------------------------------------------------------
+# SYSTEM_PROMPT — jargon blocklist
+# ---------------------------------------------------------------------------
+
+
+def test_system_prompt_blocks_technical_jargon():
+    """SYSTEM_PROMPT must explicitly forbid all ML/stats jargon terms that could
+    surface in T4's commentary snippet (which goes to non-technical family subscribers).
+    """
+    required = ["Chronos", "model", "baseline", "naive", "MAE", "backtest", "folds", "Wilcoxon"]
+    for term in required:
+        assert term in SYSTEM_PROMPT, (
+            f"SYSTEM_PROMPT is missing '{term}' in its NEVER USE list — "
+            "add it to prevent jargon reaching family subscribers via T4 weekly digest"
+        )
 
 
 # ---------------------------------------------------------------------------

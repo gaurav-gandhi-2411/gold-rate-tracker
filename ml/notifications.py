@@ -310,14 +310,13 @@ def _check_t1(
     if compute_dir_acc_30f(backtest) < 0.55:
         return None
     current = prices[-1]["22k"] if prices else 0
-    title = "Gold: Model and momentum both lean DOWN over next 5d"
+    abs_mom = abs(mom_pct)
+    title = "Gold: Prices may ease lower over the next few days"
     body = (
-        f"22K spot Rs.{current}. "
-        f"Last 7d trend: {mom_pct:+.1f}%. "
-        f"Chronos lean: {strength:.1f}% over 5d. "
-        f"Consensus: {consensus:.0%}. "
-        "This is a directional signal, not a price forecast. "
-        "Check the dashboard for full context."
+        f"Gold 22K: Rs.{current}. "
+        f"Down {abs_mom:.1f}% this week. "
+        "Both recent momentum and the direction signal agree prices may ease lower. "
+        "A lean, not a certainty -- check the app for context."
     )
     return _make_alert("T1", title, body, 4, ["decline", "chart_with_downwards_trend"], now_ist)
 
@@ -352,14 +351,12 @@ def _check_t2(
     if compute_dir_acc_30f(backtest) < 0.55:
         return None
     current = prices[-1]["22k"] if prices else 0
-    title = "Gold: Model and momentum both lean UP over next 5d"
+    title = "Gold: Prices may edge higher over the next few days"
     body = (
-        f"22K spot Rs.{current}. "
-        f"Last 7d trend: {mom_pct:+.1f}%. "
-        f"Chronos lean: {strength:.1f}% over 5d. "
-        f"Consensus: {consensus:.0%}. "
-        "This is a directional signal, not a price forecast. "
-        "Check the dashboard for full context."
+        f"Gold 22K: Rs.{current}. "
+        f"Up {mom_pct:.1f}% this week. "
+        "Both recent momentum and the direction signal agree prices may edge up. "
+        "A lean, not a certainty -- check the app for context."
     )
     return _make_alert("T2", title, body, 3, ["rise", "chart_with_upwards_trend"], now_ist)
 
@@ -392,10 +389,7 @@ def _check_t3(
     abs_delta = abs(delta)
     priority = 5 if abs_delta >= 300 else 4
     title = f"Gold: Rs.{abs_delta} {direction} detected ({pct:+.1f}%)"
-    body = (
-        f"22K moved from Rs.{prev} to Rs.{current} ({pct:+.1f}%). "
-        "Model-agnostic price alert. Check the dashboard for context."
-    )
+    body = f"Gold 22K: Rs.{current} ({pct:+.1f}% from Rs.{prev}). " "Check the app for context."
     return _make_alert(
         "T3", title, body, priority, ["warning", "chart_with_upwards_trend"], now_ist
     )
@@ -432,15 +426,6 @@ def _check_t4(
         return None
 
     current = prices[-1]["22k"] if prices else 0
-    n_folds = backtest.get("n_folds", 0)
-    mae_c = backtest.get("mae_5d_avg_chronos", 0.0)
-    mae_n = backtest.get("mae_5d_avg_naive", 0.0)
-    if mae_n > 0 and mae_c <= mae_n:
-        verdict = "Model beating naive"
-    elif mae_n > 0:
-        verdict = f"Model {(mae_c - mae_n) / mae_n * 100:.0f}% above naive MAE"
-    else:
-        verdict = "Backtest pending"
     extra = ""
     commentary_path = DATA_DIR / "commentary.json"
     if commentary_path.exists():
@@ -451,12 +436,8 @@ def _check_t4(
                 extra = " " + snippet
         except Exception:
             pass
-    title = f"{title_prefix}Gold Weekly: {verdict} (22K: Rs.{current})"
-    body = (
-        f"22K spot: Rs.{current}. "
-        f"Backtest ({n_folds} folds): Chronos MAE Rs.{mae_c:.0f} vs Naive Rs.{mae_n:.0f}."
-        + (extra or " See dashboard for full context.")
-    )
+    title = f"{title_prefix}Gold Weekly: 22K Rs.{current}"
+    body = f"Gold 22K: Rs.{current}." + (extra or " Check the app for the latest read.")
     return _make_alert(
         "T4", title, body, 2, ["newspaper", "white_flower"], now_ist, bypass_quiet=True
     )
@@ -479,16 +460,16 @@ def _check_t5(
     if state.last_t5_ist_date == today_ist:
         return None
     if fallback:
-        title = "Gold forecast: inference path failed"
+        title = "Gold: tracking system running on backup"
         body = (
-            "Chronos probe failed and model_fallback is set. "
-            "Forecast may be stale. Check CI logs for root cause."
+            "The direction-tracking system encountered an issue and switched to backup mode. "
+            "Headline price is still accurate. Check the app and CI logs."
         )
     else:
-        title = "Gold forecast: Chronos probe failed"
+        title = "Gold: direction signal temporarily unavailable"
         body = (
-            f"Chronos probe status: {probe.get('status', 'unknown')}. "
-            "Directional signal unavailable. Check CI logs."
+            "The direction signal could not be updated this cycle. "
+            "Price readings are unaffected. Check the app and CI logs."
         )
     return _make_alert("T5", title, body, 2, ["warning", "rotating_light"], now_ist)
 
@@ -549,14 +530,20 @@ def _check_t7(
     current = prices[-1]["22k"] if prices else 0
     lean_dir, _ = compute_chronos_lean(probe)
     _mom_dir, mom_pct = compute_recent_momentum(prices)
-    dir_acc = compute_dir_acc_30f(backtest)
-    title = f"Gold daily check: 22K Rs.{current}"
-    body = (
-        f"22K spot Rs.{current}. "
-        f"7d trend: {mom_pct:+.1f}%. "
-        f"Model lean: {lean_dir} (dir acc {dir_acc:.0%} on recent folds). "
-        "System healthy."
-    )
+    abs_mom = abs(mom_pct)
+    if abs_mom < 0.5:
+        week_desc = "Roughly flat this week"
+    elif mom_pct > 0:
+        week_desc = f"Up {abs_mom:.1f}% this week"
+    else:
+        week_desc = f"Down {abs_mom:.1f}% this week"
+    lean_hint = ""
+    if lean_dir == "up":
+        lean_hint = " Prices may edge up a little."
+    elif lean_dir == "down":
+        lean_hint = " Prices may ease a little."
+    title = f"Gold daily check: Rs.{current}"
+    body = f"Gold 22K: Rs.{current}. " f"{week_desc}." f"{lean_hint} " "System working normally."
     return _make_alert("T7", title, body, 2, ["robot", "white_check_mark"], now_ist)
 
 
@@ -802,6 +789,36 @@ def send_pending(
     return sent
 
 
+def _stamp_ist_dedup(trigger_id: str, state: NotificationState, now_ist: datetime) -> None:
+    """Set the IST-date dedup stamp for trigger_id when it is queued.
+
+    Mirrors the stamp logic in send_pending but fires at queue time, not send
+    time.  Without this, a trigger queued during quiet hours is never stamped,
+    so every subsequent quiet-hours CI run sees an un-stamped state and adds
+    another copy to the queue — producing N identical notifications when the
+    queue is finally released.
+
+    Called from main() immediately after queue_for_quiet_hours.  send_pending
+    will overwrite the stamp with the actual send time-date, so the cadence
+    gate is always measured from delivery, not from queuing.
+    """
+    today = now_ist.strftime("%Y-%m-%d")
+    if trigger_id == "T7":
+        state.last_t7_fired_ist_date = today
+    elif trigger_id == "T4":
+        state.last_t4_fired_ist_date = today
+    elif trigger_id == "T5":
+        state.last_t5_ist_date = today
+    elif trigger_id == "T8_MORNING":
+        state.last_t8_morning_ist_date = today
+    elif trigger_id == "T8_EVENING":
+        state.last_t8_evening_ist_date = today
+    # T6 uses last_t6_fired_date_ist — fires once-ever, bypass_quiet=False.
+    # Include for completeness; in practice T6 can only fire once.
+    elif trigger_id == "T6":
+        state.last_t6_fired_date_ist = today
+
+
 def queue_for_quiet_hours(
     alerts: list[PendingAlert],
     state: NotificationState,
@@ -917,6 +934,10 @@ def main() -> None:
     for alert in new_alerts:
         if in_quiet and not alert.bypass_quiet:
             state = queue_for_quiet_hours([alert], state)
+            # Stamp the IST-date dedup immediately on queue so the next CI run
+            # during quiet hours does not regenerate and re-queue the same alert.
+            # send_pending will overwrite the stamp on actual delivery.
+            _stamp_ist_dedup(alert.trigger_id, state, now_ist)
         else:
             to_send.append(alert)
 
