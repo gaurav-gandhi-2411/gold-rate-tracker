@@ -238,13 +238,12 @@ function computeComparisons(readings) {
 
   const prices7d  = readings.filter(r => now - new Date(r.timestamp).getTime() <= 7 * 86400e3).map(p22);
   const prices30d = readings.filter(r => now - new Date(r.timestamp).getTime() <= 30 * 86400e3).map(p22);
-  const pricesAll = readings.map(p22);
   const spanDays  = Math.round((now - new Date(readings[0].timestamp).getTime()) / 86400e3);
 
   return {
     vs7d:     prices7d.length  > 1 ? current - avg(prices7d)       : null,
     vs30d:    prices30d.length > 1 ? current - avg(prices30d)      : null,
-    vsLow:    pricesAll.length > 0 ? current - Math.min(...pricesAll) : null,
+    vsLow:    prices30d.length > 0 ? current - Math.min(...prices30d) : null,
     spanDays,
   };
 }
@@ -501,9 +500,6 @@ function renderModelSignal(fc) {
   const dirLabel  = dir === "up" ? "Up" : dir === "down" ? "Down" : "Neutral";
   const cardClass = dir === "up" ? "signal-card--up" : dir === "down" ? "signal-card--down" : "";
 
-  const strength = typeof cc.lean_strength_pct === "number"
-    ? `~${cc.lean_strength_pct.toFixed(1)}% expected move`
-    : "";
   const dirAcc = typeof cc.direction_acc_30f === "number"
     ? `Right about ${Math.round(cc.direction_acc_30f * 100)}% of the time recently`
     : "—";
@@ -521,7 +517,6 @@ function renderModelSignal(fc) {
       <div class="signal-direction-row">
         <span class="signal-arrow">${arrow}</span>
         <span class="signal-label">${dirLabel}</span>
-        ${strength ? `<span class="signal-strength">${strength}</span>` : ""}
       </div>
       <div class="signal-stats-row">
         <span>${dirAcc}</span>
