@@ -1,5 +1,5 @@
 {
-  "predicted_at": "2026-06-01T13:38:56.822811+00:00",
+  "predicted_at": "2026-06-01T20:19:38.660484+00:00",
   "target_window": "5d",
   "headline": {
     "method": "naive_flat_hold",
@@ -12,28 +12,28 @@
   "chronos_companion": {
     "status": "success",
     "lean_direction": "up",
-    "lean_strength_pct": 2.645,
+    "lean_strength_pct": 1.569,
     "direction_acc_30f": 0.633,
     "horizon_p10": [
-      14145.27,
-      14032.22,
-      13958.51,
-      13926.26,
-      13905.03
+      13801.68,
+      13739.55,
+      13685.64,
+      13657.38,
+      13606.22
     ],
     "horizon_p50": [
-      14770.41,
-      14771.25,
-      14831.01,
-      14907.0,
-      14987.27
+      14358.71,
+      14403.66,
+      14470.66,
+      14539.46,
+      14578.98
     ],
     "horizon_p90": [
-      15413.18,
-      15508.04,
-      15667.38,
-      15825.61,
-      15993.34
+      14966.02,
+      15096.36,
+      15239.44,
+      15376.2,
+      15480.15
     ],
     "model_version": "amazon/chronos-bolt-tiny@a0e552de",
     "calibration_applied": false,
@@ -41,9 +41,9 @@
     "majority_direction": "up",
     "direction_consensus": 1.0
   },
-  "real_readings_count": 132,
+  "real_readings_count": 133,
   "current_22k": 14365,
-  "scraped_at": "2026-06-01T13:38:35.037Z",
+  "scraped_at": "2026-06-01T20:19:17.882Z",
   "model_fallback": false,
   "predicted_22k": 14365,
   "lower": 13429,
