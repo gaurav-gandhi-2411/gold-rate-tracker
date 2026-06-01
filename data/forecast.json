@@ -1,11 +1,11 @@
 {
-  "predicted_at": "2026-06-01T04:10:14.203835+00:00",
+  "predicted_at": "2026-06-01T13:38:56.822811+00:00",
   "target_window": "5d",
   "headline": {
     "method": "naive_flat_hold",
-    "predicted_22k": 14440,
-    "lower": 13504,
-    "upper": 15376,
+    "predicted_22k": 14365,
+    "lower": 13429,
+    "upper": 15301,
     "conformal_pi_half": 935.7,
     "naive_mae_recent_30": 566.9
   },
@@ -24,7 +24,7 @@
     "horizon_p50": [
       14770.41,
       14771.25,
-      14831.02,
+      14831.01,
       14907.0,
       14987.27
     ],
@@ -41,13 +41,13 @@
     "majority_direction": "up",
     "direction_consensus": 1.0
   },
-  "real_readings_count": 131,
-  "current_22k": 14440,
-  "scraped_at": "2026-06-01T04:09:58.202Z",
+  "real_readings_count": 132,
+  "current_22k": 14365,
+  "scraped_at": "2026-06-01T13:38:35.037Z",
   "model_fallback": false,
-  "predicted_22k": 14440,
-  "lower": 13504,
-  "upper": 15376,
+  "predicted_22k": 14365,
+  "lower": 13429,
+  "upper": 15301,
   "target_time": "2026-06-02T00:00:00+00:00",
   "model_status": "naive_headline",
   "model_version": "naive_flat_hold",
