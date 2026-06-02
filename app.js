@@ -315,6 +315,71 @@ function computeComparisons(readings) {
   };
 }
 
+// ─── GOOD-PRICE SIGNALS ───────────────────────────────────────────────────────
+// Computes the two 30-day signals for "Is today a good price?":
+//   percentile30d — % of IST-day-deduped daily prices in the last 30 days that
+//                   are at/below today's price (distribution-aware position)
+//   vsAvg30d      — today's price minus the mean of those 30 daily prices
+//
+// Returns null when fewer than 5 distinct IST days are available in the 30d window
+// (not enough data for a meaningful signal).
+// The "90-day band position" signal is deferred until ~90 distinct days accumulate
+// (currently 48 days); see Decision Log Φ11-2 band-at-90d revisit trigger.
+
+function computeGoodPriceSignals(readings) {
+  if (!readings || readings.length < 2) return null;
+
+  const now     = Date.now();
+  const current = readings[readings.length - 1]["22k"];
+
+  const within30d = readings.filter(
+    r => now - new Date(r.timestamp).getTime() <= 30 * 86400e3,
+  );
+  const daily30d  = dedupeByISTDay(within30d);
+  const nDays30d  = daily30d.length;
+  if (nDays30d < 5) return null;
+
+  const prices30d     = daily30d.map(r => r["22k"]);
+  const percentile30d = Math.round(
+    prices30d.filter(p => p <= current).length / nDays30d * 100,
+  );
+
+  const avg30d   = Math.round(prices30d.reduce((s, p) => s + p, 0) / nDays30d);
+  const vsAvg30d = current - avg30d;
+
+  let verdict, supportLine1, verdictType;
+  if (percentile30d <= 30) {
+    verdictType  = "low";
+    verdict      = "Prices have been lower than usual lately";
+    supportLine1 = "Cheaper than most days this past month.";
+  } else if (percentile30d >= 70) {
+    verdictType  = "high";
+    verdict      = "Prices have been higher than usual lately";
+    supportLine1 = "Pricier than most days this past month.";
+  } else {
+    verdictType  = "mid";
+    verdict      = "Prices are around usual levels lately";
+    supportLine1 = "Around the middle of the past month.";
+  }
+
+  const absVsAvg = fmtINR(Math.abs(vsAvg30d));
+  const supportLine2 = vsAvg30d < 0
+    ? `₹${absVsAvg} below the 30-day average.`
+    : vsAvg30d > 0
+      ? `₹${absVsAvg} above the 30-day average.`
+      : "At the 30-day average.";
+
+  // Divergence: percentile says cheap but vs-avg says above average, or vice versa.
+  // Fires in skewed distributions (e.g. one recent spike pulls the average up).
+  const divergenceNote =
+    (verdictType === "low"  && vsAvg30d > 0) ||
+    (verdictType === "high" && vsAvg30d < 0)
+      ? "(The two measures diverge here — the percentile counts days, the average measures distance. The headline follows the percentile.)"
+      : null;
+
+  return { percentile30d, vsAvg30d, avg30d, nDays30d, verdict, verdictType, supportLine1, supportLine2, divergenceNote };
+}
+
 // ─── RENDERERS ────────────────────────────────────────────────────────────────
 
 function renderStaleBanner(forecast) {
@@ -579,32 +644,48 @@ function renderModelSignal(fc, readings, bt) {
   const skelEl = document.getElementById("model-signal-skeleton");
   if (skelEl) skelEl.hidden = true;
 
-  const hl = fc?.headline;
-  if (!hl || typeof hl.lower !== "number" || typeof hl.upper !== "number") {
+  const signals = computeGoodPriceSignals(readings ?? []);
+  if (!signals) {
     section.hidden = true;
     return;
   }
 
-  const trend = computeTrendDescription(readings ?? [], 7);
+  const hl = fc?.headline;
+  const hasPI = hl && typeof hl.lower === "number" && typeof hl.upper === "number";
 
-  // pi_coverage_80_5d_avg from backtest; fall back to the established value.
-  const coveragePct = bt?.pi_coverage_80_5d_avg != null
-    ? Math.round(bt.pi_coverage_80_5d_avg * 100)
-    : 87;
+  // Volatility context (demoted 5-day band): describes how much gold moves, not where it goes.
+  // conformal_pi_half is the half-width of the 80% PI; round to nearest ₹50 for readability.
+  let volatilityHtml = "";
+  if (hasPI) {
+    const piHalf    = hl.conformal_pi_half ?? (hl.upper - hl.lower) / 2;
+    const Z         = Math.round(piHalf / 50) * 50;
+    const coveragePct = bt?.pi_coverage_80_5d_avg != null
+      ? Math.round(bt.pi_coverage_80_5d_avg * 100)
+      : 87;
+    // XSS-safe: rupee()/fmtINR() wrap numbers only; Z and coveragePct are computed numbers.
+    volatilityHtml = `
+      <div class="outlook-volatility">
+        <p class="outlook-volatility-note">Gold's price typically moves about ±₹${fmtINR(Z)} over 5 days.</p>
+        <div class="outlook-range-row">
+          <span class="outlook-range-label">5-day range</span>
+          <span class="outlook-range-value">${rupee(hl.lower)} – ${rupee(hl.upper)}</span>
+        </div>
+        <p class="outlook-range-note">Covers typical 5-day moves ${coveragePct}% of the time</p>
+      </div>
+    `;
+  }
 
-  // XSS-safe: rupee()/fmtINR() output safe strings from numeric data only.
-  // Card layout: trend description is the clear primary statement (role the old arrow played),
-  // then the honest PI band, then an honest non-forecast current-price note. No point estimate
-  // beside the band — that was the false-precision GG flagged (ADR 019/020).
+  // XSS-safe: verdict/supportLine1/divergenceNote are hardcoded string literals from
+  // computeGoodPriceSignals; supportLine2 interpolates fmtINR(number) only.
   document.getElementById("model-signal-body").innerHTML = `
     <div class="outlook-card">
-      ${trend ? `<p class="outlook-trend">${trend}</p>` : ""}
-      <div class="outlook-range-row">
-        <span class="outlook-range-label">5-day range</span>
-        <span class="outlook-range-value">${rupee(hl.lower)} – ${rupee(hl.upper)}</span>
-      </div>
-      <p class="outlook-range-note">Covers typical 5-day moves ${coveragePct}% of the time</p>
-      <p class="outlook-current-note">Today: ${rupee(hl.predicted_22k)}. Gold's 5-day move is unpredictable, so we show the likely range above rather than guess a single number.</p>
+      <p class="good-price-verdict good-price-verdict--${signals.verdictType}">${signals.verdict}</p>
+      <ul class="good-price-supporting">
+        <li>${signals.supportLine1}</li>
+        <li>${signals.supportLine2}</li>
+        ${signals.divergenceNote ? `<li class="good-price-divergence">${signals.divergenceNote}</li>` : ""}
+      </ul>
+      ${volatilityHtml}
     </div>
   `;
 
