@@ -1511,6 +1511,30 @@ Each confirmation uses a different mechanism — IBJA's own price momentum, USD/
 
 ---
 
+#### Batch Φ10B — Dynamic Volatility Context (2026-06-03)
+
+**Context:** Replace the static "±Rs.950 over 5 days" context line with a dynamic estimate based on recent realized volatility. MAGNITUDE ONLY — not a forecast, not directional (ADR 005 hard line).
+
+**FLAG-AND-STOP findings (resolved before building):**
+
+1. **Series: Tanishq 22K (`prices.json`)** — 49 contiguous daily readings (2026-04-14 to 2026-06-02), no gaps > 2 days, zero null prices. IBJA pm_916 rejected: most recent contiguous block = 2 rows (14-day gap ended 2026-05-31). The entire IBJA history is gap-broken (two major scraper-outage gaps: 101 days Aug–Nov 2025, 95 days Jan–Apr 2026). IBJA/10 ≈ Tanishq 22K (same purity) so log returns are comparable, but the dynamic estimate must use Tanishq.
+
+2. **Sufficient history: YES** — 49 contiguous Tanishq days is enough for a 20-day trailing vol window.
+
+3. **Method: trailing realized vol, window=20 days, horizon=5 days (option 1).** GARCH rejected (< 200 contiguous rows, gap-broken history). EWMA not needed (trailing std is simpler and adequate). Current numbers (2026-06-03): 20-day daily log-return std = 0.0142; 5d half-width (raw) = Rs.456; static conformal PI half = Rs.935.7; floor (50% of static) = Rs.468; floored half-width = Rs.468 → display Rs.450. Regime: NORMAL (recent/baseline ratio = 1.28, thresholds 0.75 / 1.35). Note: dynamic Rs.468 ≈ half the static Rs.950 — expected. Conformal PI measures 80th-pct forecast errors; realized vol measures actual price movements. Both honest; different questions.
+
+#### PR-Φ10B-1 — dynamic vol computation (2026-06-03)
+
+**New file:** `ml/volatility.py` — `compute_vol_context(prices, static_pi_half)` returns a `VolContext` TypedDict. Method: 20-day trailing realized vol × sqrt(5). Floor: 50% of static conformal PI half. Degrades to static when < 20 contiguous days (is_degraded=True, norm #8 — no silent swap). Regime classifier: calm (<0.75 × baseline), normal, elevated (>1.35 × baseline). Gap tolerance: ≤ 3 calendar days (Fri→Mon counted as contiguous).
+
+**Updated:** `ml/inference.py` — imports `compute_vol_context`, calls it after conformal PI, writes `headline.vol_context` to `forecast.json`. Static `conformal_pi_half` and PI bounds untouched (additive).
+
+**Tests:** `tests/test_volatility.py` — 35 unit tests covering: dedup, gap detection, contiguous-run extraction, std/log-returns, regime classifier, degraded path (too few days, large gap, empty), happy path (floor binding, floor not binding, regime calm/normal/elevated), and two gap-handling integration scenarios (101-day gap + 14-day gap).
+
+**Result:** 452 tests pass. Lint: ruff clean. Format: ruff-format clean.
+
+---
+
 ## Risks Register
 
 | Risk | Severity | Owner | Mitigation status |
