@@ -633,19 +633,35 @@ function renderModelSignal(fc, readings, bt) {
   const hl = fc?.headline;
   const hasPI = hl && typeof hl.lower === "number" && typeof hl.upper === "number";
 
-  // Volatility context (demoted 5-day band): describes how much gold moves, not where it goes.
-  // conformal_pi_half is the half-width of the 80% PI; round to nearest ₹50 for readability.
+  // Volatility context — dynamic realized-vol estimate (Phi10B) with static-PI fallback.
+  // Shows "has been moving about ±Rs.X lately" — magnitude only, no direction (ADR 005).
   let volatilityHtml = "";
   if (hasPI) {
-    const piHalf    = hl.conformal_pi_half ?? (hl.upper - hl.lower) / 2;
-    const Z         = Math.round(piHalf / 50) * 50;
+    const volCtx = hl.vol_context;
+    let Z, volNote;
+    if (volCtx && typeof volCtx.half_width === "number" && !volCtx.is_degraded) {
+      Z = Math.round(volCtx.half_width / 50) * 50;
+      const regime = volCtx.regime ?? "normal";
+      if (regime === "elevated") {
+        volNote = `Gold has been more volatile than usual lately — about ±₹${fmtINR(Z)} over 5 days.`;
+      } else if (regime === "calm") {
+        volNote = `Gold has been calmer than usual lately — about ±₹${fmtINR(Z)} over 5 days.`;
+      } else {
+        volNote = `Gold has been moving about ±₹${fmtINR(Z)} over 5 days lately.`;
+      }
+    } else {
+      // Fallback: vol estimate degraded or absent (forecast.json not yet updated) → static PI.
+      const piHalf = hl.conformal_pi_half ?? (hl.upper - hl.lower) / 2;
+      Z = Math.round(piHalf / 50) * 50;
+      volNote = `Gold's price typically moves about ±₹${fmtINR(Z)} over 5 days.`;
+    }
     const coveragePct = bt?.pi_coverage_80_5d_avg != null
       ? Math.round(bt.pi_coverage_80_5d_avg * 100)
       : 87;
-    // XSS-safe: rupee()/fmtINR() wrap numbers only; Z and coveragePct are computed numbers.
+    // XSS-safe: rupee()/fmtINR() wrap numbers only; Z, coveragePct, and volNote are computed.
     volatilityHtml = `
       <div class="outlook-volatility">
-        <p class="outlook-volatility-note">Gold's price typically moves about ±₹${fmtINR(Z)} over 5 days.</p>
+        <p class="outlook-volatility-note">${volNote}</p>
         <div class="outlook-range-row">
           <span class="outlook-range-label">5-day range</span>
           <span class="outlook-range-value">${rupee(hl.lower)} – ${rupee(hl.upper)}</span>
