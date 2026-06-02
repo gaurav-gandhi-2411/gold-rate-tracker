@@ -188,5 +188,25 @@
     "wilcoxon_p": 0.0014,
     "n_folds_ge30ctx": 129,
     "beats_naive": true
+  },
+  {
+    "name": "drift_naive_span20_non_bull_subset",
+    "experiment": "Phi7D-Exp4",
+    "horizon": 20,
+    "subset_rule": "non_up_folds_realised_h20_change_lte_0",
+    "diagnostic": true,
+    "below_gate_power": true,
+    "n_non_bull_folds": 11,
+    "n_total_ge30_folds": 129,
+    "fullset_reference": {
+      "n_folds_ge30ctx": 129,
+      "mae_drift_span20": 721.57,
+      "mae_flat_naive": 760.94,
+      "pct_improvement": 0.05174
+    },
+    "subset_mae_drift_span20": 1150.52,
+    "subset_mae_flat_naive": 172.98,
+    "subset_signed_improvement": -5.65137,
+    "sign_flip_observed": true
   }
 ]

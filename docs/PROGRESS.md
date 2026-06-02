@@ -1288,6 +1288,7 @@ Tests: 4 unit tests for `extract_ge30ctx_gate_metrics`. Pre-commit clean. Lint C
 | 2026-06-02 | Batch Phi7A: drift_naive spans 5/10/20 at h=5 — results in phi7_results.json | CC (Phi7A) | Pre-registered gate: >=2% MAE improvement, Wilcoxon p<0.05, >=30 ge30ctx folds |
 | 2026-06-02 | Phi7B: premium-carry flat-carry at h=5 -- algebraic identity with flat-naive confirmed | CC (Phi7B) | 124 folds with macro coverage; flat-carry collapses to flat-naive by construction; beats_naive=false as predicted |
 | 2026-06-02 | Phi7C: horizon sweep (h=10, h=20) Chronos + drift_naive -- gap-vs-horizon curve | CC (Phi7C) | Reports whether Chronos gap widens or narrows with longer horizon; all variants |
+| 2026-06-02 | Phi7D: non-bull subset diagnostic — drift_naive_span20 at h=20 — sign flip observed (ADR 018 confirmed) | CC (Phi7D) | Subset rule: non-up folds (realised h=20 change ≤ 0). n_folds=11 of 129 total; mae_drift=1150.52, mae_flat=172.98, subset_signed_improvement=−565.14% (drift loses catastrophically vs flat on reversals). Full-set reference: +5.17%. Sign flip observed as predicted by ADR 018 — the +5.17% gate pass is a bull-regime artefact. Diagnostic only: below_gate_power=true, no beats_naive boolean. ADR 018 "held" status unchanged; promotion still requires genuine out-of-regime folds AND a gate pass on them. |
 
 ### Φ8A — Pipeline Hardening (2026-06-02)
 
