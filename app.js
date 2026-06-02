@@ -62,10 +62,58 @@ function dedupeByISTDay(readings) {
   return [...byDay.values()];
 }
 
+// ─── DISPLAY-ONLY DEDUP (Φ8C' / absorbed from Ψ3C.3) ────────────────────────
+// prices.json is NEVER modified. ML pipeline reads it directly.
+
+function dedupReadings(readings) {
+  if (readings.length === 0) return [];
+  const groups = [];
+  let g = { reading: readings[0], endTimestamp: readings[0].timestamp, count: 1 };
+  for (let i = 1; i < readings.length; i++) {
+    if (readings[i]["22k"] === g.reading["22k"]) {
+      g.endTimestamp = readings[i].timestamp;
+      g.count++;
+    } else {
+      groups.push(g);
+      g = { reading: readings[i], endTimestamp: readings[i].timestamp, count: 1 };
+    }
+  }
+  groups.push(g);
+  return groups;
+}
+
+function dedupForChart(readings) {
+  if (readings.length === 0) return [];
+  const pts = [];
+  let runStart = readings[0];
+  let runEnd   = readings[0];
+  for (let i = 1; i < readings.length; i++) {
+    if (readings[i]["22k"] === runStart["22k"]) {
+      runEnd = readings[i];
+    } else {
+      pts.push(runStart);
+      if (runEnd !== runStart) pts.push(runEnd);
+      runStart = readings[i];
+      runEnd   = readings[i];
+    }
+  }
+  pts.push(runStart);
+  if (runEnd !== runStart) pts.push(runEnd);
+  return pts;
+}
+
+function fmtDateShort(iso) {
+  return new Intl.DateTimeFormat("en-IN", {
+    timeZone: "Asia/Kolkata", day: "numeric", month: "short",
+  }).format(new Date(iso));
+}
+
 let chart            = null;
 let allReadings      = [];
 let currentRange     = "7";   // tracks active chart tab for refreshData()
 let pwaHelpDismissed = false; // D5: set true when user taps ✕; survives re-renders
+let chartPinnedIndex  = null;  // index of tapped chart point; null = no callout
+let trackRecordChart  = null;  // Chart.js instance for forecast-vs-actual section
 
 // Ψ3C.2: stagger card-enter animation across a list of elements.
 // Forces a reflow between remove/add so the animation restarts each time.
@@ -465,6 +513,11 @@ function renderCommentary(entries) {
   const metaEl = document.getElementById("commentary-meta");
   if (!textEl) return;
 
+  const skelEl = document.getElementById("commentary-skeleton");
+  if (skelEl) skelEl.hidden = true;
+  if (textEl) textEl.hidden = false;
+  if (metaEl) metaEl.hidden = false;
+
   if (!Array.isArray(entries) || entries.length === 0) {
     textEl.textContent = "Commentary not yet available. Check back after the next price update.";
     metaEl.textContent = "";
@@ -493,53 +546,132 @@ function renderCommentary(entries) {
   }
 }
 
-function renderModelSignal(fc) {
+function computeTrendDescription(readings, nDays = 7) {
+  if (!readings || readings.length < 2) return null;
+  const cutoff = Date.now() - nDays * 86400 * 1000;
+  const recent = readings.filter(r => new Date(r.timestamp).getTime() >= cutoff);
+  if (recent.length < 2) return null;
+  const first = recent[0]["22k"];
+  const last  = readings[readings.length - 1]["22k"];
+  const delta = last - first;
+  const abs   = Math.abs(delta);
+  if (abs < 100) return `Roughly flat over the past ${nDays} days`;
+  const dir  = delta > 0 ? "up" : "down";
+  const sign = delta > 0 ? "+" : "−";
+  return `Trending ${dir} — ${sign}₹${fmtINR(abs)} over the past ${nDays} days`;
+}
+
+function renderModelSignal(fc, readings, bt) {
   const section = document.getElementById("model-signal-section");
   if (!section) return;
 
-  const cc = fc?.chronos_companion;
-  if (!cc || cc.status !== "success") {
+  const skelEl = document.getElementById("model-signal-skeleton");
+  if (skelEl) skelEl.hidden = true;
+
+  const hl = fc?.headline;
+  if (!hl || typeof hl.lower !== "number" || typeof hl.upper !== "number") {
     section.hidden = true;
     return;
   }
 
-  const dir       = cc.lean_direction ?? "neutral";
-  const arrow     = dir === "up" ? "▲" : dir === "down" ? "▼" : "—";
-  const dirLabel  = dir === "up" ? "Up" : dir === "down" ? "Down" : "Neutral";
-  const cardClass = dir === "up" ? "signal-card--up" : dir === "down" ? "signal-card--down" : "";
+  const trend = computeTrendDescription(readings ?? [], 7);
 
-  const dirAcc = typeof cc.direction_acc_30f === "number"
-    ? `Right about ${Math.round(cc.direction_acc_30f * 100)}% of the time recently`
-    : "—";
+  // pi_coverage_80_5d_avg from backtest; fall back to the established value.
+  const coveragePct = bt?.pi_coverage_80_5d_avg != null
+    ? Math.round(bt.pi_coverage_80_5d_avg * 100)
+    : 87;
 
-  const body = document.getElementById("model-signal-body");
-  // XSS-safe: all interpolated values are numbers, booleans, or hardcoded label strings
-  // derived from forecast.json. No external text or LLM content reaches this template.
-  body.innerHTML = `
-    <div class="signal-card ${cardClass}">
-      <div class="signal-direction-row">
-        <span class="signal-arrow">${arrow}</span>
-        <span class="signal-label">${dirLabel}</span>
+  // XSS-safe: rupee()/fmtINR() output safe strings from numeric data only.
+  document.getElementById("model-signal-body").innerHTML = `
+    <div class="outlook-card">
+      <div class="outlook-range-row">
+        <span class="outlook-range-label">5-day range</span>
+        <span class="outlook-range-value">${rupee(hl.lower)} – ${rupee(hl.upper)}</span>
       </div>
-      <div class="signal-stats-row">
-        <span>${dirAcc}</span>
+      <p class="outlook-range-note">Covers typical 5-day moves ${coveragePct}% of the time</p>
+      ${trend ? `<p class="outlook-trend">${trend}</p>` : ""}
+      <div class="outlook-estimate-row">
+        <span class="outlook-estimate-label">Estimate</span>
+        <span class="outlook-estimate-value">${rupee(hl.predicted_22k)}</span>
+        <span class="outlook-estimate-note">flat — today's price</span>
       </div>
-      <p class="signal-note">A guide for which way prices may move — not a guarantee. Updated roughly every 3 hours.</p>
     </div>
   `;
 
   section.hidden = false;
 }
 
+// Φ8C' / Ψ3C.3: persistent tap-to-reveal price callout drawn via Chart.js afterDraw.
+const CALLOUT_PLUGIN = {
+  id: "phi8cCallout",
+  afterDraw(ch) {
+    if (chartPinnedIndex === null) return;
+    const meta = ch.getDatasetMeta(0);
+    const dp   = meta.data[chartPinnedIndex];
+    if (!dp) return;
+    const { ctx, chartArea } = ch;
+    const x = dp.x;
+    const label = ch.data.labels[chartPinnedIndex] || "";
+    const value = ch.data.datasets[0].data[chartPinnedIndex];
+    ctx.save();
+    ctx.strokeStyle = "rgba(224,155,46,0.50)";
+    ctx.lineWidth   = 1;
+    ctx.setLineDash([4, 4]);
+    ctx.beginPath();
+    ctx.moveTo(x, chartArea.top);
+    ctx.lineTo(x, chartArea.bottom);
+    ctx.stroke();
+    ctx.setLineDash([]);
+    ctx.font = "bold 13px DM Sans, system-ui, sans-serif";
+    const pw = ctx.measureText(`₹${fmtINR(value)}`).width;
+    ctx.font = "11px DM Sans, system-ui, sans-serif";
+    const dw = ctx.measureText(label).width;
+    const bW = Math.max(pw, dw) + 24;
+    const bH = 40;
+    const bR = 7;
+    let bx = x - bW / 2;
+    bx = Math.max(chartArea.left, Math.min(bx, chartArea.right - bW));
+    const by = chartArea.top + 4;
+    ctx.beginPath();
+    ctx.moveTo(bx + bR, by);
+    ctx.lineTo(bx + bW - bR, by);
+    ctx.quadraticCurveTo(bx + bW, by, bx + bW, by + bR);
+    ctx.lineTo(bx + bW, by + bH - bR);
+    ctx.quadraticCurveTo(bx + bW, by + bH, bx + bW - bR, by + bH);
+    ctx.lineTo(bx + bR, by + bH);
+    ctx.quadraticCurveTo(bx, by + bH, bx, by + bH - bR);
+    ctx.lineTo(bx, by + bR);
+    ctx.quadraticCurveTo(bx, by, bx + bR, by);
+    ctx.closePath();
+    ctx.fillStyle   = "#241E16";
+    ctx.fill();
+    ctx.strokeStyle = "#E09B2E";
+    ctx.lineWidth   = 1;
+    ctx.stroke();
+    ctx.fillStyle   = "#E09B2E";
+    ctx.font        = "bold 13px DM Sans, system-ui, sans-serif";
+    ctx.textAlign   = "center";
+    ctx.textBaseline = "alphabetic";
+    ctx.fillText(`₹${fmtINR(value)}`, bx + bW / 2, by + 16);
+    ctx.fillStyle = "#9A9282";
+    ctx.font      = "11px DM Sans, system-ui, sans-serif";
+    ctx.fillText(label, bx + bW / 2, by + 31);
+    ctx.restore();
+  },
+};
+
 function renderChart(readings, range) {
+  chartPinnedIndex = null;
+
   let filtered = readings;
   if (range !== "all") {
     const cutoff = Date.now() - parseInt(range, 10) * 86400 * 1000;
     filtered     = readings.filter(r => new Date(r.timestamp).getTime() >= cutoff);
   }
-  filtered = dedupeByISTDay(filtered);
-  const labels = filtered.map(r => fmtDate(r.timestamp));
-  const data22 = filtered.map(r => r["22k"]);
+
+  const chartPts = dedupForChart(filtered);
+  const labels   = chartPts.map(r => fmtDate(r.timestamp));
+  const data22   = chartPts.map(r => r["22k"]);
 
   const goldLine  = "#E09B2E";
   const axisColor = "#9a9282";
@@ -563,10 +695,12 @@ function renderChart(readings, range) {
         backgroundColor: gradient,
         fill: true,
         borderWidth: 2.5,
-        pointRadius: filtered.length > 30 ? 0 : 3,
+        pointRadius: chartPts.length > 30 ? 0 : 3,
+        pointHoverRadius: 5,
         pointBackgroundColor: goldLine,
         pointBorderWidth: 0,
-        tension: 0.3,
+        tension: 0,
+        stepped: "before",
         spanGaps: true,
       }],
     },
@@ -574,6 +708,15 @@ function renderChart(readings, range) {
       responsive: true,
       maintainAspectRatio: false,
       interaction: { mode: "index", intersect: false },
+      onClick: (event, elements) => {
+        if (elements.length > 0) {
+          const idx = elements[0].index;
+          chartPinnedIndex = (chartPinnedIndex === idx) ? null : idx;
+        } else {
+          chartPinnedIndex = null;
+        }
+        chart.update("none");
+      },
       plugins: {
         legend: { display: false },
         tooltip: {
@@ -587,6 +730,7 @@ function renderChart(readings, range) {
             label: (c) => `22K: ₹${fmtINR(c.parsed.y)}`,
           },
         },
+        phi8cCallout: {},
       },
       scales: {
         x: {
@@ -601,6 +745,7 @@ function renderChart(readings, range) {
         },
       },
     },
+    plugins: [CALLOUT_PLUGIN],
   });
 }
 
@@ -608,124 +753,199 @@ function renderHistory(readings) {
   const tbody    = document.getElementById("history-body");
   const cardList = document.getElementById("history-cards");
   const showBtn  = document.getElementById("history-show-all");
+  const skelEl   = document.getElementById("history-skeleton");
+
+  if (skelEl) skelEl.hidden = true;
 
   const EMPTY_TABLE = `<tr><td colspan="5" class="empty">No readings yet.</td></tr>`;
   const EMPTY_CARDS = `<li class="hcard-empty">No readings yet.</li>`;
 
   if (readings.length === 0) {
-    tbody.innerHTML    = EMPTY_TABLE;    // XSS-safe: static template, no external data
-    cardList.innerHTML = EMPTY_CARDS;   // XSS-safe: static template, no external data
+    tbody.innerHTML    = EMPTY_TABLE;
+    cardList.innerHTML = EMPTY_CARDS;
     if (showBtn) showBtn.hidden = true;
     return;
   }
 
-  const rows = [...dedupeByISTDay(readings)].reverse().slice(0, 50);
+  const allGroups = dedupReadings([...readings].reverse());
+  const groups    = allGroups.slice(0, 50);
 
-  // ── Desktop table (unchanged from pre-Ψ2B) ──────────────────────────────────
-  // XSS-safe: all interpolated values are numbers (fmtINR/rupee) or date strings
-  // from prices.json; Groq/LLM output never reaches this template.
-  tbody.innerHTML = rows.map((r, i) => {
-    const next = rows[i + 1];
+  // ── Desktop table ────────────────────────────────────────────────────────────
+  // XSS-safe: all interpolated values are numbers or date strings from prices.json.
+  tbody.innerHTML = groups.map((g, i) => {
+    const nextGroup = groups[i + 1];
     let deltaCell = `<span class="delta-flat">—</span>`;
-    if (next && typeof next["22k"] === "number") {
-      const d = r["22k"] - next["22k"];
+    if (nextGroup) {
+      const d = g.reading["22k"] - nextGroup.reading["22k"];
       if (d > 0)      deltaCell = `<span class="delta-up">↑ ₹${fmtINR(d)}</span>`;
       else if (d < 0) deltaCell = `<span class="delta-down">↓ ₹${fmtINR(Math.abs(d))}</span>`;
       else            deltaCell = `<span class="delta-flat">·</span>`;
     }
+    // g.reading.timestamp = NEWEST reading in run; g.endTimestamp = OLDEST (first occurrence).
+    let whenCell;
+    if (g.count === 1) {
+      whenCell = fmtDate(g.reading.timestamp);
+    } else if (i === 0) {
+      whenCell = `Since ${fmtDateShort(g.endTimestamp)}`;
+    } else {
+      whenCell = `${fmtDateShort(g.endTimestamp)} – ${fmtDateShort(g.reading.timestamp)}`;
+    }
     return `<tr>
-      <td>${fmtDate(r.timestamp)}</td>
-      <td class="num">${rupee(r["22k"])}</td>
-      <td class="num">${rupee(r["24k"])}</td>
-      <td class="num">${rupee(r["18k"])}</td>
+      <td>${whenCell}</td>
+      <td class="num">${rupee(g.reading["22k"])}</td>
+      <td class="num">${rupee(g.reading["24k"])}</td>
+      <td class="num">${rupee(g.reading["18k"])}</td>
       <td class="num">${deltaCell}</td>
     </tr>`;
   }).join("");
 
-  // ── Mobile card list — date-grouped timeline (Ψ2B) ──────────────────────────
-  const VISIBLE_DAYS = 3;
-
-  // Returns "29/5/2026" style key for grouping by IST calendar date
-  function getISTDateKey(iso) {
-    return new Date(iso).toLocaleDateString("en-IN", { timeZone: "Asia/Kolkata" });
-  }
-
-  // Returns "Thu, 29 May" for the date divider label
-  function getISTDateLabel(iso) {
-    return new Intl.DateTimeFormat("en-IN", {
-      timeZone: "Asia/Kolkata", weekday: "short", day: "numeric", month: "short",
-    }).format(new Date(iso));
-  }
-
-  // Returns "1:00 pm" for the card time
+  // ── Mobile card list (dedup-grouped) ─────────────────────────────────────────
   function formatISTTime(iso) {
     return new Intl.DateTimeFormat("en-IN", {
       timeZone: "Asia/Kolkata", hour: "numeric", minute: "2-digit", hour12: true,
     }).format(new Date(iso)).toLowerCase();
   }
 
-  // Group rows (newest-first) by IST calendar date
-  const grouped = [];
-  let currentGroup = null;
-  rows.forEach((r, rowIndex) => {
-    const key = getISTDateKey(r.timestamp);
-    if (!currentGroup || currentGroup.key !== key) {
-      currentGroup = { key, label: getISTDateLabel(r.timestamp), items: [] };
-      grouped.push(currentGroup);
-    }
-    currentGroup.items.push({ r, rowIndex });
-  });
+  const VISIBLE_GROUPS = 8;
 
-  // Build HTML for a slice of groups; delta uses rows[] for cross-day continuity
-  function buildGroupsHtml(groups) {
-    // XSS-safe: formatISTTime, rupee(), fmtINR all produce safe output from numeric/date data
-    return groups.map((group) => {
-      const plural  = group.items.length !== 1 ? "s" : "";
-      const divider = `<li class="hdate-divider">${group.label} · ${group.items.length} reading${plural}</li>`;
-      const cards   = group.items.map(({ r, rowIndex: i }) => {
-        const next = rows[i + 1];
-        let deltaHtml = "";
-        if (next && typeof next["22k"] === "number") {
-          const d = r["22k"] - next["22k"];
-          if (d > 0)      deltaHtml = `<span class="hcard-delta hcard-delta--up">↑ ₹${fmtINR(d)}</span>`;
-          else if (d < 0) deltaHtml = `<span class="hcard-delta hcard-delta--down">↓ ₹${fmtINR(Math.abs(d))}</span>`;
-          else            deltaHtml = `<span class="hcard-delta hcard-delta--flat">·</span>`;
-        }
-        return `<li class="history-card">
-          <span class="hcard-time">${formatISTTime(r.timestamp)}</span>
-          <span class="hcard-price">${rupee(r["22k"])}</span>
-          ${deltaHtml}
-        </li>`;
-      }).join("");
-      return divider + cards;
+  function buildCardsHtml(start, count) {
+    // XSS-safe: all interpolated values are numbers or date strings from prices.json.
+    return groups.slice(start, start + count).map((g, relIdx) => {
+      const absIdx    = start + relIdx;
+      const nextGroup = groups[absIdx + 1];
+      let deltaHtml   = "";
+      if (nextGroup) {
+        const d = g.reading["22k"] - nextGroup.reading["22k"];
+        if (d > 0)      deltaHtml = `<span class="hcard-delta hcard-delta--up">↑ ₹${fmtINR(d)}</span>`;
+        else if (d < 0) deltaHtml = `<span class="hcard-delta hcard-delta--down">↓ ₹${fmtINR(Math.abs(d))}</span>`;
+      }
+      let timeLabel;
+      if (g.count === 1) {
+        timeLabel = formatISTTime(g.reading.timestamp);
+      } else if (absIdx === 0) {
+        timeLabel = `Since ${fmtDateShort(g.endTimestamp)}`;
+      } else {
+        timeLabel = `${fmtDateShort(g.endTimestamp)}–${fmtDateShort(g.reading.timestamp)}`;
+      }
+      return `<li class="history-card">
+        <span class="hcard-time">${timeLabel}</span>
+        <span class="hcard-price">${rupee(g.reading["22k"])}</span>
+        ${deltaHtml}
+      </li>`;
     }).join("");
   }
 
-  // Render initial VISIBLE_DAYS days
-  cardList.innerHTML = buildGroupsHtml(grouped.slice(0, VISIBLE_DAYS));
+  cardList.innerHTML = buildCardsHtml(0, VISIBLE_GROUPS);
 
-  // Show-more button (visible on mobile only via CSS display:none / display:block)
-  const hiddenDayCount = Math.max(0, grouped.length - VISIBLE_DAYS);
+  const hiddenCount = Math.max(0, groups.length - VISIBLE_GROUPS);
   if (showBtn) {
-    if (hiddenDayCount > 0) {
+    if (hiddenCount > 0) {
       showBtn.hidden = false;
-      const moreLabel = `Show ${hiddenDayCount} more day${hiddenDayCount !== 1 ? "s" : ""}`;
+      const moreLabel = `Show ${hiddenCount} more`;
       showBtn.textContent = moreLabel;
       let isExpanded = false;
       showBtn.onclick = () => {
         isExpanded = !isExpanded;
-        if (isExpanded) {
-          cardList.innerHTML = buildGroupsHtml(grouped);
-          showBtn.textContent = "Show less";
-        } else {
-          cardList.innerHTML = buildGroupsHtml(grouped.slice(0, VISIBLE_DAYS));
-          showBtn.textContent = moreLabel;
-        }
+        cardList.innerHTML = buildCardsHtml(0, isExpanded ? groups.length : VISIBLE_GROUPS);
+        showBtn.textContent = isExpanded ? "Show less" : moreLabel;
       };
     } else {
       showBtn.hidden = true;
     }
   }
+}
+
+function renderForecastVsActual(bt) {
+  const section = document.getElementById("section-track-record");
+  if (!section) return;
+  if (!bt?.folds?.length) { section.hidden = true; return; }
+
+  const folds = bt.folds
+    .filter(f => !f.sub_30_context)
+    .slice(-30);
+
+  if (folds.length < 3) { section.hidden = true; return; }
+
+  const labels  = folds.map(f => fmtDateShort(f.context_end_date + "T00:00:00Z"));
+  const actuals = folds.map(f => typeof f.actuals[0] === "number" ? f.actuals[0] : null);
+  const naives  = folds.map(f => typeof f.naive[0]   === "number" ? f.naive[0]   : null);
+
+  const goldLine  = "#E09B2E";
+  const axisColor = "#9a9282";
+  const gridColor = "#3A3028";
+  const ctx       = document.getElementById("track-record-chart");
+  if (!ctx) { section.hidden = true; return; }
+
+  if (trackRecordChart) trackRecordChart.destroy();
+
+  trackRecordChart = new Chart(ctx, {
+    type: "line",
+    data: {
+      labels,
+      datasets: [
+        {
+          label: "What happened",
+          data: actuals,
+          borderColor: goldLine,
+          backgroundColor: "transparent",
+          fill: false,
+          borderWidth: 2,
+          pointRadius: 3,
+          pointBackgroundColor: goldLine,
+          pointBorderWidth: 0,
+          tension: 0.1,
+          spanGaps: true,
+        },
+        {
+          label: "Flat-hold forecast",
+          data: naives,
+          borderColor: "#6B5E4E",
+          backgroundColor: "transparent",
+          fill: false,
+          borderWidth: 1.5,
+          pointRadius: 0,
+          borderDash: [5, 4],
+          tension: 0,
+          spanGaps: true,
+        },
+      ],
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+        legend: {
+          display: true,
+          labels: { color: axisColor, font: { family: "DM Sans", size: 11 }, boxWidth: 24 },
+        },
+        tooltip: {
+          backgroundColor: "#241E16",
+          borderColor: gridColor,
+          borderWidth: 1,
+          titleColor: axisColor,
+          bodyColor: "#F5EDE0",
+          padding: 12,
+          callbacks: {
+            label: (c) => `${c.dataset.label}: ₹${fmtINR(c.parsed.y)}`,
+          },
+        },
+      },
+      scales: {
+        x: {
+          ticks:  { color: axisColor, maxTicksLimit: 6, autoSkip: true, font: { family: "DM Sans", size: 11 } },
+          grid:   { color: "transparent" },
+          border: { color: gridColor },
+        },
+        y: {
+          ticks:  { color: axisColor, font: { family: "DM Sans", size: 11 }, callback: v => "₹" + fmtINR(v) },
+          grid:   { color: gridColor },
+          border: { display: false },
+        },
+      },
+    },
+  });
+
+  section.hidden = false;
 }
 
 function renderMethodology(fc, bt, drift) {
@@ -774,22 +994,20 @@ function renderMethodology(fc, bt, drift) {
     `);
   }
 
-  // Chronos directional companion
+  // Direction signal — honest base-rate framing (ADR 019/020)
   if (fc?.chronos_companion?.status === "success") {
     const cc = fc.chronos_companion;
+    const acc30f = typeof cc.direction_acc_30f === "number"
+      ? `${(cc.direction_acc_30f * 100).toFixed(1)}%`
+      : "—";
     parts.push(`
       <div class="meth-section">
         <h3 class="meth-heading">Direction signal</h3>
         <div class="meth-stats">
           <div class="meth-stat">
-            <div class="meth-stat-label">Direction</div>
-            <div class="meth-stat-value">${cc.lean_direction || "—"}</div>
-            <div class="meth-stat-sub">±${cc.lean_strength_pct.toFixed(1)}% expected move</div>
-          </div>
-          <div class="meth-stat">
-            <div class="meth-stat-label">Recent accuracy</div>
-            <div class="meth-stat-value">${(cc.direction_acc_30f * 100).toFixed(1)}%</div>
-            <div class="meth-stat-sub">random guessing: 50%</div>
+            <div class="meth-stat-label">Accuracy (recent 30 windows)</div>
+            <div class="meth-stat-value">${acc30f}</div>
+            <div class="meth-stat-sub">gold rising ~70% of days in our data</div>
           </div>
           <div class="meth-stat">
             <div class="meth-stat-label">Adjusted to Tanishq prices</div>
@@ -797,38 +1015,56 @@ function renderMethodology(fc, bt, drift) {
             ${!cc.calibration_applied ? `<div class="meth-stat-sub">activates after 30 days of data</div>` : `<div class="meth-stat-sub">${cc.model_version}</div>`}
           </div>
         </div>
-        <p class="meth-note">This shows which way prices may move — it doesn't change the headline price shown. When the signal is strong and consistent, it may trigger a price-move notification.</p>
+        <p class="meth-note">Current price-move alerts use 7-day momentum — not the AI direction model — because the AI's 56% accuracy over all windows doesn't exceed the ~70% base rate. No directional edge is claimed.</p>
       </div>
     `);
   } else if (fc?.chronos_companion?.status === "failed") {
     parts.push(`<p class="meth-text">Direction signal unavailable this cycle.</p>`);
   }
 
-  // Backtest stats
-  if (bt && typeof bt.mae_5d_avg_chronos === "number") {
-    const maeDiff = Math.round(bt.mae_5d_avg_chronos - bt.mae_5d_avg_naive);
-    const dirDiff = Math.round((bt.dir_acc_5d_chronos - bt.dir_acc_5d_naive) * 100);
+  // "How good is this?" — honest track record panel (Φ8C', ADR 019/020/012)
+  if (bt && typeof bt.mae_5d_avg_naive === "number") {
+    const n           = bt.n_folds ?? "—";
+    const naiveMae    = fmtINR(Math.round(bt.mae_5d_avg_naive));
+    const chronosMae  = typeof bt.mae_5d_avg_chronos === "number"
+      ? fmtINR(Math.round(bt.mae_5d_avg_chronos))
+      : "—";
+    const maePctWorse = typeof bt.mae_5d_avg_chronos === "number"
+      ? Math.round(((bt.mae_5d_avg_chronos - bt.mae_5d_avg_naive) / bt.mae_5d_avg_naive) * 100)
+      : null;
+    const dirAll   = typeof bt.dir_acc_5d_chronos === "number"
+      ? Math.round(bt.dir_acc_5d_chronos * 100) + "%"
+      : "—";
+    const pVal     = bt.wilcoxon_signed_rank_p != null
+      ? bt.wilcoxon_signed_rank_p.toFixed(4)
+      : "—";
+    const coverPct = bt.pi_coverage_80_5d_avg != null
+      ? Math.round(bt.pi_coverage_80_5d_avg * 100)
+      : 87;
+    const hl      = fc?.headline;
+    const rangeStr = hl && typeof hl.lower === "number" && typeof hl.upper === "number"
+      ? `₹${fmtINR(hl.lower)}–₹${fmtINR(hl.upper)}`
+      : "the current range";
+
     parts.push(`
-      <div class="meth-section">
-        <h3 class="meth-heading">Historical accuracy check — ${bt.n_folds ?? "—"} periods, 5-day horizon</h3>
-        <div class="meth-stats">
-          <div class="meth-stat">
-            <div class="meth-stat-label">Avg. price error</div>
-            <div class="meth-stat-value">₹${fmtINR(Math.round(bt.mae_5d_avg_chronos))}</div>
-            <div class="meth-stat-sub">${maeDiff >= 0 ? "+" : ""}₹${fmtINR(Math.abs(maeDiff))} vs predict-no-change (₹${fmtINR(Math.round(bt.mae_5d_avg_naive))})</div>
-          </div>
-          <div class="meth-stat">
-            <div class="meth-stat-label">Direction</div>
-            <div class="meth-stat-value">${Math.round(bt.dir_acc_5d_chronos * 100)}%</div>
-            <div class="meth-stat-sub">${dirDiff >= 0 ? "+" : ""}${dirDiff}pp vs predict-no-change (${Math.round(bt.dir_acc_5d_naive * 100)}%)</div>
-          </div>
-          <div class="meth-stat">
-            <div class="meth-stat-label">Statistical significance</div>
-            <div class="meth-stat-value">${bt.wilcoxon_signed_rank_p != null ? bt.wilcoxon_signed_rank_p.toFixed(4) : "—"}</div>
-            <div class="meth-stat-sub">paired comparison test</div>
-          </div>
-        </div>
-        <p class="meth-note">'Predict no change' means: assume today's price holds for the next 5 days. The direction-tracking signal currently performs slightly worse than this simple approach on overall accuracy — so we use predict-no-change for the headline figure and the direction signal only as a guide.</p>
+      <div class="meth-section meth-how-good">
+        <h3 class="meth-heading">How accurate is this forecast?</h3>
+
+        <p class="meth-text"><strong>The price estimate uses flat-hold (today's price, unchanged)</strong><br>
+        Gold prices over 5 days are close to unpredictable; no model we tested could beat simply using today's price as the forecast. Over ${n} windows from 2022–2026:<br>
+        &bull; Flat-hold average error: ₹${naiveMae}/g<br>
+        ${maePctWorse != null ? `&bull; Time-series AI average error: ₹${chronosMae}/g — ${maePctWorse}% worse (p&thinsp;=&thinsp;${pVal})<br>` : ""}
+        Today's price is the forecast.</p>
+
+        <p class="meth-text"><strong>The ${rangeStr} range has held ${coverPct}% of the time</strong><br>
+        It reflects the real distribution of 5-day price moves — wide because gold can move sharply.</p>
+
+        <p class="meth-text"><strong>About the direction signal</strong><br>
+        Over ${n} windows the AI signal was correct ${dirAll}. Gold has risen roughly 70% of trading days in our data. A naive "always-up" guess clears ~70% without a model — our signal doesn't beat that baseline.<br>
+        No directional edge is claimed. Current price-move alerts use 7-day momentum, not the AI.</p>
+
+        <p class="meth-text"><strong>What would change this</strong><br>
+        A mixed price regime (roughly equal up/down days) or a momentum signal that consistently clears the base rate in held-out tests. We'll update this section when that happens.</p>
       </div>
     `);
   }
@@ -890,7 +1126,7 @@ async function refreshData() {
     renderChart(allReadings, currentRange);
     renderHero(allReadings, fc);
     renderStaleBanner(fc);
-    renderModelSignal(fc);
+    renderModelSignal(fc, allReadings);
     // Ψ3C.2: stagger visible data cards to confirm refresh visually
     staggerEnter([
       document.getElementById("comparison-section"),
@@ -1165,7 +1401,7 @@ function initPullToRefresh() {
   const fc = await fcPromise;
   renderHero(allReadings, fc);
   renderStaleBanner(fc);
-  renderModelSignal(fc);
+  renderModelSignal(fc, allReadings);  // first render — coverage% uses fallback until backtest loads
 
   // Remaining optional data (all gracefully degrade on failure).
   const [bt, commentary, drift] = await Promise.allSettled([
@@ -1182,10 +1418,22 @@ function initPullToRefresh() {
     });
   }
 
+  const btData = bt.status === "fulfilled" ? bt.value : null;
+  renderModelSignal(fc, allReadings, btData);  // re-render with coverage% from backtest
   renderCommentary(commentary.status === "fulfilled" ? commentary.value : null);
+  renderForecastVsActual(btData);
   renderMethodology(
     fc,
-    bt.status        === "fulfilled" ? bt.value        : null,
-    drift.status     === "fulfilled" ? drift.value     : null,
+    btData,
+    drift.status === "fulfilled" ? drift.value : null,
   );
+
+  // Dismiss chart callout when tapping outside the chart canvas (Φ8C'/Ψ3C.3)
+  const chartCanvas = document.getElementById("chart");
+  document.addEventListener("click", (e) => {
+    if (chartCanvas && e.target !== chartCanvas && chartPinnedIndex !== null) {
+      chartPinnedIndex = null;
+      if (chart) chart.update("none");
+    }
+  }, { passive: true, capture: false });
 })();

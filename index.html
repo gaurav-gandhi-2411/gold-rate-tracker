@@ -148,8 +148,14 @@
           <p class="commentary-eyebrow">
             <span aria-hidden="true">✨</span> Today's read
           </p>
-          <p class="commentary-text" id="commentary-text">Loading…</p>
-          <p class="commentary-meta" id="commentary-meta"></p>
+          <!-- Φ8C'/Ψ3C.3: skeleton shown while commentary loads -->
+          <div class="commentary-skeleton" id="commentary-skeleton" aria-hidden="true">
+            <div class="skel" style="height:14px;width:70%;border-radius:4px;margin-bottom:8px"></div>
+            <div class="skel" style="height:14px;width:85%;border-radius:4px;margin-bottom:8px"></div>
+            <div class="skel" style="height:14px;width:55%;border-radius:4px"></div>
+          </div>
+          <p class="commentary-text" id="commentary-text" hidden></p>
+          <p class="commentary-meta" id="commentary-meta" hidden></p>
         </div>
       </section>
 
@@ -157,6 +163,11 @@
       <section class="model-signal-section" id="model-signal-section" hidden
                aria-label="5-day price outlook">
         <h2>5-day outlook</h2>
+        <!-- Φ8C'/Ψ3C.3: skeleton shown while signal loads -->
+        <div class="model-signal-skeleton" id="model-signal-skeleton" aria-hidden="true">
+          <div class="skel" style="height:20px;width:45%;border-radius:4px;margin-bottom:8px"></div>
+          <div class="skel" style="height:16px;width:65%;border-radius:4px"></div>
+        </div>
         <div class="model-signal-body" id="model-signal-body"></div>
       </section>
 
@@ -178,6 +189,12 @@
       <!-- 7. HISTORY -->
       <section class="history-section" id="section-history" aria-label="Price history">
         <h2>History</h2>
+        <!-- Φ8C'/Ψ3C.3: skeleton shown while history loads -->
+        <div class="history-skeleton" id="history-skeleton" aria-hidden="true">
+          <div class="skel" style="height:40px;width:100%;border-radius:6px;margin-bottom:8px"></div>
+          <div class="skel" style="height:40px;width:100%;border-radius:6px;margin-bottom:8px"></div>
+          <div class="skel" style="height:40px;width:80%;border-radius:6px"></div>
+        </div>
         <div class="history-wrap" id="history-wrap">
           <!-- Desktop table (≥640px) -->
           <table class="history history-table">
@@ -200,10 +217,21 @@
         <button class="history-show-all" id="history-show-all" hidden></button>
       </section>
 
+      <!-- 7b. FORECAST TRACK RECORD — past forecasts vs actual prices -->
+      <section class="track-record-section" id="section-track-record" hidden
+               aria-label="Past forecast accuracy — flat-hold vs actual prices">
+        <h2>Past forecast checks</h2>
+        <p class="track-record-caption">30 recent five-day windows: flat-hold forecast (dashed) vs what actually happened (gold)</p>
+        <div class="track-record-chart-wrap">
+          <canvas id="track-record-chart" role="img"
+                  aria-label="Past flat-hold forecasts vs actual gold prices"></canvas>
+        </div>
+      </section>
+
       <!-- 8. METHODOLOGY ACCORDION -->
       <details class="methodology" id="section-info">
         <summary class="methodology-summary">
-          How this works · how accurate the signal is · historical checks
+          How this works · how good is this forecast? · historical checks
         </summary>
         <div class="methodology-body" id="methodology-body">
           <p class="meth-loading">Loading model details…</p>
