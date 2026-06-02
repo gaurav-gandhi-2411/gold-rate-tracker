@@ -43,5 +43,26 @@
     "wilcoxon_p": 0.1651,
     "n_folds_ge30ctx": 144,
     "beats_naive": false
+  },
+  {
+    "name": "premium_carry_flat",
+    "experiment": "Phi7B-Exp2",
+    "horizon": 5,
+    "params": {
+      "carry": "flat",
+      "components": [
+        "gold_usd",
+        "usd_inr"
+      ],
+      "n_folds_skipped_no_macro": 20,
+      "n_folds_skipped_sub30": 22,
+      "macro_coverage_note": "49 IBJA dates before macro range excluded; max ffill gap 3 trading days (weekend)"
+    },
+    "mae_variant": 269.65,
+    "mae_naive": 269.65,
+    "pct_improvement": -0.0,
+    "wilcoxon_p": 0.2044,
+    "n_folds_ge30ctx": 124,
+    "beats_naive": false
   }
 ]
