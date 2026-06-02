@@ -100,8 +100,7 @@ def _make_probe(status: str = "success") -> dict:
     return {
         "status": "success",
         "ibja_forecast": [
-            {"day": d, "p10": 14200.0, "p50": 14500.0 + d * 20, "p90": 14900.0}
-            for d in range(1, 6)
+            {"day": d, "p10": 14200.0, "p50": 14500.0 + d * 20, "p90": 14900.0} for d in range(1, 6)
         ],
         "ibja_last_value": 14450.0,
         "model_version": "test",
@@ -206,7 +205,9 @@ def test_pipeline_wiring_calibration_applied(tmp_path, monkeypatch):
         "majority_direction",
         "direction_consensus",
     ]:
-        assert field in cc, f"commentary.py consumer field missing from chronos_companion: {field!r}"
+        assert field in cc, (
+            f"commentary.py consumer field missing from chronos_companion: {field!r}"
+        )
 
     # app.js reads (lines 509-806):
     for field in [
@@ -286,7 +287,9 @@ def test_pipeline_wiring_probe_failed_triggers_t5(tmp_path, monkeypatch):
     assert fc["model_fallback"] is True, "model_fallback must be True when probe failed"
 
     cc = fc["chronos_companion"]
-    assert cc["status"] == "failed", f"chronos_companion.status must be 'failed', got {cc['status']!r}"
+    assert cc["status"] == "failed", (
+        f"chronos_companion.status must be 'failed', got {cc['status']!r}"
+    )
     assert cc["lean_direction"] == "neutral", (
         f"lean_direction must be 'neutral' for failed probe, got {cc['lean_direction']!r}"
     )
