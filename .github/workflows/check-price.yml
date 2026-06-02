@@ -2,11 +2,11 @@ name: Check Gold Price
 
 on:
   schedule:
-    # Every 4 hours, at minute 0 (UTC). India is UTC+5:30, so this fires at
-    # ~05:30, 09:30, 13:30, 17:30, 21:30, 01:30 IST (6 runs/day).
+    # Every 3 hours, at minute 0 (UTC). India is UTC+5:30, so this fires at
+    # ~05:30, 08:30, 11:30, 14:30, 17:30, 20:30, 23:30, 02:30 IST (8 runs/day).
     # T8 morning window 08-14 IST and evening window 18-22 IST each contain
-    # at least one 4h-cadence slot, so twice-daily digests are unaffected.
-    - cron: "0 */4 * * *"
+    # at least one 3h-cadence slot, so twice-daily digests are unaffected.
+    - cron: "0 */3 * * *"
   workflow_dispatch: # allows manual run from the Actions tab
   push:
     branches: [master]
