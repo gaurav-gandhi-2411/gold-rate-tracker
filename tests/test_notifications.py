@@ -249,16 +249,47 @@ def test_t1_blocked_probe_failure():
     assert all(a.trigger_id != "T1" for a in alerts)
 
 
-def test_t1_blocked_dir_acc_gate():
+def test_t1_skips_momentum_up():
+    """T1 skips when 7d momentum is up (wrong direction)."""
     alerts = check_triggers(
         _forecast(warmup=False),
         _probe_down(strength_pct=1.0),
-        _prices_down(),
-        _backtest_inaccurate(30),  # dir_acc = 0.0 < 0.55
+        _prices_up(),  # momentum is up ~5%
+        _backtest_accurate(30),
         NotificationState(),
         _ist(2026, 5, 19, 14, 0),
     )
-    assert all(a.trigger_id != "T1" for a in alerts)
+    assert all(a.trigger_id != "T1" for a in alerts), "T1 must NOT fire when momentum is up"
+
+
+def test_t1_skips_momentum_too_small():
+    """T1 skips when |mom_pct| < 0.5% (below the meaningful-move threshold)."""
+    alerts = check_triggers(
+        _forecast(warmup=False),
+        _probe_down(strength_pct=1.0),
+        _prices_flat(),  # 0% change
+        _backtest_accurate(30),
+        NotificationState(),
+        _ist(2026, 5, 19, 14, 0),
+    )
+    assert all(a.trigger_id != "T1" for a in alerts), "T1 must NOT fire on flat/sub-0.5% prices"
+
+
+def test_t1_fires_regardless_of_probe_majority():
+    """T1 fires on momentum even when probe majority_direction is 'up' (Chronos gate gone)."""
+    probe = _probe_down(strength_pct=1.0)
+    probe["majority_direction"] = "up"  # would have blocked T1 under old gate
+    probe["direction_consensus"] = 1.0
+    alerts = check_triggers(
+        _forecast(warmup=False),
+        probe,
+        _prices_down(),
+        _backtest_accurate(30),
+        NotificationState(),
+        _ist(2026, 5, 19, 14, 0),
+    )
+    t1 = [a for a in alerts if a.trigger_id == "T1"]
+    assert len(t1) == 1, "T1 must fire on momentum regardless of probe majority_direction"
 
 
 def test_t1_cooldown_blocks_second_call():
@@ -301,16 +332,47 @@ def test_t2_fires():
     assert "Rs." in t2.body
 
 
-def test_t2_blocked_dir_acc_gate():
+def test_t2_skips_momentum_down():
+    """T2 skips when 7d momentum is down (wrong direction)."""
     alerts = check_triggers(
         _forecast(warmup=False),
         _probe_up(strength_pct=1.0),
-        _prices_up(),
-        _backtest_inaccurate(30),
+        _prices_down(),  # momentum is down ~5%
+        _backtest_accurate(30),
         NotificationState(),
         _ist(2026, 5, 19, 14, 0),
     )
-    assert all(a.trigger_id != "T2" for a in alerts)
+    assert all(a.trigger_id != "T2" for a in alerts), "T2 must NOT fire when momentum is down"
+
+
+def test_t2_skips_momentum_too_small():
+    """T2 skips when |mom_pct| < 0.5% (below the meaningful-move threshold)."""
+    alerts = check_triggers(
+        _forecast(warmup=False),
+        _probe_up(strength_pct=1.0),
+        _prices_flat(),  # 0% change
+        _backtest_accurate(30),
+        NotificationState(),
+        _ist(2026, 5, 19, 14, 0),
+    )
+    assert all(a.trigger_id != "T2" for a in alerts), "T2 must NOT fire on flat/sub-0.5% prices"
+
+
+def test_t2_fires_regardless_of_probe_majority():
+    """T2 fires on momentum even when probe majority_direction is 'down' (Chronos gate gone)."""
+    probe = _probe_up(strength_pct=1.0)
+    probe["majority_direction"] = "down"  # would have blocked T2 under old gate
+    probe["direction_consensus"] = 1.0
+    alerts = check_triggers(
+        _forecast(warmup=False),
+        probe,
+        _prices_up(),
+        _backtest_accurate(30),
+        NotificationState(),
+        _ist(2026, 5, 19, 14, 0),
+    )
+    t2 = [a for a in alerts if a.trigger_id == "T2"]
+    assert len(t2) == 1, "T2 must fire on momentum regardless of probe majority_direction"
 
 
 def test_t2_blocked_probe_failure():
@@ -1095,239 +1157,49 @@ def test_state_round_trip_includes_t6_field(tmp_path: Path):
 
 
 # ---------------------------------------------------------------------------
-# Phi4 pass 2/2 — T1/T2 consensus gate (PR Phi4)
+# ADR 020 momentum gate — T1/T2 re-pointed to 7-day realised momentum
+# ---------------------------------------------------------------------------
+# The old Phi4 consensus gate (direction_consensus >= 0.6) is removed — it was
+# always true (model deterministic, consensus always 1.0). T1/T2 now fire on
+# N=7d momentum >= 0.5% in the correct direction. Probe majority_direction and
+# direction_consensus fields are ignored for gating purposes.
 # ---------------------------------------------------------------------------
 
 
-def _probe_v2_down(
-    last: float = 14000.0,
-    strength_pct: float = 1.0,
-    majority_direction: str = "down",
-    direction_consensus: float = 1.0,
-    num_samples: int = 5,
-) -> dict:
-    """Build a v2-schema probe dict with explicit majority_direction / direction_consensus."""
-    p50 = last * (1 - strength_pct / 100)
-    probe = _probe(last=last, p50_list=[p50] * 5)
-    probe["majority_direction"] = majority_direction
-    probe["direction_consensus"] = direction_consensus
-    probe["num_samples"] = num_samples
-    probe["sample_directions"] = [majority_direction] * num_samples
-    return probe
-
-
-def _probe_v2_up(
-    last: float = 14000.0,
-    strength_pct: float = 1.0,
-    majority_direction: str = "up",
-    direction_consensus: float = 1.0,
-    num_samples: int = 5,
-) -> dict:
-    """Build a v2-schema probe dict with explicit majority_direction / direction_consensus."""
-    p50 = last * (1 + strength_pct / 100)
-    probe = _probe(last=last, p50_list=[p50] * 5)
-    probe["majority_direction"] = majority_direction
-    probe["direction_consensus"] = direction_consensus
-    probe["num_samples"] = num_samples
-    probe["sample_directions"] = [majority_direction] * num_samples
-    return probe
-
-
-# --- T1 consensus gate tests ---
-
-
-def test_t1_fires_majority_down_consensus_0_6():
-    """(a) T1 fires when majority=down and consensus exactly 0.6."""
+def test_t1_copy_is_description_not_forecast():
+    """T1 body must say 'past 7 days' (past-tense description) and never say 'will' or 'signal'."""
     alerts = check_triggers(
         _forecast(warmup=False),
-        _probe_v2_down(strength_pct=1.0, direction_consensus=0.6),
+        _probe_down(strength_pct=1.0),
         _prices_down(),
         _backtest_accurate(30),
         NotificationState(),
         _ist(2026, 5, 19, 14, 0),
     )
-    t1 = [a for a in alerts if a.trigger_id == "T1"]
-    assert len(t1) == 1, "T1 must fire at consensus=0.6"
+    t1 = next((a for a in alerts if a.trigger_id == "T1"), None)
+    assert t1 is not None, "T1 must fire"
+    assert "past 7 days" in t1.body, "T1 body must anchor move as past"
+    assert "will" not in t1.body.lower(), "T1 body must not use 'will'"
+    assert "signal" not in t1.body.lower(), "T1 body must not reference a signal"
+    assert "Rs." in t1.body
 
 
-def test_t1_fires_majority_down_consensus_1_0():
-    """(b) T1 fires when majority=down and consensus=1.0 (5-of-5 unanimous)."""
+def test_t2_copy_is_description_not_forecast():
+    """T2 body must say 'past 7 days' (past-tense description) and never say 'will' or 'signal'."""
     alerts = check_triggers(
         _forecast(warmup=False),
-        _probe_v2_down(strength_pct=1.0, direction_consensus=1.0),
-        _prices_down(),
-        _backtest_accurate(30),
-        NotificationState(),
-        _ist(2026, 5, 19, 14, 0),
-    )
-    t1 = [a for a in alerts if a.trigger_id == "T1"]
-    assert len(t1) == 1, "T1 must fire at consensus=1.0"
-
-
-def test_t1_skips_majority_down_consensus_0_4():
-    """(c) T1 skips when majority=down but consensus only 0.4 (2-of-5)."""
-    alerts = check_triggers(
-        _forecast(warmup=False),
-        _probe_v2_down(strength_pct=1.0, direction_consensus=0.4),
-        _prices_down(),
-        _backtest_accurate(30),
-        NotificationState(),
-        _ist(2026, 5, 19, 14, 0),
-    )
-    assert all(a.trigger_id != "T1" for a in alerts), "T1 must NOT fire at consensus=0.4"
-
-
-def test_t1_skips_majority_up_high_consensus():
-    """(d) T1 skips when majority=up even with consensus=1.0 (wrong direction)."""
-    alerts = check_triggers(
-        _forecast(warmup=False),
-        _probe_v2_down(
-            strength_pct=1.0,
-            majority_direction="up",
-            direction_consensus=1.0,
-        ),
-        _prices_down(),
-        _backtest_accurate(30),
-        NotificationState(),
-        _ist(2026, 5, 19, 14, 0),
-    )
-    assert all(a.trigger_id != "T1" for a in alerts), "T1 must NOT fire when majority_direction=up"
-
-
-def test_t1_skips_missing_majority_direction_v1_schema():
-    """(e) T1 skips on v1-schema probe with no majority_direction field (backward-compat)."""
-    # Build a probe WITHOUT majority_direction — simulates a v1-schema probe file.
-    probe = _probe(last=14000.0, p50_list=[14000.0 * (1 - 1.0 / 100)] * 5)
-    # Deliberately do NOT add majority_direction or direction_consensus.
-    assert "majority_direction" not in probe
-
-    alerts = check_triggers(
-        _forecast(warmup=False),
-        probe,
-        _prices_down(),
-        _backtest_accurate(30),
-        NotificationState(),
-        _ist(2026, 5, 19, 14, 0),
-    )
-    assert all(
-        a.trigger_id != "T1" for a in alerts
-    ), "T1 must NOT fire when majority_direction is absent (v1 schema back-compat)"
-
-
-def test_t1_skips_majority_neutral():
-    """(f) T1 skips when majority=neutral (even with consensus=1.0)."""
-    alerts = check_triggers(
-        _forecast(warmup=False),
-        _probe_v2_down(
-            strength_pct=1.0,
-            majority_direction="neutral",
-            direction_consensus=1.0,
-        ),
-        _prices_down(),
-        _backtest_accurate(30),
-        NotificationState(),
-        _ist(2026, 5, 19, 14, 0),
-    )
-    assert all(
-        a.trigger_id != "T1" for a in alerts
-    ), "T1 must NOT fire when majority_direction=neutral"
-
-
-def test_t1_skips_when_strength_too_low_despite_full_consensus():
-    """(h) T1 skips when strength < 0.5% even with perfect consensus — gates are independent."""
-    alerts = check_triggers(
-        _forecast(warmup=False),
-        _probe_v2_down(strength_pct=0.3, direction_consensus=1.0),
-        _prices_down(),
-        _backtest_accurate(30),
-        NotificationState(),
-        _ist(2026, 5, 19, 14, 0),
-    )
-    assert all(
-        a.trigger_id != "T1" for a in alerts
-    ), "T1 must NOT fire when strength=0.3% (below 0.5% gate)"
-
-
-# --- T2 consensus gate tests (mirror of T1) ---
-
-
-def test_t2_fires_majority_up_consensus_0_6():
-    """(g-1) T2 fires when majority=up and consensus exactly 0.6."""
-    alerts = check_triggers(
-        _forecast(warmup=False),
-        _probe_v2_up(strength_pct=1.0, direction_consensus=0.6),
+        _probe_up(strength_pct=1.0),
         _prices_up(),
         _backtest_accurate(30),
         NotificationState(),
         _ist(2026, 5, 19, 14, 0),
     )
-    t2 = [a for a in alerts if a.trigger_id == "T2"]
-    assert len(t2) == 1, "T2 must fire at consensus=0.6"
-
-
-def test_t2_skips_majority_down_high_consensus():
-    """(g-2) T2 skips when majority=down even with consensus=1.0."""
-    alerts = check_triggers(
-        _forecast(warmup=False),
-        _probe_v2_up(
-            strength_pct=1.0,
-            majority_direction="down",
-            direction_consensus=1.0,
-        ),
-        _prices_up(),
-        _backtest_accurate(30),
-        NotificationState(),
-        _ist(2026, 5, 19, 14, 0),
-    )
-    assert all(
-        a.trigger_id != "T2" for a in alerts
-    ), "T2 must NOT fire when majority_direction=down"
-
-
-def test_t2_skips_majority_up_consensus_0_4():
-    """(g-3) T2 skips when majority=up but consensus only 0.4."""
-    alerts = check_triggers(
-        _forecast(warmup=False),
-        _probe_v2_up(strength_pct=1.0, direction_consensus=0.4),
-        _prices_up(),
-        _backtest_accurate(30),
-        NotificationState(),
-        _ist(2026, 5, 19, 14, 0),
-    )
-    assert all(a.trigger_id != "T2" for a in alerts), "T2 must NOT fire at consensus=0.4"
-
-
-def test_t2_skips_missing_majority_direction_v1_schema():
-    """(g-4) T2 skips on v1-schema probe with no majority_direction field (backward-compat)."""
-    probe = _probe(last=14000.0, p50_list=[14000.0 * (1 + 1.0 / 100)] * 5)
-    assert "majority_direction" not in probe
-
-    alerts = check_triggers(
-        _forecast(warmup=False),
-        probe,
-        _prices_up(),
-        _backtest_accurate(30),
-        NotificationState(),
-        _ist(2026, 5, 19, 14, 0),
-    )
-    assert all(
-        a.trigger_id != "T2" for a in alerts
-    ), "T2 must NOT fire when majority_direction is absent (v1 schema back-compat)"
-
-
-def test_t2_skips_when_strength_too_low_despite_full_consensus():
-    """(g-5) T2 skips when strength < 0.5% even with perfect consensus."""
-    alerts = check_triggers(
-        _forecast(warmup=False),
-        _probe_v2_up(strength_pct=0.3, direction_consensus=1.0),
-        _prices_up(),
-        _backtest_accurate(30),
-        NotificationState(),
-        _ist(2026, 5, 19, 14, 0),
-    )
-    assert all(
-        a.trigger_id != "T2" for a in alerts
-    ), "T2 must NOT fire when strength=0.3% (below 0.5% gate)"
+    t2 = next((a for a in alerts if a.trigger_id == "T2"), None)
+    assert t2 is not None, "T2 must fire"
+    assert "past 7 days" in t2.body, "T2 body must anchor move as past"
+    assert "will" not in t2.body.lower(), "T2 body must not use 'will'"
+    assert "signal" not in t2.body.lower(), "T2 body must not reference a signal"
+    assert "Rs." in t2.body
 
 
 # ---------------------------------------------------------------------------

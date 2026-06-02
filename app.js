@@ -515,11 +515,6 @@ function renderModelSignal(fc) {
     ? `Right about ${Math.round(cc.direction_acc_30f * 100)}% of the time recently`
     : "—";
 
-  let consensusText = "—";
-  if (typeof cc.direction_consensus === "number") {
-    consensusText = cc.direction_consensus >= 0.8 ? "Consistent signal" : "Mixed signal";
-  }
-
   const body = document.getElementById("model-signal-body");
   // XSS-safe: all interpolated values are numbers, booleans, or hardcoded label strings
   // derived from forecast.json. No external text or LLM content reaches this template.
@@ -531,8 +526,6 @@ function renderModelSignal(fc) {
       </div>
       <div class="signal-stats-row">
         <span>${dirAcc}</span>
-        <span class="signal-dot">·</span>
-        <span>${consensusText}</span>
       </div>
       <p class="signal-note">A guide for which way prices may move — not a guarantee. Updated roughly every 3 hours.</p>
     </div>

@@ -31,11 +31,12 @@ CHRONOS_BOLT_TINY_MODEL_ID = "amazon/chronos-bolt-tiny"
 CHRONOS_BOLT_TINY_REVISION = "a0e552de83495b5c28c14c71c374f3e33280b340"
 
 DEFAULT_HORIZON = 5
-DEFAULT_NUM_SAMPLES = 5
+# Model is deterministic: predict_quantiles returns byte-identical results across calls
+# on the same context. 5 calls are 5× redundant work. Single call per probe — ADR 020.
+DEFAULT_NUM_SAMPLES = 1
 DEFAULT_QUANTILES = [0.1, 0.5, 0.9]
 _MIN_CONTEXT_DAYS = 8
 _DIRECTION_NEUTRAL_THRESHOLD = 0.001  # |delta|/ibja_last below this is "neutral"
-_CONSENSUS_GATE = 0.6  # documented threshold; used by notifications, here for reference only
 
 logger = logging.getLogger(__name__)
 
@@ -247,12 +248,10 @@ def run_probe(
         return probe
     probe["wall_clock_ms"]["pipeline_load"] = int((time.monotonic() - t_load) * 1000)
 
-    # --- Forecast 5 independent samples ---
+    # --- Single-call forecast (model is deterministic — ADR 020) ---
     t_fc = time.monotonic()
-    sample_forecasts: list[pd.DataFrame] = []
     try:
-        for _ in range(DEFAULT_NUM_SAMPLES):
-            sample_forecasts.append(forecast_ibja(pipeline, ibja_series))
+        ibja_fc = forecast_ibja(pipeline, ibja_series)
     except Exception as exc:
         logger.error("chronos_probe: forecast failed: %s", exc)
         probe["status"] = "forecast_failed"
@@ -261,9 +260,6 @@ def run_probe(
         _write_probe(probe, out_path)
         return probe
     probe["wall_clock_ms"]["forecast"] = int((time.monotonic() - t_fc) * 1000)
-
-    # Use first sample for the existing ibja_forecast field (back-compat with consumers)
-    ibja_fc = sample_forecasts[0]
 
     probe["ibja_forecast"] = [
         {
@@ -276,16 +272,17 @@ def run_probe(
         for idx, (_, row) in enumerate(ibja_fc.iterrows())
     ]
 
-    # --- Per-sample direction analysis (Phi4) ---
+    # --- Direction classification ---
     ibja_last_value: float = (
         float(probe["ibja_last_value"]) if probe.get("ibja_last_value") else 0.0
     )
-    sample_directions = [_classify_sample_direction(df, ibja_last_value) for df in sample_forecasts]
-    majority, consensus = _aggregate_directions(sample_directions)
-    probe["num_samples"] = DEFAULT_NUM_SAMPLES
-    probe["sample_directions"] = sample_directions
-    probe["majority_direction"] = majority
-    probe["direction_consensus"] = consensus
+    direction = _classify_sample_direction(ibja_fc, ibja_last_value)
+    probe["num_samples"] = 1
+    probe["sample_directions"] = [direction]
+    probe["majority_direction"] = direction
+    # direction_consensus is a constant 1.0: model is deterministic, 1 call, 1 result — ADR 020.
+    # Field kept in schema for backward-compat; carries no information.
+    probe["direction_consensus"] = 1.0
 
     # --- Calibration ---
     t_calib = time.monotonic()

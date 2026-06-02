@@ -1,6 +1,7 @@
 # ADR 015 - Multi-Sample Chronos Probe with Consensus Gating
 
-**Status:** Accepted 2026-05-22
+**Status:** Accepted 2026-05-22 — Superseded by ADR 020
+**Superseded-by:** ADR 020 (Consensus Is Degenerate; Re-point T1/T2 to Momentum)
 **Author:** Gaurav Gandhi
 
 ---

@@ -284,39 +284,34 @@ def _check_t1(
     state: NotificationState,
     now_ist: datetime,
 ) -> PendingAlert | None:
-    """T1 — Predicted 5d drop: Chronos leans down AND 7d momentum down."""
+    """T1 — 7-day momentum down: prices have been trending down over the past week.
+
+    ADR 020: Chronos consensus gate removed (model is deterministic, gate was inert).
+    Trigger is now purely momentum-based — a description of observed trend, not a forecast.
+    """
     if _in_cooldown("T1", state, 24.0):
         return None
     if _count_sent(state, ["T1", "T2", "T3"]) >= _MAX_T123_PER_24H:
         return None
     if probe.get("status") != "success":
         return None
-    # Gate on ≥30 backtest folds, not on forecast.json's warmup flag — the
-    # warmup field is written by the legacy LightGBM path and will not exist
-    # post-PR-H. n_folds is written by ml/backtest.py, independent of the
-    # inference path.
+    # Gate on ≥30 backtest folds — ensures the conformal PI and naive_mae are reliable.
     if backtest.get("n_folds", 0) < 30:
-        return None
-    _direction, strength = compute_chronos_lean(probe)
-    majority_dir = probe.get("majority_direction")
-    consensus = probe.get("direction_consensus", 0.0)
-    # Phi4: gate on multi-sample majority consensus (>= 0.6) instead of single-sample direction.
-    # strength check stays — it's an independent magnitude threshold.
-    if majority_dir != "down" or consensus < 0.6 or strength < 0.5:
         return None
     mom_dir, mom_pct = compute_recent_momentum(prices)
     if mom_dir != "down":
         return None
-    if compute_dir_acc_30f(backtest) < 0.55:
+    # Require a meaningful move (>= 0.5%) — filters out sub-noise drift.
+    if abs(mom_pct) < 0.5:
+        logger.debug("T1 suppressed: momentum %.3f%% below 0.5%% threshold", mom_pct)
         return None
     current = prices[-1]["22k"] if prices else 0
     abs_mom = abs(mom_pct)
-    title = "Gold: Prices may ease lower over the next few days"
+    title = "Gold: 22K prices are down this week"
     body = (
         f"Gold 22K: Rs.{current}. "
-        f"Down {abs_mom:.1f}% this week. "
-        "Both recent momentum and the direction signal agree prices may ease lower. "
-        "A lean, not a certainty -- check the app for context."
+        f"Prices are down {abs_mom:.1f}% over the past 7 days. "
+        "A recent trend -- not a forecast. Check the app for context."
     )
     return _make_alert("T1", title, body, 4, ["decline", "chart_with_downwards_trend"], now_ist)
 
@@ -329,7 +324,11 @@ def _check_t2(
     state: NotificationState,
     now_ist: datetime,
 ) -> PendingAlert | None:
-    """T2 — Predicted 5d rise: Chronos leans up AND 7d momentum up."""
+    """T2 — 7-day momentum up: prices have been trending up over the past week.
+
+    ADR 020: Chronos consensus gate removed (model is deterministic, gate was inert).
+    Trigger is now purely momentum-based — a description of observed trend, not a forecast.
+    """
     if _in_cooldown("T2", state, 24.0):
         return None
     if _count_sent(state, ["T1", "T2", "T3"]) >= _MAX_T123_PER_24H:
@@ -338,25 +337,19 @@ def _check_t2(
         return None
     if backtest.get("n_folds", 0) < 30:
         return None
-    _direction, strength = compute_chronos_lean(probe)
-    majority_dir = probe.get("majority_direction")
-    consensus = probe.get("direction_consensus", 0.0)
-    # Phi4: gate on multi-sample majority consensus (>= 0.6) instead of single-sample direction.
-    # strength check stays — it's an independent magnitude threshold.
-    if majority_dir != "up" or consensus < 0.6 or strength < 0.5:
-        return None
     mom_dir, mom_pct = compute_recent_momentum(prices)
     if mom_dir != "up":
         return None
-    if compute_dir_acc_30f(backtest) < 0.55:
+    # Require a meaningful move (>= 0.5%) — filters out sub-noise drift.
+    if abs(mom_pct) < 0.5:
+        logger.debug("T2 suppressed: momentum %.3f%% below 0.5%% threshold", mom_pct)
         return None
     current = prices[-1]["22k"] if prices else 0
-    title = "Gold: Prices may edge higher over the next few days"
+    title = "Gold: 22K prices are up this week"
     body = (
         f"Gold 22K: Rs.{current}. "
-        f"Up {mom_pct:.1f}% this week. "
-        "Both recent momentum and the direction signal agree prices may edge up. "
-        "A lean, not a certainty -- check the app for context."
+        f"Prices are up {mom_pct:.1f}% over the past 7 days. "
+        "A recent trend -- not a forecast. Check the app for context."
     )
     return _make_alert("T2", title, body, 3, ["rise", "chart_with_upwards_trend"], now_ist)
 
@@ -389,7 +382,7 @@ def _check_t3(
     abs_delta = abs(delta)
     priority = 5 if abs_delta >= 300 else 4
     title = f"Gold: Rs.{abs_delta} {direction} detected ({pct:+.1f}%)"
-    body = f"Gold 22K: Rs.{current} ({pct:+.1f}% from Rs.{prev}). " "Check the app for context."
+    body = f"Gold 22K: Rs.{current} ({pct:+.1f}% from Rs.{prev}). Check the app for context."
     return _make_alert(
         "T3", title, body, priority, ["warning", "chart_with_upwards_trend"], now_ist
     )
@@ -543,7 +536,7 @@ def _check_t7(
     elif lean_dir == "down":
         lean_hint = " Prices may ease a little."
     title = f"Gold daily check: Rs.{current}"
-    body = f"Gold 22K: Rs.{current}. " f"{week_desc}." f"{lean_hint} " "System working normally."
+    body = f"Gold 22K: Rs.{current}. {week_desc}.{lean_hint} System working normally."
     return _make_alert("T7", title, body, 2, ["robot", "white_check_mark"], now_ist)
 
 
