@@ -122,3 +122,38 @@ test("dedupForChart: run-then-change emits start+end+change", () => {
   assert.equal(res[1].timestamp, "t3");
   assert.equal(res[2].timestamp, "t4");
 });
+
+// ── Chart series dedup (renderChart uses dedupForChart) ───────────────────────
+// renderChart calls dedupForChart(filtered) before building labels/data arrays,
+// so these tests verify the data the trend chart actually receives.
+
+test("chart series: 40 flat readings (one 3h price hold) collapse to 2 points", () => {
+  // Real-world case: scraper fires every 3h, price unchanged for ~5 days = ~40 readings.
+  // renderChart must hand Chart.js only 2 points (start + end), not 40.
+  const flat = Array.from({ length: 40 }, (_, i) => ({
+    "22k": 14365, "24k": 15678, "18k": 11751,
+    timestamp: new Date(Date.UTC(2026, 5, 1, i * 3)).toISOString(),
+  }));
+  const chartPts = dedupForChart(flat);
+  assert.equal(chartPts.length, 2, "40 flat readings must collapse to 2 chart points");
+  assert.equal(chartPts[0].timestamp, flat[0].timestamp, "first point is the run start");
+  assert.equal(chartPts[chartPts.length - 1].timestamp, flat[flat.length - 1].timestamp, "last point is the run end");
+});
+
+test("chart series: three price levels produce correct stepped segments", () => {
+  // [A×3, B×2, C×1] → [A_start, A_end, B_start, B_end, C]
+  // Each segment has its own start+end boundary; single-reading runs appear once.
+  const pts = dedupForChart([
+    r(14000, "t1"), r(14000, "t2"), r(14000, "t3"),
+    r(14200, "t4"), r(14200, "t5"),
+    r(14300, "t6"),
+  ]);
+  assert.equal(pts.length, 5, "three runs → 5 chart points (2+2+1)");
+  assert.equal(pts[0]["22k"], 14000); // A start
+  assert.equal(pts[1]["22k"], 14000); // A end (t3)
+  assert.equal(pts[2]["22k"], 14200); // B start (t4)
+  assert.equal(pts[3]["22k"], 14200); // B end (t5)
+  assert.equal(pts[4]["22k"], 14300); // C (single point)
+  assert.equal(pts[1].timestamp, "t3");
+  assert.equal(pts[2].timestamp, "t4");
+});
