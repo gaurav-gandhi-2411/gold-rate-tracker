@@ -29,14 +29,13 @@ Also tested:
 from __future__ import annotations
 
 import json
-from datetime import UTC, datetime, timedelta
+from datetime import datetime
 from zoneinfo import ZoneInfo
-
-import pandas as pd
-import pytest
 
 import ml.calibration as cal
 import ml.inference as inf
+import pandas as pd
+import pytest
 from ml.inference import _build_chronos_companion
 from ml.notifications import (
     NotificationState,
@@ -343,7 +342,9 @@ def test_t6_queued_during_quiet_hours_not_requeued():
 
     # Run 2: still quiet hours — T6 must NOT re-fire (stamp already set)
     quiet_ist_r2 = _ist(2026, 6, 13, 4, 30)  # 04:30 IST next calendar day — still quiet
-    alerts_r2 = check_triggers({}, probe, prices, backtest, state, quiet_ist_r2, calibration=cal_valid)
+    alerts_r2 = check_triggers(
+        {}, probe, prices, backtest, state, quiet_ist_r2, calibration=cal_valid
+    )
     assert not any(a.trigger_id == "T6" for a in alerts_r2), (
         "T6 re-queued on second quiet-hours run — stamp-on-queue not applied to T6"
     )
