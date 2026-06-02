@@ -1298,6 +1298,9 @@ Tests: 4 unit tests for `extract_ge30ctx_gate_metrics`. Pre-commit clean. Lint C
 | 2026-06-02 | Φ9B-1: vs-7d/vs-30d avg and verdict avg30d compute over IST-day-deduped daily series (GG option b) | CC (INV-3) | Raw average over ~8 readings/day means a flat-held price dominates with ~8× weight; label says "daily average" but computation was time-weighted. Fix scoped to the two user-facing daily averages only; conformal PI, backtest, trend slope, current price stay raw (ADR 014). vsLow stays raw so intra-day extremes are captured. PR #69. |
 | 2026-06-02 | Φ9B-2 outlook card non-forecast line: positive-reason-first framing approved (GG) | GG (copy review) | "Today: ₹X. Gold's 5-day move is unpredictable, so we show the likely range above rather than guess a single number." — replaces the negation-first draft ("we don't forecast…"). Principle: range as the offering, non-forecast as principle not shortfall. Trend line approved as-is. PR #70. |
 | 2026-06-02 | Φ9B-3: initBottomNav() — open DETAILS first, scrollIntoView() in single rAF (device verification pending) | CC (INV-5) | Old order was scroll-then-open; iOS reflow from el.open=true cancelled in-flight smooth scroll. Reversed order + rAF chosen over setTimeout (fires on paint boundary, not wall-clock). Escalation path (double-rAF) documented. Device verification by GG required before merge (norm #14). PR #71. |
+| 2026-06-03 | Φ11-1: chart series dedup tests added — renderChart already used dedupForChart+stepped (landed Φ8C') | CC | Spec finding "trend chart never switched to dedupForChart" was stale at Φ11 write time; the implementation was already in place from commit 38084ba (Φ8C'). PR adds 2 JS tests asserting the chart data pipeline collapses flat runs: 40 identical readings → 2 points; 3 price levels → 5 stepped boundary points. Closes the test gap in the Φ11-1 acceptance criteria. PR #72. STALE-SPEC NOTE (GG): the finding was a consultant error — spec written same-day as Φ8C' merge, before the fix was known live. CC caught it by fetching deployed app.js directly: live site confirmed dedupForChart active, 28 raw readings → 10 stepped chart points. Flag-and-stop applies to consultant assertions too, not only executor work. |
+| 2026-06-03 | Φ11-2: product reframe to "is today a good price?" — two 30-day signals replace 5-day band headline; band demoted to volatility context | CC + GG (copy review) | FLAG-AND-STOP: 48 distinct IST days (2026-04-14 to 2026-06-03). 30-day window honest (48 ≥ 30). "90-day" window deferred — with 48 days, the 90d window overlaps the 30d window by 30/48 days (not independent). Band-at-90d revisit trigger: add band_pos_90d supporting line when distinct IST-day history reaches ~90 days. Verdict hierarchy: percentile_30d ≤30 → "lower than usual" / 31–69 → "around usual" / ≥70 → "higher than usual". Supporting: (1) coarse language ("Cheaper/Pricier/Around the middle of the past month") — 30 data points ≈ 3.3pp each, number precision not warranted; (2) vs-30d-average in Rs. 5-day conformal band demoted from headline to volatility context: "Gold's price typically moves about ±Rs.Z over 5 days." + range row + coverage%. computeGoodPriceSignals() pure function; 12 JS tests added. Consumer audit (norm #15): commentary.py SYSTEM_PROMPT unchanged, past-tense/no-advice guardrails already in place. PR #73. |
+| 2026-06-03 | Φ11-3: title changed from "Should I buy today?" to "Gold Rate Today · Is it a good price?"; favicon added | CC + GG (copy review) | "Should I buy today?" promised a buy-signal we explicitly do not provide (ADR 005/019). New title accurately describes the product: a price-comparison tool. Favicon: <link rel="icon" href="icons/icon-192.png"> reuses existing PWA icon (same "Au" gold-on-dark icon already wired for apple-touch-icon). OG/Twitter meta and meta description updated consistently. PWA manifest unchanged. PR #74. |
 
 ### Phi8A — Pipeline Hardening (2026-06-02)
 
@@ -1374,6 +1377,39 @@ Three items from diagnosis INV-3/INV-4/INV-5. PR #69 (Φ9B-1) ✅ merged; PR #70
 **Non-DETAILS regression:** non-DETAILS nav targets (Home, Trend, History) skip the guard; scroll deferred ~16ms (one frame), imperceptible.
 
 **Device verification.** Norm #14: must be verified on rendered behavior, not code review. This is the specific WI-5 code-review-only gap from the original PR #59 surfacing again. Verification = one-tap open+scroll observed on the live site by GG.
+
+---
+
+### Batch Φ11 — Product Reframe: "Is Today a Good Price?" 🟡 IN PROGRESS — 2026-06-03
+
+Three PRs. PR #72 (Φ11-1) merges on CI green. PR #73 (Φ11-2) and PR #74 (Φ11-3) pending CI.
+
+#### PR #72 — Φ11-1: Chart series dedup tests
+
+Closes the test gap in the Φ11-1 acceptance criteria. The trend chart already used `dedupForChart()` + `stepped:'before'` (landed Φ8C'/#53) — the spec's "finding" was stale at Φ11 write time. Adds 2 JS tests to `tests/test_dedup.js`: 40 flat readings → 2 chart points; 3 price levels → 5 stepped boundary points. 36/36 JS tests pass.
+
+#### PR #73 — Φ11-2: "Is today a good price?" reframe + 5-day band demotion
+
+**FLAG-AND-STOP:** 48 distinct IST days (2026-04-14 – 2026-06-03). 30-day window honest. "90-day" window deferred (30/48-day overlap with 30d window = not independent). Revisit trigger: add `band_pos_90d` supporting line when distinct IST-day history reaches ~90 days.
+
+**Product change.** Replaces "5-day outlook" section with "How does today's price compare?" — answering from the price record (provable fact) not a forecast.
+
+**Verdict hierarchy (GG-approved):**
+- Headline (percentile_30d ≤30): "Prices have been lower than usual lately"
+- Headline (31–69): "Prices are around usual levels lately"
+- Headline (≥70): "Prices have been higher than usual lately"
+- Supporting 1: coarse language ("Cheaper/Around the middle/Pricier of the past month") — 30 points ≈ 3.3pp, numeric precision not warranted (GG simplification)
+- Supporting 2: "₹Y below/above the 30-day average."
+- Divergence note: fires when percentile and vs-avg contradict (skewed distribution)
+- Band-at-90d: omitted for now; revisit at ~90 distinct days
+
+**5-day band demoted.** "Gold's price typically moves about ±₹Z over 5 days." + range row + coverage% — same honest numbers, framed as volatility description not forecast. Z = round(conformal_pi_half / 50) × 50.
+
+`computeGoodPriceSignals()` pure function; 12 new JS tests. Consumer audit (norm #15): `commentary.py` SYSTEM_PROMPT unchanged. 46/46 JS tests pass.
+
+#### PR #74 — Φ11-3: Honest title + favicon
+
+`<title>` changed from "Gold Rate · Should I buy today?" to "Gold Rate Today · Is it a good price?". OG/Twitter meta and meta description updated. `<link rel="icon" href="icons/icon-192.png">` added — reuses existing PWA icon (same "Au" icon already wired for apple-touch-icon). PWA manifest unchanged. Favicon manual verification at 16/32px recommended post-deploy (norm #14).
 
 ---
 
