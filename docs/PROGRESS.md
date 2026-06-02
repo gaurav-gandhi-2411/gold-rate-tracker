@@ -1446,6 +1446,69 @@ Two deferred dependabot major bumps validated and merged. Each PR: full suite + 
 
 **Verdict: MERGED.** CI: lint pass 2m39s.
 
+#### PR-Φ10A — driver-decomposition forecast experiment (analysis only, 2026-06-03)
+
+**Hypothesis:** `IBJA ≈ premium × gold_USD × USD/INR`. If we forecast the drivers (especially USD/INR, which has structural drift properties gold lacks) rather than carrying them flat, can the composed forecast beat flat-naive? This is the DRIVER-FORECAST version of Φ7's flat-carry experiment, which revealed the algebraic null.
+
+**FLAG-AND-STOP findings (resolved before building):**
+
+| Item | Finding |
+|---|---|
+| USD/INR + gold-USD macro history | 2.09 years (Apr 2024 – May 2026), 766 daily rows, 100% non-null |
+| IBJA-916 series | 179 rows (pm_916 non-null), Jan 2022 – Jun 2026; mostly daily (median gap 1 cal day) |
+| Two IBJA data-collection outages within overlap | 101 days (2025-08-08→2025-11-17) and 95 days (2026-01-12→2026-04-17) — IBJA scraper gaps, not macro gaps |
+| Overlap window | 130 IBJA rows with macro coverage; 125 effective walk-forward folds (context ≥30) |
+| Premium stability | 130 values, mean 0.972 (dimensionless, gram-normalized), CV 0.021 — very stable |
+| Fold gate (≥30) | PASS (125 >> 30) |
+
+**Experiment:** `ibja_hat = premium_hat × gold_usd_hat × usdinr_hat`
+- `premium_hat`: trailing-30-IBJA-observation median premium (stable; held flat)
+- `usdinr_hat`: drift model (last value + calendar_days_ahead × mean-30d-daily-change)
+- `gold_usd_hat`: variant A = random-walk (flat carry); variant B = drift (same window)
+- Drift projected over actual calendar day offsets to each IBJA actuals date (known in backtest)
+
+**Pre-registered gate (fixed before results):** ≥2% MAE improvement AND Wilcoxon p<0.05 AND n_folds_ge30ctx≥30 AND non_bull_signed_improvement≥−0.02.
+
+**Results (n=121 effective folds, 17 tests passing, 416 total tests green):**
+
+| Variant | MAE variant | MAE naive | % improvement | Wilcoxon p | Non-bull signed impr | beats_naive |
+|---|---|---|---|---|---|---|
+| usdinr=drift, gold=RW | Rs.226.03 | Rs.276.04 | +18.1% | 0.095 | −13.1% | **false** |
+| usdinr=drift, gold=drift | Rs.263.65 | Rs.276.04 | +4.5% | 0.1155 | −57.1% | **false** |
+
+**Gate analysis:**
+- `pct_ge_2pct`: PASS for both variants
+- `wilcoxon_lt_005`: FAIL for both (p=0.095 and p=0.116 > 0.05). Headline improvement is real but not statistically reliable at n=121.
+- `non_bull_not_inverted`: FAIL for both. Non-bull signed improvement is −13% and −57%. The USD/INR drift ran strongly upward over the macro window (INR depreciating) — this amplifies the forecast in bull markets but overshots in flat/down markets, making errors catastrophically worse on the non-bull subset. This is exactly the Φ7D/ADR-018 regime artifact pattern.
+
+**Falsifier outcomes:**
+- Gold_usd drift collapse (null): did NOT collapse — gold had non-trivial trailing drift. Drift variant genuinely adds the gold upward trend, which is why the gold_drift variant under-performs the gold_RW variant overall (gold amplifies USD/INR overshoot).
+- USD/INR ~random-walk (null): NOT observed — USD/INR drift is non-negligible (INR steadily depreciating). But the drift direction is upward, not noise-around-zero, making it the source of the non-bull failure rather than the source of signal.
+- Premium unstable: NOT observed — CV=0.021, very tight. The decomposition identity is reliable.
+- Verdict collapses to naive: NOT observed — the 18.1% headline improvement is real. The problem is regime sensitivity, not algebraic identity.
+
+**Recommendation: close-negative.** The driver-decomposition approach adds no production-safe improvement over flat-naive under the pre-registered gate. The USD/INR drift signal is a trend-continuation artifact: it amplifies bull-market performance but inverts sharply in the non-bull subset, failing gate 4 (ADR 018 precedent). Wilcoxon non-significance (p=0.095 with 121 folds) is a secondary failure confirming high fold-level variance. The 101/95-day IBJA collection outages contribute to this variance by producing folds with very long calendar horizons, amplifying the drift overshoot.
+
+**Iterate or close:** If future work expands IBJA history (denser daily coverage across both gap periods), a regime-conditioned variant could be revisited. At current data density, the non-bull inversion is unambiguous and the gate correctly rejects promotion. **Do NOT re-open** as a production candidate without: (a) ≥250 IBJA rows with dense daily coverage, (b) a conditional variant that reduces usdinr_drift to zero in non-bull regimes, (c) Wilcoxon p<0.05.
+
+**Artifact:** `data/experiments/phi10a_driver_decomp.json` committed. Analysis only — zero production-path files touched.
+
+---
+
+#### Series property established: trend-persistence in-regime, no out-of-regime edge (2026-06-03)
+
+**This is the THIRD independent confirmation of the same structural finding across Φ7D and Φ10A:**
+
+| Experiment | Mechanism | Full-set improvement | Non-bull signed impr | Verdict |
+|---|---|---|---|---|
+| Φ7D — drift_naive_span20, h=20 | IBJA own momentum (EWMA drift) | +5.2% (beats gate 1-3) | −565% (sign_flip; Φ7D entry) | ADR 018 codified |
+| Φ10A — driver_decomp, usdinr=drift, gold=RW, h=5 | Macro driver composition (USD/INR drift) | +18.1% (beats gate 1,3) | −13.1% | close-negative |
+| Φ10A — driver_decomp, usdinr=drift, gold=drift, h=5 | Macro driver composition (both drivers drift) | +4.5% (beats gate 1,3) | −57.1% | close-negative |
+
+Each confirmation uses a different mechanism — IBJA's own price momentum, USD/INR drift propagated through the decomposition identity, gold-USD drift — and all three collapse out-of-regime in the same direction: the model wins when the market trends up and loses when it does not. This is not a per-experiment artifact; it is a well-evidenced structural property of short-horizon INR gold at current IBJA data density.
+
+**Codified rule (effective 2026-06-03):** Future forecasting attempts on IBJA-916-PM (h=5) must clear the non-bull subset gate (`non_bull_signed_improvement >= −0.02`) to be considered real. The gate is load-bearing, not optional. A variant winning only on the full set while inverting on non-bull folds is a trend-continuation artifact regardless of the mechanism. Re-open criteria: ≥250 dense IBJA rows (filling the Aug→Nov 2025 and Jan→Apr 2026 collection gaps) + a regime-conditioned variant that explicitly handles the non-bull case + Wilcoxon p<0.05 on the non-bull-inclusive evaluation.
+
 ---
 
 ## Risks Register
