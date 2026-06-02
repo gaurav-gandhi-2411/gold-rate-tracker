@@ -33,6 +33,7 @@ from pathlib import Path
 import numpy as np
 
 from ml.notifications import NotificationState
+from ml.volatility import compute_vol_context
 
 ROOT = Path(__file__).resolve().parent.parent
 DATA_DIR = ROOT / "data"
@@ -223,6 +224,17 @@ def main() -> None:
     predicted_22k = current_22k
     lower = round(current_22k - conformal_pi_half)
     upper = round(current_22k + conformal_pi_half)
+
+    # 3a. Dynamic vol context — magnitude-of-movement estimate, NOT a forecast (ADR 005).
+    vol_ctx = compute_vol_context(prices, conformal_pi_half)
+    logger.info(
+        "Vol context: method=%s  half_width=Rs.%d  regime=%s  is_degraded=%s",
+        vol_ctx["method"],
+        vol_ctx["half_width"],
+        vol_ctx["regime"],
+        vol_ctx["is_degraded"],
+    )
+
     headline: dict = {
         "method": "naive_flat_hold",
         "predicted_22k": predicted_22k,
@@ -230,6 +242,7 @@ def main() -> None:
         "upper": upper,
         "conformal_pi_half": conformal_pi_half,
         "naive_mae_recent_30": naive_mae_recent_30,
+        "vol_context": dict(vol_ctx),
     }
 
     # 4. Chronos companion (read from probe; never call Chronos directly)
