@@ -1193,15 +1193,24 @@ function initBottomNav() {
 
   // Click: prevent default anchor jump, use smooth scrollIntoView instead.
   // CSS scroll-margin-top on each section accounts for the 52px header.
+  //
+  // iOS race fix (WI-Φ9B-3): the old order was scrollIntoView() then el.open=true.
+  // On iOS, el.open=true triggers a layout reflow that cancels the in-flight smooth
+  // scroll, so tap 1 opened but didn't scroll and tap 2 scrolled. Fix: open FIRST,
+  // then scrollIntoView() inside one requestAnimationFrame so the expanded DETAILS
+  // layout is stable before the browser computes the scroll target position.
+  // Single rAF is sufficient — if a future iOS regression appears, escalate to
+  // double-rAF: requestAnimationFrame(() => requestAnimationFrame(() => scroll...)).
   navItems.forEach(item => {
     item.addEventListener("click", (e) => {
       e.preventDefault();
       const sectionId = item.dataset.section;
       const el = document.getElementById(sectionId);
-      if (el) {
+      if (!el) return;
+      if (el.tagName === "DETAILS" && !el.open) el.open = true;
+      requestAnimationFrame(() => {
         el.scrollIntoView({ behavior: "smooth", block: "start" });
-        if (el.tagName === "DETAILS" && !el.open) el.open = true;
-      }
+      });
     });
   });
 
