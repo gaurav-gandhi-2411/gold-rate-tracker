@@ -1495,6 +1495,22 @@ Two deferred dependabot major bumps validated and merged. Each PR: full suite + 
 
 ---
 
+#### Series property established: trend-persistence in-regime, no out-of-regime edge (2026-06-03)
+
+**This is the THIRD independent confirmation of the same structural finding across Φ7D and Φ10A:**
+
+| Experiment | Mechanism | Full-set improvement | Non-bull signed impr | Verdict |
+|---|---|---|---|---|
+| Φ7D — drift_naive_span20, h=20 | IBJA own momentum (EWMA drift) | +5.2% (beats gate 1-3) | −565% (sign_flip; Φ7D entry) | ADR 018 codified |
+| Φ10A — driver_decomp, usdinr=drift, gold=RW, h=5 | Macro driver composition (USD/INR drift) | +18.1% (beats gate 1,3) | −13.1% | close-negative |
+| Φ10A — driver_decomp, usdinr=drift, gold=drift, h=5 | Macro driver composition (both drivers drift) | +4.5% (beats gate 1,3) | −57.1% | close-negative |
+
+Each confirmation uses a different mechanism — IBJA's own price momentum, USD/INR drift propagated through the decomposition identity, gold-USD drift — and all three collapse out-of-regime in the same direction: the model wins when the market trends up and loses when it does not. This is not a per-experiment artifact; it is a well-evidenced structural property of short-horizon INR gold at current IBJA data density.
+
+**Codified rule (effective 2026-06-03):** Future forecasting attempts on IBJA-916-PM (h=5) must clear the non-bull subset gate (`non_bull_signed_improvement >= −0.02`) to be considered real. The gate is load-bearing, not optional. A variant winning only on the full set while inverting on non-bull folds is a trend-continuation artifact regardless of the mechanism. Re-open criteria: ≥250 dense IBJA rows (filling the Aug→Nov 2025 and Jan→Apr 2026 collection gaps) + a regime-conditioned variant that explicitly handles the non-bull case + Wilcoxon p<0.05 on the non-bull-inclusive evaluation.
+
+---
+
 ## Risks Register
 
 | Risk | Severity | Owner | Mitigation status |
