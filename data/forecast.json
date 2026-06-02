@@ -1,5 +1,5 @@
 {
-  "predicted_at": "2026-06-02T18:37:49.220711+00:00",
+  "predicted_at": "2026-06-02T22:45:09.026532+00:00",
   "target_window": "5d",
   "headline": {
     "method": "naive_flat_hold",
@@ -7,7 +7,20 @@
     "lower": 13429,
     "upper": 15301,
     "conformal_pi_half": 935.7,
-    "naive_mae_recent_30": 566.9
+    "naive_mae_recent_30": 566.9,
+    "vol_context": {
+      "half_width": 468,
+      "half_width_raw": 467.9,
+      "method": "realized_20d",
+      "window_days": 20,
+      "contiguous_days": 49,
+      "is_floored": false,
+      "is_degraded": false,
+      "floor_fraction": 0.5,
+      "static_pi_half": 935.7,
+      "baseline_half_width": 361,
+      "regime": "normal"
+    }
   },
   "chronos_companion": {
     "status": "success",

@@ -1,11 +1,11 @@
 {
-  "probed_at": "2026-06-02T18:37:58.457196+00:00",
+  "probed_at": "2026-06-02T22:45:19.226705+00:00",
   "status": "success",
   "wall_clock_ms": {
-    "pipeline_load": 9270,
-    "forecast": 16,
+    "pipeline_load": 9146,
+    "forecast": 15,
     "calibration": 0,
-    "total": 9305
+    "total": 9181
   },
   "ibja_context_days": 179,
   "ibja_last_date": "2026-06-02",
