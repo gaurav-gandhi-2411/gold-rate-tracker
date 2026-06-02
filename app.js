@@ -84,26 +84,6 @@ function dedupReadings(readings) {
   return groups;
 }
 
-function dedupForChart(readings) {
-  if (readings.length === 0) return [];
-  const pts = [];
-  let runStart = readings[0];
-  let runEnd   = readings[0];
-  for (let i = 1; i < readings.length; i++) {
-    if (readings[i]["22k"] === runStart["22k"]) {
-      runEnd = readings[i];
-    } else {
-      pts.push(runStart);
-      if (runEnd !== runStart) pts.push(runEnd);
-      runStart = readings[i];
-      runEnd   = readings[i];
-    }
-  }
-  pts.push(runStart);
-  if (runEnd !== runStart) pts.push(runEnd);
-  return pts;
-}
-
 function fmtDateShort(iso) {
   return new Intl.DateTimeFormat("en-IN", {
     timeZone: "Asia/Kolkata", day: "numeric", month: "short",
@@ -760,8 +740,11 @@ function renderChart(readings, range) {
     filtered     = readings.filter(r => new Date(r.timestamp).getTime() >= cutoff);
   }
 
-  const chartPts = dedupForChart(filtered);
-  const labels   = chartPts.map(r => fmtDate(r.timestamp));
+  // One point per IST calendar day (latest reading wins) — same rule history uses.
+  // Connects real daily prices with a clean straight line; no stepped plateaus,
+  // no fill, no doubled boundary dots. Matches the clean daily-line look of Tanishq.
+  const chartPts = dedupeByISTDay(filtered);
+  const labels   = chartPts.map(r => fmtDateShort(r.timestamp));
   const data22   = chartPts.map(r => r["22k"]);
 
   const goldLine  = "#E09B2E";
@@ -770,10 +753,6 @@ function renderChart(readings, range) {
   const ctx       = document.getElementById("chart");
 
   if (chart) chart.destroy();
-  const c2d      = ctx.getContext("2d");
-  const gradient = c2d.createLinearGradient(0, 0, 0, ctx.height || 320);
-  gradient.addColorStop(0, "rgba(224,155,46,0.40)");
-  gradient.addColorStop(1, "rgba(224,155,46,0.00)");
 
   chart = new Chart(ctx, {
     type: "line",
@@ -783,15 +762,14 @@ function renderChart(readings, range) {
         label: "22K (₹/g)",
         data: data22,
         borderColor: goldLine,
-        backgroundColor: gradient,
-        fill: true,
-        borderWidth: 2.5,
-        pointRadius: chartPts.length > 30 ? 0 : 3,
-        pointHoverRadius: 5,
+        backgroundColor: "transparent",
+        fill: false,
+        borderWidth: 1.5,
+        pointRadius: 0,
+        pointHoverRadius: 4,
         pointBackgroundColor: goldLine,
         pointBorderWidth: 0,
         tension: 0,
-        stepped: "before",
         spanGaps: true,
       }],
     },
