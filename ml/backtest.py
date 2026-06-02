@@ -54,6 +54,33 @@ def load_ibja_series(parquet_path: Path = IBJA_PARQUET) -> pd.Series:
     return df.set_index("date")["pm_916"] / 10.0
 
 
+def yield_folds(
+    ibja_series: pd.Series,
+    horizon: int = _HORIZON,
+    min_context: int = _MIN_CONTEXT_DAYS,
+):
+    """Yield (context, actuals) fold pairs using the canonical walk-forward split.
+
+    Same fold boundaries as run_backtest() — use for paired-fold experiments
+    (Wilcoxon requires identical fold indices across variants).
+
+    Yields
+    ------
+    context : pd.Series — rows strictly before the forecast window.
+    actuals : list[float] — the next ``horizon`` actual values.
+    """
+    n = len(ibja_series)
+    for context_end_idx in range(min_context - 1, n - horizon):
+        context = ibja_series.iloc[: context_end_idx + 1]
+        actuals_slice = ibja_series.iloc[context_end_idx + 1 : context_end_idx + 1 + horizon]
+        if len(actuals_slice) < horizon:
+            break
+        assert (
+            context.index[-1] < actuals_slice.index[0]
+        ), f"leakage: context ends {context.index[-1]}, actuals start {actuals_slice.index[0]}"
+        yield context, actuals_slice.values.tolist()
+
+
 def run_backtest(
     ibja_series: pd.Series,
     pipeline,

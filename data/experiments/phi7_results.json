@@ -1,0 +1,47 @@
+[
+  {
+    "name": "drift_naive_span5",
+    "experiment": "Phi7A-Exp1",
+    "horizon": 5,
+    "params": {
+      "span": 5,
+      "ewma_type": "daily_delta"
+    },
+    "mae_variant": 376.0,
+    "mae_naive": 278.88,
+    "pct_improvement": -0.34824,
+    "wilcoxon_p": 0.0001,
+    "n_folds_ge30ctx": 144,
+    "beats_naive": false
+  },
+  {
+    "name": "drift_naive_span10",
+    "experiment": "Phi7A-Exp1",
+    "horizon": 5,
+    "params": {
+      "span": 10,
+      "ewma_type": "daily_delta"
+    },
+    "mae_variant": 349.03,
+    "mae_naive": 278.88,
+    "pct_improvement": -0.25153,
+    "wilcoxon_p": 0.0044,
+    "n_folds_ge30ctx": 144,
+    "beats_naive": false
+  },
+  {
+    "name": "drift_naive_span20",
+    "experiment": "Phi7A-Exp1",
+    "horizon": 5,
+    "params": {
+      "span": 20,
+      "ewma_type": "daily_delta"
+    },
+    "mae_variant": 319.03,
+    "mae_naive": 278.88,
+    "pct_improvement": -0.14395,
+    "wilcoxon_p": 0.1651,
+    "n_folds_ge30ctx": 144,
+    "beats_naive": false
+  }
+]
