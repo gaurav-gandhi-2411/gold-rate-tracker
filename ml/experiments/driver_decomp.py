@@ -70,7 +70,7 @@ def compute_trailing_premium(
     recent_ctx = context.iloc[-window:]
     premiums: list[float] = []
     for date, ibja_val in recent_ctx.items():
-        ts = pd.Timestamp(date, tz="UTC")
+        ts = pd.Timestamp(str(date), tz="UTC")
         g_slice = gold_usd.loc[:ts]
         u_slice = usd_inr.loc[:ts]
         if len(g_slice) == 0 or len(u_slice) == 0:
@@ -300,7 +300,7 @@ def run_driver_decomp_experiment(
             "cv": round(prem_cv, 4),
         }
     else:
-        premium_stats = {"mean": None, "std": None, "cv": None}
+        premium_stats: dict[str, float | None] = {"mean": None, "std": None, "cv": None}
 
     for vi, (name, usdinr_method, gold_usd_method, _) in enumerate(variants):
         acc = accumulators[vi]
