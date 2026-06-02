@@ -1168,6 +1168,60 @@ Backend + PWA + CI. SW VERSION bump v9→v10 (`"v10-20260601-a"`). Merge commit 
 
 ---
 
+### Batch Φ7 — Backtest Experiments: Can Anything Beat Flat-Naive?  ✅ COMPLETE — 2026-06-02
+
+Analysis-only batch. No production-path files touched (inference.py, forecast.json, app.js, notifications.py, check-price.yml unchanged). Three pre-registered experiments tested whether any cheap, structurally-different approach beats flat-naive on the existing walk-forward harness. Pre-registered gate (applied as-is, no post-hoc changes): ≥2% MAE improvement AND Wilcoxon p<0.05 AND ≥30 folds with ≥30-context rows. Results committed to `data/experiments/phi7_results.json` (12 entries).
+
+**h=5 reference (data/backtest.json, >=30-context folds): mae_naive=276.29, mae_chronos=306.79, Chronos -11.04% worse.**
+
+#### PR #60 (Φ7A) — Exp-1: Drift-naive vs flat-naive (h=5)
+
+Experiment harness scaffolded: `data/experiments/phi7_results.json`, `ml/experiments/` package, `yield_folds()` generator added to `ml/backtest.py`. Drift-naive variant: `forecast = last_value + h × EWMA(daily deltas)`, spans [5, 10, 20] trading days. 144 folds with ≥30-context.
+
+| Variant | mae_variant | mae_naive | pct | Wilcoxon p | beats_naive |
+|---------|-------------|-----------|-----|------------|-------------|
+| drift_naive_span5  | 376.00 | 278.88 | −34.82% | 0.0001 | **false** |
+| drift_naive_span10 | 349.03 | 278.88 | −25.15% | 0.0044 | **false** |
+| drift_naive_span20 | 319.03 | 278.88 | −14.39% | 0.1651 | **false** |
+
+All three spans fail the gate by a large margin. In the 2022–2026 uptrend, EWMA of daily deltas produces forecasts that systematically overshoot — the drift amplifies trend rather than correcting error, increasing MAE. **Recommendation: close as negative. The overshooting pattern at h=5 is consistent, not a sampling artefact.**
+
+Tests: 21 unit tests for `forecast_drift_naive` and `apply_gate`. Pre-commit clean. Lint CI: pass (3m26s).
+
+#### PR #61 (Φ7B) — Exp-2: Premium-carry flat vs flat-naive (h=5)
+
+Macro alignment audit (pre-verified, not a flag-and-stop): macro cache (2024-04-09 → 2026-05-14) covers 124 of 178 IBJA dates as fold context_end positions; 49 early IBJA dates excluded (before macro range start, not forward-filled); max ffill gap within range = 3 trading days (weekend/holiday, acceptable). All 124 folds have ≥30-context. Gate requirement: ≥30 folds — passes.
+
+Variant: `forecast_{t+h} = premium_t × gold_usd_t × usd_inr_t` with flat carry. With flat carry this is algebraically identical to flat-naive: `premium_t × gold_usd_t × usd_inr_t = (IBJA_t / (gold_usd_t × usd_inr_t)) × gold_usd_t × usd_inr_t = IBJA_t`.
+
+| Variant | mae_variant | mae_naive | pct | Wilcoxon p | beats_naive |
+|---------|-------------|-----------|-----|------------|-------------|
+| premium_carry_flat | 269.65 | 269.65 | 0.00% | 0.2044 | **false** |
+
+pct_improvement = exactly 0.00% — algebraic identity confirmed numerically. **Recommendation: close as expected null. The flat-carry result is the clean baseline the spec required. A second pass substituting a naive drift on FX/spot (instead of flat carry) is the natural iterate but outside Φ7 scope.**
+
+Tests: 5 unit tests confirming algebraic identity across parameter ranges. Pre-commit clean. Lint CI: pass (2m41s).
+
+#### PR #62 (Φ7C) — Exp-3: Horizon sweep h=10/h=20 (Chronos + drift_naive)
+
+| Horizon | mae_chronos | mae_naive | Chronos gap | Wilcoxon p | beats_naive |
+|---------|-------------|-----------|-------------|------------|-------------|
+| h=5 (ref) | 306.79 | 276.29 | −11.04% | — | false |
+| h=10 | 472.88 | 432.43 | −9.35% | 0.0122 | **false** |
+| h=20 | 807.12 | 760.94 | −6.07% | 0.0247 | **false** |
+
+The Chronos-vs-naive gap **narrows** with horizon (−11.04% → −9.35% → −6.07%). This confirms the spec hypothesis: flat-naive is hardest to beat at short horizons; Chronos closes the gap at h=20 but still falls short of the ≥2% improvement gate. Direction (Chronos still losing but less badly) is interesting; the trend may continue past h=20.
+
+Drift-naive at extended horizons: all spans fail at h=10. At h=20, **drift_naive_span20 passes the gate** (mae_variant=721.57, mae_naive=760.94, +5.17%, p=0.0014, 129 folds). This is the only positive finding across all 12 Φ7 variants.
+
+**Caution flag on drift_naive_span20@h=20:** The entire IBJA history (2022–2026) is a sustained uptrend. A span-20 EWMA of daily deltas captures this trend and happens to project it more accurately at h=20 than flat-hold in this specific regime. Whether this edge generalises outside a bull market is unverified — a 4-year uptrend is a single regime, not diverse market conditions. The Wilcoxon test confirms within-sample statistical significance (p=0.0014) but cannot test out-of-distribution robustness.
+
+**Recommendation for drift_naive_span20@h=20:** Promote to ADR for decision. The gate is met numerically and the positive result is a first-class deliverable per ADR 005. The ADR should: (a) document the regime-specific caution; (b) define a promotion criterion that includes a regime-diversity test when sufficient data accumulates; (c) not immediately route production traffic to h=20 — the current production horizon is h=5 and the h=20 result is from a research experiment.
+
+Tests: 4 unit tests for `extract_ge30ctx_gate_metrics`. Pre-commit clean. Lint CI: pass (2m32s).
+
+**Batch Φ7 summary:** 11/12 variants fail the gate. 1 passes (drift_naive_span20@h=20, +5.17%). The positive result is honest and warrants an ADR — it is a research finding, not a production promotion. Two clean negatives (drift at h=5 and premium-carry flat-carry) close confirmed dead ends. The horizon-gap curve (Chronos closing gap −11% → −6% as h grows) is new structural evidence for ADR consideration alongside the h=20 drift result.
+
 ### Phase 5 — Validate  ⏸️ NOT STARTED
 
 ### Phase 6 — Promote  ⏸️ NOT STARTED
