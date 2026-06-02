@@ -32,6 +32,9 @@ jobs:
       # Training-deps tests (config, promotion, tracking, tuning) excluded — they need
       # hydra/mlflow/optuna which are training-only deps not in the inference lockfile.
       # A future CI job will run these with training deps installed.
+      # Integration tests excluded here (norm #11): @pytest.mark.integration tests make
+      # live network calls (HuggingFace model download). They run non-gating in
+      # weekly-backtest.yml where the Chronos cache is warm and continue-on-error: true.
       - name: Run full pytest suite
         run: |
           pytest \
@@ -39,4 +42,5 @@ jobs:
             --ignore=tests/test_promotion.py \
             --ignore=tests/test_tracking.py \
             --ignore=tests/test_tuning.py \
+            -m "not integration" \
             tests/ -v
