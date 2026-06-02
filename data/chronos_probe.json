@@ -1,51 +1,51 @@
 {
-  "probed_at": "2026-06-02T08:23:02.242531+00:00",
+  "probed_at": "2026-06-02T12:22:30.084658+00:00",
   "status": "success",
   "wall_clock_ms": {
-    "pipeline_load": 9312,
-    "forecast": 64,
+    "pipeline_load": 9596,
+    "forecast": 15,
     "calibration": 0,
-    "total": 9397
+    "total": 9633
   },
-  "ibja_context_days": 178,
-  "ibja_last_date": "2026-06-01",
-  "ibja_last_value": 14247.1,
+  "ibja_context_days": 179,
+  "ibja_last_date": "2026-06-02",
+  "ibja_last_value": 14316.5,
   "horizon": 5,
   "ibja_forecast": [
     {
       "day": 1,
-      "date": "2026-06-02",
-      "p10": 13801.68,
-      "p50": 14358.71,
-      "p90": 14966.02
+      "date": "2026-06-03",
+      "p10": 13860.64,
+      "p50": 14391.59,
+      "p90": 14980.12
     },
     {
       "day": 2,
-      "date": "2026-06-03",
-      "p10": 13739.55,
-      "p50": 14403.66,
-      "p90": 15096.36
+      "date": "2026-06-04",
+      "p10": 13821.6,
+      "p50": 14457.92,
+      "p90": 15131.51
     },
     {
       "day": 3,
-      "date": "2026-06-04",
-      "p10": 13685.64,
-      "p50": 14470.66,
-      "p90": 15239.44
+      "date": "2026-06-05",
+      "p10": 13774.51,
+      "p50": 14528.44,
+      "p90": 15279.89
     },
     {
       "day": 4,
-      "date": "2026-06-05",
-      "p10": 13657.38,
-      "p50": 14539.46,
-      "p90": 15376.2
+      "date": "2026-06-06",
+      "p10": 13715.07,
+      "p50": 14554.72,
+      "p90": 15358.02
     },
     {
       "day": 5,
-      "date": "2026-06-06",
-      "p10": 13606.22,
-      "p50": 14578.98,
-      "p90": 15480.15
+      "date": "2026-06-07",
+      "p10": 13651.04,
+      "p50": 14580.89,
+      "p90": 15448.62
     }
   ],
   "calibration_applied": false,
@@ -53,12 +53,8 @@
   "tanishq_forecast": null,
   "model_version": "amazon/chronos-bolt-tiny@a0e552de",
   "schema_version": 2,
-  "num_samples": 5,
+  "num_samples": 1,
   "sample_directions": [
-    "up",
-    "up",
-    "up",
-    "up",
     "up"
   ],
   "majority_direction": "up",
