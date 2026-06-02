@@ -1192,6 +1192,102 @@ html.ptr-pulling {
   overscroll-behavior-y: none;
 }
 
+/* ── Outlook card (Φ8C') ────────────────────────────────────────────────────── */
+.outlook-card {
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-lg);
+  padding: clamp(16px, 4vw, 24px);
+}
+.outlook-range-row {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  margin-bottom: 4px;
+}
+.outlook-range-label {
+  font-size: 12px;
+  color: var(--cream-mute);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  white-space: nowrap;
+}
+.outlook-range-value {
+  font-family: var(--display);
+  font-size: clamp(18px, 3vw, 22px);
+  font-weight: 600;
+  color: var(--cream);
+}
+.outlook-range-note {
+  font-size: 13px;
+  color: var(--cream-mute);
+  margin: 0 0 12px;
+}
+.outlook-trend {
+  font-size: 15px;
+  color: var(--cream);
+  margin: 0 0 12px;
+  font-weight: 500;
+}
+.outlook-estimate-row {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+  padding-top: 12px;
+  border-top: 1px solid var(--line);
+  opacity: 0.65;
+}
+.outlook-estimate-label {
+  font-size: 12px;
+  color: var(--cream-mute);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+.outlook-estimate-value {
+  font-size: 16px;
+  color: var(--cream);
+}
+.outlook-estimate-note {
+  font-size: 12px;
+  color: var(--cream-mute);
+}
+
+/* ── Track record section (Φ8C') ────────────────────────────────────────────── */
+.track-record-section {
+  margin-bottom: clamp(40px, 9vw, 56px);
+  scroll-margin-top: 64px;
+}
+.track-record-section h2 {
+  font-size: clamp(22px, 3.5vw, 32px);
+  margin-bottom: var(--space-3);
+}
+.track-record-caption {
+  font-size: 13px;
+  color: var(--cream-mute);
+  margin: 0 0 var(--space-4);
+}
+.track-record-chart-wrap {
+  position: relative;
+  height: clamp(200px, 40vw, 280px);
+}
+
+/* ── Commentary skeleton ────────────────────────────────────────────────────── */
+.commentary-skeleton { padding: 4px 0; }
+.commentary-skeleton[hidden] { display: none; }
+
+/* ── Model-signal skeleton ──────────────────────────────────────────────────── */
+.model-signal-skeleton { padding: 4px 0; }
+.model-signal-skeleton[hidden] { display: none; }
+
+/* ── History skeleton ───────────────────────────────────────────────────────── */
+.history-skeleton { padding: 4px 0; }
+.history-skeleton[hidden] { display: none; }
+
+/* ── How-good panel ─────────────────────────────────────────────────────────── */
+.meth-how-good { background: rgba(224,155,46,0.04); border-radius: var(--radius-lg); padding: clamp(12px, 3vw, 20px); }
+.meth-how-good .meth-text { margin-bottom: 16px; }
+.meth-how-good .meth-text:last-child { margin-bottom: 0; }
+
 /* ═══════════════════════════════════════════════════════════════
    REDUCED MOTION
 ═══════════════════════════════════════════════════════════════ */
