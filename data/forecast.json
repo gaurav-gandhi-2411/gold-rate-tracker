@@ -1,5 +1,5 @@
 {
-  "predicted_at": "2026-06-02T22:45:09.026532+00:00",
+  "predicted_at": "2026-06-02T23:01:19.396720+00:00",
   "target_window": "5d",
   "headline": {
     "method": "naive_flat_hold",
