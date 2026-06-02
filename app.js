@@ -593,7 +593,7 @@ function renderModelSignal(fc, readings, bt) {
         <span class="outlook-range-value">${rupee(hl.lower)} – ${rupee(hl.upper)}</span>
       </div>
       <p class="outlook-range-note">Covers typical 5-day moves ${coveragePct}% of the time</p>
-      <p class="outlook-current-note">Today's price: ${rupee(hl.predicted_22k)} — we don't forecast an exact future price.</p>
+      <p class="outlook-current-note">Today: ${rupee(hl.predicted_22k)}. Gold's 5-day move is unpredictable, so we show the likely range above rather than guess a single number.</p>
     </div>
   `;
 
