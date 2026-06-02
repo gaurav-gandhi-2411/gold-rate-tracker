@@ -593,19 +593,18 @@ function renderModelSignal(fc, readings, bt) {
     : 87;
 
   // XSS-safe: rupee()/fmtINR() output safe strings from numeric data only.
+  // Card layout: trend description is the clear primary statement (role the old arrow played),
+  // then the honest PI band, then an honest non-forecast current-price note. No point estimate
+  // beside the band — that was the false-precision GG flagged (ADR 019/020).
   document.getElementById("model-signal-body").innerHTML = `
     <div class="outlook-card">
+      ${trend ? `<p class="outlook-trend">${trend}</p>` : ""}
       <div class="outlook-range-row">
         <span class="outlook-range-label">5-day range</span>
         <span class="outlook-range-value">${rupee(hl.lower)} – ${rupee(hl.upper)}</span>
       </div>
       <p class="outlook-range-note">Covers typical 5-day moves ${coveragePct}% of the time</p>
-      ${trend ? `<p class="outlook-trend">${trend}</p>` : ""}
-      <div class="outlook-estimate-row">
-        <span class="outlook-estimate-label">Estimate</span>
-        <span class="outlook-estimate-value">${rupee(hl.predicted_22k)}</span>
-        <span class="outlook-estimate-note">flat — today's price</span>
-      </div>
+      <p class="outlook-current-note">Today: ${rupee(hl.predicted_22k)}. Gold's 5-day move is unpredictable, so we show the likely range above rather than guess a single number.</p>
     </div>
   `;
 
