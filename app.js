@@ -151,22 +151,19 @@ async function load() {
  *
  * THREE-BUCKET RULES (deterministic):
  *
- * TRENDING_DOWN → "Trending down — no rush to buy"
+ * TRENDING_DOWN → "Trending down this week"
  *   Condition: 7-day slope < −₹100
  *              AND (forecast below current  OR  current below 30d avg)
  *   Why two signals: a single 7-day slope can be noisy (festival spikes,
  *   weekend data gaps). A confirming signal from forecast or 30d mean
- *   reduces false alarms that would mislead buyers.
- *   Interpretation: prices are falling; buyer benefits from waiting.
+ *   reduces false alarms.
  *
- * TRENDING_UP → "Trending up — consider buying sooner"
+ * TRENDING_UP → "Trending up this week"
  *   Condition: 7-day slope > +₹100
  *              AND (forecast above current  OR  current above 30d avg)
- *   Interpretation: prices are rising; better to act before further increases.
  *
- * FLAT → "Roughly flat — buy when convenient"  (DEFAULT)
+ * FLAT → "Roughly flat this week"  (DEFAULT)
  *   Condition: slope within ±₹100, OR the two signals conflict.
- *   Interpretation: no directional pressure; timing is not critical.
  */
 function computeVerdict(prices, forecast) {
   const SLOPE_THRESHOLD = 100; // ₹ change over 7 days to count as a trend
@@ -212,7 +209,7 @@ function computeVerdict(prices, forecast) {
     return {
       type: "down",
       icon: "✓",
-      headline: "Trending down — no rush to buy",
+      headline: "Trending down this week",
       reason: `Prices have slipped ₹${absDelta} over the last 7 days${avgNote}.`,
     };
   }
@@ -225,7 +222,7 @@ function computeVerdict(prices, forecast) {
     return {
       type: "up",
       icon: "⚡",
-      headline: "Trending up — consider buying sooner",
+      headline: "Trending up this week",
       reason: `Prices have risen ₹${delta} over the last 7 days${avgNote}.`,
     };
   }
@@ -239,7 +236,7 @@ function computeVerdict(prices, forecast) {
   return {
     type: "flat",
     icon: "◉",
-    headline: "Roughly flat — buy when convenient",
+    headline: "Roughly flat this week",
     reason: `Prices are ${stableDesc} over the last 7 days. No strong signal either way.`,
   };
 }

@@ -40,11 +40,10 @@ SYSTEM_PROMPT = (
     "FRAMING: "
     "(1) The current price is the expected price for the next few days — the tracker does not predict "
     "a different number. Never say 'the forecast is Rs.X' as if it differs from today's price. "
-    "(2) When directional_signal_available is true, gently note which way prices may lean over the next few days. "
-    "Use natural phrasing: 'prices look likely to edge up a little' or 'prices may ease slightly'. "
-    "Describe reliability in plain fractions: if direction_acc is ~0.63, say 'right about 6 times out of 10' "
-    "or 'tends to be right more often than not'. "
-    "Describe it as a gentle lean, not a certainty. Never say prices 'will' rise or fall. "
+    "(2) When directional_signal_available is true, briefly describe the recent price direction in "
+    "plain past-tense language ('prices have eased a little over the past week' or 'prices have "
+    "edged up slightly recently'). Do NOT describe reliability, accuracy, or hit-rate. Do NOT imply "
+    "future direction. Never say prices 'will', 'look likely to', or 'may' rise or fall. "
     "(3) When directional_signal_available is false, say nothing about price direction — do not guess. "
     "(4) You may mention where the current price sits relative to recent months using everyday language: "
     "'around what it's been lately', 'a bit above its recent range', 'near the lower end recently'. "
@@ -185,15 +184,13 @@ def build_user_message(
     if companion_available:
         _lean_dir = companion.get("lean_direction", "N/A")
         _lean_pct = companion.get("lean_strength_pct")
-        _dir_acc = companion.get("direction_acc_30f")
         lean_str = (
             f"{_lean_dir} ({_lean_pct:.1f}% from current)"
             if isinstance(_lean_pct, (int, float))
             else str(_lean_dir)
         )
-        dir_acc_str = f"{_dir_acc * 100:.0f}%" if isinstance(_dir_acc, (int, float)) else "N/A"
     else:
-        lean_str = dir_acc_str = "N/A"
+        lean_str = "N/A"
 
     lines = [
         f"sufficient_for_short_term_stats: {'true' if sufficient else 'false'}",
@@ -214,7 +211,6 @@ def build_user_message(
         "Directional signal (Chronos) — treat separately from naive baseline:",
         f"  directional_signal_available: {'true' if companion_available else 'false'}",
         f"  Lean            : {lean_str}",
-        f"  Direction acc. (last 30 folds): {dir_acc_str}",
         "",
         "Notable patterns:",
         f"  Days since last >=Rs.100 drop : {days_since_drop}",
