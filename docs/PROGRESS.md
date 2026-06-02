@@ -1303,6 +1303,7 @@ Tests: 4 unit tests for `extract_ge30ctx_gate_metrics`. Pre-commit clean. Lint C
 | 2026-06-03 | Φ11-3: title changed from "Should I buy today?" to "Gold Rate Today · Is it a good price?"; favicon added | CC + GG (copy review) | "Should I buy today?" promised a buy-signal we explicitly do not provide (ADR 005/019). New title accurately describes the product: a price-comparison tool. Favicon: <link rel="icon" href="icons/icon-192.png"> reuses existing PWA icon (same "Au" gold-on-dark icon already wired for apple-touch-icon). OG/Twitter meta and meta description updated consistently. PWA manifest unchanged. PR #74. |
 | 2026-06-03 | Φ11 visual follow-up: trend chart → one-point-per-IST-day clean line; favicon → transparent SVG mark | GG (live screenshots) | GG observed: (1) stepped + filled-area chart looks blocky vs Tanishq's clean daily line — dedupForChart start/end boundary dots per flat run read as plateaus with doubled dots. Fix: chart now uses dedupeByISTDay (one real daily price, same rule as history), straight connected line, no fill, no stepped, no dots (hover only). dedupForChart removed (dead code). (2) icon-192.png has opaque background box in tab. Fix: dedicated favicon.svg (transparent bg, gold circle + "Au" mark), <link rel="icon"> updated. PWA icons (icon-192/512.png) untouched. PR #76. GG to re-verify both post-deploy on fresh load. SCRAPE-GAP NOTE (GG): at tension:0 one-point-per-day, scrape-gap days (pre-Φ6 ~27% gap history) draw a straight connecting segment across the gap. This is honest — no interpolation of fake prices — and may appear as an unusually long flat or steep stretch in the chart. It is real data showing through, NOT a rendering bug. Do not smooth by interpolating. If GG or a future reader flags this as a regression, refer here. |
 | 2026-06-03 | Φ10B: dynamic vol context — DEFINITION CHANGE, not a volatility event | CC + GG (approved) | The displayed ±Rs. number changes from ~Rs.950 to ~Rs.450. This is NOT a sign gold got calmer — it is a change in what is being measured. Rs.950 was the 80th-pct conformal PI half-width (forecast-error distribution over ~165 backtest folds). Rs.450 is a 20-day trailing realized half-width (actual price movements over the most recent 49 contiguous Tanishq days). These measure different things. "Has been moving" (realized fact) vs "typically moves" (forecast uncertainty) is the wording signal that communicates this honestly. Future readers: if the displayed band shrinks from ~Rs.950 to ~Rs.450 and you are wondering whether it signals a real calm patch — it does not; it is the definition change landing. Baseline for calm/elevated: full 49-day contiguous Tanishq run (48 log returns). Recent window: trailing 20 days. Circularity (recent is a subset of baseline) suppresses false regime calls — the ratio pulls toward 1.0 when recent and baseline overlap, so elevated/calm thresholds (1.35×/0.75×) require sustained divergence that survives the dampening. At 49-day baseline the signal is conservative by design; baseline strengthens as data accumulates. |
+| 2026-06-03 | Batch Φ13: PR preview deploy — chose NONE / keep manual device-check | GG + consultant | Bug class (iOS visual bugs found post-merge) materialized twice in project lifetime (WI-5, Φ9B-3); zero user impact; root cause was the check being SKIPPED, not a missing preview URL. Option 2 (GH Pages subpath) adds a new production failure mode to check-price.yml. Option 3 (Netlify/Cloudflare) breaks Rs.0/no-external-dependency discipline. Solo contributor: no second reviewer exists to open a preview URL. Structural fix: manual post-deploy device-check codified as a required RUNBOOK step (§10). |
 
 ### Phi8A — Pipeline Hardening (2026-06-02)
 
@@ -1550,6 +1551,30 @@ Each confirmation uses a different mechanism — IBJA's own price momentum, USD/
 **Consumer audit (norm #15):** `commentary.py` does not read vol fields — unaffected. `app.js` is the only consumer. 5-day PI range and coverage percentage lines unchanged.
 
 **Status:** Copy approved by GG 2026-06-03. Merged PR #82.
+
+---
+
+### Batch Φ13 — PR Preview Deploy: Chose NONE / Keep Manual Device-Check (2026-06-03)
+
+**Decision:** Do not build PR preview deploy infrastructure. Codify the manual post-deploy device-check as a required RUNBOOK step instead.
+
+**Options evaluated:**
+
+| Option | Live URL on iOS | New dependency | Production risk | Ruling |
+|--------|----------------|----------------|-----------------|--------|
+| GH Actions artifact | ❌ (zip only) | None | None | Fails iOS requirement outright |
+| GH Pages subpath (gh-pages branch) | ✓ | None | New failure mode in check-price.yml | Rejected — production risk for dev convenience |
+| Netlify / Cloudflare Pages | ✓ | Account + deploy dep | None | Rejected — breaks Rs.0/no-external-dependency discipline |
+| None / manual | ✓ (post-merge) | None | None | **Chosen** |
+
+**Rationale (norm #3):**
+1. **Bug class cost is small.** WI-5 and Φ9B-3 are the two instances of "iOS visual bug found post-merge" in the entire project lifetime. Both caught and fixed within days; zero user or data impact.
+2. **Root cause was a skipped check, not missing infrastructure.** The structural fix is to make the check required — not to build around the skip.
+3. **Option 2 trades production reliability for dev convenience.** The GH Pages subpath approach requires migrating the production deploy from master-root to a gh-pages branch and adding a new push step to `check-price.yml`. If that step fails, the live site goes stale — a new production failure mode. Taking on production risk to save 2 minutes of manual verification violates the right-sizing principle (ADR 002 precedent).
+4. **Option 3 breaks the Rs.0/no-external-dependency line for the weakest reason.** Dev convenience was not sufficient justification for DagsHub, W&B, or residential proxies; it is not sufficient here.
+5. **Solo contributor.** No second reviewer exists to open a preview URL. PR previews solve a coordination problem that does not exist at this scale.
+
+**Structural fix (RUNBOOK §10):** "Frontend PR touching `app.js` / `index.html` / `style.css` / `service-worker.js` → author verifies the changed UI on a REAL DEVICE after deploy (fresh SW cache / app-switcher reload) before closing."
 
 ---
 
