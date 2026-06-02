@@ -115,6 +115,7 @@ def test_inference_main_produces_valid_forecast(tmp_path, monkeypatch):
     assert cc["lean_direction"] in ("up", "down", "neutral")
     assert isinstance(cc["lean_strength_pct"], float)
     assert cc["direction_acc_30f"] is not None
+    assert cc["direction_prob_basis"] == "base_rate_fallback"  # ADR 019
     assert len(cc["horizon_p50"]) == 5
 
     # No LightGBM artifacts in new schema
@@ -147,6 +148,7 @@ def test_inference_probe_failed(tmp_path, monkeypatch):
     assert cc["status"] == "failed"
     assert cc["lean_direction"] == "neutral"
     assert cc["direction_acc_30f"] is None
+    assert cc["direction_prob_basis"] == "base_rate_fallback"  # ADR 019
     # Headline still valid when probe fails
     assert fc["predicted_22k"] > 0
     assert fc["lower"] < fc["predicted_22k"] < fc["upper"]
