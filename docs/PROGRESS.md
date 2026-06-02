@@ -1414,6 +1414,40 @@ Closes the test gap in the Φ11-1 acceptance criteria. The trend chart already u
 
 ---
 
+### Batch Φ12 — Dependency Major-Bump Compatibility (numpy 2.x, yfinance 1.x) ✅ COMPLETE — 2026-06-03
+
+Two deferred dependabot major bumps validated and merged. Each PR: full suite + Φ8A integration + schema contracts green; numeric/fetch paths exercised; CI green before merge.
+
+#### PR #77 — Φ12-1: numpy >=2.4.6 (merged 37c407a)
+
+**torch ↔ numpy constraint (norm #1 check):** CLEAR. Lock already had `torch==2.12.0+cpu` running with `numpy==2.4.5` (2.x) — torch 2.12 is numpy 2.x compatible. numpy 2.4.6 is a patch release fixing `arr.conj()` regression and SVD/NpyString allocator bugs from 2.4.5. No constraint conflict.
+
+**Numeric path coverage:** `np.array / np.percentile / np.mean` in `inference._compute_conformal_pi` ARE exercised by `test_pipeline_wiring_calibration_applied` and `test_pipeline_wiring_probe_failed_triggers_t5` (both call `inf.main()` with 35-fold backtest). Added `test_conformal_pi_numpy_dtype_safety` as an explicit dtype-safety guard (float64 array, finite outputs, no silent int truncation).
+
+**Safety-net gap flagged:** Chronos real model load (torch+chronos forward pass under numpy 2.x) is NOT exercised by the standard test suite — `load_chronos_pipeline` is mocked in all `test_chronos_forecast.py` tests. The `@pytest.mark.integration` `test_run_probe_real_model` test covers this path but requires model download (`-m integration`). Risk low: lock already ran numpy 2.4.5 + torch 2.12.0+cpu in CI. Post-merge CI chronos probe step is the empirical confirmation.
+
+**Side-effect — jsonschema restored to lock:** `jsonschema>=4.0` was in `requirements.txt` but missing from the old lock, so schema contract tests (`test_schema_contracts.py`) were silently skipped in CI. Lock regeneration restored `jsonschema==4.26.0` + transitive deps; schema tests now run.
+
+**Verdict: MERGED.** CI: lint pass 2m32s.
+
+#### PR #78 — Φ12-2: yfinance >=1.4.1 (merged 6a42bdb)
+
+**API compatibility check:** `macro.py` confirmed compatible with yfinance 1.x as-is:
+- `yf.download(threads=False)`: `threads` is still a valid bool/int param in yfinance 1.x per official docs.
+- Column format: yfinance 1.x default (`group_by='column'`) → `(price_type, ticker)` MultiIndex = ordering-1 in `macro._extract_close`. Test mock already uses this format.
+- 1.4.0/1.4.1 changes (Auth class, reentrant download, index name fix) do not affect macro.py call surface.
+- **No code changes to macro.py needed.**
+
+**frozendict removed:** yfinance 1.4.0 dropped `frozendict` as a hard dependency (uses internal fallback). Removed from lock.
+
+**Φ10 prerequisite closed:** Φ10 (macro driver-decomposition forecasting) will use macro layer. yfinance now current.
+
+**Post-merge validation note:** CI `Fetch macro features` step (`continue-on-error: true`) is the live end-to-end confirm. Confirm CI log shows "Cache: N rows" not a TypeError after next check-price run.
+
+**Verdict: MERGED.** CI: lint pass 2m39s.
+
+---
+
 ## Risks Register
 
 | Risk | Severity | Owner | Mitigation status |
