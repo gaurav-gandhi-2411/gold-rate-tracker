@@ -1,87 +1,124 @@
-// tests/test_dedup.js
-// Tests for dedupeByISTDay — one reading per IST calendar day (latest wins).
-// Function is inlined from app.js since app.js is not a module.
-//
-// Run: node --test tests/test_dedup.js  (from repo root)
-
-import assert from "assert/strict";
 import { test } from "node:test";
+import assert from "node:assert/strict";
 
-// --- Inline the function under test (must match app.js) ---
+// ── Inline the functions under test (no module system in app.js) ──────────────
 
-function dedupeByISTDay(readings) {
-  const byDay = new Map();
-  for (const r of readings) {
-    const key = new Date(r.timestamp).toLocaleDateString("en-IN", { timeZone: "Asia/Kolkata" });
-    byDay.set(key, r);
+function dedupReadings(readings) {
+  if (readings.length === 0) return [];
+  const groups = [];
+  let g = { reading: readings[0], endTimestamp: readings[0].timestamp, count: 1 };
+  for (let i = 1; i < readings.length; i++) {
+    if (readings[i]["22k"] === g.reading["22k"]) {
+      g.endTimestamp = readings[i].timestamp;
+      g.count++;
+    } else {
+      groups.push(g);
+      g = { reading: readings[i], endTimestamp: readings[i].timestamp, count: 1 };
+    }
   }
-  return [...byDay.values()];
+  groups.push(g);
+  return groups;
 }
 
-// --- Tests ---
+function dedupForChart(readings) {
+  if (readings.length === 0) return [];
+  const pts = [];
+  let runStart = readings[0];
+  let runEnd   = readings[0];
+  for (let i = 1; i < readings.length; i++) {
+    if (readings[i]["22k"] === runStart["22k"]) {
+      runEnd = readings[i];
+    } else {
+      pts.push(runStart);
+      if (runEnd !== runStart) pts.push(runEnd);
+      runStart = readings[i];
+      runEnd   = readings[i];
+    }
+  }
+  pts.push(runStart);
+  if (runEnd !== runStart) pts.push(runEnd);
+  return pts;
+}
 
-test("single reading per day is unchanged", () => {
-  const r1 = { timestamp: "2026-05-30T08:00:00.000Z", "22k": 14440 };
-  const r2 = { timestamp: "2026-05-31T08:00:00.000Z", "22k": 14450 };
-  const result = dedupeByISTDay([r1, r2]);
-  assert.equal(result.length, 2);
-  assert.equal(result[0]["22k"], 14440);
-  assert.equal(result[1]["22k"], 14450);
+// ── dedupReadings tests ───────────────────────────────────────────────────────
+
+const r = (price, ts) => ({ "22k": price, "24k": price * 1.1, "18k": price * 0.8, timestamp: ts });
+
+test("dedupReadings: empty", () => assert.deepEqual(dedupReadings([]), []));
+
+test("dedupReadings: single reading", () => {
+  const res = dedupReadings([r(100, "t1")]);
+  assert.equal(res.length, 1);
+  assert.equal(res[0].count, 1);
+  assert.equal(res[0].reading["22k"], 100);
 });
 
-test("multiple same-day readings collapse to latest (same price)", () => {
-  // Three readings on 2026-05-31 IST — all same price
-  const r1 = { timestamp: "2026-05-31T00:00:00.000Z", "22k": 14440 };
-  const r2 = { timestamp: "2026-05-31T04:00:00.000Z", "22k": 14440 };
-  const r3 = { timestamp: "2026-05-31T08:00:00.000Z", "22k": 14440 };
-  const result = dedupeByISTDay([r1, r2, r3]);
-  assert.equal(result.length, 1, "three same-day readings → one entry");
-  assert.equal(result[0].timestamp, r3.timestamp, "latest reading is kept");
+test("dedupReadings: two identical readings collapsed", () => {
+  const res = dedupReadings([r(100, "t1"), r(100, "t2")]);
+  assert.equal(res.length, 1);
+  assert.equal(res[0].count, 2);
+  assert.equal(res[0].reading.timestamp, "t1");
+  assert.equal(res[0].endTimestamp, "t2");
 });
 
-test("multiple same-day readings collapse to latest (different prices)", () => {
-  // Intraday price update: later reading shows different price
-  const r1 = { timestamp: "2026-05-31T02:00:00.000Z", "22k": 14430 };
-  const r2 = { timestamp: "2026-05-31T06:00:00.000Z", "22k": 14440 };
-  const result = dedupeByISTDay([r1, r2]);
-  assert.equal(result.length, 1);
-  assert.equal(result[0]["22k"], 14440, "latest price is kept");
+test("dedupReadings: two distinct readings not collapsed", () => {
+  const res = dedupReadings([r(100, "t1"), r(200, "t2")]);
+  assert.equal(res.length, 2);
+  assert.equal(res[0].count, 1);
+  assert.equal(res[1].count, 1);
 });
 
-test("readings spanning multiple days each get one entry", () => {
-  const readings = [
-    { timestamp: "2026-05-29T04:00:00.000Z", "22k": 14495 },
-    { timestamp: "2026-05-29T14:00:00.000Z", "22k": 14495 },
-    { timestamp: "2026-05-30T04:00:00.000Z", "22k": 14440 },
-    { timestamp: "2026-05-30T14:00:00.000Z", "22k": 14440 },
-    { timestamp: "2026-05-31T04:00:00.000Z", "22k": 14440 },
-  ];
-  const result = dedupeByISTDay(readings);
-  assert.equal(result.length, 3, "three distinct IST days → three entries");
+test("dedupReadings: non-consecutive identical NOT collapsed", () => {
+  const res = dedupReadings([r(100, "t1"), r(200, "t2"), r(100, "t3")]);
+  assert.equal(res.length, 3);
 });
 
-test("IST day boundary: UTC midnight is IST 05:30 — same IST day", () => {
-  // 2026-05-30T18:30Z = 2026-05-31T00:00 IST (start of May 31 IST)
-  // 2026-05-30T20:00Z = 2026-05-31T01:30 IST — same IST day as above
-  const r1 = { timestamp: "2026-05-30T18:30:00.000Z", "22k": 14440 };
-  const r2 = { timestamp: "2026-05-30T20:00:00.000Z", "22k": 14440 };
-  const result = dedupeByISTDay([r1, r2]);
-  assert.equal(result.length, 1, "both readings fall on same IST day");
+test("dedupReadings: all identical", () => {
+  const res = dedupReadings([r(100, "t1"), r(100, "t2"), r(100, "t3")]);
+  assert.equal(res.length, 1);
+  assert.equal(res[0].count, 3);
 });
 
-test("empty input returns empty output", () => {
-  const result = dedupeByISTDay([]);
-  assert.equal(result.length, 0);
+test("dedupReadings: mixed run at start", () => {
+  const res = dedupReadings([r(100, "t1"), r(100, "t2"), r(200, "t3")]);
+  assert.equal(res.length, 2);
+  assert.equal(res[0].count, 2);
+  assert.equal(res[1].count, 1);
 });
 
-test("output preserves chronological order", () => {
-  const readings = [
-    { timestamp: "2026-05-28T08:00:00.000Z", "22k": 14400 },
-    { timestamp: "2026-05-29T08:00:00.000Z", "22k": 14440 },
-    { timestamp: "2026-05-30T08:00:00.000Z", "22k": 14480 },
-  ];
-  const result = dedupeByISTDay(readings);
-  assert.equal(result[0]["22k"], 14400);
-  assert.equal(result[1]["22k"], 14440);
-  assert.equal(result[2]["22k"], 14480);
+test("dedupReadings: mixed run at end", () => {
+  const res = dedupReadings([r(100, "t1"), r(200, "t2"), r(200, "t3")]);
+  assert.equal(res.length, 2);
+  assert.equal(res[0].count, 1);
+  assert.equal(res[1].count, 2);
+});
+
+// ── dedupForChart tests ───────────────────────────────────────────────────────
+
+test("dedupForChart: empty", () => assert.deepEqual(dedupForChart([]), []));
+
+test("dedupForChart: single point", () => {
+  const res = dedupForChart([r(100, "t1")]);
+  assert.equal(res.length, 1);
+});
+
+test("dedupForChart: two identical → two points (start+end)", () => {
+  const res = dedupForChart([r(100, "t1"), r(100, "t2")]);
+  assert.equal(res.length, 2);
+  assert.equal(res[0].timestamp, "t1");
+  assert.equal(res[1].timestamp, "t2");
+});
+
+test("dedupForChart: two distinct → two points", () => {
+  const res = dedupForChart([r(100, "t1"), r(200, "t2")]);
+  assert.equal(res.length, 2);
+});
+
+test("dedupForChart: run-then-change emits start+end+change", () => {
+  // [A, A, A, B] → [A_start, A_end, B]
+  const res = dedupForChart([r(100, "t1"), r(100, "t2"), r(100, "t3"), r(200, "t4")]);
+  assert.equal(res.length, 3);
+  assert.equal(res[0].timestamp, "t1");
+  assert.equal(res[1].timestamp, "t3");
+  assert.equal(res[2].timestamp, "t4");
 });
