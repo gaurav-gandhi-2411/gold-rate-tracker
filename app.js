@@ -1054,10 +1054,10 @@ function renderMethodology(fc, bt, drift) {
         <h3 class="meth-heading">How accurate is this forecast?</h3>
 
         <p class="meth-text"><strong>The price estimate uses flat-hold (today's price, unchanged)</strong><br>
-        Over ${n} five-day windows from 2022–2026:<br>
+        Gold prices over 5 days are close to unpredictable; no model we tested could beat simply using today's price as the forecast. Over ${n} windows from 2022–2026:<br>
         &bull; Flat-hold average error: ₹${naiveMae}/g<br>
         ${maePctWorse != null ? `&bull; Time-series AI average error: ₹${chronosMae}/g — ${maePctWorse}% worse (p&thinsp;=&thinsp;${pVal})<br>` : ""}
-        Flat-hold beat every model we tested. Today's price is the forecast.</p>
+        Today's price is the forecast.</p>
 
         <p class="meth-text"><strong>The ${rangeStr} range has held ${coverPct}% of the time</strong><br>
         It reflects the real distribution of 5-day price moves — wide because gold can move sharply.</p>
