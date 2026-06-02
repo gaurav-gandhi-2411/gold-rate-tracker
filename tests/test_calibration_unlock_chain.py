@@ -382,7 +382,7 @@ def test_horizon_values_numerically_transformed_by_refit_calibration(tmp_path):
     )
 
     raw_ibja_p50 = 14450.0  # typical INR/g probe value
-    probe = _make_probe(ibja_last=14450.0)
+    probe = _make_probe(ibja_last=raw_ibja_p50)
     backtest = {"n_folds": 30, "folds": [], "mae_5d_avg_naive": 249.5}
     companion = _build_chronos_companion(probe, backtest, cal_dict, None)
 
