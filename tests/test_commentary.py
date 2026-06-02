@@ -110,7 +110,9 @@ class TestBuildUserMessage:
         assert "directional_signal_available: true" in msg
         assert "5/5" not in msg  # consensus no longer sent to LLM (ADR 020)
         assert "up" in msg  # lean_direction
-        assert "Direction acc. (last 30 folds)" not in msg  # Φ9A: Chronos hit-rate removed (ADR 019)
+        assert (
+            "Direction acc. (last 30 folds)" not in msg
+        )  # Φ9A: Chronos hit-rate removed (ADR 019)
 
     def test_skips_directional_when_probe_failed(self):
         """When companion status != success, directional fields are N/A; no lean fabricated."""
