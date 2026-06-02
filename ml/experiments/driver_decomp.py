@@ -289,6 +289,7 @@ def run_driver_decomp_experiment(
     results: list[dict[str, Any]] = []
 
     # Premium stats (shared — same folds processed for both variants)
+    premium_stats: dict[str, float | None]
     if premium_values:
         prem_arr = np.array(premium_values)
         prem_mean = float(np.mean(prem_arr))
@@ -300,7 +301,7 @@ def run_driver_decomp_experiment(
             "cv": round(prem_cv, 4),
         }
     else:
-        premium_stats: dict[str, float | None] = {"mean": None, "std": None, "cv": None}
+        premium_stats = {"mean": None, "std": None, "cv": None}
 
     for vi, (name, usdinr_method, gold_usd_method, _) in enumerate(variants):
         acc = accumulators[vi]
