@@ -1533,6 +1533,23 @@ Each confirmation uses a different mechanism — IBJA's own price momentum, USD/
 
 **Result:** 452 tests pass. Lint: ruff clean. Format: ruff-format clean.
 
+#### PR-Φ10B-2 — dynamic vol display (2026-06-03) — PENDING COPY REVIEW
+
+**Changed:** `app.js` `renderModelSignal()` — replaces static `conformal_pi_half` volatility note with dynamic `vol_context`-driven copy. Reads `hl.vol_context.half_width` (rounded to nearest Rs.50) and `hl.vol_context.regime` from `forecast.json`. Falls back to static `conformal_pi_half` when `vol_context` absent or `is_degraded=True`.
+
+**Copy (three variants — stop for review before merge):**
+
+- *normal:* "Gold has been moving about ±₹X over 5 days lately."
+- *elevated:* "Gold has been more volatile than usual lately — about ±₹X over 5 days."
+- *calm:* "Gold has been calmer than usual lately — about ±₹X over 5 days."
+- *fallback (degraded/absent):* "Gold's price typically moves about ±₹X over 5 days." (unchanged from Φ11)
+
+**Current regime at 2026-06-03:** NORMAL. Display: "Gold has been moving about ±₹450 over 5 days lately."
+
+**Consumer audit (norm #15):** `commentary.py` does not read vol fields — unaffected. `app.js` is the only consumer. 5-day PI range and coverage percentage lines unchanged.
+
+**Status:** STOP — awaiting copy approval before merge.
+
 ---
 
 ## Risks Register
