@@ -3,14 +3,13 @@ export PYTHONUTF8 := 1
 
 .PHONY: help mlflow-up mlflow-down mlflow-logs train-lgbm train-tft train-nbeats \
         train-all inference-test test test-integration lint format clean \
-        setup-train setup-inference
+        setup-inference
 
 help:
 	@echo "Targets:"
 	@echo "  mlflow-up         - Start MLflow stack (docker compose, port 5001)"
 	@echo "  mlflow-down       - Stop MLflow stack"
 	@echo "  mlflow-logs       - Tail MLflow logs"
-	@echo "  setup-train       - Install training deps (see scripts/win/setup-train.ps1 on Windows)"
 	@echo "  setup-inference   - Install inference deps (CI parity)"
 	@echo "  train-all         - Train all models with current configs"
 	@echo "  train-lgbm        - Train LightGBM only"
@@ -32,9 +31,6 @@ mlflow-down:
 
 mlflow-logs:
 	docker compose logs -f mlflow
-
-setup-train:
-	pip install -r ml/requirements-train.txt
 
 setup-inference:
 	pip install -r ml/requirements-inference.txt

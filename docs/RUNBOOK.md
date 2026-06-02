@@ -25,17 +25,13 @@ Operational procedures for gold-rate-tracker.
 git clone https://github.com/gaurav-gandhi-2411/gold-rate-tracker
 cd gold-rate-tracker
 
-# 2. Start MLflow (port 5001 — avoids conflict with other local MLflow instances)
-.\scripts\win\mlflow-up.ps1        # or: docker compose up -d
-# MLflow UI: http://localhost:5001
-
-# 3. Create training venv with PyTorch CUDA 12.4 (RTX 3070)
-.\scripts\win\setup-train.ps1
-# Activates venv-train, installs torch+cu124, then ml/requirements-train.txt
-
-# 4. Install pre-commit hooks (one-time)
+# 2. Install pre-commit hooks (one-time)
 pre-commit install
 ```
+
+> **Local training infra retired (ADR 009/010).** `ml/requirements-train.txt`,
+> `scripts/win/setup-train.ps1`, and the `make setup-train` target were removed.
+> LightGBM, TFT, N-BEATS, and MLflow are no longer part of this repo.
 
 ---
 
@@ -94,25 +90,9 @@ Commit the updated `.lock` file. The lockfile is the source of truth for `check-
 
 ## How to retrain
 
-```powershell
-# 1. Ensure MLflow is running
-.\scripts\win\mlflow-up.ps1
-
-# 2. Activate training venv
-venv-train\Scripts\Activate.ps1
-
-# 3. Train all models (LightGBM + TFT + N-BEATS)
-python -m ml.training              # or: .\scripts\win\train-all.ps1
-
-# 4. Inspect run in MLflow UI
-# http://localhost:5001  -> experiment "gold-rate-training"
-
-# 5. If a new champion was promoted, commit and push the updated ONNX files
-git add models/production/
-git commit -m "chore: promote new model champion"
-git push
-# CI inference picks up the new ONNX on the next 6h cron
-```
+> **Retired (ADR 009/010).** Local training infra retired per ADR 009/010; `requirements-train.txt` removed.
+> Production forecast is naive flat-hold (ADR 012) — no retraining loop applies.
+> Chronos-Bolt-Tiny is zero-shot; it is not trained locally.
 
 ---
 
