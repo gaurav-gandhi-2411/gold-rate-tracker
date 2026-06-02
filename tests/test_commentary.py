@@ -99,13 +99,17 @@ class TestBuildUserMessage:
         assert "Naive baseline" in msg
 
     def test_contains_chronos_directional_signal_when_present(self):
-        """Chronos companion fields reach the prompt when status=success."""
+        """Chronos companion fields reach the prompt when status=success.
+
+        direction_consensus is no longer included in the user message (ADR 020:
+        field is a constant 1.0 and carries no information).
+        """
         msg = build_user_message(
             SAMPLE_PRICES, SAMPLE_PRICES, SAMPLE_FORECAST_WITH_COMPANION, SAMPLE_BACKTEST
         )
         assert "directional_signal_available: true" in msg
         assert "63%" in msg  # direction_acc_30f (0.633 → "63%")
-        assert "5/5" in msg  # consensus (1.0 × 5 = 5 samples)
+        assert "5/5" not in msg  # consensus no longer sent to LLM (ADR 020)
         assert "up" in msg  # lean_direction
 
     def test_skips_directional_when_probe_failed(self):

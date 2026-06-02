@@ -44,7 +44,6 @@ SYSTEM_PROMPT = (
     "Use natural phrasing: 'prices look likely to edge up a little' or 'prices may ease slightly'. "
     "Describe reliability in plain fractions: if direction_acc is ~0.63, say 'right about 6 times out of 10' "
     "or 'tends to be right more often than not'. "
-    "If direction_consensus is 1.0 (or close), you may add 'the signal is quite consistent'. "
     "Describe it as a gentle lean, not a certainty. Never say prices 'will' rise or fall. "
     "(3) When directional_signal_available is false, say nothing about price direction — do not guess. "
     "(4) You may mention where the current price sits relative to recent months using everyday language: "
@@ -187,18 +186,14 @@ def build_user_message(
         _lean_dir = companion.get("lean_direction", "N/A")
         _lean_pct = companion.get("lean_strength_pct")
         _dir_acc = companion.get("direction_acc_30f")
-        _majority = companion.get("majority_direction", "N/A")
-        _consensus = companion.get("direction_consensus")
         lean_str = (
             f"{_lean_dir} ({_lean_pct:.1f}% from current)"
             if isinstance(_lean_pct, (int, float))
             else str(_lean_dir)
         )
         dir_acc_str = f"{_dir_acc * 100:.0f}%" if isinstance(_dir_acc, (int, float)) else "N/A"
-        consensus_count = round(_consensus * 5) if isinstance(_consensus, (int, float)) else "?"
-        consensus_str = f"{consensus_count}/5 samples agree on {_majority}"
     else:
-        lean_str = dir_acc_str = consensus_str = "N/A"
+        lean_str = dir_acc_str = "N/A"
 
     lines = [
         f"sufficient_for_short_term_stats: {'true' if sufficient else 'false'}",
@@ -220,7 +215,6 @@ def build_user_message(
         f"  directional_signal_available: {'true' if companion_available else 'false'}",
         f"  Lean            : {lean_str}",
         f"  Direction acc. (last 30 folds): {dir_acc_str}",
-        f"  Consensus       : {consensus_str}",
         "",
         "Notable patterns:",
         f"  Days since last >=Rs.100 drop : {days_since_drop}",

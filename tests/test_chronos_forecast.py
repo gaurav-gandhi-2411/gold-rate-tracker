@@ -495,7 +495,7 @@ def test_run_probe_calls_forecast_num_samples_times(mock_load, tmp_path):
 
 @patch("ml.chronos_forecast.load_chronos_pipeline")
 def test_run_probe_sample_directions_length(mock_load, tmp_path):
-    """num_samples == 5 and sample_directions has 5 valid labels."""
+    """num_samples == DEFAULT_NUM_SAMPLES and sample_directions has matching length."""
     mock_load.return_value = _stub_pipeline()
     parquet_path = tmp_path / "ibja.parquet"
     calib_path = tmp_path / "calibration.json"
@@ -506,8 +506,8 @@ def test_run_probe_sample_directions_length(mock_load, tmp_path):
 
     result = cf.run_probe(parquet_path, calib_path, out_path)
 
-    assert result["num_samples"] == 5
-    assert len(result["sample_directions"]) == 5
+    assert result["num_samples"] == cf.DEFAULT_NUM_SAMPLES
+    assert len(result["sample_directions"]) == cf.DEFAULT_NUM_SAMPLES
     assert all(d in ("up", "down", "neutral") for d in result["sample_directions"])
 
 
@@ -543,51 +543,12 @@ def _stub_pipeline_alternating(up_count: int, down_count: int, horizon: int = 5)
 
 
 @patch("ml.chronos_forecast.load_chronos_pipeline")
-def test_run_probe_majority_direction_3up_2down(mock_load, tmp_path):
-    """3 up + 2 down samples => majority_direction='up', consensus=0.6."""
-    mock_load.return_value = _stub_pipeline_alternating(up_count=3, down_count=2)
-    parquet_path = tmp_path / "ibja.parquet"
-    calib_path = tmp_path / "calibration.json"
-    out_path = tmp_path / "probe.json"
+def test_run_probe_single_sample_direction_up(mock_load, tmp_path):
+    """Single-sample probe: pipeline returning 'up' forecast => majority_direction='up'.
 
-    _write_stub_parquet(parquet_path)
-    _write_stub_calibration(calib_path, valid=False)
-
-    result = cf.run_probe(parquet_path, calib_path, out_path)
-
-    assert result["majority_direction"] == "up"
-    assert result["direction_consensus"] == 0.6
-
-
-@patch("ml.chronos_forecast.load_chronos_pipeline")
-def test_run_probe_direction_flip_pattern(mock_load, tmp_path):
-    """up,up,down,up,neutral => majority 'up', consensus 0.6."""
-    # We simulate this by returning 3 up (first 3) and 2 down (last 2),
-    # but the pipeline doesn't produce "neutral" naturally from p50 far from ibja_last.
-    # Instead, test the helpers directly for the mixed case.
-    # For run_probe integration: 4 up + 1 down => majority 'up', consensus 0.8.
-    mock_load.return_value = _stub_pipeline_alternating(up_count=4, down_count=1)
-    parquet_path = tmp_path / "ibja.parquet"
-    calib_path = tmp_path / "calibration.json"
-    out_path = tmp_path / "probe.json"
-
-    _write_stub_parquet(parquet_path)
-    _write_stub_calibration(calib_path, valid=False)
-
-    result = cf.run_probe(parquet_path, calib_path, out_path)
-
-    assert result["majority_direction"] == "up"
-    assert result["direction_consensus"] >= 0.6
-
-
-@patch("ml.chronos_forecast.load_chronos_pipeline")
-def test_run_probe_low_consensus_2_up_3_down(mock_load, tmp_path):
-    """2 up + 3 down => majority 'down' with consensus 0.6; gate accepts 'down' direction.
-
-    Separately, the aggregate helper test confirms a 2-2-1 split gives consensus < 0.6.
-    This probe test verifies that a minority label (2/5 = 0.4) is NOT chosen as majority.
+    ADR 020: DEFAULT_NUM_SAMPLES=1; multi-sample alternating stubs are no longer relevant.
     """
-    mock_load.return_value = _stub_pipeline_alternating(up_count=2, down_count=3)
+    mock_load.return_value = _stub_pipeline_alternating(up_count=1, down_count=0)
     parquet_path = tmp_path / "ibja.parquet"
     calib_path = tmp_path / "calibration.json"
     out_path = tmp_path / "probe.json"
@@ -597,9 +558,52 @@ def test_run_probe_low_consensus_2_up_3_down(mock_load, tmp_path):
 
     result = cf.run_probe(parquet_path, calib_path, out_path)
 
-    # majority must be 'down' (3/5), not 'up' (2/5)
+    assert result["majority_direction"] == "up"
+    assert result["num_samples"] == 1
+    assert result["sample_directions"] == ["up"]
+
+
+@patch("ml.chronos_forecast.load_chronos_pipeline")
+def test_run_probe_single_sample_direction_down(mock_load, tmp_path):
+    """Single-sample probe: pipeline returning 'down' forecast => majority_direction='down'."""
+    mock_load.return_value = _stub_pipeline_alternating(up_count=0, down_count=1)
+    parquet_path = tmp_path / "ibja.parquet"
+    calib_path = tmp_path / "calibration.json"
+    out_path = tmp_path / "probe.json"
+
+    _write_stub_parquet(parquet_path)
+    _write_stub_calibration(calib_path, valid=False)
+
+    result = cf.run_probe(parquet_path, calib_path, out_path)
+
     assert result["majority_direction"] == "down"
-    assert result["direction_consensus"] == 0.6
+    assert result["num_samples"] == 1
+    assert result["sample_directions"] == ["down"]
+
+
+@patch("ml.chronos_forecast.load_chronos_pipeline")
+def test_direction_consensus_is_constant_1_0_on_success(mock_load, tmp_path):
+    """direction_consensus must be exactly 1.0 on a successful probe — ADR 020 schema contract.
+
+    Model is deterministic; any successful probe returning direction_consensus != 1.0 is a bug.
+    This test is the Phi8A schema contract guard: if the field is ever re-wired to a computed
+    non-1.0 value, this test will catch it.
+    """
+    mock_load.return_value = _stub_pipeline_alternating(up_count=1, down_count=0)
+    parquet_path = tmp_path / "ibja.parquet"
+    calib_path = tmp_path / "calibration.json"
+    out_path = tmp_path / "probe.json"
+
+    _write_stub_parquet(parquet_path)
+    _write_stub_calibration(calib_path, valid=False)
+
+    result = cf.run_probe(parquet_path, calib_path, out_path)
+
+    assert result["status"] == "success"
+    assert result["direction_consensus"] == 1.0, (
+        "direction_consensus must be constant 1.0 on success (ADR 020: deterministic model). "
+        "If this changed, a consumer has re-wired the field — review before merging."
+    )
 
 
 def _stub_pipeline_neutral(ibja_last: float, horizon: int = 5) -> MagicMock:
@@ -622,7 +626,7 @@ def _stub_pipeline_neutral(ibja_last: float, horizon: int = 5) -> MagicMock:
 
 @patch("ml.chronos_forecast.load_chronos_pipeline")
 def test_run_probe_all_neutral(mock_load, tmp_path):
-    """All 5 samples neutral => majority_direction='neutral', consensus=1.0."""
+    """Single neutral sample => majority_direction='neutral', direction_consensus=1.0."""
     parquet_path = tmp_path / "ibja.parquet"
     calib_path = tmp_path / "calibration.json"
     out_path = tmp_path / "probe.json"
