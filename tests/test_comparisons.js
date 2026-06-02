@@ -1,5 +1,5 @@
 // tests/test_comparisons.js
-// Tests for computeComparisons logic (vsLow uses 30d window, not all-time).
+// Tests for computeComparisons logic (vsLow uses 30d raw window; vs7d/vs30d use IST-day-deduped daily series).
 // Functions are inlined from app.js since app.js is not a module.
 //
 // Run: node --test tests/test_comparisons.js  (from repo root)
@@ -7,7 +7,16 @@
 import assert from "assert/strict";
 import { test } from "node:test";
 
-// --- Inline the function under test (must match app.js) ---
+// --- Inline the functions under test (must match app.js) ---
+
+function dedupeByISTDay(readings) {
+  const byDay = new Map();
+  for (const r of readings) {
+    const key = new Date(r.timestamp).toLocaleDateString("en-IN", { timeZone: "Asia/Kolkata" });
+    byDay.set(key, r);
+  }
+  return [...byDay.values()];
+}
 
 function computeComparisons(readings) {
   if (readings.length === 0) return null;
@@ -16,14 +25,16 @@ function computeComparisons(readings) {
   const avg     = (arr) => Math.round(arr.reduce((s, v) => s + v, 0) / arr.length);
   const p22     = (r) => r["22k"];
 
-  const prices7d  = readings.filter(r => now - new Date(r.timestamp).getTime() <= 7 * 86400e3).map(p22);
-  const prices30d = readings.filter(r => now - new Date(r.timestamp).getTime() <= 30 * 86400e3).map(p22);
+  const raw7d    = readings.filter(r => now - new Date(r.timestamp).getTime() <= 7 * 86400e3);
+  const raw30d   = readings.filter(r => now - new Date(r.timestamp).getTime() <= 30 * 86400e3);
+  const prices7d  = dedupeByISTDay(raw7d).map(p22);
+  const prices30d = dedupeByISTDay(raw30d).map(p22);
   const spanDays  = Math.round((now - new Date(readings[0].timestamp).getTime()) / 86400e3);
 
   return {
-    vs7d:     prices7d.length  > 1 ? current - avg(prices7d)       : null,
-    vs30d:    prices30d.length > 1 ? current - avg(prices30d)      : null,
-    vsLow:    prices30d.length > 0 ? current - Math.min(...prices30d) : null,
+    vs7d:     prices7d.length  > 1 ? current - avg(prices7d)          : null,
+    vs30d:    prices30d.length > 1 ? current - avg(prices30d)         : null,
+    vsLow:    raw30d.length    > 0 ? current - Math.min(...raw30d.map(p22)) : null,
     spanDays,
   };
 }
@@ -33,6 +44,21 @@ function computeComparisons(readings) {
 function makeReading(price, daysAgo) {
   const ts = new Date(Date.now() - daysAgo * 86400 * 1000).toISOString();
   return { timestamp: ts, "22k": price };
+}
+
+// Build multiple readings all on the same IST calendar day.
+// Anchors to 12:00 IST (06:30 UTC) on that day to avoid crossing midnight regardless of
+// the test runner's UTC clock — makeReading()'s relative-offset approach is unsafe here
+// because IST midnight = 18:30 UTC, so a 5-hour span could straddle two IST days.
+function makeReadingsSameISTDay(prices, istDaysAgo) {
+  const nowIST  = new Date().toLocaleDateString("en-CA", { timeZone: "Asia/Kolkata" }); // "YYYY-MM-DD"
+  const [y, m, d] = nowIST.split("-").map(Number);
+  const baseDay = new Date(Date.UTC(y, m - 1, d - istDaysAgo));
+  const noon    = new Date(baseDay.getTime() + 6 * 3600e3 + 30 * 60e3); // 06:30 UTC = 12:00 IST
+  return prices.map((price, i) => ({
+    timestamp: new Date(noon.getTime() + i * 1800e3).toISOString(),
+    "22k": price,
+  }));
 }
 
 // --- Tests ---
@@ -88,4 +114,39 @@ test("vsLow uses 30d window when all readings are recent", () => {
   ];
   const cmp = computeComparisons(readings);
   assert.equal(cmp.vsLow, 14440 - 14000);
+});
+
+test("vs7d uses daily-average basis — multiple readings/day count as one", () => {
+  // Day 6 ago: 6 readings all at 14000 (flat-held price repeats 6×, same IST calendar day).
+  // Day 3 ago: 1 reading at 14200.
+  // Day 0 (today): 1 reading at 14440 (current).
+  //
+  // Raw average of [14000×6, 14200, 14440] = Math.round(112640/8) = 14080 → vs7d = 360
+  // Daily average of [14000 (day-6), 14200 (day-3), 14440 (today)] = 14213 → vs7d = 227
+  //
+  // The daily-basis result (227) is the correct "vs 7-day average price" for a user reading it.
+  const dayReadings = makeReadingsSameISTDay([14000, 14000, 14000, 14000, 14000, 14000], 6);
+  const readings = [
+    ...dayReadings,
+    makeReading(14200, 3),
+    makeReading(14440, 0),
+  ];
+  const cmp = computeComparisons(readings);
+  // Daily dedup: three days → [14000, 14200, 14440], avg = Math.round(42640/3) = 14213
+  const expectedDailyAvg = Math.round((14000 + 14200 + 14440) / 3);
+  assert.equal(cmp.vs7d, 14440 - expectedDailyAvg,
+    `vs7d should be daily-basis ${14440 - expectedDailyAvg}, not raw-basis`);
+  // Confirm it does NOT equal the raw average
+  const rawAvg = Math.round((14000 * 6 + 14200 + 14440) / 8);
+  assert.notEqual(cmp.vs7d, 14440 - rawAvg,
+    "vs7d must NOT be computed over raw (time-weighted) readings");
+});
+
+test("vsLow still uses raw readings — intra-day extreme is captured", () => {
+  // Day 5 ago: two readings on the same IST day — 14100 then 13800 (intra-day dip).
+  // vsLow must use raw30d so both values are seen and the minimum (13800) is used.
+  const [r1, r2] = makeReadingsSameISTDay([14100, 13800], 5);
+  const readings = [r1, r2, makeReading(14440, 0)];
+  const cmp = computeComparisons(readings);
+  assert.equal(cmp.vsLow, 14440 - 13800, "vsLow must use raw readings to capture intra-day extremes");
 });

@@ -52,7 +52,9 @@ function fmtIST(iso) {
 }
 
 // One reading per IST calendar day (latest timestamp wins).
-// Used only in display/chart paths — allReadings stays raw for computations.
+// Used in display/chart paths AND in the daily-average computations (vs-7d/vs-30d avg,
+// verdict avg30d). allReadings stays raw for everything else: conformal PI, backtest
+// inputs, trend slope, current price — those must not be time-averaged away.
 function dedupeByISTDay(readings) {
   const byDay = new Map();
   for (const r of readings) {
@@ -188,10 +190,13 @@ function computeVerdict(prices, forecast) {
     : prices[Math.max(0, prices.length - 5)];
   const slope7d  = current - ref7d["22k"];
 
-  // 30-day average.
+  // 30-day average over IST-day-deduped daily series — one reading per day, latest wins.
+  // Deduped so "30-day average" means the avg of 30 daily prices, not time-weighted over ~8
+  // readings/day (a flat-held price would otherwise dominate the average).
   const within30d = prices.filter(p => now - new Date(p.timestamp).getTime() <= 30 * 24 * 3600 * 1000);
-  const avg30d    = within30d.length > 0
-    ? Math.round(within30d.reduce((s, p) => s + p["22k"], 0) / within30d.length)
+  const daily30d  = dedupeByISTDay(within30d);
+  const avg30d    = daily30d.length > 0
+    ? Math.round(daily30d.reduce((s, p) => s + p["22k"], 0) / daily30d.length)
     : current;
   const vsAvg30d  = current - avg30d;
 
@@ -292,14 +297,20 @@ function computeComparisons(readings) {
   const avg     = (arr) => Math.round(arr.reduce((s, v) => s + v, 0) / arr.length);
   const p22     = (r) => r["22k"];
 
-  const prices7d  = readings.filter(r => now - new Date(r.timestamp).getTime() <= 7 * 86400e3).map(p22);
-  const prices30d = readings.filter(r => now - new Date(r.timestamp).getTime() <= 30 * 86400e3).map(p22);
+  // raw7d/raw30d stay raw so vsLow reflects the actual extreme price reached during the period.
+  // prices7d/prices30d are deduped to one reading per IST day so vs-7d/vs-30d avg = avg of daily
+  // prices, not time-weighted over ~8 readings/day (a flat-held price repeats ~8×/day and
+  // would otherwise dominate the average — see dedupeByISTDay() comment for scope of this rule).
+  const raw7d    = readings.filter(r => now - new Date(r.timestamp).getTime() <= 7 * 86400e3);
+  const raw30d   = readings.filter(r => now - new Date(r.timestamp).getTime() <= 30 * 86400e3);
+  const prices7d  = dedupeByISTDay(raw7d).map(p22);
+  const prices30d = dedupeByISTDay(raw30d).map(p22);
   const spanDays  = Math.round((now - new Date(readings[0].timestamp).getTime()) / 86400e3);
 
   return {
-    vs7d:     prices7d.length  > 1 ? current - avg(prices7d)       : null,
-    vs30d:    prices30d.length > 1 ? current - avg(prices30d)      : null,
-    vsLow:    prices30d.length > 0 ? current - Math.min(...prices30d) : null,
+    vs7d:     prices7d.length  > 1 ? current - avg(prices7d)          : null,
+    vs30d:    prices30d.length > 1 ? current - avg(prices30d)         : null,
+    vsLow:    raw30d.length    > 0 ? current - Math.min(...raw30d.map(p22)) : null,
     spanDays,
   };
 }
