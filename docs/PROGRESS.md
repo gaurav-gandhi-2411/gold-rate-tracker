@@ -1295,7 +1295,9 @@ Tests: 4 unit tests for `extract_ge30ctx_gate_metrics`. Pre-commit clean. Lint C
 | 2026-06-02 | Φ8C' honest trust surface: outlook card leads with range+trend; "how good is this?" panel; forecast-vs-actual chart (ADR 019+020 UI) | CC | renderModelSignal rewritten: PI range + 7-day realized trend description primary; point estimate de-emphasized; direction_consensus not surfaced; direction_prob_basis="base_rate_fallback" → no probability shown. New forecast-vs-actual chart (last 30 backtest folds). "How accurate is this?" panel in methodology accordion: flat-hold framed as hard-prediction-problem win (not AI defeat), 56%/63% accuracy vs ~70% base rate stated, no directional edge claimed. PR #53 (Ψ3C.3) superseded — dedupReadings/dedupForChart/CALLOUT_PLUGIN/skeletons absorbed, PR closed, branch deleted. |
 | 2026-06-02 | Batch Φ9A: two live honesty regressions remediated (INV-1/INV-2, ADR 019+020) | CC (Φ9A) | INV-1: ml/commentary.py SYSTEM_PROMPT was instructing the LLM to render direction signal accuracy as "right about 6 times out of 10" — a claim ADR 019 disproved (56%/63% Chronos accuracy vs ~70% bull-regime base rate; signal does not beat always-up). Instruction and forward-lean phrasing removed; point (2) rewritten to past-tense description only ("prices have eased…"). Direction acc. (last 30 folds) line removed from build_user_message — no copy should reference it. forecast.chronos_companion.direction_prob_basis wired to "base_rate_fallback" in both success and failure paths (ADR 019 field was None since the ADR was written; consumer audit: app.js already renders correctly regardless; notifications.py, drift.py, commentary.py do not read it). INV-2: app.js computeVerdict() headline advice clauses removed — "no rush to buy" / "consider buying sooner" / "buy when convenient" replaced with description-only "Trending down/up this week" / "Roughly flat this week". Reason fields unchanged (already past-tense descriptive). We are not financial advisors. PATTERN NOTE (5th instance, norm #15): commentary SYSTEM_PROMPT predated ADR 019 and was never re-audited when the ADR re-contextualized 63% accuracy against the ~70% base rate; the prompt also carried a forward-direction lean instruction; Up/Flat verdict headlines carried buy-timing advice — all removed. STRUCTURAL GAP: we have automated guards for data wiring (Φ8A integration tests + schema contracts) and for banned jargon (test_system_prompt_blocks_technical_jargon), but no test catches a SYSTEM_PROMPT making a quantitative claim that contradicts an ADR. The copy layer is the current honesty blind spot. Process fix: whenever an ADR changes what a metric MEANS, manually audit commentary.py + app.js copy against it before closing the ADR. |
 | 2026-06-02 | CI chore: wire @pytest.mark.integration filter — norm #11 wiring gap (marker existed, CI filter never connected) | CC (chore) | test_run_probe_real_model is @pytest.mark.integration (downloads Chronos from HuggingFace), but lint.yml "Run full pytest suite" step had no -m filter — so it made live network calls in the gating suite and flapped red on cache/network state (reddened master after #67 merge). Fix (two parts): (1) lint.yml: added -m "not integration" to full-suite step — gating suite now makes zero live calls (norm #11). (2) weekly-backtest.yml: added "Run integration tests (non-gating)" step after walk-forward backtest with continue-on-error: true, running -m "integration". Chronos weights already cached by the backtest step (same runner session, HuggingFace hub path). A HuggingFace outage never reds the gate; a genuine model/pin regression still appears in weekly workflow logs. Same pattern family as Φ9A: computed/registered but never wired to the consumer that enforces it. |
+| 2026-06-02 | Φ9B-1: vs-7d/vs-30d avg and verdict avg30d compute over IST-day-deduped daily series (GG option b) | CC (INV-3) | Raw average over ~8 readings/day means a flat-held price dominates with ~8× weight; label says "daily average" but computation was time-weighted. Fix scoped to the two user-facing daily averages only; conformal PI, backtest, trend slope, current price stay raw (ADR 014). vsLow stays raw so intra-day extremes are captured. PR #69. |
 | 2026-06-02 | Φ9B-2 outlook card non-forecast line: positive-reason-first framing approved (GG) | GG (copy review) | "Today: ₹X. Gold's 5-day move is unpredictable, so we show the likely range above rather than guess a single number." — replaces the negation-first draft ("we don't forecast…"). Principle: range as the offering, non-forecast as principle not shortfall. Trend line approved as-is. PR #70. |
+| 2026-06-02 | Φ9B-3: initBottomNav() — open DETAILS first, scrollIntoView() in single rAF (device verification pending) | CC (INV-5) | Old order was scroll-then-open; iOS reflow from el.open=true cancelled in-flight smooth scroll. Reversed order + rAF chosen over setTimeout (fires on paint boundary, not wall-clock). Escalation path (double-rAF) documented. Device verification by GG required before merge (norm #14). PR #71. |
 
 ### Phi8A — Pipeline Hardening (2026-06-02)
 
@@ -1327,6 +1329,51 @@ PR `feat/phi8c-honest-trust-surface`. Implements ADR 019 + ADR 020 UI surface. A
 **Files changed:** `app.js`, `index.html`, `style.css`, `service-worker.js` (v10 → v11), `tests/test_dedup.js` (new), `tests/test_trend.js` (new).
 
 **Tests.** 398 Python tests pass (no Python changes). 18 JS tests pass (13 dedup + 5 trend). Lint CI: pending on PR.
+
+---
+
+### Batch Φ9B — Correctness + Clarity (deduped averages, rebuilt outlook card, two-click fix) 🟡 IN PROGRESS — 2026-06-02
+
+Three items from diagnosis INV-3/INV-4/INV-5. PR #69 (Φ9B-1) ✅ merged; PR #70 (Φ9B-2) ✅ merged; PR #71 (Φ9B-3) open pending device verification.
+
+#### PR #69 — Φ9B-1: vs-7d/vs-30d and verdict avg30d over IST-day-deduped daily series
+
+**Root cause (INV-3).** `computeComparisons()` and `computeVerdict()` averaged over raw allReadings (~8 readings/day). At ~8 readings/day, a price held flat for 5 days at ₹14,000 dominates the average with ~40 entries out of ~48. The label "vs 7-day avg" implies "average of daily prices"; the computation was time-weighted. GG confirmed option (b): compute over IST-day-deduped daily series.
+
+**Changes (app.js):**
+- `computeComparisons()`: `raw7d`/`raw30d` feed `vsLow` (raw so intra-day extremes are captured); `prices7d`/`prices30d` use `dedupeByISTDay()` → average of daily prices.
+- `computeVerdict()`: `avg30d` uses `dedupeByISTDay(within30d)` for consistency with the comparison cards.
+- `dedupeByISTDay()` comment updated: scope now includes daily-average computations, not only display/chart paths.
+- Constraint: PI, backtest, trend slope, current price all stay raw (ADR 014).
+
+**Tests.** `tests/test_comparisons.js`: 2 new tests — daily-basis assertion (vs7d with 6 flat readings on one IST day = daily avg, not time-weighted avg) and vsLow raw-basis guard (intra-day extreme captured). 7/7 pass. Lint CI: pass.
+
+#### PR #70 — Φ9B-2: Rebuilt outlook card (STOP gate — copy review pending)
+
+**Root cause (INV-4).** Current card shows `Estimate Rs.X / flat — today's price` row beside the ~Rs.500-wide PI band — two contradictory messages (false precision + honest range). GG: "earlier was better" (true on legibility, not on honesty). The fix recovers legibility without reintroducing overclaims.
+
+**Changes (app.js + style.css):**
+- Trend description (`computeTrendDescription`, past-tense, pure momentum) moved to top as the clear PRIMARY statement.
+- PI band stays second (honest forward view).
+- `Estimate Rs.X / flat — today's price` row removed.
+- Replaced with `Today's price: Rs.X — we don't forecast an exact future price.`
+- CSS: `.outlook-estimate-{row,label,value,note}` removed; `.outlook-current-note` added.
+
+**STOP gate.** Do not merge until GG approves the literal copy: trend line + non-forecast line (see PR #70 description).
+
+**Note on the wide band.** The ~Rs.500 range is the honest 87% conformal band reflecting the real 5-day move distribution. Narrowing it would be the dishonest move. The fix removes the false-precision POINT beside the band, not the band width.
+
+#### PR #71 — Φ9B-3: Fix two-click Info nav race (device verification pending)
+
+**Root cause (INV-5).** `initBottomNav()` called `scrollIntoView()` then `el.open = true` on the same tick. On iOS, `el.open = true` triggers a layout reflow that cancels the in-flight smooth scroll. Tap 1 opened the DETAILS section; tap 2 scrolled.
+
+**Fix (app.js):** Open DETAILS first, then scroll inside `requestAnimationFrame`. Single rAF chosen over double-rAF or setTimeout (rAF fires on the next paint boundary — semantically correct). Escalation path (double-rAF) documented in comment.
+
+**rAF choice rationale:** iOS Safari executes `el.open` synchronously and completes the reflow before the next paint frame. Single rAF fires after that reflow; scroll position is then stable. `setTimeout(n)` would also work but fires on wall-clock delay, not layout stability — rAF is more deterministic.
+
+**Non-DETAILS regression:** non-DETAILS nav targets (Home, Trend, History) skip the guard; scroll deferred ~16ms (one frame), imperceptible.
+
+**Device verification.** Norm #14: must be verified on rendered behavior, not code review. This is the specific WI-5 code-review-only gap from the original PR #59 surfacing again. Verification = one-tap open+scroll observed on the live site by GG.
 
 ---
 
