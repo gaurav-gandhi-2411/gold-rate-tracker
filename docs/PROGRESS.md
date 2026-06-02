@@ -1289,6 +1289,15 @@ Tests: 4 unit tests for `extract_ge30ctx_gate_metrics`. Pre-commit clean. Lint C
 | 2026-06-02 | Phi7B: premium-carry flat-carry at h=5 -- algebraic identity with flat-naive confirmed | CC (Phi7B) | 124 folds with macro coverage; flat-carry collapses to flat-naive by construction; beats_naive=false as predicted |
 | 2026-06-02 | Phi7C: horizon sweep (h=10, h=20) Chronos + drift_naive -- gap-vs-horizon curve | CC (Phi7C) | Reports whether Chronos gap widens or narrows with longer horizon; all variants |
 
+### Φ8A — Pipeline Hardening (2026-06-02)
+
+**WI-Φ8A: Integration test + schema contracts**
+
+- `tests/test_pipeline_integration.py`: end-to-end chain test (calibration → inference → notifications). Asserts: calibration flip to valid=true changes forecast.json.chronos_companion.calibration_applied; probe failure sets status=failed + T5 fires; all consumer fields present (commentary.py, app.js, notifications.py).
+- `tests/test_schema_contracts.py`: jsonschema contracts for prices.json, forecast.json, chronos_probe.json, backtest.json, calibration.json. Validates both committed data files and freshly-written inference output.
+- No production behavior change.
+- RED demonstration: removing the `cal_applied = True` assignment in `_build_chronos_companion` causes `test_pipeline_wiring_calibration_applied` to fail with AssertionError on `calibration_applied == True`. This is the exact wiring gap that was missed for weeks in Phi5 history.
+
 ---
 
 ## Risks Register
