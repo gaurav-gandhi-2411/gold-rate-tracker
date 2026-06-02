@@ -6,7 +6,7 @@ onnxruntime>=1.16.0
 hmmlearn>=0.3.0
 structlog==24.4.0
 pandas>=2.0
-numpy>=1.24
+numpy>=2.4.6
 scikit-learn>=1.8.0
 pyarrow>=13.0
 yfinance>=0.2.40
