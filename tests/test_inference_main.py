@@ -7,6 +7,7 @@ import math
 from datetime import UTC, datetime, timedelta
 
 import ml.inference as inf
+import numpy as np
 import pytest
 
 
@@ -221,3 +222,43 @@ def test_compute_conformal_pi_uses_last_30_folds():
     # All 30 recent folds have error=100 → 80th pct = 100.0
     assert pi_half == pytest.approx(100.0, abs=1.0)
     assert mae == pytest.approx(100.0, abs=1.0)
+
+
+def test_conformal_pi_numpy_dtype_safety():
+    """numpy 2.x dtype guard for the conformal PI path (Φ12-1 safety check).
+
+    numpy 2.x changed scalar/dtype semantics.  The exact pattern in
+    _compute_conformal_pi is:
+        arr = np.array(errors)                      # list[float] → float64
+        round(float(np.percentile(arr, 80)), 1)
+        round(float(np.mean(arr)), 1)
+
+    A silent dtype shift (e.g. object array, integer truncation) would corrupt
+    the conformal PI bands without raising an error.  This test pins the
+    observed behaviour so any regression surfaces immediately.
+    """
+    errors = [float(14000.0 + i * 10) for i in range(30)]
+    arr = np.array(errors)
+
+    assert arr.dtype == np.float64, f"Expected float64, got {arr.dtype}"
+
+    p80 = np.percentile(arr, 80)
+    avg = np.mean(arr)
+
+    result_pct = round(float(p80), 1)
+    result_mean = round(float(avg), 1)
+
+    assert isinstance(result_pct, float) and np.isfinite(result_pct) and result_pct > 0
+    assert isinstance(result_mean, float) and np.isfinite(result_mean) and result_mean > 0
+
+    # End-to-end: _compute_conformal_pi must return finite (pi_half, mae) on 35 folds
+    folds = [
+        {
+            "actuals": [14000.0] * 4 + [14250.0],
+            "naive": [14000.0] * 5,
+        }
+        for _ in range(35)
+    ]
+    pi_half, mae = inf._compute_conformal_pi({"folds": folds})
+    assert isinstance(pi_half, float) and np.isfinite(pi_half) and pi_half > 0
+    assert isinstance(mae, float) and np.isfinite(mae) and mae > 0

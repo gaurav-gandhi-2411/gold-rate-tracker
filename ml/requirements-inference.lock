@@ -2,6 +2,10 @@
 #    uv pip compile ml/requirements.txt --index-strategy unsafe-best-match --output-file ml/requirements-inference.lock --python-version 3.12
 accelerate==1.13.0
     # via chronos-forecasting
+attrs==26.1.0
+    # via
+    #   jsonschema
+    #   referencing
 beautifulsoup4==4.14.3
     # via yfinance
 certifi==2026.4.22
@@ -58,6 +62,10 @@ joblib==1.5.3
     # via
     #   -r ml/requirements.txt
     #   scikit-learn
+jsonschema==4.26.0
+    # via -r ml/requirements.txt
+jsonschema-specifications==2025.9.1
+    # via jsonschema
 lightgbm==4.6.0
     # via -r ml/requirements.txt
 lxml==6.1.0
@@ -74,7 +82,7 @@ multitasking==0.0.13
     # via yfinance
 networkx==3.6.1
     # via torch
-numpy==2.4.5
+numpy==2.4.6
     # via
     #   -r ml/requirements.txt
     #   accelerate
@@ -140,6 +148,10 @@ pyyaml==6.0.3
     #   accelerate
     #   huggingface-hub
     #   transformers
+referencing==0.37.0
+    # via
+    #   jsonschema
+    #   jsonschema-specifications
 regex==2026.5.9
     # via transformers
 requests==2.34.2
@@ -150,6 +162,10 @@ requests==2.34.2
     #   yfinance
 rich==15.0.0
     # via curl-cffi
+rpds-py==2026.5.1
+    # via
+    #   jsonschema
+    #   referencing
 safetensors==0.7.0
     # via
     #   accelerate
@@ -190,6 +206,7 @@ typing-extensions==4.15.0
     # via
     #   beautifulsoup4
     #   huggingface-hub
+    #   referencing
     #   torch
 tzdata==2026.2
     # via pandas
