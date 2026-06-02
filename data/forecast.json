@@ -1,5 +1,5 @@
 {
-  "predicted_at": "2026-06-02T12:40:08.686064+00:00",
+  "predicted_at": "2026-06-02T15:51:17.012344+00:00",
   "target_window": "5d",
   "headline": {
     "method": "naive_flat_hold",
@@ -14,6 +14,7 @@
     "lean_direction": "up",
     "lean_strength_pct": 1.48,
     "direction_acc_30f": 0.633,
+    "direction_prob_basis": "base_rate_fallback",
     "horizon_p10": [
       13860.64,
       13821.6,
@@ -41,9 +42,9 @@
     "majority_direction": "up",
     "direction_consensus": 1.0
   },
-  "real_readings_count": 137,
+  "real_readings_count": 138,
   "current_22k": 14365,
-  "scraped_at": "2026-06-02T12:39:48.845Z",
+  "scraped_at": "2026-06-02T15:50:50.076Z",
   "model_fallback": false,
   "predicted_22k": 14365,
   "lower": 13429,
