@@ -51,6 +51,17 @@ function fmtIST(iso) {
   } catch (_) { return iso; }
 }
 
+// One reading per IST calendar day (latest timestamp wins).
+// Used only in display/chart paths — allReadings stays raw for computations.
+function dedupeByISTDay(readings) {
+  const byDay = new Map();
+  for (const r of readings) {
+    const key = new Date(r.timestamp).toLocaleDateString("en-IN", { timeZone: "Asia/Kolkata" });
+    byDay.set(key, r);
+  }
+  return [...byDay.values()];
+}
+
 let chart            = null;
 let allReadings      = [];
 let currentRange     = "7";   // tracks active chart tab for refreshData()
@@ -362,7 +373,7 @@ function renderSparkline(readings) {
   const rangeEl = document.getElementById("sparkline-range");
 
   const now  = Date.now();
-  const pts  = readings.filter(r => now - new Date(r.timestamp).getTime() <= 7 * 86400e3);
+  const pts  = dedupeByISTDay(readings.filter(r => now - new Date(r.timestamp).getTime() <= 7 * 86400e3));
   if (pts.length < 2) { wrap.hidden = true; return; }
 
   const prices = pts.map(p => p["22k"]);
@@ -536,6 +547,7 @@ function renderChart(readings, range) {
     const cutoff = Date.now() - parseInt(range, 10) * 86400 * 1000;
     filtered     = readings.filter(r => new Date(r.timestamp).getTime() >= cutoff);
   }
+  filtered = dedupeByISTDay(filtered);
   const labels = filtered.map(r => fmtDate(r.timestamp));
   const data22 = filtered.map(r => r["22k"]);
 
@@ -617,7 +629,7 @@ function renderHistory(readings) {
     return;
   }
 
-  const rows = [...readings].reverse().slice(0, 50);
+  const rows = [...dedupeByISTDay(readings)].reverse().slice(0, 50);
 
   // ── Desktop table (unchanged from pre-Ψ2B) ──────────────────────────────────
   // XSS-safe: all interpolated values are numbers (fmtINR/rupee) or date strings
@@ -950,7 +962,10 @@ function initBottomNav() {
       e.preventDefault();
       const sectionId = item.dataset.section;
       const el = document.getElementById(sectionId);
-      if (el) el.scrollIntoView({ behavior: "smooth", block: "start" });
+      if (el) {
+        el.scrollIntoView({ behavior: "smooth", block: "start" });
+        if (el.tagName === "DETAILS" && !el.open) el.open = true;
+      }
     });
   });
 
