@@ -8,7 +8,6 @@ Runs BEFORE any experiment code is built.
 This script is read-only — it does NOT touch production files.
 """
 
-import numpy as np
 import pandas as pd
 
 
@@ -133,10 +132,7 @@ def count_effective_folds(
         if horizon_end_idx >= n:
             break  # not enough data for this fold
 
-        context_size = min_context  # always min_context (expanding window from fold start i)
-        # For expanding window: context_size = context_end_idx - 0 + 1 = context_end_idx + 1
-        # But the spec says "context_size >= 30", so use expanding window where
-        # context_size = context_end_idx + 1 (all rows from 0 to context_end_idx)
+        # Expanding window: context includes all rows from 0 to context_end_idx
         context_size_expanding = context_end_idx + 1
 
         total_possible += 1
@@ -162,13 +158,12 @@ def main() -> None:
     ibja = load_ibja()
     print()
     print("── SECTION 1: IBJA 916 Series ─────────────────────────────────────")
-    print(f"  Column used          : pm_916")
+    print("  Column used          : pm_916")
     print(f"  Series length        : {len(ibja):,} rows")
     print(f"  First date           : {ibja['date'].iloc[0]}")
     print(f"  Last date            : {ibja['date'].iloc[-1]}")
     ibja_years = (
-        pd.to_datetime(str(ibja["date"].iloc[-1]))
-        - pd.to_datetime(str(ibja["date"].iloc[0]))
+        pd.to_datetime(str(ibja["date"].iloc[-1])) - pd.to_datetime(str(ibja["date"].iloc[0]))
     ).days / 365.25
     print(f"  Approx years         : {ibja_years:.2f}")
 
@@ -199,7 +194,6 @@ def main() -> None:
 
     has_both = overlap["usd_inr"].notna() & overlap["gold_usd"].notna()
     covered = overlap[has_both]
-    not_covered = overlap[~has_both]
 
     total_ibja = len(overlap)
     ibja_with_macro = has_both.sum()
@@ -234,7 +228,7 @@ def main() -> None:
     premium = compute_premium(overlap)
     if len(premium) > 0:
         cv = premium.std() / premium.mean()
-        print(f"  premium = (pm_916 / 10) / (gold_usd × usd_inr / 31.1035)")
+        print("  premium = (pm_916 / 10) / (gold_usd x usd_inr / 31.1035)")
         print(f"  Values computed    : {len(premium):,}")
         print(f"  Mean premium       : {premium.mean():.6f}")
         print(f"  Std  premium       : {premium.std():.6f}")
@@ -253,7 +247,7 @@ def main() -> None:
     gate_pass = effective_folds >= 30
     print(f"  Total possible folds               : {total_folds:,}")
     print(f"  Folds with context>=30 & macro     : {effective_folds:,}")
-    print(f"  Gate threshold                     : >= 30 effective folds")
+    print("  Gate threshold                     : >= 30 effective folds")
     print(f"  Gate result                        : {'PASS' if gate_pass else 'FAIL'}")
 
     # -----------------------------------------------------------------------
@@ -269,9 +263,7 @@ def main() -> None:
     if len(premium) == 0:
         issues.append("CRITICAL: Premium series is empty — cannot compute drivers.")
     if not gate_pass:
-        issues.append(
-            f"GATE FAIL: Only {effective_folds} effective folds (need >= 30)."
-        )
+        issues.append(f"GATE FAIL: Only {effective_folds} effective folds (need >= 30).")
     if max_gap > 7:
         issues.append(
             f"WARNING: Max calendar gap in overlap is {max_gap} days "
