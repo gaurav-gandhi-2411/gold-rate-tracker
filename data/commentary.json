@@ -1,12 +1,5 @@
 [
   {
-    "ts": "2026-05-29T02:47:27Z",
-    "text": "The 22K gold price is at Rs.14350, with a 2.08% drop over 3 days and a 2.41% drop over 7 days, currently at the 45.3th percentile in the last 90 days. The model expects a similar price at the next reading. Recent price moves have been downward.",
-    "model": "llama-3.3-70b-versatile",
-    "prompt_hash": "0d1f9a210a6d",
-    "commentary_age_hours": 0.0
-  },
-  {
     "ts": "2026-05-29T09:45:16Z",
     "text": "The 22K gold price is at Rs.14495, with a 3-day decline of 0.79% and a 7-day decline of 1.16%. The model expects the next reading to be around Rs.14495.",
     "model": "llama-3.3-70b-versatile",
@@ -207,6 +200,13 @@
     "text": "The current gold price is around average for the past few months. Prices have been down a little over the past week. Prices look likely to edge up a little, and this signal tends to be right more often than not, about 6 times out of 10, with a consistent signal from all sources.",
     "model": "llama-3.3-70b-versatile",
     "prompt_hash": "35b6ae592fe1",
+    "commentary_age_hours": 0.0
+  },
+  {
+    "ts": "2026-06-02T04:04:21Z",
+    "text": "The current gold price is around average for the past few months. Prices look likely to edge up a little over the next few days, and this signal tends to be right more often than not, about 6 times out of 10, with a consistent signal from our readings. Gold prices are down a little over the past week.",
+    "model": "llama-3.3-70b-versatile",
+    "prompt_hash": "dd1f202bfa5d",
     "commentary_age_hours": 0.0
   }
 ]
