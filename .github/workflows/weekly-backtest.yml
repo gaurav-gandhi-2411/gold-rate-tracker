@@ -47,6 +47,14 @@ jobs:
       - name: Run walk-forward backtest
         run: python -m ml.backtest --run
 
+      - name: Run integration tests (non-gating)
+        # @pytest.mark.integration tests make live HuggingFace calls — excluded from the
+        # gating Lint suite (norm #11). Chronos weights are already cached by the step
+        # above. continue-on-error: true so a HuggingFace outage never blocks the gate,
+        # but a genuine model/pin regression still appears in workflow logs.
+        continue-on-error: true
+        run: pytest -m "integration" tests/ -v
+
       - name: Resolve metrics outcomes
         continue-on-error: true
         run: python -m ml.metrics --resolve
