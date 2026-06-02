@@ -1229,27 +1229,12 @@ html.ptr-pulling {
   margin: 0 0 12px;
   font-weight: 500;
 }
-.outlook-estimate-row {
-  display: flex;
-  align-items: baseline;
-  gap: 6px;
+.outlook-current-note {
+  font-size: 13px;
+  color: var(--cream-mute);
+  margin: 12px 0 0;
   padding-top: 12px;
   border-top: 1px solid var(--line);
-  opacity: 0.65;
-}
-.outlook-estimate-label {
-  font-size: 12px;
-  color: var(--cream-mute);
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
-}
-.outlook-estimate-value {
-  font-size: 16px;
-  color: var(--cream);
-}
-.outlook-estimate-note {
-  font-size: 12px;
-  color: var(--cream-mute);
 }
 
 /* ── Track record section (Φ8C') ────────────────────────────────────────────── */
