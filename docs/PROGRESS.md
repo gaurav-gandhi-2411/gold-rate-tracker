@@ -1233,6 +1233,7 @@ Backend + PWA + CI. SW VERSION bump v9→v10 (`"v10-20260601-a"`). Merge commit 
 | 2026-06-02 | Display-layer dedup by IST day for chart/history/sparkline; Info nav click opens <details> (WI-4+WI-5, PR #59/Φ6C) | CC | WI-4: one reading per IST day (latest) — Tanishq posts one daily rate, intraday reads are same price; dedup display-only, prices.json untouched, allReadings stays raw for verdict/comparisons/freshness. 7 pure-function tests for dedupeByISTDay in tests/test_dedup.js. WI-5 root cause: initBottomNav() click handler scrolled to section but never opened the <details> accordion; fix: el.open=true when target is DETAILS; norm #14 compliant (el.open is IDL attribute governing computed display, not el.hidden). |
 | 2026-06-02 | Batch Phi7A: drift_naive spans 5/10/20 at h=5 — results in phi7_results.json | CC (Phi7A) | Pre-registered gate: >=2% MAE improvement, Wilcoxon p<0.05, >=30 ge30ctx folds |
 | 2026-06-02 | Phi7B: premium-carry flat-carry at h=5 -- algebraic identity with flat-naive confirmed | CC (Phi7B) | 124 folds with macro coverage; flat-carry collapses to flat-naive by construction; beats_naive=false as predicted |
+| 2026-06-02 | Phi7C: horizon sweep (h=10, h=20) Chronos + drift_naive -- gap-vs-horizon curve | CC (Phi7C) | Reports whether Chronos gap widens or narrows with longer horizon; all variants |
 
 ---
 
