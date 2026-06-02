@@ -1292,6 +1292,7 @@ Tests: 4 unit tests for `extract_ge30ctx_gate_metrics`. Pre-commit clean. Lint C
 | 2026-06-02 | ADR 019: Chronos direction accuracy below bull-regime base rate on all windows; no calibrated probability ships | CC + consultant (ADR 019) | base rate P(actual up) = 69.7%/75.5%/70% (all/ge30ctx/last30 windows); Chronos accuracy = 55.8%/52.4%/63.3% — below base rate on every window. Brier improvement over constant base-rate: 0.0008 (in-sample, most-favourable possible setup). Pre-registered gate not met. forecast.json.chronos_companion carries direction_prob_basis: "base_rate_fallback"; no fabricated probability. Honest-baseline reporting (ADR 005) functioning as intended. Re-evaluation trigger: mixed-regime fold set AND a signal that beats base rate out-of-sample. |
 | 2026-06-02 | Dead training-infra files removed: ml/requirements-train.txt, scripts/win/setup-train.ps1, make setup-train target | CC (hygiene) | No CI workflow or production Python import referenced ml/requirements-train.txt (confirmed by grep). File served retired training infra (LightGBM/TFT/N-BEATS, ADR 009). Dependabot bumps #19 (mlflow) and #20 (structlog) closed as moot. setup-train.ps1 deleted (sole purpose was to install the deleted file; keeping a broken runnable worse than removing it). Makefile setup-train target removed; no other target depended on it. RUNBOOK.md "Local development setup" step 3 and "How to retrain" section tombstoned with one-liner referencing ADR 009/010. |
 | 2026-06-02 | ADR 020: Chronos consensus mechanism degenerate; supersedes ADR 015; T1/T2 re-pointed to momentum (Option b) | CC + consultant (ADR 020) | predict_quantiles is deterministic — 5 calls return byte-identical results. direction_consensus was always 1.0 in 40/40 historical probe commits (100%); consensus >= 0.6 gate was always true; gate never suppressed a single false fire. Root cause of the original inter-run direction flips: context window change between runs (new scrape readings shift the input), not sampling stochasticity. Cleanup: DEFAULT_NUM_SAMPLES = 1 (redundant calls removed); consensus gate removed from T1/T2; T1/T2 re-pointed to N=7d momentum signal >= 0.5%, description-only copy ("Prices are up/down X% over the past 7 days — a recent trend, not a forecast"); three ADR-005 violations removed (app.js "Consistent signal", commentary.py SYSTEM_PROMPT "quite consistent", commentary.py LLM prompt "5/5 samples agree"); ADR 015 marked Superseded-by: 020. ADR 020 schema contract test added (direction_consensus == 1.0 on success is a documented constant; any deviation trips the test). 390 tests pass. |
+| 2026-06-02 | Φ8C' honest trust surface: outlook card leads with range+trend; "how good is this?" panel; forecast-vs-actual chart (ADR 019+020 UI) | CC | renderModelSignal rewritten: PI range + 7-day realized trend description primary; point estimate de-emphasized; direction_consensus not surfaced; direction_prob_basis="base_rate_fallback" → no probability shown. New forecast-vs-actual chart (last 30 backtest folds). "How accurate is this?" panel in methodology accordion: flat-hold framed as hard-prediction-problem win (not AI defeat), 56%/63% accuracy vs ~70% base rate stated, no directional edge claimed. PR #53 (Ψ3C.3) superseded — dedupReadings/dedupForChart/CALLOUT_PLUGIN/skeletons absorbed, PR closed, branch deleted. |
 
 ### Phi8A — Pipeline Hardening (2026-06-02)
 
@@ -1301,6 +1302,28 @@ Tests: 4 unit tests for `extract_ge30ctx_gate_metrics`. Pre-commit clean. Lint C
 - `tests/test_schema_contracts.py`: jsonschema contracts for prices.json, forecast.json, chronos_probe.json, backtest.json, calibration.json. Validates both committed data files and freshly-written inference output.
 - No production behavior change.
 - RED demonstration: removing the `cal_applied = True` assignment in `_build_chronos_companion` causes `test_pipeline_wiring_calibration_applied` to fail with AssertionError on `calibration_applied == True`. This is the exact wiring gap that was missed for weeks in Phi5 history.
+
+---
+
+### Batch Φ8C' — Honest Trust Surface (2026-06-02)
+
+PR `feat/phi8c-honest-trust-surface`. Implements ADR 019 + ADR 020 UI surface. Absorbs Ψ3C.3 (PR #53, superseded).
+
+**PR #53 (Ψ3C.3) absorbed and closed.** The honesty-neutral parts — `dedupReadings`, `dedupForChart`, `CALLOUT_PLUGIN`, skeleton loaders, `tests/test_dedup.js` — absorbed into Φ8C'. PR #53 closed (superseded), `feat/psi3c3-chart-dedup-skeletons` branch deleted. Section 4.18 was documented only in the PR #53 branch and was never merged; content subsumed here.
+
+**5-day outlook card rewritten (ADR 019/020).** `renderModelSignal` leads with PI range (₹lower – ₹upper) + 7-day realized trend description computed from `allReadings`. Point estimate (flat-hold) de-emphasized. `direction_consensus` not surfaced. `direction_prob_basis = "base_rate_fallback"` or absent → no probability shown. Up/Down arrow + "Right about X% of the time recently" copy removed.
+
+**Forecast-vs-actual chart.** New `section-track-record` renders last 30 qualifying backtest folds as dual-line chart: "What happened" (gold line) vs "Flat-hold forecast" (dashed). Misses shown honestly.
+
+**"How accurate is this?" panel.** First section in the methodology accordion (replaces old direction-signal + historical-accuracy sections). Flat-hold wins because gold over 5 days is close to unpredictable — not because it outsmarts AI. Numbers: ₹250 naive vs ₹276 AI (10% worse, p=0.0089), 87% PI coverage, 56%/63% direction accuracy vs ~70% base rate. No directional edge claimed. Current price-move alerts use 7-day momentum.
+
+**Price history chart.** `dedupForChart` + `stepped:'before'` renders flat-hold periods as horizontal segments. `CALLOUT_PLUGIN` (tap-to-reveal ₹price+date) retained — reinforces the honest "prices are often static" message.
+
+**Coverage % unified.** Both the outlook card note and the methodology panel compute `Math.round(bt.pi_coverage_80_5d_avg * 100)` from the same `bt` object. Fallback 87 used before backtest loads (first `renderModelSignal` call); second call (after `Promise.allSettled`) updates with live data.
+
+**Files changed:** `app.js`, `index.html`, `style.css`, `service-worker.js` (v10 → v11), `tests/test_dedup.js` (new), `tests/test_trend.js` (new).
+
+**Tests.** 398 Python tests pass (no Python changes). 18 JS tests pass (13 dedup + 5 trend). Lint CI: pending on PR.
 
 ---
 
