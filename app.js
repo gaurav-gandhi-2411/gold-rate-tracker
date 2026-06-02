@@ -523,7 +523,7 @@ function renderModelSignal(fc) {
         <span class="signal-dot">·</span>
         <span>${consensusText}</span>
       </div>
-      <p class="signal-note">A guide for which way prices may move — not a guarantee. Updated at least every 3 days.</p>
+      <p class="signal-note">A guide for which way prices may move — not a guarantee. Updated roughly every 3 hours.</p>
     </div>
   `;
 
