@@ -1671,6 +1671,23 @@ Copy approved: all three branch strings + headline patterns (GG 2026-06-03). Dri
 
 ---
 
+### Batch Φ17 — RUNBOOK dead-content tombstones (2026-06-03)  ✅ COMPLETE
+
+**Goal:** Tombstone all dead-workflow references in `docs/RUNBOOK.md` per project convention (mark, don't silently delete). Docs-only hygiene; no code or behaviour change.
+
+**PR-Φ17 (2026-06-03)** ✅ MERGED
+
+Four tombstone sites applied:
+
+- **§3 "How to roll back a bad production model":** Entire body tombstoned (ADR 009). The `models/production/` rollback procedure is dead — no ONNX artifacts exist. Redirected to §4 (forecast.json rollback), which is the live recovery path.
+- **§5 "How to add a new feature" — steps 5–6:** `python -m ml.training` and the ONNX champion/challenger auto-promotion gate tombstoned (ADR 009/010). Steps 1–4 (feature logic, config, unit test) remain live.
+- **§6 "How to investigate a CI failure" — Forecast step bullet:** ONNX-schema-mismatch failure mode tombstoned (ADR 009). ONNX is no longer in the CI pipeline; the bullet would mislead anyone investigating a live forecast step failure.
+- **§9 "Known constraints" — five bullets:** MLflow-local, CUDA/GPU training, `onnxruntime` inference venv, `models/production/*-meta.json` model-vs-naive framing, and `models/local/` gitignore note — all tombstoned (ADR 009/010/012). WANDB note kept (still live). Near-random-walk context preserved inline (still true; model-vs-naive framing corrected).
+
+**No FLAG-AND-STOP issues found** beyond the tombstoned content itself. The §6 Forecast step bullet was actively misdescribing a live CI step (claiming ONNX was involved); tombstoning removes the incorrect description. The §6 section now has no current failure-mode entry for the Forecast step — gap noted; filling it is out of scope for this docs-only PR.
+
+---
+
 ## Risks Register
 
 | Risk | Severity | Owner | Mitigation status |
