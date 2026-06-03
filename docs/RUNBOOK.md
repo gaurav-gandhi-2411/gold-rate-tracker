@@ -143,7 +143,9 @@ The next successful CI run will replace `forecast.json` and hide the banner.
 3. Common failure points:
    - **Scraper step:** Tanishq changed HTML structure. Look for `=== PAGE TEXT ===` in stderr; update the selector in `scraper/scrape.js`.
    - **Macro step:** yfinance rate-limited or ticker changed. Check `ml/macro.py` ticker list and `data/macro_cache.parquet` freshness.
-   - **Forecast step (ONNX — retired, ADR 009):** ONNX inference is no longer in the pipeline. This failure mode does not apply.
+   - **Run inference** (`ml.inference`): `continue-on-error: true`. Missing `data/prices.json` or fewer than 30 backtest folds → `forecast.json` written with `model_status: "insufficient_backtest_history"`. File write failure → staleness alert fires >18h later.
+   - **Refit calibration** (`ml.calibration`): `continue-on-error: true`. Missing `data/ibja_rates.parquet` or fewer than 30 IBJA-Tanishq overlap pairs → refit silently skipped; stale `calibration.json` persists until data accumulates.
+   - **Run Chronos probe** (`ml.chronos_forecast --probe`): `continue-on-error: true`. HuggingFace download timeout or torch error → `chronos_probe.json` absent or `status: "failed"` → next run's inference falls back to flat-hold, no directional signal. Check the Actions cache for `chronos-bolt-tiny-*`.
    - **Commentary step:** `GROQ_API_KEY` secret expired or Groq rate limit hit. Step is `continue-on-error: true` so it won't block scraping.
 
 ---
