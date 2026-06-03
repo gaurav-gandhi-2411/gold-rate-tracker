@@ -1,5 +1,5 @@
 {
-  "predicted_at": "2026-06-03T03:06:09.798412+00:00",
+  "predicted_at": "2026-06-03T03:43:45.294904+00:00",
   "target_window": "5d",
   "headline": {
     "method": "naive_flat_hold",
@@ -32,19 +32,19 @@
       13860.64,
       13821.6,
       13774.51,
-      13715.08,
+      13715.07,
       13651.04
     ],
     "horizon_p50": [
       14391.59,
-      14457.91,
+      14457.92,
       14528.44,
       14554.72,
       14580.89
     ],
     "horizon_p90": [
       14980.12,
-      15131.5,
+      15131.51,
       15279.89,
       15358.02,
       15448.62
@@ -55,9 +55,9 @@
     "majority_direction": "up",
     "direction_consensus": 1.0
   },
-  "real_readings_count": 141,
+  "real_readings_count": 142,
   "current_22k": 14365,
-  "scraped_at": "2026-06-03T03:05:53.717Z",
+  "scraped_at": "2026-06-03T03:43:27.089Z",
   "model_fallback": false,
   "predicted_22k": 14365,
   "lower": 13429,
