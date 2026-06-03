@@ -1686,6 +1686,13 @@ Four tombstone sites applied:
 
 **No FLAG-AND-STOP issues found** beyond the tombstoned content itself. The §6 Forecast step bullet was actively misdescribing a live CI step (claiming ONNX was involved); tombstoning removes the incorrect description. The §6 section now has no current failure-mode entry for the Forecast step — gap noted; filling it is out of scope for this docs-only PR.
 
+**PR-Φ17b (2026-06-03)** ✅ MERGED
+
+Follow-up: filled the §6 Forecast step gap exposed by the Φ17 tombstone. Replaced the retired tombstone bullet with three current CI step entries, each `continue-on-error: true`:
+- **Run inference** (`ml.inference`): degraded `model_status` on missing `prices.json`/insufficient folds; file write failure → staleness alert.
+- **Refit calibration** (`ml.calibration`): silent skip when `ibja_rates.parquet` absent or <30 IBJA-Tanishq pairs; stale calibration persists.
+- **Run Chronos probe** (`ml.chronos_forecast --probe`): HuggingFace timeout/torch failure → `chronos_probe.json` absent/failed → next run falls back to flat-hold. Check Actions cache `chronos-bolt-tiny-*`.
+
 ---
 
 ## Risks Register
