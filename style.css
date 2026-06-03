@@ -336,6 +336,30 @@ main {
 }
 
 /* ═══════════════════════════════════════════════════════════════
+   OFFLINE BANNER (Φ16)
+   Shown when navigator.onLine === false. Terracotta to match
+   freshness--stale register. Suppresses #stale-banner (precedence).
+═══════════════════════════════════════════════════════════════ */
+.offline-banner {
+  width: 100%;
+  padding: 10px 20px;
+  background: rgba(198, 106, 75, 0.18);
+  border-bottom: 1px solid rgba(198, 106, 75, 0.40);
+  color: var(--up);
+  font-size: var(--ts-xs);
+  font-family: var(--sans);
+  text-align: center;
+  letter-spacing: 0.03em;
+  font-weight: 500;
+}
+@media (prefers-color-scheme: light) {
+  .offline-banner {
+    background: rgba(198, 106, 75, 0.10);
+    color: #a04020;
+  }
+}
+
+/* ═══════════════════════════════════════════════════════════════
    2. HERO CARD
 ═══════════════════════════════════════════════════════════════ */
 .hero-card {

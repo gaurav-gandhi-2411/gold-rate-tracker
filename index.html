@@ -62,6 +62,10 @@
     <!-- Forecast staleness banner — hidden by default, shown by app.js when forecast is >18h old -->
     <div class="stale-banner" id="stale-banner" hidden role="alert" aria-live="polite"></div>
 
+    <!-- Offline banner — hidden by default, shown by app.js when navigator.onLine is false.
+         Suppresses #stale-banner: "Offline" already explains staleness; stacking both is redundant. -->
+    <div class="offline-banner" id="offline-banner" hidden role="status" aria-live="polite"></div>
+
     <main>
       <!-- 2. HERO CARD -->
       <section class="hero-card" id="section-home" aria-label="Current 22K gold price and buying verdict">
