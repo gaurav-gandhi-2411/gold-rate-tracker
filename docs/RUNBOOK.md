@@ -286,12 +286,13 @@ After the PR merges and the live site updates (Pages rebuilds within ~1 min of t
 | 5 | `app.js` | `computeGoodPriceSignals()` | Good-price verdict text ("Prices have been lower/higher/around usual levels lately"), supporting lines ("Cheaper/Pricier/Around the middle of the past month."), divergence note | Φ11-2 |
 | 6 | `app.js` | `renderModelSignal()` vol-context block | 4 regime-conditional strings: "Gold has been more/calmer volatile than usual lately — about ±₹X over 5 days." / "Gold has been moving about ±₹X over 5 days lately." / "Gold's price typically moves about ±₹X over 5 days." | Φ10B |
 | 7 | `app.js` | `renderModelSignal()` methodology accordion | "How accurate is this forecast?" panel: flat-hold framing, 56%/63% vs ~70% base rate, no-directional-edge claim; PI range framing ("Covers typical 5-day moves X% of the time"); direction-signal note ("Current price-move alerts use 7-day momentum — not the AI direction model") | Φ8C' |
+| 8 | `app.js` | `renderDriverContext()` (Φ14-2, not yet merged) | Attribution headline: "Gold is up/down ~Rs.{total} over the past week — about Rs.{usdinr_part} from a weaker/stronger rupee and Rs.{gold_part} from global gold prices." Driver-state supporting: "The rupee has weakened/strengthened ~{x}% over the past month…", "Global gold (USD) is up/down ~{y}%…" — PAST-TENSE ONLY, no forecast. Suppressed when attribution_valid=false. | Φ14-2 (pending copy review) |
 
 **Grep to find all paths before closing a honesty PR:**
 
 ```bash
 grep -rn "SYSTEM_PROMPT\|lean_hint\|_build_t8_content\|body +=" ml/
-grep -n "computeVerdict\|computeGoodPriceSignals\|volNote\|meth-note\|How accurate" app.js
+grep -n "computeVerdict\|computeGoodPriceSignals\|volNote\|meth-note\|How accurate\|renderDriverContext" app.js
 ```
 
 **Instruction:** When an honesty decision (ADR) changes what we can claim, audit every row in this table before marking the PR ready. These generate user-facing copy and are easy to miss in a fix's scope — 7 misses to date. Update the "Last audited" column when you confirm a path is still compliant.

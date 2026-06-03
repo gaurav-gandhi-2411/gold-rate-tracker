@@ -1306,6 +1306,7 @@ Tests: 4 unit tests for `extract_ge30ctx_gate_metrics`. Pre-commit clean. Lint C
 | 2026-06-03 | Batch Φ13: PR preview deploy — chose NONE / keep manual device-check | GG + consultant | Bug class (iOS visual bugs found post-merge) materialized twice in project lifetime (WI-5, Φ9B-3); zero user impact; root cause was the check being SKIPPED, not a missing preview URL. Option 2 (GH Pages subpath) adds a new production failure mode to check-price.yml. Option 3 (Netlify/Cloudflare) breaks Rs.0/no-external-dependency discipline. Solo contributor: no second reviewer exists to open a preview URL. Structural fix: manual post-deploy device-check codified as a required RUNBOOK step (§10). |
 | 2026-06-03 | fix(notifications): T8 digest forecast language stripped — 7th consumer-audit miss, Φ9A scope gap (PR #84) | CC | `_build_t8_content` up-hint "Prices look likely to edge up a little in the next few days." had two violations of the honesty norm: (1) probability language "look likely to" stronger than T7's "may"; (2) explicit future time horizon "in the next few days" makes it a forecast claim ADR 019 proved we cannot make. Down-hint "The next few days may ease a little." also carried a time horizon. Both fixed to "Prices may edge up a little." / "Prices may ease a little." — matching T7's honest modal framing (modal hedge only, no probability claim, no time horizon). PATTERN NOTE (7th instance, norm #15): Φ9A fixed ml/commentary.py; `_build_t8_content` in ml/notifications.py is a separate copy path that generates notification bodies independently of commentary.py and was not in Φ9A's audit scope. Guard tightened: `test_t8_hint_included_when_companion_success_up` now pins the exact string "Prices may edge up a little." and adds three negative guards (`"likely" not in body`, `"next few days" not in body`, `" will " not in body`). |
 | 2026-06-03 | chore: commit-race retry hardening + copy-path audit RUNBOOK §11 (PR #85) | CC | (A) check-price.yml commit step: bare `git pull --rebase --autostash` replaced with 3-attempt retry loop (10s/20s backoff, `git rebase --abort` before each retry to reset clean state). `concurrency: group: check-price, cancel-in-progress: false` was already present — serialises push+cron runs so most races never start; retry loop covers the residual. Frequency confirmed: 1 real rebase-conflict instance in last 4 weeks (Jun 2 push+cron overlap). `cancel-in-progress: false` queues but never drops a waiting run. (B) RUNBOOK §11 added: complete table of all 7 user-facing copy-generating paths (notifications `_build_t8_content` + T1–T7 bodies; `ml/commentary.py` `SYSTEM_PROMPT`; `app.js` `computeVerdict` / `computeGoodPriceSignals` / vol-context block / methodology accordion), grep pattern to find them, "Last audited" column. Instruction embedded: audit every row when an honesty ADR changes what we can claim. Structural close on the 7-miss consumer-audit pattern — turns "remember to check all paths" into "here is the list, with the last time each was verified." |
+| 2026-06-03 | Φ14-1: driver-attribution computation (PR-Φ14-1) | CC | FLAG-AND-STOP gate resolved before building. Macro fresh (0.24d old). 7d decomp: gold_usd drove +0.42% but IBJA fell −0.91%; premium contracted −1.33% → premium share 146% >> 15% → attribution_valid=False. 30d: gold_usd flat (−0.007%), rupee +0.37%, premium expanded +5.02% → premium share 93.2% → attribution_valid=False. Root cause: Indian gold premium expanded ~5% over 30d, NOT explained by gold_usd or usd_inr. BOTH windows fail the sanity gate. PR-Φ14-1 computation proceeds (no copy gate). `ml/drivers.py` new module: log decomposition Δln(IBJA)=Δln(gold_usd)+Δln(usd_inr)+Δln(premium), premium-residual flag (>15% threshold → invalid), macro-staleness degrade (>14d → all windows invalid). Output written to `forecast.json["driver_context"]` block. `ml/inference.py` wrapped call with try/except (norm #8). `tests/test_drivers.py`: 12 mocked unit tests covering identity (terms sum), premium flag, stale-degrade, full pipeline. Lint clean. 465 tests pass. RUNBOOK §11 updated with path #8 (renderDriverContext, pending Φ14-2). STOP gate for Φ14-2 still required per spec: show GG literal copy strings before merge. |
 
 ### Phi8A — Pipeline Hardening (2026-06-02)
 
@@ -1620,6 +1621,30 @@ T7's equivalent lean hint already used the honest form ("Prices may edge up a li
 **Problem.** 7 copy-path misses to date; 3 were copy-layer misses where a sibling consumer was not in the fix's audit scope. No canonical list of copy-generating paths existed.
 
 **Fix.** RUNBOOK §11 added: complete table of all 7 user-facing copy-generating paths with file, function, what each generates, and when it was last audited. Includes grep pattern for pre-merge verification. Instruction embedded: audit every row when an honesty ADR changes what we can claim.
+
+---
+
+### Batch Φ14 — Honest driver-context attribution (2026-06-03)  🟡 IN PROGRESS
+
+**Goal:** Attribute OBSERVED Indian gold price moves to drivers (rupee vs global gold) — DESCRIPTIVE decomposition, NOT a forecast. Rescues the real descriptive signal Φ10A found (stable premium, CV 0.021).
+
+**PR-Φ14-1 — Computation (2026-06-03)** 🟡 OPEN (green, no copy gate)
+
+- `ml/drivers.py` new module: log decomposition `Δln(IBJA_916) = Δln(gold_usd) + Δln(usd_inr) + Δln(premium)`; premium-residual sanity flag (`|premium share| > 15%` → attribution_valid=False); macro-staleness degrade; `compute_driver_attribution()` public API writes `driver_context` block.
+- `ml/inference.py`: import + call `compute_driver_attribution`, adds `"driver_context"` key to `forecast.json`. Wrapped in try/except so failure never blocks inference.
+- `tests/test_drivers.py`: 12 mocked unit tests (identity check, premium flag, stale-degrade, full pipeline). 465 tests pass, lint clean.
+- RUNBOOK §11 updated: path #8 (renderDriverContext, Φ14-2 pending).
+- `check-price.yml` push trigger: added `ml/drivers.py`.
+
+**FLAG-AND-STOP gate (resolved, both windows invalid):**
+- Macro: PASS (0.24d old, data through 2026-06-02)
+- 7d (May 26→Jun 2): premium share 146% — gold_usd rose +0.42% but IBJA fell −0.91% (premium contracted); attribution_valid=False
+- 30d (May 4→Jun 2): gold_usd FLAT (−0.007%), rupee +0.37%, IBJA +5.39% — premium expanded +5.02%; premium share 93.2%; attribution_valid=False
+- Root cause: Indian gold premium expanded ~5% over 30d (likely import duty or demand event); neither standard driver explains it. Honesty gate fires correctly.
+
+**PR-Φ14-2 — Display** 🔴 BLOCKED (STOP gate pending GG copy review)
+
+Required before merge: GG reviews (a) literal headline strings (up/down/mixed); (b) driver-state strings; (c) premium-residual threshold + live window findings. See this section.
 
 ---
 
