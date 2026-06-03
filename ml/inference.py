@@ -32,6 +32,7 @@ from pathlib import Path
 
 import numpy as np
 
+from ml.drivers import compute_driver_attribution
 from ml.notifications import NotificationState
 from ml.volatility import compute_vol_context
 
@@ -254,18 +255,27 @@ def main() -> None:
     chronos_companion = _build_chronos_companion(probe, backtest, calibration, notification_state)
     model_fallback = probe.get("status") != "success"
 
-    # 5. Timestamps
+    # 5. Driver-context attribution (log decomposition — DESCRIPTIVE, not a forecast).
+    # Wrapped in try/except so a drivers.py failure never blocks inference (norm #8).
+    try:
+        driver_context = compute_driver_attribution(data_dir=DATA_DIR)
+    except Exception as exc:
+        logger.warning("drivers: compute_driver_attribution failed: %s", exc)
+        driver_context = None
+
+    # 6. Timestamps
     predicted_at = datetime.now(UTC)
     target_time = (predicted_at + timedelta(days=1)).replace(
         hour=0, minute=0, second=0, microsecond=0
     )
 
-    # 6. Write forecast.json — new nested schema + top-level aliases for PWA compat
+    # 7. Write forecast.json — new nested schema + top-level aliases for PWA compat
     result: dict = {
         "predicted_at": predicted_at.isoformat(),
         "target_window": "5d",
         "headline": headline,
         "chronos_companion": chronos_companion,
+        "driver_context": driver_context,
         "real_readings_count": real_readings_count,
         "current_22k": current_22k,
         "scraped_at": scraped_at,

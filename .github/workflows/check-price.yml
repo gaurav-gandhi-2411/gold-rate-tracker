@@ -18,6 +18,7 @@ on:
       - "ml/chronos_forecast.py"
       - "ml/calibration.py"
       - "ml/notifications.py"
+      - "ml/drivers.py"
       - "scraper/**"
       - ".github/workflows/check-price.yml"
 
