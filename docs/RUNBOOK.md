@@ -13,6 +13,7 @@ Operational procedures for gold-rate-tracker.
 7. [Staleness alerts — interpretation and response](#staleness-alerts--interpretation-and-response)
 8. [Manual scraper re-run](#manual-scraper-re-run)
 9. [Known constraints](#known-constraints)
+10. [Frontend PR device-check (required)](#frontend-pr-device-check-required)
 
 ---
 
@@ -249,3 +250,18 @@ Nothing to configure in this repo until the domain is purchased.
 - Gold prices exhibit near-random-walk behaviour; the model may not beat the naive baseline on MAE. This is documented honestly in the README and in `models/production/*-meta.json`.
 - `models/local/` is gitignored — PyTorch `.pt` checkpoints and Optuna DBs stay on your machine.
 - WANDB is **not wired** in this project. The `.env` file previously contained `WANDB_API_KEY`, `WANDB_ENTITY`, and `WANDB_PROJECT` stubs which have been removed (Phase 1 audit confirmed no `wandb` imports anywhere in the codebase). Do not re-add these without a tracking ADR.
+
+---
+
+## Frontend PR device-check (required)
+
+**Trigger:** any PR that touches `app.js`, `index.html`, `style.css`, or `service-worker.js`.
+
+After the PR merges and the live site updates (Pages rebuilds within ~1 min of the master push):
+
+1. Open the live site on a real iOS device (Safari).
+2. Force a fresh service worker: open App Switcher (swipe up, hold), swipe the app away, reopen from Home Screen. This evicts the cached shell and forces the new SW to install. See also the "iOS standalone PWA" note in CURRENT_STATE.md for full SW lifecycle context.
+3. Verify the specific UI change from the PR on the live site — not just "no blank screen."
+4. If a regression is found, open a follow-on fix PR immediately (do not revert unless blocking).
+
+**Background (Φ13, 2026-06-03):** WI-5 (info-panel) and Φ9B-3 (two-click nav) were both verified code-review-only and discovered post-merge on device. The root cause was this check being skipped, not a missing preview URL. A PR preview deploy was evaluated and rejected — the viable no-dependency option (GH Pages subpath) would add a new production failure mode to `check-price.yml`; third-party options (Netlify/Cloudflare) break the Rs.0/no-external-dependency discipline. See PROGRESS.md Decision Log §Φ13.

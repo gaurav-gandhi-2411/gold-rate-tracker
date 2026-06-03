@@ -1,138 +1,78 @@
-# Spec — Batch Φ10A: Driver-Decomposition Forecast Experiment (analysis only)
+# Spec — Batch Φ13: PR Preview Deploy — Feasibility Diagnosis FIRST, then Decision
 
 **Date:** 2026-06-03
 **Author:** External consultant (via GG) → Orchestrator (CC)
 **Status:** Draft for orchestrator execution
-**Type:** ANALYSIS ONLY. No production-path change (no edit to inference.py, forecast.json,
-app.js, notifications.py, check-price.yml). Pre-registered gate fixed BEFORE results exist.
+**Type:** DIAGNOSIS-FIRST. Part 1 is read-only research + a recommendation. Do NOT build any deploy
+infrastructure until GG + consultant pick an option from Part 1's findings (norm #1).
 
 ---
 
-## Hypothesis & why this is different from Φ7
+## Motivation
 
-Indian retail gold ≈ international_gold_USD × USD/INR × (duty/GST factor) × local_premium. A
-UNIVARIATE model (Chronos, naive) structurally cannot see USD/INR or international gold moves.
-Φ7's premium-carry experiment tested the FLAT-CARRY version (hold all drivers constant) and got
-the algebraic null — but we explicitly deferred the DRIVER-FORECAST version. This batch runs that:
-forecast the drivers (especially USD/INR, which has structural drift properties gold lacks),
-compose into an IBJA forecast, and test whether it beats flat-naive.
+Two frontend fixes (WI-5 info-panel, Φ9B-3 two-click nav) shipped on code-review confidence and
+could only be verified AFTER merge on a real iOS device — the "merge then discover" gap. A PR
+preview deploy would turn that into "see it live before merge" for the whole UI layer. This is the
+structural fix for that class.
 
-**The key reason this could differ from Φ7:** USD/INR and gold-USD have YEARS of yfinance history,
-which can lend statistical power even though the IBJA target series is short (~177 rows). This is
-the central uncertainty — see the flag-and-stop.
+BUT: the repo is plain GitHub Pages (production deploys from master only — confirmed in the Φ-era
+cleanup). GitHub Pages does NOT natively provide per-PR preview URLs. So whether a clean preview is
+even achievable on this stack — within the project's standing Rs.0 / no-new-external-dependency
+discipline (the same constraint that rejected DagsHub, W&B, residential proxies) — is an OPEN
+QUESTION. Resolve it before building anything.
 
-This is the experiment that tests GG's original instinct (a driver-aware model may beat naive where
-a univariate one can't). If it fails the gate, that is a clean, valuable negative that closes the
-question. If it passes, it becomes a production-model ADR proposal AND honest context for the
-"is today a good price?" framing ("the rupee's been weakening, which tends to push gold up").
-
-All norms apply — honest-baseline (#4/ADR 005), statistical relevance (#5), flag-and-stop (#1),
-append-only PROGRESS (#10), no production change.
+All norms apply — flag-and-stop (#1), all-CI-green (#2), Rs.0/no-vendor-lock discipline
+(CURRENT_STATE), append-only PROGRESS (#10).
 
 ---
 
-## FLAG-AND-STOP gate (resolve BEFORE building the experiment)
+## PART 1 — Feasibility diagnosis (READ-ONLY, no infra built)
 
-**Macro history depth aligned to IBJA (norm #5).** Report:
-1. How many years of USD/INR and gold-USD daily history yfinance returns (the drivers).
-2. The IBJA-916 series length and date range (the target).
-3. The OVERLAP window where all three align cleanly to common trading dates (the backtest can only
-   run where target + both drivers exist). Report gaps, weekend/holiday misalignment, and any
-   forward-fill needed — do NOT silently forward-fill across large gaps.
-4. The premium series: premium_t = IBJA_916_t / (gold_usd_t × usdinr_t) — its length, mean, and
-   stability (std) over the overlap. A wildly unstable premium means the decomposition identity is
-   noisy and the experiment is weaker.
+Research and report, with concrete tradeoffs, the genuinely-available options for previewing a PR's
+built PWA on a REAL DEVICE (the iOS-render requirement — a downloadable zip does NOT satisfy this,
+since the motivating bugs were live-device-only). For each option report: what it delivers, setup
+complexity, whether it gives a real phone-openable URL, cost, new dependencies, and how it interacts
+with the existing production Pages deploy.
 
-Report all four BEFORE building. If the clean overlap is too short for ≥30 walk-forward folds at
-h=5, STOP and report — the experiment may not have the power to clear the gate, and we decide
-whether to proceed as exploratory-only or defer.
+Options to evaluate (at minimum):
+1. **GitHub Actions artifact** — build site, upload as artifact. Likely gives only a downloadable
+   zip, NOT a live URL → probably fails the iOS-device requirement. Report whether any GH-native
+   mechanism gives a live URL from an artifact.
+2. **GitHub Pages preview path / second environment** — deploy PR builds to a `/preview/pr-N/`
+   subpath or a separate Pages environment. Report whether this is achievable WITHOUT colliding with
+   the production master deploy, and how cleanup of stale previews would work.
+3. **Third-party free-tier (Netlify / Cloudflare Pages) PR previews** — wired to the repo, auto
+   preview URL per PR. Report: does this violate the Rs.0/no-new-external-dependency discipline?
+   (It adds an account + a third-party deploy dependency — flag this against the project's standing
+   constraints; it is the consultant/GG's call whether the tradeoff is acceptable, NOT yours to
+   assume.)
+4. **Any other genuinely-available mechanism** CC finds.
 
----
+**Honest recommendation required:** end Part 1 with CC's recommendation — including the option of
+"NONE worth it: the manual post-deploy device-check discipline already in use is the right call at
+this project's scale, and a preview deploy is over-engineering." That is a legitimate and possibly
+correct conclusion. Do NOT default to building something just because the batch exists.
 
-## Pre-registered promotion gate (fixed before results — same as Φ7 + non-bull requirement)
-
-A driver-decomposition variant is promotable ONLY if ALL hold:
-1. `mae_variant < mae_flat_naive` by ≥2%: `(mae_naive - mae_variant)/mae_naive >= 0.02`
-2. Wilcoxon signed-rank p < 0.05 on paired per-fold absolute errors
-3. Holds on ≥30-context folds only (sub-30-context excluded)
-4. ≥30 such folds exist
-5. **NEW (the Φ7D/ADR-018 lesson): does NOT invert on the non-bull subset.** Report the variant's
-   signed performance on non-up folds (realised h=5 change ≤ 0). A variant that wins overall but
-   loses catastrophically out-of-regime is a trend-continuation artifact, held not promoted (ADR
-   018 precedent). Promotion requires it not be a pure-regime artifact.
-
-Methodology: expanding-window walk-forward, h=5, same fold boundaries as ml/backtest.py so errors
-pair with the existing naive/Chronos results (Wilcoxon needs paired folds). random_state=42.
+**STOP after Part 1.** Report findings + recommendation. GG + consultant decide. No infra is built
+until an option is chosen.
 
 ---
 
-## The experiment
+## PART 2 — Implementation (ONLY if an option is chosen after Part 1)
 
-**Variant: `driver_decomp`** — for each fold, at context end t, forecast IBJA_{t+h} as:
-```
-forecast_IBJA_{t+h} = premium_hat × gold_usd_hat_{t+h} × usdinr_hat_{t+h}
-```
-where:
-- **usdinr_hat_{t+h}**: forecast USD/INR with a DRIFT-AWARE model. Test, in order of simplicity:
-  (1) drift / random-walk-with-drift (last value + h × recent mean daily change),
-  (2) simple ARIMA or ETS if (1) is insufficient.
-  Report which. Start with (1) — cheapest, and it directly tests whether USD/INR drift carries
-  signal. Do NOT overfit; ~years of data supports a simple model, not a high-variance one.
-- **gold_usd_hat_{t+h}**: international gold is closer to a random walk — forecast it as
-  random-walk (carry last value) AND, as a second variant, random-walk-with-drift. Report both.
-- **premium_hat**: the local premium. Use the recent (e.g. trailing-30d) median premium — it should
-  be relatively stable (confirm in the flag-and-stop). Hold it flat over the horizon (we are not
-  forecasting premium; we are composing driver forecasts × stable premium).
-
-**Variants to report (each against flat-naive, each with the full gate verdict):**
-- `driver_decomp` with usdinr=drift, gold_usd=random-walk
-- `driver_decomp` with usdinr=drift, gold_usd=drift
-- (if ARIMA/ETS used for usdinr) that variant too
-
-**Falsifiers (honest expected-null cases — report plainly if they occur):**
-- If USD/INR is itself ~random-walk at h=5 (drift adds nothing), driver_decomp collapses toward
-  flat-naive → null, report it.
-- If the premium is unstable, the decomposition identity is noisy and may underperform → report.
-- If gold_usd dominates and is random-walk, the whole thing reduces to "carry gold-USD" ≈ naive in
-  INR terms after FX → report.
+Deferred. Scope written after the Part 1 decision. If the chosen option is "none / keep manual
+checks," Part 2 does not happen and this batch closes as a documented decision (an ADR-style note
+in PROGRESS: "evaluated PR preview deploy, chose manual device-checks because X").
 
 ---
-
-## Deliverables
-
-1. **Code:** experiment script under scripts/ or ml/experiments/ (reuse ml/backtest.py fold logic +
-   ml/metrics.py — do NOT duplicate fold generation). New non-trivial functions get mocked-data unit
-   tests (norm #11).
-2. **Committed artifact:** data/experiments/phi10a_driver_decomp.json — per variant:
-   {name, usdinr_method, gold_usd_method, mae_variant, mae_naive, pct_improvement, wilcoxon_p,
-   n_folds_ge30ctx, non_bull_signed_improvement, beats_naive: bool}. Mark clearly; this is evidence.
-3. **PR-description summary:** which variants beat naive (if any), the non-bull-subset behavior, and
-   a recommendation: promote-to-ADR (a real production-model proposal) / iterate (try ARIMA, longer
-   horizon) / close-negative. Negatives are first-class (ADR 005).
-
----
-
-## Do-NOT-reopen (evidenced dead ends — STOP and report if tempted)
-
-MCX, TFT/N-BEATS, synthetic seed, HMM/regime, LightGBM. (CURRENT_STATE dead-ends + ADR 009/010.)
-This experiment uses the EXISTING macro layer (yfinance USD/INR + gold-USD, now on 1.4.1 post-Φ12)
-+ simple forecasting of those drivers — not a resurrection of any retired model.
-
----
-
-## PR plan
-
-Single PR — **PR-Φ10A** (driver-decomposition experiment). Analysis only.
 
 ## Acceptance gates
 
-- `gh pr checks <N>` green incl lint (norm #2); strip `[skip ci]` (norm #13).
-- NO production-path file touched (analysis only).
-- Pre-registered gate applied exactly as written — no post-hoc threshold changes. Non-bull-subset
-  reported for any variant that passes 1-4.
-- Every variant gets an honest beats_naive verdict incl. negatives (ADR 005).
-- Macro-alignment flag-and-stop resolved + reported BEFORE building.
-- PROGRESS Decision Log appended (norm #10).
-- Report back: the flag-and-stop overlap/premium findings FIRST, then per-variant gate results +
-  recommendation. If anything passes the full gate (incl. non-bull), that is a promote-to-ADR
-  candidate — present it for consultant review, do NOT auto-wire to production.
+- Part 1 is READ-ONLY: no workflow files changed, no deploy infra built, no third-party account
+  created (norm #1).
+- The Rs.0 / no-new-external-dependency discipline is explicitly weighed for any third-party option
+  — flagged, not silently accepted.
+- The "none / not worth it" outcome is presented as a first-class legitimate recommendation.
+- Findings + recommendation reported for GG + consultant decision BEFORE any Part 2 build.
+- If a decision is reached, PROGRESS Decision Log records it either way (build X, or chose-not-to
+  because Y) — norm #10.
