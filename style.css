@@ -1271,6 +1271,29 @@ html.ptr-pulling {
   margin: 0 0 8px;
 }
 
+/* ── Driver context (Φ14-2) ─────────────────────────────────────────────────── */
+.driver-context-section {
+  margin-bottom: clamp(32px, 7vw, 48px);
+}
+.driver-context-card {
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-lg);
+  padding: clamp(16px, 4vw, 24px);
+}
+.driver-headline {
+  font-size: clamp(14px, 2.2vw, 16px);
+  color: var(--cream);
+  margin: 0 0 10px;
+  line-height: 1.45;
+}
+.driver-state {
+  font-size: 13px;
+  color: var(--cream-mute);
+  margin: 0;
+  line-height: 1.55;
+}
+
 /* ── Track record section (Φ8C') ────────────────────────────────────────────── */
 .track-record-section {
   margin-bottom: clamp(40px, 9vw, 56px);

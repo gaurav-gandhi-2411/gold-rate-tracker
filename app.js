@@ -688,6 +688,121 @@ function renderModelSignal(fc, readings, bt) {
   section.hidden = false;
 }
 
+// ─── DRIVER CONTEXT (Φ14-2) ──────────────────────────────────────────────────
+// Renders honest attribution of recent gold moves. PAST-TENSE ONLY — describes what
+// already happened, never implies a future direction (ADR 005 + Φ14 spec).
+//
+// Three driver-state branches (30d):
+//   1. A driver moved > DRIVER_THRESHOLD_PCT → state it + mechanism sentence
+//   2. Both drivers muted but premium moved → "local factors" copy (humble about why)
+//   3. Everything flat → "stable" copy
+//
+// Attribution headline (7d) shown only when attribution_valid=true.
+// Degrades visibly: section hidden when macro not fresh or driver_context absent (norm #8).
+
+const _DC_DRIVER_THRESHOLD_PCT  = 2.0;  // mechanism sentence fires at >2% (clearly noticeable)
+const _DC_PREMIUM_THRESHOLD_PCT = 1.0;  // "premium moved" at >1% log-space %
+
+function renderDriverContext(fc) {
+  const section = document.getElementById("driver-context-section");
+  const body    = document.getElementById("driver-context-body");
+  if (!section || !body) return;
+
+  const dc = fc?.driver_context;
+
+  if (!dc || !dc.macro_fresh) {
+    section.hidden = true;
+    return;
+  }
+
+  const w7  = dc.windows?.["7d"];
+  const w30 = dc.windows?.["30d"];
+  const ds  = dc.driver_state;
+
+  if (!ds) {
+    section.hidden = true;
+    return;
+  }
+
+  const inrPct   = ds.usd_inr_30d_pct_change ?? 0;
+  const goldPct  = ds.gold_usd_30d_pct_change ?? 0;
+  const premPct30 = w30?.delta_pct_premium ?? 0;
+
+  const inrMoved  = Math.abs(inrPct)   > _DC_DRIVER_THRESHOLD_PCT;
+  const goldMoved = Math.abs(goldPct)  > _DC_DRIVER_THRESHOLD_PCT;
+  const premMoved = Math.abs(premPct30) > _DC_PREMIUM_THRESHOLD_PCT;
+
+  // --- Attribution headline (7d) — only when attribution_valid ---
+  let headlineHtml = "";
+  if (w7?.attribution_valid && w7?.total_move_rs_per_g != null) {
+    const total    = Math.round(w7.total_move_rs_per_g);
+    const inrPt    = Math.round(w7.usdinr_contrib_rs_per_g ?? 0);
+    const goldPt   = Math.round(w7.gold_usd_contrib_rs_per_g ?? 0);
+    const absTotal = Math.abs(total);
+    const inrAbs   = Math.abs(inrPt);
+    const goldAbs  = Math.abs(goldPt);
+    let headline;
+
+    if (total >= 0) {
+      if (inrAbs >= goldAbs && inrAbs > 10) {
+        headline = `Gold is up ~Rs.${fmtINR(absTotal)} over the past week — about Rs.${fmtINR(inrAbs)} from a weaker rupee and Rs.${fmtINR(goldAbs)} from global gold prices.`;
+      } else if (goldAbs > 10) {
+        headline = `Gold is up ~Rs.${fmtINR(absTotal)} over the past week — about Rs.${fmtINR(goldAbs)} from global gold prices and Rs.${fmtINR(inrAbs)} from the rupee.`;
+      } else {
+        headline = `Gold is up ~Rs.${fmtINR(absTotal)} over the past week from a mix of global prices and the rupee.`;
+      }
+    } else {
+      if (inrAbs >= goldAbs && inrAbs > 10) {
+        headline = `Gold is down ~Rs.${fmtINR(absTotal)} over the past week — mostly a stronger rupee (~Rs.${fmtINR(inrAbs)}) with global gold about flat.`;
+      } else if (goldAbs > 10) {
+        const inrNote = inrAbs > 10
+          ? `, with the rupee adding Rs.${fmtINR(inrAbs)}`
+          : " with the rupee about flat";
+        headline = `Gold is down ~Rs.${fmtINR(absTotal)} over the past week — global gold fell ~Rs.${fmtINR(goldAbs)}${inrNote}.`;
+      } else {
+        headline = `Gold is down ~Rs.${fmtINR(absTotal)} over the past week from a mix of global prices and the rupee.`;
+      }
+    }
+    // XSS-safe: headline built from fmtINR(number) and hardcoded string literals only
+    headlineHtml = `<p class="driver-headline">${headline}</p>`;
+  }
+
+  // --- Driver-state supporting (30d, three-branch) ---
+  let driverStateText;
+  if (inrMoved || goldMoved) {
+    // Branch 1: at least one driver moved > 2%
+    const parts = [];
+    if (inrMoved) {
+      const dir = inrPct > 0 ? "weakened" : "strengthened";
+      const mechanism = inrPct > 0
+        ? " a weaker rupee lifts the price of imported gold in India."
+        : " a stronger rupee eases the price of imported gold in India.";
+      parts.push(`The rupee has ${dir} ~${Math.abs(inrPct).toFixed(1)}% over the past month;${mechanism}`);
+    }
+    if (goldMoved) {
+      const dir = goldPct > 0 ? "up" : "down";
+      parts.push(`Global gold (USD) is ${dir} ~${Math.abs(goldPct).toFixed(1)}% over the past month.`);
+    }
+    driverStateText = parts.join(" ");
+  } else if (premMoved) {
+    // Branch 2: premium-dominated — both drivers muted (<2%), premium moved (>1%)
+    driverStateText = "Indian gold has moved more than global prices or the rupee explain this month — local factors such as import costs or seasonal demand are driving the difference.";
+  } else {
+    // Branch 3: everything flat
+    driverStateText = "Gold has been stable this month; no major driver moved much.";
+  }
+
+  // XSS-safe: driverStateText is a hardcoded literal or toFixed(1) on a number
+  body.innerHTML = `
+    <div class="driver-context-card">
+      ${headlineHtml}
+      <p class="driver-state">${driverStateText}</p>
+    </div>
+  `;
+
+  section.hidden = false;
+}
+
 // Φ8C' / Ψ3C.3: persistent tap-to-reveal price callout drawn via Chart.js afterDraw.
 const CALLOUT_PLUGIN = {
   id: "phi8cCallout",
@@ -1212,11 +1327,13 @@ async function refreshData() {
     renderHero(allReadings, fc);
     renderStaleBanner(fc);
     renderModelSignal(fc, allReadings);
+    renderDriverContext(fc);
     // Ψ3C.2: stagger visible data cards to confirm refresh visually
     staggerEnter([
       document.getElementById("comparison-section"),
       document.querySelector(".karat-strip"),
       document.getElementById("model-signal-section"),
+      document.getElementById("driver-context-section"),
     ]);
   } catch (err) {
     console.error("Refresh failed:", err);
@@ -1496,6 +1613,7 @@ function initPullToRefresh() {
   renderHero(allReadings, fc);
   renderStaleBanner(fc);
   renderModelSignal(fc, allReadings);  // first render — coverage% uses fallback until backtest loads
+  renderDriverContext(fc);
 
   // Remaining optional data (all gracefully degrade on failure).
   const [bt, commentary, drift] = await Promise.allSettled([
