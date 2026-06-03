@@ -11,7 +11,7 @@
 // in the body — a [skip ci] merge skips master Lint for up to ~24h (only the daily
 // 06:00 UTC schedule backstop in lint.yml recovers it).
 
-const VERSION = "v11-20260602-phi8c";
+const VERSION = "v12-20260603-phi14";
 const SHELL_CACHE = `gold-shell-${VERSION}`;
 
 const SHELL_FILES = [
