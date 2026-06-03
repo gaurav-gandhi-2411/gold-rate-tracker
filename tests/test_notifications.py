@@ -1542,9 +1542,11 @@ def test_t8_hint_included_when_companion_success_up():
         _ist(2026, 5, 19, 10, 0),
     )
     t8m = next(a for a in alerts if a.trigger_id == "T8_MORNING")
-    assert "edge up" in t8m.body
-    # norm #4: no "will"
+    assert "Prices may edge up a little." in t8m.body
+    # norm #4: no forecast language — no "will", no probability claim, no time horizon
     assert " will " not in t8m.body
+    assert "likely" not in t8m.body
+    assert "next few days" not in t8m.body
 
 
 def test_t8_hint_included_when_companion_success_down():
@@ -1558,8 +1560,9 @@ def test_t8_hint_included_when_companion_success_down():
         _ist(2026, 5, 19, 10, 0),
     )
     t8m = next(a for a in alerts if a.trigger_id == "T8_MORNING")
-    assert "ease" in t8m.body
+    assert "Prices may ease a little." in t8m.body
     assert " will " not in t8m.body
+    assert "next few days" not in t8m.body
 
 
 def test_t8_hint_omitted_when_probe_failed():
