@@ -1304,6 +1304,7 @@ Tests: 4 unit tests for `extract_ge30ctx_gate_metrics`. Pre-commit clean. Lint C
 | 2026-06-03 | Φ11 visual follow-up: trend chart → one-point-per-IST-day clean line; favicon → transparent SVG mark | GG (live screenshots) | GG observed: (1) stepped + filled-area chart looks blocky vs Tanishq's clean daily line — dedupForChart start/end boundary dots per flat run read as plateaus with doubled dots. Fix: chart now uses dedupeByISTDay (one real daily price, same rule as history), straight connected line, no fill, no stepped, no dots (hover only). dedupForChart removed (dead code). (2) icon-192.png has opaque background box in tab. Fix: dedicated favicon.svg (transparent bg, gold circle + "Au" mark), <link rel="icon"> updated. PWA icons (icon-192/512.png) untouched. PR #76. GG to re-verify both post-deploy on fresh load. SCRAPE-GAP NOTE (GG): at tension:0 one-point-per-day, scrape-gap days (pre-Φ6 ~27% gap history) draw a straight connecting segment across the gap. This is honest — no interpolation of fake prices — and may appear as an unusually long flat or steep stretch in the chart. It is real data showing through, NOT a rendering bug. Do not smooth by interpolating. If GG or a future reader flags this as a regression, refer here. |
 | 2026-06-03 | Φ10B: dynamic vol context — DEFINITION CHANGE, not a volatility event | CC + GG (approved) | The displayed ±Rs. number changes from ~Rs.950 to ~Rs.450. This is NOT a sign gold got calmer — it is a change in what is being measured. Rs.950 was the 80th-pct conformal PI half-width (forecast-error distribution over ~165 backtest folds). Rs.450 is a 20-day trailing realized half-width (actual price movements over the most recent 49 contiguous Tanishq days). These measure different things. "Has been moving" (realized fact) vs "typically moves" (forecast uncertainty) is the wording signal that communicates this honestly. Future readers: if the displayed band shrinks from ~Rs.950 to ~Rs.450 and you are wondering whether it signals a real calm patch — it does not; it is the definition change landing. Baseline for calm/elevated: full 49-day contiguous Tanishq run (48 log returns). Recent window: trailing 20 days. Circularity (recent is a subset of baseline) suppresses false regime calls — the ratio pulls toward 1.0 when recent and baseline overlap, so elevated/calm thresholds (1.35×/0.75×) require sustained divergence that survives the dampening. At 49-day baseline the signal is conservative by design; baseline strengthens as data accumulates. |
 | 2026-06-03 | Batch Φ13: PR preview deploy — chose NONE / keep manual device-check | GG + consultant | Bug class (iOS visual bugs found post-merge) materialized twice in project lifetime (WI-5, Φ9B-3); zero user impact; root cause was the check being SKIPPED, not a missing preview URL. Option 2 (GH Pages subpath) adds a new production failure mode to check-price.yml. Option 3 (Netlify/Cloudflare) breaks Rs.0/no-external-dependency discipline. Solo contributor: no second reviewer exists to open a preview URL. Structural fix: manual post-deploy device-check codified as a required RUNBOOK step (§10). |
+| 2026-06-03 | fix(notifications): T8 digest forecast language stripped — 7th consumer-audit miss, Φ9A scope gap (PR #84) | CC | `_build_t8_content` up-hint "Prices look likely to edge up a little in the next few days." had two violations of the honesty norm: (1) probability language "look likely to" stronger than T7's "may"; (2) explicit future time horizon "in the next few days" makes it a forecast claim ADR 019 proved we cannot make. Down-hint "The next few days may ease a little." also carried a time horizon. Both fixed to "Prices may edge up a little." / "Prices may ease a little." — matching T7's honest modal framing (modal hedge only, no probability claim, no time horizon). PATTERN NOTE (7th instance, norm #15): Φ9A fixed ml/commentary.py; `_build_t8_content` in ml/notifications.py is a separate copy path that generates notification bodies independently of commentary.py and was not in Φ9A's audit scope. Guard tightened: `test_t8_hint_included_when_companion_success_up` now pins the exact string "Prices may edge up a little." and adds three negative guards (`"likely" not in body`, `"next few days" not in body`, `" will " not in body`). |
 
 ### Phi8A — Pipeline Hardening (2026-06-02)
 
@@ -1575,6 +1576,26 @@ Each confirmation uses a different mechanism — IBJA's own price momentum, USD/
 5. **Solo contributor.** No second reviewer exists to open a preview URL. PR previews solve a coordination problem that does not exist at this scale.
 
 **Structural fix (RUNBOOK §10):** "Frontend PR touching `app.js` / `index.html` / `style.css` / `service-worker.js` → author verifies the changed UI on a REAL DEVICE after deploy (fresh SW cache / app-switcher reload) before closing."
+
+---
+
+### PR #84 — fix(notifications): T8 digest forecast language (2026-06-03) ✅ COMPLETE
+
+**Scope:** Strip forecast language from T8 morning/evening digest directional hints. Backend-only, no schema change, no CI-step change.
+
+**Root cause.** `_build_t8_content()` (ml/notifications.py ~line 598) appended two strings that violated ADR 019's honesty norm:
+- Up-hint: `"Prices look likely to edge up a little in the next few days."` — probability language ("look likely to") stronger than T7's "may", plus an explicit future time horizon ("in the next few days").
+- Down-hint: `"The next few days may ease a little."` — time horizon present.
+
+T7's equivalent lean hint already used the honest form ("Prices may edge up a little." / "Prices may ease a little.") with no time horizon. T8 predated T7 in the file and was never realigned when T7 was written.
+
+**Fix.** Both strings changed to match T7's framing exactly:
+- Up: `"Prices may edge up a little."`
+- Down: `"Prices may ease a little."`
+
+**Tests.** `test_t8_hint_included_when_companion_success_up` and `test_t8_hint_included_when_companion_success_down` updated to pin exact strings. Up-hint test adds negative guards: `"likely" not in body`, `"next few days" not in body`. Full suite: 452 tests pass.
+
+**Pattern note (7th instance, norm #15).** Φ9A fixed commentary.py (the Groq LLM copy path). T8's `_build_t8_content` generates notification bodies directly in notifications.py — a separate copy path not touched by commentary.py and not in Φ9A's audit scope. This is a direct repeat of the "one consumer fixed, sibling consumer missed" failure mode.
 
 ---
 

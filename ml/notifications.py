@@ -597,9 +597,9 @@ def _build_t8_content(
     if companion.get("status") == "success":
         lean = companion.get("lean_direction", "flat")
         if lean == "up":
-            body += " Prices look likely to edge up a little in the next few days."
+            body += " Prices may edge up a little."
         elif lean == "down":
-            body += " The next few days may ease a little."
+            body += " Prices may ease a little."
         # lean == "flat" or missing → no hint (don't fabricate a direction)
 
     return title, body
