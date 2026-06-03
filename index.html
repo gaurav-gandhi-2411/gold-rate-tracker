@@ -122,7 +122,7 @@
             <div class="cmp-sub" id="cmp-30d-sub"></div>
           </div>
           <div class="comparison-card" id="cmp-low">
-            <div class="cmp-label">vs 30-day low</div>
+            <div class="cmp-label">30-day floor</div>
             <div class="cmp-value" id="cmp-low-value">—</div>
             <div class="cmp-sub" id="cmp-low-sub"></div>
           </div>
@@ -226,21 +226,21 @@
         <button class="history-show-all" id="history-show-all" hidden></button>
       </section>
 
-      <!-- 7b. FORECAST TRACK RECORD — past forecasts vs actual prices -->
+      <!-- 7b. PAST ESTIMATE TRACK RECORD — past estimates vs actual prices -->
       <section class="track-record-section" id="section-track-record" hidden
-               aria-label="Past forecast accuracy — flat-hold vs actual prices">
-        <h2>Past forecast checks</h2>
-        <p class="track-record-caption">30 recent five-day windows: flat-hold forecast (dashed) vs what actually happened (gold)</p>
+               aria-label="Past estimate accuracy — flat-hold vs actual prices">
+        <h2>Past estimate checks</h2>
+        <p class="track-record-caption">30 recent five-day windows: flat-hold estimate (dashed) vs what actually happened (gold)</p>
         <div class="track-record-chart-wrap">
           <canvas id="track-record-chart" role="img"
-                  aria-label="Past flat-hold forecasts vs actual gold prices"></canvas>
+                  aria-label="Past flat-hold estimates vs actual gold prices"></canvas>
         </div>
       </section>
 
       <!-- 8. METHODOLOGY ACCORDION -->
       <details class="methodology" id="section-info">
         <summary class="methodology-summary">
-          How this works · how good is this forecast? · historical checks
+          How this works · how good is this? · historical checks
         </summary>
         <div class="methodology-body" id="methodology-body">
           <p class="meth-loading">Loading model details…</p>
