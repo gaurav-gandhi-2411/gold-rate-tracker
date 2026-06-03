@@ -96,6 +96,9 @@ let currentRange     = "7";   // tracks active chart tab for refreshData()
 let pwaHelpDismissed = false; // D5: set true when user taps ✕; survives re-renders
 let chartPinnedIndex  = null;  // index of tapped chart point; null = no callout
 let trackRecordChart  = null;  // Chart.js instance for forecast-vs-actual section
+let displayedPrice    = null;  // Φ16-4: last rendered hero price; drives number tick
+let _heroTickRaf      = null;  // Φ16-4: RAF handle; cancelled when a new tick starts
+let lastForecast      = null;  // Φ16-2: stored for stale-banner re-evaluation on online restore
 
 // Ψ3C.2: stagger card-enter animation across a list of elements.
 // Forces a reflow between remove/add so the animation restarts each time.
@@ -107,6 +110,29 @@ function staggerEnter(elements, step = 30) {
     el.style.animationDelay = `${i * step}ms`;
     el.classList.add("card-enter");
   });
+}
+
+// Φ16-4: count/tick hero price from old value to new (~400ms ease-out cubic).
+// JS-driven — must gate on matchMedia explicitly; the global CSS override won't suppress a JS counter.
+function animateNumberTick(el, fromVal, toVal, durationMs = 400) {
+  if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
+    el.innerHTML = rupee(toVal);
+    return;
+  }
+  if (_heroTickRaf) { cancelAnimationFrame(_heroTickRaf); _heroTickRaf = null; }
+  const start = performance.now();
+  const step = (now) => {
+    const t      = Math.min((now - start) / durationMs, 1);
+    const eased  = 1 - Math.pow(1 - t, 3); // ease-out cubic
+    el.innerHTML = rupee(Math.round(fromVal + (toVal - fromVal) * eased));
+    if (t < 1) {
+      _heroTickRaf = requestAnimationFrame(step);
+    } else {
+      _heroTickRaf = null;
+      el.innerHTML = rupee(toVal); // snap to exact final value
+    }
+  };
+  _heroTickRaf = requestAnimationFrame(step);
 }
 
 async function loadJSON(url) {
@@ -365,10 +391,14 @@ function computeGoodPriceSignals(readings) {
 function renderStaleBanner(forecast) {
   const banner = document.getElementById("stale-banner");
   if (!banner) return;
+  // Offline banner takes precedence — "Offline" already explains staleness; don't stack both.
+  const offlineBanner = document.getElementById("offline-banner");
+  if (offlineBanner && !offlineBanner.hidden) return;
+  // Always reset first so a refresh-error or prior stale message is cleared on success.
+  banner.hidden = true;
   if (!forecast || !forecast.predicted_at) return;
   const ageH = (Date.now() - new Date(forecast.predicted_at).getTime()) / 3_600_000;
   if (ageH > 18) {
-    const hours = Math.round(ageH);
     banner.textContent = `Prices last updated ${fmtRelative(forecast.predicted_at)} — data may not reflect the current rate.`;
     banner.hidden = false;
   }
@@ -408,6 +438,28 @@ function renderFreshness(readings) {
   }
 }
 
+// ─── OFFLINE BANNER (Φ16) ────────────────────────────────────────────────────
+// Called on init, on offline/online events, and after each successful refresh.
+// Offline takes precedence over #stale-banner: the user doesn't need both.
+function updateOfflineBanner() {
+  const offlineBanner = document.getElementById("offline-banner");
+  const staleBanner   = document.getElementById("stale-banner");
+  if (!offlineBanner) return;
+
+  if (!navigator.onLine) {
+    const rel = allReadings.length > 0
+      ? fmtRelative(allReadings[allReadings.length - 1].timestamp)
+      : null;
+    offlineBanner.textContent = rel
+      ? `Offline · showing last loaded data from ${rel}`
+      : "Offline · no data loaded yet";
+    offlineBanner.hidden = false;
+    if (staleBanner) staleBanner.hidden = true;
+  } else {
+    offlineBanner.hidden = true;
+  }
+}
+
 function renderHero(readings, forecast) {
   const skelEl    = document.getElementById("hero-skeleton");
   const eyeEl     = document.getElementById("hero-eyebrow");
@@ -433,10 +485,19 @@ function renderHero(readings, forecast) {
     return;
   }
 
-  const latest = readings[readings.length - 1];
-  // XSS-safe: rupee() wraps a number with fmtINR (toLocaleString); numbers cannot contain HTML
-  priceEl.innerHTML = rupee(latest["22k"]);
-  priceEl.hidden    = false;
+  const latest    = readings[readings.length - 1];
+  const newPrice  = latest["22k"];
+  const prevPrice = displayedPrice; // capture before update — animateNumberTick uses this as fromVal
+  displayedPrice  = newPrice;
+  // Φ16-4: tick when price changes on a live refresh; first render and no-change case are instant.
+  // priceEl.hidden guard: element hidden means skeleton is still showing — don't animate there.
+  if (prevPrice !== null && prevPrice !== newPrice && !priceEl.hidden) {
+    animateNumberTick(priceEl, prevPrice, newPrice);
+  } else {
+    // XSS-safe: rupee() wraps a number with fmtINR (toLocaleString); numbers cannot contain HTML
+    priceEl.innerHTML = rupee(newPrice);
+  }
+  priceEl.hidden = false;
 
   // Other karat prices — same as above, rupee() on a number is injection-proof
   const r24 = document.getElementById("rate-24");
@@ -1320,6 +1381,7 @@ async function refreshData() {
     const fresh = await load();
     const fc    = await loadJSON(FORECAST_URL).catch(() => null);
     allReadings  = fresh;
+    lastForecast = fc;
     renderFreshness(allReadings);
     renderComparisons(allReadings);
     renderHistory(allReadings);
@@ -1328,6 +1390,7 @@ async function refreshData() {
     renderStaleBanner(fc);
     renderModelSignal(fc, allReadings);
     renderDriverContext(fc);
+    updateOfflineBanner();
     // Ψ3C.2: stagger visible data cards to confirm refresh visually
     staggerEnter([
       document.getElementById("comparison-section"),
@@ -1337,6 +1400,16 @@ async function refreshData() {
     ]);
   } catch (err) {
     console.error("Refresh failed:", err);
+    // Φ16-1: visible refresh-failure state — persists until next successful refresh.
+    // renderStaleBanner() on the next success will reset this (it always hides first now).
+    const banner = document.getElementById("stale-banner");
+    if (banner) {
+      const rel = allReadings.length > 0
+        ? fmtRelative(allReadings[allReadings.length - 1].timestamp)
+        : "an unknown time";
+      banner.textContent = `Couldn't refresh — showing last update from ${rel}`;
+      banner.hidden = false;
+    }
   } finally {
     if (btn) { btn.classList.remove("refresh-btn--spinning"); btn.disabled = false; }
   }
@@ -1546,6 +1619,14 @@ function initPullToRefresh() {
   initBottomNav();
   initPullToRefresh();
 
+  // Φ16-2: register offline/online listeners before data load so they catch mid-load state changes.
+  window.addEventListener("offline", updateOfflineBanner);
+  window.addEventListener("online", () => {
+    const offlineBanner = document.getElementById("offline-banner");
+    if (offlineBanner) offlineBanner.hidden = true;
+    renderStaleBanner(lastForecast); // re-evaluate stale-banner now we're connected
+  });
+
   // Ambient header: add elevation (.scrolled → border + shadow) only when content
   // is scrolling under the header. Passive listener — no layout work on scroll.
   const appHeader = document.getElementById("utility-row");
@@ -1587,12 +1668,17 @@ function initPullToRefresh() {
   } catch (err) {
     if (typeof Sentry !== "undefined") Sentry.captureException(err, { extra: { url: DATA_URL } });
     console.error(err);
+    console.warn("Could not load price data. If you just deployed, run the workflow once from the Actions tab.");
     const skelEl = document.getElementById("hero-skeleton");
     if (skelEl) skelEl.hidden = true;
     const priceEl = document.getElementById("hero-price");
-    if (priceEl) { priceEl.textContent = "Error loading data"; priceEl.hidden = false; }
-    document.getElementById("commentary-text").textContent =
-      "Could not load price data. If you just deployed, run the workflow once from the Actions tab.";
+    if (priceEl) { priceEl.textContent = "Price unavailable"; priceEl.hidden = false; }
+    const commentaryTextEl = document.getElementById("commentary-text");
+    if (commentaryTextEl) {
+      commentaryTextEl.textContent = "Couldn't load the latest price. Check your connection and try again.";
+      commentaryTextEl.hidden = false;
+    }
+    updateOfflineBanner();
     return;
   }
 
@@ -1614,6 +1700,15 @@ function initPullToRefresh() {
   renderStaleBanner(fc);
   renderModelSignal(fc, allReadings);  // first render — coverage% uses fallback until backtest loads
   renderDriverContext(fc);
+  lastForecast = fc;
+  // Φ16-5: stagger on initial load — consistent with refreshData() behaviour
+  staggerEnter([
+    document.getElementById("comparison-section"),
+    document.querySelector(".karat-strip"),
+    document.getElementById("model-signal-section"),
+    document.getElementById("driver-context-section"),
+  ]);
+  updateOfflineBanner(); // update offline banner text now allReadings is populated
 
   // Remaining optional data (all gracefully degrade on failure).
   const [bt, commentary, drift] = await Promise.allSettled([
