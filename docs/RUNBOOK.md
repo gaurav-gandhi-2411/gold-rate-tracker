@@ -287,12 +287,22 @@ After the PR merges and the live site updates (Pages rebuilds within ~1 min of t
 | 6 | `app.js` | `renderModelSignal()` vol-context block | 4 regime-conditional strings: "Gold has been more/calmer volatile than usual lately — about ±₹X over 5 days." / "Gold has been moving about ±₹X over 5 days lately." / "Gold's price typically moves about ±₹X over 5 days." | Φ10B |
 | 7 | `app.js` | `renderModelSignal()` methodology accordion | "How accurate is this forecast?" panel: flat-hold framing, 56%/63% vs ~70% base rate, no-directional-edge claim; PI range framing ("Covers typical 5-day moves X% of the time"); direction-signal note ("Current price-move alerts use 7-day momentum — not the AI direction model") | Φ8C' |
 | 8 | `app.js` | `renderDriverContext()` | Attribution headline (7d, only when attribution_valid=True): "Gold is up/down ~Rs.{total} over the past week — about Rs.{x} from a weaker/stronger rupee and Rs.{y} from global gold prices." Driver-state (30d, 3-branch): B1 (driver >2%): mechanism sentences; B2 (premium-dominated, both drivers <2%): "Indian gold has moved more than global prices or the rupee explain this month — local factors such as import costs or seasonal demand are driving the difference."; B3 (all flat): "Gold has been stable this month; no major driver moved much." — PAST-TENSE ONLY, no forecast, no buy/sell. | Φ14-2 (2026-06-03) |
+| 9 | `index.html` | Static section headings, `<summary>` accordion text, `aria-label` attributes | Section `<h2>` labels ("Past estimate checks"), track-record section aria-label, methodology accordion summary ("How this works · how good is this? · historical checks"), canvas aria-labels, comparison card labels ("30-day floor") | Φ15 (2026-06-03) |
+| 10 | `app.js` | Hardcoded strings inside `renderMethodology()` template literals and `renderComparisons()` `textContent` assignments | Methodology card heading/stat strings ("5-day range", "Assume no change", "How accurate is this?", "Estimate accuracy — last 7 days"); Chart.js dataset label ("Flat-hold estimate"); verdict-rule body ("estimate or 30-day average"); floor card sub-text ("above this month's lowest") | Φ15 (2026-06-03) |
 
 **Grep to find all paths before closing a honesty PR:**
 
 ```bash
+# Generated-copy paths (Python):
 grep -rn "SYSTEM_PROMPT\|lean_hint\|_build_t8_content\|body +=" ml/
-grep -n "computeVerdict\|computeGoodPriceSignals\|volNote\|meth-note\|How accurate\|renderDriverContext" app.js
+# Generated-copy paths (JS functions):
+grep -n "computeVerdict\|computeGoodPriceSignals\|volNote\|renderDriverContext\|renderMethodology\|renderComparisons" app.js
+# Static HTML labels and aria — these were the §11 blind spot (Φ15):
+grep -in "forecast\|predict\|expected" index.html
+# Hardcoded strings inside template literals — also missed pre-Φ15:
+grep -n "meth-heading\|meth-stat-value\|cmp-label\|dataset\.label\|textContent\s*=" app.js | grep -v "^\s*//"
 ```
 
-**Instruction:** When an honesty decision (ADR) changes what we can claim, audit every row in this table before marking the PR ready. These generate user-facing copy and are easy to miss in a fix's scope — 7 misses to date. Update the "Last audited" column when you confirm a path is still compliant.
+**Instruction:** When an honesty decision (ADR) changes what we can claim, audit every row in this table before marking the PR ready. These generate user-facing copy and are easy to miss in a fix's scope — 8 misses to date. Update the "Last audited" column when you confirm a path is still compliant.
+
+**§11 blind-spot note (Φ15):** Rows 9 and 10 were added because the original §11 only listed JS *functions* generating copy — it missed static HTML labels (`<h2>`, `aria-label`, `<summary>`) and hardcoded strings inside template literals in render functions. The `grep -in "forecast\|predict\|expected" index.html` pattern is the structural guard that catches future label regressions.

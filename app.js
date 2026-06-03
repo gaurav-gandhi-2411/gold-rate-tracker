@@ -213,16 +213,16 @@ function computeVerdict(prices, forecast) {
   }
 
   // Flat — describe magnitude of stability.
-  const absSlope    = Math.abs(Math.round(slope7d));
-  const dirWord     = slope7d > 0 ? "edged up" : slope7d < 0 ? "edged down" : "unchanged";
-  const stableDesc  = absSlope < 20
-    ? "virtually flat"
-    : `${dirWord} ₹${fmtINR(absSlope)}`;
+  const absSlope = Math.abs(Math.round(slope7d));
+  const dirWord  = slope7d > 0 ? "edged up" : slope7d < 0 ? "edged down" : "unchanged";
+  const flatReason = absSlope < 20
+    ? "Prices are virtually flat this week. No strong signal either way."
+    : `Prices have ${dirWord} ₹${fmtINR(absSlope)} this week — within the typical weekly range. No strong signal either way.`;
   return {
     type: "flat",
     icon: "◉",
     headline: "Roughly flat this week",
-    reason: `Prices are ${stableDesc} over the last 7 days. No strong signal either way.`,
+    reason: flatReason,
   };
 }
 
@@ -553,11 +553,11 @@ function renderComparisons(readings) {
     lowCard.dataset.sentiment = "neutral";
   } else if (cmp.vsLow === 0) {
     lowVal.textContent        = "at low";
-    lowSub.textContent        = `30d period low`;
+    lowSub.textContent        = "this month's lowest price";
     lowCard.dataset.sentiment = "good";
   } else {
     lowVal.textContent        = `+₹${fmtINR(cmp.vsLow)}`;
-    lowSub.textContent        = `above 30d low`;
+    lowSub.textContent        = "above this month's lowest";
     lowCard.dataset.sentiment = cmp.vsLow < 300 ? "neutral" : "caution";
   }
 
@@ -1097,7 +1097,7 @@ function renderForecastVsActual(bt) {
           spanGaps: true,
         },
         {
-          label: "Flat-hold forecast",
+          label: "Flat-hold estimate",
           data: naives,
           borderColor: "#6B5E4E",
           backgroundColor: "transparent",
@@ -1160,8 +1160,8 @@ function renderMethodology(fc, bt, drift) {
       <h3 class="meth-heading">Verdict rules</h3>
       <p class="meth-text">Three simple cases — each needs two things to agree to avoid reacting to a single unusual reading.</p>
       <ul class="meth-list">
-        <li><strong>Trending down:</strong> price has fallen more than ₹100 over 7 days, and the forecast or 30-day average agrees</li>
-        <li><strong>Trending up:</strong> price has risen more than ₹100 over 7 days, and the forecast or 30-day average agrees</li>
+        <li><strong>Trending down:</strong> price has fallen more than ₹100 over 7 days, and the estimate or 30-day average agrees</li>
+        <li><strong>Trending up:</strong> price has risen more than ₹100 over 7 days, and the estimate or 30-day average agrees</li>
         <li><strong>Roughly flat:</strong> everything else — movement within ±₹100 or the two checks disagree</li>
       </ul>
     </div>
@@ -1175,7 +1175,7 @@ function renderMethodology(fc, bt, drift) {
     const hasPI   = typeof lower === "number" && typeof upper === "number";
     parts.push(`
       <div class="meth-section">
-        <h3 class="meth-heading">5-day expected range</h3>
+        <h3 class="meth-heading">5-day range</h3>
         <div class="meth-stats">
           <div class="meth-stat">
             <div class="meth-stat-label">22K estimate</div>
@@ -1184,7 +1184,7 @@ function renderMethodology(fc, bt, drift) {
           </div>
           <div class="meth-stat">
             <div class="meth-stat-label">Method</div>
-            <div class="meth-stat-value">Predict no change</div>
+            <div class="meth-stat-value">Assume no change</div>
             <div class="meth-stat-sub">Range covers 80% of typical 5-day swings</div>
           </div>
         </div>
@@ -1248,7 +1248,7 @@ function renderMethodology(fc, bt, drift) {
 
     parts.push(`
       <div class="meth-section meth-how-good">
-        <h3 class="meth-heading">How accurate is this forecast?</h3>
+        <h3 class="meth-heading">How accurate is this?</h3>
 
         <p class="meth-text"><strong>The price estimate uses flat-hold (today's price, unchanged)</strong><br>
         Gold prices over 5 days are close to unpredictable; no model we tested could beat simply using today's price as the forecast. Over ${n} windows from 2022–2026:<br>
@@ -1284,7 +1284,7 @@ function renderMethodology(fc, bt, drift) {
       : "";
     parts.push(`
       <div class="meth-section">
-        <h3 class="meth-heading">Forecast accuracy — last 7 days</h3>
+        <h3 class="meth-heading">Estimate accuracy — last 7 days</h3>
         <div class="meth-stats">
           <div class="meth-stat">
             <div class="meth-stat-label">Recent avg. error</div>
