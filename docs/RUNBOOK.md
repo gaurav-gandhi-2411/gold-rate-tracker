@@ -14,6 +14,7 @@ Operational procedures for gold-rate-tracker.
 8. [Manual scraper re-run](#manual-scraper-re-run)
 9. [Known constraints](#known-constraints)
 10. [Frontend PR device-check (required)](#frontend-pr-device-check-required)
+11. [Honesty-ADR audit: user-facing copy paths (required)](#honesty-adr-audit-user-facing-copy-paths-required)
 
 ---
 
@@ -265,3 +266,32 @@ After the PR merges and the live site updates (Pages rebuilds within ~1 min of t
 4. If a regression is found, open a follow-on fix PR immediately (do not revert unless blocking).
 
 **Background (Φ13, 2026-06-03):** WI-5 (info-panel) and Φ9B-3 (two-click nav) were both verified code-review-only and discovered post-merge on device. The root cause was this check being skipped, not a missing preview URL. A PR preview deploy was evaluated and rejected — the viable no-dependency option (GH Pages subpath) would add a new production failure mode to `check-price.yml`; third-party options (Netlify/Cloudflare) break the Rs.0/no-external-dependency discipline. See PROGRESS.md Decision Log §Φ13.
+
+---
+
+## Honesty-ADR audit: user-facing copy paths (required)
+
+**Trigger:** any PR that implements or updates an ADR that changes what the system can *claim* — accuracy framing, probability language, direction-signal scope, forecast vs. description framing, buy-timing advice.
+
+**Why this exists:** 7 copy-path misses to date. 3 of them were pure copy-layer misses — the fix landed in one consumer, and a sibling consumer generating independent copy was not in scope. The fix scope has been the primary consumer; the pattern is the sibling. Structural guard: when an honesty ADR lands, iterate this list before closing the PR.
+
+**Complete list of user-facing copy-generating paths:**
+
+| # | File | Function / constant | What copy it generates | Last audited |
+|---|------|---------------------|------------------------|--------------|
+| 1 | `ml/notifications.py` | `_build_t8_content()` | T8 morning/evening digest directional hint: "Prices may edge up/ease a little." | PR #84 (Φ9A gap) |
+| 2 | `ml/notifications.py` | `_check_t1()` … `_check_t7()` bodies | T1–T7 notification titles and bodies; T7 lean_hint strings | Φ9A |
+| 3 | `ml/commentary.py` | `SYSTEM_PROMPT` constant | Groq LLM instruction block — governs factual claims about accuracy, direction framing, forward-lean language | Φ9A |
+| 4 | `app.js` | `computeVerdict()` | Verdict card headline + reason: "Trending down/up this week" / "Roughly flat this week" + reason template | Φ9A (INV-2) |
+| 5 | `app.js` | `computeGoodPriceSignals()` | Good-price verdict text ("Prices have been lower/higher/around usual levels lately"), supporting lines ("Cheaper/Pricier/Around the middle of the past month."), divergence note | Φ11-2 |
+| 6 | `app.js` | `renderModelSignal()` vol-context block | 4 regime-conditional strings: "Gold has been more/calmer volatile than usual lately — about ±₹X over 5 days." / "Gold has been moving about ±₹X over 5 days lately." / "Gold's price typically moves about ±₹X over 5 days." | Φ10B |
+| 7 | `app.js` | `renderModelSignal()` methodology accordion | "How accurate is this forecast?" panel: flat-hold framing, 56%/63% vs ~70% base rate, no-directional-edge claim; PI range framing ("Covers typical 5-day moves X% of the time"); direction-signal note ("Current price-move alerts use 7-day momentum — not the AI direction model") | Φ8C' |
+
+**Grep to find all paths before closing a honesty PR:**
+
+```bash
+grep -rn "SYSTEM_PROMPT\|lean_hint\|_build_t8_content\|body +=" ml/
+grep -n "computeVerdict\|computeGoodPriceSignals\|volNote\|meth-note\|How accurate" app.js
+```
+
+**Instruction:** When an honesty decision (ADR) changes what we can claim, audit every row in this table before marking the PR ready. These generate user-facing copy and are easy to miss in a fix's scope — 7 misses to date. Update the "Last audited" column when you confirm a path is still compliant.
