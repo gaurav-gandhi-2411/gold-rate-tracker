@@ -279,8 +279,18 @@ jobs:
             echo "No changes to commit."
           else
             git commit -m "chore: update gold prices and forecast [skip ci]"
-            git pull --rebase --autostash origin "${GITHUB_REF_NAME}"
-            git push
+            for attempt in 1 2 3; do
+              if git pull --rebase --autostash origin "${GITHUB_REF_NAME}" && git push; then
+                break
+              fi
+              git rebase --abort 2>/dev/null || true
+              if [ "$attempt" -lt 3 ]; then
+                echo "Rebase/push attempt ${attempt}/3 failed — retrying in $((attempt * 10))s"
+                sleep $((attempt * 10))
+              else
+                exit 1
+              fi
+            done
           fi
 
       - name: Staleness guard

@@ -1305,6 +1305,7 @@ Tests: 4 unit tests for `extract_ge30ctx_gate_metrics`. Pre-commit clean. Lint C
 | 2026-06-03 | Φ10B: dynamic vol context — DEFINITION CHANGE, not a volatility event | CC + GG (approved) | The displayed ±Rs. number changes from ~Rs.950 to ~Rs.450. This is NOT a sign gold got calmer — it is a change in what is being measured. Rs.950 was the 80th-pct conformal PI half-width (forecast-error distribution over ~165 backtest folds). Rs.450 is a 20-day trailing realized half-width (actual price movements over the most recent 49 contiguous Tanishq days). These measure different things. "Has been moving" (realized fact) vs "typically moves" (forecast uncertainty) is the wording signal that communicates this honestly. Future readers: if the displayed band shrinks from ~Rs.950 to ~Rs.450 and you are wondering whether it signals a real calm patch — it does not; it is the definition change landing. Baseline for calm/elevated: full 49-day contiguous Tanishq run (48 log returns). Recent window: trailing 20 days. Circularity (recent is a subset of baseline) suppresses false regime calls — the ratio pulls toward 1.0 when recent and baseline overlap, so elevated/calm thresholds (1.35×/0.75×) require sustained divergence that survives the dampening. At 49-day baseline the signal is conservative by design; baseline strengthens as data accumulates. |
 | 2026-06-03 | Batch Φ13: PR preview deploy — chose NONE / keep manual device-check | GG + consultant | Bug class (iOS visual bugs found post-merge) materialized twice in project lifetime (WI-5, Φ9B-3); zero user impact; root cause was the check being SKIPPED, not a missing preview URL. Option 2 (GH Pages subpath) adds a new production failure mode to check-price.yml. Option 3 (Netlify/Cloudflare) breaks Rs.0/no-external-dependency discipline. Solo contributor: no second reviewer exists to open a preview URL. Structural fix: manual post-deploy device-check codified as a required RUNBOOK step (§10). |
 | 2026-06-03 | fix(notifications): T8 digest forecast language stripped — 7th consumer-audit miss, Φ9A scope gap (PR #84) | CC | `_build_t8_content` up-hint "Prices look likely to edge up a little in the next few days." had two violations of the honesty norm: (1) probability language "look likely to" stronger than T7's "may"; (2) explicit future time horizon "in the next few days" makes it a forecast claim ADR 019 proved we cannot make. Down-hint "The next few days may ease a little." also carried a time horizon. Both fixed to "Prices may edge up a little." / "Prices may ease a little." — matching T7's honest modal framing (modal hedge only, no probability claim, no time horizon). PATTERN NOTE (7th instance, norm #15): Φ9A fixed ml/commentary.py; `_build_t8_content` in ml/notifications.py is a separate copy path that generates notification bodies independently of commentary.py and was not in Φ9A's audit scope. Guard tightened: `test_t8_hint_included_when_companion_success_up` now pins the exact string "Prices may edge up a little." and adds three negative guards (`"likely" not in body`, `"next few days" not in body`, `" will " not in body`). |
+| 2026-06-03 | chore: commit-race retry hardening + copy-path audit RUNBOOK §11 (PR #85) | CC | (A) check-price.yml commit step: bare `git pull --rebase --autostash` replaced with 3-attempt retry loop (10s/20s backoff, `git rebase --abort` before each retry to reset clean state). `concurrency: group: check-price, cancel-in-progress: false` was already present — serialises push+cron runs so most races never start; retry loop covers the residual. Frequency confirmed: 1 real rebase-conflict instance in last 4 weeks (Jun 2 push+cron overlap). `cancel-in-progress: false` queues but never drops a waiting run. (B) RUNBOOK §11 added: complete table of all 7 user-facing copy-generating paths (notifications `_build_t8_content` + T1–T7 bodies; `ml/commentary.py` `SYSTEM_PROMPT`; `app.js` `computeVerdict` / `computeGoodPriceSignals` / vol-context block / methodology accordion), grep pattern to find them, "Last audited" column. Instruction embedded: audit every row when an honesty ADR changes what we can claim. Structural close on the 7-miss consumer-audit pattern — turns "remember to check all paths" into "here is the list, with the last time each was verified." |
 
 ### Phi8A — Pipeline Hardening (2026-06-02)
 
@@ -1596,6 +1597,29 @@ T7's equivalent lean hint already used the honest form ("Prices may edge up a li
 **Tests.** `test_t8_hint_included_when_companion_success_up` and `test_t8_hint_included_when_companion_success_down` updated to pin exact strings. Up-hint test adds negative guards: `"likely" not in body`, `"next few days" not in body`. Full suite: 452 tests pass.
 
 **Pattern note (7th instance, norm #15).** Φ9A fixed commentary.py (the Groq LLM copy path). T8's `_build_t8_content` generates notification bodies directly in notifications.py — a separate copy path not touched by commentary.py and not in Φ9A's audit scope. This is a direct repeat of the "one consumer fixed, sibling consumer missed" failure mode.
+
+---
+
+### PR #85 — chore: commit-race retry + copy-path audit RUNBOOK §11 (2026-06-03) ✅ COMPLETE
+
+**Scope:** Two independent hardening items in one chore PR. No Python changes, no schema changes, no user-facing behaviour change.
+
+#### (A) Commit-race retry loop — check-price.yml
+
+**Problem.** The `Commit updated data files` step used bare `git pull --rebase --autostash origin master && git push`. When a push-triggered run and a cron run overlap (both commit data to master concurrently), the second run's rebase fails with `error: could not apply ... chore: update gold prices and forecast [skip ci]`. Good scraped data is silently dropped. Confirmed 1 instance in last 4 weeks (Jun 2, run 26820246926).
+
+**Serialisation note.** `concurrency: group: check-price, cancel-in-progress: false` was already present in the workflow — it serialises runs so most races never start (the second run waits for the first to finish before checking out master). The retry loop covers the residual: a race is still possible when the cron run starts, finds no prior run active, and a push-triggered run commits in the window between the cron's checkout and its push.
+
+**Fix.** 3-attempt retry loop wrapping `git pull --rebase --autostash && git push`:
+- `git rebase --abort` before each retry to reset to a clean state
+- Backoff: 10s after attempt 1, 20s after attempt 2
+- Explicit `exit 1` if all 3 attempts fail (step fails loudly, scraper data not silently dropped)
+
+#### (B) RUNBOOK §11 — copy-path inventory
+
+**Problem.** 7 copy-path misses to date; 3 were copy-layer misses where a sibling consumer was not in the fix's audit scope. No canonical list of copy-generating paths existed.
+
+**Fix.** RUNBOOK §11 added: complete table of all 7 user-facing copy-generating paths with file, function, what each generates, and when it was last audited. Includes grep pattern for pre-merge verification. Instruction embedded: audit every row when an honesty ADR changes what we can claim.
 
 ---
 
