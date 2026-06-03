@@ -1,5 +1,5 @@
 {
-  "predicted_at": "2026-06-02T23:01:19.396720+00:00",
+  "predicted_at": "2026-06-03T02:46:36.226214+00:00",
   "target_window": "5d",
   "headline": {
     "method": "naive_flat_hold",
@@ -10,16 +10,16 @@
     "naive_mae_recent_30": 566.9,
     "vol_context": {
       "half_width": 468,
-      "half_width_raw": 467.9,
+      "half_width_raw": 247.4,
       "method": "realized_20d",
       "window_days": 20,
-      "contiguous_days": 49,
-      "is_floored": false,
+      "contiguous_days": 50,
+      "is_floored": true,
       "is_degraded": false,
       "floor_fraction": 0.5,
       "static_pi_half": 935.7,
-      "baseline_half_width": 361,
-      "regime": "normal"
+      "baseline_half_width": 357,
+      "regime": "calm"
     }
   },
   "chronos_companion": {
@@ -55,14 +55,14 @@
     "majority_direction": "up",
     "direction_consensus": 1.0
   },
-  "real_readings_count": 139,
+  "real_readings_count": 140,
   "current_22k": 14365,
-  "scraped_at": "2026-06-02T18:37:34.739Z",
+  "scraped_at": "2026-06-03T02:46:21.575Z",
   "model_fallback": false,
   "predicted_22k": 14365,
   "lower": 13429,
   "upper": 15301,
-  "target_time": "2026-06-03T00:00:00+00:00",
+  "target_time": "2026-06-04T00:00:00+00:00",
   "model_status": "naive_headline",
   "model_version": "naive_flat_hold",
   "warmup": false
