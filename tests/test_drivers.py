@@ -44,18 +44,16 @@ def _build_merged(
         {"ibja_10g": ibja_10g, "gold_usd": gold_usd, "usd_inr": usd_inr},
         index=pd.to_datetime(dates),
     )
-    df["ln_ibja"]     = np.log(df["ibja_10g"])
+    df["ln_ibja"] = np.log(df["ibja_10g"])
     df["ln_gold_usd"] = np.log(df["gold_usd"])
-    df["ln_usdinr"]   = np.log(df["usd_inr"])
-    df["ln_premium"]  = df["ln_ibja"] - df["ln_gold_usd"] - df["ln_usdinr"] - ln_conv
+    df["ln_usdinr"] = np.log(df["usd_inr"])
+    df["ln_premium"] = df["ln_ibja"] - df["ln_gold_usd"] - df["ln_usdinr"] - ln_conv
     return df
 
 
 def _write_ibja_parquet(path: Path, dates: list[str], ibja_10g_vals: list[float]) -> None:
     """Write ibja_rates.parquet with pm_916 = ibja_10g (stored raw in INR/10g)."""
-    df = pd.DataFrame(
-        {"date": dates, "am_916": ibja_10g_vals, "pm_916": ibja_10g_vals}
-    )
+    df = pd.DataFrame({"date": dates, "am_916": ibja_10g_vals, "pm_916": ibja_10g_vals})
     df.to_parquet(path, index=False)
 
 
@@ -112,8 +110,8 @@ def test_log_terms_sum_to_total_ibja_change_gold_only():
     Scenario: only gold_usd moves; usd_inr and premium held flat.
     """
     dates = ["2026-05-01", "2026-05-08"]
-    gold_usd = [4000.0, 4400.0]   # +10%
-    usd_inr  = [95.0, 95.0]        # flat
+    gold_usd = [4000.0, 4400.0]  # +10%
+    usd_inr = [95.0, 95.0]  # flat
     ibja_10g = _stable_ibja(dates, gold_usd, usd_inr)
 
     merged = _build_merged(dates, gold_usd, usd_inr, ibja_10g)
@@ -132,8 +130,8 @@ def test_log_terms_sum_to_total_ibja_change_gold_only():
 def test_log_terms_sum_when_both_drivers_move():
     """Identity holds when gold_usd AND usd_inr both move (cross-term handled by log)."""
     dates = ["2026-05-01", "2026-05-08"]
-    gold_usd = [4000.0, 4200.0]   # +5%
-    usd_inr  = [90.0, 96.0]        # +6.67%
+    gold_usd = [4000.0, 4200.0]  # +5%
+    usd_inr = [90.0, 96.0]  # +6.67%
     ibja_10g = _stable_ibja(dates, gold_usd, usd_inr)
 
     merged = _build_merged(dates, gold_usd, usd_inr, ibja_10g)
@@ -156,7 +154,7 @@ def test_premium_flag_fires_when_premium_dominates():
     """
     dates = ["2026-05-01", "2026-05-08"]
     gold_usd = [4500.0, 4500.0]
-    usd_inr  = [95.0, 95.0]
+    usd_inr = [95.0, 95.0]
     prem_0, prem_1 = 1.10, 1.155  # +5% premium jump
     ibja_10g = [
         gold_usd[0] * usd_inr[0] * _CONV_10G_916 * prem_0,
@@ -173,8 +171,8 @@ def test_premium_flag_fires_when_premium_dominates():
 def test_attribution_valid_when_premium_within_threshold():
     """attribution_valid=True when gold_usd drives the move and premium stays flat."""
     dates = ["2026-05-01", "2026-05-08"]
-    gold_usd = [4000.0, 4400.0]   # +10%
-    usd_inr  = [95.0, 95.0]
+    gold_usd = [4000.0, 4400.0]  # +10%
+    usd_inr = [95.0, 95.0]
     ibja_10g = _stable_ibja(dates, gold_usd, usd_inr)  # premium=1.12, flat
 
     merged = _build_merged(dates, gold_usd, usd_inr, ibja_10g)
@@ -194,14 +192,14 @@ def test_premium_flag_threshold_is_strict_greater_than():
     # Total IBJA +10% (log space); premium is exactly PREMIUM_THRESHOLD_PCT of that
     total_ln = 0.10
     prem_share = PREMIUM_THRESHOLD_PCT / 100.0  # 0.15
-    prem_ln = prem_share * total_ln             # 0.015
-    gold_ln = (1.0 - prem_share) * total_ln     # 0.085 (usd_inr flat → all remainder to gold)
+    prem_ln = prem_share * total_ln  # 0.015
+    gold_ln = (1.0 - prem_share) * total_ln  # 0.085 (usd_inr flat → all remainder to gold)
 
     dates = ["2026-05-01", "2026-05-08"]
     gold_usd = [4000.0, 4000.0 * math.exp(gold_ln)]
-    usd_inr  = [95.0, 95.0]
+    usd_inr = [95.0, 95.0]
     base_prem = 1.12
-    ibja_10g  = [
+    ibja_10g = [
         gold_usd[0] * usd_inr[0] * _CONV_10G_916 * base_prem,
         gold_usd[1] * usd_inr[1] * _CONV_10G_916 * base_prem * math.exp(prem_ln),
     ]
@@ -243,7 +241,9 @@ def test_attribution_degrades_when_macro_missing(tmp_path):
     """attribution_valid=False for all windows when macro_cache.parquet is absent."""
     _write_macro_status(tmp_path / "macro_status.json", age_days=None)
     # Override: write a status with no cache_age_days
-    (tmp_path / "macro_status.json").write_text(json.dumps({"cache_age_days": None, "cache_exists": False}))
+    (tmp_path / "macro_status.json").write_text(
+        json.dumps({"cache_age_days": None, "cache_exists": False})
+    )
 
     result = compute_driver_attribution(data_dir=tmp_path)
     assert result["macro_fresh"] is False
@@ -272,9 +272,9 @@ def test_full_pipeline_valid_attribution_7d(tmp_path):
     dates = _make_clean_dates(40)  # 40 trading days (~8 weeks)
     # Gold rises steadily; premium flat at 1.12; usd_inr flat
     gold_usd = [4000.0 + i * 4 for i in range(len(dates))]  # +0.1% per day
-    usd_inr  = [95.0] * len(dates)
-    ibja_10g = _stable_ibja(dates, gold_usd, usd_inr)       # premium = 1.12, flat
-    tanishq  = [v / 10 for v in ibja_10g]                   # ~IBJA/10 in INR/g
+    usd_inr = [95.0] * len(dates)
+    ibja_10g = _stable_ibja(dates, gold_usd, usd_inr)  # premium = 1.12, flat
+    tanishq = [v / 10 for v in ibja_10g]  # ~IBJA/10 in INR/g
 
     _write_macro_status(tmp_path / "macro_status.json", age_days=0.5)
     _write_ibja_parquet(tmp_path / "ibja_rates.parquet", dates, ibja_10g)
@@ -301,9 +301,9 @@ def test_full_pipeline_contributions_sum_to_total(tmp_path):
     """gold_usd_contrib + usdinr_contrib + premium_contrib ≈ total_move (within rounding)."""
     dates = _make_clean_dates(40)
     gold_usd = [4000.0 + i * 4 for i in range(len(dates))]
-    usd_inr  = [95.0] * len(dates)
+    usd_inr = [95.0] * len(dates)
     ibja_10g = _stable_ibja(dates, gold_usd, usd_inr)
-    tanishq  = [v / 10 for v in ibja_10g]
+    tanishq = [v / 10 for v in ibja_10g]
 
     _write_macro_status(tmp_path / "macro_status.json", age_days=0.5)
     _write_ibja_parquet(tmp_path / "ibja_rates.parquet", dates, ibja_10g)
@@ -322,16 +322,16 @@ def test_full_pipeline_contributions_sum_to_total(tmp_path):
                 + w["premium_contrib_rs_per_g"]
             )
             # Allow up to Rs 2/g rounding tolerance (shares are from log, total from Tanishq prices)
-            assert abs(parts - total) <= 2.0, (
-                f"Window {key}: contributions {parts} do not sum to total {total}"
-            )
+            assert (
+                abs(parts - total) <= 2.0
+            ), f"Window {key}: contributions {parts} do not sum to total {total}"
 
 
 def test_full_pipeline_driver_state_present(tmp_path):
     """driver_state block is populated with 30d percentage changes."""
     dates = _make_clean_dates(40)
     gold_usd = [4500.0] * len(dates)
-    usd_inr  = [95.0 + i * 0.01 for i in range(len(dates))]  # small INR weakening
+    usd_inr = [95.0 + i * 0.01 for i in range(len(dates))]  # small INR weakening
     ibja_10g = _stable_ibja(dates, gold_usd, usd_inr)
 
     _write_macro_status(tmp_path / "macro_status.json", age_days=0.5)
@@ -353,8 +353,12 @@ def test_missing_ibja_parquet_degrades_gracefully(tmp_path):
     """Missing ibja_rates.parquet → all windows attribution_valid=False."""
     _write_macro_status(tmp_path / "macro_status.json", age_days=0.5)
     # Do NOT write ibja parquet
-    _write_macro_parquet(tmp_path / "macro_cache.parquet", ["2026-06-01", "2026-06-02"],
-                         [4500.0, 4500.0], [95.0, 95.0])
+    _write_macro_parquet(
+        tmp_path / "macro_cache.parquet",
+        ["2026-06-01", "2026-06-02"],
+        [4500.0, 4500.0],
+        [95.0, 95.0],
+    )
 
     result = compute_driver_attribution(data_dir=tmp_path)
     for wd in WINDOWS_DAYS:
@@ -366,7 +370,7 @@ def test_ibja_unchanged_window_degrades_gracefully():
     dates = ["2026-05-01", "2026-05-08"]
     ibja_10g = [130000.0, 130000.0]  # flat
     gold_usd = [4500.0, 4500.0]
-    usd_inr  = [95.0, 95.0]
+    usd_inr = [95.0, 95.0]
 
     merged = _build_merged(dates, gold_usd, usd_inr, ibja_10g)
     w = _decompose_window(merged, window_days=7, tanishq_df=None)

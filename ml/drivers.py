@@ -41,22 +41,23 @@ logger = logging.getLogger(__name__)
 # ---------------------------------------------------------------------------
 # Unit constants
 # ---------------------------------------------------------------------------
-_TROY_G_PER_OZ: float = 31.1035       # grams per troy ounce
-_PURITY_916: float = 0.916             # 916‰ purity (22K)
+_TROY_G_PER_OZ: float = 31.1035  # grams per troy ounce
+_PURITY_916: float = 0.916  # 916‰ purity (22K)
 # Pure-gold troy-oz equivalent in 10g of 916-purity gold
 _CONV_10G_916: float = (10.0 / _TROY_G_PER_OZ) * _PURITY_916  # ≈ 0.2945
 
 # ---------------------------------------------------------------------------
 # Tuning knobs (all in one place, auditable)
 # ---------------------------------------------------------------------------
-PREMIUM_THRESHOLD_PCT: float = 15.0    # |premium share| above this → attribution invalid
+PREMIUM_THRESHOLD_PCT: float = 15.0  # |premium share| above this → attribution invalid
 MACRO_STALE_THRESHOLD_DAYS: float = 14.0  # matches macro.py hard-fail threshold
-WINDOWS_DAYS: list[int] = [7, 30]     # attribution windows for 7d headline + 30d context
+WINDOWS_DAYS: list[int] = [7, 30]  # attribution windows for 7d headline + 30d context
 
 
 # ---------------------------------------------------------------------------
 # Private loaders
 # ---------------------------------------------------------------------------
+
 
 def _load_ibja(data_dir: Path) -> pd.DataFrame:
     """Load ibja_rates.parquet with parsed date index and ibja_10g column (INR/10g)."""
@@ -124,6 +125,7 @@ def _null_window(reason: str) -> dict:
 # Core: single-window log decomposition
 # ---------------------------------------------------------------------------
 
+
 def _decompose_window(
     merged: pd.DataFrame,
     window_days: int,
@@ -143,25 +145,23 @@ def _decompose_window(
     w = merged[merged.index >= now - pd.Timedelta(days=window_days)]
 
     if len(w) < 2:
-        return _null_window(
-            f"fewer than 2 IBJA/macro rows in past {window_days}d"
-        )
+        return _null_window(f"fewer than 2 IBJA/macro rows in past {window_days}d")
 
     t0, t1 = w.iloc[0], w.iloc[-1]
 
-    dln_ibja = float(t1["ln_ibja"]     - t0["ln_ibja"])
-    dln_g    = float(t1["ln_gold_usd"] - t0["ln_gold_usd"])
-    dln_r    = float(t1["ln_usdinr"]   - t0["ln_usdinr"])
-    dln_p    = float(t1["ln_premium"]  - t0["ln_premium"])
+    dln_ibja = float(t1["ln_ibja"] - t0["ln_ibja"])
+    dln_g = float(t1["ln_gold_usd"] - t0["ln_gold_usd"])
+    dln_r = float(t1["ln_usdinr"] - t0["ln_usdinr"])
+    dln_p = float(t1["ln_premium"] - t0["ln_premium"])
 
     result: dict = {
         "n_obs": len(w),
         "t0_date": w.index[0].strftime("%Y-%m-%d"),
         "t1_date": w.index[-1].strftime("%Y-%m-%d"),
-        "delta_pct_ibja":     round(dln_ibja * 100, 3),
+        "delta_pct_ibja": round(dln_ibja * 100, 3),
         "delta_pct_gold_usd": round(dln_g * 100, 3),
-        "delta_pct_usdinr":   round(dln_r * 100, 3),
-        "delta_pct_premium":  round(dln_p * 100, 3),
+        "delta_pct_usdinr": round(dln_r * 100, 3),
+        "delta_pct_premium": round(dln_p * 100, 3),
         "total_move_rs_per_g": None,
         "gold_usd_contrib_rs_per_g": None,
         "usdinr_contrib_rs_per_g": None,
@@ -204,8 +204,8 @@ def _decompose_window(
         sr = dln_r / dln_ibja
         sp = dln_p / dln_ibja
         result["gold_usd_contrib_rs_per_g"] = round(sg * total_move, 1)
-        result["usdinr_contrib_rs_per_g"]   = round(sr * total_move, 1)
-        result["premium_contrib_rs_per_g"]  = round(sp * total_move, 1)
+        result["usdinr_contrib_rs_per_g"] = round(sr * total_move, 1)
+        result["premium_contrib_rs_per_g"] = round(sp * total_move, 1)
 
     return result
 
@@ -213,6 +213,7 @@ def _decompose_window(
 # ---------------------------------------------------------------------------
 # Public API
 # ---------------------------------------------------------------------------
+
 
 def compute_driver_attribution(
     data_dir: Path = DATA_DIR,
@@ -233,8 +234,7 @@ def compute_driver_attribution(
         macro_staleness_days = _resolve_macro_staleness(data_dir)
 
     macro_fresh = (
-        macro_staleness_days is not None
-        and macro_staleness_days <= MACRO_STALE_THRESHOLD_DAYS
+        macro_staleness_days is not None and macro_staleness_days <= MACRO_STALE_THRESHOLD_DAYS
     )
 
     ctx: dict = {
@@ -259,7 +259,7 @@ def compute_driver_attribution(
             ctx["windows"][f"{wd}d"] = _null_window(stale_msg)
         return ctx
 
-    ibja  = _load_ibja(data_dir)
+    ibja = _load_ibja(data_dir)
     macro = _load_macro(data_dir)
 
     if ibja.empty or macro.empty:
@@ -294,16 +294,11 @@ def compute_driver_attribution(
     # Pre-compute log series (done once; shared across all window calls)
     ln_conv = math.log(_CONV_10G_916)
     merged = merged.copy()
-    merged["ln_ibja"]     = np.log(merged["ibja_10g"])
+    merged["ln_ibja"] = np.log(merged["ibja_10g"])
     merged["ln_gold_usd"] = np.log(merged["gold_usd"])
-    merged["ln_usdinr"]   = np.log(merged["usd_inr"])
+    merged["ln_usdinr"] = np.log(merged["usd_inr"])
     # ln_premium = ln(ibja) − ln(gold_usd) − ln(usd_inr) − ln(conv)
-    merged["ln_premium"]  = (
-        merged["ln_ibja"]
-        - merged["ln_gold_usd"]
-        - merged["ln_usdinr"]
-        - ln_conv
-    )
+    merged["ln_premium"] = merged["ln_ibja"] - merged["ln_gold_usd"] - merged["ln_usdinr"] - ln_conv
 
     # Driver state: 30d raw % changes for the supporting display copy
     now = merged.index.max()
@@ -311,9 +306,9 @@ def compute_driver_attribution(
     if len(w30) >= 2:
         r0, r1 = w30.iloc[0], w30.iloc[-1]
         ctx["driver_state"] = {
-            "usd_inr_now":             round(float(r1["usd_inr"]), 3),
-            "gold_usd_now":            round(float(r1["gold_usd"]), 1),
-            "usd_inr_30d_pct_change":  round(
+            "usd_inr_now": round(float(r1["usd_inr"]), 3),
+            "gold_usd_now": round(float(r1["gold_usd"]), 1),
+            "usd_inr_30d_pct_change": round(
                 (float(r1["usd_inr"]) - float(r0["usd_inr"])) / float(r0["usd_inr"]) * 100, 2
             ),
             "gold_usd_30d_pct_change": round(
