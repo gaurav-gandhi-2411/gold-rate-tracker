@@ -100,16 +100,7 @@ Commit the updated `.lock` file. The lockfile is the source of truth for `check-
 
 ## How to roll back a bad production model
 
-```bash
-# 1. Find the commit before the bad promotion
-git log --oneline models/production/
-
-# 2. Revert that commit (creates a revert commit, does not rewrite history)
-git revert <bad-commit-sha>
-
-# 3. Push — CI uses the reverted model on the next cron tick
-git push
-```
+> **Retired (ADR 009).** ONNX model promotion was retired with the neural models (ADR 009). No model artifacts exist in `models/production/`; the production forecast is naive flat-hold (ADR 012). To recover from a bad forecast output, see [How to roll back a bad forecast.json commit](#how-to-roll-back-a-bad-forecastjson-commit).
 
 ---
 
@@ -140,8 +131,8 @@ The next successful CI run will replace `forecast.json` and hide the banner.
 2. Add the feature name to `FEATURE_COLS` or `MACRO_FEATURE_COLS` as appropriate.
 3. If the feature requires a config flag, add it to `configs/data/default.yaml`.
 4. Write a unit test in `tests/test_features.py`.
-5. Retrain: `python -m ml.training` — MLflow logs the new feature count in run params.
-6. If the new model wins the champion/challenger comparison (2% MAE improvement gate), it auto-promotes to `models/production/`.
+
+> **Steps 5–6 retired (ADR 009/010).** `python -m ml.training` and the ONNX auto-promotion pipeline were retired with the neural models. The production forecast is naive flat-hold (ADR 012) — no retraining or model-promotion step applies.
 
 ---
 
@@ -152,7 +143,7 @@ The next successful CI run will replace `forecast.json` and hide the banner.
 3. Common failure points:
    - **Scraper step:** Tanishq changed HTML structure. Look for `=== PAGE TEXT ===` in stderr; update the selector in `scraper/scrape.js`.
    - **Macro step:** yfinance rate-limited or ticker changed. Check `ml/macro.py` ticker list and `data/macro_cache.parquet` freshness.
-   - **Forecast step:** ONNX schema mismatch after a bad model promotion. Roll back `models/production/` (see above).
+   - **Forecast step (ONNX — retired, ADR 009):** ONNX inference is no longer in the pipeline. This failure mode does not apply.
    - **Commentary step:** `GROQ_API_KEY` secret expired or Groq rate limit hit. Step is `continue-on-error: true` so it won't block scraping.
 
 ---
@@ -245,11 +236,11 @@ Nothing to configure in this repo until the domain is purchased.
 
 ## Known constraints
 
-- MLflow runs locally only (port 5001). CI inference is CPU-only via ONNX; no tracking in CI.
-- Training requires CUDA 12.4; RTX 3070 Laptop has 8 GB VRAM — sufficient for TFT (hidden=32) and N-BEATS (128 wide).
-- GitHub Actions inference venv has no PyTorch or MLflow — only `onnxruntime` for neural model inference.
-- Gold prices exhibit near-random-walk behaviour; the model may not beat the naive baseline on MAE. This is documented honestly in the README and in `models/production/*-meta.json`.
-- `models/local/` is gitignored — PyTorch `.pt` checkpoints and Optuna DBs stay on your machine.
+- ~~MLflow runs locally only (port 5001). CI inference is CPU-only via ONNX; no tracking in CI.~~ **Retired (ADR 009).** MLflow and ONNX runtime removed with the neural models.
+- ~~Training requires CUDA 12.4; RTX 3070 Laptop has 8 GB VRAM — sufficient for TFT (hidden=32) and N-BEATS (128 wide).~~ **Retired (ADR 009).** Local GPU training retired; TFT and N-BEATS removed.
+- ~~GitHub Actions inference venv has no PyTorch or MLflow — only `onnxruntime` for neural model inference.~~ **Retired (ADR 009).** Neural model inference path removed; CI runs Chronos-Bolt-Tiny (zero-shot) or naive flat-hold.
+- ~~Gold prices exhibit near-random-walk behaviour; the model may not beat the naive baseline on MAE. Documented in `models/production/*-meta.json`.~~ **Retired (ADR 009/012).** No trained model competes against naive; the production forecast IS naive flat-hold. Near-random-walk behaviour is still true and documented in the README.
+- ~~`models/local/` is gitignored — PyTorch `.pt` checkpoints and Optuna DBs stay on your machine.~~ **Retired (ADR 009).** No local training artifacts; `models/local/` no longer used.
 - WANDB is **not wired** in this project. The `.env` file previously contained `WANDB_API_KEY`, `WANDB_ENTITY`, and `WANDB_PROJECT` stubs which have been removed (Phase 1 audit confirmed no `wandb` imports anywhere in the codebase). Do not re-add these without a tracking ADR.
 
 ---
