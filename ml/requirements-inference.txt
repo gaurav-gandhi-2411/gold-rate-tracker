@@ -2,7 +2,7 @@
 # Mirrors ml/requirements.txt but adds structlog for structured logging.
 
 lightgbm>=4.0
-onnxruntime>=1.16.0
+onnxruntime>=1.26.0
 hmmlearn>=0.3.0
 structlog==24.4.0
 pandas>=2.0
