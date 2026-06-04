@@ -1767,3 +1767,16 @@ Architectural pivot: single-series IBJA-916-PM forecasting. MCX dropped entirely
 |------|--------|
 | 2026-06-03 | GG device-verify Φ16: offline banner (airplane mode), refresh-fail state, number tick, initial-load stagger — prefers-reduced-motion on AND off |
 | ~~2026-05-25~~ RESOLVED 2026-05-28 | ~~Verify Chronos falsifiable bet from PR E probe~~ Resolved: Chronos predicted −2.29% (14,118.69 INR/g); price moved UP. Chronos lost. See Decision Log entry 2026-05-28. |
+
+### Φ18C — Display fixes  ✅ COMPLETE — 2026-06-05
+
+**PRs:** Φ18C
+
+**Decision Log:**
+
+- **D1 confirmed clean:** computeVerdict() "virtually flat" is computed from live 7d slope, not hardcoded. Current slope ≈ −₹55 (within ±₹100 threshold) → flat branch is correct. No bug.
+- **D2 confirmed clean:** renderDriverContext() "local factors" copy fires from live premium data: USD/INR 30d = 0.68% and gold_usd 30d = −0.67% (both < 2% driver threshold), delta_pct_premium 30d = 5.38% (> 1% premium threshold) → Branch 2 computed correctly. No bug.
+- **D4 fix:** Hardcoded "56%" literal in renderMethodology() meth-note made dynamic from bt.dir_acc_5d_chronos. Added clarity clause "(acc30f over the most recent 30)" so the two accuracy numbers (all-windows vs recent-30) read as long-run-vs-recent, not a contradiction.
+- **D3 fix:** "Past estimate checks" → "How past estimates have held up" (plainer; "checks" was opaque).
+- **F3:** Default chart range changed from 7d to 30d. Toggle still available.
+- **F4:** History shows date only (no time). 22K · per gram labels added to Price Trend and History section headings.

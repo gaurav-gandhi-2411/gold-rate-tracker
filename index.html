@@ -189,11 +189,12 @@
         <div class="chart-header">
           <h2>Price trend</h2>
           <div class="range-toggle" role="tablist" aria-label="Chart time range">
-            <button data-range="7" class="active" role="tab" aria-selected="true">7d</button>
-            <button data-range="30" role="tab" aria-selected="false">30d</button>
+            <button data-range="7" role="tab" aria-selected="false">7d</button>
+            <button data-range="30" class="active" role="tab" aria-selected="true">30d</button>
             <button data-range="all" role="tab" aria-selected="false">All</button>
           </div>
         </div>
+        <p class="section-karat-note">22K · per gram</p>
         <div class="chart-wrap">
           <canvas id="chart" role="img" aria-label="Gold price trend chart"></canvas>
         </div>
@@ -202,6 +203,7 @@
       <!-- 7. HISTORY -->
       <section class="history-section" id="section-history" aria-label="Price history">
         <h2>History</h2>
+        <p class="section-karat-note">22K · per gram</p>
         <!-- Φ8C'/Ψ3C.3: skeleton shown while history loads -->
         <div class="history-skeleton" id="history-skeleton" aria-hidden="true">
           <div class="skel" style="height:40px;width:100%;border-radius:6px;margin-bottom:8px"></div>
@@ -233,7 +235,7 @@
       <!-- 7b. PAST ESTIMATE TRACK RECORD — past estimates vs actual prices -->
       <section class="track-record-section" id="section-track-record" hidden
                aria-label="Past estimate accuracy — flat-hold vs actual prices">
-        <h2>Past estimate checks</h2>
+        <h2>How past estimates have held up</h2>
         <p class="track-record-caption">30 recent five-day windows: flat-hold estimate (dashed) vs what actually happened (gold)</p>
         <div class="track-record-chart-wrap">
           <canvas id="track-record-chart" role="img"

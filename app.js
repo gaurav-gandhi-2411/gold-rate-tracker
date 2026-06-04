@@ -92,7 +92,7 @@ function fmtDateShort(iso) {
 
 let chart            = null;
 let allReadings      = [];
-let currentRange     = "7";   // tracks active chart tab for refreshData()
+let currentRange     = "30";   // tracks active chart tab for refreshData()
 let pwaHelpDismissed = false; // D5: set true when user taps ✕; survives re-renders
 let chartPinnedIndex  = null;  // index of tapped chart point; null = no callout
 let trackRecordChart  = null;  // Chart.js instance for forecast-vs-actual section
@@ -1045,7 +1045,7 @@ function renderHistory(readings) {
     // g.reading.timestamp = NEWEST reading in run; g.endTimestamp = OLDEST (first occurrence).
     let whenCell;
     if (g.count === 1) {
-      whenCell = fmtDate(g.reading.timestamp);
+      whenCell = fmtDateShort(g.reading.timestamp);
     } else if (i === 0) {
       whenCell = `Since ${fmtDateShort(g.endTimestamp)}`;
     } else {
@@ -1082,7 +1082,7 @@ function renderHistory(readings) {
       }
       let timeLabel;
       if (g.count === 1) {
-        timeLabel = formatISTTime(g.reading.timestamp);
+        timeLabel = fmtDateShort(g.reading.timestamp);
       } else if (absIdx === 0) {
         timeLabel = `Since ${fmtDateShort(g.endTimestamp)}`;
       } else {
@@ -1215,6 +1215,11 @@ function renderMethodology(fc, bt, drift) {
 
   const parts = [];
 
+  // Hoist so direction-signal section and how-good section share the same all-windows accuracy.
+  const dirAll = bt && typeof bt.dir_acc_5d_chronos === "number"
+    ? `${Math.round(bt.dir_acc_5d_chronos * 100)}%`
+    : null;
+
   // Verdict rule explanation
   parts.push(`
     <div class="meth-section">
@@ -1276,7 +1281,7 @@ function renderMethodology(fc, bt, drift) {
             ${!cc.calibration_applied ? `<div class="meth-stat-sub">activates after 30 days of data</div>` : `<div class="meth-stat-sub">${cc.model_version}</div>`}
           </div>
         </div>
-        <p class="meth-note">Current price-move alerts use 7-day momentum — not the AI direction model — because the AI's 56% accuracy over all windows doesn't exceed the ~70% base rate. No directional edge is claimed.</p>
+        <p class="meth-note">Current price-move alerts use 7-day momentum — not the AI direction model — because the AI's ${dirAll ?? "56%"} accuracy across all ${bt?.n_folds ?? 165} windows (${acc30f} over the most recent 30) doesn't exceed the ~70% base rate. No directional edge is claimed.</p>
       </div>
     `);
   } else if (fc?.chronos_companion?.status === "failed") {
@@ -1293,9 +1298,7 @@ function renderMethodology(fc, bt, drift) {
     const maePctWorse = typeof bt.mae_5d_avg_chronos === "number"
       ? Math.round(((bt.mae_5d_avg_chronos - bt.mae_5d_avg_naive) / bt.mae_5d_avg_naive) * 100)
       : null;
-    const dirAll   = typeof bt.dir_acc_5d_chronos === "number"
-      ? Math.round(bt.dir_acc_5d_chronos * 100) + "%"
-      : "—";
+    const dirAllDisplay = dirAll ?? "—";
     const pVal     = bt.wilcoxon_signed_rank_p != null
       ? bt.wilcoxon_signed_rank_p.toFixed(4)
       : "—";
@@ -1321,7 +1324,7 @@ function renderMethodology(fc, bt, drift) {
         It reflects the real distribution of 5-day price moves — wide because gold can move sharply.</p>
 
         <p class="meth-text"><strong>About the direction signal</strong><br>
-        Over ${n} windows the AI signal was correct ${dirAll}. Gold has risen roughly 70% of trading days in our data. A naive "always-up" guess clears ~70% without a model — our signal doesn't beat that baseline.<br>
+        Over ${n} windows the AI signal was correct ${dirAllDisplay}. Gold has risen roughly 70% of trading days in our data. A naive "always-up" guess clears ~70% without a model — our signal doesn't beat that baseline.<br>
         No directional edge is claimed. Current price-move alerts use 7-day momentum, not the AI.</p>
 
         <p class="meth-text"><strong>What would change this</strong><br>
@@ -1692,7 +1695,7 @@ function initPullToRefresh() {
   renderFreshness(allReadings);
   renderComparisons(allReadings);
   renderHistory(allReadings);
-  renderChart(allReadings, "7");
+  renderChart(allReadings, "30");
 
   // Await forecast, then render hero (hides skeleton, shows verdict).
   const fc = await fcPromise;
