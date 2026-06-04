@@ -1780,3 +1780,12 @@ Architectural pivot: single-series IBJA-916-PM forecasting. MCX dropped entirely
 - **D3 fix:** "Past estimate checks" → "How past estimates have held up" (plainer; "checks" was opaque).
 - **F3:** Default chart range changed from 7d to 30d. Toggle still available.
 - **F4:** History shows date only (no time). 22K · per gram labels added to Price Trend and History section headings.
+
+### Φ18A — Honest buy-timing lead + F2 range removal  ✅ COMPLETE — 2026-06-05
+
+**PRs:** Φ18A
+
+**Decision Log:**
+
+- **#9 Buy-timing lead:** computeGoodPriceSignals() refactored from 3 tiers (≤30/31-69/≥70) to 4 tiers (≤20/21-40/41-70/71-100). Added verdictLead (prominent headline) and proofLine (percentile fact as proof). Proof line uses unified frame: "Cheaper than X%" when ≤50th percentile, "More expensive than X%" when >50th. Past-tense position only — no forecast, no buy advice (ADR 005). Data-sufficiency degrade fires when nDays30d < 30 (currently 48-49 days, safe).
+- **F2 conformal range removal:** The outlook-range-row ("5-day range Rs.X–Rs.Y") and outlook-range-note ("Covers typical 5-day moves 87% of the time") removed from the good-price section display. 4 reviews of user confusion; 13%-wide band answers no buyer question. Volatility note ("Gold has been calmer than usual — about ±₹468 over 5 days") retained (useful). Conformal PI stays in forecast.json, methodology section, and track-record chart.
