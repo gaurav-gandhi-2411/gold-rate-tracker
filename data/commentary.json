@@ -1,12 +1,5 @@
 [
   {
-    "ts": "2026-05-31T13:05:23Z",
-    "text": "The current gold price is around average for the past few months. Prices look likely to edge up a little, and this signal tends to be right more often than not, about 6 times out of 10, with a consistent signal from our data. Gold is down a little over the past week.",
-    "model": "llama-3.3-70b-versatile",
-    "prompt_hash": "661e21a8e1e7",
-    "commentary_age_hours": 0.0
-  },
-  {
     "ts": "2026-05-31T13:27:39Z",
     "text": "The current gold price is around average for the past few months. Prices look likely to edge up a little, and this signal tends to be right more often than not, about 6 times out of 10, with a consistent signal from all sources. Gold has been down a little over the past week.",
     "model": "llama-3.3-70b-versatile",
@@ -205,6 +198,13 @@
   {
     "ts": "2026-06-04T20:02:07Z",
     "text": "Gold prices have edged up slightly recently. The current price of Rs.14355 for 22K is around what it's been lately, and it's down a little over the past week.",
+    "model": "llama-3.3-70b-versatile",
+    "prompt_hash": "6058aabf465f",
+    "commentary_age_hours": 0.0
+  },
+  {
+    "ts": "2026-06-04T22:19:38Z",
+    "text": "Gold prices have edged up slightly recently. The current price of Rs.14355 for 22K is around what it's been lately, and it's down a little over the past 3 days.",
     "model": "llama-3.3-70b-versatile",
     "prompt_hash": "6058aabf465f",
     "commentary_age_hours": 0.0
