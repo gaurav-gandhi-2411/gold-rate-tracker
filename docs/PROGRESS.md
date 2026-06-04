@@ -1768,6 +1768,14 @@ Architectural pivot: single-series IBJA-916-PM forecasting. MCX dropped entirely
 | 2026-06-03 | GG device-verify Φ16: offline banner (airplane mode), refresh-fail state, number tick, initial-load stagger — prefers-reduced-motion on AND off |
 | ~~2026-05-25~~ RESOLVED 2026-05-28 | ~~Verify Chronos falsifiable bet from PR E probe~~ Resolved: Chronos predicted −2.29% (14,118.69 INR/g); price moved UP. Chronos lost. See Decision Log entry 2026-05-28. |
 
+### Φ18B — Commentary SYSTEM_PROMPT coherence fix  ✅ COMPLETE — 2026-06-05
+
+**PRs:** Φ18B
+
+**Decision Log:**
+
+- **F1 commentary coherence:** Root cause: old rules (2) and (5) both licensed direction statements independently, causing the LLM to generate "prices have eased a little over the past week" AND "prices are down a little over the past week" as separate sentences. Also, the LLM was reading "Lean: up" from the user_message and generating "prices look likely to edge up" despite the 'may/will/look likely' prohibition. Fix: merged rules (2)+(5) into a single ONE-TIMEFRAME-ONCE rule, added explicit ban on interpreting the Lean value, removed rule (5) as standalone. Watch-item: prompt fixes are probabilistic — confirm first few real generations post-merge follow the one-direction-one-position pattern.
+
 ### Φ18C — Display fixes  ✅ COMPLETE — 2026-06-05
 
 **PRs:** Φ18C

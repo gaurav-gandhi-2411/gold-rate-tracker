@@ -274,7 +274,7 @@ After the PR merges and the live site updates (Pages rebuilds within ~1 min of t
 |---|------|---------------------|------------------------|--------------|
 | 1 | `ml/notifications.py` | `_build_t8_content()` | T8 morning/evening digest directional hint: "Prices may edge up/ease a little." | PR #84 (Φ9A gap) |
 | 2 | `ml/notifications.py` | `_check_t1()` … `_check_t7()` bodies | T1–T7 notification titles and bodies; T7 lean_hint strings | Φ9A |
-| 3 | `ml/commentary.py` | `SYSTEM_PROMPT` constant | Groq LLM instruction block — governs factual claims about accuracy, direction framing, forward-lean language | Φ9A |
+| 3 | `ml/commentary.py` | `SYSTEM_PROMPT` constant | Groq LLM instruction block — governs factual claims about accuracy, direction framing, forward-lean language | Φ18B (2026-06-05) |
 | 4 | `app.js` | `computeVerdict()` | Verdict card headline + reason: "Trending down/up this week" / "Roughly flat this week" + reason template | Φ9A (INV-2) |
 | 5 | `app.js` | `computeGoodPriceSignals()` | Good-price verdict lead (4-tier: "Today's price is low for the past month" / "on the lower side" / "around usual levels" / "on the higher side this month"), proof line ("Cheaper than X% / More expensive than X% of the N days in the past month"), data-sufficiency degrade note (when <30 days), supporting lines, divergence note | Φ18A (2026-06-05) |
 | 6 | `app.js` | `renderModelSignal()` vol-context block | 4 regime-conditional strings: "Gold has been more/calmer volatile than usual lately — about ±₹X over 5 days." / "Gold has been moving about ±₹X over 5 days lately." / "Gold's price typically moves about ±₹X over 5 days." | Φ10B |
