@@ -353,20 +353,35 @@ function computeGoodPriceSignals(readings) {
   const avg30d   = Math.round(prices30d.reduce((s, p) => s + p, 0) / nDays30d);
   const vsAvg30d = current - avg30d;
 
-  let verdict, supportLine1, verdictType;
-  if (percentile30d <= 30) {
-    verdictType  = "low";
-    verdict      = "Prices have been lower than usual lately";
+  // Four-tier verdict (Φ18A)
+  let verdictLead, verdictType, supportLine1;
+  if (percentile30d <= 20) {
+    verdictType  = "cheap";
+    verdictLead  = "Today's price is low for the past month";
     supportLine1 = "Cheaper than most days this past month.";
-  } else if (percentile30d >= 70) {
-    verdictType  = "high";
-    verdict      = "Prices have been higher than usual lately";
-    supportLine1 = "Pricier than most days this past month.";
-  } else {
+  } else if (percentile30d <= 40) {
+    verdictType  = "below-mid";
+    verdictLead  = "Today's price is on the lower side this month";
+    supportLine1 = "Below average for the past month.";
+  } else if (percentile30d <= 70) {
     verdictType  = "mid";
-    verdict      = "Prices are around usual levels lately";
+    verdictLead  = "Today's price is around usual levels lately";
     supportLine1 = "Around the middle of the past month.";
+  } else {
+    verdictType  = "high";
+    verdictLead  = "Today's price is on the higher side this month";
+    supportLine1 = "Pricier than most days this past month.";
   }
+
+  // Unified proof line — consistent frame (cheaper-than / more-expensive-than)
+  const proofLine = percentile30d <= 50
+    ? `Cheaper than ${100 - percentile30d}% of the ${nDays30d} days in the past month.`
+    : `More expensive than ${percentile30d}% of the ${nDays30d} days in the past month.`;
+
+  // Data-sufficiency degrade note (norm #5) — shown when < 30 distinct days
+  const dataSuffNote = nDays30d < 30
+    ? `Only ${nDays30d} distinct days in the window — treat as indicative.`
+    : null;
 
   const absVsAvg = fmtINR(Math.abs(vsAvg30d));
   const supportLine2 = vsAvg30d < 0
@@ -375,15 +390,14 @@ function computeGoodPriceSignals(readings) {
       ? `₹${absVsAvg} above the 30-day average.`
       : "At the 30-day average.";
 
-  // Divergence: percentile says cheap but vs-avg says above average, or vice versa.
-  // Fires in skewed distributions (e.g. one recent spike pulls the average up).
+  // Divergence: percentile says cheap/low but vs-avg says above average, or vice versa.
   const divergenceNote =
-    (verdictType === "low"  && vsAvg30d > 0) ||
-    (verdictType === "high" && vsAvg30d < 0)
+    (percentile30d <= 40 && vsAvg30d > 0) ||
+    (percentile30d >= 70 && vsAvg30d < 0)
       ? "(The two measures diverge here — the percentile counts days, the average measures distance. The headline follows the percentile.)"
       : null;
 
-  return { percentile30d, vsAvg30d, avg30d, nDays30d, verdict, verdictType, supportLine1, supportLine2, divergenceNote };
+  return { percentile30d, vsAvg30d, avg30d, nDays30d, verdictLead, verdictType, proofLine, dataSuffNote, supportLine1, supportLine2, divergenceNote };
 }
 
 // ─── RENDERERS ────────────────────────────────────────────────────────────────
@@ -716,27 +730,21 @@ function renderModelSignal(fc, readings, bt) {
       Z = Math.round(piHalf / 50) * 50;
       volNote = `Gold's price typically moves about ±₹${fmtINR(Z)} over 5 days.`;
     }
-    const coveragePct = bt?.pi_coverage_80_5d_avg != null
-      ? Math.round(bt.pi_coverage_80_5d_avg * 100)
-      : 87;
-    // XSS-safe: rupee()/fmtINR() wrap numbers only; Z, coveragePct, and volNote are computed.
+    // XSS-safe: fmtINR() wraps numbers only; Z and volNote are computed.
     volatilityHtml = `
       <div class="outlook-volatility">
         <p class="outlook-volatility-note">${volNote}</p>
-        <div class="outlook-range-row">
-          <span class="outlook-range-label">5-day range</span>
-          <span class="outlook-range-value">${rupee(hl.lower)} – ${rupee(hl.upper)}</span>
-        </div>
-        <p class="outlook-range-note">Covers typical 5-day moves ${coveragePct}% of the time</p>
       </div>
     `;
   }
 
-  // XSS-safe: verdict/supportLine1/divergenceNote are hardcoded string literals from
-  // computeGoodPriceSignals; supportLine2 interpolates fmtINR(number) only.
+  // XSS-safe: verdictLead/proofLine/dataSuffNote/supportLine1/supportLine2/divergenceNote are
+  // hardcoded string literals or fmtINR(number) from computeGoodPriceSignals — no external data.
   document.getElementById("model-signal-body").innerHTML = `
     <div class="outlook-card">
-      <p class="good-price-verdict good-price-verdict--${signals.verdictType}">${signals.verdict}</p>
+      <p class="good-price-verdict good-price-verdict--${signals.verdictType}">${signals.verdictLead}</p>
+      <p class="good-price-proof">${signals.proofLine}</p>
+      ${signals.dataSuffNote ? `<p class="good-price-data-note">${signals.dataSuffNote}</p>` : ""}
       <ul class="good-price-supporting">
         <li>${signals.supportLine1}</li>
         <li>${signals.supportLine2}</li>
