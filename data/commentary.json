@@ -1,12 +1,5 @@
 [
   {
-    "ts": "2026-06-01T04:10:15Z",
-    "text": "The current gold price is around average for the past few months. Prices look likely to edge up a little, and this lean tends to be right more often than not, about 6 times out of 10, with a consistent signal. Gold has been down a little over the past week.",
-    "model": "llama-3.3-70b-versatile",
-    "prompt_hash": "9935aaf456aa",
-    "commentary_age_hours": 0.0
-  },
-  {
     "ts": "2026-06-01T13:38:58Z",
     "text": "The current gold price is around average for the past few months. Prices look likely to edge up a little over the next few days, and this signal tends to be right more often than not, about 6 times out of 10, with a consistent signal from all sources. Gold has been down a little over the past week.",
     "model": "llama-3.3-70b-versatile",
@@ -207,6 +200,13 @@
     "text": "Gold prices have eased a little over the past week. The current price of Rs.14320 is around what it's been lately. You can buy 22K gold at this rate, with 24K and 18K options also available at Rs.15622 and Rs.11716 respectively.",
     "model": "llama-3.3-70b-versatile",
     "prompt_hash": "5516c780478c",
+    "commentary_age_hours": 0.0
+  },
+  {
+    "ts": "2026-06-05T22:14:16Z",
+    "text": "Gold prices have eased a little over the past week. The current price of Rs.14320 is around what it's been lately. You can buy 22K gold at this rate, with 24K and 18K options available at Rs.15622 and Rs.11716 respectively.",
+    "model": "llama-3.3-70b-versatile",
+    "prompt_hash": "d0993adab2a0",
     "commentary_age_hours": 0.0
   }
 ]
