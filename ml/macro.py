@@ -51,6 +51,8 @@ TICKER_MAP: dict[str, str] = {
     "dxy": "DX-Y.NYB",
     "sensex": "^BSESN",
     "vix": "^VIX",
+    "crude_wti": "CL=F",
+    "tips": "TIP",
 }
 
 # Calendar days of history to fetch on first run (cold start)

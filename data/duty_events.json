@@ -1,0 +1,10 @@
+[
+  {
+    "date": "2024-07-23",
+    "event_type": "duty_change",
+    "direction": "cut",
+    "magnitude_pct": null,
+    "note": "Union Budget 2024-25: basic customs duty on gold reduced. Local gold prices fell significantly on announcement. Exact split between customs duty and cess components unverified — magnitude set to null.",
+    "source": "Union Budget 2024-25 public announcement"
+  }
+]
