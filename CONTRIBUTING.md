@@ -62,3 +62,24 @@ Open a GitHub issue with:
 3. Steps to reproduce
 
 For security issues, see [SECURITY.md](SECURITY.md).
+
+## Branch hygiene
+
+Always start new work from the current remote tip:
+
+```bash
+git fetch && git checkout -b <branch> origin/master
+```
+
+Never branch from local `master` — it may be behind `origin/master`, contaminating the
+new branch with stale commits and a red lint baseline.
+
+Before opening a PR, verify the branch shares its base with `origin/master`:
+
+```bash
+git merge-base HEAD origin/master  # must equal:
+git rev-parse origin/master
+```
+
+Recurring stale-base contamination caused rebase conflicts and an inherited red-lint
+baseline on PRs #36 and #101.
