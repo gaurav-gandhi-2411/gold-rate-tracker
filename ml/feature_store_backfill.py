@@ -223,6 +223,11 @@ def run_backfill(
             "ibja_pm_916": ibja_pm_916,
             "ibja_am_916": ibja_am_916,
             "tanishq_22k": None,
+            # For backfill rows the IBJA row IS for date d, so asof == d.
+            # tanishq_22k is always None for backfill (historical scrapes not retained).
+            "ibja_pm_916_asof_date": d if ibja_pm_916 is not None else None,
+            "ibja_am_916_asof_date": d if ibja_am_916 is not None else None,
+            "tanishq_22k_asof_date": None,
             "dow": d_obj.weekday(),
             "dom": d_obj.day,
             "month": d_obj.month,

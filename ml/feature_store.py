@@ -7,7 +7,7 @@ import pandas as pd
 
 logger = logging.getLogger(__name__)
 
-SCHEMA_VERSION: int = 1
+SCHEMA_VERSION: int = 2
 
 STORE_PATH: Path = Path(__file__).parent.parent / "data" / "feature_store" / "snapshots.parquet"
 
@@ -36,6 +36,9 @@ _ALL_COLUMNS: list[str] = [
     "ibja_pm_916",
     "ibja_am_916",
     "tanishq_22k",
+    "ibja_pm_916_asof_date",
+    "ibja_am_916_asof_date",
+    "tanishq_22k_asof_date",
     "dow",
     "dom",
     "month",
@@ -180,6 +183,7 @@ def capture_daily_snapshot(
     # ------------------------------------------------------------------
     ibja_pm_916: float | None = None
     ibja_am_916: float | None = None
+    _ibja_observation_date: str | None = None
 
     _ibja_path: Path = ibja_path or (Path(__file__).parent.parent / "data" / "ibja_rates.parquet")
     try:
@@ -188,6 +192,8 @@ def capture_daily_snapshot(
         ibja_df = pd.read_parquet(_ibja_path)
         if not ibja_df.empty:
             last_row = ibja_df.iloc[-1]
+            if "date" in ibja_df.columns:
+                _ibja_observation_date = str(last_row["date"])
             if "pm_916" in ibja_df.columns and not pd.isna(last_row.get("pm_916")):
                 ibja_pm_916 = float(last_row["pm_916"])
             if "am_916" in ibja_df.columns and not pd.isna(last_row.get("am_916")):
@@ -195,10 +201,14 @@ def capture_daily_snapshot(
     except Exception as exc:
         logger.warning("feature_store: IBJA load failed — %s", exc)
 
+    ibja_pm_916_asof_date: str | None = _ibja_observation_date if ibja_pm_916 is not None else None
+    ibja_am_916_asof_date: str | None = _ibja_observation_date if ibja_am_916 is not None else None
+
     # ------------------------------------------------------------------
     # 5. Load Tanishq price
     # ------------------------------------------------------------------
     tanishq_22k: float | None = None
+    tanishq_22k_asof_date: str | None = None
 
     _prices_path: Path = prices_path or (Path(__file__).parent.parent / "data" / "prices.json")
     try:
@@ -211,6 +221,12 @@ def capture_daily_snapshot(
             raw_val = last_price_entry.get("22k")
             if raw_val is not None:
                 tanishq_22k = float(raw_val)
+                # Convert the entry's UTC timestamp to IST before taking the calendar
+                # date — a late-UTC entry (e.g. 19:00Z) is the next calendar day in IST.
+                ts_str = last_price_entry.get("timestamp", "")
+                if ts_str:
+                    ts_utc = datetime.fromisoformat(ts_str.replace("Z", "+00:00"))
+                    tanishq_22k_asof_date = ts_utc.astimezone(ist_offset).date().isoformat()
     except Exception as exc:
         logger.warning("feature_store: prices.json load failed — %s", exc)
 
@@ -258,6 +274,9 @@ def capture_daily_snapshot(
         "ibja_pm_916": ibja_pm_916,
         "ibja_am_916": ibja_am_916,
         "tanishq_22k": tanishq_22k,
+        "ibja_pm_916_asof_date": ibja_pm_916_asof_date,
+        "ibja_am_916_asof_date": ibja_am_916_asof_date,
+        "tanishq_22k_asof_date": tanishq_22k_asof_date,
         "dow": as_of_date_obj.weekday(),
         "dom": as_of_date_obj.day,
         "month": as_of_date_obj.month,
