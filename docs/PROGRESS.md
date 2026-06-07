@@ -1846,3 +1846,34 @@ Architectural pivot: single-series IBJA-916-PM forecasting. MCX dropped entirely
 - **8h threshold matches T9:** Banner fires at the same staleness level as the T9 ntfy notification. Both surfaces reflect the same definition of "stale".
 
 **Verification:** All 6 JS test suites pass (48 total tests). Device verification of banner required (norm #14) — pending GG live-site confirmation.
+
+---
+
+### Φ21 — Exogenous Feature Store (capture-now, train-in-a-year) ✅ COMPLETE — 2026-06-07
+
+**Goal:** Build a committed, append-only, point-in-time feature store that captures gold price drivers on every pipeline run, creating a clean, look-ahead-bias-free dataset for a future directional model (~12 months from now). No model is built in this phase.
+
+**Deliverables shipped:**
+- `ml/feature_store.py` — versioned schema (SCHEMA_VERSION=1), `append_snapshot()` (idempotent, append-only), `capture_daily_snapshot()` (live pipeline integration), `load_snapshots()`
+- `data/feature_store/snapshots.parquet` — committed; accumulation starts 2026-06-07; idempotent daily write via check-price.yml
+- `ml/calendar_events.py` — multi-year festival windows (Akshaya Tritiya, Dhanteras, Diwali, Navratri, 2022–2027)
+- `data/duty_events.json` — 2024-07-23 duty cut seeded; append-only; magnitude null (unverified exact split)
+- `ml/macro.py` — crude_wti (CL=F) and tips (TIP) added to TICKER_MAP, additively; existing 6 series and all forecast.json/Chronos values regression-tested and unchanged
+- `ml/feature_store_backfill.py` — provenance-tagged 2025+ reconstruction from yfinance historical; explicit no-overwrite guard for live_pit rows
+- `docs/FEATURE_STORE.md` — schema reference, immutability contract, label derivation, provenance semantics, do-not-train note
+- `tests/test_feature_store.py` — 25+ tests covering idempotency, immutability, schema, partial flag, capture step, backfill no-overwrite
+- `tests/test_duty_and_calendar.py` — 19 tests covering festival windows, duty JSON validation, duty join logic
+
+**Key design decisions:**
+- Immutability/idempotency tests written RED first; implementation written to pass them
+- Labels NOT stored — derived at training time from ibja_rates.parquet PIT join (avoids look-ahead bias)
+- Duty magnitude null — 2024-07-23 direction verifiable; exact percentage split not independently confirmed
+
+---
+
+## Decision Log
+
+| Date | Decision | Why | Outcome |
+|------|----------|-----|---------|
+| 2026-06-07 | Capture-now, train-in-a-year (Φ21) | Only ~100 backtestable consecutive pairs available today (adverse bull regime); India-local factors dominate (attribution invalid). 12 months of clean daily PIT data needed before training. | Feature store accumulation begins 2026-06-07. |
+| 2026-06-07 | Labels derived at training time, NOT stored in feature store | Storing next-day pm_916 at capture time embeds a future value, creating look-ahead bias for any row where the next close wasn't yet known at capture. PIT join from ibja_rates.parquet at training time preserves the capture-day "what was known" guarantee. | ibja_rates.parquet continues to accumulate; labels joined at training time. |
