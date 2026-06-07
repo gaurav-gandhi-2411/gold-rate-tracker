@@ -117,7 +117,7 @@ gold-rate-tracker/
 | `ml/backtest.py` | Walk-forward h=5 backtest, weekly cron | Produces `data/backtest.json` that feeds `naive_mae_recent_30` into inference and `direction_acc_30f` into notification gating. |
 | `data/forecast.json` | PWA reads this every page load | Schema IS the PWA contract. Structured blocks (`headline`, `chronos_companion`) are canonical; top-level aliases are backward-compat shims. |
 | `data/chronos_probe.json` | Inference reads this for companion block | If probe fails, inference still runs (writes `chronos_companion.status: "failed"`); T5 fires once per IST day. |
-| `data/notification_state.json` | Anti-spam state | Gitignored; cached via `actions/cache/restore@v4` + `save@v4` with `notification-state-${run_id}` key and `notification-state-` restore-keys prefix. Master branch only. |
+| `data/notification_state.json` | Anti-spam state | Gitignored (`.gitignore` entry was absent until 2026-06-07, added in chore PR); cached via `actions/cache/restore@v4` + `save@v4` with `notification-state-${run_id}` key and `notification-state-` restore-keys prefix. Master branch only. |
 | `data/calibration.json` | Calibration gate | `valid: false` until 30 IBJA-Tanishq overlap days. Don't manually flip; `run_refit_if_needed()` in CI handles it (ADR 017). |
 | `.github/workflows/check-price.yml` | 4h production cron | Step ORDER is load-bearing: scrape → ibja-append (upsert) → **calibration-refit** → chronos-probe → notification-restore → inference → notification-evaluate → notification-save → commit. |
 | `app.js` | PWA logic | Reads current schema (Φ2 migrated; Ψ3C redesigned). Any JS error breaks the live site. |
