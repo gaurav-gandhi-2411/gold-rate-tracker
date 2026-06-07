@@ -384,3 +384,91 @@ class TestGetTrainXyWithMacro:
         X, _y = get_train_Xy(feat)  # no feature_cols arg
         assert X.shape[1] == len(FEATURE_COLS), "Base FEATURE_COLS count changed"
         assert not X.isnull().any().any()
+
+
+# ---------------------------------------------------------------------------
+# 7. TestMacroAdditionsAreAdditive — crude_wti / tips do not affect the 6 original series
+# ---------------------------------------------------------------------------
+
+_BEFORE_MAP: dict[str, str] = {
+    "usd_inr": "INR=X",
+    "gold_usd": "GC=F",
+    "us_10y_yield": "^TNX",
+    "dxy": "DX-Y.NYB",
+    "sensex": "^BSESN",
+    "vix": "^VIX",
+}
+
+_AFTER_MAP: dict[str, str] = {
+    **_BEFORE_MAP,
+    "crude_wti": "CL=F",
+    "tips": "TIP",
+}
+
+_TICKER_VALUES: dict[str, float] = {
+    "INR=X": 85.0,
+    "GC=F": 3200.0,
+    "^TNX": 4.5,
+    "DX-Y.NYB": 104.0,
+    "^BSESN": 75000.0,
+    "^VIX": 18.0,
+    "CL=F": 72.0,
+    "TIP": 110.0,
+}
+
+_EXISTING_COLS = [
+    "usd_inr",
+    "gold_usd",
+    "us_10y_yield",
+    "dxy",
+    "sensex",
+    "vix",
+    "usd_inr_change_1d",
+    "gold_usd_change_1d",
+    "gold_usd_5d_vol",
+    "sensex_5d_return",
+    "vix_level",
+]
+
+
+def _make_mock_multiindex_df() -> pd.DataFrame:
+    dates = pd.date_range("2026-06-01", "2026-06-05", freq="D", tz="UTC")
+    tickers = list(_TICKER_VALUES.keys())
+    columns = pd.MultiIndex.from_product([["Close"], tickers])
+    data = {("Close", t): [v] * len(dates) for t, v in _TICKER_VALUES.items()}
+    return pd.DataFrame(data, index=dates, columns=columns)
+
+
+class TestMacroAdditionsAreAdditive:
+    def test_crude_wti_and_tips_do_not_change_existing_six_series(self) -> None:
+        import ml.macro as macro_mod
+        from ml.macro import _extract_close
+
+        mock_df = _make_mock_multiindex_df()
+
+        # Patch TICKER_MAP to the 6-series "before" state so _derive_features uses
+        # the correct core list when computing the before snapshot.
+        with patch.object(macro_mod, "TICKER_MAP", _BEFORE_MAP):
+            from ml.macro import _derive_features as _df_fn  # re-import inside patch scope
+
+            before_df = _df_fn(_extract_close(mock_df, _BEFORE_MAP))
+
+        # Patch TICKER_MAP to the full 8-series "after" state.
+        with patch.object(macro_mod, "TICKER_MAP", _AFTER_MAP):
+            from ml.macro import _derive_features as _df_fn  # re-import inside patch scope
+
+            after_df = _df_fn(_extract_close(mock_df, _AFTER_MAP))
+
+        for col in _EXISTING_COLS:
+            pd.testing.assert_series_equal(
+                before_df[col],
+                after_df[col],
+                check_names=False,
+                obj=f"column '{col}' changed after adding crude_wti/tips",
+            )
+
+        assert "crude_wti" in after_df.columns, "crude_wti missing from after DataFrame"
+        assert "tips" in after_df.columns, "tips missing from after DataFrame"
+        assert "crude_wti" not in before_df.columns, (
+            "crude_wti unexpectedly present in before DataFrame"
+        )
