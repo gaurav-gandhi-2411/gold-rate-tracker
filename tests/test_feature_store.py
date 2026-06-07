@@ -4,8 +4,6 @@ import math
 from pathlib import Path
 
 import pandas as pd
-import pytest
-
 from ml.feature_store import SCHEMA_VERSION, append_snapshot, capture_daily_snapshot, load_snapshots
 from ml.feature_store_backfill import run_backfill
 
@@ -28,28 +26,24 @@ _ASOF_DATE_COLS = [f"{col}_asof_date" for col in _MACRO_FLOATS]
 
 _PRICE_FLOATS = ["ibja_pm_916", "ibja_am_916", "tanishq_22k"]
 
-_ALL_COLUMNS = (
-    [
-        "capture_utc",
-        "as_of_date",
-        "schema_version",
-        "source",
-        "partial",
-    ]
-    + _MACRO_FLOATS
-    + _ASOF_DATE_COLS
-    + _PRICE_FLOATS
-    + [
-        "dow",
-        "dom",
-        "month",
-        "is_festival_window",
-        "festival_name",
-        "days_to_next_festival",
-        "duty_change_active",
-        "days_since_last_duty_change",
-    ]
-)
+_ALL_COLUMNS = [
+    "capture_utc",
+    "as_of_date",
+    "schema_version",
+    "source",
+    "partial",
+    *_MACRO_FLOATS,
+    *_ASOF_DATE_COLS,
+    *_PRICE_FLOATS,
+    "dow",
+    "dom",
+    "month",
+    "is_festival_window",
+    "festival_name",
+    "days_to_next_festival",
+    "duty_change_active",
+    "days_since_last_duty_change",
+]
 
 
 def _make_snapshot(as_of_date: str, **overrides: object) -> dict:
@@ -256,8 +250,8 @@ class TestPartialFlag:
 
 def _make_mock_macro_parquet(tmp_path: Path) -> Path:
     """Write a minimal macro_cache.parquet with 5 rows and all 8 series."""
+
     import pandas as pd
-    from datetime import datetime, timezone
 
     dates = pd.date_range("2026-06-01", periods=5, freq="D", tz="UTC")
     data = {
