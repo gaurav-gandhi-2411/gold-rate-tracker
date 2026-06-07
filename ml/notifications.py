@@ -706,10 +706,7 @@ def _check_t9(
 
     hours = int(age_h)
     title = f"Gold Tracker: data stale ({hours}h)"
-    body = (
-        f"No new price reading in {hours}h. "
-        "Scraper may be failing. Check CI logs."
-    )
+    body = f"No new price reading in {hours}h. Scraper may be failing. Check CI logs."
     return _make_alert("T9", title, body, 4, ["warning"], now_ist)
 
 

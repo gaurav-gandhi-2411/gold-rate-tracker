@@ -205,9 +205,9 @@ def test_pipeline_wiring_calibration_applied(tmp_path, monkeypatch):
         "majority_direction",
         "direction_consensus",
     ]:
-        assert (
-            field in cc
-        ), f"commentary.py consumer field missing from chronos_companion: {field!r}"
+        assert field in cc, (
+            f"commentary.py consumer field missing from chronos_companion: {field!r}"
+        )
 
     # app.js reads (lines 509-806):
     for field in [
@@ -287,15 +287,15 @@ def test_pipeline_wiring_probe_failed_triggers_t5(tmp_path, monkeypatch):
     assert fc["model_fallback"] is True, "model_fallback must be True when probe failed"
 
     cc = fc["chronos_companion"]
-    assert (
-        cc["status"] == "failed"
-    ), f"chronos_companion.status must be 'failed', got {cc['status']!r}"
-    assert (
-        cc["lean_direction"] == "neutral"
-    ), f"lean_direction must be 'neutral' for failed probe, got {cc['lean_direction']!r}"
-    assert (
-        cc["direction_acc_30f"] is None
-    ), f"direction_acc_30f must be None for failed probe, got {cc['direction_acc_30f']!r}"
+    assert cc["status"] == "failed", (
+        f"chronos_companion.status must be 'failed', got {cc['status']!r}"
+    )
+    assert cc["lean_direction"] == "neutral", (
+        f"lean_direction must be 'neutral' for failed probe, got {cc['lean_direction']!r}"
+    )
+    assert cc["direction_acc_30f"] is None, (
+        f"direction_acc_30f must be None for failed probe, got {cc['direction_acc_30f']!r}"
+    )
 
     # PI bands must still be present — headline works without probe
     assert fc["predicted_22k"] > 0
