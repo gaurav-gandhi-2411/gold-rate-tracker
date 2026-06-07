@@ -1820,3 +1820,206 @@ def test_get_prior_day_price_returns_none_when_no_prior():
     ]
     result = _get_prior_day_price(prices, _ist(2026, 5, 19, 14, 0))
     assert result is None
+
+
+# ---------------------------------------------------------------------------
+# T9 — Data feed stale (scraper health, IST-day deduped)
+# ---------------------------------------------------------------------------
+# Fixes two bugs in the old two-path design:
+#   Over-alert: shell curl step re-fired on every transient cluster restart.
+#   H4b under-alert: when age >12h, shell step AND staleness guard BOTH
+#     suppressed themselves — zero alerts during sustained failures.
+# T9 fires at most once per IST calendar day across ALL staleness ages.
+# ---------------------------------------------------------------------------
+
+_T9_NOW_IST = _ist(2026, 6, 7, 14, 0)  # reference time for T9 tests
+
+
+def _prices_aged(age_h: float, now_ist: datetime = _T9_NOW_IST) -> list[dict]:
+    """One-entry prices list where the reading is age_h hours old relative to now_ist."""
+    ts = (now_ist.astimezone(UTC) - timedelta(hours=age_h)).isoformat().replace("+00:00", "Z")
+    return [{"timestamp": ts, "22k": 14000, "24k": 14500, "18k": 13500, "source": "test"}]
+
+
+def test_t9_fires_when_prices_stale():
+    """T9 fires when prices.json latest entry is > 8h old."""
+    alerts = check_triggers(
+        _forecast(),
+        _probe(),
+        _prices_aged(9.0),
+        _backtest_accurate(),
+        NotificationState(),
+        _T9_NOW_IST,
+    )
+    t9 = [a for a in alerts if a.trigger_id == "T9"]
+    assert len(t9) == 1, "T9 must fire when prices are 9h stale"
+    assert "₹" not in t9[0].title, "T9 title must be ASCII-safe (no ₹)"
+    assert "₹" not in t9[0].body, "T9 body must be ASCII-safe (no ₹)"
+
+
+def test_t9_no_fire_when_prices_fresh():
+    """T9 does not fire when prices.json is < 8h old."""
+    alerts = check_triggers(
+        _forecast(),
+        _probe(),
+        _prices_aged(3.0),
+        _backtest_accurate(),
+        NotificationState(),
+        _T9_NOW_IST,
+    )
+    assert all(a.trigger_id != "T9" for a in alerts), "T9 must NOT fire on fresh prices"
+
+
+def test_t9_at_most_one_per_ist_day():
+    """Multi-cluster-per-day dedup: T9 fires once on first stale run, not again same IST day.
+
+    Simulates two transient-cluster failures in the same IST day.
+    Run 1 (10:00 IST): data 9h stale -> T9 fires, IST-date stamped.
+    Run 2 (13:00 IST, same day): data still stale -> T9 suppressed by dedup.
+    """
+    now_run1 = _ist(2026, 6, 7, 10, 0)
+    now_run2 = _ist(2026, 6, 7, 13, 0)
+
+    stale_ts = (now_run1.astimezone(UTC) - timedelta(hours=9)).isoformat().replace("+00:00", "Z")
+    stale_prices = [
+        {"timestamp": stale_ts, "22k": 14000, "24k": 14500, "18k": 13500, "source": "test"}
+    ]
+
+    state = NotificationState()
+    alerts_r1 = check_triggers(
+        _forecast(), _probe(), stale_prices, _backtest_accurate(), state, now_run1
+    )
+    t9_r1 = [a for a in alerts_r1 if a.trigger_id == "T9"]
+    assert len(t9_r1) == 1, "Run 1: T9 must fire (first stale alert today)"
+
+    # Stamp the IST-date dedup — mirrors what main() does via _stamp_ist_dedup
+    _stamp_ist_dedup("T9", state, now_run1)
+
+    alerts_r2 = check_triggers(
+        _forecast(), _probe(), stale_prices, _backtest_accurate(), state, now_run2
+    )
+    t9_r2 = [a for a in alerts_r2 if a.trigger_id == "T9"]
+    assert len(t9_r2) == 0, "Run 2 (same IST day): T9 must NOT fire again — IST-day dedup"
+
+
+def test_t9_h4b_sustained_fires_on_day_2():
+    """H4b regression: sustained >12h scraper failure alerts on the next IST day.
+
+    Before the fix: shell step suppressed itself (age > 12h) AND staleness guard
+    suppressed itself (SCRAPER_DOWN_THIS_RUN) -> zero alerts for sustained outages.
+    After the fix: T9 fires once per IST day, so a sustained failure spanning two
+    IST days produces an alert on each day.
+
+    Day 1 (2026-06-07): T9 fired, last_t9_ist_date = "2026-06-07".
+    Day 2 (2026-06-08): data still stale (20h old) -> T9 must fire again.
+    """
+    state = NotificationState()
+    state.last_t9_ist_date = "2026-06-07"  # simulates Day 1 send
+
+    now_day2 = _ist(2026, 6, 8, 14, 0)
+    stale_ts = (now_day2.astimezone(UTC) - timedelta(hours=20)).isoformat().replace("+00:00", "Z")
+    stale_prices = [
+        {"timestamp": stale_ts, "22k": 14000, "24k": 14500, "18k": 13500, "source": "test"}
+    ]
+
+    alerts = check_triggers(
+        _forecast(), _probe(), stale_prices, _backtest_accurate(), state, now_day2
+    )
+    t9 = [a for a in alerts if a.trigger_id == "T9"]
+    assert len(t9) == 1, "H4b: T9 must fire on day 2 of sustained failure (different IST day)"
+
+
+def test_t9_not_counted_in_t123_cap():
+    """T9 fires even when the T1+T2+T3 combined anti-spam cap is saturated."""
+    state = NotificationState()
+    now_utc = datetime.now(UTC).isoformat()
+    state.sent_today = [
+        {"trigger_id": "T1", "sent_at": now_utc},
+        {"trigger_id": "T2", "sent_at": now_utc},
+        {"trigger_id": "T3", "sent_at": now_utc},
+    ]
+    state.last_sent["T1"] = now_utc
+    state.last_sent["T2"] = now_utc
+    state.last_sent["T3"] = now_utc
+
+    alerts = check_triggers(
+        _forecast(),
+        _probe(),
+        _prices_aged(9.0),
+        _backtest_accurate(),
+        state,
+        _T9_NOW_IST,
+    )
+    assert any(a.trigger_id == "T9" for a in alerts), "T9 must fire even when T1/T2/T3 cap is full"
+
+
+def test_t9_state_round_trip(tmp_path: Path):
+    """last_t9_ist_date survives a NotificationState save/load cycle."""
+    state = NotificationState(last_t9_ist_date="2026-06-07")
+    path = tmp_path / "notification_state.json"
+    save_state(state, path)
+
+    loaded = load_state(path)
+    assert loaded.last_t9_ist_date == "2026-06-07"
+
+
+def test_t9_backward_compat_old_state(tmp_path: Path):
+    """State file without last_t9_ist_date loads with empty-string default."""
+    import json as _json
+
+    old_state = {
+        "schema_version": 1,
+        "last_sent": {},
+        "queued": [],
+        "sent_today": [],
+        "last_t5_ist_date": "",
+        "last_t6_fired_date_ist": "",
+        "last_t4_fired_ist_date": "",
+        "last_t7_fired_ist_date": "",
+        "last_t8_morning_ist_date": "",
+        "last_t8_evening_ist_date": "",
+        # deliberately absent: last_t9_ist_date
+    }
+    path = tmp_path / "old_state.json"
+    path.write_text(_json.dumps(old_state), encoding="utf-8")
+
+    loaded = load_state(path)
+    assert loaded.last_t9_ist_date == ""
+    assert loaded.schema_version == 1
+
+
+def test_send_pending_sets_t9_ist_date(monkeypatch):
+    """send_pending stamps last_t9_ist_date when T9 is successfully sent."""
+    mock_resp = MagicMock()
+    mock_resp.status = 200
+    mock_resp.__enter__ = MagicMock(return_value=mock_resp)
+    mock_resp.__exit__ = MagicMock(return_value=False)
+    monkeypatch.setattr("urllib.request.urlopen", lambda req, timeout=None: mock_resp)
+    monkeypatch.setenv("NTFY_TOPIC", "test-gold-topic")
+
+    now_ist = _ist(2026, 6, 7, 14, 0)
+    alert = PendingAlert(
+        trigger_id="T9",
+        title="Gold Tracker: data stale (9h)",
+        body="No new price reading in 9h. Scraper may be failing. Check CI logs.",
+        priority=4,
+        tags=["warning"],
+        click_url="https://gaurav-gandhi-2411.github.io/gold-rate-tracker/",
+        queued_at=now_ist.isoformat(),
+        bypass_quiet=False,
+    )
+    state = NotificationState()
+    assert state.last_t9_ist_date == ""
+
+    send_pending([alert], state, now_ist)
+
+    assert state.last_t9_ist_date == now_ist.strftime("%Y-%m-%d")
+
+
+def test_stamp_ist_dedup_t9():
+    """_stamp_ist_dedup sets last_t9_ist_date for T9 immediately on queue."""
+    state = NotificationState()
+    now_ist = _ist(2026, 6, 7, 23, 30)  # quiet hours
+    assert state.last_t9_ist_date == ""
+    _stamp_ist_dedup("T9", state, now_ist)
+    assert state.last_t9_ist_date == "2026-06-07"
