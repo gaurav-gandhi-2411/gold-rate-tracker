@@ -5,7 +5,7 @@ from pathlib import Path
 
 import pandas as pd
 from ml.feature_store import SCHEMA_VERSION, append_snapshot, capture_daily_snapshot, load_snapshots
-from ml.feature_store_backfill import run_backfill
+from ml.feature_store_backfill import patch_missing_macro_series, run_backfill
 
 # ---------------------------------------------------------------------------
 # Helpers
@@ -34,6 +34,7 @@ _ALL_COLUMNS = [
     "schema_version",
     "source",
     "partial",
+    "n_macro_null",
     *_MACRO_FLOATS,
     *_ASOF_DATE_COLS,
     *_PRICE_FLOATS,
@@ -57,6 +58,7 @@ def _make_snapshot(as_of_date: str, **overrides: object) -> dict:
         "schema_version": SCHEMA_VERSION,
         "source": "live_pit",
         "partial": False,
+        "n_macro_null": 0,
         # macro floats
         "gold_usd": 3200.0,
         "usd_inr": 83.5,
@@ -746,3 +748,175 @@ class TestBackfill:
         df = load_snapshots(store)
         assert len(df) == 0
         assert n == 0
+
+
+# ---------------------------------------------------------------------------
+# TestNMacroNull
+# ---------------------------------------------------------------------------
+
+
+class TestNMacroNull:
+    def test_n_macro_null_zero_when_all_macro_present(self, tmp_path: Path) -> None:
+        """capture_daily_snapshot sets n_macro_null=0 when all 8 series are available."""
+        store = _store_path(tmp_path)
+        macro = _make_mock_macro_parquet(tmp_path)
+        duty = _make_mock_duty_json(tmp_path)
+
+        capture_daily_snapshot(store_path=store, macro_cache_path=macro, duty_events_path=duty)
+
+        df = load_snapshots(store)
+        assert int(df.iloc[0]["n_macro_null"]) == 0
+
+    def test_n_macro_null_eight_when_macro_missing(self, tmp_path: Path) -> None:
+        """capture_daily_snapshot sets n_macro_null=8 when macro cache is unavailable."""
+        store = _store_path(tmp_path)
+        duty = _make_mock_duty_json(tmp_path)
+
+        capture_daily_snapshot(
+            store_path=store,
+            macro_cache_path=tmp_path / "nonexistent.parquet",
+            duty_events_path=duty,
+        )
+
+        df = load_snapshots(store)
+        assert int(df.iloc[0]["n_macro_null"]) == 8
+
+    def test_n_macro_null_column_always_written(self, tmp_path: Path) -> None:
+        """n_macro_null column is present in the parquet after any append_snapshot call."""
+        path = _store_path(tmp_path)
+        append_snapshot(_make_snapshot("2026-06-07"), path)
+
+        df = load_snapshots(path)
+        assert "n_macro_null" in df.columns
+
+    def test_n_macro_null_stored_value(self, tmp_path: Path) -> None:
+        """append_snapshot persists the n_macro_null value from the snapshot dict."""
+        path = _store_path(tmp_path)
+        snap = _make_snapshot(
+            "2026-06-07", crude_wti=None, crude_wti_asof_date=None, n_macro_null=1
+        )
+        append_snapshot(snap, path)
+
+        df = load_snapshots(path)
+        assert int(df.iloc[0]["n_macro_null"]) == 1
+
+
+# ---------------------------------------------------------------------------
+# TestPatchMacroSeries
+# ---------------------------------------------------------------------------
+
+
+def _make_mock_price_df(dates: list[str], values: list[float]) -> pd.DataFrame:
+    """Return a mock injectable price DataFrame (UTC DatetimeIndex, 'close' column)."""
+    return pd.DataFrame(
+        {"close": values},
+        index=pd.to_datetime(dates, utc=True),
+    )
+
+
+class TestPatchMacroSeries:
+    def test_patch_fills_missing_crude_and_tips(self, tmp_path: Path) -> None:
+        """patch_missing_macro_series fills null crude_wti/tips on backfill_yfinance rows."""
+        path = _store_path(tmp_path)
+        snap = _make_snapshot(
+            "2025-06-01",
+            source="backfill_yfinance",
+            crude_wti=None,
+            crude_wti_asof_date=None,
+            tips=None,
+            tips_asof_date=None,
+            n_macro_null=2,
+        )
+        append_snapshot(snap, path)
+
+        crude = _make_mock_price_df(["2025-05-31"], [75.5])
+        tips = _make_mock_price_df(["2025-05-31"], [108.2])
+
+        result = patch_missing_macro_series(store_path=path, crude_df=crude, tips_df=tips)
+
+        assert result["crude_patched"] == 1
+        assert result["tips_patched"] == 1
+
+        df = load_snapshots(path)
+        row = df.iloc[0]
+        assert abs(float(row["crude_wti"]) - 75.5) < 0.01
+        assert abs(float(row["tips"]) - 108.2) < 0.01
+        # All 8 macro series now present — crude and tips filled from mock.
+        assert int(row["n_macro_null"]) == 0
+
+    def test_patch_does_not_touch_live_pit(self, tmp_path: Path) -> None:
+        """patch_missing_macro_series never modifies live_pit rows."""
+        path = _store_path(tmp_path)
+        snap = _make_snapshot(
+            "2025-06-01",
+            source="live_pit",
+            crude_wti=None,
+            crude_wti_asof_date=None,
+            n_macro_null=1,
+        )
+        append_snapshot(snap, path)
+
+        crude = _make_mock_price_df(["2025-05-31"], [75.5])
+        tips = _make_mock_price_df(["2025-05-31"], [108.2])
+
+        result = patch_missing_macro_series(store_path=path, crude_df=crude, tips_df=tips)
+
+        assert result["crude_patched"] == 0
+        df = load_snapshots(path)
+        assert pd.isna(df.iloc[0]["crude_wti"]), "live_pit crude_wti must remain null"
+
+    def test_patch_returns_correct_counts(self, tmp_path: Path) -> None:
+        """Return dict accurately reports how many rows were patched for each series."""
+        path = _store_path(tmp_path)
+        # Two backfill rows: one missing crude only, one missing both.
+        for date_str, crude_val, tips_val in [
+            ("2025-06-01", None, 108.0),
+            ("2025-06-02", None, None),
+        ]:
+            snap = _make_snapshot(
+                date_str,
+                source="backfill_yfinance",
+                crude_wti=crude_val,
+                crude_wti_asof_date=None if crude_val is None else "2025-05-31",
+                tips=tips_val,
+                tips_asof_date=None if tips_val is None else "2025-05-31",
+                n_macro_null=(
+                    1
+                    if crude_val is None and tips_val is not None
+                    else 2
+                    if crude_val is None and tips_val is None
+                    else 0
+                ),
+            )
+            append_snapshot(snap, path)
+
+        crude = _make_mock_price_df(["2025-05-31"], [75.0])
+        tips = _make_mock_price_df(["2025-05-31"], [109.0])
+
+        result = patch_missing_macro_series(store_path=path, crude_df=crude, tips_df=tips)
+
+        assert result["crude_patched"] == 2
+        assert result["tips_patched"] == 1
+        assert result["n_macro_null_recomputed"] == 2
+
+    def test_patch_leaves_null_where_no_history(self, tmp_path: Path) -> None:
+        """When the injectable df has no data on or before as_of_date, value stays null."""
+        path = _store_path(tmp_path)
+        snap = _make_snapshot(
+            "2025-01-15",
+            source="backfill_yfinance",
+            crude_wti=None,
+            crude_wti_asof_date=None,
+            n_macro_null=1,
+        )
+        append_snapshot(snap, path)
+
+        # Only data from 2025-02-01 onwards — nothing on or before 2025-01-15.
+        crude = _make_mock_price_df(["2025-02-01"], [70.0])
+        tips = _make_mock_price_df(["2025-02-01"], [105.0])
+
+        result = patch_missing_macro_series(store_path=path, crude_df=crude, tips_df=tips)
+
+        assert result["crude_patched"] == 0
+        df = load_snapshots(path)
+        assert pd.isna(df.iloc[0]["crude_wti"]), "No history before target date — must stay null"

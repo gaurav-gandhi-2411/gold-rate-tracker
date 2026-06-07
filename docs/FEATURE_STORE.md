@@ -18,7 +18,7 @@ Purpose: accumulate a clean, look-ahead-bias-free dataset for a future direction
 
 ## 2. Schema Reference
 
-The following columns are defined in `_ALL_COLUMNS` in `ml/feature_store.py` (`SCHEMA_VERSION = 2`).
+The following columns are defined in `_ALL_COLUMNS` in `ml/feature_store.py` (`SCHEMA_VERSION = 3`).
 
 | Column | Type | Nullable | Description |
 |--------|------|----------|-------------|
@@ -27,6 +27,7 @@ The following columns are defined in `_ALL_COLUMNS` in `ml/feature_store.py` (`S
 | `schema_version` | int | No | Integer schema version. Currently `1`. Increment when columns are added or semantics change. |
 | `source` | str | No | Provenance tag. Either `live_pit` (written by live CI pipeline) or `backfill_yfinance` (reconstructed from historical data). |
 | `partial` | bool | Yes | `True` if the macro cache was unavailable at capture time; macro columns will be null. Uses pandas nullable boolean (`pd.BooleanDtype`). |
+| `n_macro_null` | int | No | Count of null values across the **canonical 8 macro series** (denominator = 8). `n_macro_null == 0` means all 8 series are present. `partial=True` implies `n_macro_null == 8`. Per-series presence is recoverable without a separate column: `df['tips'].notna()` tells you whether TIPS is present for each row. The canonical 8 series (fixed; documented below) are the denominator for all time. |
 | `gold_usd` | float | Yes | Gold spot price in USD/oz (ticker `GC=F` via yfinance). Null when `partial=True`. |
 | `usd_inr` | float | Yes | USD/INR exchange rate (ticker `INR=X` via yfinance). Null when `partial=True`. |
 | `us_10y_yield` | float | Yes | US 10-year Treasury yield in % (ticker `^TNX` via yfinance). Null when `partial=True`. |
@@ -57,6 +58,30 @@ The following columns are defined in `_ALL_COLUMNS` in `ml/feature_store.py` (`S
 | `days_to_next_festival` | int | No | Calendar days from `as_of_date` to the nearest upcoming festival anchor date. `0` when currently inside a festival window. |
 | `duty_change_active` | bool | No | `True` when `as_of_date` falls within 30 calendar days of a duty change event in `data/duty_events.json`. |
 | `days_since_last_duty_change` | int | No | Calendar days between the most recent past duty event and `as_of_date`. `9999` if no event is on record before `as_of_date`. |
+
+### Canonical macro series (fixed denominator for `n_macro_null`)
+
+The 8 series below are the permanent denominator. `n_macro_null` is always counted against this exact list. The list is stable — adding a new macro series requires a SCHEMA_VERSION bump and a new `n_macro_null` recompute.
+
+| Column | Ticker | Description |
+|--------|--------|-------------|
+| `gold_usd` | `GC=F` | Gold spot price USD/oz |
+| `usd_inr` | `INR=X` | USD/INR exchange rate |
+| `us_10y_yield` | `^TNX` | US 10-year Treasury yield (%) |
+| `dxy` | `DX-Y.NYB` | US Dollar Index |
+| `sensex` | `^BSESN` | BSE Sensex index level |
+| `vix` | `^VIX` | CBOE Volatility Index |
+| `crude_wti` | `CL=F` | WTI crude oil futures USD/barrel |
+| `tips` | `TIP` | iShares TIPS Bond ETF (real rate proxy) |
+
+**Per-series presence query pattern:**
+```python
+# Check if a series is present for each row (no separate boolean column needed):
+df['crude_wti'].notna()   # True where crude_wti was available on that date
+df['tips'].notna()        # True where TIPS was available
+# Filter to rows where all 8 series are present:
+df[df['n_macro_null'] == 0]
+```
 
 ---
 
@@ -89,6 +114,7 @@ When `asof_date == as_of_date`, the value was observed on that day. **No separat
 |---------|--------|
 | 1 | Initial schema (2026-06-07). |
 | 2 | Added `ibja_pm_916_asof_date`, `ibja_am_916_asof_date`, `tanishq_22k_asof_date` to complete the observation-date stamp pattern already present on macro fields. Existing rows (2026-06-07, 2026-06-08) were migrated once with their verified true observation dates. This was the only permitted exception to the immutability contract: the migration added correct provenance that was always factually true; no recorded observation value was altered. |
+| 3 | Added `n_macro_null` (integer count of null values across the canonical 8 macro series). Patched 109 `backfill_yfinance` rows that had null `crude_wti`/`tips` because the macro cache only held ~5 days of history for those series at backfill time — true historical closes fetched from yfinance (CL=F, TIP) and written for all dates where data existed; genuinely missing dates left null (no imputation). `live_pit` rows were not touched. All 116 rows had `n_macro_null` computed and `schema_version` bumped to 3. |
 
 ---
 
