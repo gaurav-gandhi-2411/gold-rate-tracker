@@ -26,6 +26,8 @@ _ASOF_DATE_COLS = [f"{col}_asof_date" for col in _MACRO_FLOATS]
 
 _PRICE_FLOATS = ["ibja_pm_916", "ibja_am_916", "tanishq_22k"]
 
+_PRICE_ASOF_DATE_COLS = [f"{col}_asof_date" for col in _PRICE_FLOATS]
+
 _ALL_COLUMNS = [
     "capture_utc",
     "as_of_date",
@@ -35,6 +37,7 @@ _ALL_COLUMNS = [
     *_MACRO_FLOATS,
     *_ASOF_DATE_COLS,
     *_PRICE_FLOATS,
+    *_PRICE_ASOF_DATE_COLS,
     "dow",
     "dom",
     "month",
@@ -76,6 +79,10 @@ def _make_snapshot(as_of_date: str, **overrides: object) -> dict:
         "ibja_pm_916": 74500.0,
         "ibja_am_916": 74400.0,
         "tanishq_22k": 71000.0,
+        # price observation-date stamps (symmetric with macro asof columns)
+        "ibja_pm_916_asof_date": "2026-06-06",
+        "ibja_am_916_asof_date": "2026-06-06",
+        "tanishq_22k_asof_date": "2026-06-06",
         # calendar
         "dow": 5,
         "dom": 7,
@@ -403,7 +410,7 @@ class TestCaptureStep:
         assert row["partial"] is False or row["partial"] == False  # noqa: E712
 
     def test_capture_reads_ibja_pm_916(self, tmp_path: Path) -> None:
-        """ibja_pm_916 in stored row matches the mock IBJA parquet (73000.0)."""
+        """ibja_pm_916 and ibja_pm_916_asof_date both reflect the IBJA row date (2026-06-05)."""
         store = _store_path(tmp_path)
         ibja = _make_mock_ibja_parquet(tmp_path)
         duty = _make_mock_duty_json(tmp_path)
@@ -418,9 +425,11 @@ class TestCaptureStep:
         df = load_snapshots(store)
         row = df.iloc[0]
         assert abs(float(row["ibja_pm_916"]) - 73000.0) < 1.0
+        assert row["ibja_pm_916_asof_date"] == "2026-06-05"
+        assert row["ibja_am_916_asof_date"] == "2026-06-05"
 
     def test_capture_reads_tanishq_price(self, tmp_path: Path) -> None:
-        """tanishq_22k in stored row matches the mock prices.json (74000)."""
+        """tanishq_22k and tanishq_22k_asof_date both reflect the prices.json entry date (IST)."""
         store = _store_path(tmp_path)
         prices = _make_mock_prices_json(tmp_path)
         duty = _make_mock_duty_json(tmp_path)
@@ -435,6 +444,71 @@ class TestCaptureStep:
         df = load_snapshots(store)
         row = df.iloc[0]
         assert abs(float(row["tanishq_22k"]) - 74000.0) < 1.0
+        # Mock timestamp "2026-06-05T10:00:00Z" → IST 2026-06-05T15:30:00 → date 2026-06-05
+        assert row["tanishq_22k_asof_date"] == "2026-06-05"
+
+    def test_tanishq_asof_uses_ist_date_not_utc(self, tmp_path: Path) -> None:
+        """An evening-UTC timestamp must yield the IST calendar date, not the UTC date.
+
+        2026-06-07T19:00:00Z = 2026-06-08T00:30:00+05:30 IST → asof must be 2026-06-08.
+        String-slicing the UTC ISO date would incorrectly give 2026-06-07.
+        """
+        import json
+
+        store = _store_path(tmp_path)
+        evening_prices = tmp_path / "prices_evening.json"
+        evening_prices.write_text(
+            json.dumps([{"timestamp": "2026-06-07T19:00:00Z", "22k": 74000}]),
+            encoding="utf-8",
+        )
+        duty = _make_mock_duty_json(tmp_path)
+
+        capture_daily_snapshot(
+            store_path=store,
+            macro_cache_path=tmp_path / "nonexistent_macro.parquet",
+            prices_path=evening_prices,
+            duty_events_path=duty,
+        )
+
+        df = load_snapshots(store)
+        row = df.iloc[0]
+        # IST date is 2026-06-08, NOT 2026-06-07 (the UTC date)
+        assert row["tanishq_22k_asof_date"] == "2026-06-08"
+
+    def test_carried_ibja_asof_reflects_observation_date(self, tmp_path: Path) -> None:
+        """When the latest IBJA fix predates capture, asof_date < as_of_date (carry detectable)."""
+        store = _store_path(tmp_path)
+        # Deliberately old IBJA row so carry is always detectable regardless of test run date
+        past_ibja_row = {
+            "date": "2025-01-15",
+            "fetched_at": "2025-01-15T10:00:00+00:00",
+            "am_916": 72800.0,
+            "pm_916": 73000.0,
+            "am_999": float("nan"),
+            "pm_999": float("nan"),
+            "am_995": float("nan"),
+            "pm_995": float("nan"),
+            "am_750": float("nan"),
+            "pm_750": float("nan"),
+            "am_585": float("nan"),
+            "pm_585": float("nan"),
+        }
+        ibja_old = tmp_path / "ibja_old.parquet"
+        pd.DataFrame([past_ibja_row]).to_parquet(ibja_old, index=False)
+        duty = _make_mock_duty_json(tmp_path)
+
+        capture_daily_snapshot(
+            store_path=store,
+            macro_cache_path=tmp_path / "nonexistent_macro.parquet",
+            ibja_path=ibja_old,
+            duty_events_path=duty,
+        )
+
+        df = load_snapshots(store)
+        row = df.iloc[0]
+        assert row["ibja_pm_916_asof_date"] == "2025-01-15"
+        # Carry is detectable: asof older than the capture's as_of_date
+        assert row["ibja_pm_916_asof_date"] < row["as_of_date"]
 
     def test_capture_festival_info_included(self, tmp_path: Path) -> None:
         """Festival info keys are present with correct types."""

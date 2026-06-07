@@ -18,7 +18,7 @@ Purpose: accumulate a clean, look-ahead-bias-free dataset for a future direction
 
 ## 2. Schema Reference
 
-The following columns are defined in `_ALL_COLUMNS` in `ml/feature_store.py` (`SCHEMA_VERSION = 1`).
+The following columns are defined in `_ALL_COLUMNS` in `ml/feature_store.py` (`SCHEMA_VERSION = 2`).
 
 | Column | Type | Nullable | Description |
 |--------|------|----------|-------------|
@@ -46,6 +46,9 @@ The following columns are defined in `_ALL_COLUMNS` in `ml/feature_store.py` (`S
 | `ibja_pm_916` | float | Yes | IBJA PM fix for 916 hallmark gold in INR/g (22K daily closing benchmark). Null only if IBJA parquet unavailable. |
 | `ibja_am_916` | float | Yes | IBJA AM fix for 916 hallmark gold in INR/g. Null if AM fix not available or IBJA parquet unavailable. |
 | `tanishq_22k` | float | Yes | Tanishq 22K retail price in INR/g scraped from tanishq.com. `None` for all backfill rows (historical scrapes not available). |
+| `ibja_pm_916_asof_date` | str | Yes | ISO date of the IBJA row that `ibja_pm_916` came from (the row's own `date` field, not the capture date). Null when `ibja_pm_916` is null. |
+| `ibja_am_916_asof_date` | str | Yes | ISO date of the IBJA row that `ibja_am_916` came from. Null when `ibja_am_916` is null. |
+| `tanishq_22k_asof_date` | str | Yes | IST calendar date of the prices.json entry that `tanishq_22k` came from. Derived by converting the entry's UTC timestamp to IST (+05:30) and taking the calendar date — not by string-slicing the UTC date. Null when `tanishq_22k` is null. |
 | `dow` | int | No | Day of week (0 = Monday … 6 = Sunday), derived from `as_of_date`. |
 | `dom` | int | No | Day of month (1–31), derived from `as_of_date`. |
 | `month` | int | No | Month (1–12), derived from `as_of_date`. |
@@ -69,6 +72,24 @@ These properties are enforced in code and tested in `tests/test_feature_store.py
 - The parquet file grows by exactly one row per new IST trading day.
 - Tests in `tests/test_feature_store.py` (classes `TestIdempotency`, `TestImmutability`) prove these properties explicitly: they write a row, attempt a second write with different values, then assert the stored row is unchanged.
 
+### Carry-forward detection
+
+IBJA fixes and Tanishq scrapes are not available every day (weekends, market holidays, scrape failures). When the latest available observation predates `as_of_date`, the last-known value is recorded unchanged and the observation-date stamp reflects the older date:
+
+```
+ibja_pm_916_asof_date < as_of_date   ⟺   ibja_pm_916 is a carried value
+tanishq_22k_asof_date < as_of_date   ⟺   tanishq_22k is a carried value
+```
+
+When `asof_date == as_of_date`, the value was observed on that day. **No separate `is_carried` boolean is needed** — derive it at training time from the asof column. Training should filter or downweight carried-value rows for the label series.
+
+### Schema version history
+
+| Version | Change |
+|---------|--------|
+| 1 | Initial schema (2026-06-07). |
+| 2 | Added `ibja_pm_916_asof_date`, `ibja_am_916_asof_date`, `tanishq_22k_asof_date` to complete the observation-date stamp pattern already present on macro fields. Existing rows (2026-06-07, 2026-06-08) were migrated once with their verified true observation dates. This was the only permitted exception to the immutability contract: the migration added correct provenance that was always factually true; no recorded observation value was altered. |
+
 ---
 
 ## 4. Provenance Semantics
@@ -80,6 +101,7 @@ Each row carries a `source` value that records how it was produced.
 - Written by `capture_daily_snapshot()` in `ml/feature_store.py`.
 - Called during the live CI pipeline (`check-price.yml`), after the macro fetch step, once per IST calendar day.
 - **True point-in-time:** captures what was known at the moment of capture — macro closes as of the UTC timestamp of the run, the IBJA rate from the most recently completed fix, and the Tanishq price from the most recent successful scrape.
+- Each price field carries an `_asof_date` stamp recording the actual observation date. When `ibja_pm_916_asof_date < as_of_date`, the IBJA value is the last-known fix (weekend/holiday carry); when equal, it was observed on that day. Same convention for Tanishq.
 - These rows are the gold standard for eventual model training. Do not overwrite.
 
 ### `source='backfill_yfinance'`
