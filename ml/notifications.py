@@ -43,6 +43,7 @@ _T8_MORNING_UPPER_H = 14  # IST upper bound: suppress T8_MORNING at/after 14:00
 _T8_EVENING_THRESHOLD_H = 18  # IST lower bound: fire T8_EVENING at/after 18:00
 _T8_EVENING_UPPER_H = 22  # IST upper bound: suppress T8_EVENING at/after 22:00 (quiet-hours start)
 _T8_FLAT_THRESHOLD_RS = 25  # abs(delta) < this → "held steady" scenario
+_T9_STALE_THRESHOLD_H = 8  # prices.json entries older than this trigger T9
 
 SCHEMA_VERSION = 1
 
@@ -98,6 +99,7 @@ class NotificationState:
     last_t7_fired_ist_date: str = ""  # IST date YYYY-MM-DD of last T7 fire (dedup)
     last_t8_morning_ist_date: str = ""  # IST date YYYY-MM-DD of last T8_MORNING send (dedup)
     last_t8_evening_ist_date: str = ""  # IST date YYYY-MM-DD of last T8_EVENING send (dedup)
+    last_t9_ist_date: str = ""  # IST date YYYY-MM-DD of last T9 send (once-per-day dedup)
 
 
 # ---------------------------------------------------------------------------
@@ -122,6 +124,7 @@ def load_state(path: Path = STATE_PATH) -> NotificationState:
             last_t7_fired_ist_date=raw.get("last_t7_fired_ist_date", ""),
             last_t8_morning_ist_date=raw.get("last_t8_morning_ist_date", ""),
             last_t8_evening_ist_date=raw.get("last_t8_evening_ist_date", ""),
+            last_t9_ist_date=raw.get("last_t9_ist_date", ""),
         )
     except Exception as exc:
         logger.warning("Could not load notification state (%s) — using fresh state.", exc)
@@ -142,6 +145,7 @@ def save_state(state: NotificationState, path: Path = STATE_PATH) -> None:
         "last_t7_fired_ist_date": state.last_t7_fired_ist_date,
         "last_t8_morning_ist_date": state.last_t8_morning_ist_date,
         "last_t8_evening_ist_date": state.last_t8_evening_ist_date,
+        "last_t9_ist_date": state.last_t9_ist_date,
     }
     path.write_text(json.dumps(data, indent=2) + "\n", encoding="utf-8")
 
@@ -670,6 +674,42 @@ def _check_t8_evening(
     return _make_alert("T8_EVENING", title, body, 2, ["bell"], now_ist, bypass_quiet=True)
 
 
+def _check_t9(
+    prices: list[dict],
+    state: NotificationState,
+    now_ist: datetime,
+) -> PendingAlert | None:
+    """T9 — Data feed stale: prices.json last entry > 8h old. Once per IST calendar day.
+
+    Uses now_ist (not datetime.now(UTC)) for the freshness calculation so tests
+    can pass a fixed reference time without mocking.
+
+    Replaces the parallel shell-curl 'Alert on scraper failure' step and the
+    SCRAPER_DOWN_THIS_RUN staleness-guard suppression. Covers ALL staleness ages
+    with one IST-day cooldown, fixing the H4b silent-during-sustained-failure bug.
+    Does NOT count toward the T1+T2+T3 combined anti-spam cap.
+    """
+    now_utc = now_ist.astimezone(UTC)
+    if prices:
+        sorted_p = sorted(prices, key=lambda p: p["timestamp"])
+        ts_str = sorted_p[-1]["timestamp"].replace("Z", "+00:00")
+        latest_ts = datetime.fromisoformat(ts_str)
+        age_h = (now_utc - latest_ts).total_seconds() / 3600
+        if age_h <= _T9_STALE_THRESHOLD_H:
+            return None
+    else:
+        age_h = 999.0
+
+    today_ist = now_ist.strftime("%Y-%m-%d")
+    if state.last_t9_ist_date == today_ist:
+        return None
+
+    hours = int(age_h)
+    title = f"Gold Tracker: data stale ({hours}h)"
+    body = f"No new price reading in {hours}h. Scraper may be failing. Check CI logs."
+    return _make_alert("T9", title, body, 4, ["warning"], now_ist)
+
+
 # ---------------------------------------------------------------------------
 # Public API
 # ---------------------------------------------------------------------------
@@ -708,6 +748,9 @@ def check_triggers(
         alert = fn(forecast, probe, prices, backtest, state, now_ist)
         if alert is not None:
             alerts.append(alert)
+    t9 = _check_t9(prices, state, now_ist)
+    if t9 is not None:
+        alerts.append(t9)
     return alerts
 
 
@@ -766,6 +809,8 @@ def send_pending(
                 state.last_t8_morning_ist_date = now_ist.strftime("%Y-%m-%d")
             if alert.trigger_id == "T8_EVENING":
                 state.last_t8_evening_ist_date = now_ist.strftime("%Y-%m-%d")
+            if alert.trigger_id == "T9":
+                state.last_t9_ist_date = now_ist.strftime("%Y-%m-%d")
             logger.info("Sent %s: %s", alert.trigger_id, alert.title)
         else:
             logger.warning("Failed to send %s", alert.trigger_id)
@@ -810,6 +855,8 @@ def _stamp_ist_dedup(trigger_id: str, state: NotificationState, now_ist: datetim
     # Include for completeness; in practice T6 can only fire once.
     elif trigger_id == "T6":
         state.last_t6_fired_date_ist = today
+    elif trigger_id == "T9":
+        state.last_t9_ist_date = today
 
 
 def queue_for_quiet_hours(

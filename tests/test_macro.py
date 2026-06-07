@@ -320,9 +320,9 @@ class TestMacroIntegration:
                 continue
             expected_lag1 = float(macro_at_prev["usd_inr"].iloc[-1])
             actual_lag1 = float(row["usd_inr_lag_1"])
-            assert (
-                abs(actual_lag1 - expected_lag1) < 1e-6
-            ), f"usd_inr_lag_1 mismatch: got {actual_lag1}, expected {expected_lag1}"
+            assert abs(actual_lag1 - expected_lag1) < 1e-6, (
+                f"usd_inr_lag_1 mismatch: got {actual_lag1}, expected {expected_lag1}"
+            )
             break  # one verified row is sufficient for this test
 
     @patch("ml.macro.yf.download")

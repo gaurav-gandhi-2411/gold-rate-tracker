@@ -322,9 +322,9 @@ def test_full_pipeline_contributions_sum_to_total(tmp_path):
                 + w["premium_contrib_rs_per_g"]
             )
             # Allow up to Rs 2/g rounding tolerance (shares are from log, total from Tanishq prices)
-            assert (
-                abs(parts - total) <= 2.0
-            ), f"Window {key}: contributions {parts} do not sum to total {total}"
+            assert abs(parts - total) <= 2.0, (
+                f"Window {key}: contributions {parts} do not sum to total {total}"
+            )
 
 
 def test_full_pipeline_driver_state_present(tmp_path):

@@ -169,8 +169,7 @@ def run_premium_carry_experiment(
             "n_folds_skipped_no_macro": n_folds_skipped_no_macro,
             "n_folds_skipped_sub30": n_folds_skipped_sub30,
             "macro_coverage_note": (
-                "49 IBJA dates before macro range excluded; "
-                "max ffill gap 3 trading days (weekend)"
+                "49 IBJA dates before macro range excluded; max ffill gap 3 trading days (weekend)"
             ),
         },
         "mae_variant": round(mae_variant, 2),

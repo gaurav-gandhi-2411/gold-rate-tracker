@@ -212,12 +212,12 @@ def test_calibration_unlock_chain_end_to_end(tmp_path, monkeypatch):
 
     fc = json.loads((tmp_path / "forecast.json").read_text())
     cc = fc["chronos_companion"]
-    assert (
-        cc["calibration_applied"] is True
-    ), "Link 4 FAIL: forecast.json chronos_companion.calibration_applied is not True"
-    assert (
-        cc["horizon_p50"] is not None and len(cc["horizon_p50"]) == 5
-    ), "Link 4 FAIL: forecast.json chronos_companion.horizon_p50 missing or wrong length"
+    assert cc["calibration_applied"] is True, (
+        "Link 4 FAIL: forecast.json chronos_companion.calibration_applied is not True"
+    )
+    assert cc["horizon_p50"] is not None and len(cc["horizon_p50"]) == 5, (
+        "Link 4 FAIL: forecast.json chronos_companion.horizon_p50 missing or wrong length"
+    )
 
     # -- LINK 5: app.js reads cc["calibration_applied"] to show "Yes" --
     # JS assertion is not possible in Python; verify the field is present and True
@@ -292,16 +292,16 @@ def test_t6_lifetime_dedup_after_unlock(monkeypatch):
 
     # Second run: same day — must not fire
     alerts2 = check_triggers({}, probe, prices, backtest, state, now_ist, calibration=cal_valid)
-    assert not any(
-        a.trigger_id == "T6" for a in alerts2
-    ), "T6 fired twice same day — lifetime dedup broken"
+    assert not any(a.trigger_id == "T6" for a in alerts2), (
+        "T6 fired twice same day — lifetime dedup broken"
+    )
 
     # Third run: next day — must still not fire (lifetime, not daily dedup)
     next_day = _ist(2026, 6, 13)
     alerts3 = check_triggers({}, probe, prices, backtest, state, next_day, calibration=cal_valid)
-    assert not any(
-        a.trigger_id == "T6" for a in alerts3
-    ), "T6 fired on day 2 after initial send — lifetime dedup broken"
+    assert not any(a.trigger_id == "T6" for a in alerts3), (
+        "T6 fired on day 2 after initial send — lifetime dedup broken"
+    )
 
 
 # ---------------------------------------------------------------------------
@@ -335,9 +335,9 @@ def test_t6_queued_during_quiet_hours_not_requeued():
     state = queue_for_quiet_hours(t6_r1, state)
     _stamp_ist_dedup("T6", state, quiet_ist)
 
-    assert (
-        state.last_t6_fired_date_ist == "2026-06-12"
-    ), "T6 stamp not set after queue — subsequent quiet-hours run will re-generate T6"
+    assert state.last_t6_fired_date_ist == "2026-06-12", (
+        "T6 stamp not set after queue — subsequent quiet-hours run will re-generate T6"
+    )
     assert len(state.queued) == 1, "Queue must hold exactly 1 T6"
 
     # Run 2: still quiet hours — T6 must NOT re-fire (stamp already set)
@@ -345,9 +345,9 @@ def test_t6_queued_during_quiet_hours_not_requeued():
     alerts_r2 = check_triggers(
         {}, probe, prices, backtest, state, quiet_ist_r2, calibration=cal_valid
     )
-    assert not any(
-        a.trigger_id == "T6" for a in alerts_r2
-    ), "T6 re-queued on second quiet-hours run — stamp-on-queue not applied to T6"
+    assert not any(a.trigger_id == "T6" for a in alerts_r2), (
+        "T6 re-queued on second quiet-hours run — stamp-on-queue not applied to T6"
+    )
     assert len(state.queued) == 1, "Queue must still hold exactly 1 T6 (no duplicate)"
 
 
@@ -392,9 +392,9 @@ def test_horizon_values_numerically_transformed_by_refit_calibration(tmp_path):
     expected = round(slope * raw + intercept, 2)
 
     assert companion["calibration_applied"] is True
-    assert (
-        transformed == pytest.approx(expected, abs=0.05)
-    ), f"Transformed value {transformed} != expected {expected} (slope={slope}, intercept={intercept})"
+    assert transformed == pytest.approx(expected, abs=0.05), (
+        f"Transformed value {transformed} != expected {expected} (slope={slope}, intercept={intercept})"
+    )
     assert transformed != pytest.approx(raw, abs=1.0), (
         "Calibration produced identity transform in production data — "
         "slope and intercept need investigation"
