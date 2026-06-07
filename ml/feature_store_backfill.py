@@ -212,12 +212,15 @@ def run_backfill(
         festival_info = get_festival_info(d_obj)
 
         # --- Assemble snapshot ---
+        n_macro_null: int = sum(1 for s in _MACRO_SERIES if macro_values.get(s) is None)
+
         snapshot: dict[str, object] = {
             "capture_utc": capture_utc,
             "as_of_date": d,
             "schema_version": SCHEMA_VERSION,
             "source": "backfill_yfinance",
             "partial": partial,
+            "n_macro_null": n_macro_null,
             **macro_values,
             **macro_asof,
             "ibja_pm_916": ibja_pm_916,
@@ -248,6 +251,143 @@ def run_backfill(
     # ------------------------------------------------------------------
     print(f"Backfill complete: {n_written} new rows written ({n_skipped} skipped)")
     return n_written
+
+
+def _fetch_yf_close(ticker: str, start: str) -> pd.DataFrame:
+    """Download historical close prices for a single yfinance ticker.
+
+    Returns a DataFrame with a UTC DatetimeIndex and a "close" column.
+    Returns an empty DataFrame (columns=["close"]) on any failure.
+    """
+    try:
+        import yfinance as yf
+
+        raw = yf.download(ticker, start=start, auto_adjust=True, progress=False, threads=False)
+        if raw.empty:
+            return pd.DataFrame(columns=["close"])
+
+        # yfinance >= 0.2 returns MultiIndex columns; handle both orderings.
+        if isinstance(raw.columns, pd.MultiIndex):
+            close: pd.Series | None = None
+            for price_type in ("Close", "Adj Close"):
+                if (price_type, ticker) in raw.columns:
+                    close = raw[(price_type, ticker)]
+                    break
+                if (ticker, price_type) in raw.columns:
+                    close = raw[(ticker, price_type)]
+                    break
+            if close is None:
+                logger.warning("_fetch_yf_close: Close not found for %s in MultiIndex", ticker)
+                return pd.DataFrame(columns=["close"])
+        else:
+            flat_close: pd.Series | None = None
+            for col_name in ("Close", "Adj Close"):
+                if col_name in raw.columns:
+                    flat_close = raw[col_name]
+                    break
+            if flat_close is None:
+                logger.warning("_fetch_yf_close: Close column not found for %s", ticker)
+                return pd.DataFrame(columns=["close"])
+            close = flat_close
+
+        result = close.rename("close").to_frame()
+        dt_index = pd.DatetimeIndex(result.index)
+        result.index = (
+            dt_index.tz_localize("UTC") if dt_index.tz is None else dt_index.tz_convert("UTC")
+        )
+        return result.dropna()
+
+    except Exception as exc:
+        logger.warning("_fetch_yf_close: download failed for %s — %s", ticker, exc)
+        return pd.DataFrame(columns=["close"])
+
+
+def patch_missing_macro_series(
+    store_path: Path | None = None,
+    crude_df: pd.DataFrame | None = None,
+    tips_df: pd.DataFrame | None = None,
+) -> dict[str, int]:
+    """Patch null crude_wti/tips on backfill_yfinance rows; recompute n_macro_null for all rows.
+
+    Only ``source='backfill_yfinance'`` rows with null values are modified.
+    ``source='live_pit'`` rows are never touched.
+
+    After patching, ``n_macro_null`` is recomputed for ALL rows against the canonical
+    8-series list and ``schema_version`` is bumped to SCHEMA_VERSION (3) for all rows.
+
+    Parameters
+    ----------
+    store_path : Path | None
+        Path to feature store parquet. Defaults to STORE_PATH.
+    crude_df : pd.DataFrame | None
+        Pre-loaded price DataFrame for CL=F. Must have a UTC DatetimeIndex and a
+        "close" column with float values. If None, fetches from yfinance (live network).
+    tips_df : pd.DataFrame | None
+        Pre-loaded price DataFrame for TIP. Same format as crude_df. If None,
+        fetches from yfinance (live network).
+
+    Returns
+    -------
+    dict[str, int]
+        Keys: ``crude_patched``, ``tips_patched``, ``n_macro_null_recomputed``.
+    """
+    from ml.feature_store import _MACRO_SERIES, SCHEMA_VERSION, load_snapshots
+    from ml.feature_store import STORE_PATH as _DEFAULT_STORE_PATH
+
+    _store_path: Path = store_path or _DEFAULT_STORE_PATH
+
+    df = load_snapshots(_store_path)
+    if df.empty:
+        return {"crude_patched": 0, "tips_patched": 0, "n_macro_null_recomputed": 0}
+
+    # Add n_macro_null column when migrating from schema_version < 3.
+    if "n_macro_null" not in df.columns:
+        df["n_macro_null"] = 0
+
+    # Fetch price history from yfinance when not injected (requires live network).
+    if crude_df is None:
+        crude_df = _fetch_yf_close("CL=F", start="2024-01-01")
+    if tips_df is None:
+        tips_df = _fetch_yf_close("TIP", start="2024-01-01")
+
+    crude_patched = 0
+    tips_patched = 0
+
+    for i, row in df.iterrows():
+        if row.get("source") != "backfill_yfinance":
+            continue
+
+        d: str = row["as_of_date"]
+        target_ts = pd.Timestamp(d, tz="UTC")
+
+        if pd.isna(row.get("crude_wti")) and crude_df is not None and not crude_df.empty:
+            available = crude_df.loc[:target_ts]
+            if not available.empty:
+                df.at[i, "crude_wti"] = float(available["close"].iloc[-1])
+                df.at[i, "crude_wti_asof_date"] = available.index[-1].date().isoformat()
+                crude_patched += 1
+
+        if pd.isna(row.get("tips")) and tips_df is not None and not tips_df.empty:
+            available = tips_df.loc[:target_ts]
+            if not available.empty:
+                df.at[i, "tips"] = float(available["close"].iloc[-1])
+                df.at[i, "tips_asof_date"] = available.index[-1].date().isoformat()
+                tips_patched += 1
+
+    # Recompute n_macro_null for ALL rows + bump schema_version.
+    for i in df.index:
+        n_null = sum(1 for s in _MACRO_SERIES if pd.isna(df.at[i, s]))
+        df.at[i, "n_macro_null"] = n_null
+        df.at[i, "schema_version"] = SCHEMA_VERSION
+
+    _store_path.parent.mkdir(parents=True, exist_ok=True)
+    df.to_parquet(_store_path, index=False)
+
+    return {
+        "crude_patched": crude_patched,
+        "tips_patched": tips_patched,
+        "n_macro_null_recomputed": len(df),
+    }
 
 
 if __name__ == "__main__":

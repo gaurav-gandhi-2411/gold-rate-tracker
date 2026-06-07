@@ -7,7 +7,7 @@ import pandas as pd
 
 logger = logging.getLogger(__name__)
 
-SCHEMA_VERSION: int = 2
+SCHEMA_VERSION: int = 3
 
 STORE_PATH: Path = Path(__file__).parent.parent / "data" / "feature_store" / "snapshots.parquet"
 
@@ -17,6 +17,12 @@ _ALL_COLUMNS: list[str] = [
     "schema_version",
     "source",
     "partial",
+    # Count of null values across the 8 expected macro series (denominator = 8).
+    # n_macro_null == 0 means all macro series are present for this row.
+    # Per-series presence is recoverable via each series' own column being null/non-null.
+    # partial=True implies n_macro_null=8; partial=False allows 0-8 (individual series may
+    # be absent even when the cache loaded, e.g. new tickers not yet in historical cache).
+    "n_macro_null",
     "gold_usd",
     "usd_inr",
     "us_10y_yield",
@@ -263,12 +269,15 @@ def capture_daily_snapshot(
     # ------------------------------------------------------------------
     # 8. Build snapshot dict and write
     # ------------------------------------------------------------------
+    n_macro_null: int = sum(1 for s in _MACRO_SERIES if macro_values.get(s) is None)
+
     snapshot: dict[str, object] = {
         "capture_utc": capture_utc,
         "as_of_date": as_of_date,
         "schema_version": SCHEMA_VERSION,
         "source": "live_pit",
         "partial": partial,
+        "n_macro_null": n_macro_null,
         **macro_values,
         **macro_asof,
         "ibja_pm_916": ibja_pm_916,
