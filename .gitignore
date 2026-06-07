@@ -12,6 +12,7 @@ __pycache__/
 .claude/settings.local.json
 data/macro_cache.parquet
 data/macro_status.json
+data/notification_state.json
 data/*.pdf
 models/local/
 models/production/ensemble-config.json
