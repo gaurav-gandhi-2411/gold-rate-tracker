@@ -24,8 +24,8 @@ Baseline: 27% gap rate (34 gaps >9h across 124 readings). ADR 016 re-evaluation 
 **(c) H5 calibrated fallback — decision needed post-unlock.**
 ADR 016 deferred the IBJA-calibrated price fallback because calibration was invalid ("invalid calibration = noise"). Once item (a) resolves, H5 becomes a legitimate option (flagged in ADR 017). No code needed until (a) resolves; flag to consultant for a decision at that point.
 
-**(d) ntfy topic rotation — low-stakes, deferred.**
-Topic `gold-msgg-7k2x9p4r` was exposed in this engagement. Fresh topic `gold-r4k9x2mj8vqt` is suggested. User steps: update NTFY_TOPIC GitHub secret (no trailing whitespace), subscribe phone to new topic, unsubscribe old. No code change required. Verify delivery via next scheduled T8 notification (norm #16). The topic lives only in the GitHub secret — grep confirmed zero hardcoded references in the repo.
+**(d) ntfy topic rotation — RESOLVED (WONTFIX) 2026-06-07.**
+GG accepts `gold-msgg-7k2x9p4r` as the permanent live topic. No rotation will be performed. Residual risk: a public ntfy topic permits unsolicited publishes (notification spam) only — no data, repo, or pipeline access. Revisit only if the product goes multi-tenant. The topic lives only in the GitHub secret — zero hardcoded references in the repo.
 
 ---
 
