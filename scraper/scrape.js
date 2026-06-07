@@ -56,12 +56,12 @@ const VIEWPORTS = [
 ];
 
 // Keep UA strings current with Chrome stable. Chrome releases ~every 4 weeks.
-// Last bumped: 2026-05-31 (Chrome 136 was stable). Update when the installed
-// Playwright Chromium version lags by >2 major versions vs. this UA.
+// Last bumped: 2026-06-07 (Chrome 148 — Playwright 1.60.0 bundles Chromium 148.0.7778.96).
+// Update when the installed Playwright Chromium version lags by >2 major versions vs. this UA.
 const USER_AGENTS = [
-  "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/136.0.0.0 Safari/537.36",
-  "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/136.0.0.0 Safari/537.36",
-  "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/135.0.0.0 Safari/537.36",
+  "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/148.0.0.0 Safari/537.36",
+  "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/148.0.0.0 Safari/537.36",
+  "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/147.0.0.0 Safari/537.36",
 ];
 
 // ── CF challenge detection (H2) ───────────────────────────────────────────────
