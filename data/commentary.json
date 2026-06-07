@@ -1,12 +1,5 @@
 [
   {
-    "ts": "2026-06-02T18:37:50Z",
-    "text": "Gold prices have eased a little over the past week, and the current price of Rs.14365 is around what it's been lately. Prices are down a bit from their recent levels.",
-    "model": "llama-3.3-70b-versatile",
-    "prompt_hash": "9e1c2a362722",
-    "commentary_age_hours": 0.0
-  },
-  {
     "ts": "2026-06-02T22:45:10Z",
     "text": "Gold prices have eased a little over the past week, and the current price of Rs.14365 is around what it's been lately. Prices are down a little over the past week. The current price is near the middle of its recent range.",
     "model": "llama-3.3-70b-versatile",
@@ -207,6 +200,13 @@
     "text": "Gold prices have eased a little over the past week. The current price of Rs.14045 for 22K is around what it's been lately. You can also find 24K gold at Rs.15322 and 18K at Rs.11491.",
     "model": "llama-3.3-70b-versatile",
     "prompt_hash": "f36752a06fd8",
+    "commentary_age_hours": 0.0
+  },
+  {
+    "ts": "2026-06-07T03:32:59Z",
+    "text": "Gold prices have eased a little over the past week. The current price of Rs.14045 is around what it's been lately. You can buy 22K gold at this rate, with 24K and 18K options available at Rs.15322 and Rs.11491 respectively.",
+    "model": "llama-3.3-70b-versatile",
+    "prompt_hash": "9c0273cdd108",
     "commentary_age_hours": 0.0
   }
 ]
