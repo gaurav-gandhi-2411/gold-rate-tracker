@@ -1825,5 +1825,24 @@ Architectural pivot: single-series IBJA-916-PM forecasting. MCX dropped entirely
 - **Single Python path over committed cooldown file:** Consolidated all scraper/data-health alerting into `ml/notifications.py` T9 trigger. Reused the existing `actions/cache` `notification-state-*` mechanism (state persisted in `data/notification_state.json`). No new committed per-run state file. 1/IST-day dedup semantics chosen (consistent with T4-T8 pattern; behavior is nearly identical to an N-hour cooldown in practice).
 - **Staleness guard deleted (not neutered):** Removing the entire step is cleaner than leaving a no-op `if: always()` shell step. T9 in the notifications step provides the primary detection path.
 - **Playwright UA bump:** Playwright was already at 1.60.0; `npm update playwright` confirmed no newer version. Chrome major version read from `node_modules/playwright-core/browsers.json` (chromium entry: `"browserVersion": "148.0.7778.96"`) — not guessed. UA bumped from 136/135 to 148/147.
+- **ntfy topic rotation cancelled (WONTFIX, 2026-06-07):** GG accepts `gold-msgg-7k2x9p4r` as the permanent live topic. Residual risk: public ntfy topic permits unsolicited publishes (spam) only; no data, repo, or pipeline access. Revisit only if product goes multi-tenant. CURRENT_STATE.md item (d) updated accordingly.
 
-**Verification:** 474 Python tests pass (including 9 new T9 tests), 36 JS tests pass, ruff check + format clean, mypy clean. End-to-end ntfy delivery pending (norm #16 — owner confirmation required before PR merge).
+**Verification:** 474 Python tests pass (including 9 new T9 tests), 36 JS tests pass, ruff check + format clean, mypy clean. End-to-end ntfy delivery confirmed on device (norm #16). PR #100 squash-merged 2026-06-07.
+
+### Φ20 — Honest stale banner (scraped_at field swap)  ✅ COMPLETE — 2026-06-07
+
+**PRs:** Φ20
+
+**Problem (confirmed in Φ20 diagnosis session):** `renderStaleBanner()` in `app.js` read `forecast.predicted_at` (inference timestamp, always ≤1h old since inference runs every cycle even when the scrape fails) instead of `forecast.scraped_at` (last successful Tanishq price scrape). Banner was functionally dead during CF/IP-block scrape outages — the primary failure mode.
+
+**Solution:**
+- `app.js` `renderStaleBanner()`: field `predicted_at` → `scraped_at` (×3), threshold `> 18h` → `> 8h`, copy updated to "Live price update unavailable — showing last confirmed price from {rel_time}."
+- `service-worker.js`: VERSION bumped `v14-20260603-phi16` → `v15-20260607-phi20` (shell asset change).
+- New test `tests/test_stale_banner.js` (4 tests): split-state scenario (scraped_at 9h stale + predicted_at fresh → shows), below threshold (7h → hidden), boundary (exactly 8h → hidden; condition is `> 8`, not `≥ 8`), missing `scraped_at` field (graceful → hidden).
+
+**Decision Log:**
+
+- **Cron already at 3h:** User's conditional instruction (if PUBLIC, change cron from `0 */4` to `0 */3`) was pre-empted — cron was already changed to `"0 */3 * * *"` in PR #57/Φ6A (2026-06-02). No cron change in this PR.
+- **8h threshold matches T9:** Banner fires at the same staleness level as the T9 ntfy notification. Both surfaces reflect the same definition of "stale".
+
+**Verification:** All 6 JS test suites pass (48 total tests). Device verification of banner required (norm #14) — pending GG live-site confirmation.

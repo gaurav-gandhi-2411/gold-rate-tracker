@@ -410,10 +410,10 @@ function renderStaleBanner(forecast) {
   if (offlineBanner && !offlineBanner.hidden) return;
   // Always reset first so a refresh-error or prior stale message is cleared on success.
   banner.hidden = true;
-  if (!forecast || !forecast.predicted_at) return;
-  const ageH = (Date.now() - new Date(forecast.predicted_at).getTime()) / 3_600_000;
-  if (ageH > 18) {
-    banner.textContent = `Prices last updated ${fmtRelative(forecast.predicted_at)} — data may not reflect the current rate.`;
+  if (!forecast || !forecast.scraped_at) return;
+  const ageH = (Date.now() - new Date(forecast.scraped_at).getTime()) / 3_600_000;
+  if (ageH > 8) {
+    banner.textContent = `Live price update unavailable — showing last confirmed price from ${fmtRelative(forecast.scraped_at)}.`;
     banner.hidden = false;
   }
 }
