@@ -1797,3 +1797,33 @@ Architectural pivot: single-series IBJA-916-PM forecasting. MCX dropped entirely
 
 - **#9 Buy-timing lead:** computeGoodPriceSignals() refactored from 3 tiers (≤30/31-69/≥70) to 4 tiers (≤20/21-40/41-70/71-100). Added verdictLead (prominent headline) and proofLine (percentile fact as proof). Proof line uses unified frame: "Cheaper than X%" when ≤50th percentile, "More expensive than X%" when >50th. Past-tense position only — no forecast, no buy advice (ADR 005). Data-sufficiency degrade fires when nDays30d < 30 (currently 48-49 days, safe).
 - **F2 conformal range removal:** The outlook-range-row ("5-day range Rs.X–Rs.Y") and outlook-range-note ("Covers typical 5-day moves 87% of the time") removed from the good-price section display. 4 reviews of user confusion; 13%-wide band answers no buyer question. Volatility note ("Gold has been calmer than usual — about ±₹468 over 5 days") retained (useful). Conformal PI stays in forecast.json, methodology section, and track-record chart.
+
+### Φ19 — Scraper/data-health alert consolidation + scraper hygiene  ✅ COMPLETE — 2026-06-07
+
+**PRs:** Φ19
+
+**Problem:** Two parallel alert paths (shell `curl` in `check-price.yml` + Python staleness guard) caused ~22 ntfy floods/week via transient-cluster re-fire (over-alert) and zero alerts during sustained >12h failures (H4b under-alert — both paths suppressed each other via `SCRAPER_DOWN_THIS_RUN`).
+
+**Solution:**
+- Added T9 "data feed stale" trigger to `ml/notifications.py`: fires when `prices.json` latest entry age > 8h, IST-date deduped (at most 1 alert/IST-day via existing `actions/cache` notification-state mechanism). Covers all staleness ages including sustained >12h failures (H4b fixed).
+- Deleted the shell `Alert on scraper failure` step from `check-price.yml`.
+- Deleted the `Staleness guard` step from `check-price.yml` (T9 owns that function now).
+- Bumped `USER_AGENTS` in `scraper/scrape.js` from Chrome 136 to Chrome 148 (Playwright 1.60.0 bundles Chromium 148.0.7778.96); updated periodic-bump comment per ADR 016 H3.
+
+**Test coverage:** 9 new tests in `tests/test_notifications.py`:
+- T9 fires when prices >8h stale
+- At most 1 ntfy/IST-day across multiple transient clusters (primary over-alert regression)
+- Sustained >12h failure alerts on the next IST day (H4b regression)
+- T9 does not count toward T1+T2+T3 combined cap
+- State round-trip for `last_t9_ist_date`
+- Backward compatibility for old state files without `last_t9_ist_date`
+- `send_pending` stamps `last_t9_ist_date` on successful send
+- `_stamp_ist_dedup` handles T9 immediately on quiet-hours queue
+
+**Decision Log:**
+
+- **Single Python path over committed cooldown file:** Consolidated all scraper/data-health alerting into `ml/notifications.py` T9 trigger. Reused the existing `actions/cache` `notification-state-*` mechanism (state persisted in `data/notification_state.json`). No new committed per-run state file. 1/IST-day dedup semantics chosen (consistent with T4-T8 pattern; behavior is nearly identical to an N-hour cooldown in practice).
+- **Staleness guard deleted (not neutered):** Removing the entire step is cleaner than leaving a no-op `if: always()` shell step. T9 in the notifications step provides the primary detection path.
+- **Playwright UA bump:** Playwright was already at 1.60.0; `npm update playwright` confirmed no newer version. Chrome major version read from `node_modules/playwright-core/browsers.json` (chromium entry: `"browserVersion": "148.0.7778.96"`) — not guessed. UA bumped from 136/135 to 148/147.
+
+**Verification:** 474 Python tests pass (including 9 new T9 tests), 36 JS tests pass, ruff check + format clean, mypy clean. End-to-end ntfy delivery pending (norm #16 — owner confirmation required before PR merge).
