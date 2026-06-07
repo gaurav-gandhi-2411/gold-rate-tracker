@@ -19,6 +19,8 @@ on:
       - "ml/calibration.py"
       - "ml/notifications.py"
       - "ml/drivers.py"
+      - "ml/feature_store.py"
+      - "ml/calendar_events.py"
       - "scraper/**"
       - ".github/workflows/check-price.yml"
 
@@ -226,11 +228,15 @@ jobs:
         continue-on-error: true
         run: python -m ml.metrics --record
 
+      - name: Capture feature-store snapshot
+        continue-on-error: true
+        run: python -m ml.feature_store
+
       - name: Commit updated data files
         run: |
           git config user.name "gold-rate-bot"
           git config user.email "actions@users.noreply.github.com"
-          git add data/prices.json data/forecast.json data/commentary.json data/drift_metrics.json data/metrics_history.json data/ibja_rates.parquet data/chronos_probe.json data/calibration.json || true
+          git add data/prices.json data/forecast.json data/commentary.json data/drift_metrics.json data/metrics_history.json data/ibja_rates.parquet data/chronos_probe.json data/calibration.json data/feature_store/snapshots.parquet || true
           if git diff --staged --quiet; then
             echo "No changes to commit."
           else
