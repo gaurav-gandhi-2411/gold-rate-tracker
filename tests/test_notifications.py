@@ -1688,9 +1688,9 @@ def test_t8_not_counted_in_t123_cap():
         state,
         _ist(2026, 5, 19, 10, 0),
     )
-    assert any(
-        a.trigger_id == "T8_MORNING" for a in alerts
-    ), "T8_MORNING must fire even when T1/T2/T3 cap is full"
+    assert any(a.trigger_id == "T8_MORNING" for a in alerts), (
+        "T8_MORNING must fire even when T1/T2/T3 cap is full"
+    )
 
 
 # --- send_pending stamps T8 state dates ---

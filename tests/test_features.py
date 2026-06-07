@@ -58,9 +58,9 @@ class TestLagNoLeakage:
         for i in range(1, len(feat)):
             lag1 = feat.iloc[i]["lag_1"]
             if pd.notna(lag1):
-                assert (
-                    lag1 == prices[i - 1]
-                ), f"Row {i}: lag_1={lag1} but price[{i - 1}]={prices[i - 1]}"
+                assert lag1 == prices[i - 1], (
+                    f"Row {i}: lag_1={lag1} but price[{i - 1}]={prices[i - 1]}"
+                )
 
     def test_lag4_equals_price_four_steps_back(self):
         df = make_df(n=40)
@@ -69,9 +69,9 @@ class TestLagNoLeakage:
         for i in range(4, len(feat)):
             lag4 = feat.iloc[i]["lag_4"]
             if pd.notna(lag4):
-                assert (
-                    lag4 == prices[i - 4]
-                ), f"Row {i}: lag_4={lag4} but price[{i - 4}]={prices[i - 4]}"
+                assert lag4 == prices[i - 4], (
+                    f"Row {i}: lag_4={lag4} but price[{i - 4}]={prices[i - 4]}"
+                )
 
     def test_first_row_lags_are_nan(self):
         df = make_df(n=20)
@@ -88,9 +88,9 @@ class TestLagNoLeakage:
         for i in range(len(feat) - 1):
             expected_delta = prices[i + 1] - prices[i]
             actual_target = feat.iloc[i]["target"]
-            assert (
-                abs(actual_target - expected_delta) < 1e-6
-            ), f"Row {i}: target={actual_target} expected {expected_delta}"
+            assert abs(actual_target - expected_delta) < 1e-6, (
+                f"Row {i}: target={actual_target} expected {expected_delta}"
+            )
 
     def test_last_row_target_is_nan(self):
         df = make_df(n=20)
@@ -119,9 +119,9 @@ class TestRollingStats:
                 (ts > ts.iloc[i] - pd.Timedelta(days=7)) & (ts <= ts.iloc[i])
             ].mean()
             actual_mean = feat.iloc[i]["roll_7d_mean"]
-            assert (
-                abs(actual_mean - expected_mean) < 0.5
-            ), f"Row {i}: roll_7d_mean={actual_mean:.2f} expected {expected_mean:.2f}"
+            assert abs(actual_mean - expected_mean) < 0.5, (
+                f"Row {i}: roll_7d_mean={actual_mean:.2f} expected {expected_mean:.2f}"
+            )
 
     def test_roll_7d_min_le_current_price(self):
         """7-day rolling min must be ≤ current price (since current is in the window)."""
