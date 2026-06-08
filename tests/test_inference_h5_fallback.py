@@ -1,12 +1,7 @@
-"""RED regression tests for Phi22 H5 IBJA-calibrated fallback safety gate.
+"""Tests for Phi22 H5 IBJA-calibrated fallback safety gate.
 
-Test 1 (test_valid_false_is_noop_regression) MUST FAIL with current code because
-`price_source` does not yet exist in forecast.json output.  It will go GREEN once
-inference.py is updated in a later Phi22 step.
-
-Test 2 (test_valid_false_no_crash_without_parquet) verifies that when
-calibration.valid=False the run completes without touching ibja_rates.parquet
-(which is absent).  This may already PASS with current code.
+Tests 1–2 were RED regression tests; they go GREEN once inference.py emits
+`price_source`.  Tests 3–8 cover the full fallback logic.
 """
 
 from __future__ import annotations
@@ -15,6 +10,7 @@ import json
 from datetime import UTC, datetime, timedelta
 
 import ml.inference as inf
+import pandas as pd
 import pytest
 
 
@@ -98,6 +94,34 @@ def _make_probe(status: str = "success") -> dict:
     }
 
 
+def _make_ibja_parquet(tmp_path: object, rows: list[dict]) -> None:
+    """Write ibja_rates.parquet with given rows to tmp_path."""
+    pd.DataFrame(rows).to_parquet(tmp_path / "ibja_rates.parquet", index=False)
+
+
+def _make_prices_with_last_ts(n: int, last_ts: datetime, last_22k: int = 14320) -> list[dict]:
+    """n price entries where the last entry has a specific timestamp."""
+    start = datetime(2026, 1, 1, 10, 0, 0, tzinfo=UTC)
+    entries = [
+        {
+            "timestamp": (start + timedelta(days=i)).strftime("%Y-%m-%dT%H:%M:%S.000Z"),
+            "22k": 14000 + (i % 7) * 20,
+            "24k": round((14000 + (i % 7) * 20) * 24 / 22),
+            "18k": round((14000 + (i % 7) * 20) * 18 / 22),
+            "source": "test",
+        }
+        for i in range(n - 1)
+    ]
+    entries.append({
+        "timestamp": last_ts.strftime("%Y-%m-%dT%H:%M:%S.000Z"),
+        "22k": last_22k,
+        "24k": round(last_22k * 24 / 22),
+        "18k": round(last_22k * 18 / 22),
+        "source": "test",
+    })
+    return entries
+
+
 # ---------------------------------------------------------------------------
 # Tests
 # ---------------------------------------------------------------------------
@@ -177,3 +201,180 @@ def test_valid_false_no_crash_without_parquet(tmp_path: object, monkeypatch: obj
     assert (tmp_path / "forecast.json").exists(), (
         "forecast.json must be written even when calibration.valid=False and parquet is absent"
     )
+
+
+# ---------------------------------------------------------------------------
+# New tests C1–C6: full fallback logic coverage
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.smoke
+def test_valid_true_stale_scrape_ibja_fresh(tmp_path: object, monkeypatch: object) -> None:
+    """All gates pass: stale scrape + valid calibration + fresh IBJA → ibja_calibrated path."""
+    monkeypatch.setattr(inf, "DATA_DIR", tmp_path)
+
+    now = datetime(2026, 3, 15, 13, 30, tzinfo=UTC)
+    # Last scrape at 04:00 UTC = 9.5h before now → stale
+    last_ts = datetime(2026, 3, 15, 4, 0, tzinfo=UTC)
+    prices = _make_prices_with_last_ts(40, last_ts, last_22k=14320)
+    expected_scraped_at = prices[-1]["timestamp"]
+
+    (tmp_path / "prices.json").write_text(json.dumps(prices))
+    (tmp_path / "backtest.json").write_text(json.dumps(_make_backtest(35)))
+    (tmp_path / "chronos_probe.json").write_text(json.dumps(_make_probe("success")))
+    (tmp_path / "calibration.json").write_text(
+        json.dumps({"valid": True, "slope": 1.0, "intercept": 100.0, "residual_std": 50.0})
+    )
+    # ibja_per_g = 144000 / 10 = 14400; ibja_calibrated_22k = round(1.0*14400+100) = 14500
+    _make_ibja_parquet(tmp_path, [{"date": "2026-03-15", "pm_916": 144000.0}])
+
+    inf.main(now=now)
+
+    fc = json.loads((tmp_path / "forecast.json").read_text())
+
+    assert fc["price_source"] == "ibja_calibrated"
+    assert fc["current_22k"] == round(1.0 * 14400.0 + 100.0)  # 14500
+    assert fc["est_low"] == round(14500 - 50.0)  # 14450
+    assert fc["est_high"] == round(14500 + 50.0)  # 14550
+    assert fc["scraped_at"] == expected_scraped_at, (
+        "scraped_at must NOT be overwritten with IBJA time"
+    )
+    assert fc["ibja_asof"] == "2026-03-15T11:30:00+00:00"
+    assert fc["predicted_22k"] == 14500, "naive flat-hold must use the calibrated current price"
+
+
+@pytest.mark.smoke
+def test_valid_true_fresh_scrape_no_override(tmp_path: object, monkeypatch: object) -> None:
+    """Fresh scrape (1.5h old) → fallback must NOT override, even with valid calibration."""
+    monkeypatch.setattr(inf, "DATA_DIR", tmp_path)
+
+    now = datetime(2026, 3, 15, 13, 30, tzinfo=UTC)
+    # Last scrape at 12:00 UTC = 1.5h before now → fresh
+    last_ts = datetime(2026, 3, 15, 12, 0, tzinfo=UTC)
+    prices = _make_prices_with_last_ts(40, last_ts, last_22k=14320)
+
+    (tmp_path / "prices.json").write_text(json.dumps(prices))
+    (tmp_path / "backtest.json").write_text(json.dumps(_make_backtest(35)))
+    (tmp_path / "chronos_probe.json").write_text(json.dumps(_make_probe("success")))
+    (tmp_path / "calibration.json").write_text(
+        json.dumps({"valid": True, "slope": 1.0, "intercept": 100.0, "residual_std": 50.0})
+    )
+    _make_ibja_parquet(tmp_path, [{"date": "2026-03-15", "pm_916": 144000.0}])
+
+    inf.main(now=now)
+
+    fc = json.loads((tmp_path / "forecast.json").read_text())
+
+    assert fc["price_source"] == "tanishq_scrape"
+    assert fc["current_22k"] == 14320
+    assert fc.get("est_low") is None
+    assert fc.get("est_high") is None
+
+
+@pytest.mark.smoke
+def test_valid_true_ibja_stale_weekend_falls_through(tmp_path: object, monkeypatch: object) -> None:
+    """Sunday noon: latest IBJA row is Friday (48.5h old → stale) → falls through to tanishq."""
+    monkeypatch.setattr(inf, "DATA_DIR", tmp_path)
+
+    now = datetime(2026, 3, 15, 12, 0, tzinfo=UTC)  # Sunday noon UTC
+    # Last scrape at 03:00 UTC = 9h before now → stale
+    last_ts = datetime(2026, 3, 15, 3, 0, tzinfo=UTC)
+    scraped_22k = 14320
+    prices = _make_prices_with_last_ts(40, last_ts, last_22k=scraped_22k)
+
+    (tmp_path / "prices.json").write_text(json.dumps(prices))
+    (tmp_path / "backtest.json").write_text(json.dumps(_make_backtest(35)))
+    (tmp_path / "chronos_probe.json").write_text(json.dumps(_make_probe("success")))
+    (tmp_path / "calibration.json").write_text(
+        json.dumps({"valid": True, "slope": 1.0, "intercept": 100.0, "residual_std": 50.0})
+    )
+    # Friday row: ibja_asof = 2026-03-13T11:30 UTC; age at Sunday noon = 48.5h → stale
+    _make_ibja_parquet(tmp_path, [{"date": "2026-03-13", "pm_916": 144000.0}])
+
+    inf.main(now=now)
+
+    fc = json.loads((tmp_path / "forecast.json").read_text())
+
+    assert fc["price_source"] == "tanishq_scrape"
+    assert fc["current_22k"] == scraped_22k
+    assert fc.get("est_low") is None
+    assert fc.get("est_high") is None
+    assert fc.get("ibja_asof") is None
+
+
+@pytest.mark.smoke
+def test_ibja_parquet_missing_noop(tmp_path: object, monkeypatch: object) -> None:
+    """No ibja_rates.parquet present → fallback returns noop, inference must not raise."""
+    monkeypatch.setattr(inf, "DATA_DIR", tmp_path)
+
+    now = datetime(2026, 3, 15, 13, 30, tzinfo=UTC)
+    last_ts = datetime(2026, 3, 15, 4, 0, tzinfo=UTC)  # 9.5h before now → stale
+    prices = _make_prices_with_last_ts(40, last_ts, last_22k=14320)
+
+    (tmp_path / "prices.json").write_text(json.dumps(prices))
+    (tmp_path / "backtest.json").write_text(json.dumps(_make_backtest(35)))
+    (tmp_path / "chronos_probe.json").write_text(json.dumps(_make_probe("success")))
+    (tmp_path / "calibration.json").write_text(
+        json.dumps({"valid": True, "slope": 1.0, "intercept": 100.0, "residual_std": 50.0})
+    )
+    # ibja_rates.parquet intentionally absent
+
+    inf.main(now=now)  # must not raise
+
+    fc = json.loads((tmp_path / "forecast.json").read_text())
+
+    assert fc["price_source"] == "tanishq_scrape"
+    assert fc["current_22k"] == 14320
+    assert fc.get("est_low") is None
+
+
+@pytest.mark.smoke
+def test_ibja_parquet_unreadable_noop(tmp_path: object, monkeypatch: object) -> None:
+    """Corrupt parquet file → fallback catches exception, inference must not raise."""
+    monkeypatch.setattr(inf, "DATA_DIR", tmp_path)
+
+    now = datetime(2026, 3, 15, 13, 30, tzinfo=UTC)
+    last_ts = datetime(2026, 3, 15, 4, 0, tzinfo=UTC)  # stale
+    prices = _make_prices_with_last_ts(40, last_ts, last_22k=14320)
+
+    (tmp_path / "prices.json").write_text(json.dumps(prices))
+    (tmp_path / "backtest.json").write_text(json.dumps(_make_backtest(35)))
+    (tmp_path / "chronos_probe.json").write_text(json.dumps(_make_probe("success")))
+    (tmp_path / "calibration.json").write_text(
+        json.dumps({"valid": True, "slope": 1.0, "intercept": 100.0, "residual_std": 50.0})
+    )
+    (tmp_path / "ibja_rates.parquet").write_bytes(b"not a parquet file")
+
+    inf.main(now=now)  # must not raise
+
+    fc = json.loads((tmp_path / "forecast.json").read_text())
+
+    assert fc["price_source"] == "tanishq_scrape"
+
+
+@pytest.mark.smoke
+def test_band_unit_scaling_correctness(tmp_path: object, monkeypatch: object) -> None:
+    """residual_std is applied directly (INR/g at 22k) — no extra scaling factor."""
+    monkeypatch.setattr(inf, "DATA_DIR", tmp_path)
+
+    now = datetime(2026, 3, 15, 13, 30, tzinfo=UTC)
+    last_ts = datetime(2026, 3, 15, 4, 0, tzinfo=UTC)  # 9.5h before now → stale
+    prices = _make_prices_with_last_ts(40, last_ts, last_22k=14000)
+
+    (tmp_path / "prices.json").write_text(json.dumps(prices))
+    (tmp_path / "backtest.json").write_text(json.dumps(_make_backtest(35)))
+    (tmp_path / "chronos_probe.json").write_text(json.dumps(_make_probe("success")))
+    (tmp_path / "calibration.json").write_text(
+        json.dumps({"valid": True, "slope": 1.0, "intercept": 0.0, "residual_std": 100.0})
+    )
+    # ibja_per_g = 145000/10 = 14500; ibja_calibrated_22k = round(1.0*14500+0) = 14500
+    _make_ibja_parquet(tmp_path, [{"date": "2026-03-15", "pm_916": 145000.0}])
+
+    inf.main(now=now)
+
+    fc = json.loads((tmp_path / "forecast.json").read_text())
+
+    assert fc["current_22k"] == 14500
+    assert fc["est_low"] == 14400   # exactly 100 INR/g below
+    assert fc["est_high"] == 14600  # exactly 100 INR/g above
+    assert fc["est_high"] - fc["est_low"] == 200  # band width = 2 * residual_std
