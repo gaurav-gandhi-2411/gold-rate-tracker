@@ -7,6 +7,9 @@ const COMMENTARY_URL = "data/commentary.json";
 const DRIFT_URL     = "data/drift_metrics.json";
 const METRICS_URL   = "data/metrics_history.json";
 
+// Staleness threshold (hours) shared with Python inference.py _STALE_THRESHOLD_H.
+const STALE_THRESHOLD_H = 8;
+
 // D4: True when running as an installed PWA launched from the home screen.
 // navigator.standalone is iOS WebKit's proprietary flag (true/false/undefined).
 // matchMedia display-mode:standalone is the W3C standard (patchy on older iOS).
@@ -411,11 +414,24 @@ function renderStaleBanner(forecast) {
   // Always reset first so a refresh-error or prior stale message is cleared on success.
   banner.hidden = true;
   if (!forecast || !forecast.scraped_at) return;
-  const ageH = (Date.now() - new Date(forecast.scraped_at).getTime()) / 3_600_000;
-  if (ageH > 8) {
-    banner.textContent = `Live price update unavailable — showing last confirmed price from ${fmtRelative(forecast.scraped_at)}.`;
-    banner.hidden = false;
+
+  const scrapeAgeH = (Date.now() - new Date(forecast.scraped_at).getTime()) / 3_600_000;
+  if (scrapeAgeH <= STALE_THRESHOLD_H) return; // scraped-fresh — banner stays hidden
+
+  // Scrape is stale — check IBJA fallback state
+  if (forecast.price_source === "ibja_calibrated" && forecast.ibja_asof) {
+    const ibjaAgeH = (Date.now() - new Date(forecast.ibja_asof).getTime()) / 3_600_000;
+    if (ibjaAgeH < STALE_THRESHOLD_H) {
+      // State 2: IBJA-derived-fresh
+      banner.textContent = "Approximate — live retail scrape unavailable; estimated from IBJA benchmark.";
+      banner.hidden = false;
+      return;
+    }
   }
+
+  // State 3: genuinely stale (Phi20 copy)
+  banner.textContent = `Live price update unavailable — showing last confirmed price from ${fmtRelative(forecast.scraped_at)}.`;
+  banner.hidden = false;
 }
 
 function renderFreshness(readings) {
@@ -502,16 +518,30 @@ function renderHero(readings, forecast) {
   const latest    = readings[readings.length - 1];
   const newPrice  = latest["22k"];
   const prevPrice = displayedPrice; // capture before update — animateNumberTick uses this as fromVal
-  displayedPrice  = newPrice;
-  // Φ16-4: tick when price changes on a live refresh; first render and no-change case are instant.
-  // priceEl.hidden guard: element hidden means skeleton is still showing — don't animate there.
-  if (prevPrice !== null && prevPrice !== newPrice && !priceEl.hidden) {
-    animateNumberTick(priceEl, prevPrice, newPrice);
+
+  if (
+    forecast && forecast.price_source === "ibja_calibrated" &&
+    forecast.current_22k != null && forecast.est_low != null && forecast.est_high != null
+  ) {
+    // IBJA-calibrated estimate — show as bounded range, not a bare point (ADR 021 §4).
+    // ASCII-safe: Rs. not the rupee glyph. XSS-safe: all values are integers from forecast.json.
+    displayedPrice = forecast.current_22k;
+    priceEl.innerHTML =
+      `≈ Rs.${fmtINR(forecast.current_22k)}` +
+      ` <span class="est-range">(est. Rs.${fmtINR(forecast.est_low)}–Rs.${fmtINR(forecast.est_high)})</span>`;
+    priceEl.hidden = false;
   } else {
-    // XSS-safe: rupee() wraps a number with fmtINR (toLocaleString); numbers cannot contain HTML
-    priceEl.innerHTML = rupee(newPrice);
+    displayedPrice = newPrice;
+    // Φ16-4: tick when price changes on a live refresh; first render and no-change case are instant.
+    // priceEl.hidden guard: element hidden means skeleton is still showing — don't animate there.
+    if (prevPrice !== null && prevPrice !== newPrice && !priceEl.hidden) {
+      animateNumberTick(priceEl, prevPrice, newPrice);
+    } else {
+      // XSS-safe: rupee() wraps a number with fmtINR (toLocaleString); numbers cannot contain HTML
+      priceEl.innerHTML = rupee(newPrice);
+    }
+    priceEl.hidden = false;
   }
-  priceEl.hidden = false;
 
   // Other karat prices — same as above, rupee() on a number is injection-proof
   const r24 = document.getElementById("rate-24");
