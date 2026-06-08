@@ -121,6 +121,57 @@ function makePrices(scrapedAgeH) {
   return JSON.stringify(readings);
 }
 
+function makeForecastIBJA(scrapeAgeH, ibjaAgeH) {
+  const now     = Date.now();
+  const scraped  = new Date(now - scrapeAgeH  * 3_600_000).toISOString();
+  const predicted = new Date(now - 0.1 * 3_600_000).toISOString();
+  const ibjaAsof  = new Date(now - ibjaAgeH   * 3_600_000).toISOString();
+  return JSON.stringify({
+    predicted_at: predicted,
+    scraped_at:   scraped,
+    target_window: "5d",
+    price_source: "ibja_calibrated",
+    current_22k:  14500,
+    est_low:      14450,
+    est_high:     14550,
+    ibja_asof:    ibjaAsof,
+    headline: {
+      method: "naive_flat_hold",
+      predicted_22k: 14500,
+      lower: 13565,
+      upper: 15435,
+      conformal_pi_half: 935,
+      naive_mae_recent_30: 616,
+      vol_context: {
+        half_width: 468, half_width_raw: 231, method: "realized_20d",
+        window_days: 20, contiguous_days: 54, is_floored: true, is_degraded: false,
+        floor_fraction: 0.5, static_pi_half: 935, baseline_half_width: 346,
+        regime: "calm",
+      },
+    },
+    chronos_companion: {
+      status: "success", lean_direction: "flat", lean_strength_pct: 0.5,
+      direction_acc_30f: 0.55, direction_prob_basis: "base_rate_fallback",
+      horizon_p10: [13900, 13850, 13800, 13750, 13700],
+      horizon_p50: [14500, 14505, 14510, 14515, 14520],
+      horizon_p90: [15100, 15150, 15200, 15250, 15300],
+      model_version: "amazon/chronos-bolt-tiny@test",
+      calibration_applied: true, calibration_just_unlocked: false,
+      majority_direction: "flat", direction_consensus: 0.5,
+    },
+    driver_context: null,
+    real_readings_count: 30,
+    model_fallback: false,
+    predicted_22k: 14500,
+    lower: 13565,
+    upper: 15435,
+    target_time: predicted,
+    model_status: "naive_headline",
+    model_version: "naive_flat_hold",
+    warmup: false,
+  });
+}
+
 // ─── Banner visibility check (getComputedStyle, not just .hidden) ─────────────
 
 async function checkBannerState(page) {
@@ -221,6 +272,58 @@ async function run() {
 
       assert("banner.hidden === true",        state.hidden === true);
       assert("computed display === 'none'",   state.display === "none",   `got "${state.display}"`);
+
+      await ctx.close();
+    }
+
+    // ── Scenario C: IBJA-derived-fresh → banner shows "Approximate" ────────────
+    console.log("\nScenario C: price_source=ibja_calibrated, IBJA 2h old → 'Approximate' banner");
+    {
+      const ctx  = await browser.newContext();
+      const page = await ctx.newPage();
+      // scrape 9h old (stale), IBJA 2h old (fresh) → State 2
+      await injectMockFetch(page, makeForecastIBJA(9, 2), makePrices(9));
+
+      await page.goto(base, { waitUntil: "networkidle" });
+      await page.waitForTimeout(500);
+
+      const state = await checkBannerState(page);
+      console.log(`  Banner state: hidden=${state.hidden}, display=${state.display}, text="${state.text}"`);
+
+      assert("banner.hidden === false",         state.hidden === false);
+      assert("computed display !== 'none'",     state.display !== "none",   `got "${state.display}"`);
+      assert('text includes "Approximate"',
+        state.text.includes("Approximate"),     `got "${state.text}"`);
+      assert('text includes "IBJA"',
+        state.text.includes("IBJA"),            `got "${state.text}"`);
+      assert('text does NOT include "last confirmed price"',
+        !state.text.includes("last confirmed price"), `got "${state.text}"`);
+
+      await ctx.close();
+    }
+
+    // ── Scenario D: hero shows bounded estimate when ibja_calibrated ─────────────
+    console.log("\nScenario D: price_source=ibja_calibrated → hero shows '≈ Rs.14,500 (est. Rs.14,450–Rs.14,550)'");
+    {
+      const ctx  = await browser.newContext();
+      const page = await ctx.newPage();
+      await injectMockFetch(page, makeForecastIBJA(9, 2), makePrices(9));
+
+      await page.goto(base, { waitUntil: "networkidle" });
+      await page.waitForTimeout(500);
+
+      const heroText = await page.evaluate(() => {
+        const el = document.getElementById("hero-price");
+        return el ? el.textContent.trim() : null;
+      });
+      console.log(`  Hero text: "${heroText}"`);
+
+      assert("hero-price element found",     heroText !== null);
+      assert('hero text includes "14,500"',  heroText.includes("14,500"),  `got "${heroText}"`);
+      assert('hero text includes "est."  OR "(est."',
+        heroText.includes("est.") || heroText.includes("(est"),           `got "${heroText}"`);
+      assert('hero text includes "14,450"',  heroText.includes("14,450"),  `got "${heroText}"`);
+      assert('hero text includes "14,550"',  heroText.includes("14,550"),  `got "${heroText}"`);
 
       await ctx.close();
     }

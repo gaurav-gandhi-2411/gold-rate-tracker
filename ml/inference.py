@@ -49,6 +49,10 @@ _CONFORMAL_FOLDS: int = 30
 # Below this threshold the PI estimate has too much variance to be useful; the
 # caller writes model_status="insufficient_backtest_history" instead of a fake band.
 _MIN_CONFORMAL_FOLDS: int = 30
+# Staleness threshold shared with app.js banner (hours). Change in ONE place only.
+_STALE_THRESHOLD_H: int = 8
+# IBJA publishes pm_916 ~17:00 IST = 11:30 UTC on each trading day.
+_IBJA_PUBLISH_UTC: tuple[int, int] = (11, 30)
 
 
 def _load_json(path: Path) -> dict | list | None:
@@ -163,8 +167,114 @@ def _build_chronos_companion(
     }
 
 
-def main() -> None:
+def _apply_ibja_fallback(
+    current_22k: int,
+    scraped_at: str,
+    calibration: dict,
+    data_dir: Path,
+    now: datetime,
+) -> tuple[int, str, int | None, int | None, str | None]:
+    """Current-price fallback: IBJA-calibrated estimate when Tanishq scrape is stale.
+
+    Returns (current_22k, price_source, est_low, est_high, ibja_asof).
+    Falls back to (current_22k, "tanishq_scrape", None, None, None) when any gate fails.
+
+    Gates (all must pass):
+      - calibration.valid == True AND slope/intercept/residual_std present
+      - scrape age > _STALE_THRESHOLD_H
+      - IBJA pm_916 row exists AND ibja_age < _STALE_THRESHOLD_H
+    Does NOT touch scraped_at (ADR 021).
+    Does NOT modify the Chronos-horizon calibration block in _build_chronos_companion.
+    """
+    _noop: tuple[int, str, int | None, int | None, str | None] = (
+        current_22k,
+        "tanishq_scrape",
+        None,
+        None,
+        None,
+    )
+
+    if not calibration.get("valid"):
+        return _noop
+
+    slope = calibration.get("slope")
+    intercept = calibration.get("intercept")
+    residual_std = calibration.get("residual_std")
+    if slope is None or intercept is None or residual_std is None:
+        return _noop
+
+    # Scrape staleness check
+    try:
+        scraped_dt = datetime.fromisoformat(scraped_at.replace("Z", "+00:00"))
+        scrape_age_h = (now - scraped_dt).total_seconds() / 3600
+    except Exception:
+        logger.warning("_apply_ibja_fallback: could not parse scraped_at %r", scraped_at)
+        return _noop
+
+    if scrape_age_h <= _STALE_THRESHOLD_H:
+        return _noop  # scrape is fresh — no override needed
+
+    # Resilient IBJA parquet read
+    try:
+        import pandas as pd  # local import — pandas not needed on the cold path
+
+        parquet_path = data_dir / "ibja_rates.parquet"
+        ibja_df = pd.read_parquet(parquet_path)
+        valid_rows = ibja_df[ibja_df["pm_916"].notna()].sort_values("date")
+        if valid_rows.empty:
+            logger.warning("_apply_ibja_fallback: no non-null pm_916 rows — skipping")
+            return _noop
+        latest_ibja = valid_rows.iloc[-1]
+        ibja_date_str: str = str(latest_ibja["date"])[:10]  # "YYYY-MM-DD"
+        pm_916 = float(latest_ibja["pm_916"])
+    except FileNotFoundError:
+        logger.info("_apply_ibja_fallback: ibja_rates.parquet not found — skipping")
+        return _noop
+    except Exception as exc:
+        logger.warning("_apply_ibja_fallback: parquet read failed: %s — skipping", exc)
+        return _noop
+
+    # IBJA publication datetime: ~17:00 IST = 11:30 UTC on the row's date
+    try:
+        y, m, d = int(ibja_date_str[:4]), int(ibja_date_str[5:7]), int(ibja_date_str[8:10])
+        ibja_asof_dt = datetime(y, m, d, _IBJA_PUBLISH_UTC[0], _IBJA_PUBLISH_UTC[1], tzinfo=UTC)
+    except Exception as exc:
+        logger.warning("_apply_ibja_fallback: could not parse ibja date %r: %s", ibja_date_str, exc)
+        return _noop
+
+    ibja_age_h = (now - ibja_asof_dt).total_seconds() / 3600
+    if ibja_age_h >= _STALE_THRESHOLD_H:
+        logger.info(
+            "_apply_ibja_fallback: IBJA %s is %.1fh old (>= %dh) — genuinely stale",
+            ibja_date_str,
+            ibja_age_h,
+            _STALE_THRESHOLD_H,
+        )
+        return _noop
+
+    # All gates passed — compute calibrated estimate
+    ibja_per_g = pm_916 / 10.0
+    ibja_calibrated_22k = round(slope * ibja_per_g + intercept)
+    est_low = round(ibja_calibrated_22k - residual_std)
+    est_high = round(ibja_calibrated_22k + residual_std)
+    ibja_asof_iso = ibja_asof_dt.isoformat()
+
+    logger.info(
+        "_apply_ibja_fallback: ibja_per_g=%.2f -> Rs.%d [Rs.%d-Rs.%d]  ibja_date=%s",
+        ibja_per_g,
+        ibja_calibrated_22k,
+        est_low,
+        est_high,
+        ibja_date_str,
+    )
+    return ibja_calibrated_22k, "ibja_calibrated", est_low, est_high, ibja_asof_iso
+
+
+def main(now: datetime | None = None) -> None:
     logging.basicConfig(level=logging.INFO, format="%(levelname)s %(name)s: %(message)s")
+
+    if now is None:
+        now = datetime.now(UTC)
 
     # 1. Current price
     prices: list[dict] = _load_json(DATA_DIR / "prices.json") or []
@@ -192,7 +302,7 @@ def main() -> None:
             fold_count,
             _MIN_CONFORMAL_FOLDS,
         )
-        predicted_at = datetime.now(UTC)
+        predicted_at = now
         target_time = (predicted_at + timedelta(days=1)).replace(
             hour=0, minute=0, second=0, microsecond=0
         )
@@ -202,6 +312,10 @@ def main() -> None:
             "real_readings_count": real_readings_count,
             "current_22k": current_22k,
             "scraped_at": scraped_at,
+            "price_source": "tanishq_scrape",
+            "est_low": None,
+            "est_high": None,
+            "ibja_asof": None,
             "model_status": "insufficient_backtest_history",
             "model_version": "naive_flat_hold",
             "model_fallback": False,
@@ -219,6 +333,11 @@ def main() -> None:
         "Conformal PI half=Rs.%.1f  naive_mae_recent_30=%.1f",
         conformal_pi_half,
         naive_mae_recent_30,
+    )
+
+    calibration: dict = _load_json(DATA_DIR / "calibration.json") or {}
+    current_22k, price_source, est_low, est_high, ibja_asof = _apply_ibja_fallback(
+        current_22k, scraped_at, calibration, DATA_DIR, now
     )
 
     # 3. Headline: naive flat-hold
@@ -248,7 +367,6 @@ def main() -> None:
 
     # 4. Chronos companion (read from probe; never call Chronos directly)
     probe: dict = _load_json(DATA_DIR / "chronos_probe.json") or {}
-    calibration: dict = _load_json(DATA_DIR / "calibration.json") or {}
     from ml.notifications import STATE_PATH, load_state
 
     notification_state = load_state(STATE_PATH)
@@ -264,7 +382,7 @@ def main() -> None:
         driver_context = None
 
     # 6. Timestamps
-    predicted_at = datetime.now(UTC)
+    predicted_at = now
     target_time = (predicted_at + timedelta(days=1)).replace(
         hour=0, minute=0, second=0, microsecond=0
     )
@@ -279,6 +397,10 @@ def main() -> None:
         "real_readings_count": real_readings_count,
         "current_22k": current_22k,
         "scraped_at": scraped_at,
+        "price_source": price_source,
+        "est_low": est_low,
+        "est_high": est_high,
+        "ibja_asof": ibja_asof,
         "model_fallback": model_fallback,
         # Top-level aliases — read by app.js, drift.py, metrics.py, notifications.py.
         # Removed in a follow-up PWA-update PR after the new schema is rendered in the UI.

@@ -46,7 +46,7 @@ The following columns are defined in `_ALL_COLUMNS` in `ml/feature_store.py` (`S
 | `tips_asof_date` | str | Yes | ISO date of the last non-null `tips` observation. |
 | `ibja_pm_916` | float | Yes | IBJA PM fix for 916 hallmark gold in INR/g (22K daily closing benchmark). Null only if IBJA parquet unavailable. |
 | `ibja_am_916` | float | Yes | IBJA AM fix for 916 hallmark gold in INR/g. Null if AM fix not available or IBJA parquet unavailable. |
-| `tanishq_22k` | float | Yes | Tanishq 22K retail price in INR/g scraped from tanishq.com. `None` for all backfill rows (historical scrapes not available). |
+| `tanishq_22k` | float | Yes | Tanishq 22K retail price in INR/g scraped from tanishq.com. `None` for all backfill rows (historical scrapes not available). **Φ22 H5 (IBJA-calibrated display estimate) is display-only and is NEVER written here — only genuinely scraped retail prices are stored (ADR 021 §5).** |
 | `ibja_pm_916_asof_date` | str | Yes | ISO date of the IBJA row that `ibja_pm_916` came from (the row's own `date` field, not the capture date). Null when `ibja_pm_916` is null. |
 | `ibja_am_916_asof_date` | str | Yes | ISO date of the IBJA row that `ibja_am_916` came from. Null when `ibja_am_916` is null. |
 | `tanishq_22k_asof_date` | str | Yes | IST calendar date of the prices.json entry that `tanishq_22k` came from. Derived by converting the entry's UTC timestamp to IST (+05:30) and taking the calendar date — not by string-slicing the UTC date. Null when `tanishq_22k` is null. |
