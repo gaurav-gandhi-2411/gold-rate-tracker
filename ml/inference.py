@@ -187,7 +187,11 @@ def _apply_ibja_fallback(
     Does NOT modify the Chronos-horizon calibration block in _build_chronos_companion.
     """
     _noop: tuple[int, str, int | None, int | None, str | None] = (
-        current_22k, "tanishq_scrape", None, None, None
+        current_22k,
+        "tanishq_scrape",
+        None,
+        None,
+        None,
     )
 
     if not calibration.get("valid"):
@@ -242,7 +246,9 @@ def _apply_ibja_fallback(
     if ibja_age_h >= _STALE_THRESHOLD_H:
         logger.info(
             "_apply_ibja_fallback: IBJA %s is %.1fh old (>= %dh) — genuinely stale",
-            ibja_date_str, ibja_age_h, _STALE_THRESHOLD_H,
+            ibja_date_str,
+            ibja_age_h,
+            _STALE_THRESHOLD_H,
         )
         return _noop
 
@@ -254,8 +260,12 @@ def _apply_ibja_fallback(
     ibja_asof_iso = ibja_asof_dt.isoformat()
 
     logger.info(
-        "_apply_ibja_fallback: ibja_per_g=%.2f → Rs.%d [Rs.%d–Rs.%d]  ibja_date=%s",
-        ibja_per_g, ibja_calibrated_22k, est_low, est_high, ibja_date_str,
+        "_apply_ibja_fallback: ibja_per_g=%.2f -> Rs.%d [Rs.%d-Rs.%d]  ibja_date=%s",
+        ibja_per_g,
+        ibja_calibrated_22k,
+        est_low,
+        est_high,
+        ibja_date_str,
     )
     return ibja_calibrated_22k, "ibja_calibrated", est_low, est_high, ibja_asof_iso
 

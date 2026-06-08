@@ -13,7 +13,6 @@ import ml.inference as inf
 import pandas as pd
 import pytest
 
-
 # ---------------------------------------------------------------------------
 # Fixture helpers (self-contained; do NOT import from test_inference_main.py)
 # ---------------------------------------------------------------------------
@@ -86,8 +85,7 @@ def _make_probe(status: str = "success") -> dict:
         "status": "success",
         "ibja_last_value": 14450.0,
         "ibja_forecast": [
-            {"day": d, "p10": 14200.0, "p50": 14600.0 + d * 50, "p90": 14900.0}
-            for d in range(1, 6)
+            {"day": d, "p10": 14200.0, "p50": 14600.0 + d * 50, "p90": 14900.0} for d in range(1, 6)
         ],
         "model_version": "amazon/chronos-bolt-tiny@test",
         "schema_version": 1,
@@ -112,13 +110,15 @@ def _make_prices_with_last_ts(n: int, last_ts: datetime, last_22k: int = 14320) 
         }
         for i in range(n - 1)
     ]
-    entries.append({
-        "timestamp": last_ts.strftime("%Y-%m-%dT%H:%M:%S.000Z"),
-        "22k": last_22k,
-        "24k": round(last_22k * 24 / 22),
-        "18k": round(last_22k * 18 / 22),
-        "source": "test",
-    })
+    entries.append(
+        {
+            "timestamp": last_ts.strftime("%Y-%m-%dT%H:%M:%S.000Z"),
+            "22k": last_22k,
+            "24k": round(last_22k * 24 / 22),
+            "18k": round(last_22k * 18 / 22),
+            "source": "test",
+        }
+    )
     return entries
 
 
@@ -375,6 +375,6 @@ def test_band_unit_scaling_correctness(tmp_path: object, monkeypatch: object) ->
     fc = json.loads((tmp_path / "forecast.json").read_text())
 
     assert fc["current_22k"] == 14500
-    assert fc["est_low"] == 14400   # exactly 100 INR/g below
+    assert fc["est_low"] == 14400  # exactly 100 INR/g below
     assert fc["est_high"] == 14600  # exactly 100 INR/g above
     assert fc["est_high"] - fc["est_low"] == 200  # band width = 2 * residual_std

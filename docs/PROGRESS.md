@@ -1871,6 +1871,46 @@ Architectural pivot: single-series IBJA-916-PM forecasting. MCX dropped entirely
 
 ---
 
+### Φ22 — H5 IBJA-Calibrated Fallback Price  ✅ COMPLETE — 2026-06-08
+
+**Goal:** When the Tanishq retail scrape is stale (>8h), serve an IBJA-calibrated estimate of the retail price with explicit provenance, an honest ±residual_std band, and a 3-state banner — instead of a silently-stale scraped value. All logic gated on `calibration.valid`; dormant while false, auto-activates at n=30 (~2026-06-19).
+
+**Build order (spec §Build order):** RED regression test → inference.py fallback block → app.js 3-state banner + hero range → consumer audit → docs. All steps complete.
+
+**Inference.py changes:**
+- `_STALE_THRESHOLD_H: int = 8` — shared constant; one place to change.
+- `_apply_ibja_fallback(current_22k, scraped_at, calibration, data_dir, now)` — new function inserted in `main()` between conformal PI and headline computation. Reads `ibja_rates.parquet` (resilient: catches FileNotFoundError + all exceptions → no-op), derives `ibja_asof_dt = date + 11:30 UTC` (IBJA ~17:00 IST publication time), gates on `scrape_age > 8h AND ibja_age < 8h AND calibration params present`.
+- Returns `(ibja_calibrated_22k, "ibja_calibrated", est_low, est_high, ibja_asof_iso)` when all gates pass; `(current_22k, "tanishq_scrape", None, None, None)` otherwise.
+- `scraped_at` NEVER overwritten (ADR 021). `_build_chronos_companion` NOT modified (load-bearing; separate semantic).
+- New forecast.json fields (additive, backward-compatible): `price_source`, `est_low`, `est_high`, `ibja_asof`.
+- `main()` accepts `now: datetime | None = None` for deterministic test injection.
+
+**IBJA freshness design:** `ibja_asof_dt = datetime(ibja_date, 11, 30, UTC)`. At exactly 8h → stale. Weekend/holiday case (IBJA 48h+ old) correctly falls through to genuinely-stale state. Tests verify with fixed `now` parameter.
+
+**app.js changes:**
+- `const STALE_THRESHOLD_H = 8` — module-level constant, shared with Python.
+- `renderStaleBanner`: 3-state logic — scraped-fresh (hidden) / IBJA-derived-fresh ("Approximate — live retail scrape unavailable; estimated from IBJA benchmark.") / genuinely-stale (Φ20 copy).
+- `renderHero`: when `price_source == "ibja_calibrated"`, shows `≈ Rs.X (est. Rs.low–Rs.high)` using `forecast.current_22k/est_low/est_high`. ASCII-safe (Rs., not ₹). XSS-safe (all values are integers from forecast.json).
+- SW VERSION: `v15-20260607-phi20` → `v16-20260608-phi22`.
+
+**Consumer audit (norm #15):**
+- `ml/metrics.py`: reads `current_22k` from `prices[-1]` directly (not forecast.json) — unaffected.
+- `ml/notifications.py`: reads `model_fallback` and `chronos_companion` only — unaffected.
+- `ml/commentary.py`: reads `predicted_22k` (will use IBJA-calibrated value when fallback active — more accurate than stale scraped, acceptable).
+- `ml/drift.py`: reads `predicted_22k` from PREVIOUS forecast — residuals during scrape outages will include IBJA estimation noise; acceptable, drift.py is legacy/low-harm.
+- `data/feature_store/snapshots.parquet`: NEVER written by H5 — display/store divergence is intentional (ADR 021 §5, FEATURE_STORE.md note added).
+
+**Tests added:**
+- `tests/test_inference_h5_fallback.py` (8 tests): RED regression (valid=false no-op), no-crash without parquet, valid+stale+IBJA-fresh (main path), valid+fresh-scrape (no override), valid+IBJA-stale-weekend (falls through), parquet missing, parquet corrupt, band unit-scaling correctness.
+- `tests/test_stale_banner.js` (7 tests, full rewrite): State 1 (scraped-fresh), State 2 (ibja-derived-fresh), State 3 (genuinely-stale), weekend/IBJA-stale, defensive (ibja_asof missing).
+- `tests/test_stale_banner_headless.js`: Scenarios C (Approximate banner) + D (hero range text) added for device verify.
+
+**ADR 021** committed alongside spec.md. **FEATURE_STORE.md** note added. All CI passes pre-merge.
+
+**STOP gate:** GG device-verify all 3 banner states + hero bounded-range display before merge.
+
+---
+
 ## Decision Log
 
 | Date | Decision | Why | Outcome |
