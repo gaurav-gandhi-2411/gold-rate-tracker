@@ -8,8 +8,9 @@
 // On failure it exits non-zero so the GitHub Action fails loudly instead of
 // silently writing bad data.
 //
-// Exports scrapeWithRetry(), isCloudflareChallenge(), extractRates(), validate()
-// for unit testing.
+// Exports hybridScrape(), scrapeWithRetry(), fetchWithRequests(),
+// isCFChallengeHtml(), parseGoldRates(), isCloudflareChallenge(),
+// extractRates(), validate() for unit testing.
 
 import { chromium } from "playwright";
 import { fileURLToPath } from "url";
@@ -171,6 +172,116 @@ export function validate(rate22, rate24, rate18) {
   return { r22_24, r18_24 };
 }
 
+// ── Requests path (Φ24) ──────────────────────────────────────────────────────
+// Plain HTTP fetch attempted before Playwright — eliminates Chromium startup
+// (~8-15 s) when CF passes a browser-UA GET.  Falls back to Playwright on any
+// failure so future CF tightening degrades gracefully.
+//
+// The requests path accepts the result ONLY when ALL of:
+//   1. HTTP status 200 (response.ok)
+//   2. Body is NOT a CF challenge/interstitial page (CF can return 200 + challenge HTML)
+//   3. goldpurity-rate span present with all three karat data attributes
+//   4. Extracted values pass validate()
+//
+// scrapeWithRetry() (Playwright-only) is kept UNCHANGED; hybridScrape() wraps it.
+
+const REQUESTS_TIMEOUT_MS = 10_000;
+
+const REQUESTS_HEADERS = {
+  "User-Agent":
+    "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 " +
+    "(KHTML, like Gecko) Chrome/148.0.0.0 Safari/537.36",
+  Accept: "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+  "Accept-Language": "en-IN,en;q=0.9",
+};
+
+/**
+ * Returns true when an HTML string looks like a Cloudflare challenge/interstitial page.
+ * Mirrors the marker set in isCloudflareChallenge() but operates on a raw HTML string.
+ * CF can return 200 with a challenge body, so HTTP status alone is not sufficient.
+ */
+export function isCFChallengeHtml(html) {
+  const head = html.slice(0, 4000);
+  return (
+    /<title[^>]*>Just a moment\.\.\.<\/title>/i.test(head) ||
+    /<title[^>]*>Attention Required/i.test(head) ||
+    html.includes("cf-challenge") ||
+    html.includes("_cf_chl_") ||
+    html.includes("cf-browser-verification")
+  );
+}
+
+/**
+ * Parse goldpurity-rate span data attributes from a raw HTML string.
+ * Returns { rate22, rate24, rate18 } or null when the span or any attribute
+ * is absent, empty, or non-numeric.
+ *
+ * [^>]* in the regex matches any char including newlines because it is a
+ * negated character class (not the . metachar), so multi-line attribute
+ * formatting is handled without the /s flag.
+ */
+export function parseGoldRates(html) {
+  const spanMatch = html.match(
+    /<span[^>]+class="[^"]*goldpurity-rate[^"]*"([^>]*)>/,
+  );
+  if (!spanMatch) return null;
+  const attrs = spanMatch[1];
+  const rate22 = parseInt(attrs.match(/data-goldrate22kt="(\d+)"/)?.[1], 10);
+  const rate24 = parseInt(attrs.match(/data-goldrate24kt="(\d+)"/)?.[1], 10);
+  const rate18 = parseInt(attrs.match(/data-goldrate18kt="(\d+)"/)?.[1], 10);
+  if (!Number.isFinite(rate22) || !Number.isFinite(rate24) || !Number.isFinite(rate18)) {
+    return null;
+  }
+  return { rate22, rate24, rate18 };
+}
+
+/**
+ * Attempt to fetch and parse gold rates using a plain HTTP GET (no browser).
+ * Throws on any failure; callers fall back to Playwright via scrapeWithRetry().
+ *
+ * @param {string} [targetUrl]
+ * @returns {Promise<{timestamp: string, "22k": number, "24k": number, "18k": number, source: string}>}
+ */
+export async function fetchWithRequests(targetUrl = TARGET_URL) {
+  const ac = new AbortController();
+  const timer = setTimeout(() => ac.abort(), REQUESTS_TIMEOUT_MS);
+  let response;
+  try {
+    response = await fetch(targetUrl, {
+      headers: REQUESTS_HEADERS,
+      signal: ac.signal,
+    });
+  } finally {
+    clearTimeout(timer);
+  }
+
+  if (!response.ok) {
+    throw new Error(`requests path: HTTP ${response.status}`);
+  }
+
+  const html = await response.text();
+
+  if (isCFChallengeHtml(html)) {
+    throw new Error("requests path: CF challenge/interstitial page detected");
+  }
+
+  const rates = parseGoldRates(html);
+  if (!rates) {
+    throw new Error("requests path: goldpurity-rate span absent or incomplete");
+  }
+
+  const { rate22, rate24, rate18 } = rates;
+  validate(rate22, rate24, rate18); // throws "Rate validation failed: …" on bad data
+
+  return {
+    timestamp: new Date().toISOString(),
+    "22k": rate22,
+    "24k": rate24,
+    "18k": rate18,
+    source: targetUrl,
+  };
+}
+
 // ── Single attempt ────────────────────────────────────────────────────────────
 
 /**
@@ -319,11 +430,40 @@ export async function scrapeWithRetry(targetUrl = TARGET_URL) {
   throw lastError;
 }
 
+// ── Hybrid orchestration (Φ24) ───────────────────────────────────────────────
+
+/**
+ * Production entry point.  Tries a plain HTTP GET first (fast, no Chromium);
+ * on any failure falls back to the unchanged Playwright scrapeWithRetry() path.
+ * Logs [scraper] fetch_method= to stderr on both paths for hit-rate monitoring.
+ *
+ * scrapeWithRetry() is kept UNCHANGED so existing hardening tests call it
+ * directly without triggering the requests path.
+ *
+ * @param {string} [targetUrl]
+ * @returns {Promise<{timestamp: string, "22k": number, "24k": number, "18k": number, source: string}>}
+ */
+export async function hybridScrape(targetUrl = TARGET_URL) {
+  try {
+    const result = await fetchWithRequests(targetUrl);
+    process.stderr.write("[scraper] fetch_method=requests\n");
+    return result;
+  } catch (requestsErr) {
+    process.stderr.write(
+      `[scraper] requests path failed (${requestsErr.message}) — falling back to Playwright\n`,
+    );
+  }
+
+  const result = await scrapeWithRetry(targetUrl);
+  process.stderr.write("[scraper] fetch_method=playwright\n");
+  return result;
+}
+
 // ── Entry point ───────────────────────────────────────────────────────────────
 
 const __filename = fileURLToPath(import.meta.url);
 if (process.argv[1] === __filename) {
-  scrapeWithRetry()
+  hybridScrape()
     .then((result) => console.log(JSON.stringify(result)))
     .catch((err) => {
       console.error("Scrape failed:", err.message);

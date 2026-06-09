@@ -38,7 +38,7 @@ Free-tier gold price tracker for Indian retail (Tanishq 22K). Live scrape every 
 ```
 [GitHub Actions cron, 0 */4 * * * UTC → ~05:30/09:30/13:30/17:30/21:30/01:30 IST]
         ↓
-[Tanishq scrape — 3-attempt retry, CF detection (ADR 016)]──→ data/prices.json
+[Tanishq scrape — requests-first (Φ24), 3-attempt Playwright fallback, CF detection (ADR 016)]──→ data/prices.json
 [IBJA scrape — upsert pm_916 when post-PM-fix run has value]─→ data/ibja_rates.parquet
 [ml.calibration — refit if ≥30 overlap pairs (ADR 017)]─────→ data/calibration.json
 [macro fetch]────→ data/macro_cache.parquet (gitignored)
@@ -119,7 +119,7 @@ gold-rate-tracker/
 | `data/chronos_probe.json` | Inference reads this for companion block | If probe fails, inference still runs (writes `chronos_companion.status: "failed"`); T5 fires once per IST day. |
 | `data/notification_state.json` | Anti-spam state | Gitignored (`.gitignore` entry was absent until 2026-06-07, added in chore PR); cached via `actions/cache/restore@v4` + `save@v4` with `notification-state-${run_id}` key and `notification-state-` restore-keys prefix. Master branch only. |
 | `data/calibration.json` | Calibration gate | `valid: false` until 30 IBJA-Tanishq overlap days. Don't manually flip; `run_refit_if_needed()` in CI handles it (ADR 017). |
-| `.github/workflows/check-price.yml` | 4h production cron | Step ORDER is load-bearing: scrape → ibja-append (upsert) → **calibration-refit** → chronos-probe → notification-restore → inference → notification-evaluate → notification-save → commit. |
+| `.github/workflows/check-price.yml` | 4h production cron | Step ORDER is load-bearing (actual yml order): scrape → macro-fetch → inference → commentary → **ibja-append** → **calibration-refit** → chronos-probe → notification-restore → notifications → notification-save → commit. NOTE: inference runs BEFORE ibja-append and calibration-refit. Consequence: H5 (IBJA-calibrated fallback) activates one CI run after the calibration flip, not the same run. |
 | `app.js` | PWA logic | Reads current schema (Φ2 migrated; Ψ3C redesigned). Any JS error breaks the live site. |
 | `docs/PROGRESS.md` | Engagement record + Risks Register + Decision Log | Append-only. Don't rewrite history. |
 
@@ -178,6 +178,7 @@ gold-rate-tracker/
 - `pytest` locally without ignore flags shows 9 failures in training-deps test files. CI uses ignores; clean. Local devs need the same flags.
 - IBJA PM rate sometimes `NaN` on early-morning CI runs (before ~17:00 IST publication). The upsert fix (PR #56) captures the PM value on the post-17:00 run; inference falls back to the most recent complete PM row until then. This is expected and accepted.
 - `data/calibration.json` shows `valid: false` until 30 valid overlap pairs (pm_916 non-null). Currently accumulating at ~1 pair/trading day via the IBJA upsert fix. ETA for unlock: ~2026-06-12 (see RESUME HERE section). Refitted automatically by `run_refit_if_needed()` in CI (ADR 017). Do NOT manually flip `valid`.
+- Φ24 (2026-06-10): Tanishq scraper now tries a plain `fetch()` GET with Chrome UA before launching Playwright. CF is currently UA-string-only (403 on default UA, 200 on Chrome UA); the requests path succeeds on ~healthy days and saves ~8-15s of Chromium startup per CI run. ANY failure (non-200, CF challenge body, missing span, validation error) falls back transparently to the existing Playwright path. `scrapeWithRetry()` is unchanged; `hybridScrape()` is the new entry point.
 - Chronos forecasts can flip direction between consecutive runs. Stochastic sampling. **Addressed in Φ4 (PR #35) with 5-sample majority consensus; T1/T2 gate on direction_consensus ≥ 0.6.**
 
 **Recurring pattern — "computed-but-never-wired" bugs:**
@@ -206,7 +207,7 @@ Prevention going forward: norm #15 (consumer audit), norm #16 (delivery verifica
 | Item | Status |
 |---|---|
 | Lint workflow (ruff + ruff-format + mypy + pytest) | Green on master (commit `cf6fc78`, 2026-05-31). **365 Python tests pass.** |
-| JS tests | Green: 9 pure-function (tests/test_scrape.js) + 4 Playwright fixture DOM (scraper/test_scrape.js) + 16 hardening mock-HTTP (scraper/test_scraper_hardening.mjs) + 5 comparison cards (tests/test_comparisons.js). |
+| JS tests | Green: 9 pure-function (tests/test_scrape.js) + 4 Playwright fixture DOM (scraper/test_scrape.js) + 16 hardening mock-HTTP (scraper/test_scraper_hardening.mjs) + 9 hybrid-scrape Φ24 (scraper/test_hybrid_scrape.mjs) + 5 comparison cards (tests/test_comparisons.js). |
 | check-price.yml | Green on master. 4h cadence. Scraper hardened with 3-attempt retry + CF detection (ADR 016). Calibration-refit step wired (ADR 017). IBJA upsert captures post-PM-fix rates. |
 | scraper-canary.yml | Triggers on PR push to scraper/** paths (live DOM canary guarded to schedule/manual). |
 | weekly-backtest.yml | Green; last run 2026-05-19. |
