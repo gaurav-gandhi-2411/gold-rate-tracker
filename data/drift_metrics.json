@@ -1,55 +1,5 @@
 [
   {
-    "ts": "2026-05-11T16:58:13.586582+00:00",
-    "target_time": "2026-05-12T00:00:00+00:00",
-    "actual_ts": "2026-05-11T16:57:46.361Z",
-    "actual_22k": 13990.0,
-    "forecast_22k": 14076.0,
-    "residual": -86.0,
-    "model_version": "ensemble-3m",
-    "baseline_mae": 225.65
-  },
-  {
-    "ts": "2026-05-11T17:00:01.373824+00:00",
-    "target_time": "2026-05-12T00:00:00+00:00",
-    "actual_ts": "2026-05-11T16:59:35.450Z",
-    "actual_22k": 13990.0,
-    "forecast_22k": 14073.0,
-    "residual": -83.0,
-    "model_version": "ensemble-inv-mae",
-    "baseline_mae": 225.65
-  },
-  {
-    "ts": "2026-05-11T18:46:59.633277+00:00",
-    "target_time": "2026-05-12T00:00:00+00:00",
-    "actual_ts": "2026-05-11T18:46:30.690Z",
-    "actual_22k": 13990.0,
-    "forecast_22k": 14073.0,
-    "residual": -83.0,
-    "model_version": "ensemble-inv-mae",
-    "baseline_mae": 225.65
-  },
-  {
-    "ts": "2026-05-11T19:00:07.686327+00:00",
-    "target_time": "2026-05-12T00:00:00+00:00",
-    "actual_ts": "2026-05-11T18:59:35.876Z",
-    "actual_22k": 13990.0,
-    "forecast_22k": 14073.0,
-    "residual": -83.0,
-    "model_version": "ensemble-inv-mae",
-    "baseline_mae": 225.65
-  },
-  {
-    "ts": "2026-05-11T19:57:14.706379+00:00",
-    "target_time": "2026-05-12T00:00:00+00:00",
-    "actual_ts": "2026-05-11T19:56:49.100Z",
-    "actual_22k": 13990.0,
-    "forecast_22k": 14073.0,
-    "residual": -83.0,
-    "model_version": "ensemble-inv-mae",
-    "baseline_mae": 225.65
-  },
-  {
     "ts": "2026-05-12T03:48:45.868537+00:00",
     "target_time": "2026-05-12T00:00:00+00:00",
     "actual_ts": "2026-05-12T03:48:16.862Z",
@@ -1371,6 +1321,16 @@
     "actual_22k": 13590.0,
     "forecast_22k": 13690.0,
     "residual": -100.0,
+    "model_version": "naive_flat_hold",
+    "baseline_mae": 252.6
+  },
+  {
+    "ts": "2026-06-10T20:26:47.873702+00:00",
+    "target_time": "2026-06-11T00:00:00+00:00",
+    "actual_ts": "2026-06-10T20:26:22.767Z",
+    "actual_22k": 13590.0,
+    "forecast_22k": 13590.0,
+    "residual": 0.0,
     "model_version": "naive_flat_hold",
     "baseline_mae": 252.6
   }
