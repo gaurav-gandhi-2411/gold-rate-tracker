@@ -51,6 +51,10 @@ jobs:
         working-directory: scraper
         run: node --test test_scraper_hardening.mjs
 
+      - name: Run hybrid-scrape tests (mock HTTP + Playwright fallback, Φ24)
+        working-directory: scraper
+        run: node --test test_hybrid_scrape.mjs
+
       - name: Live DOM canary (Tanishq page)
         id: canary
         # Live network call — skip on pull_request to avoid external dependency in PR CI.
