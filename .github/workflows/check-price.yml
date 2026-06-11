@@ -8,6 +8,8 @@ on:
     # at least one 3h-cadence slot, so twice-daily digests are unaffected.
     - cron: "0 */3 * * *"
   workflow_dispatch: # allows manual run from the Actions tab
+  repository_dispatch:
+    types: [tanishq-price]
   push:
     branches: [master]
     paths:
@@ -62,10 +64,25 @@ jobs:
         env:
           NTFY_TOPIC: ${{ secrets.NTFY_TOPIC }}
           DROP_THRESHOLD: "100"
+          GH_EVENT_NAME: ${{ github.event_name }}
+          DISPATCH_22K: ${{ github.event.client_payload['22k'] }}
+          DISPATCH_24K: ${{ github.event.client_payload['24k'] }}
+          DISPATCH_18K: ${{ github.event.client_payload['18k'] }}
+          DISPATCH_TIMESTAMP: ${{ github.event.client_payload.timestamp }}
         run: |
           set -e
-          node scrape.js | tee /tmp/reading.json
-          cat /tmp/reading.json | node update-and-notify.js
+          if [ "$GH_EVENT_NAME" = "repository_dispatch" ]; then
+            node dispatch-validate.js > /tmp/dispatch_reading.json
+            if [ -s /tmp/dispatch_reading.json ]; then
+              cat /tmp/dispatch_reading.json | node update-and-notify.js
+            else
+              >&2 echo "[dispatch] payload rejected or invalid — treating as miss"
+              exit 1
+            fi
+          else
+            node scrape.js | tee /tmp/reading.json
+            cat /tmp/reading.json | node update-and-notify.js
+          fi
 
       - name: Set up Python
         uses: actions/setup-python@v6
