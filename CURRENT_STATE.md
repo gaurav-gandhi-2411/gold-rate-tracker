@@ -36,9 +36,11 @@ Free-tier gold price tracker for Indian retail (Tanishq 22K). Live scrape every 
 ## Production architecture (one-paragraph + diagram)
 
 ```
-[GitHub Actions cron, 0 */4 * * * UTC → ~05:30/09:30/13:30/17:30/21:30/01:30 IST]
+[CF Worker (Φ25) — cron 30 */3 * * * UTC, Singapore edge IP]
+        ↓ repository_dispatch[tanishq-price]
+[GitHub Actions cron, 0 */3 * * * UTC → ~05:30/08:30/11:30/14:30/17:30/20:30/23:30/02:30 IST]
         ↓
-[Tanishq scrape — requests-first (Φ24), 3-attempt Playwright fallback, CF detection (ADR 016)]──→ data/prices.json
+[Tanishq scrape — dispatch branch (Φ25) or fallback: requests (0% on runner IPs, Φ24) + Playwright]──→ data/prices.json
 [IBJA scrape — upsert pm_916 when post-PM-fix run has value]─→ data/ibja_rates.parquet
 [ml.calibration — refit if ≥30 overlap pairs (ADR 017)]─────→ data/calibration.json
 [macro fetch]────→ data/macro_cache.parquet (gitignored)
@@ -100,6 +102,10 @@ gold-rate-tracker/
 │   ├── generate-og-image.yml
 │   └── scraper-canary.yml
 ├── archive/                     ← Deprecated reference data, never imported
+├── worker/                      ← Φ25 Cloudflare Worker (clean-IP Tanishq fetch)
+│   ├── index.js                 ← CF Worker: fetch → parse/validate → repository_dispatch
+│   ├── wrangler.toml            ← cron config + non-secret vars (no secrets)
+│   └── test_worker.mjs          ← 11 unit tests (mock fetch, no live network)
 ├── app.js                       ← LOAD-BEARING PWA logic
 ├── index.html
 └── service-worker.js
@@ -179,6 +185,7 @@ gold-rate-tracker/
 - IBJA PM rate sometimes `NaN` on early-morning CI runs (before ~17:00 IST publication). The upsert fix (PR #56) captures the PM value on the post-17:00 run; inference falls back to the most recent complete PM row until then. This is expected and accepted.
 - `data/calibration.json` shows `valid: false` until 30 valid overlap pairs (pm_916 non-null). Currently accumulating at ~1 pair/trading day via the IBJA upsert fix. ETA for unlock: ~2026-06-12 (see RESUME HERE section). Refitted automatically by `run_refit_if_needed()` in CI (ADR 017). Do NOT manually flip `valid`.
 - Φ24 (2026-06-10): Tanishq scraper now tries a plain `fetch()` GET with Chrome UA before launching Playwright. CF is currently UA-string-only (403 on default UA, 200 on Chrome UA); the requests path succeeds on ~healthy days and saves ~8-15s of Chromium startup per CI run. ANY failure (non-200, CF challenge body, missing span, validation error) falls back transparently to the existing Playwright path. `scrapeWithRetry()` is unchanged; `hybridScrape()` is the new entry point.
+- Φ25 (2026-06-11): CF Worker added as primary Tanishq fetch path (Singapore edge, 200 in ~400ms). The validation constants (RANGE_MIN, RANGE_MAX, ratio bounds) and parse/validate logic are copied across 3 files: `scraper/scrape.js`, `worker/index.js`, `scraper/dispatch-validate.js`. SYNC CONTRACT: update all 3 together whenever thresholds change.
 - Chronos forecasts can flip direction between consecutive runs. Stochastic sampling. **Addressed in Φ4 (PR #35) with 5-sample majority consensus; T1/T2 gate on direction_consensus ≥ 0.6.**
 
 **Recurring pattern — "computed-but-never-wired" bugs:**
@@ -207,7 +214,7 @@ Prevention going forward: norm #15 (consumer audit), norm #16 (delivery verifica
 | Item | Status |
 |---|---|
 | Lint workflow (ruff + ruff-format + mypy + pytest) | Green on master (commit `cf6fc78`, 2026-05-31). **365 Python tests pass.** |
-| JS tests | Green: 9 pure-function (tests/test_scrape.js) + 4 Playwright fixture DOM (scraper/test_scrape.js) + 16 hardening mock-HTTP (scraper/test_scraper_hardening.mjs) + 9 hybrid-scrape Φ24 (scraper/test_hybrid_scrape.mjs) + 5 comparison cards (tests/test_comparisons.js). |
+| JS tests | Green: 9 pure-function (tests/test_scrape.js) + 4 Playwright fixture DOM (scraper/test_scrape.js) + 16 hardening mock-HTTP (scraper/test_scraper_hardening.mjs) + 9 hybrid-scrape Φ24 (scraper/test_hybrid_scrape.mjs) + 5 comparison cards (tests/test_comparisons.js) + 11 CF Worker Φ25 (worker/test_worker.mjs) + 9 dispatch-validate Φ25 (scraper/test_dispatch_validate.mjs). |
 | check-price.yml | Green on master. 4h cadence. Scraper hardened with 3-attempt retry + CF detection (ADR 016). Calibration-refit step wired (ADR 017). IBJA upsert captures post-PM-fix rates. |
 | scraper-canary.yml | Triggers on PR push to scraper/** paths (live DOM canary guarded to schedule/manual). |
 | weekly-backtest.yml | Green; last run 2026-05-19. |
