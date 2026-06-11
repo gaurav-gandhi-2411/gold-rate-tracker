@@ -1,12 +1,11 @@
 {
-  "slope": null,
-  "intercept": null,
-  "fit_date": "2026-05-19",
-  "n_observations": 21,
-  "residual_std": null,
-  "r_squared": null,
+  "slope": 1.013748272415499,
+  "intercept": 3.200202659085892,
+  "fit_date": "2026-06-11",
+  "n_observations": 30,
+  "residual_std": 106.1845284587364,
+  "r_squared": 0.888721105478065,
   "huber_epsilon": 1.35,
-  "valid": false,
-  "schema_version": 1,
-  "_note": "Stub: 21 IBJA-Tanishq overlap pairs available; 30 required. Refit automatically when overlap reaches 30 (approx 9 more trading days)."
+  "valid": true,
+  "schema_version": 1
 }
