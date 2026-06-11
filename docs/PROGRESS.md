@@ -1909,6 +1909,60 @@ Architectural pivot: single-series IBJA-916-PM forecasting. MCX dropped entirely
 
 **STOP gate:** GG device-verify all 3 banner states + hero bounded-range display before merge.
 
+### Φ25 — Clean-IP Tanishq Fetch via Cloudflare Worker  🔴 IN PROGRESS — 2026-06-11
+
+**Goal:** Restore reliable, near-real-time Tanishq price capture. GitHub Actions runner
+IPs are hard-403'd by Tanishq's CF WAF (requests path 0% success on runner IPs). A CF
+Worker running from Singapore edge returns HTTP 200 with valid prices in ~400ms.
+
+**Deliverables shipped (all on `feat/phi24-hybrid-scrape`, pending PR):**
+- `worker/index.js` — CF Worker: fetch → isCFChallengeHtml → parseGoldRates → validate
+  → repository_dispatch POST. On any failure: log + skip (Playwright fallback handles it).
+- `worker/wrangler.toml` — cron `30 */3 * * *`, GITHUB_OWNER/REPO as vars. No secrets.
+- `worker/test_worker.mjs` — 11 unit tests: valid→dispatch, 403→no-dispatch,
+  CF-body→no-dispatch, missing-span→no-dispatch, out-of-range→no-dispatch,
+  missing-token→no-dispatch.
+- `scraper/dispatch-validate.js` — in-CI payload re-validation before piping to
+  update-and-notify.js. Reads DISPATCH_22K/24K/18K from ENV (injection-safe). Same
+  constants as scrape.js/worker/index.js (sync contract). Exits 0 always; writes JSON
+  to stdout only on valid payload → YAML `[ -s ]` check gates the pipe.
+- `scraper/test_dispatch_validate.mjs` — 9 tests: valid→correct-shape,
+  out-of-range→error, non-numeric→error, missing-key→error, ordering-violated→error,
+  missing-timestamp→fallback, CLI-valid→stdout-JSON, CLI-malformed→stdout-EMPTY.
+- `check-price.yml` — 2 diffs only: (1) `repository_dispatch: types: [tanishq-price]`
+  added to `on:`; (2) scrape step branches on `GH_EVENT_NAME`: dispatch branch uses
+  dispatch-validate.js + ENV-var reading; else-branch is the original Playwright path
+  byte-for-byte unchanged. No step reordered.
+- `docs/CLEAN_IP_FETCH.md` — owner-actionable steps: PAT creation (fine-grained,
+  single-repo, Actions:write only), `wrangler secret put GITHUB_TOKEN`,
+  `wrangler deploy`, verify live dispatch.
+
+**Key design decisions:**
+- Playwright in-CI path KEPT as fallback for missed cycles; scrape.js not modified.
+- Cron offset: Worker `30 */3 * * *` vs CI `0 */3 * * *` (30-min stagger). No concurrent
+  push conflicts. Concurrency group `check-price` + `cancel-in-progress: false` queues
+  any overlap run.
+- Double-fire / drop-alert spam: nil risk. The second run (whichever arrives later)
+  reads prices.json with the first run's newly-written price as `lastEntry`; delta=0;
+  no alert fires. Documented in CLEAN_IP_FETCH.md.
+- Dispatch payload re-validated in CI (addition to spec): a token holder could send
+  malformed client_payload; dispatch-validate.js rejects out-of-range/non-integer values
+  before they reach update-and-notify.js. Prices.json is never polluted.
+- Injection safety: client_payload values read into ENV vars via GitHub Actions `env:`
+  block, consumed by Node.js as `process.env.*` — never shell-interpolated.
+- Token scope: fine-grained PAT, single repo, Actions:write only. Never in repo.
+
+**Test coverage:** 11 Worker + 9 dispatch-validate = 20 new JS tests. All mocked.
+All 38 existing JS tests unchanged and green.
+
+**STOP gate — owner required post-merge:**
+1. Create fine-grained PAT (single repo, Actions:write only).
+2. `cd worker && wrangler secret put GITHUB_TOKEN`.
+3. `wrangler deploy`.
+4. Wait for next Worker cron fire (≤30 min). Confirm CI run triggered as
+   repository_dispatch. Confirm `[dispatch] 22k=... validated OK` in scrape step log.
+   Confirm prices.json has new entry.
+
 ---
 
 ## Decision Log
@@ -1917,3 +1971,5 @@ Architectural pivot: single-series IBJA-916-PM forecasting. MCX dropped entirely
 |------|----------|-----|---------|
 | 2026-06-07 | Capture-now, train-in-a-year (Φ21) | Only ~100 backtestable consecutive pairs available today (adverse bull regime); India-local factors dominate (attribution invalid). 12 months of clean daily PIT data needed before training. | Feature store accumulation begins 2026-06-07. |
 | 2026-06-07 | Labels derived at training time, NOT stored in feature store | Storing next-day pm_916 at capture time embeds a future value, creating look-ahead bias for any row where the next close wasn't yet known at capture. PIT join from ibja_rates.parquet at training time preserves the capture-day "what was known" guarantee. | ibja_rates.parquet continues to accumulate; labels joined at training time. |
+| 2026-06-11 | CF Worker as primary Tanishq fetch path (Φ25) | GitHub Actions runner IPs are hard-403'd by Tanishq CF WAF; requests path 0/8 success in production. CF Worker from Singapore PoP returns HTTP 200 in ~400ms (probe 2026-06-11). Restores near-real-time price capture without changing any CI pipeline logic. | Worker dispatches via repository_dispatch; CI Playwright path retained as fallback for missed cycles. |
+| 2026-06-11 | Cron offset: Worker at `30 */3 * * *`, CI at `0 */3 * * *` | 30-min stagger prevents concurrent git pushes. Concurrency group `check-price` + `cancel-in-progress: false` queues any overlap. Double-fire risk: nil — second run always reads the first run's committed price as baseline (delta=0, no drop alert). | Documented in `docs/CLEAN_IP_FETCH.md`. |
