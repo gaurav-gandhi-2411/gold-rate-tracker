@@ -1,25 +1,5 @@
 [
   {
-    "ts": "2026-05-13T03:57:37.597796+00:00",
-    "target_time": "2026-05-13T00:00:00+00:00",
-    "actual_ts": "2026-05-13T03:57:07.363Z",
-    "actual_22k": 14160.0,
-    "forecast_22k": 14063.0,
-    "residual": 97.0,
-    "model_version": "ensemble-inv-mae",
-    "baseline_mae": 225.65
-  },
-  {
-    "ts": "2026-05-13T08:53:23.190217+00:00",
-    "target_time": "2026-05-14T00:00:00+00:00",
-    "actual_ts": "2026-05-13T08:52:56.003Z",
-    "actual_22k": 14935.0,
-    "forecast_22k": 14176.0,
-    "residual": 759.0,
-    "model_version": "ensemble-inv-mae",
-    "baseline_mae": 225.65
-  },
-  {
     "ts": "2026-05-14T05:08:21.908880+00:00",
     "target_time": "2026-05-14T00:00:00+00:00",
     "actual_ts": "2026-05-14T05:07:49.176Z",
@@ -1341,6 +1321,16 @@
     "actual_22k": 13395.0,
     "forecast_22k": 13395.0,
     "residual": 0.0,
+    "model_version": "naive_flat_hold",
+    "baseline_mae": 252.6
+  },
+  {
+    "ts": "2026-06-12T17:36:35.115339+00:00",
+    "target_time": "2026-06-13T00:00:00+00:00",
+    "actual_ts": "2026-06-12T17:36:15.515Z",
+    "actual_22k": 13665.0,
+    "forecast_22k": 13395.0,
+    "residual": 270.0,
     "model_version": "naive_flat_hold",
     "baseline_mae": 252.6
   }
