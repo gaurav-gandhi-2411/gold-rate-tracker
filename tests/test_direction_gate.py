@@ -6,7 +6,12 @@ and that ship=True is only produced when all conditions hold simultaneously.
 
 from __future__ import annotations
 
-from ml.direction.gate import MIN_OOS_FOLDS, decide_direction_signal
+from ml.direction.gate import (
+    ECE_MAX_PROB,
+    MIN_OOS_FOLDS,
+    decide_direction_signal,
+    decide_timing_signal,
+)
 
 # ---------------------------------------------------------------------------
 # Helpers
@@ -14,7 +19,7 @@ from ml.direction.gate import MIN_OOS_FOLDS, decide_direction_signal
 
 
 def _passing_baseline() -> dict:
-    """Construct a synthetic baseline dict that satisfies all four gates."""
+    """Construct a synthetic baseline dict that satisfies all five gates."""
     return {
         "n_test_folds": 50,  # G1: >= 30
         "logistic_metrics": {
@@ -28,8 +33,25 @@ def _passing_baseline() -> dict:
             "p_value": 0.02,  # G2: significant_at_05 requires p < 0.05
             "significant_at_05": True,  # G2: must be True
             "n_discordant": 20,
+            "ece": 0.04,  # G5: well-calibrated (<= ECE_MAX_PROB)
         },
     }
+
+
+def _timing_passing_baseline() -> dict:
+    """A baseline that passes the probability gate AND the stricter timing gate."""
+    b = _passing_baseline()
+    b["n_test_folds"] = 70  # T1: >= 60
+    b["logistic_metrics"].update(
+        {
+            "accuracy": 0.80,  # T2: edge 0.10 >= 0.05
+            "always_up_accuracy": 0.70,
+            "brier": 0.15,
+            "ece": 0.03,  # T3: <= 0.05
+            "p_value": 0.005,  # T4: < 0.01
+        }
+    )
+    return b
 
 
 # ---------------------------------------------------------------------------
@@ -244,3 +266,91 @@ class TestGateAllPass:
         b4["logistic_metrics"]["accuracy"] = 0.70
         b4["logistic_metrics"]["always_up_accuracy"] = 0.70
         assert decide_direction_signal(b4)["ship"] is False
+
+        # Flip G5 (calibration)
+        b5 = _passing_baseline()
+        b5["logistic_metrics"]["ece"] = ECE_MAX_PROB + 0.01
+        assert decide_direction_signal(b5)["ship"] is False
+
+
+# ---------------------------------------------------------------------------
+# Gate G5: calibration (ECE)
+# ---------------------------------------------------------------------------
+
+
+class TestGateG5Calibration:
+    """G5: ECE must be <= ECE_MAX_PROB to call a probability well-calibrated."""
+
+    def test_missing_ece_key_fails(self) -> None:
+        baseline = _passing_baseline()
+        del baseline["logistic_metrics"]["ece"]
+        result = decide_direction_signal(baseline)
+        assert result["ship"] is False
+        assert "missing logistic_metrics keys" in result["reason"]
+
+    def test_high_ece_fails(self) -> None:
+        baseline = _passing_baseline()
+        baseline["logistic_metrics"]["ece"] = ECE_MAX_PROB + 0.05
+        result = decide_direction_signal(baseline)
+        assert result["ship"] is False
+        assert "calibrated" in result["reason"]
+
+    def test_ece_at_threshold_passes(self) -> None:
+        baseline = _passing_baseline()
+        baseline["logistic_metrics"]["ece"] = ECE_MAX_PROB  # <= boundary
+        result = decide_direction_signal(baseline)
+        assert result["ship"] is True
+
+
+# ---------------------------------------------------------------------------
+# Timing gate (stricter, separate)
+# ---------------------------------------------------------------------------
+
+
+class TestTimingGate:
+    """decide_timing_signal is gated stricter than the probability gate."""
+
+    def test_dark_when_probability_gate_fails(self) -> None:
+        # A baseline that fails the probability gate (not significant) must also
+        # fail timing, with the probability-gate reason surfaced.
+        baseline = _passing_baseline()
+        baseline["logistic_metrics"]["significant_at_05"] = False
+        result = decide_timing_signal(baseline)
+        assert result["ship"] is False
+        assert result["basis"] == "hold_dark"
+        assert "probability gate not passed" in result["reason"]
+
+    def test_dark_when_prob_passes_but_folds_too_few(self) -> None:
+        # Passes probability gate (50 folds >= 30) but below timing's 60-fold bar.
+        baseline = _passing_baseline()  # 50 folds
+        assert decide_direction_signal(baseline)["ship"] is True
+        result = decide_timing_signal(baseline)
+        assert result["ship"] is False
+        assert "insufficient folds" in result["reason"]
+
+    def test_dark_when_edge_too_small(self) -> None:
+        baseline = _timing_passing_baseline()
+        baseline["logistic_metrics"]["accuracy"] = 0.72  # edge 0.02 < 0.05
+        result = decide_timing_signal(baseline)
+        assert result["ship"] is False
+        assert "edge" in result["reason"]
+
+    def test_dark_when_p_too_weak(self) -> None:
+        baseline = _timing_passing_baseline()
+        baseline["logistic_metrics"]["p_value"] = 0.03  # >= 0.01
+        result = decide_timing_signal(baseline)
+        assert result["ship"] is False
+        assert "significance too weak" in result["reason"]
+
+    def test_ships_only_when_all_strict_conditions_hold(self) -> None:
+        baseline = _timing_passing_baseline()
+        result = decide_timing_signal(baseline)
+        assert result["ship"] is True
+        assert result["basis"] == "timing_model"
+
+    def test_timing_strictly_harder_than_probability(self) -> None:
+        # A baseline that ships the probability gate but NOT timing proves the
+        # timing gate is strictly stricter.
+        baseline = _passing_baseline()  # 50 folds, edge 0.05, p=0.02
+        assert decide_direction_signal(baseline)["ship"] is True
+        assert decide_timing_signal(baseline)["ship"] is False

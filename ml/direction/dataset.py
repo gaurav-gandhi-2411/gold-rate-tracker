@@ -1,9 +1,12 @@
 """ml.direction.dataset — build a leak-free directional forecast dataset.
 
 Features come from snapshots.parquet (captured at day t).
-Labels come from the NEXT available IBJA pm_916 entry (day t+1 or later).
-This guarantees no look-ahead leakage: the model only sees information
-that was known at capture time.
+Labels come from IBJA pm_916 entries STRICTLY AFTER the capture date:
+  - h=1 (next trading day)      → label_binary_h1 / label_ternary_h1
+  - h=2 (the day after that)    → label_binary_h2 / label_ternary_h2  (None if absent)
+The unsuffixed columns (label_binary, next_pm916, ...) are retained as h=1
+aliases for backward-compat. Because every label day is strictly after the
+feature-capture date, the dataset is leak-free for either horizon.
 """
 
 from __future__ import annotations
@@ -175,21 +178,36 @@ def build_dataset(
 
         current_pm916 = float(row["ibja_pm_916"])
 
-        # Find next IBJA pm_916 strictly after as_of_date
-        idx = bisect.bisect_right(ibja_dates, as_of)
-        if idx >= len(ibja_dates):
+        # Find the next IBJA pm_916 strictly after as_of_date. idx0 is the h=1
+        # label day (next trading day), idx0+1 is the h=2 label day. Both are
+        # strictly after the feature-capture date → leak-free for either horizon.
+        idx0 = bisect.bisect_right(ibja_dates, as_of)
+        if idx0 >= len(ibja_dates) or pd.isna(ibja_pm916[idx0]):
+            # No h=1 label at all → row is unusable for any horizon.
             n_no_label += 1
             continue
 
-        next_pm916 = ibja_pm916[idx]
-        label_date = ibja_dates[idx]
+        # h=1 (next trading day)
+        next_pm916_h1 = ibja_pm916[idx0]
+        label_date_h1 = ibja_dates[idx0]
+        delta_h1 = (next_pm916_h1 - current_pm916) / 10.0
+        ternary_h1, binary_h1 = make_label(current_pm916, next_pm916_h1, dead_band_per_gram)
 
-        if pd.isna(next_pm916):
-            n_no_label += 1
-            continue
-
-        delta_per_gram = (next_pm916 - current_pm916) / 10.0
-        label_ternary, label_binary = make_label(current_pm916, next_pm916, dead_band_per_gram)
+        # h=2 (the trading day after that). Optional — absent for the last usable
+        # row(s); stored as NaN/None so the h=2 eval can drop them without
+        # affecting the h=1 dataset.
+        next_pm916_h2: float | None = None
+        label_date_h2: str | None = None
+        delta_h2: float | None = None
+        binary_h2: float | None = None
+        ternary_h2_val: str | None = None
+        if idx0 + 1 < len(ibja_dates) and not pd.isna(ibja_pm916[idx0 + 1]):
+            n2 = float(ibja_pm916[idx0 + 1])  # known-float inside this branch
+            next_pm916_h2 = n2
+            label_date_h2 = ibja_dates[idx0 + 1]
+            delta_h2 = (n2 - current_pm916) / 10.0
+            ternary_h2_val, binary_h2_int = make_label(current_pm916, n2, dead_band_per_gram)
+            binary_h2 = float(binary_h2_int)
 
         feature_vals = {col: row[col] for col in FEATURE_COLS}
 
@@ -198,11 +216,23 @@ def build_dataset(
                 "as_of_date": as_of,
                 **feature_vals,
                 "current_pm916": current_pm916,
-                "next_pm916": next_pm916,
-                "delta_per_gram": delta_per_gram,
-                "label_ternary": label_ternary,
-                "label_binary": label_binary,
-                "label_date": label_date,
+                # h=1 (unsuffixed columns retained as h1 for backward-compat)
+                "next_pm916": next_pm916_h1,
+                "delta_per_gram": delta_h1,
+                "label_ternary": ternary_h1,
+                "label_binary": binary_h1,
+                "label_date": label_date_h1,
+                "next_pm916_h1": next_pm916_h1,
+                "delta_per_gram_h1": delta_h1,
+                "label_ternary_h1": ternary_h1,
+                "label_binary_h1": binary_h1,
+                "label_date_h1": label_date_h1,
+                # h=2 (None when unavailable)
+                "next_pm916_h2": next_pm916_h2,
+                "delta_per_gram_h2": delta_h2,
+                "label_ternary_h2": ternary_h2_val,
+                "label_binary_h2": binary_h2,
+                "label_date_h2": label_date_h2,
                 "ibja_pm_916_asof_date": ibja_asof,
                 "n_macro_null": n_macro_null_val,
             }
@@ -220,8 +250,10 @@ def build_dataset(
         print(f"  Excluded (no label): {n_no_label}")
         print(f"  Kept rows         : {len(dataset)}")
         if not dataset.empty:
-            lv = dataset["label_binary"].value_counts().to_dict()
-            print(f"  Label distribution: {lv}")
+            lv = dataset["label_binary_h1"].value_counts().to_dict()
+            n_h2 = int(dataset["label_binary_h2"].notna().sum())
+            print(f"  Label distribution (h1): {lv}")
+            print(f"  Rows with h2 label: {n_h2}")
             print(
                 f"  Date range        : {dataset['as_of_date'].min()} "
                 f"to {dataset['as_of_date'].max()}"

@@ -15,7 +15,12 @@ from ml.direction.dataset import (
     build_dataset,
     make_label,
 )
-from ml.direction.evaluate import MIN_TRAIN_SIZE, append_history, run_walk_forward
+from ml.direction.evaluate import (
+    MIN_TRAIN_SIZE,
+    append_history,
+    compute_calibration,
+    run_walk_forward,
+)
 
 # ---------------------------------------------------------------------------
 # make_label
@@ -222,6 +227,35 @@ class TestBuildDataset:
         expected_delta = (71000.0 - 70000.0) / 10.0
         assert abs(ds.iloc[0]["delta_per_gram"] - expected_delta) < 1e-9
 
+    def test_h1_h2_labels_leak_free_and_correct(self) -> None:
+        """h1 label = next IBJA day, h2 = 2nd-next; both strictly after as_of_date."""
+        snaps_df = _make_snapshots(["2025-01-01"], [70000.0])
+        ibja_df = _make_ibja(
+            ["2025-01-01", "2025-01-02", "2025-01-03"],
+            [70000.0, 71000.0, 69000.0],
+        )
+        ds = build_dataset(snapshots_df=snaps_df, ibja_df=ibja_df)
+        row = ds.iloc[0]
+        # h1: 70000 -> 71000 (up); h2: 70000 -> 69000 (down)
+        assert row["label_binary_h1"] == 1
+        assert row["label_date_h1"] == "2025-01-02"
+        assert row["label_binary_h2"] == 0
+        assert row["label_date_h2"] == "2025-01-03"
+        # unsuffixed columns mirror h1
+        assert row["label_binary"] == row["label_binary_h1"]
+        # leak-free: both label dates strictly after as_of_date
+        assert row["label_date_h1"] > row["as_of_date"]
+        assert row["label_date_h2"] > row["label_date_h1"]
+
+    def test_h2_absent_when_no_second_next_ibja(self) -> None:
+        """When only one future IBJA exists, h2 is None but the row is still kept (h1)."""
+        snaps_df = _make_snapshots(["2025-01-01"], [70000.0])
+        ibja_df = _make_ibja(["2025-01-01", "2025-01-02"], [70000.0, 71000.0])
+        ds = build_dataset(snapshots_df=snaps_df, ibja_df=ibja_df)
+        assert len(ds) == 1
+        assert ds.iloc[0]["label_binary_h1"] == 1
+        assert ds.iloc[0]["label_binary_h2"] is None or pd.isna(ds.iloc[0]["label_binary_h2"])
+
 
 # ---------------------------------------------------------------------------
 # run_walk_forward smoke test
@@ -250,12 +284,16 @@ def _make_synthetic_dataset(n: int = 35, seed: int = 42) -> pd.DataFrame:
                 row[col] = bool(rng.integers(0, 2))
             else:
                 row[col] = float(rng.uniform(0.5, 2.0) * (i + 1))
+        next2_price = next_price + float(rng.integers(-600, 600))
         row["current_pm916"] = price
         row["next_pm916"] = next_price
         row["delta_per_gram"] = (next_price - price) / 10.0
         row["label_binary"] = int(next_price > price)
         row["label_ternary"] = "up" if row["label_binary"] else "down"
         row["label_date"] = f"2025-{((i + 1) // 28) + 1:02d}-{((i + 1) % 28) + 1:02d}"
+        # Explicit per-horizon labels (h1 mirrors the unsuffixed columns).
+        row["label_binary_h1"] = row["label_binary"]
+        row["label_binary_h2"] = int(next2_price > price)
         row["ibja_pm_916_asof_date"] = row["as_of_date"]
         row["n_macro_null"] = 0
         rows.append(row)
@@ -345,32 +383,86 @@ class TestRunWalkForward:
         r2 = run_walk_forward(ds, min_train_size=MIN_TRAIN_SIZE)
         assert r1["logistic_metrics"]["accuracy"] == r2["logistic_metrics"]["accuracy"]
 
+    def test_logistic_metrics_have_ece_and_reliability(self) -> None:
+        """Calibration is the primary metric — ece + reliability must be present."""
+        ds = _make_synthetic_dataset(n=35, seed=42)
+        result = run_walk_forward(ds, min_train_size=MIN_TRAIN_SIZE)
+        lm = result["logistic_metrics"]
+        assert "ece" in lm and 0.0 <= lm["ece"] <= 1.0
+        assert isinstance(lm["reliability"], list)
+
+    def test_h2_horizon_runs_on_h2_labels(self) -> None:
+        """run_walk_forward(label_col='label_binary_h2') evaluates the 2-day horizon."""
+        ds = _make_synthetic_dataset(n=35, seed=42)
+        result = run_walk_forward(ds, min_train_size=MIN_TRAIN_SIZE, label_col="label_binary_h2")
+        assert result["n_test_folds"] > 0
+        assert 0.0 <= result["logistic_metrics"]["accuracy"] <= 1.0
+
+
+class TestCalibration:
+    """compute_calibration — ECE + reliability bins."""
+
+    def test_perfectly_calibrated_low_ece(self) -> None:
+        # Predictions exactly match outcome frequency within each bin → ECE ~ 0.
+        y_prob = [0.0, 0.0, 1.0, 1.0] * 10
+        y_true = [0, 0, 1, 1] * 10
+        ece, bins = compute_calibration(y_true, y_prob)
+        assert ece < 1e-9
+        assert all(b["count"] > 0 for b in bins)
+
+    def test_miscalibrated_high_ece(self) -> None:
+        # Always predicts 0.9 but the truth is 0 → large gap.
+        y_prob = [0.9] * 20
+        y_true = [0] * 20
+        ece, _ = compute_calibration(y_true, y_prob)
+        assert ece > 0.8
+
+    def test_empty_input(self) -> None:
+        ece, bins = compute_calibration([], [])
+        assert ece == 0.0
+        assert bins == []
+
 
 class TestAppendHistory:
-    """append_history writes one compact, parseable record per run."""
+    """append_history writes one compact, parseable per-run record (all horizons)."""
+
+    @staticmethod
+    def _nested_result() -> dict:
+        def _wf(n: int, base: float, acc: float, ece: float) -> dict:
+            return {
+                "n_test_folds": n,
+                "always_up_baseline_accuracy": base,
+                "logistic_metrics": {
+                    "accuracy": acc,
+                    "brier": 0.26,
+                    "ece": ece,
+                    "p_value": 0.42,
+                    "significant_at_05": False,
+                },
+                "probability_gate": {"ship": False, "basis": "base_rate_fallback"},
+                "timing_gate": {"ship": False, "basis": "hold_dark"},
+            }
+
+        return {
+            "generated_at_utc": "2026-06-13T00:00:00+00:00",
+            "as_of_date_range": "2025-01-09 to 2026-06-05",
+            "horizons": {
+                "h1": _wf(93, 0.5376, 0.4946, 0.1208),
+                "h2": _wf(92, 0.6196, 0.6087, 0.0864),
+            },
+        }
 
     def test_appends_one_record_per_call(self, tmp_path) -> None:
         path = tmp_path / "history.jsonl"
-        result = {
-            "generated_at_utc": "2026-06-13T00:00:00+00:00",
-            "as_of_date_range": "2025-01-09 to 2026-06-05",
-            "n_test_folds": 93,
-            "always_up_baseline_accuracy": 0.5376,
-            "logistic_metrics": {
-                "accuracy": 0.4946,
-                "brier": 0.2668,
-                "p_value": 0.42,
-                "significant_at_05": False,
-            },
-            "lightgbm_metrics": {"accuracy": 0.5269},
-        }
-        verdict = {"ship": False, "basis": "base_rate_fallback"}
-        append_history(result, verdict, path=path)
-        append_history(result, verdict, path=path)
+        result = self._nested_result()
+        append_history(result, path=path)
+        append_history(result, path=path)
         lines = path.read_text(encoding="utf-8").strip().splitlines()
         assert len(lines) == 2, "each call appends exactly one record"
         rec = json.loads(lines[0])
-        assert rec["n_test_folds"] == 93
-        assert rec["logistic_accuracy"] == 0.4946
-        assert rec["ship"] is False
-        assert rec["basis"] == "base_rate_fallback"
+        assert rec["h1_n_folds"] == 93
+        assert rec["h2_n_folds"] == 92
+        assert rec["h1_logistic_acc"] == 0.4946
+        assert rec["h2_logistic_ece"] == 0.0864
+        assert rec["h1_prob_ship"] is False
+        assert rec["h2_timing_ship"] is False

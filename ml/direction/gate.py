@@ -1,15 +1,21 @@
-"""ml.direction.gate — product gate for the directional forecast signal.
+"""ml.direction.gate — product gates for the directional forecast signal.
 
-This is the load-bearing decision function that controls whether a calibrated
-direction probability is ever shown to users in the gold-rate-tracker UI.
+Two independent, load-bearing decisions, BOTH DARK until earned:
 
-The signal stays DARK unless ALL four OOS conditions hold simultaneously:
-  1. Sufficient OOS folds (n_test_folds >= 30)
-  2. Statistical significance (significant_at_05 == True)
-  3. Model Brier score < always-up Brier score
-  4. Model accuracy > always-up accuracy
+decide_direction_signal — may a calibrated direction probability ("58% up
+  tomorrow") be shown? Ships only when ALL hold:
+    1. Sufficient OOS folds (n_test_folds >= 30)
+    2. Statistical significance (significant_at_05 == True)
+    3. Model Brier < always-up Brier
+    4. Model accuracy > always-up accuracy
+    5. Well-calibrated (ECE <= ECE_MAX_PROB) — calibration is the primary quality bar
 
-See ADR 019 for the rationale.
+decide_timing_signal — may a buy/wait/sell timing signal be shown? It implies an
+  ACTION, so it is gated STRICTER: the probability gate must pass AND a higher
+  fold count, a meaningful accuracy edge, tighter calibration, and stronger
+  significance must all hold.
+
+See ADR 019 for the rationale (no signal that fails its baseline ships).
 """
 
 from __future__ import annotations
@@ -21,8 +27,18 @@ from ml.direction.dataset import DATA_DIR
 
 BASELINE_JSON: Path = DATA_DIR / "direction_baseline.json"
 
-# Required number of OOS test folds before the gate considers shipping
+# --- Probability gate thresholds ------------------------------------------------
 MIN_OOS_FOLDS: int = 30
+# Max Expected Calibration Error to call a probability "well-calibrated". With ~100
+# folds ECE is noisy; 0.10 is a permissive bar (a probability off by >10pp on
+# average is not honest to show).
+ECE_MAX_PROB: float = 0.10
+
+# --- Timing gate thresholds (stricter — a buy/wait/sell signal implies action) --
+TIMING_MIN_OOS_FOLDS: int = 60
+TIMING_MIN_ACC_EDGE: float = 0.05  # accuracy must beat base rate by >= 5pp
+TIMING_MAX_ECE: float = 0.05
+TIMING_MAX_P: float = 0.01
 
 # Keys that must be present in the logistic_metrics block
 _REQUIRED_LOGISTIC_KEYS: frozenset[str] = frozenset(
@@ -33,6 +49,7 @@ _REQUIRED_LOGISTIC_KEYS: frozenset[str] = frozenset(
         "always_up_accuracy",
         "always_up_brier",
         "significant_at_05",
+        "ece",
     }
 )
 
@@ -140,6 +157,15 @@ def decide_direction_signal(baseline: dict | None) -> dict:
             "reason": (f"model accuracy {acc:.4f} <= always-up accuracy {always_up_acc:.4f}"),
         }
 
+    # G5 — calibration (primary quality bar)
+    ece = float(logistic["ece"])
+    if ece > ECE_MAX_PROB:
+        return {
+            "ship": False,
+            "basis": "base_rate_fallback",
+            "reason": f"poorly calibrated: ECE {ece:.4f} > {ECE_MAX_PROB}",
+        }
+
     # All gates pass
     return {
         "ship": True,
@@ -148,7 +174,75 @@ def decide_direction_signal(baseline: dict | None) -> dict:
             f"logistic beats always-up OOS: "
             f"acc {acc:.4f}>{always_up_acc:.4f}, "
             f"brier {brier:.4f}<{always_up_brier:.4f}, "
+            f"ECE {ece:.4f}<={ECE_MAX_PROB}, "
             f"p={p_value:.4f} over {n_folds} folds"
+        ),
+    }
+
+
+def decide_timing_signal(baseline: dict | None) -> dict:
+    """Decide whether a buy/wait/sell TIMING signal may be shown to users.
+
+    A timing signal implies an action, so it is gated STRICTER than the
+    probability gate. PURE function. Ships only when the probability gate passes
+    AND all of:
+      T1: n_test_folds >= TIMING_MIN_OOS_FOLDS (60)
+      T2: accuracy - always_up_accuracy >= TIMING_MIN_ACC_EDGE (5pp)
+      T3: ece <= TIMING_MAX_ECE (0.05)
+      T4: p_value < TIMING_MAX_P (0.01)
+
+    Returns {ship, basis ("timing_model" | "hold_dark"), reason}.
+    """
+    prob = decide_direction_signal(baseline)
+    if not prob["ship"]:
+        return {
+            "ship": False,
+            "basis": "hold_dark",
+            "reason": f"probability gate not passed ({prob['reason']})",
+        }
+
+    # baseline/logistic are valid here (probability gate already passed).
+    assert baseline is not None
+    logistic = baseline["logistic_metrics"]
+    n_folds = int(baseline["n_test_folds"])
+    acc = float(logistic["accuracy"])
+    always_up_acc = float(logistic["always_up_accuracy"])
+    ece = float(logistic["ece"])
+    p_value = float(logistic.get("p_value", 1.0))
+
+    if n_folds < TIMING_MIN_OOS_FOLDS:
+        return {
+            "ship": False,
+            "basis": "hold_dark",
+            "reason": f"insufficient folds for an actionable signal: {n_folds} < {TIMING_MIN_OOS_FOLDS}",
+        }
+    edge = acc - always_up_acc
+    if edge < TIMING_MIN_ACC_EDGE:
+        return {
+            "ship": False,
+            "basis": "hold_dark",
+            "reason": f"accuracy edge {edge:.4f} < required {TIMING_MIN_ACC_EDGE}",
+        }
+    if ece > TIMING_MAX_ECE:
+        return {
+            "ship": False,
+            "basis": "hold_dark",
+            "reason": f"calibration too loose for action: ECE {ece:.4f} > {TIMING_MAX_ECE}",
+        }
+    if p_value >= TIMING_MAX_P:
+        return {
+            "ship": False,
+            "basis": "hold_dark",
+            "reason": f"significance too weak for action: p={p_value:.4f} >= {TIMING_MAX_P}",
+        }
+
+    return {
+        "ship": True,
+        "basis": "timing_model",
+        "reason": (
+            f"timing signal earned: edge {edge:.4f}>={TIMING_MIN_ACC_EDGE}, "
+            f"ECE {ece:.4f}<={TIMING_MAX_ECE}, p={p_value:.4f}<{TIMING_MAX_P}, "
+            f"{n_folds} folds"
         ),
     }
 
