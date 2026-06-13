@@ -32,14 +32,26 @@ describe("validateDispatchPayload", () => {
     assert.equal(r.reading.timestamp, "2026-06-11T12:00:00.000Z");
   });
 
-  it("valid env → reading keys match scrape output shape", () => {
+  it("valid env → reading keys match scrape output shape (incl. source)", () => {
     const r = validateDispatchPayload({
       DISPATCH_22K: "14010",
       DISPATCH_24K: "15284",
       DISPATCH_18K: "11463",
       DISPATCH_TIMESTAMP: "2026-06-11T12:00:00.000Z",
     });
-    assert.deepEqual(Object.keys(r.reading).sort(), ["18k", "22k", "24k", "timestamp"]);
+    // scrape.js entries carry a `source`; the dispatch reading does too, so the
+    // appended prices.json shapes match and origin is explicit.
+    assert.deepEqual(Object.keys(r.reading).sort(), ["18k", "22k", "24k", "source", "timestamp"]);
+  });
+
+  it("valid env → reading is tagged source=repository_dispatch", () => {
+    const r = validateDispatchPayload({
+      DISPATCH_22K: "14010",
+      DISPATCH_24K: "15284",
+      DISPATCH_18K: "11463",
+      DISPATCH_TIMESTAMP: "2026-06-11T12:00:00.000Z",
+    });
+    assert.equal(r.reading.source, "repository_dispatch");
   });
 
   it("22k out-of-range → error, no reading", () => {
@@ -117,6 +129,7 @@ describe("CLI", () => {
     assert.equal(output["24k"], 15284);
     assert.equal(output["18k"], 11463);
     assert.equal(output.timestamp, "2026-06-11T12:00:00.000Z");
+    assert.equal(output.source, "repository_dispatch");
   });
 
   it("malformed payload (out-of-range 22k) → stdout EMPTY, exit 0 — no prices.json write", () => {

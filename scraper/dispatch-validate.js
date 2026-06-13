@@ -34,12 +34,16 @@ const RATIO_18_24_MAX = 0.77;
  * the provided env object (typically process.env).  Applies the same range,
  * ordering, and ratio checks as scrape.js validate().
  *
- * Returns { reading: { timestamp, "22k", "24k", "18k" } } on success.
+ * Returns { reading: { timestamp, "22k", "24k", "18k", source } } on success.
  * Returns { error: "descriptive message" } on any failure.
  * Never throws.
  *
+ * The reading carries source: "repository_dispatch" so the appended prices.json
+ * entry self-documents its origin (vs scrape.js entries, whose source is the
+ * Tanishq URL). Consumers such as the feature store can distinguish the path.
+ *
  * @param {Record<string, string | undefined>} env
- * @returns {{ reading: { timestamp: string, "22k": number, "24k": number, "18k": number } } | { error: string }}
+ * @returns {{ reading: { timestamp: string, "22k": number, "24k": number, "18k": number, source: string } } | { error: string }}
  */
 export function validateDispatchPayload(env) {
   const r22 = parseInt(env.DISPATCH_22K, 10);
@@ -63,7 +67,9 @@ export function validateDispatchPayload(env) {
   if (r18_24 < RATIO_18_24_MIN || r18_24 > RATIO_18_24_MAX) {
     return { error: `18k/24k ratio ${r18_24.toFixed(4)} outside [${RATIO_18_24_MIN}, ${RATIO_18_24_MAX}]` };
   }
-  return { reading: { timestamp: ts, "22k": r22, "24k": r24, "18k": r18 } };
+  return {
+    reading: { timestamp: ts, "22k": r22, "24k": r24, "18k": r18, source: "repository_dispatch" },
+  };
 }
 
 // ── Entry point ───────────────────────────────────────────────────────────────
