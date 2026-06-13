@@ -44,3 +44,27 @@ jobs:
             --ignore=tests/test_tuning.py \
             -m "not integration" \
             tests/ -v
+
+  # PWA pure-function JS tests (app.js logic: comparisons, dedup, good-price,
+  # scrape parsing, stale-banner, trend). These existed under tests/*.js but ran
+  # in NO workflow — scraper-canary.yml only covers scraper/** and worker/**.
+  # This job closes that gap so app.js logic is gated on every push/PR.
+  # Dep-free (node builtins + inlined functions); no npm install needed.
+  # test_stale_banner_headless.js is intentionally excluded — it needs Playwright
+  # (imports scraper/node_modules/playwright); tracked as a follow-up.
+  pwa-js:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-node@v6
+        with:
+          node-version: "20"
+      - name: Run PWA pure-function tests
+        run: |
+          node --test \
+            tests/test_comparisons.js \
+            tests/test_dedup.js \
+            tests/test_good_price.js \
+            tests/test_scrape.js \
+            tests/test_stale_banner.js \
+            tests/test_trend.js
