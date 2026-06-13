@@ -53,7 +53,7 @@ Until you replace the DSN, errors are logged to the browser console only (Sentry
 
 1. Fork / create a public repo. Upload all files.
 2. **Settings → Secrets → Actions → New secret:**
-   - `NTFY_TOPIC` — your ntfy.sh topic (treat like a password; e.g. `gold-gaurav-7k2x9p4r`)
+   - `NTFY_TOPIC` — your OWN ntfy.sh topic. Treat it like a password: pick a long random string nobody can guess (e.g. `gold-<yourname>-<random-suffix>`). Anyone who knows the topic can publish notifications to it.
    - `GROQ_API_KEY` — from [console.groq.com](https://console.groq.com) (free tier)
 3. **Actions → Check Gold Price → Run workflow** (manual trigger, wait ~2 min).
 4. **Settings → Pages → Deploy from branch → master → / (root).**
