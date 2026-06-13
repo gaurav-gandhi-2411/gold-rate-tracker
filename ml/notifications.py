@@ -309,7 +309,11 @@ def _check_t1(
     if abs(mom_pct) < 0.5:
         logger.debug("T1 suppressed: momentum %.3f%% below 0.5%% threshold", mom_pct)
         return None
-    current = prices[-1]["22k"] if prices else 0
+    # Read the latest reading by timestamp (not array order) and coerce to int —
+    # matches T3/T8/T9 so the body never shows "Rs.14420.0" or a stale reading
+    # if prices.json is ever out of order.
+    sorted_p = sorted(prices, key=lambda p: p["timestamp"])
+    current = int(sorted_p[-1]["22k"]) if sorted_p else 0
     abs_mom = abs(mom_pct)
     title = "Gold: 22K prices are down this week"
     body = (
@@ -348,7 +352,10 @@ def _check_t2(
     if abs(mom_pct) < 0.5:
         logger.debug("T2 suppressed: momentum %.3f%% below 0.5%% threshold", mom_pct)
         return None
-    current = prices[-1]["22k"] if prices else 0
+    # Read the latest reading by timestamp (not array order) and coerce to int —
+    # matches T3/T8/T9 (see T1).
+    sorted_p = sorted(prices, key=lambda p: p["timestamp"])
+    current = int(sorted_p[-1]["22k"]) if sorted_p else 0
     title = "Gold: 22K prices are up this week"
     body = (
         f"Gold 22K: Rs.{current}. "
