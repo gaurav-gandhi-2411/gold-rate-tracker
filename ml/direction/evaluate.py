@@ -46,12 +46,61 @@ HISTORY_JSONL: Path = DATA_DIR / "direction_eval_history.jsonl"
 # ---------------------------------------------------------------------------
 
 
+def compute_calibration(
+    y_true: list[int],
+    y_prob: list[float],
+    n_bins: int = 10,
+) -> tuple[float, list[dict]]:
+    """Expected Calibration Error (ECE) + reliability bins.
+
+    Calibration is the PRIMARY quality metric: a well-calibrated probability
+    ("58% up") is honest and useful even when its 0.5-threshold accuracy only
+    matches the base rate. ECE is the count-weighted mean gap between predicted
+    confidence and observed frequency across equal-width probability bins.
+
+    Returns (ece, reliability_bins) where each bin is
+    {lo, hi, mean_pred, frac_pos, count}. Empty bins are omitted from the list
+    but contribute 0 to ECE (their weight is 0).
+
+    NOTE: with ~100 folds ECE is itself noisy; treat it as directional, not exact.
+    """
+    arr_true = np.asarray(y_true, dtype=float)
+    arr_prob = np.asarray(y_prob, dtype=float)
+    n = len(arr_true)
+    if n == 0:
+        return 0.0, []
+
+    edges = np.linspace(0.0, 1.0, n_bins + 1)
+    ece = 0.0
+    bins: list[dict] = []
+    for b in range(n_bins):
+        lo, hi = edges[b], edges[b + 1]
+        # Last bin is closed on the right so p==1.0 lands somewhere.
+        in_bin = (arr_prob >= lo) & (arr_prob < hi) if b < n_bins - 1 else (arr_prob >= lo)
+        count = int(in_bin.sum())
+        if count == 0:
+            continue
+        mean_pred = float(arr_prob[in_bin].mean())
+        frac_pos = float(arr_true[in_bin].mean())
+        ece += (count / n) * abs(mean_pred - frac_pos)
+        bins.append(
+            {
+                "lo": round(lo, 2),
+                "hi": round(hi, 2),
+                "mean_pred": round(mean_pred, 4),
+                "frac_pos": round(frac_pos, 4),
+                "count": count,
+            }
+        )
+    return float(ece), bins
+
+
 def compute_direction_metrics(
     y_true: list[int],
     y_prob: list[float],
     model_name: str,
 ) -> dict:
-    """Compute classification metrics and compare against always-up baseline.
+    """Compute classification + calibration metrics vs the always-up baseline.
 
     Args:
         y_true: Ground-truth binary labels (1 = up, 0 = not-up).
@@ -60,8 +109,8 @@ def compute_direction_metrics(
 
     Returns:
         Dict containing: model, n, accuracy, brier, log_loss,
-        always_up_accuracy, always_up_brier, p_value,
-        significant_at_05, n_discordant.
+        always_up_accuracy, always_up_brier, p_value, significant_at_05,
+        n_discordant, ece, reliability.
     """
     arr_true = np.asarray(y_true, dtype=float)
     arr_prob = np.asarray(y_prob, dtype=float)
@@ -113,6 +162,8 @@ def compute_direction_metrics(
 
     significant_at_05: bool = (p_value < 0.05) and (accuracy > always_up_accuracy)
 
+    ece, reliability = compute_calibration(y_true, y_prob)
+
     return {
         "model": model_name,
         "n": n,
@@ -124,6 +175,8 @@ def compute_direction_metrics(
         "p_value": p_value,
         "significant_at_05": significant_at_05,
         "n_discordant": n_discordant,
+        "ece": ece,
+        "reliability": reliability,
     }
 
 
@@ -208,6 +261,8 @@ def _flatten_metrics(metrics_dict: dict) -> dict:
         "p_value": metrics_dict["p_value"],
         "significant_at_05": metrics_dict["significant_at_05"],
         "n_discordant": metrics_dict["n_discordant"],
+        "ece": metrics_dict["ece"],
+        "reliability": metrics_dict["reliability"],
     }
 
 
@@ -228,6 +283,7 @@ def _print_summary(result: dict) -> None:
         print(f"  [{m['model']}]")
         print(f"    accuracy  : {m['accuracy']:.4f}  (baseline: {m['always_up_accuracy']:.4f})")
         print(f"    brier     : {m['brier']:.4f}  (baseline brier: {m['always_up_brier']:.4f})")
+        print(f"    ECE       : {m.get('ece', float('nan')):.4f}  (calibration — lower is better)")
         print(f"    log_loss  : {m['log_loss']:.4f}")
         print(f"    p_value   : {m['p_value']:.4f}  significant@0.05: {m['significant_at_05']}")
         print(f"    n_discordant: {m['n_discordant']}")
@@ -255,13 +311,14 @@ def run_walk_forward(
     min_train_size: int = MIN_TRAIN_SIZE,
     calibration_method: str = "sigmoid",
     verbose: bool = False,
+    label_col: str = "label_binary",
 ) -> dict:
-    """Run an expanding-window walk-forward evaluation.
+    """Run an expanding-window walk-forward evaluation for one horizon.
 
     For each test index i starting at min_train_size, train on rows [0:i]
     and predict for row i.  Aggregates per-fold predictions and computes
     OOS metrics for logistic regression, LightGBM, and a persistence
-    baseline (prev day's label).
+    baseline (prev row's label).
 
     Args:
         dataset: Output of build_dataset(); must be sorted by as_of_date.
@@ -269,11 +326,17 @@ def run_walk_forward(
         min_train_size: Minimum training rows before first test fold.
         calibration_method: Calibration method for logistic ("sigmoid" / "isotonic").
         verbose: If True, print fold progress.
+        label_col: Binary label column for the horizon under test
+            ("label_binary"/"label_binary_h1" for h=1, "label_binary_h2" for h=2).
+            Rows with a missing (NaN) label for this horizon are dropped first.
 
     Returns:
         Nested dict with OOS metrics, feature importances, and metadata.
     """
     dataset = dataset.sort_values("as_of_date").reset_index(drop=True)
+    # Drop rows that have no label for THIS horizon (e.g. the last row for h=2).
+    if label_col in dataset.columns:
+        dataset = dataset[dataset[label_col].notna()].reset_index(drop=True)
     n = len(dataset)
 
     y_true_all: list[int] = []
@@ -289,7 +352,7 @@ def run_walk_forward(
         train_df = dataset.iloc[:i]
         test_row = dataset.iloc[i]
 
-        y_train = train_df["label_binary"].tolist()
+        y_train = train_df[label_col].astype(int).tolist()
 
         # Skip fold if only one class in training labels
         if len(set(y_train)) < 2:
@@ -319,11 +382,11 @@ def run_walk_forward(
         else:
             lgbm_prob = 0.5  # neutral fallback
 
-        # Persistence baseline: previous row's binary label
-        prev_lbl = int(dataset.iloc[i - 1]["label_binary"]) if i > 0 else 1
+        # Persistence baseline: previous row's binary label (same horizon)
+        prev_lbl = int(dataset.iloc[i - 1][label_col]) if i > 0 else 1
         prev_label_prob = float(prev_lbl)
 
-        y_true_all.append(int(test_row["label_binary"]))
+        y_true_all.append(int(test_row[label_col]))
         log_prob_all.append(log_prob)
         lgbm_prob_all.append(lgbm_prob)
         prev_label_all.append(prev_label_prob)
@@ -337,9 +400,7 @@ def run_walk_forward(
             lgbm_fi_list.append(lgbm_fi)
 
         if verbose and (i - min_train_size) % 10 == 0:
-            print(
-                f"  fold {i}/{n - 1}  log_prob={log_prob:.3f}  y_true={int(test_row['label_binary'])}"
-            )
+            print(f"  fold {i}/{n - 1}  log_prob={log_prob:.3f}  y_true={int(test_row[label_col])}")
 
     n_test_folds = len(y_true_all)
     always_up_baseline_accuracy = float(np.mean(y_true_all)) if y_true_all else 0.0
@@ -384,32 +445,38 @@ def run_walk_forward(
 # ---------------------------------------------------------------------------
 
 
-def append_history(result: dict, gate_verdict: dict, path: Path = HISTORY_JSONL) -> None:
-    """Append one compact measurement record to the append-only history log."""
-    log = result.get("logistic_metrics", {})
-    lgbm = result.get("lightgbm_metrics", {})
-    record = {
+# Per-horizon label columns evaluated by main().
+HORIZONS: tuple[tuple[str, str], ...] = (
+    ("h1", "label_binary_h1"),
+    ("h2", "label_binary_h2"),
+)
+
+
+def append_history(result: dict, path: Path = HISTORY_JSONL) -> None:
+    """Append one compact per-run record (all horizons) to the history log."""
+    record: dict = {
         "generated_at_utc": result.get("generated_at_utc"),
         "as_of_date_range": result.get("as_of_date_range"),
-        "n_test_folds": result.get("n_test_folds"),
-        "always_up_baseline_accuracy": result.get("always_up_baseline_accuracy"),
-        "logistic_accuracy": log.get("accuracy"),
-        "logistic_brier": log.get("brier"),
-        "logistic_p_value": log.get("p_value"),
-        "logistic_significant_at_05": log.get("significant_at_05"),
-        "lightgbm_accuracy": lgbm.get("accuracy"),
-        "ship": gate_verdict.get("ship"),
-        "basis": gate_verdict.get("basis"),
     }
+    for hkey, wf in result.get("horizons", {}).items():
+        log = wf.get("logistic_metrics", {})
+        record[f"{hkey}_n_folds"] = wf.get("n_test_folds")
+        record[f"{hkey}_base_rate"] = wf.get("always_up_baseline_accuracy")
+        record[f"{hkey}_logistic_acc"] = log.get("accuracy")
+        record[f"{hkey}_logistic_brier"] = log.get("brier")
+        record[f"{hkey}_logistic_ece"] = log.get("ece")
+        record[f"{hkey}_logistic_p"] = log.get("p_value")
+        record[f"{hkey}_prob_ship"] = wf.get("probability_gate", {}).get("ship")
+        record[f"{hkey}_timing_ship"] = wf.get("timing_gate", {}).get("ship")
     path.parent.mkdir(parents=True, exist_ok=True)
     with path.open("a", encoding="utf-8") as f:
         f.write(json.dumps(record) + "\n")
 
 
 def main() -> None:
-    """Build dataset, run walk-forward eval, write JSON + history, print summary."""
+    """Build dataset, run per-horizon walk-forward eval, write JSON + history."""
     # Imported here (not at module top) to keep the gate's import graph one-directional.
-    from ml.direction.gate import decide_direction_signal
+    from ml.direction.gate import decide_direction_signal, decide_timing_signal
 
     dataset = build_dataset(verbose=True)
 
@@ -417,20 +484,32 @@ def main() -> None:
         print(f"Dataset too small ({len(dataset)} rows). Need at least {MIN_TRAIN_SIZE + 1}")
         return
 
-    result = run_walk_forward(dataset, verbose=False)
+    horizons: dict[str, dict] = {}
+    for hkey, label_col in HORIZONS:
+        wf = run_walk_forward(dataset, label_col=label_col)
+        wf["horizon"] = hkey
+        # Two independent gates, both DARK until earned (see ml/direction/gate.py).
+        wf["probability_gate"] = decide_direction_signal(wf)
+        wf["timing_gate"] = decide_timing_signal(wf)
+        horizons[hkey] = wf
 
-    # Embed the ship/dark verdict in the artifact so consumers read it directly
-    # rather than re-deriving the gate logic.
-    gate_verdict = decide_direction_signal(result)
-    result["gate"] = gate_verdict
+        print(f"\n========== horizon {hkey} ==========")
+        _print_summary(wf)
+        pg, tg = wf["probability_gate"], wf["timing_gate"]
+        print(f"  probability_gate: ship={pg['ship']} — {pg['reason']}")
+        print(f"  timing_gate:      ship={tg['ship']} — {tg['reason']}")
 
-    _print_summary(result)
-    print(f"\nGate verdict: ship={gate_verdict['ship']} basis={gate_verdict['basis']}")
-    print(f"  reason: {gate_verdict['reason']}")
+    result = {
+        "schema_version": 2,
+        "generated_at_utc": horizons["h1"]["generated_at_utc"],
+        "as_of_date_range": horizons["h1"]["as_of_date_range"],
+        "min_train_size": MIN_TRAIN_SIZE,
+        "horizons": horizons,
+    }
 
     BASELINE_JSON.parent.mkdir(parents=True, exist_ok=True)
     BASELINE_JSON.write_text(json.dumps(result, indent=2) + "\n", encoding="utf-8")
-    append_history(result, gate_verdict)
+    append_history(result)
     print(f"\nWrote {BASELINE_JSON}")
     print(f"Appended measurement to {HISTORY_JSONL}")
 
