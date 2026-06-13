@@ -292,6 +292,74 @@ def test_t1_fires_regardless_of_probe_majority():
     assert len(t1) == 1, "T1 must fire on momentum regardless of probe majority_direction"
 
 
+def _prices_down_unordered_float_latest() -> list[dict]:
+    """Descending 7d series where the newest reading (by timestamp) is a float and
+    is NOT the last element of the array — exercises the sort + int-coerce fix."""
+    base_ts = datetime(2026, 5, 10, 10, 0, 0, tzinfo=UTC)
+    prices = [
+        {
+            "timestamp": (base_ts + timedelta(days=i)).isoformat().replace("+00:00", "Z"),
+            "22k": 14500 - i * 100,
+            "24k": 14500 - i * 100 + 500,
+            "18k": 14500 - i * 100 - 500,
+            "source": "test",
+        }
+        for i in range(10)
+    ]
+    prices[-1]["22k"] = 13600.0  # newest (day 9) is a float
+    newest = prices.pop()  # remove day 9 from the end ...
+    prices.insert(0, newest)  # ... and put it first, so prices[-1] is NOT the latest
+    return prices
+
+
+def test_t1_current_price_is_int_and_latest_by_timestamp():
+    """T1 body shows the int latest-by-timestamp price (Rs.13600), not the unsorted
+    array tail (Rs.13700) and not a float (Rs.13600.0)."""
+    alerts = check_triggers(
+        _forecast(warmup=False),
+        _probe(),  # status success, flat — T1 is momentum-driven
+        _prices_down_unordered_float_latest(),
+        _backtest_accurate(30),
+        NotificationState(),
+        _ist(2026, 5, 19, 14, 0),
+    )
+    t1 = [a for a in alerts if a.trigger_id == "T1"]
+    assert len(t1) == 1, "T1 must fire on the down momentum"
+    assert "Rs.13600.0" not in t1[0].body, "must not render a float (Rs.13600.0)"
+    assert "Rs.13600" in t1[0].body, "must show the int latest-by-timestamp price"
+    assert "Rs.13700" not in t1[0].body, "must not show the unsorted array-tail reading"
+
+
+def test_t2_current_price_is_int_and_latest_by_timestamp():
+    """T2 mirror of the T1 sort+int regression (ascending series)."""
+    base_ts = datetime(2026, 5, 10, 10, 0, 0, tzinfo=UTC)
+    prices = [
+        {
+            "timestamp": (base_ts + timedelta(days=i)).isoformat().replace("+00:00", "Z"),
+            "22k": 13500 + i * 100,
+            "24k": 13500 + i * 100 + 500,
+            "18k": 13500 + i * 100 - 500,
+            "source": "test",
+        }
+        for i in range(10)
+    ]
+    prices[-1]["22k"] = 14400.0  # newest is a float
+    newest = prices.pop()
+    prices.insert(0, newest)  # out of order
+    alerts = check_triggers(
+        _forecast(warmup=False),
+        _probe(),
+        prices,
+        _backtest_accurate(30),
+        NotificationState(),
+        _ist(2026, 5, 19, 14, 0),
+    )
+    t2 = [a for a in alerts if a.trigger_id == "T2"]
+    assert len(t2) == 1, "T2 must fire on the up momentum"
+    assert "Rs.14400.0" not in t2[0].body, "must not render a float (Rs.14400.0)"
+    assert "Rs.14400" in t2[0].body, "must show the int latest-by-timestamp price"
+
+
 def test_t1_cooldown_blocks_second_call():
     forecast = _forecast(warmup=False)
     probe = _probe_down(strength_pct=1.0)
