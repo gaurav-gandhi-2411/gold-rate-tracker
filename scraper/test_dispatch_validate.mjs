@@ -98,6 +98,21 @@ describe("validateDispatchPayload", () => {
     assert.ok(!r.reading);
   });
 
+  it("ratio violated (in-range + ordered but wrong purity ratio) → error, no reading", () => {
+    // 13000 < 14000 < 24000 (ordering OK), all within [2000, 25000] (range OK),
+    // but 22k/24k = 0.583 is far outside [0.905, 0.925]. This is the garbage-but-
+    // plausible payload that range+ordering checks alone would let through.
+    const r = validateDispatchPayload({
+      DISPATCH_22K: "14000",
+      DISPATCH_24K: "24000",
+      DISPATCH_18K: "13000",
+      DISPATCH_TIMESTAMP: "2026-06-13T12:00:00.000Z",
+    });
+    assert.ok(r.error, "ratio violation must be rejected");
+    assert.match(r.error, /ratio/);
+    assert.ok(!r.reading);
+  });
+
   it("missing DISPATCH_TIMESTAMP → uses fallback timestamp", () => {
     const r = validateDispatchPayload({
       DISPATCH_22K: "14010",
