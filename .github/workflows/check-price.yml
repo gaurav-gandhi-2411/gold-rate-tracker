@@ -62,8 +62,9 @@ jobs:
         working-directory: scraper
         continue-on-error: true
         env:
-          NTFY_TOPIC: ${{ secrets.NTFY_TOPIC }}
-          DROP_THRESHOLD: "100"
+          # NTFY_TOPIC/DROP_THRESHOLD removed: update-and-notify.js no longer sends
+          # the drop-alert (retired in favour of T3 in ml/notifications.py). This
+          # step only appends the reading; the notifications step does the alerting.
           GH_EVENT_NAME: ${{ github.event_name }}
           DISPATCH_22K: ${{ github.event.client_payload['22k'] }}
           DISPATCH_24K: ${{ github.event.client_payload['24k'] }}

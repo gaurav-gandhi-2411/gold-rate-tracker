@@ -60,10 +60,6 @@ jobs:
         working-directory: scraper
         run: node --test test_dispatch_validate.mjs
 
-      - name: Run update-and-notify decision tests (pure, no disk/network)
-        working-directory: scraper
-        run: node --test test_update_and_notify.mjs
-
       - name: Run Worker unit tests (mock fetch, no live network, Φ25)
         working-directory: worker
         run: node --test test_worker.mjs
