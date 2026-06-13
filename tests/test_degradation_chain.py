@@ -76,7 +76,12 @@ def _backtest(n_folds: int = 35) -> dict:
                 "naive": [base] * 5,
             }
         )
-    return {"n_folds": n_folds, "mae_5d_avg_naive": 249.5, "mae_5d_avg_chronos": 275.0, "folds": folds}
+    return {
+        "n_folds": n_folds,
+        "mae_5d_avg_naive": 249.5,
+        "mae_5d_avg_chronos": 275.0,
+        "folds": folds,
+    }
 
 
 def _probe_flat(last: float = 14000.0) -> dict:
@@ -95,7 +100,9 @@ def _probe_flat(last: float = 14000.0) -> dict:
     }
 
 
-def _write_inputs(tmp_path, prices: list[dict], calibration: dict, ibja_rows: list[dict] | None) -> None:
+def _write_inputs(
+    tmp_path, prices: list[dict], calibration: dict, ibja_rows: list[dict] | None
+) -> None:
     (tmp_path / "prices.json").write_text(json.dumps(prices))
     (tmp_path / "backtest.json").write_text(json.dumps(_backtest(35)))
     (tmp_path / "chronos_probe.json").write_text(json.dumps(_probe_flat()))
@@ -126,8 +133,12 @@ def test_both_miss_ibja_fresh_h5_and_t9_fire_together(tmp_path, monkeypatch) -> 
     inf.main(now=now)
     fc = json.loads((tmp_path / "forecast.json").read_text())
 
-    assert fc["price_source"] == "ibja_calibrated", "H5 must serve the IBJA estimate on a stale scrape"
-    assert fc["current_22k"] == 14500, "user sees the calibrated live estimate, not the stale scrape"
+    assert fc["price_source"] == "ibja_calibrated", (
+        "H5 must serve the IBJA estimate on a stale scrape"
+    )
+    assert fc["current_22k"] == 14500, (
+        "user sees the calibrated live estimate, not the stale scrape"
+    )
     assert fc["current_22k"] is not None and fc["current_22k"] > 0, "price must never be dead"
     assert fc["est_low"] == 14450 and fc["est_high"] == 14550
 
@@ -145,7 +156,9 @@ def test_both_miss_ibja_fresh_h5_and_t9_fire_together(tmp_path, monkeypatch) -> 
 
 
 @pytest.mark.smoke
-def test_both_miss_ibja_stale_falls_to_last_real_price_t9_still_fires(tmp_path, monkeypatch) -> None:
+def test_both_miss_ibja_stale_falls_to_last_real_price_t9_still_fires(
+    tmp_path, monkeypatch
+) -> None:
     monkeypatch.setattr(inf, "DATA_DIR", tmp_path)
 
     now = datetime(2026, 3, 15, 12, 0, tzinfo=UTC)  # Sunday noon
