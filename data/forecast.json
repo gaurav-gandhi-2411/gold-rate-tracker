@@ -1,5 +1,5 @@
 {
-  "predicted_at": "2026-06-12T22:22:57.099603+00:00",
+  "predicted_at": "2026-06-13T03:23:29.801730+00:00",
   "target_window": "5d",
   "headline": {
     "method": "naive_flat_hold",
@@ -13,12 +13,12 @@
       "half_width_raw": 352.5,
       "method": "realized_20d",
       "window_days": 20,
-      "contiguous_days": 59,
+      "contiguous_days": 60,
       "is_floored": true,
       "is_degraded": false,
       "floor_fraction": 0.5,
       "static_pi_half": 935.7,
-      "baseline_half_width": 369,
+      "baseline_half_width": 366,
       "regime": "normal"
     }
   },
@@ -56,7 +56,7 @@
     "direction_consensus": 1.0
   },
   "driver_context": {
-    "computed_at": "2026-06-12T22:22:57.102690+00:00",
+    "computed_at": "2026-06-13T03:23:29.804605+00:00",
     "macro_staleness_days": 0.0,
     "macro_fresh": true,
     "premium_threshold_pct": 15.0,
@@ -69,10 +69,10 @@
         "delta_pct_gold_usd": -2.267,
         "delta_pct_usdinr": -0.723,
         "delta_pct_premium": -1.274,
-        "total_move_rs_per_g": -655.0,
-        "gold_usd_contrib_rs_per_g": -348.2,
-        "usdinr_contrib_rs_per_g": -111.1,
-        "premium_contrib_rs_per_g": -195.7,
+        "total_move_rs_per_g": -380.0,
+        "gold_usd_contrib_rs_per_g": -202.0,
+        "usdinr_contrib_rs_per_g": -64.5,
+        "premium_contrib_rs_per_g": -113.5,
         "premium_share_pct": 29.9,
         "attribution_valid": false,
         "attribution_valid_reason": "premium share 29.9% exceeds 15% threshold"
@@ -101,9 +101,9 @@
       "gold_usd_30d_pct_change": -9.75
     }
   },
-  "real_readings_count": 185,
+  "real_readings_count": 186,
   "current_22k": 13665,
-  "scraped_at": "2026-06-12T17:36:15.515Z",
+  "scraped_at": "2026-06-13T03:23:13.036Z",
   "price_source": "tanishq_scrape",
   "est_low": null,
   "est_high": null,
@@ -112,7 +112,7 @@
   "predicted_22k": 13665,
   "lower": 12729,
   "upper": 14601,
-  "target_time": "2026-06-13T00:00:00+00:00",
+  "target_time": "2026-06-14T00:00:00+00:00",
   "model_status": "naive_headline",
   "model_version": "naive_flat_hold",
   "warmup": false
