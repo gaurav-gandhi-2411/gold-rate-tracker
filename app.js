@@ -9,6 +9,12 @@ const METRICS_URL   = "data/metrics_history.json";
 
 // Staleness threshold (hours) shared with Python inference.py _STALE_THRESHOLD_H.
 const STALE_THRESHOLD_H = 8;
+// Max IBJA age (hours) for which the IBJA-calibrated estimate banner (State 2) is
+// shown. Mirrors inference.py _IBJA_MAX_AGE_H — inference only emits
+// price_source="ibja_calibrated" when IBJA is within this window, so the banner
+// must use the same bound (an 8h bound here would show "last confirmed price" even
+// while current_22k IS the IBJA estimate). Change in BOTH places.
+const IBJA_FALLBACK_MAX_AGE_H = 30;
 
 // D4: True when running as an installed PWA launched from the home screen.
 // navigator.standalone is iOS WebKit's proprietary flag (true/false/undefined).
@@ -453,8 +459,9 @@ function renderStaleBanner(forecast) {
   // Scrape is stale — check IBJA fallback state
   if (forecast.price_source === "ibja_calibrated" && forecast.ibja_asof) {
     const ibjaAgeH = (Date.now() - new Date(forecast.ibja_asof).getTime()) / 3_600_000;
-    if (ibjaAgeH < STALE_THRESHOLD_H) {
-      // State 2: IBJA-derived-fresh
+    if (ibjaAgeH < IBJA_FALLBACK_MAX_AGE_H) {
+      // State 2: IBJA-derived estimate (IBJA publishes once daily, so this may be
+      // up to ~30h old — still the latest official benchmark; copy stays honest).
       banner.textContent = "Approximate — live retail scrape unavailable; estimated from IBJA benchmark.";
       banner.hidden = false;
       return;
