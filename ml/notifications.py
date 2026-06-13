@@ -872,9 +872,19 @@ def queue_for_quiet_hours(
 
 
 def _release_queued(state: NotificationState) -> list[PendingAlert]:
-    """Return non-expired queued alerts and clear state.queued."""
+    """Return non-expired queued alerts (deduped by trigger_id) and clear state.queued.
+
+    Dedup is trigger-agnostic: a trigger that was queued more than once during a
+    quiet window is released at most once, keeping the most-recently-queued copy
+    (freshest price/forecast data). This is the backstop for triggers that carry
+    no queue-time IST-date stamp (T1/T2/T3 gate on send-time cooldown/cap, so they
+    re-queue every quiet-hours run); any future trigger inherits the protection
+    without per-trigger handling. IST-date-stamped triggers (T4-T9) are already
+    queued at most once, so dedup is a no-op for them.
+    """
     cutoff = (datetime.now(UTC) - timedelta(hours=_MAX_QUEUE_AGE_H)).isoformat()
-    ready: list[PendingAlert] = []
+    # trigger_id -> (queued_at_utc_iso, alert); keep the most-recent copy per trigger.
+    kept: dict[str, tuple[str, PendingAlert]] = {}
     for d in state.queued:
         try:
             alert = PendingAlert.from_dict(d)
@@ -884,14 +894,21 @@ def _release_queued(state: NotificationState) -> list[PendingAlert]:
             qat = datetime.fromisoformat(alert.queued_at)
             if qat.tzinfo is None:
                 qat = qat.replace(tzinfo=IST)
-            if qat.astimezone(UTC).isoformat() >= cutoff:
-                ready.append(alert)
-            else:
+            qat_utc_iso = qat.astimezone(UTC).isoformat()
+            if qat_utc_iso < cutoff:
                 logger.debug("Discarding expired queued %s", alert.trigger_id)
+                continue
+            existing = kept.get(alert.trigger_id)
+            if existing is None or qat_utc_iso >= existing[0]:
+                if existing is not None:
+                    logger.info(
+                        "Collapsing duplicate queued %s — keeping most recent", alert.trigger_id
+                    )
+                kept[alert.trigger_id] = (qat_utc_iso, alert)
         except Exception as exc:
             logger.debug("Skipping malformed queued entry: %s", exc)
     state.queued = []
-    return ready
+    return [alert for _, alert in kept.values()]
 
 
 # ---------------------------------------------------------------------------

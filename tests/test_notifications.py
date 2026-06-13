@@ -917,6 +917,115 @@ def test_release_queued_returns_and_clears(monkeypatch):
     assert state.queued == []
 
 
+def _freeze_now_utc(monkeypatch, frozen_now_utc) -> None:
+    """Freeze ml.notifications.datetime.now(UTC) to a fixed instant.
+
+    Mirrors the _FakeDatetime pattern in test_release_queued_returns_and_clears
+    so the 12-hour _release_queued cutoff is deterministic.
+    """
+    from datetime import datetime as _real_datetime
+
+    class _FakeDatetime(_real_datetime):
+        @classmethod
+        def now(cls, tz=None):  # type: ignore[override]
+            return frozen_now_utc if tz is UTC else _real_datetime.now(tz)
+
+    monkeypatch.setattr("ml.notifications.datetime", _FakeDatetime)
+
+
+def test_release_dedupes_repeated_trigger_keeps_most_recent(monkeypatch):
+    """Reproduce the production duplicate: 3 quiet-hours runs each queue T1+T3,
+    then one post-quiet release run must send exactly ONE T1 and ONE T3 — not 3 each.
+
+    Mirrors the live run sequence 27432315878 -> 27440006193 -> 27446430564
+    (three quiet-hours schedule runs, each Queued T1 + Queued T3) -> 27455089566
+    (08:52 IST release run that fired 3xT1 + 3xT3). T1/T2/T3 carry no IST-date
+    queue-time stamp, so they accumulate; release-dedup is the backstop.
+    """
+    # Release at 2026-06-13 08:52 IST (= 03:22 UTC), matching run 27455089566.
+    _freeze_now_utc(monkeypatch, _ist(2026, 6, 13, 8, 52).astimezone(UTC))
+
+    state = NotificationState()
+    # Three quiet-hours runs, increasing queued_at; all within the 12h window.
+    run_times_ist = [
+        _ist(2026, 6, 12, 23, 5),  # 27432315878
+        _ist(2026, 6, 13, 1, 35),  # 27440006193
+        _ist(2026, 6, 13, 3, 51),  # 27446430564
+    ]
+    for i, qt in enumerate(run_times_ist):
+        alerts = [
+            PendingAlert(
+                trigger_id="T1",
+                title="Gold: 22K prices are down this week",
+                body=f"run{i}",
+                priority=4,
+                tags=["decline"],
+                click_url="https://example.com",
+                queued_at=qt.isoformat(),
+                bypass_quiet=False,
+            ),
+            PendingAlert(
+                trigger_id="T3",
+                title="Gold: Rs.270 up detected (+2.0%)",
+                body=f"run{i}",
+                priority=4,
+                tags=["warning"],
+                click_url="https://example.com",
+                queued_at=qt.isoformat(),
+                bypass_quiet=False,
+            ),
+        ]
+        queue_for_quiet_hours(alerts, state)
+
+    assert len(state.queued) == 6, "precondition: 3 runs x (T1+T3) accumulated"
+
+    released = _release_queued(state)
+
+    by_id = {}
+    for a in released:
+        by_id.setdefault(a.trigger_id, []).append(a)
+    assert sorted(by_id) == ["T1", "T3"]
+    assert len(by_id["T1"]) == 1, "exactly one T1 released (not 3)"
+    assert len(by_id["T3"]) == 1, "exactly one T3 released (not 3)"
+    # Most-recent copy kept (run index 2 = the 03:51 IST run).
+    assert by_id["T1"][0].body == "run2"
+    assert by_id["T3"][0].body == "run2"
+    assert state.queued == []
+
+
+def test_release_dedup_preserves_distinct_triggers(monkeypatch):
+    """Guard: release-dedup must NOT merge or drop distinct queued triggers.
+
+    A queue holding one each of the IST-date-stamped triggers (T5/T7/T8_MORNING/T9)
+    must release one of each — confirming dedup-by-trigger_id only collapses
+    genuine duplicates and leaves the T4-T9 queue-time-stamping behavior intact.
+    """
+    _freeze_now_utc(monkeypatch, _ist(2026, 6, 13, 8, 52).astimezone(UTC))
+
+    qt = _ist(2026, 6, 13, 3, 51)
+    state = NotificationState()
+    for tid in ("T5", "T7", "T8_MORNING", "T9"):
+        queue_for_quiet_hours(
+            [
+                PendingAlert(
+                    trigger_id=tid,
+                    title=f"{tid} title",
+                    body=f"{tid} body",
+                    priority=2,
+                    tags=["bell"],
+                    click_url="https://example.com",
+                    queued_at=qt.isoformat(),
+                    bypass_quiet=False,
+                )
+            ],
+            state,
+        )
+
+    released = _release_queued(state)
+    assert sorted(a.trigger_id for a in released) == ["T5", "T7", "T8_MORNING", "T9"]
+    assert state.queued == []
+
+
 # ---------------------------------------------------------------------------
 # ntfy POST mocked — ASCII-safe headers, Rs. in body
 # ---------------------------------------------------------------------------
