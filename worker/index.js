@@ -23,6 +23,11 @@ const RATIO_18_24_MAX = 0.77;
 // ── Request constants ─────────────────────────────────────────────────────────
 const TANISHQ_URL = "https://www.tanishq.co.in/gold-rate.html?lang=en_IN";
 const GITHUB_API = "https://api.github.com";
+// GitHub's REST API rejects any request without a User-Agent header (HTTP 403:
+// "Request forbidden ... please make sure your request has a User-Agent header").
+// Cloudflare Workers' fetch() sends NO default User-Agent, so the dispatch POST
+// must set one explicitly or every dispatch 403s.
+const GITHUB_UA = "gold-rate-tanishq-worker";
 const FETCH_HEADERS = {
   "User-Agent":
     "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/148.0.0.0 Safari/537.36",
@@ -216,6 +221,8 @@ export async function runScheduled(env, fetchFn) {
           Authorization: `Bearer ${env.GITHUB_TOKEN}`,
           Accept: "application/vnd.github+json",
           "X-GitHub-Api-Version": "2022-11-28",
+          // Required by GitHub — without it the API returns 403 (see GITHUB_UA).
+          "User-Agent": GITHUB_UA,
           "Content-Type": "application/json",
         },
         body: JSON.stringify(payload),
@@ -226,9 +233,17 @@ export async function runScheduled(env, fetchFn) {
     return;
   }
 
-  // 8. Log outcome.
+  // 8. Log outcome. On non-2xx, include GitHub's JSON response body — it states
+  // the exact reason (e.g. "Bad credentials", "Resource not accessible by
+  // personal access token", "missing User-Agent") so wrangler tail shows why.
   if (!dispatchResponse.ok) {
-    console.error(`[worker] dispatch failed: HTTP ${dispatchResponse.status}`);
+    let detail = "";
+    try {
+      detail = await dispatchResponse.text();
+    } catch {
+      detail = "<no response body>";
+    }
+    console.error(`[worker] dispatch failed: HTTP ${dispatchResponse.status} — ${detail}`);
   } else {
     console.log(`[worker] dispatched: 22k=${rates.rate22}`);
   }
