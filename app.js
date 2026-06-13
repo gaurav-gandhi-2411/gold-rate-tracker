@@ -1337,28 +1337,20 @@ function renderMethodology(fc, bt, drift) {
     `);
   }
 
-  // Direction signal — honest base-rate framing (ADR 019/020)
+  // Direction signal — DARK gate (ADR 019/020). We test direction models weekly;
+  // none beats the "gold usually rises" base rate with significance, so we show NO
+  // directional prediction and NO accuracy stat (a base-rate number dressed as
+  // model accuracy reads as an edge we don't have). Qualitative "off" only.
   if (fc?.chronos_companion?.status === "success") {
-    const cc = fc.chronos_companion;
-    const acc30f = typeof cc.direction_acc_30f === "number"
-      ? `${(cc.direction_acc_30f * 100).toFixed(1)}%`
-      : "—";
     parts.push(`
       <div class="meth-section">
         <h3 class="meth-heading">Direction signal</h3>
-        <div class="meth-stats">
-          <div class="meth-stat">
-            <div class="meth-stat-label">Accuracy (recent 30 windows)</div>
-            <div class="meth-stat-value">${acc30f}</div>
-            <div class="meth-stat-sub">gold rising ~70% of days in our data</div>
-          </div>
-          <div class="meth-stat">
-            <div class="meth-stat-label">Adjusted to Tanishq prices</div>
-            <div class="meth-stat-value">${cc.calibration_applied ? "Yes" : "Not yet"}</div>
-            ${!cc.calibration_applied ? `<div class="meth-stat-sub">activates after 30 days of data</div>` : `<div class="meth-stat-sub">${cc.model_version}</div>`}
-          </div>
+        <div class="meth-stat">
+          <div class="meth-stat-label">Status</div>
+          <div class="meth-stat-value">Off — not yet reliable</div>
+          <div class="meth-stat-sub">no model beats "gold usually rises" yet</div>
         </div>
-        <p class="meth-note">Current price-move alerts use 7-day momentum — not the AI direction model — because the AI's ${dirAll ?? "56%"} accuracy across all ${bt?.n_folds ?? 165} windows (${acc30f} over the most recent 30) doesn't exceed the ~70% base rate. No directional edge is claimed.</p>
+        <p class="meth-note">We re-test next-day and multi-day direction models every week. None has beaten the simple base rate (gold rises most days) by a meaningful, statistically significant margin — so we do <strong>not</strong> show a "chance up" percentage or a buy/sell call. The price-move alerts describe the recent 7-day trend; they are not a forecast.</p>
       </div>
     `);
   } else if (fc?.chronos_companion?.status === "failed") {
