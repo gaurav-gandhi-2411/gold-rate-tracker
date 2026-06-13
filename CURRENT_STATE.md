@@ -1,28 +1,19 @@
 # gold-rate-tracker — Current State for Orchestrator Handoff
 
-*Snapshot as of 2026-05-31. Maintained for context that isn't in the code. The repo itself shows what exists; this document explains why.*
+*Snapshot as of 2026-05-31; partially refreshed 2026-06-13 (calibration unlock, H5, Φ25 Worker dispatch, test count). Maintained for context that isn't in the code. The repo itself shows what exists; this document explains why.*
 
 ---
 
-## RESUME HERE — Open time-gated items (as of 2026-05-31)
+## RESUME HERE — Open time-gated items (as of 2026-05-31; refreshed 2026-06-13)
 
-Four items need attention at defined future dates. A new session can pick up directly here.
-
-**(a) Calibration unlock ~2026-06-12 — highest priority.**
-The first-ever automatic flip of `calibration.json` to `valid: true`. Trigger: `run_refit_if_needed()` detects ≥30 valid overlap pairs in CI (currently accumulating at ~1/trading day via the IBJA pm_916 upsert fix, PR #56). What to verify the day it fires:
-- CI log shows "refitting… n=30 slope=X.XX intercept=Y.Y"
-- T6 ntfy notification "Gold forecast: calibration unlocked" arrives on device (norm #16)
-- `data/calibration.json` has `valid: true` with real slope/intercept
-- Dashboard "Adjusted to Tanishq prices" shows "Yes"
-- `data/forecast.json` `chronos_companion.calibration_applied` is `true`
-
-The full chain is pre-verified by `tests/test_calibration_unlock_chain.py` (commit `cf6fc78`). If anything fails, check that test first.
+**(a) Calibration unlock — ✅ RESOLVED 2026-06-11.**
+The first-ever automatic flip of `calibration.json` to `valid: true` fired in CI run `27359608818` (2026-06-11T15:52 UTC). Refit logged `n=30 slope=1.0137 intercept=3.20 r2=0.8887 residual_std=106.18`; **T6 ntfy "Gold forecast: calibration unlocked" was emitted and `[OK]`-acknowledged in the same run.** `data/calibration.json` is now `valid: true` (slope 1.0137, intercept 3.20, n_observations 30, fit_date 2026-06-11). `data/forecast.json` `chronos_companion.calibration_applied` is `true` with horizons on the Tanishq retail scale (~13.2k–14.7k INR/g). The `tests/test_calibration_unlock_chain.py` pre-verification held. Nothing further to do here.
 
 **(b) Scraper gap-rate trend post-4h-cadence (~2026-06-28).**
 Baseline: 27% gap rate (34 gaps >9h across 124 readings). ADR 016 re-evaluation trigger is >15% sustained over 4 weeks. Check CI run history at ~2026-06-28 and record in Decision Log.
 
-**(c) H5 calibrated fallback — decision needed post-unlock.**
-ADR 016 deferred the IBJA-calibrated price fallback because calibration was invalid ("invalid calibration = noise"). Once item (a) resolves, H5 becomes a legitimate option (flagged in ADR 017). No code needed until (a) resolves; flag to consultant for a decision at that point.
+**(c) H5 calibrated fallback — ✅ ACTIVE since 2026-06-11.**
+ADR 016 deferred the IBJA-calibrated price fallback while calibration was invalid. With item (a) resolved, H5 activated automatically: inference now applies the calibration to the Chronos companion horizons (`chronos_companion.calibration_applied: true`). Per the check-price.yml step order (inference runs BEFORE calibration-refit), it activated one CI run after the flip, as designed. No outstanding decision — serving correctly.
 
 **(d) ntfy topic rotation — RESOLVED (WONTFIX) 2026-06-07.**
 GG accepts `gold-msgg-7k2x9p4r` as the permanent live topic. No rotation will be performed. Residual risk: a public ntfy topic permits unsolicited publishes (notification spam) only — no data, repo, or pipeline access. Revisit only if the product goes multi-tenant. The topic lives only in the GitHub secret — zero hardcoded references in the repo.
@@ -152,7 +143,7 @@ gold-rate-tracker/
 **Notifications:**
 - ASCII-only titles (no ₹; use `Rs.`)
 - Priority 4/5 actionable, 2/3 informational
-- Quiet hours 22:00–07:00 IST; alerts queued during quiet hours are stamped immediately on queue (PR #55 dedup fix) to prevent accumulation across consecutive CI runs
+- Quiet hours 22:00–07:00 IST; alerts queued during quiet hours are stamped immediately on queue (PR #55 dedup fix) to prevent accumulation across consecutive CI runs. PR #115 (merged 2026-06-13) adds a second dedup at release time (`_release_queued` collapses duplicate `trigger_id`s, keeping the most recent) — fix merged; first post-merge quiet-hours release (~01:30–03:30 UTC 2026-06-14) still to be verified live.
 - T1–T5 conditional/ML-gated; T6 once-ever (calibration unlock); T7 3-day floor; T8 twice-daily digest
 - All user-facing bodies plain-language (no ML jargon) as of PR #55; T6 body is owner-facing, retains technical language
 - Commentary SYSTEM_PROMPT blocks: 'Chronos', 'model', 'baseline', 'naive', 'MAE', 'backtest', 'folds', 'fold', 'Wilcoxon' (pinned by `test_system_prompt_blocks_technical_jargon`)
@@ -183,10 +174,11 @@ gold-rate-tracker/
 **Currently noisy but accepted:**
 - `pytest` locally without ignore flags shows 9 failures in training-deps test files. CI uses ignores; clean. Local devs need the same flags.
 - IBJA PM rate sometimes `NaN` on early-morning CI runs (before ~17:00 IST publication). The upsert fix (PR #56) captures the PM value on the post-17:00 run; inference falls back to the most recent complete PM row until then. This is expected and accepted.
-- `data/calibration.json` shows `valid: false` until 30 valid overlap pairs (pm_916 non-null). Currently accumulating at ~1 pair/trading day via the IBJA upsert fix. ETA for unlock: ~2026-06-12 (see RESUME HERE section). Refitted automatically by `run_refit_if_needed()` in CI (ADR 017). Do NOT manually flip `valid`.
+- `data/calibration.json` is now `valid: true` (unlocked 2026-06-11; slope 1.0137, intercept 3.20, n=30). Refitted automatically by `run_refit_if_needed()` in CI (ADR 017) when ≥10 new overlap pairs accumulate. Do NOT manually flip `valid`.
 - Φ24 (2026-06-10): Tanishq scraper now tries a plain `fetch()` GET with Chrome UA before launching Playwright. CF is currently UA-string-only (403 on default UA, 200 on Chrome UA); the requests path succeeds on ~healthy days and saves ~8-15s of Chromium startup per CI run. ANY failure (non-200, CF challenge body, missing span, validation error) falls back transparently to the existing Playwright path. `scrapeWithRetry()` is unchanged; `hybridScrape()` is the new entry point.
-- Φ25 (2026-06-11): CF Worker added as primary Tanishq fetch path (Singapore edge, 200 in ~400ms). The validation constants (RANGE_MIN, RANGE_MAX, ratio bounds) and parse/validate logic are copied across 3 files: `scraper/scrape.js`, `worker/index.js`, `scraper/dispatch-validate.js`. SYNC CONTRACT: update all 3 together whenever thresholds change.
+- Φ25 (2026-06-11): CF Worker added as primary Tanishq fetch path (Singapore edge, 200 in ~400ms). **LIVE since 2026-06-13** — owner deployed Worker Version d8b69033 (UA-on-dispatch-POST 403 fix #117) + set Contents-scoped PAT. First-ever `repository_dispatch` run `27466836116` fired 2026-06-13T12:30 UTC (success): scrape log `[dispatch] 22k=13710 validated OK`, prices.json entry tagged `source="repository_dispatch"` (#118). This **closes Symptom 1 (scraper staleness)**. The validation constants (RANGE_MIN, RANGE_MAX, ratio bounds) and parse/validate logic are copied across 3 files: `scraper/scrape.js`, `worker/index.js`, `scraper/dispatch-validate.js`. SYNC CONTRACT: update all 3 together whenever thresholds change.
 - Chronos forecasts can flip direction between consecutive runs. Stochastic sampling. **Addressed in Φ4 (PR #35) with 5-sample majority consensus; T1/T2 gate on direction_consensus ≥ 0.6.**
+- **Commit-push rebase race (burst-only flake).** The `Commit updated data files` step in `check-price.yml` has a 3-attempt `git pull --rebase --autostash` retry. It recovers from transient push races, but when two runs commit genuinely conflicting data-file content within the same window (e.g. two PR merges + a schedule run within minutes, as on 2026-06-13T11:01 run `27464880225`), the rebase hits the same deterministic conflict on all 3 attempts and the run fails red. It self-heals on the next scheduled run. Steady-state risk is low (scheduled `:00` and Worker-dispatch `:30` runs are 30 min apart, no overlap); it only bites during PR-merge bursts. Not yet hardened — fixing it means editing the load-bearing commit step (a conflict-resolution strategy that lets this run's freshly-computed data win), so deferred until burst frequency justifies the blast-radius. Low priority.
 
 **Recurring pattern — "computed-but-never-wired" bugs:**
 This codebase has produced four instances of code that was tested in isolation but never connected to the live CI cycle:
@@ -213,13 +205,13 @@ Prevention going forward: norm #15 (consumer audit), norm #16 (delivery verifica
 
 | Item | Status |
 |---|---|
-| Lint workflow (ruff + ruff-format + mypy + pytest) | Green on master (commit `cf6fc78`, 2026-05-31). **365 Python tests pass.** |
+| Lint workflow (ruff + ruff-format + mypy + pytest) | Green on master (2026-06-13, run `27466215568`). **538 Python tests pass** (3 skipped, 1 deselected). |
 | JS tests | Green: 9 pure-function (tests/test_scrape.js) + 4 Playwright fixture DOM (scraper/test_scrape.js) + 16 hardening mock-HTTP (scraper/test_scraper_hardening.mjs) + 9 hybrid-scrape Φ24 (scraper/test_hybrid_scrape.mjs) + 5 comparison cards (tests/test_comparisons.js) + 11 CF Worker Φ25 (worker/test_worker.mjs) + 9 dispatch-validate Φ25 (scraper/test_dispatch_validate.mjs). |
 | check-price.yml | Green on master. 4h cadence. Scraper hardened with 3-attempt retry + CF detection (ADR 016). Calibration-refit step wired (ADR 017). IBJA upsert captures post-PM-fix rates. |
 | scraper-canary.yml | Triggers on PR push to scraper/** paths (live DOM canary guarded to schedule/manual). |
 | weekly-backtest.yml | Green; last run 2026-05-19. |
 | notification state cache chain | Verified unbroken. T1-T8 all covered. Dedup-on-queue fix (PR #55) prevents quiet-hours accumulation for all IST-date-deduped triggers. |
-| Calibration unlock chain | Pre-verified via `tests/test_calibration_unlock_chain.py` (4 tests, 6 links asserted end-to-end). Will fire for real ~2026-06-12. |
+| Calibration unlock chain | ✅ Fired for real 2026-06-11 (run `27359608818`): refit n=30, T6 sent + `[OK]`, `valid:true`, `calibration_applied:true`. Pre-verification via `tests/test_calibration_unlock_chain.py` held. |
 
 ## Discipline norms (the orchestrator must inherit these)
 
