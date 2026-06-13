@@ -181,3 +181,85 @@ test("runScheduled: non-2xx dispatch logs status AND response body", async () =>
     `expected a log line with the 403 status and the response body, got: ${JSON.stringify(errors)}`,
   );
 });
+
+// WS1 failure mode #2: GitHub dispatch POST fails (403/401/404/422). Every
+// status must be logged WITH the response body so `wrangler tail` shows the
+// exact reason, and the Worker must NOT throw (CF marks a throwing cron run as
+// failed). The Worker writes nothing locally, so "no bad write" is inherent —
+// a failed dispatch simply means no repository_dispatch event, and the in-CI
+// scrape path remains the source of truth for that cycle.
+for (const { status, body } of [
+  { status: 401, body: '{"message":"Bad credentials"}' },
+  { status: 403, body: '{"message":"Resource not accessible by personal access token"}' },
+  { status: 404, body: '{"message":"Not Found"}' },
+  { status: 422, body: '{"message":"Validation Failed"}' },
+]) {
+  test(`runScheduled: dispatch HTTP ${status} → logs status + body, no throw`, async () => {
+    const { fetchFn } = makeMockFetch({ dispatchStatus: status, dispatchBody: body });
+    const errors = [];
+    const orig = console.error;
+    console.error = (msg) => errors.push(String(msg));
+    let threw = false;
+    try {
+      await runScheduled(MOCK_ENV, fetchFn); // must resolve, never reject
+    } catch {
+      threw = true;
+    } finally {
+      console.error = orig;
+    }
+    assert.equal(threw, false, "runScheduled must not throw on a failed dispatch");
+    const msg = JSON.parse(body).message;
+    assert.ok(
+      errors.some((e) => e.includes(String(status)) && e.includes(msg)),
+      `expected a log line with status ${status} and body ${JSON.stringify(msg)}, got: ${JSON.stringify(errors)}`,
+    );
+  });
+}
+
+test("runScheduled: Tanishq fetch throws (network error) → logged, no dispatch, no throw", async () => {
+  const dispatches = [];
+  const errors = [];
+  const fetchFn = async (url) => {
+    if (url.includes("tanishq")) throw new Error("ECONNRESET");
+    dispatches.push(url);
+    return { ok: true, status: 204, text: async () => "" };
+  };
+  const orig = console.error;
+  console.error = (msg) => errors.push(String(msg));
+  let threw = false;
+  try {
+    await runScheduled(MOCK_ENV, fetchFn);
+  } catch {
+    threw = true;
+  } finally {
+    console.error = orig;
+  }
+  assert.equal(threw, false);
+  assert.equal(dispatches.length, 0, "no dispatch when the Tanishq fetch itself throws");
+  assert.ok(errors.some((e) => e.includes("ECONNRESET")), "the fetch error must be logged");
+});
+
+test("runScheduled: dispatch fetch throws (network error) → logged, no throw", async () => {
+  const errors = [];
+  const fetchFn = async (url, opts) => {
+    if (url.includes("tanishq")) {
+      return { ok: true, status: 200, text: async () => VALID_HTML };
+    }
+    throw new Error("dispatch socket hang up");
+  };
+  const orig = console.error;
+  console.error = (msg) => errors.push(String(msg));
+  let threw = false;
+  try {
+    await runScheduled(MOCK_ENV, fetchFn);
+  } catch {
+    threw = true;
+  } finally {
+    console.error = orig;
+  }
+  assert.equal(threw, false);
+  assert.ok(
+    errors.some((e) => e.includes("dispatch fetch threw") && e.includes("socket hang up")),
+    `expected a 'dispatch fetch threw' log, got: ${JSON.stringify(errors)}`,
+  );
+});
