@@ -51,6 +51,13 @@ _CONFORMAL_FOLDS: int = 30
 _MIN_CONFORMAL_FOLDS: int = 30
 # Staleness threshold shared with app.js banner (hours). Change in ONE place only.
 _STALE_THRESHOLD_H: int = 8
+# Max IBJA age (hours) for which the IBJA-calibrated fallback (H5) may still serve
+# an estimate. IBJA publishes pm_916 only once per trading day (~11:30 UTC), so an
+# 8h gate would leave H5 dark ~16h/day; a 1-day-old PM fix is still a sound daily
+# estimate of the retail price. 30h covers same-day + overnight gaps while still
+# excluding genuinely stale (weekend/multi-day) IBJA. Mirrored in app.js
+# IBJA_FALLBACK_MAX_AGE_H — change in BOTH places.
+_IBJA_MAX_AGE_H: int = 30
 # IBJA publishes pm_916 ~17:00 IST = 11:30 UTC on each trading day.
 _IBJA_PUBLISH_UTC: tuple[int, int] = (11, 30)
 
@@ -182,7 +189,7 @@ def _apply_ibja_fallback(
     Gates (all must pass):
       - calibration.valid == True AND slope/intercept/residual_std present
       - scrape age > _STALE_THRESHOLD_H
-      - IBJA pm_916 row exists AND ibja_age < _STALE_THRESHOLD_H
+      - IBJA pm_916 row exists AND ibja_age < _IBJA_MAX_AGE_H
     Does NOT touch scraped_at (ADR 021).
     Does NOT modify the Chronos-horizon calibration block in _build_chronos_companion.
     """
@@ -243,12 +250,12 @@ def _apply_ibja_fallback(
         return _noop
 
     ibja_age_h = (now - ibja_asof_dt).total_seconds() / 3600
-    if ibja_age_h >= _STALE_THRESHOLD_H:
+    if ibja_age_h >= _IBJA_MAX_AGE_H:
         logger.info(
             "_apply_ibja_fallback: IBJA %s is %.1fh old (>= %dh) — genuinely stale",
             ibja_date_str,
             ibja_age_h,
-            _STALE_THRESHOLD_H,
+            _IBJA_MAX_AGE_H,
         )
         return _noop
 

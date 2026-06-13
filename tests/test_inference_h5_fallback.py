@@ -272,6 +272,36 @@ def test_valid_true_fresh_scrape_no_override(tmp_path: object, monkeypatch: obje
 
 
 @pytest.mark.smoke
+def test_valid_true_ibja_24h_old_still_activates(tmp_path: object, monkeypatch: object) -> None:
+    """Overnight gap: IBJA ~24h old (within the 30h window) → H5 still serves the estimate.
+
+    Before the window widen this fell through (8h gate); a 1-day-old PM fix is still
+    a sound daily estimate, so it must now activate.
+    """
+    monkeypatch.setattr(inf, "DATA_DIR", tmp_path)
+
+    now = datetime(2026, 3, 16, 10, 0, tzinfo=UTC)  # Monday morning
+    last_ts = datetime(2026, 3, 16, 0, 30, tzinfo=UTC)  # 9.5h before now → stale
+    prices = _make_prices_with_last_ts(40, last_ts, last_22k=14320)
+
+    (tmp_path / "prices.json").write_text(json.dumps(prices))
+    (tmp_path / "backtest.json").write_text(json.dumps(_make_backtest(35)))
+    (tmp_path / "chronos_probe.json").write_text(json.dumps(_make_probe("success")))
+    (tmp_path / "calibration.json").write_text(
+        json.dumps({"valid": True, "slope": 1.0, "intercept": 100.0, "residual_std": 50.0})
+    )
+    # Sunday 2026-03-15 IBJA: asof 11:30 UTC; age at Mon 10:00 = 22.5h → within 30h
+    _make_ibja_parquet(tmp_path, [{"date": "2026-03-15", "pm_916": 144000.0}])
+
+    inf.main(now=now)
+
+    fc = json.loads((tmp_path / "forecast.json").read_text())
+    assert fc["price_source"] == "ibja_calibrated", "24h-old IBJA must still serve H5 estimate"
+    assert fc["current_22k"] == 14500
+    assert fc["est_low"] == 14450 and fc["est_high"] == 14550
+
+
+@pytest.mark.smoke
 def test_valid_true_ibja_stale_weekend_falls_through(tmp_path: object, monkeypatch: object) -> None:
     """Sunday noon: latest IBJA row is Friday (48.5h old → stale) → falls through to tanishq."""
     monkeypatch.setattr(inf, "DATA_DIR", tmp_path)
