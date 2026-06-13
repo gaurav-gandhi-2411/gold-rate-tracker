@@ -1,6 +1,8 @@
 node_modules/
 *.log
 logs/
+# Cloudflare Worker (Φ25) local dev state — cache/state/tmp, never committed
+worker/.wrangler/
 .DS_Store
 .env
 .env.local
