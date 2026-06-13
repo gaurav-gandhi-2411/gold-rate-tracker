@@ -403,6 +403,38 @@ function computeGoodPriceSignals(readings) {
   return { percentile30d, vsAvg30d, avg30d, nDays30d, verdictLead, verdictType, proofLine, dataSuffNote, supportLine1, supportLine2, divergenceNote };
 }
 
+// ─── PURCHASE COST ESTIMATE ───────────────────────────────────────────────────
+// Itemised "what will it cost me?" estimate for a gold jewellery purchase, the
+// way an Indian retail invoice is built up:
+//   gold value = ratePerGram × grams
+//   making     = gold value × makingPct/100   (making charges — design-dependent,
+//                                               jeweller-specific; the caller supplies it)
+//   GST        = (gold value + making) × gstPct/100   (3% on gold jewellery in India)
+//   total      = gold value + making + GST
+//
+// No making-charge default is baked in here (it varies far too widely by design
+// to assume) — makingPct defaults to 0 so the bare metal+GST figure is the floor;
+// the UI layer owns the user-entered default and its framing. gstPct defaults to
+// the current 3% India rate. Returns null on any invalid (non-finite / negative)
+// input so the caller can show a neutral empty state rather than NaN.
+function computePurchaseCost({ ratePerGram, grams, makingPct = 0, gstPct = 3 }) {
+  const vals = [ratePerGram, grams, makingPct, gstPct];
+  if (!vals.every(Number.isFinite)) return null;
+  if (ratePerGram < 0 || grams < 0 || makingPct < 0 || gstPct < 0) return null;
+
+  const goldValue = ratePerGram * grams;
+  const making = goldValue * (makingPct / 100);
+  const gst = (goldValue + making) * (gstPct / 100);
+  const total = goldValue + making + gst;
+
+  return {
+    goldValue: Math.round(goldValue),
+    making: Math.round(making),
+    gst: Math.round(gst),
+    total: Math.round(total),
+  };
+}
+
 // ─── RENDERERS ────────────────────────────────────────────────────────────────
 
 function renderStaleBanner(forecast) {

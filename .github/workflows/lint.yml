@@ -62,6 +62,7 @@ jobs:
       - name: Run PWA pure-function tests
         run: |
           node --test \
+            tests/test_calculator.js \
             tests/test_comparisons.js \
             tests/test_dedup.js \
             tests/test_good_price.js \
