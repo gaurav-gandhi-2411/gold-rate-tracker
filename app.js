@@ -263,6 +263,10 @@ function computeVerdict(prices, forecast) {
 
 // ─── TODAY'S CHANGE ────────────────────────────────────────────────────────────
 
+// Returns { delta, basis } or null. `basis` is "today" when the change is measured
+// against an earlier reading from the SAME IST day, or "since last" when it falls
+// back to the previous reading (which — given scrape gaps — may be from yesterday).
+// The UI labels the change accordingly so we never call a yesterday-to-now move "today".
 function computeTodayChange(readings) {
   if (readings.length < 2) return null;
   const latest   = readings[readings.length - 1];
@@ -281,10 +285,14 @@ function computeTodayChange(readings) {
   }
 
   const earliestToday = earliestTodayIdx >= 0 ? readings[earliestTodayIdx] : null;
+  const sinceLast = {
+    delta: latest["22k"] - readings[readings.length - 2]["22k"],
+    basis: "since last",
+  };
 
   // If today has only one reading or we couldn't find an earlier one, use readings[-2].
   if (!earliestToday || earliestToday === latest) {
-    return latest["22k"] - readings[readings.length - 2]["22k"];
+    return sinceLast;
   }
 
   // Sanity guard: if today's first reading differs from the reading immediately before
@@ -296,11 +304,11 @@ function computeTodayChange(readings) {
     const prevClose = readings[earliestTodayIdx - 1];
     const pctChange = Math.abs(earliestToday["22k"] - prevClose["22k"]) / prevClose["22k"];
     if (pctChange > 0.03) {
-      return latest["22k"] - readings[readings.length - 2]["22k"];
+      return sinceLast;
     }
   }
 
-  return latest["22k"] - earliestToday["22k"];
+  return { delta: latest["22k"] - earliestToday["22k"], basis: "today" };
 }
 
 // ─── COMPARISON CARD VALUES ───────────────────────────────────────────────────
@@ -462,7 +470,7 @@ function renderStaleBanner(forecast) {
     if (ibjaAgeH < IBJA_FALLBACK_MAX_AGE_H) {
       // State 2: IBJA-derived estimate (IBJA publishes once daily, so this may be
       // up to ~30h old — still the latest official benchmark; copy stays honest).
-      banner.textContent = "Approximate — live retail scrape unavailable; estimated from IBJA benchmark.";
+      banner.textContent = "Approximate price — live retail rate unavailable right now, so this is estimated from today's official gold rate (IBJA).";
       banner.hidden = false;
       return;
     }
@@ -589,8 +597,9 @@ function renderHero(readings, forecast) {
   if (r18) r18.innerHTML = rupee(latest["18k"]);
 
   // Today's change
-  const todayDelta = computeTodayChange(readings);
-  if (todayDelta !== null) {
+  const change = computeTodayChange(readings);
+  if (change !== null) {
+    const todayDelta = change.delta;
     const dir    = todayDelta > 0 ? "up" : todayDelta < 0 ? "down" : "flat";
     const arrow  = dir === "up" ? "↑" : dir === "down" ? "↓" : "→";
     const sign   = dir === "up" ? "+" : dir === "down" ? "−" : "";
@@ -598,6 +607,10 @@ function renderHero(readings, forecast) {
     changeEl.querySelector(".hero-change-arrow").textContent  = arrow;
     changeEl.querySelector(".hero-change-amount").textContent =
       todayDelta === 0 ? "no change" : `${sign}₹${fmtINR(Math.abs(todayDelta))}`;
+    // Honest label: "today" only when measured within the same IST day; otherwise
+    // "since last" (the prior reading may be from yesterday when scrapes have gapped).
+    const labelEl = changeEl.querySelector(".hero-change-label");
+    if (labelEl) labelEl.textContent = change.basis;
     changeEl.hidden = false;
   }
 
