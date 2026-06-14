@@ -12,7 +12,8 @@ Operational procedures for gold-rate-tracker.
 6. [How to investigate a CI failure](#how-to-investigate-a-ci-failure)
 7. [Staleness alerts — interpretation and response](#staleness-alerts--interpretation-and-response)
 8. [Manual scraper re-run](#manual-scraper-re-run)
-9. [Known constraints](#known-constraints)
+9. [Cloudflare Worker & token renewal (⏰ expires 2026-09-11)](#cloudflare-worker--token-renewal)
+10. [Known constraints](#known-constraints)
 10. [Frontend PR device-check (required)](#frontend-pr-device-check-required)
 11. [Honesty-ADR audit: user-facing copy paths (required)](#honesty-adr-audit-user-facing-copy-paths-required)
 
@@ -201,6 +202,25 @@ If the selector is broken, open the Tanishq gold rate page, inspect
 `span.goldpurity-rate[data-goldrate22kt]`, and update the selector in `scraper/scrape.js`.
 Then update `tests/fixtures/tanishq_sample.html` with the new page structure and update the
 expected values in `scraper/test_scrape.js`.
+
+> **Scraper DOM canary issues (#113/#114-style):** the weekly `scraper-canary.yml` runs the
+> live scrape on a GitHub runner IP, which Tanishq's CDN frequently blocks — so a canary
+> failure usually means "runner IP blocked", NOT "DOM changed". Before assuming the selector
+> broke, confirm against the Cloudflare Worker's last successful dispatch (clean IP): if a
+> recent `repository_dispatch` run parsed a valid `22k=` value, the DOM is fine and the
+> canary issue can be closed.
+
+---
+
+## Cloudflare Worker & token renewal
+
+The clean-IP scraper is a Cloudflare Worker (`gold-rate-tanishq-worker`) that dispatches the
+pipeline. It authenticates with a fine-grained GitHub PAT stored as the Worker secret
+`GITHUB_TOKEN`, which **expires 2026-09-11**. The full renewal procedure (one `wrangler
+secret put`), deploy commands, and the graceful-degradation behaviour if the Worker dies are
+documented in **[`worker/README.md`](../worker/README.md)**. Renew before the expiry to keep
+the scrape gap-rate low; if it lapses, the scheduled in-CI scrape + the IBJA estimate floor
+keep the app correct (degraded, not broken).
 
 ---
 
