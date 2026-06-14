@@ -15,17 +15,14 @@ Baseline: 27% gap rate (34 gaps >9h across 124 readings). ADR 016 re-evaluation 
 **(c) H5 calibrated fallback — ✅ ACTIVE since 2026-06-11.**
 ADR 016 deferred the IBJA-calibrated price fallback while calibration was invalid. With item (a) resolved, H5 activated automatically: inference now applies the calibration to the Chronos companion horizons (`chronos_companion.calibration_applied: true`). Per the check-price.yml step order (inference runs BEFORE calibration-refit), it activated one CI run after the flip, as designed. No outstanding decision — serving correctly.
 
-**(d) ntfy topic — ROTATION NOW REQUIRED (owner action).** *Superseded 2026-06-14.*
-The previous "WONTFIX, zero hardcoded references" assessment was WRONG: the literal topic
-was committed in this file and in `docs/PROGRESS.md` (and its random suffix in `README.md`),
-so it is exposed in git history and effectively public. The topic value has been redacted
-from the working tree (`gold-***`), but redaction does NOT remove it from history. The only
-real remediation is to **rotate**: owner picks a fresh random topic, updates the `NTFY_TOPIC`
-GitHub secret (no trailing whitespace), subscribes the phone to the new topic, unsubscribes
-the old. No code change required (the topic lives only in the secret). Residual risk if NOT
-rotated: anyone reading the public repo history can publish unsolicited notifications (spam)
-to the old topic — no data/repo/pipeline access. CRITICAL-APPROVAL: owner-only (touches the
-secret). See README "Notifications (bring your own ntfy topic)".
+**(d) ntfy topic — WONTFIX, exposure accepted (owner decision 2026-06-14).**
+The live topic was committed in this file / `docs/PROGRESS.md` (suffix in `README.md`) and is
+therefore in git history. The value is now redacted from the working tree (`gold-***`). The
+owner has **decided NOT to rotate**: the worst case of a known public topic is unsolicited
+notifications (spam) to the owner's own device — **no data, repo, or pipeline access**, since
+ntfy topics are publish-only. Accepted as-is. No action pending. (Revisit only if the product
+goes multi-tenant or the spam becomes a nuisance, at which point rotation is a one-line secret
+change.)
 
 ---
 
