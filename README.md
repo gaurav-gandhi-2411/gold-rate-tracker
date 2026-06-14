@@ -4,107 +4,98 @@
 [![Lint](https://github.com/gaurav-gandhi-2411/gold-rate-tracker/actions/workflows/lint.yml/badge.svg)](https://github.com/gaurav-gandhi-2411/gold-rate-tracker/actions/workflows/lint.yml)
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 
-A free, zero-infrastructure app that scrapes the Tanishq gold rate page every 6 hours, answers "Should I buy today?" with a buyer-facing verdict, pushes a phone notification when the 22K rate drops by ₹100 or more, and forecasts the next reading with a LightGBM ensemble.
+A free, $0/month gold-price tracker for Indian retail buyers (Tanishq 22K). It scrapes the live retail rate every 3 hours, shows today's price with an honest range, sends phone alerts when prices move, and **deliberately does not pretend to predict tomorrow's price** — because, measured honestly, no model we've tested beats "today's price, held flat."
 
 **Live site:** https://gaurav-gandhi-2411.github.io/gold-rate-tracker/
 
-**Stack:** GitHub Actions (cron scraper + ML pipeline) · GitHub Pages (PWA) · LightGBM · Groq LLM · ntfy.sh · ₹0/month
+**Stack:** Cloudflare Workers (clean-IP scrape) · GitHub Actions (3h cron + ML pipeline) · GitHub Pages (PWA) · Chronos-Bolt-Tiny · Groq LLM · ntfy.sh — **₹0 / month**
+
+## What it actually claims (and what it doesn't)
+
+This project is built around **honest-baseline reporting** ([ADR 005](docs/adr/005-honest-baseline-reporting.md)):
+
+- ✅ **Today's price**, scraped live, with a freshness label and a clearly-marked fallback estimate when the live scrape is briefly unavailable.
+- ✅ A **5-day range** ("prices have typically swung ±X over 5 days") — an illustrative band, not a forecast.
+- ✅ A plain-language **"is it a good time to buy?"** read based on the *recent 7-day trend* (a description of what already happened, never a prediction).
+- ❌ **No price prediction. No "% chance up". No buy/sell call.** We test next-day and 2-day direction models every week; none beats the base rate ("gold rises most days") by a statistically significant margin, so the directional signal stays **off**. See [docs/DIRECTION_SIGNAL_STATUS.md](docs/DIRECTION_SIGNAL_STATUS.md) for the live numbers and [ADR 012](docs/adr/012-naive-headline-chronos-companion.md) / [ADR 019](docs/adr/019-direction-signal-below-base-rate.md) for why.
+
+The headline forecast is a **naive flat-hold** (predict = today's price). The app reports the model's accuracy *next to* the naive baseline's, every time — it never cherry-picks.
 
 ## How it works
 
-- **Scrape → forecast → commit:** GitHub Actions runs every 6h — Playwright scrapes Tanishq, LightGBM retrains on all data, Groq writes a 2-sentence commentary, results committed to `data/*.json`.
-- **Static PWA:** `index.html` + `app.js` fetch those JSON files directly from the repo and render price, verdict, sparkline, and chart — no server needed.
-- **Verdict logic:** 7-day slope ±₹100 threshold confirmed by a second signal (forecast direction or 30-day mean deviation) → three buckets: down / flat / up.
-
-## Honesty
-
-Model currently matches the naive baseline on MAE (LightGBM 1.010× naive at 65 real readings). The naive-blend safety net means the live forecast hedges toward "no change" until the model earns its weight. Verdict logic combines price slope, model direction, and 30-day average — it does not rely on the point-estimate alone. **Not financial advice.**
-
-Quarterly model check scheduled at ~200 real readings (~2026-07-15). See [ADR 005](docs/adr/005-honest-baseline-reporting.md).
-
-## Monitoring
-
-Configured via [UptimeRobot](https://uptimerobot.com) free tier (create monitors yourself — no API key needed in this repo).
-
-| URL | Monitor type | What it catches |
-|-----|-------------|-----------------|
-| `https://gaurav-gandhi-2411.github.io/gold-rate-tracker/` | HTTP(S) · 5 min interval | Site down / Pages outage |
-| `https://gaurav-gandhi-2411.github.io/gold-rate-tracker/data/forecast.json` | Keyword · check for `predicted_22k` | Forecast pipeline silently broken (site up, data missing) |
-| `https://gaurav-gandhi-2411.github.io/gold-rate-tracker/data/prices.json` | Keyword · check for `price_22k` | Scraper broken (prices file empty or malformed) |
-
-**Alert channel:** use the same ntfy.sh topic as the in-pipeline alerts (`NTFY_TOPIC` secret). Set UptimeRobot alert contacts to send a webhook to `https://ntfy.sh/<your-topic>` with `Content-Type: text/plain`.
-
-> UptimeRobot free tier does not support "response older than N hours" checks natively. The in-pipeline staleness monitors (check-price.yml steps "Check data staleness" and "Forecast staleness monitor") cover the age dimension; UptimeRobot covers availability and schema.
-
-## Error tracking
-
-Sentry browser SDK is wired in `index.html` (CDN, v7). It captures JS exceptions and failed JSON fetches with context (which URL failed, HTTP status).
-
-**To activate:** create a free Sentry project at [sentry.io](https://sentry.io) → **Settings → Client Keys → DSN**. Replace the placeholder in `index.html`:
-
-```html
-<!-- Find this line in index.html and replace the DSN value: -->
-dsn: "https://PLACEHOLDER@o000000.ingest.sentry.io/0000000",
+```
+Cloudflare Worker (cron, clean Singapore IP)
+   └─ fetch Tanishq → parse/validate → repository_dispatch ──┐
+                                                             ▼
+GitHub Actions (check-price.yml, every 3h)                   │
+   ├─ if dispatched: validate payload ──────────────────────┤
+   └─ else (or if Worker is down): scrape in-CI              │
+        (plain fetch → Playwright fallback) ─────────────────┘
+                          ▼
+   prices.json → inference (naive flat-hold + IBJA-calibrated
+                 fallback floor + Chronos directional companion,
+                 kept DARK) → forecast.json
+                          ▼
+   ntfy alerts (price moves, weekly digest, staleness)
+                          ▼
+   commit data/*.json → GitHub Pages PWA renders it
 ```
 
-Until you replace the DSN, errors are logged to the browser console only (Sentry init fails silently when the DSN is invalid, and all Sentry calls are guarded by `typeof Sentry !== 'undefined'`).
+- **Three-layer scrape resilience.** A Cloudflare Worker fetches from a clean IP (Tanishq blocks GitHub's runner IPs). If the Worker is down, the scheduled CI run scrapes in-process (plain `fetch` → Playwright). If both miss, the page shows an IBJA-calibrated estimate (and, failing that, the last confirmed price with a clear "may be outdated" banner) — **the user never sees a dead price.**
+- **Static PWA.** `index.html` + `app.js` fetch `data/*.json` straight from the repo and render price, verdict, sparkline, and chart — no server.
+
+## Notifications (bring your own ntfy topic)
+
+Alerts are delivered via [ntfy.sh](https://ntfy.sh) — free, no account. **Pick your own topic and keep it private:** anyone who knows a topic name can publish to it, so treat it like a password (a long random string, e.g. `gold-<yourname>-<16 random chars>`). Set it as the `NTFY_TOPIC` GitHub Actions secret and subscribe to it in the ntfy app.
+
+Alert types: a price-move alert (describes the recent trend), a twice-daily digest, and a data-staleness warning if scraping stalls. All copy is plain-language and ASCII-safe.
 
 ## Setup (~15 minutes)
 
-1. Fork / create a public repo. Upload all files.
-2. **Settings → Secrets → Actions → New secret:**
-   - `NTFY_TOPIC` — your OWN ntfy.sh topic. Treat it like a password: pick a long random string nobody can guess (e.g. `gold-<yourname>-<random-suffix>`). Anyone who knows the topic can publish notifications to it.
-   - `GROQ_API_KEY` — from [console.groq.com](https://console.groq.com) (free tier)
-3. **Actions → Check Gold Price → Run workflow** (manual trigger, wait ~2 min).
-4. **Settings → Pages → Deploy from branch → master → / (root).**
+1. Fork / create a public repo and upload all files.
+2. **Settings → Secrets and variables → Actions → New repository secret:**
+   - `NTFY_TOPIC` — your OWN ntfy.sh topic (treat like a password; long & random).
+   - `GROQ_API_KEY` — free tier from [console.groq.com](https://console.groq.com) (optional; without it the plain-language commentary is skipped, nothing else breaks).
+3. **Actions → Check Gold Price → Run workflow** (manual trigger; wait ~2 min).
+4. **Settings → Pages → Deploy from branch → `master` → `/` (root).**
 5. Install the PWA: iOS Safari → Share → Add to Home Screen · Android Chrome → Install app.
-6. Subscribe ntfy: install the ntfy app → **+** → enter your topic.
+6. Subscribe to alerts: install the ntfy app → **+** → enter your topic.
 
-### Seed historical data (first time only)
+### Optional: clean-IP scraping via Cloudflare Workers
 
-```bash
-pip install -r ml/requirements.txt
-python ml/seed_history.py
-git add data/history_seed.json && git commit -m "chore: add seed data"
-```
+Tanishq blocks GitHub's runner IPs, so the in-CI scrape misses ~1/3 of the time on its own. A free Cloudflare Worker fetches from a clean IP and triggers the pipeline. This is **optional** — without it the app still works (degraded), because the scheduled CI run and the estimate floor keep the price correct. To set it up (and to renew the token before it expires), see **[worker/README.md](worker/README.md)**.
 
-## Dev setup
+## Honesty & methodology
 
-```bash
-# MLflow (local, port 5001)
-docker compose up -d
-# http://localhost:5001 — experiment "gold-rate-training"
+- Headline = **naive flat-hold**; on the walk-forward backtest no model beats it on magnitude (it's ~14% *worse*, p≈0.003), so the baseline *is* the production forecast ([ADR 012](docs/adr/012-naive-headline-chronos-companion.md)).
+- Direction signal is **off** at every horizon — see the auto-measured [DIRECTION_SIGNAL_STATUS.md](docs/DIRECTION_SIGNAL_STATUS.md) (re-run weekly).
+- **Not financial advice. Rates are indicative.**
 
-# Training venv (RTX 3070 / CUDA 12.4)
-.\scripts\win\setup-train.ps1
-venv-train\Scripts\Activate.ps1
-python -m ml.training
-```
+## Repo layout
 
-See [docs/RUNBOOK.md](docs/RUNBOOK.md) for rollback, CI debugging, and staleness alert procedures.
-
-## Tweaking
-
-| What | Where |
-|------|-------|
-| Cron schedule | `.github/workflows/check-price.yml` → `cron:` |
-| Drop threshold | same file → `DROP_THRESHOLD` env var |
-| Chart default range | `app.js` → `renderChart(allReadings, "7")` |
-| Model hyperparams | `configs/model/lightgbm.yaml` |
+| Path | What |
+|------|------|
+| `index.html`, `app.js`, `service-worker.js` | The PWA (what users see) |
+| `scraper/` | Tanishq scrape + dispatch validation (Node) |
+| `worker/` | Cloudflare Worker (clean-IP fetch) + its README |
+| `ml/` | Inference, calibration, notifications, the direction-eval harness |
+| `data/` | Committed price/forecast/eval JSON the PWA reads |
+| `.github/workflows/` | `check-price.yml` (3h loop), `lint.yml`, `eval-direction.yml`, canary |
+| `docs/` | RUNBOOK, ADRs, CURRENT_STATE, DIRECTION_SIGNAL_STATUS |
 
 ## Troubleshooting
 
-- **Scraper fails:** Tanishq changed HTML. Find the new selector in the `=== PAGE TEXT ===` dump and update `scraper/scrape.js`.
-- **No notifications:** check `NTFY_TOPIC` has no URL prefix, you subscribed to the exact topic, and price actually dropped ≥₹100.
-- **Forecast missing:** check "Run forecast" step in Actions logs. It's `continue-on-error: true` so scraping still works.
-- **Commentary missing:** ensure `GROQ_API_KEY` secret is set.
-- **OG image stale:** share via [Twitter Card Validator](https://cards-dev.twitter.com/validator) or [Facebook Sharing Debugger](https://developers.facebook.com/tools/debug/) to force a re-fetch.
+- **Prices look stale:** the page banner will say so. Check the latest **Check Gold Price** run in Actions; the scrape step is `continue-on-error`, so a miss is logged as a run annotation, not a hard failure.
+- **No notifications:** confirm `NTFY_TOPIC` has no URL prefix, you subscribed to the *exact* topic, and a price move actually occurred.
+- **Commentary missing:** set `GROQ_API_KEY` (optional).
+- **Scraper DOM canary issue opened:** Tanishq's runner-IP block can fail the live canary even when the page is fine — confirm against the Worker's last successful dispatch before assuming the selector changed. See [docs/RUNBOOK.md](docs/RUNBOOK.md).
 
-## Design decisions
+## Design decisions (ADRs)
 
-- [ADR 001](docs/adr/001-local-train-ci-inference.md) — Train locally, serve via ONNX in CI
-- [ADR 002](docs/adr/002-no-dagster.md) — No Dagster: Python scripts + Makefile
-- [ADR 005](docs/adr/005-honest-baseline-reporting.md) — Always report when model loses to naive
+- [ADR 005](docs/adr/005-honest-baseline-reporting.md) — always report when the model loses to naive
+- [ADR 012](docs/adr/012-naive-headline-chronos-companion.md) — naive flat-hold headline, Chronos as a (dark) companion
+- [ADR 019](docs/adr/019-direction-signal-below-base-rate.md) — the direction signal doesn't beat the base rate; ship nothing
+- [docs/RUNBOOK.md](docs/RUNBOOK.md) — rollback, CI debugging, staleness, Worker/token ops
 
 ## License
 
