@@ -11,6 +11,6 @@ pytest>=7.4
 yfinance>=1.4.1
 pyarrow>=13.0
 hmmlearn>=0.3.0
-onnxruntime>=1.16.0
+onnxruntime>=1.26.0
 chronos-forecasting>=2.2.0
 jsonschema>=4.0
