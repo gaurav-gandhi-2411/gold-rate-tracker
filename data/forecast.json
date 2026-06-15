@@ -1,5 +1,5 @@
 {
-  "predicted_at": "2026-06-15T11:58:22.860380+00:00",
+  "predicted_at": "2026-06-15T12:31:21.886971+00:00",
   "target_window": "5d",
   "headline": {
     "method": "naive_flat_hold",
@@ -25,29 +25,29 @@
   "chronos_companion": {
     "status": "success",
     "lean_direction": "up",
-    "lean_strength_pct": 0.604,
+    "lean_strength_pct": 0.974,
     "direction_acc_30f": 0.467,
     "direction_prob_basis": "base_rate_fallback",
     "horizon_p10": [
-      13233.9,
-      13166.97,
-      13113.37,
-      13071.38,
-      13012.91
+      13602.6,
+      13519.23,
+      13449.94,
+      13396.19,
+      13324.02
     ],
     "horizon_p50": [
-      13716.91,
-      13754.87,
-      13810.66,
-      13854.03,
-      13886.22
+      14087.77,
+      14093.68,
+      14128.33,
+      14161.5,
+      14176.31
     ],
     "horizon_p90": [
-      14296.58,
-      14422.66,
-      14555.56,
-      14647.5,
-      14734.23
+      14666.71,
+      14749.73,
+      14858.37,
+      14945.64,
+      15013.9
     ],
     "model_version": "amazon/chronos-bolt-tiny@a0e552de",
     "calibration_applied": true,
@@ -56,54 +56,54 @@
     "direction_consensus": 1.0
   },
   "driver_context": {
-    "computed_at": "2026-06-15T11:58:22.864835+00:00",
+    "computed_at": "2026-06-15T12:31:21.889978+00:00",
     "macro_staleness_days": 0.0,
     "macro_fresh": true,
     "premium_threshold_pct": 15.0,
     "windows": {
       "7d": {
         "n_obs": 6,
-        "t0_date": "2026-06-05",
-        "t1_date": "2026-06-12",
-        "delta_pct_ibja": -4.264,
-        "delta_pct_gold_usd": -2.856,
-        "delta_pct_usdinr": -0.032,
-        "delta_pct_premium": -1.376,
+        "t0_date": "2026-06-08",
+        "t1_date": "2026-06-15",
+        "delta_pct_ibja": -0.558,
+        "delta_pct_gold_usd": 0.297,
+        "delta_pct_usdinr": -0.248,
+        "delta_pct_premium": -0.607,
         "total_move_rs_per_g": -15.0,
-        "gold_usd_contrib_rs_per_g": -10.0,
-        "usdinr_contrib_rs_per_g": -0.1,
-        "premium_contrib_rs_per_g": -4.8,
-        "premium_share_pct": 32.3,
+        "gold_usd_contrib_rs_per_g": 8.0,
+        "usdinr_contrib_rs_per_g": -6.7,
+        "premium_contrib_rs_per_g": -16.3,
+        "premium_share_pct": 108.8,
         "attribution_valid": false,
-        "attribution_valid_reason": "premium share 32.3% exceeds 15% threshold"
+        "attribution_valid_reason": "premium share 108.8% exceeds 15% threshold"
       },
       "30d": {
-        "n_obs": 22,
-        "t0_date": "2026-05-13",
-        "t1_date": "2026-06-12",
-        "delta_pct_ibja": -8.54,
-        "delta_pct_gold_usd": -10.842,
-        "delta_pct_usdinr": 0.133,
-        "delta_pct_premium": 2.169,
+        "n_obs": 20,
+        "t0_date": "2026-05-18",
+        "t1_date": "2026-06-15",
+        "delta_pct_ibja": -4.601,
+        "delta_pct_gold_usd": -4.578,
+        "delta_pct_usdinr": -1.317,
+        "delta_pct_premium": 1.294,
         "total_move_rs_per_g": -460.0,
-        "gold_usd_contrib_rs_per_g": -584.0,
-        "usdinr_contrib_rs_per_g": 7.2,
-        "premium_contrib_rs_per_g": 116.9,
-        "premium_share_pct": 25.4,
+        "gold_usd_contrib_rs_per_g": -457.7,
+        "usdinr_contrib_rs_per_g": -131.6,
+        "premium_contrib_rs_per_g": 129.3,
+        "premium_share_pct": 28.1,
         "attribution_valid": false,
-        "attribution_valid_reason": "premium share 25.4% exceeds 15% threshold"
+        "attribution_valid_reason": "premium share 28.1% exceeds 15% threshold"
       }
     },
     "driver_state": {
-      "usd_inr_now": 95.76,
-      "gold_usd_now": 4215.0,
-      "usd_inr_30d_pct_change": 0.13,
-      "gold_usd_30d_pct_change": -10.28
+      "usd_inr_now": 94.715,
+      "gold_usd_now": 4348.8,
+      "usd_inr_30d_pct_change": -1.31,
+      "gold_usd_30d_pct_change": -4.47
     }
   },
-  "real_readings_count": 205,
+  "real_readings_count": 206,
   "current_22k": 13935,
-  "scraped_at": "2026-06-15T06:30:04.309Z",
+  "scraped_at": "2026-06-15T12:30:05.274Z",
   "price_source": "tanishq_scrape",
   "est_low": null,
   "est_high": null,
