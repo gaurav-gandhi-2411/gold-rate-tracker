@@ -1,16 +1,16 @@
 {
-  "predicted_at": "2026-06-17T03:43:05.022103+00:00",
+  "predicted_at": "2026-06-17T06:32:06.285824+00:00",
   "target_window": "5d",
   "headline": {
     "method": "naive_flat_hold",
-    "predicted_22k": 13920,
-    "lower": 13001,
-    "upper": 14839,
+    "predicted_22k": 13895,
+    "lower": 12976,
+    "upper": 14814,
     "conformal_pi_half": 918.9,
     "naive_mae_recent_30": 570.1,
     "vol_context": {
       "half_width": 459,
-      "half_width_raw": 376.6,
+      "half_width_raw": 375.8,
       "method": "realized_20d",
       "window_days": 20,
       "contiguous_days": 64,
@@ -18,7 +18,7 @@
       "is_degraded": false,
       "floor_fraction": 0.5,
       "static_pi_half": 918.9,
-      "baseline_half_width": 367,
+      "baseline_half_width": 366,
       "regime": "normal"
     }
   },
@@ -38,7 +38,7 @@
     "horizon_p50": [
       14104.67,
       14081.45,
-      14094.14,
+      14094.13,
       14124.64,
       14149.93
     ],
@@ -47,7 +47,7 @@
       14709.02,
       14804.0,
       14894.33,
-      14982.04
+      14982.05
     ],
     "model_version": "amazon/chronos-bolt-tiny@a0e552de",
     "calibration_applied": true,
@@ -56,7 +56,7 @@
     "direction_consensus": 1.0
   },
   "driver_context": {
-    "computed_at": "2026-06-17T03:43:05.025230+00:00",
+    "computed_at": "2026-06-17T06:32:06.288883+00:00",
     "macro_staleness_days": 0.0,
     "macro_fresh": true,
     "premium_threshold_pct": 15.0,
@@ -66,52 +66,52 @@
         "t0_date": "2026-06-09",
         "t1_date": "2026-06-16",
         "delta_pct_ibja": -1.224,
-        "delta_pct_gold_usd": 2.139,
+        "delta_pct_gold_usd": 1.651,
         "delta_pct_usdinr": -0.994,
-        "delta_pct_premium": -2.369,
-        "total_move_rs_per_g": 230.0,
-        "gold_usd_contrib_rs_per_g": -401.8,
-        "usdinr_contrib_rs_per_g": 186.8,
-        "premium_contrib_rs_per_g": 445.1,
-        "premium_share_pct": 193.5,
+        "delta_pct_premium": -1.881,
+        "total_move_rs_per_g": 205.0,
+        "gold_usd_contrib_rs_per_g": -276.4,
+        "usdinr_contrib_rs_per_g": 166.5,
+        "premium_contrib_rs_per_g": 314.9,
+        "premium_share_pct": 153.6,
         "attribution_valid": false,
-        "attribution_valid_reason": "premium share 193.5% exceeds 15% threshold"
+        "attribution_valid_reason": "premium share 153.6% exceeds 15% threshold"
       },
       "30d": {
         "n_obs": 21,
         "t0_date": "2026-05-18",
         "t1_date": "2026-06-16",
         "delta_pct_ibja": -4.59,
-        "delta_pct_gold_usd": -4.502,
+        "delta_pct_gold_usd": -4.99,
         "delta_pct_usdinr": -1.288,
-        "delta_pct_premium": 1.2,
-        "total_move_rs_per_g": -425.0,
-        "gold_usd_contrib_rs_per_g": -416.8,
-        "usdinr_contrib_rs_per_g": -119.3,
-        "premium_contrib_rs_per_g": 111.1,
-        "premium_share_pct": 26.2,
+        "delta_pct_premium": 1.689,
+        "total_move_rs_per_g": -450.0,
+        "gold_usd_contrib_rs_per_g": -489.2,
+        "usdinr_contrib_rs_per_g": -126.3,
+        "premium_contrib_rs_per_g": 165.6,
+        "premium_share_pct": 36.8,
         "attribution_valid": false,
-        "attribution_valid_reason": "premium share 26.2% exceeds 15% threshold"
+        "attribution_valid_reason": "premium share 36.8% exceeds 15% threshold"
       }
     },
     "driver_state": {
       "usd_inr_now": 94.742,
-      "gold_usd_now": 4352.1,
+      "gold_usd_now": 4330.9,
       "usd_inr_30d_pct_change": -1.28,
-      "gold_usd_30d_pct_change": -4.4
+      "gold_usd_30d_pct_change": -4.87
     }
   },
-  "real_readings_count": 222,
-  "current_22k": 13920,
-  "scraped_at": "2026-06-17T03:42:47.188Z",
+  "real_readings_count": 223,
+  "current_22k": 13895,
+  "scraped_at": "2026-06-17T06:30:58.970Z",
   "price_source": "tanishq_scrape",
   "est_low": null,
   "est_high": null,
   "ibja_asof": null,
   "model_fallback": false,
-  "predicted_22k": 13920,
-  "lower": 13001,
-  "upper": 14839,
+  "predicted_22k": 13895,
+  "lower": 12976,
+  "upper": 14814,
   "target_time": "2026-06-18T00:00:00+00:00",
   "model_status": "naive_headline",
   "model_version": "naive_flat_hold",
