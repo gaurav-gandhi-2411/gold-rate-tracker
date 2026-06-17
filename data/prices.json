@@ -1531,5 +1531,12 @@
     "24k": 15185,
     "18k": 11389,
     "source": "https://www.tanishq.co.in/gold-rate.html?lang=en_IN"
+  },
+  {
+    "timestamp": "2026-06-17T00:30:59.359Z",
+    "22k": 13920,
+    "24k": 15185,
+    "18k": 11389,
+    "source": "repository_dispatch"
   }
 ]

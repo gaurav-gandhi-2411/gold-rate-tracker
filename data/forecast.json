@@ -1,5 +1,5 @@
 {
-  "predicted_at": "2026-06-16T22:52:14.630514+00:00",
+  "predicted_at": "2026-06-17T00:31:49.866581+00:00",
   "target_window": "5d",
   "headline": {
     "method": "naive_flat_hold",
@@ -10,15 +10,15 @@
     "naive_mae_recent_30": 570.1,
     "vol_context": {
       "half_width": 459,
-      "half_width_raw": 377.1,
+      "half_width_raw": 376.6,
       "method": "realized_20d",
       "window_days": 20,
-      "contiguous_days": 63,
+      "contiguous_days": 64,
       "is_floored": true,
       "is_degraded": false,
       "floor_fraction": 0.5,
       "static_pi_half": 918.9,
-      "baseline_half_width": 370,
+      "baseline_half_width": 367,
       "regime": "normal"
     }
   },
@@ -38,7 +38,7 @@
     "horizon_p50": [
       14104.67,
       14081.45,
-      14094.14,
+      14094.13,
       14124.64,
       14149.93
     ],
@@ -47,7 +47,7 @@
       14709.02,
       14804.0,
       14894.33,
-      14982.04
+      14982.05
     ],
     "model_version": "amazon/chronos-bolt-tiny@a0e552de",
     "calibration_applied": true,
@@ -56,7 +56,7 @@
     "direction_consensus": 1.0
   },
   "driver_context": {
-    "computed_at": "2026-06-16T22:52:14.634106+00:00",
+    "computed_at": "2026-06-17T00:31:49.869785+00:00",
     "macro_staleness_days": 0.0,
     "macro_fresh": true,
     "premium_threshold_pct": 15.0,
@@ -66,44 +66,44 @@
         "t0_date": "2026-06-09",
         "t1_date": "2026-06-16",
         "delta_pct_ibja": -1.224,
-        "delta_pct_gold_usd": 2.141,
-        "delta_pct_usdinr": -1.139,
-        "delta_pct_premium": -2.227,
+        "delta_pct_gold_usd": 2.281,
+        "delta_pct_usdinr": -0.994,
+        "delta_pct_premium": -2.511,
         "total_move_rs_per_g": -165.0,
-        "gold_usd_contrib_rs_per_g": 288.6,
-        "usdinr_contrib_rs_per_g": -153.4,
-        "premium_contrib_rs_per_g": -300.1,
-        "premium_share_pct": 181.9,
+        "gold_usd_contrib_rs_per_g": 307.5,
+        "usdinr_contrib_rs_per_g": -134.0,
+        "premium_contrib_rs_per_g": -338.5,
+        "premium_share_pct": 205.1,
         "attribution_valid": false,
-        "attribution_valid_reason": "premium share 181.9% exceeds 15% threshold"
+        "attribution_valid_reason": "premium share 205.1% exceeds 15% threshold"
       },
       "30d": {
         "n_obs": 21,
         "t0_date": "2026-05-18",
         "t1_date": "2026-06-16",
         "delta_pct_ibja": -4.59,
-        "delta_pct_gold_usd": -4.5,
-        "delta_pct_usdinr": -1.433,
-        "delta_pct_premium": 1.342,
+        "delta_pct_gold_usd": -4.359,
+        "delta_pct_usdinr": -1.288,
+        "delta_pct_premium": 1.058,
         "total_move_rs_per_g": -425.0,
-        "gold_usd_contrib_rs_per_g": -416.6,
-        "usdinr_contrib_rs_per_g": -132.7,
-        "premium_contrib_rs_per_g": 124.3,
-        "premium_share_pct": 29.2,
+        "gold_usd_contrib_rs_per_g": -403.7,
+        "usdinr_contrib_rs_per_g": -119.3,
+        "premium_contrib_rs_per_g": 98.0,
+        "premium_share_pct": 23.1,
         "attribution_valid": false,
-        "attribution_valid_reason": "premium share 29.2% exceeds 15% threshold"
+        "attribution_valid_reason": "premium share 23.1% exceeds 15% threshold"
       }
     },
     "driver_state": {
-      "usd_inr_now": 94.605,
-      "gold_usd_now": 4352.2,
-      "usd_inr_30d_pct_change": -1.42,
-      "gold_usd_30d_pct_change": -4.4
+      "usd_inr_now": 94.742,
+      "gold_usd_now": 4358.3,
+      "usd_inr_30d_pct_change": -1.28,
+      "gold_usd_30d_pct_change": -4.27
     }
   },
-  "real_readings_count": 219,
+  "real_readings_count": 220,
   "current_22k": 13920,
-  "scraped_at": "2026-06-16T22:51:56.185Z",
+  "scraped_at": "2026-06-17T00:30:59.359Z",
   "price_source": "tanishq_scrape",
   "est_low": null,
   "est_high": null,
@@ -112,7 +112,7 @@
   "predicted_22k": 13920,
   "lower": 13001,
   "upper": 14839,
-  "target_time": "2026-06-17T00:00:00+00:00",
+  "target_time": "2026-06-18T00:00:00+00:00",
   "model_status": "naive_headline",
   "model_version": "naive_flat_hold",
   "warmup": false
