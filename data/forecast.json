@@ -1,23 +1,23 @@
 {
-  "predicted_at": "2026-06-21T06:31:53.058422+00:00",
+  "predicted_at": "2026-06-21T09:32:04.175529+00:00",
   "target_window": "5d",
   "headline": {
     "method": "naive_flat_hold",
     "predicted_22k": 13435,
-    "lower": 12516,
-    "upper": 14354,
-    "conformal_pi_half": 918.9,
-    "naive_mae_recent_30": 570.1,
+    "lower": 12833,
+    "upper": 14037,
+    "conformal_pi_half": 602.4,
+    "naive_mae_recent_30": 393.7,
     "vol_context": {
-      "half_width": 459,
+      "half_width": 389,
       "half_width_raw": 389.0,
       "method": "realized_20d",
       "window_days": 20,
       "contiguous_days": 68,
-      "is_floored": true,
+      "is_floored": false,
       "is_degraded": false,
       "floor_fraction": 0.5,
-      "static_pi_half": 918.9,
+      "static_pi_half": 602.4,
       "baseline_half_width": 357,
       "regime": "normal"
     }
@@ -26,7 +26,7 @@
     "status": "success",
     "lean_direction": "down",
     "lean_strength_pct": 0.556,
-    "direction_acc_30f": 0.467,
+    "direction_acc_30f": 0.4,
     "direction_prob_basis": "base_rate_fallback",
     "horizon_p10": [
       12848.13,
@@ -56,7 +56,7 @@
     "direction_consensus": 1.0
   },
   "driver_context": {
-    "computed_at": "2026-06-21T06:31:53.061645+00:00",
+    "computed_at": "2026-06-21T09:32:04.177907+00:00",
     "macro_staleness_days": 0.0,
     "macro_fresh": true,
     "premium_threshold_pct": 15.0,
@@ -101,17 +101,17 @@
       "gold_usd_30d_pct_change": -7.91
     }
   },
-  "real_readings_count": 264,
+  "real_readings_count": 265,
   "current_22k": 13435,
-  "scraped_at": "2026-06-21T06:30:58.705Z",
+  "scraped_at": "2026-06-21T09:30:58.671Z",
   "price_source": "tanishq_scrape",
   "est_low": null,
   "est_high": null,
   "ibja_asof": null,
   "model_fallback": false,
   "predicted_22k": 13435,
-  "lower": 12516,
-  "upper": 14354,
+  "lower": 12833,
+  "upper": 14037,
   "target_time": "2026-06-22T00:00:00+00:00",
   "model_status": "naive_headline",
   "model_version": "naive_flat_hold",
