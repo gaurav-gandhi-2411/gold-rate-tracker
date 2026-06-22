@@ -1,5 +1,5 @@
 {
-  "predicted_at": "2026-06-21T22:11:42.908143+00:00",
+  "predicted_at": "2026-06-22T00:31:07.088384+00:00",
   "target_window": "5d",
   "headline": {
     "method": "naive_flat_hold",
@@ -13,12 +13,12 @@
       "half_width_raw": 389.0,
       "method": "realized_20d",
       "window_days": 20,
-      "contiguous_days": 68,
+      "contiguous_days": 69,
       "is_floored": false,
       "is_degraded": false,
       "floor_fraction": 0.5,
       "static_pi_half": 602.4,
-      "baseline_half_width": 357,
+      "baseline_half_width": 354,
       "regime": "normal"
     }
   },
@@ -56,7 +56,7 @@
     "direction_consensus": 1.0
   },
   "driver_context": {
-    "computed_at": "2026-06-21T22:11:42.910575+00:00",
+    "computed_at": "2026-06-22T00:31:07.091930+00:00",
     "macro_staleness_days": 0.0,
     "macro_fresh": true,
     "premium_threshold_pct": 15.0,
@@ -101,9 +101,9 @@
       "gold_usd_30d_pct_change": -6.78
     }
   },
-  "real_readings_count": 270,
+  "real_readings_count": 271,
   "current_22k": 13435,
-  "scraped_at": "2026-06-21T21:30:10.925Z",
+  "scraped_at": "2026-06-22T00:30:10.882Z",
   "price_source": "tanishq_scrape",
   "est_low": null,
   "est_high": null,
@@ -112,7 +112,7 @@
   "predicted_22k": 13435,
   "lower": 12833,
   "upper": 14037,
-  "target_time": "2026-06-22T00:00:00+00:00",
+  "target_time": "2026-06-23T00:00:00+00:00",
   "model_status": "naive_headline",
   "model_version": "naive_flat_hold",
   "warmup": false
