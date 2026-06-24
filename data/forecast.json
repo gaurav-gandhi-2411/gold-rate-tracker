@@ -1,5 +1,5 @@
 {
-  "predicted_at": "2026-06-24T06:31:04.396683+00:00",
+  "predicted_at": "2026-06-24T06:46:38.595185+00:00",
   "target_window": "5d",
   "headline": {
     "method": "naive_flat_hold",
@@ -47,7 +47,7 @@
       14069.74,
       14126.85,
       14180.47,
-      14238.78
+      14238.77
     ],
     "model_version": "amazon/chronos-bolt-tiny@a0e552de",
     "calibration_applied": true,
@@ -56,7 +56,7 @@
     "direction_consensus": 1.0
   },
   "driver_context": {
-    "computed_at": "2026-06-24T06:31:04.400156+00:00",
+    "computed_at": "2026-06-24T06:46:38.598562+00:00",
     "macro_staleness_days": 0.0,
     "macro_fresh": true,
     "premium_threshold_pct": 15.0,
@@ -101,9 +101,9 @@
       "gold_usd_30d_pct_change": -8.65
     }
   },
-  "real_readings_count": 295,
+  "real_readings_count": 296,
   "current_22k": 13275,
-  "scraped_at": "2026-06-24T06:30:10.794Z",
+  "scraped_at": "2026-06-24T06:46:18.722Z",
   "price_source": "tanishq_scrape",
   "est_low": null,
   "est_high": null,
