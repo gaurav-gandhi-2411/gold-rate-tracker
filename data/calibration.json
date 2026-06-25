@@ -1,10 +1,10 @@
 {
-  "slope": 1.013748272415499,
-  "intercept": 3.200202659085892,
-  "fit_date": "2026-06-11",
-  "n_observations": 30,
-  "residual_std": 106.1845284587364,
-  "r_squared": 0.888721105478065,
+  "slope": 1.0126355772485613,
+  "intercept": 0.3336124694439428,
+  "fit_date": "2026-06-25",
+  "n_observations": 40,
+  "residual_std": 99.02880030873388,
+  "r_squared": 0.9409075606801174,
   "huber_epsilon": 1.35,
   "valid": true,
   "schema_version": 1
