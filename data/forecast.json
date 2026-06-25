@@ -1,5 +1,5 @@
 {
-  "predicted_at": "2026-06-25T00:31:35.848649+00:00",
+  "predicted_at": "2026-06-25T02:53:07.256470+00:00",
   "target_window": "5d",
   "headline": {
     "method": "naive_flat_hold",
@@ -56,7 +56,7 @@
     "direction_consensus": 1.0
   },
   "driver_context": {
-    "computed_at": "2026-06-25T00:31:35.851731+00:00",
+    "computed_at": "2026-06-25T02:53:07.259845+00:00",
     "macro_staleness_days": 0.0,
     "macro_fresh": true,
     "premium_threshold_pct": 15.0,
@@ -66,44 +66,44 @@
         "t0_date": "2026-06-17",
         "t1_date": "2026-06-24",
         "delta_pct_ibja": -5.455,
-        "delta_pct_gold_usd": -8.089,
+        "delta_pct_gold_usd": -8.768,
         "delta_pct_usdinr": 0.311,
-        "delta_pct_premium": 2.324,
+        "delta_pct_premium": 3.003,
         "total_move_rs_per_g": -620.0,
-        "gold_usd_contrib_rs_per_g": -919.4,
+        "gold_usd_contrib_rs_per_g": -996.6,
         "usdinr_contrib_rs_per_g": 35.3,
-        "premium_contrib_rs_per_g": 264.1,
-        "premium_share_pct": 42.6,
+        "premium_contrib_rs_per_g": 341.3,
+        "premium_share_pct": 55.0,
         "attribution_valid": false,
-        "attribution_valid_reason": "premium share 42.6% exceeds 15% threshold"
+        "attribution_valid_reason": "premium share 55.0% exceeds 15% threshold"
       },
       "30d": {
         "n_obs": 22,
         "t0_date": "2026-05-25",
         "t1_date": "2026-06-24",
         "delta_pct_ibja": -10.945,
-        "delta_pct_gold_usd": -11.74,
+        "delta_pct_gold_usd": -12.419,
         "delta_pct_usdinr": -0.561,
-        "delta_pct_premium": 1.357,
-        "total_move_rs_per_g": -1380.0,
-        "gold_usd_contrib_rs_per_g": -1480.3,
-        "usdinr_contrib_rs_per_g": -70.8,
-        "premium_contrib_rs_per_g": 171.1,
-        "premium_share_pct": 12.4,
-        "attribution_valid": true,
-        "attribution_valid_reason": "clean \u2014 premium share within threshold"
+        "delta_pct_premium": 2.036,
+        "total_move_rs_per_g": -1335.0,
+        "gold_usd_contrib_rs_per_g": -1514.8,
+        "usdinr_contrib_rs_per_g": -68.5,
+        "premium_contrib_rs_per_g": 248.3,
+        "premium_share_pct": 18.6,
+        "attribution_valid": false,
+        "attribution_valid_reason": "premium share 18.6% exceeds 15% threshold"
       }
     },
     "driver_state": {
       "usd_inr_now": 95.184,
-      "gold_usd_now": 4020.2,
+      "gold_usd_now": 3993.0,
       "usd_inr_30d_pct_change": -0.56,
-      "gold_usd_30d_pct_change": -11.08
+      "gold_usd_30d_pct_change": -11.68
     }
   },
-  "real_readings_count": 305,
+  "real_readings_count": 306,
   "current_22k": 13275,
-  "scraped_at": "2026-06-25T00:30:37.272Z",
+  "scraped_at": "2026-06-25T02:52:51.193Z",
   "price_source": "tanishq_scrape",
   "est_low": null,
   "est_high": null,
