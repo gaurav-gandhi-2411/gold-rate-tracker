@@ -1,5 +1,5 @@
 {
-  "predicted_at": "2026-06-28T22:00:45.519983+00:00",
+  "predicted_at": "2026-06-29T03:33:11.773307+00:00",
   "target_window": "5d",
   "headline": {
     "method": "naive_flat_hold",
@@ -9,16 +9,16 @@
     "conformal_pi_half": 685.1,
     "naive_mae_recent_30": 441.9,
     "vol_context": {
-      "half_width": 438,
-      "half_width_raw": 437.7,
+      "half_width": 430,
+      "half_width_raw": 429.8,
       "method": "realized_20d",
       "window_days": 20,
-      "contiguous_days": 75,
+      "contiguous_days": 76,
       "is_floored": false,
       "is_degraded": false,
       "floor_fraction": 0.5,
       "static_pi_half": 685.1,
-      "baseline_half_width": 357,
+      "baseline_half_width": 354,
       "regime": "normal"
     }
   },
@@ -56,7 +56,7 @@
     "direction_consensus": 1.0
   },
   "driver_context": {
-    "computed_at": "2026-06-28T22:00:45.523216+00:00",
+    "computed_at": "2026-06-29T03:33:11.776680+00:00",
     "macro_staleness_days": 0.0,
     "macro_fresh": true,
     "premium_threshold_pct": 15.0,
@@ -85,10 +85,10 @@
         "delta_pct_gold_usd": -11.028,
         "delta_pct_usdinr": -0.856,
         "delta_pct_premium": -0.126,
-        "total_move_rs_per_g": -1255.0,
-        "gold_usd_contrib_rs_per_g": -1152.4,
-        "usdinr_contrib_rs_per_g": -89.5,
-        "premium_contrib_rs_per_g": -13.1,
+        "total_move_rs_per_g": -1200.0,
+        "gold_usd_contrib_rs_per_g": -1101.9,
+        "usdinr_contrib_rs_per_g": -85.6,
+        "premium_contrib_rs_per_g": -12.5,
         "premium_share_pct": 1.0,
         "attribution_valid": true,
         "attribution_valid_reason": "clean \u2014 premium share within threshold"
@@ -101,9 +101,9 @@
       "gold_usd_30d_pct_change": -10.44
     }
   },
-  "real_readings_count": 331,
+  "real_readings_count": 332,
   "current_22k": 13240,
-  "scraped_at": "2026-06-28T22:00:24.196Z",
+  "scraped_at": "2026-06-29T03:32:54.976Z",
   "price_source": "tanishq_scrape",
   "est_low": null,
   "est_high": null,
@@ -112,7 +112,7 @@
   "predicted_22k": 13240,
   "lower": 12555,
   "upper": 13925,
-  "target_time": "2026-06-29T00:00:00+00:00",
+  "target_time": "2026-06-30T00:00:00+00:00",
   "model_status": "naive_headline",
   "model_version": "naive_flat_hold",
   "warmup": false
