@@ -1,5 +1,5 @@
 {
-  "predicted_at": "2026-07-03T06:28:52.166750+00:00",
+  "predicted_at": "2026-07-03T11:30:30.893966+00:00",
   "target_window": "5d",
   "headline": {
     "method": "naive_flat_hold",
@@ -30,7 +30,7 @@
     "direction_prob_basis": "base_rate_fallback",
     "horizon_p10": [
       13004.86,
-      12887.76,
+      12887.77,
       12808.82,
       12793.31,
       12793.61
@@ -56,7 +56,7 @@
     "direction_consensus": 1.0
   },
   "driver_context": {
-    "computed_at": "2026-07-03T06:28:52.170046+00:00",
+    "computed_at": "2026-07-03T11:30:30.897267+00:00",
     "macro_staleness_days": 0.0,
     "macro_fresh": true,
     "premium_threshold_pct": 15.0,
@@ -101,9 +101,9 @@
       "gold_usd_30d_pct_change": -8.38
     }
   },
-  "real_readings_count": 358,
+  "real_readings_count": 359,
   "current_22k": 13520,
-  "scraped_at": "2026-07-03T06:28:33.081Z",
+  "scraped_at": "2026-07-03T11:30:09.417Z",
   "price_source": "tanishq_scrape",
   "est_low": null,
   "est_high": null,
