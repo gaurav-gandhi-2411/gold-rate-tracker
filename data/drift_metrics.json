@@ -1,45 +1,5 @@
 [
   {
-    "ts": "2026-06-03T02:46:36.040032+00:00",
-    "target_time": "2026-06-03T00:00:00+00:00",
-    "actual_ts": "2026-06-03T02:46:21.575Z",
-    "actual_22k": 14365.0,
-    "forecast_22k": 14365.0,
-    "residual": 0.0,
-    "model_version": "naive_flat_hold",
-    "baseline_mae": 249.53
-  },
-  {
-    "ts": "2026-06-03T03:06:09.582972+00:00",
-    "target_time": "2026-06-04T00:00:00+00:00",
-    "actual_ts": "2026-06-03T03:05:53.717Z",
-    "actual_22k": 14365.0,
-    "forecast_22k": 14365.0,
-    "residual": 0.0,
-    "model_version": "naive_flat_hold",
-    "baseline_mae": 249.53
-  },
-  {
-    "ts": "2026-06-03T03:43:45.086380+00:00",
-    "target_time": "2026-06-04T00:00:00+00:00",
-    "actual_ts": "2026-06-03T03:43:27.089Z",
-    "actual_22k": 14365.0,
-    "forecast_22k": 14365.0,
-    "residual": 0.0,
-    "model_version": "naive_flat_hold",
-    "baseline_mae": 249.53
-  },
-  {
-    "ts": "2026-06-03T04:13:10.383508+00:00",
-    "target_time": "2026-06-04T00:00:00+00:00",
-    "actual_ts": "2026-06-03T04:12:56.262Z",
-    "actual_22k": 14365.0,
-    "forecast_22k": 14365.0,
-    "residual": 0.0,
-    "model_version": "naive_flat_hold",
-    "baseline_mae": 249.53
-  },
-  {
     "ts": "2026-06-03T10:53:51.917733+00:00",
     "target_time": "2026-06-04T00:00:00+00:00",
     "actual_ts": "2026-06-03T10:53:36.035Z",
@@ -2176,6 +2136,16 @@
     "actual_22k": 13395.0,
     "forecast_22k": 13395.0,
     "residual": 0.0,
+    "model_version": "naive_flat_hold",
+    "baseline_mae": 258.55
+  },
+  {
+    "ts": "2026-07-03T06:28:51.708074+00:00",
+    "target_time": "2026-07-04T00:00:00+00:00",
+    "actual_ts": "2026-07-03T06:28:33.081Z",
+    "actual_22k": 13520.0,
+    "forecast_22k": 13395.0,
+    "residual": 125.0,
     "model_version": "naive_flat_hold",
     "baseline_mae": 258.55
   }
