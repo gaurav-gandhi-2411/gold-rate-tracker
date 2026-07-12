@@ -2288,5 +2288,15 @@
     "residual": 0.0,
     "model_version": "naive_flat_hold",
     "baseline_mae": 259.35
+  },
+  {
+    "ts": "2026-07-12T02:25:30.579621+00:00",
+    "target_time": "2026-07-12T00:00:00+00:00",
+    "actual_ts": "2026-07-12T02:25:06.634Z",
+    "actual_22k": 13275.0,
+    "forecast_22k": 13275.0,
+    "residual": 0.0,
+    "model_version": "naive_flat_hold",
+    "baseline_mae": 259.35
   }
 ]
