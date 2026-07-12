@@ -69,3 +69,27 @@ jobs:
             tests/test_scrape.js \
             tests/test_stale_banner.js \
             tests/test_trend.js
+
+  # Dependency vulnerability audit — informational only, not a required check.
+  # Neither lint nor pwa-js depends on this job; a finding here should not block
+  # merges. Findings are surfaced in the job log for manual triage.
+  # worker/ has no dependencies (empty package.json), so it is not audited here.
+  dependency-audit:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.11"
+      - name: pip-audit (ml/requirements.txt)
+        continue-on-error: true
+        run: |
+          pip install -q pip-audit
+          pip-audit -r ml/requirements.txt
+      - uses: actions/setup-node@v6
+        with:
+          node-version: "20"
+      - name: npm audit (scraper)
+        continue-on-error: true
+        working-directory: scraper
+        run: npm audit --audit-level=high
