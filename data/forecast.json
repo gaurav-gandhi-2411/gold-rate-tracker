@@ -1,5 +1,5 @@
 {
-  "predicted_at": "2026-07-12T05:54:52.511454+00:00",
+  "predicted_at": "2026-07-12T08:11:32.214799+00:00",
   "target_window": "5d",
   "headline": {
     "method": "naive_flat_hold",
@@ -38,7 +38,7 @@
     "horizon_p50": [
       13382.27,
       13376.61,
-      13371.96,
+      13371.95,
       13376.05,
       13374.43
     ],
@@ -56,7 +56,7 @@
     "direction_consensus": 1.0
   },
   "driver_context": {
-    "computed_at": "2026-07-12T05:54:52.515261+00:00",
+    "computed_at": "2026-07-12T08:11:32.218289+00:00",
     "macro_staleness_days": 0.0,
     "macro_fresh": true,
     "premium_threshold_pct": 15.0,
