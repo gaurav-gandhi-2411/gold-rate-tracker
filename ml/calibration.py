@@ -110,7 +110,7 @@ def save_calibration(params: CalibrationParams, path: Path | None = None) -> Non
     p = path or CALIBRATION_JSON
     p.parent.mkdir(parents=True, exist_ok=True)
     payload = {**asdict(params), "valid": True, "schema_version": 1}
-    p.write_text(json.dumps(payload, indent=2))
+    p.write_text(json.dumps(payload, indent=2) + "\n")
     logger.info("calibration: saved to %s (n=%d)", p, params.n_observations)
 
 
