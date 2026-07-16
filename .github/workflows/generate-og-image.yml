@@ -65,16 +65,6 @@ jobs:
             echo "changed=true" >> "$GITHUB_OUTPUT"
           fi
 
-      - name: Mint bot-merge App token
-        if: steps.commit.outputs.changed == 'true'
-        id: app-token
-        uses: actions/create-github-app-token@v3
-        with:
-          app-id: ${{ secrets.APP_ID }}
-          private-key: ${{ secrets.APP_PRIVATE_KEY }}
-          owner: ${{ github.repository_owner }}
-          repositories: gold-rate-tracker
-
       - name: Sync og.png via bot PR
         # Same protected-master gate as check-price.yml's data commit — see
         # the composite action for the full writeup.
@@ -84,5 +74,5 @@ jobs:
           branch: bot/og-image
           pr-title: "chore: refresh OG image"
           pr-body: "Automated OG image refresh from run ${{ github.run_id }}."
-          token: ${{ steps.app-token.outputs.token }}
+          token: ${{ secrets.CI_MERGE_PAT }}
           wait-minutes: "10"

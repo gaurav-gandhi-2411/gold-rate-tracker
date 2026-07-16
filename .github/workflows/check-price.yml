@@ -214,25 +214,6 @@ jobs:
             echo "changed=true" >> "$GITHUB_OUTPUT"
           fi
 
-      - name: Mint bot-merge App token
-        # CI_MERGE_PAT (a fine-grained user PAT) hit "the base branch policy
-        # prohibits the merge" on every cycle despite green checks — bug #4
-        # was never actually fixed by the #160 PAT switch, only silently
-        # absorbed by manual merges (see PROGRESS.md). A GitHub App installed
-        # on this repo, added as a Ruleset bypass_actor (ruleset
-        # ci-bot-merge-required-checks, id 19060205; classic protection is
-        # untouched and still authoritative until this is proven), gets a
-        # first-class bypass GitHub actually honors for automation. Test only
-        # — reverts to CI_MERGE_PAT if this doesn't hold across scheduled runs.
-        if: steps.commit.outputs.changed == 'true'
-        id: app-token
-        uses: actions/create-github-app-token@v3
-        with:
-          app-id: ${{ secrets.APP_ID }}
-          private-key: ${{ secrets.APP_PRIVATE_KEY }}
-          owner: ${{ github.repository_owner }}
-          repositories: gold-rate-tracker
-
       - name: Sync data via bot PR
         # master requires the "lint" and "pwa-js" status checks (added
         # 2026-07-12), which blocks a direct push from ever landing (a
@@ -250,7 +231,7 @@ jobs:
           branch: bot/data-sync
           pr-title: "chore: update gold prices and forecast"
           pr-body: "Automated data sync from Check Gold Price run ${{ github.run_id }}."
-          token: ${{ steps.app-token.outputs.token }}
+          token: ${{ secrets.CI_MERGE_PAT }}
           wait-minutes: "15"
 
       - name: Alert on stuck bot PR

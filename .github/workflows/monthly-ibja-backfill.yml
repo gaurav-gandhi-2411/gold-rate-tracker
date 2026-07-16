@@ -61,16 +61,6 @@ jobs:
             echo "changed=true" >> "$GITHUB_OUTPUT"
           fi
 
-      - name: Mint bot-merge App token
-        if: steps.commit.outputs.changed == 'true'
-        id: app-token
-        uses: actions/create-github-app-token@v3
-        with:
-          app-id: ${{ secrets.APP_ID }}
-          private-key: ${{ secrets.APP_PRIVATE_KEY }}
-          owner: ${{ github.repository_owner }}
-          repositories: gold-rate-tracker
-
       - name: Sync IBJA parquet via bot PR
         # master requires "lint"+"pwa-js" status checks — see the composite
         # action for the full writeup on why this can't be a direct push.
@@ -80,5 +70,5 @@ jobs:
           branch: bot/ibja-backfill-sync
           pr-title: "chore: monthly IBJA PDF backfill"
           pr-body: "Automated IBJA backfill sync from Monthly IBJA PDF Backfill run ${{ github.run_id }}."
-          token: ${{ steps.app-token.outputs.token }}
+          token: ${{ secrets.CI_MERGE_PAT }}
           wait-minutes: "10"
