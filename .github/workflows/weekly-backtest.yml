@@ -7,6 +7,8 @@ on:
 
 permissions:
   contents: write
+  pull-requests: write # needed to open/auto-merge the backtest-sync PR (master requires status checks)
+  actions: write # needed to dispatch lint.yml explicitly (GITHUB_TOKEN pushes/PRs don't auto-trigger it)
 
 concurrency:
   group: gold-backtest
@@ -60,14 +62,39 @@ jobs:
         run: python -m ml.metrics --resolve
 
       - name: Commit backtest results
+        # master requires "lint"+"pwa-js" status checks that a fresh bot
+        # commit can never have attached before a direct push is evaluated
+        # (GH006, rejected every time — see check-price.yml for the full
+        # writeup). Route through a bot branch + PR + auto-merge instead;
+        # workflow_dispatch is exempt from GITHUB_TOKEN's cascade-trigger
+        # suppression, so we dispatch lint.yml ourselves to get the check
+        # runs the PR needs. No branch-protection change.
+        env:
+          GH_TOKEN: ${{ github.token }}
         run: |
+          set -e
           git config user.name "gold-rate-bot"
           git config user.email "actions@users.noreply.github.com"
           git add data/backtest.json data/metrics_history.json || true
           if git diff --staged --quiet; then
             echo "No changes to commit."
-          else
-            git commit -m "chore: update backtest results [skip ci]"
-            git pull --rebase --autostash origin "${GITHUB_REF_NAME}"
-            git push
+            exit 0
           fi
+
+          git commit -m "chore: update backtest results [skip ci]"
+
+          # Rebase onto latest master first — it can move between this job's
+          # checkout and this step, and a branch that starts behind can't
+          # satisfy required-status-checks' "strict" rule even after checks pass.
+          git fetch origin master
+          git rebase origin/master
+          git push --force origin "HEAD:refs/heads/bot/backtest-sync"
+
+          if ! gh pr view bot/backtest-sync --json number >/dev/null 2>&1; then
+            gh pr create --base master --head bot/backtest-sync \
+              --title "chore: update backtest results" \
+              --body "Automated backtest sync from Weekly Backtest run ${GITHUB_RUN_ID}. Auto-merges once lint + pwa-js pass."
+          fi
+
+          gh workflow run lint.yml --ref bot/backtest-sync
+          gh pr merge bot/backtest-sync --auto --squash
