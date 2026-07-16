@@ -12,8 +12,7 @@ Operational procedures for gold-rate-tracker.
 6. [How to investigate a CI failure](#how-to-investigate-a-ci-failure)
 7. [Staleness alerts — interpretation and response](#staleness-alerts--interpretation-and-response)
 8. [Manual scraper re-run](#manual-scraper-re-run)
-9. [Cloudflare Worker & token renewal (⏰ expires 2026-09-11)](#cloudflare-worker--token-renewal)
-10. [Known constraints](#known-constraints)
+9. [Known constraints](#known-constraints)
 10. [Frontend PR device-check (required)](#frontend-pr-device-check-required)
 11. [Honesty-ADR audit: user-facing copy paths (required)](#honesty-adr-audit-user-facing-copy-paths-required)
 
@@ -206,21 +205,25 @@ expected values in `scraper/test_scrape.js`.
 > **Scraper DOM canary issues (#113/#114-style):** the weekly `scraper-canary.yml` runs the
 > live scrape on a GitHub runner IP, which Tanishq's CDN frequently blocks — so a canary
 > failure usually means "runner IP blocked", NOT "DOM changed". Before assuming the selector
-> broke, confirm against the Cloudflare Worker's last successful dispatch (clean IP): if a
-> recent `repository_dispatch` run parsed a valid `22k=` value, the DOM is fine and the
-> canary issue can be closed.
+> broke, check whether `data/prices.json` has a run of missed entries around the same time
+> (an IP block affects every run, not one DOM change) — if recent readings are otherwise
+> intact and only the canary run failed, the DOM is fine and the canary issue can be closed.
 
 ---
 
-## Cloudflare Worker & token renewal
+## Cloudflare Worker (retired 2026-07-16)
 
-The clean-IP scraper is a Cloudflare Worker (`gold-rate-tanishq-worker`) that dispatches the
-pipeline. It authenticates with a fine-grained GitHub PAT stored as the Worker secret
-`GITHUB_TOKEN`, which **expires 2026-09-11**. The full renewal procedure (one `wrangler
-secret put`), deploy commands, and the graceful-degradation behaviour if the Worker dies are
-documented in **[`worker/README.md`](../worker/README.md)**. Renew before the expiry to keep
-the scrape gap-rate low; if it lapses, the scheduled in-CI scrape + the IBJA estimate floor
-keep the app correct (degraded, not broken).
+A Cloudflare Worker (`gold-rate-tanishq-worker`) ran 2026-06-13–2026-06-25 as a clean-IP
+fetch path, dispatching the pipeline via `repository_dispatch`. It went silent on
+2026-06-25 when Tanishq extended its Cloudflare bot-protection challenge to Workers
+egress (confirmed via `wrangler dev --remote` reproduction: `403` + "Just a moment..."
+challenge on the exact production fetch). Cron, deploy, and the GitHub PAT were all
+healthy — the block was on Tanishq's side and not fixable client-side. The Worker, its
+GitHub PAT (`gold-rate-tracker-worker-dispatch`), the `repository_dispatch` CI trigger,
+and the in-CI dispatch-payload validator were all removed rather than left running in a
+permanently degraded state. The scheduled in-CI Playwright scrape + IBJA estimate floor
+are now the sole ingestion path (see [docs/CLEAN_IP_FETCH.md](CLEAN_IP_FETCH.md) for the
+retired setup, kept for historical reference).
 
 ---
 

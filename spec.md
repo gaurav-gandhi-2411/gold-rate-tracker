@@ -1,5 +1,11 @@
 # Project Spec: Φ25 — Clean-IP Tanishq Fetch via Cloudflare Worker + repository_dispatch
 
+> **RETIRED 2026-07-16.** This spec was fully implemented and live 2026-06-13–2026-06-25,
+> then retired: Tanishq extended its Cloudflare bot-protection challenge to Workers
+> egress, the same block this Worker existed to route around. Kept as a historical
+> record of the build; see [docs/PROGRESS.md](docs/PROGRESS.md) (Φ25 entry) and
+> [docs/RUNBOOK.md](docs/RUNBOOK.md) for the retirement details and current architecture.
+
 ## Goal
 Restore reliable, near-real-time Tanishq price capture — the core purpose of the
 product (early notification of price drops). The in-CI scrape fails on 12-45% of runs
