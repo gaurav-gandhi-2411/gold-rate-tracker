@@ -13,4 +13,4 @@ pyarrow>=24.0.0
 hmmlearn>=0.3.0
 onnxruntime>=1.26.0
 chronos-forecasting>=2.2.2
-jsonschema>=4.0
+jsonschema>=4.26.0
