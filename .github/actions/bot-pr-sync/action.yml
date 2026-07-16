@@ -101,9 +101,12 @@ runs:
             PASS_COUNT=$(gh api "repos/${GITHUB_REPOSITORY}/commits/${CURRENT_SHA}/check-runs" \
               --jq '[.check_runs[] | select((.name=="lint" or .name=="pwa-js") and .conclusion=="success")] | length' 2>/dev/null || echo 0)
             if [ "$PASS_COUNT" -ge 2 ]; then
-              if gh pr merge "${PR_NUM}" --squash 2>/dev/null; then
+              echo "Checks green (${PASS_COUNT}) — attempting merge of PR #${PR_NUM}..."
+              if gh pr merge "${PR_NUM}" --squash; then
                 echo "Merged."
                 exit 0
+              else
+                echo "Merge attempt failed (see error above) — will retry next poll."
               fi
             fi
           fi
