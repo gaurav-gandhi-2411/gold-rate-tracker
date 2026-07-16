@@ -1,0 +1,98 @@
+name: "Bot PR sync"
+description: >
+  Pushes the current HEAD commit (assumed already committed by the caller) to
+  a reusable bot branch, opens/reuses a PR into master, dispatches lint.yml
+  explicitly (a GITHUB_TOKEN-authored PR does not auto-trigger
+  pull_request-triggered workflows), then polls the check-runs directly and
+  merges once "lint" and "pwa-js" both succeed. Does not rely on
+  `gh pr merge --auto`: GitHub's background auto-merge evaluator does not
+  reliably re-trigger off check-suites created via workflow_dispatch
+  (confirmed empirically — a PR sat at mergeable_state=blocked for 8+ minutes
+  with both checks green and the branch up to date, then merged instantly via
+  a direct merge call).
+
+inputs:
+  branch:
+    description: "Bot branch name to push to (reused across runs, force-pushed)"
+    required: true
+  pr-title:
+    description: "Title for the PR if one needs to be created"
+    required: true
+  pr-body:
+    description: "Body for the PR if one needs to be created"
+    required: true
+  wait-minutes:
+    description: "Max minutes to wait for the PR to merge before failing"
+    required: false
+    default: "15"
+
+runs:
+  using: composite
+  steps:
+    - name: Push, open/reuse PR, dispatch checks, and merge once green
+      shell: bash
+      env:
+        GH_TOKEN: ${{ github.token }}
+        BRANCH: ${{ inputs.branch }}
+        PR_TITLE: ${{ inputs.pr-title }}
+        PR_BODY: ${{ inputs.pr-body }}
+        WAIT_MINUTES: ${{ inputs.wait-minutes }}
+      run: |
+        set -e
+
+        # Rebase onto latest master first — master can move between this
+        # job's checkout and this step, and a branch that starts behind can't
+        # satisfy required-status-checks' "strict" rule even after checks pass.
+        git fetch origin master
+        git rebase origin/master
+        git push --force origin "HEAD:refs/heads/${BRANCH}"
+
+        if ! gh pr view "${BRANCH}" --json number >/dev/null 2>&1; then
+          gh pr create --base master --head "${BRANCH}" --title "${PR_TITLE}" --body "${PR_BODY}"
+        fi
+
+        gh workflow run lint.yml --ref "${BRANCH}"
+
+        ITERATIONS=$(( WAIT_MINUTES * 6 ))  # one iteration per 10s
+        echo "Waiting up to ${WAIT_MINUTES} minutes for ${BRANCH} to pass checks and merge..."
+        for i in $(seq 1 "${ITERATIONS}"); do
+          PR_STATE=$(gh pr view "${BRANCH}" --json state --jq '.state' 2>/dev/null || echo "UNKNOWN")
+          if [ "$PR_STATE" = "MERGED" ]; then
+            echo "Merged."
+            exit 0
+          fi
+          if [ "$PR_STATE" = "CLOSED" ]; then
+            echo "PR was closed without merging — failing loudly."
+            exit 1
+          fi
+
+          # master can also advance while we wait (another bot-sync PR
+          # merging, or a human PR) — resync and re-dispatch since the new
+          # merge-commit SHA starts with zero check runs.
+          if [ $(( i % 2 )) -eq 0 ]; then
+            MERGE_STATE=$(gh pr view "${BRANCH}" --json mergeStateStatus --jq '.mergeStateStatus' 2>/dev/null || echo "UNKNOWN")
+            if [ "$MERGE_STATE" = "BEHIND" ]; then
+              echo "Branch fell behind master — resyncing via gh pr update-branch"
+              gh pr update-branch "${BRANCH}" || true
+              sleep 5
+              gh workflow run lint.yml --ref "${BRANCH}" || true
+            fi
+          fi
+
+          CURRENT_SHA=$(gh pr view "${BRANCH}" --json headRefOid --jq '.headRefOid' 2>/dev/null || echo "")
+          if [ -n "$CURRENT_SHA" ]; then
+            PASS_COUNT=$(gh api "repos/${GITHUB_REPOSITORY}/commits/${CURRENT_SHA}/check-runs" \
+              --jq '[.check_runs[] | select((.name=="lint" or .name=="pwa-js") and .conclusion=="success")] | length' 2>/dev/null || echo 0)
+            if [ "$PASS_COUNT" -ge 2 ]; then
+              if gh pr merge "${BRANCH}" --squash 2>/dev/null; then
+                echo "Merged."
+                exit 0
+              fi
+            fi
+          fi
+
+          sleep 10
+        done
+
+        echo "Timed out after ${WAIT_MINUTES} minutes waiting for ${BRANCH} to merge (checks likely failing)."
+        exit 1

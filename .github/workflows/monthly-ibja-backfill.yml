@@ -21,7 +21,7 @@ concurrency:
 jobs:
   backfill:
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    timeout-minutes: 20 # 10 for the backfill itself + 10 headroom for the bot-pr-sync wait
 
     steps:
       - name: Checkout repository
@@ -47,15 +47,7 @@ jobs:
         run: python -m ml.ibja backfill
 
       - name: Commit updated parquet
-        # master requires "lint"+"pwa-js" status checks that a fresh bot
-        # commit can never have attached before a direct push is evaluated
-        # (GH006, rejected every time — see check-price.yml for the full
-        # writeup). Route through a bot branch + PR + auto-merge instead;
-        # workflow_dispatch is exempt from GITHUB_TOKEN's cascade-trigger
-        # suppression, so we dispatch lint.yml ourselves to get the check
-        # runs the PR needs. No branch-protection change.
-        env:
-          GH_TOKEN: ${{ github.token }}
+        id: commit
         run: |
           set -e
           git config user.name "gold-rate-bot"
@@ -63,23 +55,19 @@ jobs:
           git add data/ibja_rates.parquet 2>/dev/null || true
           if git diff --staged --quiet; then
             echo "No new IBJA rows to commit."
-            exit 0
+            echo "changed=false" >> "$GITHUB_OUTPUT"
+          else
+            git commit -m "chore: monthly IBJA PDF backfill [skip ci]"
+            echo "changed=true" >> "$GITHUB_OUTPUT"
           fi
 
-          git commit -m "chore: monthly IBJA PDF backfill [skip ci]"
-
-          # Rebase onto latest master first — it can move between this job's
-          # checkout and this step, and a branch that starts behind can't
-          # satisfy required-status-checks' "strict" rule even after checks pass.
-          git fetch origin master
-          git rebase origin/master
-          git push --force origin "HEAD:refs/heads/bot/ibja-backfill-sync"
-
-          if ! gh pr view bot/ibja-backfill-sync --json number >/dev/null 2>&1; then
-            gh pr create --base master --head bot/ibja-backfill-sync \
-              --title "chore: monthly IBJA PDF backfill" \
-              --body "Automated IBJA backfill sync from Monthly IBJA PDF Backfill run ${GITHUB_RUN_ID}. Auto-merges once lint + pwa-js pass."
-          fi
-
-          gh workflow run lint.yml --ref bot/ibja-backfill-sync
-          gh pr merge bot/ibja-backfill-sync --auto --squash
+      - name: Sync IBJA parquet via bot PR
+        # master requires "lint"+"pwa-js" status checks — see the composite
+        # action for the full writeup on why this can't be a direct push.
+        if: steps.commit.outputs.changed == 'true'
+        uses: ./.github/actions/bot-pr-sync
+        with:
+          branch: bot/ibja-backfill-sync
+          pr-title: "chore: monthly IBJA PDF backfill"
+          pr-body: "Automated IBJA backfill sync from Monthly IBJA PDF Backfill run ${{ github.run_id }}."
+          wait-minutes: "10"

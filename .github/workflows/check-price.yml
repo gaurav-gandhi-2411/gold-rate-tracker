@@ -218,20 +218,7 @@ jobs:
         run: python -m ml.feature_store
 
       - name: Commit updated data files
-        # master requires the "lint" and "pwa-js" status checks (added 2026-07-12),
-        # which blocks a direct push from ever landing (a brand-new commit has no
-        # checks attached yet, so GH006 rejects it every time — not a flake).
-        # Fix: push to a reusable bot branch and go through the same PR gate a
-        # human would, then auto-merge once checks pass. No branch-protection change.
-        #
-        # A PR opened via GITHUB_TOKEN does NOT auto-trigger lint.yml's
-        # pull_request event — GitHub suppresses cascaded triggers from
-        # GITHUB_TOKEN-authored pushes/PRs to prevent recursive runs. workflow_dispatch
-        # is explicitly exempt from that suppression, so we dispatch lint.yml
-        # ourselves against the bot branch; the resulting check runs attach to that
-        # commit SHA and satisfy the PR's required status checks.
-        env:
-          GH_TOKEN: ${{ github.token }}
+        id: commit
         run: |
           set -e
           git config user.name "gold-rate-bot"
@@ -239,62 +226,27 @@ jobs:
           git add data/prices.json data/forecast.json data/commentary.json data/drift_metrics.json data/metrics_history.json data/ibja_rates.parquet data/chronos_probe.json data/calibration.json data/feature_store/snapshots.parquet || true
           if git diff --staged --quiet; then
             echo "No changes to commit."
-            exit 0
+            echo "changed=false" >> "$GITHUB_OUTPUT"
+          else
+            git commit -m "chore: update gold prices and forecast [skip ci]"
+            echo "changed=true" >> "$GITHUB_OUTPUT"
           fi
 
-          git commit -m "chore: update gold prices and forecast [skip ci]"
-
-          # Rebase onto latest master before pushing — master can move between
-          # this job's checkout and this step (e.g. a previous run's data-sync
-          # PR merging mid-job), and a branch that starts behind can't satisfy
-          # required-status-checks' "strict" (must-be-up-to-date) rule even
-          # after its checks pass.
-          git fetch origin master
-          git rebase origin/master
-
-          git push --force origin "HEAD:refs/heads/bot/data-sync"
-
-          if ! gh pr view bot/data-sync --json number >/dev/null 2>&1; then
-            gh pr create --base master --head bot/data-sync \
-              --title "chore: update gold prices and forecast" \
-              --body "Automated data sync from Check Gold Price run ${GITHUB_RUN_ID}. Auto-merges once lint + pwa-js pass."
-          fi
-
-          gh workflow run lint.yml --ref bot/data-sync
-          gh pr merge bot/data-sync --auto --squash
-
-          # generate-og-image.yml triggers on this job's completion, so block
-          # here until the PR actually lands — otherwise it would screenshot
-          # og.html before master has the new price.
-          echo "Waiting for bot/data-sync to merge..."
-          for i in $(seq 1 90); do
-            STATE=$(gh pr view bot/data-sync --json state --jq '.state' 2>/dev/null || echo "UNKNOWN")
-            if [ "$STATE" = "MERGED" ]; then
-              echo "Merged."
-              exit 0
-            fi
-            if [ "$STATE" = "CLOSED" ]; then
-              echo "PR was closed without merging — failing loudly."
-              exit 1
-            fi
-
-            # master can also advance AFTER our push (e.g. a human PR landing
-            # while ours waits on checks) — "strict" mode blocks merge on a
-            # stale branch even once checks are green, and auto-merge does not
-            # resync this by itself. Self-heal every other poll (~20s).
-            if [ $((i % 2)) -eq 0 ]; then
-              MERGE_STATE=$(gh pr view bot/data-sync --json mergeStateStatus --jq '.mergeStateStatus' 2>/dev/null || echo "UNKNOWN")
-              if [ "$MERGE_STATE" = "BEHIND" ]; then
-                echo "Branch fell behind master — resyncing via gh pr update-branch"
-                gh pr update-branch bot/data-sync || true
-                sleep 5
-                # update-branch creates a new merge-commit SHA, which starts
-                # with zero check runs — re-dispatch so it can satisfy the gate.
-                gh workflow run lint.yml --ref bot/data-sync || true
-              fi
-            fi
-
-            sleep 10
-          done
-          echo "Timed out after 15 minutes waiting for bot/data-sync to merge (checks likely failing)."
-          exit 1
+      - name: Sync data via bot PR
+        # master requires the "lint" and "pwa-js" status checks (added
+        # 2026-07-12), which blocks a direct push from ever landing (a
+        # brand-new commit has no checks attached yet, so GH006 rejects it
+        # every time — not a flake). This composite action pushes to a bot
+        # branch, goes through the same PR gate a human would, and merges
+        # once checks pass. No branch-protection change. See its own comments
+        # for why it merges explicitly instead of via `gh pr merge --auto`
+        # (generate-og-image.yml triggers on this job's completion, so this
+        # step blocks until the PR actually lands — otherwise it would
+        # screenshot og.html before master has the new price).
+        if: steps.commit.outputs.changed == 'true'
+        uses: ./.github/actions/bot-pr-sync
+        with:
+          branch: bot/data-sync
+          pr-title: "chore: update gold prices and forecast"
+          pr-body: "Automated data sync from Check Gold Price run ${{ github.run_id }}."
+          wait-minutes: "15"
