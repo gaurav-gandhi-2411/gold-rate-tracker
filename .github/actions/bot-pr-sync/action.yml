@@ -9,7 +9,11 @@ description: >
   reliably re-trigger off check-suites created via workflow_dispatch
   (confirmed empirically — a PR sat at mergeable_state=blocked for 8+ minutes
   with both checks green and the branch up to date, then merged instantly via
-  a direct merge call).
+  a direct merge call). Also resolves to an explicit PR number up front
+  rather than re-resolving by branch name throughout: once this reusable
+  branch has any merged/closed PR in its history, `gh pr view <branch>` keeps
+  returning that stale PR, which made a later run falsely report success
+  immediately (confirmed empirically — see the PR-lookup step below).
 
 inputs:
   branch:
@@ -47,22 +51,35 @@ runs:
         git rebase origin/master
         git push --force origin "HEAD:refs/heads/${BRANCH}"
 
-        if ! gh pr view "${BRANCH}" --json number >/dev/null 2>&1; then
+        # Resolve to an explicit PR NUMBER up front and use only that from
+        # here on. `gh pr view <branch>` / `gh pr merge <branch>` resolve by
+        # branch NAME, which is ambiguous once this reusable branch has any
+        # merged/closed PR in its history — `gh pr view` happily returns that
+        # stale PR (confirmed empirically: after bot/data-sync's first PR
+        # #148 merged, a later run's `gh pr view bot/data-sync` still
+        # returned #148 as MERGED, so the "does a PR exist" check thought one
+        # already existed, never created a new one, and the poll loop saw
+        # state=MERGED on the very first check — reporting success while that
+        # run's actual commit sat on the branch, never opened as a PR, never
+        # merged).
+        PR_NUM=$(gh pr list --repo "${GITHUB_REPOSITORY}" --head "${BRANCH}" --state open --json number --jq '.[0].number' 2>/dev/null || echo "")
+        if [ -z "$PR_NUM" ]; then
           gh pr create --base master --head "${BRANCH}" --title "${PR_TITLE}" --body "${PR_BODY}"
+          PR_NUM=$(gh pr list --repo "${GITHUB_REPOSITORY}" --head "${BRANCH}" --state open --json number --jq '.[0].number')
         fi
 
         gh workflow run lint.yml --ref "${BRANCH}"
 
         ITERATIONS=$(( WAIT_MINUTES * 6 ))  # one iteration per 10s
-        echo "Waiting up to ${WAIT_MINUTES} minutes for ${BRANCH} to pass checks and merge..."
+        echo "Waiting up to ${WAIT_MINUTES} minutes for PR #${PR_NUM} (${BRANCH}) to pass checks and merge..."
         for i in $(seq 1 "${ITERATIONS}"); do
-          PR_STATE=$(gh pr view "${BRANCH}" --json state --jq '.state' 2>/dev/null || echo "UNKNOWN")
+          PR_STATE=$(gh pr view "${PR_NUM}" --json state --jq '.state' 2>/dev/null || echo "UNKNOWN")
           if [ "$PR_STATE" = "MERGED" ]; then
             echo "Merged."
             exit 0
           fi
           if [ "$PR_STATE" = "CLOSED" ]; then
-            echo "PR was closed without merging — failing loudly."
+            echo "PR #${PR_NUM} was closed without merging — failing loudly."
             exit 1
           fi
 
@@ -70,21 +87,21 @@ runs:
           # merging, or a human PR) — resync and re-dispatch since the new
           # merge-commit SHA starts with zero check runs.
           if [ $(( i % 2 )) -eq 0 ]; then
-            MERGE_STATE=$(gh pr view "${BRANCH}" --json mergeStateStatus --jq '.mergeStateStatus' 2>/dev/null || echo "UNKNOWN")
+            MERGE_STATE=$(gh pr view "${PR_NUM}" --json mergeStateStatus --jq '.mergeStateStatus' 2>/dev/null || echo "UNKNOWN")
             if [ "$MERGE_STATE" = "BEHIND" ]; then
               echo "Branch fell behind master — resyncing via gh pr update-branch"
-              gh pr update-branch "${BRANCH}" || true
+              gh pr update-branch "${PR_NUM}" || true
               sleep 5
               gh workflow run lint.yml --ref "${BRANCH}" || true
             fi
           fi
 
-          CURRENT_SHA=$(gh pr view "${BRANCH}" --json headRefOid --jq '.headRefOid' 2>/dev/null || echo "")
+          CURRENT_SHA=$(gh pr view "${PR_NUM}" --json headRefOid --jq '.headRefOid' 2>/dev/null || echo "")
           if [ -n "$CURRENT_SHA" ]; then
             PASS_COUNT=$(gh api "repos/${GITHUB_REPOSITORY}/commits/${CURRENT_SHA}/check-runs" \
               --jq '[.check_runs[] | select((.name=="lint" or .name=="pwa-js") and .conclusion=="success")] | length' 2>/dev/null || echo 0)
             if [ "$PASS_COUNT" -ge 2 ]; then
-              if gh pr merge "${BRANCH}" --squash 2>/dev/null; then
+              if gh pr merge "${PR_NUM}" --squash 2>/dev/null; then
                 echo "Merged."
                 exit 0
               fi
@@ -94,5 +111,5 @@ runs:
           sleep 10
         done
 
-        echo "Timed out after ${WAIT_MINUTES} minutes waiting for ${BRANCH} to merge (checks likely failing)."
+        echo "Timed out after ${WAIT_MINUTES} minutes waiting for PR #${PR_NUM} (${BRANCH}) to merge (checks likely failing)."
         exit 1
