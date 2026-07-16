@@ -243,6 +243,15 @@ jobs:
           fi
 
           git commit -m "chore: update gold prices and forecast [skip ci]"
+
+          # Rebase onto latest master before pushing — master can move between
+          # this job's checkout and this step (e.g. a previous run's data-sync
+          # PR merging mid-job), and a branch that starts behind can't satisfy
+          # required-status-checks' "strict" (must-be-up-to-date) rule even
+          # after its checks pass.
+          git fetch origin master
+          git rebase origin/master
+
           git push --force origin "HEAD:refs/heads/bot/data-sync"
 
           if ! gh pr view bot/data-sync --json number >/dev/null 2>&1; then
@@ -268,6 +277,23 @@ jobs:
               echo "PR was closed without merging — failing loudly."
               exit 1
             fi
+
+            # master can also advance AFTER our push (e.g. a human PR landing
+            # while ours waits on checks) — "strict" mode blocks merge on a
+            # stale branch even once checks are green, and auto-merge does not
+            # resync this by itself. Self-heal every other poll (~20s).
+            if [ $((i % 2)) -eq 0 ]; then
+              MERGE_STATE=$(gh pr view bot/data-sync --json mergeStateStatus --jq '.mergeStateStatus' 2>/dev/null || echo "UNKNOWN")
+              if [ "$MERGE_STATE" = "BEHIND" ]; then
+                echo "Branch fell behind master — resyncing via gh pr update-branch"
+                gh pr update-branch bot/data-sync || true
+                sleep 5
+                # update-branch creates a new merge-commit SHA, which starts
+                # with zero check runs — re-dispatch so it can satisfy the gate.
+                gh workflow run lint.yml --ref bot/data-sync || true
+              fi
+            fi
+
             sleep 10
           done
           echo "Timed out after 15 minutes waiting for bot/data-sync to merge (checks likely failing)."

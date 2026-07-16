@@ -69,6 +69,14 @@ jobs:
           fi
 
           git commit -m "chore: refresh OG image [skip ci]"
+
+          # See check-price.yml's identical comment: master can move between
+          # this job's checkout and this step, and a branch that starts behind
+          # can't satisfy required-status-checks' "strict" rule even after its
+          # checks pass.
+          git fetch origin master
+          git rebase origin/master
+
           git push --force origin "HEAD:refs/heads/bot/og-image"
 
           if ! gh pr view bot/og-image --json number >/dev/null 2>&1; then
