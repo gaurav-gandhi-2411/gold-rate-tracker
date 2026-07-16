@@ -17,6 +17,8 @@ on:
 
 permissions:
   contents: write
+  pull-requests: write # needed to open/auto-merge the og.png PR (master requires status checks)
+  actions: write # needed to dispatch lint.yml explicitly (GITHUB_TOKEN pushes/PRs don't auto-trigger it)
 
 jobs:
   generate:
@@ -49,12 +51,31 @@ jobs:
         run: node scripts/screenshot-og.mjs http://localhost:8080
 
       - name: Commit og.png
+        # Same protected-master gate as check-price.yml's data commit (master
+        # requires "lint"+"pwa-js" checks; a fresh commit can't have them
+        # attached before a direct push is evaluated). Same fix: PR + explicit
+        # lint.yml dispatch (workflow_dispatch is exempt from GITHUB_TOKEN's
+        # cascade-trigger suppression) + auto-merge.
+        env:
+          GH_TOKEN: ${{ github.token }}
         run: |
+          set -e
           git config user.name  gold-rate-bot
           git config user.email gold-rate-bot@users.noreply.github.com
           git add og.png
-          git diff --cached --quiet \
-            && echo "og.png unchanged, skipping commit" \
-            || git commit -m "chore: refresh OG image [skip ci]"
-          git pull --rebase origin master
-          git push
+          if git diff --cached --quiet; then
+            echo "og.png unchanged, skipping commit"
+            exit 0
+          fi
+
+          git commit -m "chore: refresh OG image [skip ci]"
+          git push --force origin "HEAD:refs/heads/bot/og-image"
+
+          if ! gh pr view bot/og-image --json number >/dev/null 2>&1; then
+            gh pr create --base master --head bot/og-image \
+              --title "chore: refresh OG image" \
+              --body "Automated OG image refresh from run ${GITHUB_RUN_ID}. Auto-merges once lint + pwa-js pass."
+          fi
+
+          gh workflow run lint.yml --ref bot/og-image
+          gh pr merge bot/og-image --auto --squash

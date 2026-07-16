@@ -60,6 +60,10 @@ jobs:
         working-directory: scraper
         run: node --test test_dispatch_validate.mjs
 
+      - name: Run update-and-notify jump-guard tests
+        working-directory: scraper
+        run: node --test test_update_and_notify.js
+
       - name: Run Worker unit tests (mock fetch, no live network, Φ25)
         working-directory: worker
         run: node --test test_worker.mjs

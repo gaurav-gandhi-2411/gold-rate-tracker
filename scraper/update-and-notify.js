@@ -19,6 +19,26 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const PRICES_FILE = path.join(__dirname, "..", "data", "prices.json");
 
+// Reject a per-cycle jump this large vs. the last committed reading — catches
+// a scraper returning a frozen/cached page whose numbers don't match reality,
+// or a parsing bug, without flagging a genuinely flat market (0% change is fine).
+const JUMP_THRESHOLD = 0.05;
+
+export function checkJump(reading, prevReading) {
+  if (!prevReading) return;
+  for (const karat of ["22k", "24k", "18k"]) {
+    const prev = prevReading[karat];
+    if (typeof prev !== "number" || prev <= 0) continue;
+    const change = Math.abs(reading[karat] - prev) / prev;
+    if (change > JUMP_THRESHOLD) {
+      throw new Error(
+        `Implausible ${karat} jump: ${prev} -> ${reading[karat]} ` +
+          `(${(change * 100).toFixed(1)}% > ${(JUMP_THRESHOLD * 100).toFixed(0)}% threshold) — refusing to write`,
+      );
+    }
+  }
+}
+
 async function readStdin() {
   let data = "";
   for await (const chunk of process.stdin) data += chunk;
@@ -46,6 +66,7 @@ async function main() {
   }
 
   const history = await loadPrices();
+  checkJump(reading, history[history.length - 1]);
   history.push(reading);
   await fs.writeFile(PRICES_FILE, JSON.stringify(history, null, 2) + "\n");
   console.log(

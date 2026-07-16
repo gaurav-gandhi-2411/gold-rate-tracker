@@ -28,6 +28,8 @@ on:
 
 permissions:
   contents: write # needed so the action can commit prices.json back to the repo
+  pull-requests: write # needed to open/auto-merge the data-sync PR (master requires status checks)
+  actions: write # needed to dispatch lint.yml explicitly (see note below on GITHUB_TOKEN cascade suppression)
 
 concurrency:
   group: check-price
@@ -36,7 +38,11 @@ concurrency:
 jobs:
   check:
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    # 20min for scrape+ML steps, +15min headroom for the PR auto-merge wait
+    # (generate-og-image.yml's workflow_run trigger fires on this job's
+    # completion, so it must wait for the data-sync PR to actually merge —
+    # otherwise it screenshots stale data).
+    timeout-minutes: 35
 
     steps:
       - name: Checkout repository
@@ -212,24 +218,57 @@ jobs:
         run: python -m ml.feature_store
 
       - name: Commit updated data files
+        # master requires the "lint" and "pwa-js" status checks (added 2026-07-12),
+        # which blocks a direct push from ever landing (a brand-new commit has no
+        # checks attached yet, so GH006 rejects it every time — not a flake).
+        # Fix: push to a reusable bot branch and go through the same PR gate a
+        # human would, then auto-merge once checks pass. No branch-protection change.
+        #
+        # A PR opened via GITHUB_TOKEN does NOT auto-trigger lint.yml's
+        # pull_request event — GitHub suppresses cascaded triggers from
+        # GITHUB_TOKEN-authored pushes/PRs to prevent recursive runs. workflow_dispatch
+        # is explicitly exempt from that suppression, so we dispatch lint.yml
+        # ourselves against the bot branch; the resulting check runs attach to that
+        # commit SHA and satisfy the PR's required status checks.
+        env:
+          GH_TOKEN: ${{ github.token }}
         run: |
+          set -e
           git config user.name "gold-rate-bot"
           git config user.email "actions@users.noreply.github.com"
           git add data/prices.json data/forecast.json data/commentary.json data/drift_metrics.json data/metrics_history.json data/ibja_rates.parquet data/chronos_probe.json data/calibration.json data/feature_store/snapshots.parquet || true
           if git diff --staged --quiet; then
             echo "No changes to commit."
-          else
-            git commit -m "chore: update gold prices and forecast [skip ci]"
-            for attempt in 1 2 3; do
-              if git pull --rebase --autostash origin "${GITHUB_REF_NAME}" && git push; then
-                break
-              fi
-              git rebase --abort 2>/dev/null || true
-              if [ "$attempt" -lt 3 ]; then
-                echo "Rebase/push attempt ${attempt}/3 failed — retrying in $((attempt * 10))s"
-                sleep $((attempt * 10))
-              else
-                exit 1
-              fi
-            done
+            exit 0
           fi
+
+          git commit -m "chore: update gold prices and forecast [skip ci]"
+          git push --force origin "HEAD:refs/heads/bot/data-sync"
+
+          if ! gh pr view bot/data-sync --json number >/dev/null 2>&1; then
+            gh pr create --base master --head bot/data-sync \
+              --title "chore: update gold prices and forecast" \
+              --body "Automated data sync from Check Gold Price run ${GITHUB_RUN_ID}. Auto-merges once lint + pwa-js pass."
+          fi
+
+          gh workflow run lint.yml --ref bot/data-sync
+          gh pr merge bot/data-sync --auto --squash
+
+          # generate-og-image.yml triggers on this job's completion, so block
+          # here until the PR actually lands — otherwise it would screenshot
+          # og.html before master has the new price.
+          echo "Waiting for bot/data-sync to merge..."
+          for i in $(seq 1 90); do
+            STATE=$(gh pr view bot/data-sync --json state --jq '.state' 2>/dev/null || echo "UNKNOWN")
+            if [ "$STATE" = "MERGED" ]; then
+              echo "Merged."
+              exit 0
+            fi
+            if [ "$STATE" = "CLOSED" ]; then
+              echo "PR was closed without merging — failing loudly."
+              exit 1
+            fi
+            sleep 10
+          done
+          echo "Timed out after 15 minutes waiting for bot/data-sync to merge (checks likely failing)."
+          exit 1
