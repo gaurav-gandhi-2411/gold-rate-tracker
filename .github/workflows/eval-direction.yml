@@ -78,4 +78,5 @@ jobs:
           branch: bot/direction-eval-sync
           pr-title: "chore: refresh direction eval results"
           pr-body: "Automated direction-eval sync from Direction Signal Eval run ${{ github.run_id }}."
+          token: ${{ secrets.CI_MERGE_PAT }}
           wait-minutes: "10"

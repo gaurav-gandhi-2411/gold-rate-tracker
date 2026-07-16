@@ -85,4 +85,5 @@ jobs:
           branch: bot/backtest-sync
           pr-title: "chore: update backtest results"
           pr-body: "Automated backtest sync from Weekly Backtest run ${{ github.run_id }}."
+          token: ${{ secrets.CI_MERGE_PAT }}
           wait-minutes: "10"

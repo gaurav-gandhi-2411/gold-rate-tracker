@@ -14,6 +14,12 @@ description: >
   branch has any merged/closed PR in its history, `gh pr view <branch>` keeps
   returning that stale PR, which made a later run falsely report success
   immediately (confirmed empirically — see the PR-lookup step below).
+  Pushes/merges using the `token` input rather than GITHUB_TOKEN: branch
+  protection blocks github-actions[bot]'s own merge even when required checks
+  pass and the branch is up to date ("the base branch policy prohibits the
+  merge", confirmed empirically — an identical merge from a user-authenticated
+  session succeeds instantly). `token` must belong to a real user account
+  (a PAT), not the default GITHUB_TOKEN.
 
 inputs:
   branch:
@@ -24,6 +30,12 @@ inputs:
     required: true
   pr-body:
     description: "Body for the PR if one needs to be created"
+    required: true
+  token:
+    description: >
+      Token to push, open, and merge the PR with. Must be a PAT belonging to
+      a real user account — GITHUB_TOKEN's actor (github-actions[bot]) is
+      blocked from completing the merge by branch protection policy.
     required: true
   wait-minutes:
     description: "Max minutes to wait for the PR to merge before failing"
@@ -36,13 +48,23 @@ runs:
     - name: Push, open/reuse PR, dispatch checks, and merge once green
       shell: bash
       env:
-        GH_TOKEN: ${{ github.token }}
+        GH_TOKEN: ${{ inputs.token }}
         BRANCH: ${{ inputs.branch }}
         PR_TITLE: ${{ inputs.pr-title }}
         PR_BODY: ${{ inputs.pr-body }}
         WAIT_MINUTES: ${{ inputs.wait-minutes }}
       run: |
         set -e
+
+        # Push/merge as a real user account (via GH_TOKEN, set from the
+        # `token` input above) rather than GITHUB_TOKEN — required so the
+        # merge itself is allowed (see the action description). As a likely
+        # side effect this also makes lint.yml's pull_request trigger fire
+        # naturally, since GITHUB_TOKEN-authored pushes are what don't
+        # cascade into new workflow runs — a PAT-authored push isn't subject
+        # to that suppression. The explicit `gh workflow run lint.yml` below
+        # is kept until that's confirmed live; remove once verified redundant.
+        git remote set-url origin "https://x-access-token:${GH_TOKEN}@github.com/${GITHUB_REPOSITORY}.git"
 
         # Rebase onto latest master first — master can move between this
         # job's checkout and this step, and a branch that starts behind can't

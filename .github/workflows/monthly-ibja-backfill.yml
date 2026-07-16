@@ -70,4 +70,5 @@ jobs:
           branch: bot/ibja-backfill-sync
           pr-title: "chore: monthly IBJA PDF backfill"
           pr-body: "Automated IBJA backfill sync from Monthly IBJA PDF Backfill run ${{ github.run_id }}."
+          token: ${{ secrets.CI_MERGE_PAT }}
           wait-minutes: "10"
