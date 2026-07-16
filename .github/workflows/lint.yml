@@ -47,7 +47,7 @@ jobs:
 
   # PWA pure-function JS tests (app.js logic: comparisons, dedup, good-price,
   # scrape parsing, stale-banner, trend). These existed under tests/*.js but ran
-  # in NO workflow — scraper-canary.yml only covers scraper/** and worker/**.
+  # in NO workflow — scraper-canary.yml only covers scraper/**.
   # This job closes that gap so app.js logic is gated on every push/PR.
   # Dep-free (node builtins + inlined functions); no npm install needed.
   # test_stale_banner_headless.js is intentionally excluded — it needs Playwright
@@ -73,7 +73,6 @@ jobs:
   # Dependency vulnerability audit — informational only, not a required check.
   # Neither lint nor pwa-js depends on this job; a finding here should not block
   # merges. Findings are surfaced in the job log for manual triage.
-  # worker/ has no dependencies (empty package.json), so it is not audited here.
   dependency-audit:
     runs-on: ubuntu-latest
     steps:

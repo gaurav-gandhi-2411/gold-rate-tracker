@@ -8,7 +8,7 @@ A free, $0/month gold-price tracker for Indian retail buyers (Tanishq 22K). It s
 
 **Live site:** https://gaurav-gandhi-2411.github.io/gold-rate-tracker/
 
-**Stack:** Cloudflare Workers (clean-IP scrape) · GitHub Actions (3h cron + ML pipeline) · GitHub Pages (PWA) · Chronos-Bolt-Tiny · Groq LLM · ntfy.sh — **₹0 / month**
+**Stack:** GitHub Actions (3h cron + ML pipeline) · GitHub Pages (PWA) · Chronos-Bolt-Tiny · Groq LLM · ntfy.sh — **₹0 / month**
 
 ## What it actually claims (and what it doesn't)
 
@@ -24,13 +24,8 @@ The headline forecast is a **naive flat-hold** (predict = today's price). The ap
 ## How it works
 
 ```
-Cloudflare Worker (cron, clean Singapore IP)
-   └─ fetch Tanishq → parse/validate → repository_dispatch ──┐
-                                                             ▼
-GitHub Actions (check-price.yml, every 3h)                   │
-   ├─ if dispatched: validate payload ──────────────────────┤
-   └─ else (or if Worker is down): scrape in-CI              │
-        (plain fetch → Playwright fallback) ─────────────────┘
+GitHub Actions (check-price.yml, every 3h)
+   └─ scrape in-CI (plain fetch → Playwright fallback)
                           ▼
    prices.json → inference (naive flat-hold + IBJA-calibrated
                  fallback floor + Chronos directional companion,
@@ -41,7 +36,7 @@ GitHub Actions (check-price.yml, every 3h)                   │
    commit data/*.json → GitHub Pages PWA renders it
 ```
 
-- **Three-layer scrape resilience.** A Cloudflare Worker fetches from a clean IP (Tanishq blocks GitHub's runner IPs). If the Worker is down, the scheduled CI run scrapes in-process (plain `fetch` → Playwright). If both miss, the page shows an IBJA-calibrated estimate (and, failing that, the last confirmed price with a clear "may be outdated" banner) — **the user never sees a dead price.**
+- **Two-layer scrape resilience.** The scheduled CI run scrapes in-process (plain `fetch` → Playwright fallback). If that misses, the page shows an IBJA-calibrated estimate (and, failing that, the last confirmed price with a clear "may be outdated" banner) — **the user never sees a dead price.** (A Cloudflare Worker clean-IP fetch path ran 2026-06-13–2026-06-25 but was retired after Tanishq extended its bot-blocking to Workers egress; see [docs/RUNBOOK.md](docs/RUNBOOK.md).)
 - **Static PWA.** `index.html` + `app.js` fetch `data/*.json` straight from the repo and render price, verdict, sparkline, and chart — no server.
 
 ## Notifications (bring your own ntfy topic)
@@ -61,10 +56,6 @@ Alert types: a price-move alert (describes the recent trend), a twice-daily dige
 5. Install the PWA: iOS Safari → Share → Add to Home Screen · Android Chrome → Install app.
 6. Subscribe to alerts: install the ntfy app → **+** → enter your topic.
 
-### Optional: clean-IP scraping via Cloudflare Workers
-
-Tanishq blocks GitHub's runner IPs, so the in-CI scrape misses ~1/3 of the time on its own. A free Cloudflare Worker fetches from a clean IP and triggers the pipeline. This is **optional** — without it the app still works (degraded), because the scheduled CI run and the estimate floor keep the price correct. To set it up (and to renew the token before it expires), see **[worker/README.md](worker/README.md)**.
-
 ## Honesty & methodology
 
 - Headline = **naive flat-hold**; on the walk-forward backtest no model beats it on magnitude (it's ~14% *worse*, p≈0.003), so the baseline *is* the production forecast ([ADR 012](docs/adr/012-naive-headline-chronos-companion.md)).
@@ -76,8 +67,7 @@ Tanishq blocks GitHub's runner IPs, so the in-CI scrape misses ~1/3 of the time 
 | Path | What |
 |------|------|
 | `index.html`, `app.js`, `service-worker.js` | The PWA (what users see) |
-| `scraper/` | Tanishq scrape + dispatch validation (Node) |
-| `worker/` | Cloudflare Worker (clean-IP fetch) + its README |
+| `scraper/` | Tanishq scrape (Node) |
 | `ml/` | Inference, calibration, notifications, the direction-eval harness |
 | `data/` | Committed price/forecast/eval JSON the PWA reads |
 | `.github/workflows/` | `check-price.yml` (3h loop), `lint.yml`, `eval-direction.yml`, canary |
@@ -88,14 +78,14 @@ Tanishq blocks GitHub's runner IPs, so the in-CI scrape misses ~1/3 of the time 
 - **Prices look stale:** the page banner will say so. Check the latest **Check Gold Price** run in Actions; the scrape step is `continue-on-error`, so a miss is logged as a run annotation, not a hard failure.
 - **No notifications:** confirm `NTFY_TOPIC` has no URL prefix, you subscribed to the *exact* topic, and a price move actually occurred.
 - **Commentary missing:** set `GROQ_API_KEY` (optional).
-- **Scraper DOM canary issue opened:** Tanishq's runner-IP block can fail the live canary even when the page is fine — confirm against the Worker's last successful dispatch before assuming the selector changed. See [docs/RUNBOOK.md](docs/RUNBOOK.md).
+- **Scraper DOM canary issue opened:** Tanishq's runner-IP block can fail the live canary even when the page is fine — check recent `prices.json` entries first (a stretch of missed scrapes points at an IP block, not a DOM change) before assuming the selector changed. See [docs/RUNBOOK.md](docs/RUNBOOK.md).
 
 ## Design decisions (ADRs)
 
 - [ADR 005](docs/adr/005-honest-baseline-reporting.md) — always report when the model loses to naive
 - [ADR 012](docs/adr/012-naive-headline-chronos-companion.md) — naive flat-hold headline, Chronos as a (dark) companion
 - [ADR 019](docs/adr/019-direction-signal-below-base-rate.md) — the direction signal doesn't beat the base rate; ship nothing
-- [docs/RUNBOOK.md](docs/RUNBOOK.md) — rollback, CI debugging, staleness, Worker/token ops
+- [docs/RUNBOOK.md](docs/RUNBOOK.md) — rollback, CI debugging, staleness
 
 ## License
 

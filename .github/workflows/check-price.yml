@@ -8,8 +8,6 @@ on:
     # at least one 3h-cadence slot, so twice-daily digests are unaffected.
     - cron: "0 */3 * * *"
   workflow_dispatch: # allows manual run from the Actions tab
-  repository_dispatch:
-    types: [tanishq-price]
   push:
     branches: [master]
     paths:
@@ -67,38 +65,22 @@ jobs:
         id: scrape
         working-directory: scraper
         continue-on-error: true
-        env:
-          # NTFY_TOPIC/DROP_THRESHOLD removed: update-and-notify.js no longer sends
-          # the drop-alert (retired in favour of T3 in ml/notifications.py). This
-          # step only appends the reading; the notifications step does the alerting.
-          GH_EVENT_NAME: ${{ github.event_name }}
-          DISPATCH_22K: ${{ github.event.client_payload['22k'] }}
-          DISPATCH_24K: ${{ github.event.client_payload['24k'] }}
-          DISPATCH_18K: ${{ github.event.client_payload['18k'] }}
-          DISPATCH_TIMESTAMP: ${{ github.event.client_payload.timestamp }}
+        # NTFY_TOPIC/DROP_THRESHOLD removed: update-and-notify.js no longer sends
+        # the drop-alert (retired in favour of T3 in ml/notifications.py). This
+        # step only appends the reading; the notifications step does the alerting.
         run: |
           set -e
-          if [ "$GH_EVENT_NAME" = "repository_dispatch" ]; then
-            node dispatch-validate.js > /tmp/dispatch_reading.json
-            if [ -s /tmp/dispatch_reading.json ]; then
-              cat /tmp/dispatch_reading.json | node update-and-notify.js
-            else
-              >&2 echo "[dispatch] payload rejected or invalid — treating as miss"
-              exit 1
-            fi
-          else
-            node scrape.js | tee /tmp/reading.json
-            cat /tmp/reading.json | node update-and-notify.js
-          fi
+          node scrape.js | tee /tmp/reading.json
+          cat /tmp/reading.json | node update-and-notify.js
 
       - name: Flag scrape miss
-        # The scrape step is continue-on-error, so a CF-blocked / rejected-dispatch
-        # run still reports green. Surface the miss as a run-summary annotation so a
-        # frozen prices.json is visible operationally. User-facing staleness is
-        # covered by T9 in ml.notifications; this is CI visibility only.
+        # The scrape step is continue-on-error, so a CF-blocked run still reports
+        # green. Surface the miss as a run-summary annotation so a frozen
+        # prices.json is visible operationally. User-facing staleness is covered
+        # by T9 in ml.notifications; this is CI visibility only.
         if: steps.scrape.outcome == 'failure'
         run: |
-          echo "::warning title=Scrape miss::Tanishq scrape produced no reading this run (CF block or rejected dispatch); prices.json not updated. T9 covers user-facing staleness."
+          echo "::warning title=Scrape miss::Tanishq scrape produced no reading this run (CF block); prices.json not updated. T9 covers user-facing staleness."
 
       - name: Set up Python
         uses: actions/setup-python@v6

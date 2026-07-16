@@ -8,7 +8,6 @@ on:
     branches: [master]
     paths:
       - "scraper/**"
-      - "worker/**"
       - "tests/fixtures/tanishq_sample.html"
       - "tests/fixtures/cf_challenge.html"
 
@@ -56,17 +55,9 @@ jobs:
         working-directory: scraper
         run: node --test test_hybrid_scrape.mjs
 
-      - name: Run dispatch-validate tests (mock ENV, no live network, Φ25)
-        working-directory: scraper
-        run: node --test test_dispatch_validate.mjs
-
       - name: Run update-and-notify jump-guard tests
         working-directory: scraper
         run: node --test test_update_and_notify.js
-
-      - name: Run Worker unit tests (mock fetch, no live network, Φ25)
-        working-directory: worker
-        run: node --test test_worker.mjs
 
       - name: Live DOM canary (Tanishq page)
         id: canary

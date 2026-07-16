@@ -33,11 +33,9 @@ Free-tier gold price tracker for Indian retail (Tanishq 22K). Live scrape every 
 ## Production architecture (one-paragraph + diagram)
 
 ```
-[CF Worker (Φ25) — cron 30 */3 * * * UTC, Singapore edge IP]
-        ↓ repository_dispatch[tanishq-price]
 [GitHub Actions cron, 0 */3 * * * UTC → ~05:30/08:30/11:30/14:30/17:30/20:30/23:30/02:30 IST]
         ↓
-[Tanishq scrape — dispatch branch (Φ25) or fallback: requests (0% on runner IPs, Φ24) + Playwright]──→ data/prices.json
+[Tanishq scrape — requests (0% on runner IPs, Φ24) + Playwright fallback]──→ data/prices.json
 [IBJA scrape — upsert pm_916 when post-PM-fix run has value]─→ data/ibja_rates.parquet
 [ml.calibration — refit if ≥30 overlap pairs (ADR 017)]─────→ data/calibration.json
 [macro fetch]────→ data/macro_cache.parquet (gitignored)
@@ -99,10 +97,6 @@ gold-rate-tracker/
 │   ├── generate-og-image.yml
 │   └── scraper-canary.yml
 ├── archive/                     ← Deprecated reference data, never imported
-├── worker/                      ← Φ25 Cloudflare Worker (clean-IP Tanishq fetch)
-│   ├── index.js                 ← CF Worker: fetch → parse/validate → repository_dispatch
-│   ├── wrangler.toml            ← cron config + non-secret vars (no secrets)
-│   └── test_worker.mjs          ← 11 unit tests (mock fetch, no live network)
 ├── app.js                       ← LOAD-BEARING PWA logic
 ├── index.html
 └── service-worker.js
@@ -182,7 +176,7 @@ gold-rate-tracker/
 - IBJA PM rate sometimes `NaN` on early-morning CI runs (before ~17:00 IST publication). The upsert fix (PR #56) captures the PM value on the post-17:00 run; inference falls back to the most recent complete PM row until then. This is expected and accepted.
 - `data/calibration.json` is now `valid: true` (unlocked 2026-06-11; slope 1.0137, intercept 3.20, n=30). Refitted automatically by `run_refit_if_needed()` in CI (ADR 017) when ≥10 new overlap pairs accumulate. Do NOT manually flip `valid`.
 - Φ24 (2026-06-10): Tanishq scraper now tries a plain `fetch()` GET with Chrome UA before launching Playwright. CF is currently UA-string-only (403 on default UA, 200 on Chrome UA); the requests path succeeds on ~healthy days and saves ~8-15s of Chromium startup per CI run. ANY failure (non-200, CF challenge body, missing span, validation error) falls back transparently to the existing Playwright path. `scrapeWithRetry()` is unchanged; `hybridScrape()` is the new entry point.
-- Φ25 (2026-06-11): CF Worker added as primary Tanishq fetch path (Singapore edge, 200 in ~400ms). **LIVE since 2026-06-13** — owner deployed Worker Version d8b69033 (UA-on-dispatch-POST 403 fix #117) + set Contents-scoped PAT. First-ever `repository_dispatch` run `27466836116` fired 2026-06-13T12:30 UTC (success): scrape log `[dispatch] 22k=13710 validated OK`, prices.json entry tagged `source="repository_dispatch"` (#118). This **closes Symptom 1 (scraper staleness)**. The validation constants (RANGE_MIN, RANGE_MAX, ratio bounds) and parse/validate logic are copied across 3 files: `scraper/scrape.js`, `worker/index.js`, `scraper/dispatch-validate.js`. SYNC CONTRACT: update all 3 together whenever thresholds change.
+- Φ25 (2026-06-11): CF Worker added as primary Tanishq fetch path (Singapore edge, 200 in ~400ms). Live 2026-06-13 through 2026-06-25 — owner deployed Worker Version d8b69033 (UA-on-dispatch-POST 403 fix #117) + set Contents-scoped PAT. First-ever `repository_dispatch` run `27466836116` fired 2026-06-13T12:30 UTC (success): scrape log `[dispatch] 22k=13710 validated OK`, prices.json entry tagged `source="repository_dispatch"` (#118). **RETIRED 2026-07-16:** Tanishq extended its CF bot-protection challenge to Workers egress on 2026-06-25 (confirmed via direct edge reproduction — 403 + challenge page on the exact production fetch; cron/deploy/PAT all healthy, not a client-side bug). Worker, PAT, `repository_dispatch` trigger, and `scraper/dispatch-validate.js` removed. In-CI Playwright scrape is now the sole ingestion path. See [docs/RUNBOOK.md](docs/RUNBOOK.md).
 - Chronos forecasts can flip direction between consecutive runs. Stochastic sampling. **Addressed in Φ4 (PR #35) with 5-sample majority consensus; T1/T2 gate on direction_consensus ≥ 0.6.**
 - **Commit-push rebase race (burst-only flake).** The `Commit updated data files` step in `check-price.yml` has a 3-attempt `git pull --rebase --autostash` retry. It recovers from transient push races, but when two runs commit genuinely conflicting data-file content within the same window (e.g. two PR merges + a schedule run within minutes, as on 2026-06-13T11:01 run `27464880225`), the rebase hits the same deterministic conflict on all 3 attempts and the run fails red. It self-heals on the next scheduled run. Steady-state risk is low (scheduled `:00` and Worker-dispatch `:30` runs are 30 min apart, no overlap); it only bites during PR-merge bursts. Not yet hardened — fixing it means editing the load-bearing commit step (a conflict-resolution strategy that lets this run's freshly-computed data win), so deferred until burst frequency justifies the blast-radius. Low priority.
 
@@ -212,7 +206,7 @@ Prevention going forward: norm #15 (consumer audit), norm #16 (delivery verifica
 | Item | Status |
 |---|---|
 | Lint workflow (ruff + ruff-format + mypy + pytest) | Green on master (2026-06-13, run `27466215568`). **538 Python tests pass** (3 skipped, 1 deselected). |
-| JS tests | Green: 9 pure-function (tests/test_scrape.js) + 4 Playwright fixture DOM (scraper/test_scrape.js) + 16 hardening mock-HTTP (scraper/test_scraper_hardening.mjs) + 9 hybrid-scrape Φ24 (scraper/test_hybrid_scrape.mjs) + 5 comparison cards (tests/test_comparisons.js) + 11 CF Worker Φ25 (worker/test_worker.mjs) + 9 dispatch-validate Φ25 (scraper/test_dispatch_validate.mjs). |
+| JS tests | Green: 9 pure-function (tests/test_scrape.js) + 4 Playwright fixture DOM (scraper/test_scrape.js) + 16 hardening mock-HTTP (scraper/test_scraper_hardening.mjs) + 9 hybrid-scrape Φ24 (scraper/test_hybrid_scrape.mjs) + 5 comparison cards (tests/test_comparisons.js). CF Worker Φ25 (11 tests) + dispatch-validate Φ25 (9 tests) removed with the Worker retirement (2026-07-16). |
 | check-price.yml | Green on master. 4h cadence. Scraper hardened with 3-attempt retry + CF detection (ADR 016). Calibration-refit step wired (ADR 017). IBJA upsert captures post-PM-fix rates. |
 | scraper-canary.yml | Triggers on PR push to scraper/** paths (live DOM canary guarded to schedule/manual). |
 | weekly-backtest.yml | Green; last run 2026-05-19. |

@@ -1910,7 +1910,7 @@ Architectural pivot: single-series IBJA-916-PM forecasting. MCX dropped entirely
 
 **STOP gate:** GG device-verify all 3 banner states + hero bounded-range display before merge.
 
-### Φ25 — Clean-IP Tanishq Fetch via Cloudflare Worker  🔴 IN PROGRESS — 2026-06-11
+### Φ25 — Clean-IP Tanishq Fetch via Cloudflare Worker  ✅ COMPLETE 2026-06-13 → 🪦 RETIRED 2026-07-16
 
 **Goal:** Restore reliable, near-real-time Tanishq price capture. GitHub Actions runner
 IPs are hard-403'd by Tanishq's CF WAF (requests path 0% success on runner IPs). A CF
@@ -1964,6 +1964,40 @@ All 38 existing JS tests unchanged and green.
    repository_dispatch. Confirm `[dispatch] 22k=... validated OK` in scrape step log.
    Confirm prices.json has new entry.
 
+**STOP gate result — owner completed 2026-06-13.** Worker deployed (version d8b69033,
+UA-on-dispatch-POST fix #117), PAT set. First `repository_dispatch` run `27466836116`
+fired 2026-06-13T12:30 UTC (success). Closed Symptom 1 (scraper staleness).
+
+**Retirement — 2026-07-16.** The Worker went silent 2026-06-25 (last successful dispatch
+`27466...`-series run at 06:30:40 UTC that day). Diagnosis (orchestrator-run, evidence
+before action): Cloudflare GraphQL analytics showed the cron continued firing 7-8x/day
+with zero errors throughout, and subrequests-per-run dropped from ~2 (Tanishq fetch +
+GitHub POST) to exactly 1 starting 2026-06-26 — meaning the Worker ran and fetched
+Tanishq, but never reached the GitHub dispatch call. `wrangler deployments list` showed
+no deploy since 2026-06-13T12:11, ruling out a bad deploy. A live reproduction via
+`wrangler dev --remote`, replicating the production fetch byte-for-byte from Cloudflare's
+edge, returned `403` with a "Just a moment..." Cloudflare challenge page and no
+`goldpurity-rate` span — Tanishq's own CF bot-protection now challenges Workers-originated
+traffic, the same way it already challenged GitHub Actions runner IPs. Cron, deploy, and
+the GitHub PAT were all confirmed healthy; the block is external and not fixable
+client-side (a Browser-Rendering rewrite was considered and explicitly rejected in favour
+of retirement — see Decision Log).
+
+**Decommission actions (2026-07-16):** `wrangler delete` removed the Worker (confirmed
+zero scripts remain in the CF account; its `GITHUB_TOKEN` secret was Worker-scoped and
+went with it — no orphaned CF secrets/KV). `worker/`, `scraper/dispatch-validate.js`,
+`scraper/test_dispatch_validate.mjs` deleted from the repo. `check-price.yml`'s
+`repository_dispatch` trigger and dispatch branch removed; `scraper-canary.yml`'s Worker
+test step and `worker/**` path trigger removed. The `gold-rate-tracker-worker-dispatch`
+fine-grained PAT has no programmatic self-revocation API (GitHub's fine-grained PAT
+management is web-UI-only for the token owner) — flagged to the owner for manual
+revocation at github.com/settings/tokens; nothing else in the repo references it
+(`CI_MERGE_PAT`, used by `bot-pr-sync`, is a separate token). In-CI Playwright scrape +
+IBJA estimate floor are now the sole ingestion path. Quick sanity check post-retirement:
+last 60 readings show a 3% gap rate (2/59 gaps >9h; one 92h outlier), well under the ADR
+016 re-evaluation trigger (>15% sustained over 4 weeks) — no single point of failure
+beyond what already existed pre-Worker.
+
 ---
 
 ## Decision Log
@@ -1973,4 +2007,5 @@ All 38 existing JS tests unchanged and green.
 | 2026-06-07 | Capture-now, train-in-a-year (Φ21) | Only ~100 backtestable consecutive pairs available today (adverse bull regime); India-local factors dominate (attribution invalid). 12 months of clean daily PIT data needed before training. | Feature store accumulation begins 2026-06-07. |
 | 2026-06-07 | Labels derived at training time, NOT stored in feature store | Storing next-day pm_916 at capture time embeds a future value, creating look-ahead bias for any row where the next close wasn't yet known at capture. PIT join from ibja_rates.parquet at training time preserves the capture-day "what was known" guarantee. | ibja_rates.parquet continues to accumulate; labels joined at training time. |
 | 2026-06-11 | CF Worker as primary Tanishq fetch path (Φ25) | GitHub Actions runner IPs are hard-403'd by Tanishq CF WAF; requests path 0/8 success in production. CF Worker from Singapore PoP returns HTTP 200 in ~400ms (probe 2026-06-11). Restores near-real-time price capture without changing any CI pipeline logic. | Worker dispatches via repository_dispatch; CI Playwright path retained as fallback for missed cycles. |
+| 2026-07-16 | Retire the CF Worker rather than upgrade to Browser Rendering or add dispatch-silence monitoring | Tanishq extended its CF bot-protection challenge to Workers egress on 2026-06-25 (confirmed by direct edge reproduction); this is an arms race Tanishq controls, not a bug. In-CI Playwright already carries the pipeline (3% gap rate post-retirement, well under the ADR 016 15% trigger) and running a Worker that can't dispatch is dead infrastructure with a live PAT-renewal obligation and no product value. | Worker, PAT, repository_dispatch trigger, and dispatch-validate.js removed. CI-Playwright is the sole ingestion path. No monitoring added (nothing left to monitor). |
 | 2026-06-11 | Cron offset: Worker at `30 */3 * * *`, CI at `0 */3 * * *` | 30-min stagger prevents concurrent git pushes. Concurrency group `check-price` + `cancel-in-progress: false` queues any overlap. Double-fire risk: nil — second run always reads the first run's committed price as baseline (delta=0, no drop alert). | Documented in `docs/CLEAN_IP_FETCH.md`. |

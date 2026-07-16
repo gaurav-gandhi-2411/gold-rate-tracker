@@ -1,4 +1,13 @@
-# Φ25 Clean-IP Tanishq Fetch — Owner Setup Guide
+# Φ25 Clean-IP Tanishq Fetch — Owner Setup Guide (RETIRED 2026-07-16)
+
+> **Retired.** The Worker ran 2026-06-13–2026-06-25, then went silent: Tanishq extended
+> its Cloudflare bot-protection challenge to Workers egress (confirmed via direct
+> reproduction — `403` + "Just a moment..." challenge on the exact production fetch from
+> Cloudflare's edge). Cron, deploy, and the PAT were all healthy; the block was on
+> Tanishq's side and not fixable client-side. The Worker, its PAT, the
+> `repository_dispatch` CI trigger, and `scraper/dispatch-validate.js` were removed. See
+> [docs/RUNBOOK.md](RUNBOOK.md) for the current (CI-Playwright-only) architecture. This
+> file is kept as a historical record of the setup steps, not a live procedure.
 
 A Cloudflare Worker running from a non-Indian edge IP fetches the Tanishq gold-rate page
 every ~3h and triggers the existing GitHub Actions pipeline via `repository_dispatch`.
