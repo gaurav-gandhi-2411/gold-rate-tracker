@@ -26,7 +26,7 @@ class TargetNormalizer:
         return x * self.std + self.mean
 
     def save(self, path: Path) -> None:
-        path.write_text(json.dumps(asdict(self), indent=2))
+        path.write_text(json.dumps(asdict(self), indent=2) + "\n")
 
     @classmethod
     def load(cls, path: Path) -> TargetNormalizer:

@@ -229,6 +229,24 @@ def test_save_includes_valid_true(tmp_path):
     assert raw["schema_version"] == 1
 
 
+def test_save_ends_with_trailing_newline(tmp_path):
+    # pre-commit's end-of-file-fixer hook rewrites (and fails CI on) any
+    # file missing a trailing newline. A refit that lands without one
+    # breaks the required "lint" check on the bot-sync PR every time.
+    params = cal.CalibrationParams(
+        slope=1.02,
+        intercept=50.0,
+        fit_date="2026-05-19",
+        n_observations=35,
+        residual_std=10.0,
+        r_squared=0.998,
+        huber_epsilon=1.35,
+    )
+    p = tmp_path / "calibration.json"
+    cal.save_calibration(params, p)
+    assert p.read_text().endswith("\n")
+
+
 def test_load_raises_on_missing_file(tmp_path):
     with pytest.raises(FileNotFoundError):
         cal.load_calibration(tmp_path / "nonexistent.json")
