@@ -51,13 +51,7 @@ jobs:
         run: node scripts/screenshot-og.mjs http://localhost:8080
 
       - name: Commit og.png
-        # Same protected-master gate as check-price.yml's data commit (master
-        # requires "lint"+"pwa-js" checks; a fresh commit can't have them
-        # attached before a direct push is evaluated). Same fix: PR + explicit
-        # lint.yml dispatch (workflow_dispatch is exempt from GITHUB_TOKEN's
-        # cascade-trigger suppression) + auto-merge.
-        env:
-          GH_TOKEN: ${{ github.token }}
+        id: commit
         run: |
           set -e
           git config user.name  gold-rate-bot
@@ -65,25 +59,19 @@ jobs:
           git add og.png
           if git diff --cached --quiet; then
             echo "og.png unchanged, skipping commit"
-            exit 0
+            echo "changed=false" >> "$GITHUB_OUTPUT"
+          else
+            git commit -m "chore: refresh OG image [skip ci]"
+            echo "changed=true" >> "$GITHUB_OUTPUT"
           fi
 
-          git commit -m "chore: refresh OG image [skip ci]"
-
-          # See check-price.yml's identical comment: master can move between
-          # this job's checkout and this step, and a branch that starts behind
-          # can't satisfy required-status-checks' "strict" rule even after its
-          # checks pass.
-          git fetch origin master
-          git rebase origin/master
-
-          git push --force origin "HEAD:refs/heads/bot/og-image"
-
-          if ! gh pr view bot/og-image --json number >/dev/null 2>&1; then
-            gh pr create --base master --head bot/og-image \
-              --title "chore: refresh OG image" \
-              --body "Automated OG image refresh from run ${GITHUB_RUN_ID}. Auto-merges once lint + pwa-js pass."
-          fi
-
-          gh workflow run lint.yml --ref bot/og-image
-          gh pr merge bot/og-image --auto --squash
+      - name: Sync og.png via bot PR
+        # Same protected-master gate as check-price.yml's data commit — see
+        # the composite action for the full writeup.
+        if: steps.commit.outputs.changed == 'true'
+        uses: ./.github/actions/bot-pr-sync
+        with:
+          branch: bot/og-image
+          pr-title: "chore: refresh OG image"
+          pr-body: "Automated OG image refresh from run ${{ github.run_id }}."
+          wait-minutes: "10"
