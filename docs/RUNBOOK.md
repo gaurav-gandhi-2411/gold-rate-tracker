@@ -12,9 +12,10 @@ Operational procedures for gold-rate-tracker.
 6. [How to investigate a CI failure](#how-to-investigate-a-ci-failure)
 7. [Staleness alerts — interpretation and response](#staleness-alerts--interpretation-and-response)
 8. [Manual scraper re-run](#manual-scraper-re-run)
-9. [Known constraints](#known-constraints)
-10. [Frontend PR device-check (required)](#frontend-pr-device-check-required)
-11. [Honesty-ADR audit: user-facing copy paths (required)](#honesty-adr-audit-user-facing-copy-paths-required)
+9. [Bug #4 — bot-sync PRs never auto-merge (permanent, accept manual-merge-on-alert)](#bug-4--bot-sync-prs-never-auto-merge-permanent-accept-manual-merge-on-alert)
+10. [Known constraints](#known-constraints)
+11. [Frontend PR device-check (required)](#frontend-pr-device-check-required)
+12. [Honesty-ADR audit: user-facing copy paths (required)](#honesty-adr-audit-user-facing-copy-paths-required)
 
 ---
 
@@ -224,6 +225,71 @@ and the in-CI dispatch-payload validator were all removed rather than left runni
 permanently degraded state. The scheduled in-CI Playwright scrape + IBJA estimate floor
 are now the sole ingestion path (see [docs/CLEAN_IP_FETCH.md](CLEAN_IP_FETCH.md) for the
 retired setup, kept for historical reference).
+
+---
+
+## Bug #4 — bot-sync PRs never auto-merge (permanent, accept manual-merge-on-alert)
+
+**Status: closed as won't-fix. Do not re-investigate from scratch — both known bypass
+mechanisms have been tried and both fail identically. Read this section fully before
+attempting a third approach.**
+
+Every `bot-pr-sync` merge (`bot/data-sync`, `bot/og-image`, `bot/direction-eval-sync`,
+`bot/ibja-backfill-sync`, `bot/backtest-sync`) fails with `"Pull request #N is not
+mergeable: the base branch policy prohibits the merge"` even after both required checks
+(`lint`, `pwa-js`) report `success` on the head SHA. This happens on effectively every
+cycle, not intermittently. `#169`'s ntfy alert (fires after 30 min unmerged) exists
+specifically to catch this; the owner has been manually clicking merge on each stuck PR
+since PR #160 first tried to fix this (2026-07-16 and earlier) — the fix never actually
+worked, it was silently absorbed by the alert + manual merge, and only surfaced as a live
+issue when a full triage pass and live-trigger test happened in the same session (2026-07-16).
+
+**Root cause:** master's classic branch protection (`required_status_checks: [lint,
+pwa-js]`, `enforce_admins: false`, `allow_force_pushes: false`, no required reviews, no
+restrictions) is the actual blocker. `enforce_admins: false` should exempt the repo
+owner's own credentials from required-status-check enforcement — but GitHub does not
+extend that exemption to *scoped* tokens (fine-grained PATs, GitHub App installation
+tokens) belonging to that account, even when the account itself is an admin. Confirmed
+`gh pr checks <N>` / GraphQL `statusCheckRollup` report **zero checks** for these PRs even
+though the direct Checks API (`GET /repos/{owner}/{repo}/commits/{sha}/check-runs`) shows
+both required checks `success` on the exact head SHA — the check-runs exist (dispatched via
+explicit `workflow_dispatch`, not a `pull_request` event) but GitHub's merge-eligibility
+evaluator doesn't link them to the PR the way it needs to for `required_status_checks` to
+be satisfied by API-driven merge.
+
+**Two approaches tried, both fail with the identical error message:**
+
+1. **User PAT (`CI_MERGE_PAT`, fine-grained, PR #160).** Belongs to the repo owner/admin.
+   Still blocked — confirms the block isn't about who the actor *is*, it's about how
+   GitHub evaluates required-status-check satisfaction for a non-interactive merge call.
+2. **GitHub App with a Ruleset `bypass_actor` (2026-07-16, this session).** Created a
+   minimal GitHub App (Contents/Pull requests/Actions R/W, installed on this repo only),
+   added it as a `bypass_actor` (`actor_type: Integration`, `bypass_mode: always`) on a
+   new Ruleset (`ci-bot-merge-required-checks`) mirroring `required_status_checks`,
+   redundant with classic protection. Live-triggered `check-price.yml` twice — **identical
+   `"base branch policy prohibits the merge"` failure**, same 15-minute timeout. Root
+   cause: **Ruleset `bypass_actors` only exempt an actor from that ruleset's own rules,
+   never from a separately-configured classic branch protection rule.** Since classic
+   protection (not the ruleset) is what's actually enforcing the block, App bypass_actor
+   status is irrelevant here. Fully reverted same session: ruleset deleted, App deleted,
+   `APP_ID`/`APP_PRIVATE_KEY` secrets removed, all 5 workflows restored byte-identical to
+   pre-experiment (diffed against the exact pre-App commit to confirm).
+
+**The only way to get GitHub's own merge evaluator to actually honor the bypass would be
+migrating master's `required_status_checks` off classic protection entirely and onto a
+Ruleset** (so the App's bypass_actor becomes the operative mechanism instead of a
+redundant addition) — this is a real, bigger structural change (removes classic
+protection as the source of truth for a production branch) and was explicitly out of
+scope for this test per the agreed methodology (classic protection stays authoritative
+until a bypass is *proven*, and it never got proven). If this is ever revisited, that
+migration — not another bypass_actor variant — is the only remaining unexplored lever.
+
+**Permanent interim: manual merge on `#169`'s ntfy alert.** This is accepted, not a bug
+to keep chasing. Nothing else in the pipeline is affected — scrape, inference, and
+notifications all run correctly regardless; only the final "land the commit on master"
+step needs a human click, roughly once per data-sync cycle when the branch happens to be
+open long enough to alert (most cycles resolve via the *next* run's force-push before the
+30-minute alert threshold even fires).
 
 ---
 
