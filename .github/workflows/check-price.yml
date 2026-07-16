@@ -251,3 +251,46 @@ jobs:
           pr-body: "Automated data sync from Check Gold Price run ${{ github.run_id }}."
           token: ${{ secrets.CI_MERGE_PAT }}
           wait-minutes: "15"
+
+      - name: Alert on stuck bot PR
+        # Path-scoped required checks (only requiring lint/pwa-js on code-path
+        # PRs, not data-only ones) turned out not to be supported by GitHub —
+        # neither classic branch protection nor rulesets support conditioning
+        # required_status_checks on changed file paths, and path-filtering the
+        # *workflow trigger* itself just leaves the required check pending
+        # forever instead of skipping it (GitHub's own troubleshooting docs
+        # warn against this). So bot-pr-sync's merge can still fail (a required
+        # check genuinely red, not just a mechanism problem) and leave a PR
+        # open indefinitely. This runs regardless of the sync step's outcome
+        # (always(), not just on failure) so it also catches a PR left over
+        # from an earlier run that this run didn't touch (e.g. no new commit
+        # this cycle). Read-only — github.token is sufficient, no need for
+        # CI_MERGE_PAT.
+        if: always()
+        continue-on-error: true
+        env:
+          GH_TOKEN: ${{ github.token }}
+          NTFY_TOPIC: ${{ secrets.NTFY_TOPIC }}
+        run: |
+          PR_JSON=$(gh pr list --repo "${GITHUB_REPOSITORY}" --head bot/data-sync --state open --json number,createdAt --jq '.[0]' 2>/dev/null || echo "")
+          if [ -z "$PR_JSON" ] || [ "$PR_JSON" = "null" ]; then
+            echo "No open bot/data-sync PR — nothing to check."
+            exit 0
+          fi
+          PR_NUM=$(echo "$PR_JSON" | jq -r '.number')
+          CREATED_AT=$(echo "$PR_JSON" | jq -r '.createdAt')
+          AGE_MIN=$(( ($(date -u +%s) - $(date -u -d "$CREATED_AT" +%s)) / 60 ))
+          echo "bot/data-sync PR #${PR_NUM} has been open for ${AGE_MIN} minutes."
+          if [ "$AGE_MIN" -le 30 ]; then
+            exit 0
+          fi
+          if [ -z "${NTFY_TOPIC}" ]; then
+            echo "NTFY_TOPIC not set — skipping ntfy alert."
+            exit 0
+          fi
+          curl -s \
+            -H "Title: Gold Tracker: bot PR stuck unmerged" \
+            -H "Priority: high" \
+            -H "Tags: warning" \
+            -d "bot/data-sync PR #${PR_NUM} has been open ${AGE_MIN} min without merging -- prices.json may be stale. https://github.com/${GITHUB_REPOSITORY}/pull/${PR_NUM}" \
+            "https://ntfy.sh/${NTFY_TOPIC}" || true
