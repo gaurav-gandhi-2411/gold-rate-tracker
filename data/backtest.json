@@ -1,5 +1,5 @@
 {
-  "backtest_run_at": "2026-07-12T05:18:23.106302+00:00",
+  "backtest_run_at": "2026-07-16T09:40:57.527878+00:00",
   "n_folds": 194,
   "n_folds_sub_30_context": 22,
   "horizon": 5,
