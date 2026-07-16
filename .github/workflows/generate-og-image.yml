@@ -74,4 +74,5 @@ jobs:
           branch: bot/og-image
           pr-title: "chore: refresh OG image"
           pr-body: "Automated OG image refresh from run ${{ github.run_id }}."
+          token: ${{ secrets.CI_MERGE_PAT }}
           wait-minutes: "10"
