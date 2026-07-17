@@ -12,7 +12,7 @@ Operational procedures for gold-rate-tracker.
 6. [How to investigate a CI failure](#how-to-investigate-a-ci-failure)
 7. [Staleness alerts — interpretation and response](#staleness-alerts--interpretation-and-response)
 8. [Manual scraper re-run](#manual-scraper-re-run)
-9. [Bug #4 — bot-sync PRs sometimes don't auto-merge (re-opened, mechanism uncertain)](#bug-4--bot-sync-prs-sometimes-dont-auto-merge-re-opened-2026-07-16-mechanism-uncertain)
+9. [Bug #4 — bot-sync PRs don't auto-merge (FIXED, PR #183)](#bug-4--bot-sync-prs-dont-auto-merge-fixed-2026-07-17-pr-183)
 10. [Known constraints](#known-constraints)
 11. [Frontend PR device-check (required)](#frontend-pr-device-check-required)
 12. [Honesty-ADR audit: user-facing copy paths (required)](#honesty-adr-audit-user-facing-copy-paths-required)
@@ -228,11 +228,21 @@ retired setup, kept for historical reference).
 
 ---
 
-## Bug #4 — bot-sync PRs sometimes don't auto-merge (re-opened 2026-07-16, mechanism uncertain)
+## Bug #4 — bot-sync PRs don't auto-merge (FIXED 2026-07-17, PR #183)
 
-**Status: NOT confirmed permanent/structural — the "won't-fix" conclusion below was
-reached, then partially disproven, in the same session (2026-07-16). Read the whole
-section; the timeline matters more than any single paragraph.**
+**Status: fixed. `lint.yml` now forwards its real result as a Commit Status
+(`post-required-check-status` job) in addition to the normal Check Run, sidestepping the
+PR-linkage question entirely — Commit Statuses are SHA-scoped and branch protection
+matches required contexts by name across both APIs. Proven 3/3 on live `check-price.yml`
+cycles (00:15, 00:21, 00:26 UTC 2026-07-17): every merge succeeded on bot-pr-sync's FIRST
+attempt, ~3 seconds after checks went green, zero `"policy prohibits"` rejections. `#169`'s
+ntfy alert is untouched and remains the permanent backstop regardless.**
+
+The section below is kept as the full diagnostic timeline — three different theories were
+tried before landing on the actual fix, and the history is worth more than a clean summary
+would be if this ever regresses. Read it before assuming a new bypass mechanism is needed;
+the working fix (Commit Status forwarding) is a completely different lever from either of
+the two abandoned bypass attempts.
 
 Every `bot-pr-sync` merge (`bot/data-sync`, `bot/og-image`, `bot/direction-eval-sync`,
 `bot/ibja-backfill-sync`, `bot/backtest-sync`) had been failing with `"Pull request #N is
@@ -278,18 +288,43 @@ intermittently returning malformed responses during the investigation, blocking 
 follow-up check (`required_status_checks.strict`) that would have ruled out a "branch
 behind" explanation cleanly.
 
-**No code changes made pending more evidence.** `bot-pr-sync`'s `workflow_dispatch`
-fallback was deliberately left in place — if webhook delivery really is the flaky part,
-removing the fallback could make things worse on exactly the days it's needed, and that's
-not a change to make on an unconfirmed mechanism against a production data pipeline.
-**Current plan: observe natural scheduled cycles going forward.** If bot PRs keep
-resolving to `mergeable: CLEAN` within a reasonable window without intervention, that's
-evidence for the webhook-flakiness theory and a real code change (loosen or restructure
-the resync/dispatch loop) becomes worth making with actual confidence. If they go back to
-reliably blocking, the original manual-merge-on-alert interim still holds and this section
-should be updated to reflect that more `won't-fix`-shaped reality — but don't write that
-conclusion again without a specific, evidenced reason; the first "permanent" verdict here
-lasted about four hours.
+**A short observation window followed** (natural scheduled cycles, no code changes) to
+distinguish "webhook flakiness, needs a different mitigation" from "reliably broken in
+steady state." Superseded before completing — GG requested the deterministic fix directly
+rather than continuing to measure trigger reliability. In hindsight the webhook-flakiness
+question was a red herring for the actual FIX (though it may still explain the original
+*symptom*): the real lever was never "make `pull_request` fire reliably," it was "give
+branch protection a satisfying status through a channel that doesn't depend on `pull_request`
+firing at all."
+
+**The actual fix (PR #183, 2026-07-17):** added `post-required-check-status` to
+`lint.yml` — `needs: [lint, pwa-js]`, gated on their real result (`if:
+needs.lint.result == 'success' && needs['pwa-js'].result == 'success'`, never posts on
+failure), running with `GITHUB_TOKEN` under job-level `permissions: statuses: write` (repo
+default is read-only; `CI_MERGE_PAT`'s scope untouched). Posts two Commit Statuses
+(`POST /repos/{owner}/{repo}/statuses/{sha}`, `context: "lint"` / `"pwa-js"` — exact
+required-context names, confirmed via `gh api .../branches/master/protection`) to
+`github.event.pull_request.head.sha` (pull_request-triggered runs) or `github.sha`
+(workflow_dispatch/push). Branch protection's `required_status_checks.contexts` matches by
+name across *both* Check Runs and Commit Statuses — a Commit Status has no check-suite or
+PR-linkage concept to fail, regardless of which event triggered the workflow. No branch
+protection setting was touched (`required_status_checks: [lint, pwa-js]`, `strict: true`
+unchanged); `strict: true` needed no separate handling since `bot-pr-sync` already
+rebases-before-push and resyncs on `BEHIND` (redispatching `lint.yml`, which re-posts fresh
+statuses against the new SHA automatically).
+
+**Proof:** 3 consecutive manual `check-price.yml` dispatches, each merging its
+`bot/data-sync` PR (#184, #185, #186) on bot-pr-sync's first merge attempt:
+
+| Cycle | PR | Checks-green → merge attempt | Result |
+|---|---|---|---|
+| 1 | #184 | 00:15:34 → 00:15:37 UTC (3s) | Merged, no rejection |
+| 2 | #185 | 00:21:17 → 00:21:20 UTC (3s) | Merged, no rejection |
+| 3 | #186 | 00:26:51 → 00:26:54 UTC (3s) | Merged, no rejection |
+
+Compare to the pre-fix pattern: every historical cycle retried the merge call every ~12s
+for the full 15-minute window and failed every single time with `"the base branch policy
+prohibits the merge"`.
 
 ---
 
