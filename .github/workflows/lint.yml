@@ -70,6 +70,38 @@ jobs:
             tests/test_stale_banner.js \
             tests/test_trend.js
 
+  # Forward lint+pwa-js's real result as commit statuses (bug #4, docs/RUNBOOK.md).
+  # Branch protection's required_status_checks matches by context NAME across both
+  # Check Runs and Commit Statuses — it doesn't care which API produced the match.
+  # bot-pr-sync (CI_MERGE_PAT-authored pushes) dispatches this workflow via
+  # workflow_dispatch rather than relying on the native pull_request trigger, and
+  # workflow_dispatch-triggered check-runs were observed NOT reliably linking to the
+  # PR for merge-eligibility purposes (intermittent, mechanism never fully confirmed —
+  # see RUNBOOK). A commit status is SHA-scoped with no PR-linkage concept at all, so
+  # it sidesteps that ambiguity entirely regardless of triggering event or webhook
+  # delivery reliability. Runs on every trigger (push/pull_request/workflow_dispatch/
+  # schedule) — harmless redundancy for normal PRs, load-bearing for bot ones.
+  post-required-check-status:
+    needs: [lint, pwa-js]
+    if: needs.lint.result == 'success' && needs['pwa-js'].result == 'success'
+    runs-on: ubuntu-latest
+    permissions:
+      statuses: write
+    steps:
+      - name: Post lint + pwa-js as commit statuses on the head SHA
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TARGET_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+        run: |
+          set -e
+          for CTX in lint pwa-js; do
+            gh api "repos/${GITHUB_REPOSITORY}/statuses/${TARGET_SHA}" \
+              -f state=success \
+              -f context="${CTX}" \
+              -f description="Forwarded from run ${GITHUB_RUN_ID} (job result: success)" \
+              -f target_url="${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}"
+          done
+
   # Dependency vulnerability audit — informational only, not a required check.
   # Neither lint nor pwa-js depends on this job; a finding here should not block
   # merges. Findings are surfaced in the job log for manual triage.
