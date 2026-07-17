@@ -460,6 +460,108 @@ function computeBandPos90d(readings) {
   return { percentile90d, nDays90d, note };
 }
 
+// ─── 30-DAY TREND RESIDUAL (audit finding, 2026-07-18) ────────────────────────
+// The 30-day percentile above is a pure range position — it cannot tell "cheap
+// and still falling" from "cheap and stabilizing". Confirmed on the 2026-06
+// selloff: percentile30d read "cheap" (3-20) for ~15 straight sessions
+// (2026-06-10 to 06-25) while the price kept dropping, falsified the next day
+// every time. This fits a Theil-Sen (median-of-pairwise-slopes) line over the
+// same 30-day window — robust to the odd promotional-price outlier, unlike
+// OLS — and reports today's price as a robust z-score residual off that line:
+// strongly negative means today is still falling away from its own recent
+// trend; near zero or positive means the price has leveled off or turned back
+// toward/above it.
+//
+// A SUPPORTING line only, mirroring computeBandPos90d: self-labeling, gracefully
+// degrades to null on thin data, and never changes the verdict hierarchy
+// (verdictLead/verdictType/proofLine) in computeGoodPriceSignals. Descriptive,
+// not predictive — it describes where today sits relative to the recent trend,
+// it does not forecast tomorrow's move.
+//
+// Returns null below MIN_DAYS_TREND (Theil-Sen needs enough points for the
+// median-of-slopes and residual-MAD estimates to be stable, not noise).
+const MIN_DAYS_TREND = 10;
+const FLAT_SLOPE_INR_PER_DAY = 5; // |slope| below this reads as "flattened out"
+const CHEAP_PERCENTILE_MAX = 40;  // matches computeGoodPriceSignals' below-mid cutoff
+const STILL_FALLING_Z = -1;       // residZ below this reads as "not yet stabilized"
+
+function theilSenFit(points) {
+  // points: [{x, y}]. Median of all pairwise slopes, then median residual as
+  // the intercept — the standard robust (Theil-Sen) line fit.
+  const slopes = [];
+  for (let i = 0; i < points.length; i++) {
+    for (let j = i + 1; j < points.length; j++) {
+      const dx = points[j].x - points[i].x;
+      if (dx !== 0) slopes.push((points[j].y - points[i].y) / dx);
+    }
+  }
+  slopes.sort((a, b) => a - b);
+  const midS = Math.floor(slopes.length / 2);
+  const slope = slopes.length % 2 !== 0
+    ? slopes[midS]
+    : (slopes[midS - 1] + slopes[midS]) / 2;
+
+  const intercepts = points.map(p => p.y - slope * p.x).sort((a, b) => a - b);
+  const midI = Math.floor(intercepts.length / 2);
+  const intercept = intercepts.length % 2 !== 0
+    ? intercepts[midI]
+    : (intercepts[midI - 1] + intercepts[midI]) / 2;
+
+  return { slope, intercept };
+}
+
+function computeTrendResidual30d(readings, percentile30d) {
+  if (!readings || readings.length < 2) return null;
+
+  const now = Date.now();
+  const within30d = readings.filter(
+    r => now - new Date(r.timestamp).getTime() <= 30 * 86400e3,
+  );
+  const daily30d = dedupeByISTDay(within30d);
+  const nDays = daily30d.length;
+  if (nDays < MIN_DAYS_TREND) return null;
+
+  const points = daily30d.map((r, i) => ({ x: i, y: r["22k"] }));
+  const { slope, intercept } = theilSenFit(points);
+
+  const absResiduals = points
+    .map(p => Math.abs(p.y - (slope * p.x + intercept)))
+    .sort((a, b) => a - b);
+  const midR = Math.floor(absResiduals.length / 2);
+  const mad = absResiduals.length % 2 !== 0
+    ? absResiduals[midR]
+    : (absResiduals[midR - 1] + absResiduals[midR]) / 2;
+  const robustStd = 1.4826 * mad; // normal-consistent scale of the MAD
+
+  const todayIdx = points.length - 1;
+  const trendValue = slope * todayIdx + intercept;
+  const residual = points[todayIdx].y - trendValue;
+  const residZ = robustStd > 0 ? residual / robustStd : 0;
+
+  let trendState;
+  if (slope <= -FLAT_SLOPE_INR_PER_DAY) trendState = "falling";
+  else if (slope >= FLAT_SLOPE_INR_PER_DAY) trendState = "rising";
+  else trendState = "flat";
+
+  const isCheap = typeof percentile30d === "number" && percentile30d <= CHEAP_PERCENTILE_MAX;
+  const slopeAbs = fmtINR(Math.round(Math.abs(slope)));
+
+  let note;
+  if (isCheap && residZ < STILL_FALLING_Z) {
+    note = `Cheap, but still falling — today is well below its own recent trend line (about ₹${slopeAbs}/day downhill over the month).`;
+  } else if (isCheap) {
+    note = "Cheap, and stabilizing — despite the recent dip, today's price is back near (or above) its own recent trend line.";
+  } else if (trendState === "falling") {
+    note = `Prices have been sliding about ₹${slopeAbs}/day over the past month.`;
+  } else if (trendState === "rising") {
+    note = `Prices have been climbing about ₹${slopeAbs}/day over the past month.`;
+  } else {
+    note = "Prices have been roughly flat over the past month, close to their own recent trend.";
+  }
+
+  return { slope, residual, residZ, trendState, nDays, note };
+}
+
 // ─── PURCHASE COST ESTIMATE ───────────────────────────────────────────────────
 // Itemised "what will it cost me?" estimate for a gold jewellery purchase, the
 // way an Indian retail invoice is built up:
@@ -830,6 +932,7 @@ function renderModelSignal(fc, readings, bt) {
     return;
   }
   const bandPos90d = computeBandPos90d(readings ?? []);
+  const trendResidual = computeTrendResidual30d(readings ?? [], signals.percentile30d);
 
   const hl = fc?.headline;
   const hasPI = hl && typeof hl.lower === "number" && typeof hl.upper === "number";
@@ -869,8 +972,8 @@ function renderModelSignal(fc, readings, bt) {
   }
 
   // XSS-safe: verdictLead/proofLine/dataSuffNote/supportLine1/supportLine2/divergenceNote/
-  // bandPos90d.note are hardcoded string literals or fmtINR(number) from
-  // computeGoodPriceSignals/computeBandPos90d — no external data.
+  // bandPos90d.note/trendResidual.note are hardcoded string literals or fmtINR(number)
+  // from computeGoodPriceSignals/computeBandPos90d/computeTrendResidual30d — no external data.
   document.getElementById("model-signal-body").innerHTML = `
     <div class="outlook-card">
       <p class="good-price-verdict good-price-verdict--${signals.verdictType}">${signals.verdictLead}</p>
@@ -880,6 +983,7 @@ function renderModelSignal(fc, readings, bt) {
         <li>${signals.supportLine1}</li>
         <li>${signals.supportLine2}</li>
         ${signals.divergenceNote ? `<li class="good-price-divergence">${signals.divergenceNote}</li>` : ""}
+        ${trendResidual ? `<li class="good-price-trend">${trendResidual.note}</li>` : ""}
         ${bandPos90d ? `<li class="good-price-band-90d">${bandPos90d.note}</li>` : ""}
       </ul>
       ${volatilityHtml}
