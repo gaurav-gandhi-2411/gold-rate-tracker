@@ -62,7 +62,10 @@ def add_momentum_features(dataset: pd.DataFrame) -> pd.DataFrame:
     out = dataset.sort_values("as_of_date").reset_index(drop=True).copy()
     for col in _MOMENTUM_BASE_COLS:
         out[f"{col}_chg1"] = out[col].pct_change(1)
-    log_ret = np.log(out["gold_usd"] / out["gold_usd"].shift(1))
+    # np.log() on a pd.Series returns a Series at runtime (pandas __array_ufunc__), but
+    # mypy's numpy stub resolves it to ndarray — same false positive pre-exempted for the
+    # identical pattern in ml/macro.py (which predates mypy enforcement, see pyproject.toml).
+    log_ret: pd.Series = np.log(out["gold_usd"] / out["gold_usd"].shift(1))  # type: ignore[assignment]
     out["gold_usd_vol5"] = log_ret.rolling(_VOL_WINDOW, min_periods=2).std()
     return out
 

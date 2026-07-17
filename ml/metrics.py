@@ -342,11 +342,16 @@ def save_coverage_metrics(
         "schema_version": 1,
         "generated_at_utc": datetime.now(UTC).isoformat(),
         "band_source": "naive_flat_hold conformal PI (headline.lower/upper), "
-        "calibrated on the last 30 backtest folds' naive errors",
+        "calibrated on the last 30 backtest folds' next-trading-day (h=1) naive errors "
+        "(ADR 022)",
         "nominal_pct": 80,
         "coverage": result["coverage"],
         "n": result["n"],
         "n_in_band": result["n_in_band"],
+        "note": "Recalibrated 2026-07 from h=5 to h=1 (ADR 022) to match the horizon this "
+        "metric actually tests. n accumulates across the change with no time window, so "
+        "coverage may read above 80% for a while as pre-recalibration decisions are still "
+        "counted; it converges toward the new calibration's true rate as n grows.",
     }
     out_path.write_text(json.dumps(payload, indent=2) + "\n")
     return payload

@@ -418,6 +418,48 @@ function computeGoodPriceSignals(readings) {
   return { percentile30d, vsAvg30d, avg30d, nDays30d, verdictLead, verdictType, proofLine, dataSuffNote, supportLine1, supportLine2, divergenceNote };
 }
 
+// ─── 90-DAY BAND POSITION (Φ11-2 revisit trigger) ─────────────────────────────
+// Deferred at Φ11-2 pending ~90 distinct IST days (48 at the time — too much overlap
+// with the 30-day window to be an independent read). That threshold is met as of
+// 2026-07-17. This is a SUPPORTING line only — it never changes the 30-day verdict
+// hierarchy above (verdictLead/verdictType/proofLine) — and always names its own
+// 90-day window + day count so it can't be mistaken for the 30-day read.
+//
+// Returns null below MIN_DAYS_90D (not enough history for a 90-day comparison to be
+// meaningfully different from the 30-day one). Below FULL_DAYS_90D, appends an
+// honest data-sufficiency caveat inline rather than hiding the line — same
+// graceful-degrade pattern as the 30-day dataSuffNote above.
+const MIN_DAYS_90D = 60;
+const FULL_DAYS_90D = 90;
+
+function computeBandPos90d(readings) {
+  if (!readings || readings.length < 2) return null;
+
+  const now     = Date.now();
+  const current = readings[readings.length - 1]["22k"];
+
+  const within90d = readings.filter(
+    r => now - new Date(r.timestamp).getTime() <= 90 * 86400e3,
+  );
+  const daily90d = dedupeByISTDay(within90d);
+  const nDays90d = daily90d.length;
+  if (nDays90d < MIN_DAYS_90D) return null;
+
+  const prices90d      = daily90d.map(r => r["22k"]);
+  const percentile90d  = Math.round(
+    prices90d.filter(p => p <= current).length / nDays90d * 100,
+  );
+
+  let note = percentile90d <= 50
+    ? `Over the past 90 days: cheaper than ${100 - percentile90d}% of the ${nDays90d} days.`
+    : `Over the past 90 days: more expensive than ${percentile90d}% of the ${nDays90d} days.`;
+  if (nDays90d < FULL_DAYS_90D) {
+    note += ` (Only ${nDays90d} distinct days in this window so far — treat as indicative.)`;
+  }
+
+  return { percentile90d, nDays90d, note };
+}
+
 // ─── PURCHASE COST ESTIMATE ───────────────────────────────────────────────────
 // Itemised "what will it cost me?" estimate for a gold jewellery purchase, the
 // way an Indian retail invoice is built up:
@@ -787,6 +829,7 @@ function renderModelSignal(fc, readings, bt) {
     section.hidden = true;
     return;
   }
+  const bandPos90d = computeBandPos90d(readings ?? []);
 
   const hl = fc?.headline;
   const hasPI = hl && typeof hl.lower === "number" && typeof hl.upper === "number";
@@ -808,8 +851,12 @@ function renderModelSignal(fc, readings, bt) {
         volNote = `Gold has been moving about ±₹${fmtINR(Z)} over 5 days lately.`;
       }
     } else {
-      // Fallback: vol estimate degraded or absent (forecast.json not yet updated) → static PI.
-      const piHalf = hl.conformal_pi_half ?? (hl.upper - hl.lower) / 2;
+      // Fallback: vol estimate degraded or absent → the dedicated 5-day static-PI
+      // reference (vol_context.static_pi_half). NOT hl.conformal_pi_half — since
+      // ADR 022 that field is the next-trading-day (h=1) band and would understate a
+      // "5 days" claim. Old cached forecast.json missing vol_context entirely still
+      // falls back to conformal_pi_half (pre-ADR-022 shape) rather than break.
+      const piHalf = hl.vol_context?.static_pi_half ?? hl.conformal_pi_half ?? (hl.upper - hl.lower) / 2;
       Z = Math.round(piHalf / 50) * 50;
       volNote = `Gold's price typically moves about ±₹${fmtINR(Z)} over 5 days.`;
     }
@@ -821,8 +868,9 @@ function renderModelSignal(fc, readings, bt) {
     `;
   }
 
-  // XSS-safe: verdictLead/proofLine/dataSuffNote/supportLine1/supportLine2/divergenceNote are
-  // hardcoded string literals or fmtINR(number) from computeGoodPriceSignals — no external data.
+  // XSS-safe: verdictLead/proofLine/dataSuffNote/supportLine1/supportLine2/divergenceNote/
+  // bandPos90d.note are hardcoded string literals or fmtINR(number) from
+  // computeGoodPriceSignals/computeBandPos90d — no external data.
   document.getElementById("model-signal-body").innerHTML = `
     <div class="outlook-card">
       <p class="good-price-verdict good-price-verdict--${signals.verdictType}">${signals.verdictLead}</p>
@@ -832,6 +880,7 @@ function renderModelSignal(fc, readings, bt) {
         <li>${signals.supportLine1}</li>
         <li>${signals.supportLine2}</li>
         ${signals.divergenceNote ? `<li class="good-price-divergence">${signals.divergenceNote}</li>` : ""}
+        ${bandPos90d ? `<li class="good-price-band-90d">${bandPos90d.note}</li>` : ""}
       </ul>
       ${volatilityHtml}
     </div>
@@ -1332,7 +1381,7 @@ function renderMethodology(fc, bt, drift, coverage) {
     const hasPI   = typeof lower === "number" && typeof upper === "number";
     parts.push(`
       <div class="meth-section">
-        <h3 class="meth-heading">5-day range</h3>
+        <h3 class="meth-heading">Next trading day range</h3>
         <div class="meth-stats">
           <div class="meth-stat">
             <div class="meth-stat-label">22K estimate</div>
@@ -1342,11 +1391,11 @@ function renderMethodology(fc, bt, drift, coverage) {
           <div class="meth-stat">
             <div class="meth-stat-label">Method</div>
             <div class="meth-stat-value">Assume no change</div>
-            <div class="meth-stat-sub">Range covers 80% of typical 5-day swings</div>
+            <div class="meth-stat-sub">Range covers 80% of typical next-day swings</div>
           </div>
         </div>
         ${fc.target_time ? `<p class="meth-text" style="margin-top:8px">Target: ${fmtIST(fc.target_time)}</p>` : ""}
-        <p class="meth-text" style="margin-top:12px">This price range is intentionally wide — it covers the whole 5-day window, not just tomorrow. The range is based on how much prices have typically swung over 5 days in recent history.</p>
+        <p class="meth-text" style="margin-top:12px">This range covers the next trading day only — how much the price has typically moved by the next reading. It's based on the last 30 backtest windows' typical next-day error. (The good-price card's "moves about ±₹X over 5 days" note is a separate, wider 5-day volatility estimate — a different question.)</p>
       </div>
     `);
   }
@@ -1407,8 +1456,8 @@ function renderMethodology(fc, bt, drift, coverage) {
         ${maePctWorse != null ? `&bull; Time-series AI average error: ₹${chronosMae}/g — ${maePctWorse}% worse (p&thinsp;=&thinsp;${pVal})<br>` : ""}
         Today's price is the forecast.</p>
 
-        <p class="meth-text"><strong>The ${rangeStr} range has held ${hasCoverage ? `${coverPct}% of the time (n=${coverN} resolved 5-day windows)` : "close to its target rate so far — still building a track record"}</strong><br>
-        It reflects the real distribution of 5-day price moves — wide because gold can move sharply. The width is calibrated on only the last 30 backtest windows' typical error, which is a thin sample; so far it has come out wide rather than narrow, the safer way to be wrong.</p>
+        <p class="meth-text"><strong>The ${rangeStr} range has held ${hasCoverage ? `${coverPct}% of the time (n=${coverN} resolved next-day checks)` : "close to its target rate so far — still building a track record"}</strong><br>
+        It reflects the real distribution of next-day price moves, not a 5-day move — the range is meant to describe how far tomorrow's price is likely to sit from today's, not a wider multi-day swing. The width is calibrated on only the last 30 backtest windows' typical next-day error, which is a thin sample. This range was tightened in July 2026 after we found it had been sized for 5-day moves while only ever being checked against next-day prices — the coverage % above may still read above 80% for a while as older, wider-range decisions count toward it alongside newer ones; it's expected to settle nearer 80% as more decisions resolve under the corrected width.</p>
 
         <p class="meth-text"><strong>About the direction signal</strong><br>
         Over ${n} windows the AI signal was correct ${dirAllDisplay}. Gold has risen roughly 70% of trading days in our data. A naive "always-up" guess clears ~70% without a model — our signal doesn't beat that baseline.<br>
