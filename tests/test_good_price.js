@@ -1,6 +1,7 @@
 // tests/test_good_price.js
-// Tests for computeGoodPriceSignals (Φ11-2 "Is today a good price?" signals).
-// Functions inlined from app.js since app.js has no module system.
+// Tests for computeGoodPriceSignals, computeBandPos90d, and computeTrendResidual30d
+// (the "Is today a good price?" card signals). Functions inlined from app.js since
+// app.js has no module system.
 //
 // Run: node --test tests/test_good_price.js  (from repo root)
 
@@ -44,20 +45,35 @@ function computeGoodPriceSignals(readings) {
   const avg30d   = Math.round(prices30d.reduce((s, p) => s + p, 0) / nDays30d);
   const vsAvg30d = current - avg30d;
 
-  let verdict, supportLine1, verdictType;
-  if (percentile30d <= 30) {
-    verdictType  = "low";
-    verdict      = "Prices have been lower than usual lately";
+  // Four-tier verdict (Φ18A)
+  let verdictLead, verdictType, supportLine1;
+  if (percentile30d <= 20) {
+    verdictType  = "cheap";
+    verdictLead  = "Today's price is low for the past month";
     supportLine1 = "Cheaper than most days this past month.";
-  } else if (percentile30d >= 70) {
-    verdictType  = "high";
-    verdict      = "Prices have been higher than usual lately";
-    supportLine1 = "Pricier than most days this past month.";
-  } else {
+  } else if (percentile30d <= 40) {
+    verdictType  = "below-mid";
+    verdictLead  = "Today's price is on the lower side this month";
+    supportLine1 = "Below average for the past month.";
+  } else if (percentile30d <= 70) {
     verdictType  = "mid";
-    verdict      = "Prices are around usual levels lately";
+    verdictLead  = "Today's price is around usual levels lately";
     supportLine1 = "Around the middle of the past month.";
+  } else {
+    verdictType  = "high";
+    verdictLead  = "Today's price is on the higher side this month";
+    supportLine1 = "Pricier than most days this past month.";
   }
+
+  // Unified proof line — consistent frame (cheaper-than / more-expensive-than)
+  const proofLine = percentile30d <= 50
+    ? `Cheaper than ${100 - percentile30d}% of the ${nDays30d} days in the past month.`
+    : `More expensive than ${percentile30d}% of the ${nDays30d} days in the past month.`;
+
+  // Data-sufficiency degrade note (norm #5) — shown when < 30 distinct days
+  const dataSuffNote = nDays30d < 30
+    ? `Only ${nDays30d} distinct days in the window — treat as indicative.`
+    : null;
 
   const absVsAvg = fmtINR(Math.abs(vsAvg30d));
   const supportLine2 = vsAvg30d < 0
@@ -66,13 +82,14 @@ function computeGoodPriceSignals(readings) {
       ? `₹${absVsAvg} above the 30-day average.`
       : "At the 30-day average.";
 
+  // Divergence: percentile says cheap/low but vs-avg says above average, or vice versa.
   const divergenceNote =
-    (verdictType === "low"  && vsAvg30d > 0) ||
-    (verdictType === "high" && vsAvg30d < 0)
+    (percentile30d <= 40 && vsAvg30d > 0) ||
+    (percentile30d >= 70 && vsAvg30d < 0)
       ? "(The two measures diverge here — the percentile counts days, the average measures distance. The headline follows the percentile.)"
       : null;
 
-  return { percentile30d, vsAvg30d, avg30d, nDays30d, verdict, verdictType, supportLine1, supportLine2, divergenceNote };
+  return { percentile30d, vsAvg30d, avg30d, nDays30d, verdictLead, verdictType, proofLine, dataSuffNote, supportLine1, supportLine2, divergenceNote };
 }
 
 // ── Test helpers ──────────────────────────────────────────────────────────────
@@ -91,7 +108,7 @@ function makeReadings(prices) {
   return prices.map((price, i) => makeReading(price, prices.length - 1 - i));
 }
 
-// ── Tests ─────────────────────────────────────────────────────────────────────
+// ── Tests: computeGoodPriceSignals ──────────────────────────────────────────────
 
 test("returns null when fewer than 2 readings", () => {
   assert.equal(computeGoodPriceSignals([]), null);
@@ -111,15 +128,27 @@ test("returns signals when 5+ distinct IST days available", () => {
   assert.equal(signals.nDays30d, 5);
 });
 
-test("verdictType=low and correct strings when today is in bottom 30%", () => {
+test("verdictType=cheap and correct strings when today is in bottom 20%", () => {
   // 10 readings, today's price is the lowest → percentile = 10%
   const readings = makeReadings([14500, 14520, 14540, 14560, 14580, 14600, 14620, 14640, 14660, 14000]);
   const signals  = computeGoodPriceSignals(readings);
   assert.ok(signals !== null);
-  assert.ok(signals.percentile30d <= 30, `expected ≤30 but got ${signals.percentile30d}`);
-  assert.equal(signals.verdictType, "low");
-  assert.equal(signals.verdict, "Prices have been lower than usual lately");
+  assert.ok(signals.percentile30d <= 20, `expected ≤20 but got ${signals.percentile30d}`);
+  assert.equal(signals.verdictType, "cheap");
+  assert.equal(signals.verdictLead, "Today's price is low for the past month");
   assert.equal(signals.supportLine1, "Cheaper than most days this past month.");
+});
+
+test("verdictType=below-mid when percentile is in 21-40", () => {
+  // 10 readings, today at 3rd-lowest → percentile = 30%
+  const readings = makeReadings([14000, 14050, 14100, 14600, 14650, 14700, 14750, 14800, 14850, 14090]);
+  const signals  = computeGoodPriceSignals(readings);
+  assert.ok(signals !== null);
+  assert.ok(signals.percentile30d > 20 && signals.percentile30d <= 40,
+    `expected 21-40 but got ${signals.percentile30d}`);
+  assert.equal(signals.verdictType, "below-mid");
+  assert.equal(signals.verdictLead, "Today's price is on the lower side this month");
+  assert.equal(signals.supportLine1, "Below average for the past month.");
 });
 
 test("verdictType=high and correct strings when today is in top 30%", () => {
@@ -129,19 +158,19 @@ test("verdictType=high and correct strings when today is in top 30%", () => {
   assert.ok(signals !== null);
   assert.ok(signals.percentile30d >= 70, `expected ≥70 but got ${signals.percentile30d}`);
   assert.equal(signals.verdictType, "high");
-  assert.equal(signals.verdict, "Prices have been higher than usual lately");
+  assert.equal(signals.verdictLead, "Today's price is on the higher side this month");
   assert.equal(signals.supportLine1, "Pricier than most days this past month.");
 });
 
-test("verdictType=mid when percentile is in the middle 31–69%", () => {
-  // 10 readings with today in the middle → percentile ~50%
+test("verdictType=mid when percentile is in the middle 41-70%", () => {
+  // 10 readings with today in the middle → percentile ~60%
   const readings = makeReadings([14000, 14100, 14200, 14300, 14400, 14500, 14600, 14700, 14800, 14450]);
   const signals  = computeGoodPriceSignals(readings);
   assert.ok(signals !== null);
-  assert.ok(signals.percentile30d > 30 && signals.percentile30d < 70,
-    `expected 31–69 but got ${signals.percentile30d}`);
+  assert.ok(signals.percentile30d > 40 && signals.percentile30d <= 70,
+    `expected 41-70 but got ${signals.percentile30d}`);
   assert.equal(signals.verdictType, "mid");
-  assert.equal(signals.verdict, "Prices are around usual levels lately");
+  assert.equal(signals.verdictLead, "Today's price is around usual levels lately");
   assert.equal(signals.supportLine1, "Around the middle of the past month.");
 });
 
@@ -172,50 +201,9 @@ test("supportLine2 says 'At the 30-day average' when price equals avg", () => {
   assert.equal(signals.supportLine2, "At the 30-day average.");
 });
 
-test("divergenceNote fires when percentile=low but vsAvg is positive", () => {
-  // Skewed: most readings are very low, one recent spike pulls the average above today.
-  // e.g. 8 readings at 14000, one spike at 16000, today at 14100 (above most days but below avg).
-  // Wait — if today (14100) > all 8 days at 14000, percentile = 90% (high), not low.
-  // For low+above-avg: need today BELOW most days but ABOVE the average.
-  // That happens when the series has a few very high outliers dragging the average up.
-  // E.g. 8 days at 14000, 2 days at 18000 (spikes), today = 14200.
-  // prices30d = [14000,14000,14000,14000,14000,14000,14000,14000,18000,18000, today=14200]
-  // but "today" is the last element, it's in the daily series too.
-  // For simplicity: 5 days at 18000 (spikes), 5 days at 12000 (low), today at 12100.
-  // percentile = % of days where price <= 12100 → 5 days at 12000 ≤ 12100, 1 today = 6/11 ≈ 54% → mid, not low.
-  // Try: 7 days at 18000, 3 days at 12000, today = 12100.
-  // percentile = days where price ≤ 12100 / 10 days = 3 days (12000×3) + 0 (18000) → 3/10 = 30% → low
-  // vsAvg = 12100 - (7*18000 + 3*12000)/10 = 12100 - (126000+36000)/10 = 12100 - 16200 = -4100 → below avg, no divergence
-  //
-  // For divergence (low+vsAvg positive): today must be below most days (low percentile)
-  // but above the mean. This requires high-freq low readings and low-freq very-high outliers.
-  // e.g. 8 days at 13000, 2 days at 11000 (outliers below), today = 13200.
-  // percentile = days where price ≤ 13200 → all 8 at 13000 + 2 at 11000 + today = 10+1 = 10/11? No — today is in the series.
-  // Let's reason differently: exclude today from the comparison series.
-  // Actually computeGoodPriceSignals doesn't exclude today — it uses daily30d which includes today's reading.
-  //
-  // Cleaner approach: 10 distinct days, today = max (high percentile, say 100%), but we want low percentile.
-  // For LOW percentile + POSITIVE vsAvg: impossible with a normal distribution.
-  // This only happens in a bimodal dist: series has MOSTLY HIGH days except a few very-low outliers,
-  // AND today's price is in the bottom 30% (below most days), AND also above the average.
-  //
-  // Actually with a bimodal [mostly HIGH + 2 very-LOW outliers]:
-  // e.g. 7 days at 14500, 3 days at 10000, today = 10100.
-  // percentile = % where price ≤ 10100 → 3 days at 10000 / 10 total = 30% → LOW ✓
-  // vsAvg = 10100 - (7*14500 + 3*10000)/10 = 10100 - (101500+30000)/10 = 10100 - 13150 = -3050 → BELOW avg → no divergence
-  //
-  // Hmm. For divergence to trigger, we need:
-  // LOW verdict (percentile ≤ 30) AND vsAvg30d > 0 (today > avg)
-  // This is actually impossible if percentile ≤ 30 means today ≤ 70% of the series values.
-  // If today is lower than 70%+ of the values, most values > today → avg > today → vsAvg < 0.
-  // So LOW + positive vsAvg is theoretically rare/impossible in practice.
-  //
-  // The divergence case that CAN happen: HIGH verdict (percentile ≥ 70) AND vsAvg30d < 0.
-  // This happens with right-skewed distribution: a few extreme high outliers pull average up,
-  // but today is still above 70% of the actual days.
-  // e.g. 7 days at 12000, 2 days at 20000 (outliers), today = 13000.
-  // percentile = days where price ≤ 13000 → 7 days at 12000 / 9 = 77.8% → HIGH ✓
-  // vsAvg = 13000 - (7*12000 + 2*20000)/9 = 13000 - (84000+40000)/9 = 13000 - 13778 = -778 → BELOW avg ✓
+test("divergenceNote fires when percentile=high but vsAvg is negative", () => {
+  // Right-skewed: a couple of high outliers pull the average up, but today is
+  // still above most of the actual days.
   const readings = [
     makeReading(12000, 9),
     makeReading(12000, 8),
@@ -226,7 +214,7 @@ test("divergenceNote fires when percentile=low but vsAvg is positive", () => {
     makeReading(12000, 3),
     makeReading(20000, 2),
     makeReading(20000, 1),
-    makeReading(13000, 0),  // today: above 7/9 prev days → percentile 70-80%, vsAvg < 0
+    makeReading(13000, 0),  // today: above most prev days → high percentile, vsAvg < 0
   ];
   const signals = computeGoodPriceSignals(readings);
   assert.ok(signals !== null);
@@ -241,7 +229,7 @@ test("divergenceNote is null when percentile and vsAvg agree", () => {
   const signals  = computeGoodPriceSignals(readings);
   assert.ok(signals !== null);
   // today = 14000 → low percentile + below avg → agree
-  assert.ok(signals.percentile30d <= 30);
+  assert.ok(signals.percentile30d <= 40);
   assert.ok(signals.vsAvg30d < 0);
   assert.equal(signals.divergenceNote, null);
 });
@@ -357,4 +345,172 @@ test("computeBandPos90d window is independent of the 30-day window's percentile"
   assert.ok(signals30d !== null && band90d !== null);
   assert.ok(signals30d.percentile30d >= 70, `30d percentile: ${signals30d.percentile30d}`);
   assert.ok(band90d.percentile90d < 70, `90d percentile: ${band90d.percentile90d}`);
+});
+
+// ── computeTrendResidual30d (audit finding, 2026-07-18) ─────────────────────────
+// Fixes the percentile's blind spot: it cannot tell "cheap and still falling"
+// from "cheap and stabilizing" (both read as the same low percentile). A
+// SUPPORTING line only — never changes computeGoodPriceSignals' verdict hierarchy.
+// Inlined from app.js (see file header note).
+
+const MIN_DAYS_TREND = 10;
+const FLAT_SLOPE_INR_PER_DAY = 5;
+const CHEAP_PERCENTILE_MAX = 40;
+const STILL_FALLING_Z = -1;
+
+function theilSenFit(points) {
+  const slopes = [];
+  for (let i = 0; i < points.length; i++) {
+    for (let j = i + 1; j < points.length; j++) {
+      const dx = points[j].x - points[i].x;
+      if (dx !== 0) slopes.push((points[j].y - points[i].y) / dx);
+    }
+  }
+  slopes.sort((a, b) => a - b);
+  const midS = Math.floor(slopes.length / 2);
+  const slope = slopes.length % 2 !== 0
+    ? slopes[midS]
+    : (slopes[midS - 1] + slopes[midS]) / 2;
+
+  const intercepts = points.map(p => p.y - slope * p.x).sort((a, b) => a - b);
+  const midI = Math.floor(intercepts.length / 2);
+  const intercept = intercepts.length % 2 !== 0
+    ? intercepts[midI]
+    : (intercepts[midI - 1] + intercepts[midI]) / 2;
+
+  return { slope, intercept };
+}
+
+function computeTrendResidual30d(readings, percentile30d) {
+  if (!readings || readings.length < 2) return null;
+
+  const now = Date.now();
+  const within30d = readings.filter(
+    r => now - new Date(r.timestamp).getTime() <= 30 * 86400e3,
+  );
+  const daily30d = dedupeByISTDay(within30d);
+  const nDays = daily30d.length;
+  if (nDays < MIN_DAYS_TREND) return null;
+
+  const points = daily30d.map((r, i) => ({ x: i, y: r["22k"] }));
+  const { slope, intercept } = theilSenFit(points);
+
+  const absResiduals = points
+    .map(p => Math.abs(p.y - (slope * p.x + intercept)))
+    .sort((a, b) => a - b);
+  const midR = Math.floor(absResiduals.length / 2);
+  const mad = absResiduals.length % 2 !== 0
+    ? absResiduals[midR]
+    : (absResiduals[midR - 1] + absResiduals[midR]) / 2;
+  const robustStd = 1.4826 * mad;
+
+  const todayIdx = points.length - 1;
+  const trendValue = slope * todayIdx + intercept;
+  const residual = points[todayIdx].y - trendValue;
+  const residZ = robustStd > 0 ? residual / robustStd : 0;
+
+  let trendState;
+  if (slope <= -FLAT_SLOPE_INR_PER_DAY) trendState = "falling";
+  else if (slope >= FLAT_SLOPE_INR_PER_DAY) trendState = "rising";
+  else trendState = "flat";
+
+  const isCheap = typeof percentile30d === "number" && percentile30d <= CHEAP_PERCENTILE_MAX;
+  const slopeAbs = fmtINR(Math.round(Math.abs(slope)));
+
+  let note;
+  if (isCheap && residZ < STILL_FALLING_Z) {
+    note = `Cheap, but still falling — today is well below its own recent trend line (about ₹${slopeAbs}/day downhill over the month).`;
+  } else if (isCheap) {
+    note = "Cheap, and stabilizing — despite the recent dip, today's price is back near (or above) its own recent trend line.";
+  } else if (trendState === "falling") {
+    note = `Prices have been sliding about ₹${slopeAbs}/day over the past month.`;
+  } else if (trendState === "rising") {
+    note = `Prices have been climbing about ₹${slopeAbs}/day over the past month.`;
+  } else {
+    note = "Prices have been roughly flat over the past month, close to their own recent trend.";
+  }
+
+  return { slope, residual, residZ, trendState, nDays, note };
+}
+
+test("computeTrendResidual30d returns null below MIN_DAYS_TREND (10 distinct days)", () => {
+  const readings = makeReadings(Array.from({ length: 9 }, (_, i) => 14000 + i * 10));
+  assert.equal(computeTrendResidual30d(readings), null);
+});
+
+test("theilSenFit recovers the exact slope/intercept on a noiseless line", () => {
+  const points = Array.from({ length: 15 }, (_, i) => ({ x: i, y: 14000 - 30 * i }));
+  const { slope, intercept } = theilSenFit(points);
+  assert.ok(Math.abs(slope - -30) < 1e-9, `expected slope -30, got ${slope}`);
+  assert.ok(Math.abs(intercept - 14000) < 1e-9, `expected intercept 14000, got ${intercept}`);
+});
+
+// Small fixed jitter (deterministic, not Math.random) around the trend line —
+// real price data is never perfectly linear; a noiseless line makes every
+// residual exactly 0, which collapses MAD to 0 and residZ to 0 by the
+// guard (robustStd > 0 ? ... : 0), masking the behavior under test.
+const TREND_JITTER = [0, 12, -8, 5, -15, 9, -3, 14, -6, 2, -11, 7, -4, 10, -9, 3];
+
+test("cheap + still falling: steep drop on top of an existing downtrend", () => {
+  // Mirrors the 2026-06-10→06-25 selloff the audit found: a multi-day slide
+  // (~-₹40/day) where the most recent reading drops sharply further below its
+  // own trend line — the "still falling, hasn't found a floor" case.
+  const prices = Array.from({ length: 16 }, (_, i) => 13590 - 40 * i + TREND_JITTER[i]);
+  prices[15] -= 300; // sharp drop on the last day
+  const readings = makeReadings(prices);
+  const signals = computeGoodPriceSignals(readings);
+  const trend = computeTrendResidual30d(readings, signals.percentile30d);
+  assert.ok(trend !== null);
+  assert.equal(trend.trendState, "falling");
+  assert.ok(signals.percentile30d <= CHEAP_PERCENTILE_MAX, `expected cheap, percentile=${signals.percentile30d}`);
+  assert.ok(trend.residZ < STILL_FALLING_Z, `expected residZ < -1, got ${trend.residZ}`);
+  assert.ok(trend.note.startsWith("Cheap, but still falling"), `unexpected note: ${trend.note}`);
+});
+
+test("cheap + stabilizing: downtrend followed by a bounce back toward the line", () => {
+  // Same slide as above, but the last reading ticks back UP toward/above the trend
+  // line instead of continuing down — the audit's "cheap and stabilizing" case
+  // (2026-06-27/07-01: percentile still low, residZ flips positive).
+  const prices = Array.from({ length: 15 }, (_, i) => 13590 - 40 * i + TREND_JITTER[i]);
+  prices.push(prices[14] + 50); // bounce back up on the last day
+  const readings = makeReadings(prices);
+  const signals = computeGoodPriceSignals(readings);
+  const trend = computeTrendResidual30d(readings, signals.percentile30d);
+  assert.ok(trend !== null);
+  assert.ok(signals.percentile30d <= CHEAP_PERCENTILE_MAX, `expected cheap, percentile=${signals.percentile30d}`);
+  assert.ok(trend.residZ >= STILL_FALLING_Z, `expected residZ >= -1, got ${trend.residZ}`);
+  assert.equal(trend.note, "Cheap, and stabilizing — despite the recent dip, today's price is back near (or above) its own recent trend line.");
+});
+
+test("not cheap: mid-range percentile gets a plain trend note, no 'cheap' framing", () => {
+  const prices = Array.from({ length: 15 }, (_, i) => 14000 + 40 * i); // rising, ends high-mid
+  const readings = makeReadings(prices);
+  const signals = computeGoodPriceSignals(readings);
+  const trend = computeTrendResidual30d(readings, signals.percentile30d);
+  assert.ok(trend !== null);
+  assert.ok(signals.percentile30d > CHEAP_PERCENTILE_MAX, `expected not-cheap, percentile=${signals.percentile30d}`);
+  assert.equal(trend.trendState, "rising");
+  assert.ok(!trend.note.startsWith("Cheap"), `should not use cheap framing: ${trend.note}`);
+  assert.ok(trend.note.includes("climbing"), `expected a rising-trend note, got: ${trend.note}`);
+});
+
+test("flat trend: |slope| below FLAT_SLOPE_INR_PER_DAY reads as roughly flat", () => {
+  const prices = Array.from({ length: 12 }, () => 14000);
+  const readings = makeReadings(prices);
+  const trend = computeTrendResidual30d(readings, 50); // not cheap
+  assert.ok(trend !== null);
+  assert.equal(trend.trendState, "flat");
+  assert.equal(trend.note, "Prices have been roughly flat over the past month, close to their own recent trend.");
+});
+
+test("computeTrendResidual30d never overrides computeGoodPriceSignals' verdict fields", () => {
+  const prices = Array.from({ length: 16 }, (_, i) => 13590 - 40 * i);
+  const readings = makeReadings(prices);
+  const signals = computeGoodPriceSignals(readings);
+  const before = { verdictLead: signals.verdictLead, verdictType: signals.verdictType, proofLine: signals.proofLine };
+  computeTrendResidual30d(readings, signals.percentile30d); // supporting line only, no mutation
+  assert.deepEqual(
+    { verdictLead: signals.verdictLead, verdictType: signals.verdictType, proofLine: signals.proofLine },
+    before,
+  );
 });
