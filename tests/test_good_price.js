@@ -257,3 +257,104 @@ test("readings older than 30 days are excluded from signals", () => {
   // If the old reading were included, it would pull percentile and avg down significantly
   assert.ok(signals.avg30d > 12000, "avg must not be pulled down by the excluded old reading");
 });
+
+// ── computeBandPos90d (Φ11-2 revisit trigger, met 2026-07-17 at ~90 distinct days) ────
+// A SUPPORTING line only — never changes computeGoodPriceSignals' verdict hierarchy.
+// Inlined from app.js (see file header note); kept in sync by construction since
+// this is a fresh addition, not a copy of a pre-existing drifted function.
+
+const MIN_DAYS_90D = 60;
+const FULL_DAYS_90D = 90;
+
+function computeBandPos90d(readings) {
+  if (!readings || readings.length < 2) return null;
+
+  const now     = Date.now();
+  const current = readings[readings.length - 1]["22k"];
+
+  const within90d = readings.filter(
+    r => now - new Date(r.timestamp).getTime() <= 90 * 86400e3,
+  );
+  const daily90d = dedupeByISTDay(within90d);
+  const nDays90d = daily90d.length;
+  if (nDays90d < MIN_DAYS_90D) return null;
+
+  const prices90d      = daily90d.map(r => r["22k"]);
+  const percentile90d  = Math.round(
+    prices90d.filter(p => p <= current).length / nDays90d * 100,
+  );
+
+  let note = percentile90d <= 50
+    ? `Over the past 90 days: cheaper than ${100 - percentile90d}% of the ${nDays90d} days.`
+    : `Over the past 90 days: more expensive than ${percentile90d}% of the ${nDays90d} days.`;
+  if (nDays90d < FULL_DAYS_90D) {
+    note += ` (Only ${nDays90d} distinct days in this window so far — treat as indicative.)`;
+  }
+
+  return { percentile90d, nDays90d, note };
+}
+
+test("computeBandPos90d returns null below MIN_DAYS_90D (60 distinct days)", () => {
+  const readings = makeReadings(Array.from({ length: 59 }, (_, i) => 14000 + i));
+  assert.equal(computeBandPos90d(readings), null);
+});
+
+test("computeBandPos90d returns a result at exactly MIN_DAYS_90D with a caveat", () => {
+  const readings = makeReadings(Array.from({ length: 60 }, (_, i) => 14000 + i));
+  const result = computeBandPos90d(readings);
+  assert.ok(result !== null);
+  assert.equal(result.nDays90d, 60);
+  assert.ok(result.note.includes("Only 60 distinct days"),
+    `expected a data-sufficiency caveat, got: ${result.note}`);
+});
+
+test("computeBandPos90d has no caveat once FULL_DAYS_90D (90) is reached", () => {
+  const readings = makeReadings(Array.from({ length: 90 }, (_, i) => 14000 + i));
+  const result = computeBandPos90d(readings);
+  assert.ok(result !== null);
+  assert.equal(result.nDays90d, 90);
+  assert.ok(!result.note.includes("indicative"), `expected no caveat, got: ${result.note}`);
+});
+
+test("computeBandPos90d note says 'cheaper than' when today is in the bottom half", () => {
+  // 90 days, today (last) is the lowest price → percentile ~1%
+  const prices = Array.from({ length: 89 }, (_, i) => 15000 + i);
+  prices.push(10000);
+  const readings = makeReadings(prices);
+  const result = computeBandPos90d(readings);
+  assert.ok(result !== null);
+  assert.ok(result.percentile90d <= 50, `expected <=50, got ${result.percentile90d}`);
+  assert.ok(result.note.startsWith("Over the past 90 days: cheaper than"),
+    `unexpected note: ${result.note}`);
+  assert.ok(result.note.includes("90 days."), `window length not disclosed: ${result.note}`);
+});
+
+test("computeBandPos90d note says 'more expensive than' when today is in the top half", () => {
+  // 90 days, today (last) is the highest price → percentile 100%
+  const prices = Array.from({ length: 89 }, (_, i) => 10000 + i);
+  prices.push(20000);
+  const readings = makeReadings(prices);
+  const result = computeBandPos90d(readings);
+  assert.ok(result !== null);
+  assert.ok(result.percentile90d > 50, `expected >50, got ${result.percentile90d}`);
+  assert.ok(result.note.startsWith("Over the past 90 days: more expensive than"),
+    `unexpected note: ${result.note}`);
+});
+
+test("computeBandPos90d window is independent of the 30-day window's percentile", () => {
+  // Oldest 60 days very expensive (outside the 30d window, inside the 90d window),
+  // most-recent 29 days cheap, today slightly above those recent cheap days — the two
+  // windows must disagree here, proving the 90d line is a genuinely different read
+  // from the 30d verdict, not a relabeled copy of it.
+  const prices = [
+    ...Array.from({ length: 60 }, () => 20000),
+    ...Array.from({ length: 29 }, () => 14000),
+    14500, // today: top of the last 30 days, but well below the 90d history
+  ];
+  const readings = makeReadings(prices);
+  const signals30d = computeGoodPriceSignals(readings);
+  const band90d = computeBandPos90d(readings);
+  assert.ok(signals30d !== null && band90d !== null);
+  assert.ok(signals30d.percentile30d >= 70, `30d percentile: ${signals30d.percentile30d}`);
+  assert.ok(band90d.percentile90d < 70, `90d percentile: ${band90d.percentile90d}`);
+});

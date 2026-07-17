@@ -132,6 +132,32 @@ def test_inference_main_produces_valid_forecast(tmp_path, monkeypatch):
 
 
 @pytest.mark.smoke
+def test_inference_conformal_pi_uses_h1_not_h5(tmp_path, monkeypatch):
+    """ADR 022: headline.conformal_pi_half is h=1 (next trading day), matching the
+    horizon ml.metrics.compute_band_coverage actually measures — not h=5.
+    vol_context.static_pi_half stays h=5 (floors the genuinely-5-day realized-vol
+    estimate in ml/volatility.py, which must not silently inherit the h=1 magnitude).
+    """
+    monkeypatch.setattr(inf, "DATA_DIR", tmp_path)
+
+    (tmp_path / "prices.json").write_text(json.dumps(_make_prices(40)))
+    (tmp_path / "backtest.json").write_text(json.dumps(_make_backtest(35)))
+    (tmp_path / "chronos_probe.json").write_text(json.dumps(_make_probe("success")))
+    (tmp_path / "calibration.json").write_text(json.dumps({"valid": False}))
+
+    inf.main()
+
+    fc = json.loads((tmp_path / "forecast.json").read_text())
+    hl = fc["headline"]
+
+    # _make_backtest: naive=[base]*5, actuals[j]=base+(j+1)*50 -> h1 error=50 (constant),
+    # h5 error=250 (constant) across all 35 folds -> both 80th percentiles are exact.
+    assert hl["conformal_pi_half"] == pytest.approx(50.0)
+    assert hl["upper"] - hl["lower"] == pytest.approx(100.0, abs=2)  # 2 * h1 half-width
+    assert hl["vol_context"]["static_pi_half"] == pytest.approx(250.0)
+
+
+@pytest.mark.smoke
 def test_inference_probe_failed(tmp_path, monkeypatch):
     """When chronos probe failed, companion block reflects failure and model_fallback=True."""
     monkeypatch.setattr(inf, "DATA_DIR", tmp_path)
@@ -222,6 +248,27 @@ def test_compute_conformal_pi_uses_last_30_folds():
     # All 30 recent folds have error=100 → 80th pct = 100.0
     assert pi_half == pytest.approx(100.0, abs=1.0)
     assert mae == pytest.approx(100.0, abs=1.0)
+
+
+@pytest.mark.smoke
+def test_compute_conformal_pi_horizon_idx_selects_correct_step():
+    """horizon_idx=0 (h=1, next trading day) and the default horizon_idx=4 (h=5) read
+    different steps of each fold's actuals/naive arrays (ADR 022)."""
+    folds = [
+        {
+            "actuals": [14000.0 + (j + 1) * 50 for j in range(5)],
+            "naive": [14000.0] * 5,
+        }
+        for _ in range(35)
+    ]
+    bt = {"folds": folds}
+
+    pi_h1, _ = inf._compute_conformal_pi(bt, horizon_idx=0)
+    pi_h5, _ = inf._compute_conformal_pi(bt)  # default horizon_idx=4
+
+    assert pi_h1 == pytest.approx(50.0)
+    assert pi_h5 == pytest.approx(250.0)
+    assert pi_h1 < pi_h5
 
 
 def test_conformal_pi_numpy_dtype_safety():

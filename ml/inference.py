@@ -1,10 +1,13 @@
 """
 inference.py — Naive flat-hold headline forecast + Chronos directional companion.
 
-Production design per ADR 012 and ADR 014:
+Production design per ADR 012, ADR 014, and ADR 022:
   - Headline forecast: naive flat-hold (predicted = current 22K price).
-  - Confidence interval: 80th-percentile of the last 30 folds' naive h=5 errors
-    (conformal prediction, same percentile as the legacy LightGBM path).
+  - Confidence interval: 80th-percentile of the last 30 folds' naive h=1 (next
+    trading day) errors — matches the horizon ml.metrics.compute_band_coverage
+    actually measures against (see ADR 022). A separate h=5 reference (same
+    percentile, horizon_idx=4) floors ml.volatility's dynamic 5-day estimate —
+    that estimate is a genuinely different, still-5-day quantity.
   - Chronos directional companion: read from chronos_probe.json (written by the
     Chronos probe step). NOT called directly — single source of Chronos data.
 
@@ -71,8 +74,15 @@ def _load_json(path: Path) -> dict | list | None:
         return None
 
 
-def _compute_conformal_pi(backtest: dict) -> tuple[float, float] | None:
-    """80th-percentile conformal PI from the last 30 folds' naive h=5 absolute errors.
+def _compute_conformal_pi(backtest: dict, horizon_idx: int = 4) -> tuple[float, float] | None:
+    """80th-percentile conformal PI from the last 30 folds' naive absolute errors at
+    a given horizon step.
+
+    horizon_idx indexes into each fold's actuals/naive arrays (0 = next trading day
+    (h=1), 4 = 5th day out (h=5)). Defaults to 4 (h=5) for backward compatibility with
+    the vol-context floor reference (see main()); the displayed band (headline.lower/
+    upper) is calibrated at horizon_idx=0 (h=1) — the horizon actually measured by
+    ml.metrics.compute_band_coverage, so the band and its coverage claim agree.
 
     Returns (conformal_pi_half, naive_mae_recent_30), or None when fewer than
     _MIN_CONFORMAL_FOLDS valid fold errors are available.  None signals the caller
@@ -86,7 +96,7 @@ def _compute_conformal_pi(backtest: dict) -> tuple[float, float] | None:
         actuals = fold.get("actuals", [])
         naive = fold.get("naive", [])
         if len(actuals) >= 5 and len(naive) >= 5:
-            errors.append(abs(actuals[4] - naive[4]))
+            errors.append(abs(actuals[horizon_idx] - naive[horizon_idx]))
 
     if len(errors) < _MIN_CONFORMAL_FOLDS:
         return None
@@ -298,9 +308,10 @@ def main(now: datetime | None = None) -> None:
         real_readings_count,
     )
 
-    # 2. Conformal PI from backtest naive errors
+    # 2. Conformal PI from backtest naive errors — h=1 (next trading day), matching
+    # the horizon ml.metrics.compute_band_coverage actually tests (ADR 022).
     backtest: dict = _load_json(DATA_DIR / "backtest.json") or {}
-    pi_result = _compute_conformal_pi(backtest)
+    pi_result = _compute_conformal_pi(backtest, horizon_idx=0)
     if pi_result is None:
         fold_count = len(backtest.get("folds", []))
         logger.warning(
@@ -336,10 +347,19 @@ def main(now: datetime | None = None) -> None:
         (DATA_DIR / "forecast.json").write_text(json.dumps(result, indent=2) + "\n")
         return
     conformal_pi_half, naive_mae_recent_30 = pi_result
+
+    # Separate h=5 reference purely to floor ml.volatility's dynamic 5-day estimate —
+    # that estimate is a genuinely different (realized-vol-scaled) 5-day quantity and
+    # must not silently inherit the h=1 band's magnitude. Same fold-count gate as the
+    # h=1 call above, so this cannot be None when pi_result above succeeded.
+    pi_result_5d = _compute_conformal_pi(backtest, horizon_idx=4)
+    conformal_pi_half_5d = pi_result_5d[0] if pi_result_5d is not None else conformal_pi_half
+
     logger.info(
-        "Conformal PI half=Rs.%.1f  naive_mae_recent_30=%.1f",
+        "Conformal PI half=Rs.%.1f (h1)  naive_mae_recent_30=%.1f  vol-floor ref=Rs.%.1f (h5)",
         conformal_pi_half,
         naive_mae_recent_30,
+        conformal_pi_half_5d,
     )
 
     calibration: dict = _load_json(DATA_DIR / "calibration.json") or {}
@@ -353,7 +373,9 @@ def main(now: datetime | None = None) -> None:
     upper = round(current_22k + conformal_pi_half)
 
     # 3a. Dynamic vol context — magnitude-of-movement estimate, NOT a forecast (ADR 005).
-    vol_ctx = compute_vol_context(prices, conformal_pi_half)
+    # Floored against the h=5 reference (conformal_pi_half_5d), not the h=1 displayed
+    # band — this is a genuinely-5-day-scaled realized-vol estimate (ml/volatility.py).
+    vol_ctx = compute_vol_context(prices, conformal_pi_half_5d)
     logger.info(
         "Vol context: method=%s  half_width=Rs.%d  regime=%s  is_degraded=%s",
         vol_ctx["method"],
