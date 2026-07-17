@@ -1,6 +1,6 @@
 """Notification system for gold-rate-tracker.
 
-Evaluates five triggers (T1–T5) against current data files and dispatches
+Evaluates triggers (T1-T10) against current data files and dispatches
 ntfy push notifications. Designed to run as a CI step after the Chronos probe.
 
 Usage:
@@ -23,6 +23,7 @@ from zoneinfo import ZoneInfo
 ROOT = Path(__file__).resolve().parent.parent
 DATA_DIR = ROOT / "data"
 
+SNAPSHOTS_PARQUET = DATA_DIR / "feature_store" / "snapshots.parquet"
 FORECAST_JSON = DATA_DIR / "forecast.json"
 PROBE_JSON = DATA_DIR / "chronos_probe.json"
 PRICES_JSON = DATA_DIR / "prices.json"
@@ -44,6 +45,7 @@ _T8_EVENING_THRESHOLD_H = 18  # IST lower bound: fire T8_EVENING at/after 18:00
 _T8_EVENING_UPPER_H = 22  # IST upper bound: suppress T8_EVENING at/after 22:00 (quiet-hours start)
 _T8_FLAT_THRESHOLD_RS = 25  # abs(delta) < this → "held steady" scenario
 _T9_STALE_THRESHOLD_H = 8  # prices.json entries older than this trigger T9
+_T10_GAP_THRESHOLD_DAYS = 2  # >=2 calendar days with no new PIT snapshot trigger T10
 
 SCHEMA_VERSION = 1
 
@@ -100,6 +102,7 @@ class NotificationState:
     last_t8_morning_ist_date: str = ""  # IST date YYYY-MM-DD of last T8_MORNING send (dedup)
     last_t8_evening_ist_date: str = ""  # IST date YYYY-MM-DD of last T8_EVENING send (dedup)
     last_t9_ist_date: str = ""  # IST date YYYY-MM-DD of last T9 send (once-per-day dedup)
+    last_t10_ist_date: str = ""  # IST date YYYY-MM-DD of last T10 send (once-per-day dedup)
 
 
 # ---------------------------------------------------------------------------
@@ -125,6 +128,7 @@ def load_state(path: Path = STATE_PATH) -> NotificationState:
             last_t8_morning_ist_date=raw.get("last_t8_morning_ist_date", ""),
             last_t8_evening_ist_date=raw.get("last_t8_evening_ist_date", ""),
             last_t9_ist_date=raw.get("last_t9_ist_date", ""),
+            last_t10_ist_date=raw.get("last_t10_ist_date", ""),
         )
     except Exception as exc:
         logger.warning("Could not load notification state (%s) — using fresh state.", exc)
@@ -146,6 +150,7 @@ def save_state(state: NotificationState, path: Path = STATE_PATH) -> None:
         "last_t8_morning_ist_date": state.last_t8_morning_ist_date,
         "last_t8_evening_ist_date": state.last_t8_evening_ist_date,
         "last_t9_ist_date": state.last_t9_ist_date,
+        "last_t10_ist_date": state.last_t10_ist_date,
     }
     path.write_text(json.dumps(data, indent=2) + "\n", encoding="utf-8")
 
@@ -254,6 +259,32 @@ def compute_recent_momentum(prices: list[dict], n_days: int = 7) -> tuple[str, f
     if abs(pct) < 0.05:
         return "flat", 0.0
     return ("up" if pct > 0 else "down"), round(pct, 3)
+
+
+def compute_snapshot_gap_days(
+    now_ist: datetime,
+    path: Path = SNAPSHOTS_PARQUET,
+) -> int | None:
+    """Calendar days since the most recent PIT feature-store snapshot.
+
+    The direction-model revisit timeline (docs/DIRECTION_SIGNAL_STATUS.md) depends on
+    ~1 snapshot/calendar-day landing in data/feature_store/snapshots.parquet. Returns
+    None if the store is missing/empty/unreadable -- a fresh or reset store is not a
+    capture failure, so T10 stays silent rather than alerting on it.
+    """
+    if not path.exists():
+        return None
+    try:
+        import pandas as pd
+
+        df = pd.read_parquet(path, columns=["as_of_date"])
+        if df.empty:
+            return None
+        max_date = pd.to_datetime(df["as_of_date"]).max().date()
+    except Exception as exc:
+        logger.warning("Could not read feature-store snapshots (%s) - skipping T10 check", exc)
+        return None
+    return (now_ist.date() - max_date).days
 
 
 def compute_dir_acc_30f(backtest: dict) -> float:
@@ -717,6 +748,34 @@ def _check_t9(
     return _make_alert("T9", title, body, 4, ["warning"], now_ist)
 
 
+def _check_t10(
+    snapshot_gap_days: int | None,
+    state: NotificationState,
+    now_ist: datetime,
+) -> PendingAlert | None:
+    """T10 -- Feature-store snapshot capture stalled: no new PIT snapshot in
+    >= _T10_GAP_THRESHOLD_DAYS calendar days. Once per IST calendar day.
+
+    A silent capture gap (e.g. bot-pr-sync failing to merge -- bug #4, which cost a
+    real 3-day gap 2026-07-13 to 2026-07-15) directly delays the direction-model
+    revisit timeline, which is the only thing that can unblock the DARK direction
+    signal. Checked independently of price/forecast staleness (T9): the scraper can be
+    healthy while the feature-store commit path is broken, and vice versa.
+    """
+    if snapshot_gap_days is None or snapshot_gap_days < _T10_GAP_THRESHOLD_DAYS:
+        return None
+    today_ist = now_ist.strftime("%Y-%m-%d")
+    if state.last_t10_ist_date == today_ist:
+        return None
+    title = f"Gold Tracker: feature-store snapshot gap ({snapshot_gap_days}d)"
+    body = (
+        f"No new direction-model snapshot in {snapshot_gap_days} days. "
+        "This delays the direction-signal revisit timeline. Check check-price.yml "
+        "and bot-pr-sync (data/feature_store/snapshots.parquet)."
+    )
+    return _make_alert("T10", title, body, 4, ["warning", "hourglass"], now_ist)
+
+
 # ---------------------------------------------------------------------------
 # Public API
 # ---------------------------------------------------------------------------
@@ -730,6 +789,7 @@ def check_triggers(
     state: NotificationState,
     now_ist: datetime,
     calibration: dict | None = None,
+    snapshot_gap_days: int | None = None,
 ) -> list[PendingAlert]:
     """Evaluate all triggers (T1–T8); return new alerts for this call.
 
@@ -758,6 +818,9 @@ def check_triggers(
     t9 = _check_t9(prices, state, now_ist)
     if t9 is not None:
         alerts.append(t9)
+    t10 = _check_t10(snapshot_gap_days, state, now_ist)
+    if t10 is not None:
+        alerts.append(t10)
     return alerts
 
 
@@ -818,6 +881,8 @@ def send_pending(
                 state.last_t8_evening_ist_date = now_ist.strftime("%Y-%m-%d")
             if alert.trigger_id == "T9":
                 state.last_t9_ist_date = now_ist.strftime("%Y-%m-%d")
+            if alert.trigger_id == "T10":
+                state.last_t10_ist_date = now_ist.strftime("%Y-%m-%d")
             logger.info("Sent %s: %s", alert.trigger_id, alert.title)
         else:
             logger.warning("Failed to send %s", alert.trigger_id)
@@ -864,6 +929,8 @@ def _stamp_ist_dedup(trigger_id: str, state: NotificationState, now_ist: datetim
         state.last_t6_fired_date_ist = today
     elif trigger_id == "T9":
         state.last_t9_ist_date = today
+    elif trigger_id == "T10":
+        state.last_t10_ist_date = today
 
 
 def queue_for_quiet_hours(
@@ -927,7 +994,7 @@ def main() -> None:
     import argparse
 
     logging.basicConfig(level=logging.INFO, format="%(levelname)s: %(message)s")
-    parser = argparse.ArgumentParser(description="Gold rate notification system (T1-T8)")
+    parser = argparse.ArgumentParser(description="Gold rate notification system (T1-T10)")
     parser.add_argument(
         "--simulate",
         action="store_true",
@@ -958,8 +1025,17 @@ def main() -> None:
     # Prune stale entries before trigger evaluation
     _prune_sent_today(state)
 
+    snapshot_gap_days = compute_snapshot_gap_days(now_ist)
+
     new_alerts = check_triggers(
-        forecast, probe, prices, backtest, state, now_ist, calibration=calibration
+        forecast,
+        probe,
+        prices,
+        backtest,
+        state,
+        now_ist,
+        calibration=calibration,
+        snapshot_gap_days=snapshot_gap_days,
     )
 
     if args.simulate:
@@ -974,6 +1050,8 @@ def main() -> None:
         print(f"Momentum 7d:  {mom_dir} ({mom_pct:+.2f}%)")
         n_folds = backtest.get("n_folds", 0)
         print(f"n_folds:      {n_folds}  (T1/T2 gate: >= 30)")
+        gap_str = "n/a" if snapshot_gap_days is None else f"{snapshot_gap_days}d"
+        print(f"Snapshot gap: {gap_str}  (T10 gate: >= {_T10_GAP_THRESHOLD_DAYS}d)")
         print(f"\nTriggers fired ({len(new_alerts)}):")
         if new_alerts:
             for a in new_alerts:

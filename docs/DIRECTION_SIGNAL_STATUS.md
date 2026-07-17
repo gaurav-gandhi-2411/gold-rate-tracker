@@ -48,3 +48,49 @@ Dataset: 113 labelled rows (h=1) / 112 (h=2), 2025-01-09 → 2026-06-05, from th
 - **Weekly** (Mon 04:00 UTC) and on `ml/direction/**` changes, via `eval-direction.yml`.
 - Each run rewrites `data/direction_baseline.json` (both horizons, with embedded gate verdicts) and appends one record to `data/direction_eval_history.jsonl`.
 - Expected to stay dark until the regime offers genuine directional uncertainty and a model earns its gate. Both gates flip automatically — no manual edit — when the conditions are met.
+
+## Revisit trigger — data accumulation, not feature/target iteration (as of 2026-07-17)
+
+A 2026-07-17 diagnostic (Monte Carlo power sim matching the actual sign-test gate)
+found the DARK verdict is explained by sample size, not missing signal: at n=93
+folds, only an accuracy edge of **~21 percentage points** is reliably detectable
+(80% power) — far beyond anything plausible for daily direction on a globally
+arbitraged commodity. Two enrichment experiments (momentum/volatility features,
+a "relative cheapness vs. trailing mean" reframed target — both committed at
+`ml/experiments/direction_enrichment.py`) were tested against the unmodified gate
+and came back negative, consistent with that power ceiling. **Conclusion: do not
+iterate further on features or targets until n grows.** No agentic feature/target
+search either — n=93 is nowhere near enough for that to be meaningful.
+
+**Verified capture rate** (audited 2026-07-17): the feature store
+(`data/feature_store/snapshots.parquet`) held 152 rows, 93 h1-usable folds. A
+live 2026-07-13→07-15 gap (3 missed calendar days) was traced to bug #4
+(`bot-pr-sync` failing GH006 branch-protection pushes) — **not** a silent
+regression of the Φ25 capture pipeline itself. Fixed by PR #183 (merged
+2026-07-17T00:10 UTC); every `check-price.yml` run has succeeded since. The
+clean 30-day window immediately before the outage (2026-06-13 → 2026-07-12) shows
+the underlying rate is **1.00 snapshot/calendar-day (30/30, zero gaps)** — that is
+the number the revisit dates below are computed from, not the outage-diluted
+30-day blended rate (0.93/day).
+
+**A new guard now watches this directly**: `ml.notifications` trigger **T10**
+fires via `NTFY_TOPIC` (once per IST day) if the feature store goes
+≥2 calendar days without a new snapshot — independent of price/forecast
+staleness (T9), since the scraper can be healthy while the commit path is
+broken (exactly what happened in bug #4). See `ml/notifications.py::_check_t10`.
+
+**Computed revisit dates** (from n=152 / 93 h1 folds on 2026-07-17, at the
+verified 1.0 row/day rate):
+
+| Target n (feature-store rows) | h1 test folds at that n | Rows needed | Revisit date |
+|---|---|---|---|
+| 250 | ~230 | 98 | **2026-10-23** |
+| 300 | ~280 | 148 | **2026-12-12** |
+
+(Conservative fallback if the rate regresses toward the outage-blended 0.93/day:
+2026-10-30 / 2026-12-22 respectively.)
+
+**What to re-run at each checkpoint:**
+1. `python -m ml.direction.evaluate` (already runs weekly, unmodified gate — no action needed, just read the new `data/direction_baseline.json`).
+2. `python -m ml.experiments.direction_enrichment` (committed, not wired into production) — re-check whether the momentum-feature and relative-cheapness variants clear the gate at the larger n. At n≈250, edges ≥~8-10pp become detectable per the power sim (vs. ~21pp at n=93) — still a high bar, but no longer categorically unprovable.
+3. Only if either shows a **real, gate-clearing** edge: revisit the Phase 3 agentic-search design (held-out set, purged walk-forward CV, multiple-testing correction) — not before.
