@@ -17,6 +17,7 @@ from ml.notifications import (
     check_triggers,
     compute_chronos_lean,
     compute_dir_acc_30f,
+    compute_snapshot_gap_days,
     load_state,
     queue_for_quiet_hours,
     save_state,
@@ -2200,3 +2201,169 @@ def test_stamp_ist_dedup_t9():
     assert state.last_t9_ist_date == ""
     _stamp_ist_dedup("T9", state, now_ist)
     assert state.last_t9_ist_date == "2026-06-07"
+
+
+# ---------------------------------------------------------------------------
+# T10 — Feature-store snapshot capture stalled (IST-day deduped)
+# ---------------------------------------------------------------------------
+# Protects the direction-model data-accumulation path: a silent bot-pr-sync
+# failure (e.g. bug #4) can stop new PIT snapshots landing while price/forecast
+# data (T9's concern) stays fresh, so this is checked independently of T9.
+# ---------------------------------------------------------------------------
+
+_T10_NOW_IST = _ist(2026, 6, 7, 14, 0)  # reference time for T10 tests
+
+
+def _write_snapshots_parquet(path: Path, as_of_dates: list[str]) -> None:
+    import pandas as pd
+
+    pd.DataFrame({"as_of_date": as_of_dates}).to_parquet(path)
+
+
+def test_compute_snapshot_gap_days_missing_file(tmp_path: Path):
+    """Returns None when the feature store does not exist (not a capture failure)."""
+    missing = tmp_path / "does_not_exist.parquet"
+    assert compute_snapshot_gap_days(_T10_NOW_IST, path=missing) is None
+
+
+def test_compute_snapshot_gap_days_fresh(tmp_path: Path):
+    """Gap is 0 when the latest snapshot is dated today (IST)."""
+    path = tmp_path / "snapshots.parquet"
+    _write_snapshots_parquet(path, ["2026-06-05", "2026-06-06", "2026-06-07"])
+    assert compute_snapshot_gap_days(_T10_NOW_IST, path=path) == 0
+
+
+def test_compute_snapshot_gap_days_stale(tmp_path: Path):
+    """Gap counts calendar days since the max as_of_date."""
+    path = tmp_path / "snapshots.parquet"
+    _write_snapshots_parquet(path, ["2026-06-01", "2026-06-02", "2026-06-04"])
+    assert compute_snapshot_gap_days(_T10_NOW_IST, path=path) == 3
+
+
+def test_t10_fires_when_snapshot_gap_exceeds_threshold():
+    """T10 fires when snapshot_gap_days >= _T10_GAP_THRESHOLD_DAYS (2)."""
+    alerts = check_triggers(
+        _forecast(),
+        _probe(),
+        _prices_aged(1.0, _T10_NOW_IST),
+        _backtest_accurate(),
+        NotificationState(),
+        _T10_NOW_IST,
+        snapshot_gap_days=3,
+    )
+    t10 = [a for a in alerts if a.trigger_id == "T10"]
+    assert len(t10) == 1, "T10 must fire when the snapshot gap is 3 days"
+    assert "3 days" in t10[0].body
+    assert "₹" not in t10[0].title
+    assert "₹" not in t10[0].body
+
+
+def test_t10_no_fire_below_threshold():
+    """T10 does not fire when the gap is below the threshold (e.g. 1 day, or None)."""
+    for gap in (None, 0, 1):
+        alerts = check_triggers(
+            _forecast(),
+            _probe(),
+            _prices_aged(1.0, _T10_NOW_IST),
+            _backtest_accurate(),
+            NotificationState(),
+            _T10_NOW_IST,
+            snapshot_gap_days=gap,
+        )
+        assert all(a.trigger_id != "T10" for a in alerts), f"T10 must not fire at gap={gap}"
+
+
+def test_t10_at_most_one_per_ist_day():
+    """T10 fires once on the first stale run, not again the same IST day."""
+    now_run1 = _ist(2026, 6, 7, 10, 0)
+    now_run2 = _ist(2026, 6, 7, 13, 0)
+
+    state = NotificationState()
+    alerts_r1 = check_triggers(
+        _forecast(),
+        _probe(),
+        _prices_aged(1.0, now_run1),
+        _backtest_accurate(),
+        state,
+        now_run1,
+        snapshot_gap_days=3,
+    )
+    assert len([a for a in alerts_r1 if a.trigger_id == "T10"]) == 1
+
+    _stamp_ist_dedup("T10", state, now_run1)
+
+    alerts_r2 = check_triggers(
+        _forecast(),
+        _probe(),
+        _prices_aged(1.0, now_run2),
+        _backtest_accurate(),
+        state,
+        now_run2,
+        snapshot_gap_days=4,  # gap can only grow within the same day
+    )
+    assert len([a for a in alerts_r2 if a.trigger_id == "T10"]) == 0, (
+        "Run 2 (same IST day): T10 must NOT fire again - IST-day dedup"
+    )
+
+
+def test_t10_fires_again_next_ist_day():
+    """A sustained gap alerts again on the following IST day (mirrors T9's H4b fix)."""
+    state = NotificationState()
+    state.last_t10_ist_date = "2026-06-07"
+
+    now_day2 = _ist(2026, 6, 8, 14, 0)
+    alerts = check_triggers(
+        _forecast(),
+        _probe(),
+        _prices_aged(1.0, now_day2),
+        _backtest_accurate(),
+        state,
+        now_day2,
+        snapshot_gap_days=4,
+    )
+    assert len([a for a in alerts if a.trigger_id == "T10"]) == 1
+
+
+def test_t10_state_round_trip(tmp_path: Path):
+    """last_t10_ist_date survives a NotificationState save/load cycle."""
+    state = NotificationState(last_t10_ist_date="2026-06-07")
+    path = tmp_path / "notification_state.json"
+    save_state(state, path)
+
+    loaded = load_state(path)
+    assert loaded.last_t10_ist_date == "2026-06-07"
+
+
+def test_t10_backward_compat_old_state(tmp_path: Path):
+    """State file without last_t10_ist_date loads with empty-string default."""
+    import json as _json
+
+    old_state = {
+        "schema_version": 1,
+        "last_sent": {},
+        "queued": [],
+        "sent_today": [],
+        "last_t5_ist_date": "",
+        "last_t6_fired_date_ist": "",
+        "last_t4_fired_ist_date": "",
+        "last_t7_fired_ist_date": "",
+        "last_t8_morning_ist_date": "",
+        "last_t8_evening_ist_date": "",
+        "last_t9_ist_date": "",
+        # deliberately absent: last_t10_ist_date
+    }
+    path = tmp_path / "old_state.json"
+    path.write_text(_json.dumps(old_state), encoding="utf-8")
+
+    loaded = load_state(path)
+    assert loaded.last_t10_ist_date == ""
+    assert loaded.schema_version == 1
+
+
+def test_stamp_ist_dedup_t10():
+    """_stamp_ist_dedup sets last_t10_ist_date for T10 immediately on queue."""
+    state = NotificationState()
+    now_ist = _ist(2026, 6, 7, 23, 30)  # quiet hours
+    assert state.last_t10_ist_date == ""
+    _stamp_ist_dedup("T10", state, now_ist)
+    assert state.last_t10_ist_date == "2026-06-07"

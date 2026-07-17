@@ -32,7 +32,7 @@ import bisect
 import numpy as np
 import pandas as pd
 
-from ml.direction.dataset import FEATURE_COLS, IBJA_PARQUET, SNAPSHOTS_PARQUET, build_dataset
+from ml.direction.dataset import FEATURE_COLS, IBJA_PARQUET, build_dataset
 from ml.direction.evaluate import MIN_TRAIN_SIZE, run_walk_forward
 from ml.direction.gate import decide_direction_signal
 
@@ -49,9 +49,7 @@ _MOMENTUM_BASE_COLS: list[str] = [
 ]
 _VOL_WINDOW = 5
 
-MOMENTUM_FEATURE_COLS: list[str] = [f"{c}_chg1" for c in _MOMENTUM_BASE_COLS] + [
-    "gold_usd_vol5"
-]
+MOMENTUM_FEATURE_COLS: list[str] = [f"{c}_chg1" for c in _MOMENTUM_BASE_COLS] + ["gold_usd_vol5"]
 
 
 def add_momentum_features(dataset: pd.DataFrame) -> pd.DataFrame:
@@ -162,7 +160,9 @@ def run_relative_cheapness_experiment(dataset: pd.DataFrame) -> None:
 
 def main() -> None:
     dataset = build_dataset(verbose=False)
-    print(f"Dataset: {len(dataset)} rows, {dataset['as_of_date'].min()} to {dataset['as_of_date'].max()}\n")
+    print(
+        f"Dataset: {len(dataset)} rows, {dataset['as_of_date'].min()} to {dataset['as_of_date'].max()}\n"
+    )
     run_momentum_experiment(dataset)
     run_relative_cheapness_experiment(dataset)
 
