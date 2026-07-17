@@ -464,3 +464,92 @@ def test_wilcoxon_p_all_zeros():
 
     result = compute_wilcoxon_p([0.0] * 10)
     assert result == 1.0
+
+
+# ============================================================
+# Displayed-band coverage (naive_flat_hold headline PI) — bug fix:
+# app.js previously attributed bt.pi_coverage_80_5d_avg (Chronos's own quantile PI)
+# to this band; these guard the metric that's actually sourced correctly now.
+# ============================================================
+
+
+def test_band_coverage_all_inside():
+    """All resolved entries fall inside [lower, upper] → coverage 1.0."""
+    from ml.metrics import compute_band_coverage
+
+    entries = [
+        _resolved_entry("2026-05-01", 14845, 14845, 14800, "neutral", "resolved"),
+        _resolved_entry("2026-05-02", 14845, 14845, 14900, "neutral", "resolved"),
+    ]
+    result = compute_band_coverage(entries)
+    assert result["n"] == 2
+    assert result["n_in_band"] == 2
+    assert result["coverage"] == 1.0
+
+
+def test_band_coverage_partial():
+    """One of three resolved entries falls outside its band → coverage 2/3."""
+    from ml.metrics import compute_band_coverage
+
+    entries = [
+        _resolved_entry(
+            "2026-05-01", 14845, 14845, 14800, "neutral", "resolved"
+        ),  # in [14645,15145]
+        _resolved_entry(
+            "2026-05-02", 14845, 14845, 14900, "neutral", "resolved"
+        ),  # in [14645,15145]
+        _resolved_entry("2026-05-03", 14845, 14845, 20000, "neutral", "resolved"),  # outside
+    ]
+    result = compute_band_coverage(entries)
+    assert result["n"] == 3
+    assert result["n_in_band"] == 2
+    assert abs(result["coverage"] - 2 / 3) < 0.001
+
+
+def test_band_coverage_excludes_pending():
+    """Pending entries (no actual_next_22k yet) never count toward n."""
+    from ml.metrics import compute_band_coverage
+
+    entries = [
+        _resolved_entry("2026-05-01", 14845, 14845, 14800, "neutral", "resolved"),
+        _entry(decision_date="2026-05-02", outcome="pending", actual_next_22k=None),
+    ]
+    result = compute_band_coverage(entries)
+    assert result["n"] == 1
+
+
+def test_band_coverage_empty():
+    """No resolved entries → coverage None, n 0 — caller must handle, not fabricate."""
+    from ml.metrics import compute_band_coverage
+
+    result = compute_band_coverage([])
+    assert result["coverage"] is None
+    assert result["n"] == 0
+    assert result["n_in_band"] == 0
+
+
+def test_save_coverage_metrics_persists_and_grows(tmp_path: Path):
+    """save_coverage_metrics writes a schema'd JSON file whose n grows as more
+    entries resolve — not a static one-time snapshot."""
+    import json
+
+    from ml.metrics import save_coverage_metrics
+
+    metrics_path = tmp_path / "metrics_history.json"
+    out_path = tmp_path / "coverage_metrics.json"
+
+    entries = [_resolved_entry("2026-05-01", 14845, 14845, 14800, "neutral", "resolved")]
+    metrics_path.write_text(json.dumps(entries))
+
+    payload1 = save_coverage_metrics(metrics_path=metrics_path, out_path=out_path)
+    assert payload1["n"] == 1
+    assert payload1["coverage"] == 1.0
+    assert payload1["schema_version"] == 1
+    assert json.loads(out_path.read_text())["n"] == 1
+
+    entries.append(_resolved_entry("2026-05-02", 14845, 14845, 20000, "neutral", "resolved"))
+    metrics_path.write_text(json.dumps(entries))
+
+    payload2 = save_coverage_metrics(metrics_path=metrics_path, out_path=out_path)
+    assert payload2["n"] == 2
+    assert payload2["n_in_band"] == 1

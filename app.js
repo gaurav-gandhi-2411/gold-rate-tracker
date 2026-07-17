@@ -6,6 +6,7 @@ const BACKTEST_URL  = "data/backtest.json";
 const COMMENTARY_URL = "data/commentary.json";
 const DRIFT_URL     = "data/drift_metrics.json";
 const METRICS_URL   = "data/metrics_history.json";
+const COVERAGE_URL  = "data/coverage_metrics.json";
 
 // Staleness threshold (hours) shared with Python inference.py _STALE_THRESHOLD_H.
 const STALE_THRESHOLD_H = 8;
@@ -1299,7 +1300,7 @@ function renderForecastVsActual(bt) {
   section.hidden = false;
 }
 
-function renderMethodology(fc, bt, drift) {
+function renderMethodology(fc, bt, drift, coverage) {
   const body = document.getElementById("methodology-body");
   if (!body) return;
 
@@ -1384,13 +1385,17 @@ function renderMethodology(fc, bt, drift) {
     const pVal     = bt.wilcoxon_signed_rank_p != null
       ? bt.wilcoxon_signed_rank_p.toFixed(4)
       : "—";
-    const coverPct = bt.pi_coverage_80_5d_avg != null
-      ? Math.round(bt.pi_coverage_80_5d_avg * 100)
-      : 87;
     const hl      = fc?.headline;
     const rangeStr = hl && typeof hl.lower === "number" && typeof hl.upper === "number"
       ? `₹${fmtINR(hl.lower)}–₹${fmtINR(hl.upper)}`
       : "the current range";
+
+    // Empirical coverage of the DISPLAYED band (headline.lower/upper), tracked from
+    // resolved live decisions — not bt.pi_coverage_80_5d_avg, which measures Chronos's
+    // own quantile PI (a different band, never shown as the headline range).
+    const hasCoverage = coverage && typeof coverage.coverage === "number" && coverage.n > 0;
+    const coverPct = hasCoverage ? Math.round(coverage.coverage * 100) : null;
+    const coverN   = hasCoverage ? coverage.n : null;
 
     parts.push(`
       <div class="meth-section meth-how-good">
@@ -1402,8 +1407,8 @@ function renderMethodology(fc, bt, drift) {
         ${maePctWorse != null ? `&bull; Time-series AI average error: ₹${chronosMae}/g — ${maePctWorse}% worse (p&thinsp;=&thinsp;${pVal})<br>` : ""}
         Today's price is the forecast.</p>
 
-        <p class="meth-text"><strong>The ${rangeStr} range has held ${coverPct}% of the time</strong><br>
-        It reflects the real distribution of 5-day price moves — wide because gold can move sharply.</p>
+        <p class="meth-text"><strong>The ${rangeStr} range has held ${hasCoverage ? `${coverPct}% of the time (n=${coverN} resolved 5-day windows)` : "close to its target rate so far — still building a track record"}</strong><br>
+        It reflects the real distribution of 5-day price moves — wide because gold can move sharply. The width is calibrated on only the last 30 backtest windows' typical error, which is a thin sample; so far it has come out wide rather than narrow, the safer way to be wrong.</p>
 
         <p class="meth-text"><strong>About the direction signal</strong><br>
         Over ${n} windows the AI signal was correct ${dirAllDisplay}. Gold has risen roughly 70% of trading days in our data. A naive "always-up" guess clears ~70% without a model — our signal doesn't beat that baseline.<br>
@@ -1796,16 +1801,17 @@ function initPullToRefresh() {
   updateOfflineBanner(); // update offline banner text now allReadings is populated
 
   // Remaining optional data (all gracefully degrade on failure).
-  const [bt, commentary, drift] = await Promise.allSettled([
+  const [bt, commentary, drift, coverage] = await Promise.allSettled([
     loadJSON(BACKTEST_URL),
     loadJSON(COMMENTARY_URL),
     loadJSON(DRIFT_URL),
+    loadJSON(COVERAGE_URL),
   ]);
 
   // Report any optional-fetch failures so silent pipeline breaks surface in Sentry.
   if (typeof Sentry !== "undefined") {
-    const optionalUrls = [BACKTEST_URL, COMMENTARY_URL, DRIFT_URL];
-    [bt, commentary, drift].forEach((r, i) => {
+    const optionalUrls = [BACKTEST_URL, COMMENTARY_URL, DRIFT_URL, COVERAGE_URL];
+    [bt, commentary, drift, coverage].forEach((r, i) => {
       if (r.status === "rejected") Sentry.captureException(r.reason, { extra: { url: optionalUrls[i] } });
     });
   }
@@ -1818,6 +1824,7 @@ function initPullToRefresh() {
     fc,
     btData,
     drift.status === "fulfilled" ? drift.value : null,
+    coverage.status === "fulfilled" ? coverage.value : null,
   );
 
   // Dismiss chart callout when tapping outside the chart canvas (Φ8C'/Ψ3C.3)

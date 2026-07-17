@@ -33,6 +33,7 @@ DATA_DIR = Path(__file__).parent.parent / "data"
 METRICS_PATH = DATA_DIR / "metrics_history.json"
 PRICES_PATH = DATA_DIR / "prices.json"
 FORECAST_PATH = DATA_DIR / "forecast.json"
+COVERAGE_PATH = DATA_DIR / "coverage_metrics.json"
 
 DROP_THRESHOLD = 100.0
 OUTCOME_WINDOW = 5  # trading days
@@ -292,7 +293,63 @@ def resolve_pending(
         out_path.write_text(json.dumps(entries, indent=2) + "\n")
 
     print(f"Resolved {resolved_count} pending entries.")
+    save_coverage_metrics(metrics_path=out_path)
     return resolved_count
+
+
+def compute_band_coverage(entries: list[dict]) -> dict:
+    """Empirical coverage of the displayed naive flat-hold PI (lower/upper) vs
+    realized outcomes.
+
+    This is the range actually shown to users (fc.headline.lower/upper), which
+    differs from Chronos's own quantile PI reported in backtest.json — the two
+    must not be conflated (see app.js renderMethodology). Grows monotonically
+    over all resolved decisions; no time window, so n only ever increases.
+    """
+    resolved = [
+        e
+        for e in entries
+        if e.get("outcome") not in ("pending", None)
+        and isinstance(e.get("lower"), (int, float))
+        and isinstance(e.get("upper"), (int, float))
+        and isinstance(e.get("actual_next_22k"), (int, float))
+    ]
+    n = len(resolved)
+    if n == 0:
+        return {"coverage": None, "n": 0, "n_in_band": 0}
+
+    n_in_band = sum(1 for e in resolved if e["lower"] <= e["actual_next_22k"] <= e["upper"])
+    return {"coverage": round(n_in_band / n, 4), "n": n, "n_in_band": n_in_band}
+
+
+def save_coverage_metrics(
+    metrics_path: Path = METRICS_PATH,
+    out_path: Path = COVERAGE_PATH,
+) -> dict:
+    """Recompute displayed-band coverage from metrics_history.json and persist it.
+
+    Called from resolve_pending() so the figure updates every time the weekly
+    backtest workflow resolves outcomes, rather than being a one-time snapshot.
+    """
+    entries: list[dict] = []
+    if metrics_path.exists():
+        raw = json.loads(metrics_path.read_text())
+        if isinstance(raw, list):
+            entries = raw
+
+    result = compute_band_coverage(entries)
+    payload = {
+        "schema_version": 1,
+        "generated_at_utc": datetime.now(UTC).isoformat(),
+        "band_source": "naive_flat_hold conformal PI (headline.lower/upper), "
+        "calibrated on the last 30 backtest folds' naive errors",
+        "nominal_pct": 80,
+        "coverage": result["coverage"],
+        "n": result["n"],
+        "n_in_band": result["n_in_band"],
+    }
+    out_path.write_text(json.dumps(payload, indent=2) + "\n")
+    return payload
 
 
 def main() -> None:
