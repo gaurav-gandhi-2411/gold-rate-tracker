@@ -351,7 +351,11 @@ def save_coverage_metrics(
         "note": "Recalibrated 2026-07 from h=5 to h=1 (ADR 022) to match the horizon this "
         "metric actually tests. n accumulates across the change with no time window, so "
         "coverage may read above 80% for a while as pre-recalibration decisions are still "
-        "counted; it converges toward the new calibration's true rate as n grows.",
+        "counted; it converges toward the new calibration's true rate as n grows. Per ADR 023: "
+        "while this figure is still pre-fix-dominated, it is NOT yet independent out-of-sample "
+        "evidence for the h=1 band — that confirmation arrives only once enough decisions made "
+        "after 2026-07-17 have resolved. The 84.7% figure in ADR 022 is a retrospective, "
+        "overlapping-window sanity check, not OOS validation.",
     }
     out_path.write_text(json.dumps(payload, indent=2) + "\n")
     return payload

@@ -1,7 +1,12 @@
 # ADR 022 — Conformal PI Recalibrated to h=1 (Next Trading Day), Matching What Coverage Actually Tests
 
-Status: Accepted
+Status: Accepted — §3's 84.7% validation claim corrected by ADR 023 (2026-07-18)
 Date: 2026-07-17
+
+**Note (2026-07-18):** the h=1 recalibration below is unchanged and correct. ADR 023 corrects
+§3's "84.7% validated" framing — that figure's fit window and check window overlap almost
+entirely, so it is a retrospective sanity check, not independent out-of-sample evidence. See
+ADR 023 for the corrected claim and where genuine OOS confirmation will come from.
 
 ## Context
 
