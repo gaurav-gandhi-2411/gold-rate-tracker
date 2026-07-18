@@ -1,5 +1,18 @@
 # Architecture
 
+> **Partially stale — last fully updated 2026-05-10, before the Phase 3 rewrite
+> (PR #29, 2026-05-20; see [ADR 014](adr/014-production-architecture.md)).**
+> The regime-detection section below is corrected as of 2026-07-18 (it was
+> deleted in Phase 3, not merely dead weight). The Forecast/Training/MLflow
+> sections and the data-flow diagram below that still describe the
+> pre-Phase-3 LightGBM + TFT + N-BEATS training pipeline, which Phase 3
+> replaced with a naive-headline + conformal-PI + Chronos-directional-companion
+> architecture — those sections were out of scope for this pass and have NOT
+> been corrected. Treat everything below except the regime section as
+> historical context, not current design; see
+> [docs/PROGRESS.md](../PROGRESS.md) (Phase 3 entry) for what actually runs
+> today.
+
 ## System overview
 
 ```mermaid
@@ -40,8 +53,10 @@ Playwright-based Node.js scraper that navigates Tanishq's gold rate page and ext
 ### Macro features (`ml/macro.py`)
 Downloads daily macro data (gold spot GC=F, USD/INR, 10Y yield, DXY, Sensex, VIX) from yfinance with retry logic. Caches to `data/macro_cache.parquet` (gitignored). Falls back gracefully if yfinance is unavailable.
 
-### Regime detection (`ml/regime.py`)
+### Regime detection (`ml/regime.py`) — RETIRED 2026-05-20
 Gaussian HMM (2 states, hmmlearn) fitted on log-returns of macro features. Labels each trading day as `low-vol` (state 0) or `high-vol` (state 1). State labels added as a feature for LightGBM. Current regime written to `data/regime.json`.
+
+**Retired in [ADR 014](adr/014-production-architecture.md) / PR #29**, alongside the rest of the LightGBM training infrastructure — `ml/regime.py`, `tests/test_regime.py`, and `data/regime.json` were all deleted, not merely left unused. The `regime` feature had zero splits in any LightGBM model (confirmed dead weight per `docs/FEATURE_INVENTORY.md`) and is not part of the current Chronos-based inference path. Kept here as historical record of what was tried; not part of the live pipeline.
 
 ### Forecast (`ml/forecast.py`)
 Trains LightGBM (mean + 10th/90th quantile) on combined seed + scraped history. At inference, loads ONNX models for TFT and N-BEATS. Ensemble weights are inverse-MAE from a rolling holdout. Writes `data/forecast.json`.
@@ -65,7 +80,8 @@ Tanishq page
   → prices.json (scraped, committed every 6h)
   → history_seed.json (bootstrapped from Yahoo Finance, one-time)
   → load_combined_history() (merge + deduplicate + calibrate)
-  → build_feature_matrix() (19 base + 24 macro + 1 regime features)
+  → build_feature_matrix() (19 base + 24 macro + 1 regime features — regime
+     retired 2026-05-20, see the Regime detection section above)
   → LightGBM / TFT ONNX / N-BEATS ONNX → ensemble prediction
   → forecast.json (next-day 22K point estimate + 80% interval)
   → commentary.json (Groq LLM market note)

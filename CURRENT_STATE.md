@@ -249,6 +249,12 @@ These earned their place across PRs #1–56. They are NOT visible in the code.
 
 16. **An alert channel must be verified end-to-end (delivery confirmed), not just wired.** The scraper-down `curl` in `check-price.yml` uses `|| true`, meaning any ntfy delivery failure — wrong topic, unsubscribed topic, network error — is silently swallowed. For weeks, scraper failures fired the alert step (CI log showed it ran) but the alert never reached anyone because NTFY_TOPIC was misconfigured. The CI step reporting OK is NOT the same as the alert being delivered. Lesson: whenever a new alert path is added, verify receipt end-to-end (send a test notification to the actual device/channel and confirm arrival) before treating the path as operational. `[OK] ≠ delivered.`
 
+17. **Surface git-command failures; don't silently switch strategies.** When a git command fails (rebase, push, etc.), report the failure and propose an alternative — don't silently fall back to a different strategy (e.g. rebase → merge) without saying so.
+
+18. **Diagnostic ranking: pull actual logs before ranking hypotheses.** The May 2026 stale-scraper diagnostic put "workflow disabled" and "IP block" above the actual cause (₹ symbol in an HTTP header at `update-and-notify.js:47`), which was visible in the Actions log the whole time. Read the log before ranking causes.
+
+19. **Do NOT use `cast()` for mypy fixes — use `TypedDict` or `assert isinstance` instead.** `cast()` bypasses mypy silently; if the dict shape changes later, the cast lies and produces a runtime crash instead of a mypy error.
+
 ## Open questions (things to verify when implementing)
 
 - **Φ4 wall-clock budget on GH Actions runner.** ✅ RESOLVED — ADR 015. Actual probe wall-clock ~10s (dominated by model deserialization, not forecast compute). 5-sample probe adds ~75ms; 6h cadence makes this operationally fine.

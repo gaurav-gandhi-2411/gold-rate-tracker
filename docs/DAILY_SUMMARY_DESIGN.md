@@ -1,7 +1,16 @@
 # Daily Summary Notification Design
 
-Session B.5 design document. Records decisions that shape ml/daily_summary.py
-and .github/workflows/daily-summary.yml.
+> **RETIRED 2026-05-20.** `ml/daily_summary.py`, `.github/workflows/daily-summary.yml`,
+> `tests/test_daily_summary.py`, and the `data/last_summary.json` marker file
+> were all deleted in PR #29 ("Phase 3 complete") — superseded by the
+> Chronos-directional-signal notification path in `ml/notifications.py`
+> (see [ADR 014](adr/014-production-architecture.md) and
+> [docs/PROGRESS.md](PROGRESS.md), Phase 3 §3.4.5). Kept as a historical
+> record of the trigger-threshold design rationale below; none of it
+> describes the live system.
+
+Session B.5 design document. Records decisions that shaped ml/daily_summary.py
+and .github/workflows/daily-summary.yml (both retired — see notice above).
 
 ---
 
