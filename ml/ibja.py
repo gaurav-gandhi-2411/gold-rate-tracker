@@ -25,7 +25,7 @@ from __future__ import annotations
 import logging
 import re
 import time
-from datetime import UTC, date, datetime
+from datetime import UTC, date, datetime, timedelta
 from io import StringIO
 from pathlib import Path
 from urllib.parse import urljoin
@@ -128,6 +128,64 @@ def load_ibja_parquet(path: Path | None = None) -> pd.DataFrame:
     if not p.exists():
         return pd.DataFrame()
     return pd.read_parquet(p)
+
+
+def latest_ibja_date(path: Path | None = None) -> date | None:
+    """Most recent date with a non-null pm_916 row in ibja_rates.parquet.
+
+    Returns None if the parquet is missing/empty/unreadable/has no valid pm_916
+    row — a fresh or reset store is not a capture failure, so callers should
+    treat None as "nothing to gate on" rather than an error.
+    """
+    try:
+        df = load_ibja_parquet(path)
+        if df.empty or "pm_916" not in df.columns:
+            return None
+        valid = df[df["pm_916"].notna()]
+        if valid.empty:
+            return None
+        return pd.to_datetime(valid["date"]).max().date()
+    except Exception as exc:
+        logger.warning("latest_ibja_date: could not read ibja_rates.parquet: %s", exc)
+        return None
+
+
+def business_days_since(last_date: date, today: date) -> int:
+    """Count weekdays (Mon-Fri) strictly after last_date, through today inclusive.
+
+    IBJA never publishes Sat/Sun ("Rates are not published on Central Govt.
+    Holidays & SAT/SUN"), so a weekend gap is not a capture failure — it's the
+    calendar working as expected. This is why the gap is measured in business
+    days, not wall-clock hours: a Friday-close reading is 0 business-days stale
+    all weekend (correct — nothing was missed), 1 on Monday before that day's
+    own publish lands (also expected — just hasn't arrived yet), and only
+    reaches 2+ when an actual weekday publish opportunity was missed. Does not
+    know about ad-hoc govt holidays (unpredictable, no calendar available) — an
+    isolated one-off holiday just delays the gap count by one day, the same
+    tolerance already accepted for T10's snapshot-gap check.
+    """
+    gap = 0
+    d = last_date
+    while d < today:
+        d += timedelta(days=1)
+        if d.weekday() < 5:  # Monday=0 ... Friday=4
+            gap += 1
+    return gap
+
+
+def compute_ibja_gap_business_days(
+    now_ist: datetime,
+    path: Path | None = None,
+) -> int | None:
+    """Business-day gap since the most recent valid IBJA pm_916 reading.
+
+    Returns None when there is no valid IBJA data at all (missing/empty
+    parquet) — nothing to gate on, distinct from a genuine gap of 0+.
+    """
+    last = latest_ibja_date(path)
+    if last is None:
+        return None
+    return business_days_since(last, now_ist.date())
 
 
 def append_ibja_today(path: Path | None = None) -> bool | None:

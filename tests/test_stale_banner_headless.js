@@ -276,12 +276,12 @@ async function run() {
       await ctx.close();
     }
 
-    // ── Scenario C: IBJA-derived-fresh → banner shows "Approximate" ────────────
-    console.log("\nScenario C: price_source=ibja_calibrated, IBJA 2h old → 'Approximate' banner");
+    // ── Scenario C: IBJA-primary, published today → "Estimated" banner (ADR 025) ──
+    console.log("\nScenario C: price_source=ibja_calibrated, IBJA 2h old → 'Estimated' banner");
     {
       const ctx  = await browser.newContext();
       const page = await ctx.newPage();
-      // scrape 9h old (stale), IBJA 2h old (fresh) → State 2
+      // scrape 9h old (stale — expected), IBJA 2h old (fresh, today) → IBJA-primary
       await injectMockFetch(page, makeForecastIBJA(9, 2), makePrices(9));
 
       await page.goto(base, { waitUntil: "networkidle" });
@@ -292,10 +292,39 @@ async function run() {
 
       assert("banner.hidden === false",         state.hidden === false);
       assert("computed display !== 'none'",     state.display !== "none",   `got "${state.display}"`);
-      assert('text includes "Approximate"',
-        state.text.includes("Approximate"),     `got "${state.text}"`);
+      assert('text includes "Estimated retail price"',
+        state.text.includes("Estimated retail price"), `got "${state.text}"`);
       assert('text includes "IBJA"',
         state.text.includes("IBJA"),            `got "${state.text}"`);
+      assert('text includes "today"',
+        state.text.includes("today"),           `got "${state.text}"`);
+      assert('text does NOT include "last confirmed price"',
+        !state.text.includes("last confirmed price"), `got "${state.text}"`);
+
+      await ctx.close();
+    }
+
+    // ── Scenario C2: IBJA-primary, weekend/holiday carry-forward (ADR 025) ────
+    console.log("\nScenario C2: price_source=ibja_calibrated, IBJA 50h old → dated carry-forward banner");
+    {
+      const ctx  = await browser.newContext();
+      const page = await ctx.newPage();
+      // scrape 9h old (stale — expected), IBJA 50h old (Friday, e.g. now is Sunday)
+      await injectMockFetch(page, makeForecastIBJA(9, 50), makePrices(9));
+
+      await page.goto(base, { waitUntil: "networkidle" });
+      await page.waitForTimeout(500);
+
+      const state = await checkBannerState(page);
+      console.log(`  Banner state: hidden=${state.hidden}, display=${state.display}, text="${state.text}"`);
+
+      assert("banner.hidden === false",         state.hidden === false);
+      assert('text includes "Estimated retail price"',
+        state.text.includes("Estimated retail price"), `got "${state.text}"`);
+      assert('text includes "close" (dated carry-forward qualifier)',
+        state.text.includes("close"),           `got "${state.text}"`);
+      assert('text does NOT include "today\'s"  (must not overclaim freshness)',
+        !state.text.includes("today's"),        `got "${state.text}"`);
       assert('text does NOT include "last confirmed price"',
         !state.text.includes("last confirmed price"), `got "${state.text}"`);
 

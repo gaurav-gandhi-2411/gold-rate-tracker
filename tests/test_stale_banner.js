@@ -1,30 +1,37 @@
-// tests/test_stale_banner.js — renderStaleBanner 3-state logic (Phi20 + Phi22 H5)
+// tests/test_stale_banner.js — renderStaleBanner state logic (ADR 025: IBJA-primary)
 // Run: node --test tests/test_stale_banner.js
 
 import { test } from "node:test";
 import assert from "node:assert/strict";
 
-const STALE_THRESHOLD_H = 8; // mirrors app.js + inference.py constant
-const IBJA_FALLBACK_MAX_AGE_H = 30; // mirrors app.js + inference.py _IBJA_MAX_AGE_H
+const STALE_THRESHOLD_H = 8; // mirrors app.js + inference.py constant (Tanishq enrichment gate)
 
-// Mirrors the 3-state decision logic of renderStaleBanner() in app.js.
-// Returns: "hidden" | "approximate" | "stale"
-function bannerStateForForecast(forecast, nowMs) {
-  if (!forecast || !forecast.scraped_at) return "hidden";
-  const scrapeAgeH = (nowMs - new Date(forecast.scraped_at).getTime()) / 3_600_000;
-  if (scrapeAgeH <= STALE_THRESHOLD_H) return "hidden"; // scraped-fresh
-
-  // Scrape is stale — check IBJA fallback. IBJA publishes once daily, so the
-  // estimate may be up to ~30h old and still be the latest official benchmark.
-  if (forecast.price_source === "ibja_calibrated" && forecast.ibja_asof) {
-    const ibjaAgeH = (nowMs - new Date(forecast.ibja_asof).getTime()) / 3_600_000;
-    if (ibjaAgeH < IBJA_FALLBACK_MAX_AGE_H) return "approximate"; // State 2
-  }
-
-  return "stale"; // State 3 — genuinely stale
+function istDayKey(d) {
+  return d.toLocaleDateString("en-IN", { timeZone: "Asia/Kolkata" });
 }
 
-// ── Existing tests (Phi20) ────────────────────────────────────────────────────
+// Mirrors renderStaleBanner()'s decision logic in app.js (ADR 025).
+// Per ADR 025, IBJA-calibrated is the PRIMARY path — trusted via price_source
+// alone (inference.py already gated its freshness), with the date qualifier
+// derived purely from whether ibja_asof falls on today's IST calendar day.
+// Returns: "hidden" | "approximate_today" | "approximate_carry_forward" | "stale"
+function bannerStateForForecast(forecast, nowMs) {
+  if (!forecast) return "hidden";
+
+  if (forecast.price_source === "ibja_calibrated" && forecast.ibja_asof) {
+    const ibjaDate = new Date(forecast.ibja_asof);
+    const isToday = istDayKey(ibjaDate) === istDayKey(new Date(nowMs));
+    return isToday ? "approximate_today" : "approximate_carry_forward";
+  }
+
+  if (!forecast.scraped_at) return "hidden";
+  const scrapeAgeH = (nowMs - new Date(forecast.scraped_at).getTime()) / 3_600_000;
+  if (scrapeAgeH <= STALE_THRESHOLD_H) return "hidden"; // Tanishq enrichment fresh
+
+  return "stale"; // genuinely stale — neither source available
+}
+
+// ── Tanishq-enrichment path ───────────────────────────────────────────────────
 
 test("scraped_at 9h old + price_source=tanishq_scrape → stale", () => {
   const nowMs = Date.now();
@@ -36,7 +43,7 @@ test("scraped_at 9h old + price_source=tanishq_scrape → stale", () => {
   assert.equal(bannerStateForForecast(forecast, nowMs), "stale");
 });
 
-test("scraped_at 7h old → hidden", () => {
+test("scraped_at 7h old → hidden (fresh Tanishq enrichment)", () => {
   const nowMs = Date.now();
   const forecast = {
     scraped_at:   new Date(nowMs - 7 * 3_600_000).toISOString(),
@@ -54,53 +61,35 @@ test("scraped_at exactly 8h old → hidden (boundary: condition is > 8, not >= 8
   assert.equal(bannerStateForForecast(forecast, nowMs), "hidden");
 });
 
-test("no scraped_at field → hidden", () => {
+test("no forecast → hidden", () => {
+  assert.equal(bannerStateForForecast(null, Date.now()), "hidden");
+});
+
+test("no scraped_at field, no price_source → hidden", () => {
   const nowMs = Date.now();
   const forecast = { predicted_at: new Date(nowMs - 9 * 3_600_000).toISOString() };
   assert.equal(bannerStateForForecast(forecast, nowMs), "hidden");
 });
 
-// ── New H5 tests (Phi22) ──────────────────────────────────────────────────────
+// ── IBJA-primary path (ADR 025) ───────────────────────────────────────────────
 
-test("Phi22 state 2: scrape 9h old, ibja_calibrated, IBJA 2h old → approximate", () => {
+test("ibja_calibrated, ibja_asof is today → approximate_today (no date qualifier)", () => {
   const nowMs = Date.now();
   const forecast = {
-    scraped_at:   new Date(nowMs - 9 * 3_600_000).toISOString(),
+    scraped_at:   new Date(nowMs - 10 * 3_600_000).toISOString(), // Tanishq stale — expected
     price_source: "ibja_calibrated",
-    ibja_asof:    new Date(nowMs - 2 * 3_600_000).toISOString(),
+    ibja_asof:    new Date(nowMs - 2 * 3_600_000).toISOString(),  // published a few hours ago
     current_22k:  14500,
     est_low:      14450,
     est_high:     14550,
   };
-  assert.equal(bannerStateForForecast(forecast, nowMs), "approximate");
+  assert.equal(bannerStateForForecast(forecast, nowMs), "approximate_today");
 });
 
-test("H5-widen: scrape 10h old, ibja_calibrated, IBJA 24h old → approximate (within 30h)", () => {
-  // Overnight gap: IBJA from yesterday's publication is ~24h old. Previously (8h
-  // gate) this fell to "stale"; now it correctly shows the IBJA estimate banner.
-  const nowMs = Date.now();
-  const forecast = {
-    scraped_at:   new Date(nowMs - 10 * 3_600_000).toISOString(),
-    price_source: "ibja_calibrated",
-    ibja_asof:    new Date(nowMs - 24 * 3_600_000).toISOString(),
-    current_22k:  14500,
-  };
-  assert.equal(bannerStateForForecast(forecast, nowMs), "approximate");
-});
-
-test("H5-widen boundary: IBJA exactly 30h old → stale (condition is < 30)", () => {
-  const nowMs = Date.now();
-  const forecast = {
-    scraped_at:   new Date(nowMs - 10 * 3_600_000).toISOString(),
-    price_source: "ibja_calibrated",
-    ibja_asof:    new Date(nowMs - 30 * 3_600_000).toISOString(),
-    current_22k:  14500,
-  };
-  assert.equal(bannerStateForForecast(forecast, nowMs), "stale");
-});
-
-test("Phi22 weekend: scrape 9h old, ibja_calibrated, IBJA 50h old → stale", () => {
-  // IBJA publishes weekday-only. On Sunday, latest row is from Friday (48-72h old).
+test("ibja_calibrated, ibja_asof is Friday and now is Sunday → approximate_carry_forward, NOT stale", () => {
+  // Per ADR 025: IBJA publishes weekday-only, so a Friday close on a Sunday is
+  // the EXPECTED steady state, not staleness. Previously (pre-025) this asserted
+  // "stale" — that was the exact gap ADR 025 closed.
   const nowMs = Date.now();
   const forecast = {
     scraped_at:   new Date(nowMs - 9 * 3_600_000).toISOString(),
@@ -110,15 +99,29 @@ test("Phi22 weekend: scrape 9h old, ibja_calibrated, IBJA 50h old → stale", ()
     est_low:      14450,
     est_high:     14550,
   };
-  assert.equal(bannerStateForForecast(forecast, nowMs), "stale");
+  assert.equal(bannerStateForForecast(forecast, nowMs), "approximate_carry_forward");
 });
 
-test("Phi22 defensive: ibja_calibrated but ibja_asof missing → stale", () => {
+test("ibja_calibrated, ibja_asof 20 days old → still approximate_carry_forward (backend already gated it)", () => {
+  // Per ADR 025, the frontend trusts price_source alone — inference.py's own
+  // 14-day backstop is what decides whether ibja_calibrated is emitted at all.
+  // If the backend served it, the frontend shows it; it never re-derives an age gate.
   const nowMs = Date.now();
   const forecast = {
     scraped_at:   new Date(nowMs - 9 * 3_600_000).toISOString(),
     price_source: "ibja_calibrated",
-    // ibja_asof intentionally absent
+    ibja_asof:    new Date(nowMs - 20 * 24 * 3_600_000).toISOString(),
+    current_22k:  14500,
+  };
+  assert.equal(bannerStateForForecast(forecast, nowMs), "approximate_carry_forward");
+});
+
+test("ibja_calibrated but ibja_asof missing → falls through to Tanishq staleness check", () => {
+  const nowMs = Date.now();
+  const forecast = {
+    scraped_at:   new Date(nowMs - 9 * 3_600_000).toISOString(),
+    price_source: "ibja_calibrated",
+    // ibja_asof intentionally absent — defensive fallback
     current_22k:  14500,
     est_low:      14450,
     est_high:     14550,

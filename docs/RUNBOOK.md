@@ -144,9 +144,9 @@ The next successful CI run will replace `forecast.json` and hide the banner.
 1. Go to **Actions** tab: `https://github.com/gaurav-gandhi-2411/gold-rate-tracker/actions`
 2. Find the failed run; click in.
 3. Common failure points:
-   - **Scraper step:** Tanishq changed HTML structure. Look for `=== PAGE TEXT ===` in stderr; update the selector in `scraper/scrape.js`.
+   - **Scraper step:** usually Tanishq's Cloudflare block (`continue-on-error: true`, logged as a `::warning` run annotation, not a hard failure — expected per ADR 025). Only look for `=== PAGE TEXT ===` in stderr and update the selector in `scraper/scrape.js` if the failure message is a selector/DOM error, not a `Cloudflare challenge page` message.
    - **Macro step:** yfinance rate-limited or ticker changed. Check `ml/macro.py` ticker list and `data/macro_cache.parquet` freshness.
-   - **Run inference** (`ml.inference`): `continue-on-error: true`. Missing `data/prices.json` or fewer than 30 backtest folds → `forecast.json` written with `model_status: "insufficient_backtest_history"`. File write failure → staleness alert fires >18h later.
+   - **Run inference** (`ml.inference`): `continue-on-error: true`. Missing `data/prices.json` or fewer than 30 backtest folds → `forecast.json` written with `model_status: "insufficient_backtest_history"`. A hard crash here isn't independently alerted (T9/T9_ESCALATE watch IBJA freshness, not inference success) — check the Actions run status directly.
    - **Refit calibration** (`ml.calibration`): `continue-on-error: true`. Missing `data/ibja_rates.parquet` or fewer than 30 IBJA-Tanishq overlap pairs → refit silently skipped; stale `calibration.json` persists until data accumulates.
    - **Run Chronos probe** (`ml.chronos_forecast --probe`): `continue-on-error: true`. HuggingFace download timeout or torch error → `chronos_probe.json` absent or `status: "failed"` → next run's inference falls back to flat-hold, no directional signal. Check the Actions cache for `chronos-bolt-tiny-*`.
    - **Commentary step:** `GROQ_API_KEY` secret expired or Groq rate limit hit. Step is `continue-on-error: true` so it won't block scraping.
@@ -155,15 +155,21 @@ The next successful CI run will replace `forecast.json` and hide the banner.
 
 ## Staleness alerts — interpretation and response
 
-You may receive ntfy.sh alerts with the following titles. Here is what each means and what to do.
+Per **ADR 025** (IBJA is the primary price source, Tanishq an opportunistic
+enrichment), Tanishq's scrape failing is the *expected* steady state under its
+sustained Cloudflare block and does **not** raise an alert on its own — only IBJA
+itself (the primary source) failing does. You may receive ntfy.sh alerts with the
+following titles. Here is what each means and what to do.
 
 | Alert title | Meaning | Action |
 |---|---|---|
-| `Gold Tracker: data stale (Xh)` | `prices.json` last reading is >8h old | Check the scraper step in the last CI run |
-| `Gold Tracker: forecast stale (Xh)` | `forecast.json` predicted_at is >18h old | Check the forecast/macro steps in the last CI run |
-| `Gold Tracker: Scraper Down` | Scraper step exited non-zero | Check DOM structure on Tanishq site; see [Manual scraper re-run](#manual-scraper-re-run) |
-| `Gold Tracker: Scraper DOM broken` | Weekly canary failed against live page | DOM may have changed; update selector in `scraper/scrape.js` |
-| `Gold Tracker: data stale (Xh)` from Staleness guard | prices.json age >8h after full workflow | Usually same root cause as scraper failure |
+| `Gold Tracker: IBJA data stale (Nd)` (T9) | No valid IBJA reading in >= 2 business days (weekends never count) | Check `ibjarates.com` reachability and the "Append IBJA rates" step in the last CI run |
+| `Gold Tracker: SUSTAINED IBJA outage (Nd)` (T9_ESCALATE) | Same gap >= 4 business days — a sustained, not transient, IBJA outage | Same as above, treat as urgent; the site has nothing fresher than a multi-day-old estimate |
+| `Gold Tracker: Scraper DOM broken` | Weekly canary failed against the live Tanishq page | DOM may have changed *or* Tanishq's runner-IP block is active — check `data/prices.json` for a run of missed entries before assuming the selector broke (see [Manual scraper re-run](#manual-scraper-re-run)) |
+
+A Tanishq-only scrape miss shows up as a `::warning` run annotation in the
+"Flag scrape miss" CI step (visible in the Actions run summary) — informational
+only, never a paging alert.
 
 **Macro cache stale (CI fails with age >14d):**
 The "Check macro cache age" CI step will fail the run (not `continue-on-error`) if `data/macro_status.json`
@@ -176,10 +182,12 @@ git add data/macro_cache.parquet   # not committed normally; trigger via workflo
 # Or: trigger check-price.yml manually from the Actions tab — it will re-fetch macro data
 ```
 
-**Forecast amber banner visible on site:**
-The banner in `index.html` shows when `forecast.json`'s `predicted_at` field is >18h old.
-It hides automatically once CI successfully updates `forecast.json`. No manual action needed
-unless the banner persists for >24h (then check CI).
+**Stale/estimate banner visible on site:**
+`app.js::renderStaleBanner` and `renderFreshness` read `forecast.price_source` directly —
+"Estimated retail price — calibrated from IBJA..." is the expected default state
+whenever Tanishq hasn't confirmed within 8h (not a problem to fix). It only shows the
+"Live price update unavailable" wording when IBJA itself is beyond its 14-day display
+backstop — that state should be rare and, if it persists, will have already fired T9.
 
 ---
 

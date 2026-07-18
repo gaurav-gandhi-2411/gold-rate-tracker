@@ -76,11 +76,14 @@ jobs:
       - name: Flag scrape miss
         # The scrape step is continue-on-error, so a CF-blocked run still reports
         # green. Surface the miss as a run-summary annotation so a frozen
-        # prices.json is visible operationally. User-facing staleness is covered
-        # by T9 in ml.notifications; this is CI visibility only.
+        # prices.json is visible operationally. Per ADR 025 this is now the
+        # EXPECTED steady state (Tanishq is enrichment, not primary) and does
+        # NOT raise a user-facing alert — the site falls through to the IBJA-
+        # calibrated estimate. T9/T9_ESCALATE in ml.notifications watch IBJA's
+        # own freshness instead; this annotation is CI visibility only.
         if: steps.scrape.outcome == 'failure'
         run: |
-          echo "::warning title=Scrape miss::Tanishq scrape produced no reading this run (CF block); prices.json not updated. T9 covers user-facing staleness."
+          echo "::warning title=Scrape miss::Tanishq scrape produced no reading this run (expected under its sustained Cloudflare block — ADR 025); prices.json not updated. Site continues serving the IBJA-calibrated estimate."
 
       - name: Set up Python
         uses: actions/setup-python@v6

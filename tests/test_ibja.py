@@ -2,7 +2,9 @@
 
 from __future__ import annotations
 
+from datetime import date, datetime
 from pathlib import Path
+from zoneinfo import ZoneInfo
 
 import ml.ibja as ibja
 import pandas as pd
@@ -415,3 +417,63 @@ def test_backfill_from_pdf_preserves_existing_rows(tmp_path, monkeypatch):
     assert count == 2
     assert len(df) == 3
     assert "2026-04-01" in df["date"].values
+
+
+# ---------------------------------------------------------------------------
+# ADR 025 — IBJA-primary business-day gap (T9/T9_ESCALATE + display backstop)
+# ---------------------------------------------------------------------------
+
+
+def test_business_days_since_weekend_is_zero_gap():
+    """Friday close is 0 business-days stale all weekend — expected, not a gap."""
+    fri = date(2026, 7, 17)
+    assert ibja.business_days_since(fri, date(2026, 7, 18)) == 0  # Saturday
+    assert ibja.business_days_since(fri, date(2026, 7, 19)) == 0  # Sunday
+
+
+def test_business_days_since_monday_before_publish_is_one():
+    """Monday (before that day's own publish lands) is 1 — normal, not an outage."""
+    fri = date(2026, 7, 17)
+    assert ibja.business_days_since(fri, date(2026, 7, 20)) == 1  # Monday
+
+
+def test_business_days_since_two_missed_weekdays_is_two():
+    """A genuinely missed weekday (e.g. Monday holiday, still stale Tuesday) counts up."""
+    fri = date(2026, 7, 17)
+    assert ibja.business_days_since(fri, date(2026, 7, 21)) == 2  # Tuesday
+
+
+def test_business_days_since_same_day_is_zero():
+    assert ibja.business_days_since(date(2026, 7, 17), date(2026, 7, 17)) == 0
+
+
+def test_latest_ibja_date_missing_file_returns_none(tmp_path):
+    assert ibja.latest_ibja_date(tmp_path / "missing.parquet") is None
+
+
+def test_latest_ibja_date_all_null_pm916_returns_none(tmp_path):
+    p = tmp_path / "ibja.parquet"
+    pd.DataFrame({"date": ["2026-07-16", "2026-07-17"], "pm_916": [None, None]}).to_parquet(
+        p, index=False
+    )
+    assert ibja.latest_ibja_date(p) is None
+
+
+def test_latest_ibja_date_returns_max_valid_row(tmp_path):
+    p = tmp_path / "ibja.parquet"
+    pd.DataFrame(
+        {"date": ["2026-07-15", "2026-07-16", "2026-07-17"], "pm_916": [144000.0, None, 144500.0]}
+    ).to_parquet(p, index=False)
+    assert ibja.latest_ibja_date(p) == date(2026, 7, 17)
+
+
+def test_compute_ibja_gap_business_days_missing_parquet_returns_none(tmp_path):
+    now_ist = datetime(2026, 7, 18, 14, 0, tzinfo=ZoneInfo("Asia/Kolkata"))
+    assert ibja.compute_ibja_gap_business_days(now_ist, tmp_path / "missing.parquet") is None
+
+
+def test_compute_ibja_gap_business_days_weekend_is_zero(tmp_path):
+    p = tmp_path / "ibja.parquet"
+    pd.DataFrame({"date": ["2026-07-17"], "pm_916": [144000.0]}).to_parquet(p, index=False)
+    now_ist = datetime(2026, 7, 18, 14, 0, tzinfo=ZoneInfo("Asia/Kolkata"))  # Saturday
+    assert ibja.compute_ibja_gap_business_days(now_ist, p) == 0

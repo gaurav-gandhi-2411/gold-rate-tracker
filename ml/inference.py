@@ -53,14 +53,20 @@ _CONFORMAL_FOLDS: int = 30
 # caller writes model_status="insufficient_backtest_history" instead of a fake band.
 _MIN_CONFORMAL_FOLDS: int = 30
 # Staleness threshold shared with app.js banner (hours). Change in ONE place only.
+# Per ADR 025: this now gates Tanishq *enrichment* — how fresh a successful scrape
+# must be to override the IBJA-primary display with a confirmed retail reading.
+# Tanishq being older than this (now the expected steady state under its sustained
+# Cloudflare block, not an error) simply means no enrichment this cycle.
 _STALE_THRESHOLD_H: int = 8
-# Max IBJA age (hours) for which the IBJA-calibrated fallback (H5) may still serve
-# an estimate. IBJA publishes pm_916 only once per trading day (~11:30 UTC), so an
-# 8h gate would leave H5 dark ~16h/day; a 1-day-old PM fix is still a sound daily
-# estimate of the retail price. 30h covers same-day + overnight gaps while still
-# excluding genuinely stale (weekend/multi-day) IBJA. Mirrored in app.js
-# IBJA_FALLBACK_MAX_AGE_H — change in BOTH places.
-_IBJA_MAX_AGE_H: int = 30
+# Generous backstop (calendar days) on how old the last IBJA reading may be before
+# the primary display gives up entirely and falls through to the last-confirmed-
+# Tanishq-price state. Per ADR 025, IBJA is now the PRIMARY source (not an
+# occasional fallback), so this is deliberately loose — it should essentially
+# never bind in practice (IBJA publishes ~5x/week) and exists only as a defensive
+# ceiling against showing an absurdly old number as current. Weekend/holiday
+# carry-forward (a few days old) is expected and handled by business-day-aware
+# alerting (ml.ibja.compute_ibja_gap_business_days), not by this constant.
+_IBJA_DISPLAY_MAX_AGE_DAYS: int = 14
 # IBJA publishes pm_916 ~17:00 IST = 11:30 UTC on each trading day.
 _IBJA_PUBLISH_UTC: tuple[int, int] = (11, 30)
 
@@ -184,22 +190,30 @@ def _build_chronos_companion(
     }
 
 
-def _apply_ibja_fallback(
+def _select_price_source(
     current_22k: int,
     scraped_at: str,
     calibration: dict,
     data_dir: Path,
     now: datetime,
 ) -> tuple[int, str, int | None, int | None, str | None]:
-    """Current-price fallback: IBJA-calibrated estimate when Tanishq scrape is stale.
+    """Select the displayed current price per ADR 025's source hierarchy.
+
+    IBJA-calibrated is now the PRIMARY source; a fresh Tanishq scrape is an
+    ENRICHMENT that overrides it with a confirmed retail reading when available.
+    Tanishq being stale is the expected steady state (sustained Cloudflare block,
+    not an error) — it silently yields to the IBJA-calibrated estimate rather
+    than being treated as a failure.
 
     Returns (current_22k, price_source, est_low, est_high, ibja_asof).
-    Falls back to (current_22k, "tanishq_scrape", None, None, None) when any gate fails.
+    Falls back to (current_22k, "tanishq_scrape", None, None, None) — using the
+    last-confirmed Tanishq reading — when any gate fails (no valid calibration,
+    no IBJA data, or IBJA itself is beyond the defensive staleness ceiling).
 
-    Gates (all must pass):
+    Gates (all must pass for the IBJA-primary path):
       - calibration.valid == True AND slope/intercept/residual_std present
-      - scrape age > _STALE_THRESHOLD_H
-      - IBJA pm_916 row exists AND ibja_age < _IBJA_MAX_AGE_H
+      - Tanishq scrape age > _STALE_THRESHOLD_H (i.e. no fresher enrichment to show)
+      - IBJA pm_916 row exists AND its age <= _IBJA_DISPLAY_MAX_AGE_DAYS
     Does NOT touch scraped_at (ADR 021).
     Does NOT modify the Chronos-horizon calibration block in _build_chronos_companion.
     """
@@ -225,7 +239,7 @@ def _apply_ibja_fallback(
         scraped_dt = datetime.fromisoformat(scraped_at.replace("Z", "+00:00"))
         scrape_age_h = (now - scraped_dt).total_seconds() / 3600
     except Exception:
-        logger.warning("_apply_ibja_fallback: could not parse scraped_at %r", scraped_at)
+        logger.warning("_select_price_source: could not parse scraped_at %r", scraped_at)
         return _noop
 
     if scrape_age_h <= _STALE_THRESHOLD_H:
@@ -239,16 +253,16 @@ def _apply_ibja_fallback(
         ibja_df = pd.read_parquet(parquet_path)
         valid_rows = ibja_df[ibja_df["pm_916"].notna()].sort_values("date")
         if valid_rows.empty:
-            logger.warning("_apply_ibja_fallback: no non-null pm_916 rows — skipping")
+            logger.warning("_select_price_source: no non-null pm_916 rows — skipping")
             return _noop
         latest_ibja = valid_rows.iloc[-1]
         ibja_date_str: str = str(latest_ibja["date"])[:10]  # "YYYY-MM-DD"
         pm_916 = float(latest_ibja["pm_916"])
     except FileNotFoundError:
-        logger.info("_apply_ibja_fallback: ibja_rates.parquet not found — skipping")
+        logger.info("_select_price_source: ibja_rates.parquet not found — skipping")
         return _noop
     except Exception as exc:
-        logger.warning("_apply_ibja_fallback: parquet read failed: %s — skipping", exc)
+        logger.warning("_select_price_source: parquet read failed: %s — skipping", exc)
         return _noop
 
     # IBJA publication datetime: ~17:00 IST = 11:30 UTC on the row's date
@@ -256,16 +270,16 @@ def _apply_ibja_fallback(
         y, m, d = int(ibja_date_str[:4]), int(ibja_date_str[5:7]), int(ibja_date_str[8:10])
         ibja_asof_dt = datetime(y, m, d, _IBJA_PUBLISH_UTC[0], _IBJA_PUBLISH_UTC[1], tzinfo=UTC)
     except Exception as exc:
-        logger.warning("_apply_ibja_fallback: could not parse ibja date %r: %s", ibja_date_str, exc)
+        logger.warning("_select_price_source: could not parse ibja date %r: %s", ibja_date_str, exc)
         return _noop
 
-    ibja_age_h = (now - ibja_asof_dt).total_seconds() / 3600
-    if ibja_age_h >= _IBJA_MAX_AGE_H:
+    ibja_age_days = (now - ibja_asof_dt).total_seconds() / 86400
+    if ibja_age_days >= _IBJA_DISPLAY_MAX_AGE_DAYS:
         logger.info(
-            "_apply_ibja_fallback: IBJA %s is %.1fh old (>= %dh) — genuinely stale",
+            "_select_price_source: IBJA %s is %.1fd old (>= %dd) — genuinely stale",
             ibja_date_str,
-            ibja_age_h,
-            _IBJA_MAX_AGE_H,
+            ibja_age_days,
+            _IBJA_DISPLAY_MAX_AGE_DAYS,
         )
         return _noop
 
@@ -277,7 +291,7 @@ def _apply_ibja_fallback(
     ibja_asof_iso = ibja_asof_dt.isoformat()
 
     logger.info(
-        "_apply_ibja_fallback: ibja_per_g=%.2f -> Rs.%d [Rs.%d-Rs.%d]  ibja_date=%s",
+        "_select_price_source: ibja_per_g=%.2f -> Rs.%d [Rs.%d-Rs.%d]  ibja_date=%s",
         ibja_per_g,
         ibja_calibrated_22k,
         est_low,
@@ -363,7 +377,7 @@ def main(now: datetime | None = None) -> None:
     )
 
     calibration: dict = _load_json(DATA_DIR / "calibration.json") or {}
-    current_22k, price_source, est_low, est_high, ibja_asof = _apply_ibja_fallback(
+    current_22k, price_source, est_low, est_high, ibja_asof = _select_price_source(
         current_22k, scraped_at, calibration, DATA_DIR, now
     )
 

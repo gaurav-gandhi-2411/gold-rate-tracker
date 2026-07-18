@@ -273,10 +273,8 @@ def test_valid_true_fresh_scrape_no_override(tmp_path: object, monkeypatch: obje
 
 @pytest.mark.smoke
 def test_valid_true_ibja_24h_old_still_activates(tmp_path: object, monkeypatch: object) -> None:
-    """Overnight gap: IBJA ~24h old (within the 30h window) → H5 still serves the estimate.
-
-    Before the window widen this fell through (8h gate); a 1-day-old PM fix is still
-    a sound daily estimate, so it must now activate.
+    """Overnight gap: IBJA ~24h old (well within the 14-day backstop) → H5 still serves
+    the estimate. A 1-day-old PM fix is a sound daily estimate under IBJA-primary (ADR 025).
     """
     monkeypatch.setattr(inf, "DATA_DIR", tmp_path)
 
@@ -302,12 +300,17 @@ def test_valid_true_ibja_24h_old_still_activates(tmp_path: object, monkeypatch: 
 
 
 @pytest.mark.smoke
-def test_valid_true_ibja_stale_weekend_falls_through(tmp_path: object, monkeypatch: object) -> None:
-    """Sunday noon: latest IBJA row is Friday (48.5h old → stale) → falls through to tanishq."""
+def test_valid_true_ibja_weekend_carry_forward_still_activates(
+    tmp_path: object, monkeypatch: object
+) -> None:
+    """ADR 025: Sunday noon, latest IBJA row is Friday's (48.5h old) → IBJA is now
+    PRIMARY, so this is expected weekend carry-forward, not staleness. Must still
+    serve the calibrated estimate (dated to Friday via ibja_asof), not fall through.
+    """
     monkeypatch.setattr(inf, "DATA_DIR", tmp_path)
 
     now = datetime(2026, 3, 15, 12, 0, tzinfo=UTC)  # Sunday noon UTC
-    # Last scrape at 03:00 UTC = 9h before now → stale
+    # Last scrape at 03:00 UTC = 9h before now → stale (expected — Tanishq enrichment absent)
     last_ts = datetime(2026, 3, 15, 3, 0, tzinfo=UTC)
     scraped_22k = 14320
     prices = _make_prices_with_last_ts(40, last_ts, last_22k=scraped_22k)
@@ -318,8 +321,45 @@ def test_valid_true_ibja_stale_weekend_falls_through(tmp_path: object, monkeypat
     (tmp_path / "calibration.json").write_text(
         json.dumps({"valid": True, "slope": 1.0, "intercept": 100.0, "residual_std": 50.0})
     )
-    # Friday row: ibja_asof = 2026-03-13T11:30 UTC; age at Sunday noon = 48.5h → stale
+    # Friday row: ibja_asof = 2026-03-13T11:30 UTC; age at Sunday noon = 48.5h — well
+    # within the 14-day backstop, so this is normal weekend carry-forward.
     _make_ibja_parquet(tmp_path, [{"date": "2026-03-13", "pm_916": 144000.0}])
+
+    inf.main(now=now)
+
+    fc = json.loads((tmp_path / "forecast.json").read_text())
+
+    assert fc["price_source"] == "ibja_calibrated", (
+        "weekend carry-forward must still serve the IBJA-calibrated estimate"
+    )
+    assert fc["current_22k"] == round(1.0 * 14400.0 + 100.0)  # 14500
+    assert fc["ibja_asof"] == "2026-03-13T11:30:00+00:00", (
+        "ibja_asof must carry Friday's date so the frontend can label it honestly"
+    )
+
+
+@pytest.mark.smoke
+def test_valid_true_ibja_beyond_backstop_falls_through(
+    tmp_path: object, monkeypatch: object
+) -> None:
+    """IBJA row 20 days old (beyond the 14-day defensive backstop) → falls through
+    to the last-confirmed Tanishq price rather than showing an absurdly old estimate.
+    """
+    monkeypatch.setattr(inf, "DATA_DIR", tmp_path)
+
+    now = datetime(2026, 3, 15, 12, 0, tzinfo=UTC)
+    last_ts = datetime(2026, 3, 15, 3, 0, tzinfo=UTC)  # 9h before now → stale
+    scraped_22k = 14320
+    prices = _make_prices_with_last_ts(40, last_ts, last_22k=scraped_22k)
+
+    (tmp_path / "prices.json").write_text(json.dumps(prices))
+    (tmp_path / "backtest.json").write_text(json.dumps(_make_backtest(35)))
+    (tmp_path / "chronos_probe.json").write_text(json.dumps(_make_probe("success")))
+    (tmp_path / "calibration.json").write_text(
+        json.dumps({"valid": True, "slope": 1.0, "intercept": 100.0, "residual_std": 50.0})
+    )
+    # 2026-02-23 row: 20 days before 2026-03-15 → beyond the 14-day backstop
+    _make_ibja_parquet(tmp_path, [{"date": "2026-02-23", "pm_916": 144000.0}])
 
     inf.main(now=now)
 

@@ -20,6 +20,8 @@ from pathlib import Path
 from statistics import median
 from zoneinfo import ZoneInfo
 
+from ml.ibja import compute_ibja_gap_business_days
+
 ROOT = Path(__file__).resolve().parent.parent
 DATA_DIR = ROOT / "data"
 
@@ -44,8 +46,8 @@ _T8_MORNING_UPPER_H = 14  # IST upper bound: suppress T8_MORNING at/after 14:00
 _T8_EVENING_THRESHOLD_H = 18  # IST lower bound: fire T8_EVENING at/after 18:00
 _T8_EVENING_UPPER_H = 22  # IST upper bound: suppress T8_EVENING at/after 22:00 (quiet-hours start)
 _T8_FLAT_THRESHOLD_RS = 25  # abs(delta) < this → "held steady" scenario
-_T9_STALE_THRESHOLD_H = 8  # prices.json entries older than this trigger T9
-_T9_ESCALATE_STALE_THRESHOLD_H = 16  # 2x T9 threshold -> distinct high-priority escalation
+_T9_IBJA_GAP_THRESHOLD_DAYS = 2  # business days w/o a new IBJA reading trigger T9 (ADR 025)
+_T9_ESCALATE_IBJA_GAP_THRESHOLD_DAYS = 4  # 2x T9 threshold -> distinct high-priority escalation
 _T10_GAP_THRESHOLD_DAYS = 2  # >=2 calendar days with no new PIT snapshot trigger T10
 
 SCHEMA_VERSION = 1
@@ -717,77 +719,70 @@ def _check_t8_evening(
 
 
 def _check_t9(
-    prices: list[dict],
+    ibja_gap_days: int | None,
     state: NotificationState,
     now_ist: datetime,
 ) -> PendingAlert | None:
-    """T9 — Data feed stale: prices.json last entry > 8h old. Once per IST calendar day.
+    """T9 — IBJA data feed stale: >= _T9_IBJA_GAP_THRESHOLD_DAYS business days since
+    the last valid IBJA reading. Once per IST calendar day.
 
-    Uses now_ist (not datetime.now(UTC)) for the freshness calculation so tests
-    can pass a fixed reference time without mocking.
-
-    Replaces the parallel shell-curl 'Alert on scraper failure' step and the
-    SCRAPER_DOWN_THIS_RUN staleness-guard suppression. Covers ALL staleness ages
-    with one IST-day cooldown, fixing the H4b silent-during-sustained-failure bug.
-    Does NOT count toward the T1+T2+T3 combined anti-spam cap.
+    Per ADR 025 (IBJA is now the PRIMARY price source, Tanishq an opportunistic
+    enrichment), Tanishq's scrape being stale is the expected steady state under
+    its sustained Cloudflare block — it is NOT an error and must NOT trip this
+    alert. What actually matters now is whether IBJA itself — the primary source
+    — is failing. Gap is measured in business days (ml.ibja.compute_ibja_gap_
+    business_days), not wall-clock hours, so IBJA's normal Sat/Sun silence never
+    false-alarms: a Friday close is 0 business-days stale all weekend and only 1
+    on Monday morning before that day's own publish lands. Returns None (no
+    alert) when ibja_gap_days is None — a missing/reset store is not a capture
+    failure, same convention as T10.
     """
-    now_utc = now_ist.astimezone(UTC)
-    if prices:
-        sorted_p = sorted(prices, key=lambda p: p["timestamp"])
-        ts_str = sorted_p[-1]["timestamp"].replace("Z", "+00:00")
-        latest_ts = datetime.fromisoformat(ts_str)
-        age_h = (now_utc - latest_ts).total_seconds() / 3600
-        if age_h <= _T9_STALE_THRESHOLD_H:
-            return None
-    else:
-        age_h = 999.0
+    if ibja_gap_days is None or ibja_gap_days < _T9_IBJA_GAP_THRESHOLD_DAYS:
+        return None
 
     today_ist = now_ist.strftime("%Y-%m-%d")
     if state.last_t9_ist_date == today_ist:
         return None
 
-    hours = int(age_h)
-    title = f"Gold Tracker: data stale ({hours}h)"
-    body = f"No new price reading in {hours}h. Scraper may be failing. Check CI logs."
+    title = f"Gold Tracker: IBJA data stale ({ibja_gap_days}d)"
+    body = (
+        f"No new IBJA reading in {ibja_gap_days} business days (weekends don't "
+        "count). IBJA is the primary price source per ADR 025 — check ibjarates.com "
+        "reachability and the ibja.py fetch step in check-price.yml."
+    )
     return _make_alert("T9", title, body, 4, ["warning"], now_ist)
 
 
 def _check_t9_escalate(
-    prices: list[dict],
+    ibja_gap_days: int | None,
     state: NotificationState,
     now_ist: datetime,
 ) -> PendingAlert | None:
-    """T9_ESCALATE — sustained data-feed outage: prices.json > 2x the T9 threshold old.
+    """T9_ESCALATE — sustained IBJA outage: >= _T9_ESCALATE_IBJA_GAP_THRESHOLD_DAYS
+    business days since the last valid IBJA reading (2x the routine T9 threshold).
 
-    T9 fires once per IST day regardless of how stale the feed gets, so a
-    multi-day outage produces the same priority-4 alert every day with no
-    signal that it's gotten worse. This fires a separate, higher-priority
-    (max, urgent) alert once per IST day when staleness has doubled past the
-    routine T9 threshold, so a single missed cycle stays quiet but a sustained
-    outage becomes impossible to miss. Bypasses quiet hours: a sustained
-    outage warrants immediate delivery even at night, unlike routine T9.
+    T9 fires once per IST day regardless of how stale IBJA gets, so a multi-day
+    outage produces the same priority-4 alert every day with no signal that it's
+    gotten worse. This fires a separate, higher-priority (max, urgent) alert once
+    per IST day when the business-day gap has doubled past the routine T9
+    threshold, so a single missed publish stays quiet but a sustained IBJA outage
+    becomes impossible to miss. Bypasses quiet hours: with IBJA now the primary
+    source (ADR 025), a sustained outage here means the site itself has nothing
+    fresher than a week-plus-old estimate — that warrants immediate delivery.
     """
-    now_utc = now_ist.astimezone(UTC)
-    if not prices:
-        age_h = 999.0
-    else:
-        sorted_p = sorted(prices, key=lambda p: p["timestamp"])
-        ts_str = sorted_p[-1]["timestamp"].replace("Z", "+00:00")
-        latest_ts = datetime.fromisoformat(ts_str)
-        age_h = (now_utc - latest_ts).total_seconds() / 3600
-        if age_h <= _T9_ESCALATE_STALE_THRESHOLD_H:
-            return None
+    if ibja_gap_days is None or ibja_gap_days < _T9_ESCALATE_IBJA_GAP_THRESHOLD_DAYS:
+        return None
 
     today_ist = now_ist.strftime("%Y-%m-%d")
     if state.last_t9_escalate_ist_date == today_ist:
         return None
 
-    hours = int(age_h)
-    title = f"Gold Tracker: SUSTAINED outage ({hours}h stale)"
+    title = f"Gold Tracker: SUSTAINED IBJA outage ({ibja_gap_days}d)"
     body = (
-        f"No new price reading in {hours}h ({hours // 24}d{hours % 24}h) — well beyond the "
-        f"{_T9_STALE_THRESHOLD_H}h routine-alert threshold. The scraper has likely been "
-        "failing for multiple consecutive cycles. Check check-price.yml logs now."
+        f"No new IBJA reading in {ibja_gap_days} business days — well beyond the "
+        f"{_T9_IBJA_GAP_THRESHOLD_DAYS}-business-day routine-alert threshold. IBJA is "
+        "the primary price source per ADR 025; the site has nothing fresher than a "
+        "multi-day-old estimate. Check ibjarates.com and the ibja.py fetch step now."
     )
     return _make_alert(
         "T9_ESCALATE", title, body, 5, ["rotating_light", "warning"], now_ist, bypass_quiet=True
@@ -836,8 +831,9 @@ def check_triggers(
     now_ist: datetime,
     calibration: dict | None = None,
     snapshot_gap_days: int | None = None,
+    ibja_gap_days: int | None = None,
 ) -> list[PendingAlert]:
-    """Evaluate all triggers (T1–T8); return new alerts for this call.
+    """Evaluate all triggers (T1–T10); return new alerts for this call.
 
     Cooldowns and combined caps are enforced here.  Quiet-hours queuing and
     delivery of previously queued alerts is the caller's responsibility (see
@@ -848,6 +844,9 @@ def check_triggers(
 
     calibration: optional dict from calibration.json. When provided and valid,
         triggers T6 (calibration-unlocked, fires once ever).
+    ibja_gap_days: business-day gap since the last valid IBJA reading (see
+        ml.ibja.compute_ibja_gap_business_days). Drives T9/T9_ESCALATE per
+        ADR 025 — Tanishq scrape staleness no longer does (it's expected).
     """
     alerts: list[PendingAlert] = []
     for fn in (_check_t1, _check_t2, _check_t3, _check_t4, _check_t5, _check_t7):
@@ -861,10 +860,10 @@ def check_triggers(
         alert = fn(forecast, probe, prices, backtest, state, now_ist)
         if alert is not None:
             alerts.append(alert)
-    t9 = _check_t9(prices, state, now_ist)
+    t9 = _check_t9(ibja_gap_days, state, now_ist)
     if t9 is not None:
         alerts.append(t9)
-    t9_escalate = _check_t9_escalate(prices, state, now_ist)
+    t9_escalate = _check_t9_escalate(ibja_gap_days, state, now_ist)
     if t9_escalate is not None:
         alerts.append(t9_escalate)
     t10 = _check_t10(snapshot_gap_days, state, now_ist)
@@ -1077,6 +1076,7 @@ def main() -> None:
     _prune_sent_today(state)
 
     snapshot_gap_days = compute_snapshot_gap_days(now_ist)
+    ibja_gap_days = compute_ibja_gap_business_days(now_ist)
 
     new_alerts = check_triggers(
         forecast,
@@ -1087,6 +1087,7 @@ def main() -> None:
         now_ist,
         calibration=calibration,
         snapshot_gap_days=snapshot_gap_days,
+        ibja_gap_days=ibja_gap_days,
     )
 
     if args.simulate:
@@ -1103,6 +1104,12 @@ def main() -> None:
         print(f"n_folds:      {n_folds}  (T1/T2 gate: >= 30)")
         gap_str = "n/a" if snapshot_gap_days is None else f"{snapshot_gap_days}d"
         print(f"Snapshot gap: {gap_str}  (T10 gate: >= {_T10_GAP_THRESHOLD_DAYS}d)")
+        ibja_gap_str = "n/a" if ibja_gap_days is None else f"{ibja_gap_days}bd"
+        print(
+            f"IBJA gap:     {ibja_gap_str}  "
+            f"(T9 gate: >= {_T9_IBJA_GAP_THRESHOLD_DAYS}bd, "
+            f"T9_ESCALATE gate: >= {_T9_ESCALATE_IBJA_GAP_THRESHOLD_DAYS}bd)"
+        )
         print(f"\nTriggers fired ({len(new_alerts)}):")
         if new_alerts:
             for a in new_alerts:

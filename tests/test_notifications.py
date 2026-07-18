@@ -2001,13 +2001,13 @@ def test_get_prior_day_price_returns_none_when_no_prior():
 
 
 # ---------------------------------------------------------------------------
-# T9 — Data feed stale (scraper health, IST-day deduped)
+# T9 — IBJA data feed stale (IST-day deduped) — ADR 025
 # ---------------------------------------------------------------------------
-# Fixes two bugs in the old two-path design:
-#   Over-alert: shell curl step re-fired on every transient cluster restart.
-#   H4b under-alert: when age >12h, shell step AND staleness guard BOTH
-#     suppressed themselves — zero alerts during sustained failures.
-# T9 fires at most once per IST calendar day across ALL staleness ages.
+# Per ADR 025, IBJA is now the PRIMARY price source and Tanishq an opportunistic
+# enrichment. Tanishq scrape staleness is the expected steady state under its
+# sustained Cloudflare block and must NOT trip this alert — only a business-day
+# gap in IBJA itself (ml.ibja.compute_ibja_gap_business_days) does.
+# T9 fires at most once per IST calendar day across all gap sizes >= threshold.
 # ---------------------------------------------------------------------------
 
 _T9_NOW_IST = _ist(2026, 6, 7, 14, 0)  # reference time for T9 tests
@@ -2019,8 +2019,43 @@ def _prices_aged(age_h: float, now_ist: datetime = _T9_NOW_IST) -> list[dict]:
     return [{"timestamp": ts, "22k": 14000, "24k": 14500, "18k": 13500, "source": "test"}]
 
 
-def test_t9_fires_when_prices_stale():
-    """T9 fires when prices.json latest entry is > 8h old."""
+def test_t9_fires_when_ibja_gap_at_threshold():
+    """T9 fires when the IBJA business-day gap is >= 2 (the routine threshold)."""
+    alerts = check_triggers(
+        _forecast(),
+        _probe(),
+        _prices_aged(9.0),  # Tanishq stale too — expected, must NOT itself trigger anything
+        _backtest_accurate(),
+        NotificationState(),
+        _T9_NOW_IST,
+        ibja_gap_days=2,
+    )
+    t9 = [a for a in alerts if a.trigger_id == "T9"]
+    assert len(t9) == 1, "T9 must fire when the IBJA gap is 2 business days"
+    assert "₹" not in t9[0].title, "T9 title must be ASCII-safe (no ₹)"
+    assert "₹" not in t9[0].body, "T9 body must be ASCII-safe (no ₹)"
+
+
+def test_t9_no_fire_when_ibja_gap_below_threshold():
+    """T9 does not fire when the IBJA gap is 0 or 1 business day (normal weekday lag
+    or expected weekend/holiday silence) — regardless of Tanishq's own staleness."""
+    alerts = check_triggers(
+        _forecast(),
+        _probe(),
+        _prices_aged(200.0),  # Tanishq badly stale — must be irrelevant to T9 now
+        _backtest_accurate(),
+        NotificationState(),
+        _T9_NOW_IST,
+        ibja_gap_days=1,
+    )
+    assert all(a.trigger_id != "T9" for a in alerts), (
+        "T9 must NOT fire on a 1-business-day IBJA gap, however stale Tanishq is"
+    )
+
+
+def test_t9_no_fire_when_ibja_gap_none():
+    """T9 does not fire when ibja_gap_days is None (missing/reset IBJA store —
+    not a capture failure, same convention as T10)."""
     alerts = check_triggers(
         _forecast(),
         _probe(),
@@ -2028,83 +2063,70 @@ def test_t9_fires_when_prices_stale():
         _backtest_accurate(),
         NotificationState(),
         _T9_NOW_IST,
+        ibja_gap_days=None,
     )
-    t9 = [a for a in alerts if a.trigger_id == "T9"]
-    assert len(t9) == 1, "T9 must fire when prices are 9h stale"
-    assert "₹" not in t9[0].title, "T9 title must be ASCII-safe (no ₹)"
-    assert "₹" not in t9[0].body, "T9 body must be ASCII-safe (no ₹)"
-
-
-def test_t9_no_fire_when_prices_fresh():
-    """T9 does not fire when prices.json is < 8h old."""
-    alerts = check_triggers(
-        _forecast(),
-        _probe(),
-        _prices_aged(3.0),
-        _backtest_accurate(),
-        NotificationState(),
-        _T9_NOW_IST,
-    )
-    assert all(a.trigger_id != "T9" for a in alerts), "T9 must NOT fire on fresh prices"
+    assert all(a.trigger_id != "T9" for a in alerts)
 
 
 def test_t9_at_most_one_per_ist_day():
-    """Multi-cluster-per-day dedup: T9 fires once on first stale run, not again same IST day.
+    """Dedup: T9 fires once on first gapped run, not again same IST day.
 
-    Simulates two transient-cluster failures in the same IST day.
-    Run 1 (10:00 IST): data 9h stale -> T9 fires, IST-date stamped.
-    Run 2 (13:00 IST, same day): data still stale -> T9 suppressed by dedup.
+    Run 1 (10:00 IST): IBJA gap=3 -> T9 fires, IST-date stamped.
+    Run 2 (13:00 IST, same day): gap still 3 -> T9 suppressed by dedup.
     """
     now_run1 = _ist(2026, 6, 7, 10, 0)
     now_run2 = _ist(2026, 6, 7, 13, 0)
 
-    stale_ts = (now_run1.astimezone(UTC) - timedelta(hours=9)).isoformat().replace("+00:00", "Z")
-    stale_prices = [
-        {"timestamp": stale_ts, "22k": 14000, "24k": 14500, "18k": 13500, "source": "test"}
-    ]
-
     state = NotificationState()
     alerts_r1 = check_triggers(
-        _forecast(), _probe(), stale_prices, _backtest_accurate(), state, now_run1
+        _forecast(),
+        _probe(),
+        _prices_aged(1.0, now_run1),
+        _backtest_accurate(),
+        state,
+        now_run1,
+        ibja_gap_days=3,
     )
     t9_r1 = [a for a in alerts_r1 if a.trigger_id == "T9"]
-    assert len(t9_r1) == 1, "Run 1: T9 must fire (first stale alert today)"
+    assert len(t9_r1) == 1, "Run 1: T9 must fire (first gapped alert today)"
 
     # Stamp the IST-date dedup — mirrors what main() does via _stamp_ist_dedup
     _stamp_ist_dedup("T9", state, now_run1)
 
     alerts_r2 = check_triggers(
-        _forecast(), _probe(), stale_prices, _backtest_accurate(), state, now_run2
+        _forecast(),
+        _probe(),
+        _prices_aged(1.0, now_run2),
+        _backtest_accurate(),
+        state,
+        now_run2,
+        ibja_gap_days=3,
     )
     t9_r2 = [a for a in alerts_r2 if a.trigger_id == "T9"]
     assert len(t9_r2) == 0, "Run 2 (same IST day): T9 must NOT fire again — IST-day dedup"
 
 
-def test_t9_h4b_sustained_fires_on_day_2():
-    """H4b regression: sustained >12h scraper failure alerts on the next IST day.
-
-    Before the fix: shell step suppressed itself (age > 12h) AND staleness guard
-    suppressed itself (SCRAPER_DOWN_THIS_RUN) -> zero alerts for sustained outages.
-    After the fix: T9 fires once per IST day, so a sustained failure spanning two
-    IST days produces an alert on each day.
+def test_t9_sustained_gap_fires_on_day_2():
+    """A sustained IBJA outage spanning two IST days alerts on each day.
 
     Day 1 (2026-06-07): T9 fired, last_t9_ist_date = "2026-06-07".
-    Day 2 (2026-06-08): data still stale (20h old) -> T9 must fire again.
+    Day 2 (2026-06-08): gap still >= threshold -> T9 must fire again.
     """
     state = NotificationState()
     state.last_t9_ist_date = "2026-06-07"  # simulates Day 1 send
 
     now_day2 = _ist(2026, 6, 8, 14, 0)
-    stale_ts = (now_day2.astimezone(UTC) - timedelta(hours=20)).isoformat().replace("+00:00", "Z")
-    stale_prices = [
-        {"timestamp": stale_ts, "22k": 14000, "24k": 14500, "18k": 13500, "source": "test"}
-    ]
-
     alerts = check_triggers(
-        _forecast(), _probe(), stale_prices, _backtest_accurate(), state, now_day2
+        _forecast(),
+        _probe(),
+        _prices_aged(1.0, now_day2),
+        _backtest_accurate(),
+        state,
+        now_day2,
+        ibja_gap_days=4,
     )
     t9 = [a for a in alerts if a.trigger_id == "T9"]
-    assert len(t9) == 1, "H4b: T9 must fire on day 2 of sustained failure (different IST day)"
+    assert len(t9) == 1, "T9 must fire on day 2 of a sustained IBJA gap (different IST day)"
 
 
 def test_t9_not_counted_in_t123_cap():
@@ -2127,6 +2149,7 @@ def test_t9_not_counted_in_t123_cap():
         _backtest_accurate(),
         state,
         _T9_NOW_IST,
+        ibja_gap_days=2,
     )
     assert any(a.trigger_id == "T9" for a in alerts), "T9 must fire even when T1/T2/T3 cap is full"
 
@@ -2204,27 +2227,28 @@ def test_stamp_ist_dedup_t9():
 
 
 # ---------------------------------------------------------------------------
-# T9_ESCALATE — Sustained data-feed outage (2x T9 threshold, IST-day deduped)
+# T9_ESCALATE — Sustained IBJA outage (2x T9 threshold, IST-day deduped)
 # ---------------------------------------------------------------------------
-# T9 fires once per IST day regardless of how stale the feed gets, so a
-# multi-day outage looks identical (priority 4) to a single 9h blip. This
-# fires a separate, higher-priority alert once staleness doubles past the
-# routine T9 threshold, so sustained outages escalate instead of staying flat.
+# T9 fires once per IST day regardless of how large the IBJA gap gets, so a
+# multi-day outage looks identical (priority 4) to a single missed publish.
+# This fires a separate, higher-priority alert once the business-day gap
+# doubles past the routine T9 threshold, so sustained outages escalate.
 # ---------------------------------------------------------------------------
 
 
-def test_t9_escalate_fires_when_sustained_stale():
-    """T9_ESCALATE fires when prices.json latest entry is > 16h old."""
+def test_t9_escalate_fires_when_ibja_gap_sustained():
+    """T9_ESCALATE fires when the IBJA gap is >= 4 business days."""
     alerts = check_triggers(
         _forecast(),
         _probe(),
-        _prices_aged(17.0),
+        _prices_aged(1.0),
         _backtest_accurate(),
         NotificationState(),
         _T9_NOW_IST,
+        ibja_gap_days=4,
     )
     esc = [a for a in alerts if a.trigger_id == "T9_ESCALATE"]
-    assert len(esc) == 1, "T9_ESCALATE must fire when prices are 17h stale"
+    assert len(esc) == 1, "T9_ESCALATE must fire when the IBJA gap is 4 business days"
     assert esc[0].priority == 5, "T9_ESCALATE must be max priority"
     assert esc[0].bypass_quiet, "T9_ESCALATE must bypass quiet hours — sustained outage is urgent"
     assert "₹" not in esc[0].title
@@ -2232,19 +2256,20 @@ def test_t9_escalate_fires_when_sustained_stale():
 
 
 def test_t9_escalate_no_fire_below_threshold():
-    """T9_ESCALATE does not fire when staleness is between the T9 and escalate thresholds."""
+    """T9_ESCALATE does not fire when the gap is between the T9 and escalate thresholds."""
     alerts = check_triggers(
         _forecast(),
         _probe(),
-        _prices_aged(9.0),
+        _prices_aged(1.0),
         _backtest_accurate(),
         NotificationState(),
         _T9_NOW_IST,
+        ibja_gap_days=2,
     )
     assert all(a.trigger_id != "T9_ESCALATE" for a in alerts), (
-        "T9_ESCALATE must NOT fire at 9h — only routine T9 should fire"
+        "T9_ESCALATE must NOT fire at gap=2 — only routine T9 should fire"
     )
-    assert any(a.trigger_id == "T9" for a in alerts), "T9 should still fire at 9h"
+    assert any(a.trigger_id == "T9" for a in alerts), "T9 should still fire at gap=2"
 
 
 def test_t9_escalate_fires_alongside_t9():
@@ -2252,30 +2277,42 @@ def test_t9_escalate_fires_alongside_t9():
     alerts = check_triggers(
         _forecast(),
         _probe(),
-        _prices_aged(20.0),
+        _prices_aged(1.0),
         _backtest_accurate(),
         NotificationState(),
         _T9_NOW_IST,
+        ibja_gap_days=5,
     )
     ids = {a.trigger_id for a in alerts}
-    assert {"T9", "T9_ESCALATE"} <= ids, "sustained staleness must fire both T9 and T9_ESCALATE"
+    assert {"T9", "T9_ESCALATE"} <= ids, "sustained IBJA gap must fire both T9 and T9_ESCALATE"
 
 
 def test_t9_escalate_at_most_one_per_ist_day():
     """T9_ESCALATE dedups per IST day, independent of T9's own dedup."""
     now_run1 = _ist(2026, 6, 7, 10, 0)
     now_run2 = _ist(2026, 6, 7, 13, 0)
-    stale_prices = _prices_aged(20.0, now_ist=now_run1)
 
     state = NotificationState()
     alerts_r1 = check_triggers(
-        _forecast(), _probe(), stale_prices, _backtest_accurate(), state, now_run1
+        _forecast(),
+        _probe(),
+        _prices_aged(1.0, now_run1),
+        _backtest_accurate(),
+        state,
+        now_run1,
+        ibja_gap_days=5,
     )
     assert any(a.trigger_id == "T9_ESCALATE" for a in alerts_r1)
     state.last_t9_escalate_ist_date = now_run1.strftime("%Y-%m-%d")
 
     alerts_r2 = check_triggers(
-        _forecast(), _probe(), stale_prices, _backtest_accurate(), state, now_run2
+        _forecast(),
+        _probe(),
+        _prices_aged(1.0, now_run2),
+        _backtest_accurate(),
+        state,
+        now_run2,
+        ibja_gap_days=5,
     )
     assert all(a.trigger_id != "T9_ESCALATE" for a in alerts_r2), (
         "T9_ESCALATE must NOT fire again same IST day"
