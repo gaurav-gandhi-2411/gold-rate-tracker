@@ -10,7 +10,6 @@ pdfplumber>=0.11.9
 pytest>=9.1.0
 yfinance>=1.4.1
 pyarrow>=24.0.0
-hmmlearn>=0.3.0
 onnxruntime>=1.26.0
 chronos-forecasting>=2.2.2
 jsonschema>=4.26.0

@@ -39,17 +39,13 @@ warn_unused_ignores = false               # existing code has # type: ignore com
 files = ["ml"]
 
 # Pre-existing files with type issues that predate mypy enforcement — skip for now.
-# New ml/ files (tracking.py, logging_setup.py, config.py) are checked by default.
+# New ml/ files (e.g. logging_setup.py) are checked by default.
 [[tool.mypy.overrides]]
 module = [
     "ml.features",
-    "ml.forecast",
     "ml.macro",
-    "ml.regime",
     "ml.backtest",
     "ml.commentary",
-    "ml.models.lgbm",
-    "ml.training.train_lgbm",
     "ml.inference",
 ]
 ignore_errors = true

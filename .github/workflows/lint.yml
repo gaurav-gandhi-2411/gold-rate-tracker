@@ -29,18 +29,12 @@ jobs:
         run: pip install -q -r ml/requirements.txt
       - name: Run smoke tests
         run: pytest tests/test_inference_main.py -m smoke -v
-      # tests/test_promotion.py and tests/test_tuning.py don't exist in this repo —
-      # their --ignore entries predate this comment and are pre-existing, harmless
-      # no-ops (not touched by ADR 024's MLflow/Hydra removal, which is a separate
-      # cleanup: see docs/adr/024-remove-mlflow-hydra-scaffolding.md).
       # Integration tests excluded here (norm #11): @pytest.mark.integration tests make
       # live network calls (HuggingFace model download). They run non-gating in
       # weekly-backtest.yml where the Chronos cache is warm and continue-on-error: true.
       - name: Run full pytest suite
         run: |
           pytest \
-            --ignore=tests/test_promotion.py \
-            --ignore=tests/test_tuning.py \
             -m "not integration" \
             tests/ -v
 
