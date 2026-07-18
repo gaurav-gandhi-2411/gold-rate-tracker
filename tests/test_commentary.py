@@ -14,9 +14,11 @@ from __future__ import annotations
 import json
 from unittest.mock import MagicMock, patch
 
+import pytest
 from ml.commentary import (
     MAX_COMMENTARY_ENTRIES,
     SYSTEM_PROMPT,
+    _violates_content_policy,
     append_commentary,
     build_user_message,
     call_groq,
@@ -71,7 +73,10 @@ SAMPLE_BACKTEST = {
     "baseline": {"mae": 135.0, "mape": 1.88, "direction_acc": 0.51},
 }
 
-MOCK_NOTE = "Gold prices are steady near ₹7,180 per gram. The model expects little change in the next reading."
+MOCK_NOTE = (
+    "Gold prices are steady near ₹7,180 per gram, about where they've been over the past week. "
+    "Nothing unusual to report today."
+)
 
 
 # ---------------------------------------------------------------------------
@@ -272,6 +277,54 @@ class TestCallGroq:
 
 
 # ---------------------------------------------------------------------------
+# _violates_content_policy — output-side guard (audit fix)
+# ---------------------------------------------------------------------------
+
+
+class TestViolatesContentPolicy:
+    def test_clean_compliant_text_passes(self):
+        """A clean note using only the allowed past-tense direction framing passes."""
+        text = (
+            "Gold prices have eased a little over the past week, now near ₹7,180 per gram. "
+            "That's around what it's been lately."
+        )
+        assert _violates_content_policy(text, directional_signal_available=True) is None
+
+    def test_clean_text_with_no_signal_passes(self):
+        """A clean note with no directional language passes when the signal is unavailable."""
+        text = "Gold is trading near ₹7,180 per gram today, about where it's been lately."
+        assert _violates_content_policy(text, directional_signal_available=False) is None
+
+    def test_banned_word_detected(self):
+        """A generation that leaks a banned jargon word is flagged, whatever else it says."""
+        text = "Gold is steady today. Based on the model's bullish outlook, prices held firm."
+        reason = _violates_content_policy(text, directional_signal_available=True)
+        assert reason is not None
+        assert "banned word" in reason
+
+    def test_forward_looking_language_detected(self):
+        """Forward-looking modal + direction verb combos are exactly what the prompt bans."""
+        text = "Gold may keep climbing toward festival season, buyers should take note."
+        reason = _violates_content_policy(text, directional_signal_available=True)
+        assert reason is not None
+        assert "forward-looking" in reason
+
+    def test_directional_claim_while_signal_unavailable_detected(self):
+        """DARK-gate contradiction: any directional claim when the signal isn't earned yet,
+        even plain past-tense language that would otherwise be allowed.
+        """
+        text = "Gold prices have risen a little this week, now near ₹7,180 per gram."
+        reason = _violates_content_policy(text, directional_signal_available=False)
+        assert reason is not None
+        assert "directional_signal_available=False" in reason
+
+    def test_directional_claim_allowed_when_signal_available(self):
+        """The same past-tense phrasing is fine once the signal is available."""
+        text = "Gold prices have risen a little this week, now near ₹7,180 per gram."
+        assert _violates_content_policy(text, directional_signal_available=True) is None
+
+
+# ---------------------------------------------------------------------------
 # End-to-end main() (fully mocked)
 # ---------------------------------------------------------------------------
 
@@ -303,3 +356,44 @@ class TestMain:
         assert entry["model"] == "llama-3.3-70b-versatile"
         assert "prompt_hash" in entry
         assert "ts" in entry
+
+    @patch("ml.commentary.requests.post")
+    def test_main_falls_back_when_content_policy_violated(self, mock_post, tmp_path, monkeypatch):
+        """audit fix: a Groq generation that ignores SYSTEM_PROMPT (banned word leaked)
+        must NOT be written to commentary.json — main() falls back to the last good entry,
+        the same path used for Groq API errors.
+        """
+        import ml.commentary as comm
+
+        monkeypatch.setattr(comm, "DATA_DIR", tmp_path)
+        monkeypatch.setenv("GROQ_API_KEY", "test-key")
+
+        (tmp_path / "prices.json").write_text(json.dumps(SAMPLE_PRICES))
+        (tmp_path / "forecast.json").write_text(json.dumps(SAMPLE_FORECAST))
+        (tmp_path / "backtest.json").write_text(json.dumps(SAMPLE_BACKTEST))
+
+        last_good = {
+            "ts": "2026-05-08T00:00:00Z",
+            "text": "Gold prices are steady near ₹7,180 per gram, about where they've been lately.",
+            "model": "llama-3.3-70b-versatile",
+            "prompt_hash": "priorhash001",
+        }
+        (tmp_path / "commentary.json").write_text(json.dumps([last_good]))
+
+        violating_text = "Gold's bullish outlook, per the model, means prices may keep climbing."
+        mock_resp = MagicMock()
+        mock_resp.raise_for_status = MagicMock()
+        mock_resp.json.return_value = {"choices": [{"message": {"content": violating_text}}]}
+        mock_post.return_value = mock_resp
+
+        with pytest.raises(SystemExit) as exc_info:
+            comm.main()
+        assert exc_info.value.code == 0
+
+        out = json.loads((tmp_path / "commentary.json").read_text())
+        # The last-good entry is re-surfaced (fallback=True); the violating text
+        # is never written anywhere in commentary.json.
+        assert violating_text not in [e["text"] for e in out]
+        entry = out[-1]
+        assert entry["text"] == last_good["text"]
+        assert entry.get("fallback") is True
