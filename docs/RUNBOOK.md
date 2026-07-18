@@ -32,9 +32,12 @@ cd gold-rate-tracker
 pre-commit install
 ```
 
-> **Local training infra retired (ADR 009/010).** `ml/requirements-train.txt`,
+> **Local training infra retired (ADR 009/010/014).** `ml/requirements-train.txt`,
 > `scripts/win/setup-train.ps1`, and the `make setup-train` target were removed.
-> LightGBM, TFT, N-BEATS, and MLflow are no longer part of this repo.
+> LightGBM, TFT, and N-BEATS are no longer part of this repo. MLflow
+> (`docker-compose.yml`'s `mlflow` service, `ml/tracking.py`) is still present
+> but is dead infra with zero production callers — nothing trains anymore
+> that would need tracking (see [ARCHITECTURE.md](ARCHITECTURE.md#retired-components)).
 
 ---
 
