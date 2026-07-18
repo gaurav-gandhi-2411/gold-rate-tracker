@@ -1,20 +1,24 @@
 """WS1 — three-layer scraper degradation chain (cross-layer integration).
 
 Failure mode #3 from the orchestrator brief: "Both Worker AND Playwright miss in
-a cycle". This proves that a single stale prices.json fixture simultaneously
-drives BOTH downstream safety layers off the same data:
+a cycle". Per ADR 025, Tanishq being blocked is now the EXPECTED steady state
+(sustained Cloudflare block) and IBJA is the PRIMARY source — this file proves
+the two downstream layers agree on what's actually alertable:
 
-  - ml.inference   -> H5 IBJA-calibrated estimate floor (price_source field)
-  - ml.notifications -> T9 "data stale" alert (>8h)
-
-and that the user NEVER sees a dead price: even when H5 cannot activate (IBJA
-itself stale), current_22k stays the last real scraped value, not null.
+  - ml.inference      -> H5 IBJA-calibrated estimate (price_source field),
+                         active whenever IBJA has a usable reading, not just as
+                         an occasional fallback.
+  - ml.notifications  -> T9 "IBJA data stale" alert, driven by the IBJA
+                         business-day gap (ml.ibja.compute_ibja_gap_business_days),
+                         NOT by Tanishq's scrape freshness. A Tanishq-blocked
+                         cycle with IBJA fresh (or on its normal weekend
+                         carry-forward) must NOT alert — that's the new normal.
 
 These layers have unit tests of their own (test_inference_h5_fallback.py,
 test_notifications.py). This file is deliberately an integration test: it runs
-the real inference.main() to write forecast.json, then feeds that SAME stale
-prices list into the real notifications.check_triggers(), asserting the two
-layers agree on the staleness and degrade together.
+the real inference.main() to write forecast.json, then computes the matching
+IBJA gap the same way main() does, and feeds both into the real
+notifications.check_triggers(), asserting the two layers agree.
 
 Self-contained fixtures (norm: do NOT import helpers from sibling test modules).
 """
@@ -27,6 +31,7 @@ from datetime import UTC, datetime, timedelta, timezone
 import ml.inference as inf
 import pandas as pd
 import pytest
+from ml.ibja import compute_ibja_gap_business_days
 from ml.notifications import NotificationState, check_triggers
 
 IST = timezone(timedelta(hours=5, minutes=30))
@@ -115,26 +120,28 @@ _VALID_CAL = {"valid": True, "slope": 1.0, "intercept": 100.0, "residual_std": 5
 
 
 # ---------------------------------------------------------------------------
-# Scenario 1 — both scrape paths miss, IBJA fresh: H5 fires AND T9 fires
+# Scenario 1 — Tanishq blocked, IBJA fresh: the new normal (ADR 025).
+# H5 fires; T9 must NOT — a Tanishq-blocked cycle with healthy IBJA is expected.
 # ---------------------------------------------------------------------------
 
 
 @pytest.mark.smoke
-def test_both_miss_ibja_fresh_h5_and_t9_fire_together(tmp_path, monkeypatch) -> None:
+def test_tanishq_blocked_ibja_fresh_h5_fires_t9_silent(tmp_path, monkeypatch) -> None:
     monkeypatch.setattr(inf, "DATA_DIR", tmp_path)
 
     now = datetime(2026, 3, 15, 13, 30, tzinfo=UTC)  # IBJA (11:30 UTC) is 2h old -> fresh
-    last_ts = datetime(2026, 3, 15, 4, 0, tzinfo=UTC)  # 9.5h before now -> stale (>8h)
+    last_ts = datetime(2026, 3, 15, 4, 0, tzinfo=UTC)  # 9.5h before now -> stale (expected)
     prices = _prices_with_last_ts(40, last_ts, last_22k=14320)
     # ibja_per_g = 144000/10 = 14400; calibrated = round(1.0*14400 + 100) = 14500
-    _write_inputs(tmp_path, prices, _VALID_CAL, [{"date": "2026-03-15", "pm_916": 144000.0}])
+    ibja_rows = [{"date": "2026-03-15", "pm_916": 144000.0}]
+    _write_inputs(tmp_path, prices, _VALID_CAL, ibja_rows)
 
-    # Layer A: inference H5 estimate floor.
+    # Layer A: inference H5 estimate — now the primary display path.
     inf.main(now=now)
     fc = json.loads((tmp_path / "forecast.json").read_text())
 
     assert fc["price_source"] == "ibja_calibrated", (
-        "H5 must serve the IBJA estimate on a stale scrape"
+        "H5 must serve the IBJA estimate on a Tanishq-blocked cycle"
     )
     assert fc["current_22k"] == 14500, (
         "user sees the calibrated live estimate, not the stale scrape"
@@ -142,31 +149,86 @@ def test_both_miss_ibja_fresh_h5_and_t9_fire_together(tmp_path, monkeypatch) -> 
     assert fc["current_22k"] is not None and fc["current_22k"] > 0, "price must never be dead"
     assert fc["est_low"] == 14450 and fc["est_high"] == 14550
 
-    # Layer B: notifications T9, driven off the SAME stale prices list.
+    # Layer B: notifications T9, driven off the IBJA gap (not Tanishq's staleness).
     now_ist = now.astimezone(IST)
-    alerts = check_triggers(fc, _probe_flat(), prices, _backtest(35), NotificationState(), now_ist)
-    t9 = [a for a in alerts if a.trigger_id == "T9"]
-    assert len(t9) == 1, "T9 must fire off the same >8h-stale prices.json that triggered H5"
-    assert "₹" not in t9[0].title and "₹" not in t9[0].body, "T9 payload must be ASCII-safe"
+    ibja_gap = compute_ibja_gap_business_days(now_ist, tmp_path / "ibja_rates.parquet")
+    assert ibja_gap == 0, "IBJA published today — gap must be 0"
+    alerts = check_triggers(
+        fc,
+        _probe_flat(),
+        prices,
+        _backtest(35),
+        NotificationState(),
+        now_ist,
+        ibja_gap_days=ibja_gap,
+    )
+    assert all(a.trigger_id != "T9" for a in alerts), (
+        "T9 must NOT fire — Tanishq-blocked-with-fresh-IBJA is the expected steady state"
+    )
 
 
 # ---------------------------------------------------------------------------
-# Scenario 2 — both miss AND IBJA stale: H5 cannot activate, but no dead price
+# Scenario 2 — Tanishq blocked, IBJA on normal weekend carry-forward.
+# H5 still fires (dated to Friday); T9 still must NOT fire — the weekend gap is 0.
 # ---------------------------------------------------------------------------
 
 
 @pytest.mark.smoke
-def test_both_miss_ibja_stale_falls_to_last_real_price_t9_still_fires(
-    tmp_path, monkeypatch
-) -> None:
+def test_tanishq_blocked_ibja_weekend_carry_forward_t9_silent(tmp_path, monkeypatch) -> None:
     monkeypatch.setattr(inf, "DATA_DIR", tmp_path)
 
     now = datetime(2026, 3, 15, 12, 0, tzinfo=UTC)  # Sunday noon
+    last_ts = datetime(2026, 3, 15, 3, 0, tzinfo=UTC)  # 9h before now -> stale (expected)
+    scraped_22k = 14320
+    prices = _prices_with_last_ts(40, last_ts, last_22k=scraped_22k)
+    # IBJA row is Friday 2026-03-13 (asof 11:30 UTC) -> 48.5h old, but well within the
+    # 14-day display backstop — this is normal weekend carry-forward, not staleness.
+    ibja_rows = [{"date": "2026-03-13", "pm_916": 144000.0}]
+    _write_inputs(tmp_path, prices, _VALID_CAL, ibja_rows)
+
+    inf.main(now=now)
+    fc = json.loads((tmp_path / "forecast.json").read_text())
+
+    assert fc["price_source"] == "ibja_calibrated", (
+        "weekend carry-forward must still serve the IBJA-calibrated estimate"
+    )
+    assert fc["current_22k"] == 14500
+    assert fc["ibja_asof"] == "2026-03-13T11:30:00+00:00", "must carry Friday's date"
+
+    now_ist = now.astimezone(IST)
+    ibja_gap = compute_ibja_gap_business_days(now_ist, tmp_path / "ibja_rates.parquet")
+    assert ibja_gap == 0, "Fri->Sun is 0 business days — weekends never count toward the gap"
+    alerts = check_triggers(
+        fc,
+        _probe_flat(),
+        prices,
+        _backtest(35),
+        NotificationState(),
+        now_ist,
+        ibja_gap_days=ibja_gap,
+    )
+    assert all(a.trigger_id != "T9" for a in alerts), (
+        "T9 must NOT fire on a normal weekend carry-forward"
+    )
+
+
+# ---------------------------------------------------------------------------
+# Scenario 3 — Tanishq blocked AND IBJA genuinely stale (beyond the 14-day
+# backstop): H5 cannot activate, falls to last real price; T9 DOES fire.
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.smoke
+def test_both_sources_stale_falls_to_last_real_price_t9_fires(tmp_path, monkeypatch) -> None:
+    monkeypatch.setattr(inf, "DATA_DIR", tmp_path)
+
+    now = datetime(2026, 3, 15, 12, 0, tzinfo=UTC)
     last_ts = datetime(2026, 3, 15, 3, 0, tzinfo=UTC)  # 9h before now -> stale
     scraped_22k = 14320
     prices = _prices_with_last_ts(40, last_ts, last_22k=scraped_22k)
-    # IBJA row is Friday 2026-03-13 (asof 11:30 UTC) -> 48.5h old -> stale -> H5 falls through.
-    _write_inputs(tmp_path, prices, _VALID_CAL, [{"date": "2026-03-13", "pm_916": 144000.0}])
+    # 2026-02-23 -> 20 days before now -> beyond the 14-day backstop -> H5 falls through.
+    ibja_rows = [{"date": "2026-02-23", "pm_916": 144000.0}]
+    _write_inputs(tmp_path, prices, _VALID_CAL, ibja_rows)
 
     inf.main(now=now)
     fc = json.loads((tmp_path / "forecast.json").read_text())
@@ -178,14 +240,26 @@ def test_both_miss_ibja_stale_falls_to_last_real_price_t9_still_fires(
     assert fc["current_22k"] is not None and fc["current_22k"] > 0
     assert fc.get("est_low") is None and fc.get("est_high") is None
 
-    # T9 still fires so the user is told the feed is stale.
+    # T9 fires — a genuine multi-week IBJA outage is exactly what it exists to catch.
     now_ist = now.astimezone(IST)
-    alerts = check_triggers(fc, _probe_flat(), prices, _backtest(35), NotificationState(), now_ist)
-    assert any(a.trigger_id == "T9" for a in alerts), "T9 must fire even when H5 cannot activate"
+    ibja_gap = compute_ibja_gap_business_days(now_ist, tmp_path / "ibja_rates.parquet")
+    assert ibja_gap is not None and ibja_gap >= 2
+    alerts = check_triggers(
+        fc,
+        _probe_flat(),
+        prices,
+        _backtest(35),
+        NotificationState(),
+        now_ist,
+        ibja_gap_days=ibja_gap,
+    )
+    assert any(a.trigger_id == "T9" for a in alerts), (
+        "T9 must fire on a genuine multi-week IBJA outage, even though H5 cannot activate"
+    )
 
 
 # ---------------------------------------------------------------------------
-# Scenario 3 — fresh scrape: neither layer activates (negative control)
+# Scenario 4 — everything fresh: negative control, neither layer activates.
 # ---------------------------------------------------------------------------
 
 
@@ -196,7 +270,8 @@ def test_fresh_scrape_no_h5_no_t9(tmp_path, monkeypatch) -> None:
     now = datetime(2026, 3, 15, 13, 30, tzinfo=UTC)
     last_ts = datetime(2026, 3, 15, 12, 0, tzinfo=UTC)  # 1.5h old -> fresh
     prices = _prices_with_last_ts(40, last_ts, last_22k=14320)
-    _write_inputs(tmp_path, prices, _VALID_CAL, [{"date": "2026-03-15", "pm_916": 144000.0}])
+    ibja_rows = [{"date": "2026-03-15", "pm_916": 144000.0}]
+    _write_inputs(tmp_path, prices, _VALID_CAL, ibja_rows)
 
     inf.main(now=now)
     fc = json.loads((tmp_path / "forecast.json").read_text())
@@ -204,5 +279,14 @@ def test_fresh_scrape_no_h5_no_t9(tmp_path, monkeypatch) -> None:
     assert fc["current_22k"] == 14320
 
     now_ist = now.astimezone(IST)
-    alerts = check_triggers(fc, _probe_flat(), prices, _backtest(35), NotificationState(), now_ist)
-    assert all(a.trigger_id != "T9" for a in alerts), "T9 must not fire on a fresh scrape"
+    ibja_gap = compute_ibja_gap_business_days(now_ist, tmp_path / "ibja_rates.parquet")
+    alerts = check_triggers(
+        fc,
+        _probe_flat(),
+        prices,
+        _backtest(35),
+        NotificationState(),
+        now_ist,
+        ibja_gap_days=ibja_gap,
+    )
+    assert all(a.trigger_id != "T9" for a in alerts), "T9 must not fire when everything is fresh"
