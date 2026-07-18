@@ -26,8 +26,10 @@ colorama==0.4.6
     # via
     #   pytest
     #   tqdm
-cryptography==48.0.0
-    # via pdfminer-six
+cryptography==49.0.0
+    # via
+    #   -r ml/requirements.txt
+    #   pdfminer-six
 curl-cffi==0.15.0
     # via yfinance
 einops==0.8.2
@@ -37,8 +39,6 @@ filelock==3.29.0
     #   huggingface-hub
     #   torch
     #   transformers
-flatbuffers==25.12.19
-    # via onnxruntime
 fsspec==2026.4.0
     # via
     #   huggingface-hub
@@ -55,9 +55,7 @@ iniconfig==2.3.0
 jinja2==3.1.6
     # via torch
 joblib==1.5.3
-    # via
-    #   -r ml/requirements.txt
-    #   scikit-learn
+    # via scikit-learn
 jsonschema==4.26.0
     # via -r ml/requirements.txt
 jsonschema-specifications==2025.9.1
@@ -86,19 +84,15 @@ numpy==2.4.6
     #   accelerate
     #   chronos-forecasting
     #   lightgbm
-    #   onnxruntime
     #   pandas
     #   scikit-learn
     #   scipy
     #   transformers
     #   yfinance
-onnxruntime==1.26.0
-    # via -r ml/requirements.txt
 packaging==26.2
     # via
     #   accelerate
     #   huggingface-hub
-    #   onnxruntime
     #   pytest
     #   transformers
 pandas==3.0.3
@@ -111,16 +105,16 @@ pdfplumber==0.11.9
     # via -r ml/requirements.txt
 peewee==4.0.5
     # via yfinance
-pillow==12.2.0
-    # via pdfplumber
+pillow==12.3.0
+    # via
+    #   -r ml/requirements.txt
+    #   pdfplumber
 platformdirs==4.9.6
     # via yfinance
 pluggy==1.6.0
     # via pytest
 protobuf==7.34.1
-    # via
-    #   onnxruntime
-    #   yfinance
+    # via yfinance
 psutil==7.2.2
     # via accelerate
 pyarrow==24.0.0
@@ -175,12 +169,16 @@ scipy==1.17.1
     # via
     #   lightgbm
     #   scikit-learn
-setuptools==81.0.0
-    # via torch
+setuptools==83.0.0
+    # via
+    #   -r ml/requirements.txt
+    #   torch
 six==1.17.0
     # via python-dateutil
-soupsieve==2.8.3
-    # via beautifulsoup4
+soupsieve==2.8.4
+    # via
+    #   -r ml/requirements.txt
+    #   beautifulsoup4
 sympy==1.14.0
     # via torch
 threadpoolctl==3.6.0
