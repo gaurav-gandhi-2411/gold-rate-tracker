@@ -1,0 +1,41 @@
+# Scopes the GitHub Pages (legacy Jekyll) build to the actual PWA. Without this,
+# Jekyll's defaults only exclude dot-prefixed paths — everything else tracked in
+# git (docs, ML pipeline source, tests, dev tooling) is otherwise reachable at a
+# live URL under the public app's own domain. Excluded paths stay fully visible
+# on GitHub itself (repo browsing, portfolio/review) — this only scopes what
+# gets copied into the Pages build output.
+#
+# The live app needs: index.html, style.css, app.js, service-worker.js,
+# manifest.webmanifest, favicon.svg, og.png, icons/, and the 7 data/*.json
+# files app.js actually fetches (see the *_URL constants at the top of app.js).
+# Everything below is real, working repo content — this file changes nothing
+# about git tracking, CI, or local dev; it only affects what the Pages build
+# copies into the served site.
+exclude:
+  - archive/
+  - configs/
+  - docs/
+  - ml/
+  - notebooks/
+  - reports/
+  - scraper/
+  - scripts/
+  - tests/
+  - og.html
+  - spec.md
+  - CHANGELOG.md
+  - CONTRIBUTING.md
+  - CURRENT_STATE.md
+  - SECURITY.md
+  - Makefile
+  - docker-compose.yml
+  - pyproject.toml
+  - data/README.md
+  - data/experiments/
+  - data/feature_store/
+  - data/calibration.json
+  - data/chronos_probe.json
+  - data/direction_baseline.json
+  - data/direction_eval_history.jsonl
+  - data/duty_events.json
+  - data/ibja_rates.parquet
