@@ -10,12 +10,21 @@ function istDayKey(d) {
   return d.toLocaleDateString("en-IN", { timeZone: "Asia/Kolkata" });
 }
 
+// Anchors "now" to noon IST on the current calendar day so a fixed hours-ago
+// offset can never accidentally cross an IST day boundary — used only by the
+// "is today" test below, which flaked when run within ~2h of IST midnight
+// (Date.now() - 2h landed on the previous IST calendar day).
+function nowAtNoonIST() {
+  const todayIST = new Date().toLocaleDateString("en-CA", { timeZone: "Asia/Kolkata" });
+  return new Date(`${todayIST}T12:00:00+05:30`).getTime();
+}
+
 // Mirrors renderStaleBanner()'s decision logic in app.js (ADR 025).
 // Per ADR 025, IBJA-calibrated is the PRIMARY path — trusted via price_source
 // alone (inference.py already gated its freshness), with the date qualifier
 // derived purely from whether ibja_asof falls on today's IST calendar day.
 // Returns: "hidden" | "approximate_today" | "approximate_carry_forward" | "stale"
-function bannerStateForForecast(forecast, nowMs) {
+function bannerStateForForecast(forecast, nowMs, readings = []) {
   if (!forecast) return "hidden";
 
   if (forecast.price_source === "ibja_calibrated" && forecast.ibja_asof) {
@@ -25,7 +34,16 @@ function bannerStateForForecast(forecast, nowMs) {
   }
 
   if (!forecast.scraped_at) return "hidden";
-  const scrapeAgeH = (nowMs - new Date(forecast.scraped_at).getTime()) / 3_600_000;
+  // Use the fresher of forecast.scraped_at and the latest raw-price reading's
+  // timestamp — ml.inference runs continue-on-error, so it can fail
+  // independently of the scrape step and leave forecast.scraped_at stale
+  // while prices.json (readings) keeps updating on schedule.
+  let scrapedAtMs = new Date(forecast.scraped_at).getTime();
+  if (readings.length > 0) {
+    const latestReadingMs = new Date(readings[readings.length - 1].timestamp).getTime();
+    if (latestReadingMs > scrapedAtMs) scrapedAtMs = latestReadingMs;
+  }
+  const scrapeAgeH = (nowMs - scrapedAtMs) / 3_600_000;
   if (scrapeAgeH <= STALE_THRESHOLD_H) return "hidden"; // Tanishq enrichment fresh
 
   return "stale"; // genuinely stale — neither source available
@@ -74,7 +92,7 @@ test("no scraped_at field, no price_source → hidden", () => {
 // ── IBJA-primary path (ADR 025) ───────────────────────────────────────────────
 
 test("ibja_calibrated, ibja_asof is today → approximate_today (no date qualifier)", () => {
-  const nowMs = Date.now();
+  const nowMs = nowAtNoonIST();
   const forecast = {
     scraped_at:   new Date(nowMs - 10 * 3_600_000).toISOString(), // Tanishq stale — expected
     price_source: "ibja_calibrated",
@@ -127,4 +145,34 @@ test("ibja_calibrated but ibja_asof missing → falls through to Tanishq stalene
     est_high:     14550,
   };
   assert.equal(bannerStateForForecast(forecast, nowMs), "stale");
+});
+
+// ── Hardening: ml.inference can fail independently of the scrape step ────────
+// (check-price.yml runs it `continue-on-error: true`). When that happens,
+// forecast.json (and forecast.scraped_at) goes stale while prices.json keeps
+// updating on schedule. Without a fallback, this would show a contradictory
+// "stale" banner next to an "ok" freshness pill — the credibility-surface bug
+// this test guards against.
+test("inference failure: forecast.scraped_at 9h old but latest price reading 1h old → hidden", () => {
+  const nowMs = Date.now();
+  const forecast = {
+    scraped_at:   new Date(nowMs - 9 * 3_600_000).toISOString(), // stale forecast output
+    price_source: "tanishq_scrape",
+  };
+  const readings = [
+    { timestamp: new Date(nowMs - 1 * 3_600_000).toISOString(), "22k": 14500 }, // scrape kept working
+  ];
+  assert.equal(bannerStateForForecast(forecast, nowMs, readings), "hidden");
+});
+
+test("both forecast.scraped_at and latest price reading 9h old → stale (no readings to rescue it)", () => {
+  const nowMs = Date.now();
+  const forecast = {
+    scraped_at:   new Date(nowMs - 9 * 3_600_000).toISOString(),
+    price_source: "tanishq_scrape",
+  };
+  const readings = [
+    { timestamp: new Date(nowMs - 9 * 3_600_000).toISOString(), "22k": 14500 },
+  ];
+  assert.equal(bannerStateForForecast(forecast, nowMs, readings), "stale");
 });
