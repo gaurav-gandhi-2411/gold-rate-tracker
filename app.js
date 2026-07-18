@@ -53,7 +53,7 @@ function fmtIST(iso) {
       day: "numeric", month: "short", year: "numeric",
       hour: "2-digit", minute: "2-digit", hour12: true,
     }).format(new Date(iso));
-  } catch (_) { return iso; }
+  } catch (_) { return "—"; }
 }
 
 // One reading per IST calendar day (latest timestamp wins).
@@ -683,7 +683,18 @@ function renderStaleBanner(forecast) {
   // Tanishq path: fresh scrape stays silent; genuinely stale (IBJA also
   // unavailable/too old) falls to the honest last-confirmed-price state.
   if (!forecast.scraped_at) return;
-  const scrapeAgeH = (Date.now() - new Date(forecast.scraped_at).getTime()) / 3_600_000;
+  // Use the fresher of forecast.scraped_at and the latest raw-price reading's
+  // timestamp. ml.inference runs continue-on-error in check-price.yml, so it
+  // can fail independently of the scrape step — leaving forecast.json (and
+  // forecast.scraped_at) stale while prices.json keeps updating. Without this
+  // fallback, this banner could show "unavailable" while the freshness pill
+  // (which reads prices.json directly on this same Tanishq path) shows "ok".
+  let scrapedAtMs = new Date(forecast.scraped_at).getTime();
+  if (allReadings.length > 0) {
+    const latestReadingMs = new Date(allReadings[allReadings.length - 1].timestamp).getTime();
+    if (latestReadingMs > scrapedAtMs) scrapedAtMs = latestReadingMs;
+  }
+  const scrapeAgeH = (Date.now() - scrapedAtMs) / 3_600_000;
   if (scrapeAgeH <= STALE_THRESHOLD_H) return; // scraped-fresh — banner stays hidden
 
   banner.textContent = `Live price update unavailable — showing last confirmed price from ${fmtRelative(forecast.scraped_at)}.`;
