@@ -45,6 +45,7 @@ _T8_EVENING_THRESHOLD_H = 18  # IST lower bound: fire T8_EVENING at/after 18:00
 _T8_EVENING_UPPER_H = 22  # IST upper bound: suppress T8_EVENING at/after 22:00 (quiet-hours start)
 _T8_FLAT_THRESHOLD_RS = 25  # abs(delta) < this → "held steady" scenario
 _T9_STALE_THRESHOLD_H = 8  # prices.json entries older than this trigger T9
+_T9_ESCALATE_STALE_THRESHOLD_H = 16  # 2x T9 threshold -> distinct high-priority escalation
 _T10_GAP_THRESHOLD_DAYS = 2  # >=2 calendar days with no new PIT snapshot trigger T10
 
 SCHEMA_VERSION = 1
@@ -102,6 +103,7 @@ class NotificationState:
     last_t8_morning_ist_date: str = ""  # IST date YYYY-MM-DD of last T8_MORNING send (dedup)
     last_t8_evening_ist_date: str = ""  # IST date YYYY-MM-DD of last T8_EVENING send (dedup)
     last_t9_ist_date: str = ""  # IST date YYYY-MM-DD of last T9 send (once-per-day dedup)
+    last_t9_escalate_ist_date: str = ""  # IST date YYYY-MM-DD of last T9_ESCALATE send (dedup)
     last_t10_ist_date: str = ""  # IST date YYYY-MM-DD of last T10 send (once-per-day dedup)
 
 
@@ -128,6 +130,7 @@ def load_state(path: Path = STATE_PATH) -> NotificationState:
             last_t8_morning_ist_date=raw.get("last_t8_morning_ist_date", ""),
             last_t8_evening_ist_date=raw.get("last_t8_evening_ist_date", ""),
             last_t9_ist_date=raw.get("last_t9_ist_date", ""),
+            last_t9_escalate_ist_date=raw.get("last_t9_escalate_ist_date", ""),
             last_t10_ist_date=raw.get("last_t10_ist_date", ""),
         )
     except Exception as exc:
@@ -150,6 +153,7 @@ def save_state(state: NotificationState, path: Path = STATE_PATH) -> None:
         "last_t8_morning_ist_date": state.last_t8_morning_ist_date,
         "last_t8_evening_ist_date": state.last_t8_evening_ist_date,
         "last_t9_ist_date": state.last_t9_ist_date,
+        "last_t9_escalate_ist_date": state.last_t9_escalate_ist_date,
         "last_t10_ist_date": state.last_t10_ist_date,
     }
     path.write_text(json.dumps(data, indent=2) + "\n", encoding="utf-8")
@@ -748,6 +752,48 @@ def _check_t9(
     return _make_alert("T9", title, body, 4, ["warning"], now_ist)
 
 
+def _check_t9_escalate(
+    prices: list[dict],
+    state: NotificationState,
+    now_ist: datetime,
+) -> PendingAlert | None:
+    """T9_ESCALATE — sustained data-feed outage: prices.json > 2x the T9 threshold old.
+
+    T9 fires once per IST day regardless of how stale the feed gets, so a
+    multi-day outage produces the same priority-4 alert every day with no
+    signal that it's gotten worse. This fires a separate, higher-priority
+    (max, urgent) alert once per IST day when staleness has doubled past the
+    routine T9 threshold, so a single missed cycle stays quiet but a sustained
+    outage becomes impossible to miss. Bypasses quiet hours: a sustained
+    outage warrants immediate delivery even at night, unlike routine T9.
+    """
+    now_utc = now_ist.astimezone(UTC)
+    if not prices:
+        age_h = 999.0
+    else:
+        sorted_p = sorted(prices, key=lambda p: p["timestamp"])
+        ts_str = sorted_p[-1]["timestamp"].replace("Z", "+00:00")
+        latest_ts = datetime.fromisoformat(ts_str)
+        age_h = (now_utc - latest_ts).total_seconds() / 3600
+        if age_h <= _T9_ESCALATE_STALE_THRESHOLD_H:
+            return None
+
+    today_ist = now_ist.strftime("%Y-%m-%d")
+    if state.last_t9_escalate_ist_date == today_ist:
+        return None
+
+    hours = int(age_h)
+    title = f"Gold Tracker: SUSTAINED outage ({hours}h stale)"
+    body = (
+        f"No new price reading in {hours}h ({hours // 24}d{hours % 24}h) — well beyond the "
+        f"{_T9_STALE_THRESHOLD_H}h routine-alert threshold. The scraper has likely been "
+        "failing for multiple consecutive cycles. Check check-price.yml logs now."
+    )
+    return _make_alert(
+        "T9_ESCALATE", title, body, 5, ["rotating_light", "warning"], now_ist, bypass_quiet=True
+    )
+
+
 def _check_t10(
     snapshot_gap_days: int | None,
     state: NotificationState,
@@ -818,6 +864,9 @@ def check_triggers(
     t9 = _check_t9(prices, state, now_ist)
     if t9 is not None:
         alerts.append(t9)
+    t9_escalate = _check_t9_escalate(prices, state, now_ist)
+    if t9_escalate is not None:
+        alerts.append(t9_escalate)
     t10 = _check_t10(snapshot_gap_days, state, now_ist)
     if t10 is not None:
         alerts.append(t10)
@@ -881,6 +930,8 @@ def send_pending(
                 state.last_t8_evening_ist_date = now_ist.strftime("%Y-%m-%d")
             if alert.trigger_id == "T9":
                 state.last_t9_ist_date = now_ist.strftime("%Y-%m-%d")
+            if alert.trigger_id == "T9_ESCALATE":
+                state.last_t9_escalate_ist_date = now_ist.strftime("%Y-%m-%d")
             if alert.trigger_id == "T10":
                 state.last_t10_ist_date = now_ist.strftime("%Y-%m-%d")
             logger.info("Sent %s: %s", alert.trigger_id, alert.title)
