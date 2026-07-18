@@ -1,15 +1,12 @@
 # Force UTF-8 stdout on Windows so MLflow's emoji output (🏃) doesn't crash CP1252 terminals.
 export PYTHONUTF8 := 1
 
-.PHONY: help mlflow-up mlflow-down mlflow-logs train-lgbm train-tft train-nbeats \
+.PHONY: help train-lgbm train-tft train-nbeats \
         train-all inference-test test test-integration lint format clean \
         setup-inference
 
 help:
 	@echo "Targets:"
-	@echo "  mlflow-up         - Start MLflow stack (docker compose, port 5001)"
-	@echo "  mlflow-down       - Stop MLflow stack"
-	@echo "  mlflow-logs       - Tail MLflow logs"
 	@echo "  setup-inference   - Install inference deps (CI parity)"
 	@echo "  train-all         - Train all models with current configs"
 	@echo "  train-lgbm        - Train LightGBM only"
@@ -17,20 +14,10 @@ help:
 	@echo "  train-nbeats      - Train N-BEATS only"
 	@echo "  inference-test    - Run inference path locally (mimics CI)"
 	@echo "  test              - Run unit tests (no integration)"
-	@echo "  test-integration  - Run integration tests (requires MLflow up)"
+	@echo "  test-integration  - Run integration tests (requires live network access)"
 	@echo "  lint              - Run pre-commit on all files"
 	@echo "  format            - Format code with ruff"
 	@echo "  clean             - Remove build artifacts and caches"
-
-mlflow-up:
-	docker compose up -d mlflow
-	@echo "MLflow at http://localhost:5001"
-
-mlflow-down:
-	docker compose down
-
-mlflow-logs:
-	docker compose logs -f mlflow
 
 setup-inference:
 	pip install -r ml/requirements-inference.txt

@@ -1,6 +1,0 @@
-seed: 42
-val_fraction: 0.15
-holdout_days: 90
-walk_forward_step: 7
-log_every_n_steps: 10
-max_epochs: null  # null = use model config default; override to limit training runs

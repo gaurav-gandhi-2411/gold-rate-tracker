@@ -81,8 +81,8 @@ These were part of the pre-Phase-3 architecture (last live 2026-05-19, replaced 
 | `ml/regime.py` | Gaussian HMM regime detector, feature for LightGBM | Zero splits in any LightGBM model — confirmed dead weight (`docs/FEATURE_INVENTORY.md`) before the model itself was retired |
 | `ml/daily_summary.py` | Standalone trigger-based ntfy notification system | Superseded by `ml/notifications.py`'s Chronos-directional-signal triggers |
 | `ml/ensemble.py`, `ml/promotion.py`, `ml/compare_feature_sets.py` | Champion/challenger ONNX promotion pipeline | No longer applicable — Chronos is a fixed pretrained model, not trained/promoted per run |
-| MLflow (`docker-compose.yml`'s `mlflow` service, `ml/tracking.py`) | Local experiment tracking for LightGBM/TFT/N-BEATS training runs | **Dead infra, not formally retired** — the `docker-compose.yml` service definition and `ml/tracking.py` are both still present but have zero production callers (grepped the full `ml/*.py` tree and every workflow; only `tests/test_tracking.py` imports it). Nothing trains anymore that would need tracking. Candidate for removal in a future cleanup pass. |
-| Hydra configs (`ml/config.py`, `configs/`) | Composable YAML config loader for the training pipeline | Same pattern as MLflow — `lint.yml` explicitly excludes its test as needing "training-only deps not in the inference lockfile." No production caller found; only exercised by `tests/test_config.py`. |
+| MLflow (`docker-compose.yml`'s `mlflow` service, `ml/tracking.py`) | Local experiment tracking for LightGBM/TFT/N-BEATS training runs | Removed in [ADR 024](adr/024-remove-mlflow-hydra-scaffolding.md) — zero production callers, and `mlflow` was never in any requirements file (uninstallable in CI regardless) |
+| Hydra configs (`ml/config.py`, `configs/`) | Composable YAML config loader for the training pipeline | Removed in [ADR 024](adr/024-remove-mlflow-hydra-scaffolding.md) — zero production callers, and had been silently broken for two months (its default config referenced `configs/model/ensemble.yaml`, itself deleted in PR #29) |
 
 ## Data flow
 
