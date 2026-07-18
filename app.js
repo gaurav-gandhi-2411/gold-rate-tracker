@@ -562,6 +562,65 @@ function computeTrendResidual30d(readings, percentile30d) {
   return { slope, residual, residZ, trendState, nDays, note };
 }
 
+// ─── DISTANCE TO 90-DAY SUPPORT (audit finding, 2026-07-18) ───────────────────
+// The trend-residual line above measures deviation from the recent 30-day slope —
+// it cannot distinguish "falling away from trend but still mid-range" from
+// "falling away from trend AND sitting on the actual 90-day floor". Confirmed on
+// real history: 2026-05-28 (residZ -2.71, price 4.6% above its 90-day low) and
+// 2026-06-19 (residZ -2.13, price 0.15% above its 90-day low) carry near-identical
+// trend-residual readings but describe different situations — one mid-range and
+// falling, the other testing its own floor. Correlation between residZ and this
+// distance across the real prices.json history: r≈0.48 (90-day window) —
+// moderate, not redundant (scoped 2026-07-18 before building).
+//
+// Support here is descriptive, not predictive: the plain trailing-90-day low, no
+// smoothing or local-minima detection — the simplest construction that stays
+// stable day to day and reads as one sentence ("N% above its 3-month low"). A
+// SUPPORTING line only, mirroring computeBandPos90d: self-labeling, gracefully
+// degrades to null on thin data, never changes the verdict hierarchy
+// (verdictLead/verdictType/proofLine) in computeGoodPriceSignals.
+//
+// Returns null below MIN_DAYS_SUPPORT (need enough of the 90-day window filled
+// in for "recent floor" to mean more than the last few readings).
+const MIN_DAYS_SUPPORT = 60;
+const FULL_DAYS_SUPPORT = 90;
+const NEAR_SUPPORT_PCT = 2; // within this % of the 90-day low reads as "at" support
+
+function computeSupportDistance90d(readings, percentile30d) {
+  if (!readings || readings.length < 2) return null;
+
+  const now     = Date.now();
+  const current = readings[readings.length - 1]["22k"];
+
+  const within90d = readings.filter(
+    r => now - new Date(r.timestamp).getTime() <= 90 * 86400e3,
+  );
+  const daily90d = dedupeByISTDay(within90d);
+  const nDays = daily90d.length;
+  if (nDays < MIN_DAYS_SUPPORT) return null;
+
+  const low90d      = Math.min(...daily90d.map(r => r["22k"]));
+  const distPct     = ((current - low90d) / low90d) * 100;
+  const nearSupport = distPct <= NEAR_SUPPORT_PCT;
+  const isCheap      = typeof percentile30d === "number" && percentile30d <= CHEAP_PERCENTILE_MAX;
+
+  let note;
+  if (isCheap && nearSupport) {
+    note = `Cheap, and sitting right at its 3-month low (₹${fmtINR(low90d)}) — testing a floor it hasn't broken in ${nDays} days.`;
+  } else if (isCheap) {
+    note = `Cheap, but still ${distPct.toFixed(1)}% above its 3-month low of ₹${fmtINR(low90d)} — room to fall further before testing that floor.`;
+  } else if (nearSupport) {
+    note = `Sitting right at its 3-month low (₹${fmtINR(low90d)}), even though it's not among the cheapest days this month.`;
+  } else {
+    note = `${distPct.toFixed(1)}% above its 3-month low of ₹${fmtINR(low90d)} (over the last ${nDays} days).`;
+  }
+  if (nDays < FULL_DAYS_SUPPORT) {
+    note += ` (Only ${nDays} distinct days in this 90-day window so far — treat as indicative.)`;
+  }
+
+  return { distPct, low90d, nDays, note };
+}
+
 // ─── PURCHASE COST ESTIMATE ───────────────────────────────────────────────────
 // Itemised "what will it cost me?" estimate for a gold jewellery purchase, the
 // way an Indian retail invoice is built up:
@@ -933,6 +992,7 @@ function renderModelSignal(fc, readings, bt) {
   }
   const bandPos90d = computeBandPos90d(readings ?? []);
   const trendResidual = computeTrendResidual30d(readings ?? [], signals.percentile30d);
+  const supportDistance90d = computeSupportDistance90d(readings ?? [], signals.percentile30d);
 
   const hl = fc?.headline;
   const hasPI = hl && typeof hl.lower === "number" && typeof hl.upper === "number";
@@ -972,8 +1032,9 @@ function renderModelSignal(fc, readings, bt) {
   }
 
   // XSS-safe: verdictLead/proofLine/dataSuffNote/supportLine1/supportLine2/divergenceNote/
-  // bandPos90d.note/trendResidual.note are hardcoded string literals or fmtINR(number)
-  // from computeGoodPriceSignals/computeBandPos90d/computeTrendResidual30d — no external data.
+  // bandPos90d.note/trendResidual.note/supportDistance90d.note are hardcoded string
+  // literals or fmtINR(number) from computeGoodPriceSignals/computeBandPos90d/
+  // computeTrendResidual30d/computeSupportDistance90d — no external data.
   document.getElementById("model-signal-body").innerHTML = `
     <div class="outlook-card">
       <p class="good-price-verdict good-price-verdict--${signals.verdictType}">${signals.verdictLead}</p>
@@ -985,6 +1046,7 @@ function renderModelSignal(fc, readings, bt) {
         ${signals.divergenceNote ? `<li class="good-price-divergence">${signals.divergenceNote}</li>` : ""}
         ${trendResidual ? `<li class="good-price-trend">${trendResidual.note}</li>` : ""}
         ${bandPos90d ? `<li class="good-price-band-90d">${bandPos90d.note}</li>` : ""}
+        ${supportDistance90d ? `<li class="good-price-support-90d">${supportDistance90d.note}</li>` : ""}
       </ul>
       ${volatilityHtml}
     </div>
