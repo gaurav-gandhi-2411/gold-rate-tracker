@@ -9,13 +9,8 @@ const METRICS_URL   = "data/metrics_history.json";
 const COVERAGE_URL  = "data/coverage_metrics.json";
 
 // Staleness threshold (hours) shared with Python inference.py _STALE_THRESHOLD_H.
+// Per ADR 025 this now gates Tanishq *enrichment* freshness, not primary staleness.
 const STALE_THRESHOLD_H = 8;
-// Max IBJA age (hours) for which the IBJA-calibrated estimate banner (State 2) is
-// shown. Mirrors inference.py _IBJA_MAX_AGE_H — inference only emits
-// price_source="ibja_calibrated" when IBJA is within this window, so the banner
-// must use the same bound (an 8h bound here would show "last confirmed price" even
-// while current_22k IS the IBJA estimate). Change in BOTH places.
-const IBJA_FALLBACK_MAX_AGE_H = 30;
 
 // D4: True when running as an installed PWA launched from the home screen.
 // navigator.standalone is iOS WebKit's proprietary flag (true/false/undefined).
@@ -655,6 +650,11 @@ function computePurchaseCost({ ratePerGram, grams, makingPct = 0, gstPct = 3 }) 
 
 // ─── RENDERERS ────────────────────────────────────────────────────────────────
 
+// IST calendar-day key, matching dedupeByISTDay's convention.
+function istDayKey(d) {
+  return d.toLocaleDateString("en-IN", { timeZone: "Asia/Kolkata" });
+}
+
 function renderStaleBanner(forecast) {
   const banner = document.getElementById("stale-banner");
   if (!banner) return;
@@ -663,31 +663,58 @@ function renderStaleBanner(forecast) {
   if (offlineBanner && !offlineBanner.hidden) return;
   // Always reset first so a refresh-error or prior stale message is cleared on success.
   banner.hidden = true;
-  if (!forecast || !forecast.scraped_at) return;
+  if (!forecast) return;
 
+  // Per ADR 025, IBJA-calibrated is now the PRIMARY display path (Tanishq not
+  // enriching this cycle is the expected steady state, not an error) — trust
+  // inference.py's price_source gate rather than re-deriving freshness here.
+  if (forecast.price_source === "ibja_calibrated" && forecast.ibja_asof) {
+    const ibjaDate = new Date(forecast.ibja_asof);
+    const isToday  = istDayKey(ibjaDate) === istDayKey(new Date());
+    banner.textContent = isToday
+      ? "Estimated retail price — calibrated from today's IBJA gold benchmark. Live Tanishq confirmation isn't available right now."
+      : `Estimated retail price — calibrated from IBJA's ${
+          ibjaDate.toLocaleDateString("en-IN", { weekday: "long", timeZone: "Asia/Kolkata" })
+        } close (the most recent published rate). Live Tanishq confirmation isn't available right now.`;
+    banner.hidden = false;
+    return;
+  }
+
+  // Tanishq path: fresh scrape stays silent; genuinely stale (IBJA also
+  // unavailable/too old) falls to the honest last-confirmed-price state.
+  if (!forecast.scraped_at) return;
   const scrapeAgeH = (Date.now() - new Date(forecast.scraped_at).getTime()) / 3_600_000;
   if (scrapeAgeH <= STALE_THRESHOLD_H) return; // scraped-fresh — banner stays hidden
 
-  // Scrape is stale — check IBJA fallback state
-  if (forecast.price_source === "ibja_calibrated" && forecast.ibja_asof) {
-    const ibjaAgeH = (Date.now() - new Date(forecast.ibja_asof).getTime()) / 3_600_000;
-    if (ibjaAgeH < IBJA_FALLBACK_MAX_AGE_H) {
-      // State 2: IBJA-derived estimate (IBJA publishes once daily, so this may be
-      // up to ~30h old — still the latest official benchmark; copy stays honest).
-      banner.textContent = "Approximate price — live retail rate unavailable right now, so this is estimated from today's official gold rate (IBJA).";
-      banner.hidden = false;
-      return;
-    }
-  }
-
-  // State 3: genuinely stale (Phi20 copy)
   banner.textContent = `Live price update unavailable — showing last confirmed price from ${fmtRelative(forecast.scraped_at)}.`;
   banner.hidden = false;
 }
 
-function renderFreshness(readings) {
+function renderFreshness(readings, forecast) {
   const pill = document.getElementById("freshness-pill");
   if (!pill) return;
+  pill.classList.remove("freshness--ok", "freshness--warn", "freshness--stale");
+
+  // Per ADR 025: reflect whichever source is actually driving the displayed
+  // price, not Tanishq's scrape recency alone — Tanishq being stale is now the
+  // expected steady state and must not read as a failure when IBJA is healthy.
+  if (forecast && forecast.price_source === "ibja_calibrated" && forecast.ibja_asof) {
+    const ibjaDate = new Date(forecast.ibja_asof);
+    const isToday  = istDayKey(ibjaDate) === istDayKey(new Date());
+    const rel      = fmtRelative(forecast.ibja_asof);
+    if (isToday) {
+      pill.className   = "freshness-pill freshness--ok";
+      pill.textContent = `Estimated · ${rel}`;
+      pill.setAttribute("aria-label", `Estimated retail price, IBJA benchmark updated ${rel}`);
+    } else {
+      const dayLabel = ibjaDate.toLocaleDateString("en-IN", { weekday: "long", timeZone: "Asia/Kolkata" });
+      pill.className   = "freshness-pill freshness--warn";
+      pill.textContent = `As of ${dayLabel} close`;
+      pill.setAttribute("aria-label", `Estimated retail price, as of ${dayLabel}'s IBJA close`);
+    }
+    return;
+  }
+
   if (readings.length === 0) {
     pill.textContent = "Awaiting first reading";
     pill.className   = "freshness-pill";
@@ -696,7 +723,6 @@ function renderFreshness(readings) {
   const latest = readings[readings.length - 1];
   const ageH   = (Date.now() - new Date(latest.timestamp).getTime()) / 3_600_000;
   const rel    = fmtRelative(latest.timestamp);
-  pill.classList.remove("freshness--ok", "freshness--warn", "freshness--stale");
   if (ageH >= 18) {
     pill.className   = "freshness-pill freshness--stale";
     pill.textContent = `Not updating · ${rel}`;
@@ -712,7 +738,8 @@ function renderFreshness(readings) {
   }
 
   // D5: Auto-open iOS help panel when standalone + data is ≥ 12h stale,
-  // but only if the user hasn't dismissed it this session (FIX 1).
+  // but only if the user hasn't dismissed it this session (FIX 1). Only
+  // reachable here (IBJA not serving an estimate) — i.e. a genuine outage.
   if (IS_STANDALONE && ageH >= 12 && !pwaHelpDismissed) {
     const panel = document.getElementById("pwa-help-panel");
     if (panel) panel.hidden = false;
@@ -1687,7 +1714,7 @@ async function refreshData() {
     const fc    = await loadJSON(FORECAST_URL).catch(() => null);
     allReadings  = fresh;
     lastForecast = fc;
-    renderFreshness(allReadings);
+    renderFreshness(allReadings, fc);
     renderComparisons(allReadings);
     renderHistory(allReadings);
     renderChart(allReadings, currentRange);
@@ -2001,6 +2028,7 @@ function initPullToRefresh() {
 
   // Await forecast, then render hero (hides skeleton, shows verdict).
   const fc = await fcPromise;
+  renderFreshness(allReadings, fc); // re-render now IBJA-primary state is known
   renderHero(allReadings, fc);
   renderStaleBanner(fc);
   renderModelSignal(fc, allReadings);  // first render — coverage% uses fallback until backtest loads
