@@ -1,11 +1,15 @@
 # ADR 025 — Invert Source Hierarchy: IBJA Primary, Tanishq Enrichment
 
-Status: **Proposed — decision doc, awaiting owner sign-off. Not implemented.**
+Status: **Accepted and implemented** (2026-07-18). Ratified by the owner and shipped:
+`ml/ibja.py`'s business-day gap helpers, `ml/inference.py`'s IBJA-primary source
+selection, `ml/notifications.py`'s T9/T9_ESCALATE re-wire to IBJA freshness, the
+`app.js` freshness-pill/stale-banner honest labeling, and the README/index.html/
+manifest copy pass all landed in the same change as this status flip.
 Date: 2026-07-18
 Supersedes/relates: ADR 016 (scraper hardening — proxy/stealth already rejected here),
-ADR 021 (H5 IBJA-calibrated fallback — the mechanism this ADR proposes promoting to
-primary), [[project_tanishq_cf_block_t9_escalate]] (this incident),
-[[project_worker_dispatch_silence]] (the prior CF escalation).
+ADR 021 (H5 IBJA-calibrated fallback — the mechanism this ADR promotes to primary).
+The retired Cloudflare Worker relay (2026-06-13–2026-06-25, see docs/RUNBOOK.md) was
+the prior escalation in the same pattern.
 
 ## Context
 
@@ -15,8 +19,7 @@ Cloudflare bot-blocking to Cloudflare Workers egress, retiring the Worker relay
 the Playwright *headless-browser* fallback from GitHub Actions egress, not just the
 plain-`fetch` path — confirmed via `gh run view --log` on 4 consecutive scheduled runs
 plus one fresh `workflow_dispatch` re-dispatch, all producing identical
-`Cloudflare challenge page` failures on all 3 retry attempts
-([[project_tanishq_cf_block_t9_escalate]]).
+`Cloudflare challenge page` failures on all 3 retry attempts.
 
 ADR 016 (2026-06-08) already named this exact risk and already rejected the standard
 countermeasures on record:
@@ -137,9 +140,10 @@ whatever the owner decides, it should be a decision, not a drift.
 - Positive: removes the dependency on an adversarial, escalating block as the
   critical path for the product's core number. Reuses ~90% of already-shipped,
   already-tested code (H5, calibration, banner states). Fully reversible.
-- Positive: the T9_ESCALATE hardening shipped this session ([[project_tanishq_cf_block_t9_escalate]])
-  keeps working unchanged — it alerts on scrape staleness regardless of which source
-  is primary.
+- Positive: the T9/T9_ESCALATE staleness guards were re-wired in this same change to
+  key off the IBJA business-day gap rather than Tanishq's scrape freshness — Tanishq
+  being unreachable no longer false-alarms (it's the expected steady state), while a
+  genuine IBJA outage still escalates.
 - Negative/accepted: update cadence drops from up to 8×/day to ~2×/day on Tanishq-dark
   days; the displayed number is formally always an estimate, never a raw observation,
   until Tanishq confirms it. Requires an honest copy/README pass (README's opening

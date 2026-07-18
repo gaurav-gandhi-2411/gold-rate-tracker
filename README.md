@@ -4,7 +4,7 @@
 [![Lint](https://github.com/gaurav-gandhi-2411/gold-rate-tracker/actions/workflows/lint.yml/badge.svg)](https://github.com/gaurav-gandhi-2411/gold-rate-tracker/actions/workflows/lint.yml)
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 
-A free, $0/month gold-price tracker for Indian retail buyers (Tanishq 22K). It scrapes the live retail rate every 3 hours, shows today's price with an honest range, sends phone alerts when prices move, and **deliberately does not pretend to predict tomorrow's price** — because, measured honestly, no model we've tested beats "today's price, held flat."
+A free, $0/month gold-price tracker for Indian retail buyers (22K). The displayed price is an **IBJA-calibrated retail estimate** (R²=0.96), confirmed live against Tanishq retail whenever its site is reachable ([ADR 025](docs/adr/025-ibja-primary-source-decision.md) — Tanishq's Cloudflare protection now blocks automated access most of the time, so IBJA, the national benchmark, is the primary source and Tanishq is opportunistic confirmation, not the other way around). The app shows today's price with an honest range, sends phone alerts when prices move, and **deliberately does not pretend to predict tomorrow's price** — because, measured honestly, no model we've tested beats "today's price, held flat."
 
 **Live site:** https://gaurav-gandhi-2411.github.io/gold-rate-tracker/
 
@@ -14,7 +14,7 @@ A free, $0/month gold-price tracker for Indian retail buyers (Tanishq 22K). It s
 
 This project is built around **honest-baseline reporting** ([ADR 005](docs/adr/005-honest-baseline-reporting.md)):
 
-- ✅ **Today's price**, scraped live, with a freshness label and a clearly-marked fallback estimate when the live scrape is briefly unavailable.
+- ✅ **Today's price** — an IBJA-calibrated estimate by default, upgraded to a directly-confirmed Tanishq retail reading whenever the live scrape succeeds — always with an honest, clearly-dated freshness label (never a bare number pretending to be more certain than it is).
 - ✅ A **5-day range** ("prices have typically swung ±X over 5 days") — an illustrative band, not a forecast.
 - ✅ A plain-language **"is it a good time to buy?"** read based on the *recent 7-day trend* (a description of what already happened, never a prediction).
 - ❌ **No price prediction. No "% chance up". No buy/sell call.** We test next-day and 2-day direction models every week; none beats the base rate ("gold rises most days") by a statistically significant margin, so the directional signal stays **off**. See [docs/DIRECTION_SIGNAL_STATUS.md](docs/DIRECTION_SIGNAL_STATUS.md) for the live numbers and [ADR 012](docs/adr/012-naive-headline-chronos-companion.md) / [ADR 019](docs/adr/019-direction-signal-below-base-rate.md) for why.
@@ -25,18 +25,19 @@ The headline forecast is a **naive flat-hold** (predict = today's price). The ap
 
 ```
 GitHub Actions (check-price.yml, every 3h)
-   └─ scrape in-CI (plain fetch → Playwright fallback)
+   ├─ IBJA fetch (plain HTTP, primary — ADR 025)
+   └─ Tanishq scrape (plain fetch → Playwright fallback, opportunistic enrichment)
                           ▼
-   prices.json → inference (naive flat-hold + IBJA-calibrated
-                 fallback floor + Chronos directional companion,
-                 kept DARK) → forecast.json
+   prices.json + ibja_rates.parquet → inference (naive flat-hold, IBJA-calibrated
+                 by default / Tanishq-confirmed when fresh + Chronos directional
+                 companion, kept DARK) → forecast.json
                           ▼
-   ntfy alerts (price moves, weekly digest, staleness)
+   ntfy alerts (price moves, weekly digest, IBJA staleness)
                           ▼
    commit data/*.json → GitHub Pages PWA renders it
 ```
 
-- **Two-layer scrape resilience.** The scheduled CI run scrapes in-process (plain `fetch` → Playwright fallback). If that misses, the page shows an IBJA-calibrated estimate (and, failing that, the last confirmed price with a clear "may be outdated" banner) — **the user never sees a dead price.** (A Cloudflare Worker clean-IP fetch path ran 2026-06-13–2026-06-25 but was retired after Tanishq extended its bot-blocking to Workers egress; see [docs/RUNBOOK.md](docs/RUNBOOK.md).)
+- **IBJA-primary, Tanishq-enrichment ([ADR 025](docs/adr/025-ibja-primary-source-decision.md)).** IBJA (India's national bullion-association benchmark) isn't Cloudflare-protected and reliably serves a daily reading; Tanishq's site now blocks automated access most of the time. So the displayed price defaults to an IBJA-calibrated estimate and upgrades to a directly-confirmed Tanishq reading only when that scrape succeeds within the last 8h — never the reverse. On IBJA's non-publishing days (Sat/Sun/govt holidays) the page carries forward the last published close, clearly dated ("as of Friday's close"). **The user never sees a dead price.** (A Cloudflare Worker clean-IP fetch path ran 2026-06-13–2026-06-25 but was retired after Tanishq extended its bot-blocking to Workers egress; see [docs/RUNBOOK.md](docs/RUNBOOK.md).)
 - **Static PWA.** `index.html` + `app.js` fetch `data/*.json` straight from the repo and render price, verdict, sparkline, and chart — no server.
 
 ## Notifications (bring your own ntfy topic)
@@ -75,7 +76,7 @@ Alert types: a price-move alert (describes the recent trend), a twice-daily dige
 
 ## Troubleshooting
 
-- **Prices look stale:** the page banner will say so. Check the latest **Check Gold Price** run in Actions; the scrape step is `continue-on-error`, so a miss is logged as a run annotation, not a hard failure.
+- **Prices look stale:** the page banner will say so, honestly labeled either way. A Tanishq scrape miss alone is expected (its Cloudflare block, ADR 025) and logged as a run annotation, not a hard failure — check the latest **Check Gold Price** run in Actions. An actual alert (ntfy T9/T9_ESCALATE) only fires when *IBJA* itself hasn't published in 2+ business days — that's the genuine failure signal now.
 - **No notifications:** confirm `NTFY_TOPIC` has no URL prefix, you subscribed to the *exact* topic, and a price move actually occurred.
 - **Commentary missing:** set `GROQ_API_KEY` (optional).
 - **Scraper DOM canary issue opened:** Tanishq's runner-IP block can fail the live canary even when the page is fine — check recent `prices.json` entries first (a stretch of missed scrapes points at an IP block, not a DOM change) before assuming the selector changed. See [docs/RUNBOOK.md](docs/RUNBOOK.md).
