@@ -10,6 +10,15 @@ function istDayKey(d) {
   return d.toLocaleDateString("en-IN", { timeZone: "Asia/Kolkata" });
 }
 
+// Anchors "now" to noon IST on the current calendar day so a fixed hours-ago
+// offset can never accidentally cross an IST day boundary — used only by the
+// "is today" test below, which flaked when run within ~2h of IST midnight
+// (Date.now() - 2h landed on the previous IST calendar day).
+function nowAtNoonIST() {
+  const todayIST = new Date().toLocaleDateString("en-CA", { timeZone: "Asia/Kolkata" });
+  return new Date(`${todayIST}T12:00:00+05:30`).getTime();
+}
+
 // Mirrors renderStaleBanner()'s decision logic in app.js (ADR 025).
 // Per ADR 025, IBJA-calibrated is the PRIMARY path — trusted via price_source
 // alone (inference.py already gated its freshness), with the date qualifier
@@ -83,7 +92,7 @@ test("no scraped_at field, no price_source → hidden", () => {
 // ── IBJA-primary path (ADR 025) ───────────────────────────────────────────────
 
 test("ibja_calibrated, ibja_asof is today → approximate_today (no date qualifier)", () => {
-  const nowMs = Date.now();
+  const nowMs = nowAtNoonIST();
   const forecast = {
     scraped_at:   new Date(nowMs - 10 * 3_600_000).toISOString(), // Tanishq stale — expected
     price_source: "ibja_calibrated",
