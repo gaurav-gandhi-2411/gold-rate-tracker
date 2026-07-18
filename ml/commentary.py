@@ -20,6 +20,7 @@ from __future__ import annotations
 import hashlib
 import json
 import os
+import re
 import sys
 import time
 from pathlib import Path
@@ -32,6 +33,29 @@ DATA_DIR = Path(__file__).parent.parent / "data"
 GROQ_API_URL = "https://api.groq.com/openai/v1/chat/completions"
 GROQ_MODEL = "llama-3.3-70b-versatile"
 MAX_COMMENTARY_ENTRIES = 30
+
+# Single source of truth for jargon the LLM must never surface to family
+# subscribers. Referenced by BOTH the system prompt below AND the output-side
+# guard (_violates_content_policy) so the two can never drift apart — a
+# generation that ignores the prompt (a known, non-zero-temperature failure
+# mode) is still caught before it reaches data/commentary.json.
+BANNED_WORDS: tuple[str, ...] = (
+    "Chronos",
+    "model",
+    "baseline",
+    "samples",
+    "percentile",
+    "naive",
+    "MAE",
+    "backtest",
+    "folds",
+    "fold",
+    "Wilcoxon",
+    "bullish",
+    "bearish",
+    "soaring",
+    "plunging",
+)
 
 SYSTEM_PROMPT = (
     "You write brief, friendly notes for an Indian retail gold price tracker aimed at everyday "
@@ -50,14 +74,128 @@ SYSTEM_PROMPT = (
     "(3) You may mention where the current price sits relative to recent history in everyday language: "
     "'around what it's been lately', 'a bit above its recent range', 'near the lower end recently'. "
     "Never use the word 'percentile'. "
-    "NEVER USE these words or phrases: 'Chronos', 'model', 'baseline', 'samples', 'percentile', "
-    "'naive', 'MAE', 'backtest', 'folds', 'fold', 'Wilcoxon', "
-    "'bullish', 'bearish', 'soaring', 'plunging'. "
+    "NEVER USE these words or phrases: " + ", ".join(f"'{w}'" for w in BANNED_WORDS) + ". "
     "Never give buy/sell/hold advice. "
     "IMPORTANT: When sufficient_for_short_term_stats is false, do NOT mention 3-day or "
     "7-day price changes — instead note that more trend detail will build up over the coming weeks. "
     "Output the note only, no preamble."
 )
+
+# --- Output-side content guard --------------------------------------------------
+# The system prompt above is not a guarantee — an LLM can ignore instructions on
+# a given generation, especially at non-zero temperature (this call uses 0.3).
+# These patterns are the enforcement layer: scanned against the ACTUAL generated
+# text before it is ever written to data/commentary.json or rendered in the UI.
+
+_BANNED_WORD_RE = re.compile(
+    r"\b(" + "|".join(re.escape(w) for w in BANNED_WORDS) + r")\b", re.IGNORECASE
+)
+
+# Forward-looking directional language the prompt explicitly forbids:
+# "Never say prices 'will', 'look likely to', or 'may' rise or fall."
+_FORWARD_LOOKING_MODALS = ("will", "likely to", "may", "might", "could")
+
+# Directional verbs/adjectives (all common inflections) covering both the
+# forward-looking check above and the "omit direction entirely when
+# directional_signal_available is false" rule below.
+_DIRECTION_WORDS = (
+    "rise",
+    "rises",
+    "rising",
+    "risen",
+    "rose",
+    "fall",
+    "falls",
+    "falling",
+    "fallen",
+    "fell",
+    "climb",
+    "climbs",
+    "climbing",
+    "climbed",
+    "drop",
+    "drops",
+    "dropping",
+    "dropped",
+    "increase",
+    "increases",
+    "increasing",
+    "increased",
+    "decrease",
+    "decreases",
+    "decreasing",
+    "decreased",
+    "surge",
+    "surges",
+    "surging",
+    "surged",
+    "dip",
+    "dips",
+    "dipping",
+    "dipped",
+    "rally",
+    "rallies",
+    "rallying",
+    "rallied",
+    "correct",
+    "corrects",
+    "correcting",
+    "corrected",
+    "gain",
+    "gains",
+    "gaining",
+    "gained",
+    "ease",
+    "eases",
+    "easing",
+    "eased",
+)
+
+_DIRECTION_WORD_RE = re.compile(r"\b(" + "|".join(_DIRECTION_WORDS) + r")\b", re.IGNORECASE)
+
+_FORWARD_LOOKING_RE = re.compile(
+    r"\b(" + "|".join(re.escape(m) for m in _FORWARD_LOOKING_MODALS) + r")\b"
+    r".{0,20}?"
+    r"\b(" + "|".join(_DIRECTION_WORDS) + r"|up|down)\b",
+    re.IGNORECASE | re.DOTALL,
+)
+
+
+def _violates_content_policy(text: str, directional_signal_available: bool = True) -> str | None:
+    """Scan generated commentary text against the SYSTEM_PROMPT's content rules.
+
+    Pure function — no I/O. Returns a human-readable reason string if the text
+    violates policy, or None if it is clean. Called from main() before the text
+    is accepted for data/commentary.json; a violation triggers the existing
+    last-known-good fallback path (see main()'s except block).
+
+    Args:
+        text: The raw commentary text returned by call_groq().
+        directional_signal_available: Mirrors the same field sent to the LLM in
+            build_user_message(). When False, the prompt instructs the LLM to
+            omit price direction entirely — any directional word at all (not
+            just forward-looking ones) is a DARK-gate contradiction.
+
+    Returns:
+        A reason string describing the violation, or None if the text is clean.
+    """
+    banned = _BANNED_WORD_RE.search(text)
+    if banned:
+        return f"banned word/phrase detected: {banned.group(0)!r}"
+
+    forward = _FORWARD_LOOKING_RE.search(text)
+    if forward:
+        return f"forward-looking directional language detected: {forward.group(0)!r}"
+
+    if not directional_signal_available:
+        direction = _DIRECTION_WORD_RE.search(text)
+        if direction:
+            return (
+                "directional language present while directional_signal_available=False "
+                f"(DARK-gate contradiction): {direction.group(0)!r}"
+            )
+
+    return None
 
 
 def _load_json(path: Path):
@@ -308,6 +446,13 @@ def main():
         print("No price data available — skipping commentary")
         sys.exit(0)
 
+    # Mirrors the same field computed inside build_user_message() — kept in
+    # sync manually rather than threaded through the return value, since
+    # build_user_message()'s contract is "returns the prompt string" and this
+    # guard is a separate concern (output validation, not prompt construction).
+    companion = (forecast or {}).get("chronos_companion") or {}
+    directional_signal_available = companion.get("status") == "success"
+
     note_text = None
     prompt_hash = None
     try:
@@ -316,8 +461,11 @@ def main():
         note_text = call_groq(api_key, user_msg)
         if not note_text:
             raise ValueError("Groq returned empty response")
+        violation = _violates_content_policy(note_text, directional_signal_available)
+        if violation:
+            raise ValueError(f"content policy violation — {violation}")
     except Exception as exc:
-        print(f"Groq API error: {exc} — falling back to last commentary")
+        print(f"Commentary generation failed: {exc} — falling back to last commentary")
         last = _last_good_commentary()
         if last:
             age_h = _commentary_age_hours(last.get("ts", ""))
