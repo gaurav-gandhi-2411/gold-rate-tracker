@@ -44,10 +44,10 @@ jobs:
 
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v7
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
 
       - name: Set up Node.js
-        uses: actions/setup-node@v6
+        uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6.5.0
         with:
           node-version: "20"
           cache: "npm"
@@ -86,7 +86,7 @@ jobs:
           echo "::warning title=Scrape miss::Tanishq scrape produced no reading this run (expected under its sustained Cloudflare block — ADR 025); prices.json not updated. Site continues serving the IBJA-calibrated estimate."
 
       - name: Set up Python
-        uses: actions/setup-python@v6
+        uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6.3.0
         with:
           python-version: "3.12"
           cache: "pip"
@@ -160,7 +160,7 @@ jobs:
         run: python -m ml.calibration
 
       - name: Cache Chronos model weights
-        uses: actions/cache@v6
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
           path: ~/.cache/huggingface/hub
           key: chronos-bolt-tiny-${{ env.CHRONOS_BOLT_TINY_REVISION }}
@@ -174,7 +174,7 @@ jobs:
         run: python -m ml.chronos_forecast --probe
 
       - name: Restore notification state
-        uses: actions/cache/restore@v6
+        uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
           path: data/notification_state.json
           key: notification-state-${{ github.run_id }}
@@ -188,7 +188,7 @@ jobs:
         run: python -m ml.notifications
 
       - name: Save notification state
-        uses: actions/cache/save@v6
+        uses: actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         if: always() && github.ref_name == 'master'
         with:
           path: data/notification_state.json
