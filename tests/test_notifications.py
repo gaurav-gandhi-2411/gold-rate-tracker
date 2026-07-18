@@ -2204,6 +2204,142 @@ def test_stamp_ist_dedup_t9():
 
 
 # ---------------------------------------------------------------------------
+# T9_ESCALATE — Sustained data-feed outage (2x T9 threshold, IST-day deduped)
+# ---------------------------------------------------------------------------
+# T9 fires once per IST day regardless of how stale the feed gets, so a
+# multi-day outage looks identical (priority 4) to a single 9h blip. This
+# fires a separate, higher-priority alert once staleness doubles past the
+# routine T9 threshold, so sustained outages escalate instead of staying flat.
+# ---------------------------------------------------------------------------
+
+
+def test_t9_escalate_fires_when_sustained_stale():
+    """T9_ESCALATE fires when prices.json latest entry is > 16h old."""
+    alerts = check_triggers(
+        _forecast(),
+        _probe(),
+        _prices_aged(17.0),
+        _backtest_accurate(),
+        NotificationState(),
+        _T9_NOW_IST,
+    )
+    esc = [a for a in alerts if a.trigger_id == "T9_ESCALATE"]
+    assert len(esc) == 1, "T9_ESCALATE must fire when prices are 17h stale"
+    assert esc[0].priority == 5, "T9_ESCALATE must be max priority"
+    assert esc[0].bypass_quiet, "T9_ESCALATE must bypass quiet hours — sustained outage is urgent"
+    assert "₹" not in esc[0].title
+    assert "₹" not in esc[0].body
+
+
+def test_t9_escalate_no_fire_below_threshold():
+    """T9_ESCALATE does not fire when staleness is between the T9 and escalate thresholds."""
+    alerts = check_triggers(
+        _forecast(),
+        _probe(),
+        _prices_aged(9.0),
+        _backtest_accurate(),
+        NotificationState(),
+        _T9_NOW_IST,
+    )
+    assert all(a.trigger_id != "T9_ESCALATE" for a in alerts), (
+        "T9_ESCALATE must NOT fire at 9h — only routine T9 should fire"
+    )
+    assert any(a.trigger_id == "T9" for a in alerts), "T9 should still fire at 9h"
+
+
+def test_t9_escalate_fires_alongside_t9():
+    """A sustained outage fires both T9 (routine) and T9_ESCALATE (urgent) same run."""
+    alerts = check_triggers(
+        _forecast(),
+        _probe(),
+        _prices_aged(20.0),
+        _backtest_accurate(),
+        NotificationState(),
+        _T9_NOW_IST,
+    )
+    ids = {a.trigger_id for a in alerts}
+    assert {"T9", "T9_ESCALATE"} <= ids, "sustained staleness must fire both T9 and T9_ESCALATE"
+
+
+def test_t9_escalate_at_most_one_per_ist_day():
+    """T9_ESCALATE dedups per IST day, independent of T9's own dedup."""
+    now_run1 = _ist(2026, 6, 7, 10, 0)
+    now_run2 = _ist(2026, 6, 7, 13, 0)
+    stale_prices = _prices_aged(20.0, now_ist=now_run1)
+
+    state = NotificationState()
+    alerts_r1 = check_triggers(
+        _forecast(), _probe(), stale_prices, _backtest_accurate(), state, now_run1
+    )
+    assert any(a.trigger_id == "T9_ESCALATE" for a in alerts_r1)
+    state.last_t9_escalate_ist_date = now_run1.strftime("%Y-%m-%d")
+
+    alerts_r2 = check_triggers(
+        _forecast(), _probe(), stale_prices, _backtest_accurate(), state, now_run2
+    )
+    assert all(a.trigger_id != "T9_ESCALATE" for a in alerts_r2), (
+        "T9_ESCALATE must NOT fire again same IST day"
+    )
+
+
+def test_t9_escalate_state_round_trip(tmp_path: Path):
+    """last_t9_escalate_ist_date survives a NotificationState save/load cycle."""
+    state = NotificationState(last_t9_escalate_ist_date="2026-06-07")
+    path = tmp_path / "notification_state.json"
+    save_state(state, path)
+
+    loaded = load_state(path)
+    assert loaded.last_t9_escalate_ist_date == "2026-06-07"
+
+
+def test_t9_escalate_backward_compat_old_state(tmp_path: Path):
+    """State file without last_t9_escalate_ist_date loads with empty-string default."""
+    import json as _json
+
+    old_state = {
+        "schema_version": 1,
+        "last_sent": {},
+        "queued": [],
+        "sent_today": [],
+        "last_t9_ist_date": "2026-06-07",
+        # deliberately absent: last_t9_escalate_ist_date
+    }
+    path = tmp_path / "old_state.json"
+    path.write_text(_json.dumps(old_state), encoding="utf-8")
+
+    loaded = load_state(path)
+    assert loaded.last_t9_escalate_ist_date == ""
+
+
+def test_send_pending_sets_t9_escalate_ist_date(monkeypatch):
+    """send_pending stamps last_t9_escalate_ist_date when T9_ESCALATE is successfully sent."""
+    mock_resp = MagicMock()
+    mock_resp.status = 200
+    mock_resp.__enter__ = MagicMock(return_value=mock_resp)
+    mock_resp.__exit__ = MagicMock(return_value=False)
+    monkeypatch.setattr("urllib.request.urlopen", lambda req, timeout=None: mock_resp)
+    monkeypatch.setenv("NTFY_TOPIC", "test-gold-topic")
+
+    now_ist = _ist(2026, 6, 7, 14, 0)
+    alert = PendingAlert(
+        trigger_id="T9_ESCALATE",
+        title="Gold Tracker: SUSTAINED outage (17h stale)",
+        body="No new price reading in 17h ...",
+        priority=5,
+        tags=["rotating_light", "warning"],
+        click_url="https://gaurav-gandhi-2411.github.io/gold-rate-tracker/",
+        queued_at=now_ist.isoformat(),
+        bypass_quiet=True,
+    )
+    state = NotificationState()
+    assert state.last_t9_escalate_ist_date == ""
+
+    send_pending([alert], state, now_ist)
+
+    assert state.last_t9_escalate_ist_date == now_ist.strftime("%Y-%m-%d")
+
+
+# ---------------------------------------------------------------------------
 # T10 — Feature-store snapshot capture stalled (IST-day deduped)
 # ---------------------------------------------------------------------------
 # Protects the direction-model data-accumulation path: a silent bot-pr-sync
