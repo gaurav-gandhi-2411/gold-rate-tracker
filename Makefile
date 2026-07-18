@@ -13,7 +13,7 @@ help:
 	@echo "  clean             - Remove build artifacts and caches"
 
 setup-inference:
-	pip install -r ml/requirements-inference.txt
+	pip install -r ml/requirements-inference.lock
 
 test:
 	pytest -m "not integration"
