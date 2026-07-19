@@ -780,12 +780,13 @@ function updateOfflineBanner() {
 }
 
 function renderHero(readings, forecast) {
-  const skelEl    = document.getElementById("hero-skeleton");
-  const eyeEl     = document.getElementById("hero-eyebrow");
-  const priceEl   = document.getElementById("hero-price");
-  const rangeEl   = document.getElementById("hero-estimate-range");
-  const changeEl  = document.getElementById("hero-change");
-  const verdictEl = document.getElementById("verdict-banner");
+  const skelEl        = document.getElementById("hero-skeleton");
+  const eyeEl         = document.getElementById("hero-eyebrow");
+  const priceEl       = document.getElementById("hero-price");
+  const rangeEl       = document.getElementById("hero-estimate-range");
+  const lastConfEl    = document.getElementById("hero-last-confirmed");
+  const changeEl      = document.getElementById("hero-change");
+  const verdictEl     = document.getElementById("verdict-banner");
 
   if (skelEl) skelEl.hidden = true;
   if (eyeEl)  eyeEl.hidden  = false;
@@ -796,6 +797,7 @@ function renderHero(readings, forecast) {
     priceEl.innerHTML = "—"; // XSS-safe: static literal string, no external data
     priceEl.hidden    = false;
     if (rangeEl) rangeEl.hidden = true;
+    if (lastConfEl) lastConfEl.hidden = true;
     if (verdictEl) {
       document.getElementById("verdict-icon").textContent    = "○";
       document.getElementById("verdict-headline").textContent = "Not enough data yet";
@@ -827,9 +829,22 @@ function renderHero(readings, forecast) {
       rangeEl.textContent = `estimated range ₹${fmtINR(forecast.est_low)}–₹${fmtINR(forecast.est_high)}`;
       rangeEl.hidden = false;
     }
+    // Honest secondary line: the actual last-observed Tanishq reading, dated —
+    // never implied current. prices.json holds only genuine scraped Tanishq
+    // readings (never IBJA/estimate data), so `latest` here is always a real
+    // observation; this line naturally shows the freshest one once a scrape
+    // succeeds again (no separate "reachable again" wiring needed — same data,
+    // same render path, whatever `latest` currently is).
+    if (lastConfEl) {
+      lastConfEl.textContent = `Tanishq last confirmed: ₹${fmtINR(newPrice)} (${fmtDateShort(latest.timestamp)})`;
+      lastConfEl.hidden = false;
+    }
   } else {
     displayedPrice = newPrice;
     if (rangeEl) rangeEl.hidden = true;
+    // Hero already IS the last-confirmed Tanishq reading here — a secondary
+    // line repeating it would be pure noise, not honesty.
+    if (lastConfEl) lastConfEl.hidden = true;
     // Φ16-4: tick when price changes on a live refresh; first render and no-change case are instant.
     // priceEl.hidden guard: element hidden means skeleton is still showing — don't animate there.
     if (prevPrice !== null && prevPrice !== newPrice && !priceEl.hidden) {
