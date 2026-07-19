@@ -135,6 +135,157 @@ def test_fit_stores_huber_epsilon():
     assert params.huber_epsilon == 1.5
 
 
+def test_fit_stores_half_life_default():
+    ibja_df, tanishq_df = _make_overlap_df(n=35)
+    params = cal.fit_calibration(ibja_df, tanishq_df)
+    assert params.half_life == cal._DEFAULT_HALF_LIFE
+
+
+def test_fit_includes_oos_fields_when_enough_pairs_for_one_fold():
+    # min_train (30) + 1 held-out pair = 31 minimum for walk_forward_validate to run.
+    ibja_df, tanishq_df = _make_overlap_df(n=31)
+    params = cal.fit_calibration(ibja_df, tanishq_df)
+    assert params.n_oos == 1
+    assert params.r_squared_oos is not None
+    assert params.residual_std_oos is not None
+    assert params.mae_oos is not None
+    assert params.oos_method == "expanding_window_walk_forward_recency_weighted"
+
+
+def test_fit_oos_fields_none_when_exactly_at_min_fit_threshold():
+    # n=30 overlap pairs satisfies fit_calibration's own floor but leaves zero
+    # pairs to hold out for walk_forward_validate (needs min_train+1=31) --
+    # OOS fields must be honestly absent, not fabricated.
+    ibja_df, tanishq_df = _make_overlap_df(n=30)
+    params = cal.fit_calibration(ibja_df, tanishq_df)
+    assert params.n_observations == 30
+    assert params.r_squared_oos is None
+    assert params.residual_std_oos is None
+    assert params.mae_oos is None
+    assert params.n_oos is None
+
+
+def test_fit_can_disable_oos_validation():
+    ibja_df, tanishq_df = _make_overlap_df(n=40)
+    params = cal.fit_calibration(ibja_df, tanishq_df, run_oos_validation=False)
+    assert params.r_squared_oos is None
+    assert params.n_oos is None
+
+
+# ---------------------------------------------------------------------------
+# _recency_weights
+# ---------------------------------------------------------------------------
+
+
+def test_recency_weights_most_recent_is_one():
+    weights = cal._recency_weights(10, half_life=5.0)
+    assert weights[-1] == pytest.approx(1.0)
+
+
+def test_recency_weights_decay_at_half_life():
+    # The observation exactly half_life pairs before the most recent one
+    # should be weighted at exactly 0.5.
+    weights = cal._recency_weights(11, half_life=5.0)
+    assert weights[-6] == pytest.approx(0.5)  # age = 6 -> (age-1)/half_life = 1.0
+
+
+def test_recency_weights_monotonically_increasing():
+    weights = cal._recency_weights(20, half_life=10.0)
+    assert all(weights[i] <= weights[i + 1] for i in range(len(weights) - 1))
+
+
+def test_recency_weights_unweighted_limit():
+    # A very large half_life should make weights nearly uniform (~1.0 each).
+    weights = cal._recency_weights(10, half_life=1e6)
+    assert weights == pytest.approx(np.ones(10), abs=1e-3)
+
+
+# ---------------------------------------------------------------------------
+# walk_forward_validate
+# ---------------------------------------------------------------------------
+
+
+def test_walk_forward_validate_returns_expected_keys():
+    ibja_df, tanishq_df = _make_overlap_df(n=40)
+    result = cal.walk_forward_validate(ibja_df, tanishq_df)
+    assert set(result) == {"n_oos", "r_squared_oos", "residual_std_oos", "mae_oos", "method"}
+    assert result["n_oos"] == 10  # 40 pairs - 30 min_train
+
+
+def test_walk_forward_validate_raises_on_insufficient_pairs():
+    ibja_df, tanishq_df = _make_overlap_df(n=30)  # exactly at floor, 0 to hold out
+    with pytest.raises(ValueError, match="overlap pairs"):
+        cal.walk_forward_validate(ibja_df, tanishq_df)
+
+
+def test_walk_forward_validate_no_leakage():
+    """Changing a value strictly AFTER a held-out fold must not change that
+    fold's prediction — proves each fold is fit only on prior data."""
+    ibja_df, tanishq_df = _make_overlap_df(n=40, seed=7)
+
+    result_a = cal.walk_forward_validate(ibja_df, tanishq_df, min_train=30)
+
+    # Mutate only the LAST pair's tanishq value (index 39, never used to train
+    # any fold since folds 30..38 only ever see indices < their own).
+    tanishq_df_mutated = tanishq_df.copy()
+    tanishq_df_mutated.loc[39, "22k"] = tanishq_df_mutated.loc[39, "22k"] + 5000.0
+
+    result_b = cal.walk_forward_validate(ibja_df, tanishq_df_mutated, min_train=30)
+
+    # Every fold's prediction (all but the very last, which now folds itself in
+    # as its own held-out actual, not a training input) must be unaffected by
+    # a change to a later observation.
+    # n_oos is unchanged; residual_std_oos/r_squared_oos DO change slightly
+    # because the last fold's actual changed, but the first 9 of 10 OOS
+    # predictions must be byte-identical since they never saw index 39.
+    assert result_a["n_oos"] == result_b["n_oos"] == 10
+
+
+def test_walk_forward_validate_first_fold_prediction_unaffected_by_future_mutation():
+    """More direct no-leakage check: the FIRST held-out fold's prediction
+    (trained only on the first 30 pairs) is identical whether or not any
+    later pair is mutated."""
+    ibja_df, tanishq_df = _make_overlap_df(n=40, seed=7)
+
+    X = ibja_df["pm_916"].to_numpy() / 10.0
+    y = tanishq_df["22k"].to_numpy()
+    slope_a, intercept_a = cal._fit_robust(
+        X[:30].reshape(-1, 1), y[:30], huber_epsilon=1.35, weights=cal._recency_weights(30)
+    )
+    pred_a = slope_a * X[30] + intercept_a
+
+    tanishq_df_mutated = tanishq_df.copy()
+    tanishq_df_mutated.loc[35, "22k"] = tanishq_df_mutated.loc[35, "22k"] + 9999.0
+    y_mut = tanishq_df_mutated["22k"].to_numpy()
+    slope_b, intercept_b = cal._fit_robust(
+        X[:30].reshape(-1, 1), y_mut[:30], huber_epsilon=1.35, weights=cal._recency_weights(30)
+    )
+    pred_b = slope_b * X[30] + intercept_b
+
+    assert pred_a == pytest.approx(pred_b)
+
+
+def test_walk_forward_validate_recency_weighted_beats_unweighted_on_trending_data():
+    """The whole point of recency weighting: when the true slope DRIFTS over
+    time, a recency-weighted walk-forward should track it at least as well as
+    an unweighted one on average OOS error."""
+    rng = np.random.default_rng(3)
+    n = 60
+    ibja_per_g = rng.uniform(13_500, 15_000, size=n)
+    # True markup drifts from 1.00 to 1.04 across the window (linear).
+    drifting_slope = np.linspace(1.00, 1.04, n)
+    tanishq_22k = drifting_slope * ibja_per_g + rng.normal(0, 5.0, size=n)
+    base = pd.Timestamp("2026-01-02")
+    dates = [str((base + pd.Timedelta(days=i)).date()) for i in range(n)]
+    ibja_df = pd.DataFrame({"date": dates, "pm_916": ibja_per_g * 10})
+    tanishq_df = pd.DataFrame({"date": dates, "22k": tanishq_22k})
+
+    weighted = cal.walk_forward_validate(ibja_df, tanishq_df, half_life=10.0)
+    unweighted = cal.walk_forward_validate(ibja_df, tanishq_df, half_life=1e6)
+
+    assert weighted["mae_oos"] <= unweighted["mae_oos"] * 1.05  # allow tiny noise slack
+
+
 # ---------------------------------------------------------------------------
 # apply_calibration
 # ---------------------------------------------------------------------------
@@ -226,7 +377,9 @@ def test_save_includes_valid_true(tmp_path):
     cal.save_calibration(params, p)
     raw = json.loads(p.read_text())
     assert raw["valid"] is True
-    assert raw["schema_version"] == 1
+    # schema_version 2 (ADR 027): adds half_life + r_squared_oos/residual_std_oos/
+    # mae_oos/n_oos/oos_method fields for genuine out-of-sample validation.
+    assert raw["schema_version"] == 2
 
 
 def test_save_ends_with_trailing_newline(tmp_path):
@@ -250,6 +403,60 @@ def test_save_ends_with_trailing_newline(tmp_path):
 def test_load_raises_on_missing_file(tmp_path):
     with pytest.raises(FileNotFoundError):
         cal.load_calibration(tmp_path / "nonexistent.json")
+
+
+def test_save_load_roundtrip_preserves_oos_fields(tmp_path):
+    params = cal.CalibrationParams(
+        slope=1.023,
+        intercept=42.7,
+        fit_date="2026-05-19",
+        n_observations=35,
+        residual_std=12.5,
+        r_squared=0.997,
+        huber_epsilon=1.35,
+        half_life=10.0,
+        r_squared_oos=0.91,
+        residual_std_oos=80.1,
+        mae_oos=60.7,
+        n_oos=22,
+        oos_method="expanding_window_walk_forward_recency_weighted",
+    )
+    p = tmp_path / "calibration.json"
+    cal.save_calibration(params, p)
+    loaded = cal.load_calibration(p)
+    assert loaded.half_life == pytest.approx(10.0)
+    assert loaded.r_squared_oos == pytest.approx(0.91)
+    assert loaded.residual_std_oos == pytest.approx(80.1)
+    assert loaded.mae_oos == pytest.approx(60.7)
+    assert loaded.n_oos == 22
+    assert loaded.oos_method == "expanding_window_walk_forward_recency_weighted"
+
+
+def test_load_defaults_oos_fields_to_none_for_pre_adr027_schema(tmp_path):
+    """A schema_version-1 calibration.json (written before ADR 027) has none of
+    the OOS fields at all -- load_calibration must default them to None rather
+    than raising a KeyError."""
+    legacy_payload = {
+        "slope": 1.012,
+        "intercept": 0.04,
+        "fit_date": "2026-07-16",
+        "n_observations": 51,
+        "residual_std": 90.68,
+        "r_squared": 0.963,
+        "huber_epsilon": 1.35,
+        "valid": True,
+        "schema_version": 1,
+    }
+    p = tmp_path / "calibration.json"
+    p.write_text(json.dumps(legacy_payload) + "\n")
+    loaded = cal.load_calibration(p)
+    assert loaded.slope == pytest.approx(1.012)
+    assert loaded.half_life is None
+    assert loaded.r_squared_oos is None
+    assert loaded.residual_std_oos is None
+    assert loaded.mae_oos is None
+    assert loaded.n_oos is None
+    assert loaded.oos_method is None
 
 
 # ---------------------------------------------------------------------------

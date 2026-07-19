@@ -448,3 +448,40 @@ def test_band_unit_scaling_correctness(tmp_path: object, monkeypatch: object) ->
     assert fc["est_low"] == 14400  # exactly 100 INR/g below
     assert fc["est_high"] == 14600  # exactly 100 INR/g above
     assert fc["est_high"] - fc["est_low"] == 200  # band width = 2 * residual_std
+
+
+@pytest.mark.smoke
+def test_band_prefers_residual_std_oos_when_present(tmp_path: object, monkeypatch: object) -> None:
+    """ADR 027: when calibration.json carries residual_std_oos (genuine
+    out-of-sample), the displayed band must use it instead of the in-sample
+    residual_std -- residual_std alone must never be cited as the real
+    uncertainty estimate once an OOS number exists."""
+    monkeypatch.setattr(inf, "DATA_DIR", tmp_path)
+
+    now = datetime(2026, 3, 15, 13, 30, tzinfo=UTC)
+    last_ts = datetime(2026, 3, 15, 4, 0, tzinfo=UTC)
+    prices = _make_prices_with_last_ts(40, last_ts, last_22k=14000)
+
+    (tmp_path / "prices.json").write_text(json.dumps(prices))
+    (tmp_path / "backtest.json").write_text(json.dumps(_make_backtest(35)))
+    (tmp_path / "chronos_probe.json").write_text(json.dumps(_make_probe("success")))
+    (tmp_path / "calibration.json").write_text(
+        json.dumps(
+            {
+                "valid": True,
+                "slope": 1.0,
+                "intercept": 0.0,
+                "residual_std": 100.0,  # in-sample -- must NOT be used when OOS present
+                "residual_std_oos": 65.0,  # genuine OOS -- must be used instead
+            }
+        )
+    )
+    _make_ibja_parquet(tmp_path, [{"date": "2026-03-15", "pm_916": 145000.0}])
+
+    inf.main(now=now)
+
+    fc = json.loads((tmp_path / "forecast.json").read_text())
+
+    assert fc["current_22k"] == 14500
+    assert fc["est_low"] == 14435  # 14500 - 65 (OOS), not 14400 (in-sample)
+    assert fc["est_high"] == 14565  # 14500 + 65 (OOS), not 14600 (in-sample)

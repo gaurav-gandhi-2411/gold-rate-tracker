@@ -234,6 +234,16 @@ def _select_price_source(
     if slope is None or intercept is None or residual_std is None:
         return _noop
 
+    # ADR 027: prefer the genuinely out-of-sample residual_std_oos (expanding-
+    # window walk-forward, no leakage) for the displayed band when available --
+    # residual_std alone is in-sample (fit and evaluated on the same data) and
+    # per ADR 023's caution must not be treated as a generalization estimate.
+    # calibration.json files predating ADR 027 (schema_version 1) have no
+    # residual_std_oos key at all; falling back to the in-sample residual_std
+    # keeps those working exactly as before.
+    residual_std_oos = calibration.get("residual_std_oos")
+    band_half_width = residual_std_oos if residual_std_oos is not None else residual_std
+
     # Scrape staleness check
     try:
         scraped_dt = datetime.fromisoformat(scraped_at.replace("Z", "+00:00"))
@@ -286,8 +296,8 @@ def _select_price_source(
     # All gates passed — compute calibrated estimate
     ibja_per_g = pm_916 / 10.0
     ibja_calibrated_22k = round(slope * ibja_per_g + intercept)
-    est_low = round(ibja_calibrated_22k - residual_std)
-    est_high = round(ibja_calibrated_22k + residual_std)
+    est_low = round(ibja_calibrated_22k - band_half_width)
+    est_high = round(ibja_calibrated_22k + band_half_width)
     ibja_asof_iso = ibja_asof_dt.isoformat()
 
     logger.info(
