@@ -1,0 +1,36 @@
+name: (Diagnostic) Reachability check — throwaway, do not merge
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Curl candidate sources from a GH Actions runner IP
+        run: |
+          UA="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/136.0.0.0 Safari/537.36"
+          for url in \
+            "https://www.tanishq.co.in/gold-rate.html?lang=en_IN" \
+            "https://www.grtjewels.com/gold-rate/" \
+            "https://www.joyalukkas.in/gold-rate" \
+            "https://www.kalyanjewellers.net/gold-rate/Gold-Rate-Today" \
+            "https://www.goodreturns.in/gold-rates/bangalore.html" \
+            "https://www.bankbazaar.com/gold-rate-bangalore.html" ; do
+            echo "=== $url ==="
+            code=$(curl -s -o /tmp/resp.html -D /tmp/resp_headers.txt -A "$UA" --max-time 20 -w "%{http_code}" "$url" || echo "CURL_FAIL")
+            echo "HTTP: $code"
+            grep -iE "^server:|cf-ray|cf-mitigated" /tmp/resp_headers.txt || true
+            title=$(grep -o "<title>[^<]*</title>" /tmp/resp.html | head -1)
+            echo "title: $title"
+            if grep -qiE "just a moment|cf-challenge|_cf_chl_|cf-browser-verification|access denied|are you human" /tmp/resp.html; then
+              echo "*** CF/WAF CHALLENGE MARKER DETECTED ***"
+            fi
+            bytes=$(wc -c < /tmp/resp.html)
+            echo "body bytes: $bytes"
+            echo ""
+            sleep 2
+          done
