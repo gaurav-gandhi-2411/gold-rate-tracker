@@ -10,8 +10,18 @@
 // See also CURRENT_STATE.md norm #13: squash-merge commits must not carry [skip ci]
 // in the body — a [skip ci] merge skips master Lint for up to ~24h (only the daily
 // 06:00 UTC schedule backstop in lint.yml recovers it).
-
-const VERSION = "v16-20260608-phi22";
+//
+// 2026-07-19: VERSION had gone unbumped since 2026-06-08 (v16-20260608-phi22)
+// across 11 merged PRs that changed index.html/app.js/style.css (#122 through
+// #237). Because this file's own bytes never changed, registration.update()
+// never detected a diff and never re-installed — any client that had this SW
+// installed anytime in that window is frozen on whichever shell snapshot was
+// live at that moment and never received a single one of those 11 shell
+// updates. Bumping VERSION now forces every such client to evict the stale
+// cache and re-fetch the current shell on next load. See lint.yml's
+// sw-version-guard job, added the same day, which now fails CI when shell
+// files change without a VERSION bump.
+const VERSION = "v17-20260719-shell-resync";
 const SHELL_CACHE = `gold-shell-${VERSION}`;
 
 const SHELL_FILES = [

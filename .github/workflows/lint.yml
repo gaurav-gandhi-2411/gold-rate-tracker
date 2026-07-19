@@ -98,6 +98,37 @@ jobs:
               -f target_url="${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}"
           done
 
+  # Enforces service-worker.js's own CACHE INVALIDATION CONTRACT: cache-first
+  # shell serving means a client that already installed this SW never re-fetches
+  # index.html/app.js/style.css/manifest.webmanifest unless service-worker.js's
+  # own bytes change (which is what forces registration.update() to reinstall).
+  # VERSION went unbumped for 11 merged PRs (2026-06-08 to 2026-07-19) before
+  # this was added — returning visitors were frozen on a stale, drifted shell
+  # with no error and no signal. This job fails fast the next time a shell file
+  # changes without a VERSION bump instead of relying on someone remembering.
+  sw-version-guard:
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        with:
+          fetch-depth: 0
+      - name: Require a VERSION bump when shell assets change
+        run: |
+          set -e
+          BASE="origin/${{ github.base_ref }}"
+          CHANGED=$(git diff --name-only "$BASE"...HEAD)
+          if echo "$CHANGED" | grep -qE '^(index\.html|app\.js|style\.css|manifest\.webmanifest)$'; then
+            if ! echo "$CHANGED" | grep -qx 'service-worker.js'; then
+              echo "::error::index.html/app.js/style.css/manifest.webmanifest changed but service-worker.js wasn't touched. Bump VERSION in service-worker.js — see the CACHE INVALIDATION CONTRACT comment at the top of that file."
+              exit 1
+            fi
+            if ! git diff "$BASE...HEAD" -- service-worker.js | grep -q '^[+-]const VERSION'; then
+              echo "::error::service-worker.js changed but the VERSION const wasn't. Bump VERSION — see the CACHE INVALIDATION CONTRACT comment at the top of that file."
+              exit 1
+            fi
+          fi
+
   # Dependency vulnerability audit — informational only, not a required check.
   # Neither lint nor pwa-js depends on this job; a finding here should not block
   # merges. Findings are surfaced in the job log for manual triage.
