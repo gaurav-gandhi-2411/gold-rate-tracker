@@ -1,11 +1,11 @@
 {
-  "predicted_at": "2026-07-19T15:54:55.036150+00:00",
+  "predicted_at": "2026-07-19T17:02:42.186891+00:00",
   "target_window": "5d",
   "headline": {
     "method": "naive_flat_hold",
-    "predicted_22k": 13089,
-    "lower": 12836,
-    "upper": 13342,
+    "predicted_22k": 13084,
+    "lower": 12831,
+    "upper": 13337,
     "conformal_pi_half": 253.0,
     "naive_mae_recent_30": 163.3,
     "vol_context": {
@@ -29,25 +29,25 @@
     "direction_acc_30f": 0.267,
     "direction_prob_basis": "base_rate_fallback",
     "horizon_p10": [
-      12814.55,
-      12708.18,
-      12629.81,
-      12564.23,
-      12506.55
+      12809.94,
+      12703.62,
+      12625.28,
+      12559.72,
+      12502.07
     ],
     "horizon_p50": [
-      13234.31,
-      13232.64,
-      13249.35,
-      13260.66,
-      13285.62
+      13229.54,
+      13227.87,
+      13244.57,
+      13255.88,
+      13280.83
     ],
     "horizon_p90": [
-      13692.74,
-      13805.73,
-      13909.97,
-      13977.29,
-      14062.62
+      13687.79,
+      13800.73,
+      13904.93,
+      13972.22,
+      14057.52
     ],
     "model_version": "amazon/chronos-bolt-tiny@a0e552de",
     "calibration_applied": true,
@@ -56,7 +56,7 @@
     "direction_consensus": 1.0
   },
   "driver_context": {
-    "computed_at": "2026-07-19T15:54:55.075997+00:00",
+    "computed_at": "2026-07-19T17:02:42.216319+00:00",
     "macro_staleness_days": 0.0,
     "macro_fresh": true,
     "premium_threshold_pct": 15.0,
@@ -102,16 +102,16 @@
     }
   },
   "real_readings_count": 428,
-  "current_22k": 13089,
+  "current_22k": 13084,
   "scraped_at": "2026-07-18T15:53:24.364Z",
   "price_source": "ibja_calibrated",
-  "est_low": 12998,
-  "est_high": 13180,
+  "est_low": 13004,
+  "est_high": 13164,
   "ibja_asof": "2026-07-17T11:30:00+00:00",
   "model_fallback": false,
-  "predicted_22k": 13089,
-  "lower": 12836,
-  "upper": 13342,
+  "predicted_22k": 13084,
+  "lower": 12831,
+  "upper": 13337,
   "target_time": "2026-07-20T00:00:00+00:00",
   "model_status": "naive_headline",
   "model_version": "naive_flat_hold",
