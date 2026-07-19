@@ -153,3 +153,21 @@ def test_output_written_to_disk(monkeypatch, tmp_path):
     written = shadow_fusion.SHADOW_OUTPUT_PATH
     assert written.exists()
     assert "national_benchmark" in written.read_text(encoding="utf-8")
+
+
+def test_output_ends_with_exactly_one_trailing_newline(monkeypatch):
+    # Regression test: a file missing its trailing newline fails pre-commit's
+    # end-of-file-fixer hook, which stalls every CI cycle's bot-PR-sync step
+    # (found 2026-07-19, PR #262 timed out this way -- see ml.shadow_fusion's
+    # _write_output).
+    _patch_national(monkeypatch)
+    _patch_kalyan(
+        monkeypatch,
+        {city: _reading("kalyan", 13100, city=city) for city in shadow_fusion.KALYAN_CITIES},
+    )
+
+    shadow_fusion.run_shadow_cycle()
+
+    raw = shadow_fusion.SHADOW_OUTPUT_PATH.read_bytes()
+    assert raw.endswith(b"\n")
+    assert not raw.endswith(b"\n\n")
