@@ -168,7 +168,11 @@ def run_shadow_cycle() -> dict:
 
 def _write_output(output: dict, path: Path = SHADOW_OUTPUT_PATH) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_text(json.dumps(output, indent=2), encoding="utf-8")
+    # Trailing newline required: pre-commit's end-of-file-fixer hook (lint.yml)
+    # rewrites any file missing one and fails the run — every shadow-fusion CI
+    # cycle would otherwise regenerate this file without one and get stuck at
+    # the bot-PR-sync step forever (found 2026-07-19, PR #262 timed out this way).
+    path.write_text(json.dumps(output, indent=2) + "\n", encoding="utf-8")
 
 
 if __name__ == "__main__":
