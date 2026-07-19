@@ -1,0 +1,66 @@
+name: Live Render Smoke Test
+
+# Catches render-time failures a curl/HTTP-status check cannot see: a
+# throwing script, a blocked/broken external resource, a failed data fetch,
+# or a stale service-worker cache serving an incompatible shell to a
+# returning visitor — any of which leaves the DOM on its "Loading…"
+# skeleton with zero HTTP-level signal. This exists because exactly that
+# happened silently for 11 merged PRs before service-worker.js's VERSION
+# contract was restored in #252; see tests/smoke_render_live.js for the
+# three checks this runs.
+#
+# Triggered right after a Pages deploy completes (deployment_status on the
+# github-pages environment), plus a schedule backstop in case that event
+# doesn't fire for a given deploy path — same backstop idiom lint.yml uses
+# for its daily schedule trigger.
+
+on:
+  deployment_status:
+  schedule:
+    - cron: "30 */6 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  smoke:
+    if: github.event_name != 'deployment_status' || (github.event.deployment_status.state == 'success' && github.event.deployment_status.environment == 'github-pages')
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+
+      - uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6.5.0
+        with:
+          node-version: "20"
+          cache: "npm"
+          cache-dependency-path: scraper/package-lock.json
+
+      - name: Install scraper dependencies
+        working-directory: scraper
+        run: npm ci || npm install
+
+      - name: Install Playwright browsers
+        working-directory: scraper
+        run: npx playwright install --with-deps chromium
+
+      - name: Run live-site render smoke test
+        run: node tests/smoke_render_live.js
+
+      - name: Alert on render failure
+        if: failure()
+        continue-on-error: true
+        env:
+          NTFY_TOPIC: ${{ secrets.NTFY_TOPIC }}
+        run: |
+          if [ -z "${NTFY_TOPIC}" ]; then
+            echo "NTFY_TOPIC not set — skipping ntfy alert."
+            exit 0
+          fi
+          curl -s \
+            -H "Title: Gold Tracker: live site not rendering" \
+            -H "Priority: urgent" \
+            -H "Tags: rotating_light" \
+            -d "Post-deploy render smoke test failed -- the live site may be stuck on Loading for real visitors. https://github.com/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}" \
+            "https://ntfy.sh/${NTFY_TOPIC}" || true
