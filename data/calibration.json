@@ -1,11 +1,17 @@
 {
-  "slope": 1.0122551502969606,
-  "intercept": 0.038639442646201554,
-  "fit_date": "2026-07-16",
-  "n_observations": 51,
-  "residual_std": 90.68017785739075,
-  "r_squared": 0.9630789583608824,
+  "slope": 1.0118524773327247,
+  "intercept": 0.5296613636746405,
+  "fit_date": "2026-07-19",
+  "n_observations": 52,
+  "residual_std": 96.92041806623597,
+  "r_squared": 0.9574977139831213,
   "huber_epsilon": 1.35,
+  "half_life": 10.0,
+  "r_squared_oos": 0.9203229222505053,
+  "residual_std_oos": 80.0900445540021,
+  "mae_oos": 58.85890357505907,
+  "n_oos": 22,
+  "oos_method": "expanding_window_walk_forward_recency_weighted",
   "valid": true,
-  "schema_version": 1
+  "schema_version": 2
 }
