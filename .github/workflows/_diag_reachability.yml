@@ -1,0 +1,41 @@
+name: (Diagnostic) Reachability check 2 — throwaway, do not merge
+
+on:
+  workflow_dispatch:
+  pull_request:
+    branches: [master]
+
+permissions:
+  contents: read
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Test specific data endpoints from a GH Actions runner IP
+        run: |
+          UA="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/136.0.0.0 Safari/537.36"
+
+          echo "=== Kalyan Jewellers get_rate (Bangalore: countryId=1 stateId=8 cityId=40) ==="
+          curl -s -D /tmp/h1.txt -A "$UA" \
+            -H "X-Requested-With: XMLHttpRequest" \
+            -H "Content-Type: application/x-www-form-urlencoded; charset=UTF-8" \
+            -H "Referer: https://www.kalyanjewellers.net/gold-rate/Gold-Rate-Today" \
+            --data "countryId=1&stateId=8&cityId=40" \
+            --max-time 20 \
+            "https://www.kalyanjewellers.net/kalyan_gold_rates/ajax/get_rate" -w "\nHTTP: %{http_code}\n"
+          grep -iE "^server:|cf-ray" /tmp/h1.txt || true
+          echo ""
+
+          echo "=== Malabar GraphQL getMetalRate (national) ==="
+          curl -s -D /tmp/h2.txt -A "$UA" \
+            -H "Referer: https://www.malabargoldanddiamonds.com/in/pan-india/en/live-gold-rate.html" \
+            --max-time 20 \
+            'https://www.malabargoldanddiamonds.com/graphql-magento?query=query%20getMetalRate(%24filter%3A%20MetalRateFilterInput)%20%7B%20getMetalRate(filter%3A%20%24filter)%20%7B%20items%20%7B%20entry_date%20entry_time%20purity%20unit%20rate%20country%20state%20%7D%20%7D%20%7D&variables=%7B%22filter%22%3A%7B%22metal_type%22%3A%22gold%22%2C%22country%22%3A%22India%22%7D%7D' -w "\nHTTP: %{http_code}\n"
+          grep -iE "^server:|x-served-by" /tmp/h2.txt || true
+          echo ""
+
+          echo "=== GRT Jewels page (embedded JSON price) ==="
+          curl -s -D /tmp/h3.txt -o /tmp/grt.html -A "$UA" --max-time 20 "https://www.grtjewels.com/gold-rate/" -w "HTTP: %{http_code}\n"
+          grep -iE "^server:|cf-ray" /tmp/h3.txt || true
+          grep -o '"purity\\":\\"22 KT\\",\\"amount\\":[0-9]*' /tmp/grt.html || echo "price pattern not found"
