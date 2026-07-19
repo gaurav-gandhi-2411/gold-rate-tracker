@@ -783,6 +783,7 @@ function renderHero(readings, forecast) {
   const skelEl    = document.getElementById("hero-skeleton");
   const eyeEl     = document.getElementById("hero-eyebrow");
   const priceEl   = document.getElementById("hero-price");
+  const rangeEl   = document.getElementById("hero-estimate-range");
   const changeEl  = document.getElementById("hero-change");
   const verdictEl = document.getElementById("verdict-banner");
 
@@ -794,6 +795,7 @@ function renderHero(readings, forecast) {
   if (readings.length === 0) {
     priceEl.innerHTML = "—"; // XSS-safe: static literal string, no external data
     priceEl.hidden    = false;
+    if (rangeEl) rangeEl.hidden = true;
     if (verdictEl) {
       document.getElementById("verdict-icon").textContent    = "○";
       document.getElementById("verdict-headline").textContent = "Not enough data yet";
@@ -812,15 +814,22 @@ function renderHero(readings, forecast) {
     forecast && forecast.price_source === "ibja_calibrated" &&
     forecast.current_22k != null && forecast.est_low != null && forecast.est_high != null
   ) {
-    // IBJA-calibrated estimate — show as bounded range, not a bare point (ADR 021 §4).
-    // ASCII-safe: Rs. not the rupee glyph. XSS-safe: all values are integers from forecast.json.
+    // IBJA-calibrated estimate — bounded range still shown (ADR 021 §4), but as a
+    // small secondary line below the hero, not jammed into the headline itself.
+    // The point estimate AND the range crammed into one giant number reads as
+    // garbled/stale at a glance; the ≈ prefix plus the stale-banner already signal
+    // "estimate" without a third hedge competing for attention in the headline.
+    // XSS-safe: rupee()/fmtINR wrap numbers only; all values are integers from forecast.json.
     displayedPrice = forecast.current_22k;
-    priceEl.innerHTML =
-      `≈ Rs.${fmtINR(forecast.current_22k)}` +
-      ` <span class="est-range">(est. Rs.${fmtINR(forecast.est_low)}–Rs.${fmtINR(forecast.est_high)})</span>`;
+    priceEl.innerHTML = `≈ ${rupee(forecast.current_22k)}`;
     priceEl.hidden = false;
+    if (rangeEl) {
+      rangeEl.textContent = `estimated range ₹${fmtINR(forecast.est_low)}–₹${fmtINR(forecast.est_high)}`;
+      rangeEl.hidden = false;
+    }
   } else {
     displayedPrice = newPrice;
+    if (rangeEl) rangeEl.hidden = true;
     // Φ16-4: tick when price changes on a live refresh; first render and no-change case are instant.
     // priceEl.hidden guard: element hidden means skeleton is still showing — don't animate there.
     if (prevPrice !== null && prevPrice !== newPrice && !priceEl.hidden) {

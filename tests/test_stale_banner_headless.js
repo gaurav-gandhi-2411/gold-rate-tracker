@@ -331,8 +331,12 @@ async function run() {
       await ctx.close();
     }
 
-    // ── Scenario D: hero shows bounded estimate when ibja_calibrated ─────────────
-    console.log("\nScenario D: price_source=ibja_calibrated → hero shows '≈ Rs.14,500 (est. Rs.14,450–Rs.14,550)'");
+    // ── Scenario D: hero shows point estimate; range is a separate secondary
+    // line, not jammed into the headline (decluttered per the presentation fix —
+    // the point estimate AND range crammed into one giant number read as
+    // garbled/stale at a glance). Hero: "≈ ₹14,500". Subline: "estimated range
+    // ₹14,450–₹14,550".
+    console.log("\nScenario D: price_source=ibja_calibrated → hero '≈ ₹14,500', range as a separate secondary line");
     {
       const ctx  = await browser.newContext();
       const page = await ctx.newPage();
@@ -341,18 +345,28 @@ async function run() {
       await page.goto(base, { waitUntil: "networkidle" });
       await page.waitForTimeout(500);
 
-      const heroText = await page.evaluate(() => {
-        const el = document.getElementById("hero-price");
-        return el ? el.textContent.trim() : null;
+      const { heroText, rangeText, rangeHidden } = await page.evaluate(() => {
+        const hero  = document.getElementById("hero-price");
+        const range = document.getElementById("hero-estimate-range");
+        return {
+          heroText:    hero  ? hero.textContent.trim()  : null,
+          rangeText:   range ? range.textContent.trim() : null,
+          rangeHidden: range ? range.hidden             : null,
+        };
       });
       console.log(`  Hero text: "${heroText}"`);
+      console.log(`  Range text: "${rangeText}" (hidden=${rangeHidden})`);
 
-      assert("hero-price element found",     heroText !== null);
-      assert('hero text includes "14,500"',  heroText.includes("14,500"),  `got "${heroText}"`);
-      assert('hero text includes "est."  OR "(est."',
-        heroText.includes("est.") || heroText.includes("(est"),           `got "${heroText}"`);
-      assert('hero text includes "14,450"',  heroText.includes("14,450"),  `got "${heroText}"`);
-      assert('hero text includes "14,550"',  heroText.includes("14,550"),  `got "${heroText}"`);
+      assert("hero-price element found",       heroText !== null);
+      assert('hero text includes "≈"',         heroText.includes("≈"),      `got "${heroText}"`);
+      assert('hero text includes "14,500"',    heroText.includes("14,500"), `got "${heroText}"`);
+      assert('hero text does NOT include the range (no "14,450")',
+        !heroText.includes("14,450"), `got "${heroText}" — range leaked into the headline`);
+
+      assert("hero-estimate-range element found", rangeText !== null);
+      assert("hero-estimate-range is visible",    rangeHidden === false);
+      assert('range text includes "14,450"',      rangeText.includes("14,450"), `got "${rangeText}"`);
+      assert('range text includes "14,550"',      rangeText.includes("14,550"), `got "${rangeText}"`);
 
       await ctx.close();
     }
