@@ -1,0 +1,99 @@
+name: Shadow Fusion
+
+# Runs the Kalyan-anchored city-fusion system (ADR 026) in SHADOW MODE: fetch
+# all four sources, fuse a national benchmark + per-city prices, and persist
+# both to data/fusion_snapshots.parquet and data/shadow_fusion_output.json.
+# This NEVER touches data/forecast.json, app.js, or anything the live site
+# displays — it exists purely to accumulate history for Phase C's
+# validation gate, ahead of any promotion decision (Phase D).
+#
+# Deliberately a looser 6h cadence than check-price.yml's 3h — these are
+# three new, unproven scraping relationships with third-party sites; starting
+# polite and infrequent is the right default until there's a reason to
+# tighten it (ADR 026).
+#
+# A single source failing is normal (ADR 025's precedent, extended to all
+# four sources here) and does not fail this job. Only every national source
+# failing in the same cycle does -- see ml/shadow_fusion.py.
+
+on:
+  schedule:
+    - cron: "15 */6 * * *"
+  workflow_dispatch:
+  push:
+    branches: [master]
+    paths:
+      - "ml/fusion.py"
+      - "ml/fusion_snapshot_store.py"
+      - "ml/shadow_fusion.py"
+      - "ml/sources/**"
+      - ".github/workflows/shadow-fusion.yml"
+
+permissions:
+  contents: write # commits fusion_snapshots.parquet / shadow_fusion_output.json back via bot-pr-sync
+  pull-requests: write
+
+concurrency:
+  group: shadow-fusion
+  cancel-in-progress: false
+
+jobs:
+  shadow:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+
+      - name: Set up Python
+        uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6.3.0
+        with:
+          python-version: "3.12"
+          cache: "pip"
+
+      - name: Install fusion dependencies
+        # Deliberately NOT ml/requirements-inference.lock -- this job needs
+        # none of the heavy Chronos/torch stack, only requests + pandas +
+        # pyarrow. A separate, minimal install keeps this cheap and fast.
+        run: pip install -q "requests>=2.34.2" "pandas>=2.0" "pyarrow>=24.0.0"
+
+      - name: Run shadow fusion cycle
+        id: shadow
+        continue-on-error: true
+        run: python -m ml.shadow_fusion
+
+      - name: Warn on shadow-fusion failure
+        if: steps.shadow.outcome == 'failure'
+        run: |
+          echo "::warning title=Shadow fusion failed::All national sources failed this cycle (or an unexpected error occurred) -- see the 'Run shadow fusion cycle' step log. This does not affect the live site; it means this cycle's shadow-mode data point is missing."
+
+      - name: Commit shadow fusion data
+        id: commit
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "actions@users.noreply.github.com"
+          git add data/fusion_snapshots.parquet data/shadow_fusion_output.json || true
+          if git diff --staged --quiet; then
+            echo "No changes to commit."
+            echo "changed=false" >> "$GITHUB_OUTPUT"
+          else
+            git commit -m "chore: update shadow fusion snapshots [skip ci]"
+            echo "changed=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Sync data via bot PR
+        # Same bot-branch-PR mechanism check-price.yml uses (master requires
+        # the "lint"/"pwa-js" status checks, which blocks a direct push).
+        # PR title deliberately carries no "[skip ci]" -- that belongs on the
+        # bot-branch commit message only; a squash-merge uses the PR title as
+        # the master commit message, and [skip ci] there would skip Lint on
+        # master for up to ~24h (CURRENT_STATE.md norm #13).
+        if: steps.commit.outputs.changed == 'true'
+        uses: ./.github/actions/bot-pr-sync
+        with:
+          branch: bot/shadow-fusion-sync
+          pr-title: "chore: update shadow fusion snapshots"
+          pr-body: "Automated shadow-mode fusion data sync from run ${{ github.run_id }}. No effect on the live site (ADR 026)."
+          token: ${{ secrets.CI_MERGE_PAT }}
+          wait-minutes: "15"
