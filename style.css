@@ -400,6 +400,13 @@ main {
   font-variant-numeric: tabular-nums;
   font-feature-settings: "tnum" 1, "lnum" 1;
 }
+.hero-last-confirmed {
+  margin: 0 0 var(--space-3);
+  font-size: var(--ts-sm);
+  color: var(--cream-mute);
+  font-variant-numeric: tabular-nums;
+  font-feature-settings: "tnum" 1, "lnum" 1;
+}
 
 /* ─── Today's change ─── */
 .hero-change {

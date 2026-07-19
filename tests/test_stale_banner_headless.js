@@ -345,17 +345,21 @@ async function run() {
       await page.goto(base, { waitUntil: "networkidle" });
       await page.waitForTimeout(500);
 
-      const { heroText, rangeText, rangeHidden } = await page.evaluate(() => {
-        const hero  = document.getElementById("hero-price");
-        const range = document.getElementById("hero-estimate-range");
+      const { heroText, rangeText, rangeHidden, lastConfText, lastConfHidden } = await page.evaluate(() => {
+        const hero      = document.getElementById("hero-price");
+        const range     = document.getElementById("hero-estimate-range");
+        const lastConf  = document.getElementById("hero-last-confirmed");
         return {
-          heroText:    hero  ? hero.textContent.trim()  : null,
-          rangeText:   range ? range.textContent.trim() : null,
-          rangeHidden: range ? range.hidden             : null,
+          heroText:      hero     ? hero.textContent.trim()     : null,
+          rangeText:     range    ? range.textContent.trim()    : null,
+          rangeHidden:   range    ? range.hidden                : null,
+          lastConfText:  lastConf ? lastConf.textContent.trim() : null,
+          lastConfHidden: lastConf ? lastConf.hidden            : null,
         };
       });
       console.log(`  Hero text: "${heroText}"`);
       console.log(`  Range text: "${rangeText}" (hidden=${rangeHidden})`);
+      console.log(`  Last-confirmed text: "${lastConfText}" (hidden=${lastConfHidden})`);
 
       assert("hero-price element found",       heroText !== null);
       assert('hero text includes "≈"',         heroText.includes("≈"),      `got "${heroText}"`);
@@ -367,6 +371,41 @@ async function run() {
       assert("hero-estimate-range is visible",    rangeHidden === false);
       assert('range text includes "14,450"',      rangeText.includes("14,450"), `got "${rangeText}"`);
       assert('range text includes "14,550"',      rangeText.includes("14,550"), `got "${rangeText}"`);
+
+      // Honest last-confirmed-Tanishq line (real prices.json last reading,
+      // "14,045" per makePrices(9) — NOT the "14,500" IBJA estimate above).
+      assert("hero-last-confirmed element found", lastConfText !== null);
+      assert("hero-last-confirmed is visible",    lastConfHidden === false);
+      assert('last-confirmed text mentions "Tanishq"',
+        lastConfText.includes("Tanishq"), `got "${lastConfText}"`);
+      assert('last-confirmed text includes the real reading "14,045"',
+        lastConfText.includes("14,045"), `got "${lastConfText}"`);
+      assert('last-confirmed text does NOT include the estimate "14,500"',
+        !lastConfText.includes("14,500"), `got "${lastConfText}" — estimate leaked into the last-confirmed line`);
+
+      await ctx.close();
+    }
+
+    // ── Scenario E: fresh Tanishq scrape — hero-last-confirmed must be
+    // hidden. The hero itself already IS the last-confirmed reading here;
+    // showing the secondary line too would just repeat the same number.
+    console.log("\nScenario E: price_source=tanishq_scrape (fresh) → hero-last-confirmed hidden (would be redundant)");
+    {
+      const ctx  = await browser.newContext();
+      const page = await ctx.newPage();
+      await injectMockFetch(page, makeForecast(1, 0.1), makePrices(1));
+
+      await page.goto(base, { waitUntil: "networkidle" });
+      await page.waitForTimeout(500);
+
+      const lastConfHidden = await page.evaluate(() => {
+        const el = document.getElementById("hero-last-confirmed");
+        return el ? el.hidden : null;
+      });
+      console.log(`  hero-last-confirmed hidden: ${lastConfHidden}`);
+
+      assert("hero-last-confirmed is hidden on a fresh Tanishq scrape",
+        lastConfHidden === true, `got hidden=${lastConfHidden}`);
 
       await ctx.close();
     }
