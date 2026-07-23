@@ -2540,3 +2540,94 @@ def test_stamp_ist_dedup_t10():
     assert state.last_t10_ist_date == ""
     _stamp_ist_dedup("T10", state, now_ist)
     assert state.last_t10_ist_date == "2026-06-07"
+
+
+# ---------------------------------------------------------------------------
+# T11 — fusion-consensus fallback (both Tanishq and IBJA unavailable this cycle)
+# ---------------------------------------------------------------------------
+
+_T11_NOW_IST = _ist(2026, 6, 7, 14, 0)
+
+
+def _forecast_fusion(fusion_sources: list[str] | None, current_22k: int = 13500) -> dict:
+    return {
+        "price_source": "fusion_consensus",
+        "fusion_sources": fusion_sources,
+        "current_22k": current_22k,
+        "predicted_22k": current_22k,
+    }
+
+
+def test_t11_fires_when_price_source_is_fusion_consensus():
+    """T11 fires when forecast.price_source == 'fusion_consensus'; body names sources."""
+    alerts = check_triggers(
+        _forecast_fusion(["grt", "malabar"]),
+        _probe(),
+        _prices_aged(1.0, _T11_NOW_IST),
+        _backtest_accurate(),
+        NotificationState(),
+        _T11_NOW_IST,
+    )
+    t11 = [a for a in alerts if a.trigger_id == "T11"]
+    assert len(t11) == 1, "T11 must fire when price_source is fusion_consensus"
+    assert "GRT, Malabar" in t11[0].body
+    assert "₹" not in t11[0].title
+    assert "₹" not in t11[0].body
+
+
+def test_t11_silent_when_price_source_is_ibja_calibrated():
+    """T11 must not fire on the (healthy) tier-2 IBJA-calibrated path."""
+    forecast = {"price_source": "ibja_calibrated", "current_22k": 14500}
+    alerts = check_triggers(
+        forecast,
+        _probe(),
+        _prices_aged(1.0, _T11_NOW_IST),
+        _backtest_accurate(),
+        NotificationState(),
+        _T11_NOW_IST,
+    )
+    assert all(a.trigger_id != "T11" for a in alerts)
+
+
+def test_t11_silent_when_price_source_is_tanishq_scrape():
+    """T11 must not fire on the (healthy) tier-1 fresh-Tanishq-scrape path."""
+    forecast = {"price_source": "tanishq_scrape", "current_22k": 14320}
+    alerts = check_triggers(
+        forecast,
+        _probe(),
+        _prices_aged(1.0, _T11_NOW_IST),
+        _backtest_accurate(),
+        NotificationState(),
+        _T11_NOW_IST,
+    )
+    assert all(a.trigger_id != "T11" for a in alerts)
+
+
+def test_t11_dedup_once_per_ist_day():
+    """T11 does not fire again the same IST day it already fired."""
+    state = NotificationState(last_t11_ist_date="2026-06-07")
+    alerts = check_triggers(
+        _forecast_fusion(["grt", "malabar", "kalyan"]),
+        _probe(),
+        _prices_aged(1.0, _T11_NOW_IST),
+        _backtest_accurate(),
+        state,
+        _T11_NOW_IST,
+    )
+    assert all(a.trigger_id != "T11" for a in alerts)
+
+
+def test_t11_fires_alongside_t9_when_both_conditions_met():
+    """T9 (IBJA business-day gap) and T11 (this-cycle fusion fallback) are independent
+    signals — both must be able to fire in the same check_triggers() call."""
+    alerts = check_triggers(
+        _forecast_fusion(["grt", "malabar"]),
+        _probe(),
+        _prices_aged(1.0, _T11_NOW_IST),
+        _backtest_accurate(),
+        NotificationState(),
+        _T11_NOW_IST,
+        ibja_gap_days=3,
+    )
+    assert any(a.trigger_id == "T9" for a in alerts), "T9 must fire (gap >= threshold)"
+    assert any(a.trigger_id == "T11" for a in alerts), "T11 must fire (fusion_consensus)"

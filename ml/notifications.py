@@ -1,6 +1,6 @@
 """Notification system for gold-rate-tracker.
 
-Evaluates triggers (T1-T10) against current data files and dispatches
+Evaluates triggers (T1-T11) against current data files and dispatches
 ntfy push notifications. Designed to run as a CI step after the Chronos probe.
 
 Usage:
@@ -107,6 +107,7 @@ class NotificationState:
     last_t9_ist_date: str = ""  # IST date YYYY-MM-DD of last T9 send (once-per-day dedup)
     last_t9_escalate_ist_date: str = ""  # IST date YYYY-MM-DD of last T9_ESCALATE send (dedup)
     last_t10_ist_date: str = ""  # IST date YYYY-MM-DD of last T10 send (once-per-day dedup)
+    last_t11_ist_date: str = ""  # IST date YYYY-MM-DD of last T11 send (once-per-day dedup)
 
 
 # ---------------------------------------------------------------------------
@@ -134,6 +135,7 @@ def load_state(path: Path = STATE_PATH) -> NotificationState:
             last_t9_ist_date=raw.get("last_t9_ist_date", ""),
             last_t9_escalate_ist_date=raw.get("last_t9_escalate_ist_date", ""),
             last_t10_ist_date=raw.get("last_t10_ist_date", ""),
+            last_t11_ist_date=raw.get("last_t11_ist_date", ""),
         )
     except Exception as exc:
         logger.warning("Could not load notification state (%s) — using fresh state.", exc)
@@ -157,6 +159,7 @@ def save_state(state: NotificationState, path: Path = STATE_PATH) -> None:
         "last_t9_ist_date": state.last_t9_ist_date,
         "last_t9_escalate_ist_date": state.last_t9_escalate_ist_date,
         "last_t10_ist_date": state.last_t10_ist_date,
+        "last_t11_ist_date": state.last_t11_ist_date,
     }
     path.write_text(json.dumps(data, indent=2) + "\n", encoding="utf-8")
 
@@ -817,6 +820,37 @@ def _check_t10(
     return _make_alert("T10", title, body, 4, ["warning", "hourglass"], now_ist)
 
 
+def _check_t11_fusion_fallback(
+    forecast: dict,
+    state: NotificationState,
+    now_ist: datetime,
+) -> PendingAlert | None:
+    """T11 -- both Tanishq and IBJA unavailable this cycle: the site is serving
+    ml.inference's tier-3 fusion-consensus fallback (GRT/Malabar/Kalyan, ADR 026)
+    instead of either primary source. Fires the same cycle this happens, unlike
+    T9 (which gates on IBJA's own business-day-staleness and can take up to 2
+    business days to trip) -- this is the fast, precise signal for "both primary
+    sources are down right now", independent of and complementary to T9. Once per
+    IST calendar day.
+    """
+    if forecast.get("price_source") != "fusion_consensus":
+        return None
+    today_ist = now_ist.strftime("%Y-%m-%d")
+    if state.last_t11_ist_date == today_ist:
+        return None
+    sources = forecast.get("fusion_sources") or []
+    names = {"grt": "GRT", "malabar": "Malabar", "kalyan": "Kalyan"}
+    sources_str = ", ".join(names.get(s, s) for s in sources) or "retail consensus"
+    current = forecast.get("current_22k", 0)
+    title = "Gold Tracker: Tanishq and IBJA both unavailable"
+    body = (
+        f"Gold 22K: Rs.{current} (estimated from {sources_str} consensus). "
+        "Both the Tanishq scrape and the IBJA feed failed this cycle. Check "
+        "ibjarates.com reachability and the ibja.py fetch step in check-price.yml."
+    )
+    return _make_alert("T11", title, body, 4, ["warning", "satellite"], now_ist)
+
+
 # ---------------------------------------------------------------------------
 # Public API
 # ---------------------------------------------------------------------------
@@ -833,7 +867,7 @@ def check_triggers(
     snapshot_gap_days: int | None = None,
     ibja_gap_days: int | None = None,
 ) -> list[PendingAlert]:
-    """Evaluate all triggers (T1–T10); return new alerts for this call.
+    """Evaluate all triggers (T1–T11); return new alerts for this call.
 
     Cooldowns and combined caps are enforced here.  Quiet-hours queuing and
     delivery of previously queued alerts is the caller's responsibility (see
@@ -869,6 +903,9 @@ def check_triggers(
     t10 = _check_t10(snapshot_gap_days, state, now_ist)
     if t10 is not None:
         alerts.append(t10)
+    t11 = _check_t11_fusion_fallback(forecast, state, now_ist)
+    if t11 is not None:
+        alerts.append(t11)
     return alerts
 
 
@@ -933,6 +970,8 @@ def send_pending(
                 state.last_t9_escalate_ist_date = now_ist.strftime("%Y-%m-%d")
             if alert.trigger_id == "T10":
                 state.last_t10_ist_date = now_ist.strftime("%Y-%m-%d")
+            if alert.trigger_id == "T11":
+                state.last_t11_ist_date = now_ist.strftime("%Y-%m-%d")
             logger.info("Sent %s: %s", alert.trigger_id, alert.title)
         else:
             logger.warning("Failed to send %s", alert.trigger_id)
@@ -981,6 +1020,8 @@ def _stamp_ist_dedup(trigger_id: str, state: NotificationState, now_ist: datetim
         state.last_t9_ist_date = today
     elif trigger_id == "T10":
         state.last_t10_ist_date = today
+    elif trigger_id == "T11":
+        state.last_t11_ist_date = today
 
 
 def queue_for_quiet_hours(
@@ -1044,7 +1085,7 @@ def main() -> None:
     import argparse
 
     logging.basicConfig(level=logging.INFO, format="%(levelname)s: %(message)s")
-    parser = argparse.ArgumentParser(description="Gold rate notification system (T1-T10)")
+    parser = argparse.ArgumentParser(description="Gold rate notification system (T1-T11)")
     parser.add_argument(
         "--simulate",
         action="store_true",
