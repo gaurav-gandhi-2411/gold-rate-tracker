@@ -280,12 +280,17 @@ jobs:
     # Every step below is bash-flavoured (||, set -e, heredocs) — fine on
     # ubuntu-latest's default shell, but a Windows self-hosted runner
     # defaults `run:` to Windows PowerShell 5.1, which doesn't support any
-    # of that syntax. Force bash (Git for Windows' bash.exe, confirmed
-    # present alongside git.exe on the runner host) for the whole job rather
-    # than repeating `shell: bash` on every step.
+    # of that syntax. `shell: bash` alone isn't enough either: on this host
+    # it resolves to Windows' own WSL launcher stub at
+    # C:\Windows\system32\bash.EXE (earlier on PATH than Git's bash.exe),
+    # which immediately fails with "no installed distributions" since WSL
+    # itself was never set up — confirmed live (run 29999091930). Pointing
+    # at Git for Windows' own bash.exe explicitly sidesteps that PATH
+    # ordering entirely, without touching machine-wide PATH or installing
+    # WSL.
     defaults:
       run:
-        shell: bash
+        shell: 'C:\Program Files\Git\bin\bash.exe -e {0}'
 
     steps:
       - name: Checkout repository
