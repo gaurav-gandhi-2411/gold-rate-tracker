@@ -306,3 +306,93 @@ def test_fresh_scrape_no_h5_no_t9(tmp_path, monkeypatch) -> None:
         ibja_gap_days=ibja_gap,
     )
     assert all(a.trigger_id != "T9" for a in alerts), "T9 must not fire when everything is fresh"
+
+
+# ---------------------------------------------------------------------------
+# Scenario 5 — Tanishq stale AND IBJA genuinely stale, but tier-3 fusion
+# consensus succeeds: the user sees a reasonable live estimate, and T9 (its
+# own IBJA-parquet-gap signal) AND T11 (this-cycle fusion-fallback signal)
+# both fire — proving the two alerts are orthogonal, not mutually exclusive.
+# ---------------------------------------------------------------------------
+
+
+def _fake_national_reading(source: str, rate_22k: float):
+    from datetime import UTC as _UTC
+
+    from ml.sources.base import SourceReading
+
+    return SourceReading(
+        source=source,
+        city=None,
+        rate_22k=rate_22k,
+        observed_at=datetime(2026, 3, 15, 12, 0, tzinfo=_UTC),
+        attribution=f"{source} — national board rate (test fixture)",
+    )
+
+
+def _fake_kalyan_raw(rate_22k: float):
+    import types
+    from datetime import UTC as _UTC
+
+    from ml.sources.base import SourceReading
+
+    return types.SimpleNamespace(
+        reading=SourceReading(
+            source="kalyan",
+            city="Bangalore",
+            rate_22k=rate_22k,
+            observed_at=datetime(2026, 3, 15, 12, 0, tzinfo=_UTC),
+            attribution="Kalyan Jewellers — BENGALURU board rate",
+        )
+    )
+
+
+@pytest.mark.smoke
+def test_ibja_stale_fusion_succeeds_serves_consensus_t9_still_fires_on_its_own_schedule(
+    tmp_path, monkeypatch
+) -> None:
+    monkeypatch.setattr(inf, "DATA_DIR", tmp_path)
+
+    now = datetime(2026, 3, 15, 12, 0, tzinfo=UTC)
+    last_ts = datetime(2026, 3, 15, 3, 0, tzinfo=UTC)  # 9h before now -> stale
+    scraped_22k = 14320
+    prices = _prices_with_last_ts(40, last_ts, last_22k=scraped_22k)
+    # Same fixture as scenario 3: 20 days before now -> beyond the 14-day backstop.
+    ibja_rows = [{"date": "2026-02-23", "pm_916": 144000.0}]
+    _write_inputs(tmp_path, prices, _VALID_CAL, ibja_rows)
+
+    monkeypatch.setattr(grt_mod, "fetch_grt", lambda: _fake_national_reading("grt", 14000.0))
+    monkeypatch.setattr(
+        malabar_mod, "fetch_malabar", lambda: _fake_national_reading("malabar", 14100.0)
+    )
+    monkeypatch.setattr(kalyan_mod, "fetch_kalyan_city", lambda _city: _fake_kalyan_raw(14080.0))
+
+    inf.main(now=now)
+    fc = json.loads((tmp_path / "forecast.json").read_text())
+
+    assert fc["price_source"] == "fusion_consensus", (
+        "tier 3 must serve the live consensus estimate when both Tanishq and IBJA fail"
+    )
+    assert fc["fusion_sources"] == ["grt", "malabar", "kalyan"]
+
+    # T9 fires — driven purely by IBJA's own parquet gap, independent of which
+    # display tier is currently active.
+    now_ist = now.astimezone(IST)
+    ibja_gap = compute_ibja_gap_business_days(now_ist, tmp_path / "ibja_rates.parquet")
+    assert ibja_gap is not None and ibja_gap >= 2
+    alerts = check_triggers(
+        fc,
+        _probe_flat(),
+        prices,
+        _backtest(35),
+        NotificationState(),
+        now_ist,
+        ibja_gap_days=ibja_gap,
+    )
+    assert any(a.trigger_id == "T9" for a in alerts), (
+        "T9 must still fire on its own IBJA-gap schedule, even though the user "
+        "is seeing a reasonable fusion estimate rather than a frozen price"
+    )
+    assert any(a.trigger_id == "T11" for a in alerts), (
+        "T11 must fire because the site is serving fusion_consensus this cycle"
+    )
