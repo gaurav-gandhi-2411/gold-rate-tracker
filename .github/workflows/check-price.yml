@@ -287,10 +287,13 @@ jobs:
     # itself was never set up — confirmed live (run 29999091930). Pointing
     # at Git for Windows' own bash.exe explicitly sidesteps that PATH
     # ordering entirely, without touching machine-wide PATH or installing
-    # WSL.
+    # WSL. The 8.3 short path (PROGRA~1) avoids a separate failure where the
+    # runner's own path-combining logic chokes on the space in "Program
+    # Files" inside a custom shell command string — confirmed live (run
+    # 29999308989: "Second path fragment must not be a drive or UNC name").
     defaults:
       run:
-        shell: 'C:\Program Files\Git\bin\bash.exe -e {0}'
+        shell: 'C:\PROGRA~1\Git\bin\bash.exe -e {0}'
 
     steps:
       - name: Checkout repository
