@@ -41,6 +41,10 @@ _IBJA_URL = "https://ibjarates.com/"
 _USER_AGENT = "gold-rate-tracker/1.0 (portfolio project; gaurav.gandhi2411@gmail.com)"
 _TIMEOUT = 30
 _POLITE_DELAY = 1.0  # seconds; ibjarates.com has no Crawl-delay; 1s is conservative
+_MAX_FETCH_ATTEMPTS = 3
+# Mirrors scraper/scrape.js's retry cadence (5s then 15s) so both CI-side
+# fetchers behave consistently against IP-based rate-limiting from GH runners.
+_RETRY_BACKOFF_S = (5, 15)
 
 logger = logging.getLogger(__name__)
 
@@ -59,9 +63,33 @@ def fetch_ibja_daily() -> dict[str, float]:
     Returns a dict with keys ``am_<purity>`` and ``pm_<purity>`` for each
     recognised purity row. Values are in Rs per 10g.
 
-    Returns an empty dict (and logs WARNING) on any network or parse failure.
-    Single retry on HTTP 5xx before giving up.
+    Retries up to ``_MAX_FETCH_ATTEMPTS`` times (backoff: ``_RETRY_BACKOFF_S``)
+    on any fetch or parse failure — ibjarates.com has started intermittently
+    failing from GitHub Actions runner IPs specifically (works fine from
+    non-CI IPs), the same failure class as Tanishq's Cloudflare block.
+    Returns an empty dict (and logs a summary WARNING) only after every
+    attempt fails.
     """
+    for attempt in range(1, _MAX_FETCH_ATTEMPTS + 1):
+        result = _fetch_and_parse_once(attempt)
+        if result:
+            return result
+        if attempt < _MAX_FETCH_ATTEMPTS:
+            delay = _RETRY_BACKOFF_S[attempt - 1]
+            logger.warning(
+                "ibja: attempt %d/%d failed; retrying in %ds...",
+                attempt,
+                _MAX_FETCH_ATTEMPTS,
+                delay,
+            )
+            time.sleep(delay)
+
+    logger.warning("ibja: all %d attempts failed — no rates fetched", _MAX_FETCH_ATTEMPTS)
+    return {}
+
+
+def _fetch_and_parse_once(attempt: int) -> dict[str, float]:
+    """Single fetch+parse attempt. Returns {} (with diagnostic WARNING) on failure."""
     time.sleep(_POLITE_DELAY)
     headers = {"User-Agent": _USER_AGENT}
 
@@ -69,19 +97,39 @@ def fetch_ibja_daily() -> dict[str, float]:
     if html is None:
         return {}
 
+    body_len = len(html)
+    snippet = html[:500]
+
     try:
         tables = pd.read_html(StringIO(html))
     except Exception as exc:
-        logger.warning("ibja: could not parse HTML tables: %s", exc)
+        logger.warning(
+            "ibja: could not parse HTML tables (attempt %d): %s body_len=%d snippet=%r",
+            attempt,
+            exc,
+            body_len,
+            snippet,
+        )
         return {}
 
     if not tables:
-        logger.warning("ibja: no tables found on page")
+        logger.warning(
+            "ibja: no tables found on page (attempt %d) body_len=%d snippet=%r",
+            attempt,
+            body_len,
+            snippet,
+        )
         return {}
 
     df = tables[0]
     if df.shape[1] < 3:
-        logger.warning("ibja: expected >=3 columns, got %d", df.shape[1])
+        logger.warning(
+            "ibja: expected >=3 columns, got %d (attempt %d) body_len=%d snippet=%r",
+            df.shape[1],
+            attempt,
+            body_len,
+            snippet,
+        )
         return {}
 
     df.columns = pd.Index([str(c).strip() for c in df.columns])
@@ -100,7 +148,13 @@ def fetch_ibja_daily() -> dict[str, float]:
             logger.warning("ibja: could not parse %s row: %s", key, exc)
 
     if not result:
-        logger.warning("ibja: no recognised purity rows parsed from table")
+        logger.warning(
+            "ibja: no recognised purity rows parsed from table (attempt %d) "
+            "body_len=%d snippet=%r",
+            attempt,
+            body_len,
+            snippet,
+        )
     return result
 
 
