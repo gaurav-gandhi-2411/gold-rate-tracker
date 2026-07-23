@@ -29,12 +29,27 @@ import json
 from datetime import UTC, datetime, timedelta, timezone
 
 import ml.inference as inf
+import ml.sources.grt as grt_mod
+import ml.sources.kalyan as kalyan_mod
+import ml.sources.malabar as malabar_mod
 import pandas as pd
 import pytest
 from ml.ibja import compute_ibja_gap_business_days
 from ml.notifications import NotificationState, check_triggers
+from ml.sources.base import SourceNetworkError, SourceReading
 
 IST = timezone(timedelta(hours=5, minutes=30))
+
+
+def _raise_network(*_a, **_k) -> None:
+    raise SourceNetworkError("test: network disabled")
+
+
+def _disable_fusion(monkeypatch) -> None:
+    """Never let a unit test hit the real network via the tier-3 fusion fallback."""
+    monkeypatch.setattr(grt_mod, "fetch_grt", _raise_network)
+    monkeypatch.setattr(malabar_mod, "fetch_malabar", _raise_network)
+    monkeypatch.setattr(kalyan_mod, "fetch_kalyan_city", _raise_network)
 
 
 # ---------------------------------------------------------------------------
@@ -221,6 +236,7 @@ def test_tanishq_blocked_ibja_weekend_carry_forward_t9_silent(tmp_path, monkeypa
 @pytest.mark.smoke
 def test_both_sources_stale_falls_to_last_real_price_t9_fires(tmp_path, monkeypatch) -> None:
     monkeypatch.setattr(inf, "DATA_DIR", tmp_path)
+    _disable_fusion(monkeypatch)  # tier 3 must also fail for this to stay "everything is dead"
 
     now = datetime(2026, 3, 15, 12, 0, tzinfo=UTC)
     last_ts = datetime(2026, 3, 15, 3, 0, tzinfo=UTC)  # 9h before now -> stale

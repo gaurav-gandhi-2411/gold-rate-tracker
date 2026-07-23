@@ -10,8 +10,12 @@ import json
 from datetime import UTC, datetime, timedelta
 
 import ml.inference as inf
+import ml.sources.grt as grt_mod
+import ml.sources.kalyan as kalyan_mod
+import ml.sources.malabar as malabar_mod
 import pandas as pd
 import pytest
+from ml.sources.base import SourceNetworkError, SourceReading
 
 # ---------------------------------------------------------------------------
 # Fixture helpers (self-contained; do NOT import from test_inference_main.py)
@@ -97,6 +101,20 @@ def _make_ibja_parquet(tmp_path: object, rows: list[dict]) -> None:
     pd.DataFrame(rows).to_parquet(tmp_path / "ibja_rates.parquet", index=False)
 
 
+def _raise_network(*_a: object, **_k: object) -> None:
+    raise SourceNetworkError("test: network disabled")
+
+
+def _disable_fusion(monkeypatch: object) -> None:
+    """Monkeypatch all three tier-3 fusion fetchers to fail — never hit the real
+    network from a unit test. Tests that want tier 3 to succeed instead patch
+    individual fetchers with their own valid-reading stubs.
+    """
+    monkeypatch.setattr(grt_mod, "fetch_grt", _raise_network)
+    monkeypatch.setattr(malabar_mod, "fetch_malabar", _raise_network)
+    monkeypatch.setattr(kalyan_mod, "fetch_kalyan_city", _raise_network)
+
+
 def _make_prices_with_last_ts(n: int, last_ts: datetime, last_22k: int = 14320) -> list[dict]:
     """n price entries where the last entry has a specific timestamp."""
     start = datetime(2026, 1, 1, 10, 0, 0, tzinfo=UTC)
@@ -136,6 +154,7 @@ def test_valid_false_is_noop_regression(tmp_path: object, monkeypatch: object) -
     field.  Its purpose is to prove the safety gate is not silently bypassed.
     """
     monkeypatch.setattr(inf, "DATA_DIR", tmp_path)
+    _disable_fusion(monkeypatch)  # calibration.valid=False + stale scrape reaches tier 3
 
     prices = _make_prices(40, base=14000, stale_last=True)
     # Capture the exact timestamp that was written so we can assert round-trip.
@@ -186,6 +205,7 @@ def test_valid_false_no_crash_without_parquet(tmp_path: object, monkeypatch: obj
     with FileNotFoundError.
     """
     monkeypatch.setattr(inf, "DATA_DIR", tmp_path)
+    _disable_fusion(monkeypatch)  # calibration.valid=False + stale scrape reaches tier 3
 
     prices = _make_prices(40, base=14000, stale_last=True)
     (tmp_path / "prices.json").write_text(json.dumps(prices))
@@ -346,6 +366,7 @@ def test_valid_true_ibja_beyond_backstop_falls_through(
     to the last-confirmed Tanishq price rather than showing an absurdly old estimate.
     """
     monkeypatch.setattr(inf, "DATA_DIR", tmp_path)
+    _disable_fusion(monkeypatch)  # tier 3 must also fail for this to stay a true noop
 
     now = datetime(2026, 3, 15, 12, 0, tzinfo=UTC)
     last_ts = datetime(2026, 3, 15, 3, 0, tzinfo=UTC)  # 9h before now → stale
@@ -376,6 +397,7 @@ def test_valid_true_ibja_beyond_backstop_falls_through(
 def test_ibja_parquet_missing_noop(tmp_path: object, monkeypatch: object) -> None:
     """No ibja_rates.parquet present → fallback returns noop, inference must not raise."""
     monkeypatch.setattr(inf, "DATA_DIR", tmp_path)
+    _disable_fusion(monkeypatch)  # tier 3 must also fail for this to stay a true noop
 
     now = datetime(2026, 3, 15, 13, 30, tzinfo=UTC)
     last_ts = datetime(2026, 3, 15, 4, 0, tzinfo=UTC)  # 9.5h before now → stale
@@ -402,6 +424,7 @@ def test_ibja_parquet_missing_noop(tmp_path: object, monkeypatch: object) -> Non
 def test_ibja_parquet_unreadable_noop(tmp_path: object, monkeypatch: object) -> None:
     """Corrupt parquet file → fallback catches exception, inference must not raise."""
     monkeypatch.setattr(inf, "DATA_DIR", tmp_path)
+    _disable_fusion(monkeypatch)  # tier 3 must also fail for this to stay a true noop
 
     now = datetime(2026, 3, 15, 13, 30, tzinfo=UTC)
     last_ts = datetime(2026, 3, 15, 4, 0, tzinfo=UTC)  # stale
@@ -485,3 +508,179 @@ def test_band_prefers_residual_std_oos_when_present(tmp_path: object, monkeypatc
     assert fc["current_22k"] == 14500
     assert fc["est_low"] == 14435  # 14500 - 65 (OOS), not 14400 (in-sample)
     assert fc["est_high"] == 14565  # 14500 + 65 (OOS), not 14600 (in-sample)
+
+
+# ---------------------------------------------------------------------------
+# Tier 3: fusion-consensus fallback (feat/fusion-fallback-tier)
+# ---------------------------------------------------------------------------
+
+
+def _fake_kalyan_raw(rate_22k: float) -> object:
+    """Build a stand-in for KalyanRawReading — only `.reading` is consumed."""
+    import types
+
+    return types.SimpleNamespace(
+        reading=SourceReading(
+            source="kalyan",
+            city="Bangalore",
+            rate_22k=rate_22k,
+            observed_at=datetime(2026, 3, 15, 12, 0, tzinfo=UTC),
+            attribution="Kalyan Jewellers — BENGALURU board rate",
+        )
+    )
+
+
+def _fake_national_reading(source: str, rate_22k: float) -> SourceReading:
+    return SourceReading(
+        source=source,
+        city=None,
+        rate_22k=rate_22k,
+        observed_at=datetime(2026, 3, 15, 12, 0, tzinfo=UTC),
+        attribution=f"{source} — national board rate (test fixture)",
+    )
+
+
+@pytest.mark.smoke
+def test_fusion_fallback_fires_when_ibja_also_fails(tmp_path: object, monkeypatch: object) -> None:
+    """Tanishq stale + IBJA parquet missing + all 3 fusion sources succeed →
+    tier 3 fusion_consensus serves a sensible, wider-banded estimate."""
+    monkeypatch.setattr(inf, "DATA_DIR", tmp_path)
+
+    now = datetime(2026, 3, 15, 13, 30, tzinfo=UTC)
+    last_ts = datetime(2026, 3, 15, 4, 0, tzinfo=UTC)  # 9.5h before now → stale
+    prices = _make_prices_with_last_ts(40, last_ts, last_22k=14320)
+
+    (tmp_path / "prices.json").write_text(json.dumps(prices))
+    (tmp_path / "backtest.json").write_text(json.dumps(_make_backtest(35)))
+    (tmp_path / "chronos_probe.json").write_text(json.dumps(_make_probe("success")))
+    (tmp_path / "calibration.json").write_text(
+        json.dumps({"valid": True, "slope": 1.0, "intercept": 100.0, "residual_std": 50.0})
+    )
+    # ibja_rates.parquet intentionally absent — tier 2 must fail so tier 3 fires.
+
+    monkeypatch.setattr(grt_mod, "fetch_grt", lambda: _fake_national_reading("grt", 14000.0))
+    monkeypatch.setattr(
+        malabar_mod, "fetch_malabar", lambda: _fake_national_reading("malabar", 14100.0)
+    )
+    monkeypatch.setattr(
+        kalyan_mod, "fetch_kalyan_city", lambda _city: _fake_kalyan_raw(14080.0)
+    )
+
+    from ml.fusion import fuse_city_price, fuse_national_benchmark
+
+    national = fuse_national_benchmark(
+        [_fake_national_reading("grt", 14000.0), _fake_national_reading("malabar", 14100.0)]
+    )
+    city_fused = fuse_city_price(
+        _fake_kalyan_raw(14080.0).reading, national, city="Bangalore"
+    )
+    expected_current = round(city_fused.value)
+    expected_low = round(city_fused.value - city_fused.band_half_width)
+    expected_high = round(city_fused.value + city_fused.band_half_width)
+
+    inf.main(now=now)
+
+    fc = json.loads((tmp_path / "forecast.json").read_text())
+
+    assert fc["price_source"] == "fusion_consensus"
+    assert fc["current_22k"] == expected_current
+    assert fc["fusion_sources"] == ["grt", "malabar", "kalyan"]
+    assert fc["est_low"] < fc["current_22k"] < fc["est_high"]
+    assert fc["est_low"] == expected_low
+    assert fc["est_high"] == expected_high
+    # BASE_BAND_PCT=0.01 on a ~14000 price ≈ ±140 -- comfortably wider than a
+    # typical in-sample IBJA residual_std (~50-160 observed in this repo's
+    # calibration history); a concrete, unambiguous width floor.
+    assert fc["est_high"] - fc["est_low"] > 100
+
+
+@pytest.mark.smoke
+def test_fusion_fallback_partial_sources(tmp_path: object, monkeypatch: object) -> None:
+    """Only GRT succeeds; Malabar and Kalyan fail → still serves fusion_consensus,
+    fusion_sources reflects exactly what actually contributed."""
+    monkeypatch.setattr(inf, "DATA_DIR", tmp_path)
+
+    now = datetime(2026, 3, 15, 13, 30, tzinfo=UTC)
+    last_ts = datetime(2026, 3, 15, 4, 0, tzinfo=UTC)
+    prices = _make_prices_with_last_ts(40, last_ts, last_22k=14320)
+
+    (tmp_path / "prices.json").write_text(json.dumps(prices))
+    (tmp_path / "backtest.json").write_text(json.dumps(_make_backtest(35)))
+    (tmp_path / "chronos_probe.json").write_text(json.dumps(_make_probe("success")))
+    (tmp_path / "calibration.json").write_text(
+        json.dumps({"valid": True, "slope": 1.0, "intercept": 100.0, "residual_std": 50.0})
+    )
+    # ibja_rates.parquet intentionally absent.
+
+    monkeypatch.setattr(grt_mod, "fetch_grt", lambda: _fake_national_reading("grt", 14000.0))
+    monkeypatch.setattr(malabar_mod, "fetch_malabar", _raise_network)
+    monkeypatch.setattr(kalyan_mod, "fetch_kalyan_city", _raise_network)
+
+    inf.main(now=now)
+
+    fc = json.loads((tmp_path / "forecast.json").read_text())
+
+    assert fc["price_source"] == "fusion_consensus"
+    assert fc["fusion_sources"] == ["grt"]
+    assert fc["current_22k"] == 14000
+
+
+@pytest.mark.smoke
+def test_fusion_fallback_all_sources_fail_last_resort(
+    tmp_path: object, monkeypatch: object
+) -> None:
+    """IBJA AND all 3 fusion sources fail → true last resort, unchanged behaviour:
+    serves the last-known Tanishq price with fusion_sources=None."""
+    monkeypatch.setattr(inf, "DATA_DIR", tmp_path)
+    _disable_fusion(monkeypatch)
+
+    now = datetime(2026, 3, 15, 13, 30, tzinfo=UTC)
+    last_ts = datetime(2026, 3, 15, 4, 0, tzinfo=UTC)
+    prices = _make_prices_with_last_ts(40, last_ts, last_22k=14320)
+
+    (tmp_path / "prices.json").write_text(json.dumps(prices))
+    (tmp_path / "backtest.json").write_text(json.dumps(_make_backtest(35)))
+    (tmp_path / "chronos_probe.json").write_text(json.dumps(_make_probe("success")))
+    (tmp_path / "calibration.json").write_text(
+        json.dumps({"valid": True, "slope": 1.0, "intercept": 100.0, "residual_std": 50.0})
+    )
+    # ibja_rates.parquet intentionally absent.
+
+    inf.main(now=now)
+
+    fc = json.loads((tmp_path / "forecast.json").read_text())
+
+    assert fc["price_source"] == "tanishq_scrape"
+    assert fc.get("fusion_sources") is None
+
+
+@pytest.mark.smoke
+def test_tier1_fresh_scrape_never_calls_fusion(tmp_path: object, monkeypatch: object) -> None:
+    """Fresh Tanishq scrape → tier 3 must never even be attempted (lazy/conditional,
+    not fetched every cycle)."""
+    monkeypatch.setattr(inf, "DATA_DIR", tmp_path)
+
+    def _fail_if_called(*_a: object, **_k: object) -> None:
+        pytest.fail("fusion fetcher must not be called when Tanishq scrape is fresh")
+
+    monkeypatch.setattr(grt_mod, "fetch_grt", _fail_if_called)
+    monkeypatch.setattr(malabar_mod, "fetch_malabar", _fail_if_called)
+    monkeypatch.setattr(kalyan_mod, "fetch_kalyan_city", _fail_if_called)
+
+    now = datetime(2026, 3, 15, 13, 30, tzinfo=UTC)
+    last_ts = datetime(2026, 3, 15, 12, 0, tzinfo=UTC)  # 1.5h before now → fresh
+    prices = _make_prices_with_last_ts(40, last_ts, last_22k=14320)
+
+    (tmp_path / "prices.json").write_text(json.dumps(prices))
+    (tmp_path / "backtest.json").write_text(json.dumps(_make_backtest(35)))
+    (tmp_path / "chronos_probe.json").write_text(json.dumps(_make_probe("success")))
+    (tmp_path / "calibration.json").write_text(
+        json.dumps({"valid": True, "slope": 1.0, "intercept": 100.0, "residual_std": 50.0})
+    )
+    _make_ibja_parquet(tmp_path, [{"date": "2026-03-15", "pm_916": 144000.0}])
+
+    inf.main(now=now)
+
+    fc = json.loads((tmp_path / "forecast.json").read_text())
+    assert fc["price_source"] == "tanishq_scrape"
+    assert fc["current_22k"] == 14320
