@@ -1,55 +1,5 @@
 [
   {
-    "ts": "2026-06-22T22:45:21.771725+00:00",
-    "target_time": "2026-06-23T00:00:00+00:00",
-    "actual_ts": "2026-06-22T22:45:02.269Z",
-    "actual_22k": 13610.0,
-    "forecast_22k": 13610.0,
-    "residual": 0.0,
-    "model_version": "naive_flat_hold",
-    "baseline_mae": 256.75
-  },
-  {
-    "ts": "2026-06-23T02:52:55.583615+00:00",
-    "target_time": "2026-06-23T00:00:00+00:00",
-    "actual_ts": "2026-06-23T02:52:34.943Z",
-    "actual_22k": 13610.0,
-    "forecast_22k": 13610.0,
-    "residual": 0.0,
-    "model_version": "naive_flat_hold",
-    "baseline_mae": 256.75
-  },
-  {
-    "ts": "2026-06-23T03:31:01.814770+00:00",
-    "target_time": "2026-06-24T00:00:00+00:00",
-    "actual_ts": "2026-06-23T03:30:10.981Z",
-    "actual_22k": 13610.0,
-    "forecast_22k": 13610.0,
-    "residual": 0.0,
-    "model_version": "naive_flat_hold",
-    "baseline_mae": 256.75
-  },
-  {
-    "ts": "2026-06-23T06:31:01.846617+00:00",
-    "target_time": "2026-06-24T00:00:00+00:00",
-    "actual_ts": "2026-06-23T06:30:11.426Z",
-    "actual_22k": 13420.0,
-    "forecast_22k": 13610.0,
-    "residual": -190.0,
-    "model_version": "naive_flat_hold",
-    "baseline_mae": 256.75
-  },
-  {
-    "ts": "2026-06-23T09:31:14.902505+00:00",
-    "target_time": "2026-06-24T00:00:00+00:00",
-    "actual_ts": "2026-06-23T09:30:11.212Z",
-    "actual_22k": 13420.0,
-    "forecast_22k": 13420.0,
-    "residual": 0.0,
-    "model_version": "naive_flat_hold",
-    "baseline_mae": 256.75
-  },
-  {
     "ts": "2026-06-23T12:31:38.435391+00:00",
     "target_time": "2026-06-24T00:00:00+00:00",
     "actual_ts": "2026-06-23T12:30:10.839Z",
@@ -1546,6 +1496,16 @@
     "actual_22k": 13475.0,
     "forecast_22k": 13466.0,
     "residual": 9.0,
+    "model_version": "naive_flat_hold",
+    "baseline_mae": 255.28
+  },
+  {
+    "ts": "2026-07-23T10:56:17.565054+00:00",
+    "target_time": "2026-07-24T00:00:00+00:00",
+    "actual_ts": "2026-07-23T10:51:27.415Z",
+    "actual_22k": 13545.0,
+    "forecast_22k": 13466.0,
+    "residual": 79.0,
     "model_version": "naive_flat_hold",
     "baseline_mae": 255.28
   }
