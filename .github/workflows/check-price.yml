@@ -277,6 +277,15 @@ jobs:
     concurrency:
       group: tanishq-selfhosted-scrape
       cancel-in-progress: false
+    # Every step below is bash-flavoured (||, set -e, heredocs) — fine on
+    # ubuntu-latest's default shell, but a Windows self-hosted runner
+    # defaults `run:` to Windows PowerShell 5.1, which doesn't support any
+    # of that syntax. Force bash (Git for Windows' bash.exe, confirmed
+    # present alongside git.exe on the runner host) for the whole job rather
+    # than repeating `shell: bash` on every step.
+    defaults:
+      run:
+        shell: bash
 
     steps:
       - name: Checkout repository
