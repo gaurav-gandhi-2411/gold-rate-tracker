@@ -56,6 +56,14 @@ function fmtIST(iso) {
   } catch (_) { return "—"; }
 }
 
+// Human-readable label for tier-3 fusion_sources (e.g. ["grt","malabar"] -> "GRT, Malabar").
+// Never crashes on a missing/null sources list — falls back to a generic label.
+function fusionSourcesLabel(sources) {
+  const NAMES = { grt: "GRT", malabar: "Malabar", kalyan: "Kalyan" };
+  const labels = (sources || []).map(s => NAMES[s] || s);
+  return labels.length ? labels.join(", ") : "retail consensus";
+}
+
 // One reading per IST calendar day (latest timestamp wins).
 // Used in display/chart paths AND in the daily-average computations (vs-7d/vs-30d avg,
 // verdict avg30d). allReadings stays raw for everything else: conformal PI, backtest
@@ -680,6 +688,14 @@ function renderStaleBanner(forecast) {
     return;
   }
 
+  // Tier 3: both Tanishq and IBJA unavailable this cycle — live GRT/Malabar/
+  // Kalyan consensus (ADR 026) is the only estimate available.
+  if (forecast.price_source === "fusion_consensus") {
+    banner.textContent = `Estimated from retail consensus (${fusionSourcesLabel(forecast.fusion_sources)}) — Tanishq and IBJA are both currently unavailable.`;
+    banner.hidden = false;
+    return;
+  }
+
   // Tanishq path: fresh scrape stays silent; genuinely stale (IBJA also
   // unavailable/too old) falls to the honest last-confirmed-price state.
   if (!forecast.scraped_at) return;
@@ -723,6 +739,17 @@ function renderFreshness(readings, forecast) {
       pill.textContent = `As of ${dayLabel} close`;
       pill.setAttribute("aria-label", `Estimated retail price, as of ${dayLabel}'s IBJA close`);
     }
+    return;
+  }
+
+  // Tier 3: both Tanishq and IBJA unavailable this cycle — same branch order
+  // and same forecast.price_source values as renderStaleBanner, so the pill
+  // and banner can never disagree about which state is active (PR #237).
+  if (forecast && forecast.price_source === "fusion_consensus") {
+    const rel = fmtRelative(forecast.predicted_at);
+    pill.className   = "freshness-pill freshness--warn";
+    pill.textContent = `Consensus estimate · ${rel}`;
+    pill.setAttribute("aria-label", `Retail consensus estimate, updated ${rel}`);
     return;
   }
 
@@ -812,12 +839,17 @@ function renderHero(readings, forecast) {
   const newPrice  = latest["22k"];
   const prevPrice = displayedPrice; // capture before update — animateNumberTick uses this as fromVal
 
-  if (
-    forecast && forecast.price_source === "ibja_calibrated" &&
-    forecast.current_22k != null && forecast.est_low != null && forecast.est_high != null
-  ) {
-    // IBJA-calibrated estimate — bounded range still shown (ADR 021 §4), but as a
-    // small secondary line below the hero, not jammed into the headline itself.
+  // ibja_calibrated (tier 2) and fusion_consensus (tier 3) render identically here
+  // — the distinguishing honest labeling lives in the banner/pill (renderStaleBanner/
+  // renderFreshness), not duplicated a third time in the hero itself.
+  const isEstimateTier = forecast && (
+    forecast.price_source === "ibja_calibrated" || forecast.price_source === "fusion_consensus"
+  ) && forecast.current_22k != null && forecast.est_low != null && forecast.est_high != null;
+
+  if (isEstimateTier) {
+    // Estimate tier (IBJA-calibrated or fusion-consensus) — bounded range still
+    // shown (ADR 021 §4), but as a small secondary line below the hero, not
+    // jammed into the headline itself.
     // The point estimate AND the range crammed into one giant number reads as
     // garbled/stale at a glance; the ≈ prefix plus the stale-banner already signal
     // "estimate" without a third hedge competing for attention in the headline.
