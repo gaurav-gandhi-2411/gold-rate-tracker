@@ -12,10 +12,11 @@ Operational procedures for gold-rate-tracker.
 6. [How to investigate a CI failure](#how-to-investigate-a-ci-failure)
 7. [Staleness alerts — interpretation and response](#staleness-alerts--interpretation-and-response)
 8. [Manual scraper re-run](#manual-scraper-re-run)
-9. [Bug #4 — bot-sync PRs don't auto-merge (FIXED, PR #183)](#bug-4--bot-sync-prs-dont-auto-merge-fixed-2026-07-17-pr-183)
-10. [Known constraints](#known-constraints)
-11. [Frontend PR device-check (required)](#frontend-pr-device-check-required)
-12. [Honesty-ADR audit: user-facing copy paths (required)](#honesty-adr-audit-user-facing-copy-paths-required)
+9. [Self-hosted runner for the Tanishq scrape (optional)](#self-hosted-runner-for-the-tanishq-scrape-optional)
+10. [Bug #4 — bot-sync PRs don't auto-merge (FIXED, PR #183)](#bug-4--bot-sync-prs-dont-auto-merge-fixed-2026-07-17-pr-183)
+11. [Known constraints](#known-constraints)
+12. [Frontend PR device-check (required)](#frontend-pr-device-check-required)
+13. [Honesty-ADR audit: user-facing copy paths (required)](#honesty-adr-audit-user-facing-copy-paths-required)
 
 ---
 
@@ -219,6 +220,114 @@ expected values in `scraper/test_scrape.js`.
 > broke, check whether `data/prices.json` has a run of missed entries around the same time
 > (an IP block affects every run, not one DOM change) — if recent readings are otherwise
 > intact and only the canary run failed, the DOM is fine and the canary issue can be closed.
+
+---
+
+## Self-hosted runner for the Tanishq scrape (optional)
+
+`scrape-tanishq-selfhosted` in `check-price.yml` runs the exact same `scraper/scrape.js` as
+before, just on a `runs-on: [self-hosted, tanishq-scraper]` runner instead of `ubuntu-latest`
+— Tanishq's WAF blocks GitHub-hosted (datacenter) IPs but not residential ones (confirmed
+2026-07-23). No proxies, IP rotation, fingerprint spoofing, or CAPTCHA solving — same code,
+same headers, different network origin. **This is entirely optional.** With no runner
+registered, that job just sits `queued` forever (harmless — see "Graceful degradation" below)
+and the site runs exactly as it does today: IBJA-calibrated → fusion-consensus → last-known.
+
+### Security — read this before registering anything
+
+This repo is **public**. GitHub's own guidance is blunt: **do not use self-hosted runners on
+public repositories** unless you understand and accept the risk, because a self-hosted runner
+executes workflow `run:` steps as native OS processes on whatever machine it's installed on —
+not sandboxed, not scoped by `GITHUB_TOKEN` permissions (those only limit GitHub API access,
+not what shell commands can do on the host). The realistic attack path: someone forks this
+repo, opens a PR that adds or edits a workflow file to target a self-hosted runner, and if
+that PR's workflow run is ever approved, its code executes on the runner's host machine.
+
+What's already in our favor, checked 2026-07-23:
+- Zero other collaborators — only `gaurav-gandhi-2411` has write access.
+- `default_workflow_permissions: read` — the auto-issued `GITHUB_TOKEN` can't push/write via
+  the API even if a workflow did run (doesn't limit host-level shell access, see above).
+- Neither `lint.yml` nor `scraper-canary.yml` (the only two `pull_request`-triggered
+  workflows) reference `self-hosted` today, and this job lives only in `check-price.yml`,
+  which never triggers on `pull_request` at all.
+
+What you must do / verify yourself:
+- **GitHub Settings → Actions → General → Fork pull request workflows from outside
+  collaborators** — set this to **"Require approval for all outside collaborators"** (the
+  strictest option; not the default). This is the actual load-bearing control, not the
+  `tanishq-scraper` label — a runner's extra labels don't stop a broader `runs-on:
+  self-hosted` job elsewhere from matching it.
+- **Never approve a workflow run from an unfamiliar contributor** without reading exactly what
+  it does first. If in doubt, don't approve it.
+- **Don't run this on your primary machine if you can avoid it.** A spare device (old laptop,
+  Raspberry Pi, a cheap mini PC) or a dedicated low-privilege Windows user account / VM
+  contains the blast radius if something does go wrong. If it must be your primary machine, at
+  minimum run the service under a separate, non-admin Windows user account with no access to
+  your other files/credentials.
+
+If any of this changes your risk calculus, the safe fallback is simply: don't register a
+runner. Nothing else in the pipeline depends on it.
+
+### Setup (Windows)
+
+1. **GitHub → this repo → Settings → Actions → Runners → New self-hosted runner.**
+2. Choose **Windows**, **x64**. GitHub shows a page of commands generated for you, including a
+   one-time registration token (expires in ~1 hour — if it expires, just reopen this page for
+   a fresh one). Run them in PowerShell on the machine that will host the runner, in a
+   dedicated folder (e.g. `C:\actions-runner`), e.g.:
+   ```powershell
+   mkdir C:\actions-runner ; cd C:\actions-runner
+   Invoke-WebRequest -Uri https://github.com/actions/runner/releases/download/vX.X.X/actions-runner-win-x64-X.X.X.zip -OutFile actions-runner.zip
+   Expand-Archive -Path actions-runner.zip -DestinationPath .
+   ./config.cmd --url https://github.com/gaurav-gandhi-2411/gold-rate-tracker --token <TOKEN_FROM_GITHUB_UI>
+   ```
+   (Use the exact URL/version/token GitHub's own setup page shows you — they're generated
+   per-repo and change over time; don't reuse the example above verbatim.)
+3. When `config.cmd` asks for a runner name, accept the default or name it something
+   recognizable (e.g. `gg-home-tanishq`).
+4. **Labels:** when prompted (or via `./config.cmd --labels tanishq-scraper` if not prompted),
+   add the custom label `tanishq-scraper` — this is what `runs-on: [self-hosted,
+   tanishq-scraper]` in `check-price.yml` targets. (Per the security section above: this
+   scopes *this job* to need that label, it does not stop some other job from targeting the
+   runner via a bare `self-hosted` request — the fork-approval setting is what actually
+   matters.)
+5. **Run as a service** so it survives reboots and doesn't need a logged-in session open:
+   ```powershell
+   ./svc.cmd install
+   ./svc.cmd start
+   ```
+   Check status any time with `./svc.cmd status`. To stop it (e.g. before travel, or just to
+   pause it): `./svc.cmd stop`. The workflow degrades gracefully with it stopped — nothing to
+   clean up on the GitHub side, the job just queues and eventually auto-cancels.
+6. Verify registration: **Settings → Actions → Runners** should show it as **Idle**. Or from
+   the CLI: `gh api repos/gaurav-gandhi-2411/gold-rate-tracker/actions/runners`.
+
+### Graceful degradation (verified 2026-07-23)
+
+With zero runners registered, `scrape-tanishq-selfhosted` sits `queued` (GitHub auto-cancels a
+job that never gets picked up after 24h — not before). Confirmed live: dispatched
+`check-price.yml` with no runner registered (run 29997874748), and the `check` job (macro →
+drift → inference → commentary → IBJA → calibration → Chronos probe → notifications → metrics
+→ feature_store) ran to completion normally while the self-hosted job stayed queued the entire
+time — confirmed via `Forecast written: Rs.13466...` and `No alerts to send this cycle.` in
+that run's own logs. The two jobs share no `needs:` relationship and no concurrency group,
+specifically so a stuck/offline runner can never delay the next scheduled `check` run either —
+see the comments in `check-price.yml` for the mechanism (a shared concurrency group would have
+queued the *next* `check` run behind that same 24h window).
+
+If you stop the runner mid-travel and forget to restart it for weeks, worst case: Tanishq
+enrichment silently stops landing, and the site keeps serving IBJA-calibrated /
+fusion-consensus estimates exactly as it already does today. No alert fires for this
+specifically (T9/T11 alert on IBJA/fusion-tier health, not on "did the optional Tanishq
+enrichment run this cycle") — that's a deliberate, honest choice: an idle self-hosted runner
+isn't a system failure, it's just "enrichment currently unavailable," which is already the
+system's normal, expected steady state per ADR 025.
+
+### Removing it later
+
+Stop the service (`./svc.cmd stop`), unregister (`./config.cmd remove --token
+<REMOVAL_TOKEN_FROM_GITHUB_UI>`), then delete the folder. The workflow needs no changes — it
+already tolerates zero runners being registered.
 
 ---
 
