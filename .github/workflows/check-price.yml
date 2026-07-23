@@ -280,20 +280,31 @@ jobs:
     # Every step below is bash-flavoured (||, set -e, heredocs) — fine on
     # ubuntu-latest's default shell, but a Windows self-hosted runner
     # defaults `run:` to Windows PowerShell 5.1, which doesn't support any
-    # of that syntax. `shell: bash` alone isn't enough either: on this host
-    # it resolves to Windows' own WSL launcher stub at
-    # C:\Windows\system32\bash.EXE (earlier on PATH than Git's bash.exe),
-    # which immediately fails with "no installed distributions" since WSL
-    # itself was never set up — confirmed live (run 29999091930). Pointing
-    # at Git for Windows' own bash.exe explicitly sidesteps that PATH
-    # ordering entirely, without touching machine-wide PATH or installing
-    # WSL. The 8.3 short path (PROGRA~1) avoids a separate failure where the
-    # runner's own path-combining logic chokes on the space in "Program
-    # Files" inside a custom shell command string — confirmed live (run
-    # 29999308989: "Second path fragment must not be a drive or UNC name").
+    # of that syntax.
+    #
+    # `shell: bash` alone isn't enough on a fresh Windows install either:
+    # Git for Windows' installer adds `Git\cmd` to PATH by default but NOT
+    # `Git\bin` (where bash.exe actually lives), so the only "bash" reachable
+    # via a normal PATH lookup was Windows' own WSL launcher stub at
+    # C:\Windows\system32\bash.EXE — which fails immediately with "no
+    # installed distributions" since WSL was never set up. Confirmed live
+    # (run 29999091930). This also broke bot-pr-sync's own composite-action
+    # step below (it hardcodes `shell: bash` internally; a job-level
+    # `defaults.run.shell` override doesn't reach into a composite action's
+    # own step definitions, so pointing *this* job's default at Git's
+    # bash.exe directly wouldn't have fixed that step anyway — confirmed
+    # live, run 29999459405).
+    #
+    # Fixed at the host level instead (see docs/RUNBOOK.md): the runner
+    # Windows service has a PATH override scoped to *just its own process
+    # environment* (via its service registry key's Environment value, not
+    # the machine-wide PATH) that puts Git's bin dir first — so plain
+    # `shell: bash` now resolves correctly for every step in this job,
+    # including composite actions, without touching what "bash" resolves to
+    # anywhere else on the host.
     defaults:
       run:
-        shell: 'C:\PROGRA~1\Git\bin\bash.exe -e {0}'
+        shell: bash
 
     steps:
       - name: Checkout repository
