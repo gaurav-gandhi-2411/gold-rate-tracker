@@ -26,6 +26,7 @@ Self-contained fixtures (norm: do NOT import helpers from sibling test modules).
 from __future__ import annotations
 
 import json
+import types
 from datetime import UTC, datetime, timedelta, timezone
 
 import ml.inference as inf
@@ -316,32 +317,24 @@ def test_fresh_scrape_no_h5_no_t9(tmp_path, monkeypatch) -> None:
 # ---------------------------------------------------------------------------
 
 
-def _fake_national_reading(source: str, rate_22k: float):
-    from datetime import UTC as _UTC
-
-    from ml.sources.base import SourceReading
-
+def _fake_national_reading(source: str, rate_22k: float) -> SourceReading:
     return SourceReading(
         source=source,
         city=None,
         rate_22k=rate_22k,
-        observed_at=datetime(2026, 3, 15, 12, 0, tzinfo=_UTC),
+        observed_at=datetime(2026, 3, 15, 12, 0, tzinfo=UTC),
         attribution=f"{source} — national board rate (test fixture)",
     )
 
 
-def _fake_kalyan_raw(rate_22k: float):
-    import types
-    from datetime import UTC as _UTC
-
-    from ml.sources.base import SourceReading
-
+def _fake_kalyan_raw(rate_22k: float) -> object:
+    """Stand-in for KalyanRawReading — only `.reading` is consumed by _try_fusion_fallback."""
     return types.SimpleNamespace(
         reading=SourceReading(
             source="kalyan",
             city="Bangalore",
             rate_22k=rate_22k,
-            observed_at=datetime(2026, 3, 15, 12, 0, tzinfo=_UTC),
+            observed_at=datetime(2026, 3, 15, 12, 0, tzinfo=UTC),
             attribution="Kalyan Jewellers — BENGALURU board rate",
         )
     )

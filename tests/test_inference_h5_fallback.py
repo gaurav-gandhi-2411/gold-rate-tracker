@@ -562,18 +562,14 @@ def test_fusion_fallback_fires_when_ibja_also_fails(tmp_path: object, monkeypatc
     monkeypatch.setattr(
         malabar_mod, "fetch_malabar", lambda: _fake_national_reading("malabar", 14100.0)
     )
-    monkeypatch.setattr(
-        kalyan_mod, "fetch_kalyan_city", lambda _city: _fake_kalyan_raw(14080.0)
-    )
+    monkeypatch.setattr(kalyan_mod, "fetch_kalyan_city", lambda _city: _fake_kalyan_raw(14080.0))
 
     from ml.fusion import fuse_city_price, fuse_national_benchmark
 
     national = fuse_national_benchmark(
         [_fake_national_reading("grt", 14000.0), _fake_national_reading("malabar", 14100.0)]
     )
-    city_fused = fuse_city_price(
-        _fake_kalyan_raw(14080.0).reading, national, city="Bangalore"
-    )
+    city_fused = fuse_city_price(_fake_kalyan_raw(14080.0).reading, national, city="Bangalore")
     expected_current = round(city_fused.value)
     expected_low = round(city_fused.value - city_fused.band_half_width)
     expected_high = round(city_fused.value + city_fused.band_half_width)

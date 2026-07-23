@@ -149,8 +149,7 @@ def _fetch_and_parse_once(attempt: int) -> dict[str, float]:
 
     if not result:
         logger.warning(
-            "ibja: no recognised purity rows parsed from table (attempt %d) "
-            "body_len=%d snippet=%r",
+            "ibja: no recognised purity rows parsed from table (attempt %d) body_len=%d snippet=%r",
             attempt,
             body_len,
             snippet,
