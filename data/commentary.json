@@ -1,19 +1,5 @@
 [
   {
-    "ts": "2026-07-22T05:46:56Z",
-    "text": "Gold prices have edged up slightly over the past week. The current price of Rs.13475 for 22K is around what it's been lately. You can also buy 24K for Rs.14700 and 18K for Rs.11025.",
-    "model": "llama-3.3-70b-versatile",
-    "prompt_hash": "df3758019a70",
-    "commentary_age_hours": 0.0
-  },
-  {
-    "ts": "2026-07-22T08:22:48Z",
-    "text": "Gold prices have edged up slightly over the past week. The current price of Rs.13475 is around what it's been lately. You can buy 22K gold at this rate, with 24K and 18K options available at Rs.14700 and Rs.11025 respectively.",
-    "model": "llama-3.3-70b-versatile",
-    "prompt_hash": "51c4a3306244",
-    "commentary_age_hours": 0.0
-  },
-  {
     "ts": "2026-07-22T11:06:42Z",
     "text": "Gold prices have edged up slightly over the past week. The current price of Rs.13475 is a bit above its recent range. You can expect to buy gold at around this price for the next few days.",
     "model": "llama-3.3-70b-versatile",
@@ -207,6 +193,20 @@
     "text": "Gold prices have eased a little over the past week. The current price of Rs.13330 is around what it's been lately. You can buy 22K gold at this rate, with 24K and 18K options also available at Rs.14542 and Rs.10906 respectively.",
     "model": "llama-3.3-70b-versatile",
     "prompt_hash": "7bc0e6083fe2",
+    "commentary_age_hours": 0.0
+  },
+  {
+    "ts": "2026-07-25T13:16:30Z",
+    "text": "Gold prices have eased a little over the past week. The current price of Rs.13330 is around what it's been lately. You can buy 22K gold at this rate, with 24K and 18K options available at Rs.14542 and Rs.10906 respectively.",
+    "model": "llama-3.3-70b-versatile",
+    "prompt_hash": "02366d4d1465",
+    "commentary_age_hours": 0.0
+  },
+  {
+    "ts": "2026-07-25T16:02:00Z",
+    "text": "Gold prices have eased a little over the past week. The current price of Rs.13330 is around what it's been lately. You can buy 22K gold at this rate, with 24K and 18K options available at Rs.14542 and Rs.10906 respectively.",
+    "model": "llama-3.3-70b-versatile",
+    "prompt_hash": "b60effb6ac68",
     "commentary_age_hours": 0.0
   }
 ]
