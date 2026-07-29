@@ -1,13 +1,9 @@
 {
-  "capture_utc": "2026-07-29T14:29:19Z",
+  "capture_utc": "2026-07-29T19:40:12Z",
   "as_of_date": "2026-07-29",
   "national_failures": {},
-  "kalyan_failures": {
-    "Bangalore": "network: kalyan: request failed for Bangalore: HTTPSConnectionPool(host='www.kalyanjewellers.net', port=443): Read timed out. (read timeout=20)",
-    "Chennai": "network: kalyan: request failed for Chennai: HTTPSConnectionPool(host='www.kalyanjewellers.net', port=443): Read timed out. (read timeout=20)",
-    "Hyderabad": "network: kalyan: request failed for Hyderabad: HTTPSConnectionPool(host='www.kalyanjewellers.net', port=443): Read timed out. (read timeout=20)"
-  },
-  "snapshot_rows_persisted": 4,
+  "kalyan_failures": {},
+  "snapshot_rows_persisted": 7,
   "national_benchmark": {
     "value": 13166.666666666668,
     "band_half_width": 131.66666666666669,
@@ -25,25 +21,25 @@
   },
   "cities": {
     "Bangalore": {
-      "value": 13166.666666666668,
-      "band_half_width": 197.50000000000003,
-      "coverage": "national_derived",
-      "attribution": "National consensus (ibja, grt, malabar) \u2014 no city-specific source for Bangalore",
-      "markup": null
+      "value": 13155.0,
+      "band_half_width": 131.66666666666669,
+      "coverage": "city_specific",
+      "attribution": "Kalyan Jewellers \u2014 BANGALORE board rate",
+      "markup": 0.9991139240506328
     },
     "Chennai": {
-      "value": 13166.666666666668,
-      "band_half_width": 197.50000000000003,
-      "coverage": "national_derived",
-      "attribution": "National consensus (ibja, grt, malabar) \u2014 no city-specific source for Chennai",
-      "markup": null
+      "value": 13155.0,
+      "band_half_width": 131.66666666666669,
+      "coverage": "city_specific",
+      "attribution": "Kalyan Jewellers \u2014 CHENNAI board rate",
+      "markup": 0.9991139240506328
     },
     "Hyderabad": {
-      "value": 13166.666666666668,
-      "band_half_width": 197.50000000000003,
-      "coverage": "national_derived",
-      "attribution": "National consensus (ibja, grt, malabar) \u2014 no city-specific source for Hyderabad",
-      "markup": null
+      "value": 13155.0,
+      "band_half_width": 131.66666666666669,
+      "coverage": "city_specific",
+      "attribution": "Kalyan Jewellers \u2014 HYDERABAD board rate",
+      "markup": 0.9991139240506328
     },
     "Ernakulam": {
       "value": 13155.0,
