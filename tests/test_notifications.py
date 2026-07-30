@@ -17,6 +17,7 @@ from ml.notifications import (
     check_triggers,
     compute_chronos_lean,
     compute_dir_acc_30f,
+    compute_selfhosted_consecutive_failures,
     compute_snapshot_gap_days,
     load_state,
     queue_for_quiet_hours,
@@ -2631,3 +2632,140 @@ def test_t11_fires_alongside_t9_when_both_conditions_met():
     )
     assert any(a.trigger_id == "T9" for a in alerts), "T9 must fire (gap >= threshold)"
     assert any(a.trigger_id == "T11" for a in alerts), "T11 must fire (fusion_consensus)"
+
+
+# ---------------------------------------------------------------------------
+# T12 — Tanishq self-hosted job failing repeatedly (runner online, jobs failing)
+# ---------------------------------------------------------------------------
+
+_T12_NOW_IST = _ist(2026, 6, 7, 14, 0)
+
+
+def test_t12_fires_at_three_consecutive_failures():
+    """T12 fires once consecutive_job_failures reaches the threshold (3)."""
+    alerts = check_triggers(
+        _forecast(),
+        _probe(),
+        _prices_aged(1.0, _T12_NOW_IST),
+        _backtest_accurate(),
+        NotificationState(),
+        _T12_NOW_IST,
+        selfhosted_consecutive_failures=3,
+    )
+    t12 = [a for a in alerts if a.trigger_id == "T12"]
+    assert len(t12) == 1, "T12 must fire at 3 consecutive failures"
+    assert "3x" in t12[0].title
+    assert "3 runs in a row" in t12[0].body
+
+
+def test_t12_no_fire_below_threshold():
+    """T12 does not fire below the threshold, and is silent when the health
+    record is missing (None) -- mirrors T9/T10's "missing store isn't a
+    failure" convention, since a never-run/reset record isn't itself a signal."""
+    for count in (None, 0, 1, 2):
+        alerts = check_triggers(
+            _forecast(),
+            _probe(),
+            _prices_aged(1.0, _T12_NOW_IST),
+            _backtest_accurate(),
+            NotificationState(),
+            _T12_NOW_IST,
+            selfhosted_consecutive_failures=count,
+        )
+        assert all(a.trigger_id != "T12" for a in alerts), f"T12 must not fire at count={count}"
+
+
+def test_t12_dedup_once_per_ist_day():
+    """T12 does not fire again the same IST day it already fired."""
+    state = NotificationState(last_t12_ist_date="2026-06-07")
+    alerts = check_triggers(
+        _forecast(),
+        _probe(),
+        _prices_aged(1.0, _T12_NOW_IST),
+        _backtest_accurate(),
+        state,
+        _T12_NOW_IST,
+        selfhosted_consecutive_failures=5,
+    )
+    assert all(a.trigger_id != "T12" for a in alerts)
+
+
+def test_t12_fires_again_next_ist_day():
+    """A sustained failure streak alerts again on the following IST day."""
+    state = NotificationState()
+    state.last_t12_ist_date = "2026-06-07"
+
+    now_day2 = _ist(2026, 6, 8, 14, 0)
+    alerts = check_triggers(
+        _forecast(),
+        _probe(),
+        _prices_aged(1.0, now_day2),
+        _backtest_accurate(),
+        state,
+        now_day2,
+        selfhosted_consecutive_failures=4,
+    )
+    assert len([a for a in alerts if a.trigger_id == "T12"]) == 1
+
+
+def test_t12_state_round_trip(tmp_path: Path):
+    """last_t12_ist_date survives a NotificationState save/load cycle."""
+    state = NotificationState(last_t12_ist_date="2026-06-07")
+    path = tmp_path / "notification_state.json"
+    save_state(state, path)
+
+    loaded = load_state(path)
+    assert loaded.last_t12_ist_date == "2026-06-07"
+
+
+def test_t12_backward_compat_old_state(tmp_path: Path):
+    """State file without last_t12_ist_date loads with empty-string default."""
+    import json as _json
+
+    old_state = {
+        "schema_version": 1,
+        "last_sent": {},
+        "queued": [],
+        "sent_today": [],
+        # deliberately absent: last_t12_ist_date (and everything after T9)
+    }
+    path = tmp_path / "old_state.json"
+    path.write_text(_json.dumps(old_state), encoding="utf-8")
+
+    loaded = load_state(path)
+    assert loaded.last_t12_ist_date == ""
+    assert loaded.schema_version == 1
+
+
+def test_stamp_ist_dedup_t12():
+    """_stamp_ist_dedup sets last_t12_ist_date for T12 immediately on queue."""
+    state = NotificationState()
+    now_ist = _ist(2026, 6, 7, 23, 30)  # quiet hours
+    assert state.last_t12_ist_date == ""
+    _stamp_ist_dedup("T12", state, now_ist)
+    assert state.last_t12_ist_date == "2026-06-07"
+
+
+def test_compute_selfhosted_consecutive_failures_missing_file(tmp_path: Path):
+    """Missing health record returns None (not a failure signal)."""
+    assert compute_selfhosted_consecutive_failures(tmp_path / "absent.json") is None
+
+
+def test_compute_selfhosted_consecutive_failures_reads_count(tmp_path: Path):
+    """Reads consecutive_job_failures from the health record the self-hosted
+    job writes each run."""
+    import json as _json
+
+    path = tmp_path / "tanishq_selfhosted_health.json"
+    path.write_text(
+        _json.dumps({"consecutive_job_failures": 4, "last_job_outcome": "failure"}),
+        encoding="utf-8",
+    )
+    assert compute_selfhosted_consecutive_failures(path) == 4
+
+
+def test_compute_selfhosted_consecutive_failures_malformed_file(tmp_path: Path):
+    """Unparseable health record degrades to None, same as missing."""
+    path = tmp_path / "tanishq_selfhosted_health.json"
+    path.write_text("not json", encoding="utf-8")
+    assert compute_selfhosted_consecutive_failures(path) is None
