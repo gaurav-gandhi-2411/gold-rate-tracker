@@ -1,52 +1,52 @@
 {
-  "capture_utc": "2026-07-30T08:46:01Z",
+  "capture_utc": "2026-07-30T09:19:16Z",
   "as_of_date": "2026-07-30",
-  "national_failures": {},
+  "national_failures": {
+    "grt": "network: grt: request failed: HTTPSConnectionPool(host='www.grtjewels.com', port=443): Read timed out. (read timeout=20)"
+  },
   "kalyan_failures": {},
-  "snapshot_rows_persisted": 7,
+  "snapshot_rows_persisted": 6,
   "national_benchmark": {
-    "value": 13210.416666666668,
-    "band_half_width": 132.10416666666669,
+    "value": 13202.35294117647,
+    "band_half_width": 132.0235294117647,
     "disagreement": false,
     "sources_used": [
       "ibja",
-      "grt",
       "malabar"
     ],
     "weights_used": {
       "ibja": 1.0,
-      "grt": 0.7,
       "malabar": 0.7
     }
   },
   "cities": {
     "Bangalore": {
-      "value": 13229.999999999998,
-      "band_half_width": 132.10416666666669,
-      "coverage": "city_specific",
-      "attribution": "Kalyan Jewellers \u2014 BANGALORE board rate",
-      "markup": 1.0014824160227092
+      "value": 13230.0,
+      "band_half_width": 132.0235294117647,
+      "coverage": "kalyan_anchored",
+      "attribution": "National retail consensus, Kalyan-anchored (Kalyan Jewellers \u2014 BANGALORE board rate)",
+      "markup": 1.0020941008732847
     },
     "Chennai": {
-      "value": 13229.999999999998,
-      "band_half_width": 132.10416666666669,
-      "coverage": "city_specific",
-      "attribution": "Kalyan Jewellers \u2014 CHENNAI board rate",
-      "markup": 1.0014824160227092
+      "value": 13230.0,
+      "band_half_width": 132.0235294117647,
+      "coverage": "kalyan_anchored",
+      "attribution": "National retail consensus, Kalyan-anchored (Kalyan Jewellers \u2014 CHENNAI board rate)",
+      "markup": 1.0020941008732847
     },
     "Hyderabad": {
-      "value": 13229.999999999998,
-      "band_half_width": 132.10416666666669,
-      "coverage": "city_specific",
-      "attribution": "Kalyan Jewellers \u2014 HYDERABAD board rate",
-      "markup": 1.0014824160227092
+      "value": 13230.0,
+      "band_half_width": 132.0235294117647,
+      "coverage": "kalyan_anchored",
+      "attribution": "National retail consensus, Kalyan-anchored (Kalyan Jewellers \u2014 HYDERABAD board rate)",
+      "markup": 1.0020941008732847
     },
     "Ernakulam": {
-      "value": 13229.999999999998,
-      "band_half_width": 132.10416666666669,
-      "coverage": "city_specific",
-      "attribution": "Kalyan Jewellers \u2014 ERNAKULAM board rate",
-      "markup": 1.0014824160227092
+      "value": 13230.0,
+      "band_half_width": 132.0235294117647,
+      "coverage": "kalyan_anchored",
+      "attribution": "National retail consensus, Kalyan-anchored (Kalyan Jewellers \u2014 ERNAKULAM board rate)",
+      "markup": 1.0020941008732847
     }
   }
 }
