@@ -4,8 +4,21 @@
 
 National benchmark: a reliability-weighted consensus of national-level
 sources (IBJA, GRT, Malabar today). City price: the national benchmark
-scaled by a city-specific markup derived from a real local source (Kalyan
-today) where one exists, honestly labeled national-derived elsewhere.
+scaled by a markup derived from a real local source (Kalyan today) where
+one exists, honestly labeled national-derived elsewhere.
+
+HONEST LABELING (ADR 026 update, 2026-07-30): 43/43 accumulated shadow
+cycles show Kalyan's rate_22k identical across all four registered cities
+(Bangalore/Chennai/Hyderabad/Ernakulam) -- zero observed city-to-city
+variation. Indian retail gold pricing is a national metal rate; the
+store-to-store variation that DOES exist (making charges) isn't captured by
+this scrape. The two-layer architecture and the Kalyan-vs-national markup
+are still real, useful signal (a fourth independent source disagreeing with
+IBJA/GRT/Malabar is meaningful) -- what's NOT real is per-city
+differentiation. `coverage="kalyan_anchored"` (not "city_specific") and
+callers must present this as a *national retail consensus*, never as
+location-specific pricing, until a source with genuine city-differentiated
+metal pricing is found.
 
 THE WEIGHTING SEAM (read this before touching weights): ``DEFAULT_WEIGHTS``
 and ``default_weight_fn`` are a deliberately simple, static placeholder.
@@ -73,12 +86,17 @@ class FusedBenchmark:
 
 @dataclass(frozen=True)
 class FusedCityPrice:
-    """The final per-location price: national benchmark x city markup."""
+    """The final fused price for one Kalyan-registered location tag.
+
+    Despite the ``city`` field, this is NOT verified city-differentiated
+    pricing (see module docstring) -- treat ``value`` as the national retail
+    consensus, optionally Kalyan-anchored, never as a location-specific price.
+    """
 
     city: str | None
     value: float
     band_half_width: float
-    coverage: str  # "city_specific" | "national_derived"
+    coverage: str  # "kalyan_anchored" | "national_derived" -- neither implies city-specific pricing
     attribution: str
     markup: float | None  # None when coverage == "national_derived"
 
@@ -137,12 +155,15 @@ def fuse_city_price(
     *,
     city: str,
 ) -> FusedCityPrice:
-    """Combine the national benchmark with a city-specific reading if one exists.
+    """Combine the national benchmark with a same-cycle Kalyan reading if one exists.
 
-    ``city_reading is None`` means no local source covers this city this
+    ``city_reading is None`` means no local source covers this tag this
     cycle (either it isn't a registered city, or the local source failed) --
-    the result is honestly labeled ``"national_derived"``, never a
-    fabricated city-specific number.
+    the result is honestly labeled ``"national_derived"``. When a reading
+    IS available, the result is labeled ``"kalyan_anchored"`` -- real signal
+    from a fourth independent source, but NOT verified city-specific pricing
+    (see module docstring): every registered city has produced the identical
+    value in 43/43 accumulated shadow cycles.
     """
     if city_reading is not None:
         markup = compute_city_markup(city_reading, national)
@@ -151,8 +172,8 @@ def fuse_city_price(
             city=city,
             value=value,
             band_half_width=national.band_half_width,
-            coverage="city_specific",
-            attribution=city_reading.attribution,
+            coverage="kalyan_anchored",
+            attribution=f"National retail consensus, Kalyan-anchored ({city_reading.attribution})",
             markup=markup,
         )
 
@@ -162,6 +183,6 @@ def fuse_city_price(
         value=national.value,
         band_half_width=national.band_half_width * NATIONAL_DERIVED_BAND_MULTIPLIER,
         coverage="national_derived",
-        attribution=f"National consensus ({sources_note}) — no city-specific source for {city}",
+        attribution=f"National retail consensus ({sources_note}) — no Kalyan reading for {city} this cycle",
         markup=None,
     )

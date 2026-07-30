@@ -191,7 +191,10 @@ def _build_chronos_companion(
 
 
 _FUSION_FALLBACK_CITY = "Bangalore"  # matches Kalyan's KALYAN_CITIES key and the site's
-# hardcoded "Bengaluru" identity (index.html)
+# hardcoded "Bengaluru" identity (index.html) -- an arbitrary anchor tag, not a claim of
+# Bangalore-specific pricing: 43/43 accumulated shadow cycles show Kalyan's rate is
+# identical across every registered city (ADR 026 update, 2026-07-30), so this fallback
+# is a national retail consensus regardless of which city tag routes the Kalyan fetch.
 
 
 def _try_ibja_calibrated(

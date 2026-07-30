@@ -323,6 +323,42 @@ enrichment run this cycle") — that's a deliberate, honest choice: an idle self
 isn't a system failure, it's just "enrichment currently unavailable," which is already the
 system's normal, expected steady state per ADR 025.
 
+### Self-hosted runner reliability — the "online but jobs keep failing" gap (T12)
+
+The graceful-degradation story above only covers a runner with **no jobs starting at all**
+(queued, then auto-cancelled after 24h). It does not cover a runner that **is** picking up jobs
+and they keep genuinely failing — a distinct failure mode with different implications (something
+is actively broken on the host, not just paused) that had no detection until T12
+(`ml/notifications.py`) was added.
+
+**Incident, 2026-07-26 to 2026-07-30:** the runner host went to sleep/powered off for ~4 days
+(confirmed via the Windows `Kernel-Power` event log — no sleep/resume events logged in that
+window at all, versus the usual hourly Modern Standby cycling). When it came back online, the
+first `scrape-tanishq-selfhosted` checkouts hit transient connection resets mid-fetch (`RPC
+failed; curl 18/56`, `early EOF`) — plausibly Modern Standby's throttled background networking
+still settling, though not confirmed. A reset mid-fetch left the local `.git` unable to resolve
+`HEAD` (`ambiguous argument 'HEAD'`), which forces `actions/checkout` into its "delete and
+recreate" fallback on every subsequent run (~8min instead of ~seconds) — eating most of the job's
+time budget and making a second network hiccup within the same run far more likely. Net effect:
+every run failed for 4 days straight while `gh api .../actions/runners` still reported the runner
+`status: online` throughout, and nothing surfaced it.
+
+**Fix:**
+- `scrape-tanishq-selfhosted`'s final step (`Commit Tanishq reading and record job health`,
+  `if: always()`) now writes `data/tanishq_selfhosted_health.json` — a `consecutive_job_failures`
+  counter, incremented whenever `steps.scrape.outcome != 'success'` (covering checkout/npm/
+  playwright/scrape failures alike) and reset to 0 on success. It commits via the same
+  `bot/tanishq-selfhosted-sync` PR path as the price reading itself.
+- **T12** (`ml/notifications.py::_check_t12_selfhosted_runner`) fires once per IST day when that
+  counter reaches 3 — meaning the runner genuinely executed and failed 3 times in a row, not
+  "no runner available." Read via `compute_selfhosted_consecutive_failures()`.
+- `timeout-minutes` bumped 20 → 25 to give the recreate-fallback path enough headroom to not get
+  cancelled purely on timing when the host has just woken from an extended outage.
+
+The queued-forever / no-runner case above is **unchanged and still intentionally silent** — T12
+is scoped narrowly to "job started and failed," so a runner you've deliberately paused for travel
+still degrades exactly as documented, with no false alarm.
+
 ### Removing it later
 
 Stop the service (`./svc.cmd stop`), unregister (`./config.cmd remove --token

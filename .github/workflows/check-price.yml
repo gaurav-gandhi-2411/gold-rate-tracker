@@ -272,7 +272,13 @@ jobs:
     # `continue-on-error: true` at the job level additionally guarantees
     # this job's own failure never marks the workflow run as failed.
     runs-on: [self-hosted, tanishq-scraper]
-    timeout-minutes: 20
+    # 20min was tight-but-sufficient under normal conditions (healthy runs land
+    # in ~4min). Bumped to give headroom for actions/checkout's internal
+    # recreate-from-scratch fallback (observed 2026-07-30: ~8min) when the repo's
+    # local git state can't be cleanly reset -- e.g. after a mid-transfer
+    # connection drop on a prior run. See docs/RUNBOOK.md "Self-hosted runner
+    # reliability" for the incident this headroom was sized against.
+    timeout-minutes: 25
     continue-on-error: true
     concurrency:
       group: tanishq-selfhosted-scrape
@@ -349,14 +355,57 @@ jobs:
         run: |
           echo "::warning title=Scrape miss (self-hosted)::Tanishq scrape produced no reading this run from the self-hosted runner. prices.json not updated. Site continues serving the IBJA-calibrated/fusion-consensus estimate."
 
-      - name: Commit Tanishq reading
+      - name: Commit Tanishq reading and record job health
         id: commit
-        if: steps.scrape.outcome == 'success'
+        # always() so a failure anywhere upstream (checkout, npm ci, playwright
+        # install, scrape itself) still gets recorded -- this is the health
+        # signal T12 (ml/notifications.py) reads to detect "runner is online and
+        # picking up jobs, but they keep failing" (docs/RUNBOOK.md), a distinct
+        # failure mode from "runner offline" (which stays silent by design).
+        if: always()
+        continue-on-error: true
         run: |
           set -e
+          if ! git rev-parse --is-inside-work-tree >/dev/null 2>&1; then
+            echo "No git working tree (checkout itself failed) -- skipping commit and health record."
+            echo "changed=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
           git config user.name "gold-rate-bot"
           git config user.email "actions@users.noreply.github.com"
-          git add data/prices.json
+
+          if [ "${{ steps.scrape.outcome }}" = "success" ]; then
+            git add data/prices.json
+          fi
+
+          # Pure bash (no python3/jq assumed present on this Windows self-hosted
+          # host) -- the health record has a fixed, trivial 4-key schema, so a
+          # regex extraction of the prior count is simpler than adding a new
+          # runtime dependency to a job that has never needed Python.
+          HEALTH_FILE="data/tanishq_selfhosted_health.json"
+          PRIOR_COUNT=0
+          if [ -f "$HEALTH_FILE" ]; then
+            EXTRACTED=$(grep -o '"consecutive_job_failures": *[0-9]*' "$HEALTH_FILE" | grep -o '[0-9]*$' || true)
+            if [ -n "$EXTRACTED" ]; then
+              PRIOR_COUNT="$EXTRACTED"
+            fi
+          fi
+          OUTCOME="${{ steps.scrape.outcome }}"
+          if [ "$OUTCOME" = "success" ]; then
+            NEW_COUNT=0
+          else
+            NEW_COUNT=$((PRIOR_COUNT + 1))
+          fi
+          {
+            echo "{"
+            echo "  \"schema_version\": 1,"
+            echo "  \"consecutive_job_failures\": $NEW_COUNT,"
+            echo "  \"last_job_outcome\": \"$OUTCOME\","
+            echo "  \"last_updated_utc\": \"$(date -u +%Y-%m-%dT%H:%M:%SZ)\""
+            echo "}"
+          } > "$HEALTH_FILE"
+          git add "$HEALTH_FILE"
+
           if git diff --staged --quiet; then
             echo "No changes to commit."
             echo "changed=false" >> "$GITHUB_OUTPUT"
@@ -367,8 +416,10 @@ jobs:
 
       - name: Sync Tanishq reading via bot PR
         # Separate branch from bot/data-sync (used by the check job) so the
-        # two jobs' commits never race for the same PR/branch.
-        if: steps.commit.outputs.changed == 'true'
+        # two jobs' commits never race for the same PR/branch. always() so this
+        # still runs (and pushes the health-record commit) even when an upstream
+        # step failed -- the commit step above is if:always() too.
+        if: always() && steps.commit.outputs.changed == 'true'
         uses: ./.github/actions/bot-pr-sync
         with:
           branch: bot/tanishq-selfhosted-sync

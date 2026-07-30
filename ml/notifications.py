@@ -1,6 +1,6 @@
 """Notification system for gold-rate-tracker.
 
-Evaluates triggers (T1-T11) against current data files and dispatches
+Evaluates triggers (T1-T12) against current data files and dispatches
 ntfy push notifications. Designed to run as a CI step after the Chronos probe.
 
 Usage:
@@ -32,6 +32,7 @@ PRICES_JSON = DATA_DIR / "prices.json"
 BACKTEST_JSON = DATA_DIR / "backtest.json"
 CALIBRATION_JSON = DATA_DIR / "calibration.json"
 STATE_PATH = DATA_DIR / "notification_state.json"
+SELFHOSTED_HEALTH_JSON = DATA_DIR / "tanishq_selfhosted_health.json"
 
 IST = ZoneInfo("Asia/Kolkata")
 _NTFY_BASE = "https://ntfy.sh"
@@ -49,6 +50,10 @@ _T8_FLAT_THRESHOLD_RS = 25  # abs(delta) < this → "held steady" scenario
 _T9_IBJA_GAP_THRESHOLD_DAYS = 2  # business days w/o a new IBJA reading trigger T9 (ADR 025)
 _T9_ESCALATE_IBJA_GAP_THRESHOLD_DAYS = 4  # 2x T9 threshold -> distinct high-priority escalation
 _T10_GAP_THRESHOLD_DAYS = 2  # >=2 calendar days with no new PIT snapshot trigger T10
+# >=3 consecutive scrape-tanishq-selfhosted job failures (job actually ran, not
+# just queued-with-no-runner) trigger T12. At the ~3h schedule cadence that's
+# ~9h of the runner being online but genuinely failing -- see docs/RUNBOOK.md.
+_T12_CONSECUTIVE_FAILURE_THRESHOLD = 3
 
 SCHEMA_VERSION = 1
 
@@ -108,6 +113,7 @@ class NotificationState:
     last_t9_escalate_ist_date: str = ""  # IST date YYYY-MM-DD of last T9_ESCALATE send (dedup)
     last_t10_ist_date: str = ""  # IST date YYYY-MM-DD of last T10 send (once-per-day dedup)
     last_t11_ist_date: str = ""  # IST date YYYY-MM-DD of last T11 send (once-per-day dedup)
+    last_t12_ist_date: str = ""  # IST date YYYY-MM-DD of last T12 send (once-per-day dedup)
 
 
 # ---------------------------------------------------------------------------
@@ -136,6 +142,7 @@ def load_state(path: Path = STATE_PATH) -> NotificationState:
             last_t9_escalate_ist_date=raw.get("last_t9_escalate_ist_date", ""),
             last_t10_ist_date=raw.get("last_t10_ist_date", ""),
             last_t11_ist_date=raw.get("last_t11_ist_date", ""),
+            last_t12_ist_date=raw.get("last_t12_ist_date", ""),
         )
     except Exception as exc:
         logger.warning("Could not load notification state (%s) — using fresh state.", exc)
@@ -160,6 +167,7 @@ def save_state(state: NotificationState, path: Path = STATE_PATH) -> None:
         "last_t9_escalate_ist_date": state.last_t9_escalate_ist_date,
         "last_t10_ist_date": state.last_t10_ist_date,
         "last_t11_ist_date": state.last_t11_ist_date,
+        "last_t12_ist_date": state.last_t12_ist_date,
     }
     path.write_text(json.dumps(data, indent=2) + "\n", encoding="utf-8")
 
@@ -294,6 +302,28 @@ def compute_snapshot_gap_days(
         logger.warning("Could not read feature-store snapshots (%s) - skipping T10 check", exc)
         return None
     return (now_ist.date() - max_date).days
+
+
+def compute_selfhosted_consecutive_failures(path: Path = SELFHOSTED_HEALTH_JSON) -> int | None:
+    """Consecutive scrape-tanishq-selfhosted job failures, from the health record the
+    job itself writes every run (check-price.yml, if:always() step).
+
+    Counts only cycles where the job actually STARTED executing on the runner and
+    then failed (checkout, npm ci, playwright install, or the scrape itself) --
+    this is deliberately distinct from "no runner registered / job queued
+    forever", which is the documented, non-alerting steady state for a paused
+    self-hosted runner (docs/RUNBOOK.md). Returns None if the file is missing/
+    unreadable -- a fresh/reset record is not itself a failure signal, same
+    convention as T9/T10.
+    """
+    if not path.exists():
+        return None
+    try:
+        raw = json.loads(path.read_text(encoding="utf-8"))
+        return int(raw.get("consecutive_job_failures", 0))
+    except Exception as exc:
+        logger.warning("Could not read selfhosted health record (%s) - skipping T12 check", exc)
+        return None
 
 
 def compute_dir_acc_30f(backtest: dict) -> float:
@@ -851,6 +881,43 @@ def _check_t11_fusion_fallback(
     return _make_alert("T11", title, body, 4, ["warning", "satellite"], now_ist)
 
 
+def _check_t12_selfhosted_runner(
+    consecutive_failures: int | None,
+    state: NotificationState,
+    now_ist: datetime,
+) -> PendingAlert | None:
+    """T12 -- Tanishq self-hosted job failing repeatedly while actually running:
+    >= _T12_CONSECUTIVE_FAILURE_THRESHOLD consecutive scrape-tanishq-selfhosted
+    job failures. Once per IST calendar day.
+
+    Deliberately distinct from "runner offline/unregistered" (a job that never
+    starts stays queued and is silently auto-cancelled after 24h -- an
+    intentional, documented non-alert per docs/RUNBOOK.md, since a paused
+    self-hosted runner is a normal, tolerated state, not a system failure).
+    T12 only counts cycles where the job actually started executing and then
+    failed (checkout, npm ci, playwright install, or the scrape step itself) --
+    "runner is online and picking up jobs, but they keep failing" is a genuinely
+    different failure mode with no other detection (incident: 2026-07-26 to
+    2026-07-30, the runner's host was powered off for ~4 days; when it woke,
+    the first checkouts hit transient connection resets that forced an
+    expensive full-repo-recreate on every subsequent run, and nothing alerted
+    for the whole window).
+    """
+    if consecutive_failures is None or consecutive_failures < _T12_CONSECUTIVE_FAILURE_THRESHOLD:
+        return None
+    today_ist = now_ist.strftime("%Y-%m-%d")
+    if state.last_t12_ist_date == today_ist:
+        return None
+    title = f"Gold Tracker: Tanishq self-hosted runner failing ({consecutive_failures}x)"
+    body = (
+        f"scrape-tanishq-selfhosted has failed {consecutive_failures} runs in a row "
+        "-- the runner is online and picking up jobs, but they're not completing. "
+        "Different from a paused/offline runner (which stays silent by design). "
+        "Check the runner host (docs/RUNBOOK.md) and the job's recent logs."
+    )
+    return _make_alert("T12", title, body, 4, ["warning", "desktop_computer"], now_ist)
+
+
 # ---------------------------------------------------------------------------
 # Public API
 # ---------------------------------------------------------------------------
@@ -866,8 +933,9 @@ def check_triggers(
     calibration: dict | None = None,
     snapshot_gap_days: int | None = None,
     ibja_gap_days: int | None = None,
+    selfhosted_consecutive_failures: int | None = None,
 ) -> list[PendingAlert]:
-    """Evaluate all triggers (T1–T11); return new alerts for this call.
+    """Evaluate all triggers (T1–T12); return new alerts for this call.
 
     Cooldowns and combined caps are enforced here.  Quiet-hours queuing and
     delivery of previously queued alerts is the caller's responsibility (see
@@ -881,6 +949,8 @@ def check_triggers(
     ibja_gap_days: business-day gap since the last valid IBJA reading (see
         ml.ibja.compute_ibja_gap_business_days). Drives T9/T9_ESCALATE per
         ADR 025 — Tanishq scrape staleness no longer does (it's expected).
+    selfhosted_consecutive_failures: consecutive scrape-tanishq-selfhosted job
+        failures (see compute_selfhosted_consecutive_failures). Drives T12.
     """
     alerts: list[PendingAlert] = []
     for fn in (_check_t1, _check_t2, _check_t3, _check_t4, _check_t5, _check_t7):
@@ -906,6 +976,9 @@ def check_triggers(
     t11 = _check_t11_fusion_fallback(forecast, state, now_ist)
     if t11 is not None:
         alerts.append(t11)
+    t12 = _check_t12_selfhosted_runner(selfhosted_consecutive_failures, state, now_ist)
+    if t12 is not None:
+        alerts.append(t12)
     return alerts
 
 
@@ -972,6 +1045,8 @@ def send_pending(
                 state.last_t10_ist_date = now_ist.strftime("%Y-%m-%d")
             if alert.trigger_id == "T11":
                 state.last_t11_ist_date = now_ist.strftime("%Y-%m-%d")
+            if alert.trigger_id == "T12":
+                state.last_t12_ist_date = now_ist.strftime("%Y-%m-%d")
             logger.info("Sent %s: %s", alert.trigger_id, alert.title)
         else:
             logger.warning("Failed to send %s", alert.trigger_id)
@@ -1022,6 +1097,8 @@ def _stamp_ist_dedup(trigger_id: str, state: NotificationState, now_ist: datetim
         state.last_t10_ist_date = today
     elif trigger_id == "T11":
         state.last_t11_ist_date = today
+    elif trigger_id == "T12":
+        state.last_t12_ist_date = today
 
 
 def queue_for_quiet_hours(
@@ -1085,7 +1162,7 @@ def main() -> None:
     import argparse
 
     logging.basicConfig(level=logging.INFO, format="%(levelname)s: %(message)s")
-    parser = argparse.ArgumentParser(description="Gold rate notification system (T1-T11)")
+    parser = argparse.ArgumentParser(description="Gold rate notification system (T1-T12)")
     parser.add_argument(
         "--simulate",
         action="store_true",
@@ -1118,6 +1195,7 @@ def main() -> None:
 
     snapshot_gap_days = compute_snapshot_gap_days(now_ist)
     ibja_gap_days = compute_ibja_gap_business_days(now_ist)
+    selfhosted_consecutive_failures = compute_selfhosted_consecutive_failures()
 
     new_alerts = check_triggers(
         forecast,
@@ -1129,6 +1207,7 @@ def main() -> None:
         calibration=calibration,
         snapshot_gap_days=snapshot_gap_days,
         ibja_gap_days=ibja_gap_days,
+        selfhosted_consecutive_failures=selfhosted_consecutive_failures,
     )
 
     if args.simulate:
@@ -1150,6 +1229,15 @@ def main() -> None:
             f"IBJA gap:     {ibja_gap_str}  "
             f"(T9 gate: >= {_T9_IBJA_GAP_THRESHOLD_DAYS}bd, "
             f"T9_ESCALATE gate: >= {_T9_ESCALATE_IBJA_GAP_THRESHOLD_DAYS}bd)"
+        )
+        selfhosted_str = (
+            "n/a"
+            if selfhosted_consecutive_failures is None
+            else f"{selfhosted_consecutive_failures}x"
+        )
+        print(
+            f"Selfhosted:   {selfhosted_str} consecutive failures  "
+            f"(T12 gate: >= {_T12_CONSECUTIVE_FAILURE_THRESHOLD}x)"
         )
         print(f"\nTriggers fired ({len(new_alerts)}):")
         if new_alerts:
