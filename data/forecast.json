@@ -1,11 +1,11 @@
 {
-  "predicted_at": "2026-08-01T21:51:15.842323+00:00",
+  "predicted_at": "2026-08-02T02:25:32.645924+00:00",
   "target_window": "5d",
   "headline": {
     "method": "naive_flat_hold",
-    "predicted_22k": 13265,
-    "lower": 13012,
-    "upper": 13518,
+    "predicted_22k": 13242,
+    "lower": 12989,
+    "upper": 13495,
     "conformal_pi_half": 253.0,
     "naive_mae_recent_30": 148.2,
     "vol_context": {
@@ -56,7 +56,7 @@
     "direction_consensus": 1.0
   },
   "driver_context": {
-    "computed_at": "2026-08-01T21:51:15.846547+00:00",
+    "computed_at": "2026-08-02T02:25:32.673331+00:00",
     "macro_staleness_days": 0.0,
     "macro_fresh": true,
     "premium_threshold_pct": 15.0,
@@ -102,18 +102,18 @@
     }
   },
   "real_readings_count": 476,
-  "current_22k": 13265,
+  "current_22k": 13242,
   "scraped_at": "2026-08-01T15:58:54.234Z",
-  "price_source": "tanishq_scrape",
-  "est_low": null,
-  "est_high": null,
-  "ibja_asof": null,
+  "price_source": "ibja_calibrated",
+  "est_low": 13162,
+  "est_high": 13322,
+  "ibja_asof": "2026-07-31T11:30:00+00:00",
   "fusion_sources": null,
   "model_fallback": false,
-  "predicted_22k": 13265,
-  "lower": 13012,
-  "upper": 13518,
-  "target_time": "2026-08-02T00:00:00+00:00",
+  "predicted_22k": 13242,
+  "lower": 12989,
+  "upper": 13495,
+  "target_time": "2026-08-03T00:00:00+00:00",
   "model_status": "naive_headline",
   "model_version": "naive_flat_hold",
   "warmup": false
