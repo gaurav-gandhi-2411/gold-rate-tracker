@@ -1,5 +1,17 @@
 // app.js — Buyer-focused gold rate tracker.
 
+// Sentry.init() lives here (not an inline <script> in index.html) so it runs after the
+// deferred Sentry bundle has loaded — see index.html's comment on that script tag for why
+// it's deferred and why an inline init script there would race ahead of it.
+if (typeof Sentry !== "undefined") {
+  Sentry.init({
+    dsn: "https://PLACEHOLDER@o000000.ingest.sentry.io/0000000", // TODO: replace with your project DSN
+    sampleRate: 1.0,        // capture every error event
+    tracesSampleRate: 0.0,  // no performance tracing (not needed)
+    environment: "production",
+  });
+}
+
 const DATA_URL      = "data/prices.json";
 const FORECAST_URL  = "data/forecast.json";
 const BACKTEST_URL  = "data/backtest.json";
@@ -148,10 +160,25 @@ function animateNumberTick(el, fromVal, toVal, durationMs = 400) {
   _heroTickRaf = requestAnimationFrame(step);
 }
 
-async function loadJSON(url) {
-  const res = await fetch(`${url}?t=${Date.now()}`);
-  if (!res.ok) throw new Error(`HTTP ${res.status} for ${url}`);
-  return res.json();
+// No fetch here ever waited on another fetch's result — only render ordering did — but
+// with no timeout a single stalled connection could still hang a section on its "Loading…"
+// placeholder indefinitely. LOAD_TIMEOUT_MS bounds every fetch so a stall degrades to an
+// honest error within a fixed budget instead of hanging forever (render-smoke incident).
+const LOAD_TIMEOUT_MS = 10_000;
+
+async function loadJSON(url, timeoutMs = LOAD_TIMEOUT_MS) {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), timeoutMs);
+  try {
+    const res = await fetch(`${url}?t=${Date.now()}`, { signal: controller.signal });
+    if (!res.ok) throw new Error(`HTTP ${res.status} for ${url}`);
+    return await res.json();
+  } catch (err) {
+    if (err.name === "AbortError") throw new Error(`Timed out after ${timeoutMs}ms loading ${url}`);
+    throw err;
+  } finally {
+    clearTimeout(timer);
+  }
 }
 
 async function load() {
@@ -1777,8 +1804,10 @@ async function refreshData() {
   const btn = document.getElementById("refresh-btn");
   if (btn) { btn.classList.add("refresh-btn--spinning"); btn.disabled = true; }
   try {
-    const fresh = await load();
-    const fc    = await loadJSON(FORECAST_URL).catch(() => null);
+    const freshPromise = load();
+    const fcPromise    = loadJSON(FORECAST_URL).catch(() => null);
+    const fresh = await freshPromise;
+    const fc    = await fcPromise;
     allReadings  = fresh;
     lastForecast = fc;
     renderFreshness(allReadings, fc);
@@ -2061,9 +2090,35 @@ function initPullToRefresh() {
     }
   }
 
+  // Kick off every data fetch immediately, in parallel — none of them has a real
+  // dependency on another fetch's *result*, only on the RENDER order below. This
+  // replaces what was a 3-stage serialized waterfall (prices -> forecast ->
+  // {backtest,commentary,drift,coverage}, each stage starting only after the
+  // previous one resolved) with one parallel batch. Combined with loadJSON's
+  // LOAD_TIMEOUT_MS, this is the fix for the render-smoke "fresh-load" timeouts —
+  // see docs/RUNBOOK.md's render-smoke section for the incident and diagnosis
+  // (two render-blocking third-party <script> tags plus this serialized chain
+  // together could exceed the smoke test's cold-load budget).
+  const pricesPromise = load();
+  const fcPromise = loadJSON(FORECAST_URL).catch(err => {
+    if (typeof Sentry !== "undefined") Sentry.captureException(err, { extra: { url: FORECAST_URL } });
+    return null;
+  });
+  const btPromise = loadJSON(BACKTEST_URL);
+  const commentaryPromise = loadJSON(COMMENTARY_URL);
+  const driftPromise = loadJSON(DRIFT_URL);
+  const coveragePromise = loadJSON(COVERAGE_URL);
+  // These four are only actually consumed much later (via Promise.allSettled, after
+  // awaiting price+forecast and rendering the hero) — attach an inert catch to each
+  // now so an early rejection (e.g. a timeout firing while we're still waiting on
+  // prices) doesn't surface as a spurious unhandledrejection console error / Sentry
+  // event in the meantime. Promise.allSettled below still sees the real outcome —
+  // this doesn't replace the promise, just marks it handled.
+  [btPromise, commentaryPromise, driftPromise, coveragePromise].forEach(p => p.catch(() => {}));
+
   // Load prices (critical path)
   try {
-    allReadings = await load();
+    allReadings = await pricesPromise;
   } catch (err) {
     if (typeof Sentry !== "undefined") Sentry.captureException(err, { extra: { url: DATA_URL } });
     console.error(err);
@@ -2077,15 +2132,19 @@ function initPullToRefresh() {
       commentaryTextEl.textContent = "Couldn't load the latest price. Check your connection and try again.";
       commentaryTextEl.hidden = false;
     }
+    // Everything else renders from allReadings — degrade history/methodology honestly
+    // too instead of leaving them on their static "Loading…" placeholders forever.
+    const historyBody = document.getElementById("history-body");
+    if (historyBody) {
+      historyBody.innerHTML = '<tr><td colspan="5" class="empty">Couldn’t load price history.</td></tr>';
+    }
+    const methBody = document.getElementById("methodology-body");
+    if (methBody) {
+      methBody.innerHTML = '<p class="meth-loading">Couldn’t load model details — check your connection and reload.</p>';
+    }
     updateOfflineBanner();
     return;
   }
-
-  // Forecast loads in parallel — needed for verdict.
-  const fcPromise = loadJSON(FORECAST_URL).catch(err => {
-    if (typeof Sentry !== "undefined") Sentry.captureException(err, { extra: { url: FORECAST_URL } });
-    return null;
-  });
 
   // Render everything that doesn't need forecast immediately.
   renderFreshness(allReadings);
@@ -2110,12 +2169,12 @@ function initPullToRefresh() {
   ]);
   updateOfflineBanner(); // update offline banner text now allReadings is populated
 
-  // Remaining optional data (all gracefully degrade on failure).
+  // Remaining optional data (already in flight above; all gracefully degrade on failure).
   const [bt, commentary, drift, coverage] = await Promise.allSettled([
-    loadJSON(BACKTEST_URL),
-    loadJSON(COMMENTARY_URL),
-    loadJSON(DRIFT_URL),
-    loadJSON(COVERAGE_URL),
+    btPromise,
+    commentaryPromise,
+    driftPromise,
+    coveragePromise,
   ]);
 
   // Report any optional-fetch failures so silent pipeline breaks surface in Sentry.

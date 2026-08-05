@@ -300,24 +300,23 @@
     <!-- Sentry error tracking — replace the placeholder DSN with the one from sentry.io
          (Project Settings → Client Keys → DSN). The site will work normally without it.
          Served from Sentry's own CDN (not jsdelivr's npm proxy) — the npm package no longer
-         ships the prebuilt bundle jsdelivr would need, so an npm-path URL 404s. -->
+         ships the prebuilt bundle jsdelivr would need, so an npm-path URL 404s.
+         `defer` (not a blocking classic script) so a slow/unlucky round-trip to this
+         third-party CDN cannot delay HTML parsing or push app.js's own fetches past a
+         cold-load render budget — see the render-smoke incident writeup in app.js's
+         init() comment. Sentry.init() itself now lives at the top of app.js (deferred
+         scripts execute in document order, so Sentry is still guaranteed to be defined
+         before app.js's very first statement runs) — an inline script here would run
+         immediately on parse, before this deferred bundle has loaded. -->
     <script src="https://browser.sentry-cdn.com/7.120.4/bundle.min.js"
             integrity="sha384-HF4Kc49tTfBgl6JmNMfcrjBeW9pK13xSnnr307iG4PCNj8eRKhkvE9Tp27DigU1L"
-            crossorigin="anonymous"></script>
-    <script>
-      if (typeof Sentry !== "undefined") {
-        Sentry.init({
-          dsn: "https://PLACEHOLDER@o000000.ingest.sentry.io/0000000", // TODO: replace with your project DSN
-          sampleRate: 1.0,        // capture every error event
-          tracesSampleRate: 0.0,  // no performance tracing (not needed)
-          environment: "production",
-        });
-      }
-    </script>
+            crossorigin="anonymous" defer></script>
 
+    <!-- `defer`, same reasoning as Sentry above. Document order among deferred scripts
+         is preserved, so Chart is still guaranteed defined before app.js runs. -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.6/dist/chart.umd.min.js"
             integrity="sha384-Sse/HDqcypGpyTDpvZOJNnG0TT3feGQUkF9H+mnRvic+LjR+K1NhTt8f51KIQ3v3"
-            crossorigin="anonymous"></script>
+            crossorigin="anonymous" defer></script>
     <script src="app.js" defer></script>
     <script>
       if ("serviceWorker" in navigator) {
