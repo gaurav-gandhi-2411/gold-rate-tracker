@@ -212,7 +212,7 @@
           <div class="skel" style="height:40px;width:100%;border-radius:6px;margin-bottom:8px"></div>
           <div class="skel" style="height:40px;width:80%;border-radius:6px"></div>
         </div>
-        <div class="history-wrap" id="history-wrap">
+        <div class="history-wrap" id="history-wrap" hidden>
           <!-- Desktop table (≥640px) -->
           <table class="history history-table">
             <thead>
@@ -251,7 +251,13 @@
           How this works · how good is this? · historical checks
         </summary>
         <div class="methodology-body" id="methodology-body">
-          <p class="meth-loading">Loading model details…</p>
+          <div class="meth-skeleton" aria-hidden="true">
+            <div class="skel skel-meth-heading"></div>
+            <div class="skel skel-meth-line"></div>
+            <div class="skel skel-meth-line skel-meth-line--short"></div>
+            <div class="skel skel-meth-heading"></div>
+            <div class="skel skel-meth-line"></div>
+          </div>
         </div>
       </details>
 
