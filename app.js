@@ -1442,8 +1442,10 @@ function renderHistory(readings) {
   const cardList = document.getElementById("history-cards");
   const showBtn  = document.getElementById("history-show-all");
   const skelEl   = document.getElementById("history-skeleton");
+  const wrapEl   = document.getElementById("history-wrap");
 
   if (skelEl) skelEl.hidden = true;
+  if (wrapEl) wrapEl.hidden = false;
 
   const EMPTY_TABLE = `<tr><td colspan="5" class="empty">No readings yet.</td></tr>`;
   const EMPTY_CARDS = `<li class="hcard-empty">No readings yet.</li>`;
@@ -2133,7 +2135,11 @@ function initPullToRefresh() {
       commentaryTextEl.hidden = false;
     }
     // Everything else renders from allReadings — degrade history/methodology honestly
-    // too instead of leaving them on their static "Loading…" placeholders forever.
+    // too instead of leaving them on their skeleton placeholders forever.
+    const historySkel = document.getElementById("history-skeleton");
+    if (historySkel) historySkel.hidden = true;
+    const historyWrap = document.getElementById("history-wrap");
+    if (historyWrap) historyWrap.hidden = false;
     const historyBody = document.getElementById("history-body");
     if (historyBody) {
       historyBody.innerHTML = '<tr><td colspan="5" class="empty">Couldn’t load price history.</td></tr>';
