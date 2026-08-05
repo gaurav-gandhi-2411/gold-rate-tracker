@@ -44,6 +44,14 @@
     <!-- 1. APP HEADER — sticky top -->
     <div class="app-header" id="utility-row" aria-live="polite">
       <div class="app-header-left">
+        <!-- Pure-CSS 3D accent, not WebGL -- see style.css's .coin-accent comment
+             for why. Purely decorative, never over the price. -->
+        <span class="coin-accent" aria-hidden="true">
+          <span class="coin-inner">
+            <span class="coin-face coin-face--front"></span>
+            <span class="coin-face coin-face--back"></span>
+          </span>
+        </span>
         <span class="app-title">Gold · Bengaluru</span>
       </div>
       <div class="app-header-right">
