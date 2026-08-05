@@ -1,5 +1,5 @@
 {
-  "predicted_at": "2026-08-05T02:06:37.194864+00:00",
+  "predicted_at": "2026-08-05T05:42:50.177487+00:00",
   "target_window": "5d",
   "headline": {
     "method": "naive_flat_hold",
@@ -13,7 +13,7 @@
       "half_width_raw": 336.3,
       "method": "degraded_static",
       "window_days": 20,
-      "contiguous_days": 4,
+      "contiguous_days": 5,
       "is_floored": false,
       "is_degraded": true,
       "floor_fraction": 0.5,
@@ -56,7 +56,7 @@
     "direction_consensus": 1.0
   },
   "driver_context": {
-    "computed_at": "2026-08-05T02:06:37.198913+00:00",
+    "computed_at": "2026-08-05T05:42:50.181587+00:00",
     "macro_staleness_days": 0.0,
     "macro_fresh": true,
     "premium_threshold_pct": 15.0,
@@ -66,44 +66,44 @@
         "t0_date": "2026-07-28",
         "t1_date": "2026-08-04",
         "delta_pct_ibja": 0.403,
-        "delta_pct_gold_usd": 2.898,
+        "delta_pct_gold_usd": -0.064,
         "delta_pct_usdinr": -0.463,
-        "delta_pct_premium": -2.033,
+        "delta_pct_premium": 0.93,
         "total_move_rs_per_g": -30.0,
-        "gold_usd_contrib_rs_per_g": -215.9,
+        "gold_usd_contrib_rs_per_g": 4.8,
         "usdinr_contrib_rs_per_g": 34.5,
-        "premium_contrib_rs_per_g": 151.4,
-        "premium_share_pct": 504.7,
+        "premium_contrib_rs_per_g": -69.3,
+        "premium_share_pct": 231.0,
         "attribution_valid": false,
-        "attribution_valid_reason": "premium share 504.7% exceeds 15% threshold"
+        "attribution_valid_reason": "premium share 231.0% exceeds 15% threshold"
       },
       "30d": {
         "n_obs": 22,
         "t0_date": "2026-07-06",
         "t1_date": "2026-08-04",
         "delta_pct_ibja": -1.884,
-        "delta_pct_gold_usd": -0.002,
+        "delta_pct_gold_usd": -2.965,
         "delta_pct_usdinr": 0.123,
-        "delta_pct_premium": -2.004,
+        "delta_pct_premium": 0.959,
         "total_move_rs_per_g": -250.0,
-        "gold_usd_contrib_rs_per_g": -0.3,
+        "gold_usd_contrib_rs_per_g": -393.5,
         "usdinr_contrib_rs_per_g": 16.3,
-        "premium_contrib_rs_per_g": -265.9,
-        "premium_share_pct": 106.4,
+        "premium_contrib_rs_per_g": 127.2,
+        "premium_share_pct": 50.9,
         "attribution_valid": false,
-        "attribution_valid_reason": "premium share 106.4% exceeds 15% threshold"
+        "attribution_valid_reason": "premium share 50.9% exceeds 15% threshold"
       }
     },
     "driver_state": {
       "usd_inr_now": 95.332,
-      "gold_usd_now": 4155.0,
+      "gold_usd_now": 4033.7,
       "usd_inr_30d_pct_change": 0.12,
-      "gold_usd_30d_pct_change": -0.0
+      "gold_usd_30d_pct_change": -2.92
     }
   },
-  "real_readings_count": 482,
+  "real_readings_count": 483,
   "current_22k": 13245,
-  "scraped_at": "2026-08-04T22:08:50.333Z",
+  "scraped_at": "2026-08-05T02:07:06.186Z",
   "price_source": "tanishq_scrape",
   "est_low": null,
   "est_high": null,
