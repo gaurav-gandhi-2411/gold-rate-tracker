@@ -1,6 +1,6 @@
 """Notification system for gold-rate-tracker.
 
-Evaluates triggers (T1-T12) against current data files and dispatches
+Evaluates triggers (T1-T13) against current data files and dispatches
 ntfy push notifications. Designed to run as a CI step after the Chronos probe.
 
 Usage:
@@ -50,6 +50,7 @@ _T8_FLAT_THRESHOLD_RS = 25  # abs(delta) < this → "held steady" scenario
 _T9_IBJA_GAP_THRESHOLD_DAYS = 2  # business days w/o a new IBJA reading trigger T9 (ADR 025)
 _T9_ESCALATE_IBJA_GAP_THRESHOLD_DAYS = 4  # 2x T9 threshold -> distinct high-priority escalation
 _T10_GAP_THRESHOLD_DAYS = 2  # >=2 calendar days with no new PIT snapshot trigger T10
+_T13_GAP_THRESHOLD_DAYS = 2  # >=2 calendar days with no new USABLE PIT snapshot trigger T13
 # >=3 consecutive scrape-tanishq-selfhosted job failures (job actually ran, not
 # just queued-with-no-runner) trigger T12. At the ~3h schedule cadence that's
 # ~9h of the runner being online but genuinely failing -- see docs/RUNBOOK.md.
@@ -114,6 +115,7 @@ class NotificationState:
     last_t10_ist_date: str = ""  # IST date YYYY-MM-DD of last T10 send (once-per-day dedup)
     last_t11_ist_date: str = ""  # IST date YYYY-MM-DD of last T11 send (once-per-day dedup)
     last_t12_ist_date: str = ""  # IST date YYYY-MM-DD of last T12 send (once-per-day dedup)
+    last_t13_ist_date: str = ""  # IST date YYYY-MM-DD of last T13 send (once-per-day dedup)
 
 
 # ---------------------------------------------------------------------------
@@ -143,6 +145,7 @@ def load_state(path: Path = STATE_PATH) -> NotificationState:
             last_t10_ist_date=raw.get("last_t10_ist_date", ""),
             last_t11_ist_date=raw.get("last_t11_ist_date", ""),
             last_t12_ist_date=raw.get("last_t12_ist_date", ""),
+            last_t13_ist_date=raw.get("last_t13_ist_date", ""),
         )
     except Exception as exc:
         logger.warning("Could not load notification state (%s) — using fresh state.", exc)
@@ -168,6 +171,7 @@ def save_state(state: NotificationState, path: Path = STATE_PATH) -> None:
         "last_t10_ist_date": state.last_t10_ist_date,
         "last_t11_ist_date": state.last_t11_ist_date,
         "last_t12_ist_date": state.last_t12_ist_date,
+        "last_t13_ist_date": state.last_t13_ist_date,
     }
     path.write_text(json.dumps(data, indent=2) + "\n", encoding="utf-8")
 
@@ -302,6 +306,50 @@ def compute_snapshot_gap_days(
         logger.warning("Could not read feature-store snapshots (%s) - skipping T10 check", exc)
         return None
     return (now_ist.date() - max_date).days
+
+
+def compute_usable_snapshot_gap_days(
+    now_ist: datetime,
+    path: Path = SNAPSHOTS_PARQUET,
+) -> int | None:
+    """Calendar days since the most recent USABLE feature-store snapshot -- one
+    whose ibja_pm_916_asof_date matches its own as_of_date, the same leak-free
+    same-day-IBJA gate ml.direction.dataset applies before a row can enter the
+    direction-model training set.
+
+    Distinct from compute_snapshot_gap_days (T10), which only checks that SOME
+    row landed recently regardless of whether it's usable. Raw capture and
+    usable capture can silently diverge: the 2026-06-07 -> 2026-08-05
+    capture-timing bug in ml.feature_store.append_snapshot produced a fresh
+    row every single day (T10 stayed green throughout) while every one of
+    those rows carried a stale IBJA join, freezing the direction-model
+    dataset at n=113 for 8 weeks with no alert. T10 watches raw arrival; T13
+    watches whether what arrives is actually usable -- neither implies the
+    other. Returns None if the store is missing/empty/unreadable or has no
+    usable row at all (same non-alerting convention as T10 -- a fresh/reset
+    store is not a capture failure).
+    """
+    if not path.exists():
+        return None
+    try:
+        import pandas as pd
+
+        df = pd.read_parquet(path, columns=["as_of_date", "ibja_pm_916_asof_date"])
+        if df.empty:
+            return None
+        df["as_of_date"] = df["as_of_date"].astype(str)
+        valid = df[df["ibja_pm_916_asof_date"].notna()].copy()
+        if valid.empty:
+            return None
+        valid["ibja_pm_916_asof_date"] = valid["ibja_pm_916_asof_date"].astype(str)
+        usable = valid[valid["ibja_pm_916_asof_date"] >= valid["as_of_date"]]
+        if usable.empty:
+            return None
+        max_usable_date = pd.to_datetime(usable["as_of_date"]).max().date()
+    except Exception as exc:
+        logger.warning("Could not read feature-store snapshots (%s) - skipping T13 check", exc)
+        return None
+    return (now_ist.date() - max_usable_date).days
 
 
 def compute_selfhosted_consecutive_failures(path: Path = SELFHOSTED_HEALTH_JSON) -> int | None:
@@ -918,6 +966,37 @@ def _check_t12_selfhosted_runner(
     return _make_alert("T12", title, body, 4, ["warning", "desktop_computer"], now_ist)
 
 
+def _check_t13_usable_snapshot_stall(
+    usable_snapshot_gap_days: int | None,
+    state: NotificationState,
+    now_ist: datetime,
+) -> PendingAlert | None:
+    """T13 -- feature-store rows are arriving but not usable: no new USABLE PIT
+    snapshot (same-day IBJA join) in >= _T13_GAP_THRESHOLD_DAYS calendar days.
+    Once per IST calendar day.
+
+    T10 alone missed exactly this failure mode for 8 weeks (2026-06-07 ->
+    2026-08-05): raw rows kept landing on schedule while every one of them
+    carried a stale IBJA join, so T10's "did a row land recently" check stayed
+    green the entire time. T13 checks the thing that actually matters for the
+    direction-model revisit timeline -- whether the dataset is growing, not
+    just the parquet file.
+    """
+    if usable_snapshot_gap_days is None or usable_snapshot_gap_days < _T13_GAP_THRESHOLD_DAYS:
+        return None
+    today_ist = now_ist.strftime("%Y-%m-%d")
+    if state.last_t13_ist_date == today_ist:
+        return None
+    title = f"Gold Tracker: direction dataset stalled ({usable_snapshot_gap_days}d)"
+    body = (
+        f"No new USABLE direction-model snapshot in {usable_snapshot_gap_days} days, "
+        "even though raw feature-store rows may still be landing (see T10). Check "
+        "whether ml.ibja is appending before ml.feature_store captures each cycle -- "
+        "see ml.feature_store.append_snapshot's same-day-IBJA upgrade logic."
+    )
+    return _make_alert("T13", title, body, 4, ["warning", "mag"], now_ist)
+
+
 # ---------------------------------------------------------------------------
 # Public API
 # ---------------------------------------------------------------------------
@@ -934,8 +1013,9 @@ def check_triggers(
     snapshot_gap_days: int | None = None,
     ibja_gap_days: int | None = None,
     selfhosted_consecutive_failures: int | None = None,
+    usable_snapshot_gap_days: int | None = None,
 ) -> list[PendingAlert]:
-    """Evaluate all triggers (T1–T12); return new alerts for this call.
+    """Evaluate all triggers (T1–T13); return new alerts for this call.
 
     Cooldowns and combined caps are enforced here.  Quiet-hours queuing and
     delivery of previously queued alerts is the caller's responsibility (see
@@ -951,6 +1031,10 @@ def check_triggers(
         ADR 025 — Tanishq scrape staleness no longer does (it's expected).
     selfhosted_consecutive_failures: consecutive scrape-tanishq-selfhosted job
         failures (see compute_selfhosted_consecutive_failures). Drives T12.
+    usable_snapshot_gap_days: calendar-day gap since the most recent USABLE
+        (same-day-IBJA) feature-store snapshot (see
+        compute_usable_snapshot_gap_days). Drives T13 -- distinct from
+        snapshot_gap_days/T10, which only checks that some row landed.
     """
     alerts: list[PendingAlert] = []
     for fn in (_check_t1, _check_t2, _check_t3, _check_t4, _check_t5, _check_t7):
@@ -979,6 +1063,9 @@ def check_triggers(
     t12 = _check_t12_selfhosted_runner(selfhosted_consecutive_failures, state, now_ist)
     if t12 is not None:
         alerts.append(t12)
+    t13 = _check_t13_usable_snapshot_stall(usable_snapshot_gap_days, state, now_ist)
+    if t13 is not None:
+        alerts.append(t13)
     return alerts
 
 
@@ -1047,6 +1134,8 @@ def send_pending(
                 state.last_t11_ist_date = now_ist.strftime("%Y-%m-%d")
             if alert.trigger_id == "T12":
                 state.last_t12_ist_date = now_ist.strftime("%Y-%m-%d")
+            if alert.trigger_id == "T13":
+                state.last_t13_ist_date = now_ist.strftime("%Y-%m-%d")
             logger.info("Sent %s: %s", alert.trigger_id, alert.title)
         else:
             logger.warning("Failed to send %s", alert.trigger_id)
@@ -1099,6 +1188,8 @@ def _stamp_ist_dedup(trigger_id: str, state: NotificationState, now_ist: datetim
         state.last_t11_ist_date = today
     elif trigger_id == "T12":
         state.last_t12_ist_date = today
+    elif trigger_id == "T13":
+        state.last_t13_ist_date = today
 
 
 def queue_for_quiet_hours(
@@ -1162,7 +1253,7 @@ def main() -> None:
     import argparse
 
     logging.basicConfig(level=logging.INFO, format="%(levelname)s: %(message)s")
-    parser = argparse.ArgumentParser(description="Gold rate notification system (T1-T12)")
+    parser = argparse.ArgumentParser(description="Gold rate notification system (T1-T13)")
     parser.add_argument(
         "--simulate",
         action="store_true",
@@ -1194,6 +1285,7 @@ def main() -> None:
     _prune_sent_today(state)
 
     snapshot_gap_days = compute_snapshot_gap_days(now_ist)
+    usable_snapshot_gap_days = compute_usable_snapshot_gap_days(now_ist)
     ibja_gap_days = compute_ibja_gap_business_days(now_ist)
     selfhosted_consecutive_failures = compute_selfhosted_consecutive_failures()
 
@@ -1208,6 +1300,7 @@ def main() -> None:
         snapshot_gap_days=snapshot_gap_days,
         ibja_gap_days=ibja_gap_days,
         selfhosted_consecutive_failures=selfhosted_consecutive_failures,
+        usable_snapshot_gap_days=usable_snapshot_gap_days,
     )
 
     if args.simulate:
@@ -1224,6 +1317,10 @@ def main() -> None:
         print(f"n_folds:      {n_folds}  (T1/T2 gate: >= 30)")
         gap_str = "n/a" if snapshot_gap_days is None else f"{snapshot_gap_days}d"
         print(f"Snapshot gap: {gap_str}  (T10 gate: >= {_T10_GAP_THRESHOLD_DAYS}d)")
+        usable_gap_str = (
+            "n/a" if usable_snapshot_gap_days is None else f"{usable_snapshot_gap_days}d"
+        )
+        print(f"Usable gap:   {usable_gap_str}  (T13 gate: >= {_T13_GAP_THRESHOLD_DAYS}d)")
         ibja_gap_str = "n/a" if ibja_gap_days is None else f"{ibja_gap_days}bd"
         print(
             f"IBJA gap:     {ibja_gap_str}  "

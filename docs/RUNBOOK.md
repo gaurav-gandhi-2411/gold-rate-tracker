@@ -359,6 +359,33 @@ The queued-forever / no-runner case above is **unchanged and still intentionally
 is scoped narrowly to "job started and failed," so a runner you've deliberately paused for travel
 still degrades exactly as documented, with no false alarm.
 
+### Feature-store rows arriving but not usable — the T10 blind spot (T13)
+
+**Incident, 2026-06-07 to 2026-08-05 (~8 weeks, undetected):** `ml.feature_store.append_snapshot`
+kept exactly one row per IST calendar day, first-writer-wins. Because check-price.yml runs 8x/day
+and IBJA only publishes once (~17:00 IST), the run that first crossed IST midnight (~00:40–02:30
+IST) routinely captured *before* that day's IBJA publish and permanently locked in the prior day's
+close for that `as_of_date` — every later same-day run, which *would* have had the fresh reading,
+was silently a no-op. T10 (raw capture-gap alert) stayed green the entire time: a row landed every
+day, on schedule. What T10 cannot see is whether that row is *usable* — `ml.direction.dataset`
+excludes any row where `ibja_pm_916_asof_date < as_of_date` as a leakage guard, so every one of
+these rows was silently dropped from the direction-model training set. The dataset was frozen at
+n=113 (93 h1 folds) for the whole window while the raw parquet grew normally underneath it.
+
+**Fix:**
+- `ml.feature_store.append_snapshot` now allows one same-day *upgrade*: if the stored row's IBJA
+  reading predates `as_of_date` and a later same-day capture has the genuine same-day reading, the
+  row is replaced (never downgraded). See its docstring for the full mechanism.
+- `ml.feature_store_backfill.repair_stale_ibja` fixed the 38 (of 51) already-affected historical
+  rows that had a genuine same-day IBJA publish available in `ibja_rates.parquet` — a pure
+  same-repo join repair, not a re-fetch of revised data (IBJA's own capture job was never broken;
+  only the feature-store join was). The remaining rows were genuine non-trading days (weekends) or
+  not-yet-published — correctly excluded, not a bug.
+- **T13** (`ml/notifications.py::_check_t13_usable_snapshot_stall`) fires once per IST day when the
+  most recent *usable* (same-day-IBJA) snapshot is >= 2 calendar days old, independent of T10 —
+  read via `compute_usable_snapshot_gap_days()`. T10 answers "did a row land"; T13 answers "is the
+  dataset actually growing." Neither implies the other.
+
 ### Removing it later
 
 Stop the service (`./svc.cmd stop`), unregister (`./config.cmd remove --token
