@@ -32,6 +32,16 @@ const IS_STANDALONE =
   window.matchMedia("(display-mode: standalone)").matches ||
   window.navigator.standalone === true;
 
+// True on iOS/iPadOS Safari (and any other iOS browser -- all iOS browsers are
+// WebKit under the hood, so this applies regardless of what's in the UA string
+// beyond the OS itself). Classic UA check plus the iPadOS 13+ case, where an
+// iPad reports "MacIntel" like desktop Safari but is touch-capable.
+const IS_IOS =
+  /iPad|iPhone|iPod/.test(navigator.userAgent) ||
+  (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
+
+const INSTALL_PROMPT_DISMISSED_KEY = "install-prompt-dismissed";
+
 const fmtINR = (n) =>
   typeof n === "number"
     ? n.toLocaleString("en-IN", { maximumFractionDigits: 0 })
@@ -1442,10 +1452,8 @@ function renderHistory(readings) {
   const cardList = document.getElementById("history-cards");
   const showBtn  = document.getElementById("history-show-all");
   const skelEl   = document.getElementById("history-skeleton");
-  const wrapEl   = document.getElementById("history-wrap");
 
   if (skelEl) skelEl.hidden = true;
-  if (wrapEl) wrapEl.hidden = false;
 
   const EMPTY_TABLE = `<tr><td colspan="5" class="empty">No readings yet.</td></tr>`;
   const EMPTY_CARDS = `<li class="hcard-empty">No readings yet.</li>`;
@@ -2092,6 +2100,38 @@ function initPullToRefresh() {
     }
   }
 
+  // iOS Add-to-Home-Screen prompt: shown only to iOS Safari visitors not already
+  // running standalone, self-dismisses permanently via localStorage (unlike the
+  // pwa-help panel above, which is a per-session reminder for already-installed
+  // users -- this is a one-time nudge, so it shouldn't keep coming back once
+  // dismissed). Pure DOM/localStorage work, no data dependency -- runs before
+  // any fetch below so it never competes with or delays the price render.
+  if (IS_IOS && !IS_STANDALONE) {
+    let dismissed = false;
+    try {
+      dismissed = localStorage.getItem(INSTALL_PROMPT_DISMISSED_KEY) === "1";
+    } catch {
+      // Storage access can throw (private browsing, disabled storage) -- treat
+      // as not-dismissed rather than blocking the banner over a read failure.
+    }
+    if (!dismissed) {
+      const installPanel = document.getElementById("install-prompt-panel");
+      const installClose = document.getElementById("install-prompt-close");
+      if (installPanel) installPanel.hidden = false;
+      if (installClose) {
+        installClose.addEventListener("click", () => {
+          if (installPanel) installPanel.hidden = true;
+          try {
+            localStorage.setItem(INSTALL_PROMPT_DISMISSED_KEY, "1");
+          } catch {
+            // Best-effort persistence -- if storage is unavailable the banner
+            // just reappears next visit, which is a degraded UX, not a bug.
+          }
+        });
+      }
+    }
+  }
+
   // Kick off every data fetch immediately, in parallel — none of them has a real
   // dependency on another fetch's *result*, only on the RENDER order below. This
   // replaces what was a 3-stage serialized waterfall (prices -> forecast ->
@@ -2138,8 +2178,6 @@ function initPullToRefresh() {
     // too instead of leaving them on their skeleton placeholders forever.
     const historySkel = document.getElementById("history-skeleton");
     if (historySkel) historySkel.hidden = true;
-    const historyWrap = document.getElementById("history-wrap");
-    if (historyWrap) historyWrap.hidden = false;
     const historyBody = document.getElementById("history-body");
     if (historyBody) {
       historyBody.innerHTML = '<tr><td colspan="5" class="empty">Couldn’t load price history.</td></tr>';

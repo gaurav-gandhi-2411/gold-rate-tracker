@@ -59,6 +59,15 @@
       <button class="pwa-help-close" id="pwa-help-close" aria-label="Dismiss">✕</button>
     </div>
 
+    <!-- iOS has no native install prompt (no beforeinstallprompt) and no way for us
+         to detect "already dismissed the native prompt" the way Chrome/Android does,
+         so this is JS-shown only to iOS Safari visitors not already running
+         standalone, and self-manages its own persistent dismissal via localStorage. -->
+    <div class="install-prompt-panel" id="install-prompt-panel" hidden role="note" aria-live="polite">
+      <p>Add this to your Home Screen for quicker access: tap <strong>Share</strong>, then <strong>Add to Home Screen</strong>.</p>
+      <button class="install-prompt-close" id="install-prompt-close" aria-label="Dismiss">✕</button>
+    </div>
+
     <!-- Forecast staleness banner — hidden by default, shown by app.js when forecast is >18h old -->
     <div class="stale-banner" id="stale-banner" hidden role="alert" aria-live="polite"></div>
 
@@ -206,13 +215,16 @@
       <section class="history-section" id="section-history" aria-label="Price history">
         <h2>History</h2>
         <p class="section-karat-note">22K · per gram</p>
-        <!-- Φ8C'/Ψ3C.3: skeleton shown while history loads -->
-        <div class="history-skeleton" id="history-skeleton" aria-hidden="true">
-          <div class="skel" style="height:40px;width:100%;border-radius:6px;margin-bottom:8px"></div>
-          <div class="skel" style="height:40px;width:100%;border-radius:6px;margin-bottom:8px"></div>
-          <div class="skel" style="height:40px;width:80%;border-radius:6px"></div>
-        </div>
-        <div class="history-wrap" id="history-wrap" hidden>
+        <div class="history-wrap" id="history-wrap">
+          <!-- Φ8C'/Ψ3C.3: skeleton overlay shown while history loads. Absolutely
+               positioned over history-wrap (not a separate hidden/shown sibling) so
+               hiding it on load never changes document height -- zero CLS instead of
+               the hidden-container-pops-in shift a plain [hidden] toggle would cause. -->
+          <div class="history-skeleton" id="history-skeleton" aria-hidden="true">
+            <div class="skel" style="height:40px;width:100%;border-radius:6px;margin-bottom:8px"></div>
+            <div class="skel" style="height:40px;width:100%;border-radius:6px;margin-bottom:8px"></div>
+            <div class="skel" style="height:40px;width:80%;border-radius:6px"></div>
+          </div>
           <!-- Desktop table (≥640px) -->
           <table class="history history-table">
             <thead>
