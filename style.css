@@ -22,6 +22,11 @@
   --gold:         #E09B2E;   /* dark mode price, links, highlights */
   --gold-glow:    rgba(212, 147, 42, 0.18);
 
+  /* Hero price material — a gold-metal gradient (warm > primary > rich),
+     tuned per color-scheme below since --gold itself already means a
+     different literal color in each mode. */
+  --hero-gradient: linear-gradient(135deg, var(--gold-warm) 0%, var(--gold) 45%, var(--gold-rich) 100%);
+
   /* Semantic up/down */
   --up:           #c66a4b;   /* terracotta — price rose (bad for buyer) */
   --down:         #6a9a72;   /* sage — price fell (good for buyer) */
@@ -71,6 +76,14 @@
   --radius-sm: 10px;
   --radius-md: 12px;
   --radius-lg: 16px;
+
+  /* Elevation — dark-tuned: a soft dark drop shadow reads as depth against
+     --ink, paired with a faint top-edge highlight (a hairline of the
+     surface catching light from above) since a plain drop-shadow alone
+     reads flat on a dark background. Light mode below overrides both. */
+  --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.30), inset 0 1px 0 rgba(255, 255, 255, 0.03);
+  --shadow-md: 0 4px 14px rgba(0, 0, 0, 0.34), inset 0 1px 0 rgba(255, 255, 255, 0.04);
+  --shadow-lg: 0 10px 28px rgba(0, 0, 0, 0.38), inset 0 1px 0 rgba(255, 255, 255, 0.05);
 }
 
 /* Light mode overrides — colours only, layout unchanged */
@@ -95,6 +108,15 @@
 
     --cmp-good-text:    #173404;
     --cmp-caution-text: #412402;
+
+    /* Elevation — light mode: a conventional soft shadow off a light
+       surface; no top-highlight needed (nothing to catch light against). */
+    --shadow-sm: 0 1px 3px rgba(26, 18, 8, 0.07);
+    --shadow-md: 0 4px 14px rgba(26, 18, 8, 0.09);
+    --shadow-lg: 0 10px 28px rgba(26, 18, 8, 0.12);
+
+    /* Light mode needs darker stops than dark mode for contrast on white. */
+    --hero-gradient: linear-gradient(135deg, var(--gold-rich) 0%, var(--gold-deep) 55%, var(--gold-deep) 100%);
   }
 }
 
@@ -314,6 +336,34 @@ main {
   -webkit-tap-highlight-color: transparent;
 }
 
+/* ─── INSTALL PROMPT PANEL (iOS Safari, not-yet-installed only) ─────────── */
+.install-prompt-panel {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 10px clamp(20px, 5vw, 56px);
+  background: rgba(212, 147, 42, 0.10);
+  border-bottom: 1px solid rgba(212, 147, 42, 0.22);
+}
+.install-prompt-panel p {
+  margin: 0;
+  flex: 1;
+  font-size: var(--ts-xs);
+  color: var(--cream-dim);
+  line-height: 1.55;
+}
+.install-prompt-close {
+  background: none;
+  border: none;
+  color: var(--cream-mute);
+  font-size: 11px;
+  cursor: pointer;
+  padding: 2px 4px;
+  flex-shrink: 0;
+  margin-top: 1px;
+  -webkit-tap-highlight-color: transparent;
+}
+
 /* ═══════════════════════════════════════════════════════════════
    FORECAST STALENESS BANNER
 ═══════════════════════════════════════════════════════════════ */
@@ -376,22 +426,51 @@ main {
 }
 
 /* ─── Hero price ─── */
+/* Gold-material treatment: a gradient across the gold spectrum (not a flat
+   color) clipped to the digits themselves, plus a light-sweep that plays
+   ONCE when the price is first revealed (element goes from [hidden] to
+   visible -- CSS animations on a newly-rendered element play automatically,
+   no JS trigger needed). Deliberately not looping -- a looping shine on the
+   actual price would compete with the skeleton shimmer pattern used
+   elsewhere and read as busy/gimmicky rather than a one-time reveal. */
 .hero-price {
+  position: relative;
   font-family: var(--display);
   font-weight: 400;
   font-size: clamp(56px, 16vw, 160px);
   line-height: 0.92;
   letter-spacing: -0.04em;
-  color: var(--gold);                     /* warm amber in dark, deep umber in light */
   font-variant-numeric: tabular-nums;
   font-feature-settings: "tnum" 1, "lnum" 1;
   margin: 0 0 var(--space-4);
+  background-image:
+    linear-gradient(115deg, transparent 35%, rgba(255, 255, 255, 0.55) 48%, transparent 60%),
+    var(--hero-gradient);
+  background-size: 250% 100%, 100% 100%;
+  background-position: 150% 0, 0 0;
+  background-clip: text;
+  -webkit-background-clip: text;
+  color: transparent;
+  animation: hero-sweep 1s ease-out 1 both;
+}
+@keyframes hero-sweep {
+  from { background-position: 150% 0, 0 0; }
+  to   { background-position: -50% 0, 0 0; }
 }
 .hero-price .rupee {
   font-style: italic;
   font-weight: 400;
   margin-right: 0.05em;
   opacity: 0.7;
+  /* Opt out of the parent's gradient/transparent-text treatment -- `background`
+     isn't inherited, so without this the symbol would inherit color:transparent
+     with no background of its own and vanish. A flat --gold accent on the small
+     currency mark against the big gradient digits is also an intentional
+     hierarchy, not just a workaround. */
+  background: none;
+  -webkit-background-clip: initial;
+  background-clip: initial;
+  color: var(--gold);
 }
 .hero-estimate-range {
   margin: -8px 0 var(--space-3);
@@ -516,7 +595,8 @@ main {
   border: 1px solid var(--line);
   border-radius: var(--radius-md);
   padding: var(--space-4) var(--space-4) var(--space-3);
-  transition: background 0.2s, border-color 0.2s, transform 100ms ease-out;
+  box-shadow: var(--shadow-sm);
+  transition: background 0.2s, border-color 0.2s, transform 100ms ease-out, box-shadow 0.2s;
 }
 .comparison-card:active { transform: scale(0.98); }
 .comparison-card[data-sentiment="good"] {
@@ -569,6 +649,7 @@ main {
   border: 1px solid var(--line);
   border-radius: var(--radius-md);
   padding: var(--space-4) var(--space-5);
+  box-shadow: var(--shadow-sm);
   transition: transform 100ms ease-out;
 }
 .karat-card:active { transform: scale(0.98); }
@@ -687,7 +768,14 @@ main {
   border-radius: var(--radius-lg);
   padding: var(--space-3) var(--space-5);
   aspect-ratio: 16 / 5;
+  box-shadow: var(--shadow-sm);
 }
+/* Touch-scrub: pan-y (not the default "auto") lets a horizontal/diagonal
+   drag on the canvas reach Chart.js's own touchmove handling instead of the
+   browser immediately treating it as a page-scroll gesture, so dragging a
+   finger across the chart continuously updates the tooltip like a mouse
+   hover would. Vertical scrolling still passes through untouched. */
+#chart { touch-action: pan-y; }
 
 /* ═══════════════════════════════════════════════════════════════
    7. HISTORY — table (desktop) + card list (mobile)
@@ -705,9 +793,12 @@ main {
 }
 
 .history-wrap {
+  position: relative;
+  min-height: 180px; /* room for the skeleton overlay before any real rows exist */
   background: var(--surface);
   border: 1px solid var(--line);
   border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-md);
   overflow: hidden;
 }
 
@@ -1403,7 +1494,13 @@ html.ptr-pulling {
 .model-signal-skeleton[hidden] { display: none; }
 
 /* ── History skeleton ───────────────────────────────────────────────────────── */
-.history-skeleton { padding: 4px 0; }
+.history-skeleton {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  padding: 12px;
+  background: var(--surface);
+}
 .history-skeleton[hidden] { display: none; }
 
 /* ── How-good panel ─────────────────────────────────────────────────────────── */
