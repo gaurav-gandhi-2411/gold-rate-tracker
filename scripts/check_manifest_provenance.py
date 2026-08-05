@@ -14,6 +14,7 @@ live-run citation can't be re-verified from history the way a committed file
 can. Anything else -- a path that doesn't exist, or exists but isn't tracked
 -- is a hard failure.
 """
+
 from __future__ import annotations
 
 import json
@@ -48,10 +49,14 @@ def main() -> int:
         # Non-file citations are explicit strings containing a paren-note or a
         # space (a real repo-relative path never has spaces in this convention).
         if "(" in source_file or " " in source_file:
-            warnings.append(f"{mid}: non-file citation ({source_file!r}) -- can't be verified from git history")
+            warnings.append(
+                f"{mid}: non-file citation ({source_file!r}) -- can't be verified from git history"
+            )
             continue
         if source_file not in tracked:
-            failures.append(f"{mid}: source_file {source_file!r} is not a tracked file (missing or gitignored)")
+            failures.append(
+                f"{mid}: source_file {source_file!r} is not a tracked file (missing or gitignored)"
+            )
 
     for w in warnings:
         print(f"WARN: {w}")
@@ -62,7 +67,10 @@ def main() -> int:
             print(f"  - {f}")
         return 1
 
-    print(f"OK: every {MANIFEST_PATH} metric with a file citation is committed ({len(warnings)} non-file citation(s) warned above).")
+    print(
+        f"OK: every {MANIFEST_PATH} metric with a file citation is committed "
+        f"({len(warnings)} non-file citation(s) warned above)."
+    )
     return 0
 
 
