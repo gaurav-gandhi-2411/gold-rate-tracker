@@ -1,12 +1,12 @@
 {
-  "capture_utc": "2026-08-05T03:28:54Z",
+  "capture_utc": "2026-08-05T08:50:01Z",
   "as_of_date": "2026-08-05",
   "national_failures": {},
   "kalyan_failures": {},
   "snapshot_rows_persisted": 7,
   "national_benchmark": {
-    "value": 13217.5,
-    "band_half_width": 132.175,
+    "value": 13310.833333333334,
+    "band_half_width": 133.10833333333335,
     "disagreement": false,
     "sources_used": [
       "ibja",
@@ -21,32 +21,32 @@
   },
   "cities": {
     "Bangalore": {
-      "value": 13200.0,
-      "band_half_width": 132.175,
+      "value": 13359.999999999998,
+      "band_half_width": 133.10833333333335,
       "coverage": "kalyan_anchored",
       "attribution": "National retail consensus, Kalyan-anchored (Kalyan Jewellers \u2014 BANGALORE board rate)",
-      "markup": 0.9986759977302818
+      "markup": 1.0036937331747322
     },
     "Chennai": {
-      "value": 13200.0,
-      "band_half_width": 132.175,
+      "value": 13359.999999999998,
+      "band_half_width": 133.10833333333335,
       "coverage": "kalyan_anchored",
       "attribution": "National retail consensus, Kalyan-anchored (Kalyan Jewellers \u2014 CHENNAI board rate)",
-      "markup": 0.9986759977302818
+      "markup": 1.0036937331747322
     },
     "Hyderabad": {
-      "value": 13200.0,
-      "band_half_width": 132.175,
+      "value": 13359.999999999998,
+      "band_half_width": 133.10833333333335,
       "coverage": "kalyan_anchored",
       "attribution": "National retail consensus, Kalyan-anchored (Kalyan Jewellers \u2014 HYDERABAD board rate)",
-      "markup": 0.9986759977302818
+      "markup": 1.0036937331747322
     },
     "Ernakulam": {
-      "value": 13200.0,
-      "band_half_width": 132.175,
+      "value": 13359.999999999998,
+      "band_half_width": 133.10833333333335,
       "coverage": "kalyan_anchored",
       "attribution": "National retail consensus, Kalyan-anchored (Kalyan Jewellers \u2014 ERNAKULAM board rate)",
-      "markup": 0.9986759977302818
+      "markup": 1.0036937331747322
     }
   }
 }
