@@ -234,6 +234,43 @@ main {
   flex-shrink: 0;
 }
 
+/* ─── COIN ACCENT — pure CSS 3D, not WebGL ───────────────────────────────────
+   A slowly-rotating gold "coin" next to the wordmark. WebGL (even a minimal
+   three.js setup) runs 150-600KB minified -- this achieves the same "slowly
+   rotating gold element" brief in pure CSS transforms (rotateY + preserve-3d),
+   effectively 0 extra bytes and GPU-composited (transform-only, no layout/
+   paint cost). Decorative only (aria-hidden), fixed size, lives in the
+   sticky header -- never overlaps or delays the hero price. */
+.coin-accent {
+  display: inline-block;
+  width: 32px;
+  height: 32px;
+  margin-right: 10px;
+  perspective: 220px;
+  flex-shrink: 0;
+}
+.coin-inner {
+  display: block; /* spans are inline by default -- inline elements ignore width/height entirely */
+  position: relative;
+  width: 100%;
+  height: 100%;
+  transform-style: preserve-3d;
+  animation: coin-spin 7s linear infinite;
+}
+.coin-face {
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  background: radial-gradient(circle at 35% 30%, var(--gold-warm), var(--gold) 55%, var(--gold-rich) 100%);
+  box-shadow: inset 0 0 0 1.5px rgba(0, 0, 0, 0.15);
+  backface-visibility: hidden;
+}
+.coin-face--back { transform: rotateY(180deg); }
+@keyframes coin-spin {
+  from { transform: rotateY(0deg); }
+  to   { transform: rotateY(360deg); }
+}
+
 .app-title {
   font-family: var(--display);
   font-size: 20px;
