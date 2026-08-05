@@ -5,7 +5,7 @@ from pathlib import Path
 
 import pandas as pd
 from ml.feature_store import SCHEMA_VERSION, append_snapshot, capture_daily_snapshot, load_snapshots
-from ml.feature_store_backfill import patch_missing_macro_series, run_backfill
+from ml.feature_store_backfill import patch_missing_macro_series, repair_stale_ibja, run_backfill
 
 # ---------------------------------------------------------------------------
 # Helpers
@@ -143,6 +143,97 @@ class TestIdempotency:
         df = load_snapshots(path)
         row = df[df["as_of_date"] == "2026-06-07"].iloc[0]
         assert row["gold_usd"] == 3200.0
+
+
+# ---------------------------------------------------------------------------
+# TestSameDayIbjaUpgrade
+# ---------------------------------------------------------------------------
+
+
+class TestSameDayIbjaUpgrade:
+    """Regression coverage for the 2026-06-07 -> 2026-08-05 staleness incident:
+    a run that lands before IBJA's daily publish must not permanently lock a
+    stale IBJA reading into that as_of_date once a later same-day run has the
+    genuine same-day close."""
+
+    def test_upgrades_stale_row_when_new_capture_is_same_day_fresh(self, tmp_path: Path) -> None:
+        path = _store_path(tmp_path)
+        stale = _make_snapshot(
+            "2026-06-07",
+            gold_usd=3200.0,
+            ibja_pm_916=73000.0,
+            ibja_pm_916_asof_date="2026-06-06",  # captured before today's IBJA publish
+        )
+        fresh = _make_snapshot(
+            "2026-06-07",
+            gold_usd=3250.0,
+            ibja_pm_916=73500.0,
+            ibja_pm_916_asof_date="2026-06-07",  # a later run, after today's IBJA publish
+        )
+
+        append_snapshot(stale, path)
+        append_snapshot(fresh, path)
+
+        df = load_snapshots(path)
+        assert len(df) == 1
+        row = df[df["as_of_date"] == "2026-06-07"].iloc[0]
+        assert row["ibja_pm_916_asof_date"] == "2026-06-07"
+        assert row["ibja_pm_916"] == 73500.0
+        assert row["gold_usd"] == 3250.0
+
+    def test_does_not_downgrade_an_already_fresh_row(self, tmp_path: Path) -> None:
+        path = _store_path(tmp_path)
+        fresh = _make_snapshot(
+            "2026-06-07",
+            gold_usd=3200.0,
+            ibja_pm_916=73000.0,
+            ibja_pm_916_asof_date="2026-06-07",
+        )
+        later_same_day = _make_snapshot(
+            "2026-06-07",
+            gold_usd=3999.0,
+            ibja_pm_916=79999.0,
+            ibja_pm_916_asof_date="2026-06-07",
+        )
+
+        append_snapshot(fresh, path)
+        append_snapshot(later_same_day, path)
+
+        df = load_snapshots(path)
+        assert len(df) == 1
+        row = df[df["as_of_date"] == "2026-06-07"].iloc[0]
+        assert row["gold_usd"] == 3200.0
+        assert row["ibja_pm_916"] == 73000.0
+
+    def test_stays_noop_when_neither_capture_is_fresh(self, tmp_path: Path) -> None:
+        path = _store_path(tmp_path)
+        first = _make_snapshot("2026-06-07", gold_usd=3200.0, ibja_pm_916_asof_date="2026-06-05")
+        second = _make_snapshot("2026-06-07", gold_usd=3999.0, ibja_pm_916_asof_date="2026-06-06")
+
+        append_snapshot(first, path)
+        append_snapshot(second, path)
+
+        df = load_snapshots(path)
+        assert len(df) == 1
+        row = df[df["as_of_date"] == "2026-06-07"].iloc[0]
+        assert row["gold_usd"] == 3200.0
+
+    def test_prior_dates_untouched_by_an_upgrade(self, tmp_path: Path) -> None:
+        path = _store_path(tmp_path)
+        append_snapshot(_make_snapshot("2026-06-06", gold_usd=3100.0), path)
+        append_snapshot(
+            _make_snapshot("2026-06-07", ibja_pm_916_asof_date="2026-06-06", gold_usd=3200.0),
+            path,
+        )
+        append_snapshot(
+            _make_snapshot("2026-06-07", ibja_pm_916_asof_date="2026-06-07", gold_usd=3250.0),
+            path,
+        )
+
+        df = load_snapshots(path)
+        assert len(df) == 2
+        prior_row = df[df["as_of_date"] == "2026-06-06"].iloc[0]
+        assert prior_row["gold_usd"] == 3100.0
 
 
 # ---------------------------------------------------------------------------
@@ -799,6 +890,105 @@ class TestNMacroNull:
 
         df = load_snapshots(path)
         assert int(df.iloc[0]["n_macro_null"]) == 1
+
+
+# ---------------------------------------------------------------------------
+# TestRepairStaleIbja
+# ---------------------------------------------------------------------------
+
+
+class TestRepairStaleIbja:
+    """Regression coverage for the one-off repair of live_pit rows stuck on a
+    prior day's IBJA close by the 2026-06-07 -> 2026-08-05 capture-timing
+    bug."""
+
+    def test_repairs_row_with_genuine_same_day_ibja(self, tmp_path: Path) -> None:
+        store = _store_path(tmp_path)
+        append_snapshot(
+            _make_snapshot(
+                "2026-06-08",
+                ibja_pm_916=73000.0,
+                ibja_am_916=72800.0,
+                ibja_pm_916_asof_date="2026-06-06",  # stuck one day+ behind
+                ibja_am_916_asof_date="2026-06-06",
+            ),
+            store,
+        )
+        ibja = _make_backfill_ibja_parquet(
+            tmp_path, [("2026-06-06", 73000.0, 72800.0), ("2026-06-08", 73900.0, 73700.0)]
+        )
+
+        n = repair_stale_ibja(store_path=store, ibja_path=ibja)
+
+        assert n == 1
+        df = load_snapshots(store)
+        row = df.iloc[0]
+        assert row["ibja_pm_916"] == 73900.0
+        assert row["ibja_pm_916_asof_date"] == "2026-06-08"
+        assert row["ibja_am_916"] == 73700.0
+        assert row["ibja_am_916_asof_date"] == "2026-06-08"
+
+    def test_leaves_row_untouched_when_no_same_day_ibja(self, tmp_path: Path) -> None:
+        """A genuine non-trading day (weekend/holiday) is not a bug and stays as-is."""
+        store = _store_path(tmp_path)
+        append_snapshot(
+            _make_snapshot(
+                "2026-06-13",  # a Saturday -- IBJA doesn't publish
+                ibja_pm_916=73000.0,
+                ibja_pm_916_asof_date="2026-06-12",
+            ),
+            store,
+        )
+        ibja = _make_backfill_ibja_parquet(tmp_path, [("2026-06-12", 73000.0, 72800.0)])
+
+        n = repair_stale_ibja(store_path=store, ibja_path=ibja)
+
+        assert n == 0
+        df = load_snapshots(store)
+        row = df.iloc[0]
+        assert row["ibja_pm_916"] == 73000.0
+        assert row["ibja_pm_916_asof_date"] == "2026-06-12"
+
+    def test_does_not_touch_non_stale_rows(self, tmp_path: Path) -> None:
+        store = _store_path(tmp_path)
+        append_snapshot(
+            _make_snapshot("2026-06-08", ibja_pm_916=73900.0, ibja_pm_916_asof_date="2026-06-08"),
+            store,
+        )
+        ibja = _make_backfill_ibja_parquet(tmp_path, [("2026-06-08", 99999.0, 99999.0)])
+
+        n = repair_stale_ibja(store_path=store, ibja_path=ibja)
+
+        assert n == 0
+        df = load_snapshots(store)
+        assert df.iloc[0]["ibja_pm_916"] == 73900.0
+
+    def test_skips_backfill_yfinance_rows(self, tmp_path: Path) -> None:
+        store = _store_path(tmp_path)
+        append_snapshot(
+            _make_snapshot(
+                "2026-06-08",
+                source="backfill_yfinance",
+                ibja_pm_916=73000.0,
+                ibja_pm_916_asof_date="2026-06-06",
+            ),
+            store,
+        )
+        ibja = _make_backfill_ibja_parquet(tmp_path, [("2026-06-08", 73900.0, 73700.0)])
+
+        n = repair_stale_ibja(store_path=store, ibja_path=ibja)
+
+        assert n == 0
+        df = load_snapshots(store)
+        assert df.iloc[0]["ibja_pm_916"] == 73000.0
+
+    def test_returns_zero_on_empty_store(self, tmp_path: Path) -> None:
+        store = _store_path(tmp_path)
+        ibja = _make_backfill_ibja_parquet(tmp_path, [("2026-06-08", 73900.0, 73700.0)])
+
+        n = repair_stale_ibja(store_path=store, ibja_path=ibja)
+
+        assert n == 0
 
 
 # ---------------------------------------------------------------------------
