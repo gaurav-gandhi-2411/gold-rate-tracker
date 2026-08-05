@@ -934,6 +934,31 @@ main {
 .skel-spark   { height: 56px; width: 100%; }
 .hero-skeleton[hidden] { display: none; }
 
+/* Methodology panel skeleton — shown until renderMethodology() replaces
+   #methodology-body's innerHTML entirely (see app.js). */
+.meth-skeleton { display: flex; flex-direction: column; gap: var(--space-4); }
+.skel-meth-heading { height: 16px; width: 160px; }
+.skel-meth-line     { height: 12px; width: 100%; }
+.skel-meth-line--short { width: 60%; }
+
+/* "Live" pulse dot on the freshness pill — subtle, currentColor so it tracks
+   the pill's existing --ok/--warn/--stale color classes automatically. */
+@keyframes freshness-pulse {
+  0%, 100% { opacity: 1; }
+  50%      { opacity: 0.35; }
+}
+.freshness-pill.freshness--ok::before {
+  content: "";
+  display: inline-block;
+  width: 6px;
+  height: 6px;
+  margin-right: 5px;
+  border-radius: 50%;
+  background: currentColor;
+  vertical-align: middle;
+  animation: freshness-pulse 2s ease-in-out infinite;
+}
+
 /* ═══════════════════════════════════════════════════════════════
    RESPONSIVE — mobile card history ≤640px
 ═══════════════════════════════════════════════════════════════ */
