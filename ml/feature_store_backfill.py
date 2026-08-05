@@ -306,7 +306,11 @@ def repair_stale_ibja(
             continue  # not stale
         if as_of not in ibja_by_date.index:
             continue  # IBJA genuinely didn't publish this day -- leave as-is
-        ibja_row = ibja_by_date.loc[as_of]
+        ibja_match = ibja_by_date.loc[as_of]
+        # .loc[scalar] is typed as Series | DataFrame since pandas can't statically
+        # guarantee a unique index -- drop_duplicates above makes it unique at runtime,
+        # but narrow explicitly so mypy (and any future duplicate slipping through) is safe.
+        ibja_row = ibja_match.iloc[-1] if isinstance(ibja_match, pd.DataFrame) else ibja_match
         if pd.isna(ibja_row.get("pm_916")):
             continue
 
