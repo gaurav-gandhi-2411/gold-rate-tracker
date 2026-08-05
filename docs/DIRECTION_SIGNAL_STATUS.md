@@ -2,7 +2,7 @@
 
 *Auto-measured by `ml/direction/evaluate.py` (weekly via `.github/workflows/eval-direction.yml`). Latest run embedded below; live numbers are in `data/direction_baseline.json` (per-horizon, with embedded gate verdicts) and the trend in `data/direction_eval_history.jsonl`.*
 
-## Verdict (as of 2026-06-13)
+## Verdict (as of 2026-08-05)
 
 **DARK at every horizon and for both signal types.** No model beats the always-up base rate out-of-sample with significance, so neither a calibrated direction probability nor a buy/wait/sell timing signal is shown to users. This is the gate (`ml/direction/gate.py`) working as designed (ADR 019, honest-baseline ADR 005), not a failure.
 
@@ -14,29 +14,30 @@ Calibration (Expected Calibration Error, ECE) is the **primary** quality metric:
 
 | Horizon | N folds | Base rate (always-up) | Model | OOS accuracy | Brier | ECE | Significant (p) | Prob gate | Timing gate |
 |---|---|---|---|---|---|---|---|---|---|
-| **h=1** | 93 | 53.8% | logistic | 49.5% | 0.267 | 0.121 | no (p=0.42) | **dark** | **dark** |
-| | | | lightgbm | 52.7% | 0.282 | 0.211 | no | | |
-| **h=2** | 92 | 62.0% | logistic | 60.9% | **0.243** | **0.086** | no (p=1.0) | **dark** | **dark** |
-| | | | lightgbm | 58.7% | 0.269 | 0.199 | no | | |
+| **h=1** | 130 | 50.8% | logistic | 48.5% | 0.264 | 0.134 | no (p=0.63) | **dark** | **dark** |
+| | | | lightgbm | 50.8% | 0.292 | 0.208 | no | | |
+| **h=2** | 128 | 57.8% | logistic | 60.9% | **0.242** | **0.038** | no (p=0.45) | **dark** | **dark** |
+| | | | lightgbm | 57.8% | 0.265 | 0.190 | no | | |
 
-Dataset: 113 labelled rows (h=1) / 112 (h=2), 2025-01-09 → 2026-06-05, from the PIT feature store.
+Dataset: 150 labelled rows (h=1) / 148 (h=2), 2025-01-09 → 2026-08-03, from the PIT feature store. n_test_folds = kept rows − min_train_size(20).
 
 ### What the numbers say (honestly)
-- **h=1 is both inaccurate and poorly calibrated.** Logistic accuracy (49.5%) is *below* the base rate, and ECE 0.121 means its probabilities are off by ~12pp on average. Its reliability curve is overconfident (a "74% up" bin came true 29% of the time). Nothing to ship.
-- **h=2 is the interesting one.** The logistic model is **reasonably well-calibrated** (ECE 0.086, below our 0.10 bar) and its **Brier (0.243) beats the base rate's (0.380)** — its probabilities are honest. But its 0.5-threshold **accuracy (60.9%) does not beat the base rate (62.0%)**, and the difference is not significant (p=1.0). So a calibrated probability exists, but it carries no directional *edge* over "gold usually goes up." Per the gate, that stays dark.
-- This is exactly the case the gate is built for: a probability can be well-calibrated yet still fail to beat the trivial baseline. We do not ship calibration alone as if it were an edge.
+- **h=1 is both inaccurate and poorly calibrated.** Logistic accuracy (48.5%) is *below* the base rate, and ECE 0.134 means its probabilities are off by ~13pp on average. Nothing to ship.
+- **h=2 is the interesting one.** The logistic model is **well-calibrated** (ECE 0.038, comfortably below our 0.10 bar — improved further now that n has grown) and its **Brier (0.242) beats the base rate's (0.421)** — its probabilities are honest. But its 0.5-threshold **accuracy (60.9%) does not beat the base rate (57.8%) with significance** (p=0.45). So a calibrated probability exists, but it carries no *statistically demonstrated* edge over "gold usually goes up." Per the gate, that stays dark.
+- This is exactly the case the gate is built for: a probability can be well-calibrated yet still fail to beat the trivial baseline with significance. We do not ship calibration alone as if it were an edge.
+- n grew from 93/92 folds to 130/128 folds in this run — see "Data-accumulation bug" below for why that jump happened all at once rather than gradually.
 
 ## Website-ready copy (same honest voice as the flat-hold section)
 
 > **Can it call tomorrow's move?** Not yet — and we won't fake it. Every week we test
 > next-day and 2-day direction models against the simplest honest benchmark: "gold
-> usually rises, so just say up." Over ~90 out-of-sample days, the models land around
-> 49–61% accuracy versus that benchmark's 54–62%. They don't beat it, and the gap isn't
+> usually rises, so just say up." Over ~130 out-of-sample days, the models land around
+> 49–61% accuracy versus that benchmark's 51–58%. They don't beat it, and the gap isn't
 > statistically meaningful. The 2-day model's *probabilities* are actually fairly honest
 > (well-calibrated), but honest probabilities with no edge over "usually up" aren't worth
 > showing as a signal. So we keep it off and keep measuring as data grows.
 
-(Pill variant: *"Direction signal: off — no model beats the base rate yet (h1 ~50% vs 54%, h2 ~61% vs 62%). Revisit as data grows."*)
+(Pill variant: *"Direction signal: off — no model beats the base rate yet (h1 ~49% vs 51%, h2 ~61% vs 58%). Revisit as data grows."*)
 
 ## The two gates (both dark)
 
@@ -49,7 +50,7 @@ Dataset: 113 labelled rows (h=1) / 112 (h=2), 2025-01-09 → 2026-06-05, from th
 - Each run rewrites `data/direction_baseline.json` (both horizons, with embedded gate verdicts) and appends one record to `data/direction_eval_history.jsonl`.
 - Expected to stay dark until the regime offers genuine directional uncertainty and a model earns its gate. Both gates flip automatically — no manual edit — when the conditions are met.
 
-## Revisit trigger — data accumulation, not feature/target iteration (as of 2026-07-17)
+## Revisit trigger — data accumulation, not feature/target iteration (as of 2026-08-05)
 
 A 2026-07-17 diagnostic (Monte Carlo power sim matching the actual sign-test gate)
 found the DARK verdict is explained by sample size, not missing signal: at n=93
@@ -60,35 +61,66 @@ a "relative cheapness vs. trailing mean" reframed target — both committed at
 `ml/experiments/direction_enrichment.py`) were tested against the unmodified gate
 and came back negative, consistent with that power ceiling. **Conclusion: do not
 iterate further on features or targets until n grows.** No agentic feature/target
-search either — n=93 is nowhere near enough for that to be meaningful.
+search either — n is nowhere near enough for that to be meaningful.
 
-**Verified capture rate** (audited 2026-07-17): the feature store
-(`data/feature_store/snapshots.parquet`) held 152 rows, 93 h1-usable folds. A
-live 2026-07-13→07-15 gap (3 missed calendar days) was traced to bug #4
-(`bot-pr-sync` failing GH006 branch-protection pushes) — **not** a silent
-regression of the Φ25 capture pipeline itself. Fixed by PR #183 (merged
-2026-07-17T00:10 UTC); every `check-price.yml` run has succeeded since. The
-clean 30-day window immediately before the outage (2026-06-13 → 2026-07-12) shows
-the underlying rate is **1.00 snapshot/calendar-day (30/30, zero gaps)** — that is
-the number the revisit dates below are computed from, not the outage-diluted
-30-day blended rate (0.93/day).
+### Data-accumulation bug (2026-06-07 → 2026-08-05, ~8 weeks) — found and fixed
 
-**A new guard now watches this directly**: `ml.notifications` trigger **T10**
-fires via `NTFY_TOPIC` (once per IST day) if the feature store goes
-≥2 calendar days without a new snapshot — independent of price/forecast
-staleness (T9), since the scraper can be healthy while the commit path is
-broken (exactly what happened in bug #4). See `ml/notifications.py::_check_t10`.
+The 2026-07-17 revisit-date table below (2026-10-23 for n=250) turned out to be **invalid**,
+not just optimistic. Root cause: `ml.feature_store.append_snapshot` kept exactly one row per IST
+calendar day, first-writer-wins. `check-price.yml` runs 8x/day; the run that first crossed IST
+midnight (~00:40–02:30 IST) routinely captured *before* IBJA's own daily publish (~17:00 IST) and
+permanently locked in the prior day's close for that `as_of_date` — every later same-day run,
+which *would* have had the fresh reading, was silently a no-op. `ml.direction.dataset` correctly
+excludes any row where `ibja_pm_916_asof_date < as_of_date` as a leakage guard, so **every one of
+these rows was silently dropped** from the direction-model training set: n stayed frozen at 93
+h1 folds across five weekly eval runs (2026-07-16 → 2026-07-27) while the raw feature-store parquet
+kept growing normally underneath it (113 → 171 rows). `ml.notifications` trigger T10 — the guard
+built specifically to catch capture gaps — stayed green the entire time, because a row genuinely
+landed every day; T10 checks that *something* arrived, not whether it was usable. This is why the
+2026-07-17 "verified capture rate" audit below, which measured raw row arrival, did not catch it.
 
-**Computed revisit dates** (from n=152 / 93 h1 folds on 2026-07-17, at the
-verified 1.0 row/day rate):
+**Fixed 2026-08-05:**
+- `ml.feature_store.append_snapshot` now allows one same-day *upgrade*: once a later same-day
+  capture has the genuine same-day IBJA reading, it replaces a stale same-day row (never
+  downgrades). See its docstring for the full mechanism.
+- `ml.feature_store_backfill.repair_stale_ibja` repaired 38 of the 51 affected historical rows —
+  the ones with a genuine same-day IBJA publish already sitting in `ibja_rates.parquet` (IBJA's own
+  capture job was never broken; only the feature-store join was). This was a same-repo join
+  repair, not a re-fetch of revised third-party data, so it's fully PIT-honest. The remaining 13
+  were genuine non-trading days (weekends) or not-yet-published — correctly excluded, not a bug.
+  Macro backfill via yfinance for the gap was considered and **declined**: `feature_store_backfill.py`
+  already documents that yfinance returns revised adjusted closes, not the value known at capture
+  time, so it cannot honestly reconstruct that window — and it wasn't needed anyway, since the
+  affected rows' macro/Tanishq/calendar fields were already captured correctly live; only the IBJA
+  join was wrong.
+- New guard: `ml.notifications` trigger **T13** (`_check_t13_usable_snapshot_stall`) fires once per
+  IST day when the most recent *usable* (same-day-IBJA) snapshot is ≥2 calendar days old,
+  independent of T10. T10 answers "did a row land"; T13 answers "is the dataset actually growing."
+  See `docs/RUNBOOK.md`'s matching section for the full incident writeup.
+- The repair immediately recovered the dataset from 113 to 150 kept rows (93 → 130 h1 folds, 92 →
+  128 h2 folds) in the 2026-08-05 eval run — see the Verdict table above.
 
-| Target n (feature-store rows) | h1 test folds at that n | Rows needed | Revisit date |
+**Verified capture rate** (audited 2026-07-17, still accurate for *raw* capture): the feature store
+held 152 rows at a genuine **1.00 raw snapshot/calendar-day** rate (a live 2026-07-13→07-15 gap was
+bug #4, `bot-pr-sync` failing GH006 pushes, fixed by PR #183 — unrelated to the staleness bug above).
+What that audit did not measure, and what the revisit dates below correct for, is that raw capture
+and *usable* capture are different rates: IBJA only publishes on trading days (~5/7), so even with
+the capture-timing bug fixed, at most ~5/7 of raw-captured days become usable rows. Measured directly
+from the post-fix `live_pit` window (2026-06-07 → 2026-08-05, 60 calendar days): 57 raw rows (0.95/day,
+matching the earlier audit) but only 38 usable-after-repair rows (**0.63 usable rows/calendar-day**) —
+that is the rate the revisit dates below are computed from.
+
+**Computed revisit dates** (from n=150 / 130 h1 folds as of 2026-08-03, at the verified 0.63 usable
+row/calendar-day rate):
+
+| Target n (kept rows) | h1 test folds at that n | Rows needed | Revisit date |
 |---|---|---|---|
-| 250 | ~230 | 98 | **2026-10-23** |
-| 300 | ~280 | 148 | **2026-12-12** |
+| 250 | ~230 | 100 | **2027-01-07** |
+| 300 | ~280 | 150 | **2027-03-27** |
 
-(Conservative fallback if the rate regresses toward the outage-blended 0.93/day:
-2026-10-30 / 2026-12-22 respectively.)
+(Theoretical ceiling if usable capture ever tracked raw capture 1:1 — not achievable under IBJA's
+known publish cadence, since it doesn't publish on weekends, but useful as a bound: 2026-11-16 /
+2027-01-07 respectively.)
 
 **What to re-run at each checkpoint:**
 1. `python -m ml.direction.evaluate` (already runs weekly, unmodified gate — no action needed, just read the new `data/direction_baseline.json`).
