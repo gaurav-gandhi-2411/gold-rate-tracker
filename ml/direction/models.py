@@ -190,3 +190,9 @@ def lightgbm_feature_importances(
         return {name: float(val) for name, val in zip(feature_names, importances, strict=True)}
     except Exception:
         return {}
+
+
+import os
+def _deliberate_lint_break_for_strict_removal_verification():
+    unused_variable_that_ruff_will_flag = 12345
+    return None
