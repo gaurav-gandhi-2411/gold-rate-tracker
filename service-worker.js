@@ -21,7 +21,7 @@
 // cache and re-fetch the current shell on next load. See lint.yml's
 // sw-version-guard job, added the same day, which now fails CI when shell
 // files change without a VERSION bump.
-const VERSION = "v25-20260806-conformal-range-depth-hero";
+const VERSION = "v26-20260806-self-hosted-fonts-cls-fix";
 const SHELL_CACHE = `gold-shell-${VERSION}`;
 
 const SHELL_FILES = [
@@ -32,6 +32,9 @@ const SHELL_FILES = [
   "./manifest.webmanifest",
   "./icons/icon-192.png",
   "./icons/icon-512.png",
+  "./fonts/fraunces-variable-latin.woff2",
+  "./fonts/dmsans-variable-latin.woff2",
+  "./fonts/syne-variable-latin.woff2",
 ];
 
 // All JSON data files get network-first treatment (same as prices.json).
