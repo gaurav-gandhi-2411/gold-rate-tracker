@@ -1,10 +1,10 @@
 {
   "schema_version": 1,
-  "generated_at_utc": "2026-07-19T05:12:48.194300+00:00",
+  "generated_at_utc": "2026-08-02T05:18:40.464462+00:00",
   "band_source": "naive_flat_hold conformal PI (headline.lower/upper), calibrated on the last 30 backtest folds' next-trading-day (h=1) naive errors (ADR 022)",
   "nominal_pct": 80,
-  "coverage": 0.9836,
-  "n": 61,
-  "n_in_band": 60,
+  "coverage": 0.9733,
+  "n": 75,
+  "n_in_band": 73,
   "note": "Recalibrated 2026-07 from h=5 to h=1 (ADR 022) to match the horizon this metric actually tests. n accumulates across the change with no time window, so coverage may read above 80% for a while as pre-recalibration decisions are still counted; it converges toward the new calibration's true rate as n grows. Per ADR 023: while this figure is still pre-fix-dominated, it is NOT yet independent out-of-sample evidence for the h=1 band \u2014 that confirmation arrives only once enough decisions made after 2026-07-17 have resolved. The 84.7% figure in ADR 022 is a retrospective, overlapping-window sanity check, not OOS validation."
 }

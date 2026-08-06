@@ -204,10 +204,11 @@ def test_inference_output_validates_forecast_schema(tmp_path, monkeypatch) -> No
     """Freshly-written forecast.json from inference.main() must validate against FORECAST_SCHEMA."""
     import ml.inference as inf
 
-    from tests.test_inference_main import _make_backtest, _make_prices, _make_probe
+    from tests.test_inference_main import _disable_fusion, _make_backtest, _make_prices, _make_probe
 
     monkeypatch.setattr(inf, "DATA_DIR", tmp_path)
     monkeypatch.setattr("ml.notifications.STATE_PATH", tmp_path / "notification_state.json")
+    _disable_fusion(monkeypatch)  # calibration.valid=False + stale fixture prices reach tier 3
 
     (tmp_path / "prices.json").write_text(json.dumps(_make_prices(40)))
     (tmp_path / "backtest.json").write_text(json.dumps(_make_backtest(35)))
