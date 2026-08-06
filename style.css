@@ -22,6 +22,11 @@
   --gold:         #E09B2E;   /* dark mode price, links, highlights */
   --gold-glow:    rgba(212, 147, 42, 0.18);
 
+  /* Hero price material — a gold-metal gradient (warm > primary > rich),
+     tuned per color-scheme below since --gold itself already means a
+     different literal color in each mode. */
+  --hero-gradient: linear-gradient(135deg, var(--gold-warm) 0%, var(--gold) 45%, var(--gold-rich) 100%);
+
   /* Semantic up/down */
   --up:           #c66a4b;   /* terracotta — price rose (bad for buyer) */
   --down:         #6a9a72;   /* sage — price fell (good for buyer) */
@@ -71,6 +76,14 @@
   --radius-sm: 10px;
   --radius-md: 12px;
   --radius-lg: 16px;
+
+  /* Elevation — dark-tuned: a soft dark drop shadow reads as depth against
+     --ink, paired with a faint top-edge highlight (a hairline of the
+     surface catching light from above) since a plain drop-shadow alone
+     reads flat on a dark background. Light mode below overrides both. */
+  --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.30), inset 0 1px 0 rgba(255, 255, 255, 0.03);
+  --shadow-md: 0 4px 14px rgba(0, 0, 0, 0.34), inset 0 1px 0 rgba(255, 255, 255, 0.04);
+  --shadow-lg: 0 10px 28px rgba(0, 0, 0, 0.38), inset 0 1px 0 rgba(255, 255, 255, 0.05);
 }
 
 /* Light mode overrides — colours only, layout unchanged */
@@ -95,6 +108,15 @@
 
     --cmp-good-text:    #173404;
     --cmp-caution-text: #412402;
+
+    /* Elevation — light mode: a conventional soft shadow off a light
+       surface; no top-highlight needed (nothing to catch light against). */
+    --shadow-sm: 0 1px 3px rgba(26, 18, 8, 0.07);
+    --shadow-md: 0 4px 14px rgba(26, 18, 8, 0.09);
+    --shadow-lg: 0 10px 28px rgba(26, 18, 8, 0.12);
+
+    /* Light mode needs darker stops than dark mode for contrast on white. */
+    --hero-gradient: linear-gradient(135deg, var(--gold-rich) 0%, var(--gold-deep) 55%, var(--gold-deep) 100%);
   }
 }
 
@@ -212,6 +234,10 @@ main {
   flex-shrink: 0;
 }
 
+/* Header 3D coin retired in favor of the larger .hero-gold-piece below -- 32px
+   next to the wordmark was reported twice as too small to register. See
+   HERO CARD section for the replacement. */
+
 .app-title {
   font-family: var(--display);
   font-size: 20px;
@@ -276,6 +302,11 @@ main {
 /* Ψ3C.1 latent bug fixes (norm #14): inline-flex/flex defeats UA [hidden] rule */
 .hero-change[hidden]    { display: none !important; }
 .sparkline-wrap[hidden] { display: none !important; }
+/* Same class of bug (norm #14), reintroduced by the install-prompt-panel's own
+   `display: flex` -- dismissing it set the hidden attribute correctly (app.js's
+   click handler was never broken) but had zero visual effect, since the panel's
+   own flex rule tied with and beat the UA's [hidden]{display:none} rule. */
+.install-prompt-panel[hidden] { display: none !important; }
 
 @keyframes refresh-spin {
   to { transform: rotate(360deg); }
@@ -303,6 +334,34 @@ main {
   line-height: 1.55;
 }
 .pwa-help-close {
+  background: none;
+  border: none;
+  color: var(--cream-mute);
+  font-size: 11px;
+  cursor: pointer;
+  padding: 2px 4px;
+  flex-shrink: 0;
+  margin-top: 1px;
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* ─── INSTALL PROMPT PANEL (iOS Safari, not-yet-installed only) ─────────── */
+.install-prompt-panel {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 10px clamp(20px, 5vw, 56px);
+  background: rgba(212, 147, 42, 0.10);
+  border-bottom: 1px solid rgba(212, 147, 42, 0.22);
+}
+.install-prompt-panel p {
+  margin: 0;
+  flex: 1;
+  font-size: var(--ts-xs);
+  color: var(--cream-dim);
+  line-height: 1.55;
+}
+.install-prompt-close {
   background: none;
   border: none;
   color: var(--cream-mute);
@@ -363,8 +422,104 @@ main {
    2. HERO CARD
 ═══════════════════════════════════════════════════════════════ */
 .hero-card {
+  position: relative;
   padding-top: clamp(32px, 6vw, 64px);
   margin-bottom: clamp(28px, 6vw, 56px);
+}
+
+/* ─── HERO GOLD PIECE — pure CSS 3D, not WebGL ────────────────────────────────
+   The signature "feel alive" element, replacing the old 32px header coin. A
+   genuinely large, layered 3D piece (front/back faces + a rim shading layer +
+   a specular sweep pass) that's part of the hero composition rather than a
+   corner ornament. WebGL (even a minimal three.js build) runs 150-600KB
+   minified and needs a lazy-loaded runtime; this achieves the same "large
+   rotating dimensional gold object" brief in pure CSS transforms
+   (preserve-3d + rotateY), 0 extra bytes, GPU-composited (only `transform`/
+   `opacity`/`background-position` animate -- no layout or paint-triggering
+   properties), same reasoning the old coin used.
+
+   STACKING GUARANTEE (never obscures the price): both layers below are
+   `position: absolute` with a NEGATIVE z-index inside .hero-card's stacking
+   context (established by .hero-card's own `position: relative`). Per CSS
+   stacking rules, negative-z-index positioned descendants paint BEFORE
+   (behind) their stacking context's normal in-flow content -- so every hero
+   text element (price, eyebrow, verdict) paints on top automatically, with
+   no z-index needed on them and no risk of a viewport width where the
+   layering flips. Verified against real screenshots, not just asserted. */
+.hero-gold-ambient {
+  position: absolute;
+  z-index: -1;
+  top: -40px;
+  right: -60px;
+  width: clamp(220px, 55vw, 420px);
+  height: clamp(220px, 55vw, 420px);
+  background: radial-gradient(circle, var(--gold-glow) 0%, transparent 70%);
+  pointer-events: none;
+}
+.hero-gold-piece {
+  position: absolute;
+  z-index: -1;
+  top: clamp(-4px, 1vw, 8px);
+  right: clamp(4px, 4vw, 24px);
+  width: clamp(84px, 22vw, 148px);
+  height: clamp(84px, 22vw, 148px);
+  perspective: 600px;
+  pointer-events: none;
+}
+.hero-gold-piece-inner {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  transform-style: preserve-3d;
+  animation: hero-gold-spin 14s linear infinite;
+}
+.hero-gold-piece::before {
+  /* Rim shading -- a conic-gradient ring simulating a beveled metal edge,
+     sits behind the faces (z-index:-1 within .hero-gold-piece's own
+     stacking context, same negative-z-index-paints-first mechanism). */
+  content: "";
+  position: absolute;
+  z-index: -1;
+  inset: -4%;
+  border-radius: 50%;
+  background: conic-gradient(from 0deg,
+    var(--gold-rich), var(--gold-warm), var(--gold), var(--gold-warm), var(--gold-rich));
+  filter: brightness(0.72);
+}
+.hero-gold-face {
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  background:
+    radial-gradient(circle at 32% 26%, rgba(255, 255, 255, 0.5), transparent 32%),
+    radial-gradient(circle at 35% 30%, var(--gold-warm), var(--gold) 55%, var(--gold-rich) 100%);
+  box-shadow:
+    inset 0 0 0 2px rgba(0, 0, 0, 0.15),
+    inset 0 -8px 16px rgba(0, 0, 0, 0.28);
+  backface-visibility: hidden;
+}
+.hero-gold-face--back { transform: rotateY(180deg); }
+.hero-gold-specular {
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  background: linear-gradient(115deg, transparent 40%, rgba(255, 255, 255, 0.55) 50%, transparent 60%);
+  background-size: 300% 300%;
+  animation: hero-gold-sweep 5s ease-in-out infinite;
+  mix-blend-mode: overlay;
+}
+@keyframes hero-gold-spin {
+  from { transform: rotateY(0deg); }
+  to   { transform: rotateY(360deg); }
+}
+@keyframes hero-gold-sweep {
+  0%, 100% { background-position: 130% 130%; }
+  50%      { background-position: -30% -30%; }
+}
+/* Small viewports: dial the ambient glow back so it doesn't wash out the
+   price's own gradient-text treatment on a dense, narrow layout. */
+@media (max-width: 420px) {
+  .hero-gold-ambient { opacity: 0.7; }
 }
 
 .eyebrow {
@@ -376,22 +531,51 @@ main {
 }
 
 /* ─── Hero price ─── */
+/* Gold-material treatment: a gradient across the gold spectrum (not a flat
+   color) clipped to the digits themselves, plus a light-sweep that plays
+   ONCE when the price is first revealed (element goes from [hidden] to
+   visible -- CSS animations on a newly-rendered element play automatically,
+   no JS trigger needed). Deliberately not looping -- a looping shine on the
+   actual price would compete with the skeleton shimmer pattern used
+   elsewhere and read as busy/gimmicky rather than a one-time reveal. */
 .hero-price {
+  position: relative;
   font-family: var(--display);
   font-weight: 400;
   font-size: clamp(56px, 16vw, 160px);
   line-height: 0.92;
   letter-spacing: -0.04em;
-  color: var(--gold);                     /* warm amber in dark, deep umber in light */
   font-variant-numeric: tabular-nums;
   font-feature-settings: "tnum" 1, "lnum" 1;
   margin: 0 0 var(--space-4);
+  background-image:
+    linear-gradient(115deg, transparent 35%, rgba(255, 255, 255, 0.55) 48%, transparent 60%),
+    var(--hero-gradient);
+  background-size: 250% 100%, 100% 100%;
+  background-position: 150% 0, 0 0;
+  background-clip: text;
+  -webkit-background-clip: text;
+  color: transparent;
+  animation: hero-sweep 1s ease-out 1 both;
+}
+@keyframes hero-sweep {
+  from { background-position: 150% 0, 0 0; }
+  to   { background-position: -50% 0, 0 0; }
 }
 .hero-price .rupee {
   font-style: italic;
   font-weight: 400;
   margin-right: 0.05em;
   opacity: 0.7;
+  /* Opt out of the parent's gradient/transparent-text treatment -- `background`
+     isn't inherited, so without this the symbol would inherit color:transparent
+     with no background of its own and vanish. A flat --gold accent on the small
+     currency mark against the big gradient digits is also an intentional
+     hierarchy, not just a workaround. */
+  background: none;
+  -webkit-background-clip: initial;
+  background-clip: initial;
+  color: var(--gold);
 }
 .hero-estimate-range {
   margin: -8px 0 var(--space-3);
@@ -516,7 +700,8 @@ main {
   border: 1px solid var(--line);
   border-radius: var(--radius-md);
   padding: var(--space-4) var(--space-4) var(--space-3);
-  transition: background 0.2s, border-color 0.2s, transform 100ms ease-out;
+  box-shadow: var(--shadow-sm);
+  transition: background 0.2s, border-color 0.2s, transform 100ms ease-out, box-shadow 0.2s;
 }
 .comparison-card:active { transform: scale(0.98); }
 .comparison-card[data-sentiment="good"] {
@@ -569,6 +754,7 @@ main {
   border: 1px solid var(--line);
   border-radius: var(--radius-md);
   padding: var(--space-4) var(--space-5);
+  box-shadow: var(--shadow-sm);
   transition: transform 100ms ease-out;
 }
 .karat-card:active { transform: scale(0.98); }
@@ -687,7 +873,14 @@ main {
   border-radius: var(--radius-lg);
   padding: var(--space-3) var(--space-5);
   aspect-ratio: 16 / 5;
+  box-shadow: var(--shadow-sm);
 }
+/* Touch-scrub: pan-y (not the default "auto") lets a horizontal/diagonal
+   drag on the canvas reach Chart.js's own touchmove handling instead of the
+   browser immediately treating it as a page-scroll gesture, so dragging a
+   finger across the chart continuously updates the tooltip like a mouse
+   hover would. Vertical scrolling still passes through untouched. */
+#chart { touch-action: pan-y; }
 
 /* ═══════════════════════════════════════════════════════════════
    7. HISTORY — table (desktop) + card list (mobile)
@@ -705,9 +898,12 @@ main {
 }
 
 .history-wrap {
+  position: relative;
+  min-height: 180px; /* room for the skeleton overlay before any real rows exist */
   background: var(--surface);
   border: 1px solid var(--line);
   border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-md);
   overflow: hidden;
 }
 
@@ -933,6 +1129,31 @@ main {
 .skel-verdict { height: 72px; width: 100%; border-radius: var(--radius-lg); }
 .skel-spark   { height: 56px; width: 100%; }
 .hero-skeleton[hidden] { display: none; }
+
+/* Methodology panel skeleton — shown until renderMethodology() replaces
+   #methodology-body's innerHTML entirely (see app.js). */
+.meth-skeleton { display: flex; flex-direction: column; gap: var(--space-4); }
+.skel-meth-heading { height: 16px; width: 160px; }
+.skel-meth-line     { height: 12px; width: 100%; }
+.skel-meth-line--short { width: 60%; }
+
+/* "Live" pulse dot on the freshness pill — subtle, currentColor so it tracks
+   the pill's existing --ok/--warn/--stale color classes automatically. */
+@keyframes freshness-pulse {
+  0%, 100% { opacity: 1; }
+  50%      { opacity: 0.35; }
+}
+.freshness-pill.freshness--ok::before {
+  content: "";
+  display: inline-block;
+  width: 6px;
+  height: 6px;
+  margin-right: 5px;
+  border-radius: 50%;
+  background: currentColor;
+  vertical-align: middle;
+  animation: freshness-pulse 2s ease-in-out infinite;
+}
 
 /* ═══════════════════════════════════════════════════════════════
    RESPONSIVE — mobile card history ≤640px
@@ -1316,6 +1537,20 @@ html.ptr-pulling {
   margin: 0 0 8px;
   font-style: italic;
 }
+/* The single most actionable number the forecast produces (what to expect by the
+   next trading day) gets its own visually distinct treatment -- previously this
+   only existed inside the collapsed methodology accordion as "80% range: X-Y". */
+.good-price-tomorrow {
+  font-size: 14px;
+  color: var(--cream);
+  margin: 10px 0 0;
+  padding: 10px 14px;
+  background: var(--gold-glow);
+  border: 1px solid rgba(212, 147, 42, 0.28);
+  border-radius: var(--radius-sm);
+}
+.good-price-tomorrow strong { color: var(--gold); font-weight: 600; }
+
 .outlook-volatility {
   margin-top: 14px;
   padding-top: 12px;
@@ -1378,13 +1613,41 @@ html.ptr-pulling {
 .model-signal-skeleton[hidden] { display: none; }
 
 /* ── History skeleton ───────────────────────────────────────────────────────── */
-.history-skeleton { padding: 4px 0; }
+.history-skeleton {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  padding: 12px;
+  background: var(--surface);
+}
 .history-skeleton[hidden] { display: none; }
 
 /* ── How-good panel ─────────────────────────────────────────────────────────── */
 .meth-how-good { background: rgba(224,155,46,0.04); border-radius: var(--radius-lg); padding: clamp(12px, 3vw, 20px); }
 .meth-how-good .meth-text { margin-bottom: 16px; }
 .meth-how-good .meth-text:last-child { margin-bottom: 0; }
+
+/* ═══════════════════════════════════════════════════════════════
+   SCROLL REVEALS (feel-alive pass)
+═══════════════════════════════════════════════════════════════ */
+/* Progressive enhancement: `.reveal-on-scroll` alone (no JS) has ZERO visual
+   effect -- app.js's initScrollReveals() adds `.reveal-armed` only after
+   confirming IntersectionObserver support and successful setup, so a JS
+   error or unsupported browser never leaves a section stuck invisible. The
+   hero card is deliberately never part of this system -- price must render
+   instantly, never gated behind a scroll trigger. Reduced-motion needs no
+   separate handling here: the global transition-duration kill-switch below
+   already collapses this 0.5s transition to near-zero, so content still pops
+   in (just without the fade/slide motion) rather than staying hidden. */
+.reveal-on-scroll.reveal-armed {
+  opacity: 0;
+  transform: translateY(16px);
+  transition: opacity 0.5s ease-out, transform 0.5s ease-out;
+}
+.reveal-on-scroll.reveal-armed.reveal-visible {
+  opacity: 1;
+  transform: translateY(0);
+}
 
 /* ═══════════════════════════════════════════════════════════════
    REDUCED MOTION

@@ -190,49 +190,34 @@ def _build_chronos_companion(
     }
 
 
-def _select_price_source(
-    current_22k: int,
-    scraped_at: str,
+_FUSION_FALLBACK_CITY = "Bangalore"  # matches Kalyan's KALYAN_CITIES key and the site's
+# hardcoded "Bengaluru" identity (index.html) -- an arbitrary anchor tag, not a claim of
+# Bangalore-specific pricing: 43/43 accumulated shadow cycles show Kalyan's rate is
+# identical across every registered city (ADR 026 update, 2026-07-30), so this fallback
+# is a national retail consensus regardless of which city tag routes the Kalyan fetch.
+
+
+def _try_ibja_calibrated(
     calibration: dict,
     data_dir: Path,
     now: datetime,
-) -> tuple[int, str, int | None, int | None, str | None]:
-    """Select the displayed current price per ADR 025's source hierarchy.
+) -> tuple[int, str, int, int, str] | None:
+    """Tier 2: IBJA-calibrated estimate. Returns None on any gate failure.
 
-    IBJA-calibrated is now the PRIMARY source; a fresh Tanishq scrape is an
-    ENRICHMENT that overrides it with a confirmed retail reading when available.
-    Tanishq being stale is the expected steady state (sustained Cloudflare block,
-    not an error) — it silently yields to the IBJA-calibrated estimate rather
-    than being treated as a failure.
-
-    Returns (current_22k, price_source, est_low, est_high, ibja_asof).
-    Falls back to (current_22k, "tanishq_scrape", None, None, None) — using the
-    last-confirmed Tanishq reading — when any gate fails (no valid calibration,
-    no IBJA data, or IBJA itself is beyond the defensive staleness ceiling).
-
-    Gates (all must pass for the IBJA-primary path):
+    Gates (all must pass):
       - calibration.valid == True AND slope/intercept/residual_std present
-      - Tanishq scrape age > _STALE_THRESHOLD_H (i.e. no fresher enrichment to show)
       - IBJA pm_916 row exists AND its age <= _IBJA_DISPLAY_MAX_AGE_DAYS
-    Does NOT touch scraped_at (ADR 021).
-    Does NOT modify the Chronos-horizon calibration block in _build_chronos_companion.
+    Does NOT touch scraped_at (ADR 021). Caller is responsible for the
+    Tanishq-freshness gate (tier 1) before reaching here.
     """
-    _noop: tuple[int, str, int | None, int | None, str | None] = (
-        current_22k,
-        "tanishq_scrape",
-        None,
-        None,
-        None,
-    )
-
     if not calibration.get("valid"):
-        return _noop
+        return None
 
     slope = calibration.get("slope")
     intercept = calibration.get("intercept")
     residual_std = calibration.get("residual_std")
     if slope is None or intercept is None or residual_std is None:
-        return _noop
+        return None
 
     # ADR 027: prefer the genuinely out-of-sample residual_std_oos (expanding-
     # window walk-forward, no leakage) for the displayed band when available --
@@ -244,17 +229,6 @@ def _select_price_source(
     residual_std_oos = calibration.get("residual_std_oos")
     band_half_width = residual_std_oos if residual_std_oos is not None else residual_std
 
-    # Scrape staleness check
-    try:
-        scraped_dt = datetime.fromisoformat(scraped_at.replace("Z", "+00:00"))
-        scrape_age_h = (now - scraped_dt).total_seconds() / 3600
-    except Exception:
-        logger.warning("_select_price_source: could not parse scraped_at %r", scraped_at)
-        return _noop
-
-    if scrape_age_h <= _STALE_THRESHOLD_H:
-        return _noop  # scrape is fresh — no override needed
-
     # Resilient IBJA parquet read
     try:
         import pandas as pd  # local import — pandas not needed on the cold path
@@ -263,35 +237,35 @@ def _select_price_source(
         ibja_df = pd.read_parquet(parquet_path)
         valid_rows = ibja_df[ibja_df["pm_916"].notna()].sort_values("date")
         if valid_rows.empty:
-            logger.warning("_select_price_source: no non-null pm_916 rows — skipping")
-            return _noop
+            logger.warning("_try_ibja_calibrated: no non-null pm_916 rows — skipping")
+            return None
         latest_ibja = valid_rows.iloc[-1]
         ibja_date_str: str = str(latest_ibja["date"])[:10]  # "YYYY-MM-DD"
         pm_916 = float(latest_ibja["pm_916"])
     except FileNotFoundError:
-        logger.info("_select_price_source: ibja_rates.parquet not found — skipping")
-        return _noop
+        logger.info("_try_ibja_calibrated: ibja_rates.parquet not found — skipping")
+        return None
     except Exception as exc:
-        logger.warning("_select_price_source: parquet read failed: %s — skipping", exc)
-        return _noop
+        logger.warning("_try_ibja_calibrated: parquet read failed: %s — skipping", exc)
+        return None
 
     # IBJA publication datetime: ~17:00 IST = 11:30 UTC on the row's date
     try:
         y, m, d = int(ibja_date_str[:4]), int(ibja_date_str[5:7]), int(ibja_date_str[8:10])
         ibja_asof_dt = datetime(y, m, d, _IBJA_PUBLISH_UTC[0], _IBJA_PUBLISH_UTC[1], tzinfo=UTC)
     except Exception as exc:
-        logger.warning("_select_price_source: could not parse ibja date %r: %s", ibja_date_str, exc)
-        return _noop
+        logger.warning("_try_ibja_calibrated: could not parse ibja date %r: %s", ibja_date_str, exc)
+        return None
 
     ibja_age_days = (now - ibja_asof_dt).total_seconds() / 86400
     if ibja_age_days >= _IBJA_DISPLAY_MAX_AGE_DAYS:
         logger.info(
-            "_select_price_source: IBJA %s is %.1fd old (>= %dd) — genuinely stale",
+            "_try_ibja_calibrated: IBJA %s is %.1fd old (>= %dd) — genuinely stale",
             ibja_date_str,
             ibja_age_days,
             _IBJA_DISPLAY_MAX_AGE_DAYS,
         )
-        return _noop
+        return None
 
     # All gates passed — compute calibrated estimate
     ibja_per_g = pm_916 / 10.0
@@ -301,7 +275,7 @@ def _select_price_source(
     ibja_asof_iso = ibja_asof_dt.isoformat()
 
     logger.info(
-        "_select_price_source: ibja_per_g=%.2f -> Rs.%d [Rs.%d-Rs.%d]  ibja_date=%s",
+        "_try_ibja_calibrated: ibja_per_g=%.2f -> Rs.%d [Rs.%d-Rs.%d]  ibja_date=%s",
         ibja_per_g,
         ibja_calibrated_22k,
         est_low,
@@ -309,6 +283,115 @@ def _select_price_source(
         ibja_date_str,
     )
     return ibja_calibrated_22k, "ibja_calibrated", est_low, est_high, ibja_asof_iso
+
+
+def _try_fusion_fallback(
+    data_dir: Path,
+) -> tuple[int, str, int, int, str | None, list[str]] | None:
+    """Tier 3: live GRT + Malabar + Kalyan consensus, only reached when both
+    Tanishq and IBJA-calibrated are unavailable this cycle. Reuses ml.fusion's
+    tested national-benchmark + city-markup engine (ADR 026) — not new modelling.
+    Returns None if every fusion source also fails this cycle (true last resort).
+    """
+    from ml.fusion import fuse_city_price, fuse_national_benchmark
+    from ml.sources.base import SourceNetworkError, SourceStructureError
+    from ml.sources.grt import fetch_grt
+    from ml.sources.kalyan import fetch_kalyan_city
+    from ml.sources.malabar import fetch_malabar
+
+    national_readings = []
+    for name, fetch_fn in (("grt", fetch_grt), ("malabar", fetch_malabar)):
+        try:
+            national_readings.append(fetch_fn())
+        except (SourceNetworkError, SourceStructureError) as exc:
+            logger.warning("_try_fusion_fallback: %s failed: %s", name, exc)
+
+    if not national_readings:
+        logger.warning("_try_fusion_fallback: all national sources failed — no fallback available")
+        return None
+
+    national = fuse_national_benchmark(national_readings)
+
+    kalyan_reading = None
+    try:
+        kalyan_reading = fetch_kalyan_city(_FUSION_FALLBACK_CITY).reading
+    except (SourceNetworkError, SourceStructureError) as exc:
+        logger.warning("_try_fusion_fallback: kalyan/%s failed: %s", _FUSION_FALLBACK_CITY, exc)
+
+    city_fused = fuse_city_price(kalyan_reading, national, city=_FUSION_FALLBACK_CITY)
+    current = round(city_fused.value)
+    est_low = round(city_fused.value - city_fused.band_half_width)
+    est_high = round(city_fused.value + city_fused.band_half_width)
+    sources_used = list(national.sources_used) + (["kalyan"] if kalyan_reading is not None else [])
+
+    logger.info(
+        "_try_fusion_fallback: consensus Rs.%d [Rs.%d-Rs.%d] from %s",
+        current,
+        est_low,
+        est_high,
+        sources_used,
+    )
+    return current, "fusion_consensus", est_low, est_high, None, sources_used
+
+
+def _select_price_source(
+    current_22k: int,
+    scraped_at: str,
+    calibration: dict,
+    data_dir: Path,
+    now: datetime,
+) -> tuple[int, str, int | None, int | None, str | None, list[str] | None]:
+    """Select the displayed current price per ADR 025's source hierarchy (+ tier 3).
+
+    IBJA-calibrated is the PRIMARY source; a fresh Tanishq scrape is an
+    ENRICHMENT that overrides it with a confirmed retail reading when available.
+    Tanishq being stale is the expected steady state (sustained Cloudflare block,
+    not an error) — it silently yields to the IBJA-calibrated estimate rather
+    than being treated as a failure.
+
+    Returns (current_22k, price_source, est_low, est_high, ibja_asof, fusion_sources).
+    Falls back to (current_22k, "tanishq_scrape", None, None, None, None) — using
+    the last-confirmed Tanishq reading — when every tier fails.
+
+    Tier 1 gate: Tanishq scrape age <= _STALE_THRESHOLD_H — wins outright.
+    Tier 2 gates (see _try_ibja_calibrated): calibration.valid, slope/intercept/
+      residual_std present, IBJA pm_916 row exists and age <= _IBJA_DISPLAY_MAX_AGE_DAYS.
+    Tier 3 (see _try_fusion_fallback): fires only when both Tanishq and IBJA are
+      unavailable this cycle — a live GRT/Malabar/Kalyan consensus fetch. An
+      individual fusion source failing is normal (same as any single source going
+      quiet); only "all national fusion sources failed too" makes tier 3 itself
+      return None and fall through to the final last-known-Tanishq-price noop.
+    Does NOT touch scraped_at (ADR 021).
+    Does NOT modify the Chronos-horizon calibration block in _build_chronos_companion.
+    """
+    _noop: tuple[int, str, int | None, int | None, str | None, list[str] | None] = (
+        current_22k,
+        "tanishq_scrape",
+        None,
+        None,
+        None,
+        None,
+    )
+
+    try:
+        scraped_dt = datetime.fromisoformat(scraped_at.replace("Z", "+00:00"))
+        scrape_age_h = (now - scraped_dt).total_seconds() / 3600
+    except Exception:
+        logger.warning("_select_price_source: could not parse scraped_at %r", scraped_at)
+        return _noop
+
+    if scrape_age_h <= _STALE_THRESHOLD_H:
+        return _noop  # tier 1: Tanishq fresh — wins outright, no need to check anything else
+
+    ibja_result = _try_ibja_calibrated(calibration, data_dir, now)
+    if ibja_result is not None:
+        return (*ibja_result, None)  # tier 2 — fusion_sources=None (not a fusion tier)
+
+    fusion_result = _try_fusion_fallback(data_dir)
+    if fusion_result is not None:
+        return fusion_result  # tier 3
+
+    return _noop  # tier 4: last-known Tanishq price, everything else failed
 
 
 def main(now: datetime | None = None) -> None:
@@ -358,6 +441,7 @@ def main(now: datetime | None = None) -> None:
             "est_low": None,
             "est_high": None,
             "ibja_asof": None,
+            "fusion_sources": None,
             "model_status": "insufficient_backtest_history",
             "model_version": "naive_flat_hold",
             "model_fallback": False,
@@ -387,7 +471,7 @@ def main(now: datetime | None = None) -> None:
     )
 
     calibration: dict = _load_json(DATA_DIR / "calibration.json") or {}
-    current_22k, price_source, est_low, est_high, ibja_asof = _select_price_source(
+    current_22k, price_source, est_low, est_high, ibja_asof, fusion_sources = _select_price_source(
         current_22k, scraped_at, calibration, DATA_DIR, now
     )
 
@@ -454,6 +538,7 @@ def main(now: datetime | None = None) -> None:
         "est_low": est_low,
         "est_high": est_high,
         "ibja_asof": ibja_asof,
+        "fusion_sources": fusion_sources,
         "model_fallback": model_fallback,
         # Top-level aliases — read by app.js, drift.py, metrics.py, notifications.py.
         # Removed in a follow-up PWA-update PR after the new schema is rendered in the UI.

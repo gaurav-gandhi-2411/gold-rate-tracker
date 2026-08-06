@@ -54,24 +54,38 @@ function extractVersion(source) {
 async function assertRendered(page, label) {
   const reasons = [];
   try {
-    // renderMethodology() is the LAST step in app.js's init sequence — it
-    // waits on the forecast plus four more Promise.allSettled fetches
-    // (backtest/commentary/drift/coverage) after the history table already
-    // rendered. Wait for all three surfaces together, not just history,
-    // or this check races ahead of methodology and reports a false failure.
+    // renderHero() is the earliest of the three to depend on the forecast fetch;
+    // renderMethodology() is the LAST step in app.js's init sequence — it waits on
+    // the forecast plus four more Promise.allSettled fetches (backtest/commentary/
+    // drift/coverage) after the history table already rendered. Wait for all
+    // three surfaces together (price, history, methodology), not just history, or
+    // this check races ahead and reports a false pass while something else is
+    // still stuck -- see the methodology-check regression note below.
+    //
+    // Methodology's "still loading" signal is `.meth-skeleton`'s presence, not a
+    // literal "Loading model details" text match: the skeleton-loader change
+    // (render-blocking-fix follow-up) replaced that text with shimmer-bar markup
+    // that never contained the string this check used to look for, which made
+    // this half of the wait (and the standalone recheck below) silently vacuous
+    // -- true from the very first paint, before any JS runs, so it could never
+    // again detect a genuinely stuck methodology panel. renderMethodology() does
+    // a full innerHTML replace, so `.meth-skeleton` existing at all is a reliable
+    // "still loading" signal regardless of what real content eventually replaces it.
     await page.waitForFunction(
       () => {
+        const price = document.getElementById("hero-price");
         const history = document.getElementById("history-body");
         const meth = document.getElementById("methodology-body");
         return (
+          price && price.textContent.trim() !== "—" &&
           history && !history.textContent.includes("Loading") &&
-          meth && !meth.textContent.includes("Loading model details")
+          meth && !meth.querySelector(".meth-skeleton")
         );
       },
       { timeout: RENDER_TIMEOUT_MS }
     );
   } catch {
-    reasons.push(`${label}: history table and/or methodology panel never left their "Loading…" placeholders within ${RENDER_TIMEOUT_MS}ms`);
+    reasons.push(`${label}: hero price, history table, and/or methodology panel never left their loading placeholders within ${RENDER_TIMEOUT_MS}ms`);
   }
 
   const priceText = ((await page.locator("#hero-price").textContent()) || "").trim();
@@ -84,9 +98,9 @@ async function assertRendered(page, label) {
     reasons.push(`${label}: #history-body did not populate real rows (got "${historyText.slice(0, 60)}...")`);
   }
 
-  const methText = (await page.locator("#methodology-body").textContent()) || "";
-  if (methText.includes("Loading model details")) {
-    reasons.push(`${label}: #methodology-body still shows "Loading model details…"`);
+  const methSkeletonCount = await page.locator("#methodology-body .meth-skeleton").count();
+  if (methSkeletonCount > 0) {
+    reasons.push(`${label}: #methodology-body still shows its skeleton placeholder (.meth-skeleton present)`);
   }
 
   return { ok: reasons.length === 0, reasons };

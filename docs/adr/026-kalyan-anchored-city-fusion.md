@@ -1,6 +1,9 @@
 # ADR 026 — Kalyan-Anchored City-Level Consensus (Fusion Foundation, Option 1)
 
-**Status:** Accepted — Phases A/B implemented, Phase C (shadow) live, Phase D (promotion) pending
+**Status:** Accepted — Phases A/B implemented, Phase C (shadow) live, Phase D (promotion) pending.
+**Update 2026-07-30:** the city-level precision this ADR originally targeted is not supported by
+accumulated data — see "Update: city-differentiation finding" below. The two-layer architecture
+stands; the *labeling* of its output changes from "city-specific" to "national retail consensus."
 
 **Date:** 2026-07-19
 
@@ -152,6 +155,38 @@ mush and defeats the purpose of having Kalyan's city data at all.
 - Shadow-mode validation (Phase C promotion gate) needs real elapsed time to produce meaningful
   numbers — this ADR documents the mechanism going live, not a validated outcome. See PROGRESS.md /
   the relevant PR for validation results once the accumulation period has passed.
+
+## Update: city-differentiation finding (2026-07-30)
+
+**Finding:** across all 43 accumulated shadow-fusion cycles (2026-07-19 to 2026-07-30, ~10.6
+days at the 6h cadence), Kalyan's `rate_22k` is **identical across all four registered cities**
+(Bangalore/Chennai/Hyderabad/Ernakulam) in every single cycle — 0/43 show any variation, range
+exactly ₹0.00 city-to-city. The national layer, by contrast, does show real disagreement worth
+arbitrating (IBJA/GRT/Malabar spread: mean 0.36%, up to 1.3% across the same cycles) — the fusion
+engine's *national* consensus is doing genuine work; it's specifically the *city-markup* layer
+that has produced no signal.
+
+**Mechanistic reason:** Indian retail gold pricing quotes one national MCX/IBJA-derived metal
+rate; the store-to-store/city-to-city variation that genuinely exists (making charges, GST
+handling nuances) lives outside `rate_22k` and isn't captured by this scrape. Kalyan's dropdown
+giving city-name labels was never proof the underlying *number* varies by city — this is not a
+scraping bug, it's the real absence of city-differentiated metal pricing behind the label.
+
+**Decision:** relabel, don't remove. The two-layer architecture
+(`retail_price = fused_national_benchmark × location_markup`) and the PIT snapshot collection
+across all four Kalyan cities both stay exactly as built — cheap to keep, and the only way to
+notice if a genuinely city-differentiated source appears later or if Kalyan's behavior changes.
+What changes is presentation: `ml.fusion.fuse_city_price`'s `coverage` value is renamed
+`"city_specific"` → `"kalyan_anchored"`, and its `attribution` string now reads "National retail
+consensus, Kalyan-anchored (...)" rather than implying location-specific pricing. Any future
+Phase D promotion must present fusion output as a *national retail consensus (GRT, Malabar,
+Kalyan)*, never as per-city pricing, until a source demonstrates real city-to-city variation.
+
+**Consequence for Phase D:** the original promotion vision (showing "Bangalore: ₹X, Chennai: ₹Y…"
+as differentiated numbers) is not supportable today — promoting to a *national* display remains
+viable once shadow validation (Phase C) clears its own bar (see Future Work below), but a
+city-differentiated display specifically would need a new source, not just more history from
+Kalyan.
 
 ## Future work — Option 2 (planned, not started)
 
