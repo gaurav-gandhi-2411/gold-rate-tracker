@@ -100,21 +100,6 @@
       <!-- 2. HERO CARD -->
       <section class="hero-card" id="section-home" aria-label="Current 22K gold price and buying verdict">
 
-        <!-- Hero gold piece — pure CSS 3D (preserve-3d + rotateY), not WebGL. Purely
-             decorative (aria-hidden), position:absolute + negative z-index within
-             .hero-card's stacking context, so it always paints BEHIND every hero text
-             element regardless of viewport width -- see style.css's comment for the
-             stacking-order reasoning. Rendered immediately (not gated behind price
-             data loading) since it doesn't depend on any fetch. -->
-        <div class="hero-gold-ambient" aria-hidden="true"></div>
-        <div class="hero-gold-piece" aria-hidden="true">
-          <div class="hero-gold-piece-inner">
-            <div class="hero-gold-face hero-gold-face--front"></div>
-            <div class="hero-gold-face hero-gold-face--back"></div>
-            <div class="hero-gold-specular"></div>
-          </div>
-        </div>
-
         <!-- Skeleton shown while loading -->
         <div class="hero-skeleton" id="hero-skeleton" aria-hidden="true">
           <div class="skel skel-eyebrow"></div>

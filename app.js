@@ -2099,49 +2099,6 @@ function initScrollReveals() {
   }
 }
 
-// ─── DEVICE-TILT PARALLAX (optional, feel-alive pass) ──────────────────────────
-// Subtle tilt-based shift on the hero gold piece via the DeviceOrientation API.
-// Deliberately scoped to non-iOS touch devices only: Android Chrome/Firefox fire
-// 'deviceorientation' with no permission prompt, so this wires directly there.
-// iOS 13+ gates the same API behind DeviceOrientationEvent.requestPermission(),
-// which must be called from a user gesture -- there's no existing gesture-
-// triggering UI in this flow to hang that prompt off without adding dedicated
-// UI clutter for a purely decorative effect, so iOS is skipped by design rather
-// than forcing an extra permission dialog into the experience. Reduced-motion
-// and non-touch (desktop) skip this entirely. rAF-throttled: at most one style
-// write per animation frame regardless of event frequency (some devices fire
-// deviceorientation well above 60Hz).
-function initTiltParallax() {
-  if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
-  if (!("ontouchstart" in window)) return;
-  if (typeof DeviceOrientationEvent === "undefined") return;
-  if (typeof DeviceOrientationEvent.requestPermission === "function") return; // iOS gesture-gated path, skipped by design
-
-  const piece = document.querySelector(".hero-gold-piece");
-  if (!piece) return;
-
-  let ticking = false;
-  let latest = null;
-  window.addEventListener(
-    "deviceorientation",
-    (e) => {
-      latest = e;
-      if (ticking) return;
-      ticking = true;
-      requestAnimationFrame(() => {
-        ticking = false;
-        if (!latest) return;
-        const beta  = latest.beta  ?? 45; // front-back tilt, -180..180; ~45 deg is a natural holding angle
-        const gamma = latest.gamma ?? 0;  // left-right tilt, -90..90
-        const dx = Math.max(-8, Math.min(8, gamma / 4));
-        const dy = Math.max(-8, Math.min(8, (beta - 45) / 6));
-        piece.style.transform = `translate(${dx}px, ${dy}px)`;
-      });
-    },
-    { passive: true },
-  );
-}
-
 // ─── INIT ─────────────────────────────────────────────────────────────────────
 
 (async function init() {
@@ -2149,7 +2106,6 @@ function initTiltParallax() {
   initBottomNav();
   initPullToRefresh();
   initScrollReveals();
-  initTiltParallax();
 
   // Φ16-2: register offline/online listeners before data load so they catch mid-load state changes.
   window.addEventListener("offline", updateOfflineBanner);
