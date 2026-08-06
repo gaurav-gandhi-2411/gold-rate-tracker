@@ -335,6 +335,11 @@ main {
 /* Ψ3C.1 latent bug fixes (norm #14): inline-flex/flex defeats UA [hidden] rule */
 .hero-change[hidden]    { display: none !important; }
 .sparkline-wrap[hidden] { display: none !important; }
+/* Same class of bug (norm #14), reintroduced by the install-prompt-panel's own
+   `display: flex` -- dismissing it set the hidden attribute correctly (app.js's
+   click handler was never broken) but had zero visual effect, since the panel's
+   own flex rule tied with and beat the UA's [hidden]{display:none} rule. */
+.install-prompt-panel[hidden] { display: none !important; }
 
 @keyframes refresh-spin {
   to { transform: rotate(360deg); }
