@@ -26,10 +26,31 @@
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
     <meta name="apple-mobile-web-app-title" content="Gold" />
 
-    <!-- Fonts -->
-    <link rel="preconnect" href="https://fonts.googleapis.com" />
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,700&family=DM+Sans:wght@400;500;700&family=Syne:wght@600;700&display=swap" rel="stylesheet" />
+    <!-- Fonts: self-hosted (style.css's @font-face block, fonts/*.woff2) -- no
+         Google Fonts round-trip, no preconnect needed. See style.css's FONTS
+         comment for why (font-display: optional eliminates the CLS this
+         previously caused, not just defers it).
+
+         Preloaded here (not just discovered later via style.css's @font-face)
+         because font-display:optional alone measured non-zero CLS on live
+         production (Lighthouse's own layout-shifts diagnostic named
+         fraunces-variable-latin.woff2 as the cause on some runs, 2026-08-06)
+         -- optional's block-period decision still depends on the font
+         arriving fast enough, and CSS-discovered fonts don't start
+         downloading until the CSSOM is built and @font-face is matched
+         against rendered text, which loses a real amount of time against a
+         page that also kicks off DATA_URL/FORECAST_URL/etc. fetches early
+         (app.js's parallelized-fetch fix, PR #634). A <link rel=preload>
+         is discovered directly off this HTML, before CSS parsing gates it,
+         so the font's network request starts at the earliest possible
+         moment regardless of how contested bandwidth/priority gets later
+         in the load. `crossorigin` is required on font preloads even
+         same-origin -- fonts are always fetched in anonymous-CORS mode
+         per spec, and a preload without matching CORS-mode is ignored
+         (fetched again, silently, defeating the preload). -->
+    <link rel="preload" href="fonts/fraunces-variable-latin.woff2" as="font" type="font/woff2" crossorigin>
+    <link rel="preload" href="fonts/dmsans-variable-latin.woff2" as="font" type="font/woff2" crossorigin>
+    <link rel="preload" href="fonts/syne-variable-latin.woff2" as="font" type="font/woff2" crossorigin>
     <link rel="stylesheet" href="style.css" />
   </head>
   <body>
@@ -179,14 +200,19 @@
           <p class="commentary-eyebrow">
             <span aria-hidden="true">✨</span> Today's read
           </p>
-          <!-- Φ8C'/Ψ3C.3: skeleton shown while commentary loads -->
-          <div class="commentary-skeleton" id="commentary-skeleton" aria-hidden="true">
-            <div class="skel" style="height:14px;width:70%;border-radius:4px;margin-bottom:8px"></div>
-            <div class="skel" style="height:14px;width:85%;border-radius:4px;margin-bottom:8px"></div>
-            <div class="skel" style="height:14px;width:55%;border-radius:4px"></div>
+          <!-- Φ8C'/Ψ3C.3: skeleton shown while commentary loads. commentary-body wraps
+               just the skeleton+text+meta (not the eyebrow above) so the absolute-overlay
+               CLS fix (same pattern as history-wrap/history-skeleton) doesn't cover content
+               that's already visible. -->
+          <div class="commentary-body">
+            <div class="commentary-skeleton" id="commentary-skeleton" aria-hidden="true">
+              <div class="skel" style="height:14px;width:70%;border-radius:4px;margin-bottom:8px"></div>
+              <div class="skel" style="height:14px;width:85%;border-radius:4px;margin-bottom:8px"></div>
+              <div class="skel" style="height:14px;width:55%;border-radius:4px"></div>
+            </div>
+            <p class="commentary-text" id="commentary-text" hidden></p>
+            <p class="commentary-meta" id="commentary-meta" hidden></p>
           </div>
-          <p class="commentary-text" id="commentary-text" hidden></p>
-          <p class="commentary-meta" id="commentary-meta" hidden></p>
         </div>
       </section>
 
