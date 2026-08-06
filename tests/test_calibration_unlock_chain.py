@@ -34,6 +34,9 @@ from zoneinfo import ZoneInfo
 
 import ml.calibration as cal
 import ml.inference as inf
+import ml.sources.grt as grt_mod
+import ml.sources.kalyan as kalyan_mod
+import ml.sources.malabar as malabar_mod
 import pandas as pd
 import pytest
 from ml.inference import _build_chronos_companion
@@ -44,8 +47,20 @@ from ml.notifications import (
     queue_for_quiet_hours,
     send_pending,
 )
+from ml.sources.base import SourceNetworkError
 
 IST = ZoneInfo("Asia/Kolkata")
+
+
+def _raise_network(*_a, **_k) -> None:
+    raise SourceNetworkError("test: network disabled")
+
+
+def _disable_fusion(monkeypatch) -> None:
+    """Never let a unit test hit the real network via the tier-3 fusion fallback."""
+    monkeypatch.setattr(grt_mod, "fetch_grt", _raise_network)
+    monkeypatch.setattr(malabar_mod, "fetch_malabar", _raise_network)
+    monkeypatch.setattr(kalyan_mod, "fetch_kalyan_city", _raise_network)
 
 
 # ---------------------------------------------------------------------------
@@ -207,6 +222,7 @@ def test_calibration_unlock_chain_end_to_end(tmp_path, monkeypatch):
     # Redirect STATE_PATH so inference.main() gets a fresh NotificationState
     # (no prior T6 fire → calibration_just_unlocked=True)
     monkeypatch.setattr("ml.notifications.STATE_PATH", tmp_path / "notification_state.json")
+    _disable_fusion(monkeypatch)  # fixture IBJA dates read as stale vs wall-clock "now"
 
     inf.main()
 

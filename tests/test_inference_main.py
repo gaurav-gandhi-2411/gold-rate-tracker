@@ -7,8 +7,28 @@ import math
 from datetime import UTC, datetime, timedelta
 
 import ml.inference as inf
+import ml.sources.grt as grt_mod
+import ml.sources.kalyan as kalyan_mod
+import ml.sources.malabar as malabar_mod
 import numpy as np
 import pytest
+from ml.sources.base import SourceNetworkError
+
+
+def _raise_network(*_a, **_k) -> None:
+    raise SourceNetworkError("test: network disabled")
+
+
+def _disable_fusion(monkeypatch) -> None:
+    """Never let a unit test hit the real network via the tier-3 fusion fallback.
+
+    These fixtures use dated (2026-01-xx) prices/IBJA data that read as stale
+    against wall-clock "now" whenever inf.main() is called without an explicit
+    `now=`, so tiers 1-2 fail and tier 3 would otherwise attempt live fetches.
+    """
+    monkeypatch.setattr(grt_mod, "fetch_grt", _raise_network)
+    monkeypatch.setattr(malabar_mod, "fetch_malabar", _raise_network)
+    monkeypatch.setattr(kalyan_mod, "fetch_kalyan_city", _raise_network)
 
 
 def _make_prices(n: int, base: int = 14400) -> list[dict]:
@@ -67,6 +87,7 @@ def _make_probe(status: str = "success") -> dict:
 def test_inference_main_produces_valid_forecast(tmp_path, monkeypatch):
     """main() writes forecast.json with correct new schema and top-level aliases."""
     monkeypatch.setattr(inf, "DATA_DIR", tmp_path)
+    _disable_fusion(monkeypatch)
 
     (tmp_path / "prices.json").write_text(json.dumps(_make_prices(40)))
     (tmp_path / "backtest.json").write_text(json.dumps(_make_backtest(35)))
@@ -139,6 +160,7 @@ def test_inference_conformal_pi_uses_h1_not_h5(tmp_path, monkeypatch):
     estimate in ml/volatility.py, which must not silently inherit the h=1 magnitude).
     """
     monkeypatch.setattr(inf, "DATA_DIR", tmp_path)
+    _disable_fusion(monkeypatch)
 
     (tmp_path / "prices.json").write_text(json.dumps(_make_prices(40)))
     (tmp_path / "backtest.json").write_text(json.dumps(_make_backtest(35)))
@@ -161,6 +183,7 @@ def test_inference_conformal_pi_uses_h1_not_h5(tmp_path, monkeypatch):
 def test_inference_probe_failed(tmp_path, monkeypatch):
     """When chronos probe failed, companion block reflects failure and model_fallback=True."""
     monkeypatch.setattr(inf, "DATA_DIR", tmp_path)
+    _disable_fusion(monkeypatch)
 
     (tmp_path / "prices.json").write_text(json.dumps(_make_prices(20)))
     (tmp_path / "backtest.json").write_text(json.dumps(_make_backtest(35)))
@@ -203,6 +226,7 @@ def test_inference_no_backtest(tmp_path, monkeypatch):
 def test_inference_calibration_applied(tmp_path, monkeypatch):
     """When calibration.valid=True, companion horizon arrays are calibrated."""
     monkeypatch.setattr(inf, "DATA_DIR", tmp_path)
+    _disable_fusion(monkeypatch)  # calibration here has no residual_std -> tier 2 gate fails too
 
     (tmp_path / "prices.json").write_text(json.dumps(_make_prices(20)))
     (tmp_path / "backtest.json").write_text(json.dumps(_make_backtest(35)))
