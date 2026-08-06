@@ -1234,18 +1234,39 @@ main {
 /* ═══════════════════════════════════════════════════════════════
    SKELETON SHIMMER — shown while fetching
 ═══════════════════════════════════════════════════════════════ */
-@keyframes shimmer {
-  0%   { background-position: -200% 0; }
-  100% { background-position:  200% 0; }
-}
+/* CLS fix (2026-08-06): the previous single-layer version animated
+   `background-position` directly on .skel, which Chrome's own CLSCulprits
+   trace insight flags as a non-composited animation (background-position
+   isn't a compositor-only property, so the browser repaints every frame
+   instead of just re-compositing a layer) -- confirmed as the actual CLS
+   source on both pre- and post-redesign code via a live trace, unrelated to
+   any of that redesign's changes. Same visual result (a light band sweeping
+   left-to-right over a solid base, 1.6s loop, default ease timing), same
+   duration, restructured onto a `::after` pseudo-element animated via
+   `transform: translateX()` instead -- transform IS compositor-only, so
+   this runs on the GPU compositor thread with no repaint per frame.
+   `overflow: hidden` + `position: relative` on .skel clips the sweep to the
+   element's own rounded corners (border-radius, set here or via an inline
+   override) and gives ::after's `inset: 0` something to position against. */
 .skel {
+  position: relative;
+  overflow: hidden;
   border-radius: var(--radius-sm);
+  background: var(--surface);
+}
+.skel::after {
+  content: "";
+  position: absolute;
+  inset: 0;
   background: linear-gradient(90deg,
-    var(--surface) 25%,
+    transparent 0%,
     var(--surface-2) 50%,
-    var(--surface) 75%);
-  background-size: 200% 100%;
-  animation: shimmer 1.6s infinite;
+    transparent 100%);
+  transform: translateX(-100%);
+  animation: shimmer-sweep 1.6s infinite;
+}
+@keyframes shimmer-sweep {
+  100% { transform: translateX(100%); }
 }
 .hero-skeleton {
   position: absolute;
