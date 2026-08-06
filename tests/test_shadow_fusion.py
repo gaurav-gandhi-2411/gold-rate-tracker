@@ -81,7 +81,7 @@ def test_all_sources_healthy_produces_full_output(monkeypatch):
     assert result["national_failures"] == {}
     assert result["kalyan_failures"] == {}
     for city in shadow_fusion.KALYAN_CITIES:
-        assert result["cities"][city]["coverage"] == "city_specific"
+        assert result["cities"][city]["coverage"] == "kalyan_anchored"
 
 
 def test_one_national_source_down_still_produces_output(monkeypatch):
@@ -126,7 +126,7 @@ def test_one_kalyan_city_down_falls_back_to_national_derived(monkeypatch):
     assert result["cities"][down_city]["coverage"] == "national_derived"
     for c in cities:
         if c != down_city:
-            assert result["cities"][c]["coverage"] == "city_specific"
+            assert result["cities"][c]["coverage"] == "kalyan_anchored"
 
 
 def test_structure_vs_network_failure_distinguishable(monkeypatch):

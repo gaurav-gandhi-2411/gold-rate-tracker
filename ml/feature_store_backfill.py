@@ -253,6 +253,81 @@ def run_backfill(
     return n_written
 
 
+def repair_stale_ibja(
+    store_path: Path | None = None,
+    ibja_path: Path | None = None,
+) -> int:
+    """Repair live_pit rows whose IBJA reading carries a prior day's close due
+    to the 2026-06-07 -> 2026-08-05 capture-timing bug (see
+    ml.feature_store.append_snapshot's docstring): the first check-price run
+    after IST midnight often captured before IBJA's own ~17:00 IST publish,
+    so that as_of_date's ibja_pm_916/asof_date got permanently stuck one (or
+    more) days behind.
+
+    For each affected row, looks up ibja_rates.parquet for a row dated
+    exactly as_of_date. ibja_rates.parquet itself was captured correctly and
+    PIT-honestly throughout the outage (a separate, unaffected job) -- this
+    is not a re-fetch of revised third-party data, just fixing a wrong join
+    against data the repo already has. If IBJA has no entry for that date
+    (a genuine non-trading day -- weekend/holiday -- or a day not yet
+    published), the row is left untouched; it was correctly excluded by
+    ml.direction.dataset's leak-free check and stays excluded.
+
+    Only source='live_pit' rows are eligible; backfill_yfinance rows already
+    carry same-day IBJA by construction (see run_backfill). Macro/Tanishq/
+    calendar fields on repaired rows are untouched -- those were captured
+    correctly at the time; only the IBJA join was wrong.
+
+    Returns the number of rows repaired.
+    """
+    from ml.feature_store import STORE_PATH as _DEFAULT_STORE_PATH
+    from ml.feature_store import load_snapshots
+
+    _store_path: Path = store_path or _DEFAULT_STORE_PATH
+    _ibja_path: Path = ibja_path or (Path(__file__).parent.parent / "data" / "ibja_rates.parquet")
+
+    df = load_snapshots(_store_path)
+    if df.empty or not _ibja_path.exists():
+        return 0
+
+    ibja = pd.read_parquet(_ibja_path)
+    if ibja.empty or "date" not in ibja.columns or "pm_916" not in ibja.columns:
+        return 0
+    ibja["date"] = ibja["date"].astype(str)
+    ibja_by_date = ibja.drop_duplicates("date", keep="last").set_index("date")
+
+    n_repaired = 0
+    for i, row in df.iterrows():
+        if row.get("source") != "live_pit":
+            continue
+        as_of = str(row["as_of_date"])
+        ibja_asof = str(row.get("ibja_pm_916_asof_date"))
+        if ibja_asof >= as_of:
+            continue  # not stale
+        if as_of not in ibja_by_date.index:
+            continue  # IBJA genuinely didn't publish this day -- leave as-is
+        ibja_match = ibja_by_date.loc[as_of]
+        # .loc[scalar] is typed as Series | DataFrame since pandas can't statically
+        # guarantee a unique index -- drop_duplicates above makes it unique at runtime,
+        # but narrow explicitly so mypy (and any future duplicate slipping through) is safe.
+        ibja_row = ibja_match.iloc[-1] if isinstance(ibja_match, pd.DataFrame) else ibja_match
+        if pd.isna(ibja_row.get("pm_916")):
+            continue
+
+        df.at[i, "ibja_pm_916"] = float(ibja_row["pm_916"])
+        df.at[i, "ibja_pm_916_asof_date"] = as_of
+        if "am_916" in ibja_row.index and not pd.isna(ibja_row.get("am_916")):
+            df.at[i, "ibja_am_916"] = float(ibja_row["am_916"])
+            df.at[i, "ibja_am_916_asof_date"] = as_of
+        n_repaired += 1
+
+    if n_repaired:
+        _store_path.parent.mkdir(parents=True, exist_ok=True)
+        df.to_parquet(_store_path, index=False)
+
+    return n_repaired
+
+
 def _fetch_yf_close(ticker: str, start: str) -> pd.DataFrame:
     """Download historical close prices for a single yfinance ticker.
 

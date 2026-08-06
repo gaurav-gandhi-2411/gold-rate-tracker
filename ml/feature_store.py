@@ -59,13 +59,28 @@ _ALL_COLUMNS: list[str] = [
 def append_snapshot(snapshot: dict, store_path: Path = STORE_PATH) -> None:
     """Append a snapshot row to the parquet store if the as_of_date is new.
 
-    Idempotent: a second call with the same as_of_date is a no-op and the
-    existing row is never modified.
+    Idempotent by default: a second call with the same as_of_date is a no-op.
+    One exception — a same-day IBJA upgrade: if the stored row's IBJA reading
+    predates as_of_date (captured before IBJA's ~17:00 IST publish that day)
+    and the new capture's IBJA reading IS dated as_of_date, the stored row is
+    replaced. check-price.yml runs 8x/day; the run that first crosses IST
+    midnight captures before IBJA publishes and would otherwise permanently
+    lock in the prior day's close for that as_of_date, since every later
+    same-day run was silently a no-op. This starved the direction-classifier
+    dataset of usable rows for 8 weeks (2026-06-07 -> 2026-08-05, see
+    docs/DIRECTION_SIGNAL_STATUS.md) before being caught. Once a same-day-
+    fresh row exists, later same-day calls remain no-ops (never downgrades).
     """
     existing = load_snapshots(store_path)
 
     if len(existing) > 0 and snapshot["as_of_date"] in existing["as_of_date"].values:
-        return
+        existing_row = existing.loc[existing["as_of_date"] == snapshot["as_of_date"]].iloc[0]
+        as_of_date = snapshot["as_of_date"]
+        existing_is_fresh = existing_row.get("ibja_pm_916_asof_date") == as_of_date
+        new_is_fresh = snapshot.get("ibja_pm_916_asof_date") == as_of_date
+        if existing_is_fresh or not new_is_fresh:
+            return
+        existing = existing.loc[existing["as_of_date"] != as_of_date]
 
     # Build a single-row DataFrame. Use pd.array with "boolean" dtype for the
     # `partial` column so nullable-bool survives the parquet round-trip cleanly.

@@ -19,11 +19,20 @@ function nowAtNoonIST() {
   return new Date(`${todayIST}T12:00:00+05:30`).getTime();
 }
 
-// Mirrors renderStaleBanner()'s decision logic in app.js (ADR 025).
+// Human-readable label for tier-3 fusion_sources — mirrors app.js's fusionSourcesLabel.
+function fusionSourcesLabel(sources) {
+  const NAMES = { grt: "GRT", malabar: "Malabar", kalyan: "Kalyan" };
+  const labels = (sources || []).map(s => NAMES[s] || s);
+  return labels.length ? labels.join(", ") : "retail consensus";
+}
+
+// Mirrors renderStaleBanner()'s decision logic in app.js (ADR 025 + fusion tier).
 // Per ADR 025, IBJA-calibrated is the PRIMARY path — trusted via price_source
 // alone (inference.py already gated its freshness), with the date qualifier
 // derived purely from whether ibja_asof falls on today's IST calendar day.
-// Returns: "hidden" | "approximate_today" | "approximate_carry_forward" | "stale"
+// Tier 3 (fusion_consensus) takes precedence over the Tanishq staleness check,
+// same branch order as app.js, so the banner and freshness pill never disagree.
+// Returns: "hidden" | "approximate_today" | "approximate_carry_forward" | "fusion_consensus" | "stale"
 function bannerStateForForecast(forecast, nowMs, readings = []) {
   if (!forecast) return "hidden";
 
@@ -31,6 +40,10 @@ function bannerStateForForecast(forecast, nowMs, readings = []) {
     const ibjaDate = new Date(forecast.ibja_asof);
     const isToday = istDayKey(ibjaDate) === istDayKey(new Date(nowMs));
     return isToday ? "approximate_today" : "approximate_carry_forward";
+  }
+
+  if (forecast.price_source === "fusion_consensus") {
+    return "fusion_consensus";
   }
 
   if (!forecast.scraped_at) return "hidden";
@@ -175,4 +188,41 @@ test("both forecast.scraped_at and latest price reading 9h old → stale (no rea
     { timestamp: new Date(nowMs - 9 * 3_600_000).toISOString(), "22k": 14500 },
   ];
   assert.equal(bannerStateForForecast(forecast, nowMs, readings), "stale");
+});
+
+// ── Tier 3: fusion-consensus fallback (both Tanishq and IBJA unavailable) ────
+
+test("price_source=fusion_consensus, fusion_sources=[grt,malabar] → consensus banner mentioning 'GRT, Malabar'", () => {
+  const nowMs = Date.now();
+  const forecast = {
+    price_source: "fusion_consensus",
+    fusion_sources: ["grt", "malabar"],
+    current_22k: 14050,
+    est_low: 13950,
+    est_high: 14150,
+  };
+  assert.equal(bannerStateForForecast(forecast, nowMs), "fusion_consensus");
+  assert.equal(fusionSourcesLabel(forecast.fusion_sources), "GRT, Malabar");
+});
+
+test("price_source=fusion_consensus, fusion_sources missing/null → 'retail consensus' fallback text, never crashes", () => {
+  const forecastNull = { price_source: "fusion_consensus", fusion_sources: null };
+  const forecastMissing = { price_source: "fusion_consensus" };
+  assert.equal(fusionSourcesLabel(forecastNull.fusion_sources), "retail consensus");
+  assert.equal(fusionSourcesLabel(forecastMissing.fusion_sources), "retail consensus");
+  assert.equal(bannerStateForForecast(forecastNull, Date.now()), "fusion_consensus");
+  assert.equal(bannerStateForForecast(forecastMissing, Date.now()), "fusion_consensus");
+});
+
+test("price_source=fusion_consensus takes precedence over Tanishq staleness check (banner shows regardless of scraped_at)", () => {
+  const nowMs = Date.now();
+  // scraped_at is FRESH (1h old) -- if the Tanishq branch ran first, this would
+  // return "hidden". It must still show the fusion banner because tier 3 only
+  // ever fires when Tanishq is genuinely unavailable this cycle.
+  const forecast = {
+    price_source: "fusion_consensus",
+    fusion_sources: ["grt"],
+    scraped_at: new Date(nowMs - 1 * 3_600_000).toISOString(),
+  };
+  assert.equal(bannerStateForForecast(forecast, nowMs), "fusion_consensus");
 });

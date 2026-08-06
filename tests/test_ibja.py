@@ -87,6 +87,43 @@ def test_fetch_916_am_correct(monkeypatch):
     assert result["am_916"] == 144564.0
 
 
+def test_fetch_retries_and_succeeds_on_second_attempt(monkeypatch):
+    monkeypatch.setattr("time.sleep", lambda _: None)
+    calls = {"n": 0}
+
+    def _fake_get(_h):
+        calls["n"] += 1
+        return _MISSING_PURITY_HTML if calls["n"] == 1 else _IBJA_HTML
+
+    monkeypatch.setattr(ibja, "_get_with_retry", _fake_get)
+    result = ibja.fetch_ibja_daily()
+    assert result["am_916"] == 144564.0
+    assert calls["n"] == 2
+
+
+def test_fetch_retries_exhausted_returns_empty(monkeypatch):
+    monkeypatch.setattr("time.sleep", lambda _: None)
+    calls = {"n": 0}
+
+    def _fake_get(_h):
+        calls["n"] += 1
+        return _MISSING_PURITY_HTML
+
+    monkeypatch.setattr(ibja, "_get_with_retry", _fake_get)
+    assert ibja.fetch_ibja_daily() == {}
+    assert calls["n"] == ibja._MAX_FETCH_ATTEMPTS
+
+
+def test_fetch_failure_logs_diagnostic_context(monkeypatch, caplog):
+    monkeypatch.setattr("time.sleep", lambda _: None)
+    monkeypatch.setattr(ibja, "_get_with_retry", lambda _h: _MISSING_PURITY_HTML)
+    with caplog.at_level("WARNING", logger="ml.ibja"):
+        ibja.fetch_ibja_daily()
+    diagnostic_records = [r for r in caplog.records if "body_len=" in r.message]
+    assert diagnostic_records, "expected at least one log record with body_len= diagnostic"
+    assert any("Silver" in r.message for r in diagnostic_records)
+
+
 # ---------------------------------------------------------------------------
 # load_ibja_parquet
 # ---------------------------------------------------------------------------
