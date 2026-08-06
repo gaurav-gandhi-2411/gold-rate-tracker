@@ -473,6 +473,18 @@ main {
   position: relative;
   padding-top: clamp(32px, 6vw, 64px);
   margin-bottom: clamp(28px, 6vw, 56px);
+  /* CLS fix (2026-08-06): hero-skeleton was in normal flow, a sibling of the real
+     eyebrow/price/location/change/verdict-banner/sparkline content it represents --
+     hiding it while they un-hide changed hero-card's height (confirmed empirically:
+     force-hiding hero-skeleton entirely made CLS far WORSE, ~1.15, proving it does
+     reserve real, load-bearing space today, just not exactly the right amount).
+     min-height mirrors hero-skeleton's own natural stacked height (eyebrow 12px +
+     price ~52-96px + change 28px + verdict 72px + spark 56px + gaps/margin), same
+     imprecision class as history-wrap/commentary-body's estimates -- not pixel-
+     exact against the real content's variable height (verdict-reason text length,
+     conditional estimate-range/last-confirmed lines), but eliminates the skeleton-
+     to-content swap as a shift source, which is the actual mechanism being fixed. */
+  min-height: 340px;
 }
 
 /* ─── HERO GOLD PIECE — pure CSS 3D, not WebGL ────────────────────────────────
@@ -1166,10 +1178,12 @@ main {
   animation: shimmer 1.6s infinite;
 }
 .hero-skeleton {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
   display: flex;
   flex-direction: column;
   gap: var(--space-4);
-  margin-bottom: var(--space-5);
 }
 .skel-eyebrow { height: 12px; width: 140px; }
 .skel-price   { height: clamp(52px, 12vw, 96px); width: clamp(200px, 50vw, 380px); border-radius: 8px; }
@@ -1653,7 +1667,28 @@ html.ptr-pulling {
 }
 
 /* ── Commentary skeleton ────────────────────────────────────────────────────── */
-.commentary-skeleton { padding: 4px 0; }
+/* CLS fix (2026-08-06): commentary-skeleton was a plain sibling of commentary-text/
+   -meta -- hiding it while they un-hide changed commentary-body's document height
+   (skeleton's ~58px of bars vs. real commentary's variable 1-3 sentence height),
+   a real, reproducible layout shift confirmed via Lighthouse's layout-shifts
+   diagnostic and isolated from font-loading and the scroll-reveal transform (both
+   independently ruled out by disabling each and re-measuring). Same pattern as
+   history-wrap/history-skeleton: skeleton becomes an absolute overlay inside a
+   position:relative, min-height'd wrapper, so hiding it never changes document
+   height. min-height is a typical-content estimate (2-3 sentences + meta line),
+   same imprecision class as history-wrap's own min-height estimate -- not
+   pixel-exact for unusually long commentary, but eliminates the shift for the
+   normal case, which is what the pre-fix version never had at all. */
+.commentary-body {
+  position: relative;
+  min-height: 90px;
+}
+.commentary-skeleton {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  padding: 4px 0;
+}
 .commentary-skeleton[hidden] { display: none; }
 
 /* ── Model-signal skeleton ──────────────────────────────────────────────────── */
