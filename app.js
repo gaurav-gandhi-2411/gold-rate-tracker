@@ -1,5 +1,17 @@
 // app.js — Buyer-focused gold rate tracker.
 
+// Sentry.init() lives here (not an inline <script> in index.html) so it runs after the
+// deferred Sentry bundle has loaded — see index.html's comment on that script tag for why
+// it's deferred and why an inline init script there would race ahead of it.
+if (typeof Sentry !== "undefined") {
+  Sentry.init({
+    dsn: "https://PLACEHOLDER@o000000.ingest.sentry.io/0000000", // TODO: replace with your project DSN
+    sampleRate: 1.0,        // capture every error event
+    tracesSampleRate: 0.0,  // no performance tracing (not needed)
+    environment: "production",
+  });
+}
+
 const DATA_URL      = "data/prices.json";
 const FORECAST_URL  = "data/forecast.json";
 const BACKTEST_URL  = "data/backtest.json";
@@ -19,6 +31,16 @@ const STALE_THRESHOLD_H = 8;
 const IS_STANDALONE =
   window.matchMedia("(display-mode: standalone)").matches ||
   window.navigator.standalone === true;
+
+// True on iOS/iPadOS Safari (and any other iOS browser -- all iOS browsers are
+// WebKit under the hood, so this applies regardless of what's in the UA string
+// beyond the OS itself). Classic UA check plus the iPadOS 13+ case, where an
+// iPad reports "MacIntel" like desktop Safari but is touch-capable.
+const IS_IOS =
+  /iPad|iPhone|iPod/.test(navigator.userAgent) ||
+  (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
+
+const INSTALL_PROMPT_DISMISSED_KEY = "install-prompt-dismissed";
 
 const fmtINR = (n) =>
   typeof n === "number"
@@ -148,10 +170,25 @@ function animateNumberTick(el, fromVal, toVal, durationMs = 400) {
   _heroTickRaf = requestAnimationFrame(step);
 }
 
-async function loadJSON(url) {
-  const res = await fetch(`${url}?t=${Date.now()}`);
-  if (!res.ok) throw new Error(`HTTP ${res.status} for ${url}`);
-  return res.json();
+// No fetch here ever waited on another fetch's result — only render ordering did — but
+// with no timeout a single stalled connection could still hang a section on its "Loading…"
+// placeholder indefinitely. LOAD_TIMEOUT_MS bounds every fetch so a stall degrades to an
+// honest error within a fixed budget instead of hanging forever (render-smoke incident).
+const LOAD_TIMEOUT_MS = 10_000;
+
+async function loadJSON(url, timeoutMs = LOAD_TIMEOUT_MS) {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), timeoutMs);
+  try {
+    const res = await fetch(`${url}?t=${Date.now()}`, { signal: controller.signal });
+    if (!res.ok) throw new Error(`HTTP ${res.status} for ${url}`);
+    return await res.json();
+  } catch (err) {
+    if (err.name === "AbortError") throw new Error(`Timed out after ${timeoutMs}ms loading ${url}`);
+    throw err;
+  } finally {
+    clearTimeout(timer);
+  }
 }
 
 async function load() {
@@ -1091,6 +1128,23 @@ function renderModelSignal(fc, readings, bt) {
   const hl = fc?.headline;
   const hasPI = hl && typeof hl.lower === "number" && typeof hl.upper === "number";
 
+  // Tomorrow's likely range, plain language — the actual next-trading-day conformal
+  // band (same source as methodology's "Next trading day range" — hl.lower/upper,
+  // with the same fc.lower/upper fallback for older cached shapes). Previously this
+  // number only existed inside the collapsed methodology accordion as "80% range:
+  // ₹X – ₹Y", which is exactly the kind of ML-reader framing a regular buyer has no
+  // use for; the number itself (what to expect tomorrow) is the single most
+  // actionable thing the forecast produces, so it belongs in the default view.
+  // "next trading day" (not "tomorrow") stays accurate across weekends/holidays —
+  // methodology's own heading uses the same phrase for the same reason.
+  const rangeLower = hl?.lower ?? fc?.lower;
+  const rangeUpper = hl?.upper ?? fc?.upper;
+  const hasRange = typeof rangeLower === "number" && typeof rangeUpper === "number";
+  // XSS-safe: fmtINR() wraps numbers only.
+  const tomorrowRangeHtml = hasRange
+    ? `<p class="good-price-tomorrow">Likely to stay between <strong>₹${fmtINR(rangeLower)}</strong> and <strong>₹${fmtINR(rangeUpper)}</strong> by the next trading day.</p>`
+    : "";
+
   // Volatility context — dynamic realized-vol estimate (Phi10B) with static-PI fallback.
   // Shows "has been moving about ±Rs.X lately" — magnitude only, no direction (ADR 005).
   let volatilityHtml = "";
@@ -1129,6 +1183,7 @@ function renderModelSignal(fc, readings, bt) {
   // bandPos90d.note/trendResidual.note/supportDistance90d.note are hardcoded string
   // literals or fmtINR(number) from computeGoodPriceSignals/computeBandPos90d/
   // computeTrendResidual30d/computeSupportDistance90d — no external data.
+  // tomorrowRangeHtml/volatilityHtml built above, same fmtINR(number)-only rule.
   document.getElementById("model-signal-body").innerHTML = `
     <div class="outlook-card">
       <p class="good-price-verdict good-price-verdict--${signals.verdictType}">${signals.verdictLead}</p>
@@ -1142,6 +1197,7 @@ function renderModelSignal(fc, readings, bt) {
         ${bandPos90d ? `<li class="good-price-band-90d">${bandPos90d.note}</li>` : ""}
         ${supportDistance90d ? `<li class="good-price-support-90d">${supportDistance90d.note}</li>` : ""}
       </ul>
+      ${tomorrowRangeHtml}
       ${volatilityHtml}
     </div>
   `;
@@ -1777,8 +1833,10 @@ async function refreshData() {
   const btn = document.getElementById("refresh-btn");
   if (btn) { btn.classList.add("refresh-btn--spinning"); btn.disabled = true; }
   try {
-    const fresh = await load();
-    const fc    = await loadJSON(FORECAST_URL).catch(() => null);
+    const freshPromise = load();
+    const fcPromise    = loadJSON(FORECAST_URL).catch(() => null);
+    const fresh = await freshPromise;
+    const fc    = await fcPromise;
     allReadings  = fresh;
     lastForecast = fc;
     renderFreshness(allReadings, fc);
@@ -2011,12 +2069,87 @@ function initPullToRefresh() {
   }, { passive: true });
 }
 
+// ─── SCROLL REVEALS (feel-alive pass) ──────────────────────────────────────────
+// Fade/slide-in as sections enter the viewport. Progressive enhancement: elements
+// only go to opacity:0 once `.reveal-armed` is added below, so a JS error or
+// missing IntersectionObserver support never leaves content stuck invisible --
+// see style.css's .reveal-on-scroll comment for the full contract. The hero card
+// is deliberately excluded: price must render instantly, never scroll-gated.
+function initScrollReveals() {
+  const targets = document.querySelectorAll(".reveal-on-scroll");
+  if (!targets.length || typeof IntersectionObserver === "undefined") return;
+
+  try {
+    targets.forEach((el) => el.classList.add("reveal-armed"));
+    const observer = new IntersectionObserver(
+      (entries) => {
+        for (const entry of entries) {
+          if (entry.isIntersecting) {
+            entry.target.classList.add("reveal-visible");
+            observer.unobserve(entry.target);
+          }
+        }
+      },
+      { rootMargin: "0px 0px -10% 0px", threshold: 0.1 },
+    );
+    targets.forEach((el) => observer.observe(el));
+  } catch {
+    // Setup failed after arming -- force visible rather than leave opacity:0 stuck.
+    targets.forEach((el) => el.classList.add("reveal-visible"));
+  }
+}
+
+// ─── DEVICE-TILT PARALLAX (optional, feel-alive pass) ──────────────────────────
+// Subtle tilt-based shift on the hero gold piece via the DeviceOrientation API.
+// Deliberately scoped to non-iOS touch devices only: Android Chrome/Firefox fire
+// 'deviceorientation' with no permission prompt, so this wires directly there.
+// iOS 13+ gates the same API behind DeviceOrientationEvent.requestPermission(),
+// which must be called from a user gesture -- there's no existing gesture-
+// triggering UI in this flow to hang that prompt off without adding dedicated
+// UI clutter for a purely decorative effect, so iOS is skipped by design rather
+// than forcing an extra permission dialog into the experience. Reduced-motion
+// and non-touch (desktop) skip this entirely. rAF-throttled: at most one style
+// write per animation frame regardless of event frequency (some devices fire
+// deviceorientation well above 60Hz).
+function initTiltParallax() {
+  if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+  if (!("ontouchstart" in window)) return;
+  if (typeof DeviceOrientationEvent === "undefined") return;
+  if (typeof DeviceOrientationEvent.requestPermission === "function") return; // iOS gesture-gated path, skipped by design
+
+  const piece = document.querySelector(".hero-gold-piece");
+  if (!piece) return;
+
+  let ticking = false;
+  let latest = null;
+  window.addEventListener(
+    "deviceorientation",
+    (e) => {
+      latest = e;
+      if (ticking) return;
+      ticking = true;
+      requestAnimationFrame(() => {
+        ticking = false;
+        if (!latest) return;
+        const beta  = latest.beta  ?? 45; // front-back tilt, -180..180; ~45 deg is a natural holding angle
+        const gamma = latest.gamma ?? 0;  // left-right tilt, -90..90
+        const dx = Math.max(-8, Math.min(8, gamma / 4));
+        const dy = Math.max(-8, Math.min(8, (beta - 45) / 6));
+        piece.style.transform = `translate(${dx}px, ${dy}px)`;
+      });
+    },
+    { passive: true },
+  );
+}
+
 // ─── INIT ─────────────────────────────────────────────────────────────────────
 
 (async function init() {
   bindRangeToggle();
   initBottomNav();
   initPullToRefresh();
+  initScrollReveals();
+  initTiltParallax();
 
   // Φ16-2: register offline/online listeners before data load so they catch mid-load state changes.
   window.addEventListener("offline", updateOfflineBanner);
@@ -2061,9 +2194,67 @@ function initPullToRefresh() {
     }
   }
 
+  // iOS Add-to-Home-Screen prompt: shown only to iOS Safari visitors not already
+  // running standalone, self-dismisses permanently via localStorage (unlike the
+  // pwa-help panel above, which is a per-session reminder for already-installed
+  // users -- this is a one-time nudge, so it shouldn't keep coming back once
+  // dismissed). Pure DOM/localStorage work, no data dependency -- runs before
+  // any fetch below so it never competes with or delays the price render.
+  if (IS_IOS && !IS_STANDALONE) {
+    let dismissed = false;
+    try {
+      dismissed = localStorage.getItem(INSTALL_PROMPT_DISMISSED_KEY) === "1";
+    } catch {
+      // Storage access can throw (private browsing, disabled storage) -- treat
+      // as not-dismissed rather than blocking the banner over a read failure.
+    }
+    if (!dismissed) {
+      const installPanel = document.getElementById("install-prompt-panel");
+      const installClose = document.getElementById("install-prompt-close");
+      if (installPanel) installPanel.hidden = false;
+      if (installClose) {
+        installClose.addEventListener("click", () => {
+          if (installPanel) installPanel.hidden = true;
+          try {
+            localStorage.setItem(INSTALL_PROMPT_DISMISSED_KEY, "1");
+          } catch {
+            // Best-effort persistence -- if storage is unavailable the banner
+            // just reappears next visit, which is a degraded UX, not a bug.
+          }
+        });
+      }
+    }
+  }
+
+  // Kick off every data fetch immediately, in parallel — none of them has a real
+  // dependency on another fetch's *result*, only on the RENDER order below. This
+  // replaces what was a 3-stage serialized waterfall (prices -> forecast ->
+  // {backtest,commentary,drift,coverage}, each stage starting only after the
+  // previous one resolved) with one parallel batch. Combined with loadJSON's
+  // LOAD_TIMEOUT_MS, this is the fix for the render-smoke "fresh-load" timeouts —
+  // see docs/RUNBOOK.md's render-smoke section for the incident and diagnosis
+  // (two render-blocking third-party <script> tags plus this serialized chain
+  // together could exceed the smoke test's cold-load budget).
+  const pricesPromise = load();
+  const fcPromise = loadJSON(FORECAST_URL).catch(err => {
+    if (typeof Sentry !== "undefined") Sentry.captureException(err, { extra: { url: FORECAST_URL } });
+    return null;
+  });
+  const btPromise = loadJSON(BACKTEST_URL);
+  const commentaryPromise = loadJSON(COMMENTARY_URL);
+  const driftPromise = loadJSON(DRIFT_URL);
+  const coveragePromise = loadJSON(COVERAGE_URL);
+  // These four are only actually consumed much later (via Promise.allSettled, after
+  // awaiting price+forecast and rendering the hero) — attach an inert catch to each
+  // now so an early rejection (e.g. a timeout firing while we're still waiting on
+  // prices) doesn't surface as a spurious unhandledrejection console error / Sentry
+  // event in the meantime. Promise.allSettled below still sees the real outcome —
+  // this doesn't replace the promise, just marks it handled.
+  [btPromise, commentaryPromise, driftPromise, coveragePromise].forEach(p => p.catch(() => {}));
+
   // Load prices (critical path)
   try {
-    allReadings = await load();
+    allReadings = await pricesPromise;
   } catch (err) {
     if (typeof Sentry !== "undefined") Sentry.captureException(err, { extra: { url: DATA_URL } });
     console.error(err);
@@ -2077,15 +2268,21 @@ function initPullToRefresh() {
       commentaryTextEl.textContent = "Couldn't load the latest price. Check your connection and try again.";
       commentaryTextEl.hidden = false;
     }
+    // Everything else renders from allReadings — degrade history/methodology honestly
+    // too instead of leaving them on their skeleton placeholders forever.
+    const historySkel = document.getElementById("history-skeleton");
+    if (historySkel) historySkel.hidden = true;
+    const historyBody = document.getElementById("history-body");
+    if (historyBody) {
+      historyBody.innerHTML = '<tr><td colspan="5" class="empty">Couldn’t load price history.</td></tr>';
+    }
+    const methBody = document.getElementById("methodology-body");
+    if (methBody) {
+      methBody.innerHTML = '<p class="meth-loading">Couldn’t load model details — check your connection and reload.</p>';
+    }
     updateOfflineBanner();
     return;
   }
-
-  // Forecast loads in parallel — needed for verdict.
-  const fcPromise = loadJSON(FORECAST_URL).catch(err => {
-    if (typeof Sentry !== "undefined") Sentry.captureException(err, { extra: { url: FORECAST_URL } });
-    return null;
-  });
 
   // Render everything that doesn't need forecast immediately.
   renderFreshness(allReadings);
@@ -2110,12 +2307,12 @@ function initPullToRefresh() {
   ]);
   updateOfflineBanner(); // update offline banner text now allReadings is populated
 
-  // Remaining optional data (all gracefully degrade on failure).
+  // Remaining optional data (already in flight above; all gracefully degrade on failure).
   const [bt, commentary, drift, coverage] = await Promise.allSettled([
-    loadJSON(BACKTEST_URL),
-    loadJSON(COMMENTARY_URL),
-    loadJSON(DRIFT_URL),
-    loadJSON(COVERAGE_URL),
+    btPromise,
+    commentaryPromise,
+    driftPromise,
+    coveragePromise,
   ]);
 
   // Report any optional-fetch failures so silent pipeline breaks surface in Sentry.

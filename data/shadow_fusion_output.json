@@ -1,12 +1,12 @@
 {
-  "capture_utc": "2026-08-03T19:58:53Z",
-  "as_of_date": "2026-08-03",
+  "capture_utc": "2026-08-06T03:32:16Z",
+  "as_of_date": "2026-08-06",
   "national_failures": {},
   "kalyan_failures": {},
   "snapshot_rows_persisted": 7,
   "national_benchmark": {
-    "value": 13217.5,
-    "band_half_width": 132.175,
+    "value": 13475.833333333334,
+    "band_half_width": 134.75833333333335,
     "disagreement": false,
     "sources_used": [
       "ibja",
@@ -21,32 +21,32 @@
   },
   "cities": {
     "Bangalore": {
-      "value": 13220.0,
-      "band_half_width": 132.175,
+      "value": 13460.0,
+      "band_half_width": 134.75833333333335,
       "coverage": "kalyan_anchored",
       "attribution": "National retail consensus, Kalyan-anchored (Kalyan Jewellers \u2014 BANGALORE board rate)",
-      "markup": 1.0001891431813883
+      "markup": 0.9988250572011625
     },
     "Chennai": {
-      "value": 13220.0,
-      "band_half_width": 132.175,
+      "value": 13460.0,
+      "band_half_width": 134.75833333333335,
       "coverage": "kalyan_anchored",
       "attribution": "National retail consensus, Kalyan-anchored (Kalyan Jewellers \u2014 CHENNAI board rate)",
-      "markup": 1.0001891431813883
+      "markup": 0.9988250572011625
     },
     "Hyderabad": {
-      "value": 13220.0,
-      "band_half_width": 132.175,
+      "value": 13460.0,
+      "band_half_width": 134.75833333333335,
       "coverage": "kalyan_anchored",
       "attribution": "National retail consensus, Kalyan-anchored (Kalyan Jewellers \u2014 HYDERABAD board rate)",
-      "markup": 1.0001891431813883
+      "markup": 0.9988250572011625
     },
     "Ernakulam": {
-      "value": 13220.0,
-      "band_half_width": 132.175,
+      "value": 13460.0,
+      "band_half_width": 134.75833333333335,
       "coverage": "kalyan_anchored",
       "attribution": "National retail consensus, Kalyan-anchored (Kalyan Jewellers \u2014 ERNAKULAM board rate)",
-      "markup": 1.0001891431813883
+      "markup": 0.9988250572011625
     }
   }
 }

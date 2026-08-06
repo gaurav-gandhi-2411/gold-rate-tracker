@@ -19,6 +19,7 @@ from ml.notifications import (
     compute_dir_acc_30f,
     compute_selfhosted_consecutive_failures,
     compute_snapshot_gap_days,
+    compute_usable_snapshot_gap_days,
     load_state,
     queue_for_quiet_hours,
     save_state,
@@ -2769,3 +2770,217 @@ def test_compute_selfhosted_consecutive_failures_malformed_file(tmp_path: Path):
     path = tmp_path / "tanishq_selfhosted_health.json"
     path.write_text("not json", encoding="utf-8")
     assert compute_selfhosted_consecutive_failures(path) is None
+
+
+# ---------------------------------------------------------------------------
+# T13 — direction-dataset stall: rows arriving (T10 green) but not usable
+# ---------------------------------------------------------------------------
+# Regression coverage for the 2026-06-07 -> 2026-08-05 incident: T10 alone
+# cannot see this failure mode, since raw rows landed on schedule the whole
+# time while every one carried a stale IBJA join.
+# ---------------------------------------------------------------------------
+
+_T13_NOW_IST = _ist(2026, 6, 7, 14, 0)
+
+
+def _write_snapshots_with_ibja_asof(path: Path, rows: list[tuple[str, str | None]]) -> None:
+    """rows: list of (as_of_date, ibja_pm_916_asof_date)."""
+    import pandas as pd
+
+    pd.DataFrame(
+        {
+            "as_of_date": [r[0] for r in rows],
+            "ibja_pm_916_asof_date": [r[1] for r in rows],
+        }
+    ).to_parquet(path)
+
+
+def test_compute_usable_snapshot_gap_days_missing_file(tmp_path: Path):
+    """Returns None when the feature store does not exist (not a capture failure)."""
+    missing = tmp_path / "does_not_exist.parquet"
+    assert compute_usable_snapshot_gap_days(_T13_NOW_IST, path=missing) is None
+
+
+def test_compute_usable_snapshot_gap_days_all_fresh(tmp_path: Path):
+    """Gap is 0 when the latest row's IBJA join is same-day as of today."""
+    path = tmp_path / "snapshots.parquet"
+    _write_snapshots_with_ibja_asof(
+        path,
+        [("2026-06-05", "2026-06-05"), ("2026-06-06", "2026-06-06"), ("2026-06-07", "2026-06-07")],
+    )
+    assert compute_usable_snapshot_gap_days(_T13_NOW_IST, path=path) == 0
+
+
+def test_compute_usable_snapshot_gap_days_stuck_while_raw_rows_grow(tmp_path: Path):
+    """The core regression: raw rows keep landing (max as_of_date == today) but
+    every one has a stale IBJA join -- the usable gap must reflect the LAST
+    genuinely usable row, not the last row that merely arrived."""
+    path = tmp_path / "snapshots.parquet"
+    _write_snapshots_with_ibja_asof(
+        path,
+        [
+            ("2026-06-01", "2026-06-01"),  # last usable row
+            ("2026-06-05", "2026-06-04"),  # stale: arrived, not usable
+            ("2026-06-06", "2026-06-05"),  # stale: arrived, not usable
+            ("2026-06-07", "2026-06-06"),  # stale: arrived, not usable (today)
+        ],
+    )
+    # compute_snapshot_gap_days (T10) would report 0 here -- a row landed today.
+    assert compute_snapshot_gap_days(_T13_NOW_IST, path=path) == 0
+    # compute_usable_snapshot_gap_days (T13) correctly reports the real gap.
+    assert compute_usable_snapshot_gap_days(_T13_NOW_IST, path=path) == 6
+
+
+def test_compute_usable_snapshot_gap_days_ignores_null_ibja_asof(tmp_path: Path):
+    """A row with a null ibja_pm_916_asof_date (e.g. IBJA parquet unreadable
+    that cycle) must not be misread as usable."""
+    path = tmp_path / "snapshots.parquet"
+    _write_snapshots_with_ibja_asof(path, [("2026-06-01", "2026-06-01"), ("2026-06-07", None)])
+    assert compute_usable_snapshot_gap_days(_T13_NOW_IST, path=path) == 6
+
+
+def test_compute_usable_snapshot_gap_days_no_usable_row_at_all(tmp_path: Path):
+    """Every row stale -> None (not a false 'gap=0' or a crash)."""
+    path = tmp_path / "snapshots.parquet"
+    _write_snapshots_with_ibja_asof(path, [("2026-06-07", "2026-06-05")])
+    assert compute_usable_snapshot_gap_days(_T13_NOW_IST, path=path) is None
+
+
+def test_t13_fires_when_usable_gap_exceeds_threshold():
+    """T13 fires when usable_snapshot_gap_days >= _T13_GAP_THRESHOLD_DAYS (2)."""
+    alerts = check_triggers(
+        _forecast(),
+        _probe(),
+        _prices_aged(1.0, _T13_NOW_IST),
+        _backtest_accurate(),
+        NotificationState(),
+        _T13_NOW_IST,
+        usable_snapshot_gap_days=6,
+    )
+    t13 = [a for a in alerts if a.trigger_id == "T13"]
+    assert len(t13) == 1, "T13 must fire when the usable gap is 6 days"
+    assert "6 days" in t13[0].body
+    assert "₹" not in t13[0].title
+    assert "₹" not in t13[0].body
+
+
+def test_t13_no_fire_below_threshold():
+    """T13 does not fire when the gap is below the threshold (e.g. 1 day, or None)."""
+    for gap in (None, 0, 1):
+        alerts = check_triggers(
+            _forecast(),
+            _probe(),
+            _prices_aged(1.0, _T13_NOW_IST),
+            _backtest_accurate(),
+            NotificationState(),
+            _T13_NOW_IST,
+            usable_snapshot_gap_days=gap,
+        )
+        assert all(a.trigger_id != "T13" for a in alerts), f"T13 must not fire at gap={gap}"
+
+
+def test_t13_independent_of_t10():
+    """T13 can fire even when T10 does not -- raw rows arriving (T10 quiet)
+    while the usable dataset is stalled (T13 fires) is exactly the bug this
+    trigger exists to catch."""
+    alerts = check_triggers(
+        _forecast(),
+        _probe(),
+        _prices_aged(1.0, _T13_NOW_IST),
+        _backtest_accurate(),
+        NotificationState(),
+        _T13_NOW_IST,
+        snapshot_gap_days=0,  # T10: a row landed today, would not fire
+        usable_snapshot_gap_days=6,  # T13: none of them were usable
+    )
+    assert all(a.trigger_id != "T10" for a in alerts)
+    assert len([a for a in alerts if a.trigger_id == "T13"]) == 1
+
+
+def test_t13_at_most_one_per_ist_day():
+    """T13 fires once on the first stale run, not again the same IST day."""
+    now_run1 = _ist(2026, 6, 7, 10, 0)
+    now_run2 = _ist(2026, 6, 7, 13, 0)
+
+    state = NotificationState()
+    alerts_r1 = check_triggers(
+        _forecast(),
+        _probe(),
+        _prices_aged(1.0, now_run1),
+        _backtest_accurate(),
+        state,
+        now_run1,
+        usable_snapshot_gap_days=3,
+    )
+    assert len([a for a in alerts_r1 if a.trigger_id == "T13"]) == 1
+
+    _stamp_ist_dedup("T13", state, now_run1)
+
+    alerts_r2 = check_triggers(
+        _forecast(),
+        _probe(),
+        _prices_aged(1.0, now_run2),
+        _backtest_accurate(),
+        state,
+        now_run2,
+        usable_snapshot_gap_days=4,  # gap can only grow within the same day
+    )
+    assert len([a for a in alerts_r2 if a.trigger_id == "T13"]) == 0, (
+        "Run 2 (same IST day): T13 must NOT fire again - IST-day dedup"
+    )
+
+
+def test_t13_fires_again_next_ist_day():
+    """A sustained gap alerts again on the following IST day."""
+    state = NotificationState()
+    state.last_t13_ist_date = "2026-06-07"
+
+    now_day2 = _ist(2026, 6, 8, 14, 0)
+    alerts = check_triggers(
+        _forecast(),
+        _probe(),
+        _prices_aged(1.0, now_day2),
+        _backtest_accurate(),
+        state,
+        now_day2,
+        usable_snapshot_gap_days=7,
+    )
+    assert len([a for a in alerts if a.trigger_id == "T13"]) == 1
+
+
+def test_t13_state_round_trip(tmp_path: Path):
+    """last_t13_ist_date survives a NotificationState save/load cycle."""
+    state = NotificationState(last_t13_ist_date="2026-06-07")
+    path = tmp_path / "notification_state.json"
+    save_state(state, path)
+
+    loaded = load_state(path)
+    assert loaded.last_t13_ist_date == "2026-06-07"
+
+
+def test_t13_backward_compat_old_state(tmp_path: Path):
+    """State file without last_t13_ist_date loads with empty-string default."""
+    import json as _json
+
+    old_state = {
+        "schema_version": 1,
+        "last_sent": {},
+        "queued": [],
+        "sent_today": [],
+        # deliberately absent: last_t13_ist_date (and everything after T9)
+    }
+    path = tmp_path / "old_state.json"
+    path.write_text(_json.dumps(old_state), encoding="utf-8")
+
+    loaded = load_state(path)
+    assert loaded.last_t13_ist_date == ""
+    assert loaded.schema_version == 1
+
+
+def test_stamp_ist_dedup_t13():
+    """_stamp_ist_dedup sets last_t13_ist_date for T13 immediately on queue."""
+    state = NotificationState()
+    now_ist = _ist(2026, 6, 7, 23, 30)  # quiet hours
+    assert state.last_t13_ist_date == ""
+    _stamp_ist_dedup("T13", state, now_ist)
+    assert state.last_t13_ist_date == "2026-06-07"
