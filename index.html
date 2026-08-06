@@ -327,19 +327,28 @@
          (Project Settings → Client Keys → DSN). The site will work normally without it.
          Served from Sentry's own CDN (not jsdelivr's npm proxy) — the npm package no longer
          ships the prebuilt bundle jsdelivr would need, so an npm-path URL 404s.
-         `defer` (not a blocking classic script) so a slow/unlucky round-trip to this
-         third-party CDN cannot delay HTML parsing or push app.js's own fetches past a
-         cold-load render budget — see the render-smoke incident writeup in app.js's
-         init() comment. Sentry.init() itself now lives at the top of app.js (deferred
-         scripts execute in document order, so Sentry is still guaranteed to be defined
-         before app.js's very first statement runs) — an inline script here would run
-         immediately on parse, before this deferred bundle has loaded. -->
+         `async`, not `defer` — deliberately NOT in app.js's execution-order dependency
+         chain. Unlike Chart.js below (a hard, unguarded dependency — `new Chart(...)`
+         throws if it isn't loaded), every Sentry.* call in app.js is already guarded
+         with `typeof Sentry !== "undefined"`, so app.js tolerates Sentry loading late
+         or not at all. render-smoke kept intermittently failing cold-load even after
+         the original render-blocking fix (see app.js's init() comment) because app.js
+         still had to wait for BOTH third-party scripts to finish, regardless of defer
+         vs blocking, since deferred scripts execute in document order. Moving Sentry to
+         async removes it from that wait entirely — Chart.js is the one third-party
+         script app.js's own start time still depends on, which is unavoidable given it's
+         a real (not just guarded) dependency. Worth noting Sentry currently uses a
+         placeholder DSN and isn't actually reporting anywhere yet, so this has zero
+         functional cost today regardless. -->
     <script src="https://browser.sentry-cdn.com/7.120.4/bundle.min.js"
             integrity="sha384-HF4Kc49tTfBgl6JmNMfcrjBeW9pK13xSnnr307iG4PCNj8eRKhkvE9Tp27DigU1L"
-            crossorigin="anonymous" defer></script>
+            crossorigin="anonymous" async></script>
 
-    <!-- `defer`, same reasoning as Sentry above. Document order among deferred scripts
-         is preserved, so Chart is still guaranteed defined before app.js runs. -->
+    <!-- `defer`, not `async` like Sentry above — app.js calls `new Chart(...)`
+         unguarded, so this one genuinely must be loaded and executed before app.js
+         runs. Document order among deferred scripts is preserved, so Chart is still
+         guaranteed defined before app.js runs; not render-blocking either way (defer
+         never blocks HTML parsing, only gates when app.js itself starts). -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.6/dist/chart.umd.min.js"
             integrity="sha384-Sse/HDqcypGpyTDpvZOJNnG0TT3feGQUkF9H+mnRvic+LjR+K1NhTt8f51KIQ3v3"
             crossorigin="anonymous" defer></script>
