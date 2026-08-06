@@ -234,42 +234,9 @@ main {
   flex-shrink: 0;
 }
 
-/* ─── COIN ACCENT — pure CSS 3D, not WebGL ───────────────────────────────────
-   A slowly-rotating gold "coin" next to the wordmark. WebGL (even a minimal
-   three.js setup) runs 150-600KB minified -- this achieves the same "slowly
-   rotating gold element" brief in pure CSS transforms (rotateY + preserve-3d),
-   effectively 0 extra bytes and GPU-composited (transform-only, no layout/
-   paint cost). Decorative only (aria-hidden), fixed size, lives in the
-   sticky header -- never overlaps or delays the hero price. */
-.coin-accent {
-  display: inline-block;
-  width: 32px;
-  height: 32px;
-  margin-right: 10px;
-  perspective: 220px;
-  flex-shrink: 0;
-}
-.coin-inner {
-  display: block; /* spans are inline by default -- inline elements ignore width/height entirely */
-  position: relative;
-  width: 100%;
-  height: 100%;
-  transform-style: preserve-3d;
-  animation: coin-spin 7s linear infinite;
-}
-.coin-face {
-  position: absolute;
-  inset: 0;
-  border-radius: 50%;
-  background: radial-gradient(circle at 35% 30%, var(--gold-warm), var(--gold) 55%, var(--gold-rich) 100%);
-  box-shadow: inset 0 0 0 1.5px rgba(0, 0, 0, 0.15);
-  backface-visibility: hidden;
-}
-.coin-face--back { transform: rotateY(180deg); }
-@keyframes coin-spin {
-  from { transform: rotateY(0deg); }
-  to   { transform: rotateY(360deg); }
-}
+/* Header 3D coin retired in favor of the larger .hero-gold-piece below -- 32px
+   next to the wordmark was reported twice as too small to register. See
+   HERO CARD section for the replacement. */
 
 .app-title {
   font-family: var(--display);
@@ -455,8 +422,104 @@ main {
    2. HERO CARD
 ═══════════════════════════════════════════════════════════════ */
 .hero-card {
+  position: relative;
   padding-top: clamp(32px, 6vw, 64px);
   margin-bottom: clamp(28px, 6vw, 56px);
+}
+
+/* ─── HERO GOLD PIECE — pure CSS 3D, not WebGL ────────────────────────────────
+   The signature "feel alive" element, replacing the old 32px header coin. A
+   genuinely large, layered 3D piece (front/back faces + a rim shading layer +
+   a specular sweep pass) that's part of the hero composition rather than a
+   corner ornament. WebGL (even a minimal three.js build) runs 150-600KB
+   minified and needs a lazy-loaded runtime; this achieves the same "large
+   rotating dimensional gold object" brief in pure CSS transforms
+   (preserve-3d + rotateY), 0 extra bytes, GPU-composited (only `transform`/
+   `opacity`/`background-position` animate -- no layout or paint-triggering
+   properties), same reasoning the old coin used.
+
+   STACKING GUARANTEE (never obscures the price): both layers below are
+   `position: absolute` with a NEGATIVE z-index inside .hero-card's stacking
+   context (established by .hero-card's own `position: relative`). Per CSS
+   stacking rules, negative-z-index positioned descendants paint BEFORE
+   (behind) their stacking context's normal in-flow content -- so every hero
+   text element (price, eyebrow, verdict) paints on top automatically, with
+   no z-index needed on them and no risk of a viewport width where the
+   layering flips. Verified against real screenshots, not just asserted. */
+.hero-gold-ambient {
+  position: absolute;
+  z-index: -1;
+  top: -40px;
+  right: -60px;
+  width: clamp(220px, 55vw, 420px);
+  height: clamp(220px, 55vw, 420px);
+  background: radial-gradient(circle, var(--gold-glow) 0%, transparent 70%);
+  pointer-events: none;
+}
+.hero-gold-piece {
+  position: absolute;
+  z-index: -1;
+  top: clamp(-4px, 1vw, 8px);
+  right: clamp(4px, 4vw, 24px);
+  width: clamp(84px, 22vw, 148px);
+  height: clamp(84px, 22vw, 148px);
+  perspective: 600px;
+  pointer-events: none;
+}
+.hero-gold-piece-inner {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  transform-style: preserve-3d;
+  animation: hero-gold-spin 14s linear infinite;
+}
+.hero-gold-piece::before {
+  /* Rim shading -- a conic-gradient ring simulating a beveled metal edge,
+     sits behind the faces (z-index:-1 within .hero-gold-piece's own
+     stacking context, same negative-z-index-paints-first mechanism). */
+  content: "";
+  position: absolute;
+  z-index: -1;
+  inset: -4%;
+  border-radius: 50%;
+  background: conic-gradient(from 0deg,
+    var(--gold-rich), var(--gold-warm), var(--gold), var(--gold-warm), var(--gold-rich));
+  filter: brightness(0.72);
+}
+.hero-gold-face {
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  background:
+    radial-gradient(circle at 32% 26%, rgba(255, 255, 255, 0.5), transparent 32%),
+    radial-gradient(circle at 35% 30%, var(--gold-warm), var(--gold) 55%, var(--gold-rich) 100%);
+  box-shadow:
+    inset 0 0 0 2px rgba(0, 0, 0, 0.15),
+    inset 0 -8px 16px rgba(0, 0, 0, 0.28);
+  backface-visibility: hidden;
+}
+.hero-gold-face--back { transform: rotateY(180deg); }
+.hero-gold-specular {
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  background: linear-gradient(115deg, transparent 40%, rgba(255, 255, 255, 0.55) 50%, transparent 60%);
+  background-size: 300% 300%;
+  animation: hero-gold-sweep 5s ease-in-out infinite;
+  mix-blend-mode: overlay;
+}
+@keyframes hero-gold-spin {
+  from { transform: rotateY(0deg); }
+  to   { transform: rotateY(360deg); }
+}
+@keyframes hero-gold-sweep {
+  0%, 100% { background-position: 130% 130%; }
+  50%      { background-position: -30% -30%; }
+}
+/* Small viewports: dial the ambient glow back so it doesn't wash out the
+   price's own gradient-text treatment on a dense, narrow layout. */
+@media (max-width: 420px) {
+  .hero-gold-ambient { opacity: 0.7; }
 }
 
 .eyebrow {
@@ -1474,6 +1537,20 @@ html.ptr-pulling {
   margin: 0 0 8px;
   font-style: italic;
 }
+/* The single most actionable number the forecast produces (what to expect by the
+   next trading day) gets its own visually distinct treatment -- previously this
+   only existed inside the collapsed methodology accordion as "80% range: X-Y". */
+.good-price-tomorrow {
+  font-size: 14px;
+  color: var(--cream);
+  margin: 10px 0 0;
+  padding: 10px 14px;
+  background: var(--gold-glow);
+  border: 1px solid rgba(212, 147, 42, 0.28);
+  border-radius: var(--radius-sm);
+}
+.good-price-tomorrow strong { color: var(--gold); font-weight: 600; }
+
 .outlook-volatility {
   margin-top: 14px;
   padding-top: 12px;
@@ -1549,6 +1626,28 @@ html.ptr-pulling {
 .meth-how-good { background: rgba(224,155,46,0.04); border-radius: var(--radius-lg); padding: clamp(12px, 3vw, 20px); }
 .meth-how-good .meth-text { margin-bottom: 16px; }
 .meth-how-good .meth-text:last-child { margin-bottom: 0; }
+
+/* ═══════════════════════════════════════════════════════════════
+   SCROLL REVEALS (feel-alive pass)
+═══════════════════════════════════════════════════════════════ */
+/* Progressive enhancement: `.reveal-on-scroll` alone (no JS) has ZERO visual
+   effect -- app.js's initScrollReveals() adds `.reveal-armed` only after
+   confirming IntersectionObserver support and successful setup, so a JS
+   error or unsupported browser never leaves a section stuck invisible. The
+   hero card is deliberately never part of this system -- price must render
+   instantly, never gated behind a scroll trigger. Reduced-motion needs no
+   separate handling here: the global transition-duration kill-switch below
+   already collapses this 0.5s transition to near-zero, so content still pops
+   in (just without the fade/slide motion) rather than staying hidden. */
+.reveal-on-scroll.reveal-armed {
+  opacity: 0;
+  transform: translateY(16px);
+  transition: opacity 0.5s ease-out, transform 0.5s ease-out;
+}
+.reveal-on-scroll.reveal-armed.reveal-visible {
+  opacity: 1;
+  transform: translateY(0);
+}
 
 /* ═══════════════════════════════════════════════════════════════
    REDUCED MOTION
