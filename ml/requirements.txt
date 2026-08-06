@@ -16,7 +16,7 @@ chronos-forecasting>=2.3.0
 jsonschema>=4.26.0
 # Explicit minimum-version pins for transitive deps with published CVEs below
 # the version otherwise resolved (pip-audit finding, 2026-07-18).
-cryptography>=48.0.1
+cryptography>=49.0.0
 pillow>=12.3.0
 setuptools>=83.0.0
 soupsieve>=2.8.4
