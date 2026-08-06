@@ -1128,6 +1128,23 @@ function renderModelSignal(fc, readings, bt) {
   const hl = fc?.headline;
   const hasPI = hl && typeof hl.lower === "number" && typeof hl.upper === "number";
 
+  // Tomorrow's likely range, plain language — the actual next-trading-day conformal
+  // band (same source as methodology's "Next trading day range" — hl.lower/upper,
+  // with the same fc.lower/upper fallback for older cached shapes). Previously this
+  // number only existed inside the collapsed methodology accordion as "80% range:
+  // ₹X – ₹Y", which is exactly the kind of ML-reader framing a regular buyer has no
+  // use for; the number itself (what to expect tomorrow) is the single most
+  // actionable thing the forecast produces, so it belongs in the default view.
+  // "next trading day" (not "tomorrow") stays accurate across weekends/holidays —
+  // methodology's own heading uses the same phrase for the same reason.
+  const rangeLower = hl?.lower ?? fc?.lower;
+  const rangeUpper = hl?.upper ?? fc?.upper;
+  const hasRange = typeof rangeLower === "number" && typeof rangeUpper === "number";
+  // XSS-safe: fmtINR() wraps numbers only.
+  const tomorrowRangeHtml = hasRange
+    ? `<p class="good-price-tomorrow">Likely to stay between <strong>₹${fmtINR(rangeLower)}</strong> and <strong>₹${fmtINR(rangeUpper)}</strong> by the next trading day.</p>`
+    : "";
+
   // Volatility context — dynamic realized-vol estimate (Phi10B) with static-PI fallback.
   // Shows "has been moving about ±Rs.X lately" — magnitude only, no direction (ADR 005).
   let volatilityHtml = "";
@@ -1166,6 +1183,7 @@ function renderModelSignal(fc, readings, bt) {
   // bandPos90d.note/trendResidual.note/supportDistance90d.note are hardcoded string
   // literals or fmtINR(number) from computeGoodPriceSignals/computeBandPos90d/
   // computeTrendResidual30d/computeSupportDistance90d — no external data.
+  // tomorrowRangeHtml/volatilityHtml built above, same fmtINR(number)-only rule.
   document.getElementById("model-signal-body").innerHTML = `
     <div class="outlook-card">
       <p class="good-price-verdict good-price-verdict--${signals.verdictType}">${signals.verdictLead}</p>
@@ -1179,6 +1197,7 @@ function renderModelSignal(fc, readings, bt) {
         ${bandPos90d ? `<li class="good-price-band-90d">${bandPos90d.note}</li>` : ""}
         ${supportDistance90d ? `<li class="good-price-support-90d">${supportDistance90d.note}</li>` : ""}
       </ul>
+      ${tomorrowRangeHtml}
       ${volatilityHtml}
     </div>
   `;
@@ -2050,12 +2069,87 @@ function initPullToRefresh() {
   }, { passive: true });
 }
 
+// ─── SCROLL REVEALS (feel-alive pass) ──────────────────────────────────────────
+// Fade/slide-in as sections enter the viewport. Progressive enhancement: elements
+// only go to opacity:0 once `.reveal-armed` is added below, so a JS error or
+// missing IntersectionObserver support never leaves content stuck invisible --
+// see style.css's .reveal-on-scroll comment for the full contract. The hero card
+// is deliberately excluded: price must render instantly, never scroll-gated.
+function initScrollReveals() {
+  const targets = document.querySelectorAll(".reveal-on-scroll");
+  if (!targets.length || typeof IntersectionObserver === "undefined") return;
+
+  try {
+    targets.forEach((el) => el.classList.add("reveal-armed"));
+    const observer = new IntersectionObserver(
+      (entries) => {
+        for (const entry of entries) {
+          if (entry.isIntersecting) {
+            entry.target.classList.add("reveal-visible");
+            observer.unobserve(entry.target);
+          }
+        }
+      },
+      { rootMargin: "0px 0px -10% 0px", threshold: 0.1 },
+    );
+    targets.forEach((el) => observer.observe(el));
+  } catch {
+    // Setup failed after arming -- force visible rather than leave opacity:0 stuck.
+    targets.forEach((el) => el.classList.add("reveal-visible"));
+  }
+}
+
+// ─── DEVICE-TILT PARALLAX (optional, feel-alive pass) ──────────────────────────
+// Subtle tilt-based shift on the hero gold piece via the DeviceOrientation API.
+// Deliberately scoped to non-iOS touch devices only: Android Chrome/Firefox fire
+// 'deviceorientation' with no permission prompt, so this wires directly there.
+// iOS 13+ gates the same API behind DeviceOrientationEvent.requestPermission(),
+// which must be called from a user gesture -- there's no existing gesture-
+// triggering UI in this flow to hang that prompt off without adding dedicated
+// UI clutter for a purely decorative effect, so iOS is skipped by design rather
+// than forcing an extra permission dialog into the experience. Reduced-motion
+// and non-touch (desktop) skip this entirely. rAF-throttled: at most one style
+// write per animation frame regardless of event frequency (some devices fire
+// deviceorientation well above 60Hz).
+function initTiltParallax() {
+  if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+  if (!("ontouchstart" in window)) return;
+  if (typeof DeviceOrientationEvent === "undefined") return;
+  if (typeof DeviceOrientationEvent.requestPermission === "function") return; // iOS gesture-gated path, skipped by design
+
+  const piece = document.querySelector(".hero-gold-piece");
+  if (!piece) return;
+
+  let ticking = false;
+  let latest = null;
+  window.addEventListener(
+    "deviceorientation",
+    (e) => {
+      latest = e;
+      if (ticking) return;
+      ticking = true;
+      requestAnimationFrame(() => {
+        ticking = false;
+        if (!latest) return;
+        const beta  = latest.beta  ?? 45; // front-back tilt, -180..180; ~45 deg is a natural holding angle
+        const gamma = latest.gamma ?? 0;  // left-right tilt, -90..90
+        const dx = Math.max(-8, Math.min(8, gamma / 4));
+        const dy = Math.max(-8, Math.min(8, (beta - 45) / 6));
+        piece.style.transform = `translate(${dx}px, ${dy}px)`;
+      });
+    },
+    { passive: true },
+  );
+}
+
 // ─── INIT ─────────────────────────────────────────────────────────────────────
 
 (async function init() {
   bindRangeToggle();
   initBottomNav();
   initPullToRefresh();
+  initScrollReveals();
+  initTiltParallax();
 
   // Φ16-2: register offline/online listeners before data load so they catch mid-load state changes.
   window.addEventListener("offline", updateOfflineBanner);
