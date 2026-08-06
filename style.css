@@ -105,6 +105,27 @@
   --cmp-caution-border: rgba(212, 147, 42, 0.28);
   --cmp-caution-text:   #E8C87A;
 
+  /* System/freshness status colors — a deliberately distinct hue family from
+     --up/--down (price direction) and --cmp-good/--cmp-caution (comparison
+     sentiment). Previously freshness--ok reused var(--down) and
+     freshness--stale reused var(--up) directly, so "data is fresh" and
+     "price fell" shared a color channel, as did "not updating" and "price
+     rose" -- a red header tint could be misread as a price alarm rather
+     than a connectivity/staleness one. This is the only cool-toned family
+     on an otherwise warm palette, on purpose: reserved exclusively for
+     system/connectivity state so its meaning never overlaps with content. */
+  --status-live:          #7FADC4;  /* fresh/live data -- muted steel-blue */
+  --status-live-bg:       rgba(127, 173, 196, 0.14);
+  --status-live-border:   rgba(127, 173, 196, 0.38);
+
+  --status-carryover:        #C9A15A;  /* estimate / weekend carryover / mild staleness -- muted bronze, distinct from --gold's brighter warm tone */
+  --status-carryover-bg:     rgba(201, 161, 90, 0.14);
+  --status-carryover-border: rgba(201, 161, 90, 0.38);
+
+  --status-stale:        #E0637A;  /* not updating / offline -- rose-crimson, distinct from --up's orange-terracotta */
+  --status-stale-bg:     rgba(224, 99, 122, 0.16);
+  --status-stale-border: rgba(224, 99, 122, 0.42);
+
   /* Typography */
   --display: "Fraunces", "Cormorant Garamond", Georgia, serif;
   --heading: "Syne", system-ui, sans-serif;
@@ -157,6 +178,20 @@
     --cmp-good-text:    #173404;
     --cmp-caution-text: #412402;
 
+    /* Status family — darkened/richened for contrast on a light surface,
+       same pattern as the verdict/comparison text overrides above. */
+    --status-live:          #2E5A72;
+    --status-live-bg:       rgba(46, 90, 114, 0.10);
+    --status-live-border:   rgba(46, 90, 114, 0.30);
+
+    --status-carryover:        #7A5A1E;
+    --status-carryover-bg:     rgba(122, 90, 30, 0.10);
+    --status-carryover-border: rgba(122, 90, 30, 0.30);
+
+    --status-stale:        #A32B44;
+    --status-stale-bg:     rgba(163, 43, 68, 0.10);
+    --status-stale-border: rgba(163, 43, 68, 0.28);
+
     /* Elevation — light mode: a conventional soft shadow off a light
        surface; no top-highlight needed (nothing to catch light against). */
     --shadow-sm: 0 1px 3px rgba(26, 18, 8, 0.07);
@@ -173,6 +208,17 @@
 ═══════════════════════════════════════════════════════════════ */
 * { box-sizing: border-box; }
 html, body { margin: 0; padding: 0; }
+
+/* ─── FOCUS STATE — global, keyboard-only ────────────────────────────────────
+   No explicit focus styling existed anywhere before this -- every
+   interactive element relied on the browser's own default outline, which
+   is inconsistent across custom-appearance controls (pills, circular icon
+   buttons, cards). :focus-visible (not :focus) so this never shows on a
+   mouse/touch click, only on real keyboard navigation. */
+:focus-visible {
+  outline: 2px solid var(--gold);
+  outline-offset: 2px;
+}
 
 /* ─── TAP FEEDBACK — Ψ3C.2 (CSS-only, global) ────────────────────────────── */
 /* All buttons: transparent highlight + scale-down on press */
@@ -223,6 +269,88 @@ main {
            calc(80px + env(safe-area-inset-bottom, 0px));
 }
 
+/* ═══════════════════════════════════════════════════════════════
+   DESKTOP TWO-ZONE GRID (≥1024px)
+   Below 1024px both wrappers are `display: contents` -- they vanish from
+   the box tree entirely (children become direct flow children of `main`,
+   identical DOM order, zero selectors elsewhere reference `main >` so
+   nothing else depends on this), which is how this stays a true no-op on
+   mobile/tablet rather than an extra nested block needing its own spacing
+   reset. Grid kicks in only at the breakpoint below.
+═══════════════════════════════════════════════════════════════ */
+.layout-left, .layout-right { display: contents; }
+
+@media (min-width: 1024px) {
+  main { max-width: 1240px; }
+
+  .layout-grid {
+    display: grid;
+    grid-template-columns: minmax(320px, 400px) 1fr;
+    gap: clamp(var(--space-7), 4vw, var(--space-9));
+    /* Deliberately NOT align-items:start. Sticky positioning's constraint
+       rectangle is the STICKY ELEMENT'S OWN containing block (.layout-left,
+       its direct block-container ancestor) -- not the grid area/track. With
+       align-items:start, .layout-left's own box shrinks to hero-card's
+       content height, so the sticky constraint rectangle is only ~700px
+       tall and releases almost immediately on scroll (confirmed empirically:
+       hero-card vanished after ~1200px of scroll, nowhere near the page's
+       real length). Default align-items (stretch) makes .layout-left fill
+       the full row height (row auto-sizes to the taller right column
+       regardless), giving hero-card's sticky containing block real height
+       to move within for the whole page. hero-card itself is NOT stretched
+       by this -- position:sticky elements size to their own content
+       regardless of an ancestor's stretched height, so the visible card
+       stays hero-card-sized either way; only the invisible containing box
+       around it needs to be tall. */
+  }
+  .layout-left, .layout-right { display: block; }
+
+  /* Hero stays in view while the right column scrolls past it. Releases
+     cleanly once .layout-left's (now full-height, see above) containing
+     block ends -- i.e. once the right column's content ends -- no manual
+     height/overflow math needed, and no risk of trapping scroll since
+     nothing here sets overflow on any ancestor between this and the
+     viewport. On short viewports where the hero card's own height plus the
+     sticky offset exceeds the visible area, it simply isn't fully visible
+     while stuck (same as any sticky element) -- it never clips or scrolls
+     internally, so no content becomes unreachable, and normal page scroll
+     still applies once the containing block's height is exhausted. Verified
+     at 1024px and 1280px, including short (~700px) viewport heights, and
+     confirmed the fix by scrolling well past 1200px and seeing hero-card
+     still pinned, via live screenshots. */
+  .layout-left .hero-card {
+    position: sticky;
+    top: calc(52px + env(safe-area-inset-top, 0px) + var(--space-6));
+  }
+
+  /* .hero-price's mobile sizing is `clamp(56px, 16vw, 160px)` -- 16vw tracks
+     the viewport because on mobile the hero IS the viewport width (up to
+     main's 980px cap). In the two-zone grid the left column is a FIXED
+     minmax(320px, 400px) regardless of viewport, so the same vw-based clamp
+     hits its 160px ceiling while the column is only ~400px wide, overflowing
+     the price off the edge of its own card. Override with a column-width-
+     appropriate ceiling instead. */
+  .layout-left .hero-price {
+    font-size: clamp(60px, 7vw, 84px);
+  }
+}
+
+/* Prose line-length cap -- on mobile every card is already narrower than
+   65ch so this is a no-op there; it only matters once the right column
+   (or any single-column wide layout) gives a paragraph more width than is
+   comfortable to read. Targets the actual text-bearing elements, not their
+   containing cards, so card backgrounds/padding still span full width. */
+.commentary-text,
+.verdict-reason,
+.meth-text,
+.meth-list,
+.meth-note,
+.good-price-proof,
+.driver-headline,
+.driver-state {
+  max-width: 65ch;
+}
+
 /* Scroll offset so sections don't hide under the sticky header when anchor-scrolled */
 #section-home,
 #section-trend,
@@ -252,6 +380,7 @@ main {
   background: var(--ink);
   /* At rest: no border, no shadow — merges with page. JS adds .scrolled
      when scrollY > 0, which applies elevation (border + shadow). */
+  transition: background 0.3s ease-out, border-color 0.3s ease-out;
 }
 
 .app-header.scrolled {
@@ -259,20 +388,17 @@ main {
   box-shadow: 0 1px 8px rgba(0, 0, 0, 0.28);
 }
 
-/* Freshness alert states always show a tinted border (alert indicator). */
+/* Freshness alert states always show a tinted border (alert indicator).
+   Uses --status-* (not --up/--gold) -- see the token block's comment for
+   why freshness state needs its own hue family. The base rule's
+   transition (above) softens the swap between states. */
 .app-header:has(.freshness--stale) {
-  /* Opaque --ink base + 28% terracotta tint overlay. */
-  background:
-    linear-gradient(rgba(198, 106, 75, 0.28), rgba(198, 106, 75, 0.28)),
-    var(--ink);
-  border-bottom: 1px solid rgba(198, 106, 75, 0.60);
+  background: linear-gradient(var(--status-stale-bg), var(--status-stale-bg)), var(--ink);
+  border-bottom: 1px solid var(--status-stale-border);
 }
 .app-header:has(.freshness--warn) {
-  /* Opaque --ink base + 22% gold tint overlay. */
-  background:
-    linear-gradient(rgba(212, 147, 42, 0.22), rgba(212, 147, 42, 0.22)),
-    var(--ink);
-  border-bottom: 1px solid rgba(212, 147, 42, 0.45);
+  background: linear-gradient(var(--status-carryover-bg), var(--status-carryover-bg)), var(--ink);
+  border-bottom: 1px solid var(--status-carryover-border);
 }
 
 /* ─── APP HEADER LAYOUT ───────────────────────────────────────────────────── */
@@ -306,9 +432,10 @@ main {
   color: var(--cream-mute);
   font-variant-numeric: tabular-nums;
 }
-.freshness-pill.freshness--ok    { color: var(--down); }
-.freshness-pill.freshness--warn  { color: var(--gold); }
-.freshness-pill.freshness--stale { color: var(--up); font-weight: 700; }
+.freshness-pill { transition: color 0.3s ease-out; }
+.freshness-pill.freshness--ok    { color: var(--status-live); }
+.freshness-pill.freshness--warn  { color: var(--status-carryover); }
+.freshness-pill.freshness--stale { color: var(--status-stale); font-weight: 700; }
 
 /* ─── HERO LOCATION — relocated from header to hero area (Ψ3C.1) ─────────── */
 .hero-location {
@@ -328,8 +455,10 @@ main {
   line-height: 1;
   padding: 4px;
   cursor: pointer;
-  width: 28px;
-  height: 28px;
+  /* 44px hit area (was 28px, below the 44px touch-target minimum) -- the
+     visible glyph stays 15px, only the tappable circle grows. */
+  width: 44px;
+  height: 44px;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -423,43 +552,32 @@ main {
 .stale-banner {
   width: 100%;
   padding: 10px 20px;
-  background: rgba(180, 120, 30, 0.18);
-  border-bottom: 1px solid rgba(180, 120, 30, 0.35);
-  color: #c8922a;
+  background: var(--status-carryover-bg);
+  border-bottom: 1px solid var(--status-carryover-border);
+  color: var(--status-carryover);
   font-size: var(--ts-xs);
   font-family: var(--sans);
   text-align: center;
   letter-spacing: 0.03em;
 }
-@media (prefers-color-scheme: light) {
-  .stale-banner {
-    background: rgba(180, 120, 30, 0.10);
-    color: #9a6a10;
-  }
-}
 
 /* ═══════════════════════════════════════════════════════════════
    OFFLINE BANNER (Φ16)
-   Shown when navigator.onLine === false. Terracotta to match
-   freshness--stale register. Suppresses #stale-banner (precedence).
+   Shown when navigator.onLine === false. Same --status-stale register as
+   freshness--stale (a harder failure than mere carryover). Suppresses
+   #stale-banner (precedence).
 ═══════════════════════════════════════════════════════════════ */
 .offline-banner {
   width: 100%;
   padding: 10px 20px;
-  background: rgba(198, 106, 75, 0.18);
-  border-bottom: 1px solid rgba(198, 106, 75, 0.40);
-  color: var(--up);
+  background: var(--status-stale-bg);
+  border-bottom: 1px solid var(--status-stale-border);
+  color: var(--status-stale);
   font-size: var(--ts-xs);
   font-family: var(--sans);
   text-align: center;
   letter-spacing: 0.03em;
   font-weight: 500;
-}
-@media (prefers-color-scheme: light) {
-  .offline-banner {
-    background: rgba(198, 106, 75, 0.10);
-    color: #a04020;
-  }
 }
 
 /* ═══════════════════════════════════════════════════════════════
@@ -481,6 +599,35 @@ main {
      conditional estimate-range/last-confirmed lines), but eliminates the skeleton-
      to-content swap as a shift source, which is the actual mechanism being fixed. */
   min-height: 340px;
+}
+
+/* Hero ambient glow — replaces the removed CSS-3D coin's "signature element"
+   role with material (light + gradient) instead of an object. `::before`,
+   position:absolute + negative z-index inside .hero-card's own stacking
+   context (established by .hero-card's position:relative above), so it
+   always paints behind every hero text element regardless of viewport
+   width -- same stacking guarantee the coin used to rely on. Static (no
+   animation): the coin's failure mode was decoration for its own sake
+   spinning/floating with no tie to meaning; a soft fixed wash of light
+   reads as material warmth without competing for attention or drawing a
+   perf/CLS cost. --gold-glow already carries a light-mode override (a
+   darker, lower-alpha value tuned for a white surface), which is exactly
+   why this reads as gold in both schemes where the coin's flat sphere
+   fill did not -- confirmed via light-mode screenshot during the audit
+   pass, where the coin rendered as a plain brown ball. */
+.hero-card::before {
+  content: "";
+  position: absolute;
+  z-index: -1;
+  top: -40px;
+  right: -80px;
+  left: 20%;
+  height: clamp(260px, 42vw, 460px);
+  background: radial-gradient(closest-side, var(--gold-glow) 0%, transparent 75%);
+  pointer-events: none;
+}
+@media (max-width: 420px) {
+  .hero-card::before { opacity: 0.75; }
 }
 
 .eyebrow {
@@ -648,7 +795,10 @@ main {
 /* ═══════════════════════════════════════════════════════════════
    3. COMPARISON CARDS
 ═══════════════════════════════════════════════════════════════ */
-.comparison-section { margin-bottom: clamp(var(--space-6), 5vw, var(--space-7)); }
+/* Tight gap into karat-strip below -- both are "today's numbers" and should
+   read as one cluster; the bigger gap belongs after karat-strip, where the
+   topic actually changes to commentary. */
+.comparison-section { margin-bottom: var(--space-4); }
 
 .comparison-cards {
   display: grid;
@@ -665,6 +815,11 @@ main {
   transition: background 0.2s, border-color 0.2s, transform 100ms ease-out, box-shadow 0.2s;
 }
 .comparison-card:active { transform: scale(0.98); }
+/* `hover: hover` excludes touch devices -- otherwise :hover can stick after
+   a tap until the next tap elsewhere, reading as a stuck/broken state. */
+@media (hover: hover) {
+  .comparison-card:hover { transform: translateY(-2px); box-shadow: var(--shadow-md); border-color: var(--line-strong); }
+}
 .comparison-card[data-sentiment="good"] {
   background: var(--cmp-good-bg);
   border-color: var(--cmp-good-border);
@@ -705,7 +860,10 @@ main {
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 12px;
-  margin-bottom: clamp(var(--space-7), 7vw, var(--space-8));
+  /* Last of the "today's numbers" cluster -- larger gap here (vs. the
+     tightened comparison-section above) is the deliberate topic break
+     before commentary starts. */
+  margin-bottom: clamp(48px, 9vw, 64px);
 }
 .karat-card {
   display: flex;
@@ -716,9 +874,12 @@ main {
   border-radius: var(--radius-md);
   padding: var(--space-4) var(--space-5);
   box-shadow: var(--shadow-sm);
-  transition: transform 100ms ease-out;
+  transition: transform 100ms ease-out, box-shadow 0.2s, border-color 0.2s;
 }
 .karat-card:active { transform: scale(0.98); }
+@media (hover: hover) {
+  .karat-card:hover { transform: translateY(-2px); box-shadow: var(--shadow-md); border-color: var(--line-strong); }
+}
 .karat-label {
   font-size: var(--ts-xs);
   letter-spacing: 0.18em;
@@ -772,7 +933,7 @@ main {
   letter-spacing: 0.04em;
   margin: 0;
 }
-.commentary-meta--stale { color: var(--up); }
+.commentary-meta--stale { color: var(--status-carryover); }
 
 /* ═══════════════════════════════════════════════════════════════
    6. TREND CHART
@@ -806,7 +967,10 @@ main {
   font-family: var(--sans); font-size: var(--ts-sm); font-weight: 500;
   padding: 6px 14px; border-radius: 999px;
   transition: color 0.2s, transform 100ms ease-out;
-  min-height: 36px;
+  /* 44px touch target at every width, not just ≤640px -- touchscreen
+     laptops/tablets exist above that breakpoint too. */
+  min-height: 44px;
+  min-width: 44px;
 }
 .range-toggle button:hover { color: var(--cream); }
 /* Active: text turns dark (readable on gold pill); background handled by ::after */
@@ -899,17 +1063,22 @@ main {
 .delta-flat { color: var(--cream-mute); opacity: 0.45; }
 .empty { text-align: center; color: var(--cream-mute); padding: 30px !important; }
 
-/* Show-all button */
+/* Show-all button -- visibility driven purely by the [hidden] attribute
+   (app.js toggles it) so it works at every viewport, not just the mobile
+   card-list breakpoint. Previously force-hidden here outside ≤640px, which
+   is why the desktop table never truncated at all. */
 .history-show-all {
-  display: none;  /* shown by JS & media query */
   width: 100%;
+  min-height: 44px;
   padding: var(--space-3) 0;
   margin-top: var(--space-3);
   background: none; border: none;
   font-family: var(--sans); font-size: var(--ts-sm);
   color: var(--gold); cursor: pointer; text-align: center;
+  transition: color 0.15s ease-out, transform 100ms ease-out;
 }
-.history-show-all:hover { color: var(--cream); }
+.history-show-all:hover  { color: var(--cream); }
+.history-show-all:active { transform: scale(0.98); }
 
 /* ═══════════════════════════════════════════════════════════════
    8. METHODOLOGY ACCORDION
@@ -1129,7 +1298,6 @@ main {
     list-style: none;
     margin: 0; padding: 0;
   }
-  .history-show-all { display: block; }
 
   .hdate-divider {
     font-family: var(--heading);
@@ -1196,7 +1364,7 @@ main {
 
   /* Chart */
   .chart-wrap { aspect-ratio: 3 / 2; padding: var(--space-2) var(--space-4); }
-  .range-toggle button { padding: 10px 16px; min-height: 44px; min-width: 44px; }
+  .range-toggle button { padding: 10px 16px; }
 
   /* Karat strip stays 2-col — no change needed */
 
@@ -1482,11 +1650,12 @@ html.ptr-pulling {
   margin: 0;
   display: flex;
   flex-direction: column;
-  gap: 3px;
+  gap: 6px;
 }
 .good-price-supporting li {
   font-size: 14px;
   color: var(--cream-mute);
+  max-width: 65ch;
 }
 .good-price-divergence { font-style: italic; font-size: 12px; }
 .good-price-proof {

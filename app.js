@@ -1379,6 +1379,31 @@ const CALLOUT_PLUGIN = {
   },
 };
 
+// Chart.js colors read from CSS custom properties (not hardcoded hex) so both
+// charts adapt to light/dark automatically instead of being permanently
+// dark-tuned -- gridColor/axisColor previously stayed the same hex in light
+// mode, where they were tuned for contrast against --ink, not --surface's
+// light-mode white. Tooltip backgrounds intentionally stay a fixed dark
+// literal below (not tokenized) -- a dark floating overlay reads fine
+// against either page theme, same convention Chart.js tooltips use by
+// default, so there's no legibility gap there to fix.
+function getChartColors() {
+  const s = getComputedStyle(document.documentElement);
+  const get = (name, fallback) => (s.getPropertyValue(name) || fallback).trim();
+  return {
+    gold: get("--gold", "#E09B2E"),
+    axis: get("--cream-mute", "#9A9282"),
+    grid: get("--line", "#3A3028"),
+  };
+}
+
+function hexToRgba(hex, alpha) {
+  const h    = hex.replace("#", "");
+  const full = h.length === 3 ? h.split("").map((c) => c + c).join("") : h;
+  const n    = parseInt(full, 16);
+  return `rgba(${(n >> 16) & 255}, ${(n >> 8) & 255}, ${n & 255}, ${alpha})`;
+}
+
 function renderChart(readings, range) {
   chartPinnedIndex = null;
 
@@ -1394,10 +1419,12 @@ function renderChart(readings, range) {
   const chartPts = dedupeByISTDay(filtered);
   const labels   = chartPts.map(r => fmtDateShort(r.timestamp));
   const data22   = chartPts.map(r => r["22k"]);
+  const lastIdx  = data22.length - 1;
 
-  const goldLine  = "#E09B2E";
-  const axisColor = "#9a9282";
-  const gridColor = "#3A3028";
+  const colors    = getChartColors();
+  const goldLine  = colors.gold;
+  const axisColor = colors.axis;
+  const gridColor = colors.grid;
   const ctx       = document.getElementById("chart");
 
   if (chart) chart.destroy();
@@ -1410,10 +1437,23 @@ function renderChart(readings, range) {
         label: "22K (₹/g)",
         data: data22,
         borderColor: goldLine,
-        backgroundColor: "transparent",
-        fill: false,
+        // Gradient fill under the line (gold fading to transparent) instead
+        // of a flat/no fill -- Chart.js calls this per-render since chartArea
+        // isn't known until the canvas has a layout pass.
+        backgroundColor: (context) => {
+          const { ctx: c, chartArea } = context.chart;
+          if (!chartArea) return "transparent";
+          const gradient = c.createLinearGradient(0, chartArea.top, 0, chartArea.bottom);
+          gradient.addColorStop(0, hexToRgba(goldLine, 0.22));
+          gradient.addColorStop(1, hexToRgba(goldLine, 0));
+          return gradient;
+        },
+        fill: true,
         borderWidth: 1.5,
-        pointRadius: 0,
+        // Only the latest point gets a visible marker -- a "you are here"
+        // emphasis, not a dot on every day (which would look busy on a
+        // 30-90 point line).
+        pointRadius: data22.map((_, i) => (i === lastIdx ? 4 : 0)),
         pointHoverRadius: 4,
         pointBackgroundColor: goldLine,
         pointBorderWidth: 0,
@@ -1437,8 +1477,11 @@ function renderChart(readings, range) {
       plugins: {
         legend: { display: false },
         tooltip: {
+          // Fixed dark literal, not gridColor -- the tooltip bg below is also
+          // a fixed dark literal by design (see getChartColors' comment), so
+          // its border shouldn't flip to a light-mode token and mismatch it.
           backgroundColor: "#241E16",
-          borderColor: gridColor,
+          borderColor: "#3A3028",
           borderWidth: 1,
           titleColor: axisColor,
           bodyColor: "#F5EDE0",
@@ -1456,8 +1499,10 @@ function renderChart(readings, range) {
           border: { color: gridColor },
         },
         y: {
+          // Quiet gridlines -- half the token's own opacity so they read as
+          // a faint reference, not a ruled grid competing with the line.
           ticks:  { color: axisColor, font: { family: "DM Sans", size: 11 }, callback: (v) => "₹" + fmtINR(v) },
-          grid:   { color: gridColor },
+          grid:   { color: hexToRgba(gridColor, 0.5) },
           border: { display: false },
         },
       },
@@ -1487,48 +1532,48 @@ function renderHistory(readings) {
   const allGroups = dedupReadings([...readings].reverse());
   const groups    = allGroups.slice(0, 50);
 
+  // Shared truncation point for BOTH the desktop table and the mobile card
+  // list -- one "Show N more" button drives both in lockstep (CSS decides
+  // which is actually visible per viewport, see .history-table/.history-cards).
+  // Previously only the card list truncated; the table rendered up to 50 rows
+  // unconditionally, which is what made desktop History run ~8800px tall.
+  const VISIBLE_GROUPS = 15;
+
   // ── Desktop table ────────────────────────────────────────────────────────────
   // XSS-safe: all interpolated values are numbers or date strings from prices.json.
-  tbody.innerHTML = groups.map((g, i) => {
-    const nextGroup = groups[i + 1];
-    let deltaCell = `<span class="delta-flat">—</span>`;
-    if (nextGroup) {
-      const d = g.reading["22k"] - nextGroup.reading["22k"];
-      if (d > 0)      deltaCell = `<span class="delta-up">↑ ₹${fmtINR(d)}</span>`;
-      else if (d < 0) deltaCell = `<span class="delta-down">↓ ₹${fmtINR(Math.abs(d))}</span>`;
-      else            deltaCell = `<span class="delta-flat">·</span>`;
-    }
-    // g.reading.timestamp = NEWEST reading in run; g.endTimestamp = OLDEST (first occurrence).
-    let whenCell;
-    if (g.count === 1) {
-      whenCell = fmtDateShort(g.reading.timestamp);
-    } else if (i === 0) {
-      whenCell = `Since ${fmtDateShort(g.endTimestamp)}`;
-    } else {
-      whenCell = `${fmtDateShort(g.endTimestamp)} – ${fmtDateShort(g.reading.timestamp)}`;
-    }
-    return `<tr>
-      <td>${whenCell}</td>
-      <td class="num">${rupee(g.reading["22k"])}</td>
-      <td class="num">${rupee(g.reading["24k"])}</td>
-      <td class="num">${rupee(g.reading["18k"])}</td>
-      <td class="num">${deltaCell}</td>
-    </tr>`;
-  }).join("");
-
-  // ── Mobile card list (dedup-grouped) ─────────────────────────────────────────
-  function formatISTTime(iso) {
-    return new Intl.DateTimeFormat("en-IN", {
-      timeZone: "Asia/Kolkata", hour: "numeric", minute: "2-digit", hour12: true,
-    }).format(new Date(iso)).toLowerCase();
+  function buildTableHtml(count) {
+    return groups.slice(0, count).map((g, i) => {
+      const nextGroup = groups[i + 1];
+      let deltaCell = `<span class="delta-flat">—</span>`;
+      if (nextGroup) {
+        const d = g.reading["22k"] - nextGroup.reading["22k"];
+        if (d > 0)      deltaCell = `<span class="delta-up">↑ ₹${fmtINR(d)}</span>`;
+        else if (d < 0) deltaCell = `<span class="delta-down">↓ ₹${fmtINR(Math.abs(d))}</span>`;
+        else            deltaCell = `<span class="delta-flat">·</span>`;
+      }
+      // g.reading.timestamp = NEWEST reading in run; g.endTimestamp = OLDEST (first occurrence).
+      let whenCell;
+      if (g.count === 1) {
+        whenCell = fmtDateShort(g.reading.timestamp);
+      } else if (i === 0) {
+        whenCell = `Since ${fmtDateShort(g.endTimestamp)}`;
+      } else {
+        whenCell = `${fmtDateShort(g.endTimestamp)} – ${fmtDateShort(g.reading.timestamp)}`;
+      }
+      return `<tr>
+        <td>${whenCell}</td>
+        <td class="num">${rupee(g.reading["22k"])}</td>
+        <td class="num">${rupee(g.reading["24k"])}</td>
+        <td class="num">${rupee(g.reading["18k"])}</td>
+        <td class="num">${deltaCell}</td>
+      </tr>`;
+    }).join("");
   }
 
-  const VISIBLE_GROUPS = 8;
-
-  function buildCardsHtml(start, count) {
+  // ── Mobile card list (dedup-grouped) ─────────────────────────────────────────
+  function buildCardsHtml(count) {
     // XSS-safe: all interpolated values are numbers or date strings from prices.json.
-    return groups.slice(start, start + count).map((g, relIdx) => {
-      const absIdx    = start + relIdx;
+    return groups.slice(0, count).map((g, absIdx) => {
       const nextGroup = groups[absIdx + 1];
       let deltaHtml   = "";
       if (nextGroup) {
@@ -1552,7 +1597,8 @@ function renderHistory(readings) {
     }).join("");
   }
 
-  cardList.innerHTML = buildCardsHtml(0, VISIBLE_GROUPS);
+  tbody.innerHTML    = buildTableHtml(VISIBLE_GROUPS);
+  cardList.innerHTML = buildCardsHtml(VISIBLE_GROUPS);
 
   const hiddenCount = Math.max(0, groups.length - VISIBLE_GROUPS);
   if (showBtn) {
@@ -1563,7 +1609,9 @@ function renderHistory(readings) {
       let isExpanded = false;
       showBtn.onclick = () => {
         isExpanded = !isExpanded;
-        cardList.innerHTML = buildCardsHtml(0, isExpanded ? groups.length : VISIBLE_GROUPS);
+        const count = isExpanded ? groups.length : VISIBLE_GROUPS;
+        tbody.innerHTML    = buildTableHtml(count);
+        cardList.innerHTML = buildCardsHtml(count);
         showBtn.textContent = isExpanded ? "Show less" : moreLabel;
       };
     } else {
@@ -1587,9 +1635,10 @@ function renderForecastVsActual(bt) {
   const actuals = folds.map(f => typeof f.actuals[0] === "number" ? f.actuals[0] : null);
   const naives  = folds.map(f => typeof f.naive[0]   === "number" ? f.naive[0]   : null);
 
-  const goldLine  = "#E09B2E";
-  const axisColor = "#9a9282";
-  const gridColor = "#3A3028";
+  const colors    = getChartColors();
+  const goldLine  = colors.gold;
+  const axisColor = colors.axis;
+  const gridColor = colors.grid;
   const ctx       = document.getElementById("track-record-chart");
   if (!ctx) { section.hidden = true; return; }
 
@@ -1637,7 +1686,7 @@ function renderForecastVsActual(bt) {
         },
         tooltip: {
           backgroundColor: "#241E16",
-          borderColor: gridColor,
+          borderColor: "#3A3028",
           borderWidth: 1,
           titleColor: axisColor,
           bodyColor: "#F5EDE0",
@@ -1655,7 +1704,7 @@ function renderForecastVsActual(bt) {
         },
         y: {
           ticks:  { color: axisColor, font: { family: "DM Sans", size: 11 }, callback: v => "₹" + fmtINR(v) },
-          grid:   { color: gridColor },
+          grid:   { color: hexToRgba(gridColor, 0.5) },
           border: { display: false },
         },
       },

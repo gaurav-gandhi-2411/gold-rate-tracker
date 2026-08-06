@@ -97,6 +97,13 @@
     <div class="offline-banner" id="offline-banner" hidden role="status" aria-live="polite"></div>
 
     <main>
+      <!-- Desktop (≥1024px): two-zone grid — hero stays sticky in the left
+           column while everything else scrolls in the right column. Below
+           1024px both wrapper divs are `display:contents` (see style.css),
+           so they impose zero layout/DOM-order change on mobile/tablet --
+           children render exactly as if these divs weren't here. -->
+      <div class="layout-grid">
+      <div class="layout-left">
       <!-- 2. HERO CARD -->
       <section class="hero-card" id="section-home" aria-label="Current 22K gold price and buying verdict">
 
@@ -142,7 +149,9 @@
           <span class="sparkline-label-right" id="sparkline-range"></span>
         </div>
       </section>
+      </div>
 
+      <div class="layout-right">
       <!-- 3. COMPARISON CARDS -->
       <section class="comparison-section reveal-on-scroll" id="comparison-section" hidden
                aria-label="How today's price compares to recent averages">
@@ -298,6 +307,8 @@
           </div>
         </div>
       </details>
+      </div>
+      </div><!-- /.layout-grid -->
 
       <!-- 9. FOOTER -->
       <footer class="site-footer">
