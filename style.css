@@ -1,4 +1,52 @@
 /* ═══════════════════════════════════════════════════════════════
+   FONTS — self-hosted, font-display: optional
+═══════════════════════════════════════════════════════════════ */
+/* CLS root cause (confirmed via chrome-devtools' CLSCulprits trace insight,
+   2026-08-06): these three fonts were loaded from Google Fonts with
+   font-display: swap -- text paints immediately in the fallback font, then
+   swaps to the real one once it arrives, and that swap IS the layout shift
+   (Fraunces/DM Sans have different glyph metrics than their fallbacks). This
+   was independent of any other change: confirmed by reproducing on
+   unmodified master (0.25-0.54 CLS locally under the same methodology).
+   `swap` and `optional` are not two points on the same "how long do we wait"
+   dial -- swap GUARANTEES the shift eventually happens (just later); optional
+   is the only display mode that removes the shift as a possibility at all,
+   because the browser commits to whichever font (real or fallback) is
+   available within its ~100ms period and never swaps again for that page
+   load, cached or not. `font-display: swap` remains on Google's URL in case
+   a future edit reintroduces it there; self-hosting the three files below
+   means this @font-face block is the one actually used, not Google's.
+   These are the EXACT SAME bytes Google's CDN was serving for this site's
+   CSS request (verified via fontTools against the fetched Google Fonts CSS
+   before downloading) -- self-hosting is a zero-visual-diff origin change,
+   not a different font. Weight ranges below match each file's real fvar
+   axis (verified with fontTools, not assumed from the Google Fonts URL).
+   Cached via service-worker.js's SHELL_FILES like the rest of the shell, so
+   repeat visits (the primary usage pattern for an installed, habitually-
+   checked PWA) never hit the network for these at all. */
+@font-face {
+  font-family: "Fraunces";
+  src: url("fonts/fraunces-variable-latin.woff2") format("woff2");
+  font-weight: 100 900;
+  font-style: normal;
+  font-display: optional;
+}
+@font-face {
+  font-family: "DM Sans";
+  src: url("fonts/dmsans-variable-latin.woff2") format("woff2");
+  font-weight: 100 1000;
+  font-style: normal;
+  font-display: optional;
+}
+@font-face {
+  font-family: "Syne";
+  src: url("fonts/syne-variable-latin.woff2") format("woff2");
+  font-weight: 400 800;
+  font-style: normal;
+  font-display: optional;
+}
+
+/* ═══════════════════════════════════════════════════════════════
    TOKENS
 ═══════════════════════════════════════════════════════════════ */
 :root {
