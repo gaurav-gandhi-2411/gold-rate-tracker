@@ -1,5 +1,5 @@
 {
-  "predicted_at": "2026-08-05T11:43:47.681112+00:00",
+  "predicted_at": "2026-08-06T05:44:47.302321+00:00",
   "target_window": "5d",
   "headline": {
     "method": "naive_flat_hold",
@@ -13,7 +13,7 @@
       "half_width_raw": 336.3,
       "method": "degraded_static",
       "window_days": 20,
-      "contiguous_days": 5,
+      "contiguous_days": 6,
       "is_floored": false,
       "is_degraded": true,
       "floor_fraction": 0.5,
@@ -25,29 +25,29 @@
   "chronos_companion": {
     "status": "success",
     "lean_direction": "up",
-    "lean_strength_pct": 1.351,
+    "lean_strength_pct": 2.07,
     "direction_acc_30f": 0.367,
     "direction_prob_basis": "base_rate_fallback",
     "horizon_p10": [
-      12959.83,
-      12882.57,
-      12813.59,
-      12753.21,
-      12715.61
+      13332.92,
+      13246.65,
+      13184.08,
+      13143.98,
+      13114.7
     ],
     "horizon_p50": [
-      13373.14,
-      13399.78,
-      13421.08,
-      13430.53,
-      13467.51
+      13755.5,
+      13753.52,
+      13777.37,
+      13808.55,
+      13849.48
     ],
     "horizon_p90": [
-      13835.43,
-      13969.26,
-      14073.35,
-      14127.59,
-      14222.61
+      14208.99,
+      14304.04,
+      14409.64,
+      14490.58,
+      14585.79
     ],
     "model_version": "amazon/chronos-bolt-tiny@a0e552de",
     "calibration_applied": true,
@@ -56,7 +56,7 @@
     "direction_consensus": 1.0
   },
   "driver_context": {
-    "computed_at": "2026-08-05T11:43:47.685127+00:00",
+    "computed_at": "2026-08-06T05:44:47.306211+00:00",
     "macro_staleness_days": 0.0,
     "macro_fresh": true,
     "premium_threshold_pct": 15.0,
@@ -65,45 +65,45 @@
         "n_obs": 6,
         "t0_date": "2026-07-29",
         "t1_date": "2026-08-05",
-        "delta_pct_ibja": 2.331,
-        "delta_pct_gold_usd": 4.968,
-        "delta_pct_usdinr": -0.502,
-        "delta_pct_premium": -2.135,
+        "delta_pct_ibja": 2.364,
+        "delta_pct_gold_usd": 5.1,
+        "delta_pct_usdinr": -0.526,
+        "delta_pct_premium": -2.21,
         "total_move_rs_per_g": 230.0,
-        "gold_usd_contrib_rs_per_g": 490.2,
-        "usdinr_contrib_rs_per_g": -49.5,
-        "premium_contrib_rs_per_g": -210.7,
-        "premium_share_pct": 91.6,
+        "gold_usd_contrib_rs_per_g": 496.2,
+        "usdinr_contrib_rs_per_g": -51.2,
+        "premium_contrib_rs_per_g": -215.1,
+        "premium_share_pct": 93.5,
         "attribution_valid": false,
-        "attribution_valid_reason": "premium share 91.6% exceeds 15% threshold"
+        "attribution_valid_reason": "premium share 93.5% exceeds 15% threshold"
       },
       "30d": {
         "n_obs": 23,
         "t0_date": "2026-07-06",
         "t1_date": "2026-08-05",
-        "delta_pct_ibja": -0.004,
-        "delta_pct_gold_usd": 2.027,
-        "delta_pct_usdinr": -0.1,
-        "delta_pct_premium": -1.932,
-        "total_move_rs_per_g": 20.0,
-        "gold_usd_contrib_rs_per_g": -10814.3,
-        "usdinr_contrib_rs_per_g": 531.3,
-        "premium_contrib_rs_per_g": 10302.9,
-        "premium_share_pct": 51514.7,
+        "delta_pct_ibja": 0.029,
+        "delta_pct_gold_usd": 2.159,
+        "delta_pct_usdinr": -0.124,
+        "delta_pct_premium": -2.007,
+        "total_move_rs_per_g": 145.0,
+        "gold_usd_contrib_rs_per_g": 10707.8,
+        "usdinr_contrib_rs_per_g": -612.8,
+        "premium_contrib_rs_per_g": -9950.0,
+        "premium_share_pct": 6862.0,
         "attribution_valid": false,
-        "attribution_valid_reason": "premium share 51514.7% exceeds 15% threshold"
+        "attribution_valid_reason": "premium share 6862.0% exceeds 15% threshold"
       }
     },
     "driver_state": {
-      "usd_inr_now": 95.12,
-      "gold_usd_now": 4240.2,
-      "usd_inr_30d_pct_change": -0.1,
-      "gold_usd_30d_pct_change": 2.05
+      "usd_inr_now": 95.097,
+      "gold_usd_now": 4245.8,
+      "usd_inr_30d_pct_change": -0.12,
+      "gold_usd_30d_pct_change": 2.18
     }
   },
-  "real_readings_count": 487,
+  "real_readings_count": 491,
   "current_22k": 13505,
-  "scraped_at": "2026-08-05T11:17:57.092Z",
+  "scraped_at": "2026-08-06T04:23:00.449Z",
   "price_source": "tanishq_scrape",
   "est_low": null,
   "est_high": null,
@@ -113,7 +113,7 @@
   "predicted_22k": 13505,
   "lower": 13294,
   "upper": 13716,
-  "target_time": "2026-08-06T00:00:00+00:00",
+  "target_time": "2026-08-07T00:00:00+00:00",
   "model_status": "naive_headline",
   "model_version": "naive_flat_hold",
   "warmup": false

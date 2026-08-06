@@ -65,10 +65,27 @@ jobs:
         # Hardening tests (above) cover all mock-testable failure modes on every PR.
         if: github.event_name != 'pull_request'
         working-directory: scraper
-        # Run scrape.js but discard the output — we only care about the exit code.
-        # scrape.js validates: selector exists, prices in range, 22/24 & 18/24 ratios.
-        # A non-zero exit means the DOM changed or the page is broken.
-        run: node scrape.js > /dev/null
+        # scrape.js exit codes distinguish an IP-level Cloudflare block (2) — the
+        # documented expected steady state per ADR 025, see docs/RUNBOOK.md's
+        # "Scraper DOM canary issues" note — from a genuine DOM/selector break (1).
+        # A CF block is recorded as a step output but does NOT fail the step, so
+        # it never reaches the alert step below; only a real break does. Without
+        # this split, every canary run this repo has ever seen fail was actually
+        # a runner-IP CF block (see #577), and the alert/issue text below always
+        # claimed "the DOM may have changed" regardless — a control crying wolf
+        # on its most common failure mode.
+        run: |
+          set +e
+          node scrape.js > /dev/null 2> /tmp/canary_stderr.log
+          code=$?
+          set -e
+          cat /tmp/canary_stderr.log
+          if [ "$code" -eq 2 ]; then
+            echo "::warning::Scraper canary blocked by Cloudflare (expected steady-state per ADR 025) — not a DOM change. Not alerting."
+            echo "cf_block=true" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          exit "$code"
 
       - name: Alert on canary failure
         if: failure() && steps.canary.outcome == 'failure'
@@ -85,14 +102,17 @@ jobs:
             -H "Title: Gold Tracker: Scraper DOM broken" \
             -H "Priority: urgent" \
             -H "Tags: rotating_light" \
-            -d "Tanishq DOM canary failed. The selector or page structure may have changed. Check: ${RUN_URL}" \
+            -d "Tanishq DOM canary failed with a non-Cloudflare error -- the selector or page structure likely changed. Check: ${RUN_URL}" \
             "https://ntfy.sh/${NTFY_TOPIC}" || true
 
           # Open a GitHub issue so it doesn't get lost
           gh issue create \
             --repo "${REPO}" \
             --title "Scraper DOM canary failed $(date -u +%Y-%m-%d)" \
-            --body "The weekly scraper DOM canary failed. The Tanishq page selector or page structure may have changed.
+            --body "The weekly scraper DOM canary failed with a non-Cloudflare error. Cloudflare-block
+          failures are filtered out before this alert fires (see scraper-canary.yml's canary step and
+          scrape.js's isCFBlock exit-code split) -- this means the Tanishq page selector or structure
+          most likely actually changed.
 
           **Run:** ${RUN_URL}
 
