@@ -44,14 +44,6 @@
     <!-- 1. APP HEADER — sticky top -->
     <div class="app-header" id="utility-row" aria-live="polite">
       <div class="app-header-left">
-        <!-- Pure-CSS 3D accent, not WebGL -- see style.css's .coin-accent comment
-             for why. Purely decorative, never over the price. -->
-        <span class="coin-accent" aria-hidden="true">
-          <span class="coin-inner">
-            <span class="coin-face coin-face--front"></span>
-            <span class="coin-face coin-face--back"></span>
-          </span>
-        </span>
         <span class="app-title">Gold · Bengaluru</span>
       </div>
       <div class="app-header-right">
@@ -86,6 +78,21 @@
     <main>
       <!-- 2. HERO CARD -->
       <section class="hero-card" id="section-home" aria-label="Current 22K gold price and buying verdict">
+
+        <!-- Hero gold piece — pure CSS 3D (preserve-3d + rotateY), not WebGL. Purely
+             decorative (aria-hidden), position:absolute + negative z-index within
+             .hero-card's stacking context, so it always paints BEHIND every hero text
+             element regardless of viewport width -- see style.css's comment for the
+             stacking-order reasoning. Rendered immediately (not gated behind price
+             data loading) since it doesn't depend on any fetch. -->
+        <div class="hero-gold-ambient" aria-hidden="true"></div>
+        <div class="hero-gold-piece" aria-hidden="true">
+          <div class="hero-gold-piece-inner">
+            <div class="hero-gold-face hero-gold-face--front"></div>
+            <div class="hero-gold-face hero-gold-face--back"></div>
+            <div class="hero-gold-specular"></div>
+          </div>
+        </div>
 
         <!-- Skeleton shown while loading -->
         <div class="hero-skeleton" id="hero-skeleton" aria-hidden="true">
@@ -131,7 +138,7 @@
       </section>
 
       <!-- 3. COMPARISON CARDS -->
-      <section class="comparison-section" id="comparison-section" hidden
+      <section class="comparison-section reveal-on-scroll" id="comparison-section" hidden
                aria-label="How today's price compares to recent averages">
         <div class="comparison-cards">
           <div class="comparison-card" id="cmp-7d">
@@ -153,7 +160,7 @@
       </section>
 
       <!-- 4. OTHER KARATS — compact strip -->
-      <section class="karat-strip" aria-label="24K and 18K gold prices">
+      <section class="karat-strip reveal-on-scroll" aria-label="24K and 18K gold prices">
         <div class="karat-card">
           <span class="karat-label">24 KT</span>
           <span class="karat-price" id="rate-24">—</span>
@@ -167,7 +174,7 @@
       </section>
 
       <!-- 5. COMMENTARY CARD — always visible -->
-      <section class="commentary-section" aria-label="Market commentary">
+      <section class="commentary-section reveal-on-scroll" aria-label="Market commentary">
         <div class="commentary-card">
           <p class="commentary-eyebrow">
             <span aria-hidden="true">✨</span> Today's read
@@ -184,7 +191,7 @@
       </section>
 
       <!-- 5b. PRICE CONTEXT — "Is today a good price?" verdict + volatility context -->
-      <section class="model-signal-section" id="model-signal-section" hidden
+      <section class="model-signal-section reveal-on-scroll" id="model-signal-section" hidden
                aria-label="How today's price compares to recent history">
         <h2>How does today's price compare?</h2>
         <!-- Φ8C'/Ψ3C.3: skeleton shown while signal loads -->
@@ -197,14 +204,14 @@
 
       <!-- 5c. DRIVER CONTEXT — What is moving gold prices this week/month (Φ14-2)
            Descriptive only: attributes past observed moves, never implies a future direction. -->
-      <section class="driver-context-section" id="driver-context-section" hidden
+      <section class="driver-context-section reveal-on-scroll" id="driver-context-section" hidden
                aria-label="What is driving gold prices">
         <h2>What's moving the price?</h2>
         <div class="driver-context-body" id="driver-context-body"></div>
       </section>
 
       <!-- 6. FULL TREND CHART -->
-      <section class="chart-section" id="section-trend" aria-label="Price trend chart">
+      <section class="chart-section reveal-on-scroll" id="section-trend" aria-label="Price trend chart">
         <div class="chart-header">
           <h2>Price trend</h2>
           <div class="range-toggle" role="tablist" aria-label="Chart time range">
@@ -220,7 +227,7 @@
       </section>
 
       <!-- 7. HISTORY -->
-      <section class="history-section" id="section-history" aria-label="Price history">
+      <section class="history-section reveal-on-scroll" id="section-history" aria-label="Price history">
         <h2>History</h2>
         <p class="section-karat-note">22K · per gram</p>
         <div class="history-wrap" id="history-wrap">
@@ -255,7 +262,7 @@
       </section>
 
       <!-- 7b. PAST ESTIMATE TRACK RECORD — past estimates vs actual prices -->
-      <section class="track-record-section" id="section-track-record" hidden
+      <section class="track-record-section reveal-on-scroll" id="section-track-record" hidden
                aria-label="Past estimate accuracy — flat-hold vs actual prices">
         <h2>How past estimates have held up</h2>
         <p class="track-record-caption">30 recent five-day windows: flat-hold estimate (dashed) vs what actually happened (gold)</p>
@@ -266,7 +273,7 @@
       </section>
 
       <!-- 8. METHODOLOGY ACCORDION -->
-      <details class="methodology" id="section-info">
+      <details class="methodology reveal-on-scroll" id="section-info">
         <summary class="methodology-summary">
           How this works · how good is this? · historical checks
         </summary>

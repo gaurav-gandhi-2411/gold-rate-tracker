@@ -3,8 +3,21 @@ name: Lint
 on:
   push:
     branches: [main, master]
+  # No `branches:` filter here (deliberately, unlike push above): a PR targeting any base
+  # branch -- not just main/master -- must still get lint+pwa-js+dependency-audit+
+  # sw-version-guard. Scoping this to [main, master] left both stacked PRs (base = a feature
+  # branch, e.g. Waves-2/3 stacking pattern) and any long-stale PR whose base branch history
+  # drifted with ZERO CI coverage -- required-checks-never-ran, not required-checks-failed,
+  # which is a strictly worse failure mode: branch protection blocks the merge with an opaque
+  # "2 of 2 required status checks are expected" and no actionable signal pointing at this
+  # filter as the cause. Confirmed 2026-08-06: 10 PRs (#293-300, #459, #633) were stuck on
+  # exactly this, unrelated to whether the PR was human- or Dependabot-authored -- both fire
+  # `pull_request` normally once a synchronize event occurs, but master-targeting PRs that
+  # simply sat too long without one never got a fresh check run against their current head
+  # SHA. This trigger widening does not fix stale SHAs by itself (an update-branch/synchronize
+  # is still needed once) but ensures no FUTURE PR, regardless of base branch, can end up
+  # silently uncovered again.
   pull_request:
-    branches: [main, master]
   # Daily backstop: GitHub Actions [skip ci] only suppresses push/pull_request events.
   # If a squash-merge commit carries [skip ci] in its body (e.g., a docs commit from
   # a PR branch), the push-triggered run is skipped. The schedule trigger runs regardless
