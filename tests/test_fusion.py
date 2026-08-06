@@ -189,15 +189,18 @@ def test_city_markup_equal_national_is_one():
 # ---------------------------------------------------------------------------
 
 
-def test_fuse_city_price_with_local_source_is_city_specific():
+def test_fuse_city_price_with_local_source_is_kalyan_anchored():
+    """A same-cycle Kalyan reading yields coverage="kalyan_anchored", NOT "city_specific" --
+    43/43 accumulated shadow cycles show zero city-to-city variation (ADR 026 update), so
+    the label must never claim location-specific pricing."""
     national = fuse_national_benchmark([reading("ibja", 13000), reading("grt", 13050)])
     city_reading = reading("kalyan", 13135, city="Bangalore")
     result = fuse_city_price(city_reading, national, city="Bangalore")
-    assert result.coverage == "city_specific"
+    assert result.coverage == "kalyan_anchored"
     assert result.markup is not None
     # value == national.value * markup == city_reading.rate_22k algebraically (v1, no smoothing).
     assert result.value == pytest.approx(city_reading.rate_22k)
-    assert "Kalyan" not in result.attribution or "kalyan" in city_reading.attribution.lower()
+    assert "National retail consensus" in result.attribution
     assert result.band_half_width == national.band_half_width
 
 
@@ -208,7 +211,7 @@ def test_fuse_city_price_without_local_source_is_national_derived():
     assert result.markup is None
     assert result.value == national.value
     assert "Pune" in result.attribution
-    assert "no city-specific source" in result.attribution
+    assert "National retail consensus" in result.attribution
 
 
 def test_fuse_city_price_national_derived_band_is_wider_than_national():

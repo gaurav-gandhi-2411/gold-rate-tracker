@@ -59,6 +59,15 @@
       <button class="pwa-help-close" id="pwa-help-close" aria-label="Dismiss">✕</button>
     </div>
 
+    <!-- iOS has no native install prompt (no beforeinstallprompt) and no way for us
+         to detect "already dismissed the native prompt" the way Chrome/Android does,
+         so this is JS-shown only to iOS Safari visitors not already running
+         standalone, and self-manages its own persistent dismissal via localStorage. -->
+    <div class="install-prompt-panel" id="install-prompt-panel" hidden role="note" aria-live="polite">
+      <p>Add this to your Home Screen for quicker access: tap <strong>Share</strong>, then <strong>Add to Home Screen</strong>.</p>
+      <button class="install-prompt-close" id="install-prompt-close" aria-label="Dismiss">✕</button>
+    </div>
+
     <!-- Forecast staleness banner — hidden by default, shown by app.js when forecast is >18h old -->
     <div class="stale-banner" id="stale-banner" hidden role="alert" aria-live="polite"></div>
 
@@ -69,6 +78,21 @@
     <main>
       <!-- 2. HERO CARD -->
       <section class="hero-card" id="section-home" aria-label="Current 22K gold price and buying verdict">
+
+        <!-- Hero gold piece — pure CSS 3D (preserve-3d + rotateY), not WebGL. Purely
+             decorative (aria-hidden), position:absolute + negative z-index within
+             .hero-card's stacking context, so it always paints BEHIND every hero text
+             element regardless of viewport width -- see style.css's comment for the
+             stacking-order reasoning. Rendered immediately (not gated behind price
+             data loading) since it doesn't depend on any fetch. -->
+        <div class="hero-gold-ambient" aria-hidden="true"></div>
+        <div class="hero-gold-piece" aria-hidden="true">
+          <div class="hero-gold-piece-inner">
+            <div class="hero-gold-face hero-gold-face--front"></div>
+            <div class="hero-gold-face hero-gold-face--back"></div>
+            <div class="hero-gold-specular"></div>
+          </div>
+        </div>
 
         <!-- Skeleton shown while loading -->
         <div class="hero-skeleton" id="hero-skeleton" aria-hidden="true">
@@ -114,7 +138,7 @@
       </section>
 
       <!-- 3. COMPARISON CARDS -->
-      <section class="comparison-section" id="comparison-section" hidden
+      <section class="comparison-section reveal-on-scroll" id="comparison-section" hidden
                aria-label="How today's price compares to recent averages">
         <div class="comparison-cards">
           <div class="comparison-card" id="cmp-7d">
@@ -136,7 +160,7 @@
       </section>
 
       <!-- 4. OTHER KARATS — compact strip -->
-      <section class="karat-strip" aria-label="24K and 18K gold prices">
+      <section class="karat-strip reveal-on-scroll" aria-label="24K and 18K gold prices">
         <div class="karat-card">
           <span class="karat-label">24 KT</span>
           <span class="karat-price" id="rate-24">—</span>
@@ -150,7 +174,7 @@
       </section>
 
       <!-- 5. COMMENTARY CARD — always visible -->
-      <section class="commentary-section" aria-label="Market commentary">
+      <section class="commentary-section reveal-on-scroll" aria-label="Market commentary">
         <div class="commentary-card">
           <p class="commentary-eyebrow">
             <span aria-hidden="true">✨</span> Today's read
@@ -167,7 +191,7 @@
       </section>
 
       <!-- 5b. PRICE CONTEXT — "Is today a good price?" verdict + volatility context -->
-      <section class="model-signal-section" id="model-signal-section" hidden
+      <section class="model-signal-section reveal-on-scroll" id="model-signal-section" hidden
                aria-label="How today's price compares to recent history">
         <h2>How does today's price compare?</h2>
         <!-- Φ8C'/Ψ3C.3: skeleton shown while signal loads -->
@@ -180,14 +204,14 @@
 
       <!-- 5c. DRIVER CONTEXT — What is moving gold prices this week/month (Φ14-2)
            Descriptive only: attributes past observed moves, never implies a future direction. -->
-      <section class="driver-context-section" id="driver-context-section" hidden
+      <section class="driver-context-section reveal-on-scroll" id="driver-context-section" hidden
                aria-label="What is driving gold prices">
         <h2>What's moving the price?</h2>
         <div class="driver-context-body" id="driver-context-body"></div>
       </section>
 
       <!-- 6. FULL TREND CHART -->
-      <section class="chart-section" id="section-trend" aria-label="Price trend chart">
+      <section class="chart-section reveal-on-scroll" id="section-trend" aria-label="Price trend chart">
         <div class="chart-header">
           <h2>Price trend</h2>
           <div class="range-toggle" role="tablist" aria-label="Chart time range">
@@ -203,16 +227,19 @@
       </section>
 
       <!-- 7. HISTORY -->
-      <section class="history-section" id="section-history" aria-label="Price history">
+      <section class="history-section reveal-on-scroll" id="section-history" aria-label="Price history">
         <h2>History</h2>
         <p class="section-karat-note">22K · per gram</p>
-        <!-- Φ8C'/Ψ3C.3: skeleton shown while history loads -->
-        <div class="history-skeleton" id="history-skeleton" aria-hidden="true">
-          <div class="skel" style="height:40px;width:100%;border-radius:6px;margin-bottom:8px"></div>
-          <div class="skel" style="height:40px;width:100%;border-radius:6px;margin-bottom:8px"></div>
-          <div class="skel" style="height:40px;width:80%;border-radius:6px"></div>
-        </div>
         <div class="history-wrap" id="history-wrap">
+          <!-- Φ8C'/Ψ3C.3: skeleton overlay shown while history loads. Absolutely
+               positioned over history-wrap (not a separate hidden/shown sibling) so
+               hiding it on load never changes document height -- zero CLS instead of
+               the hidden-container-pops-in shift a plain [hidden] toggle would cause. -->
+          <div class="history-skeleton" id="history-skeleton" aria-hidden="true">
+            <div class="skel" style="height:40px;width:100%;border-radius:6px;margin-bottom:8px"></div>
+            <div class="skel" style="height:40px;width:100%;border-radius:6px;margin-bottom:8px"></div>
+            <div class="skel" style="height:40px;width:80%;border-radius:6px"></div>
+          </div>
           <!-- Desktop table (≥640px) -->
           <table class="history history-table">
             <thead>
@@ -235,7 +262,7 @@
       </section>
 
       <!-- 7b. PAST ESTIMATE TRACK RECORD — past estimates vs actual prices -->
-      <section class="track-record-section" id="section-track-record" hidden
+      <section class="track-record-section reveal-on-scroll" id="section-track-record" hidden
                aria-label="Past estimate accuracy — flat-hold vs actual prices">
         <h2>How past estimates have held up</h2>
         <p class="track-record-caption">30 recent five-day windows: flat-hold estimate (dashed) vs what actually happened (gold)</p>
@@ -246,12 +273,18 @@
       </section>
 
       <!-- 8. METHODOLOGY ACCORDION -->
-      <details class="methodology" id="section-info">
+      <details class="methodology reveal-on-scroll" id="section-info">
         <summary class="methodology-summary">
           How this works · how good is this? · historical checks
         </summary>
         <div class="methodology-body" id="methodology-body">
-          <p class="meth-loading">Loading model details…</p>
+          <div class="meth-skeleton" aria-hidden="true">
+            <div class="skel skel-meth-heading"></div>
+            <div class="skel skel-meth-line"></div>
+            <div class="skel skel-meth-line skel-meth-line--short"></div>
+            <div class="skel skel-meth-heading"></div>
+            <div class="skel skel-meth-line"></div>
+          </div>
         </div>
       </details>
 
@@ -300,24 +333,32 @@
     <!-- Sentry error tracking — replace the placeholder DSN with the one from sentry.io
          (Project Settings → Client Keys → DSN). The site will work normally without it.
          Served from Sentry's own CDN (not jsdelivr's npm proxy) — the npm package no longer
-         ships the prebuilt bundle jsdelivr would need, so an npm-path URL 404s. -->
+         ships the prebuilt bundle jsdelivr would need, so an npm-path URL 404s.
+         `async`, not `defer` — deliberately NOT in app.js's execution-order dependency
+         chain. Unlike Chart.js below (a hard, unguarded dependency — `new Chart(...)`
+         throws if it isn't loaded), every Sentry.* call in app.js is already guarded
+         with `typeof Sentry !== "undefined"`, so app.js tolerates Sentry loading late
+         or not at all. render-smoke kept intermittently failing cold-load even after
+         the original render-blocking fix (see app.js's init() comment) because app.js
+         still had to wait for BOTH third-party scripts to finish, regardless of defer
+         vs blocking, since deferred scripts execute in document order. Moving Sentry to
+         async removes it from that wait entirely — Chart.js is the one third-party
+         script app.js's own start time still depends on, which is unavoidable given it's
+         a real (not just guarded) dependency. Worth noting Sentry currently uses a
+         placeholder DSN and isn't actually reporting anywhere yet, so this has zero
+         functional cost today regardless. -->
     <script src="https://browser.sentry-cdn.com/7.120.4/bundle.min.js"
             integrity="sha384-HF4Kc49tTfBgl6JmNMfcrjBeW9pK13xSnnr307iG4PCNj8eRKhkvE9Tp27DigU1L"
-            crossorigin="anonymous"></script>
-    <script>
-      if (typeof Sentry !== "undefined") {
-        Sentry.init({
-          dsn: "https://PLACEHOLDER@o000000.ingest.sentry.io/0000000", // TODO: replace with your project DSN
-          sampleRate: 1.0,        // capture every error event
-          tracesSampleRate: 0.0,  // no performance tracing (not needed)
-          environment: "production",
-        });
-      }
-    </script>
+            crossorigin="anonymous" async></script>
 
+    <!-- `defer`, not `async` like Sentry above — app.js calls `new Chart(...)`
+         unguarded, so this one genuinely must be loaded and executed before app.js
+         runs. Document order among deferred scripts is preserved, so Chart is still
+         guaranteed defined before app.js runs; not render-blocking either way (defer
+         never blocks HTML parsing, only gates when app.js itself starts). -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.6/dist/chart.umd.min.js"
             integrity="sha384-Sse/HDqcypGpyTDpvZOJNnG0TT3feGQUkF9H+mnRvic+LjR+K1NhTt8f51KIQ3v3"
-            crossorigin="anonymous"></script>
+            crossorigin="anonymous" defer></script>
     <script src="app.js" defer></script>
     <script>
       if ("serviceWorker" in navigator) {

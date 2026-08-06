@@ -139,7 +139,15 @@ test("FM-1: 3× CF challenge → all retries exhausted → throws", async () => 
   try {
     await assert.rejects(
       () => scrapeWithRetry(mock.url),
-      /Cloudflare challenge page/,
+      (err) => {
+        assert.match(err.message, /Cloudflare challenge page/);
+        // scrape.js's CLI entry point reads this flag to exit 2 (CF block,
+        // no alert) instead of 1 (real DOM break, alerts + opens an issue) —
+        // see scraper-canary.yml. A regression here silently turns every CF
+        // block back into a false-positive "DOM broken" alert (#577's cause).
+        assert.equal(err.isCFBlock, true, "CF-exhausted error must be tagged isCFBlock");
+        return true;
+      },
       "should throw after exhausting all retries",
     );
     assert.equal(mock.getCount(), 3, "all 3 attempts made exactly one request each");
@@ -185,6 +193,10 @@ test("FM-2: selector absent → fails, does not retry (only 1 request made)", as
       // The error should be a Playwright TimeoutError or similar
       (err) => {
         assert.ok(err instanceof Error, "should throw an Error");
+        // A real DOM/selector break must NOT be tagged isCFBlock, or
+        // scrape.js's CLI entry point would exit 2 and scraper-canary.yml
+        // would silently skip alerting on a genuine break.
+        assert.ok(!err.isCFBlock, "selector-absent error must not be tagged isCFBlock");
         return true;
       },
     );

@@ -466,6 +466,17 @@ if (process.argv[1] === __filename) {
   hybridScrape()
     .then((result) => console.log(JSON.stringify(result)))
     .catch((err) => {
+      // Exit code 2 vs 1 lets callers (scraper-canary.yml) distinguish an
+      // IP-level Cloudflare block — the documented expected steady state per
+      // ADR 025, see docs/RUNBOOK.md's "Scraper DOM canary issues" note —
+      // from a genuine DOM/selector break. Both requests-path and Playwright
+      // CF-challenge detection tag their errors `isCFBlock: true`; every
+      // other failure (selector absent, validation failed, navigation error)
+      // exits 1 as before.
+      if (err.isCFBlock) {
+        console.error("Scrape blocked by Cloudflare (not a DOM change):", err.message);
+        process.exit(2);
+      }
       console.error("Scrape failed:", err.message);
       process.exit(1);
     });
