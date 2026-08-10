@@ -214,12 +214,16 @@
       <section class="model-signal-section reveal-on-scroll" id="model-signal-section" hidden
                aria-label="How today's price compares to recent history">
         <h2>How does today's price compare?</h2>
-        <!-- Φ8C'/Ψ3C.3: skeleton shown while signal loads -->
-        <div class="model-signal-skeleton" id="model-signal-skeleton" aria-hidden="true">
-          <div class="skel" style="height:20px;width:45%;border-radius:4px;margin-bottom:8px"></div>
-          <div class="skel" style="height:16px;width:65%;border-radius:4px"></div>
+        <!-- Φ8C'/Ψ3C.3: skeleton shown while signal loads. model-signal-wrap: same
+             absolute-overlay CLS fix as commentary-body/history-wrap (2026-08-10) --
+             see the .model-signal-wrap rule in style.css for why. -->
+        <div class="model-signal-wrap">
+          <div class="model-signal-skeleton" id="model-signal-skeleton" aria-hidden="true">
+            <div class="skel" style="height:20px;width:45%;border-radius:4px;margin-bottom:8px"></div>
+            <div class="skel" style="height:16px;width:65%;border-radius:4px"></div>
+          </div>
+          <div class="model-signal-body" id="model-signal-body"></div>
         </div>
-        <div class="model-signal-body" id="model-signal-body"></div>
       </section>
 
       <!-- 5c. DRIVER CONTEXT — What is moving gold prices this week/month (Φ14-2)
