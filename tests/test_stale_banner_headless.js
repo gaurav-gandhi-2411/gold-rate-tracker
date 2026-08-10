@@ -253,6 +253,8 @@ async function run() {
       assert("computed visibility !== hidden", state.visibility !== "hidden", `got "${state.visibility}"`);
       assert('text includes "last confirmed price"',
         state.text.includes("last confirmed price"), `got "${state.text}"`);
+      assert('text includes "couldn\'t get a live price update"',
+        state.text.includes("couldn't get a live price update"), `got "${state.text}"`);
 
       await ctx.close();
     }
@@ -292,8 +294,8 @@ async function run() {
 
       assert("banner.hidden === false",         state.hidden === false);
       assert("computed display !== 'none'",     state.display !== "none",   `got "${state.display}"`);
-      assert('text includes "Estimated retail price"',
-        state.text.includes("Estimated retail price"), `got "${state.text}"`);
+      assert('text includes "estimated price"',
+        state.text.includes("estimated price"), `got "${state.text}"`);
       assert('text includes "IBJA"',
         state.text.includes("IBJA"),            `got "${state.text}"`);
       assert('text includes "today"',
@@ -319,8 +321,8 @@ async function run() {
       console.log(`  Banner state: hidden=${state.hidden}, display=${state.display}, text="${state.text}"`);
 
       assert("banner.hidden === false",         state.hidden === false);
-      assert('text includes "Estimated retail price"',
-        state.text.includes("Estimated retail price"), `got "${state.text}"`);
+      assert('text includes "estimated price"',
+        state.text.includes("estimated price"), `got "${state.text}"`);
       assert('text includes "close" (dated carry-forward qualifier)',
         state.text.includes("close"),           `got "${state.text}"`);
       assert('text does NOT include "today\'s"  (must not overclaim freshness)',

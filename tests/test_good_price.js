@@ -49,26 +49,29 @@ function computeGoodPriceSignals(readings) {
   let verdictLead, verdictType, supportLine1;
   if (percentile30d <= 20) {
     verdictType  = "cheap";
-    verdictLead  = "Today's price is low for the past month";
-    supportLine1 = "Cheaper than most days this past month.";
+    verdictLead  = "You're paying less than usual this month";
+    supportLine1 = "Cheaper than most days this month.";
   } else if (percentile30d <= 40) {
     verdictType  = "below-mid";
-    verdictLead  = "Today's price is on the lower side this month";
-    supportLine1 = "Below average for the past month.";
+    verdictLead  = "You're paying a little less than usual this month";
+    supportLine1 = "A bit below the usual price this month.";
   } else if (percentile30d <= 70) {
     verdictType  = "mid";
-    verdictLead  = "Today's price is around usual levels lately";
-    supportLine1 = "Around the middle of the past month.";
+    verdictLead  = "You're paying about the usual amount this month";
+    supportLine1 = "Right around the middle for this month.";
   } else {
     verdictType  = "high";
-    verdictLead  = "Today's price is on the higher side this month";
-    supportLine1 = "Pricier than most days this past month.";
+    verdictLead  = "You're paying a bit more than usual this month";
+    supportLine1 = "Pricier than most days this month.";
   }
 
-  // Unified proof line — consistent frame (cheaper-than / more-expensive-than)
+  // Unified proof line — consistent frame (cheaper-than / pricier-than), phrased as an
+  // actual day count (not a percentage). Must match app.js's computeGoodPriceSignals.
+  const daysCheaperThanToday = prices30d.filter(p => p > current).length;
+  const daysPricierThanToday = prices30d.filter(p => p < current).length;
   const proofLine = percentile30d <= 50
-    ? `Cheaper than ${100 - percentile30d}% of the ${nDays30d} days in the past month.`
-    : `More expensive than ${percentile30d}% of the ${nDays30d} days in the past month.`;
+    ? `Cheaper than ${daysCheaperThanToday} of the last ${nDays30d} days.`
+    : `Pricier than ${daysPricierThanToday} of the last ${nDays30d} days.`;
 
   // Data-sufficiency degrade note (norm #5) — shown when < 30 distinct days
   const dataSuffNote = nDays30d < 30
@@ -77,16 +80,16 @@ function computeGoodPriceSignals(readings) {
 
   const absVsAvg = fmtINR(Math.abs(vsAvg30d));
   const supportLine2 = vsAvg30d < 0
-    ? `₹${absVsAvg} below the 30-day average.`
+    ? `₹${absVsAvg} below the usual price for the month.`
     : vsAvg30d > 0
-      ? `₹${absVsAvg} above the 30-day average.`
-      : "At the 30-day average.";
+      ? `₹${absVsAvg} above the usual price for the month.`
+      : "Right at the usual price for the month.";
 
   // Divergence: percentile says cheap/low but vs-avg says above average, or vice versa.
   const divergenceNote =
     (percentile30d <= 40 && vsAvg30d > 0) ||
     (percentile30d >= 70 && vsAvg30d < 0)
-      ? "(The two measures diverge here — the percentile counts days, the average measures distance. The headline follows the percentile.)"
+      ? "(These two don't quite agree — one counts days, the other measures the actual rupee gap. We go with the day-count for the headline above.)"
       : null;
 
   return { percentile30d, vsAvg30d, avg30d, nDays30d, verdictLead, verdictType, proofLine, dataSuffNote, supportLine1, supportLine2, divergenceNote };
@@ -135,8 +138,8 @@ test("verdictType=cheap and correct strings when today is in bottom 20%", () => 
   assert.ok(signals !== null);
   assert.ok(signals.percentile30d <= 20, `expected ≤20 but got ${signals.percentile30d}`);
   assert.equal(signals.verdictType, "cheap");
-  assert.equal(signals.verdictLead, "Today's price is low for the past month");
-  assert.equal(signals.supportLine1, "Cheaper than most days this past month.");
+  assert.equal(signals.verdictLead, "You're paying less than usual this month");
+  assert.equal(signals.supportLine1, "Cheaper than most days this month.");
 });
 
 test("verdictType=below-mid when percentile is in 21-40", () => {
@@ -147,8 +150,8 @@ test("verdictType=below-mid when percentile is in 21-40", () => {
   assert.ok(signals.percentile30d > 20 && signals.percentile30d <= 40,
     `expected 21-40 but got ${signals.percentile30d}`);
   assert.equal(signals.verdictType, "below-mid");
-  assert.equal(signals.verdictLead, "Today's price is on the lower side this month");
-  assert.equal(signals.supportLine1, "Below average for the past month.");
+  assert.equal(signals.verdictLead, "You're paying a little less than usual this month");
+  assert.equal(signals.supportLine1, "A bit below the usual price this month.");
 });
 
 test("verdictType=high and correct strings when today is in top 30%", () => {
@@ -158,8 +161,8 @@ test("verdictType=high and correct strings when today is in top 30%", () => {
   assert.ok(signals !== null);
   assert.ok(signals.percentile30d >= 70, `expected ≥70 but got ${signals.percentile30d}`);
   assert.equal(signals.verdictType, "high");
-  assert.equal(signals.verdictLead, "Today's price is on the higher side this month");
-  assert.equal(signals.supportLine1, "Pricier than most days this past month.");
+  assert.equal(signals.verdictLead, "You're paying a bit more than usual this month");
+  assert.equal(signals.supportLine1, "Pricier than most days this month.");
 });
 
 test("verdictType=mid when percentile is in the middle 41-70%", () => {
@@ -170,8 +173,8 @@ test("verdictType=mid when percentile is in the middle 41-70%", () => {
   assert.ok(signals.percentile30d > 40 && signals.percentile30d <= 70,
     `expected 41-70 but got ${signals.percentile30d}`);
   assert.equal(signals.verdictType, "mid");
-  assert.equal(signals.verdictLead, "Today's price is around usual levels lately");
-  assert.equal(signals.supportLine1, "Around the middle of the past month.");
+  assert.equal(signals.verdictLead, "You're paying about the usual amount this month");
+  assert.equal(signals.supportLine1, "Right around the middle for this month.");
 });
 
 test("supportLine2 says 'below' when today is under 30d average", () => {
@@ -180,7 +183,7 @@ test("supportLine2 says 'below' when today is under 30d average", () => {
   const signals  = computeGoodPriceSignals(readings);
   assert.ok(signals !== null);
   assert.ok(signals.vsAvg30d < 0);
-  assert.ok(signals.supportLine2.includes("below the 30-day average"));
+  assert.ok(signals.supportLine2.includes("below the usual price for the month"));
 });
 
 test("supportLine2 says 'above' when today is over 30d average", () => {
@@ -189,7 +192,7 @@ test("supportLine2 says 'above' when today is over 30d average", () => {
   const signals  = computeGoodPriceSignals(readings);
   assert.ok(signals !== null);
   assert.ok(signals.vsAvg30d > 0);
-  assert.ok(signals.supportLine2.includes("above the 30-day average"));
+  assert.ok(signals.supportLine2.includes("above the usual price for the month"));
 });
 
 test("supportLine2 says 'At the 30-day average' when price equals avg", () => {
@@ -198,7 +201,7 @@ test("supportLine2 says 'At the 30-day average' when price equals avg", () => {
   const signals  = computeGoodPriceSignals(readings);
   assert.ok(signals !== null);
   assert.equal(signals.vsAvg30d, 0);
-  assert.equal(signals.supportLine2, "At the 30-day average.");
+  assert.equal(signals.supportLine2, "Right at the usual price for the month.");
 });
 
 test("divergenceNote fires when percentile=high but vsAvg is negative", () => {
@@ -419,15 +422,15 @@ function computeTrendResidual30d(readings, percentile30d) {
 
   let note;
   if (isCheap && residZ < STILL_FALLING_Z) {
-    note = `Cheap, but still falling — today is well below its own recent trend line (about ₹${slopeAbs}/day downhill over the month).`;
+    note = `Cheap, but still falling — today is well below its usual trend for the month (dropping about ₹${slopeAbs} a day).`;
   } else if (isCheap) {
-    note = "Cheap, and stabilizing — despite the recent dip, today's price is back near (or above) its own recent trend line.";
+    note = "Cheap, and steadying — despite the recent dip, today's price is back close to its usual trend for the month.";
   } else if (trendState === "falling") {
-    note = `Prices have been sliding about ₹${slopeAbs}/day over the past month.`;
+    note = `Prices have been slipping about ₹${slopeAbs} a day this month.`;
   } else if (trendState === "rising") {
-    note = `Prices have been climbing about ₹${slopeAbs}/day over the past month.`;
+    note = `Prices have been climbing about ₹${slopeAbs} a day this month.`;
   } else {
-    note = "Prices have been roughly flat over the past month, close to their own recent trend.";
+    note = "Prices have been steady this month, close to their usual trend.";
   }
 
   return { slope, residual, residZ, trendState, nDays, note };
@@ -479,7 +482,7 @@ test("cheap + stabilizing: downtrend followed by a bounce back toward the line",
   assert.ok(trend !== null);
   assert.ok(signals.percentile30d <= CHEAP_PERCENTILE_MAX, `expected cheap, percentile=${signals.percentile30d}`);
   assert.ok(trend.residZ >= STILL_FALLING_Z, `expected residZ >= -1, got ${trend.residZ}`);
-  assert.equal(trend.note, "Cheap, and stabilizing — despite the recent dip, today's price is back near (or above) its own recent trend line.");
+  assert.equal(trend.note, "Cheap, and steadying — despite the recent dip, today's price is back close to its usual trend for the month.");
 });
 
 test("not cheap: mid-range percentile gets a plain trend note, no 'cheap' framing", () => {
@@ -500,7 +503,7 @@ test("flat trend: |slope| below FLAT_SLOPE_INR_PER_DAY reads as roughly flat", (
   const trend = computeTrendResidual30d(readings, 50); // not cheap
   assert.ok(trend !== null);
   assert.equal(trend.trendState, "flat");
-  assert.equal(trend.note, "Prices have been roughly flat over the past month, close to their own recent trend.");
+  assert.equal(trend.note, "Prices have been steady this month, close to their usual trend.");
 });
 
 test("computeTrendResidual30d never overrides computeGoodPriceSignals' verdict fields", () => {
@@ -549,13 +552,13 @@ function computeSupportDistance90d(readings, percentile30d) {
 
   let note;
   if (isCheap && nearSupport) {
-    note = `Cheap, and sitting right at its 3-month low (₹${fmtINR(low90d)}) — testing a floor it hasn't broken in ${nDays} days.`;
+    note = `Cheap, and sitting right at its 3-month low (₹${fmtINR(low90d)}) — it hasn't dropped below this in ${nDays} days.`;
   } else if (isCheap) {
-    note = `Cheap, but still ${distPct.toFixed(1)}% above its 3-month low of ₹${fmtINR(low90d)} — room to fall further before testing that floor.`;
+    note = `Cheap, but still ${distPct.toFixed(1)}% above its lowest price in 3 months (₹${fmtINR(low90d)}).`;
   } else if (nearSupport) {
-    note = `Sitting right at its 3-month low (₹${fmtINR(low90d)}), even though it's not among the cheapest days this month.`;
+    note = `Right at its lowest price in 3 months (₹${fmtINR(low90d)}), even though it's not among the cheapest days this month.`;
   } else {
-    note = `${distPct.toFixed(1)}% above its 3-month low of ₹${fmtINR(low90d)} (over the last ${nDays} days).`;
+    note = `${distPct.toFixed(1)}% above its lowest price in 3 months (₹${fmtINR(low90d)}, over the last ${nDays} days).`;
   }
   if (nDays < FULL_DAYS_SUPPORT) {
     note += ` (Only ${nDays} distinct days in this 90-day window so far — treat as indicative.)`;

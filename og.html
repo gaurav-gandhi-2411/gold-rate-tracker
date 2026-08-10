@@ -170,7 +170,7 @@
         <div class="og-left">
           <div class="og-eyebrow">Should I buy today?</div>
           <div class="og-price" id="og-price"><span class="rupee">₹</span><span id="og-price-num">—</span></div>
-          <div class="og-karat">22K gold · per gram · Bengaluru</div>
+          <div class="og-karat">22K gold · per gram · pan-India</div>
           <div class="og-verdict" id="og-verdict" data-type="unknown">
             <span class="og-verdict-icon" id="og-verdict-icon">○</span>
             <span id="og-verdict-text">—</span>
@@ -210,7 +210,7 @@
         const now = Date.now();
         const sevenDaysAgo = now - 7 * 86400e3;
         const recent = prices.filter(p => new Date(p.timestamp).getTime() >= sevenDaysAgo);
-        if (recent.length < 2) return { type: "flat", icon: "◈", text: "Roughly flat — buy when convenient" };
+        if (recent.length < 2) return { type: "flat", icon: "→", text: "Roughly flat — buy when convenient" };
 
         const oldest = recent[0].price_22k;
         const latest = recent[recent.length - 1].price_22k;
@@ -225,7 +225,7 @@
         if (slope > SLOPE_THRESHOLD && (fcDir > 0 || latest > avg30)) {
           return { type: "up", icon: "↑", text: "Trending up — consider buying sooner" };
         }
-        return { type: "flat", icon: "◈", text: "Roughly flat — buy when convenient" };
+        return { type: "flat", icon: "→", text: "Roughly flat — buy when convenient" };
       }
 
       function drawSparkline(prices, type) {
