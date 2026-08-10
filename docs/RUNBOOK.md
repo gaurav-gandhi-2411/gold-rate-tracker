@@ -150,7 +150,6 @@ The next successful CI run will replace `forecast.json` and hide the banner.
    - **Run inference** (`ml.inference`): `continue-on-error: true`. Missing `data/prices.json` or fewer than 30 backtest folds → `forecast.json` written with `model_status: "insufficient_backtest_history"`. A hard crash here isn't independently alerted (T9/T9_ESCALATE watch IBJA freshness, not inference success) — check the Actions run status directly.
    - **Refit calibration** (`ml.calibration`): `continue-on-error: true`. Missing `data/ibja_rates.parquet` or fewer than 30 IBJA-Tanishq overlap pairs → refit silently skipped; stale `calibration.json` persists until data accumulates.
    - **Run Chronos probe** (`ml.chronos_forecast --probe`): `continue-on-error: true`. HuggingFace download timeout or torch error → `chronos_probe.json` absent or `status: "failed"` → next run's inference falls back to flat-hold, no directional signal. Check the Actions cache for `chronos-bolt-tiny-*`.
-   - **Commentary step:** `GROQ_API_KEY` secret expired or Groq rate limit hit. Step is `continue-on-error: true` so it won't block scraping.
 
 ---
 
@@ -197,7 +196,7 @@ backstop — that state should be rare and, if it persists, will have already fi
 To re-scrape outside the 6-hour schedule (e.g. after fixing a broken selector):
 
 1. Go to **Actions** → **Check Gold Price** → **Run workflow** (top-right button).
-2. This triggers the full pipeline: scrape → macro → forecast → commentary → commit.
+2. This triggers the full pipeline: scrape → macro → forecast → commit.
 
 To test the scraper locally:
 
@@ -580,7 +579,7 @@ After the PR merges and the live site updates (Pages rebuilds within ~1 min of t
 |---|------|---------------------|------------------------|--------------|
 | 1 | `ml/notifications.py` | `_build_t8_content()` | T8 morning/evening digest directional hint: "Prices may edge up/ease a little." | PR #84 (Φ9A gap) |
 | 2 | `ml/notifications.py` | `_check_t1()` … `_check_t7()` bodies | T1–T7 notification titles and bodies; T7 lean_hint strings | Φ9A |
-| 3 | `ml/commentary.py` | `SYSTEM_PROMPT` constant | Groq LLM instruction block — governs factual claims about accuracy, direction framing, forward-lean language | Φ18B (2026-06-05) |
+| 3 | *(retired 2026-08-10)* | — | `ml/commentary.py` removed — the Groq-generated blurb it wrote had no remaining consumer once "Today's read" moved to a deterministic client-side synthesis (`composeTodaysRead()` in `app.js`, undocumented in this table as of this edit — see CHANGELOG.md). | Φ18B (2026-06-05) → retired |
 | 4 | `app.js` | `computeVerdict()` | Verdict card headline + reason: "Trending down/up this week" / "Roughly flat this week" + reason template | Φ9A (INV-2) |
 | 5 | `app.js` | `computeGoodPriceSignals()` | Good-price verdict lead (4-tier: "Today's price is low for the past month" / "on the lower side" / "around usual levels" / "on the higher side this month"), proof line ("Cheaper than X% / More expensive than X% of the N days in the past month"), data-sufficiency degrade note (when <30 days), supporting lines, divergence note | Φ18A (2026-06-05) |
 | 6 | `app.js` | `renderModelSignal()` vol-context block | 4 regime-conditional strings: "Gold has been more/calmer volatile than usual lately — about ±₹X over 5 days." / "Gold has been moving about ±₹X over 5 days lately." / "Gold's price typically moves about ±₹X over 5 days." | Φ10B |

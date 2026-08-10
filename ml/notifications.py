@@ -548,18 +548,8 @@ def _check_t4(
         return None
 
     current = prices[-1]["22k"] if prices else 0
-    extra = ""
-    commentary_path = DATA_DIR / "commentary.json"
-    if commentary_path.exists():
-        try:
-            c = json.loads(commentary_path.read_text())
-            snippet = str(c.get("commentary", ""))[:180].strip()
-            if snippet:
-                extra = " " + snippet
-        except Exception:
-            pass
     title = f"{title_prefix}Gold Weekly: 22K Rs.{current}"
-    body = f"Gold 22K: Rs.{current}." + (extra or " Check the app for the latest read.")
+    body = f"Gold 22K: Rs.{current}. Check the app for the latest read."
     return _make_alert(
         "T4", title, body, 2, ["newspaper", "white_flower"], now_ist, bypass_quiet=True
     )

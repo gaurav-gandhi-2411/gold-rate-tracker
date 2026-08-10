@@ -88,7 +88,6 @@ Alert types: a price-move alert (describes the recent trend), a twice-daily dige
 1. Fork / create a public repo and upload all files.
 2. **Settings → Secrets and variables → Actions → New repository secret:**
    - `NTFY_TOPIC` — your OWN ntfy.sh topic (treat like a password; long & random).
-   - `GROQ_API_KEY` — free tier from [console.groq.com](https://console.groq.com) (optional; without it the plain-language commentary is skipped, nothing else breaks).
 3. **Actions → Check Gold Price → Run workflow** (manual trigger; wait ~2 min).
 4. **Settings → Pages → Deploy from branch → `master` → `/` (root).**
 5. Install the PWA: iOS Safari → Share → Add to Home Screen · Android Chrome → Install app.
@@ -109,7 +108,6 @@ Alert types: a price-move alert (describes the recent trend), a twice-daily dige
 
 - **Prices look stale:** the page banner will say so, honestly labeled either way. A Tanishq scrape miss alone is expected (its Cloudflare block, [ADR 025](docs/adr/025-ibja-primary-source-decision.md)) and logged as a run annotation, not a hard failure — check the latest **Check Gold Price** run in Actions. An actual alert (ntfy T9/T9_ESCALATE) only fires when *IBJA* itself hasn't published in 2+ business days — that's the genuine failure signal.
 - **No notifications:** confirm `NTFY_TOPIC` has no URL prefix, you subscribed to the *exact* topic, and a price move actually occurred.
-- **Commentary missing:** set `GROQ_API_KEY` (optional).
 - **Scraper DOM canary issue opened:** the canary now distinguishes a Cloudflare block (logged as a warning, no alert — expected steady state) from a real DOM/selector break (alerts + opens an issue) automatically. See [docs/RUNBOOK.md](docs/RUNBOOK.md) if one still fires.
 
 ## Design decisions (ADRs)

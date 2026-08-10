@@ -67,7 +67,6 @@ gold-rate-tracker/
 │   ├── backtest.py              ← Walk-forward methodology
 │   ├── metrics.py               ← Metric definitions
 │   ├── macro.py                 ← yfinance covariates (not used by Chronos yet)
-│   ├── commentary.py            ← Groq LLM, every 6h
 │   ├── drift.py                 ← Drift monitor (partial; legacy logic, no harm)
 │   ├── features.py              ← Feature engineering helpers (legacy)
 │   └── llm_cache_helpers.py     ← Forward-looking, no live consumer

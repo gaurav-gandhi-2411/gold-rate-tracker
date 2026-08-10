@@ -42,7 +42,6 @@ const DATA_FILES = [
   "prices.json",
   "forecast.json",
   "backtest.json",
-  "commentary.json",
 ];
 
 self.addEventListener("install", (e) => {

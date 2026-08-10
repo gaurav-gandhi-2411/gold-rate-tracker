@@ -106,26 +106,12 @@ Written by: `ml/backtest.py` (overwrites on each weekly Actions run).
 
 ---
 
-## commentary.json
+## commentary.json (retired 2026-08-10)
 
-Rolling list of LLM-generated market notes (capped at 30 entries).
-
-```json
-[
-  {
-    "ts": "2026-05-09T15:27:57Z",
-    "text": "Only 1 real reading collected so far; trend metrics will be available after ~14 days of data. The current 22K gold price is Rs.14010.",
-    "model": "llama-3.3-70b-versatile",
-    "prompt_hash": "72e4a2352490"
-  }
-]
-```
-
-| Field | Type | Description |
-|---|---|---|
-| `ts` | ISO 8601 UTC | When the commentary was generated |
-| `text` | string | 2–3 sentence plain-English market note |
-| `model` | string | Groq model ID used |
-| `prompt_hash` | string | First 12 hex chars of SHA-1 of the user-message payload (for deduplication) |
-
-Written by: `ml/commentary.py` (appends on each scrape run; rolls off oldest when > 30 entries).
+Was a rolling list of LLM-generated market notes, written by `ml/commentary.py` via Groq.
+Retired once "Today's read" in the PWA moved to a deterministic client-side sentence
+(`composeTodaysRead()` in `app.js`) composed from signals already computed for the good-price
+card — no remaining consumer read this file, so the generation step was removed rather than
+left running with nowhere for its output to go. The file itself is left in the repo as a
+historical artifact (its past entries aren't reproducible) but nothing produces or reads it
+going forward.

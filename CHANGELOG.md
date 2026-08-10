@@ -8,6 +8,9 @@ Versioning: [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+### Removed
+- `ml/commentary.py` (Groq-generated "Today's read" blurb) — retired, no remaining consumer once the PWA moved to a deterministic client-side synthesis. See `docs/PROGRESS.md` Decision Log, 2026-08-10.
+
 ---
 
 ## [0.6.0] — 2026-05-15 — Phase 4: Ship (monitoring, error tracking, OG image)
