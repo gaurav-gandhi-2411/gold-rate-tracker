@@ -21,7 +21,12 @@
 // cache and re-fetch the current shell on next load. See lint.yml's
 // sw-version-guard job, added the same day, which now fails CI when shell
 // files change without a VERSION bump.
-const VERSION = "v34-20260810-hindi-i18n";
+// 2026-08-10 (v35): Hindi/English polish -- letter-spacing fix for broken
+// Devanagari conjuncts, Noto Serif Devanagari added for --display, "Gold
+// Tracker" header rename, copy tightening. Shell files (index.html, app.js,
+// i18n.js, style.css) all changed; bumping so every installed client
+// re-fetches instead of serving the pre-fix shell indefinitely.
+const VERSION = "v35-20260810-hindi-polish";
 const SHELL_CACHE = `gold-shell-${VERSION}`;
 
 const SHELL_FILES = [
@@ -36,11 +41,19 @@ const SHELL_FILES = [
   "./fonts/fraunces-variable-latin.woff2",
   "./fonts/dmsans-variable-latin.woff2",
   "./fonts/syne-variable-latin.woff2",
-  // Deliberately NOT the Devanagari font — see isDevanagariFont() below.
-  // Unlike the three English fonts above (needed by every visitor, so
-  // precaching them at install is correct), unconditionally precaching this
-  // one would cost every English-only visitor a 121KB fetch they'll never
-  // use. It's cached on first actual use instead (Hindi visitors only).
+  "./fonts/rupee-sign.woff2",
+  // rupee-sign.woff2 (~1.1KB, ₹ only) belongs in this unconditional tier, not
+  // the Devanagari one below it -- ₹ appears in every price display
+  // regardless of language, so every visitor needs it, same as the three
+  // Latin faces above. See style.css's Rupee Sign @font-face comment for why
+  // it exists as its own tiny face instead of just being part of one of the
+  // Latin faces.
+  // Deliberately NOT the two Devanagari fonts (Sans + Serif) — see
+  // isDevanagariFont() below. Unlike the four fonts above (needed by every
+  // visitor, so precaching them at install is correct), unconditionally
+  // precaching these would cost every English-only visitor a ~248KB fetch
+  // they'll never use. They're cached on first actual use instead (Hindi
+  // visitors only).
 ];
 
 // All JSON data files get network-first treatment (same as prices.json).
@@ -76,7 +89,10 @@ function isDataFile(url) {
 }
 
 function isDevanagariFont(url) {
-  return url.pathname.endsWith("/fonts/notosans-devanagari-variable.woff2");
+  return (
+    url.pathname.endsWith("/fonts/notosans-devanagari-variable.woff2") ||
+    url.pathname.endsWith("/fonts/notoserif-devanagari-variable.woff2")
+  );
 }
 
 self.addEventListener("fetch", (e) => {
