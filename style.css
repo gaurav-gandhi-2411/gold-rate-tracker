@@ -847,6 +847,11 @@ main {
 .comparison-card[data-sentiment="good"]    .cmp-value { color: var(--cmp-good-text); }
 .comparison-card[data-sentiment="caution"] .cmp-value { color: var(--cmp-caution-text); }
 .cmp-sub {
+  /* Tier 1 CLS fix (2026-08-10): starts empty in HTML (populated by renderComparisons()),
+     unlike .cmp-value which always has a "—" placeholder -- without a reserved height, an
+     empty-to-one-line-of-text swap shifts the card below it. min-height matches its own
+     measured single-line rendered height (16.5px, mobile viewport, live production). */
+  min-height: 16.5px;
   margin-top: 4px;
   font-size: var(--ts-xs);
   color: var(--cream-mute);
