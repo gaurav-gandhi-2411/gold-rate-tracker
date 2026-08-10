@@ -46,6 +46,27 @@
   font-display: optional;
 }
 
+/* Devanagari (Hindi) — Noto Sans Devanagari, devanagari-subset only (not the
+   latin/latin-ext subsets Google also serves under this family — English text
+   on this page already has Fraunces/DM Sans/Syne, so only the Devanagari glyph
+   range is needed here). Same self-hosting rationale as the three faces above:
+   the exact bytes Google's CDN serves for this subset (verified via fontTools:
+   full U+0900-097F coverage, wght 100-900 variable, confirmed 2026-08-10), same
+   font-display:optional CLS discipline.
+   Declaring this rule costs nothing for English visitors on its own — a browser
+   only fetches an @font-face's src when something on the page actually renders
+   using that font-family, and the html[lang="hi"] selectors below are the ONLY
+   place this font-family is ever applied. An English page (html[lang="en"])
+   never matches those selectors, so this file is never even requested. */
+@font-face {
+  font-family: "Noto Sans Devanagari";
+  src: url("fonts/notosans-devanagari-variable.woff2") format("woff2");
+  font-weight: 100 900;
+  font-style: normal;
+  font-display: optional;
+  unicode-range: U+0900-097F, U+1CD0-1CF9, U+200C-200D, U+20A8, U+20B9, U+20F0, U+25CC, U+A830-A839, U+A8E0-A8FF;
+}
+
 /* ═══════════════════════════════════════════════════════════════
    TOKENS
 ═══════════════════════════════════════════════════════════════ */
@@ -127,9 +148,20 @@
   --status-stale-border: rgba(224, 99, 122, 0.42);
 
   /* Typography */
-  --display: "Fraunces", "Cormorant Garamond", Georgia, serif;
-  --heading: "Syne", system-ui, sans-serif;
-  --sans:    "DM Sans", system-ui, -apple-system, sans-serif;
+  /* "Noto Sans Devanagari" appended to every stack, not scoped by html[lang] --
+     it's the ONLY font here covering the Devanagari block (Fraunces/Cormorant/
+     Syne/DM Sans don't), so per-character font fallback already routes Hindi
+     text to it automatically, on English pages AND Hindi pages alike, with no
+     selector needed. This costs English visitors nothing: the font-face's own
+     unicode-range (U+0900-097F et al.) means the browser only ever fetches it
+     when a Devanagari character actually needs painting, which never happens
+     on an English page (no Devanagari character appears anywhere in its DOM).
+     Also means numerals/₹/Latin mixed into Hindi text (prices, "22K", the EN
+     toggle label) keep rendering via DM Sans's tabular-nums, not Devanagari's
+     digit shapes -- exactly the mixed-script behavior we want. */
+  --display: "Fraunces", "Cormorant Garamond", "Noto Sans Devanagari", Georgia, serif;
+  --heading: "Syne", "Noto Sans Devanagari", system-ui, sans-serif;
+  --sans:    "DM Sans", "Noto Sans Devanagari", system-ui, -apple-system, sans-serif;
 
   /* Spacing (8px base) */
   --space-1:  4px;  --space-2:  8px;  --space-3: 12px;
@@ -469,6 +501,35 @@ main {
 }
 .refresh-btn:active,
 .pwa-help-btn:active { color: var(--gold); }
+
+/* Language toggle — a compact pill (not a circular icon button like
+   refresh/pwa-help above) since it shows 2-character text ("हिं"/"EN"), not a
+   single glyph. Placed first in .app-header-right (left of the freshness
+   pill) so it reads as a settings control grouped apart from status text.
+   44px min-height keeps the touch target on par with the icon buttons despite
+   the visually shorter pill shape. */
+.lang-toggle {
+  background: var(--surface-2);
+  border: 1px solid var(--line);
+  color: var(--cream-mute);
+  font-family: var(--sans);
+  font-size: var(--ts-xs);
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  padding: 0 10px;
+  min-height: 36px;
+  min-width: 40px;
+  border-radius: 999px;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+  touch-action: manipulation;
+  flex-shrink: 0;
+  transition: color 0.15s ease-out, border-color 0.15s ease-out, transform 100ms ease-out;
+}
+.lang-toggle:active { color: var(--gold); border-color: var(--line-strong); transform: scale(0.95); }
+@media (hover: hover) {
+  .lang-toggle:hover { color: var(--gold); border-color: var(--line-strong); }
+}
 /* Author-side display overrides the UA [hidden]{display:none}; restore all. */
 .pwa-help-btn[hidden]   { display: none !important; }
 .pwa-help-panel[hidden] { display: none !important; }
