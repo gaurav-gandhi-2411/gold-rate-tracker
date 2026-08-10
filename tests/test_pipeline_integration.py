@@ -209,10 +209,12 @@ def test_pipeline_wiring_calibration_applied(tmp_path, monkeypatch):
     assert cc["majority_direction"] == "up"
 
     # -- Consumer field presence assertions --
-    # commentary.py reads (lines 157-190):
-    assert "predicted_22k" in fc, "commentary.py reads fc.get('predicted_22k')"
-    assert "lower" in fc, "commentary.py reads fc.get('lower')"
-    assert "upper" in fc, "commentary.py reads fc.get('upper')"
+    # app.js's renderHero()/renderMethodology() read (ml/commentary.py, the other
+    # former consumer of these same fields, was retired 2026-08-10 — no remaining
+    # reader depends on this specific assertion group beyond app.js):
+    assert "predicted_22k" in fc, "app.js reads fc.headline?.predicted_22k ?? fc.predicted_22k"
+    assert "lower" in fc, "app.js reads fc.headline?.lower ?? fc.lower"
+    assert "upper" in fc, "app.js reads fc.headline?.upper ?? fc.upper"
     for field in [
         "status",
         "lean_direction",
@@ -222,7 +224,7 @@ def test_pipeline_wiring_calibration_applied(tmp_path, monkeypatch):
         "direction_consensus",
     ]:
         assert field in cc, (
-            f"commentary.py consumer field missing from chronos_companion: {field!r}"
+            f"app.js consumer field missing from chronos_companion: {field!r}"
         )
 
     # app.js reads (lines 509-806):

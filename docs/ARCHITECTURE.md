@@ -11,8 +11,7 @@ graph TD
         SCR --> MAC[ml/macro.py\nyfinance macro cache]
         MAC --> DRIFT[ml/drift.py]
         DRIFT --> INF[ml/inference.py\nnaive headline + conformal PI h=1]
-        INF --> COM[ml/commentary.py\nGroq LLM]
-        COM --> IBJA[ml/ibja.py\nappend rate + refit calibration]
+        INF --> IBJA[ml/ibja.py\nappend rate + refit calibration]
         IBJA --> PROBE[ml/chronos_forecast.py --probe\nChronos-Bolt-Tiny, zero-shot]
         PROBE --> NOTIF[ml/notifications.py\nntfy alerts, DARK-gated]
         NOTIF --> MET[ml/metrics.py --record]
@@ -93,7 +92,6 @@ yfinance ──► macro_cache.parquet / macro_status.json
 
 prices.json + backtest.json (h=1 conformal PI) + calibration.json + chronos_probe.json[prior cycle]
   ──► ml/inference.py ──► forecast.json (naive headline + Chronos companion + IBJA fallback)
-  ──► ml/commentary.py (Groq LLM) ──► commentary.json
   ──► ml/chronos_forecast.py --probe (Chronos-Bolt-Tiny, zero-shot) ──► chronos_probe.json
   ──► ml/notifications.py (DARK-gated triggers) ──► ntfy push + notification_state.json
   ──► ml/metrics.py --record ──► metrics_history.json
@@ -102,8 +100,8 @@ prices.json + backtest.json (h=1 conformal PI) + calibration.json + chronos_prob
 weekly:  ml/backtest.py ──► backtest.json;  ml/metrics.py --resolve ──► metrics_history.json, coverage_metrics.json
 weekly:  ml/direction/evaluate.py (DARK gate re-checked) ──► direction_baseline.json, direction_eval_history.jsonl
 
-forecast.json + commentary.json + prices.json + backtest.json + coverage_metrics.json
-  ──► app.js (PWA) ──► good-price signals (percentile, trend-residual, support-distance), stale banner, methodology card
+forecast.json + prices.json + backtest.json + coverage_metrics.json
+  ──► app.js (PWA) ──► good-price signals (percentile, trend-residual, support-distance), today's-read synthesis, stale banner, methodology card
 ```
 
 ## Key constraints

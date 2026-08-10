@@ -1,5 +1,11 @@
 # ADR 013 — Prompt Caching Scope: Do Not Apply to Live LLM Path
 
+> **`ml/commentary.py` retired 2026-08-10.** The `call_groq()` call site this ADR analyzes
+> no longer exists — "Today's read" in the PWA moved to a deterministic client-side
+> synthesis with no LLM call at all, once the Groq blurb's only consumer (`app.js`'s old
+> `renderCommentary()`) was removed. Kept as a historical record of the caching-scope
+> reasoning below; the call site itself is gone.
+
 **Status:** Accepted — we have decided NOT to use Anthropic prompt caching at this time.
 **Author:** Gaurav Gandhi / CC
 **Date:** 2026-05-19
