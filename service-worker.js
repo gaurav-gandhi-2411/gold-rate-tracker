@@ -21,7 +21,7 @@
 // cache and re-fetch the current shell on next load. See lint.yml's
 // sw-version-guard job, added the same day, which now fails CI when shell
 // files change without a VERSION bump.
-const VERSION = "v29-20260810-model-signal-cls-fix";
+const VERSION = "v30-20260810-tier1-section-hidden-cls-fix";
 const SHELL_CACHE = `gold-shell-${VERSION}`;
 
 const SHELL_FILES = [

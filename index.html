@@ -153,7 +153,13 @@
 
       <div class="layout-right">
       <!-- 3. COMPARISON CARDS -->
-      <section class="comparison-section reveal-on-scroll" id="comparison-section" hidden
+      <!-- Tier 1 CLS fix (2026-08-10): no `hidden` on the section itself -- cards render
+           with their "—" placeholders from page load, matching commentary/history-section's
+           actual pattern (always in flow), instead of popping the whole section into flow
+           atomically once renderComparisons() resolves. renderComparisons()'s own
+           `readings.length < 2` fallback still hides the section for the rare-edge case,
+           now happening after this initial state rather than instead of it. -->
+      <section class="comparison-section reveal-on-scroll" id="comparison-section"
                aria-label="How today's price compares to recent averages">
         <div class="comparison-cards">
           <div class="comparison-card" id="cmp-7d">
@@ -211,12 +217,17 @@
       </section>
 
       <!-- 5b. PRICE CONTEXT — "Is today a good price?" verdict + volatility context -->
-      <section class="model-signal-section reveal-on-scroll" id="model-signal-section" hidden
+      <section class="model-signal-section reveal-on-scroll" id="model-signal-section"
                aria-label="How today's price compares to recent history">
         <h2>How does today's price compare?</h2>
         <!-- Φ8C'/Ψ3C.3: skeleton shown while signal loads. model-signal-wrap: same
              absolute-overlay CLS fix as commentary-body/history-wrap (2026-08-10) --
-             see the .model-signal-wrap rule in style.css for why. -->
+             see the .model-signal-wrap rule in style.css for why. Tier 1 CLS fix
+             (2026-08-10): `hidden` removed from the section itself too -- the skeleton
+             above was invisible the whole time otherwise, since its ancestor section was
+             display:none until data resolved. renderModelSignal()'s own `!signals`
+             fallback still hides the section for the rare-edge case, now happening after
+             this initial visible-skeleton state rather than instead of it. -->
         <div class="model-signal-wrap">
           <div class="model-signal-skeleton" id="model-signal-skeleton" aria-hidden="true">
             <div class="skel" style="height:20px;width:45%;border-radius:4px;margin-bottom:8px"></div>
@@ -286,7 +297,13 @@
       </section>
 
       <!-- 7b. PAST ESTIMATE TRACK RECORD — past estimates vs actual prices -->
-      <section class="track-record-section reveal-on-scroll" id="section-track-record" hidden
+      <!-- Tier 1 CLS fix (2026-08-10): no `hidden` on the section itself -- h2/caption are
+           static text and track-record-chart-wrap already reserves a fixed height (see its
+           CSS rule), so nothing here changes size once rendered; only the section-level
+           hidden->visible pop-in was the risk. renderForecastVsActual()'s own
+           `!bt?.folds?.length` / `folds.length < 3` fallbacks still hide the section for the
+           rare-edge case, now happening after this initial state rather than instead of it. -->
+      <section class="track-record-section reveal-on-scroll" id="section-track-record"
                aria-label="Past estimate accuracy — flat-hold vs actual prices">
         <h2>How past estimates have held up</h2>
         <p class="track-record-caption">30 recent five-day windows: flat-hold estimate (dashed) vs what actually happened (gold)</p>
