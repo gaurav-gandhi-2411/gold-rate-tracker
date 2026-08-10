@@ -51,28 +51,49 @@ function rupee(n) {
   return `<span class="rupee">₹</span>${fmtINR(n)}`;
 }
 
+// English keeps its existing hand-tuned short form ("2h ago") unchanged — only Hindi
+// gets a real Intl.RelativeTimeFormat path, which handles Hindi's grammar/pluralization
+// correctly via CLDR data (not a word-swap of the English template). numeric:"auto" lets
+// it say "अभी-अभी"-equivalent phrasing where natural, but we drive the actual "just now"
+// case ourselves for consistency with the English branch's own explicit just-now case.
 function fmtRelative(iso) {
   const d    = new Date(iso);
   const diff = (Date.now() - d.getTime()) / 1000;
-  if (diff < 60)    return "just now";
-  if (diff < 3600)  return `${Math.round(diff / 60)} min ago`;
-  if (diff < 86400) return `${Math.round(diff / 3600)}h ago`;
-  return `${Math.round(diff / 86400)}d ago`;
+  if (currentLang === "hi") {
+    if (diff < 60) return t("relJustNow");
+    const rtf = new Intl.RelativeTimeFormat("hi-IN", { numeric: "auto", style: "long" });
+    if (diff < 3600)  return rtf.format(-Math.round(diff / 60), "minute");
+    if (diff < 86400) return rtf.format(-Math.round(diff / 3600), "hour");
+    return rtf.format(-Math.round(diff / 86400), "day");
+  }
+  if (diff < 60)    return t("relJustNow");
+  if (diff < 3600)  return t("relMinAgo", { n: Math.round(diff / 60) });
+  if (diff < 86400) return t("relHoursAgo", { n: Math.round(diff / 3600) });
+  return t("relDaysAgo", { n: Math.round(diff / 86400) });
 }
 
+// Digit grouping stays en-IN regardless of UI language — Indian digit grouping
+// (₹13,33,330) is a REGIONAL convention, not a language one, and hi-IN's default
+// numbering system can silently switch to Devanagari digits (०१२३…) depending on the
+// browser's ICU data. numberingSystem:"latn" pins Arabic digits explicitly for the
+// Hindi date path below, matching how Indian Hindi media actually writes dates.
 function fmtDate(iso) {
-  return new Date(iso).toLocaleString("en-IN", {
+  const locale = currentLang === "hi" ? "hi-IN" : "en-IN";
+  return new Date(iso).toLocaleString(locale, {
     day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit",
+    numberingSystem: "latn",
   });
 }
 
 function fmtIST(iso) {
   if (!iso) return "—";
+  const locale = currentLang === "hi" ? "hi-IN" : "en-IN";
   try {
-    return new Intl.DateTimeFormat("en-IN", {
+    return new Intl.DateTimeFormat(locale, {
       timeZone: "Asia/Kolkata",
       day: "numeric", month: "short", year: "numeric",
       hour: "2-digit", minute: "2-digit", hour12: true,
+      numberingSystem: "latn",
     }).format(new Date(iso));
   } catch (_) { return "—"; }
 }
@@ -80,9 +101,9 @@ function fmtIST(iso) {
 // Human-readable label for tier-3 fusion_sources (e.g. ["grt","malabar"] -> "GRT, Malabar").
 // Never crashes on a missing/null sources list — falls back to a generic label.
 function fusionSourcesLabel(sources) {
-  const NAMES = { grt: "GRT", malabar: "Malabar", kalyan: "Kalyan" };
+  const NAMES = { grt: t("fusionSourceGrt"), malabar: t("fusionSourceMalabar"), kalyan: t("fusionSourceKalyan") };
   const labels = (sources || []).map(s => NAMES[s] || s);
-  return labels.length ? labels.join(", ") : "retail consensus";
+  return labels.length ? labels.join(", ") : t("fusionSourceFallback");
 }
 
 // One reading per IST calendar day (latest timestamp wins).
@@ -119,8 +140,9 @@ function dedupReadings(readings) {
 }
 
 function fmtDateShort(iso) {
-  return new Intl.DateTimeFormat("en-IN", {
-    timeZone: "Asia/Kolkata", day: "numeric", month: "short",
+  const locale = currentLang === "hi" ? "hi-IN" : "en-IN";
+  return new Intl.DateTimeFormat(locale, {
+    timeZone: "Asia/Kolkata", day: "numeric", month: "short", numberingSystem: "latn",
   }).format(new Date(iso));
 }
 
@@ -133,6 +155,9 @@ let trackRecordChart  = null;  // Chart.js instance for forecast-vs-actual secti
 let displayedPrice    = null;  // Φ16-4: last rendered hero price; drives number tick
 let _heroTickRaf      = null;  // Φ16-4: RAF handle; cancelled when a new tick starts
 let lastForecast      = null;  // Φ16-2: stored for stale-banner re-evaluation on online restore
+let lastBacktest      = null;  // cached so applyLanguage() can re-render methodology/track-record without re-fetching
+let lastDrift         = null;
+let lastCoverage      = null;
 
 // Ψ3C.2: stagger card-enter animation across a list of elements.
 // Forces a reflow between remove/add so the animation restarts each time.
@@ -229,8 +254,8 @@ function computeVerdict(prices, forecast) {
     return {
       type: "unknown",
       icon: "○",
-      headline: "Not enough data yet",
-      reason: "Check back once we've collected a few more readings.",
+      headline: t("verdictHeadlineUnknown"),
+      reason: t("verdictReasonUnknown"),
     };
   }
 
@@ -263,40 +288,36 @@ function computeVerdict(prices, forecast) {
   // ── Classify ──
   if (slope7d < -SLOPE_THRESHOLD && (forecastDelta < 0 || vsAvg30d < 0)) {
     const absDelta = fmtINR(Math.abs(Math.round(slope7d)));
-    const avgNote  = vsAvg30d < 0
-      ? `, and ₹${fmtINR(Math.abs(vsAvg30d))} below the usual price for the month`
-      : "";
+    const avgDelta = vsAvg30d < 0 ? fmtINR(Math.abs(vsAvg30d)) : null;
     return {
       type: "down",
       icon: "↓",
-      headline: "Getting cheaper this week",
-      reason: `Down ₹${absDelta} this week${avgNote}.`,
+      headline: t("verdictHeadlineDown"),
+      reason: t("verdictReasonDown", { delta: absDelta, avgDelta }),
     };
   }
 
   if (slope7d > SLOPE_THRESHOLD && (forecastDelta > 0 || vsAvg30d > 0)) {
-    const delta   = fmtINR(Math.round(slope7d));
-    const avgNote = vsAvg30d > 0
-      ? `, and ₹${fmtINR(Math.abs(vsAvg30d))} above the usual price for the month`
-      : "";
+    const delta    = fmtINR(Math.round(slope7d));
+    const avgDelta = vsAvg30d > 0 ? fmtINR(Math.abs(vsAvg30d)) : null;
     return {
       type: "up",
       icon: "↑",
-      headline: "Getting pricier this week",
-      reason: `Up ₹${delta} this week${avgNote}.`,
+      headline: t("verdictHeadlineUp"),
+      reason: t("verdictReasonUp", { delta, avgDelta }),
     };
   }
 
   // Flat — describe magnitude of stability.
   const absSlope = Math.abs(Math.round(slope7d));
-  const dirWord  = slope7d > 0 ? "edged up" : slope7d < 0 ? "edged down" : "unchanged";
+  const dirWordKey = slope7d > 0 ? "dirWordUp" : slope7d < 0 ? "dirWordDown" : "dirWordUnchanged";
   const flatReason = absSlope < 20
-    ? "Barely moved this week — nothing to react to."
-    : `Prices ${dirWord} ₹${fmtINR(absSlope)} this week — that's normal movement, nothing to react to.`;
+    ? t("verdictReasonFlatBarely")
+    : t("verdictReasonFlatMoved", { dirWord: t(dirWordKey), amount: fmtINR(absSlope) });
   return {
     type: "flat",
     icon: "→",
-    headline: "Steady this week",
+    headline: t("verdictHeadlineFlat"),
     reason: flatReason,
   };
 }
@@ -414,20 +435,20 @@ function computeGoodPriceSignals(readings) {
   let verdictLead, verdictType, supportLine1;
   if (percentile30d <= 20) {
     verdictType  = "cheap";
-    verdictLead  = "You're paying less than usual this month";
-    supportLine1 = "Cheaper than most days this month.";
+    verdictLead  = t("verdictLeadCheap");
+    supportLine1 = t("supportLine1Cheap");
   } else if (percentile30d <= 40) {
     verdictType  = "below-mid";
-    verdictLead  = "You're paying a little less than usual this month";
-    supportLine1 = "A bit below the usual price this month.";
+    verdictLead  = t("verdictLeadBelowMid");
+    supportLine1 = t("supportLine1BelowMid");
   } else if (percentile30d <= 70) {
     verdictType  = "mid";
-    verdictLead  = "You're paying about the usual amount this month";
-    supportLine1 = "Right around the middle for this month.";
+    verdictLead  = t("verdictLeadMid");
+    supportLine1 = t("supportLine1Mid");
   } else {
     verdictType  = "high";
-    verdictLead  = "You're paying a bit more than usual this month";
-    supportLine1 = "Pricier than most days this month.";
+    verdictLead  = t("verdictLeadHigh");
+    supportLine1 = t("supportLine1High");
   }
 
   // Unified proof line — consistent frame (cheaper-than / pricier-than), phrased as an
@@ -438,26 +459,26 @@ function computeGoodPriceSignals(readings) {
   const daysCheaperThanToday = prices30d.filter(p => p > current).length;
   const daysPricierThanToday = prices30d.filter(p => p < current).length;
   const proofLine = percentile30d <= 50
-    ? `Cheaper than ${daysCheaperThanToday} of the last ${nDays30d} days.`
-    : `Pricier than ${daysPricierThanToday} of the last ${nDays30d} days.`;
+    ? t("proofLineCheaper", { days: daysCheaperThanToday, total: nDays30d })
+    : t("proofLinePricier", { days: daysPricierThanToday, total: nDays30d });
 
   // Data-sufficiency degrade note (norm #5) — shown when < 30 distinct days
   const dataSuffNote = nDays30d < 30
-    ? `Only ${nDays30d} distinct days in the window — treat as indicative.`
+    ? t("dataSuffNote", { n: nDays30d })
     : null;
 
   const absVsAvg = fmtINR(Math.abs(vsAvg30d));
   const supportLine2 = vsAvg30d < 0
-    ? `₹${absVsAvg} below the usual price for the month.`
+    ? t("supportLine2Below", { amount: absVsAvg })
     : vsAvg30d > 0
-      ? `₹${absVsAvg} above the usual price for the month.`
-      : "Right at the usual price for the month.";
+      ? t("supportLine2Above", { amount: absVsAvg })
+      : t("supportLine2At");
 
   // Divergence: percentile says cheap/low but vs-avg says above average, or vice versa.
   const divergenceNote =
     (percentile30d <= 40 && vsAvg30d > 0) ||
     (percentile30d >= 70 && vsAvg30d < 0)
-      ? "(These two don't quite agree — one counts days, the other measures the actual rupee gap. We go with the day-count for the headline above.)"
+      ? t("divergenceNote")
       : null;
 
   return { percentile30d, vsAvg30d, avg30d, nDays30d, verdictLead, verdictType, proofLine, dataSuffNote, supportLine1, supportLine2, divergenceNote };
@@ -496,10 +517,10 @@ function computeBandPos90d(readings) {
   );
 
   let note = percentile90d <= 50
-    ? `Over the past 90 days: cheaper than ${100 - percentile90d}% of the ${nDays90d} days.`
-    : `Over the past 90 days: more expensive than ${percentile90d}% of the ${nDays90d} days.`;
+    ? t("band90dCheaper", { pct: 100 - percentile90d, n: nDays90d })
+    : t("band90dMoreExpensive", { pct: percentile90d, n: nDays90d });
   if (nDays90d < FULL_DAYS_90D) {
-    note += ` (Only ${nDays90d} distinct days in this window so far — treat as indicative.)`;
+    note += t("band90dSuffAppend", { n: nDays90d });
   }
 
   return { percentile90d, nDays90d, note };
@@ -593,15 +614,15 @@ function computeTrendResidual30d(readings, percentile30d) {
 
   let note;
   if (isCheap && residZ < STILL_FALLING_Z) {
-    note = `Cheap, but still falling — today is well below its usual trend for the month (dropping about ₹${slopeAbs} a day).`;
+    note = t("trendCheapStillFalling", { slope: slopeAbs });
   } else if (isCheap) {
-    note = "Cheap, and steadying — despite the recent dip, today's price is back close to its usual trend for the month.";
+    note = t("trendCheapSteadying");
   } else if (trendState === "falling") {
-    note = `Prices have been slipping about ₹${slopeAbs} a day this month.`;
+    note = t("trendFalling", { slope: slopeAbs });
   } else if (trendState === "rising") {
-    note = `Prices have been climbing about ₹${slopeAbs} a day this month.`;
+    note = t("trendRising", { slope: slopeAbs });
   } else {
-    note = "Prices have been steady this month, close to their usual trend.";
+    note = t("trendFlat");
   }
 
   return { slope, residual, residZ, trendState, nDays, note };
@@ -651,16 +672,16 @@ function computeSupportDistance90d(readings, percentile30d) {
 
   let note;
   if (isCheap && nearSupport) {
-    note = `Cheap, and sitting right at its 3-month low (₹${fmtINR(low90d)}) — it hasn't dropped below this in ${nDays} days.`;
+    note = t("supportCheapAtSupport", { low: fmtINR(low90d), n: nDays });
   } else if (isCheap) {
-    note = `Cheap, but still ${distPct.toFixed(1)}% above its lowest price in 3 months (₹${fmtINR(low90d)}).`;
+    note = t("supportCheapNotAtSupport", { pct: distPct.toFixed(1), low: fmtINR(low90d) });
   } else if (nearSupport) {
-    note = `Right at its lowest price in 3 months (₹${fmtINR(low90d)}), even though it's not among the cheapest days this month.`;
+    note = t("supportNotCheapAtSupport", { low: fmtINR(low90d) });
   } else {
-    note = `${distPct.toFixed(1)}% above its lowest price in 3 months (₹${fmtINR(low90d)}, over the last ${nDays} days).`;
+    note = t("supportNotCheapNotAtSupport", { pct: distPct.toFixed(1), low: fmtINR(low90d), n: nDays });
   }
   if (nDays < FULL_DAYS_SUPPORT) {
-    note += ` (Only ${nDays} distinct days in this 90-day window so far — treat as indicative.)`;
+    note += t("supportSuffAppend", { n: nDays });
   }
 
   return { distPct, low90d, nDays, note };
@@ -705,6 +726,14 @@ function istDayKey(d) {
   return d.toLocaleDateString("en-IN", { timeZone: "Asia/Kolkata" });
 }
 
+// Weekday name in the active UI language — e.g. "Friday" / "शुक्रवार" — via CLDR data,
+// not a lookup table. Only used for display (banner/pill text); istDayKey above stays
+// en-IN unconditionally since it's purely an internal grouping key, never shown.
+function weekdayLong(d) {
+  const locale = currentLang === "hi" ? "hi-IN" : "en-IN";
+  return d.toLocaleDateString(locale, { weekday: "long", timeZone: "Asia/Kolkata", numberingSystem: "latn" });
+}
+
 function renderStaleBanner(forecast) {
   const banner = document.getElementById("stale-banner");
   if (!banner) return;
@@ -722,10 +751,8 @@ function renderStaleBanner(forecast) {
     const ibjaDate = new Date(forecast.ibja_asof);
     const isToday  = istDayKey(ibjaDate) === istDayKey(new Date());
     banner.textContent = isToday
-      ? "This is today's estimated price, based on IBJA's official gold benchmark — we couldn't confirm it against the shop rate just now."
-      : `This is an estimated price, based on IBJA's ${
-          ibjaDate.toLocaleDateString("en-IN", { weekday: "long", timeZone: "Asia/Kolkata" })
-        } close (their most recent official rate) — we couldn't confirm it against the shop rate just now.`;
+      ? t("bannerIbjaToday")
+      : t("bannerIbjaCarryForward", { weekday: weekdayLong(ibjaDate) });
     banner.hidden = false;
     return;
   }
@@ -733,7 +760,7 @@ function renderStaleBanner(forecast) {
   // Tier 3: both Tanishq and IBJA unavailable this cycle — live GRT/Malabar/
   // Kalyan consensus (ADR 026) is the only estimate available.
   if (forecast.price_source === "fusion_consensus") {
-    banner.textContent = `This is an estimated price based on other jewellers' rates (${fusionSourcesLabel(forecast.fusion_sources)}) — we couldn't reach Tanishq or IBJA just now.`;
+    banner.textContent = t("bannerFusion", { sources: fusionSourcesLabel(forecast.fusion_sources) });
     banner.hidden = false;
     return;
   }
@@ -755,7 +782,7 @@ function renderStaleBanner(forecast) {
   const scrapeAgeH = (Date.now() - scrapedAtMs) / 3_600_000;
   if (scrapeAgeH <= STALE_THRESHOLD_H) return; // scraped-fresh — banner stays hidden
 
-  banner.textContent = `We couldn't get a live price update — this is the last confirmed price, from ${fmtRelative(forecast.scraped_at)}.`;
+  banner.textContent = t("bannerStaleConfirmed", { rel: fmtRelative(forecast.scraped_at) });
   banner.hidden = false;
 }
 
@@ -773,13 +800,13 @@ function renderFreshness(readings, forecast) {
     const rel      = fmtRelative(forecast.ibja_asof);
     if (isToday) {
       pill.className   = "freshness-pill freshness--ok";
-      pill.textContent = `Estimated · ${rel}`;
-      pill.setAttribute("aria-label", `Estimated retail price, IBJA benchmark updated ${rel}`);
+      pill.textContent = t("freshnessEstimated", { rel });
+      pill.setAttribute("aria-label", t("freshnessEstimatedAria", { rel }));
     } else {
-      const dayLabel = ibjaDate.toLocaleDateString("en-IN", { weekday: "long", timeZone: "Asia/Kolkata" });
+      const dayLabel = weekdayLong(ibjaDate);
       pill.className   = "freshness-pill freshness--warn";
-      pill.textContent = `As of ${dayLabel} close`;
-      pill.setAttribute("aria-label", `Estimated retail price, as of ${dayLabel}'s IBJA close`);
+      pill.textContent = t("freshnessAsOfClose", { weekday: dayLabel });
+      pill.setAttribute("aria-label", t("freshnessAsOfCloseAria", { weekday: dayLabel }));
     }
     return;
   }
@@ -790,13 +817,13 @@ function renderFreshness(readings, forecast) {
   if (forecast && forecast.price_source === "fusion_consensus") {
     const rel = fmtRelative(forecast.predicted_at);
     pill.className   = "freshness-pill freshness--warn";
-    pill.textContent = `Consensus estimate · ${rel}`;
-    pill.setAttribute("aria-label", `Retail consensus estimate, updated ${rel}`);
+    pill.textContent = t("freshnessConsensus", { rel });
+    pill.setAttribute("aria-label", t("freshnessConsensusAria", { rel }));
     return;
   }
 
   if (readings.length === 0) {
-    pill.textContent = "Awaiting first reading";
+    pill.textContent = t("freshnessAwaiting");
     pill.className   = "freshness-pill";
     return;
   }
@@ -805,16 +832,16 @@ function renderFreshness(readings, forecast) {
   const rel    = fmtRelative(latest.timestamp);
   if (ageH >= 18) {
     pill.className   = "freshness-pill freshness--stale";
-    pill.textContent = `Not updating · ${rel}`;
-    pill.setAttribute("aria-label", `Not updating, last updated ${rel}`);
+    pill.textContent = t("freshnessNotUpdating", { rel });
+    pill.setAttribute("aria-label", t("freshnessNotUpdatingAria", { rel }));
   } else if (ageH >= 8) {
     pill.className   = "freshness-pill freshness--warn";
-    pill.textContent = `Stale · ${rel}`;
-    pill.setAttribute("aria-label", `Data stale, last updated ${rel}`);
+    pill.textContent = t("freshnessStale", { rel });
+    pill.setAttribute("aria-label", t("freshnessStaleAria", { rel }));
   } else {
     pill.className   = "freshness-pill freshness--ok";
     pill.textContent = rel;
-    pill.setAttribute("aria-label", `Updated ${rel}`);
+    pill.setAttribute("aria-label", t("freshnessOkAria", { rel }));
   }
 
   // D5: Auto-open iOS help panel when standalone + data is ≥ 12h stale,
@@ -839,8 +866,8 @@ function updateOfflineBanner() {
       ? fmtRelative(allReadings[allReadings.length - 1].timestamp)
       : null;
     offlineBanner.textContent = rel
-      ? `You're offline — showing prices from ${rel}`
-      : "You're offline — no prices loaded yet";
+      ? t("offlineWithTime", { rel })
+      : t("offlineNoData");
     offlineBanner.hidden = false;
     if (staleBanner) staleBanner.hidden = true;
   } else {
@@ -869,8 +896,8 @@ function renderHero(readings, forecast) {
     if (lastConfEl) lastConfEl.hidden = true;
     if (verdictEl) {
       document.getElementById("verdict-icon").textContent    = "○";
-      document.getElementById("verdict-headline").textContent = "Not enough data yet";
-      document.getElementById("verdict-reason").textContent  = "Awaiting first price reading.";
+      document.getElementById("verdict-headline").textContent = t("verdictHeadlineUnknown");
+      document.getElementById("verdict-reason").textContent  = t("heroFallbackReason");
       verdictEl.dataset.type = "unknown";
       verdictEl.hidden       = false;
     }
@@ -900,7 +927,7 @@ function renderHero(readings, forecast) {
     priceEl.innerHTML = `≈ ${rupee(forecast.current_22k)}`;
     priceEl.hidden = false;
     if (rangeEl) {
-      rangeEl.textContent = `estimated range ₹${fmtINR(forecast.est_low)}–₹${fmtINR(forecast.est_high)}`;
+      rangeEl.textContent = t("heroEstimatedRange", { low: fmtINR(forecast.est_low), high: fmtINR(forecast.est_high) });
       rangeEl.hidden = false;
     }
     // Honest secondary line: the actual last-observed Tanishq reading, dated —
@@ -910,7 +937,7 @@ function renderHero(readings, forecast) {
     // succeeds again (no separate "reachable again" wiring needed — same data,
     // same render path, whatever `latest` currently is).
     if (lastConfEl) {
-      lastConfEl.textContent = `Tanishq last confirmed: ₹${fmtINR(newPrice)} (${fmtDateShort(latest.timestamp)})`;
+      lastConfEl.textContent = t("heroLastConfirmed", { price: fmtINR(newPrice), date: fmtDateShort(latest.timestamp) });
       lastConfEl.hidden = false;
     }
   } else {
@@ -946,11 +973,11 @@ function renderHero(readings, forecast) {
     changeEl.dataset.direction = dir;
     changeEl.querySelector(".hero-change-arrow").textContent  = arrow;
     changeEl.querySelector(".hero-change-amount").textContent =
-      todayDelta === 0 ? "no change" : `${sign}₹${fmtINR(Math.abs(todayDelta))}`;
+      todayDelta === 0 ? t("noChangeLabel") : `${sign}₹${fmtINR(Math.abs(todayDelta))}`;
     // Honest label: "today" only when measured within the same IST day; otherwise
     // "since last" (the prior reading may be from yesterday when scrapes have gapped).
     const labelEl = changeEl.querySelector(".hero-change-label");
-    if (labelEl) labelEl.textContent = change.basis;
+    if (labelEl) labelEl.textContent = t(change.basis === "today" ? "todayLabel" : "sinceLastLabel");
     changeEl.hidden = false;
   }
 
@@ -993,8 +1020,10 @@ function renderSparkline(readings) {
   const fillClr   = trendDown ? "rgba(106,154,114,0.18)" : "rgba(198,106,75,0.15)";
   const netChange = prices[prices.length - 1] - prices[0];
 
-  svgEl.setAttribute("aria-label",
-    `7-day price trend: ${trendDown ? "down" : "up"} ₹${fmtINR(Math.abs(Math.round(netChange)))}`);
+  svgEl.setAttribute("aria-label", t("sparklineAria", {
+    dir: trendDown ? t("trendDirDown") : t("trendDirUp"),
+    delta: fmtINR(Math.abs(Math.round(netChange))),
+  }));
   // XSS-safe: all interpolated values are derived from numeric price data
   // (coords = toFixed(1) floats, fillClr/lineClr = hardcoded rgba/hex literals).
   svgEl.innerHTML = `
@@ -1003,7 +1032,7 @@ function renderSparkline(readings) {
               stroke-width="1.5" stroke-linejoin="round" stroke-linecap="round"/>
   `;
 
-  rangeEl.textContent = `Low ₹${fmtINR(min22k)} · High ₹${fmtINR(max22k)}`;
+  rangeEl.textContent = t("sparklineRange", { min: fmtINR(min22k), max: fmtINR(max22k) });
   wrap.hidden = false;
 }
 
@@ -1012,34 +1041,34 @@ function renderComparisons(readings) {
   const cmp     = computeComparisons(readings);
   if (!cmp || readings.length < 2) { section.hidden = true; return; }
 
-  function setCard(valueId, subId, cardId, delta, avgLabel, nullNote) {
+  function setCard(valueId, subId, cardId, delta, avgLabel) {
     const valEl  = document.getElementById(valueId);
     const subEl  = document.getElementById(subId);
     const card   = document.getElementById(cardId);
     if (delta === null) {
       valEl.textContent        = "—";
-      subEl.textContent        = nullNote || "";
+      subEl.textContent        = t("cmpNotEnoughData");
       card.dataset.sentiment   = "neutral";
       return;
     }
     const abs = fmtINR(Math.abs(delta));
     if (delta < 0) {
       valEl.textContent      = `−₹${abs}`;
-      subEl.textContent      = `cheaper than ${avgLabel}`;
+      subEl.textContent      = t("cmpCheaperThan", { avgLabel });
       card.dataset.sentiment = "good";
     } else if (delta > 0) {
       valEl.textContent      = `+₹${abs}`;
-      subEl.textContent      = `pricier than ${avgLabel}`;
+      subEl.textContent      = t("cmpPricierThan", { avgLabel });
       card.dataset.sentiment = "caution";
     } else {
-      valEl.textContent      = "at avg";
+      valEl.textContent      = t("cmpAtAvg");
       subEl.textContent      = avgLabel;
       card.dataset.sentiment = "neutral";
     }
   }
 
-  setCard("cmp-7d-value",  "cmp-7d-sub",  "cmp-7d",  cmp.vs7d,  "7d avg",  "not enough data");
-  setCard("cmp-30d-value", "cmp-30d-sub", "cmp-30d", cmp.vs30d, "30d avg", "not enough data");
+  setCard("cmp-7d-value",  "cmp-7d-sub",  "cmp-7d",  cmp.vs7d,  t("avgLabel7d"));
+  setCard("cmp-30d-value", "cmp-30d-sub", "cmp-30d", cmp.vs30d, t("avgLabel30d"));
 
   const lowVal  = document.getElementById("cmp-low-value");
   const lowSub  = document.getElementById("cmp-low-sub");
@@ -1049,12 +1078,12 @@ function renderComparisons(readings) {
     lowSub.textContent        = "";
     lowCard.dataset.sentiment = "neutral";
   } else if (cmp.vsLow === 0) {
-    lowVal.textContent        = "at low";
-    lowSub.textContent        = "this month's lowest price";
+    lowVal.textContent        = t("cmpAtLow");
+    lowSub.textContent        = t("cmpLowestPrice");
     lowCard.dataset.sentiment = "good";
   } else {
     lowVal.textContent        = `+₹${fmtINR(cmp.vsLow)}`;
-    lowSub.textContent        = "above this month's lowest";
+    lowSub.textContent        = t("cmpAboveLowest");
     lowCard.dataset.sentiment = cmp.vsLow < 300 ? "neutral" : "caution";
   }
 
@@ -1079,7 +1108,7 @@ function renderComparisons(readings) {
 function composeTodaysRead(readings) {
   const signals = computeGoodPriceSignals(readings ?? []);
   if (!signals) {
-    return "We don't have enough price history yet to say much about today — check back once a few more readings come in.";
+    return t("readNoSignals");
   }
 
   const isCheap = signals.verdictType === "cheap" || signals.verdictType === "below-mid";
@@ -1087,31 +1116,31 @@ function composeTodaysRead(readings) {
   const trend   = computeTrendResidual30d(readings ?? [], signals.percentile30d);
 
   if (!trend) {
-    if (isCheap) return "Today's price is on the low side for the month.";
-    if (isHigh)  return "Today's price is on the higher side for the month.";
-    return "Today's price is sitting around its usual range this month.";
+    if (isCheap) return t("readNoTrendCheap");
+    if (isHigh)  return t("readNoTrendHigh");
+    return t("readNoTrendMid");
   }
 
   const { trendState, residZ } = trend;
   if (isCheap && trendState === "falling" && residZ < STILL_FALLING_Z) {
-    return "Today's price is on the low side for the month, and it's still sliding — it hasn't leveled off yet.";
+    return t("readCheapStillFalling");
   }
   if (isCheap) {
-    return "Today's price is on the low side for the month, and it looks like it's steadying after a recent dip.";
+    return t("readCheapSteadying");
   }
   if (isHigh && trendState === "rising") {
-    return "Today's price is on the higher side for the month, and it's still climbing.";
+    return t("readHighRising");
   }
   if (isHigh) {
-    return "Today's price is on the higher side for the month, though the climb has slowed.";
+    return t("readHighSlowed");
   }
   if (trendState === "falling") {
-    return "Prices have eased over the past month, though today isn't especially cheap yet.";
+    return t("readFalling");
   }
   if (trendState === "rising") {
-    return "Prices have climbed over the past month, though today isn't especially expensive yet.";
+    return t("readRising");
   }
-  return "Prices have been fairly steady this month — today sits around the usual range.";
+  return t("readFlat");
 }
 
 function renderTodaysRead(readings) {
@@ -1177,7 +1206,7 @@ function renderModelSignal(fc, readings, bt) {
   const hasRange = typeof rangeLower === "number" && typeof rangeUpper === "number";
   // XSS-safe: fmtINR() wraps numbers only.
   const tomorrowRangeHtml = hasRange
-    ? `<p class="good-price-tomorrow">Likely to stay between <strong>₹${fmtINR(rangeLower)}</strong> and <strong>₹${fmtINR(rangeUpper)}</strong> by the next trading day.</p>`
+    ? `<p class="good-price-tomorrow">${t("goodPriceTomorrow", { low: fmtINR(rangeLower), high: fmtINR(rangeUpper) })}</p>`
     : "";
 
   // Volatility context — dynamic realized-vol estimate (Phi10B) with static-PI fallback.
@@ -1190,11 +1219,11 @@ function renderModelSignal(fc, readings, bt) {
       Z = Math.round(volCtx.half_width / 50) * 50;
       const regime = volCtx.regime ?? "normal";
       if (regime === "elevated") {
-        volNote = `Gold has been more volatile than usual lately — about ±₹${fmtINR(Z)} over 5 days.`;
+        volNote = t("volNoteElevated", { z: fmtINR(Z) });
       } else if (regime === "calm") {
-        volNote = `Gold has been calmer than usual lately — about ±₹${fmtINR(Z)} over 5 days.`;
+        volNote = t("volNoteCalm", { z: fmtINR(Z) });
       } else {
-        volNote = `Gold has been moving about ±₹${fmtINR(Z)} over 5 days lately.`;
+        volNote = t("volNoteNormal", { z: fmtINR(Z) });
       }
     } else {
       // Fallback: vol estimate degraded or absent → the dedicated 5-day static-PI
@@ -1204,7 +1233,7 @@ function renderModelSignal(fc, readings, bt) {
       // falls back to conformal_pi_half (pre-ADR-022 shape) rather than break.
       const piHalf = hl.vol_context?.static_pi_half ?? hl.conformal_pi_half ?? (hl.upper - hl.lower) / 2;
       Z = Math.round(piHalf / 50) * 50;
-      volNote = `Gold's price typically moves about ±₹${fmtINR(Z)} over 5 days.`;
+      volNote = t("volNoteFallback", { z: fmtINR(Z) });
     }
     // XSS-safe: fmtINR() wraps numbers only; Z and volNote are computed.
     volatilityHtml = `
@@ -1298,25 +1327,25 @@ function renderDriverContext(fc) {
 
     if (total >= 0) {
       if (inrAbs >= goldAbs && inrAbs > 10) {
-        headline = `Gold is up about ₹${fmtINR(absTotal)} this week — mostly a weaker rupee (₹${fmtINR(inrAbs)}), plus a bit from global gold prices (₹${fmtINR(goldAbs)}).`;
+        headline = t("driverUpInrDominant", { total: fmtINR(absTotal), inr: fmtINR(inrAbs), gold: fmtINR(goldAbs) });
       } else if (goldAbs > 10) {
-        headline = `Gold is up about ₹${fmtINR(absTotal)} this week — mostly global gold prices (₹${fmtINR(goldAbs)}), plus a bit from the rupee (₹${fmtINR(inrAbs)}).`;
+        headline = t("driverUpGoldDominant", { total: fmtINR(absTotal), gold: fmtINR(goldAbs), inr: fmtINR(inrAbs) });
       } else {
-        headline = `Gold is up about ₹${fmtINR(absTotal)} this week, from a mix of global prices and the rupee.`;
+        headline = t("driverUpMixed", { total: fmtINR(absTotal) });
       }
     } else {
       if (inrAbs >= goldAbs && inrAbs > 10) {
-        headline = `Gold is down about ₹${fmtINR(absTotal)} this week — mostly a stronger rupee (₹${fmtINR(inrAbs)}), with global gold roughly flat.`;
+        headline = t("driverDownInrDominant", { total: fmtINR(absTotal), inr: fmtINR(inrAbs) });
       } else if (goldAbs > 10) {
         const inrNote = inrAbs > 10
-          ? `, and the rupee added back ₹${fmtINR(inrAbs)}`
-          : ", with the rupee roughly flat";
-        headline = `Gold is down about ₹${fmtINR(absTotal)} this week — global gold fell about ₹${fmtINR(goldAbs)}${inrNote}.`;
+          ? t("driverDownGoldDominantInrNoteAdded", { inr: fmtINR(inrAbs) })
+          : t("driverDownGoldDominantInrNoteFlat");
+        headline = t("driverDownGoldDominant", { total: fmtINR(absTotal), gold: fmtINR(goldAbs), inrNote });
       } else {
-        headline = `Gold is down about ₹${fmtINR(absTotal)} this week, from a mix of global prices and the rupee.`;
+        headline = t("driverDownMixed", { total: fmtINR(absTotal) });
       }
     }
-    // XSS-safe: headline built from fmtINR(number) and hardcoded string literals only
+    // XSS-safe: headline built from fmtINR(number) and catalogue string literals only
     headlineHtml = `<p class="driver-headline">${headline}</p>`;
   }
 
@@ -1326,26 +1355,24 @@ function renderDriverContext(fc) {
     // Branch 1: at least one driver moved > 2%
     const parts = [];
     if (inrMoved) {
-      const dir = inrPct > 0 ? "weakened" : "strengthened";
-      const mechanism = inrPct > 0
-        ? " a weaker rupee makes imported gold pricier in India."
-        : " a stronger rupee makes imported gold cheaper in India.";
-      parts.push(`The rupee has ${dir} about ${Math.abs(inrPct).toFixed(1)}% this month —${mechanism}`);
+      const mechanism = inrPct > 0 ? t("driverMechanismWeaker") : t("driverMechanismStronger");
+      const key = inrPct > 0 ? "driverRupeeWeakened" : "driverRupeeStrengthened";
+      parts.push(t(key, { pct: Math.abs(inrPct).toFixed(1), mechanism }));
     }
     if (goldMoved) {
-      const dir = goldPct > 0 ? "up" : "down";
-      parts.push(`Global gold prices are ${dir} about ${Math.abs(goldPct).toFixed(1)}% this month.`);
+      const key = goldPct > 0 ? "driverGoldUp" : "driverGoldDown";
+      parts.push(t(key, { pct: Math.abs(goldPct).toFixed(1) }));
     }
     driverStateText = parts.join(" ");
   } else if (premMoved) {
     // Branch 2: premium-dominated — both drivers muted (<2%), premium moved (>1%)
-    driverStateText = "Indian gold has moved more than the global price or rupee explain — likely import costs or festival demand at home.";
+    driverStateText = t("driverPremiumDominated");
   } else {
     // Branch 3: everything flat
-    driverStateText = "Nothing much moved this month — global prices, the rupee, and local demand have all been quiet.";
+    driverStateText = t("driverAllFlat");
   }
 
-  // XSS-safe: driverStateText is a hardcoded literal or toFixed(1) on a number
+  // XSS-safe: driverStateText is a catalogue literal or toFixed(1) on a number
   body.innerHTML = `
     <div class="driver-context-card">
       ${headlineHtml}
@@ -1471,7 +1498,7 @@ function renderChart(readings, range) {
     data: {
       labels,
       datasets: [{
-        label: "22K (₹/g)",
+        label: t("chart22kLabel"),
         data: data22,
         borderColor: goldLine,
         // Gradient fill under the line (gold fading to transparent) instead
@@ -1524,7 +1551,7 @@ function renderChart(readings, range) {
           bodyColor: "#F5EDE0",
           padding: 12,
           callbacks: {
-            label: (c) => `22K: ₹${fmtINR(c.parsed.y)}`,
+            label: (c) => t("chart22kTooltip", { value: fmtINR(c.parsed.y) }),
           },
         },
         phi8cCallout: {},
@@ -1556,8 +1583,8 @@ function renderHistory(readings) {
 
   if (skelEl) skelEl.hidden = true;
 
-  const EMPTY_TABLE = `<tr><td colspan="5" class="empty">No readings yet.</td></tr>`;
-  const EMPTY_CARDS = `<li class="hcard-empty">No readings yet.</li>`;
+  const EMPTY_TABLE = `<tr><td colspan="5" class="empty">${t("historyNoReadings")}</td></tr>`;
+  const EMPTY_CARDS = `<li class="hcard-empty">${t("historyNoReadings")}</li>`;
 
   if (readings.length === 0) {
     tbody.innerHTML    = EMPTY_TABLE;
@@ -1593,9 +1620,9 @@ function renderHistory(readings) {
       if (g.count === 1) {
         whenCell = fmtDateShort(g.reading.timestamp);
       } else if (i === 0) {
-        whenCell = `Since ${fmtDateShort(g.endTimestamp)}`;
+        whenCell = t("historySince", { date: fmtDateShort(g.endTimestamp) });
       } else {
-        whenCell = `${fmtDateShort(g.endTimestamp)} – ${fmtDateShort(g.reading.timestamp)}`;
+        whenCell = t("historyRange", { from: fmtDateShort(g.endTimestamp), to: fmtDateShort(g.reading.timestamp) });
       }
       return `<tr>
         <td>${whenCell}</td>
@@ -1622,9 +1649,9 @@ function renderHistory(readings) {
       if (g.count === 1) {
         timeLabel = fmtDateShort(g.reading.timestamp);
       } else if (absIdx === 0) {
-        timeLabel = `Since ${fmtDateShort(g.endTimestamp)}`;
+        timeLabel = t("historySince", { date: fmtDateShort(g.endTimestamp) });
       } else {
-        timeLabel = `${fmtDateShort(g.endTimestamp)}–${fmtDateShort(g.reading.timestamp)}`;
+        timeLabel = t("historyRangeCard", { from: fmtDateShort(g.endTimestamp), to: fmtDateShort(g.reading.timestamp) });
       }
       return `<li class="history-card">
         <span class="hcard-time">${timeLabel}</span>
@@ -1641,7 +1668,7 @@ function renderHistory(readings) {
   if (showBtn) {
     if (hiddenCount > 0) {
       showBtn.hidden = false;
-      const moreLabel = `Show ${hiddenCount} more`;
+      const moreLabel = t("historyShowMore", { n: hiddenCount });
       showBtn.textContent = moreLabel;
       let isExpanded = false;
       showBtn.onclick = () => {
@@ -1649,7 +1676,7 @@ function renderHistory(readings) {
         const count = isExpanded ? groups.length : VISIBLE_GROUPS;
         tbody.innerHTML    = buildTableHtml(count);
         cardList.innerHTML = buildCardsHtml(count);
-        showBtn.textContent = isExpanded ? "Show less" : moreLabel;
+        showBtn.textContent = isExpanded ? t("historyShowLess") : moreLabel;
       };
     } else {
       showBtn.hidden = true;
@@ -1687,7 +1714,7 @@ function renderForecastVsActual(bt) {
       labels,
       datasets: [
         {
-          label: "What happened",
+          label: t("chartWhatHappened"),
           data: actuals,
           borderColor: goldLine,
           backgroundColor: "transparent",
@@ -1700,7 +1727,7 @@ function renderForecastVsActual(bt) {
           spanGaps: true,
         },
         {
-          label: "Flat-hold estimate",
+          label: t("chartFlatHoldEstimate"),
           data: naives,
           borderColor: "#6B5E4E",
           backgroundColor: "transparent",
@@ -1729,7 +1756,7 @@ function renderForecastVsActual(bt) {
           bodyColor: "#F5EDE0",
           padding: 12,
           callbacks: {
-            label: (c) => `${c.dataset.label}: ₹${fmtINR(c.parsed.y)}`,
+            label: (c) => t("chartTooltipLabeled", { label: c.dataset.label, value: fmtINR(c.parsed.y) }),
           },
         },
       },
@@ -1765,12 +1792,12 @@ function renderMethodology(fc, bt, drift, coverage) {
   // Verdict rule explanation
   parts.push(`
     <div class="meth-section">
-      <h3 class="meth-heading">How we call a trend</h3>
-      <p class="meth-text">We only call a trend when two separate checks agree — that way one odd reading doesn't set off a false alarm.</p>
+      <h3 class="meth-heading">${t("methHowWeCallTrendHeading")}</h3>
+      <p class="meth-text">${t("methHowWeCallTrendIntro")}</p>
       <ul class="meth-list">
-        <li><strong>Getting cheaper:</strong> price has dropped more than ₹100 in a week, and the estimate or monthly average agrees</li>
-        <li><strong>Getting pricier:</strong> price has climbed more than ₹100 in a week, and the estimate or monthly average agrees</li>
-        <li><strong>Steady:</strong> everything else — movement within ₹100 either way, or the two checks disagree</li>
+        <li>${t("methRuleCheaper")}</li>
+        <li>${t("methRulePricier")}</li>
+        <li>${t("methRuleSteady")}</li>
       </ul>
     </div>
   `);
@@ -1783,21 +1810,21 @@ function renderMethodology(fc, bt, drift, coverage) {
     const hasPI   = typeof lower === "number" && typeof upper === "number";
     parts.push(`
       <div class="meth-section">
-        <h3 class="meth-heading">Next trading day range</h3>
+        <h3 class="meth-heading">${t("methNextDayRangeHeading")}</h3>
         <div class="meth-stats">
           <div class="meth-stat">
-            <div class="meth-stat-label">22K estimate</div>
+            <div class="meth-stat-label">${t("methEstimateLabel")}</div>
             <div class="meth-stat-value">₹${fmtINR(pred22k)}</div>
-            ${hasPI ? `<div class="meth-stat-sub">Right about 4 times out of 5: ₹${fmtINR(lower)} – ₹${fmtINR(upper)}</div>` : ""}
+            ${hasPI ? `<div class="meth-stat-sub">${t("methRangeSub", { low: fmtINR(lower), high: fmtINR(upper) })}</div>` : ""}
           </div>
           <div class="meth-stat">
-            <div class="meth-stat-label">Method</div>
-            <div class="meth-stat-value">Assume no change</div>
-            <div class="meth-stat-sub">Covers most of the usual day-to-day moves</div>
+            <div class="meth-stat-label">${t("methMethodLabel")}</div>
+            <div class="meth-stat-value">${t("methAssumeNoChange")}</div>
+            <div class="meth-stat-sub">${t("methCoversMoves")}</div>
           </div>
         </div>
-        ${fc.target_time ? `<p class="meth-text" style="margin-top:8px">Target: ${fmtIST(fc.target_time)}</p>` : ""}
-        <p class="meth-text" style="margin-top:12px">This is just for the next reading, not several days out — based on how much the price has typically moved by the next check over our last 30 test runs. (The "moves about ±₹X over 5 days" note above is a separate, longer-range estimate.)</p>
+        ${fc.target_time ? `<p class="meth-text" style="margin-top:8px">${t("methTargetLine", { date: fmtIST(fc.target_time) })}</p>` : ""}
+        <p class="meth-text" style="margin-top:12px">${t("methNextDayExplainer")}</p>
       </div>
     `);
   }
@@ -1809,17 +1836,17 @@ function renderMethodology(fc, bt, drift, coverage) {
   if (fc?.chronos_companion?.status === "success") {
     parts.push(`
       <div class="meth-section">
-        <h3 class="meth-heading">Direction signal</h3>
+        <h3 class="meth-heading">${t("methDirectionHeading")}</h3>
         <div class="meth-stat">
-          <div class="meth-stat-label">Status</div>
-          <div class="meth-stat-value">Off — not yet reliable</div>
-          <div class="meth-stat-sub">no model beats "gold usually rises" yet</div>
+          <div class="meth-stat-label">${t("methStatusLabel")}</div>
+          <div class="meth-stat-value">${t("methDirectionOff")}</div>
+          <div class="meth-stat-sub">${t("methDirectionSub")}</div>
         </div>
-        <p class="meth-note">We test our price-direction models every week. So far, none of them beat just assuming "gold usually goes up" — so we don't show a chance-of-rising percentage or tell you to buy or sell. The trend labels above (Getting cheaper/pricier/Steady) describe what already happened this week — they're not a prediction of what happens next.</p>
+        <p class="meth-note">${t("methDirectionNote")}</p>
       </div>
     `);
   } else if (fc?.chronos_companion?.status === "failed") {
-    parts.push(`<p class="meth-text">Direction signal unavailable this cycle.</p>`);
+    parts.push(`<p class="meth-text">${t("methDirectionUnavailable")}</p>`);
   }
 
   // "How good is this?" — honest track record panel (Φ8C', ADR 019/020/012)
@@ -1839,7 +1866,7 @@ function renderMethodology(fc, bt, drift, coverage) {
     const hl      = fc?.headline;
     const rangeStr = hl && typeof hl.lower === "number" && typeof hl.upper === "number"
       ? `₹${fmtINR(hl.lower)}–₹${fmtINR(hl.upper)}`
-      : "the current range";
+      : t("methRangeStrFallback");
 
     // Empirical coverage of the DISPLAYED band (headline.lower/upper), tracked from
     // resolved live decisions — not bt.pi_coverage_80_5d_avg, which measures Chronos's
@@ -1850,22 +1877,25 @@ function renderMethodology(fc, bt, drift, coverage) {
 
     parts.push(`
       <div class="meth-section meth-how-good">
-        <h3 class="meth-heading">How accurate is this?</h3>
+        <h3 class="meth-heading">${t("methHowAccurateHeading")}</h3>
 
-        <p class="meth-text"><strong>We assume tomorrow's price is about the same as today's</strong><br>
-        Gold prices are hard to predict even a few days out — every model we tried did worse than simply guessing "no change." Tested over ${n} time windows from 2022–2026:<br>
-        &bull; Guessing "no change" was off by ₹${naiveMae}/g on average<br>
-        ${maePctWorse != null ? `&bull; Our AI model was off by ₹${chronosMae}/g — ${maePctWorse}% worse (p&thinsp;=&thinsp;${pVal})<br>` : ""}
-        So "no change" is what we go with.</p>
+        <p class="meth-text"><strong>${t("methAccurateP1Strong")}</strong><br>
+        ${t("methAccurateP1", {
+          n, naiveMae,
+          chronosBullet: maePctWorse != null ? t("methAccurateP1ChronosBullet", { chronosMae, maePctWorse, pVal }) : "",
+        })}</p>
 
-        <p class="meth-text"><strong>Our ${rangeStr} range has been right ${hasCoverage ? `${coverPct}% of the time (checked ${coverN} times so far)` : "close to on target so far — still building a track record"}</strong><br>
-        This range is about tomorrow's price only, not several days out. It's based on just the last 30 test runs, so it's a small sample. We narrowed this range in July 2026 after realizing it had been sized for 5-day moves but only ever checked against next-day prices — so the percentage above may look better than it really is for a while, until enough checks have happened under the corrected, narrower range. We'll call it fully proven once that settles.</p>
+        <p class="meth-text"><strong>${t("methAccurateP2Strong", {
+          rangeStr,
+          coverageText: hasCoverage ? t("methAccurateP2CoveragePct", { pct: coverPct, n: coverN }) : t("methAccurateP2CoverageUnknown"),
+        })}</strong><br>
+        ${t("methAccurateP2")}</p>
 
-        <p class="meth-text"><strong>About the direction signal</strong><br>
-        Our AI was right ${dirAllDisplay} of the time across ${n} test windows. But gold rises on roughly 70% of trading days anyway — so just guessing "up" every time would score about as well, with no model needed. We don't claim any edge here. The Getting cheaper/pricier labels above come from the recent 7-day trend, not from this AI.</p>
+        <p class="meth-text"><strong>${t("methAccurateP3Strong")}</strong><br>
+        ${t("methAccurateP3", { dirAllDisplay, n })}</p>
 
-        <p class="meth-text"><strong>What would change this</strong><br>
-        If gold started moving up and down more evenly (not mostly up), or if a model started reliably beating the "gold usually rises" guess in testing, we'd turn this back on. We'll update this section if that happens.</p>
+        <p class="meth-text"><strong>${t("methAccurateP4Strong")}</strong><br>
+        ${t("methAccurateP4")}</p>
       </div>
     `);
   }
@@ -1880,25 +1910,25 @@ function renderMethodology(fc, bt, drift, coverage) {
     const withBase = [...drift].reverse().find(e => e.baseline_mae != null);
     const baseMae  = withBase ? Math.round(withBase.baseline_mae) : null;
     const ratio    = rolling != null && baseMae ? (rolling / baseMae).toFixed(2) : null;
-    const ratioLabel = ratio
-      ? (parseFloat(ratio) < 1 ? "on track" : parseFloat(ratio) <= 1.5 ? "watch" : "retraining recommended")
-      : "";
+    const ratioLabelKey = ratio
+      ? (parseFloat(ratio) < 1 ? "ratioOnTrack" : parseFloat(ratio) <= 1.5 ? "ratioWatch" : "ratioRetrain")
+      : null;
     parts.push(`
       <div class="meth-section">
-        <h3 class="meth-heading">Estimate accuracy — last 7 days</h3>
+        <h3 class="meth-heading">${t("methDriftHeading")}</h3>
         <div class="meth-stats">
           <div class="meth-stat">
-            <div class="meth-stat-label">Recent avg. error</div>
+            <div class="meth-stat-label">${t("methRecentError")}</div>
             <div class="meth-stat-value">${rolling != null ? "₹" + fmtINR(rolling) : "—"}</div>
           </div>
           <div class="meth-stat">
-            <div class="meth-stat-label">Historical avg. error</div>
+            <div class="meth-stat-label">${t("methHistoricalError")}</div>
             <div class="meth-stat-value">${baseMae != null ? "₹" + fmtINR(baseMae) : "—"}</div>
           </div>
           <div class="meth-stat">
-            <div class="meth-stat-label">Accuracy drift</div>
+            <div class="meth-stat-label">${t("methAccuracyDrift")}</div>
             <div class="meth-stat-value">${ratio ?? "—"}</div>
-            <div class="meth-stat-sub">${ratioLabel === "retraining recommended" ? "may need recalibration" : ratioLabel}</div>
+            <div class="meth-stat-sub">${ratioLabelKey === "ratioRetrain" ? t("ratioRetrainSub") : (ratioLabelKey ? t(ratioLabelKey) : "")}</div>
           </div>
         </div>
       </div>
@@ -1949,8 +1979,8 @@ async function refreshData() {
     if (banner) {
       const rel = allReadings.length > 0
         ? fmtRelative(allReadings[allReadings.length - 1].timestamp)
-        : "an unknown time";
-      banner.textContent = `Couldn't refresh — this is the last update, from ${rel}`;
+        : t("unknownTime");
+      banner.textContent = t("bannerRefreshFailed", { rel });
       banner.hidden = false;
     }
   } finally {
@@ -2185,9 +2215,104 @@ function initScrollReveals() {
   }
 }
 
+// ─── LANGUAGE ─────────────────────────────────────────────────────────────────
+// Applies the active language to every static (non-JS-rendered) string in
+// index.html, driven entirely by data-i18n* attributes rather than a hardcoded
+// element list — adding a new translatable static string only requires adding
+// the attribute in index.html, no app.js change needed.
+//   data-i18n="key"       → element.textContent = t(key)
+//   data-i18n-html="key"  → element.innerHTML = t(key)   (only for strings that
+//                            deliberately embed markup, e.g. <strong> in the
+//                            footer/PWA-help text — every such key is a hardcoded
+//                            catalogue literal, never external data, so this is
+//                            XSS-safe the same way the rest of app.js's innerHTML
+//                            uses already are)
+//   data-i18n-attr="attr:key[,attr2:key2...]" → sets one or more attributes
+function applyStaticStrings() {
+  document.title = t("pageTitle");
+  const metaDesc = document.querySelector('meta[name="description"]');
+  if (metaDesc) metaDesc.setAttribute("content", t("pageDescription"));
+  const ogDesc = document.querySelector('meta[property="og:description"]');
+  if (ogDesc) ogDesc.setAttribute("content", t("pageDescription"));
+  const twDesc = document.querySelector('meta[name="twitter:description"]');
+  if (twDesc) twDesc.setAttribute("content", t("pageDescription"));
+
+  document.querySelectorAll("[data-i18n]").forEach(el => {
+    el.textContent = t(el.getAttribute("data-i18n"));
+  });
+  document.querySelectorAll("[data-i18n-html]").forEach(el => {
+    el.innerHTML = t(el.getAttribute("data-i18n-html"));
+  });
+  document.querySelectorAll("[data-i18n-attr]").forEach(el => {
+    el.getAttribute("data-i18n-attr").split(",").forEach(pair => {
+      const [attr, key] = pair.split(":");
+      if (attr && key) el.setAttribute(attr.trim(), t(key.trim()));
+    });
+  });
+}
+
+// Devanagari font, loaded only when Hindi is active — English users' browsers
+// never discover this @font-face at all (see style.css's html[lang="hi"] scoping),
+// so this only needs to add the preload <link> so the (already-scoped) font-face
+// starts downloading immediately instead of waiting for CSSOM+layout to discover
+// it, same reasoning as the three English fonts' own preload in index.html.
+// Idempotent — safe to call on every applyLanguage(), only inserts once.
+function applyDevanagariFont() {
+  if (currentLang !== "hi") return;
+  if (document.getElementById("devanagari-preload")) return;
+  const link = document.createElement("link");
+  link.id = "devanagari-preload";
+  link.rel = "preload";
+  link.as = "font";
+  link.type = "font/woff2";
+  link.href = "fonts/notosans-devanagari-variable.woff2";
+  link.crossOrigin = "anonymous";
+  document.head.appendChild(link);
+}
+
+// Switches language, persists it, updates <html lang>, and re-renders every
+// section from already-cached state (allReadings/lastForecast/lastBacktest/
+// lastDrift/lastCoverage) — no re-fetch, no reload. Safe to call before the
+// first data load resolves: every render* function already degrades to its
+// own empty/loading state when passed empty readings.
+function applyLanguage(lang) {
+  setLang(lang);
+  applyStaticStrings();
+  applyDevanagariFont();
+  renderFreshness(allReadings, lastForecast);
+  renderComparisons(allReadings);
+  renderHistory(allReadings);
+  renderChart(allReadings, currentRange);
+  renderHero(allReadings, lastForecast);
+  renderStaleBanner(lastForecast);
+  renderTodaysRead(allReadings);
+  renderModelSignal(lastForecast, allReadings, lastBacktest);
+  renderDriverContext(lastForecast);
+  renderForecastVsActual(lastBacktest);
+  renderMethodology(lastForecast, lastBacktest, lastDrift, lastCoverage);
+  updateOfflineBanner();
+  const toggle = document.getElementById("lang-toggle");
+  if (toggle) toggle.textContent = lang === "hi" ? "EN" : "हिं"; // shows the OTHER language — tapping switches to it
+}
+
 // ─── INIT ─────────────────────────────────────────────────────────────────────
 
 (async function init() {
+  // Apply the starting language (persisted choice, or navigator.language default for a
+  // first-time visitor — see getLang() in i18n.js) to every static string immediately,
+  // before any data fetch. The synchronous head script in index.html already set
+  // <html lang> and preloaded the Devanagari font before first paint if needed; this
+  // covers the actual text content, which needs the DOM (post-parse) to exist.
+  applyStaticStrings();
+  applyDevanagariFont();
+  const langToggle = document.getElementById("lang-toggle");
+  if (langToggle) {
+    langToggle.textContent = currentLang === "hi" ? "EN" : "हिं";
+    langToggle.addEventListener("click", () => {
+      applyLanguage(currentLang === "hi" ? "en" : "hi");
+    });
+  }
+
   bindRangeToggle();
   initBottomNav();
   initPullToRefresh();
@@ -2303,10 +2428,10 @@ function initScrollReveals() {
     const skelEl = document.getElementById("hero-skeleton");
     if (skelEl) skelEl.hidden = true;
     const priceEl = document.getElementById("hero-price");
-    if (priceEl) { priceEl.textContent = "Price unavailable"; priceEl.hidden = false; }
+    if (priceEl) { priceEl.textContent = t("errPriceUnavailable"); priceEl.hidden = false; }
     const commentaryTextEl = document.getElementById("commentary-text");
     if (commentaryTextEl) {
-      commentaryTextEl.textContent = "Couldn't load the latest price. Check your connection and try again.";
+      commentaryTextEl.textContent = t("errCouldntLoadPrice");
       commentaryTextEl.hidden = false;
     }
     // Everything else renders from allReadings — degrade history/methodology honestly
@@ -2315,11 +2440,11 @@ function initScrollReveals() {
     if (historySkel) historySkel.hidden = true;
     const historyBody = document.getElementById("history-body");
     if (historyBody) {
-      historyBody.innerHTML = '<tr><td colspan="5" class="empty">Couldn’t load price history.</td></tr>';
+      historyBody.innerHTML = `<tr><td colspan="5" class="empty">${t("errCouldntLoadHistory")}</td></tr>`;
     }
     const methBody = document.getElementById("methodology-body");
     if (methBody) {
-      methBody.innerHTML = '<p class="meth-loading">Couldn’t load model details — check your connection and reload.</p>';
+      methBody.innerHTML = `<p class="meth-loading">${t("errCouldntLoadMethodology")}</p>`;
     }
     // Tier 1/2 CLS fix (2026-08-10): comparison/model-signal/track-record/driver-context
     // sections no longer start `hidden` in HTML (so their skeletons/placeholders are genuinely
@@ -2379,14 +2504,12 @@ function initScrollReveals() {
   }
 
   const btData = bt.status === "fulfilled" ? bt.value : null;
+  lastBacktest = btData;
+  lastDrift    = drift.status === "fulfilled" ? drift.value : null;
+  lastCoverage = coverage.status === "fulfilled" ? coverage.value : null;
   renderModelSignal(fc, allReadings, btData);  // re-render with coverage% from backtest
   renderForecastVsActual(btData);
-  renderMethodology(
-    fc,
-    btData,
-    drift.status === "fulfilled" ? drift.value : null,
-    coverage.status === "fulfilled" ? coverage.value : null,
-  );
+  renderMethodology(fc, btData, lastDrift, lastCoverage);
 
   // Dismiss chart callout when tapping outside the chart canvas (Φ8C'/Ψ3C.3)
   const chartCanvas = document.getElementById("chart");

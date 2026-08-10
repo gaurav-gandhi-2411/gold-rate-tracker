@@ -3,6 +3,45 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+
+    <!-- Synchronous, blocking, deliberately tiny: decides the starting language and, if
+         Hindi, injects the Devanagari font preload BEFORE the browser has begun downloading
+         anything else in <head> -- so a Hindi-preferring visitor's font starts fetching at
+         the earliest possible moment instead of only after app.js runs (deferred, fires
+         after the whole document parses). Also sets <html lang> before first paint, so a
+         returning Hindi user never sees an English flash. Duplicates a minimal slice of
+         i18n.js's getLang() logic deliberately -- i18n.js itself hasn't loaded yet at this
+         point in <head> parsing, and this must run before first paint, not after a
+         deferred script. Storage/navigator access wrapped in try/catch: private browsing
+         or disabled storage must degrade to English, never throw and block parsing. -->
+    <script>
+      (function () {
+        var lang = "en";
+        try {
+          var stored = localStorage.getItem("lang");
+          if (stored === "hi" || stored === "en") {
+            lang = stored;
+          } else {
+            var langs = navigator.languages || [navigator.language || ""];
+            for (var i = 0; i < langs.length; i++) {
+              if (langs[i].toLowerCase().indexOf("hi") === 0) { lang = "hi"; break; }
+            }
+          }
+        } catch (e) { /* default to en */ }
+        document.documentElement.lang = lang;
+        if (lang === "hi") {
+          var link = document.createElement("link");
+          link.rel = "preload";
+          link.as = "font";
+          link.type = "font/woff2";
+          link.href = "fonts/notosans-devanagari-variable.woff2";
+          link.crossOrigin = "anonymous";
+          link.id = "devanagari-preload";
+          document.head.appendChild(link);
+        }
+      })();
+    </script>
+
     <title>Gold Rate Today · Is it a good price?</title>
     <meta name="description" content="22K gold rate — an IBJA-calibrated estimate, confirmed against live Tanishq retail when reachable. See if today's price is high or low compared to recent weeks." />
 
@@ -47,7 +86,14 @@
          in the load. `crossorigin` is required on font preloads even
          same-origin -- fonts are always fetched in anonymous-CORS mode
          per spec, and a preload without matching CORS-mode is ignored
-         (fetched again, silently, defeating the preload). -->
+         (fetched again, silently, defeating the preload).
+
+         The Devanagari face (Noto Sans Devanagari) is NOT preloaded here --
+         it's added conditionally by the blocking script above, only when the
+         resolved starting language is Hindi, so English visitors' browsers
+         never even discover it exists. See style.css's html[lang="hi"]
+         scoping for why the @font-face declaration itself is free to always
+         be present (CSS never fetches an unused @font-face). -->
     <link rel="preload" href="fonts/fraunces-variable-latin.woff2" as="font" type="font/woff2" crossorigin>
     <link rel="preload" href="fonts/dmsans-variable-latin.woff2" as="font" type="font/woff2" crossorigin>
     <link rel="preload" href="fonts/syne-variable-latin.woff2" as="font" type="font/woff2" crossorigin>
@@ -65,19 +111,20 @@
     <!-- 1. APP HEADER — sticky top -->
     <div class="app-header" id="utility-row" aria-live="polite">
       <div class="app-header-left">
-        <span class="app-title">Gold</span>
+        <span class="app-title" data-i18n="appTitle">Gold</span>
       </div>
       <div class="app-header-right">
+        <button class="lang-toggle" id="lang-toggle" aria-label="Switch language" data-i18n-attr="aria-label:langToggleAriaLabel" title="Switch language">हिं</button>
         <span class="freshness-pill" id="freshness-pill">—</span>
-        <button class="refresh-btn" id="refresh-btn" aria-label="Refresh data" title="Refresh data">↻</button>
-        <button class="pwa-help-btn" id="pwa-help-btn" aria-label="About auto-refresh on iPhone" title="About auto-refresh" hidden>?</button>
+        <button class="refresh-btn" id="refresh-btn" aria-label="Refresh data" data-i18n-attr="aria-label:refreshLabel,title:refreshLabel" title="Refresh data">↻</button>
+        <button class="pwa-help-btn" id="pwa-help-btn" aria-label="About auto-refresh on iPhone" data-i18n-attr="aria-label:pwaHelpBtnLabel,title:pwaHelpBtnTitle" title="About auto-refresh" hidden>?</button>
       </div>
     </div>
 
     <!-- D5: iOS standalone help panel — JS reveals in standalone mode only -->
     <div class="pwa-help-panel" id="pwa-help-panel" hidden>
-      <p>iOS limits how often home-screen apps update in the background. Tap <strong>↻</strong> to get the latest prices. If prices remain stuck, open the App Switcher (swipe up, hold), swipe this app away, and reopen from Home Screen — that forces a full reload.</p>
-      <button class="pwa-help-close" id="pwa-help-close" aria-label="Dismiss">✕</button>
+      <p data-i18n-html="pwaHelpPanelText">iOS limits how often home-screen apps update in the background. Tap <strong>↻</strong> to get the latest prices. If prices remain stuck, open the App Switcher (swipe up, hold), swipe this app away, and reopen from Home Screen — that forces a full reload.</p>
+      <button class="pwa-help-close" id="pwa-help-close" aria-label="Dismiss" data-i18n-attr="aria-label:dismissLabel">✕</button>
     </div>
 
     <!-- iOS has no native install prompt (no beforeinstallprompt) and no way for us
@@ -85,8 +132,8 @@
          so this is JS-shown only to iOS Safari visitors not already running
          standalone, and self-manages its own persistent dismissal via localStorage. -->
     <div class="install-prompt-panel" id="install-prompt-panel" hidden role="note" aria-live="polite">
-      <p>Add this to your Home Screen for quicker access: tap <strong>Share</strong>, then <strong>Add to Home Screen</strong>.</p>
-      <button class="install-prompt-close" id="install-prompt-close" aria-label="Dismiss">✕</button>
+      <p data-i18n-html="installPromptText">Add this to your Home Screen for quicker access: tap <strong>Share</strong>, then <strong>Add to Home Screen</strong>.</p>
+      <button class="install-prompt-close" id="install-prompt-close" aria-label="Dismiss" data-i18n-attr="aria-label:dismissLabel">✕</button>
     </div>
 
     <!-- Forecast staleness banner — hidden by default, shown by app.js when forecast is >18h old -->
@@ -105,7 +152,7 @@
       <div class="layout-grid">
       <div class="layout-left">
       <!-- 2. HERO CARD -->
-      <section class="hero-card" id="section-home" aria-label="Current 22K gold price and buying verdict">
+      <section class="hero-card" id="section-home" aria-label="Current 22K gold price and buying verdict" data-i18n-attr="aria-label:heroAriaLabel">
 
         <!-- Skeleton shown while loading -->
         <div class="hero-skeleton" id="hero-skeleton" aria-hidden="true">
@@ -116,16 +163,16 @@
           <div class="skel skel-spark"></div>
         </div>
 
-        <p class="eyebrow" id="hero-eyebrow" hidden>22K gold · per gram</p>
+        <p class="eyebrow" id="hero-eyebrow" hidden data-i18n="eyebrow">22K gold · per gram</p>
         <h1 class="hero-price" id="hero-price" hidden>—</h1>
         <p class="hero-estimate-range" id="hero-estimate-range" hidden></p>
         <p class="hero-last-confirmed" id="hero-last-confirmed" hidden></p>
-        <p class="hero-location" id="hero-location" hidden>Tanishq retail price · pan-India</p>
+        <p class="hero-location" id="hero-location" hidden data-i18n="heroLocation">Tanishq retail price · pan-India</p>
 
         <div class="hero-change" id="hero-change" hidden aria-live="polite">
           <span class="hero-change-arrow" aria-hidden="true"></span>
           <span class="hero-change-amount"></span>
-          <span class="hero-change-label">today</span>
+          <span class="hero-change-label" data-i18n="todayLabel">today</span>
         </div>
 
         <!-- VERDICT BANNER -->
@@ -139,7 +186,7 @@
 
         <!-- 7-day SVG sparkline -->
         <div class="sparkline-wrap" id="sparkline-wrap" hidden>
-          <span class="sparkline-label-left">7 days</span>
+          <span class="sparkline-label-left" data-i18n="sparklineLabelLeft">7 days</span>
           <svg class="sparkline" id="sparkline"
                viewBox="0 0 300 56"
                preserveAspectRatio="none"
@@ -160,20 +207,20 @@
            `readings.length < 2` fallback still hides the section for the rare-edge case,
            now happening after this initial state rather than instead of it. -->
       <section class="comparison-section reveal-on-scroll" id="comparison-section"
-               aria-label="How today's price compares to recent averages">
+               aria-label="How today's price compares to recent averages" data-i18n-attr="aria-label:comparisonAriaLabel">
         <div class="comparison-cards">
           <div class="comparison-card" id="cmp-7d">
-            <div class="cmp-label">vs 7-day avg</div>
+            <div class="cmp-label" data-i18n="cmpHeading7d">vs 7-day avg</div>
             <div class="cmp-value" id="cmp-7d-value">—</div>
             <div class="cmp-sub" id="cmp-7d-sub"></div>
           </div>
           <div class="comparison-card" id="cmp-30d">
-            <div class="cmp-label">vs 30-day avg</div>
+            <div class="cmp-label" data-i18n="cmpHeading30d">vs 30-day avg</div>
             <div class="cmp-value" id="cmp-30d-value">—</div>
             <div class="cmp-sub" id="cmp-30d-sub"></div>
           </div>
           <div class="comparison-card" id="cmp-low">
-            <div class="cmp-label">30-day floor</div>
+            <div class="cmp-label" data-i18n="cmpHeadingFloor">30-day floor</div>
             <div class="cmp-value" id="cmp-low-value">—</div>
             <div class="cmp-sub" id="cmp-low-sub"></div>
           </div>
@@ -181,24 +228,24 @@
       </section>
 
       <!-- 4. OTHER KARATS — compact strip -->
-      <section class="karat-strip reveal-on-scroll" aria-label="24K and 18K gold prices">
+      <section class="karat-strip reveal-on-scroll" aria-label="24K and 18K gold prices" data-i18n-attr="aria-label:karatAriaLabel">
         <div class="karat-card">
-          <span class="karat-label">24 KT</span>
+          <span class="karat-label" data-i18n="karatLabel24">24 KT</span>
           <span class="karat-price" id="rate-24">—</span>
-          <span class="karat-sub">per gram · 99.9% pure</span>
+          <span class="karat-sub" data-i18n="karatSub24">per gram · 99.9% pure</span>
         </div>
         <div class="karat-card">
-          <span class="karat-label">18 KT</span>
+          <span class="karat-label" data-i18n="karatLabel18">18 KT</span>
           <span class="karat-price" id="rate-18">—</span>
-          <span class="karat-sub">per gram · 75% pure</span>
+          <span class="karat-sub" data-i18n="karatSub18">per gram · 75% pure</span>
         </div>
       </section>
 
       <!-- 5. COMMENTARY CARD — always visible -->
-      <section class="commentary-section reveal-on-scroll" aria-label="Market commentary">
+      <section class="commentary-section reveal-on-scroll" aria-label="Market commentary" data-i18n-attr="aria-label:commentaryAriaLabel">
         <div class="commentary-card">
           <p class="commentary-eyebrow">
-            <span aria-hidden="true">✨</span> Today's read
+            <span aria-hidden="true">✨</span> <span data-i18n="todaysReadEyebrow">Today's read</span>
           </p>
           <!-- Φ8C'/Ψ3C.3: skeleton shown while commentary loads. commentary-body wraps
                just the skeleton+text+meta (not the eyebrow above) so the absolute-overlay
@@ -218,8 +265,8 @@
 
       <!-- 5b. PRICE CONTEXT — "Is today a good price?" verdict + volatility context -->
       <section class="model-signal-section reveal-on-scroll" id="model-signal-section"
-               aria-label="How today's price compares to recent history">
-        <h2>Is today a good time to buy?</h2>
+               aria-label="How today's price compares to recent history" data-i18n-attr="aria-label:modelSignalAriaLabel">
+        <h2 data-i18n="goodPriceHeading">Is today a good time to buy?</h2>
         <!-- Φ8C'/Ψ3C.3: skeleton shown while signal loads. model-signal-wrap: same
              absolute-overlay CLS fix as commentary-body/history-wrap (2026-08-10) --
              see the .model-signal-wrap rule in style.css for why. Tier 1 CLS fix
@@ -247,8 +294,8 @@
            accepted (same imprecision tolerance as elsewhere) since the alternative -- reserving
            permanent space for content that may never come -- is worse UX. -->
       <section class="driver-context-section reveal-on-scroll" id="driver-context-section"
-               aria-label="What is driving gold prices">
-        <h2>What's moving the price?</h2>
+               aria-label="What is driving gold prices" data-i18n-attr="aria-label:driverAriaLabel">
+        <h2 data-i18n="driverHeading">What's moving the price?</h2>
         <div class="driver-context-wrap">
           <div class="driver-context-skeleton" id="driver-context-skeleton" aria-hidden="true">
             <div class="skel" style="height:16px;width:70%;border-radius:4px;margin-bottom:8px"></div>
@@ -259,25 +306,25 @@
       </section>
 
       <!-- 6. FULL TREND CHART -->
-      <section class="chart-section reveal-on-scroll" id="section-trend" aria-label="Price trend chart">
+      <section class="chart-section reveal-on-scroll" id="section-trend" aria-label="Price trend chart" data-i18n-attr="aria-label:chartAriaLabel">
         <div class="chart-header">
-          <h2>Price trend</h2>
-          <div class="range-toggle" role="tablist" aria-label="Chart time range">
+          <h2 data-i18n="priceTrendHeading">Price trend</h2>
+          <div class="range-toggle" role="tablist" aria-label="Chart time range" data-i18n-attr="aria-label:rangeToggleAriaLabel">
             <button data-range="7" role="tab" aria-selected="false">7d</button>
             <button data-range="30" class="active" role="tab" aria-selected="true">30d</button>
-            <button data-range="all" role="tab" aria-selected="false">All</button>
+            <button data-range="all" role="tab" aria-selected="false" data-i18n="rangeAll">All</button>
           </div>
         </div>
-        <p class="section-karat-note">22K · per gram</p>
+        <p class="section-karat-note" data-i18n="sectionKaratNote">22K · per gram</p>
         <div class="chart-wrap">
-          <canvas id="chart" role="img" aria-label="Gold price trend chart"></canvas>
+          <canvas id="chart" role="img" aria-label="Gold price trend chart" data-i18n-attr="aria-label:chartCanvasAriaLabel"></canvas>
         </div>
       </section>
 
       <!-- 7. HISTORY -->
-      <section class="history-section reveal-on-scroll" id="section-history" aria-label="Price history">
-        <h2>History</h2>
-        <p class="section-karat-note">22K · per gram</p>
+      <section class="history-section reveal-on-scroll" id="section-history" aria-label="Price history" data-i18n-attr="aria-label:historyAriaLabel">
+        <h2 data-i18n="historyHeading">History</h2>
+        <p class="section-karat-note" data-i18n="sectionKaratNote">22K · per gram</p>
         <div class="history-wrap" id="history-wrap">
           <!-- Φ8C'/Ψ3C.3: skeleton overlay shown while history loads. Absolutely
                positioned over history-wrap (not a separate hidden/shown sibling) so
@@ -292,19 +339,19 @@
           <table class="history history-table">
             <thead>
               <tr>
-                <th scope="col">When</th>
+                <th scope="col" data-i18n="thWhen">When</th>
                 <th scope="col" class="num">22K</th>
                 <th scope="col" class="num">24K</th>
                 <th scope="col" class="num">18K</th>
-                <th scope="col" class="num">Δ 22K</th>
+                <th scope="col" class="num" data-i18n="thDelta">Δ 22K</th>
               </tr>
             </thead>
             <tbody id="history-body">
-              <tr><td colspan="5" class="empty">Loading…</td></tr>
+              <tr><td colspan="5" class="empty" data-i18n="loadingText">Loading…</td></tr>
             </tbody>
           </table>
           <!-- Mobile card list (<640px) -->
-          <ul class="history-cards" id="history-cards" aria-label="Price readings"></ul>
+          <ul class="history-cards" id="history-cards" aria-label="Price readings" data-i18n-attr="aria-label:historyCardsAriaLabel"></ul>
         </div>
         <button class="history-show-all" id="history-show-all" hidden></button>
       </section>
@@ -317,18 +364,18 @@
            `!bt?.folds?.length` / `folds.length < 3` fallbacks still hide the section for the
            rare-edge case, now happening after this initial state rather than instead of it. -->
       <section class="track-record-section reveal-on-scroll" id="section-track-record"
-               aria-label="Past estimate accuracy — flat-hold vs actual prices">
-        <h2>How past estimates have held up</h2>
-        <p class="track-record-caption">30 recent five-day windows: flat-hold estimate (dashed) vs what actually happened (gold)</p>
+               aria-label="Past estimate accuracy — flat-hold vs actual prices" data-i18n-attr="aria-label:trackRecordAriaLabel">
+        <h2 data-i18n="trackRecordHeading">How past estimates have held up</h2>
+        <p class="track-record-caption" data-i18n="trackRecordCaption">30 recent five-day windows: flat-hold estimate (dashed) vs what actually happened (gold)</p>
         <div class="track-record-chart-wrap">
           <canvas id="track-record-chart" role="img"
-                  aria-label="Past flat-hold estimates vs actual gold prices"></canvas>
+                  aria-label="Past flat-hold estimates vs actual gold prices" data-i18n-attr="aria-label:trackRecordChartAriaLabel"></canvas>
         </div>
       </section>
 
       <!-- 8. METHODOLOGY ACCORDION -->
       <details class="methodology reveal-on-scroll" id="section-info">
-        <summary class="methodology-summary">
+        <summary class="methodology-summary" data-i18n="methodologySummary">
           How this works — and how accurate it's been
         </summary>
         <div class="methodology-body" id="methodology-body">
@@ -346,7 +393,7 @@
 
       <!-- 9. FOOTER -->
       <footer class="site-footer">
-        <p>
+        <p data-i18n-html="footerBody">
           We use <a href="https://ibjarates.com/" target="_blank" rel="noopener">IBJA</a>'s
           official gold benchmark and calibrate it to match real shop prices, checking
           against <a href="https://www.tanishq.co.in/gold-rate.html?lang=en_IN" target="_blank" rel="noopener">Tanishq</a>'s
@@ -354,35 +401,35 @@
           Prices are checked every 3 hours — IBJA itself only updates once a day, so the
           number sometimes stays the same for a while.
         </p>
-        <p class="muted">Not financial advice. Rates are indicative.</p>
+        <p class="muted" data-i18n="footerMuted">Not financial advice. Rates are indicative.</p>
       </footer>
     </main>
 
     <!-- BOTTOM NAV — scroll-anchor style, Option B (single page preserved) -->
-    <nav class="bottom-nav" aria-label="Page sections">
+    <nav class="bottom-nav" aria-label="Page sections" data-i18n-attr="aria-label:bottomNavAriaLabel">
       <a class="bottom-nav-item active" href="#section-home" data-section="section-home" aria-current="page">
         <span class="bottom-nav-icon" aria-hidden="true">
           <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round" stroke-linecap="round"><path d="M3 12L12 4l9 8"/><path d="M5 10v9a1 1 0 001 1h4v-5h4v5h4a1 1 0 001-1v-9"/></svg>
         </span>
-        <span class="bottom-nav-label">Home</span>
+        <span class="bottom-nav-label" data-i18n="navHome">Home</span>
       </a>
       <a class="bottom-nav-item" href="#section-trend" data-section="section-trend" aria-current="false">
         <span class="bottom-nav-icon" aria-hidden="true">
           <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round" stroke-linecap="round"><polyline points="22 7 13.5 15.5 8.5 10.5 2 17"/><polyline points="16 7 22 7 22 13"/></svg>
         </span>
-        <span class="bottom-nav-label">Trend</span>
+        <span class="bottom-nav-label" data-i18n="navTrend">Trend</span>
       </a>
       <a class="bottom-nav-item" href="#section-history" data-section="section-history" aria-current="false">
         <span class="bottom-nav-icon" aria-hidden="true">
           <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round" stroke-linecap="round"><circle cx="12" cy="12" r="9"/><polyline points="12 7 12 12 15 15"/></svg>
         </span>
-        <span class="bottom-nav-label">History</span>
+        <span class="bottom-nav-label" data-i18n="navHistory">History</span>
       </a>
       <a class="bottom-nav-item" href="#section-info" data-section="section-info" aria-current="false">
         <span class="bottom-nav-icon" aria-hidden="true">
           <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round" stroke-linecap="round"><circle cx="12" cy="12" r="9"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8" stroke-width="2.4"/></svg>
         </span>
-        <span class="bottom-nav-label">Info</span>
+        <span class="bottom-nav-label" data-i18n="navInfo">Info</span>
       </a>
     </nav>
 
@@ -415,6 +462,9 @@
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.6/dist/chart.umd.min.js"
             integrity="sha384-Sse/HDqcypGpyTDpvZOJNnG0TT3feGQUkF9H+mnRvic+LjR+K1NhTt8f51KIQ3v3"
             crossorigin="anonymous" defer></script>
+    <!-- i18n.js must execute before app.js (both deferred; document order preserves this) --
+         app.js calls t()/getLang()/setLang() at its own top level (currentLang = getLang()). -->
+    <script src="i18n.js" defer></script>
     <script src="app.js" defer></script>
     <script>
       if ("serviceWorker" in navigator) {

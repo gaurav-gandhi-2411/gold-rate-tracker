@@ -21,7 +21,7 @@
 // cache and re-fetch the current shell on next load. See lint.yml's
 // sw-version-guard job, added the same day, which now fails CI when shell
 // files change without a VERSION bump.
-const VERSION = "v33-20260810-responsive-icons-copy-todays-read";
+const VERSION = "v34-20260810-hindi-i18n";
 const SHELL_CACHE = `gold-shell-${VERSION}`;
 
 const SHELL_FILES = [
@@ -29,12 +29,18 @@ const SHELL_FILES = [
   "./index.html",
   "./style.css",
   "./app.js",
+  "./i18n.js",
   "./manifest.webmanifest",
   "./icons/icon-192.png",
   "./icons/icon-512.png",
   "./fonts/fraunces-variable-latin.woff2",
   "./fonts/dmsans-variable-latin.woff2",
   "./fonts/syne-variable-latin.woff2",
+  // Deliberately NOT the Devanagari font — see isDevanagariFont() below.
+  // Unlike the three English fonts above (needed by every visitor, so
+  // precaching them at install is correct), unconditionally precaching this
+  // one would cost every English-only visitor a 121KB fetch they'll never
+  // use. It's cached on first actual use instead (Hindi visitors only).
 ];
 
 // All JSON data files get network-first treatment (same as prices.json).
@@ -69,6 +75,10 @@ function isDataFile(url) {
   );
 }
 
+function isDevanagariFont(url) {
+  return url.pathname.endsWith("/fonts/notosans-devanagari-variable.woff2");
+}
+
 self.addEventListener("fetch", (e) => {
   const url = new URL(e.request.url);
 
@@ -82,6 +92,25 @@ self.addEventListener("fetch", (e) => {
           return res;
         })
         .catch(() => caches.match(e.request))
+    );
+    return;
+  }
+
+  if (isDevanagariFont(url)) {
+    // Not in SHELL_FILES (see comment there) -- cached the first time it's
+    // actually requested instead, so only visitors who ever switch to Hindi
+    // ever store it, while repeat Hindi visits still hit cache like the rest
+    // of the shell (same "installed, habitually-checked PWA" pattern the
+    // other fonts are precached for).
+    e.respondWith(
+      caches.match(e.request).then((cached) => {
+        if (cached) return cached;
+        return fetch(e.request).then((res) => {
+          const copy = res.clone();
+          caches.open(SHELL_CACHE).then((c) => c.put(e.request, copy));
+          return res;
+        });
+      })
     );
     return;
   }
