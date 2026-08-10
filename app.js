@@ -15,7 +15,6 @@ if (typeof Sentry !== "undefined") {
 const DATA_URL      = "data/prices.json";
 const FORECAST_URL  = "data/forecast.json";
 const BACKTEST_URL  = "data/backtest.json";
-const COMMENTARY_URL = "data/commentary.json";
 const DRIFT_URL     = "data/drift_metrics.json";
 const METRICS_URL   = "data/metrics_history.json";
 const COVERAGE_URL  = "data/coverage_metrics.json";
@@ -231,7 +230,7 @@ function computeVerdict(prices, forecast) {
       type: "unknown",
       icon: "○",
       headline: "Not enough data yet",
-      reason: "Check back once more price readings are collected.",
+      reason: "Check back once we've collected a few more readings.",
     };
   }
 
@@ -265,26 +264,26 @@ function computeVerdict(prices, forecast) {
   if (slope7d < -SLOPE_THRESHOLD && (forecastDelta < 0 || vsAvg30d < 0)) {
     const absDelta = fmtINR(Math.abs(Math.round(slope7d)));
     const avgNote  = vsAvg30d < 0
-      ? ` and ₹${fmtINR(Math.abs(vsAvg30d))} below the 30-day average`
+      ? `, and ₹${fmtINR(Math.abs(vsAvg30d))} below the usual price for the month`
       : "";
     return {
       type: "down",
-      icon: "✓",
-      headline: "Trending down this week",
-      reason: `Prices have slipped ₹${absDelta} over the last 7 days${avgNote}.`,
+      icon: "↓",
+      headline: "Getting cheaper this week",
+      reason: `Down ₹${absDelta} this week${avgNote}.`,
     };
   }
 
   if (slope7d > SLOPE_THRESHOLD && (forecastDelta > 0 || vsAvg30d > 0)) {
     const delta   = fmtINR(Math.round(slope7d));
     const avgNote = vsAvg30d > 0
-      ? `, now ₹${fmtINR(Math.abs(vsAvg30d))} above the 30-day average`
+      ? `, and ₹${fmtINR(Math.abs(vsAvg30d))} above the usual price for the month`
       : "";
     return {
       type: "up",
-      icon: "⚡",
-      headline: "Trending up this week",
-      reason: `Prices have risen ₹${delta} over the last 7 days${avgNote}.`,
+      icon: "↑",
+      headline: "Getting pricier this week",
+      reason: `Up ₹${delta} this week${avgNote}.`,
     };
   }
 
@@ -292,12 +291,12 @@ function computeVerdict(prices, forecast) {
   const absSlope = Math.abs(Math.round(slope7d));
   const dirWord  = slope7d > 0 ? "edged up" : slope7d < 0 ? "edged down" : "unchanged";
   const flatReason = absSlope < 20
-    ? "Prices are virtually flat this week. No strong signal either way."
-    : `Prices have ${dirWord} ₹${fmtINR(absSlope)} this week — within the typical weekly range. No strong signal either way.`;
+    ? "Barely moved this week — nothing to react to."
+    : `Prices ${dirWord} ₹${fmtINR(absSlope)} this week — that's normal movement, nothing to react to.`;
   return {
     type: "flat",
-    icon: "◉",
-    headline: "Roughly flat this week",
+    icon: "→",
+    headline: "Steady this week",
     reason: flatReason,
   };
 }
@@ -415,26 +414,32 @@ function computeGoodPriceSignals(readings) {
   let verdictLead, verdictType, supportLine1;
   if (percentile30d <= 20) {
     verdictType  = "cheap";
-    verdictLead  = "Today's price is low for the past month";
-    supportLine1 = "Cheaper than most days this past month.";
+    verdictLead  = "You're paying less than usual this month";
+    supportLine1 = "Cheaper than most days this month.";
   } else if (percentile30d <= 40) {
     verdictType  = "below-mid";
-    verdictLead  = "Today's price is on the lower side this month";
-    supportLine1 = "Below average for the past month.";
+    verdictLead  = "You're paying a little less than usual this month";
+    supportLine1 = "A bit below the usual price this month.";
   } else if (percentile30d <= 70) {
     verdictType  = "mid";
-    verdictLead  = "Today's price is around usual levels lately";
-    supportLine1 = "Around the middle of the past month.";
+    verdictLead  = "You're paying about the usual amount this month";
+    supportLine1 = "Right around the middle for this month.";
   } else {
     verdictType  = "high";
-    verdictLead  = "Today's price is on the higher side this month";
-    supportLine1 = "Pricier than most days this past month.";
+    verdictLead  = "You're paying a bit more than usual this month";
+    supportLine1 = "Pricier than most days this month.";
   }
 
-  // Unified proof line — consistent frame (cheaper-than / more-expensive-than)
+  // Unified proof line — consistent frame (cheaper-than / pricier-than), phrased as an
+  // actual day count (not a percentage) since a count of real days reads more concretely
+  // than an abstract "83%" to a non-technical buyer. Counted directly from prices30d
+  // rather than back-derived from the rounded percentile30d, so this never mismatches
+  // percentile30d's own rounding.
+  const daysCheaperThanToday = prices30d.filter(p => p > current).length;
+  const daysPricierThanToday = prices30d.filter(p => p < current).length;
   const proofLine = percentile30d <= 50
-    ? `Cheaper than ${100 - percentile30d}% of the ${nDays30d} days in the past month.`
-    : `More expensive than ${percentile30d}% of the ${nDays30d} days in the past month.`;
+    ? `Cheaper than ${daysCheaperThanToday} of the last ${nDays30d} days.`
+    : `Pricier than ${daysPricierThanToday} of the last ${nDays30d} days.`;
 
   // Data-sufficiency degrade note (norm #5) — shown when < 30 distinct days
   const dataSuffNote = nDays30d < 30
@@ -443,16 +448,16 @@ function computeGoodPriceSignals(readings) {
 
   const absVsAvg = fmtINR(Math.abs(vsAvg30d));
   const supportLine2 = vsAvg30d < 0
-    ? `₹${absVsAvg} below the 30-day average.`
+    ? `₹${absVsAvg} below the usual price for the month.`
     : vsAvg30d > 0
-      ? `₹${absVsAvg} above the 30-day average.`
-      : "At the 30-day average.";
+      ? `₹${absVsAvg} above the usual price for the month.`
+      : "Right at the usual price for the month.";
 
   // Divergence: percentile says cheap/low but vs-avg says above average, or vice versa.
   const divergenceNote =
     (percentile30d <= 40 && vsAvg30d > 0) ||
     (percentile30d >= 70 && vsAvg30d < 0)
-      ? "(The two measures diverge here — the percentile counts days, the average measures distance. The headline follows the percentile.)"
+      ? "(These two don't quite agree — one counts days, the other measures the actual rupee gap. We go with the day-count for the headline above.)"
       : null;
 
   return { percentile30d, vsAvg30d, avg30d, nDays30d, verdictLead, verdictType, proofLine, dataSuffNote, supportLine1, supportLine2, divergenceNote };
@@ -588,15 +593,15 @@ function computeTrendResidual30d(readings, percentile30d) {
 
   let note;
   if (isCheap && residZ < STILL_FALLING_Z) {
-    note = `Cheap, but still falling — today is well below its own recent trend line (about ₹${slopeAbs}/day downhill over the month).`;
+    note = `Cheap, but still falling — today is well below its usual trend for the month (dropping about ₹${slopeAbs} a day).`;
   } else if (isCheap) {
-    note = "Cheap, and stabilizing — despite the recent dip, today's price is back near (or above) its own recent trend line.";
+    note = "Cheap, and steadying — despite the recent dip, today's price is back close to its usual trend for the month.";
   } else if (trendState === "falling") {
-    note = `Prices have been sliding about ₹${slopeAbs}/day over the past month.`;
+    note = `Prices have been slipping about ₹${slopeAbs} a day this month.`;
   } else if (trendState === "rising") {
-    note = `Prices have been climbing about ₹${slopeAbs}/day over the past month.`;
+    note = `Prices have been climbing about ₹${slopeAbs} a day this month.`;
   } else {
-    note = "Prices have been roughly flat over the past month, close to their own recent trend.";
+    note = "Prices have been steady this month, close to their usual trend.";
   }
 
   return { slope, residual, residZ, trendState, nDays, note };
@@ -646,13 +651,13 @@ function computeSupportDistance90d(readings, percentile30d) {
 
   let note;
   if (isCheap && nearSupport) {
-    note = `Cheap, and sitting right at its 3-month low (₹${fmtINR(low90d)}) — testing a floor it hasn't broken in ${nDays} days.`;
+    note = `Cheap, and sitting right at its 3-month low (₹${fmtINR(low90d)}) — it hasn't dropped below this in ${nDays} days.`;
   } else if (isCheap) {
-    note = `Cheap, but still ${distPct.toFixed(1)}% above its 3-month low of ₹${fmtINR(low90d)} — room to fall further before testing that floor.`;
+    note = `Cheap, but still ${distPct.toFixed(1)}% above its lowest price in 3 months (₹${fmtINR(low90d)}).`;
   } else if (nearSupport) {
-    note = `Sitting right at its 3-month low (₹${fmtINR(low90d)}), even though it's not among the cheapest days this month.`;
+    note = `Right at its lowest price in 3 months (₹${fmtINR(low90d)}), even though it's not among the cheapest days this month.`;
   } else {
-    note = `${distPct.toFixed(1)}% above its 3-month low of ₹${fmtINR(low90d)} (over the last ${nDays} days).`;
+    note = `${distPct.toFixed(1)}% above its lowest price in 3 months (₹${fmtINR(low90d)}, over the last ${nDays} days).`;
   }
   if (nDays < FULL_DAYS_SUPPORT) {
     note += ` (Only ${nDays} distinct days in this 90-day window so far — treat as indicative.)`;
@@ -717,10 +722,10 @@ function renderStaleBanner(forecast) {
     const ibjaDate = new Date(forecast.ibja_asof);
     const isToday  = istDayKey(ibjaDate) === istDayKey(new Date());
     banner.textContent = isToday
-      ? "Estimated retail price — calibrated from today's IBJA gold benchmark. Live Tanishq confirmation isn't available right now."
-      : `Estimated retail price — calibrated from IBJA's ${
+      ? "This is today's estimated price, based on IBJA's official gold benchmark — we couldn't confirm it against the shop rate just now."
+      : `This is an estimated price, based on IBJA's ${
           ibjaDate.toLocaleDateString("en-IN", { weekday: "long", timeZone: "Asia/Kolkata" })
-        } close (the most recent published rate). Live Tanishq confirmation isn't available right now.`;
+        } close (their most recent official rate) — we couldn't confirm it against the shop rate just now.`;
     banner.hidden = false;
     return;
   }
@@ -728,7 +733,7 @@ function renderStaleBanner(forecast) {
   // Tier 3: both Tanishq and IBJA unavailable this cycle — live GRT/Malabar/
   // Kalyan consensus (ADR 026) is the only estimate available.
   if (forecast.price_source === "fusion_consensus") {
-    banner.textContent = `Estimated from retail consensus (${fusionSourcesLabel(forecast.fusion_sources)}) — Tanishq and IBJA are both currently unavailable.`;
+    banner.textContent = `This is an estimated price based on other jewellers' rates (${fusionSourcesLabel(forecast.fusion_sources)}) — we couldn't reach Tanishq or IBJA just now.`;
     banner.hidden = false;
     return;
   }
@@ -750,7 +755,7 @@ function renderStaleBanner(forecast) {
   const scrapeAgeH = (Date.now() - scrapedAtMs) / 3_600_000;
   if (scrapeAgeH <= STALE_THRESHOLD_H) return; // scraped-fresh — banner stays hidden
 
-  banner.textContent = `Live price update unavailable — showing last confirmed price from ${fmtRelative(forecast.scraped_at)}.`;
+  banner.textContent = `We couldn't get a live price update — this is the last confirmed price, from ${fmtRelative(forecast.scraped_at)}.`;
   banner.hidden = false;
 }
 
@@ -834,8 +839,8 @@ function updateOfflineBanner() {
       ? fmtRelative(allReadings[allReadings.length - 1].timestamp)
       : null;
     offlineBanner.textContent = rel
-      ? `Offline · showing last loaded data from ${rel}`
-      : "Offline · no data loaded yet";
+      ? `You're offline — showing prices from ${rel}`
+      : "You're offline — no prices loaded yet";
     offlineBanner.hidden = false;
     if (staleBanner) staleBanner.hidden = true;
   } else {
@@ -1056,42 +1061,72 @@ function renderComparisons(readings) {
   section.hidden = false;
 }
 
-function renderCommentary(entries) {
+// ─── TODAY'S READ ────────────────────────────────────────────────────────────
+// Was previously the Groq-generated commentary.json blurb, which — per audit —
+// only restated numbers already shown elsewhere on the page (price, 24K/18K)
+// rather than telling the buyer anything they could act on. Replaced with a
+// deterministic sentence composed client-side from signals already computed
+// for the good-price card below (computeGoodPriceSignals/computeTrendResidual30d)
+// — same inputs, same trust surface, no LLM call, and no risk of duplicating
+// content the good-price card states more precisely a few lines down. Purely
+// qualitative (no ₹/% figures) so it reads as a plain-language headline for
+// the numbers that follow, not a repeat of them. Descriptive only — never
+// implies a future direction (DARK gate, same as computeVerdict/driver context).
+//
+// commentary.json / the Groq generation step this replaces is now unused by the
+// frontend — left in place rather than deleted here since retiring the pipeline
+// step itself is out of this session's scope (layout/copy only, no ml/ changes).
+function composeTodaysRead(readings) {
+  const signals = computeGoodPriceSignals(readings ?? []);
+  if (!signals) {
+    return "We don't have enough price history yet to say much about today — check back once a few more readings come in.";
+  }
+
+  const isCheap = signals.verdictType === "cheap" || signals.verdictType === "below-mid";
+  const isHigh  = signals.verdictType === "high";
+  const trend   = computeTrendResidual30d(readings ?? [], signals.percentile30d);
+
+  if (!trend) {
+    if (isCheap) return "Today's price is on the low side for the month.";
+    if (isHigh)  return "Today's price is on the higher side for the month.";
+    return "Today's price is sitting around its usual range this month.";
+  }
+
+  const { trendState, residZ } = trend;
+  if (isCheap && trendState === "falling" && residZ < STILL_FALLING_Z) {
+    return "Today's price is on the low side for the month, and it's still sliding — it hasn't leveled off yet.";
+  }
+  if (isCheap) {
+    return "Today's price is on the low side for the month, and it looks like it's steadying after a recent dip.";
+  }
+  if (isHigh && trendState === "rising") {
+    return "Today's price is on the higher side for the month, and it's still climbing.";
+  }
+  if (isHigh) {
+    return "Today's price is on the higher side for the month, though the climb has slowed.";
+  }
+  if (trendState === "falling") {
+    return "Prices have eased over the past month, though today isn't especially cheap yet.";
+  }
+  if (trendState === "rising") {
+    return "Prices have climbed over the past month, though today isn't especially expensive yet.";
+  }
+  return "Prices have been fairly steady this month — today sits around the usual range.";
+}
+
+function renderTodaysRead(readings) {
   const textEl = document.getElementById("commentary-text");
   const metaEl = document.getElementById("commentary-meta");
   if (!textEl) return;
 
   const skelEl = document.getElementById("commentary-skeleton");
   if (skelEl) skelEl.hidden = true;
-  if (textEl) textEl.hidden = false;
-  if (metaEl) metaEl.hidden = false;
+  textEl.hidden = false;
+  // No separate staleness concept — this is computed fresh from the same
+  // readings/forecast every render, unlike the old LLM blurb it replaced.
+  if (metaEl) metaEl.hidden = true;
 
-  if (!Array.isArray(entries) || entries.length === 0) {
-    textEl.textContent = "Commentary not yet available. Check back after the next price update.";
-    metaEl.textContent = "";
-    return;
-  }
-  const latest = entries[entries.length - 1];
-  if (!latest || !latest.text) {
-    textEl.textContent = "Commentary unavailable.";
-    metaEl.textContent = "";
-    return;
-  }
-
-  // textContent (not innerHTML) prevents XSS from LLM output.
-  textEl.textContent = latest.text;
-
-  const ageH = latest.ts
-    ? (Date.now() - new Date(latest.ts).getTime()) / 3_600_000
-    : 0;
-
-  if (ageH > 12) {
-    metaEl.textContent = `From ${fmtRelative(latest.ts)} · may be stale`;
-    metaEl.classList.add("commentary-meta--stale");
-  } else {
-    metaEl.textContent = latest.ts ? fmtRelative(latest.ts) : "";
-    metaEl.classList.remove("commentary-meta--stale");
-  }
+  textEl.textContent = composeTodaysRead(readings);
 }
 
 function computeTrendDescription(readings, nDays = 7) {
@@ -1263,22 +1298,22 @@ function renderDriverContext(fc) {
 
     if (total >= 0) {
       if (inrAbs >= goldAbs && inrAbs > 10) {
-        headline = `Gold is up ~Rs.${fmtINR(absTotal)} over the past week — about Rs.${fmtINR(inrAbs)} from a weaker rupee and Rs.${fmtINR(goldAbs)} from global gold prices.`;
+        headline = `Gold is up about ₹${fmtINR(absTotal)} this week — mostly a weaker rupee (₹${fmtINR(inrAbs)}), plus a bit from global gold prices (₹${fmtINR(goldAbs)}).`;
       } else if (goldAbs > 10) {
-        headline = `Gold is up ~Rs.${fmtINR(absTotal)} over the past week — about Rs.${fmtINR(goldAbs)} from global gold prices and Rs.${fmtINR(inrAbs)} from the rupee.`;
+        headline = `Gold is up about ₹${fmtINR(absTotal)} this week — mostly global gold prices (₹${fmtINR(goldAbs)}), plus a bit from the rupee (₹${fmtINR(inrAbs)}).`;
       } else {
-        headline = `Gold is up ~Rs.${fmtINR(absTotal)} over the past week from a mix of global prices and the rupee.`;
+        headline = `Gold is up about ₹${fmtINR(absTotal)} this week, from a mix of global prices and the rupee.`;
       }
     } else {
       if (inrAbs >= goldAbs && inrAbs > 10) {
-        headline = `Gold is down ~Rs.${fmtINR(absTotal)} over the past week — mostly a stronger rupee (~Rs.${fmtINR(inrAbs)}) with global gold about flat.`;
+        headline = `Gold is down about ₹${fmtINR(absTotal)} this week — mostly a stronger rupee (₹${fmtINR(inrAbs)}), with global gold roughly flat.`;
       } else if (goldAbs > 10) {
         const inrNote = inrAbs > 10
-          ? `, with the rupee adding Rs.${fmtINR(inrAbs)}`
-          : " with the rupee about flat";
-        headline = `Gold is down ~Rs.${fmtINR(absTotal)} over the past week — global gold fell ~Rs.${fmtINR(goldAbs)}${inrNote}.`;
+          ? `, and the rupee added back ₹${fmtINR(inrAbs)}`
+          : ", with the rupee roughly flat";
+        headline = `Gold is down about ₹${fmtINR(absTotal)} this week — global gold fell about ₹${fmtINR(goldAbs)}${inrNote}.`;
       } else {
-        headline = `Gold is down ~Rs.${fmtINR(absTotal)} over the past week from a mix of global prices and the rupee.`;
+        headline = `Gold is down about ₹${fmtINR(absTotal)} this week, from a mix of global prices and the rupee.`;
       }
     }
     // XSS-safe: headline built from fmtINR(number) and hardcoded string literals only
@@ -1293,21 +1328,21 @@ function renderDriverContext(fc) {
     if (inrMoved) {
       const dir = inrPct > 0 ? "weakened" : "strengthened";
       const mechanism = inrPct > 0
-        ? " a weaker rupee lifts the price of imported gold in India."
-        : " a stronger rupee eases the price of imported gold in India.";
-      parts.push(`The rupee has ${dir} ~${Math.abs(inrPct).toFixed(1)}% over the past month;${mechanism}`);
+        ? " a weaker rupee makes imported gold pricier in India."
+        : " a stronger rupee makes imported gold cheaper in India.";
+      parts.push(`The rupee has ${dir} about ${Math.abs(inrPct).toFixed(1)}% this month —${mechanism}`);
     }
     if (goldMoved) {
       const dir = goldPct > 0 ? "up" : "down";
-      parts.push(`Global gold (USD) is ${dir} ~${Math.abs(goldPct).toFixed(1)}% over the past month.`);
+      parts.push(`Global gold prices are ${dir} about ${Math.abs(goldPct).toFixed(1)}% this month.`);
     }
     driverStateText = parts.join(" ");
   } else if (premMoved) {
     // Branch 2: premium-dominated — both drivers muted (<2%), premium moved (>1%)
-    driverStateText = "Indian gold has moved more than global prices or the rupee explain this month — local factors such as import costs or seasonal demand are driving the difference.";
+    driverStateText = "Indian gold has moved more than the global price or rupee explain — likely import costs or festival demand at home.";
   } else {
     // Branch 3: everything flat
-    driverStateText = "Gold has been stable this month; no major driver moved much.";
+    driverStateText = "Nothing much moved this month — global prices, the rupee, and local demand have all been quiet.";
   }
 
   // XSS-safe: driverStateText is a hardcoded literal or toFixed(1) on a number
@@ -1730,12 +1765,12 @@ function renderMethodology(fc, bt, drift, coverage) {
   // Verdict rule explanation
   parts.push(`
     <div class="meth-section">
-      <h3 class="meth-heading">Verdict rules</h3>
-      <p class="meth-text">Three simple cases — each needs two things to agree to avoid reacting to a single unusual reading.</p>
+      <h3 class="meth-heading">How we call a trend</h3>
+      <p class="meth-text">We only call a trend when two separate checks agree — that way one odd reading doesn't set off a false alarm.</p>
       <ul class="meth-list">
-        <li><strong>Trending down:</strong> price has fallen more than ₹100 over 7 days, and the estimate or 30-day average agrees</li>
-        <li><strong>Trending up:</strong> price has risen more than ₹100 over 7 days, and the estimate or 30-day average agrees</li>
-        <li><strong>Roughly flat:</strong> everything else — movement within ±₹100 or the two checks disagree</li>
+        <li><strong>Getting cheaper:</strong> price has dropped more than ₹100 in a week, and the estimate or monthly average agrees</li>
+        <li><strong>Getting pricier:</strong> price has climbed more than ₹100 in a week, and the estimate or monthly average agrees</li>
+        <li><strong>Steady:</strong> everything else — movement within ₹100 either way, or the two checks disagree</li>
       </ul>
     </div>
   `);
@@ -1753,16 +1788,16 @@ function renderMethodology(fc, bt, drift, coverage) {
           <div class="meth-stat">
             <div class="meth-stat-label">22K estimate</div>
             <div class="meth-stat-value">₹${fmtINR(pred22k)}</div>
-            ${hasPI ? `<div class="meth-stat-sub">80% range: ₹${fmtINR(lower)} – ₹${fmtINR(upper)}</div>` : ""}
+            ${hasPI ? `<div class="meth-stat-sub">Right about 4 times out of 5: ₹${fmtINR(lower)} – ₹${fmtINR(upper)}</div>` : ""}
           </div>
           <div class="meth-stat">
             <div class="meth-stat-label">Method</div>
             <div class="meth-stat-value">Assume no change</div>
-            <div class="meth-stat-sub">Range covers 80% of typical next-day swings</div>
+            <div class="meth-stat-sub">Covers most of the usual day-to-day moves</div>
           </div>
         </div>
         ${fc.target_time ? `<p class="meth-text" style="margin-top:8px">Target: ${fmtIST(fc.target_time)}</p>` : ""}
-        <p class="meth-text" style="margin-top:12px">This range covers the next trading day only — how much the price has typically moved by the next reading. It's based on the last 30 backtest windows' typical next-day error. (The good-price card's "moves about ±₹X over 5 days" note is a separate, wider 5-day volatility estimate — a different question.)</p>
+        <p class="meth-text" style="margin-top:12px">This is just for the next reading, not several days out — based on how much the price has typically moved by the next check over our last 30 test runs. (The "moves about ±₹X over 5 days" note above is a separate, longer-range estimate.)</p>
       </div>
     `);
   }
@@ -1780,7 +1815,7 @@ function renderMethodology(fc, bt, drift, coverage) {
           <div class="meth-stat-value">Off — not yet reliable</div>
           <div class="meth-stat-sub">no model beats "gold usually rises" yet</div>
         </div>
-        <p class="meth-note">We re-test next-day and multi-day direction models every week. None has beaten the simple base rate (gold rises most days) by a meaningful, statistically significant margin — so we do <strong>not</strong> show a "chance up" percentage or a buy/sell call. The price-move alerts describe the recent 7-day trend; they are not a forecast.</p>
+        <p class="meth-note">We test our price-direction models every week. So far, none of them beat just assuming "gold usually goes up" — so we don't show a chance-of-rising percentage or tell you to buy or sell. The trend labels above (Getting cheaper/pricier/Steady) describe what already happened this week — they're not a prediction of what happens next.</p>
       </div>
     `);
   } else if (fc?.chronos_companion?.status === "failed") {
@@ -1817,21 +1852,20 @@ function renderMethodology(fc, bt, drift, coverage) {
       <div class="meth-section meth-how-good">
         <h3 class="meth-heading">How accurate is this?</h3>
 
-        <p class="meth-text"><strong>The price estimate uses flat-hold (today's price, unchanged)</strong><br>
-        Gold prices over 5 days are close to unpredictable; no model we tested could beat simply using today's price as the forecast. Over ${n} windows from 2022–2026:<br>
-        &bull; Flat-hold average error: ₹${naiveMae}/g<br>
-        ${maePctWorse != null ? `&bull; Time-series AI average error: ₹${chronosMae}/g — ${maePctWorse}% worse (p&thinsp;=&thinsp;${pVal})<br>` : ""}
-        Today's price is the forecast.</p>
+        <p class="meth-text"><strong>We assume tomorrow's price is about the same as today's</strong><br>
+        Gold prices are hard to predict even a few days out — every model we tried did worse than simply guessing "no change." Tested over ${n} time windows from 2022–2026:<br>
+        &bull; Guessing "no change" was off by ₹${naiveMae}/g on average<br>
+        ${maePctWorse != null ? `&bull; Our AI model was off by ₹${chronosMae}/g — ${maePctWorse}% worse (p&thinsp;=&thinsp;${pVal})<br>` : ""}
+        So "no change" is what we go with.</p>
 
-        <p class="meth-text"><strong>The ${rangeStr} range has held ${hasCoverage ? `${coverPct}% of the time (n=${coverN} resolved next-day checks)` : "close to its target rate so far — still building a track record"}</strong><br>
-        It reflects the real distribution of next-day price moves, not a 5-day move — the range is meant to describe how far tomorrow's price is likely to sit from today's, not a wider multi-day swing. The width is calibrated on only the last 30 backtest windows' typical next-day error, which is a thin sample. This range was tightened in July 2026 after we found it had been sized for 5-day moves while only ever being checked against next-day prices — the coverage % above may still read above 80% for a while as older, wider-range decisions count toward it alongside newer ones; it's expected to settle nearer 80% as more decisions resolve under the corrected width. Honestly: that settling-in period also means this percentage isn't yet independent confirmation the new range is well-calibrated — it still mixes in decisions made under the old, wider range. A clean read arrives once enough decisions made after the July 2026 tightening have resolved.</p>
+        <p class="meth-text"><strong>Our ${rangeStr} range has been right ${hasCoverage ? `${coverPct}% of the time (checked ${coverN} times so far)` : "close to on target so far — still building a track record"}</strong><br>
+        This range is about tomorrow's price only, not several days out. It's based on just the last 30 test runs, so it's a small sample. We narrowed this range in July 2026 after realizing it had been sized for 5-day moves but only ever checked against next-day prices — so the percentage above may look better than it really is for a while, until enough checks have happened under the corrected, narrower range. We'll call it fully proven once that settles.</p>
 
         <p class="meth-text"><strong>About the direction signal</strong><br>
-        Over ${n} windows the AI signal was correct ${dirAllDisplay}. Gold has risen roughly 70% of trading days in our data. A naive "always-up" guess clears ~70% without a model — our signal doesn't beat that baseline.<br>
-        No directional edge is claimed. Current price-move alerts use 7-day momentum, not the AI.</p>
+        Our AI was right ${dirAllDisplay} of the time across ${n} test windows. But gold rises on roughly 70% of trading days anyway — so just guessing "up" every time would score about as well, with no model needed. We don't claim any edge here. The Getting cheaper/pricier labels above come from the recent 7-day trend, not from this AI.</p>
 
         <p class="meth-text"><strong>What would change this</strong><br>
-        A mixed price regime (roughly equal up/down days) or a momentum signal that consistently clears the base rate in held-out tests. We'll update this section when that happens.</p>
+        If gold started moving up and down more evenly (not mostly up), or if a model started reliably beating the "gold usually rises" guess in testing, we'd turn this back on. We'll update this section if that happens.</p>
       </div>
     `);
   }
@@ -1872,8 +1906,8 @@ function renderMethodology(fc, bt, drift, coverage) {
   }
 
   // XSS-safe: parts[] contains only hardcoded HTML templates with numeric/boolean
-  // values from forecast.json and backtest.json. Groq commentary is NEVER included
-  // here — it is rendered via textContent in renderCommentary() (line ~427).
+  // values from forecast.json and backtest.json. Today's-read text is rendered
+  // separately via textContent in renderTodaysRead().
   body.innerHTML = parts.join("");
 }
 
@@ -1896,6 +1930,7 @@ async function refreshData() {
     renderChart(allReadings, currentRange);
     renderHero(allReadings, fc);
     renderStaleBanner(fc);
+    renderTodaysRead(allReadings);
     renderModelSignal(fc, allReadings);
     renderDriverContext(fc);
     updateOfflineBanner();
@@ -1915,7 +1950,7 @@ async function refreshData() {
       const rel = allReadings.length > 0
         ? fmtRelative(allReadings[allReadings.length - 1].timestamp)
         : "an unknown time";
-      banner.textContent = `Couldn't refresh — showing last update from ${rel}`;
+      banner.textContent = `Couldn't refresh — this is the last update, from ${rel}`;
       banner.hidden = false;
     }
   } finally {
@@ -2248,16 +2283,15 @@ function initScrollReveals() {
     return null;
   });
   const btPromise = loadJSON(BACKTEST_URL);
-  const commentaryPromise = loadJSON(COMMENTARY_URL);
   const driftPromise = loadJSON(DRIFT_URL);
   const coveragePromise = loadJSON(COVERAGE_URL);
-  // These four are only actually consumed much later (via Promise.allSettled, after
+  // These three are only actually consumed much later (via Promise.allSettled, after
   // awaiting price+forecast and rendering the hero) — attach an inert catch to each
   // now so an early rejection (e.g. a timeout firing while we're still waiting on
   // prices) doesn't surface as a spurious unhandledrejection console error / Sentry
   // event in the meantime. Promise.allSettled below still sees the real outcome —
   // this doesn't replace the promise, just marks it handled.
-  [btPromise, commentaryPromise, driftPromise, coveragePromise].forEach(p => p.catch(() => {}));
+  [btPromise, driftPromise, coveragePromise].forEach(p => p.catch(() => {}));
 
   // Load prices (critical path)
   try {
@@ -2316,6 +2350,7 @@ function initScrollReveals() {
   renderFreshness(allReadings, fc); // re-render now IBJA-primary state is known
   renderHero(allReadings, fc);
   renderStaleBanner(fc);
+  renderTodaysRead(allReadings);
   renderModelSignal(fc, allReadings);  // first render — coverage% uses fallback until backtest loads
   renderDriverContext(fc);
   lastForecast = fc;
@@ -2329,24 +2364,22 @@ function initScrollReveals() {
   updateOfflineBanner(); // update offline banner text now allReadings is populated
 
   // Remaining optional data (already in flight above; all gracefully degrade on failure).
-  const [bt, commentary, drift, coverage] = await Promise.allSettled([
+  const [bt, drift, coverage] = await Promise.allSettled([
     btPromise,
-    commentaryPromise,
     driftPromise,
     coveragePromise,
   ]);
 
   // Report any optional-fetch failures so silent pipeline breaks surface in Sentry.
   if (typeof Sentry !== "undefined") {
-    const optionalUrls = [BACKTEST_URL, COMMENTARY_URL, DRIFT_URL, COVERAGE_URL];
-    [bt, commentary, drift, coverage].forEach((r, i) => {
+    const optionalUrls = [BACKTEST_URL, DRIFT_URL, COVERAGE_URL];
+    [bt, drift, coverage].forEach((r, i) => {
       if (r.status === "rejected") Sentry.captureException(r.reason, { extra: { url: optionalUrls[i] } });
     });
   }
 
   const btData = bt.status === "fulfilled" ? bt.value : null;
   renderModelSignal(fc, allReadings, btData);  // re-render with coverage% from backtest
-  renderCommentary(commentary.status === "fulfilled" ? commentary.value : null);
   renderForecastVsActual(btData);
   renderMethodology(
     fc,

@@ -4,17 +4,17 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
     <title>Gold Rate Today · Is it a good price?</title>
-    <meta name="description" content="22K gold rate — an IBJA-calibrated estimate, confirmed against live Tanishq retail when reachable. See if today's price is high or low compared to recent weeks — Bengaluru." />
+    <meta name="description" content="22K gold rate — an IBJA-calibrated estimate, confirmed against live Tanishq retail when reachable. See if today's price is high or low compared to recent weeks." />
 
     <!-- OG / social sharing -->
     <meta property="og:title" content="Gold Rate Today · Is it a good price?" />
-    <meta property="og:description" content="22K gold rate — an IBJA-calibrated estimate, confirmed against live Tanishq retail when reachable. See if today's price is high or low compared to recent weeks — Bengaluru." />
+    <meta property="og:description" content="22K gold rate — an IBJA-calibrated estimate, confirmed against live Tanishq retail when reachable. See if today's price is high or low compared to recent weeks." />
     <meta property="og:image" content="https://gaurav-gandhi-2411.github.io/gold-rate-tracker/og.png" />
     <meta property="og:type" content="website" />
     <meta property="og:url" content="https://gaurav-gandhi-2411.github.io/gold-rate-tracker/" />
     <meta name="twitter:card" content="summary_large_image" />
     <meta name="twitter:title" content="Gold Rate Today · Is it a good price?" />
-    <meta name="twitter:description" content="22K gold rate — an IBJA-calibrated estimate, confirmed against live Tanishq retail when reachable. See if today's price is high or low compared to recent weeks — Bengaluru." />
+    <meta name="twitter:description" content="22K gold rate — an IBJA-calibrated estimate, confirmed against live Tanishq retail when reachable. See if today's price is high or low compared to recent weeks." />
     <meta name="twitter:image" content="https://gaurav-gandhi-2411.github.io/gold-rate-tracker/og.png" />
 
     <!-- PWA -->
@@ -65,7 +65,7 @@
     <!-- 1. APP HEADER — sticky top -->
     <div class="app-header" id="utility-row" aria-live="polite">
       <div class="app-header-left">
-        <span class="app-title">Gold · Bengaluru</span>
+        <span class="app-title">Gold</span>
       </div>
       <div class="app-header-right">
         <span class="freshness-pill" id="freshness-pill">—</span>
@@ -120,7 +120,7 @@
         <h1 class="hero-price" id="hero-price" hidden>—</h1>
         <p class="hero-estimate-range" id="hero-estimate-range" hidden></p>
         <p class="hero-last-confirmed" id="hero-last-confirmed" hidden></p>
-        <p class="hero-location" id="hero-location" hidden>Bengaluru · 22K gold</p>
+        <p class="hero-location" id="hero-location" hidden>Tanishq retail price · pan-India</p>
 
         <div class="hero-change" id="hero-change" hidden aria-live="polite">
           <span class="hero-change-arrow" aria-hidden="true"></span>
@@ -219,7 +219,7 @@
       <!-- 5b. PRICE CONTEXT — "Is today a good price?" verdict + volatility context -->
       <section class="model-signal-section reveal-on-scroll" id="model-signal-section"
                aria-label="How today's price compares to recent history">
-        <h2>How does today's price compare?</h2>
+        <h2>Is today a good time to buy?</h2>
         <!-- Φ8C'/Ψ3C.3: skeleton shown while signal loads. model-signal-wrap: same
              absolute-overlay CLS fix as commentary-body/history-wrap (2026-08-10) --
              see the .model-signal-wrap rule in style.css for why. Tier 1 CLS fix
@@ -329,7 +329,7 @@
       <!-- 8. METHODOLOGY ACCORDION -->
       <details class="methodology reveal-on-scroll" id="section-info">
         <summary class="methodology-summary">
-          How this works · how good is this? · historical checks
+          How this works — and how accurate it's been
         </summary>
         <div class="methodology-body" id="methodology-body">
           <div class="meth-skeleton" aria-hidden="true">
@@ -347,12 +347,12 @@
       <!-- 9. FOOTER -->
       <footer class="site-footer">
         <p>
-          Sources: <a href="https://ibjarates.com/" target="_blank" rel="noopener">IBJA</a> benchmark
-          rate, calibrated to retail (R²=0.96) — confirmed against live
-          <a href="https://www.tanishq.co.in/gold-rate.html?lang=en_IN" target="_blank" rel="noopener">Tanishq</a>
-          quotes when reachable.
-          Checked every 3 hours via GitHub Actions — IBJA itself publishes once
-          a day, so the price shown often carries over between checks.
+          We use <a href="https://ibjarates.com/" target="_blank" rel="noopener">IBJA</a>'s
+          official gold benchmark and calibrate it to match real shop prices, checking
+          against <a href="https://www.tanishq.co.in/gold-rate.html?lang=en_IN" target="_blank" rel="noopener">Tanishq</a>'s
+          live rate when we can.
+          Prices are checked every 3 hours — IBJA itself only updates once a day, so the
+          number sometimes stays the same for a while.
         </p>
         <p class="muted">Not financial advice. Rates are indicative.</p>
       </footer>

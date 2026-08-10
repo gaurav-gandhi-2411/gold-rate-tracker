@@ -685,6 +685,33 @@ main {
   background-clip: initial;
   color: var(--gold);
 }
+
+/* Landscape phones with a short viewport (a rotated 375-440px-wide phone lands
+   in roughly this height range): the base clamp(56px,16vw,160px) above sizes
+   purely off width, so on a wide-but-short landscape phone the price alone can
+   consume nearly the full viewport height, pushing the change pill and verdict
+   banner off-screen without scrolling. Constrain by viewport height instead
+   once height, not width, is the binding dimension. Scoped to
+   orientation:landscape + max-height so portrait phones (where height is
+   plentiful) keep the original width-based sizing untouched, and so this can
+   never affect the portrait viewport Lighthouse CI measures CLS against. */
+@media (orientation: landscape) and (max-height: 500px) {
+  .hero-price { font-size: clamp(40px, 13vh, 88px); margin-bottom: 8px; }
+  .hero-card {
+    padding-top: clamp(8px, 2vh, 16px);
+    margin-bottom: clamp(8px, 2vh, 16px);
+    min-height: 0;
+  }
+  .eyebrow { margin-bottom: 4px; }
+  .hero-change { margin-bottom: 8px; padding: 4px 12px; }
+  .verdict-banner { margin-bottom: 8px; padding: 10px 14px; }
+  /* Least essential element on a viewport this short — the verdict banner
+     above it is what answers "should I care today?"; the sparkline is
+     supplementary and already pushed below the fold at these heights, so
+     hiding it (rather than leaving it half-cut) reclaims real room instead
+     of spending it on a chart nobody can see anyway. */
+  .sparkline-wrap { display: none !important; }
+}
 .hero-estimate-range {
   margin: -8px 0 var(--space-3);
   font-size: var(--ts-sm);
@@ -1413,8 +1440,13 @@ main {
 
 /* ═══════════════════════════════════════════════════════════════
    RESPONSIVE — tablets ≥641px, constrained comparison cards
+   min-height excludes landscape phones that land in this same width band
+   (e.g. a 375px-wide phone rotated is 667px wide × 375px tall) — those are
+   short, not tall, so they fall through to the base (fluid, mobile-tuned)
+   rule below instead of this tablet-specific override. See the landscape
+   hero-price fix above for the same width-only-breakpoint root cause.
 ═══════════════════════════════════════════════════════════════ */
-@media (min-width: 641px) and (max-width: 860px) {
+@media (min-width: 641px) and (max-width: 860px) and (min-height: 700px) {
   .comparison-cards { grid-template-columns: repeat(3, 1fr); gap: 10px; }
   .cmp-value { font-size: 20px; }
 }
@@ -1556,8 +1588,13 @@ main {
 }
 
 /* Desktop ≥900px: hide bottom nav — desktop users have scroll/keyboard;
-   a full-width fixed bar reads as broken-mobile at this width. */
-@media (min-width: 900px) {
+   a full-width fixed bar reads as broken-mobile at this width.
+   `hover:hover` + `pointer:fine` (the same real-desktop signal already used
+   for .comparison-card/.karat-card hover effects above) — width alone isn't
+   enough: a landscape "Plus"-size phone (e.g. 926x428) is ≥900px wide too,
+   and a width-only query wrongly hid the nav for exactly those touch users,
+   who still need it. */
+@media (min-width: 900px) and (hover: hover) and (pointer: fine) {
   .bottom-nav { display: none; }
   /* Restore original main bottom padding (no nav to clear) */
   main { padding-bottom: calc(var(--space-7) + env(safe-area-inset-bottom, 0px)); }
