@@ -1,6 +1,6 @@
 {
   "name": "Gold Rate Tracker",
-  "short_name": "Gold",
+  "short_name": "Gold Tracker",
   "description": "22K / 24K / 18K gold rates, IBJA-calibrated and confirmed against live Tanishq retail when reachable, with trend charts and price-drop notifications.",
   "start_url": "./",
   "scope": "./",

@@ -2251,23 +2251,35 @@ function applyStaticStrings() {
   });
 }
 
-// Devanagari font, loaded only when Hindi is active — English users' browsers
-// never discover this @font-face at all (see style.css's html[lang="hi"] scoping),
-// so this only needs to add the preload <link> so the (already-scoped) font-face
-// starts downloading immediately instead of waiting for CSSOM+layout to discover
-// it, same reasoning as the three English fonts' own preload in index.html.
-// Idempotent — safe to call on every applyLanguage(), only inserts once.
+// Devanagari fonts (Sans for --heading/--sans, Serif for --display), loaded
+// only when Hindi is active — English users' browsers never discover either
+// @font-face at all (each unicode-range only matches when a Devanagari
+// character is actually painted, see style.css's TOKENS comment), so this
+// only needs to add the preload <link>s so the already-scoped font-faces
+// start downloading immediately instead of waiting for CSSOM+layout to
+// discover them, same reasoning as the three English fonts' own preload in
+// index.html. Idempotent — safe to call on every applyLanguage(), only
+// inserts each once. Mirrors the same two-font preload injected synchronously
+// in index.html's <head> for a first Hindi load; this is the fallback path
+// for a same-session language *switch* (index.html's script only runs once,
+// at initial parse, keyed off the resolved starting language).
 function applyDevanagariFont() {
   if (currentLang !== "hi") return;
-  if (document.getElementById("devanagari-preload")) return;
-  const link = document.createElement("link");
-  link.id = "devanagari-preload";
-  link.rel = "preload";
-  link.as = "font";
-  link.type = "font/woff2";
-  link.href = "fonts/notosans-devanagari-variable.woff2";
-  link.crossOrigin = "anonymous";
-  document.head.appendChild(link);
+  const devanagariFonts = [
+    ["devanagari-preload-sans", "fonts/notosans-devanagari-variable.woff2"],
+    ["devanagari-preload-serif", "fonts/notoserif-devanagari-variable.woff2"],
+  ];
+  for (const [id, href] of devanagariFonts) {
+    if (document.getElementById(id)) continue;
+    const link = document.createElement("link");
+    link.id = id;
+    link.rel = "preload";
+    link.as = "font";
+    link.type = "font/woff2";
+    link.href = href;
+    link.crossOrigin = "anonymous";
+    document.head.appendChild(link);
+  }
 }
 
 // Switches language, persists it, updates <html lang>, and re-renders every

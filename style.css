@@ -46,25 +46,78 @@
   font-display: optional;
 }
 
+/* Rupee sign (₹, U+20B9) — a 1.1KB subset covering exactly one glyph, needed
+   by EVERY visitor regardless of language: none of the three Latin faces
+   above (verified via fontTools cmap check, 2026-08-10) include U+20B9, so
+   every price display on this page (hero price, comparison cards, karat
+   strip, methodology stats) was already falling all the way through to the
+   full Noto Sans Devanagari face just to paint one currency symbol -- a
+   121KB fetch, unconditionally, for every English visitor, contradicting
+   this file's own long-standing "costs nothing for English visitors" claim
+   about the Devanagari fonts below. Adding the Serif Devanagari face
+   (2026-08-10) would have doubled that unconditional cost to ~248KB before
+   this fix. This subset (built from Noto Sans Devanagari's own ₹ glyph via
+   `fonttools subset --unicodes=U+20B9`, keeps its wght 100-900 variable axis
+   so it interpolates to match surrounding text weight same as any other
+   glyph) is inserted into all three stacks below, before either Devanagari
+   fallback, and both Devanagari faces' unicode-range is trimmed to exclude
+   U+20B9 so there's no overlap/ambiguity about which face serves the glyph.
+   Precached in SHELL_FILES and preloaded unconditionally in index.html, like
+   the three Latin faces above -- not gated behind html[lang="hi"] the way the
+   Devanagari faces are, since ₹ appears on every page load either way. */
+@font-face {
+  font-family: "Rupee Sign";
+  src: url("fonts/rupee-sign.woff2") format("woff2");
+  font-weight: 100 900;
+  font-style: normal;
+  font-display: optional;
+  unicode-range: U+20B9;
+}
+
 /* Devanagari (Hindi) — Noto Sans Devanagari, devanagari-subset only (not the
    latin/latin-ext subsets Google also serves under this family — English text
    on this page already has Fraunces/DM Sans/Syne, so only the Devanagari glyph
    range is needed here). Same self-hosting rationale as the three faces above:
    the exact bytes Google's CDN serves for this subset (verified via fontTools:
    full U+0900-097F coverage, wght 100-900 variable, confirmed 2026-08-10), same
-   font-display:optional CLS discipline.
+   font-display:optional CLS discipline. unicode-range excludes U+20B9 (₹) --
+   see the Rupee Sign face above, which owns that codepoint exclusively so this
+   121KB face is never fetched just to paint a currency symbol.
    Declaring this rule costs nothing for English visitors on its own — a browser
    only fetches an @font-face's src when something on the page actually renders
-   using that font-family, and the html[lang="hi"] selectors below are the ONLY
-   place this font-family is ever applied. An English page (html[lang="en"])
-   never matches those selectors, so this file is never even requested. */
+   using that font-family. The family is appended, unscoped, to every stack in
+   the TOKENS block below (see that comment for why) rather than gated by an
+   html[lang="hi"] selector — the unicode-range above is what keeps the fetch
+   conditional instead, and this file's own TOKENS comment names the one
+   real exception (the language toggle glyph) to the "never on an English
+   page" claim. */
 @font-face {
   font-family: "Noto Sans Devanagari";
   src: url("fonts/notosans-devanagari-variable.woff2") format("woff2");
   font-weight: 100 900;
   font-style: normal;
   font-display: optional;
-  unicode-range: U+0900-097F, U+1CD0-1CF9, U+200C-200D, U+20A8, U+20B9, U+20F0, U+25CC, U+A830-A839, U+A8E0-A8FF;
+  unicode-range: U+0900-097F, U+1CD0-1CF9, U+200C-200D, U+20A8, U+20F0, U+25CC, U+A830-A839, U+A8E0-A8FF;
+}
+
+/* Devanagari display face — pairs with Fraunces in --display so Hindi headings/
+   verdict text get the same serif hierarchy the English page has, instead of
+   falling through to the same Noto Sans face body text uses (the pre-2026-08-10
+   behavior: every Hindi weight/role looked identical because --display,
+   --heading, and --sans all resolved to one flat sans face for Devanagari,
+   English's serif/sans distinction. Same self-hosting rationale and verification
+   as the Sans face above: exact bytes Google's CDN serves for this subset
+   (verified via fontTools: full U+0900-097F coverage, wght 100-900 variable,
+   confirmed 2026-08-10). --heading/--sans deliberately keep Noto Sans Devanagari
+   unchanged -- only --display's Devanagari member changes. unicode-range
+   excludes U+20B9 (₹) for the same reason as the Sans face above. */
+@font-face {
+  font-family: "Noto Serif Devanagari";
+  src: url("fonts/notoserif-devanagari-variable.woff2") format("woff2");
+  font-weight: 100 900;
+  font-style: normal;
+  font-display: optional;
+  unicode-range: U+0900-097F, U+1CD0-1CF9, U+200C-200D, U+20A8, U+20F0, U+25CC, U+A830-A839, U+A8E0-A8FF, U+11B00-11B09;
 }
 
 /* ═══════════════════════════════════════════════════════════════
@@ -148,20 +201,42 @@
   --status-stale-border: rgba(224, 99, 122, 0.42);
 
   /* Typography */
-  /* "Noto Sans Devanagari" appended to every stack, not scoped by html[lang] --
-     it's the ONLY font here covering the Devanagari block (Fraunces/Cormorant/
-     Syne/DM Sans don't), so per-character font fallback already routes Hindi
-     text to it automatically, on English pages AND Hindi pages alike, with no
-     selector needed. This costs English visitors nothing: the font-face's own
-     unicode-range (U+0900-097F et al.) means the browser only ever fetches it
-     when a Devanagari character actually needs painting, which never happens
-     on an English page (no Devanagari character appears anywhere in its DOM).
-     Also means numerals/₹/Latin mixed into Hindi text (prices, "22K", the EN
-     toggle label) keep rendering via DM Sans's tabular-nums, not Devanagari's
-     digit shapes -- exactly the mixed-script behavior we want. */
-  --display: "Fraunces", "Cormorant Garamond", "Noto Sans Devanagari", Georgia, serif;
-  --heading: "Syne", "Noto Sans Devanagari", system-ui, sans-serif;
-  --sans:    "DM Sans", "Noto Sans Devanagari", system-ui, -apple-system, sans-serif;
+  /* Rupee Sign + both Devanagari faces appended to their stacks, not scoped by
+     html[lang] -- each is the ONLY font in its stack covering its glyph(s)
+     (Fraunces/Cormorant/Syne/DM Sans cover neither Devanagari nor ₹, verified
+     via fontTools, 2026-08-10), so per-character font fallback already routes
+     each character to the right face automatically, on English pages AND
+     Hindi pages alike, with no selector needed.
+     Rupee Sign is NOT the "costs English visitors nothing" case the two
+     Devanagari faces are -- ₹ appears in every price display regardless of
+     language, so this ~1KB face is fetched unconditionally by every visitor,
+     same tier as Fraunces/DM Sans/Syne (see its own @font-face comment for
+     the full story of why this face exists at all).
+     The two Devanagari faces genuinely do cost English visitors nothing on
+     their own: each face's unicode-range (U+0900-097F et al., now excluding
+     U+20B9 -- see their own comments) means the browser only ever fetches one
+     when a Devanagari character actually needs painting -- true everywhere on
+     an English page except one: #lang-toggle's own label reads "हिं" while
+     English is active (app.js's applyLanguage, "shows the OTHER language"),
+     so that one 2-glyph string (rendered via --sans, so only Noto Sans
+     Devanagari) is a real, accepted exception to "never on an English page".
+     Not preloaded for it (the preload above stays conditional on Hindi being
+     the resolved starting language) -- worst case those two glyphs paint in
+     the fallback stack's own Devanagari coverage (present on every mainstream
+     OS) until/unless the font arrives, never a blank/tofu render, and the
+     cost of always preloading a whole variable font for two button glyphs
+     would outweigh that. Also means numerals/Latin mixed into Hindi text
+     (prices, "22K", the EN toggle label) keep rendering via DM Sans's
+     tabular-nums, not either Devanagari face's digit shapes -- exactly the
+     mixed-script behavior we want.
+     --display uses the Serif face (not Sans) deliberately -- see that
+     @font-face's own comment for why: it's what gives Hindi headings/verdict
+     text the same serif hierarchy Fraunces gives English, instead of every
+     Hindi role collapsing onto one flat sans face. --heading/--sans keep Noto
+     Sans Devanagari, matching Syne/DM Sans's own sans character. */
+  --display: "Fraunces", "Rupee Sign", "Cormorant Garamond", "Noto Serif Devanagari", Georgia, serif;
+  --heading: "Syne", "Rupee Sign", "Noto Sans Devanagari", system-ui, sans-serif;
+  --sans:    "DM Sans", "Rupee Sign", "Noto Sans Devanagari", system-ui, -apple-system, sans-serif;
 
   /* Spacing (8px base) */
   --space-1:  4px;  --space-2:  8px;  --space-3: 12px;
@@ -233,6 +308,63 @@
     /* Light mode needs darker stops than dark mode for contrast on white. */
     --hero-gradient: linear-gradient(135deg, var(--gold-rich) 0%, var(--gold-deep) 55%, var(--gold-deep) 100%);
   }
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   DEVANAGARI TEXT SAFETY (html[lang="hi"])
+═══════════════════════════════════════════════════════════════ */
+/* Bug (reported 2026-08-10): "आज का सार" (todaysReadEyebrow) rendered as
+   "सा र" -- a visible gap splitting सार apart. Root cause confirmed by
+   tracing the exact element: .commentary-eyebrow carries letter-spacing:
+   0.18em (for the uppercase-tracking look on Latin/English text), and
+   Devanagari conjuncts + matras are positioned by the shaping engine
+   assuming zero inter-glyph space -- any nonzero letter-spacing forces
+   the browser to insert a gap between glyphs that must sit flush (base
+   consonant + matra, or two conjunct-forming consonants), breaking the
+   shaped cluster apart mid-word. This is universal to the script, not a
+   quirk of this one string: EVERY element below that can carry Hindi
+   text and also declares its own letter-spacing (which wins over
+   inheritance -- letter-spacing is inherited, but an element's own
+   explicit value always overrides an inherited one, so setting this only
+   on <html> would not reach any of them) needs the override restated here
+   with higher specificity (the html[lang="hi"] prefix beats the bare
+   selector everywhere in this file, since every one of theirs is a single
+   class/type selector with no attribute prefix of its own).
+   Deliberately excludes elements that only ever render digits/₹ amounts
+   (.hero-price via h1, .cmp-value, .karat-price, .karat-label, .meth-stat-value,
+   Chart.js canvas labels) -- their letter-spacing is real, intentional
+   numeral tracking, unrelated to this bug, and safe to keep since no
+   Devanagari character is ever painted through them.
+   New translatable element? If it can render Hindi text (any data-i18n*
+   target, or any element app.js fills via t()) AND the class you give it
+   sets its own letter-spacing, add that class to this list -- otherwise
+   it inherits this exact bug the next time someone reaches for
+   letter-spacing on an uppercase/tracked label. */
+html[lang="hi"] h2,
+html[lang="hi"] h3,
+html[lang="hi"] .app-title,
+html[lang="hi"] .freshness-pill,
+html[lang="hi"] .hero-location,
+html[lang="hi"] .lang-toggle,
+html[lang="hi"] .eyebrow,
+html[lang="hi"] .hero-change-label,
+html[lang="hi"] .verdict-headline,
+html[lang="hi"] .sparkline-label-left,
+html[lang="hi"] .sparkline-label-right,
+html[lang="hi"] .cmp-label,
+html[lang="hi"] .cmp-sub,
+html[lang="hi"] .karat-sub,
+html[lang="hi"] .commentary-eyebrow,
+html[lang="hi"] .commentary-meta,
+html[lang="hi"] .section-karat-note,
+html[lang="hi"] .history-table th,
+html[lang="hi"] .methodology-summary,
+html[lang="hi"] .meth-stat-label,
+html[lang="hi"] .stale-banner,
+html[lang="hi"] .offline-banner,
+html[lang="hi"] .bottom-nav-item,
+html[lang="hi"] .hcard-time {
+  letter-spacing: normal;
 }
 
 /* ═══════════════════════════════════════════════════════════════

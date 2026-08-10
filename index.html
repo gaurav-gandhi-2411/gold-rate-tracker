@@ -5,15 +5,18 @@
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
 
     <!-- Synchronous, blocking, deliberately tiny: decides the starting language and, if
-         Hindi, injects the Devanagari font preload BEFORE the browser has begun downloading
-         anything else in <head> -- so a Hindi-preferring visitor's font starts fetching at
+         Hindi, injects the Devanagari font preloads BEFORE the browser has begun downloading
+         anything else in <head> -- so a Hindi-preferring visitor's fonts start fetching at
          the earliest possible moment instead of only after app.js runs (deferred, fires
          after the whole document parses). Also sets <html lang> before first paint, so a
          returning Hindi user never sees an English flash. Duplicates a minimal slice of
          i18n.js's getLang() logic deliberately -- i18n.js itself hasn't loaded yet at this
          point in <head> parsing, and this must run before first paint, not after a
          deferred script. Storage/navigator access wrapped in try/catch: private browsing
-         or disabled storage must degrade to English, never throw and block parsing. -->
+         or disabled storage must degrade to English, never throw and block parsing.
+         Both faces (Sans body/heading + Serif display) preload together -- verdict-headline
+         (--display, hero card, above the fold) needs Serif as early as the body text that
+         needs Sans, so there's no CLS-safety reason to stagger them. -->
     <script>
       (function () {
         var lang = "en";
@@ -30,14 +33,20 @@
         } catch (e) { /* default to en */ }
         document.documentElement.lang = lang;
         if (lang === "hi") {
-          var link = document.createElement("link");
-          link.rel = "preload";
-          link.as = "font";
-          link.type = "font/woff2";
-          link.href = "fonts/notosans-devanagari-variable.woff2";
-          link.crossOrigin = "anonymous";
-          link.id = "devanagari-preload";
-          document.head.appendChild(link);
+          var devanagariFonts = [
+            ["devanagari-preload-sans", "fonts/notosans-devanagari-variable.woff2"],
+            ["devanagari-preload-serif", "fonts/notoserif-devanagari-variable.woff2"]
+          ];
+          for (var i = 0; i < devanagariFonts.length; i++) {
+            var link = document.createElement("link");
+            link.rel = "preload";
+            link.as = "font";
+            link.type = "font/woff2";
+            link.href = devanagariFonts[i][1];
+            link.crossOrigin = "anonymous";
+            link.id = devanagariFonts[i][0];
+            document.head.appendChild(link);
+          }
         }
       })();
     </script>
@@ -63,7 +72,7 @@
     <link rel="apple-touch-icon" sizes="180x180" href="icons/icon-192.png" />
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
-    <meta name="apple-mobile-web-app-title" content="Gold" />
+    <meta name="apple-mobile-web-app-title" content="Gold Tracker" />
 
     <!-- Fonts: self-hosted (style.css's @font-face block, fonts/*.woff2) -- no
          Google Fonts round-trip, no preconnect needed. See style.css's FONTS
@@ -88,15 +97,26 @@
          per spec, and a preload without matching CORS-mode is ignored
          (fetched again, silently, defeating the preload).
 
-         The Devanagari face (Noto Sans Devanagari) is NOT preloaded here --
-         it's added conditionally by the blocking script above, only when the
-         resolved starting language is Hindi, so English visitors' browsers
-         never even discover it exists. See style.css's html[lang="hi"]
-         scoping for why the @font-face declaration itself is free to always
-         be present (CSS never fetches an unused @font-face). -->
+         The two Devanagari faces (Sans + Serif) are NOT preloaded here --
+         they're added conditionally by the blocking script above, only when
+         the resolved starting language is Hindi, so English visitors'
+         browsers never even discover them. See style.css's TOKENS comment
+         for why each @font-face declaration is free to always be present
+         regardless (CSS never fetches an @font-face whose unicode-range
+         matches no rendered character).
+
+         Rupee Sign (₹, U+20B9) IS preloaded here, unconditionally, same tier
+         as the three Latin faces below it -- unlike the Devanagari faces, ₹
+         appears in every price display on this page regardless of language,
+         so gating its preload behind Hindi detection would just delay it for
+         everyone. See style.css's own Rupee Sign @font-face comment for the
+         full story (it exists because none of Fraunces/DM Sans/Syne cover
+         U+20B9, so without it every price would silently fall through to the
+         full 121KB Devanagari face just to paint one currency symbol). -->
     <link rel="preload" href="fonts/fraunces-variable-latin.woff2" as="font" type="font/woff2" crossorigin>
     <link rel="preload" href="fonts/dmsans-variable-latin.woff2" as="font" type="font/woff2" crossorigin>
     <link rel="preload" href="fonts/syne-variable-latin.woff2" as="font" type="font/woff2" crossorigin>
+    <link rel="preload" href="fonts/rupee-sign.woff2" as="font" type="font/woff2" crossorigin>
     <link rel="stylesheet" href="style.css" />
   </head>
   <body>
@@ -111,7 +131,7 @@
     <!-- 1. APP HEADER — sticky top -->
     <div class="app-header" id="utility-row" aria-live="polite">
       <div class="app-header-left">
-        <span class="app-title" data-i18n="appTitle">Gold</span>
+        <span class="app-title" data-i18n="appTitle">Gold Tracker</span>
       </div>
       <div class="app-header-right">
         <button class="lang-toggle" id="lang-toggle" aria-label="Switch language" data-i18n-attr="aria-label:langToggleAriaLabel" title="Switch language">हिं</button>
