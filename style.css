@@ -847,6 +847,11 @@ main {
 .comparison-card[data-sentiment="good"]    .cmp-value { color: var(--cmp-good-text); }
 .comparison-card[data-sentiment="caution"] .cmp-value { color: var(--cmp-caution-text); }
 .cmp-sub {
+  /* Tier 1 CLS fix (2026-08-10): starts empty in HTML (populated by renderComparisons()),
+     unlike .cmp-value which always has a "—" placeholder -- without a reserved height, an
+     empty-to-one-line-of-text swap shifts the card below it. min-height matches its own
+     measured single-line rendered height (16.5px, mobile viewport, live production). */
+  min-height: 16.5px;
   margin-top: 4px;
   font-size: var(--ts-xs);
   color: var(--cream-mute);
@@ -1782,8 +1787,30 @@ html.ptr-pulling {
 }
 .commentary-skeleton[hidden] { display: none; }
 
-/* ── Model-signal skeleton ──────────────────────────────────────────────────── */
-.model-signal-skeleton { padding: 4px 0; }
+/* CLS fix (2026-08-10): model-signal-skeleton was a plain sibling of
+   model-signal-body inside model-signal-section -- hiding it while body's
+   content un-hid changed the section's document height, a real,
+   reproducible layout shift confirmed via CI Lighthouse's layout-shifts
+   diagnostic (run 31355234247: 2 shifts, ~0.97 each, one attributed to
+   <main>). Same pattern as commentary-body/history-wrap: skeleton becomes
+   an absolute overlay inside a position:relative wrapper, so hiding it
+   never changes document height. min-height is measured from live
+   production content (552px, mobile viewport, 2026-08-10) -- same
+   imprecision class as commentary-body's own estimate: model-signal-body's
+   real height varies with how many optional supporting lines apply that
+   day (divergence/trend/band/support notes), so this won't be pixel-exact
+   on a lighter-content day, but eliminates the shift for the current,
+   near-maximal case rather than the typical case commentary-body targets. */
+.model-signal-wrap {
+  position: relative;
+  min-height: 550px;
+}
+.model-signal-skeleton {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  padding: 4px 0;
+}
 .model-signal-skeleton[hidden] { display: none; }
 
 /* ── History skeleton ───────────────────────────────────────────────────────── */

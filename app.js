@@ -2285,6 +2285,18 @@ function initScrollReveals() {
     if (methBody) {
       methBody.innerHTML = '<p class="meth-loading">Couldn’t load model details — check your connection and reload.</p>';
     }
+    // Tier 1 CLS fix (2026-08-10): comparison/model-signal/track-record sections no longer
+    // start `hidden` in HTML (so their skeletons/placeholders are genuinely visible from page
+    // load) — renderComparisons()/renderModelSignal()/renderForecastVsActual() normally hide
+    // them on their own rare-edge fallback paths, but none of those run on this total-failure
+    // path, so hide explicitly here too or they'd stay stuck showing an unresolved skeleton
+    // forever.
+    const comparisonSection = document.getElementById("comparison-section");
+    if (comparisonSection) comparisonSection.hidden = true;
+    const modelSignalSection = document.getElementById("model-signal-section");
+    if (modelSignalSection) modelSignalSection.hidden = true;
+    const trackRecordSection = document.getElementById("section-track-record");
+    if (trackRecordSection) trackRecordSection.hidden = true;
     updateOfflineBanner();
     return;
   }

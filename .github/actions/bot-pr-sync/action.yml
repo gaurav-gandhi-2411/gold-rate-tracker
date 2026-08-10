@@ -73,16 +73,17 @@ runs:
         git rebase origin/master
 
         # Guard: the data-only guarantee otherwise lives only in each calling
-        # workflow's `git add <allowlist>` line (never `git add -A`) — five
+        # workflow's `git add <allowlist>` line (never `git add -A`) — six
         # separate files, easy to weaken by accident later without the merge
         # mechanism ever noticing. Independently verify the diff about to be
         # pushed/merged is confined to those same data-only paths before it
         # goes anywhere near a push or a merge. Allowlist mirrors the exact
         # `git add` lines in check-price.yml, weekly-backtest.yml,
-        # monthly-ibja-backfill.yml, eval-direction.yml, generate-og-image.yml.
-        BAD_FILES=$(git diff --name-only origin/master...HEAD | grep -v -E '^(data/|og\.png$)' || true)
+        # monthly-ibja-backfill.yml, eval-direction.yml, generate-og-image.yml,
+        # lighthouse.yml.
+        BAD_FILES=$(git diff --name-only origin/master...HEAD | grep -v -E '^(data/|og\.png$|reports/lighthouse/)' || true)
         if [ -n "$BAD_FILES" ]; then
-          echo "::error::bot-pr-sync diff includes file(s) outside the data-only allowlist (data/, og.png) — refusing to push/merge:"
+          echo "::error::bot-pr-sync diff includes file(s) outside the data-only allowlist (data/, og.png, reports/lighthouse/) — refusing to push/merge:"
           echo "$BAD_FILES"
           exit 1
         fi
