@@ -239,10 +239,23 @@
 
       <!-- 5c. DRIVER CONTEXT — What is moving gold prices this week/month (Φ14-2)
            Descriptive only: attributes past observed moves, never implies a future direction. -->
-      <section class="driver-context-section reveal-on-scroll" id="driver-context-section" hidden
+      <!-- Tier 2 CLS fix (2026-08-10): no `hidden` on the section itself -- skeleton renders
+           from page load like Tier 1's sections, absolute-overlaid in driver-context-wrap so
+           hiding it never changes document height. Genuinely optional (macro not fresh, or no
+           driver_context some days) -- renderDriverContext()'s own `!dc.macro_fresh` / `!ds`
+           fallbacks still collapse the whole section to 0 height on those days; that shift is
+           accepted (same imprecision tolerance as elsewhere) since the alternative -- reserving
+           permanent space for content that may never come -- is worse UX. -->
+      <section class="driver-context-section reveal-on-scroll" id="driver-context-section"
                aria-label="What is driving gold prices">
         <h2>What's moving the price?</h2>
-        <div class="driver-context-body" id="driver-context-body"></div>
+        <div class="driver-context-wrap">
+          <div class="driver-context-skeleton" id="driver-context-skeleton" aria-hidden="true">
+            <div class="skel" style="height:16px;width:70%;border-radius:4px;margin-bottom:8px"></div>
+            <div class="skel" style="height:16px;width:50%;border-radius:4px"></div>
+          </div>
+          <div class="driver-context-body" id="driver-context-body"></div>
+        </div>
       </section>
 
       <!-- 6. FULL TREND CHART -->

@@ -1724,6 +1724,23 @@ html.ptr-pulling {
 .driver-context-section {
   margin-bottom: clamp(32px, 7vw, 48px);
 }
+/* Tier 2 CLS fix (2026-08-10): same absolute-overlay pattern as
+   .model-signal-wrap/.commentary-body/.history-wrap. min-height is measured
+   from live production content (73.625px, mobile viewport, 2026-08-10,
+   driver-state text only -- no attribution headline present that day) --
+   same imprecision tolerance as elsewhere: won't be pixel-exact on a day
+   the headline is also present, but eliminates the shift for the observed
+   case. */
+.driver-context-wrap {
+  position: relative;
+  min-height: 74px;
+}
+.driver-context-skeleton {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+}
+.driver-context-skeleton[hidden] { display: none; }
 .driver-context-card {
   background: var(--surface);
   border: 1px solid var(--line);
