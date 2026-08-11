@@ -1,5 +1,5 @@
 {
-  "predicted_at": "2026-08-11T04:16:33.557774+00:00",
+  "predicted_at": "2026-08-11T06:59:47.256131+00:00",
   "target_window": "5d",
   "headline": {
     "method": "naive_flat_hold",
@@ -56,7 +56,7 @@
     "direction_consensus": 1.0
   },
   "driver_context": {
-    "computed_at": "2026-08-11T04:16:33.561975+00:00",
+    "computed_at": "2026-08-11T06:59:47.260186+00:00",
     "macro_staleness_days": 0.0,
     "macro_fresh": true,
     "premium_threshold_pct": 15.0,
@@ -101,9 +101,9 @@
       "gold_usd_30d_pct_change": 9.13
     }
   },
-  "real_readings_count": 507,
+  "real_readings_count": 508,
   "current_22k": 13975,
-  "scraped_at": "2026-08-11T03:13:47.227Z",
+  "scraped_at": "2026-08-11T04:17:17.026Z",
   "price_source": "tanishq_scrape",
   "est_low": null,
   "est_high": null,
