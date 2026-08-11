@@ -26,7 +26,14 @@
 // Tracker" header rename, copy tightening. Shell files (index.html, app.js,
 // i18n.js, style.css) all changed; bumping so every installed client
 // re-fetches instead of serving the pre-fix shell indefinitely.
-const VERSION = "v35-20260810-hindi-polish";
+// 2026-08-11 (v36): insights + UX batch -- gram-quantity calculator, coverage%/
+// accuracy-drift promoted out of the methodology accordion, typical-weekly-
+// movement historical stat, calibration-confidence line on estimated-price
+// banners, first-visit orientation strip, share-a-snapshot. Shell files
+// (index.html, app.js, i18n.js, style.css) all changed; bumping so every
+// installed client re-fetches instead of serving the pre-batch shell
+// indefinitely.
+const VERSION = "v36-20260811-insights-ux";
 const SHELL_CACHE = `gold-shell-${VERSION}`;
 
 const SHELL_FILES = [

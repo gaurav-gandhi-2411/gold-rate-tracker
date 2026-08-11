@@ -128,6 +128,11 @@
       <span class="pull-icon">↓</span>
     </div>
 
+    <!-- Share-fallback toast — only ever shown on browsers without navigator.share
+         (the clipboard-copy fallback in shareSnapshot()), so a visitor gets some
+         confirmation the copy actually happened, not silence. -->
+    <div class="toast" id="share-toast" role="status" aria-live="polite" hidden></div>
+
     <!-- 1. APP HEADER — sticky top -->
     <div class="app-header" id="utility-row" aria-live="polite">
       <div class="app-header-left">
@@ -137,8 +142,21 @@
         <button class="lang-toggle" id="lang-toggle" aria-label="Switch language" data-i18n-attr="aria-label:langToggleAriaLabel" title="Switch language">हिं</button>
         <span class="freshness-pill" id="freshness-pill">—</span>
         <button class="refresh-btn" id="refresh-btn" aria-label="Refresh data" data-i18n-attr="aria-label:refreshLabel,title:refreshLabel" title="Refresh data">↻</button>
+        <button class="share-btn" id="share-btn" aria-label="Share" data-i18n-attr="aria-label:shareLabel,title:shareLabel" title="Share">
+          <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round" stroke-linecap="round" aria-hidden="true"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.6" y1="10.6" x2="15.4" y2="6.4"/><line x1="8.6" y1="13.4" x2="15.4" y2="17.6"/></svg>
+        </button>
         <button class="pwa-help-btn" id="pwa-help-btn" aria-label="About auto-refresh on iPhone" data-i18n-attr="aria-label:pwaHelpBtnLabel,title:pwaHelpBtnTitle" title="About auto-refresh" hidden>?</button>
       </div>
+    </div>
+
+    <!-- First-glance orientation strip — shown to every visitor until dismissed
+         (same one-time-nudge pattern as install-prompt-panel below, not a true
+         "first visit only" gate: localStorage-persisted dismissal, shown again
+         every session otherwise). Placed before the PWA/iOS panels below since
+         it's relevant to essentially every visitor, not just a platform subset. -->
+    <div class="first-visit-panel" id="first-visit-panel" hidden role="note" aria-live="polite">
+      <p data-i18n="firstVisitText">22K gold retail price, checked every 3 hours and confirmed against Tanishq's live rate when possible. We always say plainly when a price is an estimate.</p>
+      <button class="first-visit-close" id="first-visit-close" aria-label="Dismiss" data-i18n-attr="aria-label:dismissLabel">✕</button>
     </div>
 
     <!-- D5: iOS standalone help panel — JS reveals in standalone mode only -->
@@ -258,6 +276,43 @@
           <span class="karat-label" data-i18n="karatLabel18">18 KT</span>
           <span class="karat-price" id="rate-18">—</span>
           <span class="karat-sub" data-i18n="karatSub18">per gram · 75% pure</span>
+        </div>
+      </section>
+
+      <!-- 4b. PURCHASE CALCULATOR — computePurchaseCost() UI. No `hidden` on the section
+           itself (same Tier 1 CLS-fix pattern as comparison/model-signal/driver-context
+           above) -- the skeleton renders from page load, absolute-overlaid inside
+           calculator-wrap so hiding it never changes document height. Inputs are live
+           (not gated behind data load) so a visitor can start typing immediately;
+           renderCalculator() just has nothing to compute against until allReadings
+           arrives, at which point the skeleton clears and results populate. -->
+      <section class="calculator-section reveal-on-scroll" id="calculator-section"
+               aria-label="Purchase cost calculator" data-i18n-attr="aria-label:calcAriaLabel">
+        <h2 data-i18n="calcHeading">How much would you pay?</h2>
+        <div class="calculator-card">
+          <div class="calc-inputs">
+            <div class="calc-input-group">
+              <label for="calc-grams" data-i18n="calcGramsLabel">Grams</label>
+              <input type="number" id="calc-grams" class="calc-input" inputmode="decimal"
+                     min="0" max="10000" step="0.1" value="20"
+                     aria-label="Quantity in grams" data-i18n-attr="aria-label:calcGramsAriaLabel">
+            </div>
+            <div class="calc-input-group">
+              <label for="calc-making" data-i18n="calcMakingLabel">Making charge (%)</label>
+              <input type="number" id="calc-making" class="calc-input" inputmode="decimal"
+                     min="0" max="100" step="0.5" value="0"
+                     aria-label="Making charge percentage" data-i18n-attr="aria-label:calcMakingAriaLabel">
+            </div>
+          </div>
+          <p class="calc-making-hint" data-i18n="calcMakingHint">Varies by jeweler and design — enter yours if you know it.</p>
+          <div class="calc-wrap" id="calc-wrap">
+            <div class="calc-skeleton" id="calc-skeleton" aria-hidden="true">
+              <div class="skel" style="height:16px;width:60%;border-radius:4px;margin-bottom:10px"></div>
+              <div class="skel" style="height:32px;width:80%;border-radius:4px;margin-bottom:8px"></div>
+              <div class="skel" style="height:14px;width:50%;border-radius:4px"></div>
+            </div>
+            <div class="calc-results" id="calc-results"></div>
+          </div>
         </div>
       </section>
 

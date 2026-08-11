@@ -28,6 +28,11 @@ const STRINGS = {
     pwaHelpPanelText: 'iOS limits how often home-screen apps update in the background. Tap <strong>↻</strong> to get the latest prices. If prices remain stuck, open the App Switcher (swipe up and hold), then swipe this app away and reopen from Home Screen — that forces a full reload.',
     dismissLabel: "Dismiss",
     installPromptText: 'Add this to your Home Screen for quicker access: tap <strong>Share</strong>, then <strong>Add to Home Screen</strong>.',
+    firstVisitText: "22K gold retail price, checked every 3 hours and confirmed against Tanishq's live rate when possible. We always say plainly when a price is an estimate.",
+    shareLabel: "Share",
+    shareTextWithPrice: ({ price }) => `Today's 22K gold price is ₹${price}/gram — check Gold Tracker`,
+    shareTextGeneric: "Check today's gold price on Gold Tracker",
+    shareCopied: "Link copied!",
     heroAriaLabel: "Current 22K gold price and buying verdict",
     eyebrow: "22K gold · per gram",
     heroLocation: "Tanishq retail price · pan-India",
@@ -43,6 +48,24 @@ const STRINGS = {
     karatLabel18: "18 KT",
     karatSub24: "per gram · 99.9% pure",
     karatSub18: "per gram · 75% pure",
+
+    // ── Purchase calculator ─────────────────────────────────────────────────────
+    calcAriaLabel: "Purchase cost calculator",
+    calcHeading: "How much would you pay?",
+    calcGramsLabel: "Grams",
+    calcGramsAriaLabel: "Quantity in grams",
+    calcMakingLabel: "Making charge (%)",
+    calcMakingAriaLabel: "Making charge percentage",
+    calcMakingHint: "Varies by jeweler and design — enter yours if you know it.",
+    calcKaratLabel22: "22 KT",
+    calcRowGoldValue: "Gold value",
+    calcRowMaking: "Making charge",
+    calcRowGst: ({ pct }) => `GST (${pct}%)`,
+    calcRowTotal: "Total",
+    calcOtherKarats: ({ k24, k18 }) => `24 KT: ₹${k24} · 18 KT: ₹${k18}`,
+    calcEstimatedNote: "Today's price is an estimate, so this total is too.",
+    calcEmptyState: "Enter a quantity to see the cost.",
+
     commentaryAriaLabel: "Market commentary",
     todaysReadEyebrow: "Today's read",
     modelSignalAriaLabel: "How today's price compares to recent history",
@@ -148,6 +171,15 @@ const STRINGS = {
     volNoteCalm: ({ z }) => `Gold has been calmer than usual lately — about ±₹${z} over 5 days.`,
     volNoteNormal: ({ z }) => `Gold has been moving about ±₹${z} over 5 days lately.`,
     volNoteFallback: ({ z }) => `Gold's price typically moves about ±₹${z} over 5 days.`,
+    weeklyMovementNote: ({ amount, pairs }) => `Looking back, gold has typically moved about ₹${amount} from one week to the next (based on ${pairs} weekly comparisons).`,
+    weeklyMovementSuffAppend: ({ n }) => ` (Only ${n} distinct days in this 90-day window so far — treat as indicative.)`,
+
+    // ── Reliability (promoted from methodology accordion) ──────────────────────
+    reliabilityCoverage: ({ pct, n }) => `Our estimated range has been right ${pct}% of the time (checked ${n} times).`,
+    reliabilityUnknown: "Still building a track record for this — check back later.",
+    reliabilityDriftOnTrack: "Recent accuracy has stayed in line with the historical average.",
+    reliabilityDriftWatch: "Recent accuracy has drifted a bit from the historical average — we're keeping an eye on it.",
+    reliabilityDriftRetrain: "Recent errors have run notably higher than the historical average — we're due to recalibrate.",
 
     // ── 90-day band position ────────────────────────────────────────────────────
     band90dCheaper: ({ pct, n }) => `Over the past 90 days: cheaper than ${pct}% of the ${n} days.`,
@@ -171,6 +203,7 @@ const STRINGS = {
     // ── State banners ────────────────────────────────────────────────────────────
     bannerIbjaToday: "This is today's estimated price, based on IBJA's official gold benchmark — we couldn't confirm it against the shop rate just now.",
     bannerIbjaCarryForward: ({ weekday }) => `This is an estimated price, based on IBJA's ${weekday} close (their most recent official rate) — we couldn't confirm it against the shop rate just now.`,
+    calibrationConfidenceAppend: ({ amount }) => ` Based on past comparisons, this kind of estimate is typically within about ₹${amount}/gram of the real price.`,
     bannerFusion: ({ sources }) => `This is an estimated price based on other jewellers' rates (${sources}) — we couldn't reach Tanishq or IBJA just now.`,
     bannerStaleConfirmed: ({ rel }) => `We couldn't get a live price update — this is the last confirmed price, from ${rel}.`,
     unknownTime: "an unknown time",
@@ -306,6 +339,11 @@ const STRINGS = {
     pwaHelpPanelText: 'iOS होम-स्क्रीन ऐप्स को बैकग्राउंड में कम बार अपडेट करता है। ताज़ी कीमत के लिए <strong>↻</strong> दबाएं। अगर कीमत अटकी रहे, तो ऐप स्विचर खोलें (ऊपर स्वाइप करके दबाए रखें), फिर इस ऐप को स्वाइप करके हटाएं और होम स्क्रीन से दोबारा खोलें — इससे पूरा रीलोड हो जाएगा।',
     dismissLabel: "बंद करें",
     installPromptText: 'तेज़ी से खोलने के लिए इसे होम स्क्रीन पर जोड़ें: <strong>Share</strong> दबाएं, फिर <strong>Add to Home Screen</strong>।',
+    firstVisitText: "22K सोने की खुदरा कीमत, हर 3 घंटे में जांची जाती है और जब संभव हो तो Tanishq की लाइव दर से पुष्टि की जाती है। कीमत अनुमानित हो तो हम साफ़ बता देते हैं।",
+    shareLabel: "शेयर करें",
+    shareTextWithPrice: ({ price }) => `आज 22K सोने की कीमत ₹${price}/ग्राम है — Gold Tracker पर देखें`,
+    shareTextGeneric: "Gold Tracker पर आज की सोने की कीमत देखें",
+    shareCopied: "लिंक कॉपी हो गया!",
     heroAriaLabel: "मौजूदा 22K सोने की कीमत और ख़रीद का सुझाव",
     eyebrow: "22K सोना · प्रति ग्राम",
     heroLocation: "Tanishq की खुदरा कीमत · पूरे भारत में",
@@ -321,6 +359,24 @@ const STRINGS = {
     karatLabel18: "18 KT",
     karatSub24: "प्रति ग्राम · 99.9% शुद्ध",
     karatSub18: "प्रति ग्राम · 75% शुद्ध",
+
+    // ── Purchase calculator ─────────────────────────────────────────────────────
+    calcAriaLabel: "ख़रीद लागत कैलकुलेटर",
+    calcHeading: "आपको कितना पड़ेगा?",
+    calcGramsLabel: "ग्राम",
+    calcGramsAriaLabel: "मात्रा (ग्राम में)",
+    calcMakingLabel: "मेकिंग चार्ज (%)",
+    calcMakingAriaLabel: "मेकिंग चार्ज प्रतिशत",
+    calcMakingHint: "जौहरी और डिज़ाइन के हिसाब से बदलता है — अगर पता हो तो अपना % डालें।",
+    calcKaratLabel22: "22 KT",
+    calcRowGoldValue: "सोने की कीमत",
+    calcRowMaking: "मेकिंग चार्ज",
+    calcRowGst: ({ pct }) => `GST (${pct}%)`,
+    calcRowTotal: "कुल",
+    calcOtherKarats: ({ k24, k18 }) => `24 KT: ₹${k24} · 18 KT: ₹${k18}`,
+    calcEstimatedNote: "आज की कीमत अनुमानित है, इसलिए यह कुल भी अनुमानित है।",
+    calcEmptyState: "कीमत देखने के लिए मात्रा डालें।",
+
     commentaryAriaLabel: "बाज़ार पर टिप्पणी",
     todaysReadEyebrow: "आज का सार",
     modelSignalAriaLabel: "आज की कीमत हाल के इतिहास से कैसे मिलती है",
@@ -421,6 +477,15 @@ const STRINGS = {
     volNoteCalm: ({ z }) => `हाल में सोना सामान्य से ज़्यादा स्थिर रहा है — 5 दिनों में करीब ±₹${z} तक।`,
     volNoteNormal: ({ z }) => `हाल में सोने में 5 दिनों में करीब ±₹${z} तक की हलचल रही है।`,
     volNoteFallback: ({ z }) => `सोने की कीमत में आमतौर पर 5 दिनों में करीब ±₹${z} तक बदलाव होता है।`,
+    weeklyMovementNote: ({ amount, pairs }) => `पीछे देखने पर, सोने की कीमत आमतौर पर एक हफ्ते में करीब ₹${amount} तक बदलती रही है (${pairs} हफ्तों की तुलना पर आधारित)।`,
+    weeklyMovementSuffAppend: ({ n }) => ` (इस 90-दिन के दायरे में अभी तक सिर्फ़ ${n} अलग दिन हैं — इसे संकेत के तौर पर लें।)`,
+
+    // ── Reliability (promoted from methodology accordion) ──────────────────────
+    reliabilityCoverage: ({ pct, n }) => `हमारी अनुमानित रेंज अब तक ${pct}% बार सही रही है (${n} बार जांची गई)।`,
+    reliabilityUnknown: "अभी इसका रिकॉर्ड बन रहा है — कुछ समय बाद फिर देखें।",
+    reliabilityDriftOnTrack: "हाल की सटीकता ऐतिहासिक औसत के मुताबिक बनी हुई है।",
+    reliabilityDriftWatch: "हाल की सटीकता ऐतिहासिक औसत से थोड़ी अलग हुई है — हम नज़र बनाए हुए हैं।",
+    reliabilityDriftRetrain: "हाल की त्रुटि ऐतिहासिक औसत से काफ़ी ज़्यादा रही है — हम मॉडल को दोबारा कैलिब्रेट करने वाले हैं।",
 
     // ── 90-day band position ────────────────────────────────────────────────────
     band90dCheaper: ({ pct, n }) => `पिछले 90 दिनों में: ${n} दिनों में से ${pct}% से सस्ता।`,
@@ -444,6 +509,7 @@ const STRINGS = {
     // ── State banners ────────────────────────────────────────────────────────────
     bannerIbjaToday: "यह आज की अनुमानित कीमत है, IBJA के आधिकारिक सोने के बेंचमार्क पर आधारित — हम इसे अभी दुकान की कीमत से जांच नहीं पाए।",
     bannerIbjaCarryForward: ({ weekday }) => `यह एक अनुमानित कीमत है, IBJA के ${weekday} के बंद भाव पर आधारित (उनकी सबसे हाल की आधिकारिक दर) — हम इसे अभी दुकान की कीमत से जांच नहीं पाए।`,
+    calibrationConfidenceAppend: ({ amount }) => ` पिछली तुलनाओं के आधार पर, इस तरह का अनुमान आमतौर पर असली कीमत के ₹${amount}/ग्राम के दायरे में रहता है।`,
     bannerFusion: ({ sources }) => `यह अन्य जौहरियों की दरों (${sources}) पर आधारित एक अनुमानित कीमत है — हम अभी Tanishq या IBJA तक नहीं पहुंच पाए।`,
     bannerStaleConfirmed: ({ rel }) => `हमें ताज़ी कीमत नहीं मिल पाई — यह आख़िरी पुष्टि की गई कीमत है, ${rel}।`,
     unknownTime: "अज्ञात समय",

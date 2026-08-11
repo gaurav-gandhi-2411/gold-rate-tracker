@@ -18,6 +18,7 @@ const BACKTEST_URL  = "data/backtest.json";
 const DRIFT_URL     = "data/drift_metrics.json";
 const METRICS_URL   = "data/metrics_history.json";
 const COVERAGE_URL  = "data/coverage_metrics.json";
+const CALIBRATION_URL = "data/calibration.json";
 
 // Staleness threshold (hours) shared with Python inference.py _STALE_THRESHOLD_H.
 // Per ADR 025 this now gates Tanishq *enrichment* freshness, not primary staleness.
@@ -40,6 +41,7 @@ const IS_IOS =
   (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
 
 const INSTALL_PROMPT_DISMISSED_KEY = "install-prompt-dismissed";
+const FIRST_VISIT_DISMISSED_KEY = "first-visit-dismissed";
 
 const fmtINR = (n) =>
   typeof n === "number"
@@ -158,6 +160,7 @@ let lastForecast      = null;  // Φ16-2: stored for stale-banner re-evaluation 
 let lastBacktest      = null;  // cached so applyLanguage() can re-render methodology/track-record without re-fetching
 let lastDrift         = null;
 let lastCoverage      = null;
+let lastCalibration   = null;
 
 // Ψ3C.2: stagger card-enter animation across a list of elements.
 // Forces a reflow between remove/add so the animation restarts each time.
@@ -687,6 +690,76 @@ function computeSupportDistance90d(readings, percentile30d) {
   return { distPct, low90d, nDays, note };
 }
 
+// Typical week-over-week price movement, purely historical — distinct from
+// headline.vol_context's 5-day RECENT realized-vol estimate (computed server-side
+// in ml/volatility.py from just the last 20 days, feeding the "moving about ±₹X
+// over 5 days lately" note below). This one looks back further (90 days) and asks
+// a different question: not "how choppy has it been lately" but "if I wait a
+// week, how much has the price actually tended to move, historically". Answers
+// "is waiting worth it?" without predicting anything — every comparison is
+// (price today) vs (price exactly 7 calendar days earlier), median of the
+// absolute differences. Median, not mean, matching this file's existing
+// preference for robust-over-outlier-sensitive stats (see computeTrendResidual30d's
+// own robustStd). Same MIN/FULL day-window gating convention as
+// computeSupportDistance90d above.
+const MIN_DAYS_MOVEMENT  = 60;
+const FULL_DAYS_MOVEMENT = 90;
+
+function computeWeeklyMovement(readings) {
+  if (!readings || readings.length < 2) return null;
+
+  const now = Date.now();
+  const within90d = readings.filter(
+    r => now - new Date(r.timestamp).getTime() <= FULL_DAYS_MOVEMENT * 86400e3,
+  );
+  const daily = dedupeByISTDay(within90d);
+  const nDays = daily.length;
+  if (nDays < MIN_DAYS_MOVEMENT) return null;
+
+  // Pure UTC-millisecond arithmetic (not Date.setDate/getDate, which operate in
+  // the browser's local timezone) so "7 days ago" means the same thing
+  // regardless of the visitor's own timezone — only istDayKey's own IST
+  // timeZone option determines which calendar day a timestamp falls on.
+  const byDayKey = new Map(daily.map(r => [istDayKey(new Date(r.timestamp)), r["22k"]]));
+  const diffs = [];
+  for (const r of daily) {
+    const weekAgo = new Date(new Date(r.timestamp).getTime() - 7 * 86400000);
+    const priorPrice = byDayKey.get(istDayKey(weekAgo));
+    if (priorPrice != null) diffs.push(Math.abs(r["22k"] - priorPrice));
+  }
+  if (diffs.length === 0) return null;
+
+  diffs.sort((a, b) => a - b);
+  const mid = Math.floor(diffs.length / 2);
+  const median = diffs.length % 2 === 0 ? (diffs[mid - 1] + diffs[mid]) / 2 : diffs[mid];
+
+  let note = t("weeklyMovementNote", { amount: fmtINR(Math.round(median)), pairs: diffs.length });
+  if (nDays < FULL_DAYS_MOVEMENT) {
+    note += t("weeklyMovementSuffAppend", { n: nDays });
+  }
+
+  return { median, pairs: diffs.length, nDays, note };
+}
+
+// Recent-vs-historical forecast error ratio, from drift_metrics.json — shared by the
+// promoted reliability note (model-signal-section) and the methodology accordion's
+// detailed drift stats, so the two never state a different number for the same
+// underlying data. Raw (unrounded) numbers returned; each caller formats/rounds at
+// its own display site, matching this file's existing convention elsewhere.
+function computeAccuracyDrift(drift) {
+  if (!Array.isArray(drift) || drift.length === 0) return null;
+  const now      = Date.now();
+  const recent7d = drift.filter(e => e.residual != null && now - new Date(e.ts).getTime() <= 7 * 86400e3);
+  const rolling  = recent7d.length > 0
+    ? recent7d.reduce((s, e) => s + Math.abs(e.residual), 0) / recent7d.length
+    : null;
+  const withBase = [...drift].reverse().find(e => e.baseline_mae != null);
+  const baseMae  = withBase ? withBase.baseline_mae : null;
+  const ratio    = rolling != null && baseMae ? rolling / baseMae : null;
+  const ratioLabelKey = ratio == null ? null : (ratio < 1 ? "ratioOnTrack" : ratio <= 1.5 ? "ratioWatch" : "ratioRetrain");
+  return { rolling, baseMae, ratio, ratioLabelKey };
+}
+
 // ─── PURCHASE COST ESTIMATE ───────────────────────────────────────────────────
 // Itemised "what will it cost me?" estimate for a gold jewellery purchase, the
 // way an Indian retail invoice is built up:
@@ -734,7 +807,7 @@ function weekdayLong(d) {
   return d.toLocaleDateString(locale, { weekday: "long", timeZone: "Asia/Kolkata", numberingSystem: "latn" });
 }
 
-function renderStaleBanner(forecast) {
+function renderStaleBanner(forecast, calibration) {
   const banner = document.getElementById("stale-banner");
   if (!banner) return;
   // Offline banner takes precedence — "Offline" already explains staleness; don't stack both.
@@ -753,6 +826,19 @@ function renderStaleBanner(forecast) {
     banner.textContent = isToday
       ? t("bannerIbjaToday")
       : t("bannerIbjaCarryForward", { weekday: weekdayLong(ibjaDate) });
+    // Scoped to this banner only — calibration.json's residual numbers measure
+    // exactly this estimation mechanism (IBJA→Tanishq), not fusion_consensus's
+    // separate multi-source-disagreement math below, so appending this note
+    // anywhere else would cite a number that doesn't apply to that estimate.
+    // Prefer residual_std_oos (out-of-sample, walk-forward — see
+    // ml/calibration.py's walk_forward_validate()) over the in-sample
+    // residual_std, matching ml/inference.py's own _try_ibja_calibrated()
+    // fallback order for the est_low/est_high band width, so this sentence
+    // and that band are always describing the same confidence.
+    const confidence = calibration?.residual_std_oos ?? calibration?.residual_std;
+    if (typeof confidence === "number") {
+      banner.textContent += t("calibrationConfidenceAppend", { amount: fmtINR(Math.round(confidence)) });
+    }
     banner.hidden = false;
     return;
   }
@@ -992,6 +1078,83 @@ function renderHero(readings, forecast) {
   renderSparkline(readings);
 }
 
+// ─── PURCHASE CALCULATOR ────────────────────────────────────────────────────
+// UI for computePurchaseCost() (defined above) — grams + optional making-charge
+// input, three karat totals. Honesty rule: the 22K figure uses exactly the same
+// rate and the same isEstimateTier gate renderHero() uses for the hero price
+// (recomputed here rather than shared via a module var, matching this file's
+// existing per-render-function style) -- when the hero price shows "≈", the
+// calculator's 22K total carries the same "≈" and the same estimated-price
+// note, so a buyer never sees a confident-looking total built on an estimate.
+// 24K/18K always come from the last real Tanishq reading (latest["24k"/"18k"])
+// -- same as the karat-strip cards above, which never show "≈" either; this
+// app has never estimated 24K/18K independently, only 22K, so inventing an
+// estimate qualifier for them here would claim more than the data supports.
+const CALC_GST_PCT = 3; // India's GST rate on gold jewellery — matches computePurchaseCost's own default
+
+function renderCalculator(readings, forecast) {
+  const skelEl    = document.getElementById("calc-skeleton");
+  const resultsEl = document.getElementById("calc-results");
+  const gramsEl   = document.getElementById("calc-grams");
+  const makingEl  = document.getElementById("calc-making");
+  if (!resultsEl || !gramsEl || !makingEl) return;
+
+  if (!readings || readings.length === 0) {
+    if (skelEl) skelEl.hidden = false;
+    resultsEl.innerHTML = "";
+    return;
+  }
+  if (skelEl) skelEl.hidden = true;
+
+  const latest = readings[readings.length - 1];
+  const isEstimateTier = forecast && (
+    forecast.price_source === "ibja_calibrated" || forecast.price_source === "fusion_consensus"
+  ) && forecast.current_22k != null;
+
+  const rate22 = isEstimateTier ? forecast.current_22k : latest["22k"];
+  const rate24 = latest["24k"];
+  const rate18 = latest["18k"];
+
+  const grams     = parseFloat(gramsEl.value);
+  const makingPct = parseFloat(makingEl.value);
+
+  // grams === 0 is valid input to computePurchaseCost() (returns an all-zero
+  // result, not null) -- but a ₹0 total reads as broken, not "you haven't
+  // entered anything yet". Treat <= 0 as the empty state explicitly.
+  const c22 = grams > 0 ? computePurchaseCost({ ratePerGram: rate22, grams, makingPct, gstPct: CALC_GST_PCT }) : null;
+  const c24 = grams > 0 ? computePurchaseCost({ ratePerGram: rate24, grams, makingPct, gstPct: CALC_GST_PCT }) : null;
+  const c18 = grams > 0 ? computePurchaseCost({ ratePerGram: rate18, grams, makingPct, gstPct: CALC_GST_PCT }) : null;
+
+  if (!c22 || !c24 || !c18) {
+    // XSS-safe: t() returns a catalogue literal only.
+    resultsEl.innerHTML = `<p class="calc-empty">${t("calcEmptyState")}</p>`;
+    return;
+  }
+
+  // XSS-safe: every interpolated value is either fmtINR(number) or a t()
+  // catalogue literal — no external data reaches this template.
+  resultsEl.innerHTML = `
+    <div class="calc-result-card">
+      <div class="calc-result-karat">${isEstimateTier ? "≈ " : ""}${t("calcKaratLabel22")}</div>
+      <div class="calc-result-row"><span>${t("calcRowGoldValue")}</span><span>₹${fmtINR(c22.goldValue)}</span></div>
+      ${c22.making > 0 ? `<div class="calc-result-row"><span>${t("calcRowMaking")}</span><span>₹${fmtINR(c22.making)}</span></div>` : ""}
+      <div class="calc-result-row"><span>${t("calcRowGst", { pct: CALC_GST_PCT })}</span><span>₹${fmtINR(c22.gst)}</span></div>
+      <div class="calc-result-row calc-result-row--total"><span>${t("calcRowTotal")}</span><span>₹${fmtINR(c22.total)}</span></div>
+      ${isEstimateTier ? `<p class="calc-estimated-note">${t("calcEstimatedNote")}</p>` : ""}
+    </div>
+    <p class="calc-other-karats">${t("calcOtherKarats", { k24: fmtINR(c24.total), k18: fmtINR(c18.total) })}</p>
+  `;
+}
+
+function bindCalculatorInputs() {
+  const gramsEl  = document.getElementById("calc-grams");
+  const makingEl = document.getElementById("calc-making");
+  if (!gramsEl || !makingEl) return;
+  const onInput = () => renderCalculator(allReadings, lastForecast);
+  gramsEl.addEventListener("input", onInput);
+  makingEl.addEventListener("input", onInput);
+}
+
 function renderSparkline(readings) {
   const wrap    = document.getElementById("sparkline-wrap");
   const svgEl   = document.getElementById("sparkline");
@@ -1173,7 +1336,7 @@ function computeTrendDescription(readings, nDays = 7) {
   return `Trending ${dir} — ${sign}₹${fmtINR(abs)} over the past ${nDays} days`;
 }
 
-function renderModelSignal(fc, readings, bt) {
+function renderModelSignal(fc, readings, bt, coverage, drift) {
   const section = document.getElementById("model-signal-section");
   if (!section) return;
 
@@ -1209,6 +1372,39 @@ function renderModelSignal(fc, readings, bt) {
     ? `<p class="good-price-tomorrow">${t("goodPriceTomorrow", { low: fmtINR(rangeLower), high: fmtINR(rangeUpper) })}</p>`
     : "";
 
+  // Reliability — plain-language promotion of coverage_metrics.json (empirical
+  // hit-rate of the range stated above) + drift_metrics.json (recent vs historical
+  // error), previously buried inside the collapsed methodology accordion
+  // (methAccurateP2/methDriftHeading). Only rendered alongside the range statement
+  // it's actually validating (hasRange) — a reliability claim with nothing to
+  // anchor it to reads as a floating, unverifiable assertion. Sample size (n)
+  // stays visible deliberately: "right 95% of the time" alone is pure reassurance;
+  // naming how many times we've actually checked is what makes it a real, honest
+  // claim instead of a vibe. computeAccuracyDrift() is shared with
+  // renderMethodology()'s own drift section so the two never disagree on the
+  // same underlying numbers.
+  let reliabilityHtml = "";
+  if (hasRange) {
+    const hasCoverage = coverage && typeof coverage.coverage === "number" && coverage.n > 0;
+    const coverageNote = hasCoverage
+      ? t("reliabilityCoverage", { pct: Math.round(coverage.coverage * 100), n: coverage.n })
+      : t("reliabilityUnknown");
+
+    const accDrift = computeAccuracyDrift(drift);
+    const driftKeySuffix = accDrift?.ratioLabelKey === "ratioOnTrack" ? "OnTrack"
+      : accDrift?.ratioLabelKey === "ratioWatch" ? "Watch"
+      : accDrift?.ratioLabelKey === "ratioRetrain" ? "Retrain"
+      : null;
+    const driftNote = driftKeySuffix ? t(`reliabilityDrift${driftKeySuffix}`) : "";
+
+    // XSS-safe: coverageNote/driftNote are t() catalogue literals only.
+    reliabilityHtml = `
+      <div class="outlook-reliability">
+        <p class="outlook-reliability-note">${coverageNote}${driftNote ? ` ${driftNote}` : ""}</p>
+      </div>
+    `;
+  }
+
   // Volatility context — dynamic realized-vol estimate (Phi10B) with static-PI fallback.
   // Shows "has been moving about ±Rs.X lately" — magnitude only, no direction (ADR 005).
   let volatilityHtml = "";
@@ -1235,10 +1431,20 @@ function renderModelSignal(fc, readings, bt) {
       Z = Math.round(piHalf / 50) * 50;
       volNote = t("volNoteFallback", { z: fmtINR(Z) });
     }
-    // XSS-safe: fmtINR() wraps numbers only; Z and volNote are computed.
+
+    // Typical weekly movement — deliberately in the SAME card as the 5-day note
+    // above rather than its own separate bordered block, so the two read as one
+    // "how much does this move" cluster with two different timeframes, not two
+    // unrelated stats competing for attention. See computeWeeklyMovement()'s own
+    // comment for exactly how it differs from the 5-day note (90-day historical
+    // median vs 20-day recent realized-vol).
+    const weeklyMovement = computeWeeklyMovement(readings ?? []);
+
+    // XSS-safe: fmtINR() wraps numbers only; volNote/weeklyMovement.note are t()-built strings.
     volatilityHtml = `
       <div class="outlook-volatility">
         <p class="outlook-volatility-note">${volNote}</p>
+        ${weeklyMovement ? `<p class="outlook-weekly-movement-note">${weeklyMovement.note}</p>` : ""}
       </div>
     `;
   }
@@ -1247,7 +1453,8 @@ function renderModelSignal(fc, readings, bt) {
   // bandPos90d.note/trendResidual.note/supportDistance90d.note are hardcoded string
   // literals or fmtINR(number) from computeGoodPriceSignals/computeBandPos90d/
   // computeTrendResidual30d/computeSupportDistance90d — no external data.
-  // tomorrowRangeHtml/volatilityHtml built above, same fmtINR(number)-only rule.
+  // tomorrowRangeHtml/reliabilityHtml/volatilityHtml built above, same
+  // fmtINR(number)/t()-literal-only rule.
   document.getElementById("model-signal-body").innerHTML = `
     <div class="outlook-card">
       <p class="good-price-verdict good-price-verdict--${signals.verdictType}">${signals.verdictLead}</p>
@@ -1262,6 +1469,7 @@ function renderModelSignal(fc, readings, bt) {
         ${supportDistance90d ? `<li class="good-price-support-90d">${supportDistance90d.note}</li>` : ""}
       </ul>
       ${tomorrowRangeHtml}
+      ${reliabilityHtml}
       ${volatilityHtml}
     </div>
   `;
@@ -1901,18 +2109,12 @@ function renderMethodology(fc, bt, drift, coverage) {
   }
 
   // Live drift
-  if (Array.isArray(drift) && drift.length > 0) {
-    const now      = Date.now();
-    const recent7d = drift.filter(e => e.residual != null && now - new Date(e.ts).getTime() <= 7 * 86400e3);
-    const rolling  = recent7d.length > 0
-      ? Math.round(recent7d.reduce((s, e) => s + Math.abs(e.residual), 0) / recent7d.length)
-      : null;
-    const withBase = [...drift].reverse().find(e => e.baseline_mae != null);
-    const baseMae  = withBase ? Math.round(withBase.baseline_mae) : null;
-    const ratio    = rolling != null && baseMae ? (rolling / baseMae).toFixed(2) : null;
-    const ratioLabelKey = ratio
-      ? (parseFloat(ratio) < 1 ? "ratioOnTrack" : parseFloat(ratio) <= 1.5 ? "ratioWatch" : "ratioRetrain")
-      : null;
+  const accDrift = computeAccuracyDrift(drift);
+  if (accDrift) {
+    const rolling = accDrift.rolling != null ? Math.round(accDrift.rolling) : null;
+    const baseMae = accDrift.baseMae != null ? Math.round(accDrift.baseMae) : null;
+    const ratio   = accDrift.ratio != null ? accDrift.ratio.toFixed(2) : null;
+    const ratioLabelKey = accDrift.ratioLabelKey;
     parts.push(`
       <div class="meth-section">
         <h3 class="meth-heading">${t("methDriftHeading")}</h3>
@@ -1959,15 +2161,17 @@ async function refreshData() {
     renderHistory(allReadings);
     renderChart(allReadings, currentRange);
     renderHero(allReadings, fc);
-    renderStaleBanner(fc);
+    renderStaleBanner(fc, lastCalibration);
     renderTodaysRead(allReadings);
-    renderModelSignal(fc, allReadings);
+    renderModelSignal(fc, allReadings, lastBacktest, lastCoverage, lastDrift);
     renderDriverContext(fc);
+    renderCalculator(allReadings, fc);
     updateOfflineBanner();
     // Ψ3C.2: stagger visible data cards to confirm refresh visually
     staggerEnter([
       document.getElementById("comparison-section"),
       document.querySelector(".karat-strip"),
+      document.getElementById("calculator-section"),
       document.getElementById("model-signal-section"),
       document.getElementById("driver-context-section"),
     ]);
@@ -2296,10 +2500,11 @@ function applyLanguage(lang) {
   renderHistory(allReadings);
   renderChart(allReadings, currentRange);
   renderHero(allReadings, lastForecast);
-  renderStaleBanner(lastForecast);
+  renderStaleBanner(lastForecast, lastCalibration);
   renderTodaysRead(allReadings);
-  renderModelSignal(lastForecast, allReadings, lastBacktest);
+  renderModelSignal(lastForecast, allReadings, lastBacktest, lastCoverage, lastDrift);
   renderDriverContext(lastForecast);
+  renderCalculator(allReadings, lastForecast);
   renderForecastVsActual(lastBacktest);
   renderMethodology(lastForecast, lastBacktest, lastDrift, lastCoverage);
   updateOfflineBanner();
@@ -2326,6 +2531,7 @@ function applyLanguage(lang) {
   }
 
   bindRangeToggle();
+  bindCalculatorInputs();
   initBottomNav();
   initPullToRefresh();
   initScrollReveals();
@@ -2335,7 +2541,7 @@ function applyLanguage(lang) {
   window.addEventListener("online", () => {
     const offlineBanner = document.getElementById("offline-banner");
     if (offlineBanner) offlineBanner.hidden = true;
-    renderStaleBanner(lastForecast); // re-evaluate stale-banner now we're connected
+    renderStaleBanner(lastForecast, lastCalibration); // re-evaluate stale-banner now we're connected
   });
 
   // Ambient header: add elevation (.scrolled → border + shadow) only when content
@@ -2405,6 +2611,89 @@ function applyLanguage(lang) {
     }
   }
 
+  // First-glance orientation strip: shown to every visitor until dismissed once
+  // (same one-time-nudge localStorage pattern as the install prompt above, not
+  // gated to iOS/standalone — this one's for everybody). Pure DOM/localStorage
+  // work, no data dependency, runs before any fetch below for the same reason
+  // the install prompt does.
+  {
+    let firstVisitDismissed = false;
+    try {
+      firstVisitDismissed = localStorage.getItem(FIRST_VISIT_DISMISSED_KEY) === "1";
+    } catch {
+      // Storage access can throw (private browsing, disabled storage) -- treat
+      // as not-dismissed rather than blocking the strip over a read failure.
+    }
+    if (!firstVisitDismissed) {
+      const firstVisitPanel = document.getElementById("first-visit-panel");
+      const firstVisitClose = document.getElementById("first-visit-close");
+      if (firstVisitPanel) firstVisitPanel.hidden = false;
+      if (firstVisitClose) {
+        firstVisitClose.addEventListener("click", () => {
+          if (firstVisitPanel) firstVisitPanel.hidden = true;
+          try {
+            localStorage.setItem(FIRST_VISIT_DISMISSED_KEY, "1");
+          } catch {
+            // Best-effort persistence -- if storage is unavailable the strip
+            // just reappears next visit, which is a degraded UX, not a bug.
+          }
+        });
+      }
+    }
+  }
+
+  // Share-a-snapshot: Web Share API where available (mobile browsers, most
+  // desktop browsers as of 2026), clipboard-copy + toast fallback otherwise
+  // (older desktop browsers). Shares the current displayed price as text plus
+  // the page URL -- NOT an attached image; letting the URL carry the share
+  // means WhatsApp/Telegram/etc. pull the live og:image preview themselves via
+  // the existing OG pipeline (og.html -> og.png, refreshed every cycle) rather
+  // than this needing to fetch/attach a static image file, which would also
+  // go stale the moment the price next updates.
+  let shareToastTimeout = null;
+  function showToast(message) {
+    const el = document.getElementById("share-toast");
+    if (!el) return;
+    el.textContent = message;
+    el.hidden = false;
+    requestAnimationFrame(() => el.classList.add("toast--visible"));
+    if (shareToastTimeout) clearTimeout(shareToastTimeout);
+    shareToastTimeout = setTimeout(() => {
+      el.classList.remove("toast--visible");
+      setTimeout(() => { el.hidden = true; }, 250);
+    }, 2200);
+  }
+
+  async function shareSnapshot() {
+    const shareText = displayedPrice != null
+      ? t("shareTextWithPrice", { price: fmtINR(displayedPrice) })
+      : t("shareTextGeneric");
+    // Strip query/hash -- this page has none that matter to a recipient, and a
+    // bare canonical URL is what actually matches og:url in the OG tags.
+    const shareUrl = `${window.location.origin}${window.location.pathname}`;
+
+    if (navigator.share) {
+      try {
+        await navigator.share({ title: t("pageTitle"), text: shareText, url: shareUrl });
+      } catch (err) {
+        // AbortError fires when the visitor just closes the native share sheet
+        // without picking anything -- expected, not a failure worth logging.
+        if (err.name !== "AbortError") console.error("Share failed:", err);
+      }
+      return;
+    }
+
+    try {
+      await navigator.clipboard.writeText(shareUrl);
+      showToast(t("shareCopied"));
+    } catch (err) {
+      console.error("Clipboard copy failed:", err);
+    }
+  }
+
+  const shareBtn = document.getElementById("share-btn");
+  if (shareBtn) shareBtn.addEventListener("click", shareSnapshot);
+
   // Kick off every data fetch immediately, in parallel — none of them has a real
   // dependency on another fetch's *result*, only on the RENDER order below. This
   // replaces what was a 3-stage serialized waterfall (prices -> forecast ->
@@ -2422,13 +2711,14 @@ function applyLanguage(lang) {
   const btPromise = loadJSON(BACKTEST_URL);
   const driftPromise = loadJSON(DRIFT_URL);
   const coveragePromise = loadJSON(COVERAGE_URL);
-  // These three are only actually consumed much later (via Promise.allSettled, after
+  const calibrationPromise = loadJSON(CALIBRATION_URL);
+  // These four are only actually consumed much later (via Promise.allSettled, after
   // awaiting price+forecast and rendering the hero) — attach an inert catch to each
   // now so an early rejection (e.g. a timeout firing while we're still waiting on
   // prices) doesn't surface as a spurious unhandledrejection console error / Sentry
   // event in the meantime. Promise.allSettled below still sees the real outcome —
   // this doesn't replace the promise, just marks it handled.
-  [btPromise, driftPromise, coveragePromise].forEach(p => p.catch(() => {}));
+  [btPromise, driftPromise, coveragePromise, calibrationPromise].forEach(p => p.catch(() => {}));
 
   // Load prices (critical path)
   try {
@@ -2488,29 +2778,32 @@ function applyLanguage(lang) {
   renderHero(allReadings, fc);
   renderStaleBanner(fc);
   renderTodaysRead(allReadings);
-  renderModelSignal(fc, allReadings);  // first render — coverage% uses fallback until backtest loads
+  renderModelSignal(fc, allReadings);  // first render — coverage/drift not loaded yet, reliability note uses its own fallback text
   renderDriverContext(fc);
+  renderCalculator(allReadings, fc);
   lastForecast = fc;
   // Φ16-5: stagger on initial load — consistent with refreshData() behaviour
   staggerEnter([
     document.getElementById("comparison-section"),
     document.querySelector(".karat-strip"),
+    document.getElementById("calculator-section"),
     document.getElementById("model-signal-section"),
     document.getElementById("driver-context-section"),
   ]);
   updateOfflineBanner(); // update offline banner text now allReadings is populated
 
   // Remaining optional data (already in flight above; all gracefully degrade on failure).
-  const [bt, drift, coverage] = await Promise.allSettled([
+  const [bt, drift, coverage, calibration] = await Promise.allSettled([
     btPromise,
     driftPromise,
     coveragePromise,
+    calibrationPromise,
   ]);
 
   // Report any optional-fetch failures so silent pipeline breaks surface in Sentry.
   if (typeof Sentry !== "undefined") {
-    const optionalUrls = [BACKTEST_URL, DRIFT_URL, COVERAGE_URL];
-    [bt, drift, coverage].forEach((r, i) => {
+    const optionalUrls = [BACKTEST_URL, DRIFT_URL, COVERAGE_URL, CALIBRATION_URL];
+    [bt, drift, coverage, calibration].forEach((r, i) => {
       if (r.status === "rejected") Sentry.captureException(r.reason, { extra: { url: optionalUrls[i] } });
     });
   }
@@ -2519,7 +2812,9 @@ function applyLanguage(lang) {
   lastBacktest = btData;
   lastDrift    = drift.status === "fulfilled" ? drift.value : null;
   lastCoverage = coverage.status === "fulfilled" ? coverage.value : null;
-  renderModelSignal(fc, allReadings, btData);  // re-render with coverage% from backtest
+  lastCalibration = calibration.status === "fulfilled" ? calibration.value : null;
+  renderModelSignal(fc, allReadings, btData, lastCoverage, lastDrift);  // re-render — coverage/drift now loaded
+  renderStaleBanner(fc, lastCalibration);  // re-render — calibration confidence now loaded (no-op unless price_source is ibja_calibrated)
   renderForecastVsActual(btData);
   renderMethodology(fc, btData, lastDrift, lastCoverage);
 
