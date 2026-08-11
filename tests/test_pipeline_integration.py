@@ -223,9 +223,7 @@ def test_pipeline_wiring_calibration_applied(tmp_path, monkeypatch):
         "majority_direction",
         "direction_consensus",
     ]:
-        assert field in cc, (
-            f"app.js consumer field missing from chronos_companion: {field!r}"
-        )
+        assert field in cc, f"app.js consumer field missing from chronos_companion: {field!r}"
 
     # app.js reads (lines 509-806):
     for field in [
