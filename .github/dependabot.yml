@@ -23,6 +23,17 @@ updates:
         update-types:
           - "minor"
           - "patch"
+    ignore:
+      # numpy 2.5.0+ requires Python >=3.12, but lint.yml's "Install ML
+      # dependencies" step installs ml/requirements.txt directly under
+      # Python 3.11 (separate from ml/requirements-inference.lock, which
+      # IS generated for 3.12 but only consumed by `make setup-inference`,
+      # not CI). A numpy>=2.5.x floor bump breaks that install step every
+      # time dependabot proposes it (confirmed 2026-08-11, PR #785) until
+      # lint.yml's Python version and this floor move together. Remove
+      # this ignore rule if/when lint.yml bumps off 3.11.
+      - dependency-name: "numpy"
+        versions: [">=2.5.0"]
 
   - package-ecosystem: "github-actions"
     directory: "/"
