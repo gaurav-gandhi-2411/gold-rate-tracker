@@ -611,6 +611,7 @@ main {
 }
 
 .refresh-btn,
+.share-btn,
 .pwa-help-btn {
   background: none;
   border: none;
@@ -632,6 +633,7 @@ main {
   flex-shrink: 0;
 }
 .refresh-btn:active,
+.share-btn:active,
 .pwa-help-btn:active { color: var(--gold); }
 
 /* Language toggle — a compact pill (not a circular icon button like
@@ -663,8 +665,9 @@ main {
   .lang-toggle:hover { color: var(--gold); border-color: var(--line-strong); }
 }
 /* Author-side display overrides the UA [hidden]{display:none}; restore all. */
-.pwa-help-btn[hidden]   { display: none !important; }
-.pwa-help-panel[hidden] { display: none !important; }
+.pwa-help-btn[hidden]     { display: none !important; }
+.pwa-help-panel[hidden]   { display: none !important; }
+.first-visit-panel[hidden] { display: none !important; }
 /* Ψ3C.1 latent bug fixes (norm #14): inline-flex/flex defeats UA [hidden] rule */
 .hero-change[hidden]    { display: none !important; }
 .sparkline-wrap[hidden] { display: none !important; }
@@ -738,6 +741,60 @@ main {
   margin-top: 1px;
   -webkit-tap-highlight-color: transparent;
 }
+
+/* ─── FIRST-VISIT ORIENTATION STRIP — same visual register as the install
+   prompt above (both are dismissible one-time nudges), distinct tint so it
+   doesn't read as the same message twice if a visitor happens to see both. ─── */
+.first-visit-panel {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 10px clamp(20px, 5vw, 56px);
+  background: var(--surface-2);
+  border-bottom: 1px solid var(--line);
+}
+.first-visit-panel p {
+  margin: 0;
+  flex: 1;
+  font-size: var(--ts-xs);
+  color: var(--cream-dim);
+  line-height: 1.55;
+}
+.first-visit-close {
+  background: none;
+  border: none;
+  color: var(--cream-mute);
+  font-size: 11px;
+  cursor: pointer;
+  padding: 2px 4px;
+  flex-shrink: 0;
+  margin-top: 1px;
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* ─── SHARE TOAST — clipboard-fallback confirmation only (Web Share API needs
+   no visual feedback of its own; the native share sheet IS the feedback). ─── */
+.toast {
+  position: fixed;
+  bottom: calc(72px + env(safe-area-inset-bottom, 0px));
+  left: 50%;
+  transform: translateX(-50%) translateY(8px);
+  background: var(--surface-2);
+  border: 1px solid var(--line-strong);
+  color: var(--cream);
+  font-size: var(--ts-sm);
+  padding: 10px 18px;
+  border-radius: 999px;
+  box-shadow: var(--shadow-md);
+  z-index: 20;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.2s ease-out, transform 0.2s ease-out;
+  max-width: calc(100vw - 40px);
+  text-align: center;
+}
+.toast.toast--visible { opacity: 1; transform: translateX(-50%) translateY(0); }
+.toast[hidden] { display: none; }
 
 /* ═══════════════════════════════════════════════════════════════
    FORECAST STALENESS BANNER
@@ -1126,6 +1183,133 @@ main {
   font-size: var(--ts-xs);
   color: var(--cream-mute);
   letter-spacing: 0.02em;
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   4b. PURCHASE CALCULATOR
+═══════════════════════════════════════════════════════════════ */
+.calculator-section { margin-bottom: clamp(40px, 9vw, 56px); }
+.calculator-section h2 {
+  font-size: clamp(22px, 3.5vw, 32px);
+  margin-bottom: var(--space-5);
+}
+.calculator-card {
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-lg);
+  padding: clamp(16px, 4vw, 24px);
+  box-shadow: var(--shadow-sm);
+}
+.calc-inputs {
+  display: flex;
+  gap: var(--space-4);
+  flex-wrap: wrap;
+  margin-bottom: 4px;
+}
+.calc-input-group {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  flex: 1;
+  min-width: 130px;
+}
+.calc-input-group label {
+  font-size: var(--ts-xs);
+  color: var(--cream-mute);
+}
+/* 44px min-height touch target; inputmode="decimal" on the input itself (see
+   index.html) is what actually triggers the numeric keypad on mobile -- this
+   just makes the tappable control itself comfortably sized once it's up. */
+.calc-input {
+  font-family: var(--sans);
+  font-size: var(--ts-base);
+  font-variant-numeric: tabular-nums;
+  background: var(--surface-2);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  padding: 0 var(--space-4);
+  min-height: 44px;
+  width: 100%;
+  color: var(--cream);
+}
+.calc-input:focus-visible {
+  outline: 2px solid var(--gold);
+  outline-offset: 2px;
+}
+.calc-making-hint {
+  font-size: var(--ts-xs);
+  color: var(--cream-mute);
+  margin: 4px 0 var(--space-5);
+}
+
+/* CLS fix, same absolute-overlay pattern as commentary-body/model-signal-wrap
+   above -- calc-skeleton is hidden without ever changing calc-wrap's height,
+   since calc-results starts empty and only gets content once renderCalculator()
+   has real readings/forecast to compute against. min-height is the measured
+   near-maximal case, not the zero-making-charge default: the making-charge
+   row and the estimated-price note are both conditionally rendered, so the
+   card is taller once a visitor enters a making % and/or the headline price
+   is in ibja_calibrated/fusion_consensus mode. Measured scrollHeight at
+   375px (tallest of 375/390/428, both languages, 2026-08-11) with both of
+   those present: 240px. 250px leaves a small margin without padding far
+   beyond the measured case. */
+.calc-wrap {
+  position: relative;
+  min-height: 250px;
+}
+.calc-skeleton {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+}
+.calc-skeleton[hidden] { display: none; }
+
+.calc-result-card {
+  background: var(--surface-2);
+  border-radius: var(--radius-md);
+  padding: var(--space-4) var(--space-5);
+}
+.calc-result-karat {
+  font-size: var(--ts-xs);
+  letter-spacing: 0.06em;
+  color: var(--gold);
+  font-weight: 500;
+  margin-bottom: var(--space-3);
+}
+.calc-result-row {
+  display: flex;
+  justify-content: space-between;
+  gap: var(--space-3);
+  font-size: var(--ts-sm);
+  color: var(--cream-dim);
+  padding: 3px 0;
+  font-variant-numeric: tabular-nums;
+}
+.calc-result-row--total {
+  border-top: 1px solid var(--line);
+  margin-top: 6px;
+  padding-top: 10px;
+  font-family: var(--display);
+  font-size: clamp(20px, 4vw, 26px);
+  font-weight: 500;
+  color: var(--cream);
+}
+.calc-estimated-note {
+  margin: var(--space-2) 0 0;
+  font-size: var(--ts-xs);
+  color: var(--status-carryover);
+  font-style: italic;
+}
+.calc-other-karats {
+  margin: var(--space-3) 0 0;
+  font-size: var(--ts-xs);
+  color: var(--cream-mute);
+  font-variant-numeric: tabular-nums;
+}
+.calc-empty {
+  color: var(--cream-mute);
+  font-size: var(--ts-sm);
+  margin: 0;
 }
 
 /* ═══════════════════════════════════════════════════════════════
@@ -1939,6 +2123,13 @@ html.ptr-pulling {
 }
 .good-price-tomorrow strong { color: var(--gold); font-weight: 600; }
 
+.outlook-reliability { margin-top: 8px; }
+.outlook-reliability-note {
+  font-size: 13px;
+  color: var(--cream-dim);
+  margin: 0;
+}
+
 .outlook-volatility {
   margin-top: 14px;
   padding-top: 12px;
@@ -1948,6 +2139,11 @@ html.ptr-pulling {
   font-size: 13px;
   color: var(--cream-mute);
   margin: 0 0 8px;
+}
+.outlook-weekly-movement-note {
+  font-size: 13px;
+  color: var(--cream-mute);
+  margin: 0;
 }
 
 /* ── Driver context (Φ14-2) ─────────────────────────────────────────────────── */
@@ -2042,15 +2238,25 @@ html.ptr-pulling {
    <main>). Same pattern as commentary-body/history-wrap: skeleton becomes
    an absolute overlay inside a position:relative wrapper, so hiding it
    never changes document height. min-height is measured from live
-   production content (552px, mobile viewport, 2026-08-10) -- same
-   imprecision class as commentary-body's own estimate: model-signal-body's
-   real height varies with how many optional supporting lines apply that
-   day (divergence/trend/band/support notes), so this won't be pixel-exact
-   on a lighter-content day, but eliminates the shift for the current,
-   near-maximal case rather than the typical case commentary-body targets. */
+   production content -- same imprecision class as commentary-body's own
+   estimate: model-signal-body's real height varies with how many optional
+   supporting lines apply that day (divergence/trend/band/support/
+   reliability/weekly-movement notes), so this won't be pixel-exact on a
+   lighter-content day, but eliminates the shift for the near-maximal case.
+   Remeasured 2026-08-11 (was 550px/552px measured) after adding the
+   reliability note (item 2) and weekly-movement note (item 3) to this same
+   card -- both add real height, and the old value was already reused
+   without reverifying it, exactly the kind of stale-CLS-budget regression
+   this comment's own philosophy exists to prevent. Measured scrollHeight
+   across both languages x 375/390/428px (2026-08-11, live data): Hindi
+   658/596/561px, English 698/680/623px -- English 375px was tallest at
+   698px. 720px leaves ~22px headroom above that without padding as
+   generously as it'd take to survive a much longer future addition, which
+   isn't the goal here (this value should be remeasured again the next time
+   this card's content changes, not treated as permanent headroom). */
 .model-signal-wrap {
   position: relative;
-  min-height: 550px;
+  min-height: 720px;
 }
 .model-signal-skeleton {
   position: absolute;
