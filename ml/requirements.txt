@@ -12,7 +12,7 @@ pyarrow>=25.0.0
 # >=2.3.0 relaxes the upstream transformers pin from <5 to <6, letting the
 # lockfile clear all 4 transformers CVEs pip-audit previously flagged
 # (2026-07-19 — see ml/requirements-inference.lock resolution).
-chronos-forecasting>=2.3.0
+chronos-forecasting>=2.3.1
 jsonschema>=4.26.0
 # Explicit minimum-version pins for transitive deps with published CVEs below
 # the version otherwise resolved (pip-audit finding, 2026-07-18).
