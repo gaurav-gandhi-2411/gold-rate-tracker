@@ -19,4 +19,4 @@ jsonschema>=4.26.0
 cryptography>=50.0.0
 pillow>=12.3.0
 setuptools>=83.0.0
-soupsieve>=2.9
+soupsieve>=2.9.2
