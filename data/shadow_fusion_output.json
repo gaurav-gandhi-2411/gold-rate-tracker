@@ -1,5 +1,5 @@
 {
-  "capture_utc": "2026-08-15T01:47:26Z",
+  "capture_utc": "2026-08-15T06:55:35Z",
   "as_of_date": "2026-08-15",
   "national_failures": {
     "malabar": "network: malabar: request failed: HTTPSConnectionPool(host='www.malabargoldanddiamonds.com', port=443): Read timed out. (read timeout=20)"
@@ -7,8 +7,8 @@
   "kalyan_failures": {},
   "snapshot_rows_persisted": 6,
   "national_benchmark": {
-    "value": 14133.235294117647,
-    "band_half_width": 141.33235294117648,
+    "value": 14160.0,
+    "band_half_width": 141.6,
     "disagreement": false,
     "sources_used": [
       "ibja",
@@ -22,31 +22,31 @@
   "cities": {
     "Bangalore": {
       "value": 14015.0,
-      "band_half_width": 141.33235294117648,
+      "band_half_width": 141.6,
       "coverage": "kalyan_anchored",
       "attribution": "National retail consensus, Kalyan-anchored (Kalyan Jewellers \u2014 BANGALORE board rate)",
-      "markup": 0.991634237196429
+      "markup": 0.9897598870056498
     },
     "Chennai": {
       "value": 14015.0,
-      "band_half_width": 141.33235294117648,
+      "band_half_width": 141.6,
       "coverage": "kalyan_anchored",
       "attribution": "National retail consensus, Kalyan-anchored (Kalyan Jewellers \u2014 CHENNAI board rate)",
-      "markup": 0.991634237196429
+      "markup": 0.9897598870056498
     },
     "Hyderabad": {
       "value": 14015.0,
-      "band_half_width": 141.33235294117648,
+      "band_half_width": 141.6,
       "coverage": "kalyan_anchored",
       "attribution": "National retail consensus, Kalyan-anchored (Kalyan Jewellers \u2014 HYDERABAD board rate)",
-      "markup": 0.991634237196429
+      "markup": 0.9897598870056498
     },
     "Ernakulam": {
       "value": 14015.0,
-      "band_half_width": 141.33235294117648,
+      "band_half_width": 141.6,
       "coverage": "kalyan_anchored",
       "attribution": "National retail consensus, Kalyan-anchored (Kalyan Jewellers \u2014 ERNAKULAM board rate)",
-      "markup": 0.991634237196429
+      "markup": 0.9897598870056498
     }
   }
 }
