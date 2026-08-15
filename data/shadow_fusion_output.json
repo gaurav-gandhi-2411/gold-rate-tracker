@@ -1,6 +1,6 @@
 {
-  "capture_utc": "2026-08-14T19:10:28Z",
-  "as_of_date": "2026-08-14",
+  "capture_utc": "2026-08-15T01:47:26Z",
+  "as_of_date": "2026-08-15",
   "national_failures": {
     "malabar": "network: malabar: request failed: HTTPSConnectionPool(host='www.malabargoldanddiamonds.com', port=443): Read timed out. (read timeout=20)"
   },
