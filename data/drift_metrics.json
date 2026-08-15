@@ -1,55 +1,5 @@
 [
   {
-    "ts": "2026-07-16T06:35:20.959263+00:00",
-    "target_time": "2026-07-13T00:00:00+00:00",
-    "actual_ts": "2026-07-16T06:35:05.714Z",
-    "actual_22k": 13180.0,
-    "forecast_22k": 13275.0,
-    "residual": -95.0,
-    "model_version": "naive_flat_hold",
-    "baseline_mae": 258.28
-  },
-  {
-    "ts": "2026-07-16T07:36:24.097954+00:00",
-    "target_time": "2026-07-17T00:00:00+00:00",
-    "actual_ts": "2026-07-16T07:36:00.628Z",
-    "actual_22k": 13180.0,
-    "forecast_22k": 13180.0,
-    "residual": 0.0,
-    "model_version": "naive_flat_hold",
-    "baseline_mae": 258.28
-  },
-  {
-    "ts": "2026-07-16T08:07:08.319612+00:00",
-    "target_time": "2026-07-17T00:00:00+00:00",
-    "actual_ts": "2026-07-16T08:06:51.859Z",
-    "actual_22k": 13180.0,
-    "forecast_22k": 13180.0,
-    "residual": 0.0,
-    "model_version": "naive_flat_hold",
-    "baseline_mae": 258.28
-  },
-  {
-    "ts": "2026-07-16T08:40:43.389328+00:00",
-    "target_time": "2026-07-17T00:00:00+00:00",
-    "actual_ts": "2026-07-16T08:40:22.783Z",
-    "actual_22k": 13180.0,
-    "forecast_22k": 13180.0,
-    "residual": 0.0,
-    "model_version": "naive_flat_hold",
-    "baseline_mae": 258.28
-  },
-  {
-    "ts": "2026-07-16T09:17:23.502023+00:00",
-    "target_time": "2026-07-17T00:00:00+00:00",
-    "actual_ts": "2026-07-16T09:17:04.615Z",
-    "actual_22k": 13180.0,
-    "forecast_22k": 13180.0,
-    "residual": 0.0,
-    "model_version": "naive_flat_hold",
-    "baseline_mae": 258.28
-  },
-  {
     "ts": "2026-07-16T14:58:09.837090+00:00",
     "target_time": "2026-07-17T00:00:00+00:00",
     "actual_ts": "2026-07-16T14:57:44.176Z",
@@ -1223,6 +1173,16 @@
     "ts": "2026-08-15T06:31:08.444237+00:00",
     "target_time": "2026-08-16T00:00:00+00:00",
     "actual_ts": "2026-08-15T03:35:14.910Z",
+    "actual_22k": 14060.0,
+    "forecast_22k": 14060.0,
+    "residual": 0.0,
+    "model_version": "naive_flat_hold",
+    "baseline_mae": 247.04
+  },
+  {
+    "ts": "2026-08-15T09:21:17.510505+00:00",
+    "target_time": "2026-08-16T00:00:00+00:00",
+    "actual_ts": "2026-08-15T08:37:46.194Z",
     "actual_22k": 14060.0,
     "forecast_22k": 14060.0,
     "residual": 0.0,
