@@ -1,24 +1,24 @@
 {
-  "predicted_at": "2026-08-16T01:03:45.086123+00:00",
+  "predicted_at": "2026-08-16T03:43:45.750472+00:00",
   "target_window": "5d",
   "headline": {
     "method": "naive_flat_hold",
     "predicted_22k": 14265,
-    "lower": 14068,
-    "upper": 14462,
-    "conformal_pi_half": 197.1,
-    "naive_mae_recent_30": 106.6,
+    "lower": 14123,
+    "upper": 14407,
+    "conformal_pi_half": 141.7,
+    "naive_mae_recent_30": 96.7,
     "vol_context": {
-      "half_width": 314,
-      "half_width_raw": 314.3,
+      "half_width": 390,
+      "half_width_raw": 389.8,
       "method": "degraded_static",
       "window_days": 20,
-      "contiguous_days": 13,
+      "contiguous_days": 14,
       "is_floored": false,
       "is_degraded": true,
       "floor_fraction": 0.5,
-      "static_pi_half": 314.3,
-      "baseline_half_width": 314,
+      "static_pi_half": 389.8,
+      "baseline_half_width": 390,
       "regime": "normal"
     }
   },
@@ -26,7 +26,7 @@
     "status": "success",
     "lean_direction": "up",
     "lean_strength_pct": 1.36,
-    "direction_acc_30f": 0.5,
+    "direction_acc_30f": 0.567,
     "direction_prob_basis": "base_rate_fallback",
     "horizon_p10": [
       13881.38,
@@ -56,7 +56,7 @@
     "direction_consensus": 1.0
   },
   "driver_context": {
-    "computed_at": "2026-08-16T01:03:45.090518+00:00",
+    "computed_at": "2026-08-16T03:43:45.754624+00:00",
     "macro_staleness_days": 0.0,
     "macro_fresh": true,
     "premium_threshold_pct": 15.0,
@@ -101,9 +101,9 @@
       "gold_usd_30d_pct_change": 8.32
     }
   },
-  "real_readings_count": 543,
+  "real_readings_count": 544,
   "current_22k": 14265,
-  "scraped_at": "2026-08-15T21:17:49.496Z",
+  "scraped_at": "2026-08-16T01:04:49.563Z",
   "price_source": "tanishq_scrape",
   "est_low": null,
   "est_high": null,
@@ -111,8 +111,8 @@
   "fusion_sources": null,
   "model_fallback": false,
   "predicted_22k": 14265,
-  "lower": 14068,
-  "upper": 14462,
+  "lower": 14123,
+  "upper": 14407,
   "target_time": "2026-08-17T00:00:00+00:00",
   "model_status": "naive_headline",
   "model_version": "naive_flat_hold",
