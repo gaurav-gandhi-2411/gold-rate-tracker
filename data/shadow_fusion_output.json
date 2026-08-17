@@ -1,12 +1,12 @@
 {
-  "capture_utc": "2026-08-17T07:13:25Z",
+  "capture_utc": "2026-08-17T13:03:34Z",
   "as_of_date": "2026-08-17",
   "national_failures": {},
   "kalyan_failures": {},
   "snapshot_rows_persisted": 7,
   "national_benchmark": {
-    "value": 14206.666666666668,
-    "band_half_width": 142.0666666666667,
+    "value": 14276.25,
+    "band_half_width": 142.76250000000002,
     "disagreement": false,
     "sources_used": [
       "ibja",
@@ -21,32 +21,32 @@
   },
   "cities": {
     "Bangalore": {
-      "value": 14220.0,
-      "band_half_width": 142.0666666666667,
+      "value": 14270.0,
+      "band_half_width": 142.76250000000002,
       "coverage": "kalyan_anchored",
       "attribution": "National retail consensus, Kalyan-anchored (Kalyan Jewellers \u2014 BANGALORE board rate)",
-      "markup": 1.000938526513374
+      "markup": 0.9995622099641012
     },
     "Chennai": {
-      "value": 14220.0,
-      "band_half_width": 142.0666666666667,
+      "value": 14270.0,
+      "band_half_width": 142.76250000000002,
       "coverage": "kalyan_anchored",
       "attribution": "National retail consensus, Kalyan-anchored (Kalyan Jewellers \u2014 CHENNAI board rate)",
-      "markup": 1.000938526513374
+      "markup": 0.9995622099641012
     },
     "Hyderabad": {
-      "value": 14220.0,
-      "band_half_width": 142.0666666666667,
+      "value": 14270.0,
+      "band_half_width": 142.76250000000002,
       "coverage": "kalyan_anchored",
       "attribution": "National retail consensus, Kalyan-anchored (Kalyan Jewellers \u2014 HYDERABAD board rate)",
-      "markup": 1.000938526513374
+      "markup": 0.9995622099641012
     },
     "Ernakulam": {
-      "value": 14220.0,
-      "band_half_width": 142.0666666666667,
+      "value": 14270.0,
+      "band_half_width": 142.76250000000002,
       "coverage": "kalyan_anchored",
       "attribution": "National retail consensus, Kalyan-anchored (Kalyan Jewellers \u2014 ERNAKULAM board rate)",
-      "markup": 1.000938526513374
+      "markup": 0.9995622099641012
     }
   }
 }
