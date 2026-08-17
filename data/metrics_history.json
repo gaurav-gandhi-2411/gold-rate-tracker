@@ -1727,5 +1727,24 @@
     "track": "real",
     "model_version": "naive_flat_hold",
     "real_readings_count": 543
+  },
+  {
+    "decision_date": "2026-08-17",
+    "predicted_at": "2026-08-17T01:01:02.898872+00:00",
+    "current_22k": 14265,
+    "predicted_22k": 14265,
+    "delta": 0.0,
+    "lower": 14123,
+    "upper": 14407,
+    "decision": "neutral",
+    "outcome_window_days": 5,
+    "outcome_resolved_at": null,
+    "outcome": "pending",
+    "min_future_price": null,
+    "actual_next_22k": null,
+    "drop_threshold": 100.0,
+    "track": "real",
+    "model_version": "naive_flat_hold",
+    "real_readings_count": 551
   }
 ]
