@@ -18,5 +18,5 @@ jsonschema>=4.26.0
 # the version otherwise resolved (pip-audit finding, 2026-07-18).
 cryptography>=50.0.0
 pillow>=12.3.0
-setuptools>=83.0.0
+setuptools>=84.0.0
 soupsieve>=2.9.2
