@@ -1,11 +1,11 @@
 {
-  "probed_at": "2026-08-18T18:32:07.742846+00:00",
+  "probed_at": "2026-08-18T21:19:42.625229+00:00",
   "status": "success",
   "wall_clock_ms": {
-    "pipeline_load": 7747,
-    "forecast": 10,
-    "calibration": 0,
-    "total": 7778
+    "pipeline_load": 10959,
+    "forecast": 15,
+    "calibration": 1,
+    "total": 11000
   },
   "ibja_context_days": 233,
   "ibja_last_date": "2026-08-18",
@@ -84,7 +84,7 @@
       "date": "2026-08-23",
       "p10": 13931.86,
       "p50": 14656.55,
-      "p90": 15375.19
+      "p90": 15375.18
     }
   ],
   "model_version": "amazon/chronos-bolt-tiny@a0e552de",
