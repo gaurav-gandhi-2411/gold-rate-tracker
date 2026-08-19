@@ -1,12 +1,12 @@
 {
-  "capture_utc": "2026-08-19T01:50:45Z",
+  "capture_utc": "2026-08-19T07:02:10Z",
   "as_of_date": "2026-08-19",
   "national_failures": {},
   "kalyan_failures": {},
   "snapshot_rows_persisted": 7,
   "national_benchmark": {
-    "value": 14284.583333333334,
-    "band_half_width": 142.84583333333333,
+    "value": 14235.0,
+    "band_half_width": 142.35,
     "disagreement": false,
     "sources_used": [
       "ibja",
@@ -21,32 +21,32 @@
   },
   "cities": {
     "Bangalore": {
-      "value": 14290.000000000002,
-      "band_half_width": 142.84583333333333,
+      "value": 14290.0,
+      "band_half_width": 142.35,
       "coverage": "kalyan_anchored",
       "attribution": "National retail consensus, Kalyan-anchored (Kalyan Jewellers \u2014 BANGALORE board rate)",
-      "markup": 1.0003791966864044
+      "markup": 1.0038637161924833
     },
     "Chennai": {
-      "value": 14290.000000000002,
-      "band_half_width": 142.84583333333333,
+      "value": 14290.0,
+      "band_half_width": 142.35,
       "coverage": "kalyan_anchored",
       "attribution": "National retail consensus, Kalyan-anchored (Kalyan Jewellers \u2014 CHENNAI board rate)",
-      "markup": 1.0003791966864044
+      "markup": 1.0038637161924833
     },
     "Hyderabad": {
-      "value": 14290.000000000002,
-      "band_half_width": 142.84583333333333,
+      "value": 14290.0,
+      "band_half_width": 142.35,
       "coverage": "kalyan_anchored",
       "attribution": "National retail consensus, Kalyan-anchored (Kalyan Jewellers \u2014 HYDERABAD board rate)",
-      "markup": 1.0003791966864044
+      "markup": 1.0038637161924833
     },
     "Ernakulam": {
-      "value": 14290.000000000002,
-      "band_half_width": 142.84583333333333,
+      "value": 14290.0,
+      "band_half_width": 142.35,
       "coverage": "kalyan_anchored",
       "attribution": "National retail consensus, Kalyan-anchored (Kalyan Jewellers \u2014 ERNAKULAM board rate)",
-      "markup": 1.0003791966864044
+      "markup": 1.0038637161924833
     }
   }
 }
