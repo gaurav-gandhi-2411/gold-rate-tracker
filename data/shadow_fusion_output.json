@@ -1,12 +1,12 @@
 {
-  "capture_utc": "2026-08-20T01:48:46Z",
+  "capture_utc": "2026-08-20T07:03:20Z",
   "as_of_date": "2026-08-20",
   "national_failures": {},
   "kalyan_failures": {},
   "snapshot_rows_persisted": 7,
   "national_benchmark": {
-    "value": 14226.666666666668,
-    "band_half_width": 142.26666666666668,
+    "value": 14457.083333333334,
+    "band_half_width": 144.57083333333335,
     "disagreement": false,
     "sources_used": [
       "ibja",
@@ -22,31 +22,31 @@
   "cities": {
     "Bangalore": {
       "value": 14205.0,
-      "band_half_width": 142.26666666666668,
+      "band_half_width": 144.57083333333335,
       "coverage": "kalyan_anchored",
       "attribution": "National retail consensus, Kalyan-anchored (Kalyan Jewellers \u2014 BANGALORE board rate)",
-      "markup": 0.998477038425492
+      "markup": 0.9825633340058217
     },
     "Chennai": {
       "value": 14205.0,
-      "band_half_width": 142.26666666666668,
+      "band_half_width": 144.57083333333335,
       "coverage": "kalyan_anchored",
       "attribution": "National retail consensus, Kalyan-anchored (Kalyan Jewellers \u2014 CHENNAI board rate)",
-      "markup": 0.998477038425492
+      "markup": 0.9825633340058217
     },
     "Hyderabad": {
       "value": 14205.0,
-      "band_half_width": 142.26666666666668,
+      "band_half_width": 144.57083333333335,
       "coverage": "kalyan_anchored",
       "attribution": "National retail consensus, Kalyan-anchored (Kalyan Jewellers \u2014 HYDERABAD board rate)",
-      "markup": 0.998477038425492
+      "markup": 0.9825633340058217
     },
     "Ernakulam": {
       "value": 14205.0,
-      "band_half_width": 142.26666666666668,
+      "band_half_width": 144.57083333333335,
       "coverage": "kalyan_anchored",
       "attribution": "National retail consensus, Kalyan-anchored (Kalyan Jewellers \u2014 ERNAKULAM board rate)",
-      "markup": 0.998477038425492
+      "markup": 0.9825633340058217
     }
   }
 }
