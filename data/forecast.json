@@ -1,24 +1,24 @@
 {
-  "predicted_at": "2026-08-23T01:04:42.567501+00:00",
+  "predicted_at": "2026-08-23T03:46:25.937717+00:00",
   "target_window": "5d",
   "headline": {
     "method": "naive_flat_hold",
     "predicted_22k": 14995,
-    "lower": 14853,
-    "upper": 15137,
-    "conformal_pi_half": 141.7,
-    "naive_mae_recent_30": 96.7,
+    "lower": 14835,
+    "upper": 15155,
+    "conformal_pi_half": 160.0,
+    "naive_mae_recent_30": 95.7,
     "vol_context": {
-      "half_width": 390,
-      "half_width_raw": 389.8,
-      "method": "degraded_static",
+      "half_width": 295,
+      "half_width_raw": 295.2,
+      "method": "realized_20d",
       "window_days": 20,
-      "contiguous_days": 19,
+      "contiguous_days": 20,
       "is_floored": false,
-      "is_degraded": true,
+      "is_degraded": false,
       "floor_fraction": 0.5,
-      "static_pi_half": 389.8,
-      "baseline_half_width": 390,
+      "static_pi_half": 432.0,
+      "baseline_half_width": 295,
       "regime": "normal"
     }
   },
@@ -26,7 +26,7 @@
     "status": "success",
     "lean_direction": "up",
     "lean_strength_pct": 3.49,
-    "direction_acc_30f": 0.567,
+    "direction_acc_30f": 0.667,
     "direction_prob_basis": "base_rate_fallback",
     "horizon_p10": [
       14851.56,
@@ -56,7 +56,7 @@
     "direction_consensus": 1.0
   },
   "driver_context": {
-    "computed_at": "2026-08-23T01:04:42.570722+00:00",
+    "computed_at": "2026-08-23T03:46:25.942128+00:00",
     "macro_staleness_days": 0.0,
     "macro_fresh": true,
     "premium_threshold_pct": 15.0,
@@ -101,9 +101,9 @@
       "gold_usd_30d_pct_change": 11.51
     }
   },
-  "real_readings_count": 583,
+  "real_readings_count": 584,
   "current_22k": 14995,
-  "scraped_at": "2026-08-22T21:18:16.645Z",
+  "scraped_at": "2026-08-23T01:05:47.423Z",
   "price_source": "tanishq_scrape",
   "est_low": null,
   "est_high": null,
@@ -111,8 +111,8 @@
   "fusion_sources": null,
   "model_fallback": false,
   "predicted_22k": 14995,
-  "lower": 14853,
-  "upper": 15137,
+  "lower": 14835,
+  "upper": 15155,
   "target_time": "2026-08-24T00:00:00+00:00",
   "model_status": "naive_headline",
   "model_version": "naive_flat_hold",
