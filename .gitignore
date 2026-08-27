@@ -3,6 +3,8 @@ node_modules/
 logs/
 # Cloudflare Worker (Φ25) local dev state — cache/state/tmp, never committed
 worker/.wrangler/
+worker-deadman/.wrangler/
+worker-deadman/node_modules/
 .DS_Store
 .env
 .env.local

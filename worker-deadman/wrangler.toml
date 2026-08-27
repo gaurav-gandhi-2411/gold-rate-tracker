@@ -1,0 +1,22 @@
+name = "gold-rate-tracker-deadman"
+main = "src/index.mjs"
+compatibility_date = "2026-08-27"
+
+# Every 30 min: 48 invocations/day, well inside the Workers Free plan's
+# 100,000 requests/day and 5-cron-triggers-per-account limits (verified
+# 2026-08-27 against developers.cloudflare.com/workers/platform/limits/).
+# Gives WARN(5h)/ESCALATE(10h) thresholds ~30 min of resolution.
+[triggers]
+crons = ["*/30 * * * *"]
+
+# Created by hand per README.md's deploy step 3 (`wrangler kv namespace create`)
+# -- id filled in after creation, not before, since it doesn't exist yet at
+# commit time. Free-tier KV: 1,000 writes/day, 100,000 reads/day; this
+# Worker uses at most 48 of each/day.
+[[kv_namespaces]]
+binding = "DEADMAN_STATE"
+id = "REPLACE_WITH_KV_NAMESPACE_ID"
+
+# NTFY_TOPIC is set as a Wrangler secret (`wrangler secret put NTFY_TOPIC`),
+# never committed here -- same "treat it like a password" rule as the
+# GitHub Actions NTFY_TOPIC secret it must match (README.md).

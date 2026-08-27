@@ -409,6 +409,21 @@ retired setup, kept for historical reference).
 
 ---
 
+## Dead-man's switch (added 2026-08-28, deploy pending owner action)
+
+A second, unrelated Cloudflare Worker — `gold-rate-tracker-deadman`, on the
+same Cloudflare account the retired worker above ran on — independently
+checks the public site's `data/forecast.json` freshness and alerts to the
+existing ntfy topic at WARN (>=5h stale) / ESCALATE (>=10h stale). Unlike
+every other alert in this project, it does not run inside GitHub Actions,
+so it keeps working if GitHub Actions' own scheduling ever stops firing.
+Code and tests are complete; deployment is a manual owner step (Cloudflare
+resources/secrets can't be created from this session) — see
+[worker-deadman/README.md](../worker-deadman/README.md) for the exact
+deploy procedure and how to confirm it's live.
+
+---
+
 ## Bug #4 — bot-sync PRs don't auto-merge (FIXED 2026-07-17, PR #183)
 
 **Status: fixed. `lint.yml` now forwards its real result as a Commit Status

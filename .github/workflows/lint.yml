@@ -78,6 +78,12 @@ jobs:
             tests/test_scrape.js \
             tests/test_stale_banner.js \
             tests/test_trend.js
+      - name: Run dead-man's-switch Worker tests
+        # Code-quality gate only -- this does NOT wire the switch's own
+        # operation into GitHub Actions. It runs entirely on Cloudflare
+        # Cron Triggers (see worker-deadman/README.md); this step only
+        # lints/tests the source before it's deployed by hand.
+        run: node --test worker-deadman/test/deadman.test.mjs
 
   # Forward lint+pwa-js's real result as commit statuses (bug #4, docs/RUNBOOK.md).
   # Branch protection's required_status_checks matches by context NAME across both
