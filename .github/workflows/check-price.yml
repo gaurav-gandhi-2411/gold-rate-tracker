@@ -2,11 +2,16 @@ name: Check Gold Price
 
 on:
   schedule:
-    # Every 3 hours, at minute 0 (UTC). India is UTC+5:30, so this fires at
-    # ~05:30, 08:30, 11:30, 14:30, 17:30, 20:30, 23:30, 02:30 IST (8 runs/day).
+    # Every 3 hours, at minute 7 (UTC), not minute 0. GitHub Actions documents
+    # that scheduled workflows can be delayed or dropped during periods of
+    # high load, and "high load times include the start of every hour"
+    # (https://docs.github.com/actions/using-workflows/events-that-trigger-workflows#schedule).
+    # This cron fired exactly on the hour; offsetting by 7 minutes moves it
+    # off that documented peak without changing the cadence. Fires at
+    # ~05:37, 08:37, 11:37, 14:37, 17:37, 20:37, 23:37, 02:37 IST (8 runs/day).
     # T8 morning window 08-14 IST and evening window 18-22 IST each contain
     # at least one 3h-cadence slot, so twice-daily digests are unaffected.
-    - cron: "0 */3 * * *"
+    - cron: "7 */3 * * *"
   workflow_dispatch: # allows manual run from the Actions tab
   push:
     branches: [master]
