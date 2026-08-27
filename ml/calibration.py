@@ -41,9 +41,10 @@ _DEFAULT_HUBER_EPSILON = 1.35
 # range" vocabulary across both bands on the page. Chosen from a strict walk-
 # forward audit (fit on pairs strictly before each scored date, band from
 # recency-WEIGHTED empirical quantiles of that same static fit's in-sample
-# residuals -- see _weighted_percentile -- no future leakage): at n=45 scored
-# days (the same-day IBJA/Tanishq overlap this module actually fits on),
-# empirical coverage was 68.9/82.2/88.9% against nominal 68/80/90%
+# residuals -- see _weighted_percentile -- no future leakage): at n=65 scored
+# days (45 same-day + 20 asof-matched carry-forward, mirroring exactly which
+# days ml.inference._try_ibja_calibrated would display this tier on),
+# empirical coverage was 70.8/83.1/92.3% against nominal 68/80/90%
 # respectively -- essentially matching nominal within Wilson-CI noise at this
 # sample size. See evaluate_empirical_band_coverage's docstring and the PR
 # that introduced this constant for the full table (session dated 2026-08-27).
@@ -84,9 +85,11 @@ def _weighted_percentile(values: np.ndarray, weights: np.ndarray, percentile: fl
     window measured ~21% larger than the late half (99.5 vs 82.4 Rs/g,
     n=45 windows), so an unweighted quantile is stale-dispersion-inflated
     relative to the fit's own effective (recency-weighted) sample. Switching
-    to this weighted quantile closed a measured 45.3%-vs-68.3% / 84.4%-vs-80%
-    -type over-coverage gap down to within Wilson-CI noise at every nominal
-    level tested -- see fit_calibration's own docstring for the numbers.
+    to this weighted quantile closed a measured 45.3%-vs-68.3% (the pre-PR
+    Gaussian-sigma band) / 84.6%-vs-80% (this PR's first unweighted-quantile
+    draft, n=65) -type over-coverage gap down to within Wilson-CI noise at
+    every nominal level tested -- see fit_calibration's own docstring for
+    the numbers.
     """
     order = np.argsort(values)
     v = values[order]
@@ -304,6 +307,13 @@ def walk_forward_validate(
     }
 
 
+# Must match ml.inference._IBJA_DISPLAY_MAX_AGE_DAYS. Not imported directly to
+# avoid a circular import (ml.inference imports NOMINAL_COVERAGE_PCT from this
+# module); kept in sync by the assertion in
+# tests/test_calibration.py::test_max_age_days_matches_inference_constant.
+_SCORING_MAX_IBJA_AGE_DAYS = 14
+
+
 def evaluate_empirical_band_coverage(
     ibja_df: pd.DataFrame,
     tanishq_df: pd.DataFrame,
@@ -311,68 +321,108 @@ def evaluate_empirical_band_coverage(
     huber_epsilon: float = _DEFAULT_HUBER_EPSILON,
     half_life: float = _DEFAULT_HALF_LIFE,
     min_train: int = _MIN_FIT_OBSERVATIONS,
+    max_age_days: int = _SCORING_MAX_IBJA_AGE_DAYS,
 ) -> dict:
     """Walk-forward coverage of an empirical-quantile band, matching PRODUCTION
     exactly -- not the same thing walk_forward_validate measures.
 
-    At each pair index i from min_train onward: fit slope/intercept on pairs
-    [0:i] only (strictly before i, recency-weighted -- static, as production
-    does), form a band from the EMPIRICAL |residual| quantile at `level`
-    computed on that SAME fit's IN-SAMPLE residuals (pairs [0:i] evaluated with
-    those params -- exactly what fit_calibration's own residual_abs_quantiles
-    would have been had a refit happened right before i), then score whether
-    pair i's actual tanishq_22k falls within predicted_i +/- that band. No
-    future information reaches either the fit or the band at any step.
+    TRAINING set: same-day IBJA/Tanishq pairs only (via _merge_overlap's exact
+    date join) -- identical to what fit_calibration fits on. SCORING set: every
+    Tanishq daily reading date, asof-matched (backward) to the most recent IBJA
+    date at or before it, gated at max_age_days -- this mirrors what
+    ml.inference._try_ibja_calibrated actually does in production (uses
+    whatever the LATEST available IBJA row is, not requiring an exact same-day
+    match, with the same max-age gate), so this function scores every day
+    production would have actually displayed a tier-2 estimate on, not only
+    the subset where IBJA happened to publish same-day.
+
+    At each scored date t: fit slope/intercept on same-day training pairs
+    STRICTLY BEFORE t (date < t, recency-weighted -- static, as production
+    does; no future information reaches the fit at any step), form a band from
+    the EMPIRICAL |residual| quantile at `level`, weighted with the SAME
+    recency weights as the fit (_weighted_percentile, not np.percentile -- an
+    audit found an unweighted quantile here systematically over-covers,
+    because it lets older/larger/less-relevant residuals from early in each
+    expanding window inflate the band relative to the fit's own effective
+    (recency-weighted) sample -- see the PR that introduced _weighted_
+    percentile for the full simulation-based audit), then score whether t's
+    actual tanishq_22k falls within predicted_t +/- that band.
 
     Distinct from walk_forward_validate: that function's residual_std_oos/
     mae_oos summarize the sequence of single-point OOS residuals themselves
-    (a genuinely-out-of-sample fit-quality estimate). This function instead
-    asks the honest production question -- "if I size today's band from
-    whatever static fit is currently live, how often does the real reading
-    actually land inside it".
-
-    The residual quantile is weighted with the SAME recency weights as the
-    fit (_weighted_percentile, not np.percentile) -- an audit found an
-    unweighted quantile here systematically over-covers, because it lets
-    older/larger/less-relevant residuals from early in each expanding window
-    inflate the band relative to the fit's own effective (recency-weighted)
-    sample. A controlled simulation confirmed this directly: bootstrapping
-    i.i.d. noise from the real residual distribution (no real-world drift by
-    construction, 500 replicates) reproduced close-to-nominal coverage
-    (65.9/78.0/87.8% mean vs 68/80/90% nominal) -- ruling out small-sample
-    estimator bias as the cause of the over-coverage seen on real data, and
-    pointing at the real data's own non-stationarity (measured: mean
-    |residual| in the early half of each training window ~99.5 Rs/g vs ~82.4
-    Rs/g in the late half, a real, not simulated, effect) hitting an
-    unweighted quantile. Measured on the real ibja_rates.parquet/prices.json
-    overlap this function actually scores (n=75 same-day pairs -> 45
-    walk-forward-scored days after the min_train warmup -- NOT the larger
-    asof/carry-forward-inclusive set some earlier analysis used): weighted-
-    quantile empirical coverage is 68.9/82.2/88.9% against nominal 68/80/90%
-    respectively, essentially matching nominal within Wilson-CI noise at
-    n=45 -- see tests/test_calibration.py's regression test for the ongoing
-    check.
+    (a genuinely-out-of-sample fit-quality estimate, same-day training points
+    only). This function instead asks the honest production question -- "if I
+    size today's band from whatever static fit is currently live, how often
+    does the real reading actually land inside it, on every day production
+    would have shown this tier". Measured on the real ibja_rates.parquet/
+    prices.json overlap (n=65 scored days: n=45 same-day + n=20 asof-matched
+    carry-forward, after the min_train warmup): weighted-quantile coverage is
+    70.8/83.1/92.3% against nominal 68/80/90% (Wilson 95% CI at 80% nominal:
+    [72.2%, 90.3%], n=65). half_life=10 was NOT selected by tuning against
+    this coverage number -- it is the pre-existing value the point-estimate
+    fit already uses (ADR 027, chosen for MAE_oos, before this coverage
+    audit existed); a diagnostic sweep across half_life in {5,8,10,15,20,25,
+    30} on this exact scoring set showed 10 is not uniquely best (15/20/25
+    look as good or better at some levels), and a held-out check restricted
+    to the 15 most recent scored dates (2026-08-12 to 2026-08-27, all after
+    ADR 027's own 2026-07-17 sweep-data cutoff, so genuinely untouched by
+    that selection) gave 46.7/80.0/93.3% at half_life=10 -- noisy at this
+    small n but not systematically over-covering the way the unweighted
+    quantile did. See tests/test_calibration.py's regression test for the
+    ongoing check.
 
     Returns {"n": int, "n_in_band": int, "coverage": float | None}.
     coverage is None when n == 0 (not enough history to score even one day).
     """
-    merged = _merge_overlap(ibja_df, tanishq_df)
-    X = merged["ibja_per_g"].to_numpy().reshape(-1, 1)
-    y = merged["tanishq_22k"].to_numpy()
+    same_day = _merge_overlap(ibja_df, tanishq_df)
+    X = same_day["ibja_per_g"].to_numpy().reshape(-1, 1)
+    y = same_day["tanishq_22k"].to_numpy()
+    same_day_dates = pd.to_datetime(same_day["date"]).to_numpy()
+
+    ibja_sorted = ibja_df[["date", "pm_916"]].dropna(subset=["pm_916"]).copy()
+    ibja_sorted["date_dt"] = pd.to_datetime(ibja_sorted["date"])
+    ibja_sorted["ibja_per_g"] = ibja_sorted["pm_916"] / 10.0
+    ibja_sorted = ibja_sorted.sort_values("date_dt")
+
+    tanishq_sorted = tanishq_df[["date", "22k"]].copy()
+    tanishq_sorted["date_dt"] = pd.to_datetime(tanishq_sorted["date"])
+    tanishq_sorted = tanishq_sorted.sort_values("date_dt")
+
+    scoring = pd.merge_asof(
+        tanishq_sorted,
+        ibja_sorted[["date_dt", "ibja_per_g", "date"]].rename(columns={"date": "ibja_date"}),
+        on="date_dt",
+        direction="backward",
+    )
+    scoring = scoring.dropna(subset=["ibja_per_g"])
+    scoring["gap_days"] = (scoring["date_dt"] - pd.to_datetime(scoring["ibja_date"])).dt.days
+    scoring = (
+        scoring[scoring["gap_days"] < max_age_days].sort_values("date_dt").reset_index(drop=True)
+    )
 
     n_in_band = 0
     n_scored = 0
-    for i in range(min_train, len(merged)):
-        weights = _recency_weights(i, half_life)
-        slope, intercept = _fit_robust(X[:i], y[:i], huber_epsilon=huber_epsilon, weights=weights)
+    for _, srow in scoring.iterrows():
+        t = np.datetime64(srow["date_dt"])
+        train_mask = same_day_dates < t  # strictly before -- no leakage
+        n_train = int(train_mask.sum())
+        if n_train < min_train:
+            continue
 
-        train_pred = slope * X[:i, 0] + intercept
-        train_abs_residuals = np.abs(y[:i] - train_pred)
+        X_train = X[train_mask]
+        y_train = y[train_mask]
+        weights = _recency_weights(n_train, half_life)
+        slope, intercept = _fit_robust(
+            X_train, y_train, huber_epsilon=huber_epsilon, weights=weights
+        )
+
+        train_pred = slope * X_train[:, 0] + intercept
+        train_abs_residuals = np.abs(y_train - train_pred)
         band_half_width = _weighted_percentile(train_abs_residuals, weights, level)
 
-        pred_i = slope * X[i, 0] + intercept
+        pred_t = slope * srow["ibja_per_g"] + intercept
         n_scored += 1
-        if abs(y[i] - pred_i) <= band_half_width:
+        if abs(srow["22k"] - pred_t) <= band_half_width:
             n_in_band += 1
 
     coverage = (n_in_band / n_scored) if n_scored > 0 else None

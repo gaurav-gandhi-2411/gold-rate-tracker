@@ -737,25 +737,56 @@ def test_evaluate_empirical_band_coverage_insufficient_data_returns_none():
     assert result["coverage"] is None
 
 
+def test_evaluate_empirical_band_coverage_recovers_carry_forward_days():
+    """A Tanishq reading on a date with no exact-match IBJA row (e.g. a weekend)
+    must still be scored via the most recent PRIOR IBJA date, asof-matched --
+    exactly what ml.inference._try_ibja_calibrated does in production. This is
+    the recovery for the n=65-vs-45 gap (session dated 2026-08-27)."""
+    ibja_df, tanishq_df = _make_overlap_df(n=40)
+    # Add one extra Tanishq-only date (no matching IBJA row) two days after the
+    # last synthetic pair -- a carry-forward day that should still get scored.
+    last_date = pd.Timestamp(tanishq_df["date"].iloc[-1])
+    carry_forward_date = str((last_date + pd.Timedelta(days=2)).date())
+    extra_row = pd.DataFrame({"date": [carry_forward_date], "22k": [tanishq_df["22k"].iloc[-1]]})
+    tanishq_extended = pd.concat([tanishq_df, extra_row], ignore_index=True)
+
+    same_day_only = cal.evaluate_empirical_band_coverage(ibja_df, tanishq_df, level=80)
+    with_carry_forward = cal.evaluate_empirical_band_coverage(ibja_df, tanishq_extended, level=80)
+    assert with_carry_forward["n"] == same_day_only["n"] + 1
+
+
+def test_max_age_days_matches_inference_constant():
+    """ml.calibration's scoring gate must stay in sync with ml.inference's real
+    production gate (no direct import to avoid a circular import -- see
+    _SCORING_MAX_IBJA_AGE_DAYS's comment)."""
+    from ml import inference as inf
+
+    assert cal._SCORING_MAX_IBJA_AGE_DAYS == inf._IBJA_DISPLAY_MAX_AGE_DAYS
+
+
 # ---------------------------------------------------------------------------
 # Regression gate: production's live data must stay within the walk-forward-
 # measured coverage tolerance around NOMINAL_COVERAGE_PCT.
 #
-# Tolerance derivation (session dated 2026-08-27, revised same day after
-# switching to a recency-weighted quantile -- see _weighted_percentile): a
+# Tolerance derivation (session dated 2026-08-27, revised twice same day: once
+# for the recency-weighted quantile fix (_weighted_percentile), once more
+# after recovering the 20 asof-matched carry-forward scoring days the function
+# had been dropping -- see evaluate_empirical_band_coverage's docstring for
+# why n=45-same-day-only undercounted what production actually displays): a
 # walk-forward audit of this exact method against the real ibja_rates.parquet/
-# prices.json overlap (n=75 same-day pairs -> 45 scored days after the
-# min_train warmup -- this function only ever scores the same-day-matched
-# subset, not a larger asof/carry-forward set) measured 82.2% observed
-# coverage at 80% nominal, with a Wilson 95% CI of [68.7%, 90.7%] -- a 22.0
-# percentage-point-wide interval at this sample size. The task that
-# introduced this test specified a default +/-10pp tolerance but required
-# widening it to match the CI when the CI is wider than that -- it is, so the
-# tolerance here is +/-22pp (ceil(22.0)), not +/-10pp. A tighter tolerance
-# would fail intermittently on genuine sampling noise at this sample size,
-# not on a real calibration regression; a materially wider tolerance would
-# stop being a meaningful regression gate at all.
-_COVERAGE_TOLERANCE_PP = 22
+# prices.json overlap (n=65 scored days: 45 same-day + 20 asof-matched
+# carry-forward, after the min_train warmup) measured 83.1% observed coverage
+# at 80% nominal, with a Wilson 95% CI of [72.2%, 90.3%] -- an 18.1
+# percentage-point-wide interval at this sample size (narrower than the 22.0pp
+# measured on the same-day-only n=45 before the recovery, as expected with
+# more data). The task that introduced this test specified a default +/-10pp
+# tolerance but required widening it to match the CI when the CI is wider than
+# that -- it is, so the tolerance here is +/-19pp (ceil(18.1)), not +/-10pp
+# and not the earlier +/-22pp. A tighter tolerance would fail intermittently
+# on genuine sampling noise at this sample size, not on a real calibration
+# regression; a materially wider tolerance would stop being a meaningful
+# regression gate at all.
+_COVERAGE_TOLERANCE_PP = 19
 
 
 def test_real_data_empirical_band_coverage_within_tolerance():

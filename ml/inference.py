@@ -233,10 +233,11 @@ def _try_ibja_calibrated(
     # empirical-quantile band above -- using the SAME recency weights as the fit
     # (_weighted_percentile, not a plain quantile; an unweighted quantile was
     # tried first and still over-covered, traced to stale early-window residuals
-    # inflating it) -- measured 82.2% observed vs 80% nominal at n=45 (Wilson
-    # 95% CI [68.7%, 90.7%], n=45 -- see the PR that introduced this comment for
-    # the full table; this dataset cannot resolve differences smaller than
-    # roughly 20-25 percentage points at this sample size).
+    # inflating it) -- measured 83.1% observed vs 80% nominal at n=65 (45
+    # same-day + 20 asof-matched carry-forward scored days; Wilson 95% CI
+    # [72.2%, 90.3%], n=65 -- see the PR that introduced this comment for the
+    # full table; this dataset cannot resolve differences smaller than roughly
+    # 18-22 percentage points at this sample size).
     # calibration.json files predating this fix (schema_version < 3) have no
     # residual_abs_quantiles key; fall back to the old residual_std_oos/residual_std
     # band rather than breaking outright, but flag the fallback via band_method so
