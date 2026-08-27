@@ -14,19 +14,25 @@ fresh resolve.
 Marker syntax (paired HTML comments, invisible when GitHub renders the
 markdown -- the visible page shows plain text, never raw marker syntax):
 
-    <!--METRIC:<json-path>#<field.path>:<format>[|n=<field>][|asof=<field>]-->
+    <!--METRIC:<json-path>#<field.path>:<format>[|n=<field>][|asof=<field>][|ci=<lo>,<hi>][|unresolved_if=<field>]-->
     rendered text goes here, replaced on every run
     <!--/METRIC-->
 
-  <json-path>    repo-relative path to a data/*.json file
-  <field.path>   dot-separated path into that JSON (supports nested objects,
-                 e.g. horizons.h1.logistic_metrics.accuracy)
-  <format>       pct1 (80.0%), pct2 (80.00%), num2 (0.98), num3 (0.975),
-                 int (96), raw (verbatim)
-  n=<field>      optional sibling field (same file) supplying the sample size;
-                 rendered as "(n=<value>, as of <date>)" alongside the value
-  asof=<field>   optional sibling field supplying the as-of date/timestamp;
-                 ISO timestamps are truncated to YYYY-MM-DD
+  <json-path>       repo-relative path to a data/*.json file
+  <field.path>      dot-separated path into that JSON (supports nested objects,
+                    e.g. horizons.h1.logistic_metrics.accuracy)
+  <format>          pct1 (80.0%), pct2 (80.00%), num2 (0.98), num3 (0.975),
+                    int (96), raw (verbatim)
+  n=<field>         optional sibling field (same file) supplying the sample size;
+                    rendered as "(n=<value>, ...)" alongside the value
+  asof=<field>      optional sibling field supplying the as-of date/timestamp;
+                    ISO timestamps are truncated to YYYY-MM-DD
+  ci=<lo>,<hi>      optional pair of sibling fields (e.g. Wilson CI bounds),
+                    rendered as "95% CI [lo%, hi%]" -- pct1/pct2 formats only
+  unresolved_if=<field>  optional sibling boolean field; when it is falsy,
+                    appends a fixed "— not yet resolvable at this sample
+                    size" note. A computed flag, never hand-typed prose (see
+                    ml.metrics.compute_band_coverage's resolvable_at_n).
 
 The opening/closing comments are the PERSISTENT template -- unlike a
 one-shot {{placeholder}} that gets consumed on first render (an earlier
@@ -77,7 +83,7 @@ ROOT = Path(__file__).resolve().parent.parent
 TARGET_GLOBS: tuple[str, ...] = ("README.md", "docs/*.md", "docs/adr/*.md")
 
 METRIC_RE = re.compile(
-    r"<!--METRIC:([^#<>]+)#([^:<>]+):([a-z0-9]+)((?:\|[a-z]+=[^<>|]+)*)-->"
+    r"<!--METRIC:([^#<>]+)#([^:<>]+):([a-z0-9]+)((?:\|[a-z_]+=[^<>|]+)*)-->"
     r"(.*?)"
     r"<!--/METRIC-->",
     re.DOTALL,
@@ -139,6 +145,9 @@ def _format_asof(value: object) -> str:
         return text[:10] if len(text) >= 10 and text[4] == "-" else text
 
 
+_UNRESOLVED_NOTE = "not yet resolvable at this sample size"
+
+
 def resolve_marker(json_path: str, field_path: str, fmt: str, modifiers_raw: str) -> str:
     source = f"{json_path}#{field_path}"
     data = _load_json(json_path)
@@ -147,23 +156,55 @@ def resolve_marker(json_path: str, field_path: str, fmt: str, modifiers_raw: str
 
     n_val: str | None = None
     asof_val: str | None = None
-    for key, field in re.findall(r"\|([a-z]+)=([^<>|]+)", modifiers_raw):
-        raw = _get_field(data, field, json_path)
+    ci_val: str | None = None
+    unresolved_note: str | None = None
+    for key, field in re.findall(r"\|([a-z_]+)=([^<>|]+)", modifiers_raw):
         if key == "n":
+            raw = _get_field(data, field, json_path)
             n_val = str(int(raw)) if isinstance(raw, int | float) else str(raw)
         elif key == "asof":
+            raw = _get_field(data, field, json_path)
             asof_val = _format_asof(raw)
+        elif key == "ci":
+            # ci=<lo_field>,<hi_field> -- renders "95% CI [lo%, hi%]", same
+            # format as the marker's own value (pct1/pct2 only; a CI on a
+            # num/int-formatted value isn't a supported combination).
+            try:
+                lo_field, hi_field = field.split(",")
+            except ValueError as exc:
+                raise MetricError(
+                    f"{source}: ci= needs exactly two comma-separated fields"
+                ) from exc
+            lo_raw = _get_field(data, lo_field, json_path)
+            hi_raw = _get_field(data, hi_field, json_path)
+            if fmt not in ("pct1", "pct2"):
+                raise MetricError(f"{source}: ci= modifier only supports pct1/pct2 formats")
+            lo_text = _format_value(lo_raw, fmt, source)
+            hi_text = _format_value(hi_raw, fmt, source)
+            ci_val = f"95% CI [{lo_text}, {hi_text}]"
+        elif key == "unresolved_if":
+            # unresolved_if=<field> -- appends a fixed warning when that
+            # boolean field is falsy (i.e. NOT resolvable at this n). A
+            # computed flag, not hand-typed prose -- see E4a.
+            raw = _get_field(data, field, json_path)
+            if not raw:
+                unresolved_note = _UNRESOLVED_NOTE
         else:
             raise MetricError(f"{source}: unknown modifier {key!r}")
 
     suffix_parts = []
     if n_val is not None:
         suffix_parts.append(f"n={n_val}")
+    if ci_val is not None:
+        suffix_parts.append(ci_val)
     if asof_val is not None:
         suffix_parts.append(f"as of {asof_val}")
+    text = rendered
     if suffix_parts:
-        return f"{rendered} ({', '.join(suffix_parts)})"
-    return rendered
+        text = f"{text} ({', '.join(suffix_parts)})"
+    if unresolved_note is not None:
+        text = f"{text} — {unresolved_note}"
+    return text
 
 
 def _frozen_spans(text: str) -> list[tuple[int, int]]:
