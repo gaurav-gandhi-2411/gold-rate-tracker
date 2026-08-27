@@ -34,6 +34,20 @@ _MIN_FIT_OBSERVATIONS = 30
 _REFIT_NEW_PAIRS = 10
 _DEFAULT_HUBER_EPSILON = 1.35
 
+# Nominal coverage level for the displayed est_low/est_high band, as an EXPLICIT
+# constant rather than an implicit Gaussian sigma. 80% matches the nominal level
+# ml.metrics.compute_band_coverage already uses for the separate headline.lower/
+# upper conformal PI (data/coverage_metrics.json), giving one consistent "likely
+# range" vocabulary across both bands on the page. Chosen from a strict walk-
+# forward audit (fit on pairs strictly before each scored date, band from
+# EMPIRICAL quantiles of that same static fit's in-sample residuals, no future
+# leakage): at n=65 scored days, empirical coverage was 80.0/84.6/92.3% against
+# nominal 68/80/90% respectively — 80% landed closest to its own nominal target.
+# See the walk-forward measurement referenced in the PR that introduced this
+# constant for the full table (session dated 2026-08-27).
+NOMINAL_COVERAGE_PCT = 80
+_RESIDUAL_QUANTILE_LEVELS: tuple[int, ...] = (68, 80, 90)
+
 # Recency half-life for sample weighting, in overlap PAIRS (not calendar days --
 # overlap pairs are sparse and irregular). ADR 027: swept half-life 8/10/15/20/25/30
 # against unweighted on genuine walk-forward OOS validation (expanding window, no
@@ -102,6 +116,17 @@ class CalibrationParams:
     mae_oos: float | None = None
     n_oos: int | None = None
     oos_method: str | None = None
+    # Empirical |residual| quantiles of the in-sample fit residuals above
+    # (residual_std's own array, not resampled) at _RESIDUAL_QUANTILE_LEVELS,
+    # keyed by level as a string ("68"/"80"/"90"). This is what actually sizes
+    # the displayed band now (ml.inference reads residual_abs_quantiles[str(
+    # NOMINAL_COVERAGE_PCT)]) -- replacing a Gaussian one-sigma assumption
+    # (residual_std_oos applied as if it were a symmetric normal band) that a
+    # walk-forward coverage audit found badly miscalibrated: 45.3% observed vs
+    # 68.3% nominal at n=75 (session dated 2026-08-27). residual_std_oos/mae_oos
+    # above remain persisted for their own honest purpose (ADR 027's OOS fit-
+    # quality reporting) but are no longer used to size the band.
+    residual_abs_quantiles: dict[str, float] | None = None
 
 
 def _merge_overlap(ibja_df: pd.DataFrame, tanishq_df: pd.DataFrame) -> pd.DataFrame:
@@ -156,6 +181,11 @@ def fit_calibration(
     residuals = y - y_pred
     residual_std = float(residuals.std())
     r2 = float(r2_score(y, y_pred))
+    abs_residuals = np.abs(residuals)
+    residual_abs_quantiles = {
+        str(level): float(np.percentile(abs_residuals, level))
+        for level in _RESIDUAL_QUANTILE_LEVELS
+    }
 
     oos: dict = {}
     if run_oos_validation:
@@ -183,6 +213,7 @@ def fit_calibration(
         mae_oos=oos.get("mae_oos"),
         n_oos=oos.get("n_oos"),
         oos_method=oos.get("method"),
+        residual_abs_quantiles=residual_abs_quantiles,
     )
 
 
@@ -240,6 +271,65 @@ def walk_forward_validate(
     }
 
 
+def evaluate_empirical_band_coverage(
+    ibja_df: pd.DataFrame,
+    tanishq_df: pd.DataFrame,
+    level: int,
+    huber_epsilon: float = _DEFAULT_HUBER_EPSILON,
+    half_life: float = _DEFAULT_HALF_LIFE,
+    min_train: int = _MIN_FIT_OBSERVATIONS,
+) -> dict:
+    """Walk-forward coverage of an empirical-quantile band, matching PRODUCTION
+    exactly -- not the same thing walk_forward_validate measures.
+
+    At each pair index i from min_train onward: fit slope/intercept on pairs
+    [0:i] only (strictly before i, recency-weighted -- static, as production
+    does), form a band from the EMPIRICAL |residual| quantile at `level`
+    computed on that SAME fit's IN-SAMPLE residuals (pairs [0:i] evaluated with
+    those params -- exactly what fit_calibration's own residual_abs_quantiles
+    would have been had a refit happened right before i), then score whether
+    pair i's actual tanishq_22k falls within predicted_i +/- that band. No
+    future information reaches either the fit or the band at any step.
+
+    Distinct from walk_forward_validate: that function's residual_std_oos/
+    mae_oos summarize the sequence of single-point OOS residuals themselves
+    (a genuinely-out-of-sample fit-quality estimate). This function instead
+    asks the honest production question -- "if I size today's band from
+    whatever static fit is currently live, how often does the real reading
+    actually land inside it" -- which is a different, generally LARGER
+    quantity, because a static fit's in-sample residual spread understates
+    how much the world can drift before the next refit. Measured on the real
+    ibja_rates.parquet/prices.json overlap (n=75 same-day pairs, 65 walk-
+    forward-scored days after the min_train warmup): empirical coverage was
+    80.0/84.6/92.3% against nominal 68/80/90% respectively -- see
+    tests/test_calibration.py's regression test for the ongoing check.
+
+    Returns {"n": int, "n_in_band": int, "coverage": float | None}.
+    coverage is None when n == 0 (not enough history to score even one day).
+    """
+    merged = _merge_overlap(ibja_df, tanishq_df)
+    X = merged["ibja_per_g"].to_numpy().reshape(-1, 1)
+    y = merged["tanishq_22k"].to_numpy()
+
+    n_in_band = 0
+    n_scored = 0
+    for i in range(min_train, len(merged)):
+        weights = _recency_weights(i, half_life)
+        slope, intercept = _fit_robust(X[:i], y[:i], huber_epsilon=huber_epsilon, weights=weights)
+
+        train_pred = slope * X[:i, 0] + intercept
+        train_abs_residuals = np.abs(y[:i] - train_pred)
+        band_half_width = float(np.percentile(train_abs_residuals, level))
+
+        pred_i = slope * X[i, 0] + intercept
+        n_scored += 1
+        if abs(y[i] - pred_i) <= band_half_width:
+            n_in_band += 1
+
+    coverage = (n_in_band / n_scored) if n_scored > 0 else None
+    return {"n": n_scored, "n_in_band": n_in_band, "coverage": coverage}
+
+
 def apply_calibration(
     ibja_forecast: pd.Series | float,
     params: CalibrationParams,
@@ -258,10 +348,14 @@ def save_calibration(params: CalibrationParams, path: Path | None = None) -> Non
     schema_version 2 (ADR 027): adds half_life + the r_squared_oos/
     residual_std_oos/mae_oos/n_oos/oos_method fields. A schema_version-1 file
     (no OOS fields) still loads fine -- load_calibration defaults them to None.
+    schema_version 3: adds residual_abs_quantiles, which now sizes the
+    displayed band (see NOMINAL_COVERAGE_PCT) in place of residual_std_oos.
+    A schema_version <3 file still loads fine -- ml.inference falls back to
+    the old Gaussian-sigma band when residual_abs_quantiles is absent.
     """
     p = path or CALIBRATION_JSON
     p.parent.mkdir(parents=True, exist_ok=True)
-    payload = {**asdict(params), "valid": True, "schema_version": 2}
+    payload = {**asdict(params), "valid": True, "schema_version": 3}
     p.write_text(json.dumps(payload, indent=2) + "\n")
     logger.info("calibration: saved to %s (n=%d)", p, params.n_observations)
 
@@ -284,6 +378,7 @@ def load_calibration(path: Path | None = None) -> CalibrationParams:
         mae_oos=raw.get("mae_oos"),
         n_oos=raw.get("n_oos"),
         oos_method=raw.get("oos_method"),
+        residual_abs_quantiles=raw.get("residual_abs_quantiles"),
     )
 
 

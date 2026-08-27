@@ -35,6 +35,7 @@ from pathlib import Path
 
 import numpy as np
 
+from ml.calibration import NOMINAL_COVERAGE_PCT
 from ml.drivers import compute_driver_attribution
 from ml.notifications import NotificationState
 from ml.volatility import compute_vol_context
@@ -201,7 +202,7 @@ def _try_ibja_calibrated(
     calibration: dict,
     data_dir: Path,
     now: datetime,
-) -> tuple[int, str, int, int, str] | None:
+) -> tuple[int, str, int, int, str, str, int | None, str] | None:
     """Tier 2: IBJA-calibrated estimate. Returns None on any gate failure.
 
     Gates (all must pass):
@@ -209,6 +210,9 @@ def _try_ibja_calibrated(
       - IBJA pm_916 row exists AND its age <= _IBJA_DISPLAY_MAX_AGE_DAYS
     Does NOT touch scraped_at (ADR 021). Caller is responsible for the
     Tanishq-freshness gate (tier 1) before reaching here.
+
+    Returns (current_22k, price_source, est_low, est_high, ibja_asof,
+    band_method, nominal_coverage, freshness_stratum).
     """
     if not calibration.get("valid"):
         return None
@@ -219,15 +223,34 @@ def _try_ibja_calibrated(
     if slope is None or intercept is None or residual_std is None:
         return None
 
-    # ADR 027: prefer the genuinely out-of-sample residual_std_oos (expanding-
-    # window walk-forward, no leakage) for the displayed band when available --
-    # residual_std alone is in-sample (fit and evaluated on the same data) and
-    # per ADR 023's caution must not be treated as a generalization estimate.
-    # calibration.json files predating ADR 027 (schema_version 1) have no
-    # residual_std_oos key at all; falling back to the in-sample residual_std
-    # keeps those working exactly as before.
-    residual_std_oos = calibration.get("residual_std_oos")
-    band_half_width = residual_std_oos if residual_std_oos is not None else residual_std
+    # Band sizing: EMPIRICAL |residual| quantile at the explicit NOMINAL_COVERAGE_PCT
+    # level (see ml.calibration), not a Gaussian one-sigma assumption. A walk-forward
+    # coverage audit (fit on pairs strictly before each scored date, matching this
+    # module's actual static-refit behavior; score against EMPIRICAL quantiles of
+    # that same fit's in-sample residuals; no future leakage) found the previous
+    # approach -- residual_std_oos applied as if it were a symmetric-normal band --
+    # gave 45.3% observed coverage against a 68.3%-implied nominal at n=75. The
+    # empirical-quantile band above measured 84.6% observed vs 80% nominal at n=65
+    # (Wilson 95% CI [73.9%, 91.4%], n=65 -- see the PR that introduced this comment
+    # for the full table; this dataset cannot resolve differences smaller than
+    # roughly 15-20 percentage points at this sample size).
+    # calibration.json files predating this fix (schema_version < 3) have no
+    # residual_abs_quantiles key; fall back to the old residual_std_oos/residual_std
+    # band rather than breaking outright, but flag the fallback via band_method so
+    # it's visible in forecast.json which regime actually produced a given band.
+    residual_abs_quantiles = calibration.get("residual_abs_quantiles")
+    nominal_key = str(NOMINAL_COVERAGE_PCT)
+    if residual_abs_quantiles and nominal_key in residual_abs_quantiles:
+        band_half_width = residual_abs_quantiles[nominal_key]
+        band_method = "empirical_quantile"
+        nominal_coverage: int | None = NOMINAL_COVERAGE_PCT
+    else:
+        residual_std_oos = calibration.get("residual_std_oos")
+        band_half_width = residual_std_oos if residual_std_oos is not None else residual_std
+        band_method = (
+            "residual_std_oos" if residual_std_oos is not None else "residual_std_in_sample"
+        )
+        nominal_coverage = None
 
     # Resilient IBJA parquet read
     try:
@@ -274,20 +297,46 @@ def _try_ibja_calibrated(
     est_high = round(ibja_calibrated_22k + band_half_width)
     ibja_asof_iso = ibja_asof_dt.isoformat()
 
+    # freshness_stratum: same_day vs carry_forward. Emitted for auditability
+    # and future conditioning, but NOT yet used to change band_half_width above
+    # -- the same walk-forward audit stratified by this exact split and found
+    # it underpowered to resolve at current n (same-day n=45, carry-forward
+    # n=20; Wilson 95% CIs overlap almost entirely at every nominal level
+    # tested, and the sign of the tiny observed gap flips across levels, which
+    # is itself evidence of noise rather than a real freshness effect). Do not
+    # start conditioning band_half_width on this field until a re-measurement
+    # with materially more carry-forward history shows a resolvable, consistent
+    # difference -- see the PR that introduced this field for the full table.
+    gap_days = (now.date() - ibja_asof_dt.date()).days
+    freshness_stratum = "same_day" if gap_days == 0 else "carry_forward"
+
     logger.info(
-        "_try_ibja_calibrated: ibja_per_g=%.2f -> Rs.%d [Rs.%d-Rs.%d]  ibja_date=%s",
+        "_try_ibja_calibrated: ibja_per_g=%.2f -> Rs.%d [Rs.%d-Rs.%d]  ibja_date=%s  "
+        "band_method=%s  freshness=%s (gap=%dd)",
         ibja_per_g,
         ibja_calibrated_22k,
         est_low,
         est_high,
         ibja_date_str,
+        band_method,
+        freshness_stratum,
+        gap_days,
     )
-    return ibja_calibrated_22k, "ibja_calibrated", est_low, est_high, ibja_asof_iso
+    return (
+        ibja_calibrated_22k,
+        "ibja_calibrated",
+        est_low,
+        est_high,
+        ibja_asof_iso,
+        band_method,
+        nominal_coverage,
+        freshness_stratum,
+    )
 
 
 def _try_fusion_fallback(
     data_dir: Path,
-) -> tuple[int, str, int, int, str | None, list[str]] | None:
+) -> tuple[int, str, int, int, str | None, list[str], None, None, None] | None:
     """Tier 3: live GRT + Malabar + Kalyan consensus, only reached when both
     Tanishq and IBJA-calibrated are unavailable this cycle. Reuses ml.fusion's
     tested national-benchmark + city-markup engine (ADR 026) — not new modelling.
@@ -331,7 +380,7 @@ def _try_fusion_fallback(
         est_high,
         sources_used,
     )
-    return current, "fusion_consensus", est_low, est_high, None, sources_used
+    return current, "fusion_consensus", est_low, est_high, None, sources_used, None, None, None
 
 
 def _select_price_source(
@@ -340,7 +389,17 @@ def _select_price_source(
     calibration: dict,
     data_dir: Path,
     now: datetime,
-) -> tuple[int, str, int | None, int | None, str | None, list[str] | None]:
+) -> tuple[
+    int,
+    str,
+    int | None,
+    int | None,
+    str | None,
+    list[str] | None,
+    str | None,
+    int | None,
+    str | None,
+]:
     """Select the displayed current price per ADR 025's source hierarchy (+ tier 3).
 
     IBJA-calibrated is the PRIMARY source; a fresh Tanishq scrape is an
@@ -349,9 +408,12 @@ def _select_price_source(
     not an error) — it silently yields to the IBJA-calibrated estimate rather
     than being treated as a failure.
 
-    Returns (current_22k, price_source, est_low, est_high, ibja_asof, fusion_sources).
-    Falls back to (current_22k, "tanishq_scrape", None, None, None, None) — using
-    the last-confirmed Tanishq reading — when every tier fails.
+    Returns (current_22k, price_source, est_low, est_high, ibja_asof, fusion_sources,
+    band_method, nominal_coverage, freshness_stratum). The last three are only
+    populated on tier 2 (ibja_calibrated) -- None on every other tier, since this
+    round only replaced tier 2's band-sizing method (see _try_ibja_calibrated).
+    Falls back to (current_22k, "tanishq_scrape", None, None, None, None, None,
+    None, None) — using the last-confirmed Tanishq reading — when every tier fails.
 
     Tier 1 gate: Tanishq scrape age <= _STALE_THRESHOLD_H — wins outright.
     Tier 2 gates (see _try_ibja_calibrated): calibration.valid, slope/intercept/
@@ -364,9 +426,22 @@ def _select_price_source(
     Does NOT touch scraped_at (ADR 021).
     Does NOT modify the Chronos-horizon calibration block in _build_chronos_companion.
     """
-    _noop: tuple[int, str, int | None, int | None, str | None, list[str] | None] = (
+    _noop: tuple[
+        int,
+        str,
+        int | None,
+        int | None,
+        str | None,
+        list[str] | None,
+        str | None,
+        int | None,
+        str | None,
+    ] = (
         current_22k,
         "tanishq_scrape",
+        None,
+        None,
+        None,
         None,
         None,
         None,
@@ -385,7 +460,21 @@ def _select_price_source(
 
     ibja_result = _try_ibja_calibrated(calibration, data_dir, now)
     if ibja_result is not None:
-        return (*ibja_result, None)  # tier 2 — fusion_sources=None (not a fusion tier)
+        current, source, est_low, est_high, ibja_asof, band_method, nominal_coverage, freshness = (
+            ibja_result
+        )
+        # tier 2 — fusion_sources=None (not a fusion tier)
+        return (
+            current,
+            source,
+            est_low,
+            est_high,
+            ibja_asof,
+            None,
+            band_method,
+            nominal_coverage,
+            freshness,
+        )
 
     fusion_result = _try_fusion_fallback(data_dir)
     if fusion_result is not None:
@@ -442,6 +531,9 @@ def main(now: datetime | None = None) -> None:
             "est_high": None,
             "ibja_asof": None,
             "fusion_sources": None,
+            "band_method": None,
+            "nominal_coverage": None,
+            "freshness_stratum": None,
             "model_status": "insufficient_backtest_history",
             "model_version": "naive_flat_hold",
             "model_fallback": False,
@@ -471,9 +563,17 @@ def main(now: datetime | None = None) -> None:
     )
 
     calibration: dict = _load_json(DATA_DIR / "calibration.json") or {}
-    current_22k, price_source, est_low, est_high, ibja_asof, fusion_sources = _select_price_source(
-        current_22k, scraped_at, calibration, DATA_DIR, now
-    )
+    (
+        current_22k,
+        price_source,
+        est_low,
+        est_high,
+        ibja_asof,
+        fusion_sources,
+        band_method,
+        nominal_coverage,
+        freshness_stratum,
+    ) = _select_price_source(current_22k, scraped_at, calibration, DATA_DIR, now)
 
     # 3. Headline: naive flat-hold
     predicted_22k = current_22k
@@ -539,6 +639,15 @@ def main(now: datetime | None = None) -> None:
         "est_high": est_high,
         "ibja_asof": ibja_asof,
         "fusion_sources": fusion_sources,
+        # Band provenance for est_low/est_high (tier 2 / ibja_calibrated only;
+        # None on every other tier). band_method is "empirical_quantile" when
+        # sized from ml.calibration's residual_abs_quantiles at nominal_coverage
+        # %, or a fallback name when calibration.json predates that field.
+        # freshness_stratum records same_day vs carry_forward IBJA staleness but
+        # does not (yet) change band width -- see _try_ibja_calibrated.
+        "band_method": band_method,
+        "nominal_coverage": nominal_coverage,
+        "freshness_stratum": freshness_stratum,
         "model_fallback": model_fallback,
         # Top-level aliases — read by app.js, drift.py, metrics.py, notifications.py.
         # Removed in a follow-up PWA-update PR after the new schema is rendered in the UI.

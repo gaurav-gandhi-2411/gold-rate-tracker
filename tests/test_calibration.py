@@ -1,15 +1,21 @@
-"""Tests for ml.calibration — no live requests, no filesystem side effects."""
+"""Tests for ml.calibration — no live requests. Read-only real-data checks are
+confined to the coverage regression gate at the bottom of this file (same
+pattern as tests/test_schema_contracts.py); everything else is synthetic."""
 
 from __future__ import annotations
 
 import json
 from datetime import date
+from pathlib import Path
 
 import ml.calibration as cal
 import numpy as np
 import pandas as pd
 import pytest
 from sklearn.linear_model import LinearRegression
+
+ROOT = Path(__file__).resolve().parent.parent
+DATA_DIR = ROOT / "data"
 
 # ---------------------------------------------------------------------------
 # Helpers
@@ -377,9 +383,9 @@ def test_save_includes_valid_true(tmp_path):
     cal.save_calibration(params, p)
     raw = json.loads(p.read_text())
     assert raw["valid"] is True
-    # schema_version 2 (ADR 027): adds half_life + r_squared_oos/residual_std_oos/
-    # mae_oos/n_oos/oos_method fields for genuine out-of-sample validation.
-    assert raw["schema_version"] == 2
+    # schema_version 3: adds residual_abs_quantiles (empirical-quantile band
+    # sizing, replacing the Gaussian-sigma residual_std_oos band).
+    assert raw["schema_version"] == 3
 
 
 def test_save_ends_with_trailing_newline(tmp_path):
@@ -676,3 +682,108 @@ def test_run_refit_excludes_null_pm916_from_overlap_count(tmp_path):
     assert result is False
     loaded = json.loads((tmp_path / "calibration.json").read_text())
     assert loaded["valid"] is False  # calibration must NOT have flipped
+
+
+# ---------------------------------------------------------------------------
+# residual_abs_quantiles / evaluate_empirical_band_coverage
+# ---------------------------------------------------------------------------
+
+
+def test_fit_includes_residual_abs_quantiles():
+    ibja_df, tanishq_df = _make_overlap_df(n=40)
+    params = cal.fit_calibration(ibja_df, tanishq_df, run_oos_validation=False)
+    assert params.residual_abs_quantiles is not None
+    assert set(params.residual_abs_quantiles.keys()) == {"68", "80", "90"}
+
+
+def test_residual_abs_quantiles_monotonic_by_level():
+    # A wider nominal level must never imply a NARROWER band.
+    ibja_df, tanishq_df = _make_overlap_df(n=60, noise_std=25.0)
+    params = cal.fit_calibration(ibja_df, tanishq_df, run_oos_validation=False)
+    q = params.residual_abs_quantiles
+    assert q["68"] <= q["80"] <= q["90"]
+
+
+def test_evaluate_empirical_band_coverage_returns_expected_keys():
+    ibja_df, tanishq_df = _make_overlap_df(n=45)
+    result = cal.evaluate_empirical_band_coverage(ibja_df, tanishq_df, level=80)
+    assert set(result.keys()) == {"n", "n_in_band", "coverage"}
+    assert result["n"] == 45 - cal._MIN_FIT_OBSERVATIONS
+    assert 0 <= result["n_in_band"] <= result["n"]
+
+
+def test_evaluate_empirical_band_coverage_no_leakage():
+    """Mutating a pair strictly AFTER the scored index must not change that
+    index's own band or coverage outcome -- mirrors
+    test_walk_forward_validate_no_leakage's protocol for the same reason."""
+    ibja_df, tanishq_df = _make_overlap_df(n=50, seed=7)
+    result_before = cal.evaluate_empirical_band_coverage(ibja_df, tanishq_df, level=80)
+
+    tanishq_mutated = tanishq_df.copy()
+    tanishq_mutated.loc[tanishq_mutated.index[-1], "22k"] += 5000.0  # blow up the last pair only
+    result_after = cal.evaluate_empirical_band_coverage(ibja_df, tanishq_mutated, level=80)
+
+    # Only the LAST scored day can differ (it's the one point whose actual
+    # value changed); every earlier day's fit, band, and outcome must be
+    # bit-for-bit identical, so n and n_in_band can differ by at most 1.
+    assert result_after["n"] == result_before["n"]
+    assert abs(result_after["n_in_band"] - result_before["n_in_band"]) <= 1
+
+
+def test_evaluate_empirical_band_coverage_insufficient_data_returns_none():
+    ibja_df, tanishq_df = _make_overlap_df(n=cal._MIN_FIT_OBSERVATIONS)  # no scoreable days
+    result = cal.evaluate_empirical_band_coverage(ibja_df, tanishq_df, level=80)
+    assert result["n"] == 0
+    assert result["coverage"] is None
+
+
+# ---------------------------------------------------------------------------
+# Regression gate: production's live data must stay within the walk-forward-
+# measured coverage tolerance around NOMINAL_COVERAGE_PCT.
+#
+# Tolerance derivation (session dated 2026-08-27): a walk-forward audit of
+# this exact method against the real ibja_rates.parquet/prices.json overlap
+# (n=75 same-day pairs, 65 scored days after the min_train warmup) measured
+# 84.6% observed coverage at 80% nominal, with a Wilson 95% CI of
+# [73.9%, 91.4%] -- a 17.5 percentage-point-wide interval. The task that
+# introduced this test specified a default +/-10pp tolerance but required
+# widening it to match the CI when the CI is wider than that -- it is, so the
+# tolerance here is +/-18pp (ceil(17.5)), not +/-10pp. A tighter tolerance
+# would fail intermittently on genuine sampling noise at this sample size,
+# not on a real calibration regression; a materially wider tolerance would
+# stop being a meaningful regression gate at all.
+_COVERAGE_TOLERANCE_PP = 18
+
+
+def test_real_data_empirical_band_coverage_within_tolerance():
+    if not (DATA_DIR / "ibja_rates.parquet").exists() or not (DATA_DIR / "prices.json").exists():
+        pytest.skip("real data files not present in this checkout")
+
+    ibja_df = pd.read_parquet(DATA_DIR / "ibja_rates.parquet")
+    ibja_df = ibja_df[ibja_df["pm_916"].notna()][["date", "pm_916"]]
+
+    prices_raw = json.loads((DATA_DIR / "prices.json").read_text())
+    rows = [
+        {"date": r["timestamp"][:10], "22k": float(r["22k"])}
+        for r in prices_raw
+        if r.get("timestamp") and r.get("22k") is not None
+    ]
+    tanishq_df = pd.DataFrame(rows).sort_values("date").groupby("date").last().reset_index()
+
+    result = cal.evaluate_empirical_band_coverage(
+        ibja_df, tanishq_df, level=cal.NOMINAL_COVERAGE_PCT
+    )
+    if result["n"] < 20:
+        pytest.skip(
+            f"only {result['n']} walk-forward-scored days available yet — too few to gate on"
+        )
+
+    nominal = cal.NOMINAL_COVERAGE_PCT / 100.0
+    tolerance = _COVERAGE_TOLERANCE_PP / 100.0
+    coverage = result["coverage"]
+    assert nominal - tolerance <= coverage <= nominal + tolerance, (
+        f"empirical band coverage {coverage:.1%} (n={result['n']}) has drifted outside "
+        f"[{nominal - tolerance:.0%}, {nominal + tolerance:.0%}] around the "
+        f"{cal.NOMINAL_COVERAGE_PCT}% nominal level — re-run the R2-style walk-forward "
+        f"audit before assuming the band is still well-calibrated."
+    )
