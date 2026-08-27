@@ -40,11 +40,13 @@ _DEFAULT_HUBER_EPSILON = 1.35
 # upper conformal PI (data/coverage_metrics.json), giving one consistent "likely
 # range" vocabulary across both bands on the page. Chosen from a strict walk-
 # forward audit (fit on pairs strictly before each scored date, band from
-# EMPIRICAL quantiles of that same static fit's in-sample residuals, no future
-# leakage): at n=65 scored days, empirical coverage was 80.0/84.6/92.3% against
-# nominal 68/80/90% respectively — 80% landed closest to its own nominal target.
-# See the walk-forward measurement referenced in the PR that introduced this
-# constant for the full table (session dated 2026-08-27).
+# recency-WEIGHTED empirical quantiles of that same static fit's in-sample
+# residuals -- see _weighted_percentile -- no future leakage): at n=45 scored
+# days (the same-day IBJA/Tanishq overlap this module actually fits on),
+# empirical coverage was 68.9/82.2/88.9% against nominal 68/80/90%
+# respectively -- essentially matching nominal within Wilson-CI noise at this
+# sample size. See evaluate_empirical_band_coverage's docstring and the PR
+# that introduced this constant for the full table (session dated 2026-08-27).
 NOMINAL_COVERAGE_PCT = 80
 _RESIDUAL_QUANTILE_LEVELS: tuple[int, ...] = (68, 80, 90)
 
@@ -68,6 +70,33 @@ def _recency_weights(n: int, half_life: float = _DEFAULT_HALF_LIFE) -> np.ndarra
     """
     age = np.arange(n, 0, -1)  # n = oldest (age n), 1 = most recent (age 1)
     return 0.5 ** ((age - 1) / half_life)
+
+
+def _weighted_percentile(values: np.ndarray, weights: np.ndarray, percentile: float) -> float:
+    """Weighted analogue of np.percentile (linear interpolation on the weighted CDF).
+
+    Exists because the residual quantile that sizes the displayed band must use
+    the SAME recency weights as the slope/intercept fit those residuals came
+    from -- an audit (session dated 2026-08-27) found that using
+    np.percentile's plain UNweighted quantile on a recency-WEIGHTED fit's
+    residuals silently let older, larger, less-relevant residuals inflate the
+    band: mean |residual| in the early half of each walk-forward training
+    window measured ~21% larger than the late half (99.5 vs 82.4 Rs/g,
+    n=45 windows), so an unweighted quantile is stale-dispersion-inflated
+    relative to the fit's own effective (recency-weighted) sample. Switching
+    to this weighted quantile closed a measured 45.3%-vs-68.3% / 84.4%-vs-80%
+    -type over-coverage gap down to within Wilson-CI noise at every nominal
+    level tested -- see fit_calibration's own docstring for the numbers.
+    """
+    order = np.argsort(values)
+    v = values[order]
+    w = weights[order]
+    cum_w = np.cumsum(w)
+    cum_w = cum_w / cum_w[-1]
+    target = percentile / 100.0
+    idx = int(np.searchsorted(cum_w, target))
+    idx = min(idx, len(v) - 1)
+    return float(v[idx])
 
 
 def _fit_robust(
@@ -182,8 +211,12 @@ def fit_calibration(
     residual_std = float(residuals.std())
     r2 = float(r2_score(y, y_pred))
     abs_residuals = np.abs(residuals)
+    # Weighted quantile, using the SAME recency weights the fit above used --
+    # see _weighted_percentile's docstring for why an unweighted quantile here
+    # would silently inflate the band with stale, larger, less-relevant
+    # residuals from early in the window.
     residual_abs_quantiles = {
-        str(level): float(np.percentile(abs_residuals, level))
+        str(level): _weighted_percentile(abs_residuals, weights, level)
         for level in _RESIDUAL_QUANTILE_LEVELS
     }
 
@@ -296,13 +329,29 @@ def evaluate_empirical_band_coverage(
     (a genuinely-out-of-sample fit-quality estimate). This function instead
     asks the honest production question -- "if I size today's band from
     whatever static fit is currently live, how often does the real reading
-    actually land inside it" -- which is a different, generally LARGER
-    quantity, because a static fit's in-sample residual spread understates
-    how much the world can drift before the next refit. Measured on the real
-    ibja_rates.parquet/prices.json overlap (n=75 same-day pairs, 65 walk-
-    forward-scored days after the min_train warmup): empirical coverage was
-    80.0/84.6/92.3% against nominal 68/80/90% respectively -- see
-    tests/test_calibration.py's regression test for the ongoing check.
+    actually land inside it".
+
+    The residual quantile is weighted with the SAME recency weights as the
+    fit (_weighted_percentile, not np.percentile) -- an audit found an
+    unweighted quantile here systematically over-covers, because it lets
+    older/larger/less-relevant residuals from early in each expanding window
+    inflate the band relative to the fit's own effective (recency-weighted)
+    sample. A controlled simulation confirmed this directly: bootstrapping
+    i.i.d. noise from the real residual distribution (no real-world drift by
+    construction, 500 replicates) reproduced close-to-nominal coverage
+    (65.9/78.0/87.8% mean vs 68/80/90% nominal) -- ruling out small-sample
+    estimator bias as the cause of the over-coverage seen on real data, and
+    pointing at the real data's own non-stationarity (measured: mean
+    |residual| in the early half of each training window ~99.5 Rs/g vs ~82.4
+    Rs/g in the late half, a real, not simulated, effect) hitting an
+    unweighted quantile. Measured on the real ibja_rates.parquet/prices.json
+    overlap this function actually scores (n=75 same-day pairs -> 45
+    walk-forward-scored days after the min_train warmup -- NOT the larger
+    asof/carry-forward-inclusive set some earlier analysis used): weighted-
+    quantile empirical coverage is 68.9/82.2/88.9% against nominal 68/80/90%
+    respectively, essentially matching nominal within Wilson-CI noise at
+    n=45 -- see tests/test_calibration.py's regression test for the ongoing
+    check.
 
     Returns {"n": int, "n_in_band": int, "coverage": float | None}.
     coverage is None when n == 0 (not enough history to score even one day).
@@ -319,7 +368,7 @@ def evaluate_empirical_band_coverage(
 
         train_pred = slope * X[:i, 0] + intercept
         train_abs_residuals = np.abs(y[:i] - train_pred)
-        band_half_width = float(np.percentile(train_abs_residuals, level))
+        band_half_width = _weighted_percentile(train_abs_residuals, weights, level)
 
         pred_i = slope * X[i, 0] + intercept
         n_scored += 1

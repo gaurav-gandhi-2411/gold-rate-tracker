@@ -741,18 +741,21 @@ def test_evaluate_empirical_band_coverage_insufficient_data_returns_none():
 # Regression gate: production's live data must stay within the walk-forward-
 # measured coverage tolerance around NOMINAL_COVERAGE_PCT.
 #
-# Tolerance derivation (session dated 2026-08-27): a walk-forward audit of
-# this exact method against the real ibja_rates.parquet/prices.json overlap
-# (n=75 same-day pairs, 65 scored days after the min_train warmup) measured
-# 84.6% observed coverage at 80% nominal, with a Wilson 95% CI of
-# [73.9%, 91.4%] -- a 17.5 percentage-point-wide interval. The task that
+# Tolerance derivation (session dated 2026-08-27, revised same day after
+# switching to a recency-weighted quantile -- see _weighted_percentile): a
+# walk-forward audit of this exact method against the real ibja_rates.parquet/
+# prices.json overlap (n=75 same-day pairs -> 45 scored days after the
+# min_train warmup -- this function only ever scores the same-day-matched
+# subset, not a larger asof/carry-forward set) measured 82.2% observed
+# coverage at 80% nominal, with a Wilson 95% CI of [68.7%, 90.7%] -- a 22.0
+# percentage-point-wide interval at this sample size. The task that
 # introduced this test specified a default +/-10pp tolerance but required
 # widening it to match the CI when the CI is wider than that -- it is, so the
-# tolerance here is +/-18pp (ceil(17.5)), not +/-10pp. A tighter tolerance
+# tolerance here is +/-22pp (ceil(22.0)), not +/-10pp. A tighter tolerance
 # would fail intermittently on genuine sampling noise at this sample size,
 # not on a real calibration regression; a materially wider tolerance would
 # stop being a meaningful regression gate at all.
-_COVERAGE_TOLERANCE_PP = 18
+_COVERAGE_TOLERANCE_PP = 22
 
 
 def test_real_data_empirical_band_coverage_within_tolerance():
