@@ -1,12 +1,12 @@
 {
-  "capture_utc": "2026-08-26T19:59:18Z",
-  "as_of_date": "2026-08-26",
+  "capture_utc": "2026-08-27T09:37:04Z",
+  "as_of_date": "2026-08-27",
   "national_failures": {},
   "kalyan_failures": {},
   "snapshot_rows_persisted": 7,
   "national_benchmark": {
-    "value": 14991.666666666668,
-    "band_half_width": 149.91666666666669,
+    "value": 14825.416666666668,
+    "band_half_width": 148.2541666666667,
     "disagreement": false,
     "sources_used": [
       "ibja",
@@ -21,32 +21,32 @@
   },
   "cities": {
     "Bangalore": {
-      "value": 15010.000000000002,
-      "band_half_width": 149.91666666666669,
+      "value": 14940.0,
+      "band_half_width": 148.2541666666667,
       "coverage": "kalyan_anchored",
       "attribution": "National retail consensus, Kalyan-anchored (Kalyan Jewellers \u2014 BANGALORE board rate)",
-      "markup": 1.0012229016120067
+      "markup": 1.0077288440459795
     },
     "Chennai": {
-      "value": 15010.000000000002,
-      "band_half_width": 149.91666666666669,
+      "value": 14940.0,
+      "band_half_width": 148.2541666666667,
       "coverage": "kalyan_anchored",
       "attribution": "National retail consensus, Kalyan-anchored (Kalyan Jewellers \u2014 CHENNAI board rate)",
-      "markup": 1.0012229016120067
+      "markup": 1.0077288440459795
     },
     "Hyderabad": {
-      "value": 15010.000000000002,
-      "band_half_width": 149.91666666666669,
+      "value": 14940.0,
+      "band_half_width": 148.2541666666667,
       "coverage": "kalyan_anchored",
       "attribution": "National retail consensus, Kalyan-anchored (Kalyan Jewellers \u2014 HYDERABAD board rate)",
-      "markup": 1.0012229016120067
+      "markup": 1.0077288440459795
     },
     "Ernakulam": {
-      "value": 15010.000000000002,
-      "band_half_width": 149.91666666666669,
+      "value": 14940.0,
+      "band_half_width": 148.2541666666667,
       "coverage": "kalyan_anchored",
       "attribution": "National retail consensus, Kalyan-anchored (Kalyan Jewellers \u2014 ERNAKULAM board rate)",
-      "markup": 1.0012229016120067
+      "markup": 1.0077288440459795
     }
   }
 }
