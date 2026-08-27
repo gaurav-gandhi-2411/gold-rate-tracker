@@ -510,6 +510,100 @@ def test_band_prefers_residual_std_oos_when_present(tmp_path: object, monkeypatc
     assert fc["est_high"] == 14565  # 14500 + 65 (OOS), not 14600 (in-sample)
 
 
+# schema_version 1: pre-ADR-027, no half_life/OOS fields at all.
+_SCHEMA_1_CALIBRATION = {
+    "slope": 1.0,
+    "intercept": 0.0,
+    "fit_date": "2026-03-01",
+    "n_observations": 40,
+    "residual_std": 90.0,
+    "r_squared": 0.95,
+    "huber_epsilon": 1.35,
+    "valid": True,
+    "schema_version": 1,
+}
+# schema_version 2: ADR 027 (half_life + OOS fields), pre-#1223 -- no
+# residual_abs_quantiles. This is what data/calibration.json ACTUALLY
+# contains on master right now (fit_date 2026-08-24) -- the exact scenario
+# the new empirical-quantile band code will first run unattended against.
+_SCHEMA_2_CALIBRATION = {
+    "slope": 1.0,
+    "intercept": 0.0,
+    "fit_date": "2026-08-24",
+    "n_observations": 72,
+    "residual_std": 78.75,
+    "r_squared": 0.975,
+    "huber_epsilon": 1.35,
+    "half_life": 10.0,
+    "r_squared_oos": 0.99,
+    "residual_std_oos": 65.0,
+    "mae_oos": 36.22,
+    "n_oos": 42,
+    "oos_method": "expanding_window_walk_forward_recency_weighted",
+    "valid": True,
+    "schema_version": 2,
+}
+# schema_version 3: #1223 -- adds residual_abs_quantiles, the new band's
+# preferred (empirical_quantile) source.
+_SCHEMA_3_CALIBRATION = {
+    **_SCHEMA_2_CALIBRATION,
+    "residual_abs_quantiles": {"68": 60.0, "80": 80.0, "90": 100.0},
+    "schema_version": 3,
+}
+
+
+@pytest.mark.smoke
+@pytest.mark.parametrize(
+    "schema_calibration,expected_band_method",
+    [
+        (_SCHEMA_1_CALIBRATION, "residual_std_in_sample"),
+        (_SCHEMA_2_CALIBRATION, "residual_std_oos"),
+        (_SCHEMA_3_CALIBRATION, "empirical_quantile"),
+    ],
+    ids=["schema_v1_legacy", "schema_v2_current_on_disk", "schema_v3_post_refit"],
+)
+def test_tier2_band_complete_for_every_reachable_schema_version(
+    tmp_path: object, monkeypatch: object, schema_calibration: dict, expected_band_method: str
+) -> None:
+    """F1d (session dated 2026-08-28): the tier-2 path must produce a
+    complete, non-None band (est_low/est_high at minimum) against EVERY
+    calibration.json schema currently reachable on master -- not just the
+    newest one. schema_version 2 (no residual_abs_quantiles) is what the
+    real, committed data/calibration.json actually contains right now; the
+    new band code must degrade gracefully to it, not fail or emit a None
+    band, the first time Tanishq goes stale and tier 2 fires unattended."""
+    monkeypatch.setattr(inf, "DATA_DIR", tmp_path)
+
+    now = datetime(2026, 3, 15, 13, 30, tzinfo=UTC)
+    last_ts = datetime(2026, 3, 15, 4, 0, tzinfo=UTC)  # stale -- forces tier 2
+    prices = _make_prices_with_last_ts(40, last_ts, last_22k=14000)
+
+    (tmp_path / "prices.json").write_text(json.dumps(prices))
+    (tmp_path / "backtest.json").write_text(json.dumps(_make_backtest(35)))
+    (tmp_path / "chronos_probe.json").write_text(json.dumps(_make_probe("success")))
+    (tmp_path / "calibration.json").write_text(json.dumps(schema_calibration))
+    _make_ibja_parquet(tmp_path, [{"date": "2026-03-15", "pm_916": 145000.0}])
+
+    inf.main(now=now)
+
+    fc = json.loads((tmp_path / "forecast.json").read_text())
+
+    assert fc["price_source"] == "ibja_calibrated"
+    assert fc["est_low"] is not None
+    assert fc["est_high"] is not None
+    assert fc["est_low"] < fc["current_22k"] < fc["est_high"]
+    assert fc["band_method"] == expected_band_method
+    # nominal_coverage is legitimately None outside the empirical_quantile
+    # regime -- that is the documented, correct signal for "not applicable
+    # in this regime", not a defect; only assert it's populated when it
+    # should be.
+    if expected_band_method == "empirical_quantile":
+        assert fc["nominal_coverage"] is not None
+    assert fc["residual_quantile_source"] is not None
+    assert fc["ibja_asof"] is not None
+    assert fc["freshness_stratum"] is not None
+
+
 # ---------------------------------------------------------------------------
 # Tier 3: fusion-consensus fallback (feat/fusion-fallback-tier)
 # ---------------------------------------------------------------------------
