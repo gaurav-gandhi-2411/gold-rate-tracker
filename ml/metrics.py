@@ -297,14 +297,63 @@ def resolve_pending(
     return resolved_count
 
 
-def compute_band_coverage(entries: list[dict]) -> dict:
+def wilson_confidence_interval(k: int, n: int, z: float = 1.96) -> tuple[float, float]:
+    """Wilson score 95% CI (default z=1.96) for a binomial proportion k/n.
+
+    Preferred over the normal (Wald) approximation at small n / extreme p,
+    where Wald can produce nonsensical bounds outside [0, 1]. Returns
+    (nan, nan) when n == 0 (undefined, not "no interval" -- caller must
+    handle before treating this as a real interval).
+    """
+    if n == 0:
+        return (float("nan"), float("nan"))
+    p = k / n
+    denom = 1 + z**2 / n
+    center = (p + z**2 / (2 * n)) / denom
+    half = (z * ((p * (1 - p) / n + z**2 / (4 * n**2)) ** 0.5)) / denom
+    return (center - half, center + half)
+
+
+# ADR 022 landed 2026-07-17 (commit db0357c), recalibrating the displayed
+# band from h=5 to h=1. A decision made ON OR AFTER this date was generated
+# under the current calibration; anything before it was generated under the
+# OLD (wrong-horizon) one and describes a different band's behavior, not
+# this one's. min_decision_date below defaults to the day after, so the
+# default coverage figure is never contaminated by pre-fix decisions.
+ADR_022_FIX_DATE = "2026-07-18"
+
+
+def compute_band_coverage(
+    entries: list[dict],
+    nominal_pct: int = 80,
+    min_decision_date: str | None = ADR_022_FIX_DATE,
+) -> dict:
     """Empirical coverage of the displayed naive flat-hold PI (lower/upper) vs
     realized outcomes.
 
     This is the range actually shown to users (fc.headline.lower/upper), which
     differs from Chronos's own quantile PI reported in backtest.json — the two
     must not be conflated (see app.js renderMethodology). Grows monotonically
-    over all resolved decisions; no time window, so n only ever increases.
+    over all resolved decisions on/after min_decision_date; no time window
+    otherwise, so n only ever increases.
+
+    min_decision_date (session dated 2026-08-28): defaults to the day after
+    ADR 022's horizon-recalibration fix. Decisions made before that date were
+    generated under a DIFFERENT band (the old h=5 miscalibration) and mixing
+    them into "coverage of the displayed band" silently averages together two
+    different things -- exactly what inflated the all-time figure to ~97% in
+    August while the honest post-fix-only reading sits closer to nominal (see
+    the PR that introduced this parameter for the measured numbers). Pass
+    None to get the old all-time behavior (kept for callers that explicitly
+    want the full history, e.g. an audit).
+
+    Also computes the Wilson 95% CI and a resolvable_at_n flag (session dated
+    2026-08-28): resolvable_at_n is True only when the CI does NOT contain the
+    nominal level, i.e. the observed coverage is statistically distinguishable
+    from nominal at this sample size, not just numerically different from it.
+    A raw point estimate with no CI reads as more precise than the data
+    actually supports -- this makes "not yet resolvable" a computed fact
+    instead of a hand-typed caveat that can drift out of sync with n.
     """
     resolved = [
         e
@@ -313,13 +362,31 @@ def compute_band_coverage(entries: list[dict]) -> dict:
         and isinstance(e.get("lower"), (int, float))
         and isinstance(e.get("upper"), (int, float))
         and isinstance(e.get("actual_next_22k"), (int, float))
+        and (min_decision_date is None or e.get("decision_date", "") >= min_decision_date)
     ]
     n = len(resolved)
     if n == 0:
-        return {"coverage": None, "n": 0, "n_in_band": 0}
+        return {
+            "coverage": None,
+            "n": 0,
+            "n_in_band": 0,
+            "wilson_ci_low": None,
+            "wilson_ci_high": None,
+            "resolvable_at_n": None,
+        }
 
     n_in_band = sum(1 for e in resolved if e["lower"] <= e["actual_next_22k"] <= e["upper"])
-    return {"coverage": round(n_in_band / n, 4), "n": n, "n_in_band": n_in_band}
+    ci_low, ci_high = wilson_confidence_interval(n_in_band, n)
+    nominal = nominal_pct / 100.0
+    resolvable = not (ci_low <= nominal <= ci_high)
+    return {
+        "coverage": round(n_in_band / n, 4),
+        "n": n,
+        "n_in_band": n_in_band,
+        "wilson_ci_low": round(ci_low, 4),
+        "wilson_ci_high": round(ci_high, 4),
+        "resolvable_at_n": resolvable,
+    }
 
 
 def save_coverage_metrics(
@@ -337,25 +404,40 @@ def save_coverage_metrics(
         if isinstance(raw, list):
             entries = raw
 
-    result = compute_band_coverage(entries)
+    nominal_pct = 80
+    # Filtered to decisions made on/after ADR_022_FIX_DATE by default -- see
+    # compute_band_coverage's docstring. This replaces the old all-time
+    # figure (which mixed pre- and post-fix decisions and read ~97% for
+    # months as an artifact of that mixing) with the honest post-fix-only
+    # reading.
+    result = compute_band_coverage(entries, nominal_pct=nominal_pct)
     payload = {
-        "schema_version": 1,
+        "schema_version": 2,
         "generated_at_utc": datetime.now(UTC).isoformat(),
         "band_source": "naive_flat_hold conformal PI (headline.lower/upper), "
         "calibrated on the last 30 backtest folds' next-trading-day (h=1) naive errors "
         "(ADR 022)",
-        "nominal_pct": 80,
+        "nominal_pct": nominal_pct,
         "coverage": result["coverage"],
         "n": result["n"],
         "n_in_band": result["n_in_band"],
-        "note": "Recalibrated 2026-07 from h=5 to h=1 (ADR 022) to match the horizon this "
-        "metric actually tests. n accumulates across the change with no time window, so "
-        "coverage may read above 80% for a while as pre-recalibration decisions are still "
-        "counted; it converges toward the new calibration's true rate as n grows. Per ADR 023: "
-        "while this figure is still pre-fix-dominated, it is NOT yet independent out-of-sample "
-        "evidence for the h=1 band — that confirmation arrives only once enough decisions made "
-        "after 2026-07-17 have resolved. The 84.7% figure in ADR 022 is a retrospective, "
-        "overlapping-window sanity check, not OOS validation.",
+        # schema_version 2 (session dated 2026-08-28): Wilson 95% CI + a
+        # computed resolvable_at_n flag -- see compute_band_coverage's
+        # docstring. Renders as an explicit "not yet resolvable" qualifier in
+        # README.md (scripts/inject_metrics.py) whenever the CI contains the
+        # nominal level, so the caveat can't silently drift stale the way the
+        # hand-typed prose version of this claim previously did.
+        "wilson_ci_low": result["wilson_ci_low"],
+        "wilson_ci_high": result["wilson_ci_high"],
+        "resolvable_at_n": result["resolvable_at_n"],
+        "min_decision_date": ADR_022_FIX_DATE,
+        "note": "Recalibrated 2026-07 from h=5 to h=1 (ADR 022, fix landed 2026-07-17). "
+        "This figure counts ONLY decisions made on/after "
+        f"{ADR_022_FIX_DATE} (min_decision_date) -- pre-fix decisions were generated under "
+        "the old, wrong-horizon band and are excluded rather than averaged in, which is what "
+        "inflated the all-time figure to ~97% for months. n is small and growing slowly (one "
+        "new decision per day); resolvable_at_n (Wilson 95% CI vs nominal_pct) tells you "
+        "honestly whether n is large enough yet to say anything statistically.",
     }
     out_path.write_text(json.dumps(payload, indent=2) + "\n")
     return payload
