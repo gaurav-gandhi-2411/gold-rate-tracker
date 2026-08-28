@@ -163,7 +163,12 @@ def test_tanishq_blocked_ibja_fresh_h5_fires_t9_silent(tmp_path, monkeypatch) ->
         "user sees the calibrated live estimate, not the stale scrape"
     )
     assert fc["current_22k"] is not None and fc["current_22k"] > 0, "price must never be dead"
-    assert fc["est_low"] == 14450 and fc["est_high"] == 14550
+    # _VALID_CAL has no residual_abs_quantiles and only 1 IBJA row (an on-the-fly
+    # fit needs >= 30 overlap pairs) -- G1d: suppress the band rather than
+    # silently substitute the old Gaussian residual_std fallback this session
+    # measured at 45.3% coverage against its own 68.3% nominal claim.
+    assert fc["est_low"] is None and fc["est_high"] is None
+    assert fc["band_unavailable_reason"] is not None
 
     # Layer B: notifications T9, driven off the IBJA gap (not Tanishq's staleness).
     now_ist = now.astimezone(IST)

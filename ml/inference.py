@@ -202,7 +202,22 @@ def _try_ibja_calibrated(
     calibration: dict,
     data_dir: Path,
     now: datetime,
-) -> tuple[int, str, int, int, str, str, int | None, str, str | None] | None:
+) -> (
+    tuple[
+        int,
+        str,
+        int | None,
+        int | None,
+        str,
+        str | None,
+        int | None,
+        str,
+        str | None,
+        float | None,
+        str | None,
+    ]
+    | None
+):
     """Tier 2: IBJA-calibrated estimate. Returns None on any gate failure.
 
     Gates (all must pass):
@@ -212,7 +227,10 @@ def _try_ibja_calibrated(
     Tanishq-freshness gate (tier 1) before reaching here.
 
     Returns (current_22k, price_source, est_low, est_high, ibja_asof,
-    band_method, nominal_coverage, freshness_stratum, residual_quantile_source).
+    band_method, nominal_coverage, freshness_stratum, residual_quantile_source,
+    band_half_width, band_unavailable_reason). est_low/est_high/band_half_width
+    are None (and band_unavailable_reason is set) when no empirically-validated
+    band can be produced -- see the band-sizing block below.
     """
     if not calibration.get("valid"):
         return None
@@ -239,34 +257,86 @@ def _try_ibja_calibrated(
     # full table; this dataset cannot resolve differences smaller than roughly
     # 18-22 percentage points at this sample size).
     # calibration.json files predating this fix (schema_version < 3) have no
-    # residual_abs_quantiles key; fall back to the old residual_std_oos/residual_std
-    # band rather than breaking outright, but flag the fallback via band_method so
-    # it's visible in forecast.json which regime actually produced a given band.
+    # residual_abs_quantiles key. The OLD fallback here substituted the Gaussian
+    # residual_std_oos/residual_std band as if it were a symmetric-normal
+    # interval -- a walk-forward audit of exactly that substitution found 45.3%
+    # empirical coverage against its own 68.3% nominal claim (session dated
+    # 2026-08-27): a band that LOOKS validated but silently isn't. Priority
+    # order now, per that finding:
+    #   1. calibration.json has residual_abs_quantiles -- use it (normal path).
+    #   2. it doesn't, but the raw source data to fit one on the fly exists --
+    #      run the real fit (ml.calibration.fit_calibration, read-only, never
+    #      writes calibration.json -- that stays ml.calibration's own job on
+    #      its own refit cadence) and use ITS residual_abs_quantiles.
+    #   3. neither -- suppress the band entirely (no est_low/est_high) rather
+    #      than emit one this session has measured as unreliable.
+    # Never (2) and (3) both fail into a Gaussian substitute again, and never
+    # emit est_low/est_high together with nominal_coverage=None.
     residual_abs_quantiles = calibration.get("residual_abs_quantiles")
     nominal_key = str(NOMINAL_COVERAGE_PCT)
     fit_date = calibration.get("fit_date")
     fit_n = calibration.get("n_observations")
+    band_half_width: float | None = None
+    band_method: str | None = None
+    nominal_coverage: int | None = None
+    residual_quantile_source: str | None = None
+    band_unavailable_reason: str | None = None
+
     if residual_abs_quantiles and nominal_key in residual_abs_quantiles:
         band_half_width = residual_abs_quantiles[nominal_key]
         band_method = "empirical_quantile"
-        nominal_coverage: int | None = NOMINAL_COVERAGE_PCT
+        nominal_coverage = NOMINAL_COVERAGE_PCT
         # Full provenance for this specific number: which fit's in-sample residual
         # pool it was drawn from, so a forecast.json snapshot is self-auditable
         # without cross-referencing calibration.json's own history.
-        residual_quantile_source: str | None = (
+        residual_quantile_source = (
             f"calibration.residual_abs_quantiles[{nominal_key}] "
             f"(in_sample, fit_date={fit_date}, n={fit_n})"
         )
     else:
-        residual_std_oos = calibration.get("residual_std_oos")
-        band_half_width = residual_std_oos if residual_std_oos is not None else residual_std
-        band_method = (
-            "residual_std_oos" if residual_std_oos is not None else "residual_std_in_sample"
-        )
-        nominal_coverage = None
-        residual_quantile_source = (
-            f"calibration.{band_method} (pre-schema-3 fallback, fit_date={fit_date}, n={fit_n})"
-        )
+        try:
+            import pandas as pd
+
+            from ml.calibration import fit_calibration
+
+            fallback_ibja_df = pd.read_parquet(data_dir / "ibja_rates.parquet")
+            fallback_prices_raw = json.loads((data_dir / "prices.json").read_text())
+            fallback_rows = [
+                {"date": r["timestamp"][:10], "22k": float(r["22k"])}
+                for r in fallback_prices_raw
+                if r.get("timestamp") and r.get("22k") is not None
+            ]
+            fallback_tanishq_df = (
+                pd.DataFrame(fallback_rows).sort_values("date").groupby("date").last().reset_index()
+            )
+            # run_oos_validation=False: this is a live-serving read path, not a
+            # refit -- only the in-sample residual_abs_quantiles are needed here,
+            # so skip walk_forward_validate's extra work.
+            fresh_params = fit_calibration(
+                fallback_ibja_df, fallback_tanishq_df, run_oos_validation=False
+            )
+            fresh_quantiles = fresh_params.residual_abs_quantiles or {}
+            if nominal_key in fresh_quantiles:
+                band_half_width = fresh_quantiles[nominal_key]
+                band_method = "empirical_quantile_on_the_fly"
+                nominal_coverage = NOMINAL_COVERAGE_PCT
+                residual_quantile_source = (
+                    "on_the_fly fit_calibration (calibration.json missing "
+                    f"residual_abs_quantiles; fit_date={fresh_params.fit_date}, "
+                    f"n={fresh_params.n_observations})"
+                )
+        except Exception as exc:
+            logger.warning("_try_ibja_calibrated: on-the-fly quantile fit failed: %s", exc)
+
+        if band_half_width is None:
+            band_unavailable_reason = (
+                "calibration.json lacks residual_abs_quantiles and an on-the-fly fit "
+                "could not be produced (insufficient overlap data or fit failure) -- "
+                "suppressing the band rather than substituting the Gaussian "
+                "residual_std_oos band this session measured at 45.3% coverage "
+                "against its own 68.3% nominal claim"
+            )
+            logger.warning("_try_ibja_calibrated: %s", band_unavailable_reason)
 
     # Resilient IBJA parquet read
     try:
@@ -306,11 +376,13 @@ def _try_ibja_calibrated(
         )
         return None
 
-    # All gates passed — compute calibrated estimate
+    # All gates passed — compute calibrated estimate. est_low/est_high stay
+    # None when band_half_width couldn't be produced (see band-sizing block
+    # above) -- never emit a bounded range next to nominal_coverage=None.
     ibja_per_g = pm_916 / 10.0
     ibja_calibrated_22k = round(slope * ibja_per_g + intercept)
-    est_low = round(ibja_calibrated_22k - band_half_width)
-    est_high = round(ibja_calibrated_22k + band_half_width)
+    est_low = round(ibja_calibrated_22k - band_half_width) if band_half_width is not None else None
+    est_high = round(ibja_calibrated_22k + band_half_width) if band_half_width is not None else None
     ibja_asof_iso = ibja_asof_dt.isoformat()
 
     # freshness_stratum: same_day vs carry_forward. Emitted for auditability
@@ -326,13 +398,13 @@ def _try_ibja_calibrated(
     gap_days = (now.date() - ibja_asof_dt.date()).days
     freshness_stratum = "same_day" if gap_days == 0 else "carry_forward"
 
+    band_str = f"[Rs.{est_low}-Rs.{est_high}]" if band_half_width is not None else "[no band]"
     logger.info(
-        "_try_ibja_calibrated: ibja_per_g=%.2f -> Rs.%d [Rs.%d-Rs.%d]  ibja_date=%s  "
+        "_try_ibja_calibrated: ibja_per_g=%.2f -> Rs.%d %s  ibja_date=%s  "
         "band_method=%s  freshness=%s (gap=%dd)",
         ibja_per_g,
         ibja_calibrated_22k,
-        est_low,
-        est_high,
+        band_str,
         ibja_date_str,
         band_method,
         freshness_stratum,
@@ -348,16 +420,20 @@ def _try_ibja_calibrated(
         nominal_coverage,
         freshness_stratum,
         residual_quantile_source,
+        band_half_width,
+        band_unavailable_reason,
     )
 
 
 def _try_fusion_fallback(
     data_dir: Path,
-) -> tuple[int, str, int, int, str | None, list[str], None, None, None, None] | None:
+) -> tuple[int, str, int, int, str | None, list[str], None, None, None, None, float, None] | None:
     """Tier 3: live GRT + Malabar + Kalyan consensus, only reached when both
     Tanishq and IBJA-calibrated are unavailable this cycle. Reuses ml.fusion's
     tested national-benchmark + city-markup engine (ADR 026) — not new modelling.
     Returns None if every fusion source also fails this cycle (true last resort).
+    band_half_width is always populated here (fuse_city_price computes it
+    deterministically) -- band_unavailable_reason is always None on this tier.
     """
     from ml.fusion import fuse_city_price, fuse_national_benchmark
     from ml.sources.base import SourceNetworkError, SourceStructureError
@@ -408,6 +484,8 @@ def _try_fusion_fallback(
         None,
         None,
         None,
+        city_fused.band_half_width,
+        None,
     )
 
 
@@ -428,6 +506,8 @@ def _select_price_source(
     int | None,
     str | None,
     str | None,
+    float | None,
+    str | None,
 ]:
     """Select the displayed current price per ADR 025's source hierarchy (+ tier 3).
 
@@ -438,11 +518,12 @@ def _select_price_source(
     than being treated as a failure.
 
     Returns (current_22k, price_source, est_low, est_high, ibja_asof, fusion_sources,
-    band_method, nominal_coverage, freshness_stratum, residual_quantile_source). The
-    last four are only populated on tier 2 (ibja_calibrated) -- None on every other
-    tier, since this round only replaced tier 2's band-sizing method (see
-    _try_ibja_calibrated). Falls back to (current_22k, "tanishq_scrape", None, None,
-    None, None, None, None, None, None) — using the last-confirmed Tanishq reading —
+    band_method, nominal_coverage, freshness_stratum, residual_quantile_source,
+    band_half_width, band_unavailable_reason). The last six are only populated on
+    tier 2 (ibja_calibrated) / tier 3 (fusion_consensus, band_half_width +
+    band_unavailable_reason only) as applicable -- None on every other tier.
+    Falls back to (current_22k, "tanishq_scrape", None, None, None, None, None,
+    None, None, None, None, None) — using the last-confirmed Tanishq reading —
     when every tier fails.
 
     Tier 1 gate: Tanishq scrape age <= _STALE_THRESHOLD_H — wins outright.
@@ -467,9 +548,13 @@ def _select_price_source(
         int | None,
         str | None,
         str | None,
+        float | None,
+        str | None,
     ] = (
         current_22k,
         "tanishq_scrape",
+        None,
+        None,
         None,
         None,
         None,
@@ -502,6 +587,8 @@ def _select_price_source(
             nominal_coverage,
             freshness,
             quantile_source,
+            band_half_width,
+            band_unavailable_reason,
         ) = ibja_result
         # tier 2 — fusion_sources=None (not a fusion tier)
         return (
@@ -515,6 +602,8 @@ def _select_price_source(
             nominal_coverage,
             freshness,
             quantile_source,
+            band_half_width,
+            band_unavailable_reason,
         )
 
     fusion_result = _try_fusion_fallback(data_dir)
@@ -576,6 +665,8 @@ def main(now: datetime | None = None) -> None:
             "nominal_coverage": None,
             "freshness_stratum": None,
             "residual_quantile_source": None,
+            "band_half_width": None,
+            "band_unavailable_reason": None,
             "model_status": "insufficient_backtest_history",
             "model_version": "naive_flat_hold",
             "model_fallback": False,
@@ -616,6 +707,8 @@ def main(now: datetime | None = None) -> None:
         nominal_coverage,
         freshness_stratum,
         residual_quantile_source,
+        band_half_width,
+        band_unavailable_reason,
     ) = _select_price_source(current_22k, scraped_at, calibration, DATA_DIR, now)
 
     # 3. Headline: naive flat-hold
@@ -698,6 +791,15 @@ def main(now: datetime | None = None) -> None:
         "nominal_coverage": nominal_coverage,
         "freshness_stratum": freshness_stratum,
         "residual_quantile_source": residual_quantile_source,
+        # Explicit half-width behind est_low/est_high, so a consumer (app.js's
+        # copy) derives its own accuracy claim from this number instead of
+        # independently recomputing one from calibration.json fields that may
+        # not match which band_method actually produced est_low/est_high.
+        # band_unavailable_reason is set (est_low/est_high/band_half_width all
+        # None) when no empirically-validated band could be produced -- never a
+        # band with nominal_coverage=None (see _try_ibja_calibrated).
+        "band_half_width": band_half_width,
+        "band_unavailable_reason": band_unavailable_reason,
         "model_fallback": model_fallback,
         # Top-level aliases — read by app.js, drift.py, metrics.py, notifications.py.
         # Removed in a follow-up PWA-update PR after the new schema is rendered in the UI.
