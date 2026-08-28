@@ -116,6 +116,43 @@ function recoveredAlert() {
  * notification that's easy to miss. A transition back to "ok" from a
  * non-ok level sends one low-priority recovery notice.
  */
+/**
+ * G4a: IST calendar date (YYYY-MM-DD) for a given UTC timestamp. Matches the
+ * rest of this project's alert catalog (ml/notifications.py's T-series
+ * "once per IST day" gating) rather than UTC, so heartbeat cadence reads
+ * the same way every other daily alert in this project already does.
+ */
+export function istDateString(nowMs) {
+  const IST_OFFSET_MS = 5.5 * 3_600_000;
+  return new Date(nowMs + IST_OFFSET_MS).toISOString().slice(0, 10);
+}
+
+/**
+ * G4a: without a heartbeat, this switch cannot report its own liveness --
+ * silence is ambiguous between "everything is fine" and "the switch itself
+ * died" (Cloudflare account issue, quota exhaustion, a bad deploy). Once per
+ * IST calendar day, independent of whatever WARN/ESCALATE/recovery alert may
+ * also have fired this run -- the heartbeat's job is specifically to make
+ * absence-of-alerts informative, not to report site staleness (that's
+ * decideAction's job). Priority 1 (below T-series' informational tier, e.g.
+ * T8 in ml/notifications.py) since "I'm still running" is the least urgent
+ * thing this switch ever says.
+ */
+export function shouldSendHeartbeat(lastHeartbeatDateIst, nowMs) {
+  const todayIst = istDateString(nowMs);
+  return { send: lastHeartbeatDateIst !== todayIst, todayIst };
+}
+
+export function buildHeartbeatAlert(currentLevel, ageHours) {
+  const age = fmtAge(ageHours);
+  return {
+    title: "Gold Tracker: dead-man's switch heartbeat",
+    body: `Still running, checked from Cloudflare. Current forecast.json age: ${age}, level: ${currentLevel}. If this daily heartbeat ever stops arriving, the switch itself has gone down.`,
+    priority: 1,
+    tags: "heartbeat",
+  };
+}
+
 export function decideAction(current, previousState, nowMs) {
   const prevLevel = previousState ? previousState.level : "ok";
   const prevSentAtMs = previousState ? previousState.lastSentAtMs : null;
