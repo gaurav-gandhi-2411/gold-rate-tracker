@@ -393,6 +393,29 @@ already tolerates zero runners being registered.
 
 ---
 
+## Rolling scrape-success-rate metric (H3, added 2026-08-28)
+
+README's Tanishq-access claim used to be hand-typed prose ("blocks automated access
+most of the time") — now driven by `data/tanishq_scrape_success_rate.json`
+(`ml.scrape_metrics`, injected via `scripts/inject_metrics.py`, same mechanism as
+#1228). Source data: `data/tanishq_scrape_outcomes.jsonl`, one append-only record
+per `scrape-tanishq-selfhosted` run (`{timestamp, outcome, fetch_method}`), written
+by that job's own health-recording step — `fetch_method` is read from a stderr
+capture of `scraper/scrape.js`'s existing `[scraper] fetch_method=` log line, kept
+deliberately out of `prices.json`'s own schema (see the step's in-line comment for
+why). The `check` job computes the rolling 7-day rate from that log on its normal
+schedule; no dependency between the two jobs beyond both reading/writing files on
+`master`, same pattern already used for `prices.json` itself.
+
+Measured 2026-08-28 (n=52, 7-day window): **100% overall success, but 0% via the
+plain-HTTP requests path — every single successful scrape went through the
+Playwright fallback.** Tanishq's WAF still blocks the cheap path outright; it just
+doesn't block the residential-IP-plus-real-browser path. Worth knowing before
+"just try the requests path first" gets re-proposed as an optimization — it's
+already tried first (Phi24), and currently never wins.
+
+---
+
 ## Cloudflare Worker (retired 2026-07-16)
 
 A Cloudflare Worker (`gold-rate-tanishq-worker`) ran 2026-06-13–2026-06-25 as a clean-IP
