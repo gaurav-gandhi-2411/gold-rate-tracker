@@ -4,6 +4,11 @@ Independently checks that the **public** site — `data/forecast.json`, fetched
 from `https://gaurav-gandhi-2411.github.io/gold-rate-tracker/data/forecast.json`,
 never anything under `github.com/.../repos/...` — is fresh, and alerts to the
 existing ntfy topic at **WARN (>=5h stale)** / **ESCALATE (>=10h stale)**.
+It also posts a low-priority **daily heartbeat** so its own silence is
+informative (G4a): without it, no ntfy message could ever distinguish "the
+site is fine" from "the switch itself died" (Cloudflare account issue, quota
+exhaustion, a bad deploy). One heartbeat per IST calendar day, independent of
+whether a WARN/ESCALATE also fired that day.
 
 **Why this exists, and why it's not a GitHub Actions workflow:** every other
 alert in this project (T1–T13 in `ml/notifications.py`, the CI-scheduled

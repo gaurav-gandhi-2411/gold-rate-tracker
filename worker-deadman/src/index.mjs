@@ -10,9 +10,12 @@ import {
   classifyStaleness,
   classifyFetchFailure,
   decideAction,
+  shouldSendHeartbeat,
+  buildHeartbeatAlert,
 } from "./deadman.mjs";
 
 const KV_STATE_KEY = "deadman:last_state";
+const KV_HEARTBEAT_KEY = "deadman:last_heartbeat_date_ist";
 const FETCH_TIMEOUT_MS = 10_000;
 
 async function fetchForecast(fetchImpl) {
@@ -80,7 +83,25 @@ export async function runCheck(env, fetchImpl, nowMs) {
     await postToNtfy(fetchImpl, env.NTFY_TOPIC, alert);
   }
 
-  return { level: current.level, ageHours: current.ageHours, sent: send };
+  // G4a: independent of whatever staleness alert may have just fired --
+  // the heartbeat's job is confirming the SWITCH ITSELF ran today, not
+  // reporting site staleness (decideAction's job, above).
+  let heartbeatSent = false;
+  if (env.DEADMAN_STATE) {
+    const lastHeartbeatDateIst = await env.DEADMAN_STATE.get(KV_HEARTBEAT_KEY);
+    const { send: dueToday, todayIst } = shouldSendHeartbeat(lastHeartbeatDateIst, nowMs);
+    if (dueToday) {
+      await postToNtfy(
+        fetchImpl,
+        env.NTFY_TOPIC,
+        buildHeartbeatAlert(current.level, current.ageHours),
+      );
+      await env.DEADMAN_STATE.put(KV_HEARTBEAT_KEY, todayIst);
+      heartbeatSent = true;
+    }
+  }
+
+  return { level: current.level, ageHours: current.ageHours, sent: send, heartbeatSent };
 }
 
 export default {

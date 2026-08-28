@@ -5,6 +5,9 @@ import {
   classifyFetchFailure,
   buildAlert,
   decideAction,
+  istDateString,
+  shouldSendHeartbeat,
+  buildHeartbeatAlert,
   WARN_THRESHOLD_HOURS,
   ESCALATE_THRESHOLD_HOURS,
 } from "../src/deadman.mjs";
@@ -182,18 +185,21 @@ test("runCheck: stale payload (11h old) fires an ESCALATE ntfy POST with the rig
 
   assert.equal(result.level, "escalate");
   assert.equal(result.sent, true);
-  assert.equal(ntfyCalls.length, 1);
-  assert.equal(ntfyCalls[0].url, "https://ntfy.sh/test-gold-topic");
-  assert.equal(ntfyCalls[0].opts.headers.Priority, "5");
-  assert.match(ntfyCalls[0].opts.body, /11\.0h/);
+  // 2, not 1: the ESCALATE alert AND the once-per-day heartbeat (G4a) --
+  // this is also the first run of the IST day against a fresh KV.
+  assert.equal(ntfyCalls.length, 2);
+  const escalateCall = ntfyCalls.find((c) => c.opts.headers.Priority === "5");
+  assert.ok(escalateCall, "expected one ntfy call with Priority 5 (ESCALATE)");
+  assert.equal(escalateCall.url, "https://ntfy.sh/test-gold-topic");
+  assert.match(escalateCall.opts.body, /11\.0h/);
 });
 
-test("runCheck: fresh payload sends nothing", async () => {
+test("runCheck: fresh payload sends no staleness alert (heartbeat is separate -- see G4a tests)", async () => {
   const fetchImpl = async (url) => {
     if (url.includes("forecast.json")) {
       return { ok: true, json: async () => ({ predicted_at: isoHoursAgo(0.5) }) };
     }
-    throw new Error(`unexpected fetch: ${url}`);
+    return { ok: true }; // heartbeat still fires on the first run of the day (G4a)
   };
   const env = { NTFY_TOPIC: "test-gold-topic", DEADMAN_STATE: fakeKv() };
   const result = await runCheck(env, fetchImpl, NOW);
@@ -214,8 +220,11 @@ test("runCheck: repeated ESCALATE runs inside the reminder window only alert onc
   const env = { NTFY_TOPIC: "test-gold-topic", DEADMAN_STATE: fakeKv() };
   await runCheck(env, fetchImpl, NOW);
   const second = await runCheck(env, fetchImpl, NOW + 20 * 60 * 1000); // 20 min later
-  assert.equal(ntfyCount, 1);
+  // 2, not 1: the first run's ESCALATE + its once-per-day heartbeat (G4a).
+  // The second run (same IST day, inside the reminder window) adds neither.
+  assert.equal(ntfyCount, 2);
   assert.equal(second.sent, false);
+  assert.equal(second.heartbeatSent, false);
 });
 
 test("runCheck: HTTP failure on the public URL is unverifiable, still alerts (fail closed, not silently ok)", async () => {
@@ -231,7 +240,9 @@ test("runCheck: HTTP failure on the public URL is unverifiable, still alerts (fa
   const result = await runCheck(env, fetchImpl, NOW);
   assert.equal(result.level, "unverifiable");
   assert.equal(result.sent, true);
-  assert.equal(ntfyCalls.length, 1);
+  // 2, not 1: the unverifiable alert AND the once-per-day heartbeat (G4a) --
+  // a fresh KV means this is also the first run of the IST day.
+  assert.equal(ntfyCalls.length, 2);
 });
 
 test("runCheck: missing NTFY_TOPIC skips cleanly instead of throwing", async () => {
@@ -255,4 +266,90 @@ test("runCheck: corrupt KV state does not crash, treated as first run", async ()
   const result = await runCheck(env, fetchImpl, NOW);
   assert.equal(result.level, "escalate");
   assert.equal(result.sent, true);
+});
+
+// --- G4a: daily heartbeat ---
+
+test("istDateString: converts UTC to the IST calendar date", () => {
+  // 2026-08-28T04:00:00Z + 5:30 = 2026-08-28T09:30 IST -- same calendar day.
+  assert.equal(istDateString(NOW), "2026-08-28");
+  // 2026-08-27T19:00:00Z + 5:30 = 2026-08-28T00:30 IST -- crosses into the next day.
+  assert.equal(istDateString(Date.parse("2026-08-27T19:00:00Z")), "2026-08-28");
+});
+
+test("shouldSendHeartbeat: first-ever run (no prior heartbeat) sends", () => {
+  const { send, todayIst } = shouldSendHeartbeat(null, NOW);
+  assert.equal(send, true);
+  assert.equal(todayIst, "2026-08-28");
+});
+
+test("shouldSendHeartbeat: same IST day as last heartbeat does not re-send", () => {
+  const { send } = shouldSendHeartbeat("2026-08-28", NOW);
+  assert.equal(send, false);
+});
+
+test("shouldSendHeartbeat: a new IST day sends again", () => {
+  const { send } = shouldSendHeartbeat("2026-08-27", NOW);
+  assert.equal(send, true);
+});
+
+test("buildHeartbeatAlert: lowest priority, states current level and age", () => {
+  const alert = buildHeartbeatAlert("ok", 1.2);
+  assert.equal(alert.priority, 1);
+  assert.match(alert.body, /1\.2h/);
+  assert.match(alert.body, /ok/);
+});
+
+test("runCheck: sends a heartbeat on first run of the day, independent of staleness state", async () => {
+  const ntfyCalls = [];
+  const fetchImpl = async (url) => {
+    if (url.includes("forecast.json")) {
+      return { ok: true, json: async () => ({ predicted_at: isoHoursAgo(0.5) }) }; // fresh -- no staleness alert
+    }
+    ntfyCalls.push(url);
+    return { ok: true };
+  };
+  const env = { NTFY_TOPIC: "test-gold-topic", DEADMAN_STATE: fakeKv() };
+  const result = await runCheck(env, fetchImpl, NOW);
+
+  assert.equal(result.sent, false); // no staleness alert -- forecast is fresh
+  assert.equal(result.heartbeatSent, true); // but the heartbeat still fires
+  assert.equal(ntfyCalls.length, 1);
+});
+
+test("runCheck: does not re-send the heartbeat twice on the same IST day", async () => {
+  let ntfyCount = 0;
+  const fetchImpl = async (url) => {
+    if (url.includes("forecast.json")) {
+      return { ok: true, json: async () => ({ predicted_at: isoHoursAgo(0.5) }) };
+    }
+    ntfyCount += 1;
+    return { ok: true };
+  };
+  const env = { NTFY_TOPIC: "test-gold-topic", DEADMAN_STATE: fakeKv() };
+  await runCheck(env, fetchImpl, NOW);
+  const second = await runCheck(env, fetchImpl, NOW + 20 * 60 * 1000); // 20 min later, same IST day
+  assert.equal(ntfyCount, 1);
+  assert.equal(second.heartbeatSent, false);
+});
+
+test("runCheck: heartbeat and a real ESCALATE alert can both fire in the same run", async () => {
+  let ntfyCount = 0;
+  const priorities = [];
+  const fetchImpl = async (url, opts) => {
+    if (url.includes("forecast.json")) {
+      return { ok: true, json: async () => ({ predicted_at: isoHoursAgo(11) }) };
+    }
+    ntfyCount += 1;
+    priorities.push(opts.headers.Priority);
+    return { ok: true };
+  };
+  const env = { NTFY_TOPIC: "test-gold-topic", DEADMAN_STATE: fakeKv() };
+  const result = await runCheck(env, fetchImpl, NOW);
+
+  assert.equal(result.sent, true); // ESCALATE
+  assert.equal(result.heartbeatSent, true); // AND the heartbeat
+  assert.equal(ntfyCount, 2);
+  assert.ok(priorities.includes("5")); // ESCALATE
+  assert.ok(priorities.includes("1")); // heartbeat
 });
