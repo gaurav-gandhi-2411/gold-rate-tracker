@@ -33,7 +33,13 @@
 // (index.html, app.js, i18n.js, style.css) all changed; bumping so every
 // installed client re-fetches instead of serving the pre-batch shell
 // indefinitely.
-const VERSION = "v36-20260811-insights-ux";
+// 2026-08-28 (v37): app.js fix -- the estimate-tier hero render no longer
+// requires est_low/est_high to show the calibrated price. A band-suppressed
+// forecast (new possible state as of this change) used to fall through to
+// rendering the stale last-confirmed Tanishq reading as an unqualified
+// current price; now it correctly shows "≈" + current_22k with the range
+// line hidden. app.js changed; bumping so every installed client re-fetches.
+const VERSION = "v37-20260828-band-suppression-hero-fix";
 const SHELL_CACHE = `gold-shell-${VERSION}`;
 
 const SHELL_FILES = [
