@@ -474,14 +474,20 @@ def test_wilcoxon_p_all_zeros():
 
 
 def test_band_coverage_all_inside():
-    """All resolved entries fall inside [lower, upper] → coverage 1.0."""
+    """All resolved entries fall inside [lower, upper] → coverage 1.0.
+
+    min_decision_date=None: this test is about the coverage arithmetic, not
+    the ADR-022-fix date filter (covered separately below) -- fixture dates
+    predate the filter's default cutoff on purpose (arbitrary, pre-2026-08
+    dates), so the filter must be disabled explicitly here.
+    """
     from ml.metrics import compute_band_coverage
 
     entries = [
         _resolved_entry("2026-05-01", 14845, 14845, 14800, "neutral", "resolved"),
         _resolved_entry("2026-05-02", 14845, 14845, 14900, "neutral", "resolved"),
     ]
-    result = compute_band_coverage(entries)
+    result = compute_band_coverage(entries, min_decision_date=None)
     assert result["n"] == 2
     assert result["n_in_band"] == 2
     assert result["coverage"] == 1.0
@@ -500,7 +506,7 @@ def test_band_coverage_partial():
         ),  # in [14645,15145]
         _resolved_entry("2026-05-03", 14845, 14845, 20000, "neutral", "resolved"),  # outside
     ]
-    result = compute_band_coverage(entries)
+    result = compute_band_coverage(entries, min_decision_date=None)
     assert result["n"] == 3
     assert result["n_in_band"] == 2
     assert abs(result["coverage"] - 2 / 3) < 0.001
@@ -514,8 +520,25 @@ def test_band_coverage_excludes_pending():
         _resolved_entry("2026-05-01", 14845, 14845, 14800, "neutral", "resolved"),
         _entry(decision_date="2026-05-02", outcome="pending", actual_next_22k=None),
     ]
-    result = compute_band_coverage(entries)
+    result = compute_band_coverage(entries, min_decision_date=None)
     assert result["n"] == 1
+
+
+def test_band_coverage_min_decision_date_filters_pre_fix_entries():
+    """Default min_decision_date (ADR_022_FIX_DATE) excludes decisions made
+    before the fix -- the exact behavior that replaces the old all-time
+    figure with the honest post-fix-only one (session dated 2026-08-28)."""
+    from ml.metrics import ADR_022_FIX_DATE, compute_band_coverage
+
+    entries = [
+        _resolved_entry("2026-05-01", 14845, 14845, 14800, "neutral", "resolved"),  # pre-fix
+        _resolved_entry("2026-08-01", 14845, 14845, 14900, "neutral", "resolved"),  # post-fix
+    ]
+    result = compute_band_coverage(entries)  # default filter applied
+    assert result["n"] == 1
+    result_all = compute_band_coverage(entries, min_decision_date=None)
+    assert result_all["n"] == 2
+    assert ADR_022_FIX_DATE == "2026-07-18"
 
 
 def test_band_coverage_empty():
@@ -526,6 +549,73 @@ def test_band_coverage_empty():
     assert result["coverage"] is None
     assert result["n"] == 0
     assert result["n_in_band"] == 0
+    assert result["wilson_ci_low"] is None
+    assert result["wilson_ci_high"] is None
+    assert result["resolvable_at_n"] is None
+
+
+# ============================================================
+# Wilson CI / resolvable_at_n (session dated 2026-08-28) — the coverage claim
+# must render with a computed "not yet resolvable" flag rather than a bare
+# point estimate; these guard the flag's actual boolean logic.
+# ============================================================
+
+
+def test_wilson_ci_matches_known_value():
+    """n=96, k=85 (the real 88.54% observed reading) has a known Wilson 95%
+    CI of approximately [80.6%, 93.5%] -- cross-checked by hand."""
+    from ml.metrics import wilson_confidence_interval
+
+    lo, hi = wilson_confidence_interval(85, 96)
+    assert abs(lo - 0.8064) < 0.001
+    assert abs(hi - 0.9348) < 0.001
+
+
+def test_wilson_ci_undefined_at_n_zero():
+    from ml.metrics import wilson_confidence_interval
+
+    lo, hi = wilson_confidence_interval(0, 0)
+    assert lo != lo  # nan
+    assert hi != hi
+
+
+def test_resolvable_at_n_false_when_ci_contains_nominal():
+    """A small, noisy sample whose CI straddles 80% nominal must NOT claim
+    resolvability -- this is the exact defect the flag exists to prevent."""
+    from ml.metrics import compute_band_coverage
+
+    # 25/35 = 71.4%, Wilson CI [54.9%, 83.7%] -- contains 0.80.
+    entries = [
+        _resolved_entry(f"2026-0{(i % 9) + 1}-01", 14845, 14845, 14845, "neutral", "resolved")
+        for i in range(25)
+    ] + [
+        _resolved_entry(f"2026-0{(i % 9) + 1}-02", 14845, 14845, 30000, "neutral", "resolved")
+        for i in range(10)
+    ]
+    result = compute_band_coverage(entries, nominal_pct=80, min_decision_date=None)
+    assert result["n"] == 35
+    assert result["n_in_band"] == 25
+    assert result["resolvable_at_n"] is False
+    assert result["wilson_ci_low"] <= 0.80 <= result["wilson_ci_high"]
+
+
+def test_resolvable_at_n_true_when_ci_excludes_nominal():
+    """A large sample cleanly above nominal (CI excludes 80%) must claim
+    resolvability -- the flag must be able to say yes, not just no."""
+    from ml.metrics import compute_band_coverage
+
+    entries = [
+        _resolved_entry(f"2026-0{(i % 9) + 1}-01", 14845, 14845, 14845, "neutral", "resolved")
+        for i in range(95)
+    ] + [
+        _resolved_entry(f"2026-0{(i % 9) + 1}-02", 14845, 14845, 30000, "neutral", "resolved")
+        for i in range(5)
+    ]
+    result = compute_band_coverage(entries, nominal_pct=80, min_decision_date=None)
+    assert result["n"] == 100
+    assert result["n_in_band"] == 95
+    assert result["resolvable_at_n"] is True
+    assert not (result["wilson_ci_low"] <= 0.80 <= result["wilson_ci_high"])
 
 
 def test_save_coverage_metrics_persists_and_grows(tmp_path: Path):
@@ -538,16 +628,21 @@ def test_save_coverage_metrics_persists_and_grows(tmp_path: Path):
     metrics_path = tmp_path / "metrics_history.json"
     out_path = tmp_path / "coverage_metrics.json"
 
-    entries = [_resolved_entry("2026-05-01", 14845, 14845, 14800, "neutral", "resolved")]
+    # Post-ADR_022_FIX_DATE dates (2026-08, not 2026-05) -- save_coverage_metrics
+    # applies compute_band_coverage's default post-fix filter (session dated
+    # 2026-08-28); pre-fix dates would be silently excluded and n would stay 0.
+    entries = [_resolved_entry("2026-08-01", 14845, 14845, 14800, "neutral", "resolved")]
     metrics_path.write_text(json.dumps(entries))
 
     payload1 = save_coverage_metrics(metrics_path=metrics_path, out_path=out_path)
     assert payload1["n"] == 1
     assert payload1["coverage"] == 1.0
-    assert payload1["schema_version"] == 1
+    # schema_version 2 (session dated 2026-08-28): adds wilson_ci_low/high +
+    # resolvable_at_n (see compute_band_coverage's docstring).
+    assert payload1["schema_version"] == 2
     assert json.loads(out_path.read_text())["n"] == 1
 
-    entries.append(_resolved_entry("2026-05-02", 14845, 14845, 20000, "neutral", "resolved"))
+    entries.append(_resolved_entry("2026-08-02", 14845, 14845, 20000, "neutral", "resolved"))
     metrics_path.write_text(json.dumps(entries))
 
     payload2 = save_coverage_metrics(metrics_path=metrics_path, out_path=out_path)

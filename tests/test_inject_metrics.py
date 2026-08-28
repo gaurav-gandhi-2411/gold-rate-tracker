@@ -34,6 +34,10 @@ def fixture_json(tmp_path, monkeypatch):
         "n": 96,
         "generated_at_utc": "2026-08-23T02:54:42.208269+00:00",
         "nested": {"deep": {"value": 0.975}},
+        "wilson_ci_low": 0.5494,
+        "wilson_ci_high": 0.8367,
+        "resolvable_at_n": False,
+        "resolvable_true": True,
     }
     (data_dir / "metrics.json").write_text(json.dumps(payload))
     return payload
@@ -183,3 +187,43 @@ def test_check_mode_detects_stale_committed_text(fixture_json, tmp_path):
     rendered, errors = inject_metrics.render_file(stale_file.read_text(encoding="utf-8"))
     assert errors == []
     assert rendered != stale_file.read_text(encoding="utf-8")  # would need rewriting
+
+
+def test_ci_modifier_renders_wilson_bounds(fixture_json):
+    text = _marker("coverage", "pct1", "|ci=wilson_ci_low,wilson_ci_high")
+    rendered, errors = inject_metrics.render_file(text)
+    assert errors == []
+    assert "95% CI [54.9%, 83.7%]" in rendered
+
+
+def test_ci_modifier_rejects_non_percent_format(fixture_json):
+    text = _marker("nested.deep.value", "num3", "|ci=wilson_ci_low,wilson_ci_high")
+    rendered, errors = inject_metrics.render_file(text)
+    assert rendered == text
+    assert len(errors) == 1
+    assert "only supports pct1/pct2" in errors[0]
+
+
+def test_unresolved_if_appends_note_when_false(fixture_json):
+    text = _marker("coverage", "pct1", "|unresolved_if=resolvable_at_n")
+    rendered, errors = inject_metrics.render_file(text)
+    assert errors == []
+    assert "not yet resolvable at this sample size" in rendered
+
+
+def test_unresolved_if_silent_when_true(fixture_json):
+    text = _marker("coverage", "pct1", "|unresolved_if=resolvable_true")
+    rendered, errors = inject_metrics.render_file(text)
+    assert errors == []
+    assert "not yet resolvable" not in rendered
+
+
+def test_all_modifiers_combined(fixture_json):
+    text = _marker(
+        "coverage",
+        "pct1",
+        "|n=n|ci=wilson_ci_low,wilson_ci_high|asof=generated_at_utc|unresolved_if=resolvable_at_n",
+    )
+    rendered, errors = inject_metrics.render_file(text)
+    assert errors == []
+    assert "88.5% (n=96, 95% CI [54.9%, 83.7%], as of 2026-08-23) — not yet resolvable" in rendered
