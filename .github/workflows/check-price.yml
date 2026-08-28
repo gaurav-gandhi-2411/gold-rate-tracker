@@ -130,6 +130,16 @@ jobs:
         continue-on-error: true
         run: python -m ml.calibration
 
+      - name: Compute rolling Tanishq scrape success rate
+        # H3 (session dated 2026-08-28): reads whatever data/tanishq_scrape_
+        # outcomes.jsonl already is on master at checkout time (same "read
+        # whatever's committed" pattern this job already uses for prices.json
+        # itself -- see the comment at the top of this job) -- no dependency
+        # on scrape-tanishq-selfhosted having run in this same workflow
+        # trigger. Feeds README's injected scrape-success-rate metric.
+        continue-on-error: true
+        run: python -m ml.scrape_metrics
+
       - name: Cache Chronos model weights
         uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
@@ -179,7 +189,7 @@ jobs:
           set -e
           git config user.name "gold-rate-bot"
           git config user.email "actions@users.noreply.github.com"
-          git add data/forecast.json data/drift_metrics.json data/metrics_history.json data/ibja_rates.parquet data/chronos_probe.json data/calibration.json data/feature_store/snapshots.parquet || true
+          git add data/forecast.json data/drift_metrics.json data/metrics_history.json data/ibja_rates.parquet data/chronos_probe.json data/calibration.json data/feature_store/snapshots.parquet data/tanishq_scrape_success_rate.json || true
           if git diff --staged --quiet; then
             echo "No changes to commit."
             echo "changed=false" >> "$GITHUB_OUTPUT"
@@ -338,9 +348,16 @@ jobs:
         # the drop-alert (retired in favour of T3 in ml/notifications.py). This
         # step only appends the reading; ml.notifications (in the check job)
         # does the alerting once it next reads this data.
+        # stderr captured separately (H3, session dated 2026-08-28): scrape.js
+        # already logs "[scraper] fetch_method=requests|playwright" to stderr
+        # (Phi24) -- redirecting it to its own file lets the health-recording
+        # step below read which path succeeded, without adding a field to the
+        # reading object itself (which would permanently change prices.json's
+        # schema for every future entry -- avoided on purpose).
         run: |
           set -e
-          node scrape.js | tee /tmp/reading.json
+          node scrape.js 2> /tmp/scrape_stderr.log | tee /tmp/reading.json
+          cat /tmp/scrape_stderr.log  # still visible in the job log
           cat /tmp/reading.json | node update-and-notify.js
 
       - name: Flag scrape miss
@@ -404,6 +421,26 @@ jobs:
             echo "}"
           } > "$HEALTH_FILE"
           git add "$HEALTH_FILE"
+
+          # H3 (session dated 2026-08-28): append one record per run to a
+          # rolling scrape-outcome log -- data/tanishq_scrape_outcomes.jsonl,
+          # same append-only-log convention as data/direction_eval_history.jsonl.
+          # fetch_method read from the stderr capture above (defaults to
+          # "none" when the scrape failed before either path logged anything,
+          # e.g. checkout/npm/playwright-install failing upstream). Still pure
+          # bash -- same host constraint as above; the rolling rate itself is
+          # computed separately by ml.scrape_metrics (Python, in the `check`
+          # job) from this raw log, not here.
+          FETCH_METHOD="none"
+          if [ -f /tmp/scrape_stderr.log ]; then
+            EXTRACTED_METHOD=$(grep -o 'fetch_method=[a-z]*' /tmp/scrape_stderr.log | tail -1 | cut -d= -f2 || true)
+            if [ -n "$EXTRACTED_METHOD" ]; then
+              FETCH_METHOD="$EXTRACTED_METHOD"
+            fi
+          fi
+          OUTCOMES_LOG="data/tanishq_scrape_outcomes.jsonl"
+          echo "{\"timestamp\": \"$(date -u +%Y-%m-%dT%H:%M:%SZ)\", \"outcome\": \"$OUTCOME\", \"fetch_method\": \"$FETCH_METHOD\"}" >> "$OUTCOMES_LOG"
+          git add "$OUTCOMES_LOG"
 
           if git diff --staged --quiet; then
             echo "No changes to commit."
