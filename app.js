@@ -997,9 +997,20 @@ function renderHero(readings, forecast) {
   // ibja_calibrated (tier 2) and fusion_consensus (tier 3) render identically here
   // — the distinguishing honest labeling lives in the banner/pill (renderStaleBanner/
   // renderFreshness), not duplicated a third time in the hero itself.
+  // Deliberately NOT gated on est_low/est_high (G1d): a suppressed band (no
+  // residual_abs_quantiles and no on-the-fly fit possible — see ml/inference.py)
+  // must still show the ≈-prefixed calibrated estimate, just without the range
+  // line below it. Gating this whole tier on est_low/est_high being present used
+  // to be safe only because the old fallback ALWAYS produced a (sometimes
+  // unreliable) band; now that suppression is a real, reachable state, that
+  // gate would silently render the stale last-confirmed Tanishq reading as an
+  // unqualified "current" price — the opposite of what the stale-banner above
+  // it says. current_22k is always the right number for this tier regardless
+  // of whether a band could be sized.
   const isEstimateTier = forecast && (
     forecast.price_source === "ibja_calibrated" || forecast.price_source === "fusion_consensus"
-  ) && forecast.current_22k != null && forecast.est_low != null && forecast.est_high != null;
+  ) && forecast.current_22k != null;
+  const hasBand = forecast && forecast.est_low != null && forecast.est_high != null;
 
   if (isEstimateTier) {
     // Estimate tier (IBJA-calibrated or fusion-consensus) — bounded range still
@@ -1013,8 +1024,12 @@ function renderHero(readings, forecast) {
     priceEl.innerHTML = `≈ ${rupee(forecast.current_22k)}`;
     priceEl.hidden = false;
     if (rangeEl) {
-      rangeEl.textContent = t("heroEstimatedRange", { low: fmtINR(forecast.est_low), high: fmtINR(forecast.est_high) });
-      rangeEl.hidden = false;
+      if (hasBand) {
+        rangeEl.textContent = t("heroEstimatedRange", { low: fmtINR(forecast.est_low), high: fmtINR(forecast.est_high) });
+        rangeEl.hidden = false;
+      } else {
+        rangeEl.hidden = true;
+      }
     }
     // Honest secondary line: the actual last-observed Tanishq reading, dated —
     // never implied current. prices.json holds only genuine scraped Tanishq
