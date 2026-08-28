@@ -676,24 +676,34 @@ _SCHEMA_3_CALIBRATION = {
 
 @pytest.mark.smoke
 @pytest.mark.parametrize(
-    "schema_calibration,expected_band_method",
+    "schema_calibration,expect_band",
     [
-        (_SCHEMA_1_CALIBRATION, "residual_std_in_sample"),
-        (_SCHEMA_2_CALIBRATION, "residual_std_oos"),
-        (_SCHEMA_3_CALIBRATION, "empirical_quantile"),
+        (_SCHEMA_1_CALIBRATION, False),
+        (_SCHEMA_2_CALIBRATION, False),
+        (_SCHEMA_3_CALIBRATION, True),
     ],
     ids=["schema_v1_legacy", "schema_v2_current_on_disk", "schema_v3_post_refit"],
 )
 def test_tier2_band_complete_for_every_reachable_schema_version(
-    tmp_path: object, monkeypatch: object, schema_calibration: dict, expected_band_method: str
+    tmp_path: object, monkeypatch: object, schema_calibration: dict, expect_band: bool
 ) -> None:
-    """F1d (session dated 2026-08-28): the tier-2 path must produce a
-    complete, non-None band (est_low/est_high at minimum) against EVERY
-    calibration.json schema currently reachable on master -- not just the
-    newest one. schema_version 2 (no residual_abs_quantiles) is what the
-    real, committed data/calibration.json actually contains right now; the
-    new band code must degrade gracefully to it, not fail or emit a None
-    band, the first time Tanishq goes stale and tier 2 fires unattended."""
+    """F1d/G1d (session dated 2026-08-28): the tier-2 PRICE ESTIMATE must
+    activate against every calibration.json schema currently reachable on
+    master -- but whether a BAND accompanies it now correctly depends on
+    whether an empirically-validated one can be produced.
+
+    Originally (F1d) this test asserted every schema produces a non-None
+    band, including via the old residual_std_in_sample/residual_std_oos
+    Gaussian substitution for schema_version 1/2. G1d found that
+    substitution measured 45.3% empirical coverage against its own 68.3%
+    nominal claim and removed it. With this fixture's minimal 1-row IBJA
+    parquet (insufficient for G1d's on-the-fly-fit fallback, which needs
+    >= 30 overlap pairs), schema 1/2 now correctly SUPPRESS the band rather
+    than substitute an unreliable one -- schema 3 (has
+    residual_abs_quantiles) still produces a real empirical_quantile band.
+    The price estimate itself (current_22k) activates in every case
+    regardless -- band availability is a separate concern from price
+    availability (see app.js's isEstimateTier/hasBand split, #1237)."""
     monkeypatch.setattr(inf, "DATA_DIR", tmp_path)
 
     now = datetime(2026, 3, 15, 13, 30, tzinfo=UTC)
@@ -711,19 +721,24 @@ def test_tier2_band_complete_for_every_reachable_schema_version(
     fc = json.loads((tmp_path / "forecast.json").read_text())
 
     assert fc["price_source"] == "ibja_calibrated"
-    assert fc["est_low"] is not None
-    assert fc["est_high"] is not None
-    assert fc["est_low"] < fc["current_22k"] < fc["est_high"]
-    assert fc["band_method"] == expected_band_method
-    # nominal_coverage is legitimately None outside the empirical_quantile
-    # regime -- that is the documented, correct signal for "not applicable
-    # in this regime", not a defect; only assert it's populated when it
-    # should be.
-    if expected_band_method == "empirical_quantile":
-        assert fc["nominal_coverage"] is not None
-    assert fc["residual_quantile_source"] is not None
+    assert fc["current_22k"] is not None  # the price estimate always activates
     assert fc["ibja_asof"] is not None
     assert fc["freshness_stratum"] is not None
+
+    if expect_band:
+        assert fc["est_low"] is not None
+        assert fc["est_high"] is not None
+        assert fc["est_low"] < fc["current_22k"] < fc["est_high"]
+        assert fc["band_method"] == "empirical_quantile"
+        assert fc["nominal_coverage"] is not None
+        assert fc["residual_quantile_source"] is not None
+        assert fc["band_unavailable_reason"] is None
+    else:
+        assert fc["est_low"] is None
+        assert fc["est_high"] is None
+        assert fc["band_method"] is None
+        assert fc["nominal_coverage"] is None
+        assert fc["band_unavailable_reason"] is not None
 
 
 # ---------------------------------------------------------------------------
