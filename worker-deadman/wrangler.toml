@@ -9,13 +9,12 @@ compatibility_date = "2026-08-27"
 [triggers]
 crons = ["*/30 * * * *"]
 
-# Created by hand per README.md's deploy step 3 (`wrangler kv namespace create`)
-# -- id filled in after creation, not before, since it doesn't exist yet at
-# commit time. Free-tier KV: 1,000 writes/day, 100,000 reads/day; this
-# Worker uses at most 48 of each/day.
+# Created by hand per README.md's deploy step 2 (`wrangler kv namespace create`).
+# Free-tier KV: 1,000 writes/day, 100,000 reads/day; this Worker uses at most
+# 48 of each/day.
 [[kv_namespaces]]
 binding = "DEADMAN_STATE"
-id = "REPLACE_WITH_KV_NAMESPACE_ID"
+id = "cbaf40f06963460fa19e3624dd9e5542"
 
 # NTFY_TOPIC is set as a Wrangler secret (`wrangler secret put NTFY_TOPIC`),
 # never committed here -- same "treat it like a password" rule as the
