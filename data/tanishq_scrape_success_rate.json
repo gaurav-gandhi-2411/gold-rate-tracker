@@ -1,13 +1,13 @@
 {
   "window_days": 7,
-  "n": 44,
-  "n_success": 44,
+  "n": 43,
+  "n_success": 43,
   "n_failure": 0,
   "n_requests_path": 0,
-  "n_playwright_fallback": 44,
+  "n_playwright_fallback": 43,
   "success_rate": 1.0,
-  "wilson_ci_low": 0.9197016822179859,
-  "wilson_ci_high": 0.9999999999999999,
+  "wilson_ci_low": 0.9179874299767729,
+  "wilson_ci_high": 1.0,
   "schema_version": 1,
-  "generated_at_utc": "2026-08-29T09:58:01.808337+00:00"
+  "generated_at_utc": "2026-08-29T16:40:13.010122+00:00"
 }
