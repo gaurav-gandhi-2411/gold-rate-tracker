@@ -1,5 +1,5 @@
 {
-  "predicted_at": "2026-08-30T23:23:32.654122+00:00",
+  "predicted_at": "2026-08-31T05:19:54.410800+00:00",
   "target_window": "5d",
   "headline": {
     "method": "naive_flat_hold",
@@ -56,7 +56,7 @@
     "direction_consensus": 1.0
   },
   "driver_context": {
-    "computed_at": "2026-08-30T23:23:32.680634+00:00",
+    "computed_at": "2026-08-31T05:19:54.438423+00:00",
     "macro_staleness_days": 0.0,
     "macro_fresh": true,
     "premium_threshold_pct": 15.0,
@@ -119,7 +119,7 @@
   "predicted_22k": 14825,
   "lower": 14628,
   "upper": 15022,
-  "target_time": "2026-08-31T00:00:00+00:00",
+  "target_time": "2026-09-01T00:00:00+00:00",
   "model_status": "naive_headline",
   "model_version": "naive_flat_hold",
   "warmup": false
