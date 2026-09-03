@@ -224,7 +224,9 @@ expected values in `scraper/test_scrape.js`.
 
 ## Self-hosted runner for the Tanishq scrape (optional)
 
-`scrape-tanishq-selfhosted` in `check-price.yml` runs the exact same `scraper/scrape.js` as
+`scrape-tanishq-selfhosted` in `scrape-tanishq-selfhosted.yml` (its own workflow file since
+audit 2026-09 — previously lived inside `check-price.yml`, see "Why this job has its own
+workflow file" below) runs the exact same `scraper/scrape.js` as
 before, just on a `runs-on: [self-hosted, tanishq-scraper]` runner instead of `ubuntu-latest`
 — Tanishq's WAF blocks GitHub-hosted (datacenter) IPs but not residential ones (confirmed
 2026-07-23). No proxies, IP rotation, fingerprint spoofing, or CAPTCHA solving — same code,
@@ -247,8 +249,8 @@ What's already in our favor, checked 2026-07-23:
 - `default_workflow_permissions: read` — the auto-issued `GITHUB_TOKEN` can't push/write via
   the API even if a workflow did run (doesn't limit host-level shell access, see above).
 - Neither `lint.yml` nor `scraper-canary.yml` (the only two `pull_request`-triggered
-  workflows) reference `self-hosted` today, and this job lives only in `check-price.yml`,
-  which never triggers on `pull_request` at all.
+  workflows) reference `self-hosted` today, and this job lives only in
+  `scrape-tanishq-selfhosted.yml`, which never triggers on `pull_request` at all.
 
 What you must do / verify yourself:
 - **GitHub Settings → Actions → General → Fork pull request workflows from outside
@@ -286,7 +288,7 @@ runner. Nothing else in the pipeline depends on it.
    recognizable (e.g. `gg-home-tanishq`).
 4. **Labels:** when prompted (or via `./config.cmd --labels tanishq-scraper` if not prompted),
    add the custom label `tanishq-scraper` — this is what `runs-on: [self-hosted,
-   tanishq-scraper]` in `check-price.yml` targets. (Per the security section above: this
+   tanishq-scraper]` in `scrape-tanishq-selfhosted.yml` targets. (Per the security section above: this
    scopes *this job* to need that label, it does not stop some other job from targeting the
    runner via a bare `self-hosted` request — the fork-approval setting is what actually
    matters.)
@@ -309,10 +311,7 @@ job that never gets picked up after 24h — not before). Confirmed live: dispatc
 drift → inference → commentary → IBJA → calibration → Chronos probe → notifications → metrics
 → feature_store) ran to completion normally while the self-hosted job stayed queued the entire
 time — confirmed via `Forecast written: Rs.13466...` and `No alerts to send this cycle.` in
-that run's own logs. The two jobs share no `needs:` relationship and no concurrency group,
-specifically so a stuck/offline runner can never delay the next scheduled `check` run either —
-see the comments in `check-price.yml` for the mechanism (a shared concurrency group would have
-queued the *next* `check` run behind that same 24h window).
+that run's own logs.
 
 If you stop the runner mid-travel and forget to restart it for weeks, worst case: Tanishq
 enrichment silently stops landing, and the site keeps serving IBJA-calibrated /
@@ -321,6 +320,32 @@ specifically (T9/T11 alert on IBJA/fusion-tier health, not on "did the optional 
 enrichment run this cycle") — that's a deliberate, honest choice: an idle self-hosted runner
 isn't a system failure, it's just "enrichment currently unavailable," which is already the
 system's normal, expected steady state per ADR 025.
+
+### Why this job has its own workflow file (audit 2026-09)
+
+The "share no `needs:`, no shared concurrency group" design above was NOT sufficient to stop
+this job from delaying `check-price.yml`'s own scheduling — measured, not assumed. Over a
+6.93-day post-#1222 window, 28 of 55 expected `check-price.yml` scheduled ticks (50.9%) created
+no run at all; cross-referencing each missed tick's exact timestamp against the prior run's
+per-job completion times, 14 of those 28 (50.0%) coincided with a PRIOR `check-price.yml` run
+whose `scrape-tanishq-selfhosted` job was still sitting non-completed at that exact moment.
+`timeout-minutes: 25` on that job did **not** bound this — GitHub Actions only starts a job's
+timeout clock once a runner actually picks the job up and starts executing it; a job `queued`
+with no runner available accrues zero timeout-minutes clock time regardless of how long it
+waits (confirmed from the job's own recorded duration distribution: median 5.4min across 30
+runs, but the 8 `cancelled`-conclusion runs — all genuinely stuck in queue, not slow execution
+— ranged 2.31h to 5.94h, 6 of them past the 3h mark). A GitHub Actions workflow **run** stays
+non-`completed` until every one of its jobs finishes, independent of `needs:` or per-job
+`concurrency:` — so co-locating this job in `check-price.yml` meant it could hold that run open
+for hours, and the next scheduled trigger for the same workflow does not reliably fire while a
+prior run of it is still open.
+
+**Fix (`fix/selfhosted-job-cannot-block-schedule`):** this job moved into its own workflow file,
+`scrape-tanishq-selfhosted.yml`, with its own independent 3h cron. `check-price.yml`'s `check`
+job now always completes in minutes and can never again share an open workflow run with this
+job, no matter how long a self-hosted runner outage lasts. The 24h auto-cancel / graceful-
+degradation story above is unchanged in substance — it's now scoped to
+`scrape-tanishq-selfhosted.yml`'s own next tick, not `check-price.yml`'s.
 
 ### Self-hosted runner reliability — the "online but jobs keep failing" gap (T12)
 
