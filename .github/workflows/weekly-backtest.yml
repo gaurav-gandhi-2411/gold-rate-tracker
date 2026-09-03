@@ -61,13 +61,24 @@ jobs:
         continue-on-error: true
         run: python -m ml.metrics --resolve
 
+      - name: Re-score IBJA-calibrated band coverage
+        # Separate from ml.metrics's coverage_metrics.json -- that scores
+        # headline.lower/upper (the naive flat-hold conformal PI); this scores
+        # the OTHER displayed band, the IBJA-calibrated tier's est_low/est_high
+        # (P5, audit 2026-09): previously a one-time reading frozen in
+        # ml.calibration.evaluate_empirical_band_coverage's docstring, not
+        # continuously monitored. continue-on-error so a transient data-read
+        # issue here never blocks the backtest commit below.
+        continue-on-error: true
+        run: python -m ml.calibration --score-coverage
+
       - name: Commit backtest results
         id: commit
         run: |
           set -e
           git config user.name "gold-rate-bot"
           git config user.email "actions@users.noreply.github.com"
-          git add data/backtest.json data/metrics_history.json data/coverage_metrics.json || true
+          git add data/backtest.json data/metrics_history.json data/coverage_metrics.json data/calibration_band_coverage.json || true
           if git diff --staged --quiet; then
             echo "No changes to commit."
             echo "changed=false" >> "$GITHUB_OUTPUT"
