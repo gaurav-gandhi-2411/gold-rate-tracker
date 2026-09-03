@@ -3,13 +3,18 @@ import assert from "node:assert/strict";
 import {
   classifyStaleness,
   classifyFetchFailure,
+  classifyTanishqSilence,
   buildAlert,
+  buildTanishqAlert,
   decideAction,
+  decideTanishqAction,
   istDateString,
   shouldSendHeartbeat,
   buildHeartbeatAlert,
   WARN_THRESHOLD_HOURS,
   ESCALATE_THRESHOLD_HOURS,
+  TANISHQ_WARN_HOURS,
+  TANISHQ_ESCALATE_HOURS,
 } from "../src/deadman.mjs";
 import { runCheck } from "../src/index.mjs";
 
@@ -171,7 +176,7 @@ test("runCheck: stale payload (11h old) fires an ESCALATE ntfy POST with the rig
     if (url.includes("forecast.json")) {
       return {
         ok: true,
-        json: async () => ({ predicted_at: staleIso }),
+        json: async () => ({ predicted_at: staleIso, scraped_at: isoHoursAgo(0.5) }),
       };
     }
     if (url.startsWith("https://ntfy.sh/")) {
@@ -197,7 +202,7 @@ test("runCheck: stale payload (11h old) fires an ESCALATE ntfy POST with the rig
 test("runCheck: fresh payload sends no staleness alert (heartbeat is separate -- see G4a tests)", async () => {
   const fetchImpl = async (url) => {
     if (url.includes("forecast.json")) {
-      return { ok: true, json: async () => ({ predicted_at: isoHoursAgo(0.5) }) };
+      return { ok: true, json: async () => ({ predicted_at: isoHoursAgo(0.5), scraped_at: isoHoursAgo(0.5) }) };
     }
     return { ok: true }; // heartbeat still fires on the first run of the day (G4a)
   };
@@ -212,7 +217,7 @@ test("runCheck: repeated ESCALATE runs inside the reminder window only alert onc
   let ntfyCount = 0;
   const fetchImpl = async (url) => {
     if (url.includes("forecast.json")) {
-      return { ok: true, json: async () => ({ predicted_at: staleIso }) };
+      return { ok: true, json: async () => ({ predicted_at: staleIso, scraped_at: isoHoursAgo(0.5) }) };
     }
     ntfyCount += 1;
     return { ok: true };
@@ -256,7 +261,7 @@ test("runCheck: missing NTFY_TOPIC skips cleanly instead of throwing", async () 
 test("runCheck: corrupt KV state does not crash, treated as first run", async () => {
   const fetchImpl = async (url) => {
     if (url.includes("forecast.json")) {
-      return { ok: true, json: async () => ({ predicted_at: isoHoursAgo(11) }) };
+      return { ok: true, json: async () => ({ predicted_at: isoHoursAgo(11), scraped_at: isoHoursAgo(0.5) }) };
     }
     return { ok: true };
   };
@@ -304,7 +309,7 @@ test("runCheck: sends a heartbeat on first run of the day, independent of stalen
   const ntfyCalls = [];
   const fetchImpl = async (url) => {
     if (url.includes("forecast.json")) {
-      return { ok: true, json: async () => ({ predicted_at: isoHoursAgo(0.5) }) }; // fresh -- no staleness alert
+      return { ok: true, json: async () => ({ predicted_at: isoHoursAgo(0.5), scraped_at: isoHoursAgo(0.5) }) }; // fresh -- no staleness alert
     }
     ntfyCalls.push(url);
     return { ok: true };
@@ -321,7 +326,7 @@ test("runCheck: does not re-send the heartbeat twice on the same IST day", async
   let ntfyCount = 0;
   const fetchImpl = async (url) => {
     if (url.includes("forecast.json")) {
-      return { ok: true, json: async () => ({ predicted_at: isoHoursAgo(0.5) }) };
+      return { ok: true, json: async () => ({ predicted_at: isoHoursAgo(0.5), scraped_at: isoHoursAgo(0.5) }) };
     }
     ntfyCount += 1;
     return { ok: true };
@@ -338,7 +343,7 @@ test("runCheck: heartbeat and a real ESCALATE alert can both fire in the same ru
   const priorities = [];
   const fetchImpl = async (url, opts) => {
     if (url.includes("forecast.json")) {
-      return { ok: true, json: async () => ({ predicted_at: isoHoursAgo(11) }) };
+      return { ok: true, json: async () => ({ predicted_at: isoHoursAgo(11), scraped_at: isoHoursAgo(0.5) }) };
     }
     ntfyCount += 1;
     priorities.push(opts.headers.Priority);
@@ -352,4 +357,139 @@ test("runCheck: heartbeat and a real ESCALATE alert can both fire in the same ru
   assert.equal(ntfyCount, 2);
   assert.ok(priorities.includes("5")); // ESCALATE
   assert.ok(priorities.includes("1")); // heartbeat
+});
+
+// --- Q4 (audit 2026-09-03): Tanishq-silence channel ---
+
+test("classifyTanishqSilence: fresh scraped_at is ok", () => {
+  const r = classifyTanishqSilence(isoHoursAgo(1), NOW);
+  assert.equal(r.level, "ok");
+});
+
+test("classifyTanishqSilence: exactly at WARN threshold is warn", () => {
+  const r = classifyTanishqSilence(isoHoursAgo(TANISHQ_WARN_HOURS), NOW);
+  assert.equal(r.level, "warn");
+});
+
+test("classifyTanishqSilence: just under WARN threshold is ok", () => {
+  const r = classifyTanishqSilence(isoHoursAgo(TANISHQ_WARN_HOURS - 0.01), NOW);
+  assert.equal(r.level, "ok");
+});
+
+test("classifyTanishqSilence: exactly at ESCALATE threshold is escalate", () => {
+  const r = classifyTanishqSilence(isoHoursAgo(TANISHQ_ESCALATE_HOURS), NOW);
+  assert.equal(r.level, "escalate");
+});
+
+test("classifyTanishqSilence: missing scraped_at is unverifiable, not ok", () => {
+  const r = classifyTanishqSilence(undefined, NOW);
+  assert.equal(r.level, "unverifiable");
+});
+
+test("classifyTanishqSilence: unparseable scraped_at is unverifiable, not ok", () => {
+  const r = classifyTanishqSilence("not-a-date", NOW);
+  assert.equal(r.level, "unverifiable");
+});
+
+test("buildTanishqAlert: escalate names the runner as the likely cause", () => {
+  const a = buildTanishqAlert("escalate", 80, null);
+  assert.equal(a.priority, 5);
+  assert.match(a.body, /80\.0h/);
+  assert.match(a.body, /self-hosted runner/);
+});
+
+test("buildTanishqAlert: warn is lower priority than the forecast-staleness WARN (4)", () => {
+  const a = buildTanishqAlert("warn", 30, null);
+  assert.equal(a.priority, 3);
+});
+
+test("buildTanishqAlert: ok returns null", () => {
+  assert.equal(buildTanishqAlert("ok", 1, null), null);
+});
+
+test("decideTanishqAction: first-ever run already past ESCALATE sends immediately", () => {
+  const { send, alert, nextState } = decideTanishqAction(
+    { level: "escalate", ageHours: 80, reason: null },
+    null,
+    NOW,
+  );
+  assert.equal(send, true);
+  assert.equal(alert.priority, 5);
+  assert.equal(nextState.level, "escalate");
+});
+
+test("decideTanishqAction: recovering to ok sends a distinct (non-forecast) recovery notice", () => {
+  const prev = { level: "escalate", lastSentAtMs: NOW - 2 * HOUR };
+  const { send, alert } = decideTanishqAction({ level: "ok", ageHours: 0.5, reason: null }, prev, NOW);
+  assert.equal(send, true);
+  assert.match(alert.title, /Tanishq confirmation resumed/);
+});
+
+test("runCheck: scraped_at far in the past fires a Tanishq-silence alert, independent of a fresh predicted_at", () => {
+  const ntfyBodies = [];
+  const fetchImpl = async (url, opts) => {
+    if (url.includes("forecast.json")) {
+      // predicted_at fresh (IBJA-calibrated fallback keeping it alive) --
+      // exactly the scenario Q4 exists for: forecast looks fine, Tanishq
+      // confirmation has actually been silent for days.
+      return {
+        ok: true,
+        json: async () => ({ predicted_at: isoHoursAgo(0.2), scraped_at: isoHoursAgo(100) }),
+      };
+    }
+    ntfyBodies.push(opts.body);
+    return { ok: true };
+  };
+  const env = { NTFY_TOPIC: "test-gold-topic", DEADMAN_STATE: fakeKv() };
+  return runCheck(env, fetchImpl, NOW).then((result) => {
+    assert.equal(result.level, "ok"); // forecast-staleness channel: fine
+    assert.equal(result.sent, false);
+    assert.equal(result.tanishqLevel, "escalate"); // Tanishq channel: not fine
+    assert.equal(result.tanishqSent, true);
+    assert.ok(ntfyBodies.some((b) => b.includes("Tanishq")));
+  });
+});
+
+test("runCheck: a single fetch failure does not double-alert (one root cause, one alert)", async () => {
+  let ntfyCount = 0;
+  const fetchImpl = async (url) => {
+    if (url.includes("forecast.json")) {
+      return {
+        ok: false,
+        status: 503,
+        json: async () => {
+          throw new Error("no body");
+        },
+      };
+    }
+    ntfyCount += 1;
+    return { ok: true };
+  };
+  const env = { NTFY_TOPIC: "test-gold-topic", DEADMAN_STATE: fakeKv() };
+  const result = await runCheck(env, fetchImpl, NOW);
+  assert.equal(result.level, "unverifiable");
+  assert.equal(result.tanishqSent, false); // Tanishq channel skipped, not a second "unverifiable" alert
+  // 2, not 3: the one "unverifiable" alert AND the once-per-day heartbeat --
+  // NOT a second near-identical "could not verify Tanishq" alert for the
+  // same underlying fetch failure.
+  assert.equal(ntfyCount, 2);
+});
+
+test("runCheck: heartbeat body states the Tanishq channel too", async () => {
+  const ntfyCalls = [];
+  const fetchImpl = async (url, opts) => {
+    if (url.includes("forecast.json")) {
+      return {
+        ok: true,
+        json: async () => ({ predicted_at: isoHoursAgo(0.2), scraped_at: isoHoursAgo(2) }),
+      };
+    }
+    ntfyCalls.push(opts);
+    return { ok: true };
+  };
+  const env = { NTFY_TOPIC: "test-gold-topic", DEADMAN_STATE: fakeKv() };
+  await runCheck(env, fetchImpl, NOW);
+  const heartbeat = ntfyCalls.find((c) => c.headers.Priority === "1");
+  assert.ok(heartbeat);
+  assert.match(heartbeat.body, /Tanishq confirmation/);
 });
