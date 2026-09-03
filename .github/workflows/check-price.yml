@@ -183,33 +183,13 @@ jobs:
         continue-on-error: true
         run: python -m ml.feature_store
 
-      - name: Refresh injected doc metrics
-        # Q5 (audit 2026-09-03): docs-freshness (this same lint.yml check) was
-        # failing routinely on essentially every PR, not because of anything
-        # the PR itself did -- README.md/docs/*.md's <!--METRIC:...--> values
-        # are a snapshot only refreshed when someone manually runs this
-        # script and commits, while the data files they read from
-        # (data/*.json) update automatically every ~3h via this exact
-        # workflow. Master's own committed docs drift stale within hours of
-        # any such refresh, and every PR's docs-freshness check runs against
-        # a `refs/pull/N/merge` ref built from CURRENT (already-drifted)
-        # master, not the PR's own branch-point state -- so the check was
-        # correctly detecting real drift, just drift the PR itself had no
-        # part in causing. Root-caused, not routed around: keep the docs
-        # continuously fresh at the same cadence the underlying data
-        # actually changes, so there's nothing left to drift by branch time.
-        # Idempotent (writes only if a resolved value actually changed) and
-        # cheap (no data.json write, just README.md/docs/*.md text).
-        continue-on-error: true
-        run: python scripts/inject_metrics.py
-
       - name: Commit updated data files
         id: commit
         run: |
           set -e
           git config user.name "gold-rate-bot"
           git config user.email "actions@users.noreply.github.com"
-          git add data/forecast.json data/drift_metrics.json data/metrics_history.json data/ibja_rates.parquet data/chronos_probe.json data/calibration.json data/feature_store/snapshots.parquet data/tanishq_scrape_success_rate.json README.md docs/*.md docs/adr/*.md || true
+          git add data/forecast.json data/drift_metrics.json data/metrics_history.json data/ibja_rates.parquet data/chronos_probe.json data/calibration.json data/feature_store/snapshots.parquet data/tanishq_scrape_success_rate.json || true
           if git diff --staged --quiet; then
             echo "No changes to commit."
             echo "changed=false" >> "$GITHUB_OUTPUT"
