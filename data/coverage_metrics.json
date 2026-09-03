@@ -1,10 +1,14 @@
 {
-  "schema_version": 1,
-  "generated_at_utc": "2026-08-23T02:54:42.208269+00:00",
+  "schema_version": 2,
+  "generated_at_utc": "2026-08-30T07:40:36.170407+00:00",
   "band_source": "naive_flat_hold conformal PI (headline.lower/upper), calibrated on the last 30 backtest folds' next-trading-day (h=1) naive errors (ADR 022)",
   "nominal_pct": 80,
-  "coverage": 0.8854,
-  "n": 96,
-  "n_in_band": 85,
-  "note": "Recalibrated 2026-07 from h=5 to h=1 (ADR 022) to match the horizon this metric actually tests. n accumulates across the change with no time window, so coverage may read above 80% for a while as pre-recalibration decisions are still counted; it converges toward the new calibration's true rate as n grows. Per ADR 023: while this figure is still pre-fix-dominated, it is NOT yet independent out-of-sample evidence for the h=1 band \u2014 that confirmation arrives only once enough decisions made after 2026-07-17 have resolved. The 84.7% figure in ADR 022 is a retrospective, overlapping-window sanity check, not OOS validation."
+  "coverage": 0.7381,
+  "n": 42,
+  "n_in_band": 31,
+  "wilson_ci_low": 0.5893,
+  "wilson_ci_high": 0.847,
+  "resolvable_at_n": false,
+  "min_decision_date": "2026-07-18",
+  "note": "Recalibrated 2026-07 from h=5 to h=1 (ADR 022, fix landed 2026-07-17). This figure counts ONLY decisions made on/after 2026-07-18 (min_decision_date) -- pre-fix decisions were generated under the old, wrong-horizon band and are excluded rather than averaged in, which is what inflated the all-time figure to ~97% for months. n is small and growing slowly (one new decision per day); resolvable_at_n (Wilson 95% CI vs nominal_pct) tells you honestly whether n is large enough yet to say anything statistically."
 }

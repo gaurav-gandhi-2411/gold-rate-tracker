@@ -1,17 +1,22 @@
 {
-  "slope": 1.0127655392104487,
-  "intercept": -1.144054422254926,
-  "fit_date": "2026-08-24",
-  "n_observations": 72,
-  "residual_std": 78.75221688021311,
-  "r_squared": 0.9752898358098088,
+  "slope": 1.0142366922447341,
+  "intercept": 7.25873907323282e-05,
+  "fit_date": "2026-08-28",
+  "n_observations": 75,
+  "residual_std": 103.4776313393892,
+  "r_squared": 0.9608468602953815,
   "huber_epsilon": 1.35,
   "half_life": 10.0,
-  "r_squared_oos": 0.9899881132101267,
-  "residual_std_oos": 48.80913205883112,
-  "mae_oos": 36.21871450886335,
-  "n_oos": 42,
+  "r_squared_oos": 0.971521967826761,
+  "residual_std_oos": 94.70351155145673,
+  "mae_oos": 67.86269465228894,
+  "n_oos": 45,
   "oos_method": "expanding_window_walk_forward_recency_weighted",
+  "residual_abs_quantiles": {
+    "68": 73.27115604108803,
+    "80": 92.57659082447572,
+    "90": 115.41821080914451
+  },
   "valid": true,
-  "schema_version": 2
+  "schema_version": 3
 }
