@@ -27,7 +27,7 @@ runs again.
 - `src/index.mjs` — the actual Worker: wires `deadman.mjs` to a real `fetch()`
   of the public site, a KV-backed "last alert sent" state (so a multi-hour
   outage doesn't re-alert every 30 min), and a POST to `ntfy.sh`.
-- `test/deadman.test.mjs` — 26 cases (`node --test`), including a synthetic
+- `test/deadman.test.mjs` — 34 cases (`node --test`), including a synthetic
   stale payload asserting the ESCALATE alert actually fires, dedup-window
   behavior, and fail-closed handling of an unreachable/unparseable payload.
   Wired into CI as a lint gate only (`.github/workflows/lint.yml`,
@@ -95,13 +95,13 @@ wrangler deploy
 Expect output ending in a `https://gold-rate-tracker-deadman.<your-subdomain>.workers.dev`
 URL and a `Cron Trigger` line showing `*/30 * * * *`.
 
-### 6. Confirm it's live
+### 6. Confirm it's deployed (not yet proof it's live — see step 8)
 
 Two independent checks — do both:
 
 **a. Manual on-demand trigger.** The Worker also responds to a plain HTTP
 GET (separate from the cron path, for exactly this purpose). Visit the
-`*.workers.dev` URL printed in step 5, or:
+`*.workers.dev` URL printed by step 5's `wrangler deploy` output, or:
 
 ```
 curl https://gold-rate-tracker-deadman.<your-subdomain>.workers.dev
@@ -110,21 +110,79 @@ curl https://gold-rate-tracker-deadman.<your-subdomain>.workers.dev
 Expect a JSON body like `{"level":"ok","ageHours":1.2,"sent":false}` (or
 `"warn"`/`"escalate"` if the real site happens to be stale right now — if
 so, you should also receive a real ntfy notification within a few seconds).
+A non-200 response or a body missing `level`/`ageHours` means step 5 did
+not actually produce a working deployment — stop and re-check step 5's
+output before continuing.
 
-**b. Cron actually firing.** In the Cloudflare dashboard: **Workers &
-Pages → gold-rate-tracker-deadman → Triggers** tab, confirm the Cron
-Trigger `*/30 * * * *` is listed and enabled. After waiting up to 30
-minutes, **Logs** (or `wrangler tail` run locally) should show an
-invocation with `"source":"cron"` in the trace.
+**b. Cron registered.** In the Cloudflare dashboard, go to:
+`https://dash.cloudflare.com/<account-id>/workers/services/view/gold-rate-tracker-deadman/production/triggers`
+(replace `<account-id>` with `65e3c4a67e072063692db52be17bab3d`, the
+account confirmed in step 1) — the **Triggers** tab. Confirm a Cron Trigger
+row reads `*/30 * * * *` and its toggle is on/enabled. This confirms the
+trigger is *registered*, not that it has *fired* — that's step 8b.
 
-### 7. (Optional but recommended) Force a real end-to-end alert test
+### 7. Set up log visibility before you need it
 
-To see a real ntfy notification arrive without waiting for an actual
-outage: temporarily lower `WARN_THRESHOLD_HOURS`/`ESCALATE_THRESHOLD_HOURS`
-in `src/deadman.mjs` to something below the site's current real age (e.g.
-`0` / `0.01`), `wrangler deploy`, hit the `.workers.dev` URL once (step 6a),
-confirm the ntfy notification arrives, then **revert the thresholds back to
-5/10 and redeploy**. Do not leave the lowered thresholds live.
+Dashboard: `https://dash.cloudflare.com/<account-id>/workers/services/view/gold-rate-tracker-deadman/production/observability/logs`
+(**Workers & Pages → gold-rate-tracker-deadman → Logs** tab). Leave this
+tab open, or in a second terminal run:
+
+```
+wrangler tail gold-rate-tracker-deadman
+```
+
+Either surface will show you a live invocation the moment one happens —
+you need this open *before* step 8b, not after, since Cloudflare Logs only
+capture invocations from the moment observability is first queried onward
+in some dashboard views (`wrangler tail` always captures from when you
+start it).
+
+### 8. Mandatory: prove the Worker is genuinely live, not just deployed
+
+A successful `wrangler deploy` (step 5) and a green curl (step 6a) only
+prove the code runs when *you* invoke it by hand. Neither proves the cron
+trigger fires unattended, and neither proves an alert actually reaches
+ntfy end-to-end. Do both of the following before considering this
+deployment done — do not skip on the assumption steps 5–6 were enough.
+
+**a. Force a real ESCALATE alert (proves the alert path end-to-end).**
+
+1. In `worker-deadman/src/deadman.mjs`, temporarily change:
+   ```
+   export const WARN_THRESHOLD_HOURS = 5;
+   export const ESCALATE_THRESHOLD_HOURS = 10;
+   ```
+   to `0` and `0.01` respectively.
+2. `wrangler deploy`
+3. Hit the `.workers.dev` URL once (same command as step 6a).
+4. Confirm within a few seconds:
+   - the curl response body shows `"level":"escalate"`
+   - a real ntfy notification arrives on your phone/client for the topic
+     set in step 4, titled "Gold Tracker: dead-man's switch ESCALATE"
+5. **Revert** the two threshold values back to `5` and `10` in
+   `src/deadman.mjs`.
+6. `wrangler deploy` again. Re-run step 6a's curl and confirm `"level"`
+   has returned to `"ok"` (or `"warn"`, matching the site's real current
+   age — never `"escalate"` unless the site is genuinely stale). Do not
+   leave the lowered thresholds live even briefly longer than needed to
+   see the ntfy alert land.
+
+**b. Confirm the cron fires unattended (proves the Worker survives without
+being manually poked).**
+
+With step 7's log view already open, wait up to 30 minutes (the cron
+interval) without touching the Worker. Confirm a new invocation appears
+in Logs / `wrangler tail` with a trigger source of `cron` (not `fetch`/
+on-demand). If 30 minutes pass with zero cron-triggered invocations, the
+Trigger shown in step 6b is registered but not actually firing — treat
+that as undeployed and escalate rather than assuming it will start later.
+
+Both 8a and 8b must pass. 8a alone proves the alert *logic and delivery*
+work; 8b alone proves the *scheduler* works. Neither implies the other —
+this repo's own history is a scheduled-trigger silently not firing while
+everything else about the workflow looked healthy (`docs/RUNBOOK.md`,
+2026-08-27 and 2026-09-03 incidents), so do not accept "the Trigger is
+listed in the dashboard" as proof it will actually fire.
 
 ## What this does NOT do
 
