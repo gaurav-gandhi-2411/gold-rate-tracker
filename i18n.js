@@ -203,7 +203,9 @@ const STRINGS = {
     // ── State banners ────────────────────────────────────────────────────────────
     bannerIbjaToday: "This is today's estimated price, based on IBJA's official gold benchmark — we couldn't confirm it against the shop rate just now.",
     bannerIbjaCarryForward: ({ weekday }) => `This is an estimated price, based on IBJA's ${weekday} close (their most recent official rate) — we couldn't confirm it against the shop rate just now.`,
-    calibrationConfidenceAppend: ({ amount }) => ` Based on past comparisons, this kind of estimate is typically within about ₹${amount}/gram of the real price.`,
+    // G2: coverage is forecast.json's own nominal_coverage (e.g. 80), never
+    // hand-typed — driven by whichever band actually produced est_low/est_high.
+    calibrationConfidenceAppend: ({ amount, coverage }) => ` Based on past comparisons, the real price lands within about ₹${amount}/gram of this estimate about ${coverage}% of the time.`,
     bannerFusion: ({ sources }) => `This is an estimated price based on other jewellers' rates (${sources}) — we couldn't reach Tanishq or IBJA just now.`,
     bannerStaleConfirmed: ({ rel }) => `We couldn't get a live price update — this is the last confirmed price, from ${rel}.`,
     unknownTime: "an unknown time",
@@ -509,7 +511,7 @@ const STRINGS = {
     // ── State banners ────────────────────────────────────────────────────────────
     bannerIbjaToday: "यह आज की अनुमानित कीमत है, IBJA के आधिकारिक सोने के बेंचमार्क पर आधारित — हम इसे अभी दुकान की कीमत से जांच नहीं पाए।",
     bannerIbjaCarryForward: ({ weekday }) => `यह एक अनुमानित कीमत है, IBJA के ${weekday} के बंद भाव पर आधारित (उनकी सबसे हाल की आधिकारिक दर) — हम इसे अभी दुकान की कीमत से जांच नहीं पाए।`,
-    calibrationConfidenceAppend: ({ amount }) => ` पिछली तुलनाओं के आधार पर, इस तरह का अनुमान आमतौर पर असली कीमत के ₹${amount}/ग्राम के दायरे में रहता है।`,
+    calibrationConfidenceAppend: ({ amount, coverage }) => ` पिछली तुलनाओं के आधार पर, असली कीमत लगभग ${coverage}% बार इस अनुमान के ₹${amount}/ग्राम के दायरे में रहती है।`,
     bannerFusion: ({ sources }) => `यह अन्य जौहरियों की दरों (${sources}) पर आधारित एक अनुमानित कीमत है — हम अभी Tanishq या IBJA तक नहीं पहुंच पाए।`,
     bannerStaleConfirmed: ({ rel }) => `हमें ताज़ी कीमत नहीं मिल पाई — यह आख़िरी पुष्टि की गई कीमत है, ${rel}।`,
     unknownTime: "अज्ञात समय",

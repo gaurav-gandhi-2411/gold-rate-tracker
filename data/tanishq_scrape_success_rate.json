@@ -1,0 +1,13 @@
+{
+  "window_days": 7,
+  "n": 17,
+  "n_success": 17,
+  "n_failure": 0,
+  "n_requests_path": 0,
+  "n_playwright_fallback": 17,
+  "success_rate": 1.0,
+  "wilson_ci_low": 0.8156763396284354,
+  "wilson_ci_high": 1.0,
+  "schema_version": 1,
+  "generated_at_utc": "2026-09-03T04:11:02.155121+00:00"
+}

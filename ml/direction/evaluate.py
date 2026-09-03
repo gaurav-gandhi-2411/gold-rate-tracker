@@ -35,6 +35,23 @@ from ml.direction.models import (
 # ---------------------------------------------------------------------------
 MIN_TRAIN_SIZE: int = 20
 BASELINE_JSON: Path = DATA_DIR / "direction_baseline.json"
+# How many of the most recent folds' predictions to check for majority-class
+# collapse (G3). 30 matches the walk-forward window already used elsewhere in
+# this eval (e.g. the eval's own recent-trend framing) -- large enough to not
+# flag a short lucky/unlucky streak, small enough to react to the model's
+# actual current behavior rather than being swamped by its multi-year history.
+TRAILING_FOLD_WINDOW: int = 30
+# A model whose trailing-window "up" prediction fraction is at or beyond this
+# threshold (either direction) is treated as having collapsed to the majority
+# class rather than genuinely discriminating. Chosen from this session's own
+# measurement: at both horizons the observed trailing-30 fraction was exactly
+# 1.0 (100% "up"), while the full-history base rates are far lower (h1 51.7%,
+# h2 60.0%) -- 0.95 cleanly separates "the model has a directional lean" from
+# "the model has stopped discriminating at all," with wide margin on both
+# sides of the actually-observed values. Symmetric (fires on near-total
+# "down" collapse too, not just "up") even though only the "up" collapse has
+# been observed here.
+MAJORITY_CLASS_COLLAPSE_THRESHOLD: float = 0.95
 # Append-only measurement log: one compact record per eval run, so the model
 # self-measures as the feature store grows toward a regime where a signal could
 # clear the baseline. The full latest result lives in BASELINE_JSON; this is the
@@ -266,6 +283,30 @@ def _flatten_metrics(metrics_dict: dict) -> dict:
     }
 
 
+def detect_majority_class_collapse(
+    prob_all: list[float],
+    window: int = TRAILING_FOLD_WINDOW,
+    threshold: float = MAJORITY_CLASS_COLLAPSE_THRESHOLD,
+) -> tuple[float | None, bool]:
+    """G3: has the model's own trailing-window prediction stopped varying?
+
+    Pure function (no dataset/model dependency) so it's directly unit-testable
+    without a full walk-forward run. Returns (trailing_up_fraction,
+    majority_class_collapse). trailing_up_fraction is None (not 0.0) when
+    fewer than `window` predictions exist yet -- a short history must not
+    silently read as "not collapsed." Symmetric: fires on near-total "down"
+    collapse too, not just "up" (see MAJORITY_CLASS_COLLAPSE_THRESHOLD's
+    docstring for why 0.95 was chosen).
+    """
+    preds = [1 if p >= 0.5 else 0 for p in prob_all]
+    trailing = preds[-window:]
+    if len(trailing) < window:
+        return None, False
+    up_fraction = float(np.mean(trailing))
+    collapsed = up_fraction >= threshold or up_fraction <= (1.0 - threshold)
+    return up_fraction, collapsed
+
+
 def _print_summary(result: dict) -> None:
     """Print a human-readable walk-forward summary to stdout."""
     print("=== Phi23 Walk-Forward Results ===")
@@ -418,11 +459,25 @@ def run_walk_forward(
         else "N/A"
     )
 
+    # G3: majority-class collapse detection on the logistic model's own
+    # predictions (the model compute_direction_metrics' significance test is
+    # computed against) -- distinct from always_up_baseline_accuracy above,
+    # which describes the LABELS' base rate, not what the model is predicting.
+    # A model can be discriminating fine even when the base rate is skewed;
+    # what matters here is whether the MODEL'S OWN predictions have stopped
+    # varying.
+    trailing_30_fold_up_fraction, majority_class_collapse = detect_majority_class_collapse(
+        log_prob_all
+    )
+
     result = {
         "n_test_folds": n_test_folds,
         "n_skipped_folds": n_skipped,
         "min_train_size": min_train_size,
         "always_up_baseline_accuracy": always_up_baseline_accuracy,
+        "trailing_30_fold_up_fraction": trailing_30_fold_up_fraction,
+        "majority_class_collapse": majority_class_collapse,
+        "majority_class_collapse_threshold": MAJORITY_CLASS_COLLAPSE_THRESHOLD,
         "logistic_metrics": _flatten_metrics(log_metrics),
         "lightgbm_metrics": _flatten_metrics(lgbm_metrics),
         "persistence_metrics": _flatten_metrics(persistence_metrics),
@@ -462,6 +517,8 @@ def append_history(result: dict, path: Path = HISTORY_JSONL) -> None:
         log = wf.get("logistic_metrics", {})
         record[f"{hkey}_n_folds"] = wf.get("n_test_folds")
         record[f"{hkey}_base_rate"] = wf.get("always_up_baseline_accuracy")
+        record[f"{hkey}_trailing_30_up_frac"] = wf.get("trailing_30_fold_up_fraction")
+        record[f"{hkey}_majority_collapse"] = wf.get("majority_class_collapse")
         record[f"{hkey}_logistic_acc"] = log.get("accuracy")
         record[f"{hkey}_logistic_brier"] = log.get("brier")
         record[f"{hkey}_logistic_ece"] = log.get("ece")

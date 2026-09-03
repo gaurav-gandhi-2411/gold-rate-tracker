@@ -254,8 +254,11 @@ def test_valid_true_stale_scrape_ibja_fresh(tmp_path: object, monkeypatch: objec
 
     assert fc["price_source"] == "ibja_calibrated"
     assert fc["current_22k"] == round(1.0 * 14400.0 + 100.0)  # 14500
-    assert fc["est_low"] == round(14500 - 50.0)  # 14450
-    assert fc["est_high"] == round(14500 + 50.0)  # 14550
+    # G1d: no residual_abs_quantiles and only 1 IBJA row (on-the-fly fit needs
+    # >= 30 overlap pairs) -> band suppressed, not the old Gaussian residual_std
+    # substitute this session measured at 45.3% coverage against 68.3% nominal.
+    assert fc["est_low"] is None and fc["est_high"] is None
+    assert fc["band_unavailable_reason"] is not None
     assert fc["scraped_at"] == expected_scraped_at, (
         "scraped_at must NOT be overwritten with IBJA time"
     )
@@ -316,7 +319,10 @@ def test_valid_true_ibja_24h_old_still_activates(tmp_path: object, monkeypatch: 
     fc = json.loads((tmp_path / "forecast.json").read_text())
     assert fc["price_source"] == "ibja_calibrated", "24h-old IBJA must still serve H5 estimate"
     assert fc["current_22k"] == 14500
-    assert fc["est_low"] == 14450 and fc["est_high"] == 14550
+    # G1d: band suppressed (no residual_abs_quantiles, insufficient overlap for
+    # an on-the-fly fit) -- the price estimate still activates independently.
+    assert fc["est_low"] is None and fc["est_high"] is None
+    assert fc["band_unavailable_reason"] is not None
 
 
 @pytest.mark.smoke
@@ -447,7 +453,12 @@ def test_ibja_parquet_unreadable_noop(tmp_path: object, monkeypatch: object) -> 
 
 @pytest.mark.smoke
 def test_band_unit_scaling_correctness(tmp_path: object, monkeypatch: object) -> None:
-    """residual_std is applied directly (INR/g at 22k) — no extra scaling factor."""
+    """G1d superseded this test's original premise: residual_std is no longer
+    used to size the displayed band at all (that Gaussian-substitution path was
+    removed -- session-measured at 45.3% coverage against its own 68.3% nominal
+    claim). With no residual_abs_quantiles and only 1 IBJA row (an on-the-fly
+    fit needs >= 30 overlap pairs), the correct current behavior is suppression,
+    not a residual_std-scaled band -- verifying that instead."""
     monkeypatch.setattr(inf, "DATA_DIR", tmp_path)
 
     now = datetime(2026, 3, 15, 13, 30, tzinfo=UTC)
@@ -468,17 +479,19 @@ def test_band_unit_scaling_correctness(tmp_path: object, monkeypatch: object) ->
     fc = json.loads((tmp_path / "forecast.json").read_text())
 
     assert fc["current_22k"] == 14500
-    assert fc["est_low"] == 14400  # exactly 100 INR/g below
-    assert fc["est_high"] == 14600  # exactly 100 INR/g above
-    assert fc["est_high"] - fc["est_low"] == 200  # band width = 2 * residual_std
+    assert fc["est_low"] is None and fc["est_high"] is None
+    assert fc["band_unavailable_reason"] is not None
 
 
 @pytest.mark.smoke
 def test_band_prefers_residual_std_oos_when_present(tmp_path: object, monkeypatch: object) -> None:
-    """ADR 027: when calibration.json carries residual_std_oos (genuine
-    out-of-sample), the displayed band must use it instead of the in-sample
-    residual_std -- residual_std alone must never be cited as the real
-    uncertainty estimate once an OOS number exists."""
+    """SUPERSEDED by G1d: ADR 027's residual_std_oos-over-residual_std preference
+    applied to a Gaussian-substitute band this session measured at 45.3%
+    coverage against its own 68.3% nominal claim -- that whole substitution
+    path is now removed, so neither field sizes the band anymore regardless of
+    which is present. With no residual_abs_quantiles and only 1 IBJA row (an
+    on-the-fly fit needs >= 30 overlap pairs), the correct current behavior is
+    suppression -- verifying that instead of the old OOS-preference assertion."""
     monkeypatch.setattr(inf, "DATA_DIR", tmp_path)
 
     now = datetime(2026, 3, 15, 13, 30, tzinfo=UTC)
@@ -494,8 +507,8 @@ def test_band_prefers_residual_std_oos_when_present(tmp_path: object, monkeypatc
                 "valid": True,
                 "slope": 1.0,
                 "intercept": 0.0,
-                "residual_std": 100.0,  # in-sample -- must NOT be used when OOS present
-                "residual_std_oos": 65.0,  # genuine OOS -- must be used instead
+                "residual_std": 100.0,  # neither this nor OOS below sizes the band anymore
+                "residual_std_oos": 65.0,
             }
         )
     )
@@ -506,8 +519,226 @@ def test_band_prefers_residual_std_oos_when_present(tmp_path: object, monkeypatc
     fc = json.loads((tmp_path / "forecast.json").read_text())
 
     assert fc["current_22k"] == 14500
-    assert fc["est_low"] == 14435  # 14500 - 65 (OOS), not 14400 (in-sample)
-    assert fc["est_high"] == 14565  # 14500 + 65 (OOS), not 14600 (in-sample)
+    assert fc["est_low"] is None and fc["est_high"] is None
+    assert fc["band_unavailable_reason"] is not None
+
+
+# ---------------------------------------------------------------------------
+# G1d: fallback priority order when residual_abs_quantiles is absent
+# ---------------------------------------------------------------------------
+
+
+def _make_ibja_parquet_aligned(n: int) -> list[dict]:
+    """n daily IBJA rows on the same 2026-01-01-based date sequence
+    _make_prices_with_last_ts/_make_prices use, so overlap_count == n."""
+    start = datetime(2026, 1, 1, 10, 0, 0, tzinfo=UTC)
+    return [
+        {
+            "date": (start + timedelta(days=i)).strftime("%Y-%m-%d"),
+            "pm_916": 144000.0 + (i % 7) * 200.0,
+        }
+        for i in range(n)
+    ]
+
+
+@pytest.mark.smoke
+def test_no_residual_abs_quantiles_never_uses_residual_std_oos_path(
+    tmp_path: object, monkeypatch: object
+) -> None:
+    """G1d, the required regression test: a calibration file lacking
+    residual_abs_quantiles must NEVER produce a band via the old
+    residual_std_oos path, regardless of how large residual_std_oos is or
+    whether an on-the-fly fit is possible. Two sub-cases in one test:
+    insufficient overlap data (suppression) and, separately, band_method is
+    asserted to never equal "residual_std_oos" in either case."""
+    monkeypatch.setattr(inf, "DATA_DIR", tmp_path)
+
+    now = datetime(2026, 3, 15, 13, 30, tzinfo=UTC)
+    last_ts = datetime(2026, 3, 15, 4, 0, tzinfo=UTC)  # stale
+    prices = _make_prices_with_last_ts(40, last_ts, last_22k=14000)
+    calibration = {
+        "valid": True,
+        "slope": 1.0,
+        "intercept": 0.0,
+        "residual_std": 100.0,
+        "residual_std_oos": 65.0,  # present, large enough to notice if it leaked through
+        # residual_abs_quantiles deliberately absent
+    }
+
+    (tmp_path / "prices.json").write_text(json.dumps(prices))
+    (tmp_path / "backtest.json").write_text(json.dumps(_make_backtest(35)))
+    (tmp_path / "chronos_probe.json").write_text(json.dumps(_make_probe("success")))
+    (tmp_path / "calibration.json").write_text(json.dumps(calibration))
+    _make_ibja_parquet(tmp_path, [{"date": "2026-03-15", "pm_916": 145000.0}])  # only 1 row
+
+    inf.main(now=now)
+    fc = json.loads((tmp_path / "forecast.json").read_text())
+
+    assert fc["band_method"] != "residual_std_oos"
+    assert fc["band_method"] != "residual_std_in_sample"
+    assert fc["est_low"] is None and fc["est_high"] is None
+    assert fc["band_unavailable_reason"] is not None
+    assert (
+        fc["nominal_coverage"] is None
+    )  # priority 3: never a band with nominal_coverage set to a lie
+
+
+@pytest.mark.smoke
+def test_on_the_fly_fit_used_when_residual_abs_quantiles_absent_but_overlap_data_sufficient(
+    tmp_path: object, monkeypatch: object
+) -> None:
+    """G1d priority 1: calibration.json lacks residual_abs_quantiles, but the raw
+    ibja_rates.parquet + prices.json overlap has >= 30 pairs -- an on-the-fly fit
+    must be used instead of suppression, and must never fall back to
+    residual_std_oos either."""
+    monkeypatch.setattr(inf, "DATA_DIR", tmp_path)
+
+    now = datetime(2026, 2, 10, 13, 30, tzinfo=UTC)
+    last_ts = datetime(2026, 2, 10, 4, 0, tzinfo=UTC)  # stale
+    prices = _make_prices_with_last_ts(40, last_ts, last_22k=14000)
+    ibja_rows = _make_ibja_parquet_aligned(35)  # >= 30 overlap pairs with prices above
+
+    (tmp_path / "prices.json").write_text(json.dumps(prices))
+    (tmp_path / "backtest.json").write_text(json.dumps(_make_backtest(35)))
+    (tmp_path / "chronos_probe.json").write_text(json.dumps(_make_probe("success")))
+    (tmp_path / "calibration.json").write_text(
+        json.dumps(
+            {
+                "valid": True,
+                "slope": 1.0,
+                "intercept": 0.0,
+                "residual_std": 100.0,
+                "residual_std_oos": 65.0,
+                # residual_abs_quantiles deliberately absent -- forces the fallback
+            }
+        )
+    )
+    _make_ibja_parquet(tmp_path, ibja_rows)
+
+    inf.main(now=now)
+    fc = json.loads((tmp_path / "forecast.json").read_text())
+
+    assert fc["price_source"] == "ibja_calibrated"
+    assert fc["band_method"] == "empirical_quantile_on_the_fly"
+    assert fc["band_method"] != "residual_std_oos"
+    assert fc["nominal_coverage"] is not None
+    assert fc["est_low"] is not None and fc["est_high"] is not None
+    assert fc["est_low"] < fc["current_22k"] < fc["est_high"]
+    assert fc["band_unavailable_reason"] is None
+    assert "on_the_fly" in fc["residual_quantile_source"]
+    # ml.calibration.CALIBRATION_JSON must NOT have been written by this
+    # read-path fit -- the on-the-fly fit is read-only.
+    on_disk_calibration = json.loads((tmp_path / "calibration.json").read_text())
+    assert "residual_abs_quantiles" not in on_disk_calibration
+
+
+# schema_version 1: pre-ADR-027, no half_life/OOS fields at all.
+_SCHEMA_1_CALIBRATION = {
+    "slope": 1.0,
+    "intercept": 0.0,
+    "fit_date": "2026-03-01",
+    "n_observations": 40,
+    "residual_std": 90.0,
+    "r_squared": 0.95,
+    "huber_epsilon": 1.35,
+    "valid": True,
+    "schema_version": 1,
+}
+# schema_version 2: ADR 027 (half_life + OOS fields), pre-#1223 -- no
+# residual_abs_quantiles. This is what data/calibration.json ACTUALLY
+# contains on master right now (fit_date 2026-08-24) -- the exact scenario
+# the new empirical-quantile band code will first run unattended against.
+_SCHEMA_2_CALIBRATION = {
+    "slope": 1.0,
+    "intercept": 0.0,
+    "fit_date": "2026-08-24",
+    "n_observations": 72,
+    "residual_std": 78.75,
+    "r_squared": 0.975,
+    "huber_epsilon": 1.35,
+    "half_life": 10.0,
+    "r_squared_oos": 0.99,
+    "residual_std_oos": 65.0,
+    "mae_oos": 36.22,
+    "n_oos": 42,
+    "oos_method": "expanding_window_walk_forward_recency_weighted",
+    "valid": True,
+    "schema_version": 2,
+}
+# schema_version 3: #1223 -- adds residual_abs_quantiles, the new band's
+# preferred (empirical_quantile) source.
+_SCHEMA_3_CALIBRATION = {
+    **_SCHEMA_2_CALIBRATION,
+    "residual_abs_quantiles": {"68": 60.0, "80": 80.0, "90": 100.0},
+    "schema_version": 3,
+}
+
+
+@pytest.mark.smoke
+@pytest.mark.parametrize(
+    "schema_calibration,expect_band",
+    [
+        (_SCHEMA_1_CALIBRATION, False),
+        (_SCHEMA_2_CALIBRATION, False),
+        (_SCHEMA_3_CALIBRATION, True),
+    ],
+    ids=["schema_v1_legacy", "schema_v2_current_on_disk", "schema_v3_post_refit"],
+)
+def test_tier2_band_complete_for_every_reachable_schema_version(
+    tmp_path: object, monkeypatch: object, schema_calibration: dict, expect_band: bool
+) -> None:
+    """F1d/G1d (session dated 2026-08-28): the tier-2 PRICE ESTIMATE must
+    activate against every calibration.json schema currently reachable on
+    master -- but whether a BAND accompanies it now correctly depends on
+    whether an empirically-validated one can be produced.
+
+    Originally (F1d) this test asserted every schema produces a non-None
+    band, including via the old residual_std_in_sample/residual_std_oos
+    Gaussian substitution for schema_version 1/2. G1d found that
+    substitution measured 45.3% empirical coverage against its own 68.3%
+    nominal claim and removed it. With this fixture's minimal 1-row IBJA
+    parquet (insufficient for G1d's on-the-fly-fit fallback, which needs
+    >= 30 overlap pairs), schema 1/2 now correctly SUPPRESS the band rather
+    than substitute an unreliable one -- schema 3 (has
+    residual_abs_quantiles) still produces a real empirical_quantile band.
+    The price estimate itself (current_22k) activates in every case
+    regardless -- band availability is a separate concern from price
+    availability (see app.js's isEstimateTier/hasBand split, #1237)."""
+    monkeypatch.setattr(inf, "DATA_DIR", tmp_path)
+
+    now = datetime(2026, 3, 15, 13, 30, tzinfo=UTC)
+    last_ts = datetime(2026, 3, 15, 4, 0, tzinfo=UTC)  # stale -- forces tier 2
+    prices = _make_prices_with_last_ts(40, last_ts, last_22k=14000)
+
+    (tmp_path / "prices.json").write_text(json.dumps(prices))
+    (tmp_path / "backtest.json").write_text(json.dumps(_make_backtest(35)))
+    (tmp_path / "chronos_probe.json").write_text(json.dumps(_make_probe("success")))
+    (tmp_path / "calibration.json").write_text(json.dumps(schema_calibration))
+    _make_ibja_parquet(tmp_path, [{"date": "2026-03-15", "pm_916": 145000.0}])
+
+    inf.main(now=now)
+
+    fc = json.loads((tmp_path / "forecast.json").read_text())
+
+    assert fc["price_source"] == "ibja_calibrated"
+    assert fc["current_22k"] is not None  # the price estimate always activates
+    assert fc["ibja_asof"] is not None
+    assert fc["freshness_stratum"] is not None
+
+    if expect_band:
+        assert fc["est_low"] is not None
+        assert fc["est_high"] is not None
+        assert fc["est_low"] < fc["current_22k"] < fc["est_high"]
+        assert fc["band_method"] == "empirical_quantile"
+        assert fc["nominal_coverage"] is not None
+        assert fc["residual_quantile_source"] is not None
+        assert fc["band_unavailable_reason"] is None
+    else:
+        assert fc["est_low"] is None
+        assert fc["est_high"] is None
+        assert fc["band_method"] is None
+        assert fc["nominal_coverage"] is None
+        assert fc["band_unavailable_reason"] is not None
 
 
 # ---------------------------------------------------------------------------

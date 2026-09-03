@@ -16,9 +16,12 @@ from ml.direction.dataset import (
     make_label,
 )
 from ml.direction.evaluate import (
+    MAJORITY_CLASS_COLLAPSE_THRESHOLD,
     MIN_TRAIN_SIZE,
+    TRAILING_FOLD_WINDOW,
     append_history,
     compute_calibration,
+    detect_majority_class_collapse,
     run_walk_forward,
 )
 
@@ -313,6 +316,9 @@ class TestRunWalkForward:
             "n_skipped_folds",
             "min_train_size",
             "always_up_baseline_accuracy",
+            "trailing_30_fold_up_fraction",
+            "majority_class_collapse",
+            "majority_class_collapse_threshold",
             "logistic_metrics",
             "lightgbm_metrics",
             "persistence_metrics",
@@ -397,6 +403,66 @@ class TestRunWalkForward:
         result = run_walk_forward(ds, min_train_size=MIN_TRAIN_SIZE, label_col="label_binary_h2")
         assert result["n_test_folds"] > 0
         assert 0.0 <= result["logistic_metrics"]["accuracy"] <= 1.0
+
+
+class TestDetectMajorityClassCollapse:
+    """G3: detect_majority_class_collapse — pure function, no dataset/model needed."""
+
+    def test_fewer_than_window_predictions_is_none_not_zero(self) -> None:
+        """A short history must not silently read as 'not collapsed' (None, not False+0.0)."""
+        frac, collapsed = detect_majority_class_collapse([0.9] * (TRAILING_FOLD_WINDOW - 1))
+        assert frac is None
+        assert collapsed is False
+
+    def test_all_up_predictions_at_window_flags_collapse(self) -> None:
+        frac, collapsed = detect_majority_class_collapse([0.9] * TRAILING_FOLD_WINDOW)
+        assert frac == 1.0
+        assert collapsed is True
+
+    def test_all_down_predictions_also_flags_collapse(self) -> None:
+        """Symmetric: near-total 'down' collapse must also fire, not just 'up'."""
+        frac, collapsed = detect_majority_class_collapse([0.1] * TRAILING_FOLD_WINDOW)
+        assert frac == 0.0
+        assert collapsed is True
+
+    def test_genuinely_mixed_predictions_not_flagged(self) -> None:
+        """Alternating predictions -- a genuinely discriminating model -- must not flag."""
+        probs = [0.9 if i % 2 == 0 else 0.1 for i in range(TRAILING_FOLD_WINDOW)]
+        frac, collapsed = detect_majority_class_collapse(probs)
+        assert frac == 0.5
+        assert collapsed is False
+
+    def test_just_above_threshold_flags_just_below_does_not(self) -> None:
+        """29/30 (0.9667, >= 0.95) flags; 27/30 (0.9, < 0.95) does not -- brackets
+        MAJORITY_CLASS_COLLAPSE_THRESHOLD without depending on it being exactly
+        reachable by an integer count out of TRAILING_FOLD_WINDOW."""
+        probs_above = [0.9] * 29 + [0.1] * 1
+        frac_above, collapsed_above = detect_majority_class_collapse(probs_above)
+        assert frac_above > MAJORITY_CLASS_COLLAPSE_THRESHOLD
+        assert collapsed_above is True
+
+        probs_below = [0.9] * 27 + [0.1] * 3
+        frac_below, collapsed_below = detect_majority_class_collapse(probs_below)
+        assert frac_below < MAJORITY_CLASS_COLLAPSE_THRESHOLD
+        assert collapsed_below is False
+
+    def test_only_trailing_window_considered_not_full_history(self) -> None:
+        """A long history of down-predictions followed by a recent run of ups must
+        reflect the RECENT behavior, not be diluted by history outside the window --
+        this is what makes the flag catch a collapse happening right now."""
+        old_history = [0.1] * 200  # long history of "down" -- outside the window
+        recent_collapse = [0.9] * TRAILING_FOLD_WINDOW  # recent full "up" collapse
+        frac, collapsed = detect_majority_class_collapse(old_history + recent_collapse)
+        assert frac == 1.0
+        assert collapsed is True
+
+    def test_real_session_observation_h1_h2_both_collapsed(self) -> None:
+        """Regression pin: this session measured trailing-30 up-fraction = 1.0 at
+        BOTH horizons (h1 and h2) via an independent recompute script -- the exact
+        scenario this flag exists to surface. See F3's session findings."""
+        frac, collapsed = detect_majority_class_collapse([0.99] * TRAILING_FOLD_WINDOW)
+        assert frac == 1.0
+        assert collapsed is True
 
 
 class TestCalibration:
