@@ -8,7 +8,7 @@ lxml>=6.1.2
 pdfplumber>=0.11.10
 pytest>=9.1.1
 yfinance>=1.5.2
-pyarrow>=25.0.0
+pyarrow>=25.0.1
 # >=2.3.0 relaxes the upstream transformers pin from <5 to <6, letting the
 # lockfile clear all 4 transformers CVEs pip-audit previously flagged
 # (2026-07-19 — see ml/requirements-inference.lock resolution).
