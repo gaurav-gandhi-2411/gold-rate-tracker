@@ -7,20 +7,34 @@ existing ntfy topic on TWO independent channels:
 
 1. **Forecast staleness** — `predicted_at` age, **WARN (>=5h)** / **ESCALATE
    (>=10h)**. Catches "the pipeline stopped running entirely."
-2. **Tanishq confirmation silence** (Q4, audit 2026-09-03) — `scraped_at`
-   age (the last SUCCESSFUL Tanishq reading), **WARN (>=24h)** / **ESCALATE
-   (>=72h)**. Catches a scenario channel 1 structurally cannot: the
-   self-hosted runner dying permanently. `predicted_at` stays fresh forever
-   via the IBJA-calibrated fallback even with Tanishq dead for weeks, T12
-   (`ml/notifications.py`) only fires when the runner is online and jobs are
-   *failing* (not when it's offline, by design — see `docs/RUNBOOK.md`), and
-   the page itself gives users no indication Tanishq confirmation has
-   stopped (`price_source` stays `"ibja_calibrated"` and renders identically
-   whether Tanishq confirmed 2h ago or 3 weeks ago). Before this channel
-   existed, a permanent runner failure produced **zero alerts from
-   anything, ever**. Thresholds derived from the observed gap distribution
-   between successful Tanishq readings over the last 30 days (n=155 gaps:
-   median 2.92h, p90 5.99h, p95 14.21h, p99 29.43h, max 61.31h) — see the
+2. **Tanishq confirmation silence** (Q4, audit 2026-09-03; thresholds
+   recalibrated + corroboration added R2, audit 2026-09-04) — `scraped_at`
+   age (the last SUCCESSFUL Tanishq reading), **WARN (>=48h)** / **ESCALATE
+   (>=72h)**, corroborated by `tanishq_selfhosted_health.json` (also public,
+   same origin, zero new dependency): once past WARN, if that file's own
+   `last_updated_utc` is ALSO stale past 9h (3 missed 3h cycles — meaning
+   the self-hosted job hasn't executed at all, not just failed to scrape),
+   escalates immediately regardless of the 72h wait. Catches a scenario
+   channel 1 structurally cannot: the self-hosted runner dying permanently.
+   `predicted_at` stays fresh forever via the IBJA-calibrated fallback even
+   with Tanishq dead for weeks, T12 (`ml/notifications.py`) only fires when
+   the runner is online and jobs are *failing* (not when it's offline, by
+   design — see `docs/RUNBOOK.md`), and the page itself gives users no
+   indication Tanishq confirmation has stopped (`price_source` stays
+   `"ibja_calibrated"` and renders identically whether Tanishq confirmed 2h
+   ago or 3 weeks ago — see `fix/tier-degradation-visible`). Before this
+   channel existed, a permanent runner failure produced **zero alerts from
+   anything, ever**.
+
+   Thresholds derived from the observed gap distribution between successful
+   Tanishq readings over the last 30 days (n=154 gaps: median 2.93h, p90
+   5.99h, p95 14.21h, p99 29.43h, max 61.31h) against an explicit
+   false-alarm budget of **<=1 false WARN/month**: the original WARN=24h
+   produced ~4 false alarms/month (a muted alert is a non-functioning
+   control) and sat *below* the largest observed normal gap (61.31h, a
+   known/diagnosed transient runner outage, not a failure) — guaranteeing
+   false alarms. WARN=48h and ESCALATE=72h both clear the budget (1/month
+   and 0/month respectively in the same 30-day sample) — see the
    constants' own comments in `src/deadman.mjs` for the full arithmetic.
 
 It also posts a low-priority **daily heartbeat** — stating BOTH channels'
@@ -47,11 +61,15 @@ runs again.
 - `src/index.mjs` — the actual Worker: wires `deadman.mjs` to a real `fetch()`
   of the public site, a KV-backed "last alert sent" state (so a multi-hour
   outage doesn't re-alert every 30 min), and a POST to `ntfy.sh`.
-- `test/deadman.test.mjs` — 48 cases (`node --test`), including a synthetic
+- `test/deadman.test.mjs` — 58 cases (`node --test`), including a synthetic
   stale payload asserting the ESCALATE alert actually fires, dedup-window
-  behavior, fail-closed handling of an unreachable/unparseable payload, and
+  behavior, fail-closed handling of an unreachable/unparseable payload,
   (Q4) the Tanishq-silence channel's own classification/dedup/alert-copy
-  cases plus the "one fetch failure alerts once, not twice" guard.
+  cases plus the "one fetch failure alerts once, not twice" guard, and
+  (R2c) the health-file corroboration logic in both directions (stale
+  health escalates early; fresh health suppresses escalation and names the
+  scrape-failure hypothesis instead) plus its own fail-closed handling of a
+  missing/unparseable health signal.
   Wired into CI as a lint gate only (`.github/workflows/lint.yml`,
   `pwa-js` job) — this does **not** make the switch's own operation depend
   on GitHub Actions in any way; it only lints the source before deployment.
