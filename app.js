@@ -1457,13 +1457,20 @@ function renderModelSignal(fc, readings, bt, coverage, drift) {
     let Z, volNote;
     if (volCtx && typeof volCtx.half_width === "number" && !volCtx.is_degraded) {
       Z = Math.round(volCtx.half_width / 50) * 50;
-      const regime = volCtx.regime ?? "normal";
+      const regime = volCtx.regime;
       if (regime === "elevated") {
         volNote = t("volNoteElevated", { z: fmtINR(Z) });
       } else if (regime === "calm") {
         volNote = t("volNoteCalm", { z: fmtINR(Z) });
-      } else {
+      } else if (regime === "normal") {
         volNote = t("volNoteNormal", { z: fmtINR(Z) });
+      } else {
+        // regime absent/unrecognized (e.g. a service-worker-cached forecast.json
+        // predating this field) -- do NOT default to "normal", that's a claim
+        // about current behaviour we don't actually have. Use the same
+        // magnitude-only, no-comparison copy as the degraded-vol-estimate
+        // branch below instead.
+        volNote = t("volNoteFallback", { z: fmtINR(Z) });
       }
     } else {
       // Fallback: vol estimate degraded or absent → the dedicated 5-day static-PI
@@ -1553,25 +1560,48 @@ function renderDriverContext(fc) {
   const w30 = dc.windows?.["30d"];
   const ds  = dc.driver_state;
 
-  if (!ds) {
+  // ds.usd_inr_30d_pct_change / gold_usd_30d_pct_change are built together as
+  // one atomic dict in ml/drivers.py -- either both are real numbers or ds
+  // itself is None. Checking the sub-fields explicitly (rather than `?? 0`
+  // on each) means a future schema change that decouples them fails closed
+  // (section hidden) instead of silently asserting "0% change" -- a specific,
+  // false claim -- for a driver whose real value is simply missing.
+  if (!ds || typeof ds.usd_inr_30d_pct_change !== "number" || typeof ds.gold_usd_30d_pct_change !== "number") {
     section.hidden = true;
     return;
   }
 
-  const inrPct   = ds.usd_inr_30d_pct_change ?? 0;
-  const goldPct  = ds.gold_usd_30d_pct_change ?? 0;
-  const premPct30 = w30?.delta_pct_premium ?? 0;
+  const inrPct   = ds.usd_inr_30d_pct_change;
+  const goldPct  = ds.gold_usd_30d_pct_change;
+  // delta_pct_premium is explicitly `null` in ml/drivers.py's degraded/
+  // insufficient-data window dict -- a real, reachable "we don't know" state,
+  // not just a schema-drift edge case. Coalescing it to 0 would silently
+  // assert "premium flat" when it's actually unmeasured (see premAvailable
+  // below, which keeps that distinction through to branch 3).
+  const premAvailable = w30 && typeof w30.delta_pct_premium === "number";
+  const premPct30 = premAvailable ? w30.delta_pct_premium : 0;
 
   const inrMoved  = Math.abs(inrPct)   > _DC_DRIVER_THRESHOLD_PCT;
   const goldMoved = Math.abs(goldPct)  > _DC_DRIVER_THRESHOLD_PCT;
-  const premMoved = Math.abs(premPct30) > _DC_PREMIUM_THRESHOLD_PCT;
+  const premMoved = premAvailable && Math.abs(premPct30) > _DC_PREMIUM_THRESHOLD_PCT;
 
   // --- Attribution headline (7d) — only when attribution_valid ---
+  // ml/drivers.py sets total_move_rs_per_g/gold_usd_contrib_rs_per_g/
+  // usdinr_contrib_rs_per_g together in one block (all-or-nothing), but that's
+  // an implementation detail of one Python function, not a schema contract --
+  // checking all three explicitly here means a future refactor that breaks
+  // that coupling fails closed (no headline) instead of `?? 0` silently
+  // asserting "zero contribution" for a driver whose split just isn't known.
   let headlineHtml = "";
-  if (w7?.attribution_valid && w7?.total_move_rs_per_g != null) {
+  if (
+    w7?.attribution_valid &&
+    typeof w7?.total_move_rs_per_g === "number" &&
+    typeof w7?.usdinr_contrib_rs_per_g === "number" &&
+    typeof w7?.gold_usd_contrib_rs_per_g === "number"
+  ) {
     const total    = Math.round(w7.total_move_rs_per_g);
-    const inrPt    = Math.round(w7.usdinr_contrib_rs_per_g ?? 0);
-    const goldPt   = Math.round(w7.gold_usd_contrib_rs_per_g ?? 0);
+    const inrPt    = Math.round(w7.usdinr_contrib_rs_per_g);
+    const goldPt   = Math.round(w7.gold_usd_contrib_rs_per_g);
     const absTotal = Math.abs(total);
     const inrAbs   = Math.abs(inrPt);
     const goldAbs  = Math.abs(goldPt);
@@ -1619,8 +1649,13 @@ function renderDriverContext(fc) {
   } else if (premMoved) {
     // Branch 2: premium-dominated — both drivers muted (<2%), premium moved (>1%)
     driverStateText = t("driverPremiumDominated");
+  } else if (!premAvailable) {
+    // Branch 3a: drivers muted AND premium window itself unmeasured -- do NOT
+    // claim "everything flat" (driverAllFlat) when one input to that claim is
+    // actually unknown, not confirmed-small.
+    driverStateText = t("driverStateUnavailable");
   } else {
-    // Branch 3: everything flat
+    // Branch 3b: everything genuinely flat (premium was measured and small too)
     driverStateText = t("driverAllFlat");
   }
 
