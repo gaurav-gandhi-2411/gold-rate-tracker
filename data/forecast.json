@@ -1,5 +1,5 @@
 {
-  "predicted_at": "2026-09-03T16:19:20.811709+00:00",
+  "predicted_at": "2026-09-03T19:12:35.455963+00:00",
   "target_window": "5d",
   "headline": {
     "method": "naive_flat_hold",
@@ -25,29 +25,29 @@
   "chronos_companion": {
     "status": "success",
     "lean_direction": "up",
-    "lean_strength_pct": 0.478,
+    "lean_strength_pct": 1.344,
     "direction_acc_30f": 0.8,
     "direction_prob_basis": "base_rate_fallback",
     "horizon_p10": [
-      13478.47,
-      13416.93,
-      13327.93,
-      13268.41,
-      13235.12
+      13940.66,
+      13880.25,
+      13825.33,
+      13789.97,
+      13762.47
     ],
     "horizon_p50": [
-      14010.66,
-      14089.84,
-      14112.79,
-      14130.17,
-      14189.18
+      14401.19,
+      14446.08,
+      14493.97,
+      14531.31,
+      14585.76
     ],
     "horizon_p90": [
-      14581.42,
-      14785.32,
-      14893.04,
-      14970.31,
-      15112.32
+      14912.09,
+      15050.83,
+      15182.2,
+      15271.54,
+      15398.2
     ],
     "model_version": "amazon/chronos-bolt-tiny@a0e552de",
     "calibration_applied": true,
@@ -56,7 +56,7 @@
     "direction_consensus": 1.0
   },
   "driver_context": {
-    "computed_at": "2026-09-03T16:19:20.816683+00:00",
+    "computed_at": "2026-09-03T19:12:35.460310+00:00",
     "macro_staleness_days": 0.0,
     "macro_fresh": true,
     "premium_threshold_pct": 15.0,
@@ -65,45 +65,45 @@
         "n_obs": 6,
         "t0_date": "2026-08-27",
         "t1_date": "2026-09-03",
-        "delta_pct_ibja": -2.982,
-        "delta_pct_gold_usd": -1.528,
+        "delta_pct_ibja": -2.847,
+        "delta_pct_gold_usd": -1.914,
         "delta_pct_usdinr": -1.006,
-        "delta_pct_premium": -0.448,
+        "delta_pct_premium": 0.073,
         "total_move_rs_per_g": -520.0,
-        "gold_usd_contrib_rs_per_g": -266.4,
-        "usdinr_contrib_rs_per_g": -175.4,
-        "premium_contrib_rs_per_g": -78.2,
-        "premium_share_pct": 15.0,
-        "attribution_valid": false,
-        "attribution_valid_reason": "premium share 15.0% exceeds 15% threshold"
+        "gold_usd_contrib_rs_per_g": -349.6,
+        "usdinr_contrib_rs_per_g": -183.8,
+        "premium_contrib_rs_per_g": 13.4,
+        "premium_share_pct": 2.6,
+        "attribution_valid": true,
+        "attribution_valid_reason": "clean \u2014 premium share within threshold"
       },
       "30d": {
         "n_obs": 23,
         "t0_date": "2026-08-04",
         "t1_date": "2026-09-03",
-        "delta_pct_ibja": 7.331,
-        "delta_pct_gold_usd": 10.302,
+        "delta_pct_ibja": 7.466,
+        "delta_pct_gold_usd": 9.916,
         "delta_pct_usdinr": -0.903,
-        "delta_pct_premium": -2.068,
+        "delta_pct_premium": -1.547,
         "total_move_rs_per_g": 1040.0,
-        "gold_usd_contrib_rs_per_g": 1461.5,
-        "usdinr_contrib_rs_per_g": -128.0,
-        "premium_contrib_rs_per_g": -293.4,
-        "premium_share_pct": 28.2,
+        "gold_usd_contrib_rs_per_g": 1381.1,
+        "usdinr_contrib_rs_per_g": -125.7,
+        "premium_contrib_rs_per_g": -215.4,
+        "premium_share_pct": 20.7,
         "attribution_valid": false,
-        "attribution_valid_reason": "premium share 28.2% exceeds 15% threshold"
+        "attribution_valid_reason": "premium share 20.7% exceeds 15% threshold"
       }
     },
     "driver_state": {
       "usd_inr_now": 94.475,
-      "gold_usd_now": 4539.8,
+      "gold_usd_now": 4522.3,
       "usd_inr_30d_pct_change": -0.9,
-      "gold_usd_30d_pct_change": 10.85
+      "gold_usd_30d_pct_change": 10.42
     }
   },
-  "real_readings_count": 634,
+  "real_readings_count": 636,
   "current_22k": 14285,
-  "scraped_at": "2026-09-03T11:06:16.875Z",
+  "scraped_at": "2026-09-03T19:05:09.996Z",
   "price_source": "tanishq_scrape",
   "est_low": null,
   "est_high": null,
