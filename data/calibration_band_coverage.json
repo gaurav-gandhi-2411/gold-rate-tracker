@@ -1,0 +1,13 @@
+{
+  "schema_version": 1,
+  "generated_at_utc": "2026-09-03T08:49:10.727738+00:00",
+  "band_source": "IBJA-calibrated tier's displayed est_low/est_high (recency-weighted empirical residual quantile, ml.calibration)",
+  "nominal_pct": 80,
+  "coverage": 0.7222,
+  "n": 72,
+  "n_in_band": 52,
+  "wilson_ci_low": 0.6095,
+  "wilson_ci_high": 0.8124,
+  "resolvable_at_n": false,
+  "note": "Walk-forward re-score of the band actually shown to users on the IBJA-calibrated tier (est_low/est_high) -- recomputed weekly by weekly-backtest.yml, not a one-time reading. resolvable_at_n is True only when the Wilson 95% CI does not contain nominal_pct, i.e. n is large enough to say observed coverage is statistically distinguishable from nominal, not just numerically different from it. Distinct from data/coverage_metrics.json, which scores the OTHER displayed band (headline.lower/upper)."
+}

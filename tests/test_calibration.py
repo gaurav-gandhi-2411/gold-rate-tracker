@@ -765,6 +765,79 @@ def test_max_age_days_matches_inference_constant():
 
 
 # ---------------------------------------------------------------------------
+# save_calibration_band_coverage (P5, audit 2026-09): the weekly re-score that
+# replaces evaluate_empirical_band_coverage's one-time docstring reading with
+# a persisted, continuously-updated data/calibration_band_coverage.json.
+# ---------------------------------------------------------------------------
+
+
+def _write_overlap_files(data_dir: Path, ibja_df: pd.DataFrame, tanishq_df: pd.DataFrame) -> None:
+    """Persist _make_overlap_df's in-memory frames as the real files
+    save_calibration_band_coverage reads (mirrors production's schema)."""
+    ibja_df.to_parquet(data_dir / "ibja_rates.parquet", index=False)
+    rows = [
+        {"timestamp": f"{d}T12:00:00.000Z", "22k": v}
+        for d, v in zip(tanishq_df["date"], tanishq_df["22k"], strict=True)
+    ]
+    (data_dir / "prices.json").write_text(json.dumps(rows))
+
+
+def test_save_calibration_band_coverage_writes_expected_shape(tmp_path):
+    ibja_df, tanishq_df = _make_overlap_df(n=60, noise_std=15.0, seed=11)
+    _write_overlap_files(tmp_path, ibja_df, tanishq_df)
+
+    payload = cal.save_calibration_band_coverage(data_dir=tmp_path)
+
+    assert payload is not None
+    out_path = tmp_path / "calibration_band_coverage.json"
+    assert out_path.exists()
+    on_disk = json.loads(out_path.read_text())
+    assert on_disk == payload
+    assert payload["nominal_pct"] == cal.NOMINAL_COVERAGE_PCT
+    assert payload["n"] == 60 - cal._MIN_FIT_OBSERVATIONS
+    assert 0 <= payload["n_in_band"] <= payload["n"]
+    assert 0.0 <= payload["coverage"] <= 1.0
+    assert 0.0 <= payload["wilson_ci_low"] <= payload["wilson_ci_high"] <= 1.0
+    assert isinstance(payload["resolvable_at_n"], bool)
+    # resolvable_at_n must actually match "CI excludes nominal" -- the whole
+    # point of the flag (P5's "if the CI ever excludes nominal, the eval must
+    # flag it").
+    nominal = cal.NOMINAL_COVERAGE_PCT / 100.0
+    ci_excludes_nominal = not (payload["wilson_ci_low"] <= nominal <= payload["wilson_ci_high"])
+    assert payload["resolvable_at_n"] == ci_excludes_nominal
+
+
+def test_save_calibration_band_coverage_n_only_grows(tmp_path):
+    """Same monotonic-window property ml.metrics.save_coverage_metrics has for
+    the OTHER band -- more history in, n never decreases."""
+    ibja_df, tanishq_df = _make_overlap_df(n=50, seed=3)
+    _write_overlap_files(tmp_path, ibja_df, tanishq_df)
+    first = cal.save_calibration_band_coverage(data_dir=tmp_path)
+
+    ibja_more, tanishq_more = _make_overlap_df(n=70, seed=3)
+    _write_overlap_files(tmp_path, ibja_more, tanishq_more)
+    second = cal.save_calibration_band_coverage(data_dir=tmp_path)
+
+    assert second["n"] > first["n"]
+
+
+def test_save_calibration_band_coverage_insufficient_data_returns_none(tmp_path):
+    """n=0 scoreable days (not enough overlap to clear min_train) writes
+    nothing -- an absent file is a clearer signal than a 0-row one."""
+    ibja_df, tanishq_df = _make_overlap_df(n=cal._MIN_FIT_OBSERVATIONS)
+    _write_overlap_files(tmp_path, ibja_df, tanishq_df)
+
+    payload = cal.save_calibration_band_coverage(data_dir=tmp_path)
+
+    assert payload is None
+    assert not (tmp_path / "calibration_band_coverage.json").exists()
+
+
+def test_save_calibration_band_coverage_missing_files_returns_none(tmp_path):
+    assert cal.save_calibration_band_coverage(data_dir=tmp_path) is None
+
+
+# ---------------------------------------------------------------------------
 # Regression gate: production's live data must stay within the walk-forward-
 # measured coverage tolerance around NOMINAL_COVERAGE_PCT.
 #

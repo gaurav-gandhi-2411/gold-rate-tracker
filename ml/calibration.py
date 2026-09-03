@@ -18,7 +18,7 @@ import json
 import logging
 import warnings
 from dataclasses import asdict, dataclass
-from datetime import date
+from datetime import UTC, date, datetime
 from pathlib import Path
 
 import numpy as np
@@ -429,6 +429,110 @@ def evaluate_empirical_band_coverage(
     return {"n": n_scored, "n_in_band": n_in_band, "coverage": coverage}
 
 
+def save_calibration_band_coverage(
+    data_dir: Path | None = None,
+    out_filename: str = "calibration_band_coverage.json",
+) -> dict | None:
+    """Recompute evaluate_empirical_band_coverage() at NOMINAL_COVERAGE_PCT and
+    persist it, so the IBJA-calibrated tier's displayed band (est_low/est_high)
+    has its real-world coverage continuously monitored rather than a one-time
+    reading frozen in evaluate_empirical_band_coverage's own docstring (n=65 as
+    of the audit that introduced NOMINAL_COVERAGE_PCT -- see that constant's
+    comment). n only ever grows call over call, same monotonic-window property
+    as ml.metrics.save_coverage_metrics for the OTHER band (headline.lower/
+    upper conformal PI, data/coverage_metrics.json) -- these are two distinct
+    bands with two distinct coverage files; do not conflate them.
+
+    Called weekly from weekly-backtest.yml (python -m ml.calibration
+    --score-coverage), mirroring save_coverage_metrics's cadence and shape:
+    Wilson 95% CI + a resolvable_at_n flag that's True only when the CI does
+    NOT contain nominal_pct, rendered via inject_metrics.py's
+    unresolved_if=resolvable_at_n the same way data/coverage_metrics.json
+    already is in README.md.
+
+    Returns None (writes nothing) when there isn't enough overlap history to
+    score even one day -- an absent file is a clearer signal than a 0-row one.
+    """
+    _data = data_dir or DATA_DIR
+    ibja_path = _data / "ibja_rates.parquet"
+    prices_path = _data / "prices.json"
+    out_path = _data / out_filename
+
+    if not ibja_path.exists():
+        logger.info("save_calibration_band_coverage: ibja_rates.parquet not found — skipping")
+        return None
+    if not prices_path.exists():
+        logger.info("save_calibration_band_coverage: prices.json not found — skipping")
+        return None
+
+    ibja_df = pd.read_parquet(ibja_path)
+    try:
+        prices_raw = json.loads(prices_path.read_text())
+    except Exception as exc:
+        logger.error("save_calibration_band_coverage: could not read prices.json: %s", exc)
+        return None
+    if not isinstance(prices_raw, list) or not prices_raw:
+        logger.info("save_calibration_band_coverage: prices.json is empty — skipping")
+        return None
+
+    rows = [
+        {"date": r["timestamp"][:10], "22k": float(r["22k"])}
+        for r in prices_raw
+        if r.get("timestamp") and r.get("22k") is not None
+    ]
+    if not rows:
+        logger.info("save_calibration_band_coverage: no valid readings in prices.json — skipping")
+        return None
+    tanishq_df = pd.DataFrame(rows).sort_values("date").groupby("date").last().reset_index()
+
+    result = evaluate_empirical_band_coverage(ibja_df, tanishq_df, level=NOMINAL_COVERAGE_PCT)
+    n = result["n"]
+    if n == 0:
+        logger.info("save_calibration_band_coverage: n=0 scored days — skipping")
+        return None
+
+    # Reuse the Wilson-CI math already trusted for the other band's coverage
+    # file rather than re-deriving it — see ml.metrics.wilson_confidence_interval.
+    from ml.metrics import wilson_confidence_interval
+
+    ci_low, ci_high = wilson_confidence_interval(result["n_in_band"], n)
+    nominal = NOMINAL_COVERAGE_PCT / 100.0
+    resolvable_at_n = not (ci_low <= nominal <= ci_high)
+    coverage = round(result["coverage"], 4) if result["coverage"] is not None else None
+
+    payload = {
+        "schema_version": 1,
+        "generated_at_utc": datetime.now(UTC).isoformat(),
+        "band_source": "IBJA-calibrated tier's displayed est_low/est_high "
+        "(recency-weighted empirical residual quantile, ml.calibration)",
+        "nominal_pct": NOMINAL_COVERAGE_PCT,
+        "coverage": coverage,
+        "n": n,
+        "n_in_band": result["n_in_band"],
+        "wilson_ci_low": round(ci_low, 4),
+        "wilson_ci_high": round(ci_high, 4),
+        "resolvable_at_n": resolvable_at_n,
+        "note": "Walk-forward re-score of the band actually shown to users on the "
+        "IBJA-calibrated tier (est_low/est_high) -- recomputed weekly by "
+        "weekly-backtest.yml, not a one-time reading. resolvable_at_n is True only "
+        "when the Wilson 95% CI does not contain nominal_pct, i.e. n is large enough "
+        "to say observed coverage is statistically distinguishable from nominal, not "
+        "just numerically different from it. Distinct from data/coverage_metrics.json, "
+        "which scores the OTHER displayed band (headline.lower/upper).",
+    }
+    out_path.write_text(json.dumps(payload, indent=2) + "\n")
+    logger.info(
+        "save_calibration_band_coverage: coverage=%s n=%d wilson_ci=[%.1f%%, %.1f%%] "
+        "resolvable_at_n=%s",
+        f"{coverage * 100:.1f}%" if coverage is not None else "n/a",
+        n,
+        ci_low * 100,
+        ci_high * 100,
+        resolvable_at_n,
+    )
+    return payload
+
+
 def apply_calibration(
     ibja_forecast: pd.Series | float,
     params: CalibrationParams,
@@ -620,5 +724,20 @@ def run_refit_if_needed(data_dir: Path | None = None) -> bool:
 
 
 if __name__ == "__main__":
+    import argparse
+
     logging.basicConfig(level=logging.INFO, format="%(levelname)s %(name)s: %(message)s")
-    run_refit_if_needed()
+
+    parser = argparse.ArgumentParser(description="IBJA/Tanishq calibration layer")
+    parser.add_argument(
+        "--score-coverage",
+        action="store_true",
+        help="Re-score the displayed calibrated band's real-world coverage and "
+        "persist to data/calibration_band_coverage.json (weekly eval; does not refit)",
+    )
+    args = parser.parse_args()
+
+    if args.score_coverage:
+        save_calibration_band_coverage()
+    else:
+        run_refit_if_needed()
