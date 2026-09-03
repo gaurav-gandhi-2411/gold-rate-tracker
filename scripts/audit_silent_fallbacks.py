@@ -269,7 +269,10 @@ def main() -> None:
     report = render_report(findings)
 
     args.out.parent.mkdir(parents=True, exist_ok=True)
-    args.out.write_text(report + "\n", encoding="utf-8")
+    # newline="\n" pins the output to LF regardless of platform -- Path.write_text's
+    # default newline handling translates "\n" to os.linesep on Windows (CRLF),
+    # which fails pre-commit's end-of-file-fixer/mixed-line-ending hooks on this repo.
+    args.out.write_text(report + "\n", encoding="utf-8", newline="\n")
 
     by_category: dict[str, int] = {}
     for f in findings:
