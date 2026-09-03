@@ -24,6 +24,19 @@ const CALIBRATION_URL = "data/calibration.json";
 // Per ADR 025 this now gates Tanishq *enrichment* freshness, not primary staleness.
 const STALE_THRESHOLD_H = 8;
 
+// R3 (audit 2026-09-04): the ibja_calibrated tier is ADR 025's normal steady
+// state -- every scrape cycle that misses the STALE_THRESHOLD_H=8h window
+// lands here, which is routine and stays silent about *why* on purpose (see
+// the comment at this constant's only call site). But when Tanishq
+// confirmation has been silent for a LONG time, not just this cycle, that's
+// a different, worth-naming state -- the same "seventh silent fallback" this
+// audit already flagged: the page otherwise renders the ibja_calibrated tier
+// identically whether Tanishq confirmed 2h ago or 3 weeks ago. Matches
+// worker-deadman's own TANISHQ_WARN_HOURS (same false-alarm-budget-derived
+// value, see src/deadman.mjs's own comment for the arithmetic) so the page
+// and the out-of-band alert agree on what "long" means.
+const TIER_DEGRADED_THRESHOLD_H = 48;
+
 // D4: True when running as an installed PWA launched from the home screen.
 // navigator.standalone is iOS WebKit's proprietary flag (true/false/undefined).
 // matchMedia display-mode:standalone is the W3C standard (patchy on older iOS).
@@ -840,6 +853,18 @@ function renderStaleBanner(forecast, calibration) {
         amount: fmtINR(Math.round(forecast.band_half_width)),
         coverage: forecast.nominal_coverage,
       });
+    }
+    // R3: the branch above is silent about Tanishq confirmation age by
+    // design (ADR 025 -- one missed cycle is routine, not worth narrating
+    // every time). This is the DIFFERENT case: confirmation has been silent
+    // for TIER_DEGRADED_THRESHOLD_H, not just this cycle -- driven entirely
+    // by forecast.scraped_at (the same field worker-deadman's Tanishq-
+    // silence channel already watches), never hand-typed.
+    if (forecast.scraped_at) {
+      const scrapedAgeH = (Date.now() - new Date(forecast.scraped_at).getTime()) / 3_600_000;
+      if (scrapedAgeH > TIER_DEGRADED_THRESHOLD_H) {
+        banner.textContent += t("bannerTanishqLongSilent", { rel: fmtRelative(forecast.scraped_at) });
+      }
     }
     banner.hidden = false;
     return;
