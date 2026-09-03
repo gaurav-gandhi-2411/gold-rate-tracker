@@ -28,7 +28,7 @@ A free, **₹0/month** gold-price tracker for Indian retail buyers (22K), built 
 flowchart TD
     subgraph cron["check-price.yml — every 3h"]
         A["IBJA fetch<br/>plain HTTP, primary source"] --> C
-        B["Tanishq scrape<br/>requests to Playwright fallback<br/>opportunistic enrichment"] --> C
+        B["Tanishq scrape<br/>Playwright only in practice —<br/>requests path is CF-blocked<br/>opportunistic enrichment"] --> C
         C["prices.json<br/>ibja_rates.parquet"]
     end
 
@@ -49,7 +49,7 @@ flowchart TD
     style D fill:#2a2015,stroke:#d4932a,color:#f0d9a8
 ```
 
-- **IBJA-primary, Tanishq-enrichment ([ADR 025](docs/adr/025-ibja-primary-source-decision.md)).** IBJA (India's national bullion-association benchmark) isn't Cloudflare-protected and reliably publishes a daily reading. Tanishq's site still blocks the plain-HTTP request path outright, but the self-hosted Playwright scraper ([docs/RUNBOOK.md](docs/RUNBOOK.md)) succeeds <!--METRIC:data/tanishq_scrape_success_rate.json#success_rate:pct1|n=n|asof=generated_at_utc-->100.0% (n=19, as of 2026-09-03)<!--/METRIC--> of the time over the last 7 days — IBJA stays primary regardless (Tanishq is opportunistic enrichment even when reachable, not a hard dependency). The displayed price defaults to an IBJA-calibrated estimate (R²=<!--METRIC:data/calibration.json#r_squared:num2|n=n_observations|asof=fit_date-->0.96 (n=75, as of 2026-08-28)<!--/METRIC-->) and upgrades to a directly-confirmed Tanishq reading only when that scrape succeeds within the last 8h — never the reverse. On IBJA's non-publishing days (weekends, holidays) the page carries forward the last published close, clearly dated. The user never sees a dead price.
+- **IBJA-primary, Tanishq-enrichment ([ADR 025](docs/adr/025-ibja-primary-source-decision.md)).** IBJA (India's national bullion-association benchmark) isn't Cloudflare-protected and reliably publishes a daily reading. Tanishq's site still blocks the plain-HTTP request path outright, but the self-hosted Playwright scraper ([docs/RUNBOOK.md](docs/RUNBOOK.md)) succeeds <!--METRIC:data/tanishq_scrape_success_rate.json#success_rate:pct1|n=n|asof=generated_at_utc-->100.0% (n=17, as of 2026-09-03)<!--/METRIC--> of the time over the last 7 days — IBJA stays primary regardless (Tanishq is opportunistic enrichment even when reachable, not a hard dependency). The displayed price defaults to an IBJA-calibrated estimate (R²=<!--METRIC:data/calibration.json#r_squared:num2|n=n_observations|asof=fit_date-->0.96 (n=75, as of 2026-08-28)<!--/METRIC-->) and upgrades to a directly-confirmed Tanishq reading only when that scrape succeeds within the last 8h — never the reverse. On IBJA's non-publishing days (weekends, holidays) the page carries forward the last published close, clearly dated. The user never sees a dead price.
 - **Static PWA, no server.** `index.html` + `app.js` fetch `data/*.json` straight from the repo and render price, verdict, sparkline, and chart client-side.
 - **Direction signal stays dark by design**, not by omission — see below.
 
@@ -98,7 +98,7 @@ Alert types: a price-move alert (describes the recent trend), a twice-daily dige
 | Path | What |
 |------|------|
 | `index.html`, `app.js`, `service-worker.js` | The PWA (what users see) |
-| `scraper/` | Tanishq scrape (Node, requests-first with Playwright fallback) |
+| `scraper/` | Tanishq scrape (Node; tries a plain-HTTP requests path first, but it's Cloudflare-blocked and has succeeded <!--METRIC:data/tanishq_scrape_success_rate.json#n_requests_path:int-->0<!--/METRIC--> of <!--METRIC:data/tanishq_scrape_success_rate.json#n:int|asof=generated_at_utc-->17 (as of 2026-09-03)<!--/METRIC--> attempts in the rolling window — Playwright is what actually runs every cycle) |
 | `ml/` | Inference, calibration, notifications, the direction-eval harness |
 | `data/` | Committed price/forecast/eval JSON the PWA reads |
 | `.github/workflows/` | `check-price.yml` (3h loop), `lint.yml`, `eval-direction.yml`, `scraper-canary.yml` |
