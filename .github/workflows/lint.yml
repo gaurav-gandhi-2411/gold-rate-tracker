@@ -78,6 +78,12 @@ jobs:
             tests/test_scrape.js \
             tests/test_stale_banner.js \
             tests/test_trend.js
+      - name: Run dead-man's-switch Worker tests
+        # Code-quality gate only -- this does NOT wire the switch's own
+        # operation into GitHub Actions. It runs entirely on Cloudflare
+        # Cron Triggers (see worker-deadman/README.md); this step only
+        # lints/tests the source before it's deployed by hand.
+        run: node --test worker-deadman/test/deadman.test.mjs
 
   # Forward lint+pwa-js's real result as commit statuses (bug #4, docs/RUNBOOK.md).
   # Branch protection's required_status_checks matches by context NAME across both
@@ -141,6 +147,25 @@ jobs:
               exit 1
             fi
           fi
+
+  # Fail if any <!--METRIC:...--> marker in README.md/docs/*.md doesn't
+  # resolve, or resolves to text that differs from what's committed --
+  # same "regenerate, don't hand-edit" idiom as sw-version-guard above.
+  # Three numbers were found hand-copied and stale before this existed
+  # (R²=0.96, 97.3% coverage, direction-signal h1/h2 accuracy — 21-22 days
+  # stale despite live sources existing for all three; session dated
+  # 2026-08-27). See scripts/inject_metrics.py's module docstring for the
+  # marker syntax and the FROZEN-block convention for numbers that must
+  # NOT be auto-updated (ADR snapshots, the SHA-pinned backtest citation).
+  docs-freshness:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: "3.12"
+      - name: Every METRIC marker must resolve and match committed text
+        run: python scripts/inject_metrics.py --check
 
   # Dependency vulnerability audit — informational only, not a required check.
   # Neither lint nor pwa-js depends on this job; a finding here should not block

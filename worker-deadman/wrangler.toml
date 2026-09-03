@@ -1,0 +1,47 @@
+name = "gold-rate-tracker-deadman"
+main = "src/index.mjs"
+compatibility_date = "2026-08-27"
+
+# Every 30 min: 48 invocations/day, well inside the Workers Free plan's
+# 100,000 requests/day and 5-cron-triggers-per-account limits (verified
+# 2026-08-27 against developers.cloudflare.com/workers/platform/limits/).
+# Gives WARN(5h)/ESCALATE(10h) thresholds ~30 min of resolution.
+[triggers]
+crons = ["*/30 * * * *"]
+
+# Created by hand per README.md's deploy step 2 (`wrangler kv namespace create`).
+# Free-tier KV: 1,000 writes/day, 100,000 reads/day; this Worker uses at most
+# 48 of each/day.
+[[kv_namespaces]]
+binding = "DEADMAN_STATE"
+id = "cbaf40f06963460fa19e3624dd9e5542"
+
+# NTFY_TOPIC is set as a Wrangler secret (`wrangler secret put NTFY_TOPIC`),
+# never committed here -- same "treat it like a password" rule as the
+# GitHub Actions NTFY_TOPIC secret it must match (README.md).
+
+# Observability: Workers Logs + Traces, so a cron-triggered run (no HTTP
+# response to inspect) is debuggable after the fact -- console.log/warn from
+# runCheck() and any uncaught exception otherwise leave zero trace once the
+# invocation ends. enabled=true corrected from the pasted reference config's
+# enabled=false at this top level: per Cloudflare's own docs this is the
+# master switch ("logs for the Worker are persisted... defaults to true"),
+# and false here would disable logging entirely regardless of the nested
+# [observability.logs]/[observability.traces] enabled=true below -- directly
+# contradicting both this session's instruction and the nested settings
+# themselves. Flagged rather than applied verbatim (session dated 2026-08-28).
+[observability]
+enabled = true
+head_sampling_rate = 1
+redact_query_string = false
+
+[observability.logs]
+enabled = true
+head_sampling_rate = 1
+persist = true
+invocation_logs = true
+
+[observability.traces]
+enabled = true
+persist = true
+head_sampling_rate = 1

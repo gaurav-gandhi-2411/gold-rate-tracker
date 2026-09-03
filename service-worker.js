@@ -33,7 +33,18 @@
 // (index.html, app.js, i18n.js, style.css) all changed; bumping so every
 // installed client re-fetches instead of serving the pre-batch shell
 // indefinitely.
-const VERSION = "v36-20260811-insights-ux";
+// 2026-08-28 (v37): app.js fix -- the estimate-tier hero render no longer
+// requires est_low/est_high to show the calibrated price. A band-suppressed
+// forecast (new possible state as of this change) used to fall through to
+// rendering the stale last-confirmed Tanishq reading as an unqualified
+// current price; now it correctly shows "≈" + current_22k with the range
+// line hidden. app.js changed; bumping so every installed client re-fetches.
+// 2026-08-28 (v38): G2 -- the estimated-price banner's confidence sentence
+// now states its actual nominal confidence level (e.g. "about 80% of the
+// time") instead of an unqualified Rs/gram number, and is driven entirely by
+// forecast.json's nominal_coverage/band_half_width rather than independently
+// recomputed from calibration.json. app.js + i18n.js (EN+HI) changed.
+const VERSION = "v38-20260828-band-copy-nominal";
 const SHELL_CACHE = `gold-shell-${VERSION}`;
 
 const SHELL_FILES = [

@@ -826,18 +826,20 @@ function renderStaleBanner(forecast, calibration) {
     banner.textContent = isToday
       ? t("bannerIbjaToday")
       : t("bannerIbjaCarryForward", { weekday: weekdayLong(ibjaDate) });
-    // Scoped to this banner only — calibration.json's residual numbers measure
-    // exactly this estimation mechanism (IBJA→Tanishq), not fusion_consensus's
-    // separate multi-source-disagreement math below, so appending this note
-    // anywhere else would cite a number that doesn't apply to that estimate.
-    // Prefer residual_std_oos (out-of-sample, walk-forward — see
-    // ml/calibration.py's walk_forward_validate()) over the in-sample
-    // residual_std, matching ml/inference.py's own _try_ibja_calibrated()
-    // fallback order for the est_low/est_high band width, so this sentence
-    // and that band are always describing the same confidence.
-    const confidence = calibration?.residual_std_oos ?? calibration?.residual_std;
-    if (typeof confidence === "number") {
-      banner.textContent += t("calibrationConfidenceAppend", { amount: fmtINR(Math.round(confidence)) });
+    // G2: driven entirely by forecast.json's own band_half_width/nominal_coverage
+    // -- NOT recomputed from calibration.json fields (the previous version read
+    // calibration.residual_std_oos directly, which could describe a different
+    // number than whatever band_method actually produced est_low/est_high, and
+    // asserted a specific Rs/gram accuracy with no stated confidence level at
+    // all). nominal_coverage is only non-null exactly when ml.inference produced
+    // a real, empirically-validated band (see _try_ibja_calibrated's band-sizing
+    // priority order) -- rendering nothing otherwise is the honest choice, not an
+    // unqualified number carried over from a suppressed or unvalidated band.
+    if (typeof forecast.nominal_coverage === "number" && typeof forecast.band_half_width === "number") {
+      banner.textContent += t("calibrationConfidenceAppend", {
+        amount: fmtINR(Math.round(forecast.band_half_width)),
+        coverage: forecast.nominal_coverage,
+      });
     }
     banner.hidden = false;
     return;
@@ -997,9 +999,20 @@ function renderHero(readings, forecast) {
   // ibja_calibrated (tier 2) and fusion_consensus (tier 3) render identically here
   // — the distinguishing honest labeling lives in the banner/pill (renderStaleBanner/
   // renderFreshness), not duplicated a third time in the hero itself.
+  // Deliberately NOT gated on est_low/est_high (G1d): a suppressed band (no
+  // residual_abs_quantiles and no on-the-fly fit possible — see ml/inference.py)
+  // must still show the ≈-prefixed calibrated estimate, just without the range
+  // line below it. Gating this whole tier on est_low/est_high being present used
+  // to be safe only because the old fallback ALWAYS produced a (sometimes
+  // unreliable) band; now that suppression is a real, reachable state, that
+  // gate would silently render the stale last-confirmed Tanishq reading as an
+  // unqualified "current" price — the opposite of what the stale-banner above
+  // it says. current_22k is always the right number for this tier regardless
+  // of whether a band could be sized.
   const isEstimateTier = forecast && (
     forecast.price_source === "ibja_calibrated" || forecast.price_source === "fusion_consensus"
-  ) && forecast.current_22k != null && forecast.est_low != null && forecast.est_high != null;
+  ) && forecast.current_22k != null;
+  const hasBand = forecast && forecast.est_low != null && forecast.est_high != null;
 
   if (isEstimateTier) {
     // Estimate tier (IBJA-calibrated or fusion-consensus) — bounded range still
@@ -1013,8 +1026,12 @@ function renderHero(readings, forecast) {
     priceEl.innerHTML = `≈ ${rupee(forecast.current_22k)}`;
     priceEl.hidden = false;
     if (rangeEl) {
-      rangeEl.textContent = t("heroEstimatedRange", { low: fmtINR(forecast.est_low), high: fmtINR(forecast.est_high) });
-      rangeEl.hidden = false;
+      if (hasBand) {
+        rangeEl.textContent = t("heroEstimatedRange", { low: fmtINR(forecast.est_low), high: fmtINR(forecast.est_high) });
+        rangeEl.hidden = false;
+      } else {
+        rangeEl.hidden = true;
+      }
     }
     // Honest secondary line: the actual last-observed Tanishq reading, dated —
     // never implied current. prices.json holds only genuine scraped Tanishq
@@ -2814,7 +2831,13 @@ function applyLanguage(lang) {
   lastCoverage = coverage.status === "fulfilled" ? coverage.value : null;
   lastCalibration = calibration.status === "fulfilled" ? calibration.value : null;
   renderModelSignal(fc, allReadings, btData, lastCoverage, lastDrift);  // re-render — coverage/drift now loaded
-  renderStaleBanner(fc, lastCalibration);  // re-render — calibration confidence now loaded (no-op unless price_source is ibja_calibrated)
+  // G2: renderStaleBanner's confidence sentence is now driven entirely by
+  // forecast.json (nominal_coverage/band_half_width), already available at the
+  // FIRST renderStaleBanner(fc) call above (line ~2781) — re-rendering here
+  // once calibration.json finishes loading would be a no-op with identical
+  // output. Removed. lastCalibration/calibrationPromise are otherwise unused
+  // by any renderer now (flagged as a follow-up cleanup, not done here to keep
+  // this PR scoped to the copy fix).
   renderForecastVsActual(btData);
   renderMethodology(fc, btData, lastDrift, lastCoverage);
 

@@ -44,6 +44,57 @@ Dataset: 150 labelled rows (h=1) / 148 (h=2), 2025-01-09 → 2026-08-03, from th
 1. **Probability gate** (`decide_direction_signal`) — ships a "% up" only when, OOS: ≥30 folds, significant (p<0.05), Brier < base-rate Brier, accuracy > base rate, AND ECE ≤ 0.10. Currently fails on accuracy + significance at both horizons.
 2. **Timing gate** (`decide_timing_signal`, *stricter* — a buy/wait/sell signal implies an action) — requires the probability gate to pass AND ≥60 folds, accuracy edge ≥5pp, ECE ≤ 0.05, p < 0.01. Dark by definition while the probability gate is dark.
 
+## Majority-class collapse (G3, session dated 2026-08-28)
+
+Beyond "not significant yet" above, the logistic model's own *predictions*
+— not just the labels' base rate — have stopped varying. In its most
+recent 30 folds, at **both** horizons, it predicted "up" every single
+time, exactly matching the always-up baseline's own prediction every fold:
+
+| Horizon | N folds | Trailing-30 "up" fraction | Majority-class collapse |
+|---|---|---|---|
+| h=1 | <!--METRIC:data/direction_baseline.json#horizons.h1.n_test_folds:int-->147<!--/METRIC--> | <!--METRIC:data/direction_baseline.json#horizons.h1.trailing_30_fold_up_fraction:pct1-->100.0%<!--/METRIC--> | <!--METRIC:data/direction_baseline.json#horizons.h1.majority_class_collapse:raw-->True<!--/METRIC--> |
+| h=2 | <!--METRIC:data/direction_baseline.json#horizons.h2.n_test_folds:int-->145<!--/METRIC--> | <!--METRIC:data/direction_baseline.json#horizons.h2.trailing_30_fold_up_fraction:pct1-->100.0%<!--/METRIC--> | <!--METRIC:data/direction_baseline.json#horizons.h2.majority_class_collapse:raw-->True<!--/METRIC--> |
+
+(`majority_class_collapse` fires at a trailing-30-fold fraction >= 0.95
+either direction — see `ml/direction/evaluate.py`'s
+`MAJORITY_CLASS_COLLAPSE_THRESHOLD` docstring for the full reasoning.
+Computed and written by `ml.direction.evaluate` every eval run; the table
+above is live, not hand-typed.)
+
+**Why this matters for the significance test above:** a model that always
+agrees with a trivial baseline can never generate a *new* discordant pair
+against it. This is not just "not yet significant" — the gate's p-value is
+currently **structurally frozen** at either horizon, regardless of how many
+more weekly runs pass, for as long as this trailing-window behavior
+persists.
+
+**The arithmetic** (point-in-time, measured 2026-08-28 — a derived
+calculation across multiple discordant-pair counts and an extrapolation
+assumption, not a single stored field, so it is presented as a dated
+analysis rather than a live-injected number; the `n_test_folds`/
+`trailing_30_fold_up_fraction`/`majority_class_collapse` figures above
+*are* live-injected and will update on their own): at the observed
+discordant-pair counts (h1: b=7, c=10, 17 of 147 folds; h2: b=10, c=6, 16
+of 145 folds), reaching p<0.05 at the *current* b:c ratio held constant
+would need roughly 125 discordant pairs (h1) / 65 (h2) — about 108 / 49
+*more* than exist today. At the full-history average accrual rate (0.116
+discordant pairs/fold for h1, 0.110/fold for h2), that is **~934 more
+folds for h1 (~18.0 years at this eval's weekly cadence) and ~444 more
+folds for h2 (~8.5 years)**. But the full-history average is not the
+*current* rate: in the most recent 30 folds, the accrual rate is 0/fold at
+both horizons — the model has matched the baseline every single time. Under
+that behavior, the gate cannot reach significance at *any* finite number of
+additional folds; it would first need to resume predicting "down" at least
+occasionally. **The gate is not "waiting for more data" right now — it is
+structurally unresolvable until the model's own behavior changes.**
+
+This finding does not change the verdict (still DARK, correctly) and does
+not modify the model or the gate logic — it is a diagnostic addition,
+recorded so a future reader of this doc (or the weekly eval output) sees
+*why* the p-value looks frozen rather than reading a flat "p=0.63, not
+significant" as "inconclusive, check back later."
+
 ## Re-run cadence
 
 - **Weekly** (Mon 04:00 UTC) and on `ml/direction/**` changes, via `eval-direction.yml`.
