@@ -15,6 +15,7 @@ import {
   ESCALATE_THRESHOLD_HOURS,
   TANISHQ_WARN_HOURS,
   TANISHQ_ESCALATE_HOURS,
+  RUNNER_CONFIRMED_OFFLINE_HOURS,
 } from "../src/deadman.mjs";
 import { runCheck } from "../src/index.mjs";
 
@@ -391,6 +392,104 @@ test("classifyTanishqSilence: unparseable scraped_at is unverifiable, not ok", (
   assert.equal(r.level, "unverifiable");
 });
 
+// --- R2c (audit 2026-09-04): health-file corroboration ---
+
+test("classifyTanishqSilence: WARN-range gap + stale health file escalates immediately (corroborated)", () => {
+  const scrapedAt = isoHoursAgo(TANISHQ_WARN_HOURS + 1); // in WARN range, well under ESCALATE
+  const staleHealth = isoHoursAgo(RUNNER_CONFIRMED_OFFLINE_HOURS + 1);
+  const r = classifyTanishqSilence(scrapedAt, NOW, staleHealth);
+  assert.equal(r.level, "escalate");
+  assert.match(r.reason, /corroborated/);
+});
+
+test("classifyTanishqSilence: WARN-range gap + FRESH health file stays warn, not escalate", () => {
+  const scrapedAt = isoHoursAgo(TANISHQ_WARN_HOURS + 1);
+  const freshHealth = isoHoursAgo(RUNNER_CONFIRMED_OFFLINE_HOURS - 1);
+  const r = classifyTanishqSilence(scrapedAt, NOW, freshHealth);
+  assert.equal(r.level, "warn");
+  assert.equal(r.reason, "health-fresh");
+});
+
+test("classifyTanishqSilence: missing health signal does not escalate early -- falls back to plain thresholds", () => {
+  const scrapedAt = isoHoursAgo(TANISHQ_WARN_HOURS + 1);
+  const r = classifyTanishqSilence(scrapedAt, NOW, null);
+  assert.equal(r.level, "warn"); // plain threshold result, unaffected by absent corroboration
+  assert.equal(r.reason, null);
+});
+
+test("classifyTanishqSilence: unparseable health signal does not escalate early or crash", () => {
+  const scrapedAt = isoHoursAgo(TANISHQ_WARN_HOURS + 1);
+  const r = classifyTanishqSilence(scrapedAt, NOW, "not-a-date");
+  assert.equal(r.level, "warn");
+  assert.equal(r.reason, null);
+});
+
+test("classifyTanishqSilence: health corroboration is not consulted when scraped_at is still fresh (no wasted work)", () => {
+  const r = classifyTanishqSilence(isoHoursAgo(1), NOW, isoHoursAgo(100)); // health stale, but scraped_at fresh
+  assert.equal(r.level, "ok");
+});
+
+test("buildTanishqAlert: escalate corroborated by health file states so explicitly", () => {
+  const a = buildTanishqAlert(
+    "escalate",
+    50,
+    "corroborated: tanishq_selfhosted_health.json also stale (12.0h) -- nothing has run, not just failed",
+  );
+  assert.match(a.body, /corroborated/);
+});
+
+test("buildTanishqAlert: warn with confirmed-fresh health names the scrape-failure hypothesis", () => {
+  const a = buildTanishqAlert("warn", 50, "health-fresh");
+  assert.match(a.body, /still shows the job itself executing/);
+});
+
+test("buildTanishqAlert: warn with no health signal does not claim the job is fine", () => {
+  const a = buildTanishqAlert("warn", 50, null);
+  assert.doesNotMatch(a.body, /still shows the job itself executing/);
+  assert.match(a.body, /[Cc]ould not confirm/);
+});
+
+test("runCheck: fetches the health file only once scraped_at is already in WARN range", async () => {
+  let healthFetched = false;
+  const fetchImpl = async (url) => {
+    if (url.includes("forecast.json")) {
+      return { ok: true, json: async () => ({ predicted_at: isoHoursAgo(0.2), scraped_at: isoHoursAgo(1) }) };
+    }
+    if (url.includes("tanishq_selfhosted_health.json")) {
+      healthFetched = true;
+      return { ok: true, json: async () => ({ last_updated_utc: isoHoursAgo(1) }) };
+    }
+    return { ok: true };
+  };
+  const env = { NTFY_TOPIC: "test-gold-topic", DEADMAN_STATE: fakeKv() };
+  await runCheck(env, fetchImpl, NOW);
+  assert.equal(healthFetched, false); // scraped_at fresh -- no reason to spend the request
+});
+
+test("runCheck: corroborated offline escalates even though scraped_at alone would still be WARN", async () => {
+  const ntfyBodies = [];
+  const fetchImpl = async (url, opts) => {
+    if (url.includes("forecast.json")) {
+      return {
+        ok: true,
+        json: async () => ({
+          predicted_at: isoHoursAgo(0.2),
+          scraped_at: isoHoursAgo(TANISHQ_WARN_HOURS + 2), // WARN range, NOT past ESCALATE (72h) alone
+        }),
+      };
+    }
+    if (url.includes("tanishq_selfhosted_health.json")) {
+      return { ok: true, json: async () => ({ last_updated_utc: isoHoursAgo(RUNNER_CONFIRMED_OFFLINE_HOURS + 1) }) };
+    }
+    ntfyBodies.push(opts.body);
+    return { ok: true };
+  };
+  const env = { NTFY_TOPIC: "test-gold-topic", DEADMAN_STATE: fakeKv() };
+  const result = await runCheck(env, fetchImpl, NOW);
+  assert.equal(result.tanishqLevel, "escalate");
+  assert.ok(ntfyBodies.some((b) => b.includes("corroborated")));
+});
+
 test("buildTanishqAlert: escalate names the runner as the likely cause", () => {
   const a = buildTanishqAlert("escalate", 80, null);
   assert.equal(a.priority, 5);
@@ -436,6 +535,9 @@ test("runCheck: scraped_at far in the past fires a Tanishq-silence alert, indepe
         ok: true,
         json: async () => ({ predicted_at: isoHoursAgo(0.2), scraped_at: isoHoursAgo(100) }),
       };
+    }
+    if (url.includes("tanishq_selfhosted_health.json")) {
+      return { ok: false, status: 404 }; // unavailable -- 100h already clears plain ESCALATE (72h) regardless
     }
     ntfyBodies.push(opts.body);
     return { ok: true };
