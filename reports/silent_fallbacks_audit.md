@@ -198,4 +198,3 @@ does and does not catch.
 - `.github/workflows/shadow-fusion.yml:63` — step "Run shadow fusion cycle"
 - `.github/workflows/weekly-backtest.yml:57` — step "Run integration tests (non-gating)"
 - `.github/workflows/weekly-backtest.yml:61` — step "Resolve metrics outcomes"
-

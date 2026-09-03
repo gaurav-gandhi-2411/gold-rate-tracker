@@ -269,10 +269,13 @@ def main() -> None:
     report = render_report(findings)
 
     args.out.parent.mkdir(parents=True, exist_ok=True)
-    # newline="\n" pins the output to LF regardless of platform -- Path.write_text's
-    # default newline handling translates "\n" to os.linesep on Windows (CRLF),
-    # which fails pre-commit's end-of-file-fixer/mixed-line-ending hooks on this repo.
-    args.out.write_text(report + "\n", encoding="utf-8", newline="\n")
+    # rstrip + one "\n": render_report()'s own "\n".join(lines) already ends in a
+    # blank-line artifact from the last per-category lines.append(""), so
+    # unconditionally appending "\n" here produced a double trailing newline that
+    # failed pre-commit's end-of-file-fixer. newline="\n" also pins output to LF
+    # regardless of platform -- write_text's default translates "\n" to os.linesep
+    # on Windows (CRLF), which that same hook rejects too.
+    args.out.write_text(report.rstrip("\n") + "\n", encoding="utf-8", newline="\n")
 
     by_category: dict[str, int] = {}
     for f in findings:
