@@ -52,7 +52,12 @@
 // 2026-09-04 (v40): R3 -- firstVisitText/footerBody (EN+HI) no longer
 // hand-type "checked every 3 hours"; both render the real measured cadence
 // from a new data/cadence_metrics.json fetch. app.js + i18n.js changed.
-const VERSION = "v40-20260904-cadence-claim";
+// 2026-09-03 (v41): fix(app) vol-regime and driver-context claims fail loud
+// instead of defaulting to a plausible value (audit finding (e) + two
+// siblings). app.js + i18n.js (EN+HI) changed. (Rebased onto master
+// 2026-09-05 -- see W5 in the session history for why this lands after v40
+// despite its own dated comment predating it.)
+const VERSION = "v41-20260905-fail-loud-defaults";
 const SHELL_CACHE = `gold-shell-${VERSION}`;
 
 const SHELL_FILES = [
