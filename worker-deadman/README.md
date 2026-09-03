@@ -3,12 +3,32 @@
 Independently checks that the **public** site — `data/forecast.json`, fetched
 from `https://gaurav-gandhi-2411.github.io/gold-rate-tracker/data/forecast.json`,
 never anything under `github.com/.../repos/...` — is fresh, and alerts to the
-existing ntfy topic at **WARN (>=5h stale)** / **ESCALATE (>=10h stale)**.
-It also posts a low-priority **daily heartbeat** so its own silence is
-informative (G4a): without it, no ntfy message could ever distinguish "the
-site is fine" from "the switch itself died" (Cloudflare account issue, quota
-exhaustion, a bad deploy). One heartbeat per IST calendar day, independent of
-whether a WARN/ESCALATE also fired that day.
+existing ntfy topic on TWO independent channels:
+
+1. **Forecast staleness** — `predicted_at` age, **WARN (>=5h)** / **ESCALATE
+   (>=10h)**. Catches "the pipeline stopped running entirely."
+2. **Tanishq confirmation silence** (Q4, audit 2026-09-03) — `scraped_at`
+   age (the last SUCCESSFUL Tanishq reading), **WARN (>=24h)** / **ESCALATE
+   (>=72h)**. Catches a scenario channel 1 structurally cannot: the
+   self-hosted runner dying permanently. `predicted_at` stays fresh forever
+   via the IBJA-calibrated fallback even with Tanishq dead for weeks, T12
+   (`ml/notifications.py`) only fires when the runner is online and jobs are
+   *failing* (not when it's offline, by design — see `docs/RUNBOOK.md`), and
+   the page itself gives users no indication Tanishq confirmation has
+   stopped (`price_source` stays `"ibja_calibrated"` and renders identically
+   whether Tanishq confirmed 2h ago or 3 weeks ago). Before this channel
+   existed, a permanent runner failure produced **zero alerts from
+   anything, ever**. Thresholds derived from the observed gap distribution
+   between successful Tanishq readings over the last 30 days (n=155 gaps:
+   median 2.92h, p90 5.99h, p95 14.21h, p99 29.43h, max 61.31h) — see the
+   constants' own comments in `src/deadman.mjs` for the full arithmetic.
+
+It also posts a low-priority **daily heartbeat** — stating BOTH channels'
+current level/age — so its own silence is informative (G4a): without it, no
+ntfy message could ever distinguish "the site is fine" from "the switch
+itself died" (Cloudflare account issue, quota exhaustion, a bad deploy). One
+heartbeat per IST calendar day, independent of whether either channel also
+fired that day.
 
 **Why this exists, and why it's not a GitHub Actions workflow:** every other
 alert in this project (T1–T13 in `ml/notifications.py`, the CI-scheduled
@@ -27,9 +47,11 @@ runs again.
 - `src/index.mjs` — the actual Worker: wires `deadman.mjs` to a real `fetch()`
   of the public site, a KV-backed "last alert sent" state (so a multi-hour
   outage doesn't re-alert every 30 min), and a POST to `ntfy.sh`.
-- `test/deadman.test.mjs` — 26 cases (`node --test`), including a synthetic
+- `test/deadman.test.mjs` — 48 cases (`node --test`), including a synthetic
   stale payload asserting the ESCALATE alert actually fires, dedup-window
-  behavior, and fail-closed handling of an unreachable/unparseable payload.
+  behavior, fail-closed handling of an unreachable/unparseable payload, and
+  (Q4) the Tanishq-silence channel's own classification/dedup/alert-copy
+  cases plus the "one fetch failure alerts once, not twice" guard.
   Wired into CI as a lint gate only (`.github/workflows/lint.yml`,
   `pwa-js` job) — this does **not** make the switch's own operation depend
   on GitHub Actions in any way; it only lints the source before deployment.
