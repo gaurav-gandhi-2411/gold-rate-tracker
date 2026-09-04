@@ -12,8 +12,8 @@ does and does not catch.
 | except-swallows-and-continues | 31 |
 | js-default-near-render | 11 |
 | js-default-other | 46 |
-| workflow-continue-on-error | 23 |
-| **total** | **170** |
+| workflow-continue-on-error | 24 |
+| **total** | **171** |
 
 ## dict.get-substantive-default (59)
 
@@ -42,7 +42,7 @@ does and does not catch.
 - `ml/logging_setup.py:34` — os.environ.get('CI', '')
 - `ml/metrics.py:109` — entry.get('decision', 'neutral')
 - `ml/metrics.py:235` — fc.get('predicted_at', '')
-- `ml/metrics.py:249` — fc.get('model_version', 'lgbm-only')
+- `ml/metrics.py:249` — fc.get('model_version', 'unknown')
 - `ml/metrics.py:250` — fc.get('real_readings_count', 0)
 - `ml/metrics.py:118` — entry.get('drop_threshold', DROP_THRESHOLD)
 - `ml/metrics.py:141` — e.get('decision_date', '')
@@ -113,80 +113,81 @@ does and does not catch.
 
 ## js-default-near-render (11)
 
-- `app.js:107` — const labels = (sources || []).map(s => NAMES[s] || s);
-- `app.js:482` — (percentile30d <= 40 && vsAvg30d > 0) ||
-- `app.js:1119` — if (!readings || readings.length === 0) {
-- `app.js:1145` — if (!c22 || !c24 || !c18) {
-- `app.js:1289` — const signals = computeGoodPriceSignals(readings ?? []);
-- `app.js:1294` — const isCheap = signals.verdictType === "cheap" || signals.verdictType === "below-mid";
-- `app.js:1296` — const trend   = computeTrendResidual30d(readings ?? [], signals.percentile30d);
-- `app.js:1433` — const regime = volCtx.regime ?? "normal";
-- `app.js:1447` — const piHalf = hl.vol_context?.static_pi_half ?? hl.conformal_pi_half ?? (hl.upper - hl.lower) / 2;
-- `app.js:1458` — const weeklyMovement = computeWeeklyMovement(readings ?? []);
-- `app.js:2149` — <div class="meth-stat-value">${ratio ?? "—"}</div>
+- `app.js:121` — const labels = (sources || []).map(s => NAMES[s] || s);
+- `app.js:497` — (percentile30d <= 40 && vsAvg30d > 0) ||
+- `app.js:1146` — if (!readings || readings.length === 0) {
+- `app.js:1172` — if (!c22 || !c24 || !c18) {
+- `app.js:1316` — const signals = computeGoodPriceSignals(readings ?? []);
+- `app.js:1321` — const isCheap = signals.verdictType === "cheap" || signals.verdictType === "below-mid";
+- `app.js:1323` — const trend   = computeTrendResidual30d(readings ?? [], signals.percentile30d);
+- `app.js:1460` — const regime = volCtx.regime ?? "normal";
+- `app.js:1474` — const piHalf = hl.vol_context?.static_pi_half ?? hl.conformal_pi_half ?? (hl.upper - hl.lower) / 2;
+- `app.js:1485` — const weeklyMovement = computeWeeklyMovement(readings ?? []);
+- `app.js:2176` — <div class="meth-stat-value">${ratio ?? "—"}</div>
 
 ## js-default-other (46)
 
-- `app.js:32` — window.matchMedia("(display-mode: standalone)").matches ||
-- `app.js:40` — /iPad|iPhone|iPod/.test(navigator.userAgent) ||
-- `app.js:256` — if (!prices || prices.length < 2) {
-- `app.js:292` — if (slope7d < -SLOPE_THRESHOLD && (forecastDelta < 0 || vsAvg30d < 0)) {
-- `app.js:303` — if (slope7d > SLOPE_THRESHOLD && (forecastDelta > 0 || vsAvg30d > 0)) {
-- `app.js:358` — if (!earliestToday || earliestToday === latest) {
-- `app.js:417` — if (!readings || readings.length < 2) return null;
-- `app.js:505` — if (!readings || readings.length < 2) return null;
-- `app.js:583` — if (!readings || readings.length < 2) return null;
-- `app.js:659` — if (!readings || readings.length < 2) return null;
-- `app.js:709` — if (!readings || readings.length < 2) return null;
-- `app.js:750` — if (!Array.isArray(drift) || drift.length === 0) return null;
-- `app.js:780` — if (ratePerGram < 0 || grams < 0 || makingPct < 0 || gstPct < 0) return null;
-- `app.js:1013` — forecast.price_source === "ibja_calibrated" || forecast.price_source === "fusion_consensus"
-- `app.js:1117` — if (!resultsEl || !gramsEl || !makingEl) return;
-- `app.js:1128` — forecast.price_source === "ibja_calibrated" || forecast.price_source === "fusion_consensus"
-- `app.js:1169` — if (!gramsEl || !makingEl) return;
-- `app.js:1187` — const span   = max22k - min22k || 1;
-- `app.js:1222` — if (!cmp || readings.length < 2) { section.hidden = true; return; }
-- `app.js:1342` — if (!readings || readings.length < 2) return null;
-- `app.js:1363` — const signals = computeGoodPriceSignals(readings ?? []);
-- `app.js:1368` — const bandPos90d = computeBandPos90d(readings ?? []);
-- `app.js:1369` — const trendResidual = computeTrendResidual30d(readings ?? [], signals.percentile30d);
-- `app.js:1370` — const supportDistance90d = computeSupportDistance90d(readings ?? [], signals.percentile30d);
-- `app.js:1384` — const rangeLower = hl?.lower ?? fc?.lower;
-- `app.js:1385` — const rangeUpper = hl?.upper ?? fc?.upper;
-- `app.js:1516` — if (!section || !body) return;
-- `app.js:1520` — if (!dc || !dc.macro_fresh) {
-- `app.js:1534` — const inrPct   = ds.usd_inr_30d_pct_change ?? 0;
-- `app.js:1535` — const goldPct  = ds.gold_usd_30d_pct_change ?? 0;
-- `app.js:1536` — const premPct30 = w30?.delta_pct_premium ?? 0;
-- `app.js:1546` — const inrPt    = Math.round(w7.usdinr_contrib_rs_per_g ?? 0);
-- `app.js:1547` — const goldPt   = Math.round(w7.gold_usd_contrib_rs_per_g ?? 0);
-- `app.js:1579` — if (inrMoved || goldMoved) {
-- `app.js:1622` — const label = ch.data.labels[chartPinnedIndex] || "";
-- `app.js:1681` — const get = (name, fallback) => (s.getPropertyValue(name) || fallback).trim();
-- `app.js:2031` — if (fc && typeof (fc.headline?.predicted_22k ?? fc.predicted_22k) === "number") {
-- `app.js:2032` — const pred22k = fc.headline?.predicted_22k ?? fc.predicted_22k;
-- `app.js:2033` — const lower   = fc.headline?.lower ?? fc.lower;
-- `app.js:2034` — const upper   = fc.headline?.upper ?? fc.upper;
-- `app.js:2079` — const n           = bt.n_folds ?? "—";
-- `app.js:2087` — const dirAllDisplay = dirAll ?? "—";
-- `app.js:2280` — const HEADER_H = document.getElementById("utility-row")?.getBoundingClientRect().height ?? 52;
-- `app.js:2330` — if (!indicator || !mainEl) return;
-- `app.js:2404` — const releaseY = e.changedTouches[0]?.clientY ?? (startY + 0);
-- `app.js:2417` — if (!targets.length || typeof IntersectionObserver === "undefined") return;
+- `app.js:46` — window.matchMedia("(display-mode: standalone)").matches ||
+- `app.js:54` — /iPad|iPhone|iPod/.test(navigator.userAgent) ||
+- `app.js:271` — if (!prices || prices.length < 2) {
+- `app.js:307` — if (slope7d < -SLOPE_THRESHOLD && (forecastDelta < 0 || vsAvg30d < 0)) {
+- `app.js:318` — if (slope7d > SLOPE_THRESHOLD && (forecastDelta > 0 || vsAvg30d > 0)) {
+- `app.js:373` — if (!earliestToday || earliestToday === latest) {
+- `app.js:432` — if (!readings || readings.length < 2) return null;
+- `app.js:520` — if (!readings || readings.length < 2) return null;
+- `app.js:598` — if (!readings || readings.length < 2) return null;
+- `app.js:674` — if (!readings || readings.length < 2) return null;
+- `app.js:724` — if (!readings || readings.length < 2) return null;
+- `app.js:765` — if (!Array.isArray(drift) || drift.length === 0) return null;
+- `app.js:795` — if (ratePerGram < 0 || grams < 0 || makingPct < 0 || gstPct < 0) return null;
+- `app.js:1040` — forecast.price_source === "ibja_calibrated" || forecast.price_source === "fusion_consensus"
+- `app.js:1144` — if (!resultsEl || !gramsEl || !makingEl) return;
+- `app.js:1155` — forecast.price_source === "ibja_calibrated" || forecast.price_source === "fusion_consensus"
+- `app.js:1196` — if (!gramsEl || !makingEl) return;
+- `app.js:1214` — const span   = max22k - min22k || 1;
+- `app.js:1249` — if (!cmp || readings.length < 2) { section.hidden = true; return; }
+- `app.js:1369` — if (!readings || readings.length < 2) return null;
+- `app.js:1390` — const signals = computeGoodPriceSignals(readings ?? []);
+- `app.js:1395` — const bandPos90d = computeBandPos90d(readings ?? []);
+- `app.js:1396` — const trendResidual = computeTrendResidual30d(readings ?? [], signals.percentile30d);
+- `app.js:1397` — const supportDistance90d = computeSupportDistance90d(readings ?? [], signals.percentile30d);
+- `app.js:1411` — const rangeLower = hl?.lower ?? fc?.lower;
+- `app.js:1412` — const rangeUpper = hl?.upper ?? fc?.upper;
+- `app.js:1543` — if (!section || !body) return;
+- `app.js:1547` — if (!dc || !dc.macro_fresh) {
+- `app.js:1561` — const inrPct   = ds.usd_inr_30d_pct_change ?? 0;
+- `app.js:1562` — const goldPct  = ds.gold_usd_30d_pct_change ?? 0;
+- `app.js:1563` — const premPct30 = w30?.delta_pct_premium ?? 0;
+- `app.js:1573` — const inrPt    = Math.round(w7.usdinr_contrib_rs_per_g ?? 0);
+- `app.js:1574` — const goldPt   = Math.round(w7.gold_usd_contrib_rs_per_g ?? 0);
+- `app.js:1606` — if (inrMoved || goldMoved) {
+- `app.js:1649` — const label = ch.data.labels[chartPinnedIndex] || "";
+- `app.js:1708` — const get = (name, fallback) => (s.getPropertyValue(name) || fallback).trim();
+- `app.js:2058` — if (fc && typeof (fc.headline?.predicted_22k ?? fc.predicted_22k) === "number") {
+- `app.js:2059` — const pred22k = fc.headline?.predicted_22k ?? fc.predicted_22k;
+- `app.js:2060` — const lower   = fc.headline?.lower ?? fc.lower;
+- `app.js:2061` — const upper   = fc.headline?.upper ?? fc.upper;
+- `app.js:2106` — const n           = bt.n_folds ?? "—";
+- `app.js:2114` — const dirAllDisplay = dirAll ?? "—";
+- `app.js:2307` — const HEADER_H = document.getElementById("utility-row")?.getBoundingClientRect().height ?? 52;
+- `app.js:2357` — if (!indicator || !mainEl) return;
+- `app.js:2431` — const releaseY = e.changedTouches[0]?.clientY ?? (startY + 0);
+- `app.js:2444` — if (!targets.length || typeof IntersectionObserver === "undefined") return;
 
-## workflow-continue-on-error (23)
+## workflow-continue-on-error (24)
 
-- `.github/workflows/check-price.yml:87` — step "Fetch macro features"
-- `.github/workflows/check-price.yml:121` — step "Check forecast drift"
-- `.github/workflows/check-price.yml:128` — step "Run inference"
-- `.github/workflows/check-price.yml:132` — step "Append IBJA rates"
-- `.github/workflows/check-price.yml:136` — step "Refit calibration if needed"
-- `.github/workflows/check-price.yml:146` — step "Compute rolling Tanishq scrape success rate"
-- `.github/workflows/check-price.yml:158` — step "Run Chronos probe"
-- `.github/workflows/check-price.yml:172` — step "Run notifications"
-- `.github/workflows/check-price.yml:185` — step "Record prediction metrics"
-- `.github/workflows/check-price.yml:189` — step "Capture feature-store snapshot"
-- `.github/workflows/check-price.yml:243` — step "Alert on stuck bot PR"
+- `.github/workflows/check-price.yml:159` — step "Fetch macro features"
+- `.github/workflows/check-price.yml:193` — step "Check forecast drift"
+- `.github/workflows/check-price.yml:200` — step "Run inference"
+- `.github/workflows/check-price.yml:204` — step "Append IBJA rates"
+- `.github/workflows/check-price.yml:208` — step "Refit calibration if needed"
+- `.github/workflows/check-price.yml:218` — step "Compute rolling Tanishq scrape success rate"
+- `.github/workflows/check-price.yml:230` — step "Run Chronos probe"
+- `.github/workflows/check-price.yml:244` — step "Run notifications"
+- `.github/workflows/check-price.yml:257` — step "Record prediction metrics"
+- `.github/workflows/check-price.yml:269` — step "Compute rolling data-cadence metric"
+- `.github/workflows/check-price.yml:273` — step "Capture feature-store snapshot"
+- `.github/workflows/check-price.yml:335` — step "Alert on stuck bot PR"
 - `.github/workflows/lint.yml:181` — step "pip-audit (ml/requirements-inference.lock)"
 - `.github/workflows/lint.yml:189` — step "npm audit (scraper)"
 - `.github/workflows/monthly-ibja-backfill.yml:46` — step "Run IBJA PDF backfill"
