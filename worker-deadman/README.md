@@ -5,8 +5,13 @@ from `https://gaurav-gandhi-2411.github.io/gold-rate-tracker/data/forecast.json`
 never anything under `github.com/.../repos/...` — is fresh, and alerts to the
 existing ntfy topic on TWO independent channels:
 
-1. **Forecast staleness** — `predicted_at` age, **WARN (>=5h)** / **ESCALATE
-   (>=10h)**. Catches "the pipeline stopped running entirely."
+1. **Forecast staleness** — `predicted_at` age, **WARN (>=6h)** / **ESCALATE
+   (>=12h)** (W1, audit 2026-09-04: derived from the product promise of a 3h
+   check cadence — WARN=2x, ESCALATE=4x — not from the currently-degraded
+   gap distribution, which is used only to state the resulting false-alarm
+   rate; see `src/deadman.mjs`'s own comment for the full reasoning and an
+   earlier, rejected attempt at these numbers). Catches "the pipeline
+   stopped running entirely."
 2. **Tanishq confirmation silence** (Q4, audit 2026-09-03; thresholds
    recalibrated + corroboration added R2, audit 2026-09-04) — `scraped_at`
    age (the last SUCCESSFUL Tanishq reading), **WARN (>=48h)** / **ESCALATE
@@ -189,8 +194,8 @@ deployment done — do not skip on the assumption steps 5–6 were enough.
 
 1. In `worker-deadman/src/deadman.mjs`, temporarily change:
    ```
-   export const WARN_THRESHOLD_HOURS = 5;
-   export const ESCALATE_THRESHOLD_HOURS = 10;
+   export const WARN_THRESHOLD_HOURS = 6;
+   export const ESCALATE_THRESHOLD_HOURS = 12;
    ```
    to `0` and `0.01` respectively.
 2. `wrangler deploy`

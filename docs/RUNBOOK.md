@@ -210,21 +210,69 @@ quota — this repo is public, so minutes are unlimited and billing net cost
 is $0 regardless of usage).
 
 Since the drop is platform-side and may not fully recover, `check-price.yml`
-now includes a **self-triggering catch-up** step (`Detect missed cadence and
+includes a **self-triggering catch-up** step (`Detect missed cadence and
 self-trigger catch-up`, runs immediately after checkout): if the last
-committed `data/forecast.json.predicted_at` is >= 6h old (2x the 3h cadence),
-it dispatches one extra `workflow_dispatch` run via the REST API
+committed `data/forecast.json.predicted_at` is >= 4h old, it dispatches one
+extra `workflow_dispatch` run via the REST API
 (`gh workflow run check-price.yml -f catchup=true`) instead of passively
-waiting up to 3h for the next scheduled tick, which carries the same
-~18.5%+ drop probability. The `catchup=true` input on the dispatched run
-prevents it from re-triggering again, bounding this to one extra run per
-detected gap.
+waiting up to 3h for the next scheduled tick, which carries the same drop
+probability. The `catchup=true` input on the dispatched run prevents it
+from re-triggering again, bounding this to one extra run per detected gap.
 
 **What this does not fix:** IBJA and Tanishq only expose their *current*
 reading, not a historical lookback — so a genuinely missed window's price is
 never recoverable after the fact, catch-up or not. It also does not reduce
 the underlying platform miss rate; it only shortens how long the site stays
 stale once a run *does* fire and observes the gap.
+
+### Recovered on miss rate, not on latency (audit 2026-09-04)
+
+The miss rate above did recover to near-0% by 2026-08-30 (measured on the
+control workflows `shadow-fusion.yml`/`render-smoke.yml`, which share no
+code with `check-price.yml`). But miss rate only asks "did a run happen
+somewhere in the 6h window" — it cannot see how *late* within that window
+the run landed. Re-measuring with a delay-vs-nominal-slot metric found the
+recovery was one-dimensional: pre-incident median fire delay was
+51–134 minutes (two different clean weeks); post-recovery (2026-08-30
+onward) it is a *consistent* 245–288 minutes (~4.1–4.8h), every day,
+corroborated on two independent workflows. `data/forecast.json`'s own
+commit-gap distribution over the same post-recovery window (n=28) shows the
+same shape: median 4.69h, p90 7.29h, max 8.18h — worse than the promised 3h
+cadence by 50%+ on a typical cycle. **Miss rate alone is structurally blind
+to this** and should not be quoted on its own as evidence of health; pair it
+with a delay/gap distribution, or don't quote it.
+
+### Threshold ladder (W1, audit 2026-09-04)
+
+`check-price.yml`'s catch-up (4h) and `worker-deadman`'s dead-man's-switch
+WARN (6h) / ESCALATE (12h) are derived from the **product promise** — the
+page states a 3h check cadence, so catch-up = ~1.3x, WARN = 2x, ESCALATE =
+4x that promise — not from the currently-observed (degraded) gap
+distribution. An earlier attempt derived WARN/ESCALATE from the observed
+distribution directly (median/p90/max of the actual gaps) and landed on
+WARN=9h/ESCALATE=10h; that repeats the exact mistake that produced the
+original, too-loose 6h catch-up threshold in the first place — calibrating
+an alert against a degraded sample encodes the degradation as the new
+normal, and every future degradation ratchets the threshold looser again,
+forever. (That attempt briefly reached master by process accident —
+squash-merging an unrelated PR whose branch had been created without
+returning to master first — and was reverted before this section was
+written.)
+
+**The tension this creates, on purpose:** at the current degraded cadence,
+WARN=6h is exceeded by ~21% of normal gaps (roughly 34 pages/month,
+extrapolated). That is a real, disruptive rate. The alternative — raising
+WARN until the noise stops — was rejected: a WARN that only fires during
+genuine multi-cycle outages, tuned to whatever the platform's current bad
+day looks like, stops being an alert about the promise and becomes an alert
+about the *incident*, which is a different and much weaker thing. If this
+page rate is unacceptable, the honest fix is to change what the page
+promises users (already done once — see the injected-cadence-metric fix,
+`i18n.js`'s `firstVisitText`/`footerBody`, `README.md`'s median-gap marker
+— both render the real measured cadence now, not a fixed "3 hours" claim),
+not to keep raising the alarm threshold until it stops firing. The 3h cron
+itself is a separate, bigger decision (would mean admitting the *system*,
+not just the on-page copy, no longer targets 3h) and was left alone here.
 
 ---
 

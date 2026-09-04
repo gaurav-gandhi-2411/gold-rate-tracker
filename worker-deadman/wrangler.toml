@@ -5,7 +5,7 @@ compatibility_date = "2026-08-27"
 # Every 30 min: 48 invocations/day, well inside the Workers Free plan's
 # 100,000 requests/day and 5-cron-triggers-per-account limits (verified
 # 2026-08-27 against developers.cloudflare.com/workers/platform/limits/).
-# Gives WARN(5h)/ESCALATE(10h) thresholds ~30 min of resolution.
+# Gives WARN(6h)/ESCALATE(12h) thresholds ~30 min of resolution.
 [triggers]
 crons = ["*/30 * * * *"]
 

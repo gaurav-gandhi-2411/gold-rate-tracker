@@ -2,8 +2,38 @@
 // (fetch, KV bindings) so it can be unit-tested with plain Node -- the
 // Workers entry point (index.mjs) is a thin wiring layer around this file.
 
-export const WARN_THRESHOLD_HOURS = 5;
-export const ESCALATE_THRESHOLD_HOURS = 10;
+// W1 (audit 2026-09-04, amending an earlier V1 attempt that leaked to master
+// by process accident -- see the revert PR that preceded this one): thresholds
+// derived from the PRODUCT PROMISE (the page states forecast.json is checked
+// every 3h -- .github/workflows/check-price.yml's cron), not from the
+// currently-observed gap distribution. V1's mistake was the same shape as the
+// original 6h catch-up threshold it was trying to fix: both were calibrated
+// against a degraded-state sample, which encodes degradation as normal and
+// ratchets thresholds looser every time reality gets worse. The observed
+// distribution (data/forecast.json commit gaps, 2026-08-30 onward, n=28:
+// median 4.69h, p90 7.29h, p95 7.79h, max 8.18h) is used ONLY below to STATE
+// the resulting false-alarm rate at each promise-derived level, never to set
+// the level itself.
+//
+// WARN = 6h = 2x the 3h promise. "A user checking the timestamp would notice
+// this is wrong." Exceeded by 6 of 28 gaps (21.4%) in the current sample --
+// extrapolated, roughly 34 WARN pages/month at the current (degraded)
+// cadence. That is a real, disruptive rate, and it is meant to be: WARN
+// firing often right now is the alert correctly reporting that the system
+// no longer meets its promise, not a mis-tuned threshold. See docs/RUNBOOK.md
+// for the recommendation this implies (fix the promise, not the alarm).
+//
+// ESCALATE = 12h = 4x the 3h promise. Exceeded by 0 of 28 gaps in the
+// post-recovery sample, and by only 1 of 84 gaps (1.2%) in the full 14-day
+// window spanning the actual Aug-27 incident (that one exceedance was the
+// genuine incident, correctly the only thing that should ever cross this
+// line). 6h of separation from WARN: comfortably above the measured
+// mechanical time to restore service after a manual workflow_dispatch
+// (dispatch-to-live-on-master: median ~4.5min, worst observed ~12min, n=5,
+// 2026-09-04 data) -- the gap exists for human response time (noticing the
+// page, deciding to act), not for the dispatch mechanics, which are fast.
+export const WARN_THRESHOLD_HOURS = 6;
+export const ESCALATE_THRESHOLD_HOURS = 12;
 
 // Q4 (audit 2026-09-03): T12 cannot fire when the self-hosted runner is
 // offline (deliberate design, docs/RUNBOOK.md), and forecast.json's

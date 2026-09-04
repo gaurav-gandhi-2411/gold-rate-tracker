@@ -76,16 +76,29 @@ jobs:
         # does NOT backfill the missed window's data -- IBJA/Tanishq only
         # expose CURRENT readings, not historical lookback, so whatever the
         # price was during a dropped tick is permanently unrecorded. What
-        # this DOES do: when a run finds the last commit is stale by more
-        # than 2 cadence cycles (6h), it does not just do this tick's normal
-        # work and then passively wait up to 3h for the next scheduled
-        # slot -- which shares the same ~18.5%+ drop probability and could
-        # extend the gap further. It immediately dispatches one extra run via
-        # the REST API (independent of the `schedule` event path that's
-        # actually degraded), giving the system a second, faster chance to
-        # land fresh data. `inputs.catchup` on the dispatch marks that run so
-        # its own copy of this step never re-dispatches -- bounded to one
-        # extra run per detected gap, never a chain.
+        # this DOES do: when a run finds the last commit is stale, it does
+        # not just do this tick's normal work and then passively wait up to
+        # 3h for the next scheduled slot -- which shares the same drop
+        # probability and could extend the gap further. It immediately
+        # dispatches one extra run via the REST API (independent of the
+        # `schedule` event path), giving the system a second, faster chance
+        # to land fresh data. `inputs.catchup` on the dispatch marks that
+        # run so its own copy of this step never re-dispatches -- bounded to
+        # one extra run per detected gap, never a chain.
+        #
+        # W1 (audit 2026-09-04): threshold = 4h, derived from the PRODUCT
+        # PROMISE (3h cron cadence) plus margin for ordinary jitter around a
+        # single tick -- roughly 1.33x the promise, deliberately BELOW
+        # worker-deadman's WARN=6h (2x the promise) so this free, silent
+        # self-heal attempt always gets a chance to resolve a gap before a
+        # human would be paged. Not derived from the observed gap
+        # distribution (an earlier attempt at this threshold was, and
+        # briefly leaked to master by process accident before being
+        # reverted -- deriving alert/self-heal levels from a degraded-state
+        # sample encodes the degradation as normal). At the current
+        # (degraded) cadence this fires on a majority of ticks (empirically
+        # ~68% in a recent 28-gap sample) -- acceptable because the action
+        # is a few free CI minutes on a public repo, not a page.
         if: github.event.inputs.catchup != 'true'
         env:
           GH_TOKEN: ${{ github.token }}
@@ -108,11 +121,11 @@ jobs:
           NOW_EPOCH=$(date -u +%s)
           GAP_HOURS=$(( (NOW_EPOCH - PREDICTED_EPOCH) / 3600 ))
           echo "Last committed forecast is ${GAP_HOURS}h old."
-          if [ "$GAP_HOURS" -ge 6 ]; then
-            echo "Gap >= 6h (2x the 3h cadence) -- at least one scheduled tick was likely dropped. Dispatching one catch-up run."
+          if [ "$GAP_HOURS" -ge 4 ]; then
+            echo "Gap >= 4h -- at least one scheduled tick was likely dropped. Dispatching one catch-up run."
             gh workflow run check-price.yml --repo "${GITHUB_REPOSITORY}" --ref master -f catchup=true
           else
-            echo "Gap under 6h -- normal cadence, no catch-up needed."
+            echo "Gap under 4h -- normal cadence, no catch-up needed."
           fi
 
       # Tanishq scraping happens in scrape-tanishq-selfhosted.yml (its own
