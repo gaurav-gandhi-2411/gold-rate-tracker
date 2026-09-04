@@ -44,7 +44,12 @@
 // time") instead of an unqualified Rs/gram number, and is driven entirely by
 // forecast.json's nominal_coverage/band_half_width rather than independently
 // recomputed from calibration.json. app.js + i18n.js (EN+HI) changed.
-const VERSION = "v38-20260828-band-copy-nominal";
+//
+// 2026-09-04 (v39): R3 -- the ibja_calibrated banner now names it when
+// Tanishq confirmation itself has been silent for TIER_DEGRADED_THRESHOLD_H
+// (48h), instead of rendering identically whether Tanishq confirmed 2h ago
+// or 3 weeks ago. app.js + i18n.js (EN+HI) changed.
+const VERSION = "v39-20260904-tier-degradation-visible";
 const SHELL_CACHE = `gold-shell-${VERSION}`;
 
 const SHELL_FILES = [
