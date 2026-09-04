@@ -2546,8 +2546,17 @@ function applyStaticStrings() {
 // resolves, and must be re-called after every future applyStaticStrings()
 // call (i.e. on language switch too) or the override would be lost.
 function renderCadenceStrings(metric) {
+  // X1b (audit 2026-09-05): p90 added alongside the median -- a median
+  // alone hides the tail users actually experience. Falls back to omitting
+  // the worst-case clause (not a fabricated number) if an older cached
+  // cadence_metrics.json predating this field is ever served.
   const params = metric && typeof metric.median_gap_hours === "number"
-    ? { hours: metric.median_gap_hours.toFixed(1), n: metric.n, asOf: String(metric.as_of).slice(0, 10) }
+    ? {
+        hours: metric.median_gap_hours.toFixed(1),
+        p90Hours: typeof metric.p90_gap_hours === "number" ? metric.p90_gap_hours.toFixed(1) : null,
+        n: metric.n,
+        asOf: String(metric.as_of).slice(0, 10),
+      }
     : null;
   const firstVisitEl = document.querySelector('[data-i18n="firstVisitText"]');
   if (firstVisitEl) firstVisitEl.textContent = t("firstVisitText", params);

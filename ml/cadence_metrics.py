@@ -63,18 +63,39 @@ def load_log(path: Path = CADENCE_LOG_PATH) -> list[dict]:
     return records
 
 
+def _percentile(sorted_values: list[float], p: float) -> float:
+    """Linear-interpolation percentile (matches the method used throughout
+    this audit's own gap-distribution analysis, e.g. Wilson-adjacent p90/p95
+    reporting elsewhere in this repo) -- not numpy, to avoid adding a
+    dependency to a script this small."""
+    if len(sorted_values) == 1:
+        return sorted_values[0]
+    idx = (len(sorted_values) - 1) * p
+    lo, hi = int(idx), min(int(idx) + 1, len(sorted_values) - 1)
+    if lo == hi:
+        return sorted_values[lo]
+    frac = idx - lo
+    return sorted_values[lo] + (sorted_values[hi] - sorted_values[lo]) * frac
+
+
 def compute_median_gap(
     records: list[dict],
     now: datetime,
     window_days: int = WINDOW_DAYS,
 ) -> dict:
-    """Filter to the rolling window and compute the median inter-commit gap.
+    """Filter to the rolling window and compute the inter-commit gap
+    distribution.
 
-    Returns a dict with window_days/n/median_gap_hours/as_of. n is the
-    number of GAPS (record count in window minus one), not the record
-    count itself. median_gap_hours and as_of are None when n == 0 (fewer
+    Returns a dict with window_days/n/median_gap_hours/p90_gap_hours/as_of.
+    n is the number of GAPS (record count in window minus one), not the
+    record count itself. All stats and as_of are None when n == 0 (fewer
     than 2 records in window) -- no data is a distinct, honest state from
     a specific number, not something to default to 0 or the nominal 3h.
+
+    X1b (audit 2026-09-05): p90 added alongside the median -- a median
+    alone hides the tail users actually experience; a system whose median
+    gap looks fine can still leave a meaningful share of visits looking at
+    a noticeably staler number than "typical" would suggest.
     """
     cutoff = now - timedelta(days=window_days)
     timestamps: list[datetime] = []
@@ -95,17 +116,19 @@ def compute_median_gap(
             "window_days": window_days,
             "n": 0,
             "median_gap_hours": None,
+            "p90_gap_hours": None,
             "as_of": None,
         }
 
-    gaps_hours = [
+    gaps_hours = sorted(
         (timestamps[i] - timestamps[i - 1]).total_seconds() / 3600.0
         for i in range(1, len(timestamps))
-    ]
+    )
     return {
         "window_days": window_days,
         "n": len(gaps_hours),
         "median_gap_hours": statistics.median(gaps_hours),
+        "p90_gap_hours": _percentile(gaps_hours, 0.9),
         "as_of": timestamps[-1].isoformat(),
     }
 
