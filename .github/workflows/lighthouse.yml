@@ -87,3 +87,4 @@ jobs:
           pr-body: "Automated Lighthouse mobile measurement from run ${{ github.run_id }}. 5 runs against production, median recorded. No effect on the live site."
           token: ${{ secrets.CI_MERGE_PAT }}
           wait-minutes: "15"
+          ntfy-topic: ${{ secrets.NTFY_TOPIC }}

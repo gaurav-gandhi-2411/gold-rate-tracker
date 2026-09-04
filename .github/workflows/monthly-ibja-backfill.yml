@@ -72,3 +72,4 @@ jobs:
           pr-body: "Automated IBJA backfill sync from Monthly IBJA PDF Backfill run ${{ github.run_id }}."
           token: ${{ secrets.CI_MERGE_PAT }}
           wait-minutes: "10"
+          ntfy-topic: ${{ secrets.NTFY_TOPIC }}

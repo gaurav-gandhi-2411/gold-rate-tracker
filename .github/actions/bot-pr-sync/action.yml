@@ -41,6 +41,19 @@ inputs:
     description: "Max minutes to wait for the PR to merge before failing"
     required: false
     default: "15"
+  ntfy-topic:
+    description: >
+      ntfy.sh topic to alert on if the data-only allowlist guard rejects this
+      run's diff. Optional -- when empty, the guard still fails the step
+      (::error:: + exit 1, unchanged), it just can't also page anyone. R2
+      (audit 2026-09-04): the guard already failed the step/job on rejection,
+      but that alone went unnoticed -- "Alert on stuck bot PR" (in every
+      caller) only checks an OPEN PR's age, and this guard exits before any
+      PR is ever created, so there's nothing for that check to find. A failed
+      CI run with no PR and no page is easy to miss among the routine
+      continue-on-error steps this same job is full of.
+    required: false
+    default: ""
 
 runs:
   using: composite
@@ -53,6 +66,7 @@ runs:
         PR_TITLE: ${{ inputs.pr-title }}
         PR_BODY: ${{ inputs.pr-body }}
         WAIT_MINUTES: ${{ inputs.wait-minutes }}
+        NTFY_TOPIC: ${{ inputs.ntfy-topic }}
       run: |
         set -e
 
@@ -85,6 +99,21 @@ runs:
         if [ -n "$BAD_FILES" ]; then
           echo "::error::bot-pr-sync diff includes file(s) outside the data-only allowlist (data/, og.png, reports/lighthouse/) — refusing to push/merge:"
           echo "$BAD_FILES"
+          # R2 (audit 2026-09-04): fail LOUD, not just red. This guard exits
+          # before any PR is created, so the age-based "Alert on stuck bot
+          # PR" check in the calling workflow has nothing to find -- without
+          # this, the only signal is a failed Actions run indistinguishable
+          # (at a glance) from the many continue-on-error steps in the same
+          # job. Best-effort (|| true): a broken ntfy post must never mask
+          # the real failure being reported via exit 1 below.
+          if [ -n "${NTFY_TOPIC}" ]; then
+            curl -s \
+              -H "Title: Gold Tracker: bot-pr-sync allowlist rejected a commit" \
+              -H "Priority: high" \
+              -H "Tags: warning,no_entry_sign" \
+              -d "bot-pr-sync (branch ${BRANCH}) refused to push/merge -- diff includes file(s) outside the data-only allowlist: $(echo "$BAD_FILES" | tr '\n' ' '). Data sync is blocked until this is fixed. https://github.com/${GITHUB_REPOSITORY}/actions" \
+              "https://ntfy.sh/${NTFY_TOPIC}" || true
+          fi
           exit 1
         fi
 
