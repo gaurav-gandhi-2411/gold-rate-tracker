@@ -191,6 +191,43 @@ backstop — that state should be rare and, if it persists, will have already fi
 
 ---
 
+## Scheduled-trigger reliability and catch-up (added 2026-09-04)
+
+`check-price.yml`'s scheduled-trigger miss rate stepped from 0.0% (152/152
+expected 3h slots fired cleanly across 39 clean days) to 18.5%+ starting
+**2026-08-27T00:15 UTC** and has stayed elevated since. This is a
+**GitHub-platform-side incident, not a defect in this repo**:
+[githubstatus.com's incident report](https://githubstatus.com/incidents/kz4khcgdsfdv)
+for 2026-08-26 15:02 UTC – 2026-08-27 01:00 UTC (recovery) describes
+"saturation of writes to the database primary used by the service processing
+triggers for Actions workflows" with "downstream throttles set ~10% too
+high to protect the system" — our step-change timestamp falls inside that
+recovery window. Corroborated cross-repo: `gg-portfolio`'s `chat-canary.yml`
+(unrelated repo, unrelated code, every-6h cron) shows the identical
+0.6%→17.1% miss-rate step at the same point, ruling out any repo-specific
+cause (no `.github/` change, no runner re-registration, no Actions-minutes
+quota — this repo is public, so minutes are unlimited and billing net cost
+is $0 regardless of usage).
+
+Since the drop is platform-side and may not fully recover, `check-price.yml`
+now includes a **self-triggering catch-up** step (`Detect missed cadence and
+self-trigger catch-up`, runs immediately after checkout): if the last
+committed `data/forecast.json.predicted_at` is >= 6h old (2x the 3h cadence),
+it dispatches one extra `workflow_dispatch` run via the REST API
+(`gh workflow run check-price.yml -f catchup=true`) instead of passively
+waiting up to 3h for the next scheduled tick, which carries the same
+~18.5%+ drop probability. The `catchup=true` input on the dispatched run
+prevents it from re-triggering again, bounding this to one extra run per
+detected gap.
+
+**What this does not fix:** IBJA and Tanishq only expose their *current*
+reading, not a historical lookback — so a genuinely missed window's price is
+never recoverable after the fact, catch-up or not. It also does not reduce
+the underlying platform miss rate; it only shortens how long the site stays
+stale once a run *does* fire and observes the gap.
+
+---
+
 ## Manual scraper re-run
 
 To re-scrape outside the 6-hour schedule (e.g. after fixing a broken selector):
@@ -457,18 +494,43 @@ retired setup, kept for historical reference).
 
 ---
 
-## Dead-man's switch (added 2026-08-28, deploy pending owner action)
+## Dead-man's switch (deployed 2026-08-28, redeploy needed — audit 2026-09-04)
 
 A second, unrelated Cloudflare Worker — `gold-rate-tracker-deadman`, on the
 same Cloudflare account the retired worker above ran on — independently
 checks the public site's `data/forecast.json` freshness and alerts to the
 existing ntfy topic at WARN (>=5h stale) / ESCALATE (>=10h stale). Unlike
 every other alert in this project, it does not run inside GitHub Actions,
-so it keeps working if GitHub Actions' own scheduling ever stops firing.
-Code and tests are complete; deployment is a manual owner step (Cloudflare
-resources/secrets can't be created from this session) — see
-[worker-deadman/README.md](../worker-deadman/README.md) for the exact
-deploy procedure and how to confirm it's live.
+so it keeps working if GitHub Actions' own scheduling ever stops firing. See
+[worker-deadman/README.md](../worker-deadman/README.md) for the deploy
+procedure and how to confirm it's live.
+
+**Verified live 2026-09-04** (Cloudflare API, account `gg5678g@gmail.com`):
+cron trigger `*/30 * * * *` registered, 306 invocations since deploy, 100%
+`success`, 0 errors, current KV state `level: "ok"` agreeing with the live
+site's actual freshness. The core staleness check works.
+
+**But the deployed code is stale and needs a redeploy.** `wrangler
+deployments list` shows exactly 2 deployments, both from 2026-08-28
+00:28–00:30 UTC — before the daily-heartbeat feature (`#1241`, merged
+2026-08-28 01:28 UTC) and before the `wrangler.toml` `observability.enabled`
+fix (`be13ad5`, 2026-08-28 06:03 UTC) landed on master. Confirmed
+behaviourally: the KV key `deadman:last_heartbeat_date_ist` the heartbeat
+code writes does not exist (404) after 7 days of continuous cron firing —
+the running code has no heartbeat path at all, so G4a's whole purpose
+(making the switch's own silence informative) is currently unmet in
+production. To fix:
+
+```bash
+cd worker-deadman
+wrangler deploy
+```
+
+No new secret needed (`NTFY_TOPIC` persists across a code-only redeploy).
+Within 30 min of redeploying, expect one ntfy heartbeat notification (the
+stored heartbeat date is empty, so the next tick's `shouldSendHeartbeat`
+check is immediately due) — that arrival is itself the confirmation the
+redeploy picked up the new code.
 
 ---
 
