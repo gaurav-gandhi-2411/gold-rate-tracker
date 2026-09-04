@@ -21,8 +21,8 @@ markdown -- the visible page shows plain text, never raw marker syntax):
   <json-path>       repo-relative path to a data/*.json file
   <field.path>      dot-separated path into that JSON (supports nested objects,
                     e.g. horizons.h1.logistic_metrics.accuracy)
-  <format>          pct1 (80.0%), pct2 (80.00%), num2 (0.98), num3 (0.975),
-                    int (96), raw (verbatim)
+  <format>          pct1 (80.0%), pct2 (80.00%), num1 (4.9), num2 (0.98),
+                    num3 (0.975), int (96), raw (verbatim)
   n=<field>         optional sibling field (same file) supplying the sample size;
                     rendered as "(n=<value>, ...)" alongside the value
   asof=<field>      optional sibling field supplying the as-of date/timestamp;
@@ -127,6 +127,8 @@ def _format_value(value: object, fmt: str, source: str) -> str:
         return f"{value * 100:.1f}%"
     if fmt == "pct2":
         return f"{value * 100:.2f}%"
+    if fmt == "num1":
+        return f"{value:.1f}"
     if fmt == "num2":
         return f"{value:.2f}"
     if fmt == "num3":

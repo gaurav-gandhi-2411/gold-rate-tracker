@@ -19,6 +19,7 @@ const DRIFT_URL     = "data/drift_metrics.json";
 const METRICS_URL   = "data/metrics_history.json";
 const COVERAGE_URL  = "data/coverage_metrics.json";
 const CALIBRATION_URL = "data/calibration.json";
+const CADENCE_URL   = "data/cadence_metrics.json"; // R2: real observed data-commit interval, see ml/cadence_metrics.py
 
 // Staleness threshold (hours) shared with Python inference.py _STALE_THRESHOLD_H.
 // Per ADR 025 this now gates Tanishq *enrichment* freshness, not primary staleness.
@@ -174,6 +175,7 @@ let lastBacktest      = null;  // cached so applyLanguage() can re-render method
 let lastDrift         = null;
 let lastCoverage      = null;
 let lastCalibration   = null;
+let lastCadenceMetric = null; // R2: cached so applyLanguage() can re-render the cadence claim without re-fetching
 
 // Ψ3C.2: stagger card-enter animation across a list of elements.
 // Forces a reflow between remove/add so the animation restarts each time.
@@ -2497,6 +2499,27 @@ function applyStaticStrings() {
   });
 }
 
+// R2 (audit 2026-09-04): firstVisitText/footerBody hand-typed "checked every
+// 3 hours" as a present-tense claim that stopped being true once scheduled-
+// trigger reliability degraded (docs/RUNBOOK.md). Both i18n.js entries are
+// now params-taking functions rendered from data/cadence_metrics.json (the
+// real median gap between successful data commits) instead of a fixed
+// number. applyStaticStrings()'s generic data-i18n scan calls every key with
+// no params (by design -- it doesn't know which keys need them), so it
+// always renders these two with the "still loading" fallback text first;
+// this function overrides them with the real numbers once the fetch
+// resolves, and must be re-called after every future applyStaticStrings()
+// call (i.e. on language switch too) or the override would be lost.
+function renderCadenceStrings(metric) {
+  const params = metric && typeof metric.median_gap_hours === "number"
+    ? { hours: metric.median_gap_hours.toFixed(1), n: metric.n, asOf: String(metric.as_of).slice(0, 10) }
+    : null;
+  const firstVisitEl = document.querySelector('[data-i18n="firstVisitText"]');
+  if (firstVisitEl) firstVisitEl.textContent = t("firstVisitText", params);
+  const footerEl = document.querySelector('[data-i18n-html="footerBody"]');
+  if (footerEl) footerEl.innerHTML = t("footerBody", params);
+}
+
 // Devanagari fonts (Sans for --heading/--sans, Serif for --display), loaded
 // only when Hindi is active — English users' browsers never discover either
 // @font-face at all (each unicode-range only matches when a Devanagari
@@ -2536,6 +2559,7 @@ function applyDevanagariFont() {
 function applyLanguage(lang) {
   setLang(lang);
   applyStaticStrings();
+  renderCadenceStrings(lastCadenceMetric); // re-apply over applyStaticStrings()'s no-params render
   applyDevanagariFont();
   renderFreshness(allReadings, lastForecast);
   renderComparisons(allReadings);
@@ -2754,13 +2778,14 @@ function applyLanguage(lang) {
   const driftPromise = loadJSON(DRIFT_URL);
   const coveragePromise = loadJSON(COVERAGE_URL);
   const calibrationPromise = loadJSON(CALIBRATION_URL);
-  // These four are only actually consumed much later (via Promise.allSettled, after
+  const cadencePromise = loadJSON(CADENCE_URL);
+  // These five are only actually consumed much later (via Promise.allSettled, after
   // awaiting price+forecast and rendering the hero) — attach an inert catch to each
   // now so an early rejection (e.g. a timeout firing while we're still waiting on
   // prices) doesn't surface as a spurious unhandledrejection console error / Sentry
   // event in the meantime. Promise.allSettled below still sees the real outcome —
   // this doesn't replace the promise, just marks it handled.
-  [btPromise, driftPromise, coveragePromise, calibrationPromise].forEach(p => p.catch(() => {}));
+  [btPromise, driftPromise, coveragePromise, calibrationPromise, cadencePromise].forEach(p => p.catch(() => {}));
 
   // Load prices (critical path)
   try {
@@ -2835,17 +2860,18 @@ function applyLanguage(lang) {
   updateOfflineBanner(); // update offline banner text now allReadings is populated
 
   // Remaining optional data (already in flight above; all gracefully degrade on failure).
-  const [bt, drift, coverage, calibration] = await Promise.allSettled([
+  const [bt, drift, coverage, calibration, cadence] = await Promise.allSettled([
     btPromise,
     driftPromise,
     coveragePromise,
     calibrationPromise,
+    cadencePromise,
   ]);
 
   // Report any optional-fetch failures so silent pipeline breaks surface in Sentry.
   if (typeof Sentry !== "undefined") {
-    const optionalUrls = [BACKTEST_URL, DRIFT_URL, COVERAGE_URL, CALIBRATION_URL];
-    [bt, drift, coverage, calibration].forEach((r, i) => {
+    const optionalUrls = [BACKTEST_URL, DRIFT_URL, COVERAGE_URL, CALIBRATION_URL, CADENCE_URL];
+    [bt, drift, coverage, calibration, cadence].forEach((r, i) => {
       if (r.status === "rejected") Sentry.captureException(r.reason, { extra: { url: optionalUrls[i] } });
     });
   }
@@ -2855,6 +2881,8 @@ function applyLanguage(lang) {
   lastDrift    = drift.status === "fulfilled" ? drift.value : null;
   lastCoverage = coverage.status === "fulfilled" ? coverage.value : null;
   lastCalibration = calibration.status === "fulfilled" ? calibration.value : null;
+  lastCadenceMetric = cadence.status === "fulfilled" ? cadence.value : null;
+  renderCadenceStrings(lastCadenceMetric); // override the "still loading" fallback with the real number
   renderModelSignal(fc, allReadings, btData, lastCoverage, lastDrift);  // re-render — coverage/drift now loaded
   // G2: renderStaleBanner's confidence sentence is now driven entirely by
   // forecast.json (nominal_coverage/band_half_width), already available at the

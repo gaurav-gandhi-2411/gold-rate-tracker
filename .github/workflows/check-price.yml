@@ -185,6 +185,18 @@ jobs:
         continue-on-error: true
         run: python -m ml.metrics --record
 
+      - name: Compute rolling data-cadence metric
+        # R2 (audit 2026-09-04): feeds README's injected cadence claim
+        # (scripts/inject_metrics.py marker) and the PWA's i18n.js cadence
+        # text (app.js fetches this step's output, data/cadence_metrics.json,
+        # directly). Reads data/run_cadence_log.jsonl, appended to by THIS
+        # run's own "Commit updated data files" step below -- so this metric
+        # reflects every commit up to and including the PREVIOUS run, not
+        # this one (which hasn't committed yet when this step runs). One run
+        # of lag is fine for a rolling weekly median.
+        continue-on-error: true
+        run: python -m ml.cadence_metrics
+
       - name: Capture feature-store snapshot
         continue-on-error: true
         run: python -m ml.feature_store
@@ -195,11 +207,19 @@ jobs:
           set -e
           git config user.name "gold-rate-bot"
           git config user.email "actions@users.noreply.github.com"
-          git add data/forecast.json data/drift_metrics.json data/metrics_history.json data/ibja_rates.parquet data/chronos_probe.json data/calibration.json data/feature_store/snapshots.parquet data/tanishq_scrape_success_rate.json || true
+          git add data/forecast.json data/drift_metrics.json data/metrics_history.json data/ibja_rates.parquet data/chronos_probe.json data/calibration.json data/feature_store/snapshots.parquet data/tanishq_scrape_success_rate.json data/cadence_metrics.json || true
           if git diff --staged --quiet; then
             echo "No changes to commit."
             echo "changed=false" >> "$GITHUB_OUTPUT"
           else
+            # R2 (audit 2026-09-04): one line per actual successful data
+            # commit -- ml.cadence_metrics reads this to compute the real
+            # observed interval between commits (feeds README's injected
+            # cadence claim and the PWA's i18n.js cadence text), not the
+            # nominal 3h cron value, which stopped being accurate once
+            # scheduled-trigger reliability degraded (see docs/RUNBOOK.md).
+            echo "{\"timestamp\": \"$(date -u +%Y-%m-%dT%H:%M:%SZ)\"}" >> data/run_cadence_log.jsonl
+            git add data/run_cadence_log.jsonl
             git commit -m "chore: update gold prices and forecast [skip ci]"
             echo "changed=true" >> "$GITHUB_OUTPUT"
           fi
