@@ -148,6 +148,37 @@ jobs:
             fi
           fi
 
+  # X2 (audit 2026-09-05): PR #1393's un-reviewed threshold change reached
+  # master anyway -- through PR #1394's squash-merge, because #1394's branch
+  # was created without returning to master first, so its history included
+  # #1393's commit as an ancestor. #1393 itself correctly showed as OPEN the
+  # whole time; nothing detected the leak until it was found by chance. Two
+  # checks, either one would have caught it: the PR branch's divergence
+  # point must be an ancestor of the base branch (not some other unmerged
+  # ref), and no open PR should share files with an open PR labelled
+  # "boundary-gated" (the convention this session established for PRs
+  # touching alert thresholds, user-facing copy, or anything else on the
+  # STOP boundary in CLAUDE.md's autonomy rules). See
+  # scripts/check_pr_boundary_leak.py's own docstring for the full mechanism.
+  boundary-leak-check:
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: "3.12"
+      - name: Check branch ancestry and boundary-gated file overlap
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          python scripts/check_pr_boundary_leak.py \
+            --pr "${{ github.event.pull_request.number }}" \
+            --repo "${{ github.repository }}" \
+            --base "${{ github.base_ref }}"
+
   # Fail if any <!--METRIC:...--> marker in README.md/docs/*.md doesn't
   # resolve, or resolves to text that differs from what's committed --
   # same "regenerate, don't hand-edit" idiom as sw-version-guard above.
