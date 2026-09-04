@@ -8,8 +8,8 @@ docs/RUNBOOK.md) contradicts this on essentially every cycle. This module
 computes the real rate from real run history instead of leaving the claim
 hand-typed and unmeasured.
 
-Reads the append-only log check-price.yml's scrape-tanishq-selfhosted job
-writes one line to per run (data/tanishq_scrape_outcomes.jsonl -- {timestamp,
+Reads the append-only log scrape-tanishq-selfhosted.yml's scrape-tanishq-
+selfhosted job writes one line to per run (data/tanishq_scrape_outcomes.jsonl -- {timestamp,
 outcome, fetch_method}), filters to a rolling window, and reports:
   - overall success rate (any successful reading, requests OR playwright)
   - the requests-path vs playwright-fallback split among successes
