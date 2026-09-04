@@ -30,10 +30,24 @@ id = "cbaf40f06963460fa19e3624dd9e5542"
 # [observability.logs]/[observability.traces] enabled=true below -- directly
 # contradicting both this session's instruction and the nested settings
 # themselves. Flagged rather than applied verbatim (session dated 2026-08-28).
+#
+# U1 (audit 2026-09-04): removed `redact_query_string = false`, which every
+# deploy since 2026-08-28 has silently ignored ("Unexpected fields found in
+# observability field: redact_query_string" -- wrangler warns, does not
+# fail). Confirmed against wrangler 4.99.0's own config-schema.json (the
+# exact version this repo deploys with): the `Observability` definition has
+# `additionalProperties: false` and exactly four valid keys -- enabled,
+# head_sampling_rate, logs, traces. No field for redacting/filtering query
+# strings exists anywhere in the schema, at this level or nested under
+# logs/traces -- there is no correct name to rename this to. Whatever
+# produced this line (a "pasted reference config" per the comment above) was
+# either hallucinated or copied from an unrelated product; there is nothing
+# to preserve. If query-string redaction is ever needed, it has to happen in
+# the Worker's own code (e.g. stripping params before any console.log of a
+# URL) -- Workers Logs has no built-in redaction config.
 [observability]
 enabled = true
 head_sampling_rate = 1
-redact_query_string = false
 
 [observability.logs]
 enabled = true
