@@ -17,18 +17,46 @@ export const ESCALATE_THRESHOLD_HOURS = 10;
 //
 // Thresholds derived from the observed gap distribution between
 // consecutive successful Tanishq readings, data/prices.json, last 30 days
-// as of 2026-09-03 (n=156 readings, 155 gaps): median 2.92h, p90 5.99h,
+// as of 2026-09-04 (n=155 readings, 154 gaps): median 2.93h, p90 5.99h,
 // p95 14.21h, p99 29.43h, max 61.31h.
-//   WARN = 24h: comfortably past p95 (14.21h) with margin, so routine bad
-//     cycles rarely trigger it -- only 4 of 155 gaps (2.6%) in the sample
-//     window exceeded 24h. Round number, easy to reason about ("a full day
-//     of silence").
-//   ESCALATE = 72h (3x WARN): past every gap observed in the 30-day sample
-//     (max 61.31h) -- would not have false-fired once in that window, while
-//     still bounding total silence to 3 days instead of forever (today's
-//     actual state: no bound at all).
-export const TANISHQ_WARN_HOURS = 24;
+//
+// R2 (audit 2026-09-04): the original WARN=24h sat BELOW the observed max
+// normal gap (61.31h) -- both of the two largest gaps in the sample
+// (45.91h on 2026-08-18->20, 61.31h on 2026-08-07->10) are known,
+// already-diagnosed transient self-hosted-runner outages that self-
+// resolved, not permanent failures. At 24h, exactly 4 of 154 gaps (2.6%)
+// in a single 30-day window exceeded it -- an explicit false-alarm budget
+// of <=1 WARN/month (chosen: frequent enough to still mean something,
+// rare enough that a real alert doesn't get lost in noise) requires a
+// threshold only the single largest gap (61.31h) clears -- 46h/48h/50h/60h
+// all give exactly 1/154 in this sample; 48h chosen as the roundest of
+// those. ESCALATE stays at 72h: already 0 of 154 gaps (0%) in the same
+// 30-day window, i.e. already comfortably under a <=1/month budget with
+// room to spare -- no data-driven reason to move it, and moving it further
+// out only delays real-failure detection with no false-alarm benefit.
+export const TANISHQ_WARN_HOURS = 48;
 export const TANISHQ_ESCALATE_HOURS = 72;
+
+// R2c: a long scraped_at gap is ambiguous on its own -- "runner alive, but
+// Tanishq itself is blocking/failing every attempt" (a known, tolerated
+// failure mode, ADR 025) reads identically to "nothing has run in days"
+// using scraped_at alone, since scraped_at only advances on a SUCCESSFUL
+// scrape. data/tanishq_selfhosted_health.json breaks that ambiguity for
+// free: it's already public (same GitHub Pages origin as forecast.json,
+// zero new dependency, no GitHub API/token needed -- verified reachable at
+// .../data/tanishq_selfhosted_health.json, HTTP 200) and its
+// last_updated_utc field is written by the self-hosted job's LAST step
+// unconditionally (`if: always()`, scrape-tanishq-selfhosted.yml) --
+// success OR failure, so it advances every time the job actually executes,
+// independent of whether the scrape itself succeeded. If that field is
+// ALSO stale past this threshold, nothing has executed at all (not "ran
+// and failed") -- exactly "a silence alert that can see the runner is
+// offline needs no long threshold at all" (R2c). 9h = 3 missed cycles of
+// scrape-tanishq-selfhosted.yml's own 3h cron (matches the same
+// missed-cycle-count reasoning as ESCALATE_THRESHOLD_HOURS=10 above for
+// the unrelated forecast-staleness channel) -- corroborated silence
+// escalates immediately instead of waiting the full TANISHQ_ESCALATE_HOURS.
+export const RUNNER_CONFIRMED_OFFLINE_HOURS = 9;
 
 // How often to re-send an alert while the same level persists, so a
 // multi-hour outage doesn't page every 30 min but also isn't a single
@@ -76,8 +104,20 @@ export function classifyFetchFailure(reason) {
  * calibrated fallback) for weeks while scraped_at goes silent. Same shape/
  * levels as classifyStaleness so both channels share decideActionGeneric
  * and the same KV-state/dedup machinery.
+ *
+ * healthUpdatedAtIso (R2c, optional): tanishq_selfhosted_health.json's
+ * last_updated_utc, which advances every time the self-hosted job actually
+ * executes (success OR failure -- its commit step runs `if: always()`),
+ * unlike scrapedAtIso which only advances on a successful SCRAPE. When
+ * scrapedAtIso is already stale past TANISHQ_WARN_HOURS and this field is
+ * ALSO stale past RUNNER_CONFIRMED_OFFLINE_HOURS, that's corroborated
+ * evidence nothing has executed at all (not "ran and failed") -- escalates
+ * immediately rather than waiting the full TANISHQ_ESCALATE_HOURS. A
+ * missing/unparseable health signal does NOT weaken the check (rule 98a):
+ * it just means no corroboration is available this run, falling through to
+ * the plain scrapedAtIso-only thresholds exactly as before.
  */
-export function classifyTanishqSilence(scrapedAtIso, nowMs) {
+export function classifyTanishqSilence(scrapedAtIso, nowMs, healthUpdatedAtIso = null) {
   if (typeof scrapedAtIso !== "string" || scrapedAtIso.length === 0) {
     return { level: "unverifiable", ageHours: null, reason: "scraped_at missing or not a string" };
   }
@@ -86,8 +126,38 @@ export function classifyTanishqSilence(scrapedAtIso, nowMs) {
     return { level: "unverifiable", ageHours: null, reason: `scraped_at unparseable: ${scrapedAtIso}` };
   }
   const ageHours = (nowMs - scrapedAtMs) / 3_600_000;
+
+  // healthChecked/healthFresh distinguish "we verified the job is still
+  // executing" from "we have no signal either way" -- buildTanishqAlert's
+  // WARN copy must only assert the job-is-alive claim when it was actually
+  // confirmed, never as a default (rule 98a: an unavailable secondary
+  // signal must not be silently treated as a positive result).
+  let healthChecked = false;
+  let healthFresh = false;
+  if (typeof healthUpdatedAtIso === "string" && healthUpdatedAtIso.length > 0) {
+    const healthMs = Date.parse(healthUpdatedAtIso);
+    if (!Number.isNaN(healthMs)) {
+      healthChecked = true;
+      const healthAgeHours = (nowMs - healthMs) / 3_600_000;
+      healthFresh = healthAgeHours < RUNNER_CONFIRMED_OFFLINE_HOURS;
+      if (ageHours >= TANISHQ_WARN_HOURS && !healthFresh) {
+        return {
+          level: "escalate",
+          ageHours,
+          reason: `corroborated: tanishq_selfhosted_health.json also stale (${healthAgeHours.toFixed(1)}h) -- nothing has run, not just failed`,
+        };
+      }
+    }
+  }
+
   if (ageHours >= TANISHQ_ESCALATE_HOURS) return { level: "escalate", ageHours, reason: null };
-  if (ageHours >= TANISHQ_WARN_HOURS) return { level: "warn", ageHours, reason: null };
+  if (ageHours >= TANISHQ_WARN_HOURS) {
+    return {
+      level: "warn",
+      ageHours,
+      reason: healthChecked && healthFresh ? "health-fresh" : null,
+    };
+  }
   return { level: "ok", ageHours, reason: null };
 }
 
@@ -160,12 +230,15 @@ function recoveredAlert() {
 export function buildTanishqAlert(level, ageHours, reason) {
   const age = fmtAge(ageHours);
   if (level === "escalate") {
+    const corroborated = typeof reason === "string" && reason.startsWith("corroborated:");
     return {
       title: "Gold Tracker: Tanishq confirmation silent for days (dead-man's switch)",
       body:
-        `data/forecast.json's scraped_at (last SUCCESSFUL Tanishq reading) is ${age} old ` +
-        `(>= ${TANISHQ_ESCALATE_HOURS}h) -- past every gap seen in 30 days of normal operation. ` +
-        "The site is still serving IBJA-calibrated estimates fine; nothing on the page tells " +
+        `data/forecast.json's scraped_at (last SUCCESSFUL Tanishq reading) is ${age} old` +
+        (corroborated
+          ? ` -- ${reason}.`
+          : ` (>= ${TANISHQ_ESCALATE_HOURS}h) -- past every gap seen in 30 days of normal operation.`) +
+        " The site is still serving IBJA-calibrated estimates fine; nothing on the page tells " +
         "users this. The self-hosted runner has very likely died permanently -- check " +
         `docs/RUNBOOK.md's self-hosted runner section. ${PUBLIC_FORECAST_URL}`,
       priority: 5,
@@ -173,12 +246,18 @@ export function buildTanishqAlert(level, ageHours, reason) {
     };
   }
   if (level === "warn") {
+    const healthNote =
+      reason === "health-fresh"
+        ? " tanishq_selfhosted_health.json still shows the job itself executing, so this looks " +
+          "like a persistent scrape failure (e.g. a Cloudflare block), not a dead runner."
+        : " Could not confirm from tanishq_selfhosted_health.json whether the job is still " +
+          "executing -- treat as unknown, not as \"probably fine\".";
     return {
       title: "Gold Tracker: Tanishq confirmation quiet (dead-man's switch)",
       body:
         `data/forecast.json's scraped_at is ${age} old (>= ${TANISHQ_WARN_HOURS}h) -- longer than ` +
-        "~97% of gaps observed in 30 days of normal operation. Might just be a slow cycle; if it " +
-        `keeps climbing toward ${TANISHQ_ESCALATE_HOURS}h, the self-hosted runner is likely offline. ${PUBLIC_FORECAST_URL}`,
+        `~99% of gaps observed in 30 days of normal operation.${healthNote} If it keeps climbing ` +
+        `toward ${TANISHQ_ESCALATE_HOURS}h, escalate. ${PUBLIC_FORECAST_URL}`,
       priority: 3,
       tags: "hourglass",
     };

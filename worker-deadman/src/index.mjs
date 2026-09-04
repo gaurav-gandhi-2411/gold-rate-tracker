@@ -21,6 +21,11 @@ const KV_TANISHQ_STATE_KEY = "deadman:tanishq_last_state"; // Q4: independent de
 const KV_HEARTBEAT_KEY = "deadman:last_heartbeat_date_ist";
 const FETCH_TIMEOUT_MS = 10_000;
 
+// R2c: same public GitHub Pages origin as forecast.json -- no new
+// dependency, no GitHub API/token. Verified reachable (HTTP 200) 2026-09-04.
+const PUBLIC_HEALTH_URL =
+  "https://gaurav-gandhi-2411.github.io/gold-rate-tracker/data/tanishq_selfhosted_health.json";
+
 async function fetchForecast(fetchImpl) {
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), FETCH_TIMEOUT_MS);
@@ -45,6 +50,33 @@ async function fetchForecast(fetchImpl) {
       scrapedAtIso: null,
       failure: String(err && err.message ? err.message : err),
     };
+  } finally {
+    clearTimeout(timeout);
+  }
+}
+
+/**
+ * R2c: fetch the health file's last_updated_utc for corroboration. Best-
+ * effort -- returns null on ANY failure (unreachable, non-200, bad JSON,
+ * missing field) rather than throwing, since this is a secondary signal:
+ * classifyTanishqSilence already treats a null healthUpdatedAtIso as "no
+ * corroboration available" and falls back to the plain scrapedAtIso-only
+ * thresholds, never as a false "confirmed offline" or "confirmed fine".
+ */
+async function fetchHealthUpdatedAt(fetchImpl) {
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), FETCH_TIMEOUT_MS);
+  try {
+    const resp = await fetchImpl(PUBLIC_HEALTH_URL, {
+      signal: controller.signal,
+      headers: { "User-Agent": "gold-rate-tracker-deadman-switch" },
+      cf: { cacheTtl: 0, cacheEverything: false },
+    });
+    if (!resp.ok) return null;
+    const body = await resp.json();
+    return typeof body.last_updated_utc === "string" ? body.last_updated_utc : null;
+  } catch {
+    return null;
   } finally {
     clearTimeout(timeout);
   }
@@ -111,7 +143,17 @@ export async function runCheck(env, fetchImpl, nowMs) {
   let tanishqCurrent = { level: "ok", ageHours: null, reason: null };
   let tanishqSend = false;
   if (!failure) {
-    tanishqCurrent = classifyTanishqSilence(scrapedAtIso, nowMs);
+    // R2c: only worth fetching once we're already at/past WARN territory --
+    // no point spending a request confirming runner health when scraped_at
+    // is fresh anyway. classifyTanishqSilence itself also gates on
+    // ageHours >= TANISHQ_WARN_HOURS before using this value, so fetching
+    // it earlier would just be wasted.
+    const provisional = classifyTanishqSilence(scrapedAtIso, nowMs);
+    const healthUpdatedAtIso =
+      provisional.level === "ok" ? null : await fetchHealthUpdatedAt(fetchImpl);
+    tanishqCurrent = healthUpdatedAtIso
+      ? classifyTanishqSilence(scrapedAtIso, nowMs, healthUpdatedAtIso)
+      : provisional;
     const previousTanishqState = await loadState(env, KV_TANISHQ_STATE_KEY);
     const {
       send: sendResult,
