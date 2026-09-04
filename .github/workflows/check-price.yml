@@ -298,6 +298,7 @@ jobs:
           pr-body: "Automated data sync from Check Gold Price run ${{ github.run_id }}."
           token: ${{ secrets.CI_MERGE_PAT }}
           wait-minutes: "15"
+          ntfy-topic: ${{ secrets.NTFY_TOPIC }}
 
       - name: Alert on stuck bot PR
         # Path-scoped required checks (only requiring lint/pwa-js on code-path

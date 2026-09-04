@@ -250,3 +250,4 @@ jobs:
           pr-body: "Automated Tanishq-only data sync from the self-hosted scraper, run ${{ github.run_id }}."
           token: ${{ secrets.CI_MERGE_PAT }}
           wait-minutes: "15"
+          ntfy-topic: ${{ secrets.NTFY_TOPIC }}

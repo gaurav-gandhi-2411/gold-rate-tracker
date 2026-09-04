@@ -80,3 +80,4 @@ jobs:
           pr-body: "Automated direction-eval sync from Direction Signal Eval run ${{ github.run_id }}."
           token: ${{ secrets.CI_MERGE_PAT }}
           wait-minutes: "10"
+          ntfy-topic: ${{ secrets.NTFY_TOPIC }}

@@ -1,18 +1,28 @@
 """scripts/audit_silent_fallbacks.py — repeatable sweep for the "emits a
 plausible value instead of failing" defect class (audit 2026-09).
 
-Six confirmed instances of this class were found by hand-reading code during
-a production audit: (a) all ntfy alerts run inside the workflow they
+Eight confirmed instances of this class were found by hand-reading code
+during a production audit: (a) all ntfy alerts run inside the workflow they
 monitor; (b) the coverage evaluator silently scored 45 of 65 windows; (c)
 the direction gate's verdict cannot change; (d) the band silently fell back
 to a Gaussian band already measured miscalibrated; (e) the hero price
 rendered a stale value without the "~" marker; (f) `volCtx.regime ?? "normal"`
-substitutes a named claim for a missing field. This script does NOT find any
-of those six — they required reading surrounding logic, not a pattern match.
-What it does: turn the ad-hoc grep-and-read process used to find (f)'s two
-siblings (see fix/vol-regime-fails-loud) into something that can be re-run
-every time the codebase changes, so the next instance doesn't require a full
-audit to surface as a candidate.
+substitutes a named claim for a missing field; (g) a permanently dead runner
+shows `ibja_calibrated` forever with zero on-page indication; (h)
+bot-pr-sync's data-only allowlist guard (`.github/actions/bot-pr-sync/action.yml`)
+rejected a commit outside its allowlist, correctly failing the step/job, but
+with no page — the only other failure-detection step in every caller
+("Alert on stuck bot PR") checks an open PR's age and this guard exits
+before any PR exists, so it had nothing to find. Fixed (R2, audit
+2026-09-04): the guard now also posts an ntfy alert when it rejects a diff
+(`ntfy-topic` input, wired from every caller's `NTFY_TOPIC` secret) — a
+failed run is no longer distinguishable only by noticing a red X among the
+many `continue-on-error` steps in the same job. This script does NOT find
+any of those eight — they required reading surrounding logic, not a pattern
+match. What it does: turn the ad-hoc grep-and-read process used to find
+(f)'s two siblings (see fix/vol-regime-fails-loud) into something that can
+be re-run every time the codebase changes, so the next instance doesn't
+require a full audit to surface as a candidate.
 
 This is a REVIEW AID, not a correctness checker. False positives are
 expected and normal — every category here also matches plenty of

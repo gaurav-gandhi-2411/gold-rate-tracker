@@ -12,14 +12,14 @@ does and does not catch.
 | except-swallows-and-continues | 31 |
 | js-default-near-render | 11 |
 | js-default-other | 46 |
-| workflow-continue-on-error | 22 |
-| **total** | **169** |
+| workflow-continue-on-error | 23 |
+| **total** | **170** |
 
 ## dict.get-substantive-default (59)
 
 - `ml/backtest.py:219` — result.get('insufficient_evidence', False)
-- `ml/calibration.py:576` — calib.get('valid', False)
-- `ml/calibration.py:578` — calib.get('fit_date', '2000-01-01')
+- `ml/calibration.py:680` — calib.get('valid', False)
+- `ml/calibration.py:682` — calib.get('fit_date', '2000-01-01')
 - `ml/chronos_forecast.py:103` — col_map.get(level, f'p{int(level * 100)}')
 - `ml/chronos_forecast.py:230` — raw_calib.get('valid', False)
 - `ml/direction/evaluate.py:260` — d.get(key, 0.0)
@@ -79,11 +79,11 @@ does and does not catch.
 
 ## except-swallows-and-continues (31)
 
-- `ml/calibration.py:511` — calib = {}
-- `ml/calibration.py:513` — logger.error('run_refit_if_needed: could not read calibration.json: %s', exc)
-- `ml/calibration.py:525` — logger.error('run_refit_if_needed: could not read ibja_rates.parquet: %s', exc)
-- `ml/calibration.py:536` — logger.error('run_refit_if_needed: could not read prices.json: %s', exc)
-- `ml/calibration.py:579` — last_fit_date = date(2000, 1, 1)
+- `ml/calibration.py:615` — calib = {}
+- `ml/calibration.py:617` — logger.error('run_refit_if_needed: could not read calibration.json: %s', exc)
+- `ml/calibration.py:629` — logger.error('run_refit_if_needed: could not read ibja_rates.parquet: %s', exc)
+- `ml/calibration.py:640` — logger.error('run_refit_if_needed: could not read prices.json: %s', exc)
+- `ml/calibration.py:683` — last_fit_date = date(2000, 1, 1)
 - `ml/calibration.py:122` — logger.warning('calibration: HuberRegressor failed to converge (%s) — falling back to OLS', exc)
 - `ml/chronos_forecast.py:234` — logger.warning('chronos_probe: could not load calibration: %s', exc)
 - `ml/chronos_forecast.py:242` — logger.error('chronos_probe: pipeline load failed: %s', exc)
@@ -174,27 +174,28 @@ does and does not catch.
 - `app.js:2404` — const releaseY = e.changedTouches[0]?.clientY ?? (startY + 0);
 - `app.js:2417` — if (!targets.length || typeof IntersectionObserver === "undefined") return;
 
-## workflow-continue-on-error (22)
+## workflow-continue-on-error (23)
 
-- `.github/workflows/check-price.yml:81` — step "Fetch macro features"
-- `.github/workflows/check-price.yml:115` — step "Check forecast drift"
-- `.github/workflows/check-price.yml:122` — step "Run inference"
-- `.github/workflows/check-price.yml:126` — step "Append IBJA rates"
-- `.github/workflows/check-price.yml:130` — step "Refit calibration if needed"
-- `.github/workflows/check-price.yml:140` — step "Compute rolling Tanishq scrape success rate"
-- `.github/workflows/check-price.yml:152` — step "Run Chronos probe"
-- `.github/workflows/check-price.yml:166` — step "Run notifications"
-- `.github/workflows/check-price.yml:179` — step "Record prediction metrics"
-- `.github/workflows/check-price.yml:183` — step "Capture feature-store snapshot"
-- `.github/workflows/check-price.yml:236` — step "Alert on stuck bot PR"
-- `.github/workflows/check-price.yml:291` — step "Alert on stuck bot PR"
-- `.github/workflows/check-price.yml:346` — step "Scrape Tanishq and update prices.json"
-- `.github/workflows/check-price.yml:382` — step "Commit Tanishq reading and record job health"
+- `.github/workflows/check-price.yml:87` — step "Fetch macro features"
+- `.github/workflows/check-price.yml:121` — step "Check forecast drift"
+- `.github/workflows/check-price.yml:128` — step "Run inference"
+- `.github/workflows/check-price.yml:132` — step "Append IBJA rates"
+- `.github/workflows/check-price.yml:136` — step "Refit calibration if needed"
+- `.github/workflows/check-price.yml:146` — step "Compute rolling Tanishq scrape success rate"
+- `.github/workflows/check-price.yml:158` — step "Run Chronos probe"
+- `.github/workflows/check-price.yml:172` — step "Run notifications"
+- `.github/workflows/check-price.yml:185` — step "Record prediction metrics"
+- `.github/workflows/check-price.yml:189` — step "Capture feature-store snapshot"
+- `.github/workflows/check-price.yml:243` — step "Alert on stuck bot PR"
 - `.github/workflows/lint.yml:181` — step "pip-audit (ml/requirements-inference.lock)"
 - `.github/workflows/lint.yml:189` — step "npm audit (scraper)"
 - `.github/workflows/monthly-ibja-backfill.yml:46` — step "Run IBJA PDF backfill"
 - `.github/workflows/render-smoke.yml:53` — step "Alert on render failure"
+- `.github/workflows/scrape-tanishq-selfhosted.yml:77` — step "(unnamed step)"
+- `.github/workflows/scrape-tanishq-selfhosted.yml:132` — step "Scrape Tanishq and update prices.json"
+- `.github/workflows/scrape-tanishq-selfhosted.yml:168` — step "Commit Tanishq reading and record job health"
 - `.github/workflows/scraper-canary.yml:92` — step "Alert on canary failure"
 - `.github/workflows/shadow-fusion.yml:63` — step "Run shadow fusion cycle"
 - `.github/workflows/weekly-backtest.yml:57` — step "Run integration tests (non-gating)"
 - `.github/workflows/weekly-backtest.yml:61` — step "Resolve metrics outcomes"
+- `.github/workflows/weekly-backtest.yml:72` — step "Re-score IBJA-calibrated band coverage"
