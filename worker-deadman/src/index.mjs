@@ -9,12 +9,15 @@ import {
   PUBLIC_FORECAST_URL,
   classifyStaleness,
   classifyFetchFailure,
+  classifyTanishqSilence,
   decideAction,
+  decideTanishqAction,
   shouldSendHeartbeat,
   buildHeartbeatAlert,
 } from "./deadman.mjs";
 
 const KV_STATE_KEY = "deadman:last_state";
+const KV_TANISHQ_STATE_KEY = "deadman:tanishq_last_state"; // Q4: independent dedup state, own KV key
 const KV_HEARTBEAT_KEY = "deadman:last_heartbeat_date_ist";
 const FETCH_TIMEOUT_MS = 10_000;
 
@@ -28,12 +31,20 @@ async function fetchForecast(fetchImpl) {
       cf: { cacheTtl: 0, cacheEverything: false },
     });
     if (!resp.ok) {
-      return { predictedAtIso: null, failure: `HTTP ${resp.status}` };
+      return { predictedAtIso: null, scrapedAtIso: null, failure: `HTTP ${resp.status}` };
     }
     const body = await resp.json();
-    return { predictedAtIso: body.predicted_at, failure: null };
+    // Q4: scraped_at read from the SAME response/fetch as predicted_at -- one
+    // fetch serves both channels, so a genuine site-unreachable failure
+    // (below) correctly propagates to both rather than needing a second
+    // request against the same public URL.
+    return { predictedAtIso: body.predicted_at, scrapedAtIso: body.scraped_at, failure: null };
   } catch (err) {
-    return { predictedAtIso: null, failure: String(err && err.message ? err.message : err) };
+    return {
+      predictedAtIso: null,
+      scrapedAtIso: null,
+      failure: String(err && err.message ? err.message : err),
+    };
   } finally {
     clearTimeout(timeout);
   }
@@ -51,28 +62,28 @@ async function postToNtfy(fetchImpl, topic, alert) {
   });
 }
 
+async function loadState(env, kvKey) {
+  if (!env.DEADMAN_STATE) return null;
+  const raw = await env.DEADMAN_STATE.get(kvKey);
+  if (!raw) return null;
+  try {
+    return JSON.parse(raw);
+  } catch {
+    return null; // corrupt state -- treat as first run, do not crash
+  }
+}
+
 export async function runCheck(env, fetchImpl, nowMs) {
   if (!env.NTFY_TOPIC) {
     return { skipped: "NTFY_TOPIC secret not set" };
   }
 
-  const { predictedAtIso, failure } = await fetchForecast(fetchImpl);
+  const { predictedAtIso, scrapedAtIso, failure } = await fetchForecast(fetchImpl);
   const current = failure
     ? classifyFetchFailure(failure)
     : classifyStaleness(predictedAtIso, nowMs);
 
-  let previousState = null;
-  if (env.DEADMAN_STATE) {
-    const raw = await env.DEADMAN_STATE.get(KV_STATE_KEY);
-    if (raw) {
-      try {
-        previousState = JSON.parse(raw);
-      } catch {
-        previousState = null; // corrupt state -- treat as first run, do not crash
-      }
-    }
-  }
-
+  const previousState = await loadState(env, KV_STATE_KEY);
   const { send, alert, nextState } = decideAction(current, previousState, nowMs);
 
   if (env.DEADMAN_STATE) {
@@ -81,6 +92,40 @@ export async function runCheck(env, fetchImpl, nowMs) {
 
   if (send && alert) {
     await postToNtfy(fetchImpl, env.NTFY_TOPIC, alert);
+  }
+
+  // Q4 (audit 2026-09-03): independent second channel -- forecast.json's
+  // predicted_at can stay perfectly fresh (IBJA-calibrated fallback) for
+  // weeks while Tanishq confirmation (scraped_at) goes silent; T12 cannot
+  // detect this (fires only when the runner is online and jobs are
+  // genuinely failing, not when it's offline) and nothing on the page
+  // tells users Tanishq confirmation has stopped. Own KV state key so its
+  // dedup/reminder timing is entirely independent of the channel above.
+  //
+  // Deliberately skipped entirely on a fetch failure (`failure` truthy):
+  // the channel above already sends one "could not verify the site"
+  // alert for that same root cause (one fetch serves both channels) --
+  // firing a second, near-identical "could not verify Tanishq" alert on
+  // top of it would be redundant noise for a single underlying problem,
+  // not two independent findings.
+  let tanishqCurrent = { level: "ok", ageHours: null, reason: null };
+  let tanishqSend = false;
+  if (!failure) {
+    tanishqCurrent = classifyTanishqSilence(scrapedAtIso, nowMs);
+    const previousTanishqState = await loadState(env, KV_TANISHQ_STATE_KEY);
+    const {
+      send: sendResult,
+      alert: tanishqAlert,
+      nextState: nextTanishqState,
+    } = decideTanishqAction(tanishqCurrent, previousTanishqState, nowMs);
+    tanishqSend = sendResult;
+
+    if (env.DEADMAN_STATE) {
+      await env.DEADMAN_STATE.put(KV_TANISHQ_STATE_KEY, JSON.stringify(nextTanishqState));
+    }
+    if (tanishqSend && tanishqAlert) {
+      await postToNtfy(fetchImpl, env.NTFY_TOPIC, tanishqAlert);
+    }
   }
 
   // G4a: independent of whatever staleness alert may have just fired --
@@ -94,14 +139,22 @@ export async function runCheck(env, fetchImpl, nowMs) {
       await postToNtfy(
         fetchImpl,
         env.NTFY_TOPIC,
-        buildHeartbeatAlert(current.level, current.ageHours),
+        buildHeartbeatAlert(current.level, current.ageHours, tanishqCurrent.level, tanishqCurrent.ageHours),
       );
       await env.DEADMAN_STATE.put(KV_HEARTBEAT_KEY, todayIst);
       heartbeatSent = true;
     }
   }
 
-  return { level: current.level, ageHours: current.ageHours, sent: send, heartbeatSent };
+  return {
+    level: current.level,
+    ageHours: current.ageHours,
+    sent: send,
+    tanishqLevel: tanishqCurrent.level,
+    tanishqAgeHours: tanishqCurrent.ageHours,
+    tanishqSent: tanishqSend,
+    heartbeatSent,
+  };
 }
 
 export default {
