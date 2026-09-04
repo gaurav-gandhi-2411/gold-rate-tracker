@@ -288,6 +288,7 @@ const STRINGS = {
     driverGoldDown: ({ pct }) => `Global gold prices are down about ${pct}% this month.`,
     driverPremiumDominated: "Indian gold has moved more than the global price or rupee explain — likely import costs or festival demand at home.",
     driverAllFlat: "Nothing much moved this month — global prices, the rupee, and local demand have all been quiet.",
+    driverStateUnavailable: "Global prices and the rupee have been quiet this month — local demand data isn't available to check separately.",
 
     // ── Methodology ───────────────────────────────────────────────────────────────
     methHowWeCallTrendHeading: "How we call a trend",
@@ -601,6 +602,7 @@ const STRINGS = {
     driverGoldDown: ({ pct }) => `वैश्विक सोने की कीमतें इस महीने करीब ${pct}% गिरी हैं।`,
     driverPremiumDominated: "भारत में सोने की कीमत वैश्विक कीमत या रुपये से ज़्यादा बदली है — शायद आयात लागत या त्योहारी मांग की वजह से।",
     driverAllFlat: "इस महीने ज़्यादा कुछ नहीं बदला — वैश्विक कीमतें, रुपया, और स्थानीय मांग, सब स्थिर रहे।",
+    driverStateUnavailable: "इस महीने वैश्विक कीमतें और रुपया स्थिर रहे हैं — स्थानीय मांग का डेटा अलग से जांचने के लिए उपलब्ध नहीं है।",
 
     // ── Methodology ───────────────────────────────────────────────────────────────
     methHowWeCallTrendHeading: "हम ट्रेंड कैसे तय करते हैं",
