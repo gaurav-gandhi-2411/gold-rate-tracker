@@ -32,9 +32,11 @@ const STRINGS = {
     // that stopped being true once scheduled-trigger reliability degraded
     // (docs/RUNBOOK.md). params is null until data/cadence_metrics.json
     // resolves (app.js's renderCadenceStrings) — the fallback branch never
-    // states a specific number it can't back up.
+    // states a specific number it can't back up. X1b (audit 2026-09-05):
+    // added the p90 worst-case alongside the median -- the median alone
+    // hides the tail a real visitor can land on.
     firstVisitText: (params) => params
-      ? `22K gold retail price, checked about every ${params.hours}h (n=${params.n}, as of ${params.asOf}) and confirmed against Tanishq's live rate when possible. We always say plainly when a price is an estimate.`
+      ? `22K gold retail price, checked about every ${params.hours}h (worst case recently ~${params.p90Hours ?? params.hours}h; n=${params.n}, as of ${params.asOf}) and confirmed against Tanishq's live rate when possible. We always say plainly when a price is an estimate.`
       : "22K gold retail price, checked on a regular schedule and confirmed against Tanishq's live rate when possible. We always say plainly when a price is an estimate.",
     shareLabel: "Share",
     shareTextWithPrice: ({ price }) => `Today's 22K gold price is ₹${price}/gram — check Gold Tracker`,
@@ -98,7 +100,7 @@ const STRINGS = {
     methodologySummary: "How this works — and how accurate it's been",
     footerBody: (params) => `We use <a href="https://ibjarates.com/" target="_blank" rel="noopener">IBJA</a>'s official gold benchmark and calibrate it to match real shop prices, checking against <a href="https://www.tanishq.co.in/gold-rate.html?lang=en_IN" target="_blank" rel="noopener">Tanishq</a>'s live rate when we can. ${
       params
-        ? `Prices are checked about every ${params.hours}h (n=${params.n}, as of ${params.asOf})`
+        ? `Prices are checked about every ${params.hours}h (worst case recently ~${params.p90Hours ?? params.hours}h; n=${params.n}, as of ${params.asOf})`
         : "Prices are checked on a regular schedule"
     } — IBJA itself only updates once a day, so the number sometimes stays the same for a while.`,
     footerMuted: "Not financial advice. Rates are indicative.",
@@ -358,7 +360,7 @@ const STRINGS = {
     dismissLabel: "बंद करें",
     installPromptText: 'तेज़ी से खोलने के लिए इसे होम स्क्रीन पर जोड़ें: <strong>Share</strong> दबाएं, फिर <strong>Add to Home Screen</strong>।',
     firstVisitText: (params) => params
-      ? `22K सोने की खुदरा कीमत, लगभग हर ${params.hours} घंटे में जांची जाती है (n=${params.n}, ${params.asOf} तक) और जब संभव हो तो Tanishq की लाइव दर से पुष्टि की जाती है। कीमत अनुमानित हो तो हम साफ़ बता देते हैं।`
+      ? `22K सोने की खुदरा कीमत, लगभग हर ${params.hours} घंटे में जांची जाती है (हाल में सबसे धीमी बार ~${params.p90Hours ?? params.hours} घंटे तक; n=${params.n}, ${params.asOf} तक) और जब संभव हो तो Tanishq की लाइव दर से पुष्टि की जाती है। कीमत अनुमानित हो तो हम साफ़ बता देते हैं।`
       : "22K सोने की खुदरा कीमत, नियमित समय पर जांची जाती है और जब संभव हो तो Tanishq की लाइव दर से पुष्टि की जाती है। कीमत अनुमानित हो तो हम साफ़ बता देते हैं।",
     shareLabel: "शेयर करें",
     shareTextWithPrice: ({ price }) => `आज 22K सोने की कीमत ₹${price}/ग्राम है — Gold Tracker पर देखें`,
@@ -422,7 +424,7 @@ const STRINGS = {
     methodologySummary: "यह कैसे काम करता है — और कितना सटीक रहा है",
     footerBody: (params) => `हम <a href="https://ibjarates.com/" target="_blank" rel="noopener">IBJA</a> के आधिकारिक सोने के बेंचमार्क का इस्तेमाल करते हैं और इसे असली दुकान की कीमतों से मिलाकर कैलिब्रेट करते हैं, और जब मुमकिन हो तो <a href="https://www.tanishq.co.in/gold-rate.html?lang=en_IN" target="_blank" rel="noopener">Tanishq</a> की लाइव कीमत से भी जांचते हैं। ${
       params
-        ? `लगभग हर ${params.hours} घंटे में कीमत जांची जाती है (n=${params.n}, ${params.asOf} तक)`
+        ? `लगभग हर ${params.hours} घंटे में कीमत जांची जाती है (हाल में सबसे धीमी बार ~${params.p90Hours ?? params.hours} घंटे तक; n=${params.n}, ${params.asOf} तक)`
         : "कीमत नियमित समय पर जांची जाती है"
     } — IBJA खुद दिन में एक बार अपडेट होता है, इसलिए कभी-कभी नंबर कुछ समय तक वही रहता है।`,
     footerMuted: "यह वित्तीय सलाह नहीं है। दरें संकेतात्मक हैं।",
