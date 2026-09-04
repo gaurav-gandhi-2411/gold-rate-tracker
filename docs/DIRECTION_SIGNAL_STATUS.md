@@ -53,8 +53,8 @@ time, exactly matching the always-up baseline's own prediction every fold:
 
 | Horizon | N folds | Trailing-30 "up" fraction | Majority-class collapse |
 |---|---|---|---|
-| h=1 | <!--METRIC:data/direction_baseline.json#horizons.h1.n_test_folds:int-->148<!--/METRIC--> | <!--METRIC:data/direction_baseline.json#horizons.h1.trailing_30_fold_up_fraction:pct1-->100.0%<!--/METRIC--> | <!--METRIC:data/direction_baseline.json#horizons.h1.majority_class_collapse:raw-->True<!--/METRIC--> |
-| h=2 | <!--METRIC:data/direction_baseline.json#horizons.h2.n_test_folds:int-->146<!--/METRIC--> | <!--METRIC:data/direction_baseline.json#horizons.h2.trailing_30_fold_up_fraction:pct1-->100.0%<!--/METRIC--> | <!--METRIC:data/direction_baseline.json#horizons.h2.majority_class_collapse:raw-->True<!--/METRIC--> |
+| h=1 | <!--METRIC:data/direction_baseline.json#horizons.h1.n_test_folds:int-->152<!--/METRIC--> | <!--METRIC:data/direction_baseline.json#horizons.h1.trailing_30_fold_up_fraction:pct1-->100.0%<!--/METRIC--> | <!--METRIC:data/direction_baseline.json#horizons.h1.majority_class_collapse:raw-->True<!--/METRIC--> |
+| h=2 | <!--METRIC:data/direction_baseline.json#horizons.h2.n_test_folds:int-->150<!--/METRIC--> | <!--METRIC:data/direction_baseline.json#horizons.h2.trailing_30_fold_up_fraction:pct1-->100.0%<!--/METRIC--> | <!--METRIC:data/direction_baseline.json#horizons.h2.majority_class_collapse:raw-->True<!--/METRIC--> |
 
 (`majority_class_collapse` fires at a trailing-30-fold fraction >= 0.95
 either direction — see `ml/direction/evaluate.py`'s

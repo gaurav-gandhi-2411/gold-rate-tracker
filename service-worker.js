@@ -57,7 +57,10 @@
 // siblings). app.js + i18n.js (EN+HI) changed. (Rebased onto master
 // 2026-09-05 -- see W5 in the session history for why this lands after v40
 // despite its own dated comment predating it.)
-const VERSION = "v41-20260905-fail-loud-defaults";
+// 2026-09-05 (v42): X1 -- the injected cadence claim now states the p90
+// worst case alongside the median (a median alone hides the tail a real
+// visitor can land on). app.js + i18n.js (EN+HI) changed.
+const VERSION = "v42-20260905-cadence-p90";
 const SHELL_CACHE = `gold-shell-${VERSION}`;
 
 const SHELL_FILES = [
