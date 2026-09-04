@@ -5,12 +5,8 @@ from `https://gaurav-gandhi-2411.github.io/gold-rate-tracker/data/forecast.json`
 never anything under `github.com/.../repos/...` — is fresh, and alerts to the
 existing ntfy topic on TWO independent channels:
 
-1. **Forecast staleness** — `predicted_at` age, **WARN (>=9h)** / **ESCALATE
-   (>=10h)** (V1, audit 2026-09-04: re-derived from the post-recovery
-   inter-run gap distribution — the old WARN=5h sat below the current
-   median gap and paged on ~39% of normal cycles; see `src/deadman.mjs`'s
-   own comment for the full arithmetic). Catches "the pipeline stopped
-   running entirely."
+1. **Forecast staleness** — `predicted_at` age, **WARN (>=5h)** / **ESCALATE
+   (>=10h)**. Catches "the pipeline stopped running entirely."
 2. **Tanishq confirmation silence** (Q4, audit 2026-09-03; thresholds
    recalibrated + corroboration added R2, audit 2026-09-04) — `scraped_at`
    age (the last SUCCESSFUL Tanishq reading), **WARN (>=48h)** / **ESCALATE
@@ -193,7 +189,7 @@ deployment done — do not skip on the assumption steps 5–6 were enough.
 
 1. In `worker-deadman/src/deadman.mjs`, temporarily change:
    ```
-   export const WARN_THRESHOLD_HOURS = 9;
+   export const WARN_THRESHOLD_HOURS = 5;
    export const ESCALATE_THRESHOLD_HOURS = 10;
    ```
    to `0` and `0.01` respectively.

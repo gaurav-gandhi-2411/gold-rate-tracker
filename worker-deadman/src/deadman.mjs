@@ -2,25 +2,7 @@
 // (fetch, KV bindings) so it can be unit-tested with plain Node -- the
 // Workers entry point (index.mjs) is a thin wiring layer around this file.
 
-// V1 (audit 2026-09-04): re-derived from the CURRENT post-recovery inter-run
-// gap distribution (data/forecast.json commit gaps, 2026-08-30 onward -- the
-// window after the Aug-27 platform incident's control-workflow miss rate
-// recovered to near-0%, n=28 gaps): median 4.69h, p90 7.29h, p95 7.79h,
-// max 8.18h. The OLD WARN=5h was calibrated to the broken (~20%-miss-rate)
-// state and sat BELOW the current median -- 11 of 28 gaps (39.3%) exceeded
-// it, meaning it would page on close to 2 of every 5 normal cycles, not a
-// meaningful signal. WARN=9h clears 0/28 in this sample (an empirical
-// false-alarm rate this session can state as "<1 per 5.4-day sample", not a
-// precise "<1/month" the way the Tanishq-channel calibration could -- n=28
-// doesn't resolve a sub-4% tail with confidence; re-derive with a larger
-// sample once the post-#1351 cadence has had more time to settle).
-// ESCALATE stays 10h, unchanged -- 0/28 in the same sample, and it already
-// correctly distinguishes the genuine Aug-27-adjacent 12h+ incident from
-// current normal jitter. Flagged for GG: WARN=9h/ESCALATE=10h leaves only
-// 1h of separation between "worth a look" and "urgent" -- widening
-// ESCALATE (e.g. to 12-14h, still under the observed 14-day blended max of
-// 12.18h... actually above it) is a live option, not decided here.
-export const WARN_THRESHOLD_HOURS = 9;
+export const WARN_THRESHOLD_HOURS = 5;
 export const ESCALATE_THRESHOLD_HOURS = 10;
 
 // Q4 (audit 2026-09-03): T12 cannot fire when the self-hosted runner is
