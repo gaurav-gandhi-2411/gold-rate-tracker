@@ -210,6 +210,38 @@ def test_idempotency(tmp_path: Path):
     assert len(entries) == 1
 
 
+def test_missing_model_version_records_unknown_not_a_stale_fabricated_name(tmp_path: Path):
+    """V3 (audit 2026-09-04): a forecast.json missing model_version must not
+    silently record 'lgbm-only' -- that model was retired with ADR 009/010
+    and production always sets 'naive_flat_hold' explicitly (ml/inference.py),
+    so this default path only fires on a malformed/incomplete forecast.json,
+    but when it does, the audit trail must say 'unknown', not fabricate a
+    specific, no-longer-real model name."""
+    forecast = {
+        "predicted_at": "2026-05-14T12:00:00Z",
+        "predicted_22k": 14965,
+        "lower": 14791,
+        "upper": 15236,
+        # model_version deliberately omitted
+    }
+    forecast_path = tmp_path / "forecast.json"
+    forecast_path.write_text(__import__("json").dumps(forecast))
+
+    prices_data = [
+        {"timestamp": "2026-05-14T06:30:00.000Z", "22k": 14845, "24k": 16000, "18k": 12000}
+    ]
+    prices_path = tmp_path / "prices.json"
+    prices_path.write_text(__import__("json").dumps(prices_data))
+
+    out_path = tmp_path / "metrics_history.json"
+    record_prediction(forecast_path, prices_path, out_path)
+
+    import json
+
+    entries = json.loads(out_path.read_text())
+    assert entries[0]["model_version"] == "unknown"
+
+
 # ---------------------------------------------------------------------------
 # aggregate_metrics
 # ---------------------------------------------------------------------------

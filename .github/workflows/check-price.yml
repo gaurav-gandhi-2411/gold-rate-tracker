@@ -76,16 +76,33 @@ jobs:
         # does NOT backfill the missed window's data -- IBJA/Tanishq only
         # expose CURRENT readings, not historical lookback, so whatever the
         # price was during a dropped tick is permanently unrecorded. What
-        # this DOES do: when a run finds the last commit is stale by more
-        # than 2 cadence cycles (6h), it does not just do this tick's normal
-        # work and then passively wait up to 3h for the next scheduled
-        # slot -- which shares the same ~18.5%+ drop probability and could
-        # extend the gap further. It immediately dispatches one extra run via
-        # the REST API (independent of the `schedule` event path that's
-        # actually degraded), giving the system a second, faster chance to
-        # land fresh data. `inputs.catchup` on the dispatch marks that run so
-        # its own copy of this step never re-dispatches -- bounded to one
-        # extra run per detected gap, never a chain.
+        # this DOES do: when a run finds the last commit is stale, it does
+        # not just do this tick's normal work and then passively wait up to
+        # 3h for the next scheduled slot -- which shares the same drop
+        # probability and could extend the gap further. It immediately
+        # dispatches one extra run via the REST API (independent of the
+        # `schedule` event path), giving the system a second, faster chance
+        # to land fresh data. `inputs.catchup` on the dispatch marks that
+        # run so its own copy of this step never re-dispatches -- bounded to
+        # one extra run per detected gap, never a chain.
+        #
+        # V1 (audit 2026-09-04): threshold lowered from 6h to 5h and
+        # reasoned about differently from the dead-man's-switch WARN
+        # threshold, even though they now sit close together numerically.
+        # Re-derived from the post-recovery gap distribution (data/
+        # forecast.json commits, 2026-08-30 onward, n=28 gaps): median
+        # 4.69h, p90 7.29h, p95 7.79h, max 8.18h -- meaning 11 of 28 gaps
+        # (39.3%) exceed 5h under completely normal conditions. That rate
+        # would be disqualifying for a threshold that pages a human (see
+        # worker-deadman's WARN, moved to 9h for exactly this reason), but
+        # this threshold only triggers a free, silent, self-healing extra
+        # dispatch -- firing on ordinary jitter costs a few CI minutes on a
+        # public repo, not a false alarm. Set deliberately LOW (below the
+        # median, not above the tail) so catch-up gets as many chances as
+        # possible to resolve a gap before the dead-man's-switch WARN would
+        # ever need to fire -- the two thresholds' current 6h vs 5h ordering
+        # let a human page (WARN=5h, old) fire BEFORE the free self-heal
+        # attempt (catchup=6h, old) even had a chance to run. Reversed now.
         if: github.event.inputs.catchup != 'true'
         env:
           GH_TOKEN: ${{ github.token }}
@@ -108,11 +125,11 @@ jobs:
           NOW_EPOCH=$(date -u +%s)
           GAP_HOURS=$(( (NOW_EPOCH - PREDICTED_EPOCH) / 3600 ))
           echo "Last committed forecast is ${GAP_HOURS}h old."
-          if [ "$GAP_HOURS" -ge 6 ]; then
-            echo "Gap >= 6h (2x the 3h cadence) -- at least one scheduled tick was likely dropped. Dispatching one catch-up run."
+          if [ "$GAP_HOURS" -ge 5 ]; then
+            echo "Gap >= 5h -- at least one scheduled tick was likely dropped. Dispatching one catch-up run."
             gh workflow run check-price.yml --repo "${GITHUB_REPOSITORY}" --ref master -f catchup=true
           else
-            echo "Gap under 6h -- normal cadence, no catch-up needed."
+            echo "Gap under 5h -- normal cadence, no catch-up needed."
           fi
 
       # Tanishq scraping happens in scrape-tanishq-selfhosted.yml (its own
