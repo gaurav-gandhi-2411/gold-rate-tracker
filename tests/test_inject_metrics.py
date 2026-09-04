@@ -135,6 +135,7 @@ def test_unclosed_frozen_block_raises(fixture_json):
     [
         ("pct1", "88.5%"),
         ("pct2", "88.54%"),
+        ("num1", "0.9"),
         ("int", "0"),  # 0.8854 truncates to 0 -- exercises the int formatter, not a realistic use
     ],
 )

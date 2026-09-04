@@ -28,7 +28,14 @@ const STRINGS = {
     pwaHelpPanelText: 'iOS limits how often home-screen apps update in the background. Tap <strong>↻</strong> to get the latest prices. If prices remain stuck, open the App Switcher (swipe up and hold), then swipe this app away and reopen from Home Screen — that forces a full reload.',
     dismissLabel: "Dismiss",
     installPromptText: 'Add this to your Home Screen for quicker access: tap <strong>Share</strong>, then <strong>Add to Home Screen</strong>.',
-    firstVisitText: "22K gold retail price, checked every 3 hours and confirmed against Tanishq's live rate when possible. We always say plainly when a price is an estimate.",
+    // R2 (audit 2026-09-04): was a hand-typed "checked every 3 hours" claim
+    // that stopped being true once scheduled-trigger reliability degraded
+    // (docs/RUNBOOK.md). params is null until data/cadence_metrics.json
+    // resolves (app.js's renderCadenceStrings) — the fallback branch never
+    // states a specific number it can't back up.
+    firstVisitText: (params) => params
+      ? `22K gold retail price, checked about every ${params.hours}h (n=${params.n}, as of ${params.asOf}) and confirmed against Tanishq's live rate when possible. We always say plainly when a price is an estimate.`
+      : "22K gold retail price, checked on a regular schedule and confirmed against Tanishq's live rate when possible. We always say plainly when a price is an estimate.",
     shareLabel: "Share",
     shareTextWithPrice: ({ price }) => `Today's 22K gold price is ₹${price}/gram — check Gold Tracker`,
     shareTextGeneric: "Check today's gold price on Gold Tracker",
@@ -89,7 +96,11 @@ const STRINGS = {
     trackRecordCaption: "30 recent five-day windows: flat-hold estimate (dashed) vs what actually happened (gold)",
     trackRecordChartAriaLabel: "Past flat-hold estimates vs actual gold prices",
     methodologySummary: "How this works — and how accurate it's been",
-    footerBody: 'We use <a href="https://ibjarates.com/" target="_blank" rel="noopener">IBJA</a>\'s official gold benchmark and calibrate it to match real shop prices, checking against <a href="https://www.tanishq.co.in/gold-rate.html?lang=en_IN" target="_blank" rel="noopener">Tanishq</a>\'s live rate when we can. Prices are checked every 3 hours — IBJA itself only updates once a day, so the number sometimes stays the same for a while.',
+    footerBody: (params) => `We use <a href="https://ibjarates.com/" target="_blank" rel="noopener">IBJA</a>'s official gold benchmark and calibrate it to match real shop prices, checking against <a href="https://www.tanishq.co.in/gold-rate.html?lang=en_IN" target="_blank" rel="noopener">Tanishq</a>'s live rate when we can. ${
+      params
+        ? `Prices are checked about every ${params.hours}h (n=${params.n}, as of ${params.asOf})`
+        : "Prices are checked on a regular schedule"
+    } — IBJA itself only updates once a day, so the number sometimes stays the same for a while.`,
     footerMuted: "Not financial advice. Rates are indicative.",
     bottomNavAriaLabel: "Page sections",
     navHome: "Home",
@@ -345,7 +356,9 @@ const STRINGS = {
     pwaHelpPanelText: 'iOS होम-स्क्रीन ऐप्स को बैकग्राउंड में कम बार अपडेट करता है। ताज़ी कीमत के लिए <strong>↻</strong> दबाएं। अगर कीमत अटकी रहे, तो ऐप स्विचर खोलें (ऊपर स्वाइप करके दबाए रखें), फिर इस ऐप को स्वाइप करके हटाएं और होम स्क्रीन से दोबारा खोलें — इससे पूरा रीलोड हो जाएगा।',
     dismissLabel: "बंद करें",
     installPromptText: 'तेज़ी से खोलने के लिए इसे होम स्क्रीन पर जोड़ें: <strong>Share</strong> दबाएं, फिर <strong>Add to Home Screen</strong>।',
-    firstVisitText: "22K सोने की खुदरा कीमत, हर 3 घंटे में जांची जाती है और जब संभव हो तो Tanishq की लाइव दर से पुष्टि की जाती है। कीमत अनुमानित हो तो हम साफ़ बता देते हैं।",
+    firstVisitText: (params) => params
+      ? `22K सोने की खुदरा कीमत, लगभग हर ${params.hours} घंटे में जांची जाती है (n=${params.n}, ${params.asOf} तक) और जब संभव हो तो Tanishq की लाइव दर से पुष्टि की जाती है। कीमत अनुमानित हो तो हम साफ़ बता देते हैं।`
+      : "22K सोने की खुदरा कीमत, नियमित समय पर जांची जाती है और जब संभव हो तो Tanishq की लाइव दर से पुष्टि की जाती है। कीमत अनुमानित हो तो हम साफ़ बता देते हैं।",
     shareLabel: "शेयर करें",
     shareTextWithPrice: ({ price }) => `आज 22K सोने की कीमत ₹${price}/ग्राम है — Gold Tracker पर देखें`,
     shareTextGeneric: "Gold Tracker पर आज की सोने की कीमत देखें",
@@ -406,7 +419,11 @@ const STRINGS = {
     trackRecordCaption: "हाल की 30 पांच-दिन विंडो: फ़्लैट-होल्ड अनुमान (डैश) बनाम असल में क्या हुआ (सोना)",
     trackRecordChartAriaLabel: "पिछले फ़्लैट-होल्ड अनुमान बनाम असल सोने की कीमतें",
     methodologySummary: "यह कैसे काम करता है — और कितना सटीक रहा है",
-    footerBody: 'हम <a href="https://ibjarates.com/" target="_blank" rel="noopener">IBJA</a> के आधिकारिक सोने के बेंचमार्क का इस्तेमाल करते हैं और इसे असली दुकान की कीमतों से मिलाकर कैलिब्रेट करते हैं, और जब मुमकिन हो तो <a href="https://www.tanishq.co.in/gold-rate.html?lang=en_IN" target="_blank" rel="noopener">Tanishq</a> की लाइव कीमत से भी जांचते हैं। हर 3 घंटे में कीमत जांची जाती है — IBJA खुद दिन में एक बार अपडेट होता है, इसलिए कभी-कभी नंबर कुछ समय तक वही रहता है।',
+    footerBody: (params) => `हम <a href="https://ibjarates.com/" target="_blank" rel="noopener">IBJA</a> के आधिकारिक सोने के बेंचमार्क का इस्तेमाल करते हैं और इसे असली दुकान की कीमतों से मिलाकर कैलिब्रेट करते हैं, और जब मुमकिन हो तो <a href="https://www.tanishq.co.in/gold-rate.html?lang=en_IN" target="_blank" rel="noopener">Tanishq</a> की लाइव कीमत से भी जांचते हैं। ${
+      params
+        ? `लगभग हर ${params.hours} घंटे में कीमत जांची जाती है (n=${params.n}, ${params.asOf} तक)`
+        : "कीमत नियमित समय पर जांची जाती है"
+    } — IBJA खुद दिन में एक बार अपडेट होता है, इसलिए कभी-कभी नंबर कुछ समय तक वही रहता है।`,
     footerMuted: "यह वित्तीय सलाह नहीं है। दरें संकेतात्मक हैं।",
     bottomNavAriaLabel: "पेज के सेक्शन",
     navHome: "होम",

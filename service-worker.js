@@ -49,7 +49,10 @@
 // Tanishq confirmation itself has been silent for TIER_DEGRADED_THRESHOLD_H
 // (48h), instead of rendering identically whether Tanishq confirmed 2h ago
 // or 3 weeks ago. app.js + i18n.js (EN+HI) changed.
-const VERSION = "v39-20260904-tier-degradation-visible";
+// 2026-09-04 (v40): R3 -- firstVisitText/footerBody (EN+HI) no longer
+// hand-type "checked every 3 hours"; both render the real measured cadence
+// from a new data/cadence_metrics.json fetch. app.js + i18n.js changed.
+const VERSION = "v40-20260904-cadence-claim";
 const SHELL_CACHE = `gold-shell-${VERSION}`;
 
 const SHELL_FILES = [
