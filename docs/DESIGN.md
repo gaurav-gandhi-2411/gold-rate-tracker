@@ -334,3 +334,5 @@ Not strictly necessary given the use of large display sizes, but worth noting fo
 ### `font-feature-settings` for tabular / lining numerals
 
 See §5 above. Add `font-feature-settings: "tnum" 1, "lnum" 1` to all price-displaying elements.
+
+<!-- scratch test line, Z1c legitimately-rebased-PR test, will be reverted -->
