@@ -482,5 +482,6 @@
         "reason": "probability gate not passed (not significant vs always-up: p=0.4545, acc=0.6133 vs baseline=0.5867)"
       }
     }
-  }
+  },
+  "_z3_scratch_marker": true
 }
