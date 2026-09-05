@@ -7,3 +7,5 @@
 (`lgbm.txt`, `lgbm_lower.txt`, `lgbm_upper.txt`) and `ml/forecast.py` no longer exist.
 The `.gitattributes` binary markers remain and are still correct for any future binary
 artifacts under `models/`.
+
+<!-- scratch test line, Z1c unlabeled-leak repro, will be reverted -->
