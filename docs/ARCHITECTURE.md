@@ -115,3 +115,5 @@ forecast.json + prices.json + backtest.json + coverage_metrics.json
 | IBJA calibration only after ≥30 overlap days | Fewer points make the `HuberRegressor` fit unstable; the fallback price would carry unstated uncertainty |
 | GitHub Pages scoped via `_config.yml` | Legacy Jekyll build serves the whole repo by default — internal docs/ML source had no reason to be reachable at the app's own URL |
 | No Dagster/Airflow | Right-sized for a single univariate series (ADR 002) |
+
+<!-- scratch test line, will be reverted before merge -->
