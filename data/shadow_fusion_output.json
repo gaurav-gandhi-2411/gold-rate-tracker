@@ -1,12 +1,12 @@
 {
-  "capture_utc": "2026-09-05T04:20:33Z",
+  "capture_utc": "2026-09-05T10:30:17Z",
   "as_of_date": "2026-09-05",
   "national_failures": {},
   "kalyan_failures": {},
   "snapshot_rows_persisted": 7,
   "national_benchmark": {
-    "value": 14372.083333333334,
-    "band_half_width": 143.72083333333333,
+    "value": 14272.916666666668,
+    "band_half_width": 142.72916666666669,
     "disagreement": false,
     "sources_used": [
       "ibja",
@@ -21,32 +21,32 @@
   },
   "cities": {
     "Bangalore": {
-      "value": 14360.0,
-      "band_half_width": 143.72083333333333,
+      "value": 14190.0,
+      "band_half_width": 142.72916666666669,
       "coverage": "kalyan_anchored",
       "attribution": "National retail consensus, Kalyan-anchored (Kalyan Jewellers \u2014 BANGALORE board rate)",
-      "markup": 0.9991592497028382
+      "markup": 0.99419062910524
     },
     "Chennai": {
-      "value": 14360.0,
-      "band_half_width": 143.72083333333333,
+      "value": 14190.0,
+      "band_half_width": 142.72916666666669,
       "coverage": "kalyan_anchored",
       "attribution": "National retail consensus, Kalyan-anchored (Kalyan Jewellers \u2014 CHENNAI board rate)",
-      "markup": 0.9991592497028382
+      "markup": 0.99419062910524
     },
     "Hyderabad": {
-      "value": 14360.0,
-      "band_half_width": 143.72083333333333,
+      "value": 14190.0,
+      "band_half_width": 142.72916666666669,
       "coverage": "kalyan_anchored",
       "attribution": "National retail consensus, Kalyan-anchored (Kalyan Jewellers \u2014 HYDERABAD board rate)",
-      "markup": 0.9991592497028382
+      "markup": 0.99419062910524
     },
     "Ernakulam": {
-      "value": 14360.0,
-      "band_half_width": 143.72083333333333,
+      "value": 14190.0,
+      "band_half_width": 142.72916666666669,
       "coverage": "kalyan_anchored",
       "attribution": "National retail consensus, Kalyan-anchored (Kalyan Jewellers \u2014 ERNAKULAM board rate)",
-      "markup": 0.9991592497028382
+      "markup": 0.99419062910524
     }
   }
 }
