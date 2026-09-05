@@ -242,37 +242,52 @@ cadence by 50%+ on a typical cycle. **Miss rate alone is structurally blind
 to this** and should not be quoted on its own as evidence of health; pair it
 with a delay/gap distribution, or don't quote it.
 
-### Threshold ladder (W1, audit 2026-09-04)
+### Threshold ladder — three priced alternatives (Y1, audit 2026-09-05)
 
-`check-price.yml`'s catch-up (4h) and `worker-deadman`'s dead-man's-switch
-WARN (6h) / ESCALATE (12h) are derived from the **product promise** — the
-page states a 3h check cadence, so catch-up = ~1.3x, WARN = 2x, ESCALATE =
-4x that promise — not from the currently-observed (degraded) gap
-distribution. An earlier attempt derived WARN/ESCALATE from the observed
-distribution directly (median/p90/max of the actual gaps) and landed on
-WARN=9h/ESCALATE=10h; that repeats the exact mistake that produced the
-original, too-loose 6h catch-up threshold in the first place — calibrating
-an alert against a degraded sample encodes the degradation as the new
-normal, and every future degradation ratchets the threshold looser again,
-forever. (That attempt briefly reached master by process accident —
-squash-merging an unrelated PR whose branch had been created without
-returning to master first — and was reverted before this section was
-written.)
+`check-price.yml`'s catch-up threshold stays at 4h (~1.3x the 3h promise,
+deliberately below every WARN option below so the free, silent self-heal
+always gets first chance). The dead-man's-switch WARN/ESCALATE ladder went
+through three designs; GG picks one, not this repo. All three are anchored
+to the same underlying data: `data/run_cadence_log.jsonl`'s gap-between-
+successful-commits log, 7-day window n=36 (median 4.62h, p90 7.06h, p95
+7.55h, p99 8.12h, max 8.18h) and 14-day window n=59 (median 4.24h, p90
+7.52h, p95 8.40h, p99 11.19h, max 12.18h — the wider window still carries
+some of the genuine Aug-27 incident tail).
 
-**The tension this creates, on purpose:** at the current degraded cadence,
-WARN=6h is exceeded by ~21% of normal gaps (roughly 34 pages/month,
-extrapolated). That is a real, disruptive rate. The alternative — raising
-WARN until the noise stops — was rejected: a WARN that only fires during
-genuine multi-cycle outages, tuned to whatever the platform's current bad
-day looks like, stops being an alert about the promise and becomes an alert
-about the *incident*, which is a different and much weaker thing. If this
-page rate is unacceptable, the honest fix is to change what the page
-promises users (already done once — see the injected-cadence-metric fix,
-`i18n.js`'s `firstVisitText`/`footerBody`, `README.md`'s median-gap marker
-— both render the real measured cadence now, not a fixed "3 hours" claim),
-not to keep raising the alarm threshold until it stops firing. The 3h cron
-itself is a separate, bigger decision (would mean admitting the *system*,
-not just the on-page copy, no longer targets 3h) and was left alone here.
+| # | Design | Thresholds | Anchor | Pages/month (projected) | First-page delay | Known failure mode |
+|---|---|---|---|---|---|---|
+| A | 3h-anchored 2-tier (this PR's original content, X1d) | WARN=6h / ESCALATE=12h | 2x / 4x the 3h product promise | ~34 (21.4% of a 28-gap sample exceed 6h) | ~6.5h (WARN + 30min cron) | Pages on ordinary platform slowness until the channel gets muted — a control that stops reporting |
+| B | measured-anchored 2-tier (X1d, reverted V1 attempt) | WARN≈9h / ESCALATE=10h | Current gap distribution directly | ~0 in-sample | ~9.5h | Self-referential ratchet: recalibrates every time the platform degrades, so degradation becomes the new "normal" forever — the same mistake that produced the original too-loose 6h catch-up threshold |
+| **C** | **condition/event split (Y1, this PR's current content)** | **WARN=10h / ESCALATE=16h** | **Gap distribution's own p95/p99 — a level normal cycles do not reach** | **0 false pages (0/36 over 7 days; 2/59 over 14 days, both the genuine Aug-27 incident, not false alarms)** | **~10.5h** | **Condition band (gaps 3h–10h, ~63% of all gaps over 14 days) is not silently dropped — routed to a weekly non-paging digest, `ml/cadence_digest.py`** |
+
+Option A pages on the CONDITION (platform slower than promised — account-
+wide, unfixable from this repo, already disclosed on the page) as if it
+were the EVENT (the pipeline has stopped — actionable, what a page is for).
+Option B avoids that but by re-deriving the boundary from whatever the
+platform currently looks like, which stops being an alert about the
+promise and starts being an alert about today's incident — a weaker,
+self-erasing signal. Option C is the only one of the three that separates
+the two: WARN/ESCALATE fire on the EVENT only (anchored to where normal
+cycles top out, not to the promise or to a rolling number), and the
+CONDITION band gets a non-paging weekly summary instead of either silence
+or a page.
+
+**Detection-delay vs. the dead-man's-switch's own coverage (Y1c):** Option
+C's ~10.5h first-page delay is checked against this repo's worst documented
+real incident (12h+, the event that motivated T9_ESCALATE and the #1351
+self-hosted-runner split) — a genuine improvement, not a regression traded
+for fewer pages. It is also checked against the Tanishq-silence channel's
+own WARN=48h: the two channels must not both be tuned loose in the same
+band, and 10.5h vs. 48h leaves a wide margin between them.
+
+If none of these three page rates is acceptable, the honest fix is
+changing what the page promises users (already done once — see the
+injected-cadence-metric fix, `i18n.js`'s `firstVisitText`/`footerBody`,
+`README.md`'s median-gap marker — both render the real measured cadence
+now, not a fixed "3 hours" claim), not silently raising the alarm threshold
+until it stops firing. The 3h cron itself is a separate, bigger decision
+(would mean admitting the *system*, not just the on-page copy, no longer
+targets 3h) and is left alone here.
 
 ---
 
@@ -547,7 +562,10 @@ retired setup, kept for historical reference).
 A second, unrelated Cloudflare Worker — `gold-rate-tracker-deadman`, on the
 same Cloudflare account the retired worker above ran on — independently
 checks the public site's `data/forecast.json` freshness and alerts to the
-existing ntfy topic at WARN (>=5h stale) / ESCALATE (>=10h stale). Unlike
+existing ntfy topic at WARN / ESCALATE thresholds on `predicted_at` age —
+currently deployed at 5h/10h; see "Threshold ladder" above for the three
+priced alternatives awaiting GG's decision, none of which are live until a
+`wrangler deploy`. Unlike
 every other alert in this project, it does not run inside GitHub Actions,
 so it keeps working if GitHub Actions' own scheduling ever stops firing. See
 [worker-deadman/README.md](../worker-deadman/README.md) for the deploy

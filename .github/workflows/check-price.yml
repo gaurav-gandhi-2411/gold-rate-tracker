@@ -89,9 +89,11 @@ jobs:
         # W1 (audit 2026-09-04): threshold = 4h, derived from the PRODUCT
         # PROMISE (3h cron cadence) plus margin for ordinary jitter around a
         # single tick -- roughly 1.33x the promise, deliberately BELOW
-        # worker-deadman's WARN=6h (2x the promise) so this free, silent
-        # self-heal attempt always gets a chance to resolve a gap before a
-        # human would be paged. Not derived from the observed gap
+        # worker-deadman's WARN=10h (Y1, audit 2026-09-05: the EVENT
+        # threshold, anchored to the measured gap distribution's own p95/p99
+        # -- see deadman.mjs) so this free, silent self-heal attempt always
+        # gets a chance to resolve a gap before a human would be paged. Not
+        # derived from the observed gap
         # distribution (an earlier attempt at this threshold was, and
         # briefly leaked to master by process accident before being
         # reverted -- deriving alert/self-heal levels from a degraded-state
