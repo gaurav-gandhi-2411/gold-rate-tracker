@@ -105,11 +105,32 @@ class BoundaryLeakError(Exception):
     pass
 
 
+# Commit messages/diffs in this repo routinely carry non-ASCII characters
+# (em-dashes, per this repo's own prose style). subprocess.run(text=True)
+# with no explicit encoding falls back to locale.getpreferredencoding(),
+# which is cp1252 on Windows and silently corrupts (or crashes, in
+# capture_output's background reader threads) on those bytes. Explicit
+# UTF-8 + errors="replace" makes this correct and deterministic on every
+# platform, matching what the GitHub Actions (Linux, UTF-8-locale) runner
+# already did implicitly -- this is a portability fix, not a behavior
+# change for CI, but it is a mandatory fix for local reproduction/testing.
+def _run(args: list[str], **kwargs: object) -> subprocess.CompletedProcess[str]:
+    return subprocess.run(
+        args,
+        capture_output=True,
+        text=True,
+        encoding="utf-8",
+        errors="replace",
+        check=False,
+        **kwargs,  # type: ignore[arg-type]
+    )
+
+
 def _gh_json(args: list[str]) -> object:
     """Run a `gh` CLI command expecting JSON output. Raises on any failure
     (non-zero exit, unparseable output) -- never returns a default value
     that could be mistaken for a real (empty) result."""
-    result = subprocess.run(["gh", *args], capture_output=True, text=True, check=False)
+    result = _run(["gh", *args])
     if result.returncode != 0:
         raise BoundaryLeakError(
             f"gh {' '.join(args)} failed (exit {result.returncode}): {result.stderr.strip()}"
@@ -121,7 +142,7 @@ def _gh_json(args: list[str]) -> object:
 
 
 def _git(args: list[str]) -> str:
-    result = subprocess.run(["git", *args], capture_output=True, text=True, check=False)
+    result = _run(["git", *args])
     if result.returncode != 0:
         raise BoundaryLeakError(
             f"git {' '.join(args)} failed (exit {result.returncode}): {result.stderr.strip()}"
@@ -130,12 +151,7 @@ def _git(args: list[str]) -> str:
 
 
 def _gh_pr_diff_names(pr_number: int, repo: str) -> set[str]:
-    result = subprocess.run(
-        ["gh", "pr", "diff", str(pr_number), "--repo", repo, "--name-only"],
-        capture_output=True,
-        text=True,
-        check=False,
-    )
+    result = _run(["gh", "pr", "diff", str(pr_number), "--repo", repo, "--name-only"])
     if result.returncode != 0:
         raise BoundaryLeakError(
             f"gh pr diff --name-only failed for #{pr_number}: {result.stderr.strip()}"
@@ -154,16 +170,10 @@ def _unique_commits(base_ref: str, head_sha: str) -> list[str]:
 def _patch_id_for_commit(sha: str) -> str | None:
     """Returns the stable patch-id for one commit's own diff, or None if the
     commit introduces no content of its own (e.g. an empty merge commit)."""
-    show = subprocess.run(["git", "show", sha], capture_output=True, text=True, check=False)
+    show = _run(["git", "show", sha])
     if show.returncode != 0:
         raise BoundaryLeakError(f"git show {sha} failed: {show.stderr.strip()}")
-    pid = subprocess.run(
-        ["git", "patch-id", "--stable"],
-        input=show.stdout,
-        capture_output=True,
-        text=True,
-        check=False,
-    )
+    pid = _run(["git", "patch-id", "--stable"], input=show.stdout)
     if pid.returncode != 0:
         raise BoundaryLeakError(f"git patch-id failed for {sha}: {pid.stderr.strip()}")
     line = pid.stdout.strip()
@@ -245,12 +255,7 @@ def check_file_level_residue(pr_number: int, repo: str, base_ref: str) -> list[s
 
     explained_files: set[str] = set()
     for sha in unique_commits:
-        result = subprocess.run(
-            ["git", "show", "--name-only", "--format=", sha],
-            capture_output=True,
-            text=True,
-            check=False,
-        )
+        result = _run(["git", "show", "--name-only", "--format=", sha])
         if result.returncode != 0:
             raise BoundaryLeakError(f"git show --name-only {sha} failed: {result.stderr.strip()}")
         explained_files.update(line.strip() for line in result.stdout.splitlines() if line.strip())
