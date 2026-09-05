@@ -170,8 +170,9 @@ function fakeKv(initial) {
   };
 }
 
-test("runCheck: stale payload (11h old) fires an ESCALATE ntfy POST with the right topic/priority", async () => {
-  const staleIso = isoHoursAgo(11);
+test("runCheck: stale payload (past ESCALATE_THRESHOLD_HOURS) fires an ESCALATE ntfy POST with the right topic/priority", async () => {
+  const staleHours = ESCALATE_THRESHOLD_HOURS + 1;
+  const staleIso = isoHoursAgo(staleHours);
   const ntfyCalls = [];
   const fetchImpl = async (url, opts) => {
     if (url.includes("forecast.json")) {
@@ -197,7 +198,7 @@ test("runCheck: stale payload (11h old) fires an ESCALATE ntfy POST with the rig
   const escalateCall = ntfyCalls.find((c) => c.opts.headers.Priority === "5");
   assert.ok(escalateCall, "expected one ntfy call with Priority 5 (ESCALATE)");
   assert.equal(escalateCall.url, "https://ntfy.sh/test-gold-topic");
-  assert.match(escalateCall.opts.body, /11\.0h/);
+  assert.match(escalateCall.opts.body, new RegExp(`${staleHours}\\.0h`));
 });
 
 test("runCheck: fresh payload sends no staleness alert (heartbeat is separate -- see G4a tests)", async () => {
@@ -214,7 +215,7 @@ test("runCheck: fresh payload sends no staleness alert (heartbeat is separate --
 });
 
 test("runCheck: repeated ESCALATE runs inside the reminder window only alert once", async () => {
-  const staleIso = isoHoursAgo(11);
+  const staleIso = isoHoursAgo(ESCALATE_THRESHOLD_HOURS + 1);
   let ntfyCount = 0;
   const fetchImpl = async (url) => {
     if (url.includes("forecast.json")) {
@@ -262,7 +263,13 @@ test("runCheck: missing NTFY_TOPIC skips cleanly instead of throwing", async () 
 test("runCheck: corrupt KV state does not crash, treated as first run", async () => {
   const fetchImpl = async (url) => {
     if (url.includes("forecast.json")) {
-      return { ok: true, json: async () => ({ predicted_at: isoHoursAgo(11), scraped_at: isoHoursAgo(0.5) }) };
+      return {
+        ok: true,
+        json: async () => ({
+          predicted_at: isoHoursAgo(ESCALATE_THRESHOLD_HOURS + 1),
+          scraped_at: isoHoursAgo(0.5),
+        }),
+      };
     }
     return { ok: true };
   };
@@ -344,7 +351,13 @@ test("runCheck: heartbeat and a real ESCALATE alert can both fire in the same ru
   const priorities = [];
   const fetchImpl = async (url, opts) => {
     if (url.includes("forecast.json")) {
-      return { ok: true, json: async () => ({ predicted_at: isoHoursAgo(11), scraped_at: isoHoursAgo(0.5) }) };
+      return {
+        ok: true,
+        json: async () => ({
+          predicted_at: isoHoursAgo(ESCALATE_THRESHOLD_HOURS + 1),
+          scraped_at: isoHoursAgo(0.5),
+        }),
+      };
     }
     ntfyCount += 1;
     priorities.push(opts.headers.Priority);

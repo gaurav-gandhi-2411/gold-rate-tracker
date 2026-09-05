@@ -61,6 +61,29 @@ jobs:
         continue-on-error: true
         run: python -m ml.metrics --resolve
 
+      - name: Post weekly cadence digest (low-priority, non-paging)
+        # Y1 (audit 2026-09-05): the "condition" band -- gaps past the 3h
+        # promise but below the dead-man's-switch page level -- routed here
+        # instead of paging on it. Piggybacks on this job's existing weekly
+        # cron (Sunday 02:00 UTC) rather than adding a new schedule.
+        # continue-on-error: true so a digest failure never blocks the
+        # backtest commit below; ml.cadence_digest itself is silent (exit 0,
+        # no ntfy call) when there's no data, never fabricating a claim.
+        continue-on-error: true
+        env:
+          NTFY_TOPIC: ${{ secrets.NTFY_TOPIC }}
+        run: |
+          set -e
+          BODY=$(python -m ml.cadence_digest)
+          if [ -n "$BODY" ] && [ -n "${NTFY_TOPIC}" ]; then
+            curl -s \
+              -H "Title: Gold Tracker: weekly cadence digest" \
+              -H "Priority: 1" \
+              -H "Tags: bar_chart" \
+              -d "$BODY" \
+              "https://ntfy.sh/${NTFY_TOPIC}" || true
+          fi
+
       - name: Re-score IBJA-calibrated band coverage
         # Separate from ml.metrics's coverage_metrics.json -- that scores
         # headline.lower/upper (the naive flat-hold conformal PI); this scores
