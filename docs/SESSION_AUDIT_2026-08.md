@@ -217,12 +217,76 @@ old docstring's 83.1%/n=65 reading within Wilson-CI noise.
 | `check-price.yml`'s "Run inference" step has `continue-on-error: true` | Next session | Flagged by `scripts/audit_silent_fallbacks.py`, not chased down this session — verify what gets committed if inference fails outright |
 | Direction-signal model collapse (McNemar gate) | No owner — structurally unresolvable | ~934 more folds (~18 years) needed to move the gate; documented, unchanged, nothing ships (established fact #4) |
 
+## 8. The defect-class catalogue (Y3, audit 2026-09-05)
+
+Thirteen instances of one defect class have now been found across this
+audit's sessions (2026-08-27 through 2026-09-05): **a control emits a
+plausible-looking result instead of failing or raising when it cannot
+actually verify the thing it claims to report.** Each was tracked at the
+time under a different session-local codename (established fact #6, G1d,
+P6, Q4, R2/R3, U4, V3, X2, Y2) and the letter/count used to refer to it
+drifted between PR bodies — PR #1340 calls the same finding "(e)" that
+this doc's §4 called "instance (f)," and PR #1394 cites "nine known
+instances" at a point where this doc's own running count said different.
+**That drift is itself the reason this section exists**: there was never
+one canonical list. The numbering below (#1–#13) is the first attempt at
+one and supersedes every ad hoc letter/count used in earlier PR bodies —
+those PRs are not being renumbered, this is just where "the current
+count" now lives.
+
+| # | Instance | What it substituted | How found | What would have caught it earlier |
+|---|---|---|---|---|
+| 1 | `ml.inference._try_ibja_calibrated` silently used the Gaussian `residual_std_oos` band when `calibration.json` lacked `residual_abs_quantiles` (#1237) | A band that looked calibrated but measured 45.3% actual coverage against a 68.3% nominal claim | An independent walk-forward coverage audit (n=75) | A standing coverage monitor comparing displayed band to nominal — didn't exist yet; now exists as #6's weekly re-score (§6 above) |
+| 2 | `volCtx.regime ?? "normal"` in `app.js` (#1340) | An absent regime field rendered as the specific claim "normal," not "unknown" | Manual read-through (grep + read) | `scripts/audit_silent_fallbacks.py`'s `js-default-near-render` heuristic — built *after* this instance, in direct response (#1344) |
+| 3 | `renderDriverContext`'s `usd_inr_30d_pct_change ?? 0` / `gold_usd_30d_pct_change ?? 0` (#1340) | Missing driver data rendered as "nothing moved" (a specific, false claim) | Manual sweep for siblings after #2 was found | Same sweep script as #2 — but #1344's own body documents that its heuristic **misses** this one: the default sits more than 3 lines from its eventual render call, past the heuristic's window |
+| 4 | 7d attribution headline's Rs-contribution fields (#1340) | Hardened defensively; no live bug, but no schema contract guaranteeing the invariant it relied on | Same manual sweep as #2/#3 | Same gap as #3 — a schema/type contract, not a runtime check, is the thing that would make this un-need-checking |
+| 5 | `renderStaleBanner`'s `ibja_calibrated` branch (#1358) | Renders identically whether Tanishq last confirmed 2 hours or 3 weeks ago — "confirmation has gone silent" is invisible on the page | Reasoning through the consequence of a *documented, deliberate* design choice (T12 cannot fire while the runner is offline — ADR 025) to its blind spot | Nothing automated; found by tracing a known limitation's downstream effect, not by a measurement |
+| 6 | `ml.metrics.record_prediction`'s `model_version` default (#1394) | A retired model name (`"lgbm-only"`) asserted in the permanent audit trail (`metrics_history.json`) for a missing field | Continuing the same manual/semi-automated triage that found #2–#4 | `scripts/audit_silent_fallbacks.py`'s `.get()`-default category — unverified whether it was run against `ml/metrics.py` specifically before this fix; flagged, not confirmed either way |
+| 7 | bot-pr-sync's allowlist guard (#1376) | Correctly fails loud (`::error::` + exit 1) on an out-of-scope diff, but nothing pages on that failure — the only other monitor watches *open PR age*, and a rejected guard never creates a PR | Reasoning about what "silently blocked with no alert" actually meant — a loud failure with no page, not a silent pass | An audit of "does every failure path notify a human," not just "does every failure path exit non-zero" |
+| 8 | The 50.9% cron miss-rate figure (§1 above) | A rate that cannot distinguish "created on time" from "created 2h59m late" — the pre/post-#1222 comparison used two different, incompatible measurement methodologies | This session, reasoning about why the pre/post comparison didn't add up | Pairing every rate/percentage metric with its underlying delay distribution as a standing habit, not just after the fact |
+| 9 | PR #1393's threshold change reaching master through #1394's squash-merge (#1401 revert, X2) | The STOP boundary held at "is #1393 merged" (correctly showed OPEN throughout) and failed at "is #1393's commit an ancestor of what I'm about to merge" | Chance, while preparing an unrelated PR — explicitly, "nothing detected it" | `scripts/check_pr_boundary_leak.py` (#1407) — built in direct response; see #12/#13 below for what it still misses |
+| 10 | README/docs numbers hand-copied from a live source and left to drift (`lint.yml`'s `docs-freshness` job) | Three numbers (R²=0.96, 97.3% coverage, direction-signal h1/h2 accuracy) sat 21-22 days stale despite live sources existing for all three | A 2026-08-27 audit pass reading README against the actual live data | `scripts/inject_metrics.py` + the `docs-freshness` CI gate — built in direct response; same chicken-and-egg as #2 |
+| 11 | The original 5h WARN / 6h catch-up thresholds, and V1's (#1393) attempted fix | Both calibrated against whatever the gap distribution looked like at the moment of calibration — the original against the Aug-27 incident's ~20%-miss-rate broken state, V1 against the (different) state 2-3 days later | RUNBOOK.md's own "Threshold ladder" analysis, tracing the original threshold's provenance after V1 repeated the same mistake shape | Nothing mechanical — this is a design-review question ("what is this number derived FROM") that has to be asked explicitly every time a threshold changes, not something a script flags |
+| 12 | `check_pr_boundary_leak.py`'s `check_branch_base` (Y2, this session, verified via scratch PRs #1419–#1422) | Reports clean ancestry for a branch built directly off an unmerged sibling PR's tip — the exact #1393-into-#1394 mechanism — because the divergence point's parent (wherever the sibling branch itself forked from master) is *always* trivially an ancestor of current master. `check_branch_base` returned `[]` on a deliberate, faithful reproduction of its own namesake incident | This session's Y2 deliberate-failure construction: four real scratch PRs, `check_branch_base`/`check_boundary_overlap` run in isolation as well as combined | Nothing in this repo's own review process — only running the exact reproduction against the check itself, which nothing prompted before Y2 explicitly asked for a pressure test |
+| 13 | `check_pr_boundary_leak.py`'s `check_boundary_overlap` (Y2, same session, PR #1421) | Reports "OK: clean branch ancestry, no boundary-gated file overlap" for a branch built off an **unlabeled** open PR's tip (#1420, no `boundary-gated` label) — the overlap check only ever queries PRs carrying that label, so an ordinary, unlabeled open PR (the common case — #1393 itself was never proactively labeled anything) leaks with zero detection from either check | Same Y2 construction — PR #1421's combined check exited 0 | A label is a manual, forgettable step; the check's real coverage is "leaks from PRs someone remembered to tag," not "leaks," full stop — worth stating plainly rather than trusting the green result |
+
+**Grouped by what made each invisible:**
+
+- **Green metrics** (something looked complete/correct while being wrong): #1, #2, #3, #4, #5, #6, #10.
+- **A threshold calibrated during degradation** (a number encoded the bad state it was meant to detect): #11.
+- **A metric or control that structurally could not see the failure mode** (not wrong, just blind to the thing being asked of it): #3/#4's sweep-heuristic window, #8, #12, #13.
+- **A boundary enforced at the wrong step** (the check ran, passed, and still let the thing through): #7, #9.
+
+Four of thirteen (#12, #13, and the sweep-heuristic gap noted under #3/#4)
+are findings about **this audit's own controls**, not about the product —
+the same shape CLAUDE.md rule 85a names: a control's own construction can
+encode the narrower-than-advertised-surface assumption it exists to catch
+elsewhere. #9's fix (#1407) is the clearest case: built specifically to
+catch the #1393-into-#1394 mechanism, verified passing on its own PR and
+on two live open PRs, and only shown this session — by deliberately
+reproducing the exact incident it was named for — to still miss it
+whenever the leaking PR lacks a manually-applied label. **A check that has
+never failed on a real violation is unproven**, and three of this audit's
+four newest instances (#8, #12, #13) were found by asking exactly that
+question of an existing, green, trusted control.
+
 ## Provenance
 
-All PRs referenced: `#1340` (fix/vol-regime-fails-loud), `#1341`
-(docs/fix-scraper-architecture-claim), `#1342` (chore/deadman-deploy-readme),
-`#1343` (feat/calibration-band-weekly-rescore), `#1344`
-(chore/audit-silent-fallbacks). Every number in this document is either a
-command output captured live during this session or a field read from a
-committed `data/*.json` file at the commit this session made — see each
-PR's own Testing section for the exact commands run.
+All PRs referenced: `#1237` (band fallback fails loud), `#1340`
+(fix/vol-regime-fails-loud), `#1341` (docs/fix-scraper-architecture-claim),
+`#1342` (chore/deadman-deploy-readme), `#1343`
+(feat/calibration-band-weekly-rescore), `#1344`
+(chore/audit-silent-fallbacks), `#1358` (Tanishq confirmation silence
+named), `#1376` (bot-pr-sync allowlist guard pages on rejection), `#1393`/
+`#1394`/`#1401` (the threshold-leak incident and its revert), `#1403`
+(three priced threshold-ladder alternatives — open, gated), `#1406`
+(cadence-claim p90 — open, gated), `#1407` (boundary-leak detection).
+Section 8's #12/#13 findings are sourced to four real, deliberately-opened
+and closed scratch PRs (#1419–#1422) run against `scripts/
+check_pr_boundary_leak.py` as checked out from `origin/master` at commit
+`2f92429e5ce77a3b6559e9b43d4fe44b81e5cf22` — both scratch PRs and branches
+were closed/deleted immediately after the check was run against them; no
+product code changed as a result of that test. Every number in this
+document is either a command output captured live during a session or a
+field read from a committed `data/*.json` file at the commit that session
+made — see each PR's own Testing section for the exact commands run.
