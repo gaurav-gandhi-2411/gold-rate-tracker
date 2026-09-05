@@ -129,3 +129,5 @@ def main(now: datetime | None = None) -> None:
 
 if __name__ == "__main__":
     main()
+
+# scratch test line -- deliberate overlap with boundary-gated PR #1406, will be reverted
