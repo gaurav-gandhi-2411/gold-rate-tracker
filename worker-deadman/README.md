@@ -5,13 +5,25 @@ from `https://gaurav-gandhi-2411.github.io/gold-rate-tracker/data/forecast.json`
 never anything under `github.com/.../repos/...` — is fresh, and alerts to the
 existing ntfy topic on TWO independent channels:
 
-1. **Forecast staleness** — `predicted_at` age, **WARN (>=6h)** / **ESCALATE
-   (>=12h)** (W1, audit 2026-09-04: derived from the product promise of a 3h
-   check cadence — WARN=2x, ESCALATE=4x — not from the currently-degraded
-   gap distribution, which is used only to state the resulting false-alarm
-   rate; see `src/deadman.mjs`'s own comment for the full reasoning and an
-   earlier, rejected attempt at these numbers). Catches "the pipeline
-   stopped running entirely."
+1. **Forecast staleness** — `predicted_at` age, **WARN (>=10h)** / **ESCALATE
+   (>=16h)** (Y1, audit 2026-09-05 — the third and current proposal in this
+   PR; see the PR body for all three priced alternatives). Catches "the
+   pipeline stopped running entirely." This is a CONDITION/EVENT split:
+   gaps past the 3h promise but below WARN are a platform-side condition
+   (unfixable from this repo, already disclosed on the page) routed to a
+   non-paging weekly digest (`ml/cadence_digest.py`) instead of paged on
+   directly. The two rejected alternatives both paged directly on the
+   condition band: the original WARN=5h/ESCALATE=10h ladder, and this PR's
+   own first version, WARN=6h/ESCALATE=12h (2x/4x the 3h promise) — both
+   project ~34-39 false pages/month, which is itself the "control that
+   stops reporting" failure this audit exists to find (a muted channel
+   reports nothing). WARN=10h/ESCALATE=16h are instead anchored to the
+   measured gap distribution's own p95/p99 (7.55h/8.12h over 7 days, n=36;
+   8.40h/11.19h over 14 days, n=59) — a level normal cycles do not reach —
+   never to the 3h promise or to a rolling self-updating number (the
+   ratchet risk of the measured-anchored alternative, also rejected). See
+   the constants' own comments in `src/deadman.mjs` for the full derivation
+   and false-alarm arithmetic.
 2. **Tanishq confirmation silence** (Q4, audit 2026-09-03; thresholds
    recalibrated + corroboration added R2, audit 2026-09-04) — `scraped_at`
    age (the last SUCCESSFUL Tanishq reading), **WARN (>=48h)** / **ESCALATE
@@ -194,8 +206,8 @@ deployment done — do not skip on the assumption steps 5–6 were enough.
 
 1. In `worker-deadman/src/deadman.mjs`, temporarily change:
    ```
-   export const WARN_THRESHOLD_HOURS = 6;
-   export const ESCALATE_THRESHOLD_HOURS = 12;
+   export const WARN_THRESHOLD_HOURS = 10;
+   export const ESCALATE_THRESHOLD_HOURS = 16;
    ```
    to `0` and `0.01` respectively.
 2. `wrangler deploy`
@@ -204,7 +216,7 @@ deployment done — do not skip on the assumption steps 5–6 were enough.
    - the curl response body shows `"level":"escalate"`
    - a real ntfy notification arrives on your phone/client for the topic
      set in step 4, titled "Gold Tracker: dead-man's switch ESCALATE"
-5. **Revert** the two threshold values back to `5` and `10` in
+5. **Revert** the two threshold values back to `10` and `16` in
    `src/deadman.mjs`.
 6. `wrangler deploy` again. Re-run step 6a's curl and confirm `"level"`
    has returned to `"ok"` (or `"warn"`, matching the site's real current

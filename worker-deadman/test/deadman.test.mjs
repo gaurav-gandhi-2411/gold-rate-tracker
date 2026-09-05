@@ -170,8 +170,9 @@ function fakeKv(initial) {
   };
 }
 
-test("runCheck: stale payload (13h old) fires an ESCALATE ntfy POST with the right topic/priority", async () => {
-  const staleIso = isoHoursAgo(13);
+test("runCheck: stale payload (past ESCALATE_THRESHOLD_HOURS) fires an ESCALATE ntfy POST with the right topic/priority", async () => {
+  const staleHours = ESCALATE_THRESHOLD_HOURS + 1;
+  const staleIso = isoHoursAgo(staleHours);
   const ntfyCalls = [];
   const fetchImpl = async (url, opts) => {
     if (url.includes("forecast.json")) {
@@ -197,7 +198,7 @@ test("runCheck: stale payload (13h old) fires an ESCALATE ntfy POST with the rig
   const escalateCall = ntfyCalls.find((c) => c.opts.headers.Priority === "5");
   assert.ok(escalateCall, "expected one ntfy call with Priority 5 (ESCALATE)");
   assert.equal(escalateCall.url, "https://ntfy.sh/test-gold-topic");
-  assert.match(escalateCall.opts.body, /13\.0h/);
+  assert.match(escalateCall.opts.body, new RegExp(`${staleHours}\\.0h`));
 });
 
 test("runCheck: fresh payload sends no staleness alert (heartbeat is separate -- see G4a tests)", async () => {
