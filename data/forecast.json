@@ -1,5 +1,5 @@
 {
-  "predicted_at": "2026-09-06T15:23:14.130087+00:00",
+  "predicted_at": "2026-09-06T20:19:59.734612+00:00",
   "target_window": "5d",
   "headline": {
     "method": "naive_flat_hold",
@@ -56,7 +56,7 @@
     "direction_consensus": 1.0
   },
   "driver_context": {
-    "computed_at": "2026-09-06T15:23:14.151873+00:00",
+    "computed_at": "2026-09-06T20:19:59.765917+00:00",
     "macro_staleness_days": 0.0,
     "macro_fresh": true,
     "premium_threshold_pct": 15.0,
