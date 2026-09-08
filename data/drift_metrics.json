@@ -1478,5 +1478,15 @@
     "residual": 98.0,
     "model_version": "naive_flat_hold",
     "baseline_mae": 255.52
+  },
+  {
+    "ts": "2026-09-08T16:32:37.729682+00:00",
+    "target_time": "2026-09-09T00:00:00+00:00",
+    "actual_ts": "2026-09-08T11:11:40.629Z",
+    "actual_22k": 14285.0,
+    "forecast_22k": 14285.0,
+    "residual": 0.0,
+    "model_version": "naive_flat_hold",
+    "baseline_mae": 255.52
   }
 ]
