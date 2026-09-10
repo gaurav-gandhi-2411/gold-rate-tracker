@@ -98,8 +98,17 @@ Everything below was verified against a live, already-authenticated
 Cloudflare account during this session (`wrangler whoami` →
 `gg5678g@gmail.com`, account ID `65e3c4a67e072063692db52be17bab3d`, same
 account the retired `gold-rate-tanishq-worker` ran on 2026-06-13–2026-06-25
-with zero billing issues). Nothing here has been deployed yet — the code is
-written and tested, not live.
+with zero billing issues).
+
+**STALE (AB1c, audit 2026-09-10): the line below said "nothing here has been
+deployed yet" as of this file's last edit (2026-09-05, PR #1403) — wrong
+even then, the Worker first deployed 2026-08-28. Steps 1–4 below are the
+original first-time setup (KV namespace creation, secret, first
+`wrangler deploy`); if the Worker is already live, skip to step 5 onward, or
+to `wrangler deploy` alone for a code-only redeploy — see docs/RUNBOOK.md's
+"Dead-man's switch" section for the currently-verified deploy state and the
+commands to re-check it, rather than trusting this file's own age.** ~~Nothing
+here has been deployed yet — the code is written and tested, not live.~~
 
 ### 1. Confirm you're logged in as the right account
 
