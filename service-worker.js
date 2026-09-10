@@ -63,7 +63,15 @@
 // 2026-09-10 (v43): AE1 -- calibration-band confidence clause now renders the
 // real walk-forward measured coverage (data/calibration_band_coverage.json),
 // never the hardcoded 80% design target. app.js + i18n.js (EN+HI) changed.
-const VERSION = "v43-20260910-measured-band-coverage";
+// 2026-09-10 (v44): AE2 -- two stale/desynced hardcoded claims fixed: (1)
+// index.html's static firstVisitText/footerBody pre-hydration fallback text
+// still said "checked every 3 hours" even after i18n.js's dynamic version
+// was fixed (PR #1406) -- view-source/no-JS/crawlers/the pre-hydration
+// flash all still asserted it. (2) methAccurateP3's hardcoded "roughly 70%"
+// direction base-rate aside was a frozen 2026-06-02 one-time snapshot,
+// never sourced from any field this codebase currently tracks live.
+// index.html + i18n.js (EN+HI) changed.
+const VERSION = "v44-20260910-ae2-stale-claims";
 const SHELL_CACHE = `gold-shell-${VERSION}`;
 
 const SHELL_FILES = [

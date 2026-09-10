@@ -329,7 +329,16 @@ const STRINGS = {
     methAccurateP2CoverageUnknown: "close to on target so far — still building a track record",
     methAccurateP2: "It's based on just the last 30 test runs, so it's a small sample. We narrowed this range in July 2026 after realizing it had been sized for 5-day moves but only ever checked against next-day prices — so the percentage above may look better than it really is for a while, until enough checks have happened under the corrected, narrower range. We'll call it fully proven once that settles.",
     methAccurateP3Strong: "About the direction signal",
-    methAccurateP3: ({ dirAllDisplay, n }) => `Our AI was right ${dirAllDisplay} of the time across ${n} test windows. But gold rises on roughly 70% of trading days anyway — so just guessing "up" every time would score about as well, with no model needed. We don't claim any edge here. The Getting cheaper/pricier labels above come from the recent 7-day trend, not from this AI.`,
+    // AE2 (audit 2026-09-10): "roughly 70%" was a hand-typed, one-time
+    // snapshot (ADR 019, 2026-06-02, a specific 165-fold backtest's P(actual
+    // up)) -- not sourced from any field this codebase currently tracks
+    // live (direction_baseline.json's always_up_accuracy is a different
+    // metric/horizon; backtest.json's own dir_acc_5d_naive is a hardcoded
+    // 0.5 constant, not a measured up-day frequency). Reworded to make the
+    // same honest point -- a naive "always guess up" strategy is a strong,
+    // hard-to-beat baseline in this regime (ADR 019's actual finding) --
+    // without asserting a specific number nothing currently measures.
+    methAccurateP3: ({ dirAllDisplay, n }) => `Our AI was right ${dirAllDisplay} of the time across ${n} test windows. But gold has historically risen far more often than it's fallen — so just guessing "up" every time would score close to as well, with no model needed. We don't claim any edge here. The Getting cheaper/pricier labels above come from the recent 7-day trend, not from this AI.`,
     methAccurateP4Strong: "What would change this",
     methAccurateP4: "If gold started moving up and down more evenly (not mostly up), or if a model started reliably beating the \"gold usually rises\" guess in testing, we'd turn this back on. We'll update this section if that happens.",
     methDriftHeading: "Estimate accuracy — last 7 days",
@@ -648,7 +657,9 @@ const STRINGS = {
     methAccurateP2CoverageUnknown: "अब तक लगभग लक्ष्य के अनुसार रही है — अभी इसका रिकॉर्ड बन रहा है",
     methAccurateP2: "यह सिर्फ़ पिछले 30 टेस्ट रन पर आधारित है, तो यह एक छोटा सैंपल है। जुलाई 2026 में हमने इस रेंज को छोटा किया, यह पता चलने के बाद कि यह 5-दिन के बदलाव के हिसाब से बनाई गई थी लेकिन हमेशा अगले-दिन की कीमतों के हिसाब से जांची जाती थी — इसलिए ऊपर दिया गया प्रतिशत कुछ समय तक असल से बेहतर दिख सकता है, जब तक कि सही, छोटी रेंज के तहत काफ़ी जांच न हो जाए। जब यह स्थिर हो जाएगा, तब हम इसे पूरी तरह सही मानेंगे।",
     methAccurateP3Strong: "दिशा के संकेत के बारे में",
-    methAccurateP3: ({ dirAllDisplay, n }) => `हमारा AI ${n} टेस्ट विंडो में ${dirAllDisplay} बार सही निकला। लेकिन सोना वैसे भी करीब 70% ट्रेडिंग दिनों में बढ़ता है — तो बिना किसी मॉडल के हर बार सिर्फ़ "बढ़ेगा" कहने पर भी लगभग उतना ही सही होगा। हम यहां कोई बढ़त होने का दावा नहीं करते। ऊपर दिए गए "कीमत घटना/बढ़ना" वाले लेबल हाल के 7-दिन के ट्रेंड से आते हैं, इस AI से नहीं।`,
+    // AE2: see the EN string's comment above -- "करीब 70%" was a stale,
+    // one-time snapshot, not sourced from any live-tracked field.
+    methAccurateP3: ({ dirAllDisplay, n }) => `हमारा AI ${n} टेस्ट विंडो में ${dirAllDisplay} बार सही निकला। लेकिन सोना इतिहास में गिरने से कहीं ज़्यादा बार बढ़ा है — तो बिना किसी मॉडल के हर बार सिर्फ़ "बढ़ेगा" कहने पर भी लगभग उतना ही सही होगा। हम यहां कोई बढ़त होने का दावा नहीं करते। ऊपर दिए गए "कीमत घटना/बढ़ना" वाले लेबल हाल के 7-दिन के ट्रेंड से आते हैं, इस AI से नहीं।`,
     methAccurateP4Strong: "यह कब बदलेगा",
     methAccurateP4: 'अगर सोना ऊपर-नीचे ज़्यादा बराबर मात्रा में होने लगे (सिर्फ़ बढ़ने के बजाय), या कोई मॉडल टेस्टिंग में "सोना आमतौर पर बढ़ता है" वाले अंदाज़े को लगातार मात देने लगे, तो हम इसे फिर से चालू करेंगे। ऐसा होने पर हम इस सेक्शन को अपडेट करेंगे।',
     methDriftHeading: "अनुमान की सटीकता — पिछले 7 दिन",
