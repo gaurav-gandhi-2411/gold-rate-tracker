@@ -225,7 +225,7 @@ never recoverable after the fact, catch-up or not. It also does not reduce
 the underlying platform miss rate; it only shortens how long the site stays
 stale once a run *does* fire and observes the gap.
 
-### Recovered on miss rate, not on latency (audit 2026-09-04)
+### Recovered on miss rate, not on latency — WORSENED AGAIN since 2026-09-07 (AB3, audit 2026-09-10)
 
 The miss rate above did recover to near-0% by 2026-08-30 (measured on the
 control workflows `shadow-fusion.yml`/`render-smoke.yml`, which share no
@@ -233,22 +233,81 @@ code with `check-price.yml`). But miss rate only asks "did a run happen
 somewhere in the 6h window" — it cannot see how *late* within that window
 the run landed. Re-measuring with a delay-vs-nominal-slot metric found the
 recovery was one-dimensional: pre-incident median fire delay was
-51–134 minutes (two different clean weeks); post-recovery (2026-08-30
-onward) it is a *consistent* 245–288 minutes (~4.1–4.8h), every day,
-corroborated on two independent workflows. `data/forecast.json`'s own
-commit-gap distribution over the same post-recovery window (n=28) shows the
-same shape: median 4.69h, p90 7.29h, max 8.18h — worse than the promised 3h
-cadence by 50%+ on a typical cycle. **Miss rate alone is structurally blind
-to this** and should not be quoted on its own as evidence of health; pair it
-with a delay/gap distribution, or don't quote it.
+51–134 minutes (two different clean weeks); as of the 2026-09-05 audit it
+was a *consistent* 245–288 minutes (~4.1–4.8h) every day, corroborated on
+two independent workflows.
 
-### Threshold ladder — three priced alternatives (Y1, audit 2026-09-05)
+**That number is now 5 days stale and understates current reality by
+roughly 2.5x.** Re-measured 2026-09-10 across THREE independent scheduled
+workflows spanning TWO repos — `shadow-fusion.yml`, `render-smoke.yml`
+(this repo) and `chat-canary.yml` (`gg-portfolio`, cross-account control,
+same methodology as the original 2026-08-27 incident's cross-repo check) —
+using the actual `createdAt` of every `schedule`-event run against its
+nominal cron slot, trailing 7 days:
+
+| Window | n (pooled, 3 workflows) | Median delay | p90 | Max |
+|---|---|---|---|---|
+| Before 2026-09-07 09:00 UTC | 48 | 242.5min (~4.0h) | 297.5min | 386.3min |
+| From 2026-09-07 09:00 UTC onward | 30 | 618.6min (~10.3h) | 661.3min | 674.3min |
+
+The step change lands at the same point (2026-09-07, ~06:00–12:00 UTC) on
+all three workflows independently — not a code change in this repo (two of
+the three workflows share no code with each other or with
+`check-price.yml`; the third is a different repo entirely). **Additionally:
+the two most recent scheduled ticks (the trailing ~12h as of 2026-09-10
+09:00 UTC) show as outright misses on all three workflows simultaneously**
+— a synchronized triple-miss this recent has not been previously documented
+in this file. Searched githubstatus.com for a corroborating incident report
+(the 2026-08-27 incident had one); found none as of this writing — either
+unlisted/lower-severity, or not yet posted. Treat as **platform-side,
+unconfirmed cause**, not "confirmed platform incident" the way 2026-08-27
+was.
+
+**Does this affect what users actually see?** Less than the raw numbers
+above suggest. `data/cadence_metrics.json` (the metric the page and
+`ml/cadence_digest.py` actually surface) measures the gap between
+*successful data commits*, which `check-price.yml`'s own self-triggering
+catch-up (4h threshold, above) actively protects — re-measured directly
+from `data/run_cadence_log.jsonl`'s trailing 7 days as of 2026-09-10:
+n=38, median 4.59h, p90 6.74h, p95 6.88h, max 7.93h — flat-to-slightly-better
+than the 2026-09-04 snapshot (median 4.83h, p90 7.35h) baked into PR #1406
+(open, GG reviewing). **#1406's numbers are not stale in the direction that
+matters** — the catch-up mechanism is absorbing the platform-side
+degradation before it reaches the commit-gap metric users see, for now. The
+dead-man's-switch WARN=10h threshold (600min) also has real margin against
+the current p90 (6.74h ≈ 404min) — not in danger of false-firing from this
+specific degradation today, but the margin has compressed as the underlying
+platform delay has grown, and the catch-up mechanism has no headroom
+guarantee if platform delay keeps climbing. Watch, don't ignore.
+
+**Miss rate alone is structurally blind to this** and should not be quoted
+on its own as evidence of health; pair it with a delay/gap distribution, or
+don't quote it. Same lesson as 2026-09-04, restated because the platform
+regressed again three days after this file last said "recovered."
+
+### Threshold ladder — DECIDED: Option C, merged #1403 (Y1, audit 2026-09-05)
+
+**GG decided.** Option C (condition/event split) was merged into
+`worker-deadman/src/deadman.mjs` in PR #1403 (2026-09-05) — the table below
+is a historical record of the three priced alternatives GG chose between,
+not an open decision. `WARN_THRESHOLD_HOURS=10` / `ESCALATE_THRESHOLD_HOURS=16`
+are what **master** carries today (AA1 audit, 2026-09-10, re-read directly
+from `worker-deadman/src/deadman.mjs` and confirmed against #1403's own PR
+body — "Option C is the current diff in this PR"). The weekly non-paging
+digest for the condition band (`ml/cadence_digest.py`) is also merged and
+confirmed **live**, not just designed: wired into `weekly-backtest.yml`'s
+Sunday 02:00 UTC cron, reads `data/cadence_metrics.json`, posts to ntfy.
+
+**Master is not the same claim as deployed.** The Cloudflare Worker only
+picks up a code change on an explicit `wrangler deploy` — merging to master
+does not redeploy it (see "Dead-man's switch" section below for the last
+known deploy-vs-master gap, and the exact command to check current deployed
+state before trusting these numbers describe production).
 
 `check-price.yml`'s catch-up threshold stays at 4h (~1.3x the 3h promise,
 deliberately below every WARN option below so the free, silent self-heal
-always gets first chance). The dead-man's-switch WARN/ESCALATE ladder went
-through three designs; GG picks one, not this repo. All three are anchored
-to the same underlying data: `data/run_cadence_log.jsonl`'s gap-between-
+always gets first chance). All three options below were anchored to the
+same underlying data: `data/run_cadence_log.jsonl`'s gap-between-
 successful-commits log, 7-day window n=36 (median 4.62h, p90 7.06h, p95
 7.55h, p99 8.12h, max 8.18h) and 14-day window n=59 (median 4.24h, p90
 7.52h, p95 8.40h, p99 11.19h, max 12.18h — the wider window still carries
@@ -557,46 +616,88 @@ retired setup, kept for historical reference).
 
 ---
 
-## Dead-man's switch (deployed 2026-08-28, redeploy needed — audit 2026-09-04)
+## Dead-man's switch (last redeploy 2026-09-10, verified live same day — AB2, audit 2026-09-10)
 
 A second, unrelated Cloudflare Worker — `gold-rate-tracker-deadman`, on the
 same Cloudflare account the retired worker above ran on — independently
 checks the public site's `data/forecast.json` freshness and alerts to the
-existing ntfy topic at WARN / ESCALATE thresholds on `predicted_at` age —
-currently deployed at 5h/10h; see "Threshold ladder" above for the three
-priced alternatives awaiting GG's decision, none of which are live until a
-`wrangler deploy`. Unlike
-every other alert in this project, it does not run inside GitHub Actions,
-so it keeps working if GitHub Actions' own scheduling ever stops firing. See
+existing ntfy topic at WARN / ESCALATE thresholds on `predicted_at` age. See
+"Threshold ladder" above for the decided Option C values. Unlike every other
+alert in this project, it does not run inside GitHub Actions, so it keeps
+working if GitHub Actions' own scheduling ever stops firing. See
 [worker-deadman/README.md](../worker-deadman/README.md) for the deploy
-procedure and how to confirm it's live.
+procedure.
 
-**Verified live 2026-09-04** (Cloudflare API, account `gg5678g@gmail.com`):
-cron trigger `*/30 * * * *` registered, 306 invocations since deploy, 100%
-`success`, 0 errors, current KV state `level: "ok"` agreeing with the live
-site's actual freshness. The core staleness check works.
+**MASTER IS NOT THE SAME CLAIM AS DEPLOYED — this section is the record of
+the last time someone actually checked, not a standing guarantee.** A code
+change only reaches production on an explicit `wrangler deploy`; the gap
+between master and deployed has previously run 7+ days (2026-08-28 →
+2026-09-04) while every automated metric read healthy. Do not trust a
+threshold number, in this doc or anywhere else, that says "master carries
+X" as a claim about what's live — re-verify with the commands below.
 
-**But the deployed code is stale and needs a redeploy.** `wrangler
-deployments list` shows exactly 2 deployments, both from 2026-08-28
-00:28–00:30 UTC — before the daily-heartbeat feature (`#1241`, merged
-2026-08-28 01:28 UTC) and before the `wrangler.toml` `observability.enabled`
-fix (`be13ad5`, 2026-08-28 06:03 UTC) landed on master. Confirmed
-behaviourally: the KV key `deadman:last_heartbeat_date_ist` the heartbeat
-code writes does not exist (404) after 7 days of continuous cron firing —
-the running code has no heartbeat path at all, so G4a's whole purpose
-(making the switch's own silence informative) is currently unmet in
-production. To fix:
+**How to check current deployed state (AB2, verified working 2026-09-10):**
 
 ```bash
 cd worker-deadman
-wrangler deploy
+wrangler deployments list          # timestamps of every past deploy
+wrangler versions view <version-id> --json   # bindings + a content etag
+                                              # for the currently active version
 ```
 
-No new secret needed (`NTFY_TOPIC` persists across a code-only redeploy).
-Within 30 min of redeploying, expect one ntfy heartbeat notification (the
-stored heartbeat date is empty, so the next tick's `shouldSendHeartbeat`
-check is immediately due) — that arrival is itself the confirmation the
-redeploy picked up the new code.
+Cloudflare's `GET .../workers/scripts/{name}/content` API rejects an
+OAuth-login token with error 10405 ("method not allowed for this auth
+scheme") — confirmed 2026-09-10, needs a legacy API-key credential GG would
+have to provision separately, not available from a `wrangler login` session.
+`wrangler init --from-dash <name>` also does **not** reliably work around
+this: on this session it printed "SUCCESS" and crashed immediately after
+(`Assertion failed: !(handle->flags & UV_HANDLE_CLOSING)`, a Windows-specific
+wrangler/npm crash) and silently fell back to writing the generic
+create-cloudflare placeholder template — inspect the downloaded `src/`
+file's actual content before trusting it came from the dashboard, the
+"SUCCESS" message alone is not evidence. The reliable fallback: run
+`wrangler deploy --dry-run --outdir <dir>` against the local checkout and
+compare its printed `Total Upload: X KiB / gzip: Y KiB` line against the
+real deploy's own logged upload size (`~/.wrangler`'s (or, on this machine,
+`%APPDATA%\xdg.config\.wrangler`'s) `logs/wrangler-<timestamp>.log` for the
+deploy in question) — a byte-size match is corroborating, not conclusive
+(two different threshold values of the same digit-length produce identical
+bundle size), so also read the constants directly out of the dry-run
+`index.js` bundle (`grep -n "_THRESHOLD_HOURS\|_WARN_HOURS\|_ESCALATE_HOURS"
+index.js`) as the actual check.
+
+**Also note:** `wrangler kv key get`/`key list` default to **local**
+simulated storage, not the production namespace, unless you pass `--remote`
+explicitly — this cost a full round of this session's own verification (an
+apparently-empty KV namespace that was actually just the local default,
+confirmed the values were present once `--remote` was added). Always pass
+`--remote` when reading production KV state from the CLI.
+
+**Verified live 2026-09-10** (this session, AB2): `wrangler deployments
+list` shows the most recent deploy at `2026-09-10T08:41:36Z` (version
+`be46ae65...`), run from this machine's own `worker-deadman/` checkout.
+Hitting the Worker's public manual-trigger endpoint
+(`https://gold-rate-tracker-deadman.gg5678g.workers.dev/`) twice returned a
+correctly-computed live classification both times
+(`{"level":"ok","ageHours":4.45,...}`, matching `data/forecast.json`'s real
+age independently re-fetched at the same moment). Production KV (`--remote`)
+holds all three expected keys: `deadman:last_state`
+(`{"level":"ok","lastSentAtMs":...2026-09-05T11:00Z}`),
+`deadman:tanishq_last_state` (`{"level":"ok","lastSentAtMs":...2026-09-08T11:30Z}`),
+and `deadman:last_heartbeat_date_ist` = `2026-09-10` — the heartbeat fired
+today, from the cron (not from this session's manual triggers, which both
+reported `heartbeatSent: false`, i.e. already sent earlier that day).
+**Not yet verified:** the heartbeat repeating across an IST day rollover
+(one write only proves the redeploy took, not that it recurs) — re-check
+`deadman:last_heartbeat_date_ist` after the next IST midnight (~18:30 UTC)
+advances past `2026-09-10`. **Not yet verified:** exact byte-for-byte
+confirmation that the deployed threshold constants equal master's
+`WARN=10h`/`ESCALATE=16h` etc. — the dry-run bundle size (14.82 KiB / gzip
+4.05 KiB) matched the real deploy log's logged upload size exactly, and
+every other behavioral signal above is consistent with the deploy being
+sourced from this exact working tree, but that is strong circumstantial
+evidence, not a content hash match (the API path for a hash match is
+blocked per above).
 
 ---
 
