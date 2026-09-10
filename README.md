@@ -26,7 +26,7 @@ A free, **₹0/month** gold-price tracker for Indian retail buyers (22K), built 
 
 ```mermaid
 flowchart TD
-    subgraph cron["check-price.yml — every 3h"]
+    subgraph cron["check-price.yml — 3h cron target"]
         A["IBJA fetch<br/>plain HTTP, primary source"] --> C
         B["Tanishq scrape<br/>Playwright only in practice —<br/>requests path is CF-blocked<br/>opportunistic enrichment"] --> C
         C["prices.json<br/>ibja_rates.parquet"]
@@ -101,7 +101,7 @@ Alert types: a price-move alert (describes the recent trend), a twice-daily dige
 | `scraper/` | Tanishq scrape (Node; tries a plain-HTTP requests path first, but it's Cloudflare-blocked and has succeeded <!--METRIC:data/tanishq_scrape_success_rate.json#n_requests_path:int-->0<!--/METRIC--> of <!--METRIC:data/tanishq_scrape_success_rate.json#n:int|asof=generated_at_utc-->22 (as of 2026-09-10)<!--/METRIC--> attempts in the rolling window — Playwright is what actually runs every cycle) |
 | `ml/` | Inference, calibration, notifications, the direction-eval harness |
 | `data/` | Committed price/forecast/eval JSON the PWA reads |
-| `.github/workflows/` | `check-price.yml` (3h loop), `lint.yml`, `eval-direction.yml`, `scraper-canary.yml` |
+| `.github/workflows/` | `check-price.yml` (3h cron target — see [above](#gold-rate-tracker) for delivered cadence), `lint.yml`, `eval-direction.yml`, `scraper-canary.yml` |
 | `docs/` | RUNBOOK, ADRs, CURRENT_STATE, DIRECTION_SIGNAL_STATUS |
 
 ## Troubleshooting
