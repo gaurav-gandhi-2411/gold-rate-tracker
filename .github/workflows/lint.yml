@@ -72,6 +72,7 @@ jobs:
         run: |
           node --test \
             tests/test_calculator.js \
+            tests/test_calibration_confidence.js \
             tests/test_comparisons.js \
             tests/test_dedup.js \
             tests/test_good_price.js \

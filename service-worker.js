@@ -60,7 +60,10 @@
 // 2026-09-05 (v42): X1 -- the injected cadence claim now states the p90
 // worst case alongside the median (a median alone hides the tail a real
 // visitor can land on). app.js + i18n.js (EN+HI) changed.
-const VERSION = "v42-20260905-cadence-p90";
+// 2026-09-10 (v43): AE1 -- calibration-band confidence clause now renders the
+// real walk-forward measured coverage (data/calibration_band_coverage.json),
+// never the hardcoded 80% design target. app.js + i18n.js (EN+HI) changed.
+const VERSION = "v43-20260910-measured-band-coverage";
 const SHELL_CACHE = `gold-shell-${VERSION}`;
 
 const SHELL_FILES = [
