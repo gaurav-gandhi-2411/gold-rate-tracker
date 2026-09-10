@@ -165,7 +165,46 @@ jobs:
           GAP_HOURS=$(( (NOW_EPOCH - PREDICTED_EPOCH) / 3600 ))
           echo "Last committed forecast is ${GAP_HOURS}h old."
           if [ "$GAP_HOURS" -ge 4 ]; then
-            echo "Gap >= 4h -- at least one scheduled tick was likely dropped. Dispatching one catch-up run."
+            # AE3a (audit 2026-09-10): before this fix, every catch-up firing
+            # logged the same "at least one scheduled tick was likely
+            # dropped" line whether the `schedule` event actually fired late
+            # or didn't fire AT ALL -- AD1 (same audit) found check-price's
+            # own 06:07 UTC slot stopped firing as a schedule event for 9
+            # straight days, silently absorbed by catch-up every single time
+            # with nothing distinguishing that from an ordinary slow cycle.
+            # Classify which one this is: query this workflow's own recent
+            # `schedule`-event runs (excluding the current run itself, which
+            # would otherwise always look like "a schedule event just
+            # fired"), find the most recent one, and compare its age against
+            # this same 4h threshold. Best-effort -- a query failure (rate
+            # limit, transient API error) must never block the actual
+            # catch-up dispatch below, so classification failure degrades to
+            # "unknown", not to a crash or a silently-assumed cause.
+            CAUSE="unknown"
+            LAST_SCHEDULE_RUN_AGE_H=""
+            LAST_SCHEDULE_AT=$(gh api "repos/${GITHUB_REPOSITORY}/actions/workflows/check-price.yml/runs?event=schedule&per_page=5" \
+              --jq "[.workflow_runs[] | select(.id != ${GITHUB_RUN_ID})][0].created_at" 2>/dev/null || echo "")
+            if [ -n "$LAST_SCHEDULE_AT" ] && [ "$LAST_SCHEDULE_AT" != "null" ]; then
+              LAST_SCHEDULE_EPOCH=$(date -u -d "$LAST_SCHEDULE_AT" +%s 2>/dev/null || echo "")
+              if [ -n "$LAST_SCHEDULE_EPOCH" ]; then
+                LAST_SCHEDULE_RUN_AGE_H=$(python3 -c "print(round(($NOW_EPOCH - $LAST_SCHEDULE_EPOCH) / 3600, 2))")
+                if [ "$((NOW_EPOCH - LAST_SCHEDULE_EPOCH))" -le 14400 ]; then
+                  CAUSE="late"
+                else
+                  CAUSE="dropped"
+                fi
+              fi
+            fi
+            if [ "$CAUSE" = "dropped" ]; then
+              echo "Gap >= 4h AND no schedule-triggered run in the last 4h (last one: ${LAST_SCHEDULE_RUN_AGE_H}h ago) -- the scheduled trigger itself did not fire, not just ran late. Dispatching one catch-up run."
+            elif [ "$CAUSE" = "late" ]; then
+              echo "Gap >= 4h but a schedule-triggered run fired ${LAST_SCHEDULE_RUN_AGE_H}h ago -- the trigger is working, this cycle was just slow. Dispatching one catch-up run."
+            else
+              echo "Gap >= 4h -- at least one scheduled tick was likely dropped (could not classify late-vs-dropped this run). Dispatching one catch-up run."
+            fi
+            printf '{"timestamp": "%s", "gap_hours": %s, "cause": "%s", "last_schedule_run_age_hours": %s}\n' \
+              "$(date -u +%Y-%m-%dT%H:%M:%SZ)" "$GAP_HOURS" "$CAUSE" "${LAST_SCHEDULE_RUN_AGE_H:-null}" \
+              >> data/catchup_dispatch_log.jsonl
             gh workflow run check-price.yml --repo "${GITHUB_REPOSITORY}" --ref master -f catchup=true
           else
             echo "Gap under 4h -- normal cadence, no catch-up needed."
@@ -319,6 +358,9 @@ jobs:
           git config user.name "gold-rate-bot"
           git config user.email "actions@users.noreply.github.com"
           git add data/forecast.json data/drift_metrics.json data/metrics_history.json data/ibja_rates.parquet data/chronos_probe.json data/calibration.json data/feature_store/snapshots.parquet data/tanishq_scrape_success_rate.json data/cadence_metrics.json || true
+          # AE3a: only exists once a catch-up has ever fired -- separate,
+          # tolerant add so its absence never affects the main list above.
+          git add data/catchup_dispatch_log.jsonl 2>/dev/null || true
           if git diff --staged --quiet; then
             echo "No changes to commit."
             echo "changed=false" >> "$GITHUB_OUTPUT"
