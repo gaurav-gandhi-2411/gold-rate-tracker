@@ -54,24 +54,13 @@ jobs:
       - name: Run walk-forward direction eval
         run: python -m ml.direction.evaluate
 
-      - name: Refresh injected doc metrics
-        # Same gap as check-price.yml's identically-named step (audit
-        # 2026-09-10): this job's own [skip ci] commit never re-ran
-        # scripts/inject_metrics.py, so README's/DIRECTION_SIGNAL_STATUS.md's
-        # direction-baseline markers only ever refreshed when an unrelated
-        # human PR happened to trip lint.yml's docs-freshness gate.
-        # continue-on-error so a docs-injection failure never blocks the
-        # eval-results commit below.
-        continue-on-error: true
-        run: python scripts/inject_metrics.py
-
       - name: Commit refreshed eval results
         id: commit
         run: |
           set -e
           git config user.name "gold-rate-bot"
           git config user.email "actions@users.noreply.github.com"
-          git add data/direction_baseline.json data/direction_eval_history.jsonl README.md docs/DIRECTION_SIGNAL_STATUS.md || true
+          git add data/direction_baseline.json data/direction_eval_history.jsonl || true
           if git diff --staged --quiet; then
             echo "No eval changes to commit."
             echo "changed=false" >> "$GITHUB_OUTPUT"

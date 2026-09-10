@@ -271,31 +271,13 @@ jobs:
         continue-on-error: true
         run: python -m ml.feature_store
 
-      - name: Refresh injected doc metrics
-        # AC3-adjacent finding (audit 2026-09-10): this job writes fresh
-        # data/*.json every ~3h but never re-ran scripts/inject_metrics.py,
-        # so README.md/docs/DIRECTION_SIGNAL_STATUS.md's injected numbers
-        # only ever got refreshed by a human-authored PR happening to touch
-        # them -- lint.yml's docs-freshness gate is real and correctly
-        # implemented, but every commit that actually moves the underlying
-        # data carries [skip ci], so the gate never got a chance to even
-        # run against the drift it exists to catch. Confirmed live: README
-        # sat 6 days / 3 workflow generations stale (cadence n=32->38,
-        # calibration coverage 72.2%->68.9%) before this was noticed, via
-        # an unrelated PR (#1538) that happened to trip docs-freshness.
-        # continue-on-error: true so a docs-injection failure never blocks
-        # the actual data commit below -- fresh data landing matters more
-        # than fresh prose landing in the same run.
-        continue-on-error: true
-        run: python scripts/inject_metrics.py
-
       - name: Commit updated data files
         id: commit
         run: |
           set -e
           git config user.name "gold-rate-bot"
           git config user.email "actions@users.noreply.github.com"
-          git add data/forecast.json data/drift_metrics.json data/metrics_history.json data/ibja_rates.parquet data/chronos_probe.json data/calibration.json data/feature_store/snapshots.parquet data/tanishq_scrape_success_rate.json data/cadence_metrics.json README.md docs/DIRECTION_SIGNAL_STATUS.md || true
+          git add data/forecast.json data/drift_metrics.json data/metrics_history.json data/ibja_rates.parquet data/chronos_probe.json data/calibration.json data/feature_store/snapshots.parquet data/tanishq_scrape_success_rate.json data/cadence_metrics.json || true
           if git diff --staged --quiet; then
             echo "No changes to commit."
             echo "changed=false" >> "$GITHUB_OUTPUT"
