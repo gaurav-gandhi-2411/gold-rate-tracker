@@ -95,13 +95,23 @@ jobs:
         continue-on-error: true
         run: python -m ml.calibration --score-coverage
 
+      - name: Refresh injected doc metrics
+        # Same gap as check-price.yml's identically-named step (audit
+        # 2026-09-10): this job's own [skip ci] commit never re-ran
+        # scripts/inject_metrics.py, so README's coverage/calibration
+        # markers only ever refreshed when an unrelated human PR happened
+        # to trip lint.yml's docs-freshness gate. continue-on-error so a
+        # docs-injection failure never blocks the backtest commit below.
+        continue-on-error: true
+        run: python scripts/inject_metrics.py
+
       - name: Commit backtest results
         id: commit
         run: |
           set -e
           git config user.name "gold-rate-bot"
           git config user.email "actions@users.noreply.github.com"
-          git add data/backtest.json data/metrics_history.json data/coverage_metrics.json data/calibration_band_coverage.json || true
+          git add data/backtest.json data/metrics_history.json data/coverage_metrics.json data/calibration_band_coverage.json README.md docs/DIRECTION_SIGNAL_STATUS.md || true
           if git diff --staged --quiet; then
             echo "No changes to commit."
             echo "changed=false" >> "$GITHUB_OUTPUT"
