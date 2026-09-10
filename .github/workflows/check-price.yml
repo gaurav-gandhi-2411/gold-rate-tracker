@@ -97,10 +97,26 @@ jobs:
         # distribution (an earlier attempt at this threshold was, and
         # briefly leaked to master by process accident before being
         # reverted -- deriving alert/self-heal levels from a degraded-state
-        # sample encodes the degradation as normal). At the current
-        # (degraded) cadence this fires on a majority of ticks (empirically
-        # ~68% in a recent 28-gap sample) -- acceptable because the action
-        # is a few free CI minutes on a public repo, not a page.
+        # sample encodes the degradation as normal).
+        #
+        # AD2 (production audit, 2026-09-10): the "~68% in a recent 28-gap
+        # sample" figure this comment previously carried was measured
+        # 2026-09-05 (#1403), explicitly self-labeled "at the current
+        # (degraded) cadence" -- i.e. during the still-elevated-latency
+        # window (median observed gap ~245-288min then, ABOVE this 4h/240min
+        # threshold most ticks). It was never a general-purpose rate, only
+        # ever accurate for that specific degraded moment -- exactly the
+        # "threshold/rate calibrated during degradation" shape this repo's
+        # audit has flagged before (docs/SESSION_AUDIT_2026-08.md section 8).
+        # Freshly measured 2026-09-10 (trailing 7 days, n=56 nominal ticks,
+        # counted via `gh api` workflow_dispatch runs by
+        # `github-actions[bot]`): catch-up now fires on ~34% of ticks (19/56)
+        # -- LOWER than 68%, and mechanistically expected, not a regression:
+        # the underlying platform delay distribution itself improved since
+        # 09-05 (median now ~225-236min, below this 240min threshold most
+        # ticks -- see RUNBOOK.md's corrected AC2 figures), so fewer ticks
+        # cross a FIXED threshold. Still acceptable at either rate -- the
+        # action is a few free CI minutes on a public repo, not a page.
         if: github.event.inputs.catchup != 'true'
         env:
           GH_TOKEN: ${{ github.token }}
