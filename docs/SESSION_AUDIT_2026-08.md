@@ -19,6 +19,14 @@ lesson. §9–§11 (added this pass) record what was checked and came back
 clean, what the audit got wrong about itself and corrected, and what
 generalizes beyond this repo.
 
+**Extended again, same day**, to #20: testing what "required" actually means
+under this repo's branch protection (rather than reading the docs and
+inferring) found that `enforce_admins: false` lets a repo admin merge with
+required checks permanently unreported — not just failing — and that this
+has already happened twice, including the PR that caused the 7-hour
+production incident #18 documents. See §8 instance #20 and §7's newly added
+decision item.
+
 ## 1. Staleness incident — 2026-09-03
 
 **What was verified, not assumed.** At the start of this session
@@ -242,31 +250,45 @@ versus an engineer.
 | Direction-signal model collapse (McNemar gate) | Structurally unresolvable at current data volume — ~934 more folds (~18 years) needed to move the gate. Documented, unchanged, nothing ships | Established fact #4 (original session); reconfirmed unchanged this continuation |
 | `check_pr_boundary_leak.py`'s `scratch/`-prefix exclusion (AG2b, §8 instance context) | A genuinely dangerous PR deliberately or carelessly named with a `scratch/` prefix would slip past the closed-PR comparison. Accepted as narrower and more acceptable than the alternatives (excluding all closed-unmerged, or all branch-deleted, PRs) | This doc, §8 instance table and §10; the script's own docstring |
 
-### Unfinished work
+### Needs a decision — neither accepted risk nor an engineering task
+
+`enforce_admins: false` (§8 instance #20) is a genuine trade-off, not
+something to flip unilaterally: it currently lets GG (and this session,
+which merges under the same account) self-merge on repo-tooling/docs work
+even when a required check has a triggering hiccup — the exact workaround
+used on PR #1582 this same day (an empty synchronize commit, because the
+check hadn't started, not because it was red). Turning `enforce_admins: true`
+on would close instance #20 completely, but would also remove that
+capability — a future PR with a genuinely stuck check would block on a
+human, not just page one.
+
+| Item | The trade-off | Recommendation | Owner |
+|---|---|---|---|
+| `enforce_admins: false` on `master`'s branch protection (§8 instance #20) | **On**: closes the admin-bypass gap completely — no more merges with required checks unreported. Removes the self-merge-through-a-CI-hiccup capability this session and GG both currently rely on. **Off (current)**: keeps that capability, at the cost of an admin merge being able to bypass required checks silently, as #1539/#1569 already did twice | No unilateral change — this is exactly the shape of decision this audit's own boundary reserves for a human: a threshold/gate setting with a real, stated cost either way | GG |
 
 | Item | Owner | Notes |
 |---|---|---|
 | `#1303` (yfinance bump) | GG | Touches `ml/macro.py`, pipeline-adjacent — still held for review, not merged, unchanged since 2026-09-03 |
 | `#1482` (lxml bump) | GG | Same category, opened since; not yet reviewed |
 | `check-price.yml`'s "Run inference" step has `continue-on-error: true` | Next session | Flagged by `scripts/audit_silent_fallbacks.py` on 2026-09-03, still not chased down three sessions later — verify what gets committed if inference fails outright |
-| **A PR's own required checks silently never starting** (found 2026-09-11, AH2) | Next session / GG | Distinct from §8 instance #19 (which watches master's state, not a PR's). Measured against the last 30 days' non-bot PRs (n=87): 2 clear, substantive instances (#1539, #1569 — both merged anyway, with **zero check-runs ever recorded** against their head SHA) plus 2 ambiguous very-short-lived scratch PRs. **2.3% of substantive PRs, recurring, not a one-off** — #1566 (the PR that first surfaced this) makes a third. `ci-health.yml` (#1569) does **not** cover this — it watches master's already-triggered check state, not whether a given PR's checks started at all. A fix would need to enumerate open PRs and flag any whose required checks haven't started within a reasonable window of the last push — not built this session, scope estimate not yet done |
+| **A PR's own required checks silently never starting** (found 2026-09-11, AH2; mechanism confirmed AI1, §8 instance #20) | Next session / GG | Distinct from §8 instance #19 (which watches master's state, not a PR's). Measured against the last 30 days' non-bot PRs (n=87): 2 clear, substantive instances (#1539, #1569 — both merged anyway, with **zero check-runs ever recorded** against their head SHA) plus 2 ambiguous very-short-lived scratch PRs. **2.3% of substantive PRs, recurring, not a one-off** — #1566 (the PR that first surfaced this) makes a third. `ci-health.yml` (#1569) does **not** cover this — it watches master's already-triggered check state, not whether a given PR's checks started at all. A fix would need to enumerate open PRs and flag any whose required checks haven't started within a reasonable window of the last push — not built this session, scope estimate not yet done. **AI1 found the other half**: this symptom was only ever able to reach production because `enforce_admins: false` let both #1539 and #1569 merge anyway, with checks never having started at all — see §8 #20 and the decision item above |
 | The two 7-day measurement windows (§ AH4 in the production-audit continuation) | This session, in progress | 06:07 UTC slot re-firing + delay distribution vs. the 06:00 cohort (started 2026-09-11T02:45:48Z); WARN page rate vs. PR #1403's projection now that the Worker is verified running 10h/16h (started 2026-09-11T08:39:10Z). Both close 2026-09-18 — not reported on until then |
 
-## 8. The defect-class catalogue (Y3, audit 2026-09-05; extended to #19,
+## 8. The defect-class catalogue (Y3, audit 2026-09-05; extended to #20,
 production audit 2026-09-10/11)
 
-Nineteen instances of one defect class have now been found across this
+Twenty instances of one defect class have now been found across this
 audit's sessions (2026-08-27 through 2026-09-11, the first 13 by
 2026-09-05): **a control emits a plausible-looking result instead of
 failing or raising when it cannot actually verify the thing it claims to
 report.** Each was tracked at the time under a different session-local
 codename (established fact #6, G1d, P6, Q4, R2/R3, U4, V3, X2, Y2, then
-AD3/AE1, AE2, AF2, AF1, AG3 for #14–#19) and the letter/count used to
+AD3/AE1, AE2, AF2, AF1, AG3, AI1 for #14–#20) and the letter/count used to
 refer to it drifted between PR bodies — PR #1340 calls the same finding
 "(e)" that this doc's §4 called "instance (f)," and PR #1394 cites "nine
 known instances" at a point where this doc's own running count said
 different. **That drift is itself the reason this section exists**: there
-was never one canonical list. The numbering below (#1–#19) is the first
+was never one canonical list. The numbering below (#1–#20) is the first
 attempt at one and supersedes every ad hoc letter/count used in earlier PR
 bodies — those PRs are not being renumbered, this is just where "the current
 count" now lives.
@@ -292,6 +314,7 @@ count" now lives.
 | 17 | `docs-freshness`'s blind spot against the commits that actually change the numbers (found via #1539's own CI, fixed by #1566) | A CI gate ("docs-freshness") that is genuinely, correctly implemented — but the three workflows that write the `data/*.json` files its markers read from all commit with `[skip ci]`, so the gate never runs on the one class of commit that could actually cause drift. README sat 6 days / 3-4 regenerations stale before an unrelated human PR (#1539) happened to trip the check and surface it | Trying to fix the drift (PR #1539) tripped `docs-freshness` failing against **plain master**, unrelated to that PR's own content — the failure led straight back to the mechanism | Nothing — the gate is correctly implemented for the surface it was built to cover (human PRs); that surface simply never included the actual data-changing commits. The textbook shape of rule 85a: a control narrower than its name implies |
 | 18 | The written rule "read bot-pr-sync's allowlist before touching a path it guards," enforced only by memory (#1353 2026-09-04, #1539 2026-09-10, fixed by PR #1564) | A rule stated in a commit message and a revert's own writeup after the **first** violation (#1353) — with no mechanical check behind it. Violated again, by the same author, under the same reasoning ("fix docs-freshness by widening a data-commit's `git add` list"), 6 days later (#1539) — this time blocking production data sync for 7+ hours, `forecast.json`'s age reaching 7.76h against the dead-man's-switch's 10h WARN | The **second** violation was found via routine AE4a verification (checking whether a scheduled data commit had landed since a merge) — not by anyone reading the written rule and remembering to check the allowlist first | A rule enforced only by a human remembering it is not enforced; closed by `scripts/check_bot_pr_sync_allowlist.py` (#1564), which parses every bot-pr-sync-calling workflow's `git add` paths against the allowlist's own regex on every PR that could touch one |
 | 19 | Nothing watches a required status check's own health on master (found 2026-09-11, fixed by PR #1569) | An unstated assumption that *something* would notice if a required check (`lint`) went red on master itself. It did — for 33m36s, following an unrelated legitimate change (#1541) that broke a test hardcoding an exact value the change was meant to update. Every open PR's own required check inherited the failure for that window | Found by chance, while verifying an unrelated PR's own CI status — not by any monitoring. `ml/notifications.py`'s full T1–T13 alert catalog covers price/data state exclusively; nothing anywhere watches CI state for its own sake | Nothing — closed by `ci-health.yml` (#1569), a small, independent, hourly check reading required-contexts live from branch protection, deliberately *not* embedded in `lint.yml` itself (the same "control can't see its own failure mode" shape as instance #1) |
+| 20 | Branch protection's required-status-checks gate assumed to block any merge until `lint`/`pwa-js` report — tested behaviorally, not inferred from docs (found 2026-09-11, AI1) | `enforce_admins: false` (confirmed live via `branches/master/protection`) lets a repo admin merge with required checks in a permanent unreported state, not just a failing one. Both of instance #19's own §7-unfinished-work "never triggered" cases (#1539, #1569 — §7's AH2 row) are exactly this: `commits/{sha}/status` → `"pending"`, `check-runs` → 0, **forever**, yet both merged, by `gaurav-gandhi-2411` (the account, which holds repo-admin rights) merging its own PR. #1539 is the same PR that caused the 7-hour production incident #18 documents — its required checks never ran at all, so they could not have caught anything regardless of content. Separately: even had they run, neither would have caught #1539's allowlist violation — `scripts/check_bot_pr_sync_allowlist.py` (the check that *does* catch it) merged via PR #1564, 13.5 hours *after* #1539, and is still not a required context today | AH2's 30-day sweep (§7) found the *symptom* (4/87 never-triggered PRs); AI1 asked the actual mechanism question this round — "what does branch protection do when a required check never reports, tested not inferred" — against #1539/#1569's own recorded timelines and the live `enforce_admins` setting | Reading `enforce_admins` and asking "what happens on bypass" the first time a required-check gate was built into this repo's branch protection — nobody had, until explicitly asked to test it behaviorally instead of trusting what "required" implies |
 
 **Grouped by what made each invisible:**
 
@@ -302,9 +325,10 @@ count" now lives.
 - **A claim rendered as if measured, but sourced from a hardcoded constant** (new category, production audit 2026-09-10): #14, #16. Distinct from "green metric" — there was no metric at all behind the claim, just a design target or a frozen one-time reading standing in for one.
 - **Static copy desynced from its own dynamic-path fix** (new category): #15 — the same underlying claim exists in two forms (server-rendered/static and client-rendered/dynamic); fixing one form left the other silently unfixed.
 - **A written rule with no mechanical enforcement** (new category): #18 — the audit's own standing corrective ("read the allowlist first") was itself an instance of the class it names: a plausible-looking safeguard (a documented rule) that could not actually catch what it claimed to prevent.
+- **A gate assumed to enforce, never tested against what it actually enforces** (new category): #20 — "required" read as "blocking," never tested against the one setting (`enforce_admins`) that determines whether it actually is. The most consequential instance in this table: it doesn't just miss a failure mode, it means the entire required-checks gate was bypassable by the exact silent-trigger-failure shape #19 was built to watch for, the whole time.
 
-Six of nineteen (#12, #13, the sweep-heuristic gap under #3/#4, #17, #18,
-#19) are findings about **this audit's own controls or process**, not
+Seven of twenty (#12, #13, the sweep-heuristic gap under #3/#4, #17, #18,
+#19, #20) are findings about **this audit's own controls or process**, not
 about the product — the same shape CLAUDE.md rule 85a names: a control's
 own construction can encode the narrower-than-advertised-surface
 assumption it exists to catch elsewhere. #9's fix (#1407) is the clearest
@@ -316,11 +340,16 @@ manually-applied label. #18 (the allowlist rule) is the clearest later
 case: a *process* control (a written rule, not code) that reads as a fix
 after the first violation and is exactly as blind to a second violation
 as any code-based control would be if it only checked the surface it was
-first written against. **A check that has never failed on a real
-violation is unproven**, and the majority of this audit's own-control
-findings (#8, #12, #13, #18, #19) were found by asking exactly that
-question of an existing, trusted control — or, for #18/#19, of an
-existing, trusted *process*.
+first written against. #20 is the starkest: not a control with a narrower
+surface than advertised, but a control whose advertised surface (block
+merges without green required checks) was never actually true, for a
+reason (`enforce_admins: false`) sitting in the branch-protection config
+the whole time — findable by reading one field, only once someone asked
+whether "required" meant what it said instead of assuming it. **A check
+that has never failed on a real violation is unproven**, and the majority
+of this audit's own-control findings (#8, #12, #13, #18, #19, #20) were
+found by asking exactly that question of an existing, trusted control —
+or, for #18/#19/#20, of an existing, trusted *process or assumption*.
 
 ## 9. Clean results — evidence of function, not absence of testing
 
@@ -538,3 +567,17 @@ the workflow run's overall conclusion. §7's AH2 finding is sourced to a
 scripted sweep of the 87 non-bot PRs created in the last 30 days as of
 2026-09-11, checking `gh api repos/.../commits/{sha}/check-runs` for each
 PR's head SHA.
+
+**Same-day continuation, §8 instance #20 and §7's decision item (AI1,
+2026-09-11):** `enforce_admins: false` read directly from
+`gh api repos/.../branches/master/protection`, not inferred from GitHub's
+documentation. #1539 and #1569's own recorded state, both queried live:
+`gh api repos/.../commits/{head_sha}/check-runs` → 0 for both;
+`gh api repos/.../commits/{head_sha}/status` → `"pending"` for both,
+never resolved; `merged_by`/`author` on both PRs → `gaurav-gandhi-2411`
+(the account holding repo-admin rights) via
+`gh api repos/.../pulls/{n} --jq '{merged_by: .merged_by.login, author:
+.user.login}'`. PR #1564's merge timestamp
+(`2026-09-11T03:26:37Z`) checked directly against #1539's
+(`2026-09-10T13:38:30Z`) to confirm the 13.5-hour gap stated in the
+table above, rather than trusting recollection of the ordering.
