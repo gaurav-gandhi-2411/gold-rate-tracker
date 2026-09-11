@@ -2,8 +2,26 @@
 // functions: fetch the PUBLIC site (not any repo/GitHub API -- this must
 // verify what users actually see), classify staleness, decide whether to
 // alert based on KV-stored last-sent state, and post to the EXISTING ntfy
-// topic if so. Zero dependency on GitHub Actions: this runs entirely on
-// Cloudflare's own Cron Trigger scheduler.
+// topic if so. Mostly zero dependency on GitHub Actions: the staleness/
+// Tanishq-silence/heartbeat channels run entirely on Cloudflare's own Cron
+// Trigger scheduler with no GitHub API calls at all.
+//
+// AI2 (production audit continuation, 2026-09-11/12): the PR-trigger-health
+// channel below (fetchOpenPrTriggerHealth / pr_trigger_health.mjs) is a
+// deliberate, explicit departure from that "zero GitHub API dependency"
+// principle -- it has to call GitHub's REST API (open PRs, their head
+// commits, their check-runs) since that is the only place this information
+// exists. Kept honest here rather than silently blurred: this one channel
+// needs a GitHub PAT (env.GITHUB_PR_HEALTH_PAT, a NEW secret, narrowly
+// scoped to Pull requests: Read + Contents: Read + Checks: Read -- Contents
+// is what the commits/{sha} endpoint needs, easy to miss since this channel
+// never reads file contents -- see README.md for the provisioning step) and
+// unauthenticated calls to api.github.com are not a
+// safe substitute (60 req/hour, shared across Cloudflare's entire outbound
+// IP range with every other Worker on the platform, not just this one).
+// Every OTHER channel in this file remains exactly as zero-GitHub-API-
+// dependency as before; this is scoped to the one channel that structurally
+// cannot avoid it.
 
 import {
   PUBLIC_FORECAST_URL,
@@ -20,11 +38,20 @@ import {
   TANISHQ_ESCALATE_HOURS,
   RUNNER_CONFIRMED_OFFLINE_HOURS,
 } from "./deadman.mjs";
+import {
+  classifyPrTriggerHealth,
+  decidePrTriggerHealthAction,
+  buildPrTriggerHealthAlert,
+  buildPrTriggerHealthFetchFailureAlert,
+  PR_TRIGGER_STALE_MINUTES,
+} from "./pr_trigger_health.mjs";
 
 const KV_STATE_KEY = "deadman:last_state";
 const KV_TANISHQ_STATE_KEY = "deadman:tanishq_last_state"; // Q4: independent dedup state, own KV key
 const KV_HEARTBEAT_KEY = "deadman:last_heartbeat_date_ist";
+const KV_PR_TRIGGER_HEALTH_KEY = "deadman:pr_trigger_health_state"; // AI2: own key, own dedup state
 const FETCH_TIMEOUT_MS = 10_000;
+const GITHUB_REPO = "gaurav-gandhi-2411/gold-rate-tracker";
 
 // R2c: same public GitHub Pages origin as forecast.json -- no new
 // dependency, no GitHub API/token. Verified reachable (HTTP 200) 2026-09-04.
@@ -82,6 +109,75 @@ async function fetchHealthUpdatedAt(fetchImpl) {
     return typeof body.last_updated_utc === "string" ? body.last_updated_utc : null;
   } catch {
     return null;
+  } finally {
+    clearTimeout(timeout);
+  }
+}
+
+/**
+ * AI2: fetches every open, non-bot/-scratch PR's head commit timestamp and
+ * whether it has a lint/pwa-js check-run yet. Fails the WHOLE batch closed
+ * on any single API error (rule 98a) -- a partial result (some PRs checked,
+ * one silently missing because its own call failed) is worse than an
+ * explicit "could not verify this run" alert, since a silently-dropped PR
+ * is exactly the failure mode this channel exists to catch.
+ *
+ * bot/-prefixed branches excluded: those PRs auto-merge via bot-pr-sync's
+ * own polling mechanism within minutes, not the shape this channel watches
+ * for. scratch/-prefixed excluded: this repo's own established convention
+ * (AG2b, check_pr_boundary_leak.py) for deliberately disposable proof PRs,
+ * reused identically here.
+ */
+async function fetchOpenPrTriggerHealth(fetchImpl, token) {
+  const headers = {
+    "User-Agent": "gold-rate-tracker-deadman-switch",
+    Authorization: `Bearer ${token}`,
+    Accept: "application/vnd.github+json",
+  };
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), FETCH_TIMEOUT_MS);
+  try {
+    const listResp = await fetchImpl(
+      `https://api.github.com/repos/${GITHUB_REPO}/pulls?state=open&per_page=50`,
+      { headers, signal: controller.signal },
+    );
+    if (!listResp.ok) return { openPrs: null, failure: `list open PRs HTTP ${listResp.status}` };
+    const allPrs = await listResp.json();
+    const candidates = allPrs.filter(
+      (p) => !p.head.ref.startsWith("bot/") && !p.head.ref.startsWith("scratch/"),
+    );
+
+    const openPrs = [];
+    for (const p of candidates) {
+      const sha = p.head.sha;
+      const commitResp = await fetchImpl(`https://api.github.com/repos/${GITHUB_REPO}/commits/${sha}`, {
+        headers,
+        signal: controller.signal,
+      });
+      if (!commitResp.ok) return { openPrs: null, failure: `commit ${sha} HTTP ${commitResp.status}` };
+      const commit = await commitResp.json();
+
+      const checksResp = await fetchImpl(
+        `https://api.github.com/repos/${GITHUB_REPO}/commits/${sha}/check-runs`,
+        { headers, signal: controller.signal },
+      );
+      if (!checksResp.ok) return { openPrs: null, failure: `check-runs ${sha} HTTP ${checksResp.status}` };
+      const checkData = await checksResp.json();
+      const hasRequiredCheckRun = (checkData.check_runs || []).some(
+        (r) => r.name === "lint" || r.name === "pwa-js",
+      );
+
+      openPrs.push({
+        number: p.number,
+        branch: p.head.ref,
+        headSha: sha,
+        headCommitIso: commit.commit.committer.date,
+        hasRequiredCheckRun,
+      });
+    }
+    return { openPrs, failure: null };
+  } catch (err) {
+    return { openPrs: null, failure: String(err && err.message ? err.message : err) };
   } finally {
     clearTimeout(timeout);
   }
@@ -175,6 +271,43 @@ export async function runCheck(env, fetchImpl, nowMs) {
     }
   }
 
+  // AI2: PR-trigger-health channel -- entirely independent of the price-
+  // staleness/Tanishq channels above (different data source, different
+  // failure mode, own KV key). Skipped gracefully, not paged about, when
+  // GITHUB_PR_HEALTH_PAT isn't configured -- matches this file's existing
+  // NTFY_TOPIC/DEADMAN_STATE-optional pattern: a missing secret means the
+  // feature isn't deployed yet, not a live failure to alert on. Once the
+  // secret DOES exist, a fetch that fails pages honestly (rule 98a) rather
+  // than silently skipping, matching every other channel in this file.
+  let prTriggerHealthSent = false;
+  let prTriggerHealthStaleCount = 0;
+  if (env.GITHUB_PR_HEALTH_PAT) {
+    const { openPrs, failure: prFetchFailure } = await fetchOpenPrTriggerHealth(
+      fetchImpl,
+      env.GITHUB_PR_HEALTH_PAT,
+    );
+    if (prFetchFailure) {
+      await postToNtfy(fetchImpl, env.NTFY_TOPIC, buildPrTriggerHealthFetchFailureAlert(prFetchFailure));
+      prTriggerHealthSent = true;
+    } else {
+      const stalePrs = classifyPrTriggerHealth(openPrs, nowMs);
+      prTriggerHealthStaleCount = stalePrs.length;
+      const previousPrState = await loadState(env, KV_PR_TRIGGER_HEALTH_KEY);
+      const { send: prSend, alertPrs, nextState: nextPrState } = decidePrTriggerHealthAction(
+        stalePrs,
+        previousPrState,
+        nowMs,
+      );
+      if (env.DEADMAN_STATE) {
+        await env.DEADMAN_STATE.put(KV_PR_TRIGGER_HEALTH_KEY, JSON.stringify(nextPrState));
+      }
+      if (prSend && alertPrs.length > 0) {
+        await postToNtfy(fetchImpl, env.NTFY_TOPIC, buildPrTriggerHealthAlert(alertPrs));
+        prTriggerHealthSent = true;
+      }
+    }
+  }
+
   // G4a: independent of whatever staleness alert may have just fired --
   // the heartbeat's job is confirming the SWITCH ITSELF ran today, not
   // reporting site staleness (decideAction's job, above).
@@ -201,6 +334,8 @@ export async function runCheck(env, fetchImpl, nowMs) {
     tanishqAgeHours: tanishqCurrent.ageHours,
     tanishqSent: tanishqSend,
     heartbeatSent,
+    prTriggerHealthSent,
+    prTriggerHealthStaleCount,
     // AC3 (audit 2026-09-10): echoes the constants this exact deployment is
     // actually running with, not a hardcoded copy of master's current
     // values -- imported directly from deadman.mjs, so this only matches
@@ -215,6 +350,7 @@ export async function runCheck(env, fetchImpl, nowMs) {
       tanishqWarnHours: TANISHQ_WARN_HOURS,
       tanishqEscalateHours: TANISHQ_ESCALATE_HOURS,
       runnerConfirmedOfflineHours: RUNNER_CONFIRMED_OFFLINE_HOURS,
+      prTriggerStaleMinutes: PR_TRIGGER_STALE_MINUTES,
     },
   };
 }

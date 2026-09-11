@@ -152,6 +152,24 @@ wrangler secret put NTFY_TOPIC
 
 Paste your topic value when prompted (no echo).
 
+### 4a. (AI2, added 2026-09-11/12) Set the PR-trigger-health GitHub PAT
+
+Only needed once, and only for the PR-trigger-health channel
+(`src/pr_trigger_health.mjs`) — every other channel in this Worker has zero
+GitHub API dependency and does not need this. Mint a **fine-grained PAT**
+scoped to this repo only, with exactly three read-only repository
+permissions: **Pull requests: Read**, **Contents: Read**, **Checks: Read**.
+Nothing broader — this channel never writes anything and never reads file
+contents beyond a single commit's own metadata.
+
+```
+wrangler secret put GITHUB_PR_HEALTH_PAT
+```
+
+Paste the PAT when prompted (no echo). If this secret is never set, the
+channel is simply skipped (logged as absent, not paged about) — every other
+channel in this Worker keeps working exactly as before either way.
+
 ### 5. Deploy
 
 ```

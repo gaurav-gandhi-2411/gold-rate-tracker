@@ -18,6 +18,7 @@ import {
   RUNNER_CONFIRMED_OFFLINE_HOURS,
 } from "../src/deadman.mjs";
 import { runCheck } from "../src/index.mjs";
+import { PR_TRIGGER_STALE_MINUTES } from "../src/pr_trigger_health.mjs";
 
 const HOUR = 3_600_000;
 const NOW = Date.parse("2026-08-28T04:00:00Z");
@@ -242,6 +243,7 @@ test("runCheck: response echoes the real threshold constants from deadman.mjs, n
     tanishqWarnHours: TANISHQ_WARN_HOURS,
     tanishqEscalateHours: TANISHQ_ESCALATE_HOURS,
     runnerConfirmedOfflineHours: RUNNER_CONFIRMED_OFFLINE_HOURS,
+    prTriggerStaleMinutes: PR_TRIGGER_STALE_MINUTES,
   });
 });
 
@@ -683,4 +685,159 @@ test("runCheck: heartbeat body states the Tanishq channel too", async () => {
   const heartbeat = ntfyCalls.find((c) => c.headers.Priority === "1");
   assert.ok(heartbeat);
   assert.match(heartbeat.body, /Tanishq confirmation/);
+});
+
+// AI2: integration tests for the PR-trigger-health channel, proving the
+// actual wiring (index.mjs's fetchOpenPrTriggerHealth + the GITHUB_PR_
+// HEALTH_PAT gate) works end-to-end, not just the pure functions in
+// pr_trigger_health.test.mjs in isolation.
+
+function githubApiFetch({ openPrs, checkRunsBySha, failOn }) {
+  return async (url, opts) => {
+    if (url.includes("forecast.json")) {
+      return { ok: true, json: async () => ({ predicted_at: isoHoursAgo(0.2), scraped_at: isoHoursAgo(0.2) }) };
+    }
+    if (url.includes("/pulls?state=open")) {
+      if (failOn === "pulls") return { ok: false, status: 403 };
+      return { ok: true, json: async () => openPrs };
+    }
+    if (url.includes("/check-runs")) {
+      const sha = url.match(/commits\/([a-z0-9]+)\/check-runs/)[1];
+      if (failOn === "check-runs") return { ok: false, status: 500 };
+      return { ok: true, json: async () => ({ check_runs: checkRunsBySha[sha] || [] }) };
+    }
+    if (url.includes("/commits/")) {
+      const sha = url.match(/commits\/([a-z0-9]+)$/)[1];
+      if (failOn === "commit") return { ok: false, status: 404 };
+      return { ok: true, json: async () => ({ commit: { committer: { date: isoMinutesAgo(sha) } } }) };
+    }
+    // ntfy POST
+    return { ok: true };
+  };
+}
+
+function isoMinutesAgo(sha) {
+  // test helper: encode the desired age (minutes) into the fake sha itself,
+  // e.g. sha "age60" -> 60 minutes ago.
+  const m = /^age(\d+)$/.exec(sha);
+  const minutes = m ? Number(m[1]) : 0;
+  return new Date(NOW - minutes * 60_000).toISOString();
+}
+
+test("runCheck: PR trigger-health channel pages when a real stale PR is present", async () => {
+  const ntfyCalls = [];
+  const fetchImpl = async (url, opts) => {
+    const inner = githubApiFetch({
+      openPrs: [{ number: 1539, head: { ref: "fix/thing", sha: "age60" } }],
+      checkRunsBySha: {},
+    });
+    const resp = await inner(url, opts);
+    if (url.includes("ntfy.sh")) ntfyCalls.push(opts);
+    return resp;
+  };
+  const env = {
+    NTFY_TOPIC: "test-gold-topic",
+    DEADMAN_STATE: fakeKv(),
+    GITHUB_PR_HEALTH_PAT: "fake-token",
+  };
+  const result = await runCheck(env, fetchImpl, NOW);
+  assert.equal(result.prTriggerHealthSent, true);
+  assert.equal(result.prTriggerHealthStaleCount, 1);
+  const prAlert = ntfyCalls.find((c) => c.headers.Title.includes("required checks never started"));
+  assert.ok(prAlert);
+  assert.match(prAlert.body, /#1539/);
+});
+
+test("runCheck: PR trigger-health channel does not page for a fresh PR with no check-run yet", async () => {
+  const ntfyCalls = [];
+  const fetchImpl = async (url, opts) => {
+    const inner = githubApiFetch({
+      openPrs: [{ number: 9999, head: { ref: "feat/new", sha: "age1" } }],
+      checkRunsBySha: {},
+    });
+    const resp = await inner(url, opts);
+    if (url.includes("ntfy.sh")) ntfyCalls.push(opts);
+    return resp;
+  };
+  const env = {
+    NTFY_TOPIC: "test-gold-topic",
+    DEADMAN_STATE: fakeKv(),
+    GITHUB_PR_HEALTH_PAT: "fake-token",
+  };
+  const result = await runCheck(env, fetchImpl, NOW);
+  assert.equal(result.prTriggerHealthSent, false);
+  assert.equal(ntfyCalls.some((c) => c.headers.Title.includes("required checks never started")), false);
+});
+
+test("runCheck: PR trigger-health channel is skipped (not paged) when GITHUB_PR_HEALTH_PAT is unset", async () => {
+  let githubApiCalled = false;
+  const fetchImpl = async (url, opts) => {
+    if (url.includes("api.github.com")) githubApiCalled = true;
+    return githubApiFetch({ openPrs: [], checkRunsBySha: {} })(url, opts);
+  };
+  const env = { NTFY_TOPIC: "test-gold-topic", DEADMAN_STATE: fakeKv() }; // no GITHUB_PR_HEALTH_PAT
+  const result = await runCheck(env, fetchImpl, NOW);
+  assert.equal(result.prTriggerHealthSent, false);
+  assert.equal(githubApiCalled, false);
+});
+
+test("runCheck: PR trigger-health channel fails closed (pages honestly) on a GitHub API error, not silent", async () => {
+  const ntfyCalls = [];
+  const fetchImpl = async (url, opts) => {
+    const inner = githubApiFetch({ openPrs: [], checkRunsBySha: {}, failOn: "pulls" });
+    const resp = await inner(url, opts);
+    if (url.includes("ntfy.sh")) ntfyCalls.push(opts);
+    return resp;
+  };
+  const env = {
+    NTFY_TOPIC: "test-gold-topic",
+    DEADMAN_STATE: fakeKv(),
+    GITHUB_PR_HEALTH_PAT: "fake-token",
+  };
+  const result = await runCheck(env, fetchImpl, NOW);
+  assert.equal(result.prTriggerHealthSent, true);
+  const failureAlert = ntfyCalls.find((c) => c.headers.Title.includes("could not verify"));
+  assert.ok(failureAlert);
+  assert.match(failureAlert.body, /403/);
+  assert.match(failureAlert.body, /failing closed/);
+});
+
+test("runCheck: PR trigger-health channel excludes bot/ and scratch/ prefixed branches", async () => {
+  const ntfyCalls = [];
+  const fetchImpl = async (url, opts) => {
+    const inner = githubApiFetch({
+      openPrs: [
+        { number: 1, head: { ref: "bot/data-sync", sha: "age60" } },
+        { number: 2, head: { ref: "scratch/proof", sha: "age60" } },
+      ],
+      checkRunsBySha: {},
+    });
+    const resp = await inner(url, opts);
+    if (url.includes("ntfy.sh")) ntfyCalls.push(opts);
+    return resp;
+  };
+  const env = {
+    NTFY_TOPIC: "test-gold-topic",
+    DEADMAN_STATE: fakeKv(),
+    GITHUB_PR_HEALTH_PAT: "fake-token",
+  };
+  const result = await runCheck(env, fetchImpl, NOW);
+  assert.equal(result.prTriggerHealthSent, false);
+  assert.equal(result.prTriggerHealthStaleCount, 0);
+});
+
+test("runCheck: PR trigger-health channel does not re-alert on the same stale PR within the dedup window", async () => {
+  const state = fakeKv();
+  const fetchImplFactory = () =>
+    githubApiFetch({
+      openPrs: [{ number: 1539, head: { ref: "fix/thing", sha: "age60" } }],
+      checkRunsBySha: {},
+    });
+  const env = { NTFY_TOPIC: "test-gold-topic", DEADMAN_STATE: state, GITHUB_PR_HEALTH_PAT: "fake-token" };
+
+  const first = await runCheck(env, fetchImplFactory(), NOW);
+  assert.equal(first.prTriggerHealthSent, true);
+
+  const second = await runCheck(env, fetchImplFactory(), NOW + 10 * 60_000); // 10 min later, well within 6h reminder window
+  assert.equal(second.prTriggerHealthSent, false);
 });
