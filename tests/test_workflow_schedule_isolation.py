@@ -54,15 +54,58 @@ def test_check_price_has_no_self_hosted_job():
         )
 
 
+def _expand_hour_field(field: str) -> list[int]:
+    """Expands a cron hour-field to the list of hours it fires at. Handles
+    the shapes this repo's own crons actually use: `*`, `*/N`, `A-B/N`,
+    `A-B`, `H1,H2,...`, and a bare hour."""
+    if field == "*":
+        return list(range(24))
+    if "/" in field:
+        base, step_str = field.split("/")
+        step = int(step_str)
+        if base == "*":
+            start, end = 0, 23
+        elif "-" in base:
+            start, end = (int(x) for x in base.split("-"))
+        else:
+            start = end = int(base)
+        return list(range(start, end + 1, step))
+    if "-" in field:
+        start, end = (int(x) for x in field.split("-"))
+        return list(range(start, end + 1))
+    if "," in field:
+        return [int(x) for x in field.split(",")]
+    return [int(field)]
+
+
 def test_check_price_schedule_trigger_still_present():
-    """The fix must not accidentally drop check-price.yml's own schedule."""
+    """The fix must not accidentally drop check-price.yml's own schedule.
+
+    AD1 (audit 2026-09-10): checks the INVARIANT this test actually exists
+    for -- a schedule trigger present, firing 8x/day (the ~3-hourly design
+    target) -- rather than one exact cron string. The previous version
+    hardcoded `"7 */3 * * *"` verbatim and broke on AD1's own legitimate
+    cron-phase change (06:00 UTC contention fix, PR #1541) despite that
+    change not violating anything this test is meant to guard -- the
+    schedule was never dropped, just phase-shifted. A test asserting the
+    literal string, not the property, produces exactly this kind of
+    unrelated-looking failure on every future adjustment (e.g. if AF4b's
+    7-day re-measurement finds a different shift is needed).
+    """
     wf = _load_workflow("check-price.yml")
     triggers = (
         wf["on"] if "on" in wf else wf[True]
     )  # PyYAML parses bare `on:` as True in some versions
     assert "schedule" in triggers
     crons = [entry["cron"] for entry in triggers["schedule"]]
-    assert crons == ["7 */3 * * *"]
+    assert len(crons) == 1
+    minute_field, hour_field, dom, month, dow = crons[0].split()
+    assert (dom, month, dow) == ("*", "*", "*"), f"expected a daily pattern, got {crons[0]!r}"
+    assert minute_field.isdigit() and 0 <= int(minute_field) <= 59
+    hours = _expand_hour_field(hour_field)
+    assert len(hours) == 8, (
+        f"expected an 8x/day (~3-hourly) cadence, got {len(hours)} slots: {hours}"
+    )
 
 
 def test_scrape_tanishq_selfhosted_lives_in_its_own_workflow():
