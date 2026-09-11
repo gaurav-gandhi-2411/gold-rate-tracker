@@ -20,6 +20,13 @@ const METRICS_URL   = "data/metrics_history.json";
 const COVERAGE_URL  = "data/coverage_metrics.json";
 const CALIBRATION_URL = "data/calibration.json";
 const CADENCE_URL   = "data/cadence_metrics.json"; // R2: real observed data-commit interval, see ml/cadence_metrics.py
+// AE1 (audit 2026-09-10): walk-forward MEASURED coverage of the IBJA-calibrated
+// tier's actual displayed band, see ml.calibration.save_calibration_band_coverage.
+// Previously fetched by nothing -- the on-page confidence claim rendered
+// forecast.nominal_coverage (a hardcoded design target) instead, unable to ever
+// reflect this file even when it showed the band under-covering. See
+// renderStaleBanner()/deriveMeasuredBandCoverage() below.
+const CALIBRATION_BAND_COVERAGE_URL = "data/calibration_band_coverage.json";
 
 // Staleness threshold (hours) shared with Python inference.py _STALE_THRESHOLD_H.
 // Per ADR 025 this now gates Tanishq *enrichment* freshness, not primary staleness.
@@ -176,6 +183,11 @@ let lastDrift         = null;
 let lastCoverage      = null;
 let lastCalibration   = null;
 let lastCadenceMetric = null; // R2: cached so applyLanguage() can re-render the cadence claim without re-fetching
+// AE1 (audit 2026-09-10): cached so applyLanguage()/reconnect can re-render the
+// calibration confidence clause without re-fetching. Distinct from lastCalibration
+// (calibration.json -- fit R²/residual quantiles) -- this is the WALK-FORWARD
+// MEASURED coverage of the band actually shown, data/calibration_band_coverage.json.
+let lastBandCoverage  = null;
 
 // Ψ3C.2: stagger card-enter animation across a list of elements.
 // Forces a reflow between remove/add so the animation restarts each time.
@@ -822,7 +834,32 @@ function weekdayLong(d) {
   return d.toLocaleDateString(locale, { weekday: "long", timeZone: "Asia/Kolkata", numberingSystem: "latn" });
 }
 
-function renderStaleBanner(forecast, calibration) {
+// AE1 (audit 2026-09-10): weekly-backtest.yml re-scores data/calibration_band_coverage.json's
+// walk-forward coverage every Sunday -- up to ~14 days old between two successive weekly
+// runs is normal (one missed cycle's worth of slack, same "N missed cycles" reasoning idiom
+// as this repo's other thresholds, e.g. deadman.mjs's TANISHQ_WARN_HOURS). Older than that,
+// or the file missing/malformed, means "no current measurement" -- never a signal to fall
+// back to the design target (rule 98a: fail closed, not open). Returns null in every case
+// where the caller must NOT assert a specific coverage percentage.
+const BAND_COVERAGE_MAX_AGE_DAYS = 14;
+
+function deriveMeasuredBandCoverage(bandCoverage, nowMs = Date.now()) {
+  if (
+    !bandCoverage ||
+    typeof bandCoverage.coverage !== "number" ||
+    typeof bandCoverage.n !== "number" ||
+    typeof bandCoverage.generated_at_utc !== "string"
+  ) {
+    return null;
+  }
+  const generatedMs = Date.parse(bandCoverage.generated_at_utc);
+  if (Number.isNaN(generatedMs)) return null;
+  const ageDays = (nowMs - generatedMs) / 86_400_000;
+  if (ageDays > BAND_COVERAGE_MAX_AGE_DAYS) return null;
+  return { coverage: Math.round(bandCoverage.coverage * 1000) / 10, n: bandCoverage.n };
+}
+
+function renderStaleBanner(forecast, calibration, bandCoverage) {
   const banner = document.getElementById("stale-banner");
   if (!banner) return;
   // Offline banner takes precedence — "Offline" already explains staleness; don't stack both.
@@ -841,19 +878,25 @@ function renderStaleBanner(forecast, calibration) {
     banner.textContent = isToday
       ? t("bannerIbjaToday")
       : t("bannerIbjaCarryForward", { weekday: weekdayLong(ibjaDate) });
-    // G2: driven entirely by forecast.json's own band_half_width/nominal_coverage
-    // -- NOT recomputed from calibration.json fields (the previous version read
-    // calibration.residual_std_oos directly, which could describe a different
-    // number than whatever band_method actually produced est_low/est_high, and
-    // asserted a specific Rs/gram accuracy with no stated confidence level at
-    // all). nominal_coverage is only non-null exactly when ml.inference produced
-    // a real, empirically-validated band (see _try_ibja_calibrated's band-sizing
-    // priority order) -- rendering nothing otherwise is the honest choice, not an
-    // unqualified number carried over from a suppressed or unvalidated band.
+    // band_half_width is a real, per-fit computed quantity (ml/inference.py's
+    // residual_abs_quantiles, never a constant) -- forecast.nominal_coverage is
+    // only used here as a presence flag ("did inference actually produce a real,
+    // empirically-sized band" -- see _try_ibja_calibrated's priority order),
+    // never as the rendered percentage (AE1, audit 2026-09-10: it previously WAS
+    // rendered directly -- ml.calibration.NOMINAL_COVERAGE_PCT, a hardcoded
+    // design target, asserted as if it were a measured accuracy claim; it could
+    // never reflect a real walk-forward coverage reading even when one existed
+    // and showed the band under-covering, e.g. 2026-09-06's 68.9%). The coverage
+    // clause below is now sourced entirely from the actual walk-forward
+    // measurement (data/calibration_band_coverage.json via
+    // deriveMeasuredBandCoverage) and omitted -- not defaulted to the design
+    // target -- whenever that measurement is absent, malformed, or stale.
     if (typeof forecast.nominal_coverage === "number" && typeof forecast.band_half_width === "number") {
+      const measured = deriveMeasuredBandCoverage(bandCoverage);
       banner.textContent += t("calibrationConfidenceAppend", {
         amount: fmtINR(Math.round(forecast.band_half_width)),
-        coverage: forecast.nominal_coverage,
+        coverage: measured ? measured.coverage : null,
+        n: measured ? measured.n : null,
       });
     }
     // R3: the branch above is silent about Tanishq confirmation age by
@@ -2240,7 +2283,7 @@ async function refreshData() {
     renderHistory(allReadings);
     renderChart(allReadings, currentRange);
     renderHero(allReadings, fc);
-    renderStaleBanner(fc, lastCalibration);
+    renderStaleBanner(fc, lastCalibration, lastBandCoverage);
     renderTodaysRead(allReadings);
     renderModelSignal(fc, allReadings, lastBacktest, lastCoverage, lastDrift);
     renderDriverContext(fc);
@@ -2610,7 +2653,7 @@ function applyLanguage(lang) {
   renderHistory(allReadings);
   renderChart(allReadings, currentRange);
   renderHero(allReadings, lastForecast);
-  renderStaleBanner(lastForecast, lastCalibration);
+  renderStaleBanner(lastForecast, lastCalibration, lastBandCoverage);
   renderTodaysRead(allReadings);
   renderModelSignal(lastForecast, allReadings, lastBacktest, lastCoverage, lastDrift);
   renderDriverContext(lastForecast);
@@ -2651,7 +2694,7 @@ function applyLanguage(lang) {
   window.addEventListener("online", () => {
     const offlineBanner = document.getElementById("offline-banner");
     if (offlineBanner) offlineBanner.hidden = true;
-    renderStaleBanner(lastForecast, lastCalibration); // re-evaluate stale-banner now we're connected
+    renderStaleBanner(lastForecast, lastCalibration, lastBandCoverage); // re-evaluate stale-banner now we're connected
   });
 
   // Ambient header: add elevation (.scrolled → border + shadow) only when content
@@ -2823,13 +2866,14 @@ function applyLanguage(lang) {
   const coveragePromise = loadJSON(COVERAGE_URL);
   const calibrationPromise = loadJSON(CALIBRATION_URL);
   const cadencePromise = loadJSON(CADENCE_URL);
-  // These five are only actually consumed much later (via Promise.allSettled, after
+  const bandCoveragePromise = loadJSON(CALIBRATION_BAND_COVERAGE_URL); // AE1: measured band coverage
+  // These six are only actually consumed much later (via Promise.allSettled, after
   // awaiting price+forecast and rendering the hero) — attach an inert catch to each
   // now so an early rejection (e.g. a timeout firing while we're still waiting on
   // prices) doesn't surface as a spurious unhandledrejection console error / Sentry
   // event in the meantime. Promise.allSettled below still sees the real outcome —
   // this doesn't replace the promise, just marks it handled.
-  [btPromise, driftPromise, coveragePromise, calibrationPromise, cadencePromise].forEach(p => p.catch(() => {}));
+  [btPromise, driftPromise, coveragePromise, calibrationPromise, cadencePromise, bandCoveragePromise].forEach(p => p.catch(() => {}));
 
   // Load prices (critical path)
   try {
@@ -2887,7 +2931,12 @@ function applyLanguage(lang) {
   const fc = await fcPromise;
   renderFreshness(allReadings, fc); // re-render now IBJA-primary state is known
   renderHero(allReadings, fc);
-  renderStaleBanner(fc);
+  // AE1: bandCoveragePromise hasn't resolved yet at this point (still in flight,
+  // awaited below with the other optional data) -- this first render's confidence
+  // clause correctly omits the percentage (deriveMeasuredBandCoverage(null) is
+  // null) rather than asserting anything, and gets upgraded by the second
+  // renderStaleBanner() call below once lastBandCoverage is actually known.
+  renderStaleBanner(fc, lastCalibration, lastBandCoverage);
   renderTodaysRead(allReadings);
   renderModelSignal(fc, allReadings);  // first render — coverage/drift not loaded yet, reliability note uses its own fallback text
   renderDriverContext(fc);
@@ -2904,18 +2953,21 @@ function applyLanguage(lang) {
   updateOfflineBanner(); // update offline banner text now allReadings is populated
 
   // Remaining optional data (already in flight above; all gracefully degrade on failure).
-  const [bt, drift, coverage, calibration, cadence] = await Promise.allSettled([
+  const [bt, drift, coverage, calibration, cadence, bandCoverage] = await Promise.allSettled([
     btPromise,
     driftPromise,
     coveragePromise,
     calibrationPromise,
     cadencePromise,
+    bandCoveragePromise,
   ]);
 
   // Report any optional-fetch failures so silent pipeline breaks surface in Sentry.
   if (typeof Sentry !== "undefined") {
-    const optionalUrls = [BACKTEST_URL, DRIFT_URL, COVERAGE_URL, CALIBRATION_URL, CADENCE_URL];
-    [bt, drift, coverage, calibration, cadence].forEach((r, i) => {
+    const optionalUrls = [
+      BACKTEST_URL, DRIFT_URL, COVERAGE_URL, CALIBRATION_URL, CADENCE_URL, CALIBRATION_BAND_COVERAGE_URL,
+    ];
+    [bt, drift, coverage, calibration, cadence, bandCoverage].forEach((r, i) => {
       if (r.status === "rejected") Sentry.captureException(r.reason, { extra: { url: optionalUrls[i] } });
     });
   }
@@ -2926,15 +2978,19 @@ function applyLanguage(lang) {
   lastCoverage = coverage.status === "fulfilled" ? coverage.value : null;
   lastCalibration = calibration.status === "fulfilled" ? calibration.value : null;
   lastCadenceMetric = cadence.status === "fulfilled" ? cadence.value : null;
+  lastBandCoverage = bandCoverage.status === "fulfilled" ? bandCoverage.value : null;
   renderCadenceStrings(lastCadenceMetric); // override the "still loading" fallback with the real number
   renderModelSignal(fc, allReadings, btData, lastCoverage, lastDrift);  // re-render — coverage/drift now loaded
-  // G2: renderStaleBanner's confidence sentence is now driven entirely by
-  // forecast.json (nominal_coverage/band_half_width), already available at the
-  // FIRST renderStaleBanner(fc) call above (line ~2781) — re-rendering here
-  // once calibration.json finishes loading would be a no-op with identical
-  // output. Removed. lastCalibration/calibrationPromise are otherwise unused
-  // by any renderer now (flagged as a follow-up cleanup, not done here to keep
-  // this PR scoped to the copy fix).
+  // AE1 (audit 2026-09-10): reinstates the re-render G2 removed. G2 was correct
+  // that calibration.json's fields drove nothing in renderStaleBanner and a
+  // second render on ITS arrival was a no-op -- but that's a different file
+  // from data/calibration_band_coverage.json, which now genuinely does drive
+  // the confidence clause's percentage (deriveMeasuredBandCoverage above) and
+  // is NOT available at the first renderStaleBanner(fc, ...) call (line
+  // ~2921) since bandCoveragePromise is still in flight there. This call is
+  // what upgrades the banner from "no percentage yet" to the real measured
+  // figure once it lands.
+  renderStaleBanner(fc, lastCalibration, lastBandCoverage);
   renderForecastVsActual(btData);
   renderMethodology(fc, btData, lastDrift, lastCoverage);
 

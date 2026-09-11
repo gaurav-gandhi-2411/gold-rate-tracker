@@ -216,9 +216,15 @@ const STRINGS = {
     // ── State banners ────────────────────────────────────────────────────────────
     bannerIbjaToday: "This is today's estimated price, based on IBJA's official gold benchmark — we couldn't confirm it against the shop rate just now.",
     bannerIbjaCarryForward: ({ weekday }) => `This is an estimated price, based on IBJA's ${weekday} close (their most recent official rate) — we couldn't confirm it against the shop rate just now.`,
-    // G2: coverage is forecast.json's own nominal_coverage (e.g. 80), never
-    // hand-typed — driven by whichever band actually produced est_low/est_high.
-    calibrationConfidenceAppend: ({ amount, coverage }) => ` Based on past comparisons, the real price lands within about ₹${amount}/gram of this estimate about ${coverage}% of the time.`,
+    // AE1 (audit 2026-09-10): coverage/n now come from data/calibration_band_coverage.json's
+    // actual walk-forward measurement (app.js's deriveMeasuredBandCoverage), never
+    // ml.calibration.NOMINAL_COVERAGE_PCT (a hardcoded design target) -- coverage/n are
+    // null, not defaulted to that target, whenever no fresh measurement exists, so this
+    // falls through to the amount-only clause below rather than asserting an unbacked
+    // number.
+    calibrationConfidenceAppend: ({ amount, coverage, n }) => coverage != null && n != null
+      ? ` Based on past comparisons, the real price has landed within about ₹${amount}/gram of this estimate about ${coverage}% of the time so far (n=${n} weeks measured).`
+      : ` Based on past comparisons, the real price lands within about ₹${amount}/gram of this estimate.`,
     // R3: appended only when Tanishq confirmation itself has been silent for
     // TIER_DEGRADED_THRESHOLD_H, not just this cycle -- distinct from the
     // routine (silent) ibja_calibrated case above it.
@@ -535,7 +541,12 @@ const STRINGS = {
     // ── State banners ────────────────────────────────────────────────────────────
     bannerIbjaToday: "यह आज की अनुमानित कीमत है, IBJA के आधिकारिक सोने के बेंचमार्क पर आधारित — हम इसे अभी दुकान की कीमत से जांच नहीं पाए।",
     bannerIbjaCarryForward: ({ weekday }) => `यह एक अनुमानित कीमत है, IBJA के ${weekday} के बंद भाव पर आधारित (उनकी सबसे हाल की आधिकारिक दर) — हम इसे अभी दुकान की कीमत से जांच नहीं पाए।`,
-    calibrationConfidenceAppend: ({ amount, coverage }) => ` पिछली तुलनाओं के आधार पर, असली कीमत लगभग ${coverage}% बार इस अनुमान के ₹${amount}/ग्राम के दायरे में रहती है।`,
+    // AE1 (audit 2026-09-10): see the EN string's comment above — coverage/n are
+    // the real walk-forward measurement, null (not a design-target default) when
+    // no fresh reading exists.
+    calibrationConfidenceAppend: ({ amount, coverage, n }) => coverage != null && n != null
+      ? ` पिछली तुलनाओं के आधार पर, असली कीमत अब तक लगभग ${coverage}% बार इस अनुमान के ₹${amount}/ग्राम के दायरे में रही है (n=${n} हफ़्तों का मापन)।`
+      : ` पिछली तुलनाओं के आधार पर, असली कीमत इस अनुमान के ₹${amount}/ग्राम के दायरे में रहती है।`,
     bannerTanishqLongSilent: ({ rel }) => ` काफी समय से Tanishq से इस कीमत की पुष्टि नहीं हुई है — आख़िरी सफल जांच ${rel} हुई थी।`,
     bannerFusion: ({ sources }) => `यह अन्य जौहरियों की दरों (${sources}) पर आधारित एक अनुमानित कीमत है — हम अभी Tanishq या IBJA तक नहीं पहुंच पाए।`,
     bannerStaleConfirmed: ({ rel }) => `हमें ताज़ी कीमत नहीं मिल पाई — यह आख़िरी पुष्टि की गई कीमत है, ${rel}।`,
