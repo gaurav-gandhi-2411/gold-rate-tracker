@@ -104,13 +104,18 @@ name: CI Health Check
 # 2026-09-11): GG provisioned a fine-grained PAT with `Administration:
 # read`, repo-scoped, as secret `CI_HEALTH_PAT`. Switched GH_TOKEN to it
 # and verified BOTH halves behaviorally, not just that the file parses:
-# (1) the branch-protection read itself now succeeds (dispatched on this
-# branch, confirmed the prior 403 is gone and REQUIRED resolves to the
-# real "lint, pwa-js" contexts); (2) constructed the actual failure case
-# this workflow exists to catch -- pointed it at a state with a real red
-# required check on master's most recent lint.yml run and confirmed it
-# pages with the correct, specific message (not just "could not verify").
-# See the PR body for the run IDs and ntfy message ID from both checks.
+# (1) the branch-protection read itself now succeeds -- dispatched with
+# a temporary RUN_INFO override pointed at run 34555988607 (a real
+# historical run, 2026-09-11T02:47:43Z, where `lint` -- a required
+# context -- was genuinely red during the AG3 incident window); the read
+# resolved REQUIRED to the real "lint, pwa-js" contexts with no 403.
+# (2) That same run proved the actual failure case this workflow exists
+# to catch: it correctly identified `lint (failure)` and paged the
+# specific, accurate message (ntfy message ID 4kOa2UZVmKvl) -- not the
+# generic "could not verify" message, the real one. The override was
+# then reverted (this version queries the live most-recent run again,
+# as designed) and dispatched once more clean, confirming the un-
+# overridden path also succeeds end-to-end against master's real state.
 on:
   schedule:
     - cron: "17 */1 * * *" # hourly, offset from the top of the hour -- same
@@ -184,12 +189,8 @@ jobs:
           # commit's own check-runs, which are frequently empty ([skip ci]
           # bot commits never trigger lint.yml at all; see the module
           # comment above for how that first design was caught and fixed).
-          # TEMPORARY TEST OVERRIDE -- AI3 behavioral proof, reverted before merge.
-          # Points at a real historical run (34555988607, 2026-09-11T02:47:43Z) where
-          # the required `lint` job itself was genuinely red (the AG3 incident window),
-          # to prove the detection+paging logic against real data without breaking
-          # master to manufacture a fresh red check.
-          RUN_INFO=$(gh api "repos/${GITHUB_REPOSITORY}/actions/runs/34555988607" --jq '{id, head_sha}')
+          RUN_INFO=$(gh api "repos/${GITHUB_REPOSITORY}/actions/workflows/lint.yml/runs?branch=master&per_page=1" \
+            --jq '.workflow_runs[0] | {id, head_sha}')
           RUN_ID=$(echo "$RUN_INFO" | jq -r '.id')
           RUN_SHA=$(echo "$RUN_INFO" | jq -r '.head_sha')
           if [ -z "$RUN_ID" ] || [ "$RUN_ID" = "null" ]; then
