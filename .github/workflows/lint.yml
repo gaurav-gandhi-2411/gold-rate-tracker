@@ -84,7 +84,15 @@ jobs:
         # operation into GitHub Actions. It runs entirely on Cloudflare
         # Cron Triggers (see worker-deadman/README.md); this step only
         # lints/tests the source before it's deployed by hand.
-        run: node --test worker-deadman/test/deadman.test.mjs
+        #
+        # AI2 (production audit continuation, 2026-09-11/12): explicit file
+        # list, not a glob -- deliberately, so a new test file added to
+        # worker-deadman/test/ without also being added here is a visible,
+        # reviewable diff line, not a silent CI gap. (A glob would have hidden
+        # exactly the omission this comment now prevents: this line, before
+        # this edit, ran only deadman.test.mjs and would have silently never
+        # run pr_trigger_health.test.mjs.)
+        run: node --test worker-deadman/test/deadman.test.mjs worker-deadman/test/pr_trigger_health.test.mjs
 
   # Forward lint+pwa-js's real result as commit statuses (bug #4, docs/RUNBOOK.md).
   # Branch protection's required_status_checks matches by context NAME across both
