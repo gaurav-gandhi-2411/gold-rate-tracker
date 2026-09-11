@@ -81,13 +81,15 @@ name: CI Health Check
 # rule-98a gap on its first real invocation. Fixed by capturing `gh
 # api`'s own exit status explicitly (outside any `$(...) || fallback`
 # construction, proven not to reliably catch a non-2xx response through a
-# `--jq` filter) before ever parsing its output -- verified live with
-# CI_MERGE_PAT: produces a clean, accurate "could not read, failing
-# closed" message with the real response body, never a garbled false
-# alert. Also added an ntfy page to every "could not verify" exit path
-# (there was none before this fix -- only the "found a real red check"
-# branch paged), since silence on the inability to verify is the exact
-# failure shape this workflow exists to close and it can't exempt itself.
+# `--jq` filter) before ever parsing its output -- verified live with both
+# CI_MERGE_PAT and github.token: both now produce a clean, accurate
+# "could not read, failing closed" message with the real response body
+# (message ID unwc6g25Rskz for the github.token case), never a garbled
+# false alert. Also added an ntfy page to every "could not verify" exit
+# path (there was none before this fix -- only the "found a real red
+# check" branch paged), since silence on the inability to verify is the
+# exact failure shape this workflow exists to close and it can't exempt
+# itself.
 #
 # Net effect until a properly-scoped credential is provided: this
 # workflow will run (on schedule or dispatch), fail every time on the
