@@ -184,6 +184,34 @@ jobs:
             --repo "${{ github.repository }}" \
             --base "${{ github.base_ref }}"
 
+  # AF1 (audit 2026-09-10): mechanizes a rule that was written down after
+  # PR #1353 (2026-09-04) and violated again by PR #1539 (2026-09-10) --
+  # both widened a bot-pr-sync-calling workflow's `git add` list to include
+  # README.md/docs/*.md without checking bot-pr-sync/action.yml's own
+  # independent data-only allowlist first, and both blocked production data
+  # sync for hours before being reverted (#1539 for 7+ hours, until
+  # forecast.json's age reached 7.76h against the dead-man's-switch's 10h
+  # WARN). A rule enforced only by a human remembering to read a guard
+  # before touching the path it guards is not enforced -- this fails the PR
+  # at review time instead. Deliberately NOT path-filtered to only
+  # .github/workflows/** changes, unlike AF1's own originating instruction
+  # -- this repo has its own documented incident (2026-08-06, PRs #293-300/
+  # #459/#633) where path-filtering a required-adjacent check produced
+  # "required check never ran" rather than "failed", a worse failure mode
+  # than the extra few seconds this check costs on every PR. See
+  # scripts/check_bot_pr_sync_allowlist.py's own docstring for the full
+  # mechanism and its stated blind spots.
+  bot-pr-sync-allowlist-check:
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: "3.12"
+      - name: Verify every bot-pr-sync-calling workflow's git-add paths are allowlist-covered
+        run: python scripts/check_bot_pr_sync_allowlist.py
+
   # Fail if any <!--METRIC:...--> marker in README.md/docs/*.md doesn't
   # resolve, or resolves to text that differs from what's committed --
   # same "regenerate, don't hand-edit" idiom as sw-version-guard above.
