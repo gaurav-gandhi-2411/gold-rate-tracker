@@ -43,34 +43,60 @@ name: CI Health Check
 # cost silently -- the same tradeoff already made throughout this repo's
 # alert catalog (e.g. T9_ESCALATE, worker-deadman's REMINDER_INTERVAL_HOURS).
 #
-# BUG FOUND LIVE, FIXED SAME DAY (AH5, production audit, 2026-09-11): this
-# workflow's very first real run (manually dispatched ~3h48m after merge,
-# since the schedule trigger had not yet fired) failed on every single
-# invocation -- `gh api .../branches/master/protection` returns 403
-# "Resource not accessible by integration" for the default `github.token`.
-# This is not a `permissions:` block gap fixable in this file: branch
-# protection reads require the calling token to have admin rights on the
-# repo, which the ephemeral Actions GITHUB_TOKEN structurally cannot carry
-# regardless of granted scopes -- the same reason bot-pr-sync already needed
-# `CI_MERGE_PAT`, a real PAT, for its own privileged operations. Switched
-# this step to CI_MERGE_PAT accordingly.
+# BUG FOUND LIVE, PARTIALLY FIXED SAME DAY (AH5, production audit,
+# 2026-09-11): this workflow's very first real run (manually dispatched
+# ~3h48m after merge, since the schedule trigger had not yet fired) failed
+# on every invocation -- `gh api .../branches/master/protection` returns
+# 403 "Resource not accessible by integration" for the default
+# `github.token`. Not a `permissions:` block gap fixable in this file:
+# branch protection reads require the calling token to have admin rights
+# on the repo, which the ephemeral Actions GITHUB_TOKEN structurally
+# cannot carry regardless of granted scopes.
 #
-# Worse than the bare 403: this exact rule-98a "fail closed on unreadable
-# state" guard did NOT fail closed. `REQUIRED=$(gh api ... --jq '...'
-# 2>/dev/null || echo "")` was written assuming a failed `gh api` call would
-# trip the `|| echo ""` fallback -- it did not. Verified live: gh printed
-# the 403's raw JSON error body to stdout past the --jq filter, so REQUIRED
-# ended up containing that literal error text as a single "context", the
-# `-z "$REQUIRED"` closed-fail check never fired, and the script proceeded
-# to treat the error JSON as a check name -- producing a real ntfy push to
-# production with a garbled, misleading message ("Required check(s) not
-# green ... {"message":"Resource not accessible by integration"...}
-# (missing)") instead of the intended "could not verify, failing closed"
-# message. A control built specifically to apply rule 98a to CI health had
-# its own rule-98a gap on its first real invocation. Fixed by capturing
-# `gh api`'s own exit status explicitly (outside any `$(...) || fallback`
-# construction, which this incident proved does not reliably catch a
-# non-2xx response through a `--jq` filter) before ever parsing its output.
+# Tried CI_MERGE_PAT (bot-pr-sync's own PAT, used elsewhere for exactly
+# this class of privilege gap) as the fix -- confirmed live it ALSO 403s
+# ("Resource not accessible by personal access token"), so its scope
+# doesn't reach branch-protection admin reads either. STILL OPEN: no
+# credential currently available to this repo's Actions can make this
+# call succeed. Needs a PAT (or fine-grained token) with explicit
+# `Administration: read` repo permission -- a credential decision, not a
+# workflow-file fix, so left for GG rather than minted unilaterally. Left
+# on `github.token` in the meantime since swapping to a PAT that fails
+# identically has no benefit and a real cost (a second secret this step
+# now depends on for no gain).
+#
+# The other half WAS fixed and verified live: this exact rule-98a
+# "fail closed on unreadable state" guard did NOT fail closed on the 403.
+# `REQUIRED=$(gh api ... --jq '...' 2>/dev/null || echo "")` was written
+# assuming a failed `gh api` call would trip the `|| echo ""` fallback --
+# it did not. Verified: gh printed the 403's raw JSON error body to
+# stdout past the --jq filter, so REQUIRED ended up containing that
+# literal error text as a single "context", the `-z "$REQUIRED"`
+# closed-fail check never fired, and the script proceeded to treat the
+# error JSON as a check name -- producing a real ntfy push to production
+# with a garbled, misleading message ("Required check(s) not green ...
+# {"message":"Resource not accessible by integration"...} (missing)")
+# instead of the intended "could not verify, failing closed" message. A
+# control built specifically to apply rule 98a to CI health had its own
+# rule-98a gap on its first real invocation. Fixed by capturing `gh
+# api`'s own exit status explicitly (outside any `$(...) || fallback`
+# construction, proven not to reliably catch a non-2xx response through a
+# `--jq` filter) before ever parsing its output -- verified live with
+# CI_MERGE_PAT: produces a clean, accurate "could not read, failing
+# closed" message with the real response body, never a garbled false
+# alert. Also added an ntfy page to every "could not verify" exit path
+# (there was none before this fix -- only the "found a real red check"
+# branch paged), since silence on the inability to verify is the exact
+# failure shape this workflow exists to close and it can't exempt itself.
+#
+# Net effect until a properly-scoped credential is provided: this
+# workflow will run (on schedule or dispatch), fail every time on the
+# branch-protection read, page once per run with an accurate "could not
+# verify master's CI state" message, and emit the same as a GitHub
+# Actions error annotation. It does not yet cover the CI-health gap it
+# was built for; it correctly reports that it cannot, rather than
+# reporting a false all-clear or a false alarm -- and now it says so out
+# loud instead of only in a run log nobody is watching.
 on:
   schedule:
     - cron: "17 */1 * * *" # hourly, offset from the top of the hour -- same
@@ -84,11 +110,14 @@ jobs:
     steps:
       - name: Check required status checks on master's most recent lint.yml run
         env:
-          # Branch protection reads require repo-admin rights, which the
-          # ephemeral GITHUB_TOKEN cannot hold regardless of the
-          # `permissions:` block -- see the module comment above. CI_MERGE_PAT
-          # is the same PAT bot-pr-sync already relies on for this reason.
-          GH_TOKEN: ${{ secrets.CI_MERGE_PAT }}
+          # Branch protection reads require repo-admin rights. Tried
+          # CI_MERGE_PAT (bot-pr-sync's own PAT) as a fix -- confirmed live
+          # it ALSO 403s ("Resource not accessible by personal access
+          # token"), so its scope doesn't cover this either. Left on
+          # github.token: no available credential in this repo can make this
+          # specific call succeed today (see module comment above) -- that is
+          # the actual finding, not a token choice this file can fix.
+          GH_TOKEN: ${{ github.token }}
           NTFY_TOPIC: ${{ secrets.NTFY_TOPIC }}
         run: |
           set -e
@@ -107,17 +136,36 @@ jobs:
           # code can be checked on the next line rather than either killing
           # the script immediately (losing the chance to emit a clear
           # message) or being swallowed by a same-line `||`.
+          # Shared paging helper -- every "could not verify" exit below pages
+          # too, not just the "found a real red check" branch. Silence on
+          # the inability to verify is the exact failure shape this whole
+          # workflow exists to close (rule 98a); it can't exempt itself.
+          page() {
+            if [ -n "${NTFY_TOPIC}" ]; then
+              curl -s \
+                -H "Title: Gold Tracker: ci-health.yml could not verify master's CI state" \
+                -H "Priority: high" \
+                -H "Tags: warning,rotating_light" \
+                -d "$1" \
+                "https://ntfy.sh/${NTFY_TOPIC}" || true
+            fi
+          }
+
           set +e
           PROTECTION_RESPONSE=$(gh api "repos/${GITHUB_REPOSITORY}/branches/master/protection" 2>&1)
           PROTECTION_STATUS=$?
           set -e
           if [ "$PROTECTION_STATUS" -ne 0 ]; then
-            echo "::error::Could not read master's required status checks from branch protection (gh api exit ${PROTECTION_STATUS}) -- failing closed rather than silently skipping this run. Response: ${PROTECTION_RESPONSE}"
+            MSG="Could not read master's required status checks from branch protection (gh api exit ${PROTECTION_STATUS}) -- failing closed rather than silently skipping this run. Response: ${PROTECTION_RESPONSE}"
+            echo "::error::${MSG}"
+            page "${MSG}"
             exit 1
           fi
           REQUIRED=$(echo "$PROTECTION_RESPONSE" | jq -r '.required_status_checks.contexts[]?' 2>/dev/null)
           if [ -z "$REQUIRED" ]; then
-            echo "::error::Branch protection response had no required_status_checks.contexts -- failing closed rather than silently skipping this run. Response: ${PROTECTION_RESPONSE}"
+            MSG="Branch protection response had no required_status_checks.contexts -- failing closed rather than silently skipping this run. Response: ${PROTECTION_RESPONSE}"
+            echo "::error::${MSG}"
+            page "${MSG}"
             exit 1
           fi
 
@@ -130,7 +178,9 @@ jobs:
           RUN_ID=$(echo "$RUN_INFO" | jq -r '.id')
           RUN_SHA=$(echo "$RUN_INFO" | jq -r '.head_sha')
           if [ -z "$RUN_ID" ] || [ "$RUN_ID" = "null" ]; then
-            echo "::error::Could not find any lint.yml run on master -- failing closed."
+            MSG="Could not find any lint.yml run on master -- failing closed."
+            echo "::error::${MSG}"
+            page "${MSG}"
             exit 1
           fi
 
