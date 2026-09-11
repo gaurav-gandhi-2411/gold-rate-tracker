@@ -99,6 +99,23 @@ name: CI Health Check
 # was built for; it correctly reports that it cannot, rather than
 # reporting a false all-clear or a false alarm -- and now it says so out
 # loud instead of only in a run log nobody is watching.
+#
+# CREDENTIAL PROVIDED, WIRED IN AND VERIFIED (AI3, production audit,
+# 2026-09-11): GG provisioned a fine-grained PAT with `Administration:
+# read`, repo-scoped, as secret `CI_HEALTH_PAT`. Switched GH_TOKEN to it
+# and verified BOTH halves behaviorally, not just that the file parses:
+# (1) the branch-protection read itself now succeeds -- dispatched with
+# a temporary RUN_INFO override pointed at run 34555988607 (a real
+# historical run, 2026-09-11T02:47:43Z, where `lint` -- a required
+# context -- was genuinely red during the AG3 incident window); the read
+# resolved REQUIRED to the real "lint, pwa-js" contexts with no 403.
+# (2) That same run proved the actual failure case this workflow exists
+# to catch: it correctly identified `lint (failure)` and paged the
+# specific, accurate message (ntfy message ID 4kOa2UZVmKvl) -- not the
+# generic "could not verify" message, the real one. The override was
+# then reverted (this version queries the live most-recent run again,
+# as designed) and dispatched once more clean, confirming the un-
+# overridden path also succeeds end-to-end against master's real state.
 on:
   schedule:
     - cron: "17 */1 * * *" # hourly, offset from the top of the hour -- same
@@ -112,14 +129,11 @@ jobs:
     steps:
       - name: Check required status checks on master's most recent lint.yml run
         env:
-          # Branch protection reads require repo-admin rights. Tried
-          # CI_MERGE_PAT (bot-pr-sync's own PAT) as a fix -- confirmed live
-          # it ALSO 403s ("Resource not accessible by personal access
-          # token"), so its scope doesn't cover this either. Left on
-          # github.token: no available credential in this repo can make this
-          # specific call succeed today (see module comment above) -- that is
-          # the actual finding, not a token choice this file can fix.
-          GH_TOKEN: ${{ github.token }}
+          # Branch protection reads require repo-admin rights that neither
+          # github.token nor CI_MERGE_PAT carry (see module comment above).
+          # CI_HEALTH_PAT is a fine-grained PAT provisioned specifically for
+          # this, with Administration: read, repo-scoped -- verified live.
+          GH_TOKEN: ${{ secrets.CI_HEALTH_PAT }}
           NTFY_TOPIC: ${{ secrets.NTFY_TOPIC }}
         run: |
           set -e
