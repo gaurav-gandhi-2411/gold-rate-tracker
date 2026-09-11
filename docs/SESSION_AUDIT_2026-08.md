@@ -580,3 +580,4 @@ never resolved; `merged_by`/`author` on both PRs → `gaurav-gandhi-2411`
 (`2026-09-11T03:26:37Z`) checked directly against #1539's
 (`2026-09-10T13:38:30Z`) to confirm the 13.5-hour gap stated in the
 table above, rather than trusting recollection of the ordering.
+AJ1c scratch proof, Fri Sep 11 19:28:12 UTC 2026
