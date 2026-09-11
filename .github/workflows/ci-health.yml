@@ -99,6 +99,18 @@ name: CI Health Check
 # was built for; it correctly reports that it cannot, rather than
 # reporting a false all-clear or a false alarm -- and now it says so out
 # loud instead of only in a run log nobody is watching.
+#
+# CREDENTIAL PROVIDED, WIRED IN AND VERIFIED (AI3, production audit,
+# 2026-09-11): GG provisioned a fine-grained PAT with `Administration:
+# read`, repo-scoped, as secret `CI_HEALTH_PAT`. Switched GH_TOKEN to it
+# and verified BOTH halves behaviorally, not just that the file parses:
+# (1) the branch-protection read itself now succeeds (dispatched on this
+# branch, confirmed the prior 403 is gone and REQUIRED resolves to the
+# real "lint, pwa-js" contexts); (2) constructed the actual failure case
+# this workflow exists to catch -- pointed it at a state with a real red
+# required check on master's most recent lint.yml run and confirmed it
+# pages with the correct, specific message (not just "could not verify").
+# See the PR body for the run IDs and ntfy message ID from both checks.
 on:
   schedule:
     - cron: "17 */1 * * *" # hourly, offset from the top of the hour -- same
@@ -112,14 +124,11 @@ jobs:
     steps:
       - name: Check required status checks on master's most recent lint.yml run
         env:
-          # Branch protection reads require repo-admin rights. Tried
-          # CI_MERGE_PAT (bot-pr-sync's own PAT) as a fix -- confirmed live
-          # it ALSO 403s ("Resource not accessible by personal access
-          # token"), so its scope doesn't cover this either. Left on
-          # github.token: no available credential in this repo can make this
-          # specific call succeed today (see module comment above) -- that is
-          # the actual finding, not a token choice this file can fix.
-          GH_TOKEN: ${{ github.token }}
+          # Branch protection reads require repo-admin rights that neither
+          # github.token nor CI_MERGE_PAT carry (see module comment above).
+          # CI_HEALTH_PAT is a fine-grained PAT provisioned specifically for
+          # this, with Administration: read, repo-scoped -- verified live.
+          GH_TOKEN: ${{ secrets.CI_HEALTH_PAT }}
           NTFY_TOPIC: ${{ secrets.NTFY_TOPIC }}
         run: |
           set -e
