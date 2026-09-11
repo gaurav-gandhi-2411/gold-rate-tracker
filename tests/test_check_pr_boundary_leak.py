@@ -322,6 +322,49 @@ def test_recent_closed_prs_excludes_bot_branches_and_self():
     assert [p["number"] for p in result] == [2]
 
 
+def test_recent_closed_prs_excludes_scratch_branches():
+    """AG2 (audit 2026-09-11): scratch/-prefixed closed PRs are deliberate,
+    disposable audit-proof reconstructions (this repo's own established
+    convention, AA2a's #1526-#1530 and AF1b's #1561-#1563) -- comparing
+    against them produces a direction-blind false positive whenever the PR
+    under test is the ORIGINAL a scratch branch was built from, since a
+    commit copied INTO a scratch PR reads identically (same patch-id) to
+    one copied FROM it."""
+
+    def fake_run(args, **kwargs):
+        if args[:3] == ["gh", "pr", "list"]:
+            return _proc(
+                returncode=0,
+                stdout=json.dumps(
+                    [
+                        {
+                            "number": 1561,
+                            "baseRefName": "fix/wire-calibration",
+                            "headRefOid": "shaA",
+                            "headRefName": "scratch/reconstruct-1539",
+                        },
+                        {
+                            "number": 2,
+                            "baseRefName": "master",
+                            "headRefOid": "sha2",
+                            "headRefName": "fix/real-work",
+                        },
+                        {
+                            "number": 100,
+                            "baseRefName": "master",
+                            "headRefOid": "sha100",
+                            "headRefName": "fix/self",
+                        },
+                    ]
+                ),
+            )
+        raise AssertionError(f"unexpected call: {args}")
+
+    with patch("subprocess.run", side_effect=fake_run):
+        result = mod._recent_closed_prs("owner/repo", exclude_pr=100)
+    assert [p["number"] for p in result] == [2]
+
+
 # ---------------------------------------------------------------------------
 # check_file_level_residue
 # ---------------------------------------------------------------------------
