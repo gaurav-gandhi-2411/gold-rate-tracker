@@ -225,7 +225,7 @@ never recoverable after the fact, catch-up or not. It also does not reduce
 the underlying platform miss rate; it only shortens how long the site stays
 stale once a run *does* fire and observes the gap.
 
-### Recovered on miss rate, not on latency — WORSENED AGAIN since 2026-09-07 (AB3, audit 2026-09-10)
+### Recovered on miss rate, not on latency — re-measured 2026-09-10, prior "WORSENED AGAIN" figures RETRACTED (AC2, production audit 2026-09-10)
 
 The miss rate above did recover to near-0% by 2026-08-30 (measured on the
 control workflows `shadow-fusion.yml`/`render-smoke.yml`, which share no
@@ -236,6 +236,45 @@ recovery was one-dimensional: pre-incident median fire delay was
 51–134 minutes (two different clean weeks); as of the 2026-09-05 audit it
 was a *consistent* 245–288 minutes (~4.1–4.8h) every day, corroborated on
 two independent workflows.
+
+**CORRECTION (2026-09-10, later the same day as the AB3 entry below):** an
+independent re-measurement, controlling explicitly for two known analysis
+bugs (a window-matching bug that could let one late run's timestamp
+cascade into inflating later slots, and a run-fetch that must paginate
+fully and filter to `event=schedule` rather than pulling only the most
+recent N runs, which unrelated trigger types can crowd out), found the
+AB3 entry's headline numbers (242.5→618.6min median, a claimed ~2.5x
+platform-wide degradation) **do not reproduce** and are retracted. The
+re-measurement's own p90 *fell* slightly post-09-07 (309.6→300.1min) —
+a real, sustained ~2.5x median degradation cannot coexist with a falling
+p90 in the same data; that internal inconsistency is what flagged AB3's
+figures as wrong rather than as a genuine worsening. Corrected pooled
+figures, same three workflows/two repos, fully paginated, `event=schedule`
+filtered:
+
+| Window | n (pooled, 3 workflows) | Median delay | p90 | Max |
+|---|---|---|---|---|
+| 2026-08-29 → 09-07 | — | 225.3min (~3.8h) | 309.6min | 443.7min |
+| 2026-09-07 → 09-10 | — | 236.2min (~3.9h) | 300.1min | 371.0min |
+
+This is a modest, not a step-change, shift — the "WORSENED AGAIN...2.5x"
+framing below is retracted along with the "two most recent scheduled ticks
+show as outright misses on all three workflows simultaneously" claim; that
+specific reproduction was not found. What IS real and reproducible: every
+day 2026-09-07 through 09-10, the ~06:00 UTC scheduled tick specifically
+runs 296–371min late across all three workflows simultaneously, while
+other same-day ticks for the same workflows sit near baseline
+(~150–260min). This reads as an hour-of-day-specific contention pattern,
+not a uniform platform-wide slowdown — see the production audit's AD1
+findings for how far back this extends and whether a cron-hour shift is
+warranted.
+
+The retracted AB3 entry is left below, struck through in spirit but kept
+verbatim for the audit trail (rule: honest documentation names what didn't
+work, not just what shipped) rather than deleted:
+
+<details>
+<summary>Retracted 2026-09-10 (AB3 entry, superseded by the correction above)</summary>
 
 **That number is now 5 days stale and understates current reality by
 roughly 2.5x.** Re-measured 2026-09-10 across THREE independent scheduled
@@ -262,6 +301,8 @@ in this file. Searched githubstatus.com for a corroborating incident report
 unlisted/lower-severity, or not yet posted. Treat as **platform-side,
 unconfirmed cause**, not "confirmed platform incident" the way 2026-08-27
 was.
+
+</details>
 
 **Does this affect what users actually see?** Less than the raw numbers
 above suggest. `data/cadence_metrics.json` (the metric the page and
