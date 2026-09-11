@@ -1,0 +1,111 @@
+name: CI Health Check
+
+# AG3 (production audit, 2026-09-11): PR #1541 broke `lint` (a required
+# status check) on master itself for ~34 minutes (2026-09-11T02:47:45Z ->
+# 03:21:21Z, verified via each commit's own named check-run conclusions,
+# not the workflow run's overall conclusion) -- an unrelated pre-existing
+# test hardcoded the exact cron string #1541 legitimately changed.
+# Discovered only because this session happened to be actively working
+# through PRs at that exact moment; nothing alerted. Behavioral check (AF3's
+# standard, not just reading config) found no existing mechanism anywhere
+# in this repo watches a required check's status on master itself --
+# ml/notifications.py's full T1-T13 alert catalog is entirely about price/
+# data state, never CI state, and no workflow queries check-run status for
+# its own sake.
+#
+# This is a small, independent, frequently-scheduled workflow whose only
+# job is noticing when that happens again. Deliberately NOT added as a step
+# inside lint.yml itself, or any workflow whose own breakage could plausibly
+# correlate with the kind of change that breaks a required check (the
+# instance #1 shape this audit's central finding is named for: a control
+# that can't see its own failure mode). It also deliberately does NOT
+# hand-copy which contexts are "required" -- it reads that list live from
+# branch protection, the same "read from the one real source, never a
+# duplicate" discipline scripts/check_bot_pr_sync_allowlist.py (AF1) used
+# for the allowlist regex.
+#
+# First-draft bug caught before shipping: checking master's TIP commit's
+# check-runs directly returns an EMPTY result most of the time -- the tip
+# is frequently a `[skip ci]` bot data-commit, which by design never
+# triggers lint.yml at all, so it has zero check-runs for "lint"/"pwa-js"
+# and would read as "missing" (a false alarm) on nearly every run. Fixed to
+# instead query lint.yml's own most recent actual run on master (regardless
+# of which commit triggered it -- [skip ci] commits are simply skipped by
+# construction, exactly as intended) and read job-level conclusions from
+# THAT run. Verified against live data before this shipped: master's tip
+# at write time (1680fed, a [skip ci] commit) has zero "lint"/"pwa-js"
+# check-runs; the actual most recent lint.yml run (triggered by #1564's
+# merge) shows both jobs green.
+#
+# No persisted dedup state: alerts every time it runs and finds a required
+# check red, at this cadence, until fixed. A few redundant pages during an
+# active incident cost far less than the 34 minutes this exact gap already
+# cost silently -- the same tradeoff already made throughout this repo's
+# alert catalog (e.g. T9_ESCALATE, worker-deadman's REMINDER_INTERVAL_HOURS).
+on:
+  schedule:
+    - cron: "17 */1 * * *" # hourly, offset from the top of the hour -- same
+    # anti-peak-load reasoning check-price.yml's own cron comment documents.
+  workflow_dispatch:
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Check required status checks on master's most recent lint.yml run
+        env:
+          GH_TOKEN: ${{ github.token }}
+          NTFY_TOPIC: ${{ secrets.NTFY_TOPIC }}
+        run: |
+          set -e
+
+          # Read the required-contexts list live from branch protection --
+          # never a hardcoded copy of "lint, pwa-js" that could silently
+          # drift from whatever branch protection actually requires later.
+          REQUIRED=$(gh api "repos/${GITHUB_REPOSITORY}/branches/master/protection" \
+            --jq '.required_status_checks.contexts[]' 2>/dev/null || echo "")
+          if [ -z "$REQUIRED" ]; then
+            echo "::error::Could not read master's required status checks from branch protection -- failing closed rather than silently skipping this run."
+            exit 1
+          fi
+
+          # Most recent ACTUAL lint.yml run on master -- not the tip
+          # commit's own check-runs, which are frequently empty ([skip ci]
+          # bot commits never trigger lint.yml at all; see the module
+          # comment above for how that first design was caught and fixed).
+          RUN_INFO=$(gh api "repos/${GITHUB_REPOSITORY}/actions/workflows/lint.yml/runs?branch=master&per_page=1" \
+            --jq '.workflow_runs[0] | {id, head_sha}')
+          RUN_ID=$(echo "$RUN_INFO" | jq -r '.id')
+          RUN_SHA=$(echo "$RUN_INFO" | jq -r '.head_sha')
+          if [ -z "$RUN_ID" ] || [ "$RUN_ID" = "null" ]; then
+            echo "::error::Could not find any lint.yml run on master -- failing closed."
+            exit 1
+          fi
+
+          JOBS=$(gh api "repos/${GITHUB_REPOSITORY}/actions/runs/${RUN_ID}/jobs" --jq '.jobs')
+
+          FAILING=""
+          while IFS= read -r CONTEXT; do
+            [ -z "$CONTEXT" ] && continue
+            CONCLUSION=$(echo "$JOBS" | jq -r --arg name "$CONTEXT" \
+              '[.[] | select(.name == $name)] | last | .conclusion // "missing"')
+            if [ "$CONCLUSION" != "success" ]; then
+              FAILING="${FAILING}${CONTEXT} (${CONCLUSION}), "
+            fi
+          done <<< "$REQUIRED"
+
+          if [ -n "$FAILING" ]; then
+            echo "::error::Required check(s) not green on master's most recent lint.yml run (${RUN_SHA}): ${FAILING}"
+            if [ -n "${NTFY_TOPIC}" ]; then
+              curl -s \
+                -H "Title: Gold Tracker: required CI check red on master" \
+                -H "Priority: high" \
+                -H "Tags: warning,rotating_light" \
+                -d "Required status check(s) not green on master's most recent lint.yml run (${RUN_SHA}): ${FAILING}Every open PR's own required check is blocked until this is fixed. https://github.com/${GITHUB_REPOSITORY}/actions/runs/${RUN_ID}" \
+                "https://ntfy.sh/${NTFY_TOPIC}" || true
+            fi
+            exit 1
+          fi
+
+          echo "OK: all required checks (${REQUIRED}) are green on master's most recent lint.yml run (${RUN_SHA})."
