@@ -214,6 +214,82 @@ test("runCheck: fresh payload sends no staleness alert (heartbeat is separate --
   assert.equal(result.sent, false);
 });
 
+// AC3 (audit 2026-09-10): the manual-trigger endpoint's response must be a
+// LIVE echo of deadman.mjs's real exported constants, not a hardcoded
+// literal that happens to match today -- otherwise a self-report that
+// echoes a fixed string is exactly instance #14 of the defect class this
+// whole audit exists to catch (a control emitting a plausible value
+// instead of actually verifying anything). Two things are checked, not
+// one: (1) the reported numbers equal the imported constants (below), and
+// (2) those same reported numbers are the ones actually driving
+// classification behavior in the SAME call, not a cosmetic second copy
+// (next test) -- JS `export const` bindings can't be monkey-patched from
+// a test importing the real module, so "would visibly differ if master's
+// changed" is proven by tying the reported value to observed behavior
+// instead of by mutating the constant.
+test("runCheck: response echoes the real threshold constants from deadman.mjs, not a hardcoded copy", async () => {
+  const fetchImpl = async (url) => {
+    if (url.includes("forecast.json")) {
+      return { ok: true, json: async () => ({ predicted_at: isoHoursAgo(0.5), scraped_at: isoHoursAgo(0.5) }) };
+    }
+    return { ok: true };
+  };
+  const env = { NTFY_TOPIC: "test-gold-topic", DEADMAN_STATE: fakeKv() };
+  const result = await runCheck(env, fetchImpl, NOW);
+  assert.deepEqual(result.thresholds, {
+    warnHours: WARN_THRESHOLD_HOURS,
+    escalateHours: ESCALATE_THRESHOLD_HOURS,
+    tanishqWarnHours: TANISHQ_WARN_HOURS,
+    tanishqEscalateHours: TANISHQ_ESCALATE_HOURS,
+    runnerConfirmedOfflineHours: RUNNER_CONFIRMED_OFFLINE_HOURS,
+  });
+});
+
+test("runCheck: the reported warnHours is the actual operative boundary, not just a cosmetic echo", async () => {
+  // Age the payload to exactly the reported warnHours minus a hair (still
+  // "ok"), then exactly at it (must flip to "warn") -- proving the number
+  // in result.thresholds.warnHours is the same number classifyStaleness
+  // actually used to decide result.level in that same call. If
+  // `thresholds` were ever hardcoded independently of the real constant,
+  // this pairing could silently drift while the deepEqual test above still
+  // passed (both sides copy-pasted the same wrong literal).
+  const belowFetch = async (url) => {
+    if (url.includes("forecast.json")) {
+      return {
+        ok: true,
+        json: async () => ({
+          predicted_at: isoHoursAgo(WARN_THRESHOLD_HOURS - 0.01),
+          scraped_at: isoHoursAgo(0.5),
+        }),
+      };
+    }
+    return { ok: true };
+  };
+  const belowResult = await runCheck(
+    { NTFY_TOPIC: "test-gold-topic", DEADMAN_STATE: fakeKv() },
+    belowFetch,
+    NOW,
+  );
+  assert.equal(belowResult.level, "ok");
+  assert.equal(belowResult.thresholds.warnHours, WARN_THRESHOLD_HOURS);
+
+  const atFetch = async (url) => {
+    if (url.includes("forecast.json")) {
+      return {
+        ok: true,
+        json: async () => ({
+          predicted_at: isoHoursAgo(WARN_THRESHOLD_HOURS),
+          scraped_at: isoHoursAgo(0.5),
+        }),
+      };
+    }
+    return { ok: true };
+  };
+  const atResult = await runCheck({ NTFY_TOPIC: "test-gold-topic", DEADMAN_STATE: fakeKv() }, atFetch, NOW);
+  assert.equal(atResult.level, "warn");
+  assert.equal(atResult.thresholds.warnHours, WARN_THRESHOLD_HOURS);
+});
+
 test("runCheck: repeated ESCALATE runs inside the reminder window only alert once", async () => {
   const staleIso = isoHoursAgo(ESCALATE_THRESHOLD_HOURS + 1);
   let ntfyCount = 0;

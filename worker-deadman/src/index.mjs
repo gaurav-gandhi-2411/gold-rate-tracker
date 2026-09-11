@@ -14,6 +14,11 @@ import {
   decideTanishqAction,
   shouldSendHeartbeat,
   buildHeartbeatAlert,
+  WARN_THRESHOLD_HOURS,
+  ESCALATE_THRESHOLD_HOURS,
+  TANISHQ_WARN_HOURS,
+  TANISHQ_ESCALATE_HOURS,
+  RUNNER_CONFIRMED_OFFLINE_HOURS,
 } from "./deadman.mjs";
 
 const KV_STATE_KEY = "deadman:last_state";
@@ -196,6 +201,21 @@ export async function runCheck(env, fetchImpl, nowMs) {
     tanishqAgeHours: tanishqCurrent.ageHours,
     tanishqSent: tanishqSend,
     heartbeatSent,
+    // AC3 (audit 2026-09-10): echoes the constants this exact deployment is
+    // actually running with, not a hardcoded copy of master's current
+    // values -- imported directly from deadman.mjs, so this only matches
+    // master by construction if the deployed bundle is actually built from
+    // master. A stale deploy running an older deadman.mjs would report that
+    // older file's real values here, not master's -- that divergence is the
+    // whole point (see worker-deadman/README.md's deployed-vs-master proof
+    // step). No threshold VALUE changes; purely additive to the response.
+    thresholds: {
+      warnHours: WARN_THRESHOLD_HOURS,
+      escalateHours: ESCALATE_THRESHOLD_HOURS,
+      tanishqWarnHours: TANISHQ_WARN_HOURS,
+      tanishqEscalateHours: TANISHQ_ESCALATE_HOURS,
+      runnerConfirmedOfflineHours: RUNNER_CONFIRMED_OFFLINE_HOURS,
+    },
   };
 }
 
