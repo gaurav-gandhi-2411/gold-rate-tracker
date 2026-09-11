@@ -226,7 +226,8 @@ def _recent_closed_prs(
     """PRs (merged or abandoned) closed within the last window_days, excluding
     bot-pr-sync's reusable `bot/`-prefixed branches (.github/actions/bot-pr-sync
     -- every caller passes a fixed, force-pushed branch name like
-    bot/data-sync) and the PR under test itself.
+    bot/data-sync), `scratch/`-prefixed branches (AG2, audit 2026-09-11 --
+    see below), and the PR under test itself.
 
     Measured against this repo's actual history (2026-09-10, 30-day window):
     745 closed PRs total, ~89% (663, sampled at 447/500) on bot/ branches --
@@ -237,7 +238,54 @@ def _recent_closed_prs(
     minutes of added CI time on the ~2.6/day non-bot PRs that actually pay
     this cost, versus an O(n^2) blowup if paid by every one of the ~25 bot
     PRs/day too. See check_foreign_commits for where exclude_pr is also used
-    to skip this entirely when the PR under test IS itself a bot/ branch."""
+    to skip this entirely when the PR under test IS itself a bot/ branch.
+
+    AG2 (audit 2026-09-11): this same closed-PR comparison (AA2a) has no
+    concept of DIRECTION -- a commit copied INTO a PR under test reads
+    identically to one copied FROM it, since both are "the same patch-id
+    appears on both branches." AF1b's own proof method (scratch/-prefixed
+    branches, deliberately built off a real PR's tip to reconstruct and
+    verify a historical incident, then closed+deleted) triggered exactly
+    this false positive against its own source PR -- 3 flags, one per
+    scratch PR, immediately after closing them (#1561/#1562/#1563 against
+    #1564). Investigated three candidate direction signals before choosing
+    this fix, all found unreliable or expensive to establish cheaply:
+    commit AUTHOR timestamp is preserved by rebase/cherry-pick and is
+    therefore IDENTICAL across both occurrences in exactly this scenario --
+    no signal. Commit COMMITTER timestamp differs (rebase/cherry-pick both
+    stamp a fresh committer-date) but is actively MISLEADING here: the
+    scratch branches' copy was created (committer-stamped) BEFORE the
+    source PR's own commit was rebased to a new SHA, so "earlier
+    committer-date wins" would call the derivative the original and the
+    original the copy -- backwards. "Which branch did this commit first
+    appear on" would need GitHub's push-event/ref history, which isn't
+    reliably or cheaply queryable via a stable API for this purpose.
+    Direction cannot be established cheaply from any of these -- see the
+    PR that introduced this comment for the full writeup.
+
+    Narrowed the comparison instead, following the EXACT precedent already
+    set by the bot/ exclusion above: PRs on a `scratch/`-prefixed branch are
+    -- by this repo's own established convention, first used by this same
+    AA2a work's own proof PRs (#1526-#1530) and reused identically by AF1b
+    (#1561-#1563) -- deliberately disposable reconstructions/proofs of
+    something that already exists elsewhere (an open PR, a historical
+    incident, or a hypothesis under test), never a PR someone intends to
+    land. Measured against this repo's real 30-day closed-PR history
+    (2026-09-11): 8 of 785 closed PRs (1.0%) are scratch/-prefixed -- all 8
+    confirmed audit-proof artifacts (5 from AA2a itself, 3 from AF1b), zero
+    genuine feature/fix work. Excluding them removes 100% of the currently-
+    observed false-positive instances (3/3) with zero measured true-positive
+    cost, since the convention has never (until this session) been used for
+    anything but throwaway proof work.
+
+    Residual gap this reopens, stated plainly: a PR carrying genuinely
+    dangerous, should-be-caught content, deliberately or carelessly named
+    with a `scratch/` prefix, would now slip past this specific comparison.
+    Narrower and more acceptable than excluding all closed-unmerged PRs
+    (would hide genuinely abandoned/rejected content resurfacing -- exactly
+    what this comparison exists to catch) or all branch-deleted closed PRs
+    (would gut most of this comparison's real coverage, since deleting a
+    branch after closing/merging is routine hygiene, not a leak signal)."""
     cutoff = (datetime.now(UTC) - timedelta(days=window_days)).strftime("%Y-%m-%d")
     prs = _gh_json(
         [
@@ -255,7 +303,13 @@ def _recent_closed_prs(
             "1000",
         ]
     )
-    return [p for p in prs if p["number"] != exclude_pr and not p["headRefName"].startswith("bot/")]
+    return [
+        p
+        for p in prs
+        if p["number"] != exclude_pr
+        and not p["headRefName"].startswith("bot/")
+        and not p["headRefName"].startswith("scratch/")
+    ]
 
 
 def check_foreign_commits(pr_number: int, repo: str, base_ref: str) -> list[str]:
