@@ -1,0 +1,103 @@
+name: Docs Freshness Refresh
+
+# AF2 (production audit, 2026-09-10/11): re-applies #1539's intent (keep
+# README.md/docs/DIRECTION_SIGNAL_STATUS.md's injected markers fresh at the
+# same cadence the underlying data actually changes, instead of only when a
+# human PR happens to trip lint.yml's docs-freshness check) WITHOUT #1539's
+# mistake (widening bot-pr-sync's shared, security-shaped data-only
+# allowlist -- which blocked production data sync for 7+ hours when that
+# widening interacted badly with a routine content change, see #1549's
+# revert). Three options were considered (see PR body for the full
+# writeup):
+#   (A) extend bot-pr-sync's global allowlist to also permit these two
+#       paths -- rejected: widens a boundary shared by all 8 bot-pr-sync
+#       callers to accommodate 3 of them, and is the literal mechanism that
+#       already broke production twice (#1353, #1539).
+#   (B) give bot-pr-sync a per-caller allowlist override -- narrower blast
+#       radius than (A), but adds real complexity to shared, already-
+#       fragile-twice infrastructure that all 8 callers (including
+#       time-critical ones) depend on, purely to solve a freshness problem
+#       that has no such time pressure.
+#   (C) this file: an entirely independent path to master that never
+#       touches bot-pr-sync or its allowlist at all. Chosen.
+#
+# This workflow triggers on completion of the three workflows that change
+# any data/*.json field README/docs' <!--METRIC:...--> markers read from,
+# refreshes the markers, and opens a normal PR with GitHub's native
+# auto-merge (NOT bot-pr-sync's custom polling-merge) -- safe here
+# specifically because, unlike every bot-pr-sync caller, nothing downstream
+# blocks on this PR landing quickly. bot-pr-sync's own header comment
+# documents that GitHub's auto-merge evaluator did not reliably re-trigger
+# off check-suites created via an explicit `workflow_dispatch` nudge; this
+# workflow pushes via a PAT (not GITHUB_TOKEN), which -- per the OTHER
+# established finding in that same file -- makes the PR's own
+# `pull_request` event fire lint.yml naturally, a different, normal trigger
+# path the documented flakiness was never shown to affect. If auto-merge
+# still doesn't complete for any reason, the failure mode is simply "docs
+# stay stale a little longer" (the exact, already-tolerated pre-#1539
+# status quo) -- self-healing on the next trigger, never a blocked pipeline.
+on:
+  workflow_run:
+    workflows: ["Check Gold Price", "Weekly Backtest", "Direction Signal Eval"]
+    types: [completed]
+
+permissions:
+  contents: write
+  pull-requests: write
+
+concurrency:
+  group: docs-refresh
+  cancel-in-progress: false
+
+jobs:
+  refresh:
+    if: github.event.workflow_run.conclusion == 'success'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Checkout master
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: master
+
+      - name: Set up Python
+        uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: "3.12"
+
+      - name: Refresh injected doc metrics
+        run: python scripts/inject_metrics.py
+
+      - name: Commit, open PR, and enable auto-merge if anything changed
+        env:
+          GH_TOKEN: ${{ secrets.CI_MERGE_PAT }}
+        run: |
+          set -e
+          git config user.name "gold-rate-bot"
+          git config user.email "actions@users.noreply.github.com"
+          git add README.md docs/DIRECTION_SIGNAL_STATUS.md
+          if git diff --staged --quiet; then
+            echo "No doc drift to refresh."
+            exit 0
+          fi
+
+          git remote set-url origin "https://x-access-token:${GH_TOKEN}@github.com/${GITHUB_REPOSITORY}.git"
+          BRANCH="bot/docs-refresh"
+          git commit -m "chore: refresh injected doc metrics [skip ci]"
+          # Same convention as bot-pr-sync/action.yml: a reusable, force-pushed
+          # bot branch -- no local branch tracking needed, HEAD is pushed
+          # directly to the target ref.
+          git push --force origin "HEAD:refs/heads/${BRANCH}"
+
+          # Reuse an existing open PR from this branch if one is already
+          # mid-flight (e.g. a prior trigger's auto-merge hasn't landed yet)
+          # rather than creating a duplicate.
+          EXISTING_PR=$(gh pr list --repo "${GITHUB_REPOSITORY}" --head "$BRANCH" --state open --json number --jq '.[0].number' || echo "")
+          if [ -z "$EXISTING_PR" ]; then
+            gh pr create --repo "${GITHUB_REPOSITORY}" --base master --head "$BRANCH" \
+              --title "chore: refresh injected doc metrics" \
+              --body "Automated docs-freshness refresh -- triggered by ${{ github.event.workflow_run.name }} run ${{ github.event.workflow_run.id }}. Only README.md/docs/DIRECTION_SIGNAL_STATUS.md's already-injected <!--METRIC:...--> values change; no wording is ever touched by this workflow."
+            EXISTING_PR=$(gh pr list --repo "${GITHUB_REPOSITORY}" --head "$BRANCH" --state open --json number --jq '.[0].number')
+          fi
+          gh pr merge "$EXISTING_PR" --repo "${GITHUB_REPOSITORY}" --auto --squash
