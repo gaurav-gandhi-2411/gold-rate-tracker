@@ -2,16 +2,41 @@ name: Check Gold Price
 
 on:
   schedule:
-    # Every 3 hours, at minute 7 (UTC), not minute 0. GitHub Actions documents
-    # that scheduled workflows can be delayed or dropped during periods of
-    # high load, and "high load times include the start of every hour"
-    # (https://docs.github.com/actions/using-workflows/events-that-trigger-workflows#schedule).
-    # This cron fired exactly on the hour; offsetting by 7 minutes moves it
-    # off that documented peak without changing the cadence. Fires at
-    # ~05:37, 08:37, 11:37, 14:37, 17:37, 20:37, 23:37, 02:37 IST (8 runs/day).
-    # T8 morning window 08-14 IST and evening window 18-22 IST each contain
-    # at least one 3h-cadence slot, so twice-daily digests are unaffected.
-    - cron: "7 */3 * * *"
+    # Every 3 hours, at minute 37, phase-shifted to start at hour 1 (UTC),
+    # not minute 7 / hour 0. #1222 (the original minute-of-hour dodge, :00 ->
+    # :07) addressed sub-hour queueing at the top of the hour; this is a
+    # DIFFERENT claim, addressed here for the first time: an hour-of-day
+    # contention specific to the 06:00 UTC slot, not sub-hour timing within
+    # it. AD1 (audit 2026-09-10): full available run history (736 scheduled
+    # runs, back to 2026-05-17) shows the OLD 06:07 UTC slot delayed
+    # (median ~66min, unremarkable) until ~2026-08-30, then abruptly stopped
+    # firing as a `schedule` event AT ALL for 9 straight days (2026-09-02
+    # through 2026-09-10) -- silently covered by the self-triggered catch-up
+    # dispatch (see "Detect missed cadence" step below) every single day,
+    # each time producing one of the largest gaps in data/run_cadence_log.jsonl
+    # (e.g. 2026-09-07 04:22->12:18, a 7.9h gap). Two independent, separately-
+    # owned workflows sharing zero code with this one or each other
+    # (shadow-fusion.yml here, gg-portfolio's chat-canary.yml) show the same
+    # window (their own 06:15/06:00 UTC slots) landing ~255-335min late,
+    # essentially every day, continuously since 2026-08-30 (11 days at time
+    # of writing) -- not a 4-day blip, not sub-hour jitter. This shifts the
+    # whole 8-slot phase by +90min (hour offset 0->1, minute 7->37) so the
+    # slot that used to sit at 06:07 UTC now sits at 07:37 UTC, clear of the
+    # observed window; IST-window coverage is preserved (see below). Whether
+    # this actually helps is a hypothesis, not a fact -- see the PR that
+    # introduced this comment for the exact re-measurement to run after 7
+    # days of data.
+    #
+    # GitHub Actions separately documents that scheduled workflows can be
+    # delayed or dropped during periods of high load, and "high load times
+    # include the start of every hour"
+    # (https://docs.github.com/actions/using-workflows/events-that-trigger-workflows#schedule)
+    # -- minute 37 keeps clear of that too, same reasoning #1222 established.
+    # Fires at ~07:07, 10:07, 13:07, 16:07, 19:07, 22:07, 01:07, 04:07 IST
+    # (8 runs/day). T8 morning window 08-14 IST and evening window 18-22 IST
+    # each still contain at least one 3h-cadence slot (10:07/13:07 morning,
+    # 19:07 evening), so twice-daily digests are unaffected.
+    - cron: "37 1-22/3 * * *"
   workflow_dispatch: # allows manual run from the Actions tab
     inputs:
       catchup:
