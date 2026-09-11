@@ -42,6 +42,35 @@ name: CI Health Check
 # active incident cost far less than the 34 minutes this exact gap already
 # cost silently -- the same tradeoff already made throughout this repo's
 # alert catalog (e.g. T9_ESCALATE, worker-deadman's REMINDER_INTERVAL_HOURS).
+#
+# BUG FOUND LIVE, FIXED SAME DAY (AH5, production audit, 2026-09-11): this
+# workflow's very first real run (manually dispatched ~3h48m after merge,
+# since the schedule trigger had not yet fired) failed on every single
+# invocation -- `gh api .../branches/master/protection` returns 403
+# "Resource not accessible by integration" for the default `github.token`.
+# This is not a `permissions:` block gap fixable in this file: branch
+# protection reads require the calling token to have admin rights on the
+# repo, which the ephemeral Actions GITHUB_TOKEN structurally cannot carry
+# regardless of granted scopes -- the same reason bot-pr-sync already needed
+# `CI_MERGE_PAT`, a real PAT, for its own privileged operations. Switched
+# this step to CI_MERGE_PAT accordingly.
+#
+# Worse than the bare 403: this exact rule-98a "fail closed on unreadable
+# state" guard did NOT fail closed. `REQUIRED=$(gh api ... --jq '...'
+# 2>/dev/null || echo "")` was written assuming a failed `gh api` call would
+# trip the `|| echo ""` fallback -- it did not. Verified live: gh printed
+# the 403's raw JSON error body to stdout past the --jq filter, so REQUIRED
+# ended up containing that literal error text as a single "context", the
+# `-z "$REQUIRED"` closed-fail check never fired, and the script proceeded
+# to treat the error JSON as a check name -- producing a real ntfy push to
+# production with a garbled, misleading message ("Required check(s) not
+# green ... {"message":"Resource not accessible by integration"...}
+# (missing)") instead of the intended "could not verify, failing closed"
+# message. A control built specifically to apply rule 98a to CI health had
+# its own rule-98a gap on its first real invocation. Fixed by capturing
+# `gh api`'s own exit status explicitly (outside any `$(...) || fallback`
+# construction, which this incident proved does not reliably catch a
+# non-2xx response through a `--jq` filter) before ever parsing its output.
 on:
   schedule:
     - cron: "17 */1 * * *" # hourly, offset from the top of the hour -- same
@@ -55,7 +84,11 @@ jobs:
     steps:
       - name: Check required status checks on master's most recent lint.yml run
         env:
-          GH_TOKEN: ${{ github.token }}
+          # Branch protection reads require repo-admin rights, which the
+          # ephemeral GITHUB_TOKEN cannot hold regardless of the
+          # `permissions:` block -- see the module comment above. CI_MERGE_PAT
+          # is the same PAT bot-pr-sync already relies on for this reason.
+          GH_TOKEN: ${{ secrets.CI_MERGE_PAT }}
           NTFY_TOPIC: ${{ secrets.NTFY_TOPIC }}
         run: |
           set -e
@@ -63,10 +96,28 @@ jobs:
           # Read the required-contexts list live from branch protection --
           # never a hardcoded copy of "lint, pwa-js" that could silently
           # drift from whatever branch protection actually requires later.
-          REQUIRED=$(gh api "repos/${GITHUB_REPOSITORY}/branches/master/protection" \
-            --jq '.required_status_checks.contexts[]' 2>/dev/null || echo "")
+          #
+          # The gh api call's own success/failure is captured explicitly,
+          # BEFORE any --jq parsing -- proven necessary live (see module
+          # comment above): a `$(gh api ... --jq '...' 2>/dev/null || echo
+          # "")` one-liner did not reliably fall through to `echo ""` on a
+          # non-2xx response; gh printed the raw error body past the --jq
+          # filter instead, and it silently became the "required contexts"
+          # value. `set +e`/`set -e` bracket this specific call so its exit
+          # code can be checked on the next line rather than either killing
+          # the script immediately (losing the chance to emit a clear
+          # message) or being swallowed by a same-line `||`.
+          set +e
+          PROTECTION_RESPONSE=$(gh api "repos/${GITHUB_REPOSITORY}/branches/master/protection" 2>&1)
+          PROTECTION_STATUS=$?
+          set -e
+          if [ "$PROTECTION_STATUS" -ne 0 ]; then
+            echo "::error::Could not read master's required status checks from branch protection (gh api exit ${PROTECTION_STATUS}) -- failing closed rather than silently skipping this run. Response: ${PROTECTION_RESPONSE}"
+            exit 1
+          fi
+          REQUIRED=$(echo "$PROTECTION_RESPONSE" | jq -r '.required_status_checks.contexts[]?' 2>/dev/null)
           if [ -z "$REQUIRED" ]; then
-            echo "::error::Could not read master's required status checks from branch protection -- failing closed rather than silently skipping this run."
+            echo "::error::Branch protection response had no required_status_checks.contexts -- failing closed rather than silently skipping this run. Response: ${PROTECTION_RESPONSE}"
             exit 1
           fi
 
