@@ -184,8 +184,12 @@ jobs:
           # commit's own check-runs, which are frequently empty ([skip ci]
           # bot commits never trigger lint.yml at all; see the module
           # comment above for how that first design was caught and fixed).
-          RUN_INFO=$(gh api "repos/${GITHUB_REPOSITORY}/actions/workflows/lint.yml/runs?branch=master&per_page=1" \
-            --jq '.workflow_runs[0] | {id, head_sha}')
+          # TEMPORARY TEST OVERRIDE -- AI3 behavioral proof, reverted before merge.
+          # Points at a real historical run (34555988607, 2026-09-11T02:47:43Z) where
+          # the required `lint` job itself was genuinely red (the AG3 incident window),
+          # to prove the detection+paging logic against real data without breaking
+          # master to manufacture a fresh red check.
+          RUN_INFO=$(gh api "repos/${GITHUB_REPOSITORY}/actions/runs/34555988607" --jq '{id, head_sha}')
           RUN_ID=$(echo "$RUN_INFO" | jq -r '.id')
           RUN_SHA=$(echo "$RUN_INFO" | jq -r '.head_sha')
           if [ -z "$RUN_ID" ] || [ "$RUN_ID" = "null" ]; then
