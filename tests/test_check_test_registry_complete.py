@@ -115,23 +115,18 @@ def test_missing_workflows_dir_raises(tmp_path: Path) -> None:
         mod.read_all_workflow_text(tmp_path / ".github" / "workflows")
 
 
-def test_real_repo_finds_exactly_the_two_known_gaps() -> None:
-    # Integration-style: run against THIS repo's real state. Pinned to the
-    # two gaps AJ2 actually found (test_tier_degradation_visible.js,
-    # test_vol_regime.js) -- if this test starts failing because the gap
-    # count changed, that's real news (either newly fixed, or a new gap
-    # appeared) and should be investigated, not silenced.
+def test_real_repo_has_no_orphaned_js_test_files() -> None:
+    # Integration-style: run against THIS repo's real state. Updated by this
+    # same PR (fix/wire-registry-check-into-lint, AJ2b) once
+    # test_tier_degradation_visible.js and test_vol_regime.js were added to
+    # lint.yml's explicit list -- was pinned to that 2-file gap set in the
+    # prior PR (feat/test-registry-completeness-check) before the fix
+    # landed. If this starts failing again, a new orphaned test file has
+    # appeared -- investigate before updating this assertion.
     repo_root = Path(__file__).resolve().parent.parent
     files = mod.find_all_js_test_files(repo_root)
     text = mod.read_all_workflow_text(repo_root / ".github" / "workflows")
     unreferenced = mod.find_unreferenced_test_files(files, text, mod.KNOWN_EXCLUSIONS)
-    unreferenced_posix = {p.as_posix() for p in unreferenced}
-    assert unreferenced_posix == {
-        "tests/test_tier_degradation_visible.js",
-        "tests/test_vol_regime.js",
-    }, (
-        "If this fails because the set is now EMPTY, the lint.yml fix landed -- "
-        "update this test to assert an empty set. If it fails with a DIFFERENT "
-        "set, a new orphaned test file appeared -- investigate before updating "
-        "this assertion."
+    assert unreferenced == [], (
+        f"Newly orphaned JS test file(s): {[p.as_posix() for p in unreferenced]}"
     )
