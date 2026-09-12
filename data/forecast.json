@@ -1,5 +1,5 @@
 {
-  "predicted_at": "2026-09-12T18:40:51.524168+00:00",
+  "predicted_at": "2026-09-12T21:36:14.934452+00:00",
   "target_window": "5d",
   "headline": {
     "method": "naive_flat_hold",
@@ -56,7 +56,7 @@
     "direction_consensus": 1.0
   },
   "driver_context": {
-    "computed_at": "2026-09-12T18:40:51.528633+00:00",
+    "computed_at": "2026-09-12T21:36:14.937885+00:00",
     "macro_staleness_days": 0.0,
     "macro_fresh": true,
     "premium_threshold_pct": 15.0,
@@ -69,10 +69,10 @@
         "delta_pct_gold_usd": -1.446,
         "delta_pct_usdinr": 1.261,
         "delta_pct_premium": -1.736,
-        "total_move_rs_per_g": -35.0,
-        "gold_usd_contrib_rs_per_g": -26.4,
-        "usdinr_contrib_rs_per_g": 23.0,
-        "premium_contrib_rs_per_g": -31.6,
+        "total_move_rs_per_g": -85.0,
+        "gold_usd_contrib_rs_per_g": -64.0,
+        "usdinr_contrib_rs_per_g": 55.8,
+        "premium_contrib_rs_per_g": -76.8,
         "premium_share_pct": 90.4,
         "attribution_valid": false,
         "attribution_valid_reason": "premium share 90.4% exceeds 15% threshold"
@@ -85,10 +85,10 @@
         "delta_pct_gold_usd": -0.973,
         "delta_pct_usdinr": 0.329,
         "delta_pct_premium": -0.326,
-        "total_move_rs_per_g": 40.0,
-        "gold_usd_contrib_rs_per_g": 40.1,
-        "usdinr_contrib_rs_per_g": -13.6,
-        "premium_contrib_rs_per_g": 13.5,
+        "total_move_rs_per_g": 140.0,
+        "gold_usd_contrib_rs_per_g": 140.4,
+        "usdinr_contrib_rs_per_g": -47.5,
+        "premium_contrib_rs_per_g": 47.1,
         "premium_share_pct": 33.6,
         "attribution_valid": false,
         "attribution_valid_reason": "premium share 33.6% exceeds 15% threshold"
@@ -101,9 +101,9 @@
       "gold_usd_30d_pct_change": -0.97
     }
   },
-  "real_readings_count": 668,
+  "real_readings_count": 669,
   "current_22k": 14200,
-  "scraped_at": "2026-09-12T15:28:54.699Z",
+  "scraped_at": "2026-09-12T20:30:53.829Z",
   "price_source": "tanishq_scrape",
   "est_low": null,
   "est_high": null,
