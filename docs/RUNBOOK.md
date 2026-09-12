@@ -391,6 +391,75 @@ targets 3h) and is left alone here.
 
 ---
 
+## IBJA-calibrated band coverage — trajectory and an unresolved banner-copy gap (AD3, audit 2026-09-10)
+
+`data/calibration_band_coverage.json` re-scores the actual `est_low`/
+`est_high` band shown on the IBJA-calibrated tier against realized prices
+(distinct from `data/coverage_metrics.json`, which scores the *other*
+displayed band). Full trajectory since weekly monitoring began:
+
+| Date | n | Coverage | Wilson 95% CI | Resolvable vs. 80%? |
+|---|---|---|---|---|
+| 2026-08-28 (docstring, one-time, pre-monitoring) | 65 | 83.1% | not computed | — |
+| 2026-09-03 (#1343) | 72 | 72.2% | [61.0%, 81.2%] | No — contains 80% |
+| 2026-09-06 (#1459) | 74 | 68.9% | [57.7%, 78.3%] | **Yes — EXCLUDES 80%** |
+| 2026-09-10 (this audit, re-run `ml.calibration --score-coverage`) | 77 | 71.4% | [60.5%, 80.3%] | No — contains 80% (barely) |
+
+**Not three consecutive declining readings** (72.2% → 68.9% → 71.4% ticked
+back up on the most recent point) — reads as noise around a level
+persistently below the 80% nominal target, not a monotonic drift. But the
+2026-09-06 reading was **resolvably below nominal** (its CI's upper bound,
+78.3%, sat entirely under 80%) for the four days it was the latest
+committed value — and because of the docs-freshness gap this same audit
+found and fixed in #1539, that resolvably-false reading never even reached
+README, let alone anything user-facing. It was live and true internally
+with nobody able to see it externally.
+
+**Current point estimate (71.4%, n=77) does not yet resolve the claim
+false — but the margin is thin.** Holding the point estimate at 71.4% and
+solving for the Wilson-CI crossover: at **n=84** the upper bound drops to
+79.99%, first excluding 80%. The file has gained roughly 2-3 observations
+per accumulation cycle recently (72→74→77 across the last two weekly
+scores) — at that rate, n=84 is roughly **7-10 days out** (~2026-09-17 to
+09-20), assuming the point estimate holds near its current level. This is
+not a prediction that it *will* resolve false — the point estimate moved
+up between the last two readings — only that the margin for it staying
+"not yet resolvable" is narrow enough to be worth watching weekly, not
+assumed stable.
+
+**Separate, more structural finding, not previously documented:** the
+on-page claim users actually see (`i18n.js`'s `calibrationConfidenceAppend`,
+rendered in `app.js`'s `renderStaleBanner` whenever `price_source ===
+"ibja_calibrated"`) reads *"the real price lands within about ₹X/gram of
+this estimate about {coverage}% of the time."* That `{coverage}` value is
+`forecast.nominal_coverage` — traced to `ml.calibration.NOMINAL_COVERAGE_PCT`
+(hardcoded `80`) via `ml/inference.py`. **It is always the design target,
+never the measured empirical coverage above.** `calibration_band_coverage.json`
+is never read by `app.js`, `i18n.js`, or `ml/inference.py` at all — confirmed
+by a repo-wide grep, zero references outside this file and README's own
+injected marker. This means: even on 2026-09-06, when the measured
+coverage was statistically confirmed below nominal, the live page would
+still have asserted "about 80% of the time" to users making buy/wait
+decisions — the on-page claim has no mechanism by which it *could* ever
+reflect a bad measured reading, resolvable or not. This is distinct from
+(and more structural than) any single stale-number instance: it isn't that
+a number went stale, it's that the two numbers were never connected.
+
+**Not fixed this session — described, per the audit brief's own
+instruction not to implement without a STOP.** This is `UI copy, claim
+wording, displayed numbers` in the STOP-AND-ASK sense: any fix requires
+a product decision about what the banner should say when the two numbers
+disagree (omit the number? show both? only assert it when
+`resolvable_at_n` is true AND coverage >= nominal, falling back to the
+existing "not yet confirmed" framing otherwise, mirroring
+`calibrationConfidenceAppend`'s own sibling copy elsewhere on the page?),
+plus a data-plumbing change (the client currently has no path to
+`calibration_band_coverage.json` at all — it would need to ship inside
+`forecast.json` or be fetched separately). Recommend GG decide the framing
+before any implementation is attempted.
+
+---
+
 ## Manual scraper re-run
 
 To re-scrape outside the 6-hour schedule (e.g. after fixing a broken selector):
