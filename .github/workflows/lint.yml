@@ -53,6 +53,15 @@ jobs:
           pytest \
             -m "not integration" \
             tests/ -v
+      - name: Check every JS test file is referenced by some workflow
+        # AJ2 (production audit continuation, 2026-09-11/12): mechanical
+        # version of the sweep that found test_tier_degradation_visible.js
+        # and test_vol_regime.js silently never running in CI for 7-8 days.
+        # Fails closed on any file present on disk but referenced by no
+        # workflow and not in the script's own KNOWN_EXCLUSIONS -- see the
+        # script's own module docstring for what "referenced" means and its
+        # stated limitations.
+        run: python scripts/check_test_registry_complete.py
 
   # PWA pure-function JS tests (app.js logic: comparisons, dedup, good-price,
   # scrape parsing, stale-banner, trend). These existed under tests/*.js but ran
@@ -60,7 +69,20 @@ jobs:
   # This job closes that gap so app.js logic is gated on every push/PR.
   # Dep-free (node builtins + inlined functions); no npm install needed.
   # test_stale_banner_headless.js is intentionally excluded — it needs Playwright
-  # (imports scraper/node_modules/playwright); tracked as a follow-up.
+  # (imports scraper/node_modules/playwright); tracked as a follow-up. AJ2
+  # (production audit, 2026-09-11/12): it currently has one failing assertion
+  # when run manually (a stale "today" expectation vs. the app's current
+  # weekday-named copy) -- see scripts/check_test_registry_complete.py's
+  # KNOWN_EXCLUSIONS entry for this file and docs/SESSION_AUDIT_2026-08.md.
+  #
+  # AJ2 (2026-09-11/12): test_tier_degradation_visible.js and
+  # test_vol_regime.js added below -- both existed and passed locally since
+  # PR #1358/#1340 respectively, but neither was ever added to this explicit
+  # list, so neither ever ran in CI (7-8 days, silently). Found by
+  # scripts/check_test_registry_complete.py (new step at the bottom of the
+  # `lint` job, below) sweeping every JS test file against what this file
+  # actually references -- that script now gates any FUTURE instance of this
+  # exact gap.
   pwa-js:
     runs-on: ubuntu-latest
     steps:
@@ -78,7 +100,9 @@ jobs:
             tests/test_good_price.js \
             tests/test_scrape.js \
             tests/test_stale_banner.js \
-            tests/test_trend.js
+            tests/test_tier_degradation_visible.js \
+            tests/test_trend.js \
+            tests/test_vol_regime.js
       - name: Run dead-man's-switch Worker tests
         # Code-quality gate only -- this does NOT wire the switch's own
         # operation into GitHub Actions. It runs entirely on Cloudflare
