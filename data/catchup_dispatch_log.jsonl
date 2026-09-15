@@ -10,3 +10,4 @@
 {"timestamp": "2026-09-14T06:57:05Z", "gap_hours": 6, "cause": "dropped", "last_schedule_run_age_hours": 6.58}
 {"timestamp": "2026-09-14T14:22:44Z", "gap_hours": 7, "cause": "dropped", "last_schedule_run_age_hours": 7.43}
 {"timestamp": "2026-09-14T20:27:46Z", "gap_hours": 6, "cause": "dropped", "last_schedule_run_age_hours": 6.09}
+{"timestamp": "2026-09-15T00:51:33Z", "gap_hours": 4, "cause": "dropped", "last_schedule_run_age_hours": 4.4}

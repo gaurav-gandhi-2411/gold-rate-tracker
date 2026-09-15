@@ -1,11 +1,11 @@
 {
-  "predicted_at": "2026-09-14T20:28:06.766019+00:00",
+  "predicted_at": "2026-09-15T00:51:50.384022+00:00",
   "target_window": "5d",
   "headline": {
     "method": "naive_flat_hold",
-    "predicted_22k": 14055,
-    "lower": 13802,
-    "upper": 14308,
+    "predicted_22k": 14123,
+    "lower": 13870,
+    "upper": 14376,
     "conformal_pi_half": 252.6,
     "naive_mae_recent_30": 139.7,
     "vol_context": {
@@ -40,7 +40,7 @@
       14226.6,
       14261.79,
       14260.77,
-      14286.45
+      14286.44
     ],
     "horizon_p90": [
       14677.64,
@@ -56,7 +56,7 @@
     "direction_consensus": 1.0
   },
   "driver_context": {
-    "computed_at": "2026-09-14T20:28:06.770466+00:00",
+    "computed_at": "2026-09-15T00:51:50.413192+00:00",
     "macro_staleness_days": 0.0,
     "macro_fresh": true,
     "premium_threshold_pct": 15.0,
@@ -102,24 +102,24 @@
     }
   },
   "real_readings_count": 674,
-  "current_22k": 14055,
+  "current_22k": 14123,
   "scraped_at": "2026-09-14T14:38:07.244Z",
-  "price_source": "tanishq_scrape",
-  "est_low": null,
-  "est_high": null,
-  "ibja_asof": null,
+  "price_source": "ibja_calibrated",
+  "est_low": 14046,
+  "est_high": 14200,
+  "ibja_asof": "2026-09-11T11:30:00+00:00",
   "fusion_sources": null,
-  "band_method": null,
-  "nominal_coverage": null,
-  "freshness_stratum": null,
-  "residual_quantile_source": null,
-  "band_half_width": null,
+  "band_method": "empirical_quantile",
+  "nominal_coverage": 80,
+  "freshness_stratum": "carry_forward",
+  "residual_quantile_source": "calibration.residual_abs_quantiles[80] (in_sample, fit_date=2026-09-11, n=85)",
+  "band_half_width": 76.63783017688547,
   "band_unavailable_reason": null,
   "model_fallback": false,
-  "predicted_22k": 14055,
-  "lower": 13802,
-  "upper": 14308,
-  "target_time": "2026-09-15T00:00:00+00:00",
+  "predicted_22k": 14123,
+  "lower": 13870,
+  "upper": 14376,
+  "target_time": "2026-09-16T00:00:00+00:00",
   "model_status": "naive_headline",
   "model_version": "naive_flat_hold",
   "warmup": false
