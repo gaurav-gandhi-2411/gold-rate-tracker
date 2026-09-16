@@ -1,9 +1,9 @@
 {
   "window_days": 7,
   "n": 35,
-  "median_gap_hours": 4.673611111111111,
-  "p90_gap_hours": 6.649944444444444,
-  "as_of": "2026-09-15T22:26:02+00:00",
+  "median_gap_hours": 4.66,
+  "p90_gap_hours": 6.5495,
+  "as_of": "2026-09-16T00:45:27+00:00",
   "schema_version": 1,
-  "generated_at_utc": "2026-09-16T00:45:26.338178+00:00"
+  "generated_at_utc": "2026-09-16T06:39:15.950645+00:00"
 }
