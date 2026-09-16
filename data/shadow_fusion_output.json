@@ -1,12 +1,12 @@
 {
-  "capture_utc": "2026-09-15T21:16:42Z",
-  "as_of_date": "2026-09-15",
+  "capture_utc": "2026-09-16T04:44:32Z",
+  "as_of_date": "2026-09-16",
   "national_failures": {},
   "kalyan_failures": {},
   "snapshot_rows_persisted": 7,
   "national_benchmark": {
-    "value": 14034.583333333334,
-    "band_half_width": 140.34583333333333,
+    "value": 14041.875,
+    "band_half_width": 140.41875000000002,
     "disagreement": false,
     "sources_used": [
       "ibja",
@@ -21,32 +21,32 @@
   },
   "cities": {
     "Bangalore": {
-      "value": 14239.999999999998,
-      "band_half_width": 140.34583333333333,
+      "value": 14240.000000000002,
+      "band_half_width": 140.41875000000002,
       "coverage": "kalyan_anchored",
       "attribution": "National retail consensus, Kalyan-anchored (Kalyan Jewellers \u2014 BANGALORE board rate)",
-      "markup": 1.0146364634979068
+      "markup": 1.0141095829438733
     },
     "Chennai": {
-      "value": 14239.999999999998,
-      "band_half_width": 140.34583333333333,
+      "value": 14240.000000000002,
+      "band_half_width": 140.41875000000002,
       "coverage": "kalyan_anchored",
       "attribution": "National retail consensus, Kalyan-anchored (Kalyan Jewellers \u2014 CHENNAI board rate)",
-      "markup": 1.0146364634979068
+      "markup": 1.0141095829438733
     },
     "Hyderabad": {
-      "value": 14239.999999999998,
-      "band_half_width": 140.34583333333333,
+      "value": 14240.000000000002,
+      "band_half_width": 140.41875000000002,
       "coverage": "kalyan_anchored",
       "attribution": "National retail consensus, Kalyan-anchored (Kalyan Jewellers \u2014 HYDERABAD board rate)",
-      "markup": 1.0146364634979068
+      "markup": 1.0141095829438733
     },
     "Ernakulam": {
-      "value": 14239.999999999998,
-      "band_half_width": 140.34583333333333,
+      "value": 14240.000000000002,
+      "band_half_width": 140.41875000000002,
       "coverage": "kalyan_anchored",
       "attribution": "National retail consensus, Kalyan-anchored (Kalyan Jewellers \u2014 ERNAKULAM board rate)",
-      "markup": 1.0146364634979068
+      "markup": 1.0141095829438733
     }
   }
 }
