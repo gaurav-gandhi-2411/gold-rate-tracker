@@ -1,12 +1,12 @@
 {
-  "capture_utc": "2026-09-17T21:18:18Z",
-  "as_of_date": "2026-09-17",
+  "capture_utc": "2026-09-18T04:37:14Z",
+  "as_of_date": "2026-09-18",
   "national_failures": {},
   "kalyan_failures": {},
   "snapshot_rows_persisted": 7,
   "national_benchmark": {
-    "value": 14053.75,
-    "band_half_width": 140.5375,
+    "value": 14096.041666666668,
+    "band_half_width": 140.96041666666667,
     "disagreement": false,
     "sources_used": [
       "ibja",
@@ -21,32 +21,32 @@
   },
   "cities": {
     "Bangalore": {
-      "value": 14240.0,
-      "band_half_width": 140.5375,
+      "value": 14239.999999999998,
+      "band_half_width": 140.96041666666667,
       "coverage": "kalyan_anchored",
       "attribution": "National retail consensus, Kalyan-anchored (Kalyan Jewellers \u2014 BANGALORE board rate)",
-      "markup": 1.013252690563017
+      "markup": 1.0102126779089873
     },
     "Chennai": {
-      "value": 14240.0,
-      "band_half_width": 140.5375,
+      "value": 14239.999999999998,
+      "band_half_width": 140.96041666666667,
       "coverage": "kalyan_anchored",
       "attribution": "National retail consensus, Kalyan-anchored (Kalyan Jewellers \u2014 CHENNAI board rate)",
-      "markup": 1.013252690563017
+      "markup": 1.0102126779089873
     },
     "Hyderabad": {
-      "value": 14240.0,
-      "band_half_width": 140.5375,
+      "value": 14239.999999999998,
+      "band_half_width": 140.96041666666667,
       "coverage": "kalyan_anchored",
       "attribution": "National retail consensus, Kalyan-anchored (Kalyan Jewellers \u2014 HYDERABAD board rate)",
-      "markup": 1.013252690563017
+      "markup": 1.0102126779089873
     },
     "Ernakulam": {
-      "value": 14240.0,
-      "band_half_width": 140.5375,
+      "value": 14239.999999999998,
+      "band_half_width": 140.96041666666667,
       "coverage": "kalyan_anchored",
       "attribution": "National retail consensus, Kalyan-anchored (Kalyan Jewellers \u2014 ERNAKULAM board rate)",
-      "markup": 1.013252690563017
+      "markup": 1.0102126779089873
     }
   }
 }
