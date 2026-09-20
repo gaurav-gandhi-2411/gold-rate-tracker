@@ -8,6 +8,10 @@ manifest copy pass all landed in the same change as this status flip.
 Date: 2026-07-18
 Supersedes/relates: ADR 016 (scraper hardening — proxy/stealth already rejected here),
 ADR 021 (H5 IBJA-calibrated fallback — the mechanism this ADR promotes to primary).
+Superseded in part by: [ADR 029](029-ibja-only-on-runner-death.md) (2026-09-11) — this ADR's
+premise that Tanishq access loss is a *transient* condition the product degrades through no
+longer holds for the case where the self-hosted runner itself is permanently gone. The
+Option B decision (IBJA primary, Tanishq enrichment) stands.
 The retired Cloudflare Worker relay (2026-06-13–2026-06-25, see docs/RUNBOOK.md) was
 the prior escalation in the same pattern.
 
