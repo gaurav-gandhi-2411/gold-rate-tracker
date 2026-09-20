@@ -130,3 +130,35 @@ def test_real_repo_has_no_orphaned_js_test_files() -> None:
     assert unreferenced == [], (
         f"Newly orphaned JS test file(s): {[p.as_posix() for p in unreferenced]}"
     )
+
+
+def test_comment_only_mention_is_not_a_reference(tmp_path: Path) -> None:
+    # The construction that exposed the hole: the file is named in a YAML comment but
+    # no step runs it. Comments run nothing, so it must be reported as unreferenced.
+    repo = _make_repo(
+        tmp_path,
+        ["tests/test_orphan.js"],
+        "jobs:\n  t:\n    steps:\n      # TODO: add tests/test_orphan.js below\n"
+        "      - run: node --test tests/other.js\n",
+    )
+    files = mod.find_all_js_test_files(repo)
+    text = mod.read_all_workflow_text(repo / ".github" / "workflows")
+    assert [p.as_posix() for p in mod.find_unreferenced_test_files(files, text, {})] == [
+        "tests/test_orphan.js"
+    ]
+
+
+def test_reference_in_a_run_step_with_trailing_comment_still_counts(tmp_path: Path) -> None:
+    repo = _make_repo(
+        tmp_path,
+        ["tests/test_real.js"],
+        "jobs:\n  t:\n    steps:\n      - run: node --test tests/test_real.js # runs the real one\n",
+    )
+    files = mod.find_all_js_test_files(repo)
+    text = mod.read_all_workflow_text(repo / ".github" / "workflows")
+    assert mod.find_unreferenced_test_files(files, text, {}) == []
+
+
+def test_hash_inside_a_quoted_string_is_not_treated_as_a_comment() -> None:
+    line = '      - run: echo "# not a comment" && node --test tests/test_q.js\n'
+    assert "tests/test_q.js" in mod.strip_yaml_comments(line)

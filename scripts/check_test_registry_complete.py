@@ -57,16 +57,10 @@ from pathlib import Path
 # is a decision, not a place to silently accumulate gaps. Justification is
 # mandatory (a dict value, never just a bare path) so a reader can judge
 # whether the reason still holds.
-KNOWN_EXCLUSIONS: dict[str, str] = {
-    "tests/test_stale_banner_headless.js": (
-        "needs Playwright (imports scraper/node_modules/playwright) and a browser "
-        "binary -- lint.yml's pwa-js job has neither; tracked as a follow-up "
-        "(lint.yml's own comment, unchanged as of this script's writing). AJ2 "
-        "(2026-09-11/12) ran it manually and found a live failing assertion -- "
-        "see docs/SESSION_AUDIT_2026-08.md for the finding; being excluded from "
-        "CI does not mean it's exempt from being fixed."
-    ),
-}
+# Empty on purpose: test_stale_banner_headless.js was the only entry until the
+# `pwa-headless` job in lint.yml started running it. Add an entry only for a test that
+# genuinely cannot run in CI, with the reason.
+KNOWN_EXCLUSIONS: dict[str, str] = {}
 
 JS_TEST_FILENAME_PATTERNS = ("test_*.js", "test_*.mjs", "*.test.js", "*.test.mjs")
 EXCLUDED_DIR_NAMES = {"node_modules", ".git", "__pycache__"}
@@ -90,12 +84,28 @@ def find_all_js_test_files(repo_root: Path) -> list[Path]:
     return sorted(found)
 
 
+def strip_yaml_comments(text: str) -> str:
+    """Drop YAML comments so a filename that appears ONLY in a comment ("TODO: add
+    tests/x.js") is not counted as a workflow reference -- a comment runs nothing.
+    Full-line comments are removed; a trailing ` # ...` is removed only when no quote
+    precedes the `#` (so a `#` inside a quoted string on a run line is left alone)."""
+    out: list[str] = []
+    for line in text.splitlines():
+        if line.lstrip().startswith("#"):
+            continue
+        idx = line.find(" #")
+        if idx != -1 and "'" not in line[:idx] and '"' not in line[:idx]:
+            line = line[:idx]
+        out.append(line)
+    return "\n".join(out)
+
+
 def read_all_workflow_text(workflows_dir: Path) -> str:
     if not workflows_dir.is_dir():
         raise RegistryCheckError(f"{workflows_dir} does not exist or is not a directory")
     chunks = []
     for path in sorted(workflows_dir.glob("*.yml")):
-        chunks.append(path.read_text(encoding="utf-8"))
+        chunks.append(strip_yaml_comments(path.read_text(encoding="utf-8")))
     if not chunks:
         raise RegistryCheckError(
             f"no .yml files found under {workflows_dir} -- cannot verify anything"

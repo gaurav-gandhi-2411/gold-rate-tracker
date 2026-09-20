@@ -68,12 +68,12 @@ jobs:
   # in NO workflow — scraper-canary.yml only covers scraper/**.
   # This job closes that gap so app.js logic is gated on every push/PR.
   # Dep-free (node builtins + inlined functions); no npm install needed.
-  # test_stale_banner_headless.js is intentionally excluded — it needs Playwright
-  # (imports scraper/node_modules/playwright); tracked as a follow-up. AJ2
-  # (production audit, 2026-09-11/12): it currently has one failing assertion
-  # when run manually (a stale "today" expectation vs. the app's current
-  # weekday-named copy) -- see scripts/check_test_registry_complete.py's
-  # KNOWN_EXCLUSIONS entry for this file and docs/SESSION_AUDIT_2026-08.md.
+  # Scope of THIS job: the tests here exercise inlined COPIES of app.js functions
+  # ("must match app.js"), not app.js itself, so a regression in app.js that a copy
+  # doesn't reproduce is invisible to it -- verified 2026-09-21 by inverting isToday in
+  # app.js: all 115 tests in this job still passed. The one test that drives the real
+  # app.js (test_stale_banner_headless.js, needs Playwright + a browser) runs in the
+  # separate `pwa-headless` job below.
   #
   # AJ2 (2026-09-11/12): test_tier_degradation_visible.js and
   # test_vol_regime.js added below -- both existed and passed locally since
@@ -117,6 +117,29 @@ jobs:
         # this edit, ran only deadman.test.mjs and would have silently never
         # run pr_trigger_health.test.mjs.)
         run: node --test worker-deadman/test/deadman.test.mjs worker-deadman/test/pr_trigger_health.test.mjs
+
+  # Drives the REAL app.js in headless Chromium (see the scope note on pwa-js above).
+  # Deliberately not added to branch protection's required contexts -- changing the
+  # required set is a separate, human decision. Same Node/Playwright setup as
+  # render-smoke.yml (pinned action SHAs copied from there).
+  pwa-headless:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: "20"
+          cache: "npm"
+          cache-dependency-path: scraper/package-lock.json
+      - name: Install scraper dependencies (Playwright lives here)
+        working-directory: scraper
+        run: npm ci || npm install
+      - name: Install Playwright browsers
+        working-directory: scraper
+        run: npx playwright install --with-deps chromium
+      - name: Run the headless banner test against the real app.js
+        run: node tests/test_stale_banner_headless.js
 
   # Forward lint+pwa-js's real result as commit statuses (bug #4, docs/RUNBOOK.md).
   # Branch protection's required_status_checks matches by context NAME across both
