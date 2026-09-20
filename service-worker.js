@@ -71,7 +71,11 @@
 // direction base-rate aside was a frozen 2026-06-02 one-time snapshot,
 // never sourced from any field this codebase currently tracks live.
 // index.html + i18n.js (EN+HI) changed.
-const VERSION = "v44-20260910-ae2-stale-claims";
+// 2026-09-21 (v45): app.js no longer fetches data/calibration.json. Nothing consumed it
+// (renderStaleBanner's `calibration` parameter was never read after G2), and _config.yml
+// excludes it from the Pages build, so every load made a request that 404'd live.
+// app.js changed; bumping so every installed client re-fetches.
+const VERSION = "v45-20260921-drop-dead-calibration-fetch";
 const SHELL_CACHE = `gold-shell-${VERSION}`;
 
 const SHELL_FILES = [
