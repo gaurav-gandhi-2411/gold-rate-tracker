@@ -263,7 +263,7 @@ versus an engineer.
 ## 8. The defect-class catalogue (Y3, audit 2026-09-05; extended to #20,
 production audit 2026-09-10/11)
 
-Twenty instances of one defect class have now been found across this
+Twenty instances (twenty-six as of §8.1, 2026-09-21) of one defect class have now been found across this
 audit's sessions (2026-08-27 through 2026-09-11, the first 13 by
 2026-09-05): **a control emits a plausible-looking result instead of
 failing or raising when it cannot actually verify the thing it claims to
@@ -336,6 +336,29 @@ of this audit's own-control findings (#8, #12, #13, #18, #19, #20) were
 found by asking exactly that question of an existing, trusted control —
 or, for #18/#19/#20, of an existing, trusted *process or assumption*.
 
+### 8.1 Instances #21–#26 (continuation, 2026-09-21)
+
+Found by sweeping hand-maintained registries (§12.2) and by running the
+"construct the failure" check against controls that had never had it. Each row
+states what was *verified* (a command run, its output seen) separately from
+what is *inferred*. Baseline: `origin/master` `e2a935fe` unless stated.
+
+| # | Instance | What it substituted | How found | Status |
+|---|---|---|---|---|
+| 21 | `lint.yml`'s required `pwa-js` job ("gates app.js logic on every push/PR") | 9 of the 10 non-headless `tests/test_*.js` files exercise **inlined copies** of app.js functions (their headers say "must match app.js"), not app.js (the tenth, `test_scrape.js`, tests scraper output and was not classified). The one test that drives the real app.js, `test_stale_banner_headless.js`, was excluded from CI. **Verified:** with `isToday` inverted in app.js (the banner would call Monday's close "today's estimate" on Tuesday), all 115 tests across every `tests/test_*.js` except the headless one (a superset of the CI pwa-js list) passed (exit 0) while the headless test failed 3 checks. Of the 15 inlined functions that map to a named function in app.js/i18n.js, 9 are textually identical and 6 differ (2 inspected: both are i18n drift — app.js now calls `t()`, the copy hard-codes English, so a Hindi regression in those branches is invisible to CI; the other 4 were not inspected) | Reading why the headless test was excluded, then the test headers | `pwa-headless` job in draft #1598 (GG merges). Making it a *required* context is a branch-protection change, GG. The copies themselves are untouched |
+| 22 | `_config.yml`'s Pages `exclude:` list vs the files app.js fetches | `data/calibration.json` excluded 2026-07-18 (#212, nothing fetched it), fetched from 2026-08-11 (#786): **404 on every live load, two requests per load, ~41 days.** Verified in headless Chromium against the live origin before and after the fix (after: 0 responses ≥400, 0 console errors). Nothing reported it: render-smoke does not check optional-fetch status codes; the client's Sentry DSN is a placeholder (known open item, `docs/PROGRESS.md` "Sentry DSN placeholder not activated") and `Sentry.init` is additionally guarded by `typeof Sentry !== "undefined"` against an `async` bundle, so it silently does not run on page loads where `app.js` wins the race (see §10 item 8) | AK2 registry sweep, then a live probe | **Fixed** #1773 (`e2a935fe`): dead fetch removed, `tests/test_pages_surface.py` reports `data/calibration.json` against the real incident tree `443885b7`. Sentry DSN needs a credential, GG |
+| 23 | `docs-freshness` red on master, unpaged | **12 of 12** scheduled `lint.yml` runs on master, 2026-09-09 → 09-20, failed with `docs-freshness` as the only failing job (each run's jobs inspected). It is not a required context, so nothing blocks and `ci-health.yml` (required contexts only) never looks at it. The fix mechanism — `docs-refresh.yml`'s bot PR #1578 — has been open since 2026-09-11 with **zero checks run on it** (bot-token pushes do not trigger workflows) and needs a human merge because it changes published README numbers. The README's Lint badge therefore reads failing (*inferred* from the run conclusions; the rendered badge was not fetched) | Reading why a test-only PR (#1772) had a red check, then running `inject_metrics.py --check` on master | **Open**: merging #1578 changes published numbers, GG. Not a data problem: the committed text is simply stale against data |
+| 24 | `worker-deadman`'s PR-trigger-health channel (#1591) is structurally blind to fast merges | Pages only if a PR's head commit is ≥30 min old with zero required check-runs *at a 30-min tick*. **Verified** by running `classifyPrTriggerHealth` from the repo against #1539's and #1569's recorded state (head-commit time, merge time, 0 check-runs, commit status `pending`): #1569 was open 116 min → pages at 09:30Z, 57 min before it merged; **#1539 — the incident the module's own header cites as motivation — was open 5.2 min → zero ticks fall inside its lifetime, never pages.** A PR merged <30 min after its last push can never page; one is guaranteed to only if open ≥60 min. Assumes the cron fires on :00/:30 | AK3: constructing the detection case from the real recorded state | **Open**: an alert-logic change plus a Worker deploy, GG. Proposal (*inferred*, untested): also scan PRs merged in the last ~2h for zero check-runs on their head SHA — would have paged #1539 within one tick of merging |
+| 25 | `scripts/check_test_registry_complete.py` (#1596) counts a filename inside a YAML comment as "referenced" | It searched raw workflow text, so a test named only in `# TODO: add tests/x.js` passed. **Constructed and reproduced** (orphan reported `[]`), then fixed | Applying the "construct the violation" check to the check merged 2026-09-11 | **Fixed in draft #1598** with three regression tests |
+| 26 | `service-worker.js`'s "network-first, fall back to cache when offline" data handling | **The fallback has never worked.** `loadJSON()` requests `data/x.json?t=<Date.now()>` (since the initial ML commit, 2026-05-09) and the worker cached under the full request URL, so the offline lookup used a different `?t=` than any stored entry and could not match. **Verified in headless Chromium against the live origin (and a local tree): with the real worker active, offline, all 7 data requests failed (`net::ERR_FAILED`) — including the 3 files the worker lists — and after 2 online loads the cache held 2 entries per file, keyed with `?t=`** (unbounded per-load growth until the next VERSION bump; only 2 loads were observed, so the growth rate beyond that is extrapolated). Nothing tested it | Testing an *inference* from the registry sweep (row 5, §12.2: "the three unlisted files lack an offline fallback") — the test showed the fallback was dead for all of them | **Fix prepared, not merged**: draft #1780 (stacked on #1598) — query-free cache key, `res.ok` guard, `/data/*.json` rule, and a real-worker test that fails 3 checks on unfixed master and passes on the fix. Changes what an offline user sees, GG. No device verification yet |
+
+Grouped by what made each invisible: #21, #24, #25 are controls whose surface
+was narrower than their name (§11 category 3/7); #22 is a hand-maintained
+registry drifting against its consumer with no reporting channel; #23 is a
+control that is correctly implemented, red, and read by nobody because it
+gates nothing (§11 category 7); #26 is a documented fallback that no test ever
+exercised, so it could be dead since its introduction (§11 category 1).
+
 ## 9. Clean results — evidence of function, not absence of testing
 
 A control that has never been deliberately tested against a real or
@@ -392,10 +415,26 @@ checked, not just what was found broken.
   the sentence degrades to omitting the percentage entirely, never
   falling back to the design target. Zero console errors either case.
 
+- **Hand-maintained registries checked against reality and found in sync
+  (AK2, 2026-09-21; full table §12.2).** Executed, not just read:
+  `service-worker.js` `SHELL_FILES` → all 12 entries exist on disk (its install
+  step swallows misses with `.catch(() => null)`, so a missing file would have
+  been silent); `i18n.js` en/hi → 257/257 keys, no key missing either way, no
+  function-vs-string type mismatch; `dependabot.yml` → all 3 ecosystems' directories
+  match a manifest on disk; `scripts/check_bot_pr_sync_allowlist.py` re-run on
+  master → OK across all 8 bot-pr-sync callers; six `norm #N` citations in
+  workflows/`app.js`/`service-worker.js` → all six point at the norm they describe.
+  Required status contexts have no hand-typed copy anywhere: both
+  `check_required_checks_positive.py` and `ci-health.yml` read them live.
+- **`post-required-check-status` (lint.yml) does not forward a false pass.**
+  *Read, not constructed:* it is gated on `needs.lint.result == 'success' &&
+  needs['pwa-js'].result == 'success'`, so it cannot post a green commit status
+  under a required context's name when the underlying job failed.
+
 ## 10. Corrections the audit made to itself
 
 An audit that never records being wrong about its own findings is not
-reporting its own reliability. Six corrections, in the order found:
+reporting its own reliability. Eleven corrections, in the order found:
 
 1. **`check_branch_base` proven unable to fire (§8, instance #12).**
    Already recorded in the catalogue above — restated here because it's
@@ -453,6 +492,49 @@ reporting its own reliability. Six corrections, in the order found:
    not after. Left here as a record that this audit's own drafts get
    checked against existing documentation before being trusted, the same
    standard applied to every other claim in this doc.
+
+7. **The diagnosis of the red `test_stale_banner_headless.js` ("a stale
+   'today' assertion vs. the app's weekday-named copy") was wrong, and had
+   spread to three places** — the continuation brief, draft #1598's
+   `lint.yml` comment, and `KNOWN_EXCLUSIONS`'s reason text (which also
+   pointed at "the finding" in this doc; no such finding existed, so the
+   pointer dangled). Actual mechanism: Scenario C pinned IBJA's publish time
+   at "2h ago", and the app compares IST day keys, so between 00:00 and
+   02:00 IST (18:30–20:30 UTC, ~8% of wall-clock time) that fixture lands on
+   the previous IST day and the app *correctly* renders the weekday form.
+   Reproduced under a pinned clock: 19:00Z fails with "IBJA's Monday close",
+   10:00Z passes. Editing the assertion to expect a weekday, as the brief
+   asked, would have failed the other ~22 hours of every day. Fixed in #1772
+   (fixture, not app copy); the wrong text is removed in draft #1598.
+8. **This session's first Sentry probe overstated a state.** It reported the
+   live page had "no Sentry client and no DSN"; a second probe minutes later
+   found a client with the placeholder DSN. `Sentry.init` is guarded by
+   `typeof Sentry !== "undefined"` and the bundle loads `async`, so whether
+   init runs depends on which script wins the race on that page load — the
+   first probe caught one outcome, not a fixed state. The conclusion (no
+   client-side error reaches a real Sentry project) holds either way; the
+   mechanism has two layers, not one.
+9. **#1591's PR-trigger-health channel does not cover the incident its own
+   header cites.** `pr_trigger_health.mjs` names #1539/#1569 as the shape it
+   closes. Run against their real recorded state it pages for #1569 and
+   cannot page for #1539 (open 5.2 min against a 30-min threshold) — §8.1 #24.
+   Recorded because that header presents the channel as closing the
+   #1539/#1569 gap (§8 #20).
+10. **A per-slot delay table for AK4 was built, looked authoritative, and was
+    discarded before being reported.** It attributed each scheduled run to the
+    latest nominal slot at or before its creation time; with 1–5h delays against
+    a 3h slot spacing that attribution is ambiguous, and it produced rows such as
+    "01:37 slot: 0 of 7 runs" that read as a still-dead slot. The reported
+    comparison uses run-creation hour of day, which needs no attribution
+    (§12.4; `scripts/measure_schedule_windows.py` states this in its docstring).
+11. **The registry sweep's first reading of the service worker was wrong, and
+    was corrected by testing it.** Reading the fetch handler, I inferred that the
+    3 files in `DATA_FILES` had a working offline fallback and the other 4 did not.
+    An offline reload in Chromium showed no data file had one: the `?t=`
+    cache-buster made every lookup miss (§8.1 #26). The doc's own row for this
+    registry was rewritten before merge; the inference is kept here because it is
+    the same shape as the audit's other findings — a plausible reading of code,
+    stated with more confidence than a run supported, until a run said otherwise.
 
 **Not corrected — checked and found to still hold, unverifiable as stated.**
 This session searched for documented evidence of "nine merge_gate gates
@@ -521,6 +603,121 @@ repo-specific detail:
    surface would look like from the outside — usually a silent absence,
    not a loud error, which is exactly why it survives unnoticed.
 
+## 12. Continuation 2026-09-21: registry sweep, and the two measurement windows
+
+Baseline `origin/master` `e2a935fe` (after #1772 and #1773).
+
+### 12.1 What the brief said vs. what was found
+
+Three premises in the continuation brief did not survive a check, each verified
+against the repo or GitHub before acting on it: #1591 was described as a draft
+needing deploy (it merged 2026-09-11); the red headless test was described as a
+stale assertion (§10 item 7); and "confirm it is collected by CI once #1598 lands"
+was false (#1598 as written *excluded* it — it now runs in a `pwa-headless` job in
+the refreshed draft). Master itself was 169 commits ahead of the brief's snapshot
+(bot data commits only, plus #1772/#1773 from this session).
+
+### 12.2 Hand-maintained registry sweep (AK2)
+
+**Scope actually covered (rule 85b):** hand-typed file lists in workflow YAML;
+comment-enumerations of callers/offsets; regex allowlists; service-worker arrays;
+Pages exclude list; parallel-language key sets; cross-references by number
+(`norm #N`, ADR supersession); test-side copies of app code; doc numbers behind
+`inject_metrics` markers; this doc's own counts. **Not covered:** the
+`gg-portfolio` repo, `claude-config`, Cloudflare-side deployed config beyond the
+Worker-vs-master parity already closed (§9), unmarked hand-typed numbers in
+README prose (a candidate class, not swept), and any skill/agent registry
+(this repo's `.claude/` holds only `settings.local.json`).
+
+| # | Registry | Drifted? | Evidence | Discovery replaces it? | Status |
+|---|---|---|---|---|---|
+| 1 | `lint.yml` `pwa-js` test-file list | **Yes** | 2 files / 19 tests never ran for 7–8 days | Yes — completeness check | draft #1598 |
+| 2 | `lint.yml` Worker-test `node --test` list | Yes, once | `pr_trigger_health.test.mjs` had to be added by hand; now clean | Same check | covered |
+| 3 | bot-pr-sync caller list (comment) | Yes, once | said six, was eight; corrected by AF1 and the comment now says eight, matching the 8 real callers | Yes — the allowlist script discovers callers by grep | closed |
+| 4 | `sw-version-guard`'s file regex | **Yes** | 4 files vs `SHELL_FILES` 11; `i18n.js` absent; constructed i18n-only change list: old not armed, new armed. Latent: 0 of 10 `i18n.js` commits changed it alone | Yes — derive from `SHELL_FILES` | draft #1775 |
+| 5 | `service-worker.js` `DATA_FILES` (network-first list) | **Yes** | 3 entries vs the 7 data files `app.js` requests on every load (9 URL constants at the time: `calibration.json` since removed, `metrics_history.json` declared but never requested); comment says "All JSON data files". I first *inferred* the other 4 merely lacked an offline fallback the listed 3 had; **testing that showed the fallback was dead for all 7** (§8.1 #26, §10 item 11) | Yes — a `/data/*.json` rule | draft #1780 (offline behaviour change, GG) |
+| 6 | `_config.yml` Pages `exclude:` | **Yes** | `data/calibration.json` excluded but fetched: live 404 ×2/load for ~41 days; its comment says "7 data files", 8 are fetched now | Yes — `tests/test_pages_surface.py` derives from `app.js` | fixed #1773 (`_config.yml` itself untouched: deploy config) |
+| 7 | `scrape-tanishq-selfhosted.yml` cron comment | **Yes** | "same cadence/offset as check-price.yml"; crons are `7 */3` vs `37 1-22/3` since #1541. Whether the old alignment was load-bearing is not established | n/a (comment) | draft #1775, comment-only |
+| 8 | ADR 025 → ADR 029 supersession | **Yes** | ADR 029 states it partially supersedes 025's premise; 025's status carried no pointer | n/a | fixed in this PR |
+| 9 | Required status contexts | No | read live by `check_required_checks_positive.py` and `ci-health.yml`; no hardcoded copy exists | already discovery | clean |
+| 10 | bot-pr-sync allowlist ↔ callers' `git add` | No | script run on master: OK across 8 callers | already discovery (#1564) | clean |
+| 11 | `inject_metrics` marked numbers (README, `DIRECTION_SIGNAL_STATUS.md`) | **Yes** | 12/12 scheduled master runs red on it (§8.1 #23) | already discovery (`--check`) | pending #1578, GG |
+| 12 | `dependabot.yml` directories | No | 3 ecosystems, each matches a manifest on disk; `ml/requirements-inference.lock` is generated and not dependabot-visible | — | clean |
+| 13 | `i18n.js` en/hi keys | No | 257/257 | — | clean |
+| 14 | `SHELL_FILES` vs disk | No | 12/12 exist (install swallows misses) | — | clean |
+| 15 | Tests' inlined copies of app.js functions | **Yes** | 6 of 15 mapped functions differ (2 inspected: i18n drift) | Yes — test the real app.js | headless job in #1598; copies untouched |
+| 16 | `norm #N` citations | No | 6 sites, 6 correct | — | clean |
+
+**Drift count: 10 of 16 registries examined had drifted at some point** — 2 were
+already closed before this session (#2, #3), 2 are fixed by merged/this PR (#6, #8),
+4 are in draft PRs awaiting GG (#1, #4, #5, #7), and 2 are open (#11 needs GG; #15 is
+partly addressed by the headless job). Six were clean (#9, #10, #12, #13, #14, #16). Not counted: the alert catalog (`T1`–`T13`, `T8_EVENING`/
+`T8_MORNING`, `T9_ESCALATE` in `ml/notifications.py`) — no doc claims to enumerate
+it, so there is no registry to drift; and the ADR directory, which has no index file
+(number 006 never existed in git history).
+
+### 12.3 The PR-trigger-health channel (AK3), partial
+
+GG's manual-trigger response (`?trigger=1`) showed `level: ok, ageHours: 3.98,
+tanishqLevel: ok, tanishqAgeHours: 4.92, sent/tanishqSent/heartbeatSent: false` and
+a key `prTriggerHealthSent` — so the deployed Worker is a build that includes #1591's
+wiring (*verified* from the pasted key). The paste was cut off by PowerShell's default
+display of `Content` (RawContentLength 438), so the remaining PR-health fields were
+**not seen** and nothing further is claimed about them. The detection case, though,
+needs no Worker access: §8.1 #24 runs the repo's own module against #1539's and
+#1569's real recorded state. To finish the deployed-side check, GG can run
+`(Invoke-WebRequest "https://gold-rate-tracker-deadman.gg5678g.workers.dev/?trigger=1" -UseBasicParsing).Content`
+(the full body, not the truncated table).
+
+### 12.4 Measurement windows (AK4) — both closed 2026-09-18
+
+Provenance: `scripts/measure_schedule_windows.py` → `reports/schedule_windows_2026-09-18.json`,
+generated from `origin/master` `e2a935fe`. Two independent sources: `data/forecast.json`
+history in git (the series the Worker reads), and `gh run list --event schedule`.
+
+**Window 2 — WARN page rate vs #1403's projection** (opened 2026-09-11T08:39:10Z,
+7 days). #1403 projected **0** false pages for WARN=10h/ESCALATE=16h (0/36 gaps over
+10h in its 7-day sample). Actual, replaying the Worker's */30 ticks against the
+published `predicted_at` series: **0 of 336 ticks ≥10h**, 0 ≥16h; age median 2.29h,
+p90 4.99h, **max 7.04h** (2.96h headroom to WARN); 37 inter-publication gaps, max
+7.43h, 0 ≥10h. Consistent with the projection. **What n=37 can and cannot resolve:**
+zero events in 37 gaps bounds the per-gap exceedance rate below ~7.8% (95%, rule of
+three) — about 12 pages/month at ~5.3 gaps/day — so this window cannot distinguish
+"0 per month" from "a handful per month"; it only shows the ladder was not tripped
+by an ordinary week. It also does not model Pages deploy lag (minutes), and **the
+Worker's actual push history is not readable from here** — whether any WARN push
+arrived in the window is unverified (GG can check ntfy).
+
+**Window 1 — the 06:07 slot and the 06:00 cohort** (opened 2026-09-11T02:45:48Z,
+7 days). #1541's pre-registered test: after moving check-price's phase (old 06:07 →
+07:37), does the moved slot behave like the other seven, or does the bad window move
+with it; and does the recurring 7–8h gap in `run_cadence_log.jsonl` disappear?
+Per-slot delays cannot be measured cleanly (§10 item 10), so the comparison is
+run-creation hour of day:
+
+| | 7 days before | 7 days after |
+|---|---|---|
+| check-price schedule runs created (of 56 possible) | 35 | 35 |
+| days with a run created 06:00–08:59Z, check-price (moved cron) | **0 of 7** | **6 of 7** |
+| days with a run created 06:00–08:59Z, scrape-tanishq-selfhosted (cron unchanged, still has a 06:07 slot) | 0 of 7 | 0 of 7 |
+| `run_cadence_log` gaps ≥6.5h | 8 of 38 | 3 of 37 |
+| cadence-log gap median / p90 / max (h) | 4.77 / 6.76 / 7.93 | 4.68 / 6.18 / 7.43 |
+
+Reading: the delivery pattern changed for the workflow whose cron moved and did not
+change for the one whose cron did not — a difference-in-differences with **n=7 days
+and one moved workflow, suggestive, not proof** that delivery depends on cron phase
+(the two workflows' pre-window hour histograms are near-identical, as is expected if
+so). That supports #1541's hypothesis in the sense of its outcome (a) but does not
+establish the *hour-of-day* mechanism it named. It did **not** raise delivery: 35
+runs of 56 possible (62.5%) both before and after, so the moved workflow still loses
+~37.5% of its slots. Gaps ≥6.5h fell 8 → 3, directionally the right way but **not
+statistically resolvable** at n≈37 per side (Fisher two-sided p=0.19). The 06:00
+cohort is unchanged and still severe: `lint.yml`'s daily 06:00 run was created a
+median 290 min late (p90 312, n=7) and `shadow-fusion.yml`'s 06:15 slot 315 min late
+(p90 327, n=6) across the same window. Not resolved: the "recurring daily 7–8h gap
+disappears" criterion (3 gaps ≥6.5h remain in the window; the log does not let this
+be scored per-day without the same slot-attribution problem).
+
 ## Provenance
 
 All PRs referenced: `#1237` (band fallback fails loud), `#1340`
@@ -580,3 +777,23 @@ never resolved; `merged_by`/`author` on both PRs → `gaurav-gandhi-2411`
 (`2026-09-11T03:26:37Z`) checked directly against #1539's
 (`2026-09-10T13:38:30Z`) to confirm the 13.5-hour gap stated in the
 table above, rather than trusting recollection of the ordering.
+
+**Continuation 2026-09-21, instances #21–#26 and §12:** `#1772` (headless
+banner test fixture no longer crosses IST midnight; verified under a pinned clock
+at 18:30:30Z/19:00Z/20:29Z/20:31Z/10:00Z), `#1773` (dead `data/calibration.json`
+fetch removed; live probe after deploy: SW `v45`, 0 responses ≥400), draft `#1598`
+(`pwa-headless` job, orphaned tests wired, registry check ignores comments), draft
+`#1775` (`sw-version-guard` derives from `SHELL_FILES`), draft `#1780` (service-worker
+offline data fallback; stacked on #1598), `#1776` (measurement script and report),
+open bot PR `#1578` (`docs-refresh`, GG). The offline finding (§8.1 #26) was measured
+with an offline-reload run in headless Chromium against both the live origin and a
+local tree (7 of 7 data requests failed; 2 cache entries per file after 2 loads). Numbers in §12.4 are from
+`reports/schedule_windows_2026-09-18.json`, produced by
+`scripts/measure_schedule_windows.py` from `origin/master` `e2a935fe`. §8.1 #21's
+mutation run inverted `isToday` in a working copy of `app.js` and restored it from a
+saved copy (`git diff` empty afterwards); its copy-drift comparison normalises
+whitespace and strips `//` comments, so "differs" means the code text differs, not
+that behaviour was tested. §8.1 #24 replays `classifyPrTriggerHealth` (imported from
+`worker-deadman/src/pr_trigger_health.mjs`) with head-commit/merge times fetched from
+`gh api repos/.../pulls/{n}` and `.../commits/{sha}` (raw ISO strings), check-runs
+`total_count` 0 and combined status `pending` for both PRs.
