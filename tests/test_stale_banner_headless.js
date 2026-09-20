@@ -279,12 +279,17 @@ async function run() {
     }
 
     // ── Scenario C: IBJA-primary, published today → "Estimated" banner (ADR 025) ──
-    console.log("\nScenario C: price_source=ibja_calibrated, IBJA 2h old → 'Estimated' banner");
+    console.log("\nScenario C: price_source=ibja_calibrated, IBJA published today (IST) → 'Estimated' banner");
     {
       const ctx  = await browser.newContext();
       const page = await ctx.newPage();
-      // scrape 9h old (stale — expected), IBJA 2h old (fresh, today) → IBJA-primary
-      await injectMockFetch(page, makeForecastIBJA(9, 2), makePrices(9));
+      // scrape 9h old (stale — expected), IBJA published earlier the SAME IST day → IBJA-primary.
+      // The app's isToday check compares IST day keys, so a fixed "2h ago" lands on the previous
+      // IST day between 00:00 and 02:00 IST (18:30–20:30 UTC) and flips the copy to the weekday
+      // form — capped at half the time elapsed since IST midnight so the fixture is always "today".
+      const istMsIntoDay = (Date.now() + 5.5 * 3_600_000) % 86_400_000;
+      const ibjaTodayAgeH = Math.min(2, istMsIntoDay / 3_600_000 / 2);
+      await injectMockFetch(page, makeForecastIBJA(9, ibjaTodayAgeH), makePrices(9));
 
       await page.goto(base, { waitUntil: "networkidle" });
       await page.waitForTimeout(500);
