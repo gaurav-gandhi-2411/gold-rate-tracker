@@ -1,0 +1,128 @@
+{
+  "generated_from_origin_master": "e2a935fe054d0d551792e9e975f4fca94eabfcb3",
+  "warn_window": {
+    "window": [
+      "2026-09-11T08:39:10+00:00",
+      "2026-09-18T08:39:10+00:00"
+    ],
+    "forecast_commits_parsed": 51,
+    "ticks": 336,
+    "age_h": {
+      "median": 2.29,
+      "p90": 4.99,
+      "max": 7.04
+    },
+    "ticks_ge_warn": 0,
+    "ticks_ge_escalate": 0,
+    "gaps": {
+      "n": 37,
+      "median_h": 4.76,
+      "p90_h": 6.18,
+      "max_h": 7.43,
+      "n_ge_warn": 0
+    },
+    "zero_event_95pct_upper_bound_per_gap": 0.078
+  },
+  "delivery": {
+    "cadence_window": [
+      "2026-09-11T02:45:48+00:00",
+      "2026-09-18T02:45:48+00:00"
+    ],
+    "check-price.yml": {
+      "runs_pre_7d": 35,
+      "runs_post_7d": 35,
+      "expected_if_every_3h_slot_fired": 56,
+      "created_hour_utc_pre": {
+        "4": 7,
+        "10": 2,
+        "11": 4,
+        "12": 1,
+        "15": 2,
+        "16": 4,
+        "17": 1,
+        "19": 1,
+        "20": 5,
+        "21": 1,
+        "22": 3,
+        "23": 4
+      },
+      "created_hour_utc_post": {
+        "0": 7,
+        "6": 6,
+        "9": 1,
+        "11": 1,
+        "12": 4,
+        "14": 2,
+        "16": 1,
+        "17": 4,
+        "18": 1,
+        "19": 1,
+        "20": 1,
+        "21": 3,
+        "22": 3
+      },
+      "days_with_run_created_06_to_09Z_pre": 0,
+      "days_with_run_created_06_to_09Z_post": 6
+    },
+    "scrape-tanishq-selfhosted.yml": {
+      "runs_pre_7d": 34,
+      "runs_post_7d": 31,
+      "expected_if_every_3h_slot_fired": 56,
+      "created_hour_utc_pre": {
+        "4": 6,
+        "10": 2,
+        "11": 4,
+        "12": 1,
+        "15": 2,
+        "16": 4,
+        "17": 1,
+        "19": 1,
+        "20": 5,
+        "21": 1,
+        "22": 3,
+        "23": 4
+      },
+      "created_hour_utc_post": {
+        "4": 7,
+        "10": 1,
+        "11": 5,
+        "12": 1,
+        "15": 1,
+        "16": 5,
+        "19": 1,
+        "20": 3,
+        "21": 3,
+        "22": 1,
+        "23": 3
+      },
+      "days_with_run_created_06_to_09Z_pre": 0,
+      "days_with_run_created_06_to_09Z_post": 0
+    },
+    "lint_06:00": {
+      "n": 7,
+      "median_delay_min": 290.4,
+      "p90_delay_min": 312.2
+    },
+    "shadow_fusion_06:15": {
+      "n": 6,
+      "median_delay_min": 315.5,
+      "p90_delay_min": 326.7
+    }
+  },
+  "cadence_log": {
+    "pre": {
+      "n_gaps": 38,
+      "median_h": 4.77,
+      "p90_h": 6.76,
+      "max_h": 7.93,
+      "n_ge_6_5h": 8
+    },
+    "post": {
+      "n_gaps": 37,
+      "median_h": 4.68,
+      "p90_h": 6.18,
+      "max_h": 7.43,
+      "n_ge_6_5h": 3
+    }
+  }
+}
