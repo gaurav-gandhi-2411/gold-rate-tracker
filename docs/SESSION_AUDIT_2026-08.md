@@ -263,7 +263,7 @@ versus an engineer.
 ## 8. The defect-class catalogue (Y3, audit 2026-09-05; extended to #20,
 production audit 2026-09-10/11)
 
-Twenty instances (twenty-five as of §8.1, 2026-09-21) of one defect class have now been found across this
+Twenty instances (twenty-six as of §8.1, 2026-09-21) of one defect class have now been found across this
 audit's sessions (2026-08-27 through 2026-09-11, the first 13 by
 2026-09-05): **a control emits a plausible-looking result instead of
 failing or raising when it cannot actually verify the thing it claims to
@@ -336,7 +336,7 @@ of this audit's own-control findings (#8, #12, #13, #18, #19, #20) were
 found by asking exactly that question of an existing, trusted control —
 or, for #18/#19/#20, of an existing, trusted *process or assumption*.
 
-### 8.1 Instances #21–#25 (continuation, 2026-09-21)
+### 8.1 Instances #21–#26 (continuation, 2026-09-21)
 
 Found by sweeping hand-maintained registries (§12.2) and by running the
 "construct the failure" check against controls that had never had it. Each row
@@ -350,12 +350,14 @@ what is *inferred*. Baseline: `origin/master` `e2a935fe` unless stated.
 | 23 | `docs-freshness` red on master, unpaged | **12 of 12** scheduled `lint.yml` runs on master, 2026-09-09 → 09-20, failed with `docs-freshness` as the only failing job (each run's jobs inspected). It is not a required context, so nothing blocks and `ci-health.yml` (required contexts only) never looks at it. The fix mechanism — `docs-refresh.yml`'s bot PR #1578 — has been open since 2026-09-11 with **zero checks run on it** (bot-token pushes do not trigger workflows) and needs a human merge because it changes published README numbers. The README's Lint badge therefore reads failing (*inferred* from the run conclusions; the rendered badge was not fetched) | Reading why a test-only PR (#1772) had a red check, then running `inject_metrics.py --check` on master | **Open**: merging #1578 changes published numbers, GG. Not a data problem: the committed text is simply stale against data |
 | 24 | `worker-deadman`'s PR-trigger-health channel (#1591) is structurally blind to fast merges | Pages only if a PR's head commit is ≥30 min old with zero required check-runs *at a 30-min tick*. **Verified** by running `classifyPrTriggerHealth` from the repo against #1539's and #1569's recorded state (head-commit time, merge time, 0 check-runs, commit status `pending`): #1569 was open 116 min → pages at 09:30Z, 57 min before it merged; **#1539 — the incident the module's own header cites as motivation — was open 5.2 min → zero ticks fall inside its lifetime, never pages.** A PR merged <30 min after its last push can never page; one is guaranteed to only if open ≥60 min. Assumes the cron fires on :00/:30 | AK3: constructing the detection case from the real recorded state | **Open**: an alert-logic change plus a Worker deploy, GG. Proposal (*inferred*, untested): also scan PRs merged in the last ~2h for zero check-runs on their head SHA — would have paged #1539 within one tick of merging |
 | 25 | `scripts/check_test_registry_complete.py` (#1596) counts a filename inside a YAML comment as "referenced" | It searched raw workflow text, so a test named only in `# TODO: add tests/x.js` passed. **Constructed and reproduced** (orphan reported `[]`), then fixed | Applying the "construct the violation" check to the check merged 2026-09-11 | **Fixed in draft #1598** with three regression tests |
+| 26 | `service-worker.js`'s "network-first, fall back to cache when offline" data handling | **The fallback has never worked.** `loadJSON()` requests `data/x.json?t=<Date.now()>` (since the initial ML commit, 2026-05-09) and the worker cached under the full request URL, so the offline lookup used a different `?t=` than any stored entry and could not match. **Verified in headless Chromium against the live origin (and a local tree): with the real worker active, offline, all 7 data requests failed (`net::ERR_FAILED`) — including the 3 files the worker lists — and after 2 online loads the cache held 2 entries per file, keyed with `?t=`** (unbounded per-load growth until the next VERSION bump; only 2 loads were observed, so the growth rate beyond that is extrapolated). Nothing tested it | Testing an *inference* from the registry sweep (row 5, §12.2: "the three unlisted files lack an offline fallback") — the test showed the fallback was dead for all of them | **Fix prepared, not merged**: draft #1780 (stacked on #1598) — query-free cache key, `res.ok` guard, `/data/*.json` rule, and a real-worker test that fails 3 checks on unfixed master and passes on the fix. Changes what an offline user sees, GG. No device verification yet |
 
 Grouped by what made each invisible: #21, #24, #25 are controls whose surface
 was narrower than their name (§11 category 3/7); #22 is a hand-maintained
 registry drifting against its consumer with no reporting channel; #23 is a
 control that is correctly implemented, red, and read by nobody because it
-gates nothing (§11 category 7).
+gates nothing (§11 category 7); #26 is a documented fallback that no test ever
+exercised, so it could be dead since its introduction (§11 category 1).
 
 ## 9. Clean results — evidence of function, not absence of testing
 
@@ -432,7 +434,7 @@ checked, not just what was found broken.
 ## 10. Corrections the audit made to itself
 
 An audit that never records being wrong about its own findings is not
-reporting its own reliability. Ten corrections, in the order found:
+reporting its own reliability. Eleven corrections, in the order found:
 
 1. **`check_branch_base` proven unable to fire (§8, instance #12).**
    Already recorded in the catalogue above — restated here because it's
@@ -525,6 +527,14 @@ reporting its own reliability. Ten corrections, in the order found:
     "01:37 slot: 0 of 7 runs" that read as a still-dead slot. The reported
     comparison uses run-creation hour of day, which needs no attribution
     (§12.4; `scripts/measure_schedule_windows.py` states this in its docstring).
+11. **The registry sweep's first reading of the service worker was wrong, and
+    was corrected by testing it.** Reading the fetch handler, I inferred that the
+    3 files in `DATA_FILES` had a working offline fallback and the other 4 did not.
+    An offline reload in Chromium showed no data file had one: the `?t=`
+    cache-buster made every lookup miss (§8.1 #26). The doc's own row for this
+    registry was rewritten before merge; the inference is kept here because it is
+    the same shape as the audit's other findings — a plausible reading of code,
+    stated with more confidence than a run supported, until a run said otherwise.
 
 **Not corrected — checked and found to still hold, unverifiable as stated.**
 This session searched for documented evidence of "nine merge_gate gates
@@ -625,7 +635,7 @@ README prose (a candidate class, not swept), and any skill/agent registry
 | 2 | `lint.yml` Worker-test `node --test` list | Yes, once | `pr_trigger_health.test.mjs` had to be added by hand; now clean | Same check | covered |
 | 3 | bot-pr-sync caller list (comment) | Yes, once | said six, was eight; corrected by AF1 and the comment now says eight, matching the 8 real callers | Yes — the allowlist script discovers callers by grep | closed |
 | 4 | `sw-version-guard`'s file regex | **Yes** | 4 files vs `SHELL_FILES` 11; `i18n.js` absent; constructed i18n-only change list: old not armed, new armed. Latent: 0 of 10 `i18n.js` commits changed it alone | Yes — derive from `SHELL_FILES` | draft #1775 |
-| 5 | `service-worker.js` `DATA_FILES` (network-first list) | **Yes** | 3 entries vs 9 JSON files fetched by `app.js`; comment says "All JSON data files". Effect (*inferred* from reading the fetch handler, not tested offline): the other 6 fall through to a cache-first branch that never `put`s them, so they are never stale but have **no offline fallback**, unlike the 3 listed | Yes — a `/data/*.json` prefix rule | **Not prepared**: changes what an offline user sees (GG), and the offline claim should be verified with an offline browser run first |
+| 5 | `service-worker.js` `DATA_FILES` (network-first list) | **Yes** | 3 entries vs the 7 data files `app.js` requests on every load (9 URL constants at the time: `calibration.json` since removed, `metrics_history.json` declared but never requested); comment says "All JSON data files". I first *inferred* the other 4 merely lacked an offline fallback the listed 3 had; **testing that showed the fallback was dead for all 7** (§8.1 #26, §10 item 11) | Yes — a `/data/*.json` rule | draft #1780 (offline behaviour change, GG) |
 | 6 | `_config.yml` Pages `exclude:` | **Yes** | `data/calibration.json` excluded but fetched: live 404 ×2/load for ~41 days; its comment says "7 data files", 8 are fetched now | Yes — `tests/test_pages_surface.py` derives from `app.js` | fixed #1773 (`_config.yml` itself untouched: deploy config) |
 | 7 | `scrape-tanishq-selfhosted.yml` cron comment | **Yes** | "same cadence/offset as check-price.yml"; crons are `7 */3` vs `37 1-22/3` since #1541. Whether the old alignment was load-bearing is not established | n/a (comment) | draft #1775, comment-only |
 | 8 | ADR 025 → ADR 029 supersession | **Yes** | ADR 029 states it partially supersedes 025's premise; 025's status carried no pointer | n/a | fixed in this PR |
@@ -640,9 +650,8 @@ README prose (a candidate class, not swept), and any skill/agent registry
 
 **Drift count: 10 of 16 registries examined had drifted at some point** — 2 were
 already closed before this session (#2, #3), 2 are fixed by merged/this PR (#6, #8),
-3 are in draft PRs awaiting GG (#1, #4, #7), and 3 are open (#5, #11, #15 — #5 and
-#11 need GG; #15 is partly addressed by the headless job). Six were clean (#9, #10,
-#12, #13, #14, #16). Not counted: the alert catalog (`T1`–`T13`, `T8_EVENING`/
+4 are in draft PRs awaiting GG (#1, #4, #5, #7), and 2 are open (#11 needs GG; #15 is
+partly addressed by the headless job). Six were clean (#9, #10, #12, #13, #14, #16). Not counted: the alert catalog (`T1`–`T13`, `T8_EVENING`/
 `T8_MORNING`, `T9_ESCALATE` in `ml/notifications.py`) — no doc claims to enumerate
 it, so there is no registry to drift; and the ADR directory, which has no index file
 (number 006 never existed in git history).
@@ -769,13 +778,16 @@ never resolved; `merged_by`/`author` on both PRs → `gaurav-gandhi-2411`
 (`2026-09-10T13:38:30Z`) to confirm the 13.5-hour gap stated in the
 table above, rather than trusting recollection of the ordering.
 
-**Continuation 2026-09-21, instances #21–#25 and §12:** `#1772` (headless
+**Continuation 2026-09-21, instances #21–#26 and §12:** `#1772` (headless
 banner test fixture no longer crosses IST midnight; verified under a pinned clock
 at 18:30:30Z/19:00Z/20:29Z/20:31Z/10:00Z), `#1773` (dead `data/calibration.json`
 fetch removed; live probe after deploy: SW `v45`, 0 responses ≥400), draft `#1598`
 (`pwa-headless` job, orphaned tests wired, registry check ignores comments), draft
-`#1775` (`sw-version-guard` derives from `SHELL_FILES`), open bot PR `#1578`
-(`docs-refresh`, GG). Numbers in §12.4 are from
+`#1775` (`sw-version-guard` derives from `SHELL_FILES`), draft `#1780` (service-worker
+offline data fallback; stacked on #1598), `#1776` (measurement script and report),
+open bot PR `#1578` (`docs-refresh`, GG). The offline finding (§8.1 #26) was measured
+with an offline-reload run in headless Chromium against both the live origin and a
+local tree (7 of 7 data requests failed; 2 cache entries per file after 2 loads). Numbers in §12.4 are from
 `reports/schedule_windows_2026-09-18.json`, produced by
 `scripts/measure_schedule_windows.py` from `origin/master` `e2a935fe`. §8.1 #21's
 mutation run inverted `isToday` in a working copy of `app.js` and restored it from a
