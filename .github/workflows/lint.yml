@@ -146,9 +146,14 @@ jobs:
           set -e
           BASE="origin/${{ github.base_ref }}"
           CHANGED=$(git diff --name-only "$BASE"...HEAD)
-          if echo "$CHANGED" | grep -qE '^(index\.html|app\.js|style\.css|manifest\.webmanifest)$'; then
+          # The guarded set is read from service-worker.js's own SHELL_FILES, not a
+          # hand-typed regex: the old 4-file regex omitted i18n.js (precached
+          # cache-first), so an i18n-only PR never demanded a VERSION bump. `set -e`
+          # makes an unreadable/empty SHELL_FILES fail this step, not pass it.
+          PRECACHED=$(python3 scripts/sw_shell_files.py)
+          if echo "$CHANGED" | grep -qxF -f <(printf '%s\n' "$PRECACHED"); then
             if ! echo "$CHANGED" | grep -qx 'service-worker.js'; then
-              echo "::error::index.html/app.js/style.css/manifest.webmanifest changed but service-worker.js wasn't touched. Bump VERSION in service-worker.js — see the CACHE INVALIDATION CONTRACT comment at the top of that file."
+              echo "::error::a precached shell file (see scripts/sw_shell_files.py) changed but service-worker.js wasn't touched. Bump VERSION in service-worker.js — see the CACHE INVALIDATION CONTRACT comment at the top of that file."
               exit 1
             fi
             if ! git diff "$BASE...HEAD" -- service-worker.js | grep -q '^[+-]const VERSION'; then
