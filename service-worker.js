@@ -75,7 +75,12 @@
 // (renderStaleBanner's `calibration` parameter was never read after G2), and _config.yml
 // excludes it from the Pages build, so every load made a request that 404'd live.
 // app.js changed; bumping so every installed client re-fetches.
-const VERSION = "v45-20260921-drop-dead-calibration-fetch";
+// 2026-09-21 (v46): data files are cached under a query-free key and every /data/*.json
+// is network-first. Offline, ALL data requests used to fail (the ?t= cache-buster made the
+// fallback lookup never match) and each load added a new cache entry per file. See
+// isDataFile()/the fetch handler below. service-worker.js changed; bumping so every
+// installed client re-installs and evicts the per-load entries.
+const VERSION = "v46-20260921-sw-offline-data-fallback";
 const SHELL_CACHE = `gold-shell-${VERSION}`;
 
 const SHELL_FILES = [
@@ -105,13 +110,6 @@ const SHELL_FILES = [
   // visitors only).
 ];
 
-// All JSON data files get network-first treatment (same as prices.json).
-const DATA_FILES = [
-  "prices.json",
-  "forecast.json",
-  "backtest.json",
-];
-
 self.addEventListener("install", (e) => {
   e.waitUntil(
     caches.open(SHELL_CACHE).then((c) =>
@@ -131,10 +129,11 @@ self.addEventListener("activate", (e) => {
   self.clients.claim();
 });
 
+// Every JSON file under /data/ gets network-first treatment. This used to be a hand-typed
+// list of 3 names while app.js requests 7 on every load (2026-09-21 sweep), so the other 4 fell
+// through to the cache-first branch below and had no offline fallback at all.
 function isDataFile(url) {
-  return DATA_FILES.some(
-    (f) => url.pathname.endsWith(`/${f}`) || url.pathname.endsWith(`data/${f}`)
-  );
+  return url.pathname.includes("/data/") && url.pathname.endsWith(".json");
 }
 
 function isDevanagariFont(url) {
@@ -149,14 +148,24 @@ self.addEventListener("fetch", (e) => {
 
   if (isDataFile(url)) {
     // Network-first for all data files; fall back to cache when offline.
+    // The cache key drops the query string: app.js's loadJSON() appends ?t=<Date.now()>
+    // as a cache-buster, so keying on the full request URL stored a NEW entry per file per
+    // load (unbounded until the next VERSION bump) and made the offline fallback look up a
+    // different ?t= than any stored entry -- it never matched, so offline every data
+    // request failed. Verified in Chromium against the live origin, 2026-09-21.
+    const cacheKey = url.origin + url.pathname;
     e.respondWith(
       fetch(e.request)
         .then((res) => {
-          const copy = res.clone();
-          caches.open(SHELL_CACHE).then((c) => c.put(e.request, copy));
+          // Only a good response may replace the offline copy: with a stable key a
+          // transient 5xx/404 would otherwise overwrite the last known-good data.
+          if (res.ok) {
+            const copy = res.clone();
+            caches.open(SHELL_CACHE).then((c) => c.put(cacheKey, copy));
+          }
           return res;
         })
-        .catch(() => caches.match(e.request))
+        .catch(() => caches.match(cacheKey))
     );
     return;
   }
