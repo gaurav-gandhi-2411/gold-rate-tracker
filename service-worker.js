@@ -87,7 +87,10 @@
 // hard-coded English, never i18n'd). app.js changed; bumping so every installed client re-fetches.
 // 2026-09-21 (v49): Sentry is now actually initialised (real DSN, and an onload hook so init no
 // longer depends on the async bundle winning the race with app.js). app.js + index.html changed.
-const VERSION = "v49-20260921-sentry-init";
+// 2026-09-21 (v50): index.html no longer reloads a first-time visitor's page when the worker first
+// takes control (it flashed the price to the loading skeleton ~1s after first paint, and raced the
+// post-deploy render smoke test into a false URGENT). Only a worker REPLACING an existing one reloads.
+const VERSION = "v50-20260921-no-reload-on-first-install";
 const SHELL_CACHE = `gold-shell-${VERSION}`;
 
 const SHELL_FILES = [
