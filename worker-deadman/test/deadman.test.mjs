@@ -18,7 +18,11 @@ import {
   RUNNER_CONFIRMED_OFFLINE_HOURS,
 } from "../src/deadman.mjs";
 import { runCheck } from "../src/index.mjs";
-import { PR_TRIGGER_STALE_MINUTES } from "../src/pr_trigger_health.mjs";
+import {
+  PR_TRIGGER_STALE_MINUTES,
+  MERGED_SETTLE_MINUTES,
+  MERGED_LOOKBACK_MINUTES,
+} from "../src/pr_trigger_health.mjs";
 
 const HOUR = 3_600_000;
 const NOW = Date.parse("2026-08-28T04:00:00Z");
@@ -244,6 +248,8 @@ test("runCheck: response echoes the real threshold constants from deadman.mjs, n
     tanishqEscalateHours: TANISHQ_ESCALATE_HOURS,
     runnerConfirmedOfflineHours: RUNNER_CONFIRMED_OFFLINE_HOURS,
     prTriggerStaleMinutes: PR_TRIGGER_STALE_MINUTES,
+    mergedSettleMinutes: MERGED_SETTLE_MINUTES,
+    mergedLookbackMinutes: MERGED_LOOKBACK_MINUTES,
   });
 });
 
