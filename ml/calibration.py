@@ -429,6 +429,179 @@ def evaluate_empirical_band_coverage(
     return {"n": n_scored, "n_in_band": n_in_band, "coverage": coverage}
 
 
+# Minimum number of earlier stale-IBJA residuals before the stratified band is used for a
+# carry-forward day; below it the production band is used (and counted as a fallback).
+_STRATIFIED_MIN_CARRY_RESIDUALS = 8
+
+
+def evaluate_stratified_band_coverage(
+    ibja_df: pd.DataFrame,
+    tanishq_df: pd.DataFrame,
+    level: int,
+    huber_epsilon: float = _DEFAULT_HUBER_EPSILON,
+    half_life: float = _DEFAULT_HALF_LIFE,
+    min_train: int = _MIN_FIT_OBSERVATIONS,
+    max_age_days: int = _SCORING_MAX_IBJA_AGE_DAYS,
+    min_carry_residuals: int = _STRATIFIED_MIN_CARRY_RESIDUALS,
+) -> dict:
+    """SHADOW scoring of a freshness-stratified band next to the production band (AP3, 2026-09-21).
+
+    Nothing here changes the displayed band. It exists so every weekly run adds genuinely
+    out-of-sample days to a question that could only be answered retrospectively: does sizing the
+    band separately for stale-IBJA ("carry-forward") days fix their under-coverage?
+
+    Scoring set, training set, fit and the production band are exactly evaluate_empirical_band_
+    coverage's (a parity test pins n and n_in_band to it). The stratified band differs only on
+    carry-forward days (IBJA row older than the Tanishq day): instead of the same-day in-sample
+    residual quantile, it is the recency-weighted `level` quantile of |residual| under THIS day's
+    fit over every earlier Tanishq day (date < t) that was asof-matched to a stale IBJA row. Those
+    days are not in the fit (it uses same-day pairs only), so their residuals are out-of-sample to
+    it, and everything used is strictly before t. Below `min_carry_residuals` earlier stale days it
+    falls back to the production band (counted in `carry_forward_fallback_days`).
+
+    Pre-registered (no tuning): half_life, level and min_carry_residuals are the module defaults. On
+    the 87 days of 2026-06-12..2026-09-21 the retrospective result was 71.3% -> 80.5% pooled and
+    57.1% -> 85.7% carry-forward, at a mean carry-forward half-width of ~208 vs ~79 Rs/g. That
+    window also suggested the design, so it is NOT held-out evidence; the weekly re-runs are.
+    Caveat: 26 of 28 carry-forward days in it were Saturday or Sunday, so "stale IBJA" and "weekend"
+    cannot be separated yet.
+    """
+    same_day = _merge_overlap(ibja_df, tanishq_df)
+    X = same_day["ibja_per_g"].to_numpy().reshape(-1, 1)
+    y = same_day["tanishq_22k"].to_numpy()
+    same_day_dates = pd.to_datetime(same_day["date"]).to_numpy()
+
+    ibja_sorted = ibja_df[["date", "pm_916"]].dropna(subset=["pm_916"]).copy()
+    ibja_sorted["date_dt"] = pd.to_datetime(ibja_sorted["date"])
+    ibja_sorted["ibja_per_g"] = ibja_sorted["pm_916"] / 10.0
+    ibja_sorted = ibja_sorted.sort_values("date_dt")
+    tanishq_sorted = tanishq_df[["date", "22k"]].copy()
+    tanishq_sorted["date_dt"] = pd.to_datetime(tanishq_sorted["date"])
+    tanishq_sorted = tanishq_sorted.sort_values("date_dt")
+
+    scoring = pd.merge_asof(
+        tanishq_sorted,
+        ibja_sorted[["date_dt", "ibja_per_g", "date"]].rename(columns={"date": "ibja_date"}),
+        on="date_dt",
+        direction="backward",
+    )
+    scoring = scoring.dropna(subset=["ibja_per_g"])
+    scoring["gap_days"] = (scoring["date_dt"] - pd.to_datetime(scoring["ibja_date"])).dt.days
+    scoring = (
+        scoring[scoring["gap_days"] < max_age_days].sort_values("date_dt").reset_index(drop=True)
+    )
+    carry_all = scoring[scoring["gap_days"] >= 1]
+
+    strata: dict[str, dict[str, float]] = {
+        name: {
+            "n": 0,
+            "production_in_band": 0,
+            "stratified_in_band": 0,
+            "hw_prod": 0.0,
+            "hw_strat": 0.0,
+        }
+        for name in ("same_day", "carry_forward")
+    }
+    fallback_days = 0
+    for _, srow in scoring.iterrows():
+        t = np.datetime64(srow["date_dt"])
+        train_mask = same_day_dates < t
+        n_train = int(train_mask.sum())
+        if n_train < min_train:
+            continue
+        weights = _recency_weights(n_train, half_life)
+        slope, intercept = _fit_robust(
+            X[train_mask], y[train_mask], huber_epsilon=huber_epsilon, weights=weights
+        )
+        train_abs = np.abs(y[train_mask] - (slope * X[train_mask][:, 0] + intercept))
+        hw_prod = _weighted_percentile(train_abs, weights, level)
+        hw_strat = hw_prod
+        carry = int(srow["gap_days"]) >= 1
+        if carry:
+            past = carry_all[carry_all["date_dt"] < srow["date_dt"]]
+            if len(past) >= min_carry_residuals:
+                res = np.abs(
+                    past["22k"].to_numpy() - (slope * past["ibja_per_g"].to_numpy() + intercept)
+                )
+                hw_strat = _weighted_percentile(res, _recency_weights(len(res), half_life), level)
+            else:
+                fallback_days += 1
+        err = abs(srow["22k"] - (slope * srow["ibja_per_g"] + intercept))
+        s = strata["carry_forward" if carry else "same_day"]
+        s["n"] += 1
+        s["production_in_band"] += int(err <= hw_prod)
+        s["stratified_in_band"] += int(err <= hw_strat)
+        s["hw_prod"] += hw_prod
+        s["hw_strat"] += hw_strat
+
+    n = sum(int(s["n"]) for s in strata.values())
+    out_strata = {}
+    for name, s in strata.items():
+        cnt = int(s["n"])
+        out_strata[name] = {
+            "n": cnt,
+            "production_in_band": int(s["production_in_band"]),
+            "stratified_in_band": int(s["stratified_in_band"]),
+            "mean_half_width_production": round(s["hw_prod"] / cnt, 1) if cnt else None,
+            "mean_half_width_stratified": round(s["hw_strat"] / cnt, 1) if cnt else None,
+        }
+    prod_in = sum(v["production_in_band"] for v in out_strata.values())
+    strat_in = sum(v["stratified_in_band"] for v in out_strata.values())
+    return {
+        "n": n,
+        "production": {"n_in_band": prod_in, "coverage": (prod_in / n) if n else None},
+        "stratified": {"n_in_band": strat_in, "coverage": (strat_in / n) if n else None},
+        "strata": out_strata,
+        "carry_forward_fallback_days": fallback_days,
+    }
+
+
+def _stratified_shadow_payload(result: dict, nominal: float) -> dict:
+    """Shape evaluate_stratified_band_coverage's result for calibration_band_coverage.json.
+
+    Per stratum and pooled, for BOTH bands: n, in-band count, coverage, Wilson 95% CI and the exact
+    two-sided binomial p-value against nominal. That last number is the decision statistic: whether
+    a stratum is resolvably off its own target, not whether two strata differ from each other (on
+    2026-09-21 the same-day vs carry-forward difference was Fisher p=0.074, unresolved, while
+    carry-forward vs 80% was p=0.0069).
+    """
+    from scipy.stats import binomtest
+
+    from ml.metrics import wilson_confidence_interval
+
+    def block(n: int, k: int) -> dict:
+        if n == 0:
+            return {"n": 0, "n_in_band": 0, "coverage": None}
+        lo, hi = wilson_confidence_interval(k, n)
+        return {
+            "n": n,
+            "n_in_band": k,
+            "coverage": round(k / n, 4),
+            "wilson_ci_low": round(lo, 4),
+            "wilson_ci_high": round(hi, 4),
+            "p_vs_nominal": round(float(binomtest(k, n, nominal).pvalue), 4),
+        }
+
+    strata = {}
+    for name, s in result["strata"].items():
+        strata[name] = {
+            "n": s["n"],
+            "production": block(s["n"], s["production_in_band"]),
+            "stratified": block(s["n"], s["stratified_in_band"]),
+            "mean_half_width_production": s["mean_half_width_production"],
+            "mean_half_width_stratified": s["mean_half_width_stratified"],
+        }
+    n = result["n"]
+    return {
+        "status": "shadow: NOT the displayed band. Scored weekly so out-of-sample evidence accrues.",
+        "n": n,
+        "pooled_production": block(n, result["production"]["n_in_band"]),
+        "pooled_stratified": block(n, result["stratified"]["n_in_band"]),
+        "strata": strata,
+        "carry_forward_fallback_days": result["carry_forward_fallback_days"],
+    }
+
+
 def save_calibration_band_coverage(
     data_dir: Path | None = None,
     out_filename: str = "calibration_band_coverage.json",
@@ -520,6 +693,15 @@ def save_calibration_band_coverage(
         "just numerically different from it. Distinct from data/coverage_metrics.json, "
         "which scores the OTHER displayed band (headline.lower/upper).",
     }
+    # SHADOW (AP3): the freshness-stratified band scored next to the production band. Additive key,
+    # display unchanged; a failure here must never block the existing weekly file above.
+    try:
+        payload["stratified_shadow"] = _stratified_shadow_payload(
+            evaluate_stratified_band_coverage(ibja_df, tanishq_df, level=NOMINAL_COVERAGE_PCT),
+            nominal,
+        )
+    except Exception as exc:
+        logger.warning("save_calibration_band_coverage: stratified shadow scoring failed: %s", exc)
     out_path.write_text(json.dumps(payload, indent=2) + "\n")
     logger.info(
         "save_calibration_band_coverage: coverage=%s n=%d wilson_ci=[%.1f%%, %.1f%%] "
