@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "consecutive_job_failures": 1,
+  "consecutive_job_failures": 2,
   "last_job_outcome": "skipped",
-  "last_updated_utc": "2026-09-21T10:03:12Z"
+  "last_updated_utc": "2026-09-21T10:09:47Z"
 }
