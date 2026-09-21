@@ -640,7 +640,6 @@ def _check_t7(
             return None
 
     current = prices[-1]["22k"] if prices else 0
-    lean_dir, _ = compute_chronos_lean(probe)
     _mom_dir, mom_pct = compute_recent_momentum(prices)
     abs_mom = abs(mom_pct)
     if abs_mom < 0.5:
@@ -649,13 +648,11 @@ def _check_t7(
         week_desc = f"Up {abs_mom:.1f}% this week"
     else:
         week_desc = f"Down {abs_mom:.1f}% this week"
-    lean_hint = ""
-    if lean_dir == "up":
-        lean_hint = " Prices may edge up a little."
-    elif lean_dir == "down":
-        lean_hint = " Prices may ease a little."
+    # No directional hint here (2026-09-21): the README promises no direction prediction, and the
+    # hint this used to carry (Chronos lean) had no skill over the base rate -- see
+    # docs/SESSION_AUDIT_2026-08.md. week_desc above is a description of the past week only.
     title = f"Gold daily check: Rs.{current}"
-    body = f"Gold 22K: Rs.{current}. {week_desc}.{lean_hint} System working normally."
+    body = f"Gold 22K: Rs.{current}. {week_desc}. System working normally."
     return _make_alert("T7", title, body, 2, ["robot", "white_check_mark"], now_ist)
 
 
@@ -682,13 +679,13 @@ def _get_prior_day_price(prices: list[dict], now_ist: datetime) -> int | None:
 def _build_t8_content(
     current: int,
     prior: int | None,
-    forecast: dict,
     session: str,
 ) -> tuple[str, str]:
     """Build (title, body) for a T8 daily digest notification.
 
     ASCII-safe throughout (Rs. not Rs symbol). Plain language (norm #12).
-    Honest framing on directional hint (norm #4): lean, not certainty; no "will".
+    Describes what already happened only -- no directional hint (2026-09-21; see the comment
+    where it used to be appended).
     """
     delta = (current - prior) if prior is not None else 0
 
@@ -711,16 +708,10 @@ def _build_t8_content(
         title = f"Gold {session}: Rs.{current}"
         body = f"Gold held steady today - Rs.{current}."
 
-    # Optional directional hint: only when chronos_companion is available (norm #4 — honest framing)
-    companion = forecast.get("chronos_companion", {})
-    if companion.get("status") == "success":
-        lean = companion.get("lean_direction", "flat")
-        if lean == "up":
-            body += " Prices may edge up a little."
-        elif lean == "down":
-            body += " Prices may ease a little."
-        # lean == "flat" or missing → no hint (don't fabricate a direction)
-
+    # This used to append "Prices may edge up/ease a little." from chronos_companion.lean_direction.
+    # Removed 2026-09-21: the README says "Refuses to predict tomorrow's direction" and the hint had
+    # no skill -- over 122 IST days it was 'up' on 84% of days and correct 50.0% of the time at 1 day
+    # (base rate 50.6%) and 40.0% at 5 days (base rate 41.2%).
     return title, body
 
 
@@ -752,7 +743,7 @@ def _check_t8_morning(
     sorted_p = sorted(prices, key=lambda p: p["timestamp"])
     current = int(sorted_p[-1]["22k"])
     prior = _get_prior_day_price(prices, now_ist)
-    title, body = _build_t8_content(current, prior, forecast, "morning")
+    title, body = _build_t8_content(current, prior, "morning")
     return _make_alert("T8_MORNING", title, body, 2, ["bell"], now_ist, bypass_quiet=False)
 
 
@@ -785,7 +776,7 @@ def _check_t8_evening(
     sorted_p = sorted(prices, key=lambda p: p["timestamp"])
     current = int(sorted_p[-1]["22k"])
     prior = _get_prior_day_price(prices, now_ist)
-    title, body = _build_t8_content(current, prior, forecast, "evening")
+    title, body = _build_t8_content(current, prior, "evening")
     return _make_alert("T8_EVENING", title, body, 2, ["bell"], now_ist, bypass_quiet=True)
 
 
