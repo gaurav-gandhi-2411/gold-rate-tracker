@@ -30,6 +30,17 @@ FORWARD_LOOKING = [
     (r"\bbuy\b|\bsell\b|good time to", "advice"),
 ]
 
+# Copy that implies a direction signal or a forecast exists. The direction signal is DARK by design
+# (README), and the Chronos companion measures worse than naive flat-hold, so neither word may
+# appear in user-facing text. "not a forecast" stays allowed.
+SIGNAL_CLAIMS = [
+    (
+        r"\bdirection(?:al)? signal\b|\bdirectional\b|\bdirection-tracking\b",
+        "implies a direction signal",
+    ),
+    (r"(?<!not a )\bforecast", "forecast"),
+]
+
 
 def _render(node: ast.AST) -> str:
     if isinstance(node, ast.Constant) and isinstance(node.value, str):
@@ -70,13 +81,23 @@ def test_real_notification_templates_make_no_forward_looking_claims() -> None:
     source = SOURCE.read_text(encoding="utf-8")
     # Fail closed: too few templates means the discovery stopped matching, not that all is clean.
     assert len(collect_templates(source)) >= 20
-    assert find_violations(source, FORWARD_LOOKING) == []
+    assert find_violations(source, FORWARD_LOOKING + SIGNAL_CLAIMS) == []
 
 
 def test_detects_the_hint_that_used_to_ship() -> None:
     # The violation itself, constructed from the real removed line.
     src = 'lean_hint = ""\nif up:\n    lean_hint = " Prices may edge up a little."\n'
     assert len(find_violations(src, FORWARD_LOOKING)) == 1
+
+
+def test_signal_claims_fire_on_the_old_t5_t6_copy() -> None:
+    for phrase in (
+        "The direction signal could not be updated this cycle.",
+        "The direction-tracking system encountered an issue.",
+        "Chronos directional companion is now calibrated.",
+        "Gold forecast: calibration unlocked",
+    ):
+        assert find_violations(f'title = "{phrase}"\n', SIGNAL_CLAIMS), phrase
 
 
 def test_each_rule_fires_on_its_own_phrase() -> None:

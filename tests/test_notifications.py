@@ -1304,7 +1304,7 @@ def test_send_pending_sets_last_t6_fired_date_ist(monkeypatch):
     now_ist = _ist(2026, 6, 2, 14, 0)
     alert = PendingAlert(
         trigger_id="T6",
-        title="Gold forecast: calibration unlocked",
+        title="Gold: calibration unlocked",
         body="IBJA->Tanishq calibration achieved 30 overlap pairs (>=30). See dashboard.",
         priority=3,
         tags=["unlock", "white_check_mark"],

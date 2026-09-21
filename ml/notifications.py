@@ -572,15 +572,15 @@ def _check_t5(
     if state.last_t5_ist_date == today_ist:
         return None
     if fallback:
-        title = "Gold: tracking system running on backup"
+        title = "Gold: companion model running on backup"
         body = (
-            "The direction-tracking system encountered an issue and switched to backup mode. "
+            "The companion model encountered an issue and switched to backup mode. "
             "Headline price is still accurate. Check the app and CI logs."
         )
     else:
-        title = "Gold: direction signal temporarily unavailable"
+        title = "Gold: companion model temporarily unavailable"
         body = (
-            "The direction signal could not be updated this cycle. "
+            "The companion model could not be updated this cycle. "
             "Price readings are unaffected. Check the app and CI logs."
         )
     return _make_alert("T5", title, body, 2, ["warning", "rotating_light"], now_ist)
@@ -604,12 +604,8 @@ def _check_t6(
     if state.last_t6_fired_date_ist:
         return None
     n_obs = calibration.get("n_observations", 0)
-    title = "Gold forecast: calibration unlocked"
-    body = (
-        f"IBJA->Tanishq calibration achieved {n_obs} overlap pairs (>=30). "
-        "Chronos directional companion is now calibrated to Tanishq units. "
-        "See dashboard."
-    )
+    title = "Gold: calibration unlocked"
+    body = f"IBJA->Tanishq calibration achieved {n_obs} overlap pairs (>=30). See dashboard."
     return _make_alert("T6", title, body, 3, ["unlock", "white_check_mark"], now_ist)
 
 
