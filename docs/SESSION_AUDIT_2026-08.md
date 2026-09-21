@@ -263,7 +263,7 @@ versus an engineer.
 ## 8. The defect-class catalogue (Y3, audit 2026-09-05; extended to #20,
 production audit 2026-09-10/11)
 
-Twenty instances (twenty-six as of §8.1, 2026-09-21) of one defect class have now been found across this
+Twenty instances (twenty-nine as of §8.1, 2026-09-21) of one defect class have now been found across this
 audit's sessions (2026-08-27 through 2026-09-11, the first 13 by
 2026-09-05): **a control emits a plausible-looking result instead of
 failing or raising when it cannot actually verify the thing it claims to
@@ -336,7 +336,7 @@ of this audit's own-control findings (#8, #12, #13, #18, #19, #20) were
 found by asking exactly that question of an existing, trusted control —
 or, for #18/#19/#20, of an existing, trusted *process or assumption*.
 
-### 8.1 Instances #21–#26 (continuation, 2026-09-21)
+### 8.1 Instances #21–#29 (continuation, 2026-09-21)
 
 Found by sweeping hand-maintained registries (§12.2) and by running the
 "construct the failure" check against controls that had never had it. Each row
@@ -345,19 +345,25 @@ what is *inferred*. Baseline: `origin/master` `e2a935fe` unless stated.
 
 | # | Instance | What it substituted | How found | Status |
 |---|---|---|---|---|
-| 21 | `lint.yml`'s required `pwa-js` job ("gates app.js logic on every push/PR") | 9 of the 10 non-headless `tests/test_*.js` files exercise **inlined copies** of app.js functions (their headers say "must match app.js"), not app.js (the tenth, `test_scrape.js`, tests scraper output and was not classified). The one test that drives the real app.js, `test_stale_banner_headless.js`, was excluded from CI. **Verified:** with `isToday` inverted in app.js (the banner would call Monday's close "today's estimate" on Tuesday), all 115 tests across every `tests/test_*.js` except the headless one (a superset of the CI pwa-js list) passed (exit 0) while the headless test failed 3 checks. Of the 15 inlined functions that map to a named function in app.js/i18n.js, 9 are textually identical and 6 differ (2 inspected: both are i18n drift — app.js now calls `t()`, the copy hard-codes English, so a Hindi regression in those branches is invisible to CI; the other 4 were not inspected) | Reading why the headless test was excluded, then the test headers | `pwa-headless` job in draft #1598 (GG merges). Making it a *required* context is a branch-protection change, GG. The copies themselves are untouched |
+| 21 | `lint.yml`'s required `pwa-js` job ("gates app.js logic on every push/PR") | 9 of the 10 non-headless `tests/test_*.js` files exercise **inlined copies** of app.js functions (their headers say "must match app.js"), not app.js (the tenth, `test_scrape.js`, tests scraper output and was not classified). The one test that drives the real app.js, `test_stale_banner_headless.js`, was excluded from CI. **Verified:** with `isToday` inverted in app.js (the banner would call Monday's close "today's estimate" on Tuesday), all 115 tests across every `tests/test_*.js` except the headless one (a superset of the CI pwa-js list) passed (exit 0) while the headless test failed 3 checks. Of the 15 inlined functions that map to a named function in app.js/i18n.js, 9 are textually identical and 6 differ (2 inspected: both are i18n drift — app.js now calls `t()`, the copy hard-codes English, so a Hindi regression in those branches is invisible to CI; the other 4 were not inspected) | Reading why the headless test was excluded, then the test headers | **Fixed in draft #1788** (2026-09-21, AL2): the 9 files now load the real `app.js` via `tests/helpers/load_app.js` and the copies are deleted. Mutation proof on the real `app.js` (8 single-token mutations): `isToday` inverted was **115/115 green before, caught by 2 files after**; 6 of 8 caught by the converted suite and the 2 survivors (`computeBandPos90d` tie handling, `computeTrendResidual30d` MAD scale) were real gaps the copies had hidden, now killed by 2 new tests. Of the 6 diverged copies, 5 differed only by i18n (0 logic hunks) and the 6th was a `return null` stub: **no real bug found**; `computeTrendDescription` has no caller (dead code). Also the `pwa-headless` job in draft #1598. Requiring `pwa-headless` is a branch-protection change, GG — recommendation in §12.5 |
 | 22 | `_config.yml`'s Pages `exclude:` list vs the files app.js fetches | `data/calibration.json` excluded 2026-07-18 (#212, nothing fetched it), fetched from 2026-08-11 (#786): **404 on every live load, two requests per load, ~41 days.** Verified in headless Chromium against the live origin before and after the fix (after: 0 responses ≥400, 0 console errors). Nothing reported it: render-smoke does not check optional-fetch status codes; the client's Sentry DSN is a placeholder (known open item, `docs/PROGRESS.md` "Sentry DSN placeholder not activated") and `Sentry.init` is additionally guarded by `typeof Sentry !== "undefined"` against an `async` bundle, so it silently does not run on page loads where `app.js` wins the race (see §10 item 8) | AK2 registry sweep, then a live probe | **Fixed** #1773 (`e2a935fe`): dead fetch removed, `tests/test_pages_surface.py` reports `data/calibration.json` against the real incident tree `443885b7`. Sentry DSN needs a credential, GG |
-| 23 | `docs-freshness` red on master, unpaged | **12 of 12** scheduled `lint.yml` runs on master, 2026-09-09 → 09-20, failed with `docs-freshness` as the only failing job (each run's jobs inspected). It is not a required context, so nothing blocks and `ci-health.yml` (required contexts only) never looks at it. The fix mechanism — `docs-refresh.yml`'s bot PR #1578 — has been open since 2026-09-11 with **zero checks run on it** (bot-token pushes do not trigger workflows) and needs a human merge because it changes published README numbers. The README's Lint badge therefore reads failing (*inferred* from the run conclusions; the rendered badge was not fetched) | Reading why a test-only PR (#1772) had a red check, then running `inject_metrics.py --check` on master | **Open**: merging #1578 changes published numbers, GG. Not a data problem: the committed text is simply stale against data |
-| 24 | `worker-deadman`'s PR-trigger-health channel (#1591) is structurally blind to fast merges | Pages only if a PR's head commit is ≥30 min old with zero required check-runs *at a 30-min tick*. **Verified** by running `classifyPrTriggerHealth` from the repo against #1539's and #1569's recorded state (head-commit time, merge time, 0 check-runs, commit status `pending`): #1569 was open 116 min → pages at 09:30Z, 57 min before it merged; **#1539 — the incident the module's own header cites as motivation — was open 5.2 min → zero ticks fall inside its lifetime, never pages.** A PR merged <30 min after its last push can never page; one is guaranteed to only if open ≥60 min. Assumes the cron fires on :00/:30 | AK3: constructing the detection case from the real recorded state | **Open**: an alert-logic change plus a Worker deploy, GG. Proposal (*inferred*, untested): also scan PRs merged in the last ~2h for zero check-runs on their head SHA — would have paged #1539 within one tick of merging |
+| 23 | `docs-freshness` red on master, unpaged | **12 of 12** scheduled `lint.yml` runs on master, 2026-09-09 → 09-20, failed with `docs-freshness` as the only failing job (each run's jobs inspected). It is not a required context, so nothing blocks and `ci-health.yml` (required contexts only) never looks at it. The fix mechanism — `docs-refresh.yml`'s bot PR #1578 — sat open from 2026-09-11 with **zero checks ever run on it**, native auto-merge (enabled 2026-09-11T10:29:58Z) waiting on `lint`/`pwa-js` that could never start. **Root cause (verified; this row's first draft and the continuation brief both had it wrong):** not a `GITHUB_TOKEN`-created PR — the workflow already used `CI_MERGE_PAT` — but `git commit -m "... [skip ci]"` at `docs-refresh.yml:87`: GitHub suppresses `pull_request` runs when the head commit message carries the marker. Proved with a scratch PR (#1786, same identity): marker-carrying head → **0 runs in 6+ min**; a next commit without it → checks in ~2.5 min; and #1578 itself, given a marker-free merge commit at 05:41:21Z, ran native checks and auto-merged at **05:45:43Z**. The 8 bot-pr-sync callers also commit with the marker but dispatch `lint.yml` explicitly, so only docs-refresh was affected. The README's Lint badge read failing (*inferred* from run conclusions; the rendered badge was not fetched) | Reading why a test-only PR (#1772) had a red check, then running `inject_metrics.py --check` on master; root cause found in AL1 | **#1578 merged 2026-09-21; master's `lint.yml` dispatch run on `448e8745` passed all jobs including `docs-freshness`** (the scheduled 06:00 run is not yet observed). **Structural fix in draft #1787** (drop the marker; `tests/test_pr_workflows_get_checks.py` discovers every PR-opening workflow and requires no marker or an explicit dispatch — reports `docs-refresh.yml` on unfixed master, nothing on the fix). Until #1787 merges the next docs-refresh cycle re-creates the stuck shape |
+| 24 | `worker-deadman`'s PR-trigger-health channel (#1591) is structurally blind to fast merges | Pages only if a PR's head commit is ≥30 min old with zero required check-runs *at a 30-min tick*. **Verified** by running `classifyPrTriggerHealth` from the repo against #1539's and #1569's recorded state (head-commit time, merge time, 0 check-runs, commit status `pending`): #1569 was open 116 min → pages at 09:30Z, 57 min before it merged; **#1539 — the incident the module's own header cites as motivation — was open 5.2 min → zero ticks fall inside its lifetime, never pages.** A PR merged <30 min after its last push can never page; one is guaranteed to only if open ≥60 min. Assumes the cron fires on :00/:30 | AK3: constructing the detection case from the real recorded state | **Fix built (GG approved the scan), not deployed**: draft #1789 pages when a PR merged 10–180 min ago has no `lint`/`pwa-js` check-run on its head SHA, once per PR. Sized from data: over the 400 most recent merged PRs exactly 2 flag (#1539, #1569) and 0 of 355 bot PRs (false-positive rate 0/400). Proven with the real SHAs replayed through the Worker's :00/:30 ticks (#1539 pages at 14:00Z, 21.5 min after merge; #1569 at 11:00Z) and through `runCheck` against a mocked GitHub API — master's unmodified `runCheck` sends nothing for the same world. Deploy is GG's (`wrangler deploy`, no new secret) |
 | 25 | `scripts/check_test_registry_complete.py` (#1596) counts a filename inside a YAML comment as "referenced" | It searched raw workflow text, so a test named only in `# TODO: add tests/x.js` passed. **Constructed and reproduced** (orphan reported `[]`), then fixed | Applying the "construct the violation" check to the check merged 2026-09-11 | **Fixed in draft #1598** with three regression tests |
 | 26 | `service-worker.js`'s "network-first, fall back to cache when offline" data handling | **The fallback has never worked.** `loadJSON()` requests `data/x.json?t=<Date.now()>` (since the initial ML commit, 2026-05-09) and the worker cached under the full request URL, so the offline lookup used a different `?t=` than any stored entry and could not match. **Verified in headless Chromium against the live origin (and a local tree): with the real worker active, offline, all 7 data requests failed (`net::ERR_FAILED`) — including the 3 files the worker lists — and after 2 online loads the cache held 2 entries per file, keyed with `?t=`** (unbounded per-load growth until the next VERSION bump; only 2 loads were observed, so the growth rate beyond that is extrapolated). Nothing tested it | Testing an *inference* from the registry sweep (row 5, §12.2: "the three unlisted files lack an offline fallback") — the test showed the fallback was dead for all of them | **Fix prepared, not merged**: draft #1780 (stacked on #1598) — query-free cache key, `res.ok` guard, `/data/*.json` rule, and a real-worker test that fails 3 checks on unfixed master and passes on the fix. Changes what an offline user sees, GG. No device verification yet |
+| 27 | The Worker's open-PR trigger-health channel excluded every `bot/`-prefixed PR (`fetchOpenPrTriggerHealth`) | On the stated assumption that bot PRs "auto-merge via bot-pr-sync's own polling within minutes". `bot/docs-refresh` does not use bot-pr-sync (native auto-merge) and was **the one PR stuck open with zero check-runs for 10 days (#1578) — skipped by construction**. The exclusion was also pinned by an existing test (`runCheck: ... excludes bot/ and scratch/ prefixed branches`). Measured over 100 merged bot PRs: head commit → first `lint`/`pwa-js` check-run start median 0.17 min, **max 0.35 min**; → merged max 4.5 min, so an open bot PR without a check-run for the existing 30-min threshold is a real anomaly (0 false pages in the sample). *Correction to my own working note:* I first said no test covered this fetch layer; that came from a grep I had truncated — it is tested, and the test encoded the wrong assumption | Reading why the Worker never paged about #1578 during AL1 | **Prepared, needs GG's OK**: separable second commit in draft #1789 (drop it to decline); rewrites the pinned test |
+| 28 | ADR 028's `enforce_admins: false` — how often it is actually used, and the comfort that "a failing check is still blocked" | **3 of the 400 most recent merged PRs merged without `lint` and `pwa-js` recorded SUCCESS before the merge: #1539 and #1569 (never ran) and #1541 (`lint` FAILED on its head SHA at 13:55Z; merged 13 h later).** #1541 is a *third* bypass and the first over a **failing** check — it is what put master's `lint` red for 33m36s (§8 #19). The other 397 (incl. all 355 bot PRs; 0 needed the forwarded-status fallback) had both contexts green first. All 400 merges were by the one admin identity. No `--admin` anywhere in workflows/actions/scripts; 0 non-PR commits on master's first-parent history (last 400); the only `git push`es are to `bot/` branches. So: **nothing automated relies on bypass** (*verified* by the measurement; branch protection was not toggled, so how `enforce_admins: true` would behave is *documented GitHub behaviour, not tested here*) | AL3b: measuring real merges instead of reasoning about them | **GG's decision**: enabling it would have blocked exactly those 3 (0.75% of merges) — the three that caused audit incidents #18/#19/#20 — and nothing else. Cost: GG loses the merge-anyway hatch (Actions outage, emergency revert while CI is red) and would toggle the setting for those cases. Recommendation and Settings path in §12.5 |
+| 29 | `ml/requirements-inference.lock` vs the floors in `ml/requirements.txt` | Production (`check-price`, `weekly-backtest`, `eval-direction`) installs the **lock**, which is generated by a manual `uv pip compile` (RUNBOOK: "regenerate whenever `requirements.txt` changes" — a written rule with no enforcement, same class as #18). Last regenerated 2026-08-11; floors were raised since, so **production ran below 5 of its 17 declared floors**: `cryptography 50.0.0` (<50.0.1) and `setuptools 83.0.0` (<84.0.0) — both labelled CVE minimum pins — plus `lxml 6.1.1`, `pandas 3.0.3`, `yfinance 1.4.1`. CI's `pip install -r ml/requirements.txt` resolves the newest releases, so nothing red showed it, and the dependency-audit job (`continue-on-error`) audits the lock and reports `accelerate 1.13.0 PYSEC-2026-3804` while staying green. **It also means the four dependabot `ml/` floor bumps (#1659, #1660, #1482, #1303) cannot change production.** *Not claimed:* that the below-floor versions are exploitable — pip-audit on the lock flags only `accelerate` | AL4: asking what production actually installs before measuring the dependabot PRs | **Fix prepared**: draft #1792 regenerates the lock (5 pins: cryptography 50.0.1, lxml 6.1.3, pandas 3.0.6, setuptools 84.0.0, yfinance 1.7.0) and adds `tests/test_lock_satisfies_floors.py`, which names exactly those 5 on unfixed master. Regression evidence in §12.5; **Chronos not measured** |
 
-Grouped by what made each invisible: #21, #24, #25 are controls whose surface
+Grouped by what made each invisible: #21, #24, #25, #27 are controls whose surface
 was narrower than their name (§11 category 3/7); #22 is a hand-maintained
 registry drifting against its consumer with no reporting channel; #23 is a
 control that is correctly implemented, red, and read by nobody because it
-gates nothing (§11 category 7); #26 is a documented fallback that no test ever
-exercised, so it could be dead since its introduction (§11 category 1).
+gates nothing (§11 category 7) — and, once diagnosed, a workflow that
+disabled its own checks with a marker in its commit message; #26 is a
+documented fallback that no test ever exercised, so it could be dead since its
+introduction (§11 category 1); #28 is an accepted risk measured for the first
+time; #29 is a written rule with no mechanical enforcement (§11 category 6).
 
 ## 9. Clean results — evidence of function, not absence of testing
 
@@ -434,7 +440,7 @@ checked, not just what was found broken.
 ## 10. Corrections the audit made to itself
 
 An audit that never records being wrong about its own findings is not
-reporting its own reliability. Eleven corrections, in the order found:
+reporting its own reliability. Fifteen corrections, in the order found:
 
 1. **`check_branch_base` proven unable to fire (§8, instance #12).**
    Already recorded in the catalogue above — restated here because it's
@@ -535,6 +541,27 @@ reporting its own reliability. Eleven corrections, in the order found:
     registry was rewritten before merge; the inference is kept here because it is
     the same shape as the audit's other findings — a plausible reading of code,
     stated with more confidence than a run supported, until a run said otherwise.
+12. **The diagnosis of why #1578 never got checks was wrong twice.** The
+    continuation brief hypothesised a `GITHUB_TOKEN`-created PR; this doc's own first
+    draft of §8.1 #23 said "bot-token pushes do not trigger workflows". Both were
+    false: the workflow already used `CI_MERGE_PAT`. The cause is a `[skip ci]` marker in
+    the commit message (§8.1 #23), proved with a controlled scratch PR before any fix
+    was written.
+13. **My fix PR for #12 was defeated by the bug it fixes.** The first commit message on
+    draft #1787 spelled the marker out in its subject line ("drop [skip ci] from its
+    commit"), so GitHub skipped that PR's checks — the same 0-runs state, reproduced by the
+    fix itself. Found by noticing #1787 had "no checks reported" long after the ~2.5-minute
+    norm, confirmed on the commit message, fixed by rewording; checks then started within
+    ~50 s. All my other open branches' head commits were checked for the same slip (none).
+14. **I claimed the Worker's open-PR fetch layer had no tests.** That came from a grep I
+    had truncated with `head_limit`. It is tested (`deadman.test.mjs`, via a `githubApiFetch`
+    helper), and the test pinned the wrong `bot/` exclusion as intended behaviour
+    (§8.1 #27). Corrected in the PR body before it was reviewed.
+15. **§8 #20's comfort that "a failing check is still blocked" (ADR 028's test PR #676) does not
+    hold for admin merges.** #1541 merged over a *failing* `lint` (§8.1 #28). #676 proved a
+    failing check blocks a merge made without the bypass; it never covered an admin using
+    it. Recorded here, not silently edited, because #20's own text is still true of what it
+    tested.
 
 **Not corrected — checked and found to still hold, unverifiable as stated.**
 This session searched for documented evidence of "nine merge_gate gates
@@ -641,17 +668,20 @@ README prose (a candidate class, not swept), and any skill/agent registry
 | 8 | ADR 025 → ADR 029 supersession | **Yes** | ADR 029 states it partially supersedes 025's premise; 025's status carried no pointer | n/a | fixed in this PR |
 | 9 | Required status contexts | No | read live by `check_required_checks_positive.py` and `ci-health.yml`; no hardcoded copy exists | already discovery | clean |
 | 10 | bot-pr-sync allowlist ↔ callers' `git add` | No | script run on master: OK across 8 callers | already discovery (#1564) | clean |
-| 11 | `inject_metrics` marked numbers (README, `DIRECTION_SIGNAL_STATUS.md`) | **Yes** | 12/12 scheduled master runs red on it (§8.1 #23) | already discovery (`--check`) | pending #1578, GG |
+| 11 | `inject_metrics` marked numbers (README, `DIRECTION_SIGNAL_STATUS.md`) | **Yes** | 12/12 scheduled master runs red on it (§8.1 #23) | already discovery (`--check`) | #1578 merged; root cause (`[skip ci]` in docs-refresh's commit) + fix in draft #1787 |
 | 12 | `dependabot.yml` directories | No | 3 ecosystems, each matches a manifest on disk; `ml/requirements-inference.lock` is generated and not dependabot-visible | — | clean |
 | 13 | `i18n.js` en/hi keys | No | 257/257 | — | clean |
 | 14 | `SHELL_FILES` vs disk | No | 12/12 exist (install swallows misses) | — | clean |
-| 15 | Tests' inlined copies of app.js functions | **Yes** | 6 of 15 mapped functions differ (2 inspected: i18n drift) | Yes — test the real app.js | headless job in #1598; copies untouched |
+| 15 | Tests' inlined copies of app.js functions | **Yes** | 6 of 15 mapped functions differ (2 inspected: i18n drift) | Yes — test the real app.js | **fixed in draft #1788** (real app.js loaded; 8/8 mutations caught) + headless job in #1598 |
 | 16 | `norm #N` citations | No | 6 sites, 6 correct | — | clean |
+| 17 | `ml/requirements-inference.lock` ↔ the floors in `ml/requirements.txt` | **Yes** | 5 of 17 floors unmet by what production installs (§8.1 #29) | Yes — `tests/test_lock_satisfies_floors.py` | draft #1792 |
 
-**Drift count: 10 of 16 registries examined had drifted at some point** — 2 were
-already closed before this session (#2, #3), 2 are fixed by merged/this PR (#6, #8),
-4 are in draft PRs awaiting GG (#1, #4, #5, #7), and 2 are open (#11 needs GG; #15 is
-partly addressed by the headless job). Six were clean (#9, #10, #12, #13, #14, #16). Not counted: the alert catalog (`T1`–`T13`, `T8_EVENING`/
+**Drift count (updated after the AL continuation): 11 of 17 registries examined had
+drifted at some point** — 2 were already closed before this session (#2, #3), 2 are
+fixed and merged (#6, #8), and 7 are in draft PRs awaiting GG (#1, #4, #5, #7, #11, #15,
+#17). None is open without a prepared fix. Six were clean (#9, #10, #12, #13, #14, #16).
+(The 17th, the lock, was found by AL4 — not by this sweep's original list, which is itself
+the point: the sweep enumerated registries by hand.) Not counted: the alert catalog (`T1`–`T13`, `T8_EVENING`/
 `T8_MORNING`, `T9_ESCALATE` in `ml/notifications.py`) — no doc claims to enumerate
 it, so there is no registry to drift; and the ADR directory, which has no index file
 (number 006 never existed in git history).
@@ -717,6 +747,65 @@ median 290 min late (p90 312, n=7) and `shadow-fusion.yml`'s 06:15 slot 315 min 
 (p90 327, n=6) across the same window. Not resolved: the "recurring daily 7–8h gap
 disappears" criterion (3 gaps ≥6.5h remain in the window; the log does not let this
 be scored per-day without the same slot-attribution problem).
+
+### 12.5 Decisions prepared for GG (AL continuation, 2026-09-21)
+
+**Should `pwa-headless` become a required context? Not yet.** Evidence: it has **2**
+recorded CI runs (both pass: 1m22s, 48s), far too few to judge flakiness; and it loads
+**two third-party CDNs** on every run (`cdn.jsdelivr.net` for Chart.js and
+`browser.sentry-cdn.com`, measured by logging every non-localhost request the headless
+test's page load makes), so a CDN outage or slow response could fail it with no repo change —
+a required context that can fail for reasons outside the repo blocks every merge.
+Recommendation: merge #1598/#1780/#1775, harden the two headless tests to stub the CDN
+requests (`page.route`), let it accumulate about a week of runs (it also runs on the daily
+schedule), and require it only if there are 0 flakes. Path when ready: **repo Settings →
+Branches → the `master` protection rule → Edit → "Require status checks to pass before
+merging" → search `pwa-headless` (it only appears once it has run in the last 7 days) → Save
+changes.**
+
+**Should `enforce_admins` be turned on? Recommend yes.** Measured (§8.1 #28): 397 of 400 recent
+merges already had both required contexts green first, including all 355 bot PRs; the 3 that
+did not are exactly #1539, #1569 and #1541 — the three behind audit incidents #18/#19/#20.
+Nothing automated relies on bypass (no `--admin` in code, no direct pushes to master, bot
+merges satisfied checks before merging). **What it prevents:** an admin merging over a
+failing or never-started required check, including by mistake. **What it costs:** the
+merge-anyway hatch — during a GitHub Actions outage, or an emergency revert while CI is red,
+GG would have to switch the setting off first (a deliberate two-click action, and reversible).
+**Not tested:** I did not toggle branch protection, so the enforcement behaviour itself is
+GitHub's documented one, not something observed here. Path: **repo Settings → Branches → the
+`master` protection rule → Edit → tick "Do not allow bypassing the above settings" (labelled
+"Include administrators" in older UI) → Save changes.** ADR 028 would need an amendment, as it
+accepted this risk explicitly.
+
+**Dependabot `ml/` and `scraper/` PRs (#1658, #1659, #1660, #1482, #1303):** the four `ml/`
+PRs only raise floors in `requirements.txt`; production installs the pinned lock, so they cannot
+change it (§8.1 #29). The real change is regenerating the lock (draft #1792: 5 pins). In two
+throwaway py3.12 venvs (production-locked vs regenerated + scikit-learn 1.9.1, torch excluded):
+905 passed / 1 skipped in both with identical failing sets; recomputed calibration band coverage
+identical in every field (71.26%, n=87, Wilson CI [61.02%, 79.71%]); the macro download through
+the repo's own code path identical on all 8 series across `yfinance` 1.4.1 → 1.7.0 (max
+difference 0.0). **Not measured:** the Chronos-Bolt forecast for #1659 (needs torch; its release
+notes include "preserve precision when unscaling ... forecasts"), and the new bundled Chromium
+for #1658 (its download timed out 5× from this network). For #1658 the 1.63.0 *library* was run
+against a cached Chromium: scraper tests 35/35 (baseline 35/35) and a real scrape returned the
+identical reading. GG merges; the PRs carry the per-PR table.
+
+**Sentry (AL5):** no decision recorded yet (a DSN, or "delete it"). Until then the client-side
+integration is inert by both layers documented in §8.1 #22 and §10 item 8 — a placeholder DSN,
+and an `Sentry.init` guarded by `typeof Sentry !== "undefined"` against an `async` bundle that
+`app.js` can beat. Neither path has been started, deliberately: a DSN is a credential, and
+deleting the integration is a UI-path change GG asked to decide first.
+
+### 12.6 Schedule work: closed
+
+Recorded result of the two windows opened 2026-09-11 (§12.4, `reports/schedule_windows_2026-09-18.json`):
+the cron-phase shift **changed delivery** for the workflow whose cron moved — days with a run
+created 06:00–08:59Z went from 0 of 7 to 6 of 7 — while the unmoved control workflow stayed at
+0 of 7 in both windows. It did **not** raise delivery (35 of 56 slots before and after) and the
+06:00 cohort's ~290–315 min lateness is platform-side and unchanged. The cadence-tail change
+(gaps ≥6.5h: 8 of 38 → 3 of 37, Fisher two-sided p = 0.19) is **not statistically significant**
+and must not be cited as an improvement. No further cron work is planned: the remaining
+lever is GitHub's scheduler, which this repo cannot change.
 
 ## Provenance
 
@@ -797,3 +886,14 @@ that behaviour was tested. §8.1 #24 replays `classifyPrTriggerHealth` (imported
 `worker-deadman/src/pr_trigger_health.mjs`) with head-commit/merge times fetched from
 `gh api repos/.../pulls/{n}` and `.../commits/{sha}` (raw ISO strings), check-runs
 `total_count` 0 and combined status `pending` for both PRs.
+
+**AL continuation, 2026-09-21 (later), instances #27–#29 and §12.5–12.6:** `#1578` (merged
+05:45:43Z after a marker-free merge commit), scratch PR `#1786` (closed; the controlled
+`[skip ci]` experiment), draft `#1787` (docs-refresh fix + `tests/test_pr_workflows_get_checks.py`),
+draft `#1788` (unit tests load the real `app.js`; mutation results in its body, produced by an
+in-place mutation runner that restores `app.js` from a saved copy and asserts its sha256),
+draft `#1789` (Worker merged-unchecked scan; separable `bot/` commit), draft `#1792` (lock
+regeneration + parity test + the dependabot evidence). Merge-bypass counts (§8.1 #28) come from
+`gh` over the 400 most recent merged PRs (check-runs and commit statuses on each head SHA vs its
+`merged_at`); bot-PR timings from 100 merged `bot/` PRs; the venv comparison from two throwaway
+Python 3.12 venvs created with explicit interpreter paths, nothing installed globally.
