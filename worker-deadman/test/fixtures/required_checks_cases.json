@@ -1,0 +1,310 @@
+{
+ "required_contexts": [
+  "lint",
+  "pwa-js"
+ ],
+ "_comment": "Expected verdicts were produced by scripts/check_required_checks_positive.py's assert_required_checks_positive (the specification). The Worker's evaluateRequiredChecks must agree on every case; see worker-deadman/test/pr_trigger_health.test.mjs and tests/test_required_checks_parity.py. REAL cases are the recorded GitHub state of those PRs' head SHAs (fetched 2026-09-21).",
+ "cases": [
+  {
+   "name": "REAL #1539 - required checks never started (0 check-runs)",
+   "source": {
+    "pr": 1539,
+    "head_sha": "e88aca46d183a6079d0716f5f34ae006141d122f"
+   },
+   "check_runs": [],
+   "expected": {
+    "all_pass": false,
+    "statuses": {
+     "lint": "ABSENT",
+     "pwa-js": "ABSENT"
+    }
+   }
+  },
+  {
+   "name": "REAL #1569 - required checks never started (0 check-runs)",
+   "source": {
+    "pr": 1569,
+    "head_sha": "cc09753d2d0fba8c64d39c815cb22a7b77b06efc"
+   },
+   "check_runs": [],
+   "expected": {
+    "all_pass": false,
+    "statuses": {
+     "lint": "ABSENT",
+     "pwa-js": "ABSENT"
+    }
+   }
+  },
+  {
+   "name": "REAL #1541 - lint FAILED on the head SHA, merged 13h later",
+   "source": {
+    "pr": 1541,
+    "head_sha": "0b07d433304b58d7a41223132851e942fa53e7a4"
+   },
+   "check_runs": [
+    {
+     "name": "post-required-check-status",
+     "conclusion": "skipped",
+     "started_at": "2026-09-10T13:55:47Z"
+    },
+    {
+     "name": "dependency-audit",
+     "conclusion": "success",
+     "started_at": "2026-09-10T13:52:28Z"
+    },
+    {
+     "name": "sw-version-guard",
+     "conclusion": "success",
+     "started_at": "2026-09-10T13:52:28Z"
+    },
+    {
+     "name": "boundary-leak-check",
+     "conclusion": "success",
+     "started_at": "2026-09-10T13:52:27Z"
+    },
+    {
+     "name": "pwa-js",
+     "conclusion": "success",
+     "started_at": "2026-09-10T13:52:28Z"
+    },
+    {
+     "name": "docs-freshness",
+     "conclusion": "success",
+     "started_at": "2026-09-10T13:52:28Z"
+    },
+    {
+     "name": "lint",
+     "conclusion": "failure",
+     "started_at": "2026-09-10T13:52:29Z"
+    }
+   ],
+   "expected": {
+    "all_pass": false,
+    "statuses": {
+     "lint": "NOT SUCCESS",
+     "pwa-js": "SUCCESS"
+    }
+   }
+  },
+  {
+   "name": "REAL bot PR #1795 - all green",
+   "source": {
+    "pr": 1795,
+    "head_sha": "aa3b48d0a473b0ae14067a8e12fb115b5357c31b"
+   },
+   "check_runs": [
+    {
+     "name": "post-required-check-status",
+     "conclusion": "success",
+     "started_at": "2026-09-21T08:24:56Z"
+    },
+    {
+     "name": "bot-pr-sync-allowlist-check",
+     "conclusion": "skipped",
+     "started_at": "2026-09-21T08:21:49Z"
+    },
+    {
+     "name": "sw-version-guard",
+     "conclusion": "skipped",
+     "started_at": "2026-09-21T08:21:49Z"
+    },
+    {
+     "name": "boundary-leak-check",
+     "conclusion": "skipped",
+     "started_at": "2026-09-21T08:21:49Z"
+    },
+    {
+     "name": "docs-freshness",
+     "conclusion": "failure",
+     "started_at": "2026-09-21T08:21:51Z"
+    },
+    {
+     "name": "dependency-audit",
+     "conclusion": "success",
+     "started_at": "2026-09-21T08:21:51Z"
+    },
+    {
+     "name": "lint",
+     "conclusion": "success",
+     "started_at": "2026-09-21T08:21:51Z"
+    },
+    {
+     "name": "pwa-js",
+     "conclusion": "success",
+     "started_at": "2026-09-21T08:21:51Z"
+    },
+    {
+     "name": "pwa-headless",
+     "conclusion": "success",
+     "started_at": "2026-09-21T08:21:51Z"
+    }
+   ],
+   "expected": {
+    "all_pass": true,
+    "statuses": {
+     "lint": "SUCCESS",
+     "pwa-js": "SUCCESS"
+    }
+   }
+  },
+  {
+   "name": "re-run: latest started_at wins (failure then success) -> pass",
+   "check_runs": [
+    {
+     "name": "lint",
+     "conclusion": "failure",
+     "started_at": "2026-09-01T10:00:00Z"
+    },
+    {
+     "name": "lint",
+     "conclusion": "success",
+     "started_at": "2026-09-01T10:05:00Z"
+    },
+    {
+     "name": "pwa-js",
+     "conclusion": "success",
+     "started_at": "2026-09-01T10:00:30Z"
+    }
+   ],
+   "expected": {
+    "all_pass": true,
+    "statuses": {
+     "lint": "SUCCESS",
+     "pwa-js": "SUCCESS"
+    }
+   }
+  },
+  {
+   "name": "re-run: latest started_at wins (success then failure) -> block",
+   "check_runs": [
+    {
+     "name": "lint",
+     "conclusion": "success",
+     "started_at": "2026-09-01T10:00:00Z"
+    },
+    {
+     "name": "lint",
+     "conclusion": "failure",
+     "started_at": "2026-09-01T10:05:00Z"
+    },
+    {
+     "name": "pwa-js",
+     "conclusion": "success",
+     "started_at": "2026-09-01T10:00:30Z"
+    }
+   ],
+   "expected": {
+    "all_pass": false,
+    "statuses": {
+     "lint": "NOT SUCCESS",
+     "pwa-js": "SUCCESS"
+    }
+   }
+  },
+  {
+   "name": "a context still running (conclusion null) is not success",
+   "check_runs": [
+    {
+     "name": "lint",
+     "conclusion": null,
+     "started_at": "2026-09-01T10:00:00Z"
+    },
+    {
+     "name": "pwa-js",
+     "conclusion": "success",
+     "started_at": "2026-09-01T10:00:30Z"
+    }
+   ],
+   "expected": {
+    "all_pass": false,
+    "statuses": {
+     "lint": "NOT SUCCESS",
+     "pwa-js": "SUCCESS"
+    }
+   }
+  },
+  {
+   "name": "cancelled is not success",
+   "check_runs": [
+    {
+     "name": "lint",
+     "conclusion": "success",
+     "started_at": "2026-09-01T10:00:00Z"
+    },
+    {
+     "name": "pwa-js",
+     "conclusion": "cancelled",
+     "started_at": "2026-09-01T10:00:30Z"
+    }
+   ],
+   "expected": {
+    "all_pass": false,
+    "statuses": {
+     "lint": "SUCCESS",
+     "pwa-js": "NOT SUCCESS"
+    }
+   }
+  },
+  {
+   "name": "one required context absent",
+   "check_runs": [
+    {
+     "name": "lint",
+     "conclusion": "success",
+     "started_at": "2026-09-01T10:00:00Z"
+    }
+   ],
+   "expected": {
+    "all_pass": false,
+    "statuses": {
+     "lint": "SUCCESS",
+     "pwa-js": "ABSENT"
+    }
+   }
+  },
+  {
+   "name": "noise: non-required checks green, required ones absent",
+   "check_runs": [
+    {
+     "name": "docs-freshness",
+     "conclusion": "success",
+     "started_at": "2026-09-01T10:00:00Z"
+    },
+    {
+     "name": "dependency-audit",
+     "conclusion": "success",
+     "started_at": "2026-09-01T10:00:00Z"
+    }
+   ],
+   "expected": {
+    "all_pass": false,
+    "statuses": {
+     "lint": "ABSENT",
+     "pwa-js": "ABSENT"
+    }
+   }
+  },
+  {
+   "name": "skipped required check is not success",
+   "check_runs": [
+    {
+     "name": "lint",
+     "conclusion": "success",
+     "started_at": "2026-09-01T10:00:00Z"
+    },
+    {
+     "name": "pwa-js",
+     "conclusion": "skipped",
+     "started_at": "2026-09-01T10:00:30Z"
+    }
+   ],
+   "expected": {
+    "all_pass": false,
+    "statuses": {
+     "lint": "SUCCESS",
+     "pwa-js": "NOT SUCCESS"
+    }
+   }
+  }
+ ]
+}

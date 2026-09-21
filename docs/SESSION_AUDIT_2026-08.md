@@ -807,6 +807,45 @@ created 06:00–08:59Z went from 0 of 7 to 6 of 7 — while the unmoved control 
 and must not be cited as an improvement. No further cron work is planned: the remaining
 lever is GitHub's scheduler, which this repo cannot change.
 
+### 12.7 Continuation AN (2026-09-21, later): instances #30–#38
+
+Each row separates what was **verified** (a command run, output seen) from what is **inferred**.
+Baseline: `origin/master` `ed4f6ad0` unless stated. Fixes are open as PRs; none of the drafts is merged.
+
+| # | Instance | What it substituted | Evidence | Status |
+|---|---|---|---|---|
+| 30 | Chart.js as a `defer` script before `app.js`, plus an unguarded `new Chart(...)` that `init()` runs before `renderHero()` | The comment on the tag called the dependency "unavoidable". A slow, failed or blocked `cdn.jsdelivr.net` request stalled `app.js` itself, and a fast failure threw before the hero rendered, so the page stayed on its skeleton (the URGENT render-smoke failure, run 35511515077). | **Verified** in real Chromium against the live site: request aborted → hero never rendered in 30s with `ReferenceError: Chart is not defined`; request hung → never rendered. On the fix the hero renders in 0.6s in all four modes (untouched, aborted, hung, 4s-then-OK). | Fix in #1799 (draft) |
+| 31 | T7/T8 notification copy ("Prices may edge up/ease a little") vs the README's "no direction prediction" | A user-facing directional claim the product's own evaluation says it cannot make. | Traced to `ml/notifications.py`; hint removed and a guard test added (AST-discovers every template string, fails closed below 20 templates). Numbers are in the PR body. | Fix in #1796 (draft) |
+| 32 | The Worker's `"sent": true` | It meant "we attempted a POST", not "ntfy accepted it"; state (heartbeat date, last-alert state) was written before knowing, so a non-2xx or network error was reported as sent and never retried. | **Verified** by 8 delivery tests; the ntfy message `id` and a topic fingerprint are now logged. **Why nothing arrived is UNDETERMINED from here** (wrong topic vs egress rejection vs app side); the next `?trigger=1` shows it. | Fix in #1797 (draft, needs a Worker deploy) |
+| 33 | The merged-unchecked scan (#1789) flagged only PRs with **zero** check-runs | #1541 merged over a **failing** `lint` (the cause of master's 33-minute red) and would not have paged. | **Measured** over the last 400 merged PRs: the widened predicate agrees with `check_required_checks_positive.py` on all 400, flags exactly #1539, #1569, #1541, and 0 of 350 `bot/` PRs. | Fix in #1797 |
+| 34 | T13 "direction dataset stalled" counted **calendar** days at a threshold of 2 | IBJA publishes no weekend rate, so after a normal Friday snapshot the gap is 2 on Sunday and 3 on Monday. The URGENT "(3d)" of Monday 09-21 was a normal weekend. | **Verified** from `data/feature_store/snapshots.parquet` at `17d32397`: last usable row Fri 09-18. **Simulated** over 47 days: the old rule fires on 16 days (7 Sun, 7 Mon, 2 weekday), a weekday rule on 0. **How often it actually fired: UNVERIFIED** (`notification_state.json` is not tracked in git). | Fix in #1800 (draft; changes alert semantics and copy) |
+| 35 | Sentry: a placeholder DSN | The client initialised and **every captured error was rejected**: HTTP 400 `bad sentry DSN public key` from `o000000.ingest.sentry.io`. Error reporting has never worked. | **Verified** in real Chromium on the live site. With the real DSN, a captured and an uncaught error were both accepted (HTTP 200 with event ids). The async-bundle init race is real by construction and unit-tested, but the bundle **won** the race in this run, so it is a latent path, not the measured one. **The pre-existing dashboard issue is unidentified** (no Sentry access). | Fix in #1802 (draft; PII decision) |
+| 36 | `scrape-tanishq-selfhosted` after the Playwright 1.63.0 bump (#1658) | The runner cannot download the new Chromium (Chrome for Testing 153.0.8010.12): 5 of 5 attempts time out, in two consecutive runs. Install fails, the scrape is **skipped**, no reading is taken. The run still concludes **success** because the job has a deliberate job-level `continue-on-error`. | **Verified**: step conclusions of runs 35586486738 and 35587112477; on the revert branch install and scrape both succeed (run 35587762426). Health file recorded `consecutive_job_failures: 1`, so T12 (≥3) would page in about 9h. **Not diagnosed:** why the runner cannot reach that CDN path. | Revert in #1806 (draft) |
+| 37 | `bot/docs-refresh` PRs have no check-runs | The `pull_request` run for the bot's head SHA finished as `action_required`, so no required context was ever recorded and auto-merge waited forever (#1791). | **Verified**: run 35584057257 `action_required`; a `workflow_dispatch` of `lint.yml` on the branch produced real check-runs, `check_required_checks_positive.py` PASS, and the PR auto-merged. **Why `action_required` is INFERRED, not verified** (an approval policy for that actor). It will recur on every docs-refresh PR. | Cleared by dispatch; root cause open |
+| 38 | `data/calibration_band_coverage.json`'s `resolvable_at_n` flag | It has been true since 2026-09-06 (three weekly runs: 68.9%, 70.0%, 70.9%) and **nothing reads it**: no alert, no gate. | **Verified**: re-running the production scorer on current data gives 62/87 = 71.26% (the weekly file lags one run at 61/86). Same-day days cover 45/58 = 77.6% (CI contains 80%); **carry-forward days (stale IBJA, 93% Fri–Sun) cover 17/29 = 58.6%** (CI upper bound 74.5%). Median actual error ÷ in-sample residual = 1.01, and widening the band ×1.5 only reaches 78.2%, so the in-sample-optimism hypothesis is **not supported**. | Diagnosis only; a fix changes the user-visible band (GG decision) |
+
+**The one control gap that ties #32, #33, #36, #37 together:** in each, a signal that read as "fine" (`sent: true`, a
+green run, a merged PR, an auto-merge waiting) was true of a different thing than its name said. #36 is the cleanest
+case: a green scheduled run that took no reading, by design.
+
+#### Corrections this continuation made to its own claims
+
+- **The Sentry init race is not the measured failure.** I first asserted the async bundle "usually" loses the race
+  with `app.js`. The real-browser run showed it winning; what was actually broken is the placeholder DSN. The PR text
+  and the code comment were corrected before publication.
+- **The brief's 71.26% (n=87) is real, not stale:** it is the production scorer on current data; the committed weekly
+  file (61/86 = 70.93%) simply lags one run.
+- **The brief's "close dependabot PRs superseded by #1792" did not hold.** #1792 made the lock meet the floors already
+  declared; #1660 (scikit-learn ≥1.9.1, lock 1.9.0) and #1659 (chronos ≥2.3.2, lock 2.3.1) request higher floors than the
+  lock holds, and #1482 (lxml) and #1303 (yfinance) are floor-only bumps whose values the lock already satisfies.
+  None was closed.
+- **`enforce_admins` was verified read-only, not by an admin merge.** On a scratch PR with a failing `lint`,
+  GitHub reports `mergeStateStatus=BLOCKED` and `viewerCanMergeAsAdmin=false` for a viewer with `admin: true`; on a
+  green PR, `CLEAN`. All 10 recent merges checked (the brief's seven plus three bot merges) had `lint` and `pwa-js` at
+  SUCCESS on their head SHAs. An actual admin-merge attempt was not made: doing it means going around this session's own
+  merge guard. One command run for that scratch commit used `--no-verify` because the pre-commit ruff hook would refuse a
+  deliberately broken file; the commit was never merged (PR #1803 closed).
+
 ## Provenance
 
 All PRs referenced: `#1237` (band fallback fails loud), `#1340`

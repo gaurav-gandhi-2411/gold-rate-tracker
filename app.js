@@ -1418,21 +1418,6 @@ function renderTodaysRead(readings) {
   textEl.textContent = composeTodaysRead(readings);
 }
 
-function computeTrendDescription(readings, nDays = 7) {
-  if (!readings || readings.length < 2) return null;
-  const cutoff = Date.now() - nDays * 86400 * 1000;
-  const recent = readings.filter(r => new Date(r.timestamp).getTime() >= cutoff);
-  if (recent.length < 2) return null;
-  const first = recent[0]["22k"];
-  const last  = readings[readings.length - 1]["22k"];
-  const delta = last - first;
-  const abs   = Math.abs(delta);
-  if (abs < 100) return `Roughly flat over the past ${nDays} days`;
-  const dir  = delta > 0 ? "up" : "down";
-  const sign = delta > 0 ? "+" : "−";
-  return `Trending ${dir} — ${sign}₹${fmtINR(abs)} over the past ${nDays} days`;
-}
-
 function renderModelSignal(fc, readings, bt, coverage, drift) {
   const section = document.getElementById("model-signal-section");
   if (!section) return;
@@ -1808,8 +1793,33 @@ function hexToRgba(hex, alpha) {
   return `rgba(${(n >> 16) & 255}, ${(n >> 8) & 255}, ${n & 255}, ${alpha})`;
 }
 
+// Chart.js comes from a third-party CDN (index.html). If that request fails -- blocked, offline,
+// a CDN outage -- `Chart` is undefined and `new Chart(...)` throws. Before this guard that throw
+// escaped renderChart(), which init() calls BEFORE renderHero(), so one CDN failure left the
+// hero on its loading skeleton for the whole page (the render-smoke failure of 2026-09-21).
+// Missing chart = hide the chart, keep every other card.
+function chartLibAvailable() {
+  return typeof Chart !== "undefined";
+}
+
+// Chart.js is an async <script> (index.html), so app.js can start -- and render the price -- before
+// it arrives. When it does arrive, its onload calls this so the charts appear late instead of
+// never. Before Chart.js arrives renderChart() hides the chart; before data arrives there is
+// nothing to draw and the normal first render will find Chart.js already defined.
+window.__onChartReady = function () {
+  if (allReadings.length) renderChart(allReadings, currentRange);
+  if (lastBacktest) renderForecastVsActual(lastBacktest);
+};
+
 function renderChart(readings, range) {
   chartPinnedIndex = null;
+
+  const chartWrap = document.getElementById("chart")?.parentElement;
+  if (!chartLibAvailable()) {
+    if (chartWrap) chartWrap.hidden = true;
+    return;
+  }
+  if (chartWrap) chartWrap.hidden = false;
 
   let filtered = readings;
   if (range !== "all") {
@@ -2044,7 +2054,7 @@ function renderForecastVsActual(bt) {
   const axisColor = colors.axis;
   const gridColor = colors.grid;
   const ctx       = document.getElementById("track-record-chart");
-  if (!ctx) { section.hidden = true; return; }
+  if (!ctx || !chartLibAvailable()) { section.hidden = true; return; }
 
   if (trackRecordChart) trackRecordChart.destroy();
 
