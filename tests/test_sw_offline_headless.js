@@ -48,6 +48,24 @@ const base = `http://127.0.0.1:${server.address().port}`;
 
 const browser = await chromium.launch({ headless: true });
 try {
+  // A first-time visitor's page must not reload itself. controllerchange also fires for the very first
+  // clients.claim(); reloading then flashed every new visitor's price back to the loading skeleton and
+  // made the live render smoke test race the reload and page URGENT on a healthy site (2026-09-21).
+  console.log(`\nFirst visit does not reload itself (ROOT=${ROOT})`);
+  {
+    const fctx = await browser.newContext({ serviceWorkers: "allow" });
+    const fpage = await fctx.newPage();
+    let navs = 0;
+    fpage.on("framenavigated", (f) => { if (f === fpage.mainFrame()) navs++; });
+    await fpage.goto(base, { waitUntil: "load" });
+    await fpage.evaluate(async () => { await navigator.serviceWorker.ready; });
+    await fpage.waitForTimeout(4000); // well past SW install + claim (the old reload landed at ~1-2s)
+    const controlled = await fpage.evaluate(() => !!navigator.serviceWorker.controller);
+    assert("the worker took control of the first visit (test is not vacuous)", controlled);
+    assert("the first visit navigated exactly once (no self-reload)", navs === 1, `navigations: ${navs}`);
+    await fctx.close();
+  }
+
   const ctx = await browser.newContext({ serviceWorkers: "allow" });
   const page = await ctx.newPage();
 
