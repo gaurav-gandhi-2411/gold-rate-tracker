@@ -1,16 +1,29 @@
 // app.js — Buyer-focused gold rate tracker.
 
-// Sentry.init() lives here (not an inline <script> in index.html) so it runs after the
-// deferred Sentry bundle has loaded — see index.html's comment on that script tag for why
-// it's deferred and why an inline init script there would race ahead of it.
-if (typeof Sentry !== "undefined") {
+// The Sentry bundle is an `async` <script> (index.html), so it can finish loading either before
+// or after this file runs. The old code initialised only if it had already loaded, so whenever
+// the bundle lost the race (slow network, cold cache) init never ran and every later
+// Sentry.captureException was a silent no-op -- even with a valid DSN. (A fast headless-browser
+// run had the bundle win, so this is a latent path, not the one measured there.) initSentry() is
+// idempotent and is called from both places: right here (bundle came first) and from the
+// bundle's onload (bundle came second).
+const SENTRY_DSN = "https://2e98b42dc04c8e5335fee33706e5ef6c@o4512123391836160.ingest.de.sentry.io/4512123398062160"; // public by design (a DSN only permits sending events)
+let sentryInitialised = false;
+function initSentry() {
+  if (sentryInitialised || typeof Sentry === "undefined") return;
+  sentryInitialised = true;
   Sentry.init({
-    dsn: "https://PLACEHOLDER@o000000.ingest.sentry.io/0000000", // TODO: replace with your project DSN
+    dsn: SENTRY_DSN,
     sampleRate: 1.0,        // capture every error event
     tracesSampleRate: 0.0,  // no performance tracing (not needed)
-    environment: "production",
+    sendDefaultPii: false,  // no user identifiers; the SDK default, stated so it is visible
+    // Only the deployed Pages origin counts as production, so local/preview runs cannot
+    // pollute the production issue list.
+    environment: location.hostname === "gaurav-gandhi-2411.github.io" ? "production" : "development",
   });
 }
+window.__onSentryReady = initSentry;
+initSentry();
 
 const DATA_URL      = "data/prices.json";
 const FORECAST_URL  = "data/forecast.json";

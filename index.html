@@ -508,8 +508,9 @@
       </a>
     </nav>
 
-    <!-- Sentry error tracking — replace the placeholder DSN with the one from sentry.io
-         (Project Settings → Client Keys → DSN). The site will work normally without it.
+    <!-- Sentry error tracking. The DSN is in app.js (SENTRY_DSN); initSentry() there runs both
+         at app.js load and from this tag's onload, so init happens whichever finishes first.
+         The site works normally without Sentry.
          Served from Sentry's own CDN (not jsdelivr's npm proxy) — the npm package no longer
          ships the prebuilt bundle jsdelivr would need, so an npm-path URL 404s.
          `async`, not `defer` — deliberately NOT in app.js's execution-order dependency
@@ -522,12 +523,11 @@
          vs blocking, since deferred scripts execute in document order. Moving Sentry to
          async removes it from that wait entirely — Chart.js is the one third-party
          script app.js's own start time still depends on, which is unavoidable given it's
-         a real (not just guarded) dependency. Worth noting Sentry currently uses a
-         placeholder DSN and isn't actually reporting anywhere yet, so this has zero
-         functional cost today regardless. -->
+         a real (not just guarded) dependency. -->
     <script src="https://browser.sentry-cdn.com/7.120.4/bundle.min.js"
             integrity="sha384-HF4Kc49tTfBgl6JmNMfcrjBeW9pK13xSnnr307iG4PCNj8eRKhkvE9Tp27DigU1L"
-            crossorigin="anonymous" async></script>
+            crossorigin="anonymous" async
+            onload="if (window.__onSentryReady) window.__onSentryReady()"></script>
 
     <!-- `defer`, not `async` like Sentry above — app.js calls `new Chart(...)`
          unguarded, so this one genuinely must be loaded and executed before app.js
