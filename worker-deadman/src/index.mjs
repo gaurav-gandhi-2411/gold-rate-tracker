@@ -129,11 +129,15 @@ async function fetchHealthUpdatedAt(fetchImpl) {
  * explicit "could not verify this run" alert, since a silently-dropped PR
  * is exactly the failure mode this channel exists to catch.
  *
- * bot/-prefixed branches excluded: those PRs auto-merge via bot-pr-sync's
- * own polling mechanism within minutes, not the shape this channel watches
- * for. scratch/-prefixed excluded: this repo's own established convention
- * (AG2b, check_pr_boundary_leak.py) for deliberately disposable proof PRs,
- * reused identically here.
+ * bot/-prefixed branches are NO LONGER excluded (2026-09-21). They used to be, on the
+ * assumption that bot PRs "auto-merge via bot-pr-sync's own polling within minutes" -- but
+ * `bot/docs-refresh` does not use bot-pr-sync (native auto-merge), and it was the one PR
+ * that sat open with zero check-runs for 10 days (#1578) while this channel skipped it by
+ * construction. Measured over 100 merged bot PRs: head commit -> first lint/pwa-js check-run
+ * start median 0.17 min, max 0.35 min, and -> merged max 4.5 min, so an open bot PR with no
+ * check-run for PR_TRIGGER_STALE_MINUTES (30) is a genuine anomaly, not noise.
+ * scratch/-prefixed excluded: this repo's own established convention (AG2b,
+ * check_pr_boundary_leak.py) for deliberately disposable proof PRs, reused identically here.
  */
 async function fetchOpenPrTriggerHealth(fetchImpl, token) {
   const headers = {
@@ -150,9 +154,7 @@ async function fetchOpenPrTriggerHealth(fetchImpl, token) {
     );
     if (!listResp.ok) return { openPrs: null, failure: `list open PRs HTTP ${listResp.status}` };
     const allPrs = await listResp.json();
-    const candidates = allPrs.filter(
-      (p) => !p.head.ref.startsWith("bot/") && !p.head.ref.startsWith("scratch/"),
-    );
+    const candidates = allPrs.filter((p) => !p.head.ref.startsWith("scratch/"));
 
     const openPrs = [];
     for (const p of candidates) {

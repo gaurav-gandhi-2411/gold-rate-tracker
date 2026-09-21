@@ -360,6 +360,48 @@ test("runCheck: no GITHUB_PR_HEALTH_PAT -> the scan is skipped (feature not depl
   assert.equal(alertsOf(ntfyCalls).length, 0);
 });
 
+// --- open-PR channel: bot/ PRs are no longer skipped (the #1578 shape) --------------------------
+
+const openPr = (number, ref, sha) => ({ number, head: { ref, sha } });
+const openAlerts = (calls) => calls.filter((c) => c.opts.headers.Title.includes("required checks never started"));
+
+test("runCheck: an OPEN bot/ PR with no check-run for 45 min pages (the #1578 shape; it was skipped by construction)", async () => {
+  const nowMs = Date.parse("2026-09-21T06:00:00Z");
+  const ntfyCalls = [];
+  const env = { NTFY_TOPIC: "t", GITHUB_PR_HEALTH_PAT: "pat", DEADMAN_STATE: fakeKv() };
+  const fetchImpl = mockWorldFetch(
+    {
+      nowMs,
+      open: [openPr(1578, "bot/docs-refresh", "89b62565")],
+      commitIsoBySha: { "89b62565": new Date(nowMs - 45 * MINUTE).toISOString() },
+    },
+    ntfyCalls,
+  );
+  const result = await runCheck(env, fetchImpl, nowMs);
+  assert.equal(result.prTriggerHealthStaleCount, 1);
+  assert.equal(openAlerts(ntfyCalls).length, 1);
+  assert.match(openAlerts(ntfyCalls)[0].opts.body, /#1578 \(bot\/docs-refresh/);
+});
+
+test("runCheck: an open bot/ PR that DOES have its lint check-run does not page; scratch/ PRs stay excluded", async () => {
+  const nowMs = Date.parse("2026-09-21T06:00:00Z");
+  const ntfyCalls = [];
+  const env = { NTFY_TOPIC: "t", GITHUB_PR_HEALTH_PAT: "pat", DEADMAN_STATE: fakeKv() };
+  const old = new Date(nowMs - 45 * MINUTE).toISOString();
+  const fetchImpl = mockWorldFetch(
+    {
+      nowMs,
+      open: [openPr(1700, "bot/gold-prices", "bbbb2222"), openPr(1701, "scratch/proof", "cccc3333")],
+      commitIsoBySha: { bbbb2222: old, cccc3333: old },
+      checkRunsBySha: { bbbb2222: [{ name: "lint" }] },
+    },
+    ntfyCalls,
+  );
+  const result = await runCheck(env, fetchImpl, nowMs);
+  assert.equal(result.prTriggerHealthStaleCount, 0);
+  assert.equal(openAlerts(ntfyCalls).length, 0);
+});
+
 test("runCheck: the response echoes the scan's window constants", async () => {
   const nowMs = Date.parse("2026-09-10T14:00:00Z");
   const result = await runCheck({ NTFY_TOPIC: "t", DEADMAN_STATE: fakeKv() }, mockWorldFetch({ nowMs }, []), nowMs);
