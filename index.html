@@ -544,6 +544,9 @@
     <script>
       if ("serviceWorker" in navigator) {
         window.addEventListener("load", () => {
+          // Captured BEFORE register(): true only for a returning visitor whose existing worker is
+          // controlling this page. A first-time visitor has no controller yet (see controllerchange).
+          const hadController = !!navigator.serviceWorker.controller;
           navigator.serviceWorker.register("service-worker.js").then((registration) => {
             // Force SW byte-check on every page load (bypasses 24h browser SW cache).
             registration.update();
@@ -567,11 +570,17 @@
               registration.update().catch(() => {});
             }, 30 * 60 * 1000);
 
-            // When a new SW takes control (skipWaiting fires), reload once for
-            // fresh shell assets. `refreshing` guard prevents reload loops.
+            // When a NEW SW replaces an EXISTING one (skipWaiting fires), reload once for fresh
+            // shell assets. `refreshing` guard prevents reload loops.
+            // A first-time visitor has nothing to replace: the page they are looking at was just
+            // fetched from the network, so it already IS the fresh shell. controllerchange still
+            // fires for their first clients.claim(), and reloading then made every new visitor's
+            // price flash to the loading skeleton ~1s after first paint (measured: price at ~1.1s,
+            // skeleton at ~1.3s, price again at ~1.7s), and made the post-deploy render smoke test
+            // race that reload and page URGENT on a site that was fine (2026-09-21).
             let refreshing = false;
             navigator.serviceWorker.addEventListener("controllerchange", () => {
-              if (refreshing) return;
+              if (!hadController || refreshing) return;
               refreshing = true;
               window.location.reload();
             });
