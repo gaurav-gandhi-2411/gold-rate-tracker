@@ -62,6 +62,12 @@ jobs:
         # script's own module docstring for what "referenced" means and its
         # stated limitations.
         run: python scripts/check_test_registry_complete.py
+      - name: Check no test file has lost tests (hollow-run guard)
+        # AP5 (2026-09-21): a truncated test file produced a green, hollow run because the missing
+        # tests were simply not collected. Fails if any file's test count falls below the committed
+        # baseline (tests/test_count_baseline.json) or a test file is missing/unlisted. Lowering the
+        # baseline is an explicit `--update`, visible in the PR diff. Limits: see the script docstring.
+        run: python scripts/check_test_counts.py
 
   # PWA pure-function JS tests (app.js logic: comparisons, dedup, good-price,
   # scrape parsing, stale-banner, trend). These existed under tests/*.js but ran
