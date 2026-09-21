@@ -11,8 +11,13 @@ import {
   PR_TRIGGER_STALE_MINUTES,
   MERGED_SETTLE_MINUTES,
   MERGED_LOOKBACK_MINUTES,
+  REQUIRED_CONTEXTS,
+  evaluateRequiredChecks,
 } from "../src/pr_trigger_health.mjs";
-import { runCheck } from "../src/index.mjs";
+import { readFileSync } from "node:fs";
+import worker, { runCheck } from "../src/index.mjs";
+import { ESCALATE_THRESHOLD_HOURS } from "../src/deadman.mjs";
+import { createHash } from "node:crypto";
 
 const MINUTE = 60_000;
 const NOW = Date.parse("2026-09-11T14:00:00Z");
@@ -171,13 +176,13 @@ function merged(overrides = {}) {
     branch: "feat/example",
     headSha: "def456",
     mergedAtIso: isoMinutesAgo(30),
-    hasRequiredCheckRun: false,
+    requiredOk: false,
     ...overrides,
   };
 }
 
-test("classifyMergedUnchecked: a merged PR with a check-run is never flagged", () => {
-  assert.deepEqual(classifyMergedUnchecked([merged({ hasRequiredCheckRun: true })], NOW), []);
+test("classifyMergedUnchecked: a merged PR whose required checks all passed is never flagged", () => {
+  assert.deepEqual(classifyMergedUnchecked([merged({ requiredOk: true })], NOW), []);
 });
 
 test("classifyMergedUnchecked: merged with no check-run and past the settle window is flagged", () => {
@@ -219,7 +224,7 @@ const REAL_1539 = {
   headSha: "e88aca46d183a6079d0716f5f34ae006141d122f",
   headCommitIso: "2026-09-10T13:33:18Z",
   mergedAtIso: "2026-09-10T13:38:30Z",
-  hasRequiredCheckRun: false,
+  requiredOk: false,
 };
 const REAL_1569 = {
   number: 1569,
@@ -227,7 +232,7 @@ const REAL_1569 = {
   headSha: "cc09753d2d0fba8c64d39c815cb22a7b77b06efc",
   headCommitIso: "2026-09-11T08:30:45Z",
   mergedAtIso: "2026-09-11T10:27:11Z",
-  hasRequiredCheckRun: false,
+  requiredOk: false,
 };
 
 // The Worker only runs at :00 and :30. First tick (after the merge) at which the scan flags it.
@@ -277,13 +282,17 @@ function fakeKv() {
 }
 
 function mockWorldFetch(
-  { nowMs, open = [], commitIsoBySha = {}, closed = [], checkRunsBySha = {}, closedStatus = 200 },
+  { nowMs, open = [], commitIsoBySha = {}, closed = [], checkRunsBySha = {}, closedStatus = 200, ntfy = null, ageHours = 0.5 },
   ntfyCalls,
 ) {
-  const fresh = new Date(nowMs - 30 * MINUTE).toISOString();
+  const fresh = new Date(nowMs - ageHours * 60 * MINUTE).toISOString();
   return async (url, opts) => {
     if (url.includes("forecast.json")) return { ok: true, json: async () => ({ predicted_at: fresh, scraped_at: fresh }) };
-    if (url.startsWith("https://ntfy.sh/")) { ntfyCalls.push({ url, opts }); return { ok: true }; }
+    if (url.startsWith("https://ntfy.sh/")) {
+      ntfyCalls.push({ url, opts });
+      // `ntfy` lets a test decide what ntfy answers (or throw for a network failure); default is a bare 200.
+      return ntfy ? ntfy(ntfyCalls.length) : { ok: true };
+    }
     if (url.includes("/pulls?state=open")) return { ok: true, json: async () => open };
     if (url.includes("/pulls?state=closed")) return { ok: closedStatus === 200, status: closedStatus, json: async () => closed };
     const checks = url.match(/commits\/([0-9a-f]+)\/check-runs/);
@@ -295,7 +304,7 @@ function mockWorldFetch(
 }
 
 const closedPr = (pr) => ({ number: pr.number, head: { ref: pr.branch, sha: pr.headSha }, merged_at: pr.mergedAtIso });
-const alertsOf = (calls) => calls.filter((c) => c.opts.headers.Title.includes("merged with no required check"));
+const alertsOf = (calls) => calls.filter((c) => c.opts.headers.Title.includes("merged with a required check"));
 
 test("runCheck: pages for a REAL #1539-shaped merge (closed PR, 0 check-runs on its head SHA), once", async () => {
   const nowMs = Date.parse("2026-09-10T14:00:00Z"); // the first tick after #1539 merged
@@ -315,13 +324,23 @@ test("runCheck: pages for a REAL #1539-shaped merge (closed PR, 0 check-runs on 
   assert.equal(alertsOf(ntfyCalls).length, 1);
 });
 
-test("runCheck: a merged PR that DID get a lint check-run (including a bot/ PR) does not page", async () => {
+test("runCheck: a merged PR whose required checks all SUCCEEDED (including a bot/ PR) does not page", async () => {
   const nowMs = Date.parse("2026-09-10T14:00:00Z");
   const ntfyCalls = [];
   const botPr = { ...REAL_1539, number: 1600, branch: "bot/docs-refresh", headSha: "aaaa1111" };
   const env = { NTFY_TOPIC: "t", GITHUB_PR_HEALTH_PAT: "pat", DEADMAN_STATE: fakeKv() };
   const fetchImpl = mockWorldFetch(
-    { nowMs, closed: [closedPr(botPr)], checkRunsBySha: { aaaa1111: [{ name: "lint" }, { name: "docs-freshness" }] } },
+    {
+      nowMs,
+      closed: [closedPr(botPr)],
+      checkRunsBySha: {
+        aaaa1111: [
+          { name: "lint", conclusion: "success", started_at: "2026-09-10T13:34:00Z" },
+          { name: "pwa-js", conclusion: "success", started_at: "2026-09-10T13:34:01Z" },
+          { name: "docs-freshness", conclusion: "failure", started_at: "2026-09-10T13:34:02Z" },
+        ],
+      },
+    },
     ntfyCalls,
   );
   const result = await runCheck(env, fetchImpl, nowMs);
@@ -407,4 +426,236 @@ test("runCheck: the response echoes the scan's window constants", async () => {
   const result = await runCheck({ NTFY_TOPIC: "t", DEADMAN_STATE: fakeKv() }, mockWorldFetch({ nowMs }, []), nowMs);
   assert.equal(result.thresholds.mergedSettleMinutes, MERGED_SETTLE_MINUTES);
   assert.equal(result.thresholds.mergedLookbackMinutes, MERGED_LOOKBACK_MINUTES);
+});
+
+// ---------------------------------------------------------------------------
+// AN3: "sent: true" must mean ntfy accepted the message
+// ---------------------------------------------------------------------------
+// 2026-09-21: prTriggerHealthSent:true and the daily heartbeat marked sent in KV, while nothing reached
+// the phone. postToNtfy's result was never read, and each channel persisted its dedup state BEFORE
+// sending, so a failed send was also never retried.
+
+const TICK = 30 * MINUTE;
+const httpFail = (status) => () => ({ ok: false, status });
+const netFail = () => () => { throw new Error("connect ECONNRESET ntfy.sh"); };
+const okWithId = (id) => () => ({ ok: true, status: 200, json: async () => ({ id }) });
+const nonHeartbeat = (calls) => calls.filter((c) => !c.opts.headers.Title.includes("heartbeat"));
+
+test("delivery: a non-2xx from ntfy is NOT reported as sent, and the merged alert is retried next tick", async () => {
+  const nowMs = Date.parse("2026-09-10T14:00:00Z");
+  const kv = fakeKv();
+  const env = { NTFY_TOPIC: "t", GITHUB_PR_HEALTH_PAT: "pat", DEADMAN_STATE: kv };
+  const calls = [];
+  const failing = mockWorldFetch({ nowMs, closed: [closedPr(REAL_1539)], ntfy: httpFail(429) }, calls);
+
+  const first = await runCheck(env, failing, nowMs);
+  assert.equal(first.mergedUncheckedCount, 1);
+  assert.equal(first.mergedUncheckedSent, false, "a 429 must not read as sent");
+  assert.ok(first.ntfy.failed >= 1);
+  assert.equal(first.ntfy.failures[0].status, 429);
+  assert.equal(await kv.get("deadman:merged_unchecked_state"), null, "an undelivered alert must not be recorded as alerted");
+
+  // Next tick, ntfy healthy: the SAME alert must now go out (before this fix it was suppressed forever).
+  const healthyCalls = [];
+  const healthy = mockWorldFetch({ nowMs: nowMs + TICK, closed: [closedPr(REAL_1539)], ntfy: okWithId("msg1") }, healthyCalls);
+  const second = await runCheck(env, healthy, nowMs + TICK);
+  assert.equal(second.mergedUncheckedSent, true);
+  assert.equal(alertsOf(healthyCalls).length, 1);
+});
+
+test("delivery: a network error is a failed delivery, not an exception and not 'sent'", async () => {
+  const nowMs = Date.parse("2026-09-21T06:00:00Z");
+  const calls = [];
+  const env = { NTFY_TOPIC: "t", GITHUB_PR_HEALTH_PAT: "pat", DEADMAN_STATE: fakeKv() };
+  const fetchImpl = mockWorldFetch(
+    {
+      nowMs,
+      open: [openPr(1791, "bot/docs-refresh", "32e62faa")],
+      commitIsoBySha: { "32e62faa": new Date(nowMs - 120 * MINUTE).toISOString() },
+      ntfy: netFail(),
+    },
+    calls,
+  );
+  const result = await runCheck(env, fetchImpl, nowMs);
+  assert.equal(result.prTriggerHealthStaleCount, 1);
+  assert.equal(result.prTriggerHealthSent, false);
+  assert.match(result.ntfy.failures[0].error, /ECONNRESET/);
+});
+
+test("delivery: a failed PR-health page is retried next tick, not suppressed for the 6h reminder window", async () => {
+  const nowMs = Date.parse("2026-09-21T06:00:00Z");
+  const kv = fakeKv();
+  const env = { NTFY_TOPIC: "t", GITHUB_PR_HEALTH_PAT: "pat", DEADMAN_STATE: kv };
+  const world = (ntfy, at) => mockWorldFetch(
+    {
+      nowMs: at,
+      open: [openPr(1791, "bot/docs-refresh", "32e62faa")],
+      commitIsoBySha: { "32e62faa": new Date(nowMs - 120 * MINUTE).toISOString() },
+      ntfy,
+    },
+    [],
+  );
+  const first = await runCheck(env, world(httpFail(503), nowMs), nowMs);
+  assert.equal(first.prTriggerHealthSent, false);
+  const second = await runCheck(env, world(okWithId("m2"), nowMs + TICK), nowMs + TICK);
+  assert.equal(second.prTriggerHealthSent, true, "must retry on the next tick");
+});
+
+test("delivery: the daily heartbeat is only marked done when it was actually delivered", async () => {
+  const nowMs = Date.parse("2026-09-21T00:10:00Z");
+  const kv = fakeKv();
+  const env = { NTFY_TOPIC: "t", DEADMAN_STATE: kv };
+  const first = await runCheck(env, mockWorldFetch({ nowMs, ntfy: httpFail(429) }, []), nowMs);
+  assert.equal(first.heartbeatSent, false);
+  assert.equal(await kv.get("deadman:last_heartbeat_date_ist"), null, "KV must not say the heartbeat was sent");
+  const second = await runCheck(env, mockWorldFetch({ nowMs: nowMs + TICK, ntfy: okWithId("hb1") }, []), nowMs + TICK);
+  assert.equal(second.heartbeatSent, true);
+  assert.notEqual(await kv.get("deadman:last_heartbeat_date_ist"), null);
+});
+
+test("delivery: a failed staleness ESCALATE is retried within the reminder window (it used to be suppressed)", async () => {
+  const nowMs = Date.parse("2026-09-21T06:00:00Z");
+  const env = { NTFY_TOPIC: "t", DEADMAN_STATE: fakeKv() };
+  const stale = (ntfy, at) => mockWorldFetch({ nowMs: at, ageHours: ESCALATE_THRESHOLD_HOURS + 1, ntfy }, []);
+  const first = await runCheck(env, stale(httpFail(500), nowMs), nowMs);
+  assert.equal(first.level, "escalate");
+  assert.equal(first.sent, false);
+  const second = await runCheck(env, stale(okWithId("e1"), nowMs + 20 * MINUTE), nowMs + 20 * MINUTE);
+  assert.equal(second.sent, true, "the undelivered ESCALATE must go out on the next tick");
+});
+
+test("delivery: ntfy's message id and a topic fingerprint are reported, never the topic itself", async () => {
+  const nowMs = Date.parse("2026-09-21T00:10:00Z");
+  const topic = "some-secret-topic-name";
+  const env = { NTFY_TOPIC: topic, DEADMAN_STATE: fakeKv() };
+  const result = await runCheck(env, mockWorldFetch({ nowMs, ntfy: okWithId("abc123") }, []), nowMs);
+  assert.equal(result.ntfy.lastDelivery.id, "abc123");
+  assert.equal(result.ntfy.lastDelivery.ok, true);
+  assert.equal(result.ntfy.topicFingerprint, createHash("sha256").update(topic).digest("hex").slice(0, 8));
+  assert.ok(!JSON.stringify(result).includes(topic), "the topic must not appear anywhere in the response");
+});
+
+test("delivery: with nothing to send the response still echoes the last persisted delivery", async () => {
+  const kv = fakeKv();
+  const env = { NTFY_TOPIC: "t", DEADMAN_STATE: kv };
+  const t0 = Date.parse("2026-09-21T00:10:00Z");
+  await runCheck(env, mockWorldFetch({ nowMs: t0, ntfy: okWithId("hb9") }, []), t0); // heartbeat -> persisted
+  const later = await runCheck(env, mockWorldFetch({ nowMs: t0 + TICK }, []), t0 + TICK); // nothing to send
+  assert.equal(later.ntfy.attempted, 0);
+  assert.equal(later.ntfy.lastDelivery.id, "hb9");
+});
+
+test("scheduled(): a failed delivery fails the invocation (recorded as an exception), a healthy run does not", async () => {
+  const nowMs = Date.now();
+  const realFetch = globalThis.fetch;
+  try {
+    for (const [label, ntfy, expectReject] of [["429", httpFail(429), true], ["ok", okWithId("s1"), false]]) {
+      globalThis.fetch = mockWorldFetch({ nowMs, ntfy }, []);
+      let captured;
+      await worker.scheduled({}, { NTFY_TOPIC: "t", DEADMAN_STATE: fakeKv() }, { waitUntil: (p) => { captured = p; } });
+      if (expectReject) await assert.rejects(captured, /ntfy delivery failed/, label);
+      else await captured;
+    }
+  } finally {
+    globalThis.fetch = realFetch;
+  }
+});
+
+// ---------------------------------------------------------------------------
+// AN8: the merged-unchecked predicate is "every required context SUCCESS", not "any check-run exists"
+// ---------------------------------------------------------------------------
+// The first version (#1789) flagged only PRs with ZERO check-runs, which caught #1539 and #1569 but
+// missed #1541 -- merged over a FAILING lint. The predicate is now the one
+// scripts/check_required_checks_positive.py applies before a self-merge, pinned to it by shared fixtures.
+
+const FIXTURES = JSON.parse(readFileSync(new URL("./fixtures/required_checks_cases.json", import.meta.url), "utf8"));
+const category = (v) => (v === "SUCCESS" ? "SUCCESS" : v.startsWith("ABSENT") ? "ABSENT" : "NOT SUCCESS");
+const fixtureNamed = (prefix) => FIXTURES.cases.find((c) => c.name.startsWith(prefix));
+
+test("AN8 parity: evaluateRequiredChecks agrees with the Python spec on every shared fixture case", () => {
+  assert.deepEqual(FIXTURES.required_contexts, REQUIRED_CONTEXTS, "the Worker's required contexts drifted from the fixtures'");
+  assert.ok(FIXTURES.cases.length >= 10, "fixtures went missing");
+  for (const c of FIXTURES.cases) {
+    const { allPass, results } = evaluateRequiredChecks(REQUIRED_CONTEXTS, c.check_runs);
+    assert.equal(allPass, c.expected.all_pass, c.name);
+    const statuses = Object.fromEntries(Object.entries(results).map(([k, v]) => [k, category(v)]));
+    assert.deepEqual(statuses, c.expected.statuses, c.name);
+  }
+});
+
+// The three real incidents' recorded GitHub state (fixtures), with their real merge times.
+const REAL = [
+  { fx: "REAL #1539", number: 1539, branch: "fix/auto-commit-workflows-refresh-injected-docs", merged: "2026-09-10T13:38:30Z" },
+  { fx: "REAL #1569", number: 1569, branch: "feat/ci-health-check", merged: "2026-09-11T10:27:11Z" },
+  { fx: "REAL #1541", number: 1541, branch: "fix/check-price-cron-hour-shift-v2", merged: "2026-09-11T02:47:41Z" },
+];
+
+test("AN8: all THREE real incident SHAs page through runCheck, including #1541 (lint FAILED, not merely absent)", async () => {
+  for (const r of REAL) {
+    const fx = fixtureNamed(r.fx);
+    const sha = fx.source.head_sha;
+    // First :00/:30 tick at least the settle window after the merge.
+    const mergeMs = Date.parse(r.merged);
+    const nowMs = Math.ceil((mergeMs + MERGED_SETTLE_MINUTES * MINUTE) / TICK) * TICK;
+    const calls = [];
+    const env = { NTFY_TOPIC: "t", GITHUB_PR_HEALTH_PAT: "pat", DEADMAN_STATE: fakeKv() };
+    const world = mockWorldFetch(
+      { nowMs, closed: [{ number: r.number, head: { ref: r.branch, sha }, merged_at: r.merged }], checkRunsBySha: { [sha]: fx.check_runs } },
+      calls,
+    );
+    const result = await runCheck(env, world, nowMs);
+    assert.equal(result.mergedUncheckedCount, 1, r.fx);
+    assert.equal(result.mergedUncheckedSent, true, r.fx);
+    assert.equal(alertsOf(calls).length, 1, r.fx);
+  }
+});
+
+test("AN8: #1541's alert says WHAT was wrong (lint NOT SUCCESS), not just that something was", async () => {
+  const fx = fixtureNamed("REAL #1541");
+  const sha = fx.source.head_sha;
+  const nowMs = Date.parse("2026-09-11T03:00:00Z");
+  const calls = [];
+  const world = mockWorldFetch(
+    {
+      nowMs,
+      closed: [{ number: 1541, head: { ref: "fix/check-price-cron-hour-shift-v2", sha }, merged_at: "2026-09-11T02:47:41Z" }],
+      checkRunsBySha: { [sha]: fx.check_runs },
+    },
+    calls,
+  );
+  await runCheck({ NTFY_TOPIC: "t", GITHUB_PR_HEALTH_PAT: "pat", DEADMAN_STATE: fakeKv() }, world, nowMs);
+  const body = alertsOf(calls)[0].opts.body;
+  assert.match(body, /#1541/);
+  assert.match(body, /lint: NOT SUCCESS \(conclusion="failure"\)/);
+  assert.ok(!/pwa-js:/.test(body), "pwa-js passed and must not be listed as a problem");
+});
+
+test("AN8: the real all-green bot PR does not page", async () => {
+  const fx = FIXTURES.cases.find((c) => c.name.startsWith("REAL bot PR"));
+  const sha = fx.source.head_sha;
+  const nowMs = Date.parse("2026-09-21T09:00:00Z");
+  const calls = [];
+  const world = mockWorldFetch(
+    {
+      nowMs,
+      closed: [{ number: fx.source.pr, head: { ref: "bot/data-sync", sha }, merged_at: "2026-09-21T08:40:00Z" }],
+      checkRunsBySha: { [sha]: fx.check_runs },
+    },
+    calls,
+  );
+  const result = await runCheck({ NTFY_TOPIC: "t", GITHUB_PR_HEALTH_PAT: "pat", DEADMAN_STATE: fakeKv() }, world, nowMs);
+  assert.equal(result.mergedUncheckedCount, 0);
+  assert.equal(alertsOf(calls).length, 0);
+});
+
+test("AN8: a merged PR whose required check was still running (conclusion null) 10+ min after merge is flagged", () => {
+  const { allPass, results } = evaluateRequiredChecks(REQUIRED_CONTEXTS, [
+    { name: "lint", conclusion: null, started_at: "2026-09-21T08:00:00Z" },
+    { name: "pwa-js", conclusion: "success", started_at: "2026-09-21T08:00:01Z" },
+  ]);
+  assert.equal(allPass, false);
+  assert.match(results.lint, /NOT SUCCESS/);
+  const flagged = classifyMergedUnchecked([merged({ requiredOk: allPass, problems: ["lint: " + results.lint] })], NOW);
+  assert.equal(flagged.length, 1);
+  assert.match(flagged[0].problems[0], /lint/);
 });

@@ -1304,7 +1304,7 @@ def test_send_pending_sets_last_t6_fired_date_ist(monkeypatch):
     now_ist = _ist(2026, 6, 2, 14, 0)
     alert = PendingAlert(
         trigger_id="T6",
-        title="Gold forecast: calibration unlocked",
+        title="Gold: calibration unlocked",
         body="IBJA->Tanishq calibration achieved 30 overlap pairs (>=30). See dashboard.",
         priority=3,
         tags=["unlock", "white_check_mark"],
@@ -1709,89 +1709,66 @@ def test_t8_scenario_flat():
     assert "Rs." in t8m.body
 
 
-# --- Directional hint ---
+# --- No directional hint (2026-09-21) ---
+#
+# T7/T8 used to append "Prices may edge up/ease a little." from the Chronos companion's
+# lean_direction. The README promises no direction prediction, and over 122 IST days the hint
+# was 'up' on 84% of days and no better than the base rate (50.0% vs 50.6% at 1 day, 40.0% vs
+# 41.2% at 5 days). These tests pin that it is gone for every lean value and every companion state.
 
 
-def test_t8_hint_included_when_companion_success_up():
-    """Directional hint appended when chronos_companion status=success and lean=up."""
+@pytest.mark.parametrize("lean", ["up", "down", "flat"])
+def test_t8_never_carries_a_directional_hint(lean):
     alerts = check_triggers(
+        _forecast_with_companion(lean_direction=lean),
+        _probe(),
+        _prices_up(n=10),
+        _backtest_accurate(),
+        NotificationState(),
+        _ist(2026, 5, 19, 10, 0),
+    )
+    t8m = next(a for a in alerts if a.trigger_id == "T8_MORNING")
+    for phrase in ("edge up", "ease", "may ", " will ", "likely", "next few days"):
+        assert phrase not in t8m.body, f"{phrase!r} found in T8 body: {t8m.body!r}"
+
+
+@pytest.mark.parametrize("probe_fn", [_probe_up, _probe_down])
+def test_t7_never_carries_a_directional_hint(probe_fn):
+    # T7 took its hint from the probe's lean; an up/down probe must not change the copy.
+    alerts = check_triggers(
+        _forecast(),
+        probe_fn(last=14000.0, strength_pct=1.5),
+        _prices_up(n=10),
+        _backtest_accurate(),
+        NotificationState(),
+        _ist(2026, 5, 19, 14, 0),
+    )
+    t7 = next(a for a in alerts if a.trigger_id == "T7")
+    for phrase in ("edge up", "ease", "may ", " will ", "likely"):
+        assert phrase not in t7.body, f"{phrase!r} found in T7 body: {t7.body!r}"
+    assert t7.body.endswith("System working normally.")
+
+
+def test_t8_body_is_identical_across_companion_states():
+    """The companion block must not influence T8 copy at all."""
+    bodies = set()
+    for fc in (
         _forecast_with_companion(lean_direction="up"),
-        _probe(),
-        _prices_up(n=10),
-        _backtest_accurate(),
-        NotificationState(),
-        _ist(2026, 5, 19, 10, 0),
-    )
-    t8m = next(a for a in alerts if a.trigger_id == "T8_MORNING")
-    assert "Prices may edge up a little." in t8m.body
-    # norm #4: no forecast language — no "will", no probability claim, no time horizon
-    assert " will " not in t8m.body
-    assert "likely" not in t8m.body
-    assert "next few days" not in t8m.body
-
-
-def test_t8_hint_included_when_companion_success_down():
-    """Directional hint appended when chronos_companion status=success and lean=down."""
-    alerts = check_triggers(
         _forecast_with_companion(lean_direction="down"),
-        _probe(),
-        _prices_up(n=10),
-        _backtest_accurate(),
-        NotificationState(),
-        _ist(2026, 5, 19, 10, 0),
-    )
-    t8m = next(a for a in alerts if a.trigger_id == "T8_MORNING")
-    assert "Prices may ease a little." in t8m.body
-    assert " will " not in t8m.body
-    assert "next few days" not in t8m.body
-
-
-def test_t8_hint_omitted_when_probe_failed():
-    """Directional hint OMITTED when chronos_companion status=failed (no fabrication)."""
-    alerts = check_triggers(
+        _forecast_with_companion(lean_direction="flat"),
         _forecast_companion_failed(),
-        _probe(),
-        _prices_up(n=10),
-        _backtest_accurate(),
-        NotificationState(),
-        _ist(2026, 5, 19, 10, 0),
-    )
-    t8m = next(a for a in alerts if a.trigger_id == "T8_MORNING")
-    # No directional hint phrases should appear
-    assert "edge up" not in t8m.body
-    assert "ease" not in t8m.body
-    assert "likely" not in t8m.body
-
-
-def test_t8_hint_omitted_when_no_companion_block():
-    """Directional hint OMITTED when forecast has no chronos_companion key."""
-    alerts = check_triggers(
-        _forecast(),  # no chronos_companion key
-        _probe(),
-        _prices_up(n=10),
-        _backtest_accurate(),
-        NotificationState(),
-        _ist(2026, 5, 19, 10, 0),
-    )
-    t8m = next(a for a in alerts if a.trigger_id == "T8_MORNING")
-    assert "edge up" not in t8m.body
-    assert "ease" not in t8m.body
-
-
-def test_t8_hint_omitted_when_lean_flat():
-    """Directional hint OMITTED when lean_direction=flat (no direction to report)."""
-    fc = _forecast_with_companion(lean_direction="flat")
-    alerts = check_triggers(
-        fc,
-        _probe(),
-        _prices_up(n=10),
-        _backtest_accurate(),
-        NotificationState(),
-        _ist(2026, 5, 19, 10, 0),
-    )
-    t8m = next(a for a in alerts if a.trigger_id == "T8_MORNING")
-    assert "edge up" not in t8m.body
-    assert "ease" not in t8m.body
+        _forecast(),
+    ):
+        alerts = check_triggers(
+            fc,
+            _probe(),
+            _prices_up(n=10),
+            _backtest_accurate(),
+            NotificationState(),
+            _ist(2026, 5, 19, 10, 0),
+        )
+        bodies.add(next(a for a in alerts if a.trigger_id == "T8_MORNING").body)
+    assert len(bodies) == 1, bodies
 
 
 # --- ASCII-safe ---
