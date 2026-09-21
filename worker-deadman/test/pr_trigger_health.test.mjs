@@ -659,3 +659,109 @@ test("AN8: a merged PR whose required check was still running (conclusion null) 
   assert.equal(flagged.length, 1);
   assert.match(flagged[0].problems[0], /lint/);
 });
+
+// ---------------------------------------------------------------------------
+// AQ1c (2026-09-21): the merged scan must not abort on a busy merge day
+// ---------------------------------------------------------------------------
+// It used one 10s AbortController for the whole scan and read check-runs sequentially. Run against the
+// real repo on a day with ~36 merges in 6h: 30 of 31 calls succeeded and the 31st was aborted, so it
+// paged "could not verify" on every tick. These tests give each check-runs call real latency and honour
+// the abort signal, which is what makes the shared-timeout bug observable.
+
+const GREEN = (sha) => [
+  { name: "lint", conclusion: "success", started_at: "2026-09-21T10:00:00Z", head_sha: sha },
+  { name: "pwa-js", conclusion: "success", started_at: "2026-09-21T10:00:01Z", head_sha: sha },
+];
+
+function latencyWorld({ nowMs, closed, delayMs, statusBySha = {}, checkRunsBySha = {} }, ntfyCalls, stats) {
+  const base = mockWorldFetch({ nowMs, closed, checkRunsBySha }, ntfyCalls);
+  return async (url, opts = {}) => {
+    const m = url.match(/commits\/([0-9a-f]+)\/check-runs/);
+    if (!m) return base(url, opts);
+    stats.checkRunCalls.push(m[1]);
+    stats.inFlight++;
+    stats.maxInFlight = Math.max(stats.maxInFlight, stats.inFlight);
+    try {
+      await new Promise((resolve, reject) => {
+        const t = setTimeout(resolve, delayMs);
+        opts.signal?.addEventListener("abort", () => { clearTimeout(t); reject(new Error("This operation was aborted")); });
+      });
+    } finally {
+      stats.inFlight--;
+    }
+    const status = statusBySha[m[1]] || 200;
+    return { ok: status === 200, status, json: async () => ({ check_runs: checkRunsBySha[m[1]] ?? GREEN(m[1]) }) };
+  };
+}
+
+const manyMerged = (nowMs, n) =>
+  Array.from({ length: n }, (_, i) =>
+    closedPr({
+      number: 2000 + i,
+      branch: i % 2 ? "bot/data-sync" : `fix/thing-${i}`,
+      headSha: (0xabc000 + i).toString(16),
+      mergedAtIso: new Date(nowMs - (20 + i) * 60_000).toISOString(),
+    }),
+  );
+
+test("AQ1c: 30 merged PRs with per-call latency verify fine (the old shared-timeout scan aborted)", async () => {
+  const nowMs = Date.parse("2026-09-21T12:00:00Z");
+  const calls = [];
+  const stats = { checkRunCalls: [], inFlight: 0, maxInFlight: 0 };
+  const world = latencyWorld({ nowMs, closed: manyMerged(nowMs, 30), delayMs: 350 }, calls, stats);
+  const started = Date.now();
+  const result = await runCheck({ NTFY_TOPIC: "t", GITHUB_PR_HEALTH_PAT: "pat", DEADMAN_STATE: fakeKv() }, world, nowMs);
+  const elapsed = Date.now() - started;
+  assert.equal(stats.checkRunCalls.length, 30, "every merged PR is verified");
+  assert.equal(result.mergedUncheckedCount, 0);
+  assert.equal(calls.filter((c) => c.opts.headers.Title.includes("could not verify")).length, 0, "no false 'could not verify'");
+  // Sequential would take 30 * 350ms = 10.5s, past the 10s budget that used to abort the scan.
+  assert.ok(elapsed < 6000, `scan took ${elapsed}ms; it should be concurrent (~2s), not sequential (~10.5s)`);
+});
+
+test("AQ1c: concurrency is bounded (not sequential, not unbounded)", async () => {
+  const nowMs = Date.parse("2026-09-21T12:00:00Z");
+  const stats = { checkRunCalls: [], inFlight: 0, maxInFlight: 0 };
+  const world = latencyWorld({ nowMs, closed: manyMerged(nowMs, 30), delayMs: 60 }, [], stats);
+  await runCheck({ NTFY_TOPIC: "t", GITHUB_PR_HEALTH_PAT: "pat", DEADMAN_STATE: fakeKv() }, world, nowMs);
+  assert.ok(stats.maxInFlight >= 2, `expected concurrent reads, saw max ${stats.maxInFlight}`);
+  assert.ok(stats.maxInFlight <= 6, `expected at most 6 in flight, saw ${stats.maxInFlight}`);
+});
+
+test("AQ1c: a merged PR seen passing is not re-read on later ticks (steady state costs ~0 subrequests)", async () => {
+  const nowMs = Date.parse("2026-09-21T12:00:00Z");
+  const env = { NTFY_TOPIC: "t", GITHUB_PR_HEALTH_PAT: "pat", DEADMAN_STATE: fakeKv() };
+  const closed = manyMerged(nowMs, 12);
+  const first = { checkRunCalls: [], inFlight: 0, maxInFlight: 0 };
+  await runCheck(env, latencyWorld({ nowMs, closed, delayMs: 5 }, [], first), nowMs);
+  assert.equal(first.checkRunCalls.length, 12);
+  const second = { checkRunCalls: [], inFlight: 0, maxInFlight: 0 };
+  await runCheck(env, latencyWorld({ nowMs: nowMs + 30 * MINUTE, closed, delayMs: 5 }, [], second), nowMs + 30 * MINUTE);
+  assert.equal(second.checkRunCalls.length, 0, "already-verified PRs must be served from the cache");
+});
+
+test("AQ1c: a PR that did NOT pass is re-read every tick and still pages (the cache never hides a failure)", async () => {
+  const nowMs = Date.parse("2026-09-21T12:00:00Z");
+  const env = { NTFY_TOPIC: "t", GITHUB_PR_HEALTH_PAT: "pat", DEADMAN_STATE: fakeKv() };
+  const closed = manyMerged(nowMs, 5);
+  const badSha = closed[2].head.sha;
+  const calls = [];
+  const s1 = { checkRunCalls: [], inFlight: 0, maxInFlight: 0 };
+  const r1 = await runCheck(env, latencyWorld({ nowMs, closed, delayMs: 5, checkRunsBySha: { [badSha]: [] } }, calls, s1), nowMs);
+  assert.equal(r1.mergedUncheckedCount, 1);
+  const s2 = { checkRunCalls: [], inFlight: 0, maxInFlight: 0 };
+  await runCheck(env, latencyWorld({ nowMs: nowMs + 30 * MINUTE, closed, delayMs: 5, checkRunsBySha: { [badSha]: [] } }, calls, s2), nowMs + 30 * MINUTE);
+  assert.deepEqual(s2.checkRunCalls, [badSha], "only the failing PR is re-read");
+});
+
+test("AQ1c: a real GitHub error on one PR still fails closed (pages 'could not verify'), it is not swallowed", async () => {
+  const nowMs = Date.parse("2026-09-21T12:00:00Z");
+  const calls = [];
+  const closed = manyMerged(nowMs, 8);
+  const stats = { checkRunCalls: [], inFlight: 0, maxInFlight: 0 };
+  const world = latencyWorld({ nowMs, closed, delayMs: 5, statusBySha: { [closed[4].head.sha]: 500 } }, calls, stats);
+  await runCheck({ NTFY_TOPIC: "t", GITHUB_PR_HEALTH_PAT: "pat", DEADMAN_STATE: fakeKv() }, world, nowMs);
+  const alert = calls.find((c) => c.opts.headers.Title.includes("could not verify"));
+  assert.ok(alert, "an unverifiable scan must page");
+  assert.match(alert.opts.body, /HTTP 500/);
+});
