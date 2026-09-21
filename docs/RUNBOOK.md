@@ -606,7 +606,9 @@ n=113 (93 h1 folds) for the whole window while the raw parquet grew normally und
   only the feature-store join was). The remaining rows were genuine non-trading days (weekends) or
   not-yet-published — correctly excluded, not a bug.
 - **T13** (`ml/notifications.py::_check_t13_usable_snapshot_stall`) fires once per IST day when the
-  most recent *usable* (same-day-IBJA) snapshot is >= 2 calendar days old, independent of T10 —
+  most recent *usable* (same-day-IBJA) snapshot is >= 2 **weekdays** behind (Mon-Fri days since it,
+  today excluded; IBJA publishes nothing on weekends, so calendar days made it fire every Sunday and
+  Monday — fixed 2026-09-21), independent of T10 —
   read via `compute_usable_snapshot_gap_days()`. T10 answers "did a row land"; T13 answers "is the
   dataset actually growing." Neither implies the other.
 
