@@ -59,6 +59,9 @@ const KV_TANISHQ_STATE_KEY = "deadman:tanishq_last_state"; // Q4: independent de
 const KV_HEARTBEAT_KEY = "deadman:last_heartbeat_date_ist";
 const KV_PR_TRIGGER_HEALTH_KEY = "deadman:pr_trigger_health_state"; // AI2: own key, own dedup state
 const KV_MERGED_UNCHECKED_KEY = "deadman:merged_unchecked_state"; // AL3a: PR number -> alerted-at
+// AQ1c: PR number -> head SHA of merged PRs already seen with every required context SUCCESS, so a
+// merged PR is read once rather than every tick. Pruned to the lookback window on every write.
+const KV_MERGED_VERIFIED_KEY = "deadman:merged_verified";
 const KV_LAST_DELIVERY_KEY = "deadman:last_ntfy_delivery"; // AN3: last delivery attempt, echoed by ?trigger=1
 const FETCH_TIMEOUT_MS = 10_000;
 const GITHUB_REPO = "gaurav-gandhi-2411/gold-rate-tracker";
@@ -195,60 +198,107 @@ async function fetchOpenPrTriggerHealth(fetchImpl, token) {
   }
 }
 
+// Concurrent GitHub reads per scan. Bounded so a busy merge day cannot fan out without limit.
+const MERGED_SCAN_CONCURRENCY = 6;
+
+/** One GET with ITS OWN timeout (a shared one is what broke the scan, see fetchRecentlyMergedPrs). */
+async function getJson(fetchImpl, url, headers) {
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), FETCH_TIMEOUT_MS);
+  try {
+    const resp = await fetchImpl(url, { headers, signal: controller.signal });
+    if (!resp.ok) return { ok: false, status: resp.status, data: null };
+    return { ok: true, status: resp.status, data: await resp.json() };
+  } finally {
+    clearTimeout(timeout);
+  }
+}
+
+/** Run `fn` over `items` with at most `limit` in flight; results keep input order. */
+async function mapLimit(items, limit, fn) {
+  const out = new Array(items.length);
+  let next = 0;
+  const worker = async () => {
+    while (next < items.length) {
+      const i = next++;
+      out[i] = await fn(items[i]);
+    }
+  };
+  await Promise.all(Array.from({ length: Math.min(limit, items.length) }, worker));
+  return out;
+}
+
 /**
- * AL3a: PRs merged inside the lookback window, each with whether its head SHA (the head at
- * merge time) has a lint/pwa-js check-run. Same fail-closed batching as the open-PR fetch above:
- * one failed API call fails the whole batch, never a silently shorter list. Bot PRs are NOT
- * excluded here -- 355/355 merged bot PRs had check-runs, so a bot PR merged without one is
- * exactly the anomaly this scan exists to surface.
+ * AL3a: PRs merged inside the lookback window, each with whether every required context is SUCCESS
+ * on its head SHA. Same fail-closed batching as the open-PR fetch above: one failed API call fails
+ * the whole batch, never a silently shorter list. Bot PRs are NOT excluded here -- 355/355 merged
+ * bot PRs had check-runs, so a bot PR merged without one is exactly the anomaly this scan exists
+ * to surface.
+ *
+ * AQ1c (2026-09-21): this used ONE AbortController (10s) for the whole scan and awaited one
+ * check-runs call per merged PR in sequence. On a normal day that is a handful of calls; on a day
+ * with ~36 merges in 6h it exhausted the budget mid-scan ("This operation was aborted"), so the
+ * scan paged "could not verify" on every tick. Reproduced by running this function against the
+ * real repo: 30 of 31 calls succeeded, the 31st was aborted. Now: a timeout per request, bounded
+ * concurrency, and `verified` (PR number -> head SHA of PRs already seen passing) so each merged PR
+ * is read once instead of every 30 minutes, which also keeps the per-invocation subrequest count
+ * near zero in steady state. Returns `verifiedNext` (only PRs still inside the lookback).
  */
-async function fetchRecentlyMergedPrs(fetchImpl, token, nowMs) {
+async function fetchRecentlyMergedPrs(fetchImpl, token, nowMs, verified = {}) {
   const headers = {
     "User-Agent": "gold-rate-tracker-deadman-switch",
     Authorization: `Bearer ${token}`,
     Accept: "application/vnd.github+json",
   };
-  const controller = new AbortController();
-  const timeout = setTimeout(() => controller.abort(), FETCH_TIMEOUT_MS);
   try {
     // sort=updated desc: anything merged in the last few hours is among the first page.
-    const listResp = await fetchImpl(
+    const list = await getJson(
+      fetchImpl,
       `https://api.github.com/repos/${GITHUB_REPO}/pulls?state=closed&sort=updated&direction=desc&per_page=50`,
-      { headers, signal: controller.signal },
+      headers,
     );
-    if (!listResp.ok) return { mergedPrs: null, failure: `list closed PRs HTTP ${listResp.status}` };
-    const closed = await listResp.json();
+    if (!list.ok) return { mergedPrs: null, failure: `list closed PRs HTTP ${list.status}` };
     const cutoffMs = nowMs - MERGED_LOOKBACK_MINUTES * 60_000;
-    const recent = closed.filter((p) => p.merged_at && Date.parse(p.merged_at) >= cutoffMs);
+    const recent = list.data.filter((p) => p.merged_at && Date.parse(p.merged_at) >= cutoffMs);
 
-    const mergedPrs = [];
-    for (const p of recent) {
+    const results = await mapLimit(recent, MERGED_SCAN_CONCURRENCY, async (p) => {
       const sha = p.head.sha;
-      const checksResp = await fetchImpl(
-        `https://api.github.com/repos/${GITHUB_REPO}/commits/${sha}/check-runs?per_page=100`,
-        { headers, signal: controller.signal },
-      );
-      if (!checksResp.ok) return { mergedPrs: null, failure: `check-runs ${sha} HTTP ${checksResp.status}` };
-      const checkData = await checksResp.json();
-      // AN8: the same predicate scripts/check_required_checks_positive.py applies before a self-merge --
-      // every required context SUCCESS, not merely present (#1541 merged over a failing lint).
-      const { allPass, results } = evaluateRequiredChecks(REQUIRED_CONTEXTS, checkData.check_runs || []);
-      mergedPrs.push({
-        number: p.number,
-        branch: p.head.ref,
-        headSha: sha,
-        mergedAtIso: p.merged_at,
-        requiredOk: allPass,
-        problems: Object.entries(results)
-          .filter(([, v]) => v !== "SUCCESS")
-          .map(([context, v]) => `${context}: ${v}`),
-      });
-    }
-    return { mergedPrs, failure: null };
+      const base = { number: p.number, branch: p.head.ref, headSha: sha, mergedAtIso: p.merged_at };
+      if (verified[String(p.number)] === sha) return { pr: { ...base, requiredOk: true, problems: [] } };
+      try {
+        const checks = await getJson(
+          fetchImpl,
+          `https://api.github.com/repos/${GITHUB_REPO}/commits/${sha}/check-runs?per_page=100`,
+          headers,
+        );
+        if (!checks.ok) return { failure: `check-runs ${sha} HTTP ${checks.status}` };
+        // AN8: the same predicate scripts/check_required_checks_positive.py applies before a self-merge --
+        // every required context SUCCESS, not merely present (#1541 merged over a failing lint).
+        const { allPass, results: perContext } = evaluateRequiredChecks(
+          REQUIRED_CONTEXTS,
+          checks.data.check_runs || [],
+        );
+        return {
+          pr: {
+            ...base,
+            requiredOk: allPass,
+            problems: Object.entries(perContext)
+              .filter(([, v]) => v !== "SUCCESS")
+              .map(([context, v]) => `${context}: ${v}`),
+          },
+        };
+      } catch (err) {
+        return { failure: `check-runs ${sha}: ${String(err && err.message ? err.message : err)}` };
+      }
+    });
+    const failed = results.find((r) => r.failure);
+    if (failed) return { mergedPrs: null, failure: failed.failure };
+    const mergedPrs = results.map((r) => r.pr);
+    const verifiedNext = {};
+    for (const pr of mergedPrs) if (pr.requiredOk) verifiedNext[String(pr.number)] = pr.headSha;
+    return { mergedPrs, failure: null, verifiedNext };
   } catch (err) {
     return { mergedPrs: null, failure: String(err && err.message ? err.message : err) };
-  } finally {
-    clearTimeout(timeout);
   }
 }
 
@@ -416,14 +466,20 @@ export async function runCheck(env, fetchImpl, nowMs) {
   let mergedUncheckedSent = false;
   let mergedUncheckedCount = 0;
   if (env.GITHUB_PR_HEALTH_PAT) {
-    const { mergedPrs, failure: mergedFetchFailure } = await fetchRecentlyMergedPrs(
+    const verified = (await loadState(env, KV_MERGED_VERIFIED_KEY)) || {};
+    const { mergedPrs, failure: mergedFetchFailure, verifiedNext } = await fetchRecentlyMergedPrs(
       fetchImpl,
       env.GITHUB_PR_HEALTH_PAT,
       nowMs,
+      verified,
     );
     if (mergedFetchFailure) {
       mergedUncheckedSent = await deliver(buildMergedUncheckedFetchFailureAlert(mergedFetchFailure));
     } else {
+      // Verification is independent of whether an alert is delivered: a PR seen passing stays passed.
+      if (env.DEADMAN_STATE) {
+        await env.DEADMAN_STATE.put(KV_MERGED_VERIFIED_KEY, JSON.stringify(verifiedNext));
+      }
       const flagged = classifyMergedUnchecked(mergedPrs, nowMs);
       mergedUncheckedCount = flagged.length;
       const previousMergedState = await loadState(env, KV_MERGED_UNCHECKED_KEY);
