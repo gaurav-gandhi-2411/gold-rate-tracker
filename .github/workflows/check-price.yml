@@ -93,6 +93,16 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          # AQ3b (2026-09-21): a catch-up dispatch is dispatched ~8s after its parent run started, and this
+          # job's concurrency group (cancel-in-progress: false) queues it until the parent finishes, which
+          # is after the parent's data PR has merged. actions/checkout defaults to github.sha, the commit
+          # at DISPATCH time, i.e. the master from BEFORE the parent's merge. The queued run then built its
+          # data on that stale base and, on `Sync data via bot PR`, conflicted on every data file: 60 of
+          # the 65 catch-up dispatches since #1374 failed this way (the 3 that succeeded had no parent PR
+          # in flight). A catch-up run must start from master as it is when it actually STARTS. Every other
+          # event keeps its trigger commit.
+          ref: ${{ github.event.inputs.catchup == 'true' && 'master' || github.sha }}
 
       - name: Detect missed cadence and self-trigger catch-up
         # R2 (audit 2026-09-04): scheduled-trigger miss rate stepped from
