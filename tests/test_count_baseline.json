@@ -73,6 +73,6 @@
   "tests/test_volatility.py": 35,
   "tests/test_workflow_schedule_isolation.py": 4,
   "worker-deadman/test/deadman.test.mjs": 66,
-  "worker-deadman/test/pr_trigger_health.test.mjs": 49
+  "worker-deadman/test/pr_trigger_health.test.mjs": 56
  }
 }

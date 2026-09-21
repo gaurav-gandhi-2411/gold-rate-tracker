@@ -343,7 +343,7 @@ test("runCheck: missing NTFY_TOPIC skips cleanly instead of throwing", async () 
     throw new Error("fetch should not be called when NTFY_TOPIC is unset");
   };
   const result = await runCheck({ NTFY_TOPIC: "" }, fetchImpl, NOW);
-  assert.equal(result.skipped, "NTFY_TOPIC secret not set");
+  assert.match(result.skipped, /no delivery channel configured/);
 });
 
 test("runCheck: corrupt KV state does not crash, treated as first run", async () => {

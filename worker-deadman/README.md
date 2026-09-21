@@ -305,3 +305,35 @@ Cron Trigger against a 5-per-account Free-plan limit (0 currently in use —
 the retired worker's triggers were removed with it). KV usage (`kv/platform/limits/`,
 same date): at most 48 writes/day and 48 reads/day against Free-plan quotas
 of 1,000 writes/day and 100,000 reads/day.
+
+## Telegram delivery channel (optional, recommended while ntfy.sh is unreachable from Cloudflare)
+
+From 2026-09-21 every Worker delivery attempt to ntfy.sh failed (HTTP 522, and once 429): 4 of 4 since
+the #1797 deploy. If `TELEGRAM_BOT_TOKEN` and `TELEGRAM_CHAT_ID` are set, each alert goes to Telegram
+first and to ntfy only if Telegram fails, so one message reaches the phone. Unset, the Worker behaves
+exactly as before. Cost: $0.
+
+Setup (about 5 minutes, all on your side):
+
+1. In Telegram, message **@BotFather**, send `/newbot`, follow the prompts, and copy the **token**.
+2. Open a chat with your new bot and send it any message (a bot cannot message you first).
+3. On your own device, open `https://api.telegram.org/bot<TOKEN>/getUpdates` and copy `message.chat.id`.
+   (The token is in that URL: do not paste it anywhere shared.)
+4. From `worker-deadman/`:
+   ```
+   wrangler secret put TELEGRAM_BOT_TOKEN
+   wrangler secret put TELEGRAM_CHAT_ID
+   wrangler deploy
+   ```
+5. Read the **full** `?trigger=1` body. Expect `ntfy.channels.telegramConfigured: true`.
+
+**Delivery proof (nothing short of this counts):** force a real page (delete the KV key
+`deadman:last_heartbeat_date_ist`; the next */30 tick sends the daily heartbeat), then confirm **both**:
+(a) it appears on your phone in Telegram, and (b) `?trigger=1` shows `ntfy.lastDelivery` with
+`ok: true`, `channel: "telegram"` and a numeric `id`. Telegram has no server-side poll for a bot's
+outgoing messages like ntfy's `?poll=1`; the API's `result.message_id` is Telegram's server-side
+acknowledgement, and the phone confirms display. If Telegram fails, `deliveredVia` shows `ntfy` and the
+Worker logs "used ntfy after telegram failed", so a fallback is never silent.
+
+The bot token appears only in the request URL; every error string is scrubbed of it before it can reach a
+response, a KV record or a log line (tested).
