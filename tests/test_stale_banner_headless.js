@@ -9,6 +9,7 @@ import http from "node:http";
 import path from "node:path";
 import fs from "node:fs";
 import pkg from "../scraper/node_modules/playwright/index.js";
+import { LOCAL_ONLY_ARGS } from "./helpers/local_only_browser.js";
 const { chromium } = pkg;
 
 // ─── Local HTTP server (serves repo root) ────────────────────────────────────
@@ -207,7 +208,8 @@ function assert(label, condition, detail = "") {
 
 async function run() {
   const { server, port } = await startServer(ROOT);
-  const browser = await chromium.launch({ headless: true });
+  // Third-party hosts (Chart.js / Sentry CDNs) are unreachable by design: see helpers/local_only_browser.js.
+  const browser = await chromium.launch({ headless: true, args: LOCAL_ONLY_ARGS });
   const base    = `http://127.0.0.1:${port}`;
 
   // ── Inject mock fetch (addInitScript runs before page scripts) ───────────────
