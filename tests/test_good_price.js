@@ -10,90 +10,18 @@ import assert from "node:assert/strict";
 
 // ── Inline helpers (must match app.js) ────────────────────────────────────────
 
-function dedupeByISTDay(readings) {
-  const byDay = new Map();
-  for (const r of readings) {
-    const key = new Date(r.timestamp).toLocaleDateString("en-IN", { timeZone: "Asia/Kolkata" });
-    byDay.set(key, r);
-  }
-  return [...byDay.values()];
-}
+import { loadApp } from "./helpers/load_app.js";
 
-const fmtINR = (n) =>
-  typeof n === "number"
-    ? n.toLocaleString("en-IN", { maximumFractionDigits: 0 })
-    : "—";
+// Real app.js, not a copy: see tests/helpers/load_app.js.
+const app = loadApp();
+const dedupeByISTDay = app.pure("dedupeByISTDay");
+const computeGoodPriceSignals = app.pure("computeGoodPriceSignals");
+const computeBandPos90d = app.pure("computeBandPos90d");
+const theilSenFit = app.pure("theilSenFit");
+const computeTrendResidual30d = app.pure("computeTrendResidual30d");
+const computeSupportDistance90d = app.pure("computeSupportDistance90d");
 
-function computeGoodPriceSignals(readings) {
-  if (!readings || readings.length < 2) return null;
-
-  const now     = Date.now();
-  const current = readings[readings.length - 1]["22k"];
-
-  const within30d = readings.filter(
-    r => now - new Date(r.timestamp).getTime() <= 30 * 86400e3,
-  );
-  const daily30d  = dedupeByISTDay(within30d);
-  const nDays30d  = daily30d.length;
-  if (nDays30d < 5) return null;
-
-  const prices30d     = daily30d.map(r => r["22k"]);
-  const percentile30d = Math.round(
-    prices30d.filter(p => p <= current).length / nDays30d * 100,
-  );
-
-  const avg30d   = Math.round(prices30d.reduce((s, p) => s + p, 0) / nDays30d);
-  const vsAvg30d = current - avg30d;
-
-  // Four-tier verdict (Φ18A)
-  let verdictLead, verdictType, supportLine1;
-  if (percentile30d <= 20) {
-    verdictType  = "cheap";
-    verdictLead  = "You're paying less than usual this month";
-    supportLine1 = "Cheaper than most days this month.";
-  } else if (percentile30d <= 40) {
-    verdictType  = "below-mid";
-    verdictLead  = "You're paying a little less than usual this month";
-    supportLine1 = "A bit below the usual price this month.";
-  } else if (percentile30d <= 70) {
-    verdictType  = "mid";
-    verdictLead  = "You're paying about the usual amount this month";
-    supportLine1 = "Right around the middle for this month.";
-  } else {
-    verdictType  = "high";
-    verdictLead  = "You're paying a bit more than usual this month";
-    supportLine1 = "Pricier than most days this month.";
-  }
-
-  // Unified proof line — consistent frame (cheaper-than / pricier-than), phrased as an
-  // actual day count (not a percentage). Must match app.js's computeGoodPriceSignals.
-  const daysCheaperThanToday = prices30d.filter(p => p > current).length;
-  const daysPricierThanToday = prices30d.filter(p => p < current).length;
-  const proofLine = percentile30d <= 50
-    ? `Cheaper than ${daysCheaperThanToday} of the last ${nDays30d} days.`
-    : `Pricier than ${daysPricierThanToday} of the last ${nDays30d} days.`;
-
-  // Data-sufficiency degrade note (norm #5) — shown when < 30 distinct days
-  const dataSuffNote = nDays30d < 30
-    ? `Only ${nDays30d} distinct days in the window — treat as indicative.`
-    : null;
-
-  const absVsAvg = fmtINR(Math.abs(vsAvg30d));
-  const supportLine2 = vsAvg30d < 0
-    ? `₹${absVsAvg} below the usual price for the month.`
-    : vsAvg30d > 0
-      ? `₹${absVsAvg} above the usual price for the month.`
-      : "Right at the usual price for the month.";
-
-  // Divergence: percentile says cheap/low but vs-avg says above average, or vice versa.
-  const divergenceNote =
-    (percentile30d <= 40 && vsAvg30d > 0) ||
-    (percentile30d >= 70 && vsAvg30d < 0)
-      ? "(These two don't quite agree — one counts days, the other measures the actual rupee gap. We go with the day-count for the headline above.)"
-      : null;
-
-  return { percentile30d, vsAvg30d, avg30d, nDays30d, verdictLead, verdictType, proofLine, dataSuffNote, supportLine1, supportLine2, divergenceNote };
-}
+const fmtINR = app.pure("fmtINR");
 
 // ── Test helpers ──────────────────────────────────────────────────────────────
 
@@ -254,36 +182,8 @@ test("readings older than 30 days are excluded from signals", () => {
 // Inlined from app.js (see file header note); kept in sync by construction since
 // this is a fresh addition, not a copy of a pre-existing drifted function.
 
-const MIN_DAYS_90D = 60;
-const FULL_DAYS_90D = 90;
-
-function computeBandPos90d(readings) {
-  if (!readings || readings.length < 2) return null;
-
-  const now     = Date.now();
-  const current = readings[readings.length - 1]["22k"];
-
-  const within90d = readings.filter(
-    r => now - new Date(r.timestamp).getTime() <= 90 * 86400e3,
-  );
-  const daily90d = dedupeByISTDay(within90d);
-  const nDays90d = daily90d.length;
-  if (nDays90d < MIN_DAYS_90D) return null;
-
-  const prices90d      = daily90d.map(r => r["22k"]);
-  const percentile90d  = Math.round(
-    prices90d.filter(p => p <= current).length / nDays90d * 100,
-  );
-
-  let note = percentile90d <= 50
-    ? `Over the past 90 days: cheaper than ${100 - percentile90d}% of the ${nDays90d} days.`
-    : `Over the past 90 days: more expensive than ${percentile90d}% of the ${nDays90d} days.`;
-  if (nDays90d < FULL_DAYS_90D) {
-    note += ` (Only ${nDays90d} distinct days in this window so far — treat as indicative.)`;
-  }
-
-  return { percentile90d, nDays90d, note };
-}
+const MIN_DAYS_90D = app.run("MIN_DAYS_90D");
+const FULL_DAYS_90D = app.run("FULL_DAYS_90D");
 
 test("computeBandPos90d returns null below MIN_DAYS_90D (60 distinct days)", () => {
   const readings = makeReadings(Array.from({ length: 59 }, (_, i) => 14000 + i));
@@ -356,85 +256,10 @@ test("computeBandPos90d window is independent of the 30-day window's percentile"
 // SUPPORTING line only — never changes computeGoodPriceSignals' verdict hierarchy.
 // Inlined from app.js (see file header note).
 
-const MIN_DAYS_TREND = 10;
-const FLAT_SLOPE_INR_PER_DAY = 5;
-const CHEAP_PERCENTILE_MAX = 40;
-const STILL_FALLING_Z = -1;
-
-function theilSenFit(points) {
-  const slopes = [];
-  for (let i = 0; i < points.length; i++) {
-    for (let j = i + 1; j < points.length; j++) {
-      const dx = points[j].x - points[i].x;
-      if (dx !== 0) slopes.push((points[j].y - points[i].y) / dx);
-    }
-  }
-  slopes.sort((a, b) => a - b);
-  const midS = Math.floor(slopes.length / 2);
-  const slope = slopes.length % 2 !== 0
-    ? slopes[midS]
-    : (slopes[midS - 1] + slopes[midS]) / 2;
-
-  const intercepts = points.map(p => p.y - slope * p.x).sort((a, b) => a - b);
-  const midI = Math.floor(intercepts.length / 2);
-  const intercept = intercepts.length % 2 !== 0
-    ? intercepts[midI]
-    : (intercepts[midI - 1] + intercepts[midI]) / 2;
-
-  return { slope, intercept };
-}
-
-function computeTrendResidual30d(readings, percentile30d) {
-  if (!readings || readings.length < 2) return null;
-
-  const now = Date.now();
-  const within30d = readings.filter(
-    r => now - new Date(r.timestamp).getTime() <= 30 * 86400e3,
-  );
-  const daily30d = dedupeByISTDay(within30d);
-  const nDays = daily30d.length;
-  if (nDays < MIN_DAYS_TREND) return null;
-
-  const points = daily30d.map((r, i) => ({ x: i, y: r["22k"] }));
-  const { slope, intercept } = theilSenFit(points);
-
-  const absResiduals = points
-    .map(p => Math.abs(p.y - (slope * p.x + intercept)))
-    .sort((a, b) => a - b);
-  const midR = Math.floor(absResiduals.length / 2);
-  const mad = absResiduals.length % 2 !== 0
-    ? absResiduals[midR]
-    : (absResiduals[midR - 1] + absResiduals[midR]) / 2;
-  const robustStd = 1.4826 * mad;
-
-  const todayIdx = points.length - 1;
-  const trendValue = slope * todayIdx + intercept;
-  const residual = points[todayIdx].y - trendValue;
-  const residZ = robustStd > 0 ? residual / robustStd : 0;
-
-  let trendState;
-  if (slope <= -FLAT_SLOPE_INR_PER_DAY) trendState = "falling";
-  else if (slope >= FLAT_SLOPE_INR_PER_DAY) trendState = "rising";
-  else trendState = "flat";
-
-  const isCheap = typeof percentile30d === "number" && percentile30d <= CHEAP_PERCENTILE_MAX;
-  const slopeAbs = fmtINR(Math.round(Math.abs(slope)));
-
-  let note;
-  if (isCheap && residZ < STILL_FALLING_Z) {
-    note = `Cheap, but still falling — today is well below its usual trend for the month (dropping about ₹${slopeAbs} a day).`;
-  } else if (isCheap) {
-    note = "Cheap, and steadying — despite the recent dip, today's price is back close to its usual trend for the month.";
-  } else if (trendState === "falling") {
-    note = `Prices have been slipping about ₹${slopeAbs} a day this month.`;
-  } else if (trendState === "rising") {
-    note = `Prices have been climbing about ₹${slopeAbs} a day this month.`;
-  } else {
-    note = "Prices have been steady this month, close to their usual trend.";
-  }
-
-  return { slope, residual, residZ, trendState, nDays, note };
-}
+const MIN_DAYS_TREND = app.run("MIN_DAYS_TREND");
+const FLAT_SLOPE_INR_PER_DAY = app.run("FLAT_SLOPE_INR_PER_DAY");
+const CHEAP_PERCENTILE_MAX = app.run("CHEAP_PERCENTILE_MAX");
+const STILL_FALLING_Z = app.run("STILL_FALLING_Z");
 
 test("computeTrendResidual30d returns null below MIN_DAYS_TREND (10 distinct days)", () => {
   const readings = makeReadings(Array.from({ length: 9 }, (_, i) => 14000 + i * 10));
@@ -528,44 +353,9 @@ test("computeTrendResidual30d never overrides computeGoodPriceSignals' verdict f
 // situations. A SUPPORTING line only — never changes computeGoodPriceSignals'
 // verdict hierarchy. Inlined from app.js (see file header note).
 
-const MIN_DAYS_SUPPORT = 60;
-const FULL_DAYS_SUPPORT = 90;
-const NEAR_SUPPORT_PCT = 2;
-
-function computeSupportDistance90d(readings, percentile30d) {
-  if (!readings || readings.length < 2) return null;
-
-  const now     = Date.now();
-  const current = readings[readings.length - 1]["22k"];
-
-  const within90d = readings.filter(
-    r => now - new Date(r.timestamp).getTime() <= 90 * 86400e3,
-  );
-  const daily90d = dedupeByISTDay(within90d);
-  const nDays = daily90d.length;
-  if (nDays < MIN_DAYS_SUPPORT) return null;
-
-  const low90d      = Math.min(...daily90d.map(r => r["22k"]));
-  const distPct     = ((current - low90d) / low90d) * 100;
-  const nearSupport = distPct <= NEAR_SUPPORT_PCT;
-  const isCheap      = typeof percentile30d === "number" && percentile30d <= CHEAP_PERCENTILE_MAX;
-
-  let note;
-  if (isCheap && nearSupport) {
-    note = `Cheap, and sitting right at its 3-month low (₹${fmtINR(low90d)}) — it hasn't dropped below this in ${nDays} days.`;
-  } else if (isCheap) {
-    note = `Cheap, but still ${distPct.toFixed(1)}% above its lowest price in 3 months (₹${fmtINR(low90d)}).`;
-  } else if (nearSupport) {
-    note = `Right at its lowest price in 3 months (₹${fmtINR(low90d)}), even though it's not among the cheapest days this month.`;
-  } else {
-    note = `${distPct.toFixed(1)}% above its lowest price in 3 months (₹${fmtINR(low90d)}, over the last ${nDays} days).`;
-  }
-  if (nDays < FULL_DAYS_SUPPORT) {
-    note += ` (Only ${nDays} distinct days in this 90-day window so far — treat as indicative.)`;
-  }
-
-  return { distPct, low90d, nDays, note };
-}
+const MIN_DAYS_SUPPORT = app.run("MIN_DAYS_SUPPORT");
+const FULL_DAYS_SUPPORT = app.run("FULL_DAYS_SUPPORT");
+const NEAR_SUPPORT_PCT = app.run("NEAR_SUPPORT_PCT");
 
 test("computeSupportDistance90d returns null below MIN_DAYS_SUPPORT (60 distinct days)", () => {
   const readings = makeReadings(Array.from({ length: 59 }, (_, i) => 14000 + i));
@@ -646,4 +436,32 @@ test("computeSupportDistance90d never overrides computeGoodPriceSignals' verdict
     { verdictLead: signals.verdictLead, verdictType: signals.verdictType, proofLine: signals.proofLine },
     before,
   );
+});
+
+// ── Gaps found by mutating the REAL app.js (2026-09-21) ───────────────────────────
+// With the tests running against real code, two single-token mutations still passed every test:
+// computeBandPos90d's `p <= current` -> `p < current`, and computeTrendResidual30d's MAD scale
+// 1.4826 -> 1.0. These pin both.
+
+test("computeBandPos90d: today counts itself -- at the 90-day high it reads 100, at the low 1/n", () => {
+  // Strictly rising over 60 distinct days: today is the highest price.
+  const rising = makeReadings(Array.from({ length: 60 }, (_, i) => 14000 + i * 10));
+  assert.equal(computeBandPos90d(rising).percentile90d, 100);
+  // Strictly falling: today is the lowest, so only today itself is <= today.
+  const falling = makeReadings(Array.from({ length: 60 }, (_, i) => 15000 - i * 10));
+  assert.equal(computeBandPos90d(falling).percentile90d, Math.round((1 / 60) * 100));
+});
+
+test("computeTrendResidual30d: residZ uses the normal-consistent MAD scale (z -0.80 steadying, z -1.34 still falling)", () => {
+  // Deterministic noise around a flat 14000 with a known MAD; only today's deviation varies.
+  const noise = [3, -2, 4, -3, 2, -4, 3, -1, 2, -3, 4, -2];
+  const series = (lastDev) => makeReadings([...noise.map((n) => 14000 + n), 14000 + lastDev]);
+  const steadying = computeTrendResidual30d(series(-6), 10);
+  // With the 1.4826 scale z is about -0.80 (above STILL_FALLING_Z = -1); an un-scaled MAD would
+  // make it about -1.19 and flip the note.
+  assert.ok(steadying.residZ > -1 && steadying.residZ < -0.7, `residZ ${steadying.residZ}`);
+  assert.equal(steadying.note, app.t("trendCheapSteadying"));
+  const falling = computeTrendResidual30d(series(-8), 10);
+  assert.ok(falling.residZ < -1, `residZ ${falling.residZ}`);
+  assert.notEqual(falling.note, steadying.note);
 });

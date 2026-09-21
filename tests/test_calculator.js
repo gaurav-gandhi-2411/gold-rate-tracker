@@ -10,23 +10,11 @@ import { test } from "node:test";
 
 // --- Inline the function under test (must match app.js) ---
 
-function computePurchaseCost({ ratePerGram, grams, makingPct = 0, gstPct = 3 }) {
-  const vals = [ratePerGram, grams, makingPct, gstPct];
-  if (!vals.every(Number.isFinite)) return null;
-  if (ratePerGram < 0 || grams < 0 || makingPct < 0 || gstPct < 0) return null;
+import { loadApp } from "./helpers/load_app.js";
 
-  const goldValue = ratePerGram * grams;
-  const making = goldValue * (makingPct / 100);
-  const gst = (goldValue + making) * (gstPct / 100);
-  const total = goldValue + making + gst;
-
-  return {
-    goldValue: Math.round(goldValue),
-    making: Math.round(making),
-    gst: Math.round(gst),
-    total: Math.round(total),
-  };
-}
+// Real app.js, not a copy: see tests/helpers/load_app.js.
+const app = loadApp();
+const computePurchaseCost = app.pure("computePurchaseCost");
 
 // --- Tests ---
 

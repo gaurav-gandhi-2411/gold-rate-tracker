@@ -9,35 +9,12 @@ import { test } from "node:test";
 
 // --- Inline the functions under test (must match app.js) ---
 
-function dedupeByISTDay(readings) {
-  const byDay = new Map();
-  for (const r of readings) {
-    const key = new Date(r.timestamp).toLocaleDateString("en-IN", { timeZone: "Asia/Kolkata" });
-    byDay.set(key, r);
-  }
-  return [...byDay.values()];
-}
+import { loadApp } from "./helpers/load_app.js";
 
-function computeComparisons(readings) {
-  if (readings.length === 0) return null;
-  const now     = Date.now();
-  const current = readings[readings.length - 1]["22k"];
-  const avg     = (arr) => Math.round(arr.reduce((s, v) => s + v, 0) / arr.length);
-  const p22     = (r) => r["22k"];
-
-  const raw7d    = readings.filter(r => now - new Date(r.timestamp).getTime() <= 7 * 86400e3);
-  const raw30d   = readings.filter(r => now - new Date(r.timestamp).getTime() <= 30 * 86400e3);
-  const prices7d  = dedupeByISTDay(raw7d).map(p22);
-  const prices30d = dedupeByISTDay(raw30d).map(p22);
-  const spanDays  = Math.round((now - new Date(readings[0].timestamp).getTime()) / 86400e3);
-
-  return {
-    vs7d:     prices7d.length  > 1 ? current - avg(prices7d)          : null,
-    vs30d:    prices30d.length > 1 ? current - avg(prices30d)         : null,
-    vsLow:    raw30d.length    > 0 ? current - Math.min(...raw30d.map(p22)) : null,
-    spanDays,
-  };
-}
+// Real app.js, not a copy: see tests/helpers/load_app.js.
+const app = loadApp();
+const dedupeByISTDay = app.pure("dedupeByISTDay");
+const computeComparisons = app.pure("computeComparisons");
 
 // --- Helpers ---
 
