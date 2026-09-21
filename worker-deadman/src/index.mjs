@@ -337,6 +337,69 @@ async function postToNtfy(fetchImpl, topic, alert) {
   }
 }
 
+/**
+ * Telegram Bot API sendMessage (AQ1b). Free, reachable from Cloudflare Workers, independent of GitHub
+ * Actions, and it answers synchronously with `result.message_id`, which is evidence Telegram accepted
+ * the message. ok requires BOTH an HTTP 2xx and `ok: true` in the body.
+ *
+ * The bot token is part of the request URL, and a fetch failure message can echo that URL, so every
+ * error string is scrubbed of the token before it can reach a response, a KV record or a log line.
+ */
+async function postToTelegram(fetchImpl, token, chatId, alert) {
+  const scrub = (s) => String(s).split(token).join("[redacted]");
+  try {
+    const resp = await fetchImpl(`https://api.telegram.org/bot${token}/sendMessage`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ chat_id: chatId, text: `${alert.title}\n${alert.body}`, disable_web_page_preview: true }),
+    });
+    const status = resp && resp.status !== undefined ? resp.status : null;
+    let data = null;
+    if (resp && typeof resp.json === "function") {
+      try {
+        data = await resp.json();
+      } catch {
+        // an unparseable body is judged by the status alone below
+      }
+    }
+    const ok = Boolean(resp && resp.ok) && Boolean(data && data.ok === true);
+    const id = ok && data.result ? data.result.message_id ?? null : null;
+    const why = data && data.description ? `: ${scrub(data.description)}` : "";
+    return { ok, status, id, error: ok ? null : `HTTP ${status ?? "no response"}${why}` };
+  } catch (err) {
+    return { ok: false, status: null, id: null, error: scrub(err && err.message ? err.message : err) };
+  }
+}
+
+/**
+ * Deliver one alert over the configured channels: Telegram first (when TELEGRAM_BOT_TOKEN and
+ * TELEGRAM_CHAT_ID are set), then ntfy as the fallback. One message reaches the phone, not one per
+ * channel. ok means SOME channel confirmed; `attempts` records every channel tried, so a fallback
+ * that only worked because the first path was down is visible instead of hidden.
+ */
+async function postAlert(fetchImpl, env, alert) {
+  const attempts = [];
+  if (env.TELEGRAM_BOT_TOKEN && env.TELEGRAM_CHAT_ID) {
+    const r = await postToTelegram(fetchImpl, env.TELEGRAM_BOT_TOKEN, env.TELEGRAM_CHAT_ID, alert);
+    attempts.push({ channel: "telegram", ...r });
+    if (r.ok) return { ...r, channel: "telegram", attempts };
+  }
+  if (env.NTFY_TOPIC) {
+    const r = await postToNtfy(fetchImpl, env.NTFY_TOPIC, alert);
+    attempts.push({ channel: "ntfy", ...r });
+    if (r.ok) return { ...r, channel: "ntfy", attempts };
+  }
+  const last = attempts[attempts.length - 1];
+  return {
+    ok: false,
+    status: last ? last.status : null,
+    id: null,
+    channel: last ? last.channel : null,
+    error: last ? attempts.map((a) => `${a.channel}: ${a.error}`).join("; ") : "no delivery channel configured",
+    attempts,
+  };
+}
+
 // First 4 bytes of sha256(topic) as hex: lets GG compare the Worker's NTFY_TOPIC secret with the
 // topic his phone/Actions use WITHOUT the topic itself ever appearing in a response or log.
 async function topicFingerprint(topic) {
@@ -356,8 +419,8 @@ async function loadState(env, kvKey) {
 }
 
 export async function runCheck(env, fetchImpl, nowMs) {
-  if (!env.NTFY_TOPIC) {
-    return { skipped: "NTFY_TOPIC secret not set" };
+  if (!env.NTFY_TOPIC && !(env.TELEGRAM_BOT_TOKEN && env.TELEGRAM_CHAT_ID)) {
+    return { skipped: "no delivery channel configured (NTFY_TOPIC, or TELEGRAM_BOT_TOKEN and TELEGRAM_CHAT_ID)" };
   }
 
   const { predictedAtIso, scrapedAtIso, failure } = await fetchForecast(fetchImpl);
@@ -370,9 +433,13 @@ export async function runCheck(env, fetchImpl, nowMs) {
   // BEFORE sending, so a failed send also suppressed the retry for the whole reminder interval.
   const deliveries = [];
   const deliver = async (toSend) => {
-    const r = await postToNtfy(fetchImpl, env.NTFY_TOPIC, toSend);
-    deliveries.push({ title: toSend.title, ok: r.ok, status: r.status, id: r.id, error: r.error });
-    if (!r.ok) console.error(`ntfy delivery FAILED for "${toSend.title}": ${r.error}`);
+    const r = await postAlert(fetchImpl, env, toSend);
+    deliveries.push({ title: toSend.title, ok: r.ok, status: r.status, id: r.id, error: r.error, channel: r.channel });
+    if (!r.ok) console.error(`delivery FAILED for "${toSend.title}": ${r.error}`);
+    else if (r.attempts.length > 1) {
+      // A fallback that worked only because the first path failed must not look like a clean run.
+      console.error(`delivery for "${toSend.title}" used ${r.channel} after ${r.attempts[0].channel} failed: ${r.attempts[0].error}`);
+    }
     return r.ok;
   };
 
@@ -521,11 +588,11 @@ export async function runCheck(env, fetchImpl, nowMs) {
   if (env.DEADMAN_STATE && lastAttempt) {
     await env.DEADMAN_STATE.put(
       KV_LAST_DELIVERY_KEY,
-      JSON.stringify({ atMs: nowMs, ok: lastAttempt.ok, status: lastAttempt.status, id: lastAttempt.id, title: lastAttempt.title }),
+      JSON.stringify({ atMs: nowMs, ok: lastAttempt.ok, status: lastAttempt.status, id: lastAttempt.id, channel: lastAttempt.channel, title: lastAttempt.title }),
     );
   }
   const lastDelivery = lastAttempt
-    ? { atMs: nowMs, ok: lastAttempt.ok, status: lastAttempt.status, id: lastAttempt.id, title: lastAttempt.title }
+    ? { atMs: nowMs, ok: lastAttempt.ok, status: lastAttempt.status, id: lastAttempt.id, channel: lastAttempt.channel, title: lastAttempt.title }
     : await loadState(env, KV_LAST_DELIVERY_KEY);
 
   return {
@@ -545,8 +612,14 @@ export async function runCheck(env, fetchImpl, nowMs) {
       delivered: deliveries.length - failed.length,
       failed: failed.length,
       failures: failed.map((d) => ({ title: d.title, status: d.status, error: d.error })),
-      topicFingerprint: await topicFingerprint(env.NTFY_TOPIC),
+      topicFingerprint: env.NTFY_TOPIC ? await topicFingerprint(env.NTFY_TOPIC) : null,
       lastDelivery,
+      // Which channels this deployment is configured with, and which one carried each delivery.
+      channels: {
+        telegramConfigured: Boolean(env.TELEGRAM_BOT_TOKEN && env.TELEGRAM_CHAT_ID),
+        ntfyConfigured: Boolean(env.NTFY_TOPIC),
+        deliveredVia: deliveries.filter((d) => d.ok).map((d) => d.channel),
+      },
     },
     // AC3 (audit 2026-09-10): echoes the constants this exact deployment is
     // actually running with, not a hardcoded copy of master's current
