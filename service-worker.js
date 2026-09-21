@@ -75,7 +75,10 @@
 // (renderStaleBanner's `calibration` parameter was never read after G2), and _config.yml
 // excludes it from the Pages build, so every load made a request that 404'd live.
 // app.js changed; bumping so every installed client re-fetches.
-const VERSION = "v45-20260921-drop-dead-calibration-fetch";
+// 2026-09-21 (v46): renderChart()/renderForecastVsActual() no longer throw when the Chart.js
+// CDN request fails (a throw there blanked the hero -- render-smoke run 35511515077).
+// app.js changed; bumping so every installed client re-fetches.
+const VERSION = "v46-20260921-chart-cdn-guard";
 const SHELL_CACHE = `gold-shell-${VERSION}`;
 
 const SHELL_FILES = [
