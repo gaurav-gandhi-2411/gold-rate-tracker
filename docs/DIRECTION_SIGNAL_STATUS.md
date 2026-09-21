@@ -145,7 +145,8 @@ landed every day; T10 checks that *something* arrived, not whether it was usable
   affected rows' macro/Tanishq/calendar fields were already captured correctly live; only the IBJA
   join was wrong.
 - New guard: `ml.notifications` trigger **T13** (`_check_t13_usable_snapshot_stall`) fires once per
-  IST day when the most recent *usable* (same-day-IBJA) snapshot is ≥2 calendar days old,
+  IST day when the most recent *usable* (same-day-IBJA) snapshot is ≥2 weekdays behind (weekends
+  never count: IBJA does not publish then),
   independent of T10. T10 answers "did a row land"; T13 answers "is the dataset actually growing."
   See `docs/RUNBOOK.md`'s matching section for the full incident writeup.
 - The repair immediately recovered the dataset from 113 to 150 kept rows (93 → 130 h1 folds, 92 →

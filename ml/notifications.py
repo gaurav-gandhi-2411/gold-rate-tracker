@@ -15,7 +15,7 @@ import logging
 import os
 import urllib.request
 from dataclasses import asdict, dataclass, field
-from datetime import UTC, datetime, timedelta
+from datetime import UTC, date, datetime, timedelta
 from pathlib import Path
 from statistics import median
 from zoneinfo import ZoneInfo
@@ -50,7 +50,10 @@ _T8_FLAT_THRESHOLD_RS = 25  # abs(delta) < this → "held steady" scenario
 _T9_IBJA_GAP_THRESHOLD_DAYS = 2  # business days w/o a new IBJA reading trigger T9 (ADR 025)
 _T9_ESCALATE_IBJA_GAP_THRESHOLD_DAYS = 4  # 2x T9 threshold -> distinct high-priority escalation
 _T10_GAP_THRESHOLD_DAYS = 2  # >=2 calendar days with no new PIT snapshot trigger T10
-_T13_GAP_THRESHOLD_DAYS = 2  # >=2 calendar days with no new USABLE PIT snapshot trigger T13
+# >=2 WEEKDAYS (Mon-Fri) with no new USABLE PIT snapshot trigger T13. Weekdays, not calendar
+# days: IBJA publishes no weekend rate, so a usable snapshot cannot exist on a Saturday or
+# Sunday and a calendar-day gap crossed 2 every Sunday and 3 every Monday (AN4, 2026-09-21).
+_T13_GAP_THRESHOLD_DAYS = 2
 # >=3 consecutive scrape-tanishq-selfhosted job failures (job actually ran, not
 # just queued-with-no-runner) trigger T12. At the ~3h schedule cadence that's
 # ~9h of the runner being online but genuinely failing -- see docs/RUNBOOK.md.
@@ -308,11 +311,28 @@ def compute_snapshot_gap_days(
     return (now_ist.date() - max_date).days
 
 
+def _weekdays_since(last_usable: date, today: date) -> int:
+    """Mon-Fri days strictly after `last_usable` and strictly before `today`.
+
+    These are the days IBJA could have published a rate that a snapshot could join to. Today is
+    excluded because its rate may simply not be out yet at the moment the check runs, and
+    weekends are excluded because IBJA does not publish then. Weekday public holidays still
+    count as misses; two in a row is rare enough that alerting on it is acceptable.
+    """
+    missed = 0
+    day = last_usable + timedelta(days=1)
+    while day < today:
+        if day.weekday() < 5:
+            missed += 1
+        day += timedelta(days=1)
+    return missed
+
+
 def compute_usable_snapshot_gap_days(
     now_ist: datetime,
     path: Path = SNAPSHOTS_PARQUET,
 ) -> int | None:
-    """Calendar days since the most recent USABLE feature-store snapshot -- one
+    """Weekdays (Mon-Fri) missed since the most recent USABLE feature-store snapshot -- one
     whose ibja_pm_916_asof_date matches its own as_of_date, the same leak-free
     same-day-IBJA gate ml.direction.dataset applies before a row can enter the
     direction-model training set.
@@ -325,7 +345,10 @@ def compute_usable_snapshot_gap_days(
     those rows carried a stale IBJA join, freezing the direction-model
     dataset at n=113 for 8 weeks with no alert. T10 watches raw arrival; T13
     watches whether what arrives is actually usable -- neither implies the
-    other. Returns None if the store is missing/empty/unreadable or has no
+    other. The gap counts weekdays only (see _weekdays_since): the first version counted
+    calendar days and so fired every Sunday and Monday, because IBJA does not publish on
+    weekends (2026-09-21: URGENT "stalled (3d)" on a Monday after a normal Friday snapshot).
+    Returns None if the store is missing/empty/unreadable or has no
     usable row at all (same non-alerting convention as T10 -- a fresh/reset
     store is not a capture failure).
     """
@@ -349,7 +372,7 @@ def compute_usable_snapshot_gap_days(
     except Exception as exc:
         logger.warning("Could not read feature-store snapshots (%s) - skipping T13 check", exc)
         return None
-    return (now_ist.date() - max_usable_date).days
+    return _weekdays_since(max_usable_date, now_ist.date())
 
 
 def compute_selfhosted_consecutive_failures(path: Path = SELFHOSTED_HEALTH_JSON) -> int | None:
@@ -962,7 +985,7 @@ def _check_t13_usable_snapshot_stall(
     now_ist: datetime,
 ) -> PendingAlert | None:
     """T13 -- feature-store rows are arriving but not usable: no new USABLE PIT
-    snapshot (same-day IBJA join) in >= _T13_GAP_THRESHOLD_DAYS calendar days.
+    snapshot (same-day IBJA join) in >= _T13_GAP_THRESHOLD_DAYS weekdays.
     Once per IST calendar day.
 
     T10 alone missed exactly this failure mode for 8 weeks (2026-06-07 ->
@@ -977,9 +1000,9 @@ def _check_t13_usable_snapshot_stall(
     today_ist = now_ist.strftime("%Y-%m-%d")
     if state.last_t13_ist_date == today_ist:
         return None
-    title = f"Gold Tracker: direction dataset stalled ({usable_snapshot_gap_days}d)"
+    title = f"Gold Tracker: direction dataset stalled ({usable_snapshot_gap_days} weekdays)"
     body = (
-        f"No new USABLE direction-model snapshot in {usable_snapshot_gap_days} days, "
+        f"No new USABLE direction-model snapshot in {usable_snapshot_gap_days} weekdays, "
         "even though raw feature-store rows may still be landing (see T10). Check "
         "whether ml.ibja is appending before ml.feature_store captures each cycle -- "
         "see ml.feature_store.append_snapshot's same-day-IBJA upgrade logic."
@@ -1308,9 +1331,9 @@ def main() -> None:
         gap_str = "n/a" if snapshot_gap_days is None else f"{snapshot_gap_days}d"
         print(f"Snapshot gap: {gap_str}  (T10 gate: >= {_T10_GAP_THRESHOLD_DAYS}d)")
         usable_gap_str = (
-            "n/a" if usable_snapshot_gap_days is None else f"{usable_snapshot_gap_days}d"
+            "n/a" if usable_snapshot_gap_days is None else f"{usable_snapshot_gap_days}bd"
         )
-        print(f"Usable gap:   {usable_gap_str}  (T13 gate: >= {_T13_GAP_THRESHOLD_DAYS}d)")
+        print(f"Usable gap:   {usable_gap_str}  (T13 gate: >= {_T13_GAP_THRESHOLD_DAYS}bd)")
         ibja_gap_str = "n/a" if ibja_gap_days is None else f"{ibja_gap_days}bd"
         print(
             f"IBJA gap:     {ibja_gap_str}  "

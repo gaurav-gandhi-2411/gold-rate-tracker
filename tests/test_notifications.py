@@ -7,6 +7,7 @@ from pathlib import Path
 from unittest.mock import MagicMock
 from zoneinfo import ZoneInfo
 
+import pytest
 from ml.notifications import (
     NotificationState,
     PendingAlert,
@@ -2827,8 +2828,9 @@ def test_compute_usable_snapshot_gap_days_stuck_while_raw_rows_grow(tmp_path: Pa
     )
     # compute_snapshot_gap_days (T10) would report 0 here -- a row landed today.
     assert compute_snapshot_gap_days(_T13_NOW_IST, path=path) == 0
-    # compute_usable_snapshot_gap_days (T13) correctly reports the real gap.
-    assert compute_usable_snapshot_gap_days(_T13_NOW_IST, path=path) == 6
+    # compute_usable_snapshot_gap_days (T13) correctly reports the real gap: Sunday 06-07 vs
+    # last usable Monday 06-01 -> Tue, Wed, Thu, Fri missed (Saturday is not a publishing day).
+    assert compute_usable_snapshot_gap_days(_T13_NOW_IST, path=path) == 4
 
 
 def test_compute_usable_snapshot_gap_days_ignores_null_ibja_asof(tmp_path: Path):
@@ -2836,7 +2838,7 @@ def test_compute_usable_snapshot_gap_days_ignores_null_ibja_asof(tmp_path: Path)
     that cycle) must not be misread as usable."""
     path = tmp_path / "snapshots.parquet"
     _write_snapshots_with_ibja_asof(path, [("2026-06-01", "2026-06-01"), ("2026-06-07", None)])
-    assert compute_usable_snapshot_gap_days(_T13_NOW_IST, path=path) == 6
+    assert compute_usable_snapshot_gap_days(_T13_NOW_IST, path=path) == 4
 
 
 def test_compute_usable_snapshot_gap_days_no_usable_row_at_all(tmp_path: Path):
@@ -2858,8 +2860,8 @@ def test_t13_fires_when_usable_gap_exceeds_threshold():
         usable_snapshot_gap_days=6,
     )
     t13 = [a for a in alerts if a.trigger_id == "T13"]
-    assert len(t13) == 1, "T13 must fire when the usable gap is 6 days"
-    assert "6 days" in t13[0].body
+    assert len(t13) == 1, "T13 must fire when the usable gap is 6 weekdays"
+    assert "6 weekdays" in t13[0].body
     assert "₹" not in t13[0].title
     assert "₹" not in t13[0].body
 
@@ -2984,3 +2986,86 @@ def test_stamp_ist_dedup_t13():
     assert state.last_t13_ist_date == ""
     _stamp_ist_dedup("T13", state, now_ist)
     assert state.last_t13_ist_date == "2026-06-07"
+
+
+# --- AN4 (2026-09-21): weekends are not a stall ---------------------------------------------------
+# IBJA publishes no weekend rate, so a usable snapshot cannot exist on a Saturday or Sunday. T13 used
+# to count calendar days and fired every Sunday (gap 2) and Monday (gap 3): GG got a URGENT "direction
+# dataset stalled (3d)" on Monday 2026-09-21 after a perfectly normal Friday 09-18 snapshot.
+
+_REAL_WEEKEND_ROWS = [
+    ("2026-09-17", "2026-09-17"),
+    ("2026-09-18", "2026-09-18"),  # last usable row (Friday)
+    ("2026-09-19", "2026-09-18"),  # Saturday: no IBJA rate, join carries Friday's
+    ("2026-09-20", "2026-09-18"),  # Sunday: same
+    ("2026-09-21", "2026-09-18"),  # Monday morning: today's rate not out yet
+]
+
+
+@pytest.mark.parametrize(
+    ("day", "label"),
+    [(20, "Sunday"), (21, "Monday")],
+)
+def test_usable_gap_weekend_after_a_normal_friday_is_zero(tmp_path: Path, day: int, label: str):
+    path = tmp_path / "snapshots.parquet"
+    _write_snapshots_with_ibja_asof(path, _REAL_WEEKEND_ROWS)
+    now = _ist(2026, 9, day, 6, 0)
+    assert compute_usable_snapshot_gap_days(now, path=path) == 0, label
+    alerts = check_triggers(
+        _forecast(),
+        _probe(),
+        _prices_aged(1.0, now),
+        _backtest_accurate(),
+        NotificationState(),
+        now,
+        usable_snapshot_gap_days=compute_usable_snapshot_gap_days(now, path=path),
+    )
+    assert all(a.trigger_id != "T13" for a in alerts), f"T13 must stay quiet on a {label}"
+
+
+def test_usable_gap_single_missed_weekday_does_not_alert(tmp_path: Path):
+    """Real 2026-09-10 (Thursday) had no same-day IBJA join; Friday 09-11 must not page for one miss."""
+    path = tmp_path / "snapshots.parquet"
+    _write_snapshots_with_ibja_asof(
+        path,
+        [("2026-09-09", "2026-09-09"), ("2026-09-10", "2026-09-09"), ("2026-09-11", "2026-09-09")],
+    )
+    now = _ist(2026, 9, 11, 6, 0)
+    assert compute_usable_snapshot_gap_days(now, path=path) == 1
+
+
+def test_usable_gap_two_missed_weekdays_still_alerts(tmp_path: Path):
+    """A genuine outage is still caught: last usable Monday, checked Thursday -> Tue+Wed missed."""
+    path = tmp_path / "snapshots.parquet"
+    _write_snapshots_with_ibja_asof(
+        path,
+        [
+            ("2026-09-14", "2026-09-14"),
+            ("2026-09-15", "2026-09-14"),
+            ("2026-09-16", "2026-09-14"),
+            ("2026-09-17", "2026-09-14"),
+        ],
+    )
+    now = _ist(2026, 9, 17, 6, 0)
+    gap = compute_usable_snapshot_gap_days(now, path=path)
+    assert gap == 2
+    alerts = check_triggers(
+        _forecast(),
+        _probe(),
+        _prices_aged(1.0, now),
+        _backtest_accurate(),
+        NotificationState(),
+        now,
+        usable_snapshot_gap_days=gap,
+    )
+    assert len([a for a in alerts if a.trigger_id == "T13"]) == 1
+
+
+def test_usable_gap_long_outage_spanning_weekends_counts_weekdays_only(tmp_path: Path):
+    """Last usable Tue 2026-09-01, checked Mon 2026-09-14: Wed-Fri (3) + Mon-Fri (5) = 8 weekdays,
+    not the 13 calendar days."""
+    path = tmp_path / "snapshots.parquet"
+    _write_snapshots_with_ibja_asof(
+        path, [("2026-09-01", "2026-09-01"), ("2026-09-14", "2026-09-01")]
+    )
+    assert compute_usable_snapshot_gap_days(_ist(2026, 9, 14, 6, 0), path=path) == 8
