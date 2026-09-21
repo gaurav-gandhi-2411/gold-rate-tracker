@@ -440,7 +440,7 @@ checked, not just what was found broken.
 ## 10. Corrections the audit made to itself
 
 An audit that never records being wrong about its own findings is not
-reporting its own reliability. Sixteen corrections, in the order found:
+reporting its own reliability. Nineteen corrections, in the order found:
 
 1. **`check_branch_base` proven unable to fire (§8, instance #12).**
    Already recorded in the catalogue above — restated here because it's
@@ -573,9 +573,29 @@ reporting its own reliability. Sixteen corrections, in the order found:
     message. GG's server-side poll of the topic (2026-09-21) found no Worker-originated message, and
     no Worker message has ever reached the phone, so every Worker channel (dead-man, Tanishq-silence,
     heartbeat, PR-health, merged-unchecked) may have paged into nothing since deployment. The old code
-    made that undetectable (§12.8 #39). **Status: unconfirmed until the post-#1797 Worker is deployed and
-    a real page is seen on the phone AND in a server-side poll (AP1c).** If confirmed, this is the most
-    consequential instance in the catalogue.
+    made that undetectable (§12.8 #39). **Status (updated 2026-09-21 evening): CONFIRMED for the post-#1797 period.**
+    Every Worker delivery attempt after the deploy failed: 4 of 4 (HTTP 522, 429, 522, 522), 0 delivered
+    (§12.9 #46). **For the period before the deploy it remains inferred**: the old code logged nothing, so
+    there is no record to read, and GG's server-side poll found no Worker message. Still required: a real
+    page seen on the phone AND in a server-side poll (AP1c/AQ1d), which needs a working channel first.
+
+17. **The topic-mismatch hypothesis for "the Worker's pages never arrived" was not the mechanism
+    (AQ1, 2026-09-21).** The first diagnosis listed wrong topic, a swallowed non-2xx, or a POST that never
+    executes, and the deploy plan leaned on a topic-fingerprint comparison to settle it. GG's fingerprint
+    matched (`132fde71`), so the topic was right; the mechanism is that ntfy.sh is unreachable from
+    Cloudflare's egress (522 three times, 429 once). Recorded as a refuted hypothesis, not silently dropped.
+18. **"The catch-up absorbs platform delay and keeps user-facing cadence flat" was stated as fact and
+    never verified end to end (AQ3a, 2026-09-21).** Earlier briefs and `check-price.yml`'s own comments
+    carried it. Of the 65 catch-up dispatches since it was introduced (#1374, 2026-09-04): **60 failed, 3
+    succeeded, 2 were cancelled**. The 60 failed on a stale checkout (§12.9 #48). Separately it cannot work
+    by construction: the run that detects the gap is itself a full data run, so the dispatched copy is
+    redundant, and it cannot fire at all when no run exists, which is exactly the digest-lateness case.
+    My own first count ("0 successes") was also wrong: it used a timing heuristic where the run API's
+    `actor` field is exact.
+19. **I shipped a PR that failed mypy because I ran only the ruff hooks locally (#1825, 2026-09-21).**
+    CI's pre-commit mypy caught two errors. The local mypy hook cannot run here (numpy stubs under this
+    Python), so I skipped it instead of finding another way. Reproduced the exact errors in a throwaway
+    venv with the hook's pinned version, fixed, and now run mypy that way before pushing `ml/` changes.
 
 **Not corrected — checked and found to still hold, unverifiable as stated.**
 This session searched for documented evidence of "nine merge_gate gates
@@ -880,6 +900,21 @@ Baseline `origin/master` `d675998a` unless stated. **Verified** = a command run 
 - **"The evening digest was never produced" was a false premise** (row #41): it was not yet due, and the previous evening's had been sent.
 - **I caused a production regression while investigating** (row #43): running the 1.63.0 candidate on the production runner deleted the cached browser. I noticed it from the logs, repaired it, and it is the reason the gate proposal requires a scratch browser path.
 - **One `--no-verify` earlier and a mistaken local commit** (amended before push) are recorded in the session report, not here.
+
+### 12.9 Continuation AQ (2026-09-21, night): instances #46–#53
+
+Baseline `origin/master` at each step as stated. **Verified** = a command run and its output seen; **inferred** is labelled.
+
+| # | Instance | What it substituted | Evidence | Status |
+|---|---|---|---|---|
+| 46 | The Worker's delivery to ntfy.sh | "The topic is wrong" (AP1a) was the leading hypothesis. It was not: the fingerprint matched. **Every attempt failed**: 522 at 13:55Z, 429 at 14:30Z, 522 at 15:00Z and 15:30Z (the last two captured live with `wrangler tail`, 37.5 s and 41.0 s wall time, `outcome: exception`). | **Verified**: GG's `?trigger=1` body, the Worker's KV `last_ntfy_delivery`, and the live tail. 4 of 4 failed, 0 delivered. The Worker's GitHub calls succeed from Cloudflare, so the block is specific to ntfy.sh. Whether ntfy.sh blocks Cloudflare egress deliberately, or the shared address is rate-limited, is **not determined**. | Telegram-first channel prepared (#1841); needs a bot token and a deploy |
+| 47 | The Worker's merged-PR scan | "Could not verify" looked like a missing PAT scope. It is an **AbortError**: one 10 s timeout for the whole scan, one sequential `check-runs` call per merged PR, 36 merges in 6 h. | **Verified** by running the real `runCheck` against the real repo (30 of 31 calls 200, the 31st aborted). The README already lists Checks: Read and the open-PR path calls the same endpoint. | Fix in #1836 (deploy) |
+| 48 | The catch-up dispatch (`check-price.yml`) | 60 of 65 failed on `Sync data via bot PR`. `actions/checkout` uses `github.sha` (dispatch time), but the concurrency group queues the run until its parent's data PR has merged, so it built data on a stale master and conflicted on every file. | **Verified**: run API (actor `github-actions[bot]`), the conflict log, and a real parent + catch-up pair on the fix branch: the catch-up queued 4.5 min, then committed and merged PR #1835. | Fix in #1838; retiring the dispatch recommended |
+| 49 | The live render smoke test's URGENT | "The site is not rendering" on a healthy site. `index.html` reloaded every first-time visitor's page ~1 s after first paint (`controllerchange` also fires for the first `clients.claim()`); the check raced the reload. | **Verified** in real Chromium: 2 navigations and a `₹ → — → ₹` flash per fresh visit; 1 navigation after the fix. The failure reproduced on a manual dispatch. | Fixed and merged (#1827); the smoke test now attaches evidence to a failure |
+| 50 | The #1796 copy-claims guard vs the topic split | It scans only `ml/notifications.py` for strings assigned to `title`/`body`. Moving the public templates to `ml/public_copy.py` (returned as tuples) would have left the six most user-facing messages unscanned, with the floor of 20 templates still met. | Caught **before** merge; replaced by a behavioural test that runs every public function over an input grid, with a coverage test that fails if a function is added without being in the grid. | In #1839 |
+| 51 | The test-count guard's own rule | Merging it would have turned master's `lint` red: #1825 had just added an unlisted test file. | **Verified** by running the guard on the merged tree before pushing; baseline updated in the same PR. | Merged (#1818) |
+| 52 | `pwa-headless` depends on two live CDNs | The async Chart.js and Sentry scripts delay the `load` event. **Measured**, not assumed: with both hosts unroutable master's tests still PASS but take 140.0 s (banner) and 76.2 s (offline) vs 9.5 s and 13.1 s with a DNS-level block. So it is a latency and timeout risk (the job has a 10-minute limit), not a deterministic failure. | **Verified.** `page.route()` was rejected because it does not see requests a service worker makes itself. | Fix in #1840 |
+| 53 | My own Playwright trial on the production runner | Running 1.63.0 on the runner logged `Removing unused browser …chromium-1234`, deleting the working browser; production scraping was down about an hour (12:24Z-13:20Z). Found from the logs, repaired by a master-pin run. (Recorded in §12.8 #43; repeated here as a process point.) | **Verified.** Any trial must use a scratch `PLAYWRIGHT_BROWSERS_PATH`. | Open (gate, AP2c) |
 
 ## Provenance
 
