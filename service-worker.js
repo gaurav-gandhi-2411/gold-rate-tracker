@@ -75,12 +75,15 @@
 // (renderStaleBanner's `calibration` parameter was never read after G2), and _config.yml
 // excludes it from the Pages build, so every load made a request that 404'd live.
 // app.js changed; bumping so every installed client re-fetches.
-// 2026-09-21 (v46): data files are cached under a query-free key and every /data/*.json
+// 2026-09-21 (v46): renderChart()/renderForecastVsActual() no longer throw when the Chart.js
+// CDN request fails (a throw there blanked the hero -- render-smoke run 35511515077).
+// app.js changed; bumping so every installed client re-fetches.
+// 2026-09-21 (v47): data files are cached under a query-free key and every /data/*.json
 // is network-first. Offline, ALL data requests used to fail (the ?t= cache-buster made the
 // fallback lookup never match) and each load added a new cache entry per file. See
 // isDataFile()/the fetch handler below. service-worker.js changed; bumping so every
 // installed client re-installs and evicts the per-load entries.
-const VERSION = "v46-20260921-sw-offline-data-fallback";
+const VERSION = "v47-20260921-sw-offline-data-fallback";
 const SHELL_CACHE = `gold-shell-${VERSION}`;
 
 const SHELL_FILES = [
