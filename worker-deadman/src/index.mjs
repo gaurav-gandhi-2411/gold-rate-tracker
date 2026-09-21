@@ -44,6 +44,8 @@ import {
   buildPrTriggerHealthAlert,
   buildPrTriggerHealthFetchFailureAlert,
   classifyMergedUnchecked,
+  evaluateRequiredChecks,
+  REQUIRED_CONTEXTS,
   decideMergedUncheckedAction,
   buildMergedUncheckedAlert,
   buildMergedUncheckedFetchFailureAlert,
@@ -57,6 +59,7 @@ const KV_TANISHQ_STATE_KEY = "deadman:tanishq_last_state"; // Q4: independent de
 const KV_HEARTBEAT_KEY = "deadman:last_heartbeat_date_ist";
 const KV_PR_TRIGGER_HEALTH_KEY = "deadman:pr_trigger_health_state"; // AI2: own key, own dedup state
 const KV_MERGED_UNCHECKED_KEY = "deadman:merged_unchecked_state"; // AL3a: PR number -> alerted-at
+const KV_LAST_DELIVERY_KEY = "deadman:last_ntfy_delivery"; // AN3: last delivery attempt, echoed by ?trigger=1
 const FETCH_TIMEOUT_MS = 10_000;
 const GITHUB_REPO = "gaurav-gandhi-2411/gold-rate-tracker";
 
@@ -222,20 +225,23 @@ async function fetchRecentlyMergedPrs(fetchImpl, token, nowMs) {
     for (const p of recent) {
       const sha = p.head.sha;
       const checksResp = await fetchImpl(
-        `https://api.github.com/repos/${GITHUB_REPO}/commits/${sha}/check-runs`,
+        `https://api.github.com/repos/${GITHUB_REPO}/commits/${sha}/check-runs?per_page=100`,
         { headers, signal: controller.signal },
       );
       if (!checksResp.ok) return { mergedPrs: null, failure: `check-runs ${sha} HTTP ${checksResp.status}` };
       const checkData = await checksResp.json();
-      const hasRequiredCheckRun = (checkData.check_runs || []).some(
-        (r) => r.name === "lint" || r.name === "pwa-js",
-      );
+      // AN8: the same predicate scripts/check_required_checks_positive.py applies before a self-merge --
+      // every required context SUCCESS, not merely present (#1541 merged over a failing lint).
+      const { allPass, results } = evaluateRequiredChecks(REQUIRED_CONTEXTS, checkData.check_runs || []);
       mergedPrs.push({
         number: p.number,
         branch: p.head.ref,
         headSha: sha,
         mergedAtIso: p.merged_at,
-        hasRequiredCheckRun,
+        requiredOk: allPass,
+        problems: Object.entries(results)
+          .filter(([, v]) => v !== "SUCCESS")
+          .map(([context, v]) => `${context}: ${v}`),
       });
     }
     return { mergedPrs, failure: null };
@@ -246,16 +252,46 @@ async function fetchRecentlyMergedPrs(fetchImpl, token, nowMs) {
   }
 }
 
+/**
+ * One delivery attempt. Returns {ok, status, id, error} -- ok is true ONLY for a 2xx response.
+ * Every caller used to `await postToNtfy(...)` and then set its `...Sent` flag (and persist its
+ * dedup state) whether or not ntfy accepted the message, so "sent: true" meant only "the request
+ * did not throw" -- a 4xx/5xx, a rate-limit or a wrong topic all looked like success (2026-09-21:
+ * prTriggerHealthSent:true, nothing on the phone). `id` is ntfy's message id, so a sender can
+ * verify receipt server-side with GET ntfy.sh/<topic>/json?poll=1&since=<id>.
+ */
 async function postToNtfy(fetchImpl, topic, alert) {
-  return fetchImpl(`https://ntfy.sh/${topic}`, {
-    method: "POST",
-    headers: {
-      Title: alert.title,
-      Priority: String(alert.priority),
-      Tags: alert.tags,
-    },
-    body: alert.body,
-  });
+  try {
+    const resp = await fetchImpl(`https://ntfy.sh/${topic}`, {
+      method: "POST",
+      headers: {
+        Title: alert.title,
+        Priority: String(alert.priority),
+        Tags: alert.tags,
+      },
+      body: alert.body,
+    });
+    const ok = Boolean(resp && resp.ok);
+    let id = null;
+    if (ok && typeof resp.json === "function") {
+      try {
+        id = (await resp.json()).id ?? null;
+      } catch {
+        // body is informational; a 2xx without JSON is still a delivery
+      }
+    }
+    const status = resp && resp.status !== undefined ? resp.status : null;
+    return { ok, status, id, error: ok ? null : `HTTP ${status ?? "no response"}` };
+  } catch (err) {
+    return { ok: false, status: null, id: null, error: String(err && err.message ? err.message : err) };
+  }
+}
+
+// First 4 bytes of sha256(topic) as hex: lets GG compare the Worker's NTFY_TOPIC secret with the
+// topic his phone/Actions use WITHOUT the topic itself ever appearing in a response or log.
+async function topicFingerprint(topic) {
+  const buf = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(topic));
+  return [...new Uint8Array(buf).slice(0, 4)].map((b) => b.toString(16).padStart(2, "0")).join("");
 }
 
 async function loadState(env, kvKey) {
@@ -279,15 +315,23 @@ export async function runCheck(env, fetchImpl, nowMs) {
     ? classifyFetchFailure(failure)
     : classifyStaleness(predictedAtIso, nowMs);
 
+  // Every send goes through deliver(): it records the attempt and returns true only for a 2xx.
+  // Dedup state below advances ONLY when the alert actually landed -- previously it was persisted
+  // BEFORE sending, so a failed send also suppressed the retry for the whole reminder interval.
+  const deliveries = [];
+  const deliver = async (toSend) => {
+    const r = await postToNtfy(fetchImpl, env.NTFY_TOPIC, toSend);
+    deliveries.push({ title: toSend.title, ok: r.ok, status: r.status, id: r.id, error: r.error });
+    if (!r.ok) console.error(`ntfy delivery FAILED for "${toSend.title}": ${r.error}`);
+    return r.ok;
+  };
+
   const previousState = await loadState(env, KV_STATE_KEY);
   const { send, alert, nextState } = decideAction(current, previousState, nowMs);
 
-  if (env.DEADMAN_STATE) {
+  const mainDelivered = send && alert ? await deliver(alert) : true;
+  if (env.DEADMAN_STATE && mainDelivered) {
     await env.DEADMAN_STATE.put(KV_STATE_KEY, JSON.stringify(nextState));
-  }
-
-  if (send && alert) {
-    await postToNtfy(fetchImpl, env.NTFY_TOPIC, alert);
   }
 
   // Q4 (audit 2026-09-03): independent second channel -- forecast.json's
@@ -324,13 +368,11 @@ export async function runCheck(env, fetchImpl, nowMs) {
       alert: tanishqAlert,
       nextState: nextTanishqState,
     } = decideTanishqAction(tanishqCurrent, previousTanishqState, nowMs);
-    tanishqSend = sendResult;
+    const tanishqDelivered = sendResult && tanishqAlert ? await deliver(tanishqAlert) : true;
+    tanishqSend = sendResult && tanishqDelivered;
 
-    if (env.DEADMAN_STATE) {
+    if (env.DEADMAN_STATE && tanishqDelivered) {
       await env.DEADMAN_STATE.put(KV_TANISHQ_STATE_KEY, JSON.stringify(nextTanishqState));
-    }
-    if (tanishqSend && tanishqAlert) {
-      await postToNtfy(fetchImpl, env.NTFY_TOPIC, tanishqAlert);
     }
   }
 
@@ -350,8 +392,7 @@ export async function runCheck(env, fetchImpl, nowMs) {
       env.GITHUB_PR_HEALTH_PAT,
     );
     if (prFetchFailure) {
-      await postToNtfy(fetchImpl, env.NTFY_TOPIC, buildPrTriggerHealthFetchFailureAlert(prFetchFailure));
-      prTriggerHealthSent = true;
+      prTriggerHealthSent = await deliver(buildPrTriggerHealthFetchFailureAlert(prFetchFailure));
     } else {
       const stalePrs = classifyPrTriggerHealth(openPrs, nowMs);
       prTriggerHealthStaleCount = stalePrs.length;
@@ -361,12 +402,10 @@ export async function runCheck(env, fetchImpl, nowMs) {
         previousPrState,
         nowMs,
       );
-      if (env.DEADMAN_STATE) {
+      const prDelivered = prSend && alertPrs.length > 0 ? await deliver(buildPrTriggerHealthAlert(alertPrs)) : true;
+      prTriggerHealthSent = prSend && alertPrs.length > 0 && prDelivered;
+      if (env.DEADMAN_STATE && prDelivered) {
         await env.DEADMAN_STATE.put(KV_PR_TRIGGER_HEALTH_KEY, JSON.stringify(nextPrState));
-      }
-      if (prSend && alertPrs.length > 0) {
-        await postToNtfy(fetchImpl, env.NTFY_TOPIC, buildPrTriggerHealthAlert(alertPrs));
-        prTriggerHealthSent = true;
       }
     }
   }
@@ -383,20 +422,17 @@ export async function runCheck(env, fetchImpl, nowMs) {
       nowMs,
     );
     if (mergedFetchFailure) {
-      await postToNtfy(fetchImpl, env.NTFY_TOPIC, buildMergedUncheckedFetchFailureAlert(mergedFetchFailure));
-      mergedUncheckedSent = true;
+      mergedUncheckedSent = await deliver(buildMergedUncheckedFetchFailureAlert(mergedFetchFailure));
     } else {
       const flagged = classifyMergedUnchecked(mergedPrs, nowMs);
       mergedUncheckedCount = flagged.length;
       const previousMergedState = await loadState(env, KV_MERGED_UNCHECKED_KEY);
       const { send: mergedSend, alertPrs: mergedAlertPrs, nextState: nextMergedState } =
         decideMergedUncheckedAction(flagged, previousMergedState, nowMs);
-      if (env.DEADMAN_STATE) {
+      const mergedDelivered = mergedSend ? await deliver(buildMergedUncheckedAlert(mergedAlertPrs)) : true;
+      mergedUncheckedSent = mergedSend && mergedDelivered;
+      if (env.DEADMAN_STATE && mergedDelivered) {
         await env.DEADMAN_STATE.put(KV_MERGED_UNCHECKED_KEY, JSON.stringify(nextMergedState));
-      }
-      if (mergedSend) {
-        await postToNtfy(fetchImpl, env.NTFY_TOPIC, buildMergedUncheckedAlert(mergedAlertPrs));
-        mergedUncheckedSent = true;
       }
     }
   }
@@ -409,20 +445,37 @@ export async function runCheck(env, fetchImpl, nowMs) {
     const lastHeartbeatDateIst = await env.DEADMAN_STATE.get(KV_HEARTBEAT_KEY);
     const { send: dueToday, todayIst } = shouldSendHeartbeat(lastHeartbeatDateIst, nowMs);
     if (dueToday) {
-      await postToNtfy(
-        fetchImpl,
-        env.NTFY_TOPIC,
+      const hbDelivered = await deliver(
         buildHeartbeatAlert(current.level, current.ageHours, tanishqCurrent.level, tanishqCurrent.ageHours),
       );
-      await env.DEADMAN_STATE.put(KV_HEARTBEAT_KEY, todayIst);
-      heartbeatSent = true;
+      // Recorded only on a confirmed delivery: a heartbeat that never arrived must be retried on the
+      // next tick, not marked done for the day (the KV date said 2026-09-21 was sent while the phone
+      // showed nothing).
+      if (hbDelivered) {
+        await env.DEADMAN_STATE.put(KV_HEARTBEAT_KEY, todayIst);
+        heartbeatSent = true;
+      }
     }
   }
+
+  // Delivery evidence: what THIS run attempted, plus the last attempt persisted across runs, so a
+  // silent notification path is visible in ?trigger=1 instead of hiding behind `sent: true`.
+  const failed = deliveries.filter((d) => !d.ok);
+  const lastAttempt = deliveries.length ? deliveries[deliveries.length - 1] : null;
+  if (env.DEADMAN_STATE && lastAttempt) {
+    await env.DEADMAN_STATE.put(
+      KV_LAST_DELIVERY_KEY,
+      JSON.stringify({ atMs: nowMs, ok: lastAttempt.ok, status: lastAttempt.status, id: lastAttempt.id, title: lastAttempt.title }),
+    );
+  }
+  const lastDelivery = lastAttempt
+    ? { atMs: nowMs, ok: lastAttempt.ok, status: lastAttempt.status, id: lastAttempt.id, title: lastAttempt.title }
+    : await loadState(env, KV_LAST_DELIVERY_KEY);
 
   return {
     level: current.level,
     ageHours: current.ageHours,
-    sent: send,
+    sent: send && mainDelivered,
     tanishqLevel: tanishqCurrent.level,
     tanishqAgeHours: tanishqCurrent.ageHours,
     tanishqSent: tanishqSend,
@@ -431,6 +484,14 @@ export async function runCheck(env, fetchImpl, nowMs) {
     prTriggerHealthStaleCount,
     mergedUncheckedSent,
     mergedUncheckedCount,
+    ntfy: {
+      attempted: deliveries.length,
+      delivered: deliveries.length - failed.length,
+      failed: failed.length,
+      failures: failed.map((d) => ({ title: d.title, status: d.status, error: d.error })),
+      topicFingerprint: await topicFingerprint(env.NTFY_TOPIC),
+      lastDelivery,
+    },
     // AC3 (audit 2026-09-10): echoes the constants this exact deployment is
     // actually running with, not a hardcoded copy of master's current
     // values -- imported directly from deadman.mjs, so this only matches
@@ -448,13 +509,23 @@ export async function runCheck(env, fetchImpl, nowMs) {
       prTriggerStaleMinutes: PR_TRIGGER_STALE_MINUTES,
       mergedSettleMinutes: MERGED_SETTLE_MINUTES,
       mergedLookbackMinutes: MERGED_LOOKBACK_MINUTES,
+      requiredContexts: REQUIRED_CONTEXTS,
     },
   };
 }
 
 export default {
   async scheduled(_event, env, ctx) {
-    ctx.waitUntil(runCheck(env, fetch, Date.now()));
+    ctx.waitUntil(
+      runCheck(env, fetch, Date.now()).then((result) => {
+        // ntfy is the only way this Worker can tell anyone anything, so a failed delivery cannot be
+        // reported through it: fail the invocation instead, which Cloudflare records as an exception.
+        if (result.ntfy && result.ntfy.failed > 0) {
+          throw new Error(`ntfy delivery failed: ${JSON.stringify(result.ntfy.failures)}`);
+        }
+        return result;
+      }),
+    );
   },
   // Manual HTTP trigger for verification (GET the Worker's own URL) --
   // see README.md's manual verification procedure. Not used by the cron
