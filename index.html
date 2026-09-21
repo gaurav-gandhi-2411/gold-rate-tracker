@@ -508,8 +508,9 @@
       </a>
     </nav>
 
-    <!-- Sentry error tracking — replace the placeholder DSN with the one from sentry.io
-         (Project Settings → Client Keys → DSN). The site will work normally without it.
+    <!-- Sentry error tracking. The DSN is in app.js (SENTRY_DSN); initSentry() there runs both
+         at app.js load and from this tag's onload, so init happens whichever finishes first.
+         The site works normally without Sentry.
          Served from Sentry's own CDN (not jsdelivr's npm proxy) — the npm package no longer
          ships the prebuilt bundle jsdelivr would need, so an npm-path URL 404s.
          `async`, not `defer` — deliberately NOT in app.js's execution-order dependency
@@ -520,13 +521,11 @@
          still had to wait for BOTH third-party scripts to finish, regardless of defer
          vs blocking, since deferred scripts execute in document order. Moving Sentry to
          async removes it from that wait entirely. Chart.js used to be the one third-party
-         script app.js's own start time still depended on; it is async too now (below).
-         Worth noting Sentry currently uses a
-         placeholder DSN and isn't actually reporting anywhere yet, so this has zero
-         functional cost today regardless. -->
+         script app.js's own start time still depended on; it is async too now (below). -->
     <script src="https://browser.sentry-cdn.com/7.120.4/bundle.min.js"
             integrity="sha384-HF4Kc49tTfBgl6JmNMfcrjBeW9pK13xSnnr307iG4PCNj8eRKhkvE9Tp27DigU1L"
-            crossorigin="anonymous" async></script>
+            crossorigin="anonymous" async
+            onload="if (window.__onSentryReady) window.__onSentryReady()"></script>
 
     <!-- `async` like Sentry above (was `defer`). As a deferred script it gated app.js: deferred
          scripts run in document order, so a slow or failed jsdelivr request stalled app.js itself

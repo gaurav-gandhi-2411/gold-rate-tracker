@@ -100,6 +100,7 @@ jobs:
             tests/test_dedup.js \
             tests/test_good_price.js \
             tests/test_scrape.js \
+            tests/test_sentry_init.js \
             tests/test_stale_banner.js \
             tests/test_tier_degradation_visible.js \
             tests/test_vol_regime.js

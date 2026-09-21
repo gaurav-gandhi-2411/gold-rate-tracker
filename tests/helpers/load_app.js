@@ -48,7 +48,8 @@ const HIDDEN_IDS = new Set(
     .map((m) => m[1]),
 );
 
-export function loadApp({ nowMs, lang = "en" } = {}) {
+// `globals` are placed on the sandbox BEFORE app.js runs (e.g. a fake `Sentry`, to test load-time init).
+export function loadApp({ nowMs, lang = "en", globals = {} } = {}) {
   const elements = new Map();
   const document = {
     getElementById(id) {
@@ -90,6 +91,7 @@ export function loadApp({ nowMs, lang = "en" } = {}) {
     console, Intl, URL, URLSearchParams, AbortController, Response,
     addEventListener() {}, removeEventListener() {},
   };
+  Object.assign(sandbox, globals);
   sandbox.window = sandbox;
   const ctx = vm.createContext(sandbox);
 

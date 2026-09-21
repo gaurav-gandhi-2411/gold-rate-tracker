@@ -85,7 +85,9 @@
 // installed client re-installs and evicts the per-load entries.
 // 2026-09-21 (v48): app.js no longer defines computeTrendDescription (dead: nothing called it;
 // hard-coded English, never i18n'd). app.js changed; bumping so every installed client re-fetches.
-const VERSION = "v48-20260921-drop-dead-trend-description";
+// 2026-09-21 (v49): Sentry is now actually initialised (real DSN, and an onload hook so init no
+// longer depends on the async bundle winning the race with app.js). app.js + index.html changed.
+const VERSION = "v49-20260921-sentry-init";
 const SHELL_CACHE = `gold-shell-${VERSION}`;
 
 const SHELL_FILES = [
