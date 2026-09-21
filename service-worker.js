@@ -83,7 +83,9 @@
 // fallback lookup never match) and each load added a new cache entry per file. See
 // isDataFile()/the fetch handler below. service-worker.js changed; bumping so every
 // installed client re-installs and evicts the per-load entries.
-const VERSION = "v47-20260921-sw-offline-data-fallback";
+// 2026-09-21 (v48): app.js no longer defines computeTrendDescription (dead: nothing called it;
+// hard-coded English, never i18n'd). app.js changed; bumping so every installed client re-fetches.
+const VERSION = "v48-20260921-drop-dead-trend-description";
 const SHELL_CACHE = `gold-shell-${VERSION}`;
 
 const SHELL_FILES = [
