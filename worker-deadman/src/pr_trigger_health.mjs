@@ -165,3 +165,108 @@ export function decidePrTriggerHealthAction(stalePrs, previousState, nowMs) {
   // deserves its own alert, not silence because it happened once before.
   return { send: toAlert.length > 0, alertPrs: toAlert, nextState };
 }
+
+// ---------------------------------------------------------------------------
+// AL3a (2026-09-21): merged-unchecked scan.
+//
+// classifyPrTriggerHealth above only sees PRs that are still OPEN at a 30-min tick, and pages
+// only once a head commit is >= PR_TRIGGER_STALE_MINUTES old. A PR merged before that -- #1539
+// was open 5.2 min after its last push and its merge caused a 7-hour production incident --
+// closes inside the blind spot and can never page (verified by running this file's own
+// classifier against #1539/#1569's recorded state: #1569 pages, #1539 does not). This scan
+// looks at what already merged instead: any PR merged in the lookback window whose head SHA has
+// no `lint`/`pwa-js` check-run pages, once.
+//
+// Measured before choosing anything (2026-09-21, `gh` against the 400 most recent merged PRs):
+// exactly 2 have no lint/pwa-js check-run on their head SHA -- #1539 and #1569 -- and 0 of the 355
+// bot PRs do, so the false-positive rate on real history is 0/400. For bot/ PRs the head commit ->
+// first lint/pwa-js check-run start is median 0.17 min, max 0.35 min (n=100).
+//
+// MERGED_SETTLE_MINUTES: don't judge a PR merged this recently -- its check-runs may not have
+// been created yet. Normal trigger delay max is 8.48 min (see PR_TRIGGER_STALE_MINUTES above),
+// so 10 min. MERGED_LOOKBACK_MINUTES: 180 = six 30-min ticks, so a few missed cron ticks still
+// see every merge; per-PR dedup below means the wider window never repeats an alert.
+export const MERGED_SETTLE_MINUTES = 10;
+export const MERGED_LOOKBACK_MINUTES = 180;
+const MERGED_STATE_RETENTION_MS = 7 * 24 * 3_600_000;
+
+/**
+ * @param {Array<{number: number, branch: string, headSha: string, mergedAtIso: string, hasRequiredCheckRun: boolean}>} mergedPrs
+ * @param {number} nowMs
+ * @returns {Array<{number: number, branch: string, headSha: string, ageMinutes: number | null, reason: string | null}>}
+ */
+export function classifyMergedUnchecked(mergedPrs, nowMs) {
+  const flagged = [];
+  for (const pr of mergedPrs) {
+    if (pr.hasRequiredCheckRun) continue;
+    const mergedMs = Date.parse(pr.mergedAtIso);
+    // rule 98a: an unparseable merge time is "cannot verify", never "assume fine".
+    if (Number.isNaN(mergedMs)) {
+      flagged.push({
+        number: pr.number,
+        branch: pr.branch,
+        headSha: pr.headSha,
+        ageMinutes: null,
+        reason: `unparseable merged_at: ${pr.mergedAtIso}`,
+      });
+      continue;
+    }
+    const ageMinutes = (nowMs - mergedMs) / 60_000;
+    if (ageMinutes < MERGED_SETTLE_MINUTES) continue; // check-runs may still be about to appear
+    if (ageMinutes > MERGED_LOOKBACK_MINUTES) continue; // outside the window; earlier ticks saw it
+    flagged.push({ number: pr.number, branch: pr.branch, headSha: pr.headSha, ageMinutes, reason: null });
+  }
+  return flagged;
+}
+
+export function buildMergedUncheckedAlert(prs) {
+  const list = prs
+    .map((pr) =>
+      pr.reason
+        ? `#${pr.number} (${pr.branch}, ${pr.reason})`
+        : `#${pr.number} (${pr.branch}, merged ${pr.ageMinutes.toFixed(0)}min ago)`,
+    )
+    .join("; ");
+  return {
+    title: "Gold Tracker: PR merged with no required check ever recorded",
+    body:
+      `${prs.length} PR(s) merged with no lint/pwa-js check-run on their head SHA: ${list}. ` +
+      `This is the #1539/#1569 shape (audit docs/SESSION_AUDIT_2026-08.md §8 instance #20): ` +
+      `branch protection's admin-bypass (ADR 028) let it merge unchecked. Review what landed; ` +
+      `check master's Lint and the data pipeline.`,
+    priority: 4,
+    tags: "warning",
+  };
+}
+
+export function buildMergedUncheckedFetchFailureAlert(failureReason) {
+  return {
+    title: "Gold Tracker: merged-PR check scan could not verify",
+    body: `Could not fetch recently merged PRs / their check-runs from the GitHub API -- failing closed rather than silently skipping this run. Reason: ${failureReason}`,
+    priority: 3,
+    tags: "warning",
+  };
+}
+
+/**
+ * Alert once per PR number, ever (an unchecked merge is an event, not a condition that can
+ * recover), and prune state older than a week so the KV value stays small.
+ *
+ * @param {ReturnType<typeof classifyMergedUnchecked>} flagged
+ * @param {Record<string, number> | null} previousState PR number (string) -> alerted-at epoch ms
+ * @param {number} nowMs
+ */
+export function decideMergedUncheckedAction(flagged, previousState, nowMs) {
+  const nextState = {};
+  for (const [key, at] of Object.entries(previousState || {})) {
+    if (nowMs - at < MERGED_STATE_RETENTION_MS) nextState[key] = at;
+  }
+  const alertPrs = [];
+  for (const pr of flagged) {
+    const key = String(pr.number);
+    if (key in nextState) continue;
+    alertPrs.push(pr);
+    nextState[key] = nowMs;
+  }
+  return { send: alertPrs.length > 0, alertPrs, nextState };
+}

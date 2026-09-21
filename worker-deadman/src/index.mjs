@@ -43,13 +43,20 @@ import {
   decidePrTriggerHealthAction,
   buildPrTriggerHealthAlert,
   buildPrTriggerHealthFetchFailureAlert,
+  classifyMergedUnchecked,
+  decideMergedUncheckedAction,
+  buildMergedUncheckedAlert,
+  buildMergedUncheckedFetchFailureAlert,
   PR_TRIGGER_STALE_MINUTES,
+  MERGED_SETTLE_MINUTES,
+  MERGED_LOOKBACK_MINUTES,
 } from "./pr_trigger_health.mjs";
 
 const KV_STATE_KEY = "deadman:last_state";
 const KV_TANISHQ_STATE_KEY = "deadman:tanishq_last_state"; // Q4: independent dedup state, own KV key
 const KV_HEARTBEAT_KEY = "deadman:last_heartbeat_date_ist";
 const KV_PR_TRIGGER_HEALTH_KEY = "deadman:pr_trigger_health_state"; // AI2: own key, own dedup state
+const KV_MERGED_UNCHECKED_KEY = "deadman:merged_unchecked_state"; // AL3a: PR number -> alerted-at
 const FETCH_TIMEOUT_MS = 10_000;
 const GITHUB_REPO = "gaurav-gandhi-2411/gold-rate-tracker";
 
@@ -122,11 +129,15 @@ async function fetchHealthUpdatedAt(fetchImpl) {
  * explicit "could not verify this run" alert, since a silently-dropped PR
  * is exactly the failure mode this channel exists to catch.
  *
- * bot/-prefixed branches excluded: those PRs auto-merge via bot-pr-sync's
- * own polling mechanism within minutes, not the shape this channel watches
- * for. scratch/-prefixed excluded: this repo's own established convention
- * (AG2b, check_pr_boundary_leak.py) for deliberately disposable proof PRs,
- * reused identically here.
+ * bot/-prefixed branches are NO LONGER excluded (2026-09-21). They used to be, on the
+ * assumption that bot PRs "auto-merge via bot-pr-sync's own polling within minutes" -- but
+ * `bot/docs-refresh` does not use bot-pr-sync (native auto-merge), and it was the one PR
+ * that sat open with zero check-runs for 10 days (#1578) while this channel skipped it by
+ * construction. Measured over 100 merged bot PRs: head commit -> first lint/pwa-js check-run
+ * start median 0.17 min, max 0.35 min, and -> merged max 4.5 min, so an open bot PR with no
+ * check-run for PR_TRIGGER_STALE_MINUTES (30) is a genuine anomaly, not noise.
+ * scratch/-prefixed excluded: this repo's own established convention (AG2b,
+ * check_pr_boundary_leak.py) for deliberately disposable proof PRs, reused identically here.
  */
 async function fetchOpenPrTriggerHealth(fetchImpl, token) {
   const headers = {
@@ -143,9 +154,7 @@ async function fetchOpenPrTriggerHealth(fetchImpl, token) {
     );
     if (!listResp.ok) return { openPrs: null, failure: `list open PRs HTTP ${listResp.status}` };
     const allPrs = await listResp.json();
-    const candidates = allPrs.filter(
-      (p) => !p.head.ref.startsWith("bot/") && !p.head.ref.startsWith("scratch/"),
-    );
+    const candidates = allPrs.filter((p) => !p.head.ref.startsWith("scratch/"));
 
     const openPrs = [];
     for (const p of candidates) {
@@ -178,6 +187,60 @@ async function fetchOpenPrTriggerHealth(fetchImpl, token) {
     return { openPrs, failure: null };
   } catch (err) {
     return { openPrs: null, failure: String(err && err.message ? err.message : err) };
+  } finally {
+    clearTimeout(timeout);
+  }
+}
+
+/**
+ * AL3a: PRs merged inside the lookback window, each with whether its head SHA (the head at
+ * merge time) has a lint/pwa-js check-run. Same fail-closed batching as the open-PR fetch above:
+ * one failed API call fails the whole batch, never a silently shorter list. Bot PRs are NOT
+ * excluded here -- 355/355 merged bot PRs had check-runs, so a bot PR merged without one is
+ * exactly the anomaly this scan exists to surface.
+ */
+async function fetchRecentlyMergedPrs(fetchImpl, token, nowMs) {
+  const headers = {
+    "User-Agent": "gold-rate-tracker-deadman-switch",
+    Authorization: `Bearer ${token}`,
+    Accept: "application/vnd.github+json",
+  };
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), FETCH_TIMEOUT_MS);
+  try {
+    // sort=updated desc: anything merged in the last few hours is among the first page.
+    const listResp = await fetchImpl(
+      `https://api.github.com/repos/${GITHUB_REPO}/pulls?state=closed&sort=updated&direction=desc&per_page=50`,
+      { headers, signal: controller.signal },
+    );
+    if (!listResp.ok) return { mergedPrs: null, failure: `list closed PRs HTTP ${listResp.status}` };
+    const closed = await listResp.json();
+    const cutoffMs = nowMs - MERGED_LOOKBACK_MINUTES * 60_000;
+    const recent = closed.filter((p) => p.merged_at && Date.parse(p.merged_at) >= cutoffMs);
+
+    const mergedPrs = [];
+    for (const p of recent) {
+      const sha = p.head.sha;
+      const checksResp = await fetchImpl(
+        `https://api.github.com/repos/${GITHUB_REPO}/commits/${sha}/check-runs`,
+        { headers, signal: controller.signal },
+      );
+      if (!checksResp.ok) return { mergedPrs: null, failure: `check-runs ${sha} HTTP ${checksResp.status}` };
+      const checkData = await checksResp.json();
+      const hasRequiredCheckRun = (checkData.check_runs || []).some(
+        (r) => r.name === "lint" || r.name === "pwa-js",
+      );
+      mergedPrs.push({
+        number: p.number,
+        branch: p.head.ref,
+        headSha: sha,
+        mergedAtIso: p.merged_at,
+        hasRequiredCheckRun,
+      });
+    }
+    return { mergedPrs, failure: null };
+  } catch (err) {
+    return { mergedPrs: null, failure: String(err && err.message ? err.message : err) };
   } finally {
     clearTimeout(timeout);
   }
@@ -308,6 +371,36 @@ export async function runCheck(env, fetchImpl, nowMs) {
     }
   }
 
+  // AL3a: merged-unchecked scan -- the open-PR channel above cannot see a PR that merges
+  // before its head commit is PR_TRIGGER_STALE_MINUTES old (#1539 merged 5.2 min after its
+  // last push). Same secret (Pull requests/Contents/Checks read), own KV key, own dedup.
+  let mergedUncheckedSent = false;
+  let mergedUncheckedCount = 0;
+  if (env.GITHUB_PR_HEALTH_PAT) {
+    const { mergedPrs, failure: mergedFetchFailure } = await fetchRecentlyMergedPrs(
+      fetchImpl,
+      env.GITHUB_PR_HEALTH_PAT,
+      nowMs,
+    );
+    if (mergedFetchFailure) {
+      await postToNtfy(fetchImpl, env.NTFY_TOPIC, buildMergedUncheckedFetchFailureAlert(mergedFetchFailure));
+      mergedUncheckedSent = true;
+    } else {
+      const flagged = classifyMergedUnchecked(mergedPrs, nowMs);
+      mergedUncheckedCount = flagged.length;
+      const previousMergedState = await loadState(env, KV_MERGED_UNCHECKED_KEY);
+      const { send: mergedSend, alertPrs: mergedAlertPrs, nextState: nextMergedState } =
+        decideMergedUncheckedAction(flagged, previousMergedState, nowMs);
+      if (env.DEADMAN_STATE) {
+        await env.DEADMAN_STATE.put(KV_MERGED_UNCHECKED_KEY, JSON.stringify(nextMergedState));
+      }
+      if (mergedSend) {
+        await postToNtfy(fetchImpl, env.NTFY_TOPIC, buildMergedUncheckedAlert(mergedAlertPrs));
+        mergedUncheckedSent = true;
+      }
+    }
+  }
+
   // G4a: independent of whatever staleness alert may have just fired --
   // the heartbeat's job is confirming the SWITCH ITSELF ran today, not
   // reporting site staleness (decideAction's job, above).
@@ -336,6 +429,8 @@ export async function runCheck(env, fetchImpl, nowMs) {
     heartbeatSent,
     prTriggerHealthSent,
     prTriggerHealthStaleCount,
+    mergedUncheckedSent,
+    mergedUncheckedCount,
     // AC3 (audit 2026-09-10): echoes the constants this exact deployment is
     // actually running with, not a hardcoded copy of master's current
     // values -- imported directly from deadman.mjs, so this only matches
@@ -351,6 +446,8 @@ export async function runCheck(env, fetchImpl, nowMs) {
       tanishqEscalateHours: TANISHQ_ESCALATE_HOURS,
       runnerConfirmedOfflineHours: RUNNER_CONFIRMED_OFFLINE_HOURS,
       prTriggerStaleMinutes: PR_TRIGGER_STALE_MINUTES,
+      mergedSettleMinutes: MERGED_SETTLE_MINUTES,
+      mergedLookbackMinutes: MERGED_LOOKBACK_MINUTES,
     },
   };
 }

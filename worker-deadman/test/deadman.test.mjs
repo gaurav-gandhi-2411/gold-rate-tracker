@@ -18,7 +18,11 @@ import {
   RUNNER_CONFIRMED_OFFLINE_HOURS,
 } from "../src/deadman.mjs";
 import { runCheck } from "../src/index.mjs";
-import { PR_TRIGGER_STALE_MINUTES } from "../src/pr_trigger_health.mjs";
+import {
+  PR_TRIGGER_STALE_MINUTES,
+  MERGED_SETTLE_MINUTES,
+  MERGED_LOOKBACK_MINUTES,
+} from "../src/pr_trigger_health.mjs";
 
 const HOUR = 3_600_000;
 const NOW = Date.parse("2026-08-28T04:00:00Z");
@@ -244,6 +248,8 @@ test("runCheck: response echoes the real threshold constants from deadman.mjs, n
     tanishqEscalateHours: TANISHQ_ESCALATE_HOURS,
     runnerConfirmedOfflineHours: RUNNER_CONFIRMED_OFFLINE_HOURS,
     prTriggerStaleMinutes: PR_TRIGGER_STALE_MINUTES,
+    mergedSettleMinutes: MERGED_SETTLE_MINUTES,
+    mergedLookbackMinutes: MERGED_LOOKBACK_MINUTES,
   });
 });
 
@@ -802,7 +808,10 @@ test("runCheck: PR trigger-health channel fails closed (pages honestly) on a Git
   assert.match(failureAlert.body, /failing closed/);
 });
 
-test("runCheck: PR trigger-health channel excludes bot/ and scratch/ prefixed branches", async () => {
+// 2026-09-21: bot/ is no longer excluded (see fetchOpenPrTriggerHealth's comment) -- this test used
+// to assert that it was, which encoded the assumption that bot PRs always merge within minutes;
+// bot/docs-refresh sat open with zero check-runs for 10 days (#1578) and was skipped by construction.
+test("runCheck: PR trigger-health channel skips scratch/ branches but NOT bot/ ones", async () => {
   const ntfyCalls = [];
   const fetchImpl = async (url, opts) => {
     const inner = githubApiFetch({
@@ -822,8 +831,9 @@ test("runCheck: PR trigger-health channel excludes bot/ and scratch/ prefixed br
     GITHUB_PR_HEALTH_PAT: "fake-token",
   };
   const result = await runCheck(env, fetchImpl, NOW);
-  assert.equal(result.prTriggerHealthSent, false);
-  assert.equal(result.prTriggerHealthStaleCount, 0);
+  // Only the bot/ PR counts (60 min old, no check-run); the scratch/ PR is still skipped.
+  assert.equal(result.prTriggerHealthSent, true);
+  assert.equal(result.prTriggerHealthStaleCount, 1);
 });
 
 test("runCheck: PR trigger-health channel does not re-alert on the same stale PR within the dedup window", async () => {
