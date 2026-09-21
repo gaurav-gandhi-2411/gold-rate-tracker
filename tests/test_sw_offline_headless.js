@@ -1,0 +1,108 @@
+// tests/test_sw_offline_headless.js — the service worker's offline data fallback, for real.
+// Loads the app in Chromium with the real service worker, then goes offline and reloads.
+//
+// Why this exists: service-worker.js claimed "network-first for all data files; fall back to
+// cache when offline", but app.js's loadJSON() appends ?t=<Date.now()> as a cache-buster and the
+// worker cached under the full request URL. Every load stored a NEW entry per file, and offline
+// the lookup used a different ?t= than any stored entry, so it never matched: ALL data requests
+// failed offline (verified against the live origin, 2026-09-21). Nothing tested the fallback.
+//
+// Run: node tests/test_sw_offline_headless.js [ROOT]   (ROOT defaults to the repo root)
+// Requires: scraper/node_modules (npm ci in scraper/ first)
+
+import http from "node:http";
+import path from "node:path";
+import fs from "node:fs";
+import pkg from "../scraper/node_modules/playwright/index.js";
+const { chromium } = pkg;
+
+const ROOT = path.resolve(process.argv[2] || ".");
+const MIME = {
+  ".html": "text/html", ".js": "application/javascript", ".css": "text/css",
+  ".json": "application/json", ".png": "image/png", ".svg": "image/svg+xml",
+  ".webmanifest": "application/manifest+json", ".woff2": "font/woff2",
+};
+
+const PASS = "\x1b[32mPASS\x1b[0m";
+const FAIL = "\x1b[31mFAIL\x1b[0m";
+let failures = 0;
+function assert(label, ok, detail = "") {
+  console.log(`  ${ok ? PASS : FAIL}  ${label}${!ok && detail ? " — " + detail : ""}`);
+  if (!ok) failures++;
+}
+
+const server = http.createServer((req, res) => {
+  const p = req.url.split("?")[0];
+  const f = path.join(ROOT, p === "/" ? "index.html" : p);
+  try {
+    const d = fs.readFileSync(f);
+    res.writeHead(200, { "Content-Type": MIME[path.extname(f)] || "application/octet-stream" });
+    res.end(d);
+  } catch {
+    res.writeHead(404);
+    res.end("Not found");
+  }
+});
+await new Promise((r) => server.listen(0, "127.0.0.1", r));
+const base = `http://127.0.0.1:${server.address().port}`;
+
+const browser = await chromium.launch({ headless: true });
+try {
+  const ctx = await browser.newContext({ serviceWorkers: "allow" });
+  const page = await ctx.newPage();
+
+  console.log(`\nService-worker offline data fallback (ROOT=${ROOT})`);
+  await page.goto(base, { waitUntil: "networkidle" });
+  await page.evaluate(async () => { await navigator.serviceWorker.ready; });
+  await page.waitForTimeout(1500);
+  // Second online load, controlled by the worker: this is what would add a duplicate entry per file.
+  await page.reload({ waitUntil: "networkidle" });
+  await page.waitForTimeout(1500);
+
+  const keys = await page.evaluate(async () => {
+    const out = [];
+    for (const k of await caches.keys()) {
+      const c = await caches.open(k);
+      for (const r of await c.keys()) out.push(r.url);
+    }
+    return out.filter((u) => u.includes("/data/"));
+  });
+  const perFile = {};
+  for (const u of keys) {
+    const name = new URL(u).pathname.split("/").pop();
+    perFile[name] = (perFile[name] || 0) + 1;
+  }
+  console.log(`  data cache entries after 2 online loads: ${JSON.stringify(perFile)}`);
+  assert("data files are cached at all (test is not vacuous)", Object.keys(perFile).length >= 3);
+  assert("exactly one cache entry per data file (no growth per load)",
+    Object.values(perFile).every((n) => n === 1), JSON.stringify(perFile));
+  assert("no cached data key carries a query string", keys.every((u) => !u.includes("?")),
+    keys.filter((u) => u.includes("?")).slice(0, 2).join(", "));
+
+  await ctx.setOffline(true);
+  const seen = {};
+  page.on("response", (r) => {
+    const u = new URL(r.url());
+    if (u.pathname.includes("/data/")) seen[u.pathname.split("/").pop()] = { status: r.status(), sw: r.fromServiceWorker() };
+  });
+  page.on("requestfailed", (r) => {
+    const u = new URL(r.url());
+    if (u.pathname.includes("/data/")) seen[u.pathname.split("/").pop()] = { status: 0, sw: false, err: r.failure()?.errorText };
+  });
+  await page.reload({ waitUntil: "load" }).catch(() => {});
+  await page.waitForTimeout(2500);
+
+  const names = Object.keys(seen);
+  console.log(`  OFFLINE data requests: ${JSON.stringify(seen)}`);
+  assert("the app made data requests while offline (test is not vacuous)", names.length >= 3,
+    `saw ${names.length}`);
+  const bad = names.filter((n) => !(seen[n].status === 200 && seen[n].sw));
+  assert("every data request is answered from the service worker cache while offline", bad.length === 0,
+    `failed: ${bad.join(", ")}`);
+} finally {
+  await browser.close();
+  server.close();
+}
+
+console.log(`\n${failures === 0 ? PASS : FAIL}  ${failures === 0 ? "Offline data fallback works." : `${failures} check(s) failed.`}\n`);
+process.exit(failures === 0 ? 0 : 1);

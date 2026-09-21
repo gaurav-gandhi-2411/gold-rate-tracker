@@ -167,15 +167,19 @@ export function decidePrTriggerHealthAction(stalePrs, previousState, nowMs) {
 }
 
 // ---------------------------------------------------------------------------
-// AL3a (2026-09-21): merged-unchecked scan.
+// AL3a (2026-09-21): merged-unchecked scan; AN8 widened its predicate the same day.
 //
 // classifyPrTriggerHealth above only sees PRs that are still OPEN at a 30-min tick, and pages
 // only once a head commit is >= PR_TRIGGER_STALE_MINUTES old. A PR merged before that -- #1539
 // was open 5.2 min after its last push and its merge caused a 7-hour production incident --
 // closes inside the blind spot and can never page (verified by running this file's own
 // classifier against #1539/#1569's recorded state: #1569 pages, #1539 does not). This scan
-// looks at what already merged instead: any PR merged in the lookback window whose head SHA has
-// no `lint`/`pwa-js` check-run pages, once.
+// looks at what already merged instead: any PR merged in the lookback window whose head SHA does
+// not have EVERY required context recorded as SUCCESS pages, once. The first version flagged only
+// PRs with zero check-runs, which caught #1539 and #1569 but missed #1541 -- merged over a FAILING
+// lint (the one behind master's 33-minute red). The predicate is now the one
+// scripts/check_required_checks_positive.py already applies before every self-merge; see
+// evaluateRequiredChecks below and the shared fixtures that pin the two together.
 //
 // Measured before choosing anything (2026-09-21, `gh` against the 400 most recent merged PRs):
 // exactly 2 have no lint/pwa-js check-run on their head SHA -- #1539 and #1569 -- and 0 of the 355
@@ -186,19 +190,64 @@ export function decidePrTriggerHealthAction(stalePrs, previousState, nowMs) {
 // been created yet. Normal trigger delay max is 8.48 min (see PR_TRIGGER_STALE_MINUTES above),
 // so 10 min. MERGED_LOOKBACK_MINUTES: 180 = six 30-min ticks, so a few missed cron ticks still
 // see every merge; per-PR dedup below means the wider window never repeats an alert.
+// The contexts branch protection requires on master. The Worker's PAT cannot read branch
+// protection (that needs Administration: Read), so unlike the Python script -- which reads them
+// live -- this is a constant. If the required set changes in Settings -> Branches, change it here
+// too; ?trigger=1 echoes it under thresholds.requiredContexts so a stale value is visible.
+export const REQUIRED_CONTEXTS = ["lint", "pwa-js"];
+
+/**
+ * Mirror of scripts/check_required_checks_positive.py's assert_required_checks_positive: for every
+ * required context a check-run with that name must exist AND the one with the latest started_at
+ * (first wins on a tie, like Python's max) must have conclusion === "success". Absent, running
+ * (null), failure, cancelled and skipped are all NOT success.
+ * Returns {allPass, results} where each result is "SUCCESS", "ABSENT ..." or "NOT SUCCESS ...".
+ * Pinned to the Python original by worker-deadman/test/fixtures/required_checks_cases.json.
+ */
+export function evaluateRequiredChecks(requiredContexts, checkRuns) {
+  const byName = new Map();
+  for (const run of checkRuns) {
+    const list = byName.get(run.name) || [];
+    list.push(run);
+    byName.set(run.name, list);
+  }
+  const results = {};
+  let allPass = true;
+  for (const context of requiredContexts) {
+    const runs = byName.get(context) || [];
+    if (runs.length === 0) {
+      results[context] = "ABSENT (zero check-runs recorded)";
+      allPass = false;
+      continue;
+    }
+    let latest = runs[0];
+    for (const r of runs) {
+      if ((r.started_at || "") > (latest.started_at || "")) latest = r;
+    }
+    if (latest.conclusion === "success") {
+      results[context] = "SUCCESS";
+    } else {
+      results[context] = `NOT SUCCESS (conclusion=${JSON.stringify(latest.conclusion ?? null)})`;
+      allPass = false;
+    }
+  }
+  return { allPass, results };
+}
+
 export const MERGED_SETTLE_MINUTES = 10;
 export const MERGED_LOOKBACK_MINUTES = 180;
 const MERGED_STATE_RETENTION_MS = 7 * 24 * 3_600_000;
 
 /**
- * @param {Array<{number: number, branch: string, headSha: string, mergedAtIso: string, hasRequiredCheckRun: boolean}>} mergedPrs
+ * @param {Array<{number: number, branch: string, headSha: string, mergedAtIso: string, requiredOk: boolean, problems?: string[]}>} mergedPrs
  * @param {number} nowMs
- * @returns {Array<{number: number, branch: string, headSha: string, ageMinutes: number | null, reason: string | null}>}
+ * @returns {Array<{number: number, branch: string, headSha: string, ageMinutes: number | null, reason: string | null, problems: string[]}>}
  */
 export function classifyMergedUnchecked(mergedPrs, nowMs) {
   const flagged = [];
   for (const pr of mergedPrs) {
-    if (pr.hasRequiredCheckRun) continue;
+    if (pr.requiredOk) continue;
+    const problems = pr.problems || [];
     const mergedMs = Date.parse(pr.mergedAtIso);
     // rule 98a: an unparseable merge time is "cannot verify", never "assume fine".
     if (Number.isNaN(mergedMs)) {
@@ -208,29 +257,31 @@ export function classifyMergedUnchecked(mergedPrs, nowMs) {
         headSha: pr.headSha,
         ageMinutes: null,
         reason: `unparseable merged_at: ${pr.mergedAtIso}`,
+        problems,
       });
       continue;
     }
     const ageMinutes = (nowMs - mergedMs) / 60_000;
     if (ageMinutes < MERGED_SETTLE_MINUTES) continue; // check-runs may still be about to appear
     if (ageMinutes > MERGED_LOOKBACK_MINUTES) continue; // outside the window; earlier ticks saw it
-    flagged.push({ number: pr.number, branch: pr.branch, headSha: pr.headSha, ageMinutes, reason: null });
+    flagged.push({ number: pr.number, branch: pr.branch, headSha: pr.headSha, ageMinutes, reason: null, problems });
   }
   return flagged;
 }
 
 export function buildMergedUncheckedAlert(prs) {
   const list = prs
-    .map((pr) =>
-      pr.reason
-        ? `#${pr.number} (${pr.branch}, ${pr.reason})`
-        : `#${pr.number} (${pr.branch}, merged ${pr.ageMinutes.toFixed(0)}min ago)`,
-    )
+    .map((pr) => {
+      const why = pr.problems && pr.problems.length ? `: ${pr.problems.join(", ")}` : "";
+      return pr.reason
+        ? `#${pr.number} (${pr.branch}, ${pr.reason}${why})`
+        : `#${pr.number} (${pr.branch}, merged ${pr.ageMinutes.toFixed(0)}min ago${why})`;
+    })
     .join("; ");
   return {
-    title: "Gold Tracker: PR merged with no required check ever recorded",
+    title: "Gold Tracker: PR merged with a required check missing or not green",
     body:
-      `${prs.length} PR(s) merged with no lint/pwa-js check-run on their head SHA: ${list}. ` +
+      `${prs.length} PR(s) merged without every required check recorded as SUCCESS on their head SHA: ${list}. ` +
       `This is the #1539/#1569 shape (audit docs/SESSION_AUDIT_2026-08.md §8 instance #20): ` +
       `branch protection's admin-bypass (ADR 028) let it merge unchecked. Review what landed; ` +
       `check master's Lint and the data pipeline.`,

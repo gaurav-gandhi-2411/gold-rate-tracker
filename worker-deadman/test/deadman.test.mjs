@@ -22,6 +22,7 @@ import {
   PR_TRIGGER_STALE_MINUTES,
   MERGED_SETTLE_MINUTES,
   MERGED_LOOKBACK_MINUTES,
+  REQUIRED_CONTEXTS,
 } from "../src/pr_trigger_health.mjs";
 
 const HOUR = 3_600_000;
@@ -250,6 +251,7 @@ test("runCheck: response echoes the real threshold constants from deadman.mjs, n
     prTriggerStaleMinutes: PR_TRIGGER_STALE_MINUTES,
     mergedSettleMinutes: MERGED_SETTLE_MINUTES,
     mergedLookbackMinutes: MERGED_LOOKBACK_MINUTES,
+    requiredContexts: REQUIRED_CONTEXTS,
   });
 });
 
