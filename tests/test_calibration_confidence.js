@@ -16,55 +16,31 @@
 // If any future change reverts to sourcing the rendered percentage from
 // nominal_coverage instead of the measured file, these tests fail.
 //
-// Functions inlined from app.js/i18n.js since app.js has no module system —
-// see tests/test_good_price.js for the established pattern. Must match
-// app.js's deriveMeasuredBandCoverage and i18n.js's calibrationConfidenceAppend
-// exactly.
+// Drives the REAL renderStaleBanner / i18n strings (tests/helpers/load_app.js). This file used to
+// paste copies of deriveMeasuredBandCoverage, calibrationConfidenceAppend and the clause
+// construction; the Hindi case even defined its own function inside the test and asserted on it.
 //
 // Run: node --test tests/test_calibration_confidence.js  (from repo root)
 
 import { test } from "node:test";
 import assert from "node:assert/strict";
 
-const BAND_COVERAGE_MAX_AGE_DAYS = 14;
+import { loadApp } from "./helpers/load_app.js";
 
-// ── Inline copy of app.js's deriveMeasuredBandCoverage ──
-function deriveMeasuredBandCoverage(bandCoverage, nowMs = Date.now()) {
-  if (
-    !bandCoverage ||
-    typeof bandCoverage.coverage !== "number" ||
-    typeof bandCoverage.n !== "number" ||
-    typeof bandCoverage.generated_at_utc !== "string"
-  ) {
-    return null;
-  }
-  const generatedMs = Date.parse(bandCoverage.generated_at_utc);
-  if (Number.isNaN(generatedMs)) return null;
-  const ageDays = (nowMs - generatedMs) / 86_400_000;
-  if (ageDays > BAND_COVERAGE_MAX_AGE_DAYS) return null;
-  return { coverage: Math.round(bandCoverage.coverage * 1000) / 10, n: bandCoverage.n };
-}
-
-// ── Inline copy of i18n.js's EN calibrationConfidenceAppend ──
-function calibrationConfidenceAppend({ amount, coverage, n }) {
-  return coverage != null && n != null
-    ? ` Based on past comparisons, the real price has landed within about ₹${amount}/gram of this estimate about ${coverage}% of the time so far (n=${n} weeks measured).`
-    : ` Based on past comparisons, the real price lands within about ₹${amount}/gram of this estimate.`;
-}
-
-// ── Inline copy of app.js's renderStaleBanner's confidence-clause construction ──
-// (the part relevant to this claim — not the whole banner-state decision,
-// which tests/test_stale_banner.js already covers).
+// The confidence clause is appended by the real renderStaleBanner in its "IBJA published today"
+// state; run that, then slice the base sentence off to get just the clause.
 function buildConfidenceClause(forecast, bandCoverage, nowMs = Date.now()) {
-  if (typeof forecast.nominal_coverage !== "number" || typeof forecast.band_half_width !== "number") {
-    return "";
+  const app = loadApp({ nowMs });
+  try {
+    const f = { ...forecast, price_source: "ibja_calibrated", ibja_asof: new Date(nowMs).toISOString() };
+    app.renderStaleBanner(f, bandCoverage);
+    const text = app.element("stale-banner").textContent;
+    const base = app.t("bannerIbjaToday");
+    assert.ok(text.startsWith(base), `unexpected banner text: ${text}`);
+    return text.slice(base.length);
+  } finally {
+    app.dispose();
   }
-  const measured = deriveMeasuredBandCoverage(bandCoverage, nowMs);
-  return calibrationConfidenceAppend({
-    amount: Math.round(forecast.band_half_width),
-    coverage: measured ? measured.coverage : null,
-    n: measured ? measured.n : null,
-  });
 }
 
 const NOW = Date.parse("2026-09-10T12:00:00Z");
@@ -135,14 +111,15 @@ test("no band at all (nominal_coverage/band_half_width absent from forecast) →
 });
 
 test("Hindi calibrationConfidenceAppend also sources coverage/n from the measurement, never a hardcoded 80", () => {
-  function calibrationConfidenceAppendHi({ amount, coverage, n }) {
-    return coverage != null && n != null
-      ? ` पिछली तुलनाओं के आधार पर, असली कीमत अब तक लगभग ${coverage}% बार इस अनुमान के ₹${amount}/ग्राम के दायरे में रही है (n=${n} हफ़्तों का मापन)।`
-      : ` पिछली तुलनाओं के आधार पर, असली कीमत इस अनुमान के ₹${amount}/ग्राम के दायरे में रहती है।`;
+  const hi = loadApp({ lang: "hi" });
+  try {
+    const withData = hi.t("calibrationConfidenceAppend", { amount: 246, coverage: 45.3, n: 60 });
+    assert.match(withData, /45\.3%/);
+    assert.doesNotMatch(withData, /80%/);
+    const withoutData = hi.t("calibrationConfidenceAppend", { amount: 246, coverage: null, n: null });
+    assert.doesNotMatch(withoutData, /%/);
+    assert.match(withData, /[\u0900-\u097F]/, "expected Devanagari text -- is the hi table the one being read?");
+  } finally {
+    hi.dispose();
   }
-  const withData = calibrationConfidenceAppendHi({ amount: 246, coverage: 45.3, n: 60 });
-  assert.match(withData, /45\.3%/);
-  assert.doesNotMatch(withData, /80%/);
-  const withoutData = calibrationConfidenceAppendHi({ amount: 246, coverage: null, n: null });
-  assert.doesNotMatch(withoutData, /%/);
 });

@@ -4,12 +4,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 
-const STALE_THRESHOLD_H = 8; // mirrors app.js + inference.py constant (Tanishq enrichment gate)
-
-function istDayKey(d) {
-  return d.toLocaleDateString("en-IN", { timeZone: "Asia/Kolkata" });
-}
-
 // Anchors "now" to noon IST on the current calendar day so a fixed hours-ago
 // offset can never accidentally cross an IST day boundary — used only by the
 // "is today" test below, which flaked when run within ~2h of IST midnight
@@ -19,48 +13,40 @@ function nowAtNoonIST() {
   return new Date(`${todayIST}T12:00:00+05:30`).getTime();
 }
 
-// Human-readable label for tier-3 fusion_sources — mirrors app.js's fusionSourcesLabel.
-function fusionSourcesLabel(sources) {
-  const NAMES = { grt: "GRT", malabar: "Malabar", kalyan: "Kalyan" };
-  const labels = (sources || []).map(s => NAMES[s] || s);
-  return labels.length ? labels.join(", ") : "retail consensus";
+import { loadApp } from "./helpers/load_app.js";
+
+// Drives the REAL renderStaleBanner from app.js (see tests/helpers/load_app.js) under a fixed clock
+// and reads back what it wrote to the banner element. This file used to mirror the function's
+// decision logic ("must match app.js"); inverting isToday in the real app.js left every test here
+// green. Each call loads a fresh app so no banner/reading state leaks between cases.
+//
+// State is classified with the app's own i18n strings, not hard-coded English literals.
+const SENTINEL = "\u0000";
+function prefixOf(app, key, params) {
+  return app.t(key, params).split(SENTINEL)[0];
 }
 
-// Mirrors renderStaleBanner()'s decision logic in app.js (ADR 025 + fusion tier).
-// Per ADR 025, IBJA-calibrated is the PRIMARY path — trusted via price_source
-// alone (inference.py already gated its freshness), with the date qualifier
-// derived purely from whether ibja_asof falls on today's IST calendar day.
-// Tier 3 (fusion_consensus) takes precedence over the Tanishq staleness check,
-// same branch order as app.js, so the banner and freshness pill never disagree.
 // Returns: "hidden" | "approximate_today" | "approximate_carry_forward" | "fusion_consensus" | "stale"
 function bannerStateForForecast(forecast, nowMs, readings = []) {
-  if (!forecast) return "hidden";
-
-  if (forecast.price_source === "ibja_calibrated" && forecast.ibja_asof) {
-    const ibjaDate = new Date(forecast.ibja_asof);
-    const isToday = istDayKey(ibjaDate) === istDayKey(new Date(nowMs));
-    return isToday ? "approximate_today" : "approximate_carry_forward";
+  const app = loadApp({ nowMs });
+  try {
+    app.run(`allReadings = ${JSON.stringify(readings)}`);
+    app.renderStaleBanner(forecast);
+    const banner = app.element("stale-banner");
+    if (banner.hidden) return "hidden";
+    const text = banner.textContent;
+    if (text.startsWith(app.t("bannerIbjaToday"))) return "approximate_today";
+    if (text.startsWith(prefixOf(app, "bannerIbjaCarryForward", { weekday: SENTINEL }))) return "approximate_carry_forward";
+    if (text.startsWith(prefixOf(app, "bannerFusion", { sources: SENTINEL }))) return "fusion_consensus";
+    if (text.startsWith(prefixOf(app, "bannerStaleConfirmed", { rel: SENTINEL }))) return "stale";
+    throw new Error(`renderStaleBanner showed the banner with unrecognised text: ${text}`);
+  } finally {
+    app.dispose();
   }
-
-  if (forecast.price_source === "fusion_consensus") {
-    return "fusion_consensus";
-  }
-
-  if (!forecast.scraped_at) return "hidden";
-  // Use the fresher of forecast.scraped_at and the latest raw-price reading's
-  // timestamp — ml.inference runs continue-on-error, so it can fail
-  // independently of the scrape step and leave forecast.scraped_at stale
-  // while prices.json (readings) keeps updating on schedule.
-  let scrapedAtMs = new Date(forecast.scraped_at).getTime();
-  if (readings.length > 0) {
-    const latestReadingMs = new Date(readings[readings.length - 1].timestamp).getTime();
-    if (latestReadingMs > scrapedAtMs) scrapedAtMs = latestReadingMs;
-  }
-  const scrapeAgeH = (nowMs - scrapedAtMs) / 3_600_000;
-  if (scrapeAgeH <= STALE_THRESHOLD_H) return "hidden"; // Tanishq enrichment fresh
-
-  return "stale"; // genuinely stale — neither source available
 }
+
+const realApp = loadApp();
+const fusionSourcesLabel = realApp.pure("fusionSourcesLabel");
 
 // ── Tanishq-enrichment path ───────────────────────────────────────────────────
 
