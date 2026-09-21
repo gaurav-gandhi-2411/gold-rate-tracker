@@ -114,10 +114,26 @@ async function runOnce() {
     const context = await browser.newContext();
     const page = await context.newPage();
 
+    // Evidence for whoever gets paged: a failure reason alone cannot tell "the site is stuck" from "the
+    // check raced something" (2026-09-21: a self-reload after the first service-worker install made this
+    // page URGENT on a healthy site, and nothing in the alert said so). Collected passively.
+    const evidence = { mainFrameNavigations: 0, pageErrors: [], consoleErrors: [], failedRequests: [] };
+    // Deduplicated and capped so the failure JSON stays readable in an alert.
+    const summarize = () => ({
+      mainFrameNavigations: evidence.mainFrameNavigations,
+      pageErrors: [...new Set(evidence.pageErrors)].slice(0, 5),
+      consoleErrors: [...new Set(evidence.consoleErrors)].slice(0, 5),
+      failedRequests: [...new Set(evidence.failedRequests)].slice(0, 5),
+    });
+    page.on("framenavigated", (f) => { if (f === page.mainFrame()) evidence.mainFrameNavigations++; });
+    page.on("pageerror", (e) => evidence.pageErrors.push(String(e).slice(0, 200)));
+    page.on("console", (m) => { if (m.type() === "error") evidence.consoleErrors.push(m.text().slice(0, 200)); });
+    page.on("requestfailed", (r) => evidence.failedRequests.push(`${r.url().slice(0, 100)} ${r.failure()?.errorText || ""}`));
+
     // Check 1: fresh load, no prior service-worker install.
     await page.goto(LIVE_URL, { waitUntil: "load" });
     const fresh = await assertRendered(page, "fresh-load");
-    results.checks.push({ name: "fresh-load", ...fresh });
+    results.checks.push({ name: "fresh-load", ...fresh, ...(fresh.ok ? {} : { evidence: summarize() }) });
 
     // Give the service-worker registration (fired on window 'load' in
     // index.html) a moment to install + activate before reloading.
@@ -126,7 +142,7 @@ async function runOnce() {
     // Check 2: same-context reload — service-worker now controls the page.
     await page.reload({ waitUntil: "load" });
     const returning = await assertRendered(page, "returning-visitor-reload");
-    results.checks.push({ name: "returning-visitor-reload", ...returning });
+    results.checks.push({ name: "returning-visitor-reload", ...returning, ...(returning.ok ? {} : { evidence: summarize() }) });
 
     // Check 3: live service-worker.js VERSION matches this checkout's.
     const localSwPath = path.join(__dirname, "..", "service-worker.js");
