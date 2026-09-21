@@ -12,7 +12,9 @@ import {
   MERGED_SETTLE_MINUTES,
   MERGED_LOOKBACK_MINUTES,
 } from "../src/pr_trigger_health.mjs";
-import { runCheck } from "../src/index.mjs";
+import worker, { runCheck } from "../src/index.mjs";
+import { ESCALATE_THRESHOLD_HOURS } from "../src/deadman.mjs";
+import { createHash } from "node:crypto";
 
 const MINUTE = 60_000;
 const NOW = Date.parse("2026-09-11T14:00:00Z");
@@ -277,13 +279,17 @@ function fakeKv() {
 }
 
 function mockWorldFetch(
-  { nowMs, open = [], commitIsoBySha = {}, closed = [], checkRunsBySha = {}, closedStatus = 200 },
+  { nowMs, open = [], commitIsoBySha = {}, closed = [], checkRunsBySha = {}, closedStatus = 200, ntfy = null, ageHours = 0.5 },
   ntfyCalls,
 ) {
-  const fresh = new Date(nowMs - 30 * MINUTE).toISOString();
+  const fresh = new Date(nowMs - ageHours * 60 * MINUTE).toISOString();
   return async (url, opts) => {
     if (url.includes("forecast.json")) return { ok: true, json: async () => ({ predicted_at: fresh, scraped_at: fresh }) };
-    if (url.startsWith("https://ntfy.sh/")) { ntfyCalls.push({ url, opts }); return { ok: true }; }
+    if (url.startsWith("https://ntfy.sh/")) {
+      ntfyCalls.push({ url, opts });
+      // `ntfy` lets a test decide what ntfy answers (or throw for a network failure); default is a bare 200.
+      return ntfy ? ntfy(ntfyCalls.length) : { ok: true };
+    }
     if (url.includes("/pulls?state=open")) return { ok: true, json: async () => open };
     if (url.includes("/pulls?state=closed")) return { ok: closedStatus === 200, status: closedStatus, json: async () => closed };
     const checks = url.match(/commits\/([0-9a-f]+)\/check-runs/);
@@ -407,4 +413,137 @@ test("runCheck: the response echoes the scan's window constants", async () => {
   const result = await runCheck({ NTFY_TOPIC: "t", DEADMAN_STATE: fakeKv() }, mockWorldFetch({ nowMs }, []), nowMs);
   assert.equal(result.thresholds.mergedSettleMinutes, MERGED_SETTLE_MINUTES);
   assert.equal(result.thresholds.mergedLookbackMinutes, MERGED_LOOKBACK_MINUTES);
+});
+
+// ---------------------------------------------------------------------------
+// AN3: "sent: true" must mean ntfy accepted the message
+// ---------------------------------------------------------------------------
+// 2026-09-21: prTriggerHealthSent:true and the daily heartbeat marked sent in KV, while nothing reached
+// the phone. postToNtfy's result was never read, and each channel persisted its dedup state BEFORE
+// sending, so a failed send was also never retried.
+
+const TICK = 30 * MINUTE;
+const httpFail = (status) => () => ({ ok: false, status });
+const netFail = () => () => { throw new Error("connect ECONNRESET ntfy.sh"); };
+const okWithId = (id) => () => ({ ok: true, status: 200, json: async () => ({ id }) });
+const nonHeartbeat = (calls) => calls.filter((c) => !c.opts.headers.Title.includes("heartbeat"));
+
+test("delivery: a non-2xx from ntfy is NOT reported as sent, and the merged alert is retried next tick", async () => {
+  const nowMs = Date.parse("2026-09-10T14:00:00Z");
+  const kv = fakeKv();
+  const env = { NTFY_TOPIC: "t", GITHUB_PR_HEALTH_PAT: "pat", DEADMAN_STATE: kv };
+  const calls = [];
+  const failing = mockWorldFetch({ nowMs, closed: [closedPr(REAL_1539)], ntfy: httpFail(429) }, calls);
+
+  const first = await runCheck(env, failing, nowMs);
+  assert.equal(first.mergedUncheckedCount, 1);
+  assert.equal(first.mergedUncheckedSent, false, "a 429 must not read as sent");
+  assert.ok(first.ntfy.failed >= 1);
+  assert.equal(first.ntfy.failures[0].status, 429);
+  assert.equal(await kv.get("deadman:merged_unchecked_state"), null, "an undelivered alert must not be recorded as alerted");
+
+  // Next tick, ntfy healthy: the SAME alert must now go out (before this fix it was suppressed forever).
+  const healthyCalls = [];
+  const healthy = mockWorldFetch({ nowMs: nowMs + TICK, closed: [closedPr(REAL_1539)], ntfy: okWithId("msg1") }, healthyCalls);
+  const second = await runCheck(env, healthy, nowMs + TICK);
+  assert.equal(second.mergedUncheckedSent, true);
+  assert.equal(alertsOf(healthyCalls).length, 1);
+});
+
+test("delivery: a network error is a failed delivery, not an exception and not 'sent'", async () => {
+  const nowMs = Date.parse("2026-09-21T06:00:00Z");
+  const calls = [];
+  const env = { NTFY_TOPIC: "t", GITHUB_PR_HEALTH_PAT: "pat", DEADMAN_STATE: fakeKv() };
+  const fetchImpl = mockWorldFetch(
+    {
+      nowMs,
+      open: [openPr(1791, "bot/docs-refresh", "32e62faa")],
+      commitIsoBySha: { "32e62faa": new Date(nowMs - 120 * MINUTE).toISOString() },
+      ntfy: netFail(),
+    },
+    calls,
+  );
+  const result = await runCheck(env, fetchImpl, nowMs);
+  assert.equal(result.prTriggerHealthStaleCount, 1);
+  assert.equal(result.prTriggerHealthSent, false);
+  assert.match(result.ntfy.failures[0].error, /ECONNRESET/);
+});
+
+test("delivery: a failed PR-health page is retried next tick, not suppressed for the 6h reminder window", async () => {
+  const nowMs = Date.parse("2026-09-21T06:00:00Z");
+  const kv = fakeKv();
+  const env = { NTFY_TOPIC: "t", GITHUB_PR_HEALTH_PAT: "pat", DEADMAN_STATE: kv };
+  const world = (ntfy, at) => mockWorldFetch(
+    {
+      nowMs: at,
+      open: [openPr(1791, "bot/docs-refresh", "32e62faa")],
+      commitIsoBySha: { "32e62faa": new Date(nowMs - 120 * MINUTE).toISOString() },
+      ntfy,
+    },
+    [],
+  );
+  const first = await runCheck(env, world(httpFail(503), nowMs), nowMs);
+  assert.equal(first.prTriggerHealthSent, false);
+  const second = await runCheck(env, world(okWithId("m2"), nowMs + TICK), nowMs + TICK);
+  assert.equal(second.prTriggerHealthSent, true, "must retry on the next tick");
+});
+
+test("delivery: the daily heartbeat is only marked done when it was actually delivered", async () => {
+  const nowMs = Date.parse("2026-09-21T00:10:00Z");
+  const kv = fakeKv();
+  const env = { NTFY_TOPIC: "t", DEADMAN_STATE: kv };
+  const first = await runCheck(env, mockWorldFetch({ nowMs, ntfy: httpFail(429) }, []), nowMs);
+  assert.equal(first.heartbeatSent, false);
+  assert.equal(await kv.get("deadman:last_heartbeat_date_ist"), null, "KV must not say the heartbeat was sent");
+  const second = await runCheck(env, mockWorldFetch({ nowMs: nowMs + TICK, ntfy: okWithId("hb1") }, []), nowMs + TICK);
+  assert.equal(second.heartbeatSent, true);
+  assert.notEqual(await kv.get("deadman:last_heartbeat_date_ist"), null);
+});
+
+test("delivery: a failed staleness ESCALATE is retried within the reminder window (it used to be suppressed)", async () => {
+  const nowMs = Date.parse("2026-09-21T06:00:00Z");
+  const env = { NTFY_TOPIC: "t", DEADMAN_STATE: fakeKv() };
+  const stale = (ntfy, at) => mockWorldFetch({ nowMs: at, ageHours: ESCALATE_THRESHOLD_HOURS + 1, ntfy }, []);
+  const first = await runCheck(env, stale(httpFail(500), nowMs), nowMs);
+  assert.equal(first.level, "escalate");
+  assert.equal(first.sent, false);
+  const second = await runCheck(env, stale(okWithId("e1"), nowMs + 20 * MINUTE), nowMs + 20 * MINUTE);
+  assert.equal(second.sent, true, "the undelivered ESCALATE must go out on the next tick");
+});
+
+test("delivery: ntfy's message id and a topic fingerprint are reported, never the topic itself", async () => {
+  const nowMs = Date.parse("2026-09-21T00:10:00Z");
+  const topic = "some-secret-topic-name";
+  const env = { NTFY_TOPIC: topic, DEADMAN_STATE: fakeKv() };
+  const result = await runCheck(env, mockWorldFetch({ nowMs, ntfy: okWithId("abc123") }, []), nowMs);
+  assert.equal(result.ntfy.lastDelivery.id, "abc123");
+  assert.equal(result.ntfy.lastDelivery.ok, true);
+  assert.equal(result.ntfy.topicFingerprint, createHash("sha256").update(topic).digest("hex").slice(0, 8));
+  assert.ok(!JSON.stringify(result).includes(topic), "the topic must not appear anywhere in the response");
+});
+
+test("delivery: with nothing to send the response still echoes the last persisted delivery", async () => {
+  const kv = fakeKv();
+  const env = { NTFY_TOPIC: "t", DEADMAN_STATE: kv };
+  const t0 = Date.parse("2026-09-21T00:10:00Z");
+  await runCheck(env, mockWorldFetch({ nowMs: t0, ntfy: okWithId("hb9") }, []), t0); // heartbeat -> persisted
+  const later = await runCheck(env, mockWorldFetch({ nowMs: t0 + TICK }, []), t0 + TICK); // nothing to send
+  assert.equal(later.ntfy.attempted, 0);
+  assert.equal(later.ntfy.lastDelivery.id, "hb9");
+});
+
+test("scheduled(): a failed delivery fails the invocation (recorded as an exception), a healthy run does not", async () => {
+  const nowMs = Date.now();
+  const realFetch = globalThis.fetch;
+  try {
+    for (const [label, ntfy, expectReject] of [["429", httpFail(429), true], ["ok", okWithId("s1"), false]]) {
+      globalThis.fetch = mockWorldFetch({ nowMs, ntfy }, []);
+      let captured;
+      await worker.scheduled({}, { NTFY_TOPIC: "t", DEADMAN_STATE: fakeKv() }, { waitUntil: (p) => { captured = p; } });
+      if (expectReject) await assert.rejects(captured, /ntfy delivery failed/, label);
+      else await captured;
+    }
+  } finally {
+    globalThis.fetch = realFetch;
+  }
 });
