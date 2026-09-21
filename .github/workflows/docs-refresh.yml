@@ -32,10 +32,26 @@ name: Docs Freshness Refresh
 # workflow pushes via a PAT (not GITHUB_TOKEN), which -- per the OTHER
 # established finding in that same file -- makes the PR's own
 # `pull_request` event fire lint.yml naturally, a different, normal trigger
-# path the documented flakiness was never shown to affect. If auto-merge
-# still doesn't complete for any reason, the failure mode is simply "docs
-# stay stale a little longer" (the exact, already-tolerated pre-#1539
-# status quo) -- self-healing on the next trigger, never a blocked pipeline.
+# path the documented flakiness was never shown to affect.
+#
+# THE COMMIT MESSAGE MUST NOT CARRY `[skip ci]` (AL1, 2026-09-21). This
+# workflow originally did, and that made the whole mechanism structurally
+# dead: GitHub suppresses `pull_request` runs when the PR's head commit
+# message contains the marker, so the PR never got its required checks,
+# native auto-merge waited forever on contexts that could never start, and
+# PR #1578 sat open for 10 days (2026-09-11 -> 09-21) while master's
+# scheduled Lint failed 12 of 12 runs on docs-freshness. The token was never
+# the problem (this workflow already used CI_MERGE_PAT). Verified with a
+# scratch PR: a marker-carrying head commit ran nothing for 6+ minutes; the
+# next commit without it started checks in ~2.5 min; the same fix on #1578
+# merged it 4 minutes after the push. bot-pr-sync callers commit with the
+# marker too, but they dispatch lint.yml explicitly, which this workflow does
+# not -- tests/test_pr_workflows_get_checks.py enforces one or the other.
+# (Not marking the commit also keeps the marker out of the squash commit on
+# master, which would otherwise skip master's own push-triggered Lint --
+# CURRENT_STATE.md norm #13.) The earlier claim here, that a failed
+# auto-merge is "self-healing ... never a blocked pipeline", was false: the
+# stale README simply stayed stale and nothing paged.
 on:
   workflow_run:
     workflows: ["Check Gold Price", "Weekly Backtest", "Direction Signal Eval"]
@@ -84,7 +100,8 @@ jobs:
 
           git remote set-url origin "https://x-access-token:${GH_TOKEN}@github.com/${GITHUB_REPOSITORY}.git"
           BRANCH="bot/docs-refresh"
-          git commit -m "chore: refresh injected doc metrics [skip ci]"
+          # No skip marker here on purpose -- see the header comment.
+          git commit -m "chore: refresh injected doc metrics"
           # Same convention as bot-pr-sync/action.yml: a reusable, force-pushed
           # bot branch -- no local branch tracking needed, HEAD is pushed
           # directly to the target ref.
