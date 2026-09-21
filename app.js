@@ -1405,21 +1405,6 @@ function renderTodaysRead(readings) {
   textEl.textContent = composeTodaysRead(readings);
 }
 
-function computeTrendDescription(readings, nDays = 7) {
-  if (!readings || readings.length < 2) return null;
-  const cutoff = Date.now() - nDays * 86400 * 1000;
-  const recent = readings.filter(r => new Date(r.timestamp).getTime() >= cutoff);
-  if (recent.length < 2) return null;
-  const first = recent[0]["22k"];
-  const last  = readings[readings.length - 1]["22k"];
-  const delta = last - first;
-  const abs   = Math.abs(delta);
-  if (abs < 100) return `Roughly flat over the past ${nDays} days`;
-  const dir  = delta > 0 ? "up" : "down";
-  const sign = delta > 0 ? "+" : "−";
-  return `Trending ${dir} — ${sign}₹${fmtINR(abs)} over the past ${nDays} days`;
-}
-
 function renderModelSignal(fc, readings, bt, coverage, drift) {
   const section = document.getElementById("model-signal-section");
   if (!section) return;
