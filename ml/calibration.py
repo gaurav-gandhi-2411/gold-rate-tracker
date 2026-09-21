@@ -545,8 +545,9 @@ def evaluate_stratified_band_coverage(
             "mean_half_width_production": round(s["hw_prod"] / cnt, 1) if cnt else None,
             "mean_half_width_stratified": round(s["hw_strat"] / cnt, 1) if cnt else None,
         }
-    prod_in = sum(v["production_in_band"] for v in out_strata.values())
-    strat_in = sum(v["stratified_in_band"] for v in out_strata.values())
+    # Sum the integer counts at the source: out_strata's values mix ints and Optional floats.
+    prod_in = sum(int(s["production_in_band"]) for s in strata.values())
+    strat_in = sum(int(s["stratified_in_band"]) for s in strata.values())
     return {
         "n": n,
         "production": {"n_in_band": prod_in, "coverage": (prod_in / n) if n else None},
