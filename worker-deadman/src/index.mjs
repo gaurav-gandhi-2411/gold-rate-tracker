@@ -44,6 +44,8 @@ import {
   buildPrTriggerHealthAlert,
   buildPrTriggerHealthFetchFailureAlert,
   classifyMergedUnchecked,
+  evaluateRequiredChecks,
+  REQUIRED_CONTEXTS,
   decideMergedUncheckedAction,
   buildMergedUncheckedAlert,
   buildMergedUncheckedFetchFailureAlert,
@@ -223,20 +225,23 @@ async function fetchRecentlyMergedPrs(fetchImpl, token, nowMs) {
     for (const p of recent) {
       const sha = p.head.sha;
       const checksResp = await fetchImpl(
-        `https://api.github.com/repos/${GITHUB_REPO}/commits/${sha}/check-runs`,
+        `https://api.github.com/repos/${GITHUB_REPO}/commits/${sha}/check-runs?per_page=100`,
         { headers, signal: controller.signal },
       );
       if (!checksResp.ok) return { mergedPrs: null, failure: `check-runs ${sha} HTTP ${checksResp.status}` };
       const checkData = await checksResp.json();
-      const hasRequiredCheckRun = (checkData.check_runs || []).some(
-        (r) => r.name === "lint" || r.name === "pwa-js",
-      );
+      // AN8: the same predicate scripts/check_required_checks_positive.py applies before a self-merge --
+      // every required context SUCCESS, not merely present (#1541 merged over a failing lint).
+      const { allPass, results } = evaluateRequiredChecks(REQUIRED_CONTEXTS, checkData.check_runs || []);
       mergedPrs.push({
         number: p.number,
         branch: p.head.ref,
         headSha: sha,
         mergedAtIso: p.merged_at,
-        hasRequiredCheckRun,
+        requiredOk: allPass,
+        problems: Object.entries(results)
+          .filter(([, v]) => v !== "SUCCESS")
+          .map(([context, v]) => `${context}: ${v}`),
       });
     }
     return { mergedPrs, failure: null };
@@ -504,6 +509,7 @@ export async function runCheck(env, fetchImpl, nowMs) {
       prTriggerStaleMinutes: PR_TRIGGER_STALE_MINUTES,
       mergedSettleMinutes: MERGED_SETTLE_MINUTES,
       mergedLookbackMinutes: MERGED_LOOKBACK_MINUTES,
+      requiredContexts: REQUIRED_CONTEXTS,
     },
   };
 }
