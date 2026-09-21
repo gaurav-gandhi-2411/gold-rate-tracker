@@ -45,6 +45,7 @@
   "tests/test_metrics.py": 43,
   "tests/test_no_dead_imports.py": 1,
   "tests/test_notification_copy_claims.py": 6,
+  "tests/test_notification_routing.py": 16,
   "tests/test_notifications.py": 154,
   "tests/test_pages_surface.py": 5,
   "tests/test_phi10a_driver_decomp.py": 17,
