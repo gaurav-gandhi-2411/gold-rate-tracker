@@ -170,6 +170,20 @@ Paste the PAT when prompted (no echo). If this secret is never set, the
 channel is simply skipped (logged as absent, not paged about) — every other
 channel in this Worker keeps working exactly as before either way.
 
+### 4b. (AL3a, added 2026-09-21) The merged-unchecked scan — no new secret
+
+The scan that pages when a PR **merges** with no `lint`/`pwa-js` check-run on its head SHA
+reuses the `GITHUB_PR_HEALTH_PAT` from step 4a (list closed PRs = *Pull requests: Read*,
+check-runs = *Checks: Read*) — nothing new to mint. It runs on the same */30 cron. Window:
+PRs merged 10–180 min ago (`MERGED_SETTLE_MINUTES` / `MERGED_LOOKBACK_MINUTES` in
+`src/pr_trigger_health.mjs`), one page per PR number, ever.
+
+After deploying, confirm the deployed bundle has it — GET the Worker's URL with `?trigger=1`
+and read the **full body** (in PowerShell: `(Invoke-WebRequest "<url>?trigger=1" -UseBasicParsing).Content`;
+the default table view truncates it). Expect `mergedUncheckedSent`, `mergedUncheckedCount`, and
+under `thresholds`: `mergedSettleMinutes: 10`, `mergedLookbackMinutes: 180`. A body without those
+keys means the old bundle is still running.
+
 ### 5. Deploy
 
 ```
