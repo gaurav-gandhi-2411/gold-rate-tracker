@@ -294,6 +294,24 @@ async function topicFingerprint(topic) {
   return [...new Uint8Array(buf).slice(0, 4)].map((b) => b.toString(16).padStart(2, "0")).join("");
 }
 
+// S2 (audit continuation, 2026-09-23): constant-time-ish comparison for the manual-trigger
+// token below. Hashing both sides first (rather than comparing the raw strings byte-by-byte)
+// means an attacker can't use response-timing differences to learn the token's length or guess
+// it prefix-by-prefix -- the XOR loop then walks the full digest regardless of where the first
+// mismatch is, so it never short-circuits early like `===`/`startsWith` would.
+export async function safeTokenMatch(supplied, expected) {
+  const enc = new TextEncoder();
+  const [a, b] = await Promise.all([
+    crypto.subtle.digest("SHA-256", enc.encode(supplied ?? "")),
+    crypto.subtle.digest("SHA-256", enc.encode(expected ?? "")),
+  ]);
+  const aBytes = new Uint8Array(a);
+  const bBytes = new Uint8Array(b);
+  let diff = 0;
+  for (let i = 0; i < aBytes.length; i++) diff |= aBytes[i] ^ bBytes[i];
+  return diff === 0;
+}
+
 async function loadState(env, kvKey) {
   if (!env.DEADMAN_STATE) return null;
   const raw = await env.DEADMAN_STATE.get(kvKey);
@@ -527,10 +545,26 @@ export default {
       }),
     );
   },
-  // Manual HTTP trigger for verification (GET the Worker's own URL) --
-  // see README.md's manual verification procedure. Not used by the cron
-  // path itself.
-  async fetch(_request, env, _ctx) {
+  // Manual HTTP trigger for verification (GET the Worker's own URL with
+  // ?token=<TRIGGER_TOKEN>) -- see README.md's manual verification
+  // procedure. Not used by the cron path itself.
+  //
+  // S2 (audit continuation, 2026-09-23): this used to run the full
+  // runCheck() for ANY request, unauthenticated -- on a public repo the
+  // *.workers.dev URL is discoverable (it's printed in `wrangler deploy`
+  // output and this repo's own docs/git history), and every hit spends
+  // env.GITHUB_PR_HEALTH_PAT's real GitHub API quota (up to ~2N+2 calls,
+  // N = open + recently-merged PR count) and returns internal operational
+  // state (staleness levels/ages, threshold values, topicFingerprint).
+  // Fails closed (rule 98a): a request with no matching token is denied
+  // the same way whether TRIGGER_TOKEN is merely unset (not yet deployed)
+  // or set but wrong -- never falls open on a missing secret.
+  async fetch(request, env, _ctx) {
+    const url = new URL(request.url);
+    const supplied = url.searchParams.get("token") || request.headers.get("X-Trigger-Token") || "";
+    if (!env.TRIGGER_TOKEN || !(await safeTokenMatch(supplied, env.TRIGGER_TOKEN))) {
+      return new Response("Unauthorized", { status: 401 });
+    }
     const result = await runCheck(env, fetch, Date.now());
     return new Response(JSON.stringify(result, null, 2), {
       headers: { "content-type": "application/json" },
