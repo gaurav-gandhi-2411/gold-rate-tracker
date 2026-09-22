@@ -329,9 +329,9 @@ def test_t1_current_price_is_int_and_latest_by_timestamp():
     )
     t1 = [a for a in alerts if a.trigger_id == "T1"]
     assert len(t1) == 1, "T1 must fire on the down momentum"
-    assert "Rs.13600.0" not in t1[0].body, "must not render a float (Rs.13600.0)"
-    assert "Rs.13600" in t1[0].body, "must show the int latest-by-timestamp price"
-    assert "Rs.13700" not in t1[0].body, "must not show the unsorted array-tail reading"
+    assert "Rs. 13,600.0" not in t1[0].body, "must not render a float (Rs. 13,600.0)"
+    assert "Rs. 13,600" in t1[0].body, "must show the int latest-by-timestamp price"
+    assert "Rs. 13,700" not in t1[0].body, "must not show the unsorted array-tail reading"
 
 
 def test_t2_current_price_is_int_and_latest_by_timestamp():
@@ -360,8 +360,8 @@ def test_t2_current_price_is_int_and_latest_by_timestamp():
     )
     t2 = [a for a in alerts if a.trigger_id == "T2"]
     assert len(t2) == 1, "T2 must fire on the up momentum"
-    assert "Rs.14400.0" not in t2[0].body, "must not render a float (Rs.14400.0)"
-    assert "Rs.14400" in t2[0].body, "must show the int latest-by-timestamp price"
+    assert "Rs. 14,400.0" not in t2[0].body, "must not render a float (Rs. 14,400.0)"
+    assert "Rs. 14,400" in t2[0].body, "must show the int latest-by-timestamp price"
 
 
 def test_t1_cooldown_blocks_second_call():
@@ -495,7 +495,7 @@ def test_t3_fires_large_move():
     ids = [a.trigger_id for a in alerts]
     assert "T3" in ids
     t3 = next(a for a in alerts if a.trigger_id == "T3")
-    assert "Rs.200" in t3.title
+    assert "Rs. 200" in t3.title
 
 
 def test_t3_no_fire_small_move():
@@ -603,7 +603,7 @@ def test_t4_monday_recovery_fires():
     )
     t4 = [a for a in alerts if a.trigger_id == "T4"]
     assert len(t4) == 1
-    assert t4[0].title.startswith("[Delayed]")
+    assert "a day late" in t4[0].body
 
 
 def test_t4_monday_recovery_skips_if_sunday_fired():
@@ -1668,8 +1668,8 @@ def test_t8_scenario_rose():
         _ist(2026, 5, 19, 10, 0),
     )
     t8m = next(a for a in alerts if a.trigger_id == "T8_MORNING")
-    assert "rose" in t8m.body
-    assert "up Rs.100" in t8m.body
+    assert "Up Rs. 100" in t8m.body
+    assert "from yesterday" in t8m.body
     assert "₹" not in t8m.body
     assert "Rs." in t8m.body
 
@@ -1686,8 +1686,8 @@ def test_t8_scenario_dropped():
         _ist(2026, 5, 19, 10, 0),
     )
     t8m = next(a for a in alerts if a.trigger_id == "T8_MORNING")
-    assert "dropped" in t8m.body
-    assert "down Rs.100" in t8m.body
+    assert "Down Rs. 100" in t8m.body
+    assert "from yesterday" in t8m.body
     assert "₹" not in t8m.body
     assert "Rs." in t8m.body
 
@@ -1704,7 +1704,7 @@ def test_t8_scenario_flat():
         _ist(2026, 5, 19, 10, 0),
     )
     t8m = next(a for a in alerts if a.trigger_id == "T8_MORNING")
-    assert "held steady" in t8m.body
+    assert "About the same as yesterday" in t8m.body
     assert "₹" not in t8m.body
     assert "Rs." in t8m.body
 

@@ -322,6 +322,9 @@ jobs:
         continue-on-error: true
         env:
           NTFY_TOPIC: ${{ secrets.NTFY_TOPIC }}
+          # Public price digests go here (allowlisted trigger ids only, see ml/notification_routing.py).
+          # Unset or empty: they fall back to NTFY_TOPIC, so nothing is dropped while it is being set up.
+          NTFY_TOPIC_PUBLIC: ${{ secrets.NTFY_TOPIC_PUBLIC }}
         run: python -m ml.notifications
 
       - name: Save notification state

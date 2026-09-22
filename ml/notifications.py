@@ -20,7 +20,9 @@ from pathlib import Path
 from statistics import median
 from zoneinfo import ZoneInfo
 
+from ml import public_copy
 from ml.ibja import compute_ibja_gap_business_days
+from ml.notification_routing import resolve_topic
 
 ROOT = Path(__file__).resolve().parent.parent
 DATA_DIR = ROOT / "data"
@@ -456,12 +458,7 @@ def _check_t1(
     sorted_p = sorted(prices, key=lambda p: p["timestamp"])
     current = int(sorted_p[-1]["22k"]) if sorted_p else 0
     abs_mom = abs(mom_pct)
-    title = "Gold: 22K prices are down this week"
-    body = (
-        f"Gold 22K: Rs.{current}. "
-        f"Prices are down {abs_mom:.1f}% over the past 7 days. "
-        "A recent trend -- not a forecast. Check the app for context."
-    )
+    title, body = public_copy.weekly_trend("down", current, abs_mom)
     return _make_alert("T1", title, body, 4, ["decline", "chart_with_downwards_trend"], now_ist)
 
 
@@ -497,12 +494,7 @@ def _check_t2(
     # matches T3/T8/T9 (see T1).
     sorted_p = sorted(prices, key=lambda p: p["timestamp"])
     current = int(sorted_p[-1]["22k"]) if sorted_p else 0
-    title = "Gold: 22K prices are up this week"
-    body = (
-        f"Gold 22K: Rs.{current}. "
-        f"Prices are up {mom_pct:.1f}% over the past 7 days. "
-        "A recent trend -- not a forecast. Check the app for context."
-    )
+    title, body = public_copy.weekly_trend("up", current, mom_pct)
     return _make_alert("T2", title, body, 3, ["rise", "chart_with_upwards_trend"], now_ist)
 
 
@@ -529,12 +521,9 @@ def _check_t3(
     delta = current - prev
     if abs(delta) < 150:
         return None
-    direction = "up" if delta > 0 else "down"
-    pct = delta / prev * 100.0
     abs_delta = abs(delta)
     priority = 5 if abs_delta >= 300 else 4
-    title = f"Gold: Rs.{abs_delta} {direction} detected ({pct:+.1f}%)"
-    body = f"Gold 22K: Rs.{current} ({pct:+.1f}% from Rs.{prev}). Check the app for context."
+    title, body = public_copy.price_move(int(current), int(prev))
     return _make_alert(
         "T3", title, body, priority, ["warning", "chart_with_upwards_trend"], now_ist
     )
@@ -571,8 +560,7 @@ def _check_t4(
         return None
 
     current = prices[-1]["22k"] if prices else 0
-    title = f"{title_prefix}Gold Weekly: 22K Rs.{current}"
-    body = f"Gold 22K: Rs.{current}. Check the app for the latest read."
+    title, body = public_copy.weekly_summary(int(current), delayed=bool(title_prefix))
     return _make_alert(
         "T4", title, body, 2, ["newspaper", "white_flower"], now_ist, bypass_quiet=True
     )
@@ -706,26 +694,7 @@ def _build_t8_content(
     Describes what already happened only -- no directional hint (2026-09-21; see the comment
     where it used to be appended).
     """
-    delta = (current - prior) if prior is not None else 0
-
-    if prior is None or abs(delta) < _T8_FLAT_THRESHOLD_RS:
-        scenario = "steady"
-    elif delta > 0:
-        scenario = "rose"
-    else:
-        scenario = "dropped"
-
-    delta_abs = abs(delta)
-
-    if scenario == "rose":
-        title = f"Gold {session}: Rs.{current} (up Rs.{delta_abs})"
-        body = f"Gold rose today - Rs.{current} (up Rs.{delta_abs} from yesterday)."
-    elif scenario == "dropped":
-        title = f"Gold {session}: Rs.{current} (down Rs.{delta_abs})"
-        body = f"Gold dropped today - Rs.{current} (down Rs.{delta_abs} from yesterday)."
-    else:
-        title = f"Gold {session}: Rs.{current}"
-        body = f"Gold held steady today - Rs.{current}."
+    title, body = public_copy.daily_digest(session, current, prior, _T8_FLAT_THRESHOLD_RS)
 
     # This used to append "Prices may edge up/ease a little." from chronos_companion.lean_direction.
     # Removed 2026-09-21: the README says "Refuses to predict tomorrow's direction" and the hint had
@@ -1076,18 +1045,21 @@ def send_pending(
 ) -> list[SentAlert]:
     """Send alerts via ntfy.sh; update state.last_sent / sent_today / last_t5_ist_date.
 
-    Reads NTFY_TOPIC from environment. Skips silently if NTFY_TOPIC is unset.
+    Topic per alert comes from ml.notification_routing: PUBLIC only for an allowlisted trigger id and
+    only when the public-topic secret is set; everything else (and PUBLIC with none) goes to
+    NTFY_TOPIC. Skips silently if the resolved topic is unset.
     Titles must be ASCII-only (ntfy header limitation — uses Rs. not the rupee symbol).
     """
-    topic = os.environ.get("NTFY_TOPIC", "")
     sent: list[SentAlert] = []
     _prune_sent_today(state)
 
     for alert in alerts:
+        audience, topic = resolve_topic(alert.trigger_id, os.environ)
         if not topic:
-            logger.info("NTFY_TOPIC not set — skipping %s (%s)", alert.trigger_id, alert.title)
+            logger.info("no topic configured — skipping %s (%s)", alert.trigger_id, alert.title)
             continue
         url = f"{_NTFY_BASE}/{topic}"
+        logger.info("routing %s to the %s topic", alert.trigger_id, audience)
         headers = {
             "Title": alert.title,
             "Priority": str(alert.priority),
