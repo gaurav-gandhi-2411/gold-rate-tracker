@@ -7,7 +7,7 @@ import pandas as pd
 
 logger = logging.getLogger(__name__)
 
-SCHEMA_VERSION: int = 3
+SCHEMA_VERSION: int = 4
 
 STORE_PATH: Path = Path(__file__).parent.parent / "data" / "feature_store" / "snapshots.parquet"
 
@@ -17,11 +17,13 @@ _ALL_COLUMNS: list[str] = [
     "schema_version",
     "source",
     "partial",
-    # Count of null values across the 8 expected macro series (denominator = 8).
+    # Count of null values across the 9 expected macro series (denominator = 9,
+    # bumped from 8 with india_vix's addition, schema_version 3 -> 4).
     # n_macro_null == 0 means all macro series are present for this row.
     # Per-series presence is recoverable via each series' own column being null/non-null.
-    # partial=True implies n_macro_null=8; partial=False allows 0-8 (individual series may
-    # be absent even when the cache loaded, e.g. new tickers not yet in historical cache).
+    # partial=True implies n_macro_null=9; partial=False allows 0-9 (individual series may
+    # be absent even when the cache loaded, e.g. new tickers not yet in historical cache --
+    # india_vix itself is null for every row captured before this change, by construction).
     "n_macro_null",
     "gold_usd",
     "usd_inr",
@@ -31,6 +33,7 @@ _ALL_COLUMNS: list[str] = [
     "vix",
     "crude_wti",
     "tips",
+    "india_vix",
     "gold_usd_asof_date",
     "usd_inr_asof_date",
     "us_10y_yield_asof_date",
@@ -39,6 +42,7 @@ _ALL_COLUMNS: list[str] = [
     "vix_asof_date",
     "crude_wti_asof_date",
     "tips_asof_date",
+    "india_vix_asof_date",
     "ibja_pm_916",
     "ibja_am_916",
     "tanishq_22k",
@@ -110,6 +114,7 @@ _MACRO_SERIES: list[str] = [
     "vix",
     "crude_wti",
     "tips",
+    "india_vix",
 ]
 
 
