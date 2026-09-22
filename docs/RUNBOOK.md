@@ -193,6 +193,24 @@ backstop — that state should be rare and, if it persists, will have already fi
 
 ## Scheduled-trigger reliability and catch-up (added 2026-09-04)
 
+**REMOVED 2026-09-23:** the self-triggering catch-up step described below no
+longer exists in `check-price.yml`. Closing #1838 (a checkout-timing fix for
+this step) was meant to retire the mechanism outright, but the code stayed
+live afterward and kept firing — `data/catchup_dispatch_log.jsonl` shows it
+dispatching on very close to every tick in the days before removal (GG's
+decision, 2026-09-23). The section below is kept verbatim as the audit trail
+for why it existed and what it did; treat every present-tense description of
+it as historical, not current behavior. What this means for staleness
+detection: `worker-deadman`'s dead-man's-switch (WARN=10h/ESCALATE=16h,
+`data/forecast.json.predicted_at` age) is now the only backstop for a missed
+tick — it was always independent of this mechanism, not layered on top of
+it, so nothing is structurally uncovered. But the section below (2026-09-10
+entry) documented that catch-up was actively absorbing gaps *before* they
+reached that threshold — with it gone, expect the WARN/ESCALATE channel to
+fire somewhat more often than the pre-removal baseline until/unless the
+underlying scheduler-delay platform issue itself improves. Watch it, don't
+assume the margin discussed below still holds unchanged.
+
 `check-price.yml`'s scheduled-trigger miss rate stepped from 0.0% (152/152
 expected 3h slots fired cleanly across 39 clean days) to 18.5%+ starting
 **2026-08-27T00:15 UTC** and has stayed elevated since. This is a

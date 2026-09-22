@@ -12,7 +12,10 @@ on:
     # (median ~66min, unremarkable) until ~2026-08-30, then abruptly stopped
     # firing as a `schedule` event AT ALL for 9 straight days (2026-09-02
     # through 2026-09-10) -- silently covered by the self-triggered catch-up
-    # dispatch (see "Detect missed cadence" step below) every single day,
+    # dispatch this workflow used to carry (removed 2026-09-23: it was firing
+    # on ~92% of ticks and closing #1838's checkout-timing fix was meant to
+    # retire it outright -- see docs/RUNBOOK.md's "Scheduled-trigger
+    # reliability and catch-up" section for the removal note) every single day,
     # each time producing one of the largest gaps in data/run_cadence_log.jsonl
     # (e.g. 2026-09-07 04:22->12:18, a 7.9h gap). Two independent, separately-
     # owned workflows sharing zero code with this one or each other
@@ -38,15 +41,6 @@ on:
     # 19:07 evening), so twice-daily digests are unaffected.
     - cron: "37 1-22/3 * * *"
   workflow_dispatch: # allows manual run from the Actions tab
-    inputs:
-      catchup:
-        description: >-
-          Set by this workflow's own self-trigger step, never by hand. Marks
-          this run as a catch-up dispatch so its own detection step does not
-          re-trigger again -- without this flag a chain of missed ticks could
-          re-dispatch itself indefinitely.
-        type: boolean
-        default: false
   push:
     branches: [master]
     paths:
@@ -93,122 +87,6 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-
-      - name: Detect missed cadence and self-trigger catch-up
-        # R2 (audit 2026-09-04): scheduled-trigger miss rate stepped from
-        # 0.0% to 18.5%+ at 2026-08-27T00:15 UTC (GitHub-reported Actions
-        # incident, not fixable from this repo -- see docs/RUNBOOK.md). This
-        # does NOT backfill the missed window's data -- IBJA/Tanishq only
-        # expose CURRENT readings, not historical lookback, so whatever the
-        # price was during a dropped tick is permanently unrecorded. What
-        # this DOES do: when a run finds the last commit is stale, it does
-        # not just do this tick's normal work and then passively wait up to
-        # 3h for the next scheduled slot -- which shares the same drop
-        # probability and could extend the gap further. It immediately
-        # dispatches one extra run via the REST API (independent of the
-        # `schedule` event path), giving the system a second, faster chance
-        # to land fresh data. `inputs.catchup` on the dispatch marks that
-        # run so its own copy of this step never re-dispatches -- bounded to
-        # one extra run per detected gap, never a chain.
-        #
-        # W1 (audit 2026-09-04): threshold = 4h, derived from the PRODUCT
-        # PROMISE (3h cron cadence) plus margin for ordinary jitter around a
-        # single tick -- roughly 1.33x the promise, deliberately BELOW
-        # worker-deadman's WARN=10h (Y1, audit 2026-09-05: the EVENT
-        # threshold, anchored to the measured gap distribution's own p95/p99
-        # -- see deadman.mjs) so this free, silent self-heal attempt always
-        # gets a chance to resolve a gap before a human would be paged. Not
-        # derived from the observed gap
-        # distribution (an earlier attempt at this threshold was, and
-        # briefly leaked to master by process accident before being
-        # reverted -- deriving alert/self-heal levels from a degraded-state
-        # sample encodes the degradation as normal).
-        #
-        # AD2 (production audit, 2026-09-10): the "~68% in a recent 28-gap
-        # sample" figure this comment previously carried was measured
-        # 2026-09-05 (#1403), explicitly self-labeled "at the current
-        # (degraded) cadence" -- i.e. during the still-elevated-latency
-        # window (median observed gap ~245-288min then, ABOVE this 4h/240min
-        # threshold most ticks). It was never a general-purpose rate, only
-        # ever accurate for that specific degraded moment -- exactly the
-        # "threshold/rate calibrated during degradation" shape this repo's
-        # audit has flagged before (docs/SESSION_AUDIT_2026-08.md section 8).
-        # Freshly measured 2026-09-10 (trailing 7 days, n=56 nominal ticks,
-        # counted via `gh api` workflow_dispatch runs by
-        # `github-actions[bot]`): catch-up now fires on ~34% of ticks (19/56)
-        # -- LOWER than 68%, and mechanistically expected, not a regression:
-        # the underlying platform delay distribution itself improved since
-        # 09-05 (median now ~225-236min, below this 240min threshold most
-        # ticks -- see RUNBOOK.md's corrected AC2 figures), so fewer ticks
-        # cross a FIXED threshold. Still acceptable at either rate -- the
-        # action is a few free CI minutes on a public repo, not a page.
-        if: github.event.inputs.catchup != 'true'
-        env:
-          GH_TOKEN: ${{ github.token }}
-        run: |
-          set -e
-          if [ ! -f data/forecast.json ]; then
-            echo "No data/forecast.json yet -- nothing to check."
-            exit 0
-          fi
-          PREDICTED_AT=$(python3 -c "import json; print(json.load(open('data/forecast.json')).get('predicted_at',''))" 2>/dev/null || echo "")
-          if [ -z "$PREDICTED_AT" ]; then
-            echo "predicted_at missing/unparseable -- skipping catch-up check."
-            exit 0
-          fi
-          PREDICTED_EPOCH=$(date -u -d "$PREDICTED_AT" +%s 2>/dev/null || echo "")
-          if [ -z "$PREDICTED_EPOCH" ]; then
-            echo "Could not parse predicted_at=$PREDICTED_AT -- skipping catch-up check."
-            exit 0
-          fi
-          NOW_EPOCH=$(date -u +%s)
-          GAP_HOURS=$(( (NOW_EPOCH - PREDICTED_EPOCH) / 3600 ))
-          echo "Last committed forecast is ${GAP_HOURS}h old."
-          if [ "$GAP_HOURS" -ge 4 ]; then
-            # AE3a (audit 2026-09-10): before this fix, every catch-up firing
-            # logged the same "at least one scheduled tick was likely
-            # dropped" line whether the `schedule` event actually fired late
-            # or didn't fire AT ALL -- AD1 (same audit) found check-price's
-            # own 06:07 UTC slot stopped firing as a schedule event for 9
-            # straight days, silently absorbed by catch-up every single time
-            # with nothing distinguishing that from an ordinary slow cycle.
-            # Classify which one this is: query this workflow's own recent
-            # `schedule`-event runs (excluding the current run itself, which
-            # would otherwise always look like "a schedule event just
-            # fired"), find the most recent one, and compare its age against
-            # this same 4h threshold. Best-effort -- a query failure (rate
-            # limit, transient API error) must never block the actual
-            # catch-up dispatch below, so classification failure degrades to
-            # "unknown", not to a crash or a silently-assumed cause.
-            CAUSE="unknown"
-            LAST_SCHEDULE_RUN_AGE_H=""
-            LAST_SCHEDULE_AT=$(gh api "repos/${GITHUB_REPOSITORY}/actions/workflows/check-price.yml/runs?event=schedule&per_page=5" \
-              --jq "[.workflow_runs[] | select(.id != ${GITHUB_RUN_ID})][0].created_at" 2>/dev/null || echo "")
-            if [ -n "$LAST_SCHEDULE_AT" ] && [ "$LAST_SCHEDULE_AT" != "null" ]; then
-              LAST_SCHEDULE_EPOCH=$(date -u -d "$LAST_SCHEDULE_AT" +%s 2>/dev/null || echo "")
-              if [ -n "$LAST_SCHEDULE_EPOCH" ]; then
-                LAST_SCHEDULE_RUN_AGE_H=$(python3 -c "print(round(($NOW_EPOCH - $LAST_SCHEDULE_EPOCH) / 3600, 2))")
-                if [ "$((NOW_EPOCH - LAST_SCHEDULE_EPOCH))" -le 14400 ]; then
-                  CAUSE="late"
-                else
-                  CAUSE="dropped"
-                fi
-              fi
-            fi
-            if [ "$CAUSE" = "dropped" ]; then
-              echo "Gap >= 4h AND no schedule-triggered run in the last 4h (last one: ${LAST_SCHEDULE_RUN_AGE_H}h ago) -- the scheduled trigger itself did not fire, not just ran late. Dispatching one catch-up run."
-            elif [ "$CAUSE" = "late" ]; then
-              echo "Gap >= 4h but a schedule-triggered run fired ${LAST_SCHEDULE_RUN_AGE_H}h ago -- the trigger is working, this cycle was just slow. Dispatching one catch-up run."
-            else
-              echo "Gap >= 4h -- at least one scheduled tick was likely dropped (could not classify late-vs-dropped this run). Dispatching one catch-up run."
-            fi
-            printf '{"timestamp": "%s", "gap_hours": %s, "cause": "%s", "last_schedule_run_age_hours": %s}\n' \
-              "$(date -u +%Y-%m-%dT%H:%M:%SZ)" "$GAP_HOURS" "$CAUSE" "${LAST_SCHEDULE_RUN_AGE_H:-null}" \
-              >> data/catchup_dispatch_log.jsonl
-            gh workflow run check-price.yml --repo "${GITHUB_REPOSITORY}" --ref master -f catchup=true
-          else
-            echo "Gap under 4h -- normal cadence, no catch-up needed."
-          fi
 
       # Tanishq scraping happens in scrape-tanishq-selfhosted.yml (its own
       # workflow file since audit 2026-09) — this job just reads whatever
@@ -361,9 +239,6 @@ jobs:
           git config user.name "gold-rate-bot"
           git config user.email "actions@users.noreply.github.com"
           git add data/forecast.json data/drift_metrics.json data/metrics_history.json data/ibja_rates.parquet data/chronos_probe.json data/calibration.json data/feature_store/snapshots.parquet data/tanishq_scrape_success_rate.json data/cadence_metrics.json || true
-          # AE3a: only exists once a catch-up has ever fired -- separate,
-          # tolerant add so its absence never affects the main list above.
-          git add data/catchup_dispatch_log.jsonl 2>/dev/null || true
           if git diff --staged --quiet; then
             echo "No changes to commit."
             echo "changed=false" >> "$GITHUB_OUTPUT"
