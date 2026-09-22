@@ -1006,3 +1006,75 @@ regeneration + parity test + the dependabot evidence). Merge-bypass counts (§8.
 `gh` over the 400 most recent merged PRs (check-runs and commit statuses on each head SHA vs its
 `merged_at`); bot-PR timings from 100 merged `bot/` PRs; the venv comparison from two throwaway
 Python 3.12 venvs created with explicit interpreter paths, nothing installed globally.
+
+**Continuation 2026-09-22/23 — takeover session, security-first pass + G/S/I/M1 (AM).** New
+session, no prior context, given a full takeover brief (security do-first, then G confirmations,
+then I/#1756, then M model work, then P product work). **Premise check found the brief's G1 claim
+wrong**: it stated #1838 (a catch-up-dispatch checkout-timing fix) was "closed... catch-up is
+retired." Verified via `gh pr view 1838` (state CLOSED, not merged) and `git merge-base
+--is-ancestor 2e885ee4 origin/master` (not an ancestor) that the fix never landed, and the
+catch-up dispatch step was still live and firing on ~92% of ticks per
+`data/catchup_dispatch_log.jsonl`'s trailing entries. GG confirmed and ordered removal — done in
+`#1872` (merged), which also deleted the now-superseded `fix/catchup-checkout-latest-master`
+branch. **S1** (self-hosted-runner fork-PR exposure): audited every `on:` trigger across
+`.github/workflows/*.yml` — only `scrape-tanishq-selfhosted.yml` uses `runs-on:
+[self-hosted, tanishq-scraper]`, and its triggers (`schedule`/`workflow_dispatch`/`push:
+branches:[master]`) have no `pull_request`/`pull_request_target`/`issue_comment`/`workflow_run`
+path reaching them from a fork PR — confirmed no live exposure, nothing to merge. **S2** (Worker's
+unauthenticated `fetch()` handler spending `GITHUB_PR_HEALTH_PAT` quota on any request): real
+finding, fixed in `#1866` (merged) — `TRIGGER_TOKEN` secret, hash-then-XOR constant-time compare
+(`safeTokenMatch`), fails closed on an unset secret. GG deployed and verified behaviorally (401
+unauthenticated, 200 authenticated) same day. **S3** (gitleaks, full history, `--log-opts="--all"`,
+2530 commits): zero leaks. **S4** (sampled Actions logs across check-price/scrape-tanishq-
+selfhosted/shadow-fusion): no leaked secrets; GitHub's own masking confirmed actively firing (27
+`***` redactions across sampled logs), not silently absent. **S5**: every workflow already had an
+explicit least-privilege `permissions:` block except `ci.yml`/`ci-health.yml` (relying on the safe
+`read` default implicitly) — fixed in `#1874` (merged); no `pull_request_target` anywhere in the
+repo. **S6**: secret scanning + push protection already enabled (`gh api repos/:owner/:repo
+--jq .security_and_analysis`) — nothing to do. **#1756** (Headline Arena partnership): replied
+with numbers re-verified against live `data/direction_baseline.json` rather than the brief's
+(stale-by-a-run) figures — h2 is the well-calibrated horizon (ECE 0.0346, under the 0.10 gate; h1's
+ECE 0.1134 fails that bar, so h1 could not have been the one cited) — kept open, labeled
+`partnership`. **G3** (`#1839` ntfy topic-split fallback): rebased (28 commits behind — fixed
+`docs-freshness` on its own), then proved the OPS-fallback/PUBLIC-routing split with a **live run
+against real ntfy.sh** using disposable random throwaway topics (never GG's real secrets) — not
+just the PR's existing unit tests. Merged. **PowerShell `curl`-alias trap** (`#1866`'s documented
+command, closed PR so unfixable there): `curl "https://...?token=..."` resolves to
+`Invoke-WebRequest` without `-UseBasicParsing` on Windows PowerShell, showing a script-execution
+security prompt — GG hit this live. Fixed in `worker-deadman/README.md` (`#1873`, merged): split
+into an explicit PowerShell block and a bash block. **~100 remote branches** cross-referenced
+against `gh pr list --state merged` (headRefName match) and deleted in one literal
+`git push origin --delete <100 names>` (no `$VAR` substitution — the rule-98b guard blocks
+non-literal tokens in that position). **`#1542`** (stale calibration-coverage recompute + a
+"banner never reads measured coverage" structural finding) closed as superseded — the structural
+finding was already fixed elsewhere under the same 2026-09-10 audit session (marker "AE1" in
+`app.js`/`i18n.js`, confirmed by reading both files on current master) and the coverage snapshot
+(n=77) was 13 days stale (current: n=86-87, ~70.9-71.3%). **Two branches GG named as "orphaned,
+fold into model work" turned out to have different actual states than assumed** — worth recording
+so a fresh session doesn't re-investigate: `feat/calibration-oos-validation-and-tanishq-last-
+confirmed` rebased to **zero diff against master** (`git rebase` reported "skipped previously
+applied commit" for both commits) — both ADR 027's OOS validation and the "last-confirmed Tanishq"
+hero display are already fully live (confirmed via grep: `ADR 027` throughout `ml/calibration.py`,
+`hero-last-confirmed` in `app.js`) — branch deleted, no M3/P work needed for it.
+`feat/macro-india-vix` (dated 2026-05-17) genuinely was unmerged but conflicted on rebase against
+4+ months of drift in `ml/features.py`/`ml/macro.py`/`tests/test_macro.py` — rather than fight the
+conflict, reimplemented the same logical change (identical `^INDIAVIX` ticker, identical
+`india_vix_level` naming) fresh against current master as `#1878` (open at time of writing):
+`ml/macro.py`/`ml/feature_store.py` (schema v3→v4, `n_macro_null` denominator 8→9)/
+`docs/FEATURE_STORE.md` updated; deliberately **not** wired into `ml.direction.dataset.FEATURE_COLS`
+yet (every pre-2026-09-23 row is null for `india_vix` by construction — accumulate first, per this
+repo's own established discipline for new candidate drivers, evaluate in M2 once there's enough
+history). `ml/features.py`'s `MACRO_FEATURE_COLS`/`ALL_FEATURE_COLS`/`TUNED_V1_FEATURE_COLS`/
+`MINIMAL_FEATURE_COLS` confirmed dead (repo-wide grep: nothing outside `ml/features.py`'s own tests
+imports them — retired-MLflow-pipeline leftovers) — left untouched. **M3 read-only check**:
+`#1825`'s freshness-stratified shadow band scoring merged 2026-09-21 but only runs via
+`weekly-backtest.yml` (Sunday 02:00 UTC) — `data/calibration_band_coverage.json` was last generated
+2026-09-20 (before #1825 merged), so it genuinely has **zero shadow-scored weeks yet**, not a bug;
+first real data lands 2026-09-27. ADR 027's OOS validation, separately, has kept accumulating since
+July: `n_oos` 22→55, `residual_std_oos` 80.09→59.35 (`data/calibration.json`, `fit_date
+2026-09-11`) — approaching the ADR's own re-sweep trigger (`n_oos` ≥ 60) but not there yet. **Not
+yet started this session:** M2 (direction model collapse fix + COMEX variant), M4 (Chronos
+companion), P1/P3/P5. Full test suite (1066 tests) run clean twice this session (once with output
+discarded after a working-tree mutation mid-run corrupted the read — noted here as a process
+lesson: never mutate a shared checkout while a long-running background command is still reading
+it; isolate in a worktree instead, or wait for the notification before touching anything).
