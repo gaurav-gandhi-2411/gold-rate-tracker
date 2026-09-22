@@ -220,7 +220,15 @@ HTTP GET (separate from the cron path, for exactly this purpose) — it needs
 the `token` query param from step 4c or every request gets 401. Visit
 `<*.workers.dev URL printed by step 5>?token=<TRIGGER_TOKEN>`, or:
 
+```powershell
+# PowerShell: `curl` is an alias for Invoke-WebRequest here, NOT the real curl.exe -- without
+# -UseBasicParsing it tries to parse the response through IE's engine and shows a script-execution
+# security prompt on a fresh Windows install. Always pass it explicitly against this Worker.
+(Invoke-WebRequest "https://gold-rate-tracker-deadman.<your-subdomain>.workers.dev?token=<TRIGGER_TOKEN>" -UseBasicParsing).Content
 ```
+
+```bash
+# bash / real curl.exe
 curl "https://gold-rate-tracker-deadman.<your-subdomain>.workers.dev?token=<TRIGGER_TOKEN>"
 ```
 
