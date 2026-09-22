@@ -27,7 +27,7 @@ The following columns are defined in `_ALL_COLUMNS` in `ml/feature_store.py` (`S
 | `schema_version` | int | No | Integer schema version. Currently `1`. Increment when columns are added or semantics change. |
 | `source` | str | No | Provenance tag. Either `live_pit` (written by live CI pipeline) or `backfill_yfinance` (reconstructed from historical data). |
 | `partial` | bool | Yes | `True` if the macro cache was unavailable at capture time; macro columns will be null. Uses pandas nullable boolean (`pd.BooleanDtype`). |
-| `n_macro_null` | int | No | Count of null values across the **canonical 8 macro series** (denominator = 8). `n_macro_null == 0` means all 8 series are present. `partial=True` implies `n_macro_null == 8`. Per-series presence is recoverable without a separate column: `df['tips'].notna()` tells you whether TIPS is present for each row. The canonical 8 series (fixed; documented below) are the denominator for all time. |
+| `n_macro_null` | int | No | Count of null values across the **canonical 9 macro series** (denominator = 9, bumped from 8 in schema v4 when `india_vix` was added). `n_macro_null == 0` means all 9 series are present. `partial=True` implies `n_macro_null == 9`. Per-series presence is recoverable without a separate column: `df['tips'].notna()` tells you whether TIPS is present for each row. "Canonical" here means "the denominator schema v4 onward" — not literally fixed forever; the schema version changelog below is the source of truth for what the denominator was at any point in this table's history. |
 | `gold_usd` | float | Yes | Gold spot price in USD/oz (ticker `GC=F` via yfinance). Null when `partial=True`. |
 | `usd_inr` | float | Yes | USD/INR exchange rate (ticker `INR=X` via yfinance). Null when `partial=True`. |
 | `us_10y_yield` | float | Yes | US 10-year Treasury yield in % (ticker `^TNX` via yfinance). Null when `partial=True`. |
@@ -36,6 +36,7 @@ The following columns are defined in `_ALL_COLUMNS` in `ml/feature_store.py` (`S
 | `vix` | float | Yes | CBOE Volatility Index (ticker `^VIX` via yfinance). Null when `partial=True`. |
 | `crude_wti` | float | Yes | WTI crude oil futures price in USD/barrel (ticker `CL=F` via yfinance). Null when `partial=True`. |
 | `tips` | float | Yes | iShares TIPS Bond ETF price, USD (ticker `TIP` via yfinance; proxy for real rate expectations). Null when `partial=True`. |
+| `india_vix` | float | Yes | NSE India VIX, domestic equity volatility index (ticker `^INDIAVIX` via yfinance). Null when `partial=True`, and null for every row captured before schema v4 (2026-09-23) by construction — the ticker did not exist in `TICKER_MAP` before then. Not yet in `ml.direction.dataset.FEATURE_COLS` — added to the corpus first, deliberately not wired into the live direction model until enough history has accumulated to evaluate it (same discipline `docs/DIRECTION_SIGNAL_STATUS.md` already applies to other candidate drivers). |
 | `gold_usd_asof_date` | str | Yes | ISO date of the last non-null `gold_usd` observation in the macro cache (may lag `as_of_date` on weekends/holidays). |
 | `usd_inr_asof_date` | str | Yes | ISO date of the last non-null `usd_inr` observation. |
 | `us_10y_yield_asof_date` | str | Yes | ISO date of the last non-null `us_10y_yield` observation. |
@@ -44,6 +45,7 @@ The following columns are defined in `_ALL_COLUMNS` in `ml/feature_store.py` (`S
 | `vix_asof_date` | str | Yes | ISO date of the last non-null `vix` observation. |
 | `crude_wti_asof_date` | str | Yes | ISO date of the last non-null `crude_wti` observation. |
 | `tips_asof_date` | str | Yes | ISO date of the last non-null `tips` observation. |
+| `india_vix_asof_date` | str | Yes | ISO date of the last non-null `india_vix` observation. |
 | `ibja_pm_916` | float | Yes | IBJA PM fix for 916 hallmark gold in INR/g (22K daily closing benchmark). Null only if IBJA parquet unavailable. |
 | `ibja_am_916` | float | Yes | IBJA AM fix for 916 hallmark gold in INR/g. Null if AM fix not available or IBJA parquet unavailable. |
 | `tanishq_22k` | float | Yes | Tanishq 22K retail price in INR/g scraped from tanishq.com. `None` for all backfill rows (historical scrapes not available). **Φ22 H5 (IBJA-calibrated display estimate) is display-only and is NEVER written here — only genuinely scraped retail prices are stored (ADR 021 §5).** |
@@ -115,6 +117,7 @@ When `asof_date == as_of_date`, the value was observed on that day. **No separat
 | 1 | Initial schema (2026-06-07). |
 | 2 | Added `ibja_pm_916_asof_date`, `ibja_am_916_asof_date`, `tanishq_22k_asof_date` to complete the observation-date stamp pattern already present on macro fields. Existing rows (2026-06-07, 2026-06-08) were migrated once with their verified true observation dates. This was the only permitted exception to the immutability contract: the migration added correct provenance that was always factually true; no recorded observation value was altered. |
 | 3 | Added `n_macro_null` (integer count of null values across the canonical 8 macro series). Patched 109 `backfill_yfinance` rows that had null `crude_wti`/`tips` because the macro cache only held ~5 days of history for those series at backfill time — true historical closes fetched from yfinance (CL=F, TIP) and written for all dates where data existed; genuinely missing dates left null (no imputation). `live_pit` rows were not touched. All 116 rows had `n_macro_null` computed and `schema_version` bumped to 3. |
+| 4 | Added `india_vix`/`india_vix_asof_date` (M1, 2026-09-23) — `n_macro_null` denominator 8 -> 9. No historical backfill performed for this column (unlike v3's crude/tips patch): every row captured before this change is null for `india_vix` by construction, since the ticker did not exist in `TICKER_MAP` before today. A future backfill against yfinance's real `^INDIAVIX` history (same pattern as v3) is possible but not done here — flagged as a candidate follow-up, not committed to. |
 
 ---
 
