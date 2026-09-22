@@ -95,6 +95,25 @@ calibration window to test a duty-aware segmented model against — building one
 untested speculation, not a validated improvement. Revisit if/when a real duty change occurs inside
 the accumulating overlap window.
 
+**CORRECTION (2026-09-23, audit continuation AM):** the claim above — "no duty-change event inside
+the calibration window" — was wrong, not because no event occurred, but because `data/duty_events.json`
+was never updated past the 2024-07-23 entry. A real, large duty change (BCD 5%→10%, effective total
+import duty ~6%→~15%) took effect **2026-05-13**, squarely inside this ADR's own 2026-04-17 to
+2026-07-17 overlap window — cross-verified across independent sources (BusinessToday, CNBC, World
+Gold Council) during M1's data-corpus work and now recorded in `data/duty_events.json`. Concrete
+effect on the live feature set: as of today (2026-09-23), `days_since_last_duty_change` was
+incorrectly computing 792 (referencing the stale 2024-07-23 entry) instead of the correct 133
+(referencing 2026-05-13) — a live, silent feature-quality bug, not just a documentation gap.
+`duty_change_active`'s 30-day window around the real event (2026-05-13 to 2026-06-12) is
+unrecoverable for already-captured `live_pit` rows in that range (frozen at capture time, same
+class of gap as the crude_wti/tips backfill this doc's own §6/schema-changelog precedent handles —
+not patched here, flagged as a candidate follow-up). This ADR's core methodology conclusion (walk-
+forward OOS validation, recency-weighted refit) is unaffected by this correction — it was never
+duty-aware in the first place — but §5's specific "no in-window event" premise, and by extension any
+future decision to keep deferring duty-aware segmentation on that basis, needs re-evaluation now
+that a real in-window event is confirmed to exist. Not re-evaluated in this pass — recorded so a
+future session doesn't have to rediscover it.
+
 ### 6. Schema version bump (1 → 2)
 
 `CalibrationParams` gains `half_life`, `r_squared_oos`, `residual_std_oos`, `mae_oos`, `n_oos`,

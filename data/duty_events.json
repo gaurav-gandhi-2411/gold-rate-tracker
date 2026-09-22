@@ -1,10 +1,66 @@
 [
   {
+    "date": "2013-01-01",
+    "event_type": "duty_change",
+    "direction": "increase",
+    "magnitude_pct": 2.0,
+    "note": "Basic customs duty on gold raised from 4% to 6%, one of three hikes inside eight months during the 2013 current-account-deficit crisis. Press sources give month-level precision only (\"January 2013\") — exact day not verified, dated to the 1st of the month as a placeholder.",
+    "source": "Business Standard / ThePrint 2013 duty-hike retrospectives (cross-referenced, month-level precision only)"
+  },
+  {
+    "date": "2013-06-01",
+    "event_type": "duty_change",
+    "direction": "increase",
+    "magnitude_pct": 2.0,
+    "note": "Basic customs duty on gold raised from 6% to 8%, second of three 2013 crisis-era hikes. Month-level precision only (\"June 2013\") — exact day not verified.",
+    "source": "Business Standard / ThePrint 2013 duty-hike retrospectives (cross-referenced, month-level precision only)"
+  },
+  {
+    "date": "2013-08-01",
+    "event_type": "duty_change",
+    "direction": "increase",
+    "magnitude_pct": 2.0,
+    "note": "Basic customs duty on gold raised from 8% to 10%, third of three 2013 crisis-era hikes; duty then held at 10% through 2014-2018. Month-level precision only (\"August 2013\") — exact day not verified.",
+    "source": "Business Standard / ThePrint 2013 duty-hike retrospectives (cross-referenced, month-level precision only)"
+  },
+  {
+    "date": "2019-07-06",
+    "event_type": "duty_change",
+    "direction": "increase",
+    "magnitude_pct": 2.5,
+    "note": "Union Budget 2019-20 (announced 2019-07-05, effective 2019-07-06): basic customs duty on gold bar and gold doré raised from 10% to 12.5%.",
+    "source": "World Gold Council, Gold Focus, 2019-07 (\"India's gold import duties rise\")"
+  },
+  {
+    "date": "2021-02-02",
+    "event_type": "duty_change",
+    "direction": "cut",
+    "magnitude_pct": -2.19,
+    "note": "Union Budget 2021-22, effective 2021-02-02: basic customs duty on gold bar cut from 12.5% to 7.5%, with a new 2.5% Agriculture Infrastructure Development Cess (AIDC) introduced alongside it and a Social Welfare Surcharge exemption. Net total consumer tax (incl. GST) fell from 16.26% to 14.07%, a 2.19pp cut -- magnitude_pct here is that total-tax delta, not the BCD-only delta (BCD itself fell 5pp, largely offset by the new AIDC).",
+    "source": "World Gold Council, Gold Focus, 2021-02 (\"India's gold import duties reduced\")"
+  },
+  {
+    "date": "2022-07-01",
+    "event_type": "duty_change",
+    "direction": "increase",
+    "magnitude_pct": 4.38,
+    "note": "Effective 2022-07-01: basic customs duty on gold bar raised from 7.5% to 12.5% (gold doré 6.9% to 11.85%); AIDC unchanged at 2.5%; Social Welfare Surcharge (10% of BCD) exempted. Total consumer tax rose from 14.07% to 18.45%, a 4.38pp increase -- magnitude_pct here is that total-tax delta.",
+    "source": "World Gold Council, Gold Focus, 2022-07 (\"India's gold import duties hiked\")"
+  },
+  {
     "date": "2024-07-23",
     "event_type": "duty_change",
     "direction": "cut",
-    "magnitude_pct": null,
-    "note": "Union Budget 2024-25: basic customs duty on gold reduced. Local gold prices fell significantly on announcement. Exact split between customs duty and cess components unverified — magnitude set to null.",
-    "source": "Union Budget 2024-25 public announcement"
+    "magnitude_pct": -9.5,
+    "note": "Union Budget 2024-25: total customs duty on gold cut from 15% to 6%, the sharpest reduction on record and the lowest since June 2013. A World Gold Council regional CEO put the total-tax-incl-GST effect at roughly 18.5% to 9%, a ~9.5pp cut -- magnitude_pct here uses that total-tax framing for consistency with the 2021/2022 entries above (previously null in this file; filled 2026-09-23 after sourcing).",
+    "source": "World Gold Council, Gold Focus, 2024-07/2024-08 (\"Indian gold import duties reduced to the lowest level in over a decade\"); Business Standard, Union Budget 2024 coverage"
+  },
+  {
+    "date": "2026-05-13",
+    "event_type": "duty_change",
+    "direction": "increase",
+    "magnitude_pct": 9.0,
+    "note": "Effective 2026-05-13: basic customs duty on gold, silver and platinum raised from 5% to 10%, taking the effective total import duty on gold and silver from ~6% to ~15% -- the steepest single increase on record, driven by rupee depreciation and a push to curb non-essential imports amid a sharp rise in bullion purchases (gold imports +81.7% YoY, silver +157.2% YoY per the government's May 2026 Monthly Economic Review). ADDED 2026-09-23 -- this event previously had NO entry in this file despite falling inside ADR 027's 2026-04-17 to 2026-07-17 calibration overlap window; ADR 027 §5 stated \"there is no duty-change event inside the calibration window,\" which was true only because this file was never updated past the 2024-07-23 entry, not because no event occurred. See docs/SESSION_AUDIT_2026-08.md's AM continuation for the correction.",
+    "source": "BusinessToday, CNBC, World Gold Council (Gold Focus 2026-05, \"India gold market update: Import tightening\") -- cross-referenced across independent sources, 2026-09-23"
   }
 ]
