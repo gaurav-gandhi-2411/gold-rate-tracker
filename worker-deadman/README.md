@@ -170,6 +170,24 @@ Paste the PAT when prompted (no echo). If this secret is never set, the
 channel is simply skipped (logged as absent, not paged about) — every other
 channel in this Worker keeps working exactly as before either way.
 
+### 4c. (S2, added 2026-09-23) Set the manual-trigger token — REQUIRED, closes a public exposure
+
+Before this, the Worker's `*.workers.dev` URL ran the **full check** for ANY
+HTTP request — no auth. On a public repo that URL is discoverable (it's
+printed in `wrangler deploy` output and referenced in this file's git
+history), so anyone could spend `GITHUB_PR_HEALTH_PAT`'s real GitHub API
+quota (up to ~2N+2 calls per hit) and read back internal operational state.
+`fetch()` now fails closed: if this secret isn't set, **every** request gets
+401, including ones that supply a token.
+
+```
+wrangler secret put TRIGGER_TOKEN
+```
+
+Paste a long random value (e.g. `openssl rand -hex 32`) when prompted — this
+is a bearer credential, treat it exactly like the other secrets on this page.
+It is NOT the same value as `NTFY_TOPIC` or `GITHUB_PR_HEALTH_PAT`.
+
 ### 4b. (AL3a, added 2026-09-21) The merged-unchecked scan — no new secret
 
 The scan that pages when a PR **merges** with no `lint`/`pwa-js` check-run on its head SHA
@@ -178,8 +196,8 @@ check-runs = *Checks: Read*) — nothing new to mint. It runs on the same */30 c
 PRs merged 10–180 min ago (`MERGED_SETTLE_MINUTES` / `MERGED_LOOKBACK_MINUTES` in
 `src/pr_trigger_health.mjs`), one page per PR number, ever.
 
-After deploying, confirm the deployed bundle has it — GET the Worker's URL with `?trigger=1`
-and read the **full body** (in PowerShell: `(Invoke-WebRequest "<url>?trigger=1" -UseBasicParsing).Content`;
+After deploying, confirm the deployed bundle has it — GET the Worker's URL with `?token=<TRIGGER_TOKEN>`
+(step 4c) and read the **full body** (in PowerShell: `(Invoke-WebRequest "<url>?token=<TRIGGER_TOKEN>" -UseBasicParsing).Content`;
 the default table view truncates it). Expect `mergedUncheckedSent`, `mergedUncheckedCount`, and
 under `thresholds`: `mergedSettleMinutes: 10`, `mergedLookbackMinutes: 180`. A body without those
 keys means the old bundle is still running.
@@ -197,12 +215,13 @@ URL and a `Cron Trigger` line showing `*/30 * * * *`.
 
 Two independent checks — do both:
 
-**a. Manual on-demand trigger.** The Worker also responds to a plain HTTP
-GET (separate from the cron path, for exactly this purpose). Visit the
-`*.workers.dev` URL printed by step 5's `wrangler deploy` output, or:
+**a. Manual on-demand trigger.** The Worker also responds to an authenticated
+HTTP GET (separate from the cron path, for exactly this purpose) — it needs
+the `token` query param from step 4c or every request gets 401. Visit
+`<*.workers.dev URL printed by step 5>?token=<TRIGGER_TOKEN>`, or:
 
 ```
-curl https://gold-rate-tracker-deadman.<your-subdomain>.workers.dev
+curl "https://gold-rate-tracker-deadman.<your-subdomain>.workers.dev?token=<TRIGGER_TOKEN>"
 ```
 
 Expect a JSON body like `{"level":"ok","ageHours":1.2,"sent":false}` (or
