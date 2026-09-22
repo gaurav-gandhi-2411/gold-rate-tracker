@@ -14,6 +14,7 @@ import http from "node:http";
 import path from "node:path";
 import fs from "node:fs";
 import pkg from "../scraper/node_modules/playwright/index.js";
+import { LOCAL_ONLY_ARGS } from "./helpers/local_only_browser.js";
 const { chromium } = pkg;
 
 const ROOT = path.resolve(process.argv[2] || ".");
@@ -46,7 +47,8 @@ const server = http.createServer((req, res) => {
 await new Promise((r) => server.listen(0, "127.0.0.1", r));
 const base = `http://127.0.0.1:${server.address().port}`;
 
-const browser = await chromium.launch({ headless: true });
+// Third-party hosts (Chart.js / Sentry CDNs) are unreachable by design: see helpers/local_only_browser.js.
+const browser = await chromium.launch({ headless: true, args: LOCAL_ONLY_ARGS });
 try {
   // A first-time visitor's page must not reload itself. controllerchange also fires for the very first
   // clients.claim(); reloading then flashed every new visitor's price back to the loading skeleton and
