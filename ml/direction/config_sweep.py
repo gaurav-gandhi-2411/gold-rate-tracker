@@ -89,6 +89,8 @@ def run_config_sweep(
     calibrate_gbm: bool = False,
     min_train_size: int = 20,
     return_raw: bool = False,
+    embargo_label_date_col: str | None = None,
+    score_after_as_of: str | None = None,
 ) -> dict:
     """Walk-forward for one (feature_cols, model, hyperparameter) config.
 
@@ -103,14 +105,43 @@ def run_config_sweep(
     callers (e.g. ml.direction.preregistration) that run their own
     significance test (DM-HAC) on top of this walk-forward's output instead
     of relying on compute_direction_metrics' own McNemar-based p_value.
+
+    embargo_label_date_col: when set (e.g. "label_date_h2"), a training row is
+    used only if its label had matured strictly BEFORE the test row's
+    as_of_date. Without it, train = every earlier row, and at h2 each fold
+    trains on ~2 rows whose outcomes were not yet known on the test date — a
+    look-ahead leak (ADR 038 amendment A1). None keeps the historical
+    (leaky) protocol so ADR 034's published numbers stay reproducible.
+
+    score_after_as_of: when set ("YYYY-MM-DD"), only test rows with
+    as_of_date strictly after it are fitted and scored; earlier rows still
+    serve as training data. Used by the pre-registration to score only days
+    that did not exist when the config was selected.
     """
     ds = dataset[dataset[label_col].notna()].reset_index(drop=True)
     n = len(ds)
+    as_of = pd.to_datetime(ds["as_of_date"]).dt.strftime("%Y-%m-%d").tolist()
+    label_dates: list[str | None] | None = None
+    if embargo_label_date_col is not None:
+        label_dates = [
+            None if pd.isna(v) else pd.Timestamp(v).strftime("%Y-%m-%d")
+            for v in ds[embargo_label_date_col]
+        ]
     y_true_all: list[int] = []
     prob_all: list[float] = []
+    as_of_scored: list[str] = []
+    train_max_label_date: list[str | None] = []
 
     for i in range(min_train_size, n):
-        train_df = ds.iloc[:i]
+        if score_after_as_of is not None and as_of[i] <= score_after_as_of:
+            continue
+        if label_dates is None:
+            train_df = ds.iloc[:i]
+        else:
+            keep = [j for j in range(i) if (d := label_dates[j]) is not None and d < as_of[i]]
+            if len(keep) < min_train_size:
+                continue
+            train_df = ds.iloc[np.array(keep, dtype=int)]
         test_row = ds.iloc[i]
         y_train = train_df[label_col].astype(int).tolist()
         if len(set(y_train)) < 2:
@@ -150,9 +181,19 @@ def run_config_sweep(
 
         y_true_all.append(int(test_row[label_col]))
         prob_all.append(prob)
+        as_of_scored.append(as_of[i])
+        if label_dates is not None:
+            train_max_label_date.append(max(str(label_dates[j]) for j in keep))
+        else:
+            train_max_label_date.append(None)
 
     metrics = compute_direction_metrics(y_true_all, prob_all, model)
     result = {k: v for k, v in metrics.items() if k != "reliability"}
     if return_raw:
-        result["raw"] = {"y_true": y_true_all, "y_prob": prob_all}
+        result["raw"] = {
+            "y_true": y_true_all,
+            "y_prob": prob_all,
+            "as_of_date": as_of_scored,
+            "train_max_label_date": train_max_label_date,
+        }
     return result

@@ -9,6 +9,7 @@ import json
 
 import numpy as np
 import pandas as pd
+import pytest
 from ml.direction.dataset import (
     DEAD_BAND_PER_GRAM,
     FEATURE_COLS,
@@ -22,6 +23,7 @@ from ml.direction.evaluate import (
     append_history,
     compute_calibration,
     detect_majority_class_collapse,
+    label_date_col_for,
     run_walk_forward,
 )
 from ml.direction.models import fit_lightgbm, fit_logistic
@@ -402,6 +404,8 @@ def _make_synthetic_dataset(n: int = 35, seed: int = 42) -> pd.DataFrame:
         # Explicit per-horizon labels (h1 mirrors the unsuffixed columns).
         row["label_binary_h1"] = row["label_binary"]
         row["label_binary_h2"] = int(next2_price > price)
+        row["label_date_h1"] = row["label_date"]
+        row["label_date_h2"] = f"2025-{((i + 2) // 28) + 1:02d}-{((i + 2) % 28) + 1:02d}"
         row["ibja_pm_916_asof_date"] = row["as_of_date"]
         row["n_macro_null"] = 0
         rows.append(row)
@@ -637,3 +641,51 @@ class TestAppendHistory:
         assert rec["h2_logistic_ece"] == 0.0864
         assert rec["h1_prob_ship"] is False
         assert rec["h2_timing_ship"] is False
+
+
+class TestWalkForwardEmbargo:
+    """Training uses only labels that matured before the test day (2026-09-23 fix)."""
+
+    def test_label_date_col_mapping(self) -> None:
+        assert label_date_col_for("label_binary") == "label_date"
+        assert label_date_col_for("label_binary_h1") == "label_date_h1"
+        assert label_date_col_for("label_binary_h2") == "label_date_h2"
+
+    def test_missing_label_date_column_raises(self) -> None:
+        ds = _make_synthetic_dataset(n=35, seed=42).drop(columns=["label_date_h2"])
+        with pytest.raises(ValueError, match="label_date_h2"):
+            run_walk_forward(ds, min_train_size=MIN_TRAIN_SIZE, label_col="label_binary_h2")
+
+    @pytest.mark.parametrize(
+        ("label_col", "horizon"), [("label_binary", 1), ("label_binary_h2", 2)]
+    )
+    def test_train_size_excludes_unmatured_rows(
+        self, monkeypatch: pytest.MonkeyPatch, label_col: str, horizon: int
+    ) -> None:
+        # Consecutive daily rows: row j's label matures on row j+horizon's date,
+        # so for test row i only rows j <= i-horizon-1 are matured (strict <).
+        import ml.direction.evaluate as ev
+
+        sizes: list[int] = []
+        real_fit = ev.fit_logistic
+
+        def spy(X_train, y_train, **kwargs):  # type: ignore[no-untyped-def]
+            sizes.append(len(y_train))
+            return real_fit(X_train, y_train, **kwargs)
+
+        monkeypatch.setattr(ev, "fit_logistic", spy)
+        ds = _make_synthetic_dataset(n=40, seed=42)
+        run_walk_forward(ds, min_train_size=MIN_TRAIN_SIZE, label_col=label_col)
+        n = len(ds)
+        expected = [i - horizon for i in range(MIN_TRAIN_SIZE, n) if i - horizon >= MIN_TRAIN_SIZE]
+        assert sizes == expected
+
+    def test_persistence_uses_latest_matured_label(self) -> None:
+        # All labels 1 except the row right before each test day would matter
+        # only under the old leaky rule; with alternating labels the matured
+        # persistence (row i-3 at h2) differs from the leaky one (row i-1).
+        ds = _make_synthetic_dataset(n=40, seed=42)
+        ds["label_binary_h2"] = [i % 2 for i in range(len(ds))]
+        result = run_walk_forward(ds, min_train_size=MIN_TRAIN_SIZE, label_col="label_binary_h2")
+        # Row i-3 has the opposite parity of row i, so persistence is always wrong.
+        assert result["persistence_metrics"]["accuracy"] == 0.0

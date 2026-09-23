@@ -10,6 +10,16 @@ We evaluate two short horizons, both leak-free (features at day *t*, label from 
 - **h=1** — direction to the next IBJA trading day.
 - **h=2** — direction two IBJA trading days out.
 
+**Correction (2026-09-23):** features and labels were leak-free, but the walk-forward's *training
+window* was not. Until 2026-09-23 each fold trained on every earlier row, including rows whose
+labels only became known after the test day (at h=2, about 2 rows per fold). The persistence
+baseline also copied the previous row's not-yet-known label. The evaluator now trains only on
+labels known before the test day. On the same data (as of 2026-09-18), h=2 logistic accuracy went
+from 61.5% (n=161) to 58.5% (n=159) against a 59.7% always-up base rate. The h=2 persistence
+baseline went from 65.2% to 51.6%. The 2026-08-05 table and website copy below were produced
+under the old protocol and are kept as a historical record. Current numbers are in the live table
+further down and in the README.
+
 Calibration (Expected Calibration Error, ECE) is the **primary** quality metric: a well-calibrated "58% up" is honest and useful even at base-rate accuracy. The gate still requires beating the base rate *with significance* before anything ships.
 
 | Horizon | N folds | Base rate (always-up) | Model | OOS accuracy | Brier | ECE | Significant (p) | Prob gate | Timing gate |
