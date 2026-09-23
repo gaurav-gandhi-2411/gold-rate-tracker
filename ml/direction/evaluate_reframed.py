@@ -126,22 +126,43 @@ def brier_skill_score(brier_model: float, brier_climatology: float) -> float:
 # ---------------------------------------------------------------------------
 
 
-def diebold_mariano_test(loss_a: list[float], loss_b: list[float], horizon: int) -> dict:
+def diebold_mariano_test(
+    loss_a: list[float], loss_b: list[float], horizon: int, alternative: str = "two-sided"
+) -> dict:
     """DM test: H0 is loss_a and loss_b have equal predictive accuracy.
 
     d_t = loss_a[t] - loss_b[t]; DM = mean(d) / sqrt(long-run variance of
     mean(d) / n). Uses a Newey-West-style long-run variance with truncation
     lag = horizon - 1 (the standard DM recommendation for h-step-ahead
     forecast errors, which are autocorrelated up to lag h-1 even under the
-    null). Returns {dm_stat, p_value, mean_diff} — negative dm_stat/mean_diff
-    means loss_a is lower (a beats b); p_value is two-sided, from a normal
-    approximation (n here is small enough that this is approximate, not
-    exact — noted as such in the report).
+    null, since consecutive h-step folds share h-1 days of outcome overlap).
+
+    alternative: "two-sided" (default, backward-compatible), or "less"
+    (one-sided H1: mean_d < 0, i.e. loss_a — the MODEL — is lower/better
+    than loss_b — the baseline; this is the test GG's spec asks for
+    throughout: "better than baseline", not merely "different from it").
+
+    Returns {dm_stat, p_value, mean_diff, n, gamma_0, long_run_var,
+    effective_n} — negative dm_stat/mean_diff means loss_a is lower (a beats
+    b). effective_n = n * gamma_0 / long_run_var, the standard HAC
+    effective-sample-size correction: it equals n when there's no
+    autocorrelation (long_run_var == gamma_0) and shrinks as overlapping-
+    horizon autocorrelation inflates long_run_var above gamma_0. p_value is
+    from a normal approximation (n here is small enough that this is
+    approximate, not exact — noted as such in the report).
     """
     d = np.asarray(loss_a) - np.asarray(loss_b)
     n = len(d)
     if n < 2:
-        return {"dm_stat": None, "p_value": None, "mean_diff": None, "n": n}
+        return {
+            "dm_stat": None,
+            "p_value": None,
+            "mean_diff": None,
+            "n": n,
+            "gamma_0": None,
+            "long_run_var": None,
+            "effective_n": None,
+        }
 
     mean_d = float(np.mean(d))
     max_lag = max(0, horizon - 1)
@@ -154,10 +175,27 @@ def diebold_mariano_test(loss_a: list[float], loss_b: list[float], horizon: int)
     long_run_var = max(long_run_var, 1e-12)
 
     dm_stat = mean_d / math.sqrt(long_run_var / n)
-    # Normal approximation p-value (two-sided). Small-n DM tests conventionally
-    # use a Student-t correction; noted as approximate given n here.
-    p_value = float(2 * (1 - _std_normal_cdf(abs(dm_stat))))
-    return {"dm_stat": float(dm_stat), "p_value": p_value, "mean_diff": mean_d, "n": n}
+    if alternative == "two-sided":
+        p_value = float(2 * (1 - _std_normal_cdf(abs(dm_stat))))
+    elif alternative == "less":
+        # H1: mean_d < 0 (loss_a/model beats loss_b/baseline).
+        p_value = float(_std_normal_cdf(dm_stat))
+    elif alternative == "greater":
+        p_value = float(1 - _std_normal_cdf(dm_stat))
+    else:
+        raise ValueError(f"unknown alternative: {alternative!r}")
+
+    effective_n_val = n * gamma_0 / long_run_var if long_run_var > 0 else float(n)
+
+    return {
+        "dm_stat": float(dm_stat),
+        "p_value": p_value,
+        "mean_diff": mean_d,
+        "n": n,
+        "gamma_0": gamma_0,
+        "long_run_var": long_run_var,
+        "effective_n": float(effective_n_val),
+    }
 
 
 def _std_normal_cdf(x: float) -> float:
@@ -257,6 +295,14 @@ def run_walk_forward_reframed(
     climatology_brier = float(np.mean((np.array(clim_prob_all) - np.array(y_true_all)) ** 2))
     result["climatology_brier"] = climatology_brier
     result["always_up_rate"] = float(np.mean(y_true_all))
+    # Raw per-fold arrays, additive — lets a downstream statistical-correction
+    # pass (HAC/block-bootstrap/effective-n) recompute directly from the
+    # actual fold-level predictions rather than re-running the walk-forward.
+    result["raw"] = {
+        "y_true": y_true_all,
+        "model_probs": {k: list(v) for k, v in models_probs.items()},
+        "climatology_probs": clim_prob_all,
+    }
 
     always_up_loss = list((1.0 - np.array(y_true_all)) ** 2)
 
