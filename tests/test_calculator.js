@@ -146,3 +146,36 @@ test("default making range matches its cited source (6–25% or ₹200–600/g)"
   assert.deepEqual(JSON.parse(JSON.stringify(d)), { pct: { low: 6, high: 25 }, perGram: { low: 200, high: 600 } });
 });
 
+// --- renderCalculator states (real app.js against the stub DOM) ---
+
+const NOW = Date.parse("2026-09-23T06:00:00Z");
+function renderWith({ grams = "10", low = "6", high = "25", readingAgeH = 1, forecast = null } = {}) {
+  const a = loadApp({ nowMs: NOW });
+  const doc = a.run("document");
+  doc.getElementById("calc-grams").value = grams;
+  doc.getElementById("calc-making-low").value = low;
+  doc.getElementById("calc-making-high").value = high;
+  const ts = new Date(NOW - readingAgeH * 3_600_000).toISOString();
+  a.pure("renderCalculator")([{ timestamp: ts, "22k": 13710, "24k": 14957, "18k": 11218 }], forecast);
+  return doc.getElementById("calc-results").innerHTML;
+}
+
+test("render: a valid range always carries the estimate disclaimer and a low–high total", () => {
+  const html = renderWith();
+  assert.match(html, /An estimate, not a quote/);
+  assert.match(html, /₹1,49,686 – ₹1,76,516/);
+});
+
+test("render: zero grams shows the empty state, not a ₹0 total", () => {
+  assert.match(renderWith({ grams: "0" }), /Enter a quantity/);
+});
+
+test("render: a blank or negative making bound shows the making-charge error", () => {
+  assert.match(renderWith({ low: "" }), /making charge of 0 or more/);
+  assert.match(renderWith({ high: "-5" }), /making charge of 0 or more/);
+});
+
+test("render: a confirmed price older than STALE_THRESHOLD_H says how old it is", () => {
+  assert.match(renderWith({ readingAgeH: 20 }), /last confirmed price/);
+  assert.doesNotMatch(renderWith({ readingAgeH: 1 }), /last confirmed price/);
+});
