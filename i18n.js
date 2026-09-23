@@ -245,7 +245,7 @@ const STRINGS = {
     // one. fractionOutOf10Phrase floors so this never overstates (see its own
     // comment above). The exact percentage and n are not lost -- they're on
     // how-we-know.html (methAccurateP2CoveragePct), unrounded.
-    reliabilityCoverage: ({ pct }) => `Our estimated range has usually been right — ${fractionOutOf10Phrase(pct)} so far.`,
+    reliabilityCoverage: ({ pct }) => `Our estimated range has been right ${fractionOutOf10Phrase(pct)} so far.`,
     reliabilityUnknown: "Still building a track record for this — check back later.",
     reliabilityDriftOnTrack: "Recent accuracy has stayed in line with the historical average.",
     reliabilityDriftWatch: "Recent accuracy has drifted a bit from the historical average — we're keeping an eye on it.",
@@ -287,7 +287,7 @@ const STRINGS = {
     // size (weeks measured) moves to how-we-know.html's "Band accuracy" section,
     // which reads the same calibration_band_coverage.json field.
     calibrationConfidenceAppend: ({ amount, coverage, n }) => coverage != null && n != null
-      ? ` Based on past comparisons, the real price has usually landed within about ₹${amount}/gram of this estimate — ${fractionOutOf10Phrase(coverage)} so far.`
+      ? ` Based on past comparisons, the real price has landed within about ₹${amount}/gram of this estimate ${fractionOutOf10Phrase(coverage)} so far.`
       : ` Based on past comparisons, the real price lands within about ₹${amount}/gram of this estimate.`,
     // R3: appended only when Tanishq confirmation itself has been silent for
     // TIER_DEGRADED_THRESHOLD_H, not just this cycle -- distinct from the
@@ -370,7 +370,7 @@ const STRINGS = {
     // reliabilityDriftOnTrack/Watch/Retrain (already plain, defined above under
     // "Reliability") are reused here rather than duplicated.
     accSummaryIntro: "We check our price estimate against real shop prices regularly, and adjust when it drifts too far off.",
-    accSummaryDirectionOff: "We don't try to guess whether prices will rise or fall next — nothing we've tested beats simply assuming they'll stay about the same, so that's what we go with.",
+    accSummaryDirectionOff: "We don't try to guess whether prices will rise or fall next — none of the methods we've tested could do it reliably, so we don't show a guess.",
     accSummaryLinkText: "See the full numbers and how we test all of this →",
 
     // ── Error / degrade paths ────────────────────────────────────────────────────
