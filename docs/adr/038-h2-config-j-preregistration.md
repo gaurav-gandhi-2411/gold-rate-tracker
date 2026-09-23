@@ -1,6 +1,7 @@
 # ADR 038 — Pre-Registration: ADR 034's h2 "Config J" Candidate on Genuinely New Data
 
-**Status:** Accepted, implemented 2026-09-23. Pre-registration only — no promotion, no gate/user-facing
+**Status:** Accepted, implemented 2026-09-23. **Amended 2026-09-23 (A1: embargo + post-registration
+days only), before any post-registration day was scored — see "Amendment A1".** Pre-registration only — no promotion, no gate/user-facing
 change. Shadow arms run additively from `weekly-backtest.yml`; write only to
 `data/preregistered_h2_shadow_results.json`.
 
@@ -65,6 +66,72 @@ confirmatory, not merely "still watching."**
 be recomputed from accumulating shadow data — recomputing the power target from the same data being
 accumulated toward it would silently move the goalposts.
 
+## Amendment A1 — 2026-09-23: embargo, and post-registration days only
+
+**Made 2026-09-23, approved by GG, before any post-registration day was scored.** The first scheduled
+scoring run is `weekly-backtest.yml` on Sunday 2026-09-27 02:00 UTC; no run of the pre-registration
+step has happened before this amendment (the live h2 dataset's newest labelled `as_of_date` at the
+time of writing is 2026-09-18, so zero days after the registration date exist yet —
+`reports/preregistration_embargo_a1.json`, `amended_live_arm.n = 0`).
+
+**Why.** The protocol above inherited two flaws from the walk-forward it copied:
+
+1. **No embargo.** Training for test day *i* was every earlier row. At h2, the labels of the ~2 rows
+   immediately before *i* mature after *i*'s `as_of_date` — the model trained on outcomes that were
+   not yet known on the day it predicted (measured: 1.95 such rows per fold on average).
+2. **The confirmation re-scored the selection data.** `run_live_arm` scored every fold, including
+   the 161 folds that selected config J from 10 candidates — exactly the dependence this
+   pre-registration exists to remove. Only days that did not exist at registration are independent.
+
+**What changes** (`ml.direction.preregistration`, `PROTOCOL_VERSION = "adr038-A1"`):
+
+- `EMBARGO_LABEL_DATE_COL = "label_date_h2"` — a training row is used only if its h2 label had
+  matured strictly before the test day's `as_of_date` (an embargo of ≥ 2 trading days = ≥ h).
+- `CONFIRMATORY_AFTER_AS_OF = "2026-09-23"` — only test days with `as_of_date` after it are scored.
+  Every earlier day, including the 161 selection folds, is training data only.
+- Every logged live-arm run records `protocol_version`, the scored `as_of_date`s and, per scored day,
+  the latest label date in its training set (`train_max_label_dates`), so the embargo is auditable
+  from the log alone.
+
+**Also fixed:** the workflow step `python scripts/run_preregistered_h2_shadow.py` could not import
+`ml` (run as a file, `sys.path[0]` is `scripts/`; reproduced locally: `ModuleNotFoundError: No
+module named 'ml'`). Under `continue-on-error: true` the first scheduled run would have failed with
+nothing written. The script now adds the repo root to `sys.path`, the idiom other `scripts/run_*.py`
+files already use.
+
+**What does not change (frozen):** the model configuration, the one-sided HAC-DM test, α = 0.05 and
+`PREREGISTERED_N_FOR_POWER = 135.9`. The proxy arm is unchanged and remains exploratory (never
+confirmatory); its label is same-day, so its h1 embargo holds by construction.
+
+**What the flaws did to the evidence** (same config, same data, re-measured 2026-09-23 at master
+`a26c5ab2`, `scripts/measure_preregistration_embargo.py` → `reports/preregistration_embargo_a1.json`):
+
+| protocol | n | effective n | accuracy | always-up | one-sided HAC-DM p |
+|---|---|---|---|---|---|
+| original (no embargo) | 161 | 112.5 | 65.84% | 59.01% | 0.0043 |
+| embargo on `label_date_h2` | 159 | 159.2 | 60.38% | 59.75% | 0.327 |
+
+With the embargo, config J shows no significant edge over always-up on the data that selected it.
+The embargoed run has 2 fewer folds because a fold now needs ≥ 20 *matured* training rows.
+
+*Reproduction note, stated plainly:* this re-measurement gives the no-embargo p as 0.0043
+(effective n 112.5), not the 0.00340 (effective n 119.38) frozen above; accuracy and mean loss
+difference reproduce exactly, the long-run variance does not (0.10885 vs 0.10260). The cause was not
+isolated. An earlier diagnostic note recorded config J's embargoed accuracy as 57.76% (p = 0.776); a
+re-run of that same diagnostic on today's data gives 59.63% (p = 0.327, n = 161) — the 57.76% figure
+matches the *live logistic* model's embargoed accuracy and appears to have been transcribed onto the
+wrong row. Neither discrepancy changes the conclusion.
+
+**Consequence for power.** 135.9 was derived from the leaky effect size. The embargoed effect on the
+selection data is ~0.6 pp, so if config J has any real edge it is much smaller than the power target
+assumes — the confirmatory test is optimistic about its own power, and a non-significant result at
+135.9 effective folds should be read as "no detectable edge", not "no edge". The target stays frozen
+anyway: re-deriving it now, after seeing the embargoed result, would be the goalpost-moving this
+document forbids. Counting only new days, 135.9 effective folds is ~136 new labelled days if the
+embargoed effective/raw ratio (1.00 above) holds, or ~183 at the leaky protocol's ratio (0.70). New
+labelled days currently accrue at 0.66-0.70 per calendar day (last 30/60/90 days: 20/42/59 rows), so
+the target is reached roughly between April and July 2027.
+
 ## Two shadow arms
 
 1. **Live arm** (`run_live_arm`): re-scores config J on the live h2 dataset every
@@ -94,7 +161,8 @@ accumulated toward it would silently move the goalposts.
 
 ## Decision
 
-Pre-register now, before Monday 2026-09-28's weekly eval scores any new h2 fold. Wire both arms into
+Pre-register now, before the next weekly eval (Sunday 2026-09-27 02:00 UTC; an earlier draft of this
+line said Monday 2026-09-28, which was wrong) scores any new h2 fold. Wire both arms into
 `weekly-backtest.yml` as additive, `continue-on-error: true` steps that append to
 `data/preregistered_h2_shadow_results.json` (an append-only audit log, never overwritten). Neither arm
 touches `ml.direction.gate`, `data/direction_baseline.json`, or any user-facing path — see ADR 036's
