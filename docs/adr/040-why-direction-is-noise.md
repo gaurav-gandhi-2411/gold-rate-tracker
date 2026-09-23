@@ -91,10 +91,18 @@ GBM 53.5% → 55.5%), so the level features cost some sensitivity.
 | COMEX, low-volatility days | 1,716 | +0.008 | 0.052 | ~50% | **1.36 (0.003)**, momentum |
 | COMEX, high-volatility days | 1,716 | −0.043 | 0.052 | ~51% | **0.64 (0.013)**, reversal |
 | INR proxy daily | 3,637 | −0.129 | < 0.001 | ~54% | 0.68 (0.008) |
-| real IBJA daily | 252 | +0.050 | 0.08 | ~52% | 1.22 (0.44) |
+| real IBJA, dense days only* | 198 | +0.070 | 0.39 | ~52% | 5-day: 1.05 (0.74) |
 
 "Ceiling from lag-1" is the sign-prediction accuracy that lag-1 autocorrelation alone allows,
 0.5 + arcsin(ρ)/π, whichever sign is exploited.
+
+\*`data/ibja_rates.parquet` is **not daily** before 2025-Q2: its median gap is 5–18 days, and
+2026-Q1 has one row. The run's IBJA row (n = 252, lag-1 +0.050) mixed daily and multi-week
+returns and is superseded. The row above uses only returns inside 17 dense segments (every gap
+≤ 4 calendar days); the 16 lag pairs that straddle a segment join are included, which is a small
+approximation. The variance ratio uses the homoskedastic z (n is small). Computed 2026-09-23
+from the committed file; the same sparsity affects the INR direction set (13 of 182 labels span
+7–101 days), flagged separately for GG.
 
 The proxy's strong reversal does **not** appear in real IBJA. It is most likely the proxy's own
 measurement noise (noise creates negative autocorrelation), not a tradable pattern.
