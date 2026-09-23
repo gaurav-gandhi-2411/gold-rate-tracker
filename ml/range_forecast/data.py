@@ -158,6 +158,15 @@ def build_driver_features(
     return out
 
 
+def build_driver_features_for_price(
+    price: pd.Series, macro_start: str | None = None, macro_end: str | None = None
+) -> pd.DataFrame:
+    """Convenience wrapper: driver features aligned on `price.index`,
+    computing `recent_returns` from `price` itself (one log_returns call)."""
+    returns = log_returns(price)
+    return build_driver_features(pd.DatetimeIndex(price.index), returns, macro_start, macro_end)
+
+
 M1_DRIVER_FEATURE_COLS: list[str] = [
     "india_vix_prior",
     "usd_inr_change_1d_prior",
