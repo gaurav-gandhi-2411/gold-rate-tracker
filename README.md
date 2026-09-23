@@ -4,123 +4,105 @@
 [![Lint](https://github.com/gaurav-gandhi-2411/gold-rate-tracker/actions/workflows/lint.yml/badge.svg)](https://github.com/gaurav-gandhi-2411/gold-rate-tracker/actions/workflows/lint.yml)
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 
-A free, **₹0/month** gold-price tracker for Indian retail buyers (22K), built to answer one question honestly: *is today a good time to buy?* No server, no database, no paid API — GitHub Actions scrapes and models the price on a 3h cron, GitHub Pages serves a static PWA that reads the committed JSON. Actual observed cadence, since GitHub's own scheduler has been dropping a share of scheduled triggers since 2026-08-27 (see [docs/RUNBOOK.md](docs/RUNBOOK.md)), is a median of <!--METRIC:data/cadence_metrics.json#median_gap_hours:num1|n=n|asof=as_of-->4.7 (n=42, as of 2026-09-23)<!--/METRIC--> between successful data commits over the trailing week. The whole stack costs nothing to run and has run unattended since 2026-05.
+**Buying gold jewellery in India? This page tells you today's 22K gold rate, how fresh that number is, and whether today's price is cheap or expensive compared with the recent past — in plain language, for free, with no ads and no sign-up.**
 
-**Live site:** https://gaurav-gandhi-2411.github.io/gold-rate-tracker/
+**Open it:** https://gaurav-gandhi-2411.github.io/gold-rate-tracker/ — works in any phone browser, and can be installed like an app (iPhone: Safari → Share → *Add to Home Screen*; Android: Chrome → *Install app*).
 
 <p>
   <img src="https://raw.githubusercontent.com/gaurav-gandhi-2411/gold-rate-tracker/docs/readme-overhaul/reports/screenshots/readme-overhaul/hero-dark.png" alt="Gold Rate Tracker hero card — dark mode" width="280">
   <img src="https://raw.githubusercontent.com/gaurav-gandhi-2411/gold-rate-tracker/docs/readme-overhaul/reports/screenshots/readme-overhaul/hero-light.png" alt="Gold Rate Tracker hero card — light mode" width="280">
 </p>
 
-*Live screenshots, 2026-08-06 — price/verdict/trend numbers shown are real production data at capture time, not mocked.*
+*Screenshots of the live page. Numbers in them are real production data at capture time, not mocked.*
 
-## The 30-second version
+## What you'll see
 
-- Shows today's 22K gold price with an honest, dated freshness label — never a bare number pretending to be more certain than it is.
-- Tells you in plain language whether today is cheap, expensive, or in between, and whether that cheapness is stabilizing or still falling — grounded in three independent reads of the same price history (30-day percentile, trend-residual, distance to the 3-month low), not one metric dressed up three ways.
-- **Refuses to predict tomorrow's direction.** We test next-day and 2-day direction models every week against the honest baseline ("gold usually rises, so just guess up"). None has beaten it with statistical significance — see [Honest results](#honest-results--what-actually-shipped-and-what-didnt) below — so no "% chance up," no buy/sell call, ever.
-- Costs nothing: GitHub Actions (compute) + GitHub Pages (hosting) + ntfy.sh (push notifications), all free tiers, forever.
+- **Today's 22K rate, with a date on it.** The price is based on the rate published by IBJA (the India Bullion and Jewellers Association — India's national bullion benchmark) and upgraded to a directly-read Tanishq rate when that is available. Every price carries a "last updated" label, so you always know how old it is. On days IBJA doesn't publish (weekends, holidays) you see the last published rate, clearly dated — never a stale number pretending to be today's.
+- **How fresh the data is.** The data is refreshed automatically several times a day. Over the last <!--METRIC:data/cadence_metrics.json#window_days:int-->7<!--/METRIC--> days, the typical gap between updates was <!--METRIC:data/cadence_metrics.json#median_gap_hours:num1|n=n|asof=as_of-->4.7 (n=42, as of 2026-09-23)<!--/METRIC--> hours. If updates stall, the page shows a warning banner instead of quietly showing an old price.
+- **A likely range, not just one number.** Next to the price is a range the real rate usually falls within. It is aimed at being right <!--METRIC:data/calibration_band_coverage.json#nominal_pct:int-->80<!--/METRIC-->% of the time; measured against real IBJA rates, it has actually contained the real rate <!--METRIC:data/calibration_band_coverage.json#coverage:pct1|n=n|ci=wilson_ci_low,wilson_ci_high|asof=generated_at_utc|unresolved_if=resolvable_at_n-->70.9% (n=86, 95% CI [60.6%, 79.5%], as of 2026-09-20)<!--/METRIC--> of the time — so treat it as a guide, somewhat narrower than it should be. This is re-checked every week and the number above updates itself.
+- **"Is today cheap or expensive?"** A plain-language read of where today's price sits compared with the past few weeks and months — near a recent low, near a recent high, or in between — and whether prices have recently been steadying or still falling. This describes what has already happened.
+- **How much prices typically swing** over a few days, so a small daily move doesn't look like a big one.
+
+Want phone alerts when the price moves? They are available if you run your own copy of the project (free, via the [ntfy](https://ntfy.sh) app) — see [For developers](#for-developers).
+
+## What it won't tell you — and why
+
+**No prediction of where the price goes next. No "% chance it rises." No buy or sell advice.**
+
+That's deliberate, not an omission. Every week the project tests whether any model can call the next move better than the simple rule "gold usually goes up, so just guess up". So far none has, with enough evidence to trust it, so the page shows nothing rather than a guess dressed up as insight ([ADR 019](docs/adr/019-direction-signal-below-base-rate.md), [ADR 020](docs/adr/020-supersede-015-consensus-degenerate.md)). Even if a model someday passes that test, it still cannot appear on the page without a separate, explicit human sign-off ([ADR 036](docs/adr/036-direction-signal-promotion-gate.md)).
+
+The latest weekly results, updated automatically:
+
+| Question | Honest answer | Source |
+|---|---|---|
+| Can any model call tomorrow's direction? | **No, at either timeframe tested.** Next day: <!--METRIC:data/direction_baseline.json#horizons.h1.logistic_metrics.accuracy:pct1|n=horizons.h1.n_test_folds|asof=generated_at_utc-->52.5% (n=162, as of 2026-09-23)<!--/METRIC--> right vs. <!--METRIC:data/direction_baseline.json#horizons.h1.logistic_metrics.always_up_accuracy:pct1-->51.2%<!--/METRIC--> for "always guess up". Two days out: <!--METRIC:data/direction_baseline.json#horizons.h2.logistic_metrics.accuracy:pct1|n=horizons.h2.n_test_folds|asof=generated_at_utc-->58.5% (n=159, as of 2026-09-23)<!--/METRIC--> vs. <!--METRIC:data/direction_baseline.json#horizons.h2.logistic_metrics.always_up_accuracy:pct1-->59.7%<!--/METRIC-->. Neither difference is statistically significant (two days out: p=<!--METRIC:data/direction_baseline.json#horizons.h2.logistic_metrics.p_value:num2-->0.77<!--/METRIC-->). Neither is shown. | [`docs/DIRECTION_SIGNAL_STATUS.md`](docs/DIRECTION_SIGNAL_STATUS.md) |
+| Does the price forecast beat "just use today's price"? | **No.** <!--FROZEN reason="SHA-pinned point-in-time citation, backtest.json @ ad42160 -- must not drift with live data"-->Naive flat-hold: ₹249/g avg error. Chronos-Bolt-Tiny: ₹292/g avg error — **17% worse**, over 209 walk-forward folds (p≈0).<!--/FROZEN--> So the page shows today's price as the headline, not a forecast. | `data/backtest.json` @ [`ad42160`](https://github.com/gaurav-gandhi-2411/gold-rate-tracker/blob/ad4216086d10a63bb93ed3107c9ccee429cb5fa0/data/backtest.json) |
+| Is the headline's own "likely range" well-calibrated? | **Not yet known either way.** Since a July 2026 fix ([ADR 022](docs/adr/022-conformal-pi-horizon-fix.md)), it has contained the real price <!--METRIC:data/coverage_metrics.json#coverage:pct1|n=n|ci=wilson_ci_low,wilson_ci_high|asof=generated_at_utc|unresolved_if=resolvable_at_n-->73.0% (n=63, 95% CI [61.0%, 82.4%], as of 2026-09-20) — not yet resolvable at this sample size<!--/METRIC--> of the time against a <!--METRIC:data/coverage_metrics.json#nominal_pct:int-->80<!--/METRIC-->% target — too few days yet to say whether it's well-sized. | `data/coverage_metrics.json` |
 
 ## How it works
 
+No server, no database, no paid API. A scheduled GitHub Actions job fetches the IBJA rate (and tries Tanishq), works out the calibrated estimate and range, and commits the results as small JSON files; GitHub Pages serves a static web app that reads them. It costs nothing to run.
+
+- **Where the price comes from ([ADR 025](docs/adr/025-ibja-primary-source-decision.md)).** IBJA is the primary source: it publishes a daily benchmark reliably. Tanishq's site is harder to read automatically — over the last <!--METRIC:data/tanishq_scrape_success_rate.json#window_days:int-->7<!--/METRIC--> days a direct read succeeded <!--METRIC:data/tanishq_scrape_success_rate.json#success_rate:pct1|n=n|asof=generated_at_utc-->90.9% (n=33, as of 2026-09-23)<!--/METRIC--> of the time — so it only ever upgrades the IBJA-based estimate, never replaces it.
+- **How the estimate is made.** Retail 22K prices track the IBJA rate very closely (fit R²=<!--METRIC:data/calibration.json#r_squared:num2|n=n_observations|asof=fit_date-->0.97 (n=85, as of 2026-09-11)<!--/METRIC-->), so the page converts IBJA's rate into an estimated retail rate, and its range comes from how far past estimates actually missed ([ADR 027](docs/adr/027-calibration-oos-validation-recency-weighting.md)).
+- **The page itself** is plain HTML + JavaScript that reads those JSON files directly. No accounts, no ads, no analytics. Beyond GitHub itself, it loads its chart library from a public CDN (jsDelivr) and uses an error tracker (Sentry) that reports crashes in the page so they can be fixed.
+
 ```mermaid
 flowchart TD
-    subgraph cron["check-price.yml — 3h cron target"]
-        A["IBJA fetch<br/>plain HTTP, primary source"] --> C
-        B["Tanishq scrape<br/>Playwright only in practice —<br/>requests path is CF-blocked<br/>opportunistic enrichment"] --> C
+    subgraph cron["check-price.yml — scheduled"]
+        A["IBJA fetch<br/>primary source"] --> C
+        B["Tanishq read<br/>opportunistic enrichment"] --> C
         C["prices.json<br/>ibja_rates.parquet"]
     end
 
-    C --> D["ml.inference<br/>naive flat-hold headline<br/>+ IBJA calibration<br/>+ Chronos-Bolt-Tiny companion (dark)"]
+    C --> D["ml.inference<br/>today's price headline<br/>+ IBJA calibration"]
     D --> E["forecast.json"]
-    E --> F["ntfy.sh alerts<br/>price moves, digest, staleness"]
+    E --> F["ntfy.sh alerts"]
     E --> G["commit data JSON to master"]
-    G --> H["GitHub Pages<br/>static PWA (index.html + app.js)"]
+    G --> H["GitHub Pages<br/>static web app"]
     H --> I(("Your phone"))
 
     subgraph weekly["eval-direction.yml — weekly"]
-        J["PIT feature store"] --> K["direction models<br/>logistic + lightgbm"]
-        K --> L{{"beats base rate<br/>with significance?"}}
-        L -->|"no, both horizons"| M["stays DARK<br/>(ADR 019)"]
+        J["feature store"] --> K["direction models"]
+        K --> L{{"beats 'always guess up'<br/>with significance?"}}
+        L -->|"no"| M["stays hidden<br/>(ADR 019)"]
     end
 
     style M fill:#3a2418,stroke:#c67a4b,color:#e8c8a8
     style D fill:#2a2015,stroke:#d4932a,color:#f0d9a8
 ```
 
-- **IBJA-primary, Tanishq-enrichment ([ADR 025](docs/adr/025-ibja-primary-source-decision.md)).** IBJA (India's national bullion-association benchmark) isn't Cloudflare-protected and reliably publishes a daily reading. Tanishq's site still blocks the plain-HTTP request path outright, but the self-hosted Playwright scraper ([docs/RUNBOOK.md](docs/RUNBOOK.md)) succeeds <!--METRIC:data/tanishq_scrape_success_rate.json#success_rate:pct1|n=n|asof=generated_at_utc-->90.9% (n=33, as of 2026-09-23)<!--/METRIC--> of the time over the last 7 days — IBJA stays primary regardless (Tanishq is opportunistic enrichment even when reachable, not a hard dependency). The displayed price defaults to an IBJA-calibrated estimate (R²=<!--METRIC:data/calibration.json#r_squared:num2|n=n_observations|asof=fit_date-->0.97 (n=85, as of 2026-09-11)<!--/METRIC-->), whose displayed range's real-world coverage is re-scored weekly (not a one-time reading) at <!--METRIC:data/calibration_band_coverage.json#coverage:pct1|n=n|ci=wilson_ci_low,wilson_ci_high|asof=generated_at_utc|unresolved_if=resolvable_at_n-->70.9% (n=86, 95% CI [60.6%, 79.5%], as of 2026-09-20)<!--/METRIC--> against an 80% nominal target, and upgrades to a directly-confirmed Tanishq reading only when that scrape succeeds within the last 8h — never the reverse. On IBJA's non-publishing days (weekends, holidays) the page carries forward the last published close, clearly dated. The user never sees a dead price.
-- **Static PWA, no server.** `index.html` + `app.js` fetch `data/*.json` straight from the repo and render price, verdict, sparkline, and chart client-side.
-- **Direction signal stays dark by design**, not by omission — see below.
-
 <details>
 <summary>Full page, top to bottom (click to expand)</summary>
 <img src="https://raw.githubusercontent.com/gaurav-gandhi-2411/gold-rate-tracker/docs/readme-overhaul/reports/screenshots/readme-overhaul/full-page-dark.png" alt="Gold Rate Tracker full page scroll — dark mode" width="360">
 </details>
 
-## Honest results — what actually shipped, and what didn't
+## For developers
 
-This project reports the model's numbers *next to* the honest baseline's every time, win or lose — see [ADR 005](docs/adr/005-honest-baseline-reporting.md). Two things shipped; one deliberately didn't.
-
-| Question | Honest answer | Source |
-|---|---|---|
-| Does the ML forecast beat "just use today's price"? | **No.** <!--FROZEN reason="SHA-pinned point-in-time citation, backtest.json @ ad42160 -- must not drift with live data"-->Naive flat-hold: ₹249/g avg error. Chronos-Bolt-Tiny: ₹292/g avg error — **17% worse**, over 209 walk-forward folds (p≈0).<!--/FROZEN--> The naive baseline *is* the production headline. | `data/backtest.json` @ [`ad42160`](https://github.com/gaurav-gandhi-2411/gold-rate-tracker/blob/ad4216086d10a63bb93ed3107c9ccee429cb5fa0/data/backtest.json) |
-| Can any model call tomorrow's direction? | **No, at either horizon we test.** h=1: <!--METRIC:data/direction_baseline.json#horizons.h1.logistic_metrics.accuracy:pct1|n=horizons.h1.n_test_folds|asof=generated_at_utc-->52.5% (n=162, as of 2026-09-23)<!--/METRIC--> accuracy vs. a <!--METRIC:data/direction_baseline.json#horizons.h1.logistic_metrics.always_up_accuracy:pct1-->51.2%<!--/METRIC--> base rate. h=2: <!--METRIC:data/direction_baseline.json#horizons.h2.logistic_metrics.accuracy:pct1|n=horizons.h2.n_test_folds|asof=generated_at_utc-->58.5% (n=159, as of 2026-09-23)<!--/METRIC--> vs. a <!--METRIC:data/direction_baseline.json#horizons.h2.logistic_metrics.always_up_accuracy:pct1-->59.7%<!--/METRIC--> base rate. Neither difference is statistically significant (h=2 p=<!--METRIC:data/direction_baseline.json#horizons.h2.logistic_metrics.p_value:num2-->0.77<!--/METRIC-->). Neither ships. | [`docs/DIRECTION_SIGNAL_STATUS.md`](docs/DIRECTION_SIGNAL_STATUS.md), auto-updated weekly |
-| Is the "likely range" band well-calibrated? | **Not yet confirmed either way.** Since [ADR 022](docs/adr/022-conformal-pi-horizon-fix.md)/[023](docs/adr/023-correct-adr022-validation-claim.md)'s July 2026 horizon fix, observed coverage of decisions made after the fix is <!--METRIC:data/coverage_metrics.json#coverage:pct1|n=n|ci=wilson_ci_low,wilson_ci_high|asof=generated_at_utc|unresolved_if=resolvable_at_n-->73.0% (n=63, 95% CI [61.0%, 82.4%], as of 2026-09-20) — not yet resolvable at this sample size<!--/METRIC--> against an 80% nominal target — the CI still contains 80%, so this genuinely cannot say yet whether the band is well- or poorly-calibrated. | `data/coverage_metrics.json` |
-
-The direction signal's own gate logic — both a **probability gate** (calibrated "% up") and a stricter **timing gate** (buy/wait/sell) — requires beating the base rate with significance (p<0.05) *and* a calibration bar (ECE≤0.10) before anything ships. Both are open-source and re-evaluated automatically every Monday; see [`ml/direction/gate.py`](ml/direction/gate.py). This is the gate working as designed, not a stalled feature.
-
-## What it actually claims (and what it doesn't)
-
-- ✅ **Today's price** — IBJA-calibrated by default, upgraded to a directly-confirmed Tanishq reading when the live scrape succeeds — always with an honest, dated freshness label.
-- ✅ A **5-day volatility range** ("prices have typically swung ±X over 5 days") — descriptive, not a forecast.
-- ✅ A plain-language **"is it a good time to buy?"** read, grounded in the recent 7-day trend, 30-day percentile position, trend-residual, and distance to the 3-month low — a description of what already happened, never a prediction.
-- ❌ **No price prediction. No "% chance up." No buy/sell call.** See [Honest results](#honest-results--what-actually-shipped-and-what-didnt) above for exactly why, with the numbers.
-
-## Notifications (bring your own ntfy topic)
-
-Alerts are delivered via [ntfy.sh](https://ntfy.sh) — free, no account. **Pick your own topic and keep it private:** anyone who knows a topic name can publish to it, so treat it like a password (a long random string, e.g. `gold-<yourname>-<16 random chars>`). Set it as the `NTFY_TOPIC` GitHub Actions secret and subscribe to it in the ntfy app.
-
-Alert types: a price-move alert (describes the recent trend), a twice-daily digest, and a data-staleness warning if scraping stalls. All copy is plain-language and ASCII-safe.
-
-## Setup (~15 minutes)
-
-1. Fork / create a public repo and upload all files.
-2. **Settings → Secrets and variables → Actions → New repository secret:**
-   - `NTFY_TOPIC` — your OWN ntfy.sh topic (treat like a password; long & random).
-3. **Actions → Check Gold Price → Run workflow** (manual trigger; wait ~2 min).
-4. **Settings → Pages → Deploy from branch → `master` → `/` (root).**
-5. Install the PWA: iOS Safari → Share → Add to Home Screen · Android Chrome → Install app.
-6. Subscribe to alerts: install the ntfy app → **+** → enter your topic.
-
-## Repo layout
+**Run your own copy** (fork, set your own ntfy topic, enable Pages), **alert setup**, and **troubleshooting**: see [docs/RUNBOOK.md → Running your own copy](docs/RUNBOOK.md#running-your-own-copy). Operating this deployment (rollback, CI debugging, staleness response, scraper and runner ops): [docs/RUNBOOK.md](docs/RUNBOOK.md). System design: [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md). Audit history: [docs/SESSION_AUDIT_2026-08.md](docs/SESSION_AUDIT_2026-08.md).
 
 | Path | What |
 |------|------|
-| `index.html`, `app.js`, `service-worker.js` | The PWA (what users see) |
-| `scraper/` | Tanishq scrape (Node; tries a plain-HTTP requests path first, but it's Cloudflare-blocked and has succeeded <!--METRIC:data/tanishq_scrape_success_rate.json#n_requests_path:int-->0<!--/METRIC--> of <!--METRIC:data/tanishq_scrape_success_rate.json#n:int|asof=generated_at_utc-->33 (as of 2026-09-23)<!--/METRIC--> attempts in the rolling window — Playwright is what actually runs every cycle) |
+| `index.html`, `app.js`, `service-worker.js` | The web app (what users see) |
+| `scraper/` | Tanishq read (Node; a plain-HTTP path is tried first but is blocked by Cloudflare — it has succeeded <!--METRIC:data/tanishq_scrape_success_rate.json#n_requests_path:int-->0<!--/METRIC--> of <!--METRIC:data/tanishq_scrape_success_rate.json#n:int|asof=generated_at_utc-->33 (as of 2026-09-23)<!--/METRIC--> attempts in the rolling window, so the Playwright path is what actually runs) |
 | `ml/` | Inference, calibration, notifications, the direction-eval harness |
-| `data/` | Committed price/forecast/eval JSON the PWA reads |
-| `.github/workflows/` | `check-price.yml` (3h cron target — see [above](#gold-rate-tracker) for delivered cadence), `lint.yml`, `eval-direction.yml`, `scraper-canary.yml` |
-| `docs/` | RUNBOOK, ADRs, CURRENT_STATE, DIRECTION_SIGNAL_STATUS |
+| `data/` | Committed price/forecast/eval JSON the web app reads |
+| `.github/workflows/` | `check-price.yml` (scheduled data refresh), `lint.yml`, `eval-direction.yml`, `weekly-backtest.yml`, `scraper-canary.yml` |
+| `docs/` | RUNBOOK, ARCHITECTURE, ADRs, CURRENT_STATE, DIRECTION_SIGNAL_STATUS |
 
-## Troubleshooting
+Every number in this README is injected from `data/*.json` by `scripts/inject_metrics.py` and re-checked in CI (`docs-freshness`), so it can't silently go stale — never type one by hand.
 
-- **Prices look stale:** the page banner will say so, honestly labeled either way. A Tanishq scrape miss alone is expected (its Cloudflare block, [ADR 025](docs/adr/025-ibja-primary-source-decision.md)) and logged as a run annotation, not a hard failure — check the latest **Check Gold Price** run in Actions. An actual alert (ntfy T9/T9_ESCALATE) only fires when *IBJA* itself hasn't published in 2+ business days — that's the genuine failure signal.
-- **No notifications:** confirm `NTFY_TOPIC` has no URL prefix, you subscribed to the *exact* topic, and a price move actually occurred.
-- **Scraper DOM canary issue opened:** the canary now distinguishes a Cloudflare block (logged as a warning, no alert — expected steady state) from a real DOM/selector break (alerts + opens an issue) automatically. See [docs/RUNBOOK.md](docs/RUNBOOK.md) if one still fires.
+### Design decisions (ADRs)
 
-## Design decisions (ADRs)
-
-- [ADR 005](docs/adr/005-honest-baseline-reporting.md) — always report when the model loses to naive
-- [ADR 012](docs/adr/012-naive-headline-chronos-companion.md) — naive flat-hold headline, Chronos as a (dark) companion
+- [ADR 005](docs/adr/005-honest-baseline-reporting.md) — always report when the model loses to the simple baseline
+- [ADR 012](docs/adr/012-naive-headline-chronos-companion.md) — today's price as the headline; the Chronos model only as a hidden companion
 - [ADR 019](docs/adr/019-direction-signal-below-base-rate.md) — the direction signal doesn't beat the base rate; ship nothing
 - [ADR 025](docs/adr/025-ibja-primary-source-decision.md) — IBJA primary, Tanishq opportunistic enrichment
-- [docs/RUNBOOK.md](docs/RUNBOOK.md) — rollback, CI debugging, staleness
+- [ADR 036](docs/adr/036-direction-signal-promotion-gate.md) — no direction signal reaches users without an explicit, human-approved promotion record
 
-## AI/LLM usage
+### AI/LLM usage
 
-Built and maintained with heavy use of Claude Code — architecture decisions, ADRs, the ML pipeline, the PWA, and CI are all human-directed but substantially AI-implemented. Documented here rather than hidden: every non-trivial design choice above has a linked ADR explaining the *why*, written and kept current regardless of who typed the diff.
+Built and maintained with heavy use of Claude Code — architecture decisions, ADRs, the ML pipeline, the web app, and CI are all human-directed but substantially AI-implemented. Documented here rather than hidden: every non-trivial design choice has a linked ADR explaining the *why*, written and kept current regardless of who typed the diff.
 
 ## License
 
