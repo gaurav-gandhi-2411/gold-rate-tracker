@@ -1405,3 +1405,99 @@ evidence the methods are truly equivalent. Live stratified-shadow result still n
 2026-09-27) — not cited, per standing instruction.
 
 **Items 7/M4/P1/P3/P5: not yet reached this checkpoint.**
+
+## Checkpoint — 2026-09-23 (evening): the embargo leak, D1/D2 landed, analysis moved to Actions
+
+**The headline correction.** The direction walk-forwards had no embargo. The live evaluator and
+`ml.direction.config_sweep` both trained test day *i* on every earlier row. At h2 that includes
+~1.95 rows per fold whose labels matured after *i*'s `as_of_date` (measured). The ADR 034 "config J"
+result (65.84% vs 59.01%, one-sided HAC-DM p=0.0043 re-measured today) does not survive an
+embargo. On the same data it becomes 60.38% vs 59.75%, n=159, p=0.327
+(`reports/preregistration_embargo_a1.json`). The candidate's apparent edge was the leak.
+
+*Corrections to figures carried into this session:*
+- The embargoed candidate was noted as "57.8%, p=0.78". That figure is the *live logistic*
+  model's (57.76%, p=0.719). Re-running the original diagnostic on today's data gives config J
+  59.63%, p=0.327, n=161.
+- The frozen ADR 038 no-embargo figures (p 0.00340, effective n 119.38) do not reproduce exactly
+  today (0.0043, 112.5). Accuracy and mean loss difference are identical; the long-run variance
+  differs. Cause not isolated.
+- #1915 was already merged at session start, although the handover listed it as open.
+
+**D1 — pre-registration amendment A1 (#1925 and #1933 merged, the latter as 1003e46d on 2026-09-23,
+ahead of Sun 2026-09-27 02:00 UTC).** Embargo on `label_date_h2`, only `as_of_date > 2026-09-23` scored,
+config/test/alpha/135.9 frozen, dated amendment in ADR 038. Two defects found by running the step
+exactly as the workflow does:
+- `python scripts/run_preregistered_h2_shadow.py` could not import `ml` (`ModuleNotFoundError`).
+  Sunday's first run would have failed silently under `continue-on-error`.
+- It crashed formatting a `None` effective n, and wrote `NaN` (invalid JSON) when no day was
+  scored.
+
+The local end-to-end run after the fixes gives: live arm n=0 (no post-registration day exists
+yet), protocol `adr038-A1` recorded; proxy arm n=329, p=0.975. #1926 was superseded by #1933:
+#1926 carried #1925's pre-squash commit, and boundary-leak-check correctly caught it.
+
+**D2 — live evaluator embargo (#1930 merged), verified end-to-end on master.** Published README
+and status numbers, before → after, same data:
+
+| field | before | after |
+|---|---|---|
+| h1 accuracy / base rate | 48.5% (n=163) / 50.9% | 52.5% (n=162) / 51.2% |
+| h2 accuracy / base rate | 61.5% (n=161) / 59.0% | 58.5% (n=159) / 59.7% |
+| h2 p (McNemar) | 0.45 | 0.77 |
+
+The h2 persistence baseline fell from 65.2% to 51.6%: it had copied an unmatured label. One-sided
+HAC-DM: none of 6 model×horizon tests is significant before or after (Bonferroni 0.0083, BH).
+
+*Pipeline defect found:* the eval run for #1930 failed because its bot rebase conflicted with the
+previous run's refresh PR. #1932 re-published the leaky numbers for ~10 minutes, until the run for
+#1921 published the embargoed ones (#1934, re-injected by #1935). Not fixed yet. Two evaluator
+pushes in quick succession race.
+
+**Guard fixes.**
+- #1928 (merged): boundary-leak-check survives a closed PR's deleted base branch.
+- #1936 (merged): it ignores merge commits. #1933 was flagged because its merge-from-master and
+  #1921's resolved the same `tests/test_count_baseline.json` conflict identically.
+- #1921 (merged): the units guard.
+
+**Item 5 — COMEX re-run moved to GitHub Actions.**
+- #1931 (merged) adds `analysis.yml`: manual dispatch, GitHub-hosted, `contents: read`, no
+  secrets, no commits, artifact output.
+- The COMEX code existed only as untracked files in a worktree. It is now committed on
+  `feat/comex-direction-analysis` and dispatched as run 35857172862 (6 shards).
+- Primary baseline fixed before the run: the per-fold training-majority class. Always-up is a
+  straw baseline wherever "up" is the minority label (buyer_decision). On the smoke run, the same
+  predictions scored p=0.0009 vs always-up and p=0.84 vs majority.
+
+**Item 9a — proxy sub-period breakdown for config J** (`reports/proxy_subperiods_config_j.json`):
+- 2013–2017: no dead-zone test folds at all.
+- 2018–2021: n=34; predictions equal the majority baseline in every fold.
+- 2022–2026: n=295; 46.1% vs majority 53.2%, one-sided p=0.986.
+- The pre-registered proxy arm uses a same-day India VIX close (a contemporaneous feature).
+  Lagging it to the prior trading day gives 47.8% (p=0.953). Not significant either way.
+- The proxy arm stays as registered. The leak is reported to GG rather than changed unilaterally.
+
+**Item 5 result — COMEX (draft #1939, report `reports/comex_direction_run_35857172862.json`).**
+18 tests (6 target/horizon combos × 3 models, 2,621–3,201 folds each):
+- **0 significant** under Bonferroni (0.00278) or BH. 0 embargo violations.
+- Nominal best: deadzone h1 logistic, 55.0% vs 52.5% majority, p=0.010 uncorrected. Its edge sits
+  in 2018–2021 (p=0.017) and vanishes in 2022–2026, where it equals the majority class in every
+  fold.
+- M2's `detrended_h10` lead does not replicate (53.3% vs 51.3%, p=0.22, effective n 795).
+- buyer_decision: the models reproduce the 77% "no dip" majority. The earlier "100%" was the
+  units bug.
+
+**D3 — estimator presets: #1940 (draft, for GG).** Supersedes #1922/#1923. Presets 3–8/8–12/15–25%
+with typical values 5/10/20% (my rounded picks, flagged for GG), custom % or ₹/g, a rate-source
+line, and an "Estimate — stores vary." label. 145/145 PWA tests pass; a verifier subagent
+reviewed it. The new strings have no Hindi yet; the file's convention is to wait for
+native-speaker review.
+
+**Item 7:** #1919 synced to the embargoed numbers, with the two falsified phrases neutralised.
+Handed to GG with #1920.
+
+**Open for Sunday 2026-09-27:**
+- Behavioural check of the amended pre-registration step: log line
+  `live_h2 [adr038-A1]`, and an appended entry with `protocol_version`, `scored_as_of_dates` all
+  after 2026-09-23, and `train_max_label_dates` each earlier than its date.
+- The M3 stratified shadow result, with n and Wilson CIs.
