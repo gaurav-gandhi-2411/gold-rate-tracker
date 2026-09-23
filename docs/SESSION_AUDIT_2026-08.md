@@ -1424,8 +1424,8 @@ embargo. On the same data it becomes 60.38% vs 59.75%, n=159, p=0.327
   differs. Cause not isolated.
 - #1915 was already merged at session start, although the handover listed it as open.
 
-**D1 — pre-registration amendment A1 (#1925 merged; #1933 open merged as 1003e46d on 2026-09-23; had to land before
-Sun 2026-09-27 02:00 UTC).** Embargo on `label_date_h2`, only `as_of_date > 2026-09-23` scored,
+**D1 — pre-registration amendment A1 (#1925 and #1933 merged, the latter as 1003e46d on 2026-09-23,
+ahead of Sun 2026-09-27 02:00 UTC).** Embargo on `label_date_h2`, only `as_of_date > 2026-09-23` scored,
 config/test/alpha/135.9 frozen, dated amendment in ADR 038. Two defects found by running the step
 exactly as the workflow does:
 - `python scripts/run_preregistered_h2_shadow.py` could not import `ml` (`ModuleNotFoundError`).
