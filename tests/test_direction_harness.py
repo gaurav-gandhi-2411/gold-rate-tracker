@@ -133,6 +133,18 @@ def _make_ibja(dates: list[str], pm_916_vals: list[float]) -> pd.DataFrame:
 class TestBuildDataset:
     """Tests for build_dataset with injected DataFrames."""
 
+    def test_declares_inr_per_10g_units(self) -> None:
+        """INR-constant consumers (ml.direction.price_units) fail closed on an
+        undeclared frame, so build_dataset must declare its units."""
+        from ml.direction.price_units import INR_PER_10G, PRICE_UNITS_ATTR
+
+        snaps_df = _make_snapshots(["2025-01-01", "2025-01-02"], [70000.0, 71000.0])
+        ibja_df = _make_ibja(
+            ["2025-01-01", "2025-01-02", "2025-01-03"], [70000.0, 71000.0, 72000.0]
+        )
+        ds = build_dataset(snapshots_df=snaps_df, ibja_df=ibja_df)
+        assert ds.attrs[PRICE_UNITS_ATTR] == INR_PER_10G
+
     def test_label_comes_from_next_ibja_day(self) -> None:
         """Label for snapshot t must come from IBJA day t+1, not day t."""
         snap_dates = ["2025-01-01", "2025-01-02", "2025-01-03"]

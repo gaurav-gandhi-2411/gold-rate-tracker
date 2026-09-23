@@ -16,6 +16,8 @@ from pathlib import Path
 
 import pandas as pd
 
+from ml.direction.price_units import INR_PER_10G, declare_units
+
 # ---------------------------------------------------------------------------
 # Paths
 # ---------------------------------------------------------------------------
@@ -298,4 +300,4 @@ def build_dataset(
                 f"to {dataset['as_of_date'].max()}"
             )
 
-    return dataset
+    return declare_units(dataset, INR_PER_10G)
