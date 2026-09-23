@@ -23,7 +23,7 @@
   "tests/test_check_test_registry_complete.py": 12,
   "tests/test_chronos_forecast.py": 36,
   "tests/test_comparisons.js": 7,
-  "tests/test_config_sweep.py": 8,
+  "tests/test_config_sweep.py": 13,
   "tests/test_dedup.js": 11,
   "tests/test_degradation_chain.py": 5,
   "tests/test_direction_gate.py": 33,
