@@ -1078,3 +1078,55 @@ companion), P1/P3/P5. Full test suite (1066 tests) run clean twice this session 
 discarded after a working-tree mutation mid-run corrupted the read — noted here as a process
 lesson: never mutate a shared checkout while a long-running background command is still reading
 it; isolate in a worktree instead, or wait for the notification before touching anything).
+
+## 13. Continuation 2026-09-23: post-shutdown resume, branch sweep, M1 build starts
+
+Laptop shutdown cut off the prior session mid-audit. Resumed read-only first (four parallel
+research forks covering health/crash-debris, items a–i, model-work j–m, product n–o) — found **no
+crash damage**: main checkout clean, all 25 worktrees clean, no lock files, no lost work. Runner
+`gg-home-tanishq` confirmed online and installed as an auto-starting Windows service. Two real
+findings from that pass: (1) items **j** (M1 COMEX/USD-INR proxy) and **l** (M2 COMEX-targeted
+daily variant) in the prior hand-off brief both trace to the same public reply on **#1756** — the
+work was *promised* there but never built; GG's read: not a broken promise, a stated direction,
+still top priority as the core model work (see M1/M2 below). (2) `feat/macro-india-vix` was still
+undeleted despite being independently reimplemented as `#1878` weeks ago.
+
+**Item f (branch sweep), fresh run:** applied the rule literally — delete a branch only if its PR
+is merged/closed AND the branch's own tip commit is an ancestor of current master (i.e. it holds
+zero commits master doesn't already have). Checked all 12 non-open, non-dependabot, non-`chore/
+playwright-*` remote branches this way. Only 2 passed: `docs/phase-3-implementation-plan` (`#10`,
+merged 2026-05-18) and `fix/og-image-rebase-ordering` (`#5`, merged 2026-05-17) — both deleted. The
+other 10 closed/merged-by-title branches (`chore/verify-branch-protection-still-bites`,
+`docs/phase3-rescope-adr012`, `feat/coin-accent`, `feat/coverage-ci-resolvability`,
+`feat/deadman-tanishq-silence-alert`, `feat/phi20-stale-banner-fix`,
+`feat/psi3c3-chart-dedup-skeletons`, `fix/rederive-staleness-threshold-ladder`,
+`fix/sw-offline-data-fallback`, `scratch/skipci-proof`) each still hold commits absent from master
+(confirmed non-ancestor) — kept, not swept, since their PRs being closed-unmerged doesn't mean the
+work is worthless, only that GG didn't want it merged as-is at the time. `chore/playwright-1-63-
+retry` and `chore/playwright-install-debug` were never pushed to remote in the first place (local
+worktree branches only) — GG's "keep" instruction for them is a no-op here. 3 branches with no PR
+ever opened (`feat/psi3c-app-feel`, `tmp-pr12`, `worktree-agent-a369bed613f7ee7f5`) are outside the
+letter of the rule (no merged/closed PR to key off) — left alone, flagged for GG if a broader sweep
+is ever wanted. 6 dependabot branches all have OPEN PRs — kept.
+
+**Item i:** diffed `feat/macro-india-vix` against its own merge-base (4 files: `docs/
+NEXT_SESSION.md`, `ml/features.py`, `ml/macro.py`, `tests/test_macro.py` — a single India-VIX
+feature addition) and against current master (388 files differ — the branch is a ~4-month-old fork
+predating the entire post-Phase-5 architecture). Read the actual `ml/macro.py` diff: the branch
+adds the exact same `^INDIAVIX` ticker and `india_vix_level` feature, with the same code comment
+("mirrors the pattern of vix_level for consistent feature naming"), that `#1878` already shipped
+on master — and master's version is strictly better (adds a defensive `if "india_vix" in df.
+columns` guard the old branch lacks). Zero unique work. Deleted, per GG's "if not, delete it and
+record why."
+
+**Tanishq cron re-check:** the 00:07 UTC gap (flagged in the resume audit) **recurred and
+extended** — no `scrape-tanishq-selfhosted` run appears between 2026-09-22T21:13:01Z and at least
+2026-09-23T03:07Z (both the 00:07 and 03:07 slots produced no run, not even a cancelled one). The
+runner was confirmed online throughout. `check-price.yml` (the GitHub-hosted primary scraper,
+different cron offset) ran fine in that same window (2026-09-23T00:53:03Z, success) — so this is
+not a broader pipeline outage, and IBJA (the calibrated primary source) stayed fresh. Reads as the
+same intermittent GitHub Actions schedule-trigger delay pattern documented previously (~15%
+gap-rate on this specific self-hosted workflow), not a new regression — flagging, not treating as
+an incident.
+
+**Now starting M1** (data corpus — everything downstream depends on it), per GG's numbered spec.
