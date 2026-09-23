@@ -98,3 +98,35 @@ the same-days baseline.
 Any change to a policy, grid, feature list, threshold procedure, test period, metric or family.
 Fixing a bug that makes the code differ from this text is not a deviation: the text is the spec.
 Such a fix is logged in the PR with the before/after behaviour, before test data is scored.
+
+## R4 results (scored 2026-09-23, `scripts/analysis_selective_direction.py` at `05b755c6`, Actions run 35889514765, `reports/r4_selective_direction_results.json`)
+
+**Pre-registered verdict: R4 does not meet its success criterion.** No κ < 100% is significant on
+real IBJA or COMEX. Family size: 23 testable cells (real IBJA h1 at κ = 10% selected no days);
+Bonferroni threshold 0.00217.
+
+Precision on the selected days vs the training-majority class **on the same days**; one-sided HAC
+p (lag h − 1):
+
+| series | h | κ = 10% | κ = 25% | κ = 50% | κ = 100% |
+|---|---|---|---|---|---|
+| INR proxy 2022+ | 1 | **61.3% vs 47.9%, n = 163, p = 0.0010 (Bonferroni ✓)** | 58.7% vs 49.9%, p = 0.0044 | 57.6% vs 52.0%, p = 0.011 | 55.2% vs 53.5%, p = 0.19 |
+| INR proxy 2022+ | 5 | 65.4% vs 64.4%, p = 0.28 | 61.1% vs 60.9%, p = 0.45 | 59.5% vs 59.4%, p = 0.47 | 56.9% vs 58.5%, p = 0.81 |
+| real IBJA (dense) | 1 | 0 days selected | 3 days | 33.3% vs 53.3%, n = 15, p = 0.92 | 49.3% vs 49.3%, n = 73 |
+| real IBJA (dense) | 5 | 75.0% vs 75.0%, n = 8 | 80.0% vs 80.0%, n = 20 | 73.0% vs 64.9%, n = 37, p = 0.11 | 63.1% vs 60.0%, n = 65, p = 0.33 |
+| COMEX 2022+ | 1 | 57.6% vs 48.9%, n = 139, p = 0.059 | 57.6% vs 53.0%, p = 0.11 | 53.8% vs 54.6%, p = 0.62 | 53.6% vs 54.5%, p = 0.67 |
+| COMEX 2022+ | 5 | 64.3% vs 64.3%, n = 182 | 57.6% vs 56.5%, p = 0.39 | 55.9% vs 57.2%, p = 0.68 | 53.7% vs 57.7%, p = 0.94 |
+
+**The one Bonferroni-significant cell is on the proxy, and is very likely an artifact.** ADR 040
+(D4) found the INR proxy has strong day-to-day reversal (lag-1 autocorrelation −0.13), which real
+IBJA doesn't show (+0.07 on dense days). A confident-day model can learn to bet on that reversal.
+It then scores on the proxy and nowhere else, which is exactly the pattern above: real IBJA at
+h = 1 selects almost no days and has no edge. ADR 039 names real IBJA or COMEX as the success sets
+for this reason. The proxy is not a success set.
+
+**Power caveat.** Only two real-IBJA dense segments are long enough after the 20-day feature
+warm-up: 73 test days at h = 1, 65 at h = 5. That can't detect realistic edges (ADR 040, D3).
+
+**What this closes.** Selective direction, the last pre-registered direction test, finds no usable
+edge on real prices. The direction signal stays in shadow. Model effort goes to R1 (range) and R2
+(nowcast).
