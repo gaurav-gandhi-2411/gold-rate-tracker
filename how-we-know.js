@@ -266,8 +266,15 @@ function renderFullMethodology(fc, bt, drift, coverage, bandCoverage) {
 
   // XSS-safe: parts[] contains only hardcoded HTML templates with numeric/boolean
   // values from forecast.json/backtest.json/calibration_band_coverage.json.
+  // Overwriting innerHTML here removes the skeleton markup along with it —
+  // see the comment on #how-we-know-body in how-we-know.html for why that's
+  // deliberate rather than a `hidden`-attribute toggle.
+  if (parts.length === 0) {
+    body.innerHTML = `<p class="meth-loading">${tHwk("hwkEmpty")}</p>`;
+    return false;
+  }
   body.innerHTML = parts.join("");
-  return parts.length > 0;
+  return true;
 }
 
 // ── Shared shell (header title, lang toggle, footer) — reuses i18n.js's t() ───
@@ -308,30 +315,25 @@ function bindLangToggle() {
 }
 
 // ── Loading / empty / error states ─────────────────────────────────────────────
+// The loading state is the skeleton markup already sitting in #how-we-know-body's
+// HTML (how-we-know.html) — nothing to show here for it. Empty/error both write
+// their message into the same element renderFullMethodology() renders into,
+// same "overwrite innerHTML" convention as the content path above.
 
-function showState(state) {
-  const skel = document.getElementById("hwk-skeleton");
-  const stateEl = document.getElementById("hwk-state");
+function showError() {
   const body = document.getElementById("how-we-know-body");
-  if (skel) skel.hidden = state !== "loading";
-  if (stateEl) {
-    stateEl.hidden = state !== "empty" && state !== "error";
-    stateEl.textContent = state === "empty" ? tHwk("hwkEmpty") : state === "error" ? tHwk("hwkError") : "";
-  }
-  if (body) body.hidden = state !== "content";
+  if (body) body.innerHTML = `<p class="meth-loading">${tHwk("hwkError")}</p>`;
 }
 
 let lastFc = null, lastBt = null, lastDrift = null, lastCoverage = null, lastBandCoverage = null;
 
 function renderPage() {
-  const hadContent = renderFullMethodology(lastFc, lastBt, lastDrift, lastCoverage, lastBandCoverage);
-  showState(hadContent ? "content" : "empty");
+  renderFullMethodology(lastFc, lastBt, lastDrift, lastCoverage, lastBandCoverage);
 }
 
 async function init() {
   applySharedShellStrings();
   bindLangToggle();
-  showState("loading");
 
   let settled;
   try {
@@ -345,13 +347,13 @@ async function init() {
   } catch (err) {
     // Promise.allSettled itself never rejects — this is defence in depth only.
     console.error("how-we-know: unexpected failure", err);
-    showState("error");
+    showError();
     return;
   }
 
   const [fc, bt, drift, coverage, bandCoverage] = settled.map(r => (r.status === "fulfilled" ? r.value : null));
   if (settled.every(r => r.status === "rejected")) {
-    showState("error");
+    showError();
     return;
   }
 

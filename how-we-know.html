@@ -80,8 +80,14 @@
       <p class="meth-text" id="hwk-intro"></p>
 
       <div class="methodology">
-        <div class="methodology-body">
-          <!-- Loading state -->
+        <!-- how-we-know.js's renderFullMethodology() replaces this element's entire
+             innerHTML with the rendered sections (or an empty/error message) once data
+             resolves -- same convention app.js's old renderMethodology() used for this
+             exact skeleton-then-content swap (overwriting innerHTML removes the
+             skeleton's markup along with it, rather than toggling a `hidden` attribute
+             that a sibling CSS rule like .meth-skeleton's own `display: flex` would
+             silently override). -->
+        <div class="methodology-body" id="how-we-know-body" role="status" aria-live="polite">
           <div class="meth-skeleton" id="hwk-skeleton" aria-hidden="true">
             <div class="skel skel-meth-heading"></div>
             <div class="skel skel-meth-line"></div>
@@ -89,12 +95,6 @@
             <div class="skel skel-meth-heading"></div>
             <div class="skel skel-meth-line"></div>
           </div>
-
-          <!-- Empty/error state -->
-          <p class="meth-loading" id="hwk-state" hidden role="status" aria-live="polite"></p>
-
-          <!-- Content, filled by how-we-know.js's renderFullMethodology() -->
-          <div id="how-we-know-body" hidden></div>
         </div>
       </div>
 
