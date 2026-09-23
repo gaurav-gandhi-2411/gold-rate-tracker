@@ -213,10 +213,15 @@ def run_walk_forward_reframed(
     horizon: int,
     feature_cols: list[str] = FEATURE_COLS,
     min_train_size: int = MIN_TRAIN_SIZE,
+    target_builders: dict[str, object] | None = None,
 ) -> dict:
-    """Embargo-aware walk-forward for one target/horizon combination."""
+    """Embargo-aware walk-forward for one target/horizon combination.
+
+    `target_builders` overrides TARGET_BUILDERS, e.g. to swap the INR-only
+    buyer_decision builder for its unit-free percentage variant on a non-INR
+    dataset (see ml.direction.price_units)."""
     label_date_col = f"label_date_h{horizon}"
-    builder = TARGET_BUILDERS[target_name]
+    builder = (target_builders or TARGET_BUILDERS)[target_name]
     labels = builder(dataset, horizon)  # type: ignore[operator]
 
     df = dataset.copy()
