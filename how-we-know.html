@@ -1,0 +1,120 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+
+    <!-- Same blocking language-detection script as index.html (see that file's own
+         comment for the full rationale) -- duplicated deliberately, not shared via an
+         extra script tag, since it must run before first paint on THIS page too and
+         i18n.js hasn't loaded yet at this point in <head> parsing either. -->
+    <script>
+      (function () {
+        var lang = "en";
+        try {
+          var stored = localStorage.getItem("lang");
+          if (stored === "hi" || stored === "en") {
+            lang = stored;
+          } else {
+            var langs = navigator.languages || [navigator.language || ""];
+            for (var i = 0; i < langs.length; i++) {
+              if (langs[i].toLowerCase().indexOf("hi") === 0) { lang = "hi"; break; }
+            }
+          }
+        } catch (e) { /* default to en */ }
+        document.documentElement.lang = lang;
+        if (lang === "hi") {
+          var devanagariFonts = [
+            ["devanagari-preload-sans", "fonts/notosans-devanagari-variable.woff2"],
+            ["devanagari-preload-serif", "fonts/notoserif-devanagari-variable.woff2"]
+          ];
+          for (var i = 0; i < devanagariFonts.length; i++) {
+            var link = document.createElement("link");
+            link.rel = "preload";
+            link.as = "font";
+            link.type = "font/woff2";
+            link.href = devanagariFonts[i][1];
+            link.crossOrigin = "anonymous";
+            link.id = devanagariFonts[i][0];
+            document.head.appendChild(link);
+          }
+        }
+      })();
+    </script>
+
+    <title>How we know · Gold Rate Today</title>
+    <meta name="description" content="The full numbers behind Gold Rate Today's estimate: how the range is built, how accurate it has actually been, and why there's no rising/falling forecast." />
+    <meta name="robots" content="noindex" />
+
+    <!-- PWA -->
+    <link rel="manifest" href="manifest.webmanifest" />
+    <link rel="icon" href="favicon.svg" type="image/svg+xml" />
+    <meta name="theme-color" content="#1A1612" />
+    <link rel="apple-touch-icon" sizes="180x180" href="icons/icon-192.png" />
+
+    <!-- Fonts: same preload set as index.html (see that file's own FONTS comment for
+         the full rationale) -- this page uses the same design tokens/typefaces. -->
+    <link rel="preload" href="fonts/fraunces-variable-latin.woff2" as="font" type="font/woff2" crossorigin>
+    <link rel="preload" href="fonts/dmsans-variable-latin.woff2" as="font" type="font/woff2" crossorigin>
+    <link rel="preload" href="fonts/syne-variable-latin.woff2" as="font" type="font/woff2" crossorigin>
+    <link rel="preload" href="fonts/rupee-sign.woff2" as="font" type="font/woff2" crossorigin>
+    <link rel="stylesheet" href="style.css" />
+  </head>
+  <body>
+    <div class="grain" aria-hidden="true"></div>
+
+    <!-- Simplified app header — same classes/tokens as index.html's, just without the
+         refresh/share/pwa-help/freshness-pill controls this page has no use for. -->
+    <div class="app-header">
+      <div class="app-header-left">
+        <span class="app-title" id="hwk-app-title">Gold Tracker</span>
+      </div>
+      <div class="app-header-right">
+        <button class="lang-toggle" id="hwk-lang-toggle" aria-label="Switch language" title="Switch language">हिं</button>
+      </div>
+    </div>
+
+    <main>
+      <a class="how-we-know-back" id="hwk-back-link" href="index.html">← Back to Gold Rate Today</a>
+      <h1 class="how-we-know-heading" id="hwk-heading">How we know</h1>
+      <p class="meth-text" id="hwk-intro"></p>
+
+      <div class="methodology">
+        <div class="methodology-body">
+          <!-- Loading state -->
+          <div class="meth-skeleton" id="hwk-skeleton" aria-hidden="true">
+            <div class="skel skel-meth-heading"></div>
+            <div class="skel skel-meth-line"></div>
+            <div class="skel skel-meth-line skel-meth-line--short"></div>
+            <div class="skel skel-meth-heading"></div>
+            <div class="skel skel-meth-line"></div>
+          </div>
+
+          <!-- Empty/error state -->
+          <p class="meth-loading" id="hwk-state" hidden role="status" aria-live="polite"></p>
+
+          <!-- Content, filled by how-we-know.js's renderFullMethodology() -->
+          <div id="how-we-know-body" hidden></div>
+        </div>
+      </div>
+
+      <footer class="site-footer">
+        <p data-i18n-html="footerBody"></p>
+        <p class="muted" data-i18n="footerMuted"></p>
+      </footer>
+    </main>
+
+    <script src="i18n.js" defer></script>
+    <script src="how-we-know-strings.js" defer></script>
+    <script src="how-we-know.js" defer></script>
+    <script>
+      if ("serviceWorker" in navigator) {
+        window.addEventListener("load", () => {
+          navigator.serviceWorker.register("service-worker.js").then((registration) => {
+            registration.update();
+          }).catch(() => {});
+        });
+      }
+    </script>
+  </body>
+</html>
