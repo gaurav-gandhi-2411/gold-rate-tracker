@@ -4,7 +4,14 @@ import json
 from datetime import date
 from pathlib import Path
 
-from ml.calendar_events import ALL_FESTIVALS, get_festival_info
+from ml.calendar_events import (
+    ALL_FESTIVALS,
+    get_budget_window_info,
+    get_demand_calendar_features,
+    get_duty_event_proximity,
+    get_festival_info,
+    get_wedding_season_info,
+)
 
 # ---------------------------------------------------------------------------
 # Helper defined in test file (not a production export)
@@ -159,3 +166,116 @@ class TestDutyJoinLogic:
         active, days_since = duty_change_active(date(2020, 1, 1), _SAMPLE_EVENTS)
         assert active is False
         assert days_since == 9999
+
+
+# ---------------------------------------------------------------------------
+# TestWeddingSeason (M1: Indian demand calendar, GG spec 2026-09-23)
+# ---------------------------------------------------------------------------
+
+
+class TestWeddingSeason:
+    def test_mid_december_is_winter_wedding_season(self) -> None:
+        result = get_wedding_season_info(date(2025, 12, 15))
+        assert result["is_wedding_season"] is True
+        assert result["wedding_season_name"] == "winter"
+
+    def test_winter_season_wraps_year_boundary(self) -> None:
+        result = get_wedding_season_info(date(2026, 1, 20))
+        assert result["is_wedding_season"] is True
+        assert result["wedding_season_name"] == "winter"
+
+    def test_june_is_summer_wedding_season(self) -> None:
+        result = get_wedding_season_info(date(2025, 6, 1))
+        assert result["is_wedding_season"] is True
+        assert result["wedding_season_name"] == "summer"
+
+    def test_august_is_not_wedding_season(self) -> None:
+        result = get_wedding_season_info(date(2025, 8, 15))
+        assert result["is_wedding_season"] is False
+        assert result["wedding_season_name"] is None
+
+    def test_march_is_not_wedding_season(self) -> None:
+        result = get_wedding_season_info(date(2025, 3, 10))
+        assert result["is_wedding_season"] is False
+
+
+# ---------------------------------------------------------------------------
+# TestBudgetWindow
+# ---------------------------------------------------------------------------
+
+
+class TestBudgetWindow:
+    def test_budget_day_itself_in_window(self) -> None:
+        assert get_budget_window_info(date(2026, 2, 1))["is_budget_window"] is True
+
+    def test_twelve_days_before_budget_in_window(self) -> None:
+        assert get_budget_window_info(date(2026, 1, 20))["is_budget_window"] is True
+
+    def test_thirteen_days_before_budget_not_in_window(self) -> None:
+        assert get_budget_window_info(date(2026, 1, 19))["is_budget_window"] is False
+
+    def test_fourteen_days_after_budget_in_window(self) -> None:
+        assert get_budget_window_info(date(2026, 2, 15))["is_budget_window"] is True
+
+    def test_fifteen_days_after_budget_not_in_window(self) -> None:
+        assert get_budget_window_info(date(2026, 2, 16))["is_budget_window"] is False
+
+    def test_mid_year_not_in_window(self) -> None:
+        assert get_budget_window_info(date(2026, 7, 1))["is_budget_window"] is False
+
+
+# ---------------------------------------------------------------------------
+# TestDutyEventProximityProduction (production version of duty_change_active)
+# ---------------------------------------------------------------------------
+
+
+class TestDutyEventProximityProduction:
+    def test_recent_after_2026_hike(self, tmp_path: Path) -> None:
+        events_path = tmp_path / "duty_events.json"
+        events_path.write_text(json.dumps([{"date": "2026-05-13", "magnitude_pct": 9.0}]))
+
+        result = get_duty_event_proximity(date(2026, 5, 20), path=events_path)
+        assert result["is_duty_event_recent"] is True
+        assert result["days_since_duty_event"] == 7
+
+    def test_not_recent_60_days_later(self, tmp_path: Path) -> None:
+        events_path = tmp_path / "duty_events.json"
+        events_path.write_text(json.dumps([{"date": "2026-05-13", "magnitude_pct": 9.0}]))
+
+        result = get_duty_event_proximity(date(2026, 7, 12), path=events_path)
+        assert result["is_duty_event_recent"] is False
+
+    def test_no_events_before_query_date(self, tmp_path: Path) -> None:
+        events_path = tmp_path / "duty_events.json"
+        events_path.write_text(json.dumps([{"date": "2026-05-13", "magnitude_pct": 9.0}]))
+
+        result = get_duty_event_proximity(date(2020, 1, 1), path=events_path)
+        assert result["days_since_duty_event"] == 9999
+        assert result["is_duty_event_recent"] is False
+
+    def test_matches_real_duty_events_json(self) -> None:
+        # Sanity check against the real committed file — must not raise.
+        result = get_duty_event_proximity(date(2026, 9, 23))
+        assert isinstance(result["days_since_duty_event"], int)
+
+
+# ---------------------------------------------------------------------------
+# TestDemandCalendarFeatures (combined entry point)
+# ---------------------------------------------------------------------------
+
+
+class TestDemandCalendarFeatures:
+    def test_combines_all_four_flag_groups(self) -> None:
+        result = get_demand_calendar_features(date(2025, 4, 30))  # Akshaya Tritiya 2025
+        expected_keys = {
+            "is_festival_window",
+            "festival_name",
+            "days_to_next_festival",
+            "is_wedding_season",
+            "wedding_season_name",
+            "is_budget_window",
+            "is_duty_event_recent",
+            "days_since_duty_event",
+        }
+        assert expected_keys.issubset(result.keys())
+        assert result["is_festival_window"] is True
