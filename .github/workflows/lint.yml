@@ -68,6 +68,14 @@ jobs:
         # baseline (tests/test_count_baseline.json) or a test file is missing/unlisted. Lowering the
         # baseline is an explicit `--update`, visible in the PR diff. Limits: see the script docstring.
         run: python scripts/check_test_counts.py
+      - name: Check plain-language compliance (U1/U3, docs/PLAIN_LANGUAGE_AUDIT.md)
+        # Fails if a banned statistical/ML jargon term (coverage, n=, calibrated,
+        # volatility, model, ...) appears in text an ordinary gold buyer would
+        # actually read -- index.html, i18n.js, app.js, ml/public_copy.py,
+        # README.md's first screen -- outside how-we-know.html, the designated
+        # technical-detail page. See the script's own module docstring for the
+        # exact scope per file and its stated blind spots.
+        run: python scripts/check_plain_language.py
 
   # PWA pure-function JS tests (app.js logic: comparisons, dedup, good-price,
   # scrape parsing, stale-banner, trend). These existed under tests/*.js but ran
