@@ -36,6 +36,7 @@ import numpy as np
 import pandas as pd
 
 from ml.calendar_events import get_demand_calendar_features
+from ml.direction.price_units import USD_PER_TROY_OZ, declare_units
 from ml.inr_proxy import _detect_and_adjust_rolls
 from ml.macro import TICKER_MAP, _download_with_retry
 
@@ -135,7 +136,7 @@ def _derived_technical_features(gold_usd: pd.Series) -> pd.DataFrame:
     """Momentum/mean-reversion features computed purely from GC=F's own
     (already roll-adjusted) history — all using data through the row's own
     date, to be lagged by the caller before use as a T-1 feature."""
-    log_ret = np.log(gold_usd / gold_usd.shift(1))
+    log_ret = pd.Series(np.log(gold_usd / gold_usd.shift(1)), index=gold_usd.index)
     ma20 = gold_usd.rolling(20, min_periods=10).mean()
     return pd.DataFrame(
         {
@@ -178,7 +179,7 @@ def build_comex_dataset(
         "india_vix",
     ]
     lagged = drivers[lag_cols].shift(1)
-    lagged.columns = [f"{c}_lag1" for c in lag_cols]
+    lagged.columns = pd.Index([f"{c}_lag1" for c in lag_cols])
     technical_lagged = technical.shift(1)
     roll_flags_lag = roll_flags.shift(1).astype("boolean").fillna(False).astype(bool)
 
@@ -265,4 +266,6 @@ def build_comex_dataset(
 
     df = pd.DataFrame(rows)
     df = df.sort_values("as_of_date").reset_index(drop=True)
-    return df[(df["as_of_date"] >= start) & (df["as_of_date"] < end)].reset_index(drop=True)
+    df = df[(df["as_of_date"] >= start) & (df["as_of_date"] < end)].reset_index(drop=True)
+    # INR-constant label builders refuse this frame (ml.direction.price_units).
+    return declare_units(df, USD_PER_TROY_OZ)

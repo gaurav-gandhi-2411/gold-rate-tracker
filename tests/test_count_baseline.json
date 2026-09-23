@@ -22,6 +22,7 @@
   "tests/test_check_test_counts.py": 12,
   "tests/test_check_test_registry_complete.py": 12,
   "tests/test_chronos_forecast.py": 36,
+  "tests/test_comex_daily.py": 11,
   "tests/test_comparisons.js": 7,
   "tests/test_config_sweep.py": 13,
   "tests/test_dedup.js": 11,

@@ -9,6 +9,7 @@ from unittest.mock import patch
 
 import numpy as np
 import pandas as pd
+import pytest
 from ml.direction.comex_daily import (
     _DEAD_BAND_PCT,
     _fetch_all_drivers,
@@ -173,3 +174,21 @@ class TestBuildComexDataset:
 
         has_dip_in_window = (df["window_min_pm916_h5"] < df["current_pm916"] * 0.7).any()
         assert has_dip_in_window
+
+    def test_declares_usd_units_and_rupee_builder_refuses_it(self) -> None:
+        # The ₹50/g buyer_decision threshold on USD/oz produced a fake 100%
+        # accuracy on 2026-09-23; the declared units make that fail loudly.
+        from ml.direction.price_units import PRICE_UNITS_ATTR, USD_PER_TROY_OZ, PriceUnitsError
+        from ml.direction.reframed_targets import (
+            add_buyer_decision_binary,
+            add_buyer_decision_binary_pct,
+        )
+
+        raw = _make_yf_response(n_days=60)
+        with patch("ml.direction.comex_daily._download_with_retry", return_value=raw):
+            df = build_comex_dataset(start="2023-01-02", end="2023-03-15", extra_horizons=(5,))
+        assert df.attrs[PRICE_UNITS_ATTR] == USD_PER_TROY_OZ
+        with pytest.raises(PriceUnitsError):
+            add_buyer_decision_binary(df, 5)
+        labels = add_buyer_decision_binary_pct(df, 5, dip_pct=0.5)
+        assert labels.dropna().isin([0.0, 1.0]).all()
