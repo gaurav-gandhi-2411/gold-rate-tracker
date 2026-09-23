@@ -1,30 +1,31 @@
 {
   "schema_version": 2,
-  "generated_at_utc": "2026-09-23T12:40:30.063250+00:00",
-  "as_of_date_range": "2025-01-09 to 2026-09-21",
+  "source_sha": "fb5a1a5bc1dda411a411baf5d1fec74e2dac5475",
+  "generated_at_utc": "2026-09-23T13:59:30.692117+00:00",
+  "as_of_date_range": "2025-01-09 to 2026-09-22",
   "min_train_size": 20,
   "horizons": {
     "h1": {
-      "n_test_folds": 162,
+      "n_test_folds": 163,
       "n_skipped_folds": 1,
       "min_train_size": 20,
       "embargo": "train on rows with label_date_h1 < test as_of_date",
-      "always_up_baseline_accuracy": 0.5123456790123457,
+      "always_up_baseline_accuracy": 0.50920245398773,
       "trailing_30_fold_up_fraction": 0.8666666666666667,
       "majority_class_collapse": false,
       "majority_class_collapse_threshold": 0.95,
       "logistic_metrics": {
         "model": "logistic",
-        "n": 162,
-        "accuracy": 0.5246913580246914,
-        "brier": 0.2586023892623628,
-        "log_loss": 0.7116612127797217,
-        "always_up_accuracy": 0.5123456790123457,
-        "always_up_brier": 0.4876543209876543,
+        "n": 163,
+        "accuracy": 0.5214723926380368,
+        "brier": 0.2587802976165187,
+        "log_loss": 0.7120098239746039,
+        "always_up_accuracy": 0.50920245398773,
+        "always_up_brier": 0.49079754601226994,
         "p_value": 0.8238029479980469,
         "significant_at_05": false,
         "n_discordant": 20,
-        "ece": 0.07496479477916292,
+        "ece": 0.07779497922793902,
         "reliability": [
           {
             "lo": 0.2,
@@ -50,9 +51,9 @@
           {
             "lo": 0.5,
             "hi": 0.6,
-            "mean_pred": 0.5579,
-            "frac_pos": 0.5301,
-            "count": 83
+            "mean_pred": 0.5577,
+            "frac_pos": 0.5238,
+            "count": 84
           },
           {
             "lo": 0.6,
@@ -79,23 +80,23 @@
       },
       "lightgbm_metrics": {
         "model": "lightgbm",
-        "n": 162,
-        "accuracy": 0.5123456790123457,
-        "brier": 0.29413780307556714,
-        "log_loss": 0.8167406958581604,
-        "always_up_accuracy": 0.5123456790123457,
-        "always_up_brier": 0.4876543209876543,
+        "n": 163,
+        "accuracy": 0.5153374233128835,
+        "brier": 0.2923696957359426,
+        "log_loss": 0.812221902842587,
+        "always_up_accuracy": 0.50920245398773,
+        "always_up_brier": 0.49079754601226994,
         "p_value": 1.0,
         "significant_at_05": false,
-        "n_discordant": 64,
-        "ece": 0.22555717024126304,
+        "n_discordant": 65,
+        "ece": 0.2237007002912924,
         "reliability": [
           {
             "lo": 0.0,
             "hi": 0.1,
-            "mean_pred": 0.0805,
-            "frac_pos": 0.5,
-            "count": 6
+            "mean_pred": 0.08,
+            "frac_pos": 0.4286,
+            "count": 7
           },
           {
             "lo": 0.1,
@@ -164,23 +165,23 @@
       },
       "persistence_metrics": {
         "model": "persistence",
-        "n": 162,
-        "accuracy": 0.46296296296296297,
-        "brier": 0.5370370370370371,
-        "log_loss": 8.65601437750622,
-        "always_up_accuracy": 0.5123456790123457,
-        "always_up_brier": 0.4876543209876543,
-        "p_value": 0.43404225534547874,
+        "n": 163,
+        "accuracy": 0.4662576687116564,
+        "brier": 0.5337423312883436,
+        "log_loss": 8.60290999543563,
+        "always_up_accuracy": 0.50920245398773,
+        "always_up_brier": 0.49079754601226994,
+        "p_value": 0.5052364407669357,
         "significant_at_05": false,
-        "n_discordant": 80,
-        "ece": 0.537037037037037,
+        "n_discordant": 81,
+        "ece": 0.5337423312883436,
         "reliability": [
           {
             "lo": 0.0,
             "hi": 0.1,
             "mean_pred": 0.0,
-            "frac_pos": 0.55,
-            "count": 80
+            "frac_pos": 0.5432,
+            "count": 81
           },
           {
             "lo": 0.9,
@@ -197,81 +198,81 @@
       },
       "feature_importances": {
         "logistic": {
-          "days_since_last_duty_change": 0.23522997068492785,
-          "ibja_pm_916": 0.569525730219902,
-          "ibja_am_916": 0.4551055312892943,
-          "gold_usd": 0.29196253210986284,
-          "us_10y_yield": 0.29412586605220653,
-          "tips": 0.2665818069875552,
-          "usd_inr": 0.2893226972451929,
+          "dxy": 0.43254517458782876,
+          "days_to_next_festival": 0.2616263303754383,
+          "ibja_pm_916": 0.5682046099934503,
           "duty_change_active": 0.0,
-          "tanishq_22k": 0.09278566224148618,
-          "crude_wti": 0.3030432214127176,
-          "vix": 0.24171570992358743,
-          "dow": 0.27376680945972887,
-          "dom": 0.4281667423484235,
-          "month": 0.30004983506514854,
-          "days_to_next_festival": 0.2627453212161393,
-          "is_festival_window": 0.10206727883324114,
-          "sensex": 0.28277051134712466,
-          "dxy": 0.43254759033787776
+          "dom": 0.4282171557821481,
+          "days_since_last_duty_change": 0.23658527846330185,
+          "us_10y_yield": 0.2937527110614275,
+          "tips": 0.2661524097684002,
+          "vix": 0.24146860206106033,
+          "ibja_am_916": 0.45539697056140893,
+          "tanishq_22k": 0.09277771716391275,
+          "is_festival_window": 0.10192089764251852,
+          "usd_inr": 0.2887734005209566,
+          "gold_usd": 0.29261775029221054,
+          "sensex": 0.28161913784392456,
+          "crude_wti": 0.3031066284498251,
+          "dow": 0.2725210236542428,
+          "month": 0.3015228250563708
         },
         "lightgbm": {
-          "days_since_last_duty_change": 5.283950617283951,
-          "ibja_pm_916": 39.08024691358025,
-          "ibja_am_916": 7.333333333333333,
-          "gold_usd": 26.401234567901234,
-          "us_10y_yield": 19.265432098765434,
-          "tips": 26.65432098765432,
-          "usd_inr": 12.864197530864198,
+          "dxy": 22.828220858895705,
+          "days_to_next_festival": 14.748466257668712,
+          "ibja_pm_916": 39.122699386503065,
           "duty_change_active": 0.0,
-          "tanishq_22k": 0.22839506172839505,
-          "crude_wti": 12.419753086419753,
-          "vix": 30.265432098765434,
-          "dow": 15.635802469135802,
-          "dom": 33.4320987654321,
-          "month": 2.074074074074074,
-          "days_to_next_festival": 14.753086419753087,
+          "dom": 33.66257668711656,
+          "days_since_last_duty_change": 5.300613496932515,
+          "us_10y_yield": 19.478527607361965,
+          "tips": 26.828220858895705,
+          "vix": 30.39877300613497,
+          "ibja_am_916": 7.552147239263804,
+          "tanishq_22k": 0.2883435582822086,
           "is_festival_window": 0.0,
-          "sensex": 19.54320987654321,
-          "dxy": 22.58641975308642
+          "usd_inr": 12.969325153374234,
+          "gold_usd": 26.533742331288344,
+          "sensex": 19.766871165644172,
+          "crude_wti": 12.52760736196319,
+          "dow": 15.760736196319018,
+          "month": 2.0920245398773005
         }
       },
-      "as_of_date_range": "2025-01-09 to 2026-09-21",
-      "generated_at_utc": "2026-09-23T12:40:30.063250+00:00",
+      "as_of_date_range": "2025-01-09 to 2026-09-22",
+      "generated_at_utc": "2026-09-23T13:59:30.692117+00:00",
       "horizon": "h1",
       "probability_gate": {
         "ship": false,
         "basis": "base_rate_fallback",
-        "reason": "not significant vs always-up: p=0.8238, acc=0.5247 vs baseline=0.5123"
+        "reason": "not significant vs always-up: p=0.8238, acc=0.5215 vs baseline=0.5092"
       },
       "timing_gate": {
         "ship": false,
         "basis": "hold_dark",
-        "reason": "probability gate not passed (not significant vs always-up: p=0.8238, acc=0.5247 vs baseline=0.5123)"
+        "reason": "probability gate not passed (not significant vs always-up: p=0.8238, acc=0.5215 vs baseline=0.5092)"
       }
     },
     "h2": {
-      "n_test_folds": 159,
+      "n_test_folds": 160,
       "n_skipped_folds": 2,
       "min_train_size": 20,
       "embargo": "train on rows with label_date_h2 < test as_of_date",
-      "always_up_baseline_accuracy": 0.5974842767295597,
+      "always_up_baseline_accuracy": 0.59375,
       "trailing_30_fold_up_fraction": 1.0,
       "majority_class_collapse": true,
       "majority_class_collapse_threshold": 0.95,
       "logistic_metrics": {
         "model": "logistic",
-        "n": 159,
-        "accuracy": 0.5849056603773585,
-        "brier": 0.24729484355549805,
-        "log_loss": 0.691205022836838,
-        "always_up_accuracy": 0.5974842767295597,
-        "always_up_brier": 0.4025157232704403,
+        "n": 160,
+        "accuracy": 0.58125,
+        "brier": 0.248409572450699,
+        "log_loss": 0.6934897387290536,
+        "always_up_accuracy": 0.59375,
+        "always_up_brier": 0.40625,
         "p_value": 0.7744140625,
         "significant_at_05": false,
         "n_discordant": 12,
-        "ece": 0.04274636960381972,
+        "ece": 0.04655682792760707,
         "reliability": [
           {
             "lo": 0.1,
@@ -304,9 +305,9 @@
           {
             "lo": 0.6,
             "hi": 0.7,
-            "mean_pred": 0.6402,
-            "frac_pos": 0.6197,
-            "count": 71
+            "mean_pred": 0.6404,
+            "frac_pos": 0.6111,
+            "count": 72
           },
           {
             "lo": 0.7,
@@ -326,16 +327,16 @@
       },
       "lightgbm_metrics": {
         "model": "lightgbm",
-        "n": 159,
-        "accuracy": 0.5471698113207547,
-        "brier": 0.2801429344078566,
-        "log_loss": 0.7951271381793388,
-        "always_up_accuracy": 0.5974842767295597,
-        "always_up_brier": 0.4025157232704403,
-        "p_value": 0.37415171240479483,
+        "n": 160,
+        "accuracy": 0.55,
+        "brier": 0.2796535252959441,
+        "log_loss": 0.7938857083736887,
+        "always_up_accuracy": 0.59375,
+        "always_up_brier": 0.40625,
+        "p_value": 0.44996253629022254,
         "significant_at_05": false,
-        "n_discordant": 62,
-        "ece": 0.18499345716558652,
+        "n_discordant": 63,
+        "ece": 0.18102935268527684,
         "reliability": [
           {
             "lo": 0.1,
@@ -361,9 +362,9 @@
           {
             "lo": 0.4,
             "hi": 0.5,
-            "mean_pred": 0.4463,
-            "frac_pos": 0.5,
-            "count": 16
+            "mean_pred": 0.4465,
+            "frac_pos": 0.4706,
+            "count": 17
           },
           {
             "lo": 0.5,
@@ -404,16 +405,16 @@
       },
       "persistence_metrics": {
         "model": "persistence",
-        "n": 159,
-        "accuracy": 0.5157232704402516,
-        "brier": 0.48427672955974843,
-        "log_loss": 7.8056187002688056,
-        "always_up_accuracy": 0.5974842767295597,
-        "always_up_brier": 0.4025157232704403,
+        "n": 160,
+        "accuracy": 0.5125,
+        "brier": 0.4875,
+        "log_loss": 7.857571681213905,
+        "always_up_accuracy": 0.59375,
+        "always_up_brier": 0.40625,
         "p_value": 0.1480321806927584,
         "significant_at_05": false,
         "n_discordant": 69,
-        "ece": 0.48427672955974843,
+        "ece": 0.48749999999999993,
         "reliability": [
           {
             "lo": 0.0,
@@ -426,8 +427,8 @@
             "lo": 0.9,
             "hi": 1.0,
             "mean_pred": 1.0,
-            "frac_pos": 0.6,
-            "count": 90
+            "frac_pos": 0.5934,
+            "count": 91
           }
         ]
       },
@@ -437,58 +438,58 @@
       },
       "feature_importances": {
         "logistic": {
-          "days_since_last_duty_change": 0.3247079913990909,
-          "ibja_pm_916": 0.8082733011983738,
-          "ibja_am_916": 0.6722726963079148,
-          "gold_usd": 0.29166420944297766,
-          "us_10y_yield": 0.5634576346646845,
-          "tips": 0.35048718030131787,
-          "usd_inr": 0.3168237459057363,
+          "dxy": 0.44261723329921016,
+          "days_to_next_festival": 0.3052523081196543,
+          "ibja_pm_916": 0.8091241409859611,
           "duty_change_active": 0.0,
-          "tanishq_22k": 0.08343627641158749,
-          "crude_wti": 0.40569613764430473,
-          "vix": 0.3347004945350489,
-          "dow": 0.21624634489266065,
-          "dom": 0.2294827759841454,
-          "month": 0.2572777890854643,
-          "days_to_next_festival": 0.3043803445322493,
-          "is_festival_window": 0.18690552235797872,
-          "sensex": 0.2972361762102334,
-          "dxy": 0.4408403871319762
+          "dom": 0.22946094159755098,
+          "days_since_last_duty_change": 0.3263663288006971,
+          "us_10y_yield": 0.5621020970825447,
+          "tips": 0.35074684874867457,
+          "vix": 0.33429936878989097,
+          "ibja_am_916": 0.6727034696493689,
+          "tanishq_22k": 0.08364114000127902,
+          "is_festival_window": 0.1863475514798334,
+          "usd_inr": 0.31608510793545097,
+          "gold_usd": 0.2930050611133124,
+          "sensex": 0.2969653849108453,
+          "crude_wti": 0.40498947991322004,
+          "dow": 0.2154159343896099,
+          "month": 0.2570247168962119
         },
         "lightgbm": {
-          "days_since_last_duty_change": 4.245283018867925,
-          "ibja_pm_916": 25.11949685534591,
-          "ibja_am_916": 26.79245283018868,
-          "gold_usd": 25.855345911949687,
-          "us_10y_yield": 37.17610062893082,
-          "tips": 21.144654088050313,
-          "usd_inr": 14.817610062893081,
+          "dxy": 20.075,
+          "days_to_next_festival": 15.2625,
+          "ibja_pm_916": 25.4375,
           "duty_change_active": 0.0,
-          "tanishq_22k": 0.10062893081761007,
-          "crude_wti": 17.72327044025157,
-          "vix": 23.446540880503143,
-          "dow": 9.29559748427673,
-          "dom": 34.37106918238994,
-          "month": 1.6729559748427674,
-          "days_to_next_festival": 15.150943396226415,
+          "dom": 34.6,
+          "days_since_last_duty_change": 4.2875,
+          "us_10y_yield": 37.43125,
+          "tips": 21.375,
+          "vix": 23.5125,
+          "ibja_am_916": 26.875,
+          "tanishq_22k": 0.1,
           "is_festival_window": 0.0,
-          "sensex": 12.547169811320755,
-          "dxy": 19.943396226415093
+          "usd_inr": 14.925,
+          "gold_usd": 26.01875,
+          "sensex": 12.6625,
+          "crude_wti": 17.8125,
+          "dow": 9.31875,
+          "month": 1.75625
         }
       },
-      "as_of_date_range": "2025-01-09 to 2026-09-18",
-      "generated_at_utc": "2026-09-23T12:40:39.626635+00:00",
+      "as_of_date_range": "2025-01-09 to 2026-09-21",
+      "generated_at_utc": "2026-09-23T13:59:39.786228+00:00",
       "horizon": "h2",
       "probability_gate": {
         "ship": false,
         "basis": "base_rate_fallback",
-        "reason": "not significant vs always-up: p=0.7744, acc=0.5849 vs baseline=0.5975"
+        "reason": "not significant vs always-up: p=0.7744, acc=0.5813 vs baseline=0.5938"
       },
       "timing_gate": {
         "ship": false,
         "basis": "hold_dark",
-        "reason": "probability gate not passed (not significant vs always-up: p=0.7744, acc=0.5849 vs baseline=0.5975)"
+        "reason": "probability gate not passed (not significant vs always-up: p=0.7744, acc=0.5813 vs baseline=0.5938)"
       }
     }
   }
