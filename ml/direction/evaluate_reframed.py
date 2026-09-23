@@ -203,7 +203,7 @@ def run_walk_forward_reframed(
             n_skipped += 1
             continue
 
-        train_idx = eligible
+        train_idx = np.array(eligible, dtype=int)
         y_train = df["_label"].iloc[train_idx].tolist()
         if len(set(y_train)) < 2:
             n_skipped += 1
