@@ -1,0 +1,135 @@
+{
+  "generated_at_utc": "2026-09-23T12:03:53.663638+00:00",
+  "git_sha": "421f7c390181f9f2cc070b1ded6cfd05253036d4",
+  "rows": 349,
+  "lagged_variant_rows_missing_vix": 0,
+  "as_of_range": [
+    "2013-04-12",
+    "2026-09-23"
+  ],
+  "variants": [
+    {
+      "variant": "registered (same-day india_vix)",
+      "2013-2017": {
+        "n": 0,
+        "effective_n": null,
+        "accuracy": null,
+        "majority_class_accuracy": null,
+        "p_one_sided_vs_majority": null,
+        "always_up_accuracy": null,
+        "p_one_sided_vs_always_up": null
+      },
+      "2018-2021": {
+        "n": 34,
+        "effective_n": 0.0,
+        "accuracy": 0.6764705882352942,
+        "majority_class_accuracy": 0.6764705882352942,
+        "p_one_sided_vs_majority": 0.5,
+        "always_up_accuracy": 0.32352941176470584,
+        "p_one_sided_vs_always_up": 0.013920028748010738
+      },
+      "2022-2026": {
+        "n": 295,
+        "effective_n": 295.0,
+        "accuracy": 0.4610169491525423,
+        "majority_class_accuracy": 0.5322033898305085,
+        "p_one_sided_vs_majority": 0.9859294654866857,
+        "always_up_accuracy": 0.5830508474576271,
+        "p_one_sided_vs_always_up": 0.9996343121326614
+      },
+      "all": {
+        "n": 329,
+        "effective_n": 329.0,
+        "accuracy": 0.48328267477203646,
+        "majority_class_accuracy": 0.547112462006079,
+        "p_one_sided_vs_majority": 0.9858629927384472,
+        "always_up_accuracy": 0.5562310030395137,
+        "p_one_sided_vs_always_up": 0.9748829865088613
+      }
+    },
+    {
+      "variant": "india_vix = prior trading day close",
+      "2013-2017": {
+        "n": 0,
+        "effective_n": null,
+        "accuracy": null,
+        "majority_class_accuracy": null,
+        "p_one_sided_vs_majority": null,
+        "always_up_accuracy": null,
+        "p_one_sided_vs_always_up": null
+      },
+      "2018-2021": {
+        "n": 34,
+        "effective_n": 0.0,
+        "accuracy": 0.6764705882352942,
+        "majority_class_accuracy": 0.6764705882352942,
+        "p_one_sided_vs_majority": 0.5,
+        "always_up_accuracy": 0.32352941176470584,
+        "p_one_sided_vs_always_up": 0.013920028748010738
+      },
+      "2022-2026": {
+        "n": 295,
+        "effective_n": 295.0,
+        "accuracy": 0.47796610169491527,
+        "majority_class_accuracy": 0.5322033898305085,
+        "p_one_sided_vs_majority": 0.9531346956176656,
+        "always_up_accuracy": 0.5830508474576271,
+        "p_one_sided_vs_always_up": 0.9963251574172256
+      },
+      "all": {
+        "n": 329,
+        "effective_n": 329.0,
+        "accuracy": 0.4984802431610942,
+        "majority_class_accuracy": 0.547112462006079,
+        "p_one_sided_vs_majority": 0.9530539380637206,
+        "always_up_accuracy": 0.5562310030395137,
+        "p_one_sided_vs_always_up": 0.9275315531053943
+      }
+    }
+  ],
+  "bonferroni_threshold": 0.008333333333333333,
+  "corrections": [
+    {
+      "variant": "registered (same-day india_vix)",
+      "period": "2018-2021",
+      "p": 0.5,
+      "bonferroni": false,
+      "bh": false
+    },
+    {
+      "variant": "registered (same-day india_vix)",
+      "period": "2022-2026",
+      "p": 0.9859294654866857,
+      "bonferroni": false,
+      "bh": false
+    },
+    {
+      "variant": "registered (same-day india_vix)",
+      "period": "all",
+      "p": 0.9858629927384472,
+      "bonferroni": false,
+      "bh": false
+    },
+    {
+      "variant": "india_vix = prior trading day close",
+      "period": "2018-2021",
+      "p": 0.5,
+      "bonferroni": false,
+      "bh": false
+    },
+    {
+      "variant": "india_vix = prior trading day close",
+      "period": "2022-2026",
+      "p": 0.9531346956176656,
+      "bonferroni": false,
+      "bh": false
+    },
+    {
+      "variant": "india_vix = prior trading day close",
+      "period": "all",
+      "p": 0.9530539380637206,
+      "bonferroni": false,
+      "bh": false
+    }
+  ]
+}

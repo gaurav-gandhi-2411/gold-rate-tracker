@@ -6,11 +6,14 @@ and that ship=True is only produced when all conditions hold simultaneously.
 
 from __future__ import annotations
 
+from pathlib import Path
+
 from ml.direction.gate import (
     ECE_MAX_PROB,
     MIN_OOS_FOLDS,
     decide_direction_signal,
     decide_timing_signal,
+    is_signal_promoted,
 )
 
 # ---------------------------------------------------------------------------
@@ -354,3 +357,58 @@ class TestTimingGate:
         baseline = _passing_baseline()  # 50 folds, edge 0.05, p=0.02
         assert decide_direction_signal(baseline)["ship"] is True
         assert decide_timing_signal(baseline)["ship"] is False
+
+
+# ---------------------------------------------------------------------------
+# TestPromotionGateNeverWired — the proof GG's 2026-09-23 spec asked for:
+# a model that PASSES decide_direction_signal/decide_timing_signal must
+# still not reach users without a separate, explicit promotion record.
+# ---------------------------------------------------------------------------
+
+
+class TestPromotionGateNeverWired:
+    def test_passing_both_gates_does_not_imply_promoted(self) -> None:
+        """A model can ship=True on BOTH gates and still not be promoted --
+        is_signal_promoted is a wholly separate, human-authorized check."""
+        baseline = _timing_passing_baseline()
+        assert decide_direction_signal(baseline)["ship"] is True
+        assert decide_timing_signal(baseline)["ship"] is True
+        assert is_signal_promoted(path=Path("/nonexistent/no-such-file.json")) is False
+
+    def test_promoted_only_when_record_file_exists(self, tmp_path: Path) -> None:
+        record = tmp_path / "direction_promotion_record.json"
+        assert is_signal_promoted(path=record) is False
+        record.write_text('{"approved_by": "GG"}')
+        assert is_signal_promoted(path=record) is True
+
+    def test_default_promotion_record_does_not_currently_exist(self) -> None:
+        """Regression guard: the repo must not accidentally ship a promotion
+        record — its mere presence is what the check script treats as
+        authorization, so an accidental commit of this file would silently
+        flip every future direction-signal wiring to 'promoted'."""
+        assert is_signal_promoted() is False
+
+    def test_no_live_surface_references_the_gate_decision(self) -> None:
+        """Static sweep matching scripts/check_direction_signal_not_wired_
+        without_promotion.py's own logic — belt-and-suspenders: this proves
+        the CURRENT repo state from the test suite itself, not only from a
+        CI-only script."""
+        import re
+
+        root = Path(__file__).resolve().parent.parent
+        surface_files = [
+            root / "app.js",
+            root / "i18n.js",
+            root / "index.html",
+            root / "service-worker.js",
+            root / "ml" / "notifications.py",
+            root / "ml" / "notification_routing.py",
+            root / "ml" / "public_copy.py",
+        ]
+        forbidden = re.compile(
+            r"\bprobability_gate\b|\btiming_gate\b|\bdecide_direction_signal\b|\bdecide_timing_signal\b"
+        )
+        for path in surface_files:
+            assert path.exists(), f"expected surface file missing: {path}"
+            for line in path.read_text(encoding="utf-8").splitlines():
+                assert not forbidden.search(line), f"{path} references the gate directly: {line!r}"

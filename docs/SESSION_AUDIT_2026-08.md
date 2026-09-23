@@ -1206,3 +1206,298 @@ rebase, build a 5th target off the proxy's own daily changes, same embargo-aware
 **Not yet started this session:** M3 (offline adaptive-conformal + weekend-stratum eval — doesn't
 depend on the blocked items, could start next), M4 (Chronos companion — needs M1's proxy, so also
 blocked on #1890), P1/P3/P5.
+
+## Continuation 2026-09-23 (PM): #1892 fixed, M2 numbers, M1 realignment, COMEX variant, M2 fix, M3
+
+**GG merged #1890** (M1 proxy). **#1892 had a merge conflict** — rebased in an isolated worktree
+(`gold-rate-tracker-wt-m2direction`); the only conflict was `tests/test_count_baseline.json` (both
+#1890 and #1892 independently bumped the same generated file), resolved by merging both sides' entries
+then regenerating the whole file via `--update`. Confirmed and stated in #1892's body: zero
+`.github/workflows/` files touched, no change to `ml/inference.py`. Ran `check_required_checks_positive.py`.
+No clean split exists under the gate (`evaluate_reframed.py` genuinely depends on `reframed_targets.py`
+— splitting them would hurt reviewability, not help it) — handed back to GG to merge, as instructed.
+
+**Process correction, twice:** (1) attempted to self-merge #1890 believing no size gate applied to this
+repo (found no `scripts/merge_gate.py`) — wrong, the CC session's own rule-70a hook enforces it;
+converted to draft immediately. (2) After merging #1901 with `--delete-branch`, its stacked dependent
+PR (#1902) was silently auto-closed by GitHub (base branch gone) and could not be reopened or
+retargeted — recreated as a fresh PR (#1904) from the already-rebased branch. Also caught #1892 showing
+`isDraft: false` at one point (root cause not fully isolated — likely a side-effect of one of the
+several `gh pr edit`/rebase-push cycles on it) and corrected it back to draft before any merge risk.
+
+**M2 full numbers** (all 8 reframed-target combinations, all 3 models — GG asked for the complete
+table after the first report only gave ensemble numbers, which hid a real per-model finding):
+
+| target | horizon | model | n | Brier | BSS vs climatology | ECE | p (McNemar) | sig? | DM stat vs always-up | p (DM) |
+|---|---|---|---|---|---|---|---|---|---|---|
+| raw_binary | 5 | logistic_balanced | 150 | 0.2941 | -0.1985 | 0.1957 | 0.0784 | No | -1.505 | 0.132 |
+| raw_binary | 5 | gbm_calibrated | 150 | 0.2918 | -0.1893 | 0.2129 | 0.0003 | No | -1.629 | 0.103 |
+| raw_binary | 5 | ensemble | 150 | 0.2856 | -0.1637 | 0.2266 | 0.0034 | No | -1.786 | 0.074 |
+| deadzone | 5 | logistic_balanced | 132 | 0.3042 | -0.2593 | 0.2213 | 0.0015 | No | -0.837 | 0.403 |
+| deadzone | 5 | gbm_calibrated | 132 | 0.2886 | -0.1949 | 0.2464 | 0.0001 | No | -1.461 | 0.144 |
+| deadzone | 5 | ensemble | 132 | 0.2870 | -0.1882 | 0.1908 | 0.0002 | No | -1.361 | 0.174 |
+| detrended | 5 | logistic_balanced | 140 | 0.2664 | 0.0086 | 0.0947 | 0.5504 | No | -3.497 | 0.0005 |
+| detrended | 5 | gbm_calibrated | 140 | 0.2600 | 0.0325 | 0.1806 | 0.6908 | No | -3.193 | 0.0014 |
+| detrended | 5 | ensemble | 140 | 0.2549 | 0.0516 | 0.1158 | 0.6718 | No | -3.461 | 0.0005 |
+| buyer_decision | 5 | logistic_balanced | 150 | 0.2868 | -0.1046 | 0.1524 | 0.5546 | No | -3.539 | 0.0004 |
+| buyer_decision | 5 | gbm_calibrated | 150 | 0.2822 | -0.0868 | 0.1412 | 1.0000 | No | -3.263 | 0.0011 |
+| buyer_decision | 5 | ensemble | 150 | 0.2788 | -0.0738 | 0.1496 | 1.0000 | No | -3.507 | 0.0005 |
+| raw_binary | 10 | logistic_balanced | 137 | 0.2602 | -0.0740 | 0.2116 | 0.1325 | No | -0.689 | 0.491 |
+| raw_binary | 10 | gbm_calibrated | 137 | 0.2383 | 0.0161 | 0.2031 | 0.2188 | No | -1.625 | 0.104 |
+| raw_binary | 10 | ensemble | 137 | 0.2355 | 0.0278 | 0.1150 | 0.3438 | No | -1.292 | 0.196 |
+| deadzone | 10 | logistic_balanced | 122 | 0.2812 | -0.1171 | 0.2924 | 0.0029 | No | -0.541 | 0.588 |
+| deadzone | 10 | gbm_calibrated | 122 | 0.2723 | -0.0815 | 0.2416 | 0.2891 | No | -1.145 | 0.252 |
+| deadzone | 10 | ensemble | 122 | 0.2636 | -0.0471 | 0.1944 | 0.0225 | No | -0.969 | 0.333 |
+| **detrended** | **10** | **logistic_balanced** | **122** | **0.2227** | **0.1707** | **0.0946** | **0.0169** | **YES** | **-2.679** | **0.0074** |
+| detrended | 10 | gbm_calibrated | 122 | 0.2895 | -0.0780 | 0.2101 | 0.9152 | No | -1.885 | 0.059 |
+| detrended | 10 | ensemble | 122 | 0.2446 | 0.0893 | 0.0704 | 0.6570 | No | -2.381 | 0.017 |
+| buyer_decision | 10 | logistic_balanced | 137 | 0.3338 | -0.2459 | 0.2530 | 0.0869 | No | -1.659 | 0.097 |
+| buyer_decision | 10 | gbm_calibrated | 137 | 0.3081 | -0.1498 | 0.2551 | 0.0079 | No | -1.702 | 0.089 |
+| buyer_decision | 10 | ensemble | 137 | 0.3083 | -0.1507 | 0.2440 | 0.0059 | No | -1.855 | 0.064 |
+
+**Correction to the earlier report:** `detrended_h10` with the PLAIN logistic model (not the ensemble)
+IS significant — accuracy 64.75% vs 48.36% baseline (16.4pp edge), Brier 0.2227 vs 0.5164 baseline, BSS
++0.171 (best of all 24 rows), McNemar p=0.0169, DM p=0.0074 (both significant, consistent), ECE=0.095
+(under the 0.10 gate). It technically clears every one of `decide_direction_signal`'s 5 gates. Flagged
+with an explicit multiple-comparisons caveat: 1 nominally-significant result out of 24 tested is close
+to what chance alone predicts at p<0.05 (24×0.05≈1.2 expected false positives) — does NOT survive
+Bonferroni (0.05/24≈0.002 < 0.0169). Not a promotion recommendation on its own; item 4's COMEX variant
+is the natural higher-power replication test for the same "detrended" framing.
+
+**M1 label/feature role separation (PR #1901, merged; ADR write-up PR #1904, merged as recreated):**
+lag sweep shows the peak is at lag -1/0 (68.25%/68.65%, CIs overlap) — timing misalignment does NOT
+explain the ~33% disagreement, ruling out GG's item-3a hypothesis cleanly. Item 3b (magnitude buckets)
+was the real finding: 44% agreement on moves <20 Rs/g climbing monotonically to 85-100% on moves
+≥100 Rs/g (Wilson CIs, n=5-63/bucket) — a dead-zone label is well-supported. `ml/inr_proxy_labels.py`
+built the same-day (unlagged, correctly leakage-permissive for labels) counterpart to the T-1-lagged
+feature series. Full write-up: `docs/adr/032-...md`.
+
+**M2 INR flatline: diagnosed AND fixed (PR #1903, merged).** Root cause isolated cleanly by an E-vs-F
+contrast (identical features/data/walk-forward, only difference is calibration): the live pipeline's
+`ml.direction.models.fit_lightgbm` is UNCALIBRATED. Calibrating it alone: p=1.0 → p=0.0129. Combined
+with `class_weight="balanced"`: accuracy 65.84% vs 59.01% baseline, Brier 0.2303, ECE 0.0648, p=0.0034
+— survives Bonferroni across all 10 configs tested (0.05/10=0.005). Clears every one of
+`decide_direction_signal`'s 5 gates. Lighter regularization and class-weighting ALONE (on the existing
+logistic model) do nothing — ADR 031's base-rate-anchoring diagnosis is model-specific, not a data
+property. Does NOT replicate at h1 (49.08% vs 50.92% baseline, not significant) — an h2-specific fix,
+reported plainly as such. `ml/direction/config_sweep.py` is the reusable harness. Full write-up:
+`docs/adr/034-...md`. **Real promotion candidate for GG's review** (not self-promoted — shadow only).
+
+**M3 (independent, GG spec item 6): done (PR #1906).** `ml/calibration_adaptive.py` implements
+Adaptive Conformal Inference (Gibbs & Candès 2021), scored on the identical fit/scoring-set
+construction the static band uses. Result: statistically indistinguishable from the static band at
+68/80/90% (n=89, CIs overlap almost completely, ≤1.3pp difference). Gamma sensitivity: more aggressive
+adaptation (0.05/0.1) moves coverage further from target, not closer — the history is too short (n=89)
+for ACI's long-run convergence guarantees to help. Not recommending ACI as a replacement. Confirmed
+the weekend/carry-forward stratum's first live-scored result has NOT landed yet (`calibration_band_
+coverage.json` still dated 2026-09-20, no `stratified_shadow` key) — not cited, per GG's instruction;
+due 2026-09-27.
+
+**M2 item 4 (COMEX daily variant, #1756) — IN PROGRESS, running in background at write time.**
+`ml/direction/comex_daily.py` built: ground truth is GC=F itself (roll-adjusted via the same
+GLD-divergence method as M1), NOT the INR proxy — so genuinely not blocked on anything. Found and
+fixed a real bug before running the real evaluation: building on a full 7-day calendar (matching M1's
+convention) ffills weekends onto GC=F, and ~30% of "daily direction" labels came out as trivial ties
+(label_binary_h1 skewed to 35.7% "up" instead of a real market's ~50/50) — fixed by tracking genuine
+COMEX trading days explicitly and only scoring real trading-day targets; corrected dataset:
+n=3,452 real trading days over 13.7 years (2013-2026), up_frac=51.8% for h1 — a realistic daily split.
+Evaluation grid (4 targets × h=1, plus raw_binary/detrended × h=10 for the "does the M2 detrended lead
+replicate with real power" check, 6 combinations, min_train=250 ≈ 1 trading year) is running as a
+background job — ~15 min/combination measured on a 400-row subset (0.275s/fold), full run not yet
+complete at the time of this checkpoint. Results to be reported in a follow-up once it finishes.
+Also checked #1756: no reply yet from Headline Arena; the daily-lock-deadline (UTC) question the
+owner posed in the 2026-09-22 reply is still unanswered. Not posting anything, per instruction.
+
+**M4 (Chronos + M1 drivers): NOT STARTED.** Step 3 (M1 realignment) is done, so it's technically
+unblocked, but it needs actual neural-network inference (ChronosBoltPipeline) across ~250+ walk-forward
+folds × multiple variants (covariate-corrected Chronos, naive-plus-drift, an ensemble) — a materially
+different and heavier compute profile than everything else in this continuation. Deliberately not
+started this round rather than risk a rushed implementation on top of an already-long session; flagged
+as the clear next step once COMEX's results are in and reviewed.
+
+**P1/P3/P5: still not started.**
+
+## Checkpoint — 2026-09-23, continuation session (GG spec items 1-4)
+
+**Item 1 (can the direction signal ship itself?): answered, safeguard merged (PR #1908).** Traced the
+full path live: `weekly-backtest.yml` → `ml.direction.evaluate.run_walk_forward` → `decide_direction_
+signal` writes `data/direction_baseline.json` only; `app.js` never reads that file or calls the gate —
+the direction card is a hardcoded, permanently-"off" state (ADR 019/020) gated on an unrelated
+`chronos_companion.status` field. A passing gate does NOT auto-un-dark anything; there is no wiring
+path from gate to UI at all today. PR #1903 confirmed shadow-only by direct merge-commit diff
+inspection (touches only `ml/direction/config_sweep.py`, `docs/adr/034`, tests — zero touches to
+`gate.py`, `data/direction_baseline.json`, `app.js`). Both risk conditions GG asked about are FALSE.
+Built the mechanical safeguard anyway, per GG's pre-authorization: `ml.direction.gate.is_signal_
+promoted()` (checks for a committed `data/direction_promotion_record.json`) +
+`scripts/check_direction_signal_not_wired_without_promotion.py` (new CI guard, wired into `lint.yml`).
+439 lines — over the session's own merge-gate ceiling; GG's in-message "this keeps behaviour unchanged,
+merge it yourself" was treated as pre-authorization for this ONE merge; the hook did not block it.
+Full write-up: `docs/adr/036-...md`.
+
+**Item 2 (#1892's failing CI): fixed, still needs GG's own merge.** mypy failure was
+`.iloc[list[int]]` not matching CI's pandas-stubs overloads (local mypy has no pandas-stubs, so this
+was invisible locally) — fixed with `np.array(eligible, dtype=int)` before indexing. docs-freshness
+resolved itself on rebase. Rebased #1892's branch onto current `origin/master` directly (clean, no
+conflicts). Remains ~800+ lines even after the item-3 statistical-corrections work was split out into
+separate stacked PRs — no clean further split exists without hurting reviewability; stays with GG.
+
+**Item 3 (statistical corrections): built, verified, delivered as 3 stacked PRs — all merged into
+#1892's branch (not yet on master, since #1892 itself isn't merged).** `ml/direction/stats_corrections.py`
+(McNemar via `scipy.stats.binomtest`, moving block bootstrap, Bonferroni, Benjamini-Hochberg,
+forward-only power/n-for-power). `diebold_mariano_test` extended with `alternative` (one/two-sided) and
+HAC `effective_n`. Re-ran the full 24-row grid with all 4 corrections applied. **Result: ZERO of 24
+rows significant after Bonferroni (threshold 0.00208) — `detrended_h10` does NOT stand**: its original
+effective_n was inflated (122 raw → 28.9 effective after HAC at lag=9), p moved from the originally-
+reported 0.0169 to 0.106. Full corrected table + methodology: `docs/adr/037-...md`, raw output
+`data/direction_reframed_results_corrected.json`. PRs #1911→#1914→#1915 (stacked on #1892's branch),
+all green (lint+pwa-js required, boundary-leak-check/docs-freshness also clean after resolving two
+self-inflicted CI hiccups mid-session — see below). #1911/#1914 self-merged (367/111 lines); #1915
+(907 lines: 754-line generated JSON + 153-line ADR) opened as **draft**, all checks green, handed to GG
+— over the session's size gate and `data/` isn't a recognized generated-artifact carve-out path here.
+
+*Two self-inflicted CI issues this session, both diagnosed and fixed rather than worked around:*
+(a) `boundary-leak-check` false-positived twice across the 3 stacked PRs — confirmed via direct
+investigation of the script's own patch-id comparison logic that this was a genuine timing race (a
+PR's CI run compared against a sibling PR's branch mid-rebase, before that sibling's own force-push
+had landed), not a real leak; resolved by re-running once all 3 pushes had settled. (b) Accidentally
+committed the `docs-freshness` fix with `[skip ci]` in the message — copying the bot-commit convention
+onto a human/CC-authored commit, which per this session's own rule 34 suppresses CI entirely and
+silently blocked all 3 PRs' required checks from ever re-running against the new SHA. Caught by
+noticing `gh api .../check-runs` returned zero runs for the pushed SHA; fixed by amending the commit
+message to drop `[skip ci]` and re-pushing.
+
+**Item 4 (pre-registration): frozen and committed before Monday 2026-09-28's weekly eval, PRs
+#1916→#1917 open (stacked on #1892's branch via #1892→#1911→#1914→#1915... actually based directly on
+`feat/m2-reframed-target-evaluation`), CI pending at checkpoint time.** `ml.direction.preregistration`
+freezes ADR 034's config J (calibrated LightGBM + `class_weight="balanced"`, h2) as a single hypothesis
+BEFORE any new fold is scored — Bonferroni across the original 10 configs tried covers the number of
+configs, not the fact the same 161 folds also *chose* the winner, which is a separate, real validity
+gap. Re-derived the effect size under the new DM-HAC methodology: n=161, effective_n=119.38 (HAC at
+lag=1 shrinks usable information ~26%), p=0.00340 one-sided (reproduces ADR 034's accuracy numbers
+exactly: 65.84% vs 59.01%). **`PREREGISTERED_N_FOR_POWER = 135.9` (effective_n scale), frozen in code —
+the original 161-fold sample was itself nominally underpowered for its own observed effect (119.38 <
+135.9) despite reaching p=0.0034**, reported exactly as computed. Two shadow arms wired into
+`weekly-backtest.yml` as an additive, `continue-on-error: true` step: (1) live h2 arm, re-scores every
+weekly cron; (2) proxy dead-zone arm (ADR 032's ≥100 Rs/gram threshold, M1 calendar-only features,
+2013-2026 history) — **first-run result is an honest negative: accuracy 48.02% vs always-up baseline
+55.62%, worse, not significant in the "better" direction** — reported plainly, not glossed over;
+explicitly caveated as h1-equivalent framing (the proxy label is same-day), never pooled with the h2
+live arm's n. Full write-up: `docs/adr/038-...md`. Will NOT report the live arm as confirmatory before
+`effective_n >= 135.9` is reached, per GG's explicit instruction.
+
+**Item 5 (COMEX daily variant, corrected): re-run in progress at checkpoint time.** The original
+background run (reported in the prior checkpoint above) used a stale `evaluate_reframed.py` predating
+the item-3 corrections, so it has no raw per-fold data the new DM-HAC test needs — re-running from
+scratch against the corrected module (rebased `feat/m2-comex-daily-variant` onto `feat/m2-reframed-
+target-evaluation`) to get proper effective_n/accuracy-vs-always-up/Bonferroni-BH/sub-period numbers.
+Raw (uncorrected) first-pass numbers for reference, NOT the final report: `raw_binary_h1` n=3202
+acc=52.28% (not sig), `deadzone_h1` n=2621 acc=54.37% (not sig), `detrended_h1` n=3195 acc=50.86% (not
+sig), `buyer_decision_h1` n=162 acc=100%/BSS=-401.9 (degenerate — flagged as a likely framing bug, not
+a real finding, pending investigation), `raw_binary_h10` n=3190 acc=54.95% (not sig), `detrended_h10`
+n=3177 acc=50.77% (not sig, p=0.099 uncorrected McNemar). None of these were significant even before
+HAC correction — full corrected report pending the re-run's completion.
+
+**Item 6 (M3 CI widths): reported.** At n=89, Wilson CI widths are 19.3pp (68% level), 17.2pp (80%),
+12.1pp (90%) — meaning only a static-vs-ACI difference on that order could be reliably distinguished at
+this sample size; the observed differences (≤1.3pp) are far below the resolution n=89 offers, so
+"statistically indistinguishable" (ADR 035) is the expected result of an underpowered comparison, not
+evidence the methods are truly equivalent. Live stratified-shadow result still not landed (due
+2026-09-27) — not cited, per standing instruction.
+
+**Items 7/M4/P1/P3/P5: not yet reached this checkpoint.**
+
+## Checkpoint — 2026-09-23 (evening): the embargo leak, D1/D2 landed, analysis moved to Actions
+
+**The headline correction.** The direction walk-forwards had no embargo. The live evaluator and
+`ml.direction.config_sweep` both trained test day *i* on every earlier row. At h2 that includes
+~1.95 rows per fold whose labels matured after *i*'s `as_of_date` (measured). The ADR 034 "config J"
+result (65.84% vs 59.01%, one-sided HAC-DM p=0.0043 re-measured today) does not survive an
+embargo. On the same data it becomes 60.38% vs 59.75%, n=159, p=0.327
+(`reports/preregistration_embargo_a1.json`). The candidate's apparent edge was the leak.
+
+*Corrections to figures carried into this session:*
+- The embargoed candidate was noted as "57.8%, p=0.78". That figure is the *live logistic*
+  model's (57.76%, p=0.719). Re-running the original diagnostic on today's data gives config J
+  59.63%, p=0.327, n=161.
+- The frozen ADR 038 no-embargo figures (p 0.00340, effective n 119.38) do not reproduce exactly
+  today (0.0043, 112.5). Accuracy and mean loss difference are identical; the long-run variance
+  differs. Cause not isolated.
+- #1915 was already merged at session start, although the handover listed it as open.
+
+**D1 — pre-registration amendment A1 (#1925 and #1933 merged, the latter as 1003e46d on 2026-09-23,
+ahead of Sun 2026-09-27 02:00 UTC).** Embargo on `label_date_h2`, only `as_of_date > 2026-09-23` scored,
+config/test/alpha/135.9 frozen, dated amendment in ADR 038. Two defects found by running the step
+exactly as the workflow does:
+- `python scripts/run_preregistered_h2_shadow.py` could not import `ml` (`ModuleNotFoundError`).
+  Sunday's first run would have failed silently under `continue-on-error`.
+- It crashed formatting a `None` effective n, and wrote `NaN` (invalid JSON) when no day was
+  scored.
+
+The local end-to-end run after the fixes gives: live arm n=0 (no post-registration day exists
+yet), protocol `adr038-A1` recorded; proxy arm n=329, p=0.975. #1926 was superseded by #1933:
+#1926 carried #1925's pre-squash commit, and boundary-leak-check correctly caught it.
+
+**D2 — live evaluator embargo (#1930 merged), verified end-to-end on master.** Published README
+and status numbers, before → after, same data:
+
+| field | before | after |
+|---|---|---|
+| h1 accuracy / base rate | 48.5% (n=163) / 50.9% | 52.5% (n=162) / 51.2% |
+| h2 accuracy / base rate | 61.5% (n=161) / 59.0% | 58.5% (n=159) / 59.7% |
+| h2 p (McNemar) | 0.45 | 0.77 |
+
+The h2 persistence baseline fell from 65.2% to 51.6%: it had copied an unmatured label. One-sided
+HAC-DM: none of 6 model×horizon tests is significant before or after (Bonferroni 0.0083, BH).
+
+*Pipeline defect found:* the eval run for #1930 failed because its bot rebase conflicted with the
+previous run's refresh PR. #1932 re-published the leaky numbers for ~10 minutes, until the run for
+#1921 published the embargoed ones (#1934, re-injected by #1935). Not fixed yet. Two evaluator
+pushes in quick succession race.
+
+**Guard fixes.**
+- #1928 (merged): boundary-leak-check survives a closed PR's deleted base branch.
+- #1936 (merged): it ignores merge commits. #1933 was flagged because its merge-from-master and
+  #1921's resolved the same `tests/test_count_baseline.json` conflict identically.
+- #1921 (merged): the units guard.
+
+**Item 5 — COMEX re-run moved to GitHub Actions.**
+- #1931 (merged) adds `analysis.yml`: manual dispatch, GitHub-hosted, `contents: read`, no
+  secrets, no commits, artifact output.
+- The COMEX code existed only as untracked files in a worktree. It is now committed on
+  `feat/comex-direction-analysis` and dispatched as run 35857172862 (6 shards).
+- Primary baseline fixed before the run: the per-fold training-majority class. Always-up is a
+  straw baseline wherever "up" is the minority label (buyer_decision). On the smoke run, the same
+  predictions scored p=0.0009 vs always-up and p=0.84 vs majority.
+
+**Item 9a — proxy sub-period breakdown for config J** (`reports/proxy_subperiods_config_j.json`):
+- 2013–2017: no dead-zone test folds at all.
+- 2018–2021: n=34; predictions equal the majority baseline in every fold.
+- 2022–2026: n=295; 46.1% vs majority 53.2%, one-sided p=0.986.
+- The pre-registered proxy arm uses a same-day India VIX close (a contemporaneous feature).
+  Lagging it to the prior trading day gives 47.8% (p=0.953). Not significant either way.
+- The proxy arm stays as registered. The leak is reported to GG rather than changed unilaterally.
+
+**Item 5 result — COMEX (draft #1939, report `reports/comex_direction_run_35857172862.json`).**
+18 tests (6 target/horizon combos × 3 models, 2,621–3,201 folds each):
+- **0 significant** under Bonferroni (0.00278) or BH. 0 embargo violations.
+- Nominal best: deadzone h1 logistic, 55.0% vs 52.5% majority, p=0.010 uncorrected. Its edge sits
+  in 2018–2021 (p=0.017) and vanishes in 2022–2026, where it equals the majority class in every
+  fold.
+- M2's `detrended_h10` lead does not replicate (53.3% vs 51.3%, p=0.22, effective n 795).
+- buyer_decision: the models reproduce the 77% "no dip" majority. The earlier "100%" was the
+  units bug.
+
+**D3 — estimator presets: #1940 (draft, for GG).** Supersedes #1922/#1923. Presets 3–8/8–12/15–25%
+with typical values 5/10/20% (my rounded picks, flagged for GG), custom % or ₹/g, a rate-source
+line, and an "Estimate — stores vary." label. 145/145 PWA tests pass; a verifier subagent
+reviewed it. The new strings have no Hindi yet; the file's convention is to wait for
+native-speaker review.
+
+**Item 7:** #1919 synced to the embargoed numbers, with the two falsified phrases neutralised.
+Handed to GG with #1920.
+
+**Open for Sunday 2026-09-27:**
+- Behavioural check of the amended pre-registration step: log line
+  `live_h2 [adr038-A1]`, and an appended entry with `protocol_version`, `scored_as_of_dates` all
+  after 2026-09-23, and `train_max_label_dates` each earlier than its date.
+- The M3 stratified shadow result, with n and Wilson CIs.

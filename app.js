@@ -801,23 +801,29 @@ function computeAccuracyDrift(drift) {
 // Itemised "what will it cost me?" estimate for a gold jewellery purchase, the
 // way an Indian retail invoice is built up:
 //   gold value = ratePerGram × grams
-//   making     = gold value × makingPct/100   (making charges — design-dependent,
-//                                               jeweller-specific; the caller supplies it)
+//   making     = gold value × makingPct/100 + grams × makingPerGram
+//                (making charges — design-dependent, jeweller-specific; quoted
+//                 either as a % of gold value or a flat ₹/gram; the caller supplies it)
 //   GST        = (gold value + making) × gstPct/100   (3% on gold jewellery in India)
 //   total      = gold value + making + GST
 //
+// GST base: 3% on the WHOLE retail transaction value, making charges included
+// (HSN 7113; CBIC rate table: 1.5% CGST + 1.5% SGST). Some buyer guides quote
+// "5% GST on making charges" -- that rate is for B2B job work (a jeweller
+// paying an artisan to work gold the jeweller supplied), not a retail sale.
+//
 // No making-charge default is baked in here (it varies far too widely by design
-// to assume) — makingPct defaults to 0 so the bare metal+GST figure is the floor;
-// the UI layer owns the user-entered default and its framing. gstPct defaults to
-// the current 3% India rate. Returns null on any invalid (non-finite / negative)
+// to assume) — both making inputs default to 0 so the bare metal+GST figure is
+// the floor; the UI layer owns the default range and its framing. gstPct defaults
+// to the current 3% India rate. Returns null on any invalid (non-finite / negative)
 // input so the caller can show a neutral empty state rather than NaN.
-function computePurchaseCost({ ratePerGram, grams, makingPct = 0, gstPct = 3 }) {
-  const vals = [ratePerGram, grams, makingPct, gstPct];
+function computePurchaseCost({ ratePerGram, grams, makingPct = 0, makingPerGram = 0, gstPct = 3 }) {
+  const vals = [ratePerGram, grams, makingPct, makingPerGram, gstPct];
   if (!vals.every(Number.isFinite)) return null;
-  if (ratePerGram < 0 || grams < 0 || makingPct < 0 || gstPct < 0) return null;
+  if (vals.some((v) => v < 0)) return null;
 
   const goldValue = ratePerGram * grams;
-  const making = goldValue * (makingPct / 100);
+  const making = goldValue * (makingPct / 100) + grams * makingPerGram;
   const gst = (goldValue + making) * (gstPct / 100);
   const total = goldValue + making + gst;
 
@@ -827,6 +833,48 @@ function computePurchaseCost({ ratePerGram, grams, makingPct = 0, gstPct = 3 }) 
     gst: Math.round(gst),
     total: Math.round(total),
   };
+}
+
+// Jewellery-type making-charge PRESETS for the calculator. Ranges and typical values are
+// the product owner's (GG) chosen buyer-guide ranges (2026-09-23), not a market
+// measurement -- coins/plain chains sit at the low end of what a jeweller charges,
+// intricate/antique work at the top; "typical" is a rounded midpoint-ish value chosen for
+// display, not a computed mean. Replaces the earlier flat 6-25% range (see git history):
+// a single range spanning "plain chain" to "bridal antique" invented false precision for
+// buyers who know roughly what TYPE of piece they want but not a jeweller's exact %.
+// "custom" carries no low/high/typical of its own -- the UI collects a single value
+// (% or ₹/gram) instead; computePurchaseCostRange() special-cases it below.
+const MAKING_CHARGE_PRESETS = [
+  { id: "coins",      labelKey: "calcPresetCoins",      low: 3,  high: 8,  typical: 5  },
+  { id: "plain",      labelKey: "calcPresetPlain",      low: 8,  high: 12, typical: 10 },
+  { id: "intricate",  labelKey: "calcPresetIntricate",  low: 15, high: 25, typical: 20 },
+  { id: "custom",     labelKey: "calcPresetCustom" },
+];
+const DEFAULT_PRESET_ID = "plain"; // "Plain bangles & rings" -- the most common retail purchase
+
+// Typical/low/high cost breakdown for a preset, or a single (typical=low=high) breakdown
+// for a custom making charge -- a preset shows a buyer the plausible spread for that
+// jewellery TYPE, so low-high is tied to a named category rather than a free-form guess;
+// custom is a single jeweller-quoted figure, and inventing a range around a number the
+// buyer already knows exactly would only add false uncertainty. customUnit is "pct" (%
+// of gold value) or "perGram" (flat ₹/gram), only consulted when presetId === "custom".
+// Returns null on an unknown presetId or invalid custom input.
+function computePurchaseCostRange({ ratePerGram, grams, presetId, customValue, customUnit, gstPct = 3 }) {
+  if (presetId === "custom") {
+    if (customUnit !== "pct" && customUnit !== "perGram") return null;
+    if (!Number.isFinite(customValue) || customValue < 0) return null;
+    const one = computePurchaseCost(customUnit === "pct"
+      ? { ratePerGram, grams, makingPct: customValue, gstPct }
+      : { ratePerGram, grams, makingPerGram: customValue, gstPct });
+    return one ? { typical: one, low: one, high: one } : null;
+  }
+  const preset = MAKING_CHARGE_PRESETS.find((p) => p.id === presetId);
+  if (!preset) return null;
+  const at = (pct) => computePurchaseCost({ ratePerGram, grams, makingPct: pct, gstPct });
+  const typical = at(preset.typical);
+  const low = at(preset.low);
+  const high = at(preset.high);
+  return typical && low && high ? { typical, low, high } : null;
 }
 
 // ─── RENDERERS ────────────────────────────────────────────────────────────────
@@ -1176,25 +1224,67 @@ function renderHero(readings, forecast) {
 }
 
 // ─── PURCHASE CALCULATOR ────────────────────────────────────────────────────
-// UI for computePurchaseCost() (defined above) — grams + optional making-charge
-// input, three karat totals. Honesty rule: the 22K figure uses exactly the same
-// rate and the same isEstimateTier gate renderHero() uses for the hero price
-// (recomputed here rather than shared via a module var, matching this file's
-// existing per-render-function style) -- when the hero price shows "≈", the
-// calculator's 22K total carries the same "≈" and the same estimated-price
-// note, so a buyer never sees a confident-looking total built on an estimate.
-// 24K/18K always come from the last real Tanishq reading (latest["24k"/"18k"])
-// -- same as the karat-strip cards above, which never show "≈" either; this
-// app has never estimated 24K/18K independently, only 22K, so inventing an
-// estimate qualifier for them here would claim more than the data supports.
+// UI for computePurchaseCostRange() (defined above) — grams + a jewellery-type making-
+// charge PRESET (or a custom % / ₹-per-gram figure), typical + low–high totals for three
+// karats, a visible "rate used" source line, and an always-visible "estimate, not a
+// quote" disclaimer. Honesty rule: the 22K figure uses exactly the same rate and the same
+// isEstimateTier gate renderHero() uses for the hero price (recomputed here rather than
+// shared via a module var, matching this file's existing per-render-function style) --
+// when the hero price shows "≈", the calculator's 22K total carries the same "≈" and the
+// same estimated-price note, so a buyer never sees a confident-looking total built on an
+// estimate. 24K/18K always come from the last real Tanishq reading (latest["24k"/"18k"])
+// -- same as the karat-strip cards above, which never show "≈" either; this app has never
+// estimated 24K/18K independently, only 22K, so inventing an estimate qualifier for them
+// here would claim more than the data supports.
 const CALC_GST_PCT = 3; // India's GST rate on gold jewellery — matches computePurchaseCost's own default
 
+function calcSelectedPresetId() {
+  const checked = document.querySelector('input[name="calc-preset"]:checked');
+  const val = checked && checked.value;
+  return MAKING_CHARGE_PRESETS.some((p) => p.id === val) ? val : DEFAULT_PRESET_ID;
+}
+
+function calcCustomUnit() {
+  const checked = document.querySelector('input[name="calc-custom-unit"]:checked');
+  return checked && checked.value === "perGram" ? "perGram" : "pct";
+}
+
+function fmtINRRange(lo, hi) {
+  return lo === hi ? `₹${fmtINR(lo)}` : `₹${fmtINR(lo)} – ₹${fmtINR(hi)}`;
+}
+
+// "Rate used" line shown near the results -- names WHICH source fed the 22K rate the
+// totals below are built on, using the exact isEstimateTier / price_source gate
+// renderHero() uses (never re-derived differently here). Distinct wording for
+// ibja_calibrated vs fusion_consensus since they carry different confidence: a single-
+// source calibrated estimate vs a live multi-retailer consensus.
+function calcRateSourceText(isEstimateTier, forecast, rate22) {
+  if (isEstimateTier) {
+    const key = forecast.price_source === "fusion_consensus" ? "calcRateUsedFusion" : "calcRateUsedIbja";
+    return t(key, { rate: fmtINR(rate22) });
+  }
+  return t("calcRateUsedTanishq", { rate: fmtINR(rate22) });
+}
+
 function renderCalculator(readings, forecast) {
-  const skelEl    = document.getElementById("calc-skeleton");
-  const resultsEl = document.getElementById("calc-results");
-  const gramsEl   = document.getElementById("calc-grams");
-  const makingEl  = document.getElementById("calc-making");
-  if (!resultsEl || !gramsEl || !makingEl) return;
+  const skelEl         = document.getElementById("calc-skeleton");
+  const resultsEl       = document.getElementById("calc-results");
+  const gramsEl         = document.getElementById("calc-grams");
+  const customFieldsEl  = document.getElementById("calc-custom-fields");
+  const customValueEl   = document.getElementById("calc-custom-value");
+  if (!resultsEl || !gramsEl || !customFieldsEl || !customValueEl) return;
+
+  const presetId = calcSelectedPresetId();
+  const isCustom = presetId === "custom";
+  // The custom value/unit inputs only apply once "Custom" is selected -- kept in the DOM
+  // (not removed) so a value entered there survives switching away and back, just hidden.
+  customFieldsEl.hidden = !isCustom;
+  const customUnit = calcCustomUnit();
+  // Mode-dependent copy is set here, not via data-i18n, so it survives a
+  // language switch (applyLanguage() re-runs this after applyStaticStrings()).
+  document.querySelectorAll(".calc-custom-unit-label").forEach((el) => {
+    el.textContent = customUnit === "perGram" ? "₹/g" : "%";
+  });
 
   if (!readings || readings.length === 0) {
     if (skelEl) skelEl.hidden = false;
@@ -1212,44 +1302,108 @@ function renderCalculator(readings, forecast) {
   const rate24 = latest["24k"];
   const rate18 = latest["18k"];
 
-  const grams     = parseFloat(gramsEl.value);
-  const makingPct = parseFloat(makingEl.value);
+  const grams = parseFloat(gramsEl.value);
 
   // grams === 0 is valid input to computePurchaseCost() (returns an all-zero
   // result, not null) -- but a ₹0 total reads as broken, not "you haven't
-  // entered anything yet". Treat <= 0 as the empty state explicitly.
-  const c22 = grams > 0 ? computePurchaseCost({ ratePerGram: rate22, grams, makingPct, gstPct: CALC_GST_PCT }) : null;
-  const c24 = grams > 0 ? computePurchaseCost({ ratePerGram: rate24, grams, makingPct, gstPct: CALC_GST_PCT }) : null;
-  const c18 = grams > 0 ? computePurchaseCost({ ratePerGram: rate18, grams, makingPct, gstPct: CALC_GST_PCT }) : null;
-
-  if (!c22 || !c24 || !c18) {
+  // entered anything yet". Treat <= 0 (or a missing rate) as the empty state.
+  const ratesOk = [rate22, rate24, rate18].every((r) => Number.isFinite(r) && r > 0);
+  if (!(grams > 0) || !ratesOk) {
     // XSS-safe: t() returns a catalogue literal only.
     resultsEl.innerHTML = `<p class="calc-empty">${t("calcEmptyState")}</p>`;
     return;
   }
 
-  // XSS-safe: every interpolated value is either fmtINR(number) or a t()
-  // catalogue literal — no external data reaches this template.
+  const customValue = parseFloat(customValueEl.value);
+  if (isCustom) {
+    // Grams and rates are valid past this point, so an invalid custom value can only mean
+    // a blank or negative entry -- say that, not "enter a quantity".
+    const customBad = !Number.isFinite(customValue) || customValue < 0;
+    customValueEl.setAttribute("aria-invalid", String(customBad));
+    if (customBad) {
+      resultsEl.innerHTML = `<p class="calc-empty calc-error">${t("calcCustomInvalid")}</p>`;
+      return;
+    }
+  } else {
+    customValueEl.setAttribute("aria-invalid", "false");
+  }
+
+  const costFor = (rate) => computePurchaseCostRange({
+    ratePerGram: rate, grams, presetId, customValue, customUnit, gstPct: CALC_GST_PCT,
+  });
+  const r22 = costFor(rate22);
+  const r24 = costFor(rate24);
+  const r18 = costFor(rate18);
+
+  // On the Tanishq path the 22K rate is the latest confirmed reading; past the
+  // same STALE_THRESHOLD_H the page's stale-banner uses, say how old it is.
+  // (The estimate tier already carries its own "≈" note below.)
+  const latestAgeH = (Date.now() - new Date(latest.timestamp).getTime()) / 3_600_000;
+  const staleNote = !isEstimateTier && latestAgeH > STALE_THRESHOLD_H
+    ? `<p class="calc-estimated-note">${t("calcStaleNote", { rel: fmtRelative(latest.timestamp) })}</p>`
+    : "";
+
+  const rateSourceText = calcRateSourceText(isEstimateTier, forecast, rate22);
+
+  // Making-charge row label: presets show "Making charge (N%)" against the preset's own
+  // typical %; custom shows the same when quoted as a %, or the plain label when quoted
+  // ₹/gram (no % to name). Presets carry their own "Range ..." line right under the row,
+  // same pattern as the total's range line below -- inline next to the amount used to
+  // wrap onto its own line at narrow widths (e.g. 375px), reading as garbled two-line
+  // cell text instead of a clean row; custom never shows a range -- a single jeweller-
+  // quoted figure has no invented range around it.
+  const preset = MAKING_CHARGE_PRESETS.find((p) => p.id === presetId);
+  const makingLabel = !isCustom
+    ? t("calcRowMakingWithPct", { pct: preset.typical })
+    : customUnit === "pct"
+      ? t("calcRowMakingWithPct", { pct: customValue })
+      : t("calcRowMaking");
+  const makingRangeLine = !isCustom
+    ? `<p class="calc-result-range">${t("calcRangeLabel", { range: fmtINRRange(r22.low.making, r22.high.making) })}</p>`
+    : "";
+
+  // XSS-safe: every interpolated value is either fmtINR(number)/fmtINRRange(numbers) or a
+  // t() catalogue literal — no external data reaches this template.
   resultsEl.innerHTML = `
+    <p class="calc-rate-used">${rateSourceText}</p>
     <div class="calc-result-card">
       <div class="calc-result-karat">${isEstimateTier ? "≈ " : ""}${t("calcKaratLabel22")}</div>
-      <div class="calc-result-row"><span>${t("calcRowGoldValue")}</span><span>₹${fmtINR(c22.goldValue)}</span></div>
-      ${c22.making > 0 ? `<div class="calc-result-row"><span>${t("calcRowMaking")}</span><span>₹${fmtINR(c22.making)}</span></div>` : ""}
-      <div class="calc-result-row"><span>${t("calcRowGst", { pct: CALC_GST_PCT })}</span><span>₹${fmtINR(c22.gst)}</span></div>
-      <div class="calc-result-row calc-result-row--total"><span>${t("calcRowTotal")}</span><span>₹${fmtINR(c22.total)}</span></div>
-      ${isEstimateTier ? `<p class="calc-estimated-note">${t("calcEstimatedNote")}</p>` : ""}
+      <div class="calc-result-row"><span>${t("calcRowGoldValue")}</span><span>₹${fmtINR(r22.typical.goldValue)}</span></div>
+      ${r22.typical.making > 0 ? `<div class="calc-result-row"><span>${makingLabel}</span><span>₹${fmtINR(r22.typical.making)}</span></div>${makingRangeLine}` : ""}
+      <div class="calc-result-row"><span>${t("calcRowGst", { pct: CALC_GST_PCT })}</span><span>₹${fmtINR(r22.typical.gst)}</span></div>
+      <div class="calc-result-row calc-result-row--total"><span>${t("calcRowTotal")}</span><span>₹${fmtINR(r22.typical.total)}</span></div>
+      ${!isCustom ? `<p class="calc-result-range">${t("calcRangeLabel", { range: fmtINRRange(r22.low.total, r22.high.total) })}</p>` : ""}
+      <p class="calc-estimate-label">${t("calcEstimateStoresVary")}</p>
+      ${isEstimateTier ? `<p class="calc-estimated-note">${t("calcEstimatedNote")}</p>` : staleNote}
+      <p class="calc-disclaimer">${t("calcDisclaimer")}</p>
     </div>
-    <p class="calc-other-karats">${t("calcOtherKarats", { k24: fmtINR(c24.total), k18: fmtINR(c18.total) })}</p>
+    <p class="calc-other-karats">${t("calcOtherKaratsRange", {
+      k24: fmtINRRange(r24.low.total, r24.high.total),
+      k18: fmtINRRange(r18.low.total, r18.high.total),
+    })}</p>
   `;
 }
 
 function bindCalculatorInputs() {
-  const gramsEl  = document.getElementById("calc-grams");
-  const makingEl = document.getElementById("calc-making");
-  if (!gramsEl || !makingEl) return;
+  const gramsEl       = document.getElementById("calc-grams");
+  const customValueEl = document.getElementById("calc-custom-value");
+  if (!gramsEl || !customValueEl) return;
   const onInput = () => renderCalculator(allReadings, lastForecast);
-  gramsEl.addEventListener("input", onInput);
-  makingEl.addEventListener("input", onInput);
+  [gramsEl, customValueEl].forEach((el) => el.addEventListener("input", onInput));
+  document.querySelectorAll('input[name="calc-preset"]').forEach((radio) => {
+    radio.addEventListener("change", onInput);
+  });
+  document.querySelectorAll('input[name="calc-custom-unit"]').forEach((radio) => {
+    radio.addEventListener("change", () => {
+      // Switching units makes the old number meaningless (8% != ₹8/g) -- reset to a
+      // sane default for the new unit rather than reinterpret the same figure.
+      const perGram = calcCustomUnit() === "perGram";
+      customValueEl.value = perGram ? "400" : "10";
+      customValueEl.step  = perGram ? "10" : "0.5";
+      customValueEl.max   = perGram ? "10000" : "100";
+      onInput();
+    });
+  });
 }
 
 function renderSparkline(readings) {

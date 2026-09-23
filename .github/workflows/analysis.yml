@@ -1,0 +1,135 @@
+name: Analysis (manual)
+
+# Long-running model research that must not run on a laptop (it closes and
+# kills local jobs). Manually dispatched only; results are an artifact.
+#
+# Constraints (GG, 2026-09-23): GitHub-hosted runners only (never the
+# self-hosted Tanishq runner), contents: read, no secrets, commits nothing.
+#
+# Contract for an analysis script scripts/analysis_<name>.py:
+#   --list-shards           print a JSON list of shard keys on stdout
+#   --shard KEY --out DIR   run one shard, write DIR/<KEY>.json
+#   --aggregate DIR --out F read every shard JSON in DIR, write report F
+# The script may live on an unmerged branch: dispatch with
+#   gh workflow run analysis.yml --ref <branch> -f analysis=<name>
+# and this workflow runs that branch's code.
+
+on:
+  workflow_dispatch:
+    inputs:
+      analysis:
+        description: "Which analysis to run (scripts/analysis_<name>.py)"
+        required: true
+        type: choice
+        options:
+          - comex_direction
+          - chronos_m4
+          - prereg_reference
+          - direction_diagnosis
+          - range_forecast
+          - nowcast
+          - buyer_policy
+          - selective_direction
+
+permissions:
+  contents: read
+
+concurrency:
+  group: analysis-${{ inputs.analysis }}-${{ github.ref }}
+  cancel-in-progress: false
+
+env:
+  SCRIPT: scripts/analysis_${{ inputs.analysis }}.py
+
+jobs:
+  plan:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    outputs:
+      shards: ${{ steps.list.outputs.shards }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: "3.12"
+      - name: List shards
+        id: list
+        run: |
+          test -f "$SCRIPT" || { echo "::error::$SCRIPT not found on ${GITHUB_REF}"; exit 1; }
+          shards=$(python "$SCRIPT" --list-shards)
+          echo "shards=$shards" >> "$GITHUB_OUTPUT"
+          echo "shards: $shards"
+
+  shard:
+    needs: plan
+    runs-on: ubuntu-latest
+    timeout-minutes: 300
+    strategy:
+      fail-fast: false
+      matrix:
+        key: ${{ fromJSON(needs.plan.outputs.shards) }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: "3.12"
+          cache: "pip"
+          cache-dependency-path: ml/requirements-inference.lock
+      - name: Install ML dependencies
+        run: |
+          pip install -q uv
+          uv pip install --system \
+            --extra-index-url https://download.pytorch.org/whl/cpu \
+            --index-strategy unsafe-best-match \
+            -r ml/requirements-inference.lock
+      - name: Run shard
+        env:
+          SHARD: ${{ matrix.key }}
+        run: python "$SCRIPT" --shard "$SHARD" --out out
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: shard-${{ matrix.key }}
+          path: out/
+          if-no-files-found: error
+          retention-days: 30
+
+  aggregate:
+    needs: shard
+    if: ${{ !cancelled() }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: "3.12"
+          cache: "pip"
+          cache-dependency-path: ml/requirements-inference.lock
+      - name: Install ML dependencies
+        run: |
+          pip install -q uv
+          uv pip install --system \
+            --extra-index-url https://download.pytorch.org/whl/cpu \
+            --index-strategy unsafe-best-match \
+            -r ml/requirements-inference.lock
+      - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          pattern: shard-*
+          path: out
+          merge-multiple: true
+      # A failed shard is reported, not silently dropped: the aggregate step
+      # lists the shards it expected versus the files it found.
+      - name: Aggregate
+        run: python "$SCRIPT" --aggregate out --out "report_${GITHUB_RUN_ID}.json"
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: report
+          path: report_*.json
+          if-no-files-found: error
+          retention-days: 90

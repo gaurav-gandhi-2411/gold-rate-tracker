@@ -12,6 +12,8 @@ from __future__ import annotations
 
 import json
 import math
+import os
+import subprocess
 from datetime import UTC, datetime
 from pathlib import Path
 
@@ -57,6 +59,15 @@ MAJORITY_CLASS_COLLAPSE_THRESHOLD: float = 0.95
 # clear the baseline. The full latest result lives in BASELINE_JSON; this is the
 # trend over time.
 HISTORY_JSONL: Path = DATA_DIR / "direction_eval_history.jsonl"
+
+
+def label_date_col_for(label_col: str) -> str:
+    """The date a label column's outcome becomes known: label_binary ->
+    label_date, label_binary_h2 -> label_date_h2 (see ml.direction.dataset)."""
+    if not label_col.startswith("label_binary"):
+        raise ValueError(f"no label-date column known for {label_col!r}")
+    return "label_date" + label_col.removeprefix("label_binary")
+
 
 # ---------------------------------------------------------------------------
 # Metrics
@@ -356,10 +367,17 @@ def run_walk_forward(
 ) -> dict:
     """Run an expanding-window walk-forward evaluation for one horizon.
 
-    For each test index i starting at min_train_size, train on rows [0:i]
-    and predict for row i.  Aggregates per-fold predictions and computes
-    OOS metrics for logistic regression, LightGBM, and a persistence
-    baseline (prev row's label).
+    For each test index i starting at min_train_size, train on the rows
+    before i whose label had MATURED strictly before row i's as_of_date
+    (embargo, see label_date_col_for) and predict for row i.  Aggregates
+    per-fold predictions and computes OOS metrics for logistic regression,
+    LightGBM, and a persistence baseline (the most recent matured label).
+
+    Until 2026-09-23 training was every row before i. At h2 the ~2 rows just
+    before i have labels that mature after i's as_of_date, so each fold
+    trained on outcomes not yet known when it predicted, and the persistence
+    baseline copied row i-1's unmatured label. Folds with fewer than
+    min_train_size matured rows are skipped (counted in n_skipped_folds).
 
     Args:
         dataset: Output of build_dataset(); must be sorted by as_of_date.
@@ -379,6 +397,15 @@ def run_walk_forward(
     if label_col in dataset.columns:
         dataset = dataset[dataset[label_col].notna()].reset_index(drop=True)
     n = len(dataset)
+    date_col = label_date_col_for(label_col)
+    if date_col not in dataset.columns:
+        # Fail loudly: without label dates the embargo cannot be applied, and
+        # silently falling back to the leaky window is the defect this fixes.
+        raise ValueError(f"{date_col!r} column required to embargo {label_col!r}")
+    as_of = pd.to_datetime(dataset["as_of_date"]).dt.strftime("%Y-%m-%d").tolist()
+    label_dates = [
+        None if pd.isna(v) else pd.Timestamp(v).strftime("%Y-%m-%d") for v in dataset[date_col]
+    ]
 
     y_true_all: list[int] = []
     log_prob_all: list[float] = []
@@ -390,7 +417,11 @@ def run_walk_forward(
     n_skipped = 0
 
     for i in range(min_train_size, n):
-        train_df = dataset.iloc[:i]
+        keep = [j for j in range(i) if (d := label_dates[j]) is not None and d < as_of[i]]
+        if len(keep) < min_train_size:
+            n_skipped += 1
+            continue
+        train_df = dataset.iloc[np.array(keep, dtype=int)]
         test_row = dataset.iloc[i]
 
         y_train = train_df[label_col].astype(int).tolist()
@@ -423,9 +454,8 @@ def run_walk_forward(
         else:
             lgbm_prob = 0.5  # neutral fallback
 
-        # Persistence baseline: previous row's binary label (same horizon)
-        prev_lbl = int(dataset.iloc[i - 1][label_col]) if i > 0 else 1
-        prev_label_prob = float(prev_lbl)
+        # Persistence baseline: the most recent label known on the test day.
+        prev_label_prob = float(y_train[-1])
 
         y_true_all.append(int(test_row[label_col]))
         log_prob_all.append(log_prob)
@@ -474,6 +504,7 @@ def run_walk_forward(
         "n_test_folds": n_test_folds,
         "n_skipped_folds": n_skipped,
         "min_train_size": min_train_size,
+        "embargo": f"train on rows with {date_col} < test as_of_date",
         "always_up_baseline_accuracy": always_up_baseline_accuracy,
         "trailing_30_fold_up_fraction": trailing_30_fold_up_fraction,
         "majority_class_collapse": majority_class_collapse,
@@ -507,10 +538,25 @@ HORIZONS: tuple[tuple[str, str], ...] = (
 )
 
 
+def _source_sha() -> str | None:
+    """GITHUB_SHA in CI, else the local checkout's HEAD; None if neither."""
+    sha = os.environ.get("GITHUB_SHA")
+    if sha:
+        return sha
+    try:
+        out = subprocess.run(
+            ["git", "rev-parse", "HEAD"], capture_output=True, text=True, check=True
+        )
+    except (OSError, subprocess.CalledProcessError):
+        return None
+    return out.stdout.strip() or None
+
+
 def append_history(result: dict, path: Path = HISTORY_JSONL) -> None:
     """Append one compact per-run record (all horizons) to the history log."""
     record: dict = {
         "generated_at_utc": result.get("generated_at_utc"),
+        "source_sha": result.get("source_sha"),
         "as_of_date_range": result.get("as_of_date_range"),
     }
     for hkey, wf in result.get("horizons", {}).items():
@@ -558,6 +604,11 @@ def main() -> None:
 
     result = {
         "schema_version": 2,
+        # The commit whose code produced these numbers. The publish step
+        # (scripts/prepare_direction_eval_publish.py) refuses to replace
+        # numbers produced by newer code, so a slower run on older code can
+        # never overwrite them.
+        "source_sha": _source_sha(),
         "generated_at_utc": horizons["h1"]["generated_at_utc"],
         "as_of_date_range": horizons["h1"]["as_of_date_range"],
         "min_train_size": MIN_TRAIN_SIZE,

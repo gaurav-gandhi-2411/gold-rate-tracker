@@ -4,6 +4,7 @@ Operational procedures for gold-rate-tracker.
 
 ## Table of contents
 
+0. [Running your own copy](#running-your-own-copy) (fork setup, alerts, troubleshooting — moved here from the README)
 1. [Local development setup](#local-development-setup)
 2. [How to retrain](#how-to-retrain)
 3. [How to roll back a bad production model](#how-to-roll-back-a-bad-production-model)
@@ -17,6 +18,32 @@ Operational procedures for gold-rate-tracker.
 11. [Known constraints](#known-constraints)
 12. [Frontend PR device-check (required)](#frontend-pr-device-check-required)
 13. [Honesty-ADR audit: user-facing copy paths (required)](#honesty-adr-audit-user-facing-copy-paths-required)
+
+---
+
+## Running your own copy
+
+### Setup (~15 minutes)
+
+1. Fork / create a public repo and upload all files.
+2. **Settings → Secrets and variables → Actions → New repository secret:**
+   - `NTFY_TOPIC` — your OWN ntfy.sh topic (treat like a password; long & random).
+3. **Actions → Check Gold Price → Run workflow** (manual trigger; wait ~2 min).
+4. **Settings → Pages → Deploy from branch → `master` → `/` (root).**
+5. Install the PWA: iOS Safari → Share → Add to Home Screen · Android Chrome → Install app.
+6. Subscribe to alerts: install the ntfy app → **+** → enter your topic.
+
+### Notifications (bring your own ntfy topic)
+
+Alerts are delivered via [ntfy.sh](https://ntfy.sh) — free, no account. **Pick your own topic and keep it private:** anyone who knows a topic name can publish to it, so treat it like a password (a long random string, e.g. `gold-<yourname>-<16 random chars>`). Set it as the `NTFY_TOPIC` GitHub Actions secret and subscribe to it in the ntfy app.
+
+Alert types: a price-move alert (describes the recent trend), a twice-daily digest, and a data-staleness warning if scraping stalls. All copy is plain-language and ASCII-safe.
+
+### Troubleshooting
+
+- **Prices look stale:** the page banner will say so, honestly labeled either way. A Tanishq scrape miss alone is expected (its Cloudflare block, [ADR 025](adr/025-ibja-primary-source-decision.md)) and logged as a run annotation, not a hard failure — check the latest **Check Gold Price** run in Actions. An actual alert (ntfy T9/T9_ESCALATE) only fires when *IBJA* itself hasn't published in 2+ business days — that's the genuine failure signal.
+- **No notifications:** confirm `NTFY_TOPIC` has no URL prefix, you subscribed to the *exact* topic, and a price move actually occurred.
+- **Scraper DOM canary issue opened:** the canary now distinguishes a Cloudflare block (logged as a warning, no alert — expected steady state) from a real DOM/selector break (alerts + opens an issue) automatically. See the rest of this runbook if one still fires.
 
 ---
 
