@@ -34,6 +34,15 @@ _LGB_PARAMS = {
     "min_child_samples": 20,
     "random_state": 42,
     "verbosity": -1,
+    # This walk-forward does ~150-650 separate small fits (rows <= ~3600, 11
+    # features) per horizon, not one large fit -- LightGBM's default n_jobs=-1
+    # (all cores) pays thread-pool spin-up/teardown cost on EVERY one of those
+    # fits, which a local timing run showed dominating wall-clock (one horizon
+    # went from 70s to 470s under light concurrent load with other work on the
+    # same machine). Pinning to 1 thread trades per-fit parallelism (not worth
+    # it at this data size) for far less overhead and much better behavior when
+    # this shard runs alongside the other 6 shards on a CI matrix.
+    "n_jobs": 1,
 }
 
 

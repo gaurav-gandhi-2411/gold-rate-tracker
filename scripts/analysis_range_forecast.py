@@ -75,10 +75,6 @@ BASELINE_MODELS: tuple[str, str] = ("historical_vol", "historical_simulation")
 PRIMARY_BASELINE = "historical_vol"  # the task brief's "the naive baseline" for the success flag
 
 
-def _key(model: str) -> str:
-    return model
-
-
 def _git_sha() -> str:
     out = subprocess.run(["git", "rev-parse", "HEAD"], capture_output=True, text=True, check=False)
     return out.stdout.strip()
