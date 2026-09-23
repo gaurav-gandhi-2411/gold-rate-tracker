@@ -11,6 +11,7 @@
   "tests/test_cadence_metrics.py": 14,
   "tests/test_calculator.js": 9,
   "tests/test_calibration.py": 59,
+  "tests/test_calibration_adaptive.py": 10,
   "tests/test_calibration_confidence.js": 8,
   "tests/test_calibration_integration.py": 10,
   "tests/test_calibration_unlock_chain.py": 4,
