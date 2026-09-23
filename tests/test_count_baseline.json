@@ -9,7 +9,7 @@
   "tests/test_backtest.py": 15,
   "tests/test_cadence_digest.py": 19,
   "tests/test_cadence_metrics.py": 14,
-  "tests/test_calculator.js": 9,
+  "tests/test_calculator.js": 18,
   "tests/test_calibration.py": 59,
   "tests/test_calibration_confidence.js": 8,
   "tests/test_calibration_integration.py": 10,

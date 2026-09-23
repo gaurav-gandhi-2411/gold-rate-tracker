@@ -801,23 +801,29 @@ function computeAccuracyDrift(drift) {
 // Itemised "what will it cost me?" estimate for a gold jewellery purchase, the
 // way an Indian retail invoice is built up:
 //   gold value = ratePerGram × grams
-//   making     = gold value × makingPct/100   (making charges — design-dependent,
-//                                               jeweller-specific; the caller supplies it)
+//   making     = gold value × makingPct/100 + grams × makingPerGram
+//                (making charges — design-dependent, jeweller-specific; quoted
+//                 either as a % of gold value or a flat ₹/gram; the caller supplies it)
 //   GST        = (gold value + making) × gstPct/100   (3% on gold jewellery in India)
 //   total      = gold value + making + GST
 //
+// GST base: 3% on the WHOLE retail transaction value, making charges included
+// (HSN 7113; CBIC rate table: 1.5% CGST + 1.5% SGST). Some buyer guides quote
+// "5% GST on making charges" -- that rate is for B2B job work (a jeweller
+// paying an artisan to work gold the jeweller supplied), not a retail sale.
+//
 // No making-charge default is baked in here (it varies far too widely by design
-// to assume) — makingPct defaults to 0 so the bare metal+GST figure is the floor;
-// the UI layer owns the user-entered default and its framing. gstPct defaults to
-// the current 3% India rate. Returns null on any invalid (non-finite / negative)
+// to assume) — both making inputs default to 0 so the bare metal+GST figure is
+// the floor; the UI layer owns the default range and its framing. gstPct defaults
+// to the current 3% India rate. Returns null on any invalid (non-finite / negative)
 // input so the caller can show a neutral empty state rather than NaN.
-function computePurchaseCost({ ratePerGram, grams, makingPct = 0, gstPct = 3 }) {
-  const vals = [ratePerGram, grams, makingPct, gstPct];
+function computePurchaseCost({ ratePerGram, grams, makingPct = 0, makingPerGram = 0, gstPct = 3 }) {
+  const vals = [ratePerGram, grams, makingPct, makingPerGram, gstPct];
   if (!vals.every(Number.isFinite)) return null;
-  if (ratePerGram < 0 || grams < 0 || makingPct < 0 || gstPct < 0) return null;
+  if (vals.some((v) => v < 0)) return null;
 
   const goldValue = ratePerGram * grams;
-  const making = goldValue * (makingPct / 100);
+  const making = goldValue * (makingPct / 100) + grams * makingPerGram;
   const gst = (goldValue + making) * (gstPct / 100);
   const total = goldValue + making + gst;
 
@@ -827,6 +833,33 @@ function computePurchaseCost({ ratePerGram, grams, makingPct = 0, gstPct = 3 }) 
     gst: Math.round(gst),
     total: Math.round(total),
   };
+}
+
+// Pre-filled making-charge range for the calculator. Source (read 2026-09-23):
+// Aditya Birla Capital's buyer guide, "between 6% and 25% of the value of gold
+// or ₹200–₹600 per gram" (adityabirlacapital.com/abc-of-money/gold-making-charges).
+// A published typical range, not a market measurement -- a plain chain sits
+// near the bottom, bridal/antique work can exceed the top; the inputs are
+// editable and the UI labels the result an estimate.
+const MAKING_CHARGE_DEFAULTS = {
+  pct:     { low: 6,   high: 25 },
+  perGram: { low: 200, high: 600 },
+};
+
+// Low–high estimate over a making-charge RANGE -- a single making % invents
+// precision a buyer doesn't have before they're in the store. makingMode is
+// "pct" (% of gold value) or "perGram" (flat ₹/gram). Bounds are sorted, so a
+// reversed entry still works. Returns null if any input is invalid.
+function computePurchaseCostRange({ ratePerGram, grams, makingMode, makingLow, makingHigh, gstPct = 3 }) {
+  if (makingMode !== "pct" && makingMode !== "perGram") return null;
+  if (!Number.isFinite(makingLow) || !Number.isFinite(makingHigh)) return null;
+  const [lo, hi] = makingLow <= makingHigh ? [makingLow, makingHigh] : [makingHigh, makingLow];
+  const at = (v) => computePurchaseCost(makingMode === "pct"
+    ? { ratePerGram, grams, makingPct: v, gstPct }
+    : { ratePerGram, grams, makingPerGram: v, gstPct });
+  const low = at(lo);
+  const high = at(hi);
+  return low && high ? { low, high } : null;
 }
 
 // ─── RENDERERS ────────────────────────────────────────────────────────────────

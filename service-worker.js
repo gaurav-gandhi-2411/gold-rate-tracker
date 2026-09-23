@@ -90,7 +90,9 @@
 // 2026-09-21 (v50): index.html no longer reloads a first-time visitor's page when the worker first
 // takes control (it flashed the price to the loading skeleton ~1s after first paint, and raced the
 // post-deploy render smoke test into a false URGENT). Only a worker REPLACING an existing one reloads.
-const VERSION = "v50-20260921-no-reload-on-first-install";
+// 2026-09-23 (v51): app.js gains computePurchaseCostRange()/makingPerGram (calculator
+// compute only; no visible change on its own). app.js changed.
+const VERSION = "v51-20260923-calc-range-compute";
 const SHELL_CACHE = `gold-shell-${VERSION}`;
 
 const SHELL_FILES = [
