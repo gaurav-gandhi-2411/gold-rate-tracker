@@ -72,6 +72,7 @@
   "tests/test_sources_malabar.py": 9,
   "tests/test_stale_banner.js": 14,
   "tests/test_stale_banner_headless.js": 0,
+  "tests/test_stats_corrections.py": 27,
   "tests/test_stratified_band.py": 8,
   "tests/test_sw_offline_headless.js": 0,
   "tests/test_sw_shell_files.py": 7,
