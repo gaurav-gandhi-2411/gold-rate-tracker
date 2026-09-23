@@ -5,6 +5,7 @@
   "scraper/test_scrape.js": 4,
   "scraper/test_scraper_hardening.mjs": 16,
   "scraper/test_update_and_notify.js": 6,
+  "tests/test_analysis_nowcast.py": 3,
   "tests/test_audit_silent_fallbacks.py": 12,
   "tests/test_backtest.py": 15,
   "tests/test_cadence_digest.py": 19,
