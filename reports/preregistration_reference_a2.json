@@ -1,0 +1,29 @@
+{
+  "generated_at_utc": "2026-09-23T13:11:30.180542+00:00",
+  "git_sha": "fde7ce9657976d0ef8c2544c15dbdf90e099d112",
+  "python": "3.12.12",
+  "libraries": {
+    "numpy": "2.4.6",
+    "pandas": "3.0.6",
+    "scikit-learn": "1.9.1",
+    "lightgbm": "4.7.0",
+    "scipy": "1.17.1"
+  },
+  "input_sha256": {
+    "data/feature_store/snapshots.parquet": "6d2cbfb1ce7532ff7d8f027b4ac922c3c324faad3a06f7539b4b37c3f3314b3b",
+    "data/ibja_rates.parquet": "2965cce6f01d205198203fe915f5afc613b52357526621f7985ce4d13921422c"
+  },
+  "n": 161,
+  "effective_n": 112.524964,
+  "mean_diff": -0.06832298,
+  "gamma_0": 0.07607731,
+  "long_run_var": 0.10885093,
+  "dm_stat": -2.627627,
+  "p_value": 0.00429914,
+  "accuracy": 0.65838509,
+  "always_up_accuracy": 0.59006211,
+  "n_for_power": 144.1673,
+  "first_as_of": "2025-05-08",
+  "last_as_of": "2026-09-18",
+  "fold_digest": "b5e06b463499c5d0e2ceeedf18903ae092c0da210a4f92aae9da4c5f61b5ba19"
+}

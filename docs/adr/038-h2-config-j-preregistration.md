@@ -1,7 +1,8 @@
 # ADR 038 — Pre-Registration: ADR 034's h2 "Config J" Candidate on Genuinely New Data
 
 **Status:** Accepted, implemented 2026-09-23. **Amended 2026-09-23 (A1: embargo + post-registration
-days only), before any post-registration day was scored — see "Amendment A1".** Pre-registration only — no promotion, no gate/user-facing
+days only) and again 2026-09-23 (A2: prior-day VIX in the proxy arm; reproducible reference figures),
+both before any post-registration day was scored — see "Amendment A1" and "Amendment A2".** Pre-registration only — no promotion, no gate/user-facing
 change. Shadow arms run additively from `weekly-backtest.yml`; write only to
 `data/preregistered_h2_shadow_results.json`.
 
@@ -131,6 +132,73 @@ document forbids. Counting only new days, 135.9 effective folds is ~136 new labe
 embargoed effective/raw ratio (1.00 above) holds, or ~183 at the leaky protocol's ratio (0.70). New
 labelled days currently accrue at 0.66-0.70 per calendar day (last 30/60/90 days: 20/42/59 rows), so
 the target is reached roughly between April and July 2027.
+
+## Amendment A2 — 2026-09-23: prior-day VIX in the proxy arm; reproducible reference figures
+
+**This is the second amendment.** GG approved it, and it was made on 2026-09-23, **before any
+post-registration day was scored.** The pre-registration step has never run:
+`data/preregistered_h2_shadow_results.json` does not exist on master. Its first scheduled run is
+`weekly-backtest.yml` on Sunday 2026-09-27 02:00 UTC. The model configuration, the one-sided HAC-DM
+test and α = 0.05 are unchanged. The confirmatory design from A1 (embargo on `label_date_h2`, only
+`as_of_date > 2026-09-23` scored) is unchanged.
+
+### A2a — the proxy arm no longer sees the same day's India VIX
+
+**Reason.** The proxy label for day *t* is the proxy's own move from *t−1* to *t*. The proxy arm's
+`india_vix` feature was that same day *t*'s close, which isn't known until after the move it is
+used to predict. That breaks the embargo rule (embargo ≥ h).
+
+**Change.** `build_proxy_deadzone_dataset` calls
+`augment_with_m1_drivers(..., india_vix_prior_day=True)`: the close of the last trading day
+strictly before *t*.
+
+**Effect, measured** (`run_proxy_arm`, 2026-09-23): n = 329, effective n = 329.0, accuracy 49.85%
+vs always-up 55.62%, one-sided p = 0.928. The same-day version measured 48.33%, p = 0.975. The
+leak did not flatter the result; this arm stays exploratory and non-confirmatory
+(`reports/proxy_subperiods_config_j.json`, #1937).
+
+### A2b — reference figures re-frozen from a reproducible computation
+
+**Reason.** The first freeze recorded n = 161, effective n = 119.38, long-run variance 0.10260,
+p = 0.00340, n-for-power 135.9. **None of these could be reproduced from any committed code and
+data.** Every candidate source of non-determinism was tested on 2026-09-23:
+
+| suspect | test | result |
+|---|---|---|
+| run-to-run non-determinism (seeds, threads) | the freeze commit `b8514485`'s own code, run twice | bit-identical per-fold output, p = 0.00430 both times |
+| library versions | sklearn 1.9.0 / pandas 3.0.3 vs sklearn 1.9.1 / pandas 3.0.6 | bit-identical |
+| data ordering or snapshot | input parquets as of `87a2a7fe`, `c97cbb83`, `b8514485` | identical per-fold digest (the older `c779348c` has one fewer labelled day, n = 160) |
+| HAC bandwidth selection | Bartlett and uniform kernels, lags 0–5, divisor *n* or *n−k*, on the same fold losses | no setting gives 0.10260; lag 0 gives 0.07608, lag 1 gives 0.10885 |
+| untracked local inputs | `build_dataset` reads only the two tracked parquets | none |
+
+Mean loss difference (−0.06832) and γ₀ (0.07608) match the first freeze exactly. Only the lag-1
+term differs. That means the same totals of wins and losses, placed on different days. The most
+likely source is a one-off scratch computation that was never committed. The cause can't be
+pinned down further without that script. What is established is that the committed pipeline is
+deterministic, and the frozen numbers did not come from it.
+
+**Re-frozen reference** (`ml.direction.preregistration.REFERENCE`). Config J, original protocol
+(no embargo, all folds), as_of 2025-05-08 → 2026-09-18:
+
+| n | effective n | mean diff | long-run var | one-sided p | accuracy vs always-up | n for 80% power |
+|---|---|---|---|---|---|---|
+| 161 | 112.525 | −0.068323 | 0.108851 | 0.004299 | 65.84% vs 59.01% | 144.17 |
+
+- **fold digest:** `b5e06b46…61b5ba19` (SHA-256 of every fold's date, label and probability).
+- **Reproduce:** `python scripts/analysis_prereg_reference.py --check`, which exits non-zero on
+  any mismatch.
+- **Where it has been reproduced:** locally in two separate venvs with different library versions,
+  and independently on a GitHub-hosted runner via `analysis.yml` (run ID in the PR).
+- The reference is pinned to as_of ≤ 2026-09-18, so new rows can't move it.
+
+**The power target moves from 135.9 to 144.17 effective folds.** It is built exactly as before:
+std = √(long-run variance), compared against effective n. Flagged, not changed: that construction
+counts autocorrelation twice, once in the std and once in effective n. A consistent version would
+ask for about 101 effective folds. The conservative 144.17 is kept; lowering the bar after seeing
+results is the move this document exists to prevent. The target still rests on the leaky effect
+size. With the embargo, the selection data shows no edge (60.38% vs 59.75%, p = 0.327, A1), so the
+test is optimistic about its own power either way. At the current 0.66–0.70 new labelled days per
+calendar day, 144 effective folds is roughly mid-2027.
 
 ## Two shadow arms
 
