@@ -136,8 +136,8 @@ def _detect_and_adjust_rolls(
 
     Returns (adjusted_gc, flagged_mask).
     """
-    log_ret_gc = np.log(gc / gc.shift(1))
-    log_ret_gld = np.log(gld / gld.shift(1))
+    log_ret_gc = pd.Series(np.log(gc / gc.shift(1)), index=gc.index)
+    log_ret_gld = pd.Series(np.log(gld / gld.shift(1)), index=gld.index)
     divergence = log_ret_gc - log_ret_gld
 
     rolling_median = divergence.rolling(rolling_window, min_periods=20).median()
@@ -189,7 +189,7 @@ def load_duty_schedule(
     if index is None:
         return steps
 
-    daily = steps.reindex(index.union(steps.index)).ffill()
+    daily = steps.reindex(index.union(pd.DatetimeIndex(steps.index))).ffill()
     daily = daily.reindex(index)
     daily = daily.fillna(_BASE_DUTY_PCT)  # dates before the first event
     return daily
@@ -310,7 +310,7 @@ def build_proxy_history(
 
     raw_pre_duty = gc_lag / TROY_OZ_TO_GRAM * usd_inr_lag * PURITY_22K_OF_24K * GRAMS_PER_QUOTE_UNIT
 
-    full_index = raw_pre_duty.index
+    full_index = pd.DatetimeIndex(raw_pre_duty.index)
     duty_pct = load_duty_schedule(path=duty_events_path, index=full_index)
     raw_with_duty = raw_pre_duty * (1.0 + duty_pct / 100.0)
 
