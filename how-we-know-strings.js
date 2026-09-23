@@ -24,11 +24,11 @@ const STRINGS_HWK = {
     hwkPageTitle: "How we know · Gold Rate Today",
     hwkPageDescription: "The full numbers behind Gold Rate Today's estimate: how the range is built, how accurate it has actually been, and why there's no rising/falling forecast.",
     hwkHeading: "How we know",
-    hwkIntro: "This page has the full technical detail behind the plain-language summary on the main page — the same numbers, unrounded, plus how we test them.",
+    hwkIntro: "This page shows the full detail behind the short summary on the main page — the exact numbers, and how we check them.",
     hwkBackLink: "← Back to Gold Rate Today",
     hwkLoading: "Loading…",
     hwkEmpty: "Not enough data yet to show this — check back once a few more readings have come in.",
-    hwkError: "Couldn't load this page's data. Check your connection and reload.",
+    hwkError: "We couldn't show these numbers right now. Please check your internet and refresh the page.",
 
     // ── How we call a trend ──────────────────────────────────────────────────────
     methHowWeCallTrendHeading: "How we call a trend",

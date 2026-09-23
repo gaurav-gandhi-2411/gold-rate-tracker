@@ -60,8 +60,8 @@ const STRINGS = {
     // banned pattern (docs/PLAIN_LANGUAGE_AUDIT.md). The hours/worst-case/as-of
     // figures it sat next to are unaffected and stay in place.
     firstVisitText: (params) => params
-      ? `22K gold retail price, checked about every ${params.hours}h (worst case recently ~${params.p90Hours ?? params.hours}h, as of ${params.asOf}) and confirmed against Tanishq's live rate when possible. We always say plainly when a price is an estimate.`
-      : "22K gold retail price, checked on a regular schedule and confirmed against Tanishq's live rate when possible. We always say plainly when a price is an estimate.",
+      ? `The price of 22K gold in shops, checked about every ${params.hours}h (worst case recently ~${params.p90Hours ?? params.hours}h, as of ${params.asOf}) and confirmed against Tanishq's live rate when possible. We always say plainly when a price is an estimate.`
+      : "The price of 22K gold in shops, checked on a regular schedule and confirmed against Tanishq's live rate when possible. We always say plainly when a price is an estimate.",
     shareLabel: "Share",
     shareTextWithPrice: ({ price }) => `Today's 22K gold price is ₹${price}/gram — check Gold Tracker`,
     shareTextGeneric: "Check today's gold price on Gold Tracker",
@@ -147,7 +147,7 @@ const STRINGS = {
     // once, or avoided" rule) -- short mentions elsewhere (e.g. calcRateUsedIbja's
     // "IBJA-based estimate") rely on this one. Also dropped the literal
     // "n=${params.n}" clause below (same fix as firstVisitText above).
-    footerBody: (params) => `We use <a href="https://ibjarates.com/" target="_blank" rel="noopener">IBJA</a> (the India Bullion and Jewellers Association's daily benchmark rate) and adjust it to match real shop prices, checking against <a href="https://www.tanishq.co.in/gold-rate.html?lang=en_IN" target="_blank" rel="noopener">Tanishq</a>'s live rate when we can. ${
+    footerBody: (params) => `We use <a href="https://ibjarates.com/" target="_blank" rel="noopener">IBJA</a> (the India Bullion and Jewellers Association, which publishes an official gold price every working day) and adjust it to match real shop prices, checking against <a href="https://www.tanishq.co.in/gold-rate.html?lang=en_IN" target="_blank" rel="noopener">Tanishq</a>'s live rate when we can. ${
       params
         ? `Prices are checked about every ${params.hours}h (worst case recently ~${params.p90Hours ?? params.hours}h, as of ${params.asOf})`
         : "Prices are checked on a regular schedule"
@@ -245,7 +245,7 @@ const STRINGS = {
     // one. fractionOutOf10Phrase floors so this never overstates (see its own
     // comment above). The exact percentage and n are not lost -- they're on
     // how-we-know.html (methAccurateP2CoveragePct), unrounded.
-    reliabilityCoverage: ({ pct }) => `Our estimated range has been right ${fractionOutOf10Phrase(pct)} so far.`,
+    reliabilityCoverage: ({ pct }) => `The real price has stayed inside the range we show ${fractionOutOf10Phrase(pct)} so far.`,
     reliabilityUnknown: "Still building a track record for this — check back later.",
     reliabilityDriftOnTrack: "Recent accuracy has stayed in line with the historical average.",
     reliabilityDriftWatch: "Recent accuracy has drifted a bit from the historical average — we're keeping an eye on it.",
@@ -380,7 +380,7 @@ const STRINGS = {
     // U1 audit (2026-09-23): was "Couldn't load model details" -- "model" is a
     // banned term. This is the error state for the plain accuracy-summary panel
     // (app.js's renderAccuracySummary), not a methodology dump anymore.
-    errCouldntLoadMethodology: "Couldn't load this section — check your connection and reload.",
+    errCouldntLoadMethodology: "We couldn't show this part right now. Please check your internet and refresh the page.",
 
     // ── Relative time (fmtRelative) ──────────────────────────────────────────────
     relJustNow: "just now",
