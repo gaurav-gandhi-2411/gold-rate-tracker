@@ -1236,26 +1236,136 @@ main {
   outline: 2px solid var(--gold);
   outline-offset: 2px;
 }
-.calc-making-hint {
+/* Jewellery-type presets: a real <fieldset> so the radio group is one labelled group for
+   screen readers; browser chrome (border/padding) reset so it reads as part of the card,
+   not a nested box. */
+.calc-presets {
+  border: 0;
+  padding: 0;
+  margin: var(--space-4) 0 0;
+  min-width: 0;
+}
+.calc-presets legend {
+  padding: 0;
   font-size: var(--ts-xs);
   color: var(--cream-mute);
-  margin: 4px 0 var(--space-5);
+  margin-bottom: 6px;
 }
+.calc-preset-group {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  margin-bottom: var(--space-3);
+}
+.calc-mode {
+  display: flex;
+  gap: var(--space-2);
+  flex-wrap: wrap;
+  margin-bottom: var(--space-3);
+}
+/* 44px min-height touch target, same as .calc-input. */
+.calc-mode-option {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  min-height: 44px;
+  padding: 0 var(--space-4);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  background: var(--surface-2);
+  font-size: var(--ts-sm);
+  color: var(--cream-dim);
+  cursor: pointer;
+}
+.calc-mode-option:has(input:checked) {
+  border-color: var(--gold);
+  color: var(--cream);
+}
+.calc-mode-option input { accent-color: var(--gold); margin: 0; }
+.calc-mode-option input:focus-visible {
+  outline: 2px solid var(--gold);
+  outline-offset: 2px;
+}
+/* Preset options carry two lines (name + range) so they're top-aligned, not
+   vertically centred like the single-line mode toggles above; padding grows to keep
+   the 44px touch target comfortable around the taller content. */
+.calc-preset-option {
+  display: flex;
+  align-items: flex-start;
+  width: 100%;
+  padding: var(--space-2) var(--space-4);
+}
+.calc-preset-option input { margin-top: 3px; flex-shrink: 0; }
+.calc-preset-text {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.calc-preset-name {
+  font-size: var(--ts-sm);
+  color: var(--cream-dim);
+}
+.calc-preset-range {
+  font-size: var(--ts-xs);
+  color: var(--cream-mute);
+}
+.calc-preset-option:has(input:checked) .calc-preset-name,
+.calc-preset-option:has(input:checked) .calc-preset-range {
+  color: var(--cream);
+}
+/* Custom making-charge fields (value + unit toggle): shown only when the "Custom"
+   preset is selected -- see renderCalculator()'s customFieldsEl.hidden toggle. */
+.calc-custom-fields { margin-top: var(--space-3); }
+.calc-input[aria-invalid="true"] { border-color: var(--status-stale); }
+.calc-rate-used {
+  margin: 0 0 var(--space-2);
+  font-size: var(--ts-xs);
+  color: var(--cream-mute);
+}
+.calc-result-range {
+  margin: 2px 0 0;
+  font-size: var(--ts-xs);
+  color: var(--cream-mute);
+  font-variant-numeric: tabular-nums;
+}
+/* The estimate label is the one line in this card that must NOT read as fine print --
+   bold and full cream (not the muted grey every other note/disclaimer line uses) so it
+   stands out as a clear claim next to the Total, not a footnote. */
+.calc-estimate-label {
+  margin: var(--space-3) 0 0;
+  font-size: var(--ts-sm);
+  font-weight: 600;
+  color: var(--cream);
+}
+.calc-disclaimer {
+  margin: var(--space-2) 0 0;
+  font-size: var(--ts-xs);
+  color: var(--cream-mute);
+  line-height: 1.45;
+}
+.calc-error { color: var(--status-stale); }
 
 /* CLS fix, same absolute-overlay pattern as commentary-body/model-signal-wrap
    above -- calc-skeleton is hidden without ever changing calc-wrap's height,
    since calc-results starts empty and only gets content once renderCalculator()
    has real readings/forecast to compute against. min-height is the measured
-   near-maximal case, not the zero-making-charge default: the making-charge
-   row and the estimated-price note are both conditionally rendered, so the
-   card is taller once a visitor enters a making % and/or the headline price
-   is in ibja_calibrated/fusion_consensus mode. Measured scrollHeight at
-   375px (tallest of 375/390/428, both languages, 2026-08-11) with both of
-   those present: 240px. 250px leaves a small margin without padding far
-   beyond the measured case. */
+   near-maximal case, not the shortest default: the making-charge row/range
+   and the estimated-price or stale-price note are both conditionally
+   rendered, so the card is taller once a preset with a non-zero making %
+   is selected and/or a note line is showing. Re-measured 2026-09-23 after
+   splitting the making-charge range onto its own line and promoting the
+   "Estimate — stores vary" label to its own bold line (natural scrollHeight
+   at 375px, 20 g, .calc-wrap's own min-height zeroed out to read the real
+   content height): plain/intricate preset + fresh Tanishq rate 364px;
+   + stale-price note OR estimate-tier note 389px (the tallest realistic
+   case -- those two notes are mutually exclusive, never both shown);
+   custom preset (no range line) 327px, +estimate/stale note 352px. 400px
+   covers the 389px worst case with a small margin; a 10 kg entry (values
+   wrap to a second line) still grows the card beyond this, by design --
+   padding every visit for that extreme isn't worth the gap. */
 .calc-wrap {
   position: relative;
-  min-height: 250px;
+  min-height: 400px;
 }
 .calc-skeleton {
   position: absolute;
@@ -1285,6 +1395,9 @@ main {
   padding: 3px 0;
   font-variant-numeric: tabular-nums;
 }
+/* Ranges ("₹a – ₹b") wrap after the dash at narrow widths; keep the
+   wrapped half flush right under the first instead of snapping left. */
+.calc-result-row > span:last-child { text-align: right; }
 .calc-result-row--total {
   border-top: 1px solid var(--line);
   margin-top: 6px;
