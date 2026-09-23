@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import pandas as pd
+from ml.direction.price_units import INR_PER_10G, declare_units
 from ml.direction.reframed_targets import (
     add_buyer_decision_binary,
     add_deadzone_binary,
@@ -77,23 +78,34 @@ class TestDetrendedBinary:
 
 class TestBuyerDecisionBinary:
     def test_dip_beyond_dead_band_is_one(self) -> None:
-        df = pd.DataFrame({"current_pm916": [70000.0], "window_min_pm916_h5": [68000.0]})
+        df = declare_units(
+            pd.DataFrame({"current_pm916": [70000.0], "window_min_pm916_h5": [68000.0]}),
+            INR_PER_10G,
+        )
         # dip = (70000-68000)/10 = 200 Rs/gram > 50 default dead band
         result = add_buyer_decision_binary(df, 5, dead_band_per_gram=50.0)
         assert result.iloc[0] == 1.0
 
     def test_small_dip_within_dead_band_is_zero(self) -> None:
-        df = pd.DataFrame({"current_pm916": [70000.0], "window_min_pm916_h5": [69800.0]})
+        df = declare_units(
+            pd.DataFrame({"current_pm916": [70000.0], "window_min_pm916_h5": [69800.0]}),
+            INR_PER_10G,
+        )
         # dip = (70000-69800)/10 = 20 Rs/gram < 50
         result = add_buyer_decision_binary(df, 5, dead_band_per_gram=50.0)
         assert result.iloc[0] == 0.0
 
     def test_price_only_rose_is_zero(self) -> None:
-        df = pd.DataFrame({"current_pm916": [70000.0], "window_min_pm916_h5": [70500.0]})
+        df = declare_units(
+            pd.DataFrame({"current_pm916": [70000.0], "window_min_pm916_h5": [70500.0]}),
+            INR_PER_10G,
+        )
         result = add_buyer_decision_binary(df, 5, dead_band_per_gram=50.0)
         assert result.iloc[0] == 0.0
 
     def test_nan_window_min_propagates_as_nan(self) -> None:
-        df = pd.DataFrame({"current_pm916": [70000.0], "window_min_pm916_h5": [None]})
+        df = declare_units(
+            pd.DataFrame({"current_pm916": [70000.0], "window_min_pm916_h5": [None]}), INR_PER_10G
+        )
         result = add_buyer_decision_binary(df, 5, dead_band_per_gram=50.0)
         assert pd.isna(result.iloc[0])
