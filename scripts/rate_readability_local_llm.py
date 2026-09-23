@@ -73,7 +73,8 @@ def consensus_hard_words(ratings: dict) -> list[str]:
 
 
 def main() -> int:
-    items = json.load(open(sys.argv[1], encoding="utf-8"))
+    with open(sys.argv[1], encoding="utf-8") as fh:
+        items = json.load(fh)
     results = []
     for it in items:
         row = {"key": it["key"], "text": it["text"], "ratings": {}}
@@ -108,7 +109,8 @@ def main() -> int:
         },
         "results": results,
     }
-    json.dump(summary, open(sys.argv[2], "w", encoding="utf-8"), indent=2, ensure_ascii=False)
+    with open(sys.argv[2], "w", encoding="utf-8") as fh:
+        json.dump(summary, fh, indent=2, ensure_ascii=False)
     print(
         "agreement",
         round(agree, 3),
