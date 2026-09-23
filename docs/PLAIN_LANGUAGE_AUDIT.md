@@ -65,10 +65,11 @@ HI strings flagged for native review.**
 | `i18n.js` `footerBody` (EN+HI) | "...(worst case recently ~Xh; n=41, as of DATE)" | n= | same fix as `firstVisitText` |
 | `i18n.js` `volNoteElevated` (EN) | "Gold has been more volatile than usual lately — about ±₹X over 5 days." | volatility/volatile | "Gold has been swinging more than usual lately — about ±₹X over 5 days." |
 | `i18n.js` `volNoteCalm` (EN) | "Gold has been calmer than usual lately..." | volatility/volatile (key concept, adjacent to the elevated/calm pair) | "Gold has been steadier than usual lately..." |
-| `i18n.js` `reliabilityCoverage` (EN) | "Our estimated range has been right {pct}% of the time (checked {n} times)." | matches the `"coverage X% (n=Y)"` pattern | "Our estimated range has usually been right — about N times out of 10 so far." (floored, never overstates — see `fractionOutOf10Phrase`) |
+| `i18n.js` `reliabilityCoverage` (EN) | "Our estimated range has been right {pct}% of the time (checked {n} times)." | matches the `"coverage X% (n=Y)"` pattern | "Our estimated range has been right about N times out of 10 so far." (floored, never overstates — see `fractionOutOf10Phrase`) |
 | `i18n.js` `calibrationConfidenceAppend` (EN) | "...about {coverage}% of the time so far (n={n} weeks measured)." | n= | "...about N times out of 10 so far." (n dropped; exact % and n preserved on how-we-know.html's new "Band accuracy" section) |
 | `i18n.js` `errCouldntLoadMethodology` (EN) | "Couldn't load model details — check your connection and reload." | model | "Couldn't load this section — check your connection and reload." |
 | `i18n.js` `errCouldntLoadMethodology` (HI) | "मॉडल की जानकारी लोड नहीं हो पाई..." | model (मॉडल, loanword) + EN meaning changed | Removed, flagged HI-needs-native-review (falls back to reworded English) |
+| `i18n.js` `accSummaryDirectionOff` (EN) | "We don't try to guess whether prices will rise or fall next — nothing we've tested beats simply assuming they'll stay about the same, so that's what we go with." | (honesty fix, not a banned term) | "We don't try to guess whether prices will rise or fall next — none of the methods we've tested could do it reliably, so we don't show a guess." — the original wording implied "assume no change" was itself a tested, winning method; the real baseline the direction gate compares against is "always guess up" (ADR 019), not "assume no change" (that's the separate price-range method). Same correction class as the two rows below: don't let a rounding/summarizing rewrite assert something the underlying data doesn't support. |
 | `i18n.js` 37× `meth*` keys (EN+HI) | full methodology breakdown (verdict rule, next-day-range p-value, direction-signal internals, drift stats) | model, p-value, MAE, coverage, percentile-adjacent framing | Relocated verbatim to `how-we-know-strings.js` (its own exempt catalogue) — same wording, same numbers, just off the main page. Main page's accordion body now renders 2-3 short plain sentences (`accSummaryIntro`/`accSummaryDirectionOff`, reusing the already-plain `reliabilityDriftOnTrack/Watch/Retrain`) plus a link |
 | `README.md` "How fresh the data is" bullet | "...typical gap between updates was 4.6 (n=41, as of DATE) hours." | n= | "...typical gap between updates was 4.6 (as of DATE) hours." — `\|n=n` modifier dropped from the METRIC marker |
 | `README.md` "A likely range, not just one number" bullet | "...it has actually contained the real rate 70.9% (n=86, 95% CI [60.6%, 79.5%], as of DATE) of the time..." | n=, CI | "...it has actually landed inside the range about 7 times out of 10 so far..." via the new `frac10` METRIC format, plus a link to How we know for the exact numbers |
@@ -165,3 +166,27 @@ Both independently implement the identical rounding rule (floor to the
 nearest 10%, e.g. 78% → "7 times out of 10", never "8") since one runs in a
 browser and the other in a docs-build script with no runtime in common; kept
 in sync by policy (this document), not shared code.
+
+## Follow-up correction (2026-09-23, same day) — plain wording can assert too much, not just too little
+
+A second pass caught two ways the plain-language rewrite itself had drifted
+from what the data actually supports — the opposite failure mode from
+jargon, but still dishonest:
+
+- `reliabilityCoverage` and `calibrationConfidenceAppend` said the range/band
+  has "**usually** been right — about N times out of 10". Below a 6/10
+  fraction, "usually" directly contradicts the number sitting right next to
+  it (a range that's right 4 times out of 10 is not "usually" right). Fixed
+  by dropping "usually" — the fraction is left to speak for itself,
+  correct at every value from 0 to 10.
+- `accSummaryDirectionOff` said "nothing we've tested beats **simply
+  assuming they'll stay about the same**" — but the direction gate's actual
+  comparison baseline is "always guess up" (ADR 019), not "assume no
+  change" (that's the separate next-day-range method, a different part of
+  the page). The plain summary had quietly swapped in the wrong baseline
+  while simplifying. Fixed to say "none of the methods we've tested could do
+  it reliably" — true regardless of which specific baseline is meant, and
+  doesn't claim a comparison that wasn't actually made.
+
+Screenshots `06-accordion-opened-375-after.png`, `08-model-signal-375-after.png`,
+and `10-banner-mocked-375-after.png` were re-captured after this fix.
