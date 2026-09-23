@@ -281,6 +281,27 @@ jobs:
       - name: Verify every bot-pr-sync-calling workflow's git-add paths are allowlist-covered
         run: python scripts/check_bot_pr_sync_allowlist.py
 
+  # GG spec, 2026-09-23: a passing ml.direction.gate decision must never
+  # reach users without an explicit, GG-approved promotion record. Traced
+  # end to end (docs/adr/036) and confirmed true today, but that's a fact
+  # about the current code, not a structural guarantee -- this makes it one.
+  # Deliberately NOT path-filtered (same AF1-incident reasoning as
+  # bot-pr-sync-allowlist-check above): a required-adjacent check that only
+  # runs on some paths can produce "never ran" instead of "failed", which is
+  # worse than the few extra seconds of running it on every PR. See
+  # scripts/check_direction_signal_not_wired_without_promotion.py's own
+  # docstring for the full mechanism and its stated blind spots.
+  direction-signal-promotion-check:
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: "3.12"
+      - name: Verify no user-facing surface reads the direction gate without a promotion record
+        run: python scripts/check_direction_signal_not_wired_without_promotion.py
+
   # Fail if any <!--METRIC:...--> marker in README.md/docs/*.md doesn't
   # resolve, or resolves to text that differs from what's committed --
   # same "regenerate, don't hand-edit" idiom as sw-version-guard above.
