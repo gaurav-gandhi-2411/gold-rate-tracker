@@ -113,6 +113,57 @@ def walk_forward_conformal(
     }
 
 
+IBJA_FALLBACK_MIN_N = 30  # task brief: "falling back to proxy-scored errors if fewer than 30"
+
+
+def apply_ibja_fallback(
+    ibja_calibration: dict,
+    proxy_calibration: dict,
+    source_proxy_index: list[int],
+) -> dict:
+    """IBJA-arm conformal fallback (task brief): where the IBJA arm's own
+    walk-forward calibration has fewer than IBJA_FALLBACK_MIN_N matured
+    IBJA-scored errors -- i.e. `ibja_calibration` was produced with
+    `min_calibration_n=IBJA_FALLBACK_MIN_N` and came back NaN at that row --
+    fall back to the PROXY arm's own calibrated bounds for the matching
+    forecast (same as_of_date, looked up via `source_proxy_index[k]`, the
+    index ml.range_forecast.data.score_against_ibja recorded into the proxy
+    arm's arrays). Records which source was used per forecast: "ibja"
+    (IBJA-scored calibration available), "proxy_fallback" (borrowed from the
+    proxy arm), or "insufficient_history" (neither arm had enough matured
+    errors yet -- still NaN after the fallback, a genuine early-warm-up gap,
+    not an error).
+    """
+    n = len(ibja_calibration["calibrated_lo"])
+    final_lo = ibja_calibration["calibrated_lo"].copy()
+    final_hi = ibja_calibration["calibrated_hi"].copy()
+    final_qhat = ibja_calibration["q_hat"].copy()
+    source: list[str] = []
+    for k in range(n):
+        if not np.isnan(final_lo[k]):
+            source.append("ibja")
+            continue
+        j = source_proxy_index[k]
+        p_lo, p_hi, p_qhat = (
+            proxy_calibration["calibrated_lo"][j],
+            proxy_calibration["calibrated_hi"][j],
+            proxy_calibration["q_hat"][j],
+        )
+        if np.isnan(p_lo):
+            source.append("insufficient_history")
+            continue
+        final_lo[k], final_hi[k], final_qhat[k] = p_lo, p_hi, p_qhat
+        source.append("proxy_fallback")
+
+    return {
+        "calibrated_lo": final_lo,
+        "calibrated_hi": final_hi,
+        "q_hat": final_qhat,
+        "n_matured": ibja_calibration["n_matured"],
+        "source": source,
+    }
+
+
 def assert_no_unmatured_leakage(
     as_of_positions: np.ndarray, horizon: int, cur_idx: int, used_indices: np.ndarray
 ) -> None:

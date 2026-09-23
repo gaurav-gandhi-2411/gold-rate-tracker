@@ -14,8 +14,10 @@ from ml.range_forecast import baselines, conformal, garch, har, metrics
 from ml.range_forecast.data import (
     _drop_carried_forward,
     _t_minus_1_lag,
+    dense_segments,
     forward_log_return,
     log_returns,
+    score_against_ibja,
 )
 from scipy.stats import binom, chi2
 
@@ -189,6 +191,181 @@ class TestDataHelpers:
         price = pd.Series([100.0, 110.0, 105.0], index=pd.date_range("2024-01-01", periods=3))
         r = log_returns(price)
         assert len(r) == 2
+
+
+# ---------------------------------------------------------------------------
+# IBJA protocol: dense segments + rescoring (2026-09-24 fix -- IBJA is not
+# daily before 2025-Q2; a per-row horizon there silently spanned weeks)
+# ---------------------------------------------------------------------------
+
+
+class TestDenseSegments:
+    def _gappy_ibja(self) -> pd.Series:
+        idx = pd.to_datetime(
+            [
+                *["2024-01-01", "2024-01-02", "2024-01-03", "2024-01-04"],
+                *["2024-02-01", "2024-02-02", "2024-02-05", "2024-02-06"],
+            ]
+        )
+        return pd.Series([100.0, 90.0, 80.0, 85.0, 200.0, 210.0, 220.0, 230.0], index=idx)
+
+    def test_splits_on_gap_exceeding_max_gap_days(self) -> None:
+        segs = dense_segments(self._gappy_ibja())
+        assert [len(s) for s in segs] == [4, 4]
+        assert segs[0].index[-1] == pd.Timestamp("2024-01-04")
+        assert segs[1].index[0] == pd.Timestamp("2024-02-01")
+
+    def test_does_not_split_within_max_gap_days(self) -> None:
+        # 2024-02-05 to 2024-02-06 is a 1-day gap; 2024-02-02 to 2024-02-05 is a
+        # 3-day gap (<= MAX_GAP_DAYS=4) -- both stay inside the second segment.
+        segs = dense_segments(self._gappy_ibja())
+        assert list(segs[1].index) == list(
+            pd.to_datetime(["2024-02-01", "2024-02-02", "2024-02-05", "2024-02-06"])
+        )
+
+    def test_empty_series_returns_no_segments(self) -> None:
+        assert dense_segments(pd.Series(dtype=float)) == []
+
+    def test_rows_never_dropped_only_partitioned(self) -> None:
+        p = self._gappy_ibja()
+        segs = dense_segments(p)
+        total = sum(len(s) for s in segs)
+        assert total == len(p)
+
+
+class TestScoreAgainstIbja:
+    def _gappy_ibja(self) -> pd.Series:
+        idx = pd.to_datetime(
+            [
+                *["2024-01-01", "2024-01-02", "2024-01-03", "2024-01-04", "2024-01-05"],
+                *["2024-02-01", "2024-02-02", "2024-02-05", "2024-02-06", "2024-02-07"],
+            ]
+        )
+        vals = [100.0, 101.0, 99.0, 102.0, 103.0, 200.0, 205.0, 210.0, 208.0, 215.0]
+        return pd.Series(vals, index=idx)
+
+    def _proxy_forecast_set(self) -> dict:
+        proxy_idx = pd.date_range("2023-12-01", "2024-02-10", freq="D")
+        rng = np.random.default_rng(SEED)
+        vals = 100 * np.exp(np.cumsum(rng.normal(0, 0.005, len(proxy_idx))))
+        proxy = pd.Series(vals, index=proxy_idx)
+        return baselines.historical_vol_forecast_set(
+            proxy, "proxy", horizon=2, vol_window=10, min_train_size=10
+        )
+
+    def test_no_scored_window_crosses_a_gap(self) -> None:
+        """h=2: within each 5-row segment, only local positions 0,1,2 have a
+        local_i+2 that still lies inside the segment (local 3,4 would cross
+        into the next segment's first rows -- excluded)."""
+        ibja = self._gappy_ibja()
+        raw = self._proxy_forecast_set()
+        out = score_against_ibja(raw, ibja, horizon=2)
+        allowed = {
+            "2024-01-01",
+            "2024-01-02",
+            "2024-01-03",
+            "2024-02-01",
+            "2024-02-02",
+            "2024-02-05",
+        }
+        assert set(out["as_of_date"]) <= allowed
+        assert len(out["as_of_date"]) == len(allowed)
+
+    def test_h_counts_rows_within_segment_not_calendar_days(self) -> None:
+        """The 2024-02-02 -> 2024-02-05 step is a 3-CALENDAR-day gap but only
+        ONE ROW within the segment -- h=1 from 2024-02-02 must land on
+        2024-02-05's price, not be excluded for spanning >1 calendar day."""
+        ibja = self._gappy_ibja()
+        raw = self._proxy_forecast_set()
+        out = score_against_ibja(raw, ibja, horizon=1)
+        i = out["as_of_date"].index("2024-02-02")
+        expected = float(np.log(210.0) - np.log(205.0))  # ibja[2024-02-05] vs ibja[2024-02-02]
+        assert out["actual_return"][i] == pytest.approx(expected)
+
+    def test_excludes_dates_that_are_not_ibja_rows(self) -> None:
+        ibja = self._gappy_ibja()
+        raw = self._proxy_forecast_set()
+        out = score_against_ibja(raw, ibja, horizon=1)
+        ibja_date_strs = {ts.strftime("%Y-%m-%d") for ts in ibja.index}
+        assert set(out["as_of_date"]) <= ibja_date_strs
+
+    def test_bounds_copied_unchanged_from_proxy_forecast(self) -> None:
+        """The model forecasts FROM the proxy series regardless of which
+        series scores it -- only the row subset and the actual/current_price
+        change; raw interval bounds must be byte-identical to the source row."""
+        ibja = self._gappy_ibja()
+        raw = self._proxy_forecast_set()
+        out = score_against_ibja(raw, ibja, horizon=1)
+        for k, src_i in enumerate(out["source_proxy_index"]):
+            assert out["levels"]["0.9"]["lo"][k] == raw["levels"]["0.9"]["lo"][src_i]
+            assert out["levels"]["0.9"]["hi"][k] == raw["levels"]["0.9"]["hi"][src_i]
+            assert out["scale"][k] == raw["scale"][src_i]
+
+    def test_empty_when_no_dates_overlap(self) -> None:
+        ibja = pd.Series([1.0, 2.0], index=pd.to_datetime(["2099-01-01", "2099-01-02"]))
+        raw = self._proxy_forecast_set()
+        out = score_against_ibja(raw, ibja, horizon=1)
+        assert out["as_of_date"] == []
+        assert out["dataset"] == "ibja"
+
+
+class TestIbjaConformalFallback:
+    def test_falls_back_to_proxy_below_min_n(self) -> None:
+        rng = np.random.default_rng(SEED)
+        n = 200
+        positions = np.arange(n)
+        actual = rng.normal(0, 1.0, n)
+        lo, hi = np.full(n, -0.5), np.full(n, 0.5)
+
+        proxy_cal = conformal.walk_forward_conformal(
+            positions, 1, lo, hi, actual, 0.9, window=250, min_calibration_n=20
+        )
+        # Only 25 points -- below IBJA_FALLBACK_MIN_N=30, so the IBJA-native
+        # calibration never accumulates enough matured scores to fire.
+        ibja_cal = conformal.walk_forward_conformal(
+            positions[:25], 1, lo[:25], hi[:25], actual[:25], 0.9, window=250, min_calibration_n=30
+        )
+        assert np.all(np.isnan(ibja_cal["calibrated_lo"]))
+
+        merged = conformal.apply_ibja_fallback(ibja_cal, proxy_cal, list(range(25)))
+        assert set(merged["source"]) <= {"proxy_fallback", "insufficient_history"}
+        # proxy's own calibration matures at 20 matured scores -- well before
+        # row 25 -- so at least SOME rows must have successfully fallen back.
+        assert "proxy_fallback" in merged["source"]
+
+    def test_uses_ibja_native_once_enough_matured(self) -> None:
+        rng = np.random.default_rng(SEED)
+        n = 200
+        positions = np.arange(n)
+        actual = rng.normal(0, 1.0, n)
+        lo, hi = np.full(n, -0.5), np.full(n, 0.5)
+
+        proxy_cal = conformal.walk_forward_conformal(positions, 1, lo, hi, actual, 0.9, window=250)
+        ibja_cal = conformal.walk_forward_conformal(
+            positions, 1, lo, hi, actual, 0.9, window=250, min_calibration_n=30
+        )
+        merged = conformal.apply_ibja_fallback(ibja_cal, proxy_cal, list(range(n)))
+        # With all 200 points available to both, the ibja-native calibration
+        # matures (>=30) well before the end -- later rows must use "ibja".
+        assert merged["source"][-1] == "ibja"
+
+    def test_never_uses_unmatured_ibja_errors(self) -> None:
+        """The IBJA-native leg of the fallback is just walk_forward_conformal
+        with a higher min_calibration_n -- it inherits that function's own
+        embargo guarantee (already covered by TestConformalCalibration), so
+        this only checks the fallback wiring doesn't bypass it: n_matured is
+        passed through unchanged from the IBJA-native calibration."""
+        rng = np.random.default_rng(SEED)
+        n = 50
+        positions = np.arange(n)
+        actual = rng.normal(0, 1.0, n)
+        lo, hi = np.full(n, -0.5), np.full(n, 0.5)
+        proxy_cal = conformal.walk_forward_conformal(positions, 1, lo, hi, actual, 0.9, window=250)
+        ibja_cal = conformal.walk_forward_conformal(
+            positions, 1, lo, hi, actual, 0.9, window=250, min_calibration_n=30
+        )
+        merged = conformal.apply_ibja_fallback(ibja_cal, proxy_cal, list(range(n)))
+        assert merged["n_matured"] is ibja_cal["n_matured"]
 
 
 # ---------------------------------------------------------------------------

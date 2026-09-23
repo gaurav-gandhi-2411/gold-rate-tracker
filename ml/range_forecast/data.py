@@ -18,6 +18,23 @@ module additionally pulls realized-vol and usd_inr-change features from
 ml.macro) under the SAME T-1 lag discipline as that module: every driver
 value attached to trading day t is the value known at or before the close of
 day t-1 (the prior trading day), never day t's own close.
+
+DATA CAVEAT + IBJA PROTOCOL (found via the 2026-09-23 Actions run,
+35894266384/0d188fd2): data/ibja_rates.parquet is NOT daily before
+2025-Q2 -- median gap 5-18 calendar days, one row in all of 2026-Q1.
+Treating consecutive IBJA rows as consecutive trading days (the original
+design) made a nominal "1-day" horizon silently span weeks there, inflating
+coverage and shrinking width (e.g. historical_vol raw IBJA h1 80% measured
+94.1% coverage at 6.27% width). `dense_segments` (below) matches
+scripts/analysis_buyer_policy.py's fix for the same file (ADR 039/040):
+split wherever the calendar gap between consecutive rows exceeds
+MAX_GAP_DAYS. `score_against_ibja` then implements the corrected protocol
+(product question: do proxy-fitted forecasts work on real IBJA prices?):
+every model forecasts from the daily PROXY series only -- IBJA is never
+walked forward independently -- and is SCORED against the real IBJA h-day
+log return from t to t+h, only for as-of days t that are genuine IBJA rows
+AND whose h-IBJA-ROW-ahead window (h counted in rows within one dense
+segment, not calendar/trading days) never crosses a segment boundary.
 """
 
 from __future__ import annotations
@@ -62,6 +79,101 @@ def load_ibja_price_series(ibja_path: Path = IBJA_PARQUET_PATH) -> pd.Series:
     df = df.dropna(subset=["pm_916"]).sort_values("date")
     series = pd.Series(df["pm_916"].to_numpy(), index=pd.to_datetime(df["date"]))
     return _drop_carried_forward(series).sort_index()
+
+
+MAX_GAP_DAYS = 4  # weekend + a holiday; matches scripts/analysis_buyer_policy.py
+
+
+def dense_segments(price: pd.Series, max_gap_days: int = MAX_GAP_DAYS) -> list[pd.Series]:
+    """Split `price` into runs of consecutive rows whose calendar-day gap
+    from the previous row is <= max_gap_days. See the module DATA CAVEAT
+    docstring -- data/ibja_rates.parquet is not daily before 2025-Q2, so an
+    unsplit series silently mixes daily and multi-week gaps into the same
+    "1-row" horizon. Rows are never dropped, only partitioned; every input
+    row belongs to exactly one output segment, in order."""
+    if price.empty:
+        return []
+    gaps = price.index.to_series().diff().dt.days.fillna(0).to_numpy()
+    seg_id = (gaps > max_gap_days).cumsum()
+    return [price[seg_id == k] for k in sorted(set(seg_id))]
+
+
+def score_against_ibja(
+    raw: dict, ibja_price: pd.Series, horizon: int, max_gap_days: int = MAX_GAP_DAYS
+) -> dict:
+    """Rescore a proxy-forecast RangeForecastSet (ml.range_forecast.walkforward.
+    assemble_forecast_set output, dataset="proxy") against real IBJA prices.
+
+    Keeps only rows whose as_of_date is a genuine IBJA row AND whose h-IBJA-
+    ROW-ahead window lies entirely inside one dense segment -- see the module
+    DATA CAVEAT docstring. Interval bounds and `scale` are copied UNCHANGED
+    from `raw`: the model forecasts from the proxy series regardless of which
+    series scores it (the task brief's IBJA protocol); only the row subset,
+    `actual_return` (now the real IBJA h-row log return), and `current_price`
+    (now the real IBJA price, for honest Rs/gram width reporting) change.
+
+    Returns the same RangeForecastSet dict shape as `raw`, dataset="ibja",
+    plus `source_proxy_index`: for each kept row, its index into `raw`'s own
+    arrays -- callers that need the matching proxy-arm forecast (e.g. the
+    conformal fallback in ml.range_forecast.conformal.apply_ibja_fallback)
+    look it up via this list rather than re-deriving it from dates.
+    """
+    segments = dense_segments(ibja_price, max_gap_days)
+    log_ibja = np.log(ibja_price.to_numpy(dtype=float))
+    global_pos_by_date: dict[str, int] = {
+        ts.strftime("%Y-%m-%d"): i for i, ts in enumerate(ibja_price.index)
+    }
+    seg_and_local_pos_by_date: dict[str, tuple[int, int]] = {}
+    seg_lengths: list[int] = [len(seg) for seg in segments]
+    for seg_id, seg in enumerate(segments):
+        for local_i, ts in enumerate(seg.index):
+            seg_and_local_pos_by_date[ts.strftime("%Y-%m-%d")] = (seg_id, local_i)
+
+    dates: list[str] = []
+    positions: list[int] = []
+    cur_px: list[float] = []
+    actual: list[float] = []
+    scale: list[float] = []
+    source_proxy_index: list[int] = []
+    level_keys = list(raw["levels"])
+    level_lo: dict[str, list[float]] = {lv: [] for lv in level_keys}
+    level_hi: dict[str, list[float]] = {lv: [] for lv in level_keys}
+
+    for i, date_str in enumerate(raw["as_of_date"]):
+        loc = seg_and_local_pos_by_date.get(date_str)
+        if loc is None:
+            continue  # as_of_date is not a genuine IBJA row
+        seg_id, local_i = loc
+        if local_i + horizon >= seg_lengths[seg_id]:
+            continue  # the h-row window would cross this segment's boundary
+        global_i = global_pos_by_date[date_str]
+        global_target = global_i + horizon  # segments partition contiguously -> valid
+
+        dates.append(date_str)
+        positions.append(global_i)
+        cur_px.append(float(ibja_price.iloc[global_i]))
+        actual.append(float(log_ibja[global_target] - log_ibja[global_i]))
+        scale.append(raw["scale"][i])
+        source_proxy_index.append(i)
+        for lv in level_keys:
+            level_lo[lv].append(raw["levels"][lv]["lo"][i])
+            level_hi[lv].append(raw["levels"][lv]["hi"][i])
+
+    return {
+        "model": raw["model"],
+        "dataset": "ibja",
+        "horizon": horizon,
+        "as_of_date": dates,
+        "as_of_position": positions,
+        "current_price": cur_px,
+        "actual_return": actual,
+        "scale": scale,
+        "levels": {lv: {"lo": level_lo[lv], "hi": level_hi[lv]} for lv in level_keys},
+        "source_proxy_index": source_proxy_index,
+        "ibja_dense_segments": [
+            [str(seg.index[0].date()), str(seg.index[-1].date()), len(seg)] for seg in segments
+        ],
+    }
 
 
 def log_returns(price: pd.Series) -> pd.Series:

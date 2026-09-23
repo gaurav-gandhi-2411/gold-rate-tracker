@@ -9,11 +9,26 @@
 Shards are model families (one per ml.range_forecast model module), so the
 slow ones (garch, chronos) run in parallel with the fast ones on CI rather
 than serializing the whole analysis behind the slowest model. Every shard
-covers BOTH price histories -- "proxy" (ml.inr_proxy_labels, 2013-2026, much
-deeper but per ADR 032 only ~44-54% direction-reliable below ~50 Rs/gram
-moves) and "ibja" (data/ibja_rates.parquet, ~2022-2026, short but the
-product-relevant one) -- and all 4 horizons (1/5/10/20 trading days), raw
-AND conformal-calibrated, at both 80% and 90% central levels.
+covers BOTH datasets -- "proxy" and "ibja" -- and all 4 horizons (1/5/10/20),
+raw AND conformal-calibrated, at both 80% and 90% central levels.
+
+IBJA PROTOCOL (2026-09-24 fix -- see ml.range_forecast.data's DATA CAVEAT
+docstring): every model FORECASTS ONLY from the daily proxy series
+(ml.inr_proxy_labels, 2013-2026; per ADR 032 only ~44-54% direction-reliable
+below ~50 Rs/gram moves, but genuinely daily throughout) -- IBJA is NEVER
+walked forward independently, because data/ibja_rates.parquet is not daily
+before 2025-Q2 (median gap 5-18 calendar days) and a naive per-row horizon
+there silently spans weeks. The "proxy" dataset entry is that walk-forward's
+own forecasts scored against the proxy's own forward return, unchanged. The
+"ibja" dataset entry RESCORES the identical proxy-fitted forecasts (same
+bounds) against the real IBJA h-day log return, kept only for as-of days
+that are genuine IBJA rows whose h-IBJA-row-ahead window stays inside one
+dense segment (ml.range_forecast.data.dense_segments, gaps <= 4 calendar
+days) -- this is the product question "do proxy-fitted forecasts work on
+real IBJA prices?", not "what does IBJA's own history look like on its own."
+IBJA-arm conformal calibration uses matured IBJA-scored errors, falling back
+to the proxy arm's own calibration (ml.range_forecast.conformal.
+apply_ibja_fallback) below IBJA_FALLBACK_MIN_N matured errors.
 
 SHADOW RESEARCH ONLY: nothing here touches ml.direction.gate or any
 published data file.
@@ -56,18 +71,14 @@ DATASETS: list[str] = ["proxy", "ibja"]
 LEVELS: tuple[float, ...] = (0.8, 0.9)
 FULL_HORIZONS: tuple[int, ...] = (1, 5, 10, 20)
 SMOKE_HORIZONS: tuple[int, ...] = (1, 5)  # local smoke only -- bounds wall-clock
-# IBJA has only ~254 total trading days (2022-01-19+) -- a 250-day warm-up (the
-# proxy's depth-appropriate default) would leave near-ZERO forecastable days on
-# it, defeating the whole point of evaluating the product-relevant dataset. Use
-# a shorter, dataset-specific warm-up for IBJA so it actually produces a
-# walk-forward: 100 trading days (~5 months) is itself short for a GARCH/HAR
-# MLE fit to stabilize, and this is flagged in the report as a real limitation
-# of the IBJA arm, not hidden by silently reusing the proxy's warm-up.
+# Only the proxy arm is walked forward (see the IBJA PROTOCOL note above) --
+# min_train_size/refit_every apply to that one walk-forward only. The earlier
+# design ran IBJA independently with its own (shorter) warm-up; that is now
+# superseded by rescoring the proxy forecasts against real IBJA instead of
+# giving IBJA its own walk-forward at all.
 FULL_MIN_TRAIN_SIZE = 250
-FULL_MIN_TRAIN_SIZE_IBJA = 100
 FULL_REFIT_EVERY = 21
 SMOKE_MIN_TRAIN_SIZE = 80
-SMOKE_MIN_TRAIN_SIZE_IBJA = 60
 SMOKE_REFIT_EVERY = 12
 CONFORMAL_WINDOW = 250
 ALPHA = 0.05
@@ -164,17 +175,32 @@ def _run_model(
     raise ValueError(f"unknown model shard {key!r}")
 
 
+def _serialize_conformal(cal: dict) -> dict:
+    return {
+        "lo": cal["calibrated_lo"].tolist(),
+        "hi": cal["calibrated_hi"].tolist(),
+        "q_hat": cal["q_hat"].tolist(),
+        "n_matured": cal["n_matured"].tolist(),
+    }
+
+
 def run_shard(key: str, out_dir: Path, max_rows: int | None = None, smoke: bool = False) -> Path:
     import numpy as np
-    from ml.range_forecast.conformal import walk_forward_conformal
-    from ml.range_forecast.data import load_ibja_price_series, load_proxy_price_series
+    from ml.range_forecast.conformal import (
+        IBJA_FALLBACK_MIN_N,
+        apply_ibja_fallback,
+        walk_forward_conformal,
+    )
+    from ml.range_forecast.data import (
+        load_ibja_price_series,
+        load_proxy_price_series,
+        score_against_ibja,
+    )
 
     if key not in MODEL_SHARDS:
         raise SystemExit(f"unknown shard {key!r}; expected one of {MODEL_SHARDS}")
 
-    min_train_size_default = SMOKE_MIN_TRAIN_SIZE if smoke else FULL_MIN_TRAIN_SIZE
-    min_train_size_ibja = SMOKE_MIN_TRAIN_SIZE_IBJA if smoke else FULL_MIN_TRAIN_SIZE_IBJA
-    min_train_size_by_dataset = {"proxy": min_train_size_default, "ibja": min_train_size_ibja}
+    min_train_size = SMOKE_MIN_TRAIN_SIZE if smoke else FULL_MIN_TRAIN_SIZE
     refit_every = SMOKE_REFIT_EVERY if smoke else FULL_REFIT_EVERY
     horizons = SMOKE_HORIZONS if smoke else FULL_HORIZONS
 
@@ -184,103 +210,146 @@ def run_shard(key: str, out_dir: Path, max_rows: int | None = None, smoke: bool 
         "generated_at_utc": datetime.now(UTC).isoformat(),
         "smoke": smoke,
         "max_rows": max_rows,
-        "min_train_size": min_train_size_default,
-        "min_train_size_by_dataset": min_train_size_by_dataset,
+        "min_train_size": min_train_size,
         "refit_every": refit_every,
         "horizons_run": list(horizons),
         "levels": list(LEVELS),
+        "ibja_fallback_min_n": IBJA_FALLBACK_MIN_N,
         "datasets": {},
     }
 
     t_shard0 = time.time()
-    loaders = {"proxy": load_proxy_price_series, "ibja": load_ibja_price_series}
-    for dataset_name in DATASETS:
-        min_train_size = min_train_size_by_dataset[dataset_name]
-        price = loaders[dataset_name]()
-        if max_rows is not None:
-            price = price.tail(max_rows)
+    # Only the proxy series is ever walked forward -- see the IBJA PROTOCOL note
+    # in the module docstring. IBJA is loaded in full (not `max_rows`-truncated:
+    # it is already short, and truncating it would starve the rescoring step of
+    # dense segments to score against).
+    proxy_price = load_proxy_price_series()
+    ibja_price = load_ibja_price_series()
+    if max_rows is not None:
+        proxy_price = proxy_price.tail(max_rows)
 
-        if len(price) < min_train_size + max(horizons) + 5:
-            result["datasets"][dataset_name] = {
-                "error": f"insufficient rows ({len(price)}) for min_train_size={min_train_size}"
-            }
-            print(f"{key}/{dataset_name}: SKIPPED (only {len(price)} rows)", flush=True)
-            continue
+    if len(proxy_price) < min_train_size + max(horizons) + 5:
+        msg = f"insufficient proxy rows ({len(proxy_price)}) for min_train_size={min_train_size}"
+        result["datasets"]["proxy"] = {"error": msg}
+        result["datasets"]["ibja"] = {"error": "proxy arm failed; ibja is derived from it"}
+        print(f"{key}: SKIPPED ({msg})", flush=True)
+        out_dir.mkdir(parents=True, exist_ok=True)
+        path = out_dir / f"{key}.json"
+        path.write_text(json.dumps(result, default=str) + "\n", encoding="utf-8")
+        return path
 
-        dataset_entry: dict = {
-            "rows": len(price),
-            "as_of_min": str(price.index.min()),
-            "as_of_max": str(price.index.max()),
-            "horizons": {},
+    proxy_entry: dict = {
+        "rows": len(proxy_price),
+        "as_of_min": str(proxy_price.index.min()),
+        "as_of_max": str(proxy_price.index.max()),
+        "horizons": {},
+    }
+    ibja_entry: dict = {
+        "rows": len(ibja_price),
+        "as_of_min": str(ibja_price.index.min()) if len(ibja_price) else None,
+        "as_of_max": str(ibja_price.index.max()) if len(ibja_price) else None,
+        "horizons": {},
+    }
+
+    shared_features = None
+    shared_pipeline = None
+    if key == "quantile_gbm":
+        from ml.range_forecast.data import build_driver_features_for_price
+
+        t0 = time.time()
+        shared_features = build_driver_features_for_price(proxy_price)
+        print(f"{key}/proxy: built driver features in {time.time() - t0:.0f}s", flush=True)
+    if key == "chronos":
+        from ml.range_forecast.chronos_model import chronos_available, load_pipeline
+
+        if not chronos_available():
+            msg = "chronos-forecasting/torch not available in this Python environment"
+            result["datasets"]["proxy"] = {"error": msg}
+            result["datasets"]["ibja"] = {"error": msg}
+            print(f"{key}: SKIPPED (chronos/torch unavailable)", flush=True)
+            out_dir.mkdir(parents=True, exist_ok=True)
+            path = out_dir / f"{key}.json"
+            path.write_text(json.dumps(result, default=str) + "\n", encoding="utf-8")
+            return path
+        t0 = time.time()
+        shared_pipeline = load_pipeline()
+        print(f"{key}: loaded Chronos pipeline in {time.time() - t0:.0f}s", flush=True)
+
+    for h in horizons:
+        t0 = time.time()
+        raw_proxy = _run_model(
+            key,
+            proxy_price,
+            "proxy",
+            h,
+            min_train_size,
+            refit_every,
+            shared_features,
+            shared_pipeline,
+        )
+        elapsed = time.time() - t0
+        print(
+            f"{key}/proxy/h{h}: {len(raw_proxy['as_of_date'])} forecasts in {elapsed:.0f}s",
+            flush=True,
+        )
+
+        positions = np.asarray(raw_proxy["as_of_position"])
+        actual = np.asarray(raw_proxy["actual_return"])
+        conformal_proxy: dict = {}
+        for lv in LEVELS:
+            lv_key = str(lv)
+            lo = np.asarray(raw_proxy["levels"][lv_key]["lo"])
+            hi = np.asarray(raw_proxy["levels"][lv_key]["hi"])
+            conformal_proxy[lv_key] = walk_forward_conformal(
+                positions, h, lo, hi, actual, lv, window=CONFORMAL_WINDOW
+            )
+        proxy_entry["horizons"][str(h)] = {
+            "raw": raw_proxy,
+            "conformal": {lk: _serialize_conformal(c) for lk, c in conformal_proxy.items()},
+            "elapsed_sec": elapsed,
         }
 
-        shared_features = None
-        shared_pipeline = None
-        if key == "quantile_gbm":
-            from ml.range_forecast.data import build_driver_features_for_price
-
-            t0 = time.time()
-            shared_features = build_driver_features_for_price(price)
-            print(
-                f"{key}/{dataset_name}: built driver features in {time.time() - t0:.0f}s",
-                flush=True,
-            )
-        if key == "chronos":
-            from ml.range_forecast.chronos_model import chronos_available, load_pipeline
-
-            if not chronos_available():
-                result["datasets"][dataset_name] = {
-                    "error": "chronos-forecasting/torch not available in this Python environment"
-                }
-                print(f"{key}/{dataset_name}: SKIPPED (chronos/torch unavailable)", flush=True)
-                continue
-            t0 = time.time()
-            shared_pipeline = load_pipeline()
-            print(
-                f"{key}/{dataset_name}: loaded Chronos pipeline in {time.time() - t0:.0f}s",
-                flush=True,
-            )
-
-        for h in horizons:
-            t0 = time.time()
-            raw = _run_model(
-                key,
-                price,
-                dataset_name,
+        # --- IBJA arm: rescore the SAME proxy-fitted forecasts against real IBJA ---
+        raw_ibja = score_against_ibja(raw_proxy, ibja_price, h)
+        print(
+            f"{key}/ibja/h{h}: {len(raw_ibja['as_of_date'])} IBJA-scored forecasts "
+            f"(dense-segment-eligible, of {len(raw_proxy['as_of_date'])} proxy forecasts)",
+            flush=True,
+        )
+        ibja_positions = np.asarray(raw_ibja["as_of_position"])
+        ibja_actual = np.asarray(raw_ibja["actual_return"])
+        source_idx = raw_ibja["source_proxy_index"]
+        conformal_ibja_out: dict = {}
+        for lv in LEVELS:
+            lv_key = str(lv)
+            lo = np.asarray(raw_ibja["levels"][lv_key]["lo"])
+            hi = np.asarray(raw_ibja["levels"][lv_key]["hi"])
+            cal_ibja = walk_forward_conformal(
+                ibja_positions,
                 h,
-                min_train_size,
-                refit_every,
-                shared_features,
-                shared_pipeline,
+                lo,
+                hi,
+                ibja_actual,
+                lv,
+                window=CONFORMAL_WINDOW,
+                min_calibration_n=IBJA_FALLBACK_MIN_N,
             )
-            elapsed = time.time() - t0
-            print(
-                f"{key}/{dataset_name}/h{h}: {len(raw['as_of_date'])} forecasts in {elapsed:.0f}s",
-                flush=True,
-            )
-
-            positions = np.asarray(raw["as_of_position"])
-            actual = np.asarray(raw["actual_return"])
-            conformal_out: dict = {}
-            for lv in LEVELS:
-                lv_key = str(lv)
-                lo = np.asarray(raw["levels"][lv_key]["lo"])
-                hi = np.asarray(raw["levels"][lv_key]["hi"])
-                cal = walk_forward_conformal(
-                    positions, h, lo, hi, actual, lv, window=CONFORMAL_WINDOW
-                )
-                conformal_out[lv_key] = {
-                    "lo": cal["calibrated_lo"].tolist(),
-                    "hi": cal["calibrated_hi"].tolist(),
-                    "q_hat": cal["q_hat"].tolist(),
-                    "n_matured": cal["n_matured"].tolist(),
-                }
-            dataset_entry["horizons"][str(h)] = {
-                "raw": raw,
-                "conformal": conformal_out,
-                "elapsed_sec": elapsed,
+            merged = apply_ibja_fallback(cal_ibja, conformal_proxy[lv_key], source_idx)
+            conformal_ibja_out[lv_key] = {
+                "lo": merged["calibrated_lo"].tolist(),
+                "hi": merged["calibrated_hi"].tolist(),
+                "q_hat": merged["q_hat"].tolist(),
+                "n_matured": merged["n_matured"].tolist(),
+                "source": merged["source"],
             }
-        result["datasets"][dataset_name] = dataset_entry
+        ibja_entry["horizons"][str(h)] = {
+            "raw": raw_ibja,
+            "conformal": conformal_ibja_out,
+            "elapsed_sec": 0.0,  # rescoring an already-computed forecast set is cheap
+        }
+
+    result["datasets"]["proxy"] = proxy_entry
+    result["datasets"]["ibja"] = ibja_entry
 
     result["elapsed_sec_total"] = time.time() - t_shard0
     out_dir.mkdir(parents=True, exist_ok=True)
