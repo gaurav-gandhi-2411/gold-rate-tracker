@@ -9,7 +9,16 @@ Shards (analysis.yml contract: --list-shards / --shard KEY --out DIR /
   inject_comex_nonlinear,           into the real labels and measure how often the
   inject_inr_linear                 pipeline detects it
   series                         D4 predictability ceiling of the series itself
-  permute_comex, permute_inr     D5 out-of-sample permutation importance by family
+  permute_comex, permute_inr     D5 out-of-sample permutation importance by family,
+                                    shuffled within 63-day windows (a whole-period
+                                    shuffle mixes price levels from different years
+                                    and measures regime fragility, not signal)
+  family_comex, family_inr       D5 complement: a model trained on ONE family only,
+                                    tested against climatology
+  inject_comex_linear_stationary D3 repeat with only stationary features (tests
+                                    whether the level features block recovery)
+  inject_inr_level               D3 on INR with a signal the level-only INR
+                                    features can express
 
 Datasets: COMEX daily (ml.direction.comex_daily, target = next trading day up,
 ~3,400 days, 2013-2026) and INR (ml.direction.dataset, IBJA 22K, target = up in
@@ -57,7 +66,23 @@ SHARDS = [
     "series",
     "permute_comex",
     "permute_inr",
+    "family_comex",
+    "family_inr",
+    "inject_comex_linear_stationary",
+    "inject_inr_level",
 ]
+# Stationary (scale-free) COMEX features: returns, volatility, distance from a
+# moving average, and calendar. Everything else is a price or macro LEVEL.
+COMEX_STATIONARY = [
+    "gc_return_1d",
+    "gc_return_5d",
+    "gc_vol_5d",
+    "gc_ma20_dist",
+    "dow",
+    "dom",
+    "month",
+]
+PERMUTE_WINDOW = 63  # shuffle within ~3-month windows so levels stay in-regime
 
 COMEX_FAMILIES: dict[str, list[str]] = {
     "price_history": ["gold_usd_lag1", "gc_return_1d", "gc_return_5d", "gc_vol_5d", "gc_ma20_dist"],
@@ -233,12 +258,16 @@ def walk_forward(
     test_start: int | None = None,
     train_window: int | None = None,
     permute: dict[str, Any] | None = None,
+    columns: list[int] | None = None,
 ) -> dict[str, Any]:
     """Expanding (or trailing `train_window`) walk-forward. Returns per-fold
     arrays for validation plus the average in-sample (training) metrics."""
     import numpy as np
 
     X, as_of, ldate = d["X"], d["as_of"], d["label_date"]
+    if columns is not None:
+        X = X[:, columns]
+        permute = {k: v[:, columns] for k, v in (permute or {}).items()} or None
     y = d["y"] if y is None else y
     n = len(y)
     start = d["min_train"] if test_start is None else test_start
@@ -367,6 +396,9 @@ def _signal(d: dict[str, Any], kind: str):  # type: ignore[no-untyped-def]
         v = X[:, f.index(name)]
         return np.where(np.isnan(v), np.nanmedian(v), v)
 
+    if kind == "level":
+        v = col("usd_inr")
+        return (v > np.median(v)).astype(int)
     if kind == "linear":
         v = col("gc_return_1d") if "gc_return_1d" in f else col("usd_inr")
         if "gc_return_1d" not in f:
@@ -377,7 +409,7 @@ def _signal(d: dict[str, Any], kind: str):  # type: ignore[no-untyped-def]
     return ((a > np.median(a)) ^ (b > np.median(b))).astype(int)
 
 
-def shard_inject(kind: str, signal: str) -> dict[str, Any]:
+def shard_inject(kind: str, signal: str, stationary: bool = False) -> dict[str, Any]:
     """D3: with probability q a day's label is replaced by the planted signal.
     An oracle that knows the signal reaches ~0.5 + q/2 accuracy on a coin-flip
     base, so q sets the size of the only real edge in the data."""
@@ -388,7 +420,13 @@ def shard_inject(kind: str, signal: str) -> dict[str, Any]:
     qs = [0.0, 0.02, 0.05, 0.1, 0.2, 0.4] if kind == "comex" else [0.0, 0.1, 0.2, 0.4, 0.6]
     seeds = [SEED + i for i in range(5)]
     models = ["logit", "gbm_small"]
-    out: dict[str, Any] = {"dataset": kind, "signal": signal, "results": {}}
+    cols = [d["features"].index(c) for c in COMEX_STATIONARY] if stationary else None
+    out: dict[str, Any] = {
+        "dataset": kind,
+        "signal": signal,
+        "stationary_only": stationary,
+        "results": {},
+    }
     for q in qs:
         for m in models:
             rows = []
@@ -396,7 +434,7 @@ def shard_inject(kind: str, signal: str) -> dict[str, Any]:
                 rng = np.random.default_rng(sd)
                 take = rng.random(len(d["y"])) < q
                 y_inj = np.where(take, sig, d["y"])
-                wf = walk_forward(d, m, y=y_inj)
+                wf = walk_forward(d, m, y=y_inj, columns=cols)
                 sc = score(d, wf, y=y_inj)
                 rows.append(
                     {
@@ -522,7 +560,10 @@ def shard_permute(kind: str) -> dict[str, Any]:
             test_rows = np.arange(start, n)
             for fam, cols in fam_idx.items():
                 Xp = d["X"].copy()
-                shuffled = rng.permutation(test_rows)
+                shuffled = test_rows.copy()
+                for w0 in range(0, len(test_rows), PERMUTE_WINDOW):
+                    seg = shuffled[w0 : w0 + PERMUTE_WINDOW]
+                    shuffled[w0 : w0 + PERMUTE_WINDOW] = rng.permutation(seg)
                 Xp[np.ix_(test_rows, cols)] = d["X"][np.ix_(shuffled, cols)]
                 perms[fam] = Xp
             wf = walk_forward(d, m, permute=perms)
@@ -553,6 +594,21 @@ def shard_permute(kind: str) -> dict[str, Any]:
     return out
 
 
+def shard_family(kind: str) -> dict[str, Any]:
+    """D5 complement: train on ONE feature family only (two low-capacity
+    models), score against climatology / majority on unseen days."""
+    d = load(kind)
+    out: dict[str, Any] = {"dataset": kind, "families": {}}
+    for fam, names in d["families"].items():
+        cols = [d["features"].index(c) for c in names if c in d["features"]]
+        out["families"][fam] = {}
+        for m in ["logit_strong_l2", "gbm_stumps"]:
+            wf = walk_forward(d, m, columns=cols)
+            out["families"][fam][m] = score(d, wf)
+            print("family", kind, fam, m, out["families"][fam][m], flush=True)
+    return out
+
+
 def run_shard(key: str) -> dict[str, Any]:
     warnings.filterwarnings("ignore")
     t0 = time.time()
@@ -574,6 +630,14 @@ def run_shard(key: str) -> dict[str, Any]:
         r = shard_permute("comex")
     elif key == "permute_inr":
         r = shard_permute("inr")
+    elif key == "family_comex":
+        r = shard_family("comex")
+    elif key == "family_inr":
+        r = shard_family("inr")
+    elif key == "inject_comex_linear_stationary":
+        r = shard_inject("comex", "linear", stationary=True)
+    elif key == "inject_inr_level":
+        r = shard_inject("inr", "level")
     else:
         raise SystemExit(f"unknown shard {key}")
     r["shard"] = key
