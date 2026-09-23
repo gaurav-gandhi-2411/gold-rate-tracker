@@ -55,12 +55,14 @@ async function assertRendered(page, label) {
   const reasons = [];
   try {
     // renderHero() is the earliest of the three to depend on the forecast fetch;
-    // renderMethodology() is the LAST step in app.js's init sequence — it waits on
-    // the forecast plus four more Promise.allSettled fetches (backtest/commentary/
-    // drift/coverage) after the history table already rendered. Wait for all
-    // three surfaces together (price, history, methodology), not just history, or
-    // this check races ahead and reports a false pass while something else is
-    // still stuck -- see the methodology-check regression note below.
+    // renderAccuracySummary() (U2, 2026-09-23 -- was renderMethodology() before
+    // the plain-language rework, docs/PLAIN_LANGUAGE_AUDIT.md) is the LAST step
+    // in app.js's init sequence — it waits on the forecast plus four more
+    // Promise.allSettled fetches (backtest/commentary/drift/coverage) after the
+    // history table already rendered. Wait for all three surfaces together
+    // (price, history, methodology), not just history, or this check races
+    // ahead and reports a false pass while something else is still stuck --
+    // see the methodology-check regression note below.
     //
     // Methodology's "still loading" signal is `.meth-skeleton`'s presence, not a
     // literal "Loading model details" text match: the skeleton-loader change
@@ -68,9 +70,10 @@ async function assertRendered(page, label) {
     // that never contained the string this check used to look for, which made
     // this half of the wait (and the standalone recheck below) silently vacuous
     // -- true from the very first paint, before any JS runs, so it could never
-    // again detect a genuinely stuck methodology panel. renderMethodology() does
-    // a full innerHTML replace, so `.meth-skeleton` existing at all is a reliable
-    // "still loading" signal regardless of what real content eventually replaces it.
+    // again detect a genuinely stuck methodology panel. renderAccuracySummary()
+    // does a full innerHTML replace, same as renderMethodology() before it, so
+    // `.meth-skeleton` existing at all is a reliable "still loading" signal
+    // regardless of what real content eventually replaces it.
     await page.waitForFunction(
       () => {
         const price = document.getElementById("hero-price");
