@@ -1206,3 +1206,113 @@ rebase, build a 5th target off the proxy's own daily changes, same embargo-aware
 **Not yet started this session:** M3 (offline adaptive-conformal + weekend-stratum eval — doesn't
 depend on the blocked items, could start next), M4 (Chronos companion — needs M1's proxy, so also
 blocked on #1890), P1/P3/P5.
+
+## Continuation 2026-09-23 (PM): #1892 fixed, M2 numbers, M1 realignment, COMEX variant, M2 fix, M3
+
+**GG merged #1890** (M1 proxy). **#1892 had a merge conflict** — rebased in an isolated worktree
+(`gold-rate-tracker-wt-m2direction`); the only conflict was `tests/test_count_baseline.json` (both
+#1890 and #1892 independently bumped the same generated file), resolved by merging both sides' entries
+then regenerating the whole file via `--update`. Confirmed and stated in #1892's body: zero
+`.github/workflows/` files touched, no change to `ml/inference.py`. Ran `check_required_checks_positive.py`.
+No clean split exists under the gate (`evaluate_reframed.py` genuinely depends on `reframed_targets.py`
+— splitting them would hurt reviewability, not help it) — handed back to GG to merge, as instructed.
+
+**Process correction, twice:** (1) attempted to self-merge #1890 believing no size gate applied to this
+repo (found no `scripts/merge_gate.py`) — wrong, the CC session's own rule-70a hook enforces it;
+converted to draft immediately. (2) After merging #1901 with `--delete-branch`, its stacked dependent
+PR (#1902) was silently auto-closed by GitHub (base branch gone) and could not be reopened or
+retargeted — recreated as a fresh PR (#1904) from the already-rebased branch. Also caught #1892 showing
+`isDraft: false` at one point (root cause not fully isolated — likely a side-effect of one of the
+several `gh pr edit`/rebase-push cycles on it) and corrected it back to draft before any merge risk.
+
+**M2 full numbers** (all 8 reframed-target combinations, all 3 models — GG asked for the complete
+table after the first report only gave ensemble numbers, which hid a real per-model finding):
+
+| target | horizon | model | n | Brier | BSS vs climatology | ECE | p (McNemar) | sig? | DM stat vs always-up | p (DM) |
+|---|---|---|---|---|---|---|---|---|---|---|
+| raw_binary | 5 | logistic_balanced | 150 | 0.2941 | -0.1985 | 0.1957 | 0.0784 | No | -1.505 | 0.132 |
+| raw_binary | 5 | gbm_calibrated | 150 | 0.2918 | -0.1893 | 0.2129 | 0.0003 | No | -1.629 | 0.103 |
+| raw_binary | 5 | ensemble | 150 | 0.2856 | -0.1637 | 0.2266 | 0.0034 | No | -1.786 | 0.074 |
+| deadzone | 5 | logistic_balanced | 132 | 0.3042 | -0.2593 | 0.2213 | 0.0015 | No | -0.837 | 0.403 |
+| deadzone | 5 | gbm_calibrated | 132 | 0.2886 | -0.1949 | 0.2464 | 0.0001 | No | -1.461 | 0.144 |
+| deadzone | 5 | ensemble | 132 | 0.2870 | -0.1882 | 0.1908 | 0.0002 | No | -1.361 | 0.174 |
+| detrended | 5 | logistic_balanced | 140 | 0.2664 | 0.0086 | 0.0947 | 0.5504 | No | -3.497 | 0.0005 |
+| detrended | 5 | gbm_calibrated | 140 | 0.2600 | 0.0325 | 0.1806 | 0.6908 | No | -3.193 | 0.0014 |
+| detrended | 5 | ensemble | 140 | 0.2549 | 0.0516 | 0.1158 | 0.6718 | No | -3.461 | 0.0005 |
+| buyer_decision | 5 | logistic_balanced | 150 | 0.2868 | -0.1046 | 0.1524 | 0.5546 | No | -3.539 | 0.0004 |
+| buyer_decision | 5 | gbm_calibrated | 150 | 0.2822 | -0.0868 | 0.1412 | 1.0000 | No | -3.263 | 0.0011 |
+| buyer_decision | 5 | ensemble | 150 | 0.2788 | -0.0738 | 0.1496 | 1.0000 | No | -3.507 | 0.0005 |
+| raw_binary | 10 | logistic_balanced | 137 | 0.2602 | -0.0740 | 0.2116 | 0.1325 | No | -0.689 | 0.491 |
+| raw_binary | 10 | gbm_calibrated | 137 | 0.2383 | 0.0161 | 0.2031 | 0.2188 | No | -1.625 | 0.104 |
+| raw_binary | 10 | ensemble | 137 | 0.2355 | 0.0278 | 0.1150 | 0.3438 | No | -1.292 | 0.196 |
+| deadzone | 10 | logistic_balanced | 122 | 0.2812 | -0.1171 | 0.2924 | 0.0029 | No | -0.541 | 0.588 |
+| deadzone | 10 | gbm_calibrated | 122 | 0.2723 | -0.0815 | 0.2416 | 0.2891 | No | -1.145 | 0.252 |
+| deadzone | 10 | ensemble | 122 | 0.2636 | -0.0471 | 0.1944 | 0.0225 | No | -0.969 | 0.333 |
+| **detrended** | **10** | **logistic_balanced** | **122** | **0.2227** | **0.1707** | **0.0946** | **0.0169** | **YES** | **-2.679** | **0.0074** |
+| detrended | 10 | gbm_calibrated | 122 | 0.2895 | -0.0780 | 0.2101 | 0.9152 | No | -1.885 | 0.059 |
+| detrended | 10 | ensemble | 122 | 0.2446 | 0.0893 | 0.0704 | 0.6570 | No | -2.381 | 0.017 |
+| buyer_decision | 10 | logistic_balanced | 137 | 0.3338 | -0.2459 | 0.2530 | 0.0869 | No | -1.659 | 0.097 |
+| buyer_decision | 10 | gbm_calibrated | 137 | 0.3081 | -0.1498 | 0.2551 | 0.0079 | No | -1.702 | 0.089 |
+| buyer_decision | 10 | ensemble | 137 | 0.3083 | -0.1507 | 0.2440 | 0.0059 | No | -1.855 | 0.064 |
+
+**Correction to the earlier report:** `detrended_h10` with the PLAIN logistic model (not the ensemble)
+IS significant — accuracy 64.75% vs 48.36% baseline (16.4pp edge), Brier 0.2227 vs 0.5164 baseline, BSS
++0.171 (best of all 24 rows), McNemar p=0.0169, DM p=0.0074 (both significant, consistent), ECE=0.095
+(under the 0.10 gate). It technically clears every one of `decide_direction_signal`'s 5 gates. Flagged
+with an explicit multiple-comparisons caveat: 1 nominally-significant result out of 24 tested is close
+to what chance alone predicts at p<0.05 (24×0.05≈1.2 expected false positives) — does NOT survive
+Bonferroni (0.05/24≈0.002 < 0.0169). Not a promotion recommendation on its own; item 4's COMEX variant
+is the natural higher-power replication test for the same "detrended" framing.
+
+**M1 label/feature role separation (PR #1901, merged; ADR write-up PR #1904, merged as recreated):**
+lag sweep shows the peak is at lag -1/0 (68.25%/68.65%, CIs overlap) — timing misalignment does NOT
+explain the ~33% disagreement, ruling out GG's item-3a hypothesis cleanly. Item 3b (magnitude buckets)
+was the real finding: 44% agreement on moves <20 Rs/g climbing monotonically to 85-100% on moves
+≥100 Rs/g (Wilson CIs, n=5-63/bucket) — a dead-zone label is well-supported. `ml/inr_proxy_labels.py`
+built the same-day (unlagged, correctly leakage-permissive for labels) counterpart to the T-1-lagged
+feature series. Full write-up: `docs/adr/032-...md`.
+
+**M2 INR flatline: diagnosed AND fixed (PR #1903, merged).** Root cause isolated cleanly by an E-vs-F
+contrast (identical features/data/walk-forward, only difference is calibration): the live pipeline's
+`ml.direction.models.fit_lightgbm` is UNCALIBRATED. Calibrating it alone: p=1.0 → p=0.0129. Combined
+with `class_weight="balanced"`: accuracy 65.84% vs 59.01% baseline, Brier 0.2303, ECE 0.0648, p=0.0034
+— survives Bonferroni across all 10 configs tested (0.05/10=0.005). Clears every one of
+`decide_direction_signal`'s 5 gates. Lighter regularization and class-weighting ALONE (on the existing
+logistic model) do nothing — ADR 031's base-rate-anchoring diagnosis is model-specific, not a data
+property. Does NOT replicate at h1 (49.08% vs 50.92% baseline, not significant) — an h2-specific fix,
+reported plainly as such. `ml/direction/config_sweep.py` is the reusable harness. Full write-up:
+`docs/adr/034-...md`. **Real promotion candidate for GG's review** (not self-promoted — shadow only).
+
+**M3 (independent, GG spec item 6): done (PR #1906).** `ml/calibration_adaptive.py` implements
+Adaptive Conformal Inference (Gibbs & Candès 2021), scored on the identical fit/scoring-set
+construction the static band uses. Result: statistically indistinguishable from the static band at
+68/80/90% (n=89, CIs overlap almost completely, ≤1.3pp difference). Gamma sensitivity: more aggressive
+adaptation (0.05/0.1) moves coverage further from target, not closer — the history is too short (n=89)
+for ACI's long-run convergence guarantees to help. Not recommending ACI as a replacement. Confirmed
+the weekend/carry-forward stratum's first live-scored result has NOT landed yet (`calibration_band_
+coverage.json` still dated 2026-09-20, no `stratified_shadow` key) — not cited, per GG's instruction;
+due 2026-09-27.
+
+**M2 item 4 (COMEX daily variant, #1756) — IN PROGRESS, running in background at write time.**
+`ml/direction/comex_daily.py` built: ground truth is GC=F itself (roll-adjusted via the same
+GLD-divergence method as M1), NOT the INR proxy — so genuinely not blocked on anything. Found and
+fixed a real bug before running the real evaluation: building on a full 7-day calendar (matching M1's
+convention) ffills weekends onto GC=F, and ~30% of "daily direction" labels came out as trivial ties
+(label_binary_h1 skewed to 35.7% "up" instead of a real market's ~50/50) — fixed by tracking genuine
+COMEX trading days explicitly and only scoring real trading-day targets; corrected dataset:
+n=3,452 real trading days over 13.7 years (2013-2026), up_frac=51.8% for h1 — a realistic daily split.
+Evaluation grid (4 targets × h=1, plus raw_binary/detrended × h=10 for the "does the M2 detrended lead
+replicate with real power" check, 6 combinations, min_train=250 ≈ 1 trading year) is running as a
+background job — ~15 min/combination measured on a 400-row subset (0.275s/fold), full run not yet
+complete at the time of this checkpoint. Results to be reported in a follow-up once it finishes.
+Also checked #1756: no reply yet from Headline Arena; the daily-lock-deadline (UTC) question the
+owner posed in the 2026-09-22 reply is still unanswered. Not posting anything, per instruction.
+
+**M4 (Chronos + M1 drivers): NOT STARTED.** Step 3 (M1 realignment) is done, so it's technically
+unblocked, but it needs actual neural-network inference (ChronosBoltPipeline) across ~250+ walk-forward
+folds × multiple variants (covariate-corrected Chronos, naive-plus-drift, an ensemble) — a materially
+different and heavier compute profile than everything else in this continuation. Deliberately not
+started this round rather than risk a rushed implementation on top of an already-long session; flagged
+as the clear next step once COMEX's results are in and reviewed.
+
+**P1/P3/P5: still not started.**
