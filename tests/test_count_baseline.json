@@ -27,7 +27,7 @@
   "tests/test_dedup.js": 11,
   "tests/test_degradation_chain.py": 5,
   "tests/test_direction_gate.py": 33,
-  "tests/test_direction_harness.py": 44,
+  "tests/test_direction_harness.py": 48,
   "tests/test_drift.py": 5,
   "tests/test_drivers.py": 12,
   "tests/test_duty_and_calendar.py": 35,
