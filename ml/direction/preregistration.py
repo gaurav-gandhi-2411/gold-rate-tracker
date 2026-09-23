@@ -171,10 +171,11 @@ def build_proxy_deadzone_dataset(
     level = label_df["label_22k_per_10g"]
     move_per_10g = level.diff()
     move_per_gram = move_per_10g / 10.0
+    dates = pd.DatetimeIndex(label_df.index)
 
     out = pd.DataFrame(
         {
-            "as_of_date": label_df.index.strftime("%Y-%m-%d"),
+            "as_of_date": dates.strftime("%Y-%m-%d"),
             "move_per_gram": move_per_gram.to_numpy(),
         }
     )
