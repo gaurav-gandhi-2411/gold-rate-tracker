@@ -44,6 +44,26 @@ final `alpha=0.43` (target was 0.20 — badly overshot). **More aggressive adapt
 better at this sample size — it destabilizes.** ACI's convergence guarantees are long-run; n=89 days
 is short enough that a higher learning rate amplifies noise rather than correcting genuine drift.
 
+### What this sample can and cannot resolve (added 2026-09-23)
+
+Re-run on 2026-09-23 with the same module and data (n = 89). The 95% Wilson intervals on the static
+band's coverage are wide:
+
+| nominal | static coverage | 95% CI | CI width |
+|---|---|---|---|
+| 68% | 60.7% | 50.3–70.2% | 19.9 pp |
+| 80% | 71.9% | 61.8–80.2% | 18.4 pp |
+| 90% | 80.9% | 71.5–87.7% | 16.2 pp |
+
+Only a static-vs-ACI difference of roughly that size could be told apart at n = 89. The observed
+differences (0–2.2 pp) are far smaller. "Statistically indistinguishable" therefore means the
+comparison is underpowered, **not** that the two methods are equivalent. (An earlier session note
+gave these widths as 19.3 / 17.2 / 12.1 pp; the values above are the recomputed ones.)
+
+Separately: at the **90%** level the static band under-covers. Its 95% CI (71.5–87.7%) excludes
+90%, so this offline scoring set is already resolvable at that level. The live band monitors 80%,
+where the CI (61.8–80.2%) just includes nominal.
+
 ## Decision
 
 **Not recommending ACI as a replacement for the static band at this time.** The two methods perform
