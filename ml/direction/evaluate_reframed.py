@@ -238,6 +238,8 @@ def run_walk_forward_reframed(
     gbm_prob_all: list[float] = []
     ens_prob_all: list[float] = []
     clim_prob_all: list[float] = []
+    as_of_scored: list[str] = []
+    train_max_label_date: list[str] = []
     n_skipped = 0
 
     for i in range(min_train_size, n):
@@ -279,6 +281,8 @@ def run_walk_forward_reframed(
         gbm_prob_all.append(gbm_prob)
         ens_prob_all.append(ens_prob)
         clim_prob_all.append(clim_prob)
+        as_of_scored.append(as_of_dates[i])
+        train_max_label_date.append(max(str(label_dates[j]) for j in eligible))
 
     n_test_folds = len(y_true_all)
     result: dict = {
@@ -307,6 +311,10 @@ def run_walk_forward_reframed(
         "y_true": y_true_all,
         "model_probs": {k: list(v) for k, v in models_probs.items()},
         "climatology_probs": clim_prob_all,
+        # Per scored fold: its as_of_date and the latest label date in its
+        # training set, so the embargo and sub-period splits are auditable.
+        "as_of_date": as_of_scored,
+        "train_max_label_date": train_max_label_date,
     }
 
     always_up_loss = list((1.0 - np.array(y_true_all)) ** 2)
