@@ -53,8 +53,9 @@ on rows whose label_date_h2 is strictly before the test as_of_date
 (EMBARGO_LABEL_DATE_COL), and (b) scores only test days with as_of_date after
 CONFIRMATORY_AFTER_AS_OF. The model configuration, the test, alpha and
 PREREGISTERED_N_FOR_POWER are unchanged (frozen). Note: 135.9 was derived
-from the leaky effect size; with the embargo, the same 161 folds show no
-edge at all (57.76% vs 59.01% always-up, p=0.776), so the true effect — if
+from the leaky effect size; with the embargo, the same data shows no
+significant edge (60.38% vs 59.75% always-up, n=159, p=0.327 —
+reports/preregistration_embargo_a1.json), so the true effect — if
 any — is smaller than the power target assumes, and the test is optimistic
 about its own power. Kept frozen anyway: re-deriving it now would be the
 goalpost-moving this module exists to prevent.
