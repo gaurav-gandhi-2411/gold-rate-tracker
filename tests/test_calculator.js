@@ -97,85 +97,133 @@ test("negative or non-finite makingPerGram returns null", () => {
   assert.equal(computePurchaseCost({ ratePerGram: 13710, grams: 10, makingPerGram: NaN }), null);
 });
 
-// --- computePurchaseCostRange ---
+// --- computePurchaseCostRange (jewellery-type presets + custom) ---
+// Worked example throughout: rate ₹7,000/g, 10 g -> gold value ₹70,000.
 
 const computePurchaseCostRange = app.pure("computePurchaseCostRange");
+const RATE = 7000;
+const GRAMS = 10;
 
-test("range in % mode: low and high are the two bound estimates", () => {
+test("preset 'coins' (3-8%, typical 5%): typical/low/high totals", () => {
+  const r = computePurchaseCostRange({ ratePerGram: RATE, grams: GRAMS, presetId: "coins" });
+  // typical 5%: making 3500, gst (70000+3500)×0.03 = 2205, total 75705
+  assert.deepEqual(r.typical, { goldValue: 70000, making: 3500, gst: 2205, total: 75705 });
+  // low 3%: making 2100, gst 72100×0.03 = 2163, total 74263
+  assert.deepEqual(r.low, { goldValue: 70000, making: 2100, gst: 2163, total: 74263 });
+  // high 8%: making 5600, gst 75600×0.03 = 2268, total 77868
+  assert.deepEqual(r.high, { goldValue: 70000, making: 5600, gst: 2268, total: 77868 });
+});
+
+test("preset 'plain' (8-12%, typical 10%): typical/low/high totals", () => {
+  const r = computePurchaseCostRange({ ratePerGram: RATE, grams: GRAMS, presetId: "plain" });
+  assert.deepEqual(r.typical, { goldValue: 70000, making: 7000, gst: 2310, total: 79310 });
+  assert.deepEqual(r.low, { goldValue: 70000, making: 5600, gst: 2268, total: 77868 });
+  assert.deepEqual(r.high, { goldValue: 70000, making: 8400, gst: 2352, total: 80752 });
+});
+
+test("preset 'intricate' (15-25%, typical 20%): typical/low/high totals", () => {
+  const r = computePurchaseCostRange({ ratePerGram: RATE, grams: GRAMS, presetId: "intricate" });
+  assert.deepEqual(r.typical, { goldValue: 70000, making: 14000, gst: 2520, total: 86520 });
+  assert.deepEqual(r.low, { goldValue: 70000, making: 10500, gst: 2415, total: 82915 });
+  assert.deepEqual(r.high, { goldValue: 70000, making: 17500, gst: 2625, total: 90125 });
+});
+
+test("custom % of gold value: typical === low === high (no invented range)", () => {
   const r = computePurchaseCostRange({
-    ratePerGram: 13710, grams: 10, makingMode: "pct", makingLow: 6, makingHigh: 25,
+    ratePerGram: RATE, grams: GRAMS, presetId: "custom", customValue: 10, customUnit: "pct",
   });
-  // low: making 8226, gst (137100+8226)×0.03 = 4359.78 → 4360, total 149686
-  assert.deepEqual(r.low, { goldValue: 137100, making: 8226, gst: 4360, total: 149686 });
-  // high: making 34275, gst 171375×0.03 = 5141.25 → 5141, total 176516
-  assert.deepEqual(r.high, { goldValue: 137100, making: 34275, gst: 5141, total: 176516 });
+  const expected = { goldValue: 70000, making: 7000, gst: 2310, total: 79310 };
+  assert.deepEqual(r.typical, expected);
+  assert.deepEqual(r.low, expected);
+  assert.deepEqual(r.high, expected);
 });
 
-test("range in ₹/gram mode uses flat making charges", () => {
+test("custom ₹/gram: flat making charge, typical === low === high", () => {
   const r = computePurchaseCostRange({
-    ratePerGram: 13710, grams: 10, makingMode: "perGram", makingLow: 200, makingHigh: 600,
+    ratePerGram: RATE, grams: GRAMS, presetId: "custom", customValue: 400, customUnit: "perGram",
   });
-  assert.equal(r.low.making, 2000);
-  assert.equal(r.high.making, 6000);
-  assert.equal(r.low.total, Math.round((137100 + 2000) * 1.03));
-  assert.equal(r.high.total, Math.round((137100 + 6000) * 1.03));
+  // making 10×400 = 4000; gst (74000)×0.03 = 2220; total 76220
+  const expected = { goldValue: 70000, making: 4000, gst: 2220, total: 76220 };
+  assert.deepEqual(r.typical, expected);
+  assert.deepEqual(r.low, expected);
+  assert.deepEqual(r.high, expected);
 });
 
-test("reversed bounds are sorted, not rejected", () => {
-  const a = computePurchaseCostRange({ ratePerGram: 10000, grams: 5, makingMode: "pct", makingLow: 20, makingHigh: 8 });
-  const b = computePurchaseCostRange({ ratePerGram: 10000, grams: 5, makingMode: "pct", makingLow: 8, makingHigh: 20 });
-  assert.deepEqual(a, b);
+test("returns null on an unknown preset id", () => {
+  assert.equal(computePurchaseCostRange({ ratePerGram: RATE, grams: GRAMS, presetId: "bridal" }), null);
 });
 
-test("equal bounds collapse to a single figure (low === high)", () => {
-  const r = computePurchaseCostRange({ ratePerGram: 10000, grams: 5, makingMode: "pct", makingLow: 0, makingHigh: 0 });
-  assert.deepEqual(r.low, r.high);
-  assert.deepEqual(r.low, { goldValue: 50000, making: 0, gst: 1500, total: 51500 });
+test("custom returns null on a blank, negative, or non-finite value", () => {
+  const base = { ratePerGram: RATE, grams: GRAMS, presetId: "custom", customUnit: "pct" };
+  assert.equal(computePurchaseCostRange({ ...base, customValue: NaN }), null);
+  assert.equal(computePurchaseCostRange({ ...base, customValue: -1 }), null);
+  assert.equal(computePurchaseCostRange({ ...base, customValue: undefined }), null);
 });
 
-test("range returns null on an unknown mode, blank bound, or negative bound", () => {
-  const base = { ratePerGram: 13710, grams: 10, makingLow: 6, makingHigh: 25 };
-  assert.equal(computePurchaseCostRange({ ...base, makingMode: "flat" }), null);
-  assert.equal(computePurchaseCostRange({ ...base, makingMode: "pct", makingLow: NaN }), null);
-  assert.equal(computePurchaseCostRange({ ...base, makingMode: "pct", makingHigh: -1 }), null);
-  assert.equal(computePurchaseCostRange({ ...base, makingMode: "perGram", grams: -2 }), null);
+test("custom returns null on an unknown unit", () => {
+  assert.equal(computePurchaseCostRange({
+    ratePerGram: RATE, grams: GRAMS, presetId: "custom", customValue: 10, customUnit: "flat",
+  }), null);
 });
 
-test("default making range matches its cited source (6–25% or ₹200–600/g)", () => {
-  const d = app.run("MAKING_CHARGE_DEFAULTS");
-  assert.deepEqual(JSON.parse(JSON.stringify(d)), { pct: { low: 6, high: 25 }, perGram: { low: 200, high: 600 } });
+test("preset catalogue matches the product owner's chosen buyer-guide ranges (2026-09-23)", () => {
+  const presets = app.run("MAKING_CHARGE_PRESETS");
+  assert.deepEqual(JSON.parse(JSON.stringify(presets)), [
+    { id: "coins", labelKey: "calcPresetCoins", low: 3, high: 8, typical: 5 },
+    { id: "plain", labelKey: "calcPresetPlain", low: 8, high: 12, typical: 10 },
+    { id: "intricate", labelKey: "calcPresetIntricate", low: 15, high: 25, typical: 20 },
+    { id: "custom", labelKey: "calcPresetCustom" },
+  ]);
 });
 
 // --- renderCalculator states (real app.js against the stub DOM) ---
+// The stub DOM's querySelector() (tests/helpers/load_app.js) always returns a fresh,
+// unchecked element rather than honouring which radio a test "checks" -- calcSelectedPresetId()
+// and calcCustomUnit() therefore always resolve to their defaults ("plain"/"pct") here, the
+// same pre-existing limitation the old calcMakingMode()-based tests had (only "pct" mode was
+// ever exercised through render). Preset switching and the custom-input error state are
+// covered by the pure computePurchaseCostRange tests above and verified live via the
+// Playwright screenshots (reports/screenshots/p5-estimator/).
 
 const NOW = Date.parse("2026-09-23T06:00:00Z");
-function renderWith({ grams = "10", low = "6", high = "25", readingAgeH = 1, forecast = null } = {}) {
+function renderWith({ grams = "10", readingAgeH = 1, forecast = null } = {}) {
   const a = loadApp({ nowMs: NOW });
   const doc = a.run("document");
   doc.getElementById("calc-grams").value = grams;
-  doc.getElementById("calc-making-low").value = low;
-  doc.getElementById("calc-making-high").value = high;
   const ts = new Date(NOW - readingAgeH * 3_600_000).toISOString();
   a.pure("renderCalculator")([{ timestamp: ts, "22k": 13710, "24k": 14957, "18k": 11218 }], forecast);
   return doc.getElementById("calc-results").innerHTML;
 }
 
-test("render: a valid range always carries the estimate disclaimer and a low–high total", () => {
+test("render: default preset (plain bangles & rings) carries the disclaimer, a typical total, and its range", () => {
   const html = renderWith();
-  assert.match(html, /An estimate, not a quote/);
-  assert.match(html, /₹1,49,686 – ₹1,76,516/);
+  assert.match(html, /Estimate — stores vary/);
+  // plain, typical 10%: gold 137100, making 13710, gst (150810)×0.03=4524.3→4524, total 155334
+  assert.match(html, /₹1,55,334/);
+  // low 8%: making 10968, gst (148068)×0.03=4442.04→4442, total 152510
+  // high 12%: making 16452, gst (153552)×0.03=4606.56→4607, total 158159
+  assert.match(html, /₹1,52,510 – ₹1,58,159/);
 });
 
 test("render: zero grams shows the empty state, not a ₹0 total", () => {
   assert.match(renderWith({ grams: "0" }), /Enter a quantity/);
 });
 
-test("render: a blank or negative making bound shows the making-charge error", () => {
-  assert.match(renderWith({ low: "" }), /making charge of 0 or more/);
-  assert.match(renderWith({ high: "-5" }), /making charge of 0 or more/);
-});
-
 test("render: a confirmed price older than STALE_THRESHOLD_H says how old it is", () => {
   assert.match(renderWith({ readingAgeH: 20 }), /last confirmed price/);
   assert.doesNotMatch(renderWith({ readingAgeH: 1 }), /last confirmed price/);
+});
+
+test("render: rate-used line names the Tanishq store rate outside the estimate tier", () => {
+  assert.match(renderWith(), /Rate used: 22K ₹13,710\/g — Tanishq store rate/);
+});
+
+test("render: rate-used line names the IBJA-based estimate in the ibja_calibrated tier", () => {
+  const forecast = { price_source: "ibja_calibrated", current_22k: 13800 };
+  assert.match(renderWith({ forecast }), /Rate used: 22K ₹13,800\/g — IBJA-based estimate/);
+});
+
+test("render: rate-used line names the market-consensus estimate in the fusion_consensus tier", () => {
+  const forecast = { price_source: "fusion_consensus", current_22k: 13750 };
+  assert.match(renderWith({ forecast }), /Rate used: 22K ₹13,750\/g — market-consensus estimate/);
 });
