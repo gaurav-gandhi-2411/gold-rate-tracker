@@ -88,6 +88,7 @@ def run_config_sweep(
     C: float = 1.0,
     calibrate_gbm: bool = False,
     min_train_size: int = 20,
+    return_raw: bool = False,
 ) -> dict:
     """Walk-forward for one (feature_cols, model, hyperparameter) config.
 
@@ -96,6 +97,12 @@ def run_config_sweep(
     an UNCALIBRATED model — see ml.direction.models — so calibrate_gbm=True
     is the "what if we calibrated it" test, calibrate_gbm=False reproduces
     live behavior exactly for a fair baseline comparison).
+
+    return_raw: when True, adds result["raw"] = {"y_true": [...], "y_prob":
+    [...]} — the per-fold ground truth and predicted probability, needed by
+    callers (e.g. ml.direction.preregistration) that run their own
+    significance test (DM-HAC) on top of this walk-forward's output instead
+    of relying on compute_direction_metrics' own McNemar-based p_value.
     """
     ds = dataset[dataset[label_col].notna()].reset_index(drop=True)
     n = len(ds)
@@ -145,4 +152,7 @@ def run_config_sweep(
         prob_all.append(prob)
 
     metrics = compute_direction_metrics(y_true_all, prob_all, model)
-    return {k: v for k, v in metrics.items() if k != "reliability"}
+    result = {k: v for k, v in metrics.items() if k != "reliability"}
+    if return_raw:
+        result["raw"] = {"y_true": y_true_all, "y_prob": prob_all}
+    return result
