@@ -1,5 +1,5 @@
 {
-  "predicted_at": "2026-09-23T04:42:23.056775+00:00",
+  "predicted_at": "2026-09-23T06:35:49.010210+00:00",
   "target_window": "5d",
   "headline": {
     "method": "naive_flat_hold",
@@ -10,15 +10,15 @@
     "naive_mae_recent_30": 134.9,
     "vol_context": {
       "half_width": 365,
-      "half_width_raw": 342.1,
+      "half_width_raw": 337.3,
       "method": "realized_20d",
       "window_days": 20,
-      "contiguous_days": 47,
+      "contiguous_days": 48,
       "is_floored": true,
       "is_degraded": false,
       "floor_fraction": 0.5,
       "static_pi_half": 729.8,
-      "baseline_half_width": 327,
+      "baseline_half_width": 324,
       "regime": "normal"
     }
   },
@@ -56,7 +56,7 @@
     "direction_consensus": 1.0
   },
   "driver_context": {
-    "computed_at": "2026-09-23T04:42:23.060621+00:00",
+    "computed_at": "2026-09-23T06:35:49.015246+00:00",
     "macro_staleness_days": 0.0,
     "macro_fresh": true,
     "premium_threshold_pct": 15.0,
@@ -85,10 +85,10 @@
         "delta_pct_gold_usd": -7.087,
         "delta_pct_usdinr": 0.012,
         "delta_pct_premium": 0.698,
-        "total_move_rs_per_g": -895.0,
-        "gold_usd_contrib_rs_per_g": -994.6,
-        "usdinr_contrib_rs_per_g": 1.7,
-        "premium_contrib_rs_per_g": 97.9,
+        "total_move_rs_per_g": -975.0,
+        "gold_usd_contrib_rs_per_g": -1083.6,
+        "usdinr_contrib_rs_per_g": 1.9,
+        "premium_contrib_rs_per_g": 106.7,
         "premium_share_pct": 10.9,
         "attribution_valid": true,
         "attribution_valid_reason": "clean \u2014 premium share within threshold"
@@ -101,9 +101,9 @@
       "gold_usd_30d_pct_change": -6.84
     }
   },
-  "real_readings_count": 704,
+  "real_readings_count": 705,
   "current_22k": 14100,
-  "scraped_at": "2026-09-22T21:14:52.211Z",
+  "scraped_at": "2026-09-23T04:39:08.844Z",
   "price_source": "tanishq_scrape",
   "est_low": null,
   "est_high": null,
