@@ -41,6 +41,24 @@ below is computed ONCE from the ADR-034 config-J data and MUST NOT be
 recomputed from future folds — recomputing the power target from the same
 data being accumulated toward it would silently move the goalposts and
 defeat the entire purpose of pre-registration.
+
+AMENDMENT A1 (2026-09-23, approved by GG, made BEFORE any post-registration
+day was scored — see docs/adr/038 "Amendment A1"): the original protocol
+inherited two flaws from the walk-forward it copied. (1) No embargo: train
+was every earlier row, so at h2 each fold trained on ~2 rows whose outcomes
+had not matured on the test date. (2) It scored every fold, including the
+161 folds that SELECTED config J — so the "confirmation" re-counted the very
+data it was meant to be independent of. The amended live arm (a) trains only
+on rows whose label_date_h2 is strictly before the test as_of_date
+(EMBARGO_LABEL_DATE_COL), and (b) scores only test days with as_of_date after
+CONFIRMATORY_AFTER_AS_OF. The model configuration, the test, alpha and
+PREREGISTERED_N_FOR_POWER are unchanged (frozen). Note: 135.9 was derived
+from the leaky effect size; with the embargo, the same data shows no
+significant edge (60.38% vs 59.75% always-up, n=159, p=0.327 —
+reports/preregistration_embargo_a1.json), so the true effect — if
+any — is smaller than the power target assumes, and the test is optimistic
+about its own power. Kept frozen anyway: re-deriving it now would be the
+goalpost-moving this module exists to prevent.
 """
 
 from __future__ import annotations
@@ -88,6 +106,17 @@ ALPHA = 0.05
 # DO NOT recompute from accumulating shadow data (see module docstring).
 PREREGISTERED_N_FOR_POWER: float = 135.9
 
+# Amendment A1 (docs/adr/038). Protocol id stored on every logged run so the
+# append-only log shows which protocol produced each entry.
+PROTOCOL_VERSION = "adr038-A1"
+# Training row j is usable for test day i only if label_date_h2[j] < as_of[i]
+# (the outcome had matured). At h2 this is an embargo of >= 2 trading days.
+EMBARGO_LABEL_DATE_COL = "label_date_h2"
+# Registration date. Only test days strictly after it count toward the
+# confirmatory test; every earlier day (incl. the 161 selection folds) is
+# training data only.
+CONFIRMATORY_AFTER_AS_OF = "2026-09-23"
+
 DEAD_ZONE_THRESHOLD_RS_PER_GRAM = 100.0
 
 SHADOW_RESULTS_PATH = Path("data/preregistered_h2_shadow_results.json")
@@ -111,10 +140,10 @@ def score_config(y_true: list[int], y_prob: list[float], horizon: int) -> dict:
     loss_model = _misclassification_loss(y_true, y_prob)
     loss_baseline = _always_up_loss(y_true)
     dm = diebold_mariano_test(loss_model, loss_baseline, horizon=horizon, alternative=ALTERNATIVE)
-    accuracy = float(np.mean([1.0 - v for v in loss_model])) if loss_model else float("nan")
-    baseline_accuracy = (
-        float(np.mean([1.0 - v for v in loss_baseline])) if loss_baseline else float("nan")
-    )
+    # None, not NaN, when nothing was scored (the live arm's early weeks):
+    # json.dumps writes NaN as a bare token that is not valid JSON.
+    accuracy = float(np.mean([1.0 - v for v in loss_model])) if loss_model else None
+    baseline_accuracy = float(np.mean([1.0 - v for v in loss_baseline])) if loss_baseline else None
     return {
         "n": dm["n"],
         "effective_n": dm["effective_n"],
@@ -144,10 +173,19 @@ def run_live_arm(dataset: pd.DataFrame | None = None) -> dict:
         calibrate_gbm=cfg["calibrate_gbm"],
         min_train_size=cfg["min_train_size"],
         return_raw=True,
+        embargo_label_date_col=EMBARGO_LABEL_DATE_COL,
+        score_after_as_of=CONFIRMATORY_AFTER_AS_OF,
     )
     raw = result["raw"]
     scored = score_config(raw["y_true"], raw["y_prob"], horizon=cfg["horizon"])
     scored["arm"] = "live_h2"
+    scored["protocol_version"] = PROTOCOL_VERSION
+    scored["embargo_label_date_col"] = EMBARGO_LABEL_DATE_COL
+    scored["confirmatory_after_as_of"] = CONFIRMATORY_AFTER_AS_OF
+    scored["scored_as_of_dates"] = raw["as_of_date"]
+    # Audit evidence for the embargo: for every scored day, the latest label
+    # date used in its training set. Each must be < the scored as_of_date.
+    scored["train_max_label_dates"] = raw["train_max_label_date"]
     return scored
 
 
@@ -213,6 +251,12 @@ def run_proxy_arm(dataset: pd.DataFrame | None = None) -> dict:
     # horizon=1: the proxy label is a same-day (t vs t-1) direction, not h2.
     scored = score_config(raw["y_true"], raw["y_prob"], horizon=1)
     scored["arm"] = "proxy_deadzone_h1_equivalent"
+    # Exploratory, never confirmatory (ADR 038): scores the full 2013-2026
+    # proxy history, not only post-registration days. Its label is same-day,
+    # so every earlier training row has matured by the test day — the h1
+    # embargo holds by construction.
+    scored["protocol_version"] = PROTOCOL_VERSION
+    scored["confirmatory"] = False
     return scored
 
 
@@ -229,8 +273,12 @@ def append_shadow_result(result: dict, path: Path = SHADOW_RESULTS_PATH) -> dict
     # The 135.9-effective-fold target is h2-specific (ADR 038) -- only the
     # live_h2 arm's progress toward it is meaningful; the proxy arm uses a
     # different horizon/feature set and is never compared to this threshold.
-    if entry.get("arm") == "live_h2" and PREREGISTERED_N_FOR_POWER == PREREGISTERED_N_FOR_POWER:
-        entry["reached_preregistered_n"] = result.get("effective_n", 0) >= PREREGISTERED_N_FOR_POWER
+    # effective_n is None when fewer than 2 post-registration days have been
+    # scored (early weeks) — that is "not reached", not an error.
+    if entry.get("arm") == "live_h2":
+        entry["reached_preregistered_n"] = (
+            result.get("effective_n") or 0.0
+        ) >= PREREGISTERED_N_FOR_POWER
     else:
         entry["reached_preregistered_n"] = None
     history["runs"].append(entry)
