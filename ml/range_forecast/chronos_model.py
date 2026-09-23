@@ -10,15 +10,22 @@ runner) -- every import of them is deferred into functions so this module
 itself is always importable, and `chronos_available()` lets callers detect
 the gap and report it explicitly rather than crash.
 
-STRIDE (methodological choice to review): running one Chronos inference per
-trading day across ~4700 proxy-history days would take, per the existing
-single-call timing already recorded for this same checkpoint in
-ml.chronos_forecast's probe (wall_clock_ms.forecast, data/chronos_probe.json
-history), on the order of hours per (horizon, dataset) combination even
-batched. `chronos_stride` (default 5) forecasts only every Nth trading day,
-keeping the full run tractable on a GitHub-hosted CPU runner within the
-300-minute shard timeout. This makes Chronos's walk-forward sparser than
-every other model's (daily) -- flagged explicitly in the report, not hidden.
+STRIDE default is 1 (every trading day, same cadence as every other model)
+-- NOT the aggressively strided design this module started with. That
+earlier default (stride=5, justified by an unmeasured "on the order of
+hours" guess) was wrong: this repo's own committed data/chronos_probe.json
+records a REAL single-call measurement for this exact checkpoint --
+wall_clock_ms.forecast=16ms (context=258 days, horizon=5, batch of 1;
+wall_clock_ms.pipeline_load=10785ms, a one-time cost, not per-call). Linearly
+extrapolating to this module's longer context (512 vs 258, ~2x) and the full
+proxy+IBJA walk-forward (~3900 forecast days x 4 horizons) gives an estimated
+~8-10 minutes total, not hours -- comfortably inside the 300-minute shard
+timeout even before batching's own speedup. This extrapolation is still
+UNMEASURED for this module specifically (context=512, batched calls, this
+checkpoint's actual behavior on a GitHub-hosted CPU runner) -- the CI run is
+the real measurement; `stride` stays a fully general, overridable parameter
+so it can be dialed back up after that if the extrapolation turns out wrong,
+without another code change.
 """
 
 from __future__ import annotations
@@ -35,7 +42,7 @@ from ml.range_forecast.walkforward import (
 )
 
 CONTEXT_LENGTH = 512
-CHRONOS_STRIDE = 5
+CHRONOS_STRIDE = 1
 QUANTILE_LEVELS: tuple[float, ...] = (0.05, 0.10, 0.90, 0.95)
 BATCH_SIZE = 16
 MIN_TRAIN_SIZE = 250

@@ -56,9 +56,18 @@ DATASETS: list[str] = ["proxy", "ibja"]
 LEVELS: tuple[float, ...] = (0.8, 0.9)
 FULL_HORIZONS: tuple[int, ...] = (1, 5, 10, 20)
 SMOKE_HORIZONS: tuple[int, ...] = (1, 5)  # local smoke only -- bounds wall-clock
+# IBJA has only ~254 total trading days (2022-01-19+) -- a 250-day warm-up (the
+# proxy's depth-appropriate default) would leave near-ZERO forecastable days on
+# it, defeating the whole point of evaluating the product-relevant dataset. Use
+# a shorter, dataset-specific warm-up for IBJA so it actually produces a
+# walk-forward: 100 trading days (~5 months) is itself short for a GARCH/HAR
+# MLE fit to stabilize, and this is flagged in the report as a real limitation
+# of the IBJA arm, not hidden by silently reusing the proxy's warm-up.
 FULL_MIN_TRAIN_SIZE = 250
+FULL_MIN_TRAIN_SIZE_IBJA = 100
 FULL_REFIT_EVERY = 21
 SMOKE_MIN_TRAIN_SIZE = 80
+SMOKE_MIN_TRAIN_SIZE_IBJA = 60
 SMOKE_REFIT_EVERY = 12
 CONFORMAL_WINDOW = 250
 ALPHA = 0.05
@@ -167,7 +176,9 @@ def run_shard(key: str, out_dir: Path, max_rows: int | None = None, smoke: bool 
     if key not in MODEL_SHARDS:
         raise SystemExit(f"unknown shard {key!r}; expected one of {MODEL_SHARDS}")
 
-    min_train_size = SMOKE_MIN_TRAIN_SIZE if smoke else FULL_MIN_TRAIN_SIZE
+    min_train_size_default = SMOKE_MIN_TRAIN_SIZE if smoke else FULL_MIN_TRAIN_SIZE
+    min_train_size_ibja = SMOKE_MIN_TRAIN_SIZE_IBJA if smoke else FULL_MIN_TRAIN_SIZE_IBJA
+    min_train_size_by_dataset = {"proxy": min_train_size_default, "ibja": min_train_size_ibja}
     refit_every = SMOKE_REFIT_EVERY if smoke else FULL_REFIT_EVERY
     horizons = SMOKE_HORIZONS if smoke else FULL_HORIZONS
 
@@ -177,7 +188,8 @@ def run_shard(key: str, out_dir: Path, max_rows: int | None = None, smoke: bool 
         "generated_at_utc": datetime.now(UTC).isoformat(),
         "smoke": smoke,
         "max_rows": max_rows,
-        "min_train_size": min_train_size,
+        "min_train_size": min_train_size_default,
+        "min_train_size_by_dataset": min_train_size_by_dataset,
         "refit_every": refit_every,
         "horizons_run": list(horizons),
         "levels": list(LEVELS),
@@ -187,6 +199,7 @@ def run_shard(key: str, out_dir: Path, max_rows: int | None = None, smoke: bool 
     t_shard0 = time.time()
     loaders = {"proxy": load_proxy_price_series, "ibja": load_ibja_price_series}
     for dataset_name in DATASETS:
+        min_train_size = min_train_size_by_dataset[dataset_name]
         price = loaders[dataset_name]()
         if max_rows is not None:
             price = price.tail(max_rows)
@@ -369,7 +382,8 @@ def _dm_vs_baseline(
     """One-sided (model beats baseline) DM test on the Winkler-score loss
     differential, aligned on the intersection of as_of_date between the two
     (their forecast sets need not cover exactly the same days -- e.g.
-    quantile_gbm skips early NaN-feature rows, chronos is strided)."""
+    quantile_gbm skips early NaN-feature rows, and chronos may be strided
+    if `stride` was overridden above its default of 1)."""
     from ml.direction.evaluate_reframed import diebold_mariano_test
 
     baseline_map = dict(zip(baseline_dates, baseline_winkler, strict=True))
