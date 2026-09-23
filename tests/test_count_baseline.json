@@ -60,6 +60,7 @@
   "tests/test_phi7_premium_carry.py": 5,
   "tests/test_pipeline_integration.py": 2,
   "tests/test_pr_workflows_get_checks.py": 6,
+  "tests/test_prepare_direction_eval_publish.py": 9,
   "tests/test_preregistration.py": 13,
   "tests/test_price_units.py": 10,
   "tests/test_reframed_targets.py": 8,
