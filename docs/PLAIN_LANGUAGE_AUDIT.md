@@ -58,20 +58,22 @@ HI strings flagged for native review.**
 | File:line (original) | Original text | Flagged term(s) | Replacement |
 |---|---|---|---|
 | `index.html:55,59,65` (meta/og/twitter description) | "22K gold rate — an IBJA-calibrated estimate, confirmed against live Tanishq retail when reachable..." | calibrated | "22K gold rate — closely matched to real shop prices, confirmed against live Tanishq retail when reachable..." |
-| `index.html:525-528` (static pre-hydration footer fallback) | "We use IBJA's official gold benchmark and calibrate it to match real shop prices..." | calibrate; IBJA unexplained | "We use IBJA (the India Bullion and Jewellers Association's daily benchmark rate) and adjust it to match real shop prices..." |
+| `index.html:525-528` (static pre-hydration footer fallback) | "We use IBJA's official gold benchmark and calibrate it to match real shop prices..." | calibrate; IBJA unexplained | "We use IBJA (the India Bullion and Jewellers Association, which publishes an official gold price every working day) and adjust it to match real shop prices..." — U4 pass (01202f86): "daily benchmark rate" itself read as jargon; reworded to say plainly what IBJA actually does |
 | `i18n.js` `pageDescription` (EN) | same as index.html meta description | calibrated | same fix, kept in sync |
-| `i18n.js` `footerBody` (EN) | "...calibrate it to match real shop prices..." + unexplained IBJA | calibrate; IBJA unexplained | "...adjust it to match real shop prices..." + IBJA explained inline (the one canonical explanation the rest of the page relies on) |
-| `i18n.js` `firstVisitText` (EN+HI) | "...(worst case recently ~Xh; n=41, as of DATE)..." | n= | "...(worst case recently ~Xh, as of DATE)..." — n= clause dropped, hours/as-of kept |
-| `i18n.js` `footerBody` (EN+HI) | "...(worst case recently ~Xh; n=41, as of DATE)" | n= | same fix as `firstVisitText` |
+| `i18n.js` `footerBody` (EN) | "...calibrate it to match real shop prices..." + unexplained IBJA | calibrate; IBJA unexplained | "...adjust it to match real shop prices..." + "IBJA (the India Bullion and Jewellers Association, which publishes an official gold price every working day)" — U4 pass (01202f86) reworded the IBJA gloss itself (see index.html row above, same fix) |
+| `i18n.js` `firstVisitText` (EN+HI) | "22K gold retail price, checked about every Xh (worst case recently ~Xh; n=41, as of DATE)..." | n=; U4 pass: "retail price" (both models) | "The price of 22K gold in shops, checked about every Xh (worst case recently ~Xh, as of DATE)..." — n= dropped (2026-09-23 first pass), "retail price" → "price ... in shops" (U4 pass, 01202f86) |
+| `i18n.js` `footerBody` (EN+HI) | "...(worst case recently ~Xh; n=41, as of DATE)" | n= | same fix as `firstVisitText` (n= dropped) |
 | `i18n.js` `volNoteElevated` (EN) | "Gold has been more volatile than usual lately — about ±₹X over 5 days." | volatility/volatile | "Gold has been swinging more than usual lately — about ±₹X over 5 days." |
 | `i18n.js` `volNoteCalm` (EN) | "Gold has been calmer than usual lately..." | volatility/volatile (key concept, adjacent to the elevated/calm pair) | "Gold has been steadier than usual lately..." |
-| `i18n.js` `reliabilityCoverage` (EN) | "Our estimated range has been right {pct}% of the time (checked {n} times)." | matches the `"coverage X% (n=Y)"` pattern | "Our estimated range has been right about N times out of 10 so far." (floored, never overstates — see `fractionOutOf10Phrase`) |
-| `i18n.js` `calibrationConfidenceAppend` (EN) | "...about {coverage}% of the time so far (n={n} weeks measured)." | n= | "...about N times out of 10 so far." (n dropped; exact % and n preserved on how-we-know.html's new "Band accuracy" section) |
-| `i18n.js` `errCouldntLoadMethodology` (EN) | "Couldn't load model details — check your connection and reload." | model | "Couldn't load this section — check your connection and reload." |
+| `i18n.js` `reliabilityCoverage` (EN) | "Our estimated range has been right {pct}% of the time (checked {n} times)." | matches the `"coverage X% (n=Y)"` pattern; U4 pass: "estimated range" (both models) | "The real price has stayed inside the range we show about N times out of 10 so far." — floored fraction (first pass), "estimated range" → "the range we show" (U4 pass, 01202f86) |
+| `i18n.js` `calibrationConfidenceAppend` (EN) | "...about {coverage}% of the time so far (n={n} weeks measured)." | n= | "...about N times out of 10 so far." (n dropped; exact % and n preserved on how-we-know.html's new "Band accuracy" section). U4 pass: "estimate" was flagged by both models here too, but kept deliberately — see the U4 section below for why |
+| `i18n.js` `errCouldntLoadMethodology` (EN) | "Couldn't load model details — check your connection and reload." | model; U4 pass: scored 1/5 by both models even after the U1 fix | "We couldn't show this part right now. Please check your internet and refresh the page." (U4 pass, 01202f86) |
 | `i18n.js` `errCouldntLoadMethodology` (HI) | "मॉडल की जानकारी लोड नहीं हो पाई..." | model (मॉडल, loanword) + EN meaning changed | Removed, flagged HI-needs-native-review (falls back to reworded English) |
 | `i18n.js` `accSummaryDirectionOff` (EN) | "We don't try to guess whether prices will rise or fall next — nothing we've tested beats simply assuming they'll stay about the same, so that's what we go with." | (honesty fix, not a banned term) | "We don't try to guess whether prices will rise or fall next — none of the methods we've tested could do it reliably, so we don't show a guess." — the original wording implied "assume no change" was itself a tested, winning method; the real baseline the direction gate compares against is "always guess up" (ADR 019), not "assume no change" (that's the separate price-range method). Same correction class as the two rows below: don't let a rounding/summarizing rewrite assert something the underlying data doesn't support. |
 | `i18n.js` 37× `meth*` keys (EN+HI) | full methodology breakdown (verdict rule, next-day-range p-value, direction-signal internals, drift stats) | model, p-value, MAE, coverage, percentile-adjacent framing | Relocated verbatim to `how-we-know-strings.js` (its own exempt catalogue) — same wording, same numbers, just off the main page. Main page's accordion body now renders 2-3 short plain sentences (`accSummaryIntro`/`accSummaryDirectionOff`, reusing the already-plain `reliabilityDriftOnTrack/Watch/Retrain`) plus a link |
-| `README.md` "How fresh the data is" bullet | "...typical gap between updates was 4.6 (n=41, as of DATE) hours." | n= | "...typical gap between updates was 4.6 (as of DATE) hours." — `\|n=n` modifier dropped from the METRIC marker |
+| `how-we-know-strings.js` `hwkIntro` (EN) | "This page has the full technical detail behind the plain-language summary on the main page — the same numbers, unrounded, plus how we test them." | U4 pass: "technical detail", "plain-language summary", "unrounded" (both models) | "This page shows the full detail behind the short summary on the main page — the exact numbers, and how we check them." (U4 pass, 01202f86) |
+| `how-we-know-strings.js` `hwkError` (EN) | "Couldn't load this page's data. Check your connection and reload." | U4 pass: scored 1/5 by both models (same class as `errCouldntLoadMethodology`) | "We couldn't show these numbers right now. Please check your internet and refresh the page." (U4 pass, 01202f86) |
+| `README.md` "How fresh the data is" bullet | "...the typical gap between updates was 4.6 (n=41, as of DATE) hours." | n=; U4 pass: "typical gap", "updates" (both models) | "...a new price usually came in every 4.6 (as of DATE) hours." — `\|n=n` modifier dropped (first pass), "typical gap between updates was" → "a new price usually came in every" (U4 pass, 01202f86) |
 | `README.md` "A likely range, not just one number" bullet | "...it has actually contained the real rate 70.9% (n=86, 95% CI [60.6%, 79.5%], as of DATE) of the time..." | n=, CI | "...it has actually landed inside the range about 7 times out of 10 so far..." via the new `frac10` METRIC format, plus a link to How we know for the exact numbers |
 
 ## "HI needs native review" — not machine-translated
@@ -190,3 +192,89 @@ jargon, but still dishonest:
 
 Screenshots `06-accordion-opened-375-after.png`, `08-model-signal-375-after.png`,
 and `10-banner-mocked-375-after.png` were re-captured after this fix.
+
+## U4 readability check (LLM-consensus, not user testing)
+
+**Provenance note:** this section documents a rating pass run and relayed by
+GG/the orchestrating session, not reproduced independently by this executor
+session (no Ollama access in this environment, and no raw ratings artifact
+— e.g. a per-string JSON/log — was committed to the repo alongside
+`01202f86` for this session to inspect directly). The method and the
+specific findings below are recorded exactly as reported. Anything not
+explicitly reported (the individual numeric score for each of the 10
+strings that were NOT flagged, for instance) is left unstated here rather
+than invented — see the "What's not in this record" note at the end of
+this section.
+
+**Method:** every rewritten user-facing string from the U1/U2 pass was
+rated blind (the model sees only the sentence, not which key it came from
+or what it replaced) by two independently-run local model families via
+Ollama — `gemma2:9b` and `qwen3:30b-a3b` — at `temperature=0, seed=42` for
+determinism. A string is flagged if either model scores it ≤2/5 or labels
+it "misleading", plus a separate signal: a word is logged as a **consensus
+hard word** when both models name the identical word as hard-to-understand,
+independent of the pass/fail score. The rating scale itself was calibrated
+first against a GG-authored reference sentence (expected to pass) before
+being run on the real strings, so a flag means the string reads harder than
+that reference bar, not just "the model didn't love the wording."
+
+**This is a readability proxy, not user testing** — two LLMs agreeing a
+sentence is easy to read is evidence, not proof that an actual gold buyer
+finds it so. Recorded as a check against the same two "cheap
+resource-order" model families used elsewhere in this repo (rule: prefer
+free/open models before paid ones), not as a replacement for real user
+feedback.
+
+### First pass — results as reported
+
+16 rewritten strings rated. Flag agreement between the two models: 1.0
+(Cohen's κ = 1.0 — perfect agreement on which strings to flag, this pass).
+
+Reported outcomes, by string:
+
+| Key | Result | Consensus hard word(s) | Action |
+|---|---|---|---|
+| `errCouldntLoadMethodology` (EN) | scored 1/5 by both models | — | Rewritten (01202f86) |
+| `hwkError` (EN) | scored 1/5 by both models | — | Rewritten (01202f86) |
+| `footerBody` (EN) | flagged | IBJA, "benchmark rate" | Rewritten (01202f86) |
+| `firstVisitText` (EN) | flagged | "retail price" | Rewritten (01202f86) |
+| `reliabilityCoverage` (EN) | flagged | "estimated range" | Rewritten (01202f86) |
+| `calibrationConfidenceAppend` (EN) | flagged | "estimate" | **Kept as-is** — both models also flag "estimate" in GG's own reference sentence (the calibration baseline for the whole scale), so this flag reads as the scale's floor, not a real readability defect; "estimate" is also the one honest word for what the number actually is (not a guarantee) |
+| README "How fresh the data is" bullet | flagged | "typical gap", "updates" | Rewritten (01202f86) |
+| `hwkIntro` (EN) | flagged | "technical detail", "plain-language summary", "unrounded" | Rewritten (01202f86) |
+| (remaining 8 of 16 strings) | not flagged | — | No change |
+
+**What's not in this record:** the individual 1-5 score for each of the 8
+non-flagged strings, and the exact score (vs. just "≤2 or flagged") for the
+6 hard-word strings above, were not included in what was relayed to this
+session — only the flag/no-flag outcome and, for the two error messages,
+the specific "1/5" figure. The identities of the 8 non-flagged strings
+were also not enumerated. If the full 16-row table (every string, both
+raw scores, pass/fail) is needed for the record, it should be pulled from
+the rating harness's own output artifact, not reconstructed here from a
+partial summary.
+
+### What was changed and why
+
+`01202f86` rewrote the 7 strings the first pass flagged (6 consensus-hard-word
+strings plus README's freshness bullet, which is the same string as one of
+the 6 — see the updated "Detailed findings and fixes" table above for
+old/new text per key). `calibrationConfidenceAppend`'s "estimate" was left
+untouched — see the table entry above for why keeping a flagged word can be
+the correct call rather than automatically rewriting away every flag.
+
+### Second pass
+
+<to be filled>
+
+## Follow-up correction 2 (2026-09-23) — screenshots and this audit table
+
+`06-accordion-opened-375-after.png`/`08-model-signal-375-after.png` were
+already current (their underlying keys, `accSummaryDirectionOff`/
+`reliabilityCoverage`, were touched by the earlier "usually" fix, not by
+01202f86's wording, except `reliabilityCoverage`'s "estimated range" →
+"the range we show" change, which DOES affect `08-model-signal-375-after.png`
+again). `02-main-page-375-after.png`, `04-main-page-1280-after.png`,
+`08-model-signal-375-after.png`, and `11-how-we-know-375.png` were
+re-captured after `01202f86` (first-visit panel, footer, model-signal card,
+and how-we-know.html's intro all changed visible text).
