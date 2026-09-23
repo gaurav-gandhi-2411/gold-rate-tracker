@@ -40,6 +40,7 @@
   "tests/test_inference_main.py": 8,
   "tests/test_inject_metrics.py": 21,
   "tests/test_inr_proxy.py": 11,
+  "tests/test_inr_proxy_labels.py": 6,
   "tests/test_llm_cache_helpers.py": 25,
   "tests/test_lock_satisfies_floors.py": 6,
   "tests/test_macro.py": 22,
