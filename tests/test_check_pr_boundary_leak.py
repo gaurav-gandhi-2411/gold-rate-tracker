@@ -584,3 +584,40 @@ def test_other_fetch_failures_still_fail_closed():
     fake = _deleted_base_fake_run("otherpid", fetch_stderr="Authentication failed for")
     with patch("subprocess.run", side_effect=fake), pytest.raises(mod.BoundaryLeakError):
         mod.check_foreign_commits(100, "owner/repo", "master")
+
+
+def test_unique_commits_excludes_merge_commits():
+    """A merge's `git show` is only its conflict-resolution hunks; two PRs that
+    resolved the same generated-file conflict identically matched as a false
+    foreign commit (#1933 vs #1921). Merges must not be patch-id'd."""
+    seen: list[list[str]] = []
+
+    def fake_run(args, **kwargs):
+        seen.append(list(args))
+        if args[:2] == ["git", "fetch"]:
+            return _proc(returncode=0)
+        if args[:2] == ["git", "log"]:
+            return _proc(returncode=0, stdout="c1\nc2\n")
+        raise AssertionError(f"unexpected call: {args}")
+
+    with patch("subprocess.run", side_effect=fake_run):
+        assert mod._unique_commits("master", "head") == ["c1", "c2"]
+    log_calls = [a for a in seen if a[:2] == ["git", "log"]]
+    assert log_calls and "--no-merges" in log_calls[0]
+
+
+def test_api_commit_list_keeps_single_parent_commits_only():
+    seen: list[list[str]] = []
+
+    def fake_run(args, **kwargs):
+        seen.append(list(args))
+        if args[:2] == ["git", "fetch"]:
+            return _proc(returncode=0)
+        if args[:2] == ["gh", "api"]:
+            return _proc(returncode=0, stdout="c1\n")
+        raise AssertionError(f"unexpected call: {args}")
+
+    with patch("subprocess.run", side_effect=fake_run):
+        assert mod._pr_commits_via_api(916, "owner/repo") == ["c1"]
+    api_call = next(a for a in seen if a[:2] == ["gh", "api"])
+    assert "select((.parents | length) == 1)" in api_call[api_call.index("--jq") + 1]
