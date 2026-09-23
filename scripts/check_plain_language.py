@@ -353,7 +353,9 @@ def _docstring_node_ids(tree: ast.AST) -> set[int]:
     ids: set[int] = set()
     nodes: list[ast.AST] = [tree]
     nodes.extend(
-        n for n in ast.walk(tree) if isinstance(n, ast.FunctionDef | ast.AsyncFunctionDef | ast.ClassDef)
+        n
+        for n in ast.walk(tree)
+        if isinstance(n, ast.FunctionDef | ast.AsyncFunctionDef | ast.ClassDef)
     )
     for node in nodes:
         body = getattr(node, "body", None)
@@ -377,7 +379,11 @@ def scan_python_file(path: Path) -> list[Violation]:
     skip_ids = _docstring_node_ids(tree)
     out: list[Violation] = []
     for node in ast.walk(tree):
-        if isinstance(node, ast.Constant) and isinstance(node.value, str) and id(node) not in skip_ids:
+        if (
+            isinstance(node, ast.Constant)
+            and isinstance(node.value, str)
+            and id(node) not in skip_ids
+        ):
             out.extend(_check_text(node.value, path, node.lineno))
     return out
 
@@ -440,7 +446,9 @@ def main() -> int:
     violations = collect_violations()
     if violations:
         for rel, line_no, term_label, snippet in sorted(violations):
-            print(f"{rel}:{line_no}: banned term [{term_label}] found: {snippet!r}", file=sys.stderr)
+            print(
+                f"{rel}:{line_no}: banned term [{term_label}] found: {snippet!r}", file=sys.stderr
+            )
         print(
             f"\nFAIL: {len(violations)} plain-language violation(s). "
             "See docs/PLAIN_LANGUAGE_AUDIT.md.",

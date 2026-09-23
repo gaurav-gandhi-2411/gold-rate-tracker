@@ -162,14 +162,18 @@ _BANNED_TERM_CASES = [
 ]
 
 
-@pytest.mark.parametrize("term_label,sentence", _BANNED_TERM_CASES, ids=[c[0] for c in _BANNED_TERM_CASES])
+@pytest.mark.parametrize(
+    "term_label,sentence", _BANNED_TERM_CASES, ids=[c[0] for c in _BANNED_TERM_CASES]
+)
 def test_each_banned_term_fails(repo, term_label, sentence):
     (repo / "index.html").write_text(
         _CLEAN_INDEX_HTML.replace("Today's price is on the low side for the month.", sentence),
         encoding="utf-8",
     )
     violations = cpl.collect_violations()
-    assert any(v[2] == term_label for v in violations), f"expected {term_label!r} to be flagged, got {violations!r}"
+    assert any(v[2] == term_label for v in violations), (
+        f"expected {term_label!r} to be flagged, got {violations!r}"
+    )
 
 
 def test_sigma_symbol_fails(repo):
@@ -253,7 +257,9 @@ def test_i18n_js_comment_inside_strings_block_is_not_scanned(repo):
 
 
 def test_i18n_js_value_is_scanned(repo):
-    js = _CLEAN_I18N_JS.replace('greeting: "Today\'s price is here",', 'greeting: "Our model says so",')
+    js = _CLEAN_I18N_JS.replace(
+        'greeting: "Today\'s price is here",', 'greeting: "Our model says so",'
+    )
     (repo / "i18n.js").write_text(js, encoding="utf-8")
     violations = cpl.collect_violations()
     assert any(v[0] == "i18n.js" and v[2] == "model" for v in violations)
