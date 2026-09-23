@@ -1501,3 +1501,49 @@ Handed to GG with #1920.
   `live_h2 [adr038-A1]`, and an appended entry with `protocol_version`, `scored_as_of_dates` all
   after 2026-09-23, and `train_max_label_dates` each earlier than its date.
 - The M3 stratified shadow result, with n and Wilson CIs.
+
+
+## Checkpoint — 2026-09-23 (night): A1 re-freeze, why direction is noise, R1–R4, the race fix
+
+**Correction to the previous checkpoint:** the COMEX PR it cites as #1939 was superseded by #1942 (merged).
+
+**A1 — second amendment to ADR 038 (#1949, merged; before any post-registration day was scored).**
+- The proxy arm now uses the prior trading day's India VIX.
+- The frozen reference figures (p 0.00340, effective n 119.38) came from **no committed code or data**. Each suspect was tested:
+  - run-to-run: bit-identical;
+  - sklearn 1.9.0 vs 1.9.1: identical;
+  - three data snapshots: identical;
+  - every Bartlett/uniform HAC bandwidth 0–5: none gives 0.10260.
+- Re-frozen from the deterministic pipeline: p 0.004299, effective n 112.525, n-for-power 144.17, per-fold digest pinned.
+- Reproduced exactly in two Windows venvs and on Linux (run 35867359498). The first Linux attempt failed only on 10-decimal probability float order, so the digest now pins decisions plus 6 decimals.
+- The 144.17 target counts autocorrelation twice (conservative); a consistent version would be ~101. Flagged for GG, not changed.
+
+**Race fix (#1950, merged, live-verified).** evaluate.py stamps `source_sha`. `scripts/prepare_direction_eval_publish.py` publishes only the newest computation and builds the publish commit on master. After two quick ml/direction merges, master's JSON carries the newest evaluator SHA (b461cf2f) and neither refresh conflicted. The first post-merge publish failed on a GitHub 500 and passed on re-run.
+
+**D — why direction is noise (ADR 040, draft #1955, run 35870505399).**
+- Not underfitting: capacity doesn't help. High-capacity models overfit (train 100%, validation ≈ majority).
+- Learning curves approach the baseline and never cross it.
+- The pipeline can only see edges of about 10 points of oracle accuracy (misses ≤ 5).
+- The series is near a random walk, with weak regime-dependent structure: 20-day variance ratio 1.36 when calm (momentum), 0.64 when volatile (reversal).
+- No feature family beats climatology alone.
+- Verdict: genuinely little signal, plus a detection limit.
+
+**R2 nowcast (#1957).**
+- Current MAE ₹61.4/g (0.44%) over 89 walk-forward days.
+- Adding IBJA's AM fix: same-day error ₹45 → ₹35/g (BH ✓, not Bonferroni on all days).
+- Weekend/holiday days (₹96/g) are unsolved. A COMEX × USD/INR adjustment makes them worse.
+
+**R3 buyer policy (draft #1956).** No pre-registered policy saves money reliably. Best: +₹8–12/g, not significant after correction.
+
+**R4 selective direction (draft #1958).** Fails its pre-registered criterion. The one Bonferroni-significant cell is on the INR proxy, consistent with the proxy's artificial day-to-day reversal. Nothing on real IBJA or COMEX.
+
+**R1 range forecast, U plain-language site:** executor agents in progress.
+- R1 branch: `feat/r1-range-forecast`.
+- U branch: `feat/plain-language-site`, for GG.
+
+**Data findings (FOUND, not fixed; GG's call where user-visible).**
+- `data/ibja_rates.parquet` is **not daily before 2025-Q2** (median gap 5–18 days) and has one row in 2026-Q1. Analyses now use dense segments only.
+- 13 of 182 rows in the INR direction dataset have "2-day" labels spanning 7–101 days. This affects the published direction numbers and the pre-registration's training rows. New post-registration days are daily.
+- COMEX analyses re-download from yfinance, and history revisions shift results slightly; datasets should be frozen as artifacts.
+
+**M3 (#1906, merged).** At n = 89, Wilson CI widths are 16–20 pp, so the comparison is underpowered. The static band under-covers at 90% (80.9%, CI 71.5–87.7%).
