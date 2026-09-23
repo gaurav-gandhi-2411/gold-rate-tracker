@@ -1424,7 +1424,7 @@ embargo. On the same data it becomes 60.38% vs 59.75%, n=159, p=0.327
   differs. Cause not isolated.
 - #1915 was already merged at session start, although the handover listed it as open.
 
-**D1 — pre-registration amendment A1 (#1925 merged; #1933 open at checkpoint, must land before
+**D1 — pre-registration amendment A1 (#1925 merged; #1933 open merged as 1003e46d on 2026-09-23; had to land before
 Sun 2026-09-27 02:00 UTC).** Embargo on `label_date_h2`, only `as_of_date > 2026-09-23` scored,
 config/test/alpha/135.9 frozen, dated amendment in ADR 038. Two defects found by running the step
 exactly as the workflow does:
@@ -1456,7 +1456,7 @@ pushes in quick succession race.
 
 **Guard fixes.**
 - #1928 (merged): boundary-leak-check survives a closed PR's deleted base branch.
-- #1936 (open): it ignores merge commits. #1933 was flagged because its merge-from-master and
+- #1936 (merged): it ignores merge commits. #1933 was flagged because its merge-from-master and
   #1921's resolved the same `tests/test_count_baseline.json` conflict identically.
 - #1921 (merged): the units guard.
 
@@ -1477,5 +1477,27 @@ pushes in quick succession race.
   Lagging it to the prior trading day gives 47.8% (p=0.953). Not significant either way.
 - The proxy arm stays as registered. The leak is reported to GG rather than changed unilaterally.
 
-**D3 — estimator presets:** in progress on `feat/p5-jewellery-estimator-presets`, fresh from
-master, carrying #1922/#1923's content. For GG's review, not self-merge.
+**Item 5 result — COMEX (draft #1939, report `reports/comex_direction_run_35857172862.json`).**
+18 tests (6 target/horizon combos × 3 models, 2,621–3,201 folds each):
+- **0 significant** under Bonferroni (0.00278) or BH. 0 embargo violations.
+- Nominal best: deadzone h1 logistic, 55.0% vs 52.5% majority, p=0.010 uncorrected. Its edge sits
+  in 2018–2021 (p=0.017) and vanishes in 2022–2026, where it equals the majority class in every
+  fold.
+- M2's `detrended_h10` lead does not replicate (53.3% vs 51.3%, p=0.22, effective n 795).
+- buyer_decision: the models reproduce the 77% "no dip" majority. The earlier "100%" was the
+  units bug.
+
+**D3 — estimator presets: #1940 (draft, for GG).** Supersedes #1922/#1923. Presets 3–8/8–12/15–25%
+with typical values 5/10/20% (my rounded picks, flagged for GG), custom % or ₹/g, a rate-source
+line, and an "Estimate — stores vary." label. 145/145 PWA tests pass; a verifier subagent
+reviewed it. The new strings have no Hindi yet; the file's convention is to wait for
+native-speaker review.
+
+**Item 7:** #1919 synced to the embargoed numbers, with the two falsified phrases neutralised.
+Handed to GG with #1920.
+
+**Open for Sunday 2026-09-27:**
+- Behavioural check of the amended pre-registration step: log line
+  `live_h2 [adr038-A1]`, and an appended entry with `protocol_version`, `scored_as_of_dates` all
+  after 2026-09-23, and `train_max_label_dates` each earlier than its date.
+- The M3 stratified shadow result, with n and Wilson CIs.
