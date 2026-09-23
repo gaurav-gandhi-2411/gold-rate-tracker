@@ -89,8 +89,9 @@ const STRINGS = {
     calcRateUsedTanishq: ({ rate }) => `Rate used: 22K ₹${rate}/g — Tanishq store rate`,
     calcEstimatedNote: "Today's price is an estimate, so this total is too.",
     calcStaleNote: ({ rel }) => `Uses the last confirmed price, from ${rel}.`,
+    calcEstimateStoresVary: "Estimate — stores vary.",
     calcDisclaimer:
-      "Estimate — stores vary. Your jeweller's bill will differ — hallmarking (HUID) fees, stones, wastage and store pricing aren't included.",
+      "Your jeweller's bill will differ — hallmarking (HUID) fees, stones, wastage and store pricing aren't included.",
     calcEmptyState: "Enter a quantity to see the cost.",
 
     commentaryAriaLabel: "Market commentary",
@@ -424,9 +425,9 @@ const STRINGS = {
     // calcDisclaimer) and the jewellery-type presets added 2026-09-23 (calcPresetsLegend,
     // calcPresetCoins/Plain/Intricate/Custom + their *Range/*Hint variants,
     // calcCustomValueLabel, calcCustomInvalid, calcRowMakingWithPct, calcRangeLabel,
-    // calcRateUsedIbja/Fusion/Tanishq) have NO Hindi entry yet on purpose: pending
-    // native-speaker review rather than machine translation. t() falls back to the
-    // English string until they're added here.
+    // calcRateUsedIbja/Fusion/Tanishq, calcEstimateStoresVary) have NO Hindi entry yet on
+    // purpose: pending native-speaker review rather than machine translation. t() falls
+    // back to the English string until they're added here.
     calcKaratLabel22: "22 KT",
     calcRowGoldValue: "सोने की कीमत",
     calcRowMaking: "मेकिंग चार्ज",

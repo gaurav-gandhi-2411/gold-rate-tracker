@@ -205,6 +205,21 @@ test("render: default preset (plain bangles & rings) carries the disclaimer, a t
   assert.match(html, /₹1,52,510 – ₹1,58,159/);
 });
 
+test("render: the making-charge range is its own line under the row, not packed into the value cell", () => {
+  const html = renderWith();
+  // The row itself carries only the typical amount -- no range text inside its own <span>.
+  assert.match(html, /<span>Making charge \(10%\)<\/span><span>₹13,710<\/span>/);
+  // low 8%: making 10968; high 12%: making 16452 -- as a sibling <p>, not inline in the row.
+  assert.match(html, /<\/div><p class="calc-result-range">Range ₹10,968 – ₹16,452<\/p>/);
+});
+
+test("render: 'Estimate — stores vary' is its own prominent line, separate from the HUID/stones fine print", () => {
+  const html = renderWith();
+  assert.match(html, /<p class="calc-estimate-label">Estimate — stores vary\.<\/p>/);
+  // The fine-print disclaimer no longer opens with the estimate phrase -- it's a distinct line now.
+  assert.match(html, /<p class="calc-disclaimer">Your jeweller's bill will differ/);
+});
+
 test("render: zero grams shows the empty state, not a ₹0 total", () => {
   assert.match(renderWith({ grams: "0" }), /Enter a quantity/);
 });

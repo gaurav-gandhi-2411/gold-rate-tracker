@@ -854,9 +854,9 @@ const DEFAULT_PRESET_ID = "plain"; // "Plain bangles & rings" -- the most common
 
 // Typical/low/high cost breakdown for a preset, or a single (typical=low=high) breakdown
 // for a custom making charge -- a preset shows a buyer the plausible spread for that
-// jewellery TYPE (requirement: low–high isn't a free-form guess any more, it's tied to a
-// named category); custom is a single jeweller-quoted figure with no invented range around
-// it (requirement: "no free bounds needed" -- see PR discussion). customUnit is "pct" (%
+// jewellery TYPE, so low-high is tied to a named category rather than a free-form guess;
+// custom is a single jeweller-quoted figure, and inventing a range around a number the
+// buyer already knows exactly would only add false uncertainty. customUnit is "pct" (%
 // of gold value) or "perGram" (flat ₹/gram), only consulted when presetId === "custom".
 // Returns null on an unknown presetId or invalid custom input.
 function computePurchaseCostRange({ ratePerGram, grams, presetId, customValue, customUnit, gstPct = 3 }) {
@@ -1347,17 +1347,19 @@ function renderCalculator(readings, forecast) {
 
   // Making-charge row label: presets show "Making charge (N%)" against the preset's own
   // typical %; custom shows the same when quoted as a %, or the plain label when quoted
-  // ₹/gram (no % to name). Presets always carry a low–high subrange next to the typical
-  // amount (requirement: "the range"); custom never does -- a single jeweller-quoted
-  // figure has no invented range around it.
+  // ₹/gram (no % to name). Presets carry their own "Range ..." line right under the row,
+  // same pattern as the total's range line below -- inline next to the amount used to
+  // wrap onto its own line at narrow widths (e.g. 375px), reading as garbled two-line
+  // cell text instead of a clean row; custom never shows a range -- a single jeweller-
+  // quoted figure has no invented range around it.
   const preset = MAKING_CHARGE_PRESETS.find((p) => p.id === presetId);
   const makingLabel = !isCustom
     ? t("calcRowMakingWithPct", { pct: preset.typical })
     : customUnit === "pct"
       ? t("calcRowMakingWithPct", { pct: customValue })
       : t("calcRowMaking");
-  const makingSubrange = !isCustom
-    ? ` <span class="calc-result-subrange">${t("calcRangeLabel", { range: fmtINRRange(r22.low.making, r22.high.making) })}</span>`
+  const makingRangeLine = !isCustom
+    ? `<p class="calc-result-range">${t("calcRangeLabel", { range: fmtINRRange(r22.low.making, r22.high.making) })}</p>`
     : "";
 
   // XSS-safe: every interpolated value is either fmtINR(number)/fmtINRRange(numbers) or a
@@ -1367,10 +1369,11 @@ function renderCalculator(readings, forecast) {
     <div class="calc-result-card">
       <div class="calc-result-karat">${isEstimateTier ? "≈ " : ""}${t("calcKaratLabel22")}</div>
       <div class="calc-result-row"><span>${t("calcRowGoldValue")}</span><span>₹${fmtINR(r22.typical.goldValue)}</span></div>
-      ${r22.typical.making > 0 ? `<div class="calc-result-row"><span>${makingLabel}</span><span>₹${fmtINR(r22.typical.making)}${makingSubrange}</span></div>` : ""}
+      ${r22.typical.making > 0 ? `<div class="calc-result-row"><span>${makingLabel}</span><span>₹${fmtINR(r22.typical.making)}</span></div>${makingRangeLine}` : ""}
       <div class="calc-result-row"><span>${t("calcRowGst", { pct: CALC_GST_PCT })}</span><span>₹${fmtINR(r22.typical.gst)}</span></div>
       <div class="calc-result-row calc-result-row--total"><span>${t("calcRowTotal")}</span><span>₹${fmtINR(r22.typical.total)}</span></div>
       ${!isCustom ? `<p class="calc-result-range">${t("calcRangeLabel", { range: fmtINRRange(r22.low.total, r22.high.total) })}</p>` : ""}
+      <p class="calc-estimate-label">${t("calcEstimateStoresVary")}</p>
       ${isEstimateTier ? `<p class="calc-estimated-note">${t("calcEstimatedNote")}</p>` : staleNote}
       <p class="calc-disclaimer">${t("calcDisclaimer")}</p>
     </div>

@@ -1328,12 +1328,17 @@ main {
   color: var(--cream-mute);
   font-variant-numeric: tabular-nums;
 }
-.calc-result-subrange {
-  font-size: var(--ts-xs);
-  color: var(--cream-mute);
+/* The estimate label is the one line in this card that must NOT read as fine print --
+   bold and full cream (not the muted grey every other note/disclaimer line uses) so it
+   stands out as a clear claim next to the Total, not a footnote. */
+.calc-estimate-label {
+  margin: var(--space-3) 0 0;
+  font-size: var(--ts-sm);
+  font-weight: 600;
+  color: var(--cream);
 }
 .calc-disclaimer {
-  margin: var(--space-3) 0 0;
+  margin: var(--space-2) 0 0;
   font-size: var(--ts-xs);
   color: var(--cream-mute);
   line-height: 1.45;
