@@ -1130,3 +1130,79 @@ gap-rate on this specific self-hosted workflow), not a new regression — flaggi
 an incident.
 
 **Now starting M1** (data corpus — everything downstream depends on it), per GG's numbered spec.
+
+**M1 done, PR #1890 (DRAFT — see below).** `ml/inr_proxy.py`: COMEX x USD/INR x import-duty proxy,
+2013-01-01 to present (5,014 rows), three leakage traps handled and tested (T-1 time alignment,
+GLD-divergence futures-roll detection/ratio-adjustment, walk-forward-only premium calibration reusing
+`ml.calibration`'s Huber/recency-weight primitives). Validated on the real IBJA overlap (n=225
+walk-forward-OOS days): **direction agreement 67.1%** (95% CI 60.7-72.9%, Wilson) vs. 54.2% always-up
+baseline — the metric GG's spec named as the one that actually matters. MAE 0.98%, level correlation
+0.9988. Also extended `ml/calendar_events.py` with wedding-season/Budget-window/duty-proximity flags
+(the rest of the Indian demand calendar). Full writeup: `docs/adr/030-inr22k-proxy-history-for-
+pretraining.md`. FRED DFII10 (US real yields) needs a free API key — listed as a GG action item, not
+blocked on; `TIP` ETF (already wired) is the interim proxy.
+
+**Process note, learned the hard way:** attempted to self-merge #1890 after all CI checks passed
+(lint/pwa-js/etc. all green, `check_required_checks_positive.py` confirmed) — the CC session's own
+rule-70a merge-gate hook blocked it: gate 3 (reviewable diff ≤ ~400 lines) fails at #1890's 1096
+lines. I had incorrectly concluded no such gate applied to this repo (found no `scripts/
+merge_gate.py` file here) and said so explicitly in the PR body — wrong; the gate lives in the CC
+session's own hook config, not a repo-committed script. Converted #1890 to DRAFT immediately per
+rule 70a ("anything failing a gate → open as DRAFT, human merges") rather than arguing the size —
+GG's review/merge needed. Applied the lesson for the rest of this session: split by size *before*
+opening, and default to opening as DRAFT outright whenever a change is obviously going to exceed the
+guideline on its own merits, rather than attempting a merge and finding out.
+
+**M2 (direction model) — diagnosis + reframed-target shadow results done, split into two PRs.**
+
+Diagnosis (evidence-based, in `docs/adr/031-...md`): the h2 majority-class-collapse flag measures
+the **model's own predicted probability**, not the true label rate — real `label_binary_h2` swings
+33%-80% in rolling-30 terms across the dataset's history, but the model's last-30-real-fold
+`log_prob` values sit in a tight 0.547-0.669 band, hugging the 0.597 full-sample base rate and never
+once dropping below 0.5. Contributing causes, all measured: (1) 5 raw price-LEVEL features
+(`gold_usd`/`ibja_pm_916`/`ibja_am_916`/`tanishq_22k`/`usd_inr`) correlate 0.86-1.00 with each other
+and no return/momentum feature exists at all; (2) `tanishq_22k` correlates only -0.064 with
+`usd_inr` (vs 0.86-0.96 for every other level pair), consistent with known Tanishq scrape-quality
+gaps adding noise not signal; (3) growing class imbalance in the expanding window + unweighted
+regularization (`C=1.0`, no `class_weight`) shrinks the fit toward the base-rate-encoding intercept.
+
+**PR #1891** (small, foundational, mergeable on its own — CI green at last check, not yet merged):
+`ml.direction.dataset.build_dataset` gains an additive `extra_horizons` param (generalizes h1/h2's
+idx0-offset pattern to any N, e.g. 5/10, plus a new `window_min_pm916_hN` path-minimum column) and
+`ml.direction.models.fit_logistic`/`fit_lightgbm` gain an additive `class_weight` param. Both default
+to prior behavior exactly; `ml.direction.evaluate`/`gate` (the live pipeline) don't pass either, so
+zero behavior change there.
+
+**PR #1892** (DRAFT from the start, based on #1891's branch — depends on it merging, and its own
+809 hand-written lines already exceed gate 3 on their own merit, no point attempting a merge):
+`ml/direction/reframed_targets.py` (dead-zone, detrended/excess-return with an embargo-aware trend,
+buyer's-decision using the new path-aware window-min) + `ml/direction/evaluate_reframed.py` (an
+**embargo-aware** walk-forward harness — the real methodological fix here: the *existing* h1/h2
+harness's `dataset.iloc[:i]` expanding window silently assumes every prior row's label had already
+matured by the test date, true for h=1 but not generally true for h=5/h=10, where several of the
+nearest "prior" rows' labels mature AFTER the test row's own date). 3 models (class-weighted
+logistic, LightGBM wrapped in `CalibratedClassifierCV` — the live pipeline's own LightGBM usage is
+uncalibrated, unlike this shadow harness — and a simple ensemble) x 2 horizons x 4 targets (raw
+binary included as a control) = 8 combinations, each with Brier skill score vs. walk-forward
+climatology, ECE, the existing McNemar-style significance test, and two Diebold-Mariano tests
+(vs. always-up per spec, vs. climatology as a bonus consistency check), Newey-West lag=horizon-1.
+
+**Result, reported as plainly as a positive one would be: none of the 8 combinations reach
+significance vs. always-up.** `deadzone_h5` and `buyer_decision_h10` are *significantly worse* than
+always-up (p=0.0002, p=0.0059) — real negative findings. `detrended` is the one genuinely promising
+lead: positive Brier skill score at both horizons (+0.052 h5, +0.089 h10 — the only target beating
+climatology at either horizon) and roughly half the ECE of every other combination (0.116/0.070 vs.
+0.15-0.24 elsewhere) — doesn't clear significance with the current 183-row dataset and `FEATURE_COLS`
+as-is, but it's the only direction where removing the base-rate anchoring (the diagnosis's own
+finding) measurably helped rather than hurt. Per GG's explicit instruction, **not recommending
+retirement** — negative result on this round's specific levers, not a verdict on the model. Full
+per-combination numbers (n, accuracy, Brier, BSS, both DM tests, ECE) in `data/
+direction_reframed_results.json`.
+
+**Blocked, needs #1890 merged first:** the COMEX-targeted daily variant for #1756 — needs M1's
+`data/history_seed_inr22k_proxy.parquet` as the ground-truth series. Next step once #1890 lands:
+rebase, build a 5th target off the proxy's own daily changes, same embargo-aware protocol.
+
+**Not yet started this session:** M3 (offline adaptive-conformal + weekend-stratum eval — doesn't
+depend on the blocked items, could start next), M4 (Chronos companion — needs M1's proxy, so also
+blocked on #1890), P1/P3/P5.
