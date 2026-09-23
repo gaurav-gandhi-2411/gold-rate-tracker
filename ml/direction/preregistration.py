@@ -52,13 +52,20 @@ data it was meant to be independent of. The amended live arm (a) trains only
 on rows whose label_date_h2 is strictly before the test as_of_date
 (EMBARGO_LABEL_DATE_COL), and (b) scores only test days with as_of_date after
 CONFIRMATORY_AFTER_AS_OF. The model configuration, the test, alpha and
-PREREGISTERED_N_FOR_POWER are unchanged (frozen). Note: 135.9 was derived
+PREREGISTERED_N_FOR_POWER are unchanged (frozen; A2 re-froze it). Note: 135.9 was derived
 from the leaky effect size; with the embargo, the same data shows no
 significant edge (60.38% vs 59.75% always-up, n=159, p=0.327 —
 reports/preregistration_embargo_a1.json), so the true effect — if
 any — is smaller than the power target assumes, and the test is optimistic
 about its own power. Kept frozen anyway: re-deriving it now would be the
 goalpost-moving this module exists to prevent.
+
+AMENDMENT A2 (2026-09-23, approved by GG, made BEFORE any post-registration
+day was scored -- the pre-registration step has never run): (1) the proxy arm
+now uses the prior trading day's India VIX close (it used the close of the
+same day whose move it predicts); (2) the reference figures are re-frozen
+from a reproducible computation (see REFERENCE). Model configuration, test
+and alpha unchanged.
 """
 
 from __future__ import annotations
@@ -94,21 +101,40 @@ PREREGISTERED_CONFIG: dict = {
 ALTERNATIVE = "less"
 ALPHA = 0.05
 
-# Frozen 2026-09-23 from the ADR-034-reproducing run (docs/adr/038):
-# n=161, effective_n=119.38, mean_diff=-0.06832, long_run_var=0.10260,
-# dm_stat=-2.7065, p=0.00340 (one-sided HAC-DM, lag=1, vs always-up
-# misclassification loss). n_for_power at 80%/alpha=0.05 for THIS effect
-# size, on the effective_n scale: 135.9. The 161-fold sample that produced
-# it was itself nominally underpowered for 80% detection at this effect
-# size (119.38 < 135.9) despite reaching p=0.0034 — power calculations
-# describe average-case detection, not a guaranteed miss below the
-# threshold; reported here exactly as computed, not smoothed over.
+# Reference figures for the SELECTION data (config J, original protocol: no
+# embargo, all 161 folds to as_of 2026-09-18). RE-FROZEN 2026-09-23 by
+# amendment A2 (docs/adr/038): the first freeze (n=161, effective_n=119.38,
+# long_run_var=0.10260, p=0.00340, n_for_power=135.9) could not be
+# reproduced from any committed code and data. The committed pipeline is
+# deterministic -- identical per-fold output across repeated runs, two
+# library-version sets and three data snapshots -- and gives the values
+# below. Reproduce with `python scripts/analysis_prereg_reference.py --check`;
+# fold_digest pins the exact per-fold (date, label, probability) sequence.
+REFERENCE: dict = {
+    "n": 161,
+    "effective_n": 112.524964,
+    "mean_diff": -0.06832298,
+    "long_run_var": 0.10885093,
+    "p_value": 0.00429914,
+    "accuracy": 0.65838509,
+    "n_for_power": 144.1673,
+    "first_as_of": "2025-05-08",
+    "last_as_of": "2026-09-18",
+    "fold_digest": "009b0923923630cfd83e0d7236f454af3b4a102d2b9304028d213f4644f4fdc3",
+}
+# n for 80% power at alpha=0.05, one-sided, for the reference effect size,
+# built exactly as the first freeze built 135.9: std = sqrt(long-run
+# variance), compared against effective_n. That construction counts the
+# autocorrelation twice (once in the std, once in effective_n), so it asks
+# for more data than a consistent one would (~101 effective folds with
+# std = sqrt(gamma_0)); kept as the conservative choice, flagged in ADR 038.
+# It rests on the leaky effect size, so it is optimistic about power.
 # DO NOT recompute from accumulating shadow data (see module docstring).
-PREREGISTERED_N_FOR_POWER: float = 135.9
+PREREGISTERED_N_FOR_POWER: float = REFERENCE["n_for_power"]
 
 # Amendment A1 (docs/adr/038). Protocol id stored on every logged run so the
 # append-only log shows which protocol produced each entry.
-PROTOCOL_VERSION = "adr038-A1"
+PROTOCOL_VERSION = "adr038-A2"
 # Training row j is usable for test day i only if label_date_h2[j] < as_of[i]
 # (the outcome had matured). At h2 this is an embargo of >= 2 trading days.
 EMBARGO_LABEL_DATE_COL = "label_date_h2"
@@ -223,7 +249,9 @@ def build_proxy_deadzone_dataset(
         np.where(out["move_per_gram"] < -threshold_rs_per_gram, 0.0, np.nan),
     )
     out = out.dropna(subset=["label_binary_deadzone"]).reset_index(drop=True)
-    out = augment_with_m1_drivers(out)
+    # Amendment A2: the proxy label is day t's own move, so day t's VIX close
+    # is not known in time to predict it -- use the prior trading day's close.
+    out = augment_with_m1_drivers(out, india_vix_prior_day=True)
     return out
 
 
@@ -270,7 +298,7 @@ def append_shadow_result(result: dict, path: Path = SHADOW_RESULTS_PATH) -> dict
         history = {"preregistered_n_for_power": PREREGISTERED_N_FOR_POWER, "runs": []}
     entry = dict(result)
     entry["scored_at_utc"] = datetime.now(UTC).isoformat()
-    # The 135.9-effective-fold target is h2-specific (ADR 038) -- only the
+    # The pre-registered effective-fold target is h2-specific (ADR 038) -- only the
     # live_h2 arm's progress toward it is meaningful; the proxy arm uses a
     # different horizon/feature set and is never compared to this threshold.
     # effective_n is None when fewer than 2 post-registration days have been
