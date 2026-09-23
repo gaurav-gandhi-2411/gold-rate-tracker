@@ -95,13 +95,23 @@ jobs:
         continue-on-error: true
         run: python -m ml.calibration --score-coverage
 
+      - name: Score h2 pre-registration shadow arms (ADR 038)
+        # GG spec item 4 (2026-09-23): SHADOW ONLY -- never touches
+        # ml.direction.gate or data/direction_baseline.json. Appends this
+        # run's live-h2 and proxy-dead-zone results to
+        # data/preregistered_h2_shadow_results.json (append-only). continue-
+        # on-error: true so a transient failure (e.g. yfinance outage for the
+        # proxy arm's india_vix fetch) never blocks the backtest commit below.
+        continue-on-error: true
+        run: python scripts/run_preregistered_h2_shadow.py
+
       - name: Commit backtest results
         id: commit
         run: |
           set -e
           git config user.name "gold-rate-bot"
           git config user.email "actions@users.noreply.github.com"
-          git add data/backtest.json data/metrics_history.json data/coverage_metrics.json data/calibration_band_coverage.json || true
+          git add data/backtest.json data/metrics_history.json data/coverage_metrics.json data/calibration_band_coverage.json data/preregistered_h2_shadow_results.json || true
           if git diff --staged --quiet; then
             echo "No changes to commit."
             echo "changed=false" >> "$GITHUB_OUTPUT"
