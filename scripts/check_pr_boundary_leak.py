@@ -187,10 +187,17 @@ def _gh_pr_diff_names(pr_number: int, repo: str) -> set[str]:
 
 
 def _unique_commits(base_ref: str, head_sha: str) -> list[str]:
-    """Commits reachable from head_sha but not from origin/base_ref. Fetches
-    both first so this is correct even against a stale local clone."""
+    """Non-merge commits reachable from head_sha but not from origin/base_ref.
+    Fetches both first so this is correct even against a stale local clone.
+
+    Merge commits are excluded: `git show` of a merge prints only its
+    conflict-resolution hunks, so two unrelated PRs that each merged master
+    and resolved the same generated-file conflict (tests/test_count_baseline.json)
+    the same way got identical patch-ids and a false "foreign commit" (#1933
+    vs #1921, 2026-09-23). A merge's authored content is not what this check
+    is about; the PR's own commits are."""
     _git(["fetch", "origin", base_ref, head_sha])
-    log = _git(["log", f"origin/{base_ref}..{head_sha}", "--format=%H", "--reverse"])
+    log = _git(["log", f"origin/{base_ref}..{head_sha}", "--no-merges", "--format=%H", "--reverse"])
     return [line for line in log.splitlines() if line]
 
 
@@ -234,7 +241,8 @@ def _pr_commits_via_api(pr_number: int, repo: str) -> list[str]:
             f"repos/{repo}/pulls/{pr_number}/commits",
             "--paginate",
             "--jq",
-            ".[].sha",
+            # Single-parent commits only, matching _unique_commits' --no-merges.
+            ".[] | select((.parents | length) == 1) | .sha",
         ]
     )
     if result.returncode != 0:

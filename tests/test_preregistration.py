@@ -5,13 +5,19 @@ from __future__ import annotations
 import json
 
 import numpy as np
+import pandas as pd
 import pytest
+from ml.direction.dataset import FEATURE_COLS
 from ml.direction.preregistration import (
+    CONFIRMATORY_AFTER_AS_OF,
+    EMBARGO_LABEL_DATE_COL,
     PREREGISTERED_CONFIG,
     PREREGISTERED_N_FOR_POWER,
+    PROTOCOL_VERSION,
     _always_up_loss,
     _misclassification_loss,
     append_shadow_result,
+    run_live_arm,
     score_config,
 )
 
@@ -102,3 +108,55 @@ class TestAppendShadowResult:
         append_shadow_result(result, path=path)
         history = json.loads(path.read_text(encoding="utf-8"))
         assert history["runs"][0]["reached_preregistered_n"] is None
+
+
+def _dataset_straddling_registration(n: int = 60) -> pd.DataFrame:
+    """Daily rows from 2026-08-01, so some as_of_dates fall after the
+    registration date; label_date_h2 = the as_of_date two rows later."""
+    rng = np.random.default_rng(42)
+    dates = pd.date_range("2026-08-01", periods=n, freq="D").strftime("%Y-%m-%d").tolist()
+    rows = []
+    for i, as_of in enumerate(dates):
+        row: dict = {"as_of_date": as_of, "label_date_h2": dates[i + 2] if i + 2 < n else None}
+        for col in FEATURE_COLS:
+            row[col] = float(rng.uniform(0.5, 2.0))
+        row["label_binary_h2"] = int(rng.integers(0, 2))
+        rows.append(row)
+    return pd.DataFrame(rows).iloc[:-2].reset_index(drop=True)
+
+
+class TestAmendmentA1:
+    """ADR 038 amendment A1: embargo >= h and post-registration days only."""
+
+    def test_amendment_constants(self) -> None:
+        assert CONFIRMATORY_AFTER_AS_OF == "2026-09-23"
+        assert EMBARGO_LABEL_DATE_COL == "label_date_h2"
+        assert PROTOCOL_VERSION == "adr038-A1"
+
+    def test_live_arm_scores_only_post_registration_days_with_embargo(self) -> None:
+        dataset = _dataset_straddling_registration()
+        result = run_live_arm(dataset)
+        dates = result["scored_as_of_dates"]
+        expected = int((dataset["as_of_date"] > CONFIRMATORY_AFTER_AS_OF).sum())
+        assert expected > 0
+        assert result["n"] == len(dates) == expected
+        assert all(d > CONFIRMATORY_AFTER_AS_OF for d in dates)
+        for as_of, max_label in zip(dates, result["train_max_label_dates"], strict=True):
+            assert max_label < as_of
+        assert result["protocol_version"] == PROTOCOL_VERSION
+
+    def test_live_arm_with_no_post_registration_days_scores_zero(self) -> None:
+        dataset = _dataset_straddling_registration()
+        dataset = dataset[dataset["as_of_date"] <= CONFIRMATORY_AFTER_AS_OF]
+        result = run_live_arm(dataset)
+        assert result["n"] == 0
+        assert result["p_value"] is None
+        assert result["significant_at_05"] is False
+        # Must serialise as valid JSON (no bare NaN token) for the shadow log.
+        json.loads(json.dumps(result, allow_nan=False))
+
+    def test_append_handles_no_effective_n_yet(self, tmp_path) -> None:
+        path = tmp_path / "shadow.json"
+        append_shadow_result({"arm": "live_h2", "n": 1, "effective_n": None}, path=path)
+        history = json.loads(path.read_text(encoding="utf-8"))
+        assert history["runs"][0]["reached_preregistered_n"] is False
