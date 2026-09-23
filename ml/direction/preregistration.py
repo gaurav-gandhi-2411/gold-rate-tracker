@@ -139,10 +139,10 @@ def score_config(y_true: list[int], y_prob: list[float], horizon: int) -> dict:
     loss_model = _misclassification_loss(y_true, y_prob)
     loss_baseline = _always_up_loss(y_true)
     dm = diebold_mariano_test(loss_model, loss_baseline, horizon=horizon, alternative=ALTERNATIVE)
-    accuracy = float(np.mean([1.0 - v for v in loss_model])) if loss_model else float("nan")
-    baseline_accuracy = (
-        float(np.mean([1.0 - v for v in loss_baseline])) if loss_baseline else float("nan")
-    )
+    # None, not NaN, when nothing was scored (the live arm's early weeks):
+    # json.dumps writes NaN as a bare token that is not valid JSON.
+    accuracy = float(np.mean([1.0 - v for v in loss_model])) if loss_model else None
+    baseline_accuracy = float(np.mean([1.0 - v for v in loss_baseline])) if loss_baseline else None
     return {
         "n": dm["n"],
         "effective_n": dm["effective_n"],

@@ -152,6 +152,8 @@ class TestAmendmentA1:
         assert result["n"] == 0
         assert result["p_value"] is None
         assert result["significant_at_05"] is False
+        # Must serialise as valid JSON (no bare NaN token) for the shadow log.
+        json.loads(json.dumps(result, allow_nan=False))
 
     def test_append_handles_no_effective_n_yet(self, tmp_path) -> None:
         path = tmp_path / "shadow.json"
