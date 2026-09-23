@@ -1353,18 +1353,19 @@ main {
    and the estimated-price or stale-price note are both conditionally
    rendered, so the card is taller once a preset with a non-zero making %
    is selected and/or a note line is showing. Re-measured 2026-09-23 after
-   the jewellery-type presets replaced the flat range (natural scrollHeight
+   splitting the making-charge range onto its own line and promoting the
+   "Estimate — stores vary" label to its own bold line (natural scrollHeight
    at 375px, 20 g, .calc-wrap's own min-height zeroed out to read the real
-   content height): plain/intricate preset + fresh Tanishq rate 338px;
-   + stale-price note OR estimate-tier note 362px (the tallest realistic
+   content height): plain/intricate preset + fresh Tanishq rate 364px;
+   + stale-price note OR estimate-tier note 389px (the tallest realistic
    case -- those two notes are mutually exclusive, never both shown);
-   custom preset (no range line) 300px, +estimate note 324px. 370px covers
-   the 362px worst case with a small margin; a 10 kg entry (values wrap to
-   a second line) still grows the card beyond this, by design -- padding
-   every visit for that extreme isn't worth the gap. */
+   custom preset (no range line) 327px, +estimate/stale note 352px. 400px
+   covers the 389px worst case with a small margin; a 10 kg entry (values
+   wrap to a second line) still grows the card beyond this, by design --
+   padding every visit for that extreme isn't worth the gap. */
 .calc-wrap {
   position: relative;
-  min-height: 370px;
+  min-height: 400px;
 }
 .calc-skeleton {
   position: absolute;
