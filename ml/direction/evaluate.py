@@ -12,6 +12,8 @@ from __future__ import annotations
 
 import json
 import math
+import os
+import subprocess
 from datetime import UTC, datetime
 from pathlib import Path
 
@@ -536,10 +538,25 @@ HORIZONS: tuple[tuple[str, str], ...] = (
 )
 
 
+def _source_sha() -> str | None:
+    """GITHUB_SHA in CI, else the local checkout's HEAD; None if neither."""
+    sha = os.environ.get("GITHUB_SHA")
+    if sha:
+        return sha
+    try:
+        out = subprocess.run(
+            ["git", "rev-parse", "HEAD"], capture_output=True, text=True, check=True
+        )
+    except (OSError, subprocess.CalledProcessError):
+        return None
+    return out.stdout.strip() or None
+
+
 def append_history(result: dict, path: Path = HISTORY_JSONL) -> None:
     """Append one compact per-run record (all horizons) to the history log."""
     record: dict = {
         "generated_at_utc": result.get("generated_at_utc"),
+        "source_sha": result.get("source_sha"),
         "as_of_date_range": result.get("as_of_date_range"),
     }
     for hkey, wf in result.get("horizons", {}).items():
@@ -587,6 +604,11 @@ def main() -> None:
 
     result = {
         "schema_version": 2,
+        # The commit whose code produced these numbers. The publish step
+        # (scripts/prepare_direction_eval_publish.py) refuses to replace
+        # numbers produced by newer code, so a slower run on older code can
+        # never overwrite them.
+        "source_sha": _source_sha(),
         "generated_at_utc": horizons["h1"]["generated_at_utc"],
         "as_of_date_range": horizons["h1"]["as_of_date_range"],
         "min_train_size": MIN_TRAIN_SIZE,
