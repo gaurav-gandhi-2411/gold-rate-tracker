@@ -120,7 +120,7 @@ REFERENCE: dict = {
     "n_for_power": 144.1673,
     "first_as_of": "2025-05-08",
     "last_as_of": "2026-09-18",
-    "fold_digest": "b5e06b463499c5d0e2ceeedf18903ae092c0da210a4f92aae9da4c5f61b5ba19",
+    "fold_digest": "009b0923923630cfd83e0d7236f454af3b4a102d2b9304028d213f4644f4fdc3",
 }
 # n for 80% power at alpha=0.05, one-sided, for the reference effect size,
 # built exactly as the first freeze built 135.9: std = sqrt(long-run

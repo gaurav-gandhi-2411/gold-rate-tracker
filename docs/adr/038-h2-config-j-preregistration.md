@@ -184,7 +184,7 @@ deterministic, and the frozen numbers did not come from it.
 |---|---|---|---|---|---|---|
 | 161 | 112.525 | −0.068323 | 0.108851 | 0.004299 | 65.84% vs 59.01% | 144.17 |
 
-- **fold digest:** `b5e06b46…61b5ba19` (SHA-256 of every fold's date, label and probability).
+- **fold digest:** `009b0923…4644f4fdc3` (SHA-256 of every fold's date, label and probability).
 - **Reproduce:** `python scripts/analysis_prereg_reference.py --check`, which exits non-zero on
   any mismatch.
 - **Where it has been reproduced:** locally in two separate venvs with different library versions,

@@ -76,8 +76,13 @@ def compute_reference() -> dict:
     # Same n-for-power construction as the original freeze: std of the loss
     # difference taken as sqrt(long-run variance).
     power_n = n_for_power(scored["mean_diff"], math.sqrt(scored["long_run_var"]))
+    # Probabilities agree across platforms only to ~1e-10 (LightGBM/BLAS float
+    # order differs between Windows and Linux runners), so the digest pins what
+    # the test consumes -- date, label, 0/1 decision -- plus the probability to
+    # 6 decimals. The first freeze used 10 decimals and failed on Linux with
+    # every statistic identical.
     folds = [
-        [d, int(y), round(float(p), 10)]
+        [d, int(y), int(float(p) >= 0.5), round(float(p), 6)]
         for d, y, p in zip(raw["as_of_date"], raw["y_true"], raw["y_prob"], strict=True)
     ]
     fold_digest = hashlib.sha256(json.dumps(folds).encode()).hexdigest()
@@ -104,6 +109,7 @@ def compute_reference() -> dict:
         "first_as_of": folds[0][0],
         "last_as_of": folds[-1][0],
         "fold_digest": fold_digest,
+        "folds": folds,
     }
 
 
