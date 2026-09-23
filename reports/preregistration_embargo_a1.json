@@ -1,0 +1,45 @@
+{
+  "generated_at_utc": "2026-09-23T11:17:04.715915+00:00",
+  "git_sha": "a26c5ab25d7df1577dac313c74e42dfba8c1da58",
+  "dataset": {
+    "rows_with_h2_label": 181,
+    "as_of_min": "2025-01-09",
+    "as_of_max": "2026-09-18"
+  },
+  "original_no_embargo_all_folds": {
+    "n": 161,
+    "effective_n": 112.52496433666192,
+    "dm_stat": -2.6276267341315753,
+    "p_value": 0.004299140323664408,
+    "mean_diff": -0.06832298136645963,
+    "gamma_0": 0.07607731183210524,
+    "long_run_var": 0.10885093167701862,
+    "accuracy": 0.6583850931677019,
+    "always_up_accuracy": 0.5900621118012422,
+    "significant_at_05": true,
+    "first_as_of": "2025-05-08",
+    "last_as_of": "2026-09-18"
+  },
+  "embargo_all_folds": {
+    "n": 159,
+    "effective_n": 159.20304568527916,
+    "dm_stat": -0.44778076579191967,
+    "p_value": 0.3271557130407171,
+    "mean_diff": -0.006289308176100629,
+    "gamma_0": 0.03140698548316918,
+    "long_run_var": 0.031366929384603136,
+    "accuracy": 0.6037735849056604,
+    "always_up_accuracy": 0.5974842767295597,
+    "significant_at_05": false,
+    "first_as_of": "2025-05-12",
+    "last_as_of": "2026-09-18",
+    "embargo_violations": 0
+  },
+  "amended_live_arm": {
+    "n": 0,
+    "effective_n": null,
+    "p_value": null,
+    "accuracy": NaN,
+    "scored_as_of_dates": []
+  }
+}
