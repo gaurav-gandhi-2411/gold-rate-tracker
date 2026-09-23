@@ -100,6 +100,7 @@ def build_dataset(
     verbose: bool = False,
     snapshots_df: pd.DataFrame | None = None,
     ibja_df: pd.DataFrame | None = None,
+    extra_horizons: tuple[int, ...] = (),
 ) -> pd.DataFrame:
     """Build a leak-free directional dataset for walk-forward evaluation.
 
@@ -122,11 +123,20 @@ def build_dataset(
         snapshots_df: Inject a DataFrame in place of reading snapshots_path
             (for unit tests — parquet read is skipped when provided).
         ibja_df: Inject a DataFrame in place of reading ibja_path.
+        extra_horizons: Additional trading-day horizons (e.g. (5, 10)) beyond
+            the always-present h=1/h=2, for M2's longer-horizon reframed
+            targets. For each N here, adds next_pm916_hN, delta_per_gram_hN,
+            label_ternary_hN, label_binary_hN, label_date_hN (None/NaN when
+            fewer than N future IBJA days exist yet), and window_min_pm916_hN
+            (the minimum IBJA pm_916 across days [t+1 .. t+N] — the "did it
+            dip along the way" path information a single endpoint delta
+            can't answer, needed for the buyer's-decision target).
 
     Returns:
         DataFrame with columns: as_of_date, <FEATURE_COLS>, current_pm916,
         next_pm916, delta_per_gram, label_ternary, label_binary, label_date,
-        ibja_pm_916_asof_date, n_macro_null.  One row per kept snapshot,
+        ibja_pm_916_asof_date, n_macro_null, plus h1/h2 and any
+        extra_horizons columns described above.  One row per kept snapshot,
         sorted by as_of_date.
     """
     # --- Load data -----------------------------------------------------------
@@ -211,32 +221,61 @@ def build_dataset(
 
         feature_vals = {col: row[col] for col in FEATURE_COLS}
 
-        rows.append(
-            {
-                "as_of_date": as_of,
-                **feature_vals,
-                "current_pm916": current_pm916,
-                # h=1 (unsuffixed columns retained as h1 for backward-compat)
-                "next_pm916": next_pm916_h1,
-                "delta_per_gram": delta_h1,
-                "label_ternary": ternary_h1,
-                "label_binary": binary_h1,
-                "label_date": label_date_h1,
-                "next_pm916_h1": next_pm916_h1,
-                "delta_per_gram_h1": delta_h1,
-                "label_ternary_h1": ternary_h1,
-                "label_binary_h1": binary_h1,
-                "label_date_h1": label_date_h1,
-                # h=2 (None when unavailable)
-                "next_pm916_h2": next_pm916_h2,
-                "delta_per_gram_h2": delta_h2,
-                "label_ternary_h2": ternary_h2_val,
-                "label_binary_h2": binary_h2,
-                "label_date_h2": label_date_h2,
-                "ibja_pm_916_asof_date": ibja_asof,
-                "n_macro_null": n_macro_null_val,
-            }
-        )
+        row_out: dict = {
+            "as_of_date": as_of,
+            **feature_vals,
+            "current_pm916": current_pm916,
+            # h=1 (unsuffixed columns retained as h1 for backward-compat)
+            "next_pm916": next_pm916_h1,
+            "delta_per_gram": delta_h1,
+            "label_ternary": ternary_h1,
+            "label_binary": binary_h1,
+            "label_date": label_date_h1,
+            "next_pm916_h1": next_pm916_h1,
+            "delta_per_gram_h1": delta_h1,
+            "label_ternary_h1": ternary_h1,
+            "label_binary_h1": binary_h1,
+            "label_date_h1": label_date_h1,
+            # h=2 (None when unavailable)
+            "next_pm916_h2": next_pm916_h2,
+            "delta_per_gram_h2": delta_h2,
+            "label_ternary_h2": ternary_h2_val,
+            "label_binary_h2": binary_h2,
+            "label_date_h2": label_date_h2,
+            "ibja_pm_916_asof_date": ibja_asof,
+            "n_macro_null": n_macro_null_val,
+        }
+
+        # Extra horizons (M2: 5/10-day reframed targets). idx0 + (N-1) is the
+        # h=N label day (idx0 is h=1, idx0+1 is h=2, by the same convention
+        # above) — strictly after as_of_date for any N >= 1, so still
+        # leak-free. window_min_pm916_hN is the minimum pm_916 across days
+        # [idx0 .. idx0+N-1] inclusive (every day strictly between t and the
+        # h=N label day, plus the label day itself) — the buyer's-decision
+        # target needs "did it dip along the way," not just the endpoint.
+        for horizon_n in extra_horizons:
+            end_idx = idx0 + (horizon_n - 1)
+            key = f"h{horizon_n}"
+            if end_idx < len(ibja_dates) and not pd.isna(ibja_pm916[end_idx]):
+                window = ibja_pm916[idx0 : end_idx + 1]
+                window_valid = [v for v in window if not pd.isna(v)]
+                end_val = float(ibja_pm916[end_idx])
+                ternary_n, binary_n_int = make_label(current_pm916, end_val, dead_band_per_gram)
+                row_out[f"next_pm916_{key}"] = end_val
+                row_out[f"delta_per_gram_{key}"] = (end_val - current_pm916) / 10.0
+                row_out[f"label_ternary_{key}"] = ternary_n
+                row_out[f"label_binary_{key}"] = float(binary_n_int)
+                row_out[f"label_date_{key}"] = ibja_dates[end_idx]
+                row_out[f"window_min_pm916_{key}"] = min(window_valid) if window_valid else None
+            else:
+                row_out[f"next_pm916_{key}"] = None
+                row_out[f"delta_per_gram_{key}"] = None
+                row_out[f"label_ternary_{key}"] = None
+                row_out[f"label_binary_{key}"] = None
+                row_out[f"label_date_{key}"] = None
+                row_out[f"window_min_pm916_{key}"] = None
+
+        rows.append(row_out)
 
     dataset = pd.DataFrame(rows)
     if not dataset.empty:

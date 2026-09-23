@@ -24,6 +24,7 @@ from ml.direction.evaluate import (
     detect_majority_class_collapse,
     run_walk_forward,
 )
+from ml.direction.models import fit_lightgbm, fit_logistic
 
 # ---------------------------------------------------------------------------
 # make_label
@@ -258,6 +259,98 @@ class TestBuildDataset:
         assert len(ds) == 1
         assert ds.iloc[0]["label_binary_h1"] == 1
         assert ds.iloc[0]["label_binary_h2"] is None or pd.isna(ds.iloc[0]["label_binary_h2"])
+
+
+# ---------------------------------------------------------------------------
+# extra_horizons (M2: 5/10-day reframed targets)
+# ---------------------------------------------------------------------------
+
+
+class TestExtraHorizons:
+    def test_h5_label_uses_correct_offset_and_stays_leak_free(self) -> None:
+        """h=N label day is idx0+(N-1); for N=5 that's the 5th future IBJA day."""
+        snaps_df = _make_snapshots(["2025-01-01"], [70000.0])
+        dates = [f"2025-01-{d:02d}" for d in range(1, 9)]  # 01-01 .. 01-08
+        vals = [70000.0, 71000.0, 71500.0, 72000.0, 68000.0, 73000.0, 74000.0, 75000.0]
+        ibja_df = _make_ibja(dates, vals)
+        ds = build_dataset(snapshots_df=snaps_df, ibja_df=ibja_df, extra_horizons=(5,))
+        row = ds.iloc[0]
+        # idx0 = index of 01-02 (=1, h=1 day). h=5 -> idx0+4 = index 5 -> 01-06 = 73000.0
+        assert row["label_date_h5"] == "2025-01-06"
+        assert row["next_pm916_h5"] == 73000.0
+        assert row["label_date_h5"] > row["as_of_date"]
+
+    def test_window_min_captures_a_dip_the_endpoint_misses(self) -> None:
+        """window_min_pm916_hN must reflect the lowest point in [t+1, t+N], not
+        just the endpoint (needed for the buyer's-decision target)."""
+        snaps_df = _make_snapshots(["2025-01-01"], [70000.0])
+        dates = [f"2025-01-{d:02d}" for d in range(1, 6)]
+        # Dips to 65000 on day 3, then recovers by day 5 (the h=4 endpoint).
+        vals = [70000.0, 69000.0, 65000.0, 68000.0, 71000.0]
+        ibja_df = _make_ibja(dates, vals)
+        ds = build_dataset(snapshots_df=snaps_df, ibja_df=ibja_df, extra_horizons=(4,))
+        row = ds.iloc[0]
+        assert row["next_pm916_h4"] == 71000.0  # endpoint alone looks like a rise
+        assert row["window_min_pm916_h4"] == 65000.0  # but it dipped along the way
+
+    def test_extra_horizon_none_when_insufficient_future_data(self) -> None:
+        snaps_df = _make_snapshots(["2025-01-01"], [70000.0])
+        ibja_df = _make_ibja(["2025-01-01", "2025-01-02"], [70000.0, 71000.0])
+        ds = build_dataset(snapshots_df=snaps_df, ibja_df=ibja_df, extra_horizons=(10,))
+        row = ds.iloc[0]
+        assert row["label_binary_h10"] is None or pd.isna(row["label_binary_h10"])
+        assert row["window_min_pm916_h10"] is None or pd.isna(row["window_min_pm916_h10"])
+
+    def test_default_extra_horizons_empty_does_not_add_columns(self) -> None:
+        """Backward-compat: no extra_horizons arg -> no h5/h10 columns at all."""
+        snaps_df = _make_snapshots(["2025-01-01"], [70000.0])
+        ibja_df = _make_ibja(["2025-01-01", "2025-01-02"], [70000.0, 71000.0])
+        ds = build_dataset(snapshots_df=snaps_df, ibja_df=ibja_df)
+        assert "label_binary_h5" not in ds.columns
+        assert "label_binary_h10" not in ds.columns
+
+
+# ---------------------------------------------------------------------------
+# class_weight passthrough (M2: class-weighted logistic/GBM)
+# ---------------------------------------------------------------------------
+
+
+class TestClassWeightPassthrough:
+    def test_fit_logistic_default_unchanged(self) -> None:
+        """No class_weight arg -> LogisticRegression.class_weight stays None
+        (existing ml.direction.evaluate callers see no behavior change).
+        Only 1 positive sample -> _safe_cv returns 0 -> bare-pipeline path,
+        whose class_weight is directly inspectable."""
+        rng = np.random.default_rng(0)
+        X = rng.normal(size=(40, 3))
+        y = [0] * 39 + [1]
+        model = fit_logistic(X, y, cv=3)
+        assert model.named_steps["clf"].class_weight is None
+
+    def test_fit_logistic_balanced_is_applied(self) -> None:
+        rng = np.random.default_rng(0)
+        X = rng.normal(size=(40, 3))
+        y = [0] * 39 + [1]
+        model = fit_logistic(X, y, cv=3, class_weight="balanced")
+        assert model.named_steps["clf"].class_weight == "balanced"
+
+    def test_fit_lightgbm_default_unchanged(self) -> None:
+        rng = np.random.default_rng(0)
+        X = rng.normal(size=(40, 3))
+        y = [0, 1] * 20
+        model = fit_lightgbm(X, y)
+        if model is None:  # pragma: no cover - only if lightgbm isn't installed
+            return
+        assert model.class_weight is None
+
+    def test_fit_lightgbm_balanced_is_applied(self) -> None:
+        rng = np.random.default_rng(0)
+        X = rng.normal(size=(40, 3))
+        y = [0, 1] * 20
+        model = fit_lightgbm(X, y, class_weight="balanced")
+        if model is None:  # pragma: no cover - only if lightgbm isn't installed
+            return
+        assert model.class_weight == "balanced"
 
 
 # ---------------------------------------------------------------------------
