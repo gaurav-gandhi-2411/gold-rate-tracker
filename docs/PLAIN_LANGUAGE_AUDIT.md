@@ -244,15 +244,12 @@ Reported outcomes, by string:
 | `hwkIntro` (EN) | flagged | "technical detail", "plain-language summary", "unrounded" | Rewritten (01202f86) |
 | (remaining 8 of 16 strings) | not flagged | — | No change |
 
-**What's not in this record:** the individual 1-5 score for each of the 8
-non-flagged strings, and the exact score (vs. just "≤2 or flagged") for the
-6 hard-word strings above, were not included in what was relayed to this
-session — only the flag/no-flag outcome and, for the two error messages,
-the specific "1/5" figure. The identities of the 8 non-flagged strings
-were also not enumerated. If the full 16-row table (every string, both
-raw scores, pass/fail) is needed for the record, it should be pulled from
-the rating harness's own output artifact, not reconstructed here from a
-partial summary.
+**Full record:** every string, both models' raw scores, hard words, the
+"misleading" judgement and one-line reasons are committed in
+`reports/plain-language-u4/pass1_16_strings.json`, produced by
+`scripts/rate_readability_local_llm.py` (local Ollama, temperature 0, seed 42).
+The 8 unflagged strings scored 3/3 or better from both models
+(`accSummaryIntro` 3/5, `accSummaryDirectionOff` 4/5).
 
 ### What was changed and why
 
@@ -265,7 +262,33 @@ the correct call rather than automatically rewriting away every flag.
 
 ### Second pass
 
-<to be filled>
+**Pass 2** (the 7 rewritten strings; `reports/plain-language-u4/pass2_partial_log.txt`):
+- `footerBody` 3/4, `firstVisitText` 3/3, `reliabilityCoverage` 3/3, `hwkIntro` 3/5: no flags.
+- Both error messages still scored low: `errCouldntLoadMethodology` 1/1, `hwkError` 1/3.
+- The run stopped on the 7th string with an Ollama HTTP 500 (a transient failure while swapping
+  models in memory). The harness now retries, so pass 2 has no JSON artifact, only its log.
+
+**Pass 3** (`pass3_readme_and_error_variants.json`):
+- README freshness bullet 3/3: no flags.
+- Two error-message variants were tried. The one that names the likely cause and says the main
+  price is unaffected scored 3/3 (pass).
+- The shorter variant was split (2 vs 5).
+
+**Pass 4** (`pass4_hwk_error.json`): the how-we-know error in the same style scored 3/5, no
+flags, agreement 1.0.
+
+**Final state:** every rewritten string passes both models under the pre-set rule (score ≥ 3,
+not misleading). `calibrationConfidenceAppend` keeps "estimate", as decided above.
+
+Final error messages:
+- `errCouldntLoadMethodology`: "This part didn't load — usually because the internet connection
+  dropped. Today's gold price above is not affected. Please refresh the page to try again."
+- `hwkError`: "This page didn't load — usually because the internet connection dropped. The gold
+  price on the main page is not affected. Please refresh this page to try again."
+
+This is LLM-consensus, not user testing: two model families (Google Gemma 2 9B, Alibaba Qwen3
+30B-A3B) rated each string blind to each other with the same rubric. It catches jargon; it cannot
+tell us how real buyers read the page.
 
 ## Follow-up correction 2 (2026-09-23) — screenshots and this audit table
 

@@ -380,7 +380,7 @@ const STRINGS = {
     // U1 audit (2026-09-23): was "Couldn't load model details" -- "model" is a
     // banned term. This is the error state for the plain accuracy-summary panel
     // (app.js's renderAccuracySummary), not a methodology dump anymore.
-    errCouldntLoadMethodology: "We couldn't show this part right now. Please check your internet and refresh the page.",
+    errCouldntLoadMethodology: "This part didn't load — usually because the internet connection dropped. Today's gold price above is not affected. Please refresh the page to try again.",
 
     // ── Relative time (fmtRelative) ──────────────────────────────────────────────
     relJustNow: "just now",

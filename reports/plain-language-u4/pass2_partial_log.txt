@@ -1,0 +1,8 @@
+footerBody {'gemma2:9b': 3, 'qwen3:30b-a3b': 4} []
+firstVisitText {'gemma2:9b': 3, 'qwen3:30b-a3b': 3} []
+reliabilityCoverage {'gemma2:9b': 3, 'qwen3:30b-a3b': 3} []
+errCouldntLoadMethodology {'gemma2:9b': 1, 'qwen3:30b-a3b': 1} ['gemma2:9b', 'qwen3:30b-a3b']
+hwkError {'gemma2:9b': 1, 'qwen3:30b-a3b': 3} ['gemma2:9b']
+hwkIntro {'gemma2:9b': 3, 'qwen3:30b-a3b': 5} []
+Traceback (most recent call last):
+  File "C:\Users\gaura\AppData\Local\Temp\claude\C--Users-gaura-ml-projects-gold-rate-tracker\b33d86b5-5abe-4c68-9fc6-e63432c06042\scratchpad\readability_rate.py", line 101, in <module>

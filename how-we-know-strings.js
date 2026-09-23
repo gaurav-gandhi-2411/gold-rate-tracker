@@ -28,7 +28,7 @@ const STRINGS_HWK = {
     hwkBackLink: "← Back to Gold Rate Today",
     hwkLoading: "Loading…",
     hwkEmpty: "Not enough data yet to show this — check back once a few more readings have come in.",
-    hwkError: "We couldn't show these numbers right now. Please check your internet and refresh the page.",
+    hwkError: "This page didn't load — usually because the internet connection dropped. The gold price on the main page is not affected. Please refresh this page to try again.",
 
     // ── How we call a trend ──────────────────────────────────────────────────────
     methHowWeCallTrendHeading: "How we call a trend",

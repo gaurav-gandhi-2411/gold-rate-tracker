@@ -1,0 +1,86 @@
+{
+  "method": "LLM-consensus (not user testing): two model families rated each string blind to each other with the same rubric; temperature 0, seed 42",
+  "models": [
+    "gemma2:9b",
+    "qwen3:30b-a3b"
+  ],
+  "n_strings": 3,
+  "flag_agreement": 0.6666666666666666,
+  "cohens_kappa_flags": -3.3306690738754706e-16,
+  "flag_rule": "model flags at score <= 2 or misleading; plus hard words named by both",
+  "flagged_by_either": [
+    "err_v3b"
+  ],
+  "consensus_hard_words": {},
+  "results": [
+    {
+      "key": "README.freshness",
+      "text": "Over the last 7 days, a new price usually came in every 4.6 (as of 2026-09-23) hours.",
+      "ratings": {
+        "gemma2:9b": {
+          "score": 3,
+          "hard_words": [
+            "as of 2026-09-23"
+          ],
+          "misleading": false,
+          "why": "The date might confuse some buyers."
+        },
+        "qwen3:30b-a3b": {
+          "score": 3,
+          "hard_words": [
+            "usually",
+            "4.6"
+          ],
+          "misleading": false,
+          "why": "Confusing time frame for average buyer."
+        }
+      },
+      "flag_by": [],
+      "consensus_hard_words": []
+    },
+    {
+      "key": "err_v3a",
+      "text": "This part didn't load — usually because the internet connection dropped. Today's gold price above is not affected. Please refresh the page to try again.",
+      "ratings": {
+        "gemma2:9b": {
+          "score": 3,
+          "hard_words": [
+            "affected"
+          ],
+          "misleading": false,
+          "why": "The meaning is clear but 'affected' might be unclear to some."
+        },
+        "qwen3:30b-a3b": {
+          "score": 3,
+          "hard_words": [],
+          "misleading": false,
+          "why": "Some words like 'refresh' might need explanation for basic users."
+        }
+      },
+      "flag_by": [],
+      "consensus_hard_words": []
+    },
+    {
+      "key": "err_v3b",
+      "text": "We couldn't load these numbers, probably because your internet connection dropped. Please refresh the page to try again.",
+      "ratings": {
+        "gemma2:9b": {
+          "score": 2,
+          "hard_words": [],
+          "misleading": false,
+          "why": "It explains the problem clearly but assumes the user knows how to refresh a page."
+        },
+        "qwen3:30b-a3b": {
+          "score": 5,
+          "hard_words": [],
+          "misleading": false,
+          "why": "Simple error message for internet issue."
+        }
+      },
+      "flag_by": [
+        "gemma2:9b"
+      ],
+      "consensus_hard_words": []
+    }
+  ]
+}
