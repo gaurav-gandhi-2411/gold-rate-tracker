@@ -88,10 +88,48 @@ enough matured errors — a genuine early-warm-up gap, not an error).
 
 ## Results
 
-**Pending Actions run.** GG will re-dispatch `.github/workflows/analysis.yml` with
-`analysis=range_forecast` on this branch; this section will be filled in from that run's report
-artifact once it completes, with the artifact's exact commit SHA and file path as provenance
-(per this repo's metric-provenance convention — no number here without that).
+**Provenance:** GitHub Actions run **35898934718** at `1ca52d17`, all 7 shards plus the aggregate.
+Report: `reports/r1_range_forecast_run_35898934718.json`. The test family has 320 DM tests
+(Bonferroni 0.000156) plus BH. Success means nominal coverage (Kupiec not rejected and inside the
+binomial CI) **and** a significantly lower Winkler score than historical volatility.
+
+**In plain words: on real IBJA prices, nothing forecasts "how much could the price move" better
+than simple historical baselines.**
+
+### Real IBJA (product-relevant; dense segments 2025–26; n = 194 at 1 day, 159 at 5, 133 at 10, 83 at 20)
+
+- Raw historical volatility **over-covers** on IBJA: 91.8% at nominal 80% for 1 day, 100% at 90%
+  for 10 days. Most models inherit this, because they learn their scale from the INR proxy, which
+  is noisier day to day than real IBJA (ADR 040, D4).
+- **Best interval score at 1 day:** historical simulation (empirical quantiles), 80%: coverage
+  85.6%, width 3.34%, Winkler 0.042. No model beats it.
+- **One Bonferroni-significant cell, and it doesn't hold up.** Chronos, uncalibrated, 10 days,
+  90%: coverage 92.5% (Kupiec not rejected), width 12.9% vs 17.4%, Winkler 0.135 vs 0.174,
+  p = 2 × 10⁻⁷, effective n 31.
+  - It beats only the over-wide historical-vol baseline.
+  - Against historical simulation, which is reasonably calibrated here, p = 0.76.
+  - Not a robust improvement: this is not a promotion candidate.
+- Conformal calibration on IBJA errors mostly falls back to proxy errors in the early folds. It
+  doesn't bring 1-day coverage to nominal (80% rows at 83–92%).
+
+### INR proxy (2013–2026, daily, n ≈ 3,300–3,560)
+
+- **Conformal calibration works:** conformalized models are within the binomial CI at almost
+  every horizon and level. Raw historical volatility over-covers (82–93%).
+- **Only at 1 day does anything beat historical volatility after Bonferroni: GARCH(1,1).**
+  - 80%: coverage 79.8%, width 2.58% vs 2.76%, p = 0.00013.
+  - 90%: coverage 89.8%, p = 0.00004.
+  - The gain is small, about 2% on the Winkler score.
+  - HAR at 90% is BH-significant only (p = 0.00087).
+- From 5 days out, no model beats historical volatility. Chronos never does on the proxy
+  (p ≈ 1 at 1 day).
+
+### What this means for the product
+
+The site's range and volatility notes can keep a simple baseline. Historical simulation is the
+most honest cheap choice on real IBJA at short horizons. A GARCH-style 1-day range is the only
+model-based improvement found, only on the proxy, and small. Nothing here is a promotion
+candidate. A proper real-IBJA test needs more dense days, which accrue daily from 2025-Q2.
 
 ## Alternatives considered
 
