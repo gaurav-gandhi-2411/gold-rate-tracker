@@ -1344,18 +1344,22 @@ main {
    above -- calc-skeleton is hidden without ever changing calc-wrap's height,
    since calc-results starts empty and only gets content once renderCalculator()
    has real readings/forecast to compute against. min-height is the measured
-   near-maximal case, not the zero-making-charge default: the making-charge
-   row and the estimated-price note are both conditionally rendered, so the
-   card is taller once a visitor enters a making % and/or the headline price
-   is in ibja_calibrated/fusion_consensus mode. Re-measured 2026-09-23 after
-   the making-charge range + always-on estimate disclaimer: scrollHeight at
-   375px, 20 g, estimate-tier note present -- EN 330px, HI 316px (stale-note
-   variant EN 330px; default EN 305px). 340px covers those with a small
-   margin; a 10 kg entry (EN 366px, prices wrap) still grows the card, by
-   design -- padding every visit for that extreme isn't worth the gap. */
+   near-maximal case, not the shortest default: the making-charge row/range
+   and the estimated-price or stale-price note are both conditionally
+   rendered, so the card is taller once a preset with a non-zero making %
+   is selected and/or a note line is showing. Re-measured 2026-09-23 after
+   the jewellery-type presets replaced the flat range (natural scrollHeight
+   at 375px, 20 g, .calc-wrap's own min-height zeroed out to read the real
+   content height): plain/intricate preset + fresh Tanishq rate 338px;
+   + stale-price note OR estimate-tier note 362px (the tallest realistic
+   case -- those two notes are mutually exclusive, never both shown);
+   custom preset (no range line) 300px, +estimate note 324px. 370px covers
+   the 362px worst case with a small margin; a 10 kg entry (values wrap to
+   a second line) still grows the card beyond this, by design -- padding
+   every visit for that extreme isn't worth the gap. */
 .calc-wrap {
   position: relative;
-  min-height: 340px;
+  min-height: 370px;
 }
 .calc-skeleton {
   position: absolute;
