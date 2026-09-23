@@ -37,12 +37,20 @@ M1_DRIVER_COLS: list[str] = [
 
 
 def augment_with_m1_drivers(
-    dataset: pd.DataFrame, india_vix: pd.Series | None = None
+    dataset: pd.DataFrame,
+    india_vix: pd.Series | None = None,
+    india_vix_prior_day: bool = False,
 ) -> pd.DataFrame:
     """In-memory feature augmentation only — never touches the live feature
     store's schema or committed parquet. `india_vix` may be injected (a
-    UTC-DatetimeIndex Series of daily closes) for offline tests; fetched
-    live via yfinance when omitted.
+    UTC-DatetimeIndex Series of daily closes, forward-filled onto every
+    calendar day) for offline tests; fetched live via yfinance when omitted.
+
+    india_vix_prior_day: use the India VIX close of the last trading day
+    strictly BEFORE as_of_date instead of as_of_date's own close. Required
+    when as_of_date is the day whose move is being predicted (the proxy arm,
+    ADR 038 amendment A2): that day's own VIX close is not known until the
+    move it would predict has already happened.
     """
     dates = pd.to_datetime(dataset["as_of_date"])
     if india_vix is None:
@@ -67,8 +75,11 @@ def augment_with_m1_drivers(
 
     for idx, row in out.iterrows():
         as_of_ts = pd.Timestamp(row["as_of_date"], tz="UTC")
-        if as_of_ts in india_vix.index:
-            val = india_vix.loc[as_of_ts]
+        # On the forward-filled daily series, the value at t-1 is the last
+        # close on or before t-1, i.e. the last close strictly before t.
+        vix_ts = as_of_ts - pd.Timedelta(days=1) if india_vix_prior_day else as_of_ts
+        if vix_ts in india_vix.index:
+            val = india_vix.loc[vix_ts]
             out.at[idx, "india_vix"] = float(val) if not pd.isna(val) else np.nan
         cal = get_demand_calendar_features(date.fromisoformat(row["as_of_date"]))
         out.at[idx, "is_wedding_season"] = bool(cal["is_wedding_season"])
