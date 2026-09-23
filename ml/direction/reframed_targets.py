@@ -40,6 +40,8 @@ from __future__ import annotations
 
 import pandas as pd
 
+from ml.direction.price_units import require_inr_per_10g
+
 
 def add_deadzone_binary(df: pd.DataFrame, horizon: int) -> pd.Series:
     """1 for "up" / 0 for "down" / NaN for "flat" (within the dead band),
@@ -98,9 +100,24 @@ def add_buyer_decision_binary(
     question: "should I wait?"), 0 otherwise. Uses window_min_pm916_hN
     (build_dataset), not just the endpoint delta.
     """
+    require_inr_per_10g(df, "add_buyer_decision_binary")
     window_min = df[f"window_min_pm916_h{horizon}"]
     current = df["current_pm916"]
     dip_per_gram = (current - window_min) / 10.0
     label = (dip_per_gram > dead_band_per_gram).astype(float)
+    label[window_min.isna()] = None
+    return label
+
+
+def add_buyer_decision_binary_pct(df: pd.DataFrame, horizon: int, dip_pct: float) -> pd.Series:
+    """Unit-free buyer's-decision label: 1 if the price dips more than
+    `dip_pct` percent below the current price at any point within the next
+    `horizon` days. Safe on any price series (USD/oz, INR/10g, ...) because
+    the threshold is a fraction of the row's own price, not a currency amount.
+    """
+    window_min = df[f"window_min_pm916_h{horizon}"]
+    current = df["current_pm916"]
+    dip_pct_series = (current - window_min) / current * 100.0
+    label = (dip_pct_series > dip_pct).astype(float)
     label[window_min.isna()] = None
     return label
