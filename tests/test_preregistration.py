@@ -31,7 +31,7 @@ class TestFrozenConfig:
         assert PREREGISTERED_CONFIG["horizon"] == 2
 
     def test_n_for_power_is_frozen_positive_number(self) -> None:
-        assert pytest.approx(135.9, abs=0.1) == PREREGISTERED_N_FOR_POWER
+        assert pytest.approx(144.1673, abs=1e-4) == PREREGISTERED_N_FOR_POWER
 
 
 class TestLossFunctions:
@@ -91,7 +91,7 @@ class TestAppendShadowResult:
         assert history["runs"][0]["arm"] == "live_h2"
         assert history["runs"][0]["reached_preregistered_n"] is False
 
-        result2 = {"arm": "live_h2", "n": 200, "effective_n": 140.0, "p_value": 0.001}
+        result2 = {"arm": "live_h2", "n": 200, "effective_n": 150.0, "p_value": 0.001}
         append_shadow_result(result2, path=path)
         history = json.loads(path.read_text(encoding="utf-8"))
         assert len(history["runs"]) == 2
@@ -131,7 +131,7 @@ class TestAmendmentA1:
     def test_amendment_constants(self) -> None:
         assert CONFIRMATORY_AFTER_AS_OF == "2026-09-23"
         assert EMBARGO_LABEL_DATE_COL == "label_date_h2"
-        assert PROTOCOL_VERSION == "adr038-A1"
+        assert PROTOCOL_VERSION == "adr038-A2"
 
     def test_live_arm_scores_only_post_registration_days_with_embargo(self) -> None:
         dataset = _dataset_straddling_registration()
@@ -160,3 +160,39 @@ class TestAmendmentA1:
         append_shadow_result({"arm": "live_h2", "n": 1, "effective_n": None}, path=path)
         history = json.loads(path.read_text(encoding="utf-8"))
         assert history["runs"][0]["reached_preregistered_n"] is False
+
+
+class TestAmendmentA2:
+    """ADR 038 amendment A2: prior-day VIX in the proxy arm; reproducible reference."""
+
+    def test_proxy_arm_requests_prior_day_vix(self, tmp_path, monkeypatch) -> None:
+        import ml.direction.config_sweep as cs
+        import ml.direction.preregistration as pr
+
+        seen = {}
+
+        def fake_augment(df, india_vix=None, india_vix_prior_day=False):
+            seen["prior_day"] = india_vix_prior_day
+            return df
+
+        monkeypatch.setattr(cs, "augment_with_m1_drivers", fake_augment)
+        labels = pd.DataFrame(
+            {"label_22k_per_10g": [70000.0, 72000.0, 69000.0]},
+            index=pd.date_range("2026-01-01", periods=3, freq="D"),
+        )
+        path = tmp_path / "labels.parquet"
+        labels.to_parquet(path)
+        pr.build_proxy_deadzone_dataset(label_path=path)
+        assert seen["prior_day"] is True
+
+    def test_reference_is_self_consistent(self) -> None:
+        import math
+
+        from ml.direction.preregistration import REFERENCE
+        from ml.direction.stats_corrections import n_for_power
+
+        assert REFERENCE["n"] == 161
+        assert pytest.approx(REFERENCE["n_for_power"], abs=1e-3) == n_for_power(
+            REFERENCE["mean_diff"], math.sqrt(REFERENCE["long_run_var"])
+        )
+        assert len(REFERENCE["fold_digest"]) == 64
