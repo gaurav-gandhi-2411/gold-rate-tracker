@@ -298,35 +298,64 @@
                      aria-label="Quantity in grams" data-i18n-attr="aria-label:calcGramsAriaLabel">
             </div>
           </div>
-          <!-- Making charge as a low–high RANGE: nobody knows their jeweller's exact
-               making % before walking in. Default bounds are filled by
-               bindCalculatorInputs() from MAKING_CHARGE_DEFAULTS (app.js); the unit
-               spans and hint follow the selected mode via renderCalculator(). -->
-          <fieldset class="calc-making">
-            <legend data-i18n="calcRowMaking">Making charge</legend>
-            <div class="calc-mode">
-              <label class="calc-mode-option">
-                <input type="radio" name="calc-making-mode" value="pct" checked>
-                <span data-i18n="calcMakingModePct">% of gold value</span>
+          <!-- Making charge as jewellery-type PRESETS: nobody knows their jeweller's exact
+               making % before walking in, but most buyers know roughly what TYPE of piece
+               they want (a plain chain vs. an intricate/bridal design), and that predicts
+               the making-charge range far better than one flat range ever could. Preset
+               values/labels come from MAKING_CHARGE_PRESETS (app.js) via data-i18n on the
+               name/range spans below (kept in sync manually -- see that constant's own
+               comment for the source and date). "Custom" reveals a single value + unit
+               toggle (app.js's calcCustomUnit()/renderCalculator()) for a buyer who already
+               knows their jeweller's exact rate. -->
+          <fieldset class="calc-presets">
+            <legend data-i18n="calcPresetsLegend">Jewellery type</legend>
+            <div class="calc-preset-group">
+              <label class="calc-mode-option calc-preset-option">
+                <input type="radio" name="calc-preset" value="coins">
+                <span class="calc-preset-text">
+                  <span class="calc-preset-name" data-i18n="calcPresetCoins">Coins &amp; plain chains</span>
+                  <span class="calc-preset-range" data-i18n="calcPresetCoinsRange">3–8% of gold value, typically 5%</span>
+                </span>
               </label>
-              <label class="calc-mode-option">
-                <input type="radio" name="calc-making-mode" value="perGram">
-                <span data-i18n="calcMakingModePerGram">₹ per gram</span>
+              <label class="calc-mode-option calc-preset-option">
+                <input type="radio" name="calc-preset" value="plain" checked>
+                <span class="calc-preset-text">
+                  <span class="calc-preset-name" data-i18n="calcPresetPlain">Plain bangles &amp; rings</span>
+                  <span class="calc-preset-range" data-i18n="calcPresetPlainRange">8–12% of gold value, typically 10%</span>
+                </span>
+              </label>
+              <label class="calc-mode-option calc-preset-option">
+                <input type="radio" name="calc-preset" value="intricate">
+                <span class="calc-preset-text">
+                  <span class="calc-preset-name" data-i18n="calcPresetIntricate">Intricate or antique designs</span>
+                  <span class="calc-preset-range" data-i18n="calcPresetIntricateRange">15–25% of gold value, typically 20%</span>
+                </span>
+              </label>
+              <label class="calc-mode-option calc-preset-option">
+                <input type="radio" name="calc-preset" value="custom">
+                <span class="calc-preset-text">
+                  <span class="calc-preset-name" data-i18n="calcPresetCustom">Custom</span>
+                  <span class="calc-preset-range" data-i18n="calcPresetCustomHint">Know your jeweller's exact rate? Enter it below.</span>
+                </span>
               </label>
             </div>
-            <div class="calc-inputs">
-              <div class="calc-input-group">
-                <label for="calc-making-low"><span data-i18n="calcMakingLowLabel">From</span> (<span class="calc-making-unit">%</span>)</label>
-                <input type="number" id="calc-making-low" class="calc-input" inputmode="decimal"
-                       min="0" max="100" step="0.5" aria-describedby="calc-making-hint">
+            <div class="calc-custom-fields" id="calc-custom-fields" hidden>
+              <div class="calc-mode">
+                <label class="calc-mode-option">
+                  <input type="radio" name="calc-custom-unit" value="pct" checked>
+                  <span data-i18n="calcMakingModePct">% of gold value</span>
+                </label>
+                <label class="calc-mode-option">
+                  <input type="radio" name="calc-custom-unit" value="perGram">
+                  <span data-i18n="calcMakingModePerGram">₹ per gram</span>
+                </label>
               </div>
               <div class="calc-input-group">
-                <label for="calc-making-high"><span data-i18n="calcMakingHighLabel">To</span> (<span class="calc-making-unit">%</span>)</label>
-                <input type="number" id="calc-making-high" class="calc-input" inputmode="decimal"
-                       min="0" max="100" step="0.5" aria-describedby="calc-making-hint">
+                <label for="calc-custom-value"><span data-i18n="calcCustomValueLabel">Making charge</span> (<span class="calc-custom-unit-label">%</span>)</label>
+                <input type="number" id="calc-custom-value" class="calc-input" inputmode="decimal"
+                       min="0" max="100" step="0.5" value="10">
               </div>
             </div>
-            <p class="calc-making-hint" id="calc-making-hint"></p>
           </fieldset>
           <div class="calc-wrap" id="calc-wrap">
             <div class="calc-skeleton" id="calc-skeleton" aria-hidden="true">

@@ -90,12 +90,14 @@
 // 2026-09-21 (v50): index.html no longer reloads a first-time visitor's page when the worker first
 // takes control (it flashed the price to the loading skeleton ~1s after first paint, and raced the
 // post-deploy render smoke test into a false URGENT). Only a worker REPLACING an existing one reloads.
-// 2026-09-23 (v51): app.js gains computePurchaseCostRange()/makingPerGram (calculator
-// compute only; no visible change on its own). app.js changed.
-// 2026-09-23 (v52): the purchase calculator takes a making-charge RANGE (% of gold value or
-// ₹/gram), shows low–high totals, and always labels the result an estimate. index.html +
-// app.js + i18n.js + style.css changed.
-const VERSION = "v52-20260923-calc-making-range-ui";
+// 2026-09-23 (v52): the purchase calculator switches from a flat 6-25% making-charge range
+// to jewellery-type PRESETS (coins & plain chains / plain bangles & rings / intricate or
+// antique designs / custom), each showing a typical total plus a low-high range, with a
+// visible "rate used" source line and a prominent "Estimate — stores vary" disclaimer.
+// The v51 WIP commit (computePurchaseCostRange()/makingPerGram + the range-slider UI it
+// backed) never shipped separately -- this single entry covers everything that changed on
+// this branch, from master's v50 baseline. index.html + app.js + i18n.js + style.css changed.
+const VERSION = "v52-20260923-calc-making-presets";
 const SHELL_CACHE = `gold-shell-${VERSION}`;
 
 const SHELL_FILES = [

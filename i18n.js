@@ -63,25 +63,34 @@ const STRINGS = {
     calcHeading: "How much would you pay?",
     calcGramsLabel: "Grams",
     calcGramsAriaLabel: "Quantity in grams",
+    calcPresetsLegend: "Jewellery type",
+    calcPresetCoins: "Coins & plain chains",
+    calcPresetCoinsRange: "3–8% of gold value, typically 5%",
+    calcPresetPlain: "Plain bangles & rings",
+    calcPresetPlainRange: "8–12% of gold value, typically 10%",
+    calcPresetIntricate: "Intricate or antique designs",
+    calcPresetIntricateRange: "15–25% of gold value, typically 20%",
+    calcPresetCustom: "Custom",
+    calcPresetCustomHint: "Know your jeweller's exact rate? Enter it below.",
     calcMakingModePct: "% of gold value",
     calcMakingModePerGram: "₹ per gram",
-    calcMakingLowLabel: "From",
-    calcMakingHighLabel: "To",
-    calcMakingHintPct: ({ low, high }) =>
-      `Typically ${low}–${high}% of the gold value — lower for plain machine-made pieces, higher for handcrafted or bridal work. Enter your jeweller's rate if you know it.`,
-    calcMakingHintPerGram: ({ low, high }) =>
-      `Some jewellers quote a flat ₹${low}–₹${high} per gram instead of a %. Enter your jeweller's rate if you know it.`,
-    calcMakingInvalid: "Enter a making charge of 0 or more in both boxes.",
+    calcCustomValueLabel: "Making charge",
+    calcCustomInvalid: "Enter a making charge of 0 or more.",
     calcKaratLabel22: "22 KT",
     calcRowGoldValue: "Gold value",
     calcRowMaking: "Making charge",
+    calcRowMakingWithPct: ({ pct }) => `Making charge (${pct}%)`,
     calcRowGst: ({ pct }) => `GST (${pct}%)`,
     calcRowTotal: "Total",
+    calcRangeLabel: ({ range }) => `Range ${range}`,
     calcOtherKaratsRange: ({ k24, k18 }) => `24 KT: ${k24} · 18 KT: ${k18}`,
+    calcRateUsedIbja: ({ rate }) => `Rate used: 22K ₹${rate}/g — IBJA-based estimate`,
+    calcRateUsedFusion: ({ rate }) => `Rate used: 22K ₹${rate}/g — market-consensus estimate`,
+    calcRateUsedTanishq: ({ rate }) => `Rate used: 22K ₹${rate}/g — Tanishq store rate`,
     calcEstimatedNote: "Today's price is an estimate, so this total is too.",
     calcStaleNote: ({ rel }) => `Uses the last confirmed price, from ${rel}.`,
     calcDisclaimer:
-      "An estimate, not a quote. Your jeweller's bill will differ — hallmarking (HUID) fees, stones, wastage and store pricing aren't included.",
+      "Estimate — stores vary. Your jeweller's bill will differ — hallmarking (HUID) fees, stones, wastage and store pricing aren't included.",
     calcEmptyState: "Enter a quantity to see the cost.",
 
     commentaryAriaLabel: "Market commentary",
@@ -411,11 +420,13 @@ const STRINGS = {
     calcHeading: "आपको कितना पड़ेगा?",
     calcGramsLabel: "ग्राम",
     calcGramsAriaLabel: "मात्रा (ग्राम में)",
-    // Calculator range/estimate strings added 2026-09 (calcMakingMode*,
-    // calcMakingLow/HighLabel, calcMakingHint*, calcMakingInvalid,
-    // calcStaleNote, calcDisclaimer) have NO Hindi entry yet on purpose:
-    // pending native-speaker review rather than machine translation. t()
-    // falls back to the English string until they're added here.
+    // Calculator range/estimate strings added 2026-09 (calcMakingMode*, calcStaleNote,
+    // calcDisclaimer) and the jewellery-type presets added 2026-09-23 (calcPresetsLegend,
+    // calcPresetCoins/Plain/Intricate/Custom + their *Range/*Hint variants,
+    // calcCustomValueLabel, calcCustomInvalid, calcRowMakingWithPct, calcRangeLabel,
+    // calcRateUsedIbja/Fusion/Tanishq) have NO Hindi entry yet on purpose: pending
+    // native-speaker review rather than machine translation. t() falls back to the
+    // English string until they're added here.
     calcKaratLabel22: "22 KT",
     calcRowGoldValue: "सोने की कीमत",
     calcRowMaking: "मेकिंग चार्ज",

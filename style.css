@@ -1236,25 +1236,26 @@ main {
   outline: 2px solid var(--gold);
   outline-offset: 2px;
 }
-.calc-making-hint {
-  font-size: var(--ts-xs);
-  color: var(--cream-mute);
-  margin: 4px 0 var(--space-5);
-}
-/* Making-charge range: a real <fieldset> so the radios + both bounds are one
-   labelled group for screen readers; browser chrome (border/padding) reset so
-   it reads as part of the card, not a nested box. */
-.calc-making {
+/* Jewellery-type presets: a real <fieldset> so the radio group is one labelled group for
+   screen readers; browser chrome (border/padding) reset so it reads as part of the card,
+   not a nested box. */
+.calc-presets {
   border: 0;
   padding: 0;
   margin: var(--space-4) 0 0;
   min-width: 0;
 }
-.calc-making legend {
+.calc-presets legend {
   padding: 0;
   font-size: var(--ts-xs);
   color: var(--cream-mute);
   margin-bottom: 6px;
+}
+.calc-preset-group {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  margin-bottom: var(--space-3);
 }
 .calc-mode {
   display: flex;
@@ -1262,7 +1263,7 @@ main {
   flex-wrap: wrap;
   margin-bottom: var(--space-3);
 }
-/* 44px touch target, same as .calc-input. */
+/* 44px min-height touch target, same as .calc-input. */
 .calc-mode-option {
   display: inline-flex;
   align-items: center;
@@ -1285,7 +1286,52 @@ main {
   outline: 2px solid var(--gold);
   outline-offset: 2px;
 }
+/* Preset options carry two lines (name + range) so they're top-aligned, not
+   vertically centred like the single-line mode toggles above; padding grows to keep
+   the 44px touch target comfortable around the taller content. */
+.calc-preset-option {
+  display: flex;
+  align-items: flex-start;
+  width: 100%;
+  padding: var(--space-2) var(--space-4);
+}
+.calc-preset-option input { margin-top: 3px; flex-shrink: 0; }
+.calc-preset-text {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.calc-preset-name {
+  font-size: var(--ts-sm);
+  color: var(--cream-dim);
+}
+.calc-preset-range {
+  font-size: var(--ts-xs);
+  color: var(--cream-mute);
+}
+.calc-preset-option:has(input:checked) .calc-preset-name,
+.calc-preset-option:has(input:checked) .calc-preset-range {
+  color: var(--cream);
+}
+/* Custom making-charge fields (value + unit toggle): shown only when the "Custom"
+   preset is selected -- see renderCalculator()'s customFieldsEl.hidden toggle. */
+.calc-custom-fields { margin-top: var(--space-3); }
 .calc-input[aria-invalid="true"] { border-color: var(--status-stale); }
+.calc-rate-used {
+  margin: 0 0 var(--space-2);
+  font-size: var(--ts-xs);
+  color: var(--cream-mute);
+}
+.calc-result-range {
+  margin: 2px 0 0;
+  font-size: var(--ts-xs);
+  color: var(--cream-mute);
+  font-variant-numeric: tabular-nums;
+}
+.calc-result-subrange {
+  font-size: var(--ts-xs);
+  color: var(--cream-mute);
+}
 .calc-disclaimer {
   margin: var(--space-3) 0 0;
   font-size: var(--ts-xs);
