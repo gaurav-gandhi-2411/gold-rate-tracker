@@ -45,6 +45,12 @@ GRIDS: dict[str, list[float]] = {
 CONSERVATIVE_FIRST: dict[str, bool] = {"P1": True, "P2": False, "P3": False}
 REFIT_EVERY = 21
 ALPHA = 0.05
+# The real-IBJA file is not daily everywhere: before 2025-Q2 its median gap is
+# 5-18 days, and 2026-Q1 has one row. ADR 039 defines horizons in TRADING days,
+# so IBJA is split into dense segments (every gap <= 4 calendar days: weekend
+# plus a holiday) and each segment is simulated on its own; windows and
+# feature look-backs never span a gap.
+MAX_GAP_DAYS = 4
 
 
 def load_series(kind: str):  # type: ignore[no-untyped-def]
@@ -218,12 +224,43 @@ def mask_between(dates, start: str | None, end: str | None, n_out_end=None):  # 
     return m
 
 
+def dense_segments(p):  # type: ignore[no-untyped-def]
+    """Split a series into runs whose consecutive gaps are <= MAX_GAP_DAYS."""
+    gaps = p.index.to_series().diff().dt.days.fillna(0).to_numpy()
+    seg_id = (gaps > MAX_GAP_DAYS).cumsum()
+    return [p[seg_id == k] for k in sorted(set(seg_id))]
+
+
+def simulate_segmented(p, n: int, policy: str, param: float, probs_by_date=None):  # type: ignore[no-untyped-def]
+    """simulate() per dense segment; returns savings aligned to p's index."""
+    import numpy as np
+    import pandas as pd
+
+    out = pd.Series(np.nan, index=p.index)
+    for seg in dense_segments(p):
+        if len(seg) <= n:
+            continue
+        f = features(seg)
+        probs = None
+        if probs_by_date is not None:
+            probs = probs_by_date.reindex(seg.index).to_numpy()
+        out.loc[seg.index] = simulate(seg, f, n, policy, param, probs)
+    return out.to_numpy()
+
+
+def ibja_features_segmented(p):  # type: ignore[no-untyped-def]
+    import pandas as pd
+
+    return pd.concat([features(seg) for seg in dense_segments(p)])
+
+
 def run_all() -> dict[str, Any]:
     import numpy as np
+    import pandas as pd
 
     proxy = load_series("proxy")
     ibja = load_series("ibja")
-    fp, fi = features(proxy), features(ibja)
+    fp, fi = features(proxy), ibja_features_segmented(ibja)
     pdates, idates = proxy.index.to_numpy(), ibja.index.to_numpy()
     out: dict[str, Any] = {"selection": {}, "test": {}, "context": {}}
     for n in HORIZONS:
@@ -257,15 +294,22 @@ def run_all() -> dict[str, Any]:
         ):
             test = mask_between(dates, TEST_START, None)
             for pol in GRIDS:
-                sv = simulate(P, F, n, pol, chosen[pol], probs if pol == "P3" else None)
+                if series == "real_ibja":
+                    pb = pd.Series(probs, index=P.index) if pol == "P3" else None
+                    sv = simulate_segmented(P, n, pol, chosen[pol], pb)
+                else:
+                    sv = simulate(P, F, n, pol, chosen[pol], probs if pol == "P3" else None)
                 sv = np.where(test, sv, np.nan)
                 out["test"][f"{series}/{pol}/N{n}"] = {"param": chosen[pol]} | hac_test(sv, n)
-            Pa = P.to_numpy()
-            oracle = np.full(len(Pa), np.nan)
-            wait = np.full(len(Pa), np.nan)
-            for t in range(len(Pa) - n):
-                oracle[t] = Pa[t] - Pa[t : t + n + 1].min()
-                wait[t] = Pa[t] - Pa[t + n]
+            oracle = pd.Series(np.nan, index=P.index)
+            wait = pd.Series(np.nan, index=P.index)
+            segs = dense_segments(P) if series == "real_ibja" else [P]
+            for seg in segs:
+                Pa = seg.to_numpy()
+                for t in range(len(Pa) - n):
+                    oracle.loc[seg.index[t]] = Pa[t] - Pa[t : t + n + 1].min()
+                    wait.loc[seg.index[t]] = Pa[t] - Pa[t + n]
+            oracle, wait = oracle.to_numpy(), wait.to_numpy()
             out["context"][f"{series}/N{n}"] = {
                 "oracle": hac_test(np.where(test, oracle, np.nan), n),
                 "always_wait_N": hac_test(np.where(test, wait, np.nan), n),
@@ -286,6 +330,11 @@ def run_all() -> dict[str, Any]:
     out["bonferroni_threshold_primary"] = bon["threshold"]
     out["proxy_range"] = [str(pdates[0])[:10], str(pdates[-1])[:10]]
     out["ibja_range"] = [str(idates[0])[:10], str(idates[-1])[:10]]
+    out["ibja_dense_segments"] = [
+        [str(sg.index[0].date()), str(sg.index[-1].date()), len(sg)]
+        for sg in dense_segments(ibja)
+        if len(sg) > max(HORIZONS)
+    ]
     return out
 
 

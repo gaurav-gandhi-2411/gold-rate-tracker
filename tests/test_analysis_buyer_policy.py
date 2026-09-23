@@ -96,3 +96,20 @@ def test_p3_training_rows_have_matured_labels(monkeypatch: pytest.MonkeyPatch) -
     mod.p3_probabilities(p, f, f, dates, 5)
     # First fit is at target index i where last=i; usable rows j <= i-5 minus warm-up NaNs.
     assert seen and all(n <= 400 - 5 for n in seen)
+
+
+def test_ibja_gaps_split_segments_and_windows_never_span_them() -> None:
+    idx = pd.to_datetime(
+        [
+            *["2024-01-01", "2024-01-02", "2024-01-03", "2024-01-04"],
+            *["2024-02-01", "2024-02-02", "2024-02-05", "2024-02-06"],
+        ]
+    )
+    p = pd.Series([100.0, 90.0, 80.0, 85.0, 200.0, 210.0, 220.0, 230.0], index=idx)
+    segs = mod.dense_segments(p)
+    assert [len(s) for s in segs] == [4, 4]
+    sv = mod.simulate_segmented(p, 2, "P1", 0.0)  # k=0: limit = today's price
+    assert np.isnan(sv[0]) and np.isnan(sv[4])  # volatility warm-up: no decision
+    assert sv[1] == pytest.approx(90.0 - 80.0)
+    assert sv[5] == pytest.approx(210.0 - 230.0)  # deadline inside its own segment
+    assert np.isnan(sv[2]) and np.isnan(sv[3])  # t+2 would cross the gap
