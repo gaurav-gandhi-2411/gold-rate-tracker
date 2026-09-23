@@ -1316,3 +1316,92 @@ started this round rather than risk a rushed implementation on top of an already
 as the clear next step once COMEX's results are in and reviewed.
 
 **P1/P3/P5: still not started.**
+
+## Checkpoint — 2026-09-23, continuation session (GG spec items 1-4)
+
+**Item 1 (can the direction signal ship itself?): answered, safeguard merged (PR #1908).** Traced the
+full path live: `weekly-backtest.yml` → `ml.direction.evaluate.run_walk_forward` → `decide_direction_
+signal` writes `data/direction_baseline.json` only; `app.js` never reads that file or calls the gate —
+the direction card is a hardcoded, permanently-"off" state (ADR 019/020) gated on an unrelated
+`chronos_companion.status` field. A passing gate does NOT auto-un-dark anything; there is no wiring
+path from gate to UI at all today. PR #1903 confirmed shadow-only by direct merge-commit diff
+inspection (touches only `ml/direction/config_sweep.py`, `docs/adr/034`, tests — zero touches to
+`gate.py`, `data/direction_baseline.json`, `app.js`). Both risk conditions GG asked about are FALSE.
+Built the mechanical safeguard anyway, per GG's pre-authorization: `ml.direction.gate.is_signal_
+promoted()` (checks for a committed `data/direction_promotion_record.json`) +
+`scripts/check_direction_signal_not_wired_without_promotion.py` (new CI guard, wired into `lint.yml`).
+439 lines — over the session's own merge-gate ceiling; GG's in-message "this keeps behaviour unchanged,
+merge it yourself" was treated as pre-authorization for this ONE merge; the hook did not block it.
+Full write-up: `docs/adr/036-...md`.
+
+**Item 2 (#1892's failing CI): fixed, still needs GG's own merge.** mypy failure was
+`.iloc[list[int]]` not matching CI's pandas-stubs overloads (local mypy has no pandas-stubs, so this
+was invisible locally) — fixed with `np.array(eligible, dtype=int)` before indexing. docs-freshness
+resolved itself on rebase. Rebased #1892's branch onto current `origin/master` directly (clean, no
+conflicts). Remains ~800+ lines even after the item-3 statistical-corrections work was split out into
+separate stacked PRs — no clean further split exists without hurting reviewability; stays with GG.
+
+**Item 3 (statistical corrections): built, verified, delivered as 3 stacked PRs — all merged into
+#1892's branch (not yet on master, since #1892 itself isn't merged).** `ml/direction/stats_corrections.py`
+(McNemar via `scipy.stats.binomtest`, moving block bootstrap, Bonferroni, Benjamini-Hochberg,
+forward-only power/n-for-power). `diebold_mariano_test` extended with `alternative` (one/two-sided) and
+HAC `effective_n`. Re-ran the full 24-row grid with all 4 corrections applied. **Result: ZERO of 24
+rows significant after Bonferroni (threshold 0.00208) — `detrended_h10` does NOT stand**: its original
+effective_n was inflated (122 raw → 28.9 effective after HAC at lag=9), p moved from the originally-
+reported 0.0169 to 0.106. Full corrected table + methodology: `docs/adr/037-...md`, raw output
+`data/direction_reframed_results_corrected.json`. PRs #1911→#1914→#1915 (stacked on #1892's branch),
+all green (lint+pwa-js required, boundary-leak-check/docs-freshness also clean after resolving two
+self-inflicted CI hiccups mid-session — see below). #1911/#1914 self-merged (367/111 lines); #1915
+(907 lines: 754-line generated JSON + 153-line ADR) opened as **draft**, all checks green, handed to GG
+— over the session's size gate and `data/` isn't a recognized generated-artifact carve-out path here.
+
+*Two self-inflicted CI issues this session, both diagnosed and fixed rather than worked around:*
+(a) `boundary-leak-check` false-positived twice across the 3 stacked PRs — confirmed via direct
+investigation of the script's own patch-id comparison logic that this was a genuine timing race (a
+PR's CI run compared against a sibling PR's branch mid-rebase, before that sibling's own force-push
+had landed), not a real leak; resolved by re-running once all 3 pushes had settled. (b) Accidentally
+committed the `docs-freshness` fix with `[skip ci]` in the message — copying the bot-commit convention
+onto a human/CC-authored commit, which per this session's own rule 34 suppresses CI entirely and
+silently blocked all 3 PRs' required checks from ever re-running against the new SHA. Caught by
+noticing `gh api .../check-runs` returned zero runs for the pushed SHA; fixed by amending the commit
+message to drop `[skip ci]` and re-pushing.
+
+**Item 4 (pre-registration): frozen and committed before Monday 2026-09-28's weekly eval, PRs
+#1916→#1917 open (stacked on #1892's branch via #1892→#1911→#1914→#1915... actually based directly on
+`feat/m2-reframed-target-evaluation`), CI pending at checkpoint time.** `ml.direction.preregistration`
+freezes ADR 034's config J (calibrated LightGBM + `class_weight="balanced"`, h2) as a single hypothesis
+BEFORE any new fold is scored — Bonferroni across the original 10 configs tried covers the number of
+configs, not the fact the same 161 folds also *chose* the winner, which is a separate, real validity
+gap. Re-derived the effect size under the new DM-HAC methodology: n=161, effective_n=119.38 (HAC at
+lag=1 shrinks usable information ~26%), p=0.00340 one-sided (reproduces ADR 034's accuracy numbers
+exactly: 65.84% vs 59.01%). **`PREREGISTERED_N_FOR_POWER = 135.9` (effective_n scale), frozen in code —
+the original 161-fold sample was itself nominally underpowered for its own observed effect (119.38 <
+135.9) despite reaching p=0.0034**, reported exactly as computed. Two shadow arms wired into
+`weekly-backtest.yml` as an additive, `continue-on-error: true` step: (1) live h2 arm, re-scores every
+weekly cron; (2) proxy dead-zone arm (ADR 032's ≥100 Rs/gram threshold, M1 calendar-only features,
+2013-2026 history) — **first-run result is an honest negative: accuracy 48.02% vs always-up baseline
+55.62%, worse, not significant in the "better" direction** — reported plainly, not glossed over;
+explicitly caveated as h1-equivalent framing (the proxy label is same-day), never pooled with the h2
+live arm's n. Full write-up: `docs/adr/038-...md`. Will NOT report the live arm as confirmatory before
+`effective_n >= 135.9` is reached, per GG's explicit instruction.
+
+**Item 5 (COMEX daily variant, corrected): re-run in progress at checkpoint time.** The original
+background run (reported in the prior checkpoint above) used a stale `evaluate_reframed.py` predating
+the item-3 corrections, so it has no raw per-fold data the new DM-HAC test needs — re-running from
+scratch against the corrected module (rebased `feat/m2-comex-daily-variant` onto `feat/m2-reframed-
+target-evaluation`) to get proper effective_n/accuracy-vs-always-up/Bonferroni-BH/sub-period numbers.
+Raw (uncorrected) first-pass numbers for reference, NOT the final report: `raw_binary_h1` n=3202
+acc=52.28% (not sig), `deadzone_h1` n=2621 acc=54.37% (not sig), `detrended_h1` n=3195 acc=50.86% (not
+sig), `buyer_decision_h1` n=162 acc=100%/BSS=-401.9 (degenerate — flagged as a likely framing bug, not
+a real finding, pending investigation), `raw_binary_h10` n=3190 acc=54.95% (not sig), `detrended_h10`
+n=3177 acc=50.77% (not sig, p=0.099 uncorrected McNemar). None of these were significant even before
+HAC correction — full corrected report pending the re-run's completion.
+
+**Item 6 (M3 CI widths): reported.** At n=89, Wilson CI widths are 19.3pp (68% level), 17.2pp (80%),
+12.1pp (90%) — meaning only a static-vs-ACI difference on that order could be reliably distinguished at
+this sample size; the observed differences (≤1.3pp) are far below the resolution n=89 offers, so
+"statistically indistinguishable" (ADR 035) is the expected result of an underpowered comparison, not
+evidence the methods are truly equivalent. Live stratified-shadow result still not landed (due
+2026-09-27) — not cited, per standing instruction.
+
+**Items 7/M4/P1/P3/P5: not yet reached this checkpoint.**
