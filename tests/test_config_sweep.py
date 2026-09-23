@@ -55,6 +55,17 @@ class TestAugmentWithM1Drivers:
         expected = india_vix.loc[row0_ts]
         assert out.iloc[0]["india_vix"] == expected
 
+    def test_india_vix_prior_day_uses_previous_close(self) -> None:
+        # Amendment A2: a row must not see its own day's VIX close.
+        dataset = _make_synthetic_dataset(n=5)
+        idx = pd.date_range("2024-12-01", "2026-01-01", freq="D", tz="UTC")
+        india_vix = pd.Series(np.arange(len(idx)) + 10.0, index=idx)
+        out = augment_with_m1_drivers(dataset, india_vix=india_vix, india_vix_prior_day=True)
+        for i in range(len(out)):
+            ts = pd.Timestamp(out.iloc[i]["as_of_date"], tz="UTC")
+            assert out.iloc[i]["india_vix"] == india_vix.loc[ts - pd.Timedelta(days=1)]
+            assert out.iloc[i]["india_vix"] != india_vix.loc[ts]
+
     def test_does_not_mutate_original_dataset(self) -> None:
         dataset = _make_synthetic_dataset(n=5)
         india_vix = pd.Series(

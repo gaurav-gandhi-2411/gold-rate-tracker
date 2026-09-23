@@ -223,7 +223,9 @@ def build_proxy_deadzone_dataset(
         np.where(out["move_per_gram"] < -threshold_rs_per_gram, 0.0, np.nan),
     )
     out = out.dropna(subset=["label_binary_deadzone"]).reset_index(drop=True)
-    out = augment_with_m1_drivers(out)
+    # Amendment A2: the proxy label is day t's own move, so day t's VIX close
+    # is not known in time to predict it -- use the prior trading day's close.
+    out = augment_with_m1_drivers(out, india_vix_prior_day=True)
     return out
 
 
