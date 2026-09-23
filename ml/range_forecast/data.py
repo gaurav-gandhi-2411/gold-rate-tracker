@@ -66,7 +66,9 @@ def load_ibja_price_series(ibja_path: Path = IBJA_PARQUET_PATH) -> pd.Series:
 
 def log_returns(price: pd.Series) -> pd.Series:
     """Daily log return series (index shrinks by 1 vs `price`)."""
-    return np.log(price / price.shift(1)).dropna()
+    # numpy's stubs type np.log(<Series>) as ndarray (it can't special-case pandas'
+    # __array_ufunc__ override), even though at runtime it returns a Series here.
+    return np.log(price / price.shift(1)).dropna()  # type: ignore[attr-defined]
 
 
 def forward_log_return(price: pd.Series, horizon: int) -> pd.Series:
@@ -85,7 +87,9 @@ def _t_minus_1_lag(daily_calendar_series: pd.Series, as_of_dates: pd.DatetimeInd
     return aligned
 
 
-def realized_vol_features(returns: pd.Series, windows: tuple[int, ...] = (5, 20, 60)) -> pd.DataFrame:
+def realized_vol_features(
+    returns: pd.Series, windows: tuple[int, ...] = (5, 20, 60)
+) -> pd.DataFrame:
     """Rolling std of daily log returns, ending at and including day t (no
     leakage: only returns known by the close of day t)."""
     out = pd.DataFrame(index=returns.index)

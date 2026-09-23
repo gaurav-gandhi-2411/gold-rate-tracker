@@ -19,7 +19,8 @@ import numpy as np
 import pandas as pd
 from scipy.optimize import minimize
 from scipy.special import gammaln
-from scipy.stats import norm, t as student_t
+from scipy.stats import norm
+from scipy.stats import t as student_t
 
 from ml.range_forecast.walkforward import (
     assemble_forecast_set,
@@ -130,7 +131,9 @@ def fit_garch(r_used: np.ndarray, dist: str = "student_t", maxiter: int = 200) -
     return out
 
 
-def garch_h_day_variance(sigma2_next: float, long_run_var: float, persistence: float, h: int) -> float:
+def garch_h_day_variance(
+    sigma2_next: float, long_run_var: float, persistence: float, h: int
+) -> float:
     total = 0.0
     for k in range(1, h + 1):
         e_k = long_run_var + (persistence ** (k - 1)) * (sigma2_next - long_run_var)
@@ -138,7 +141,9 @@ def garch_h_day_variance(sigma2_next: float, long_run_var: float, persistence: f
     return total
 
 
-def _quantile_bounds_for_dist(scale_h: float, level: float, dist: str, nu: float | None) -> tuple[float, float]:
+def _quantile_bounds_for_dist(
+    scale_h: float, level: float, dist: str, nu: float | None
+) -> tuple[float, float]:
     if dist == "student_t" and nu is not None and nu > 2:
         z = float(student_t.ppf(0.5 + level / 2.0, df=nu))
         adj = np.sqrt((nu - 2) / nu)  # rescale so the interval has variance scale_h^2
@@ -184,7 +189,9 @@ def garch_forecast_set(
         long_run_var = (
             params["omega"] / (1.0 - persistence) if persistence < 1.0 - 1e-8 else sigma2_path[-1]
         )
-        sigma2_next = params["omega"] + params["alpha"] * r_used[-1] ** 2 + params["beta"] * sigma2_path[-1]
+        sigma2_next = (
+            params["omega"] + params["alpha"] * r_used[-1] ** 2 + params["beta"] * sigma2_path[-1]
+        )
         h_var = garch_h_day_variance(sigma2_next, long_run_var, persistence, horizon)
         scale_h = float(np.sqrt(max(h_var, 1e-12)))
         act = float(log_price[t + horizon] - log_price[t])

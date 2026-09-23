@@ -29,8 +29,10 @@ DEFAULT_WINDOW = 250
 
 
 def cqr_score(lo: np.ndarray, hi: np.ndarray, actual: np.ndarray) -> np.ndarray:
-    lo, hi, actual = np.asarray(lo, dtype=float), np.asarray(hi, dtype=float), np.asarray(
-        actual, dtype=float
+    lo, hi, actual = (
+        np.asarray(lo, dtype=float),
+        np.asarray(hi, dtype=float),
+        np.asarray(actual, dtype=float),
     )
     return np.maximum(lo - actual, actual - hi)
 
@@ -79,8 +81,10 @@ def walk_forward_conformal(
     `n_matured`), q_hat, n_matured (int array).
     """
     as_of_positions = np.asarray(as_of_positions, dtype=np.int64)
-    lo, hi, actual = np.asarray(lo, dtype=float), np.asarray(hi, dtype=float), np.asarray(
-        actual, dtype=float
+    lo, hi, actual = (
+        np.asarray(lo, dtype=float),
+        np.asarray(hi, dtype=float),
+        np.asarray(actual, dtype=float),
     )
     n = len(as_of_positions)
     scores = cqr_score(lo, hi, actual)

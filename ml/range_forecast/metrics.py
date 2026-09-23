@@ -101,10 +101,7 @@ def christoffersen_independence_test(hits: np.ndarray) -> dict:
     def _ll(p01: float, p11: float) -> float:
         p01c, p11c = min(max(p01, eps), 1 - eps), min(max(p11, eps), 1 - eps)
         return (
-            n00 * np.log1p(-p01c)
-            + n01 * np.log(p01c)
-            + n10 * np.log1p(-p11c)
-            + n11 * np.log(p11c)
+            n00 * np.log1p(-p01c) + n01 * np.log(p01c) + n10 * np.log1p(-p11c) + n11 * np.log(p11c)
         )
 
     pic = min(max(pi, eps), 1 - eps)
@@ -136,8 +133,10 @@ def stride_subsample(values: np.ndarray, stride: int) -> np.ndarray:
 def winkler_score(actual: np.ndarray, lo: np.ndarray, hi: np.ndarray, level: float) -> np.ndarray:
     """Winkler (interval) score, lower is better. `level` is the NOMINAL
     central-interval probability (e.g. 0.90); alpha = 1 - level."""
-    actual, lo, hi = np.asarray(actual, dtype=float), np.asarray(lo, dtype=float), np.asarray(
-        hi, dtype=float
+    actual, lo, hi = (
+        np.asarray(actual, dtype=float),
+        np.asarray(lo, dtype=float),
+        np.asarray(hi, dtype=float),
     )
     alpha = 1.0 - level
     width = hi - lo
@@ -158,7 +157,9 @@ def qlike(actual_var: np.ndarray, forecast_var: np.ndarray) -> np.ndarray:
     return np.log(forecast_var) + actual_var / forecast_var
 
 
-def normal_quantile_bounds(scale: np.ndarray, level: float, mean: float = 0.0) -> tuple[np.ndarray, np.ndarray]:
+def normal_quantile_bounds(
+    scale: np.ndarray, level: float, mean: float = 0.0
+) -> tuple[np.ndarray, np.ndarray]:
     """Central `level` interval bounds for N(mean, scale^2)."""
     z = float(norm.ppf(0.5 + level / 2.0))
     scale = np.asarray(scale, dtype=float)
