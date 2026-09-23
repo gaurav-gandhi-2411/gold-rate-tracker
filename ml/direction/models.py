@@ -62,6 +62,7 @@ def fit_logistic(
     C: float = 1.0,
     random_state: int = 42,
     cv: int = 3,
+    class_weight: str | dict | None = None,
 ) -> Pipeline | CalibratedClassifierCV:
     """Fit a calibrated logistic regression classifier.
 
@@ -76,6 +77,11 @@ def fit_logistic(
         C: Inverse regularisation strength.
         random_state: Seed for reproducibility.
         cv: Requested number of CV folds for calibration.
+        class_weight: Passed straight to LogisticRegression (e.g. "balanced"
+            for M2's class-weighted variant). Default None matches
+            LogisticRegression's own default — existing callers (the live
+            ml.direction.evaluate pipeline) that don't pass this see no
+            behavior change.
 
     Returns:
         Fitted estimator (CalibratedClassifierCV or Pipeline).
@@ -85,7 +91,9 @@ def fit_logistic(
             ("scaler", StandardScaler()),
             (
                 "clf",
-                LogisticRegression(C=C, max_iter=1000, random_state=random_state),
+                LogisticRegression(
+                    C=C, max_iter=1000, random_state=random_state, class_weight=class_weight
+                ),
             ),
         ]
     )
@@ -109,6 +117,7 @@ def fit_lightgbm(
     X_train: np.ndarray,
     y_train: list[int] | np.ndarray,
     random_state: int = 42,
+    class_weight: str | dict | None = None,
 ) -> object | None:
     """Fit a LightGBM classifier.
 
@@ -119,13 +128,19 @@ def fit_lightgbm(
         X_train: Feature matrix.
         y_train: Binary target labels.
         random_state: Seed for reproducibility.
+        class_weight: Passed straight to LGBMClassifier (e.g. "balanced" for
+            M2's class-weighted variant). Default None matches
+            LGBMClassifier's own default — existing callers see no behavior
+            change.
 
     Returns:
         Fitted LGBMClassifier, or None if LightGBM is unavailable.
     """
     if not _LGBM_AVAILABLE:
         return None
-    model = LGBMClassifier(n_estimators=100, random_state=random_state, verbose=-1)
+    model = LGBMClassifier(
+        n_estimators=100, random_state=random_state, verbose=-1, class_weight=class_weight
+    )
     model.fit(X_train, y_train)
     return model
 
