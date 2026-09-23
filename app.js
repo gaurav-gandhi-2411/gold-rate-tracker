@@ -801,23 +801,29 @@ function computeAccuracyDrift(drift) {
 // Itemised "what will it cost me?" estimate for a gold jewellery purchase, the
 // way an Indian retail invoice is built up:
 //   gold value = ratePerGram × grams
-//   making     = gold value × makingPct/100   (making charges — design-dependent,
-//                                               jeweller-specific; the caller supplies it)
+//   making     = gold value × makingPct/100 + grams × makingPerGram
+//                (making charges — design-dependent, jeweller-specific; quoted
+//                 either as a % of gold value or a flat ₹/gram; the caller supplies it)
 //   GST        = (gold value + making) × gstPct/100   (3% on gold jewellery in India)
 //   total      = gold value + making + GST
 //
+// GST base: 3% on the WHOLE retail transaction value, making charges included
+// (HSN 7113; CBIC rate table: 1.5% CGST + 1.5% SGST). Some buyer guides quote
+// "5% GST on making charges" -- that rate is for B2B job work (a jeweller
+// paying an artisan to work gold the jeweller supplied), not a retail sale.
+//
 // No making-charge default is baked in here (it varies far too widely by design
-// to assume) — makingPct defaults to 0 so the bare metal+GST figure is the floor;
-// the UI layer owns the user-entered default and its framing. gstPct defaults to
-// the current 3% India rate. Returns null on any invalid (non-finite / negative)
+// to assume) — both making inputs default to 0 so the bare metal+GST figure is
+// the floor; the UI layer owns the default range and its framing. gstPct defaults
+// to the current 3% India rate. Returns null on any invalid (non-finite / negative)
 // input so the caller can show a neutral empty state rather than NaN.
-function computePurchaseCost({ ratePerGram, grams, makingPct = 0, gstPct = 3 }) {
-  const vals = [ratePerGram, grams, makingPct, gstPct];
+function computePurchaseCost({ ratePerGram, grams, makingPct = 0, makingPerGram = 0, gstPct = 3 }) {
+  const vals = [ratePerGram, grams, makingPct, makingPerGram, gstPct];
   if (!vals.every(Number.isFinite)) return null;
-  if (ratePerGram < 0 || grams < 0 || makingPct < 0 || gstPct < 0) return null;
+  if (vals.some((v) => v < 0)) return null;
 
   const goldValue = ratePerGram * grams;
-  const making = goldValue * (makingPct / 100);
+  const making = goldValue * (makingPct / 100) + grams * makingPerGram;
   const gst = (goldValue + making) * (gstPct / 100);
   const total = goldValue + making + gst;
 
@@ -827,6 +833,33 @@ function computePurchaseCost({ ratePerGram, grams, makingPct = 0, gstPct = 3 }) 
     gst: Math.round(gst),
     total: Math.round(total),
   };
+}
+
+// Pre-filled making-charge range for the calculator. Source (read 2026-09-23):
+// Aditya Birla Capital's buyer guide, "between 6% and 25% of the value of gold
+// or ₹200–₹600 per gram" (adityabirlacapital.com/abc-of-money/gold-making-charges).
+// A published typical range, not a market measurement -- a plain chain sits
+// near the bottom, bridal/antique work can exceed the top; the inputs are
+// editable and the UI labels the result an estimate.
+const MAKING_CHARGE_DEFAULTS = {
+  pct:     { low: 6,   high: 25 },
+  perGram: { low: 200, high: 600 },
+};
+
+// Low–high estimate over a making-charge RANGE -- a single making % invents
+// precision a buyer doesn't have before they're in the store. makingMode is
+// "pct" (% of gold value) or "perGram" (flat ₹/gram). Bounds are sorted, so a
+// reversed entry still works. Returns null if any input is invalid.
+function computePurchaseCostRange({ ratePerGram, grams, makingMode, makingLow, makingHigh, gstPct = 3 }) {
+  if (makingMode !== "pct" && makingMode !== "perGram") return null;
+  if (!Number.isFinite(makingLow) || !Number.isFinite(makingHigh)) return null;
+  const [lo, hi] = makingLow <= makingHigh ? [makingLow, makingHigh] : [makingHigh, makingLow];
+  const at = (v) => computePurchaseCost(makingMode === "pct"
+    ? { ratePerGram, grams, makingPct: v, gstPct }
+    : { ratePerGram, grams, makingPerGram: v, gstPct });
+  const low = at(lo);
+  const high = at(hi);
+  return low && high ? { low, high } : null;
 }
 
 // ─── RENDERERS ────────────────────────────────────────────────────────────────
@@ -1176,8 +1209,9 @@ function renderHero(readings, forecast) {
 }
 
 // ─── PURCHASE CALCULATOR ────────────────────────────────────────────────────
-// UI for computePurchaseCost() (defined above) — grams + optional making-charge
-// input, three karat totals. Honesty rule: the 22K figure uses exactly the same
+// UI for computePurchaseCostRange() (defined above) — grams + a making-charge
+// range (% of gold value or ₹/gram), low–high totals for three karats, and an
+// always-visible "estimate, not a quote" line. Honesty rule: the 22K figure uses exactly the same
 // rate and the same isEstimateTier gate renderHero() uses for the hero price
 // (recomputed here rather than shared via a module var, matching this file's
 // existing per-render-function style) -- when the hero price shows "≈", the
@@ -1189,12 +1223,33 @@ function renderHero(readings, forecast) {
 // estimate qualifier for them here would claim more than the data supports.
 const CALC_GST_PCT = 3; // India's GST rate on gold jewellery — matches computePurchaseCost's own default
 
+function calcMakingMode() {
+  const checked = document.querySelector('input[name="calc-making-mode"]:checked');
+  return checked && checked.value === "perGram" ? "perGram" : "pct";
+}
+
+function fmtINRRange(lo, hi) {
+  return lo === hi ? `₹${fmtINR(lo)}` : `₹${fmtINR(lo)} – ₹${fmtINR(hi)}`;
+}
+
 function renderCalculator(readings, forecast) {
   const skelEl    = document.getElementById("calc-skeleton");
   const resultsEl = document.getElementById("calc-results");
   const gramsEl   = document.getElementById("calc-grams");
-  const makingEl  = document.getElementById("calc-making");
-  if (!resultsEl || !gramsEl || !makingEl) return;
+  const lowEl     = document.getElementById("calc-making-low");
+  const highEl    = document.getElementById("calc-making-high");
+  if (!resultsEl || !gramsEl || !lowEl || !highEl) return;
+
+  // Mode-dependent copy is set here, not via data-i18n, so it survives a
+  // language switch (applyLanguage() re-runs this after applyStaticStrings()).
+  const mode = calcMakingMode();
+  const unit = mode === "perGram" ? "₹/g" : "%";
+  document.querySelectorAll(".calc-making-unit").forEach(el => { el.textContent = unit; });
+  const hintEl = document.getElementById("calc-making-hint");
+  if (hintEl) {
+    hintEl.textContent = t(mode === "perGram" ? "calcMakingHintPerGram" : "calcMakingHintPct",
+      MAKING_CHARGE_DEFAULTS[mode]);
+  }
 
   if (!readings || readings.length === 0) {
     if (skelEl) skelEl.hidden = false;
@@ -1212,44 +1267,88 @@ function renderCalculator(readings, forecast) {
   const rate24 = latest["24k"];
   const rate18 = latest["18k"];
 
-  const grams     = parseFloat(gramsEl.value);
-  const makingPct = parseFloat(makingEl.value);
+  const grams      = parseFloat(gramsEl.value);
+  const makingLow  = parseFloat(lowEl.value);
+  const makingHigh = parseFloat(highEl.value);
 
   // grams === 0 is valid input to computePurchaseCost() (returns an all-zero
   // result, not null) -- but a ₹0 total reads as broken, not "you haven't
-  // entered anything yet". Treat <= 0 as the empty state explicitly.
-  const c22 = grams > 0 ? computePurchaseCost({ ratePerGram: rate22, grams, makingPct, gstPct: CALC_GST_PCT }) : null;
-  const c24 = grams > 0 ? computePurchaseCost({ ratePerGram: rate24, grams, makingPct, gstPct: CALC_GST_PCT }) : null;
-  const c18 = grams > 0 ? computePurchaseCost({ ratePerGram: rate18, grams, makingPct, gstPct: CALC_GST_PCT }) : null;
-
-  if (!c22 || !c24 || !c18) {
+  // entered anything yet". Treat <= 0 (or a missing rate) as the empty state.
+  const ratesOk = [rate22, rate24, rate18].every(r => Number.isFinite(r) && r > 0);
+  if (!(grams > 0) || !ratesOk) {
     // XSS-safe: t() returns a catalogue literal only.
     resultsEl.innerHTML = `<p class="calc-empty">${t("calcEmptyState")}</p>`;
     return;
   }
+
+  // Grams and rates are valid past this point, so a null range can only mean
+  // a blank or negative making-charge bound -- say that, not "enter a quantity".
+  const makingBad = !Number.isFinite(makingLow) || !Number.isFinite(makingHigh)
+    || makingLow < 0 || makingHigh < 0;
+  lowEl.setAttribute("aria-invalid", String(!Number.isFinite(makingLow) || makingLow < 0));
+  highEl.setAttribute("aria-invalid", String(!Number.isFinite(makingHigh) || makingHigh < 0));
+  if (makingBad) {
+    resultsEl.innerHTML = `<p class="calc-empty calc-error">${t("calcMakingInvalid")}</p>`;
+    return;
+  }
+
+  const range = (rate) => computePurchaseCostRange({
+    ratePerGram: rate, grams, makingMode: mode, makingLow, makingHigh, gstPct: CALC_GST_PCT,
+  });
+  const r22 = range(rate22);
+  const r24 = range(rate24);
+  const r18 = range(rate18);
+
+  // On the Tanishq path the 22K rate is the latest confirmed reading; past the
+  // same STALE_THRESHOLD_H the page's stale-banner uses, say how old it is.
+  // (The estimate tier already carries its own "≈" note below.)
+  const latestAgeH = (Date.now() - new Date(latest.timestamp).getTime()) / 3_600_000;
+  const staleNote = !isEstimateTier && latestAgeH > STALE_THRESHOLD_H
+    ? `<p class="calc-estimated-note">${t("calcStaleNote", { rel: fmtRelative(latest.timestamp) })}</p>`
+    : "";
 
   // XSS-safe: every interpolated value is either fmtINR(number) or a t()
   // catalogue literal — no external data reaches this template.
   resultsEl.innerHTML = `
     <div class="calc-result-card">
       <div class="calc-result-karat">${isEstimateTier ? "≈ " : ""}${t("calcKaratLabel22")}</div>
-      <div class="calc-result-row"><span>${t("calcRowGoldValue")}</span><span>₹${fmtINR(c22.goldValue)}</span></div>
-      ${c22.making > 0 ? `<div class="calc-result-row"><span>${t("calcRowMaking")}</span><span>₹${fmtINR(c22.making)}</span></div>` : ""}
-      <div class="calc-result-row"><span>${t("calcRowGst", { pct: CALC_GST_PCT })}</span><span>₹${fmtINR(c22.gst)}</span></div>
-      <div class="calc-result-row calc-result-row--total"><span>${t("calcRowTotal")}</span><span>₹${fmtINR(c22.total)}</span></div>
-      ${isEstimateTier ? `<p class="calc-estimated-note">${t("calcEstimatedNote")}</p>` : ""}
+      <div class="calc-result-row"><span>${t("calcRowGoldValue")}</span><span>₹${fmtINR(r22.low.goldValue)}</span></div>
+      ${r22.high.making > 0 ? `<div class="calc-result-row"><span>${t("calcRowMaking")}</span><span>${fmtINRRange(r22.low.making, r22.high.making)}</span></div>` : ""}
+      <div class="calc-result-row"><span>${t("calcRowGst", { pct: CALC_GST_PCT })}</span><span>${fmtINRRange(r22.low.gst, r22.high.gst)}</span></div>
+      <div class="calc-result-row calc-result-row--total"><span>${t("calcRowTotal")}</span><span>${fmtINRRange(r22.low.total, r22.high.total)}</span></div>
+      ${isEstimateTier ? `<p class="calc-estimated-note">${t("calcEstimatedNote")}</p>` : staleNote}
+      <p class="calc-disclaimer">${t("calcDisclaimer")}</p>
     </div>
-    <p class="calc-other-karats">${t("calcOtherKarats", { k24: fmtINR(c24.total), k18: fmtINR(c18.total) })}</p>
+    <p class="calc-other-karats">${t("calcOtherKaratsRange", {
+      k24: fmtINRRange(r24.low.total, r24.high.total),
+      k18: fmtINRRange(r18.low.total, r18.high.total),
+    })}</p>
   `;
 }
 
 function bindCalculatorInputs() {
-  const gramsEl  = document.getElementById("calc-grams");
-  const makingEl = document.getElementById("calc-making");
-  if (!gramsEl || !makingEl) return;
+  const gramsEl = document.getElementById("calc-grams");
+  const lowEl   = document.getElementById("calc-making-low");
+  const highEl  = document.getElementById("calc-making-high");
+  if (!gramsEl || !lowEl || !highEl) return;
+  // Single source for the default range: MAKING_CHARGE_DEFAULTS, not index.html.
+  lowEl.value  = MAKING_CHARGE_DEFAULTS.pct.low;
+  highEl.value = MAKING_CHARGE_DEFAULTS.pct.high;
   const onInput = () => renderCalculator(allReadings, lastForecast);
-  gramsEl.addEventListener("input", onInput);
-  makingEl.addEventListener("input", onInput);
+  [gramsEl, lowEl, highEl].forEach(el => el.addEventListener("input", onInput));
+  document.querySelectorAll('input[name="calc-making-mode"]').forEach(radio => {
+    radio.addEventListener("change", () => {
+      // Switching units makes the old numbers meaningless (8 % ≠ ₹8/g) --
+      // reset both bounds to the new mode's defaults rather than reinterpret them.
+      const d = MAKING_CHARGE_DEFAULTS[calcMakingMode()];
+      lowEl.value  = d.low;
+      highEl.value = d.high;
+      const perGram = calcMakingMode() === "perGram";
+      lowEl.step = highEl.step = perGram ? "10" : "0.5";
+      lowEl.max = highEl.max = perGram ? "10000" : "100";
+      onInput();
+    });
+  });
 }
 
 function renderSparkline(readings) {

@@ -75,3 +75,107 @@ test("returns null on non-finite inputs", () => {
   assert.equal(computePurchaseCost({ ratePerGram: 13710, grams: Infinity }), null);
   assert.equal(computePurchaseCost({ ratePerGram: 13710, grams: "10" }), null);
 });
+
+// --- makingPerGram (flat ₹/gram making charge) ---
+
+test("flat ₹/gram making charge: grams × makingPerGram, GST on gold + making", () => {
+  // gold = 13710×10 = 137100; making = 10×400 = 4000; gst = 141100×0.03 = 4233; total = 145333
+  const r = computePurchaseCost({ ratePerGram: 13710, grams: 10, makingPerGram: 400, gstPct: 3 });
+  assert.deepEqual(r, { goldValue: 137100, making: 4000, gst: 4233, total: 145333 });
+});
+
+test("GST math to the paisa: rupee fields round the exact paise result", () => {
+  // gold = 13711.37×7.35 = 100778.5695; making (pct 11.5) = 11589.535493 → 11590
+  // gst = (100778.5695 + 11589.535493)×0.03 = 3371.043180 → 3371
+  // total = 115739.148173 → 115739
+  const r = computePurchaseCost({ ratePerGram: 13711.37, grams: 7.35, makingPct: 11.5, gstPct: 3 });
+  assert.deepEqual(r, { goldValue: 100779, making: 11590, gst: 3371, total: 115739 });
+});
+
+test("negative or non-finite makingPerGram returns null", () => {
+  assert.equal(computePurchaseCost({ ratePerGram: 13710, grams: 10, makingPerGram: -1 }), null);
+  assert.equal(computePurchaseCost({ ratePerGram: 13710, grams: 10, makingPerGram: NaN }), null);
+});
+
+// --- computePurchaseCostRange ---
+
+const computePurchaseCostRange = app.pure("computePurchaseCostRange");
+
+test("range in % mode: low and high are the two bound estimates", () => {
+  const r = computePurchaseCostRange({
+    ratePerGram: 13710, grams: 10, makingMode: "pct", makingLow: 6, makingHigh: 25,
+  });
+  // low: making 8226, gst (137100+8226)×0.03 = 4359.78 → 4360, total 149686
+  assert.deepEqual(r.low, { goldValue: 137100, making: 8226, gst: 4360, total: 149686 });
+  // high: making 34275, gst 171375×0.03 = 5141.25 → 5141, total 176516
+  assert.deepEqual(r.high, { goldValue: 137100, making: 34275, gst: 5141, total: 176516 });
+});
+
+test("range in ₹/gram mode uses flat making charges", () => {
+  const r = computePurchaseCostRange({
+    ratePerGram: 13710, grams: 10, makingMode: "perGram", makingLow: 200, makingHigh: 600,
+  });
+  assert.equal(r.low.making, 2000);
+  assert.equal(r.high.making, 6000);
+  assert.equal(r.low.total, Math.round((137100 + 2000) * 1.03));
+  assert.equal(r.high.total, Math.round((137100 + 6000) * 1.03));
+});
+
+test("reversed bounds are sorted, not rejected", () => {
+  const a = computePurchaseCostRange({ ratePerGram: 10000, grams: 5, makingMode: "pct", makingLow: 20, makingHigh: 8 });
+  const b = computePurchaseCostRange({ ratePerGram: 10000, grams: 5, makingMode: "pct", makingLow: 8, makingHigh: 20 });
+  assert.deepEqual(a, b);
+});
+
+test("equal bounds collapse to a single figure (low === high)", () => {
+  const r = computePurchaseCostRange({ ratePerGram: 10000, grams: 5, makingMode: "pct", makingLow: 0, makingHigh: 0 });
+  assert.deepEqual(r.low, r.high);
+  assert.deepEqual(r.low, { goldValue: 50000, making: 0, gst: 1500, total: 51500 });
+});
+
+test("range returns null on an unknown mode, blank bound, or negative bound", () => {
+  const base = { ratePerGram: 13710, grams: 10, makingLow: 6, makingHigh: 25 };
+  assert.equal(computePurchaseCostRange({ ...base, makingMode: "flat" }), null);
+  assert.equal(computePurchaseCostRange({ ...base, makingMode: "pct", makingLow: NaN }), null);
+  assert.equal(computePurchaseCostRange({ ...base, makingMode: "pct", makingHigh: -1 }), null);
+  assert.equal(computePurchaseCostRange({ ...base, makingMode: "perGram", grams: -2 }), null);
+});
+
+test("default making range matches its cited source (6–25% or ₹200–600/g)", () => {
+  const d = app.run("MAKING_CHARGE_DEFAULTS");
+  assert.deepEqual(JSON.parse(JSON.stringify(d)), { pct: { low: 6, high: 25 }, perGram: { low: 200, high: 600 } });
+});
+
+// --- renderCalculator states (real app.js against the stub DOM) ---
+
+const NOW = Date.parse("2026-09-23T06:00:00Z");
+function renderWith({ grams = "10", low = "6", high = "25", readingAgeH = 1, forecast = null } = {}) {
+  const a = loadApp({ nowMs: NOW });
+  const doc = a.run("document");
+  doc.getElementById("calc-grams").value = grams;
+  doc.getElementById("calc-making-low").value = low;
+  doc.getElementById("calc-making-high").value = high;
+  const ts = new Date(NOW - readingAgeH * 3_600_000).toISOString();
+  a.pure("renderCalculator")([{ timestamp: ts, "22k": 13710, "24k": 14957, "18k": 11218 }], forecast);
+  return doc.getElementById("calc-results").innerHTML;
+}
+
+test("render: a valid range always carries the estimate disclaimer and a low–high total", () => {
+  const html = renderWith();
+  assert.match(html, /An estimate, not a quote/);
+  assert.match(html, /₹1,49,686 – ₹1,76,516/);
+});
+
+test("render: zero grams shows the empty state, not a ₹0 total", () => {
+  assert.match(renderWith({ grams: "0" }), /Enter a quantity/);
+});
+
+test("render: a blank or negative making bound shows the making-charge error", () => {
+  assert.match(renderWith({ low: "" }), /making charge of 0 or more/);
+  assert.match(renderWith({ high: "-5" }), /making charge of 0 or more/);
+});
+
+test("render: a confirmed price older than STALE_THRESHOLD_H says how old it is", () => {
+  assert.match(renderWith({ readingAgeH: 20 }), /last confirmed price/);
+  assert.doesNotMatch(renderWith({ readingAgeH: 1 }), /last confirmed price/);
+});

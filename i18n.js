@@ -63,16 +63,25 @@ const STRINGS = {
     calcHeading: "How much would you pay?",
     calcGramsLabel: "Grams",
     calcGramsAriaLabel: "Quantity in grams",
-    calcMakingLabel: "Making charge (%)",
-    calcMakingAriaLabel: "Making charge percentage",
-    calcMakingHint: "Varies by jeweler and design — enter yours if you know it.",
+    calcMakingModePct: "% of gold value",
+    calcMakingModePerGram: "₹ per gram",
+    calcMakingLowLabel: "From",
+    calcMakingHighLabel: "To",
+    calcMakingHintPct: ({ low, high }) =>
+      `Typically ${low}–${high}% of the gold value — lower for plain machine-made pieces, higher for handcrafted or bridal work. Enter your jeweller's rate if you know it.`,
+    calcMakingHintPerGram: ({ low, high }) =>
+      `Some jewellers quote a flat ₹${low}–₹${high} per gram instead of a %. Enter your jeweller's rate if you know it.`,
+    calcMakingInvalid: "Enter a making charge of 0 or more in both boxes.",
     calcKaratLabel22: "22 KT",
     calcRowGoldValue: "Gold value",
     calcRowMaking: "Making charge",
     calcRowGst: ({ pct }) => `GST (${pct}%)`,
     calcRowTotal: "Total",
-    calcOtherKarats: ({ k24, k18 }) => `24 KT: ₹${k24} · 18 KT: ₹${k18}`,
+    calcOtherKaratsRange: ({ k24, k18 }) => `24 KT: ${k24} · 18 KT: ${k18}`,
     calcEstimatedNote: "Today's price is an estimate, so this total is too.",
+    calcStaleNote: ({ rel }) => `Uses the last confirmed price, from ${rel}.`,
+    calcDisclaimer:
+      "An estimate, not a quote. Your jeweller's bill will differ — hallmarking (HUID) fees, stones, wastage and store pricing aren't included.",
     calcEmptyState: "Enter a quantity to see the cost.",
 
     commentaryAriaLabel: "Market commentary",
@@ -402,15 +411,17 @@ const STRINGS = {
     calcHeading: "आपको कितना पड़ेगा?",
     calcGramsLabel: "ग्राम",
     calcGramsAriaLabel: "मात्रा (ग्राम में)",
-    calcMakingLabel: "मेकिंग चार्ज (%)",
-    calcMakingAriaLabel: "मेकिंग चार्ज प्रतिशत",
-    calcMakingHint: "जौहरी और डिज़ाइन के हिसाब से बदलता है — अगर पता हो तो अपना % डालें।",
+    // Calculator range/estimate strings added 2026-09 (calcMakingMode*,
+    // calcMakingLow/HighLabel, calcMakingHint*, calcMakingInvalid,
+    // calcStaleNote, calcDisclaimer) have NO Hindi entry yet on purpose:
+    // pending native-speaker review rather than machine translation. t()
+    // falls back to the English string until they're added here.
     calcKaratLabel22: "22 KT",
     calcRowGoldValue: "सोने की कीमत",
     calcRowMaking: "मेकिंग चार्ज",
     calcRowGst: ({ pct }) => `GST (${pct}%)`,
     calcRowTotal: "कुल",
-    calcOtherKarats: ({ k24, k18 }) => `24 KT: ₹${k24} · 18 KT: ₹${k18}`,
+    calcOtherKaratsRange: ({ k24, k18 }) => `24 KT: ${k24} · 18 KT: ${k18}`,
     calcEstimatedNote: "आज की कीमत अनुमानित है, इसलिए यह कुल भी अनुमानित है।",
     calcEmptyState: "कीमत देखने के लिए मात्रा डालें।",
 

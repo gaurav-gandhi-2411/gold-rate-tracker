@@ -1241,6 +1241,58 @@ main {
   color: var(--cream-mute);
   margin: 4px 0 var(--space-5);
 }
+/* Making-charge range: a real <fieldset> so the radios + both bounds are one
+   labelled group for screen readers; browser chrome (border/padding) reset so
+   it reads as part of the card, not a nested box. */
+.calc-making {
+  border: 0;
+  padding: 0;
+  margin: var(--space-4) 0 0;
+  min-width: 0;
+}
+.calc-making legend {
+  padding: 0;
+  font-size: var(--ts-xs);
+  color: var(--cream-mute);
+  margin-bottom: 6px;
+}
+.calc-mode {
+  display: flex;
+  gap: var(--space-2);
+  flex-wrap: wrap;
+  margin-bottom: var(--space-3);
+}
+/* 44px touch target, same as .calc-input. */
+.calc-mode-option {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  min-height: 44px;
+  padding: 0 var(--space-4);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  background: var(--surface-2);
+  font-size: var(--ts-sm);
+  color: var(--cream-dim);
+  cursor: pointer;
+}
+.calc-mode-option:has(input:checked) {
+  border-color: var(--gold);
+  color: var(--cream);
+}
+.calc-mode-option input { accent-color: var(--gold); margin: 0; }
+.calc-mode-option input:focus-visible {
+  outline: 2px solid var(--gold);
+  outline-offset: 2px;
+}
+.calc-input[aria-invalid="true"] { border-color: var(--status-stale); }
+.calc-disclaimer {
+  margin: var(--space-3) 0 0;
+  font-size: var(--ts-xs);
+  color: var(--cream-mute);
+  line-height: 1.45;
+}
+.calc-error { color: var(--status-stale); }
 
 /* CLS fix, same absolute-overlay pattern as commentary-body/model-signal-wrap
    above -- calc-skeleton is hidden without ever changing calc-wrap's height,
@@ -1249,13 +1301,15 @@ main {
    near-maximal case, not the zero-making-charge default: the making-charge
    row and the estimated-price note are both conditionally rendered, so the
    card is taller once a visitor enters a making % and/or the headline price
-   is in ibja_calibrated/fusion_consensus mode. Measured scrollHeight at
-   375px (tallest of 375/390/428, both languages, 2026-08-11) with both of
-   those present: 240px. 250px leaves a small margin without padding far
-   beyond the measured case. */
+   is in ibja_calibrated/fusion_consensus mode. Re-measured 2026-09-23 after
+   the making-charge range + always-on estimate disclaimer: scrollHeight at
+   375px, 20 g, estimate-tier note present -- EN 330px, HI 316px (stale-note
+   variant EN 330px; default EN 305px). 340px covers those with a small
+   margin; a 10 kg entry (EN 366px, prices wrap) still grows the card, by
+   design -- padding every visit for that extreme isn't worth the gap. */
 .calc-wrap {
   position: relative;
-  min-height: 250px;
+  min-height: 340px;
 }
 .calc-skeleton {
   position: absolute;
@@ -1285,6 +1339,9 @@ main {
   padding: 3px 0;
   font-variant-numeric: tabular-nums;
 }
+/* Ranges ("₹a – ₹b") wrap after the dash at narrow widths; keep the
+   wrapped half flush right under the first instead of snapping left. */
+.calc-result-row > span:last-child { text-align: right; }
 .calc-result-row--total {
   border-top: 1px solid var(--line);
   margin-top: 6px;
