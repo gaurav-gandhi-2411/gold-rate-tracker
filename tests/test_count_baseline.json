@@ -17,7 +17,7 @@
   "tests/test_chart_cdn_resilience.js": 7,
   "tests/test_check_bot_pr_sync_allowlist.py": 24,
   "tests/test_check_direction_signal_not_wired.py": 9,
-  "tests/test_check_pr_boundary_leak.py": 24,
+  "tests/test_check_pr_boundary_leak.py": 26,
   "tests/test_check_required_checks_positive.py": 10,
   "tests/test_check_test_counts.py": 12,
   "tests/test_check_test_registry_complete.py": 12,
