@@ -79,6 +79,7 @@ jobs:
         # ml.sources.base.validate_observed_at), a source going bad shows up
         # here as a visible annotation on every run, not just a log line.
         if: always() && steps.shadow.outcome != 'failure'
+        continue-on-error: true  # annotation only: must never block the data commit below
         run: |
           python -c "
           import json
