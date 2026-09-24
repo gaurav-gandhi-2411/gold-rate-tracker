@@ -1,0 +1,79 @@
+{
+ "gcf": {
+  "first": "2000-08-30",
+  "last": "2012-12-31",
+  "P1_joint_weekday": {
+   "n_days": 3088,
+   "p_value": 0.16281525397400864,
+   "df": 4,
+   "mean_return_bp_by_weekday": {
+    "0": 6.102154918157336,
+    "1": -0.21000082255152622,
+    "2": 4.432646903377055,
+    "3": 2.6604165994036477,
+    "4": 16.65493488356109
+   },
+   "passes": false
+  },
+  "P2_indian_fri_vs_tue": {
+   "n_weeks": 559,
+   "mean_pct": 0.023489672043599287,
+   "ci95_pct": [
+    -0.14535889796602652,
+    0.19233824205322508
+   ],
+   "share_weeks_cheaper": 0.4525939177101968,
+   "share_wilson95": [
+    0.4117951445467376,
+    0.4940397950020604
+   ],
+   "p_one_sided": 0.6074461359867424,
+   "passes": false
+  }
+ },
+ "gld": {
+  "first": "2004-11-18",
+  "last": "2012-12-31",
+  "P1_joint_weekday": {
+   "n_days": 2042,
+   "p_value": 0.0365370259637576,
+   "df": 4,
+   "mean_return_bp_by_weekday": {
+    "0": -1.2638147836269824,
+    "1": 1.6880657406964343,
+    "2": 11.734546318043487,
+    "3": -1.6602910934563893,
+    "4": 20.66331330394675
+   },
+   "passes": false
+  },
+  "P2_indian_fri_vs_tue": {
+   "n_weeks": 370,
+   "mean_pct": 0.08109900237509564,
+   "ci95_pct": [
+    -0.13778660136805124,
+    0.2999846061182425
+   ],
+   "share_weeks_cheaper": 0.44054054054054054,
+   "share_wilson95": [
+    0.3908230669513895,
+    0.49147998169477164
+   ],
+   "p_one_sided": 0.7661409608073171,
+   "passes": false
+  }
+ },
+ "forward_ibja": {
+  "n_weeks": 0,
+  "p_one_sided": null,
+  "passes": false,
+  "read_allowed": false
+ },
+ "verdict": {
+  "comex_primary_passes": false,
+  "forward_ibja_passes": false,
+  "product_may_advise_a_weekday": false
+ },
+ "git_sha": "e887b01f344d2b957052990474f04579733e9ca6",
+ "generated_at_utc": "2026-09-24T14:35:10.465269+00:00"
+}
