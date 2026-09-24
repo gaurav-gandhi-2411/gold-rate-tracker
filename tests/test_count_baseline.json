@@ -30,7 +30,7 @@
   "tests/test_dedup.js": 11,
   "tests/test_degradation_chain.py": 5,
   "tests/test_direction_gate.py": 33,
-  "tests/test_direction_harness.py": 49,
+  "tests/test_direction_harness.py": 55,
   "tests/test_drift.py": 5,
   "tests/test_drivers.py": 12,
   "tests/test_duty_and_calendar.py": 35,
@@ -86,6 +86,7 @@
   "tests/test_tier_degradation_visible.js": 7,
   "tests/test_vol_regime.js": 12,
   "tests/test_volatility.py": 35,
+  "tests/test_weekly_range.py": 8,
   "tests/test_workflow_schedule_isolation.py": 4,
   "worker-deadman/test/deadman.test.mjs": 75,
   "worker-deadman/test/pr_trigger_health.test.mjs": 44
