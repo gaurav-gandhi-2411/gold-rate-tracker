@@ -2409,6 +2409,45 @@ html.ptr-pulling {
 .meth-how-good .meth-text { margin-bottom: 16px; }
 .meth-how-good .meth-text:last-child { margin-bottom: 0; }
 
+/* ===================================================================
+   PAGE V2 (item 6, flagged OFF) -- five-jobs view
+   Design tokens only, no hardcoded hex/px (rule 15b) -- same surface/border/radius/
+   spacing treatment as .commentary-card, so this reads as a native part of the page
+   rather than a bolted-on preview. Unstyled beyond that: the orchestrator adds
+   before/after screenshots to the PR; a full aesthetic pass is not this PR's job.
+=================================================================== */
+.pv2-container {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-5);
+  margin-bottom: clamp(40px, 9vw, 56px);
+}
+.pv2-card {
+  background: var(--surface-2);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-lg);
+  padding: var(--space-5) var(--space-6);
+}
+.pv2-card h3 {
+  font-family: var(--heading);
+  font-size: var(--ts-md);
+  margin: 0 0 var(--space-2);
+}
+.pv2-card p {
+  color: var(--cream-dim);
+  font-size: var(--ts-sm);
+  line-height: 1.5;
+  margin: 0 0 var(--space-2);
+}
+.pv2-card p:last-child { margin-bottom: 0; }
+.pv2-price-value {
+  font-family: var(--display);
+  font-size: var(--ts-2xl);
+  color: var(--cream);
+}
+.pv2-price-source { color: var(--cream-mute); }
+.pv2-slot:empty { display: none; }
+
 /* ═══════════════════════════════════════════════════════════════
    SCROLL REVEALS (feel-alive pass)
 ═══════════════════════════════════════════════════════════════ */

@@ -111,7 +111,12 @@
 // decimal places (formatPValue() in i18n.js, added same PR); renders
 // "p < 0.0001" instead. i18n.js + how-we-know.js + how-we-know-strings.js
 // (EN+HI) changed -- all three are precached shell files.
-const VERSION = "v57-20260924-pvalue-display";
+// 2026-09-24 (v58): page_v2 (item 6) -- proposed five-jobs page, entirely behind
+// isFeatureOn("page_v2") + per-card flags, all still false (merge default). app.js +
+// i18n.js + style.css changed (new pure/build/render functions, new pv2* i18n keys, new
+// .pv2-* rules) -- bumping so installed clients pick up the new app.js/i18n.js/style.css
+// bytes even though nothing currently renders differently with every flag off.
+const VERSION = "v58-20260924-pagev2-flagged";
 const SHELL_CACHE = `gold-shell-${VERSION}`;
 
 const SHELL_FILES = [
