@@ -183,7 +183,7 @@ def event_day_log_return(
     """|ln(event_close / prior_close)| for one event occurrence, plus the two
     dates actually used (post roll-forward). None if either endpoint is
     outside the series' coverage."""
-    index = series.index
+    index = pd.DatetimeIndex(series.index)
     d = pd.Timestamp(event_date)
     event_day = _roll_forward_to_genuine(d, index, is_genuine)
     if event_day is None:
@@ -210,7 +210,10 @@ def normal_day_log_returns(
         genuine_days.map(lambda d: d.date().isoformat() not in excluded_dates)
     ]
     vals = series.loc[genuine_days]
-    log_ret = np.log(vals / vals.shift(1)).abs()
+    # np.log(Series) returns a Series at runtime (NEP 18 __array_ufunc__ protocol);
+    # numpy's stubs type it as ndarray, which has no .abs() -- see ml/inr_proxy.py
+    # for the same class of stub/runtime mismatch on this codebase.
+    log_ret = np.log(vals / vals.shift(1)).abs()  # type: ignore[attr-defined]
     return log_ret.dropna()
 
 
