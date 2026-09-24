@@ -77,9 +77,3 @@ def log_price_and_returns(price: pd.Series) -> tuple[np.ndarray, np.ndarray]:
     log_price = np.log(price.to_numpy(dtype=float))
     returns = np.diff(log_price)
     return log_price, returns
-
-
-def returns_known_through(returns: np.ndarray, t: int) -> np.ndarray:
-    """Returns known by the close of trading day t (price-index units):
-    returns[0:t] -- the t returns realized at price indices 1..t."""
-    return returns[:t]
