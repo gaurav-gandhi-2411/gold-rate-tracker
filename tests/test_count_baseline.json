@@ -106,6 +106,7 @@
   "tests/test_tier_degradation_visible.js": 7,
   "tests/test_vol_regime.js": 12,
   "tests/test_volatility.py": 35,
+  "tests/test_wait_or_buy.py": 30,
   "tests/test_weekly_range.py": 8,
   "tests/test_workflow_schedule_isolation.py": 4,
   "worker-deadman/test/deadman.test.mjs": 75,
