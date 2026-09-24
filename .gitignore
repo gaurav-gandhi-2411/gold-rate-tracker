@@ -30,3 +30,8 @@ scraper/spinner-check.mjs
 scraper/visual-audit.mjs
 scraper/*.png
 scripts/screenshot_*.mjs
+
+# D3: frozen ADR 044 snapshots -- re-downloaded + SHA-256-verified at run time by
+# scripts/analysis_vol_regime_prereg.py (raw Yahoo Finance data; git history not rewritten).
+reports/vol_regime_prereg_gcf_2000_2012.csv
+reports/vol_regime_prereg_gld_2004_2012.csv

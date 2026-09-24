@@ -1,0 +1,60 @@
+name: Pre-registration snapshot verify (manual)
+
+# D3 (2026-09-25): scripts/analysis_vol_regime_prereg.py and scripts/analysis_dow_prereg.py no
+# longer commit their frozen COMEX/GLD snapshots (ADR 044) to this public repo -- each run now
+# re-downloads and SHA-256-verifies against the hash frozen in analysis_vol_regime_prereg.py.
+# This workflow proves that fetch-and-verify path actually works against live Yahoo Finance data
+# on a GitHub-hosted runner (this repo's sandboxed dev environment has no outbound network).
+#
+# Writes to a SCRATCH output path only -- never reports/vol_regime_prereg_results.json or
+# reports/dow_prereg_results.json. Those are ADR 044/052's frozen, GG-confirmed results; this
+# workflow must never overwrite them or be mistaken for a new confirmatory run.
+#
+# Constraints (same as analysis.yml, GG 2026-09-23): GitHub-hosted runners only, contents: read,
+# no secrets, commits nothing, manual dispatch only.
+
+on:
+  workflow_dispatch:
+    inputs:
+      script:
+        description: "Which prereg script to verify (scripts/<name>.py)"
+        required: true
+        type: choice
+        options:
+          - analysis_vol_regime_prereg
+          - analysis_dow_prereg
+
+permissions:
+  contents: read
+
+concurrency:
+  group: prereg-verify-${{ inputs.script }}-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: "3.12"
+          cache: "pip"
+          cache-dependency-path: ml/requirements-inference.lock
+      - name: Install dependencies
+        run: |
+          pip install -q uv
+          uv pip install --system \
+            --extra-index-url https://download.pytorch.org/whl/cpu \
+            --index-strategy unsafe-best-match \
+            -r ml/requirements-inference.lock
+      - name: Run against a scratch output path (never the committed frozen results)
+        run: |
+          mkdir -p /tmp/prereg-verify
+          python "scripts/${{ inputs.script }}.py" --out "/tmp/prereg-verify/${{ inputs.script }}.json"
+          echo "OK: fetched + SHA-256-verified the frozen ADR 044 snapshot(s); wrote a scratch report."
+      - name: Show the scratch report (not committed, not an artifact -- log only)
+        run: cat "/tmp/prereg-verify/${{ inputs.script }}.json"

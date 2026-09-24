@@ -2,8 +2,14 @@
 
 Momentum when calm, reversal when volatile, on COMEX history this project has never used
 (GC=F 2000-08-30 .. 2012-12-31; GLD 2004-11-18 .. 2012-12-31 as a roll-free robustness check).
-Downloads each series once into reports/ and reuses the saved file afterwards. Every constant
-below is fixed by ADR 044; changing one makes the result exploratory.
+Every constant below is fixed by ADR 044; changing one makes the result exploratory.
+
+D3 (2026-09-25): the snapshot CSVs are no longer committed to this public repo -- committing
+Yahoo Finance's raw daily closes republishes their data, which their terms do not cover. Each
+run re-downloads both series and checks the SHA-256 against the value frozen below (the same
+hash ADR 044's Result section records). A mismatch fails loudly rather than silently scoring a
+series that is not the one this test was pre-registered and previously run against -- git
+history for the CSVs is not rewritten (see the D3 PR body).
 
 Usage: python scripts/analysis_vol_regime_prereg.py [--out reports/vol_regime_prereg_results.json]
 """
@@ -34,37 +40,64 @@ VOL_WINDOW = 20
 MEDIAN_WINDOW = 252
 DM_HORIZON = 6  # Newey-West lag 5
 ALPHA = 0.05
+# (ticker, start, end, relative CSV path, frozen SHA-256 -- from ADR 044's Result section,
+# recomputed independently before D3 removed the CSVs from git; see the D3 PR body).
 SERIES = {
-    "gcf": ("GC=F", "2000-08-30", "2012-12-31", "reports/vol_regime_prereg_gcf_2000_2012.csv"),
-    "gld": ("GLD", "2004-11-18", "2012-12-31", "reports/vol_regime_prereg_gld_2004_2012.csv"),
+    "gcf": (
+        "GC=F",
+        "2000-08-30",
+        "2012-12-31",
+        "reports/vol_regime_prereg_gcf_2000_2012.csv",
+        "2db071aae050c593607f07518a4b36663916bc9fc9e288e3ee8292800437c6ac",
+    ),
+    "gld": (
+        "GLD",
+        "2004-11-18",
+        "2012-12-31",
+        "reports/vol_regime_prereg_gld_2004_2012.csv",
+        "9aa4143f1b1e4326a686f885724966d360fd22aa85c75ee8b7e1939b2e141127",
+    ),
 }
 
 
 def load(key: str) -> tuple[pd.Series, str]:
-    """The frozen snapshot; downloaded only if it does not exist yet."""
-    ticker, start, end, rel = SERIES[key]
+    """Re-downloads the frozen ADR 044 series every run (D3: the CSV is no longer committed)
+    and checks it against the SHA-256 frozen in SERIES. Raises loudly on a mismatch or an
+    empty/failed download -- never silently scores a series that isn't the one this test was
+    pre-registered and previously run against (rule 98a: fail closed, not open)."""
+    ticker, start, end, rel, expected_sha256 = SERIES[key]
     path = ROOT / rel
-    if not path.exists():
-        import yfinance as yf
+    import yfinance as yf
 
-        raw = yf.download(
-            ticker,
-            start=start,
-            end=(pd.Timestamp(end) + pd.Timedelta(days=1)).strftime("%Y-%m-%d"),
-            auto_adjust=True,
-            progress=False,
-            threads=False,
+    raw = yf.download(
+        ticker,
+        start=start,
+        end=(pd.Timestamp(end) + pd.Timedelta(days=1)).strftime("%Y-%m-%d"),
+        auto_adjust=True,
+        progress=False,
+        threads=False,
+    )
+    if raw.empty:
+        raise RuntimeError(f"yfinance returned no data for {ticker} ({start}..{end})")
+    close = raw["Close"]
+    if isinstance(close, pd.DataFrame):
+        close = close.iloc[:, 0]
+    close = close.dropna()
+    close.index = pd.to_datetime(close.index).tz_localize(None)
+    df = pd.DataFrame({"date": close.index.strftime("%Y-%m-%d"), "close": close.to_numpy()})
+    csv_text = df.to_csv(index=False, float_format="%.6f")
+    sha = hashlib.sha256(csv_text.encode("utf-8")).hexdigest()
+    if sha != expected_sha256:
+        raise RuntimeError(
+            f"ADR 044 frozen-snapshot mismatch for {key} ({ticker} {start}..{end}): expected "
+            f"sha256 {expected_sha256}, got {sha}. The freshly fetched series does not match "
+            "what this pre-registered test was run against -- refusing to score it silently. "
+            "If Yahoo's historical data for this range has genuinely changed, that needs a "
+            "human decision (a new frozen snapshot + a note in ADR 044), not a silent re-score."
         )
-        close = raw["Close"]
-        if isinstance(close, pd.DataFrame):
-            close = close.iloc[:, 0]
-        close = close.dropna()
-        close.index = pd.to_datetime(close.index).tz_localize(None)
-        pd.DataFrame({"date": close.index.strftime("%Y-%m-%d"), "close": close.to_numpy()}).to_csv(
-            path, index=False, float_format="%.6f"
-        )
-    df = pd.read_csv(path)
-    sha = hashlib.sha256(path.read_bytes()).hexdigest()
+    # Local, uncommitted convenience copy (gitignored) -- not used to skip verification above.
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(csv_text, encoding="utf-8")
     return pd.Series(df["close"].to_numpy(dtype=float), index=pd.to_datetime(df["date"])), sha
 
 

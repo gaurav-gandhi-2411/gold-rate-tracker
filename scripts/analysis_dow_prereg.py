@@ -9,12 +9,18 @@ registration date), read only once it has >= FORWARD_MIN_WEEKS weeks.
 Weekday mapping (frozen): an Indian buying day sees the previous US session's close, so Indian
 Tuesday <-> COMEX Monday close and Indian Friday <-> COMEX Thursday close.
 
+D3 (2026-09-25): the frozen snapshot CSVs are no longer committed to this public repo (same
+reasoning as ADR 044/analysis_vol_regime_prereg.py). `load_close` delegates to
+`analysis_vol_regime_prereg.load`, the single fetch-and-SHA-256-verify implementation shared by
+both scripts, rather than keeping a second, driftable copy of the frozen hashes.
+
 Usage: python scripts/analysis_dow_prereg.py [--out reports/dow_prereg_results.json]
 """
 
 from __future__ import annotations
 
 import argparse
+import importlib.util
 import json
 import math
 import subprocess
@@ -29,10 +35,7 @@ import pandas as pd
 ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT))
 
-SNAPSHOTS = {
-    "gcf": "reports/vol_regime_prereg_gcf_2000_2012.csv",
-    "gld": "reports/vol_regime_prereg_gld_2004_2012.csv",
-}
+SNAPSHOT_KEYS = ("gcf", "gld")
 REGISTERED_AFTER = "2026-09-24"
 FORWARD_MIN_WEEKS = 52
 ALPHA_PRIMARY = 0.025  # Bonferroni over P1 and P2
@@ -44,11 +47,26 @@ INDIAN_TUE_SEES = 0
 INDIAN_FRI_SEES = 3
 
 
+def _vol_regime_module() -> Any:
+    """Loads analysis_vol_regime_prereg.py by path (it is not a package) so `load_close` can
+    reuse its single fetch-and-SHA-256-verify implementation. Same loading pattern
+    tests/test_analysis_dow_prereg.py already uses for this script itself."""
+    spec = importlib.util.spec_from_file_location(
+        "analysis_vol_regime_prereg", ROOT / "scripts" / "analysis_vol_regime_prereg.py"
+    )
+    assert spec is not None and spec.loader is not None
+    mod = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(mod)
+    return mod
+
+
 def load_close(key: str) -> pd.Series:
-    df = pd.read_csv(ROOT / SNAPSHOTS[key])
-    s = pd.Series(df["close"].to_numpy(dtype=float), index=pd.to_datetime(df["date"]))
-    s.index = s.index.tz_localize(None) if s.index.tz is not None else s.index
-    return s.dropna().sort_index()
+    """Re-downloads and SHA-256-verifies the ADR 044 frozen snapshot for `key` (D3: the CSV is
+    no longer committed) via analysis_vol_regime_prereg.load. Raises loudly on a mismatch --
+    see that function's docstring."""
+    close, _sha256 = _vol_regime_module().load(key)
+    close.index = close.index.tz_localize(None) if close.index.tz is not None else close.index
+    return close.dropna().sort_index()
 
 
 def hac_se(x: np.ndarray, lag: int) -> float:
@@ -157,7 +175,7 @@ def forward_ibja() -> dict[str, Any]:
 
 def run() -> dict[str, Any]:
     out: dict[str, Any] = {}
-    for key in SNAPSHOTS:
+    for key in SNAPSHOT_KEYS:
         close = load_close(key)
         out[key] = {
             "first": str(close.index.min().date()),
