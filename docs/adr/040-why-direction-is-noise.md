@@ -3,6 +3,20 @@
 **Status:** Accepted, 2026-09-23. Research finding; nothing user-facing changes. The direction signal
 stays in shadow. R4 (ADR 039) is its last pre-registered test.
 
+> **Retraction, 2026-09-24 (GG decision G2).** The claim that gold shows "momentum when it is
+> calm, snapping back when it is volatile" (point 4 below, and the two regime rows in D4) is
+> **withdrawn**. See [ADR 044](044-volatility-regime-preregistration.md):
+>
+> - **The effect does not replicate.** On untouched COMEX data from 2001–2012, the
+>   pre-registered regime rule scored 50.4% against always-up's 54.2% (n = 2,816, effective n
+>   2,900, one-sided p = 0.999). The same rule on GLD was also worse than always-up.
+> - **D4's method produces the pattern from pure noise.** On simulated series with no structure,
+>   the calm-day variance ratio came out "significant" in 17 of 40 series, against a nominal 2.
+>
+> The original text below is kept unchanged as the record of what was claimed. Every other
+> finding in this ADR stands. The list of things that could change the verdict loses the
+> volatility-regime item, because ADR 044 ran that test and it failed.
+
 **Evidence:** `scripts/analysis_direction_diagnosis.py` at `bd0a2467`, run on GitHub Actions as run
 **35870505399**. Report: `reports/direction_diagnosis_run_35870505399.json`. Datasets:
 - **COMEX daily:** roll-adjusted GC=F, "up tomorrow?", 3,451 days (2013–2026), 3,201 scored.
@@ -24,7 +38,8 @@ Every walk-forward is forward-only with an embargo ≥ the horizon.
 4. **The price series itself has almost no day-to-day memory.** Gold's daily moves are close to a
    random walk. Their memory is small enough that even a perfect use of it would be right only about
    51% of the time. The little structure there is changes with the market's mood: short runs of
-   momentum when it is calm, snapping back when it is volatile.
+   momentum when it is calm, snapping back when it is volatile. *(Retracted 2026-09-24: see the
+   note at the top and ADR 044.)*
 5. **Our pipeline can't see small edges.** When we planted a fake pattern of known strength in the
    real data, the pipeline reliably found it only when a perfect predictor would have been right
    about **60%** of the time (a 10-point edge). It missed patterns worth 55% or less. On the INR set
@@ -37,7 +52,8 @@ Every walk-forward is forward-only with an embargo ≥ the horizon.
 **What would change this verdict:**
 - a genuinely new kind of information (e.g. Indian import premium or discount, MCX–COMEX basis,
   wedding-season demand data);
-- a pre-registered test of the volatility-regime effect in D4;
+- a pre-registered test of the volatility-regime effect in D4; *(done in ADR 044: it failed,
+  2026-09-24)*
 - years more real IBJA days for the INR set;
 - targets that do have structure: **how much** the price will move (R1), not which way.
 
@@ -92,6 +108,10 @@ GBM 53.5% → 55.5%), so the level features cost some sensitivity.
 | COMEX, high-volatility days | 1,716 | −0.043 | 0.052 | ~51% | **0.64 (0.013)**, reversal |
 | INR proxy daily | 3,637 | −0.129 | < 0.001 | ~54% | 0.68 (0.008) |
 | real IBJA, dense days only* | 198 | +0.070 | 0.39 | ~52% | 5-day: 1.05 (0.74) |
+
+*Retracted 2026-09-24:* the two "COMEX, low/high-volatility days" rows do not show a real
+effect. The method produces such variance ratios from pure noise, and they do not replicate on
+unseen data (ADR 044).
 
 "Ceiling from lag-1" is the sign-prediction accuracy that lag-1 autocorrelation alone allows,
 0.5 + arcsin(ρ)/π, whichever sign is exploited.

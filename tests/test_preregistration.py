@@ -36,12 +36,35 @@ class TestFrozenConfig:
         assert pytest.approx(144.1673, abs=1e-4) == PREREGISTERED_N_FOR_POWER_V1
 
     def test_v2_power_target_never_below_v1(self) -> None:
-        # GG decision G1/G2: the v2 target may rise with the clean effect size, never fall.
-        from ml.direction.preregistration import REFERENCE
+        # GG decision G1/G2: the v2 target is never below v1's 144.17.
+        from ml.direction.preregistration import N_FOR_POWER_MIN_EDGE
 
         assert PREREGISTERED_N_FOR_POWER >= PREREGISTERED_N_FOR_POWER_V1
-        expected = max(PREREGISTERED_N_FOR_POWER_V1, REFERENCE["n_for_power"])
+        expected = max(PREREGISTERED_N_FOR_POWER_V1, N_FOR_POWER_MIN_EDGE)
         assert expected == PREREGISTERED_N_FOR_POWER
+
+    def test_v2_power_target_is_sized_for_a_five_point_edge(self) -> None:
+        # Amendment B1 (ADR 042): sized for the smallest edge worth detecting,
+        # not for the reference's own in-sample effect.
+        import math
+
+        from ml.direction.preregistration import (
+            MIN_EDGE_WORTH_DETECTING,
+            N_FOR_POWER_MIN_EDGE,
+            REFERENCE,
+        )
+        from ml.direction.stats_corrections import n_for_power, power_for_observed_effect
+
+        sd = math.sqrt(REFERENCE["long_run_var"])
+        assert MIN_EDGE_WORTH_DETECTING == 0.05
+        assert pytest.approx(N_FOR_POWER_MIN_EDGE, abs=1e-3) == n_for_power(
+            -MIN_EDGE_WORTH_DETECTING, sd
+        )
+        assert pytest.approx(418.32, abs=0.01) == PREREGISTERED_N_FOR_POWER
+        # 80% power for the 5-point edge at the target, by construction.
+        assert pytest.approx(0.80, abs=1e-3) == power_for_observed_effect(
+            PREREGISTERED_N_FOR_POWER, MIN_EDGE_WORTH_DETECTING, sd
+        )
 
 
 class TestLossFunctions:

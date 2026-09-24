@@ -15,7 +15,6 @@ from ml.range_forecast.data import (
     _drop_carried_forward,
     _t_minus_1_lag,
     dense_segments,
-    forward_log_return,
     log_returns,
     score_against_ibja,
 )
@@ -179,13 +178,6 @@ class TestDataHelpers:
         # value at 2024-01-03 lagged by 1 day -> the value at 2024-01-02 (20.0)
         assert lagged.iloc[0] == pytest.approx(20.0)
         assert lagged.iloc[1] == pytest.approx(40.0)
-
-    def test_forward_log_return_matches_manual_log_diff(self) -> None:
-        price = pd.Series(
-            [100.0, 105.0, 103.0, 110.0], index=pd.date_range("2024-01-01", periods=4)
-        )
-        fwd = forward_log_return(price, horizon=2)
-        assert fwd.iloc[0] == pytest.approx(np.log(103.0 / 100.0))
 
     def test_log_returns_length_shrinks_by_one(self) -> None:
         price = pd.Series([100.0, 110.0, 105.0], index=pd.date_range("2024-01-01", periods=3))

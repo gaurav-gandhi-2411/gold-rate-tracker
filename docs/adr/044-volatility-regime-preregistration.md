@@ -154,3 +154,6 @@ should be withdrawn. It came from a measurement construction that produces the e
 structure, and it does not replicate on 11 years of unseen COMEX data. The list of things that
 could change ADR 040's verdict loses this item. The remaining items are new information (see
 the data-source review) and years more IBJA days.
+
+**Confirmed by GG, 2026-09-24 (decision G2):** the claim is withdrawn. A dated retraction note
+is now at the top of ADR 040; its original text is kept.

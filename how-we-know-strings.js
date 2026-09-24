@@ -40,7 +40,7 @@ const STRINGS_HWK = {
     // ── Next trading day range ───────────────────────────────────────────────────
     methNextDayRangeHeading: "Next trading day range",
     methEstimateLabel: "22K estimate",
-    methRangeSub: ({ low, high }) => `Right about 4 times out of 5: ₹${low} – ₹${high}`,
+    methRangeSub: ({ low, high, times }) => (times ? `Right ${times} so far: ₹${low} – ₹${high}` : `Range: ₹${low} – ₹${high}`),
     methMethodLabel: "Method",
     methAssumeNoChange: "Assume no change",
     methCoversMoves: "Covers most of the usual day-to-day moves",
@@ -112,7 +112,7 @@ const STRINGS_HWK = {
     // ── Next trading day range ───────────────────────────────────────────────────
     methNextDayRangeHeading: "अगले कारोबारी दिन की रेंज",
     methEstimateLabel: "22K अनुमान",
-    methRangeSub: ({ low, high }) => `लगभग 5 में से 4 बार: ₹${low} – ₹${high}`,
+    methRangeSub: ({ low, high, n }) => (n != null ? `अब तक लगभग 10 में से ${n} बार सही: ₹${low} – ₹${high}` : `रेंज: ₹${low} – ₹${high}`),
     methMethodLabel: "तरीका",
     methAssumeNoChange: "कोई बदलाव न मानें",
     methCoversMoves: "ज़्यादातर सामान्य रोज़ाना घट-बढ़ को कवर करता है",

@@ -144,22 +144,6 @@ def _classify_sample_direction(
     return "down" if delta_pct < 0 else "up"
 
 
-def _aggregate_directions(directions: list[str]) -> tuple[str, float]:
-    """Return (majority_direction, consensus_fraction) from a list of per-sample directions.
-
-    majority_direction is the most-frequent label (ties resolved by Counter's
-    insertion-order preference, which is deterministic given input order).
-    consensus_fraction is count(majority) / len(directions).
-    """
-    from collections import Counter
-
-    if not directions:
-        return "neutral", 0.0
-    counter = Counter(directions)
-    majority, count = counter.most_common(1)[0]
-    return majority, round(count / len(directions), 3)
-
-
 def run_probe(
     ibja_parquet_path: Path | None = None,
     calibration_json_path: Path | None = None,

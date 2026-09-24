@@ -173,12 +173,24 @@ REFERENCE: dict = {
         "scipy": "1.17.1",
     },
 }
-# GG decision G1/G2: never below v1's 144.17. The v2 reference's own figure
-# (same double-counting construction as v1, i.e. conservative) is larger
-# because the clean, embargoed effect is half the size (3.4 points vs 6.8).
-# The consistent formula (std = sqrt(gamma_0)) gives ~680 -- recorded in
-# ADR 042 for future registrations only; not used here.
-PREREGISTERED_N_FOR_POWER: float = max(PREREGISTERED_N_FOR_POWER_V1, REFERENCE["n_for_power"])
+# REFERENCE["n_for_power"] (891.70) stays as a record of the reference: it is
+# the n that powers the reference's own 3.4-point edge. It is no longer the
+# target (amendment B1 below).
+#
+# AMENDMENT B1 (2026-09-24, GG decision G1, docs/adr/042 "Amendment B1"; made
+# before any v2 day was scored): the power target is sized for the smallest
+# edge that would matter to a buyer, 5 percentage points of accuracy over
+# always-up, with the same conservative construction (std = sqrt(long-run
+# variance of the reference's loss differential), against effective n).
+# Why: 144.17 gives ~26% power for the reference's 3.4-point edge, and 891.70
+# was sized to that 3.4-point edge, which was measured on the same folds that
+# selected config J and so is inflated by selection. The target no longer
+# depends on an in-sample effect size. Still never below v1's 144.17 (G1/G2).
+MIN_EDGE_WORTH_DETECTING: float = 0.05
+# = n_for_power(-MIN_EDGE_WORTH_DETECTING, sqrt(REFERENCE["long_run_var"])).
+# Frozen as a literal; tests/test_preregistration.py checks it matches.
+N_FOR_POWER_MIN_EDGE: float = 418.3229
+PREREGISTERED_N_FOR_POWER: float = max(PREREGISTERED_N_FOR_POWER_V1, N_FOR_POWER_MIN_EDGE)
 
 # Protocol id stored on every logged run so the append-only log shows which
 # protocol produced each entry.
