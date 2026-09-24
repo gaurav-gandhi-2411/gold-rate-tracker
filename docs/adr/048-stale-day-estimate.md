@@ -2,10 +2,12 @@
 
 **Status:** Proposed 2026-09-24. Pre-registration only: the text and the code
 (`ml/stale_day_estimate.py`, `scripts/run_stale_day_shadow.py`, `tests/test_stale_day_estimate.py`)
-are frozen at the pushed commit that carries this sentence, **before any run** of
-`scripts/run_stale_day_shadow.py`. Research; nothing a user sees changes -- see "What promotion
-would need" below for exactly what a future promotion PR would touch, and that it stays behind a
-feature flag OFF until GG turns it on.
+were frozen at commit `47d677ed78dc836976349c98979640fde5b502e0`, **before any run** of
+`scripts/run_stale_day_shadow.py`. **Exploratory retrospective result recorded 2026-09-24: S2 beats
+S1 on stale-day MAE (p = 0.0078, see Result) -- not confirmatory, the forward window has n = 0 so
+far.** Research; nothing a user sees changes -- see "What promotion would need" below for exactly
+what a future promotion PR would touch, and that it stays behind a feature flag OFF until GG turns
+it on.
 
 **Builds on:** `ml.calibration.evaluate_empirical_band_coverage` (the production scoring set) and
 `evaluate_stratified_band_coverage` (AP3, 2026-09-21 -- the existing freshness-stratified SHADOW
@@ -114,6 +116,58 @@ secondary hypotheses above are read against the **forward** block only, once it 
 days to be worth reading -- there is no fixed n target here (stale days accrue roughly 2/7 of
 calendar days), so read it whenever GG asks, and report `forward.strata.stale.n` alongside any
 reading, not just the p-value.
+
+## Result (exploratory / retrospective only -- 2026-09-24, at the freeze commit)
+
+**Provenance:** `data/stale_day_shadow.json`, from `scripts/run_stale_day_shadow.py` at
+`47d677ed78dc836976349c98979640fde5b502e0` (this ADR's freeze commit), on `data/ibja_rates.parquet`
+/ `data/prices.json` / `data/fusion_snapshots.parquet` as committed there. The `retrospective` block
+covers 2026-06-12 to 2026-09-24, n = 90 (62 IBJA days, 28 stale days) -- the SAME 28 stale days
+already summarized in this ADR's Context table, so **none of this is confirmatory**: it repeats
+numbers substantially already seen (S1's MAE and band coverage) and adds S2/S3 numbers measured on
+the same, non-held-out window. The **forward** block, which is what the frozen hypotheses are
+actually read against, has n = 0 -- 2026-09-24 is the freeze date itself, so no day strictly after
+it exists yet. Every number below is read as "what a first pass through this code shows," not as a
+test result.
+
+**Stale-day stratum (n = 28):**
+
+| | n | MAE, Rs/g [95% HAC CI] | band coverage [Wilson 95%] | p(coverage ≤ observed \| 80%) |
+|---|---|---|---|---|
+| S1 (live) | 28 | 96.1 [56.2, 136.0] | 57.1% [39.1%, 73.5%] | 0.005 |
+| S2 (carry-forward) | 28 | 52.5 [32.9, 72.1] | 75.0% [56.6%, 87.3%] | 0.322 |
+| S3 (fusion, attempted days only) | 16 | 27.4 [0.5, 54.3] | 87.5% [64.0%, 96.5%] | 0.859 |
+
+Primary (exploratory): one-sided HAC DM, S2 MAE < S1 MAE on the 28 stale days -- **p = 0.0078**,
+effective n = 25.2. Secondary (exploratory, Holm over the one-member secondary family): S3 MAE <
+S2 MAE, restricted to the 16 stale days S3 was attempted on (a fair paired comparison, same days
+both ways) -- **p = 0.0088**, effective n = 17.3, Holm-significant at α = 0.05.
+
+**Fallback counts, of the 28 stale days:** `s2_estimate_fallback` = 0 (the 4-day carry-forward gate
+never actually bound in this window); `s2_band_fallback` = 8 (8 of 28 stale days sized their band
+from S1 because fewer than 8 earlier resolved carry-forward errors existed yet); of the 16 days S3
+was attempted on, `s3_estimate_fallback` = 8 (only 8 of 28 stale days total got a genuine
+ratio-based S3 estimate -- the rest of the stale days had no fusion benchmark for that date at all)
+and `s3_band_fallback` = 16 (every attempted S3 day fell back to S2's band; S3's own resolved-error
+history never reached 8 within this short a fusion-snapshot window, which starts 2026-07-19).
+
+**IBJA-day stratum (n = 62, S1 = S2 by construction):** MAE 45.5 [34.3, 56.6] Rs/g, band coverage
+79.0% [67.4%, 87.3%] -- essentially at the 80% nominal level, as expected: this is the same path
+production already scores today.
+
+**Pooled (n = 90):** S1 MAE 61.2 [45.2, 77.2], coverage 72.2% [62.2%, 80.4%]; S2 MAE 47.7 [36.8,
+58.5], coverage 77.8% [68.2%, 85.1%].
+
+**Reading, exploratory only.** On this window, S2 cuts stale-day MAE by close to half and closes
+most (not all) of the coverage gap -- but S2's own band coverage (75.0%) is still numerically below
+the 80% target, just not statistically distinguishable from it at n = 28 (p = 0.32, vs S1's p =
+0.005 which IS distinguishable). A DM win on the point estimate is not automatically a coverage win
+on the band; both are reported and neither should be read as confirming the other. S3's numbers look
+better still, but on only 16 (mostly the more recent) of the 28 stale days, with every one of those
+16 falling back to S2's band -- read S3 as a promising, very-early signal, not yet as evidence. If
+the forward window repeats the primary result, S2 promotion is worth a GG decision; if it also
+repeats the secondary result with the fusion-benchmark history no longer forcing every band to
+fall back, S3 becomes the stronger candidate of the two.
 
 ## What promotion would need (NOT applied here; feature-flagged OFF)
 
