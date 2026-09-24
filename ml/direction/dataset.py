@@ -39,7 +39,6 @@ IBJA_PARQUET: Path = DATA_DIR / "ibja_rates.parquet"
 # ---------------------------------------------------------------------------
 # Constants
 # ---------------------------------------------------------------------------
-DEAD_BAND_PER_10G: float = 500.0
 DEAD_BAND_PER_GRAM: float = 50.0
 MAX_N_MACRO_NULL: int = 3
 # np.busday_count(prev, next) counts weekdays in [prev, next): 1 = next weekday (incl.
