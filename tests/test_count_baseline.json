@@ -26,6 +26,7 @@
   "tests/test_calibration_unlock_chain.py": 4,
   "tests/test_chart_cdn_resilience.js": 7,
   "tests/test_check_bot_pr_sync_allowlist.py": 24,
+  "tests/test_check_computed_claims.py": 12,
   "tests/test_check_direction_signal_not_wired.py": 9,
   "tests/test_check_plain_language.py": 21,
   "tests/test_check_pr_boundary_leak.py": 26,

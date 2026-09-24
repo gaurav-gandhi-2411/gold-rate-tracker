@@ -76,6 +76,15 @@ jobs:
         # technical-detail page. See the script's own module docstring for the
         # exact scope per file and its stated blind spots.
         run: python scripts/check_plain_language.py
+      - name: Check for hand-typed computed claims (accuracy/coverage/error)
+        # Fails if user-facing text contains a hand-typed accuracy/coverage/error
+        # claim as a literal digit ("N times out of M", "right N%", "coverage N%",
+        # Hindi "N में से M बार", ...) instead of a value computed from data/*.json.
+        # Scope differs from check_plain_language.py above: how-we-know.html IS
+        # scanned here (a hand-typed number is a defect there too, unlike jargon).
+        # See the script's own module docstring for exact scope, patterns, and
+        # the ALLOWLIST mechanism for genuine non-claims.
+        run: python scripts/check_computed_claims.py
 
   # PWA pure-function JS tests (app.js logic: comparisons, dedup, good-price,
   # scrape parsing, stale-banner, trend). These existed under tests/*.js but ran
