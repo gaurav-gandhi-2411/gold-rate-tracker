@@ -53,6 +53,29 @@ function formatPValue(value, decimals = 4) {
   return { op: "=", text: value.toFixed(decimals) };
 }
 
+// G4 (2026-09-25): every accuracy/coverage claim on the page must be HIDDEN,
+// never shown with a stale or defaulted number, once its own measurement is
+// older than CLAIM_MAX_AGE_DAYS (rule 98a: fail closed, not open). This
+// generalizes the pattern app.js's deriveMeasuredBandCoverage introduced for
+// data/calibration_band_coverage.json alone (AE1, 2026-09-10) into one shared
+// check every claim family uses (band coverage, model-signal reliability note,
+// how-we-know.html's coverage/backtest sections, the track-record chart).
+// Defined here rather than in app.js because how-we-know.html loads i18n.js
+// but NOT app.js (see how-we-know.js's own header comment for why it's a
+// separate script) — this is the one file both pages already share.
+// A missing/unparseable/future-dated timestamp is NOT fresh, same as a
+// too-old one: a clock skew or a malformed field is exactly the kind of
+// "couldn't verify" case rule 98a says must deny, not silently pass.
+const CLAIM_MAX_AGE_DAYS = 14;
+
+function isMeasurementFresh(isoTimestamp, nowMs = Date.now(), maxAgeDays = CLAIM_MAX_AGE_DAYS) {
+  if (typeof isoTimestamp !== "string") return false;
+  const generatedMs = Date.parse(isoTimestamp);
+  if (Number.isNaN(generatedMs)) return false;
+  const ageDays = (nowMs - generatedMs) / 86_400_000;
+  return ageDays >= 0 && ageDays <= maxAgeDays;
+}
+
 const STRINGS = {
   en: {
     // ── Static shell (index.html) ──────────────────────────────────────────────
