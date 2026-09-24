@@ -1,6 +1,8 @@
 # ADR 050 — Pre-registration: F4 "Event watch" — does move SIZE spike around known calendar events?
 
-**Status:** Proposed 2026-09-24 (branch `feat/event-watch-model`). Pre-registration only. The
+**Status:** Proposed 2026-09-24 (branch `feat/event-watch-model`). **Result recorded 2026-09-24:
+none of the 4 event types pass the pre-registered success gate; no card is surfaced (see
+Result).** Pre-registration only. The
 text, `data/events_calendar.json`, `ml/event_watch.py`, `scripts/analysis_event_watch.py`, and
 `tests/test_event_watch.py` are frozen at the commit that carries this sentence, **before any run**
 of the analysis script on price data. The results section below is appended only after that frozen
@@ -201,6 +203,58 @@ only `verified: true` rows are used by `ml.event_watch`.
   comparison with one group densely time-ordered and the other sparse and scattered. Both are valid
   choices; the brief explicitly allows either and asks only that the choice be stated.
 
-## Result
+## Result (run at frozen commit `e5f5d8bce33155fcc0b23e7768d6fdfc397aaba2`, 2026-09-24)
 
-_Appended after the frozen run. See below._
+**Provenance:** `reports/event_watch_results.json` (git_sha recorded in the file matches the frozen
+commit above). Nothing in `ml/event_watch.py`, `scripts/analysis_event_watch.py`,
+`data/events_calendar.json`, or this ADR's frozen sections changed between the freeze push and this
+run.
+
+**Pre-registered verdict: none of the 4 event types pass the success gate.** No type is surfaced on
+`data/event_watch_today.json` (empty `upcoming_events`, empty `surfaced_types`, verified by direct
+inspection of the file this run produced).
+
+| type | n events priced | n normal days | mean\|move\| event | mean\|move\| normal | ratio of means | ratio of medians | p (one-sided) | Bonferroni (≤0.0125) | ratio ≥ 1.2 | **passes gate** |
+|---|---|---|---|---|---|---|---|---|---|---|
+| `fomc_decision` | 210 / 225 | 4,516 | 0.00618 | 0.00916 | **0.674** | 0.713 | 1.000 | no | no | **no** |
+| `us_cpi` | 317 / 329 | 4,516 | 0.00792 | 0.00916 | **0.864** | 0.914 | 0.998 | no | no | **no** |
+| `us_jobs_report` | 315 / 327 | 4,516 | 0.00896 | 0.00916 | **0.978** | 1.120 | 0.665 | no | no | **no** |
+| `india_budget` | 17 / 32 | 2,563 | 0.01360 | 0.00917 | **1.483** | 1.442 | 0.167 | no | yes | **no** |
+
+(`n events priced` is out of `n events in calendar`; the gap is events before each price series'
+coverage starts — COMEX from 2000-08-30, INR proxy from 2013-01-01 — dropped per the frozen
+protocol, not a bug.)
+
+**In plain words:**
+- **US FOMC decisions and CPI releases move gold LESS than a normal day, not more**, on this
+  22-27-year sample (ratio 0.67 and 0.86 respectively — both well below 1, the opposite direction
+  from the F4 hypothesis). This is consistent across the 2000-2012 and 2013-2026 halves for both
+  types (FOMC: 0.68 / 0.67; CPI: 0.88 / 0.84) — not a fluke of one sub-period. A plausible
+  mechanism, not tested here: both are heavily anticipated, scheduled releases that markets
+  extensively pre-position for, so the announcement itself can resolve LESS uncertainty than an
+  average day carries from unscheduled news, other assets' moves, or COMEX's own technical flow.
+- **US jobs reports are close to a wash** (ratio 0.98 overall) but the two halves disagree: 0.87 in
+  2000-2012, 1.10 in 2013-2026 (p=0.105, the closest of the 4 to significance but still far from
+  the 0.0125 Bonferroni bar). Reported as a genuine inconsistency, not smoothed over — if this
+  feature is revisited, jobs-report is the type worth a fresh, larger pre-registration first.
+- **India Budget shows the expected direction (ratio 1.48, biggest of the 4) but is not
+  statistically significant** (p=0.167) — it is also the smallest sample by far (17 priced events,
+  one per year since 2013, vs. hundreds for the COMEX-backed types), so this is underpowered, not
+  disproven. The 2000-2012 half is correctly reported as "not measurable" (INR proxy coverage
+  starts 2013) rather than a misleading 0/0.
+- **A genuine, documented data-quality artifact, not a code bug**: 3 of 225 FOMC event-days (all in
+  2000-2008, the lowest-liquidity years of the GC=F electronic contract) show an EXACT
+  `|log return| = 0.0` because Yahoo Finance's own raw daily close is bit-identical across two
+  consecutive days (confirmed by direct re-fetch: 2007-09-17 and 2007-09-18 both show
+  `Close=715.799988`, with different Open/High/Low/Volume — a genuine vendor stale-tick, not a
+  forward-fill in this code's `is_genuine` mask). This affects the event and normal pools equally
+  (it is not correlated with event dates) and is one contributor, alongside the pre-Dec-2004
+  roll-adjustment gap already flagged above, to the 2000-2012 half's wider error bars.
+- **What this closes.** F4's headline sentence ("prices moved about Rs.X/g") cannot be shown today
+  for any of the 4 verifiably-sourced event types — the pre-registered bar is not met, and for two
+  types (FOMC, CPI) the honest finding is the opposite of the product hypothesis. `data/
+  event_watch_today.json` correctly reflects this (empty). The code, calendar, and test harness are
+  left in place (not reverted) so that (a) India Budget or jobs-report can be re-examined once more
+  years of INR-proxy/COMEX history accumulate without rebuilding the pipeline, and (b) any future
+  attempt is required to go through its own fresh pre-registration, per this repo's standing
+  practice — this result is not grounds to lower the bar on a rerun.
