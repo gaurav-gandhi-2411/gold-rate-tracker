@@ -20,8 +20,8 @@ ml.direction.dataset: at most one weekday without a publication, i.e. one holida
 
 Method, per as-of day t (all fixed before any result was seen; see ADR 043):
   1. Base range, historical simulation on the INR proxy: over the last HS_WINDOW proxy days known
-     at t, the k-day path minimum and maximum of cumulative log returns (k = publication days in
-     the window). lo_base = 10th percentile of the path minima, hi_base = 90th percentile of the
+     at t, the k-day path minimum and maximum of cumulative log returns (k = 1, or 5 for a
+     week: the path length known at issue time). lo_base = 10th percentile of the path minima, hi_base = 90th percentile of the
      path maxima.
   2. Conformal scale on IBJA: each earlier IBJA window whose last day is strictly before t (fully
      matured, so no leak) gets a score max(path_min / lo_base, path_max / hi_base); the window is
@@ -50,6 +50,10 @@ HS_MIN_SAMPLE = 60
 CAL_WINDOW = 250  # most recent matured IBJA windows used for the conformal scale
 MIN_CAL = 30  # no forecast until this many IBJA windows have matured
 WEEK_CALENDAR_DAYS = 7
+# Publication days a weekly range is built for when it is issued. A holiday inside the
+# window is not known from the data at issue time, so a 4-day holiday week is scored
+# against a 5-day range.
+WEEK_ISSUE_DAYS = 5
 HORIZONS = ("1d", "week")
 
 
@@ -67,6 +71,11 @@ class Window:
 
 def _consecutive(a: pd.Timestamp, b: pd.Timestamp) -> bool:
     return int(np.busday_count(a.date(), b.date())) <= MAX_WEEKDAYS_PER_STEP
+
+
+def issue_days(horizon: str) -> int:
+    """Path length the range is built for at issue time (see WEEK_ISSUE_DAYS)."""
+    return 1 if horizon == "1d" else WEEK_ISSUE_DAYS
 
 
 def complete_windows(ibja: pd.Series, horizon: str) -> list[Window]:
@@ -146,7 +155,7 @@ def walk_forward(proxy: pd.Series, ibja: pd.Series, horizon: str) -> pd.DataFram
     matured: list[tuple[pd.Timestamp, float]] = []  # (window end, score) in end order
     pending: list[tuple[pd.Timestamp, float]] = []
     for w in windows:
-        base = base_range(proxy, w.as_of, len(w.days))
+        base = base_range(proxy, w.as_of, issue_days(horizon))
         if base is None:
             continue
         lo, hi = base
