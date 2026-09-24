@@ -121,6 +121,30 @@ test("weekKeyIST groups two readings in the same calendar week under one key", (
   assert.notEqual(weekKeyIST(monday), weekKeyIST(nextMonday));
 });
 
+test("weekKeyIST gives one Monday key per IST week whatever the machine timezone", async () => {
+  // Regression: the first version re-parsed a locale string as the machine's local time and
+  // read it back with toISOString(), so on a non-UTC machine readings near IST midnight split
+  // one week into two keys ("13 of 13 weeks" then covered ~6.5 real weeks). Run the real
+  // function in child processes under several TZ values.
+  const { execFileSync } = await import("node:child_process");
+  const { fileURLToPath } = await import("node:url");
+  const path = await import("node:path");
+  const appPath = path.join(path.dirname(fileURLToPath(import.meta.url)), "..", "app.js");
+  const script = `
+    const fs = require("fs"); const src = fs.readFileSync(${JSON.stringify(appPath)}, "utf8");
+    const s = src.indexOf("function weekKeyIST(date)"); const e = src.indexOf("}\\n", s);
+    const e2 = src.indexOf("}\\r\\n", s); const end = (e2 > 0 && (e < 0 || e2 < e)) ? e2 : e;
+    const weekKeyIST = new Function(src.slice(s, end + 1) + "; return weekKeyIST;")();
+    // every hour from IST Monday 2026-09-21 00:00 to IST Sunday 2026-09-27 23:00
+    const keys = new Set();
+    for (let h = 0; h < 7 * 24; h++) keys.add(weekKeyIST(new Date(Date.UTC(2026, 8, 20, 18, 30) + h * 3600e3)));
+    process.stdout.write(JSON.stringify([...keys]));`;
+  for (const tz of ["UTC", "Asia/Kolkata", "America/New_York", "Pacific/Kiritimati"]) {
+    const out = execFileSync(process.execPath, ["-e", script], { env: { ...process.env, TZ: tz } });
+    assert.deepEqual(JSON.parse(out.toString()), ["2026-09-21"], `TZ=${tz}`);
+  }
+});
+
 // ── pickRangeShadowEntry / computeMoveRangeJob (job 3) ──────────────────────────
 
 test("pickRangeShadowEntry returns null when entries array is missing/empty", () => {

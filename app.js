@@ -2410,10 +2410,18 @@ function computeMoveRangeJob(fc, nextDayRangeShadow, weeklyRangeShadowLog, bandC
 // vacuous. weekKeyIST groups by Monday-start week in IST; the key itself is never shown,
 // only used to dedupe.
 function weekKeyIST(date) {
-  const ist = new Date(date.toLocaleString("en-US", { timeZone: "Asia/Kolkata" }));
-  const dayIdx = (ist.getDay() + 6) % 7; // Monday=0 ... Sunday=6
-  ist.setDate(ist.getDate() - dayIdx);
-  return ist.toISOString().slice(0, 10);
+  // Timezone-independent: read the IST calendar date as parts, then do the Monday
+  // arithmetic in UTC. (The earlier version re-parsed a locale string as the viewer's
+  // local time and read it back with toISOString(), so around midnight one IST week
+  // could land under two keys -- "13 weeks" then covered only ~6.5 real weeks.)
+  const parts = new Intl.DateTimeFormat("en-CA", {
+    timeZone: "Asia/Kolkata", year: "numeric", month: "2-digit", day: "2-digit",
+  }).formatToParts(date);
+  const get = (type) => Number(parts.find((x) => x.type === type).value);
+  const utc = new Date(Date.UTC(get("year"), get("month") - 1, get("day")));
+  const dayIdx = (utc.getUTCDay() + 6) % 7; // Monday=0 ... Sunday=6
+  utc.setUTCDate(utc.getUTCDate() - dayIdx);
+  return utc.toISOString().slice(0, 10);
 }
 
 const MIN_WEEKS_COMPARISON = 3; // below this, an "N of M weeks" claim is too thin to be honest
