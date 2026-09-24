@@ -108,6 +108,39 @@ def lag1(df: pd.DataFrame, positive: bool) -> dict[str, Any]:
     return {"n": n, "lag1_autocorrelation": rho, "p_one_sided": p}
 
 
+def vr20_as_d4(r: np.ndarray) -> dict[str, Any]:
+    """Lo-MacKinlay VR(20) with the robust z, line for line as ADR 040 D4 computed it
+    (scripts/analysis_direction_diagnosis.py, shard_series.stats) -- construction flaws included,
+    on purpose: S5/S6 ask whether D4's own statistic replicates on unseen data."""
+    r = r[np.isfinite(r)]
+    n = len(r)
+    c = r - r.mean()
+    qq = 20
+    sums = np.convolve(r, np.ones(qq), mode="valid")
+    m = r.mean()
+    var_q = float(np.sum((sums - qq * m) ** 2)) / (qq * (n - qq + 1) * (1 - qq / n))
+    var_1 = float(np.sum((r - m) ** 2)) / (n - 1)
+    ratio = var_q / var_1
+    delta = [
+        float(np.sum((c[j:] ** 2) * (c[:-j] ** 2)) / (np.sum(c**2) ** 2)) for j in range(1, qq)
+    ]
+    theta = sum((2 * (qq - j) / qq) ** 2 * delta[j - 1] for j in range(1, qq))
+    z = (ratio - 1) / math.sqrt(theta)
+    return {"n": n, "vr20": ratio, "z_robust": z}
+
+
+def d4_regimes(close: pd.Series) -> tuple[dict[str, Any], dict[str, Any]]:
+    """S5/S6: D4's split -- rolling 20-day std including the day itself, full-sample median."""
+    r = np.log(close).diff().dropna()
+    vol = r.rolling(20).std()
+    med = vol.median()
+    low = vr20_as_d4(r[vol <= med].to_numpy())
+    high = vr20_as_d4(r[vol > med].to_numpy())
+    low["p_one_sided"] = float(1 - norm.cdf(low["z_robust"]))  # H1: VR > 1
+    high["p_one_sided"] = float(norm.cdf(high["z_robust"]))  # H1: VR < 1
+    return low, high
+
+
 def run(key: str) -> dict[str, Any]:
     close, sha = load(key)
     df = frame(close)
@@ -128,11 +161,14 @@ def run(key: str) -> dict[str, Any]:
             "S3_calm_rule_vs_up": rule_vs_up(calm),
             "S4_volatile_rule_vs_up": rule_vs_up(vol),
         }
+        sec["S5_d4_vr20_low_vol_above_1"], sec["S6_d4_vr20_high_vol_below_1"] = d4_regimes(close)
         ps = [
             sec["S1_calm_lag1_positive"]["p_one_sided"],
             sec["S2_volatile_lag1_negative"]["p_one_sided"],
             sec["S3_calm_rule_vs_up"]["p_one_sided_vs_always_up"],
             sec["S4_volatile_rule_vs_up"]["p_one_sided_vs_always_up"],
+            sec["S5_d4_vr20_low_vol_above_1"]["p_one_sided"],
+            sec["S6_d4_vr20_high_vol_below_1"]["p_one_sided"],
         ]
         bh = benjamini_hochberg(ps)
         for name, sig in zip(sec, bh["significant"], strict=True):

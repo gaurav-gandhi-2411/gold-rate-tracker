@@ -51,11 +51,31 @@ against 50% is reported as well.
 - Newey-West long-run variance with lag 5 (`diebold_mariano_test(..., horizon=6)`).
 - α = 0.05. One hypothesis, so no multiplicity correction.
 
-**Secondary (S1–S4).** Benjamini-Hochberg at q = 0.05 across the four. All one-sided.
+**Secondary (S1–S6).** Benjamini-Hochberg at q = 0.05 across all six. All one-sided.
 - S1: lag-1 autocorrelation of returns after calm days > 0 (Fisher z).
 - S2: lag-1 autocorrelation after volatile days < 0 (Fisher z).
 - S3: on calm days only, the rule vs always-up (same DM test).
 - S4: on volatile days only, the rule vs always-up (same DM test).
+
+**ADR 040's own statistic, on the unseen data (S5–S6, also in the BH family).** D4's evidence was a
+20-day variance ratio, not tomorrow's direction. Its lag-1 autocorrelation on calm days was
++0.008. D4 was built in a way that could manufacture a regime difference:
+
+- the split used the full-sample median of 20-day volatility;
+- each day's volatility window includes that day's own return;
+- VR(20) was computed on the calm or volatile days concatenated, so 20-day sums run across regime
+  boundaries.
+
+S5 and S6 recompute D4 **exactly as it was built** (`scripts/analysis_direction_diagnosis.py`
+`shard_series`: rolling 20-day std, full-sample median, Lo-MacKinlay VR(20) with the robust z)
+on the 2000–2012 data:
+
+- S5: VR(20) on low-volatility days > 1.
+- S6: VR(20) on high-volatility days < 1.
+
+This asks whether the statistic that suggested the effect replicates at all, whatever its
+construction problems. P1 asks the product question: does the regime known on the day tell you
+tomorrow's direction?
 
 **Robustness (reported, not tested for confirmation).** P1 on `GLD` (roll-free, spot-tracking), from
 its first day, 2004-11-18, to 2012-12-31. It is saved as

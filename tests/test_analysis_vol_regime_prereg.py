@@ -58,3 +58,10 @@ def test_a_planted_regime_effect_is_detected() -> None:
     res = mod.rule_vs_up(mod.frame(_close(r)))
     assert res["rule_accuracy"] > res["always_up_accuracy"]
     assert res["p_one_sided_vs_always_up"] < 0.05
+
+
+def test_d4_statistic_matches_a_random_walk_and_is_one_sided() -> None:
+    rng = np.random.default_rng(7)
+    low, high = mod.d4_regimes(_close(rng.normal(0, 0.01, 3000)))
+    assert 0.7 < low["vr20"] < 1.3 and 0.7 < high["vr20"] < 1.3
+    assert 0 < low["p_one_sided"] < 1 and 0 < high["p_one_sided"] < 1
