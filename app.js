@@ -2614,9 +2614,9 @@ function renderFlaggedFeatures(fc, readings, bandCoverage, extras = {}) {
   } = extras;
 
   const goodPriceEl = isFeatureOn("good_price_v2") ? pv2MountCard(pv2BuildGoodPriceCard(readings)) : null;
-  const markupEl    = isFeatureOn("markup_meter")   ? pv2MountCard(pv2BuildMarkupCard(markupToday)) : null;
-  const waitEl       = isFeatureOn("wait_or_buy")    ? pv2MountCard(pv2BuildWaitOrBuyCard(waitOrBuy)) : null;
-  const eventEl       = isFeatureOn("event_watch")    ? pv2MountCard(pv2BuildEventWatchCard(eventWatch)) : null;
+  const markupEl    = isFeatureOn("markup_meter") ? pv2MountCard(pv2BuildMarkupCard(markupToday)) : null;
+  const waitEl      = isFeatureOn("wait_or_buy")   ? pv2MountCard(pv2BuildWaitOrBuyCard(waitOrBuy)) : null;
+  const eventEl     = isFeatureOn("event_watch")   ? pv2MountCard(pv2BuildEventWatchCard(eventWatch)) : null;
 
   if (!isFeatureOn("page_v2")) {
     [goodPriceEl, markupEl, waitEl, eventEl].forEach(el => { if (el) document.body.appendChild(el); });
@@ -2655,7 +2655,6 @@ function renderFlaggedFeatures(fc, readings, bandCoverage, extras = {}) {
   if (extrasSlot && waitEl) extrasSlot.appendChild(waitEl);
   if (extrasSlot && eventEl) extrasSlot.appendChild(eventEl);
 }
-
 
 // D3: Lightweight data re-fetch — prices + forecast only.
 // Assigns to a local `fresh` first (FIX 2): allReadings is only committed
