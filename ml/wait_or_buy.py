@@ -172,7 +172,9 @@ def prob_lower_stats(df: pd.DataFrame, n: int) -> dict:
         "mean_diff": dm["mean_diff"],
         "gamma_0": dm["gamma_0"],
         "long_run_var": dm["long_run_var"],
-        "about_equally_likely": (eff_lo is not None and eff_lo <= 0.5 <= eff_hi),
+        "about_equally_likely": (
+            eff_lo is not None and eff_hi is not None and eff_lo <= 0.5 <= eff_hi
+        ),
         "times_out_of_10": times_out_of_ten(p_hat),
     }
 
@@ -231,7 +233,7 @@ def rolling_realized_vol(
     for seg in dense_segments(price, max_gap_days):
         if len(seg) < 2:
             continue
-        rets = np.log(seg / seg.shift(1))
+        rets = pd.Series(np.log(seg / seg.shift(1)), index=seg.index)
         out.loc[seg.index] = rets.rolling(window, min_periods=window).std()
     return out
 
