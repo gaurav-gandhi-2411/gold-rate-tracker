@@ -57,6 +57,13 @@ is below 0 (an Indian Friday is cheaper than that week's Tuesday). One-sided HAC
 Otherwise it never advises waiting for a particular day. Whatever the tests find, the copy states
 the measured odds, never a recommendation.
 
+## Deviation log
+
+- **2026-09-24, fix after the freeze at `f8afd8db`.** The first run crashed inside `weekly_pair`
+  on the empty forward IBJA set (n = 0 weeks), before any result was printed or written. The fix
+  returns an empty series instead of raising. It changes no test, threshold or data; a test covers
+  it. No result was seen before the fix.
+
 ## Consequences
 
 - The earliest a weekday claim could ever appear is about October 2027, after 52 forward weeks.

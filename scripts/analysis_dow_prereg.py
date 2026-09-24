@@ -104,6 +104,8 @@ def weekly_pair(close: pd.Series, early: int, late: int) -> pd.Series:
     df = close.to_frame("p")
     df["wk"] = df.index.to_period("W-SUN")
     piv = df.pivot_table(index="wk", columns=df.index.dayofweek, values="p", aggfunc="last")
+    if early not in piv.columns or late not in piv.columns:
+        return pd.Series(dtype=float)  # e.g. the forward arm before its first full week
     piv = piv.dropna(subset=[early, late])
     return np.log(piv[late] / piv[early])
 

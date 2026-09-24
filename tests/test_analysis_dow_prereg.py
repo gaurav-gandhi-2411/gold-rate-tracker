@@ -43,6 +43,12 @@ def test_weekly_pair_maps_indian_days_to_the_previous_us_close() -> None:
     assert np.isclose(x.iloc[0], np.log(99.0 / 100.0))  # Thursday close over Monday close
 
 
+def test_weekly_pair_is_empty_not_an_error_without_the_weekdays() -> None:
+    s = pd.Series(dtype=float, index=pd.DatetimeIndex([]))
+    assert mod.weekly_pair(s, 1, 4).empty
+    assert mod.later_cheaper_test(mod.weekly_pair(s, 1, 4), 0.05, 1)["passes"] is False
+
+
 def test_later_cheaper_test_is_one_sided() -> None:
     cheaper = mod.later_cheaper_test(
         pd.Series(np.full(200, -0.003) + np.random.default_rng(1).normal(0, 0.01, 200)), 0.025, 1
