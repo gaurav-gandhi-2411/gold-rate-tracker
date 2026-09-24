@@ -182,9 +182,11 @@ function renderFullMethodology(fc, bt, drift, coverage, bandCoverage) {
       ? Math.round(((bt.mae_5d_avg_chronos - bt.mae_5d_avg_naive) / bt.mae_5d_avg_naive) * 100)
       : null;
     const dirAllDisplay = dirAll ?? "—";
-    const pVal     = bt.wilcoxon_signed_rank_p != null
-      ? bt.wilcoxon_signed_rank_p.toFixed(4)
-      : "—";
+    // formatPValue (i18n.js) avoids ever printing "p = 0.0000" -- a p-value that
+    // rounds to zero at 4 decimal places renders "p < 0.0001" instead.
+    const pValFmt  = formatPValue(bt.wilcoxon_signed_rank_p, 4);
+    const pValOp   = pValFmt?.op ?? "=";
+    const pValText = pValFmt?.text ?? "—";
     const hl      = fc?.headline;
     const rangeStr = hl && typeof hl.lower === "number" && typeof hl.upper === "number"
       ? `₹${fmtINR(hl.lower)}–₹${fmtINR(hl.upper)}`
@@ -201,7 +203,7 @@ function renderFullMethodology(fc, bt, drift, coverage, bandCoverage) {
         <p class="meth-text"><strong>${tHwk("methAccurateP1Strong")}</strong><br>
         ${tHwk("methAccurateP1", {
           n, naiveMae,
-          chronosBullet: maePctWorse != null ? tHwk("methAccurateP1ChronosBullet", { chronosMae, maePctWorse, pVal }) : "",
+          chronosBullet: maePctWorse != null ? tHwk("methAccurateP1ChronosBullet", { chronosMae, maePctWorse, pValOp, pValText }) : "",
         })}</p>
 
         <p class="meth-text"><strong>${tHwk("methAccurateP2Strong", {

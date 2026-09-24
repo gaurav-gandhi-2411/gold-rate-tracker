@@ -106,7 +106,12 @@
 // isFeatureOn()) so future user-facing features can merge OFF by default. Loaded before
 // app.js/how-we-know.js on both pages; new precached shell file (below). index.html +
 // how-we-know.html + app.js changed too (script tag + renderFlaggedFeatures() hook).
-const VERSION = "v56-20260924-feature-flags";
+// 2026-09-24 (v57): p-value display fix -- how-we-know.js's Wilcoxon p-value
+// no longer renders a misleading "p = 0.0000" when it rounds to zero at 4
+// decimal places (formatPValue() in i18n.js, added same PR); renders
+// "p < 0.0001" instead. i18n.js + how-we-know.js + how-we-know-strings.js
+// (EN+HI) changed -- all three are precached shell files.
+const VERSION = "v57-20260924-pvalue-display";
 const SHELL_CACHE = `gold-shell-${VERSION}`;
 
 const SHELL_FILES = [

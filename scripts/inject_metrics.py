@@ -34,6 +34,13 @@ markdown -- the visible page shows plain text, never raw marker syntax):
                     (docs/PLAIN_LANGUAGE_AUDIT.md), not by shared code -- one
                     is Python driving static markdown, the other is JS
                     driving a live page, and there's no runtime they share.
+                    pval2/pval4 (a p-value at 2/4 decimal places, rendering
+                    "= 0.42" normally but "< 0.01"/"< 0.0001" whenever the raw
+                    value would otherwise round to an all-zero string -- see
+                    _format_pvalue()'s docstring. The marker owns the leading
+                    "="/"<" operator, so author the surrounding text as
+                    "p<!--METRIC:...:pval2-->" with NO literal "=" before the
+                    marker, never "p=<!--METRIC...-->").
   n=<field>         optional sibling field (same file) supplying the sample size;
                     rendered as "(n=<value>, ...)" alongside the value
   asof=<field>      optional sibling field supplying the as-of date/timestamp;
@@ -148,7 +155,26 @@ def _format_value(value: object, fmt: str, source: str) -> str:
         return str(int(value))
     if fmt == "frac10":
         return _format_frac10(value)
+    if fmt == "pval2":
+        return _format_pvalue(value, 2)
+    if fmt == "pval4":
+        return _format_pvalue(value, 4)
     raise MetricError(f"{source}: unknown format {fmt!r}")
+
+
+def _format_pvalue(value: float, decimals: int) -> str:
+    """Formats a p-value without ever printing an all-zero string ("0.00",
+    "0.0000") -- that reads as "exactly zero", which a p-value never literally
+    is. A value that rounds to zero at `decimals` places renders as
+    "< <smallest representable value>" instead (e.g. pval4 on 0.00003 ->
+    "< 0.0001"). Mirrors i18n.js's formatPValue() -- same threshold, same
+    rounds-to-zero rule -- kept in sync by policy, not shared code, same
+    Python-static-markdown vs JS-live-page split as this module's frac10/
+    i18n.js's fractionOutOf10Phrase pair (see module docstring)."""
+    smallest = 10**-decimals
+    if abs(value) < smallest / 2:
+        return f"< {smallest:.{decimals}f}"
+    return f"= {value:.{decimals}f}"
 
 
 def _format_frac10(value: float) -> str:
