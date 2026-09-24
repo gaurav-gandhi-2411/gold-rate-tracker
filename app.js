@@ -873,21 +873,18 @@ function weekdayLong(d) {
 // or the file missing/malformed, means "no current measurement" -- never a signal to fall
 // back to the design target (rule 98a: fail closed, not open). Returns null in every case
 // where the caller must NOT assert a specific coverage percentage.
-const BAND_COVERAGE_MAX_AGE_DAYS = 14;
-
+// G4 (2026-09-25): the age check itself now lives in i18n.js's isMeasurementFresh
+// (CLAIM_MAX_AGE_DAYS=14, same 14-day policy) so every accuracy/coverage claim on
+// the page -- not just this one -- shares one fail-closed freshness rule.
 function deriveMeasuredBandCoverage(bandCoverage, nowMs = Date.now()) {
   if (
     !bandCoverage ||
     typeof bandCoverage.coverage !== "number" ||
     typeof bandCoverage.n !== "number" ||
-    typeof bandCoverage.generated_at_utc !== "string"
+    !isMeasurementFresh(bandCoverage.generated_at_utc, nowMs)
   ) {
     return null;
   }
-  const generatedMs = Date.parse(bandCoverage.generated_at_utc);
-  if (Number.isNaN(generatedMs)) return null;
-  const ageDays = (nowMs - generatedMs) / 86_400_000;
-  if (ageDays > BAND_COVERAGE_MAX_AGE_DAYS) return null;
   return { coverage: Math.round(bandCoverage.coverage * 1000) / 10, n: bandCoverage.n };
 }
 
@@ -1596,7 +1593,13 @@ function renderModelSignal(fc, readings, bt, coverage, drift) {
   // on the same underlying numbers.
   let reliabilityHtml = "";
   if (hasRange) {
-    const hasCoverage = coverage && typeof coverage.coverage === "number" && coverage.n > 0;
+    // G4 (2026-09-25): coverage_metrics.json is re-scored weekly (weekly-backtest.yml);
+    // a coverage figure more than CLAIM_MAX_AGE_DAYS old is hidden the same way a
+    // missing one already was -- reliabilityUnknown covers both cases identically,
+    // there's no separate "stale" wording (rule 98a: fail closed, never a stale
+    // number asserted as current).
+    const hasCoverage = coverage && typeof coverage.coverage === "number" && coverage.n > 0
+      && isMeasurementFresh(coverage.generated_at_utc, Date.now());
     const coverageNote = hasCoverage
       ? t("reliabilityCoverage", { pct: Math.round(coverage.coverage * 100), n: coverage.n })
       : t("reliabilityUnknown");
@@ -2166,7 +2169,12 @@ function renderHistory(readings) {
 function renderForecastVsActual(bt) {
   const section = document.getElementById("section-track-record");
   if (!section) return;
-  if (!bt?.folds?.length) { section.hidden = true; return; }
+  // G4 (2026-09-25): this chart IS an accuracy claim -- "look how closely past
+  // estimates tracked reality" -- sourced from the same weekly backtest.json run
+  // as how-we-know.html's MAE/direction figures. A backtest.json more than
+  // CLAIM_MAX_AGE_DAYS old (weekly-backtest.yml stopped running) must not keep
+  // silently showing the same weeks-old folds as if they were current.
+  if (!bt?.folds?.length || !isMeasurementFresh(bt.backtest_run_at, Date.now())) { section.hidden = true; return; }
 
   const folds = bt.folds
     .filter(f => !f.sub_30_context)
