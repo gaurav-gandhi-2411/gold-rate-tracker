@@ -3,8 +3,20 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from datetime import datetime
+from datetime import UTC, datetime, timedelta
 from typing import Protocol
+
+# Below this, an observed_at is treated as corrupt rather than real -- e.g.
+# Kalyan's own `updated_time` field started returning the sentinel string
+# "01 Jan 1970 00:00" (their own placeholder for "no live update this cycle",
+# confirmed 2026-09-24) whenever the board is stale, which parses cleanly as
+# a plain epoch-zero datetime with no exception raised. A bare strptime/parse
+# success is not enough to trust a source-provided timestamp; every adapter
+# that parses one must also run it through :func:`validate_observed_at`.
+# Public (not underscore-prefixed): ml.fusion_snapshot_store re-uses the same
+# threshold so "corrupt" means the same thing at write time and read time.
+MIN_PLAUSIBLE_YEAR = 2020
+MAX_FUTURE_SKEW = timedelta(days=1)
 
 
 class SourceNetworkError(Exception):
@@ -26,6 +38,34 @@ class SourceStructureError(Exception):
     concept exists to catch; it must never be swallowed into a generic
     "fetch failed" bucket indistinguishable from a network blip.
     """
+
+
+def validate_observed_at(observed_at: datetime, *, source: str) -> datetime:
+    """Fail closed on an implausible ``observed_at`` before it reaches a reading.
+
+    A source-provided timestamp that parses without error is not necessarily
+    real data -- a source can substitute a placeholder/sentinel value (an
+    all-zero epoch being the classic case) that a plain ``strptime``/date
+    constructor accepts happily. Every adapter that derives ``observed_at``
+    from a *source-provided* field (as opposed to its own wall-clock
+    ``datetime.now(UTC)``) must pass the result through this check.
+
+    Raises :class:`SourceStructureError` -- treated identically to any other
+    structure failure by every caller (shadow_fusion, the tier-3 fusion
+    fallback): this source is skipped for the current cycle, never silently
+    recorded with a corrupt timestamp.
+    """
+    if observed_at.year < MIN_PLAUSIBLE_YEAR:
+        raise SourceStructureError(
+            f"{source}: implausible observed_at {observed_at.isoformat()!r} "
+            f"(year before {MIN_PLAUSIBLE_YEAR}) — source likely sent a placeholder timestamp"
+        )
+    if observed_at > datetime.now(UTC) + MAX_FUTURE_SKEW:
+        raise SourceStructureError(
+            f"{source}: implausible observed_at {observed_at.isoformat()!r} "
+            "(more than a day in the future)"
+        )
+    return observed_at
 
 
 @dataclass(frozen=True)

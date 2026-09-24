@@ -596,6 +596,9 @@
             integrity="sha384-Sse/HDqcypGpyTDpvZOJNnG0TT3feGQUkF9H+mnRvic+LjR+K1NhTt8f51KIQ3v3"
             crossorigin="anonymous" async
             onload="if (window.__onChartReady) window.__onChartReady()"></script>
+    <!-- flags.js must execute before app.js (both deferred; document order preserves this) --
+         renderFlaggedFeatures() reads FEATURE_FLAGS/isFeatureOn() from it. -->
+    <script src="flags.js" defer></script>
     <!-- i18n.js must execute before app.js (both deferred; document order preserves this) --
          app.js calls t()/getLang()/setLang() at its own top level (currentLang = getLang()). -->
     <script src="i18n.js" defer></script>
