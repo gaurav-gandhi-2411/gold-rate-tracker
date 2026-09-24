@@ -6,6 +6,7 @@
   "scraper/test_scraper_hardening.mjs": 16,
   "scraper/test_update_and_notify.js": 6,
   "tests/test_analysis_buyer_policy.py": 8,
+  "tests/test_analysis_calibrated_floor.py": 9,
   "tests/test_analysis_derived_premium.py": 4,
   "tests/test_analysis_nowcast.py": 3,
   "tests/test_analysis_pipeline_sensitivity.py": 3,
