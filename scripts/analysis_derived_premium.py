@@ -207,7 +207,16 @@ def main() -> int:
     summary = summarise(d, table)
     series = d.reset_index().rename(columns={"index": "date"})
     series["date"] = series["date"].dt.date.astype(str)
-    cols = ["date", "pm_999", "comex_usd_oz", "usd_inr", "duty_rate", "landed_parity"]
+    # D3 (2026-09-25): comex_usd_oz and usd_inr are raw Yahoo Finance levels -- committing them
+    # to this public report republishes Yahoo's data, so they are dropped from the written
+    # series (still used internally above to compute landed_parity/premium_pct). landed_parity
+    # is KEPT: it is comex_usd_oz/31.1034768*10*usd_inr*(1+duty_rate), a product of the two raw
+    # series (plus a public CBIC duty rate and a physical constant), not either series itself --
+    # same "product, not separable back into its raw components" reasoning ADR 053 applies to
+    # data/history_seed_inr22k_proxy.parquet's raw_pre_duty. One equation (landed_parity /
+    # (1+duty_rate) = comex_usd_oz/31.1034768*10*usd_inr) with two unknowns cannot be solved for
+    # either raw series.
+    cols = ["date", "pm_999", "duty_rate", "landed_parity"]
     cols += ["premium_pct", "segment", "stale_repeat"]
     out = {
         "definition": "premium_pct = IBJA 999 PM / (COMEX(t-1)/31.1034768*10*USDINR(t-1)"
