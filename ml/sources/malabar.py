@@ -21,7 +21,12 @@ from urllib.parse import quote
 
 import requests
 
-from ml.sources.base import SourceNetworkError, SourceReading, SourceStructureError
+from ml.sources.base import (
+    SourceNetworkError,
+    SourceReading,
+    SourceStructureError,
+    validate_observed_at,
+)
 
 _QUERY = (
     "query getMetalRate($filter: MetalRateFilterInput) "
@@ -89,7 +94,9 @@ def fetch_malabar() -> SourceReading:
     if naive is not None:
         # No explicit timezone in the API; Malabar is an Indian retailer publishing
         # IST wall-clock times, same assumption as Kalyan.
-        observed_at = (naive - timedelta(hours=5, minutes=30)).replace(tzinfo=UTC)
+        observed_at = validate_observed_at(
+            (naive - timedelta(hours=5, minutes=30)).replace(tzinfo=UTC), source="malabar"
+        )
 
     return SourceReading(
         source="malabar",
