@@ -29,6 +29,14 @@ from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
+# analysis.yml's `plan` job runs `--list-shards` with only the stdlib installed (no ML deps --
+# that install only happens in the `shard`/`aggregate` jobs). Answering --list-shards must not
+# require numpy/pandas/scipy, so it's handled here, before those imports, rather than moved into
+# main() where the module-level imports below would already have failed by the time it runs.
+if "--list-shards" in sys.argv:
+    print(json.dumps(["all"]))
+    raise SystemExit(0)
+
 import numpy as np
 import pandas as pd
 from scipy.stats import norm
@@ -227,21 +235,19 @@ def compute() -> dict[str, Any]:
 
 
 def main() -> int:
-    # --list-shards/--shard/--aggregate: analysis.yml's contract (D3, 2026-09-25), so this
-    # frozen ADR 044 runner can be dispatched on GitHub-hosted runners (this sandbox has no
-    # outbound network to fetch the now-uncommitted CSVs; see load()'s own docstring). A single
-    # "all" shard -- this script's compute is already fast and not meaningfully parallel across
-    # gcf/gld. Direct invocation (no shard flags) is unchanged: writes reports/
-    # vol_regime_prereg_results.json by default, exactly as before this contract was added.
+    # --shard/--aggregate: analysis.yml's contract (D3, 2026-09-25), so this frozen ADR 044
+    # runner can be dispatched on GitHub-hosted runners (this sandbox has no outbound network to
+    # fetch the now-uncommitted CSVs; see load()'s own docstring). --list-shards itself is
+    # answered above, before the numpy/pandas/scipy imports -- analysis.yml's `plan` job runs it
+    # with no ML deps installed. A single "all" shard -- this script's compute is already fast
+    # and not meaningfully parallel across gcf/gld. Direct invocation (no shard flags) is
+    # unchanged: writes reports/vol_regime_prereg_results.json by default, exactly as before
+    # this contract was added.
     ap = argparse.ArgumentParser()
     ap.add_argument("--out", type=Path, default=ROOT / "reports" / "vol_regime_prereg_results.json")
-    ap.add_argument("--list-shards", action="store_true")
     ap.add_argument("--shard")
     ap.add_argument("--aggregate", type=Path)
     args = ap.parse_args()
-    if args.list_shards:
-        print(json.dumps(["all"]))
-        return 0
     if args.aggregate:
         res = json.loads((args.aggregate / "all.json").read_text(encoding="utf-8"))
         args.out.write_text(json.dumps(res, indent=2) + "\n", encoding="utf-8")
