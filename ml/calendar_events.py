@@ -189,9 +189,7 @@ def get_budget_window_info(query_date: date) -> dict[str, object]:
 # ---------------------------------------------------------------------------
 
 
-def get_duty_event_proximity(
-    query_date: date, path: Path = DUTY_TABLE_PATH
-) -> dict[str, object]:
+def get_duty_event_proximity(query_date: date, path: Path = DUTY_TABLE_PATH) -> dict[str, object]:
     """Returns {"is_duty_event_recent": bool, "days_since_duty_event": int}.
 
     days_since_duty_event is 9999 if no duty change event (verified rows only,

@@ -34,12 +34,8 @@ from ml.inr_proxy import (
 # ---------------------------------------------------------------------------
 
 
-def _write_duty_table(
-    path: Path, rows: list[dict], unverified: list[dict] | None = None
-) -> None:
-    path.write_text(
-        json.dumps({"rows": rows, "unverified_pre_2019": {"rows": unverified or []}})
-    )
+def _write_duty_table(path: Path, rows: list[dict], unverified: list[dict] | None = None) -> None:
+    path.write_text(json.dumps({"rows": rows, "unverified_pre_2019": {"rows": unverified or []}}))
 
 
 class TestDutySchedule:

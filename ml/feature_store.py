@@ -138,7 +138,6 @@ def capture_daily_snapshot(
     """
     import json
     from datetime import UTC, datetime, timedelta, timezone
-    from datetime import date as _date
 
     from ml.calendar_events import get_festival_info
 
