@@ -60,8 +60,14 @@ def test_a_planted_regime_effect_is_detected() -> None:
     assert res["p_one_sided_vs_always_up"] < 0.05
 
 
-def test_d4_statistic_matches_a_random_walk_and_is_one_sided() -> None:
-    rng = np.random.default_rng(7)
-    low, high = mod.d4_regimes(_close(rng.normal(0, 0.01, 3000)))
-    assert 0.7 < low["vr20"] < 1.3 and 0.7 < high["vr20"] < 1.3
-    assert 0 < low["p_one_sided"] < 1 and 0 < high["p_one_sided"] < 1
+def test_d4_construction_manufactures_a_regime_effect_from_pure_noise() -> None:
+    """Documents why S5/S6 cannot confirm anything: on iid returns (no structure at all),
+    D4's split gives VR(20) above 1 on calm days and below 1 on volatile days."""
+    lows, highs = [], []
+    for seed in range(10):
+        rng = np.random.default_rng(seed)
+        low, high = mod.d4_regimes(_close(rng.normal(0, 0.01, 3450)))
+        lows.append(low["vr20"])
+        highs.append(high["vr20"])
+    assert np.mean(lows) > 1.05
+    assert np.mean(highs) < 0.97

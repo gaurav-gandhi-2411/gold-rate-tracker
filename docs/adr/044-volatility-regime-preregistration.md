@@ -74,7 +74,21 @@ on the 2000–2012 data:
 - S6: VR(20) on high-volatility days < 1.
 
 This asks whether the statistic that suggested the effect replicates at all, whatever its
-construction problems. P1 asks the product question: does the regime known on the day tell you
+construction problems.
+
+**Found before any data was touched: D4's construction produces the effect from pure noise.** On 40
+simulated series of n = 3,450 with no structure at all:
+
+| simulated null | calm-day VR(20), median [5–95%] | calm-day false positives at 5% | volatile-day VR(20), median [5–95%] | volatile-day false positives at 5% |
+|---|---|---|---|---|
+| iid normal | 1.16 [0.99, 1.46] | 17 of 40 | 0.91 [0.72, 1.04] | 8 of 40 |
+| GARCH(1,1)-like, 0.05 / 0.93 | 1.13 [0.97, 1.35] | 17 of 40 | 0.94 [0.79, 1.17] | 3 of 40 |
+
+The nominal false-positive rate is 5%. D4's 1.36 and 0.64 sit in or near these null ranges. **ADR
+040's "momentum when calm, reversal when volatile" is therefore mostly, perhaps entirely, a
+measurement artifact.** S5 and S6 stay in the family as registered, but they can confirm nothing
+either way; `test_d4_construction_manufactures_a_regime_effect_from_pure_noise` documents this.
+P1, which uses a regime known on the day and contiguous next-day outcomes, is the only valid test. P1 asks the product question: does the regime known on the day tell you
 tomorrow's direction?
 
 **Robustness (reported, not tested for confirmation).** P1 on `GLD` (roll-free, spot-tracking), from
