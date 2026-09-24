@@ -120,7 +120,7 @@ Register v2 now and mark v1 superseded. No v1 or v2 post-registration day has be
    instead of reporting a silent numeric mismatch. Reproduce with
    `python scripts/analysis_prereg_reference.py --check` (v2, the default) and `--protocol v1 --check`
    (v1, still reproducible via `require_consecutive=False`). Run both in the pinned environment.
-4. **Power target: 891.70 effective folds.** The rule is `max(v1's 144.17, the v2 reference's own
+4. **Power target: 891.70 effective folds.** *(Replaced by 418.32 in Amendment B1, 2026-09-24; see below.)* The rule is `max(v1's 144.17, the v2 reference's own
    figure)`. It uses the same conservative construction as v1: std = √(long-run variance), compared
    against effective n. Per G1/G2, it can never be lower than 144.17.
 
@@ -150,6 +150,55 @@ it uses proxy labels, not IBJA labels, and is exploratory.
   The proxy- and COMEX-based parts of ADR 040 are not affected.
 - **A future IBJA backfill that fills old holes would change which rows exist**, and with them the
   v2 fold digest. `--check` would then fail loudly. It would not drift silently.
+
+## Amendment B1 — power target sized for the smallest edge worth detecting (2026-09-24, GG decision G1)
+
+Made on 2026-09-24, before any v2 day was scored. The first scoreable day is as_of 2026-09-25, and
+the Sunday 2026-09-27 run scores n = 0 by construction. The model, labels, embargo, test, α and
+registration date are unchanged. Only the power target changes.
+
+**The change.** The smallest edge that would matter to a buyer is set at **5 percentage points of
+accuracy over always-up**. The target is sized for that edge with the same conservative
+construction: std = √(long-run variance of the v2 reference's loss differential) = √0.16915,
+compared against effective n, one-sided α = 0.05, 80% power.
+
+- New target: **418.32 effective folds** (`N_FOR_POWER_MIN_EDGE` in `ml.direction.preregistration`).
+  It stays above v1's floor of 144.17.
+- 891.70 stays in the reference record as the n that powers the reference's own 3.4-point edge. It
+  is no longer the target.
+
+**Why.**
+- **144.17 was too small.** At 144 effective folds the test detects the reference's 3.4-point edge
+  about 26% of the time (25.9%), and a 5-point edge 42.7% of the time.
+- **891.70 was sized to the wrong edge.** It powers the 3.4-point edge measured on the selection
+  folds, the same days that chose config J. That in-sample edge is inflated by selection. Sizing
+  the test to it ties the target to a number the test exists to question.
+- **A target set by what matters to a buyer does not depend on an in-sample effect.**
+
+**Power at each target** (same construction, std √0.16915):
+
+| edge over always-up | at 144.17 | at 418.32 (new) | at 891.70 |
+|---|---|---|---|
+| 3.4 points (the v2 reference) | 25.9% | 52.3% | 80.0% |
+| 5 points (smallest worth detecting) | 42.7% | **80.0%** | 97.6% |
+
+The cost is stated plainly: if the real edge is as small as the reference's 3.4 points, the test at
+418 folds misses it about half the time. An edge that small would not change what a buyer does, so
+missing it is acceptable.
+
+**Implied calendar timeline.** Two things set it: how many labelled days arrive, and how much
+autocorrelation reduces them.
+- Labelled days: 0.664 per calendar day in the dense data since 2026-06-01, and at most about 0.67
+  if IBJA publishes on every weekday except about 15 holidays.
+- Effective n per labelled day: 0.762 in the v2 reference (111.31 of 146).
+- So about 0.51 effective folds per calendar day.
+
+At that rate, 418.32 effective folds are reached around **December 2028**. The estimate runs from
+2028-12-17 to 2028-12-29, counting from 2026-09-25. It assumes IBJA capture has no gaps; every gap
+pushes the date later. The old 891.70 target would have been reached around **mid-2031**.
+
+**What does not wait on it.** The test keeps running automatically every week, and each entry logs
+n, effective n and p. No decision about the product waits for it. An interim p is not confirmatory.
 
 ## Alternatives considered
 
