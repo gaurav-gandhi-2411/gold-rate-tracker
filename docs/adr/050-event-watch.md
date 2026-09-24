@@ -258,3 +258,34 @@ protocol, not a bug.)
   years of INR-proxy/COMEX history accumulate without rebuilding the pipeline, and (b) any future
   attempt is required to go through its own fresh pre-registration, per this repo's standing
   practice — this result is not grounds to lower the bar on a rerun.
+
+## Measurement audit (2026-09-24, after the result; exploratory, does not change the registered result)
+
+**The FOMC event day is misaligned, so its registered "fail" is an invalid measurement, not a
+negative finding.** The frozen rule scores the FOMC decision date's GC=F close. That rule came from
+the orchestrator's brief, which assumed the day's close follows the 2:00 pm ET decision. The data
+says otherwise. For each verified event, I compared median |daily log return| with the median over
+all days, on the same series and genuine trading days:
+
+| type | n | day before | event day (registered) | next day |
+|---|---|---|---|---|
+| FOMC decision | 206 | 0.84× | **0.78×** | **1.80×** (mean 1.68×) |
+| US CPI (8:30 am ET) | 313 | 0.85× | 1.00× | 1.15× |
+| US jobs (8:30 am ET) | 306 | 1.16× | 1.23× | 0.90× |
+
+The FOMC reaction shows up on the **next** close. This is consistent with Yahoo's GC=F daily
+close being struck before 2:00 pm ET: COMEX gold settles at 1:30 pm ET (INFERRED from the pattern;
+not verified against a Yahoo or CME statement). The registered FOMC cell therefore measured the
+quiet pre-announcement session. The CPI and jobs releases come before the settlement, so their
+alignment is plausible. Their registered results stand.
+
+**Consequences:**
+- The FOMC row of the result table must not be cited as "FOMC days move less". The measurement
+  was wrong.
+- I have now seen the day+1 figures on 2000–2026, so a corrected FOMC test cannot be confirmed on
+  that history. It needs its own pre-registration and **forward FOMC meetings** (8 a year). An
+  alternative is a price series whose close is verifiably after 2:00 pm ET.
+- Nothing is surfaced to users either way. The card shows only types that pass a valid test.
+
+Diagnostic: `grt-venv/event_timing_audit.py` (orchestrator scratch). It reuses
+`ml/event_watch.py`'s loader and the committed calendar.
