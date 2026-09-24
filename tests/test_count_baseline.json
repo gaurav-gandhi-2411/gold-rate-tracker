@@ -8,6 +8,7 @@
   "tests/test_analysis_buyer_policy.py": 8,
   "tests/test_analysis_calibrated_floor.py": 9,
   "tests/test_analysis_derived_premium.py": 4,
+  "tests/test_analysis_dow_prereg.py": 4,
   "tests/test_analysis_nowcast.py": 3,
   "tests/test_analysis_pipeline_sensitivity.py": 3,
   "tests/test_analysis_premium_nowcast.py": 5,
