@@ -46,6 +46,7 @@ tests/test_stale_day_estimate.py's no-look-ahead test.
 from __future__ import annotations
 
 from dataclasses import dataclass
+from typing import Any, cast
 
 import numpy as np
 import pandas as pd
@@ -188,7 +189,10 @@ def fusion_benchmark_per_day(
             bench = fuse_national_benchmark(readings, weight_fn=default_weight_fn)
         except ValueError:
             continue
-        out[pd.Timestamp(as_of_date)] = bench.value
+        # cast: groupby()'s yielded key is typed as a broad Union across every pandas-stubs
+        # groupable dtype (a stub gap, not an actual runtime possibility) -- as_of_date is
+        # always a genuine date value here, the same "as_of_date" column grouped on above.
+        out[pd.Timestamp(cast(Any, as_of_date))] = bench.value
     return pd.Series(out, dtype=float).sort_index()
 
 
