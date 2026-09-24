@@ -26,17 +26,23 @@ from (scratchpad sources_cot_events.md, 2026-09-24) for the primary-source citat
 behind each rule below.
 
   * COT: a report "as of" Tuesday T is not public until CFTC actually releases it --
-    normally Friday T+3, 15:30 ET (CFTC Release Schedule page, VERIFIED), usable for
-    a decision made AT/AFTER that Friday's close. `cot_release_available_date`
-    computes that Friday, shifts past a US federal holiday landing on it, and
-    overrides the two known multi-week shutdown gaps (2013, 2018-19) to their
+    normally Friday T+3, 15:30 ET (CFTC Release Schedule page, VERIFIED). This
+    pipeline's decision timestamp is GC=F's own daily close, which a sibling analysis
+    found is struck well before 2pm ET (FOMC-day reactions land in the NEXT day's
+    close, not the same day's -- a stated finding, not independently re-derived here).
+    15:30 ET is AFTER that, so a report released on day R is NOT safely seen by a
+    decision using day R's own close -- `cot_release_available_date` therefore adds
+    one more business day on top of the nominal release date (the Friday, holiday-
+    shifted, or a shutdown catch-up date) before treating a report as available.
+    Overrides the two known multi-week shutdown gaps (2013, 2018-19) to their
     documented catch-up dates -- the arithmetic rule alone would silently claim a
     shutdown-delayed report was public weeks before it actually was.
   * Real yields: Treasury posts by ~18:00 ET the same day (Yield Curve Methodology
-    page, VERIFIED). A forecast made at COMEX's close is made before 18:00 ET, so the
-    conservative, documented rule this pipeline uses throughout: a decision made at
-    the close of day d may use day d-1's real yield, never day d's own.
-    `real_yield_available_date` implements this as quote_date + 1 calendar day.
+    page, VERIFIED) -- comfortably after ANY same-day close, including an early one,
+    so the existing rule was already conservative relative to the COT finding above
+    and needed no change: a decision made at the close of day d may use day d-1's
+    real yield, never day d's own. `real_yield_available_date` implements this as
+    quote_date + 1 calendar day.
 
 `align_feature_to_decision_dates` does the actual as-of merge (backward-looking,
 `pandas.merge_asof`) -- by construction it can never pull a value whose available
@@ -137,12 +143,27 @@ def _shift_past_us_federal_holiday(d: date) -> date:
 
 def cot_release_available_date(report_date: date) -> date:
     """The first day a COT report "as of" `report_date` (a Tuesday) is legitimately
-    public and usable for a decision -- see module docstring for the citations."""
+    public and usable for a decision -- see module docstring for the citations.
+
+    Extra conservative day (added 2026-09-24, before any result was read): this
+    pipeline's decision timestamp is GC=F's own daily close, and a sibling analysis
+    found GC=F's Yahoo Finance close is struck WELL BEFORE 2pm ET (FOMC-decision-day
+    reactions show up in the NEXT day's close, not the same day's -- not independently
+    re-derived in this analysis, taken as a stated finding). CFTC releases COT at
+    15:30 ET, AFTER that. So a report nominally released on day R -- Friday, or a
+    shutdown catch-up date -- is NOT safely seen by a decision using day R's own
+    price capture; it is usable only from the NEXT business day. Applied uniformly to
+    both the ordinary Friday+3 path and the shutdown-override dates below, since both
+    are release TIMESTAMPS the same reasoning applies to."""
     for start, end, forced in _COT_SHUTDOWN_OVERRIDES:
         if start <= report_date <= end:
-            return forced
-    friday = report_date + timedelta(days=3)  # Tuesday (weekday 1) -> Friday (weekday 4)
-    return _shift_past_us_federal_holiday(friday)
+            release_day = forced
+            break
+    else:
+        release_day = _shift_past_us_federal_holiday(
+            report_date + timedelta(days=3)
+        )  # Tuesday (weekday 1) -> Friday (weekday 4)
+    return _shift_past_us_federal_holiday(release_day + timedelta(days=1))
 
 
 def _parse_cot_json(rows: list[dict[str, Any]]) -> pd.DataFrame:

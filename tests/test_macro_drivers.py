@@ -15,14 +15,17 @@ from ml import macro_drivers as md
 
 
 def test_cot_release_available_date_ordinary_tuesday() -> None:
-    # 2024-01-02 is a Tuesday; 2024-01-05 (Friday) is not a US federal holiday.
-    assert md.cot_release_available_date(date(2024, 1, 2)) == date(2024, 1, 5)
+    # 2024-01-02 is a Tuesday; +3 days = 2024-01-05 (Friday), not a US federal
+    # holiday; +1 more conservative business day (GC=F's early close vs COT's
+    # 15:30 ET release, see module docstring) = Monday 2024-01-08.
+    assert md.cot_release_available_date(date(2024, 1, 2)) == date(2024, 1, 8)
 
 
 def test_cot_release_available_date_shifts_past_a_holiday_friday() -> None:
-    # 2025-07-01 is a Tuesday; +3 days = 2025-07-04 (Friday), Independence Day.
-    # Next non-holiday, non-weekend day is Monday 2025-07-07.
-    assert md.cot_release_available_date(date(2025, 7, 1)) == date(2025, 7, 7)
+    # 2025-07-01 is a Tuesday; +3 days = 2025-07-04 (Friday), Independence Day,
+    # shifts to Monday 2025-07-07; +1 more conservative business day = Tuesday
+    # 2025-07-08.
+    assert md.cot_release_available_date(date(2025, 7, 1)) == date(2025, 7, 8)
 
 
 def test_cot_release_available_date_never_moves_earlier() -> None:
@@ -30,26 +33,29 @@ def test_cot_release_available_date_never_moves_earlier() -> None:
         d = date(2020, 1, 7) + timedelta(days=offset)
         if d.weekday() != 1:
             continue
-        assert md.cot_release_available_date(d) >= d + timedelta(days=3)
+        assert md.cot_release_available_date(d) >= d + timedelta(days=4)
 
 
 @pytest.mark.parametrize(
     ("as_of", "forced"),
     [
-        (date(2013, 10, 1), date(2013, 10, 25)),
-        (date(2013, 10, 8), date(2013, 10, 25)),
-        (date(2018, 12, 18), date(2019, 3, 8)),
-        (date(2019, 1, 22), date(2019, 3, 8)),
+        (date(2013, 10, 1), date(2013, 10, 28)),
+        (date(2013, 10, 8), date(2013, 10, 28)),
+        (date(2018, 12, 18), date(2019, 3, 11)),
+        (date(2019, 1, 22), date(2019, 3, 11)),
     ],
 )
 def test_cot_release_available_date_shutdown_overrides(as_of: date, forced: date) -> None:
+    # The forced catch-up date (2013-10-25, a Friday; 2019-03-08, a Friday) plus the
+    # same +1-business-day conservative buffer as the ordinary path.
     assert md.cot_release_available_date(as_of) == forced
 
 
 def test_cot_release_available_date_outside_shutdown_window_unaffected() -> None:
     # A Tuesday safely after the 2013 window closes: back to the ordinary Friday+3
-    # rule, landing on a date the shutdown override would never produce.
-    assert md.cot_release_available_date(date(2013, 10, 29)) == date(2013, 11, 1)
+    # (+1 conservative business day) rule, landing on a date the shutdown override
+    # would never produce.
+    assert md.cot_release_available_date(date(2013, 10, 29)) == date(2013, 11, 4)
 
 
 # ---------------------------------------------------------------------------

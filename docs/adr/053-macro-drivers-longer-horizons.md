@@ -40,17 +40,28 @@ history to be useful at monthly/quarterly horizons.
 | CFTC COT, Disaggregated, gold 088691 | US federal work, 17 U.S.C. Sec 105, public domain | Socrata API, dataset `72hh-3qpy` (`publicreporting.cftc.gov`) |
 | Treasury Daily Par Real Yield Curve | US federal work (INFERRED by the standard .gov pattern; Treasury's own copyright-statement page 403'd during research) | Treasury's own XML feed, no API key |
 
-- **Release lags, encoded so a feature can never be used before it was actually public:**
-  - COT: an as-of-Tuesday report is public from **Friday (as-of + 3 days), 15:30 ET**, usable for
-    a decision made at/after that Friday's close (CFTC Release Schedule page, VERIFIED). Shifted
-    later past a US federal holiday landing on that Friday, and overridden to a single documented
-    catch-up date for the two known multi-week shutdown gaps: 2013-10-01..2013-10-15 -> forced
-    2013-10-25 (CFTC press release 6745-13); 2018-12-18..2019-01-29 -> forced 2019-03-08
-    (external reporting, not independently opened as a primary source this session --
-    flagged INFERRED in `sources_cot_events.md`, used here as the conservative bound regardless).
+- **Release lags, encoded so a feature can never be used before it was actually public.** This
+  pipeline's decision timestamp is GC=F's own daily close as fetched from Yahoo Finance -- and a
+  sibling analysis (this session, not independently re-derived here) found that close is struck
+  well before 2pm ET (FOMC-decision-day reactions land in the NEXT day's GC=F close, not the same
+  day's). Both release-lag rules below are checked against that finding, added before any result
+  from this ADR was read:
+  - COT: an as-of-Tuesday report is nominally public from **Friday (as-of + 3 days), 15:30 ET**
+    (CFTC Release Schedule page, VERIFIED) -- AFTER a close struck well before 2pm ET, so a report
+    released on day R is not safely seen by a decision using day R's own close.
+    `cot_release_available_date` therefore adds **one more business day** on top of the nominal
+    release date before treating a report as available: Friday+3 (holiday-shifted) -> next
+    business day; the two known shutdown catch-up dates get the same +1-business-day buffer.
+    Shutdown windows: 2013-10-01..2013-10-15 -> forced 2013-10-25 (CFTC press release 6745-13) ->
+    available 2013-10-28; 2018-12-18..2019-01-29 -> forced 2019-03-08 (external reporting, not
+    independently opened as a primary source this session -- flagged INFERRED in
+    `sources_cot_events.md`, used here as the conservative bound regardless) -> available
+    2019-03-11.
   - Real yields: Treasury posts by ~18:00 ET the **same day** (Yield Curve Methodology page,
-    VERIFIED). Conservative rule used throughout this pipeline: a decision made at COMEX's close
-    on day *d* may use day *d-1*'s real yield, never day *d*'s own --
+    VERIFIED) -- comfortably after ANY same-day close, including an early one, so this rule was
+    already conservative relative to the finding above and needed no change. Conservative rule
+    used throughout this pipeline: a decision made at COMEX's close on day *d* may use day
+    *d-1*'s real yield, never day *d*'s own --
     `real_yield_available_date(quote_date) = quote_date + 1 calendar day`.
   - Both are enforced structurally, not just documented: `ml.macro_drivers.
     align_feature_to_decision_dates` is a backward `merge_asof` on `available_date` -- it cannot
