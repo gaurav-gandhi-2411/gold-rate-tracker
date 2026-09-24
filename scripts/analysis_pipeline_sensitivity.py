@@ -31,18 +31,23 @@ from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
-import numpy as np
-
 ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT))
 
-_spec = importlib.util.spec_from_file_location(
-    "analysis_direction_diagnosis", ROOT / "scripts" / "analysis_direction_diagnosis.py"
-)
-assert _spec is not None and _spec.loader is not None
-diag = importlib.util.module_from_spec(_spec)
-sys.modules["analysis_direction_diagnosis"] = diag
-_spec.loader.exec_module(diag)
+
+def _diag() -> Any:
+    """Loaded lazily: the analysis workflow lists shards before installing ML dependencies."""
+    if "analysis_direction_diagnosis" in sys.modules:
+        return sys.modules["analysis_direction_diagnosis"]
+    spec = importlib.util.spec_from_file_location(
+        "analysis_direction_diagnosis", ROOT / "scripts" / "analysis_direction_diagnosis.py"
+    )
+    assert spec is not None and spec.loader is not None
+    mod = importlib.util.module_from_spec(spec)
+    sys.modules["analysis_direction_diagnosis"] = mod
+    spec.loader.exec_module(mod)
+    return mod
+
 
 SEEDS = [42 + i for i in range(20)]
 GRID = {
@@ -54,7 +59,8 @@ MODEL = "logit"
 SHARDS = [f"{kind}_q{q}" for kind in ("comex", "inr") for q in GRID[kind]]
 
 
-def tests(y: np.ndarray, p: np.ndarray, p_clim: np.ndarray, horizon: int) -> dict[str, Any]:
+def tests(y: Any, p: Any, p_clim: Any, horizon: int) -> dict[str, Any]:
+    diag = _diag()
     wrong = ((p >= 0.5).astype(int) != y).astype(float)
     wrong_maj = ((p_clim >= 0.5).astype(int) != y).astype(float)
     acc = diag._dm(wrong, wrong_maj, horizon)
@@ -67,6 +73,9 @@ def tests(y: np.ndarray, p: np.ndarray, p_clim: np.ndarray, horizon: int) -> dic
 
 
 def run_cell(kind: str, q: float) -> dict[str, Any]:
+    import numpy as np
+
+    diag = _diag()
     d = diag.load(kind)
     sig = diag._signal(d, SIGNAL[kind])
     base_rate = float(d["y"].mean())
