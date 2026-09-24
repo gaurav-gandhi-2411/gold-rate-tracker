@@ -107,32 +107,6 @@ function fmtRelative(iso) {
   return t("relDaysAgo", { n: Math.round(diff / 86400) });
 }
 
-// Digit grouping stays en-IN regardless of UI language — Indian digit grouping
-// (₹13,33,330) is a REGIONAL convention, not a language one, and hi-IN's default
-// numbering system can silently switch to Devanagari digits (०१२३…) depending on the
-// browser's ICU data. numberingSystem:"latn" pins Arabic digits explicitly for the
-// Hindi date path below, matching how Indian Hindi media actually writes dates.
-function fmtDate(iso) {
-  const locale = currentLang === "hi" ? "hi-IN" : "en-IN";
-  return new Date(iso).toLocaleString(locale, {
-    day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit",
-    numberingSystem: "latn",
-  });
-}
-
-function fmtIST(iso) {
-  if (!iso) return "—";
-  const locale = currentLang === "hi" ? "hi-IN" : "en-IN";
-  try {
-    return new Intl.DateTimeFormat(locale, {
-      timeZone: "Asia/Kolkata",
-      day: "numeric", month: "short", year: "numeric",
-      hour: "2-digit", minute: "2-digit", hour12: true,
-      numberingSystem: "latn",
-    }).format(new Date(iso));
-  } catch (_) { return "—"; }
-}
-
 // Human-readable label for tier-3 fusion_sources (e.g. ["grt","malabar"] -> "GRT, Malabar").
 // Never crashes on a missing/null sources list — falls back to a generic label.
 function fusionSourcesLabel(sources) {
