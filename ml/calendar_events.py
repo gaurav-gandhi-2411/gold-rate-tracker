@@ -1,8 +1,9 @@
 from __future__ import annotations
 
-import json
 from datetime import date, timedelta
 from pathlib import Path
+
+from ml.duty_schedule import DUTY_TABLE_PATH, duty_change_proximity, get_duty_change_dates
 
 # ±3-day window applies to single-day festivals (Akshaya Tritiya, Dhanteras, Diwali).
 FESTIVAL_WINDOW_DAYS_BEFORE: int = 3
@@ -161,7 +162,7 @@ def get_wedding_season_info(query_date: date) -> dict[str, object]:
 # The Union Budget has been presented on 2026-02-01 every year since the
 # 2017 reform (previously the last working day of February). Basic-customs-
 # duty changes on gold are announced in the Budget more often than at any
-# other time of year (see data/duty_events.json: 2019-07-06 and 2021-02-02
+# other time of year (see data/duty_cbic.json: 2019-07-06 and 2021-02-02
 # and 2022-07-01 are Budget-adjacent; only 2013's crisis-era hikes and
 # 2024/2026 are not). The window below covers pre-Budget speculation and
 # post-Budget adjustment, not just the single announcement day.
@@ -184,37 +185,27 @@ def get_budget_window_info(query_date: date) -> dict[str, object]:
 
 
 # ---------------------------------------------------------------------------
-# Duty/cess event proximity (data/duty_events.json)
+# Duty/cess event proximity (data/duty_cbic.json — see ml.duty_schedule)
 # ---------------------------------------------------------------------------
-
-_DUTY_EVENT_RECENCY_DAYS = 30
-_DEFAULT_DUTY_EVENTS_PATH = Path(__file__).parent.parent / "data" / "duty_events.json"
 
 
 def get_duty_event_proximity(
-    query_date: date, path: Path = _DEFAULT_DUTY_EVENTS_PATH
+    query_date: date, path: Path = DUTY_TABLE_PATH
 ) -> dict[str, object]:
     """Returns {"is_duty_event_recent": bool, "days_since_duty_event": int}.
 
-    days_since_duty_event is 9999 if no duty event has occurred on or before
-    query_date. is_duty_event_recent is True within
-    _DUTY_EVENT_RECENCY_DAYS of the most recent one.
+    days_since_duty_event is 9999 if no duty change event (verified rows only,
+    composition-only re-notifications like 2023-02-02 excluded — see
+    ml.duty_schedule) has occurred on or before query_date. is_duty_event_recent
+    is True within ml.duty_schedule.DUTY_EVENT_RECENCY_DAYS of the most recent one.
     """
-    events = json.loads(path.read_text(encoding="utf-8"))
-    past = [e for e in events if date.fromisoformat(e["date"]) <= query_date]
-    if not past:
-        return {"is_duty_event_recent": False, "days_since_duty_event": 9999}
-
-    most_recent = max(past, key=lambda e: date.fromisoformat(e["date"]))
-    days_since = (query_date - date.fromisoformat(most_recent["date"])).days
-    return {
-        "is_duty_event_recent": days_since <= _DUTY_EVENT_RECENCY_DAYS,
-        "days_since_duty_event": days_since,
-    }
+    change_dates = get_duty_change_dates(path)
+    is_recent, days_since = duty_change_proximity(query_date, change_dates)
+    return {"is_duty_event_recent": is_recent, "days_since_duty_event": days_since}
 
 
 def get_demand_calendar_features(
-    query_date: date, duty_events_path: Path = _DEFAULT_DUTY_EVENTS_PATH
+    query_date: date, duty_events_path: Path = DUTY_TABLE_PATH
 ) -> dict[str, object]:
     """Single entry point combining festival + wedding-season + budget-window
     + duty-event-proximity flags for feature construction (M1)."""
