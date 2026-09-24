@@ -64,6 +64,29 @@ the measured odds, never a recommendation.
   returns an empty series instead of raising. It changes no test, threshold or data; a test covers
   it. No result was seen before the fix.
 
+## Result (2026-09-24, run at `e887b01f`, `reports/dow_prereg_results.json`)
+
+The snapshot SHA-256 starts `2db071aa`, matching ADR 044's record.
+
+**Not confirmed. No weekday is reliably cheaper, and an Indian Friday is not cheaper than the same
+week's Tuesday.**
+
+| test | data | n | result | p | passes |
+|---|---|---|---|---|---|
+| P1 any weekday differs | GC=F 2000–2012 | 3,088 days | mean daily return by COMEX weekday (bp): Mon +6.1, Tue −0.2, Wed +4.4, Thu +2.7, Fri +16.7 | 0.163 | no |
+| P2 Indian Fri < Tue | GC=F 2000–2012 | 559 weeks | Friday **+0.02% dearer** [−0.15, +0.19]; cheaper in **45.3%** of weeks [41.2, 49.4] | 0.61 | no |
+| P1 (secondary) | GLD 2004–2012 | 2,042 days | Fri +20.7 bp | 0.037 (> 0.025) | no |
+| P2 (secondary) | GLD 2004–2012 | 370 weeks | Friday +0.08% dearer; cheaper in 44.1% of weeks [39.1, 49.1] | 0.77 | no |
+| forward IBJA | after 2026-09-24 | 0 weeks | not readable before 52 weeks | — | no |
+
+**Verdict: the site never advises waiting for a particular day.** If anything, the Indian Friday is
+the dearer day slightly more often than the cheaper one: 45% cheaper on untouched COMEX, 44% on
+the exploratory proxy. That matches a small drift upwards, not a weekday pattern. GLD's Friday
+return (+20.7 bp, secondary, p 0.037) falls on the COMEX Friday. That is an Indian *Monday*, so it
+would make Monday dearer, not Friday cheaper. It is not significant after correction.
+
+The forward IBJA arm keeps running and is read at 52 weeks, as registered.
+
 ## Consequences
 
 - The earliest a weekday claim could ever appear is about October 2027, after 52 forward weeks.
