@@ -126,8 +126,27 @@ jobs:
         working-directory: scraper
         run: npx playwright install --with-deps chromium
 
+      - name: Check retailer takedown switch (ADR 059)
+        # config/retailers.json -- docs/RETAILER_TAKEDOWN.md. exit 0 = enabled,
+        # 10 = disabled (skip the live fetch), anything else = config error (fail).
+        id: switch
+        run: |
+          set +e
+          node scraper/retailer-enabled.mjs tanishq
+          code=$?
+          set -e
+          if [ "$code" -eq 0 ]; then
+            echo "enabled=true" >> "$GITHUB_OUTPUT"
+          elif [ "$code" -eq 10 ]; then
+            echo "enabled=false" >> "$GITHUB_OUTPUT"
+            echo "::notice::Tanishq is disabled in config/retailers.json -- no request sent (ADR 059)."
+          else
+            exit "$code"
+          fi
+
       - name: Scrape Tanishq and update prices.json
         id: scrape
+        if: steps.switch.outputs.enabled == 'true'
         working-directory: scraper
         continue-on-error: true
         # NTFY_TOPIC/DROP_THRESHOLD removed: update-and-notify.js no longer sends

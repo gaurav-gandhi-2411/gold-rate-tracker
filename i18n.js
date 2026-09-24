@@ -89,6 +89,8 @@ const STRINGS = {
     heroAriaLabel: "Current 22K gold price and buying verdict",
     eyebrow: "22K gold · per gram",
     heroLocation: "Tanishq retail price · pan-India",
+    // ADR 059: shown only when prices.json was rebuilt from IBJA after a retailer takedown.
+    heroLocationDerived: "Estimated shop price from IBJA · pan-India",
     todayLabel: "today",
     sinceLastLabel: "since last",
     sparklineLabelLeft: "7 days",
@@ -432,6 +434,7 @@ const STRINGS = {
     heroAriaLabel: "मौजूदा 22K सोने की कीमत और ख़रीद का सुझाव",
     eyebrow: "22K सोना · प्रति ग्राम",
     heroLocation: "Tanishq की खुदरा कीमत · पूरे भारत में",
+    heroLocationDerived: "IBJA पर आधारित दुकान की अनुमानित कीमत · पूरे भारत में",
     todayLabel: "आज",
     sinceLastLabel: "पिछली बार से",
     sparklineLabelLeft: "7 दिन",

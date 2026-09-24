@@ -59,11 +59,29 @@ jobs:
         working-directory: scraper
         run: node --test test_update_and_notify.js
 
+      - name: Check retailer takedown switch (ADR 059)
+        # config/retailers.json -- docs/RETAILER_TAKEDOWN.md. exit 0 = enabled,
+        # 10 = disabled (skip the live fetch), anything else = config error (fail).
+        id: switch
+        run: |
+          set +e
+          node scraper/retailer-enabled.mjs tanishq
+          code=$?
+          set -e
+          if [ "$code" -eq 0 ]; then
+            echo "enabled=true" >> "$GITHUB_OUTPUT"
+          elif [ "$code" -eq 10 ]; then
+            echo "enabled=false" >> "$GITHUB_OUTPUT"
+            echo "::notice::Tanishq is disabled in config/retailers.json -- no request sent (ADR 059)."
+          else
+            exit "$code"
+          fi
+
       - name: Live DOM canary (Tanishq page)
         id: canary
         # Live network call — skip on pull_request to avoid external dependency in PR CI.
         # Hardening tests (above) cover all mock-testable failure modes on every PR.
-        if: github.event_name != 'pull_request'
+        if: github.event_name != 'pull_request' && steps.switch.outputs.enabled == 'true'
         working-directory: scraper
         # scrape.js exit codes distinguish an IP-level Cloudflare block (2) — the
         # documented expected steady state per ADR 025, see docs/RUNBOOK.md's
