@@ -99,6 +99,17 @@ const STRINGS_HWK = {
     methBandAccuracyHeading: "Band accuracy (measured)",
     methBandAccuracyText: ({ amount, pct, n, asOf }) => `The real price has landed within about ₹${amount}/gram of the displayed estimate ${pct}% of the time so far (n=${n} weeks measured, as of ${asOf}).`,
     methBandAccuracyUnknown: "No measurement in the last 14 days — the next weekly re-check will refresh this.",
+
+    // ── Where the numbers come from (D3, 2026-09-25) ─────────────────────────────
+    // New section crediting every data source this page's methodology relies on,
+    // including one that was never disclosed anywhere on the site before: Yahoo
+    // Finance, used as a model input (gold/currency/rate data), never shown to
+    // users as a raw number and (from this change on) never committed to this
+    // project's public source code either -- see the D3 PR for why.
+    hwkSourcesHeading: "Where the numbers come from",
+    hwkSourcesIntro: "This price and its range are built from a few different sources.",
+    hwkSourcesIbjaTanishq: "The starting point is IBJA's official daily gold benchmark, adjusted to match real shop prices and checked against Tanishq's live rate (and GRT, Malabar or Kalyan when Tanishq can't be reached) — full credits are in the footer below.",
+    hwkSourcesYahoo: "To help build the price range and notice unusual moves, our models also look at everyday market data — the international gold price, the rupee-dollar exchange rate, and a few related market indicators — sourced from Yahoo Finance. We use this only as an input to our own calculations; we never publish Yahoo Finance's own numbers directly on this site.",
   },
 
   hi: {
@@ -157,6 +168,8 @@ const STRINGS_HWK = {
 
     // hwk*/methBandAccuracy* have NO Hindi entry yet on purpose -- brand new on
     // this page, pending native-speaker review. tHwk() falls back to English.
+    // D3 (2026-09-25) added 4 more keys to that pending-review list, same reason:
+    // hwkSourcesHeading, hwkSourcesIntro, hwkSourcesIbjaTanishq, hwkSourcesYahoo.
   },
 };
 

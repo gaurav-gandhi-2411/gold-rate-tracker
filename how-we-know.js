@@ -271,6 +271,20 @@ function renderFullMethodology(fc, bt, drift, coverage, bandCoverage) {
     `);
   }
 
+  // Where the numbers come from (D3, 2026-09-25) -- static, not data-driven, so
+  // it renders unconditionally like the first section above. Credits IBJA/
+  // Tanishq/GRT/Malabar/Kalyan (already in the shared footer this page also
+  // renders -- see applySharedShellStrings) and, newly, Yahoo Finance, which
+  // was never disclosed anywhere on the site before.
+  parts.push(`
+    <div class="meth-section">
+      <h3 class="meth-heading">${tHwk("hwkSourcesHeading")}</h3>
+      <p class="meth-text">${tHwk("hwkSourcesIntro")}</p>
+      <p class="meth-text">${tHwk("hwkSourcesIbjaTanishq")}</p>
+      <p class="meth-text">${tHwk("hwkSourcesYahoo")}</p>
+    </div>
+  `);
+
   // XSS-safe: parts[] contains only hardcoded HTML templates with numeric/boolean
   // values from forecast.json/backtest.json/calibration_band_coverage.json.
   // Overwriting innerHTML here removes the skeleton markup along with it —
