@@ -275,6 +275,68 @@ class TestBuildDataset:
         assert ds.iloc[0]["label_binary_h2"] is None or pd.isna(ds.iloc[0]["label_binary_h2"])
 
 
+class TestConsecutiveIbjaDays:
+    """G2 / ADR 042: labels only across consecutive IBJA publication days. The real
+    record has holes of 14-101 days; 'the next IBJA row' used to bridge them."""
+
+    def test_h1_across_a_hole_drops_the_row(self) -> None:
+        # Thu 2025-01-02 -> next IBJA row Mon 2025-01-20: a 12-weekday hole.
+        snaps_df = _make_snapshots(["2025-01-02"], [70000.0])
+        ibja_df = _make_ibja(
+            ["2025-01-02", "2025-01-20", "2025-01-21"], [70000.0, 75000.0, 76000.0]
+        )
+        assert build_dataset(snapshots_df=snaps_df, ibja_df=ibja_df).empty
+
+    def test_h2_across_a_hole_is_none_but_h1_kept(self) -> None:
+        # Fri 2025-01-03 -> Mon 01-06 (consecutive), then a hole to Mon 01-27.
+        snaps_df = _make_snapshots(["2025-01-03"], [70000.0])
+        ibja_df = _make_ibja(
+            ["2025-01-03", "2025-01-06", "2025-01-27"], [70000.0, 71000.0, 60000.0]
+        )
+        row = build_dataset(snapshots_df=snaps_df, ibja_df=ibja_df).iloc[0]
+        assert row["label_date_h1"] == "2025-01-06"
+        assert row["label_binary_h2"] is None or pd.isna(row["label_binary_h2"])
+        assert row["label_date_h2"] is None or pd.isna(row["label_date_h2"])
+
+    def test_single_holiday_is_consecutive(self) -> None:
+        # Thu 2025-04-17 -> Mon 04-21 (Good Friday 04-18) -> Tue 04-22.
+        snaps_df = _make_snapshots(["2025-04-17"], [70000.0])
+        ibja_df = _make_ibja(
+            ["2025-04-17", "2025-04-21", "2025-04-22"], [70000.0, 71000.0, 69000.0]
+        )
+        row = build_dataset(snapshots_df=snaps_df, ibja_df=ibja_df).iloc[0]
+        assert row["label_date_h1"] == "2025-04-21"
+        assert row["label_date_h2"] == "2025-04-22"
+
+    def test_two_missing_weekdays_is_a_hole(self) -> None:
+        # Mon 2025-01-06 -> Thu 01-09: Tue and Wed both missing.
+        snaps_df = _make_snapshots(["2025-01-06"], [70000.0])
+        ibja_df = _make_ibja(
+            ["2025-01-06", "2025-01-09", "2025-01-10"], [70000.0, 71000.0, 72000.0]
+        )
+        assert build_dataset(snapshots_df=snaps_df, ibja_df=ibja_df).empty
+
+    def test_extra_horizon_across_a_hole_is_none(self) -> None:
+        snaps_df = _make_snapshots(["2025-01-06"], [70000.0])
+        dates = ["2025-01-06", "2025-01-07", "2025-01-08", "2025-02-03", "2025-02-04"]
+        ibja_df = _make_ibja(dates, [70000.0, 71000.0, 72000.0, 60000.0, 61000.0])
+        row = build_dataset(snapshots_df=snaps_df, ibja_df=ibja_df, extra_horizons=(4,)).iloc[0]
+        assert row["label_date_h2"] == "2025-01-08"
+        assert row["label_binary_h4"] is None or pd.isna(row["label_binary_h4"])
+        assert row["window_min_pm916_h4"] is None or pd.isna(row["window_min_pm916_h4"])
+
+    def test_require_consecutive_false_reproduces_the_old_bridging_labels(self) -> None:
+        snaps_df = _make_snapshots(["2025-01-02"], [70000.0])
+        ibja_df = _make_ibja(
+            ["2025-01-02", "2025-01-20", "2025-01-21"], [70000.0, 75000.0, 76000.0]
+        )
+        row = build_dataset(snapshots_df=snaps_df, ibja_df=ibja_df, require_consecutive=False).iloc[
+            0
+        ]
+        assert row["label_date_h1"] == "2025-01-20"
+        assert row["label_date_h2"] == "2025-01-21"
+
+
 # ---------------------------------------------------------------------------
 # extra_horizons (M2: 5/10-day reframed targets)
 # ---------------------------------------------------------------------------

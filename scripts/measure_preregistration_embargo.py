@@ -65,7 +65,10 @@ def _score(dataset: pd.DataFrame, embargo: bool) -> dict:
 
 def main() -> int:
     warnings.filterwarnings("ignore")
-    dataset = build_dataset()
+    # A1 provenance was measured on the pre-G2 labels, which bridge holes in the
+    # IBJA record; kept on them so reports/preregistration_embargo_a1.json stays
+    # reproducible. Item 3 now runs the v2 live arm (ADR 042) on this dataset.
+    dataset = build_dataset(require_consecutive=False)
     labelled = dataset[dataset[PREREGISTERED_CONFIG["label_col"]].notna()]
     live = run_live_arm(dataset)
     out = {
