@@ -1,5 +1,5 @@
 {
-  "predicted_at": "2026-09-23T12:58:49.313313+00:00",
+  "predicted_at": "2026-09-24T00:50:22.534777+00:00",
   "target_window": "5d",
   "headline": {
     "method": "naive_flat_hold",
@@ -25,29 +25,29 @@
   "chronos_companion": {
     "status": "success",
     "lean_direction": "up",
-    "lean_strength_pct": 0.973,
+    "lean_strength_pct": 1.085,
     "direction_acc_30f": 0.567,
     "direction_prob_basis": "base_rate_fallback",
     "horizon_p10": [
-      13824.08,
-      13756.24,
-      13683.19,
-      13649.44,
-      13615.25
+      13794.56,
+      13741.96,
+      13675.44,
+      13628.99,
+      13581.15
     ],
     "horizon_p50": [
-      14258.37,
-      14277.05,
-      14279.43,
-      14304.59,
-      14347.05
+      14228.36,
+      14271.1,
+      14283.97,
+      14294.68,
+      14322.73
     ],
     "horizon_p90": [
-      14776.05,
-      14873.14,
-      14937.98,
-      15009.22,
-      15108.47
+      14741.24,
+      14875.82,
+      14955.33,
+      15012.45,
+      15095.59
     ],
     "model_version": "amazon/chronos-bolt-tiny@a0e552de",
     "calibration_applied": true,
@@ -56,7 +56,7 @@
     "direction_consensus": 1.0
   },
   "driver_context": {
-    "computed_at": "2026-09-23T12:58:49.317738+00:00",
+    "computed_at": "2026-09-24T00:50:22.539423+00:00",
     "macro_staleness_days": 0.0,
     "macro_fresh": true,
     "premium_threshold_pct": 15.0,
@@ -65,45 +65,45 @@
         "n_obs": 6,
         "t0_date": "2026-09-16",
         "t1_date": "2026-09-23",
-        "delta_pct_ibja": -0.063,
-        "delta_pct_gold_usd": -1.047,
-        "delta_pct_usdinr": -0.264,
-        "delta_pct_premium": 1.248,
+        "delta_pct_ibja": -0.227,
+        "delta_pct_gold_usd": -1.368,
+        "delta_pct_usdinr": -0.316,
+        "delta_pct_premium": 1.456,
         "total_move_rs_per_g": 70.0,
-        "gold_usd_contrib_rs_per_g": 1162.0,
-        "usdinr_contrib_rs_per_g": 292.5,
-        "premium_contrib_rs_per_g": -1384.6,
-        "premium_share_pct": 1978.0,
+        "gold_usd_contrib_rs_per_g": 421.0,
+        "usdinr_contrib_rs_per_g": 97.3,
+        "premium_contrib_rs_per_g": -448.3,
+        "premium_share_pct": 640.5,
         "attribution_valid": false,
-        "attribution_valid_reason": "premium share 1978.0% exceeds 15% threshold"
+        "attribution_valid_reason": "premium share 640.5% exceeds 15% threshold"
       },
       "30d": {
         "n_obs": 22,
         "t0_date": "2026-08-24",
         "t1_date": "2026-09-23",
-        "delta_pct_ibja": -6.291,
-        "delta_pct_gold_usd": -7.881,
-        "delta_pct_usdinr": 0.041,
-        "delta_pct_premium": 1.548,
+        "delta_pct_ibja": -6.456,
+        "delta_pct_gold_usd": -8.201,
+        "delta_pct_usdinr": -0.011,
+        "delta_pct_premium": 1.756,
         "total_move_rs_per_g": -895.0,
-        "gold_usd_contrib_rs_per_g": -1121.1,
-        "usdinr_contrib_rs_per_g": 5.9,
-        "premium_contrib_rs_per_g": 220.2,
-        "premium_share_pct": 24.6,
+        "gold_usd_contrib_rs_per_g": -1137.0,
+        "usdinr_contrib_rs_per_g": -1.5,
+        "premium_contrib_rs_per_g": 243.5,
+        "premium_share_pct": 27.2,
         "attribution_valid": false,
-        "attribution_valid_reason": "premium share 24.6% exceeds 15% threshold"
+        "attribution_valid_reason": "premium share 27.2% exceeds 15% threshold"
       }
     },
     "driver_state": {
-      "usd_inr_now": 95.74,
-      "gold_usd_now": 4341.8,
-      "usd_inr_30d_pct_change": 0.04,
-      "gold_usd_30d_pct_change": -7.58
+      "usd_inr_now": 95.69,
+      "gold_usd_now": 4327.9,
+      "usd_inr_30d_pct_change": -0.01,
+      "gold_usd_30d_pct_change": -7.87
     }
   },
-  "real_readings_count": 706,
+  "real_readings_count": 708,
   "current_22k": 14180,
-  "scraped_at": "2026-09-23T11:27:01.385Z",
+  "scraped_at": "2026-09-23T21:28:02.541Z",
   "price_source": "tanishq_scrape",
   "est_low": null,
   "est_high": null,
@@ -119,7 +119,7 @@
   "predicted_22k": 14180,
   "lower": 13927,
   "upper": 14433,
-  "target_time": "2026-09-24T00:00:00+00:00",
+  "target_time": "2026-09-25T00:00:00+00:00",
   "model_status": "naive_headline",
   "model_version": "naive_flat_hold",
   "warmup": false
