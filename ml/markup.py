@@ -48,7 +48,7 @@ from collections.abc import Iterable
 from dataclasses import dataclass
 from datetime import UTC, date, datetime, time, timedelta
 from pathlib import Path
-from typing import Any
+from typing import Any, cast
 from zoneinfo import ZoneInfo
 
 import pandas as pd
@@ -410,7 +410,10 @@ def load_fusion_readings(
     for row in df.itertuples(index=False):
         try:
             ts = datetime.fromisoformat(str(row.observed_at))
-            rate = float(row.rate_22k)
+            # cast: itertuples' NamedTuple stub types every field as a broad Union covering
+            # all pandas dtypes it can't statically narrow per-column -- a stub gap, not an
+            # actual runtime possibility here (rate_22k is a known-numeric parquet column).
+            rate = float(cast(Any, row.rate_22k))
         except (ValueError, TypeError):
             continue
         if ts.year < _MIN_PLAUSIBLE_YEAR:
