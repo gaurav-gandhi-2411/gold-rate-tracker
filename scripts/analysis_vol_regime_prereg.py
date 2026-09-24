@@ -12,6 +12,9 @@ series that is not the one this test was pre-registered and previously run again
 history for the CSVs is not rewritten (see the D3 PR body).
 
 Usage: python scripts/analysis_vol_regime_prereg.py [--out reports/vol_regime_prereg_results.json]
+Also dispatchable via analysis.yml's shard contract (D3): --list-shards / --shard KEY --out DIR /
+--aggregate DIR --out F -- lets this run on a GitHub-hosted runner with real network access, e.g.
+`gh workflow run analysis.yml --ref <branch> -f analysis=vol_regime_prereg`.
 """
 
 from __future__ import annotations
@@ -211,11 +214,8 @@ def run(key: str) -> dict[str, Any]:
     return out
 
 
-def main() -> int:
-    ap = argparse.ArgumentParser()
-    ap.add_argument("--out", type=Path, default=ROOT / "reports" / "vol_regime_prereg_results.json")
-    args = ap.parse_args()
-    res = {
+def compute() -> dict[str, Any]:
+    return {
         "adr": "044",
         "generated_at_utc": datetime.now(UTC).isoformat(),
         "git_sha": subprocess.run(
@@ -224,6 +224,35 @@ def main() -> int:
         "primary": run("gcf"),
         "robustness_gld": run("gld"),
     }
+
+
+def main() -> int:
+    # --list-shards/--shard/--aggregate: analysis.yml's contract (D3, 2026-09-25), so this
+    # frozen ADR 044 runner can be dispatched on GitHub-hosted runners (this sandbox has no
+    # outbound network to fetch the now-uncommitted CSVs; see load()'s own docstring). A single
+    # "all" shard -- this script's compute is already fast and not meaningfully parallel across
+    # gcf/gld. Direct invocation (no shard flags) is unchanged: writes reports/
+    # vol_regime_prereg_results.json by default, exactly as before this contract was added.
+    ap = argparse.ArgumentParser()
+    ap.add_argument("--out", type=Path, default=ROOT / "reports" / "vol_regime_prereg_results.json")
+    ap.add_argument("--list-shards", action="store_true")
+    ap.add_argument("--shard")
+    ap.add_argument("--aggregate", type=Path)
+    args = ap.parse_args()
+    if args.list_shards:
+        print(json.dumps(["all"]))
+        return 0
+    if args.aggregate:
+        res = json.loads((args.aggregate / "all.json").read_text(encoding="utf-8"))
+        args.out.write_text(json.dumps(res, indent=2) + "\n", encoding="utf-8")
+        print(json.dumps(res, indent=2))
+        return 0
+    res = compute()
+    if args.shard:
+        args.out.mkdir(parents=True, exist_ok=True)
+        (args.out / "all.json").write_text(json.dumps(res, indent=2) + "\n", encoding="utf-8")
+        print(json.dumps(res, indent=2))
+        return 0
     args.out.write_text(json.dumps(res, indent=2) + "\n", encoding="utf-8")
     print(json.dumps(res, indent=2))
     return 0

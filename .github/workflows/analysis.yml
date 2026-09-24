@@ -32,6 +32,8 @@ on:
           - selective_direction
           - pipeline_sensitivity
           - calibrated_floor
+          - vol_regime_prereg
+          - dow_prereg
 
 permissions:
   contents: read

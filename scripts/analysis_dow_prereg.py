@@ -15,6 +15,9 @@ reasoning as ADR 044/analysis_vol_regime_prereg.py). `load_close` delegates to
 both scripts, rather than keeping a second, driftable copy of the frozen hashes.
 
 Usage: python scripts/analysis_dow_prereg.py [--out reports/dow_prereg_results.json]
+Also dispatchable via analysis.yml's shard contract (D3): --list-shards / --shard KEY --out DIR /
+--aggregate DIR --out F -- e.g.
+`gh workflow run analysis.yml --ref <branch> -f analysis=dow_prereg`.
 """
 
 from __future__ import annotations
@@ -197,14 +200,34 @@ def run() -> dict[str, Any]:
 
 
 def main() -> int:
+    # --list-shards/--shard/--aggregate: analysis.yml's contract (D3, 2026-09-25) -- same
+    # reasoning as analysis_vol_regime_prereg.py's main(): lets this frozen ADR 052 runner be
+    # dispatched on a GitHub-hosted runner with real network access. Direct invocation (no
+    # shard flags) is unchanged: writes reports/dow_prereg_results.json by default.
     ap = argparse.ArgumentParser()
     ap.add_argument("--out", type=Path, default=ROOT / "reports" / "dow_prereg_results.json")
+    ap.add_argument("--list-shards", action="store_true")
+    ap.add_argument("--shard")
+    ap.add_argument("--aggregate", type=Path)
     args = ap.parse_args()
+    if args.list_shards:
+        print(json.dumps(["all"]))
+        return 0
+    if args.aggregate:
+        res = json.loads((args.aggregate / "all.json").read_text(encoding="utf-8"))
+        args.out.write_text(json.dumps(res, indent=1) + "\n", encoding="utf-8")
+        print(json.dumps(res, indent=1))
+        return 0
     res = run()
     res["git_sha"] = subprocess.run(
         ["git", "rev-parse", "HEAD"], capture_output=True, text=True, check=False, cwd=ROOT
     ).stdout.strip()
     res["generated_at_utc"] = datetime.now(UTC).isoformat()
+    if args.shard:
+        args.out.mkdir(parents=True, exist_ok=True)
+        (args.out / "all.json").write_text(json.dumps(res, indent=1) + "\n", encoding="utf-8")
+        print(json.dumps(res, indent=1))
+        return 0
     args.out.write_text(json.dumps(res, indent=1) + "\n", encoding="utf-8")
     print(json.dumps(res, indent=1))
     return 0
