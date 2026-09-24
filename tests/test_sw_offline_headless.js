@@ -128,8 +128,9 @@ try {
   // shipped it for real (`scripts/run_next_day_range_shadow.py` now writes a committed file),
   // so it 200s online like any other shipped data file and belongs in the "must be served from
   // cache offline" assertion below, not the not-yet-shipped one.
+  // `wait_or_buy_today.json` moved out the same way when ADR 049 (#2020) shipped it.
   const NOT_YET_SHIPPED_DATA_FILES = new Set([
-    "markup_today.json", "wait_or_buy_today.json", "event_watch_today.json",
+    "markup_today.json", "event_watch_today.json",
     "weekly_range_shadow_log.json",
   ]);
   const shipped = names.filter((n) => !NOT_YET_SHIPPED_DATA_FILES.has(n));
