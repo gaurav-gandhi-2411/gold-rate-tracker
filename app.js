@@ -2644,7 +2644,10 @@ function renderFlaggedFeatures(fc, readings, bandCoverage, extras = {}) {
   // master's (nothing here runs at all when page_v2 is off).
   const oldSections = document.querySelector(".layout-grid");
   if (oldSections) oldSections.hidden = true;
-  (document.querySelector("main") ?? document.body).appendChild(container);
+  // Mounted directly after the hidden .layout-grid -- i.e. where the old sections were,
+  // above the site footer -- not appended after the footer at the end of <main>.
+  if (oldSections) oldSections.after(container);
+  else (document.querySelector("main") ?? document.body).appendChild(container);
 
   // Job 5: relocate the existing, unchanged calculator -- bindCalculatorInputs() already
   // bound its listeners in init() to this exact node, and renderCalculator()'s own reads/

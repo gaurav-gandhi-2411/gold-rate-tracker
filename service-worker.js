@@ -116,7 +116,10 @@
 // i18n.js + style.css changed (new pure/build/render functions, new pv2* i18n keys, new
 // .pv2-* rules) -- bumping so installed clients pick up the new app.js/i18n.js/style.css
 // bytes even though nothing currently renders differently with every flag off.
-const VERSION = "v58-20260924-pagev2-flagged";
+// 2026-09-25 (same PR, G6 layout pass): style.css (page_v2 grid/type tokens) + app.js
+// (page_v2 mount point) changed again -- suffix re-stamped so a client that installed
+// the earlier v58 preview shell does not keep the pre-layout-pass bytes.
+const VERSION = "v58-20260925-pagev2-layout";
 const SHELL_CACHE = `gold-shell-${VERSION}`;
 
 const SHELL_FILES = [
