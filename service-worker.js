@@ -102,7 +102,7 @@
 // how-we-know.js/how-we-know-strings.js from the same data files. All three are new
 // precached shell files (below). index.html + app.js + i18n.js + style.css changed too
 // (banned-jargon rewrites, accordion body replaced with a plain summary + link).
-const VERSION = "v53-20260923-plain-language";
+const VERSION = "v54-20260924-hwk-measured-range";
 const SHELL_CACHE = `gold-shell-${VERSION}`;
 
 const SHELL_FILES = [
