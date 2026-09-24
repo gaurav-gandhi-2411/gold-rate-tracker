@@ -77,6 +77,10 @@ async function run() {
       const layoutGridHidden = await page.evaluate(() => document.querySelector(".layout-grid")?.hidden === true);
       assert("no #page-v2 element exists with no ?ff=", !pageV2Exists);
       assert(".layout-grid is NOT hidden (old sections stay visible)", !layoutGridHidden);
+      // The G6 layout CSS adds a .layout-grid[hidden] rule; with the flag off it must not
+      // match, so the desktop two-zone grid is still actually laid out (1280px viewport).
+      const gridDisplay = await page.evaluate(() => getComputedStyle(document.querySelector(".layout-grid")).display);
+      assert(".layout-grid still renders as a grid at 1280px with no ?ff=", gridDisplay === "grid", `display=${gridDisplay}`);
       await ctx.close();
     }
 
@@ -93,6 +97,27 @@ async function run() {
 
       const layoutGridHidden = await page.evaluate(() => document.querySelector(".layout-grid")?.hidden === true);
       assert("the single .layout-grid toggle hid every old section", layoutGridHidden);
+      // `hidden` alone loses to `.layout-grid { display: grid }` at >=1024px, which left every
+      // old section visible above page_v2 on desktop (G6). Check what is actually rendered.
+      const gridDisplay = await page.evaluate(() => getComputedStyle(document.querySelector(".layout-grid")).display);
+      assert("old sections are actually not rendered at 1280px (computed display: none)", gridDisplay === "none",
+        `display=${gridDisplay}`);
+      const beforeFooter = await page.evaluate(() => {
+        const pv2 = document.getElementById("page-v2");
+        const footer = document.querySelector(".site-footer");
+        return !!(pv2 && footer && (pv2.compareDocumentPosition(footer) & Node.DOCUMENT_POSITION_FOLLOWING));
+      });
+      assert("#page-v2 sits above the site footer, not after it", beforeFooter);
+      // Hierarchy: the price is the single largest piece of text inside page_v2.
+      const priceDominant = await page.evaluate(() => {
+        const price = document.querySelector("#page-v2 .pv2-price-value");
+        if (!price) return false;
+        const priceSize = parseFloat(getComputedStyle(price).fontSize);
+        return [...document.querySelectorAll("#page-v2 *")]
+          .filter((el) => el !== price && !price.contains(el) && el.textContent.trim() !== "")
+          .every((el) => parseFloat(getComputedStyle(el).fontSize) < priceSize);
+      });
+      assert("the price is the largest text in page_v2", priceDominant);
 
       for (const job of PV2_JOBS) {
         // eslint-disable-next-line no-loop-func
@@ -123,6 +148,23 @@ async function run() {
       assert("F1/F2/F4 render nothing when their data files are absent (even with their flags on)", optionalCount === 0,
         `found ${optionalCount}`);
 
+      await ctx.close();
+    }
+
+    console.log("\n?ff=page_v2,good_price_v2 at 390px — single column, no horizontal scroll");
+    {
+      const ctx  = await browser.newContext({ viewport: { width: 390, height: 844 } });
+      const page = await ctx.newPage();
+      await page.goto(`${base}/?ff=page_v2,good_price_v2`, { waitUntil: "networkidle" });
+      await page.waitForTimeout(500);
+      const layout = await page.evaluate(() => ({
+        overflow: document.documentElement.scrollWidth - window.innerWidth,
+        cols: getComputedStyle(document.getElementById("page-v2")).gridTemplateColumns.split(" ").length,
+        left: document.getElementById("page-v2").getBoundingClientRect().left,
+      }));
+      assert("no horizontal overflow at 390px", layout.overflow <= 0, `overflow=${layout.overflow}px`);
+      assert("one column at 390px", layout.cols === 1, `cols=${layout.cols}`);
+      assert("16px side gutter at 390px", Math.round(layout.left) === 16, `left=${layout.left}`);
       await ctx.close();
     }
 
