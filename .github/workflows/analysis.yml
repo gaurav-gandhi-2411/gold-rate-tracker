@@ -30,6 +30,7 @@ on:
           - nowcast
           - buyer_policy
           - selective_direction
+          - pipeline_sensitivity
 
 permissions:
   contents: read
