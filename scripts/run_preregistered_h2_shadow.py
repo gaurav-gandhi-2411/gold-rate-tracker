@@ -1,5 +1,6 @@
 """scripts/run_preregistered_h2_shadow.py — weekly shadow scoring for the
-GG spec item 4 / ADR 038 pre-registration. Wired into weekly-backtest.yml
+GG spec item 4 pre-registration: v2 (ADR 042) since 2026-09-24; v1 (ADR 038)
+superseded. Wired into weekly-backtest.yml
 as an additive, continue-on-error step; appends both arms' results to
 data/preregistered_h2_shadow_results.json (append-only audit log).
 
@@ -47,11 +48,12 @@ def main() -> int:
             print(
                 f"{arm_name} [{result.get('protocol_version')}]: n={result['n']} "
                 f"(post-{result.get('confirmatory_after_as_of')} days only, scored {span}, "
-                f"embargo on {result.get('embargo_label_date_col')}) "
+                f"embargo on {result.get('embargo_label_date_col')}, "
+                f"consecutive-day labels={result.get('consecutive_day_labels')}) "
                 f"effective_n={_fmt(result['effective_n'], '.2f')} "
                 f"p={_fmt(result['p_value'], '.5f')} significant={result['significant_at_05']} "
                 f"reached_preregistered_n={reached} (target={PREREGISTERED_N_FOR_POWER}, "
-                "h2-specific -- see ADR 038)"
+                "h2-specific -- see ADR 042)"
             )
         else:
             # Proxy arm has a different horizon/feature set (ADR 038's caveat) --

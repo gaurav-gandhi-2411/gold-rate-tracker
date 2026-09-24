@@ -1,5 +1,13 @@
 # ADR 038 — Pre-Registration: ADR 034's h2 "Config J" Candidate on Genuinely New Data
 
+> **SUPERSEDED 2026-09-24 by [ADR 042](042-h2-preregistration-v2-consecutive-day-labels.md) (v2),
+> before any post-registration day was scored.** v1's labels bridged holes of up to 122 days in the
+> IBJA record (13 of 182 h2 labels). v2 keeps the model configuration, test, α and embargo, and uses
+> consecutive-day labels, a later registration date and re-frozen reference figures. The v1 reference
+> stays reproducible (`analysis_prereg_reference.py --protocol v1 --check`). A2b's unexplained
+> discrepancy has a cause: the first freeze was computed with an older library stack (scikit-learn
+> 1.7.2, LightGBM 4.6.0, pandas 2.2.3), which reproduces it exactly. See ADR 042.
+
 **Status:** Accepted, implemented 2026-09-23. **Amended 2026-09-23 (A1: embargo + post-registration
 days only) and again 2026-09-23 (A2: prior-day VIX in the proxy arm; reproducible reference figures),
 both before any post-registration day was scored — see "Amendment A1" and "Amendment A2".** Pre-registration only — no promotion, no gate/user-facing

@@ -105,13 +105,27 @@ jobs:
         continue-on-error: true
         run: python scripts/run_preregistered_h2_shadow.py
 
+      - name: Score the morning-fix nowcast shadow (G3)
+        # SHADOW ONLY (G3, 2026-09-24): logs the R2 AM+PM nowcast next to the live
+        # PM-only estimate for each completed day after the merge date, append-only, to
+        # data/nowcast_shadow_log.json. The site keeps using the current estimate.
+        continue-on-error: true
+        run: python scripts/run_nowcast_shadow.py
+
+      - name: Score the weekly price range shadow (item 5)
+        # SHADOW ONLY (2026-09-24, ADR 043): issues the 1-day and 7-day ranges for each IBJA
+        # publication day after the merge date and scores them once complete, append-only, to
+        # data/weekly_range_shadow_log.json. Nothing on the site reads it.
+        continue-on-error: true
+        run: python scripts/run_weekly_range_shadow.py
+
       - name: Commit backtest results
         id: commit
         run: |
           set -e
           git config user.name "gold-rate-bot"
           git config user.email "actions@users.noreply.github.com"
-          git add data/backtest.json data/metrics_history.json data/coverage_metrics.json data/calibration_band_coverage.json data/preregistered_h2_shadow_results.json || true
+          git add data/backtest.json data/metrics_history.json data/coverage_metrics.json data/calibration_band_coverage.json data/preregistered_h2_shadow_results.json data/nowcast_shadow_log.json data/weekly_range_shadow_log.json || true
           if git diff --staged --quiet; then
             echo "No changes to commit."
             echo "changed=false" >> "$GITHUB_OUTPUT"

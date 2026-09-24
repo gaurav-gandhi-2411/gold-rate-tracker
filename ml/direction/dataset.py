@@ -7,6 +7,15 @@ Labels come from IBJA pm_916 entries STRICTLY AFTER the capture date:
 The unsuffixed columns (label_binary, next_pm916, ...) are retained as h=1
 aliases for backward-compat. Because every label day is strictly after the
 feature-capture date, the dataset is leak-free for either horizon.
+
+Consecutive publication days only (GG decision G2, ADR 042). data/ibja_rates.parquet is
+not daily before 2025-Q2 and has multi-week holes after it (14-101 days), so "the next
+IBJA row" was sometimes months away: 13 of 182 "2-day" labels spanned 7-101 days. A label
+is now built only when every step from the capture day to the label day is between
+consecutive IBJA publication days -- at most one weekday without a publication in
+between (a single IBJA holiday; every such step in the dense data falls on one, e.g.
+Good Friday 2025-04-18, Maharashtra Day 2025/2026-05-01, Ganesh Chaturthi 2026-09-14). A row whose h=1 step is
+not consecutive is dropped; an h=2/h=N label crossing a hole is None.
 """
 
 from __future__ import annotations
@@ -14,6 +23,7 @@ from __future__ import annotations
 import bisect
 from pathlib import Path
 
+import numpy as np
 import pandas as pd
 
 from ml.direction.price_units import INR_PER_10G, declare_units
@@ -32,6 +42,9 @@ IBJA_PARQUET: Path = DATA_DIR / "ibja_rates.parquet"
 DEAD_BAND_PER_10G: float = 500.0
 DEAD_BAND_PER_GRAM: float = 50.0
 MAX_N_MACRO_NULL: int = 3
+# np.busday_count(prev, next) counts weekdays in [prev, next): 1 = next weekday (incl.
+# Fri -> Mon), 2 = one weekday skipped (a single holiday). 3+ = a hole in the record.
+MAX_WEEKDAYS_PER_STEP: int = 2
 
 FEATURE_COLS: list[str] = [
     "gold_usd",
@@ -103,6 +116,7 @@ def build_dataset(
     snapshots_df: pd.DataFrame | None = None,
     ibja_df: pd.DataFrame | None = None,
     extra_horizons: tuple[int, ...] = (),
+    require_consecutive: bool = True,
 ) -> pd.DataFrame:
     """Build a leak-free directional dataset for walk-forward evaluation.
 
@@ -115,6 +129,8 @@ def build_dataset(
             an older IBJA price; current price is unknown at capture time).
         (b) Too many macro nulls: n_macro_null > max_n_macro_null.
         (c) No next-day IBJA label available (last snapshot in the series).
+        (d) require_consecutive: the h=1 label day is not the next IBJA
+            publication day (a hole in the record, see the module docstring).
 
     Args:
         snapshots_path: Path to snapshots.parquet.
@@ -133,6 +149,10 @@ def build_dataset(
             (the minimum IBJA pm_916 across days [t+1 .. t+N] — the "did it
             dip along the way" path information a single endpoint delta
             can't answer, needed for the buyer's-decision target).
+        require_consecutive: build labels only across consecutive IBJA
+            publication days (default). False reproduces the pre-G2 labels,
+            which bridge holes of up to 101 days -- kept ONLY so the
+            superseded ADR 038 (v1) reference figures stay reproducible.
 
     Returns:
         DataFrame with columns: as_of_date, <FEATURE_COLS>, current_pm916,
@@ -165,11 +185,25 @@ def build_dataset(
     ibja_sorted = ibja.sort_values("date").reset_index(drop=True)
     ibja_dates: list[str] = ibja_sorted["date"].tolist()
     ibja_pm916: list[float] = ibja_sorted["pm_916"].tolist()
+    ibja_day64 = np.array(ibja_dates, dtype="datetime64[D]")
+
+    def _consecutive(start: str, end_idx: int) -> bool:
+        """True when every IBJA step from `start` (an IBJA date) to ibja_dates[end_idx]
+        is between consecutive publication days."""
+        if not require_consecutive:
+            return True
+        prev = np.datetime64(start, "D")
+        for k in range(bisect.bisect_right(ibja_dates, start), end_idx + 1):
+            if int(np.busday_count(prev, ibja_day64[k])) > MAX_WEEKDAYS_PER_STEP:
+                return False
+            prev = ibja_day64[k]
+        return True
 
     n_input = len(snaps)
     n_stale = 0
     n_macro = 0
     n_no_label = 0
+    n_gap_h1 = 0
 
     rows: list[dict] = []
 
@@ -198,6 +232,10 @@ def build_dataset(
             # No h=1 label at all → row is unusable for any horizon.
             n_no_label += 1
             continue
+        # (d) The h=1 label must be the next publication day after the capture day.
+        if not _consecutive(as_of, idx0):
+            n_gap_h1 += 1
+            continue
 
         # h=1 (next trading day)
         next_pm916_h1 = ibja_pm916[idx0]
@@ -213,7 +251,11 @@ def build_dataset(
         delta_h2: float | None = None
         binary_h2: float | None = None
         ternary_h2_val: str | None = None
-        if idx0 + 1 < len(ibja_dates) and not pd.isna(ibja_pm916[idx0 + 1]):
+        if (
+            idx0 + 1 < len(ibja_dates)
+            and not pd.isna(ibja_pm916[idx0 + 1])
+            and _consecutive(as_of, idx0 + 1)
+        ):
             n2 = float(ibja_pm916[idx0 + 1])  # known-float inside this branch
             next_pm916_h2 = n2
             label_date_h2 = ibja_dates[idx0 + 1]
@@ -258,7 +300,11 @@ def build_dataset(
         for horizon_n in extra_horizons:
             end_idx = idx0 + (horizon_n - 1)
             key = f"h{horizon_n}"
-            if end_idx < len(ibja_dates) and not pd.isna(ibja_pm916[end_idx]):
+            if (
+                end_idx < len(ibja_dates)
+                and not pd.isna(ibja_pm916[end_idx])
+                and _consecutive(as_of, end_idx)
+            ):
                 window = ibja_pm916[idx0 : end_idx + 1]
                 window_valid = [v for v in window if not pd.isna(v)]
                 end_val = float(ibja_pm916[end_idx])
@@ -289,6 +335,7 @@ def build_dataset(
         print(f"  Excluded (stale)  : {n_stale}")
         print(f"  Excluded (macro)  : {n_macro}")
         print(f"  Excluded (no label): {n_no_label}")
+        print(f"  Excluded (h1 crosses a hole in the IBJA record): {n_gap_h1}")
         print(f"  Kept rows         : {len(dataset)}")
         if not dataset.empty:
             lv = dataset["label_binary_h1"].value_counts().to_dict()

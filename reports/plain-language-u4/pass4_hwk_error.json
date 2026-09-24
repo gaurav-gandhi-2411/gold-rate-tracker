@@ -1,0 +1,35 @@
+{
+  "method": "LLM-consensus (not user testing): two model families rated each string blind to each other with the same rubric; temperature 0, seed 42",
+  "models": [
+    "gemma2:9b",
+    "qwen3:30b-a3b"
+  ],
+  "n_strings": 1,
+  "flag_agreement": 1.0,
+  "cohens_kappa_flags": 1.0,
+  "flag_rule": "model flags at score <= 2 or misleading; plus hard words named by both",
+  "flagged_by_either": [],
+  "consensus_hard_words": {},
+  "results": [
+    {
+      "key": "hwkError_v4",
+      "text": "This page didn't load — usually because the internet connection dropped. The gold price on the main page is not affected. Please refresh this page to try again.",
+      "ratings": {
+        "gemma2:9b": {
+          "score": 3,
+          "hard_words": [],
+          "misleading": false,
+          "why": "The language is clear but the technical issue might confuse some."
+        },
+        "qwen3:30b-a3b": {
+          "score": 5,
+          "hard_words": [],
+          "misleading": false,
+          "why": "Simple and clear for all users."
+        }
+      },
+      "flag_by": [],
+      "consensus_hard_words": []
+    }
+  ]
+}

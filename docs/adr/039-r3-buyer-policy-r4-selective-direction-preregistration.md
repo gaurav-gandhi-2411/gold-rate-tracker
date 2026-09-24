@@ -99,6 +99,49 @@ Any change to a policy, grid, feature list, threshold procedure, test period, me
 Fixing a bug that makes the code differ from this text is not a deviation: the text is the spec.
 Such a fix is logged in the PR with the before/after behaviour, before test data is scored.
 
+## R3 results (scored 2026-09-23, `scripts/analysis_buyer_policy.py` at `d092c342`, `reports/r3_buyer_policy_results.json`)
+
+**No policy saves money reliably. "Buy today" is as good as any rule tested.**
+
+Parameters chosen on the proxy up to 2021 by the pre-registered rule: P1 k = 0.25 (both N); P2
+z\* = 1.0 (N = 5) and 1.5 (N = 10); P3 θ = 0.7 (N = 5) and 0.5 (N = 10). Mean saving in ₹/g vs
+buying today; one-sided HAC p (lag N − 1).
+
+| test set | policy | N | n (eff. n) | mean saving (95% CI) | p | Bonferroni / BH |
+|---|---|---|---|---|---|---|
+| real IBJA | P1 limit | 5 | 154 (58.9) | −29.1 (−92.9, +34.6) | 0.81 | no / no |
+| real IBJA | P2 stretch | 5 | 68 (23.5) | −37.4 (−143.9, +69.2) | 0.75 | no / no |
+| real IBJA | P3 model | 5 | 65 (74.4) | +8.4 (−2.7, +19.5) | 0.07 | no / no |
+| real IBJA | P1 limit | 10 | 128 (25.1) | −35.7 (−160.4, +88.9) | 0.71 | no / no |
+| real IBJA | P2 stretch | 10 | 57 (13.3) | −50.4 (−234.4, +133.6) | 0.70 | no / no |
+| real IBJA | P3 model | 10 | 55 (9.8) | −139.3 (−404.2, +125.5) | 0.85 | no / no |
+| proxy 2022+ | P1 limit | 5 | 1,283 (596) | −16.0 (−35.6, +3.5) | 0.95 | — / no |
+| proxy 2022+ | P2 stretch | 5 | 1,283 (467) | −1.1 (−18.0, +15.7) | 0.55 | — / no |
+| proxy 2022+ | P3 model | 5 | 1,283 (708) | +11.8 (+2.3, +21.3) | 0.007 | — / no (BH rank-1 threshold 0.0042) |
+| proxy 2022+ | P1 limit | 10 | 1,278 (378) | −24.3 (−52.5, +4.0) | 0.95 | — / no |
+| proxy 2022+ | P2 stretch | 10 | 1,278 (379) | +7.0 (−12.8, +26.8) | 0.24 | — / no |
+| proxy 2022+ | P3 model | 10 | 1,278 (356) | −32.7 (−62.6, −2.7) | 0.98 | — / no |
+
+**Context.**
+- Oracle (buy at the window's lowest price): real IBJA +₹161.6/g (N = 5) and +₹249.0/g (N = 10);
+  proxy +₹105.2 and +₹148.8.
+- Always waiting until the deadline costs ₹42.7/g (N = 5) and ₹76.4/g (N = 10) on real IBJA.
+  That is gold's upward drift in 2025–26.
+
+**The one lead:** P3 at N = 5 saves ₹8–12/g where it waits. It waits rarely: on 3–5% of days it
+saved money and on 0–1% it cost money. On the proxy it is nominally significant but not after
+correction, and it isn't significant on real IBJA. It isn't promoted. A future confirmation would
+need its own pre-registration on new days.
+
+**Deviation note, stated plainly.** ADR 039 says real IBJA is scored per trading day. The
+committed `data/ibja_rates.parquet` is **not daily** before 2025-Q2 (median gap 5–18 days) and
+has one row in 2026-Q1. The first scoring run treated consecutive rows as consecutive trading days,
+so on real IBJA "N rows" meant weeks, and its IBJA numbers were invalid; they are superseded. I saw
+those invalid numbers before the fix. The fix enforces the ADR's own definition and is not a change
+of policy, grid or metric. Real IBJA is now scored only on its 5 dense segments (every gap ≤ 4
+calendar days): 2025-04-15 → 06-03, 07-07 → 08-08, 11-17 → 12-16, 2026-04-17 → 05-18, and
+06-01 → 09-23. The proxy results were unaffected (identical in both runs).
+
 ## R4 results (scored 2026-09-23, `scripts/analysis_selective_direction.py` at `05b755c6`, Actions run 35889514765, `reports/r4_selective_direction_results.json`)
 
 **Pre-registered verdict: R4 does not meet its success criterion.** No κ < 100% is significant on

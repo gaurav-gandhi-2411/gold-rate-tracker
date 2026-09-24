@@ -52,17 +52,19 @@
     </script>
 
     <title>Gold Rate Today · Is it a good price?</title>
-    <meta name="description" content="22K gold rate — an IBJA-calibrated estimate, confirmed against live Tanishq retail when reachable. See if today's price is high or low compared to recent weeks." />
+    <!-- U1 audit (2026-09-23, docs/PLAIN_LANGUAGE_AUDIT.md): was "an IBJA-calibrated
+         estimate" -- "calibrated" is jargon. Matches i18n.js's pageDescription fix. -->
+    <meta name="description" content="22K gold rate — closely matched to real shop prices, confirmed against live Tanishq retail when reachable. See if today's price is high or low compared to recent weeks." />
 
     <!-- OG / social sharing -->
     <meta property="og:title" content="Gold Rate Today · Is it a good price?" />
-    <meta property="og:description" content="22K gold rate — an IBJA-calibrated estimate, confirmed against live Tanishq retail when reachable. See if today's price is high or low compared to recent weeks." />
+    <meta property="og:description" content="22K gold rate — closely matched to real shop prices, confirmed against live Tanishq retail when reachable. See if today's price is high or low compared to recent weeks." />
     <meta property="og:image" content="https://gaurav-gandhi-2411.github.io/gold-rate-tracker/og.png" />
     <meta property="og:type" content="website" />
     <meta property="og:url" content="https://gaurav-gandhi-2411.github.io/gold-rate-tracker/" />
     <meta name="twitter:card" content="summary_large_image" />
     <meta name="twitter:title" content="Gold Rate Today · Is it a good price?" />
-    <meta name="twitter:description" content="22K gold rate — an IBJA-calibrated estimate, confirmed against live Tanishq retail when reachable. See if today's price is high or low compared to recent weeks." />
+    <meta name="twitter:description" content="22K gold rate — closely matched to real shop prices, confirmed against live Tanishq retail when reachable. See if today's price is high or low compared to recent weeks." />
     <meta name="twitter:image" content="https://gaurav-gandhi-2411.github.io/gold-rate-tracker/og.png" />
 
     <!-- PWA -->
@@ -155,7 +157,7 @@
          every session otherwise). Placed before the PWA/iOS panels below since
          it's relevant to essentially every visitor, not just a platform subset. -->
     <div class="first-visit-panel" id="first-visit-panel" hidden role="note" aria-live="polite">
-      <p data-i18n="firstVisitText">22K gold retail price, checked on a regular schedule and confirmed against Tanishq's live rate when possible. We always say plainly when a price is an estimate.</p>
+      <p data-i18n="firstVisitText">The price of 22K gold in shops, checked on a regular schedule and confirmed against Tanishq's live rate when possible. We always say plainly when a price is an estimate.</p>
       <button class="first-visit-close" id="first-visit-close" aria-label="Dismiss" data-i18n-attr="aria-label:dismissLabel">✕</button>
     </div>
 
@@ -520,9 +522,14 @@
 
       <!-- 9. FOOTER -->
       <footer class="site-footer">
+        <!-- U1 audit (2026-09-23, docs/PLAIN_LANGUAGE_AUDIT.md): static pre-hydration
+             fallback, kept in sync by hand with i18n.js's footerBody (same fix AE2's
+             own comment in i18n.js already had to make for firstVisitText -- this file's
+             fallback text is a real, separate copy JS overwrites, not a template). -->
         <p data-i18n-html="footerBody">
-          We use <a href="https://ibjarates.com/" target="_blank" rel="noopener">IBJA</a>'s
-          official gold benchmark and calibrate it to match real shop prices, checking
+          We use <a href="https://ibjarates.com/" target="_blank" rel="noopener">IBJA</a>
+          (the India Bullion and Jewellers Association, which publishes an official gold price every working day) and adjust it
+          to match real shop prices, checking
           against <a href="https://www.tanishq.co.in/gold-rate.html?lang=en_IN" target="_blank" rel="noopener">Tanishq</a>'s
           live rate when we can.
           Prices are checked on a regular schedule — IBJA itself only updates once a day, so the

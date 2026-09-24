@@ -1613,12 +1613,13 @@ function renderModelSignal(fc, readings, bt, coverage, drift) {
   // error), previously buried inside the collapsed methodology accordion
   // (methAccurateP2/methDriftHeading). Only rendered alongside the range statement
   // it's actually validating (hasRange) — a reliability claim with nothing to
-  // anchor it to reads as a floating, unverifiable assertion. Sample size (n)
-  // stays visible deliberately: "right 95% of the time" alone is pure reassurance;
-  // naming how many times we've actually checked is what makes it a real, honest
-  // claim instead of a vibe. computeAccuracyDrift() is shared with
-  // renderMethodology()'s own drift section so the two never disagree on the
-  // same underlying numbers.
+  // anchor it to reads as a floating, unverifiable assertion. U2 (2026-09-23):
+  // reliabilityCoverage now renders a floored "N times out of 10" phrase
+  // (i18n.js's fractionOutOf10Phrase) instead of the raw percentage+n -- the
+  // exact percentage and sample size aren't lost, they're on how-we-know.html
+  // (methAccurateP2CoveragePct, same coverage_metrics.json). computeAccuracyDrift()
+  // is shared with how-we-know.js's own drift section so the two never disagree
+  // on the same underlying numbers.
   let reliabilityHtml = "";
   if (hasRange) {
     const hasCoverage = coverage && typeof coverage.coverage === "number" && coverage.n > 0;
@@ -2282,161 +2283,39 @@ function renderForecastVsActual(bt) {
   section.hidden = false;
 }
 
-function renderMethodology(fc, bt, drift, coverage) {
+// U2 (2026-09-23, docs/PLAIN_LANGUAGE_AUDIT.md): replaces the old renderMethodology(),
+// which built the FULL technical breakdown (verdict rule, next-day range with its
+// p-value, direction-signal detail, drift stats -- all still ML-reader framing even
+// though it was already tucked inside a collapsed accordion) directly into this same
+// #methodology-body element. That full breakdown now lives on how-we-know.html,
+// rendered by how-we-know.js/how-we-know-strings.js from the SAME data files (fc/bt/
+// drift/coverage) -- see that file's own header comment for why it's a separate,
+// deliberately duplicated render path rather than a shared function: app.js's init()
+// IIFE assumes index.html's full DOM (hero, calculator, chart canvas, etc.) and isn't
+// safe to load on a page that only has the accordion's content. This function keeps
+// only what a buyer actually needs here: whether the estimate is currently on track,
+// whether the direction signal is on, and a link to the full numbers.
+function renderAccuracySummary(fc, drift) {
   const body = document.getElementById("methodology-body");
   if (!body) return;
 
-  const parts = [];
-
-  // Hoist so direction-signal section and how-good section share the same all-windows accuracy.
-  const dirAll = bt && typeof bt.dir_acc_5d_chronos === "number"
-    ? `${Math.round(bt.dir_acc_5d_chronos * 100)}%`
-    : null;
-
-  // Verdict rule explanation
-  parts.push(`
-    <div class="meth-section">
-      <h3 class="meth-heading">${t("methHowWeCallTrendHeading")}</h3>
-      <p class="meth-text">${t("methHowWeCallTrendIntro")}</p>
-      <ul class="meth-list">
-        <li>${t("methRuleCheaper")}</li>
-        <li>${t("methRulePricier")}</li>
-        <li>${t("methRuleSteady")}</li>
-      </ul>
-    </div>
-  `);
-
-  // Forecast details
-  if (fc && typeof (fc.headline?.predicted_22k ?? fc.predicted_22k) === "number") {
-    const pred22k = fc.headline?.predicted_22k ?? fc.predicted_22k;
-    const lower   = fc.headline?.lower ?? fc.lower;
-    const upper   = fc.headline?.upper ?? fc.upper;
-    const hasPI   = typeof lower === "number" && typeof upper === "number";
-    parts.push(`
-      <div class="meth-section">
-        <h3 class="meth-heading">${t("methNextDayRangeHeading")}</h3>
-        <div class="meth-stats">
-          <div class="meth-stat">
-            <div class="meth-stat-label">${t("methEstimateLabel")}</div>
-            <div class="meth-stat-value">₹${fmtINR(pred22k)}</div>
-            ${hasPI ? `<div class="meth-stat-sub">${t("methRangeSub", { low: fmtINR(lower), high: fmtINR(upper) })}</div>` : ""}
-          </div>
-          <div class="meth-stat">
-            <div class="meth-stat-label">${t("methMethodLabel")}</div>
-            <div class="meth-stat-value">${t("methAssumeNoChange")}</div>
-            <div class="meth-stat-sub">${t("methCoversMoves")}</div>
-          </div>
-        </div>
-        ${fc.target_time ? `<p class="meth-text" style="margin-top:8px">${t("methTargetLine", { date: fmtIST(fc.target_time) })}</p>` : ""}
-        <p class="meth-text" style="margin-top:12px">${t("methNextDayExplainer")}</p>
-      </div>
-    `);
-  }
-
-  // Direction signal — DARK gate (ADR 019/020). We test direction models weekly;
-  // none beats the "gold usually rises" base rate with significance, so we show NO
-  // directional prediction and NO accuracy stat (a base-rate number dressed as
-  // model accuracy reads as an edge we don't have). Qualitative "off" only.
-  if (fc?.chronos_companion?.status === "success") {
-    parts.push(`
-      <div class="meth-section">
-        <h3 class="meth-heading">${t("methDirectionHeading")}</h3>
-        <div class="meth-stat">
-          <div class="meth-stat-label">${t("methStatusLabel")}</div>
-          <div class="meth-stat-value">${t("methDirectionOff")}</div>
-          <div class="meth-stat-sub">${t("methDirectionSub")}</div>
-        </div>
-        <p class="meth-note">${t("methDirectionNote")}</p>
-      </div>
-    `);
-  } else if (fc?.chronos_companion?.status === "failed") {
-    parts.push(`<p class="meth-text">${t("methDirectionUnavailable")}</p>`);
-  }
-
-  // "How good is this?" — honest track record panel (Φ8C', ADR 019/020/012)
-  if (bt && typeof bt.mae_5d_avg_naive === "number") {
-    const n           = bt.n_folds ?? "—";
-    const naiveMae    = fmtINR(Math.round(bt.mae_5d_avg_naive));
-    const chronosMae  = typeof bt.mae_5d_avg_chronos === "number"
-      ? fmtINR(Math.round(bt.mae_5d_avg_chronos))
-      : "—";
-    const maePctWorse = typeof bt.mae_5d_avg_chronos === "number"
-      ? Math.round(((bt.mae_5d_avg_chronos - bt.mae_5d_avg_naive) / bt.mae_5d_avg_naive) * 100)
-      : null;
-    const dirAllDisplay = dirAll ?? "—";
-    const pVal     = bt.wilcoxon_signed_rank_p != null
-      ? bt.wilcoxon_signed_rank_p.toFixed(4)
-      : "—";
-    const hl      = fc?.headline;
-    const rangeStr = hl && typeof hl.lower === "number" && typeof hl.upper === "number"
-      ? `₹${fmtINR(hl.lower)}–₹${fmtINR(hl.upper)}`
-      : t("methRangeStrFallback");
-
-    // Empirical coverage of the DISPLAYED band (headline.lower/upper), tracked from
-    // resolved live decisions — not bt.pi_coverage_80_5d_avg, which measures Chronos's
-    // own quantile PI (a different band, never shown as the headline range).
-    const hasCoverage = coverage && typeof coverage.coverage === "number" && coverage.n > 0;
-    const coverPct = hasCoverage ? Math.round(coverage.coverage * 100) : null;
-    const coverN   = hasCoverage ? coverage.n : null;
-
-    parts.push(`
-      <div class="meth-section meth-how-good">
-        <h3 class="meth-heading">${t("methHowAccurateHeading")}</h3>
-
-        <p class="meth-text"><strong>${t("methAccurateP1Strong")}</strong><br>
-        ${t("methAccurateP1", {
-          n, naiveMae,
-          chronosBullet: maePctWorse != null ? t("methAccurateP1ChronosBullet", { chronosMae, maePctWorse, pVal }) : "",
-        })}</p>
-
-        <p class="meth-text"><strong>${t("methAccurateP2Strong", {
-          rangeStr,
-          coverageText: hasCoverage ? t("methAccurateP2CoveragePct", { pct: coverPct, n: coverN }) : t("methAccurateP2CoverageUnknown"),
-        })}</strong><br>
-        ${t("methAccurateP2")}</p>
-
-        <p class="meth-text"><strong>${t("methAccurateP3Strong")}</strong><br>
-        ${t("methAccurateP3", { dirAllDisplay, n })}</p>
-
-        <p class="meth-text"><strong>${t("methAccurateP4Strong")}</strong><br>
-        ${t("methAccurateP4")}</p>
-      </div>
-    `);
-  }
-
-  // Live drift
   const accDrift = computeAccuracyDrift(drift);
-  if (accDrift) {
-    const rolling = accDrift.rolling != null ? Math.round(accDrift.rolling) : null;
-    const baseMae = accDrift.baseMae != null ? Math.round(accDrift.baseMae) : null;
-    const ratio   = accDrift.ratio != null ? accDrift.ratio.toFixed(2) : null;
-    const ratioLabelKey = accDrift.ratioLabelKey;
-    parts.push(`
-      <div class="meth-section">
-        <h3 class="meth-heading">${t("methDriftHeading")}</h3>
-        <div class="meth-stats">
-          <div class="meth-stat">
-            <div class="meth-stat-label">${t("methRecentError")}</div>
-            <div class="meth-stat-value">${rolling != null ? "₹" + fmtINR(rolling) : "—"}</div>
-          </div>
-          <div class="meth-stat">
-            <div class="meth-stat-label">${t("methHistoricalError")}</div>
-            <div class="meth-stat-value">${baseMae != null ? "₹" + fmtINR(baseMae) : "—"}</div>
-          </div>
-          <div class="meth-stat">
-            <div class="meth-stat-label">${t("methAccuracyDrift")}</div>
-            <div class="meth-stat-value">${ratio ?? "—"}</div>
-            <div class="meth-stat-sub">${ratioLabelKey === "ratioRetrain" ? t("ratioRetrainSub") : (ratioLabelKey ? t(ratioLabelKey) : "")}</div>
-          </div>
-        </div>
-      </div>
-    `);
-  }
+  const driftKey = accDrift?.ratioLabelKey === "ratioRetrain" ? "reliabilityDriftRetrain"
+    : accDrift?.ratioLabelKey === "ratioWatch" ? "reliabilityDriftWatch"
+    : accDrift?.ratioLabelKey === "ratioOnTrack" ? "reliabilityDriftOnTrack"
+    : null;
+  const driftSentence = driftKey ? ` ${t(driftKey)}` : "";
 
-  // XSS-safe: parts[] contains only hardcoded HTML templates with numeric/boolean
-  // values from forecast.json and backtest.json. Today's-read text is rendered
-  // separately via textContent in renderTodaysRead().
-  body.innerHTML = parts.join("");
+  const directionOffParagraph = fc?.chronos_companion?.status === "success"
+    ? `<p class="meth-text">${t("accSummaryDirectionOff")}</p>`
+    : "";
+
+  // XSS-safe: driftSentence/directionOffParagraph are t() catalogue literals only.
+  body.innerHTML = `
+    <p class="meth-text">${t("accSummaryIntro")}${driftSentence}</p>
+    ${directionOffParagraph}
+    <p class="meth-text"><a class="how-we-know-link" href="how-we-know.html">${t("accSummaryLinkText")}</a></p>
+  `;
 }
 
 // D3: Lightweight data re-fetch — prices + forecast only.
@@ -2833,7 +2712,7 @@ function applyLanguage(lang) {
   renderDriverContext(lastForecast);
   renderCalculator(allReadings, lastForecast);
   renderForecastVsActual(lastBacktest);
-  renderMethodology(lastForecast, lastBacktest, lastDrift, lastCoverage);
+  renderAccuracySummary(lastForecast, lastDrift);
   updateOfflineBanner();
   const toggle = document.getElementById("lang-toggle");
   if (toggle) toggle.textContent = lang === "hi" ? "EN" : "हिं"; // shows the OTHER language — tapping switches to it
@@ -3163,7 +3042,7 @@ function applyLanguage(lang) {
   // figure once it lands.
   renderStaleBanner(fc, lastBandCoverage);
   renderForecastVsActual(btData);
-  renderMethodology(fc, btData, lastDrift, lastCoverage);
+  renderAccuracySummary(fc, lastDrift);
 
   // Dismiss chart callout when tapping outside the chart canvas (Φ8C'/Ψ3C.3)
   const chartCanvas = document.getElementById("chart");
