@@ -19,7 +19,7 @@ import json
 from datetime import UTC, datetime
 from pathlib import Path
 
-from ml.sources.base import SourceReading, SourceStructureError
+from ml.sources.base import SourceReading, SourceStructureError, validate_observed_at
 
 DATA_DIR = Path(__file__).resolve().parent.parent.parent / "data"
 
@@ -75,7 +75,9 @@ def fetch_ibja_calibrated(data_dir: Path = DATA_DIR) -> SourceReading:
 
     try:
         y, m, d = int(ibja_date_str[:4]), int(ibja_date_str[5:7]), int(ibja_date_str[8:10])
-        observed_at = datetime(y, m, d, *_IBJA_PUBLISH_UTC, tzinfo=UTC)
+        observed_at = validate_observed_at(
+            datetime(y, m, d, *_IBJA_PUBLISH_UTC, tzinfo=UTC), source="ibja"
+        )
     except ValueError as exc:
         raise SourceStructureError(f"ibja: unparseable date {ibja_date_str!r}") from exc
 

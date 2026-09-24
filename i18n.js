@@ -33,6 +33,26 @@ function fractionOutOf10Phrase(pct) {
   return `about ${n} times out of 10`;
 }
 
+// Formats a p-value for display without ever printing "0.0000" -- a p-value that
+// rounds to zero at the shown precision reads as "exactly zero" (a misreading of
+// what the statistic means; it's never literally 0), not "very small". Returns
+// { op, text } rather than one joined string because the caller's template needs
+// to render "=" vs "<" as its own HTML-entity-spaced token (e.g.
+// `p&thinsp;${op}&thinsp;${text}`) -- see how-we-know.js's use of this.
+// op is "&lt;" (HTML-entity, since callers innerHTML the result) whenever value
+// rounds to 0 at `decimals` places; "=" otherwise. text is always `decimals`
+// digits after the point. Returns null for a non-finite/missing value so callers
+// can fall back to their own placeholder the same way they already do for a null
+// input p-value.
+function formatPValue(value, decimals = 4) {
+  if (typeof value !== "number" || !Number.isFinite(value)) return null;
+  const smallestRepresentable = Math.pow(10, -decimals);
+  if (Math.abs(value) < smallestRepresentable / 2) {
+    return { op: "&lt;", text: smallestRepresentable.toFixed(decimals) };
+  }
+  return { op: "=", text: value.toFixed(decimals) };
+}
+
 const STRINGS = {
   en: {
     // ── Static shell (index.html) ──────────────────────────────────────────────
