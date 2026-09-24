@@ -71,6 +71,34 @@ date moves later; the n does not change.
 **Also reported, labelled exploratory:** the same script with `--since 2021-12-31`, i.e. all
 2022–2026 days. It is run after this ADR merges and never counts toward H1.
 
+## Exploratory result (2026-09-24, after registration; does not count toward H1)
+
+**Provenance:** `reports/premium_nowcast_exploratory.json`, from `scripts/analysis_premium_nowcast.py
+--since 2021-12-31` at `da0389a2`, on `data/ibja_rates.parquet` to 2026-09-24. There are
+n = 163 scored days, 2025-05-12 to 2026-09-24. The 30-pair warm-up uses up the earlier dense days.
+
+| prediction | mean absolute error, ₹/g (999) |
+|---|---|
+| B0 no change | **117.9** |
+| B1 global move, premium held | 151.5 |
+| C premium drifts back to its mean | 128.7 |
+
+One-sided HAC Diebold-Mariano p-values:
+
+| comparison | p | effective n | result |
+|---|---|---|---|
+| H1: C vs B1 | **0.004** | 173 | C better |
+| H2: C vs B0 | 0.87 | — | Holm: no |
+| H3: B1 vs B0 | 0.998 | — | Holm: no |
+
+**Reading, exploratory only.** Passing the previous evening's COMEX and USD/INR move through to the
+next fix makes the estimate *worse* than assuming no change. That matches the timing noise #2004
+found: the COMEX close is hours stale by the time IBJA fixes. Letting the premium drift back to its
+mean undoes part of that damage, but not enough to beat "no change". If the forward test repeats
+this, H1 will hold and H2/H3 will not. The premium would then carry information only relative to
+a parity-based estimate, and "no change" would stay the best next-fix estimate.
+The confirmatory set had n = 0 on 2026-09-24.
+
 ## What would change what
 
 - **H1 holds.** The premium's mean reversion becomes a candidate input for the next-day estimate

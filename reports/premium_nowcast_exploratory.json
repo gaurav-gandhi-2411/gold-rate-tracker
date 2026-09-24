@@ -1,0 +1,28 @@
+{
+ "since": "2021-12-31",
+ "confirmatory": false,
+ "confirmatory_read_allowed": false,
+ "n": 163,
+ "first": "2025-05-12",
+ "last": "2026-09-24",
+ "mae_rs_per_g": {
+  "B0": 117.88159509202454,
+  "B1": 151.4804742063329,
+  "C": 128.71078321157378
+ },
+ "H1_C_vs_B1": {
+  "p_one_sided": 0.0040101555212133655,
+  "effective_n": 173.0382259595407,
+  "significant": true
+ },
+ "H2_C_vs_B0": {
+  "p_one_sided": 0.8653126313168717,
+  "effective_n": 173.26681782969808,
+  "holm_significant": false
+ },
+ "H3_B1_vs_B0": {
+  "p_one_sided": 0.998025828527258,
+  "effective_n": 152.04138125464598,
+  "holm_significant": false
+ }
+}
