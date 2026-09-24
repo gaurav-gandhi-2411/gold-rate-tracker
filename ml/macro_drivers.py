@@ -289,14 +289,24 @@ def align_feature_to_decision_dates(
     """For every decision date, attaches the most recent `source` row whose
     `available_date_col` is <= that decision date (a backward `merge_asof`) -- a
     decision date earlier than every available source row gets NaN, never a
-    look-ahead value. `source` need not be pre-sorted; this sorts a copy."""
+    look-ahead value. `source` need not be pre-sorted; this sorts a copy.
+
+    `merge_asof` requires both join keys to share the exact same datetime64 unit, and
+    `pd.to_datetime` can infer DIFFERENT units for the two sides (a coarser `[s]` for a
+    column of Python `date` objects vs `[us]` for a column of ISO date strings) -- both
+    sides are forced to `datetime64[ns]` explicitly below so that mismatch can never
+    raise instead of merging (hit for real on the first CI run of this script,
+    2026-09-24: `source["available_date"]` is built from `date` objects,
+    `decision_dates` from `as_of_date` strings)."""
     src = source.sort_values(available_date_col)[[available_date_col, *value_cols]]
-    dd = pd.DataFrame({"decision_date": pd.to_datetime(decision_dates)})
+    dd = pd.DataFrame({"decision_date": pd.to_datetime(decision_dates).astype("datetime64[ns]")})
     dd["_order"] = range(len(dd))
     dd = dd.sort_values("decision_date")
     merged = pd.merge_asof(
         dd,
-        src.assign(**{available_date_col: pd.to_datetime(src[available_date_col])}),
+        src.assign(
+            **{available_date_col: pd.to_datetime(src[available_date_col]).astype("datetime64[ns]")}
+        ),
         left_on="decision_date",
         right_on=available_date_col,
         direction="backward",

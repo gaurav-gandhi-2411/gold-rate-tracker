@@ -105,6 +105,23 @@ def test_align_feature_to_decision_dates_preserves_input_order() -> None:
     assert pd.isna(out["v"].iloc[2])
 
 
+def test_align_feature_to_decision_dates_handles_mixed_date_and_string_dtypes() -> None:
+    """Regression: `fetch_cot_disaggregated`/`fetch_real_yield` build `available_date`
+    as a column of raw Python `date` objects (via `.map(...)`), while
+    `as_of_date` (the real `decision_dates` argument) is a column of ISO date
+    strings. `pd.to_datetime` infers a DIFFERENT datetime64 unit for each shape
+    ([s] for `date` objects, [us] for strings), which made the very first CI run
+    of this function raise `pandas.errors.MergeError: incompatible merge keys`
+    (2026-09-24) -- neither of this file's other alignment tests used raw `date`
+    objects on the source side, so none of them caught it."""
+    source = pd.DataFrame(
+        {"available_date": [date(2024, 1, 5), date(2024, 1, 12)], "v": [1.0, 2.0]}
+    )
+    decisions = pd.Series(["2024-01-05", "2024-01-10", "2024-01-20"])
+    out = md.align_feature_to_decision_dates(source, ["v"], decisions)
+    assert out["v"].tolist() == [1.0, 1.0, 2.0]
+
+
 def test_align_feature_equal_available_date_is_usable_same_day() -> None:
     """A decision date exactly equal to a source row's available_date must see
     that row -- "usable at/after" means the boundary itself counts."""
