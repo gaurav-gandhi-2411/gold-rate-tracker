@@ -210,7 +210,135 @@ additional hard gates.
 
 ## Results
 
-*Pending — computed after this pre-registration is committed and pushed (the freeze), from
-`reports/fhs_ranges/results.json` (`scripts/analysis_fhs_ranges.py`). Appended as a follow-up
-commit in this same PR, quoting the freeze commit SHA and this file's own SHA-256 at freeze,
-per this repo's pre-registration standing rule.*
+**Provenance:** `reports/fhs_ranges/results.json`, from `scripts/analysis_fhs_ranges.py` at
+freeze commit `ec5d83c2663cdacfbc0adda7f2bb85c95b152964` (this PR), run immediately after
+that commit was pushed. Pre-registration SHA-256 (this file, at the freeze commit, before
+this Results section existed): `300da1bcc965d48866108fcbdc13ec4ca8e128b292f723d2d5b70bb06065a1e0`.
+Proxy data 2013-01-01 to 2026-09-23; IBJA data 2022-01-19 to 2026-09-24; View B decision days
+2026-07-18 to 2026-09-18 (n = 63, the same set ADR 047's retrospective used).
+
+**Bottom line: negative result for both variants.** Neither `ewma` nor `garch` clears the
+View B three-part gate. FHS's own adaptivity works exactly as designed — its raw,
+pre-calibration shape is measurably WIDER on volatile days and narrower on calm ones (see
+"Mechanism" below) — but on this data it ends up WIDER overall than both ADR 047 v2 and the
+live range, and scores WORSE (not better) on interval (Winkler) score than every baseline in
+every one of the 14 pre-registered comparisons. None of the 14 one-sided "FHS beats
+baseline" Diebold-Mariano tests reaches significance in FHS's favor at alpha = 0.05,
+Bonferroni or BH (`n_bh_significant = 0`); several are strongly significant in the WRONG
+direction (FHS worse).
+
+### View B (decision-day, "1d", n = 63)
+
+| | n | k | coverage | Wilson 95% | p vs 80% (H1: below) | Kupiec p | Christoffersen p | mean width (₹) |
+|---|---|---|---|---|---|---|---|---|
+| **FHS-ewma** | 63 | 61 | **96.8%** | [89.1%, 99.1%] | 1.000 | 0.0001 | 0.030 | **681.5** |
+| **FHS-garch** | 63 | 61 | **96.8%** | [89.1%, 99.1%] | 1.000 | 0.0001 | 0.030 | **687.5** |
+| live (displayed) | 63 | 46 | 73.0% | [61.0%, 82.4%] | 0.112 | 0.182 | 0.023 | 417.5 |
+| ADR 047 v2 | 63 | 53 | 84.1% | [73.2%, 91.1%] | 0.835 | 0.400 | 0.005 | 545.5 |
+| plain historical simulation | 63 | 52 | 82.5% | [71.4%, 90.0%] | 0.740 | 0.608 | 0.001 | 519.6 |
+
+**Success criteria (both methods identical to 3 s.f.):**
+
+| criterion | ewma | garch |
+|---|---|---|
+| Wilson 95% CI contains 80% | **fail** — [89.1%, 99.1%] does not contain 80% (over, not under) |same|
+| coverage >= live's coverage | pass (96.8% >= 73.0%) | pass |
+| mean width <= 1.25 x live's mean width | **fail** — 681.5/417.5 = **1.63x** (garch: 687.5/417.5 = **1.65x**), far above the 25% ceiling, WORSE than v2's 1.31x |same|
+| **overall** | **fail** | **fail** |
+
+**Interval score (Winkler), one-sided DM (HAC, lag 0, H1: FHS < baseline):**
+
+| comparison | mean_diff (FHS - baseline) | dm_stat | p (H1: FHS better) |
+|---|---|---|---|
+| ewma vs live | -33.0 (FHS lower/better, not significant) | -0.397 | 0.346 |
+| ewma vs v2 | **+82.0** (FHS higher/worse) | 4.114 | 0.99998 |
+| ewma vs plain HS | **+89.2** (FHS higher/worse) | 3.810 | 0.99993 |
+| garch vs live | -36.4 (FHS lower/better, not significant) | -0.431 | 0.333 |
+| garch vs v2 | **+78.7** (FHS higher/worse) | 3.153 | 0.99919 |
+| garch vs plain HS | **+85.8** (FHS higher/worse) | 3.038 | 0.99881 |
+
+FHS's Winkler loss is directionally lower than live's (not significant either way) but
+significantly HIGHER (worse) than both v2's and plain HS's — FHS pays real width for its
+extra coverage over live, without buying a better interval score than the two simpler
+methods already in production/shadow.
+
+**Weekday/weekend split** (Mon-Thu / Fri-Sun, ewma; garch identical to 1 d.p.):
+
+| | n | FHS coverage [Wilson] | FHS mean width | live coverage [Wilson] | live mean width |
+|---|---|---|---|---|---|
+| Mon-Thu | 36 | 94.4% [81.9%, 98.5%] | 692.9 | 66.7% [50.3%, 79.8%] | 416.9 |
+| Fri-Sun | 27 | 100.0% [87.5%, 100.0%]* | 666.3 | 81.5% [63.3%, 91.8%] | 418.4 |
+
+\* Christoffersen's test is undefined (no 0-exceedance transitions to estimate from) when
+every day in a stratum hits — reported as such, not as 1.0 or omitted.
+
+### View A (IBJA-native walk-forward)
+
+| horizon | method | n | FHS coverage [Wilson] | width ratio vs weekly-range | width ratio vs plain HS | DM vs weekly-range (p, H1: FHS better) | DM vs plain HS (p, H1: FHS better) |
+|---|---|---|---|---|---|---|---|
+| 1d | ewma | 162 | 87.0% [81.0%, 91.4%] | 1.058x | 1.155x | 0.99999642 | 0.99999982 |
+| 1d | garch | 162 | 87.0% [81.0%, 91.4%] | 1.044x | 1.138x | 0.99978733 | 0.99998680 |
+| week | ewma | 120 | 87.5% [80.4%, 92.3%] | 1.168x | 1.293x | 0.99811478 | 0.99982681 |
+| week | garch | 120 | 86.7% [79.4%, 91.6%] | 1.147x | 1.269x | 0.99569123 | 0.99948320 |
+
+For reference, the two baselines on the same rows: plain HS covers 80.9% (1d) / 78.3%
+(week); the weekly-range method covers 85.2% (1d) / 84.2% (week). FHS overcovers relative
+to both, at a width cost, in every cell — the same pattern View B shows, on independent
+data (IBJA's own publication days rather than displayed decision days).
+
+**Family correction:** 14 one-sided Winkler DM tests (2 methods x [View A 1d: 2 + View A
+week: 2 + View B: 3] = 2 x 7 = 14). Bonferroni threshold = 0.05/14 = 0.00357.
+Benjamini-Hochberg significant count = **0 of 14**. No test supports "FHS beats baseline";
+6 of 14 (both methods' View A cells, all 4, plus both methods' View B vs-v2/vs-plain-HS, 4
+more) are significant in the WRONG direction even before correction (p > 0.995 for H1:
+FHS better, i.e. strong evidence FHS is worse).
+
+### Mechanism (INFERRED — reasoned from the measured numbers below, not a separate run)
+
+FHS's raw (pre-conformal-calibration) shape is itself already wider on average than the
+unconditional methods' raw shape, with substantially more day-to-day dispersion — exactly
+the adaptivity it was designed to have:
+
+| | mean raw width (1d, % of price) | std | coefficient of variation |
+|---|---|---|---|
+| FHS-ewma (raw, pre-calibration) | 5.04% | 1.72 | 0.342 |
+| weekly_range / plain HS (raw) | 3.09% | 0.52 | 0.167 |
+
+The IBJA split-conformal step DOES recognize this and applies a SMALLER multiplier to FHS
+than to the unconditional method (mean scale 0.71 for FHS vs 1.10 for weekly_range/plain
+HS, on the same 162 "1d" windows) — but not small enough to fully offset FHS's already-wider
+raw base, so the calibrated result still ends up wider overall. The most likely cause,
+consistent with every cell moving the same direction for both `ewma` and `garch`: the
+selected conditional-volatility forecasts tend to run "hot" relative to the long-run vol
+level the unconditional methods implicitly quantile over. This module's own EWMA-lambda-
+selection test (`test_select_ewma_lambda_adapts_to_a_late_volatility_regime_switch`) already
+demonstrates the mechanism directly — held-out QLIKE selection on a short validation tail
+favors the FASTEST-reacting (lowest) grid lambda whenever a regime recently shifted, which
+inflates the forecast for a stretch after any large move even once the market has calmed,
+rather than only during the move itself. GARCH's own Student-t MLE persistence estimate
+shows the identical qualitative pattern (same width inflation, same direction, similar
+magnitude), suggesting the effect is not lambda-grid-specific but a more general property of
+letting a reactive, refit-every-21-days conditional-vol model set the shape's SCALE on this
+particular return series, in this particular period. Not independently re-verified against a
+synthetic ground-truth vol process in this PR — flagged as the natural next diagnostic if
+this method is revisited, not run here (would be tuning after seeing the result).
+
+### What this means
+
+- **The core hypothesis did not hold.** An adaptive, conditional-volatility-based shape was
+  expected to buy the coverage v2 already has without paying v2's 31%-width cost. Instead it
+  clears coverage by an even larger margin (96.8% vs an 80% target) at an even larger width
+  cost (63-65% wider than live, vs v2's 31%) than the method it was meant to improve on.
+- **FHS is not simply "v2 but bigger."** Its raw shape genuinely adapts (2x the coefficient
+  of variation of the unconditional shape, narrower on calm days by construction) — the
+  adaptivity works. The failure is in how much LARGER the adaptive shape's average level
+  runs, not in whether it varies.
+- **This is a clean negative, not a partial win reframed.** Every one of the 14
+  pre-registered one-sided tests either fails to support FHS or actively contradicts it;
+  the width gate fails by a wide, unambiguous margin on both variants; Winkler score is
+  worse, not better, than the two much simpler baselines it was meant to beat.
+- **No promotion PR follows from this ADR.** `scripts/run_fhs_shadow.py` is available for a
+  forward (blind) read if a future revision of the volatility-forecast selection is tried,
+  but nothing here changes anything a user sees, and this pre-registration's own no-retuning
+  rule means the constants used above (EWMA_LAMBDA_GRID, HS_WINDOW, REFIT_EVERY) are not
+  adjusted in response to this result within this PR.
