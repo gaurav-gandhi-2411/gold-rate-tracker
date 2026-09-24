@@ -68,6 +68,28 @@ jobs:
         run: |
           echo "::warning title=Shadow fusion failed::All national sources failed this cycle (or an unexpected error occurred) -- see the 'Run shadow fusion cycle' step log. This does not affect the live site; it means this cycle's shadow-mode data point is missing."
 
+      - name: Warn on per-source failures this cycle
+        # A single source failing is routine (see the module note above) and
+        # was, before this check existed, only visible by manually reading a
+        # job log nobody was actively watching -- exactly how 441 corrupt
+        # kalyan observed_at rows (2026-07-22..2026-09-24) went unnoticed for
+        # two months: the old kalyan.py silently accepted a placeholder
+        # timestamp instead of raising, so there wasn't even a failure to
+        # notice. Now that every adapter fails closed (see
+        # ml.sources.base.validate_observed_at), a source going bad shows up
+        # here as a visible annotation on every run, not just a log line.
+        if: always() && steps.shadow.outcome != 'failure'
+        run: |
+          python -c "
+          import json
+          from pathlib import Path
+
+          output = json.loads(Path('data/shadow_fusion_output.json').read_text(encoding='utf-8'))
+          failures = {**output.get('national_failures', {}), **output.get('kalyan_failures', {})}
+          if failures:
+              print(f'::warning title=Shadow fusion: per-source failures this cycle::{failures}')
+          "
+
       - name: Commit shadow fusion data
         id: commit
         run: |
