@@ -1547,3 +1547,85 @@ Handed to GG with #1920.
 - COMEX analyses re-download from yfinance, and history revisions shift results slightly; datasets should be frozen as artifacts.
 
 **M3 (#1906, merged).** At n = 89, Wilson CI widths are 16–20 pp, so the comparison is underpowered. The static band under-covers at 90% (80.9%, CI 71.5–87.7%).
+
+## Checkpoint — 2026-09-24: G2 labels and v2 registration, G3 shadow, weekly range, regime test
+
+**PR state at session start.**
+- #1955 and #1964 were already merged.
+- #1956 (R3), #1958 (R4) and #1962 (plain-language site) conflicted. They were resolved by merging
+  master in, which needs no force-push.
+  - R3/R4 conflicted only in `tests/test_count_baseline.json`.
+  - #1962 conflicted only in README metric lines. **It re-conflicts every time docs-refresh rewrites
+    those lines**, so it was resolved twice. The PR's wording was kept verbatim and the values were
+    re-injected.
+  - A merge push on #1962 produced zero check runs because GitHub could not compute mergeability.
+    That is the #1539 shape again; `check_required_checks_positive.py` would have blocked it.
+- R3 (531 lines) and R4 (425 lines) are over the size gate and go to GG. So does #1962 (user-facing).
+
+**G2 — done before Sunday.**
+- #1980 builds labels only across consecutive IBJA publication days: at most one weekday without
+  a publication, i.e. one holiday; every such step since 2025-04 is a real holiday.
+- The brief's 13/182 h2 premise was verified, but the longest span is **122** days, not 101.
+- **h1 had the same defect** (10/184 labels, up to 101 days).
+- Rows 184 → 174; h2 labels 182 → 169.
+- Republished direction numbers (#1981, pre-approved):
+
+  | horizon | folds | always-up | logistic | LightGBM |
+  |---|---|---|---|---|
+  | h1 | 163 → 153 | 50.9% → 51.0% | 52.2% → 49.0% | 51.5% → 48.4% |
+  | h2 | 160 → 147 | 59.4% → 58.5% | 58.1% → 55.1% (p 0.42) | 55.0% → 55.8% |
+
+  Still no model beats always-up.
+- #1982 registers v2 (ADR 042):
+  - Same config, test, α and embargo. Consecutive-day labels. Registration date 2026-09-24.
+  - Reference re-frozen under the confirmatory protocol: n 146, effective n 111.31, 62.33% vs
+    58.90%, p 0.157, fold digest `f715a48e…`.
+  - `--check` reproduced on Windows (pinned venv) and on Linux (analysis run 35970400145).
+  - **Power target 891.70**, as max(144.17, v2 reference). This is flagged for GG, because it means
+    years before the test can be read.
+- On clean labels without the embargo, config J is *worse* than always-up (58.78% vs 59.46%). The
+  edge that selected it came from the leak plus the bridged labels.
+- **The A2b mystery is solved.** The first freeze (p 0.00340, effective n 119.38) reproduces exactly
+  under scikit-learn 1.7.2 / LightGBM 4.6.0 / pandas 2.2.3. Library versions are now part of the
+  frozen record.
+- The first v2-scoreable day is as_of 2026-09-25 (h2 label 09-29), so **Sunday 09-27 scores n = 0 by
+  construction**.
+
+**G3 — #1983 merged.** The R2 AM+PM nowcast runs as a forward shadow, append-only, from 2026-09-24.
+**The window ends 2026-10-22.** The expected sample is ~18–20 same-day days (effective n ~10–14),
+so only a gap as large as R2's can be confirmed.
+
+**Item 5, the weekly range.**
+- #1986 (model) and #1988 (ADR 043, measurement) are merged; #1989 (forward shadow) is pending.
+- The target is the whole path over 7 calendar days, with a real end date.
+- **Calibration did not narrow the range.** 7-day walk-forward: calibrated 84.0% [76.4, 89.5] at
+  8.89% width, vs raw 78.2% at 8.03% (n 119; about 24 non-overlapping weeks).
+- The brief's "85.6% over-coverage" premise did not reproduce under the path target. The promotion
+  PR waits for about 8–10 forward weeks.
+
+**7a, data sources.**
+- There is no free, legal daily MCX series: MCX blocks automated access, and Yahoo/stooq/investing
+  are unusable.
+- The WGC India premium series exists, but its terms forbid use without written permission.
+- The only free, clean option is a derived IBJA-vs-landed-parity premium from our own data. It needs
+  a dated duty table verified against CBIC.
+- GOLDBEES.NS has 17 years of history, under the same Yahoo-terms risk as the existing GC=F feed.
+  That risk needs GG's call.
+
+**7b, the volatility regime (ADR 044).**
+- Pre-registered (#1987) before any download.
+- **Found before the data:** D4's construction produces "momentum when calm" from pure noise. On iid
+  returns, calm-day VR(20) has a median of 1.16, with 17/40 false positives at nominal 5%.
+- On unseen GC=F 2001–2012 (n 2,816), the regime rule scores 50.4% vs always-up's 54.2% (p 0.999).
+  No secondary passes BH. The GLD check gives −4.7 points.
+- #1990 proposes withdrawing ADR 040's regime observation, for GG to confirm.
+
+**7c:** `scripts/analysis_pipeline_sensitivity.py` is running on Actions and separates the test
+floor from the learning floor.
+
+**P3:** not defined in the repo. The definition is needed from GG.
+
+**Process lessons.**
+- A `;` after pytest let a failing test get committed and pushed. It was fixed in the next commit.
+  Chain verification with `&&`.
+- Merge gate 3b correctly blocked #1988 until its body declared the reviewable/generated split.
