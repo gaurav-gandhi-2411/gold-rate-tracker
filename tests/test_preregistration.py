@@ -1,4 +1,4 @@
-"""Tests for ml.direction.preregistration (GG spec item 4 / ADR 038)."""
+"""Tests for ml.direction.preregistration (GG spec item 4 / ADR 038, v2 = ADR 042)."""
 
 from __future__ import annotations
 
@@ -13,7 +13,9 @@ from ml.direction.preregistration import (
     EMBARGO_LABEL_DATE_COL,
     PREREGISTERED_CONFIG,
     PREREGISTERED_N_FOR_POWER,
+    PREREGISTERED_N_FOR_POWER_V1,
     PROTOCOL_VERSION,
+    REQUIRE_CONSECUTIVE_LABELS,
     _always_up_loss,
     _misclassification_loss,
     append_shadow_result,
@@ -31,7 +33,15 @@ class TestFrozenConfig:
         assert PREREGISTERED_CONFIG["horizon"] == 2
 
     def test_n_for_power_is_frozen_positive_number(self) -> None:
-        assert pytest.approx(144.1673, abs=1e-4) == PREREGISTERED_N_FOR_POWER
+        assert pytest.approx(144.1673, abs=1e-4) == PREREGISTERED_N_FOR_POWER_V1
+
+    def test_v2_power_target_never_below_v1(self) -> None:
+        # GG decision G1/G2: the v2 target may rise with the clean effect size, never fall.
+        from ml.direction.preregistration import REFERENCE
+
+        assert PREREGISTERED_N_FOR_POWER >= PREREGISTERED_N_FOR_POWER_V1
+        expected = max(PREREGISTERED_N_FOR_POWER_V1, REFERENCE["n_for_power"])
+        assert expected == PREREGISTERED_N_FOR_POWER
 
 
 class TestLossFunctions:
@@ -91,7 +101,12 @@ class TestAppendShadowResult:
         assert history["runs"][0]["arm"] == "live_h2"
         assert history["runs"][0]["reached_preregistered_n"] is False
 
-        result2 = {"arm": "live_h2", "n": 200, "effective_n": 150.0, "p_value": 0.001}
+        result2 = {
+            "arm": "live_h2",
+            "n": 1200,
+            "effective_n": PREREGISTERED_N_FOR_POWER + 1.0,
+            "p_value": 0.001,
+        }
         append_shadow_result(result2, path=path)
         history = json.loads(path.read_text(encoding="utf-8"))
         assert len(history["runs"]) == 2
@@ -129,9 +144,34 @@ class TestAmendmentA1:
     """ADR 038 amendment A1: embargo >= h and post-registration days only."""
 
     def test_amendment_constants(self) -> None:
-        assert CONFIRMATORY_AFTER_AS_OF == "2026-09-23"
+        from ml.direction.preregistration import (
+            CONFIRMATORY_AFTER_AS_OF_V1,
+            PROTOCOL_VERSION_V1,
+        )
+
+        assert CONFIRMATORY_AFTER_AS_OF_V1 == "2026-09-23"
+        assert PROTOCOL_VERSION_V1 == "adr038-A2"
         assert EMBARGO_LABEL_DATE_COL == "label_date_h2"
-        assert PROTOCOL_VERSION == "adr038-A2"
+
+    def test_v2_constants(self) -> None:
+        """ADR 042: v2 supersedes v1 -- later registration date, clean labels."""
+        assert CONFIRMATORY_AFTER_AS_OF == "2026-09-24"
+        assert PROTOCOL_VERSION == "adr042-v2"
+        assert REQUIRE_CONSECUTIVE_LABELS is True
+
+    def test_live_arm_builds_consecutive_day_labels(self, monkeypatch) -> None:
+        import ml.direction.preregistration as pr
+
+        seen = {}
+
+        def fake_build(**kwargs):
+            seen.update(kwargs)
+            return _dataset_straddling_registration()
+
+        monkeypatch.setattr(pr, "build_dataset", fake_build)
+        result = pr.run_live_arm()
+        assert seen == {"require_consecutive": True}
+        assert result["consecutive_day_labels"] is True
 
     def test_live_arm_scores_only_post_registration_days_with_embargo(self) -> None:
         dataset = _dataset_straddling_registration()
@@ -188,11 +228,15 @@ class TestAmendmentA2:
     def test_reference_is_self_consistent(self) -> None:
         import math
 
-        from ml.direction.preregistration import REFERENCE
+        from ml.direction.preregistration import REFERENCE, REFERENCE_V1
         from ml.direction.stats_corrections import n_for_power
 
-        assert REFERENCE["n"] == 161
-        assert pytest.approx(REFERENCE["n_for_power"], abs=1e-3) == n_for_power(
-            REFERENCE["mean_diff"], math.sqrt(REFERENCE["long_run_var"])
-        )
-        assert len(REFERENCE["fold_digest"]) == 64
+        assert REFERENCE_V1["n"] == 161
+        assert REFERENCE["n"] == 146
+        for ref in (REFERENCE_V1, REFERENCE):
+            assert pytest.approx(ref["n_for_power"], abs=1e-3) == n_for_power(
+                ref["mean_diff"], math.sqrt(ref["long_run_var"])
+            )
+            assert len(ref["fold_digest"]) == 64
+            # the effect the power target is built on must favour the model
+            assert ref["mean_diff"] < 0
