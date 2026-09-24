@@ -102,7 +102,12 @@
 // how-we-know.js/how-we-know-strings.js from the same data files. All three are new
 // precached shell files (below). index.html + app.js + i18n.js + style.css changed too
 // (banned-jargon rewrites, accordion body replaced with a plain summary + link).
-const VERSION = "v55-20260924-hwk-measured-range";
+// 2026-09-24 (v56): p-value display fix -- how-we-know.js's Wilcoxon p-value
+// no longer renders a misleading "p = 0.0000" when it rounds to zero at 4
+// decimal places (formatPValue() in i18n.js, added same PR); renders
+// "p < 0.0001" instead. i18n.js + how-we-know.js + how-we-know-strings.js
+// (EN+HI) changed -- all three are precached shell files.
+const VERSION = "v56-20260924-pvalue-and-computed-claims";
 const SHELL_CACHE = `gold-shell-${VERSION}`;
 
 const SHELL_FILES = [

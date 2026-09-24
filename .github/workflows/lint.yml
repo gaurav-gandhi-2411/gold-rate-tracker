@@ -113,6 +113,7 @@ jobs:
             tests/test_comparisons.js \
             tests/test_dedup.js \
             tests/test_good_price.js \
+            tests/test_pvalue_format.js \
             tests/test_scrape.js \
             tests/test_sentry_init.js \
             tests/test_stale_banner.js \
