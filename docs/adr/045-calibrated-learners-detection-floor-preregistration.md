@@ -1,7 +1,9 @@
 # ADR 045 — Pre-registration: do better-calibrated learners lower the detection floor?
 
-**Status:** Accepted 2026-09-24. Pre-registration only, merged **before any run** of
-`scripts/analysis_calibrated_floor.py` on COMEX data. Research; nothing a user sees changes.
+**Status:** Proposed 2026-09-24 (PR #2000). Pre-registration only. The text and the code are
+frozen at the pushed commit that carries this sentence, **before any run** of
+`scripts/analysis_calibrated_floor.py` on COMEX data. Every shard records its git SHA, and the
+results are valid only if that SHA is this commit. Research; nothing a user sees changes.
 
 **Extends:** ADR 040 (D3, signal injection) and #1992 (`scripts/analysis_pipeline_sensitivity.py`,
 report `reports/pipeline_sensitivity_run_35974753003.json`).
@@ -84,7 +86,8 @@ accuracy, mean Brier skill vs climatology, and expected calibration error (10 eq
 
 ## How it runs
 
-`gh workflow run analysis.yml --ref master -f analysis=calibrated_floor`, GitHub-hosted, 25 shards
+`gh workflow run analysis.yml --ref feat/calibrated-learner-floor-prereg -f analysis=calibrated_floor`
+(the branch at the frozen commit; the PR is over the local size gate and waits for GG), GitHub-hosted, 25 shards
 (5 learners × 5 q). The report goes into `reports/` with the run id. Any deviation from this text
 is logged in the results PR before the numbers are read.
 
