@@ -26,7 +26,12 @@ from datetime import UTC, datetime, timedelta
 
 import requests
 
-from ml.sources.base import SourceNetworkError, SourceReading, SourceStructureError
+from ml.sources.base import (
+    SourceNetworkError,
+    SourceReading,
+    SourceStructureError,
+    validate_observed_at,
+)
 
 _ENDPOINT = "https://www.kalyanjewellers.net/kalyan_gold_rates/ajax/get_rate"
 _REFERER = "https://www.kalyanjewellers.net/gold-rate/Gold-Rate-Today"
@@ -123,7 +128,9 @@ def fetch_kalyan_city(city_name: str) -> KalyanRawReading:
         raise SourceStructureError(
             f"kalyan: unparseable updated_time {updated_time!r} for {city_name}"
         ) from exc
-    observed_at = (naive_ist - _IST_OFFSET).replace(tzinfo=UTC)
+    observed_at = validate_observed_at(
+        (naive_ist - _IST_OFFSET).replace(tzinfo=UTC), source="kalyan"
+    )
 
     history: list[KalyanHistoryPoint] = []
     prev_html = payload.get("previous_dates_html", "")

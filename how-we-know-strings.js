@@ -60,7 +60,7 @@ const STRINGS_HWK = {
     methAccurateP1Strong: "We assume tomorrow's price is about the same as today's",
     methAccurateP1: ({ n, naiveMae, chronosBullet }) =>
       `Gold prices are hard to predict even a few days out — every model we tried did worse than simply guessing "no change." Tested over ${n} time windows from 2022–2026:<br>&bull; Guessing "no change" was off by ₹${naiveMae}/g on average<br>${chronosBullet}So "no change" is what we go with.`,
-    methAccurateP1ChronosBullet: ({ chronosMae, maePctWorse, pVal }) => `&bull; Our AI model was off by ₹${chronosMae}/g — ${maePctWorse}% worse (p&thinsp;=&thinsp;${pVal})<br>`,
+    methAccurateP1ChronosBullet: ({ chronosMae, maePctWorse, pValOp, pValText }) => `&bull; Our AI model was off by ₹${chronosMae}/g — ${maePctWorse}% worse (p&thinsp;${pValOp}&thinsp;${pValText})<br>`,
     methRangeStrFallback: "the current range",
     methAccurateP2Strong: ({ rangeStr, coverageText }) => `Our ${rangeStr} range has been right ${coverageText}`,
     methAccurateP2CoveragePct: ({ pct, n }) => `${pct}% of the time (checked ${n} times so far)`,
@@ -132,7 +132,7 @@ const STRINGS_HWK = {
     methAccurateP1Strong: "हम मानते हैं कि कल की कीमत आज जैसी ही रहेगी",
     methAccurateP1: ({ n, naiveMae, chronosBullet }) =>
       `सोने की कीमत का कुछ दिन आगे का अंदाज़ा लगाना भी मुश्किल है — हमने जितने भी मॉडल आज़माए, वे सब सिर्फ़ "कोई बदलाव नहीं" मान लेने से भी कमज़ोर निकले। 2022–2026 के बीच ${n} टाइम विंडो पर टेस्ट किया गया:<br>&bull; "कोई बदलाव नहीं" मानने पर औसतन ₹${naiveMae}/ग्राम का फ़र्क़ आया<br>${chronosBullet}इसलिए हम "कोई बदलाव नहीं" वाला अंदाज़ा ही इस्तेमाल करते हैं।`,
-    methAccurateP1ChronosBullet: ({ chronosMae, maePctWorse, pVal }) => `&bull; हमारे AI मॉडल में ₹${chronosMae}/ग्राम का फ़र्क़ आया — ${maePctWorse}% ज़्यादा ख़राब (p&thinsp;=&thinsp;${pVal})<br>`,
+    methAccurateP1ChronosBullet: ({ chronosMae, maePctWorse, pValOp, pValText }) => `&bull; हमारे AI मॉडल में ₹${chronosMae}/ग्राम का फ़र्क़ आया — ${maePctWorse}% ज़्यादा ख़राब (p&thinsp;${pValOp}&thinsp;${pValText})<br>`,
     methRangeStrFallback: "मौजूदा रेंज",
     methAccurateP2Strong: ({ rangeStr, coverageText }) => `हमारी ${rangeStr} रेंज ${coverageText}`,
     methAccurateP2CoveragePct: ({ pct, n }) => `अब तक ${pct}% बार सही रही है (अब तक ${n} बार जांची गई)`,

@@ -2292,6 +2292,22 @@ function renderAccuracySummary(fc, drift) {
   `;
 }
 
+// Feature-flag demo hook (flags.js) -- proves the mechanism end to end. With every flag in
+// FEATURE_FLAGS false (the merge-OFF default) this adds NOTHING to the DOM: no hidden
+// elements, no placeholder containers -- see tests/test_feature_flags_headless.js's
+// element-count-equality check. Each flagged feature adds its own real renderer to this
+// loop once it ships; until then this stays an inert scaffold.
+function renderFlaggedFeatures() {
+  for (const name of Object.keys(FEATURE_FLAGS)) {
+    if (!isFeatureOn(name)) continue;
+    // Placeholder marker only -- replaced by the feature's real renderer once it ships.
+    // data-feature is what the headless leak-detection test scans for.
+    const el = document.createElement("div");
+    el.dataset.feature = name;
+    document.body.appendChild(el);
+  }
+}
+
 // D3: Lightweight data re-fetch — prices + forecast only.
 // Assigns to a local `fresh` first (FIX 2): allReadings is only committed
 // after both fetches resolve, keeping state consistent on partial failure.
@@ -3017,6 +3033,7 @@ function applyLanguage(lang) {
   renderStaleBanner(fc, lastBandCoverage);
   renderForecastVsActual(btData);
   renderAccuracySummary(fc, lastDrift);
+  renderFlaggedFeatures(); // feature-flag demo hook -- no-op while every flag is off
 
   // Dismiss chart callout when tapping outside the chart canvas (Φ8C'/Ψ3C.3)
   const chartCanvas = document.getElementById("chart");
