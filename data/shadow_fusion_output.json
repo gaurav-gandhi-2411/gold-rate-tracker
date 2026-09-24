@@ -1,9 +1,14 @@
 {
-  "capture_utc": "2026-09-24T17:06:07Z",
+  "capture_utc": "2026-09-24T18:21:58Z",
   "as_of_date": "2026-09-24",
   "national_failures": {},
-  "kalyan_failures": {},
-  "snapshot_rows_persisted": 7,
+  "kalyan_failures": {
+    "Bangalore": "structure: kalyan: implausible observed_at '1969-12-31T18:30:00+00:00' (year before 2020) \u2014 source likely sent a placeholder timestamp",
+    "Chennai": "structure: kalyan: implausible observed_at '1969-12-31T18:30:00+00:00' (year before 2020) \u2014 source likely sent a placeholder timestamp",
+    "Hyderabad": "structure: kalyan: implausible observed_at '1969-12-31T18:30:00+00:00' (year before 2020) \u2014 source likely sent a placeholder timestamp",
+    "Ernakulam": "structure: kalyan: implausible observed_at '1969-12-31T18:30:00+00:00' (year before 2020) \u2014 source likely sent a placeholder timestamp"
+  },
+  "snapshot_rows_persisted": 3,
   "national_benchmark": {
     "value": 14003.75,
     "band_half_width": 140.0375,
@@ -21,32 +26,32 @@
   },
   "cities": {
     "Bangalore": {
-      "value": 14240.0,
-      "band_half_width": 140.0375,
-      "coverage": "kalyan_anchored",
-      "attribution": "National retail consensus, Kalyan-anchored (Kalyan Jewellers \u2014 BANGALORE board rate)",
-      "markup": 1.0168704811211282
+      "value": 14003.75,
+      "band_half_width": 210.05624999999998,
+      "coverage": "national_derived",
+      "attribution": "National retail consensus (ibja, grt, malabar) \u2014 no Kalyan reading for Bangalore this cycle",
+      "markup": null
     },
     "Chennai": {
-      "value": 14240.0,
-      "band_half_width": 140.0375,
-      "coverage": "kalyan_anchored",
-      "attribution": "National retail consensus, Kalyan-anchored (Kalyan Jewellers \u2014 CHENNAI board rate)",
-      "markup": 1.0168704811211282
+      "value": 14003.75,
+      "band_half_width": 210.05624999999998,
+      "coverage": "national_derived",
+      "attribution": "National retail consensus (ibja, grt, malabar) \u2014 no Kalyan reading for Chennai this cycle",
+      "markup": null
     },
     "Hyderabad": {
-      "value": 14240.0,
-      "band_half_width": 140.0375,
-      "coverage": "kalyan_anchored",
-      "attribution": "National retail consensus, Kalyan-anchored (Kalyan Jewellers \u2014 HYDERABAD board rate)",
-      "markup": 1.0168704811211282
+      "value": 14003.75,
+      "band_half_width": 210.05624999999998,
+      "coverage": "national_derived",
+      "attribution": "National retail consensus (ibja, grt, malabar) \u2014 no Kalyan reading for Hyderabad this cycle",
+      "markup": null
     },
     "Ernakulam": {
-      "value": 14240.0,
-      "band_half_width": 140.0375,
-      "coverage": "kalyan_anchored",
-      "attribution": "National retail consensus, Kalyan-anchored (Kalyan Jewellers \u2014 ERNAKULAM board rate)",
-      "markup": 1.0168704811211282
+      "value": 14003.75,
+      "band_half_width": 210.05624999999998,
+      "coverage": "national_derived",
+      "attribution": "National retail consensus (ibja, grt, malabar) \u2014 no Kalyan reading for Ernakulam this cycle",
+      "markup": null
     }
   }
 }
