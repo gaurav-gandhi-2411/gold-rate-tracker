@@ -407,6 +407,46 @@ const STRINGS = {
     relMinAgo: ({ n }) => `${n} min ago`,
     relHoursAgo: ({ n }) => `${n}h ago`,
     relDaysAgo: ({ n }) => `${n}d ago`,
+
+    // ── Page v2 (item 6, flagged OFF) — five-jobs view ───────────────────────────
+    // Entirely new, English-only strings: NO Hindi entries below on purpose. t()
+    // already falls back to English for a missing hi key (see t()'s own comment),
+    // so this is a real, working degrade, not a placeholder — every key here is
+    // listed in the PR body for native-speaker review before Hindi copy is added.
+    pv2AriaLabel: "A five-question view of today's gold price",
+    pv2Job1Heading: "1. What's the price now?",
+    pv2SourceEstimate: "An estimate, matched to IBJA and Tanishq's own numbers.",
+    pv2SourceConsensus: "An estimate built from several sources — Tanishq and IBJA were both unreachable this cycle.",
+    pv2SourceConfirmed: "Confirmed live at Tanishq.",
+    pv2PriceUnavailable: "We don't have a price to show right now.",
+    pv2Job2Heading: "2. How sure are we?",
+    pv2ConfidenceNote: ({ frac }) => `We show a range, not just one number, because gold prices move day to day. That range has held the real price ${frac} so far.`,
+    pv2ConfidenceUnknown: "We don't have a recent enough track record to say how often our range holds — check back soon.",
+    pv2Job3Heading: "3. How much could it move?",
+    pv2RangeOneDay: ({ low, high }) => `By the next trading day: likely between ₹${low} and ₹${high}.`,
+    pv2RangeSevenDay: ({ low, high }) => `Over the next 7 days: likely between ₹${low} and ₹${high}.`,
+    pv2RangeOddsClause: ({ frac }) => ` A range like this has held ${frac} in the past.`,
+    pv2RangeUnavailable: "We don't have a short-term range to show today.",
+    pv2Job4Heading: "4. Is it a good price?",
+    pv2Weekly30dLabel: "Compared with the last month:",
+    pv2Weekly90dLabel: "Compared with the last three months:",
+    pv2WeeklyLower: ({ count, n }) => `Lower than on ${count} of the last ${n} weeks.`,
+    pv2WeeklyHigher: ({ count, n }) => `Higher than on ${count} of the last ${n} weeks.`,
+    pv2WeeklyAboutSame: ({ n }) => `About the same as most of the last ${n} weeks.`,
+    pv2WeeklyTooLittleData: "We don't have enough weeks of price history yet to say.",
+    pv2Job5Heading: "5. What will I pay?",
+    // F1 (markup_meter): Tanishq-vs-market only, per the brief -- no store-to-store
+    // comparison (terms decision pending GG, see PR body).
+    pv2MarkupHeading: "How Tanishq compares to the market",
+    pv2MarkupLine: ({ pct, suffix }) => `Tanishq is charging about ${pct}% above the market rate today${suffix}`,
+    pv2MarkupSuffixHigher: " — higher than usual.",
+    pv2MarkupSuffixLower: " — lower than usual.",
+    pv2MarkupSuffixUsual: " — about usual.",
+    // F2 (wait_or_buy): heading only -- the sentence body comes verbatim from
+    // data/wait_or_buy_today.json (see app.js's pv2ExtractSentences), never built here.
+    pv2WaitOrBuyHeading: "Should I wait or buy now?",
+    // F4 (event_watch): heading only -- same verbatim-sentence contract as F2 above.
+    pv2EventWatchHeading: "Upcoming events that could move the price",
   },
 
   hi: {
