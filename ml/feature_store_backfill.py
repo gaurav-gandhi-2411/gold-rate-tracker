@@ -50,7 +50,14 @@ def run_backfill(
     """
     import json
 
-    from ml.feature_store import _MACRO_SERIES, SCHEMA_VERSION, append_snapshot, load_snapshots
+    from ml.feature_store import (
+        _MACRO_SERIES,
+        SCHEMA_VERSION,
+        append_snapshot,
+        load_snapshots,
+        macro_value_hash,
+        macro_zscore,
+    )
     from ml.feature_store import STORE_PATH as _DEFAULT_STORE_PATH
 
     _store_path: Path = store_path or _DEFAULT_STORE_PATH
@@ -156,6 +163,7 @@ def run_backfill(
         partial: bool = not _macro_available
         macro_values: dict[str, object] = {}
         macro_asof: dict[str, object] = {}
+        macro_hashes: dict[str, object] = {}
 
         if macro_df is not None:
             target_ts = pd.Timestamp(d, tz="UTC")
@@ -168,24 +176,30 @@ def run_backfill(
                 partial = True
                 for series in _MACRO_SERIES:
                     macro_values[series] = None
+                    macro_hashes[f"{series}_sha256"] = None
                     macro_asof[f"{series}_asof_date"] = None
             else:
                 macro_row = available.iloc[-1]
                 macro_row_date = available.index[-1]
                 for series in _MACRO_SERIES:
                     if series in macro_df.columns and not pd.isna(macro_row.get(series)):
-                        macro_values[series] = float(macro_row[series])
+                        raw_last = float(macro_row[series])
+                        # Stored value is a z-score, not the raw level -- ADR 053.
+                        macro_values[series] = macro_zscore(available[series].dropna())
+                        macro_hashes[f"{series}_sha256"] = macro_value_hash(raw_last)
                         if hasattr(macro_row_date, "date"):
                             macro_asof[f"{series}_asof_date"] = macro_row_date.date().isoformat()
                         else:
                             macro_asof[f"{series}_asof_date"] = str(macro_row_date)
                     else:
                         macro_values[series] = None
+                        macro_hashes[f"{series}_sha256"] = None
                         macro_asof[f"{series}_asof_date"] = None
         else:
             partial = True
             for series in _MACRO_SERIES:
                 macro_values[series] = None
+                macro_hashes[f"{series}_sha256"] = None
                 macro_asof[f"{series}_asof_date"] = None
 
         # --- IBJA values ---
@@ -223,6 +237,7 @@ def run_backfill(
             "n_macro_null": n_macro_null,
             **macro_values,
             **macro_asof,
+            **macro_hashes,
             "ibja_pm_916": ibja_pm_916,
             "ibja_am_916": ibja_am_916,
             "tanishq_22k": None,
@@ -406,7 +421,13 @@ def patch_missing_macro_series(
     dict[str, int]
         Keys: ``crude_patched``, ``tips_patched``, ``n_macro_null_recomputed``.
     """
-    from ml.feature_store import _MACRO_SERIES, SCHEMA_VERSION, load_snapshots
+    from ml.feature_store import (
+        _MACRO_SERIES,
+        SCHEMA_VERSION,
+        load_snapshots,
+        macro_value_hash,
+        macro_zscore,
+    )
     from ml.feature_store import STORE_PATH as _DEFAULT_STORE_PATH
 
     _store_path: Path = store_path or _DEFAULT_STORE_PATH
@@ -435,17 +456,23 @@ def patch_missing_macro_series(
         d: str = row["as_of_date"]
         target_ts = pd.Timestamp(d, tz="UTC")
 
+        # Patched values are z-scores against their own trailing history, not the raw
+        # level -- same ADR 053 policy as run_backfill/capture_daily_snapshot.
         if pd.isna(row.get("crude_wti")) and crude_df is not None and not crude_df.empty:
             available = crude_df.loc[:target_ts]
             if not available.empty:
-                df.at[i, "crude_wti"] = float(available["close"].iloc[-1])
+                raw_last = float(available["close"].iloc[-1])
+                df.at[i, "crude_wti"] = macro_zscore(available["close"])
+                df.at[i, "crude_wti_sha256"] = macro_value_hash(raw_last)
                 df.at[i, "crude_wti_asof_date"] = available.index[-1].date().isoformat()
                 crude_patched += 1
 
         if pd.isna(row.get("tips")) and tips_df is not None and not tips_df.empty:
             available = tips_df.loc[:target_ts]
             if not available.empty:
-                df.at[i, "tips"] = float(available["close"].iloc[-1])
+                raw_last = float(available["close"].iloc[-1])
+                df.at[i, "tips"] = macro_zscore(available["close"])
+                df.at[i, "tips_sha256"] = macro_value_hash(raw_last)
                 df.at[i, "tips_asof_date"] = available.index[-1].date().isoformat()
                 tips_patched += 1
 

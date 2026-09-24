@@ -18,25 +18,43 @@ Purpose: accumulate a clean, look-ahead-bias-free dataset for a future direction
 
 ## 2. Schema Reference
 
-The following columns are defined in `_ALL_COLUMNS` in `ml/feature_store.py` (`SCHEMA_VERSION = 3`).
+The following columns are defined in `_ALL_COLUMNS` in `ml/feature_store.py` (`SCHEMA_VERSION = 5`).
+
+> **From schema_version 5 (ADR 053, 2026-09-25): the 9 macro columns below no longer hold the raw
+> Yahoo Finance level.** They hold that series' z-score against its own trailing 365-calendar-day
+> window (`ml.feature_store.macro_zscore`) — committing the raw level would republish Yahoo
+> Finance's data in this public repo. A parallel `{series}_sha256` column holds a SHA-256 of the
+> raw value at capture time, for later verification without ever committing the number itself.
+> Rows with `schema_version <= 4` still hold the raw level (git history is not rewritten). **A
+> training run spanning the v4→v5 boundary must filter on `schema_version` first** — mixing the
+> two silently trains on two different units for the same column name.
 
 | Column | Type | Nullable | Description |
 |--------|------|----------|-------------|
 | `capture_utc` | str | No | ISO-8601 UTC timestamp of when this snapshot was written (e.g. `2026-06-07T10:30:00Z`). |
 | `as_of_date` | str | No | IST calendar date for this snapshot (YYYY-MM-DD). Primary key — must be unique across all rows. |
-| `schema_version` | int | No | Integer schema version. Currently `1`. Increment when columns are added or semantics change. |
+| `schema_version` | int | No | Integer schema version. Currently `5`. Increment when columns are added or semantics change. |
 | `source` | str | No | Provenance tag. Either `live_pit` (written by live CI pipeline) or `backfill_yfinance` (reconstructed from historical data). |
 | `partial` | bool | Yes | `True` if the macro cache was unavailable at capture time; macro columns will be null. Uses pandas nullable boolean (`pd.BooleanDtype`). |
 | `n_macro_null` | int | No | Count of null values across the **canonical 9 macro series** (denominator = 9, bumped from 8 in schema v4 when `india_vix` was added). `n_macro_null == 0` means all 9 series are present. `partial=True` implies `n_macro_null == 9`. Per-series presence is recoverable without a separate column: `df['tips'].notna()` tells you whether TIPS is present for each row. "Canonical" here means "the denominator schema v4 onward" — not literally fixed forever; the schema version changelog below is the source of truth for what the denominator was at any point in this table's history. |
-| `gold_usd` | float | Yes | Gold spot price in USD/oz (ticker `GC=F` via yfinance). Null when `partial=True`. |
-| `usd_inr` | float | Yes | USD/INR exchange rate (ticker `INR=X` via yfinance). Null when `partial=True`. |
-| `us_10y_yield` | float | Yes | US 10-year Treasury yield in % (ticker `^TNX` via yfinance). Null when `partial=True`. |
-| `dxy` | float | Yes | US Dollar Index (ticker `DX-Y.NYB` via yfinance). Null when `partial=True`. |
-| `sensex` | float | Yes | BSE Sensex index level (ticker `^BSESN` via yfinance). Null when `partial=True`. |
-| `vix` | float | Yes | CBOE Volatility Index (ticker `^VIX` via yfinance). Null when `partial=True`. |
-| `crude_wti` | float | Yes | WTI crude oil futures price in USD/barrel (ticker `CL=F` via yfinance). Null when `partial=True`. |
-| `tips` | float | Yes | iShares TIPS Bond ETF price, USD (ticker `TIP` via yfinance; proxy for real rate expectations). Null when `partial=True`. |
-| `india_vix` | float | Yes | NSE India VIX, domestic equity volatility index (ticker `^INDIAVIX` via yfinance). Null when `partial=True`, and null for every row captured before schema v4 (2026-09-23) by construction — the ticker did not exist in `TICKER_MAP` before then. Not yet in `ml.direction.dataset.FEATURE_COLS` — added to the corpus first, deliberately not wired into the live direction model until enough history has accumulated to evaluate it (same discipline `docs/DIRECTION_SIGNAL_STATUS.md` already applies to other candidate drivers). |
+| `gold_usd` | float | Yes | **v5+: z-score of gold spot price (ticker `GC=F`) vs its own trailing 365-day window. v<=4: raw USD/oz level.** Null when `partial=True`, or (v5+) when fewer than 2 trailing points exist. |
+| `usd_inr` | float | Yes | **v5+: z-score of USD/INR (ticker `INR=X`) vs its own trailing 365-day window. v<=4: raw exchange rate.** Null when `partial=True`, or (v5+) when fewer than 2 trailing points exist. |
+| `us_10y_yield` | float | Yes | **v5+: z-score of US 10-year Treasury yield (ticker `^TNX`) vs its own trailing 365-day window. v<=4: raw % level.** Null when `partial=True`, or (v5+) when fewer than 2 trailing points exist. |
+| `dxy` | float | Yes | **v5+: z-score of US Dollar Index (ticker `DX-Y.NYB`) vs its own trailing 365-day window. v<=4: raw level.** Null when `partial=True`, or (v5+) when fewer than 2 trailing points exist. |
+| `sensex` | float | Yes | **v5+: z-score of BSE Sensex (ticker `^BSESN`) vs its own trailing 365-day window. v<=4: raw index level.** Null when `partial=True`, or (v5+) when fewer than 2 trailing points exist. |
+| `vix` | float | Yes | **v5+: z-score of CBOE VIX (ticker `^VIX`) vs its own trailing 365-day window. v<=4: raw level.** Null when `partial=True`, or (v5+) when fewer than 2 trailing points exist. |
+| `crude_wti` | float | Yes | **v5+: z-score of WTI crude futures (ticker `CL=F`) vs its own trailing 365-day window. v<=4: raw USD/barrel level.** Null when `partial=True`, or (v5+) when fewer than 2 trailing points exist. |
+| `tips` | float | Yes | **v5+: z-score of iShares TIPS Bond ETF (ticker `TIP`; proxy for real rate expectations) vs its own trailing 365-day window. v<=4: raw USD level.** Null when `partial=True`, or (v5+) when fewer than 2 trailing points exist. |
+| `india_vix` | float | Yes | **v5+: z-score of NSE India VIX (ticker `^INDIAVIX`) vs its own trailing 365-day window. v<=4 (from v4 on 2026-09-23 only): raw level.** Null when `partial=True`, (v5+) when fewer than 2 trailing points exist, and null for every row captured before schema v4 by construction — the ticker did not exist in `TICKER_MAP` before then. Not yet in `ml.direction.dataset.FEATURE_COLS` — added to the corpus first, deliberately not wired into the live direction model until enough history has accumulated to evaluate it (same discipline `docs/DIRECTION_SIGNAL_STATUS.md` already applies to other candidate drivers). |
+| `gold_usd_sha256` | str | Yes | v5+ only. SHA-256 of the raw `gold_usd` value at capture time, fixed 6-decimal precision (`ml.feature_store.macro_value_hash`) — for future verification without republishing the number. Null when `gold_usd` is null. |
+| `usd_inr_sha256` | str | Yes | v5+ only. SHA-256 of the raw `usd_inr` value at capture time. Null when `usd_inr` is null. |
+| `us_10y_yield_sha256` | str | Yes | v5+ only. SHA-256 of the raw `us_10y_yield` value at capture time. Null when `us_10y_yield` is null. |
+| `dxy_sha256` | str | Yes | v5+ only. SHA-256 of the raw `dxy` value at capture time. Null when `dxy` is null. |
+| `sensex_sha256` | str | Yes | v5+ only. SHA-256 of the raw `sensex` value at capture time. Null when `sensex` is null. |
+| `vix_sha256` | str | Yes | v5+ only. SHA-256 of the raw `vix` value at capture time. Null when `vix` is null. |
+| `crude_wti_sha256` | str | Yes | v5+ only. SHA-256 of the raw `crude_wti` value at capture time. Null when `crude_wti` is null. |
+| `tips_sha256` | str | Yes | v5+ only. SHA-256 of the raw `tips` value at capture time. Null when `tips` is null. |
+| `india_vix_sha256` | str | Yes | v5+ only. SHA-256 of the raw `india_vix` value at capture time. Null when `india_vix` is null. |
 | `gold_usd_asof_date` | str | Yes | ISO date of the last non-null `gold_usd` observation in the macro cache (may lag `as_of_date` on weekends/holidays). |
 | `usd_inr_asof_date` | str | Yes | ISO date of the last non-null `usd_inr` observation. |
 | `us_10y_yield_asof_date` | str | Yes | ISO date of the last non-null `us_10y_yield` observation. |
@@ -118,6 +136,7 @@ When `asof_date == as_of_date`, the value was observed on that day. **No separat
 | 2 | Added `ibja_pm_916_asof_date`, `ibja_am_916_asof_date`, `tanishq_22k_asof_date` to complete the observation-date stamp pattern already present on macro fields. Existing rows (2026-06-07, 2026-06-08) were migrated once with their verified true observation dates. This was the only permitted exception to the immutability contract: the migration added correct provenance that was always factually true; no recorded observation value was altered. |
 | 3 | Added `n_macro_null` (integer count of null values across the canonical 8 macro series). Patched 109 `backfill_yfinance` rows that had null `crude_wti`/`tips` because the macro cache only held ~5 days of history for those series at backfill time — true historical closes fetched from yfinance (CL=F, TIP) and written for all dates where data existed; genuinely missing dates left null (no imputation). `live_pit` rows were not touched. All 116 rows had `n_macro_null` computed and `schema_version` bumped to 3. |
 | 4 | Added `india_vix`/`india_vix_asof_date` (M1, 2026-09-23) — `n_macro_null` denominator 8 -> 9. No historical backfill performed for this column (unlike v3's crude/tips patch): every row captured before this change is null for `india_vix` by construction, since the ticker did not exist in `TICKER_MAP` before today. A future backfill against yfinance's real `^INDIAVIX` history (same pattern as v3) is possible but not done here — flagged as a candidate follow-up, not committed to. |
+| 5 | ADR 053 (2026-09-25, D3). The 9 macro columns switched from the raw Yahoo Finance level to a z-score against their own trailing 365-day window — the raw level, committed to this public repo, was a republication of Yahoo's data. Added 9 parallel `{series}_sha256` columns (SHA-256 of the raw value at capture time) for future audit without republishing the number. Column names unchanged; `n_macro_null` semantics unchanged (a None z-score still counts as null). No historical rows were rewritten — `schema_version <= 4` rows still hold the raw level, `schema_version >= 5` rows hold the z-score; a training run spanning the boundary must filter on `schema_version`. |
 
 ---
 

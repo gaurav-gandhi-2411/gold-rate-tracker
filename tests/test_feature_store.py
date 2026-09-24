@@ -4,7 +4,14 @@ import math
 from pathlib import Path
 
 import pandas as pd
-from ml.feature_store import SCHEMA_VERSION, append_snapshot, capture_daily_snapshot, load_snapshots
+from ml.feature_store import (
+    SCHEMA_VERSION,
+    append_snapshot,
+    capture_daily_snapshot,
+    load_snapshots,
+    macro_value_hash,
+    macro_zscore,
+)
 from ml.feature_store_backfill import patch_missing_macro_series, repair_stale_ibja, run_backfill
 
 # ---------------------------------------------------------------------------
@@ -28,6 +35,8 @@ _PRICE_FLOATS = ["ibja_pm_916", "ibja_am_916", "tanishq_22k"]
 
 _PRICE_ASOF_DATE_COLS = [f"{col}_asof_date" for col in _PRICE_FLOATS]
 
+_MACRO_SHA_COLS = [f"{col}_sha256" for col in _MACRO_FLOATS]
+
 _ALL_COLUMNS = [
     "capture_utc",
     "as_of_date",
@@ -37,6 +46,7 @@ _ALL_COLUMNS = [
     "n_macro_null",
     *_MACRO_FLOATS,
     *_ASOF_DATE_COLS,
+    *_MACRO_SHA_COLS,
     *_PRICE_FLOATS,
     *_PRICE_ASOF_DATE_COLS,
     "dow",
@@ -1010,7 +1020,9 @@ def _make_mock_price_df(dates: list[str], values: list[float]) -> pd.DataFrame:
 
 class TestPatchMacroSeries:
     def test_patch_fills_missing_crude_and_tips(self, tmp_path: Path) -> None:
-        """patch_missing_macro_series fills null crude_wti/tips on backfill_yfinance rows."""
+        """patch_missing_macro_series fills null crude_wti/tips on backfill_yfinance rows,
+        as a z-score against trailing history plus a sha256 of the raw value (ADR 053) --
+        not the raw level itself."""
         path = _store_path(tmp_path)
         snap = _make_snapshot(
             "2025-06-01",
@@ -1023,8 +1035,10 @@ class TestPatchMacroSeries:
         )
         append_snapshot(snap, path)
 
-        crude = _make_mock_price_df(["2025-05-31"], [75.5])
-        tips = _make_mock_price_df(["2025-05-31"], [108.2])
+        crude = _make_mock_price_df(["2025-05-29", "2025-05-30", "2025-05-31"], [74.0, 76.0, 75.5])
+        tips = _make_mock_price_df(
+            ["2025-05-29", "2025-05-30", "2025-05-31"], [107.0, 109.0, 108.2]
+        )
 
         result = patch_missing_macro_series(store_path=path, crude_df=crude, tips_df=tips)
 
@@ -1033,8 +1047,13 @@ class TestPatchMacroSeries:
 
         df = load_snapshots(path)
         row = df.iloc[0]
-        assert abs(float(row["crude_wti"]) - 75.5) < 0.01
-        assert abs(float(row["tips"]) - 108.2) < 0.01
+        expected_crude_z = macro_zscore(crude["close"])
+        expected_tips_z = macro_zscore(tips["close"])
+        assert expected_crude_z is not None and expected_tips_z is not None
+        assert abs(float(row["crude_wti"]) - expected_crude_z) < 1e-9
+        assert abs(float(row["tips"]) - expected_tips_z) < 1e-9
+        assert row["crude_wti_sha256"] == macro_value_hash(75.5)
+        assert row["tips_sha256"] == macro_value_hash(108.2)
         # All 8 macro series now present — crude and tips filled from mock.
         assert int(row["n_macro_null"]) == 0
 
@@ -1114,3 +1133,55 @@ class TestPatchMacroSeries:
         assert result["crude_patched"] == 0
         df = load_snapshots(path)
         assert pd.isna(df.iloc[0]["crude_wti"]), "No history before target date — must stay null"
+
+
+# ---------------------------------------------------------------------------
+# TestMacroDerivation — macro_zscore / macro_value_hash (ADR 053)
+# ---------------------------------------------------------------------------
+
+
+class TestMacroDerivation:
+    def test_zscore_matches_hand_computed_value(self) -> None:
+        """A known 5-point series produces the textbook sample z-score (ddof=1)."""
+        s = pd.Series([10.0, 12.0, 11.0, 13.0, 14.0])
+        z = macro_zscore(s)
+        mean = s.mean()
+        std = s.std(ddof=1)
+        assert z is not None
+        assert abs(z - (s.iloc[-1] - mean) / std) < 1e-12
+
+    def test_zscore_none_below_two_points(self) -> None:
+        """A single-point history can't produce a spread — None, not a fabricated 0."""
+        assert macro_zscore(pd.Series([42.0])) is None
+        assert macro_zscore(pd.Series([], dtype=float)) is None
+
+    def test_zscore_zero_for_constant_series(self) -> None:
+        """A perfectly flat series has zero deviation — a real 0.0, not a missing value."""
+        z = macro_zscore(pd.Series([100.0] * 10))
+        assert z == 0.0
+
+    def test_zscore_only_uses_trailing_window(self) -> None:
+        """A value older than the trailing window must not move the result: the last
+        MACRO_ZSCORE_WINDOW_CALENDAR_DAYS + 1 points are identical between the two series
+        below, so a correct implementation must return the same z-score for both."""
+        from ml.feature_store import MACRO_ZSCORE_WINDOW_CALENDAR_DAYS
+
+        pattern = [10.0, 12.0, 11.0, 13.0, 14.0]
+        reps = (MACRO_ZSCORE_WINDOW_CALENDAR_DAYS // len(pattern)) + 1
+        base = pd.Series((pattern * reps)[: MACRO_ZSCORE_WINDOW_CALENDAR_DAYS + 1])
+        with_old_outlier = pd.concat([pd.Series([1e9]), base], ignore_index=True)
+        assert abs(macro_zscore(with_old_outlier) - macro_zscore(base)) < 1e-9
+
+    def test_value_hash_is_deterministic_and_distinguishes_values(self) -> None:
+        h1 = macro_value_hash(2650.123456)
+        h2 = macro_value_hash(2650.123456)
+        h3 = macro_value_hash(2650.123457)
+        assert h1 == h2
+        assert h1 != h3
+        assert len(h1) == 64  # sha256 hex digest length
+
+    def test_value_hash_rounds_to_fixed_precision(self) -> None:
+        """Precision is fixed at 6 decimals -- values differing only beyond that collide,
+        by design (the hash is for later verification against a value of known precision,
+        not a lossless encoding)."""
+        assert macro_value_hash(1.0000001) == macro_value_hash(1.0000002)

@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import hashlib
 import logging
 from pathlib import Path
 
@@ -7,9 +8,43 @@ import pandas as pd
 
 logger = logging.getLogger(__name__)
 
-SCHEMA_VERSION: int = 4
+SCHEMA_VERSION: int = 5
 
 STORE_PATH: Path = Path(__file__).parent.parent / "data" / "feature_store" / "snapshots.parquet"
+
+# Trailing window (calendar days, since the in-memory macro frame is forward-filled daily
+# including weekends) used to z-score each macro series at capture time. ~365 calendar days
+# approximates a 252-trading-day year. See ADR 053: schema_version 5 stopped writing the raw
+# Yahoo Finance level into gold_usd/usd_inr/etc. -- republishing it in this public repo is not
+# covered by Yahoo's terms -- and writes a z-score of that level against its own recent history
+# instead. A window shorter than 2 points can't produce a spread and is treated as "missing",
+# same as an absent series.
+MACRO_ZSCORE_WINDOW_CALENDAR_DAYS: int = 365
+
+
+def macro_zscore(history: pd.Series) -> float | None:
+    """z-score of the last value in `history` against its own trailing
+    MACRO_ZSCORE_WINDOW_CALENDAR_DAYS-day window (history must already be sorted ascending
+    and end at the value being captured). Returns None when there are fewer than 2 points to
+    compute a spread from. A constant window (std == 0) yields 0.0, not None -- a real,
+    informative "no deviation" reading, not a missing value."""
+    window = history.tail(MACRO_ZSCORE_WINDOW_CALENDAR_DAYS + 1)
+    if len(window) < 2:
+        return None
+    std = float(window.std(ddof=1))
+    last = float(window.iloc[-1])
+    if std == 0.0:
+        return 0.0
+    return (last - float(window.mean())) / std
+
+
+def macro_value_hash(raw_value: float) -> str:
+    """SHA-256 of the raw third-party value at fixed 6-decimal precision. Lets a later,
+    independently-sourced re-fetch of the same historical date be checked against what this
+    snapshot actually captured, without the raw number itself ever being committed to the
+    public repo (ADR 053)."""
+    return hashlib.sha256(f"{raw_value:.6f}".encode()).hexdigest()
+
 
 _ALL_COLUMNS: list[str] = [
     "capture_utc",
@@ -25,6 +60,12 @@ _ALL_COLUMNS: list[str] = [
     # be absent even when the cache loaded, e.g. new tickers not yet in historical cache --
     # india_vix itself is null for every row captured before this change, by construction).
     "n_macro_null",
+    # From schema_version 5 (ADR 053), these 9 columns hold each series' z-score against its
+    # own trailing MACRO_ZSCORE_WINDOW_CALENDAR_DAYS window, NOT the raw Yahoo Finance level --
+    # committing the raw level would republish it in this public repo. Rows captured under
+    # schema_version <= 4 still hold the raw level (git history is not rewritten; ADR 053).
+    # A training run spanning the v4->v5 boundary must not treat these columns as one
+    # consistent unit without accounting for that -- filter on schema_version first.
     "gold_usd",
     "usd_inr",
     "us_10y_yield",
@@ -43,6 +84,17 @@ _ALL_COLUMNS: list[str] = [
     "crude_wti_asof_date",
     "tips_asof_date",
     "india_vix_asof_date",
+    # SHA-256 of the raw value at capture time (schema_version >= 5 only), for future
+    # audit/reproducibility without ever committing the raw number itself. See macro_value_hash.
+    "gold_usd_sha256",
+    "usd_inr_sha256",
+    "us_10y_yield_sha256",
+    "dxy_sha256",
+    "sensex_sha256",
+    "vix_sha256",
+    "crude_wti_sha256",
+    "tips_sha256",
+    "india_vix_sha256",
     "ibja_pm_916",
     "ibja_am_916",
     "tanishq_22k",
@@ -184,15 +236,20 @@ def capture_daily_snapshot(
     # ------------------------------------------------------------------
     macro_values: dict[str, object] = {}
     macro_asof: dict[str, object] = {}
+    macro_hashes: dict[str, object] = {}
 
     for series in _MACRO_SERIES:
         if macro_df is not None and series in macro_df.columns:
             col = macro_df[series].dropna()
             if col.empty:
                 macro_values[series] = None
+                macro_hashes[f"{series}_sha256"] = None
                 macro_asof[f"{series}_asof_date"] = None
             else:
-                macro_values[series] = float(col.iloc[-1])
+                raw_last = float(col.iloc[-1])
+                # Stored value is a z-score, not the raw level -- see macro_zscore (ADR 053).
+                macro_values[series] = macro_zscore(col)
+                macro_hashes[f"{series}_sha256"] = macro_value_hash(raw_last)
                 # The index may be a DatetimeIndex or a plain RangeIndex.
                 last_idx = col.index[-1]
                 if hasattr(last_idx, "date"):
@@ -202,6 +259,7 @@ def capture_daily_snapshot(
                     macro_asof[f"{series}_asof_date"] = str(last_idx)
         else:
             macro_values[series] = None
+            macro_hashes[f"{series}_sha256"] = None
             macro_asof[f"{series}_asof_date"] = None
 
     # ------------------------------------------------------------------
@@ -300,6 +358,7 @@ def capture_daily_snapshot(
         "n_macro_null": n_macro_null,
         **macro_values,
         **macro_asof,
+        **macro_hashes,
         "ibja_pm_916": ibja_pm_916,
         "ibja_am_916": ibja_am_916,
         "tanishq_22k": tanishq_22k,
