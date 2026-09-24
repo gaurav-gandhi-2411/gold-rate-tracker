@@ -1,6 +1,6 @@
 # ADR 045 — Pre-registration: do better-calibrated learners lower the detection floor?
 
-**Status:** Proposed 2026-09-24 (PR #2000). Pre-registration only. The text and the code are
+**Status:** Proposed 2026-09-24 (PR #2000). **Result recorded 2026-09-24: the floor does not come down (see Result).** Pre-registration only. The text and the code are
 frozen at the pushed commit that carries this sentence, **before any run** of
 `scripts/analysis_calibrated_floor.py` on COMEX data. Every shard records its git SHA, and the
 results are valid only if that SHA is this commit. Research; nothing a user sees changes.
@@ -97,6 +97,60 @@ is logged in the results PR before the numbers are read.
   direction work. Any live use needs its own pre-registration on untouched data.
 - If it does not: the direction track has no known cheap lever left on this data. That matches ADR
   040 and #1992. The work moves to new information (the derived Indian premium, G4).
+
+## Result (analysis run 36000320396, 2026-09-24)
+
+**Provenance:** `reports/calibrated_floor_run_36000320396.json`. All 25 shards ran at the frozen
+commit `4b3686a5`, none were missing, and every learner scored the same 3,201 COMEX test days.
+Nothing in the script or this ADR changed between the freeze and the run.
+
+**Pre-registered verdict: the floor does not come down.** No calibrated learner detects a smaller q
+than the control. Only one cell passes the paired test; its floor is equal to the control's, not
+below it, so it fails condition 1.
+
+Detection with the accuracy test, out of 100 seeds (Wilson 95%). A signal of strength q gives an
+oracle about 0.5 + q/2:
+
+| learner | q = 0.10 | q = 0.15 | q = 0.20 | floor |
+|---|---|---|---|---|
+| `logit` (control) | 20 [13, 29] | 57 [47, 66] | **86 [78, 92]** | 0.20 (~60%) |
+| `logit_platt` | 15 [9, 23] | 34 [26, 44] | 29 [21, 39] | none ≤ 0.20 |
+| `logit_isotonic` | 4 [2, 10] | 14 [9, 22] | 28 [20, 38] | none |
+| `logit_temperature` | 0 [0, 4] | 11 [6, 19] | 26 [18, 35] | none |
+| `ensemble_platt` | 3 [1, 9] | 34 [26, 44] | **98 [93, 99]** | 0.20 (~60%) |
+
+**The Brier test** never reached 80% for any learner. The best cell was 2 of 100 (the ensemble,
+q = 0.20). False alarms at q = 0 were 0 of 100 in all 10 cells.
+
+**Calibration quality** (mean over seeds, q = 0):
+
+| learner | Brier skill vs climatology | ECE |
+|---|---|---|
+| `logit` | −0.038 | 0.069 |
+| `logit_platt` | −0.015 | 0.044 |
+| `logit_isotonic` | −0.128 | 0.109 |
+| `logit_temperature` | −0.015 | 0.059 |
+| `ensemble_platt` | −0.008 | 0.023 |
+
+Only one cell reached climatology: the ensemble at q = 0.20, with a Brier skill of +0.0006.
+
+**In plain words:**
+- **Calibration made the probabilities less wrong, but not better than "gold rises about half the
+  time".** Platt and the ensemble cut the Brier deficit by 60–80%. Isotonic made it worse: it
+  overfits a calibration tail of 50–600 rows. With no probabilities better than climatology, the
+  Brier test has nothing to find. The lever named in #1992 is real but too weak here.
+- **The single-score calibrators hurt the accuracy test.** They use 20% of the training rows for
+  calibration and can only move the 0.5 threshold, as expected before the run. Temperature
+  scaling pushed accuracy below 50% at small q.
+- **One secondary observation, not the pre-registered criterion.** At q = 0.20 the ensemble detects
+  98 of 100 seeds against the control's 86. Paired McNemar: 14 seeds only the ensemble detects, 2
+  only the control; p = 0.0021, which passes Bonferroni (0.00625) and BH. It is a steadier
+  detector *at* the floor, not a lower floor. At q = 0.15 it is worse (34 against 57). A future
+  direction test could use it as its detector, but only under its own pre-registration.
+- **What this closes.** Neither test power (#1992) nor calibration lowers the COMEX floor. On this
+  data, a direction edge smaller than about 10 points of oracle accuracy stays invisible. The
+  remaining lever is new information, not better modelling of the same features: the derived
+  Indian premium (G4), and years more IBJA days.
 
 ## Alternatives considered
 
