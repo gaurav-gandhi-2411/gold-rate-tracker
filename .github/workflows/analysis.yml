@@ -31,6 +31,7 @@ on:
           - buyer_policy
           - selective_direction
           - pipeline_sensitivity
+          - calibrated_floor
 
 permissions:
   contents: read
