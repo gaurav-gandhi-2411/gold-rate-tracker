@@ -65,6 +65,7 @@
   "tests/test_metrics.py": 43,
   "tests/test_next_day_range.py": 6,
   "tests/test_no_dead_imports.py": 1,
+  "tests/test_no_horizontal_scroll_headless.js": 0,
   "tests/test_notification_copy_claims.py": 6,
   "tests/test_notification_routing.py": 16,
   "tests/test_notifications.py": 154,

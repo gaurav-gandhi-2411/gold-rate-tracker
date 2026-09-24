@@ -111,7 +111,9 @@
 // decimal places (formatPValue() in i18n.js, added same PR); renders
 // "p < 0.0001" instead. i18n.js + how-we-know.js + how-we-know-strings.js
 // (EN+HI) changed -- all three are precached shell files.
-const VERSION = "v57-20260924-pvalue-display";
+// v58 (2026-09-25): style.css -- main { overflow-x: clip } stops the phone page
+// scrolling 60px sideways (hero glow overflow). Shell file changed.
+const VERSION = "v58-20260925-no-sideways-scroll";
 const SHELL_CACHE = `gold-shell-${VERSION}`;
 
 const SHELL_FILES = [
