@@ -97,7 +97,12 @@
 // The v51 WIP commit (computePurchaseCostRange()/makingPerGram + the range-slider UI it
 // backed) never shipped separately -- this single entry covers everything that changed on
 // this branch, from master's v50 baseline. index.html + app.js + i18n.js + style.css changed.
-const VERSION = "v52-20260923-calc-making-presets";
+// 2026-09-23 (v53): U2 plain-language rework -- the methodology accordion's full technical
+// breakdown moved off the main page onto a new how-we-know.html, rendered by
+// how-we-know.js/how-we-know-strings.js from the same data files. All three are new
+// precached shell files (below). index.html + app.js + i18n.js + style.css changed too
+// (banned-jargon rewrites, accordion body replaced with a plain summary + link).
+const VERSION = "v53-20260923-plain-language";
 const SHELL_CACHE = `gold-shell-${VERSION}`;
 
 const SHELL_FILES = [
@@ -106,6 +111,9 @@ const SHELL_FILES = [
   "./style.css",
   "./app.js",
   "./i18n.js",
+  "./how-we-know.html",
+  "./how-we-know.js",
+  "./how-we-know-strings.js",
   "./manifest.webmanifest",
   "./icons/icon-192.png",
   "./icons/icon-512.png",
