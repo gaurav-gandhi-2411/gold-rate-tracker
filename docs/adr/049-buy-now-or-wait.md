@@ -211,3 +211,69 @@ the PR with before/after behaviour, before test-period data is scored.
   calibration against the same small real-IBJA record ADR 043 already found width-unstable at 7
   days (n ≈ 24 honest non-overlapping weeks). Worth revisiting once more real IBJA history
   accumulates.
+
+## Results (scored 2026-09-24, `scripts/analysis_wait_or_buy.py`, `reports/wait_or_buy_results.json`)
+
+**Series:** real IBJA n = 255, 2022-01-19 → 2026-09-24; INR proxy n = 3,638, 2013-01-01 →
+2026-09-23 (`ml.range_forecast.data`).
+
+### (a) "About equally likely" — measured
+
+Bonferroni threshold (6-test family): 0.00833. One-sided/two-sided note: this is the **two-sided**
+H0: P = 0.5 test, per the pre-registration.
+
+| horizon | series | n | p̂(lower) | effective n | effective-n Wilson 95% | two-sided p | Bonferroni |
+|---|---|---|---|---|---|---|---|
+| 1 day | real IBJA | 193 | 50.8% | 193.0 | [43.8%, 57.7%] | 0.829 | not sig. |
+| 1 day | proxy | 3,637 | 47.5% | 3,637.0 | [45.9%, 49.1%] | 0.00266 | **sig.** |
+| 2 days | real IBJA | 179 | 45.8% | 138.0 | [37.6%, 54.0%] | 0.323 | not sig. |
+| 2 days | proxy | 3,636 | 46.9% | 2,830.3 | [45.0%, 48.7%] | 0.00083 | **sig.** |
+| 7 days | real IBJA | 155 | 45.2% | 55.2 | [33.0%, 58.5%] | 0.470 | not sig. |
+| 7 days | proxy | 3,631 | 45.5% | 1,230.4 | [42.7%, 48.2%] | 0.00142 | **sig.** |
+
+**In plain words.** On real IBJA, every horizon's effective-n interval contains 50% — "about
+equally likely" is the honest sentence at all three horizons, matching R4's prior finding (ADR
+039) that real IBJA shows no exploitable directional edge at this horizon. On the proxy, all three
+horizons are Bonferroni-significant, with p̂ reliably *below* 50% (prices more often higher, not
+lower, after N days) — consistent with ADR 040's finding that the proxy carries a strong negative
+lag-1 autocorrelation (measurement noise, not a tradable pattern) and with ADR 039's finding that
+gold drifted upward through 2025-26 (always-waiting cost ₹43-76/g on real IBJA). **The proxy result
+is not used for the card's copy** — real IBJA is the product-relevant series, and its own interval
+contains 50% at every horizon tested. The non-overlapping-stride check (not shown above; in
+`reports/wait_or_buy_results.json`) agrees with the effective-n interval at every cell — its wider,
+smaller-n interval always contains the effective-n interval's own bounds.
+
+### (b) "Up to about ₹X" — calibrated endpoint range, measured coverage on real IBJA
+
+| horizon | view | n | coverage | Wilson 95% | meets 80%? |
+|---|---|---|---|---|---|
+| 1 day | walk-forward | 162 | 85.2% | [78.9%, 89.8%] | yes |
+| 1 day | hold-out | 81 | 80.2% | [70.3%, 87.5%] | yes |
+| 2 days | walk-forward | 147 | 86.4% | [79.9%, 91.0%] | yes |
+| 2 days | hold-out | 72 | 83.3% | [73.1%, 90.2%] | yes |
+| 7 days | walk-forward | 120 | 84.2% | [76.6%, 89.6%] | yes |
+| 7 days | hold-out | 56 | 89.3% | [78.5%, 95.0%] | yes |
+
+**In plain words.** All six cells meet 80% (their Wilson 95% CI contains or exceeds 0.80) —
+consistent with ADR 043's own "1d"/"week" figures (85.1%/80.0% and 84.0%/87.5% respectively,
+measured a day earlier on slightly fewer matured windows; the new N = 2 endpoint range lands in
+the same 83-86% band). `times_out_of_ten` on every walk-forward cell rounds down to 8. The N = 7
+row reuses ADR 043's path-calibrated "week" range unchanged, as the pre-registration specified — a
+valid conservative bound on the true endpoint coverage, not a fresh calibration.
+
+### (c) "Moving more than usual" — today's read (2026-09-24)
+
+Realised volatility over the last 20 consecutive real IBJA days: 1.10% (daily log-return std).
+Percentile against the INR proxy's own rolling-20-day realised-volatility history (3,638 prior
+values, all strictly before today): **67th percentile → "about as usual"**. Purely descriptive, as
+designed; not a hypothesis test.
+
+### What this means for the card, today
+
+`data/wait_or_buy_today.json` (as of 2026-09-24): every horizon reads "about equally likely" (real
+IBJA's effective-n interval contains 50% at N = 1, 2, 7) and "moving about as usual" (67th
+percentile). The N = 2 sentence, matching the brief's own example: *"Waiting 2 days: prices are
+about equally likely to go up or down. This week they've been moving about as usual."* The
+calibrated range (X = ₹4,282/g at N = 2, today's price ₹138,119/10g) is computed and available in
+the same file but not shown in this sentence, since today's category isn't "moving more than
+usual" — see the copy-ambiguity note flagged for GG above.
