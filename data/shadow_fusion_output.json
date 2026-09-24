@@ -1,12 +1,12 @@
 {
-  "capture_utc": "2026-09-23T11:28:39Z",
-  "as_of_date": "2026-09-23",
+  "capture_utc": "2026-09-24T04:42:03Z",
+  "as_of_date": "2026-09-24",
   "national_failures": {},
   "kalyan_failures": {},
   "snapshot_rows_persisted": 7,
   "national_benchmark": {
-    "value": 14137.916666666668,
-    "band_half_width": 141.3791666666667,
+    "value": 14092.5,
+    "band_half_width": 140.925,
     "disagreement": false,
     "sources_used": [
       "ibja",
@@ -21,32 +21,32 @@
   },
   "cities": {
     "Bangalore": {
-      "value": 14240.0,
-      "band_half_width": 141.3791666666667,
+      "value": 14239.999999999998,
+      "band_half_width": 140.925,
       "coverage": "kalyan_anchored",
       "attribution": "National retail consensus, Kalyan-anchored (Kalyan Jewellers \u2014 BANGALORE board rate)",
-      "markup": 1.0072205357932273
+      "markup": 1.010466560227071
     },
     "Chennai": {
-      "value": 14240.0,
-      "band_half_width": 141.3791666666667,
+      "value": 14239.999999999998,
+      "band_half_width": 140.925,
       "coverage": "kalyan_anchored",
       "attribution": "National retail consensus, Kalyan-anchored (Kalyan Jewellers \u2014 CHENNAI board rate)",
-      "markup": 1.0072205357932273
+      "markup": 1.010466560227071
     },
     "Hyderabad": {
-      "value": 14240.0,
-      "band_half_width": 141.3791666666667,
+      "value": 14239.999999999998,
+      "band_half_width": 140.925,
       "coverage": "kalyan_anchored",
       "attribution": "National retail consensus, Kalyan-anchored (Kalyan Jewellers \u2014 HYDERABAD board rate)",
-      "markup": 1.0072205357932273
+      "markup": 1.010466560227071
     },
     "Ernakulam": {
-      "value": 14240.0,
-      "band_half_width": 141.3791666666667,
+      "value": 14239.999999999998,
+      "band_half_width": 140.925,
       "coverage": "kalyan_anchored",
       "attribution": "National retail consensus, Kalyan-anchored (Kalyan Jewellers \u2014 ERNAKULAM board rate)",
-      "markup": 1.0072205357932273
+      "markup": 1.010466560227071
     }
   }
 }
