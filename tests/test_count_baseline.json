@@ -31,6 +31,7 @@
   "tests/test_check_plain_language.py": 21,
   "tests/test_check_pr_boundary_leak.py": 26,
   "tests/test_check_required_checks_positive.py": 10,
+  "tests/test_check_retailer_language.py": 5,
   "tests/test_check_test_counts.py": 12,
   "tests/test_check_test_registry_complete.py": 12,
   "tests/test_chronos_forecast.py": 31,
