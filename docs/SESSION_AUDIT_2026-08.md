@@ -1750,3 +1750,71 @@ inline markers. The original text is kept.
 - v2 logs `[adr042-v2]` with n = 0 and the embargo recorded;
 - the M3 stratified shadow result, with n and Wilson CIs;
 - the first entries from the nowcast and weekly-range shadows.
+
+## Checkpoint — 2026-09-24 (evening): scorecard, weekend fix, range v2, features, day-of-week
+
+**Item 0, the scorecard (#2015, `reports/model_scorecard.json`, for GG, 566 lines).** Every model
+is scored against its simplest baseline on the same days.
+- **Nowcast** (n 90): ₹61.2/g [45.2, 77.2].
+  - It beats carry-forward (₹103.2, p 0.0007).
+  - It does **not** beat IBJA × a fixed markup (₹62.8, p 0.32).
+  - **Weekends:** carry-forward ₹46.0 beats the nowcast's ₹93.9.
+- **Morning variant:** ₹34.8 against ₹45.5 on IBJA days. This is in-sample; the forward shadow
+  decides.
+- **Fusion (shadow):** ₹45.6 overall; on weekends it ties carry-forward.
+- **Accuracy band:** 72.2% [62.2, 80.4]; stale-IBJA days 57.1%.
+- **Tomorrow's range:** 73.0% (n 63). A historical-simulation baseline covers the same days just
+  as well and is narrower.
+- **5-day volatility note:** says ±₹390; the median move was ₹218.
+- **Direction and Chronos:** do not beat their baselines. Chronos loses to no-change (p 0.00014).
+
+**PR state.** Merged:
+- #1958, #2000 (GG, after I fixed their baseline conflicts);
+- #2016 (day-of-week);
+- #2019 (feature flags);
+- #2021 (p-value fix, verified live in EN and HI).
+
+#2018 was closed and split into #2021 plus #2025, after the boundary-leak guard correctly refused
+duplicate commits across two PRs. **For GG:** #2015, #2017, #2020, #2022, #2024, #2025.
+
+**Item 4a, tomorrow's range v2 (#2017, ADR 047, frozen at `e0569575`).**
+- Retrospective, n 63: v2 covers 84.1% [73.2, 91.1] against the live 73.0%.
+- It is **31% wider**, which fails the pre-registered limit of 25%.
+- Forward n = 0.
+
+**Items 4b/4c, stale-IBJA days (#2024, ADR 048, frozen at `47d677ed`). Exploratory, n 28:**
+- live estimate ₹96.1, band 57.1%;
+- yesterday's Tanishq ₹52.5 (p 0.0078), band 75.0%;
+- same-day fusion ₹27.4 (n 16), band 87.5%.
+- **Process note:** the agent ran the pipeline once before its freeze commit, so this is
+  exploratory only.
+
+**Item 5.**
+- Flags merged, all OFF. Verified live: `?ff=` is ignored on the real host.
+- **F2** (#2020, ADR 049): on real IBJA, "about equally likely" holds at 1, 2 and 7 days. The
+  calibrated endpoint ranges meet 80% (walk-forward 84–86%).
+- **F1** (#2022):
+  - Tanishq charges 1.45% over IBJA on average (sd 1.55, n 148, AR(1) 0.76);
+  - GRT, Malabar and Kalyan are 1.0–1.2%;
+  - Kalyan snapshots have corrupt timestamps since 2026-09-08.
+- **F4:** running.
+
+**Item 7 (#2016, merged).** No weekday effect on untouched COMEX 2000–2012:
+- joint p 0.163;
+- an Indian Friday is not cheaper than Tuesday: 45.3% of 559 weeks, p 0.61.
+
+The site never advises a day. Of the brief's exploratory figures, all but two reproduce. The
+exceptions: the typical 2-day move is a median of ₹120/g (₹220 is 1 sd), and the cost of waiting
+2 days is 0.102% rather than 0.09%.
+
+**Terms (GG decisions).**
+- Tanishq's terms ban robots and allow only personal, non-commercial reproduction.
+- GRT bans scraping. Kalyan bans public reproduction. No Malabar terms page was found.
+- IBJA has no restriction.
+- Yahoo and FBIL data can't be redistributed.
+
+The D3 inventory lists every raw third-party file. It includes `reports/derived_premium.json`,
+which carries raw COMEX and USD/INR (I added it in #2004).
+
+**Environment.** Venvs under %TEMP% lose files mid-session. The persistent venv is
+`C:/Users/gaura/ml-projects/grt-venv`. Use `set -o pipefail` before piped verification chains.
