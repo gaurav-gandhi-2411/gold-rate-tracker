@@ -90,7 +90,9 @@ def prereg_sha256() -> str:
     text = ADR.read_bytes()
     marker = b"\n## Results"
     cut = text.find(marker)
-    return hashlib.sha256(text if cut < 0 else text[: cut + 1]).hexdigest()
+    # the blank line that separates the appended heading is not part of the frozen text
+    body = text if cut < 0 else text[: cut + 1].rstrip(b"\r\n") + b"\n"
+    return hashlib.sha256(body).hexdigest()
 
 
 # --- data --------------------------------------------------------------------------------------

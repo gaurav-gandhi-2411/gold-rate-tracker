@@ -220,3 +220,113 @@ at n 26 and p 0.8 is about ±0.15, so C2 can only detect gross miscalibration.
   than about 150 days can identify. Deferred.
 - **A regression of Tanishq on all sources:** it cannot absorb missing sources or produce a
   variance that grows over gaps without ad-hoc rules. The state-space form does both by construction.
+
+## Results
+
+Everything above this heading is the pre-registration. It is frozen at commit `70d5474c`
+(pushed before the run) with sha256
+`5358ba5849d9d44f00ebcb176495c865a6a066042c690469441f2c475b35d12e`. The run recomputes that hash
+(`prereg_sha256_of_adr_above_results` in the report) and records `code_commit` `70d5474c`.
+
+**Run.** `scripts/analysis_kalman_nowcast.py`, run locally on 2026-09-24 UTC in 56 s; output
+`reports/kalman_nowcast/results.json`.
+- 15 walk-forward refits. All but one report convergence; the 2026-08-28 block stopped with
+  `converged: False` after 11 L-BFGS-B iterations and its estimate was used as-is, per the protocol.
+- No change to the model or the scoring after the freeze, and no crash fix. One post-run change:
+  `prereg_sha256()` hashed one blank line too many once this section was appended. It now drops
+  that separator, and it reproduces the frozen hash on this file. The hash in `results.json` was
+  computed before the append and is correct.
+- Data: 2026-04-14 to 2026-09-24. Readings used: Tanishq 148, IBJA AM 103, IBJA PM 103,
+  COMEX 114, GRT 68, Malabar 56.
+
+**Verdict: NEGATIVE (the gate fails on C2).** The point nowcast beats every baseline in every
+pre-registered test, but the weekend 80% band over-covers: its Wilson CI excludes 80% from above.
+
+### Primary family
+
+One-sided HAC DM, lag 1; m = 6; Bonferroni threshold 0.00833.
+
+| id | comparison | n | eff. n | Kalman MAE ₹/g [95% HAC] | baseline MAE ₹/g | p (one-sided) | Bonferroni | BH |
+|---|---|---|---|---|---|---|---|---|
+| T1 | vs IBJA × fixed markup, all | 90 | 68.8 | 30.3 [20.2, 40.3] | 62.8 [48.2, 77.3] | 1.5e-6 | yes | yes |
+| T2 | vs IBJA × fixed markup, weekdays | 64 | 51.6 | 35.9 [22.9, 49.0] | 50.6 [39.9, 61.3] | 0.0016 | yes | yes |
+| T3 | vs IBJA × fixed markup, weekends | 26 | 17.0 | 16.3 [6.7, 25.9] | 92.7 [55.0, 130.4] | 1.5e-5 | yes | yes |
+| T4 | vs fusion, weekdays | 41 | 37.6 | 19.6 [7.8, 31.4] | 41.1 [30.4, 51.8] | 9.5e-9 | yes | yes |
+| T5 | vs fusion, weekends | 15 | 10.0 | 5.3 [3.7, 6.9] | 59.7 [46.3, 73.0] | < 1e-15 | yes | yes |
+| T6 | vs yesterday's Tanishq, weekends | 26 | 35.2 | 16.3 [6.7, 25.9] | 46.0 [28.8, 63.2] | 0.0025 | yes | yes |
+
+T5's p is a normal approximation with an effective n of 10 and 15 days. Read it as "very small",
+not as a precise value.
+
+### Band coverage (80% nominal, set A)
+
+| stratum | n | covered | coverage [Wilson 95%] | exact p vs 0.80 | mean width ₹/g |
+|---|---|---|---|---|---|
+| C1 weekdays | 64 | 53 | 82.8% [71.8, 90.1] | 0.64 | 161.7 |
+| C2 weekends | 26 | 25 | 96.2% [81.1, 99.3] | 0.046 | 178.0 |
+| all | 90 | 78 | 86.7% [78.1, 92.2] | 0.15 | 166.4 |
+
+**Gate:**
+- T1 passes Bonferroni: **yes**.
+- The C1 CI contains 80%: **yes**.
+- The C2 CI contains 80%: **no**, it over-covers.
+- **FAIL.**
+
+The weekend band is about ₹178 wide around a nowcast whose weekend MAE is ₹16. The Gaussian band
+carries Tanishq's fitted reading noise (`r_tanishq`, sd about 0.43%) on every day, and on weekends
+that noise dominates. The failure is a band that is too wide, not one that is too narrow.
+
+### Secondary (descriptive, no gate)
+
+- **Against the production nowcast M0 (set A):**
+
+  | stratum | Kalman ₹/g | M0 ₹/g | p |
+  |---|---|---|---|
+  | all | 30.3 | 61.2 | < 1e-4 |
+  | weekdays | 35.9 | 47.9 | 0.029 |
+  | weekends | 16.3 | 93.9 | < 1e-4 |
+
+- **DM lag 5:** T1–T6 p = 0.0000, 0.011, 0.0001, 0.0000, 0.0000 and 0.025. Only the weekday and
+  weekend-carry-forward cells weaken.
+- **Band on set B:** 92.9% [83.0, 97.2] overall; weekdays 90.2% [77.5, 96.1]; weekends 15/15
+  [79.6, 100]. It is wide on set B too.
+- **Fitted parameters (last block):**
+  - `r_grt`, `r_malabar`, `q_markup` and `q_age` sit at the lower bound (1e-11): GRT and Malabar
+    boards track Tanishq with a near-constant log markup. Same-day correlation of daily log changes,
+    GRT vs Tanishq: 0.92, sd of the log ratio 0.26%.
+  - `r_comex` has sd about 1.25%, so COMEX carries little weight.
+  - `q_level_trading` has sd about 1.18%/day and `q_level_nontrading` sd about 0.61%/day.
+
+### Post-hoc exploratory timing check (NOT pre-registered)
+
+`scripts/analysis_kalman_nowcast_strict_timing.py` writes
+`reports/kalman_nowcast/exploratory_strict_retail_timing.json`.
+
+**Why it was run.** The pre-registered information set gives the filter, like the fusion baseline,
+the last retailer capture of the UTC date. On 47/112 set-B day/source pairs that capture is stamped
+after the target Tanishq reading. A pre-target capture exists on 106/112.
+
+**What changed.** The walk-forward was re-run with captures restricted to before the target
+reading's timestamp; nothing else changed.
+
+**Result:**
+- T1 still holds: 32.3 vs 62.8, p 4.8e-5.
+- T3, T5 and T6 still pass Bonferroni: weekend MAE 15.8; set-B weekend 4.3 vs fusion 59.7.
+- **T2 (p 0.036) and T4 (p 0.017) no longer pass Bonferroni:**
+  - weekday MAE 38.9 vs fixed markup 50.6;
+  - set-B weekday MAE 24.3 vs fusion 41.1.
+- Coverage is unchanged in kind: weekdays 84.4% [73.6, 91.3], weekends 96.2% [81.1, 99.3].
+
+**Reading.** Part of the weekday edge in the primary run comes from end-of-day retailer captures.
+The weekend and overall edges do not depend on them. This does not change the pre-registered
+verdict. It does mean the forward shadow, which only sees what exists at run time, is the test
+that matters for weekdays.
+
+### What this means (INFERRED, for GG)
+
+- As a point estimate, the Kalman nowcast roughly halves the live nowcast's error (₹30 vs ₹61).
+- On weekends it beats yesterday's Tanishq price, the baseline that beat the live model there.
+- It fails its own pre-registered band criterion by being too conservative on weekends.
+- **No retuning here.** The band fix (e.g. a separate weekend reading-noise term, or conformal
+  scaling of the filter's sd on training folds) would need a new pre-registration.
+- The forward shadow (`scripts/run_kalman_shadow.py`, not yet wired) is the blind test for both.
