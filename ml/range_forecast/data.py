@@ -39,7 +39,6 @@ segment, not calendar/trading days) never crosses a segment boundary.
 
 from __future__ import annotations
 
-from datetime import date
 from pathlib import Path
 
 import numpy as np
@@ -183,13 +182,6 @@ def log_returns(price: pd.Series) -> pd.Series:
     return np.log(price / price.shift(1)).dropna()  # type: ignore[attr-defined]
 
 
-def forward_log_return(price: pd.Series, horizon: int) -> pd.Series:
-    """log(P[t+h]) - log(P[t]) indexed by t (the as-of day, position-based)."""
-    log_p = np.log(price)
-    fwd = log_p.shift(-horizon) - log_p
-    return fwd.dropna()
-
-
 def _t_minus_1_lag(daily_calendar_series: pd.Series, as_of_dates: pd.DatetimeIndex) -> pd.Series:
     """Reindex a forward-filled CALENDAR-daily series onto `as_of_dates`
     using the value as of the PRIOR calendar day (T-1 lag discipline)."""
@@ -308,7 +300,3 @@ SUB_PERIODS: list[tuple[str, str, str]] = [
     ("2018-2021", "2018-01-01", "2022-01-01"),
     ("2022-2026", "2022-01-01", "2027-01-01"),
 ]
-
-
-def today_iso() -> str:
-    return date.today().isoformat()

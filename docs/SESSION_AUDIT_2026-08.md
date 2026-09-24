@@ -1629,3 +1629,124 @@ floor from the learning floor.
 - A `;` after pytest let a failing test get committed and pushed. It was fixed in the next commit.
   Chain verification with `&&`.
 - Merge gate 3b correctly blocked #1988 until its body declared the reviewable/generated split.
+
+## Checkpoint — 2026-09-24 (PM): G1 target, G2 retraction, calibration floor, the derived premium, G3 hygiene
+
+**PR state at session start (verified, not taken from the brief).**
+- #1962 and #1956 were merged by GG.
+- **#1992 was not merged**, though the brief said it was. It was refreshed against master, passed
+  `check_required_checks_positive.py`, and was self-merged.
+- #1958 (R4): the baseline and ADR 039 conflicts were resolved by merging master in; both sides are
+  kept. All required checks pass. **It goes to GG**: 425 reviewable lines, over the gate.
+
+**#1962 verified live (Chrome, 412 px wide, EN and HI).**
+- No banned jargon was found. The main page and How-we-know text were run through
+  `BANNED_TERMS`.
+- Numbers render; there are no raw keys, `undefined` or `NaN`.
+- No console errors. There are two warnings about unused Devanagari font preloads on the EN page.
+- **Hindi falls back to English cleanly** for the calculator block and two #1962 lines.
+- **Found a hardcoded claim.** How-we-know labelled the next-day range "Right about 4 times out of
+  5", which is the 80% target, while the same page showed 73% measured (n 63). A fix is in draft
+  #2001, for GG: it floors the measured coverage.
+- **Also for GG:** the same page prints "p = 0.0000".
+
+**G1 — merged (#1997, ADR 042 Amendment B1).**
+- The power target is now sized for the smallest edge worth detecting: 5 points over always-up,
+  with the same conservative construction (std √0.16915).
+- **418.32 effective folds**, replacing 891.70.
+- Power:
+
+  | edge | at 144.17 | at 418.32 | at 891.70 |
+  |---|---|---|---|
+  | 3.4 points (the reference) | 25.9% | 52.3% | 80.0% |
+  | 5 points | 42.7% | 80.0% | 97.6% |
+
+- **Timeline:** about 0.51 effective folds per calendar day (0.664 labelled days × 0.762), so the
+  target is reached around **December 2028**, if IBJA capture has no gaps.
+- `--check` still reproduces the frozen reference.
+
+**G2 — merged (#1998).** ADR 040 now opens with a dated retraction note pointing to ADR 044, with
+inline markers. The original text is kept.
+
+**Item 6, calibration — ADR 045, #2000, goes to GG (601 lines).**
+- Registered at pushed commit `4b3686a5`, then run from that branch as analysis run 36000320396.
+  All 25 shards ran at `4b3686a5`, each on n = 3,201 COMEX test days.
+- **The floor does not come down.** Accuracy-test detections out of 100 seeds:
+
+  | learner | q = 0.15 | q = 0.20 |
+  |---|---|---|
+  | control | 57 | 86 (floor 0.20) |
+  | Platt | 34 | 29 |
+  | isotonic | 14 | 28 |
+  | temperature | 11 | 26 |
+  | ensemble + Platt | 34 | 98 (floor 0.20) |
+
+- The Brier test detected at most 2/100 for any learner. False alarms at q = 0: 0/100 everywhere.
+- Calibration cut the Brier deficit (−0.038 → −0.008) but did not beat climatology.
+- **Secondary, not the criterion:** the ensemble is steadier at q = 0.20 (paired 14 vs 2,
+  p = 0.0021), but its floor is no lower.
+
+**G4.**
+- **a. CBIC duty table — merged (#2004), `data/duty_cbic.json`, 2019 onward.**
+  - 2021–2024 rows were read in the notification text. The 2022 row was read from the Gazette. The
+    2023 and 2024 rows were re-read by me.
+  - 2026 was read on a third-party mirror only. SWS before 2022-07 is inferred.
+  - The 2013 rows are excluded: their notification numbers could not be verified.
+- **The live `data/duty_events.json` is wrong in three places (not changed; GG):**
+  - the 2024 cut is in force 07-24, not 07-23;
+  - the 2023-02-02 BCD/AIDC rebalancing is missing;
+  - the 2026 hike also moved AIDC 1→5% (total 6→15%).
+- **b. The derived premium (#2004).**
+  - 254 usable days, 183 of them dense. Mean −0.92%, sd 1.25 points.
+  - 2026-05-13 hike: +0.0% (n 14) before, −3.1% (n 6) after.
+  - Festivals: n 5 dense days, not readable.
+  - AR(1) is only 0.30. A third of the variance is the gold move between the COMEX close and
+    IBJA's fix (diagnostic, not usable for prediction). The residual AR(1) is 0.59.
+- **c. Sources (research, nothing switched):**
+  - **AMFI's terms prohibit storing or republishing site content**, so GOLDBEES NAV via AMFI is
+    also encumbered.
+  - SEBI circular HO/(68)2026-IMD-POD-2/I/5780/2026 (26 Feb 2026) exists on sebi.gov.in. Its body
+    was not read. Secondary sources say gold-ETF NAV moved from LBMA-fix-plus-AMC-adjustments to
+    MCX's polled domestic spot price from 2026-04-01. If so, NAV is a cleaner domestic price only
+    after that date.
+  - **No clean, free, daily COMEX replacement was found.**
+    - FRED's LBMA series was removed on 2022-01-31.
+    - LBMA moved its historical tables behind a licence in Nov 2025.
+    - CME needs a paid licence even for end-of-day data.
+    - The SSGA and iShares NAV CSVs prohibit redistribution.
+    - The World Bank Pink Sheet is CC BY 4.0 but monthly only.
+    - The Alpha Vantage and Twelve Data terms still need a first-hand read.
+  - **USD/INR has the same problem:** FBIL requires a licence to redistribute.
+- **d. Pre-registered, ADR 046 (#2006).** The test asks whether the premium's pull back to its
+  mean beats "yesterday's premium plus the global move" on next-fix IBJA error in ₹/g.
+  - Forward-only; read at n ≥ 120, about April 2027.
+  - The 2022–2026 run is exploratory only.
+
+**G3, code hygiene — #2005.**
+- 139 lines, almost all deletions:
+  - 9 dead Python symbols and the 6 tests that covered only them;
+  - 2 dead `app.js` functions, with the SW VERSION bumped.
+- Every removal was re-checked by grep on master.
+- Kept, with reasons in the PR: ADR-named, pre-registered and guard code.
+- Duplicated helpers (e.g. `_wilson_ci` ×3) are listed, not merged.
+- Headless tests pass on CI.
+- **SW VERSION hazard:** #2001 and #2005 both bump to "v54". Whichever merges second needs a new
+  VERSION.
+
+**Item 7, the weekly range.**
+- The forward shadow keeps running; the first entries are due on the Sunday 09-27 run.
+- **Draft copy for the promotion PR (GG):**
+
+  > **How much could the price move this week?**
+  > Over the next 7 days, the 22K price will most likely stay between ₹{low} and ₹{high}, about
+  > ₹{half} either way from today. Ranges like this have held {N} times out of 10 so far ({k} of
+  > {n} weeks checked). This shows how much gold usually moves in a week. It doesn't say which way
+  > it will go.
+
+  {N} comes from `times_out_of_ten(forward coverage)`, rounded down. There is one range statement
+  on the page, per ADR 043. The Hindi version needs native review.
+
+**Still to verify after Sunday 2026-09-27** (item 4):
+- v2 logs `[adr042-v2]` with n = 0 and the embargo recorded;
+- the M3 stratified shadow result, with n and Wilson CIs;
+- the first entries from the nowcast and weekly-range shadows.
