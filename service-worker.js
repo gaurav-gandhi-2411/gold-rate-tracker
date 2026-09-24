@@ -102,13 +102,18 @@
 // how-we-know.js/how-we-know-strings.js from the same data files. All three are new
 // precached shell files (below). index.html + app.js + i18n.js + style.css changed too
 // (banned-jargon rewrites, accordion body replaced with a plain summary + link).
-const VERSION = "v55-20260924-hwk-measured-range";
+// 2026-09-24 (v56): new flags.js -- minimal feature-flag mechanism (FEATURE_FLAGS/
+// isFeatureOn()) so future user-facing features can merge OFF by default. Loaded before
+// app.js/how-we-know.js on both pages; new precached shell file (below). index.html +
+// how-we-know.html + app.js changed too (script tag + renderFlaggedFeatures() hook).
+const VERSION = "v56-20260924-feature-flags";
 const SHELL_CACHE = `gold-shell-${VERSION}`;
 
 const SHELL_FILES = [
   "./",
   "./index.html",
   "./style.css",
+  "./flags.js",
   "./app.js",
   "./i18n.js",
   "./how-we-know.html",
