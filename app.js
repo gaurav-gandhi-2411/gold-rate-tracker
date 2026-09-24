@@ -3258,13 +3258,25 @@ function applyLanguage(lang) {
   const coveragePromise = loadJSON(COVERAGE_URL);
   const cadencePromise = loadJSON(CADENCE_URL);
   const bandCoveragePromise = loadJSON(CALIBRATION_BAND_COVERAGE_URL); // AE1: measured band coverage
+  // page_v2 (item 6, flagged OFF) -- none of these five files exist on master yet; each
+  // pre-catches to null exactly like fcPromise above, so a 404 never surfaces as a Sentry
+  // event and every page_v2 reader sees the same "not shipped yet" null it would see once
+  // these genuinely start 404ing only intermittently.
+  const markupTodayPromise = loadJSON(MARKUP_TODAY_URL).catch(() => null);
+  const waitOrBuyPromise = loadJSON(WAIT_OR_BUY_TODAY_URL).catch(() => null);
+  const eventWatchPromise = loadJSON(EVENT_WATCH_TODAY_URL).catch(() => null);
+  const nextDayRangeShadowPromise = loadJSON(NEXT_DAY_RANGE_SHADOW_URL).catch(() => null);
+  const weeklyRangeShadowLogPromise = loadJSON(WEEKLY_RANGE_SHADOW_LOG_URL).catch(() => null);
   // These five are only actually consumed much later (via Promise.allSettled, after
   // awaiting price+forecast and rendering the hero) — attach an inert catch to each
   // now so an early rejection (e.g. a timeout firing while we're still waiting on
   // prices) doesn't surface as a spurious unhandledrejection console error / Sentry
   // event in the meantime. Promise.allSettled below still sees the real outcome —
   // this doesn't replace the promise, just marks it handled.
-  [btPromise, driftPromise, coveragePromise, cadencePromise, bandCoveragePromise].forEach(p => p.catch(() => {}));
+  [
+    btPromise, driftPromise, coveragePromise, cadencePromise, bandCoveragePromise,
+    markupTodayPromise, waitOrBuyPromise, eventWatchPromise, nextDayRangeShadowPromise, weeklyRangeShadowLogPromise,
+  ].forEach(p => p.catch(() => {}));
 
   // Load prices (critical path)
   try {
@@ -3344,16 +3356,27 @@ function applyLanguage(lang) {
   updateOfflineBanner(); // update offline banner text now allReadings is populated
 
   // Remaining optional data (already in flight above; all gracefully degrade on failure).
-  const [bt, drift, coverage, cadence, bandCoverage] = await Promise.allSettled([
+  const [
+    bt, drift, coverage, cadence, bandCoverage,
+    markupToday, waitOrBuy, eventWatch, nextDayRangeShadow, weeklyRangeShadowLog,
+  ] = await Promise.allSettled([
     btPromise,
     driftPromise,
     coveragePromise,
     cadencePromise,
     bandCoveragePromise,
+    markupTodayPromise,
+    waitOrBuyPromise,
+    eventWatchPromise,
+    nextDayRangeShadowPromise,
+    weeklyRangeShadowLogPromise,
   ]);
 
   // Report any optional-fetch failures so silent pipeline breaks surface in Sentry.
   if (typeof Sentry !== "undefined") {
+    // page_v2's five fetches are pre-caught to null above (same reasoning as fcPromise), so
+    // they never reach "rejected" here regardless of a genuine 404 -- intentionally excluded
+    // from this Sentry sweep, which only reports promises that CAN still show "rejected".
     const optionalUrls = [
       BACKTEST_URL, DRIFT_URL, COVERAGE_URL, CADENCE_URL, CALIBRATION_BAND_COVERAGE_URL,
     ];
@@ -3368,6 +3391,11 @@ function applyLanguage(lang) {
   lastCoverage = coverage.status === "fulfilled" ? coverage.value : null;
   lastCadenceMetric = cadence.status === "fulfilled" ? cadence.value : null;
   lastBandCoverage = bandCoverage.status === "fulfilled" ? bandCoverage.value : null;
+  lastMarkupToday = markupToday.status === "fulfilled" ? markupToday.value : null;
+  lastWaitOrBuy = waitOrBuy.status === "fulfilled" ? waitOrBuy.value : null;
+  lastEventWatch = eventWatch.status === "fulfilled" ? eventWatch.value : null;
+  lastNextDayRangeShadow = nextDayRangeShadow.status === "fulfilled" ? nextDayRangeShadow.value : null;
+  lastWeeklyRangeShadowLog = weeklyRangeShadowLog.status === "fulfilled" ? weeklyRangeShadowLog.value : null;
   renderCadenceStrings(lastCadenceMetric); // override the "still loading" fallback with the real number
   renderModelSignal(fc, allReadings, btData, lastCoverage, lastDrift);  // re-render — coverage/drift now loaded
   // AE1 (audit 2026-09-10): reinstates the re-render G2 removed. G2 was correct
@@ -3382,7 +3410,15 @@ function applyLanguage(lang) {
   renderStaleBanner(fc, lastBandCoverage);
   renderForecastVsActual(btData);
   renderAccuracySummary(fc, lastDrift);
-  renderFlaggedFeatures(); // feature-flag demo hook -- no-op while every flag is off
+  // page_v2 (item 6, flagged OFF): no-op while every flag in FEATURE_FLAGS stays false --
+  // see renderFlaggedFeatures()'s own comment for the full per-flag gating story.
+  renderFlaggedFeatures(fc, allReadings, lastBandCoverage, {
+    markupToday: lastMarkupToday,
+    waitOrBuy: lastWaitOrBuy,
+    eventWatch: lastEventWatch,
+    nextDayRangeShadow: lastNextDayRangeShadow,
+    weeklyRangeShadowLog: lastWeeklyRangeShadowLog,
+  });
 
   // Dismiss chart callout when tapping outside the chart canvas (Φ8C'/Ψ3C.3)
   const chartCanvas = document.getElementById("chart");
