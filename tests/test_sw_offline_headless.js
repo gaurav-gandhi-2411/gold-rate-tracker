@@ -124,9 +124,13 @@ try {
   // network, nothing cached, nothing honest to serve. Excluded from the "must be served from
   // cache" assertion below for exactly that reason -- the cache-fallback contract this test
   // exists to protect only ever applied to files that loaded successfully at least once.
+  // `next_day_range_shadow.json` moved OUT of this set after merging master: ADR 047 (#2017)
+  // shipped it for real (`scripts/run_next_day_range_shadow.py` now writes a committed file),
+  // so it 200s online like any other shipped data file and belongs in the "must be served from
+  // cache offline" assertion below, not the not-yet-shipped one.
   const NOT_YET_SHIPPED_DATA_FILES = new Set([
     "markup_today.json", "wait_or_buy_today.json", "event_watch_today.json",
-    "next_day_range_shadow.json", "weekly_range_shadow_log.json",
+    "weekly_range_shadow_log.json",
   ]);
   const shipped = names.filter((n) => !NOT_YET_SHIPPED_DATA_FILES.has(n));
   const bad = shipped.filter((n) => !(seen[n].status === 200 && seen[n].sw));
