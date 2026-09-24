@@ -120,3 +120,37 @@ small ones.
 
 The runner is `scripts/analysis_vol_regime_prereg.py`, committed with this ADR. It downloads only
 if the snapshot files do not exist.
+
+## Result (run 2026-09-24, after this ADR merged as #1987)
+
+**Provenance:** `reports/vol_regime_prereg_results.json` at `b9bcd7e8`. Snapshot SHA-256: GC=F
+`2db071aa…`, stored in the results. The first download of these series happened after the
+registration merged.
+
+**Not confirmed. The regime rule is worse than always predicting "up".**
+
+| test | n | result | one-sided p |
+|---|---|---|---|
+| **P1** rule vs always-up, GC=F 2001-10-04 → 2012-12-28 | 2,816 (effective 2,900) | 50.4% vs 54.2% (**−3.8 points**) | 0.999 |
+| S1 lag-1 autocorrelation after calm days > 0 | 1,347 | −0.026 | 0.83 |
+| S2 lag-1 autocorrelation after volatile days < 0 | 1,469 | +0.016 | 0.73 |
+| S3 rule vs always-up, calm days | 1,347 | 48.1% vs 55.6% | 1.00 |
+| S4 rule vs always-up, volatile days | 1,469 | 52.6% vs 53.0% | 0.58 |
+| S5 D4's VR(20), low-volatility days > 1 | 1,535 | 0.93 | 0.70 |
+| S6 D4's VR(20), high-volatility days < 1 | 1,534 | 0.84 | 0.13 |
+| Robustness: P1 on GLD 2005-12-16 → 2012-12-28 | 1,770 | 49.7% vs 54.4% (−4.7 points) | 0.999 |
+
+No secondary passes Benjamini-Hochberg. The calm share is 47.8%.
+
+Every piece points the wrong way or nowhere:
+
+- Calm days show slight reversal, not momentum.
+- D4's own statistic does not reproduce: it gives 0.93 on calm days, where D4 reported 1.36.
+- Of the effect D4 reported, one half fails to replicate (S5). The other half (S6, 0.84) is
+  inside the null range its construction produces from pure noise.
+
+**Consequence for ADR 040 (proposed, for GG to confirm — ADR 040 itself is not edited here):** "weak regime structure: momentum when calm, reversal when volatile"
+should be withdrawn. It came from a measurement construction that produces the effect without any
+structure, and it does not replicate on 11 years of unseen COMEX data. The list of things that
+could change ADR 040's verdict loses this item. The remaining items are new information (see
+the data-source review) and years more IBJA days.
