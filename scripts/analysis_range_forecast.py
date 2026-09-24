@@ -67,7 +67,6 @@ MODEL_SHARDS: list[str] = [
     "quantile_gbm",
     "chronos",
 ]
-DATASETS: list[str] = ["proxy", "ibja"]
 LEVELS: tuple[float, ...] = (0.8, 0.9)
 FULL_HORIZONS: tuple[int, ...] = (1, 5, 10, 20)
 SMOKE_HORIZONS: tuple[int, ...] = (1, 5)  # local smoke only -- bounds wall-clock

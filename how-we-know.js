@@ -130,6 +130,11 @@ function renderFullMethodology(fc, bt, drift, coverage, bandCoverage) {
     const lower   = fc.headline?.lower ?? fc.lower;
     const upper   = fc.headline?.upper ?? fc.upper;
     const hasPI   = typeof lower === "number" && typeof upper === "number";
+    // The range's own track record, floored (never the 80% target it aims for):
+    // the same coverage figure the "How accurate" section shows unrounded.
+    const covOk   = coverage && typeof coverage.coverage === "number" && coverage.n > 0;
+    const timesN  = covOk ? Math.max(0, Math.min(10, Math.floor(coverage.coverage * 10 + 1e-9))) : null;
+    const times   = covOk ? fractionOutOf10Phrase(coverage.coverage * 100) : null;
     parts.push(`
       <div class="meth-section">
         <h3 class="meth-heading">${tHwk("methNextDayRangeHeading")}</h3>
@@ -137,7 +142,7 @@ function renderFullMethodology(fc, bt, drift, coverage, bandCoverage) {
           <div class="meth-stat">
             <div class="meth-stat-label">${tHwk("methEstimateLabel")}</div>
             <div class="meth-stat-value">₹${fmtINR(pred22k)}</div>
-            ${hasPI ? `<div class="meth-stat-sub">${tHwk("methRangeSub", { low: fmtINR(lower), high: fmtINR(upper) })}</div>` : ""}
+            ${hasPI ? `<div class="meth-stat-sub">${tHwk("methRangeSub", { low: fmtINR(lower), high: fmtINR(upper), times, n: timesN })}</div>` : ""}
           </div>
           <div class="meth-stat">
             <div class="meth-stat-label">${tHwk("methMethodLabel")}</div>
