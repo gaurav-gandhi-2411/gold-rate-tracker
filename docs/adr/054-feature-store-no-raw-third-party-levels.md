@@ -1,4 +1,4 @@
-# ADR 053 — Feature Store Stops Committing Raw Third-Party Levels (schema_version 5)
+# ADR 054 — Feature Store Stops Committing Raw Third-Party Levels (schema_version 5)
 
 **Status:** Accepted, implemented 2026-09-25 (D3).
 

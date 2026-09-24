@@ -212,7 +212,7 @@ def main() -> int:
     # series (still used internally above to compute landed_parity/premium_pct). landed_parity
     # is KEPT: it is comex_usd_oz/31.1034768*10*usd_inr*(1+duty_rate), a product of the two raw
     # series (plus a public CBIC duty rate and a physical constant), not either series itself --
-    # same "product, not separable back into its raw components" reasoning ADR 053 applies to
+    # same "product, not separable back into its raw components" reasoning ADR 054 applies to
     # data/history_seed_inr22k_proxy.parquet's raw_pre_duty. One equation (landed_parity /
     # (1+duty_rate) = comex_usd_oz/31.1034768*10*usd_inr) with two unknowns cannot be solved for
     # either raw series.

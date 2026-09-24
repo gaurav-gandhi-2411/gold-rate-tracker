@@ -1021,7 +1021,7 @@ def _make_mock_price_df(dates: list[str], values: list[float]) -> pd.DataFrame:
 class TestPatchMacroSeries:
     def test_patch_fills_missing_crude_and_tips(self, tmp_path: Path) -> None:
         """patch_missing_macro_series fills null crude_wti/tips on backfill_yfinance rows,
-        as a z-score against trailing history plus a sha256 of the raw value (ADR 053) --
+        as a z-score against trailing history plus a sha256 of the raw value (ADR 054) --
         not the raw level itself."""
         path = _store_path(tmp_path)
         snap = _make_snapshot(
@@ -1136,7 +1136,7 @@ class TestPatchMacroSeries:
 
 
 # ---------------------------------------------------------------------------
-# TestMacroDerivation — macro_zscore / macro_value_hash (ADR 053)
+# TestMacroDerivation — macro_zscore / macro_value_hash (ADR 054)
 # ---------------------------------------------------------------------------
 
 

@@ -14,7 +14,7 @@ STORE_PATH: Path = Path(__file__).parent.parent / "data" / "feature_store" / "sn
 
 # Trailing window (calendar days, since the in-memory macro frame is forward-filled daily
 # including weekends) used to z-score each macro series at capture time. ~365 calendar days
-# approximates a 252-trading-day year. See ADR 053: schema_version 5 stopped writing the raw
+# approximates a 252-trading-day year. See ADR 054: schema_version 5 stopped writing the raw
 # Yahoo Finance level into gold_usd/usd_inr/etc. -- republishing it in this public repo is not
 # covered by Yahoo's terms -- and writes a z-score of that level against its own recent history
 # instead. A window shorter than 2 points can't produce a spread and is treated as "missing",
@@ -42,7 +42,7 @@ def macro_value_hash(raw_value: float) -> str:
     """SHA-256 of the raw third-party value at fixed 6-decimal precision. Lets a later,
     independently-sourced re-fetch of the same historical date be checked against what this
     snapshot actually captured, without the raw number itself ever being committed to the
-    public repo (ADR 053)."""
+    public repo (ADR 054)."""
     return hashlib.sha256(f"{raw_value:.6f}".encode()).hexdigest()
 
 
@@ -60,10 +60,10 @@ _ALL_COLUMNS: list[str] = [
     # be absent even when the cache loaded, e.g. new tickers not yet in historical cache --
     # india_vix itself is null for every row captured before this change, by construction).
     "n_macro_null",
-    # From schema_version 5 (ADR 053), these 9 columns hold each series' z-score against its
+    # From schema_version 5 (ADR 054), these 9 columns hold each series' z-score against its
     # own trailing MACRO_ZSCORE_WINDOW_CALENDAR_DAYS window, NOT the raw Yahoo Finance level --
     # committing the raw level would republish it in this public repo. Rows captured under
-    # schema_version <= 4 still hold the raw level (git history is not rewritten; ADR 053).
+    # schema_version <= 4 still hold the raw level (git history is not rewritten; ADR 054).
     # A training run spanning the v4->v5 boundary must not treat these columns as one
     # consistent unit without accounting for that -- filter on schema_version first.
     "gold_usd",
@@ -247,7 +247,7 @@ def capture_daily_snapshot(
                 macro_asof[f"{series}_asof_date"] = None
             else:
                 raw_last = float(col.iloc[-1])
-                # Stored value is a z-score, not the raw level -- see macro_zscore (ADR 053).
+                # Stored value is a z-score, not the raw level -- see macro_zscore (ADR 054).
                 macro_values[series] = macro_zscore(col)
                 macro_hashes[f"{series}_sha256"] = macro_value_hash(raw_last)
                 # The index may be a DatetimeIndex or a plain RangeIndex.

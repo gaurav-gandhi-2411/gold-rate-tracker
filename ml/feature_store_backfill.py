@@ -184,7 +184,7 @@ def run_backfill(
                 for series in _MACRO_SERIES:
                     if series in macro_df.columns and not pd.isna(macro_row.get(series)):
                         raw_last = float(macro_row[series])
-                        # Stored value is a z-score, not the raw level -- ADR 053.
+                        # Stored value is a z-score, not the raw level -- ADR 054.
                         macro_values[series] = macro_zscore(available[series].dropna())
                         macro_hashes[f"{series}_sha256"] = macro_value_hash(raw_last)
                         if hasattr(macro_row_date, "date"):
@@ -457,7 +457,7 @@ def patch_missing_macro_series(
         target_ts = pd.Timestamp(d, tz="UTC")
 
         # Patched values are z-scores against their own trailing history, not the raw
-        # level -- same ADR 053 policy as run_backfill/capture_daily_snapshot.
+        # level -- same ADR 054 policy as run_backfill/capture_daily_snapshot.
         if pd.isna(row.get("crude_wti")) and crude_df is not None and not crude_df.empty:
             available = crude_df.loc[:target_ts]
             if not available.empty:
