@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from ml.fusion_snapshot_store import append_snapshot_rows, load_snapshots
+from ml.fusion_snapshot_store import append_snapshot_rows, load_plausible_snapshots, load_snapshots
 
 _ROW_A = {
     "capture_utc": "2026-07-19T12:00:00Z",
@@ -73,3 +73,24 @@ def test_same_capture_different_city_both_kept(tmp_path):
     assert n == 2
     df = load_snapshots(store)
     assert set(df["city"]) == {"Bangalore", "Chennai"}
+
+
+def test_load_plausible_snapshots_empty_when_no_file(tmp_path):
+    df = load_plausible_snapshots(tmp_path / "nonexistent.parquet")
+    assert df.empty
+
+
+def test_load_plausible_snapshots_excludes_epoch_placeholder_rows(tmp_path):
+    # The exact corrupt shape found in data/fusion_snapshots.parquet: 441
+    # kalyan rows carrying "1969-12-31T18:30:00+00:00" (Kalyan's own
+    # placeholder epoch, converted IST->UTC -- see ml.sources.kalyan).
+    store = tmp_path / "fusion_snapshots.parquet"
+    corrupt_row = dict(_ROW_B, observed_at="1969-12-31T18:30:00+00:00")
+    append_snapshot_rows([_ROW_A, corrupt_row], store)
+
+    raw = load_snapshots(store)
+    assert len(raw) == 2  # raw accessor keeps the corrupt row -- no history rewrite
+
+    plausible = load_plausible_snapshots(store)
+    assert len(plausible) == 1
+    assert plausible.iloc[0]["source"] == "ibja"
