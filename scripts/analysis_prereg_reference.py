@@ -57,7 +57,8 @@ def compute_reference() -> dict:
 
     warnings.filterwarnings("ignore")
     cfg = PREREGISTERED_CONFIG
-    dataset = build_dataset()
+    # v1 was frozen on labels that bridge holes in the IBJA record (pre-G2).
+    dataset = build_dataset(require_consecutive=False)
     # Pinned to the selection folds: the input parquets gain rows every few
     # hours, and an unpinned reference would drift as new days are labelled.
     dataset = dataset[dataset["as_of_date"].astype(str) <= REFERENCE_LAST_AS_OF]
