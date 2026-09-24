@@ -9,15 +9,20 @@ reproducible definition of the reference computation. It records a manifest
 (input-file hashes, library versions, git SHA, per-fold digest) so any later
 run can prove it computed the same thing.
 
-Reference definition (unchanged from ADR 038 as first frozen): config J, the
-original protocol (no embargo, every labelled fold), one-sided HAC-DM on 0/1
-loss vs always-up, lag = h - 1 = 1. It describes the SELECTION data; the
-confirmatory test itself (embargo, post-registration days only) is separate.
+Two registrations (both: config J on the selection folds, as_of <= 2026-09-18,
+one-sided HAC-DM on 0/1 loss vs always-up, lag = h - 1 = 1):
+  v2 (default, ADR 042, active): consecutive-IBJA-day labels, embargo on
+      label_date_h2 -- the confirmatory protocol applied to the selection data.
+  v1 (ADR 038 A2, superseded): the original protocol -- labels that bridge holes
+      in the IBJA record, no embargo. Kept reproducible for the audit trail.
+
+The figures depend on library versions (see ml.direction.preregistration), so
+run --check in the pinned environment (ml/requirements-inference.lock).
 
 Usage:
-  python scripts/analysis_prereg_reference.py            # print the reference
-  python scripts/analysis_prereg_reference.py --check    # exit 1 unless it
-                                                          # matches the frozen constants
+  python scripts/analysis_prereg_reference.py [--protocol v1|v2]          # print
+  python scripts/analysis_prereg_reference.py [--protocol v1|v2] --check  # exit 1
+                                              # unless it matches the frozen constants
   analysis.yml contract: --list-shards / --shard KEY --out DIR / --aggregate DIR --out F
 """
 
@@ -46,7 +51,7 @@ def _sha256(path: Path) -> str:
     return hashlib.sha256(path.read_bytes()).hexdigest()
 
 
-def compute_reference() -> dict:
+def compute_reference(protocol: str = "v2") -> dict:
     import warnings
     from importlib.metadata import version
 
@@ -57,8 +62,8 @@ def compute_reference() -> dict:
 
     warnings.filterwarnings("ignore")
     cfg = PREREGISTERED_CONFIG
-    # v1 was frozen on labels that bridge holes in the IBJA record (pre-G2).
-    dataset = build_dataset(require_consecutive=False)
+    v2 = protocol == "v2"
+    dataset = build_dataset(require_consecutive=v2)
     # Pinned to the selection folds: the input parquets gain rows every few
     # hours, and an unpinned reference would drift as new days are labelled.
     dataset = dataset[dataset["as_of_date"].astype(str) <= REFERENCE_LAST_AS_OF]
@@ -71,6 +76,7 @@ def compute_reference() -> dict:
         calibrate_gbm=cfg["calibrate_gbm"],
         min_train_size=cfg["min_train_size"],
         return_raw=True,
+        embargo_label_date_col="label_date_h2" if v2 else None,
     )
     raw = result["raw"]
     scored = score_config(raw["y_true"], raw["y_prob"], horizon=cfg["horizon"])
@@ -88,6 +94,7 @@ def compute_reference() -> dict:
     ]
     fold_digest = hashlib.sha256(json.dumps(folds).encode()).hexdigest()
     return {
+        "protocol": protocol,
         "generated_at_utc": datetime.now(UTC).isoformat(),
         "git_sha": subprocess.run(
             ["git", "rev-parse", "HEAD"], capture_output=True, text=True, check=False, cwd=ROOT
@@ -118,7 +125,7 @@ def check(ref: dict) -> list[str]:
     """Compare against the frozen constants in ml.direction.preregistration."""
     from ml.direction import preregistration as pr
 
-    frozen = pr.REFERENCE
+    frozen = pr.REFERENCE if ref.get("protocol", "v2") == "v2" else pr.REFERENCE_V1
     errors = []
     for key, want in frozen.items():
         got = ref.get(key)
@@ -133,6 +140,7 @@ def check(ref: dict) -> list[str]:
 def main() -> int:
     ap = argparse.ArgumentParser()
     ap.add_argument("--check", action="store_true")
+    ap.add_argument("--protocol", choices=["v1", "v2"], default="v2")
     ap.add_argument("--list-shards", action="store_true")
     ap.add_argument("--shard")
     ap.add_argument("--aggregate", type=Path)
@@ -148,7 +156,7 @@ def main() -> int:
         args.out.write_text(json.dumps(ref, indent=2) + "\n", encoding="utf-8")
         print(json.dumps(ref, indent=2))
         return 1 if errors else 0
-    ref = compute_reference()
+    ref = compute_reference(args.protocol)
     if args.shard:
         args.out.mkdir(parents=True, exist_ok=True)
         (args.out / "reference.json").write_text(json.dumps(ref, indent=2) + "\n", encoding="utf-8")

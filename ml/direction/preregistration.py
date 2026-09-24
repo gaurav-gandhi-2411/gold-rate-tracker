@@ -64,8 +64,21 @@ AMENDMENT A2 (2026-09-23, approved by GG, made BEFORE any post-registration
 day was scored -- the pre-registration step has never run): (1) the proxy arm
 now uses the prior trading day's India VIX close (it used the close of the
 same day whose move it predicts); (2) the reference figures are re-frozen
-from a reproducible computation (see REFERENCE). Model configuration, test
+from a reproducible computation (see REFERENCE_V1). Model configuration, test
 and alpha unchanged.
+
+V2 RE-REGISTRATION (2026-09-24, GG decision G2, docs/adr/042): v1 (ADR 038 as
+amended by A1/A2) is SUPERSEDED before any post-registration day was scored.
+Its labels were built from "the next IBJA row", which before 2025-Q2 and across
+later holes in data/ibja_rates.parquet was up to 122 days away (13 of 182 h2
+labels spanned 7-122 days). v2 keeps the same frozen model configuration, test
+and alpha, and changes only: (1) labels are built across consecutive IBJA
+publication days only (build_dataset(require_consecutive=True)); (2) only days
+after the v2 registration date count; (3) the reference figures are re-frozen
+on the clean labels under the confirmatory protocol (with the embargo), and the
+power target is the larger of v1's 144.17 and the v2 reference's own figure
+(same conservative construction). The v1 constants below stay so the v1
+reference remains reproducible (`analysis_prereg_reference.py --protocol v1`).
 """
 
 from __future__ import annotations
@@ -110,7 +123,7 @@ ALPHA = 0.05
 # library-version sets and three data snapshots -- and gives the values
 # below. Reproduce with `python scripts/analysis_prereg_reference.py --check`;
 # fold_digest pins the exact per-fold (date, label, probability) sequence.
-REFERENCE: dict = {
+REFERENCE_V1: dict = {
     "n": 161,
     "effective_n": 112.524964,
     "mean_diff": -0.06832298,
@@ -130,18 +143,54 @@ REFERENCE: dict = {
 # std = sqrt(gamma_0)); kept as the conservative choice, flagged in ADR 038.
 # It rests on the leaky effect size, so it is optimistic about power.
 # DO NOT recompute from accumulating shadow data (see module docstring).
-PREREGISTERED_N_FOR_POWER: float = REFERENCE["n_for_power"]
+PREREGISTERED_N_FOR_POWER_V1: float = REFERENCE_V1["n_for_power"]
+PROTOCOL_VERSION_V1 = "adr038-A2"
+CONFIRMATORY_AFTER_AS_OF_V1 = "2026-09-23"
 
-# Amendment A1 (docs/adr/038). Protocol id stored on every logged run so the
-# append-only log shows which protocol produced each entry.
-PROTOCOL_VERSION = "adr038-A2"
+# --- v2 (docs/adr/042) -- the ACTIVE registration ----------------------------
+# Reference = the selection data (as_of <= 2026-09-18) under the confirmatory
+# protocol: config J, consecutive-day labels, embargo on label_date_h2. Frozen
+# in the pinned environment (ml/requirements-inference.lock); `libraries` is
+# part of the frozen record because the figures depend on it (scikit-learn
+# 1.7.2 gives p 0.139, 1.9.0 gives p 0.157 on identical data), so a --check in
+# another environment fails with a named reason instead of a silent mismatch.
+REFERENCE: dict = {
+    "n": 146,
+    "effective_n": 111.311086,
+    "mean_diff": -0.03424658,
+    "long_run_var": 0.16915446,
+    "p_value": 0.15717778,
+    "accuracy": 0.62328767,
+    "n_for_power": 891.697,
+    "first_as_of": "2025-05-19",
+    "last_as_of": "2026-09-18",
+    "fold_digest": "f715a48e5d12341def1c0a00e47f48014e895b23b69a06bf8209f7819ad751ee",
+    "libraries": {
+        "numpy": "2.4.6",
+        "pandas": "3.0.6",
+        "scikit-learn": "1.9.0",
+        "lightgbm": "4.7.0",
+        "scipy": "1.17.1",
+    },
+}
+# GG decision G1/G2: never below v1's 144.17. The v2 reference's own figure
+# (same double-counting construction as v1, i.e. conservative) is larger
+# because the clean, embargoed effect is half the size (3.4 points vs 6.8).
+# The consistent formula (std = sqrt(gamma_0)) gives ~680 -- recorded in
+# ADR 042 for future registrations only; not used here.
+PREREGISTERED_N_FOR_POWER: float = max(PREREGISTERED_N_FOR_POWER_V1, REFERENCE["n_for_power"])
+
+# Protocol id stored on every logged run so the append-only log shows which
+# protocol produced each entry.
+PROTOCOL_VERSION = "adr042-v2"
 # Training row j is usable for test day i only if label_date_h2[j] < as_of[i]
 # (the outcome had matured). At h2 this is an embargo of >= 2 trading days.
 EMBARGO_LABEL_DATE_COL = "label_date_h2"
-# Registration date. Only test days strictly after it count toward the
-# confirmatory test; every earlier day (incl. the 161 selection folds) is
-# training data only.
-CONFIRMATORY_AFTER_AS_OF = "2026-09-23"
+# v2 registration date. Only test days strictly after it count toward the
+# confirmatory test; every earlier day is training data only.
+CONFIRMATORY_AFTER_AS_OF = "2026-09-24"
+# v2 labels span consecutive IBJA publication days only (ml.direction.dataset).
+REQUIRE_CONSECUTIVE_LABELS = True
 
 DEAD_ZONE_THRESHOLD_RS_PER_GRAM = 100.0
 
@@ -188,7 +237,7 @@ def run_live_arm(dataset: pd.DataFrame | None = None) -> dict:
     """Re-scores PREREGISTERED_CONFIG on the live h2 dataset. `dataset` may
     be injected for tests; fetched fresh via build_dataset() otherwise."""
     if dataset is None:
-        dataset = build_dataset()
+        dataset = build_dataset(require_consecutive=REQUIRE_CONSECUTIVE_LABELS)
     cfg = PREREGISTERED_CONFIG
     result = run_config_sweep(
         dataset,
@@ -208,6 +257,7 @@ def run_live_arm(dataset: pd.DataFrame | None = None) -> dict:
     scored["protocol_version"] = PROTOCOL_VERSION
     scored["embargo_label_date_col"] = EMBARGO_LABEL_DATE_COL
     scored["confirmatory_after_as_of"] = CONFIRMATORY_AFTER_AS_OF
+    scored["consecutive_day_labels"] = REQUIRE_CONSECUTIVE_LABELS
     scored["scored_as_of_dates"] = raw["as_of_date"]
     # Audit evidence for the embargo: for every scored day, the latest label
     # date used in its training set. Each must be < the scored as_of_date.
@@ -304,6 +354,7 @@ def append_shadow_result(result: dict, path: Path = SHADOW_RESULTS_PATH) -> dict
     # effective_n is None when fewer than 2 post-registration days have been
     # scored (early weeks) — that is "not reached", not an error.
     if entry.get("arm") == "live_h2":
+        entry["preregistered_n_for_power"] = PREREGISTERED_N_FOR_POWER
         entry["reached_preregistered_n"] = (
             result.get("effective_n") or 0.0
         ) >= PREREGISTERED_N_FOR_POWER
