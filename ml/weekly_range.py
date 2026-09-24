@@ -188,3 +188,105 @@ def walk_forward(proxy: pd.Series, ibja: pd.Series, horizon: str) -> pd.DataFram
 def times_out_of_ten(coverage: float) -> int:
     """User-facing "right about N times out of 10": measured coverage, rounded DOWN."""
     return math.floor(coverage * 10 + 1e-9)
+
+
+# ---------------------------------------------------------------------------
+# ENDPOINT horizons (ml.wait_or_buy / ADR 049, F2 "buy now or wait?")
+#
+# Additive only: HORIZONS, complete_windows, base_range and walk_forward above
+# are unchanged, so scripts/analysis_weekly_range.py and
+# scripts/run_weekly_range_shadow.py (ADR 043's own shadow pipeline, driven by
+# HORIZONS) see no behaviour change. These three functions answer a different
+# product question: where does the price LAND at t+k (an endpoint claim), not
+# "does the whole path stay inside the range" (base_range/complete_windows'
+# "stay between" claim). Same shape/scale method (historical simulation on the
+# proxy + split conformal on real IBJA), applied to the single k-day-ahead
+# cumulative return instead of the k-day path min/max.
+# ---------------------------------------------------------------------------
+
+
+def base_range_endpoint(
+    proxy: pd.Series, as_of: pd.Timestamp, k: int
+) -> tuple[float, float] | None:
+    """Historical-simulation ENDPOINT range known at `as_of`: the 10th/90th percentile
+    of the single k-day-ahead cumulative log return (proxy[t+k] / proxy[t]), not
+    base_range's path min/max over days 1..k. Same window (HS_WINDOW) and tail
+    (LEVEL) as base_range."""
+    hist = np.log(proxy[proxy.index <= as_of].to_numpy(dtype=float))[-(HS_WINDOW + k) :]
+    n = len(hist) - k
+    if n < HS_MIN_SAMPLE:
+        return None
+    end_ret = hist[k : k + n] - hist[:n]
+    tail = (1.0 - LEVEL) / 2.0
+    lo = float(np.quantile(end_ret, tail))
+    hi = float(np.quantile(end_ret, 1.0 - tail))
+    return (min(lo, -1e-6), max(hi, 1e-6))
+
+
+def endpoint_windows(price: pd.Series, k: int) -> list[Window]:
+    """Every as-of day whose k-trading-day-ahead target is reachable across a chain of
+    k consecutive publication-day steps (ADR 042's rule, same _consecutive check as
+    complete_windows). `days` is the single target day (an endpoint claim, not a
+    path); path_min == path_max == that day's cumulative return, so the existing
+    `score` and `conformal_scale` functions work unchanged."""
+    dates = list(price.index)
+    vals = np.log(price.to_numpy(dtype=float))
+    out: list[Window] = []
+    for i, t in enumerate(dates):
+        j = i + k
+        if j >= len(dates):
+            continue
+        if not all(_consecutive(dates[m], dates[m + 1]) for m in range(i, j)):
+            continue
+        ret = float(vals[j] - vals[i])
+        out.append(
+            Window(
+                as_of=t,
+                price=float(price.iloc[i]),
+                end=dates[j],
+                days=(dates[j],),
+                path_min=ret,
+                path_max=ret,
+            )
+        )
+    return out
+
+
+def walk_forward_endpoint(proxy: pd.Series, ibja: pd.Series, k: int) -> pd.DataFrame:
+    """Split-conformal walk-forward for an ENDPOINT horizon of k trading days --
+    same out-of-sample discipline as walk_forward (each window's scale uses only
+    windows that matured strictly before it), using base_range_endpoint's shape
+    instead of base_range's path shape."""
+    windows = endpoint_windows(ibja, k)
+    rows = []
+    matured: list[tuple[pd.Timestamp, float]] = []
+    pending: list[tuple[pd.Timestamp, float]] = []
+    for w in windows:
+        base = base_range_endpoint(proxy, w.as_of, k)
+        if base is None:
+            continue
+        lo, hi = base
+        pending.sort()
+        while pending and pending[0][0] < w.as_of:
+            matured.append(pending.pop(0))
+        s = conformal_scale([sc for _, sc in matured])
+        sc = score(w, lo, hi)
+        pending.append((w.days[-1], sc))
+        rows.append(
+            {
+                "as_of": w.as_of,
+                "end": w.end,
+                "k": k,
+                "price": w.price,
+                "base_lo": lo,
+                "base_hi": hi,
+                "scale": s,
+                "score": sc,
+                "raw_hit": sc <= 1.0,
+                "hit": None if s is None else sc <= s,
+                "raw_width_pct": (math.exp(hi) - math.exp(lo)) * 100,
+                "width_pct": None if s is None else (math.exp(s * hi) - math.exp(s * lo)) * 100,
+                "n_cal": len(matured),
+            }
+        )
+    return pd.DataFrame(rows)
