@@ -204,4 +204,77 @@ lowered to get a verdict. Numbers are reported descriptively.
 
 ## 5. Results
 
-Not yet run at the freeze.
+**Freeze provenance.**
+
+- Pre-registration commit: `79180541de5bffe9731668600a9f5a807a34b8e0`, pushed 2026-09-25 04:43 IST.
+- `sha256` of this file at that commit:
+  `de4b0a101be4559740b3db2a67186fda7f0b08f13ba2dcee2105d4ca3a2f202b`.
+- Step 2 was first run after that push, with the frozen code unchanged. Command: `python
+  scripts/analysis_markup_reversion.py --step 2`, which writes
+  `reports/markup_reversion/historical_test.json`. **VERIFIED.**
+- Data: `data/prices.json` and `data/ibja_rates.parquet` as committed at `db8a4a0e`. Decision days
+  run from 2026-06-01 to 2026-09-23.
+
+### 5.1 Primary family (variant b, same-day pairs): historical, semi-confirmatory
+
+Units are Rs/g. b is the HAC one-sided test of signal days vs non-signal days on y. "Net saving" is
+the mean of −y on signal days. "Gross" is `T(d) − T(target)` on signal days. "Excess gross" is
+signal days vs non-signal days on the gross saving.
+
+| z*, N | n days | n signal | signal eff. n | b [95% CI] | p (1-sided) | Bonf / BH | baseline mean y | net saving [CI] | gross saving [CI] | excess gross [CI] | P(pay more, gross) | verdict |
+|---|---|---|---|---|---|---|---|---|---|---|---|---|
+| 1.0, 1 | 61 | 10 | 6.0 | −89 [−152, −26] | 0.0028 | yes / yes | +3.9 | 70.5 [11, 130] | 97 [26, 168] | 113 [−13, 239] | 3/10 [0.11, 0.60] | **INCONCLUSIVE** |
+| 1.5, 1 | 61 | 7 | 4.9 | −66 [−137, 5] | 0.035 | no / yes | +3.9 | 54.6 [3, 106] | 166 [65, 268] | 185 [46, 324] | 1/7 [0.03, 0.51] | **INCONCLUSIVE** |
+| 1.0, 3 | 57 | 8 | 21.3* | −84 [−116, −52] | <0.0001* | yes / yes | +0.4 | 71.7 [46, 97] | 136 [40, 232] | 134 [−48, 316] | 1/8 [0.02, 0.47] | **INCONCLUSIVE** |
+| 1.5, 3 | 57 | 6 | 17.8* | −74 [−110, −38] | <0.0001* | yes / yes | +0.4 | 65.8 [41, 91] | 243 [102, 385] | 249 [23, 475] | 0/6 [0.00, 0.39] | **INCONCLUSIVE** |
+
+Starred values: at N = 3 the HAC SE came out *below* the OLS SE (16.3 against 26.7 for z* = 1.0),
+because the sample autocovariances are negative. That pushes the "effective n" above n_signal,
+which is a small-sample artifact, not real information. Using the larger OLS SE instead, the
+one-sided p is 0.0008 (z* = 1.0) and 0.009 (z* = 1.5).
+
+**Verdict: every cell is INCONCLUSIVE.** n_signal is between 6 and 10, below the pre-registered
+floor of 15, which is exactly as §3.7 predicted before any outcome was computed. The floor stands.
+
+**What the numbers say (descriptive only; not evidence enough to ship):**
+
+1. **Relative to IBJA, the markup reverts, and by a large amount.** After a signal day it falls by
+   Rs 55–72/g more than after other days, which is several times the Rs 20/g floor. The sign is
+   consistent in every cell, every sensitivity series, and both the weekday and weekend splits.
+2. **Waiting's value to a buyer, in absolute rupees, is not established.**
+   - On signal days Tanishq fell by Rs 97–243/g on average, but IBJA also fell by Rs 26–178/g. The
+     signal days happened to fall in falling markets.
+   - Against non-signal days, the **excess** gross saving CI includes 0 in 2 of the 4 primary
+     cells.
+   - In F1's all-rows series (below), the reversion at N = 3 comes almost entirely from **IBJA
+     rising**, not from Tanishq falling: gross saving is −5 [−122, 111] Rs/g, and the buyer pays
+     more in 11 of 27 cases.
+   - A signal that reverts through the market side is worth nothing to a buyer. Measurement timing
+     alone could produce it: Tanishq sets its rate in the morning while the IBJA PM fix moves.
+
+### 5.2 Sensitivity (exploratory; not in the gated family)
+
+Full cells are in `historical_test.json`.
+
+- **Variant (c), no carry-forward** (n = 40–43 days, n_signal = 10–16):
+  - b ranges from −74 to −122 Rs/g, with every p ≤ 0.001.
+  - The N = 1 cells show a positive gross saving: 90 [11, 170] and 103 [18, 187].
+  - The N = 3 cells show a gross saving of about 0: −39 [−211, 133] and 26 [−79, 130].
+- **Variant (a), F1's all rows** (n = 125–127, n_signal = 18–27, "N rows later"):
+  - b ranges from −69 to −137 Rs/g, with every p ≤ 0.001.
+  - Gross saving: 42 [−11, 95] and 30 [−22, 82] at N = 1; −5 and −18 at N = 3.
+  - Weekday split, z* = 1.0, N = 1: b = −59, p = 0.004, gross 51 [−8, 111].
+  - Weekend split, z* = 1.0, N = 1: b = −90, p = 0.001, gross 22 [−25, 69].
+  - At N = 3 on weekends, the buyer pays more in 5 of 9 cases.
+
+### 5.3 Decision
+
+- There is nothing to promote and nothing user-facing changes.
+- The forward test in §4 (z* = 1.0, N = 3, decision days from 2026-09-25) is the confirmatory test.
+  Its third gate condition, a positive excess gross saving, is the part the historical data leaves
+  most in doubt.
+- `scripts/run_markup_reversion_shadow.py` is ready. It is **not** wired into a workflow.
+  `shadow.json` currently holds one entry, for 2026-09-24, which predates the forward sample and is
+  excluded from it.
+- Wiring the script to run daily is GG's call. Without daily runs, the forward evaluation falls
+  back to recomputation, as §4 describes.
