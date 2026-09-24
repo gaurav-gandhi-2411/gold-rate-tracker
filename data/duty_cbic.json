@@ -1,0 +1,71 @@
+{
+ "_comment": "Import duty on gold bars (HS 7108) built only from CBIC customs notifications (G4a, 2026-09-24). total_duty_pct = BCD + AIDC + SWS (SWS = 10% of BCD where it applied); IGST 3% is excluded because IBJA rates are quoted ex-GST. Duty is levied on CBIC's tariff value, not on the market price. 2013 changes are omitted: their notification numbers could not be verified. Research input only; the live pipeline still reads data/duty_events.json.",
+ "rows": [
+  {
+   "effective_date": "2019-07-06",
+   "bcd_pct": 12.5,
+   "aidc_pct": 0.0,
+   "sws_pct": 1.25,
+   "total_duty_pct": 13.75,
+   "notification": "No. 25/2019-Customs dated 06.07.2019 (amends No. 50/2017-Customs, S.No. 356: 10% -> 12.5%)",
+   "effective_date_basis": "no commencement clause; in force on publication, 06.07.2019",
+   "source": "https://www.indiabudget.gov.in/budget2019-20/doc/cen/cus2519.pdf",
+   "status": "BCD verified from notification text; SWS component inferred (gold not exempted from SWS until No. 34/2022-Customs)"
+  },
+  {
+   "effective_date": "2021-02-02",
+   "bcd_pct": 7.5,
+   "aidc_pct": 2.5,
+   "sws_pct": 0.75,
+   "total_duty_pct": 10.75,
+   "notification": "No. 2/2021-Customs (S.No. 356: 12.5% -> 7.5%) and No. 11/2021-Customs (AIDC Sl.No. 16, gold: 2.5%), both dated 01.02.2021",
+   "effective_date_basis": "'shall come into force on the 2nd February 2021' (both)",
+   "source": "https://www.indiabudget.gov.in/budget2021-22/doc/cen/cus0221.pdf ; https://www.indiabudget.gov.in/budget2021-22/doc/cen/cus1121.pdf",
+   "status": "BCD and AIDC verified from notification text; SWS component inferred (consistent with WGC's 14.07% total incl. GST = 1.1075 x 1.03)"
+  },
+  {
+   "effective_date": "2022-07-01",
+   "bcd_pct": 12.5,
+   "aidc_pct": 2.5,
+   "sws_pct": 0.0,
+   "total_duty_pct": 15.0,
+   "notification": "No. 33/2022-Customs (S.No. 356: 7.5% -> 12.5%) and No. 34/2022-Customs (SWS on 7108 exempted), both dated 30.06.2022",
+   "effective_date_basis": "no commencement clause; e-Gazette signed 01.07.2022 01:08 IST, so first in force for IBJA's 01.07.2022 fixes",
+   "source": "https://egazette.gov.in/WriteReadData/2022/236924.pdf",
+   "status": "verified from Gazette text"
+  },
+  {
+   "effective_date": "2023-02-02",
+   "bcd_pct": 10.0,
+   "aidc_pct": 5.0,
+   "sws_pct": 0.0,
+   "total_duty_pct": 15.0,
+   "notification": "No. 02/2023-Customs (S.No. 356: 12.5% -> 10%) and No. 03/2023-Customs (AIDC Sl.No. 15D, gold: 5%), both dated 01.02.2023",
+   "effective_date_basis": "'shall come into force/effect on the 2nd day of February, 2023'",
+   "source": "https://www.indiabudget.gov.in/budget2023-24/doc/cen/cus0223.pdf ; https://www.indiabudget.gov.in/budget2023-24/doc/cen/cus0323.pdf",
+   "status": "verified from notification text (03/2023 re-read 2026-09-24); total unchanged, composition changed"
+  },
+  {
+   "effective_date": "2024-07-24",
+   "bcd_pct": 5.0,
+   "aidc_pct": 1.0,
+   "sws_pct": 0.0,
+   "total_duty_pct": 6.0,
+   "notification": "No. 30/2024-Customs (S.No. 356: 10% -> 5%) and No. 32/2024-Customs (AIDC Sl.No. 15D: 5% -> 1%), both dated 23.07.2024",
+   "effective_date_basis": "'this notification shall come into force on the 24th day of July, 2024'",
+   "source": "https://www.indiabudget.gov.in/doc/cen/cus302024.pdf ; https://www.indiabudget.gov.in/doc/cen/cus322024.pdf",
+   "status": "verified from notification text (30/2024 re-read 2026-09-24)"
+  },
+  {
+   "effective_date": "2026-05-13",
+   "bcd_pct": 10.0,
+   "aidc_pct": 5.0,
+   "sws_pct": 0.0,
+   "total_duty_pct": 15.0,
+   "notification": "No. 15/2026-Customs (amends No. 45/2025-Customs, S.No. 196: 5% -> 10%) and No. 16/2026-Customs (AIDC Sl.No. 15D: 1% -> 5%), both dated 12.05.2026",
+   "effective_date_basis": "'shall come into force on the 13th day of May, 2026'",
+   "source": "https://www.worldtradescanner.com/cst-15-2026.pdf ; https://www.worldtradescanner.com/cst-16-2026.pdf",
+   "status": "notification text read on a third-party mirror, not yet on cbic.gov.in or egazette.gov.in"
+  }
+ ]
+}
