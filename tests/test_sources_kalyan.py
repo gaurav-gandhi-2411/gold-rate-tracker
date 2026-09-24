@@ -122,6 +122,25 @@ def test_unparseable_updated_time_raises_structure_error(monkeypatch):
         kalyan.fetch_kalyan_city("Bangalore")
 
 
+def test_epoch_placeholder_updated_time_raises_structure_error(monkeypatch):
+    # Real shape confirmed live against the endpoint 2026-09-24: when Kalyan's
+    # board hasn't refreshed, `updated_time` comes back as the literal string
+    # "01 Jan 1970 00:00" (their own placeholder, NOT a parse failure -- it
+    # parses cleanly with strptime) and `is_today` is False. Before this fix,
+    # fetch_kalyan_city accepted this and returned a reading with
+    # observed_at="1969-12-31T18:30:00+00:00" -- the corrupt value found in
+    # 441 rows of data/fusion_snapshots.parquet.
+    stale = dict(
+        _BANGALORE_PAYLOAD,
+        updated_time="01 Jan 1970 00:00",
+        is_today=False,
+        disclaimer="*Board Rate Last Refreshed on 08-09-2026 10:00:03 IST.",
+    )
+    monkeypatch.setattr(kalyan.requests, "post", lambda *a, **kw: _FakeResponse(stale))
+    with pytest.raises(SourceStructureError, match="implausible observed_at"):
+        kalyan.fetch_kalyan_city("Bangalore")
+
+
 def test_non_json_response_raises_structure_error(monkeypatch):
     monkeypatch.setattr(kalyan.requests, "post", lambda *a, **kw: _FakeResponse(None))
     with pytest.raises(SourceStructureError):
