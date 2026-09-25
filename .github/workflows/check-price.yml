@@ -51,6 +51,7 @@ on:
       - "ml/chronos_forecast.py"
       - "ml/calibration.py"
       - "ml/notifications.py"
+      - "scripts/build_ibja_derived_prices.py"
       - "ml/drivers.py"
       - "ml/feature_store.py"
       - "ml/calendar_events.py"
@@ -164,6 +165,13 @@ jobs:
         continue-on-error: true
         run: python -m ml.calibration
 
+      - name: Build the trend chart's IBJA-based estimate series
+        # GG decision 4c (2026-09-25): the site's trend chart plots 22K = IBJA x calibration
+        # (one row per IBJA publishing day), labelled as our estimate in app.js. Rebuilt
+        # after this run's IBJA append + calibration refit; never touches prices.json.
+        continue-on-error: true
+        run: python scripts/build_ibja_derived_prices.py --public-out data/ibja_derived_prices.json
+
       - name: Compute rolling Tanishq scrape success rate
         # H3 (session dated 2026-08-28): reads whatever data/tanishq_scrape_
         # outcomes.jsonl already is on master at checkout time (same "read
@@ -238,7 +246,7 @@ jobs:
           set -e
           git config user.name "gold-rate-bot"
           git config user.email "actions@users.noreply.github.com"
-          git add data/forecast.json data/drift_metrics.json data/metrics_history.json data/ibja_rates.parquet data/chronos_probe.json data/calibration.json data/feature_store/snapshots.parquet data/tanishq_scrape_success_rate.json data/cadence_metrics.json || true
+          git add data/forecast.json data/drift_metrics.json data/metrics_history.json data/ibja_rates.parquet data/chronos_probe.json data/calibration.json data/feature_store/snapshots.parquet data/tanishq_scrape_success_rate.json data/cadence_metrics.json data/ibja_derived_prices.json || true
           if git diff --staged --quiet; then
             echo "No changes to commit."
             echo "changed=false" >> "$GITHUB_OUTPUT"
