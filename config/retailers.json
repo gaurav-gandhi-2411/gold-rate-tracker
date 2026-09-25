@@ -1,0 +1,9 @@
+{
+  "_comment": "Retailer takedown switch (ADR 059, docs/RETAILER_TAKEDOWN.md). Set a retailer's enabled to false to stop fetching it and stop using its data for the live site. Read by scraper/retailer-enabled.mjs (self-hosted Tanishq workflow + canary + update-and-notify.js), ml/inference.py (tiers 1/3/4), ml/shadow_fusion.py and ml/calibration.py. Every known retailer must be listed with a boolean; anything else fails loudly (never silently enabled).",
+  "retailers": {
+    "tanishq": { "enabled": true },
+    "grt": { "enabled": true },
+    "malabar": { "enabled": true },
+    "kalyan": { "enabled": true }
+  }
+}

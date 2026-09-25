@@ -139,7 +139,11 @@
 // measured more than 14 days ago (isMeasurementFresh(), i18n.js) instead of showing a stale
 // number as current. app.js + i18n.js + how-we-know.js changed -- all three are precached
 // shell files.
-const VERSION = "v64-20260925-claim-freshness-14d";
+// 2026-09-25 (v65; merge train, stacked on #2049): retailer takedown switch (ADR 059) --
+// app.js stops naming Tanishq (hero location line, last-confirmed line, long-silent banner
+// clause, calculator label) when prices.json holds IBJA-derived rows; new i18n key
+// heroLocationDerived (EN+HI). Inert on today's data. app.js + i18n.js changed.
+const VERSION = "v65-20260925-retailer-takedown";
 const SHELL_CACHE = `gold-shell-${VERSION}`;
 
 const SHELL_FILES = [

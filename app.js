@@ -116,6 +116,17 @@ function fmtRelative(iso) {
   return t("relDaysAgo", { n: Math.round(diff / 86400) });
 }
 
+// Retailer takedown (ADR 059, docs/RETAILER_TAKEDOWN.md): when a retailer is taken
+// down, prices.json is rebuilt from IBJA x calibration by
+// scripts/build_ibja_derived_prices.py and every row carries this source tag. Such a
+// row is NOT a Tanishq observation, so nothing that names Tanishq may be rendered
+// from it (hero location line, "Tanishq last confirmed", the long-silent banner
+// clause, the calculator's "Tanishq store rate"). Inert today: no live row has it.
+const DERIVED_SOURCE_PREFIX = "ibja_calibrated";
+function isDerivedReading(r) {
+  return !!r && typeof r.source === "string" && r.source.startsWith(DERIVED_SOURCE_PREFIX);
+}
+
 // Human-readable label for tier-3 fusion_sources (e.g. ["grt","malabar"] -> "GRT, Malabar").
 // Never crashes on a missing/null sources list — falls back to a generic label.
 function fusionSourcesLabel(sources) {
@@ -963,7 +974,8 @@ function renderStaleBanner(forecast, bandCoverage) {
     // for TIER_DEGRADED_THRESHOLD_H, not just this cycle -- driven entirely
     // by forecast.scraped_at (the same field worker-deadman's Tanishq-
     // silence channel already watches), never hand-typed.
-    if (forecast.scraped_at) {
+    const latestReading = allReadings.length > 0 ? allReadings[allReadings.length - 1] : null;
+    if (forecast.scraped_at && !isDerivedReading(latestReading)) {
       const scrapedAgeH = (Date.now() - new Date(forecast.scraped_at).getTime()) / 3_600_000;
       if (scrapedAgeH > TIER_DEGRADED_THRESHOLD_H) {
         banner.textContent += t("bannerTanishqLongSilent", { rel: fmtRelative(forecast.scraped_at) });
@@ -1123,6 +1135,13 @@ function renderHero(readings, forecast) {
   const latest    = readings[readings.length - 1];
   const newPrice  = latest["22k"];
   const prevPrice = displayedPrice; // capture before update — animateNumberTick uses this as fromVal
+  const derivedHistory = isDerivedReading(latest);
+  // ADR 059: the location line names Tanishq; on IBJA-derived history it must not.
+  // Swapping data-i18n (not just textContent) keeps a later language switch right.
+  if (locEl) {
+    locEl.dataset.i18n = derivedHistory ? "heroLocationDerived" : "heroLocation";
+    locEl.textContent = t(locEl.dataset.i18n);
+  }
 
   // ibja_calibrated (tier 2) and fusion_consensus (tier 3) render identically here
   // — the distinguishing honest labeling lives in the banner/pill (renderStaleBanner/
@@ -1168,8 +1187,12 @@ function renderHero(readings, forecast) {
     // succeeds again (no separate "reachable again" wiring needed — same data,
     // same render path, whatever `latest` currently is).
     if (lastConfEl) {
-      lastConfEl.textContent = t("heroLastConfirmed", { price: fmtINR(newPrice), date: fmtDateShort(latest.timestamp) });
-      lastConfEl.hidden = false;
+      if (derivedHistory) {
+        lastConfEl.hidden = true; // ADR 059: no Tanishq reading exists to cite
+      } else {
+        lastConfEl.textContent = t("heroLastConfirmed", { price: fmtINR(newPrice), date: fmtDateShort(latest.timestamp) });
+        lastConfEl.hidden = false;
+      }
     }
   } else {
     displayedPrice = newPrice;
@@ -1258,8 +1281,8 @@ function fmtINRRange(lo, hi) {
 // renderHero() uses (never re-derived differently here). Distinct wording for
 // ibja_calibrated vs fusion_consensus since they carry different confidence: a single-
 // source calibrated estimate vs a live multi-retailer consensus.
-function calcRateSourceText(isEstimateTier, forecast, rate22, readingTimestamp) {
-  if (isEstimateTier) {
+function calcRateSourceText(isEstimateTier, forecast, rate22, readingTimestamp, derivedHistory = false) {
+  if (isEstimateTier || derivedHistory) {
     const key = forecast.price_source === "fusion_consensus" ? "calcRateUsedFusion" : "calcRateUsedIbja";
     return t(key, { rate: fmtINR(rate22) });
   }
@@ -1343,7 +1366,7 @@ function renderCalculator(readings, forecast) {
     ? `<p class="calc-estimated-note">${t("calcStaleNote", { rel: fmtRelative(latest.timestamp) })}</p>`
     : "";
 
-  const rateSourceText = calcRateSourceText(isEstimateTier, forecast, rate22, latest.timestamp);
+  const rateSourceText = calcRateSourceText(isEstimateTier, forecast, rate22, latest.timestamp, isDerivedReading(latest));
 
   // Making-charge row label: presets show "Making charge (N%)" against the preset's own
   // typical %; custom shows the same when quoted as a %, or the plain label when quoted
