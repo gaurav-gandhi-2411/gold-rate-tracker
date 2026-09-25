@@ -116,9 +116,32 @@ try {
   console.log(`  OFFLINE data requests: ${JSON.stringify(seen)}`);
   assert("the app made data requests while offline (test is not vacuous)", names.length >= 3,
     `saw ${names.length}`);
-  const bad = names.filter((n) => !(seen[n].status === 200 && seen[n].sw));
-  assert("every data request is answered from the service worker cache while offline", bad.length === 0,
+
+  // page_v2 (item 6, flagged OFF) added 5 new data/*.json fetches, some of which had no
+  // producing pipeline on master yet at the time (see app.js's own comment on MARKUP_TODAY_URL
+  // etc.) -- those always 404 online, so the network-first handler's `if (res.ok)` guard (see
+  // service-worker.js) correctly never caches them, and they correctly fail offline too: no
+  // network, nothing cached, nothing honest to serve. A file with no pipeline yet has no reason
+  // to exist in the checked-out tree either, so "shipped" here is derived straight from the
+  // filesystem this test's own local server reads from (see the `http.createServer` handler
+  // above: it serves `path.join(ROOT, p)` directly, no fixture copy) rather than a hand-maintained
+  // list of file names.
+  //
+  // This replaces an earlier hardcoded NOT_YET_SHIPPED_DATA_FILES set that had to be edited by
+  // hand every time a file's producing pipeline shipped -- `next_day_range_shadow.json` (ADR
+  // 047/#2017), `wait_or_buy_today.json` (ADR 049/#2020), then `markup_today.json` (F1/#2022) and
+  // `event_watch_today.json` (F4/#2028) all moved out of it one at a time, and each move was a
+  // real merge-train dry-run finding (2026-09-25) rather than something caught by this PR's own
+  // CI -- #2037's own CI only ever runs against the master of the day, which never has the NEXT
+  // PR's files yet. Deriving from the filesystem means this assertion is correct on every day's
+  // master, and after every future PR ships another page_v2 producer, with no edit here at all.
+  const shipped = names.filter((n) => fs.existsSync(path.join(ROOT, "data", n)));
+  const bad = shipped.filter((n) => !(seen[n].status === 200 && seen[n].sw));
+  assert("every SHIPPED data request is answered from the service worker cache while offline", bad.length === 0,
     `failed: ${bad.join(", ")}`);
+  const notYetShipped = names.filter((n) => !fs.existsSync(path.join(ROOT, "data", n)));
+  assert("not-yet-shipped page_v2 data files fail gracefully offline (no crash, no stale 200)",
+    notYetShipped.every((n) => seen[n].status !== 200), JSON.stringify(seen));
 } finally {
   await browser.close();
   server.close();

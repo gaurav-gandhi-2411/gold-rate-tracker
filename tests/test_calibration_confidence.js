@@ -113,6 +113,18 @@ test("exactly at the freshness boundary (14 days old) is still usable; just past
   assert.doesNotMatch(buildConfidenceClause(FORECAST_WITH_BAND, justPast, NOW), /times out of 10/);
 });
 
+test("future generated_at_utc (clock skew / bad write) → fails closed, does NOT render as fresh", () => {
+  // rule 98a: a future timestamp is exactly as untrustworthy as a stale one -- ageDays > MAX
+  // alone would let a negative ageDays (future date) slip through as "fresh".
+  const futureBandCoverage = {
+    coverage: 0.98,
+    n: 20,
+    generated_at_utc: new Date(NOW + 2 * 86_400_000).toISOString(),
+  };
+  const clause = buildConfidenceClause(FORECAST_WITH_BAND, futureBandCoverage, NOW);
+  assert.doesNotMatch(clause, /times out of 10/);
+});
+
 test("no band at all (nominal_coverage/band_half_width absent from forecast) → no clause, regardless of a valid measurement", () => {
   const forecastNoBand = { nominal_coverage: null, band_half_width: null };
   const freshBandCoverage = { coverage: 0.453, n: 60, generated_at_utc: "2026-09-09T00:00:00Z" };
