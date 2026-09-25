@@ -39,3 +39,4 @@ exclude:
   - data/direction_eval_history.jsonl
   - data/duty_events.json
   - data/ibja_rates.parquet
+  - data/encrypted/

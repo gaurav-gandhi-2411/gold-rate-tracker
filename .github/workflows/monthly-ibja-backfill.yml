@@ -42,17 +42,32 @@ jobs:
             --index-strategy unsafe-best-match \
             -r ml/requirements-inference.lock
 
+      - name: Decrypt raw data files (ADR 060)
+        uses: ./.github/actions/decrypt-data
+        with:
+          key: ${{ secrets.DATA_ENC_KEY }}
+
       - name: Run IBJA PDF backfill
         continue-on-error: true
         run: python -m ml.ibja backfill
 
+      - name: Re-encrypt IBJA history (ADR 060)
+        env:
+          DATA_ENC_KEY: ${{ secrets.DATA_ENC_KEY }}
+        run: python scripts/data_crypt.py encrypt data/ibja_rates.parquet
+
       - name: Commit updated parquet
         id: commit
+        env:
+          DATA_ENC_KEY: ${{ secrets.DATA_ENC_KEY }}
         run: |
           set -e
           git config user.name "gold-rate-bot"
           git config user.email "actions@users.noreply.github.com"
+          # Plaintext only while still tracked (pre-migration); afterwards gitignored. ADR 060.
           git add data/ibja_rates.parquet 2>/dev/null || true
+          git add data/encrypted/ || true
+          python scripts/data_crypt.py scan-key --changed
           if git diff --staged --quiet; then
             echo "No new IBJA rows to commit."
             echo "changed=false" >> "$GITHUB_OUTPUT"

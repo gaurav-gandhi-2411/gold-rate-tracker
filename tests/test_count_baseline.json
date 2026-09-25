@@ -38,6 +38,7 @@
   "tests/test_comex_daily.py": 11,
   "tests/test_comparisons.js": 7,
   "tests/test_config_sweep.py": 14,
+  "tests/test_data_crypt.py": 23,
   "tests/test_dedup.js": 11,
   "tests/test_degradation_chain.py": 5,
   "tests/test_direction_gate.py": 33,

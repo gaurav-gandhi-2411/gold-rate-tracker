@@ -56,7 +56,13 @@ jobs:
         # Deliberately NOT ml/requirements-inference.lock -- this job needs
         # none of the heavy Chronos/torch stack, only requests + pandas +
         # pyarrow. A separate, minimal install keeps this cheap and fast.
-        run: pip install -q "requests>=2.34.2" "pandas>=2.0" "pyarrow>=24.0.0"
+        # cryptography: already a pinned project dependency (ml/requirements*.txt), for ADR 060.
+        run: pip install -q "requests>=2.34.2" "pandas>=2.0" "pyarrow>=24.0.0" "cryptography>=50.0.1"
+
+      - name: Decrypt raw data files (ADR 060)
+        uses: ./.github/actions/decrypt-data
+        with:
+          key: ${{ secrets.DATA_ENC_KEY }}
 
       - name: Run shadow fusion cycle
         id: shadow
@@ -91,12 +97,22 @@ jobs:
               print(f'::warning title=Shadow fusion: per-source failures this cycle::{failures}')
           "
 
+      - name: Re-encrypt raw fusion files (ADR 060)
+        env:
+          DATA_ENC_KEY: ${{ secrets.DATA_ENC_KEY }}
+        run: python scripts/data_crypt.py encrypt data/fusion_snapshots.parquet data/shadow_fusion_output.json
+
       - name: Commit shadow fusion data
         id: commit
+        env:
+          DATA_ENC_KEY: ${{ secrets.DATA_ENC_KEY }}
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "actions@users.noreply.github.com"
+          # Plaintext only while still tracked (pre-migration); afterwards gitignored. ADR 060.
           git add data/fusion_snapshots.parquet data/shadow_fusion_output.json || true
+          git add data/encrypted/ || true
+          python scripts/data_crypt.py scan-key --changed
           if git diff --staged --quiet; then
             echo "No changes to commit."
             echo "changed=false" >> "$GITHUB_OUTPUT"
