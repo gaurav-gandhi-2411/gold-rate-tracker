@@ -88,9 +88,6 @@ const STRINGS = {
     shareCopied: "Link copied!",
     heroAriaLabel: "Current 22K gold price and buying verdict",
     eyebrow: "22K gold · per gram",
-    heroLocation: "Tanishq retail price · pan-India",
-    // ADR 059: shown only when prices.json was rebuilt from IBJA after a retailer takedown.
-    heroLocationDerived: "Estimated shop price from IBJA · pan-India",
     todayLabel: "today",
     sinceLastLabel: "since last",
     sparklineLabelLeft: "7 days",
@@ -344,7 +341,18 @@ const STRINGS = {
 
     // ── Hero ──────────────────────────────────────────────────────────────────────
     heroEstimatedRange: ({ low, high }) => `estimated range ₹${low}–₹${high}`,
-    heroLastConfirmed: ({ price, date }) => `Tanishq last confirmed: ₹${price} (${date})`,
+    // E2 (GG, 2026-09-25): the hero's label line says exactly what the figure is. Tanishq is
+    // named only for a real Tanishq reading (app.js heroDisplayState); every estimate says
+    // "Our estimate". {when} comes from whenToday/whenYesterday/whenOnDate (IST).
+    heroLabelTanishqLive: ({ when }) => `Tanishq's listed 22K rate, checked ${when}`,
+    heroLabelTanishqLastChecked: ({ when }) => `Tanishq's listed 22K rate, last checked ${when}`,
+    heroLabelEstimateIbja: "Our estimate for today, based on the IBJA rate",
+    heroLabelEstimateFusion: "Our estimate for today, based on other jewellers' listed rates",
+    heroTanishqLastRate: ({ when, price }) => `Tanishq's listed rate, checked ${when}: ₹${price}`,
+    heroTanishqTooOld: ({ when }) => `Tanishq's listed rate was last checked ${when} — too old to show here`,
+    whenToday: ({ time }) => `${time} today`,
+    whenYesterday: ({ time }) => `${time} yesterday`,
+    whenOnDate: ({ time, date }) => `${time}, ${date}`,
     sparklineRange: ({ min, max }) => `Low ₹${min} · High ₹${max}`,
     sparklineAria: ({ dir, delta }) => `7-day price trend: ${dir} ₹${delta}`,
     trendDirUp: "up",
@@ -433,8 +441,6 @@ const STRINGS = {
     shareCopied: "लिंक कॉपी हो गया!",
     heroAriaLabel: "मौजूदा 22K सोने की कीमत और ख़रीद का सुझाव",
     eyebrow: "22K सोना · प्रति ग्राम",
-    heroLocation: "Tanishq की खुदरा कीमत · पूरे भारत में",
-    heroLocationDerived: "IBJA पर आधारित दुकान की अनुमानित कीमत · पूरे भारत में",
     todayLabel: "आज",
     sinceLastLabel: "पिछली बार से",
     sparklineLabelLeft: "7 दिन",
@@ -651,7 +657,15 @@ const STRINGS = {
 
     // ── Hero ──────────────────────────────────────────────────────────────────────
     heroEstimatedRange: ({ low, high }) => `अनुमानित रेंज ₹${low}–₹${high}`,
-    heroLastConfirmed: ({ price, date }) => `Tanishq की आख़िरी पुष्टि: ₹${price} (${date})`,
+    heroLabelTanishqLive: ({ when }) => `Tanishq की सूचीबद्ध 22K दर, ${when} जांची गई`,
+    heroLabelTanishqLastChecked: ({ when }) => `Tanishq की सूचीबद्ध 22K दर, आख़िरी बार ${when} जांची गई`,
+    heroLabelEstimateIbja: "आज के लिए हमारा अनुमान, IBJA दर पर आधारित",
+    heroLabelEstimateFusion: "आज के लिए हमारा अनुमान, दूसरे जौहरियों की सूचीबद्ध दरों पर आधारित",
+    heroTanishqLastRate: ({ when, price }) => `Tanishq की सूचीबद्ध दर, ${when} जांची गई: ₹${price}`,
+    heroTanishqTooOld: ({ when }) => `Tanishq की सूचीबद्ध दर आख़िरी बार ${when} जांची गई थी — यहां दिखाने के लिए बहुत पुरानी है`,
+    whenToday: ({ time }) => `आज ${time}`,
+    whenYesterday: ({ time }) => `कल ${time}`,
+    whenOnDate: ({ time, date }) => `${date}, ${time}`,
     sparklineRange: ({ min, max }) => `न्यूनतम ₹${min} · अधिकतम ₹${max}`,
     sparklineAria: ({ dir, delta }) => `7-दिन का कीमत ट्रेंड: ${dir} ₹${delta}`,
     trendDirUp: "बढ़त",
