@@ -126,6 +126,7 @@ jobs:
             tests/test_dedup.js \
             tests/test_feature_flags.js \
             tests/test_good_price.js \
+            tests/test_hero_display_state.js \
             tests/test_page_v2.js \
             tests/test_pvalue_format.js \
             tests/test_scrape.js \
@@ -180,6 +181,8 @@ jobs:
         run: node tests/test_page_v2_headless.js
       - name: Run the retailer-takedown fallback render test (ADR 059)
         run: node tests/test_retailer_takedown_headless.js
+      - name: Run the hero display-state test (E2 + ADR 059 gates)
+        run: node tests/test_hero_display_headless.js
       - name: Run the no-sideways-scroll test against the real page
         run: node tests/test_no_horizontal_scroll_headless.js
 

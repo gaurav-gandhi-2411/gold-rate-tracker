@@ -142,7 +142,11 @@
 // (hero location line, last-confirmed line, long-silent banner clause, calculator label)
 // when prices.json holds IBJA-derived rows; new i18n key heroLocationDerived (EN+HI).
 // Inert on today's data. app.js + i18n.js changed.
-const VERSION = "v65-20260925-retailer-takedown";
+// 2026-09-25 (v67; stacked on #2053, itself merged with current master): E2 hero shows
+// Tanishq's live listed rate only when fresh + plausible, otherwise our labelled estimate
+// (heroDisplayState), which supersedes #2053's simpler heroLocation/heroLocationDerived
+// split with full takedown-awareness built in. app.js + i18n.js + index.html changed.
+const VERSION = "v67-20260925-hero-tanishq-live";
 const SHELL_CACHE = `gold-shell-${VERSION}`;
 
 const SHELL_FILES = [
