@@ -32,8 +32,24 @@ name: Scrape Tanishq (self-hosted)
 
 on:
   schedule:
-    - cron: "7 */3 * * *" # same 3h cadence as check-price.yml, NOT the same offset: #1541 moved check-price to :37 of hours 1,4,..,22
-  workflow_dispatch: # allows manual run from the Actions tab
+    # GG decision 4a (STOP for GG): 6 timed visits a day, all in 10:00-12:30 IST, instead of the
+    # old "7 */3 * * *". Times are scraper/visit_schedule.json in UTC (IST 10:00, 10:30, 11:00,
+    # 11:30, 12:00, 12:30); tests/test_tanishq_timed_visits.py fails if the two drift. GitHub
+    # delivers scheduled runs 1-3 h late and drops ~40% of them (reports/tanishq_update_times/
+    # scheduler_lateness.json), so these crons are only the fallback: the exact-time trigger is
+    # Task Scheduler on the runner's laptop (docs/TANISHQ_TIMED_VISITS.md).
+    - cron: "30 4 * * *"
+    - cron: "0 5 * * *"
+    - cron: "30 5 * * *"
+    - cron: "0 6 * * *"
+    - cron: "30 6 * * *"
+    - cron: "0 7 * * *"
+  workflow_dispatch: # manual run, and the exact-time trigger from GG's laptop (E3, below)
+    inputs:
+      slot_ist:
+        description: "Scheduled IST visit slot this run serves (HH:MM), set by scripts/win/tanishq_dispatch.ps1"
+        required: false
+        default: ""
   push:
     branches: [master]
     paths:
@@ -64,6 +80,12 @@ jobs:
     # this workflow's own next scheduled tick, never check-price.yml's.
     # `continue-on-error: true` at the job level additionally guarantees
     # this job's own failure never marks the workflow run as failed.
+    # E3: once GG has set up the Task Scheduler trigger (docs/TANISHQ_TIMED_VISITS.md) and set
+    # the repository variable TANISHQ_TRIGGER=task_scheduler, the GitHub cron above no longer
+    # visits Tanishq (a skipped job needs no runner and makes no request) -- the laptop's exact-
+    # time workflow_dispatch runs replace it, so visits are never doubled. Delete the variable to
+    # fall back to the GitHub cron.
+    if: github.event_name != 'schedule' || vars.TANISHQ_TRIGGER != 'task_scheduler'
     runs-on: [self-hosted, tanishq-scraper]
     # 20min was tight-but-sufficient under normal conditions (healthy runs land
     # in ~4min). Bumped to give headroom for actions/checkout's internal
@@ -185,6 +207,9 @@ jobs:
         # failure mode from "runner offline" (which stays silent by design).
         if: always()
         continue-on-error: true
+        env:
+          # via env, never interpolated into the script body (workflow_dispatch input)
+          SLOT_IST_INPUT: ${{ inputs.slot_ist }}
         run: |
           set -e
           if ! git rev-parse --is-inside-work-tree >/dev/null 2>&1; then
@@ -243,8 +268,20 @@ jobs:
               FETCH_METHOD="$EXTRACTED_METHOD"
             fi
           fi
+          # E3 forward measurement (scripts/tanishq_visit_metrics.py): which trigger ran this
+          # visit, which IST slot it served, and whether Tanishq answered with a Cloudflare
+          # challenge or a rate limit. Additive fields; ml.scrape_metrics ignores them.
+          BLOCKED=false
+          if [ -f /tmp/scrape_stderr.log ] && grep -qiE 'blocked by cloudflare|challenge|http 429|retry-after' /tmp/scrape_stderr.log; then
+            BLOCKED=true
+          fi
+          SLOT_IST="${SLOT_IST_INPUT:-}"
+          case "$SLOT_IST" in
+            [0-2][0-9]:[0-5][0-9]) ;;
+            *) SLOT_IST="" ;;
+          esac
           OUTCOMES_LOG="data/tanishq_scrape_outcomes.jsonl"
-          echo "{\"timestamp\": \"$(date -u +%Y-%m-%dT%H:%M:%SZ)\", \"outcome\": \"$OUTCOME\", \"fetch_method\": \"$FETCH_METHOD\"}" >> "$OUTCOMES_LOG"
+          echo "{\"timestamp\": \"$(date -u +%Y-%m-%dT%H:%M:%SZ)\", \"outcome\": \"$OUTCOME\", \"fetch_method\": \"$FETCH_METHOD\", \"trigger\": \"${{ github.event_name }}\", \"slot_ist\": \"$SLOT_IST\", \"blocked\": $BLOCKED}" >> "$OUTCOMES_LOG"
           git add "$OUTCOMES_LOG"
 
           if git diff --staged --quiet; then

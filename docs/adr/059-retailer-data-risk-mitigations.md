@@ -179,3 +179,16 @@ Nothing was deleted or rewritten in this PR, and history is not rewritten.
 - **Stop all retailer scraping now.** Rejected by GG (G1). IBJA-only (ADR 029) remains the documented fallback, and the takedown switch makes it one edit per retailer.
 - **Per-retailer display flags only, with no fetch gating.** Rejected. A takedown request is about collection as much as display.
 - **Guess at a Retry-After when none is sent.** Rejected. A 429 without guidance ends the cycle for that host; the next scheduled run, at least 3 h later, is the retry.
+
+## Addendum, 2026-09-25: GG decision E3 (Tanishq browser settings, visit timing, Kalyan)
+
+**Accepted risk (GG).** The Tanishq scraper's browser settings stay exactly as they are on master. That includes the Playwright fallback's `--disable-blink-features=AutomationControlled` flag. No identifying User-Agent is added for Tanishq.
+
+- Reasoning: announcing a bot in the User-Agent while the same browser hides its automation is contradictory. It could also be the very signal that gets the scraper blocked.
+- GG accepts the risk that the flag reads as evasion. The mitigations that remain are fewer visits (below), backoff and honouring 429/Retry-After (#2048), and the takedown switch (#2053).
+- This closes two items in the "Open for GG" list above: Tanishq's UA (not identified) and the AutomationControlled flag (kept).
+- #2048 originally removed the per-retry UA rotation. That is also a browser-setting change, so under E3 #2048 restored it byte-identical to master.
+
+**Visit timing (GG decision 4a).** Tanishq visits drop from 8 cron slots a day to 6 visits a day, 10:00–12:30 IST, 30 min apart, where most rate changes land. Because the next visit can be 30 min away, the laptop dispatcher skips every visit for 3 h after a run that Tanishq answered with a 429 or a challenge. The Retry-After alternative above therefore reads "no visit for at least 3 h; then the next scheduled visit is the retry". The times and the evidence are in `docs/TANISHQ_TIMED_VISITS.md` and `reports/tanishq_update_times/`. The live schedule change is a STOP for GG in its PR.
+
+**Kalyan.** The shadow fusion fetches 1 Kalyan city instead of 4. The cities were re-verified identical; see `reports/tanishq_update_times/kalyan_city_identity.json`. This closes the "reduce to 1?" item. The weekly live canary is kept.

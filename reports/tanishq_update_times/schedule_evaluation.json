@@ -1,0 +1,346 @@
+{
+  "update_distribution": "pooled Mon-Sat change intervals (Sunday excluded)",
+  "lateness_pool": "self-hosted runs with the runner online: created->capture minutes",
+  "q_measured_share_runner_unavailable": 0.381,
+  "current_schedule_replay": {
+    "what": "actual capture instants since 2026-09-04, Mon-Sat IST days",
+    "days": 17,
+    "mean_staleness_min": 438.7523534926351,
+    "median_staleness_min": 316.6872826738081,
+    "share_within_30min": 0.05975,
+    "share_within_60min": 0.1288,
+    "ci95": {
+      "mean_staleness_min": [
+        233.155,
+        679.738
+      ],
+      "median_staleness_min": [
+        176.675,
+        362.896
+      ],
+      "share_within_30min": [
+        0.007,
+        0.136
+      ],
+      "share_within_60min": [
+        0.037,
+        0.245
+      ]
+    }
+  },
+  "proposed": {
+    "A_gap_le_460min_K5": {
+      "visits_ist": [
+        "01:40",
+        "07:00",
+        "11:10",
+        "15:35",
+        "19:50"
+      ],
+      "max_gap_min": 350.0,
+      "q0": {
+        "mean_staleness_min": 29.098391924497836,
+        "median_staleness_min": 23.94974316869485,
+        "share_within_30min": 0.5762,
+        "share_within_60min": 0.90365
+      },
+      "q_measured": {
+        "mean_staleness_min": 201.42984916449785,
+        "median_staleness_min": 34.810986882064526,
+        "share_within_30min": 0.35535,
+        "share_within_60min": 0.55865
+      },
+      "q0_edge_placement_left": {
+        "mean_staleness_min": 31.514491924497836,
+        "median_staleness_min": 30.604025195322663,
+        "share_within_30min": 0.4043,
+        "share_within_60min": 0.9036
+      },
+      "q0_edge_placement_right": {
+        "mean_staleness_min": 26.617941924497835,
+        "median_staleness_min": 13.448444306588328,
+        "share_within_30min": 0.5978,
+        "share_within_60min": 0.90365
+      },
+      "q0_ci95": {
+        "mean_staleness_min": [
+          17.102,
+          79.632
+        ],
+        "median_staleness_min": [
+          2.784,
+          42.828
+        ],
+        "share_within_30min": [
+          0.102,
+          0.885
+        ],
+        "share_within_60min": [
+          0.663,
+          0.98
+        ]
+      }
+    },
+    "A_gap_le_460min_K6": {
+      "visits_ist": [
+        "01:40",
+        "07:30",
+        "10:40",
+        "11:10",
+        "15:35",
+        "19:50"
+      ],
+      "max_gap_min": 350.0,
+      "q0": {
+        "mean_staleness_min": 19.6968567036645,
+        "median_staleness_min": 4.951406451834771,
+        "share_within_30min": 0.8855,
+        "share_within_60min": 0.90365
+      },
+      "q_measured": {
+        "mean_staleness_min": 164.55394360449785,
+        "median_staleness_min": 23.887952025063726,
+        "share_within_30min": 0.549,
+        "share_within_60min": 0.6317
+      },
+      "q0_edge_placement_left": {
+        "mean_staleness_min": 18.369939421997838,
+        "median_staleness_min": 4.405116219637591,
+        "share_within_30min": 0.82335,
+        "share_within_60min": 0.9036
+      },
+      "q0_edge_placement_right": {
+        "mean_staleness_min": 17.56050279033117,
+        "median_staleness_min": 4.753641239282672,
+        "share_within_30min": 0.90005,
+        "share_within_60min": 0.90365
+      },
+      "q0_ci95": {
+        "mean_staleness_min": [
+          12.155,
+          74.921
+        ],
+        "median_staleness_min": [
+          2.799,
+          24.044
+        ],
+        "share_within_30min": [
+          0.639,
+          0.954
+        ],
+        "share_within_60min": [
+          0.67,
+          0.982
+        ]
+      }
+    },
+    "B_no_gap_limit_K5": {
+      "visits_ist": [
+        "07:00",
+        "10:40",
+        "11:10",
+        "15:35",
+        "19:50"
+      ],
+      "max_gap_min": 670.0,
+      "q0": {
+        "mean_staleness_min": 23.264145456164506,
+        "median_staleness_min": 4.976943663137661,
+        "share_within_30min": 0.87765,
+        "share_within_60min": 0.89245
+      },
+      "q_measured": {
+        "mean_staleness_min": 190.46325955699785,
+        "median_staleness_min": 24.264021269519162,
+        "share_within_30min": 0.54365,
+        "share_within_60min": 0.6253
+      },
+      "q0_edge_placement_left": {
+        "mean_staleness_min": 21.89918083283117,
+        "median_staleness_min": 4.3950302340834355,
+        "share_within_30min": 0.82475,
+        "share_within_60min": 0.89245
+      },
+      "q0_edge_placement_right": {
+        "mean_staleness_min": 21.148961846997835,
+        "median_staleness_min": 4.810400938079738,
+        "share_within_30min": 0.888,
+        "share_within_60min": 0.89245
+      },
+      "q0_ci95": {
+        "mean_staleness_min": [
+          15.253,
+          88.159
+        ],
+        "median_staleness_min": [
+          2.784,
+          24.173
+        ],
+        "share_within_30min": [
+          0.638,
+          0.949
+        ],
+        "share_within_60min": [
+          0.659,
+          0.979
+        ]
+      }
+    },
+    "B_no_gap_limit_K6": {
+      "visits_ist": [
+        "07:00",
+        "10:40",
+        "11:10",
+        "15:35",
+        "17:15",
+        "19:50"
+      ],
+      "max_gap_min": 670.0,
+      "q0": {
+        "mean_staleness_min": 16.6300742686645,
+        "median_staleness_min": 4.813731163913303,
+        "share_within_30min": 0.9098,
+        "share_within_60min": 0.93445
+      },
+      "q_measured": {
+        "mean_staleness_min": 140.0354697511645,
+        "median_staleness_min": 21.600463050859446,
+        "share_within_30min": 0.563,
+        "share_within_60min": 0.6509
+      },
+      "q0_edge_placement_left": {
+        "mean_staleness_min": 15.26510964533117,
+        "median_staleness_min": 4.273797017849688,
+        "share_within_30min": 0.8555,
+        "share_within_60min": 0.93445
+      },
+      "q0_edge_placement_right": {
+        "mean_staleness_min": 14.514890659497835,
+        "median_staleness_min": 4.688129367292618,
+        "share_within_30min": 0.91925,
+        "share_within_60min": 0.93445
+      },
+      "q0_ci95": {
+        "mean_staleness_min": [
+          9.587,
+          70.972
+        ],
+        "median_staleness_min": [
+          2.783,
+          23.735
+        ],
+        "share_within_30min": [
+          0.64,
+          0.964
+        ],
+        "share_within_60min": [
+          0.727,
+          0.993
+        ]
+      }
+    }
+  },
+  "recommended": "A_gap_le_460min_K6",
+  "recommended_via_github_cron_instead": {
+    "assumption": "same times as GitHub cron: measured delay lower bound + dispatch lag, trigger drop rate 0.415",
+    "mean_staleness_min": 229.77195189949785,
+    "median_staleness_min": 124.92628725216116,
+    "share_within_30min": 0.06055,
+    "share_within_60min": 0.14055
+  },
+  "measurement_window_proposal": {
+    "M1_morning_dense": {
+      "visits_per_day": 10,
+      "days_mon_sat": 15,
+      "total_visits": 150,
+      "visits_ist": [
+        "01:40",
+        "07:30",
+        "10:00",
+        "10:15",
+        "10:30",
+        "10:45",
+        "11:00",
+        "11:15",
+        "15:35",
+        "19:50"
+      ],
+      "median_width_min_all": 15.0,
+      "median_width_min_morning_09_12": 15.0,
+      "median_width_min_afternoon_13_20": 260.0,
+      "p90_width_min_all": 260.0
+    },
+    "M2_morning_and_afternoon_dense": {
+      "visits_per_day": 18,
+      "days_mon_sat": 10,
+      "total_visits": 180,
+      "visits_ist": [
+        "01:40",
+        "07:30",
+        "10:00",
+        "10:15",
+        "10:30",
+        "10:45",
+        "11:00",
+        "11:15",
+        "14:00",
+        "14:30",
+        "15:00",
+        "15:30",
+        "16:00",
+        "16:30",
+        "17:00",
+        "17:30",
+        "18:00",
+        "19:50"
+      ],
+      "median_width_min_all": 15.0,
+      "median_width_min_morning_09_12": 15.0,
+      "median_width_min_afternoon_13_20": 30.0,
+      "p90_width_min_all": 30.0
+    },
+    "current_captures_replay": {
+      "median_width_min_all": 407.9,
+      "median_width_min_morning_09_12": 421.1,
+      "median_width_min_afternoon_13_20": 380.6,
+      "p90_width_min_all": 3713.4
+    }
+  },
+  "decision_rule_c": {
+    "rule": "p90 regret <= 15 min over re-optimised bootstrap replicates",
+    "replicates": 200,
+    "regret_min": {
+      "n": 200,
+      "p50": 16.9,
+      "p90": 35.3,
+      "p100": 96.1
+    },
+    "resolved": false,
+    "bootstrap_optimal_times_ist_p5_p95": [
+      [
+        "01:40",
+        "07:00"
+      ],
+      [
+        "07:00",
+        "10:50"
+      ],
+      [
+        "10:35",
+        "11:15"
+      ],
+      [
+        "11:00",
+        "16:30"
+      ],
+      [
+        "15:30",
+        "19:50"
+      ],
+      [
+        "18:00",
+        "23:20"
+      ]
+    ]
+  }
+}
