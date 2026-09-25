@@ -111,11 +111,16 @@
 // decimal places (formatPValue() in i18n.js, added same PR); renders
 // "p < 0.0001" instead. i18n.js + how-we-know.js + how-we-know-strings.js
 // (EN+HI) changed -- all three are precached shell files.
-// 2026-09-25 (v58): G4 -- hide any accuracy/coverage claim measured more than
+// v58 (2026-09-25): the 5-day movement note shows the measured typical move
+// (vol_context.typical_move_5d) instead of a floored one-standard-deviation
+// figure that overstated it ~1.9x. app.js + i18n.js (EN+HI) changed.
+// 2026-09-25 (v61; v59/v60 are taken by the open #2053/#2069 branches): ADR 059 wording
+// P2-P5 (E5) -- neutral, dated Tanishq wording. app.js + i18n.js + index.html + manifest changed.
+// 2026-09-25 (v64): G4 -- hide any accuracy/coverage claim measured more than
 // 14 days ago (isMeasurementFresh(), i18n.js) instead of showing a stale
 // number as current. app.js + i18n.js + how-we-know.js changed -- all three
 // are precached shell files.
-const VERSION = "v58-20260925-claim-freshness-14d";
+const VERSION = "v64-20260925-claim-freshness-14d";
 const SHELL_CACHE = `gold-shell-${VERSION}`;
 
 const SHELL_FILES = [

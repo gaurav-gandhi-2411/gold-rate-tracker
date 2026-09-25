@@ -11,12 +11,15 @@ import math
 from ml.volatility import (
     FLOOR_FRACTION,
     MIN_CONTIGUOUS_DAYS,
+    MIN_TYPICAL_MOVE_PAIRS,
+    TYPICAL_MOVE_WINDOW_DAYS,
     VOL_WINDOW,
     _dedup_daily,
     _log_returns,
     _recent_contiguous_run,
     _regime,
     _std,
+    _typical_move_5d,
     compute_vol_context,
 )
 
@@ -320,3 +323,60 @@ class TestGapHandling:
         prices = _make_prices(all_dates, [14000.0] * len(all_dates))
         ctx = compute_vol_context(prices, STATIC_PI)
         assert ctx["is_degraded"] is True
+
+
+# ---------------------------------------------------------------------------
+# typical_move_5d -- the figure the page's 5-day note actually shows (2026-09-25)
+# ---------------------------------------------------------------------------
+
+
+def test_typical_move_is_median_abs_5_calendar_day_change() -> None:
+    # Alternating 5-day blocks at 14000 / 14100: every 5-day change is exactly 100.
+    dates = _daily_dates(40)
+    values = [14000.0 + 100.0 * ((i // 5) % 2) for i in range(40)]
+    move, n = _typical_move_5d(_dedup_daily(_make_prices(dates, values)))
+    assert n == TYPICAL_MOVE_WINDOW_DAYS  # every day in the window has a d-5 partner
+    assert move == 100
+
+
+def test_typical_move_uses_only_the_trailing_window() -> None:
+    # Big moves early, flat for the last 40 days -> the trailing 30-day median is 0.
+    dates = _daily_dates(80)
+    values = [14000.0 + (500.0 * (i % 2) if i < 40 else 0.0) for i in range(80)]
+    move, _ = _typical_move_5d(_dedup_daily(_make_prices(dates, values)))
+    assert move == 0
+
+
+def test_typical_move_never_pairs_across_a_gap() -> None:
+    # Only every 3rd day present, so few days have a partner exactly 5 days earlier.
+    # Too few pairs -> None, never a stretched "5-day" change.
+    dates = _daily_dates(60)[::3]
+    values = [14000.0 + 10.0 * i for i in range(len(dates))]
+    move, n = _typical_move_5d(_dedup_daily(_make_prices(dates, values)))
+    assert n < MIN_TYPICAL_MOVE_PAIRS
+    assert move is None
+
+
+def test_typical_move_is_below_the_one_sd_half_width_it_replaces() -> None:
+    # The defect this closes: for roughly normal moves the median |5-day move| is
+    # ~0.67 of one standard deviation, so the old half_width overstated it.
+    import random
+
+    rng = random.Random(42)
+    dates = _daily_dates(60)
+    price = 14000.0
+    values = []
+    for _ in dates:
+        price *= math.exp(rng.gauss(0.0, 0.01))
+        values.append(round(price))
+    ctx = compute_vol_context(_make_prices(dates, values), static_pi_half=100.0)
+    assert ctx["typical_move_5d"] is not None
+    assert ctx["typical_move_5d"] < ctx["half_width"]
+
+
+def test_vol_context_always_carries_typical_move_fields_even_when_degraded() -> None:
+    ctx = compute_vol_context([], static_pi_half=700.0)
+    assert ctx["is_degraded"] is True
+    assert ctx["typical_move_5d"] is None
+    assert ctx["typical_move_pairs"] == 0
+    assert ctx["typical_move_window_days"] == TYPICAL_MOVE_WINDOW_DAYS
