@@ -83,7 +83,10 @@ export function parseRetryAfterMs(value, nowMs = Date.now()) {
 // log, so running it every cycle is a guaranteed extra request to Tanishq. Keep
 // it (it is far lighter than a browser load if it ever starts working again) but
 // run it at most once per UTC day while it keeps losing.
-const PROBE_LOOKBACK_SUCCESSES = 8; // ~one day of 3-hourly runs
+// 8 was sized against the 3-hourly cron (8 runs/day); #2078 moves Tanishq to
+// 5-6 timed visits/day. The gating below keys off the UTC-day boundary, not this
+// count, so the lookback just becomes generously wide -- no correctness change.
+const PROBE_LOOKBACK_SUCCESSES = 8;
 
 /**
  * Decide whether this run should try the plain-GET probe before Playwright.
