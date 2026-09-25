@@ -76,6 +76,8 @@ jobs:
         # technical-detail page. See the script's own module docstring for the
         # exact scope per file and its stated blind spots.
         run: python scripts/check_plain_language.py
+      - name: Retailer-language guard (ADR 059 -- no judgmental wording near a retailer name)
+        run: python scripts/check_retailer_language.py
       - name: Check for hand-typed computed claims (accuracy/coverage/error)
         # Fails if user-facing text contains a hand-typed accuracy/coverage/error
         # claim as a literal digit ("N times out of M", "right N%", "coverage N%",

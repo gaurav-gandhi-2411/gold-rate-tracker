@@ -111,11 +111,16 @@
 // decimal places (formatPValue() in i18n.js, added same PR); renders
 // "p < 0.0001" instead. i18n.js + how-we-know.js + how-we-know-strings.js
 // (EN+HI) changed -- all three are precached shell files.
-// 2026-09-25 (v58): retailer takedown switch (ADR 059) -- app.js stops naming Tanishq
+// v58 (2026-09-25): the 5-day movement note shows the measured typical move
+// (vol_context.typical_move_5d) instead of a floored one-standard-deviation
+// figure that overstated it ~1.9x. app.js + i18n.js (EN+HI) changed.
+// 2026-09-25 (v61; v59/v60 are taken by the open #2053/#2069 branches): ADR 059 wording
+// P2-P5 (E5) -- neutral, dated Tanishq wording. app.js + i18n.js + index.html + manifest changed.
+// 2026-09-25 (v65): retailer takedown switch (ADR 059) -- app.js stops naming Tanishq
 // (hero location line, last-confirmed line, long-silent banner clause, calculator label)
 // when prices.json holds IBJA-derived rows; new i18n key heroLocationDerived (EN+HI).
 // Inert on today's data. app.js + i18n.js changed.
-const VERSION = "v58-20260925-retailer-takedown";
+const VERSION = "v65-20260925-retailer-takedown";
 const SHELL_CACHE = `gold-shell-${VERSION}`;
 
 const SHELL_FILES = [
