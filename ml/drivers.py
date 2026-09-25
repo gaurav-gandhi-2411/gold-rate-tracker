@@ -32,7 +32,7 @@ TIMESTAMP CONVENTION (ADR 058, timing audit A16; fixed 2026-09-25):
               known at 23:59 UTC of its date (conservative), so D gets the previous day's bar.
   Why not the lagged daily bar for the split as well: it is leak-free but sits 17-33 h before
   the fix, which misses more of the move than the old same-date join did. Measured on
-  2024-10-08..2026-09-24 (n=207 fix pairs, scripts/analysis_drivers_timing.py): SD of the
+  2024-11-10..2026-09-25 (n=207 fix pairs, scripts/analysis_drivers_timing.py): SD of the
   fix-to-fix premium residual is 1.35% same-date (old), 1.55% lagged daily, 0.63% intraday at the
   fix; direction agreement 68% / 67% / 90%. The old same-date join paired each fix with a COMEX
   settle taken ~6.5 h AFTER it, so gold moves after the fix were counted against a fix that could
