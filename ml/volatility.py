@@ -15,6 +15,18 @@ Method (simplest honestly supported):
 Floor: 50% of the static conformal PI half-width so a quiet patch never produces
 a falsely-tight band. Written as FLOOR_FRACTION to make it auditable.
 
+Typical move (what the page actually displays, 2026-09-25): the realized-vol
+half-width above is ONE standard deviation of a 5-day move (and floored), which a
+reader of "about ±Rs.X over 5 days" takes as the size of a typical move -- it
+overstated the measured typical move ~1.9x on 2026-09-24 (Rs.350 shown, from a
+half_width of Rs.365, vs a median 5-day change of Rs.185 over the prior 30 days,
+24 pairs). typical_move_5d is the measured quantity the sentence describes: the
+median absolute change in the displayed 22K price between each day and 5
+calendar days earlier, over the last TYPICAL_MOVE_WINDOW_DAYS calendar days. Timestamps are UTC (prices.json); days
+are UTC calendar dates, matching _dedup_daily. None when fewer than
+MIN_TYPICAL_MOVE_PAIRS pairs exist -- the page then shows no note at all rather
+than a stand-in number.
+
 Degrade: when fewer than MIN_CONTIGUOUS_DAYS contiguous daily readings are
 available, falls back to the static conformal PI half-width with is_degraded=True.
 This flag is visible in forecast.json — no silent swap (norm #8).
@@ -48,6 +60,12 @@ HORIZON_DAYS: int = 5
 # Prevents a calm-patch from producing a falsely-tight band.
 FLOOR_FRACTION: float = 0.50
 
+# Window and minimum sample for the displayed typical 5-day move. 30 calendar
+# days = "the past month" in the page copy; 15 pairs is half the window, so a
+# gap-riddled month shows nothing rather than a median of a handful of points.
+TYPICAL_MOVE_WINDOW_DAYS: int = 30
+MIN_TYPICAL_MOVE_PAIRS: int = 15
+
 # Regime thresholds: recent_std / baseline_std ratio.
 # Below CALM_THRESHOLD → "calm"; above ELEVATED_THRESHOLD → "elevated"; else "normal".
 CALM_THRESHOLD: float = 0.75
@@ -71,6 +89,9 @@ class VolContext(TypedDict):
     static_pi_half: float  # static conformal PI half-width for reference
     baseline_half_width: int  # full-window baseline (Rs.) used for regime comparison
     regime: str  # "calm" | "normal" | "elevated"
+    typical_move_5d: int | None  # median |P(d) - P(d-5)| over the window (Rs.); None if too few
+    typical_move_pairs: int  # number of (d, d-5) pairs behind typical_move_5d
+    typical_move_window_days: int  # TYPICAL_MOVE_WINDOW_DAYS
 
 
 # ---------------------------------------------------------------------------
@@ -134,6 +155,36 @@ def _std(values: list[float]) -> float:
     return math.sqrt(variance)
 
 
+def _typical_move_5d(daily: list[dict]) -> tuple[int | None, int]:
+    """Median absolute 5-calendar-day change in 22K over the trailing window.
+
+    Pairs each day d in the last TYPICAL_MOVE_WINDOW_DAYS days (ending at the
+    latest date) with d - HORIZON_DAYS; a pair counts only when both days have
+    a reading, so a gap never stretches a "5-day" change into a longer one.
+    """
+    from datetime import date as _date
+    from datetime import timedelta as _td
+
+    by_day: dict[_date, float] = {}
+    for row in daily:
+        with contextlib.suppress(KeyError, ValueError, TypeError):
+            by_day[_date.fromisoformat(str(row["timestamp"])[:10])] = float(row["22k"])
+    if not by_day:
+        return None, 0
+    last = max(by_day)
+    moves = sorted(
+        abs(price - by_day[day - _td(days=HORIZON_DAYS)])
+        for day, price in by_day.items()
+        if (last - day).days < TYPICAL_MOVE_WINDOW_DAYS and day - _td(days=HORIZON_DAYS) in by_day
+    )
+    n = len(moves)
+    if n < MIN_TYPICAL_MOVE_PAIRS:
+        return None, n
+    mid = n // 2
+    median = moves[mid] if n % 2 else (moves[mid - 1] + moves[mid]) / 2
+    return round(median), n
+
+
 def _regime(recent_std: float, baseline_std: float) -> str:
     if baseline_std <= 0:
         return "normal"
@@ -164,6 +215,7 @@ def compute_vol_context(prices: list[dict], static_pi_half: float) -> VolContext
 
     daily = _dedup_daily(prices)
     contiguous = _recent_contiguous_run(daily)
+    typical_move, typical_pairs = _typical_move_5d(daily)
 
     # Degrade path: insufficient contiguous data
     if len(contiguous) < MIN_CONTIGUOUS_DAYS:
@@ -179,6 +231,9 @@ def compute_vol_context(prices: list[dict], static_pi_half: float) -> VolContext
             static_pi_half=static_pi_half,
             baseline_half_width=round(static_pi_half),
             regime="normal",
+            typical_move_5d=typical_move,
+            typical_move_pairs=typical_pairs,
+            typical_move_window_days=TYPICAL_MOVE_WINDOW_DAYS,
         )
 
     # Extract 22k price series from the contiguous run
@@ -201,6 +256,9 @@ def compute_vol_context(prices: list[dict], static_pi_half: float) -> VolContext
             static_pi_half=static_pi_half,
             baseline_half_width=round(static_pi_half),
             regime="normal",
+            typical_move_5d=typical_move,
+            typical_move_pairs=typical_pairs,
+            typical_move_window_days=TYPICAL_MOVE_WINDOW_DAYS,
         )
 
     current_price = price_series[-1]
@@ -232,4 +290,7 @@ def compute_vol_context(prices: list[dict], static_pi_half: float) -> VolContext
         static_pi_half=static_pi_half,
         baseline_half_width=round(baseline_hw),
         regime=_regime(recent_std, baseline_std),
+        typical_move_5d=typical_move,
+        typical_move_pairs=typical_pairs,
+        typical_move_window_days=TYPICAL_MOVE_WINDOW_DAYS,
     )
