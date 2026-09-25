@@ -1,0 +1,184 @@
+{
+ "source_commit": "268a4017c3a4f2697175409fba8aebcb7f81c95c",
+ "test_key_id": "9f730bb83f9a5514",
+ "files": {
+  "reports/vol_regime_prereg_gcf_2000_2012.csv": {
+   "sha256_at_1c4a372e": "2db071aae050c593607f07518a4b36663916bc9fc9e288e3ee8292800437c6ac",
+   "adr044_pinned": "2db071aae050c593607f07518a4b36663916bc9fc9e288e3ee8292800437c6ac",
+   "plaintext_bytes": 71888,
+   "ciphertext_bytes": 72143,
+   "original_sha256": "2db071aae050c593607f07518a4b36663916bc9fc9e288e3ee8292800437c6ac",
+   "manifest_sha256": "2db071aae050c593607f07518a4b36663916bc9fc9e288e3ee8292800437c6ac",
+   "decrypted_sha256": "2db071aae050c593607f07518a4b36663916bc9fc9e288e3ee8292800437c6ac",
+   "byte_identical": true,
+   "round_trip_ok": true
+  },
+  "reports/vol_regime_prereg_gld_2004_2012.csv": {
+   "sha256_at_1c4a372e": "9aa4143f1b1e4326a686f885724966d360fd22aa85c75ee8b7e1939b2e141127",
+   "adr044_pinned": "9aa4143f1b1e4326a686f885724966d360fd22aa85c75ee8b7e1939b2e141127",
+   "plaintext_bytes": 45773,
+   "ciphertext_bytes": 46028,
+   "original_sha256": "9aa4143f1b1e4326a686f885724966d360fd22aa85c75ee8b7e1939b2e141127",
+   "manifest_sha256": "9aa4143f1b1e4326a686f885724966d360fd22aa85c75ee8b7e1939b2e141127",
+   "decrypted_sha256": "9aa4143f1b1e4326a686f885724966d360fd22aa85c75ee8b7e1939b2e141127",
+   "byte_identical": true,
+   "round_trip_ok": true
+  },
+  "data/ibja_rates.parquet": {
+   "plaintext_bytes": 27694,
+   "ciphertext_bytes": 27929,
+   "original_sha256": "f882217977715f1733fddba301d956a060879d2d05a606174ec1496f136a7256",
+   "manifest_sha256": "f882217977715f1733fddba301d956a060879d2d05a606174ec1496f136a7256",
+   "decrypted_sha256": "f882217977715f1733fddba301d956a060879d2d05a606174ec1496f136a7256",
+   "byte_identical": true,
+   "round_trip_ok": true
+  },
+  "data/fusion_snapshots.parquet": {
+   "plaintext_bytes": 21654,
+   "ciphertext_bytes": 21895,
+   "original_sha256": "1ea4f28922aaeaac89665efa16cd642224c975f04615d60227064ee7d51b77a5",
+   "manifest_sha256": "1ea4f28922aaeaac89665efa16cd642224c975f04615d60227064ee7d51b77a5",
+   "decrypted_sha256": "1ea4f28922aaeaac89665efa16cd642224c975f04615d60227064ee7d51b77a5",
+   "byte_identical": true,
+   "round_trip_ok": true
+  },
+  "data/shadow_fusion_output.json": {
+   "plaintext_bytes": 2142,
+   "ciphertext_bytes": 2384,
+   "original_sha256": "ad822c7153f11b5b8116ca3475c52996ebe0adec81d0c2621f6ce898ca78cc94",
+   "manifest_sha256": "ad822c7153f11b5b8116ca3475c52996ebe0adec81d0c2621f6ce898ca78cc94",
+   "decrypted_sha256": "ad822c7153f11b5b8116ca3475c52996ebe0adec81d0c2621f6ce898ca78cc94",
+   "byte_identical": true,
+   "round_trip_ok": true
+  },
+  "data/feature_store/snapshots.parquet": {
+   "plaintext_bytes": 53435,
+   "ciphertext_bytes": 53683,
+   "original_sha256": "41ad3082c5d190e5a72650412e3f39bf397efe10a7d2e3f2909138f88ff847b2",
+   "manifest_sha256": "41ad3082c5d190e5a72650412e3f39bf397efe10a7d2e3f2909138f88ff847b2",
+   "decrypted_sha256": "41ad3082c5d190e5a72650412e3f39bf397efe10a7d2e3f2909138f88ff847b2",
+   "byte_identical": true,
+   "round_trip_ok": true
+  },
+  "data/next_day_range_shadow.json": {
+   "plaintext_bytes": 28605,
+   "ciphertext_bytes": 28848,
+   "original_sha256": "9b618b107a5fb883c001fe0b73fbb399a53374378a84e3f738774758efd1add9",
+   "manifest_sha256": "9b618b107a5fb883c001fe0b73fbb399a53374378a84e3f738774758efd1add9",
+   "decrypted_sha256": "9b618b107a5fb883c001fe0b73fbb399a53374378a84e3f738774758efd1add9",
+   "byte_identical": true,
+   "round_trip_ok": true
+  },
+  "data/wait_or_buy_shadow.json": {
+   "plaintext_bytes": 599,
+   "ciphertext_bytes": 839,
+   "original_sha256": "44488031f6edef46d90e15a1ad242a0d6f11f0de4a12c6c30a51561f4fd44644",
+   "manifest_sha256": "44488031f6edef46d90e15a1ad242a0d6f11f0de4a12c6c30a51561f4fd44644",
+   "decrypted_sha256": "44488031f6edef46d90e15a1ad242a0d6f11f0de4a12c6c30a51561f4fd44644",
+   "byte_identical": true,
+   "round_trip_ok": true
+  },
+  "reports/derived_premium.json": {
+   "plaintext_bytes": 74741,
+   "ciphertext_bytes": 74981,
+   "original_sha256": "7ae1fa304c5b3df95c2df253e6819d2baf38d67259b67d93709497ad526eb3ba",
+   "manifest_sha256": "7ae1fa304c5b3df95c2df253e6819d2baf38d67259b67d93709497ad526eb3ba",
+   "decrypted_sha256": "7ae1fa304c5b3df95c2df253e6819d2baf38d67259b67d93709497ad526eb3ba",
+   "byte_identical": true,
+   "round_trip_ok": true
+  }
+ },
+ "migrate_stdout": "data/nowcast_shadow_log.json: not tracked, skipped\ndata_crypt migrate: 9 file(s) encrypted and untracked: reports/vol_regime_prereg_gcf_2000_2012.csv, reports/vol_regime_prereg_gld_2004_2012.csv, data/ibja_rates.parquet, data/fusion_snapshots.parquet, data/shadow_fusion_output.json, data/feature_store/snapshots.parquet, data/next_day_range_shadow.json, data/wait_or_buy_shadow.json, reports/derived_premium.json",
+ "guard_after_migrate": "data_crypt guard: 10 registered, 9 migrated, 0 problem(s)",
+ "scan_ciphertext_for_test_key": "data_crypt scan-key: scanned 19 file(s), 0 hit(s)",
+ "plaintext_absent_in_fresh_clone": "9/9",
+ "tamper": {
+  "reports/vol_regime_prereg_gcf_2000_2012.csv": {
+   "exit": 1,
+   "plaintext_written": false,
+   "stderr": "data_crypt: ERROR: authentication failed for reports/vol_regime_prereg_gcf_2000_2012.csv: the ciphertext or its header was modified (or the "
+  },
+  "reports/vol_regime_prereg_gld_2004_2012.csv": {
+   "exit": 1,
+   "plaintext_written": false,
+   "stderr": "data_crypt: ERROR: authentication failed for reports/vol_regime_prereg_gld_2004_2012.csv: the ciphertext or its header was modified (or the "
+  },
+  "data/ibja_rates.parquet": {
+   "exit": 1,
+   "plaintext_written": false,
+   "stderr": "data_crypt: ERROR: authentication failed for data/ibja_rates.parquet: the ciphertext or its header was modified (or the key is wrong)"
+  },
+  "data/fusion_snapshots.parquet": {
+   "exit": 1,
+   "plaintext_written": false,
+   "stderr": "data_crypt: ERROR: authentication failed for data/fusion_snapshots.parquet: the ciphertext or its header was modified (or the key is wrong)"
+  },
+  "data/shadow_fusion_output.json": {
+   "exit": 1,
+   "plaintext_written": false,
+   "stderr": "data_crypt: ERROR: authentication failed for data/shadow_fusion_output.json: the ciphertext or its header was modified (or the key is wrong)"
+  },
+  "data/feature_store/snapshots.parquet": {
+   "exit": 1,
+   "plaintext_written": false,
+   "stderr": "data_crypt: ERROR: authentication failed for data/feature_store/snapshots.parquet: the ciphertext or its header was modified (or the key is "
+  },
+  "data/next_day_range_shadow.json": {
+   "exit": 1,
+   "plaintext_written": false,
+   "stderr": "data_crypt: ERROR: authentication failed for data/next_day_range_shadow.json: the ciphertext or its header was modified (or the key is wrong"
+  },
+  "data/wait_or_buy_shadow.json": {
+   "exit": 1,
+   "plaintext_written": false,
+   "stderr": "data_crypt: ERROR: authentication failed for data/wait_or_buy_shadow.json: the ciphertext or its header was modified (or the key is wrong)"
+  },
+  "reports/derived_premium.json": {
+   "exit": 1,
+   "plaintext_written": false,
+   "stderr": "data_crypt: ERROR: authentication failed for reports/derived_premium.json: the ciphertext or its header was modified (or the key is wrong)"
+  }
+ },
+ "wrong_key": {
+  "exit": 1,
+  "plaintext_written": false,
+  "stderr": "data_crypt: ERROR: wrong key for data/ibja_rates.parquet: DATA_ENC_KEY has key id 244e306c1572d428, the file was encrypted under key id 9f730bb83f9a5514"
+ },
+ "no_key": {
+  "exit": 1,
+  "stderr": "data_crypt: ERROR: DATA_ENC_KEY is not set"
+ },
+ "verify_hash_only": [
+  "reports/vol_regime_prereg_gcf_2000_2012.csv: ok (plaintext on disk matches manifest)",
+  "reports/vol_regime_prereg_gld_2004_2012.csv: ok (plaintext on disk matches manifest)",
+  "data/ibja_rates.parquet: ok (plaintext on disk matches manifest)",
+  "data/fusion_snapshots.parquet: ok (plaintext on disk matches manifest)",
+  "data/shadow_fusion_output.json: ok (plaintext on disk matches manifest)",
+  "data/feature_store/snapshots.parquet: ok (plaintext on disk matches manifest)",
+  "data/next_day_range_shadow.json: ok (plaintext on disk matches manifest)",
+  "data/wait_or_buy_shadow.json: ok (plaintext on disk matches manifest)",
+  "data/nowcast_shadow_log.json: not-migrated",
+  "reports/derived_premium.json: ok (plaintext on disk matches manifest)"
+ ],
+ "check::scripts/analysis_vol_regime_prereg.py": {
+  "exit": 0,
+  "stdout": "ADR 044 --check: REPRODUCED (registered result at b9bcd7e8); GC=F P1 n=2816 rule_accuracy=0.504261 p_vs_always_up=0.998563",
+  "stderr": ""
+ },
+ "check::scripts/analysis_dow_prereg.py": {
+  "exit": 0,
+  "stdout": "ADR 052 --check: REPRODUCED (registered result at e887b01f); GC=F P1 p=0.16281525397400864 P2 n_weeks=559 p_one_sided=0.6074461359867424",
+  "note": "re-run after fixing the int/str key comparison bug the first run exposed (exit 1, TypeError); see commit history"
+ },
+ "missing_snapshot": {
+  "exit": 1,
+  "stderr": "reports/vol_regime_prereg_gcf_2000_2012.csv is missing. It is stored encrypted (ADR 060): run `python scripts/data_crypt.py decrypt reports/vol_regime_prereg_gcf_2000_2012.csv` with DATA_ENC_KEY set."
+ },
+ "test_key_in_working_files": [],
+ "negative_controls": {
+  "vol_P1_rule_accuracy_plus_1e-6": "DIFFERS, exit 1",
+  "dow_gld_P2_n_weeks_plus_1": "DIFFERS, exit 1"
+ },
+ "test_key": "a local test key (never DATA_ENC_KEY); key id above",
+ "harness": "grt-venv/tmp-e1/prove.py (local, not committed): clone -> migrate -> commit -> fresh clone -> decrypt -> compare -> tamper/wrong key -> --check"
+}

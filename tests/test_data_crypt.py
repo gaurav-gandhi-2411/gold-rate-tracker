@@ -8,6 +8,7 @@ import importlib.util
 import io
 import json
 import os
+import re
 import subprocess
 import sys
 from collections.abc import Iterator
@@ -121,7 +122,7 @@ def test_round_trip_and_header_binds_path() -> None:
     assert header["path"] == IBJA and header["schema_version"] == 1
     assert len(base64.b64decode(header["nonce"])) == 12  # 96-bit nonce
     assert blob[: len(aad)] == aad
-    with pytest.raises(dc.CryptError, match="not 'data/fusion_snapshots.parquet'"):
+    with pytest.raises(dc.CryptError, match=re.escape("not 'data/fusion_snapshots.parquet'")):
         dc.decrypt_bytes(blob, "data/fusion_snapshots.parquet", key)
 
 
@@ -168,7 +169,11 @@ def test_wrong_key_is_reported_as_wrong_key() -> None:
 
 
 def test_cli_full_round_trip_every_registered_path(repo: Path) -> None:
-    originals = {lp: os.urandom(1000) + lp.encode() for lp in dc.REGISTRY if "frozen_sha256" not in dc.REGISTRY[lp]}
+    originals = {
+        lp: os.urandom(1000) + lp.encode()
+        for lp in dc.REGISTRY
+        if "frozen_sha256" not in dc.REGISTRY[lp]
+    }
     for lp, data in originals.items():
         _put(repo, lp, data)
     r = _cli(repo, "encrypt", *originals)
@@ -187,7 +192,9 @@ def test_cli_full_round_trip_every_registered_path(repo: Path) -> None:
     assert _cli(repo, "guard", key=None).returncode == 0
 
 
-def test_tampered_ciphertext_exits_nonzero_and_writes_no_plaintext(repo: Path, key_env: bytes) -> None:
+def test_tampered_ciphertext_exits_nonzero_and_writes_no_plaintext(
+    repo: Path, key_env: bytes
+) -> None:
     _put(repo, IBJA, b"original rows")
     p = dc.Paths(repo)
     assert dc.encrypt_one(p, IBJA, key_env) == "encrypted"
@@ -206,7 +213,9 @@ def test_tampered_ciphertext_exits_nonzero_and_writes_no_plaintext(repo: Path, k
     assert not list((repo / "data").glob(".*.tmp"))
 
 
-def test_tampered_ciphertext_does_not_overwrite_existing_plaintext(repo: Path, key_env: bytes) -> None:
+def test_tampered_ciphertext_does_not_overwrite_existing_plaintext(
+    repo: Path, key_env: bytes
+) -> None:
     _put(repo, IBJA, b"good")
     p = dc.Paths(repo)
     dc.encrypt_one(p, IBJA, key_env)
@@ -290,7 +299,9 @@ def test_migrate_encrypts_and_untracks(repo: Path, key_env: bytes) -> None:
     assert dc.guard(dc.Paths(repo)) == []
 
 
-def test_guard_catches_tracked_plaintext_unignored_and_stray_files(repo: Path, key_env: bytes) -> None:
+def test_guard_catches_tracked_plaintext_unignored_and_stray_files(
+    repo: Path, key_env: bytes
+) -> None:
     p = dc.Paths(repo)
     _put(repo, IBJA, b"rows")
     dc.encrypt_one(p, IBJA, key_env)
@@ -347,7 +358,9 @@ def test_key_never_appears_in_output_or_written_files(repo: Path) -> None:
     for out in outputs:
         for form in forms:
             assert form.decode("latin-1") not in out
-    written = [f for f in repo.rglob("*") if f.is_file() and ".git" not in f.relative_to(repo).parts]
+    written = [
+        f for f in repo.rglob("*") if f.is_file() and ".git" not in f.relative_to(repo).parts
+    ]
     assert len(written) >= 7
     assert dc.scan_for_key(written, TEST_KEY.encode()) == []
 

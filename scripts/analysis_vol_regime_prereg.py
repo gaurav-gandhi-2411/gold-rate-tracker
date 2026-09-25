@@ -225,7 +225,8 @@ def main() -> int:
     }
     if args.check:
         registered = json.loads(REGISTERED_RESULTS.read_text(encoding="utf-8"))
-        diffs = check_against_registered(res, registered)
+        # JSON round trip first: the registered file has string keys where a fresh run has ints.
+        diffs = check_against_registered(json.loads(json.dumps(res)), registered)
         for d in diffs:
             print(f"MISMATCH {d}")
         p1 = res["primary"]["P1"]

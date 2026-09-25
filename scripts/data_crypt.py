@@ -138,7 +138,9 @@ def _load_key() -> bytes:
         raise CryptError(f"{KEY_ENV} is not set")
     key = raw.strip()
     if len(key) < MIN_KEY_CHARS:
-        raise CryptError(f"{KEY_ENV} is shorter than {MIN_KEY_CHARS} characters; refusing to use it")
+        raise CryptError(
+            f"{KEY_ENV} is shorter than {MIN_KEY_CHARS} characters; refusing to use it"
+        )
     return key.encode("utf-8")
 
 
@@ -318,13 +320,17 @@ def _record_state(p: Paths, logical: str, sha: str) -> None:
 def _check_frozen(logical: str, sha: str) -> None:
     pinned = REGISTRY[logical].get("frozen_sha256")
     if pinned and sha != pinned:
-        raise CryptError(f"{logical} is a frozen snapshot: SHA-256 {sha} is not the pinned {pinned}")
+        raise CryptError(
+            f"{logical} is a frozen snapshot: SHA-256 {sha} is not the pinned {pinned}"
+        )
 
 
 def _registered(logical: str) -> str:
     logical = logical.replace("\\", "/")
     if logical not in REGISTRY:
-        raise CryptError(f"{logical} is not a registered path (see REGISTRY in {Path(__file__).name})")
+        raise CryptError(
+            f"{logical} is not a registered path (see REGISTRY in {Path(__file__).name})"
+        )
     return logical
 
 
@@ -341,7 +347,9 @@ def _git_tracked(root: Path, logical: str) -> bool:
 
 def _write_encrypted(p: Paths, logical: str, data: bytes, key: bytes) -> None:
     blob = encrypt_bytes(data, logical, key)
-    if decrypt_bytes(blob, logical, key) != data:  # belt and braces: never commit an unreadable file
+    if (
+        decrypt_bytes(blob, logical, key) != data
+    ):  # belt and braces: never commit an unreadable file
         raise CryptError(f"round-trip check failed for {logical}")
     _atomic_write(p.enc(logical), blob)
     entry = {
@@ -542,8 +550,10 @@ def _run(args: argparse.Namespace, p: Paths) -> int:
         for msg in problems:
             print(f"data_crypt guard: FAIL: {msg}", file=sys.stderr)
         migrated = sum(p.meta(lp).exists() for lp in REGISTRY)
-        print(f"data_crypt guard: {len(REGISTRY)} registered, {migrated} migrated, "
-              f"{len(problems)} problem(s)")
+        print(
+            f"data_crypt guard: {len(REGISTRY)} registered, {migrated} migrated, "
+            f"{len(problems)} problem(s)"
+        )
         return 1 if problems else 0
     if args.cmd == "manifest":
         entries = {lp: _read_meta(p, lp) for lp in REGISTRY}
@@ -589,7 +599,9 @@ def _run(args: argparse.Namespace, p: Paths) -> int:
         return 0
     # encrypt
     if all(_read_meta(p, lp) is None and _git_tracked(p.root, lp) for lp in targets):
-        print("data_crypt: every target is still tracked plaintext (pre-migration) -- nothing to do")
+        print(
+            "data_crypt: every target is still tracked plaintext (pre-migration) -- nothing to do"
+        )
         return 0
     key = _load_key()
     for lp in targets:
