@@ -190,3 +190,12 @@ rewritten, so the levels stay recoverable. A test asserts that no Rs/g level app
   which would inflate n.
 - **Encrypting the log instead (#2075).** Not needed, because the log stores differences and
   timestamps only.
+
+## Results
+
+Everything above this heading is the pre-registration. It was frozen at commit `5ce5d4a2` (pushed
+2026-09-25, before any shadow entry was scored), with sha256
+`5b0c4892c4d8eff3e2a4a1cf872b9539befb397331153a9ac46133a255822c91`. Every shadow entry records
+this hash as `prereg_sha256_adr062`, and the scorer recomputes it.
+
+No results yet. The shadow is not wired into a workflow, and no episode has been scored.
