@@ -1704,6 +1704,32 @@ function renderModelSignal(fc, readings, bt, coverage, drift) {
 const _DC_DRIVER_THRESHOLD_PCT  = 2.0;  // mechanism sentence fires at >2% (clearly noticeable)
 const _DC_PREMIUM_THRESHOLD_PCT = 1.0;  // "premium moved" at >1% log-space %
 
+// Weekly headline (Rs/g, already rounded the way the page shows them). Each part is worded by
+// its own sign -- gold and the rupee can push in opposite directions, and the week's total can go
+// against either part -- so the page never says "the rupee added back" when it took money off.
+// A part within +/-_DC_PART_FLAT_RS is "roughly flat". Returns "" for a total that rounds to 0
+// (nothing to explain; ml/drivers.py already withholds the split in that case).
+const _DC_PART_FLAT_RS = 10;
+function driverHeadlineText(total, goldPt, inrPt) {
+  if (total === 0) return "";
+  const absTotal = fmtINR(Math.abs(total));
+  const goldAbs = Math.abs(goldPt);
+  const inrAbs = Math.abs(inrPt);
+  if (goldAbs <= _DC_PART_FLAT_RS && inrAbs <= _DC_PART_FLAT_RS) {
+    return t(total > 0 ? "driverUpMixed" : "driverDownMixed", { total: absTotal });
+  }
+  const gold = goldAbs <= _DC_PART_FLAT_RS
+    ? t("driverPartGoldFlat")
+    : t(goldPt > 0 ? "driverPartGoldAdded" : "driverPartGoldTookOff", { gold: fmtINR(goldAbs) });
+  const inr = inrAbs <= _DC_PART_FLAT_RS
+    ? t("driverPartRupeeFlat")
+    : t(inrPt > 0 ? "driverPartRupeeAdded" : "driverPartRupeeTookOff", { inr: fmtINR(inrAbs) });
+  const lead = t(total > 0 ? "driverWeekUp" : "driverWeekDown", { total: absTotal });
+  // The bigger part is named first
+  const [first, second] = inrAbs > goldAbs ? [inr, gold] : [gold, inr];
+  return t("driverHeadline", { lead, first, second });
+}
+
 function renderDriverContext(fc) {
   const section = document.getElementById("driver-context-section");
   const body    = document.getElementById("driver-context-body");
@@ -1760,36 +1786,13 @@ function renderDriverContext(fc) {
     typeof w7?.usdinr_contrib_rs_per_g === "number" &&
     typeof w7?.gold_usd_contrib_rs_per_g === "number"
   ) {
-    const total    = Math.round(w7.total_move_rs_per_g);
-    const inrPt    = Math.round(w7.usdinr_contrib_rs_per_g);
-    const goldPt   = Math.round(w7.gold_usd_contrib_rs_per_g);
-    const absTotal = Math.abs(total);
-    const inrAbs   = Math.abs(inrPt);
-    const goldAbs  = Math.abs(goldPt);
-    let headline;
-
-    if (total >= 0) {
-      if (inrAbs >= goldAbs && inrAbs > 10) {
-        headline = t("driverUpInrDominant", { total: fmtINR(absTotal), inr: fmtINR(inrAbs), gold: fmtINR(goldAbs) });
-      } else if (goldAbs > 10) {
-        headline = t("driverUpGoldDominant", { total: fmtINR(absTotal), gold: fmtINR(goldAbs), inr: fmtINR(inrAbs) });
-      } else {
-        headline = t("driverUpMixed", { total: fmtINR(absTotal) });
-      }
-    } else {
-      if (inrAbs >= goldAbs && inrAbs > 10) {
-        headline = t("driverDownInrDominant", { total: fmtINR(absTotal), inr: fmtINR(inrAbs) });
-      } else if (goldAbs > 10) {
-        const inrNote = inrAbs > 10
-          ? t("driverDownGoldDominantInrNoteAdded", { inr: fmtINR(inrAbs) })
-          : t("driverDownGoldDominantInrNoteFlat");
-        headline = t("driverDownGoldDominant", { total: fmtINR(absTotal), gold: fmtINR(goldAbs), inrNote });
-      } else {
-        headline = t("driverDownMixed", { total: fmtINR(absTotal) });
-      }
-    }
+    const headline = driverHeadlineText(
+      Math.round(w7.total_move_rs_per_g),
+      Math.round(w7.gold_usd_contrib_rs_per_g),
+      Math.round(w7.usdinr_contrib_rs_per_g),
+    );
     // XSS-safe: headline built from fmtINR(number) and catalogue string literals only
-    headlineHtml = `<p class="driver-headline">${headline}</p>`;
+    if (headline) headlineHtml = `<p class="driver-headline">${headline}</p>`;
   }
 
   // --- Driver-state supporting (30d, three-branch) ---
