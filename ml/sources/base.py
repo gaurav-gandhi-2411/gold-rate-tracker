@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import math
 from dataclasses import dataclass
 from datetime import UTC, datetime, timedelta
 from typing import Protocol
@@ -66,6 +67,30 @@ def validate_observed_at(observed_at: datetime, *, source: str) -> datetime:
             "(more than a day in the future)"
         )
     return observed_at
+
+
+# Plausible per-gram 22K range, INR. Same bounds as scraper/scrape.js's RANGE_MIN /
+# RANGE_MAX for Tanishq, so "implausible" means the same thing for every retailer. A
+# rate outside it is a parsing/unit error (per-10g vs per-g, a placeholder like 0 or
+# 999999), never a real market price -- fail closed rather than display it (ADR 059).
+MIN_PLAUSIBLE_RATE_22K = 2000.0
+MAX_PLAUSIBLE_RATE_22K = 25000.0
+
+
+def validate_rate_22k(rate: float, *, source: str) -> float:
+    """Fail closed on an implausible 22K per-gram rate before it reaches a reading.
+
+    Raises :class:`SourceStructureError` (the same "skip this source this cycle"
+    treatment every caller already gives a structure failure) when ``rate`` is not a
+    finite number inside [MIN_PLAUSIBLE_RATE_22K, MAX_PLAUSIBLE_RATE_22K].
+    """
+    if not math.isfinite(rate) or not (MIN_PLAUSIBLE_RATE_22K <= rate <= MAX_PLAUSIBLE_RATE_22K):
+        raise SourceStructureError(
+            f"{source}: implausible 22K rate {rate!r} (outside "
+            f"Rs.{MIN_PLAUSIBLE_RATE_22K:.0f}-{MAX_PLAUSIBLE_RATE_22K:.0f}/g) — "
+            "likely a unit or parsing error; not recorded"
+        )
+    return rate
 
 
 @dataclass(frozen=True)
