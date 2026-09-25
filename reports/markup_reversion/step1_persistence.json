@@ -1,0 +1,353 @@
+{
+ "adr": "docs/adr/057-markup-reversion-preregistration.md",
+ "label": "step 1 diagnostic -- data construction only, no forward outcome computed",
+ "data": {
+  "tanishq_first_date": "2026-04-14",
+  "tanishq_last_date": "2026-09-24",
+  "n_daily_rows": 148,
+  "n_stale_ibja": 56,
+  "n_tanishq_repeat": 26,
+  "n_backfill": 25,
+  "n_weekend": 40
+ },
+ "persistence": {
+  "a_all_pairs_f1": {
+   "definition": "every daily row, adjacent rows (F1's construction)",
+   "n_rows": 148,
+   "n_weekend_rows": 40,
+   "markup_pct__adjacent_rows": {
+    "n_pairs": 147,
+    "ar1": 0.7638195113505243,
+    "fisher_ci95": [
+     0.6868616467401547,
+     0.8238391181460274
+    ],
+    "block_bootstrap_ci95": [
+     0.40117364169946645,
+     0.7879578143426509
+    ],
+    "spearman_lag1": 0.5690150556321665,
+    "half_life_steps": 2.572702504301932,
+    "effective_n_for_mean": 19.683721383085043,
+    "pair_gap_days_counts": {
+     "1": 137,
+     "2": 6,
+     "3": 2,
+     "4": 2
+    }
+   },
+   "markup_pct__one_calendar_day": {
+    "n_pairs": 137,
+    "ar1": 0.7694745821352219,
+    "fisher_ci95": [
+     0.6909248885811813,
+     0.8300675276953077
+    ],
+    "block_bootstrap_ci95": [
+     0.40317182101336124,
+     0.7907410886684153
+    ],
+    "spearman_lag1": 0.5797642078552494,
+    "half_life_steps": 2.645121805780645,
+    "effective_n_for_mean": 17.848226002412915
+   },
+   "markup_pct__next_ibja_business_day": {
+    "n_pairs": 94,
+    "ar1": 0.4791273442873565,
+    "fisher_ci95": [
+     0.3062399467158849,
+     0.6214175150529089
+    ],
+    "block_bootstrap_ci95": [
+     0.1588539606913049,
+     0.6161855653085236
+    ],
+    "spearman_lag1": 0.48551994191676784,
+    "half_life_steps": 0.9420463069518897,
+    "effective_n_for_mean": 33.10197044635017
+   },
+   "markup_rs__adjacent_rows": {
+    "n_pairs": 147,
+    "ar1": 0.7584374183682517,
+    "fisher_ci95": [
+     0.6800439579733351,
+     0.8196849321477253
+    ],
+    "block_bootstrap_ci95": [
+     0.3998986785653339,
+     0.7845589745932054
+    ],
+    "spearman_lag1": 0.5665290817386704,
+    "half_life_steps": 2.5069068297527304,
+    "effective_n_for_mean": 20.193894379714887,
+    "pair_gap_days_counts": {
+     "1": 137,
+     "2": 6,
+     "3": 2,
+     "4": 2
+    }
+   },
+   "markup_rs__one_calendar_day": {
+    "n_pairs": 137,
+    "ar1": 0.7651793598764149,
+    "fisher_ci95": [
+     0.6854262929559325,
+     0.8267907787400737
+    ],
+    "block_bootstrap_ci95": [
+     0.4123687444944342,
+     0.7889847626641638
+    ],
+    "spearman_lag1": 0.5789941028642669,
+    "half_life_steps": 2.589800448293617,
+    "effective_n_for_mean": 18.22501918399017
+   },
+   "markup_rs__next_ibja_business_day": {
+    "n_pairs": 94,
+    "ar1": 0.4855873367962872,
+    "fisher_ci95": [
+     0.31384946499885535,
+     0.6265583354084845
+    ],
+    "block_bootstrap_ci95": [
+     0.1601841133705353,
+     0.6173307623078634
+    ],
+    "spearman_lag1": 0.48767289554519516,
+    "half_life_steps": 0.9595112213844197,
+    "effective_n_for_mean": 32.54927471677804
+   }
+  },
+  "b_same_day_fresh": {
+   "definition": "rows whose IBJA fix is the one wanted that IST day (stale_ibja False)",
+   "n_rows": 92,
+   "n_weekend_rows": 0,
+   "markup_pct__adjacent_rows": {
+    "n_pairs": 91,
+    "ar1": 0.4349953347641425,
+    "fisher_ci95": [
+     0.25158910746956054,
+     0.5882424554280813
+    ],
+    "block_bootstrap_ci95": [
+     0.10864274756422852,
+     0.5602636211259993
+    ],
+    "spearman_lag1": 0.46884033158410243,
+    "half_life_steps": 0.8326892714612081,
+    "effective_n_for_mean": 35.82968062046957,
+    "pair_gap_days_counts": {
+     "1": 67,
+     "2": 2,
+     "3": 12,
+     "4": 6,
+     "5": 1,
+     "6": 2,
+     "12": 1
+    }
+   },
+   "markup_pct__one_calendar_day": {
+    "n_pairs": 67,
+    "ar1": 0.38755592822281804,
+    "fisher_ci95": [
+     0.1624725702381463,
+     0.5743004662387559
+    ],
+    "block_bootstrap_ci95": [
+     -0.0028958517039627536,
+     0.5688240127687876
+    ],
+    "spearman_lag1": 0.4289690814432652,
+    "half_life_steps": 0.7312488201094821,
+    "effective_n_for_mean": 29.57268386408556
+   },
+   "markup_pct__next_ibja_business_day": {
+    "n_pairs": 81,
+    "ar1": 0.4143982667436888,
+    "fisher_ci95": [
+     0.21555286349818617,
+     0.580245006449586
+    ],
+    "block_bootstrap_ci95": [
+     0.060448613048370944,
+     0.5649161833565242
+    ],
+    "spearman_lag1": 0.4469763266575681,
+    "half_life_steps": 0.7868376996185313,
+    "effective_n_for_mean": 33.53633945194657
+   },
+   "markup_rs__adjacent_rows": {
+    "n_pairs": 91,
+    "ar1": 0.4516876457377436,
+    "fisher_ci95": [
+     0.2709470324900591,
+     0.601664054037635
+    ],
+    "block_bootstrap_ci95": [
+     0.1459786493361889,
+     0.5681613162559787
+    ],
+    "spearman_lag1": 0.4846789670247414,
+    "half_life_steps": 0.8721417210524757,
+    "effective_n_for_mean": 34.37132249789733,
+    "pair_gap_days_counts": {
+     "1": 67,
+     "2": 2,
+     "3": 12,
+     "4": 6,
+     "5": 1,
+     "6": 2,
+     "12": 1
+    }
+   },
+   "markup_rs__one_calendar_day": {
+    "n_pairs": 67,
+    "ar1": 0.41801648361031735,
+    "fisher_ci95": [
+     0.1976545864600207,
+     0.59816287693052
+    ],
+    "block_bootstrap_ci95": [
+     0.042091217780121745,
+     0.5766932991147675
+    ],
+    "spearman_lag1": 0.44517165350261634,
+    "half_life_steps": 0.794679928261792,
+    "effective_n_for_mean": 27.498196282480105
+   },
+   "markup_rs__next_ibja_business_day": {
+    "n_pairs": 81,
+    "ar1": 0.43474350437850956,
+    "fisher_ci95": [
+     0.2390899477493563,
+     0.5964721985524657
+    ],
+    "block_bootstrap_ci95": [
+     0.09660773934587719,
+     0.5704438646281091
+    ],
+    "spearman_lag1": 0.4609782123956285,
+    "half_life_steps": 0.832110392550247,
+    "effective_n_for_mean": 31.9121682764989
+   }
+  },
+  "c_no_carry_forward": {
+   "definition": "b minus Tanishq repeat days and synthetic-timestamp backfill rows",
+   "n_rows": 73,
+   "n_weekend_rows": 0,
+   "markup_pct__adjacent_rows": {
+    "n_pairs": 72,
+    "ar1": 0.24021098918172337,
+    "fisher_ci95": [
+     0.00904582474850694,
+     0.4470040691632938
+    ],
+    "block_bootstrap_ci95": [
+     -0.10500084951400651,
+     0.4294886487596409
+    ],
+    "spearman_lag1": 0.28831436105215774,
+    "half_life_steps": 0.48599698305399586,
+    "effective_n_for_mean": 44.10927596683327,
+    "pair_gap_days_counts": {
+     "1": 49,
+     "2": 4,
+     "3": 10,
+     "4": 5,
+     "5": 1,
+     "6": 2,
+     "12": 1
+    }
+   },
+   "markup_pct__one_calendar_day": {
+    "n_pairs": 49,
+    "ar1": 0.03157539857822045,
+    "fisher_ci95": [
+     -0.25185740442794,
+     0.3100193571880071
+    ],
+    "block_bootstrap_ci95": [
+     -0.2779264640980721,
+     0.24898799596965066
+    ],
+    "spearman_lag1": 0.15918367346938775,
+    "half_life_steps": 0.20059958234561295,
+    "effective_n_for_mean": 46.00032681573206
+   },
+   "markup_pct__next_ibja_business_day": {
+    "n_pairs": 59,
+    "ar1": 0.09972316778508913,
+    "fisher_ci95": [
+     -0.1604567480555845,
+     0.3469453848842416
+    ],
+    "block_bootstrap_ci95": [
+     -0.23784672758127187,
+     0.2953443603246243
+    ],
+    "spearman_lag1": 0.15435417884278202,
+    "half_life_steps": 0.300668011149781,
+    "effective_n_for_mean": 48.29973092924771
+   },
+   "markup_rs__adjacent_rows": {
+    "n_pairs": 72,
+    "ar1": 0.26512323491096185,
+    "fisher_ci95": [
+     0.035643953567234876,
+     0.4680441837932796
+    ],
+    "block_bootstrap_ci95": [
+     -0.06713764290121657,
+     0.4362089361637882
+    ],
+    "spearman_lag1": 0.3108560036015178,
+    "half_life_steps": 0.5221209641215041,
+    "effective_n_for_mean": 41.822903592577354,
+    "pair_gap_days_counts": {
+     "1": 49,
+     "2": 4,
+     "3": 10,
+     "4": 5,
+     "5": 1,
+     "6": 2,
+     "12": 1
+    }
+   },
+   "markup_rs__one_calendar_day": {
+    "n_pairs": 49,
+    "ar1": 0.07343246496657435,
+    "fisher_ci95": [
+     -0.2121446896670951,
+     0.3474544795357647
+    ],
+    "block_bootstrap_ci95": [
+     -0.24048033621605985,
+     0.29030458415836174
+    ],
+    "spearman_lag1": 0.17122448979591834,
+    "half_life_steps": 0.26543235941663657,
+    "effective_n_for_mean": 42.29591585722314
+   },
+   "markup_rs__next_ibja_business_day": {
+    "n_pairs": 59,
+    "ar1": 0.12807346041828158,
+    "fisher_ci95": [
+     -0.13234953055264514,
+     0.3719565515892509
+    ],
+    "block_bootstrap_ci95": [
+     -0.20613178697401904,
+     0.30017046860183777
+    ],
+    "spearman_lag1": 0.16984219754529517,
+    "half_life_steps": 0.33727307114641625,
+    "effective_n_for_mean": 45.60311685397371
+   }
+  }
+ },
+ "signal_frequency_primary_series": {
+  "n_rows_with_z": 72,
+  "share_z_ge_1": 0.1527777777777778,
+  "share_z_ge_1.5": 0.1111111111111111
+ }
+}
