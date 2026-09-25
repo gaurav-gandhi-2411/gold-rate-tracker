@@ -1,0 +1,2066 @@
+{
+ "adr": "docs/adr/057-markup-reversion-preregistration.md",
+ "label": "historical run on all data -- SEMI-CONFIRMATORY at best: F1 (#2022) computed AR(1) on this same data before the freeze. The forward shadow is the confirmatory test.",
+ "constants": {
+  "trailing_window": 60,
+  "min_trailing": 20,
+  "z_thresholds": [
+   1.0,
+   1.5
+  ],
+  "horizons_business_days": [
+   1,
+   3
+  ],
+  "forward_primary_cell": [
+   1.0,
+   3
+  ]
+ },
+ "primary_family": [
+  {
+   "z_threshold": 1.0,
+   "horizon_business_days": 1,
+   "hac_lag": 3,
+   "n_eligible_days": 61,
+   "n_signal_days": 10,
+   "first_decision_date": "2026-06-01",
+   "last_decision_date": "2026-09-23",
+   "baseline_unconditional_y": {
+    "n": 61,
+    "mean": 3.9442622950819435,
+    "hac_se": 4.941330420484102,
+    "ci95": [
+     -5.740567441171761,
+     13.629092031335647
+    ],
+    "effective_n": 247.69411755110588
+   },
+   "baseline_unconditional_gross_saving": {
+    "n": 61,
+    "mean": 2.459016393442623,
+    "hac_se": 24.372042160539163,
+    "ci95": [
+     -45.30930884769636,
+     50.227341634581606
+    ],
+    "effective_n": 55.37183792055334
+   },
+   "signal_minus_nonsignal_y": {
+    "a": 18.537254901960743,
+    "b": -89.01725490196065,
+    "se_b": 32.110464802598415,
+    "se_b_ols": 24.7707343404658,
+    "ci95": [
+     -151.95260993832065,
+     -26.081899865600654
+    ],
+    "t_hac": -2.7722194446328063,
+    "p_one_sided": 0.0027837744701646972
+   },
+   "signal_effective_n": 5.950926401745217,
+   "signal_days_y": {
+    "n": 10,
+    "mean": -70.47999999999993,
+    "hac_se": 30.25360176904564,
+    "ci95": [
+     -129.7759703376657,
+     -11.184029662334162
+    ],
+    "effective_n": 6.804108843495181
+   },
+   "signal_days_saving_net_of_market": {
+    "n": 10,
+    "mean": 70.47999999999993,
+    "hac_se": 30.25360176904564,
+    "ci95": [
+     11.184029662334162,
+     129.7759703376657
+    ],
+    "effective_n": 6.804108843495181
+   },
+   "signal_days_gross_saving": {
+    "n": 10,
+    "mean": 97.0,
+    "hac_se": 36.222575833311474,
+    "ci95": [
+     26.00505537943951,
+     167.9949446205605
+    ],
+    "effective_n": 26.329287578835046
+   },
+   "excess_gross_saving_vs_nonsignal": {
+    "b": 113.07843137254903,
+    "ci95": [
+     -13.151941627929332,
+     239.30880437302739
+    ]
+   },
+   "p_pay_more_gross": {
+    "k": 3,
+    "n": 10,
+    "rate": 0.3,
+    "wilson_ci95": [
+     0.10779126740630099,
+     0.6032218525388546
+    ]
+   },
+   "p_pay_more_net_of_market": {
+    "k": 2,
+    "n": 10,
+    "rate": 0.2,
+    "wilson_ci95": [
+     0.05668215145437522,
+     0.5098375284633582
+    ]
+   },
+   "signal_days_decomposition": {
+    "mean_tanishq_change": -97.0,
+    "mean_ibja_change": -26.520000000000074
+   },
+   "bonferroni_significant": true,
+   "bh_significant": true,
+   "verdict": "INCONCLUSIVE"
+  },
+  {
+   "z_threshold": 1.5,
+   "horizon_business_days": 1,
+   "hac_lag": 3,
+   "n_eligible_days": 61,
+   "n_signal_days": 7,
+   "first_decision_date": "2026-06-01",
+   "last_decision_date": "2026-09-23",
+   "baseline_unconditional_y": {
+    "n": 61,
+    "mean": 3.9442622950819435,
+    "hac_se": 4.941330420484102,
+    "ci95": [
+     -5.740567441171761,
+     13.629092031335647
+    ],
+    "effective_n": 247.69411755110588
+   },
+   "baseline_unconditional_gross_saving": {
+    "n": 61,
+    "mean": 2.459016393442623,
+    "hac_se": 24.372042160539163,
+    "ci95": [
+     -45.30930884769636,
+     50.227341634581606
+    ],
+    "effective_n": 55.37183792055334
+   },
+   "signal_minus_nonsignal_y": {
+    "a": 11.53333333333332,
+    "b": -66.13333333333343,
+    "se_b": 36.40254412563772,
+    "se_b_ols": 30.576728883357507,
+    "ci95": [
+     -137.48100932799483,
+     5.214342661327976
+    ],
+    "t_hac": -1.8167228396203439,
+    "p_one_sided": 0.03462978136211693
+   },
+   "signal_effective_n": 4.938745091105635,
+   "signal_days_y": {
+    "n": 7,
+    "mean": -54.6000000000001,
+    "hac_se": 26.363007477624887,
+    "ci95": [
+     -106.27054558787569,
+     -2.929454412124514
+    ],
+    "effective_n": 9.143021077420887
+   },
+   "signal_days_saving_net_of_market": {
+    "n": 7,
+    "mean": 54.6000000000001,
+    "hac_se": 26.363007477624887,
+    "ci95": [
+     2.929454412124514,
+     106.27054558787569
+    ],
+    "effective_n": 9.143021077420887
+   },
+   "signal_days_gross_saving": {
+    "n": 7,
+    "mean": 166.42857142857142,
+    "hac_se": 51.72649172190101,
+    "ci95": [
+     65.04650980734742,
+     267.8106330497954
+    ],
+    "effective_n": 8.880990786772646
+   },
+   "excess_gross_saving_vs_nonsignal": {
+    "b": 185.22486772486778,
+    "ci95": [
+     46.45288573066014,
+     323.9968497190754
+    ]
+   },
+   "p_pay_more_gross": {
+    "k": 1,
+    "n": 7,
+    "rate": 0.14285714285714285,
+    "wilson_ci95": [
+     0.025679624344743555,
+     0.5131278292743189
+    ]
+   },
+   "p_pay_more_net_of_market": {
+    "k": 2,
+    "n": 7,
+    "rate": 0.2857142857142857,
+    "wilson_ci95": [
+     0.0822189240040568,
+     0.6410655481673808
+    ]
+   },
+   "signal_days_decomposition": {
+    "mean_tanishq_change": -166.42857142857142,
+    "mean_ibja_change": -111.82857142857132
+   },
+   "bonferroni_significant": false,
+   "bh_significant": true,
+   "verdict": "INCONCLUSIVE"
+  },
+  {
+   "z_threshold": 1.0,
+   "horizon_business_days": 3,
+   "hac_lag": 5,
+   "n_eligible_days": 57,
+   "n_signal_days": 8,
+   "first_decision_date": "2026-06-01",
+   "last_decision_date": "2026-09-21",
+   "baseline_unconditional_y": {
+    "n": 57,
+    "mean": 0.3666666666666922,
+    "hac_se": 6.461638246540514,
+    "ci95": [
+     -12.29791167757584,
+     13.031245010909224
+    ],
+    "effective_n": 133.50729955212535
+   },
+   "baseline_unconditional_gross_saving": {
+    "n": 57,
+    "mean": 20.526315789473685,
+    "hac_se": 66.03808124767238,
+    "ci95": [
+     -108.90594608503928,
+     149.95857766398666
+    ],
+    "effective_n": 24.682470909505366
+   },
+   "signal_minus_nonsignal_y": {
+    "a": 12.13265306122449,
+    "b": -83.8326530612243,
+    "se_b": 16.344722081901313,
+    "se_b_ols": 26.687879008914702,
+    "ci95": [
+     -115.86771993175594,
+     -51.79758619069268
+    ],
+    "t_hac": -5.129035087972105,
+    "p_one_sided": 1.4561553121288078e-07
+   },
+   "signal_effective_n": 21.328633236267297,
+   "signal_days_y": {
+    "n": 8,
+    "mean": -71.69999999999982,
+    "hac_se": 13.139180831264444,
+    "ci95": [
+     -97.45232141876821,
+     -45.94767858123143
+    ],
+    "effective_n": 17.046471559147488
+   },
+   "signal_days_saving_net_of_market": {
+    "n": 8,
+    "mean": 71.69999999999982,
+    "hac_se": 13.139180831264444,
+    "ci95": [
+     45.94767858123143,
+     97.45232141876821
+    ],
+    "effective_n": 17.046471559147488
+   },
+   "signal_days_gross_saving": {
+    "n": 8,
+    "mean": 135.625,
+    "hac_se": 48.98873585054399,
+    "ci95": [
+     39.6088413274244,
+     231.6411586725756
+    ],
+    "effective_n": 33.19788707499257
+   },
+   "excess_gross_saving_vs_nonsignal": {
+    "b": 133.89030612244898,
+    "ci95": [
+     -48.234775112310956,
+     316.0153873572089
+    ]
+   },
+   "p_pay_more_gross": {
+    "k": 1,
+    "n": 8,
+    "rate": 0.125,
+    "wilson_ci95": [
+     0.022417491450056667,
+     0.47088818221285345
+    ]
+   },
+   "p_pay_more_net_of_market": {
+    "k": 1,
+    "n": 8,
+    "rate": 0.125,
+    "wilson_ci95": [
+     0.022417491450056667,
+     0.47088818221285345
+    ]
+   },
+   "signal_days_decomposition": {
+    "mean_tanishq_change": -135.625,
+    "mean_ibja_change": -63.92500000000018
+   },
+   "bonferroni_significant": true,
+   "bh_significant": true,
+   "verdict": "INCONCLUSIVE"
+  },
+  {
+   "z_threshold": 1.5,
+   "horizon_business_days": 3,
+   "hac_lag": 5,
+   "n_eligible_days": 57,
+   "n_signal_days": 6,
+   "first_decision_date": "2026-06-01",
+   "last_decision_date": "2026-09-21",
+   "baseline_unconditional_y": {
+    "n": 57,
+    "mean": 0.3666666666666922,
+    "hac_se": 6.461638246540514,
+    "ci95": [
+     -12.29791167757584,
+     13.031245010909224
+    ],
+    "effective_n": 133.50729955212535
+   },
+   "baseline_unconditional_gross_saving": {
+    "n": 57,
+    "mean": 20.526315789473685,
+    "hac_se": 66.03808124767238,
+    "ci95": [
+     -108.90594608503928,
+     149.95857766398666
+    ],
+    "effective_n": 24.682470909505366
+   },
+   "signal_minus_nonsignal_y": {
+    "a": 8.15686274509804,
+    "b": -74.0068627450978,
+    "se_b": 18.118413518830693,
+    "se_b_ols": 31.24941542943505,
+    "ci95": [
+     -109.51830097911929,
+     -38.49542451107632
+    ],
+    "t_hac": -4.084621573968469,
+    "p_one_sided": 2.2074353574407033e-05
+   },
+   "signal_effective_n": 17.84821179151269,
+   "signal_days_y": {
+    "n": 6,
+    "mean": -65.84999999999975,
+    "hac_se": 12.696881907979792,
+    "ci95": [
+     -90.73543145189146,
+     -40.96456854810805
+    ],
+    "effective_n": 19.349917227945305
+   },
+   "signal_days_saving_net_of_market": {
+    "n": 6,
+    "mean": 65.84999999999975,
+    "hac_se": 12.696881907979792,
+    "ci95": [
+     40.96456854810805,
+     90.73543145189146
+    ],
+    "effective_n": 19.349917227945305
+   },
+   "signal_days_gross_saving": {
+    "n": 6,
+    "mean": 243.33333333333334,
+    "hac_se": 72.34515890134533,
+    "ci95": [
+     101.53942631241694,
+     385.12724035424975
+    ],
+    "effective_n": 8.277358703824738
+   },
+   "excess_gross_saving_vs_nonsignal": {
+    "b": 249.0196078431373,
+    "ci95": [
+     23.028513347744138,
+     475.01070233853045
+    ]
+   },
+   "p_pay_more_gross": {
+    "k": 0,
+    "n": 6,
+    "rate": 0.0,
+    "wilson_ci95": [
+     3.384324554477539e-17,
+     0.39033428790216534
+    ]
+   },
+   "p_pay_more_net_of_market": {
+    "k": 1,
+    "n": 6,
+    "rate": 0.16666666666666666,
+    "wilson_ci95": [
+     0.030053369748306632,
+     0.5635028221864702
+    ]
+   },
+   "signal_days_decomposition": {
+    "mean_tanishq_change": -243.33333333333334,
+    "mean_ibja_change": -177.48333333333358
+   },
+   "bonferroni_significant": true,
+   "bh_significant": true,
+   "verdict": "INCONCLUSIVE"
+  }
+ ],
+ "sensitivity_exploratory": {
+  "c_no_carry_forward": {
+   "horizon_unit": "IBJA business days",
+   "cells": [
+    {
+     "z_threshold": 1.0,
+     "horizon_business_days": 1,
+     "hac_lag": 3,
+     "n_eligible_days": 43,
+     "n_signal_days": 13,
+     "first_decision_date": "2026-06-23",
+     "last_decision_date": "2026-09-23",
+     "baseline_unconditional_y": {
+      "n": 43,
+      "mean": 4.230232558139527,
+      "hac_se": 7.063080731372984,
+      "ci95": [
+       -9.613151404445192,
+       18.073616520724244
+      ],
+      "effective_n": 140.55501684533812
+     },
+     "baseline_unconditional_gross_saving": {
+      "n": 43,
+      "mean": -21.27906976744186,
+      "hac_se": 25.47662446837422,
+      "ci95": [
+       -71.21233656697447,
+       28.65419703209075
+      ],
+      "effective_n": 43.93142728796841
+     },
+     "signal_minus_nonsignal_y": {
+      "a": 38.34333333333337,
+      "b": -112.8356410256412,
+      "se_b": 23.76490471750356,
+      "se_b_ols": 22.367025817915987,
+      "ci95": [
+       -159.41399873537836,
+       -66.25728331590405
+      ],
+      "t_hac": -4.747994673950213,
+      "p_one_sided": 1.027217225762585e-06
+     },
+     "signal_effective_n": 11.515629289199655,
+     "signal_days_y": {
+      "n": 13,
+      "mean": -74.4923076923078,
+      "hac_se": 11.584107467311622,
+      "ci95": [
+       -97.19674130036975,
+       -51.78787408424585
+      ],
+      "effective_n": 30.794356108256842
+     },
+     "signal_days_saving_net_of_market": {
+      "n": 13,
+      "mean": 74.4923076923078,
+      "hac_se": 11.584107467311622,
+      "ci95": [
+       51.78787408424585,
+       97.19674130036975
+      ],
+      "effective_n": 30.794356108256842
+     },
+     "signal_days_gross_saving": {
+      "n": 13,
+      "mean": 90.38461538461539,
+      "hac_se": 40.37730497155821,
+      "ci95": [
+       11.246551223340262,
+       169.52267954589053
+      ],
+      "effective_n": 18.723149788421846
+     },
+     "excess_gross_saving_vs_nonsignal": {
+      "b": 160.05128205128204,
+      "ci95": [
+       63.434119877661274,
+       256.6684442249028
+      ]
+     },
+     "p_pay_more_gross": {
+      "k": 4,
+      "n": 13,
+      "rate": 0.3076923076923077,
+      "wilson_ci95": [
+       0.12680703655710512,
+       0.5763065681945096
+      ]
+     },
+     "p_pay_more_net_of_market": {
+      "k": 1,
+      "n": 13,
+      "rate": 0.07692307692307693,
+      "wilson_ci95": [
+       0.013710421242556585,
+       0.3331395092109959
+      ]
+     },
+     "signal_days_decomposition": {
+      "mean_tanishq_change": -90.38461538461539,
+      "mean_ibja_change": -15.89230769230758
+     }
+    },
+    {
+     "z_threshold": 1.5,
+     "horizon_business_days": 1,
+     "hac_lag": 3,
+     "n_eligible_days": 43,
+     "n_signal_days": 10,
+     "first_decision_date": "2026-06-23",
+     "last_decision_date": "2026-09-23",
+     "baseline_unconditional_y": {
+      "n": 43,
+      "mean": 4.230232558139527,
+      "hac_se": 7.063080731372984,
+      "ci95": [
+       -9.613151404445192,
+       18.073616520724244
+      ],
+      "effective_n": 140.55501684533812
+     },
+     "baseline_unconditional_gross_saving": {
+      "n": 43,
+      "mean": -21.27906976744186,
+      "hac_se": 25.47662446837422,
+      "ci95": [
+       -71.21233656697447,
+       28.65419703209075
+      ],
+      "effective_n": 43.93142728796841
+     },
+     "signal_minus_nonsignal_y": {
+      "a": 32.603030303030295,
+      "b": -122.00303030303029,
+      "se_b": 25.357701733972423,
+      "se_b_ols": 24.396649287352734,
+      "ci95": [
+       -171.7032128243538,
+       -72.30284778170676
+      ],
+      "t_hac": -4.811281068882493,
+      "p_one_sided": 7.498297280650562e-07
+     },
+     "signal_effective_n": 9.256367476076816,
+     "signal_days_y": {
+      "n": 10,
+      "mean": -89.4,
+      "hac_se": 19.49111464231858,
+      "ci95": [
+       -127.60188301881729,
+       -51.198116981182714
+      ],
+      "effective_n": 11.507357591156868
+     },
+     "signal_days_saving_net_of_market": {
+      "n": 10,
+      "mean": 89.4,
+      "hac_se": 19.49111464231858,
+      "ci95": [
+       51.198116981182714,
+       127.60188301881729
+      ],
+      "effective_n": 11.507357591156868
+     },
+     "signal_days_gross_saving": {
+      "n": 10,
+      "mean": 102.5,
+      "hac_se": 42.93381534408513,
+      "ci95": [
+       18.35126754294552,
+       186.64873245705448
+      ],
+      "effective_n": 19.27576034991354
+     },
+     "excess_gross_saving_vs_nonsignal": {
+      "b": 161.2878787878788,
+      "ci95": [
+       38.23646596321082,
+       284.3392916125468
+      ]
+     },
+     "p_pay_more_gross": {
+      "k": 3,
+      "n": 10,
+      "rate": 0.3,
+      "wilson_ci95": [
+       0.10779126740630099,
+       0.6032218525388546
+      ]
+     },
+     "p_pay_more_net_of_market": {
+      "k": 1,
+      "n": 10,
+      "rate": 0.1,
+      "wilson_ci95": [
+       0.01787621309507289,
+       0.4041500267952385
+      ]
+     },
+     "signal_days_decomposition": {
+      "mean_tanishq_change": -102.5,
+      "mean_ibja_change": -13.1
+     }
+    },
+    {
+     "z_threshold": 1.0,
+     "horizon_business_days": 3,
+     "hac_lag": 5,
+     "n_eligible_days": 40,
+     "n_signal_days": 16,
+     "first_decision_date": "2026-06-23",
+     "last_decision_date": "2026-09-21",
+     "baseline_unconditional_y": {
+      "n": 40,
+      "mean": -4.527499999999963,
+      "hac_se": 6.530779796172373,
+      "ci95": [
+       -17.327593292425153,
+       8.272593292425228
+      ],
+      "effective_n": 113.65831660809079
+     },
+     "baseline_unconditional_gross_saving": {
+      "n": 40,
+      "mean": -48.5,
+      "hac_se": 66.65186880038199,
+      "ci95": [
+       -179.1352633814719,
+       82.1352633814719
+      ],
+      "effective_n": 19.16112411851253
+     },
+     "signal_minus_nonsignal_y": {
+      "a": 24.924999999999955,
+      "b": -73.63124999999981,
+      "se_b": 23.095527621568586,
+      "se_b_ols": 19.71973547075952,
+      "ci95": [
+       -118.89765269927986,
+       -28.36484730071976
+      ],
+      "t_hac": -3.188117249646058,
+      "p_one_sided": 0.0007160122814028083
+     },
+     "signal_effective_n": 11.664506671427063,
+     "signal_days_y": {
+      "n": 16,
+      "mean": -48.70624999999984,
+      "hac_se": 13.703040633425758,
+      "ci95": [
+       -75.56371633205153,
+       -21.848783667948158
+      ],
+      "effective_n": 16.843090605860485
+     },
+     "signal_days_saving_net_of_market": {
+      "n": 16,
+      "mean": 48.70624999999984,
+      "hac_se": 13.703040633425758,
+      "ci95": [
+       21.848783667948158,
+       75.56371633205153
+      ],
+      "effective_n": 16.843090605860485
+     },
+     "signal_days_gross_saving": {
+      "n": 16,
+      "mean": -39.0625,
+      "hac_se": 87.81952346824212,
+      "ci95": [
+       -211.1856044949097,
+       133.0606044949097
+      ],
+      "effective_n": 8.412820675624703
+     },
+     "excess_gross_saving_vs_nonsignal": {
+      "b": 15.729166666666675,
+      "ci95": [
+       -136.20062658895404,
+       167.6589599222874
+      ]
+     },
+     "p_pay_more_gross": {
+      "k": 7,
+      "n": 16,
+      "rate": 0.4375,
+      "wilson_ci95": [
+       0.2309865240549235,
+       0.668214436011881
+      ]
+     },
+     "p_pay_more_net_of_market": {
+      "k": 3,
+      "n": 16,
+      "rate": 0.1875,
+      "wilson_ci95": [
+       0.06591599071428139,
+       0.43008880961974144
+      ]
+     },
+     "signal_days_decomposition": {
+      "mean_tanishq_change": 39.0625,
+      "mean_ibja_change": 87.76874999999984
+     }
+    },
+    {
+     "z_threshold": 1.5,
+     "horizon_business_days": 3,
+     "hac_lag": 5,
+     "n_eligible_days": 40,
+     "n_signal_days": 11,
+     "first_decision_date": "2026-06-23",
+     "last_decision_date": "2026-09-21",
+     "baseline_unconditional_y": {
+      "n": 40,
+      "mean": -4.527499999999963,
+      "hac_se": 6.530779796172373,
+      "ci95": [
+       -17.327593292425153,
+       8.272593292425228
+      ],
+      "effective_n": 113.65831660809079
+     },
+     "baseline_unconditional_gross_saving": {
+      "n": 40,
+      "mean": -48.5,
+      "hac_se": 66.65186880038199,
+      "ci95": [
+       -179.1352633814719,
+       82.1352633814719
+      ],
+      "effective_n": 19.16112411851253
+     },
+     "signal_minus_nonsignal_y": {
+      "a": 20.075862068965485,
+      "b": -89.46677115987434,
+      "se_b": 21.284746472330642,
+      "se_b_ols": 20.71735308080316,
+      "ci95": [
+       -131.1841079947694,
+       -47.74943432497928
+      ],
+      "t_hac": -4.203328015965693,
+      "p_one_sided": 1.315095049219761e-05
+     },
+     "signal_effective_n": 10.421356611593717,
+     "signal_days_y": {
+      "n": 11,
+      "mean": -69.39090909090886,
+      "hac_se": 15.52894930482584,
+      "ci95": [
+       -99.82709068619253,
+       -38.95472749562519
+      ],
+      "effective_n": 8.716624998675467
+     },
+     "signal_days_saving_net_of_market": {
+      "n": 11,
+      "mean": 69.39090909090886,
+      "hac_se": 15.52894930482584,
+      "ci95": [
+       38.95472749562519,
+       99.82709068619253
+      ],
+      "effective_n": 8.716624998675467
+     },
+     "signal_days_gross_saving": {
+      "n": 11,
+      "mean": 25.454545454545453,
+      "hac_se": 53.358986414107044,
+      "ci95": [
+       -79.12714699359344,
+       130.03623790268435
+      ],
+      "effective_n": 14.954908871372396
+     },
+     "excess_gross_saving_vs_nonsignal": {
+      "b": 102.00626959247651,
+      "ci95": [
+       -39.12985080115217,
+       243.1423899861052
+      ]
+     },
+     "p_pay_more_gross": {
+      "k": 4,
+      "n": 11,
+      "rate": 0.36363636363636365,
+      "wilson_ci95": [
+       0.15166471095367573,
+       0.6461988254921511
+      ]
+     },
+     "p_pay_more_net_of_market": {
+      "k": 1,
+      "n": 11,
+      "rate": 0.09090909090909091,
+      "wilson_ci95": [
+       0.01623217288588484,
+       0.37735843645159567
+      ]
+     },
+     "signal_days_decomposition": {
+      "mean_tanishq_change": -25.454545454545453,
+      "mean_ibja_change": 43.9363636363634
+     }
+    }
+   ]
+  },
+  "a_all_pairs_f1": {
+   "horizon_unit": "rows of the series",
+   "cells": [
+    {
+     "z_threshold": 1.0,
+     "horizon_business_days": 1,
+     "hac_lag": 3,
+     "n_eligible_days": 127,
+     "n_signal_days": 27,
+     "first_decision_date": "2026-05-04",
+     "last_decision_date": "2026-09-23",
+     "baseline_unconditional_y": {
+      "n": 127,
+      "mean": 0.3354330708661446,
+      "hac_se": 5.701421342333077,
+      "ci95": [
+       -10.839147508938362,
+       11.510013650670652
+      ],
+      "effective_n": 273.6817609992775
+     },
+     "baseline_unconditional_gross_saving": {
+      "n": 127,
+      "mean": -2.0866141732283463,
+      "hac_se": 14.16691472888818,
+      "ci95": [
+       -29.85325703291894,
+       25.68002868646225
+      ],
+      "effective_n": 125.52713399889552
+     },
+     "signal_minus_nonsignal_y": {
+      "a": 15.03000000000004,
+      "b": -69.11888888888906,
+      "se_b": 17.785231503968674,
+      "se_b_ols": 19.670642306759934,
+      "ci95": [
+       -103.97730236833351,
+       -34.2604754094446
+      ],
+      "t_hac": -3.8863080794571365,
+      "p_one_sided": 5.089016182879765e-05
+     },
+     "signal_effective_n": 33.02796390686993,
+     "signal_days_y": {
+      "n": 27,
+      "mean": -54.08888888888901,
+      "hac_se": 14.65269078602669,
+      "ci95": [
+       -82.80763533263303,
+       -25.370142445144992
+      ],
+      "effective_n": 37.46119201065409
+     },
+     "signal_days_saving_net_of_market": {
+      "n": 27,
+      "mean": 54.08888888888901,
+      "hac_se": 14.65269078602669,
+      "ci95": [
+       25.370142445144992,
+       82.80763533263303
+      ],
+      "effective_n": 37.46119201065409
+     },
+     "signal_days_gross_saving": {
+      "n": 27,
+      "mean": 41.666666666666664,
+      "hac_se": 27.080303900071456,
+      "ci95": [
+       -11.409754086532992,
+       94.74308741986633
+      ],
+      "effective_n": 27.749639532678476
+     },
+     "excess_gross_saving_vs_nonsignal": {
+      "b": 55.56666666666668,
+      "ci95": [
+       -2.758831219517262,
+       113.89216455285062
+      ]
+     },
+     "p_pay_more_gross": {
+      "k": 9,
+      "n": 27,
+      "rate": 0.3333333333333333,
+      "wilson_ci95": [
+       0.18643261498715644,
+       0.5217523949267993
+      ]
+     },
+     "p_pay_more_net_of_market": {
+      "k": 4,
+      "n": 27,
+      "rate": 0.14814814814814814,
+      "wilson_ci95": [
+       0.05915927776244328,
+       0.32478685427812976
+      ]
+     },
+     "signal_days_decomposition": {
+      "mean_tanishq_change": -41.666666666666664,
+      "mean_ibja_change": 12.422222222222343
+     },
+     "weekday_only": {
+      "z_threshold": 1.0,
+      "horizon_business_days": 1,
+      "hac_lag": 3,
+      "n_eligible_days": 93,
+      "n_signal_days": 18,
+      "first_decision_date": "2026-05-04",
+      "last_decision_date": "2026-09-23",
+      "baseline_unconditional_y": {
+       "n": 93,
+       "mean": 2.5150537634408954,
+       "hac_se": 7.473522852308559,
+       "ci95": [
+        -12.132781980261196,
+        17.16288950714299
+       ],
+       "effective_n": 167.8286937317248
+      },
+      "baseline_unconditional_gross_saving": {
+       "n": 93,
+       "mean": -6.021505376344086,
+       "hac_se": 19.855512618866374,
+       "ci95": [
+        -44.937595310867906,
+        32.89458455817973
+       ],
+       "effective_n": 81.6984321949712
+      },
+      "signal_minus_nonsignal_y": {
+       "a": 13.957333333333397,
+       "b": -59.11844444444458,
+       "se_b": 22.307193540797144,
+       "se_b_ols": 24.930672319646547,
+       "ci95": [
+        -102.83974072543951,
+        -15.397148163449643
+       ],
+       "t_hac": -2.65019641920998,
+       "p_one_sided": 0.004022249358133225
+      },
+      "signal_effective_n": 22.482811306572636,
+      "signal_days_y": {
+       "n": 18,
+       "mean": -45.16111111111119,
+       "hac_se": 13.223107067140775,
+       "ci95": [
+        -71.07792493085269,
+        -19.244297291369687
+       ],
+       "effective_n": 36.4392320835055
+      },
+      "signal_days_saving_net_of_market": {
+       "n": 18,
+       "mean": 45.16111111111119,
+       "hac_se": 13.223107067140775,
+       "ci95": [
+        19.244297291369687,
+        71.07792493085269
+       ],
+       "effective_n": 36.4392320835055
+      },
+      "signal_days_gross_saving": {
+       "n": 18,
+       "mean": 51.388888888888886,
+       "hac_se": 30.24576796142369,
+       "ci95": [
+        -7.891727467854942,
+        110.6695052456327
+       ],
+       "effective_n": 29.431863981783298
+      },
+      "excess_gross_saving_vs_nonsignal": {
+       "b": 71.18888888888891,
+       "ci95": [
+        -10.798447036385923,
+        153.17622481416373
+       ]
+      },
+      "p_pay_more_gross": {
+       "k": 7,
+       "n": 18,
+       "rate": 0.3888888888888889,
+       "wilson_ci95": [
+        0.20305246572163624,
+        0.613809583977621
+       ]
+      },
+      "p_pay_more_net_of_market": {
+       "k": 4,
+       "n": 18,
+       "rate": 0.2222222222222222,
+       "wilson_ci95": [
+        0.09000928108601693,
+        0.4521458431621262
+       ]
+      },
+      "signal_days_decomposition": {
+       "mean_tanishq_change": -51.388888888888886,
+       "mean_ibja_change": -6.227777777777697
+      }
+     },
+     "weekend_only": {
+      "z_threshold": 1.0,
+      "horizon_business_days": 1,
+      "hac_lag": 3,
+      "n_eligible_days": 34,
+      "n_signal_days": 9,
+      "first_decision_date": "2026-05-10",
+      "last_decision_date": "2026-09-20",
+      "baseline_unconditional_y": {
+       "n": 34,
+       "mean": -5.62647058823538,
+       "hac_se": 15.429565411968632,
+       "ci95": [
+        -35.867863331339066,
+        24.61492215486831
+       ],
+       "effective_n": 31.678681087938568
+      },
+      "baseline_unconditional_gross_saving": {
+       "n": 34,
+       "mean": 8.676470588235293,
+       "hac_se": 13.170317923970554,
+       "ci95": [
+        -17.13687841130173,
+        34.48981958777232
+       ],
+       "effective_n": 33.70306845811769
+      },
+      "signal_minus_nonsignal_y": {
+       "a": 18.247999999999955,
+       "b": -90.19244444444462,
+       "se_b": 30.023370646464567,
+       "se_b_ols": 30.930046065354357,
+       "ci95": [
+        -149.0371700701719,
+        -31.34771881871734
+       ],
+       "t_hac": -3.0040745759858685,
+       "p_one_sided": 0.0013319500971464685
+      },
+      "signal_effective_n": 9.551789599455669,
+      "signal_days_y": {
+       "n": 9,
+       "mean": -71.94444444444464,
+       "hac_se": 21.035978263364065,
+       "ci95": [
+        -113.17420454542074,
+        -30.714684343468555
+       ],
+       "effective_n": 24.649781647584696
+      },
+      "signal_days_saving_net_of_market": {
+       "n": 9,
+       "mean": 71.94444444444464,
+       "hac_se": 21.035978263364065,
+       "ci95": [
+        30.714684343468555,
+        113.17420454542074
+       ],
+       "effective_n": 24.649781647584696
+      },
+      "signal_days_gross_saving": {
+       "n": 9,
+       "mean": 22.22222222222222,
+       "hac_se": 23.99139013880942,
+       "ci95": [
+        -24.80003875979925,
+        69.24448320424369
+       ],
+       "effective_n": 11.52554333794528
+      },
+      "excess_gross_saving_vs_nonsignal": {
+       "b": 18.422222222222217,
+       "ci95": [
+        -53.877632862293424,
+        90.72207730673786
+       ]
+      },
+      "p_pay_more_gross": {
+       "k": 2,
+       "n": 9,
+       "rate": 0.2222222222222222,
+       "wilson_ci95": [
+        0.06322510711784671,
+        0.5474110308930111
+       ]
+      },
+      "p_pay_more_net_of_market": {
+       "k": 0,
+       "n": 9,
+       "rate": 0.0,
+       "wilson_ci95": [
+        0.0,
+        0.2991450484195441
+       ]
+      },
+      "signal_days_decomposition": {
+       "mean_tanishq_change": -22.22222222222222,
+       "mean_ibja_change": 49.72222222222243
+      }
+     }
+    },
+    {
+     "z_threshold": 1.5,
+     "horizon_business_days": 1,
+     "hac_lag": 3,
+     "n_eligible_days": 127,
+     "n_signal_days": 18,
+     "first_decision_date": "2026-05-04",
+     "last_decision_date": "2026-09-23",
+     "baseline_unconditional_y": {
+      "n": 127,
+      "mean": 0.3354330708661446,
+      "hac_se": 5.701421342333077,
+      "ci95": [
+       -10.839147508938362,
+       11.510013650670652
+      ],
+      "effective_n": 273.6817609992775
+     },
+     "baseline_unconditional_gross_saving": {
+      "n": 127,
+      "mean": -2.0866141732283463,
+      "hac_se": 14.16691472888818,
+      "ci95": [
+       -29.85325703291894,
+       25.68002868646225
+      ],
+      "effective_n": 125.52713399889552
+     },
+     "signal_minus_nonsignal_y": {
+      "a": 11.393577981651386,
+      "b": -78.02135575942923,
+      "se_b": 19.88554131820407,
+      "se_b_ols": 23.15977151477294,
+      "ci95": [
+       -116.99630086362174,
+       -39.046410655236706
+      ],
+      "t_hac": -3.923521844889642,
+      "p_one_sided": 4.363192440125541e-05
+     },
+     "signal_effective_n": 24.415533063806137,
+     "signal_days_y": {
+      "n": 18,
+      "mean": -66.62777777777784,
+      "hac_se": 16.387392223748968,
+      "ci95": [
+       -98.74647659020576,
+       -34.509078965349914
+      ],
+      "effective_n": 35.05770217915635
+     },
+     "signal_days_saving_net_of_market": {
+      "n": 18,
+      "mean": 66.62777777777784,
+      "hac_se": 16.387392223748968,
+      "ci95": [
+       34.509078965349914,
+       98.74647659020576
+      ],
+      "effective_n": 35.05770217915635
+     },
+     "signal_days_gross_saving": {
+      "n": 18,
+      "mean": 29.72222222222222,
+      "hac_se": 26.49982547615602,
+      "ci95": [
+       -22.216481717326438,
+       81.66092616177087
+      ],
+      "effective_n": 26.54388912948153
+     },
+     "excess_gross_saving_vs_nonsignal": {
+      "b": 37.061671763506624,
+      "ci95": [
+       -26.178137368829383,
+       100.30148089584263
+      ]
+     },
+     "p_pay_more_gross": {
+      "k": 6,
+      "n": 18,
+      "rate": 0.3333333333333333,
+      "wilson_ci95": [
+       0.1627877475083369,
+       0.5625053270405489
+      ]
+     },
+     "p_pay_more_net_of_market": {
+      "k": 2,
+      "n": 18,
+      "rate": 0.1111111111111111,
+      "wilson_ci95": [
+       0.031019522645612366,
+       0.32799765130178804
+      ]
+     },
+     "signal_days_decomposition": {
+      "mean_tanishq_change": -29.72222222222222,
+      "mean_ibja_change": 36.905555555555615
+     },
+     "weekday_only": {
+      "z_threshold": 1.5,
+      "horizon_business_days": 1,
+      "hac_lag": 3,
+      "n_eligible_days": 93,
+      "n_signal_days": 11,
+      "first_decision_date": "2026-05-04",
+      "last_decision_date": "2026-09-23",
+      "baseline_unconditional_y": {
+       "n": 93,
+       "mean": 2.5150537634408954,
+       "hac_se": 7.473522852308559,
+       "ci95": [
+        -12.132781980261196,
+        17.16288950714299
+       ],
+       "effective_n": 167.8286937317248
+      },
+      "baseline_unconditional_gross_saving": {
+       "n": 93,
+       "mean": -6.021505376344086,
+       "hac_se": 19.855512618866374,
+       "ci95": [
+        -44.937595310867906,
+        32.89458455817973
+       ],
+       "effective_n": 81.6984321949712
+      },
+      "signal_minus_nonsignal_y": {
+       "a": 11.350000000000035,
+       "b": -74.69545454545452,
+       "se_b": 27.415497034120826,
+       "se_b_ols": 30.436987692556436,
+       "ci95": [
+        -128.42884177443813,
+        -20.962067316470936
+       ],
+       "t_hac": -2.724570503043951,
+       "p_one_sided": 0.003219259111227262
+      },
+      "signal_effective_n": 13.558254281102005,
+      "signal_days_y": {
+       "n": 11,
+       "mean": -63.34545454545448,
+       "hac_se": 20.36851949206787,
+       "ci95": [
+        -103.26701948320579,
+        -23.423889607703174
+       ],
+       "effective_n": 17.858837141256284
+      },
+      "signal_days_saving_net_of_market": {
+       "n": 11,
+       "mean": 63.34545454545448,
+       "hac_se": 20.36851949206787,
+       "ci95": [
+        23.423889607703174,
+        103.26701948320579
+       ],
+       "effective_n": 17.858837141256284
+      },
+      "signal_days_gross_saving": {
+       "n": 11,
+       "mean": 43.63636363636363,
+       "hac_se": 27.994213302337577,
+       "ci95": [
+        -11.231286644539132,
+        98.5040139172664
+       ],
+       "effective_n": 33.33410901357879
+      },
+      "excess_gross_saving_vs_nonsignal": {
+       "b": 56.31929046563193,
+       "ci95": [
+        -35.692721993146016,
+        148.33130292440987
+       ]
+      },
+      "p_pay_more_gross": {
+       "k": 4,
+       "n": 11,
+       "rate": 0.36363636363636365,
+       "wilson_ci95": [
+        0.15166471095367573,
+        0.6461988254921511
+       ]
+      },
+      "p_pay_more_net_of_market": {
+       "k": 2,
+       "n": 11,
+       "rate": 0.18181818181818182,
+       "wilson_ci95": [
+        0.05136768974608512,
+        0.4769805619608442
+       ]
+      },
+      "signal_days_decomposition": {
+       "mean_tanishq_change": -43.63636363636363,
+       "mean_ibja_change": 19.709090909090843
+      }
+     },
+     "weekend_only": {
+      "z_threshold": 1.5,
+      "horizon_business_days": 1,
+      "hac_lag": 3,
+      "n_eligible_days": 34,
+      "n_signal_days": 7,
+      "first_decision_date": "2026-05-10",
+      "last_decision_date": "2026-09-20",
+      "baseline_unconditional_y": {
+       "n": 34,
+       "mean": -5.62647058823538,
+       "hac_se": 15.429565411968632,
+       "ci95": [
+        -35.867863331339066,
+        24.61492215486831
+       ],
+       "effective_n": 31.678681087938568
+      },
+      "baseline_unconditional_gross_saving": {
+       "n": 34,
+       "mean": 8.676470588235293,
+       "hac_se": 13.170317923970554,
+       "ci95": [
+        -17.13687841130173,
+        34.48981958777232
+       ],
+       "effective_n": 33.70306845811769
+      },
+      "signal_minus_nonsignal_y": {
+       "a": 11.525925925925884,
+       "b": -83.31164021164045,
+       "se_b": 37.71697387159721,
+       "se_b_ols": 34.994551197160234,
+       "ci95": [
+        -157.23555118891161,
+        -9.387729234369289
+       ],
+       "t_hac": -2.208863322260812,
+       "p_one_sided": 0.01359207450679239
+      },
+      "signal_effective_n": 6.025945706142974,
+      "signal_days_y": {
+       "n": 7,
+       "mean": -71.78571428571455,
+       "hac_se": 25.48344874488861,
+       "ci95": [
+        -121.7323564215414,
+        -21.83907214988769
+       ],
+       "effective_n": 19.282937458788417
+      },
+      "signal_days_saving_net_of_market": {
+       "n": 7,
+       "mean": 71.78571428571455,
+       "hac_se": 25.48344874488861,
+       "ci95": [
+        21.83907214988769,
+        121.7323564215414
+       ],
+       "effective_n": 19.282937458788417
+      },
+      "signal_days_gross_saving": {
+       "n": 7,
+       "mean": 7.857142857142857,
+       "hac_se": 28.77107723851142,
+       "ci95": [
+        -48.53313277155895,
+        64.24741848584466
+       ],
+       "effective_n": 7.367920552959452
+      },
+      "excess_gross_saving_vs_nonsignal": {
+       "b": -1.0317460317460392,
+       "ci95": [
+        -79.47268315481666,
+        77.40919109132459
+       ]
+      },
+      "p_pay_more_gross": {
+       "k": 2,
+       "n": 7,
+       "rate": 0.2857142857142857,
+       "wilson_ci95": [
+        0.0822189240040568,
+        0.6410655481673808
+       ]
+      },
+      "p_pay_more_net_of_market": {
+       "k": 0,
+       "n": 7,
+       "rate": 0.0,
+       "wilson_ci95": [
+        3.584186086443356e-17,
+        0.3543304350666874
+       ]
+      },
+      "signal_days_decomposition": {
+       "mean_tanishq_change": -7.857142857142857,
+       "mean_ibja_change": 63.928571428571686
+      }
+     }
+    },
+    {
+     "z_threshold": 1.0,
+     "horizon_business_days": 3,
+     "hac_lag": 5,
+     "n_eligible_days": 125,
+     "n_signal_days": 27,
+     "first_decision_date": "2026-05-04",
+     "last_decision_date": "2026-09-21",
+     "baseline_unconditional_y": {
+      "n": 125,
+      "mean": 0.5735999999999912,
+      "hac_se": 11.26955503817859,
+      "ci95": [
+       -21.51432217084867,
+       22.661522170848652
+      ],
+      "effective_n": 132.87060554027474
+     },
+     "baseline_unconditional_gross_saving": {
+      "n": 125,
+      "mean": -6.72,
+      "hac_se": 38.98873570141338,
+      "ci95": [
+       -83.13651838028498,
+       69.69651838028499
+      ],
+      "effective_n": 54.550666487845334
+     },
+     "signal_minus_nonsignal_y": {
+      "a": 24.733673469387707,
+      "b": -111.85219198790612,
+      "se_b": 34.28082852079694,
+      "se_b_ols": 26.616520452043154,
+      "ci95": [
+       -179.04138177884136,
+       -44.66300219697088
+      ],
+      "t_hac": -3.262820556394938,
+      "p_one_sided": 0.0005515467089769137
+     },
+     "signal_effective_n": 16.276600527322138,
+     "signal_days_y": {
+      "n": 27,
+      "mean": -87.11851851851841,
+      "hac_se": 20.674241939340785,
+      "ci95": [
+       -127.63928844691654,
+       -46.59774859012029
+      ],
+      "effective_n": 40.27472213538542
+     },
+     "signal_days_saving_net_of_market": {
+      "n": 27,
+      "mean": 87.11851851851841,
+      "hac_se": 20.674241939340785,
+      "ci95": [
+       46.59774859012029,
+       127.63928844691654
+      ],
+      "effective_n": 40.27472213538542
+     },
+     "signal_days_gross_saving": {
+      "n": 27,
+      "mean": -5.185185185185185,
+      "hac_se": 59.44710704488121,
+      "ci95": [
+       -121.69937489729874,
+       111.32900452692836
+      ],
+      "effective_n": 12.640049308949017
+     },
+     "excess_gross_saving_vs_nonsignal": {
+      "b": 1.9576719576719677,
+      "ci95": [
+       -112.28475684037284,
+       116.20010075571676
+      ]
+     },
+     "p_pay_more_gross": {
+      "k": 11,
+      "n": 27,
+      "rate": 0.4074074074074074,
+      "wilson_ci95": [
+       0.24514757074395555,
+       0.592732990319353
+      ]
+     },
+     "p_pay_more_net_of_market": {
+      "k": 8,
+      "n": 27,
+      "rate": 0.2962962962962963,
+      "wilson_ci95": [
+       0.15853040469779764,
+       0.4848068296414815
+      ]
+     },
+     "signal_days_decomposition": {
+      "mean_tanishq_change": 5.185185185185185,
+      "mean_ibja_change": 92.30370370370359
+     },
+     "weekday_only": {
+      "z_threshold": 1.0,
+      "horizon_business_days": 3,
+      "hac_lag": 5,
+      "n_eligible_days": 91,
+      "n_signal_days": 18,
+      "first_decision_date": "2026-05-04",
+      "last_decision_date": "2026-09-21",
+      "baseline_unconditional_y": {
+       "n": 91,
+       "mean": -5.767032967032919,
+       "hac_se": 14.534422105217754,
+       "ci95": [
+        -34.25397705406393,
+        22.71991111999809
+       ],
+       "effective_n": 74.67652576683942
+      },
+      "baseline_unconditional_gross_saving": {
+       "n": 91,
+       "mean": -15.43956043956044,
+       "hac_se": 42.69309970966321,
+       "ci95": [
+        -99.11649891891078,
+        68.2373780397899
+       ],
+       "effective_n": 47.68936017001406
+      },
+      "signal_minus_nonsignal_y": {
+       "a": 9.100000000000009,
+       "b": -75.16111111111094,
+       "se_b": 40.32198358015535,
+       "se_b_ols": 32.45901032107046,
+       "ci95": [
+        -154.19074733680654,
+        3.8685251145846564
+       ],
+       "t_hac": -1.864023156541878,
+       "p_one_sided": 0.03115922625617684
+      },
+      "signal_effective_n": 11.664315988166654,
+      "signal_days_y": {
+       "n": 18,
+       "mean": -66.06111111111093,
+       "hac_se": 23.38025817175177,
+       "ci95": [
+        -111.88557543845022,
+        -20.236646783771647
+       ],
+       "effective_n": 35.202995491259855
+      },
+      "signal_days_saving_net_of_market": {
+       "n": 18,
+       "mean": 66.06111111111093,
+       "hac_se": 23.38025817175177,
+       "ci95": [
+        20.236646783771647,
+        111.88557543845022
+       ],
+       "effective_n": 35.202995491259855
+      },
+      "signal_days_gross_saving": {
+       "n": 18,
+       "mean": 8.88888888888889,
+       "hac_se": 52.88719015400436,
+       "ci95": [
+        -94.76809987411411,
+        112.54587765189189
+       ],
+       "effective_n": 17.440522555575395
+      },
+      "excess_gross_saving_vs_nonsignal": {
+       "b": 30.32724505327246,
+       "ci95": [
+        -85.15056277015965,
+        145.80505287670456
+       ]
+      },
+      "p_pay_more_gross": {
+       "k": 6,
+       "n": 18,
+       "rate": 0.3333333333333333,
+       "wilson_ci95": [
+        0.1627877475083369,
+        0.5625053270405489
+       ]
+      },
+      "p_pay_more_net_of_market": {
+       "k": 8,
+       "n": 18,
+       "rate": 0.4444444444444444,
+       "wilson_ci95": [
+        0.24559518127005636,
+        0.6628358435795723
+       ]
+      },
+      "signal_days_decomposition": {
+       "mean_tanishq_change": -8.88888888888889,
+       "mean_ibja_change": 57.17222222222204
+      }
+     },
+     "weekend_only": {
+      "z_threshold": 1.0,
+      "horizon_business_days": 3,
+      "hac_lag": 5,
+      "n_eligible_days": 34,
+      "n_signal_days": 9,
+      "first_decision_date": "2026-05-10",
+      "last_decision_date": "2026-09-20",
+      "baseline_unconditional_y": {
+       "n": 34,
+       "mean": 17.544117647058663,
+       "hac_se": 27.559969353746123,
+       "ci95": [
+        -36.47243012738701,
+        71.56066542150432
+       ],
+       "effective_n": 25.570769169831255
+      },
+      "baseline_unconditional_gross_saving": {
+       "n": 34,
+       "mean": 16.61764705882353,
+       "hac_se": 52.01527055815409,
+       "ci95": [
+        -85.3304106854184,
+        118.56570480306547
+       ],
+       "effective_n": 26.415761575341985
+      },
+      "signal_minus_nonsignal_y": {
+       "a": 70.3839999999998,
+       "b": -199.61733333333314,
+       "se_b": 43.6978653960057,
+       "se_b_ols": 43.279801201022146,
+       "ci95": [
+        -285.26357638635005,
+        -113.97109028031622
+       ],
+       "t_hac": -4.568125502798121,
+       "p_one_sided": 2.4605268024581906e-06
+      },
+      "signal_effective_n": 8.828615007115033,
+      "signal_days_y": {
+       "n": 9,
+       "mean": -129.23333333333338,
+       "hac_se": 41.99702098216378,
+       "ci95": [
+        -211.54598256561903,
+        -46.920684101047726
+       ],
+       "effective_n": 5.951078494055771
+      },
+      "signal_days_saving_net_of_market": {
+       "n": 9,
+       "mean": 129.23333333333338,
+       "hac_se": 41.99702098216378,
+       "ci95": [
+        46.920684101047726,
+        211.54598256561903
+       ],
+       "effective_n": 5.951078494055771
+      },
+      "signal_days_gross_saving": {
+       "n": 9,
+       "mean": -33.333333333333336,
+       "hac_se": 50.60651797581954,
+       "ci95": [
+        -132.52028673129252,
+        65.85362006462583
+       ],
+       "effective_n": 13.76621823083584
+      },
+      "excess_gross_saving_vs_nonsignal": {
+       "b": -67.93333333333334,
+       "ci95": [
+        -235.7301806393282,
+        99.86351397266154
+       ]
+      },
+      "p_pay_more_gross": {
+       "k": 5,
+       "n": 9,
+       "rate": 0.5555555555555556,
+       "wilson_ci95": [
+        0.26665129349549305,
+        0.8112214789023354
+       ]
+      },
+      "p_pay_more_net_of_market": {
+       "k": 0,
+       "n": 9,
+       "rate": 0.0,
+       "wilson_ci95": [
+        0.0,
+        0.2991450484195441
+       ]
+      },
+      "signal_days_decomposition": {
+       "mean_tanishq_change": 33.333333333333336,
+       "mean_ibja_change": 162.56666666666672
+      }
+     }
+    },
+    {
+     "z_threshold": 1.5,
+     "horizon_business_days": 3,
+     "hac_lag": 5,
+     "n_eligible_days": 125,
+     "n_signal_days": 18,
+     "first_decision_date": "2026-05-04",
+     "last_decision_date": "2026-09-21",
+     "baseline_unconditional_y": {
+      "n": 125,
+      "mean": 0.5735999999999912,
+      "hac_se": 11.26955503817859,
+      "ci95": [
+       -21.51432217084867,
+       22.661522170848652
+      ],
+      "effective_n": 132.87060554027474
+     },
+     "baseline_unconditional_gross_saving": {
+      "n": 125,
+      "mean": -6.72,
+      "hac_se": 38.98873570141338,
+      "ci95": [
+       -83.13651838028498,
+       69.69651838028499
+      ],
+      "effective_n": 54.550666487845334
+     },
+     "signal_minus_nonsignal_y": {
+      "a": 20.342990654205586,
+      "b": -137.28743509864992,
+      "se_b": 43.29620885089049,
+      "se_b_ols": 30.980327633584054,
+      "ci95": [
+       -222.14644578287664,
+       -52.428424414423205
+      ],
+      "t_hac": -3.170888138761976,
+      "p_one_sided": 0.0007598682649155585
+     },
+     "signal_effective_n": 9.216049062130457,
+     "signal_days_y": {
+      "n": 18,
+      "mean": -116.94444444444434,
+      "hac_se": 31.939166011884623,
+      "ci95": [
+       -179.54406001776178,
+       -54.34482887112691
+      ],
+      "effective_n": 21.343780974485863
+     },
+     "signal_days_saving_net_of_market": {
+      "n": 18,
+      "mean": 116.94444444444434,
+      "hac_se": 31.939166011884623,
+      "ci95": [
+       54.34482887112691,
+       179.54406001776178
+      ],
+      "effective_n": 21.343780974485863
+     },
+     "signal_days_gross_saving": {
+      "n": 18,
+      "mean": -18.055555555555557,
+      "hac_se": 66.38352641856459,
+      "ci95": [
+       -148.1648775289911,
+       112.05376641787997
+      ],
+      "effective_n": 12.533825636801334
+     },
+     "excess_gross_saving_vs_nonsignal": {
+      "b": -13.24247144340602,
+      "ci95": [
+       -148.38037344235374,
+       121.8954305555417
+      ]
+     },
+     "p_pay_more_gross": {
+      "k": 9,
+      "n": 18,
+      "rate": 0.5,
+      "wilson_ci95": [
+       0.29031021505169974,
+       0.7096897849483003
+      ]
+     },
+     "p_pay_more_net_of_market": {
+      "k": 4,
+      "n": 18,
+      "rate": 0.2222222222222222,
+      "wilson_ci95": [
+       0.09000928108601693,
+       0.4521458431621262
+      ]
+     },
+     "signal_days_decomposition": {
+      "mean_tanishq_change": 18.055555555555557,
+      "mean_ibja_change": 134.9999999999999
+     },
+     "weekday_only": {
+      "z_threshold": 1.5,
+      "horizon_business_days": 3,
+      "hac_lag": 5,
+      "n_eligible_days": 91,
+      "n_signal_days": 11,
+      "first_decision_date": "2026-05-04",
+      "last_decision_date": "2026-09-21",
+      "baseline_unconditional_y": {
+       "n": 91,
+       "mean": -5.767032967032919,
+       "hac_se": 14.534422105217754,
+       "ci95": [
+        -34.25397705406393,
+        22.71991111999809
+       ],
+       "effective_n": 74.67652576683942
+      },
+      "baseline_unconditional_gross_saving": {
+       "n": 91,
+       "mean": -15.43956043956044,
+       "hac_se": 42.69309970966321,
+       "ci95": [
+        -99.11649891891078,
+        68.2373780397899
+       ],
+       "effective_n": 47.68936017001406
+      },
+      "signal_minus_nonsignal_y": {
+       "a": 8.000000000000021,
+       "b": -113.89090909090888,
+       "se_b": 54.4105758856605,
+       "se_b_ols": 39.01580030556945,
+       "ci95": [
+        -220.53367904607157,
+        -7.248139135746186
+       ],
+       "t_hac": -2.0931759540689585,
+       "p_one_sided": 0.01816672521854931
+      },
+      "signal_effective_n": 5.655969769856099,
+      "signal_days_y": {
+       "n": 11,
+       "mean": -105.89090909090886,
+       "hac_se": 44.909373021335774,
+       "ci95": [
+        -193.9116634752982,
+        -17.870154706519514
+       ],
+       "effective_n": 13.346675486483356
+      },
+      "signal_days_saving_net_of_market": {
+       "n": 11,
+       "mean": 105.89090909090886,
+       "hac_se": 44.909373021335774,
+       "ci95": [
+        17.870154706519514,
+        193.9116634752982
+       ],
+       "effective_n": 13.346675486483356
+      },
+      "signal_days_gross_saving": {
+       "n": 11,
+       "mean": 19.09090909090909,
+       "hac_se": 62.48502313553936,
+       "ci95": [
+        -103.37748679391517,
+        141.55930497573334
+       ],
+       "effective_n": 16.24961164369184
+      },
+      "excess_gross_saving_vs_nonsignal": {
+       "b": 39.2784090909091,
+       "ci95": [
+        -101.92183446822864,
+        180.47865265004683
+       ]
+      },
+      "p_pay_more_gross": {
+       "k": 4,
+       "n": 11,
+       "rate": 0.36363636363636365,
+       "wilson_ci95": [
+        0.15166471095367573,
+        0.6461988254921511
+       ]
+      },
+      "p_pay_more_net_of_market": {
+       "k": 4,
+       "n": 11,
+       "rate": 0.36363636363636365,
+       "wilson_ci95": [
+        0.15166471095367573,
+        0.6461988254921511
+       ]
+      },
+      "signal_days_decomposition": {
+       "mean_tanishq_change": -19.09090909090909,
+       "mean_ibja_change": 86.79999999999977
+      }
+     },
+     "weekend_only": {
+      "z_threshold": 1.5,
+      "horizon_business_days": 3,
+      "hac_lag": 5,
+      "n_eligible_days": 34,
+      "n_signal_days": 7,
+      "first_decision_date": "2026-05-10",
+      "last_decision_date": "2026-09-20",
+      "baseline_unconditional_y": {
+       "n": 34,
+       "mean": 17.544117647058663,
+       "hac_se": 27.559969353746123,
+       "ci95": [
+        -36.47243012738701,
+        71.56066542150432
+       ],
+       "effective_n": 25.570769169831255
+      },
+      "baseline_unconditional_gross_saving": {
+       "n": 34,
+       "mean": 16.61764705882353,
+       "hac_se": 52.01527055815409,
+       "ci95": [
+        -85.3304106854184,
+        118.56570480306547
+       ],
+       "effective_n": 26.415761575341985
+      },
+      "signal_minus_nonsignal_y": {
+       "a": 56.91481481481464,
+       "b": -191.2291005291005,
+       "se_b": 58.3594099567751,
+       "se_b_ols": 50.69091096070024,
+       "ci95": [
+        -305.6114431056212,
+        -76.84675795257974
+       ],
+       "t_hac": -3.276748354219784,
+       "p_one_sided": 0.0005250495751094596
+      },
+      "signal_effective_n": 5.2812466073407585,
+      "signal_days_y": {
+       "n": 7,
+       "mean": -134.31428571428583,
+       "hac_se": 50.915848941850804,
+       "ci95": [
+        -234.1075166697515,
+        -34.521054758820156
+       ],
+       "effective_n": 5.089407784504887
+      },
+      "signal_days_saving_net_of_market": {
+       "n": 7,
+       "mean": 134.31428571428583,
+       "hac_se": 50.915848941850804,
+       "ci95": [
+        34.521054758820156,
+        234.1075166697515
+       ],
+       "effective_n": 5.089407784504887
+      },
+      "signal_days_gross_saving": {
+       "n": 7,
+       "mean": -76.42857142857143,
+       "hac_se": 54.762939948807855,
+       "ci95": [
+        -183.76196226239665,
+        30.904819405253804
+       ],
+       "effective_n": 12.25586934331405
+      },
+      "excess_gross_saving_vs_nonsignal": {
+       "b": -117.16931216931218,
+       "ci95": [
+        -296.2600605135574,
+        61.92143617493301
+       ]
+      },
+      "p_pay_more_gross": {
+       "k": 5,
+       "n": 7,
+       "rate": 0.7142857142857143,
+       "wilson_ci95": [
+        0.35893445183261935,
+        0.9177810759959434
+       ]
+      },
+      "p_pay_more_net_of_market": {
+       "k": 0,
+       "n": 7,
+       "rate": 0.0,
+       "wilson_ci95": [
+        3.584186086443356e-17,
+        0.3543304350666874
+       ]
+      },
+      "signal_days_decomposition": {
+       "mean_tanishq_change": 76.42857142857143,
+       "mean_ibja_change": 210.74285714285725
+      }
+     }
+    }
+   ]
+  }
+ }
+}
