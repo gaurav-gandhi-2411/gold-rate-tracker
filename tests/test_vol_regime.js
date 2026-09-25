@@ -40,7 +40,7 @@ function selectVolNoteKey(volCtx) {
     app.renderModelSignal(fc, dailyReadings(), null, null, null);
     const html = app.element("model-signal-body").innerHTML;
     const m = html.match(/<p class="outlook-volatility-note">([\s\S]*?)<\/p>/);
-    if (!m) throw new Error("real renderModelSignal rendered no volatility note");
+    if (!m) return null;
     for (const key of ["volNoteElevated", "volNoteCalm", "volNoteNormal", "volNoteFallback"]) {
       if (matchesTemplate(app, m[1], key, { z: SENTINEL })) return key;
     }
@@ -51,29 +51,61 @@ function selectVolNoteKey(volCtx) {
 }
 
 test("selectVolNoteKey: regime='elevated' -> elevated note", () => {
-  assert.equal(selectVolNoteKey({ half_width: 365, is_degraded: false, regime: "elevated" }), "volNoteElevated");
+  assert.equal(selectVolNoteKey({ typical_move_5d: 185, is_degraded: false, regime: "elevated" }), "volNoteElevated");
 });
 
 test("selectVolNoteKey: regime='calm' -> calm note", () => {
-  assert.equal(selectVolNoteKey({ half_width: 365, is_degraded: false, regime: "calm" }), "volNoteCalm");
+  assert.equal(selectVolNoteKey({ typical_move_5d: 185, is_degraded: false, regime: "calm" }), "volNoteCalm");
 });
 
 test("selectVolNoteKey: regime='normal' -> normal note", () => {
-  assert.equal(selectVolNoteKey({ half_width: 365, is_degraded: false, regime: "normal" }), "volNoteNormal");
+  assert.equal(selectVolNoteKey({ typical_move_5d: 185, is_degraded: false, regime: "normal" }), "volNoteNormal");
 });
 
 test("selectVolNoteKey: regime field ABSENT (stale cached forecast.json) -> fallback, NOT normal", () => {
-  const volCtx = { half_width: 365, is_degraded: false }; // no `regime` key at all
+  const volCtx = { typical_move_5d: 185, is_degraded: false }; // no `regime` key at all
   assert.equal(selectVolNoteKey(volCtx), "volNoteFallback");
 });
 
 test("selectVolNoteKey: regime is an unrecognized string -> fallback, NOT normal", () => {
-  const volCtx = { half_width: 365, is_degraded: false, regime: "unknown_future_value" };
+  const volCtx = { typical_move_5d: 185, is_degraded: false, regime: "unknown_future_value" };
   assert.equal(selectVolNoteKey(volCtx), "volNoteFallback");
 });
 
-test("selectVolNoteKey: half_width missing entirely -> fallback", () => {
-  assert.equal(selectVolNoteKey({}), "volNoteFallback");
+test("selectVolNoteKey: vol_context empty -> NO note (never a stand-in number)", () => {
+  assert.equal(selectVolNoteKey({}), null);
+});
+
+// 2026-09-25: the note must show the MEASURED typical move, never the floored
+// one-standard-deviation half_width it used to show (overstated ~1.9x).
+test("volatility note: typical_move_5d absent (cached pre-fix forecast.json) -> NO note", () => {
+  assert.equal(selectVolNoteKey({ half_width: 365, is_degraded: false, regime: "normal" }), null);
+});
+
+test("volatility note: typical_move_5d null (too few pairs) -> NO note", () => {
+  const volCtx = { half_width: 365, is_degraded: false, regime: "normal", typical_move_5d: null };
+  assert.equal(selectVolNoteKey(volCtx), null);
+});
+
+test("volatility note: degraded estimate -> NO note, even with static_pi_half present", () => {
+  const volCtx = { half_width: 730, static_pi_half: 729.8, is_degraded: true, typical_move_5d: 185 };
+  assert.equal(selectVolNoteKey(volCtx), null);
+});
+
+test("volatility note: shows typical_move_5d rounded to Rs.10, not half_width", () => {
+  const app = loadApp();
+  try {
+    const volCtx = { half_width: 365, is_degraded: false, regime: "normal", typical_move_5d: 185 };
+    const fc = { headline: { lower: 13800, upper: 14200, conformal_pi_half: 200, vol_context: volCtx } };
+    app.renderModelSignal(fc, dailyReadings(), null, null, null);
+    const html = app.element("model-signal-body").innerHTML;
+    const m = html.match(/<p class="outlook-volatility-note">([\s\S]*?)<\/p>/);
+    assert.ok(m, "note rendered");
+    assert.equal(m[1], app.t("volNoteNormal", { z: app.pure("fmtINR")(190) }));
+    assert.ok(!m[1].includes("365") && !m[1].includes("350"), "half_width must not leak into the note");
+  } finally {
+    app.dispose();
+  }
 });
 
 // Runs the real renderDriverContext and reports which driver-state branch it rendered.
