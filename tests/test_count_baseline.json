@@ -85,7 +85,7 @@
   "tests/test_required_checks_parity.py": 4,
   "tests/test_run_next_day_range_shadow.py": 6,
   "tests/test_run_nowcast_shadow.py": 5,
-  "tests/test_run_weekly_range_shadow.py": 4,
+  "tests/test_run_weekly_range_shadow.py": 5,
   "tests/test_schema_contracts.py": 6,
   "tests/test_scrape.js": 9,
   "tests/test_scrape_metrics.py": 10,
