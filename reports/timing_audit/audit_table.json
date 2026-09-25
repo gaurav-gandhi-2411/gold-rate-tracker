@@ -1,0 +1,203 @@
+{
+ "note": "reasoned audit rows, ADR 058 Part 1; severity = likely effect on a decision",
+ "rows": [
+  {
+   "id": "A1",
+   "analysis": "INR proxy, feature series (ADR 030)",
+   "where": "ml/inr_proxy.py build_proxy_history",
+   "inputs_and_clocks": "GC=F settle of D-1 (13:30 ET = 17:30/18:30 UTC D-1) x INR=X bar D-1 (snapshot ~00-02 UTC D-1), labelled D, set against IBJA fixes of D (06:30/11:30 UTC)",
+   "issue": "none: no value is used before it was known. By design, the COMEX input is ~17 h old and the FX input ~30 h old at the PM fix",
+   "severity": "none",
+   "published_result_at_risk": "no",
+   "action": "none",
+   "proposed_fix": "none (state the staleness in the docstring)"
+  },
+  {
+   "id": "A2",
+   "analysis": "INR proxy, label series (ADR 032 lag sweep)",
+   "where": "ml/inr_proxy_labels.py",
+   "inputs_and_clocks": "GC=F settle of D (17:30/18:30 UTC D, 6-7 h AFTER IBJA PM D) x INR=X bar D (~00-02 UTC D, before it)",
+   "issue": "misalignment: the label straddles the fix, so neither lag 0 nor lag -1 is the fix-time price. ADR 032 swept only daily closes, then concluded 'timing misalignment does NOT explain the ~33% disagreement'. It never tested the price at the fix time",
+   "severity": "medium",
+   "published_result_at_risk": "yes: ADR 032 finding (a)",
+   "action": "re-run R1",
+   "proposed_fix": "build the label from COMEX x FX known at the IBJA fix (1-hour bars exist from 2024-05; before that, keep the daily label and state its 6-7 h lead)"
+  },
+  {
+   "id": "A3",
+   "analysis": "Forecaster macro join",
+   "where": "ml/features.py add_macro_features",
+   "inputs_and_clocks": "reading timestamp ts (UTC) joined to the macro row of ts's UTC calendar date: GC=F settle D (17:30-18:30 UTC), ^VIX/^TNX/DXY closes D (~20-21 UTC), INR=X D, ^BSESN D (10:00 UTC)",
+   "issue": "leak: a reading at 03:00 UTC D gets values published 7-18 h later. The lags are also calendar-row lags of a forward-filled frame",
+   "severity": "high if reused; dormant now (grep finds no live or analysis consumer outside tests)",
+   "published_result_at_risk": "no (no consumer)",
+   "action": "none",
+   "proposed_fix": "join on the latest row whose known_at <= ts (ml.timing_alignment.last_bar_known_by), or delete the macro path"
+  },
+  {
+   "id": "A4",
+   "analysis": "Macro cache forward-fill",
+   "where": "ml/macro.py _derive_features, ml/feature_store.py",
+   "inputs_and_clocks": "every ticker forward-filled onto a UTC calendar. The as-of date written is the row label, not the date of the last genuine observation",
+   "issue": "staleness mask: e.g. feature-store row 2026-09-20 records gold_usd_asof_date 2026-09-19, a Saturday with no COMEX session. gold_usd_change_1d = 0 on filled days, and gold_usd_5d_vol mixes filled zero-returns (biased low)",
+   "severity": "medium",
+   "published_result_at_risk": "no published result found that reads the as-of fields",
+   "action": "none",
+   "proposed_fix": "keep a genuine-observation mask per ticker (as ml/direction/comex_daily.py does) and write its date as *_asof_date. Compute returns and vols on genuine days only"
+  },
+  {
+   "id": "A5",
+   "analysis": "Feature store: backfill vs live rows",
+   "where": "ml/feature_store_backfill.py, consumed by ml/direction/dataset.py",
+   "inputs_and_clocks": "backfill (114 of 221 rows): macro row D = GC=F settle D (17:30 UTC) and US closes (~20-21 UTC), stored with IBJA PM D (11:30 UTC). live_pit (107 rows): captured ~12:00-13:00 UTC with Yahoo's partial intraday bar",
+   "issue": "leak plus train/serve skew. Backfill features include 6-9 h of price action after the IBJA fix they sit beside; live rows do not. For h=1 labels (next PM minus this PM), that is part of the target window",
+   "severity": "medium",
+   "published_result_at_risk": "no: a leak biases toward finding an edge, and the INR direction model found none (ADR 040), so 'no edge' stands a fortiori",
+   "action": "none",
+   "proposed_fix": "backfill macro with the last value known by 11:30 UTC D (1-hour bars), or by the D-1 settle, and tag each row's clock"
+  },
+  {
+   "id": "A6",
+   "analysis": "COMEX direction dataset",
+   "where": "ml/direction/comex_daily.py",
+   "inputs_and_clocks": "target settle(i)/settle(i-1). Features *_lag1 include ^VIX, ^TNX, DXY, CL=F, TIP closes of day i-1 (16:00-17:00 ET), 2.5-3.5 h after the settle(i-1) that anchors the target",
+   "issue": "partial leak: the features see the first hours of the target window. ^BSESN, ^INDIAVIX and INR=X lag1 values are fine",
+   "severity": "low-medium",
+   "published_result_at_risk": "no: this biases toward an edge, and none was found (ADR 040, #2000)",
+   "action": "none",
+   "proposed_fix": "use the D-1 values known by 13:30 ET (1-hour bars), or lag the US closes by 2 rows"
+  },
+  {
+   "id": "A7",
+   "analysis": "F4 event watch, FOMC (ADR 050)",
+   "where": "ml/event_watch.py (branch feat/event-watch-model)",
+   "inputs_and_clocks": "event day = decision date D's GC=F settle (13:30 ET), before the 14:00 ET decision",
+   "issue": "misalignment: the decision is priced in bar D+1. The registered 'FOMC days move less' (ratio 0.674) measured the quiet pre-announcement session",
+   "severity": "high",
+   "published_result_at_risk": "yes: ADR 050 FOMC row (already flagged in its own audit)",
+   "action": "Part 2 (pre-registered re-run)",
+   "proposed_fix": "event session = ml.timing_alignment.first_bar_after(decision_utc, bars, clock), per market"
+  },
+  {
+   "id": "A8",
+   "analysis": "F4 event watch, CPI / jobs (ADR 050)",
+   "where": "ml/event_watch.py",
+   "inputs_and_clocks": "08:30 ET releases, inside the D bar (settle 13:30 ET D)",
+   "issue": "none: aligned",
+   "severity": "none",
+   "published_result_at_risk": "no",
+   "action": "none",
+   "proposed_fix": "none"
+  },
+  {
+   "id": "A9",
+   "analysis": "F4 event watch, India Budget (ADR 050)",
+   "where": "ml/event_watch.py on the ADR 032 label series",
+   "inputs_and_clocks": "speech ~11:00 IST D (05:30 UTC). Label D = GC=F settle D (reflects it) x INR=X D (snapshot ~00-02 UTC, does not) x duty step dated D",
+   "issue": "partial misalignment: the FX reaction lands on D+1. The duty step is applied on the speech date (IBJA reprices that day, so broadly right)",
+   "severity": "low-medium",
+   "published_result_at_risk": "possibly: ratio 1.48, p 0.167, n 17 (not significant either way)",
+   "action": "none (n = 17 is too small to re-run usefully)",
+   "proposed_fix": "measure budget moves on IBJA's first publication after the speech, once IBJA data is dense"
+  },
+  {
+   "id": "A10",
+   "analysis": "F4 event calendar",
+   "where": "data/events_calendar.json (ADR 050)",
+   "inputs_and_clocks": "FOMC rows = last day of each meeting range, unscheduled included",
+   "issue": "data defect (not timing): the 2019-09-18 regular meeting is missing (federalreserve.gov fomchistorical2019.htm). Unscheduled actions with non-14:00 ET times (2019-10-11, 2020-03-03, 2020-03-15) are mixed in",
+   "severity": "low",
+   "published_result_at_risk": "marginal (1 of 225 events)",
+   "action": "fixed in ADR 058 Part 2's event list",
+   "proposed_fix": "add 2019-09-18; add a per-row release time and a scheduled/unscheduled flag"
+  },
+  {
+   "id": "A11",
+   "analysis": "Day of week (ADR 052)",
+   "where": "scripts/analysis_dow_prereg.py",
+   "inputs_and_clocks": "COMEX Monday settle (13:30 ET = 23:00/00:00 IST) mapped to the Indian Tuesday (INDIAN_TUE_SEES = 0)",
+   "issue": "none: aligned",
+   "severity": "none",
+   "published_result_at_risk": "no",
+   "action": "none",
+   "proposed_fix": "none"
+  },
+  {
+   "id": "A12",
+   "analysis": "F1 markup (#2022)",
+   "where": "ml/markup.py (branch feat/markup-meter-model)",
+   "inputs_and_clocks": "each retailer reading paired with the IBJA fix in force at its IST time (>= 17:00 PM; 12:00-17:00 AM; < 12:00 previous PM)",
+   "issue": "none found. Residual: fix publish times are assumed, not measured. Kalyan timestamps are corrupt since 2026-09-08 (known)",
+   "severity": "low",
+   "published_result_at_risk": "no",
+   "action": "none",
+   "proposed_fix": "record IBJA's actual publish time per fix when scraping"
+  },
+  {
+   "id": "A13",
+   "analysis": "R2 nowcast weekend 'global move' (M4/M5, #1957) and scorecard (#2015)",
+   "where": "scripts/analysis_nowcast.py build(), scripts/analysis_scorecard.py",
+   "inputs_and_clocks": "truth = last Tanishq reading per UTC date (93 of 123 are 00:00-05:29 IST the next day; the value differs from IST-day grouping on 3 of 121 days). Move = (GC=F x INR=X bar before the truth date) / (bar before the IBJA date)",
+   "issue": "misalignment: for a Saturday board the move is settle(Fri)/settle(Thu). That double-counts Thu 17:30 -> Fri 11:30 UTC (already in Friday's PM fix) and misses Fri 17:30 -> 21:00 UTC",
+   "severity": "medium",
+   "published_result_at_risk": "yes: 'a COMEX x USD/INR adjustment makes weekend days worse' (M4 122.8 vs M0 96.1 Rs/g, n 28)",
+   "action": "re-run R2",
+   "proposed_fix": "move = price known when the board was set / price known at the IBJA fix (ml.timing_alignment.asof_intraday on 1-hour bars)"
+  },
+  {
+   "id": "A14",
+   "analysis": "Derived premium (#2004) and premium nowcast (ADR 046)",
+   "where": "scripts/analysis_derived_premium.py, scripts/analysis_premium_nowcast.py (branch feat/premium-nowcast-prereg)",
+   "inputs_and_clocks": "premium(t) = IBJA PM(t) / parity from GC=F and INR=X of t-1 (settle ~18 h before the fix)",
+   "issue": "misalignment: the settle -> fix gold move enters the premium as near-i.i.d. noise. C (AR(1) shrinkage) damps that noise; B1 carries it forward. So H1 (C beats B1) can pass from timing noise rather than premium dynamics",
+   "severity": "medium",
+   "published_result_at_risk": "yes: the interpretation of ADR 046's registered H1 (forward read ~2027-04), and the exploratory 2022-2026 numbers",
+   "action": "re-run R3 (exploratory)",
+   "proposed_fix": "parity at the fix time for the premium, and parity at prediction time (before the AM fix) for the forecast, from 1-hour bars; amend ADR 046 before its forward read"
+  },
+  {
+   "id": "A15",
+   "analysis": "Accuracy band / calibration",
+   "where": "ml/calibration.py, scorecard accuracy_band",
+   "inputs_and_clocks": "Tanishq board by UTC date vs the same-date IBJA PM. The board is set ~11:00 IST, before the PM fix (17:00 IST)",
+   "issue": "evaluation-vs-use mismatch: before the IBJA AM fix, the live band is built on the previous PM, while the evaluation pairs same-date PM. Coverage for morning viewers is likely below the measured 72%",
+   "severity": "low-medium",
+   "published_result_at_risk": "direction only: the published coverage is optimistic for morning viewers (not re-run)",
+   "action": "none",
+   "proposed_fix": "score the band with the IBJA fix in force at each reading's time (ml/markup.py's rule)"
+  },
+  {
+   "id": "A16",
+   "analysis": "Driver attribution ('why did the price move', LIVE)",
+   "where": "ml/drivers.py (called from ml/inference.py; copy in app.js)",
+   "inputs_and_clocks": "IBJA PM D (11:30 UTC) joined to macro row D: the GC=F settle (17:30 UTC) when cached after it, or a partial intraday bar during a run",
+   "issue": "misalignment, user-facing: gold moves after the fix are attributed to 'premium / local factors', at both window ends",
+   "severity": "medium",
+   "published_result_at_risk": "yes: live copy, not a research result",
+   "action": "none (live pipeline, out of scope)",
+   "proposed_fix": "use COMEX x FX known at each IBJA fix, or D-1 settles at both window ends consistently"
+  },
+  {
+   "id": "A17",
+   "analysis": "Weekly / next-day range (ADR 043/047), stale-day (ADR 048), 5-day volatility",
+   "where": "ml/weekly_range.py, ml/next_day_range.py, ml/volatility.py",
+   "inputs_and_clocks": "a single series each (IBJA or Tanishq)",
+   "issue": "none: single clock",
+   "severity": "none",
+   "published_result_at_risk": "no",
+   "action": "none",
+   "proposed_fix": "none"
+  },
+  {
+   "id": "A18",
+   "analysis": "Fusion benchmark (shadow)",
+   "where": "ml/fusion.py, data/fusion_snapshots.parquet",
+   "inputs_and_clocks": "as_of_date (IST) per capture, retailer observed_at (UTC). The scorecard joins it to the UTC-date Tanishq truth",
+   "issue": "minor: IST vs UTC day keys, which agree on 118 of 121 days",
+   "severity": "low",
+   "published_result_at_risk": "no",
+   "action": "none",
+   "proposed_fix": "key everything by IST board date"
+  }
+ ]
+}
