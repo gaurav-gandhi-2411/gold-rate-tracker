@@ -252,10 +252,10 @@ const STRINGS = {
     // U1 audit (2026-09-23): "volatile"/"volatility" are on the banned-term list
     // (docs/PLAIN_LANGUAGE_AUDIT.md) -- reworded to "swinging"/"bouncing around",
     // same meaning, no jargon.
-    volNoteElevated: ({ z }) => `Gold has been swinging more than usual lately — about ±₹${z} over 5 days.`,
-    volNoteCalm: ({ z }) => `Gold has been steadier than usual lately — about ±₹${z} over 5 days.`,
-    volNoteNormal: ({ z }) => `Gold has been moving about ±₹${z} over 5 days lately.`,
-    volNoteFallback: ({ z }) => `Gold's price typically moves about ±₹${z} over 5 days.`,
+    volNoteElevated: ({ z }) => `Gold has been swinging more than usual lately. Over the past month, its price typically went up or down by about ₹${z} in 5 days.`,
+    volNoteCalm: ({ z }) => `Gold has been steadier than usual lately. Over the past month, its price typically went up or down by about ₹${z} in 5 days.`,
+    volNoteNormal: ({ z }) => `Over the past month, gold's price typically went up or down by about ₹${z} in 5 days — about as much as usual.`,
+    volNoteFallback: ({ z }) => `Over the past month, gold's price typically went up or down by about ₹${z} in 5 days.`,
     weeklyMovementNote: ({ amount, pairs }) => `Looking back, gold has typically moved about ₹${amount} from one week to the next (based on ${pairs} weekly comparisons).`,
     weeklyMovementSuffAppend: ({ n }) => ` (Only ${n} distinct days in this 90-day window so far — treat as indicative.)`,
 
@@ -571,10 +571,10 @@ const STRINGS = {
     supportLine2At: "इस महीने की सामान्य कीमत के बराबर।",
     divergenceNote: "(यहां दोनों आंकड़े पूरी तरह नहीं मिलते — एक दिन गिनता है, दूसरा असल रुपये का फ़र्क़ नापता है। ऊपर के हेडलाइन के लिए हम दिन-गिनती वाला आंकड़ा इस्तेमाल करते हैं।)",
     goodPriceTomorrow: ({ low, high }) => `अगले कारोबारी दिन तक कीमत <strong>₹${low}</strong> से <strong>₹${high}</strong> के बीच रहने की संभावना है।`,
-    volNoteElevated: ({ z }) => `हाल में सोने में सामान्य से ज़्यादा उतार-चढ़ाव रहा है — 5 दिनों में करीब ±₹${z} तक।`,
-    volNoteCalm: ({ z }) => `हाल में सोना सामान्य से ज़्यादा स्थिर रहा है — 5 दिनों में करीब ±₹${z} तक।`,
-    volNoteNormal: ({ z }) => `हाल में सोने में 5 दिनों में करीब ±₹${z} तक की हलचल रही है।`,
-    volNoteFallback: ({ z }) => `सोने की कीमत में आमतौर पर 5 दिनों में करीब ±₹${z} तक बदलाव होता है।`,
+    volNoteElevated: ({ z }) => `हाल में सोने में सामान्य से ज़्यादा उतार-चढ़ाव रहा है। पिछले एक महीने में इसकी कीमत 5 दिनों में आमतौर पर करीब ₹${z} ऊपर या नीचे गई।`,
+    volNoteCalm: ({ z }) => `हाल में सोना सामान्य से ज़्यादा स्थिर रहा है। पिछले एक महीने में इसकी कीमत 5 दिनों में आमतौर पर करीब ₹${z} ऊपर या नीचे गई।`,
+    volNoteNormal: ({ z }) => `पिछले एक महीने में सोने की कीमत 5 दिनों में आमतौर पर करीब ₹${z} ऊपर या नीचे गई — यह सामान्य के आसपास है।`,
+    volNoteFallback: ({ z }) => `पिछले एक महीने में सोने की कीमत 5 दिनों में आमतौर पर करीब ₹${z} ऊपर या नीचे गई।`,
     weeklyMovementNote: ({ amount, pairs }) => `पीछे देखने पर, सोने की कीमत आमतौर पर एक हफ्ते में करीब ₹${amount} तक बदलती रही है (${pairs} हफ्तों की तुलना पर आधारित)।`,
     weeklyMovementSuffAppend: ({ n }) => ` (इस 90-दिन के दायरे में अभी तक सिर्फ़ ${n} अलग दिन हैं — इसे संकेत के तौर पर लें।)`,
 
