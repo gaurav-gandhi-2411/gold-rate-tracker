@@ -235,6 +235,11 @@ def _resolve_macro_staleness(data_dir: Path) -> float | None:
     return None
 
 
+def _js_round(x: float) -> int:
+    """JavaScript Math.round: halves round toward +infinity (Math.round(-0.5) is -0)."""
+    return math.floor(x + 0.5)
+
+
 def _null_window(reason: str) -> dict:
     return {
         "n_obs": 0,
@@ -332,9 +337,10 @@ def _decompose_window(
 
     result["total_move_rs_per_g"] = total_move
 
-    # A board move that rounds to Rs 0 has nothing to split; leaving the parts None keeps the
-    # page from printing "up about Rs 0 this week" (app.js needs all three as numbers).
-    if total_move is not None and abs(total_move) >= 0.5:
+    # A board move that the PAGE rounds to Rs 0 has nothing to split; leaving the parts None keeps
+    # it from printing "up about Rs 0 this week" (app.js needs all three as numbers). The test is
+    # JS Math.round's rule (half rounds up: -0.5 -> 0, 0.5 -> 1), not Python's abs() >= 0.5.
+    if total_move is not None and _js_round(total_move) != 0:
         sg = dln_g / dln_ibja
         sr = dln_r / dln_ibja
         sp = dln_p / dln_ibja
@@ -421,11 +427,17 @@ def compute_driver_attribution(
     # join: the COMEX settle labelled D is published ~6.5 h after IBJA's PM fix of D.
     intraday = _load_intraday(data_dir)
     merged = _align_intraday_to_fixes(ibja, intraday) if not intraday.empty else pd.DataFrame()
-    covers_latest = not merged.empty and merged.index.max() == ibja.index.max()
+    # Fail closed unless the intraday frame prices BOTH the latest fix and the first fix of the
+    # longest window: bars that start late would otherwise shrink "30d" to a few days silently.
+    latest = ibja.index.max()
+    first_needed = ibja.index[ibja.index >= latest - pd.Timedelta(days=max(WINDOWS_DAYS))].min()
+    covers_latest = (
+        not merged.empty and merged.index.max() == latest and first_needed in merged.index
+    )
     ctx["alignment"] = "intraday_at_fix" if covers_latest else "daily_lagged_state_only"
     no_split_reason = (
-        "intraday gold/USD-INR prices unavailable at the latest IBJA fix -- "
-        "the move cannot be split at fix times"
+        f"intraday gold/USD-INR prices do not cover the IBJA fixes of the last "
+        f"{max(WINDOWS_DAYS)}d -- the move cannot be split at fix times"
     )
     if not covers_latest:
         logger.warning("drivers: %s -- driver_state from lagged daily bars only", no_split_reason)

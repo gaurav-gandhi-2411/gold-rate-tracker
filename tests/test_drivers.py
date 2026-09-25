@@ -576,3 +576,46 @@ def test_zero_rupee_total_gets_no_rupee_split():
     assert w["total_move_rs_per_g"] == 0.0
     assert w["gold_usd_contrib_rs_per_g"] is None
     assert w["usdinr_contrib_rs_per_g"] is None
+
+
+def test_intraday_starting_inside_30d_window_fails_closed(tmp_path):
+    """Bars that cover the latest fix but start 10 days back must not shrink "30d" to ~9 rows:
+    the whole split degrades and driver_state falls back to the lagged daily bars."""
+    dates = _make_clean_dates(40, start="2026-06-01")
+    gold = [4000.0 * (1.003**i) for i in range(len(dates))]
+    inr = [95.0] * len(dates)
+    ibja_10g = _stable_ibja(dates, gold, inr)
+    _write_macro_status(tmp_path / "macro_status.json", age_days=0.5)
+    _write_ibja_parquet(tmp_path / "ibja_rates.parquet", dates, ibja_10g)
+    _write_macro_parquet(tmp_path / "macro_cache.parquet", dates, gold, inr)
+    _write_intraday_parquet(tmp_path / "macro_intraday.parquet", dates[-8:], gold[-8:], inr[-8:])
+    _write_prices_json(tmp_path / "prices.json", dates, [v / 10 for v in ibja_10g])
+
+    result = compute_driver_attribution(data_dir=tmp_path)
+    assert result["alignment"] == "daily_lagged_state_only"
+    for wd in WINDOWS_DAYS:
+        assert result["windows"][f"{wd}d"]["attribution_valid"] is False
+    # 30-day change over the full window (~+6%), not the ~+2% of the last 8 days
+    assert result["driver_state"]["gold_usd_30d_pct_change"] > 5.0
+
+
+@pytest.mark.parametrize(
+    ("board_move", "split_shown"),
+    [(0.4, False), (0.5, True), (-0.4, False), (-0.5, False), (-0.6, True)],
+)
+def test_zero_total_guard_matches_js_math_round(board_move, split_shown):
+    """app.js shows Math.round(total): 0.5 -> 1 but -0.5 -> 0. The split is withheld exactly
+    when the page would print Rs 0, on both sides of the boundary."""
+    dates = ["2026-05-01", "2026-05-08"]
+    gold_usd = [4000.0, 4100.0]
+    usd_inr = [95.0, 95.0]
+    merged = _build_merged(dates, gold_usd, usd_inr, _stable_ibja(dates, gold_usd, usd_inr))
+    tanishq = pd.DataFrame(
+        {
+            "ts": pd.to_datetime(["2026-05-01T12:00Z", "2026-05-08T12:00Z"]),
+            "22k": [13000.0, 13000.0 + board_move],
+        }
+    )
+    w = _decompose_window(merged, window_days=7, tanishq_df=tanishq)
+    assert w["total_move_rs_per_g"] == pytest.approx(board_move)
+    assert (w["gold_usd_contrib_rs_per_g"] is not None) is split_shown
