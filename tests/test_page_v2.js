@@ -175,6 +175,15 @@ test("pickRangeShadowEntry fails closed on an entry older than RANGE_SHADOW_MAX_
   assert.equal(pickRangeShadowEntry(shadowLog, "1d", nowMs), null);
 });
 
+// GG's G4 freshness audit (2026-09-25): fail closed on a FUTURE as_of too (rule 98a), not just
+// a stale one -- the old `ageDays <= MAX` check alone let a negative ageDays through.
+test("pickRangeShadowEntry fails closed on a future as_of (clock skew / bad write)", () => {
+  const nowMs = Date.parse("2026-09-24T12:00:00Z");
+  const futureDate = new Date(nowMs + 2 * 86400e3).toISOString().slice(0, 10);
+  const shadowLog = { entries: [{ as_of: futureDate, horizon: "1d", lo: 100, hi: 200 }] };
+  assert.equal(pickRangeShadowEntry(shadowLog, "1d", nowMs), null);
+});
+
 test("computeMoveRangeJob: next_day_range_shadow.json takes priority for the 1-day statement", () => {
   const job = computeMoveRangeJob(null, { lo: 13800, hi: 14200 }, null, null);
   assert.ok(job.oneDayNote.includes("13,800") && job.oneDayNote.includes("14,200"));
@@ -259,6 +268,18 @@ test("computeConfidenceNote returns the floored fraction phrase, never a raw per
   const note = computeConfidenceNote(bandCoverage);
   assert.ok(note.includes("about 7 times out of 10"), note);
   assert.ok(!note.includes("70.9"), "must never type the raw percentage");
+});
+
+// GG's G4 freshness audit (2026-09-25): computeConfidenceNote shares deriveMeasuredBandCoverage
+// (and its BAND_COVERAGE_MAX_AGE_DAYS constant) with renderStaleBanner's own confidence clause
+// -- this proves a future generated_at_utc fails closed here too (rule 98a), not just stale.
+test("computeConfidenceNote fails closed on a future generated_at_utc (clock skew / bad write)", () => {
+  const bandCoverage = {
+    coverage: 0.98,
+    n: 20,
+    generated_at_utc: new Date(Date.now() + 2 * 86_400_000).toISOString(),
+  };
+  assert.equal(computeConfidenceNote(bandCoverage), null);
 });
 
 // ── readMarkupToday (F1, markup_meter) ────────────────────────────────────────────

@@ -890,6 +890,13 @@ function weekdayLong(d) {
 // or the file missing/malformed, means "no current measurement" -- never a signal to fall
 // back to the design target (rule 98a: fail closed, not open). Returns null in every case
 // where the caller must NOT assert a specific coverage percentage.
+//
+// GG's G4 rule (freshness audit, 2026-09-25): this is the ONE constant every accuracy/coverage
+// claim page_v2 shows reads (directly here, or via RANGE_SHADOW_MAX_AGE_DAYS below, which
+// derives from it rather than repeating the literal) -- the stale-banner's own confidence
+// clause (renderStaleBanner) and page_v2's job 2/3 cards (computeConfidenceNote/
+// computeMoveRangeJob) all call deriveMeasuredBandCoverage, so none of them can independently
+// drift to a different cutoff again.
 const BAND_COVERAGE_MAX_AGE_DAYS = 14;
 
 function deriveMeasuredBandCoverage(bandCoverage, nowMs = Date.now()) {
@@ -904,7 +911,10 @@ function deriveMeasuredBandCoverage(bandCoverage, nowMs = Date.now()) {
   const generatedMs = Date.parse(bandCoverage.generated_at_utc);
   if (Number.isNaN(generatedMs)) return null;
   const ageDays = (nowMs - generatedMs) / 86_400_000;
-  if (ageDays > BAND_COVERAGE_MAX_AGE_DAYS) return null;
+  // rule 98a: fail closed on a FUTURE generated_at_utc too (ageDays < 0, e.g. clock skew or a
+  // malformed producer writing a bad date), not just a stale one -- ageDays > MAX alone let a
+  // future timestamp silently pass as "fresh".
+  if (!(ageDays >= 0 && ageDays <= BAND_COVERAGE_MAX_AGE_DAYS)) return null;
   return { coverage: Math.round(bandCoverage.coverage * 1000) / 10, n: bandCoverage.n };
 }
 
@@ -2352,14 +2362,16 @@ function computeConfidenceNote(bandCoverage) {
 // for a while yet. next_day_range_shadow.json has no producing pipeline on master as of this
 // PR; its shape is unknown, so it is read defensively (lo/hi numbers only, several plausible
 // key names) and simply ignored if absent or malformed -- same "render nothing" contract as
-// every other not-yet-shipped data file this page reads. RANGE_SHADOW_MAX_AGE_DAYS mirrors
-// deriveMeasuredBandCoverage's own 14-day tolerance (one missed weekly run) -- fails closed
-// (no range shown) rather than asserting a stale one. There is deliberately NO live fallback
-// for the 7-day statement: forecast.json's own headline window is 5 trading days, not 7, and
-// item 3 of the brief explicitly forbids reusing the 5-day volatility note here (no competing
-// bands) -- so until weekly_range_shadow_log.json has a matured "week" entry, that statement
-// is simply omitted rather than mismatch the horizon it claims.
-const RANGE_SHADOW_MAX_AGE_DAYS = 14;
+// every other not-yet-shipped data file this page reads. RANGE_SHADOW_MAX_AGE_DAYS is
+// BAND_COVERAGE_MAX_AGE_DAYS itself, not a separately-maintained duplicate literal (GG's G4
+// freshness audit, 2026-09-25 -- one constant governs every accuracy/coverage/freshness claim
+// page_v2 shows) -- fails closed (no range shown) rather than asserting a stale one. There is
+// deliberately NO live fallback for the 7-day statement: forecast.json's own headline window
+// is 5 trading days, not 7, and item 3 of the brief explicitly forbids reusing the 5-day
+// volatility note here (no competing bands) -- so until weekly_range_shadow_log.json has a
+// matured "week" entry, that statement is simply omitted rather than mismatch the horizon it
+// claims.
+const RANGE_SHADOW_MAX_AGE_DAYS = BAND_COVERAGE_MAX_AGE_DAYS;
 
 function pickRangeShadowEntry(shadowLog, horizon, nowMs = Date.now()) {
   const entries = Array.isArray(shadowLog?.entries) ? shadowLog.entries : [];
@@ -2370,7 +2382,9 @@ function pickRangeShadowEntry(shadowLog, horizon, nowMs = Date.now()) {
   matching.sort((a, b) => (a.as_of < b.as_of ? 1 : -1)); // descending YYYY-MM-DD, lexical sort is safe here
   const latest = matching[0];
   const ageDays = (nowMs - Date.parse(latest.as_of)) / 86_400_000;
-  if (!(ageDays <= RANGE_SHADOW_MAX_AGE_DAYS)) return null; // fail closed on stale/unparseable (rule 98a)
+  // rule 98a: fail closed on a FUTURE as_of too (ageDays < 0), same reasoning as
+  // deriveMeasuredBandCoverage above -- ageDays <= MAX alone let a future date pass as fresh.
+  if (!(ageDays >= 0 && ageDays <= RANGE_SHADOW_MAX_AGE_DAYS)) return null;
   return { low: latest.lo, high: latest.hi };
 }
 
