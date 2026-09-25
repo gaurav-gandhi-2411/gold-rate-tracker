@@ -1,0 +1,9 @@
+{
+  "schema_version": 1,
+  "decision": "GG decision E3: 5-6 Tanishq visits a day, timed to Tanishq's own rate updates",
+  "status": "interim: the pre-registered rule says current data do not yet pin down the best times (docs/TANISHQ_TIMED_VISITS.md)",
+  "source": "reports/tanishq_update_times/schedule_evaluation.json -> proposed.A_gap_le_460min_K6",
+  "visits_ist": ["01:40", "07:30", "10:40", "11:10", "15:35", "19:50"],
+  "tolerance_min": 45,
+  "effective_from_utc": null
+}
