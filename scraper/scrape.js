@@ -10,9 +10,21 @@
 //
 // Exports hybridScrape(), scrapeWithRetry(), fetchWithRequests(),
 // isCFChallengeHtml(), parseGoldRates(), isCloudflareChallenge(),
-// extractRates(), validate() for unit testing.
+// extractRates(), validate(), backoffDelayMs(), parseRetryAfterMs(),
+// shouldTryRequestsPath(), VIEWPORTS, USER_AGENTS for unit testing.
+//
+// POLITE ACCESS (ADR 059, decision G1a): capped attempts, exponential backoff
+// with jitter between attempts, HTTP 429 (and 503 carrying Retry-After) ends the
+// cycle instead of escalating to a full browser load, and the plain-GET probe is
+// skipped when it has been failing every run (it costs Tanishq one request per
+// run for nothing -- 0 of 148 recorded successes to 2026-09-24 came from it).
+// Per GG decision E3 (2026-09-25), the browser settings themselves (per-retry
+// UA/viewport rotation, launch args, anti-detection flags) are UNCHANGED from
+// master -- request *volume* to Tanishq is governed separately (PR #2078).
 
 import { chromium } from "playwright";
+import { readFileSync } from "fs";
+import { dirname, resolve } from "path";
 import { fileURLToPath } from "url";
 
 // ── Target URL ──────────────────────────────────────────────────────────────
@@ -33,10 +45,84 @@ const RATIO_18_24_MAX = 0.77;
 // ENV overrides exist solely for test injection; never set in production.
 const MAX_RETRIES = 3;
 
-// Delays between retry attempts (ms). Index 0 = delay before attempt 2, etc.
+// Delays between retry attempts (ms). Production uses exponential backoff with
+// jitter (backoffDelayMs below: ~5s then ~10s nominal, each uniform in [d/2, d]).
+// SCRAPER_RETRY_DELAYS_MS is a TEST-ONLY override giving exact, deterministic delays.
 const RETRY_DELAYS_MS = process.env.SCRAPER_RETRY_DELAYS_MS
   ? process.env.SCRAPER_RETRY_DELAYS_MS.split(",").map(Number)
-  : [5000, 15000]; // 5s then 15s
+  : null;
+const BACKOFF_BASE_MS = 5000;
+const BACKOFF_CAP_MS = 60000;
+
+/**
+ * Exponential backoff with "equal jitter" for retry number `attempt` (1-based):
+ * d = min(cap, base * 2^(attempt-1)); result uniform in [d/2, d]. Never instant,
+ * and two runners retrying together drift apart instead of hitting in lockstep.
+ */
+export function backoffDelayMs(attempt, { baseMs = BACKOFF_BASE_MS, capMs = BACKOFF_CAP_MS, rand = Math.random } = {}) {
+  const d = Math.min(capMs, baseMs * 2 ** Math.max(0, attempt - 1));
+  return d / 2 + rand() * (d / 2);
+}
+
+/**
+ * Parse an HTTP Retry-After header (delta-seconds or HTTP-date) into ms.
+ * Returns null when absent/unparseable -- "no guidance", never zero.
+ */
+export function parseRetryAfterMs(value, nowMs = Date.now()) {
+  if (value == null) return null;
+  const v = String(value).trim();
+  if (v === "") return null;
+  if (/^\d+$/.test(v)) return Number(v) * 1000;
+  const when = Date.parse(v);
+  if (Number.isNaN(when)) return null;
+  return Math.max(0, when - nowMs);
+}
+
+// ── Requests-probe gating (ADR 059) ─────────────────────────────────────────
+// The plain-GET probe has not produced a single success in the recorded outcome
+// log, so running it every cycle is a guaranteed extra request to Tanishq. Keep
+// it (it is far lighter than a browser load if it ever starts working again) but
+// run it at most once per UTC day while it keeps losing.
+// 8 was sized against the 3-hourly cron (8 runs/day); #2078 moves Tanishq to
+// 5-6 timed visits/day. The gating below keys off the UTC-day boundary, not this
+// count, so the lookback just becomes generously wide -- no correctness change.
+const PROBE_LOOKBACK_SUCCESSES = 8;
+
+/**
+ * Decide whether this run should try the plain-GET probe before Playwright.
+ * `outcomes` is the parsed data/tanishq_scrape_outcomes.jsonl (oldest first).
+ * - no usable history            -> true (unchanged behaviour)
+ * - a recent success used requests -> true
+ * - otherwise                     -> true only for the first run of the UTC day
+ */
+export function shouldTryRequestsPath(outcomes, now = new Date()) {
+  if (!Array.isArray(outcomes) || outcomes.length === 0) return true;
+  const successes = outcomes.filter((o) => o && o.outcome === "success");
+  if (successes.length === 0) return true;
+  const recent = successes.slice(-PROBE_LOOKBACK_SUCCESSES);
+  if (recent.some((o) => o.fetch_method === "requests")) return true;
+  const last = outcomes[outcomes.length - 1];
+  const lastDay = typeof last?.timestamp === "string" ? last.timestamp.slice(0, 10) : "";
+  return lastDay !== now.toISOString().slice(0, 10);
+}
+
+function loadOutcomes(path) {
+  try {
+    return readFileSync(path, "utf8")
+      .split("\n")
+      .filter((l) => l.trim())
+      .map((l) => {
+        try {
+          return JSON.parse(l);
+        } catch {
+          return null;
+        }
+      })
+      .filter(Boolean);
+  } catch {
+    return [];
+  }
+}
 
 // Playwright navigation timeout (ms).
 const NAV_TIMEOUT_MS = parseInt(process.env.SCRAPER_NAV_TIMEOUT_MS ?? "60000", 10);
@@ -50,7 +136,14 @@ const SELECTOR_TIMEOUT_MS = parseInt(
 
 // ── Browser fingerprint rotation (H3) ────────────────────────────────────────
 // Rotate viewport and UA per attempt to reduce per-session CF fingerprinting.
-const VIEWPORTS = [
+// GG decision E3 (2026-09-25): keep this browser setting EXACTLY as on master --
+// do not remove the per-retry rotation and do not add an identifying token to
+// any Tanishq UA. #2048 briefly removed rotation in favour of one consistent
+// UA/viewport; that change is reverted here per E3. Tanishq's request *volume*
+// is governed separately (PR #2078, feat/tanishq-timed-visits).
+// Exported (test-only use) so test_polite_access.mjs can pin these against
+// master's arrays without changing any runtime behaviour.
+export const VIEWPORTS = [
   { width: 1280, height: 800 },
   { width: 1366, height: 768 },
   { width: 1440, height: 900 },
@@ -59,7 +152,7 @@ const VIEWPORTS = [
 // Keep UA strings current with Chrome stable. Chrome releases ~every 4 weeks.
 // Last bumped: 2026-06-07 (Chrome 148 — Playwright 1.60.0 bundles Chromium 148.0.7778.96).
 // Update when the installed Playwright Chromium version lags by >2 major versions vs. this UA.
-const USER_AGENTS = [
+export const USER_AGENTS = [
   "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/148.0.0.0 Safari/537.36",
   "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/148.0.0.0 Safari/537.36",
   "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/147.0.0.0 Safari/537.36",
@@ -256,6 +349,17 @@ export async function fetchWithRequests(targetUrl = TARGET_URL) {
   }
 
   if (!response.ok) {
+    const retryAfterMs = parseRetryAfterMs(response.headers?.get?.("retry-after"));
+    // 429 always, and 503 when it carries Retry-After, are the host asking us to
+    // slow down: honour it by ending this cycle -- never escalate to a heavier
+    // Playwright page load against the same host (ADR 059). A CF challenge 403/503
+    // without Retry-After is not a rate-limit signal and keeps the old fallback.
+    if (response.status === 429 || (response.status === 503 && retryAfterMs !== null)) {
+      throw Object.assign(
+        new Error(`requests path: HTTP ${response.status} (Retry-After=${retryAfterMs === null ? "none" : `${retryAfterMs}ms`}) — backing off until the next scheduled run`),
+        { rateLimited: true, retryable: false },
+      );
+    }
     throw new Error(`requests path: HTTP ${response.status}`);
   }
 
@@ -318,13 +422,22 @@ async function scrapeAttempt(targetUrl, attemptIndex) {
 
   try {
     // Navigation errors (DNS failure, timeout) are transient → retryable
+    let navResponse;
     try {
-      await page.goto(targetUrl, {
+      navResponse = await page.goto(targetUrl, {
         waitUntil: "domcontentloaded",
         timeout: NAV_TIMEOUT_MS,
       });
     } catch (navErr) {
       throw Object.assign(navErr, { retryable: true });
+    }
+
+    // ADR 059: a 429 on the page itself means stop -- no further attempts this run.
+    if (navResponse && navResponse.status() === 429) {
+      throw Object.assign(
+        new Error(`HTTP 429 on page load (attempt ${attemptIndex + 1}/${MAX_RETRIES}) — backing off until the next scheduled run`),
+        { rateLimited: true, retryable: false },
+      );
     }
 
     // H2: Detect CF challenge in <100ms — skip the 30s waitForSelector timeout
@@ -375,8 +488,10 @@ async function scrapeAttempt(targetUrl, attemptIndex) {
 /**
  * Scrape Tanishq gold rates with retry.
  *
- * H1: up to 3 attempts with backoff (5s, 15s between retries).
- *     Each retry creates a fresh browser context with rotated fingerprint.
+ * H1: up to 3 attempts, exponential backoff with jitter between them
+ *     (backoffDelayMs: ~2.5-5s, then ~5-10s). Each retry creates a fresh browser
+ *     context with a rotated fingerprint (viewport + UA), per E3 unchanged from
+ *     master.
  * H2: Cloudflare challenge pages detected in <100ms and retried immediately,
  *     avoiding the 30s waitForSelector timeout per blocked attempt.
  *
@@ -411,8 +526,9 @@ export async function scrapeWithRetry(targetUrl = TARGET_URL) {
       }
 
       if (attempt < MAX_RETRIES - 1) {
-        const delay =
-          RETRY_DELAYS_MS[attempt] ?? RETRY_DELAYS_MS[RETRY_DELAYS_MS.length - 1];
+        const delay = RETRY_DELAYS_MS
+          ? (RETRY_DELAYS_MS[attempt] ?? RETRY_DELAYS_MS[RETRY_DELAYS_MS.length - 1])
+          : Math.round(backoffDelayMs(attempt + 1));
         const kind = err.isCFBlock ? "CF block" : "transient error";
         process.stderr.write(
           `[scraper] attempt ${attempt + 1}/${MAX_RETRIES} failed (${kind}): ${err.message}\n` +
@@ -440,17 +556,29 @@ export async function scrapeWithRetry(targetUrl = TARGET_URL) {
  * scrapeWithRetry() is kept UNCHANGED so existing hardening tests call it
  * directly without triggering the requests path.
  *
+ * ADR 059: a rate-limit answer on the requests path (429, or 503 + Retry-After)
+ * ends the run there — it is rethrown, never escalated to Playwright. With
+ * `{ tryRequests: false }` the probe is skipped (see shouldTryRequestsPath).
+ *
  * @param {string} [targetUrl]
+ * @param {{ tryRequests?: boolean }} [opts]
  * @returns {Promise<{timestamp: string, "22k": number, "24k": number, "18k": number, source: string}>}
  */
-export async function hybridScrape(targetUrl = TARGET_URL) {
-  try {
-    const result = await fetchWithRequests(targetUrl);
-    process.stderr.write("[scraper] fetch_method=requests\n");
-    return result;
-  } catch (requestsErr) {
+export async function hybridScrape(targetUrl = TARGET_URL, { tryRequests = true } = {}) {
+  if (tryRequests) {
+    try {
+      const result = await fetchWithRequests(targetUrl);
+      process.stderr.write("[scraper] fetch_method=requests\n");
+      return result;
+    } catch (requestsErr) {
+      if (requestsErr.rateLimited) throw requestsErr;
+      process.stderr.write(
+        `[scraper] requests path failed (${requestsErr.message}) — falling back to Playwright\n`,
+      );
+    }
+  } else {
     process.stderr.write(
-      `[scraper] requests path failed (${requestsErr.message}) — falling back to Playwright\n`,
+      "[scraper] requests probe skipped (no requests-path success in recent runs; re-probed once per UTC day)\n",
     );
   }
 
@@ -463,9 +591,19 @@ export async function hybridScrape(targetUrl = TARGET_URL) {
 
 const __filename = fileURLToPath(import.meta.url);
 if (process.argv[1] === __filename) {
-  hybridScrape()
+  const outcomesPath =
+    process.env.SCRAPER_OUTCOMES_PATH ??
+    resolve(dirname(__filename), "..", "data", "tanishq_scrape_outcomes.jsonl");
+  const tryRequests = shouldTryRequestsPath(loadOutcomes(outcomesPath));
+  hybridScrape(TARGET_URL, { tryRequests })
     .then((result) => console.log(JSON.stringify(result)))
     .catch((err) => {
+      // Exit code 3: the site answered 429 / 503+Retry-After (ADR 059). Not a DOM
+      // change and not a CF block — the run backed off as asked.
+      if (err.rateLimited) {
+        console.error("Scrape backed off (rate-limited by the site):", err.message);
+        process.exit(3);
+      }
       // Exit code 2 vs 1 lets callers (scraper-canary.yml) distinguish an
       // IP-level Cloudflare block — the documented expected steady state per
       // ADR 025, see docs/RUNBOOK.md's "Scraper DOM canary issues" note —
