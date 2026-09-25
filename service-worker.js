@@ -116,8 +116,11 @@
 // figure that overstated it ~1.9x. app.js + i18n.js (EN+HI) changed.
 // 2026-09-25 (v61; v59/v60 are taken by the open #2053/#2069 branches): ADR 059 wording
 // P2-P5 (E5) -- neutral, dated Tanishq wording. app.js + i18n.js + index.html + manifest changed.
-// 2026-09-25 (v62): the weekly 'what moved the price' headline words each part by its own
-// sign (ADR 058 follow-up, #2073). app.js + i18n.js (EN+HI) changed.
+// 2026-09-25 (v63): style.css -- main { overflow-x: clip } stops the phone page
+// scrolling 60px sideways (hero glow overflow). Shell file changed.
+// 2026-09-25 (v62; assigned before v63 landed on master -- see the v61 note above for
+// the same pre-assignment pattern): the weekly 'what moved the price' headline words
+// each part by its own sign (ADR 058 follow-up, #2073). app.js + i18n.js (EN+HI) changed.
 const VERSION = "v62-20260925-driver-signs";
 const SHELL_CACHE = `gold-shell-${VERSION}`;
 
