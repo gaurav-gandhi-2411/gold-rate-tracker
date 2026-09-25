@@ -118,7 +118,32 @@
 // P2-P5 (E5) -- neutral, dated Tanishq wording. app.js + i18n.js + index.html + manifest changed.
 // 2026-09-25 (v63): style.css -- main { overflow-x: clip } stops the phone page
 // scrolling 60px sideways (hero glow overflow). Shell file changed.
-const VERSION = "v63-20260925-no-sideways-scroll";
+// 2026-09-24 (v66): page_v2 (item 6) -- proposed five-jobs page, entirely behind
+// isFeatureOn("page_v2") + per-card flags, all still false (merge default). app.js +
+// i18n.js + style.css changed (new pure/build/render functions, new pv2* i18n keys, new
+// .pv2-* rules) -- bumping so installed clients pick up the new app.js/i18n.js/style.css
+// bytes even though nothing currently renders differently with every flag off.
+// 2026-09-25 (same PR, G6 layout pass): style.css (page_v2 grid/type tokens) + app.js
+// (page_v2 mount point) changed again -- suffix re-stamped so a client that installed
+// the earlier v58 preview shell does not keep the pre-layout-pass bytes.
+// 2026-09-25 (same PR, design-review follow-ups): app.js (F2 sentence extraction fix,
+// freshness fail-closed fix) + i18n.js (Hindi pv2* translations) changed again -- bumped
+// once more so a client that installed the layout-pass shell picks up these bytes too.
+// 2026-09-25 (merge with current master, v63-v65/v67 taken by other now-merged/open
+// branches): re-stamped to v66.
+// 2026-09-25 (v62; assigned before v63 landed on master -- see the v61 note above for
+// the same pre-assignment pattern; merge train, stacked on #2037): the weekly 'what moved
+// the price' headline words each part by its own sign (ADR 058 follow-up, #2073). app.js +
+// i18n.js (EN+HI) changed.
+// 2026-09-25 (v64; merge train, stacked on #2073): G4 -- hide any accuracy/coverage claim
+// measured more than 14 days ago (isMeasurementFresh(), i18n.js) instead of showing a stale
+// number as current. app.js + i18n.js + how-we-know.js changed -- all three are precached
+// shell files.
+// 2026-09-25 (v65; merge train, stacked on #2049): retailer takedown switch (ADR 059) --
+// app.js stops naming Tanishq (hero location line, last-confirmed line, long-silent banner
+// clause, calculator label) when prices.json holds IBJA-derived rows; new i18n key
+// heroLocationDerived (EN+HI). Inert on today's data. app.js + i18n.js changed.
+const VERSION = "v65-20260925-retailer-takedown";
 const SHELL_CACHE = `gold-shell-${VERSION}`;
 
 const SHELL_FILES = [

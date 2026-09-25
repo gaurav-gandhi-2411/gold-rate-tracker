@@ -14,6 +14,30 @@ HONESTY HARD LINE (ADR 005 + Φ14 spec):
     display degrades to driver-state-only or suppresses (norm #8, no silent fallback).
   - If macro is stale → attribution_valid = False for all windows.
 
+TIMESTAMP CONVENTION (ADR 058, timing audit A16; fixed 2026-09-25):
+  Every IBJA row is a FIX at a known instant: PM ~17:00 IST (11:30 UTC) on its date, or AM
+  ~12:00 IST (06:30 UTC) when that day has no PM value (repo convention, ml/sources/ibja.py and
+  ml/markup.py; IBJA's real publish times are not recorded). A fix-to-fix IBJA move is split only
+  against the global move BETWEEN THE TWO FIX INSTANTS:
+    attribution windows  gold_usd / usd_inr = Yahoo 1-hour GC=F / INR=X bars (written by
+              ml/macro.py to macro_intraday.parquet, bars labelled by their START in UTC), read
+              as the Close of the last bar that ENDED at or before the fix. A fix with no bar
+              ending within MAX_INTRADAY_GAP_HOURS before it is dropped. If intraday bars are
+              missing or do not cover the latest fix, every window degrades to
+              attribution_valid=False (the Rs split and the premium residual are not shown).
+    driver_state (30d % change, "now" levels) uses the same intraday-at-fix frame when it is
+              available; otherwise the latest DAILY bars public at each fix: GC=F daily Close =
+              COMEX settle 13:30 America/New_York (VERIFIED in ADR 058), so IBJA date D gets the
+              previous NY day's settle; INR=X daily is a snapshot with no pinned clock, taken as
+              known at 23:59 UTC of its date (conservative), so D gets the previous day's bar.
+  Why not the lagged daily bar for the split as well: it is leak-free but sits 17-33 h before
+  the fix, which misses more of the move than the old same-date join did. Measured on
+  2024-11-10..2026-09-25 (n=207 fix pairs, scripts/analysis_drivers_timing.py): SD of the
+  fix-to-fix premium residual is 1.35% same-date (old), 1.55% lagged daily, 0.63% intraday at the
+  fix; direction agreement 68% / 67% / 90%. The old same-date join paired each fix with a COMEX
+  settle taken ~6.5 h AFTER it, so gold moves after the fix were counted against a fix that could
+  not contain them, and the mismatch surfaced as "premium / local factors".
+
 Units (verified from ml/calibration.py and ml/ibja.py):
   ibja pm_916 : INR per 10g (raw integer; ibja_per_g = pm_916 / 10)
   macro gold_usd : USD per troy oz  (GC=F)
@@ -28,6 +52,7 @@ import logging
 import math
 import time
 from datetime import UTC, datetime
+from datetime import time as dtime
 from pathlib import Path
 
 import numpy as np
@@ -52,6 +77,28 @@ _CONV_10G_916: float = (10.0 / _TROY_G_PER_OZ) * _PURITY_916  # ≈ 0.2945
 PREMIUM_THRESHOLD_PCT: float = 15.0  # |premium share| above this → attribution invalid
 MACRO_STALE_THRESHOLD_DAYS: float = 14.0  # matches macro.py hard-fail threshold
 WINDOWS_DAYS: list[int] = [7, 30]  # attribution windows for 7d headline + 30d context
+MAX_BAR_AGE_DAYS: float = 5.0  # a long weekend + one holiday; older = data gap, row dropped
+# Staleness cap for the last 1-hour bar before a fix. A US holiday Monday has no GC=F bars
+# after Friday 21:00 UTC (62.5 h before Monday's PM fix), and Yahoo's INR=X hourly feed has
+# multi-hour holes; in both cases the last traded price IS the price at the fix. Beyond 3 days
+# the feed is broken, not quiet.
+MAX_INTRADAY_GAP_HOURS: float = 72.0
+
+# ---------------------------------------------------------------------------
+# Publication clocks (ADR 058): wall-clock time in a zone on the value's label date
+# ---------------------------------------------------------------------------
+_IBJA_AM_CLOCK: tuple[str, dtime] = ("Asia/Kolkata", dtime(12, 0))  # repo convention
+_IBJA_PM_CLOCK: tuple[str, dtime] = ("Asia/Kolkata", dtime(17, 0))  # repo convention
+_COMEX_SETTLE_CLOCK: tuple[str, dtime] = ("America/New_York", dtime(13, 30))  # VERIFIED
+_USDINR_CONSERVATIVE_CLOCK: tuple[str, dtime] = ("UTC", dtime(23, 59))  # no pinned clock
+_MACRO_CLOCKS: dict[str, tuple[str, dtime]] = {
+    "gold_usd": _COMEX_SETTLE_CLOCK,
+    "usd_inr": _USDINR_CONSERVATIVE_CLOCK,
+}
+TIMING_CONVENTION: str = (
+    "IBJA fix (PM 17:00 IST, else AM 12:00 IST) split against GC=F x INR=X 1-hour bars "
+    "that closed by that fix (ADR 058)"
+)
 
 
 # ---------------------------------------------------------------------------
@@ -67,9 +114,49 @@ def _load_ibja(data_dir: Path) -> pd.DataFrame:
     ibja = pd.read_parquet(path)
     ibja["date_parsed"] = pd.to_datetime(ibja["date"])
     ibja = ibja.set_index("date_parsed").sort_index()
-    # Prefer PM rate (more representative closing fix); fall back to AM
+    # Prefer PM rate (more representative closing fix); fall back to AM. Record which fix the
+    # value is, because the two are published ~5 h apart and the macro pairing depends on it.
     ibja["ibja_10g"] = ibja["pm_916"].fillna(ibja["am_916"])
-    return ibja[["ibja_10g"]].dropna()
+    ibja["fix"] = np.where(ibja["pm_916"].notna(), "pm", "am")
+    return ibja[["ibja_10g", "fix"]].dropna(subset=["ibja_10g"])
+
+
+def _known_at_utc(dates: pd.Index, clock: tuple[str, dtime]) -> pd.DatetimeIndex:
+    """UTC instants at which values labelled with calendar `dates` became public."""
+    tz, at = clock
+    local = pd.DatetimeIndex(dates).normalize() + pd.Timedelta(hours=at.hour, minutes=at.minute)
+    return local.tz_localize(tz).tz_convert("UTC")
+
+
+def _align_macro_to_fixes(ibja: pd.DataFrame, macro: pd.DataFrame) -> pd.DataFrame:
+    """Pair each IBJA fix with the latest gold_usd / usd_inr DAILY bar public at that fix.
+
+    Used for driver_state only, when intraday bars are unavailable (module docstring). Returns a frame indexed by IBJA date with
+    ibja_10g, gold_usd, usd_inr (plus the *_bar_date actually used, for audit). Rows with no
+    known bar within MAX_BAR_AGE_DAYS of the fix are dropped.
+    """
+    out = _fix_instants(ibja).sort_values("fix_at")
+
+    max_age = pd.Timedelta(days=MAX_BAR_AGE_DAYS)
+    for col, clock in _MACRO_CLOCKS.items():
+        bars = macro[[col]].dropna().sort_index()
+        bars = bars.assign(
+            known_at=_known_at_utc(bars.index, clock), **{f"{col}_bar_date": bars.index}
+        )
+        out = pd.merge_asof(
+            out,
+            bars.sort_values("known_at"),
+            left_on="fix_at",
+            right_on="known_at",
+            direction="backward",  # latest bar known at or before the fix
+        )
+        too_old = (out["fix_at"] - out["known_at"]) > max_age
+        out.loc[too_old, col] = np.nan
+        out = out.drop(columns=["known_at"])
+
+    out = out.set_index("ibja_date").sort_index()
+    out.index.name = None
+    return out.dropna(subset=["ibja_10g", "gold_usd", "usd_inr"])
 
 
 def _load_macro(data_dir: Path) -> pd.DataFrame:
@@ -81,6 +168,52 @@ def _load_macro(data_dir: Path) -> pd.DataFrame:
     macro.index = pd.to_datetime(macro.index, utc=True)
     macro.index = macro.index.tz_localize(None)
     return macro[["gold_usd", "usd_inr"]].dropna(subset=["gold_usd", "usd_inr"])
+
+
+def _load_intraday(data_dir: Path) -> pd.DataFrame:
+    """Load macro_intraday.parquet: 1-hour gold_usd / usd_inr closes, UTC index = bar START."""
+    path = data_dir / "macro_intraday.parquet"
+    if not path.exists():
+        return pd.DataFrame()
+    try:
+        bars = pd.read_parquet(path)
+    except Exception as exc:
+        logger.warning("drivers: could not read %s: %s", path.name, exc)
+        return pd.DataFrame()
+    idx = pd.DatetimeIndex(pd.to_datetime(bars.index))
+    bars.index = idx.tz_localize("UTC") if idx.tz is None else idx.tz_convert("UTC")
+    return bars[["gold_usd", "usd_inr"]].sort_index()
+
+
+def _fix_instants(ibja: pd.DataFrame) -> pd.DataFrame:
+    """ibja_10g, fix, fix_at (UTC instant of the fix) and ibja_date, one row per IBJA date."""
+    fixes = ibja[["ibja_10g", "fix"]].copy()
+    am_at = _known_at_utc(fixes.index, _IBJA_AM_CLOCK)
+    pm_at = _known_at_utc(fixes.index, _IBJA_PM_CLOCK)
+    fixes["fix_at"] = pd.to_datetime(
+        np.where(fixes["fix"].to_numpy() == "pm", pm_at, am_at), utc=True
+    )
+    fixes["ibja_date"] = fixes.index
+    return fixes
+
+
+def _align_intraday_to_fixes(ibja: pd.DataFrame, intraday: pd.DataFrame) -> pd.DataFrame:
+    """Pair each IBJA fix with the Close of the last 1-hour bar that ENDED by the fix instant.
+
+    Each series is read on its own; a fix with no bar ending within MAX_INTRADAY_GAP_HOURS
+    before it gets NaN for that series and is dropped.
+    """
+    out = _fix_instants(ibja).sort_values("fix_at")
+    max_gap = pd.Timedelta(hours=MAX_INTRADAY_GAP_HOURS)
+    for col in ("gold_usd", "usd_inr"):
+        bars = intraday[[col]].dropna()
+        bars = bars.assign(bar_end=bars.index + pd.Timedelta(hours=1)).sort_values("bar_end")
+        out = pd.merge_asof(out, bars, left_on="fix_at", right_on="bar_end", direction="backward")
+        out.loc[(out["fix_at"] - out["bar_end"]) > max_gap, col] = np.nan
+        out = out.drop(columns=["bar_end"])
+    out = out.set_index("ibja_date").sort_index()
+    out.index.name = None
+    return out.dropna(subset=["ibja_10g", "gold_usd", "usd_inr"])
 
 
 def _resolve_macro_staleness(data_dir: Path) -> float | None:
@@ -100,6 +233,11 @@ def _resolve_macro_staleness(data_dir: Path) -> float | None:
     if parquet_path.exists():
         return (time.time() - parquet_path.stat().st_mtime) / 86400
     return None
+
+
+def _js_round(x: float) -> int:
+    """JavaScript Math.round: halves round toward +infinity (Math.round(-0.5) is -0)."""
+    return math.floor(x + 0.5)
 
 
 def _null_window(reason: str) -> dict:
@@ -199,7 +337,10 @@ def _decompose_window(
 
     result["total_move_rs_per_g"] = total_move
 
-    if total_move is not None:
+    # A board move that the PAGE rounds to Rs 0 has nothing to split; leaving the parts None keeps
+    # it from printing "up about Rs 0 this week" (app.js needs all three as numbers). The test is
+    # JS Math.round's rule (half rounds up: -0.5 -> 0, 0.5 -> 1), not Python's abs() >= 0.5.
+    if total_move is not None and _js_round(total_move) != 0:
         sg = dln_g / dln_ibja
         sr = dln_r / dln_ibja
         sp = dln_p / dln_ibja
@@ -244,6 +385,7 @@ def compute_driver_attribution(
         ),
         "macro_fresh": macro_fresh,
         "premium_threshold_pct": PREMIUM_THRESHOLD_PCT,
+        "timing_convention": TIMING_CONVENTION,
         "windows": {},
         "driver_state": None,
     }
@@ -281,9 +423,25 @@ def compute_driver_attribution(
         except Exception as exc:
             logger.warning("drivers: could not load prices.json: %s", exc)
 
-    # Merge IBJA + macro on date index
-    merged = ibja.join(macro, how="inner")
-    merged = merged.dropna(subset=["ibja_10g", "gold_usd", "usd_inr"])
+    # Pair each IBJA fix with global prices AT the fix instant (ADR 058 A16). Never a same-date
+    # join: the COMEX settle labelled D is published ~6.5 h after IBJA's PM fix of D.
+    intraday = _load_intraday(data_dir)
+    merged = _align_intraday_to_fixes(ibja, intraday) if not intraday.empty else pd.DataFrame()
+    # Fail closed unless the intraday frame prices BOTH the latest fix and the first fix of the
+    # longest window: bars that start late would otherwise shrink "30d" to a few days silently.
+    latest = ibja.index.max()
+    first_needed = ibja.index[ibja.index >= latest - pd.Timedelta(days=max(WINDOWS_DAYS))].min()
+    covers_latest = (
+        not merged.empty and merged.index.max() == latest and first_needed in merged.index
+    )
+    ctx["alignment"] = "intraday_at_fix" if covers_latest else "daily_lagged_state_only"
+    no_split_reason = (
+        f"intraday gold/USD-INR prices do not cover the IBJA fixes of the last "
+        f"{max(WINDOWS_DAYS)}d -- the move cannot be split at fix times"
+    )
+    if not covers_latest:
+        logger.warning("drivers: %s -- driver_state from lagged daily bars only", no_split_reason)
+        merged = _align_macro_to_fixes(ibja, macro)
 
     if len(merged) < 2:
         reason = "insufficient merged rows after IBJA/macro join"
@@ -300,7 +458,8 @@ def compute_driver_attribution(
     # ln_premium = ln(ibja) − ln(gold_usd) − ln(usd_inr) − ln(conv)
     merged["ln_premium"] = merged["ln_ibja"] - merged["ln_gold_usd"] - merged["ln_usdinr"] - ln_conv
 
-    # Driver state: 30d raw % changes for the supporting display copy
+    # Driver state: 30d raw % changes for the supporting display copy. "now" = the value in
+    # force at the latest IBJA fix (see TIMESTAMP CONVENTION), not the latest quote.
     now = merged.index.max()
     w30 = merged[merged.index >= now - pd.Timedelta(days=30)]
     if len(w30) >= 2:
@@ -315,6 +474,11 @@ def compute_driver_attribution(
                 (float(r1["gold_usd"]) - float(r0["gold_usd"])) / float(r0["gold_usd"]) * 100, 2
             ),
         }
+
+    if not covers_latest:
+        for wd in WINDOWS_DAYS:
+            ctx["windows"][f"{wd}d"] = _null_window(no_split_reason)
+        return ctx
 
     for wd in WINDOWS_DAYS:
         ctx["windows"][f"{wd}d"] = _decompose_window(merged, wd, tanishq_df)

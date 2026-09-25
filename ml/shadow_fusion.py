@@ -27,6 +27,8 @@ from pathlib import Path
 
 from ml.fusion import FusedBenchmark, fuse_city_price, fuse_national_benchmark
 from ml.fusion_snapshot_store import append_snapshot_rows
+from ml.retailers import KNOWN_RETAILERS as RETAILER_NAMES
+from ml.retailers import is_enabled
 from ml.sources.base import SourceNetworkError, SourceReading, SourceStructureError
 from ml.sources.grt import fetch_grt
 from ml.sources.ibja import fetch_ibja_calibrated
@@ -80,6 +82,10 @@ def _fetch_national_readings() -> tuple[list[SourceReading], dict[str, str]]:
     readings: list[SourceReading] = []
     failures: dict[str, str] = {}
     for name, fetch_fn in _NATIONAL_FETCHERS.items():
+        if name in RETAILER_NAMES and not is_enabled(name):
+            # ADR 059 takedown switch: not fetched, not recorded. Not a failure.
+            logger.info("shadow_fusion: %s disabled in config/retailers.json", name)
+            continue
         try:
             readings.append(fetch_fn())
         except SourceNetworkError as exc:
@@ -97,6 +103,9 @@ def _fetch_kalyan_readings() -> tuple[dict[str, SourceReading], dict[str, str]]:
     """Fetch each city in SHADOW_KALYAN_CITIES. Returns (readings by city, failures by city)."""
     readings: dict[str, SourceReading] = {}
     failures: dict[str, str] = {}
+    if not is_enabled("kalyan"):
+        logger.info("shadow_fusion: kalyan disabled in config/retailers.json")
+        return readings, failures
     for city in SHADOW_KALYAN_CITIES:
         try:
             readings[city] = fetch_kalyan_city(city).reading
