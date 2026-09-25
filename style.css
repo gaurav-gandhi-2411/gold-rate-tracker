@@ -247,6 +247,11 @@
   --ts-xs:   11px;  --ts-sm:  13px;  --ts-base: 16px;
   --ts-md:   20px;  --ts-lg:  24px;  --ts-xl:   32px;
   --ts-2xl:  40px;  --ts-3xl: 56px;
+  --ts-4xl:  96px;   /* page_v2's price -- the one display-size figure */
+
+  /* Line heights + weights -- the rest of the type scale */
+  --lh-tight: 1;     --lh-snug: 1.3;     --lh-body: 1.55;
+  --fw-regular: 400; --fw-medium: 500;   --fw-semibold: 600;
 
   /* Radii */
   --radius-sm: 10px;
@@ -2415,6 +2420,168 @@ html.ptr-pulling {
 .meth-how-good { background: rgba(224,155,46,0.04); border-radius: var(--radius-lg); padding: clamp(12px, 3vw, 20px); }
 .meth-how-good .meth-text { margin-bottom: 16px; }
 .meth-how-good .meth-text:last-child { margin-bottom: 0; }
+
+/* ===================================================================
+   PAGE V2 (item 6, flagged OFF) -- five-jobs view, layout pass (G6)
+   Tokens only (rule 15b). Every selector below is scoped to #page-v2 / .pv2-* or to
+   a [hidden]/:has(#page-v2) state that only exists once renderFlaggedFeatures() has
+   mounted page_v2 -- so with every flag off none of these rules match anything and
+   the live page renders exactly as before.
+   Hierarchy, in the order a buyer asks: price (the one bold element: display face,
+   largest size, the only gold fill) > how sure > how much it could move > is it a
+   good price > what will I pay. The price is deliberately NOT a card -- it is the
+   page's lead answer, set on the page itself; the supporting answers are quiet,
+   identical-weight cards on one grid whose left-to-right order carries the rank.
+   No shadows, gradients or all-caps labels here; the one border that is not a card
+   edge (under the price) separates "the answer" from "the detail behind it".
+=================================================================== */
+
+/* `hidden` alone loses to `.layout-grid { display: grid }` at >=1024px (author CSS
+   beats the UA's [hidden] rule), which left every old section visible above page_v2
+   on desktop. Only ever matches once page_v2 has set .hidden -- never on the live page. */
+.layout-grid[hidden] { display: none; }
+
+.pv2-container {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: var(--space-4);
+  align-items: stretch;
+  margin-bottom: var(--space-8);
+  font-variant-numeric: tabular-nums;
+  font-feature-settings: "tnum" 1, "lnum" 1;
+}
+
+/* Job 1 -- the price. The page's single dominant element. */
+.pv2-price-now {
+  padding: 0 0 var(--space-6);
+  border-bottom: 1px solid var(--line);
+}
+.pv2-price-now > h3 {
+  margin: 0 0 var(--space-2);
+  font-family: var(--sans);
+  font-size: var(--ts-base);
+  font-weight: var(--fw-medium);
+  line-height: var(--lh-snug);
+  letter-spacing: normal;
+  color: var(--cream-dim);
+}
+.pv2-price-now .pv2-price-value {
+  margin: 0 0 var(--space-2);
+  font-family: var(--display);
+  font-weight: var(--fw-regular);
+  font-size: clamp(var(--ts-3xl), 11vw, var(--ts-4xl));
+  line-height: var(--lh-tight);
+  letter-spacing: -0.03em;
+  color: var(--gold);
+}
+.pv2-price-value .rupee {
+  font-style: italic;
+  margin-right: 0.05em;
+  opacity: 0.7;
+}
+.pv2-price-now > p {
+  margin: 0;
+  font-size: var(--ts-base);
+  line-height: var(--lh-body);
+  color: var(--cream-dim);
+}
+.pv2-price-now .pv2-price-source { color: var(--cream-mute); font-size: var(--ts-sm); }
+
+/* Jobs 2-4, 5 and F1-F4 -- quiet supporting cards, one treatment for all of them. */
+.pv2-card:not(.pv2-price-now) {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  min-width: 0;
+  padding: var(--space-5);
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-lg);
+}
+.pv2-card:not(.pv2-price-now) > h3 {
+  margin: 0 0 var(--space-1);
+  font-family: var(--sans);
+  font-size: var(--ts-sm);
+  font-weight: var(--fw-semibold);
+  line-height: var(--lh-snug);
+  letter-spacing: normal;
+  color: var(--cream-dim);
+}
+.pv2-card:not(.pv2-price-now) > p {
+  margin: 0;
+  max-width: 65ch;
+  font-size: var(--ts-base);
+  line-height: var(--lh-body);
+  color: var(--cream);
+}
+
+/* Slots are layout-only wrappers: their card(s) stretch to the slot's full row height. */
+.pv2-slot { display: flex; flex-direction: column; gap: var(--space-4); min-width: 0; }
+.pv2-slot > .pv2-card { flex: 1 1 auto; }
+.pv2-slot:empty { display: none; }
+
+/* Job 5 -- the relocated live calculator. The outer page_v2 card is the one frame;
+   the calculator's own card chrome and its duplicate heading ("How much would you
+   pay?" restates job 5's question) are dropped here so nothing nests three deep.
+   The h2 stays in the accessibility tree (visually hidden, not display:none). */
+#page-v2 .calculator-section { margin: 0; }
+#page-v2 .calculator-section > h2 {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+#page-v2 .calculator-card {
+  padding: 0;
+  background: none;
+  border: 0;
+  box-shadow: none;
+}
+#page-v2 .calc-result-row--total { font-size: var(--ts-md); }
+
+/* Phones (<=480px): one column in hierarchy order, 16px side gutters on the page and
+   its header so the content edge and the logo line up. */
+@media (max-width: 480px) {
+  body:has(#page-v2) main,
+  body:has(#page-v2) .app-header {
+    padding-left: var(--space-4);
+    padding-right: var(--space-4);
+  }
+  .pv2-card:not(.pv2-price-now) { padding: var(--space-4); }
+}
+
+/* Tablet and up: price across the top, then the three supporting answers side by side
+   (equal widths, equal heights), then the calculator across the full width. */
+@media (min-width: 768px) {
+  .pv2-container {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: var(--space-5);
+  }
+  .pv2-price-now,
+  .pv2-what-you-pay,
+  #pv2-extras-slot { grid-column: 1 / -1; }
+  /* Empty state: with no "good price" card the row keeps two equal halves, never a hole. */
+  .pv2-container:has(#pv2-good-price-slot:empty) { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .pv2-slot { gap: var(--space-5); }
+  /* F2/F4 side by side when both exist; a lone card takes the full width. */
+  #pv2-extras-slot { flex-direction: row; flex-wrap: wrap; }
+  #pv2-extras-slot > .pv2-card { flex: 1 1 0; }
+  .pv2-card:not(.pv2-price-now) { padding: var(--space-6); }
+  /* Calculator: inputs on the left, the running total on the right. */
+  #page-v2 .calculator-card {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    column-gap: var(--space-7);
+    grid-template-rows: auto 1fr; /* extra height from the tall results column goes below the presets, not between grams and presets */
+    align-items: start;
+  }
+  #page-v2 .calc-inputs,
+  #page-v2 .calc-presets { grid-column: 1; }
+  #page-v2 .calc-wrap { grid-column: 2; grid-row: 1 / span 2; }
+}
 
 /* ═══════════════════════════════════════════════════════════════
    SCROLL REVEALS (feel-alive pass)
