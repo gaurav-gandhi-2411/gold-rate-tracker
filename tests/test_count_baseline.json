@@ -54,6 +54,7 @@
   "tests/test_feature_store.py": 44,
   "tests/test_features.py": 16,
   "tests/test_festival_seasonality.py": 15,
+  "tests/test_fhs_ranges.py": 20,
   "tests/test_fusion.py": 19,
   "tests/test_fusion_snapshot_store.py": 8,
   "tests/test_good_price.js": 35,
