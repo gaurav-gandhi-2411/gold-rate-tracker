@@ -350,7 +350,8 @@ const STRINGS = {
     heroLabelEstimateIbja: "Our estimate for today, based on the IBJA rate",
     heroLabelEstimateFusion: "Our estimate for today, based on other jewellers' listed rates",
     heroTanishqLastRate: ({ when, price }) => `Tanishq's listed rate, checked ${when}: ₹${price}`,
-    heroTanishqTooOld: ({ when }) => `Tanishq's listed rate was last checked ${when} — too old to show here`,
+    // GG 4b (2026-09-25): past 36 h the old figure is still shown, always with date AND time.
+    heroTanishqOldRate: ({ when, price }) => `Tanishq's listed rate when last checked, ${when}: ₹${price} — not updated since`,
     whenToday: ({ time }) => `${time} today`,
     whenYesterday: ({ time }) => `${time} yesterday`,
     whenOnDate: ({ time, date }) => `${time}, ${date}`,
@@ -370,6 +371,11 @@ const STRINGS = {
     // ── Chart labels (Chart.js legend/tooltip) ─────────────────────────────────
     chart22kLabel: "22K (₹/g)",
     chart22kTooltip: ({ value }) => `22K: ₹${value}`,
+    // GG 4c (2026-09-25): the trend chart plots our IBJA-based estimate, never a retailer's rate.
+    chartEstimateLabel: "22K estimate (₹/g)",
+    chartEstimateTooltip: ({ value }) => `22K estimate: ≈ ₹${value}`,
+    chartNoteEstimate: "Our estimate, based on the IBJA rate · one point per IBJA working day",
+    chartNoteTanishq: "Tanishq's listed 22K rate, as we checked it",
     chartWhatHappened: "What happened",
     chartFlatHoldEstimate: "Flat-hold estimate",
     chartTooltipLabeled: ({ label, value }) => `${label}: ₹${value}`,
@@ -663,7 +669,7 @@ const STRINGS = {
     heroLabelEstimateIbja: "आज के लिए हमारा अनुमान, IBJA दर पर आधारित",
     heroLabelEstimateFusion: "आज के लिए हमारा अनुमान, दूसरे जौहरियों की सूचीबद्ध दरों पर आधारित",
     heroTanishqLastRate: ({ when, price }) => `Tanishq की सूचीबद्ध दर, ${when} जांची गई: ₹${price}`,
-    heroTanishqTooOld: ({ when }) => `Tanishq की सूचीबद्ध दर आख़िरी बार ${when} जांची गई थी — यहां दिखाने के लिए बहुत पुरानी है`,
+    heroTanishqOldRate: ({ when, price }) => `Tanishq की सूचीबद्ध दर, आख़िरी बार ${when} जांची गई: ₹${price} — तब से अपडेट नहीं हुई`,
     whenToday: ({ time }) => `आज ${time}`,
     whenYesterday: ({ time }) => `कल ${time}`,
     whenOnDate: ({ time, date }) => `${date}, ${time}`,
@@ -683,6 +689,10 @@ const STRINGS = {
     // ── Chart labels (Chart.js legend/tooltip) ─────────────────────────────────
     chart22kLabel: "22K (₹/ग्राम)",
     chart22kTooltip: ({ value }) => `22K: ₹${value}`,
+    chartEstimateLabel: "22K अनुमान (₹/ग्राम)",
+    chartEstimateTooltip: ({ value }) => `22K अनुमान: ≈ ₹${value}`,
+    chartNoteEstimate: "हमारा अनुमान, IBJA दर पर आधारित · IBJA के हर कामकाजी दिन का एक बिंदु",
+    chartNoteTanishq: "Tanishq की सूचीबद्ध 22K दर, जैसी हमने जांची",
     chartWhatHappened: "असल में क्या हुआ",
     chartFlatHoldEstimate: "फ़्लैट-होल्ड अनुमान",
     chartTooltipLabeled: ({ label, value }) => `${label}: ₹${value}`,

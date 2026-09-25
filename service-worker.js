@@ -125,7 +125,11 @@
 // our labelled estimate (heroDisplayState), which supersedes #2053's simpler
 // heroLocation/heroLocationDerived split with full takedown-awareness built in. app.js +
 // i18n.js + index.html changed.
-const VERSION = "v67-20260925-hero-tanishq-live";
+// 2026-09-25 (v68): GG 4b/4c -- a Tanishq reading past 36 h keeps its figure with date and
+// time (heroTanishqOldRate replaces heroTanishqTooOld); "today's change" only next to
+// Tanishq's own latest reading; the trend chart plots data/ibja_derived_prices.json labelled
+// as our estimate (new #chart-source-note). app.js + i18n.js + index.html changed.
+const VERSION = "v68-20260925-hero-stale-chart";
 const SHELL_CACHE = `gold-shell-${VERSION}`;
 
 const SHELL_FILES = [
