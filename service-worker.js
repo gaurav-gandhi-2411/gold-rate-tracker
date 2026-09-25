@@ -118,7 +118,20 @@
 // P2-P5 (E5) -- neutral, dated Tanishq wording. app.js + i18n.js + index.html + manifest changed.
 // 2026-09-25 (v63): style.css -- main { overflow-x: clip } stops the phone page
 // scrolling 60px sideways (hero glow overflow). Shell file changed.
-const VERSION = "v63-20260925-no-sideways-scroll";
+// 2026-09-24 (v66): page_v2 (item 6) -- proposed five-jobs page, entirely behind
+// isFeatureOn("page_v2") + per-card flags, all still false (merge default). app.js +
+// i18n.js + style.css changed (new pure/build/render functions, new pv2* i18n keys, new
+// .pv2-* rules) -- bumping so installed clients pick up the new app.js/i18n.js/style.css
+// bytes even though nothing currently renders differently with every flag off.
+// 2026-09-25 (same PR, G6 layout pass): style.css (page_v2 grid/type tokens) + app.js
+// (page_v2 mount point) changed again -- suffix re-stamped so a client that installed
+// the earlier v58 preview shell does not keep the pre-layout-pass bytes.
+// 2026-09-25 (same PR, design-review follow-ups): app.js (F2 sentence extraction fix,
+// freshness fail-closed fix) + i18n.js (Hindi pv2* translations) changed again -- bumped
+// once more so a client that installed the layout-pass shell picks up these bytes too.
+// 2026-09-25 (merge with current master, v63-v65/v67 taken by other now-merged/open
+// branches): re-stamped to v66.
+const VERSION = "v66-20260925-pagev2";
 const SHELL_CACHE = `gold-shell-${VERSION}`;
 
 const SHELL_FILES = [
