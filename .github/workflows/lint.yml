@@ -126,12 +126,14 @@ jobs:
             tests/test_dedup.js \
             tests/test_feature_flags.js \
             tests/test_good_price.js \
+            tests/test_page_v2.js \
             tests/test_pvalue_format.js \
             tests/test_scrape.js \
             tests/test_sentry_init.js \
             tests/test_stale_banner.js \
             tests/test_tier_degradation_visible.js \
-            tests/test_vol_regime.js
+            tests/test_vol_regime.js \
+            tests/test_driver_headline_signs.js
       - name: Run dead-man's-switch Worker tests
         # Code-quality gate only -- this does NOT wire the switch's own
         # operation into GitHub Actions. It runs entirely on Cloudflare
@@ -173,6 +175,8 @@ jobs:
         run: node tests/test_sw_offline_headless.js
       - name: Run the feature-flag leak-detection headless test
         run: node tests/test_feature_flags_headless.js
+      - name: Run the page_v2 (item 6) headless test
+        run: node tests/test_page_v2_headless.js
       - name: Run the no-sideways-scroll test against the real page
         run: node tests/test_no_horizontal_scroll_headless.js
 
