@@ -2,10 +2,16 @@
 
 Momentum when calm, reversal when volatile, on COMEX history this project has never used
 (GC=F 2000-08-30 .. 2012-12-31; GLD 2004-11-18 .. 2012-12-31 as a roll-free robustness check).
-Downloads each series once into reports/ and reuses the saved file afterwards. Every constant
-below is fixed by ADR 044; changing one makes the result exploratory.
+Reads the frozen snapshots in reports/. Since ADR 060 they are committed only as ciphertext under
+data/encrypted/: decrypt them first (`python scripts/data_crypt.py decrypt <path>`, needs
+DATA_ENC_KEY). Each snapshot's SHA-256 must equal the one the registered result recorded; a
+missing or different snapshot is an error, never a fresh download (Yahoo's live GC=F history no
+longer matches the frozen one, see PR #2038). Every constant below is fixed by ADR 044; changing
+one makes the result exploratory.
 
 Usage: python scripts/analysis_vol_regime_prereg.py [--out reports/vol_regime_prereg_results.json]
+       python scripts/analysis_vol_regime_prereg.py --check   # re-run, compare to the registered
+                                                              # result, exit 1 on any difference
 """
 
 from __future__ import annotations
@@ -40,31 +46,29 @@ SERIES = {
 }
 
 
+REGISTERED_RESULTS = ROOT / "reports" / "vol_regime_prereg_results.json"
+RESULT_BLOCK = {"gcf": "primary", "gld": "robustness_gld"}
+
+
+def registered_sha256(key: str) -> str:
+    """The snapshot SHA-256 the registered ADR 044 result recorded (reports/, committed)."""
+    res = json.loads(REGISTERED_RESULTS.read_text(encoding="utf-8"))
+    return str(res[RESULT_BLOCK[key]]["snapshot_sha256"])
+
+
 def load(key: str) -> tuple[pd.Series, str]:
-    """The frozen snapshot; downloaded only if it does not exist yet."""
-    ticker, start, end, rel = SERIES[key]
+    """The frozen snapshot, verified against the registered SHA-256. Never re-downloaded."""
+    _ticker, _start, _end, rel = SERIES[key]
     path = ROOT / rel
     if not path.exists():
-        import yfinance as yf
-
-        raw = yf.download(
-            ticker,
-            start=start,
-            end=(pd.Timestamp(end) + pd.Timedelta(days=1)).strftime("%Y-%m-%d"),
-            auto_adjust=True,
-            progress=False,
-            threads=False,
+        raise SystemExit(
+            f"{rel} is missing. It is stored encrypted (ADR 060): run "
+            f"`python scripts/data_crypt.py decrypt {rel}` with DATA_ENC_KEY set."
         )
-        close = raw["Close"]
-        if isinstance(close, pd.DataFrame):
-            close = close.iloc[:, 0]
-        close = close.dropna()
-        close.index = pd.to_datetime(close.index).tz_localize(None)
-        pd.DataFrame({"date": close.index.strftime("%Y-%m-%d"), "close": close.to_numpy()}).to_csv(
-            path, index=False, float_format="%.6f"
-        )
-    df = pd.read_csv(path)
     sha = hashlib.sha256(path.read_bytes()).hexdigest()
+    if sha != registered_sha256(key):
+        raise SystemExit(f"{rel}: SHA-256 {sha} is not the registered {registered_sha256(key)}")
+    df = pd.read_csv(path)
     return pd.Series(df["close"].to_numpy(dtype=float), index=pd.to_datetime(df["date"])), sha
 
 
@@ -178,9 +182,37 @@ def run(key: str) -> dict[str, Any]:
     return out
 
 
+def check_against_registered(res: dict[str, Any], registered: dict[str, Any]) -> list[str]:
+    """Differences between a fresh run and the registered result, ignoring run metadata."""
+    diffs: list[str] = []
+
+    def walk(a: Any, b: Any, where: str) -> None:
+        if isinstance(a, dict) and isinstance(b, dict):
+            for k in sorted(set(a) | set(b)):
+                if k not in a or k not in b:
+                    diffs.append(f"{where}.{k}: present in only one side")
+                else:
+                    walk(a[k], b[k], f"{where}.{k}")
+        elif isinstance(a, float) and isinstance(b, float):
+            if not math.isclose(a, b, rel_tol=1e-9, abs_tol=1e-12):
+                diffs.append(f"{where}: {a!r} != {b!r}")
+        elif a != b:
+            diffs.append(f"{where}: {a!r} != {b!r}")
+
+    for block in ("primary", "robustness_gld"):
+        walk(res[block], registered[block], block)
+    return diffs
+
+
 def main() -> int:
     ap = argparse.ArgumentParser()
-    ap.add_argument("--out", type=Path, default=ROOT / "reports" / "vol_regime_prereg_results.json")
+    ap.add_argument("--out", type=Path, default=REGISTERED_RESULTS)
+    ap.add_argument(
+        "--check",
+        action="store_true",
+        help="re-run from the frozen snapshots and compare with the registered result; "
+        "writes nothing, exits 1 on any difference",
+    )
     args = ap.parse_args()
     res = {
         "adr": "044",
@@ -191,6 +223,19 @@ def main() -> int:
         "primary": run("gcf"),
         "robustness_gld": run("gld"),
     }
+    if args.check:
+        registered = json.loads(REGISTERED_RESULTS.read_text(encoding="utf-8"))
+        diffs = check_against_registered(res, registered)
+        for d in diffs:
+            print(f"MISMATCH {d}")
+        p1 = res["primary"]["P1"]
+        print(
+            f"ADR 044 --check: {'REPRODUCED' if not diffs else 'DIFFERS'} "
+            f"(registered result at {registered.get('git_sha', '?')[:8]}); GC=F P1 n={p1['n']} "
+            f"rule_accuracy={p1['rule_accuracy']:.6f} p_vs_always_up="
+            f"{p1['p_one_sided_vs_always_up']:.6f}"
+        )
+        return 1 if diffs else 0
     args.out.write_text(json.dumps(res, indent=2) + "\n", encoding="utf-8")
     print(json.dumps(res, indent=2))
     return 0
