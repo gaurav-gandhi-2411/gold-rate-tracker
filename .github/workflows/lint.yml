@@ -134,6 +134,7 @@ jobs:
             tests/test_tier_degradation_visible.js \
             tests/test_vol_regime.js \
             tests/test_driver_headline_signs.js
+            scraper/test_retailer_enabled.mjs
       - name: Run dead-man's-switch Worker tests
         # Code-quality gate only -- this does NOT wire the switch's own
         # operation into GitHub Actions. It runs entirely on Cloudflare
@@ -177,6 +178,8 @@ jobs:
         run: node tests/test_feature_flags_headless.js
       - name: Run the page_v2 (item 6) headless test
         run: node tests/test_page_v2_headless.js
+      - name: Run the retailer-takedown fallback render test (ADR 059)
+        run: node tests/test_retailer_takedown_headless.js
       - name: Run the no-sideways-scroll test against the real page
         run: node tests/test_no_horizontal_scroll_headless.js
 

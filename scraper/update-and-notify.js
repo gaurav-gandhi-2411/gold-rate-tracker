@@ -14,6 +14,7 @@
 import fs from "node:fs/promises";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
+import { isRetailerEnabled } from "./retailer-enabled.mjs";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -57,6 +58,13 @@ async function loadPrices() {
 }
 
 async function main() {
+  // ADR 059 takedown switch: never append a Tanishq reading while Tanishq is
+  // disabled in config/retailers.json (defence in depth -- the workflow gate should
+  // already have skipped the scrape). A config error throws and fails the step.
+  if (!isRetailerEnabled("tanishq")) {
+    console.log("Tanishq is disabled in config/retailers.json -- not appending any reading");
+    return;
+  }
   const stdin = await readStdin();
   if (!stdin) throw new Error("No scrape data on stdin");
   const reading = JSON.parse(stdin);
