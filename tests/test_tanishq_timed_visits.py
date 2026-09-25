@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import importlib.util
+import itertools
 import json
 import re
 import sys
@@ -25,6 +26,7 @@ def _load(name: str):
 
 an = _load("analysis_tanishq_update_times")
 vm = _load("tanishq_visit_metrics")
+sr = _load("tanishq_schedule_refine")
 IST = timedelta(hours=5, minutes=30)
 
 
@@ -169,12 +171,24 @@ def _schedule() -> dict:
     return json.loads((ROOT / "scraper" / "visit_schedule.json").read_text(encoding="utf-8"))
 
 
-def test_schedule_has_5_or_6_visits_and_a_morning_visit():
+def test_schedule_is_six_visits_inside_the_4a_window():
+    # GG decision 4a: exactly six visits, all in 10:00-12:30 IST, 15-30 min apart
     sch = _schedule()
-    mins = [int(h) * 60 + int(m) for h, m in (v.split(":") for v in sch["visits_ist"])]
-    assert 5 <= len(mins) <= 6
+    mins = sr.to_minutes(sch["visits_ist"])
+    assert len(mins) == 6
     assert mins == sorted(mins)
-    assert any(an.MORNING_WINDOW[0] <= x <= an.MORNING_WINDOW[1] for x in mins)
+    assert sr.window_feasible(mins)
+
+
+def test_dedupe_and_slot_tolerance_below_the_shortest_visit_gap():
+    sch = _schedule()
+    mins = sr.to_minutes(sch["visits_ist"])
+    shortest = min(b - a for a, b in itertools.pairwise(mins))
+    ps1 = (ROOT / "scripts" / "win" / "tanishq_dispatch.ps1").read_text(encoding="utf-8")
+    spacing = int(re.search(r"\[int\]\$MinSpacingMin = (\d+)", ps1).group(1))
+    assert spacing < shortest
+    assert sch["tolerance_min"] < shortest
+    assert "CoolOffMin" in ps1 and "SKIP cannot read outcomes log" in ps1
 
 
 def test_workflow_cron_matches_schedule_in_utc():
@@ -255,3 +269,79 @@ def test_visit_metrics_missed_slot_when_nothing_ran():
     sched = {"visits_ist": ["08:00"], "tolerance_min": 45}
     r = vm.compute([], [], sched, _ist(2026, 10, 5, 0, 0), _ist(2026, 10, 6, 0, 0))
     assert r["slots"]["missed"] == 1 and r["changes_seen"] == 0
+
+
+# ── GG decision 4a: morning schedule and weekly refinement ───────────────────
+
+
+def test_window_feasible_bounds_and_spacing():
+    assert sr.window_feasible(sr.U30)
+    assert not sr.window_feasible([590.0, 620.0, 650.0, 680.0, 710.0, 740.0])  # 09:50
+    assert not sr.window_feasible([600.0, 610.0, 640.0, 670.0, 700.0, 730.0])  # 10 min gap
+    assert not sr.window_feasible([600.0, 640.0, 670.0, 700.0, 730.0, 750.0])  # 40 min gap
+    assert sr.window_feasible([600.0, 610.0, 640.0, 670.0, 700.0, 730.0], min_step=5)
+
+
+def test_not_fresh_hours():
+    # last visit 12:30, next 10:00: 1290 min gap, minus the 480 min gate = 13.5 h
+    assert sr.not_fresh_hours(sr.U30, 0.0, 480.0) == pytest.approx(13.5)
+    assert sr.not_fresh_hours(sr.INTERIM, 0.0, 480.0) == pytest.approx(0.0)
+
+
+def test_arc_helpers_wrap_midnight():
+    assert sr.arc_contains((1380.0, 180.0), 100.0)  # 23:00 + 3 h covers 01:40
+    assert not sr.arc_contains((600.0, 60.0), 100.0)
+    assert sr.arc_inside_overnight((1380.0, 180.0))
+    assert not sr.arc_inside_overnight((1380.0, 700.0))  # runs past 09:59
+
+
+def test_forward_counts():
+    eff = _ist(2026, 10, 5, 0, 0)
+    ivs = [
+        (_ist(2026, 10, 4, 10, 0), _ist(2026, 10, 4, 10, 30)),  # before the switch
+        (_ist(2026, 10, 5, 10, 30), _ist(2026, 10, 5, 10, 45)),  # in window, 15 min
+        (_ist(2026, 10, 5, 12, 30), _ist(2026, 10, 6, 10, 0)),  # outside window
+    ]
+    assert sr.forward_counts(ivs, eff) == {
+        "changes": 2,
+        "bracketed_le_30min": 1,
+        "first_seen_at_first_visit_of_day": 1,
+    }
+    assert sr.forward_counts(ivs, None)["changes"] == 0
+
+
+def test_wilson_lower():
+    assert sr.wilson_lower(0, 0) == 0.0
+    assert sr.wilson_lower(10, 20) == pytest.approx(0.2993, abs=1e-3)
+
+
+def test_decide_follows_the_preregistered_rule():
+    from datetime import date
+
+    today = date(2026, 12, 1)
+    few = {"changes": 10, "bracketed_le_30min": 10, "first_seen_at_first_visit_of_day": 1}
+    many = {"changes": 30, "bracketed_le_30min": 25, "first_seen_at_first_visit_of_day": 5}
+    assert sr.decide(few, 20.0, 5.0, None, today)["status"] == "WAIT_FOR_DATA"
+    assert sr.decide(many, 20.0, 5.0, None, today)["status"] == "PROPOSE"
+    assert sr.decide(many, 4.0, 1.0, None, today)["status"] == "KEEP"  # below 5 min
+    assert sr.decide(many, 20.0, -1.0, None, today)["status"] == "KEEP"  # CI crosses 0
+    assert sr.decide(many, 20.0, 5.0, date(2026, 11, 20), today)["status"] == (
+        "HOLD_4_WEEK_SPACING"
+    )
+    assert not sr.decide(many, 0.0, 0.0, None, today)["escalate_window_misses_changes"]
+    out = {"changes": 30, "bracketed_le_30min": 20, "first_seen_at_first_visit_of_day": 20}
+    assert sr.decide(out, 0.0, 0.0, None, today)["escalate_window_misses_changes"]
+
+
+def test_optimise_window_returns_a_feasible_schedule():
+    rng = np.random.default_rng(0)
+    p = np.zeros(an.DAY)
+    p[640:660] = 1.0
+    crn = an.make_crn(p / p.sum(), np.array([2.0]), 0.0, 6, rng)
+    crn = an.CRN(crn.u[:500], crn.lat[:500], crn.miss[:500])
+    vs = sr.optimise_window(crn, np.random.default_rng(1), starts=3)
+    assert sr.window_feasible(vs)
+    assert (
+        float(an.staleness_fixed(crn.u, vs, crn.lat, crn.miss).mean())
+        <= float(an.staleness_fixed(crn.u, sr.U30, crn.lat, crn.miss).mean()) + 1e-9
+    )
