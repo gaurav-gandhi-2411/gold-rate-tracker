@@ -139,14 +139,26 @@ async function run() {
       );
       assert("job 5's calculator was relocated into #page-v2, not duplicated", calcInsidePageV2);
 
-      // markup_meter/wait_or_buy/event_watch: their data files don't exist on this branch, so
-      // per the brief's own contract ("handle absence by rendering nothing") none of these
-      // three should have rendered anything, even though their flags were included above.
-      const optionalCount = await page.evaluate(
-        () => document.querySelectorAll('[data-feature="markup_meter"],[data-feature="wait_or_buy"],[data-feature="event_watch"]').length
+      // markup_meter (F1) and event_watch (F4): their data files don't exist on this branch, so
+      // per the brief's own contract ("handle absence by rendering nothing") neither should
+      // have rendered anything, even though their flags were included above.
+      const stillAbsentCount = await page.evaluate(
+        () => document.querySelectorAll('[data-feature="markup_meter"],[data-feature="event_watch"]').length
       );
-      assert("F1/F2/F4 render nothing when their data files are absent (even with their flags on)", optionalCount === 0,
-        `found ${optionalCount}`);
+      assert("F1/F4 render nothing when their data files are absent (even with their flags on)", stillAbsentCount === 0,
+        `found ${stillAbsentCount}`);
+
+      // wait_or_buy (F2): data/wait_or_buy_today.json DOES exist on this branch (PR #2020/ADR
+      // 049, on master) -- pv2ExtractSentences reads its real horizons.<N>.sentence shape (the
+      // earlier top-level sentence/sentences guess never matched it), so the card must actually
+      // render, with real text content, not stay blank.
+      const waitOrBuyCard = await page.evaluate(() => {
+        const el = document.querySelector('[data-feature="wait_or_buy"]');
+        return el ? { count: 1, textLength: el.textContent.trim().length } : { count: 0, textLength: 0 };
+      });
+      assert("F2 (wait_or_buy) renders exactly once against the real data file", waitOrBuyCard.count === 1,
+        `found ${waitOrBuyCard.count}`);
+      assert("F2 (wait_or_buy) card has real text content, not a blank card", waitOrBuyCard.textLength > 0);
 
       await ctx.close();
     }

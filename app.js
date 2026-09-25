@@ -2508,16 +2508,30 @@ function pv2BuildMarkupCard(markupToday) {
 // -- F2/F4: WAIT-OR-BUY (wait_or_buy) + EVENT WATCH (event_watch) -----------------------
 // Both render their sentence(s) verbatim, exactly as their own pipeline produced them --
 // never rebuilt or re-worded here (the brief is explicit: never add an expected-saving
-// figure on top of wait_or_buy's own sentence, for instance). Neither has a producing
-// pipeline on master as of this PR (see PR #2020 / ADR 050); schema accepts either a
-// `sentences: string[]` array or a single `sentence: string`, defensively, and returns null
-// (render nothing) for anything else.
+// figure on top of wait_or_buy's own sentence, for instance). F2's real producer (PR #2020 /
+// ADR 049, now on master) ships data/wait_or_buy_today.json with sentences nested under
+// `horizons.<N>.sentence` (N = "1"/"2"/"7"), never a top-level `sentence`/`sentences` --
+// that top-level shape was this reader's original guess before the real pipeline shipped
+// and is kept below for back-compat (F4/event_watch has no producing pipeline yet and its
+// eventual shape is unknown, so it may still use it). Horizon keys are read numerically
+// ascending (1-day statement before 7-day) and any horizon missing/malformed `sentence` is
+// skipped rather than failing the whole card -- but a payload with zero usable sentences
+// anywhere still returns null (render nothing, never a blank card).
 function pv2ExtractSentences(payload) {
   if (!payload) return null;
   if (Array.isArray(payload.sentences) && payload.sentences.length > 0 && payload.sentences.every(s => typeof s === "string")) {
     return payload.sentences;
   }
   if (typeof payload.sentence === "string" && payload.sentence.length > 0) return [payload.sentence];
+  if (payload.horizons && typeof payload.horizons === "object" && !Array.isArray(payload.horizons)) {
+    const horizonKeys = Object.keys(payload.horizons)
+      .filter(k => Number.isFinite(Number(k)))
+      .sort((a, b) => Number(a) - Number(b));
+    const sentences = horizonKeys
+      .map(k => payload.horizons[k]?.sentence)
+      .filter(s => typeof s === "string" && s.length > 0);
+    if (sentences.length > 0) return sentences;
+  }
   return null;
 }
 

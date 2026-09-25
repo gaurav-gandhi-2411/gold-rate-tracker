@@ -307,6 +307,45 @@ test("pv2ExtractSentences returns null for absent/malformed payloads", () => {
   assert.equal(pv2ExtractSentences({ sentence: "" }), null);
 });
 
+// F2's real producer (PR #2020 / ADR 049, on master) ships data/wait_or_buy_today.json with
+// this exact shape -- horizons.<N>.sentence, N = "1"/"2"/"7", no top-level sentence(s) field
+// at all. Drives the real shape, not a paraphrase of it.
+test("pv2ExtractSentences reads the real wait_or_buy_today.json shape (horizons.<N>.sentence)", () => {
+  const payload = {
+    as_of: "2026-09-24",
+    horizons: {
+      "1": { sentence: "Waiting 1 day: prices are about equally likely to go up or down." },
+      "7": { sentence: "Waiting 7 days: prices are about equally likely to go up or down." },
+      "2": { sentence: "Waiting 2 days: prices are about equally likely to go up or down." },
+    },
+  };
+  // Ordered by ascending horizon (1, 2, 7), not object insertion order (1, 7, 2).
+  assert.deepEqual(pv2ExtractSentences(payload), [
+    "Waiting 1 day: prices are about equally likely to go up or down.",
+    "Waiting 2 days: prices are about equally likely to go up or down.",
+    "Waiting 7 days: prices are about equally likely to go up or down.",
+  ]);
+});
+
+test("pv2ExtractSentences skips a horizon with a missing/malformed sentence but keeps the rest", () => {
+  const payload = {
+    horizons: {
+      "1": { sentence: "Waiting 1 day: about equally likely." },
+      "2": { sentence: "" },
+      "7": {},
+    },
+  };
+  assert.deepEqual(pv2ExtractSentences(payload), ["Waiting 1 day: about equally likely."]);
+});
+
+test("pv2ExtractSentences returns null (card hidden, not blank) when horizons has no usable sentence anywhere", () => {
+  assert.equal(pv2ExtractSentences({ horizons: {} }), null);
+  assert.equal(pv2ExtractSentences({ horizons: { "1": {} } }), null);
+  assert.equal(pv2ExtractSentences({ horizons: null }), null);
+  assert.equal(pv2ExtractSentences({ horizons: [] }), null); // array, not the expected map shape
+  assert.equal(pv2ExtractSentences({ as_of: "2026-09-24" }), null); // real shape's other top-level fields alone
+});
+
 // ── pv2Build*Card descriptors (card rendering given sample data) ──────────────────
 
 test("pv2BuildGoodPriceCard returns null when there isn't enough reading history", () => {
@@ -346,6 +385,22 @@ test("pv2BuildWaitOrBuyCard renders the pipeline's own sentence(s) verbatim", ()
   assert.ok(card !== null);
   assert.equal(card.dataFeature, "wait_or_buy");
   assert.deepEqual(card.paragraphs, ["Prices have been flat -- no strong reason to wait."]);
+});
+
+test("pv2BuildWaitOrBuyCard renders against the real data/wait_or_buy_today.json shape, not just the placeholder one", () => {
+  const card = pv2BuildWaitOrBuyCard({
+    as_of: "2026-09-24",
+    horizons: {
+      "1": { sentence: "Waiting 1 day: about equally likely." },
+      "7": { sentence: "Waiting 7 days: about equally likely." },
+    },
+  });
+  assert.ok(card !== null);
+  assert.equal(card.dataFeature, "wait_or_buy");
+  assert.deepEqual(card.paragraphs, [
+    "Waiting 1 day: about equally likely.",
+    "Waiting 7 days: about equally likely.",
+  ]);
 });
 
 test("pv2BuildEventWatchCard returns null when data is absent", () => {
