@@ -175,6 +175,8 @@ jobs:
         run: node tests/test_feature_flags_headless.js
       - name: Run the retailer-takedown fallback render test (ADR 059)
         run: node tests/test_retailer_takedown_headless.js
+      - name: Run the no-sideways-scroll test against the real page
+        run: node tests/test_no_horizontal_scroll_headless.js
 
   # Forward lint+pwa-js's real result as commit statuses (bug #4, docs/RUNBOOK.md).
   # Branch protection's required_status_checks matches by context NAME across both
