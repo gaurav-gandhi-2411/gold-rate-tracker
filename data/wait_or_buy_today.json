@@ -4,7 +4,6 @@
   "git_sha": "bbd2034275a4660ba7bd8e88ef92dfb6a73ca9d2",
   "horizons": {
     "1": {
-      "price_t": 138119.0,
       "prob": {
         "n": 193,
         "p_hat": 0.5077720207253886,
@@ -33,8 +32,6 @@
       },
       "range": {
         "scale": 1.0098522545306885,
-        "lo": 135436.8,
-        "hi": 141133.4,
         "lo_rs": -2682.2,
         "hi_rs": 3014.4,
         "x_rs": 3014.4,
@@ -48,7 +45,6 @@
       "sentence": "Waiting 1 day: prices are about equally likely to go up or down. This week they've been moving about as usual."
     },
     "2": {
-      "price_t": 138119.0,
       "prob": {
         "n": 179,
         "p_hat": 0.4581005586592179,
@@ -77,8 +73,6 @@
       },
       "range": {
         "scale": 1.0030285921017021,
-        "lo": 134583.6,
-        "hi": 142401.1,
         "lo_rs": -3535.4,
         "hi_rs": 4282.1,
         "x_rs": 4282.1,
@@ -92,7 +86,6 @@
       "sentence": "Waiting 2 days: prices are about equally likely to go up or down. This week they've been moving about as usual."
     },
     "7": {
-      "price_t": 138119.0,
       "prob": {
         "n": 155,
         "p_hat": 0.45161290322580644,
@@ -121,8 +114,6 @@
       },
       "range": {
         "scale": 1.0720195223412141,
-        "lo": 132058.1,
-        "hi": 146053.2,
         "lo_rs": -6060.9,
         "hi_rs": 7934.2,
         "x_rs": 7934.2,
