@@ -16,6 +16,7 @@ module produced.
 
 from __future__ import annotations
 
+from collections.abc import Callable
 from datetime import date
 
 import numpy as np
@@ -25,7 +26,9 @@ from sklearn.calibration import CalibratedClassifierCV
 
 from ml.calendar_events import get_demand_calendar_features
 from ml.direction.evaluate import _impute_with_means, compute_direction_metrics
+from ml.direction.leak_checks import fold_prediction_moment, training_label_inputs
 from ml.direction.models import fit_lightgbm, fit_logistic
+from ml.leak_guard import KnownInput, LeakGuard, Mode
 
 M1_DRIVER_COLS: list[str] = [
     "india_vix",
@@ -51,6 +54,12 @@ def augment_with_m1_drivers(
     when as_of_date is the day whose move is being predicted (the proxy arm,
     ADR 038 amendment A2): that day's own VIX close is not known until the
     move it would predict has already happened.
+
+    Adds `india_vix_asof_date`: the date of the genuine close each row's value
+    came from (ADR 061), so ml.leak_guard can check when it was known. Dates
+    are taken from the non-NaN entries before forward-filling; an injected
+    series that is already forward-filled makes every date look genuine, which
+    can only make the guard stricter (a later close date, never an earlier one).
     """
     dates = pd.to_datetime(dataset["as_of_date"])
     if india_vix is None:
@@ -64,10 +73,14 @@ def augment_with_m1_drivers(
         india_vix.index = pd.to_datetime(india_vix.index, utc=True)
         india_vix = india_vix.reindex(
             pd.date_range(india_vix.index.min(), india_vix.index.max(), freq="D", tz="UTC")
-        ).ffill()
+        )
+    vix_close_date = pd.Series(india_vix.index, index=india_vix.index).where(india_vix.notna())
+    vix_close_date = vix_close_date.ffill()
+    india_vix = india_vix.ffill()
 
     out = dataset.copy()
     out["india_vix"] = np.nan
+    out["india_vix_asof_date"] = None
     out["is_wedding_season"] = False
     out["is_budget_window"] = False
     out["is_duty_event_recent"] = False
@@ -81,6 +94,9 @@ def augment_with_m1_drivers(
         if vix_ts in india_vix.index:
             val = india_vix.loc[vix_ts]
             out.at[idx, "india_vix"] = float(val) if not pd.isna(val) else np.nan
+            close_date = vix_close_date.loc[vix_ts]
+            if not pd.isna(val) and not pd.isna(close_date):
+                out.at[idx, "india_vix_asof_date"] = pd.Timestamp(close_date).strftime("%Y-%m-%d")
         cal = get_demand_calendar_features(date.fromisoformat(row["as_of_date"]))
         out.at[idx, "is_wedding_season"] = bool(cal["is_wedding_season"])
         out.at[idx, "is_budget_window"] = bool(cal["is_budget_window"])
@@ -102,6 +118,10 @@ def run_config_sweep(
     return_raw: bool = False,
     embargo_label_date_col: str | None = None,
     score_after_as_of: str | None = None,
+    feature_known_at: Callable[[pd.Series], list[KnownInput]] | None = None,
+    prediction_moment: Callable[[pd.Series], pd.Timestamp] | None = None,
+    feature_guard_mode: Mode = "raise",
+    label_guard_mode: Mode | None = None,
 ) -> dict:
     """Walk-forward for one (feature_cols, model, hyperparameter) config.
 
@@ -128,6 +148,17 @@ def run_config_sweep(
     as_of_date strictly after it are fitted and scored; earlier rows still
     serve as training data. Used by the pre-registration to score only days
     that did not exist when the config was selected.
+
+    Leak guard (ADR 061), result["leak_guard"]:
+      labels   when the dataset has label_col's label-date column, every training
+               label is checked against the fold's prediction moment (default:
+               ml.direction.leak_checks.fold_prediction_moment). mode "raise" with
+               an embargo; "report" without one -- the no-embargo protocol is the
+               ADR 034 leak itself, kept only so frozen figures reproduce, and the
+               report records it instead of refusing to reproduce them.
+               label_guard_mode overrides that choice.
+      features feature_known_at(test_row) -> KnownInputs, checked at
+               prediction_moment(test_row) in feature_guard_mode.
     """
     ds = dataset[dataset[label_col].notna()].reset_index(drop=True)
     n = len(ds)
@@ -143,6 +174,25 @@ def run_config_sweep(
     as_of_scored: list[str] = []
     train_max_label_date: list[str | None] = []
 
+    def _default_moment(row: pd.Series) -> pd.Timestamp:
+        return fold_prediction_moment(row["as_of_date"])
+
+    moment = prediction_moment or _default_moment
+    guard_date_col = "label_date" + label_col.removeprefix("label_binary")
+    labels_guard = (
+        LeakGuard(
+            f"config_sweep {label_col} training labels",
+            mode=label_guard_mode or ("raise" if embargo_label_date_col is not None else "report"),
+        )
+        if label_col.startswith("label_binary") and guard_date_col in ds.columns
+        else None
+    )
+    features_guard = (
+        LeakGuard(f"config_sweep {label_col} features", mode=feature_guard_mode)
+        if feature_known_at is not None
+        else None
+    )
+
     for i in range(min_train_size, n):
         if score_after_as_of is not None and as_of[i] <= score_after_as_of:
             continue
@@ -154,6 +204,14 @@ def run_config_sweep(
                 continue
             train_df = ds.iloc[np.array(keep, dtype=int)]
         test_row = ds.iloc[i]
+        t = moment(test_row)
+        ctx = f"as_of={as_of[i]}"
+        if labels_guard is not None:
+            labels_guard.check(
+                t, training_label_inputs(train_df[guard_date_col], label_col), context=ctx
+            )
+        if features_guard is not None and feature_known_at is not None:
+            features_guard.check(t, feature_known_at(test_row), context=ctx)
         y_train = train_df[label_col].astype(int).tolist()
         if len(set(y_train)) < 2:
             continue
@@ -200,6 +258,10 @@ def run_config_sweep(
 
     metrics = compute_direction_metrics(y_true_all, prob_all, model)
     result = {k: v for k, v in metrics.items() if k != "reliability"}
+    result["leak_guard"] = {
+        "labels": labels_guard.summary() if labels_guard is not None else None,
+        "features": features_guard.summary() if features_guard is not None else None,
+    }
     if return_raw:
         result["raw"] = {
             "y_true": y_true_all,
