@@ -5,7 +5,7 @@ All tests are fully offline — yfinance is never called; ml.macro._download_wit
 is mocked wherever a raw-driver fetch is needed.
 
 Test groups:
-  1. TestDutySchedule       — duty_events.json -> cumulative daily rate reconstruction
+  1. TestDutySchedule       — duty_cbic.json -> daily rate reconstruction (step function)
   2. TestRollAdjustment     — GC=F/GLD divergence detection + ratio back-adjustment
   3. TestLeakageAlignment   — T-1 lag is actually applied (no same-day leakage)
   4. TestWalkForwardPremium — no future information leaks into past fitted params
@@ -34,23 +34,28 @@ from ml.inr_proxy import (
 # ---------------------------------------------------------------------------
 
 
+def _write_duty_table(path: Path, rows: list[dict], unverified: list[dict] | None = None) -> None:
+    path.write_text(json.dumps({"rows": rows, "unverified_pre_2019": {"rows": unverified or []}}))
+
+
 class TestDutySchedule:
-    def test_before_first_event_uses_base_rate(self, tmp_path: Path) -> None:
-        events = [{"date": "2015-01-01", "magnitude_pct": 2.0}]
-        path = tmp_path / "duty_events.json"
-        path.write_text(json.dumps(events))
+    def test_before_first_row_uses_base_rate(self, tmp_path: Path) -> None:
+        path = tmp_path / "duty_cbic.json"
+        _write_duty_table(path, [{"effective_date": "2015-01-01", "total_duty_pct": 6.0}])
 
         idx = pd.date_range("2013-01-01", "2013-12-31", freq="D", tz="UTC")
         schedule = load_duty_schedule(path=path, index=idx)
         assert (schedule == 4.0).all()  # _BASE_DUTY_PCT
 
-    def test_cumulative_after_two_events(self, tmp_path: Path) -> None:
-        events = [
-            {"date": "2013-01-01", "magnitude_pct": 2.0},
-            {"date": "2013-06-01", "magnitude_pct": 2.0},
-        ]
-        path = tmp_path / "duty_events.json"
-        path.write_text(json.dumps(events))
+    def test_step_after_two_rows(self, tmp_path: Path) -> None:
+        path = tmp_path / "duty_cbic.json"
+        _write_duty_table(
+            path,
+            [
+                {"effective_date": "2013-01-01", "total_duty_pct": 6.0},
+                {"effective_date": "2013-06-01", "total_duty_pct": 8.0},
+            ],
+        )
 
         idx = pd.date_range("2013-01-01", "2013-12-31", freq="D", tz="UTC")
         schedule = load_duty_schedule(path=path, index=idx)
@@ -59,18 +64,33 @@ class TestDutySchedule:
         assert schedule.loc["2013-06-01"] == pytest.approx(8.0)
         assert schedule.loc["2013-12-31"] == pytest.approx(8.0)
 
-    def test_negative_magnitude_is_a_cut(self, tmp_path: Path) -> None:
-        events = [
-            {"date": "2013-01-01", "magnitude_pct": 6.0},
-            {"date": "2021-02-02", "magnitude_pct": -2.19},
-        ]
-        path = tmp_path / "duty_events.json"
-        path.write_text(json.dumps(events))
+    def test_a_cut_is_a_lower_absolute_level(self, tmp_path: Path) -> None:
+        path = tmp_path / "duty_cbic.json"
+        _write_duty_table(
+            path,
+            [
+                {"effective_date": "2013-01-01", "total_duty_pct": 10.0},
+                {"effective_date": "2021-02-02", "total_duty_pct": 7.81},
+            ],
+        )
 
         idx = pd.date_range("2021-01-01", "2021-03-01", freq="D", tz="UTC")
         schedule = load_duty_schedule(path=path, index=idx)
         assert schedule.loc["2021-02-01"] == pytest.approx(10.0)
         assert schedule.loc["2021-02-02"] == pytest.approx(7.81)
+
+    def test_unverified_pre_2019_rows_are_included(self, tmp_path: Path) -> None:
+        path = tmp_path / "duty_cbic.json"
+        _write_duty_table(
+            path,
+            [{"effective_date": "2019-07-06", "total_duty_pct": 13.75}],
+            unverified=[{"effective_date": "2013-01-01", "total_duty_pct": 6.0}],
+        )
+
+        idx = pd.date_range("2013-01-01", "2019-12-31", freq="D", tz="UTC")
+        schedule = load_duty_schedule(path=path, index=idx)
+        assert schedule.loc["2013-01-01"] == pytest.approx(6.0)
+        assert schedule.loc["2019-07-06"] == pytest.approx(13.75)
 
 
 # ---------------------------------------------------------------------------
@@ -140,8 +160,8 @@ class TestLeakageAlignment:
 
         raw = pd.DataFrame({"gold_usd": gc_spiked, "usd_inr": usd_inr, "gld": gld})
 
-        duty_events = tmp_path / "duty_events.json"
-        duty_events.write_text(json.dumps([{"date": "2013-01-01", "magnitude_pct": 2.0}]))
+        duty_events = tmp_path / "duty_cbic.json"
+        _write_duty_table(duty_events, [{"effective_date": "2013-01-01", "total_duty_pct": 6.0}])
 
         empty_ibja = tmp_path / "ibja_rates.parquet"
         pd.DataFrame({"date": pd.Series(dtype=str), "pm_916": pd.Series(dtype=float)}).to_parquet(

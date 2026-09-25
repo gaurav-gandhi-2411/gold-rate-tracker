@@ -119,13 +119,29 @@ jobs:
         continue-on-error: true
         run: python scripts/run_weekly_range_shadow.py
 
+      - name: Score the next-day range v2 shadow (ADR 047)
+        # SHADOW ONLY (2026-09-25, ADR 047 / #2017): full recompute of the v2 next-day range's
+        # retrospective and forward (confirmatory, decision_date > the freeze date) blocks
+        # against metrics_history.json, to data/next_day_range_shadow.json. Nothing on the site
+        # reads it.
+        continue-on-error: true
+        run: python scripts/run_next_day_range_shadow.py --out data/next_day_range_shadow.json
+
+      - name: Score the buy-now-or-wait shadow (ADR 049)
+        # SHADOW ONLY (2026-09-25, ADR 049 / #2020): append-only -- issues the N=1/2/7 entries for
+        # each IBJA publication day after the confirmatory start and scores matured ones once, to
+        # data/wait_or_buy_shadow.json (+ data/wait_or_buy_today.json). Nothing on the site reads
+        # either file.
+        continue-on-error: true
+        run: python scripts/run_wait_or_buy_shadow.py
+
       - name: Commit backtest results
         id: commit
         run: |
           set -e
           git config user.name "gold-rate-bot"
           git config user.email "actions@users.noreply.github.com"
-          git add data/backtest.json data/metrics_history.json data/coverage_metrics.json data/calibration_band_coverage.json data/preregistered_h2_shadow_results.json data/nowcast_shadow_log.json data/weekly_range_shadow_log.json || true
+          git add data/backtest.json data/metrics_history.json data/coverage_metrics.json data/calibration_band_coverage.json data/preregistered_h2_shadow_results.json data/nowcast_shadow_log.json data/weekly_range_shadow_log.json data/next_day_range_shadow.json data/wait_or_buy_shadow.json data/wait_or_buy_today.json || true
           if git diff --staged --quiet; then
             echo "No changes to commit."
             echo "changed=false" >> "$GITHUB_OUTPUT"

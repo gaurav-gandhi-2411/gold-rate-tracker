@@ -1,5 +1,5 @@
 {
- "_comment": "Import duty on gold bars (HS 7108) built only from CBIC customs notifications (G4a, 2026-09-24). total_duty_pct = BCD + AIDC + SWS (SWS = 10% of BCD where it applied); IGST 3% is excluded because IBJA rates are quoted ex-GST. Duty is levied on CBIC's tariff value, not on the market price. 2013 changes are omitted: their notification numbers could not be verified. Research input only; the live pipeline still reads data/duty_events.json.",
+ "_comment": "Import duty on gold bars (HS 7108). SINGLE SOURCE OF TRUTH for India gold import duty (D2, 2026-09-24) -- the live pipeline (ml.feature_store, ml.calendar_events, ml.inr_proxy) reads this file; data/duty_events.json is retired. total_duty_pct = BCD + AIDC + SWS (SWS = 10% of BCD where it applied); IGST 3% is excluded because IBJA rates are quoted ex-GST. Duty is levied on CBIC's tariff value, not on the market price. `rows` below are all CBIC-notification-cited (2019-07-06 onward) and are the only rows premium/research code (scripts/analysis_derived_premium.py) may read. The separate `unverified_pre_2019` key holds three press-sourced-only 2013 hikes (notification numbers could not be verified) -- read ONLY by ml.inr_proxy's pretraining proxy, which needs duty coverage back to 2013; see that key's own _comment.",
  "rows": [
   {
    "effective_date": "2019-07-06",
@@ -67,5 +67,43 @@
    "source": "https://www.worldtradescanner.com/cst-15-2026.pdf ; https://www.worldtradescanner.com/cst-16-2026.pdf",
    "status": "notification text read on a third-party mirror, not yet on cbic.gov.in or egazette.gov.in"
   }
- ]
+ ],
+ "unverified_pre_2019": {
+  "_comment": "D2 migration (2026-09-24): the three 2013 current-account-deficit-crisis BCD hikes, carried over from the retired data/duty_events.json (2013-01-01/2013-06-01/2013-08-01 entries) with NO new sourcing -- press retrospectives (Business Standard / ThePrint) give month-level precision only, no CBIC notification number was ever found for any of the three, and AIDC/SWS did not exist yet (AIDC introduced 2021, SWS on gold not confirmed applicable before 2018) so total_duty_pct here is BCD-only, not the BCD+AIDC+SWS basis the verified `rows` use from 2019-07-06 onward. Consumed ONLY by ml.inr_proxy (the long-history pretraining proxy, which needs duty coverage back to 2013-01-01) via duty_schedule.load_all_rows_including_unverified(); every other consumer (ml.calendar_events, ml.feature_store, ml.feature_store_backfill, scripts/analysis_derived_premium.py) reads `rows` only and never sees this key. The rate in force immediately before 2013-01-01 (4%) is not a row here -- it has no notification either, it is a fixed starting assumption documented as ml.inr_proxy._BASE_DUTY_PCT.",
+  "rows": [
+   {
+    "effective_date": "2013-01-01",
+    "bcd_pct": 6.0,
+    "aidc_pct": 0.0,
+    "sws_pct": 0.0,
+    "total_duty_pct": 6.0,
+    "notification": null,
+    "effective_date_basis": "press sources give month-level precision only (\"January 2013\"); exact day not verified, dated to the 1st of the month as a placeholder",
+    "source": "Business Standard / ThePrint 2013 duty-hike retrospectives (cross-referenced, month-level precision only)",
+    "status": "UNVERIFIED -- no CBIC notification number found; BCD-only, first of three 2013 crisis-era hikes (4% -> 6%)"
+   },
+   {
+    "effective_date": "2013-06-01",
+    "bcd_pct": 8.0,
+    "aidc_pct": 0.0,
+    "sws_pct": 0.0,
+    "total_duty_pct": 8.0,
+    "notification": null,
+    "effective_date_basis": "press sources give month-level precision only (\"June 2013\"); exact day not verified",
+    "source": "Business Standard / ThePrint 2013 duty-hike retrospectives (cross-referenced, month-level precision only)",
+    "status": "UNVERIFIED -- no CBIC notification number found; BCD-only, second of three 2013 crisis-era hikes (6% -> 8%)"
+   },
+   {
+    "effective_date": "2013-08-01",
+    "bcd_pct": 10.0,
+    "aidc_pct": 0.0,
+    "sws_pct": 0.0,
+    "total_duty_pct": 10.0,
+    "notification": null,
+    "effective_date_basis": "press sources give month-level precision only (\"August 2013\"); exact day not verified",
+    "source": "Business Standard / ThePrint 2013 duty-hike retrospectives (cross-referenced, month-level precision only)",
+    "status": "UNVERIFIED -- no CBIC notification number found; BCD-only, third of three 2013 crisis-era hikes (8% -> 10%); duty then held at 10% through 2014-2018 per the same retrospectives"
+   }
+  ]
+ }
 }
