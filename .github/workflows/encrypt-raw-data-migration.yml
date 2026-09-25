@@ -1,0 +1,95 @@
+name: Encrypt raw data (one-shot migration, ADR 060)
+
+# Run ONCE, by hand, after the PR that added scripts/data_crypt.py is merged. It encrypts every
+# registered raw-data file that is still tracked as plaintext with the DATA_ENC_KEY secret,
+# checks each round trip, untracks the plaintext (`git rm --cached`; git history is NOT
+# rewritten and still holds every old plaintext version), and opens a DRAFT pull request.
+# It never merges: a human reviews and merges the PR. Production ciphertext can only come from
+# here, because only CI can read DATA_ENC_KEY.
+#
+# Not a bot-pr-sync caller on purpose: bot-pr-sync auto-merges, and its data-only allowlist
+# would reject untracking reports/vol_regime_prereg_*.csv anyway.
+
+on:
+  workflow_dispatch:
+    inputs:
+      confirm:
+        description: 'Type "encrypt" to confirm. Before running, keep an offline copy of DATA_ENC_KEY (ADR 060: without it the frozen research snapshots are unrecoverable).'
+        required: true
+
+permissions:
+  contents: read # pushes and the PR use CI_MERGE_PAT, so required checks run on the PR
+
+concurrency:
+  group: encrypt-raw-data-migration
+  cancel-in-progress: false
+
+jobs:
+  migrate:
+    if: inputs.confirm == 'encrypt'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: master
+          token: ${{ secrets.CI_MERGE_PAT }}
+
+      - name: Set up Python
+        uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: "3.12"
+
+      - name: Install cryptography (the version ml/requirements-inference.lock pins)
+        run: pip install -q "cryptography==50.0.1"
+
+      - name: Mask key forms
+        env:
+          DATA_ENC_KEY: ${{ secrets.DATA_ENC_KEY }}
+        run: python scripts/data_crypt.py mask-key
+
+      - name: Encrypt, verify and untrack
+        env:
+          DATA_ENC_KEY: ${{ secrets.DATA_ENC_KEY }}
+        run: |
+          set -euo pipefail
+          git config user.name "gold-rate-bot"
+          git config user.email "actions@users.noreply.github.com"
+          BRANCH="chore/encrypt-raw-data-migration-${GITHUB_RUN_ID}"
+          git checkout -b "${BRANCH}"
+          python scripts/data_crypt.py migrate
+          python scripts/data_crypt.py verify --all
+          git add data/encrypted/
+          python scripts/data_crypt.py guard
+          python scripts/data_crypt.py scan-key --changed
+          git diff --cached --stat
+          git commit -m "chore(data): encrypt raw third-party data files (ADR 060)"
+          git push origin "HEAD:refs/heads/${BRANCH}"
+          echo "BRANCH=${BRANCH}" >> "$GITHUB_ENV"
+
+      - name: Open draft PR
+        env:
+          GH_TOKEN: ${{ secrets.CI_MERGE_PAT }}
+        run: |
+          set -euo pipefail
+          {
+            echo "Automated one-shot migration from run ${GITHUB_RUN_ID} (ADR 060)."
+            echo
+            echo "Every registered raw-data file that was tracked as plaintext is now committed only as"
+            echo "ciphertext under data/encrypted/, with its plaintext SHA-256 in the *.sha256.json next"
+            echo "to it. The plaintext paths are untracked (git rm --cached) and gitignored."
+            echo
+            echo "**Git history is not rewritten.** Every earlier plaintext version is still in this"
+            echo "repository's history; this stops publishing new versions, nothing more."
+            echo
+            echo "Review: the manifest below; CI green; after merge the next check-price, shadow-fusion"
+            echo "and weekly-backtest runs should show 'decrypted' in their Decrypt step."
+            echo
+            echo '```json'
+            python scripts/data_crypt.py manifest
+            echo '```'
+          } > "${RUNNER_TEMP}/body.md"
+          gh pr create --draft --base master --head "${BRANCH}" \
+            --title "chore(data): encrypt raw third-party data files (ADR 060)" \
+            --body-file "${RUNNER_TEMP}/body.md"

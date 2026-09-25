@@ -30,3 +30,19 @@ scraper/spinner-check.mjs
 scraper/visual-audit.mjs
 scraper/*.png
 scripts/screenshot_*.mjs
+
+# ADR 060: raw third-party data is committed only as ciphertext under data/encrypted/.
+# These plaintext paths are decrypted into CI workspaces and local clones and must never be
+# committed again. Keep this list equal to REGISTRY in scripts/data_crypt.py (its `guard`
+# subcommand fails CI if a registered path is not ignored here).
+/reports/vol_regime_prereg_gcf_2000_2012.csv
+/reports/vol_regime_prereg_gld_2004_2012.csv
+/data/ibja_rates.parquet
+/data/fusion_snapshots.parquet
+/data/shadow_fusion_output.json
+/data/feature_store/snapshots.parquet
+/data/next_day_range_shadow.json
+/data/wait_or_buy_shadow.json
+/data/nowcast_shadow_log.json
+/reports/derived_premium.json
+/.data_crypt_state.json

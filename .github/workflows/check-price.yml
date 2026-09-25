@@ -111,6 +111,18 @@ jobs:
             --index-strategy unsafe-best-match \
             -r ml/requirements-inference.lock
 
+      - name: Decrypt raw data files (ADR 060)
+        # IBJA history and the feature store are committed only as ciphertext. continue-on-error
+        # keeps the live forecast updating if this fails (tier 2 needs only today's IBJA rate and
+        # the committed calibration.json), and data_crypt.py then refuses to re-encrypt a file it
+        # did not decrypt, so a rebuilt-from-nothing parquet can never replace the history. The
+        # last step below fails the run so the failure is not silent.
+        id: decrypt
+        continue-on-error: true
+        uses: ./.github/actions/decrypt-data
+        with:
+          key: ${{ secrets.DATA_ENC_KEY }}
+
       - name: Fetch macro features
         continue-on-error: true
         run: python ml/macro.py
@@ -232,13 +244,30 @@ jobs:
         continue-on-error: true
         run: python -m ml.feature_store
 
+      - name: Re-encrypt raw data files (ADR 060)
+        # Before the migration PR lands both paths are still tracked plaintext and this is a
+        # no-op; afterwards it re-encrypts only a file whose plaintext changed.
+        id: seal
+        continue-on-error: true
+        env:
+          DATA_ENC_KEY: ${{ secrets.DATA_ENC_KEY }}
+        run: python scripts/data_crypt.py encrypt data/ibja_rates.parquet data/feature_store/snapshots.parquet
+
       - name: Commit updated data files
         id: commit
+        env:
+          DATA_ENC_KEY: ${{ secrets.DATA_ENC_KEY }}
         run: |
           set -e
           git config user.name "gold-rate-bot"
           git config user.email "actions@users.noreply.github.com"
+          # ibja_rates.parquet and feature_store/snapshots.parquet are added as plaintext only while
+          # still tracked (pre-migration). Once migrated they are gitignored, git refuses them
+          # (covered by `|| true`), and data/encrypted/ carries them instead. ADR 060.
           git add data/forecast.json data/drift_metrics.json data/metrics_history.json data/ibja_rates.parquet data/chronos_probe.json data/calibration.json data/feature_store/snapshots.parquet data/tanishq_scrape_success_rate.json data/cadence_metrics.json || true
+          git add data/encrypted/ || true
+          # Fails the commit if the key, or its base64/hex form, is in any file about to be committed.
+          python scripts/data_crypt.py scan-key --changed
           if git diff --staged --quiet; then
             echo "No changes to commit."
             echo "changed=false" >> "$GITHUB_OUTPUT"
@@ -318,3 +347,9 @@ jobs:
             -H "Tags: warning" \
             -d "bot/data-sync PR #${PR_NUM} has been open ${AGE_MIN} min without merging -- prices.json may be stale. https://github.com/${GITHUB_REPOSITORY}/pull/${PR_NUM}" \
             "https://ntfy.sh/${NTFY_TOPIC}" || true
+
+      - name: Fail the run if decrypt or re-encrypt failed (ADR 060)
+        if: always() && (steps.decrypt.outcome == 'failure' || steps.seal.outcome == 'failure')
+        run: |
+          echo "::error title=Raw data decrypt/encrypt failed::decrypt=${{ steps.decrypt.outcome }} seal=${{ steps.seal.outcome }}. The forecast was still committed; the encrypted history was left unchanged. See docs/adr/060-encrypted-raw-data.md (recovery)."
+          exit 1

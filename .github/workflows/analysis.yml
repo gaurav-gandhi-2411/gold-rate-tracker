@@ -88,6 +88,10 @@ jobs:
             --extra-index-url https://download.pytorch.org/whl/cpu \
             --index-strategy unsafe-best-match \
             -r ml/requirements-inference.lock
+      - name: Decrypt raw data files (ADR 060)
+        uses: ./.github/actions/decrypt-data
+        with:
+          key: ${{ secrets.DATA_ENC_KEY }}
       - name: Run shard
         env:
           SHARD: ${{ matrix.key }}
@@ -120,6 +124,10 @@ jobs:
             --extra-index-url https://download.pytorch.org/whl/cpu \
             --index-strategy unsafe-best-match \
             -r ml/requirements-inference.lock
+      - name: Decrypt raw data files (ADR 060)
+        uses: ./.github/actions/decrypt-data
+        with:
+          key: ${{ secrets.DATA_ENC_KEY }}
       - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
         with:
           pattern: shard-*

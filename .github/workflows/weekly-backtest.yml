@@ -38,6 +38,11 @@ jobs:
             --index-strategy unsafe-best-match \
             -r ml/requirements-inference.lock
 
+      - name: Decrypt raw data files (ADR 060)
+        uses: ./.github/actions/decrypt-data
+        with:
+          key: ${{ secrets.DATA_ENC_KEY }}
+
       - name: Cache Chronos model weights
         uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
@@ -135,13 +140,25 @@ jobs:
         continue-on-error: true
         run: python scripts/run_wait_or_buy_shadow.py
 
+      - name: Re-encrypt raw shadow files (ADR 060)
+        env:
+          DATA_ENC_KEY: ${{ secrets.DATA_ENC_KEY }}
+        run: python scripts/data_crypt.py encrypt data/next_day_range_shadow.json data/wait_or_buy_shadow.json data/nowcast_shadow_log.json
+
+      # ADR 060: next_day_range_shadow, wait_or_buy_shadow and nowcast_shadow_log hold raw prices.
+      # Their plaintext is added below only while still tracked (pre-migration); afterwards git
+      # refuses the ignored paths and data/encrypted/ carries them.
       - name: Commit backtest results
         id: commit
+        env:
+          DATA_ENC_KEY: ${{ secrets.DATA_ENC_KEY }}
         run: |
           set -e
           git config user.name "gold-rate-bot"
           git config user.email "actions@users.noreply.github.com"
           git add data/backtest.json data/metrics_history.json data/coverage_metrics.json data/calibration_band_coverage.json data/preregistered_h2_shadow_results.json data/nowcast_shadow_log.json data/weekly_range_shadow_log.json data/next_day_range_shadow.json data/wait_or_buy_shadow.json data/wait_or_buy_today.json || true
+          git add data/encrypted/ || true
+          python scripts/data_crypt.py scan-key --changed
           if git diff --staged --quiet; then
             echo "No changes to commit."
             echo "changed=false" >> "$GITHUB_OUTPUT"

@@ -53,6 +53,11 @@ jobs:
           pytest \
             -m "not integration" \
             tests/ -v
+      - name: Check raw data stays encrypted (ADR 060)
+        # No key needed. Fails if a registered raw-data path is tracked as plaintext once it has
+        # ciphertext, is not gitignored, or if any data/encrypted/ file does not match its public
+        # SHA-256 manifest entry. The key-leak and tamper tests are in tests/test_data_crypt.py.
+        run: python scripts/data_crypt.py guard
       - name: Check every JS test file is referenced by some workflow
         # AJ2 (production audit continuation, 2026-09-11/12): mechanical
         # version of the sweep that found test_tier_degradation_visible.js
