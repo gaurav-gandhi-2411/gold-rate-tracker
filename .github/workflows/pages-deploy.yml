@@ -1,0 +1,88 @@
+name: Pages Deploy (GitHub Actions build)
+
+# Not live yet -- see docs/PAGES_DEPLOY.md for the switch-over story and GG's exact steps.
+#
+# GitHub Pages for this repo currently deploys via the legacy Jekyll build straight off
+# master (Settings > Pages > Source: "Deploy from a branch"; confirmed via
+# `gh api repos/.../pages` -> build_type: "legacy"). That build has no step that can run a
+# script, so it cannot compute service-worker.js's VERSION from the shell files' content --
+# every PR that touches a precached shell file has to hand-bump VERSION instead, which is
+# exactly what causes conflicting v58/v59 bumps across stacked PRs (the problem this
+# workflow exists to remove).
+#
+# This workflow is the replacement build: it stamps VERSION from a hash of the shell files
+# (scripts/stamp_sw_version.py) before building with the SAME Jekyll pipeline
+# (actions/jekyll-build-pages), so _config.yml's `exclude:` list is honoured identically to
+# the legacy build -- the served file set does not change, only how VERSION is produced.
+#
+# It cannot take effect on its own: GitHub only runs a Pages-deploying Actions workflow once
+# a repo's Pages source is switched to "GitHub Actions" in Settings, which only GG can do.
+# Until then this workflow's `deploy` job is a permanent no-op (see the job-level `if:`
+# below) -- it can run on every push to master with zero effect on the live site, so it is
+# safe to merge before that switch happens. The job-level gate (a REPO VARIABLE, not the
+# Pages source setting itself, which this workflow has no way to read) exists so GG can
+# rehearse the switch in two independent steps: flip PAGES_BUILD_MODE to light up this
+# workflow AND put lint.yml's sw-version-guard into "actions" mode, verify a dry run, then
+# flip the actual Pages source setting -- rather than one irreversible-feeling toggle.
+
+on:
+  push:
+    branches: [master]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    # Inert until GG sets this repo variable (Settings > Secrets and variables > Actions >
+    # Variables > PAGES_BUILD_MODE = actions) AND switches Pages' source to "GitHub
+    # Actions" -- see docs/PAGES_DEPLOY.md. Until both happen, the legacy Jekyll build off
+    # master keeps serving the live site exactly as today; this job simply does not run.
+    if: vars.PAGES_BUILD_MODE == 'actions'
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: "3.12"
+
+      - name: Stamp service-worker.js VERSION from a hash of the precached shell files
+        # Build-workspace-only: this checkout is discarded after the job, nothing is
+        # committed back. See scripts/stamp_sw_version.py's module docstring for the
+        # hash's exact framing and its determinism/line-ending-stability properties.
+        run: python3 scripts/stamp_sw_version.py
+
+      - uses: actions/configure-pages@45bfe0192ca1faeb007ade9deae92b16b8254a0d # v6.0.0
+
+      - name: Build with Jekyll
+        # Same action GitHub's own Pages UI offers as the Actions-based Jekyll starter --
+        # runs `bundle exec jekyll build` against this repo's own _config.yml, so the
+        # `exclude:` list is honoured identically to the legacy build. See docs/PAGES_DEPLOY.md
+        # for what was verified about output parity with the legacy build (this action does
+        # not run locally without a Pages-flavoured Jekyll/Ruby toolchain, which was not
+        # installed for this change -- parity was checked by comparing the _config.yml
+        # exclude list against a `git ls-files` walk instead; see that doc for the exact
+        # comparison and its result).
+        uses: actions/jekyll-build-pages@44a6e6beabd48582f863aeeb6cb2151cc1716697 # v1.0.13
+        with:
+          source: ./
+          destination: ./_site
+
+      - uses: actions/upload-pages-artifact@fc324d3547104276b827a68afc52ff2a11cc49c9 # v5.0.0
+        with:
+          path: ./_site
+
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@368f82528645a54fb793d4d04e342629a3f51346 # v5.0.1

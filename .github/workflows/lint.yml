@@ -220,26 +220,16 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           fetch-depth: 0
-      - name: Require a VERSION bump when shell assets change
-        run: |
-          set -e
-          BASE="origin/${{ github.base_ref }}"
-          CHANGED=$(git diff --name-only "$BASE"...HEAD)
-          # The guarded set is read from service-worker.js's own SHELL_FILES, not a
-          # hand-typed regex: the old 4-file regex omitted i18n.js (precached
-          # cache-first), so an i18n-only PR never demanded a VERSION bump. `set -e`
-          # makes an unreadable/empty SHELL_FILES fail this step, not pass it.
-          PRECACHED=$(python3 scripts/sw_shell_files.py)
-          if echo "$CHANGED" | grep -qxF -f <(printf '%s\n' "$PRECACHED"); then
-            if ! echo "$CHANGED" | grep -qx 'service-worker.js'; then
-              echo "::error::a precached shell file (see scripts/sw_shell_files.py) changed but service-worker.js wasn't touched. Bump VERSION in service-worker.js — see the CACHE INVALIDATION CONTRACT comment at the top of that file."
-              exit 1
-            fi
-            if ! git diff "$BASE...HEAD" -- service-worker.js | grep -q '^[+-]const VERSION'; then
-              echo "::error::service-worker.js changed but the VERSION const wasn't. Bump VERSION — see the CACHE INVALIDATION CONTRACT comment at the top of that file."
-              exit 1
-            fi
-          fi
+      - name: Require correct VERSION handling for the active Pages build mode
+        # Logic lives in scripts/check_sw_version_guard.py (unit-tested in
+        # tests/test_check_sw_version_guard.py), not inline here, so the legacy-vs-actions
+        # rule (see that script's module docstring and the CACHE INVALIDATION CONTRACT
+        # comment at the top of service-worker.js) has test coverage of its own. Reads the
+        # guarded set from service-worker.js's own SHELL_FILES via scripts/sw_shell_files.py,
+        # not a hand-typed regex -- the old 4-file regex omitted i18n.js.
+        env:
+          PAGES_BUILD_MODE: ${{ vars.PAGES_BUILD_MODE }}
+        run: python3 scripts/check_sw_version_guard.py --base "origin/${{ github.base_ref }}"
 
   # X2 (audit 2026-09-05): PR #1393's un-reviewed threshold change reached
   # master anyway -- through PR #1394's squash-merge, because #1394's branch
