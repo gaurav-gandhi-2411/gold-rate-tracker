@@ -779,7 +779,7 @@ const STRINGS = {
     pv2WeeklyTooLittleData: "यह बताने के लिए अभी हमारे पास पर्याप्त हफ्तों का कीमत इतिहास नहीं है।",
     pv2Job5Heading: "5. मुझे कितना देना होगा?",
     pv2MarkupHeading: "Tanishq बाज़ार के मुक़ाबले कैसा है",
-    pv2MarkupLine: ({ pct, suffix }) => `Tanishq आज बाज़ार दर से करीब ${pct}% ज़्यादा वसूल रहा है${suffix}`,
+    pv2MarkupLine: ({ pct, suffix }) => `Tanishq का आज का भाव बाज़ार दर से करीब ${pct}% ज़्यादा है${suffix}`,
     pv2MarkupSuffixHigher: " — सामान्य से ज़्यादा।",
     pv2MarkupSuffixLower: " — सामान्य से कम।",
     pv2MarkupSuffixUsual: " — करीब सामान्य।",
