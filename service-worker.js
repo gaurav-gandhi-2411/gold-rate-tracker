@@ -131,7 +131,11 @@
 // once more so a client that installed the layout-pass shell picks up these bytes too.
 // 2026-09-25 (merge with current master, v63-v65/v67 taken by other now-merged/open
 // branches): re-stamped to v66.
-const VERSION = "v66-20260925-pagev2";
+// 2026-09-25 (v62; assigned before v63 landed on master -- see the v61 note above for
+// the same pre-assignment pattern; merge train, stacked on #2037): the weekly 'what moved
+// the price' headline words each part by its own sign (ADR 058 follow-up, #2073). app.js +
+// i18n.js (EN+HI) changed.
+const VERSION = "v62-20260925-driver-signs";
 const SHELL_CACHE = `gold-shell-${VERSION}`;
 
 const SHELL_FILES = [
