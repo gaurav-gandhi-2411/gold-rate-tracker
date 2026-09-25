@@ -2,6 +2,7 @@
  "_comment": "Minimum number of test definitions per file. Lowering an entry is a deliberate act made with `python scripts/check_test_counts.py --update`; see scripts/check_test_counts.py.",
  "files": {
   "scraper/test_hybrid_scrape.mjs": 9,
+  "scraper/test_polite_access.mjs": 10,
   "scraper/test_scrape.js": 4,
   "scraper/test_scraper_hardening.mjs": 16,
   "scraper/test_update_and_notify.js": 6,
@@ -87,6 +88,7 @@
   "tests/test_phi7_horizon_sweep.py": 4,
   "tests/test_phi7_premium_carry.py": 5,
   "tests/test_pipeline_integration.py": 2,
+  "tests/test_polite_http.py": 16,
   "tests/test_pr_workflows_get_checks.py": 6,
   "tests/test_prepare_direction_eval_publish.py": 9,
   "tests/test_preregistration.py": 19,
