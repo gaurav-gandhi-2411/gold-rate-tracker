@@ -116,7 +116,9 @@
 // figure that overstated it ~1.9x. app.js + i18n.js (EN+HI) changed.
 // 2026-09-25 (v61; v59/v60 are taken by the open #2053/#2069 branches): ADR 059 wording
 // P2-P5 (E5) -- neutral, dated Tanishq wording. app.js + i18n.js + index.html + manifest changed.
-const VERSION = "v61-20260925-retailer-wording";
+// 2026-09-25 (v63): style.css -- main { overflow-x: clip } stops the phone page
+// scrolling 60px sideways (hero glow overflow). Shell file changed.
+const VERSION = "v63-20260925-no-sideways-scroll";
 const SHELL_CACHE = `gold-shell-${VERSION}`;
 
 const SHELL_FILES = [

@@ -15,7 +15,9 @@ Construction, in order:
      (per-gram -> per-10g, matching IBJA's quoting convention) = raw
      pre-duty 22K INR/10g.
   2. Multiplied by (1 + effective import duty/cess rate in force on that
-     date), reconstructed from data/duty_events.json.
+     date), reconstructed from data/duty_cbic.json (verified rows 2019-07-06+,
+     plus its unverified_pre_2019 legacy segment for 2013-2019 coverage — see
+     ml.duty_schedule and ADR references in the D2 migration PR).
   3. A residual premium (scale + offset) fit walk-forward against real IBJA
      rates over the 2022-01-19+ overlap, to absorb everything the formula
      above can't capture: local demand premium, GST timing, dealer spreads,
@@ -63,10 +65,10 @@ import pandas as pd
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
 from ml.calibration import _DEFAULT_HALF_LIFE, _DEFAULT_HUBER_EPSILON, _fit_robust, _recency_weights
+from ml.duty_schedule import DUTY_TABLE_PATH, load_all_rows_including_unverified
 from ml.macro import _download_with_retry
 
 DATA_DIR = Path(__file__).parent.parent / "data"
-DUTY_EVENTS_PATH = DATA_DIR / "duty_events.json"
 IBJA_PARQUET_PATH = DATA_DIR / "ibja_rates.parquet"
 PROXY_OUTPUT_PATH = DATA_DIR / "history_seed_inr22k_proxy.parquet"
 
@@ -74,7 +76,7 @@ TROY_OZ_TO_GRAM = 31.1034768
 PURITY_22K_OF_24K = 22.0 / 24.0
 GRAMS_PER_QUOTE_UNIT = 10.0  # IBJA quotes per 10g
 
-PROXY_START_DATE = "2013-01-01"  # matches duty_events.json's earliest recorded event
+PROXY_START_DATE = "2013-01-01"  # matches duty_cbic.json's unverified_pre_2019 earliest row
 _FETCH_BUFFER_DAYS = 30  # extra lookback so shift(1)/rolling windows have no NaN at the start
 
 # Basic customs duty in force immediately before the first recorded event
@@ -163,26 +165,28 @@ def _detect_and_adjust_rolls(
 
 
 def load_duty_schedule(
-    path: Path = DUTY_EVENTS_PATH, index: pd.DatetimeIndex | None = None
+    path: Path = DUTY_TABLE_PATH, index: pd.DatetimeIndex | None = None
 ) -> pd.Series:
-    """Return the cumulative ad-valorem duty+cess rate (%) in force on each
-    date, as a daily step series derived from data/duty_events.json.
+    """Return the total ad-valorem duty+cess rate (%) in force on each date,
+    as a daily step series derived from data/duty_cbic.json.
 
-    Each event's magnitude_pct is treated as the effective cumulative
-    ad-valorem change (duty_events.json already folds AIDC/social-welfare
-    surcharge changes into a single net figure per event — see that file's
-    per-event `note`/`source` fields for the underlying press citations).
+    Unlike the retired data/duty_events.json (cumulative per-event deltas of
+    inconsistent basis — some BCD-only, some total-tax-incl-GST), each
+    duty_cbic.json row's total_duty_pct is an ABSOLUTE level (BCD+AIDC+SWS,
+    ex-GST) taken as-is for that date onward — no summing. Rows come from
+    ml.duty_schedule.load_all_rows_including_unverified, i.e. the verified
+    2019-07-06+ rows plus the unverified pre-2019 legacy segment this proxy
+    needs for its 2013+ coverage (see that module's docstring). Dates before
+    the earliest row (2013-01-01) use _BASE_DUTY_PCT (4.0, the assumed
+    pre-2013 rate — not itself a row, see _BASE_DUTY_PCT's own comment).
     """
-    events = json.loads(path.read_text(encoding="utf-8"))
-    events = sorted(events, key=lambda e: e["date"])
+    rows = load_all_rows_including_unverified(path)
 
-    rate = _BASE_DUTY_PCT
     step_dates: list[pd.Timestamp] = []
     step_rates: list[float] = []
-    for event in events:
-        rate += float(event["magnitude_pct"])
-        step_dates.append(pd.Timestamp(event["date"], tz="UTC"))
-        step_rates.append(rate)
+    for row in rows:
+        step_dates.append(pd.Timestamp(row["effective_date"], tz="UTC"))
+        step_rates.append(float(row["total_duty_pct"]))
 
     steps = pd.Series(step_rates, index=pd.DatetimeIndex(step_dates))
 
@@ -191,7 +195,7 @@ def load_duty_schedule(
 
     daily = steps.reindex(index.union(pd.DatetimeIndex(steps.index))).ffill()
     daily = daily.reindex(index)
-    daily = daily.fillna(_BASE_DUTY_PCT)  # dates before the first event
+    daily = daily.fillna(_BASE_DUTY_PCT)  # dates before the first row
     return daily
 
 
@@ -275,14 +279,18 @@ def _walk_forward_premium(
 def build_proxy_history(
     start: str = PROXY_START_DATE,
     end: str | None = None,
-    duty_events_path: Path = DUTY_EVENTS_PATH,
+    duty_events_path: Path = DUTY_TABLE_PATH,
     ibja_path: Path = IBJA_PARQUET_PATH,
 ) -> pd.DataFrame:
     """Build the full proxy history DataFrame.
 
+    ``duty_events_path`` points at data/duty_cbic.json (kept as the historical
+    parameter name; the file it points to changed under D2 — see
+    load_duty_schedule).
+
     Returns a DataFrame indexed by UTC date with columns:
       raw_pre_duty        — COMEX x FX x purity, no duty, no calibration
-      duty_pct            — effective cumulative ad-valorem rate in force
+      duty_pct            — total ad-valorem duty+cess rate in force
       raw_with_duty       — raw_pre_duty x (1 + duty_pct/100)
       proxy_22k_per_10g   — final calibrated proxy (the column to use)
       is_walk_forward_oos — True where proxy_22k_per_10g came from a genuine
