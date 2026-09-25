@@ -1,6 +1,6 @@
 """Shadow-mode driver for the Kalyan-anchored city fusion (ADR 026).
 
-Fetches all registered sources, fuses a national benchmark and per-city
+Fetches the national sources and SHADOW_KALYAN_CITIES, fuses a national benchmark and per-city
 prices, persists PIT snapshots, and writes a shadow output summary --
 WITHOUT touching ``data/forecast.json``, ``app.js``, or anything the live
 site displays. This is Phase C: run silently, accumulate history, validate
@@ -30,13 +30,22 @@ from ml.fusion_snapshot_store import append_snapshot_rows
 from ml.sources.base import SourceNetworkError, SourceReading, SourceStructureError
 from ml.sources.grt import fetch_grt
 from ml.sources.ibja import fetch_ibja_calibrated
-from ml.sources.kalyan import KALYAN_CITIES, fetch_kalyan_city
+from ml.sources.kalyan import fetch_kalyan_city
 from ml.sources.malabar import fetch_malabar
 
 DATA_DIR = Path(__file__).resolve().parent.parent / "data"
 SHADOW_OUTPUT_PATH = DATA_DIR / "shadow_fusion_output.json"
 
 logger = logging.getLogger(__name__)
+
+# GG decision E3 (2026-09-25): fetch ONE Kalyan city per cycle, not all four.
+# Every registered city returned the same rate_22k in every multi-city cycle
+# (43/43 in ADR 026; re-verified on the full snapshot store in
+# reports/tanishq_update_times/kalyan_city_identity.json), so the other three
+# POSTs added load on Kalyan's endpoint and no information. Bangalore matches
+# ml.inference's _FUSION_FALLBACK_CITY. KALYAN_CITIES (the registry in
+# ml.sources.kalyan) is left unchanged: re-enabling a city is adding it here.
+SHADOW_KALYAN_CITIES: tuple[str, ...] = ("Bangalore",)
 
 # National-level source fetchers. Registering a new national source later
 # (ADR 026 Option 2) is adding an entry here -- the fusion math (ml.fusion)
@@ -85,10 +94,10 @@ def _fetch_national_readings() -> tuple[list[SourceReading], dict[str, str]]:
 
 
 def _fetch_kalyan_readings() -> tuple[dict[str, SourceReading], dict[str, str]]:
-    """Fetch every registered Kalyan city. Returns (readings by city, failures by city)."""
+    """Fetch each city in SHADOW_KALYAN_CITIES. Returns (readings by city, failures by city)."""
     readings: dict[str, SourceReading] = {}
     failures: dict[str, str] = {}
-    for city in KALYAN_CITIES:
+    for city in SHADOW_KALYAN_CITIES:
         try:
             readings[city] = fetch_kalyan_city(city).reading
         except SourceNetworkError as exc:
@@ -150,7 +159,7 @@ def run_shadow_cycle() -> dict:
     }
 
     cities_output: dict = {}
-    for city in KALYAN_CITIES:
+    for city in SHADOW_KALYAN_CITIES:
         city_reading = kalyan_readings.get(city)
         fused = fuse_city_price(city_reading, national, city=city)
         cities_output[city] = {
