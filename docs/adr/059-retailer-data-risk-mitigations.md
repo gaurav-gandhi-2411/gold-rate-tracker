@@ -179,3 +179,16 @@ Nothing was deleted or rewritten in this PR, and history is not rewritten.
 - **Stop all retailer scraping now.** Rejected by GG (G1). IBJA-only (ADR 029) remains the documented fallback, and the takedown switch makes it one edit per retailer.
 - **Per-retailer display flags only, with no fetch gating.** Rejected. A takedown request is about collection as much as display.
 - **Guess at a Retry-After when none is sent.** Rejected. A 429 without guidance ends the cycle for that host; the next scheduled run, at least 3 h later, is the retry.
+
+## Addendum, 2026-09-25: GG decision E3 (Tanishq browser settings, visit timing, Kalyan)
+
+**Accepted risk (GG).** The Tanishq scraper's browser settings stay exactly as they are on master. That includes the Playwright fallback's `--disable-blink-features=AutomationControlled` flag. No identifying User-Agent is added for Tanishq.
+
+- Reasoning: announcing a bot in the User-Agent while the same browser hides its automation is contradictory. It could also be the very signal that gets the scraper blocked.
+- GG accepts the risk that the flag reads as evasion. The mitigations that remain are fewer visits (below), backoff and honouring 429/Retry-After (#2048), and the takedown switch (#2053).
+- This closes two items in the "Open for GG" list above: Tanishq's UA (not identified) and the AutomationControlled flag (kept).
+- #2048 removes the per-retry UA rotation. That is also a browser-setting change, so under E3 it needs GG's explicit yes before #2048 merges.
+
+**Visit timing.** Tanishq visits drop from 8 cron slots a day to 5–6 visits a day, timed to when Tanishq changes its rate. With timed visits the next visit after a 429 can be under 3 h away, so the Retry-After alternative above now reads "the next scheduled visit is the retry". The times and the evidence are in `docs/TANISHQ_TIMED_VISITS.md` and `reports/tanishq_update_times/`. The live schedule change is a STOP for GG in its PR.
+
+**Kalyan.** The shadow fusion fetches 1 Kalyan city instead of 4. The cities were re-verified identical; see `reports/tanishq_update_times/kalyan_city_identity.json`. This closes the "reduce to 1?" item. The weekly live canary is kept.
