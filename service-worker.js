@@ -135,7 +135,11 @@
 // the same pre-assignment pattern; merge train, stacked on #2037): the weekly 'what moved
 // the price' headline words each part by its own sign (ADR 058 follow-up, #2073). app.js +
 // i18n.js (EN+HI) changed.
-const VERSION = "v62-20260925-driver-signs";
+// 2026-09-25 (v64; merge train, stacked on #2073): G4 -- hide any accuracy/coverage claim
+// measured more than 14 days ago (isMeasurementFresh(), i18n.js) instead of showing a stale
+// number as current. app.js + i18n.js + how-we-know.js changed -- all three are precached
+// shell files.
+const VERSION = "v64-20260925-claim-freshness-14d";
 const SHELL_CACHE = `gold-shell-${VERSION}`;
 
 const SHELL_FILES = [
