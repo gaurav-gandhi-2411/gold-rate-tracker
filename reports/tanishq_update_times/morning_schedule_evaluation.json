@@ -1,0 +1,373 @@
+{
+  "preregistration": "docs/TANISHQ_TIMED_VISITS.md section 9 (commit 11d7dbba)",
+  "data": {
+    "prices_rev": "bb38f8d5",
+    "captures_live": 694,
+    "change_intervals_used": 115,
+    "change_intervals_in_mon_sat_pool": 115,
+    "mon_sat_pool": "weekday + saturday + mixed intervals (sunday-only excluded), as section 4",
+    "timestamp_convention": "prices.json timestamp = UTC capture instant; times of day IST"
+  },
+  "bootstrap": {
+    "B": 500,
+    "seed": 42,
+    "draws_per_replicate": 4000
+  },
+  "monte_carlo_draws_point": 20000,
+  "lateness_pool_median_min": 1.9,
+  "q_measured_share_runner_unavailable": 0.381,
+  "question_1_keep_0140": {
+    "rule": "keep 01:40 iff the bootstrap 95% CI of Mon-Sat NPMLE mass in 00:40-02:40 IST excludes zero",
+    "mass_00_40_02_40": 0.0104,
+    "mass_00_40_02_40_ci95": [
+      0.0,
+      0.031
+    ],
+    "share_of_bootstrap_replicates_with_any_mass_00_40_02_40": 0.584,
+    "mass_20_00_09_59": 0.0104,
+    "mass_20_00_09_59_ci95": [
+      0.0,
+      0.08
+    ],
+    "change_intervals_in_mon_sat_pool": 115,
+    "intervals_containing_01_40": 11,
+    "intervals_inside_20_00_09_59": 1,
+    "intervals_inside_20_00_09_59_containing_01_40": 1,
+    "keep_01_40": false
+  },
+  "question_2_schedule": {
+    "U30_ist": [
+      "10:00",
+      "10:30",
+      "11:00",
+      "11:30",
+      "12:00",
+      "12:30"
+    ],
+    "O_ist": [
+      "10:00",
+      "10:15",
+      "10:40",
+      "10:55",
+      "11:10",
+      "11:25"
+    ],
+    "O_min_step_min": 15,
+    "O_as_registered_no_min_step_ist": [
+      "10:00",
+      "10:10",
+      "10:40",
+      "10:45",
+      "10:55",
+      "11:10"
+    ],
+    "O_as_registered_point": {
+      "mean_staleness_min": 291.67440665699786,
+      "median_staleness_min": 4.573521056551783,
+      "share_within_30min": 0.7183,
+      "share_within_60min": 0.7186,
+      "morning_mean_staleness_min": 4.471042520046342,
+      "morning_share_of_changes": 0.7186,
+      "afternoon_mean_staleness_min": 1045.8413191986053,
+      "afternoon_share_of_changes": 0.2702
+    },
+    "improvement_O_over_U30_min": 11.311,
+    "improvement_one_sided_95_lower_bound_min": -46.718,
+    "rule": "O only if improvement >= 5.0 min and one-sided 95% lower bound > 0",
+    "chosen": "U30",
+    "chosen_ist": [
+      "10:00",
+      "10:30",
+      "11:00",
+      "11:30",
+      "12:00",
+      "12:30"
+    ]
+  },
+  "q0": {
+    "current_replay": {
+      "mean_staleness_min": 439.8823,
+      "median_staleness_min": 315.7031,
+      "share_within_30min": 0.0578,
+      "share_within_60min": 0.1282,
+      "morning_mean_staleness_min": 484.0166,
+      "morning_share_of_changes": 0.7123,
+      "afternoon_mean_staleness_min": 323.7519,
+      "afternoon_share_of_changes": 0.2763,
+      "ci95": {
+        "mean_staleness_min": [
+          226.532,
+          695.485
+        ],
+        "median_staleness_min": [
+          150.65,
+          363.064
+        ],
+        "share_within_30min": [
+          0.006,
+          0.14
+        ],
+        "share_within_60min": [
+          0.043,
+          0.271
+        ],
+        "morning_mean_staleness_min": [
+          258.458,
+          760.628
+        ],
+        "morning_share_of_changes": [
+          0.616,
+          0.791
+        ],
+        "afternoon_mean_staleness_min": [
+          138.416,
+          548.296
+        ],
+        "afternoon_share_of_changes": [
+          0.172,
+          0.368
+        ]
+      }
+    },
+    "U30": {
+      "mean_staleness_min": 303.6079,
+      "median_staleness_min": 24.1701,
+      "share_within_30min": 0.6854,
+      "share_within_60min": 0.7186,
+      "morning_mean_staleness_min": 20.9611,
+      "morning_share_of_changes": 0.7186,
+      "afternoon_mean_staleness_min": 1046.1469,
+      "afternoon_share_of_changes": 0.2702,
+      "ci95": {
+        "mean_staleness_min": [
+          215.208,
+          414.911
+        ],
+        "median_staleness_min": [
+          15.932,
+          26.284
+        ],
+        "share_within_30min": [
+          0.587,
+          0.769
+        ],
+        "share_within_60min": [
+          0.614,
+          0.796
+        ],
+        "morning_mean_staleness_min": [
+          12.617,
+          24.282
+        ],
+        "morning_share_of_changes": [
+          0.614,
+          0.792
+        ],
+        "afternoon_mean_staleness_min": [
+          997.712,
+          1112.399
+        ],
+        "afternoon_share_of_changes": [
+          0.18,
+          0.373
+        ]
+      }
+    },
+    "O": {
+      "mean_staleness_min": 292.2968,
+      "median_staleness_min": 4.7994,
+      "share_within_30min": 0.7186,
+      "share_within_60min": 0.7186,
+      "morning_mean_staleness_min": 5.2795,
+      "morning_share_of_changes": 0.7186,
+      "afternoon_mean_staleness_min": 1045.9923,
+      "afternoon_share_of_changes": 0.2702,
+      "ci95": {
+        "mean_staleness_min": [
+          208.491,
+          429.375
+        ],
+        "median_staleness_min": [
+          2.749,
+          17.061
+        ],
+        "share_within_30min": [
+          0.597,
+          0.796
+        ],
+        "share_within_60min": [
+          0.6,
+          0.796
+        ],
+        "morning_mean_staleness_min": [
+          3.191,
+          133.392
+        ],
+        "morning_share_of_changes": [
+          0.614,
+          0.792
+        ],
+        "afternoon_mean_staleness_min": [
+          997.574,
+          1112.189
+        ],
+        "afternoon_share_of_changes": [
+          0.18,
+          0.373
+        ]
+      }
+    },
+    "interim_section4": {
+      "mean_staleness_min": 19.6969,
+      "median_staleness_min": 4.9514,
+      "share_within_30min": 0.8855,
+      "share_within_60min": 0.9036,
+      "morning_mean_staleness_min": 8.3525,
+      "morning_share_of_changes": 0.7186,
+      "afternoon_mean_staleness_min": 49.6611,
+      "afternoon_share_of_changes": 0.2702,
+      "ci95": {
+        "mean_staleness_min": [
+          11.899,
+          73.027
+        ],
+        "median_staleness_min": [
+          2.753,
+          24.066
+        ],
+        "share_within_30min": [
+          0.639,
+          0.953
+        ],
+        "share_within_60min": [
+          0.666,
+          0.987
+        ],
+        "morning_mean_staleness_min": [
+          3.384,
+          59.114
+        ],
+        "morning_share_of_changes": [
+          0.614,
+          0.792
+        ],
+        "afternoon_mean_staleness_min": [
+          15.413,
+          174.428
+        ],
+        "afternoon_share_of_changes": [
+          0.18,
+          0.373
+        ]
+      }
+    }
+  },
+  "q_measured_point": {
+    "U30": {
+      "mean_staleness_min": 351.4419158053312,
+      "median_staleness_min": 51.83763796612419,
+      "share_within_30min": 0.4315,
+      "share_within_60min": 0.6091,
+      "morning_mean_staleness_min": 78.66660972479632,
+      "morning_share_of_changes": 0.7186,
+      "afternoon_mean_staleness_min": 1068.6078089037621,
+      "afternoon_share_of_changes": 0.2702
+    },
+    "O": {
+      "mean_staleness_min": 370.92791580199787,
+      "median_staleness_min": 18.27930528157367,
+      "share_within_30min": 0.61145,
+      "share_within_60min": 0.6681,
+      "morning_mean_staleness_min": 108.77333939823541,
+      "morning_share_of_changes": 0.7186,
+      "afternoon_mean_staleness_min": 1061.0003662409197,
+      "afternoon_share_of_changes": 0.2702
+    },
+    "interim_section4": {
+      "mean_staleness_min": 164.55394360449785,
+      "median_staleness_min": 23.887952025063726,
+      "share_within_30min": 0.549,
+      "share_within_60min": 0.6317,
+      "morning_mean_staleness_min": 135.13538797532976,
+      "morning_share_of_changes": 0.7186,
+      "afternoon_mean_staleness_min": 240.87210849048796,
+      "afternoon_share_of_changes": 0.2702
+    }
+  },
+  "q0_edge_placement_point": {
+    "left": {
+      "U30": {
+        "mean_staleness_min": 305.9431787394978,
+        "median_staleness_min": 24.19600341643155,
+        "share_within_30min": 0.68145,
+        "share_within_60min": 0.7186,
+        "morning_mean_staleness_min": 22.864963541244965,
+        "morning_share_of_changes": 0.7186,
+        "afternoon_mean_staleness_min": 1048.9306043299894,
+        "afternoon_share_of_changes": 0.2702
+      },
+      "O": {
+        "mean_staleness_min": 292.5494998269978,
+        "median_staleness_min": 4.40563062262072,
+        "share_within_30min": 0.71825,
+        "share_within_60min": 0.7186,
+        "morning_mean_staleness_min": 4.285227909460943,
+        "morning_share_of_changes": 0.7186,
+        "afternoon_mean_staleness_min": 1048.775939578571,
+        "afternoon_share_of_changes": 0.2702
+      },
+      "interim_section4": {
+        "mean_staleness_min": 18.369939421997838,
+        "median_staleness_min": 4.405116219637591,
+        "share_within_30min": 0.82335,
+        "share_within_60min": 0.9036,
+        "morning_mean_staleness_min": 5.160022745484693,
+        "morning_share_of_changes": 0.7186,
+        "afternoon_mean_staleness_min": 52.44478322833645,
+        "afternoon_share_of_changes": 0.2702
+      }
+    },
+    "right": {
+      "U30": {
+        "mean_staleness_min": 301.1604730044979,
+        "median_staleness_min": 24.152931621024095,
+        "share_within_30min": 0.68935,
+        "share_within_60min": 0.7186,
+        "morning_mean_staleness_min": 18.934256979875638,
+        "morning_share_of_changes": 0.7186,
+        "afternoon_mean_staleness_min": 1043.383232013187,
+        "afternoon_share_of_changes": 0.2702
+      },
+      "O": {
+        "mean_staleness_min": 292.20963388699784,
+        "median_staleness_min": 5.437879800094493,
+        "share_within_30min": 0.7185,
+        "share_within_60min": 0.7186,
+        "morning_mean_staleness_min": 6.537153960114992,
+        "morning_share_of_changes": 0.7186,
+        "afternoon_mean_staleness_min": 1043.2285672617686,
+        "afternoon_share_of_changes": 0.2702
+      },
+      "interim_section4": {
+        "mean_staleness_min": 17.56050279033117,
+        "median_staleness_min": 4.753641239282672,
+        "share_within_30min": 0.90005,
+        "share_within_60min": 0.90365,
+        "morning_mean_staleness_min": 6.758496678595373,
+        "morning_share_of_changes": 0.7186,
+        "afternoon_mean_staleness_min": 46.89741091153408,
+        "afternoon_share_of_changes": 0.2702
+      }
+    }
+  },
+  "not_fresh_hours_per_day_all_visits_on_time": {
+    "U30": 13.5,
+    "O": 14.58,
+    "interim_section4": 0.0
+  },
+  "afternoon_changes_old_tanishq_price_still_inside_8h_gate_min": {
+    "mean": 235.1,
+    "median": 300.1,
+    "note": "after an afternoon change the pre-change Tanishq price stays on the page (it is under 8 h old) until the gate flips; then the estimate, until the next morning visit"
+  }
+}
