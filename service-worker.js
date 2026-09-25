@@ -116,6 +116,8 @@
 // figure that overstated it ~1.9x. app.js + i18n.js (EN+HI) changed.
 // 2026-09-25 (v61; v59/v60 are taken by the open #2053/#2069 branches): ADR 059 wording
 // P2-P5 (E5) -- neutral, dated Tanishq wording. app.js + i18n.js + index.html + manifest changed.
+// 2026-09-25 (v63): style.css -- main { overflow-x: clip } stops the phone page
+// scrolling 60px sideways (hero glow overflow). Shell file changed.
 // 2026-09-24 (v66): page_v2 (item 6) -- proposed five-jobs page, entirely behind
 // isFeatureOn("page_v2") + per-card flags, all still false (merge default). app.js +
 // i18n.js + style.css changed (new pure/build/render functions, new pv2* i18n keys, new
@@ -127,8 +129,8 @@
 // 2026-09-25 (same PR, design-review follow-ups): app.js (F2 sentence extraction fix,
 // freshness fail-closed fix) + i18n.js (Hindi pv2* translations) changed again -- bumped
 // once more so a client that installed the layout-pass shell picks up these bytes too.
-// 2026-09-25 (merge with master through #2071): re-stamped to v66 -- v59-v65 are taken by
-// other now-merged/open branches.
+// 2026-09-25 (merge with current master, v63-v65/v67 taken by other now-merged/open
+// branches): re-stamped to v66.
 const VERSION = "v66-20260925-pagev2";
 const SHELL_CACHE = `gold-shell-${VERSION}`;
 

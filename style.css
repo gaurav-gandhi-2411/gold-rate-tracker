@@ -884,6 +884,13 @@ main {
 @media (max-width: 420px) {
   .hero-card::before { opacity: 0.75; }
 }
+/* The glow above reaches 80px past the hero card's right edge on purpose, but on a
+   phone that pushes the page 60px wider than the screen and lets it scroll sideways
+   (measured 2026-09-25: scrollWidth 450 at a 390px viewport, EN and HI). Clip
+   horizontal overflow on <main>, not the root: on the root `clip` is treated as
+   `hidden`, which still lets the page be scrolled sideways (verified). On <main> it
+   creates no scroll container, so the sticky header and nav keep working. */
+main { overflow-x: clip; }
 
 .eyebrow {
   margin: 0 0 12px;
