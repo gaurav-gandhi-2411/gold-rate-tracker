@@ -1,5 +1,5 @@
 {
-  "predicted_at": "2026-09-25T18:03:24.059106+00:00",
+  "predicted_at": "2026-09-25T22:44:30.277564+00:00",
   "target_window": "5d",
   "headline": {
     "method": "naive_flat_hold",
@@ -59,7 +59,7 @@
     "direction_consensus": 1.0
   },
   "driver_context": {
-    "computed_at": "2026-09-25T18:03:24.064762+00:00",
+    "computed_at": "2026-09-25T22:44:30.282536+00:00",
     "macro_staleness_days": 0.0,
     "macro_fresh": true,
     "premium_threshold_pct": 15.0,
@@ -69,39 +69,39 @@
         "t0_date": "2026-09-18",
         "t1_date": "2026-09-25",
         "delta_pct_ibja": -1.055,
-        "delta_pct_gold_usd": -2.413,
+        "delta_pct_gold_usd": -2.388,
         "delta_pct_usdinr": 0.003,
-        "delta_pct_premium": 1.355,
+        "delta_pct_premium": 1.33,
         "total_move_rs_per_g": -145.0,
-        "gold_usd_contrib_rs_per_g": -331.6,
+        "gold_usd_contrib_rs_per_g": -328.1,
         "usdinr_contrib_rs_per_g": 0.4,
-        "premium_contrib_rs_per_g": 186.2,
-        "premium_share_pct": 128.4,
+        "premium_contrib_rs_per_g": 182.7,
+        "premium_share_pct": 126.0,
         "attribution_valid": false,
-        "attribution_valid_reason": "premium share 128.4% exceeds 15% threshold"
+        "attribution_valid_reason": "premium share 126.0% exceeds 15% threshold"
       },
       "30d": {
         "n_obs": 22,
         "t0_date": "2026-08-26",
         "t1_date": "2026-09-25",
         "delta_pct_ibja": -5.887,
-        "delta_pct_gold_usd": -7.446,
+        "delta_pct_gold_usd": -7.421,
         "delta_pct_usdinr": 2.383,
-        "delta_pct_premium": -0.824,
+        "delta_pct_premium": -0.849,
         "total_move_rs_per_g": -1000.0,
-        "gold_usd_contrib_rs_per_g": -1264.8,
+        "gold_usd_contrib_rs_per_g": -1260.5,
         "usdinr_contrib_rs_per_g": 404.8,
-        "premium_contrib_rs_per_g": -140.0,
-        "premium_share_pct": 14.0,
+        "premium_contrib_rs_per_g": -144.3,
+        "premium_share_pct": 14.4,
         "attribution_valid": true,
         "attribution_valid_reason": "clean \u2014 premium share within threshold"
       }
     },
     "driver_state": {
       "usd_inr_now": 95.802,
-      "gold_usd_now": 4319.4,
+      "gold_usd_now": 4320.5,
       "usd_inr_30d_pct_change": 2.41,
-      "gold_usd_30d_pct_change": -7.18
+      "gold_usd_30d_pct_change": -7.15
     }
   },
   "real_readings_count": 715,
