@@ -25,12 +25,14 @@ from ml.direction.dataset import (
     FEATURE_COLS,
     build_dataset,
 )
+from ml.direction.leak_checks import check_fold
 from ml.direction.models import (
     fit_lightgbm,
     fit_logistic,
     lightgbm_feature_importances,
     logistic_feature_importances,
 )
+from ml.leak_guard import LeakGuard
 
 # ---------------------------------------------------------------------------
 # Constants
@@ -407,6 +409,13 @@ def run_walk_forward(
         None if pd.isna(v) else pd.Timestamp(v).strftime("%Y-%m-%d") for v in dataset[date_col]
     ]
 
+    # ADR 061. Training labels: raise -- the embargo above already guarantees they are known,
+    # so a violation means the embargo regressed (the #1930 leak). Test-row features: report --
+    # backfilled rows hold US daily closes published after IST day D (ADR 058 A5, ADR 061 F1),
+    # and refusing them would change the published numbers.
+    labels_guard = LeakGuard(f"direction {label_col} training labels", mode="raise")
+    features_guard = LeakGuard(f"direction {label_col} test-row features", mode="report")
+
     y_true_all: list[int] = []
     log_prob_all: list[float] = []
     lgbm_prob_all: list[float] = []
@@ -423,6 +432,9 @@ def run_walk_forward(
             continue
         train_df = dataset.iloc[np.array(keep, dtype=int)]
         test_row = dataset.iloc[i]
+        check_fold(
+            labels_guard, features_guard, test_row, train_df[date_col], label_col, feature_cols
+        )
 
         y_train = train_df[label_col].astype(int).tolist()
 
@@ -505,6 +517,7 @@ def run_walk_forward(
         "n_skipped_folds": n_skipped,
         "min_train_size": min_train_size,
         "embargo": f"train on rows with {date_col} < test as_of_date",
+        "leak_guard": {"labels": labels_guard.summary(), "features": features_guard.summary()},
         "always_up_baseline_accuracy": always_up_baseline_accuracy,
         "trailing_30_fold_up_fraction": trailing_30_fold_up_fraction,
         "majority_class_collapse": majority_class_collapse,
