@@ -15,6 +15,7 @@ __pycache__/
 .claude/
 .claude/settings.local.json
 data/macro_cache.parquet
+data/macro_intraday.parquet
 data/macro_status.json
 data/notification_state.json
 data/*.pdf
