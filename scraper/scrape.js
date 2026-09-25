@@ -11,14 +11,16 @@
 // Exports hybridScrape(), scrapeWithRetry(), fetchWithRequests(),
 // isCFChallengeHtml(), parseGoldRates(), isCloudflareChallenge(),
 // extractRates(), validate(), backoffDelayMs(), parseRetryAfterMs(),
-// shouldTryRequestsPath() for unit testing.
+// shouldTryRequestsPath(), VIEWPORTS, USER_AGENTS for unit testing.
 //
-// POLITE ACCESS (ADR 059, decision G1a): one consistent User-Agent (no per-attempt
-// rotation), capped attempts, exponential backoff with jitter between attempts,
-// HTTP 429 (and 503 carrying Retry-After) ends the cycle instead of escalating to a
-// full browser load, and the plain-GET probe is skipped when it has been failing
-// every run (it costs Tanishq one request per run for nothing -- 0 of 148 recorded
-// successes to 2026-09-24 came from it).
+// POLITE ACCESS (ADR 059, decision G1a): capped attempts, exponential backoff
+// with jitter between attempts, HTTP 429 (and 503 carrying Retry-After) ends the
+// cycle instead of escalating to a full browser load, and the plain-GET probe is
+// skipped when it has been failing every run (it costs Tanishq one request per
+// run for nothing -- 0 of 148 recorded successes to 2026-09-24 came from it).
+// Per GG decision E3 (2026-09-25), the browser settings themselves (per-retry
+// UA/viewport rotation, launch args, anti-detection flags) are UNCHANGED from
+// master -- request *volume* to Tanishq is governed separately (PR #2078).
 
 import { chromium } from "playwright";
 import { readFileSync } from "fs";
@@ -129,18 +131,29 @@ const SELECTOR_TIMEOUT_MS = parseInt(
   10,
 );
 
-// ── Browser identity (ADR 059) ────────────────────────────────────────────────
-// ONE ordinary User-Agent and viewport for every attempt and both fetch paths.
-// Until 2026-09-25 retries rotated UA/viewport "to reduce per-session CF
-// fingerprinting" -- i.e. to look like a different visitor on each retry, which is
-// the opposite of polite access; attempt 1 always used the first entry, so the
-// common (first-attempt success) path is unchanged by this.
-// Keep the UA current with Chrome stable. Chrome releases ~every 4 weeks.
+// ── Browser fingerprint rotation (H3) ────────────────────────────────────────
+// Rotate viewport and UA per attempt to reduce per-session CF fingerprinting.
+// GG decision E3 (2026-09-25): keep this browser setting EXACTLY as on master --
+// do not remove the per-retry rotation and do not add an identifying token to
+// any Tanishq UA. #2048 briefly removed rotation in favour of one consistent
+// UA/viewport; that change is reverted here per E3. Tanishq's request *volume*
+// is governed separately (PR #2078, feat/tanishq-timed-visits).
+// Exported (test-only use) so test_polite_access.mjs can pin these against
+// master's arrays without changing any runtime behaviour.
+export const VIEWPORTS = [
+  { width: 1280, height: 800 },
+  { width: 1366, height: 768 },
+  { width: 1440, height: 900 },
+];
+
+// Keep UA strings current with Chrome stable. Chrome releases ~every 4 weeks.
 // Last bumped: 2026-06-07 (Chrome 148 — Playwright 1.60.0 bundles Chromium 148.0.7778.96).
 // Update when the installed Playwright Chromium version lags by >2 major versions vs. this UA.
-export const USER_AGENT =
-  "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/148.0.0.0 Safari/537.36";
-const VIEWPORT = { width: 1280, height: 800 };
+export const USER_AGENTS = [
+  "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/148.0.0.0 Safari/537.36",
+  "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/148.0.0.0 Safari/537.36",
+  "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/147.0.0.0 Safari/537.36",
+];
 
 // ── CF challenge detection (H2) ───────────────────────────────────────────────
 
@@ -265,7 +278,9 @@ export function validate(rate22, rate24, rate18) {
 const REQUESTS_TIMEOUT_MS = 10_000;
 
 const REQUESTS_HEADERS = {
-  "User-Agent": USER_AGENT,
+  "User-Agent":
+    "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 " +
+    "(KHTML, like Gecko) Chrome/148.0.0.0 Safari/537.36",
   Accept: "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
   "Accept-Language": "en-IN,en;q=0.9",
 };
@@ -384,8 +399,8 @@ export async function fetchWithRequests(targetUrl = TARGET_URL) {
  * @returns {{ timestamp, "22k", "24k", "18k", source }}
  */
 async function scrapeAttempt(targetUrl, attemptIndex) {
-  const viewport = VIEWPORT;
-  const userAgent = USER_AGENT;
+  const viewport = VIEWPORTS[attemptIndex % VIEWPORTS.length];
+  const userAgent = USER_AGENTS[attemptIndex % USER_AGENTS.length];
 
   const browser = await chromium.launch({
     headless: true,
@@ -472,7 +487,8 @@ async function scrapeAttempt(targetUrl, attemptIndex) {
  *
  * H1: up to 3 attempts, exponential backoff with jitter between them
  *     (backoffDelayMs: ~2.5-5s, then ~5-10s). Each retry creates a fresh browser
- *     context with the SAME identity (ADR 059 — no fingerprint rotation).
+ *     context with a rotated fingerprint (viewport + UA), per E3 unchanged from
+ *     master.
  * H2: Cloudflare challenge pages detected in <100ms and retried immediately,
  *     avoiding the 30s waitForSelector timeout per blocked attempt.
  *
