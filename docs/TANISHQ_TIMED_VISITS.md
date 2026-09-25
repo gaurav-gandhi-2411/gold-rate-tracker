@@ -5,25 +5,39 @@ needs GG's own setup on the laptop (section 6).
 
 ## 1. Summary
 
-- Tanishq changes its rate mostly in the late morning: an estimated 72% of changes fall between
-  10:00 and 11:59 IST (95% CI 62–79%). Most of the rest fall between 14:00 and 19:59 (27%, CI
-  18–37%). About 1% fall overnight. No change could be dated to a Sunday.
-- The data are too coarse to pin the best exact minutes. Today's captures are a median of
-  5.1 h apart, and a typical change is only known to within 260 min. The pre-registered
-  "can the data choose?" rule fails (p90 regret 35 min against a 15 min limit).
-- Even so, any schedule built this way beats today's by a wide margin, provided the visits
-  happen on time. Interim schedule (IST): **01:40, 07:30, 10:40, 11:10, 15:35, 19:50.**
-  - Mean staleness: 20 min (95% CI 12–75), versus 439 min (CI 233–680) today.
-  - Share of changes captured within 60 min: 90% (CI 67–98%), versus 13% (CI 4–25%) today.
-- On-time visits need the laptop trigger. GitHub's scheduler creates only 4.7 of the 8
-  scheduled runs a day, 1–3 h late. The same six times sent through GitHub cron would give
-  230 min mean staleness and 14% within 60 min.
-- The self-hosted runner had no machine available for 38% of the scheduled runs. That, not the
-  schedule, is now the biggest cause of stale prices. At that miss rate the interim schedule
-  gives 165 min mean staleness and 63% within 60 min.
-- Proposed next step (STOP for GG): a bounded measurement window. 15 days (Monday to Saturday)
-  of 10 visits a day, with 15-minute probes from 10:00 to 11:15. That narrows morning changes
-  from about 420 min to 15 min. Details are in section 4.
+**GG decision 4a (2026-09-25), in force in this PR:** six visits a day, all between 10:00 and
+12:30 IST, and no measurement window. Chosen by the rule pre-registered in section 9:
+
+- **Visit times (IST): 10:00, 10:30, 11:00, 11:30, 12:00, 12:30.** Every change inside the
+  window is caught within 30 min, and dated to within 30 min for the weekly refinement.
+- **The 01:40 visit is dropped.** The data do not show updates then: 1.0% of changes near 01:40
+  (95% CI 0–3.1%); only 1 of 115 change intervals has to be overnight (Fri 2026-07-24,
+  between 00:44 and 03:32 IST).
+- **What GG's choice costs (stated plainly).** About 27% of changes happen in the afternoon
+  (14:00–19:59). With no afternoon visit, those are seen only the next morning:
+  - they are on average 1,046 min (about 17.4 h) stale (95% CI 998–1,112), against 324 min today
+    and 50 min under the section 4 interim schedule;
+  - after such a change the page keeps showing the earlier Tanishq rate (mean 235 min, median
+    300 min), because it is under 8 h old; then it shows the estimate until the next morning
+    visit.
+- **Overall (q = 0, every visit on time), against today's captures:**
+  - Share of changes caught within 30 min: 68.5% (CI 58.7–76.9%) vs 5.8% (0.6–14.0%).
+  - Within 60 min: 71.9% (61.4–79.6%) vs 12.8% (4.3–27.1%).
+  - Morning changes (10:00–11:59): 21 min mean staleness (12.6–24.3), vs 484 min today.
+  - Mean staleness over all changes: 304 min (215–415) vs 440 min (227–695). These two
+    intervals overlap: the mean is dominated by the afternoon changes.
+- **"Not fresh" hours.** The last visit is 12:30, so the site's 8 h gate shows "not fresh" (the
+  estimate) from about 20:30 to 10:00 IST, 13.5 h a day, even when every visit happens. That is
+  E2's "not fresh" display, never a wrong price. The section 4 interim schedule had 0 h.
+- **Forward refinement.** `scripts/tanishq_schedule_refine.py weekly` refits the update times on
+  every new capture and prints a recommended schedule. It proposes a change to GG only under the
+  pre-registered rule in section 9. It never applies one.
+- Exact-time visits still need the laptop trigger (section 6). GitHub's scheduler creates only
+  4.7 of 8 scheduled runs a day, 1–3 h late; its crons stay only as the fallback.
+
+Sections 2–8 below are the earlier E3 analysis. They still hold as evidence (the update-time
+distribution and scheduler lateness), but its interim schedule and measurement window were
+replaced by decision 4a.
 
 ## Pre-registration (written before the final analysis run)
 
@@ -187,7 +201,7 @@ distribution. Proposed schedules assume the laptop trigger, with lateness drawn 
   - This is uncertainty about *which* timed schedule is best. Every one of them beats today's
     captures, and the CIs do not overlap.
 
-### Proposed measurement window (STOP for GG; not started)
+### Proposed measurement window (not adopted: GG decision 4a chose no measurement window)
 
 Censoring-interval widths are simulated under the current estimate:
 
@@ -234,8 +248,12 @@ File: `reports/tanishq_update_times/scheduler_lateness.json`. Raw run metadata:
 **Design.**
 - `scripts/win/tanishq_dispatch.ps1` runs from Windows Task Scheduler at each visit time.
   - It waits up to 5 min for the network after a wake.
-  - It skips if a run of the workflow was created in the last 45 min, or is still queued or
-    in progress. A late or duplicate trigger therefore never doubles a visit.
+  - It skips if a run of the workflow was created in the last 10 min, or is still queued or
+    in progress. A late or duplicate trigger therefore never doubles a visit. (It was 45 min
+    before decision 4a; visits are now 30 min apart, so it must stay under 30.)
+  - It skips every visit for 3 h after a run that Tanishq answered with a rate limit (429)
+    or a challenge (the outcomes log's `blocked` flag). If it cannot read that log, it skips
+    (fails closed).
   - Otherwise it calls `gh workflow run scrape-tanishq-selfhosted.yml -f slot_ist=HH:MM`.
 - The existing workflow then does everything else: scrape, jump guard, health record,
   outcomes log and bot-PR sync. Nothing new touches `data/prices.json`.
@@ -247,8 +265,9 @@ File: `reports/tanishq_update_times/scheduler_lateness.json`. Raw run metadata:
   site shows the existing "not fresh" path, the one E2 is redesigning. A reading is only
   written after a successful parse, validation and the 5% jump guard.
 - `Run task as soon as possible after a scheduled start is missed` means a laptop that was off
-  at 10:40 visits when it comes back. The visit is recorded at its real time, and the 45 min
-  spacing guard stops a burst.
+  at 10:30 visits when it comes back. The visit is recorded at its real time. If several slots
+  were missed, Task Scheduler starts them together; the first dispatches, and the others skip
+  because a run is already queued or in progress, so there is no burst.
 - **Switching off the GitHub cron.** The job now carries
   `if: github.event_name != 'schedule' || vars.TANISHQ_TRIGGER != 'task_scheduler'`.
   - Setting the repository variable makes GitHub-cron runs skip without touching Tanishq, so
@@ -275,7 +294,8 @@ India Standard Time):
    Idle)" (Modern Standby), wake timers may be ignored on battery with the lid closed. Keep it
    plugged in, or accept that those slots will be missed and fall back to "not fresh".
 5. Preview the tasks: `.\scripts\win\register_tanishq_tasks.ps1 -DryRun`. It should list 6
-   tasks, `\GoldRateTracker\Tanishq-0140` … `Tanishq-1950`.
+   tasks, `\GoldRateTracker\Tanishq-1000`, `Tanishq-1030`, `Tanishq-1100`, `Tanishq-1130`,
+   `Tanishq-1200` and `Tanishq-1230`.
 6. Create them: `.\scripts\win\register_tanishq_tasks.ps1`. Each task is set to:
    - daily at its IST time;
    - **Wake the computer to run this task**;
@@ -290,19 +310,28 @@ India Standard Time):
 7. Check that the runner service is running: `Get-Service actions.runner.*` should show
    `Running`.
 8. Check wake timers: `powercfg /waketimers` should list the next `Tanishq-` task.
-9. Test one run now: `Start-ScheduledTask -TaskPath \GoldRateTracker\ -TaskName Tanishq-1110`.
+9. Test one run now: `Start-ScheduledTask -TaskPath \GoldRateTracker\ -TaskName Tanishq-1100`.
    Then check each of these:
    - `gh run list --workflow scrape-tanishq-selfhosted.yml -L 1` shows a `workflow_dispatch`
      run.
    - `Get-Content $env:LOCALAPPDATA\gold-rate-tracker\tanishq_dispatch.log -Tail 3` shows
      `DISPATCHED`.
    - After the bot PR merges, the last line of `data/tanishq_scrape_outcomes.jsonl` has
-     `"trigger": "workflow_dispatch", "slot_ist": "11:10"`.
+     `"trigger": "workflow_dispatch", "slot_ist": "11:00"`.
 10. Test sleep once: put the laptop to sleep about 5 min before a slot and confirm that the run
     appears at the slot time.
 11. Only after steps 9–10 work, stop the GitHub cron visits:
     `gh variable set TANISHQ_TRIGGER --body task_scheduler --repo gaurav-gandhi-2411/gold-rate-tracker`.
-12. Weekly: `python scripts/tanishq_visit_metrics.py --days 7` (section 7).
+12. Set the switch time, so the weekly scripts count only the new schedule: put the UTC time
+    of step 11 into `effective_from_utc` in `scraper/visit_schedule.json` (a one-line PR).
+13. Weekly (Mondays):
+    - `python scripts/tanishq_visit_metrics.py --days 7` (section 7);
+    - `python scripts/tanishq_schedule_refine.py weekly` (section 9). Act only on `PROPOSE` or
+      `ESCALATE`.
+
+**How to check a run worked** (any day): `Get-Content $env:LOCALAPPDATA\gold-rate-tracker\tanishq_dispatch.log -Tail 6` shows one line per slot: `DISPATCHED`, or `SKIP` with the reason
+(recent run, cool-off, no network). `gh run list --workflow scrape-tanishq-selfhosted.yml -L 6`
+shows the matching runs. In Task Scheduler, each task's *Last Run Result* should be `0x0`.
 
 **If the laptop is asleep or off.**
 - Asleep with wake timers on: the task wakes it, dispatches, and the runner service picks the
@@ -313,7 +342,7 @@ India Standard Time):
 
 **Undo** (any step, any order):
 1. `gh variable delete TANISHQ_TRIGGER --repo gaurav-gandhi-2411/gold-rate-tracker`. The GitHub
-   cron takes over again at the same six times.
+   cron takes over again at the same six times (as a fallback: 1–3 h late, some dropped).
 2. `.\scripts\win\register_tanishq_tasks.ps1 -Unregister`. This removes every
    `\GoldRateTracker\Tanishq-*` task.
 3. Optionally reset wake timers: re-run step 3 with `0` instead of `1`.
@@ -330,7 +359,8 @@ not wired to anything user-facing. It reports:
   exact update instant is never observable. The share of changes whose width is ≤30 or ≤60 min
   is a lower bound on the share captured within 30 or 60 min.
 - **Per slot:** captured, attempted with no capture, or missed. A missed slot means nothing
-  ran within 45 min: laptop off or asleep, runner offline, or no trigger. For captured slots,
+  ran within `tolerance_min` (10 min; it was 45 before decision 4a) after the slot: laptop off
+  or asleep, runner offline, or no trigger. For captured slots,
   it gives the lateness.
 - **Per run:** successes, failures, and runs flagged `blocked` (challenge or 429).
 
@@ -409,3 +439,93 @@ change to GG only when all of these hold:
    and the count in (1) starts again.
 
 A schedule change is GG's. The script never edits `scraper/visit_schedule.json` or the crons.
+
+Pre-registration commit: `11d7dbba`. sha256 of this section as committed (from its heading to
+the end of the file at that commit):
+`7c47974debcec2ebe92e93cd5634bcda23e11bac850fdca11a2f75fa797bbbfc`.
+
+### Deviations from the 4a pre-registration (stated, not hidden)
+
+1. **Minimum 15 min between visits, added to O.** The optimum as registered (no minimum spacing)
+   is 10:00, 10:10, 10:40, 10:45, 10:55, 11:10. Visits 5-10 min apart cannot both happen: a run
+   holds the self-hosted runner from dispatch to the bot-PR merge (created to completed: median
+   6.0 min, p95 12.6 min, n = 75 successful runs that finished within 45 min;
+   `reports/tanishq_update_times/gh_runs/runs_sh.json`), and the dispatcher skips a slot while
+   a run is in progress. So the rule was applied to O with every gap in 15-30 min. The
+   as-registered O is reported (point estimate only) and was not bootstrapped, because it
+   cannot run.
+2. **Pool wording.** The pre-registration says "112 Monday-to-Saturday" intervals. The pool
+   actually used is 115: 96 weekday, 16 Saturday and 3 mixed, exactly the section 4 pool (only
+   Sunday-only intervals excluded, and there are none). "The same data as sections 2-4" was the
+   intent; 112 was a counting slip.
+3. **Operational settings that 30-min visits force (not statistics).** The dispatcher's
+   duplicate guard went from 45 to 10 min, and the metrics slot tolerance from 45 to 10 min;
+   both must stay under the shortest visit gap (a test enforces it). A 3 h cool-off after a
+   rate-limited or challenged run was added (see "Reconciliation with PR #2048" below).
+
+### Results (VERIFIED: `scripts/tanishq_schedule_refine.py evaluate`)
+
+File: `reports/tanishq_update_times/morning_schedule_evaluation.json`. B = 500, seed 42, 4,000
+Monte Carlo draws per replicate, 20,000 for point estimates; lateness from the runner-online pool
+(median 1.9 min). Sanity check: the section 4 interim schedule reproduces its published
+19.7 min mean staleness exactly.
+
+**Question 1: keep 01:40? No.**
+- Mass in 00:40-02:40 IST: 1.0%, 95% CI 0-3.1%. Only 58% of bootstrap replicates put any
+  mass there. The CI includes zero, so the rule drops 01:40.
+- Mass in 20:00-09:59: 1.0%, CI 0-8.0%. All of it is the one interval below.
+- Change intervals containing 01:40: 11 of 115. Only 1 lies entirely inside 20:00-09:59, so
+  only 1 forces an overnight change: Fri 2026-07-24, between 00:44 and 03:32 IST. The other 10
+  also cover daytime hours, where the rest of the evidence puts the change.
+- Trade-off: without 01:40 (and with no visit after 12:30), the 8 h gate shows "not fresh" from
+  about 20:30 to 10:00 IST. That is acceptable under E2's "not fresh" display: the estimate,
+  never a wrong price. Keeping 01:40 would have shortened this to about 20:30-01:40 and
+  09:40-10:00, but the data give no reason to visit then.
+
+**Question 2: which six times? U30.**
+- O (15-30 min gaps): 10:00, 10:15, 10:40, 10:55, 11:10, 11:25. It lowers mean staleness by
+  11.3 min against U30, but the one-sided 95% lower bound of that improvement is -46.7 min. The
+  rule needs the bound above zero, so U30 stays. O's own morning staleness CI (3.2-133.4 min)
+  shows why: it bets on the NPMLE's point locations, and if the change is after 11:25 it waits
+  until the next day.
+
+| Schedule (IST) | Mean staleness, min | Morning changes, min | Afternoon changes, min | Within 30 min | Within 60 min |
+|---|---|---|---|---|---|
+| Today's captures (replayed) | 440 (227–695) | 484 (258–761) | 324 (138–548) | 5.8% (0.6–14.0%) | 12.8% (4.3–27.1%) |
+| **U30 (chosen)**: 10:00, 10:30, 11:00, 11:30, 12:00, 12:30 | 304 (215–415) | 21.0 (12.6–24.3) | 1,046 (998–1,112) | 68.5% (58.7–76.9%) | 71.9% (61.4–79.6%) |
+| O: 10:00, 10:15, 10:40, 10:55, 11:10, 11:25 | 292 (208–429) | 5.3 (3.2–133.4) | 1,046 (998–1,112) | 71.9% (59.7–79.6%) | 71.9% (60.0–79.6%) |
+| Section 4 interim: 01:40, 07:30, 10:40, 11:10, 15:35, 19:50 | 19.7 (11.9–73.0) | 8.4 (3.4–59.1) | 49.7 (15.4–174.4) | 88.5% (63.9–95.3%) | 90.4% (66.6–98.7%) |
+
+- Brackets: bootstrap 95% CIs, q = 0 (every visit happens). Morning = changes dated 10:00-11:59
+  (72% of changes); afternoon = 14:00-19:59 (27%).
+- **At the measured miss rate** (q = 0.38, 38% of visits find no runner): U30 gives 351 min
+  mean staleness, 43.1% within 30 min and 60.9% within 60 min. Morning changes 79 min.
+- **Placement bound.** With all mass on the left or right edge of each innermost interval, U30
+  gives 306 or 301 min, and 68.1% or 68.9% within 30 min. The choice does not depend on where
+  inside those intervals the changes fall.
+- **Consequence of GG's choice, plainly.** U30 is better than today for morning changes (21 vs
+  484 min) and far better at catching changes quickly (68.5% vs 5.8% within 30 min). It is worse
+  than today for afternoon changes (1,046 vs 324 min): every afternoon change now waits for the
+  next morning. Against the section 4 interim schedule, U30 gives up 20 points of within-30
+  share and about 280 min of mean staleness, and adds 13.5 h a day of "not fresh".
+
+### Reconciliation with PR #2048 (`feat/retailer-risk-mitigations`)
+
+Checked against #2048's head `5f0f2f62` (VERIFIED by reading its `scraper/scrape.js` diff):
+- **Probe once per UTC day.** #2048's `shouldTryRequestsPath` tries the plain-GET probe only when
+  the last outcome in `data/tanishq_scrape_outcomes.jsonl` is from an earlier UTC day. All six
+  visits are 04:30-07:00 UTC, the same UTC day, so the probe runs at the 10:00 IST visit and not
+  at the other five. This needs each run's outcome line on master before the next visit: bot-PR
+  merges took median 3.6 min, max 10.3 min over the last 60 (`gh pr list`), inside the 30 min
+  gap. If a merge ever lags, the worst case is one extra plain GET at the next visit.
+- **Backoff never pushes a visit past the next slot.** #2048's retries are at most 3 attempts,
+  with about 2.5-5 s then 5-10 s of backoff. The job's `timeout-minutes: 25` bounds a run below
+  the 30 min gap, and a run in progress makes the next dispatch skip, never overlap.
+- **429 handling.** #2048 ends a rate-limited run with no Playwright escalation and "backs off
+  until the next scheduled run". With visits 30 min apart that would mean another visit 30 min
+  later. So the dispatcher now skips every visit for 3 h after a run whose outcome is `blocked`
+  (429, Retry-After or a challenge). After a 429 at 10:00, the rest of that morning is skipped;
+  the next visit is the next day's 10:00. That is at least as long as the old 3 h cadence. The
+  GitHub-cron fallback has no cool-off, but it only runs when the laptop trigger is off.
+- **No file conflicts.** `git merge-tree` of the two branch heads is clean; the only shared file
+  is `tests/test_count_baseline.json`, which merges automatically. #2048 needed no change.
