@@ -472,3 +472,124 @@ class TestMacroAdditionsAreAdditive:
         assert "crude_wti" not in before_df.columns, (
             "crude_wti unexpectedly present in before DataFrame"
         )
+
+
+# ---------------------------------------------------------------------------
+# 8. TestAsofDateTracking — true as-of date survives ffill (ADR 058, finding
+#    A4 / proposed fix #6: the cache's ffill masks staleness; each core
+#    column now carries a companion "<col>_asof_date" recording the date its
+#    value was ACTUALLY last observed).
+# ---------------------------------------------------------------------------
+
+
+def _make_yf_response_with_outage(outage_start: str, outage_end: str) -> pd.DataFrame:
+    """Business-day response (Yahoo's real cadence) with every ticker blanked
+    to NaN across [outage_start, outage_end] inclusive, simulating a
+    multi-day data-provider outage layered on top of the ordinary weekend
+    gaps _make_yf_response already omits (business days only)."""
+    base = _make_yf_response().copy()
+    outage_mask = (base.index >= pd.Timestamp(outage_start, tz="UTC")) & (
+        base.index <= pd.Timestamp(outage_end, tz="UTC")
+    )
+    base.loc[outage_mask, :] = np.nan
+    return base
+
+
+class TestAsofDateTracking:
+    @patch("ml.macro.yf.download")
+    def test_asof_date_present_for_every_core_column(self, mock_dl, tmp_path):
+        mock_dl.return_value = _make_yf_response()
+        df = macro_mod.fetch_macro_features(
+            _MOCK_START, _MOCK_END, cache_path=tmp_path / "c.parquet"
+        )
+        for col in ["usd_inr", "gold_usd", "us_10y_yield", "dxy", "sensex", "vix"]:
+            assert f"{col}_asof_date" in df.columns, f"missing {col}_asof_date"
+
+    @patch("ml.macro.yf.download")
+    def test_asof_date_holds_through_weekend(self, mock_dl, tmp_path):
+        """A Saturday/Sunday row's usd_inr_asof_date should equal the
+        preceding Friday's date, not the weekend row's own date — the raw
+        yfinance response only has business days, so the weekend gap is
+        introduced by fetch_macro_features's own reindex-to-daily step."""
+        mock_dl.return_value = _make_yf_response()
+        df = macro_mod.fetch_macro_features(
+            _MOCK_START, _MOCK_END, cache_path=tmp_path / "c.parquet"
+        )
+        weekend_rows = df[df.index.dayofweek.isin([5, 6])]
+        assert len(weekend_rows) > 0, "fixture produced no weekend rows to check"
+        for ts, row in weekend_rows.iterrows():
+            # Most recent Friday on/before this weekend row.
+            days_since_friday = (ts.dayofweek - 4) % 7
+            expected_friday = (ts - pd.Timedelta(days=days_since_friday)).normalize()
+            assert row["usd_inr_asof_date"] == expected_friday, (
+                f"{ts.date()}: expected asof {expected_friday.date()}, "
+                f"got {row['usd_inr_asof_date']}"
+            )
+            # The value itself is the carried-forward Friday close.
+            assert row["usd_inr"] == df.loc[expected_friday, "usd_inr"]
+
+    @patch("ml.macro.yf.download")
+    def test_asof_date_holds_through_multiday_outage(self, mock_dl, tmp_path):
+        """A 5-business-day outage (Mon-Fri): every row inside the gap must
+        report the LAST genuine date before the outage (the prior Friday),
+        and the first row after the outage must report its own date again."""
+        outage_start, outage_end = "2026-03-16", "2026-03-20"  # Mon..Fri
+        mock_dl.return_value = _make_yf_response_with_outage(outage_start, outage_end)
+        df = macro_mod.fetch_macro_features(
+            _MOCK_START, _MOCK_END, cache_path=tmp_path / "c.parquet"
+        )
+
+        last_good_date = pd.Timestamp("2026-03-13", tz="UTC")  # Friday before the outage
+        outage_rows = df.loc[outage_start:outage_end]
+        assert len(outage_rows) == 5
+        assert (outage_rows["usd_inr_asof_date"] == last_good_date).all(), outage_rows[
+            "usd_inr_asof_date"
+        ]
+        assert (outage_rows["usd_inr"] == df.loc[last_good_date, "usd_inr"]).all()
+
+        resumed_date = pd.Timestamp("2026-03-23", tz="UTC")  # Monday after the outage
+        assert df.loc[resumed_date, "usd_inr_asof_date"] == resumed_date
+
+    @patch("ml.macro.yf.download")
+    def test_core_values_unchanged_by_asof_tracking(self, mock_dl, tmp_path):
+        """The ffilled core values themselves must equal an independently
+        computed `.ffill()` of the raw closes — the as-of bookkeeping added
+        alongside must not perturb the value it describes."""
+        mock_dl.return_value = _make_yf_response()
+        df = macro_mod.fetch_macro_features(
+            _MOCK_START, _MOCK_END, cache_path=tmp_path / "c.parquet"
+        )
+
+        raw = _make_yf_response()
+        raw.index = pd.to_datetime(raw.index, utc=True)
+        full_idx = pd.date_range(raw.index.min(), raw.index.max(), freq="D", tz="UTC")
+        raw = raw.reindex(full_idx)
+        expected_usd_inr = raw[("Close", "INR=X")].ffill()
+
+        pd.testing.assert_series_equal(
+            df["usd_inr"], expected_usd_inr, check_names=False, check_exact=True
+        )
+
+    @patch("ml.macro.yf.download")
+    def test_asof_columns_do_not_disturb_existing_schema_check(self, mock_dl, tmp_path):
+        """The pre-existing 'required columns present' contract (test #1's
+        test_schema_has_all_required_columns) must keep holding once the new
+        asof columns are added alongside it."""
+        mock_dl.return_value = _make_yf_response()
+        df = macro_mod.fetch_macro_features(
+            _MOCK_START, _MOCK_END, cache_path=tmp_path / "c.parquet"
+        )
+        expected = [
+            "usd_inr",
+            "gold_usd",
+            "us_10y_yield",
+            "dxy",
+            "sensex",
+            "vix_level",
+            "usd_inr_change_1d",
+            "gold_usd_change_1d",
+            "gold_usd_5d_vol",
+            "sensex_5d_return",
+        ]
+        missing = [c for c in expected if c not in df.columns]
+        assert not missing, f"Missing columns: {missing}"
