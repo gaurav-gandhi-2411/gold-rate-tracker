@@ -119,7 +119,10 @@
 // 2026-09-25 (same PR, G6 layout pass): style.css (page_v2 grid/type tokens) + app.js
 // (page_v2 mount point) changed again -- suffix re-stamped so a client that installed
 // the earlier v58 preview shell does not keep the pre-layout-pass bytes.
-const VERSION = "v58-20260925-pagev2-layout";
+// 2026-09-25 (same PR, design-review follow-ups): app.js (F2 sentence extraction fix,
+// freshness fail-closed fix) + i18n.js (Hindi pv2* translations) changed again -- bumped
+// once more so a client that installed the layout-pass shell picks up these bytes too.
+const VERSION = "v59-20260925-pagev2-followups";
 const SHELL_CACHE = `gold-shell-${VERSION}`;
 
 const SHELL_FILES = [
