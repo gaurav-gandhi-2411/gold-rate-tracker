@@ -632,6 +632,14 @@ def save_calibration_band_coverage(
     prices_path = _data / "prices.json"
     out_path = _data / out_filename
 
+    from ml.retailers import is_enabled
+
+    if not is_enabled("tanishq"):
+        # ADR 059: with Tanishq taken down, prices.json holds IBJA-derived rows;
+        # scoring IBJA against itself would publish a meaningless coverage figure.
+        logger.info("save_calibration_band_coverage: tanishq disabled — skipping")
+        return None
+
     if not ibja_path.exists():
         logger.info("save_calibration_band_coverage: ibja_rates.parquet not found — skipping")
         return None
@@ -791,6 +799,14 @@ def run_refit_if_needed(data_dir: Path | None = None) -> bool:
     ibja_path = _data / "ibja_rates.parquet"
     prices_path = _data / "prices.json"
     cal_path = _data / "calibration.json"
+
+    from ml.retailers import is_enabled
+
+    if not is_enabled("tanishq"):
+        # ADR 059: no Tanishq pairs to fit against (prices.json is IBJA-derived after a
+        # takedown). Keep the last fitted coefficients -- a refit would be circular.
+        logger.info("run_refit_if_needed: tanishq disabled — keeping last calibration")
+        return False
 
     try:
         with open(cal_path) as f:
