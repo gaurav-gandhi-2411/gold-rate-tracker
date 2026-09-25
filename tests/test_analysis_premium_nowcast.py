@@ -99,3 +99,76 @@ def test_evaluate_reports_mae_in_rupees_per_gram_and_holm() -> None:
     assert r["mae_rs_per_g"]["C"] < r["mae_rs_per_g"]["B1"] < r["mae_rs_per_g"]["B0"]
     assert r["H1_C_vs_B1"]["significant"] is True
     assert r["H2_C_vs_B0"]["holm_significant"] is True
+
+
+# --- Addendum A1 option A (adopted 2026-09-25): parity on the fix clock -------------------------
+
+
+def _hourly(start: str, periods: int, value0: float) -> pd.Series:
+    idx = pd.date_range(start, periods=periods, freq="h", tz="UTC")
+    return pd.Series(value0 + np.arange(periods, dtype=float), index=idx)
+
+
+def test_bar_known_by_takes_the_last_bar_that_ended_not_the_one_still_forming() -> None:
+    bars = _hourly("2026-09-25 00:00", 12, 100.0)  # bar starting 05:00 ends 06:00
+    got = mod.bar_known_by(bars, pd.Timestamp("2026-09-25 06:30", tz="UTC"))
+    assert got == {"bar_start_utc": "2026-09-25T05:00:00+00:00", "close": 105.0}
+    # at exactly a bar's end, that bar counts as known
+    got = mod.bar_known_by(bars, pd.Timestamp("2026-09-25 06:00", tz="UTC"))
+    assert got is not None and got["close"] == 105.0
+    assert mod.bar_known_by(bars, pd.Timestamp("2026-09-25 00:30", tz="UTC")) is None
+    assert mod.bar_known_by(pd.Series(dtype=float), pd.Timestamp("2026-09-25", tz="UTC")) is None
+
+
+def test_fix_clock_bars_uses_am_and_pm_cutoffs_and_never_rewrites_the_archive() -> None:
+    bars = {
+        "GC=F": _hourly("2026-09-24 00:00", 60, 2000.0),
+        "INR=X": _hourly("2026-09-24 00:00", 60, 80.0),
+    }
+    day = pd.Timestamp("2026-09-25")
+    arch, mism = mod.fix_clock_bars([day], bars, {})
+    e = arch["2026-09-25"]
+    assert e["am"]["GC=F"]["bar_start_utc"] == "2026-09-25T05:00:00+00:00"  # ended 06:00 <= 06:30
+    assert e["pm"]["GC=F"]["bar_start_utc"] == "2026-09-25T10:00:00+00:00"  # ended 11:00 <= 11:30
+    assert mism == 0
+    # a re-fetch that disagrees on an archived bar is counted, and the archive wins
+    bumped = {k: v + 1 for k, v in bars.items()}
+    arch2, mism2 = mod.fix_clock_bars([day], bumped, arch)
+    assert arch2 == arch and mism2 == 2
+    # missing bars for one ticker: nothing is archived for that day
+    arch3, _ = mod.fix_clock_bars([day], {"GC=F": bars["GC=F"]}, {})
+    assert arch3 == {}
+
+
+def test_apply_fix_clock_rebuilds_parity_and_premium_from_the_archived_bars() -> None:
+    d = pd.DataFrame(
+        {
+            "pm_999": [150000.0, 151000.0],
+            "duty_rate": [0.06, 0.06],
+            "landed_parity": [1.0, 1.0],
+            "premium_pct": [9.0, 9.0],
+            "stale_repeat": [False, False],
+        },
+        index=pd.to_datetime(["2026-09-25", "2026-09-26"]),
+    )
+    bar = {"bar_start_utc": "x", "close": 0.0}
+    arch = {
+        "2026-09-25": {
+            "am": {"GC=F": {**bar, "close": 3000.0}, "INR=X": {**bar, "close": 88.0}},
+            "pm": {"GC=F": {**bar, "close": 3010.0}, "INR=X": {**bar, "close": 88.0}},
+        }
+    }
+    x = mod.apply_fix_clock(d, arch)
+    conv = 10 / mod.TROY_OZ_TO_GRAM
+    assert x["landed_parity"].iloc[0] == pytest.approx(3000 * 88 * conv * 1.06)
+    assert x["premium_pct"].iloc[0] == pytest.approx((150000 / (3010 * 88 * conv * 1.06) - 1) * 100)
+    assert np.isnan(x["landed_parity"].iloc[1]) and np.isnan(x["premium_pct"].iloc[1])
+
+
+def test_archive_round_trips(tmp_path: Path) -> None:
+    path = tmp_path / "bars.json"
+    assert mod.load_archive(path) == {}
+    dates = {"2026-09-26": {"am": {}}, "2026-09-25": {"pm": {}}}
+    mod.save_archive(path, dates)
+    assert mod.load_archive(path) == dates
+    assert list(mod.load_archive(path)) == ["2026-09-25", "2026-09-26"]
