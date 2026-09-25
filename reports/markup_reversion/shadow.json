@@ -1,0 +1,24 @@
+{
+ "adr": "docs/adr/057-markup-reversion-preregistration.md",
+ "forward_primary_cell": {
+  "z_threshold": 1.0,
+  "n": 3
+ },
+ "forward_sample_first_date": "2026-09-25",
+ "entries": [
+  {
+   "date": "2026-09-24",
+   "markup_pct": 1.6515,
+   "markup_rs": 228.1,
+   "z": 0.8829,
+   "n_trailing": 60,
+   "signals": {
+    "z_ge_1": false,
+    "z_ge_1.5": false
+   },
+   "ibja_fix": "2026-09-24 pm",
+   "logged_at_utc": "2026-09-24T23:14:14.232966+00:00",
+   "outcomes": {}
+  }
+ ]
+}
