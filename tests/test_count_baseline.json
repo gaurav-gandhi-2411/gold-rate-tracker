@@ -62,7 +62,7 @@
   "tests/test_inr_proxy_labels.py": 6,
   "tests/test_llm_cache_helpers.py": 25,
   "tests/test_lock_satisfies_floors.py": 6,
-  "tests/test_macro.py": 22,
+  "tests/test_macro.py": 27,
   "tests/test_metrics.py": 43,
   "tests/test_next_day_range.py": 6,
   "tests/test_no_dead_imports.py": 1,
