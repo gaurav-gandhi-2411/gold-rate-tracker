@@ -111,7 +111,12 @@
 // decimal places (formatPValue() in i18n.js, added same PR); renders
 // "p < 0.0001" instead. i18n.js + how-we-know.js + how-we-know-strings.js
 // (EN+HI) changed -- all three are precached shell files.
-// 2026-09-24 (v58): page_v2 (item 6) -- proposed five-jobs page, entirely behind
+// v58 (2026-09-25): the 5-day movement note shows the measured typical move
+// (vol_context.typical_move_5d) instead of a floored one-standard-deviation
+// figure that overstated it ~1.9x. app.js + i18n.js (EN+HI) changed.
+// 2026-09-25 (v61; v59/v60 are taken by the open #2053/#2069 branches): ADR 059 wording
+// P2-P5 (E5) -- neutral, dated Tanishq wording. app.js + i18n.js + index.html + manifest changed.
+// 2026-09-24 (v66): page_v2 (item 6) -- proposed five-jobs page, entirely behind
 // isFeatureOn("page_v2") + per-card flags, all still false (merge default). app.js +
 // i18n.js + style.css changed (new pure/build/render functions, new pv2* i18n keys, new
 // .pv2-* rules) -- bumping so installed clients pick up the new app.js/i18n.js/style.css
@@ -122,7 +127,9 @@
 // 2026-09-25 (same PR, design-review follow-ups): app.js (F2 sentence extraction fix,
 // freshness fail-closed fix) + i18n.js (Hindi pv2* translations) changed again -- bumped
 // once more so a client that installed the layout-pass shell picks up these bytes too.
-const VERSION = "v59-20260925-pagev2-followups";
+// 2026-09-25 (merge with master through #2071): re-stamped to v66 -- v59-v65 are taken by
+// other now-merged/open branches.
+const VERSION = "v66-20260925-pagev2";
 const SHELL_CACHE = `gold-shell-${VERSION}`;
 
 const SHELL_FILES = [
