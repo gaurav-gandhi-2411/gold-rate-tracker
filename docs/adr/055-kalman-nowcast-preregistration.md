@@ -330,3 +330,183 @@ that matters for weekdays.
 - **No retuning here.** The band fix (e.g. a separate weekend reading-noise term, or conformal
   scaling of the filter's sd on training folds) would need a new pre-registration.
 - The forward shadow (`scripts/run_kalman_shadow.py`, not yet wired) is the blind test for both.
+
+## Addendum: independent leak audit (2026-09-25)
+
+**Verdict in one sentence:** with every input restricted to what was known strictly before the
+target reading, the Kalman nowcast still beats IBJA × fixed markup overall and on weekends (not on
+weekdays under Bonferroni), but it loses to the strongest carry-forward baseline, Tanishq's own
+last reading before the target, on every stratum. So its apparent weekend edge is not an edge
+over the best simple rule.
+
+This addendum is an independent audit appended after the Results. The pre-registration text above
+`## Results` is not edited, and the frozen hash still reproduces. The re-score **corrects the
+measurement** (it applies availability-time filtering). It is not a new hypothesis. It is
+retrospective and exploratory relative to the frozen ADR, and it does not change the
+pre-registered verdict (NEGATIVE).
+
+Code: `scripts/audit_kalman_leak.py`, with tests in `tests/test_kalman_leak_audit.py`. Output:
+- `reports/kalman_leak_audit/inputs_audit.json`: every input for every scored day, with its
+  timestamps and its delta to the target;
+- `reports/kalman_leak_audit/leak_summary.json`;
+- `reports/kalman_leak_audit/rescore.json`.
+
+The reports carry `code_commit` `ae70692d` (two runs, byte-identical apart from the stamp). The registered pipeline re-run inside the audit harness
+reproduces the published figures exactly (T1 30.3 vs 62.8, p 1.5e-6), so the comparison below is
+like for like. VERIFIED means the audit ran it.
+
+### What is being estimated
+
+- **Target.** For UTC date d, the target T_d is the last Tanishq 22K reading in `data/prices.json`
+  whose timestamp falls on d (`analysis_nowcast.load_truth`).
+- **Timestamp format.** Every timestamp is ISO UTC ending in `Z`.
+- **Why "last" is well defined.** The file is chronological, so the last row in file order is the
+  row with the latest timestamp. The audit asserts this.
+
+**When each input counts as known.** An input may be used for T_d only if known_at < T_d. The
+comparison is strict: an input known at exactly T_d is excluded.
+
+| source | known at | status |
+|---|---|---|
+| Tanishq | the reading's own timestamp | from the data |
+| IBJA AM | value date 06:30 UTC (12:00 IST) | assumption: the data has value dates only |
+| IBJA PM | value date 11:30 UTC (17:00 IST) | assumption: the data has value dates only |
+| GRT, Malabar | `capture_utc` | from the data |
+| COMEX × USD/INR close dated c | c+1 00:00 UTC at the latest (settlement is 13:30 ET, and the INR=X daily bar closes by about 23:00 UTC) | assumption |
+
+`fetched_at` for IBJA is reported only as a description. Many rows were backfilled long after
+publication, so it is not a true availability time.
+
+### Leaks found (VERIFIED; scored days are the union of set A and set B)
+
+| channel | checked | known at/after target | weekday / weekend | magnitude |
+|---|---|---|---|---|
+| Same-day Tanishq target as an input | every scored day: +5% shift of every Tanishq reading from day d on, filter re-run | **0**. The shift moves the day-d nowcast by exactly 0 (max abs Δlog = 0.0, registered and strict runs) | — | none |
+| Earlier same-day Tanishq captures | code read | never an input: `load_truth` keeps only the last reading per date | — | none |
+| GRT capture (last capture of the date) | 56 same-day pairs | **24** | 19 / 5 | median 403 min after the target, max 981 min |
+| Malabar capture | 48 same-day pairs | **20** | 18 / 2 | median 321 min after, max 981 min |
+| IBJA PM before 17:00 IST | 62 | **6** | 6 / 0 | median 231 min after, max 417 min |
+| IBJA AM before 12:00 IST | 62 | **1** | 1 / 0 | 117 min after |
+| COMEX/USD-INR close | 65 | 0 | — | none |
+| Filter state from earlier days | all | 0 inputs known after the target | — | none |
+| Noise-parameter MLE window | all | 0 blocks include the target day, 0 training inputs known after the target | — | but see (a) |
+| Carry-forward / ffill | code read | none in `build_observations`. The INR=X ffill is backward-looking only | — | none |
+| Weekly re-estimation / day-set selection | code read | the sets are selected on input existence, not target values. 3 set-B days have no pre-target retailer capture | — | none on values |
+| Baselines | — | IBJA × fixed markup used PM before publication on 6 set-A days. Fusion used post-target captures on 15 set-B days | — | both corrected in the re-score |
+
+These GRT/Malabar counts differ from the author's 47/112 because they count only the pairs the
+model actually assimilated. The model skips a Malabar row whose `observed_at` date is unchanged.
+
+**(a) The IBJA timing also affects training.** 36 of 148 dates have their last Tanishq reading
+before 11:30 UTC, and 25 of those are the April–May history backfill with a synthetic 06:30Z stamp.
+The registered filter assimilates the same-day IBJA PM before those targets, which shapes the
+fitted noise parameters. The strict-IBJA correction therefore moves the nowcast on all 90 set-A
+days: mean abs change ₹10.9/g, max ₹90.
+
+Corrected nowcast, all leaks removed:
+- it changes on all 90 set-A days;
+- mean abs change is ₹19.4/g, and the largest single change is ₹282/g;
+- correcting the retailer timing alone changes 55 days, mean ₹19.8/g.
+
+**Same-run sensitivity.** Retailer captures within 15 min before the target come from the target's
+own scrape run. Excluding them switches 10 day-source pairs to an earlier capture, and all 10 carry
+an identical value, so the results do not change.
+
+### Weekends
+
+Same-day inputs on the 26 set-A weekend days:
+
+| source | days with a reading |
+|---|---|
+| GRT | 14 |
+| Malabar | 9 |
+| COMEX (Friday's close, assimilated on Saturday) | 12 |
+| IBJA PM (1 deferred row) | 1 |
+
+8 of the 26 days have no same-day input. On those days the nowcast is the propagated state, which is
+effectively yesterday's Tanishq price.
+
+How often the target moved:
+- the target equals yesterday's last reading on **13/26** days;
+- it equals the last reading before the target on **25/26** days;
+- 24/26 weekend days have an earlier Tanishq reading on the same day.
+
+Tanishq's weekend board changes once, early, and then holds, so the last reading before the target
+is nearly always the answer. The Kalman model does not use earlier same-day Tanishq readings. Its
+weekend skill against yesterday's price comes from same-day GRT/Malabar captures, which move with
+Tanishq's once-a-day change.
+
+Weekend MAE after the strict correction (set A):
+
+| predictor | MAE ₹/g |
+|---|---|
+| Kalman | 22.9 |
+| yesterday's Tanishq | 46.0 |
+| last Tanishq reading before the target | **2.7** |
+| IBJA × fixed markup | 92.7 |
+
+### Strict re-score (all leaks removed; same day sets, metrics and tests)
+
+One-sided HAC DM on absolute error; Bonferroni and BH over T1–T6 (m 6, threshold 0.00833); CIs are
+Newey–West lag 1. Baselines are strict too: the IBJA PM must be published before the target, and
+fusion uses the last pre-target capture per source. E1–E5 are exploratory, with their own family
+(m 5). They compare against the last Tanishq reading strictly before the target. Every cell below
+has Kalman MAE higher than that carry-forward, so E1–E5 are not significant under Bonferroni or BH.
+
+| id | stratum (set) | n | eff. n (lag 1) | Kalman MAE ₹/g [95%] | baseline MAE ₹/g [95%] | p lag 1 | p lag 5 | Bonferroni (lag 1 / lag 5) | BH (lag 1 / lag 5) |
+|---|---|---|---|---|---|---|---|---|---|
+| T1 | all (A) vs IBJA × markup | 90 | 67.0 | 35.1 [23.6, 46.6] | 62.4 [48.4, 76.5] | 1.3e-4 | 3.6e-4 | yes / yes | yes / yes |
+| T2 | weekday (A) vs IBJA × markup | 64 | 52.9 | 40.0 [25.8, 54.2] | 50.1 [39.7, 60.5] | 0.041 | 0.067 | no / no | yes / no |
+| T3 | weekend (A) vs IBJA × markup | 26 | 16.4 | 22.9 [7.8, 38.1] | 92.7 [55.0, 130.4] | 1.4e-4 | 1.2e-3 | yes / yes | yes / yes |
+| T4 | weekday (B) vs fusion | 41 | 49.2 | 24.4 [10.0, 38.8] | 49.6 [34.8, 64.3] | 5.7e-7 | 1.5e-9 | yes / yes | yes / yes |
+| T5 | weekend (B) vs fusion | 15 | 9.5 | 5.0 [1.1, 8.9] | 59.5 [46.2, 72.9] | 4.0e-13 | 1.6e-11 | yes / yes | yes / yes |
+| T6 | weekend (A) vs yesterday's Tanishq | 26 | 28.2 | 22.9 [7.8, 38.1] | 46.0 [28.8, 63.2] | 0.039 | 0.11 | no / no | yes / no |
+| E1 | all (A) vs last reading before target | 90 | 69.6 | 35.1 | 13.9 [1.9, 26.0] | 0.9995 | 0.993 | no | no |
+| E2 | weekday (A) vs last reading before target | 64 | 53.1 | 40.0 | 18.5 [1.9, 35.1] | 0.996 | 0.974 | no | no |
+| E3 | weekend (A) vs last reading before target | 26 | 19.6 | 22.9 | 2.7 [−2.4, 7.8] | 0.996 | 0.979 | no | no |
+| E4 | weekday (B) vs last reading before target | 41 | 41.7 | 24.4 | 22.3 [−0.1, 44.7] | 0.62 | 0.62 | no | no |
+| E5 | weekend (B) vs last reading before target | 15 | 13.0 | 5.0 | 0.0 (15/15 exact) | 0.994 | 0.999 | no | no |
+
+What changed from the registered run:
+
+| test | registered | strict | change |
+|---|---|---|---|
+| T1 | 30.3 | 35.1 | still Bonferroni-significant |
+| T2 | p 0.0016 | p 0.041 | loses Bonferroni |
+| T3 | 16.3 | 22.9 | still Bonferroni-significant |
+| T6 | p 0.0025 | p 0.039 (lag 5: 0.11) | loses Bonferroni |
+
+T4 and T5 hold.
+
+Against the last reading before the target, the registered, uncorrected run also loses on E1–E3,
+E5 and is level on E4. **This baseline was never beaten, leak or not.**
+
+**Band coverage, strict (80% nominal; Wilson 95%; exact binomial p vs 0.80):**
+
+| stratum | covered / n | coverage [Wilson 95%] | p vs 0.80 | mean width ₹/g |
+|---|---|---|---|---|
+| C1 weekdays (A) | 59/64 | 92.2% [83.0, 96.6] | 0.012 | 216 |
+| C2 weekends (A) | 25/26 | 96.2% [81.1, 99.3] | 0.046 | 220 |
+| all (A) | 84/90 | 93.3% [86.2, 96.9] | 0.0008 | 217 |
+| set B all | 53/56 | 94.6% [85.4, 98.2] | 0.0039 | 198 |
+
+After the correction, **both** C1 and C2 over-cover (their CIs exclude 80% from above). The gate
+now fails on C1 as well as C2.
+
+### Reading (INFERRED)
+
+The leaks were real, and they came from three places:
+- end-of-day retailer captures, on 44 day-source pairs;
+- IBJA values used before publication, on 7 scored pairs, plus the training days;
+- two baselines that shared the same timing problems.
+
+Removing them costs the Kalman model about ₹5/g of MAE overall and ₹7/g on weekends. It still
+clearly beats IBJA × markup and fusion.
+
+The weekend "₹16 vs ₹46" result compared the model against yesterday's price. That is the wrong
+yardstick for a nowcast when an earlier reading from the same day exists. On weekends Tanishq's
+board is already final by the earlier reading on 25/26 days, so carrying it forward scores ₹2.7.
+
+The right forward question is narrower: does the model beat the last available Tanishq reading at
+the moment a nowcast is actually needed? That moment is when the Tanishq scrape has failed. The
+forward shadow should log the age of that last reading, and it should be scored against it.
