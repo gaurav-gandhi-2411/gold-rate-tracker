@@ -19,7 +19,10 @@
       "floor_fraction": 0.5,
       "static_pi_half": 250.0,
       "baseline_half_width": 41,
-      "regime": "normal"
+      "regime": "normal",
+      "typical_move_5d": null,
+      "typical_move_pairs": 13,
+      "typical_move_window_days": 30
     }
   },
   "chronos_companion": {
@@ -56,7 +59,7 @@
     "direction_consensus": 1.0
   },
   "driver_context": {
-    "computed_at": "2026-09-24T23:34:21.305761+00:00",
+    "computed_at": "2026-09-25T08:19:48.544832+00:00",
     "macro_staleness_days": null,
     "macro_fresh": false,
     "premium_threshold_pct": 15.0,

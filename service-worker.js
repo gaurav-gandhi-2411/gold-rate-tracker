@@ -111,14 +111,21 @@
 // decimal places (formatPValue() in i18n.js, added same PR); renders
 // "p < 0.0001" instead. i18n.js + how-we-know.js + how-we-know-strings.js
 // (EN+HI) changed -- all three are precached shell files.
-// 2026-09-25 (v58): retailer takedown switch (ADR 059) -- app.js stops naming Tanishq
+// v58 (2026-09-25): the 5-day movement note shows the measured typical move
+// (vol_context.typical_move_5d) instead of a floored one-standard-deviation
+// figure that overstated it ~1.9x. app.js + i18n.js (EN+HI) changed.
+// 2026-09-25 (v61; v59/v60 are taken by the open #2053/#2069 branches): ADR 059 wording
+// P2-P5 (E5) -- neutral, dated Tanishq wording. app.js + i18n.js + index.html + manifest changed.
+// 2026-09-25 (v65): retailer takedown switch (ADR 059) -- app.js stops naming Tanishq
 // (hero location line, last-confirmed line, long-silent banner clause, calculator label)
 // when prices.json holds IBJA-derived rows; new i18n key heroLocationDerived (EN+HI).
 // Inert on today's data. app.js + i18n.js changed.
-// 2026-09-25 (v60; v59 left for #2053's own rebase onto master's v58): E2 hero shows
-// Tanishq's live listed rate only when fresh + plausible, otherwise our labelled estimate
-// (heroDisplayState). app.js + i18n.js + index.html changed.
-const VERSION = "v60-20260925-hero-tanishq-live";
+// 2026-09-25 (v67; merged with #2053's updated branch, itself merged with master through
+// #2071): E2 hero shows Tanishq's live listed rate only when fresh + plausible, otherwise
+// our labelled estimate (heroDisplayState), which supersedes #2053's simpler
+// heroLocation/heroLocationDerived split with full takedown-awareness built in. app.js +
+// i18n.js + index.html changed.
+const VERSION = "v67-20260925-hero-tanishq-live";
 const SHELL_CACHE = `gold-shell-${VERSION}`;
 
 const SHELL_FILES = [

@@ -1818,3 +1818,54 @@ which carries raw COMEX and USD/INR (I added it in #2004).
 
 **Environment.** Venvs under %TEMP% lose files mid-session. The persistent venv is
 `C:/Users/gaura/ml-projects/grt-venv`. Use `set -o pipefail` before piped verification chains.
+
+
+---
+
+## Checkpoint 2026-09-25: queue readiness, G1–G6, the volatility note, models 5a–5d, page_v2
+
+**Premises corrected.** #2017 and #2025 were already merged; the brief listed #2017 as unmerged.
+
+**Merged this session.**
+- #2040: ADR 047's shadow is wired into the weekly job.
+- #2047: ADR 049's shadow is wired in (#2020 itself was merged by GG).
+- #2054: ADR 059, the retailer-data mitigations. It records IBJA's terms and the binding rule that nothing commercial happens without a legal review of data rights.
+
+**Item 3, the live 5-day volatility note (#2039, waiting on GG).**
+- The wording and the measurement describe different things. The note said "about ±₹X over 5 days", but X was one standard deviation of a 5-day move (20-day volatility × √5), floored at half of an 80% interval's half-width.
+- On 2026-09-24 the floor was what set the number: raw 344.7, floor 364.9, shown as ₹350.
+- The median 5-day change over the last 30 days was ₹185 (24 pairs), so the note overstated moves about 1.9x.
+- The fix shows the measured median (`typical_move_5d`) and hides the note when there is no measurement.
+
+**Item 5, models.** All four were pre-registered and frozen before any outcome was computed.
+
+- **5a, Kalman nowcast** (#2050, ADR 055, frozen at `70d5474c`):
+  - Error falls to ₹30.3/g against ₹62.8 for IBJA × markup (n 90, effective n 68.8, p 1.5e-6), which passes Bonferroni and BH.
+  - On weekends it scores ₹16.3 against ₹46.0 for yesterday's Tanishq price (p 0.0025).
+  - It still **fails** its gate: the weekend band covers 96.2% [81.1, 99.3], which is too wide.
+  - An added check (exploratory) found that some retailer captures were taken after the target reading. With strictly earlier captures only, the overall and weekend wins hold, but the weekday wins lose Bonferroni.
+- **5b, adaptive ranges** (#2052, ADR 056): **negative.**
+  - Both variants cover 96.8% [89.1, 99.1] (n 63).
+  - Both are 1.63–1.65× wider than the live range, against a 1.25× limit.
+  - Winkler scores are significantly worse than ADR 047 v2.
+- **5c, markup reversion** (#2046, ADR 057, frozen at `79180541`):
+  - F1's AR(1) of 0.76 mostly comes from weekend carry-forward. On same-day pairs it is 0.43, and 0.24 once repeated days are removed.
+  - The historical test is exploratory. All four cells are inconclusive, with fewer than 15 signal days each.
+  - The forward shadow is pre-registered for a 2027 decision.
+- **5d, timing audit** (#2051, ADR 058):
+  - GC=F's daily close is the 13:30 ET settlement.
+  - With correct alignment, the FOMC effect reverses ADR 050: FOMC days move gold more than normal days (COMEX, next settlement: ratio 1.89, n 109, p 6e-9).
+  - It contradicts three earlier conclusions: ADR 032 ("timing misalignment ruled out"), R2's weekend finding, and ADR 046's premium mean reversion.
+
+**G1 (retailers).**
+- #2048 (polite access) and #2053 (the takedown switch, which reverts to IBJA × markup, with fallback proven on real data) are waiting on GG.
+- IBJA's API terms forbid republishing rates without written permission, which conflicts with the public `data/ibja_rates.parquet`. This is a GG decision.
+- Tanishq prices also appear, under other names, in `backtest.json`, `drift_metrics.json`, `metrics_history.json` and `commentary.json`.
+
+**G4 (#2049):** 10 claims inventoried, 6 of them previously ungated. **G5:** claude-config #36. **G2:** #2035 is ready, but over the size gate.
+
+**Live bug found:** the phone page scrolled 60px sideways. The cause is the hero glow's `right: -80px`. #2055 adds `main { overflow-x: clip }` plus a headless test, which fails on master in 6 of 8 cases.
+
+**Process notes.**
+- Ten parallel agents hit the API session limit, and the in-flight work was resumed from each agent's worktree. Run at most about 5 agents at once.
+- Six open PRs each set the service-worker VERSION to v58: #2037, #2038, #2039, #2049, #2053 and #2055. Whichever merges later takes the next number.
