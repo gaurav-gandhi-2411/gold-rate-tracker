@@ -116,6 +116,8 @@
 // figure that overstated it ~1.9x. app.js + i18n.js (EN+HI) changed.
 // 2026-09-25 (v61; v59/v60 are taken by the open #2053/#2069 branches): ADR 059 wording
 // P2-P5 (E5) -- neutral, dated Tanishq wording. app.js + i18n.js + index.html + manifest changed.
+// 2026-09-25 (v63): style.css -- main { overflow-x: clip } stops the phone page
+// scrolling 60px sideways (hero glow overflow). Shell file changed.
 // 2026-09-25 (v64): G4 -- hide any accuracy/coverage claim measured more than
 // 14 days ago (isMeasurementFresh(), i18n.js) instead of showing a stale
 // number as current. app.js + i18n.js + how-we-know.js changed -- all three
