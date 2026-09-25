@@ -409,10 +409,10 @@ const STRINGS = {
     relDaysAgo: ({ n }) => `${n}d ago`,
 
     // ── Page v2 (item 6, flagged OFF) — five-jobs view ───────────────────────────
-    // Entirely new, English-only strings: NO Hindi entries below on purpose. t()
-    // already falls back to English for a missing hi key (see t()'s own comment),
-    // so this is a real, working degrade, not a placeholder — every key here is
-    // listed in the PR body for native-speaker review before Hindi copy is added.
+    // Draft Hindi translations now exist below (hi block, same key names) -- machine-drafted,
+    // plain and conversational, listed in the PR body under "New strings for native Hindi
+    // review" pending a native speaker's pass before page_v2 ever ships live. t()'s English
+    // fallback (see its own comment) still applies to any key a review finds needs reverting.
     pv2AriaLabel: "A five-question view of today's gold price",
     pv2Job1Heading: "1. What's the price now?",
     pv2SourceEstimate: "An estimate, matched to IBJA and Tanishq's own numbers.",
@@ -750,6 +750,41 @@ const STRINGS = {
     relMinAgo: ({ n }) => `${n} मिनट पहले`,
     relHoursAgo: ({ n }) => `${n} घंटे पहले`,
     relDaysAgo: ({ n }) => `${n} दिन पहले`,
+
+    // ── Page v2 (item 6, flagged OFF) — five-jobs view ───────────────────────────
+    // Draft Hindi translations, plain and conversational, matching this file's existing HI
+    // register (see reliabilityCoverage/band90d*/driver* above) -- flagged for native-speaker
+    // review before page_v2 ever ships live (see the PR body's "New strings for native Hindi
+    // review" list).
+    pv2AriaLabel: "आज सोने की कीमत — पांच आसान सवालों में",
+    pv2Job1Heading: "1. अभी कीमत क्या है?",
+    pv2SourceEstimate: "एक अनुमान, जो IBJA और Tanishq दोनों के आंकड़ों से मिलाकर बनाया गया है।",
+    pv2SourceConsensus: "कई स्रोतों से मिलाकर बनाया गया अनुमान — इस बार Tanishq और IBJA, दोनों तक नहीं पहुंच पाए।",
+    pv2SourceConfirmed: "Tanishq पर लाइव पुष्टि की गई कीमत।",
+    pv2PriceUnavailable: "अभी दिखाने के लिए कोई कीमत उपलब्ध नहीं है।",
+    pv2Job2Heading: "2. हमें कितना भरोसा है?",
+    pv2ConfidenceNote: ({ frac }) => `हम सिर्फ़ एक आंकड़ा नहीं, एक दायरा दिखाते हैं, क्योंकि सोने की कीमत रोज़ बदलती है। अब तक असली कीमत इस दायरे के भीतर ${frac} रही है।`,
+    pv2ConfidenceUnknown: "हमारे पास इतना हाल का रिकॉर्ड नहीं है कि बता सकें हमारा दायरा कितनी बार सही रहता है — कुछ समय बाद फिर देखें।",
+    pv2Job3Heading: "3. कीमत कितनी बदल सकती है?",
+    pv2RangeOneDay: ({ low, high }) => `अगले कारोबारी दिन तक: यह ₹${low} से ₹${high} के बीच रहने की संभावना है।`,
+    pv2RangeSevenDay: ({ low, high }) => `अगले 7 दिनों में: यह ₹${low} से ₹${high} के बीच रहने की संभावना है।`,
+    pv2RangeOddsClause: ({ frac }) => ` ऐसा दायरा पहले ${frac} सही साबित हुआ है।`,
+    pv2RangeUnavailable: "आज दिखाने के लिए कोई छोटी अवधि का दायरा उपलब्ध नहीं है।",
+    pv2Job4Heading: "4. क्या यह अच्छी कीमत है?",
+    pv2Weekly30dLabel: "पिछले महीने की तुलना में:",
+    pv2Weekly90dLabel: "पिछले तीन महीनों की तुलना में:",
+    pv2WeeklyLower: ({ count, n }) => `पिछले ${n} हफ्तों में से ${count} हफ्तों से कम।`,
+    pv2WeeklyHigher: ({ count, n }) => `पिछले ${n} हफ्तों में से ${count} हफ्तों से ज़्यादा।`,
+    pv2WeeklyAboutSame: ({ n }) => `पिछले ${n} हफ्तों के ज़्यादातर हफ्तों जैसी ही — लगभग बराबर।`,
+    pv2WeeklyTooLittleData: "यह बताने के लिए अभी हमारे पास पर्याप्त हफ्तों का कीमत इतिहास नहीं है।",
+    pv2Job5Heading: "5. मुझे कितना देना होगा?",
+    pv2MarkupHeading: "Tanishq बाज़ार के मुक़ाबले कैसा है",
+    pv2MarkupLine: ({ pct, suffix }) => `Tanishq आज बाज़ार दर से करीब ${pct}% ज़्यादा वसूल रहा है${suffix}`,
+    pv2MarkupSuffixHigher: " — सामान्य से ज़्यादा।",
+    pv2MarkupSuffixLower: " — सामान्य से कम।",
+    pv2MarkupSuffixUsual: " — करीब सामान्य।",
+    pv2WaitOrBuyHeading: "क्या इंतज़ार करूं या अभी खरीदूं?",
+    pv2EventWatchHeading: "आने वाली घटनाएं जो कीमत बदल सकती हैं",
   },
 };
 
