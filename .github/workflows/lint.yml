@@ -76,6 +76,8 @@ jobs:
         # technical-detail page. See the script's own module docstring for the
         # exact scope per file and its stated blind spots.
         run: python scripts/check_plain_language.py
+      - name: Retailer-language guard (ADR 059 -- no judgmental wording near a retailer name)
+        run: python scripts/check_retailer_language.py
       - name: Check for hand-typed computed claims (accuracy/coverage/error)
         # Fails if user-facing text contains a hand-typed accuracy/coverage/error
         # claim as a literal digit ("N times out of M", "right N%", "coverage N%",
@@ -170,6 +172,8 @@ jobs:
         run: node tests/test_sw_offline_headless.js
       - name: Run the feature-flag leak-detection headless test
         run: node tests/test_feature_flags_headless.js
+      - name: Run the no-sideways-scroll test against the real page
+        run: node tests/test_no_horizontal_scroll_headless.js
 
   # Forward lint+pwa-js's real result as commit statuses (bug #4, docs/RUNBOOK.md).
   # Branch protection's required_status_checks matches by context NAME across both
