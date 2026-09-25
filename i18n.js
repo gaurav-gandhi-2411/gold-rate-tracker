@@ -61,7 +61,7 @@ const STRINGS = {
     // jargon a general buyer wouldn't parse. IBJA itself gets its one plain-words
     // explanation in footerBody below; this short meta description just says what
     // the number IS without needing to re-explain the acronym here too.
-    pageDescription: "22K gold rate — closely matched to real shop prices, confirmed against live Tanishq retail when reachable. See if today's price is high or low compared to recent weeks.",
+    pageDescription: "22K gold rate — closely matched to real shop prices, compared with Tanishq's listed rate when reachable. See if today's price is high or low compared to recent weeks.",
     appTitle: "Gold Tracker",
     refreshLabel: "Refresh data",
     pwaHelpBtnLabel: "About auto-refresh on iPhone",
@@ -80,8 +80,8 @@ const STRINGS = {
     // banned pattern (docs/PLAIN_LANGUAGE_AUDIT.md). The hours/worst-case/as-of
     // figures it sat next to are unaffected and stay in place.
     firstVisitText: (params) => params
-      ? `The price of 22K gold in shops, checked about every ${params.hours}h (worst case recently ~${params.p90Hours ?? params.hours}h, as of ${params.asOf}) and confirmed against Tanishq's live rate when possible. We always say plainly when a price is an estimate.`
-      : "The price of 22K gold in shops, checked on a regular schedule and confirmed against Tanishq's live rate when possible. We always say plainly when a price is an estimate.",
+      ? `The price of 22K gold in shops, checked about every ${params.hours}h (worst case recently ~${params.p90Hours ?? params.hours}h, as of ${params.asOf}) and compared with Tanishq's listed rate when possible. We always say plainly when a price is an estimate.`
+      : "The price of 22K gold in shops, checked on a regular schedule and compared with Tanishq's listed rate when possible. We always say plainly when a price is an estimate.",
     shareLabel: "Share",
     shareTextWithPrice: ({ price }) => `Today's 22K gold price is ₹${price}/gram — check Gold Tracker`,
     shareTextGeneric: "Check today's gold price on Gold Tracker",
@@ -130,7 +130,8 @@ const STRINGS = {
     calcOtherKaratsRange: ({ k24, k18 }) => `24 KT: ${k24} · 18 KT: ${k18}`,
     calcRateUsedIbja: ({ rate }) => `Rate used: 22K ₹${rate}/g — IBJA-based estimate`,
     calcRateUsedFusion: ({ rate }) => `Rate used: 22K ₹${rate}/g — market-consensus estimate`,
-    calcRateUsedTanishq: ({ rate }) => `Rate used: 22K ₹${rate}/g — Tanishq store rate`,
+    // ADR 059 P2: dated -- on a stale Tanishq path this figure can be days old.
+    calcRateUsedTanishq: ({ rate, date }) => `Rate used: 22K ₹${rate}/g — Tanishq's listed rate on ${date}`,
     calcEstimatedNote: "Today's price is an estimate, so this total is too.",
     calcStaleNote: ({ rel }) => `Uses the last confirmed price, from ${rel}.`,
     calcEstimateStoresVary: "Estimate — stores vary.",
@@ -167,7 +168,7 @@ const STRINGS = {
     // once, or avoided" rule) -- short mentions elsewhere (e.g. calcRateUsedIbja's
     // "IBJA-based estimate") rely on this one. Also dropped the literal
     // "n=${params.n}" clause below (same fix as firstVisitText above).
-    footerBody: (params) => `We use <a href="https://ibjarates.com/" target="_blank" rel="noopener">IBJA</a> (the India Bullion and Jewellers Association, which publishes an official gold price every working day) and adjust it to match real shop prices, checking against <a href="https://www.tanishq.co.in/gold-rate.html?lang=en_IN" target="_blank" rel="noopener">Tanishq</a>'s live rate when we can. ${
+    footerBody: (params) => `We use <a href="https://ibjarates.com/" target="_blank" rel="noopener">IBJA</a> (the India Bullion and Jewellers Association, which publishes an official gold price every working day) and adjust it to match real shop prices, comparing with <a href="https://www.tanishq.co.in/gold-rate.html?lang=en_IN" target="_blank" rel="noopener">Tanishq</a>'s listed rate when we can. ${
       params
         ? `Prices are checked about every ${params.hours}h (worst case recently ~${params.p90Hours ?? params.hours}h, as of ${params.asOf})`
         : "Prices are checked on a regular schedule"
@@ -252,10 +253,10 @@ const STRINGS = {
     // U1 audit (2026-09-23): "volatile"/"volatility" are on the banned-term list
     // (docs/PLAIN_LANGUAGE_AUDIT.md) -- reworded to "swinging"/"bouncing around",
     // same meaning, no jargon.
-    volNoteElevated: ({ z }) => `Gold has been swinging more than usual lately — about ±₹${z} over 5 days.`,
-    volNoteCalm: ({ z }) => `Gold has been steadier than usual lately — about ±₹${z} over 5 days.`,
-    volNoteNormal: ({ z }) => `Gold has been moving about ±₹${z} over 5 days lately.`,
-    volNoteFallback: ({ z }) => `Gold's price typically moves about ±₹${z} over 5 days.`,
+    volNoteElevated: ({ z }) => `Gold has been swinging more than usual lately. Over the past month, its price typically went up or down by about ₹${z} in 5 days.`,
+    volNoteCalm: ({ z }) => `Gold has been steadier than usual lately. Over the past month, its price typically went up or down by about ₹${z} in 5 days.`,
+    volNoteNormal: ({ z }) => `Over the past month, gold's price typically went up or down by about ₹${z} in 5 days — about as much as usual.`,
+    volNoteFallback: ({ z }) => `Over the past month, gold's price typically went up or down by about ₹${z} in 5 days.`,
     weeklyMovementNote: ({ amount, pairs }) => `Looking back, gold has typically moved about ₹${amount} from one week to the next (based on ${pairs} weekly comparisons).`,
     weeklyMovementSuffAppend: ({ n }) => ` (Only ${n} distinct days in this 90-day window so far — treat as indicative.)`,
 
@@ -312,7 +313,7 @@ const STRINGS = {
     // R3: appended only when Tanishq confirmation itself has been silent for
     // TIER_DEGRADED_THRESHOLD_H, not just this cycle -- distinct from the
     // routine (silent) ibja_calibrated case above it.
-    bannerTanishqLongSilent: ({ rel }) => ` Tanishq hasn't confirmed this price in a while — the last successful check was ${rel}.`,
+    bannerTanishqLongSilent: ({ rel }) => ` We haven't been able to read Tanishq's listed rate recently — the last successful check was ${rel}.`,
     bannerFusion: ({ sources }) => `This is an estimated price based on other jewellers' rates (${sources}) — we couldn't reach Tanishq or IBJA just now.`,
     bannerStaleConfirmed: ({ rel }) => `We couldn't get a live price update — this is the last confirmed price, from ${rel}.`,
     unknownTime: "an unknown time",
@@ -342,7 +343,8 @@ const STRINGS = {
 
     // ── Hero ──────────────────────────────────────────────────────────────────────
     heroEstimatedRange: ({ low, high }) => `estimated range ₹${low}–₹${high}`,
-    heroLastConfirmed: ({ price, date }) => `Tanishq last confirmed: ₹${price} (${date})`,
+    // ADR 059 P3: Tanishq does not "confirm" our price; this is their listed rate that day.
+    heroLastConfirmed: ({ price, date }) => `Tanishq's listed rate on ${date}: ₹${price}`,
     sparklineRange: ({ min, max }) => `Low ₹${min} · High ₹${max}`,
     sparklineAria: ({ dir, delta }) => `7-day price trend: ${dir} ₹${delta}`,
     trendDirUp: "up",
@@ -412,7 +414,7 @@ const STRINGS = {
   hi: {
     // ── Static shell (index.html) ──────────────────────────────────────────────
     pageTitle: "आज सोने का भाव · क्या यह सही कीमत है?",
-    pageDescription: "22K सोने का भाव — IBJA पर आधारित अनुमान, जब संभव हो तो Tanishq की लाइव कीमत से जांचा गया। देखें कि आज की कीमत हाल के हफ्तों के मुक़ाबले ज़्यादा है या कम।",
+    pageDescription: "22K सोने का भाव — IBJA पर आधारित अनुमान, जब संभव हो तो Tanishq की सूचीबद्ध दर से मिलाकर देखा गया। देखें कि आज की कीमत हाल के हफ्तों के मुक़ाबले ज़्यादा है या कम।",
     appTitle: "Gold Tracker",
     refreshLabel: "डेटा रीफ़्रेश करें",
     pwaHelpBtnLabel: "iPhone पर ऑटो-रीफ़्रेश के बारे में",
@@ -423,8 +425,8 @@ const STRINGS = {
     // U1 audit (2026-09-23): dropped the literal "n=${params.n}" clause, same
     // fix as the EN string above.
     firstVisitText: (params) => params
-      ? `22K सोने की खुदरा कीमत, लगभग हर ${params.hours} घंटे में जांची जाती है (हाल में सबसे धीमी बार ~${params.p90Hours ?? params.hours} घंटे तक; ${params.asOf} तक) और जब संभव हो तो Tanishq की लाइव दर से पुष्टि की जाती है। कीमत अनुमानित हो तो हम साफ़ बता देते हैं।`
-      : "22K सोने की खुदरा कीमत, नियमित समय पर जांची जाती है और जब संभव हो तो Tanishq की लाइव दर से पुष्टि की जाती है। कीमत अनुमानित हो तो हम साफ़ बता देते हैं।",
+      ? `22K सोने की खुदरा कीमत, लगभग हर ${params.hours} घंटे में जांची जाती है (हाल में सबसे धीमी बार ~${params.p90Hours ?? params.hours} घंटे तक; ${params.asOf} तक) और जब संभव हो तो Tanishq की सूचीबद्ध दर से मिलाकर देखी जाती है। कीमत अनुमानित हो तो हम साफ़ बता देते हैं।`
+      : "22K सोने की खुदरा कीमत, नियमित समय पर जांची जाती है और जब संभव हो तो Tanishq की सूचीबद्ध दर से मिलाकर देखी जाती है। कीमत अनुमानित हो तो हम साफ़ बता देते हैं।",
     shareLabel: "शेयर करें",
     shareTextWithPrice: ({ price }) => `आज 22K सोने की कीमत ₹${price}/ग्राम है — Gold Tracker पर देखें`,
     shareTextGeneric: "Gold Tracker पर आज की सोने की कीमत देखें",
@@ -494,7 +496,7 @@ const STRINGS = {
     // "calibrate") and the missing inline IBJA gloss the EN string now has are
     // NOT touched here -- flagged in docs/PLAIN_LANGUAGE_AUDIT.md as "HI needs
     // native review" rather than inventing a translation.
-    footerBody: (params) => `हम <a href="https://ibjarates.com/" target="_blank" rel="noopener">IBJA</a> के आधिकारिक सोने के बेंचमार्क का इस्तेमाल करते हैं और इसे असली दुकान की कीमतों से मिलाकर कैलिब्रेट करते हैं, और जब मुमकिन हो तो <a href="https://www.tanishq.co.in/gold-rate.html?lang=en_IN" target="_blank" rel="noopener">Tanishq</a> की लाइव कीमत से भी जांचते हैं। ${
+    footerBody: (params) => `हम <a href="https://ibjarates.com/" target="_blank" rel="noopener">IBJA</a> के आधिकारिक सोने के बेंचमार्क का इस्तेमाल करते हैं और इसे असली दुकान की कीमतों से मिलाकर कैलिब्रेट करते हैं, और जब मुमकिन हो तो <a href="https://www.tanishq.co.in/gold-rate.html?lang=en_IN" target="_blank" rel="noopener">Tanishq</a> की सूचीबद्ध दर से भी मिलाकर देखते हैं। ${
       params
         ? `लगभग हर ${params.hours} घंटे में कीमत जांची जाती है (हाल में सबसे धीमी बार ~${params.p90Hours ?? params.hours} घंटे तक; ${params.asOf} तक)`
         : "कीमत नियमित समय पर जांची जाती है"
@@ -571,10 +573,10 @@ const STRINGS = {
     supportLine2At: "इस महीने की सामान्य कीमत के बराबर।",
     divergenceNote: "(यहां दोनों आंकड़े पूरी तरह नहीं मिलते — एक दिन गिनता है, दूसरा असल रुपये का फ़र्क़ नापता है। ऊपर के हेडलाइन के लिए हम दिन-गिनती वाला आंकड़ा इस्तेमाल करते हैं।)",
     goodPriceTomorrow: ({ low, high }) => `अगले कारोबारी दिन तक कीमत <strong>₹${low}</strong> से <strong>₹${high}</strong> के बीच रहने की संभावना है।`,
-    volNoteElevated: ({ z }) => `हाल में सोने में सामान्य से ज़्यादा उतार-चढ़ाव रहा है — 5 दिनों में करीब ±₹${z} तक।`,
-    volNoteCalm: ({ z }) => `हाल में सोना सामान्य से ज़्यादा स्थिर रहा है — 5 दिनों में करीब ±₹${z} तक।`,
-    volNoteNormal: ({ z }) => `हाल में सोने में 5 दिनों में करीब ±₹${z} तक की हलचल रही है।`,
-    volNoteFallback: ({ z }) => `सोने की कीमत में आमतौर पर 5 दिनों में करीब ±₹${z} तक बदलाव होता है।`,
+    volNoteElevated: ({ z }) => `हाल में सोने में सामान्य से ज़्यादा उतार-चढ़ाव रहा है। पिछले एक महीने में इसकी कीमत 5 दिनों में आमतौर पर करीब ₹${z} ऊपर या नीचे गई।`,
+    volNoteCalm: ({ z }) => `हाल में सोना सामान्य से ज़्यादा स्थिर रहा है। पिछले एक महीने में इसकी कीमत 5 दिनों में आमतौर पर करीब ₹${z} ऊपर या नीचे गई।`,
+    volNoteNormal: ({ z }) => `पिछले एक महीने में सोने की कीमत 5 दिनों में आमतौर पर करीब ₹${z} ऊपर या नीचे गई — यह सामान्य के आसपास है।`,
+    volNoteFallback: ({ z }) => `पिछले एक महीने में सोने की कीमत 5 दिनों में आमतौर पर करीब ₹${z} ऊपर या नीचे गई।`,
     weeklyMovementNote: ({ amount, pairs }) => `पीछे देखने पर, सोने की कीमत आमतौर पर एक हफ्ते में करीब ₹${amount} तक बदलती रही है (${pairs} हफ्तों की तुलना पर आधारित)।`,
     weeklyMovementSuffAppend: ({ n }) => ` (इस 90-दिन के दायरे में अभी तक सिर्फ़ ${n} अलग दिन हैं — इसे संकेत के तौर पर लें।)`,
 
@@ -618,7 +620,7 @@ const STRINGS = {
     // no HI entry yet on purpose, pending native-speaker review (see the
     // pending-review list near the calc* keys above). t() falls back to the
     // reworded English until it's added here.
-    bannerTanishqLongSilent: ({ rel }) => ` काफी समय से Tanishq से इस कीमत की पुष्टि नहीं हुई है — आख़िरी सफल जांच ${rel} हुई थी।`,
+    bannerTanishqLongSilent: ({ rel }) => ` हाल में हम Tanishq की सूचीबद्ध दर नहीं पढ़ पाए — आख़िरी सफल जांच ${rel} हुई थी।`,
     bannerFusion: ({ sources }) => `यह अन्य जौहरियों की दरों (${sources}) पर आधारित एक अनुमानित कीमत है — हम अभी Tanishq या IBJA तक नहीं पहुंच पाए।`,
     bannerStaleConfirmed: ({ rel }) => `हमें ताज़ी कीमत नहीं मिल पाई — यह आख़िरी पुष्टि की गई कीमत है, ${rel}।`,
     unknownTime: "अज्ञात समय",
@@ -648,7 +650,7 @@ const STRINGS = {
 
     // ── Hero ──────────────────────────────────────────────────────────────────────
     heroEstimatedRange: ({ low, high }) => `अनुमानित रेंज ₹${low}–₹${high}`,
-    heroLastConfirmed: ({ price, date }) => `Tanishq की आख़िरी पुष्टि: ₹${price} (${date})`,
+    heroLastConfirmed: ({ price, date }) => `${date} को Tanishq की सूचीबद्ध दर: ₹${price}`,
     sparklineRange: ({ min, max }) => `न्यूनतम ₹${min} · अधिकतम ₹${max}`,
     sparklineAria: ({ dir, delta }) => `7-दिन का कीमत ट्रेंड: ${dir} ₹${delta}`,
     trendDirUp: "बढ़त",
