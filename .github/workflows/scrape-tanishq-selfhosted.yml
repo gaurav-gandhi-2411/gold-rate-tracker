@@ -237,8 +237,14 @@ jobs:
             fi
           fi
           OUTCOME="${{ steps.scrape.outcome }}"
+          # A deliberate takedown (switch says enabled=false, ADR 059) skips the scrape on
+          # purpose: that is not a failure, so it must not feed T12 a false "runner failing"
+          # alert every day. Keyed on the switch's explicit output, not on outcome=skipped,
+          # so a switch/config ERROR (no output) still counts as a failure.
           if [ "$OUTCOME" = "success" ]; then
             NEW_COUNT=0
+          elif [ "${{ steps.switch.outputs.enabled }}" = "false" ]; then
+            NEW_COUNT=$PRIOR_COUNT
           else
             NEW_COUNT=$((PRIOR_COUNT + 1))
           fi

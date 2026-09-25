@@ -31,6 +31,10 @@ const BACKTEST_URL  = "data/backtest.json";
 const DRIFT_URL     = "data/drift_metrics.json";
 const METRICS_URL   = "data/metrics_history.json";
 const COVERAGE_URL  = "data/coverage_metrics.json";
+// GG 4c (2026-09-25): the trend chart's series -- 22K = IBJA x frozen calibration, one row
+// per IBJA publishing day (scripts/build_ibja_derived_prices.py --public-out). An estimate,
+// never a retailer observation; see chartSeries().
+const DERIVED_PRICES_URL = "data/ibja_derived_prices.json";
 const CADENCE_URL   = "data/cadence_metrics.json"; // R2: real observed data-commit interval, see ml/cadence_metrics.py
 // AE1 (audit 2026-09-10): walk-forward MEASURED coverage of the IBJA-calibrated
 // tier's actual displayed band, see ml.calibration.save_calibration_band_coverage.
@@ -127,6 +131,98 @@ function isDerivedReading(r) {
   return !!r && typeof r.source === "string" && r.source.startsWith(DERIVED_SOURCE_PREFIX);
 }
 
+// E2 (GG decision, 2026-09-25) + ADR 059 display gates. The hero names Tanishq only for a
+// real Tanishq reading, and only one that passes both gates below; every other figure it
+// shows is labelled as our estimate. Both constants mirror ml/inference.py (never a second,
+// drifting definition): TANISHQ_IBJA_MAX_DEVIATION = _TANISHQ_IBJA_MAX_DEVIATION (a
+// Tanishq figure >12% from the IBJA-based estimate is a suspected mis-read, not shown as
+// Tanishq's rate) and RETAILER_READING_MAX_AGE_H = _FUSION_MAX_AGE_H (a retailer-named
+// figure older than 36h is not shown). "Fresh" is STALE_THRESHOLD_H (ADR 025), unchanged.
+const TANISHQ_IBJA_MAX_DEVIATION = 0.12;
+const RETAILER_READING_MAX_AGE_H = 36;
+
+// "10:40 AM today" / "10:40 AM yesterday" / "10:40 AM, 21 Sept", IST, in the active language.
+function fmtCheckedWhen(iso, nowMs = Date.now()) {
+  const d = new Date(iso);
+  const time = new Intl.DateTimeFormat(currentLang === "hi" ? "hi-IN" : "en-US", {
+    timeZone: "Asia/Kolkata", hour: "numeric", minute: "2-digit", hour12: true, numberingSystem: "latn",
+  }).format(d);
+  const day = istDayKey(d);
+  if (day === istDayKey(new Date(nowMs))) return t("whenToday", { time });
+  if (day === istDayKey(new Date(nowMs - 86_400_000))) return t("whenYesterday", { time });
+  return t("whenOnDate", { time, date: fmtDateShort(iso) });
+}
+
+// Decides what the hero shows. Pure: readings = prices.json rows, forecast = forecast.json.
+// kind:
+//   "tanishq_live"      a real Tanishq reading, <= STALE_THRESHOLD_H old, plausible -> shown
+//                       as Tanishq's listed rate with its check time.
+//   "estimate"          our IBJA-based (or other-jewellers) estimate, labelled as ours;
+//                       tanishqLine optionally cites the last plausible Tanishq reading
+//                       WITH its figure and its date and time (GG decision 4b, 2026-09-25:
+//                       never a date alone). Past RETAILER_READING_MAX_AGE_H the wording
+//                       changes to say it has not updated since; the figure stays.
+//   "tanishq_last_only" no estimate exists this cycle (inference tier 4): the last Tanishq
+//                       reading, labelled "last checked" with its date and time.
+//   "empty"             nothing to show (the renderer keeps its existing "—" path).
+// A Tanishq takedown (IBJA-derived prices.json rows, ADR 059) never yields a Tanishq kind
+// or line: the rows are not Tanishq observations.
+// showChange (GG 4b/4c): "today's change" is Tanishq-vs-previous-Tanishq only, and only
+// when the hero figure IS that latest Tanishq row. Never next to an estimate: mixing a
+// Tanishq reading with the IBJA-based series produced false "+Rs.24" moves (E1 preview).
+function heroDisplayState(readings, forecast, nowMs = Date.now()) {
+  const latest = readings.length ? readings[readings.length - 1] : null;
+  const derived = isDerivedReading(latest);
+  const estimate = forecast
+    && (forecast.price_source === "ibja_calibrated" || forecast.price_source === "fusion_consensus")
+    && typeof forecast.current_22k === "number"
+    ? { value: forecast.current_22k, source: forecast.price_source }
+    : null;
+  const raw = latest && !derived && typeof latest["22k"] === "number" ? latest : null;
+  // Plausibility reference: the IBJA-based estimate when this cycle has one (ADR 059's
+  // gate exactly). On inference tier 1/4 forecast.current_22k is the Tanishq value that
+  // inference itself already gated against IBJA, so a newer reading is checked against it.
+  const ref = estimate ? estimate.value
+    : (forecast && typeof forecast.current_22k === "number" ? forecast.current_22k : null);
+  const passes = (v) => ref == null || Math.abs(v - ref) / ref <= TANISHQ_IBJA_MAX_DEVIATION;
+  // The Tanishq reading the hero may cite: the latest row if it passes the gate; failing
+  // that, on a Tanishq tier, the value inference gated at forecast.scraped_at; else none.
+  let tanishq = null;
+  if (raw && passes(raw["22k"])) {
+    tanishq = raw;
+  } else if (raw && !estimate && forecast && forecast.price_source === "tanishq_scrape"
+             && forecast.scraped_at && typeof forecast.current_22k === "number") {
+    tanishq = { "22k": forecast.current_22k, timestamp: forecast.scraped_at };
+  }
+  const ageH = tanishq ? (nowMs - new Date(tanishq.timestamp).getTime()) / 3_600_000 : Infinity;
+
+  if (tanishq && ageH <= STALE_THRESHOLD_H) {
+    return { kind: "tanishq_live", price: tanishq["22k"], approx: false,
+      labelKey: "heroLabelTanishqLive", labelParams: { when: fmtCheckedWhen(tanishq.timestamp, nowMs) },
+      tanishqLine: null, showChange: tanishq === raw };
+  }
+  if (estimate) {
+    let tanishqLine = null;
+    if (tanishq) {
+      const params = { when: fmtCheckedWhen(tanishq.timestamp, nowMs), price: fmtINR(tanishq["22k"]) };
+      tanishqLine = { key: ageH <= RETAILER_READING_MAX_AGE_H ? "heroTanishqLastRate" : "heroTanishqOldRate", params };
+    }
+    return { kind: "estimate", price: estimate.value, approx: true,
+      labelKey: estimate.source === "fusion_consensus" ? "heroLabelEstimateFusion" : "heroLabelEstimateIbja",
+      labelParams: {}, tanishqLine, showChange: false };
+  }
+  if (tanishq) {
+    return { kind: "tanishq_last_only", price: tanishq["22k"], approx: false,
+      labelKey: "heroLabelTanishqLastChecked", labelParams: { when: fmtCheckedWhen(tanishq.timestamp, nowMs) },
+      tanishqLine: null, showChange: tanishq === raw };
+  }
+  if (derived && typeof latest["22k"] === "number") {
+    return { kind: "estimate", price: latest["22k"], approx: true,
+      labelKey: "heroLabelEstimateIbja", labelParams: {}, tanishqLine: null, showChange: false };
+  }
+  return { kind: "empty", price: null, approx: false, labelKey: null, labelParams: {}, tanishqLine: null, showChange: false };
+}
+
 // Human-readable label for tier-3 fusion_sources (e.g. ["grt","malabar"] -> "GRT, Malabar").
 // Never crashes on a missing/null sources list — falls back to a generic label.
 function fusionSourcesLabel(sources) {
@@ -180,6 +276,8 @@ let allReadings      = [];
 let currentRange     = "30";   // tracks active chart tab for refreshData()
 let pwaHelpDismissed = false; // D5: set true when user taps ✕; survives re-renders
 let chartPinnedIndex  = null;  // index of tapped chart point; null = no callout
+let derivedSeries     = null;  // data/ibja_derived_prices.json rows (GG 4c); null until loaded
+let chartIsEstimate   = false; // what the chart currently plots (drives the ≈ in its callout)
 let trackRecordChart  = null;  // Chart.js instance for forecast-vs-actual section
 let displayedPrice    = null;  // Φ16-4: last rendered hero price; drives number tick
 let _heroTickRaf      = null;  // Φ16-4: RAF handle; cancelled when a new tick starts
@@ -937,6 +1035,10 @@ function renderStaleBanner(forecast, bandCoverage) {
   // Always reset first so a refresh-error or prior stale message is cleared on success.
   banner.hidden = true;
   if (!forecast) return;
+  // E2: a Tanishq reading newer than this forecast.json cycle can make the hero show
+  // Tanishq's live rate while price_source still says "estimate"; an estimate banner under
+  // it would contradict the hero, so the banner follows the hero's decision.
+  if (heroDisplayState(allReadings, forecast).kind === "tanishq_live") return;
 
   // Per ADR 025, IBJA-calibrated is now the PRIMARY display path (Tanishq not
   // enriching this cycle is the expected steady state, not an error) — trust
@@ -1114,10 +1216,11 @@ function renderHero(readings, forecast) {
 
   if (skelEl) skelEl.hidden = true;
   if (eyeEl)  eyeEl.hidden  = false;
+  // Label line: revealed only once heroDisplayState() has decided what the figure is.
   const locEl = document.getElementById("hero-location");
-  if (locEl) locEl.hidden = false;
 
   if (readings.length === 0) {
+    if (locEl) locEl.hidden = true;
     priceEl.innerHTML = "—"; // XSS-safe: static literal string, no external data
     priceEl.hidden    = false;
     if (rangeEl) rangeEl.hidden = true;
@@ -1133,44 +1236,31 @@ function renderHero(readings, forecast) {
   }
 
   const latest    = readings[readings.length - 1];
-  const newPrice  = latest["22k"];
   const prevPrice = displayedPrice; // capture before update — animateNumberTick uses this as fromVal
-  const derivedHistory = isDerivedReading(latest);
-  // ADR 059: the location line names Tanishq; on IBJA-derived history it must not.
-  // Swapping data-i18n (not just textContent) keeps a later language switch right.
+  // E2 + ADR 059: one decision (heroDisplayState) drives the figure, its label and the
+  // Tanishq line together, so an estimate can never carry a Tanishq label. The label is
+  // written directly (not via data-i18n) because it carries a time; applyLanguage()
+  // re-runs renderHero after the static strings, so a language switch stays right.
+  const hs = heroDisplayState(readings, forecast);
   if (locEl) {
-    locEl.dataset.i18n = derivedHistory ? "heroLocationDerived" : "heroLocation";
-    locEl.textContent = t(locEl.dataset.i18n);
+    locEl.textContent = hs.labelKey ? t(hs.labelKey, hs.labelParams) : "";
+    locEl.hidden = !hs.labelKey;
   }
+  const hasBand = hs.kind === "estimate" && forecast && forecast.est_low != null && forecast.est_high != null;
 
-  // ibja_calibrated (tier 2) and fusion_consensus (tier 3) render identically here
-  // — the distinguishing honest labeling lives in the banner/pill (renderStaleBanner/
-  // renderFreshness), not duplicated a third time in the hero itself.
-  // Deliberately NOT gated on est_low/est_high (G1d): a suppressed band (no
-  // residual_abs_quantiles and no on-the-fly fit possible — see ml/inference.py)
-  // must still show the ≈-prefixed calibrated estimate, just without the range
-  // line below it. Gating this whole tier on est_low/est_high being present used
-  // to be safe only because the old fallback ALWAYS produced a (sometimes
-  // unreliable) band; now that suppression is a real, reachable state, that
-  // gate would silently render the stale last-confirmed Tanishq reading as an
-  // unqualified "current" price — the opposite of what the stale-banner above
-  // it says. current_22k is always the right number for this tier regardless
-  // of whether a band could be sized.
-  const isEstimateTier = forecast && (
-    forecast.price_source === "ibja_calibrated" || forecast.price_source === "fusion_consensus"
-  ) && forecast.current_22k != null;
-  const hasBand = forecast && forecast.est_low != null && forecast.est_high != null;
-
-  if (isEstimateTier) {
-    // Estimate tier (IBJA-calibrated or fusion-consensus) — bounded range still
-    // shown (ADR 021 §4), but as a small secondary line below the hero, not
-    // jammed into the headline itself.
-    // The point estimate AND the range crammed into one giant number reads as
-    // garbled/stale at a glance; the ≈ prefix plus the stale-banner already signal
-    // "estimate" without a third hedge competing for attention in the headline.
-    // XSS-safe: rupee()/fmtINR wrap numbers only; all values are integers from forecast.json.
-    displayedPrice = forecast.current_22k;
-    priceEl.innerHTML = `≈ ${rupee(forecast.current_22k)}`;
+  if (hs.kind === "empty") {
+    priceEl.innerHTML = "—"; // XSS-safe: static literal string, no external data
+    priceEl.hidden = false;
+    if (rangeEl) rangeEl.hidden = true;
+    if (lastConfEl) lastConfEl.hidden = true;
+  } else if (hs.approx) {
+    // Our estimate (IBJA-calibrated, fusion consensus, or IBJA-derived history after a
+    // takedown). Deliberately NOT gated on est_low/est_high (G1d): a suppressed band still
+    // shows the ≈ estimate, just without the range line. The bounded range is a small
+    // secondary line (ADR 021 §4), never jammed into the headline.
+    // XSS-safe: rupee()/fmtINR wrap numbers only.
+    displayedPrice = hs.price;
+    priceEl.innerHTML = `≈ ${rupee(hs.price)}`;
     priceEl.hidden = false;
     if (rangeEl) {
       if (hasBand) {
@@ -1180,33 +1270,30 @@ function renderHero(readings, forecast) {
         rangeEl.hidden = true;
       }
     }
-    // Honest secondary line: the actual last-observed Tanishq reading, dated —
-    // never implied current. prices.json holds only genuine scraped Tanishq
-    // readings (never IBJA/estimate data), so `latest` here is always a real
-    // observation; this line naturally shows the freshest one once a scrape
-    // succeeds again (no separate "reachable again" wiring needed — same data,
-    // same render path, whatever `latest` currently is).
+    // The last Tanishq reading, dated and labelled as Tanishq's own listed rate -- never
+    // the estimate's figure. Absent after a takedown or when the reading failed the
+    // plausibility gate; figure-less when older than RETAILER_READING_MAX_AGE_H.
     if (lastConfEl) {
-      if (derivedHistory) {
-        lastConfEl.hidden = true; // ADR 059: no Tanishq reading exists to cite
-      } else {
-        lastConfEl.textContent = t("heroLastConfirmed", { price: fmtINR(newPrice), date: fmtDateShort(latest.timestamp) });
+      if (hs.tanishqLine) {
+        lastConfEl.textContent = t(hs.tanishqLine.key, hs.tanishqLine.params);
         lastConfEl.hidden = false;
+      } else {
+        lastConfEl.hidden = true;
       }
     }
   } else {
-    displayedPrice = newPrice;
+    // A real Tanishq reading: live (fresh) or, with no estimate available, the last one.
+    // The label line says which and when; no second line repeating the same figure.
+    displayedPrice = hs.price;
     if (rangeEl) rangeEl.hidden = true;
-    // Hero already IS the last-confirmed Tanishq reading here — a secondary
-    // line repeating it would be pure noise, not honesty.
     if (lastConfEl) lastConfEl.hidden = true;
     // Φ16-4: tick when price changes on a live refresh; first render and no-change case are instant.
     // priceEl.hidden guard: element hidden means skeleton is still showing — don't animate there.
-    if (prevPrice !== null && prevPrice !== newPrice && !priceEl.hidden) {
-      animateNumberTick(priceEl, prevPrice, newPrice);
+    if (prevPrice !== null && prevPrice !== hs.price && !priceEl.hidden) {
+      animateNumberTick(priceEl, prevPrice, hs.price);
     } else {
       // XSS-safe: rupee() wraps a number with fmtINR (toLocaleString); numbers cannot contain HTML
-      priceEl.innerHTML = rupee(newPrice);
+      priceEl.innerHTML = rupee(hs.price);
     }
     priceEl.hidden = false;
   }
@@ -1217,9 +1304,12 @@ function renderHero(readings, forecast) {
   if (r24) r24.innerHTML = rupee(latest["24k"]);
   if (r18) r18.innerHTML = rupee(latest["18k"]);
 
-  // Today's change
-  const change = computeTodayChange(readings);
-  if (change !== null) {
+  // Today's change: Tanishq rows only (never an IBJA-derived row), and only when the hero
+  // shows Tanishq's own latest reading (hs.showChange, see heroDisplayState).
+  const change = hs.showChange ? computeTodayChange(readings.filter(r => !isDerivedReading(r))) : null;
+  if (change === null) {
+    if (changeEl) changeEl.hidden = true;
+  } else {
     const todayDelta = change.delta;
     const dir    = todayDelta > 0 ? "up" : todayDelta < 0 ? "down" : "flat";
     const arrow  = dir === "up" ? "↑" : dir === "down" ? "↓" : "→";
@@ -1912,7 +2002,8 @@ const CALLOUT_PLUGIN = {
     ctx.stroke();
     ctx.setLineDash([]);
     ctx.font = "bold 13px DM Sans, system-ui, sans-serif";
-    const pw = ctx.measureText(`₹${fmtINR(value)}`).width;
+    const valueText = `${chartIsEstimate ? "≈ " : ""}₹${fmtINR(value)}`;
+    const pw = ctx.measureText(valueText).width;
     ctx.font = "11px DM Sans, system-ui, sans-serif";
     const dw = ctx.measureText(label).width;
     const bW = Math.max(pw, dw) + 24;
@@ -1974,6 +2065,22 @@ function hexToRgba(hex, alpha) {
   return `rgba(${(n >> 16) & 255}, ${(n >> 8) & 255}, ${n & 255}, ${alpha})`;
 }
 
+// GG 4c (2026-09-25): which series the trend chart plots. Pure.
+//   1. data/ibja_derived_prices.json (>= 2 valid rows): our IBJA-based estimate -> estimate.
+//   2. prices.json is itself IBJA-derived (retailer takedown, ADR 059) -> estimate.
+//   3. fallback (derived file missing/unreadable): the real Tanishq rows only, labelled as
+//      Tanishq's listed rate. The two series are NEVER mixed in one line: a Tanishq
+//      reading next to the derived estimate reads as a false price move (E1 preview, "+Rs.24").
+function chartSeries(readings, derived) {
+  const valid = Array.isArray(derived)
+    ? derived.filter(r => r && typeof r.timestamp === "string" && typeof r["22k"] === "number" && Number.isFinite(r["22k"]))
+    : [];
+  if (valid.length >= 2) return { rows: valid, estimate: true };
+  const latest = readings.length ? readings[readings.length - 1] : null;
+  if (isDerivedReading(latest)) return { rows: readings.filter(isDerivedReading), estimate: true };
+  return { rows: readings.filter(r => !isDerivedReading(r)), estimate: false };
+}
+
 // Chart.js comes from a third-party CDN (index.html). If that request fails -- blocked, offline,
 // a CDN outage -- `Chart` is undefined and `new Chart(...)` throws. Before this guard that throw
 // escaped renderChart(), which init() calls BEFORE renderHero(), so one CDN failure left the
@@ -2002,10 +2109,18 @@ function renderChart(readings, range) {
   }
   if (chartWrap) chartWrap.hidden = false;
 
-  let filtered = readings;
+  const series = chartSeries(readings, derivedSeries);
+  chartIsEstimate = series.estimate;
+  const noteEl = document.getElementById("chart-source-note");
+  if (noteEl) {
+    noteEl.textContent = t(series.estimate ? "chartNoteEstimate" : "chartNoteTanishq");
+    noteEl.hidden = false;
+  }
+
+  let filtered = series.rows;
   if (range !== "all") {
     const cutoff = Date.now() - parseInt(range, 10) * 86400 * 1000;
-    filtered     = readings.filter(r => new Date(r.timestamp).getTime() >= cutoff);
+    filtered     = series.rows.filter(r => new Date(r.timestamp).getTime() >= cutoff);
   }
 
   // One point per IST calendar day (latest reading wins) — same rule history uses.
@@ -2029,7 +2144,7 @@ function renderChart(readings, range) {
     data: {
       labels,
       datasets: [{
-        label: t("chart22kLabel"),
+        label: t(series.estimate ? "chartEstimateLabel" : "chart22kLabel"),
         data: data22,
         borderColor: goldLine,
         // Gradient fill under the line (gold fading to transparent) instead
@@ -2082,7 +2197,7 @@ function renderChart(readings, range) {
           bodyColor: "#F5EDE0",
           padding: 12,
           callbacks: {
-            label: (c) => t("chart22kTooltip", { value: fmtINR(c.parsed.y) }),
+            label: (c) => t(series.estimate ? "chartEstimateTooltip" : "chart22kTooltip", { value: fmtINR(c.parsed.y) }),
           },
         },
         phi8cCallout: {},
@@ -2734,8 +2849,11 @@ async function refreshData() {
   try {
     const freshPromise = load();
     const fcPromise    = loadJSON(FORECAST_URL).catch(() => null);
+    const derivedPromise = loadJSON(DERIVED_PRICES_URL).catch(() => null);
     const fresh = await freshPromise;
     const fc    = await fcPromise;
+    const derived = await derivedPromise;
+    if (derived) derivedSeries = derived; // keep the last good series on a failed re-fetch
     allReadings  = fresh;
     lastForecast = fc;
     renderFreshness(allReadings, fc);
@@ -3325,6 +3443,7 @@ function applyLanguage(lang) {
   const driftPromise = loadJSON(DRIFT_URL);
   const coveragePromise = loadJSON(COVERAGE_URL);
   const cadencePromise = loadJSON(CADENCE_URL);
+  const derivedPromise = loadJSON(DERIVED_PRICES_URL).catch(() => null); // GG 4c chart series
   const bandCoveragePromise = loadJSON(CALIBRATION_BAND_COVERAGE_URL); // AE1: measured band coverage
   // page_v2 (item 6, flagged OFF) -- none of these five files exist on master yet; each
   // pre-catches to null exactly like fcPromise above, so a 404 never surfaces as a Sentry
@@ -3396,6 +3515,7 @@ function applyLanguage(lang) {
   renderFreshness(allReadings);
   renderComparisons(allReadings);
   renderHistory(allReadings);
+  derivedSeries = await derivedPromise; // fetched in parallel with prices; null on failure
   renderChart(allReadings, "30");
 
   // Await forecast, then render hero (hides skeleton, shows verdict).

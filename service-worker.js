@@ -143,7 +143,16 @@
 // app.js stops naming Tanishq (hero location line, last-confirmed line, long-silent banner
 // clause, calculator label) when prices.json holds IBJA-derived rows; new i18n key
 // heroLocationDerived (EN+HI). Inert on today's data. app.js + i18n.js changed.
-const VERSION = "v65-20260925-retailer-takedown";
+// 2026-09-25 (v67; merge train, stacked on #2053): E2 hero shows Tanishq's live listed rate
+// only when fresh + plausible, otherwise our labelled estimate (heroDisplayState), which
+// supersedes #2053's simpler heroLocation/heroLocationDerived split with full
+// takedown-awareness built in. app.js + i18n.js + index.html changed.
+// 2026-09-25 (v68; merge train, stacked on #2069): GG 4b/4c -- a Tanishq reading past 36 h
+// keeps its figure with date and time (heroTanishqOldRate replaces heroTanishqTooOld);
+// "today's change" only next to Tanishq's own latest reading; the trend chart plots
+// data/ibja_derived_prices.json labelled as our estimate (new #chart-source-note). app.js +
+// i18n.js + index.html changed.
+const VERSION = "v68-20260925-hero-stale-chart";
 const SHELL_CACHE = `gold-shell-${VERSION}`;
 
 const SHELL_FILES = [
