@@ -178,6 +178,8 @@ jobs:
         run: node tests/test_retailer_takedown_headless.js
       - name: Run the hero display-state test (E2 + ADR 059 gates)
         run: node tests/test_hero_display_headless.js
+      - name: Run the no-sideways-scroll test against the real page
+        run: node tests/test_no_horizontal_scroll_headless.js
 
   # Forward lint+pwa-js's real result as commit statuses (bug #4, docs/RUNBOOK.md).
   # Branch protection's required_status_checks matches by context NAME across both

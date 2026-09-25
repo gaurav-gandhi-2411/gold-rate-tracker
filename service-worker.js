@@ -116,15 +116,17 @@
 // figure that overstated it ~1.9x. app.js + i18n.js (EN+HI) changed.
 // 2026-09-25 (v61; v59/v60 are taken by the open #2053/#2069 branches): ADR 059 wording
 // P2-P5 (E5) -- neutral, dated Tanishq wording. app.js + i18n.js + index.html + manifest changed.
-// 2026-09-25 (v65): retailer takedown switch (ADR 059) -- app.js stops naming Tanishq
-// (hero location line, last-confirmed line, long-silent banner clause, calculator label)
-// when prices.json holds IBJA-derived rows; new i18n key heroLocationDerived (EN+HI).
-// Inert on today's data. app.js + i18n.js changed.
-// 2026-09-25 (v67; merged with #2053's updated branch, itself merged with master through
-// #2071): E2 hero shows Tanishq's live listed rate only when fresh + plausible, otherwise
-// our labelled estimate (heroDisplayState), which supersedes #2053's simpler
-// heroLocation/heroLocationDerived split with full takedown-awareness built in. app.js +
-// i18n.js + index.html changed.
+// 2026-09-25 (v63): style.css -- main { overflow-x: clip } stops the phone page
+// scrolling 60px sideways (hero glow overflow). Shell file changed.
+// 2026-09-25 (v65; v64 taken by the open #2049 branch): retailer takedown switch (ADR
+// 059) -- app.js stops naming Tanishq (hero location line, last-confirmed line,
+// long-silent banner clause, calculator label) when prices.json holds IBJA-derived rows;
+// new i18n key heroLocationDerived (EN+HI). Inert on today's data. app.js + i18n.js
+// changed.
+// 2026-09-25 (v67; stacked on #2053, itself merged with current master): E2 hero shows
+// Tanishq's live listed rate only when fresh + plausible, otherwise our labelled estimate
+// (heroDisplayState), which supersedes #2053's simpler heroLocation/heroLocationDerived
+// split with full takedown-awareness built in. app.js + i18n.js + index.html changed.
 // 2026-09-25 (v68): GG 4b/4c -- a Tanishq reading past 36 h keeps its figure with date and
 // time (heroTanishqOldRate replaces heroTanishqTooOld); "today's change" only next to
 // Tanishq's own latest reading; the trend chart plots data/ibja_derived_prices.json labelled
