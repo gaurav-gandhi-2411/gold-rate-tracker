@@ -702,9 +702,9 @@ function computeSupportDistance90d(readings, percentile30d) {
 }
 
 // Typical week-over-week price movement, purely historical — distinct from
-// headline.vol_context's 5-day RECENT realized-vol estimate (computed server-side
-// in ml/volatility.py from just the last 20 days, feeding the "moving about ±₹X
-// over 5 days lately" note below). This one looks back further (90 days) and asks
+// headline.vol_context's typical 5-day move (computed server-side in
+// ml/volatility.py from the last 30 days, feeding the "over the past month ...
+// in 5 days" note below). This one looks back further (90 days) and asks
 // a different question: not "how choppy has it been lately" but "if I wait a
 // week, how much has the price actually tended to move, historically". Answers
 // "is waiting worth it?" without predicting anything — every comparison is
@@ -1232,12 +1232,12 @@ function fmtINRRange(lo, hi) {
 // renderHero() uses (never re-derived differently here). Distinct wording for
 // ibja_calibrated vs fusion_consensus since they carry different confidence: a single-
 // source calibrated estimate vs a live multi-retailer consensus.
-function calcRateSourceText(isEstimateTier, forecast, rate22) {
+function calcRateSourceText(isEstimateTier, forecast, rate22, readingTimestamp) {
   if (isEstimateTier) {
     const key = forecast.price_source === "fusion_consensus" ? "calcRateUsedFusion" : "calcRateUsedIbja";
     return t(key, { rate: fmtINR(rate22) });
   }
-  return t("calcRateUsedTanishq", { rate: fmtINR(rate22) });
+  return t("calcRateUsedTanishq", { rate: fmtINR(rate22), date: fmtDateShort(readingTimestamp) });
 }
 
 function renderCalculator(readings, forecast) {
@@ -1317,7 +1317,7 @@ function renderCalculator(readings, forecast) {
     ? `<p class="calc-estimated-note">${t("calcStaleNote", { rel: fmtRelative(latest.timestamp) })}</p>`
     : "";
 
-  const rateSourceText = calcRateSourceText(isEstimateTier, forecast, rate22);
+  const rateSourceText = calcRateSourceText(isEstimateTier, forecast, rate22, latest.timestamp);
 
   // Making-charge row label: presets show "Making charge (N%)" against the preset's own
   // typical %; custom shows the same when quoted as a %, or the plain label when quoted
@@ -1616,14 +1616,20 @@ function renderModelSignal(fc, readings, bt, coverage, drift) {
     `;
   }
 
-  // Volatility context — dynamic realized-vol estimate (Phi10B) with static-PI fallback.
-  // Shows "has been moving about ±Rs.X lately" — magnitude only, no direction (ADR 005).
+  // Volatility context — the MEASURED typical 5-day move (vol_context.typical_move_5d:
+  // median absolute 5-calendar-day change over the past 30 days, ml/volatility.py).
+  // Magnitude only, no direction (ADR 005). Until 2026-09-25 this showed
+  // vol_context.half_width -- one standard deviation, floored -- which the sentence
+  // "about ±Rs.X over 5 days" presented as a typical move, overstating it ~1.9x;
+  // the degraded branch showed an 80% interval half-width, larger still. No
+  // measured figure (degraded estimate, too few pairs, or a cached forecast.json
+  // predating the field) -> no note at all, never a stand-in number.
   let volatilityHtml = "";
   if (hasPI) {
     const volCtx = hl.vol_context;
-    let Z, volNote;
-    if (volCtx && typeof volCtx.half_width === "number" && !volCtx.is_degraded) {
-      Z = Math.round(volCtx.half_width / 50) * 50;
+    let volNote = "";
+    if (volCtx && typeof volCtx.typical_move_5d === "number" && !volCtx.is_degraded) {
+      const Z = Math.round(volCtx.typical_move_5d / 10) * 10;
       const regime = volCtx.regime;
       if (regime === "elevated") {
         volNote = t("volNoteElevated", { z: fmtINR(Z) });
@@ -1632,36 +1638,24 @@ function renderModelSignal(fc, readings, bt, coverage, drift) {
       } else if (regime === "normal") {
         volNote = t("volNoteNormal", { z: fmtINR(Z) });
       } else {
-        // regime absent/unrecognized (e.g. a service-worker-cached forecast.json
-        // predating this field) -- do NOT default to "normal", that's a claim
-        // about current behaviour we don't actually have. Use the same
-        // magnitude-only, no-comparison copy as the degraded-vol-estimate
-        // branch below instead.
+        // regime absent/unrecognized -- do NOT default to "normal", that's a claim
+        // about current behaviour we don't actually have. Magnitude-only copy.
         volNote = t("volNoteFallback", { z: fmtINR(Z) });
       }
-    } else {
-      // Fallback: vol estimate degraded or absent → the dedicated 5-day static-PI
-      // reference (vol_context.static_pi_half). NOT hl.conformal_pi_half — since
-      // ADR 022 that field is the next-trading-day (h=1) band and would understate a
-      // "5 days" claim. Old cached forecast.json missing vol_context entirely still
-      // falls back to conformal_pi_half (pre-ADR-022 shape) rather than break.
-      const piHalf = hl.vol_context?.static_pi_half ?? hl.conformal_pi_half ?? (hl.upper - hl.lower) / 2;
-      Z = Math.round(piHalf / 50) * 50;
-      volNote = t("volNoteFallback", { z: fmtINR(Z) });
     }
 
     // Typical weekly movement — deliberately in the SAME card as the 5-day note
     // above rather than its own separate bordered block, so the two read as one
     // "how much does this move" cluster with two different timeframes, not two
     // unrelated stats competing for attention. See computeWeeklyMovement()'s own
-    // comment for exactly how it differs from the 5-day note (90-day historical
-    // median vs 20-day recent realized-vol).
+    // comment for exactly how it differs from the 5-day note (90-day median of
+    // 7-day changes vs 30-day median of 5-day changes).
     const weeklyMovement = computeWeeklyMovement(readings ?? []);
 
     // XSS-safe: fmtINR() wraps numbers only; volNote/weeklyMovement.note are t()-built strings.
     volatilityHtml = `
       <div class="outlook-volatility">
-        <p class="outlook-volatility-note">${volNote}</p>
+        ${volNote ? `<p class="outlook-volatility-note">${volNote}</p>` : ""}
         ${weeklyMovement ? `<p class="outlook-weekly-movement-note">${weeklyMovement.note}</p>` : ""}
       </div>
     `;

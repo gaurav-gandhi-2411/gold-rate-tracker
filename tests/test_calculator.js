@@ -230,7 +230,8 @@ test("render: a confirmed price older than STALE_THRESHOLD_H says how old it is"
 });
 
 test("render: rate-used line names the Tanishq store rate outside the estimate tier", () => {
-  assert.match(renderWith(), /Rate used: 22K ₹13,710\/g — Tanishq store rate/);
+  // ADR 059 P2: dated with the reading's own IST date (reading is 1h before NOW).
+  assert.match(renderWith(), /Rate used: 22K ₹13,710\/g — Tanishq's listed rate on 23 Sept/);
 });
 
 test("render: rate-used line names the IBJA-based estimate in the ibja_calibrated tier", () => {

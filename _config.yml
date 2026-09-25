@@ -37,5 +37,5 @@ exclude:
   - data/chronos_probe.json
   - data/direction_baseline.json
   - data/direction_eval_history.jsonl
-  - data/duty_events.json
+  - data/duty_cbic.json
   - data/ibja_rates.parquet

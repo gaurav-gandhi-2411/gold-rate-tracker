@@ -1869,3 +1869,55 @@ which carries raw COMEX and USD/INR (I added it in #2004).
 **Process notes.**
 - Ten parallel agents hit the API session limit, and the in-flight work was resumed from each agent's worktree. Run at most about 5 agents at once.
 - Six open PRs each set the service-worker VERSION to v58: #2037, #2038, #2039, #2049, #2053 and #2055. Whichever merges later takes the next number.
+
+
+---
+
+## Checkpoint 2026-09-25 (second brief): E1–E5, the Kalman leak audit, the SW version loop
+
+**Premises verified.** #2039 and claude-config #36 were merged by GG, and the `DATA_ENC_KEY` secret exists.
+
+**Hook gap (a GG action).** The merge-guard hook that actually runs is `~/.claude/scripts/merge_gate.py`. That checkout sits on the local branch `fix/gate4-real-checks-and-pr-scoped-waiver`, which carries unpushed commits and uncommitted edits, and it does **not** yet contain #36's analysis-only exemption. A dry run with #36's gate passes #2015, #2050, #2051, #2052 and #2061 once their PR bodies state the reviewable/generated split, but the active hook still denies them on size.
+
+**Merged this round.**
+- #2071: E5 wording P2–P5, all four passing the accuracy, neutrality and estimate-labelling tests. Verified live: service-worker `v61-20260925-retailer-wording`, new strings served.
+- #2077: the weekly-range shadow log no longer carries raw IBJA rates. The file had never been written, so none were published.
+
+**Item 3, Kalman leak audit** (#2070, stacked on #2050):
+- **Real leaks found:**
+  - GRT captures made after the target, on 24 of 56 days (median 403 min late);
+  - Malabar captures after the target, on 20 of 48 days;
+  - IBJA PM used before 17:00 IST on 6 days.
+- **After correcting them**, Kalman still beats IBJA × markup overall: ₹35.1 vs ₹62.4 (n 90, effective n 67.0, p 1.3e-4).
+- **It loses on every stratum to Tanishq's last reading before the target:**
+  - all days: ₹35.1 vs ₹13.9;
+  - weekdays: ₹40.0 vs ₹18.5;
+  - weekends: ₹22.9 vs ₹2.7.
+
+  That baseline was never tested before. The earlier weekend claim ("₹16.3 vs yesterday's ₹46.0") used the wrong baseline.
+- The band now over-covers on weekdays as well (92.2%).
+- **Kalman v2 was not started**, because the model is not sound as claimed.
+
+**E3 Tanishq update times** (#2078):
+- 72% [62, 79] of rate changes fall between 10:00 and 11:59 IST.
+- No change was dated to a Sunday across 17 Sundays.
+- Captures are a median 5.1 h apart, so each change is known only to within a median of 260 min. The pre-registered rule therefore calls for a measurement window (GG's decision).
+- **Staleness:** today 439 min mean. A timed schedule triggered from the laptop would give about 20 min if every visit ran; at the measured 38% runner-unavailability, about 165 min.
+- **GitHub scheduler:** 4.7 of 8 runs a day, a median of at least 102 min late.
+- **Kalyan:** identical across cities in 259 of 259 cycles.
+
+**E4:**
+- #2072: superseded notes for ADR 032, the R2 weekend finding and ADR 046. It waits on #2051.
+- #2073: the `drivers.py` fix. It uses hourly bars at each fix, which cut the unexplained spread from 1.35% to 0.63% and raise direction agreement from 68% to 90%, n 207. The lagged daily bar the brief asked for measured worse (1.55%).
+  - An independent verifier passed it with notes; all three notes are now fixed, each with a test that fails on the old code.
+  - One of them was a bug where the headline gave the rupee the wrong sign.
+
+**E1 encryption** (#2075, draft):
+- AES-256-GCM, with the file path and schema version bound in as associated data.
+- Round trip, tamper detection and key-leak tests all pass.
+- ADR 044 and ADR 052 `--check` reproduce exactly from the decrypted snapshots.
+- Git history still holds the old plaintext; it is not rewritten.
+
+**E2 hero** (#2069, stacked on #2053): no estimate is ever labelled as Tanishq's price. A property test covers 960 state combinations.
+
+**Item 1:** #2068 builds the service-worker VERSION from a hash of the shell files at deploy time. It stays inert until GG sets `PAGES_BUILD_MODE=actions` and switches the Pages source.
