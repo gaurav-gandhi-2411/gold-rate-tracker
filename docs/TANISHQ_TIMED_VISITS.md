@@ -346,3 +346,66 @@ not counted as missed.
   day instead of 16. Bangalore is the same city as the tier-3 live fallback.
 - The `KALYAN_CITIES` registry is unchanged, so re-adding a city is a one-line change.
 - The weekly live canary (`scraper-canary.yml`) is kept unchanged, per E3.
+
+## 9. GG decision 4a: six morning visits
+
+### Pre-registration (written before any 4a schedule was evaluated)
+
+Disclosure: nothing about the 4a schedules below had been computed when this was written. The
+Monday-to-Saturday update-time distribution, its bootstrap and the replay of today's captures are
+the ones in sections 2-4 (already published). No staleness figure for any 10:00-12:30 schedule
+had been run.
+
+**GG's decision (fixed, not tested).** Six visits a day, all between 10:00 and 12:30 IST. No
+measurement window. The 01:40 visit stays only if the data show updates at that time.
+
+**Data.** The same captures as sections 2-4: `data/prices.json` at commit `bb38f8d5` plus the
+captures removed in earlier git revisions (694 captures, 115 usable change intervals, 112
+Monday-to-Saturday). Timestamps are UTC capture instants (`scraper/scrape.js`), shown in IST.
+
+**Question 1: keep 01:40?** "The data show updates at that time" means: the Monday-to-Saturday
+Turnbull NPMLE has mass in 00:40-02:40 IST (01:40 plus or minus 60 min) whose bootstrap 95%
+interval excludes zero (B = 500, seed 42, resampling change intervals). Reported alongside: the
+mass and CI for 20:00-09:59, and the number of change intervals that contain 01:40 and lie
+entirely inside 20:00-09:59 (only those force an overnight update). If the rule is not met, 01:40
+is dropped.
+
+**Question 2: which six times?** Two candidates, both entirely inside 10:00-12:30 IST:
+- **U30**: 10:00, 10:30, 11:00, 11:30, 12:00, 12:30. Every change inside the window is bracketed
+  to 30 min or less, which is what the forward refinement (below) needs.
+- **O**: the six times on the 5-minute grid inside 10:00-12:30 that minimise mean staleness,
+  subject to every gap between consecutive visits being 30 min or less (coordinate descent, 20
+  seeded starts, the same Monte Carlo and lateness pool as section 4).
+
+U30 is the default. O replaces it only if O lowers mean staleness by at least 5 min against U30
+and the one-sided 95% paired-bootstrap lower bound of that improvement is above zero. Reason for
+the default: section 4 showed the data cannot place mass inside the innermost intervals (the
+regret rule failed), so an optimum that sits on those intervals is not trusted without margin.
+
+**Reported for the chosen schedule, with bootstrap 95% CIs (B = 500, seed 42, same Monte Carlo
+settings as section 4, q = 0):** mean staleness over all changes; mean staleness for changes
+dated 10:00-11:59 ("morning") and 14:00-19:59 ("afternoon"); share of all changes captured within
+30 and within 60 min. The same metrics, from the same bootstrap draws, for today's captures
+(replayed) and for the section 4 interim schedule, so comparisons are paired. Point estimates
+also at the measured miss rate q = 0.38. Also the daily hours during which the site's 8 h
+freshness gate shows "not fresh" when every visit happens.
+
+**Forward refinement rule (run weekly, never applied automatically).**
+`scripts/tanishq_schedule_refine.py weekly` refits the same Turnbull NPMLE on every capture up to
+now (history plus the new, denser captures) and prints a recommended schedule. It proposes a
+change to GG only when all of these hold:
+1. At least 20 changes seen since `effective_from_utc` (the switch to the 4a schedule) with a
+   bracket of 30 min or less. (About 3 morning changes a week are expected, so this is about 6
+   weeks.)
+2. **Retime inside the window.** The in-window optimum (as O above) beats the current schedule by
+   at least 5 min of mean staleness, and the one-sided 95% paired-bootstrap lower bound of the
+   improvement (B = 200, seed 42) is above zero. Then it prints "PROPOSE" with the new times.
+3. **Window check.** Separately, it counts forward changes first seen at the first visit of an IST
+   day (so they happened outside the visit window, between the previous day's last visit and
+   this visit). If the Wilson 95% lower bound of that share exceeds 38% (the upper CI of the
+   historical outside-window share, 27% + 1%), it prints "ESCALATE: the window misses more
+   changes than expected", for GG to reconsider afternoon coverage.
+4. At most one proposal per 4 weeks. After GG adopts a new schedule, `effective_from_utc` is reset
+   and the count in (1) starts again.
+
+A schedule change is GG's. The script never edits `scraper/visit_schedule.json` or the crons.
