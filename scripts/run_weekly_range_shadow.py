@@ -66,7 +66,9 @@ def _issue(proxy: pd.Series, ibja: pd.Series, horizon: str, t: pd.Timestamp) -> 
         "window_end": (
             t + (pd.offsets.BDay(1) if horizon == "1d" else pd.Timedelta(days=WEEK_CALENDAR_DAYS))
         ).strftime("%Y-%m-%d"),
-        "ibja_pm_916": price,
+        # No raw IBJA rate in this public log (ADR 059: IBJA's API terms forbid republishing
+        # its rates; ADR 060 encrypts raw IBJA history). Scoring re-reads the IBJA series each
+        # run, so the log only needs the range it issued.
         "scale": s,
         "lo": round(price * math.exp(s * lo), 1),
         "hi": round(price * math.exp(s * hi), 1),
@@ -81,10 +83,9 @@ def _score(entry: dict, ibja: pd.Series) -> dict | None:
         return None  # window not complete yet (or crosses a hole: never scored)
     w = match[0]
     prices = [float(ibja.loc[d]) for d in w.days]
+    # Only whether the path stayed inside -- not the path's raw IBJA low/high (see _issue).
     return {
         "scored_days": [d.strftime("%Y-%m-%d") for d in w.days],
-        "path_low": min(prices),
-        "path_high": max(prices),
         "inside": entry["lo"] <= min(prices) and max(prices) <= entry["hi"],
     }
 
