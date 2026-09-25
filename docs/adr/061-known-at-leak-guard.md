@@ -98,9 +98,51 @@ The unit tests are in `tests/test_leak_guard.py`. They cover:
 - a GC=F bar dated D is blocked before 13:30 ET on D;
 - naive timestamps are rejected, in every mode.
 
-## Findings
+## Findings (new leaks found by wiring the guard in)
 
-Reported by PR 3 (`reports/leak_guard/findings.json`, `scripts/analysis_leak_guard_findings.py`).
+Every number here was VERIFIED by `python scripts/analysis_leak_guard_findings.py` at `18fbd132`.
+The output is `reports/leak_guard/findings.json`. No registered or published number was changed.
+
+**F1: direction walk-forward, backfilled test rows (report mode).**
+- Which folds: 82 of 154 h1 test folds (77 of 148 at h2) have test-row features published after
+  the fold's prediction moment (the end of IST day `as_of_date`). They are exactly the backfill
+  test folds. The dataset has 103 `backfill_yfinance` and 72 `live_pit` rows. No live fold is
+  flagged, and 0 training-label violations were found.
+- Which features: US daily closes dated D. `usd_inr`, `dxy`, `vix` and `us_10y_yield` are flagged
+  on 81 folds each, `crude_wti` and `tips` on 80, and `gold_usd` on 21 (winter only, because the
+  13:30 ET settlement falls at 18:30 UTC = IST midnight). There are 505 input violations in total.
+  The latest is 5.5 h after IST midnight (INR=X at 23:59 UTC).
+- This mechanically re-finds ADR 058 A5.
+- It is **not an outcome leak**. Every flagged value is known at least 11.5 h before the h1
+  label (the next IBJA PM, 11:30 UTC on D+1 or later).
+- It **is** a leak against the harness's own claim ("as of IST day D"), and train/serve skew: a
+  live row at the same moment holds an intraday quote.
+- Refusing these folds would change the published direction numbers (on this data: h1 logistic 49.35% vs
+  always-up 50.65%; h2 54.73% vs 58.11%). So they stay in report mode. The fix is ADR 058
+  proposal #7 (backfill with values known by 11:30 UTC on D). That needs its own decision.
+
+**F2: the R2 same-day nowcast and the G3 shadow built on it (report mode).**
+- What leaks: `scripts/analysis_nowcast.py` pairs each day's last Tanishq reading with that
+  day's IBJA AM/PM (`merge_asof` on the UTC date). This is the same pattern as Kalman leak 3.
+- How often: on 6 of 62 scored same-day days, IBJA's PM was published after the reading it
+  estimates (2026-07-21, 08-18, 08-28, 09-01, 09-02, 09-09). On 09-09 the AM was also published
+  after it. With this repo's own `fetched_at`, the same 6 days leak on both fixes.
+- Effect (exploratory, not a new registration), one-sided HAC-DM, lag 1, M3 better than M0:
+  - all 62 days: M0 MAE Rs 45.48/g, M3 Rs 34.79/g, effective n 50.02, p 0.00196;
+  - excluding the 6 days: M0 Rs 41.73/g, M3 Rs 32.93/g, effective n 42.44, p 0.00527.
+- R2's direction and significance survive. Its edge shrinks from Rs 10.7 to Rs 8.8/g.
+- The G3 shadow (`run_nowcast_shadow.py`) now records `inputs_known_after_target` on every
+  logged day, so the forward window shows how many days are affected. Its protocol is unchanged.
+
+**F3: provenance of 38 live snapshot rows.**
+- What: 38 `live_pit` rows captured between 2026-06-07 and 2026-08-03 (37 for the AM field) hold
+  an IBJA PM that was published up to 16.98 h after their `capture_utc`. #621 repaired these rows
+  by replacing the IBJA values and keeping the original capture time. `ibja_rates.parquet`
+  `fetched_at` confirms that the repo only had those values later.
+- Effect on scoring: none. The direction harness's moment (the end of IST day D) is after the
+  PM's publication. But `capture_utc` is not the known_at of those rows' IBJA fields.
+- Fix: `ml/known_at.snapshot_field_known_at` therefore uses max(capture, publication) for IBJA
+  fields on live rows.
 
 ## Consequences
 
