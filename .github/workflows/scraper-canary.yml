@@ -55,6 +55,10 @@ jobs:
         working-directory: scraper
         run: node --test test_hybrid_scrape.mjs
 
+      - name: Run polite-access tests (backoff, Retry-After, 429 no-escalation; ADR 059)
+        working-directory: scraper
+        run: node --test test_polite_access.mjs
+
       - name: Run update-and-notify jump-guard tests
         working-directory: scraper
         run: node --test test_update_and_notify.js
@@ -98,6 +102,12 @@ jobs:
           code=$?
           set -e
           cat /tmp/canary_stderr.log
+          # Exit 3 (ADR 059): the site answered 429 / 503+Retry-After and the scraper
+          # backed off as asked -- not a DOM change either, so no alert.
+          if [ "$code" -eq 3 ]; then
+            echo "::warning::Scraper canary backed off: the site asked us to slow down (429/Retry-After) -- not a DOM change. Not alerting."
+            exit 0
+          fi
           if [ "$code" -eq 2 ]; then
             echo "::warning::Scraper canary blocked by Cloudflare (expected steady-state per ADR 025) — not a DOM change. Not alerting."
             echo "cf_block=true" >> "$GITHUB_OUTPUT"

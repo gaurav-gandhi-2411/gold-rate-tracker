@@ -19,14 +19,15 @@ from __future__ import annotations
 from datetime import UTC, datetime, timedelta
 from urllib.parse import quote
 
-import requests
+import requests  # noqa: F401 -- the tests' monkeypatch seam (<adapter>.requests.*)
 
 from ml.sources.base import (
-    SourceNetworkError,
     SourceReading,
     SourceStructureError,
     validate_observed_at,
+    validate_rate_22k,
 )
+from ml.sources.polite_http import polite_request
 
 _QUERY = (
     "query getMetalRate($filter: MetalRateFilterInput) "
@@ -39,7 +40,6 @@ _URL = (
     f"?query={quote(_QUERY)}&variables={quote(_VARIABLES)}"
 )
 _REFERER = "https://www.malabargoldanddiamonds.com/in/pan-india/en/live-gold-rate.html"
-_USER_AGENT = "gold-rate-tracker/1.0 (portfolio project; gaurav.gandhi2411@gmail.com)"
 _TIMEOUT = 20
 
 
@@ -51,15 +51,11 @@ def fetch_malabar() -> SourceReading:
     no 22k item is present (the schema/data changed).
     """
     try:
-        resp = requests.get(
-            _URL,
-            headers={"User-Agent": _USER_AGENT, "Referer": _REFERER},
-            timeout=_TIMEOUT,
+        # Polite access (UA, per-host spacing, capped retry, Retry-After): ADR 059.
+        resp = polite_request(
+            "GET", _URL, source="malabar", headers={"Referer": _REFERER}, timeout=_TIMEOUT
         )
-        resp.raise_for_status()
         payload = resp.json()
-    except requests.RequestException as exc:
-        raise SourceNetworkError(f"malabar: request failed: {exc}") from exc
     except ValueError as exc:
         raise SourceStructureError("malabar: non-JSON response") from exc
 
@@ -82,6 +78,7 @@ def fetch_malabar() -> SourceReading:
         rate = float(latest["rate"])
     except (KeyError, TypeError, ValueError) as exc:
         raise SourceStructureError(f"malabar: unparseable rate {latest.get('rate')!r}") from exc
+    rate = validate_rate_22k(rate, source="malabar")
 
     observed_at = datetime.now(UTC)
     try:
