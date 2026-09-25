@@ -105,11 +105,19 @@ def f2_r2_nowcast() -> dict[str, Any]:
     df = pd.DataFrame(rows)
     df = df[np.isfinite(df["m3"])]
 
-    def mae(frame: pd.DataFrame) -> dict[str, float | int]:
+    def mae(frame: pd.DataFrame) -> dict[str, float | int | None]:
+        """MAE of both arms plus R2's own test: one-sided HAC-DM (lag 1) that M3 < M0."""
+        from ml.direction.evaluate_reframed import diebold_mariano_test
+
+        e0 = (frame["m0"] - frame["y"]).abs()
+        e3 = (frame["m3"] - frame["y"]).abs()
+        dm = diebold_mariano_test(e3.tolist(), e0.tolist(), 2, alternative="less")
         return {
             "n": len(frame),
-            "mae_m0": round(float((frame["m0"] - frame["y"]).abs().mean()), 2),
-            "mae_m3": round(float((frame["m3"] - frame["y"]).abs().mean()), 2),
+            "effective_n": round(float(dm["effective_n"]), 2),
+            "mae_m0": round(float(e0.mean()), 2),
+            "mae_m3": round(float(e3.mean()), 2),
+            "p_one_sided_m3_better": round(float(dm["p_value"]), 5),
         }
 
     return {
