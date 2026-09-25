@@ -39,6 +39,15 @@ const CADENCE_URL   = "data/cadence_metrics.json"; // R2: real observed data-com
 // reflect this file even when it showed the band under-covering. See
 // renderStaleBanner()/deriveMeasuredBandCoverage() below.
 const CALIBRATION_BAND_COVERAGE_URL = "data/calibration_band_coverage.json";
+// page_v2 (item 6, flagged OFF) -- none of these five have a producing pipeline on
+// master as of this PR; every fetch below is caught to null on any failure (missing
+// file, malformed JSON) and every page_v2 reader treats null/malformed the same as
+// "not shipped yet": render nothing for that piece, never guess.
+const MARKUP_TODAY_URL = "data/markup_today.json"; // F1 markup_meter -- feat/markup-meter-model, unmerged
+const WAIT_OR_BUY_TODAY_URL = "data/wait_or_buy_today.json"; // F2 wait_or_buy -- PR #2020
+const EVENT_WATCH_TODAY_URL = "data/event_watch_today.json"; // F4 event_watch, ADR 050
+const NEXT_DAY_RANGE_SHADOW_URL = "data/next_day_range_shadow.json"; // job 3, no producing pipeline yet
+const WEEKLY_RANGE_SHADOW_LOG_URL = "data/weekly_range_shadow_log.json"; // job 3, scripts/run_weekly_range_shadow.py
 
 // Staleness threshold (hours) shared with Python inference.py _STALE_THRESHOLD_H.
 // Per ADR 025 this now gates Tanishq *enrichment* freshness, not primary staleness.
@@ -172,6 +181,14 @@ let lastCadenceMetric = null; // R2: cached so applyLanguage() can re-render the
 // calibration confidence clause without re-fetching. This is the WALK-FORWARD
 // MEASURED coverage of the band actually shown, data/calibration_band_coverage.json.
 let lastBandCoverage  = null;
+// page_v2 (item 6, flagged OFF) -- cached for symmetry with the vars above, even though
+// nothing currently re-renders page_v2 after its one call at the end of init() (see
+// renderFlaggedFeatures()'s own comment for why applyLanguage() does not need to).
+let lastMarkupToday          = null;
+let lastWaitOrBuy            = null;
+let lastEventWatch           = null;
+let lastNextDayRangeShadow   = null;
+let lastWeeklyRangeShadowLog = null;
 
 // Ψ3C.2: stagger card-enter animation across a list of elements.
 // Forces a reflow between remove/add so the animation restarts each time.
@@ -873,6 +890,13 @@ function weekdayLong(d) {
 // or the file missing/malformed, means "no current measurement" -- never a signal to fall
 // back to the design target (rule 98a: fail closed, not open). Returns null in every case
 // where the caller must NOT assert a specific coverage percentage.
+//
+// GG's G4 rule (freshness audit, 2026-09-25): this is the ONE constant every accuracy/coverage
+// claim page_v2 shows reads (directly here, or via RANGE_SHADOW_MAX_AGE_DAYS below, which
+// derives from it rather than repeating the literal) -- the stale-banner's own confidence
+// clause (renderStaleBanner) and page_v2's job 2/3 cards (computeConfidenceNote/
+// computeMoveRangeJob) all call deriveMeasuredBandCoverage, so none of them can independently
+// drift to a different cutoff again.
 const BAND_COVERAGE_MAX_AGE_DAYS = 14;
 
 function deriveMeasuredBandCoverage(bandCoverage, nowMs = Date.now()) {
@@ -887,7 +911,10 @@ function deriveMeasuredBandCoverage(bandCoverage, nowMs = Date.now()) {
   const generatedMs = Date.parse(bandCoverage.generated_at_utc);
   if (Number.isNaN(generatedMs)) return null;
   const ageDays = (nowMs - generatedMs) / 86_400_000;
-  if (ageDays > BAND_COVERAGE_MAX_AGE_DAYS) return null;
+  // rule 98a: fail closed on a FUTURE generated_at_utc too (ageDays < 0, e.g. clock skew or a
+  // malformed producer writing a bad date), not just a stale one -- ageDays > MAX alone let a
+  // future timestamp silently pass as "fresh".
+  if (!(ageDays >= 0 && ageDays <= BAND_COVERAGE_MAX_AGE_DAYS)) return null;
   return { coverage: Math.round(bandCoverage.coverage * 1000) / 10, n: bandCoverage.n };
 }
 
@@ -2289,20 +2316,380 @@ function renderAccuracySummary(fc, drift) {
   `;
 }
 
-// Feature-flag demo hook (flags.js) -- proves the mechanism end to end. With every flag in
-// FEATURE_FLAGS false (the merge-OFF default) this adds NOTHING to the DOM: no hidden
-// elements, no placeholder containers -- see tests/test_feature_flags_headless.js's
-// element-count-equality check. Each flagged feature adds its own real renderer to this
-// loop once it ships; until then this stays an inert scaffold.
-function renderFlaggedFeatures() {
-  for (const name of Object.keys(FEATURE_FLAGS)) {
-    if (!isFeatureOn(name)) continue;
-    // Placeholder marker only -- replaced by the feature's real renderer once it ships.
-    // data-feature is what the headless leak-detection test scans for.
-    const el = document.createElement("div");
-    el.dataset.feature = name;
-    document.body.appendChild(el);
+// PAGE V2 (item 6, flagged OFF -- STOP gate for GG) ------------------------------------
+// A proposed page built around the product's five jobs, each answered ONCE: price now,
+// how sure, how much it could move, is it a good price, what will I pay. Everything below
+// is gated behind isFeatureOn("page_v2"); each optional card (F1-F4) is ADDITIONALLY gated
+// behind its own flag. With every flag off (the merge default) renderFlaggedFeatures() below
+// adds NOTHING to the DOM -- same "flags off -> zero-diff DOM" guarantee the old inert
+// scaffold this replaces had, still proven by tests/test_feature_flags_headless.js.
+//
+// Pure data/build functions (no DOM) are kept separate from the one DOM-mounting function
+// (renderFlaggedFeatures itself) so tests/test_page_v2.js can exercise them directly via
+// tests/helpers/load_app.js -- see that file for why a DOM-touching function can't be
+// meaningfully unit-tested the same way.
+
+// -- JOB 1: PRICE NOW -- reuses the exact tier logic renderHero() already applies (see its
+// own isEstimateTier comment) -- never a second, possibly-diverging read of price_source.
+function computePriceNowJob(readings, forecast) {
+  if (!readings || readings.length === 0) return null;
+  const latest = readings[readings.length - 1];
+  const isEstimateTier = forecast && (
+    forecast.price_source === "ibja_calibrated" || forecast.price_source === "fusion_consensus"
+  ) && forecast.current_22k != null;
+  const price = isEstimateTier ? forecast.current_22k : latest["22k"];
+  const sourceKey = forecast?.price_source === "fusion_consensus" ? "pv2SourceConsensus"
+    : forecast?.price_source === "ibja_calibrated" ? "pv2SourceEstimate"
+    : "pv2SourceConfirmed";
+  return { price, sourceLabel: t(sourceKey) };
+}
+
+// -- JOB 2: HOW SURE -- the band's measured coverage stated once, in plain words. Reuses
+// deriveMeasuredBandCoverage (same fail-closed 14-day staleness rule as the stale-banner's
+// own confidence clause) so this page never disagrees with that one about the same number.
+function computeConfidenceNote(bandCoverage) {
+  const measured = deriveMeasuredBandCoverage(bandCoverage);
+  return measured ? t("pv2ConfidenceNote", { frac: fractionOutOf10Phrase(measured.coverage) }) : null;
+}
+
+// -- JOB 3: HOW MUCH COULD IT MOVE (1-day + 7-day) --------------------------------------
+// weekly_range_shadow_log.json (scripts/run_weekly_range_shadow.py, ml/weekly_range.py) issues
+// BOTH a "1d" and a "week" range per publication day, forward-only from 2026-09-24 -- so on
+// this file alone, entries only start appearing after that date and there is nothing to read
+// for a while yet. next_day_range_shadow.json has no producing pipeline on master as of this
+// PR; its shape is unknown, so it is read defensively (lo/hi numbers only, several plausible
+// key names) and simply ignored if absent or malformed -- same "render nothing" contract as
+// every other not-yet-shipped data file this page reads. RANGE_SHADOW_MAX_AGE_DAYS is
+// BAND_COVERAGE_MAX_AGE_DAYS itself, not a separately-maintained duplicate literal (GG's G4
+// freshness audit, 2026-09-25 -- one constant governs every accuracy/coverage/freshness claim
+// page_v2 shows) -- fails closed (no range shown) rather than asserting a stale one. There is
+// deliberately NO live fallback for the 7-day statement: forecast.json's own headline window
+// is 5 trading days, not 7, and item 3 of the brief explicitly forbids reusing the 5-day
+// volatility note here (no competing bands) -- so until weekly_range_shadow_log.json has a
+// matured "week" entry, that statement is simply omitted rather than mismatch the horizon it
+// claims.
+const RANGE_SHADOW_MAX_AGE_DAYS = BAND_COVERAGE_MAX_AGE_DAYS;
+
+function pickRangeShadowEntry(shadowLog, horizon, nowMs = Date.now()) {
+  const entries = Array.isArray(shadowLog?.entries) ? shadowLog.entries : [];
+  const matching = entries.filter(e =>
+    e && e.horizon === horizon && typeof e.lo === "number" && typeof e.hi === "number" && typeof e.as_of === "string"
+  );
+  if (matching.length === 0) return null;
+  matching.sort((a, b) => (a.as_of < b.as_of ? 1 : -1)); // descending YYYY-MM-DD, lexical sort is safe here
+  const latest = matching[0];
+  const ageDays = (nowMs - Date.parse(latest.as_of)) / 86_400_000;
+  // rule 98a: fail closed on a FUTURE as_of too (ageDays < 0), same reasoning as
+  // deriveMeasuredBandCoverage above -- ageDays <= MAX alone let a future date pass as fresh.
+  if (!(ageDays >= 0 && ageDays <= RANGE_SHADOW_MAX_AGE_DAYS)) return null;
+  return { low: latest.lo, high: latest.hi };
+}
+
+function computeMoveRangeJob(fc, nextDayRangeShadow, weeklyRangeShadowLog, bandCoverage, nowMs = Date.now()) {
+  const measured = deriveMeasuredBandCoverage(bandCoverage);
+  const oddsClause = measured ? t("pv2RangeOddsClause", { frac: fractionOutOf10Phrase(measured.coverage) }) : "";
+
+  let oneDay = (nextDayRangeShadow && typeof nextDayRangeShadow.lo === "number" && typeof nextDayRangeShadow.hi === "number")
+    ? { low: nextDayRangeShadow.lo, high: nextDayRangeShadow.hi }
+    : pickRangeShadowEntry(weeklyRangeShadowLog, "1d", nowMs);
+  if (!oneDay) {
+    // Brief's own explicit final fallback: the current live next-trading-day conformal band,
+    // same source as renderModelSignal()'s tomorrowRangeHtml (hl.lower/upper).
+    const hl = fc?.headline;
+    const lower = hl?.lower ?? fc?.lower;
+    const upper = hl?.upper ?? fc?.upper;
+    if (typeof lower === "number" && typeof upper === "number") oneDay = { low: lower, high: upper };
   }
+  const sevenDay = pickRangeShadowEntry(weeklyRangeShadowLog, "week", nowMs);
+
+  return {
+    oneDayNote: oneDay
+      ? t("pv2RangeOneDay", { low: fmtINR(Math.round(oneDay.low)), high: fmtINR(Math.round(oneDay.high)) }) + oddsClause
+      : null,
+    sevenDayNote: sevenDay
+      ? t("pv2RangeSevenDay", { low: fmtINR(Math.round(sevenDay.low)), high: fmtINR(Math.round(sevenDay.high)) }) + oddsClause
+      : null,
+  };
+}
+
+// -- JOB 4a: WEEKLY PRICE COMPARISON (F3, good_price_v2) --------------------------------
+// One reading per distinct week (the LATEST reading recorded that week), comparing today's
+// price against each of the past `windowWeeks` weeks -- the brief's own worked example
+// ("lower than on 7 of the last 10 weeks"). Purely descriptive: never implies a future move,
+// mirrors computeGoodPriceSignals' data-sufficiency degrade (a plain "not enough weeks yet"
+// note instead of guessing). Today's own week is excluded -- comparing today to itself is
+// vacuous. weekKeyIST groups by Monday-start week in IST; the key itself is never shown,
+// only used to dedupe.
+function weekKeyIST(date) {
+  // Timezone-independent: read the IST calendar date as parts, then do the Monday
+  // arithmetic in UTC. (The earlier version re-parsed a locale string as the viewer's
+  // local time and read it back with toISOString(), so around midnight one IST week
+  // could land under two keys -- "13 weeks" then covered only ~6.5 real weeks.)
+  const parts = new Intl.DateTimeFormat("en-CA", {
+    timeZone: "Asia/Kolkata", year: "numeric", month: "2-digit", day: "2-digit",
+  }).formatToParts(date);
+  const get = (type) => Number(parts.find((x) => x.type === type).value);
+  const utc = new Date(Date.UTC(get("year"), get("month") - 1, get("day")));
+  const dayIdx = (utc.getUTCDay() + 6) % 7; // Monday=0 ... Sunday=6
+  utc.setUTCDate(utc.getUTCDate() - dayIdx);
+  return utc.toISOString().slice(0, 10);
+}
+
+const MIN_WEEKS_COMPARISON = 3; // below this, an "N of M weeks" claim is too thin to be honest
+
+function computeWeeklyPriceComparison(readings, windowWeeks) {
+  if (!readings || readings.length < 2) return null;
+  const latestReading = readings[readings.length - 1];
+  const current = latestReading["22k"];
+  const currentWeek = weekKeyIST(new Date(latestReading.timestamp));
+
+  const byWeek = new Map();
+  for (const r of readings) {
+    const wk = weekKeyIST(new Date(r.timestamp));
+    if (wk === currentWeek) continue;
+    const prior = byWeek.get(wk);
+    if (!prior || new Date(r.timestamp) > new Date(prior.timestamp)) byWeek.set(wk, r);
+  }
+  const weeks = [...byWeek.values()]
+    .sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp))
+    .slice(0, windowWeeks);
+  const n = weeks.length;
+  if (n < MIN_WEEKS_COMPARISON) {
+    return { n, lower: null, higher: null, note: t("pv2WeeklyTooLittleData") };
+  }
+
+  const lower  = weeks.filter(r => current < r["22k"]).length; // today cheaper than that week's reading
+  const higher = weeks.filter(r => current > r["22k"]).length;
+  const note = lower === higher
+    ? t("pv2WeeklyAboutSame", { n })
+    : lower > higher
+      ? t("pv2WeeklyLower", { count: lower, n })
+      : t("pv2WeeklyHigher", { count: higher, n });
+  return { n, lower, higher, note };
+}
+
+// Plain descriptor, not a DOM node -- kept side-effect-free so it's directly unit-testable;
+// pv2MountCard() (below) is the only place that turns one of these into real DOM.
+function pv2BuildGoodPriceCard(readings) {
+  const cmp30 = computeWeeklyPriceComparison(readings, 4);  // ~last month, weekly cadence
+  const cmp90 = computeWeeklyPriceComparison(readings, 13); // ~last three months, weekly cadence
+  if (!cmp30 && !cmp90) return null;
+  const paragraphs = [];
+  if (cmp30) paragraphs.push(`${t("pv2Weekly30dLabel")} ${cmp30.note}`);
+  if (cmp90) paragraphs.push(`${t("pv2Weekly90dLabel")} ${cmp90.note}`);
+  return { className: "pv2-good-price", dataFeature: "good_price_v2", heading: t("pv2Job4Heading"), paragraphs };
+}
+
+// -- F1: STORE MARKUP METER (markup_meter) -----------------------------------------------
+// data/markup_today.json has no producing pipeline on master as of this PR (see
+// feat/markup-meter-model, unmerged) -- schema below is a defensive best guess, accepting a
+// few plausible field-name shapes, and returns null (render nothing) if none of them resolve
+// to an honest "higher/lower/usual" classification. Update this reader once that branch's
+// real schema lands. Tanishq vs the market only (no store-to-store comparison -- terms
+// decision pending GG, see PR body).
+const MARKUP_LOW_TERTILE = 33, MARKUP_HIGH_TERTILE = 67; // placeholder percentile split, see comment above
+
+function readMarkupToday(markupToday) {
+  if (!markupToday || typeof markupToday.markup_pct !== "number") return null;
+  const pct = markupToday.markup_pct;
+  if (markupToday.category === "higher" || markupToday.category === "lower" || markupToday.category === "usual") {
+    return { pct, categoryKey: markupToday.category };
+  }
+  if (typeof markupToday.usual_low_pct === "number" && typeof markupToday.usual_high_pct === "number") {
+    const categoryKey = pct < markupToday.usual_low_pct ? "lower" : pct > markupToday.usual_high_pct ? "higher" : "usual";
+    return { pct, categoryKey };
+  }
+  if (typeof markupToday.percentile === "number") {
+    const categoryKey = markupToday.percentile <= MARKUP_LOW_TERTILE ? "lower"
+      : markupToday.percentile >= MARKUP_HIGH_TERTILE ? "higher" : "usual";
+    return { pct, categoryKey };
+  }
+  return null; // can't honestly classify -- render nothing rather than guess
+}
+
+function pv2BuildMarkupCard(markupToday) {
+  const m = readMarkupToday(markupToday);
+  if (!m) return null;
+  const suffixKey = m.categoryKey === "higher" ? "pv2MarkupSuffixHigher"
+    : m.categoryKey === "lower" ? "pv2MarkupSuffixLower" : "pv2MarkupSuffixUsual";
+  const line = t("pv2MarkupLine", { pct: Math.round(m.pct), suffix: t(suffixKey) });
+  return { className: "pv2-markup", dataFeature: "markup_meter", heading: t("pv2MarkupHeading"), paragraphs: [line] };
+}
+
+// -- F2/F4: WAIT-OR-BUY (wait_or_buy) + EVENT WATCH (event_watch) -----------------------
+// Both render their sentence(s) verbatim, exactly as their own pipeline produced them --
+// never rebuilt or re-worded here (the brief is explicit: never add an expected-saving
+// figure on top of wait_or_buy's own sentence, for instance). F2's real producer (PR #2020 /
+// ADR 049, now on master) ships data/wait_or_buy_today.json with sentences nested under
+// `horizons.<N>.sentence` (N = "1"/"2"/"7"), never a top-level `sentence`/`sentences` --
+// that top-level shape was this reader's original guess before the real pipeline shipped
+// and is kept below for back-compat (F4/event_watch has no producing pipeline yet and its
+// eventual shape is unknown, so it may still use it). Horizon keys are read numerically
+// ascending (1-day statement before 7-day) and any horizon missing/malformed `sentence` is
+// skipped rather than failing the whole card -- but a payload with zero usable sentences
+// anywhere still returns null (render nothing, never a blank card).
+function pv2ExtractSentences(payload) {
+  if (!payload) return null;
+  if (Array.isArray(payload.sentences) && payload.sentences.length > 0 && payload.sentences.every(s => typeof s === "string")) {
+    return payload.sentences;
+  }
+  if (typeof payload.sentence === "string" && payload.sentence.length > 0) return [payload.sentence];
+  if (payload.horizons && typeof payload.horizons === "object" && !Array.isArray(payload.horizons)) {
+    const horizonKeys = Object.keys(payload.horizons)
+      .filter(k => Number.isFinite(Number(k)))
+      .sort((a, b) => Number(a) - Number(b));
+    const sentences = horizonKeys
+      .map(k => payload.horizons[k]?.sentence)
+      .filter(s => typeof s === "string" && s.length > 0);
+    if (sentences.length > 0) return sentences;
+  }
+  return null;
+}
+
+function pv2BuildWaitOrBuyCard(waitOrBuy) {
+  const sentences = pv2ExtractSentences(waitOrBuy);
+  if (!sentences) return null;
+  return { className: "pv2-wait-or-buy", dataFeature: "wait_or_buy", heading: t("pv2WaitOrBuyHeading"), paragraphs: sentences };
+}
+
+function pv2BuildEventWatchCard(eventWatch) {
+  const sentences = pv2ExtractSentences(eventWatch);
+  if (!sentences) return null;
+  return { className: "pv2-event-watch", dataFeature: "event_watch", heading: t("pv2EventWatchHeading"), paragraphs: sentences };
+}
+
+// Turns a card descriptor (see the pv2Build*Card functions above) into a real DOM node via
+// textContent assignment only, never innerHTML -- F2/F4's sentence content originates
+// outside the i18n catalogue (produced by a separate pipeline, see their builders' own
+// comment), so this path never HTML-parses anything that came from a data file.
+function pv2MountCard(descriptor) {
+  if (!descriptor) return null;
+  const card = document.createElement("div");
+  card.className = `pv2-card ${descriptor.className}`;
+  card.dataset.feature = descriptor.dataFeature;
+  const h = document.createElement("h3");
+  h.textContent = descriptor.heading;
+  card.appendChild(h);
+  for (const para of descriptor.paragraphs) {
+    const el = document.createElement("p");
+    el.textContent = para;
+    card.appendChild(el);
+  }
+  return card;
+}
+
+// Pure -- returns an HTML string, no DOM -- so tests/test_page_v2.js can assert on its
+// content directly. XSS-safe: rupee()/fmtINR wrap numbers only; every other interpolated
+// value is a t() catalogue string (pv2Source*/pv2Confidence*/pv2Range*) -- no external data
+// reaches this innerHTML (F1-F4's data-sourced content is mounted separately via
+// pv2MountCard()'s textContent path, never through this function).
+function pv2BuildCoreHtml(fc, readings, bandCoverage, nextDayRangeShadow, weeklyRangeShadowLog) {
+  const priceJob = computePriceNowJob(readings, fc);
+  const confidenceNote = computeConfidenceNote(bandCoverage);
+  const moveJob = computeMoveRangeJob(fc, nextDayRangeShadow, weeklyRangeShadowLog, bandCoverage);
+
+  const priceHtml = priceJob
+    ? `<p class="pv2-price-value">${rupee(priceJob.price)}</p><p class="pv2-price-source">${priceJob.sourceLabel}</p>`
+    : `<p>${t("pv2PriceUnavailable")}</p>`;
+
+  const confidenceHtml = `<p>${confidenceNote ?? t("pv2ConfidenceUnknown")}</p>`;
+
+  const moveParas = [moveJob.oneDayNote, moveJob.sevenDayNote].filter(Boolean);
+  const moveHtml = moveParas.length
+    ? moveParas.map(para => `<p>${para}</p>`).join("")
+    : `<p>${t("pv2RangeUnavailable")}</p>`;
+
+  return `
+    <div class="pv2-card pv2-price-now" data-feature="page_v2" data-pv2-job="price_now">
+      <h3>${t("pv2Job1Heading")}</h3>
+      ${priceHtml}
+    </div>
+    <div class="pv2-card pv2-confidence" data-feature="page_v2" data-pv2-job="how_sure">
+      <h3>${t("pv2Job2Heading")}</h3>
+      ${confidenceHtml}
+    </div>
+    <div class="pv2-card pv2-move-range" data-feature="page_v2" data-pv2-job="how_much_move">
+      <h3>${t("pv2Job3Heading")}</h3>
+      ${moveHtml}
+    </div>
+    <div class="pv2-slot" id="pv2-good-price-slot" data-feature="page_v2" data-pv2-job="good_price"></div>
+    <div class="pv2-card pv2-what-you-pay" data-feature="page_v2" data-pv2-job="what_you_pay">
+      <h3>${t("pv2Job5Heading")}</h3>
+      <div class="pv2-slot" id="pv2-calculator-slot"></div>
+    </div>
+    <div class="pv2-slot" id="pv2-extras-slot" data-feature="page_v2"></div>
+  `;
+}
+
+// Real per-flag renderers, replacing the old inert demo scaffold now that a first real
+// feature ships behind every flag in FEATURE_FLAGS. page_v2 gates the whole five-jobs
+// surface; each optional card (F1-F4) is ADDITIONALLY gated by its own flag, checked here
+// (not inside the pv2Build*Card functions themselves, which stay flag-agnostic and pure so
+// they can be unit-tested without loading flags.js -- see tests/helpers/load_app.js, which
+// does not load flags.js). A sub-flag can in principle be true while page_v2 is not (GG only
+// ever ships them together in practice, see PR body) -- in that edge case the card mounts
+// directly on <body> instead of inside the (nonexistent) page_v2 container, so the flag's
+// effect stays independently provable end to end -- tests/test_feature_flags_headless.js's
+// own generic "a flag hardcoded true DOES render a [data-feature] element" check relies on
+// exactly this (see that test's own comment for which flag it now hardcodes and why).
+//
+// Called exactly once, from init() -- NOT re-called from applyLanguage() on a language
+// toggle: every page_v2 string is English-only by design (see i18n.js's own comment on the
+// pv2* keys) and fmtINR/rupee are locale-invariant ("en-IN" always, see their own
+// definitions), so a language toggle has nothing to change here yet. Revisit once Hindi
+// copy is added for these keys. Also NOT re-called from refreshData() -- page_v2 does not
+// yet refresh live; flagged OFF today, so this has no visible effect either way (left as a
+// documented follow-up, see PR body).
+function renderFlaggedFeatures(fc, readings, bandCoverage, extras = {}) {
+  const {
+    markupToday = null, waitOrBuy = null, eventWatch = null,
+    nextDayRangeShadow = null, weeklyRangeShadowLog = null,
+  } = extras;
+
+  const goodPriceEl = isFeatureOn("good_price_v2") ? pv2MountCard(pv2BuildGoodPriceCard(readings)) : null;
+  const markupEl    = isFeatureOn("markup_meter") ? pv2MountCard(pv2BuildMarkupCard(markupToday)) : null;
+  const waitEl      = isFeatureOn("wait_or_buy")   ? pv2MountCard(pv2BuildWaitOrBuyCard(waitOrBuy)) : null;
+  const eventEl     = isFeatureOn("event_watch")   ? pv2MountCard(pv2BuildEventWatchCard(eventWatch)) : null;
+
+  if (!isFeatureOn("page_v2")) {
+    [goodPriceEl, markupEl, waitEl, eventEl].forEach(el => { if (el) document.body.appendChild(el); });
+    return;
+  }
+
+  const container = document.createElement("section");
+  container.id = "page-v2";
+  container.className = "pv2-container";
+  container.dataset.feature = "page_v2";
+  container.setAttribute("aria-label", t("pv2AriaLabel"));
+  container.innerHTML = pv2BuildCoreHtml(fc, readings, bandCoverage, nextDayRangeShadow, weeklyRangeShadowLog);
+
+  // Single container toggle (brief's own requirement): .layout-grid already wraps every
+  // pre-existing section (hero + everything else) as ONE div -- no HTML change needed to
+  // hide them all, which is what keeps the flags-off DOM byte-for-byte identical to
+  // master's (nothing here runs at all when page_v2 is off).
+  const oldSections = document.querySelector(".layout-grid");
+  if (oldSections) oldSections.hidden = true;
+  // Mounted directly after the hidden .layout-grid -- i.e. where the old sections were,
+  // above the site footer -- not appended after the footer at the end of <main>.
+  if (oldSections) oldSections.after(container);
+  else (document.querySelector("main") ?? document.body).appendChild(container);
+
+  // Job 5: relocate the existing, unchanged calculator -- bindCalculatorInputs() already
+  // bound its listeners in init() to this exact node, and renderCalculator()'s own reads/
+  // writes are all by child id (calc-grams, calc-results, ...), never relative to this
+  // section's position in the tree -- so moving the live node (not cloning it) keeps every
+  // bit of its behaviour intact.
+  const calcSection = document.getElementById("calculator-section");
+  const calcSlot = container.querySelector("#pv2-calculator-slot");
+  if (calcSection && calcSlot) calcSlot.appendChild(calcSection);
+
+  const goodPriceSlot = container.querySelector("#pv2-good-price-slot");
+  if (goodPriceSlot && goodPriceEl) goodPriceSlot.appendChild(goodPriceEl);
+  if (goodPriceSlot && markupEl) goodPriceSlot.appendChild(markupEl);
+
+  const extrasSlot = container.querySelector("#pv2-extras-slot");
+  if (extrasSlot && waitEl) extrasSlot.appendChild(waitEl);
+  if (extrasSlot && eventEl) extrasSlot.appendChild(eventEl);
 }
 
 // D3: Lightweight data re-fetch — prices + forecast only.
@@ -2906,13 +3293,25 @@ function applyLanguage(lang) {
   const coveragePromise = loadJSON(COVERAGE_URL);
   const cadencePromise = loadJSON(CADENCE_URL);
   const bandCoveragePromise = loadJSON(CALIBRATION_BAND_COVERAGE_URL); // AE1: measured band coverage
+  // page_v2 (item 6, flagged OFF) -- none of these five files exist on master yet; each
+  // pre-catches to null exactly like fcPromise above, so a 404 never surfaces as a Sentry
+  // event and every page_v2 reader sees the same "not shipped yet" null it would see once
+  // these genuinely start 404ing only intermittently.
+  const markupTodayPromise = loadJSON(MARKUP_TODAY_URL).catch(() => null);
+  const waitOrBuyPromise = loadJSON(WAIT_OR_BUY_TODAY_URL).catch(() => null);
+  const eventWatchPromise = loadJSON(EVENT_WATCH_TODAY_URL).catch(() => null);
+  const nextDayRangeShadowPromise = loadJSON(NEXT_DAY_RANGE_SHADOW_URL).catch(() => null);
+  const weeklyRangeShadowLogPromise = loadJSON(WEEKLY_RANGE_SHADOW_LOG_URL).catch(() => null);
   // These five are only actually consumed much later (via Promise.allSettled, after
   // awaiting price+forecast and rendering the hero) — attach an inert catch to each
   // now so an early rejection (e.g. a timeout firing while we're still waiting on
   // prices) doesn't surface as a spurious unhandledrejection console error / Sentry
   // event in the meantime. Promise.allSettled below still sees the real outcome —
   // this doesn't replace the promise, just marks it handled.
-  [btPromise, driftPromise, coveragePromise, cadencePromise, bandCoveragePromise].forEach(p => p.catch(() => {}));
+  [
+    btPromise, driftPromise, coveragePromise, cadencePromise, bandCoveragePromise,
+    markupTodayPromise, waitOrBuyPromise, eventWatchPromise, nextDayRangeShadowPromise, weeklyRangeShadowLogPromise,
+  ].forEach(p => p.catch(() => {}));
 
   // Load prices (critical path)
   try {
@@ -2992,16 +3391,27 @@ function applyLanguage(lang) {
   updateOfflineBanner(); // update offline banner text now allReadings is populated
 
   // Remaining optional data (already in flight above; all gracefully degrade on failure).
-  const [bt, drift, coverage, cadence, bandCoverage] = await Promise.allSettled([
+  const [
+    bt, drift, coverage, cadence, bandCoverage,
+    markupToday, waitOrBuy, eventWatch, nextDayRangeShadow, weeklyRangeShadowLog,
+  ] = await Promise.allSettled([
     btPromise,
     driftPromise,
     coveragePromise,
     cadencePromise,
     bandCoveragePromise,
+    markupTodayPromise,
+    waitOrBuyPromise,
+    eventWatchPromise,
+    nextDayRangeShadowPromise,
+    weeklyRangeShadowLogPromise,
   ]);
 
   // Report any optional-fetch failures so silent pipeline breaks surface in Sentry.
   if (typeof Sentry !== "undefined") {
+    // page_v2's five fetches are pre-caught to null above (same reasoning as fcPromise), so
+    // they never reach "rejected" here regardless of a genuine 404 -- intentionally excluded
+    // from this Sentry sweep, which only reports promises that CAN still show "rejected".
     const optionalUrls = [
       BACKTEST_URL, DRIFT_URL, COVERAGE_URL, CADENCE_URL, CALIBRATION_BAND_COVERAGE_URL,
     ];
@@ -3016,6 +3426,11 @@ function applyLanguage(lang) {
   lastCoverage = coverage.status === "fulfilled" ? coverage.value : null;
   lastCadenceMetric = cadence.status === "fulfilled" ? cadence.value : null;
   lastBandCoverage = bandCoverage.status === "fulfilled" ? bandCoverage.value : null;
+  lastMarkupToday = markupToday.status === "fulfilled" ? markupToday.value : null;
+  lastWaitOrBuy = waitOrBuy.status === "fulfilled" ? waitOrBuy.value : null;
+  lastEventWatch = eventWatch.status === "fulfilled" ? eventWatch.value : null;
+  lastNextDayRangeShadow = nextDayRangeShadow.status === "fulfilled" ? nextDayRangeShadow.value : null;
+  lastWeeklyRangeShadowLog = weeklyRangeShadowLog.status === "fulfilled" ? weeklyRangeShadowLog.value : null;
   renderCadenceStrings(lastCadenceMetric); // override the "still loading" fallback with the real number
   renderModelSignal(fc, allReadings, btData, lastCoverage, lastDrift);  // re-render — coverage/drift now loaded
   // AE1 (audit 2026-09-10): reinstates the re-render G2 removed. G2 was correct
@@ -3030,7 +3445,15 @@ function applyLanguage(lang) {
   renderStaleBanner(fc, lastBandCoverage);
   renderForecastVsActual(btData);
   renderAccuracySummary(fc, lastDrift);
-  renderFlaggedFeatures(); // feature-flag demo hook -- no-op while every flag is off
+  // page_v2 (item 6, flagged OFF): no-op while every flag in FEATURE_FLAGS stays false --
+  // see renderFlaggedFeatures()'s own comment for the full per-flag gating story.
+  renderFlaggedFeatures(fc, allReadings, lastBandCoverage, {
+    markupToday: lastMarkupToday,
+    waitOrBuy: lastWaitOrBuy,
+    eventWatch: lastEventWatch,
+    nextDayRangeShadow: lastNextDayRangeShadow,
+    weeklyRangeShadowLog: lastWeeklyRangeShadowLog,
+  });
 
   // Dismiss chart callout when tapping outside the chart canvas (Φ8C'/Ψ3C.3)
   const chartCanvas = document.getElementById("chart");
