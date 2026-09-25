@@ -1232,12 +1232,12 @@ function fmtINRRange(lo, hi) {
 // renderHero() uses (never re-derived differently here). Distinct wording for
 // ibja_calibrated vs fusion_consensus since they carry different confidence: a single-
 // source calibrated estimate vs a live multi-retailer consensus.
-function calcRateSourceText(isEstimateTier, forecast, rate22) {
+function calcRateSourceText(isEstimateTier, forecast, rate22, readingTimestamp) {
   if (isEstimateTier) {
     const key = forecast.price_source === "fusion_consensus" ? "calcRateUsedFusion" : "calcRateUsedIbja";
     return t(key, { rate: fmtINR(rate22) });
   }
-  return t("calcRateUsedTanishq", { rate: fmtINR(rate22) });
+  return t("calcRateUsedTanishq", { rate: fmtINR(rate22), date: fmtDateShort(readingTimestamp) });
 }
 
 function renderCalculator(readings, forecast) {
@@ -1317,7 +1317,7 @@ function renderCalculator(readings, forecast) {
     ? `<p class="calc-estimated-note">${t("calcStaleNote", { rel: fmtRelative(latest.timestamp) })}</p>`
     : "";
 
-  const rateSourceText = calcRateSourceText(isEstimateTier, forecast, rate22);
+  const rateSourceText = calcRateSourceText(isEstimateTier, forecast, rate22, latest.timestamp);
 
   // Making-charge row label: presets show "Making charge (N%)" against the preset's own
   // typical %; custom shows the same when quoted as a %, or the plain label when quoted
