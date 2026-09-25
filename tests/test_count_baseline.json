@@ -13,7 +13,7 @@
   "tests/test_analysis_macro_horizons.py": 11,
   "tests/test_analysis_nowcast.py": 3,
   "tests/test_analysis_pipeline_sensitivity.py": 3,
-  "tests/test_analysis_premium_nowcast.py": 5,
+  "tests/test_analysis_premium_nowcast.py": 9,
   "tests/test_analysis_scorecard.py": 4,
   "tests/test_analysis_selective_direction.py": 4,
   "tests/test_analysis_vol_regime_prereg.py": 4,
