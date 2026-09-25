@@ -19,6 +19,12 @@ Writes: data/macro_cache.parquet (incremental merge, new data wins on overlap)
 
 The cache is NOT committed to the repo — it is regenerated on every CI run by the
 "Fetch macro features" step (continue-on-error: true), and read by forecast.py.
+
+Each core series (usd_inr, gold_usd, ...) is forward-filled across weekends and
+holidays so every row has a value, but each also carries a companion
+"<col>_asof_date" column (e.g. usd_inr_asof_date) recording the date that value
+was ACTUALLY last observed — see _derive_features docstring for the timestamp
+convention (ADR 058 finding A4 / proposed fix #6).
 """
 
 from __future__ import annotations
@@ -148,9 +154,41 @@ def _derive_features(df: pd.DataFrame) -> pd.DataFrame:
     Forward-fill core series across weekends/holidays, then compute derived features.
 
     Input columns expected: usd_inr, gold_usd, us_10y_yield, dxy, sensex, vix.
+
+    As-of tracking (ADR 058 finding A4 / proposed fix #6)
+    -------------------------------------------------------
+    The ffill below makes every core column NaN-free, but it also masks
+    staleness: a Saturday row's `usd_inr` is really Friday's close, and
+    nothing records that. For each core column this function adds a
+    companion `<col>_asof_date` column holding the date that column's value
+    was ACTUALLY last observed (the row's own date on a genuine reading,
+    forward-filled itself on filled rows) -- e.g. `usd_inr_asof_date`.
+    `<col>` itself is unchanged; this is purely additive.
+
+    Timestamp convention: the DataFrame index is a UTC daily DatetimeIndex
+    (one row per calendar day; see fetch_macro_features). Yahoo Finance
+    daily bars are dated by the exchange's own trading-day convention (e.g.
+    GC=F's Close is the COMEX settlement -- see ADR 058), not normalised to
+    a single clock across tickers; `<col>_asof_date` reports that bar's date
+    as-is, in the same UTC calendar-day index this module already uses
+    everywhere else.
     """
     df = df.copy()
     core = list(TICKER_MAP.keys())
+
+    # Capture each core column's true as-of date BEFORE ffill: the row's own
+    # UTC calendar date wherever a genuine (non-NaN) reading exists, NaT
+    # elsewhere -- then forward-fill that date series itself so every row,
+    # including ffilled ones, carries the date its current value was last
+    # actually observed. Computed strictly before `df[core] = df[core].ffill()`
+    # below so `.notna()` sees the real (pre-ffill) gaps.
+    row_dates = pd.Series(df.index.normalize(), index=df.index)
+    for col in core:
+        if col not in df.columns:
+            continue  # defensive: matches the "not found" NaN-fill path in _extract_close
+        asof_col = f"{col}_asof_date"
+        df[asof_col] = row_dates.where(df[col].notna())
+        df[asof_col] = df[asof_col].ffill()
 
     # Forward-fill so weekends and holidays inherit the last known value
     df[core] = df[core].ffill()
