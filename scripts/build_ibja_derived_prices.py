@@ -21,8 +21,17 @@ any Tanishq reading (it is a pure function of IBJA plus two constants).
 Default is a dry run that prints a summary; ``--write`` replaces the output file.
 Never run with --write on master without GG's takedown go-ahead (live data change).
 
+``--public-out PATH`` (GG decision 4c, 2026-09-25) is separate and routine: it writes the
+site's trend-chart series, ``data/ibja_derived_prices.json`` -- the same derived 22K rows,
+reduced to ``{"timestamp", "22k"}`` (no 24K/18K: the chart plots 22K only, and the karat
+ratios would publish IBJA's pm_999/pm_750 ratios for nothing). check-price.yml rebuilds it
+every run; it never touches prices.json. The app labels it as our estimate (app.js
+``chartSeries``). Note: with the public calibration.json, a 22K row can be inverted back to
+IBJA's pm_916 to within rounding -- publishing it is GG's 4c decision, not an oversight.
+
 Usage:
     python scripts/build_ibja_derived_prices.py [--data-dir data] [--out PATH] [--write]
+    python scripts/build_ibja_derived_prices.py --public-out data/ibja_derived_prices.json
 """
 
 from __future__ import annotations
@@ -73,11 +82,22 @@ def build_derived_prices(ibja: pd.DataFrame, calibration: dict) -> list[dict]:
     return rows
 
 
+def public_chart_rows(rows: list[dict]) -> list[dict]:
+    """The chart series published at data/ibja_derived_prices.json: timestamp + 22K only."""
+    return [{"timestamp": r["timestamp"], "22k": r["22k"]} for r in rows]
+
+
 def main(argv: list[str] | None = None) -> int:
     ap = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     ap.add_argument("--data-dir", type=Path, default=ROOT / "data")
     ap.add_argument("--out", type=Path, default=None, help="default: <data-dir>/prices.json")
     ap.add_argument("--write", action="store_true", help="replace the output file")
+    ap.add_argument(
+        "--public-out",
+        type=Path,
+        default=None,
+        help="write the trend-chart series (timestamp + 22k) here instead; never prices.json",
+    )
     args = ap.parse_args(argv)
 
     ibja = pd.read_parquet(args.data_dir / "ibja_rates.parquet")
@@ -86,6 +106,15 @@ def main(argv: list[str] | None = None) -> int:
     if len(rows) < 2:
         print(f"refusing: only {len(rows)} derived row(s) -- the site needs >= 2", file=sys.stderr)
         return 1
+
+    if args.public_out is not None:
+        if args.public_out.name == "prices.json":
+            print("refusing: --public-out must not target prices.json", file=sys.stderr)
+            return 1
+        public = public_chart_rows(rows)
+        args.public_out.write_text(json.dumps(public, indent=1) + "\n", encoding="utf-8")
+        print(f"wrote {len(public)} chart rows to {args.public_out}")
+        return 0
 
     out = args.out or (args.data_dir / "prices.json")
     print(f"{len(rows)} derived rows, {rows[0]['timestamp'][:10]} .. {rows[-1]['timestamp'][:10]}")

@@ -40,6 +40,7 @@ KNOWN_OPS: frozenset[str] = frozenset(
         "T11",  # Tanishq and IBJA both unavailable
         "T12",  # Tanishq self-hosted runner failing
         "T13",  # direction dataset stalled
+        "T14",  # Tanishq has not updated (GitHub-side, runner-independent)
     }
 )
 
