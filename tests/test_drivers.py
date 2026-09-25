@@ -540,3 +540,39 @@ def test_align_drops_fix_whose_latest_known_bar_is_stale():
     )
     out = _align_macro_to_fixes(ibja, macro)
     assert [d.strftime("%Y-%m-%d") for d in out.index] == ["2026-09-02"]
+
+
+def test_intraday_holiday_uses_last_traded_price():
+    """US holiday Monday: no GC=F bars since Friday 20:00-21:00 UTC; that last price is the
+    price at Monday's fix (62.5 h gap, within MAX_INTRADAY_GAP_HOURS)."""
+    from ml.drivers import _align_intraday_to_fixes
+
+    ibja = pd.DataFrame(
+        {"ibja_10g": [1.0], "fix": ["pm"]}, index=pd.to_datetime(["2026-09-07"])
+    )  # Labor Day
+    gold = pd.Series(
+        [4000.0, 4010.0], index=pd.to_datetime(["2026-09-04 19:00", "2026-09-04 20:00"], utc=True)
+    )
+    fx = pd.Series([94.4], index=pd.to_datetime(["2026-09-07 10:00"], utc=True))
+    bars = pd.concat({"gold_usd": gold, "usd_inr": fx}, axis=1)
+    out = _align_intraday_to_fixes(ibja, bars)
+    assert out["gold_usd"].tolist() == [4010.0]
+    assert out["usd_inr"].tolist() == [94.4]
+
+
+def test_zero_rupee_total_gets_no_rupee_split():
+    """IBJA moved but the retail board did not (total rounds to Rs 0): no Rs split, so the page
+    never prints "Gold is up about Rs 0 this week"."""
+    dates = ["2026-05-01", "2026-05-08"]
+    gold_usd = [4000.0, 4100.0]
+    usd_inr = [95.0, 95.0]
+    ibja_10g = _stable_ibja(dates, gold_usd, usd_inr)
+    merged = _build_merged(dates, gold_usd, usd_inr, ibja_10g)
+    tanishq = pd.DataFrame(
+        {"ts": pd.to_datetime(["2026-05-01T12:00Z", "2026-05-08T12:00Z"]), "22k": [13000.0] * 2}
+    )
+    w = _decompose_window(merged, window_days=7, tanishq_df=tanishq)
+    assert w["attribution_valid"] is True
+    assert w["total_move_rs_per_g"] == 0.0
+    assert w["gold_usd_contrib_rs_per_g"] is None
+    assert w["usdinr_contrib_rs_per_g"] is None

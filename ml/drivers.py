@@ -332,7 +332,9 @@ def _decompose_window(
 
     result["total_move_rs_per_g"] = total_move
 
-    if total_move is not None:
+    # A board move that rounds to Rs 0 has nothing to split; leaving the parts None keeps the
+    # page from printing "up about Rs 0 this week" (app.js needs all three as numbers).
+    if total_move is not None and abs(total_move) >= 0.5:
         sg = dln_g / dln_ibja
         sr = dln_r / dln_ibja
         sp = dln_p / dln_ibja
