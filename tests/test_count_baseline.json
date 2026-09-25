@@ -46,6 +46,7 @@
   "tests/test_drivers.py": 12,
   "tests/test_duty_and_calendar.py": 38,
   "tests/test_evaluate_reframed.py": 18,
+  "tests/test_event_watch.py": 20,
   "tests/test_feature_flags.js": 10,
   "tests/test_feature_flags_headless.js": 0,
   "tests/test_feature_store.py": 44,
