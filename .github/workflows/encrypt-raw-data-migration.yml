@@ -1,4 +1,4 @@
-name: Encrypt raw data (one-shot migration, ADR 060)
+name: Encrypt raw data (one-shot migration / key rotation, ADR 060)
 
 # Run ONCE, by hand, after the PR that added scripts/data_crypt.py is merged. It encrypts every
 # registered raw-data file that is still tracked as plaintext with the DATA_ENC_KEY secret,
@@ -9,10 +9,20 @@ name: Encrypt raw data (one-shot migration, ADR 060)
 #
 # Not a bot-pr-sync caller on purpose: bot-pr-sync auto-merges, and its data-only allowlist
 # would reject untracking reports/vol_regime_prereg_*.csv anyway.
+#
+# mode=rotate (key rotation, ADR 060): set secret DATA_ENC_KEY_OLD to the current key and
+# DATA_ENC_KEY to the new one first. Re-encrypts every migrated file under the new key and opens
+# a draft PR. Delete DATA_ENC_KEY_OLD once that PR is merged.
 
 on:
   workflow_dispatch:
     inputs:
+      mode:
+        description: "migrate (first encryption) or rotate (DATA_ENC_KEY_OLD -> DATA_ENC_KEY)"
+        required: true
+        default: migrate
+        type: choice
+        options: [migrate, rotate]
       confirm:
         description: 'Type "encrypt" to confirm. Before running, keep an offline copy of DATA_ENC_KEY (ADR 060: without it the frozen research snapshots are unrecoverable).'
         required: true
@@ -47,34 +57,41 @@ jobs:
       - name: Mask key forms
         env:
           DATA_ENC_KEY: ${{ secrets.DATA_ENC_KEY }}
-        run: python scripts/data_crypt.py mask-key
+          OLD_KEY: ${{ secrets.DATA_ENC_KEY_OLD }}
+        run: |
+          python scripts/data_crypt.py mask-key
+          DATA_ENC_KEY="${OLD_KEY}" python scripts/data_crypt.py mask-key
 
-      - name: Encrypt, verify and untrack
+      - name: Encrypt (or re-encrypt), verify and untrack
         env:
           DATA_ENC_KEY: ${{ secrets.DATA_ENC_KEY }}
+          DATA_ENC_KEY_OLD: ${{ secrets.DATA_ENC_KEY_OLD }}
+          MODE: ${{ inputs.mode }}
         run: |
           set -euo pipefail
           git config user.name "gold-rate-bot"
           git config user.email "actions@users.noreply.github.com"
-          BRANCH="chore/encrypt-raw-data-migration-${GITHUB_RUN_ID}"
+          BRANCH="chore/encrypt-raw-data-${MODE}-${GITHUB_RUN_ID}"
           git checkout -b "${BRANCH}"
-          python scripts/data_crypt.py migrate
+          python scripts/data_crypt.py "${MODE}"
           python scripts/data_crypt.py verify --all
           git add data/encrypted/
           python scripts/data_crypt.py guard
           python scripts/data_crypt.py scan-key --changed
+          DATA_ENC_KEY="${DATA_ENC_KEY_OLD}" python scripts/data_crypt.py scan-key --changed
           git diff --cached --stat
-          git commit -m "chore(data): encrypt raw third-party data files (ADR 060)"
+          git commit -m "chore(data): ${MODE} encrypted raw third-party data files (ADR 060)"
           git push origin "HEAD:refs/heads/${BRANCH}"
           echo "BRANCH=${BRANCH}" >> "$GITHUB_ENV"
 
       - name: Open draft PR
         env:
           GH_TOKEN: ${{ secrets.CI_MERGE_PAT }}
+          MODE: ${{ inputs.mode }}
         run: |
           set -euo pipefail
           {
-            echo "Automated one-shot migration from run ${GITHUB_RUN_ID} (ADR 060)."
+            echo "Automated ${MODE} from run ${GITHUB_RUN_ID} (ADR 060)."
             echo
             echo "Every registered raw-data file that was tracked as plaintext is now committed only as"
             echo "ciphertext under data/encrypted/, with its plaintext SHA-256 in the *.sha256.json next"
@@ -91,5 +108,5 @@ jobs:
             echo '```'
           } > "${RUNNER_TEMP}/body.md"
           gh pr create --draft --base master --head "${BRANCH}" \
-            --title "chore(data): encrypt raw third-party data files (ADR 060)" \
+            --title "chore(data): ${MODE} encrypted raw third-party data files (ADR 060)" \
             --body-file "${RUNNER_TEMP}/body.md"

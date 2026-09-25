@@ -50,8 +50,10 @@ Usage:
   python scripts/data_crypt.py encrypt data/ibja_rates.parquet
   python scripts/data_crypt.py verify --all [--hash-only]
   python scripts/data_crypt.py guard            # CI: no key needed
+  python scripts/data_crypt.py key-id           # is my offline copy the key CI uses?
   python scripts/data_crypt.py scan-key --changed
   python scripts/data_crypt.py migrate          # one-shot, see encrypt-raw-data-migration.yml
+  python scripts/data_crypt.py rotate           # DATA_ENC_KEY_OLD -> DATA_ENC_KEY (ADR 060)
 """
 
 from __future__ import annotations
@@ -73,6 +75,7 @@ from typing import Any
 ROOT = Path(__file__).resolve().parent.parent
 
 KEY_ENV = "DATA_ENC_KEY"
+OLD_KEY_ENV = "DATA_ENC_KEY_OLD"  # rotation only: the key being retired
 MIN_KEY_CHARS = 16
 MAGIC = b"GRTENC"
 FORMAT_VERSION = 1
@@ -132,15 +135,13 @@ class Paths:
 # ---------------------------------------------------------------- key material
 
 
-def _load_key() -> bytes:
-    raw = os.environ.get(KEY_ENV)
+def _load_key(env: str = KEY_ENV) -> bytes:
+    raw = os.environ.get(env)
     if raw is None or raw == "":
-        raise CryptError(f"{KEY_ENV} is not set")
+        raise CryptError(f"{env} is not set")
     key = raw.strip()
     if len(key) < MIN_KEY_CHARS:
-        raise CryptError(
-            f"{KEY_ENV} is shorter than {MIN_KEY_CHARS} characters; refusing to use it"
-        )
+        raise CryptError(f"{env} is shorter than {MIN_KEY_CHARS} characters; refusing to use it")
     return key.encode("utf-8")
 
 
@@ -522,10 +523,12 @@ def main(argv: list[str] | None = None) -> int:
     sub.add_parser("guard")
     sub.add_parser("manifest")
     sub.add_parser("mask-key")
+    sub.add_parser("key-id", help="print the key id of DATA_ENC_KEY (compare with a manifest)")
     sk = sub.add_parser("scan-key")
     sk.add_argument("files", nargs="*", type=Path)
     sk.add_argument("--changed", action="store_true")
     sub.add_parser("migrate")
+    sub.add_parser("rotate", help=f"re-encrypt every migrated file from {OLD_KEY_ENV} to {KEY_ENV}")
     args = ap.parse_args(argv)
     p = Paths(args.root.resolve())
     try:
@@ -581,6 +584,9 @@ def _run(args: argparse.Namespace, p: Paths) -> int:
             print(f"data_crypt scan-key: FAIL: key material found in {h}", file=sys.stderr)
         print(f"data_crypt scan-key: scanned {len(files)} file(s), {len(hits)} hit(s)")
         return 1 if hits else 0
+    if args.cmd == "key-id":
+        print(key_id(_load_key()))
+        return 0
     if args.cmd == "verify":
         key = None if args.hash_only else _load_key()
         for lp in _targets(args):
@@ -588,6 +594,8 @@ def _run(args: argparse.Namespace, p: Paths) -> int:
         return 0
     if args.cmd == "migrate":
         return _migrate(p)
+    if args.cmd == "rotate":
+        return _rotate(p)
     targets = _targets(args)
     if args.cmd == "decrypt":
         if all(_read_meta(p, lp) is None and not p.enc(lp).exists() for lp in targets):
@@ -628,6 +636,29 @@ def _migrate(p: Paths) -> int:
     if done:
         subprocess.run(["git", "rm", "--cached", "--quiet", "--", *done], cwd=p.root, check=True)
     print(f"data_crypt migrate: {len(done)} file(s) encrypted and untracked: {', '.join(done)}")
+    return 0
+
+
+def _rotate(p: Paths) -> int:
+    """Key rotation: decrypt every migrated file with the old key, verify it against the
+    manifest, and re-encrypt it with the new key (new salt and nonce, new key id)."""
+    old_key, new_key = _load_key(OLD_KEY_ENV), _load_key()
+    if key_id(old_key) == key_id(new_key):
+        raise CryptError(f"{OLD_KEY_ENV} and {KEY_ENV} are the same key")
+    done = []
+    for lp in REGISTRY:
+        meta = _read_meta(p, lp)
+        if meta is None:
+            continue
+        data = decrypt_bytes(p.enc(lp).read_bytes(), lp, old_key)
+        if _sha256(data) != meta.get("plaintext_sha256"):
+            raise CryptError(f"{lp}: decrypted content does not match the manifest")
+        _write_encrypted(p, lp, data, new_key)
+        done.append(lp)
+    print(
+        f"data_crypt rotate: {len(done)} file(s) re-encrypted, key id "
+        f"{key_id(old_key)} -> {key_id(new_key)}"
+    )
     return 0
 
 

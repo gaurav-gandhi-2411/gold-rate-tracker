@@ -322,6 +322,23 @@ def test_guard_catches_ciphertext_not_matching_manifest(repo: Path, key_env: byt
     assert any("not matching its manifest" in m for m in dc.guard(p))
 
 
+def test_rotate_re_encrypts_under_the_new_key(
+    repo: Path, key_env: bytes, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    p = dc.Paths(repo)
+    _put(repo, IBJA, b"rows")
+    dc.encrypt_one(p, IBJA, key_env)
+    monkeypatch.setenv(dc.OLD_KEY_ENV, TEST_KEY)
+    monkeypatch.setenv(dc.KEY_ENV, OTHER_KEY)
+    assert dc.main(["--root", str(repo), "rotate"]) == 0
+    with pytest.raises(dc.CryptError, match="wrong key"):
+        dc.decrypt_bytes(p.enc(IBJA).read_bytes(), IBJA, TEST_KEY.encode())
+    assert dc.decrypt_bytes(p.enc(IBJA).read_bytes(), IBJA, OTHER_KEY.encode()) == b"rows"
+    assert json.loads(p.meta(IBJA).read_text())["key_id"] == dc.key_id(OTHER_KEY.encode())
+    monkeypatch.setenv(dc.OLD_KEY_ENV, OTHER_KEY)  # same key twice is refused
+    assert dc.main(["--root", str(repo), "rotate"]) == 1
+
+
 # ---------------------------------------------------------------- key leak
 
 
@@ -347,6 +364,7 @@ def test_key_never_appears_in_output_or_written_files(repo: Path) -> None:
         ("verify", "--all", "--hash-only"),
         ("guard",),
         ("manifest",),
+        ("key-id",),
         ("scan-key", "--changed"),
         ("decrypt", IBJA),  # and the failure paths
     ):
