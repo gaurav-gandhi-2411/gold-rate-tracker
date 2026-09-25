@@ -93,6 +93,8 @@ import pandas as pd
 from ml.direction.config_sweep import run_config_sweep
 from ml.direction.dataset import FEATURE_COLS, build_dataset
 from ml.direction.evaluate_reframed import diebold_mariano_test
+from ml.known_at import ist_day_start, macro_daily_known_at
+from ml.leak_guard import KnownInput
 
 # --- The frozen configuration (ADR 034's "config J") -----------------------
 PREREGISTERED_CONFIG: dict = {
@@ -266,6 +268,7 @@ def run_live_arm(dataset: pd.DataFrame | None = None) -> dict:
     raw = result["raw"]
     scored = score_config(raw["y_true"], raw["y_prob"], horizon=cfg["horizon"])
     scored["arm"] = "live_h2"
+    scored["leak_guard"] = result["leak_guard"]
     scored["protocol_version"] = PROTOCOL_VERSION
     scored["embargo_label_date_col"] = EMBARGO_LABEL_DATE_COL
     scored["confirmatory_after_as_of"] = CONFIRMATORY_AFTER_AS_OF
@@ -317,6 +320,24 @@ def build_proxy_deadzone_dataset(
     return out
 
 
+def proxy_prediction_moment(row: pd.Series) -> pd.Timestamp:
+    """ADR 061: the proxy label is day t's own move, so a prediction of it must be made before
+    day t starts -- 00:00 IST on t. (The move runs from t-1's COMEX settlement, 23:00-00:00 IST,
+    to t's; IBJA's AM fix on t already reflects part of it.)"""
+    return ist_day_start(row["as_of_date"])
+
+
+def proxy_feature_inputs(row: pd.Series) -> list[KnownInput]:
+    """The proxy arm's one timed feature: the India VIX close it used (the M1 calendar
+    features are known in advance). A row with no VIX value has no timed input."""
+    close_date = row.get("india_vix_asof_date")
+    if pd.isna(row.get("india_vix")):
+        return []
+    return [
+        KnownInput("india_vix", "^INDIAVIX daily", macro_daily_known_at("india_vix", close_date))
+    ]
+
+
 def run_proxy_arm(dataset: pd.DataFrame | None = None) -> dict:
     """Scores the frozen config (model type/calibration/class-weight only —
     feature set differs, see build_proxy_deadzone_dataset) on the realigned
@@ -336,11 +357,15 @@ def run_proxy_arm(dataset: pd.DataFrame | None = None) -> dict:
         calibrate_gbm=cfg["calibrate_gbm"],
         min_train_size=cfg["min_train_size"],
         return_raw=True,
+        feature_known_at=proxy_feature_inputs,
+        prediction_moment=proxy_prediction_moment,
+        feature_guard_mode="raise",
     )
     raw = result["raw"]
     # horizon=1: the proxy label is a same-day (t vs t-1) direction, not h2.
     scored = score_config(raw["y_true"], raw["y_prob"], horizon=1)
     scored["arm"] = "proxy_deadzone_h1_equivalent"
+    scored["leak_guard"] = result["leak_guard"]
     # Exploratory, never confirmatory (ADR 038): scores the full 2013-2026
     # proxy history, not only post-registration days. Its label is same-day,
     # so every earlier training row has matured by the test day — the h1
