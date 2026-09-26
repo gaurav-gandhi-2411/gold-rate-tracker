@@ -25,7 +25,7 @@ from ml.direction.dataset import (
     FEATURE_COLS,
     build_dataset,
 )
-from ml.direction.leak_checks import check_fold
+from ml.direction.leak_checks import check_fold, mask_late_features
 from ml.direction.models import (
     fit_lightgbm,
     fit_logistic,
@@ -410,11 +410,14 @@ def run_walk_forward(
     ]
 
     # ADR 061. Training labels: raise -- the embargo above already guarantees they are known,
-    # so a violation means the embargo regressed (the #1930 leak). Test-row features: report --
-    # backfilled rows hold US daily closes published after IST day D (ADR 058 A5, ADR 061 F1),
-    # and refusing them would change the published numbers.
+    # so a violation means the embargo regressed (the #1930 leak). Test-row features: raise
+    # since GG decision F1 (2026-09-26, ADR 061 amendment A1). Backfilled rows held US daily
+    # closes published after IST day D (ADR 058 A5, finding F1); mask_late_features replaces
+    # each with the latest value known at the row's prediction moment, for every row, so any
+    # remaining violation is a regression. The published direction numbers moved with this.
+    dataset, masked_counts = mask_late_features(dataset, feature_cols)
     labels_guard = LeakGuard(f"direction {label_col} training labels", mode="raise")
-    features_guard = LeakGuard(f"direction {label_col} test-row features", mode="report")
+    features_guard = LeakGuard(f"direction {label_col} test-row features", mode="raise")
 
     y_true_all: list[int] = []
     log_prob_all: list[float] = []
@@ -517,7 +520,11 @@ def run_walk_forward(
         "n_skipped_folds": n_skipped,
         "min_train_size": min_train_size,
         "embargo": f"train on rows with {date_col} < test as_of_date",
-        "leak_guard": {"labels": labels_guard.summary(), "features": features_guard.summary()},
+        "leak_guard": {
+            "labels": labels_guard.summary(),
+            "features": features_guard.summary(),
+            "late_inputs_replaced": dict(sorted(masked_counts.items())),
+        },
         "always_up_baseline_accuracy": always_up_baseline_accuracy,
         "trailing_30_fold_up_fraction": trailing_30_fold_up_fraction,
         "majority_class_collapse": majority_class_collapse,

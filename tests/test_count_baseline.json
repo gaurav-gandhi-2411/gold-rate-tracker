@@ -48,6 +48,7 @@
   "tests/test_degradation_chain.py": 5,
   "tests/test_direction_gate.py": 33,
   "tests/test_direction_harness.py": 55,
+  "tests/test_direction_mask_late_features.py": 6,
   "tests/test_drift.py": 5,
   "tests/test_driver_headline_signs.js": 3,
   "tests/test_drivers.py": 23,

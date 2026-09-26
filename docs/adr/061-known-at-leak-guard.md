@@ -163,3 +163,40 @@ The output is `reports/leak_guard/findings.json`. No registered or published num
   harness starts without one. The shared contract is the point of this ADR.
 - **Depending on #2051's `ml/timing_alignment.py` now:** it is unmerged. The signatures match
   instead, so it can be swapped in with one import.
+
+## Amendment A1 (2026-09-26): F1 fixed. Late inputs are excluded from the direction evaluation
+
+**Decision.** GG decision F1, pre-approved in the 2026-09-26 brief: *"exclude every input
+published after the prediction moment from the direction evaluation, even though it is before
+the outcome. Let the published direction numbers move; report before/after."*
+
+**Method (fixed before any run on the data; this section is committed before the before/after
+run).**
+- `ml.direction.leak_checks.mask_late_features` runs inside `ml.direction.evaluate.run_walk_forward`,
+  on **every row, training and test**, so both follow one convention.
+- For each timed feature (`TIMED_FEATURES`) whose `snapshot_field_known_at` is after the row's
+  prediction moment (`ist_day_end(as_of_date)`), the value is replaced by the most recent
+  earlier row's value that was known by that moment. The donor must have the same `source`.
+  The row's `<col>_asof_date` becomes the donor's. With no donor the value becomes NaN, which the
+  harness already imputes with training means.
+- The test-row feature guard moves from `report` to `raise`. Any late input left over is now an
+  error, not a note.
+- **Not changed:**
+  - `ml.direction.config_sweep` and the pre-registered ADR 038/042 arms. Their registered
+    numbers need their own decision.
+  - The label embargo.
+  - The feature set, the models, `min_train_size`, the seeds.
+
+**Why substitute rather than drop folds.** Dropping the 82 flagged h1 folds would evaluate only
+the live period and change the population being scored. Substitution keeps every fold and
+gives each one exactly what a forecast issued at that moment could have seen. That is the
+convention of ADR 058 proposal 7.
+
+**Reported (before = master's harness, after = this amendment; same data, same commit of
+`data/`):**
+- For h1 and h2: n test folds, logistic accuracy, LightGBM accuracy, always-up accuracy, and
+  the logistic one-sided p-value vs always-up, exactly as `evaluate.py` computes them. Also the
+  per-column count of replaced inputs.
+- No other test is run on these data for this amendment.
+- The ship gate (`ml/direction/gate.py`) is unchanged. A number that moves is reported as it
+  is. It is not re-gated here.
