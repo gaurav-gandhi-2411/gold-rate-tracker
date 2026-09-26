@@ -1,5 +1,18 @@
 # gold-rate-tracker — Current State for Orchestrator Handoff
 
+> **Historical snapshot, not current.** Last refreshed 2026-06-13. It is kept for its decision
+> history and its numbered norms, which workflow comments still cite (for example "norm #13"). Several
+> operational facts below are out of date:
+> - the pipeline runs every 3h, not 4h;
+> - the Tanishq scrape runs in `scrape-tanishq-selfhosted.yml`, not `check-price.yml`;
+> - IBJA is the primary price source ([ADR 025](docs/adr/025-ibja-primary-source-decision.md));
+> - no direction model ships ([ADR 019](docs/adr/019-direction-signal-below-base-rate.md),
+>   [ADR 040](docs/adr/040-why-direction-is-noise.md)), so the 55.8% direction figure below is not
+>   a current claim.
+>
+> For the live picture, read [README.md](README.md), [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md),
+> [docs/RUNBOOK.md](docs/RUNBOOK.md) and [docs/SESSION_AUDIT_2026-08.md](docs/SESSION_AUDIT_2026-08.md).
+
 *Snapshot as of 2026-05-31; partially refreshed 2026-06-13 (calibration unlock, H5, Φ25 Worker dispatch, test count). Maintained for context that isn't in the code. The repo itself shows what exists; this document explains why.*
 
 ---
