@@ -82,6 +82,7 @@ def test_summary_prefers_the_better_arm() -> None:
             "truth_rs_per_g": float(t),
             "M0_current": float(t + 50 + rng.normal(0, 5)),
             "M3_am_pm": float(t + 10 + rng.normal(0, 5)),
+            "inputs_known_after_target": [],
         }
         for i, t in enumerate(truth)
     ]
@@ -94,6 +95,7 @@ def test_summary_prefers_the_better_arm() -> None:
 def test_summary_with_too_few_days_reports_n_only() -> None:
     assert mod.summarise([]) == {
         "n_same_day": 0,
+        "n_same_day_excluded_late_ibja": 0,
         "n_all_logged": 0,
         "n_days_input_known_after_target": 0,
     }
@@ -120,3 +122,44 @@ def test_day_without_a_target_timestamp_is_flagged_not_passed() -> None:
     r2 = _fake_r2(["2026-09-25"], [14000.0], [14000.0], [14010.0])
     rows = mod.new_rows(r2, logged=set(), today_utc="2026-10-01", targets={}, fetched={})
     assert rows[0]["inputs_known_after_target"] == ["target_timestamp_missing"]
+
+
+def _day(i: int, late: list[str] | None, m0_err: float, m3_err: float) -> dict:
+    d = {
+        "date": f"2026-10-{i + 1:02d}",
+        "ibja_date": f"2026-10-{i + 1:02d}",
+        "gap_days": 0,
+        "truth_rs_per_g": 14000.0,
+        "M0_current": 14000.0 + m0_err,
+        "M3_am_pm": 14000.0 + m3_err,
+    }
+    if late is not None:
+        d["inputs_known_after_target"] = late
+    return d
+
+
+def test_f2_late_ibja_days_are_excluded_from_the_decision_and_reported_beside_it() -> None:
+    """GG decision F2: a day whose IBJA input was published after the reading it estimates
+    does not count in the M3-vs-M0 decision; the unfiltered comparison is kept beside it."""
+    days = [_day(i, [], 50.0 + i % 3, 10.0 + i % 2) for i in range(10)]
+    days += [_day(10 + i, ["ibja_pm"], 50.0, 0.0) for i in range(3)]
+    s = mod.summarise(days)
+    assert s["n_same_day"] == 10
+    assert s["n_same_day_excluded_late_ibja"] == 3
+    assert s["last_day"] == "2026-10-10"
+    assert s["all_same_day"]["n_same_day"] == 13
+    assert s["all_same_day"]["mae_m3_rs_per_g"] < s["mae_m3_rs_per_g"]
+
+
+def test_f2_a_day_logged_without_the_field_is_certified_from_timestamps() -> None:
+    days = [_day(i, None, 50.0 + i % 3, 10.0 + i % 2) for i in range(6)]
+    late_on = {"2026-10-02"}
+    s = mod.summarise(days, lambda d: ["ibja_pm"] if d["date"] in late_on else [])
+    assert s["n_same_day"] == 5
+    assert s["n_same_day_excluded_late_ibja"] == 1
+
+
+def test_f2_without_a_certifier_an_unlabelled_day_does_not_count() -> None:
+    s = mod.summarise([_day(i, None, 50.0, 10.0) for i in range(5)])
+    assert s["n_same_day"] == 0
+    assert s["n_same_day_excluded_late_ibja"] == 5
