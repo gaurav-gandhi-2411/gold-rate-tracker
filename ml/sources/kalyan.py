@@ -24,18 +24,18 @@ import re
 from dataclasses import dataclass
 from datetime import UTC, datetime, timedelta
 
-import requests
+import requests  # noqa: F401 -- the tests' monkeypatch seam (<adapter>.requests.*)
 
 from ml.sources.base import (
-    SourceNetworkError,
     SourceReading,
     SourceStructureError,
     validate_observed_at,
+    validate_rate_22k,
 )
+from ml.sources.polite_http import polite_request
 
 _ENDPOINT = "https://www.kalyanjewellers.net/kalyan_gold_rates/ajax/get_rate"
 _REFERER = "https://www.kalyanjewellers.net/gold-rate/Gold-Rate-Today"
-_USER_AGENT = "gold-rate-tracker/1.0 (portfolio project; gaurav.gandhi2411@gmail.com)"
 _TIMEOUT = 20
 _IST_OFFSET = timedelta(
     hours=5, minutes=30
@@ -92,10 +92,13 @@ def fetch_kalyan_city(city_name: str) -> KalyanRawReading:
     country_id, state_id, city_id = KALYAN_CITIES[city_name]
 
     try:
-        resp = requests.post(
+        # Polite access (UA, per-host spacing between cities, capped retry,
+        # Retry-After): ADR 059. Network failures surface as SourceNetworkError.
+        resp = polite_request(
+            "POST",
             _ENDPOINT,
+            source=f"kalyan/{city_name}",
             headers={
-                "User-Agent": _USER_AGENT,
                 "Referer": _REFERER,
                 "X-Requested-With": "XMLHttpRequest",
                 "Content-Type": "application/x-www-form-urlencoded; charset=UTF-8",
@@ -103,10 +106,7 @@ def fetch_kalyan_city(city_name: str) -> KalyanRawReading:
             data={"countryId": country_id, "stateId": state_id, "cityId": city_id},
             timeout=_TIMEOUT,
         )
-        resp.raise_for_status()
         payload = resp.json()
-    except requests.RequestException as exc:
-        raise SourceNetworkError(f"kalyan: request failed for {city_name}: {exc}") from exc
     except ValueError as exc:  # json.JSONDecodeError subclasses ValueError
         raise SourceStructureError(f"kalyan: non-JSON response for {city_name}") from exc
 
@@ -120,7 +120,7 @@ def fetch_kalyan_city(city_name: str) -> KalyanRawReading:
             f"kalyan: expected fields missing for {city_name} — got keys {sorted(payload.keys())}"
         )
 
-    rate = _parse_rate(today_22k, field="today_22k")
+    rate = validate_rate_22k(_parse_rate(today_22k, field="today_22k"), source="kalyan")
 
     try:
         naive_ist = datetime.strptime(updated_time, "%d %b %Y %H:%M")

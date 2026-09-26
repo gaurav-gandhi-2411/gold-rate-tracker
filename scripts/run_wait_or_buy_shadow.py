@@ -47,6 +47,22 @@ CONFIRMATORY_AFTER = "2026-09-24"  # this ADR's commit date; only as-of days str
 LOG_PATH = ROOT / "data" / "wait_or_buy_shadow.json"
 TODAY_PATH = ROOT / "data" / "wait_or_buy_today.json"
 YEARS_SPAN = (pd.Timestamp("2026-09-24") - pd.Timestamp("2013-01-01")).days / 365.25  # proxy span
+# GG decision 4c (2026-09-25): wait_or_buy_today.json is public (page_v2 reads it), so it must
+# not carry a raw IBJA level. price_t IS the raw IBJA rate, and range.lo/range.hi are IBJA-scale
+# levels from which it is recovered exactly (price_t = lo - lo_rs). The today file keeps only
+# the rupee deltas (lo_rs/hi_rs/x_rs), the scale and the sentence -- page_v2 reads nothing but
+# horizons.<N>.sentence. The shadow LOG (wait_or_buy_shadow.json) keeps every field: it is
+# the scoring record and is registered for encryption by E1 (#2075).
+PUBLIC_DROP_FIELDS = ("as_of", "n", "price_t")
+PUBLIC_DROP_RANGE_FIELDS = ("lo", "hi")
+
+
+def public_today_entry(entry: dict) -> dict:
+    """An issued entry reduced to what may be published in wait_or_buy_today.json."""
+    out = {k: v for k, v in entry.items() if k not in PUBLIC_DROP_FIELDS}
+    if isinstance(out.get("range"), dict):
+        out["range"] = {k: v for k, v in out["range"].items() if k not in PUBLIC_DROP_RANGE_FIELDS}
+    return out
 
 
 def _matured_windows(known: pd.Series, n: int, before: pd.Timestamp) -> list:
@@ -180,7 +196,7 @@ def main() -> int:
     for n in N_VALUES:
         entry = _issue(proxy, ibja, ibja_vol_ref, n, latest_t)
         if entry is not None:
-            horizons[str(n)] = {k: v for k, v in entry.items() if k not in ("as_of", "n")}
+            horizons[str(n)] = public_today_entry(entry)
     today = {
         "as_of": latest_t.strftime("%Y-%m-%d"),
         "generated_at_utc": now,
