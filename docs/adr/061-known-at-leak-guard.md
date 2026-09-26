@@ -209,3 +209,35 @@ exactly the prediction moment: WTI settles at 14:30 ET, which is 18:30 UTC, IST 
 `LeakGuard` treats known_at == t as late, and the mask had treated it as on time. The mask now
 uses the same strict rule (`test_an_input_known_exactly_at_the_moment_counts_as_late`). No
 metric had been read when this was fixed.
+
+### A1 result (VERIFIED, `reports/leak_guard/f1_before_after.json`)
+
+Both runs used identical `data/`: the #2119 recovery tip, 176 dataset rows. "Before" is that tip's
+harness, with the feature guard in report mode. "After" is this amendment. p is evaluate.py's
+two-sided exact McNemar test against always-up.
+
+| Horizon | n test folds | Logistic acc. | LightGBM acc. | Always-up | Logistic p | LightGBM p |
+|---|---|---|---|---|---|---|
+| h1 before | 155 | 49.0% | 48.4% | 51.0% | 0.818 | 0.724 |
+| **h1 after** | 155 | **47.7%** | **51.0%** | 51.0% | 0.568 | 1.000 |
+| h2 before | 149 | 55.0% | 55.7% | 58.4% | 0.424 | 0.694 |
+| **h2 after** | 149 | **55.7%** | **59.1%** | 58.4% | 0.424 | 1.000 |
+
+**Late inputs.**
+- Test-row inputs found late: h1 505 across 82 folds, and 0 after. h2 478 across 77 folds, and 0
+  after. The guard now raises, and neither run raised.
+- Inputs replaced, all rows, h1: `usd_inr`, `dxy`, `vix` and `us_10y_yield` 102 each;
+  `crude_wti` and `tips` 101; `gold_usd` 21.
+- Inputs replaced, all rows, h2: 99, 97 and 20 respectively.
+
+**Read plainly.**
+- No model is significantly different from always-up, before or after.
+- The direction conclusion (ADR 019, ADR 040) does not change.
+- LightGBM's h2 point estimate moves just above the base rate, 59.1% vs 58.4%. Its p is 1.0:
+  there is no evidence it is any better. The ship gate (`ml/direction/gate.py`) is unchanged, and
+  this is not a candidate for shipping.
+
+**Published numbers.** The published numbers on master (`data/direction_baseline.json`, source
+`d9ee6b1d`, 2026-09-24) are h1 49.4% (n 154) and h2 54.7% (n 148). They come from one fewer fold
+and the report-mode harness. After this PR merges, the next `eval-direction.yml` run republishes
+them with this harness. The README's METRIC markers then update through `docs-refresh`.
