@@ -195,7 +195,9 @@ convention of ADR 058 proposal 7.
 **Reported (before = master's harness, after = this amendment; same data, same commit of
 `data/`):**
 - For h1 and h2: n test folds, logistic accuracy, LightGBM accuracy, always-up accuracy, and
-  the logistic one-sided p-value vs always-up, exactly as `evaluate.py` computes them. Also the
+  the logistic p-value vs always-up, exactly as `evaluate.py` computes them. *(Correction
+  made before the run: that p-value is a two-sided exact McNemar test, not one-sided as first
+  written here. The metric itself is unchanged.)* Also the
   per-column count of replaced inputs.
 - No other test is run on these data for this amendment.
 - The ship gate (`ml/direction/gate.py`) is unchanged. A number that moves is reported as it
