@@ -1325,15 +1325,17 @@ function renderHero(readings, forecast) {
     changeEl.hidden = false;
   }
 
-  // Verdict
-  const verdict = computeVerdict(readings, forecast);
+  // Verdict and sparkline read multi-day history, so they use the chart's series (historyRows).
+  // The flat-hold forecast is the displayed price: compare it only with a series it belongs to.
+  const hist = historyRows(readings);
+  const verdict = computeVerdict(hist.rows, hist.estimate ? null : forecast);
   document.getElementById("verdict-icon").textContent    = verdict.icon;
   document.getElementById("verdict-headline").textContent = verdict.headline;
   document.getElementById("verdict-reason").textContent  = verdict.reason;
   verdictEl.dataset.type = verdict.type;
   verdictEl.hidden       = false;
 
-  renderSparkline(readings);
+  renderSparkline(hist.rows, hist.estimate);
 }
 
 // ─── PURCHASE CALCULATOR ────────────────────────────────────────────────────
@@ -1519,7 +1521,7 @@ function bindCalculatorInputs() {
   });
 }
 
-function renderSparkline(readings) {
+function renderSparkline(readings, estimate = false) {
   const wrap    = document.getElementById("sparkline-wrap");
   const svgEl   = document.getElementById("sparkline");
   const rangeEl = document.getElementById("sparkline-range");
@@ -1559,14 +1561,20 @@ function renderSparkline(readings) {
               stroke-width="1.5" stroke-linejoin="round" stroke-linecap="round"/>
   `;
 
-  rangeEl.textContent = t("sparklineRange", { min: fmtINR(min22k), max: fmtINR(max22k) });
+  rangeEl.textContent = t(estimate ? "sparklineRangeEstimate" : "sparklineRange", { min: fmtINR(min22k), max: fmtINR(max22k) });
   wrap.hidden = false;
 }
 
 function renderComparisons(readings) {
   const section = document.getElementById("comparison-section");
-  const cmp     = computeComparisons(readings);
-  if (!cmp || readings.length < 2) { section.hidden = true; return; }
+  const hist    = historyRows(readings);
+  const cmp     = computeComparisons(hist.rows);
+  if (!cmp || hist.rows.length < 2) { section.hidden = true; return; }
+  const cmpNoteEl = document.getElementById("comparison-source-note");
+  if (cmpNoteEl) {
+    cmpNoteEl.textContent = t(hist.estimate ? "chartNoteEstimate" : "chartNoteTanishq");
+    cmpNoteEl.hidden = false;
+  }
 
   function setCard(valueId, subId, cardId, delta, avgLabel) {
     const valEl  = document.getElementById(valueId);
@@ -1633,7 +1641,7 @@ function renderComparisons(readings) {
 // frontend — left in place rather than deleted here since retiring the pipeline
 // step itself is out of this session's scope (layout/copy only, no ml/ changes).
 function composeTodaysRead(readings) {
-  const signals = computeGoodPriceSignals(readings ?? []);
+  const signals = computeGoodPriceSignals(historyRows(readings).rows);
   if (!signals) {
     return t("readNoSignals");
   }
@@ -1692,14 +1700,15 @@ function renderModelSignal(fc, readings, bt, coverage, drift) {
   const skelEl = document.getElementById("model-signal-skeleton");
   if (skelEl) skelEl.hidden = true;
 
-  const signals = computeGoodPriceSignals(readings ?? []);
+  const histRows = historyRows(readings).rows; // multi-day history: the chart's series (GG 3d)
+  const signals = computeGoodPriceSignals(histRows);
   if (!signals) {
     section.hidden = true;
     return;
   }
-  const bandPos90d = computeBandPos90d(readings ?? []);
-  const trendResidual = computeTrendResidual30d(readings ?? [], signals.percentile30d);
-  const supportDistance90d = computeSupportDistance90d(readings ?? [], signals.percentile30d);
+  const bandPos90d = computeBandPos90d(histRows);
+  const trendResidual = computeTrendResidual30d(histRows, signals.percentile30d);
+  const supportDistance90d = computeSupportDistance90d(histRows, signals.percentile30d);
 
   const hl = fc?.headline;
   const hasPI = hl && typeof hl.lower === "number" && typeof hl.upper === "number";
@@ -1795,7 +1804,7 @@ function renderModelSignal(fc, readings, bt, coverage, drift) {
     // unrelated stats competing for attention. See computeWeeklyMovement()'s own
     // comment for exactly how it differs from the 5-day note (90-day median of
     // 7-day changes vs 30-day median of 5-day changes).
-    const weeklyMovement = computeWeeklyMovement(readings ?? []);
+    const weeklyMovement = computeWeeklyMovement(histRows);
 
     // XSS-safe: fmtINR() wraps numbers only; volNote/weeklyMovement.note are t()-built strings.
     volatilityHtml = `
@@ -2081,6 +2090,16 @@ function chartSeries(readings, derived) {
   return { rows: readings.filter(r => !isDerivedReading(r)), estimate: false };
 }
 
+// GG 3d (2026-09-26): every multi-day history reader -- the hero verdict and sparkline, the
+// comparison cards, the history table and the good-price signals -- takes its rows from the same
+// series the trend chart plots (chartSeries above). Two reasons: they keep working once #2075
+// shortens prices.json to the rows "today's change" needs, and a Tanishq reading is never
+// compared against the IBJA-based estimate inside one number. Today's price, today's change and
+// the freshness label stay on prices.json. Pure apart from reading derivedSeries.
+function historyRows(readings) {
+  return chartSeries(readings ?? [], derivedSeries);
+}
+
 // Chart.js comes from a third-party CDN (index.html). If that request fails -- blocked, offline,
 // a CDN outage -- `Chart` is undefined and `new Chart(...)` throws. Before this guard that throw
 // escaped renderChart(), which init() calls BEFORE renderHero(), so one CDN failure left the
@@ -2228,6 +2247,18 @@ function renderHistory(readings) {
   const skelEl   = document.getElementById("history-skeleton");
 
   if (skelEl) skelEl.hidden = true;
+
+  // Multi-day history: the chart's series (historyRows). The IBJA-based estimate has 22K only,
+  // so the table hides its 24K/18K columns while it shows the estimate.
+  const hist = historyRows(readings);
+  readings = hist.rows;
+  const tableEl = tbody.closest("table");
+  if (tableEl) tableEl.classList.toggle("history-table--22k-only", hist.estimate);
+  const histNoteEl = document.getElementById("history-source-note");
+  if (histNoteEl) {
+    histNoteEl.textContent = t(hist.estimate ? "chartNoteEstimate" : "chartNoteTanishq");
+    histNoteEl.hidden = readings.length === 0;
+  }
 
   const EMPTY_TABLE = `<tr><td colspan="5" class="empty">${t("historyNoReadings")}</td></tr>`;
   const EMPTY_CARDS = `<li class="hcard-empty">${t("historyNoReadings")}</li>`;
@@ -2619,8 +2650,9 @@ function computeWeeklyPriceComparison(readings, windowWeeks) {
 // Plain descriptor, not a DOM node -- kept side-effect-free so it's directly unit-testable;
 // pv2MountCard() (below) is the only place that turns one of these into real DOM.
 function pv2BuildGoodPriceCard(readings) {
-  const cmp30 = computeWeeklyPriceComparison(readings, 4);  // ~last month, weekly cadence
-  const cmp90 = computeWeeklyPriceComparison(readings, 13); // ~last three months, weekly cadence
+  const histRows = historyRows(readings).rows; // multi-day history: the chart's series (GG 3d)
+  const cmp30 = computeWeeklyPriceComparison(histRows, 4);  // ~last month, weekly cadence
+  const cmp90 = computeWeeklyPriceComparison(histRows, 13); // ~last three months, weekly cadence
   if (!cmp30 && !cmp90) return null;
   const paragraphs = [];
   if (cmp30) paragraphs.push(`${t("pv2Weekly30dLabel")} ${cmp30.note}`);
@@ -3511,11 +3543,13 @@ function applyLanguage(lang) {
     return;
   }
 
-  // Render everything that doesn't need forecast immediately.
+  // Render everything that doesn't need forecast immediately. The derived series is fetched in
+  // parallel with prices (null on failure) and is awaited first: comparisons and history read
+  // the same series as the chart (historyRows, GG 3d).
   renderFreshness(allReadings);
+  derivedSeries = await derivedPromise;
   renderComparisons(allReadings);
   renderHistory(allReadings);
-  derivedSeries = await derivedPromise; // fetched in parallel with prices; null on failure
   renderChart(allReadings, "30");
 
   // Await forecast, then render hero (hides skeleton, shows verdict).

@@ -152,7 +152,7 @@
 // "today's change" only next to Tanishq's own latest reading; the trend chart plots
 // data/ibja_derived_prices.json labelled as our estimate (new #chart-source-note). app.js +
 // i18n.js + index.html changed.
-const VERSION = "v68-20260925-hero-stale-chart";
+const VERSION = "v69-20260926-history-off-tanishq";
 const SHELL_CACHE = `gold-shell-${VERSION}`;
 
 const SHELL_FILES = [

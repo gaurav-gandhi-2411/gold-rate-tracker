@@ -185,6 +185,8 @@ jobs:
         run: node tests/test_hero_display_headless.js
       - name: Run the no-sideways-scroll test against the real page
         run: node tests/test_no_horizontal_scroll_headless.js
+      - name: Run the history-series test (GG 3d; history readers keep working on a shortened prices.json)
+        run: node tests/test_history_series_headless.js
 
   # Forward lint+pwa-js's real result as commit statuses (bug #4, docs/RUNBOOK.md).
   # Branch protection's required_status_checks matches by context NAME across both
