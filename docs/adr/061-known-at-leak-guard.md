@@ -163,3 +163,81 @@ The output is `reports/leak_guard/findings.json`. No registered or published num
   harness starts without one. The shared contract is the point of this ADR.
 - **Depending on #2051's `ml/timing_alignment.py` now:** it is unmerged. The signatures match
   instead, so it can be swapped in with one import.
+
+## Amendment A1 (2026-09-26): F1 fixed. Late inputs are excluded from the direction evaluation
+
+**Decision.** GG decision F1, pre-approved in the 2026-09-26 brief: *"exclude every input
+published after the prediction moment from the direction evaluation, even though it is before
+the outcome. Let the published direction numbers move; report before/after."*
+
+**Method (fixed before any run on the data; this section is committed before the before/after
+run).**
+- `ml.direction.leak_checks.mask_late_features` runs inside `ml.direction.evaluate.run_walk_forward`,
+  on **every row, training and test**, so both follow one convention.
+- For each timed feature (`TIMED_FEATURES`) whose `snapshot_field_known_at` is after the row's
+  prediction moment (`ist_day_end(as_of_date)`), the value is replaced by the most recent
+  earlier row's value that was known by that moment. The donor must have the same `source`.
+  The row's `<col>_asof_date` becomes the donor's. With no donor the value becomes NaN, which the
+  harness already imputes with training means.
+- The test-row feature guard moves from `report` to `raise`. Any late input left over is now an
+  error, not a note.
+- **Not changed:**
+  - `ml.direction.config_sweep` and the pre-registered ADR 038/042 arms. Their registered
+    numbers need their own decision.
+  - The label embargo.
+  - The feature set, the models, `min_train_size`, the seeds.
+
+**Why substitute rather than drop folds.** Dropping the 82 flagged h1 folds would evaluate only
+the live period and change the population being scored. Substitution keeps every fold and
+gives each one exactly what a forecast issued at that moment could have seen. That is the
+convention of ADR 058 proposal 7.
+
+**Reported (before = master's harness, after = this amendment; same data, same commit of
+`data/`):**
+- For h1 and h2: n test folds, logistic accuracy, LightGBM accuracy, always-up accuracy, and
+  the logistic p-value vs always-up, exactly as `evaluate.py` computes them. *(Correction
+  made before the run: that p-value is a two-sided exact McNemar test, not one-sided as first
+  written here. The metric itself is unchanged.)* Also the
+  per-column count of replaced inputs.
+- No other test is run on these data for this amendment.
+- The ship gate (`ml/direction/gate.py`) is unchanged. A number that moves is reported as it
+  is. It is not re-gated here.
+
+*Implementation note (2026-09-26, during the first run).* The first "after" run raised in the
+new raise-mode guard at `as_of=2025-05-16`, before producing any metric. `crude_wti` is known at
+exactly the prediction moment: WTI settles at 14:30 ET, which is 18:30 UTC, IST midnight.
+`LeakGuard` treats known_at == t as late, and the mask had treated it as on time. The mask now
+uses the same strict rule (`test_an_input_known_exactly_at_the_moment_counts_as_late`). No
+metric had been read when this was fixed.
+
+### A1 result (VERIFIED, `reports/leak_guard/f1_before_after.json`)
+
+Both runs used identical `data/`: the #2119 recovery tip, 176 dataset rows. "Before" is that tip's
+harness, with the feature guard in report mode. "After" is this amendment. p is evaluate.py's
+two-sided exact McNemar test against always-up.
+
+| Horizon | n test folds | Logistic acc. | LightGBM acc. | Always-up | Logistic p | LightGBM p |
+|---|---|---|---|---|---|---|
+| h1 before | 155 | 49.0% | 48.4% | 51.0% | 0.818 | 0.724 |
+| **h1 after** | 155 | **47.7%** | **51.0%** | 51.0% | 0.568 | 1.000 |
+| h2 before | 149 | 55.0% | 55.7% | 58.4% | 0.424 | 0.694 |
+| **h2 after** | 149 | **55.7%** | **59.1%** | 58.4% | 0.424 | 1.000 |
+
+**Late inputs.**
+- Test-row inputs found late: h1 505 across 82 folds, and 0 after. h2 478 across 77 folds, and 0
+  after. The guard now raises, and neither run raised.
+- Inputs replaced, all rows, h1: `usd_inr`, `dxy`, `vix` and `us_10y_yield` 102 each;
+  `crude_wti` and `tips` 101; `gold_usd` 21.
+- Inputs replaced, all rows, h2: 99, 97 and 20 respectively.
+
+**Read plainly.**
+- No model is significantly different from always-up, before or after.
+- The direction conclusion (ADR 019, ADR 040) does not change.
+- LightGBM's h2 point estimate moves just above the base rate, 59.1% vs 58.4%. Its p is 1.0:
+  there is no evidence it is any better. The ship gate (`ml/direction/gate.py`) is unchanged, and
+  this is not a candidate for shipping.
+
+**Published numbers.** The published numbers on master (`data/direction_baseline.json`, source
+`d9ee6b1d`, 2026-09-24) are h1 49.4% (n 154) and h2 54.7% (n 148). They come from one fewer fold
+and the report-mode harness. After this PR merges, the next `eval-direction.yml` run republishes
+them with this harness. The README's METRIC markers then update through `docs-refresh`.
