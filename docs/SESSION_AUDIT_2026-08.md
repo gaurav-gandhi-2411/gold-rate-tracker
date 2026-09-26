@@ -1931,3 +1931,88 @@ which carries raw COMEX and USD/INR (I added it in #2004).
 **E2 hero** (#2069, stacked on #2053): no estimate is ever labelled as Tanishq's price. A property test covers 960 state combinations.
 
 **Item 1:** #2068 builds the service-worker VERSION from a hash of the shell files at deploy time. It stays inert until GG sets `PAGES_BUILD_MODE=actions` and switches the Pages source.
+
+## Checkpoint 2026-09-26 (cloud session): merge-train audit and recovery
+
+**Resume point for any later session.** This session ran in a cloud container and has no memory
+after it ends.
+
+**Environment.** The container's original `/home/user/repo` was a disconnected 2-commit "seed"
+snapshot with no remote. The earlier cloud session's figures came from that snapshot and are stale.
+Its local-only commit `69d83b1` on `docs/architecture-drift-fix` exists only there. This session
+attached the real repo and cloned it to `/home/user/gold-rate-tracker`: full history, 3171 commits,
+origin/master `e180bdf`. Push and REST API work. GraphQL is blocked, so `gh pr view` fails;
+`scripts/check_required_checks_positive.py` was run through a scratch shim that answers
+`gh pr view --json headRefOid` over REST. The repo's script was not modified.
+
+**Merge train: what happened (VERIFIED).**
+- Every merge GG made on 2026-09-26 was a squash merge: every merge commit has one parent. This
+  includes #2022 → `30c0e86` and #2028 → `e180bdf` on master.
+- After those two, every later train PR conflicted with master on `tests/test_count_baseline.json`,
+  and only on that file. #2086 also conflicts on five bot data files.
+- PRs merged after a skipped PR went into the skipped PR's branch, because their base was that
+  branch and it was never retargeted. They show "Merged", but the code is not on master.
+- Only #2022 and #2028 are on master, checked by merge-tree content equality.
+- GG's "#2029" is #2089. #2029 is a 2026-09-24 bot PR, and #2089 is the only unmerged, un-held
+  train PR missing from GG's conflict list.
+- Simulation from `1d78d59f`, master just before #2022: "Create a merge commit" merges all 24 in
+  order with 0 conflicts, and the result equals #2091's tip plus master's bot data. Squash
+  conflicts on every PR after #2028. The cause is the merge method, not master moving: the bot
+  commits touched only data, README, og.png and Lighthouse files, and all of those merged cleanly.
+- The stack tip `72806bf` (head of #2091) contains every train PR except the held #2078. Each
+  stranded branch's tree is byte-identical to a PR head inside that tip.
+
+**Recovery.**
+- **#2119** `fix/merge-train-recovery`: one merge commit bringing `72806bf` into master. Baseline
+  resolved as a union with the max per file, which equals the stack's version. Bot data files are
+  identical to master's. STOP for GG; merge with "Create a merge commit".
+- **#2120** `refactor/per-file-test-count-baseline` (item 2, stacked on #2119): one `.count` file
+  per test file. STOP for GG.
+
+**Open PRs from this session.** They must be merged in this order, each with **"Create a merge
+commit"**, never squash:
+
+| Order | PR | Branch | What | Merges |
+|---|---|---|---|---|
+| 1 | #2119 | `fix/merge-train-recovery` | the recovered train | GG |
+| 2 | #2120 | `refactor/per-file-test-count-baseline` | item 2, one `.count` file per test file | GG |
+| 3 | #2121 | `docs/architecture-drift-fix` | item 4, including a `_config.yml` line | GG |
+| 3 | #2122 | `fix/direction-eval-known-at-inputs` | 3b F1 | GG |
+| 3 | #2123 | `fix/nowcast-shadow-exclude-late-ibja` | 3c F2, ADR 063 | GG |
+| 3 | #2124 | `feat/history-off-tanishq-series` | 3d | GG |
+| 3 | #2078 | `feat/tanishq-timed-visits` | 3a mixed schedule; retargeted onto #2120 | GG |
+| 3 | this PR | `docs/checkpoint-2026-09-26-merge-train` | this checkpoint and the ADR 050 amendment A1 | self-merge (docs-only) |
+
+Items in order 3 are independent of each other once #2119 and #2120 are in.
+
+**Decisions and numbers (VERIFIED unless marked).**
+- **3a.** The schedule is section 4 variant A: 01:40, 07:30, 10:40, 11:10, 15:35, 19:50 IST. At
+  q = 0 it gives 19.7 min mean staleness (11.9–73.0), against U30's 304, and 0 h/day "not fresh".
+  T14 stays at 30 h. That rests on a simulation (INFERRED; it assumes independent misses): about
+  1 false alert per 65 weeks for the mixed schedule, against 1 per 54 for 4a.
+- **3b, F1.**
+  - h1: logistic 49.0% → 47.7% and LightGBM 48.4% → 51.0%, against always-up 51.0%, n = 155.
+  - h2: logistic 55.0% → 55.7% and LightGBM 55.7% → 59.1%, against 58.4%, n = 149.
+  - Nothing is significant (two-sided McNemar p ≥ 0.42). Late inputs dropped from 505 to 0 (h1)
+    and from 478 to 0 (h2).
+- **3c, F2.** The six late-IBJA days are in R2's historical data, not in the G3 window (a premise
+  in the brief was wrong). The decision now counts certified days only.
+- **3d.** Tested against the real app.js: with `prices.json` cut to today, the pre-change app
+  loses history, sparkline, comparisons and the good-price card. After the change, all of them
+  render from the estimate, labelled as such.
+- **3e.** ADR 050 amendment A1, in this PR.
+
+**Environment notes for the next cloud session.**
+- `gh pr view/list/diff` use GraphQL, which is blocked, so the repo's check scripts need a
+  REST shim. This session's shim was scratch-only.
+- `api.github.com` pagination via `--paginate` is blocked (numeric-ID URLs), and CI job logs
+  cannot be downloaded.
+- Playwright 1.62.1 needs browser build 1234 while the container ships 1194. This session used
+  a symlinked `PLAYWRIGHT_BROWSERS_PATH`.
+- `app.js`, `style.css`, `service-worker.js`, `CURRENT_STATE.md`, `docs/RUNBOOK.md`,
+  `ml/notifications.py` and `.github/workflows/lint.yml` are CRLF. Preserve that.
+
+**Next:**
+- After Sunday 2026-09-27's runs, record [adr042-v2] n = 0 with embargo, the M3 stratified
+  result (n and Wilson CIs), and the first nowcast and weekly-range shadow entries.
+- On 2026-10-22, the morning-rate decision, with F2 applied.
