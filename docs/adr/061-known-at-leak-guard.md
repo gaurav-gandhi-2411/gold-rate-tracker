@@ -202,3 +202,10 @@ convention of ADR 058 proposal 7.
 - No other test is run on these data for this amendment.
 - The ship gate (`ml/direction/gate.py`) is unchanged. A number that moves is reported as it
   is. It is not re-gated here.
+
+*Implementation note (2026-09-26, during the first run).* The first "after" run raised in the
+new raise-mode guard at `as_of=2025-05-16`, before producing any metric. `crude_wti` is known at
+exactly the prediction moment: WTI settles at 14:30 ET, which is 18:30 UTC, IST midnight.
+`LeakGuard` treats known_at == t as late, and the mask had treated it as on time. The mask now
+uses the same strict rule (`test_an_input_known_exactly_at_the_moment_counts_as_late`). No
+metric had been read when this was fixed.

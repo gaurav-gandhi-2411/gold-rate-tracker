@@ -96,3 +96,29 @@ def test_rows_without_provenance_are_returned_unchanged():
     out, counts = mask_late_features(ds, COLS)
     assert counts == {}
     assert out.equals(ds)
+
+
+def test_an_input_known_exactly_at_the_moment_counts_as_late():
+    # WTI settles 14:30 ET = 18:30 UTC in summer, the same instant as IST midnight (the moment);
+    # LeakGuard blocks known_at == t, so the mask must replace it too.
+    ds = pd.DataFrame(
+        [
+            {
+                **_row("2025-05-15", "backfill_yfinance", 83.0, "2025-05-14", None),
+                "crude_wti": 61.0,
+                "crude_wti_asof_date": "2025-05-14",
+            },
+            {
+                **_row("2025-05-16", "backfill_yfinance", 83.1, "2025-05-15", None),
+                "crude_wti": 62.0,
+                "crude_wti_asof_date": "2025-05-16",
+            },
+        ]
+    )
+    out, counts = mask_late_features(ds, ["crude_wti"])
+    assert counts == {"crude_wti": 1}
+    assert out.loc[1, "crude_wti"] == 61.0
+    guard = LeakGuard("features", mode="raise")
+    check_fold(
+        LeakGuard("labels", mode="raise"), guard, out.iloc[1], [], "label_binary", ["crude_wti"]
+    )

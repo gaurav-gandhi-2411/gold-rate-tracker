@@ -92,6 +92,7 @@ def mask_late_features(
 ) -> tuple[pd.DataFrame, dict[str, int]]:
     """Return a copy of `dataset` in which no timed feature is published after its row's
     prediction moment (fold_prediction_moment(as_of_date)), and per-column substitution counts.
+    "Known by" is strict, as in LeakGuard: an input known exactly at the moment is late.
 
     A late value in row i, column c, is replaced by the value of the most recent earlier row j
     whose own value in c was known by row i's moment, and row i's `c_asof_date` becomes row j's,
@@ -115,12 +116,12 @@ def mask_late_features(
         t = moments[i]
         for c in cols:
             k = known[i][c]
-            if k is None or k <= t:
+            if k is None or k < t:  # the guard blocks known_at == t, so equality is late
                 continue
             donor = None
             for j in range(i - 1, -1, -1):
                 kj = known[j][c]
-                if original[j].get("source") == r.get("source") and kj is not None and kj <= t:
+                if original[j].get("source") == r.get("source") and kj is not None and kj < t:
                     donor = j
                     break
             asof_col = f"{c}_asof_date"
