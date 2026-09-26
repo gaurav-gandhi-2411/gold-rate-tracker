@@ -65,7 +65,7 @@ jobs:
       - name: Check no test file has lost tests (hollow-run guard)
         # AP5 (2026-09-21): a truncated test file produced a green, hollow run because the missing
         # tests were simply not collected. Fails if any file's test count falls below the committed
-        # baseline (tests/test_count_baseline.json) or a test file is missing/unlisted. Lowering the
+        # baseline (tests/test_count_baseline/, one .count file per test file) or a test file is missing/unlisted. Lowering the
         # baseline is an explicit `--update`, visible in the PR diff. Limits: see the script docstring.
         run: python scripts/check_test_counts.py
       - name: Check plain-language compliance (U1/U3, docs/PLAIN_LANGUAGE_AUDIT.md)
