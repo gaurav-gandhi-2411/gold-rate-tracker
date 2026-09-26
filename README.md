@@ -43,7 +43,7 @@ The latest weekly results, updated automatically:
 
 No server, no database, no paid API. A scheduled GitHub Actions job fetches the IBJA rate (and tries Tanishq), works out the calibrated estimate and range, and commits the results as small JSON files; GitHub Pages serves a static web app that reads them. It costs nothing to run.
 
-- **Where the price comes from ([ADR 025](docs/adr/025-ibja-primary-source-decision.md)).** IBJA is the primary source: it publishes a daily benchmark reliably. Tanishq's site is harder to read automatically — over the last <!--METRIC:data/tanishq_scrape_success_rate.json#window_days:int-->7<!--/METRIC--> days a direct read succeeded <!--METRIC:data/tanishq_scrape_success_rate.json#success_rate:pct1|n=n|asof=generated_at_utc-->90.0% (n=30, as of 2026-09-26)<!--/METRIC--> of the time — so it only ever upgrades the IBJA-based estimate, never replaces it.
+- **Where the price comes from ([ADR 025](docs/adr/025-ibja-primary-source-decision.md)).** IBJA is the primary source: it publishes a daily benchmark reliably. Tanishq's site is harder to read automatically — over the last <!--METRIC:data/tanishq_scrape_success_rate.json#window_days:int-->7<!--/METRIC--> days a direct read succeeded <!--METRIC:data/tanishq_scrape_success_rate.json#success_rate:pct1|n=n|asof=generated_at_utc-->90.3% (n=31, as of 2026-09-26)<!--/METRIC--> of the time — so it only ever upgrades the IBJA-based estimate, never replaces it.
 - **How the estimate is made.** Retail 22K prices track the IBJA rate very closely (fit R²=<!--METRIC:data/calibration.json#r_squared:num2|n=n_observations|asof=fit_date-->0.97 (n=85, as of 2026-09-11)<!--/METRIC-->), so the page converts IBJA's rate into an estimated retail rate, and its range comes from how far past estimates actually missed ([ADR 027](docs/adr/027-calibration-oos-validation-recency-weighting.md)).
 - **The page itself** is plain HTML + JavaScript that reads those JSON files directly. No accounts, no ads, no analytics. Beyond GitHub itself, it loads its chart library from a public CDN (jsDelivr) and uses an error tracker (Sentry) that reports crashes in the page so they can be fixed.
 
@@ -84,7 +84,7 @@ flowchart TD
 | Path | What |
 |------|------|
 | `index.html`, `app.js`, `service-worker.js` | The web app (what users see) |
-| `scraper/` | Tanishq read (Node; a plain-HTTP path is tried first but is blocked by Cloudflare — it has succeeded <!--METRIC:data/tanishq_scrape_success_rate.json#n_requests_path:int-->0<!--/METRIC--> of <!--METRIC:data/tanishq_scrape_success_rate.json#n:int|asof=generated_at_utc-->30 (as of 2026-09-26)<!--/METRIC--> attempts in the rolling window, so the Playwright path is what actually runs) |
+| `scraper/` | Tanishq read (Node; a plain-HTTP path is tried first but is blocked by Cloudflare — it has succeeded <!--METRIC:data/tanishq_scrape_success_rate.json#n_requests_path:int-->0<!--/METRIC--> of <!--METRIC:data/tanishq_scrape_success_rate.json#n:int|asof=generated_at_utc-->31 (as of 2026-09-26)<!--/METRIC--> attempts in the rolling window, so the Playwright path is what actually runs) |
 | `ml/` | Inference, calibration, notifications, the direction-eval harness |
 | `data/` | Committed price/forecast/eval JSON the web app reads |
 | `.github/workflows/` | `check-price.yml` (scheduled data refresh), `lint.yml`, `eval-direction.yml`, `weekly-backtest.yml`, `scraper-canary.yml` |
