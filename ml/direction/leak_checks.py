@@ -107,7 +107,7 @@ def mask_late_features(
     if any(col not in out.columns for col in PROVENANCE_COLS) or "as_of_date" not in out.columns:
         return out, counts
     cols = [c for c in feature_cols if c in TIMED_FEATURES and c in out.columns]
-    rows = out.to_dict("records")
+    rows: list[dict[str, Any]] = [{str(k): v for k, v in r.items()} for r in out.to_dict("records")]
     moments = [fold_prediction_moment(r["as_of_date"]) for r in rows]
     original = [dict(r) for r in rows]
     known = [{c: snapshot_field_known_at(r, c) for c in cols} for r in original]
