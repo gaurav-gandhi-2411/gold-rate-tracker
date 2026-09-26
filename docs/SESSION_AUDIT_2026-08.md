@@ -1968,3 +1968,51 @@ origin/master `e180bdf`. Push and REST API work. GraphQL is blocked, so `gh pr v
   identical to master's. STOP for GG; merge with "Create a merge commit".
 - **#2120** `refactor/per-file-test-count-baseline` (item 2, stacked on #2119): one `.count` file
   per test file. STOP for GG.
+
+**Open PRs from this session.** They must be merged in this order, each with **"Create a merge
+commit"**, never squash:
+
+| Order | PR | Branch | What | Merges |
+|---|---|---|---|---|
+| 1 | #2119 | `fix/merge-train-recovery` | the recovered train | GG |
+| 2 | #2120 | `refactor/per-file-test-count-baseline` | item 2, one `.count` file per test file | GG |
+| 3 | #2121 | `docs/architecture-drift-fix` | item 4, including a `_config.yml` line | GG |
+| 3 | #2122 | `fix/direction-eval-known-at-inputs` | 3b F1 | GG |
+| 3 | #2123 | `fix/nowcast-shadow-exclude-late-ibja` | 3c F2, ADR 063 | GG |
+| 3 | #2124 | `feat/history-off-tanishq-series` | 3d | GG |
+| 3 | #2078 | `feat/tanishq-timed-visits` | 3a mixed schedule; retargeted onto #2120 | GG |
+| 3 | this PR | `docs/checkpoint-2026-09-26-merge-train` | this checkpoint and the ADR 050 amendment A1 | self-merge (docs-only) |
+
+Items in order 3 are independent of each other once #2119 and #2120 are in.
+
+**Decisions and numbers (VERIFIED unless marked).**
+- **3a.** The schedule is section 4 variant A: 01:40, 07:30, 10:40, 11:10, 15:35, 19:50 IST. At
+  q = 0 it gives 19.7 min mean staleness (11.9–73.0), against U30's 304, and 0 h/day "not fresh".
+  T14 stays at 30 h. That rests on a simulation (INFERRED; it assumes independent misses): about
+  1 false alert per 65 weeks for the mixed schedule, against 1 per 54 for 4a.
+- **3b, F1.**
+  - h1: logistic 49.0% → 47.7% and LightGBM 48.4% → 51.0%, against always-up 51.0%, n = 155.
+  - h2: logistic 55.0% → 55.7% and LightGBM 55.7% → 59.1%, against 58.4%, n = 149.
+  - Nothing is significant (two-sided McNemar p ≥ 0.42). Late inputs dropped from 505 to 0 (h1)
+    and from 478 to 0 (h2).
+- **3c, F2.** The six late-IBJA days are in R2's historical data, not in the G3 window (a premise
+  in the brief was wrong). The decision now counts certified days only.
+- **3d.** Tested against the real app.js: with `prices.json` cut to today, the pre-change app
+  loses history, sparkline, comparisons and the good-price card. After the change, all of them
+  render from the estimate, labelled as such.
+- **3e.** ADR 050 amendment A1, in this PR.
+
+**Environment notes for the next cloud session.**
+- `gh pr view/list/diff` use GraphQL, which is blocked, so the repo's check scripts need a
+  REST shim. This session's shim was scratch-only.
+- `api.github.com` pagination via `--paginate` is blocked (numeric-ID URLs), and CI job logs
+  cannot be downloaded.
+- Playwright 1.62.1 needs browser build 1234 while the container ships 1194. This session used
+  a symlinked `PLAYWRIGHT_BROWSERS_PATH`.
+- `app.js`, `style.css`, `service-worker.js`, `CURRENT_STATE.md`, `docs/RUNBOOK.md`,
+  `ml/notifications.py` and `.github/workflows/lint.yml` are CRLF. Preserve that.
+
+**Next:**
+- After Sunday 2026-09-27's runs, record [adr042-v2] n = 0 with embargo, the M3 stratified
+  result (n and Wilson CIs), and the first nowcast and weekly-range shadow entries.
+- On 2026-10-22, the morning-rate decision, with F2 applied.
