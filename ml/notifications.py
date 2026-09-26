@@ -60,19 +60,22 @@ _T13_GAP_THRESHOLD_DAYS = 2
 # just queued-with-no-runner) trigger T12. At the ~3h schedule cadence that's
 # ~9h of the runner being online but genuinely failing -- see docs/RUNBOOK.md.
 _T12_CONSECUTIVE_FAILURE_THRESHOLD = 3
-# T14 (GG decision 4b, 2026-09-25): Tanishq has not updated. Measured on the newest real
-# Tanishq row in data/prices.json (every successful visit appends a row, even when the rate
-# is unchanged), in hours that do NOT fall on a Sunday (IST). Why 30, not counted:
-#   * visits (interim schedule, PR #2078) cluster in 10:00-12:30 IST, possibly plus 01:40;
-#     the longest legitimate weekday gap is a day whose only success is its first visit
-#     (10:00) to the next day's last one (12:30) = 26.5 h;
-#   * Tanishq never changes its rate on a Sunday (reports/tanishq_update_times, #2078), so a
-#     Sunday may be skipped; Saturday 10:00 -> Monday 12:30 is 50.5 h on the clock but
-#     26.5 h once Sunday is excluded -- the same worst case as a weekday;
-#   * 30 = that worst case + 3.5 h slack, so a normal weekend never alerts, while a real
-#     outage after a 10:00 visit alerts by 16:00 IST the next working day -- within a day.
-# A single clock-hour N cannot do both: it must exceed ~50 h for the weekend, which would
-# leave a Tuesday outage undetected until Thursday.
+# T14 (GG decision 4b, 2026-09-25; threshold re-derived for decision 3a, 2026-09-26): Tanishq has
+# not updated. Measured on the newest real Tanishq row in data/prices.json (every successful visit
+# appends a row, even when the rate is unchanged), in hours that do NOT fall on a Sunday (IST).
+# Why 30 under the 3a mixed schedule (01:40, 07:30, 10:40, 11:10, 15:35, 19:50 IST;
+# docs/TANISHQ_TIMED_VISITS.md section 10):
+#   * with every visit on time the longest gap between readings is 350 min (5.8 h);
+#   * with the measured 38% of visits finding no runner, simulated as independent misses
+#     (20,000 weeks, seed 42; independence is an assumption, section 10): 30 h gives about one
+#     false alert per 65 weeks, against about one per 54 weeks for 30 h under the old 4a
+#     10:00-12:30 schedule that 4b was derived for. 24 h would give about one per 7 weeks;
+#   * so 30 h keeps 4b's false-alert rate and its worst-case detection: a real outage right after
+#     a successful visit alerts 30 non-Sunday hours later. The 4b rule applied literally ("first
+#     visit of one day to the last visit of the next", 42.2 h here, + 3.5 h) would have slowed
+#     detection to ~46 h for no gain.
+# A Sunday is still skipped (Tanishq never changes its rate on a Sunday; #2078), so a normal
+# weekend never alerts.
 _T14_TANISHQ_SILENT_THRESHOLD_H = 30.0
 _DERIVED_SOURCE_PREFIX = "ibja_calibrated"  # app.js DERIVED_SOURCE_PREFIX: not a Tanishq row
 
