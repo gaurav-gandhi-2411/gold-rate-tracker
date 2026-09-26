@@ -22,7 +22,6 @@ exclude:
   - scripts/
   - tests/
   - og.html
-  - spec.md
   - CHANGELOG.md
   - CONTRIBUTING.md
   - CURRENT_STATE.md

@@ -1,23 +1,39 @@
 # Architecture
 
-*Last verified against the running code 2026-07-18.*
+*Last verified against the running code 2026-09-26: the step order of `check-price.yml` and
+`scrape-tanishq-selfhosted.yml` after the merge-train recovery (#2119). The self-hosted job's
+schedule is deliberately not written here, because it is being changed (timed visits, #2078).
+Read it from the workflow file and `docs/TANISHQ_TIMED_VISITS.md`.*
 
 ## System overview
 
 ```mermaid
 graph TD
-    subgraph ci["GitHub Actions — check-price.yml (every 3h)"]
-        GH[Cron trigger] --> SCR[scraper/scrape.js\nPlaywright + Tanishq]
-        SCR --> MAC[ml/macro.py\nyfinance macro cache]
+    subgraph ci["GitHub Actions: check-price.yml (cron 37 1-22/3, GitHub-hosted)"]
+        GH[Cron trigger] --> MAC[ml/macro.py\nyfinance macro cache]
         MAC --> DRIFT[ml/drift.py]
         DRIFT --> INF[ml/inference.py\nnaive headline + conformal PI h=1]
-        INF --> IBJA[ml/ibja.py\nappend rate + refit calibration]
-        IBJA --> PROBE[ml/chronos_forecast.py --probe\nChronos-Bolt-Tiny, zero-shot]
+        INF --> IBJA[ml/ibja.py\nappend IBJA rate]
+        IBJA --> CAL[ml/calibration.py\nrefit if due]
+        CAL --> DER[scripts/build_ibja_derived_prices.py\ntrend chart's IBJA-based series]
+        DER --> SM[ml/scrape_metrics.py\nrolling Tanishq success rate]
+        SM --> PROBE[ml/chronos_forecast.py --probe\nChronos-Bolt-Tiny, zero-shot]
         PROBE --> NOTIF[ml/notifications.py\nntfy alerts, DARK-gated]
         NOTIF --> MET[ml/metrics.py --record]
-        MET --> FS[ml/feature_store.py\nappend-only snapshot]
+        MET --> CAD[ml/cadence_metrics.py\nrolling data cadence]
+        CAD --> FS[ml/feature_store.py\nappend-only snapshot]
         FS --> PUSH[bot-pr-sync\ncommit-status forward + squash-merge]
     end
+
+    subgraph selfhosted["GitHub Actions: scrape-tanishq-selfhosted.yml (self-hosted runner on GG's laptop)"]
+        SGH[Schedule, see workflow] --> SCR[scraper/scrape.js\nPlaywright + Tanishq]
+        SCR --> UPD[scraper/update-and-notify.js\nappend prices.json + drop alert]
+        UPD --> HEALTH[record job health\ntanishq_selfhosted_health.json\n+ tanishq_scrape_outcomes.jsonl]
+        HEALTH --> SPUSH[bot-pr-sync]
+    end
+
+    SPUSH -. "prices.json, read at the next cycle" .-> INF
+    SPUSH -. "outcomes log" .-> SM
 
     subgraph scheduled["Weekly / monthly Actions"]
         WB[weekly-backtest.yml\nml/backtest.py + metrics --resolve]
@@ -31,12 +47,13 @@ graph TD
     end
 
     PUSH --> pwa
+    SPUSH --> pwa
 ```
 
 ## Component descriptions
 
 ### Scraper (`scraper/scrape.js`, `scraper/update-and-notify.js`)
-Playwright-based Node.js scraper that navigates Tanishq's gold rate page and extracts 22K/24K/18K prices. On a drop ≥ ₹100, sends an ntfy.sh push notification. Output appended to `data/prices.json`.
+Playwright-based Node.js scraper that navigates Tanishq's gold rate page and extracts 22K/24K/18K prices. On a drop ≥ ₹100, sends an ntfy.sh push notification. Output appended to `data/prices.json`. It runs in its own workflow, `scrape-tanishq-selfhosted.yml`, on a self-hosted runner, not in `check-price.yml`. GitHub-hosted runner IPs are blocked by Cloudflare. The job was split out in the 2026-09 audit: while it sat queued on the self-hosted runner it held `check-price.yml` runs open for hours, and GitHub then dropped that workflow's next scheduled triggers. The job always records its outcome to `data/tanishq_selfhosted_health.json` (read by the T12 alert in `ml/notifications.py`) and `data/tanishq_scrape_outcomes.jsonl` (read by `ml/scrape_metrics.py`). The two workflows are decoupled: `ml/inference.py` uses whatever Tanishq reading is in `prices.json` when its cycle starts.
 
 ### Macro features (`ml/macro.py`)
 Downloads daily macro data (gold spot GC=F, USD/INR, 10Y yield, DXY, Sensex, VIX) from yfinance with retry logic. Caches to `data/macro_cache.parquet` (gitignored). Falls back gracefully if yfinance is unavailable. Feeds `ml/drift.py` and the direction dataset, not the price forecast itself (the naive headline needs no features; Chronos is univariate).
