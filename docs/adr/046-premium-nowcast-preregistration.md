@@ -1,5 +1,42 @@
 # ADR 046 — Pre-registration: does the derived Indian premium add information?
 
+> ## Superseded in part by ADR 058 (2026-09-25)
+>
+> *Added after the fact. The frozen pre-registration below is unchanged and is still the
+> registered test. Source: [ADR 058](058-timing-audit.md), re-run R3,
+> `reports/timing_audit/audit.json` at `924ee298` (PR #2051).*
+>
+> **No longer holds: the reading of the premium as mean-reverting.** The premium here is IBJA PM
+> on day t divided by parity built from COMEX and USD/INR *closes*. The COMEX close is a settle
+> 12-18 hours old at the fix it is set against. So day-to-day "reversion" in the premium is
+> mostly the clock:
+>
+> - AR(1) of the premium: **0.30** with the t-1-close parity (as published in #2004 and the
+>   Context below) vs **0.85** with parity read at the fix (1-hour bars, 184 pairs). Its SD falls
+>   from 1.26% to 0.82%.
+> - H1 re-run on the same 152 days (exploratory; the days where 1-hour data exists):
+>   - published convention: C Rs 130.1/g vs B1 148.6/g (999), one-sided p = 0.024;
+>   - premium at the fix, parity at 11:30 IST before the AM fix: C 58.04 vs B1 58.03, **p = 0.50**.
+> - The exploratory result below (C beats B1, p = 0.004, n = 163) is on a slightly different day
+>   set. Its sign agrees with the 152-day published-convention run. It should now be read as "C
+>   partly repairs B1's stale-parity error", not as evidence about premium dynamics.
+> - **Exploratory.** Post hoc, 2024-05 onward only (Yahoo keeps 730 days of 1-hour bars).
+>
+> **What this means for the registered forward test (read ~April 2027).** As registered, H1
+> compares C with B1 using parity from day t-1 closes. It would mostly measure timing noise: a C
+> win is expected whether or not the premium has any real dynamics. H2 and H3 use the same
+> t-1-close parity, so they are affected too. Before the forward read, either the parity timing or the meaning of H1 must change.
+> A dated addendum proposing this is at the end of this file. **It is not adopted.** Adopting it
+> is GG's or the orchestrator's call.
+>
+> **Has any forward data been examined?** No, as far as the repo shows (checked 2026-09-25 on
+> master `51769bd6`). The confirmatory set starts with days after 2026-09-24. The only later IBJA
+> row (2026-09-25) has an AM value and no PM value. No committed report and no workflow runs the
+> confirmatory set. ADR 058's R3 used only pre-registration days. So amending before the read is
+> still legitimate, provided it is adopted before any day after 2026-09-24 is scored.
+
+---
+
 **Status:** Accepted 2026-09-24 (GG decision G4d). Pre-registration only: the text and
 `scripts/analysis_premium_nowcast.py` are frozen in this PR **before the script is run on any
 data**. Research; nothing a user sees changes.
@@ -128,3 +165,32 @@ The confirmatory set had n = 0 on 2026-09-24.
   metric.
 - **Include the festival and wedding calendar.** Rejected. Only 5 dense days fall in a festival
   window, and the wedding-season difference is confounded with the 2026 duty period.
+
+## Addendum A1 — proposed 2026-09-25, NOT adopted (ADR 058 R3)
+
+*Status: proposal only. The frozen test above stays the registered test unless this addendum is
+adopted. It must be adopted, if at all, before any day after 2026-09-24 is scored.*
+
+**Why.** ADR 058 found the parity in this test runs on the wrong clock. The COMEX close of day t-1
+is the settle at 13:30 ET on t-1, 12-13 hours before IBJA's AM fix on t. The premium p(t')
+inherits the same error. On 152 pre-registration days, fixing the clock moves the premium's AR(1) from 0.30
+to 0.85, and H1 from p = 0.024 to p = 0.50 (exploratory, see the top of this file).
+
+**Proposed change (option A, recommended).** Keep B0, B1, C, the loss, H1-H3, alpha, Holm, the
+confirmatory start (days after 2026-09-24) and the n >= 120 read rule. Change only the clock of
+two inputs:
+- parity(t) = COMEX GC=F x USD/INR INR=X read from Yahoo 1-hour bars as the Close of the last bar
+  that ended by 06:30 UTC on t (IBJA AM ~12:00 IST), times the duty in force on t;
+- p(t') = IBJA PM(t') / parity read the same way at t''s PM fix (11:30 UTC) - 1.
+
+Because Yahoo drops 1-hour bars after 730 days, the scoring script must also save the bars it
+used for each scored day as a frozen artifact.
+
+**Alternative (option B).** Keep the inputs as registered. State now that a C win over B1 is not
+evidence of premium dynamics, only that C corrects stale parity, and that such a result cannot
+license any user-facing use of the premium.
+
+**How to adopt.** Commit the chosen option with a short note "adopted <date> by <GG/orchestrator>",
+record `sha256(docs/adr/046-premium-nowcast-preregistration.md)` at that commit, and freeze the
+amended `scripts/analysis_premium_nowcast.py` in the same commit, all before its first run on
+any day after 2026-09-24.
