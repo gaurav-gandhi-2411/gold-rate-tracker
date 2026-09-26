@@ -1,6 +1,6 @@
 """Notification system for gold-rate-tracker.
 
-Evaluates triggers (T1-T13) against current data files and dispatches
+Evaluates triggers (T1-T14) against current data files and dispatches
 ntfy push notifications. Designed to run as a CI step after the Chronos probe.
 
 Usage:
@@ -20,7 +20,7 @@ from pathlib import Path
 from statistics import median
 from zoneinfo import ZoneInfo
 
-from ml import public_copy
+from ml import public_copy, retailers
 from ml.ibja import compute_ibja_gap_business_days
 from ml.notification_routing import resolve_topic
 
@@ -60,6 +60,21 @@ _T13_GAP_THRESHOLD_DAYS = 2
 # just queued-with-no-runner) trigger T12. At the ~3h schedule cadence that's
 # ~9h of the runner being online but genuinely failing -- see docs/RUNBOOK.md.
 _T12_CONSECUTIVE_FAILURE_THRESHOLD = 3
+# T14 (GG decision 4b, 2026-09-25): Tanishq has not updated. Measured on the newest real
+# Tanishq row in data/prices.json (every successful visit appends a row, even when the rate
+# is unchanged), in hours that do NOT fall on a Sunday (IST). Why 30, not counted:
+#   * visits (interim schedule, PR #2078) cluster in 10:00-12:30 IST, possibly plus 01:40;
+#     the longest legitimate weekday gap is a day whose only success is its first visit
+#     (10:00) to the next day's last one (12:30) = 26.5 h;
+#   * Tanishq never changes its rate on a Sunday (reports/tanishq_update_times, #2078), so a
+#     Sunday may be skipped; Saturday 10:00 -> Monday 12:30 is 50.5 h on the clock but
+#     26.5 h once Sunday is excluded -- the same worst case as a weekday;
+#   * 30 = that worst case + 3.5 h slack, so a normal weekend never alerts, while a real
+#     outage after a 10:00 visit alerts by 16:00 IST the next working day -- within a day.
+# A single clock-hour N cannot do both: it must exceed ~50 h for the weekend, which would
+# leave a Tuesday outage undetected until Thursday.
+_T14_TANISHQ_SILENT_THRESHOLD_H = 30.0
+_DERIVED_SOURCE_PREFIX = "ibja_calibrated"  # app.js DERIVED_SOURCE_PREFIX: not a Tanishq row
 
 SCHEMA_VERSION = 1
 
@@ -121,6 +136,16 @@ class NotificationState:
     last_t11_ist_date: str = ""  # IST date YYYY-MM-DD of last T11 send (once-per-day dedup)
     last_t12_ist_date: str = ""  # IST date YYYY-MM-DD of last T12 send (once-per-day dedup)
     last_t13_ist_date: str = ""  # IST date YYYY-MM-DD of last T13 send (once-per-day dedup)
+    last_t14_ist_date: str = ""  # IST date YYYY-MM-DD of last T14 send (once-per-day dedup)
+
+
+@dataclass(frozen=True)
+class TanishqSilence:
+    """How long Tanishq has been silent: see compute_tanishq_silence."""
+
+    last_reading_utc: str  # timestamp of the newest real Tanishq row in prices.json
+    wall_hours: float  # clock hours since then
+    effective_hours: float  # the same span minus every hour that falls on a Sunday (IST)
 
 
 # ---------------------------------------------------------------------------
@@ -151,6 +176,7 @@ def load_state(path: Path = STATE_PATH) -> NotificationState:
             last_t11_ist_date=raw.get("last_t11_ist_date", ""),
             last_t12_ist_date=raw.get("last_t12_ist_date", ""),
             last_t13_ist_date=raw.get("last_t13_ist_date", ""),
+            last_t14_ist_date=raw.get("last_t14_ist_date", ""),
         )
     except Exception as exc:
         logger.warning("Could not load notification state (%s) — using fresh state.", exc)
@@ -177,6 +203,7 @@ def save_state(state: NotificationState, path: Path = STATE_PATH) -> None:
         "last_t11_ist_date": state.last_t11_ist_date,
         "last_t12_ist_date": state.last_t12_ist_date,
         "last_t13_ist_date": state.last_t13_ist_date,
+        "last_t14_ist_date": state.last_t14_ist_date,
     }
     path.write_text(json.dumps(data, indent=2) + "\n", encoding="utf-8")
 
@@ -397,6 +424,53 @@ def compute_selfhosted_consecutive_failures(path: Path = SELFHOSTED_HEALTH_JSON)
     except Exception as exc:
         logger.warning("Could not read selfhosted health record (%s) - skipping T12 check", exc)
         return None
+
+
+def _hours_excluding_sundays(start: datetime, end: datetime) -> float:
+    """Hours in [start, end) that do not fall on a Sunday in IST (no DST in IST)."""
+    cur, end = start.astimezone(IST), end.astimezone(IST)
+    total = 0.0
+    while cur < end:
+        next_midnight = (cur + timedelta(days=1)).replace(hour=0, minute=0, second=0, microsecond=0)
+        seg_end = min(next_midnight, end)
+        if cur.weekday() != 6:  # Monday=0 .. Sunday=6
+            total += (seg_end - cur).total_seconds() / 3600.0
+        cur = seg_end
+    return total
+
+
+def compute_tanishq_silence(
+    prices: list[dict], now_ist: datetime, tanishq_enabled: bool = True
+) -> TanishqSilence | None:
+    """Age of the newest REAL Tanishq reading in prices.json (drives T14).
+
+    None -- no alert -- when Tanishq is switched off (config/retailers.json, ADR 059: a
+    takedown is deliberate silence) or prices.json has no real Tanishq row at all (e.g.
+    fully IBJA-derived after a takedown). IBJA-derived rows are never Tanishq readings.
+    Reads only the committed data file, so it runs on GitHub's own runner (check-price.yml)
+    and sees a stopped/paused self-hosted runner as what it is: no new readings.
+    """
+    if not tanishq_enabled:
+        return None
+    for row in reversed(prices):
+        src = row.get("source")
+        if isinstance(src, str) and src.startswith(_DERIVED_SOURCE_PREFIX):
+            continue
+        if not isinstance(row.get("22k"), (int, float)) or not row.get("timestamp"):
+            continue
+        try:
+            ts = datetime.fromisoformat(str(row["timestamp"]).replace("Z", "+00:00"))
+        except ValueError:
+            continue
+        if ts.tzinfo is None:
+            ts = ts.replace(tzinfo=UTC)
+        wall = max(0.0, (now_ist - ts).total_seconds() / 3600.0)
+        return TanishqSilence(
+            last_reading_utc=ts.astimezone(UTC).isoformat(),
+            wall_hours=wall,
+            effective_hours=_hours_excluding_sundays(ts, now_ist),
+        )
+    return None
 
 
 def compute_dir_acc_30f(backtest: dict) -> float:
@@ -966,6 +1040,40 @@ def _check_t13_usable_snapshot_stall(
     return _make_alert("T13", title, body, 4, ["warning", "mag"], now_ist)
 
 
+def _check_t14_tanishq_silent(
+    silence: TanishqSilence | None,
+    state: NotificationState,
+    now_ist: datetime,
+) -> PendingAlert | None:
+    """T14 -- Tanishq has not updated: the newest real Tanishq reading is at least
+    _T14_TANISHQ_SILENT_THRESHOLD_H old, not counting Sunday hours (see the constant for
+    why 30). Once per IST calendar day.
+
+    Closes the gap T12 leaves by design: a self-hosted runner that is off, asleep or
+    paused never starts a job, so T12's failure counter never moves. T14 needs nothing
+    from that runner -- it runs in check-price.yml on a GitHub-hosted runner and reads
+    only data/prices.json -- so it fires for every cause of silence alike (runner off,
+    Tanishq blocking us, a broken sync PR). OPS topic only (ml/notification_routing.py).
+    """
+    if silence is None or silence.effective_hours < _T14_TANISHQ_SILENT_THRESHOLD_H:
+        return None
+    today_ist = now_ist.strftime("%Y-%m-%d")
+    if state.last_t14_ist_date == today_ist:
+        return None
+    last_ist = datetime.fromisoformat(silence.last_reading_utc).astimezone(IST)
+    title = f"Gold Tracker: Tanishq has not updated in {silence.wall_hours:.0f}h"
+    body = (
+        f"The newest Tanishq reading in data/prices.json is from "
+        f"{last_ist.strftime('%a %d %b %H:%M')} IST: {silence.wall_hours:.0f} h ago, "
+        f"{silence.effective_hours:.0f} h not counting Sundays (alert at "
+        f"{_T14_TANISHQ_SILENT_THRESHOLD_H:.0f} h). This check runs on GitHub's own runner, "
+        "so it fires even when the self-hosted runner is off or paused. Check the runner "
+        "host, recent scrape-tanishq-selfhosted runs and the Tanishq sync PR "
+        "(docs/RUNBOOK.md, T14)."
+    )
+    return _make_alert("T14", title, body, 4, ["warning", "hourglass"], now_ist)
+
+
 # ---------------------------------------------------------------------------
 # Public API
 # ---------------------------------------------------------------------------
@@ -983,8 +1091,9 @@ def check_triggers(
     ibja_gap_days: int | None = None,
     selfhosted_consecutive_failures: int | None = None,
     usable_snapshot_gap_days: int | None = None,
+    tanishq_silence: TanishqSilence | None = None,
 ) -> list[PendingAlert]:
-    """Evaluate all triggers (T1–T13); return new alerts for this call.
+    """Evaluate all triggers (T1–T14); return new alerts for this call.
 
     Cooldowns and combined caps are enforced here.  Quiet-hours queuing and
     delivery of previously queued alerts is the caller's responsibility (see
@@ -1004,6 +1113,8 @@ def check_triggers(
         (same-day-IBJA) feature-store snapshot (see
         compute_usable_snapshot_gap_days). Drives T13 -- distinct from
         snapshot_gap_days/T10, which only checks that some row landed.
+    tanishq_silence: age of the newest real Tanishq reading (see
+        compute_tanishq_silence). Drives T14.
     """
     alerts: list[PendingAlert] = []
     for fn in (_check_t1, _check_t2, _check_t3, _check_t4, _check_t5, _check_t7):
@@ -1035,6 +1146,9 @@ def check_triggers(
     t13 = _check_t13_usable_snapshot_stall(usable_snapshot_gap_days, state, now_ist)
     if t13 is not None:
         alerts.append(t13)
+    t14 = _check_t14_tanishq_silent(tanishq_silence, state, now_ist)
+    if t14 is not None:
+        alerts.append(t14)
     return alerts
 
 
@@ -1108,6 +1222,8 @@ def send_pending(
                 state.last_t12_ist_date = now_ist.strftime("%Y-%m-%d")
             if alert.trigger_id == "T13":
                 state.last_t13_ist_date = now_ist.strftime("%Y-%m-%d")
+            if alert.trigger_id == "T14":
+                state.last_t14_ist_date = now_ist.strftime("%Y-%m-%d")
             logger.info("Sent %s: %s", alert.trigger_id, alert.title)
         else:
             logger.warning("Failed to send %s", alert.trigger_id)
@@ -1162,6 +1278,8 @@ def _stamp_ist_dedup(trigger_id: str, state: NotificationState, now_ist: datetim
         state.last_t12_ist_date = today
     elif trigger_id == "T13":
         state.last_t13_ist_date = today
+    elif trigger_id == "T14":
+        state.last_t14_ist_date = today
 
 
 def queue_for_quiet_hours(
@@ -1225,7 +1343,7 @@ def main() -> None:
     import argparse
 
     logging.basicConfig(level=logging.INFO, format="%(levelname)s: %(message)s")
-    parser = argparse.ArgumentParser(description="Gold rate notification system (T1-T13)")
+    parser = argparse.ArgumentParser(description="Gold rate notification system (T1-T14)")
     parser.add_argument(
         "--simulate",
         action="store_true",
@@ -1260,6 +1378,12 @@ def main() -> None:
     usable_snapshot_gap_days = compute_usable_snapshot_gap_days(now_ist)
     ibja_gap_days = compute_ibja_gap_business_days(now_ist)
     selfhosted_consecutive_failures = compute_selfhosted_consecutive_failures()
+    try:
+        tanishq_enabled = retailers.is_enabled("tanishq")
+    except Exception as exc:  # a broken switch must not silence T14
+        logger.warning("retailers config unreadable (%s) -- treating Tanishq as enabled", exc)
+        tanishq_enabled = True
+    tanishq_silence = compute_tanishq_silence(prices, now_ist, tanishq_enabled)
 
     new_alerts = check_triggers(
         forecast,
@@ -1273,6 +1397,7 @@ def main() -> None:
         ibja_gap_days=ibja_gap_days,
         selfhosted_consecutive_failures=selfhosted_consecutive_failures,
         usable_snapshot_gap_days=usable_snapshot_gap_days,
+        tanishq_silence=tanishq_silence,
     )
 
     if args.simulate:
@@ -1308,6 +1433,13 @@ def main() -> None:
             f"Selfhosted:   {selfhosted_str} consecutive failures  "
             f"(T12 gate: >= {_T12_CONSECUTIVE_FAILURE_THRESHOLD}x)"
         )
+        silence_str = (
+            "n/a"
+            if tanishq_silence is None
+            else f"{tanishq_silence.effective_hours:.1f}h excl. Sundays "
+            f"({tanishq_silence.wall_hours:.1f}h clock)"
+        )
+        print(f"Tanishq age:  {silence_str}  (T14 gate: >= {_T14_TANISHQ_SILENT_THRESHOLD_H:.0f}h)")
         print(f"\nTriggers fired ({len(new_alerts)}):")
         if new_alerts:
             for a in new_alerts:
