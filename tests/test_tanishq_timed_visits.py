@@ -171,13 +171,39 @@ def _schedule() -> dict:
     return json.loads((ROOT / "scraper" / "visit_schedule.json").read_text(encoding="utf-8"))
 
 
-def test_schedule_is_six_visits_inside_the_4a_window():
-    # GG decision 4a: exactly six visits, all in 10:00-12:30 IST, 15-30 min apart
+def test_schedule_is_the_mixed_variant_a_six_visits():
+    # GG decision 3a (2026-09-26, replaces 4a): six visits across morning and afternoon, the
+    # section 4 variant A schedule; every gap under the 8 h freshness gate, 15 min minimum spacing
     sch = _schedule()
+    assert sch["mode"] == "mixed"
     mins = sr.to_minutes(sch["visits_ist"])
     assert len(mins) == 6
     assert mins == sorted(mins)
-    assert sr.window_feasible(mins)
+    assert mins == sr.INTERIM
+    assert sr.mixed_feasible(mins)
+    assert sr.not_fresh_hours(mins, 0.0, float(an.STALE_GATE_MIN)) == 0.0
+
+
+def test_mixed_feasible_rejects_long_gaps_close_visits_and_no_early_visit():
+    assert sr.mixed_feasible(sr.INTERIM)
+    assert not sr.mixed_feasible(sr.U30)  # 12:30 -> 10:00 is a 21.5 h gap
+    assert not sr.mixed_feasible([100.0, 450.0, 640.0, 650.0, 935.0, 1190.0])  # 10 min apart
+    assert not sr.mixed_feasible([100.0, 560.0, 640.0, 670.0, 935.0, 1190.0])  # none in 07-09
+
+
+def test_optimise_mixed_returns_a_feasible_schedule_no_worse_than_its_start():
+    rng = np.random.default_rng(0)
+    p = np.zeros(an.DAY)
+    p[640:660] = 0.7
+    p[930:950] = 0.3
+    crn = an.make_crn(p / p.sum(), np.array([2.0]), 0.0, 6, rng)
+    crn = an.CRN(crn.u[:500], crn.lat[:500], crn.miss[:500])
+    vs = sr.optimise_mixed(crn, sr.INTERIM, np.random.default_rng(1), starts=3)
+    assert sr.mixed_feasible(vs)
+    assert (
+        float(an.staleness_fixed(crn.u, vs, crn.lat, crn.miss).mean())
+        <= float(an.staleness_fixed(crn.u, sr.INTERIM, crn.lat, crn.miss).mean()) + 1e-9
+    )
 
 
 def test_dedupe_and_slot_tolerance_below_the_shortest_visit_gap():

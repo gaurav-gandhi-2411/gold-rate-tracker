@@ -1,37 +1,38 @@
 # Tanishq timed visits (GG decision E3)
 
 **Status: STOP for GG.** Nothing here is live until GG merges the PR, and the exact-time trigger
-needs GG's own setup on the laptop (section 6).
+needs GG's own setup on the laptop (section 6). The schedule is GG decision 3a (2026-09-26,
+section 10), which replaces decision 4a (section 9).
 
 ## 1. Summary
 
-**GG decision 4a (2026-09-25), in force in this PR:** six visits a day, all between 10:00 and
-12:30 IST, and no measurement window. Chosen by the rule pre-registered in section 9:
+**GG decision 3a (2026-09-26), in force in this PR; replaces decision 4a.** Six visits a day
+across morning and afternoon: the section 4 variant A schedule. Section 10 has the details.
 
-- **Visit times (IST): 10:00, 10:30, 11:00, 11:30, 12:00, 12:30.** Every change inside the
-  window is caught within 30 min, and dated to within 30 min for the weekly refinement.
-- **The 01:40 visit is dropped.** The data do not show updates then: 1.0% of changes near 01:40
-  (95% CI 0–3.1%); only 1 of 115 change intervals has to be overnight (Fri 2026-07-24,
-  between 00:44 and 03:32 IST).
-- **What GG's choice costs (stated plainly).** About 27% of changes happen in the afternoon
-  (14:00–19:59). With no afternoon visit, those are seen only the next morning:
-  - they are on average 1,046 min (about 17.4 h) stale (95% CI 998–1,112), against 324 min today
-    and 50 min under the section 4 interim schedule;
-  - after such a change the page keeps showing the earlier Tanishq rate (mean 235 min, median
-    300 min), because it is under 8 h old; then it shows the estimate until the next morning
-    visit.
-- **Overall (q = 0, every visit on time), against today's captures:**
-  - Share of changes caught within 30 min: 68.5% (CI 58.7–76.9%) vs 5.8% (0.6–14.0%).
-  - Within 60 min: 71.9% (61.4–79.6%) vs 12.8% (4.3–27.1%).
-  - Morning changes (10:00–11:59): 21 min mean staleness (12.6–24.3), vs 484 min today.
-  - Mean staleness over all changes: 304 min (215–415) vs 440 min (227–695). These two
-    intervals overlap: the mean is dominated by the afternoon changes.
-- **"Not fresh" hours.** The last visit is 12:30, so the site's 8 h gate shows "not fresh" (the
-  estimate) from about 20:30 to 10:00 IST, 13.5 h a day, even when every visit happens. That is
-  E2's "not fresh" display, never a wrong price. The section 4 interim schedule had 0 h.
-- **Forward refinement.** `scripts/tanishq_schedule_refine.py weekly` refits the update times on
-  every new capture and prints a recommended schedule. It proposes a change to GG only under the
-  pre-registered rule in section 9. It never applies one.
+- **Visit times (IST): 01:40, 07:30, 10:40, 11:10, 15:35, 19:50.**
+- **Why.** Decision 4a's 10:00–12:30 cluster left every afternoon change (27% of changes) stale
+  until the next morning. Measured with the same data, bootstrap and Monte Carlo (section 9
+  results table, q = 0, every visit on time):
+
+  | | Mixed (3a) | 10:00–12:30 cluster (4a) |
+  |---|---|---|
+  | Mean staleness, all changes | **19.7 min** (95% CI 11.9–73.0) | 304 min (215–415) |
+  | Morning changes | 8.4 min (3.4–59.1) | 21.0 min (12.6–24.3) |
+  | Afternoon changes | 49.7 min (15.4–174.4) | 1,046 min (998–1,112) |
+  | Caught within 30 min | 88.5% (63.9–95.3%) | 68.5% (58.7–76.9%) |
+  | Caught within 60 min | 90.4% (66.6–98.7%) | 71.9% (61.4–79.6%) |
+  | Hours a day the page shows "not fresh" | **0 h** | 13.5 h |
+
+- **At the measured miss rate** (q = 0.38: 38% of visits find no runner), mean staleness is
+  164.6 min against U30's 351.
+- **01:40 is kept for the freshness gate, not for updates.** Section 9 found no evidence of
+  updates near 01:40: 1.0%, CI 0–3.1%. The visit is there because without it the overnight gap
+  (19:50 → 07:30) is 11.7 h, longer than the site's 8 h gate. The page would then show the
+  estimate every night even when nothing is wrong.
+- **T14 ("Tanishq has not updated") stays at 30 h, re-derived for this schedule** (section 10).
+- **Forward refinement.** `scripts/tanishq_schedule_refine.py weekly` now runs in mixed mode. It
+  re-optimises under variant A's constraints and proposes a change to GG only under the rule in
+  section 10. It never applies one.
 - Exact-time visits still need the laptop trigger (section 6). GitHub's scheduler creates only
   4.7 of 8 scheduled runs a day, 1–3 h late; its crons stay only as the fallback.
 
@@ -294,8 +295,10 @@ India Standard Time):
    Idle)" (Modern Standby), wake timers may be ignored on battery with the lid closed. Keep it
    plugged in, or accept that those slots will be missed and fall back to "not fresh".
 5. Preview the tasks: `.\scripts\win\register_tanishq_tasks.ps1 -DryRun`. It should list 6
-   tasks, `\GoldRateTracker\Tanishq-1000`, `Tanishq-1030`, `Tanishq-1100`, `Tanishq-1130`,
-   `Tanishq-1200` and `Tanishq-1230`.
+   tasks: `\GoldRateTracker\Tanishq-0140`, `Tanishq-0730`, `Tanishq-1040`, `Tanishq-1110`,
+   `Tanishq-1535` and `Tanishq-1950`. If you registered the 4a tasks (`Tanishq-1000` …
+   `Tanishq-1230`) earlier, first run `.\scripts\win\register_tanishq_tasks.ps1 -Unregister`.
+   It removes every `\GoldRateTracker\Tanishq-*` task.
 6. Create them: `.\scripts\win\register_tanishq_tasks.ps1`. Each task is set to:
    - daily at its IST time;
    - **Wake the computer to run this task**;
@@ -310,14 +313,14 @@ India Standard Time):
 7. Check that the runner service is running: `Get-Service actions.runner.*` should show
    `Running`.
 8. Check wake timers: `powercfg /waketimers` should list the next `Tanishq-` task.
-9. Test one run now: `Start-ScheduledTask -TaskPath \GoldRateTracker\ -TaskName Tanishq-1100`.
+9. Test one run now: `Start-ScheduledTask -TaskPath \GoldRateTracker\ -TaskName Tanishq-1110`.
    Then check each of these:
    - `gh run list --workflow scrape-tanishq-selfhosted.yml -L 1` shows a `workflow_dispatch`
      run.
    - `Get-Content $env:LOCALAPPDATA\gold-rate-tracker\tanishq_dispatch.log -Tail 3` shows
      `DISPATCHED`.
    - After the bot PR merges, the last line of `data/tanishq_scrape_outcomes.jsonl` has
-     `"trigger": "workflow_dispatch", "slot_ist": "11:00"`.
+     `"trigger": "workflow_dispatch", "slot_ist": "11:10"`.
 10. Test sleep once: put the laptop to sleep about 5 min before a slot and confirm that the run
     appears at the slot time.
 11. Only after steps 9–10 work, stop the GitHub cron visits:
@@ -529,3 +532,72 @@ Checked against #2048's head `5f0f2f62` (VERIFIED by reading its `scraper/scrape
   GitHub-cron fallback has no cool-off, but it only runs when the laptop trigger is off.
 - **No file conflicts.** `git merge-tree` of the two branch heads is clean; the only shared file
   is `tests/test_count_baseline.json`, which merges automatically. #2048 needed no change.
+
+## 10. GG decision 3a: mixed morning-and-afternoon schedule (2026-09-26)
+
+**Decision (pre-approved by GG in the 2026-09-26 brief, STOP for GG to merge).** Switch from
+4a's 10:00–12:30 cluster to the mixed morning-and-afternoon schedule, keeping 5–6 visits.
+
+**Which mixed schedule, and why this one.** The schedule is the section 4 variant A, K = 6
+point estimate: **01:40, 07:30, 10:40, 11:10, 15:35, 19:50 IST**. No new schedule was fitted,
+and no new analysis was run to choose it. It is the only mixed candidate already evaluated
+under both pre-registrations (sections 4 and 9), in the same paired bootstrap as U30, so its
+numbers are directly comparable (section 1 table).
+- Variant A's gap limit (≤ 460 min) is what makes "not fresh" 0 h a day.
+- Variant B, K = 6 (07:00, 10:40, 11:10, 15:35, 17:15, 19:50) scores 16.6 min (9.6–71.0) but
+  has an 11.2 h overnight gap. The page would then show the estimate for about 3 h every night.
+- The 5-visit options are worse: A, K = 5 is 29.1 min and B, K = 5 is 23.3 min.
+- The section 4 regret rule said the data cannot pin down the exact best schedule. Every
+  candidate above beats both today's captures and U30.
+
+**What changed in this PR for 3a.**
+- `scraper/visit_schedule.json`: the six times and `"mode": "mixed"`.
+- The workflow's fallback crons (UTC 20:10, 02:00, 05:10, 05:40, 10:05, 14:20).
+- Tests: the schedule equals `INTERIM`, is `mixed_feasible`, and shows 0 "not fresh" hours.
+- Mixed mode in `scripts/tanishq_schedule_refine.py weekly`.
+- The T14 derivation (below).
+- The dispatcher's 10 min duplicate guard, the 10 min slot tolerance and the 3 h cool-off are
+  unchanged. The shortest gap is still 30 min (10:40 → 11:10), so the existing test that both
+  stay under the shortest gap still holds.
+
+**Reconciliation with #2048, re-checked for the new times.**
+- **Probe once per UTC day.** In UTC the visits are 20:10 (previous UTC day), 02:00, 05:10,
+  05:40, 10:05 and 14:20. The first visit of each UTC day is 02:00 UTC (07:30 IST), so the
+  plain-GET probe runs there once a day.
+- **429 cool-off.** A block at 10:40 skips 11:10 and resumes at 15:35 (3 h later), not the next
+  day as under 4a.
+
+**T14 threshold, re-derived: stays 30 h.**
+- **Method.** 20,000 simulated weeks, seed 42. Each visit is missed independently with the
+  measured q = 0.38. Silence is counted in non-Sunday IST hours, as T14 does. Independence is
+  an assumption: real misses (laptop off) are correlated, which makes long gaps more likely
+  than simulated.
+
+  | Threshold | Mixed (3a): one false alert per | 10:00–12:30 cluster (4a): one false alert per |
+  |---|---|---|
+  | 24 h | 7 weeks | 7 weeks |
+  | 26 h | 19 weeks | 52 weeks |
+  | 30 h | **65 weeks** | **54 weeks** |
+  | 36 h | 222 weeks | 74 weeks |
+
+- **With every visit on time**, the longest gap is 5.8 h, so a healthy week never alerts.
+- **Why 30 h holds.** It keeps 4b's false-alert rate and worst-case detection time (30
+  non-Sunday hours after the last successful visit).
+- **Why not 4b's rule applied literally.** "First visit of one day to the last visit of the
+  next" is 42.2 h here, which would give about 46 h: slower detection for no gain.
+- **Why not lower.** Going below 30 h trades detection speed for more false alerts, and alert
+  thresholds are GG's decision.
+- These figures come from a simulation (INFERRED), not from observed alerts.
+
+**Weekly refinement in mixed mode (set before any mixed-mode weekly run).** The rules in
+section 9 hold, with two changes:
+- The candidate is re-optimised over the whole day under `mixed_feasible`: variant A's
+  constraints plus the 15 min minimum spacing. It starts from the current schedule plus up
+  to 19 random starts (random draws that are not feasible are skipped).
+- Rule 3 (the morning-window escalation) does not apply, and the script reports it as not
+  applicable.
+
+Everything else is unchanged: at least 20 changes bracketed to ≤ 30 min since
+`effective_from_utc`, and improvement ≥ 5 min with a one-sided 95% lower bound above 0
+(B = 200, seed 42) before it prints PROPOSE. At most one proposal per 4 weeks. The script
+never edits the schedule.

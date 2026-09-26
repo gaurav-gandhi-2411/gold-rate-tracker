@@ -148,6 +148,52 @@ def optimise_window(
     return best[0]
 
 
+def mixed_feasible(visits: Sequence[float], min_step: float = MIN_STEP_MIN) -> bool:
+    """GG decision 3a (2026-09-26) mixed schedule: section 4 variant A (a visit in 07:00-09:00,
+    every circular gap <= an.MAX_GAP_MIN so the 8 h freshness gate never flips) plus the 15 min
+    minimum spacing that a visit's runner occupancy forces (section 9, deviation 1)."""
+    v = sorted(visits)
+    if not an.feasible(v, float(an.MAX_GAP_MIN)):
+        return False
+    gaps = [b - a for a, b in pairwise([*v, v[0] + DAY])]
+    return min(gaps) >= min_step
+
+
+def optimise_mixed(
+    crn: object,
+    start: Sequence[float],
+    rng: np.random.Generator,
+    starts: int = 20,
+    min_step: float = MIN_STEP_MIN,
+) -> list[float]:
+    """Coordinate descent for K visits on the 5-min grid of the whole day (mixed_feasible)."""
+    grid = np.arange(0, DAY, an.GRID, dtype=float)
+    best: tuple[list[float], float] = (sorted(start), math.inf)
+    for s in range(starts):
+        if s == 0:
+            vs = sorted(float(x) for x in start)
+        else:
+            vs = sorted(float(x) for x in rng.choice(grid, size=K, replace=False))
+            if not mixed_feasible(vs, min_step):
+                continue
+        c = float(an.staleness_fixed(crn.u, vs, crn.lat, crn.miss).mean())
+        improved = True
+        while improved:
+            improved = False
+            for i in range(K):
+                costs = an.coordinate_costs(crn, vs, i, grid)
+                for gi in np.argsort(costs):
+                    if costs[gi] >= c - 1e-9:
+                        break
+                    trial = [*vs[:i], float(grid[gi]), *vs[i + 1 :]]
+                    if mixed_feasible(trial, min_step):
+                        vs, c, improved = sorted(trial), float(costs[gi]), True
+                        break
+        if c < best[1]:
+            best = (sorted(vs), c)
+    return best[0]
+
+
 # ── metrics ──────────────────────────────────────────────────────────────────
 
 
@@ -467,7 +513,11 @@ def weekly(boot: int, last_proposal: date | None) -> dict:
     runs_sh, runs_cp = an.load_runs(RUNS_DIR)
     _, pool, _ = an.lateness_report(runs_sh, runs_cp, d["caps"])
     crn = an.make_crn(p_ms, pool, 0.0, K, np.random.default_rng(an.SEED))
-    cand = optimise_window(crn, np.random.default_rng(an.SEED))
+    mode = schedule.get("mode", "window_4a")
+    if mode == "mixed":
+        cand = optimise_mixed(crn, current, np.random.default_rng(an.SEED))
+    else:
+        cand = optimise_window(crn, np.random.default_rng(an.SEED))
     cur_m = schedule_metrics(crn, current)
     cand_m = schedule_metrics(crn, cand)
     rng = np.random.default_rng(an.SEED)
@@ -484,9 +534,15 @@ def weekly(boot: int, last_proposal: date | None) -> dict:
     imp_lb = float(np.quantile(delta, 0.05))
     today = (datetime.now(UTC) + IST).date()
     verdict = decide(counts, imp, imp_lb, last_proposal, today)
+    if mode == "mixed":
+        # The window check (section 9, rule 3) asks whether a morning-only window misses
+        # changes. A mixed schedule visits morning and afternoon, so it does not apply.
+        verdict["escalate_window_misses_changes"] = False
+        verdict["window_check"] = "not applicable in mixed mode (section 10)"
     hourly = [round(float(p_ms[h * 60 : (h + 1) * 60].sum()), 3) for h in range(24)]
     return {
         "run_ist_date": today.isoformat(),
+        "mode": mode,
         "current_schedule_ist": schedule["visits_ist"],
         "effective_from_utc": eff_s,
         "forward": counts,
