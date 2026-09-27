@@ -2016,3 +2016,47 @@ Items in order 3 are independent of each other once #2119 and #2120 are in.
 - After Sunday 2026-09-27's runs, record [adr042-v2] n = 0 with embargo, the M3 stratified
   result (n and Wilson CIs), and the first nowcast and weekly-range shadow entries.
 - On 2026-10-22, the morning-rate decision, with F2 applied.
+
+### Checkpoint 2026-09-27 (Sunday runs)
+
+**Run.** `weekly-backtest.yml` run `36302778519` (scheduled, created 07:20Z, success) ran on
+master `8557e530`. That is master's own code: #2119 was not merged, so none of the train's code
+ran. Its results landed as #2143 (`da884b6c`). Every number below is VERIFIED from the committed
+files.
+
+- **[adr042-v2] live_h2:** n = 0. Embargo column `label_date_h2`, confirmatory after 2026-09-24,
+  consecutive-day labels, and no as_of date scored yet. `reached_preregistered_n` is false; the
+  power target is n = 418.3.
+  - The non-confirmatory proxy arm (`proxy_deadzone_h1_equivalent`): n 329, accuracy 52.6% vs
+    always-up 55.6%, DM p 0.789.
+- **M3 stratified band** (`data/calibration_band_coverage.json` → `stratified_shadow`). This is the
+  first result, the one ADR 035 named. Nominal target is 80%.
+
+  | | n | Production band | Stratified band |
+  |---|---|---|---|
+  | Pooled | 93 | 69.9% (Wilson 59.9–78.3%), p vs nominal 0.019 | 80.6% (71.5–87.4%), p 1.0 |
+  | Same-day | 63 | 77.8% (66.1–86.3%) | identical |
+  | Carry-forward | 30 | 53.3% (36.1–69.8%), p 0.0009 | 86.7% (70.3–94.7%) |
+
+  - On carry-forward days, the stratified band's mean half-width is Rs 204.1/g, against 78.1
+    for production.
+  - **Caveat (INFERRED from the file history):** last week's file had n = 86 and no stratified key,
+    so only about 7 of these 93 days are new since the stratified rule was written. The rest are
+    the development window it was built on. This is not yet out-of-sample evidence.
+- **Nowcast shadow (G3).** First 2 rows, logged by master's pre-#2090 runner, without
+  `inputs_known_after_target`.
+  - 09-25 is same-day: truth 14,055, M0 14,128.32, M3 14,047.10.
+  - 09-26 is a carry-forward day (gap 1).
+  - `n_same_day` = 1. No MAE or p is computed below 3 days.
+  - F2 certification with #2123's code: 09-25 passes. IBJA was fetched 12:56Z, before the
+    17:05Z reading. So 1 certified day and 0 excluded.
+- **Weekly-range shadow.** First 2 entries, as_of 09-25. The 1d band is 136,630.1–142,377.0 per
+  10 g (n_cal 193); the week band is 133,221.7–147,340.1 (n_cal 156). Neither is scored yet.
+
+**Readiness.**
+- #2119 had gone conflicting with master: #2143 rewrote `data/wait_or_buy_today.json` with
+  master's old script, which **republishes IBJA's price level (`price_t`) in a publicly served
+  file**. The train's script omits that level (`test_committed_wait_or_buy_today_has_no_ibja_level`).
+- I merged master in and kept the train's compliant version (`3c1bce59`). lint and pwa-js are
+  green, completed after master's last commit, and the positive check PASSES.
+- The full 8-PR sequence still dry-runs with 0 conflicts on master `2ce2c77e`.
