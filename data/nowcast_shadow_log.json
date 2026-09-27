@@ -1,0 +1,35 @@
+{
+  "shadow_after": "2026-09-24",
+  "window_ends": "2026-10-22",
+  "days": [
+    {
+      "date": "2026-09-25",
+      "ibja_date": "2026-09-25",
+      "gap_days": 0,
+      "truth_rs_per_g": 14055.0,
+      "M0_current": 14128.32,
+      "M3_am_pm": 14047.1,
+      "logged_at_utc": "2026-09-27T07:21:14.338708+00:00",
+      "git_sha": "8557e530ecc94341751ade07e3334f0b8c3ee813"
+    },
+    {
+      "date": "2026-09-26",
+      "ibja_date": "2026-09-25",
+      "gap_days": 1,
+      "truth_rs_per_g": 14040.0,
+      "M0_current": 14122.03,
+      "M3_am_pm": 14050.78,
+      "logged_at_utc": "2026-09-27T07:21:14.338708+00:00",
+      "git_sha": "8557e530ecc94341751ade07e3334f0b8c3ee813"
+    }
+  ],
+  "runs": [
+    {
+      "run_at_utc": "2026-09-27T07:21:14.338708+00:00",
+      "git_sha": "8557e530ecc94341751ade07e3334f0b8c3ee813",
+      "added": 2,
+      "n_same_day": 1,
+      "n_all_logged": 2
+    }
+  ]
+}

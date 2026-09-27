@@ -1,6 +1,154 @@
 {
   "confirmatory_after": "2026-09-24",
-  "entries": [],
+  "entries": [
+    {
+      "as_of": "2026-09-25",
+      "n": 1,
+      "price_t": 139336.0,
+      "prob": {
+        "n": 194,
+        "p_hat": 0.5051546391752577,
+        "naive_wilson_95": [
+          0.4353859960351208,
+          0.574723108557626
+        ],
+        "effective_n": 194.0,
+        "effective_n_wilson_95": [
+          0.4353859960351208,
+          0.574723108557626
+        ],
+        "non_overlap_n": 194,
+        "non_overlap_stride": 1,
+        "non_overlap_wilson_95": [
+          0.4353859960351208,
+          0.574723108557626
+        ],
+        "dm_stat": 0.14359926287874783,
+        "p_value_two_sided": 0.8858169227620329,
+        "mean_diff": 0.005154639175257732,
+        "gamma_0": 0.24997342969497294,
+        "long_run_var": 0.24997342969497294,
+        "about_equally_likely": true,
+        "times_out_of_10": 5
+      },
+      "range": {
+        "scale": 1.0098522545306885,
+        "lo": 136630.1,
+        "hi": 142377.0,
+        "lo_rs": -2705.9,
+        "hi_rs": 3041.0,
+        "x_rs": 3041.0,
+        "n_cal": 193
+      },
+      "volatility": {
+        "realized_vol_20d": 0.010703329173963811,
+        "percentile": 0.6506357103372029,
+        "category": "about_as_usual"
+      },
+      "sentence": "Waiting 1 day: prices are about equally likely to go up or down. This week they've been moving about as usual.",
+      "issued_at_utc": "2026-09-27T07:21:23.236926+00:00",
+      "git_sha": "8557e530ecc94341751ade07e3334f0b8c3ee813",
+      "result": null
+    },
+    {
+      "as_of": "2026-09-25",
+      "n": 2,
+      "price_t": 139336.0,
+      "prob": {
+        "n": 180,
+        "p_hat": 0.45555555555555555,
+        "naive_wilson_95": [
+          0.3844879813541834,
+          0.5284805073499599
+        ],
+        "effective_n": 139.49224204809929,
+        "effective_n_wilson_95": [
+          0.3728490350234643,
+          0.5361409731483324
+        ],
+        "non_overlap_n": 90,
+        "non_overlap_stride": 2,
+        "non_overlap_wilson_95": [
+          0.3670842495769752,
+          0.5689781254606466
+        ],
+        "dm_stat": -1.054010774223862,
+        "p_value_two_sided": 0.2918779843595285,
+        "mean_diff": -0.044444444444444446,
+        "gamma_0": 0.24802469135802463,
+        "long_run_var": 0.32004965859714457,
+        "about_equally_likely": true,
+        "times_out_of_10": 4
+      },
+      "range": {
+        "scale": 0.9977637536896294,
+        "lo": 135787.9,
+        "hi": 143632.8,
+        "lo_rs": -3548.1,
+        "hi_rs": 4296.8,
+        "x_rs": 4296.8,
+        "n_cal": 179
+      },
+      "volatility": {
+        "realized_vol_20d": 0.010703329173963811,
+        "percentile": 0.6506357103372029,
+        "category": "about_as_usual"
+      },
+      "sentence": "Waiting 2 days: prices are about equally likely to go up or down. This week they've been moving about as usual.",
+      "issued_at_utc": "2026-09-27T07:21:23.236926+00:00",
+      "git_sha": "8557e530ecc94341751ade07e3334f0b8c3ee813",
+      "result": null
+    },
+    {
+      "as_of": "2026-09-25",
+      "n": 7,
+      "price_t": 139336.0,
+      "prob": {
+        "n": 156,
+        "p_hat": 0.4551282051282051,
+        "naive_wilson_95": [
+          0.3789990542629741,
+          0.5334141575326913
+        ],
+        "effective_n": 55.58227716325059,
+        "effective_n_wilson_95": [
+          0.3238672125478336,
+          0.5758678521006054
+        ],
+        "non_overlap_n": 32,
+        "non_overlap_stride": 5,
+        "non_overlap_wilson_95": [
+          0.3363088286932748,
+          0.6636911713067252
+        ],
+        "dm_stat": -0.6717807742234702,
+        "p_value_two_sided": 0.5017232699731493,
+        "mean_diff": -0.04487179487179487,
+        "gamma_0": 0.24798652202498353,
+        "long_run_var": 0.696011380071262,
+        "about_equally_likely": true,
+        "times_out_of_10": 4
+      },
+      "range": {
+        "scale": 1.0720195223412141,
+        "lo": 133221.7,
+        "hi": 147340.1,
+        "lo_rs": -6114.3,
+        "hi_rs": 8004.1,
+        "x_rs": 8004.1,
+        "n_cal": 156
+      },
+      "volatility": {
+        "realized_vol_20d": 0.010703329173963811,
+        "percentile": 0.6506357103372029,
+        "category": "about_as_usual"
+      },
+      "sentence": "Waiting 7 days: prices are about equally likely to go up or down. This week they've been moving about as usual.",
+      "issued_at_utc": "2026-09-27T07:21:23.236926+00:00",
+      "git_sha": "8557e530ecc94341751ade07e3334f0b8c3ee813",
+      "result": null
+    }
+  ],
   "runs": [
     {
       "run_at_utc": "2026-09-24T14:40:10.025416+00:00",
@@ -18,6 +166,12 @@
       "run_at_utc": "2026-09-24T15:03:29.187904+00:00",
       "git_sha": "bbd2034275a4660ba7bd8e88ef92dfb6a73ca9d2",
       "issued": 0,
+      "scored": 0
+    },
+    {
+      "run_at_utc": "2026-09-27T07:21:23.236926+00:00",
+      "git_sha": "8557e530ecc94341751ade07e3334f0b8c3ee813",
+      "issued": 3,
       "scored": 0
     }
   ]
