@@ -2060,3 +2060,24 @@ files.
 - I merged master in and kept the train's compliant version (`3c1bce59`). lint and pwa-js are
   green, completed after master's last commit, and the positive check PASSES.
 - The full 8-PR sequence still dry-runs with 0 conflicts on master `2ce2c77e`.
+
+### Checkpoint 2026-09-28 (Monday eval)
+
+- **Run.** `eval-direction.yml` run `36409139893` (scheduled, created 10:20Z, success) ran on
+  master `1e60cb81`. #2122 (F1) is not merged, so master's harness ran: it has no feature leak
+  guard at all. Its results landed as #2168.
+- **Published numbers** (`data/direction_baseline.json`, as_of range 2025-04-15..2026-09-24,
+  VERIFIED):
+
+  | Horizon | n folds | Logistic | LightGBM | Always-up | p (logistic / LightGBM) |
+  |---|---|---|---|---|---|
+  | h1 | 155 | 49.03% | 48.39% | 50.97% | 0.818 / 0.724 |
+  | h2 | 149 | 55.03% | 55.70% | 58.39% | 0.424 / 0.694 |
+
+  Both gates are closed.
+- **Cross-check.** These equal the "before" row of ADR 061 A1 exactly. That row was computed
+  offline on the #2119 tree, whose guard only reports and does not change any number. So the
+  A1 "after" row (h1 47.7% / 51.0%, h2 55.7% / 59.1%) is what the first run after #2122 merges
+  should publish, unless new data rows arrive first.
+- **Merge train.** Still nothing merged. #2119 is at head `db8f023a` with green checks, and it
+  merges cleanly into current master. Master has moved since then by bot data commits only.
