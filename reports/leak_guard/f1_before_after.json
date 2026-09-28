@@ -1,0 +1,229 @@
+{
+ "what": "ADR 061 amendment A1 (GG decision F1): direction walk-forward before/after excluding inputs published after the prediction moment",
+ "data": "data/ at the #2119 recovery tip (identical in both runs); 176 dataset rows",
+ "before_code": "origin/fix/merge-train-recovery a2ade684 (report-mode feature guard)",
+ "after_code": "fix/direction-eval-known-at-inputs (mask_late_features + raise-mode guard)",
+ "p_value": "two-sided exact McNemar vs always-up, as computed by ml/direction/evaluate.py",
+ "before": {
+  "n_rows": 176,
+  "horizons": {
+   "h1": {
+    "n_test_folds": 155,
+    "logistic_accuracy": 0.49032258064516127,
+    "lgbm_accuracy": 0.4838709677419355,
+    "always_up_accuracy": 0.5096774193548387,
+    "logistic_p_value_two_sided_mcnemar": 0.8175538505509841,
+    "lgbm_p_value": 0.7239481457469141,
+    "leak_guard": {
+     "labels": {
+      "name": "direction label_binary_h1 training labels",
+      "mode": "raise",
+      "n_checks": 155,
+      "n_inputs_checked": 15041,
+      "n_unchecked": 0,
+      "n_violations": 0,
+      "n_checks_with_violation": 0,
+      "violations_by_source": {},
+      "max_late_by_s": null,
+      "examples": []
+     },
+     "features": {
+      "name": "direction label_binary_h1 test-row features",
+      "mode": "report",
+      "n_checks": 155,
+      "n_inputs_checked": 1623,
+      "n_unchecked": 0,
+      "n_violations": 505,
+      "n_checks_with_violation": 82,
+      "violations_by_source": {
+       "feature:crude_wti": 80,
+       "feature:dxy": 81,
+       "feature:gold_usd": 21,
+       "feature:tips": 80,
+       "feature:us_10y_yield": 81,
+       "feature:usd_inr": 81,
+       "feature:vix": 81
+      },
+      "max_late_by_s": 19740.0,
+      "examples": [
+       {
+        "context": "as_of=2025-05-16",
+        "input": "usd_inr [feature:usd_inr] known_at 2025-05-16T23:59:00+00:00 (+19740s)"
+       },
+       {
+        "context": "as_of=2025-05-19",
+        "input": "usd_inr [feature:usd_inr] known_at 2025-05-19T23:59:00+00:00 (+19740s)"
+       },
+       {
+        "context": "as_of=2025-05-20",
+        "input": "usd_inr [feature:usd_inr] known_at 2025-05-20T23:59:00+00:00 (+19740s)"
+       },
+       {
+        "context": "as_of=2025-05-21",
+        "input": "usd_inr [feature:usd_inr] known_at 2025-05-21T23:59:00+00:00 (+19740s)"
+       },
+       {
+        "context": "as_of=2025-05-22",
+        "input": "usd_inr [feature:usd_inr] known_at 2025-05-22T23:59:00+00:00 (+19740s)"
+       }
+      ]
+     }
+    }
+   },
+   "h2": {
+    "n_test_folds": 149,
+    "logistic_accuracy": 0.5503355704697986,
+    "lgbm_accuracy": 0.5570469798657718,
+    "always_up_accuracy": 0.5838926174496645,
+    "logistic_p_value_two_sided_mcnemar": 0.42435622215270996,
+    "lgbm_p_value": 0.6940040940761318,
+    "leak_guard": {
+     "labels": {
+      "name": "direction label_binary_h2 training labels",
+      "mode": "raise",
+      "n_checks": 149,
+      "n_inputs_checked": 14023,
+      "n_unchecked": 0,
+      "n_violations": 0,
+      "n_checks_with_violation": 0,
+      "violations_by_source": {},
+      "max_late_by_s": null,
+      "examples": []
+     },
+     "features": {
+      "name": "direction label_binary_h2 test-row features",
+      "mode": "report",
+      "n_checks": 149,
+      "n_inputs_checked": 1562,
+      "n_unchecked": 0,
+      "n_violations": 478,
+      "n_checks_with_violation": 77,
+      "violations_by_source": {
+       "feature:crude_wti": 75,
+       "feature:dxy": 77,
+       "feature:gold_usd": 20,
+       "feature:tips": 75,
+       "feature:us_10y_yield": 77,
+       "feature:usd_inr": 77,
+       "feature:vix": 77
+      },
+      "max_late_by_s": 19740.0,
+      "examples": [
+       {
+        "context": "as_of=2025-05-19",
+        "input": "usd_inr [feature:usd_inr] known_at 2025-05-19T23:59:00+00:00 (+19740s)"
+       },
+       {
+        "context": "as_of=2025-05-20",
+        "input": "usd_inr [feature:usd_inr] known_at 2025-05-20T23:59:00+00:00 (+19740s)"
+       },
+       {
+        "context": "as_of=2025-05-21",
+        "input": "usd_inr [feature:usd_inr] known_at 2025-05-21T23:59:00+00:00 (+19740s)"
+       },
+       {
+        "context": "as_of=2025-05-22",
+        "input": "usd_inr [feature:usd_inr] known_at 2025-05-22T23:59:00+00:00 (+19740s)"
+       },
+       {
+        "context": "as_of=2025-05-23",
+        "input": "usd_inr [feature:usd_inr] known_at 2025-05-23T23:59:00+00:00 (+19740s)"
+       }
+      ]
+     }
+    }
+   }
+  }
+ },
+ "after": {
+  "n_rows": 176,
+  "horizons": {
+   "h1": {
+    "n_test_folds": 155,
+    "logistic_accuracy": 0.4774193548387097,
+    "lgbm_accuracy": 0.5096774193548387,
+    "always_up_accuracy": 0.5096774193548387,
+    "logistic_p_value_two_sided_mcnemar": 0.5681724128491652,
+    "lgbm_p_value": 1.0,
+    "leak_guard": {
+     "labels": {
+      "name": "direction label_binary_h1 training labels",
+      "mode": "raise",
+      "n_checks": 155,
+      "n_inputs_checked": 15041,
+      "n_unchecked": 0,
+      "n_violations": 0,
+      "n_checks_with_violation": 0,
+      "violations_by_source": {},
+      "max_late_by_s": null,
+      "examples": []
+     },
+     "features": {
+      "name": "direction label_binary_h1 test-row features",
+      "mode": "raise",
+      "n_checks": 155,
+      "n_inputs_checked": 1623,
+      "n_unchecked": 0,
+      "n_violations": 0,
+      "n_checks_with_violation": 0,
+      "violations_by_source": {},
+      "max_late_by_s": null,
+      "examples": []
+     },
+     "late_inputs_replaced": {
+      "crude_wti": 101,
+      "dxy": 102,
+      "gold_usd": 21,
+      "tips": 101,
+      "us_10y_yield": 102,
+      "usd_inr": 102,
+      "vix": 102
+     }
+    }
+   },
+   "h2": {
+    "n_test_folds": 149,
+    "logistic_accuracy": 0.5570469798657718,
+    "lgbm_accuracy": 0.5906040268456376,
+    "always_up_accuracy": 0.5838926174496645,
+    "logistic_p_value_two_sided_mcnemar": 0.4239501953125,
+    "lgbm_p_value": 1.0,
+    "leak_guard": {
+     "labels": {
+      "name": "direction label_binary_h2 training labels",
+      "mode": "raise",
+      "n_checks": 149,
+      "n_inputs_checked": 14023,
+      "n_unchecked": 0,
+      "n_violations": 0,
+      "n_checks_with_violation": 0,
+      "violations_by_source": {},
+      "max_late_by_s": null,
+      "examples": []
+     },
+     "features": {
+      "name": "direction label_binary_h2 test-row features",
+      "mode": "raise",
+      "n_checks": 149,
+      "n_inputs_checked": 1562,
+      "n_unchecked": 0,
+      "n_violations": 0,
+      "n_checks_with_violation": 0,
+      "violations_by_source": {},
+      "max_late_by_s": null,
+      "examples": []
+     },
+     "late_inputs_replaced": {
+      "crude_wti": 97,
+      "dxy": 99,
+      "gold_usd": 20,
+      "tips": 97,
+      "us_10y_yield": 99,
+      "usd_inr": 99,
+      "vix": 99
+     }
+    }
+   }
+  }
+ }
+}
