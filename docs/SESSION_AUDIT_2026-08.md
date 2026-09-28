@@ -2082,3 +2082,43 @@ files.
 - **Merge train.** Still nothing merged. #2119 is at head `db8f023a` with green checks, and it
   merges cleanly into current master. Master has moved since then only through bot commits:
   data files plus the weekly auto-updated `docs/DIRECTION_SIGNAL_STATUS.md`.
+
+### Checkpoint 2026-09-28 (evening): train merged, live price and drop alerts fixed
+
+GG delegated merge and close authority on 2026-09-28 and asked that the site show the live
+price and that ntfy alert on a live price drop.
+
+**Merged.** All with "Create a merge commit". Each PR was brought up to date with master, got
+green lint and pwa-js, and passed `check_required_checks_positive.py` right before merging.
+- #2119 (`6ed44a9b`, 2 parents)
+- #2120 (`118fc85a`)
+- #2121 (`87dcd5bd`)
+- #2122 (`9c883457`)
+- #2123 (`d91ac564`)
+- #2124 (`47e254fe`)
+- #2125 (`45fac038`)
+- #2187 (`41b967d9`)
+
+**Closed as superseded**, after proving each head's tree equals a train PR head that is now an
+ancestor of master: #2070, #2086, #2089, #2073, #2053, #2091. (#2061 was already closed.)
+**Held:** #2078, the timed Tanishq visits. It needs GG's laptop Task Scheduler setup. Without that,
+it would cut GitHub's nominal visits from 8 a day to 6.
+
+**Incident (VERIFIED).**
+- IBJA's 22K AM fix on 09-28 was Rs 135,612 per 10 g, against Friday's PM of Rs 139,336 (−2.7%).
+- GitHub's scheduler created no Tanishq scrape between 05:13Z and 13:43Z, and no `check-price`
+  run between 07:31Z and 13:43Z.
+- The site showed Rs 14,040. Then, once Tanishq passed the 8 h window, it showed the IBJA
+  estimate of Rs 14,140, built from Friday's PM.
+- No drop alert fired.
+- Manual dispatches captured Tanishq at Rs 13,710 (13:45Z). That is live now.
+
+**#2187 fix.**
+- **Estimate:** uses a newer day's AM fix. On 81 days, MAE Rs 60.5/g vs Rs 151.6/g for the
+  previous PM; paired Wilcoxon p = 3.7e-7.
+- **T3:** compares with the last *different* price, once per change, only for changes first seen
+  within 24 h. The old "last two readings" rule went blind once a second scrape landed at the new
+  price.
+- **T15 (new):** the benchmark moved ≥ Rs 150/g between its two latest fixes.
+- **Unverified:** delivery of today's alert. The Actions cache and job logs cannot be read from
+  the cloud session. GG to confirm on the phone.
