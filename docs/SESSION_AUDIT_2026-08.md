@@ -2080,4 +2080,5 @@ files.
   A1 "after" row (h1 47.7% / 51.0%, h2 55.7% / 59.1%) is what the first run after #2122 merges
   should publish, unless new data rows arrive first.
 - **Merge train.** Still nothing merged. #2119 is at head `db8f023a` with green checks, and it
-  merges cleanly into current master. Master has moved since then by bot data commits only.
+  merges cleanly into current master. Master has moved since then only through bot commits:
+  data files plus the weekly auto-updated `docs/DIRECTION_SIGNAL_STATUS.md`.
