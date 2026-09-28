@@ -1532,6 +1532,16 @@ Handed to GG with #1920.
 - Current MAE ₹61.4/g (0.44%) over 89 walk-forward days.
 - Adding IBJA's AM fix: same-day error ₹45 → ₹35/g (BH ✓, not Bonferroni on all days).
 - Weekend/holiday days (₹96/g) are unsolved. A COMEX × USD/INR adjustment makes them worse.
+  - *Superseded in part by ADR 058 (2026-09-25), re-run R2, exploratory:* the "makes them worse"
+    result came from a misaligned move (settle before the scored day / settle before the IBJA
+    date). Measured from the IBJA PM fix to the time the scored Tanishq board was first seen, the
+    adjustment makes carried-forward days **better**: M4 Rs 43.0/g vs M0 96.1 (published M4:
+    122.8), n = 28, DM one-sided p = 0.0026 (effective n 18.7); all days 44.7 vs 61.2, n = 90,
+    p = 0.0065. Post hoc (2026-04-17..09-24), with up to ~3 h of look-ahead on weekday holidays,
+    not yet compared with yesterday's Tanishq (Rs 46.0/g on #2015's weekend stratum, a
+    different day set), and it needs a forward pre-registered shadow
+    before anyone relies on it. #1957's explanation ("Tanishq doesn't re-price on days IBJA
+    doesn't publish") is not supported by the aligned numbers.
 
 **R3 buyer policy (draft #1956).** No pre-registered policy saves money reliably. Best: +₹8–12/g, not significant after correction.
 

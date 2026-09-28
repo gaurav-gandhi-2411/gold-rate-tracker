@@ -14,6 +14,11 @@ quietly re-score the window. The summary compares M3 against M0 on the same days
 one-sided HAC test R2 used.
 
 SHADOW ONLY: writes data/nowcast_shadow_log.json and nothing else; the site keeps using M0.
+
+Leak guard (ADR 061), REPORT mode: each logged day records the IBJA inputs that became known at
+or after the reading it estimates (the target is the day's last Tanishq reading; an IBJA fix is
+known at max(its assumed publication, this repo's fetched_at), ml.known_at). The registered M0/M3
+protocol is unchanged -- the report is how the leak is documented, not fixed (ADR 061 F2).
 """
 
 from __future__ import annotations
@@ -31,6 +36,9 @@ import pandas as pd
 
 ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT))
+
+from ml.known_at import capture_known_at, ibja_known_at
+from ml.leak_guard import KnownInput, LeakGuard
 
 # Merge date of the shadow; only days strictly after it count (forward-only).
 SHADOW_AFTER = "2026-09-24"
@@ -51,7 +59,50 @@ def _load_r2() -> Any:
     return mod
 
 
-def new_rows(r2: Any, logged: set[str], today_utc: str) -> list[dict[str, Any]]:
+def target_timestamps() -> dict[str, str]:
+    """UTC date -> timestamp of its last Tanishq 22K reading (the value load_truth scores)."""
+    raw = json.loads((ROOT / "data" / "prices.json").read_text(encoding="utf-8"))
+    out: dict[str, str] = {}
+    for r in raw:
+        if r.get("22k") is not None:
+            out[str(r["timestamp"])[:10]] = str(r["timestamp"])
+    return out
+
+
+def ibja_fetched_at() -> dict[str, str | None]:
+    ib = pd.read_parquet(ROOT / "data" / "ibja_rates.parquet")
+    return {
+        str(d)[:10]: (None if pd.isna(f) else str(f))
+        for d, f in zip(ib["date"], ib["fetched_at"], strict=True)
+    }
+
+
+def inputs_known_after_target(
+    guard: LeakGuard, target_ts: str | None, ibja_date: str, fetched_at: str | None
+) -> list[str]:
+    """The IBJA inputs (AM, PM of ibja_date) not known strictly before the target reading.
+    No target timestamp means the day cannot be certified: reported, never passed silently."""
+    if target_ts is None:
+        guard.n_unchecked += 1
+        return ["target_timestamp_missing"]
+    inputs = [
+        KnownInput(
+            f"ibja_{fix}@{ibja_date}", f"ibja_{fix}", ibja_known_at(ibja_date, fix, fetched_at)
+        )
+        for fix in ("am", "pm")
+    ]
+    bad = guard.check(capture_known_at(target_ts), inputs, context=ibja_date)
+    return [v.input.source for v in bad]
+
+
+def new_rows(
+    r2: Any,
+    logged: set[str],
+    today_utc: str,
+    guard: LeakGuard | None = None,
+    targets: dict[str, str] | None = None,
+    fetched: dict[str, str | None] | None = None,
+) -> list[dict[str, Any]]:
     """Walk-forward M0/M3 predictions for unlogged, completed days after SHADOW_AFTER.
     Today (UTC) is skipped: its truth would be the latest Tanishq reading so far, not the
     last reading of the day."""
@@ -60,15 +111,22 @@ def new_rows(r2: Any, logged: set[str], today_utc: str) -> list[dict[str, Any]]:
     # M0/M3 do not use the global-move adjustment; an empty series leaves it unused.
     m = r2.build(truth, ibja, pd.Series(dtype=float, index=pd.DatetimeIndex([])))
     preds = r2.predict_all(m)
+    guard = guard or LeakGuard("nowcast shadow same-day IBJA inputs", mode="report")
+    targets = target_timestamps() if targets is None else targets
+    fetched = ibja_fetched_at() if fetched is None else fetched
     rows = []
     for k in range(len(m)):
         day = m.loc[k, "date"].strftime("%Y-%m-%d")
         if day <= SHADOW_AFTER or day >= today_utc or day in logged:
             continue
+        ibja_day = m.loc[k, "ibja_date"].strftime("%Y-%m-%d")
         rows.append(
             {
                 "date": day,
-                "ibja_date": m.loc[k, "ibja_date"].strftime("%Y-%m-%d"),
+                "ibja_date": ibja_day,
+                "inputs_known_after_target": inputs_known_after_target(
+                    guard, targets.get(day), ibja_day, fetched.get(ibja_day)
+                ),
                 "gap_days": int(m.loc[k, "gap_days"]),
                 "truth_rs_per_g": float(m.loc[k, "t22"]),
                 **{
@@ -89,7 +147,14 @@ def summarise(days: list[dict[str, Any]]) -> dict[str, Any]:
         for d in days
         if d["gap_days"] == 0 and d["M0_current"] is not None and d["M3_am_pm"] is not None
     ]
-    out: dict[str, Any] = {"n_same_day": len(ok), "n_all_logged": len(days)}
+    out: dict[str, Any] = {
+        "n_same_day": len(ok),
+        "n_all_logged": len(days),
+        # ADR 061 report-mode leak guard; days logged before it existed have no field.
+        "n_days_input_known_after_target": sum(
+            1 for d in days if d.get("inputs_known_after_target")
+        ),
+    }
     if len(ok) < 3:
         return out
     y = np.array([d["truth_rs_per_g"] for d in ok])

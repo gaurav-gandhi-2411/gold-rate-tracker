@@ -70,6 +70,26 @@ _STALE_THRESHOLD_H: int = 8
 _IBJA_DISPLAY_MAX_AGE_DAYS: int = 14
 # IBJA publishes pm_916 ~17:00 IST = 11:30 UTC on each trading day.
 _IBJA_PUBLISH_UTC: tuple[int, int] = (11, 30)
+# ADR 059 (G1b): a fresh Tanishq reading is shown as the confirmed retail price only
+# if it sits within this fraction of the same cycle's IBJA-calibrated estimate.
+# Measured 2026-09-25 over all 712 prices.json readings vs the then-current
+# calibration: |deviation| p50 0.24%, max 9.53% (2026-04-16, before a premium-regime
+# shift) -- so 12% trips on none of the recorded history. It exists to catch a gross
+# mis-scrape (wrong page, cached months-old figure) that still passes the scraper's
+# range/karat-ratio checks, not ordinary premium drift.
+_TANISHQ_IBJA_MAX_DEVIATION: float = 0.12
+# ADR 059 (G1b): tier 3 names retailers on the page (bannerFusion). A reading whose
+# own observed_at is older than this is not "their rate today" and is dropped rather
+# than shown. Kalyan's board carries its own updated_time; GRT's observed_at is the
+# fetch time (the page has no timestamp), so this binds on Kalyan/Malabar only.
+_FUSION_MAX_AGE_H: float = 36.0
+
+
+class RetailerDisabledNoSourceError(RuntimeError):
+    """Tanishq is switched off (config/retailers.json) and IBJA-calibrated and the
+    fusion tier both failed this cycle. The last-resort tier would display the last
+    Tanishq reading, which a takedown forbids -- fail loudly instead, so the workflow
+    step fails and the site keeps its previous (non-Tanishq) forecast.json."""
 
 
 def _load_json(path: Path) -> dict | list | None:
@@ -304,7 +324,11 @@ def _try_ibja_calibrated(
             fallback_rows = [
                 {"date": r["timestamp"][:10], "22k": float(r["22k"])}
                 for r in fallback_prices_raw
-                if r.get("timestamp") and r.get("22k") is not None
+                if r.get("timestamp")
+                and r.get("22k") is not None
+                # ADR 059: IBJA-derived rows (retailer takedown) are not observations;
+                # fitting IBJA against them yields a meaningless zero-width band.
+                and not str(r.get("source", "")).startswith("ibja_calibrated")
             ]
             fallback_tanishq_df = (
                 pd.DataFrame(fallback_rows).sort_values("date").groupby("date").last().reset_index()
@@ -427,6 +451,7 @@ def _try_ibja_calibrated(
 
 def _try_fusion_fallback(
     data_dir: Path,
+    now: datetime | None = None,
 ) -> tuple[int, str, int, int, str | None, list[str], None, None, None, None, float, None] | None:
     """Tier 3: live GRT + Malabar + Kalyan consensus, only reached when both
     Tanishq and IBJA-calibrated are unavailable this cycle. Reuses ml.fusion's
@@ -436,17 +461,38 @@ def _try_fusion_fallback(
     deterministically) -- band_unavailable_reason is always None on this tier.
     """
     from ml.fusion import fuse_city_price, fuse_national_benchmark
+    from ml.retailers import is_enabled
     from ml.sources.base import SourceNetworkError, SourceStructureError
     from ml.sources.grt import fetch_grt
     from ml.sources.kalyan import fetch_kalyan_city
     from ml.sources.malabar import fetch_malabar
 
+    now_utc = now or datetime.now(UTC)
+
+    def _fresh(reading) -> bool:
+        age_h = (now_utc - reading.observed_at).total_seconds() / 3600
+        if age_h > _FUSION_MAX_AGE_H:
+            logger.warning(
+                "_try_fusion_fallback: %s reading is %.1fh old (> %.0fh) — not shown",
+                reading.source,
+                age_h,
+                _FUSION_MAX_AGE_H,
+            )
+            return False
+        return True
+
     national_readings = []
     for name, fetch_fn in (("grt", fetch_grt), ("malabar", fetch_malabar)):
+        if not is_enabled(name):  # ADR 059 takedown switch: never fetched, never shown
+            logger.info("_try_fusion_fallback: %s disabled in config/retailers.json", name)
+            continue
         try:
-            national_readings.append(fetch_fn())
+            reading = fetch_fn()
         except (SourceNetworkError, SourceStructureError) as exc:
             logger.warning("_try_fusion_fallback: %s failed: %s", name, exc)
+            continue
+        if _fresh(reading):
+            national_readings.append(reading)
 
     if not national_readings:
         logger.warning("_try_fusion_fallback: all national sources failed — no fallback available")
@@ -455,10 +501,14 @@ def _try_fusion_fallback(
     national = fuse_national_benchmark(national_readings)
 
     kalyan_reading = None
-    try:
-        kalyan_reading = fetch_kalyan_city(_FUSION_FALLBACK_CITY).reading
-    except (SourceNetworkError, SourceStructureError) as exc:
-        logger.warning("_try_fusion_fallback: kalyan/%s failed: %s", _FUSION_FALLBACK_CITY, exc)
+    if is_enabled("kalyan"):
+        try:
+            candidate = fetch_kalyan_city(_FUSION_FALLBACK_CITY).reading
+            kalyan_reading = candidate if _fresh(candidate) else None
+        except (SourceNetworkError, SourceStructureError) as exc:
+            logger.warning("_try_fusion_fallback: kalyan/%s failed: %s", _FUSION_FALLBACK_CITY, exc)
+    else:
+        logger.info("_try_fusion_fallback: kalyan disabled in config/retailers.json")
 
     city_fused = fuse_city_price(kalyan_reading, national, city=_FUSION_FALLBACK_CITY)
     current = round(city_fused.value)
@@ -565,17 +615,40 @@ def _select_price_source(
         None,
     )
 
-    try:
-        scraped_dt = datetime.fromisoformat(scraped_at.replace("Z", "+00:00"))
-        scrape_age_h = (now - scraped_dt).total_seconds() / 3600
-    except Exception:
-        logger.warning("_select_price_source: could not parse scraped_at %r", scraped_at)
-        return _noop
+    from ml.retailers import is_enabled
 
-    if scrape_age_h <= _STALE_THRESHOLD_H:
-        return _noop  # tier 1: Tanishq fresh — wins outright, no need to check anything else
+    # ADR 059 takedown switch: with Tanishq off, tiers 1 and 4 (both of which display
+    # a Tanishq reading) are skipped entirely; only IBJA-calibrated / fusion remain.
+    tanishq_on = is_enabled("tanishq")
+    ibja_result = None
+    if tanishq_on:
+        try:
+            scraped_dt = datetime.fromisoformat(scraped_at.replace("Z", "+00:00"))
+            scrape_age_h = (now - scraped_dt).total_seconds() / 3600
+        except Exception:
+            logger.warning("_select_price_source: could not parse scraped_at %r", scraped_at)
+            return _noop
 
-    ibja_result = _try_ibja_calibrated(calibration, data_dir, now)
+        if scrape_age_h <= _STALE_THRESHOLD_H:
+            # tier 1: Tanishq fresh — wins, unless it disagrees grossly with the
+            # same cycle's IBJA-calibrated estimate (ADR 059 plausibility gate).
+            ibja_result = _try_ibja_calibrated(calibration, data_dir, now)
+            if ibja_result is None:
+                return _noop
+            deviation = abs(current_22k - ibja_result[0]) / ibja_result[0]
+            if deviation <= _TANISHQ_IBJA_MAX_DEVIATION:
+                return _noop
+            logger.warning(
+                "_select_price_source: fresh Tanishq Rs.%d is %.1f%% from IBJA-calibrated "
+                "Rs.%d (> %.0f%%) — treated as suspect, not displayed this cycle",
+                current_22k,
+                deviation * 100,
+                ibja_result[0],
+                _TANISHQ_IBJA_MAX_DEVIATION * 100,
+            )
+
+    if ibja_result is None:
+        ibja_result = _try_ibja_calibrated(calibration, data_dir, now)
     if ibja_result is not None:
         (
             current,
@@ -606,10 +679,16 @@ def _select_price_source(
             band_unavailable_reason,
         )
 
-    fusion_result = _try_fusion_fallback(data_dir)
+    fusion_result = _try_fusion_fallback(data_dir, now)
     if fusion_result is not None:
         return fusion_result  # tier 3
 
+    if not tanishq_on:
+        raise RetailerDisabledNoSourceError(
+            "Tanishq is disabled (config/retailers.json) and neither IBJA-calibrated nor "
+            "the fusion tier produced a price this cycle — refusing to fall back to a "
+            "Tanishq reading; forecast.json left unchanged"
+        )
     return _noop  # tier 4: last-known Tanishq price, everything else failed
 
 

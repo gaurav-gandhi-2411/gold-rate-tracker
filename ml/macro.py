@@ -16,6 +16,9 @@ Usage (from repo root):
 
 Reads:  data/macro_cache.parquet (if present)
 Writes: data/macro_cache.parquet (incremental merge, new data wins on overlap)
+        data/macro_intraday.parquet (last INTRADAY_LOOKBACK_DAYS of 1-hour GC=F / INR=X
+        closes, UTC index = bar START; read by ml/drivers.py to price each IBJA fix at its
+        own instant -- ADR 058 A16. Best effort: a failed fetch is logged, never fatal.)
 
 The cache is NOT committed to the repo — it is regenerated on every CI run by the
 "Fetch macro features" step (continue-on-error: true), and read by forecast.py.
@@ -49,6 +52,11 @@ sys.path.insert(0, str(Path(__file__).parent.parent))
 
 DATA_DIR = Path(__file__).parent.parent / "data"
 CACHE_PATH = DATA_DIR / "macro_cache.parquet"
+INTRADAY_PATH = DATA_DIR / "macro_intraday.parquet"
+# drivers.py needs a 30-day window plus a few days of slack; Yahoo serves 1-hour bars for up to
+# 730 days, so 60 days is well inside the limit and keeps the download small.
+INTRADAY_LOOKBACK_DAYS = 60
+INTRADAY_TICKERS: dict[str, str] = {"gold_usd": "GC=F", "usd_inr": "INR=X"}
 
 # Map internal column names → Yahoo Finance ticker symbols
 TICKER_MAP: dict[str, str] = {
@@ -302,6 +310,33 @@ def update_macro_cache(
     return fetch_macro_features(start, end, cache_path=cache_path)
 
 
+def update_intraday_cache(
+    path: Path = INTRADAY_PATH, lookback_days: int = INTRADAY_LOOKBACK_DAYS
+) -> pd.DataFrame:
+    """Fetch 1-hour GC=F / INR=X closes for the last `lookback_days` and overwrite `path`.
+
+    Index: bar START time in UTC (Yahoo's labelling). Nothing is forward-filled -- a missing hour
+    stays missing, so a consumer can tell a feed gap from a flat market.
+    """
+    if yf is None:
+        raise ImportError("yfinance is required. Install it with: pip install yfinance")
+    raw = yf.download(
+        tickers=list(INTRADAY_TICKERS.values()),
+        period=f"{lookback_days}d",
+        interval="1h",
+        auto_adjust=True,
+        progress=False,
+        threads=False,
+    )
+    if raw.empty:
+        raise RuntimeError("yfinance returned no 1-hour bars for GC=F / INR=X")
+    raw.index = pd.to_datetime(raw.index, utc=True)
+    df = _extract_close(raw, INTRADAY_TICKERS).dropna(how="all")
+    path.parent.mkdir(parents=True, exist_ok=True)
+    df.to_parquet(path)
+    return df
+
+
 _MACRO_WARN_DAYS = 7  # log WARNING if cache is older than this
 _MACRO_STATUS_PATH = DATA_DIR / "macro_status.json"
 
@@ -368,6 +403,15 @@ def main() -> None:
         df = update_macro_cache()
 
     print(f"\nCache: {len(df)} rows  |  {df.index.min().date()} to {df.index.max().date()}")
+
+    try:
+        intraday = update_intraday_cache()
+        print(
+            f"Intraday: {len(intraday)} 1-hour bars  |  "
+            f"{intraday.index.min()} to {intraday.index.max()}"
+        )
+    except Exception as exc:  # best effort: drivers.py degrades visibly without it
+        print(f"Warning: intraday fetch failed ({exc}) -- driver attribution will be suppressed")
 
     display_cols = [
         "usd_inr",

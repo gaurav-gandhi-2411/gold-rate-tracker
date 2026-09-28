@@ -53,6 +53,29 @@ function formatPValue(value, decimals = 4) {
   return { op: "=", text: value.toFixed(decimals) };
 }
 
+// G4 (2026-09-25): every accuracy/coverage claim on the page must be HIDDEN,
+// never shown with a stale or defaulted number, once its own measurement is
+// older than CLAIM_MAX_AGE_DAYS (rule 98a: fail closed, not open). This
+// generalizes the pattern app.js's deriveMeasuredBandCoverage introduced for
+// data/calibration_band_coverage.json alone (AE1, 2026-09-10) into one shared
+// check every claim family uses (band coverage, model-signal reliability note,
+// how-we-know.html's coverage/backtest sections, the track-record chart).
+// Defined here rather than in app.js because how-we-know.html loads i18n.js
+// but NOT app.js (see how-we-know.js's own header comment for why it's a
+// separate script) — this is the one file both pages already share.
+// A missing/unparseable/future-dated timestamp is NOT fresh, same as a
+// too-old one: a clock skew or a malformed field is exactly the kind of
+// "couldn't verify" case rule 98a says must deny, not silently pass.
+const CLAIM_MAX_AGE_DAYS = 14;
+
+function isMeasurementFresh(isoTimestamp, nowMs = Date.now(), maxAgeDays = CLAIM_MAX_AGE_DAYS) {
+  if (typeof isoTimestamp !== "string") return false;
+  const generatedMs = Date.parse(isoTimestamp);
+  if (Number.isNaN(generatedMs)) return false;
+  const ageDays = (nowMs - generatedMs) / 86_400_000;
+  return ageDays >= 0 && ageDays <= maxAgeDays;
+}
+
 const STRINGS = {
   en: {
     // ── Static shell (index.html) ──────────────────────────────────────────────
@@ -88,7 +111,6 @@ const STRINGS = {
     shareCopied: "Link copied!",
     heroAriaLabel: "Current 22K gold price and buying verdict",
     eyebrow: "22K gold · per gram",
-    heroLocation: "Tanishq retail price · pan-India",
     todayLabel: "today",
     sinceLastLabel: "since last",
     sparklineLabelLeft: "7 days",
@@ -343,8 +365,19 @@ const STRINGS = {
 
     // ── Hero ──────────────────────────────────────────────────────────────────────
     heroEstimatedRange: ({ low, high }) => `estimated range ₹${low}–₹${high}`,
-    // ADR 059 P3: Tanishq does not "confirm" our price; this is their listed rate that day.
-    heroLastConfirmed: ({ price, date }) => `Tanishq's listed rate on ${date}: ₹${price}`,
+    // E2 (GG, 2026-09-25): the hero's label line says exactly what the figure is. Tanishq is
+    // named only for a real Tanishq reading (app.js heroDisplayState); every estimate says
+    // "Our estimate". {when} comes from whenToday/whenYesterday/whenOnDate (IST).
+    heroLabelTanishqLive: ({ when }) => `Tanishq's listed 22K rate, checked ${when}`,
+    heroLabelTanishqLastChecked: ({ when }) => `Tanishq's listed 22K rate, last checked ${when}`,
+    heroLabelEstimateIbja: "Our estimate for today, based on the IBJA rate",
+    heroLabelEstimateFusion: "Our estimate for today, based on other jewellers' listed rates",
+    heroTanishqLastRate: ({ when, price }) => `Tanishq's listed rate, checked ${when}: ₹${price}`,
+    // GG 4b (2026-09-25): past 36 h the old figure is still shown, always with date AND time.
+    heroTanishqOldRate: ({ when, price }) => `Tanishq's listed rate when last checked, ${when}: ₹${price} — not updated since`,
+    whenToday: ({ time }) => `${time} today`,
+    whenYesterday: ({ time }) => `${time} yesterday`,
+    whenOnDate: ({ time, date }) => `${time}, ${date}`,
     sparklineRange: ({ min, max }) => `Low ₹${min} · High ₹${max}`,
     sparklineAria: ({ dir, delta }) => `7-day price trend: ${dir} ₹${delta}`,
     trendDirUp: "up",
@@ -361,18 +394,28 @@ const STRINGS = {
     // ── Chart labels (Chart.js legend/tooltip) ─────────────────────────────────
     chart22kLabel: "22K (₹/g)",
     chart22kTooltip: ({ value }) => `22K: ₹${value}`,
+    // GG 4c (2026-09-25): the trend chart plots our IBJA-based estimate, never a retailer's rate.
+    chartEstimateLabel: "22K estimate (₹/g)",
+    chartEstimateTooltip: ({ value }) => `22K estimate: ≈ ₹${value}`,
+    chartNoteEstimate: "Our estimate, based on the IBJA rate · one point per IBJA working day",
+    chartNoteTanishq: "Tanishq's listed 22K rate, as we checked it",
     chartWhatHappened: "What happened",
     chartFlatHoldEstimate: "Flat-hold estimate",
     chartTooltipLabeled: ({ label, value }) => `${label}: ₹${value}`,
 
     // ── Driver context ────────────────────────────────────────────────────────────
-    driverUpInrDominant: ({ total, inr, gold }) => `Gold is up about ₹${total} this week — mostly a weaker rupee (₹${inr}), plus a bit from global gold prices (₹${gold}).`,
-    driverUpGoldDominant: ({ total, gold, inr }) => `Gold is up about ₹${total} this week — mostly global gold prices (₹${gold}), plus a bit from the rupee (₹${inr}).`,
+    // Weekly headline = lead + two parts. Each part is worded by ITS OWN sign: a part can push
+    // against the week's total (e.g. gold down overall while a weaker rupee added some back).
+    driverHeadline: ({ lead, first, second }) => `${lead} — ${first}, and ${second}.`,
+    driverWeekUp: ({ total }) => `Gold is up about ₹${total} this week`,
+    driverWeekDown: ({ total }) => `Gold is down about ₹${total} this week`,
+    driverPartGoldAdded: ({ gold }) => `global gold prices added about ₹${gold}`,
+    driverPartGoldTookOff: ({ gold }) => `global gold prices took off about ₹${gold}`,
+    driverPartGoldFlat: "global gold prices were roughly flat",
+    driverPartRupeeAdded: ({ inr }) => `a weaker rupee added about ₹${inr}`,
+    driverPartRupeeTookOff: ({ inr }) => `a stronger rupee took off about ₹${inr}`,
+    driverPartRupeeFlat: "the rupee was roughly flat",
     driverUpMixed: ({ total }) => `Gold is up about ₹${total} this week, from a mix of global prices and the rupee.`,
-    driverDownInrDominant: ({ total, inr }) => `Gold is down about ₹${total} this week — mostly a stronger rupee (₹${inr}), with global gold roughly flat.`,
-    driverDownGoldDominant: ({ total, gold, inrNote }) => `Gold is down about ₹${total} this week — global gold fell about ₹${gold}${inrNote}.`,
-    driverDownGoldDominantInrNoteAdded: ({ inr }) => `, and the rupee added back ₹${inr}`,
-    driverDownGoldDominantInrNoteFlat: ", with the rupee roughly flat",
     driverDownMixed: ({ total }) => `Gold is down about ₹${total} this week, from a mix of global prices and the rupee.`,
     driverRupeeWeakened: ({ pct, mechanism }) => `The rupee has weakened about ${pct}% this month —${mechanism}`,
     driverRupeeStrengthened: ({ pct, mechanism }) => `The rupee has strengthened about ${pct}% this month —${mechanism}`,
@@ -409,6 +452,46 @@ const STRINGS = {
     relMinAgo: ({ n }) => `${n} min ago`,
     relHoursAgo: ({ n }) => `${n}h ago`,
     relDaysAgo: ({ n }) => `${n}d ago`,
+
+    // ── Page v2 (item 6, flagged OFF) — five-jobs view ───────────────────────────
+    // Draft Hindi translations now exist below (hi block, same key names) -- machine-drafted,
+    // plain and conversational, listed in the PR body under "New strings for native Hindi
+    // review" pending a native speaker's pass before page_v2 ever ships live. t()'s English
+    // fallback (see its own comment) still applies to any key a review finds needs reverting.
+    pv2AriaLabel: "A five-question view of today's gold price",
+    pv2Job1Heading: "1. What's the price now?",
+    pv2SourceEstimate: "An estimate, matched to IBJA and Tanishq's own numbers.",
+    pv2SourceConsensus: "An estimate built from several sources — Tanishq and IBJA were both unreachable this cycle.",
+    pv2SourceConfirmed: "Confirmed live at Tanishq.",
+    pv2PriceUnavailable: "We don't have a price to show right now.",
+    pv2Job2Heading: "2. How sure are we?",
+    pv2ConfidenceNote: ({ frac }) => `We show a range, not just one number, because gold prices move day to day. That range has held the real price ${frac} so far.`,
+    pv2ConfidenceUnknown: "We don't have a recent enough track record to say how often our range holds — check back soon.",
+    pv2Job3Heading: "3. How much could it move?",
+    pv2RangeOneDay: ({ low, high }) => `By the next trading day: likely between ₹${low} and ₹${high}.`,
+    pv2RangeSevenDay: ({ low, high }) => `Over the next 7 days: likely between ₹${low} and ₹${high}.`,
+    pv2RangeOddsClause: ({ frac }) => ` A range like this has held ${frac} in the past.`,
+    pv2RangeUnavailable: "We don't have a short-term range to show today.",
+    pv2Job4Heading: "4. Is it a good price?",
+    pv2Weekly30dLabel: "Compared with the last month:",
+    pv2Weekly90dLabel: "Compared with the last three months:",
+    pv2WeeklyLower: ({ count, n }) => `Lower than on ${count} of the last ${n} weeks.`,
+    pv2WeeklyHigher: ({ count, n }) => `Higher than on ${count} of the last ${n} weeks.`,
+    pv2WeeklyAboutSame: ({ n }) => `About the same as most of the last ${n} weeks.`,
+    pv2WeeklyTooLittleData: "We don't have enough weeks of price history yet to say.",
+    pv2Job5Heading: "5. What will I pay?",
+    // F1 (markup_meter): Tanishq-vs-market only, per the brief -- no store-to-store
+    // comparison (terms decision pending GG, see PR body).
+    pv2MarkupHeading: "How Tanishq compares to the market",
+    pv2MarkupLine: ({ pct, suffix }) => `Tanishq is charging about ${pct}% above the market rate today${suffix}`,
+    pv2MarkupSuffixHigher: " — higher than usual.",
+    pv2MarkupSuffixLower: " — lower than usual.",
+    pv2MarkupSuffixUsual: " — about usual.",
+    // F2 (wait_or_buy): heading only -- the sentence body comes verbatim from
+    // data/wait_or_buy_today.json (see app.js's pv2ExtractSentences), never built here.
+    pv2WaitOrBuyHeading: "Should I wait or buy now?",
+    // F4 (event_watch): heading only -- same verbatim-sentence contract as F2 above.
+    pv2EventWatchHeading: "Upcoming events that could move the price",
   },
 
   hi: {
@@ -433,7 +516,6 @@ const STRINGS = {
     shareCopied: "लिंक कॉपी हो गया!",
     heroAriaLabel: "मौजूदा 22K सोने की कीमत और ख़रीद का सुझाव",
     eyebrow: "22K सोना · प्रति ग्राम",
-    heroLocation: "Tanishq की खुदरा कीमत · पूरे भारत में",
     todayLabel: "आज",
     sinceLastLabel: "पिछली बार से",
     sparklineLabelLeft: "7 दिन",
@@ -650,7 +732,15 @@ const STRINGS = {
 
     // ── Hero ──────────────────────────────────────────────────────────────────────
     heroEstimatedRange: ({ low, high }) => `अनुमानित रेंज ₹${low}–₹${high}`,
-    heroLastConfirmed: ({ price, date }) => `${date} को Tanishq की सूचीबद्ध दर: ₹${price}`,
+    heroLabelTanishqLive: ({ when }) => `Tanishq की सूचीबद्ध 22K दर, ${when} जांची गई`,
+    heroLabelTanishqLastChecked: ({ when }) => `Tanishq की सूचीबद्ध 22K दर, आख़िरी बार ${when} जांची गई`,
+    heroLabelEstimateIbja: "आज के लिए हमारा अनुमान, IBJA दर पर आधारित",
+    heroLabelEstimateFusion: "आज के लिए हमारा अनुमान, दूसरे जौहरियों की सूचीबद्ध दरों पर आधारित",
+    heroTanishqLastRate: ({ when, price }) => `Tanishq की सूचीबद्ध दर, ${when} जांची गई: ₹${price}`,
+    heroTanishqOldRate: ({ when, price }) => `Tanishq की सूचीबद्ध दर, आख़िरी बार ${when} जांची गई: ₹${price} — तब से अपडेट नहीं हुई`,
+    whenToday: ({ time }) => `आज ${time}`,
+    whenYesterday: ({ time }) => `कल ${time}`,
+    whenOnDate: ({ time, date }) => `${date}, ${time}`,
     sparklineRange: ({ min, max }) => `न्यूनतम ₹${min} · अधिकतम ₹${max}`,
     sparklineAria: ({ dir, delta }) => `7-दिन का कीमत ट्रेंड: ${dir} ₹${delta}`,
     trendDirUp: "बढ़त",
@@ -667,18 +757,25 @@ const STRINGS = {
     // ── Chart labels (Chart.js legend/tooltip) ─────────────────────────────────
     chart22kLabel: "22K (₹/ग्राम)",
     chart22kTooltip: ({ value }) => `22K: ₹${value}`,
+    chartEstimateLabel: "22K अनुमान (₹/ग्राम)",
+    chartEstimateTooltip: ({ value }) => `22K अनुमान: ≈ ₹${value}`,
+    chartNoteEstimate: "हमारा अनुमान, IBJA दर पर आधारित · IBJA के हर कामकाजी दिन का एक बिंदु",
+    chartNoteTanishq: "Tanishq की सूचीबद्ध 22K दर, जैसी हमने जांची",
     chartWhatHappened: "असल में क्या हुआ",
     chartFlatHoldEstimate: "फ़्लैट-होल्ड अनुमान",
     chartTooltipLabeled: ({ label, value }) => `${label}: ₹${value}`,
 
     // ── Driver context ────────────────────────────────────────────────────────────
-    driverUpInrDominant: ({ total, inr, gold }) => `इस हफ्ते सोना करीब ₹${total} महंगा हुआ है — ज़्यादातर कमज़ोर रुपये (₹${inr}) की वजह से, और थोड़ा वैश्विक कीमतों (₹${gold}) से।`,
-    driverUpGoldDominant: ({ total, gold, inr }) => `इस हफ्ते सोना करीब ₹${total} महंगा हुआ है — ज़्यादातर वैश्विक कीमतों (₹${gold}) की वजह से, और थोड़ा रुपये (₹${inr}) से।`,
+    driverHeadline: ({ lead, first, second }) => `${lead} — ${first}, और ${second}।`,
+    driverWeekUp: ({ total }) => `इस हफ्ते सोना करीब ₹${total} महंगा हुआ है`,
+    driverWeekDown: ({ total }) => `इस हफ्ते सोना करीब ₹${total} सस्ता हुआ है`,
+    driverPartGoldAdded: ({ gold }) => `वैश्विक सोने की कीमतों ने करीब ₹${gold} जोड़े`,
+    driverPartGoldTookOff: ({ gold }) => `वैश्विक सोने की कीमतों ने करीब ₹${gold} घटाए`,
+    driverPartGoldFlat: "वैश्विक सोने की कीमतें लगभग स्थिर रहीं",
+    driverPartRupeeAdded: ({ inr }) => `कमज़ोर रुपये ने करीब ₹${inr} जोड़े`,
+    driverPartRupeeTookOff: ({ inr }) => `मज़बूत रुपये ने करीब ₹${inr} घटाए`,
+    driverPartRupeeFlat: "रुपया लगभग स्थिर रहा",
     driverUpMixed: ({ total }) => `इस हफ्ते सोना करीब ₹${total} महंगा हुआ है, वैश्विक कीमतों और रुपये दोनों के मिले-जुले असर से।`,
-    driverDownInrDominant: ({ total, inr }) => `इस हफ्ते सोना करीब ₹${total} सस्ता हुआ है — ज़्यादातर मज़बूत रुपये (₹${inr}) की वजह से, जबकि वैश्विक सोना लगभग स्थिर रहा।`,
-    driverDownGoldDominant: ({ total, gold, inrNote }) => `इस हफ्ते सोना करीब ₹${total} सस्ता हुआ है — वैश्विक सोना करीब ₹${gold} गिरा${inrNote}।`,
-    driverDownGoldDominantInrNoteAdded: ({ inr }) => `, और रुपये ने ₹${inr} वापस जोड़ दिए`,
-    driverDownGoldDominantInrNoteFlat: ", जबकि रुपया लगभग स्थिर रहा",
     driverDownMixed: ({ total }) => `इस हफ्ते सोना करीब ₹${total} सस्ता हुआ है, वैश्विक कीमतों और रुपये दोनों के मिले-जुले असर से।`,
     driverRupeeWeakened: ({ pct, mechanism }) => `रुपया इस महीने करीब ${pct}% कमज़ोर हुआ है —${mechanism}`,
     driverRupeeStrengthened: ({ pct, mechanism }) => `रुपया इस महीने करीब ${pct}% मज़बूत हुआ है —${mechanism}`,
@@ -712,6 +809,41 @@ const STRINGS = {
     relMinAgo: ({ n }) => `${n} मिनट पहले`,
     relHoursAgo: ({ n }) => `${n} घंटे पहले`,
     relDaysAgo: ({ n }) => `${n} दिन पहले`,
+
+    // ── Page v2 (item 6, flagged OFF) — five-jobs view ───────────────────────────
+    // Draft Hindi translations, plain and conversational, matching this file's existing HI
+    // register (see reliabilityCoverage/band90d*/driver* above) -- flagged for native-speaker
+    // review before page_v2 ever ships live (see the PR body's "New strings for native Hindi
+    // review" list).
+    pv2AriaLabel: "आज सोने की कीमत — पांच आसान सवालों में",
+    pv2Job1Heading: "1. अभी कीमत क्या है?",
+    pv2SourceEstimate: "एक अनुमान, जो IBJA और Tanishq दोनों के आंकड़ों से मिलाकर बनाया गया है।",
+    pv2SourceConsensus: "कई स्रोतों से मिलाकर बनाया गया अनुमान — इस बार Tanishq और IBJA, दोनों तक नहीं पहुंच पाए।",
+    pv2SourceConfirmed: "Tanishq पर लाइव पुष्टि की गई कीमत।",
+    pv2PriceUnavailable: "अभी दिखाने के लिए कोई कीमत उपलब्ध नहीं है।",
+    pv2Job2Heading: "2. हमें कितना भरोसा है?",
+    pv2ConfidenceNote: ({ frac }) => `हम सिर्फ़ एक आंकड़ा नहीं, एक दायरा दिखाते हैं, क्योंकि सोने की कीमत रोज़ बदलती है। अब तक असली कीमत इस दायरे के भीतर ${frac} रही है।`,
+    pv2ConfidenceUnknown: "हमारे पास इतना हाल का रिकॉर्ड नहीं है कि बता सकें हमारा दायरा कितनी बार सही रहता है — कुछ समय बाद फिर देखें।",
+    pv2Job3Heading: "3. कीमत कितनी बदल सकती है?",
+    pv2RangeOneDay: ({ low, high }) => `अगले कारोबारी दिन तक: यह ₹${low} से ₹${high} के बीच रहने की संभावना है।`,
+    pv2RangeSevenDay: ({ low, high }) => `अगले 7 दिनों में: यह ₹${low} से ₹${high} के बीच रहने की संभावना है।`,
+    pv2RangeOddsClause: ({ frac }) => ` ऐसा दायरा पहले ${frac} सही साबित हुआ है।`,
+    pv2RangeUnavailable: "आज दिखाने के लिए कोई छोटी अवधि का दायरा उपलब्ध नहीं है।",
+    pv2Job4Heading: "4. क्या यह अच्छी कीमत है?",
+    pv2Weekly30dLabel: "पिछले महीने की तुलना में:",
+    pv2Weekly90dLabel: "पिछले तीन महीनों की तुलना में:",
+    pv2WeeklyLower: ({ count, n }) => `पिछले ${n} हफ्तों में से ${count} हफ्तों से कम।`,
+    pv2WeeklyHigher: ({ count, n }) => `पिछले ${n} हफ्तों में से ${count} हफ्तों से ज़्यादा।`,
+    pv2WeeklyAboutSame: ({ n }) => `पिछले ${n} हफ्तों के ज़्यादातर हफ्तों जैसी ही — लगभग बराबर।`,
+    pv2WeeklyTooLittleData: "यह बताने के लिए अभी हमारे पास पर्याप्त हफ्तों का कीमत इतिहास नहीं है।",
+    pv2Job5Heading: "5. मुझे कितना देना होगा?",
+    pv2MarkupHeading: "Tanishq बाज़ार के मुक़ाबले कैसा है",
+    pv2MarkupLine: ({ pct, suffix }) => `Tanishq का आज का भाव बाज़ार दर से करीब ${pct}% ज़्यादा है${suffix}`,
+    pv2MarkupSuffixHigher: " — सामान्य से ज़्यादा।",
+    pv2MarkupSuffixLower: " — सामान्य से कम।",
+    pv2MarkupSuffixUsual: " — करीब सामान्य।",
+    pv2WaitOrBuyHeading: "क्या इंतज़ार करूं या अभी खरीदूं?",
+    pv2EventWatchHeading: "आने वाली घटनाएं जो कीमत बदल सकती हैं",
   },
 };
 

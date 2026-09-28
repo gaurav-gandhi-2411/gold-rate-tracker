@@ -68,22 +68,19 @@ function computeAccuracyDrift(drift) {
 
 // Same rule-98a fail-closed shape as app.js's deriveMeasuredBandCoverage: a
 // stale (>14 days) or malformed measurement returns null, never a stale number
-// asserted as current.
-const BAND_COVERAGE_MAX_AGE_DAYS = 14;
-
+// asserted as current. G4 (2026-09-25): the age check itself now lives in
+// i18n.js's isMeasurementFresh (CLAIM_MAX_AGE_DAYS=14) -- shared with app.js
+// and with this page's own coverage/backtest freshness checks below, instead
+// of each render path re-deriving its own 14-day arithmetic.
 function deriveMeasuredBandCoverage(bandCoverage, nowMs = Date.now()) {
   if (
     !bandCoverage ||
     typeof bandCoverage.coverage !== "number" ||
     typeof bandCoverage.n !== "number" ||
-    typeof bandCoverage.generated_at_utc !== "string"
+    !isMeasurementFresh(bandCoverage.generated_at_utc, nowMs)
   ) {
     return null;
   }
-  const generatedMs = Date.parse(bandCoverage.generated_at_utc);
-  if (Number.isNaN(generatedMs)) return null;
-  const ageDays = (nowMs - generatedMs) / 86_400_000;
-  if (ageDays > BAND_COVERAGE_MAX_AGE_DAYS) return null;
   return { coverage: Math.round(bandCoverage.coverage * 1000) / 10, n: bandCoverage.n, asOf: bandCoverage.generated_at_utc };
 }
 
@@ -132,7 +129,10 @@ function renderFullMethodology(fc, bt, drift, coverage, bandCoverage) {
     const hasPI   = typeof lower === "number" && typeof upper === "number";
     // The range's own track record, floored (never the 80% target it aims for):
     // the same coverage figure the "How accurate" section shows unrounded.
-    const covOk   = coverage && typeof coverage.coverage === "number" && coverage.n > 0;
+    // G4 (2026-09-25): stale coverage (>CLAIM_MAX_AGE_DAYS) falls to methRangeSub's
+    // own no-times fallback (plain "Range: ₹X – ₹Y"), same as a missing measurement.
+    const covOk   = coverage && typeof coverage.coverage === "number" && coverage.n > 0
+      && isMeasurementFresh(coverage.generated_at_utc, Date.now());
     const timesN  = covOk ? Math.max(0, Math.min(10, Math.floor(coverage.coverage * 10 + 1e-9))) : null;
     const times   = covOk ? fractionOutOf10Phrase(coverage.coverage * 100) : null;
     parts.push(`
@@ -192,29 +192,41 @@ function renderFullMethodology(fc, bt, drift, coverage, bandCoverage) {
       ? `₹${fmtINR(hl.lower)}–₹${fmtINR(hl.upper)}`
       : tHwk("methRangeStrFallback");
 
-    const hasCoverage = coverage && typeof coverage.coverage === "number" && coverage.n > 0;
+    // G4 (2026-09-25): stale coverage (>CLAIM_MAX_AGE_DAYS) falls to the same
+    // "still building a track record" wording as a genuinely missing measurement
+    // (methAccurateP2CoverageUnknown already covers both -- no new string needed).
+    const hasCoverage = coverage && typeof coverage.coverage === "number" && coverage.n > 0
+      && isMeasurementFresh(coverage.generated_at_utc, Date.now());
     const coverPct = hasCoverage ? Math.round(coverage.coverage * 100) : null;
     const coverN   = hasCoverage ? coverage.n : null;
 
-    parts.push(`
-      <div class="meth-section meth-how-good">
-        <h3 class="meth-heading">${tHwk("methHowAccurateHeading")}</h3>
-
+    // G4 (2026-09-25): P1 (naive/AI MAE + p-value) and P3 (direction accuracy)
+    // both come from this SAME weekly backtest.json run -- when backtest_run_at
+    // is more than CLAIM_MAX_AGE_DAYS old (weekly-backtest.yml stopped running),
+    // omit both paragraphs entirely rather than assert a weeks-old number as
+    // current (rule 98a). P2 (coverage, independently sourced/gated above) and
+    // the static P4 explainer are unaffected and keep rendering.
+    const btFresh = isMeasurementFresh(bt.backtest_run_at, Date.now());
+    const p1Html = btFresh ? `
         <p class="meth-text"><strong>${tHwk("methAccurateP1Strong")}</strong><br>
         ${tHwk("methAccurateP1", {
           n, naiveMae,
           chronosBullet: maePctWorse != null ? tHwk("methAccurateP1ChronosBullet", { chronosMae, maePctWorse, pValOp, pValText }) : "",
-        })}</p>
+        })}</p>` : "";
+    const p3Html = btFresh ? `
+        <p class="meth-text"><strong>${tHwk("methAccurateP3Strong")}</strong><br>
+        ${tHwk("methAccurateP3", { dirAllDisplay, n })}</p>` : "";
 
+    parts.push(`
+      <div class="meth-section meth-how-good">
+        <h3 class="meth-heading">${tHwk("methHowAccurateHeading")}</h3>
+        ${p1Html}
         <p class="meth-text"><strong>${tHwk("methAccurateP2Strong", {
           rangeStr,
           coverageText: hasCoverage ? tHwk("methAccurateP2CoveragePct", { pct: coverPct, n: coverN }) : tHwk("methAccurateP2CoverageUnknown"),
         })}</strong><br>
         ${tHwk("methAccurateP2")}</p>
-
-        <p class="meth-text"><strong>${tHwk("methAccurateP3Strong")}</strong><br>
-        ${tHwk("methAccurateP3", { dirAllDisplay, n })}</p>
-
+        ${p3Html}
         <p class="meth-text"><strong>${tHwk("methAccurateP4Strong")}</strong><br>
         ${tHwk("methAccurateP4")}</p>
       </div>

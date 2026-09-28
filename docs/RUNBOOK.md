@@ -628,6 +628,42 @@ The queued-forever / no-runner case above is **unchanged and still intentionally
 is scoped narrowly to "job started and failed," so a runner you've deliberately paused for travel
 still degrades exactly as documented, with no false alarm.
 
+### Tanishq has not updated — the runner-offline gap (T14)
+
+T12 stays silent when the self-hosted runner is off, asleep or paused (no job starts, so no
+failure is counted). GG decision 4b (2026-09-25) closes that gap on the GitHub side:
+
+- **T14** (`ml/notifications.py::_check_t14_tanishq_silent`) runs in `check-price.yml` on
+  `ubuntu-latest`, so it needs nothing from the self-hosted runner. It reads only
+  `data/prices.json`: the age of the newest **real** Tanishq row (IBJA-derived rows never
+  count), in hours that do **not** fall on a Sunday (IST). It fires at **30 h**, once per IST day,
+  to the OPS topic. Tanishq switched off in `config/retailers.json` means no T14 (a takedown is
+  deliberate silence).
+- **Why 30 h:** every successful visit appends a row even when the rate is unchanged, so the
+  age is "time since the last successful visit". With visits clustered in 10:00–12:30 IST
+  (PR #2078, possibly plus 01:40), the worst legitimate weekday gap is 10:00 → next day
+  12:30 = 26.5 h. Tanishq never changes on a Sunday, so a Sunday may be skipped: Saturday
+  10:00 → Monday 12:30 is 50.5 h on the clock but 26.5 h without Sunday. 30 h = 26.5 h + 3.5 h
+  slack: a normal weekend never alerts, and an outage after a 10:00 visit alerts by 16:00 IST
+  the next working day. A single clock-hour threshold cannot do both (it would have to exceed
+  ~50 h for weekends, leaving a Tuesday outage unseen until Thursday).
+- **What to do:** check the runner host, the recent `scrape-tanishq-selfhosted` runs and the
+  `bot/tanishq-selfhosted-sync` PR, in that order. `check-price.yml` itself is subject to
+  GitHub's cron lateness (median ~2 h, see PR #2078), so T14 lands up to that much after 30 h.
+
+### Public price data after E1 (GG decision 4c)
+
+- `data/ibja_derived_prices.json` — the trend chart's series: `{"timestamp", "22k"}` per IBJA
+  publishing day, 22K = IBJA pm_916 × frozen calibration. Built every `check-price.yml` run by
+  `scripts/build_ibja_derived_prices.py --public-out`; the page labels it as our estimate.
+- `data/prices.json`, once #2075's migration encrypts the raw history, must keep public only the
+  real Tanishq rows "today's change" needs (fields `timestamp`, `22k`, `24k`, `18k`, `source`):
+  every row on the newest reading's IST day plus the last row before that day — at most 7 rows
+  at 6 visits a day. `tests/test_hero_display_state.js` ("public Tanishq set") proves the page's
+  change is identical on that set and on the full history.
+- `data/wait_or_buy_today.json` carries no IBJA level: `price_t`, `range.lo` and `range.hi` are
+  dropped (`price_t = range.lo − range.lo_rs` exactly); page_v2 reads only `horizons.<N>.sentence`.
+
 ### Feature-store rows arriving but not usable — the T10 blind spot (T13)
 
 **Incident, 2026-06-07 to 2026-08-05 (~8 weeks, undetected):** `ml.feature_store.append_snapshot`

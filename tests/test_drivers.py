@@ -66,6 +66,28 @@ def _write_macro_parquet(
     df.to_parquet(path)
 
 
+def _write_intraday_parquet(
+    path: Path,
+    dates: list[str],
+    gold_at_fix: list[float],
+    usd_inr: list[float],
+    gold_after_fix: list[float] | None = None,
+) -> None:
+    """Write macro_intraday.parquet: 24 hourly bars per date (UTC index = bar start).
+
+    Bars ending by 11:00 UTC (before the 11:30 UTC PM fix) hold gold_at_fix; later bars hold
+    gold_after_fix (default: unchanged). usd_inr is flat within each date.
+    """
+    after = gold_after_fix if gold_after_fix is not None else gold_at_fix
+    rows = []
+    for d, g0, g1, r in zip(dates, gold_at_fix, after, usd_inr, strict=True):
+        for h in range(24):
+            ts = pd.Timestamp(d, tz="UTC") + pd.Timedelta(hours=h)
+            rows.append((ts, g0 if h < 11 else g1, r))
+    df = pd.DataFrame(rows, columns=["ts", "gold_usd", "usd_inr"]).set_index("ts")
+    df.to_parquet(path)
+
+
 def _write_prices_json(path: Path, dates: list[str], prices_per_g: list[float]) -> None:
     """Write prices.json in INR/gram (matches prices.json schema)."""
     readings = [
@@ -279,6 +301,7 @@ def test_full_pipeline_valid_attribution_7d(tmp_path):
     _write_macro_status(tmp_path / "macro_status.json", age_days=0.5)
     _write_ibja_parquet(tmp_path / "ibja_rates.parquet", dates, ibja_10g)
     _write_macro_parquet(tmp_path / "macro_cache.parquet", dates, gold_usd, usd_inr)
+    _write_intraday_parquet(tmp_path / "macro_intraday.parquet", dates, gold_usd, usd_inr)
     _write_prices_json(tmp_path / "prices.json", dates, tanishq)
 
     result = compute_driver_attribution(data_dir=tmp_path)
@@ -308,6 +331,7 @@ def test_full_pipeline_contributions_sum_to_total(tmp_path):
     _write_macro_status(tmp_path / "macro_status.json", age_days=0.5)
     _write_ibja_parquet(tmp_path / "ibja_rates.parquet", dates, ibja_10g)
     _write_macro_parquet(tmp_path / "macro_cache.parquet", dates, gold_usd, usd_inr)
+    _write_intraday_parquet(tmp_path / "macro_intraday.parquet", dates, gold_usd, usd_inr)
     _write_prices_json(tmp_path / "prices.json", dates, tanishq)
 
     result = compute_driver_attribution(data_dir=tmp_path)
@@ -337,6 +361,7 @@ def test_full_pipeline_driver_state_present(tmp_path):
     _write_macro_status(tmp_path / "macro_status.json", age_days=0.5)
     _write_ibja_parquet(tmp_path / "ibja_rates.parquet", dates, ibja_10g)
     _write_macro_parquet(tmp_path / "macro_cache.parquet", dates, gold_usd, usd_inr)
+    _write_intraday_parquet(tmp_path / "macro_intraday.parquet", dates, gold_usd, usd_inr)
     _write_prices_json(tmp_path / "prices.json", dates, [v / 10 for v in ibja_10g])
 
     result = compute_driver_attribution(data_dir=tmp_path)
@@ -377,3 +402,220 @@ def test_ibja_unchanged_window_degrades_gracefully():
 
     assert w["attribution_valid"] is False
     assert "unchanged" in w["attribution_valid_reason"]
+
+
+# ---------------------------------------------------------------------------
+# (E) Timing alignment (ADR 058 A16): a fix is paired only with global moves public at the fix
+# ---------------------------------------------------------------------------
+
+
+def _post_fix_jump_fixture(tmp_path: Path) -> list[str]:
+    """Gold rises 0.5% per day, and on the LAST date falls 4% at 14:00 UTC -- after IBJA's
+    11:30 UTC PM fix and before that day's COMEX settle (13:30 ET = 17:30 UTC). IBJA prices
+    each fix off gold at the fix with a flat 1.12 premium, so the true premium move is exactly
+    zero and the fall is not in any IBJA value yet. The daily settle of each date is the
+    post-fix level (what Yahoo's GC=F daily Close records)."""
+    dates = _make_clean_dates(15, start="2026-06-01")
+    at_fix = [4000.0 * (1.005**i) for i in range(len(dates))]
+    after_fix = list(at_fix)
+    after_fix[-1] = at_fix[-1] * 0.96
+    usd_inr = [95.0] * len(dates)
+    ibja_10g = [g * r * _CONV_10G_916 * 1.12 for g, r in zip(at_fix, usd_inr, strict=True)]
+    _write_macro_status(tmp_path / "macro_status.json", age_days=0.5)
+    _write_ibja_parquet(tmp_path / "ibja_rates.parquet", dates, ibja_10g)
+    _write_macro_parquet(tmp_path / "macro_cache.parquet", dates, after_fix, usd_inr)
+    _write_intraday_parquet(
+        tmp_path / "macro_intraday.parquet", dates, at_fix, usd_inr, gold_after_fix=after_fix
+    )
+    _write_prices_json(tmp_path / "prices.json", dates, [v / 10 for v in ibja_10g])
+    return dates
+
+
+def test_post_fix_gold_move_is_not_credited_to_local_factors(tmp_path):
+    """Old same-date join: the last settle (-4%, after the fix) is paired with the fix, so the
+    IBJA rise reads as "gold fell, premium / local factors rose" (~180% of the move) and the
+    headline is suppressed. Aligned: premium share ~0, gold explains the whole move."""
+    _post_fix_jump_fixture(tmp_path)
+    result = compute_driver_attribution(data_dir=tmp_path)
+    w7 = result["windows"]["7d"]
+    assert w7["attribution_valid"] is True, w7["attribution_valid_reason"]
+    assert w7["premium_share_pct"] < 1.0
+    assert w7["delta_pct_premium"] == pytest.approx(0.0, abs=0.01)
+    assert w7["delta_pct_gold_usd"] > 0  # the pre-fix rise, not the post-fix fall
+    assert w7["gold_usd_contrib_rs_per_g"] == pytest.approx(w7["total_move_rs_per_g"], abs=1.0)
+    # 30d driver state reports gold as priced at the latest fix: the post-fix fall is excluded
+    assert result["driver_state"]["gold_usd_30d_pct_change"] > 0
+    assert result["alignment"] == "intraday_at_fix"
+
+
+def test_no_intraday_bars_suppresses_split_but_keeps_lagged_driver_state(tmp_path):
+    """Without intraday bars the split is not shown (lagged daily bars sit 17-33 h before the
+    fix and explain IBJA worse than the old join did); driver_state uses the lagged settle."""
+    _post_fix_jump_fixture(tmp_path)
+    (tmp_path / "macro_intraday.parquet").unlink()
+    result = compute_driver_attribution(data_dir=tmp_path)
+    assert result["alignment"] == "daily_lagged_state_only"
+    for wd in WINDOWS_DAYS:
+        w = result["windows"][f"{wd}d"]
+        assert w["attribution_valid"] is False
+        assert w["delta_pct_premium"] is None
+        assert "intraday" in w["attribution_valid_reason"]
+    # lagged daily: the last fix gets the previous settle, so the post-fix fall is excluded
+    assert result["driver_state"]["gold_usd_30d_pct_change"] > 0
+
+
+def test_intraday_not_covering_latest_fix_suppresses_split(tmp_path):
+    """Intraday bars that stop > MAX_INTRADAY_GAP_HOURS before the latest fix must not
+    silently shift the window to an older fix."""
+    dates = _post_fix_jump_fixture(tmp_path)
+    bars = pd.read_parquet(tmp_path / "macro_intraday.parquet")
+    bars[bars.index < pd.Timestamp(dates[-4], tz="UTC")].to_parquet(
+        tmp_path / "macro_intraday.parquet"
+    )
+    result = compute_driver_attribution(data_dir=tmp_path)
+    assert result["alignment"] == "daily_lagged_state_only"
+    assert result["windows"]["7d"]["attribution_valid"] is False
+
+
+def test_intraday_reads_last_bar_ended_by_fix():
+    """The 10:00-11:00 UTC bar is the last one ended by the 11:30 UTC PM fix; the 11:00-12:00
+    bar (in progress at the fix) must not be used. AM-only rows use 06:30 UTC."""
+    from ml.drivers import _align_intraday_to_fixes
+
+    ibja = pd.DataFrame(
+        {"ibja_10g": [1.0, 2.0], "fix": ["pm", "am"]},
+        index=pd.to_datetime(["2026-09-22", "2026-09-23"]),
+    )
+    idx = pd.date_range("2026-09-22 00:00", "2026-09-23 23:00", freq="h", tz="UTC")
+    bars = pd.DataFrame({"gold_usd": range(len(idx)), "usd_inr": range(len(idx))}, index=idx)
+    out = _align_intraday_to_fixes(ibja, bars.astype(float))
+    assert out.loc["2026-09-22", "gold_usd"] == 10.0  # bar starting 10:00 UTC
+    assert out.loc["2026-09-23", "gold_usd"] == 24.0 + 5.0  # AM fix: bar starting 05:00 UTC
+
+
+def test_align_pairs_each_fix_with_previous_settle_never_same_date():
+    """PM of D -> settle of the previous NY trading day (Monday -> Friday); AM-only rows too."""
+    from ml.drivers import _align_macro_to_fixes
+
+    ibja = pd.DataFrame(
+        {"ibja_10g": [1.0, 2.0, 3.0], "fix": ["pm", "am", "pm"]},
+        index=pd.to_datetime(["2026-09-18", "2026-09-21", "2026-09-22"]),  # Fri, Mon, Tue
+    )
+    macro = pd.DataFrame(
+        {"gold_usd": [10.0, 11.0, 12.0, 13.0], "usd_inr": [90.0, 91.0, 92.0, 93.0]},
+        index=pd.to_datetime(["2026-09-17", "2026-09-18", "2026-09-21", "2026-09-22"]),
+    )
+    out = _align_macro_to_fixes(ibja, macro)
+    assert out["gold_usd"].tolist() == [10.0, 11.0, 12.0]  # Thu, Fri, Mon settles
+    assert out["usd_inr"].tolist() == [90.0, 91.0, 92.0]
+    assert [d.strftime("%Y-%m-%d") for d in out["gold_usd_bar_date"]] == [
+        "2026-09-17",
+        "2026-09-18",
+        "2026-09-21",
+    ]
+
+
+def test_align_uses_dst_aware_settle_clock():
+    """The 13:30 ET settle is 17:30 UTC in summer, 18:30 UTC in winter -- both after the
+    11:30 UTC PM fix of the same date, so both pair with the previous day."""
+    from ml.drivers import _COMEX_SETTLE_CLOCK, _known_at_utc
+
+    summer, winter = _known_at_utc(
+        pd.to_datetime(["2026-07-15", "2026-01-15"]), _COMEX_SETTLE_CLOCK
+    )
+    assert (summer.hour, summer.minute) == (17, 30)
+    assert (winter.hour, winter.minute) == (18, 30)
+
+
+def test_align_drops_fix_whose_latest_known_bar_is_stale():
+    """A fix with no macro bar within MAX_BAR_AGE_DAYS is dropped, never paired with old data."""
+    from ml.drivers import _align_macro_to_fixes
+
+    ibja = pd.DataFrame(
+        {"ibja_10g": [1.0, 2.0], "fix": ["pm", "pm"]},
+        index=pd.to_datetime(["2026-09-02", "2026-09-22"]),
+    )
+    macro = pd.DataFrame(
+        {"gold_usd": [10.0], "usd_inr": [90.0]}, index=pd.to_datetime(["2026-09-01"])
+    )
+    out = _align_macro_to_fixes(ibja, macro)
+    assert [d.strftime("%Y-%m-%d") for d in out.index] == ["2026-09-02"]
+
+
+def test_intraday_holiday_uses_last_traded_price():
+    """US holiday Monday: no GC=F bars since Friday 20:00-21:00 UTC; that last price is the
+    price at Monday's fix (62.5 h gap, within MAX_INTRADAY_GAP_HOURS)."""
+    from ml.drivers import _align_intraday_to_fixes
+
+    ibja = pd.DataFrame(
+        {"ibja_10g": [1.0], "fix": ["pm"]}, index=pd.to_datetime(["2026-09-07"])
+    )  # Labor Day
+    gold = pd.Series(
+        [4000.0, 4010.0], index=pd.to_datetime(["2026-09-04 19:00", "2026-09-04 20:00"], utc=True)
+    )
+    fx = pd.Series([94.4], index=pd.to_datetime(["2026-09-07 10:00"], utc=True))
+    bars = pd.concat({"gold_usd": gold, "usd_inr": fx}, axis=1)
+    out = _align_intraday_to_fixes(ibja, bars)
+    assert out["gold_usd"].tolist() == [4010.0]
+    assert out["usd_inr"].tolist() == [94.4]
+
+
+def test_zero_rupee_total_gets_no_rupee_split():
+    """IBJA moved but the retail board did not (total rounds to Rs 0): no Rs split, so the page
+    never prints "Gold is up about Rs 0 this week"."""
+    dates = ["2026-05-01", "2026-05-08"]
+    gold_usd = [4000.0, 4100.0]
+    usd_inr = [95.0, 95.0]
+    ibja_10g = _stable_ibja(dates, gold_usd, usd_inr)
+    merged = _build_merged(dates, gold_usd, usd_inr, ibja_10g)
+    tanishq = pd.DataFrame(
+        {"ts": pd.to_datetime(["2026-05-01T12:00Z", "2026-05-08T12:00Z"]), "22k": [13000.0] * 2}
+    )
+    w = _decompose_window(merged, window_days=7, tanishq_df=tanishq)
+    assert w["attribution_valid"] is True
+    assert w["total_move_rs_per_g"] == 0.0
+    assert w["gold_usd_contrib_rs_per_g"] is None
+    assert w["usdinr_contrib_rs_per_g"] is None
+
+
+def test_intraday_starting_inside_30d_window_fails_closed(tmp_path):
+    """Bars that cover the latest fix but start 10 days back must not shrink "30d" to ~9 rows:
+    the whole split degrades and driver_state falls back to the lagged daily bars."""
+    dates = _make_clean_dates(40, start="2026-06-01")
+    gold = [4000.0 * (1.003**i) for i in range(len(dates))]
+    inr = [95.0] * len(dates)
+    ibja_10g = _stable_ibja(dates, gold, inr)
+    _write_macro_status(tmp_path / "macro_status.json", age_days=0.5)
+    _write_ibja_parquet(tmp_path / "ibja_rates.parquet", dates, ibja_10g)
+    _write_macro_parquet(tmp_path / "macro_cache.parquet", dates, gold, inr)
+    _write_intraday_parquet(tmp_path / "macro_intraday.parquet", dates[-8:], gold[-8:], inr[-8:])
+    _write_prices_json(tmp_path / "prices.json", dates, [v / 10 for v in ibja_10g])
+
+    result = compute_driver_attribution(data_dir=tmp_path)
+    assert result["alignment"] == "daily_lagged_state_only"
+    for wd in WINDOWS_DAYS:
+        assert result["windows"][f"{wd}d"]["attribution_valid"] is False
+    # 30-day change over the full window (~+6%), not the ~+2% of the last 8 days
+    assert result["driver_state"]["gold_usd_30d_pct_change"] > 5.0
+
+
+@pytest.mark.parametrize(
+    ("board_move", "split_shown"),
+    [(0.4, False), (0.5, True), (-0.4, False), (-0.5, False), (-0.6, True)],
+)
+def test_zero_total_guard_matches_js_math_round(board_move, split_shown):
+    """app.js shows Math.round(total): 0.5 -> 1 but -0.5 -> 0. The split is withheld exactly
+    when the page would print Rs 0, on both sides of the boundary."""
+    dates = ["2026-05-01", "2026-05-08"]
+    gold_usd = [4000.0, 4100.0]
+    usd_inr = [95.0, 95.0]
+    merged = _build_merged(dates, gold_usd, usd_inr, _stable_ibja(dates, gold_usd, usd_inr))
+    tanishq = pd.DataFrame(
+        {
+            "ts": pd.to_datetime(["2026-05-01T12:00Z", "2026-05-08T12:00Z"]),
+            "22k": [13000.0, 13000.0 + board_move],
+        }
+    )
+    w = _decompose_window(merged, window_days=7, tanishq_df=tanishq)
+    assert w["total_move_rs_per_g"] == pytest.approx(board_move)
+    assert (w["gold_usd_contrib_rs_per_g"] is not None) is split_shown
