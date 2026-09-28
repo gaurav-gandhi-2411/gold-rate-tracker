@@ -42,7 +42,12 @@ _CLICK_URL = "https://gaurav-gandhi-2411.github.io/gold-rate-tracker/"
 _QUIET_START_H = 22  # 22:00 IST
 _QUIET_END_H = 7  # 07:00 IST
 _MAX_QUEUE_AGE_H = 12  # discard queued alerts older than this
-_MAX_T123_PER_24H = 3  # T1+T2+T3 combined cap
+_MAX_T123_PER_24H = 3  # T1+T2+T3 combined cap (T15 counts toward it too)
+# T15 (2026-09-28): IBJA's 22K benchmark moved >= this many Rs per gram of shop price between its
+# two latest fixes. Same bar as T3. Exists because T3 only sees Tanishq readings: on 2026-09-28
+# IBJA's AM fell ~Rs.372/g while no Tanishq reading arrived for 8.5 h, so nothing alerted.
+_T15_IBJA_MOVE_THRESHOLD_RS = 150
+_IBJA_FIX_PUBLISH_UTC = {"am": (6, 30), "pm": (11, 30)}  # ml.known_at IBJA_AM / IBJA_PM
 
 _T8_MORNING_THRESHOLD_H = 8  # IST lower bound: fire T8_MORNING at/after 08:00
 _T8_MORNING_UPPER_H = 14  # IST upper bound: suppress T8_MORNING at/after 14:00
@@ -137,6 +142,52 @@ class NotificationState:
     last_t12_ist_date: str = ""  # IST date YYYY-MM-DD of last T12 send (once-per-day dedup)
     last_t13_ist_date: str = ""  # IST date YYYY-MM-DD of last T13 send (once-per-day dedup)
     last_t14_ist_date: str = ""  # IST date YYYY-MM-DD of last T14 send (once-per-day dedup)
+
+
+@dataclass(frozen=True)
+class IbjaMove:
+    """The latest IBJA 22K fix against the one before it (see compute_ibja_move)."""
+
+    fix_date: str  # YYYY-MM-DD of the latest fix
+    fix: str  # "am" or "pm"
+    published_utc: str  # when that fix is published (ISO)
+    delta_per_gram: int  # shop-price move it implies, Rs per gram (calibration slope)
+    estimate_now: int  # calibrated 22K estimate from the latest fix, Rs per gram
+
+
+def compute_ibja_move(ibja_path: Path, calibration: dict) -> IbjaMove | None:
+    """Latest IBJA 22K fix vs the previous fix, in shop-price Rs/g. None without a valid
+    calibration or two fixes. Fixes are ordered in time: each day's AM, then its PM."""
+    if not calibration.get("valid") or calibration.get("slope") is None:
+        return None
+    try:
+        import pandas as pd
+
+        df = pd.read_parquet(ibja_path)
+    except Exception as exc:
+        logger.warning("compute_ibja_move: could not read %s: %s", ibja_path, exc)
+        return None
+    fixes: list[tuple[str, str, float]] = []
+    for _, row in df.sort_values("date").iterrows():
+        d = str(row["date"])[:10]
+        for fix, col in (("am", "am_916"), ("pm", "pm_916")):
+            v = row.get(col)
+            if v is not None and v == v:  # not NaN
+                fixes.append((d, fix, float(v)))
+    if len(fixes) < 2:
+        return None
+    (_, _, v_prev), (d_new, fix, v_new) = fixes[-2], fixes[-1]
+    slope = float(calibration["slope"])
+    intercept = float(calibration.get("intercept") or 0.0)
+    hh, mm = _IBJA_FIX_PUBLISH_UTC[fix]
+    y, m, dd = (int(x) for x in d_new.split("-"))
+    return IbjaMove(
+        fix_date=d_new,
+        fix=fix,
+        published_utc=datetime(y, m, dd, hh, mm, tzinfo=UTC).isoformat(),
+        delta_per_gram=round(slope * (v_new - v_prev) / 10.0),
+        estimate_now=round(slope * v_new / 10.0 + intercept),
+    )
 
 
 @dataclass(frozen=True)
@@ -580,7 +631,14 @@ def _check_t3(
     state: NotificationState,
     now_ist: datetime,
 ) -> PendingAlert | None:
-    """T3 — Actual large move: |current - prev| >= Rs.150 (model-agnostic)."""
+    """T3 — Actual large move: |current - previous DIFFERENT price| >= Rs.150 (model-agnostic).
+
+    Compares the latest price with the last reading at a different price, not with the reading
+    just before it (2026-09-28): the scrape and this check run in separate workflows, so two
+    scrapes at the new price could land between checks, and the old "last two readings" rule
+    then never saw the move. Fires once per change -- skipped when T3 was already sent after the
+    change first appeared -- and only for a change first seen within the last 24 h, so a
+    notification-state cache miss cannot replay an old move."""
     if _in_cooldown("T3", state, 4.0):
         return None
     if _count_sent(state, ["T1", "T2", "T3"]) >= _MAX_T123_PER_24H:
@@ -591,7 +649,20 @@ def _check_t3(
         return None
     sorted_p = sorted(prices, key=lambda p: p["timestamp"])
     current = sorted_p[-1]["22k"]
-    prev = sorted_p[-2]["22k"]
+    k = len(sorted_p) - 1
+    while k > 0 and sorted_p[k - 1]["22k"] == current:
+        k -= 1
+    if k == 0:
+        return None
+    prev = sorted_p[k - 1]["22k"]
+    changed_at = datetime.fromisoformat(str(sorted_p[k]["timestamp"]).replace("Z", "+00:00"))
+    if changed_at.tzinfo is None:
+        changed_at = changed_at.replace(tzinfo=UTC)
+    if now_ist - changed_at > timedelta(hours=24):
+        return None
+    last = state.last_sent.get("T3")
+    if last and datetime.fromisoformat(last) >= changed_at:
+        return None
     delta = current - prev
     if abs(delta) < 150:
         return None
@@ -1040,6 +1111,29 @@ def _check_t13_usable_snapshot_stall(
     return _make_alert("T13", title, body, 4, ["warning", "mag"], now_ist)
 
 
+def _check_t15_ibja_move(
+    move: IbjaMove | None, state: NotificationState, now_ist: datetime
+) -> PendingAlert | None:
+    """T15 -- IBJA's benchmark moved >= _T15_IBJA_MOVE_THRESHOLD_RS per gram between its two
+    latest fixes. Once per fix (skipped if T15 was already sent after this fix was published);
+    skipped if T3 fired in the last 4 h (the shop price already told the move); counts toward
+    the T1+T2+T3 cap. Retailer-neutral wording; respects quiet hours."""
+    if move is None or abs(move.delta_per_gram) < _T15_IBJA_MOVE_THRESHOLD_RS:
+        return None
+    last = state.last_sent.get("T15")
+    if last and datetime.fromisoformat(last) >= datetime.fromisoformat(move.published_utc):
+        return None
+    if _in_cooldown("T3", state, 4.0):
+        return None
+    if _count_sent(state, ["T1", "T2", "T3", "T15"]) >= _MAX_T123_PER_24H:
+        return None
+    priority = 5 if abs(move.delta_per_gram) >= 300 else 4
+    title, body = public_copy.ibja_move(move.delta_per_gram, move.estimate_now, move.fix)
+    return _make_alert(
+        "T15", title, body, priority, ["warning", "chart_with_downwards_trend"], now_ist
+    )
+
+
 def _check_t14_tanishq_silent(
     silence: TanishqSilence | None,
     state: NotificationState,
@@ -1092,6 +1186,7 @@ def check_triggers(
     selfhosted_consecutive_failures: int | None = None,
     usable_snapshot_gap_days: int | None = None,
     tanishq_silence: TanishqSilence | None = None,
+    ibja_move: IbjaMove | None = None,
 ) -> list[PendingAlert]:
     """Evaluate all triggers (T1–T14); return new alerts for this call.
 
@@ -1115,6 +1210,7 @@ def check_triggers(
         snapshot_gap_days/T10, which only checks that some row landed.
     tanishq_silence: age of the newest real Tanishq reading (see
         compute_tanishq_silence). Drives T14.
+    ibja_move: the latest IBJA fix vs the previous one (see compute_ibja_move). Drives T15.
     """
     alerts: list[PendingAlert] = []
     for fn in (_check_t1, _check_t2, _check_t3, _check_t4, _check_t5, _check_t7):
@@ -1149,6 +1245,9 @@ def check_triggers(
     t14 = _check_t14_tanishq_silent(tanishq_silence, state, now_ist)
     if t14 is not None:
         alerts.append(t14)
+    t15 = _check_t15_ibja_move(ibja_move, state, now_ist)
+    if t15 is not None:
+        alerts.append(t15)
     return alerts
 
 
@@ -1384,6 +1483,7 @@ def main() -> None:
         logger.warning("retailers config unreadable (%s) -- treating Tanishq as enabled", exc)
         tanishq_enabled = True
     tanishq_silence = compute_tanishq_silence(prices, now_ist, tanishq_enabled)
+    ibja_move = compute_ibja_move(DATA_DIR / "ibja_rates.parquet", calibration)
 
     new_alerts = check_triggers(
         forecast,
@@ -1398,6 +1498,7 @@ def main() -> None:
         selfhosted_consecutive_failures=selfhosted_consecutive_failures,
         usable_snapshot_gap_days=usable_snapshot_gap_days,
         tanishq_silence=tanishq_silence,
+        ibja_move=ibja_move,
     )
 
     if args.simulate:
