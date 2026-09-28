@@ -19,6 +19,13 @@ Leak guard (ADR 061), REPORT mode: each logged day records the IBJA inputs that 
 or after the reading it estimates (the target is the day's last Tanishq reading; an IBJA fix is
 known at max(its assumed publication, this repo's fetched_at), ml.known_at). The registered M0/M3
 protocol is unchanged -- the report is how the leak is documented, not fixed (ADR 061 F2).
+
+GG decision F2 (2026-09-26, ADR 061 amendment A2): the 2026-10-22 decision compares M3 with M0
+only on CERTIFIED same-day days -- days whose IBJA inputs were all known strictly before the
+reading they estimate. Predictions are still logged for every day, unchanged; the uncertified
+days are excluded from the decision comparison and reported alongside (`all_same_day`). A logged
+day without the field (logged by the pre-#2090 runner) is certified at summary time from the same
+persisted timestamps, never by rewriting the logged row.
 """
 
 from __future__ import annotations
@@ -27,6 +34,7 @@ import importlib.util
 import json
 import subprocess
 import sys
+from collections.abc import Callable
 from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
@@ -138,39 +146,57 @@ def new_rows(
     return rows
 
 
-def summarise(days: list[dict[str, Any]]) -> dict[str, Any]:
-    """M3 vs M0 on same-day days where both exist (R2's headline comparison)."""
+def _mae_dm(ok: list[dict[str, Any]]) -> dict[str, Any]:
+    """M3 vs M0 on the given same-day days, with R2's one-sided HAC Diebold-Mariano test."""
     from ml.direction.evaluate_reframed import diebold_mariano_test
 
-    ok = [
-        d
-        for d in days
-        if d["gap_days"] == 0 and d["M0_current"] is not None and d["M3_am_pm"] is not None
-    ]
-    out: dict[str, Any] = {
-        "n_same_day": len(ok),
-        "n_all_logged": len(days),
-        # ADR 061 report-mode leak guard; days logged before it existed have no field.
-        "n_days_input_known_after_target": sum(
-            1 for d in days if d.get("inputs_known_after_target")
-        ),
-    }
     if len(ok) < 3:
-        return out
+        return {}
     y = np.array([d["truth_rs_per_g"] for d in ok])
     e0 = np.abs(np.array([d["M0_current"] for d in ok]) - y)
     e3 = np.abs(np.array([d["M3_am_pm"] for d in ok]) - y)
     dm = diebold_mariano_test(e3.tolist(), e0.tolist(), 2, alternative="less")
-    out.update(
-        {
-            "mae_m0_rs_per_g": float(e0.mean()),
-            "mae_m3_rs_per_g": float(e3.mean()),
-            "p_one_sided_m3_better": dm["p_value"],
-            "effective_n": dm["effective_n"],
-            "first_day": ok[0]["date"],
-            "last_day": ok[-1]["date"],
-        }
-    )
+    return {
+        "mae_m0_rs_per_g": float(e0.mean()),
+        "mae_m3_rs_per_g": float(e3.mean()),
+        "p_one_sided_m3_better": dm["p_value"],
+        "effective_n": dm["effective_n"],
+        "first_day": ok[0]["date"],
+        "last_day": ok[-1]["date"],
+    }
+
+
+def summarise(
+    days: list[dict[str, Any]],
+    certify: Callable[[dict[str, Any]], list[str]] | None = None,
+) -> dict[str, Any]:
+    """M3 vs M0 on same-day days where both exist (R2's headline comparison).
+
+    Decision numbers (top level) use certified days only (GG decision F2): no IBJA input known
+    at or after the target reading. `certify(day)` supplies that list for a logged day that has
+    no `inputs_known_after_target` field; without it such a day counts as uncertified.
+    `all_same_day` keeps the uncertified days in, for comparison only."""
+    same_day = [
+        d
+        for d in days
+        if d["gap_days"] == 0 and d["M0_current"] is not None and d["M3_am_pm"] is not None
+    ]
+
+    def late(d: dict[str, Any]) -> list[str]:
+        if "inputs_known_after_target" in d:
+            return list(d["inputs_known_after_target"])
+        return certify(d) if certify is not None else ["not_certified"]
+
+    ok = [d for d in same_day if not late(d)]
+    out: dict[str, Any] = {
+        "n_same_day": len(ok),
+        "n_same_day_excluded_late_ibja": len(same_day) - len(ok),
+        "n_all_logged": len(days),
+        "n_days_input_known_after_target": sum(1 for d in days if late(d)),
+    }
+    out.update(_mae_dm(ok))
+    if len(same_day) != len(ok):
+        out["all_same_day"] = {"n_same_day": len(same_day), **_mae_dm(same_day)}
     return out
 
 
@@ -191,7 +217,15 @@ def main() -> int:
         row["logged_at_utc"] = now
         row["git_sha"] = sha
     log["days"] = sorted([*log["days"], *added], key=lambda d: d["date"])
-    summary = summarise(log["days"])
+    targets, fetched = target_timestamps(), ibja_fetched_at()
+    certify_guard = LeakGuard("nowcast shadow certification (summary only)", mode="report")
+
+    def certify(d: dict[str, Any]) -> list[str]:
+        return inputs_known_after_target(
+            certify_guard, targets.get(d["date"]), d["ibja_date"], fetched.get(d["ibja_date"])
+        )
+
+    summary = summarise(log["days"], certify)
     log["runs"].append({"run_at_utc": now, "git_sha": sha, "added": len(added), **summary})
     LOG_PATH.write_text(json.dumps(log, indent=2) + "\n", encoding="utf-8")
     print(
