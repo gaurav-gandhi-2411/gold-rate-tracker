@@ -3,8 +3,8 @@
 from __future__ import annotations
 
 import importlib.util
-import json
 import shutil
+import subprocess
 import sys
 from pathlib import Path
 
@@ -107,16 +107,83 @@ def test_empty_tree_and_missing_or_malformed_baseline_fail_closed(tmp_path: Path
     assert _run(tmp_path) == 2  # no test files at all: refuse to pass an empty sweep
     root = _tree(tmp_path)
     assert _run(root) == 2  # baseline missing
-    (root / mod.BASELINE_REL).write_text("{not json", encoding="utf-8")
-    assert _run(root) == 2
-    (root / mod.BASELINE_REL).write_text(json.dumps({"files": {}}), encoding="utf-8")
-    assert _run(root) == 2
+    base = root / mod.BASELINE_REL
+    base.mkdir(parents=True)
+    assert _run(root) == 2  # baseline directory empty
+    (base / "tests").mkdir()
+    (base / "tests" / "test_x.py.count").write_text("{not a number", encoding="utf-8")
+    assert _run(root) == 2  # malformed entry
+
+
+def test_baseline_is_one_file_per_test_file(tmp_path: Path):
+    root = _tree(tmp_path)
+    assert _run(root, "--update") == 0
+    base = root / mod.BASELINE_REL
+    assert sorted(p.relative_to(base).as_posix() for p in base.rglob("*.count")) == [
+        "tests/test_x.py.count",
+        "tests/test_y.js.count",
+        "worker-deadman/test/w.test.mjs.count",
+    ]
+    assert (base / "tests" / "test_x.py.count").read_text(encoding="utf-8") == "2\n"
+
+
+def test_adding_a_test_file_touches_only_its_own_baseline_file(tmp_path: Path):
+    """The reason for the per-file layout: a new test file must not edit any shared baseline file."""
+    root = _tree(tmp_path)
+    assert _run(root, "--update") == 0
+    base = root / mod.BASELINE_REL
+    before = {p: p.read_bytes() for p in base.rglob("*.count")}
+    (root / "tests" / "test_new.py").write_text("def test_z():\n    pass\n", encoding="utf-8")
+    assert _run(root, "--update") == 0
+    after = {p: p.read_bytes() for p in base.rglob("*.count")}
+    assert set(after) - set(before) == {base / "tests" / "test_new.py.count"}
+    assert all(after[p] == b for p, b in before.items())
+
+
+def test_update_is_the_only_way_to_drop_a_deleted_file_from_the_baseline(tmp_path: Path):
+    root = _tree(tmp_path)
+    assert _run(root, "--update") == 0
+    (root / "tests" / "test_y.js").unlink()
+    assert _run(root) == 1
+    assert _run(root, "--update") == 0
+    assert not (root / mod.BASELINE_REL / "tests" / "test_y.js.count").exists()
+    assert _run(root) == 0
+
+
+def test_two_branches_adding_different_test_files_merge_without_conflict(tmp_path: Path):
+    """End-to-end with real git: the 2026-09-26 merge-train conflict shape no longer conflicts."""
+    root = _tree(tmp_path)
+    assert _run(root, "--update") == 0
+
+    def git(*args: str) -> subprocess.CompletedProcess[str]:
+        return subprocess.run(
+            ["git", "-c", "user.name=t", "-c", "user.email=t@t", *args],
+            cwd=root,
+            capture_output=True,
+            text=True,
+            check=False,
+        )
+
+    assert git("init", "-q", "-b", "main").returncode == 0
+    git("add", "-A")
+    assert git("commit", "-q", "-m", "base").returncode == 0
+    for branch, name in (("a", "test_a_new.py"), ("b", "test_b_new.py")):
+        git("checkout", "-q", "-b", branch, "main")
+        (root / "tests" / name).write_text("def test_q():\n    pass\n", encoding="utf-8")
+        assert _run(root, "--update") == 0
+        git("add", "-A")
+        assert git("commit", "-q", "-m", branch).returncode == 0
+    git("checkout", "-q", "main")
+    assert git("merge", "-q", "--no-edit", "a").returncode == 0
+    merged = git("merge", "-q", "--no-edit", "b")
+    assert merged.returncode == 0, merged.stdout + merged.stderr
+    assert _run(root) == 0
 
 
 def test_the_committed_baseline_matches_the_real_repo():
     """The guard must be green on the tree it ships in, and cover the real Worker tests."""
     current = mod.collect_counts(_REPO)
-    baseline = json.loads((_REPO / mod.BASELINE_REL).read_text(encoding="utf-8"))["files"]
+    baseline = mod.read_baseline(_REPO / mod.BASELINE_REL)
     failures, _ = mod.compare(current, baseline)
     assert failures == []
     assert "worker-deadman/test/pr_trigger_health.test.mjs" in baseline
@@ -134,7 +201,7 @@ def test_the_real_incident_shape_is_caught_on_a_copy_of_the_real_tree(tmp_path: 
     assert victim.stat().st_size > 1000
     victim.write_text("", encoding="utf-8")
     current = mod.collect_counts(tmp_path)
-    baseline = json.loads((_REPO / mod.BASELINE_REL).read_text(encoding="utf-8"))["files"]
+    baseline = mod.read_baseline(_REPO / mod.BASELINE_REL)
     failures, _ = mod.compare(
         current,
         {
