@@ -2615,3 +2615,12 @@ html.ptr-pulling {
     transition-duration: 0.01ms !important;
   }
 }
+
+/* GG 3d (2026-09-26): while the history table shows the IBJA-based estimate (22K only), its
+   24K and 18K columns are hidden rather than filled with dashes. */
+.history-table--22k-only th:nth-child(3),
+.history-table--22k-only th:nth-child(4),
+.history-table--22k-only td:nth-child(3),
+.history-table--22k-only td:nth-child(4) {
+  display: none;
+}
