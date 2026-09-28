@@ -70,6 +70,11 @@ _STALE_THRESHOLD_H: int = 8
 _IBJA_DISPLAY_MAX_AGE_DAYS: int = 14
 # IBJA publishes pm_916 ~17:00 IST = 11:30 UTC on each trading day.
 _IBJA_PUBLISH_UTC: tuple[int, int] = (11, 30)
+# ...and am_916 ~12:00 IST = 06:30 UTC (ml.known_at.IBJA_AM). Used when it is newer than the
+# latest PM (2026-09-28): on 81 days with a Tanishq reading between the two fixes, today's AM
+# estimated Tanishq with mean abs error Rs.60.5/g vs Rs.151.6/g for the previous day's PM
+# (AM closer on 61/81, paired one-sided Wilcoxon p=3.7e-7; both arms with the same calibration).
+_IBJA_AM_PUBLISH_UTC: tuple[int, int] = (6, 30)
 # ADR 059 (G1b): a fresh Tanishq reading is shown as the confirmed retail price only
 # if it sits within this fraction of the same cycle's IBJA-calibrated estimate.
 # Measured 2026-09-25 over all 712 prices.json readings vs the then-current
@@ -375,6 +380,17 @@ def _try_ibja_calibrated(
         latest_ibja = valid_rows.iloc[-1]
         ibja_date_str: str = str(latest_ibja["date"])[:10]  # "YYYY-MM-DD"
         pm_916 = float(latest_ibja["pm_916"])
+        ibja_fix = "pm"
+        # A newer day's AM fix beats the previous day's PM (see _IBJA_AM_PUBLISH_UTC): on a
+        # morning when the market moves, the PM-only estimate showed yesterday's level all day.
+        has_am = "am_916" in ibja_df.columns
+        am_rows = (ibja_df[ibja_df["am_916"].notna()] if has_am else ibja_df.iloc[0:0]).copy()
+        am_rows["_d"] = am_rows["date"].astype(str).str[:10]
+        newer_am = am_rows[am_rows["_d"] > ibja_date_str].sort_values("_d")
+        if not newer_am.empty:
+            ibja_date_str = str(newer_am.iloc[-1]["_d"])
+            pm_916 = float(newer_am.iloc[-1]["am_916"])
+            ibja_fix = "am"
     except FileNotFoundError:
         logger.info("_try_ibja_calibrated: ibja_rates.parquet not found — skipping")
         return None
@@ -385,7 +401,8 @@ def _try_ibja_calibrated(
     # IBJA publication datetime: ~17:00 IST = 11:30 UTC on the row's date
     try:
         y, m, d = int(ibja_date_str[:4]), int(ibja_date_str[5:7]), int(ibja_date_str[8:10])
-        ibja_asof_dt = datetime(y, m, d, _IBJA_PUBLISH_UTC[0], _IBJA_PUBLISH_UTC[1], tzinfo=UTC)
+        publish = _IBJA_AM_PUBLISH_UTC if ibja_fix == "am" else _IBJA_PUBLISH_UTC
+        ibja_asof_dt = datetime(y, m, d, publish[0], publish[1], tzinfo=UTC)
     except Exception as exc:
         logger.warning("_try_ibja_calibrated: could not parse ibja date %r: %s", ibja_date_str, exc)
         return None
@@ -424,12 +441,13 @@ def _try_ibja_calibrated(
 
     band_str = f"[Rs.{est_low}-Rs.{est_high}]" if band_half_width is not None else "[no band]"
     logger.info(
-        "_try_ibja_calibrated: ibja_per_g=%.2f -> Rs.%d %s  ibja_date=%s  "
+        "_try_ibja_calibrated: ibja_per_g=%.2f -> Rs.%d %s  ibja_date=%s (%s fix)  "
         "band_method=%s  freshness=%s (gap=%dd)",
         ibja_per_g,
         ibja_calibrated_22k,
         band_str,
         ibja_date_str,
+        ibja_fix,
         band_method,
         freshness_stratum,
         gap_days,
