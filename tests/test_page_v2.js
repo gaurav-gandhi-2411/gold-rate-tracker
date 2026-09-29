@@ -239,7 +239,7 @@ test("computePriceNowJob: ibja_calibrated tier uses forecast.current_22k + the e
   const forecast = { price_source: "ibja_calibrated", current_22k: 14050 };
   const job = computePriceNowJob(readings, forecast);
   assert.equal(job.price, 14050);
-  assert.equal(job.sourceLabel, "An estimate, matched to IBJA and Tanishq's own numbers.");
+  assert.equal(job.sourceLabel, "An estimate, matched to India's official gold rate and Tanishq's own numbers.");
 });
 
 test("computePriceNowJob: fusion_consensus tier uses the consensus label", () => {
@@ -247,7 +247,7 @@ test("computePriceNowJob: fusion_consensus tier uses the consensus label", () =>
   const forecast = { price_source: "fusion_consensus", current_22k: 13950 };
   const job = computePriceNowJob(readings, forecast);
   assert.equal(job.price, 13950);
-  assert.ok(job.sourceLabel.includes("unreachable"));
+  assert.ok(job.sourceLabel.includes("unavailable"));
 });
 
 test("computePriceNowJob: plain Tanishq tier uses the latest reading + confirmed label", () => {
