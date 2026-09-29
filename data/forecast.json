@@ -1,5 +1,5 @@
 {
-  "predicted_at": "2026-09-28T22:15:16.925759+00:00",
+  "predicted_at": "2026-09-29T02:15:12.146556+00:00",
   "target_window": "5d",
   "headline": {
     "method": "naive_flat_hold",
@@ -59,7 +59,7 @@
     "direction_consensus": 1.0
   },
   "driver_context": {
-    "computed_at": "2026-09-28T22:15:16.962146+00:00",
+    "computed_at": "2026-09-29T02:15:12.181067+00:00",
     "macro_staleness_days": 0.0,
     "macro_fresh": true,
     "premium_threshold_pct": 15.0,
@@ -116,7 +116,7 @@
   "fusion_sources": null,
   "band_method": "empirical_quantile",
   "nominal_coverage": 80,
-  "freshness_stratum": "same_day",
+  "freshness_stratum": "carry_forward",
   "residual_quantile_source": "calibration.residual_abs_quantiles[80] (in_sample, fit_date=2026-09-11, n=85)",
   "band_half_width": 76.63783017688547,
   "band_unavailable_reason": null,
@@ -124,7 +124,7 @@
   "predicted_22k": 13755,
   "lower": 13547,
   "upper": 13963,
-  "target_time": "2026-09-29T00:00:00+00:00",
+  "target_time": "2026-09-30T00:00:00+00:00",
   "model_status": "naive_headline",
   "model_version": "naive_flat_hold",
   "warmup": false
