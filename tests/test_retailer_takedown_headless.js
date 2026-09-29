@@ -140,7 +140,7 @@ async function run() {
 
       assert("hero shows the ≈ IBJA estimate", s.heroPrice && s.heroPrice.includes("≈") && s.heroPrice.includes(expected), s.heroPrice);
       assert("hero location does not name Tanishq", s.heroLocation && !TANISHQ_RE.test(s.heroLocation), s.heroLocation);
-      assert("hero location says IBJA", /IBJA/.test(s.heroLocation || ""), s.heroLocation);
+      assert("hero location says it is from the official rate", /official|आधिकारिक/.test(s.heroLocation || ""), s.heroLocation);
       assert("no 'Tanishq last confirmed' line", s.lastConfirmedVisible === false);
       assert("banner does not name Tanishq", !TANISHQ_RE.test(s.banner), s.banner);
       assert("calculator rate line does not name Tanishq", !TANISHQ_RE.test(s.calcRate), s.calcRate);

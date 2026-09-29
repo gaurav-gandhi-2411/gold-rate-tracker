@@ -152,7 +152,7 @@ async function run() {
             assert("old Tanishq line has a day and a time", /\d{1,2}:\d{2}/.test(s.line || "") && /Sept|सित|yesterday|कल/.test(s.line || ""), s.line);
           }
           if (e.approx) assert("no 'today's change' next to an estimate", s.change === false, String(s.change));
-          if (process.env.CHART_JS_PATH) assert("chart says it is our estimate", /IBJA/.test(s.chartNote || "") && !TANISHQ_RE.test(s.chartNote || ""), s.chartNote);
+          if (process.env.CHART_JS_PATH) assert("chart says it is our estimate", /official|आधिकारिक/.test(s.chartNote || "") && !TANISHQ_RE.test(s.chartNote || ""), s.chartNote);
           if (e.noTanishqAnywhere) assert("nothing names Tanishq", !TANISHQ_RE.test(`${s.label} ${s.line} ${s.banner} ${s.calc}`));
           assert("no page errors", errors.length === 0, errors.join(" | "));
           if (shotDir) {

@@ -265,7 +265,6 @@
             <div class="cmp-sub" id="cmp-low-sub"></div>
           </div>
         </div>
-        <p class="section-karat-note chart-source-note" id="comparison-source-note" hidden></p>
       </section>
 
       <!-- 4. OTHER KARATS — compact strip -->
@@ -445,8 +444,12 @@
             <button data-range="all" role="tab" aria-selected="false" data-i18n="rangeAll">All</button>
           </div>
         </div>
-        <p class="section-karat-note" data-i18n="sectionKaratNote">22K · per gram</p>
-        <!-- GG 4c: says what the line is (our IBJA-based estimate); written by renderChart(). -->
+        <div class="karat-toggle" role="group" aria-label="Gold purity" data-i18n-attr="aria-label:karatToggleAriaLabel">
+          <button type="button" data-karat="22" class="active" aria-pressed="true">22K</button>
+          <button type="button" data-karat="24" aria-pressed="false">24K</button>
+          <button type="button" data-karat="18" aria-pressed="false">18K</button>
+        </div>
+        <!-- GG 4c: says what the line is (estimate or Tanishq's rate); written by renderChart(). -->
         <p class="section-karat-note chart-source-note" id="chart-source-note" hidden></p>
         <div class="chart-wrap">
           <canvas id="chart" role="img" aria-label="Gold price trend chart" data-i18n-attr="aria-label:chartCanvasAriaLabel"></canvas>
@@ -456,7 +459,11 @@
       <!-- 7. HISTORY -->
       <section class="history-section reveal-on-scroll" id="section-history" aria-label="Price history" data-i18n-attr="aria-label:historyAriaLabel">
         <h2 data-i18n="historyHeading">History</h2>
-        <p class="section-karat-note" data-i18n="sectionKaratNote">22K · per gram</p>
+        <div class="karat-toggle" role="group" aria-label="Gold purity" data-i18n-attr="aria-label:karatToggleAriaLabel">
+          <button type="button" data-karat="22" class="active" aria-pressed="true">22K</button>
+          <button type="button" data-karat="24" aria-pressed="false">24K</button>
+          <button type="button" data-karat="18" aria-pressed="false">18K</button>
+        </div>
         <p class="section-karat-note chart-source-note" id="history-source-note" hidden></p>
         <div class="history-wrap" id="history-wrap">
           <!-- Φ8C'/Ψ3C.3: skeleton overlay shown while history loads. Absolutely
@@ -473,14 +480,12 @@
             <thead>
               <tr>
                 <th scope="col" data-i18n="thWhen">When</th>
-                <th scope="col" class="num">22K</th>
-                <th scope="col" class="num">24K</th>
-                <th scope="col" class="num">18K</th>
-                <th scope="col" class="num" data-i18n="thDelta">Δ 22K</th>
+                <th scope="col" class="num" id="history-th-price">22K</th>
+                <th scope="col" class="num" data-i18n="thDelta">Change</th>
               </tr>
             </thead>
             <tbody id="history-body">
-              <tr><td colspan="5" class="empty" data-i18n="loadingText">Loading…</td></tr>
+              <tr><td colspan="3" class="empty" data-i18n="loadingText">Loading…</td></tr>
             </tbody>
           </table>
           <!-- Mobile card list (<640px) -->
@@ -489,27 +494,10 @@
         <button class="history-show-all" id="history-show-all" hidden></button>
       </section>
 
-      <!-- 7b. PAST ESTIMATE TRACK RECORD — past estimates vs actual prices -->
-      <!-- Tier 1 CLS fix (2026-08-10): no `hidden` on the section itself -- h2/caption are
-           static text and track-record-chart-wrap already reserves a fixed height (see its
-           CSS rule), so nothing here changes size once rendered; only the section-level
-           hidden->visible pop-in was the risk. renderForecastVsActual()'s own
-           `!bt?.folds?.length` / `folds.length < 3` fallbacks still hide the section for the
-           rare-edge case, now happening after this initial state rather than instead of it. -->
-      <section class="track-record-section reveal-on-scroll" id="section-track-record"
-               aria-label="Past estimate accuracy — flat-hold vs actual prices" data-i18n-attr="aria-label:trackRecordAriaLabel">
-        <h2 data-i18n="trackRecordHeading">How past estimates have held up</h2>
-        <p class="track-record-caption" data-i18n="trackRecordCaption">30 recent five-day windows: flat-hold estimate (dashed) vs what actually happened (gold)</p>
-        <div class="track-record-chart-wrap">
-          <canvas id="track-record-chart" role="img"
-                  aria-label="Past flat-hold estimates vs actual gold prices" data-i18n-attr="aria-label:trackRecordChartAriaLabel"></canvas>
-        </div>
-      </section>
-
       <!-- 8. METHODOLOGY ACCORDION -->
       <details class="methodology reveal-on-scroll" id="section-info">
         <summary class="methodology-summary" data-i18n="methodologySummary">
-          How this works — and how accurate it's been
+          How this works
         </summary>
         <div class="methodology-body" id="methodology-body">
           <div class="meth-skeleton" aria-hidden="true">
@@ -520,6 +508,23 @@
             <div class="skel skel-meth-line"></div>
           </div>
         </div>
+        <!-- 7b. PAST ESTIMATE TRACK RECORD — past estimates vs actual prices -->
+        <!-- Tier 1 CLS fix (2026-08-10): no `hidden` on the section itself -- h2/caption are
+             static text and track-record-chart-wrap already reserves a fixed height (see its
+             CSS rule), so nothing here changes size once rendered; only the section-level
+             hidden->visible pop-in was the risk. renderForecastVsActual()'s own
+             `!bt?.folds?.length` / `folds.length < 3` fallbacks still hide the section for the
+             rare-edge case, now happening after this initial state rather than instead of it. -->
+        <section class="track-record-section" id="section-track-record"
+                 aria-label="Past estimate accuracy — flat-hold vs actual prices" data-i18n-attr="aria-label:trackRecordAriaLabel">
+          <h3 data-i18n="trackRecordHeading">How close our estimates have been</h3>
+          <p class="track-record-caption" data-i18n="trackRecordCaption">Our estimate (dashed) and the actual price (gold), recent weeks</p>
+          <div class="track-record-chart-wrap">
+            <canvas id="track-record-chart" role="img"
+                    aria-label="Past flat-hold estimates vs actual gold prices" data-i18n-attr="aria-label:trackRecordChartAriaLabel"></canvas>
+          </div>
+        </section>
+
       </details>
       </div>
       </div><!-- /.layout-grid -->
