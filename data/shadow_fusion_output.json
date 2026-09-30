@@ -1,5 +1,5 @@
 {
-  "capture_utc": "2026-09-30T12:28:21Z",
+  "capture_utc": "2026-09-30T22:11:32Z",
   "as_of_date": "2026-09-30",
   "national_failures": {},
   "kalyan_failures": {
@@ -10,8 +10,8 @@
   },
   "snapshot_rows_persisted": 3,
   "national_benchmark": {
-    "value": 13707.083333333334,
-    "band_half_width": 137.07083333333335,
+    "value": 13715.416666666668,
+    "band_half_width": 137.15416666666667,
     "disagreement": false,
     "sources_used": [
       "ibja",
@@ -26,29 +26,29 @@
   },
   "cities": {
     "Bangalore": {
-      "value": 13707.083333333334,
-      "band_half_width": 205.60625000000005,
+      "value": 13715.416666666668,
+      "band_half_width": 205.73125,
       "coverage": "national_derived",
       "attribution": "National retail consensus (ibja, grt, malabar) \u2014 no Kalyan reading for Bangalore this cycle",
       "markup": null
     },
     "Chennai": {
-      "value": 13707.083333333334,
-      "band_half_width": 205.60625000000005,
+      "value": 13715.416666666668,
+      "band_half_width": 205.73125,
       "coverage": "national_derived",
       "attribution": "National retail consensus (ibja, grt, malabar) \u2014 no Kalyan reading for Chennai this cycle",
       "markup": null
     },
     "Hyderabad": {
-      "value": 13707.083333333334,
-      "band_half_width": 205.60625000000005,
+      "value": 13715.416666666668,
+      "band_half_width": 205.73125,
       "coverage": "national_derived",
       "attribution": "National retail consensus (ibja, grt, malabar) \u2014 no Kalyan reading for Hyderabad this cycle",
       "markup": null
     },
     "Ernakulam": {
-      "value": 13707.083333333334,
-      "band_half_width": 205.60625000000005,
+      "value": 13715.416666666668,
+      "band_half_width": 205.73125,
       "coverage": "national_derived",
       "attribution": "National retail consensus (ibja, grt, malabar) \u2014 no Kalyan reading for Ernakulam this cycle",
       "markup": null
