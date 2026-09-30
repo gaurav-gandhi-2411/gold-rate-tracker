@@ -56,15 +56,17 @@ Dataset: 150 labelled rows (h=1) / 148 (h=2), 2025-01-09 → 2026-08-03, from th
 
 ## Majority-class collapse (G3, session dated 2026-08-28)
 
-Beyond "not significant yet" above, the logistic model's own *predictions*
-— not just the labels' base rate — have stopped varying. In its most
-recent 30 folds, at **both** horizons, it predicted "up" every single
-time, exactly matching the always-up baseline's own prediction every fold:
+On 2026-08-28 the logistic model's own *predictions* — not just the
+labels' base rate — had stopped varying: in its most recent 30 folds, at
+both horizons, it predicted "up" every time, matching the always-up
+baseline every fold. That no longer holds (eval of 2026-09-28, after the
+F1 late-input fix in #2122): the live table below shows neither horizon
+collapsed. Read the table, not this paragraph, for the current state:
 
 | Horizon | N folds | Trailing-30 "up" fraction | Majority-class collapse |
 |---|---|---|---|
-| h=1 | <!--METRIC:data/direction_baseline.json#horizons.h1.n_test_folds:int-->155<!--/METRIC--> | <!--METRIC:data/direction_baseline.json#horizons.h1.trailing_30_fold_up_fraction:pct1-->0.0%<!--/METRIC--> | <!--METRIC:data/direction_baseline.json#horizons.h1.majority_class_collapse:raw-->True<!--/METRIC--> |
-| h=2 | <!--METRIC:data/direction_baseline.json#horizons.h2.n_test_folds:int-->149<!--/METRIC--> | <!--METRIC:data/direction_baseline.json#horizons.h2.trailing_30_fold_up_fraction:pct1-->86.7%<!--/METRIC--> | <!--METRIC:data/direction_baseline.json#horizons.h2.majority_class_collapse:raw-->False<!--/METRIC--> |
+| h=1 | <!--METRIC:data/direction_baseline.json#horizons.h1.n_test_folds:int-->156<!--/METRIC--> | <!--METRIC:data/direction_baseline.json#horizons.h1.trailing_30_fold_up_fraction:pct1-->30.0%<!--/METRIC--> | <!--METRIC:data/direction_baseline.json#horizons.h1.majority_class_collapse:raw-->False<!--/METRIC--> |
+| h=2 | <!--METRIC:data/direction_baseline.json#horizons.h2.n_test_folds:int-->150<!--/METRIC--> | <!--METRIC:data/direction_baseline.json#horizons.h2.trailing_30_fold_up_fraction:pct1-->83.3%<!--/METRIC--> | <!--METRIC:data/direction_baseline.json#horizons.h2.majority_class_collapse:raw-->False<!--/METRIC--> |
 
 (`majority_class_collapse` fires at a trailing-30-fold fraction >= 0.95
 either direction — see `ml/direction/evaluate.py`'s
@@ -74,10 +76,9 @@ above is live, not hand-typed.)
 
 **Why this matters for the significance test above:** a model that always
 agrees with a trivial baseline can never generate a *new* discordant pair
-against it. This is not just "not yet significant" — the gate's p-value is
-currently **structurally frozen** at either horizon, regardless of how many
-more weekly runs pass, for as long as this trailing-window behavior
-persists.
+against it. While a horizon shows `True` above, its p-value is
+**structurally frozen**, regardless of how many more weekly runs pass; with
+`False` at both horizons, as of the latest eval, the p-values can move again.
 
 **The arithmetic** (point-in-time, measured 2026-08-28 — a derived
 calculation across multiple discordant-pair counts and an extrapolation
