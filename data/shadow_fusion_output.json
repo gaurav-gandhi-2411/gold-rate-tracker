@@ -1,6 +1,6 @@
 {
-  "capture_utc": "2026-09-30T22:11:32Z",
-  "as_of_date": "2026-09-30",
+  "capture_utc": "2026-10-01T05:45:09Z",
+  "as_of_date": "2026-10-01",
   "national_failures": {},
   "kalyan_failures": {
     "Bangalore": "structure: kalyan: implausible observed_at '1969-12-31T18:30:00+00:00' (year before 2020) \u2014 source likely sent a placeholder timestamp",
@@ -10,8 +10,8 @@
   },
   "snapshot_rows_persisted": 3,
   "national_benchmark": {
-    "value": 13715.416666666668,
-    "band_half_width": 137.15416666666667,
+    "value": 13697.916666666668,
+    "band_half_width": 136.97916666666669,
     "disagreement": false,
     "sources_used": [
       "ibja",
@@ -26,29 +26,29 @@
   },
   "cities": {
     "Bangalore": {
-      "value": 13715.416666666668,
-      "band_half_width": 205.73125,
+      "value": 13697.916666666668,
+      "band_half_width": 205.46875000000003,
       "coverage": "national_derived",
       "attribution": "National retail consensus (ibja, grt, malabar) \u2014 no Kalyan reading for Bangalore this cycle",
       "markup": null
     },
     "Chennai": {
-      "value": 13715.416666666668,
-      "band_half_width": 205.73125,
+      "value": 13697.916666666668,
+      "band_half_width": 205.46875000000003,
       "coverage": "national_derived",
       "attribution": "National retail consensus (ibja, grt, malabar) \u2014 no Kalyan reading for Chennai this cycle",
       "markup": null
     },
     "Hyderabad": {
-      "value": 13715.416666666668,
-      "band_half_width": 205.73125,
+      "value": 13697.916666666668,
+      "band_half_width": 205.46875000000003,
       "coverage": "national_derived",
       "attribution": "National retail consensus (ibja, grt, malabar) \u2014 no Kalyan reading for Hyderabad this cycle",
       "markup": null
     },
     "Ernakulam": {
-      "value": 13715.416666666668,
-      "band_half_width": 205.73125,
+      "value": 13697.916666666668,
+      "band_half_width": 205.46875000000003,
       "coverage": "national_derived",
       "attribution": "National retail consensus (ibja, grt, malabar) \u2014 no Kalyan reading for Ernakulam this cycle",
       "markup": null
