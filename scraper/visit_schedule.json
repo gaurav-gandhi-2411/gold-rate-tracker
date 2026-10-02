@@ -1,0 +1,10 @@
+{
+  "schema_version": 1,
+  "mode": "mixed",
+  "decision": "GG decision 3a (2026-09-26, replaces 4a): six Tanishq visits a day across morning and afternoon, the section 4 variant A schedule; every gap <= 460 min so the 8 h freshness gate never flips overnight",
+  "status": "section 4 variant A (K=6), evaluated in docs/TANISHQ_TIMED_VISITS.md sections 4 and 9; changed only by GG, using scripts/tanishq_schedule_refine.py weekly (mixed mode, section 10)",
+  "source": "reports/tanishq_update_times/morning_schedule_evaluation.json -> q0.interim_section4",
+  "visits_ist": ["01:40", "07:30", "10:40", "11:10", "15:35", "19:50"],
+  "tolerance_min": 10,
+  "effective_from_utc": null
+}

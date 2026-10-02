@@ -1,17 +1,14 @@
 {
-  "capture_utc": "2026-09-28T14:05:03Z",
-  "as_of_date": "2026-09-28",
+  "capture_utc": "2026-10-02T18:54:42Z",
+  "as_of_date": "2026-10-02",
   "national_failures": {},
   "kalyan_failures": {
-    "Bangalore": "structure: kalyan: implausible observed_at '1969-12-31T18:30:00+00:00' (year before 2020) \u2014 source likely sent a placeholder timestamp",
-    "Chennai": "structure: kalyan: implausible observed_at '1969-12-31T18:30:00+00:00' (year before 2020) \u2014 source likely sent a placeholder timestamp",
-    "Hyderabad": "structure: kalyan: implausible observed_at '1969-12-31T18:30:00+00:00' (year before 2020) \u2014 source likely sent a placeholder timestamp",
-    "Ernakulam": "structure: kalyan: implausible observed_at '1969-12-31T18:30:00+00:00' (year before 2020) \u2014 source likely sent a placeholder timestamp"
+    "Bangalore": "structure: kalyan: implausible observed_at '1969-12-31T18:30:00+00:00' (year before 2020) \u2014 source likely sent a placeholder timestamp"
   },
   "snapshot_rows_persisted": 3,
   "national_benchmark": {
-    "value": 13702.5,
-    "band_half_width": 137.025,
+    "value": 13763.333333333334,
+    "band_half_width": 137.63333333333335,
     "disagreement": false,
     "sources_used": [
       "ibja",
@@ -26,31 +23,10 @@
   },
   "cities": {
     "Bangalore": {
-      "value": 13702.5,
-      "band_half_width": 205.53750000000002,
+      "value": 13763.333333333334,
+      "band_half_width": 206.45000000000005,
       "coverage": "national_derived",
       "attribution": "National retail consensus (ibja, grt, malabar) \u2014 no Kalyan reading for Bangalore this cycle",
-      "markup": null
-    },
-    "Chennai": {
-      "value": 13702.5,
-      "band_half_width": 205.53750000000002,
-      "coverage": "national_derived",
-      "attribution": "National retail consensus (ibja, grt, malabar) \u2014 no Kalyan reading for Chennai this cycle",
-      "markup": null
-    },
-    "Hyderabad": {
-      "value": 13702.5,
-      "band_half_width": 205.53750000000002,
-      "coverage": "national_derived",
-      "attribution": "National retail consensus (ibja, grt, malabar) \u2014 no Kalyan reading for Hyderabad this cycle",
-      "markup": null
-    },
-    "Ernakulam": {
-      "value": 13702.5,
-      "band_half_width": 205.53750000000002,
-      "coverage": "national_derived",
-      "attribution": "National retail consensus (ibja, grt, malabar) \u2014 no Kalyan reading for Ernakulam this cycle",
       "markup": null
     }
   }

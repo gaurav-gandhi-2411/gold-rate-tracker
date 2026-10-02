@@ -234,9 +234,9 @@ test("render: rate-used line names the Tanishq store rate outside the estimate t
   assert.match(renderWith(), /Rate used: 22K ₹13,710\/g — Tanishq's listed rate on 23 Sept/);
 });
 
-test("render: rate-used line names the IBJA-based estimate in the ibja_calibrated tier", () => {
+test("render: rate-used line says it is our estimate in the ibja_calibrated tier", () => {
   const forecast = { price_source: "ibja_calibrated", current_22k: 13800 };
-  assert.match(renderWith({ forecast }), /Rate used: 22K ₹13,800\/g — IBJA-based estimate/);
+  assert.match(renderWith({ forecast }), /Rate used: 22K ₹13,800\/g — our estimate/);
 });
 
 test("render: rate-used line names the market-consensus estimate in the fusion_consensus tier", () => {

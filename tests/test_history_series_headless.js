@@ -6,10 +6,12 @@
 // the history table and the good-price card take their history from the same series as the trend
 // chart (app.js historyRows):
 //   * "short-prices": prices.json holds only today's two Tanishq readings, as it will after
-//     #2075. Every history reader still renders, from the IBJA-based estimate, and says so. The
-//     table hides 24K/18K, which the estimate does not have.
+//     #2075. Every history reader still renders, from the IBJA-based estimate, and says so.
 //   * "no-derived": the derived file is missing. Everything falls back to the Tanishq rows,
 //     as before this change, and says so.
+// Plus (2026-09-29): the 22K/24K/18K switch re-renders history in the chosen purity (24K/18K
+// from 22K by purity when the row has no own value), keeps both switches in step and is
+// remembered; and tapping Info in the bottom bar leaves Info highlighted, not History.
 //
 // Run: node tests/test_history_series_headless.js   (repo root; needs scraper/node_modules
 //      + a Playwright Chromium).
@@ -117,18 +119,17 @@ async function run() {
             const txt = (id) => (vis(byId(id)) ? byId(id).textContent.trim() : null);
             const rows = [...document.querySelectorAll("#history-body tr")];
             const firstCells = rows.length ? [...rows[0].querySelectorAll("td")] : [];
-            const th24 = document.querySelector(".history-table thead th:nth-child(3)");
             return {
               verdict: txt("verdict-headline"),
               sparkline: vis(byId("sparkline-wrap")),
               sparkRange: txt("sparkline-range"),
               comparisons: vis(byId("comparison-section")),
               cmp30: txt("cmp-30d-value"),
-              cmpNote: txt("comparison-source-note"),
               historyRows: rows.length,
               historyFirst22k: firstCells.length > 1 ? firstCells[1].textContent.trim() : null,
               historyNote: txt("history-source-note"),
-              th24Visible: vis(th24),
+              historyCols: document.querySelectorAll(".history-table thead th").length,
+              priceTh: byId("history-th-price")?.textContent.trim(),
               goodPrice: vis(byId("model-signal-section")),
             };
           });
@@ -139,22 +140,56 @@ async function run() {
           assert("history table has day rows", s.historyRows >= 15, String(s.historyRows));
           assert("good-price card renders", s.goodPrice === true);
           if (st.estimate) {
-            assert("sparkline range says it is our IBJA-based estimate", /IBJA/.test(s.sparkRange || ""), s.sparkRange);
-            assert("comparison note says estimate", /IBJA/.test(s.cmpNote || "") && !/tanishq|तनिष्क/i.test(s.cmpNote || ""), s.cmpNote);
-            assert("history note says estimate", /IBJA/.test(s.historyNote || ""), s.historyNote);
+            assert("sparkline range says it is our estimate", /estimate|अनुमान/.test(s.sparkRange || ""), s.sparkRange);
+            assert("history note says estimate", /Estimate|अनुमान/.test(s.historyNote || "") && !/tanishq|तनिष्क/i.test(s.historyNote || ""), s.historyNote);
             assert("history's newest row is the latest estimate", (s.historyFirst22k || "").includes(fmt(LATEST_DERIVED)), s.historyFirst22k);
-            assert("24K/18K columns hidden for the 22K-only estimate", s.th24Visible === false);
+            assert("history is date, 22K price, change", s.historyCols === 3 && s.priceTh === "22K", `${s.historyCols} ${s.priceTh}`);
           } else {
-            assert("sparkline range has no estimate wording", !/IBJA/.test(s.sparkRange || ""), s.sparkRange);
-            assert("comparison note names Tanishq", /tanishq|तनिष्क/i.test(s.cmpNote || ""), s.cmpNote);
+            assert("sparkline range has no estimate wording", !/estimate|अनुमान/.test(s.sparkRange || ""), s.sparkRange);
             assert("history note names Tanishq", /tanishq|तनिष्क/i.test(s.historyNote || ""), s.historyNote);
             assert("history's newest row is the latest Tanishq reading", (s.historyFirst22k || "").includes(fmt(TANISHQ_FULL[TANISHQ_FULL.length - 1]["22k"])), s.historyFirst22k);
-            assert("24K/18K columns shown for Tanishq rows", s.th24Visible === true);
+            assert("history is date, 22K price, change", s.historyCols === 3 && s.priceTh === "22K", `${s.historyCols} ${s.priceTh}`);
           }
           assert("no page errors", errors.length === 0, errors.join(" | "));
           await ctx.close();
         }
       }
+    }
+    for (const st of STATES) {
+      console.log(`\nKarat switch + Info tab: ${st.slug} @ 390px`);
+      const ctx = await browser.newContext({ viewport: { width: 390, height: 844 }, isMobile: true, deviceScaleFactor: 1, reducedMotion: "reduce" });
+      const page = await ctx.newPage();
+      const errors = [];
+      page.on("pageerror", (e) => errors.push(String(e)));
+      await injectData(page, st, "en");
+      await page.goto(`http://127.0.0.1:${port}/`, { waitUntil: "networkidle" });
+      await page.waitForTimeout(700);
+      await page.click('#section-history .karat-toggle button[data-karat="24"]');
+      await page.waitForTimeout(200);
+      const k = await page.evaluate(() => ({
+        th: document.getElementById("history-th-price")?.textContent.trim(),
+        first: document.querySelector("#history-body tr td:nth-child(2)")?.textContent.trim(),
+        trendActive: document.querySelector('#section-trend .karat-toggle button.active')?.dataset.karat,
+        pressed: document.querySelector('#section-history .karat-toggle button[data-karat="24"]')?.getAttribute("aria-pressed"),
+        stored: localStorage.getItem("karat"),
+      }));
+      const latest = st.estimate ? LATEST_DERIVED : TANISHQ_FULL[TANISHQ_FULL.length - 1]["22k"];
+      const want24 = st.estimate ? Math.round((latest * 24) / 22) : TANISHQ_FULL[TANISHQ_FULL.length - 1]["24k"];
+      assert("history header switches to 24K", k.th === "24K", k.th);
+      assert("history's newest row shows the 24K price", (k.first || "").includes(fmt(want24)), `${k.first} vs ${want24}`);
+      assert("trend switch follows the history switch", k.trendActive === "24", k.trendActive);
+      assert("pressed state is announced", k.pressed === "true", k.pressed);
+      assert("choice is remembered", k.stored === "24", k.stored);
+      await page.click('.bottom-nav-item[data-section="section-info"]');
+      await page.waitForTimeout(1600);
+      const info = await page.evaluate(() => ({
+        active: document.querySelector(".bottom-nav-item.active")?.dataset.section,
+        open: document.getElementById("section-info")?.open,
+      }));
+      assert("Info tab stays highlighted after its scroll", info.active === "section-info", info.active);
+      assert("Info panel opens", info.open === true, String(info.open));
+      assert("no page errors", errors.length === 0, errors.join(" | "));
+      await ctx.close();
     }
   } finally {
     await browser.close();

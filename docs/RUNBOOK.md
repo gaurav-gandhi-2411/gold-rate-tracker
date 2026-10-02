@@ -639,14 +639,17 @@ failure is counted). GG decision 4b (2026-09-25) closes that gap on the GitHub s
   count), in hours that do **not** fall on a Sunday (IST). It fires at **30 h**, once per IST day,
   to the OPS topic. Tanishq switched off in `config/retailers.json` means no T14 (a takedown is
   deliberate silence).
-- **Why 30 h:** every successful visit appends a row even when the rate is unchanged, so the
-  age is "time since the last successful visit". With visits clustered in 10:00–12:30 IST
-  (PR #2078, possibly plus 01:40), the worst legitimate weekday gap is 10:00 → next day
-  12:30 = 26.5 h. Tanishq never changes on a Sunday, so a Sunday may be skipped: Saturday
-  10:00 → Monday 12:30 is 50.5 h on the clock but 26.5 h without Sunday. 30 h = 26.5 h + 3.5 h
-  slack: a normal weekend never alerts, and an outage after a 10:00 visit alerts by 16:00 IST
-  the next working day. A single clock-hour threshold cannot do both (it would have to exceed
-  ~50 h for weekends, leaving a Tuesday outage unseen until Thursday).
+- **Why 30 h** (re-derived 2026-09-26 for the 3a mixed schedule, `docs/TANISHQ_TIMED_VISITS.md`
+  section 10). Every successful visit appends a row, even when the rate is unchanged, so the age
+  is "time since the last successful visit".
+  - Visits are at 01:40, 07:30, 10:40, 11:10, 15:35 and 19:50 IST. With every visit on time, the
+    longest gap is 5.8 h.
+  - 38% of visits find no runner (measured). Treating those misses as independent (an
+    assumption), a simulation of 20,000 weeks gives about **one false alert per 65 weeks at
+    30 h**. The old 10:00–12:30 schedule at 30 h gave about one per 54 weeks.
+  - 24 h would give about one false alert per 7 weeks.
+  - A real outage right after a visit alerts 30 non-Sunday hours later, the same as before.
+  - Sundays are still excluded, so a normal weekend never alerts.
 - **What to do:** check the runner host, the recent `scrape-tanishq-selfhosted` runs and the
   `bot/tanishq-selfhosted-sync` PR, in that order. `check-price.yml` itself is subject to
   GitHub's cron lateness (median ~2 h, see PR #2078), so T14 lands up to that much after 30 h.
