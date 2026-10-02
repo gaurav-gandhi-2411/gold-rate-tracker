@@ -1,7 +1,21 @@
 // service-worker.js
 //
 // CACHE INVALIDATION CONTRACT (PR Ψ3A):
-// 1. Bump VERSION on every deploy that changes shell assets (HTML, CSS, JS, icons).
+// 1. VERSION must change on every deploy that changes shell assets (HTML, CSS, JS,
+//    icons). HOW it changes depends on which Pages build mode is active (repo variable
+//    PAGES_BUILD_MODE -- see docs/PAGES_DEPLOY.md for the full switch-over story):
+//      - PAGES_BUILD_MODE unset / anything other than "actions" (LEGACY, the mode in
+//        effect right now): Pages builds straight off master's committed
+//        service-worker.js, so a PR must HAND-BUMP VERSION itself in the same PR that
+//        changes a precached shell file. lint.yml's sw-version-guard job enforces this.
+//      - PAGES_BUILD_MODE == "actions" (only after GG flips Pages' source to "GitHub
+//        Actions"): .github/workflows/pages-deploy.yml stamps VERSION automatically from
+//        a sha256 of every precached shell file's exact bytes
+//        (scripts/stamp_sw_version.py), as "sh-<16 hex chars>", at build/deploy time. A
+//        PR must NEVER hand-edit the VERSION line in this mode -- that's what caused
+//        conflicting v58/v59 bumps across stacked PRs in the first place.
+//        sw-version-guard reads the same PAGES_BUILD_MODE variable and applies whichever
+//        rule is active (scripts/check_sw_version_guard.py).
 // 2. install → skipWaiting() so new SW takes control immediately without waiting.
 // 3. activate → evict all caches not matching current VERSION (old shell cleared).
 // 4. index.html → registration.update() on load forces an immediate SW byte-check;
