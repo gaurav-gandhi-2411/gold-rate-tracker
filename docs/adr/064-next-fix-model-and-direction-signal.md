@@ -1,6 +1,6 @@
 # ADR 064: next official-rate forecast from the global move after the fix; direction signal on
 
-**Status:** Accepted 2026-10-02 (GG: "use neural nets or any other highly efficient models",
+**Status:** Accepted 2026-10-02; extended to the whole day by ADR 065 (GG: "use neural nets or any other highly efficient models",
 "make the interval smaller and then test", "ensure we get a direction signal ... no pushback").
 Promotion record: `data/direction_promotion_record.json`.
 
@@ -15,10 +15,11 @@ Promotion record: `data/direction_promotion_record.json`.
   close, ~21:00–22:00 UTC. The global move between the fix and the close is known hours before the
   next fix, and the next fix follows it. Measured: corr(next fix return, global close-to-close
   return of the fix day) = 0.364 over 203 day pairs.
-- Found on the way: the history seed (`data/history_seed_inr22k_proxy.parquet`) is dated one day
-  late. Its row dated D is the close of the trading day before D (Monday's row is Friday's close).
-  Verified against the feature store: log-ratio spread 0.0037 when shifted, 0.0145 unshifted.
-  `ml.nextfix.global_series` shifts it. Other consumers of the seed were not changed here.
+- Correction (2026-10-02, ADR 065): this ADR first called the proxy seed
+  (`data/history_seed_inr22k_proxy.parquet`) "dated one day late". That lag is deliberate: ADR 030
+  lags the proxy one day as a leak control (`ml/inr_proxy.py`, `tests/test_inr_proxy.py`
+  `TestLeakageAlignment`). The defect was this model reading the lagged file and undoing the lag by
+  hand. Since ADR 065 it reads the same-day label seed (`history_seed_inr22k_label.parquet`) instead.
 
 ## Decision
 
