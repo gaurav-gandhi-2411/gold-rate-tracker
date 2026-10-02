@@ -851,7 +851,9 @@ main {
 ═══════════════════════════════════════════════════════════════ */
 .hero-card {
   position: relative;
-  padding-top: clamp(32px, 6vw, 64px);
+  /* 2026-10-02: was clamp(32px, ...) -- with main's own top padding that left ~78px of
+     empty space between the header and the price on phones. */
+  padding-top: clamp(8px, 4vw, 64px);
   margin-bottom: clamp(28px, 6vw, 56px);
   /* CLS fix (2026-08-06): hero-skeleton was in normal flow, a sibling of the real
      eyebrow/price/location/change/verdict-banner/sparkline content it represents --
@@ -2324,6 +2326,9 @@ html.ptr-pulling {
 .driver-context-section {
   margin-bottom: clamp(32px, 7vw, 48px);
 }
+/* Was unstyled (margin 0): the card sat flush under the heading and clipped the "g" of
+   "moving" on phones (GG, 2026-10-02). Same size and gap as the other section headings. */
+.driver-context-section h2 { font-size: clamp(22px, 3.5vw, 32px); margin-bottom: var(--space-5); }
 /* Tier 2 CLS fix (2026-08-10): same absolute-overlay pattern as
    .model-signal-wrap/.commentary-body/.history-wrap. min-height is measured
    from live production content (73.625px, mobile viewport, 2026-08-10,

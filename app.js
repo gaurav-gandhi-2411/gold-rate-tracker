@@ -1635,15 +1635,26 @@ function renderComparisons(readings) {
 // commentary.json / the Groq generation step this replaces is now unused by the
 // frontend — left in place rather than deleted here since retiring the pipeline
 // step itself is out of this session's scope (layout/copy only, no ml/ changes).
+// True when the last RECENT_DAYS daily prices still trend down (Theil-Sen slope at or below
+// -FLAT_SLOPE_INR_PER_DAY); false on too few days.
+const RECENT_DAYS = 5;
+function recentWeekFalling(rows) {
+  const daily = dedupeByISTDay(rows ?? []).slice(-RECENT_DAYS);
+  if (daily.length < RECENT_DAYS) return false;
+  const { slope } = theilSenFit(daily.map((r, i) => ({ x: i, y: r["22k"] })));
+  return slope <= -FLAT_SLOPE_INR_PER_DAY;
+}
+
 function composeTodaysRead(readings) {
-  const signals = computeGoodPriceSignals(historyRows(readings).rows);
+  const rows = historyRows(readings).rows; // the chart's series, same as the signals below
+  const signals = computeGoodPriceSignals(rows);
   if (!signals) {
     return t("readNoSignals");
   }
 
   const isCheap = signals.verdictType === "cheap" || signals.verdictType === "below-mid";
   const isHigh  = signals.verdictType === "high";
-  const trend   = computeTrendResidual30d(readings ?? [], signals.percentile30d);
+  const trend   = computeTrendResidual30d(rows, signals.percentile30d);
 
   if (!trend) {
     if (isCheap) return t("readNoTrendCheap");
@@ -1652,7 +1663,10 @@ function composeTodaysRead(readings) {
   }
 
   const { trendState, residZ } = trend;
-  if (isCheap && trendState === "falling" && residZ < STILL_FALLING_Z) {
+  // "Still sliding" also needs the last week to be falling. A one-off step down inside the
+  // 30-day window (2026-09-28: -Rs.330, then flat at 13,685-13,755 for five days) tilts the
+  // 30-day line and leaves today below it, which read as "still sliding" on a flat week.
+  if (isCheap && trendState === "falling" && residZ < STILL_FALLING_Z && recentWeekFalling(rows)) {
     return t("readCheapStillFalling");
   }
   if (isCheap) {
