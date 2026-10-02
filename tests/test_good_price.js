@@ -22,6 +22,8 @@ const computeTrendResidual30d = app.pure("computeTrendResidual30d");
 const computeSupportDistance90d = app.pure("computeSupportDistance90d");
 
 const fmtINR = app.pure("fmtINR");
+const composeTodaysRead = app.pure("composeTodaysRead");
+const recentWeekFalling = app.pure("recentWeekFalling");
 
 // ── Test helpers ──────────────────────────────────────────────────────────────
 
@@ -464,4 +466,67 @@ test("computeTrendResidual30d: residZ uses the normal-consistent MAD scale (z -0
   const falling = computeTrendResidual30d(series(-8), 10);
   assert.ok(falling.residZ < -1, `residZ ${falling.residZ}`);
   assert.notEqual(falling.note, steadying.note);
+});
+
+// ── Tests: Today's read (composeTodaysRead) ───────────────────────────────────
+
+// Tanishq 22K, one reading a day, 2026-09-02 .. 2026-10-02: a slow slide, a Rs.330 step down
+// on 09-28, then flat for five days. The old rule said "still sliding" on this.
+const SEPT_STEP_THEN_FLAT = [
+  14245, 14260, 14231, 14195, 14205, 14170, 14100, 14125, 14150, 14110, 14090, 14120, 14135,
+  14160, 14175, 14110, 14080, 14095, 14060, 14050, 14040, 14075, 14040, 14040, 14040,
+  13710, 13685, 13755, 13725, 13725,
+];
+
+test("today's read: a flat week after a one-off step down is not 'still sliding'", () => {
+  const readings = makeReadings(SEPT_STEP_THEN_FLAT);
+  assert.equal(recentWeekFalling(readings), false);
+  const read = composeTodaysRead(readings);
+  assert.ok(!/still sliding/.test(read), read);
+  assert.match(read, /steadying/);
+});
+
+test("today's read: a price still falling through the last week stays 'still sliding'", () => {
+  // Rs.10/day slide with day-to-day noise, then Rs.60/day more over the last five days.
+  const prices = Array.from({ length: 30 }, (_, i) =>
+    Math.round(14300 - i * 10 + 15 * Math.sin(i * 1.7) - (i >= 25 ? (i - 24) * 60 : 0)));
+  const readings = makeReadings(prices);
+  assert.equal(recentWeekFalling(readings), true);
+  assert.match(composeTodaysRead(readings), /still sliding/);
+});
+
+// ── Tests: next-move direction line in the good-price card (ADR 064) ──────────
+
+function renderCard(nextFix) {
+  const fresh = loadApp();
+  const readings = makeReadings(Array.from({ length: 30 }, (_, i) => 14000 - i * 5));
+  const fc = { headline: { lower: 13601, upper: 13872 }, next_fix: nextFix };
+  fresh.pure("renderModelSignal")(fc, readings, null, null, null);
+  return fresh.run('document.getElementById("model-signal-body").innerHTML');
+}
+
+const TRACK = { n: 143, direction_accuracy: 0.65, range_coverage: 0.805, range_n: 123 };
+
+test("direction line: shown with its chance and track record when inference allows it", () => {
+  const html = renderCard({ active: true, direction: { show: true, side: "up", probability: 0.66 }, track_record: TRACK });
+  assert.match(html, /good-price-direction" data-side="up">More likely to go <strong>up<\/strong> than down next \(about 66% chance\)/);
+  assert.match(html, /right 93 of the last 143 times/);
+  // the range's reliability quotes the model's own hit rate, not the flat-hold band's
+  assert.match(html, /about 8 times out of 10/);
+});
+
+test("direction line: a near coin flip reads 'too close to call'", () => {
+  const html = renderCard({ active: true, direction: { show: true, side: "unclear", probability: 0.52 }, track_record: TRACK });
+  assert.match(html, /too close to call/);
+  assert.ok(!/<strong>up<\/strong>|<strong>down<\/strong>/.test(html));
+});
+
+test("direction line: hidden unless inference says show, and when the model is inactive", () => {
+  for (const nf of [
+    { active: true, direction: { show: false, side: "up", probability: 0.7 }, track_record: TRACK },
+    { active: false, reason: "waiting_for_us_close" },
+    undefined,
+  ]) {
+    assert.ok(!/good-price-direction/.test(renderCard(nf)), JSON.stringify(nf));
+  }
 });

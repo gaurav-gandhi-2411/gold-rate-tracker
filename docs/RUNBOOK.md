@@ -4,6 +4,7 @@ Operational procedures for gold-rate-tracker.
 
 ## Table of contents
 
+0. [Running your own copy](#running-your-own-copy) (fork setup, alerts, troubleshooting — moved here from the README)
 1. [Local development setup](#local-development-setup)
 2. [How to retrain](#how-to-retrain)
 3. [How to roll back a bad production model](#how-to-roll-back-a-bad-production-model)
@@ -17,6 +18,32 @@ Operational procedures for gold-rate-tracker.
 11. [Known constraints](#known-constraints)
 12. [Frontend PR device-check (required)](#frontend-pr-device-check-required)
 13. [Honesty-ADR audit: user-facing copy paths (required)](#honesty-adr-audit-user-facing-copy-paths-required)
+
+---
+
+## Running your own copy
+
+### Setup (~15 minutes)
+
+1. Fork / create a public repo and upload all files.
+2. **Settings → Secrets and variables → Actions → New repository secret:**
+   - `NTFY_TOPIC` — your OWN ntfy.sh topic (treat like a password; long & random).
+3. **Actions → Check Gold Price → Run workflow** (manual trigger; wait ~2 min).
+4. **Settings → Pages → Deploy from branch → `master` → `/` (root).**
+5. Install the PWA: iOS Safari → Share → Add to Home Screen · Android Chrome → Install app.
+6. Subscribe to alerts: install the ntfy app → **+** → enter your topic.
+
+### Notifications (bring your own ntfy topic)
+
+Alerts are delivered via [ntfy.sh](https://ntfy.sh) — free, no account. **Pick your own topic and keep it private:** anyone who knows a topic name can publish to it, so treat it like a password (a long random string, e.g. `gold-<yourname>-<16 random chars>`). Set it as the `NTFY_TOPIC` GitHub Actions secret and subscribe to it in the ntfy app.
+
+Alert types: a price-move alert (describes the recent trend), a twice-daily digest, and a data-staleness warning if scraping stalls. All copy is plain-language and ASCII-safe.
+
+### Troubleshooting
+
+- **Prices look stale:** the page banner will say so, honestly labeled either way. A Tanishq scrape miss alone is expected (its Cloudflare block, [ADR 025](adr/025-ibja-primary-source-decision.md)) and logged as a run annotation, not a hard failure — check the latest **Check Gold Price** run in Actions. An actual alert (ntfy T9/T9_ESCALATE) only fires when *IBJA* itself hasn't published in 2+ business days — that's the genuine failure signal.
+- **No notifications:** confirm `NTFY_TOPIC` has no URL prefix, you subscribed to the *exact* topic, and a price move actually occurred.
+- **Scraper DOM canary issue opened:** the canary now distinguishes a Cloudflare block (logged as a warning, no alert — expected steady state) from a real DOM/selector break (alerts + opens an issue) automatically. See the rest of this runbook if one still fires.
 
 ---
 
@@ -192,6 +219,24 @@ backstop — that state should be rare and, if it persists, will have already fi
 ---
 
 ## Scheduled-trigger reliability and catch-up (added 2026-09-04)
+
+**REMOVED 2026-09-23:** the self-triggering catch-up step described below no
+longer exists in `check-price.yml`. Closing #1838 (a checkout-timing fix for
+this step) was meant to retire the mechanism outright, but the code stayed
+live afterward and kept firing — `data/catchup_dispatch_log.jsonl` shows it
+dispatching on very close to every tick in the days before removal (GG's
+decision, 2026-09-23). The section below is kept verbatim as the audit trail
+for why it existed and what it did; treat every present-tense description of
+it as historical, not current behavior. What this means for staleness
+detection: `worker-deadman`'s dead-man's-switch (WARN=10h/ESCALATE=16h,
+`data/forecast.json.predicted_at` age) is now the only backstop for a missed
+tick — it was always independent of this mechanism, not layered on top of
+it, so nothing is structurally uncovered. But the section below (2026-09-10
+entry) documented that catch-up was actively absorbing gaps *before* they
+reached that threshold — with it gone, expect the WARN/ESCALATE channel to
+fire somewhat more often than the pre-removal baseline until/unless the
+underlying scheduler-delay platform issue itself improves. Watch it, don't
+assume the margin discussed below still holds unchanged.
 
 `check-price.yml`'s scheduled-trigger miss rate stepped from 0.0% (152/152
 expected 3h slots fired cleanly across 39 clean days) to 18.5%+ starting
@@ -582,6 +627,42 @@ every run failed for 4 days straight while `gh api .../actions/runners` still re
 The queued-forever / no-runner case above is **unchanged and still intentionally silent** — T12
 is scoped narrowly to "job started and failed," so a runner you've deliberately paused for travel
 still degrades exactly as documented, with no false alarm.
+
+### Tanishq has not updated — the runner-offline gap (T14)
+
+T12 stays silent when the self-hosted runner is off, asleep or paused (no job starts, so no
+failure is counted). GG decision 4b (2026-09-25) closes that gap on the GitHub side:
+
+- **T14** (`ml/notifications.py::_check_t14_tanishq_silent`) runs in `check-price.yml` on
+  `ubuntu-latest`, so it needs nothing from the self-hosted runner. It reads only
+  `data/prices.json`: the age of the newest **real** Tanishq row (IBJA-derived rows never
+  count), in hours that do **not** fall on a Sunday (IST). It fires at **30 h**, once per IST day,
+  to the OPS topic. Tanishq switched off in `config/retailers.json` means no T14 (a takedown is
+  deliberate silence).
+- **Why 30 h:** every successful visit appends a row even when the rate is unchanged, so the
+  age is "time since the last successful visit". With visits clustered in 10:00–12:30 IST
+  (PR #2078, possibly plus 01:40), the worst legitimate weekday gap is 10:00 → next day
+  12:30 = 26.5 h. Tanishq never changes on a Sunday, so a Sunday may be skipped: Saturday
+  10:00 → Monday 12:30 is 50.5 h on the clock but 26.5 h without Sunday. 30 h = 26.5 h + 3.5 h
+  slack: a normal weekend never alerts, and an outage after a 10:00 visit alerts by 16:00 IST
+  the next working day. A single clock-hour threshold cannot do both (it would have to exceed
+  ~50 h for weekends, leaving a Tuesday outage unseen until Thursday).
+- **What to do:** check the runner host, the recent `scrape-tanishq-selfhosted` runs and the
+  `bot/tanishq-selfhosted-sync` PR, in that order. `check-price.yml` itself is subject to
+  GitHub's cron lateness (median ~2 h, see PR #2078), so T14 lands up to that much after 30 h.
+
+### Public price data after E1 (GG decision 4c)
+
+- `data/ibja_derived_prices.json` — the trend chart's series: `{"timestamp", "22k"}` per IBJA
+  publishing day, 22K = IBJA pm_916 × frozen calibration. Built every `check-price.yml` run by
+  `scripts/build_ibja_derived_prices.py --public-out`; the page labels it as our estimate.
+- `data/prices.json`, once #2075's migration encrypts the raw history, must keep public only the
+  real Tanishq rows "today's change" needs (fields `timestamp`, `22k`, `24k`, `18k`, `source`):
+  every row on the newest reading's IST day plus the last row before that day — at most 7 rows
+  at 6 visits a day. `tests/test_hero_display_state.js` ("public Tanishq set") proves the page's
+  change is identical on that set and on the full history.
+- `data/wait_or_buy_today.json` carries no IBJA level: `price_t`, `range.lo` and `range.hi` are
+  dropped (`price_t = range.lo − range.lo_rs` exactly); page_v2 reads only `horizons.<N>.sentence`.
 
 ### Feature-store rows arriving but not usable — the T10 blind spot (T13)
 

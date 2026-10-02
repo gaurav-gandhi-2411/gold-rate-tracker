@@ -122,6 +122,9 @@ on:
     # anti-peak-load reasoning check-price.yml's own cron comment documents.
   workflow_dispatch:
 
+permissions:
+  contents: read
+
 jobs:
   check:
     runs-on: ubuntu-latest

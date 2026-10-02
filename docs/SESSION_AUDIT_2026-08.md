@@ -1006,3 +1006,1119 @@ regeneration + parity test + the dependabot evidence). Merge-bypass counts (§8.
 `gh` over the 400 most recent merged PRs (check-runs and commit statuses on each head SHA vs its
 `merged_at`); bot-PR timings from 100 merged `bot/` PRs; the venv comparison from two throwaway
 Python 3.12 venvs created with explicit interpreter paths, nothing installed globally.
+
+**Continuation 2026-09-22/23 — takeover session, security-first pass + G/S/I/M1 (AM).** New
+session, no prior context, given a full takeover brief (security do-first, then G confirmations,
+then I/#1756, then M model work, then P product work). **Premise check found the brief's G1 claim
+wrong**: it stated #1838 (a catch-up-dispatch checkout-timing fix) was "closed... catch-up is
+retired." Verified via `gh pr view 1838` (state CLOSED, not merged) and `git merge-base
+--is-ancestor 2e885ee4 origin/master` (not an ancestor) that the fix never landed, and the
+catch-up dispatch step was still live and firing on ~92% of ticks per
+`data/catchup_dispatch_log.jsonl`'s trailing entries. GG confirmed and ordered removal — done in
+`#1872` (merged), which also deleted the now-superseded `fix/catchup-checkout-latest-master`
+branch. **S1** (self-hosted-runner fork-PR exposure): audited every `on:` trigger across
+`.github/workflows/*.yml` — only `scrape-tanishq-selfhosted.yml` uses `runs-on:
+[self-hosted, tanishq-scraper]`, and its triggers (`schedule`/`workflow_dispatch`/`push:
+branches:[master]`) have no `pull_request`/`pull_request_target`/`issue_comment`/`workflow_run`
+path reaching them from a fork PR — confirmed no live exposure, nothing to merge. **S2** (Worker's
+unauthenticated `fetch()` handler spending `GITHUB_PR_HEALTH_PAT` quota on any request): real
+finding, fixed in `#1866` (merged) — `TRIGGER_TOKEN` secret, hash-then-XOR constant-time compare
+(`safeTokenMatch`), fails closed on an unset secret. GG deployed and verified behaviorally (401
+unauthenticated, 200 authenticated) same day. **S3** (gitleaks, full history, `--log-opts="--all"`,
+2530 commits): zero leaks. **S4** (sampled Actions logs across check-price/scrape-tanishq-
+selfhosted/shadow-fusion): no leaked secrets; GitHub's own masking confirmed actively firing (27
+`***` redactions across sampled logs), not silently absent. **S5**: every workflow already had an
+explicit least-privilege `permissions:` block except `ci.yml`/`ci-health.yml` (relying on the safe
+`read` default implicitly) — fixed in `#1874` (merged); no `pull_request_target` anywhere in the
+repo. **S6**: secret scanning + push protection already enabled (`gh api repos/:owner/:repo
+--jq .security_and_analysis`) — nothing to do. **#1756** (Headline Arena partnership): replied
+with numbers re-verified against live `data/direction_baseline.json` rather than the brief's
+(stale-by-a-run) figures — h2 is the well-calibrated horizon (ECE 0.0346, under the 0.10 gate; h1's
+ECE 0.1134 fails that bar, so h1 could not have been the one cited) — kept open, labeled
+`partnership`. **G3** (`#1839` ntfy topic-split fallback): rebased (28 commits behind — fixed
+`docs-freshness` on its own), then proved the OPS-fallback/PUBLIC-routing split with a **live run
+against real ntfy.sh** using disposable random throwaway topics (never GG's real secrets) — not
+just the PR's existing unit tests. Merged. **PowerShell `curl`-alias trap** (`#1866`'s documented
+command, closed PR so unfixable there): `curl "https://...?token=..."` resolves to
+`Invoke-WebRequest` without `-UseBasicParsing` on Windows PowerShell, showing a script-execution
+security prompt — GG hit this live. Fixed in `worker-deadman/README.md` (`#1873`, merged): split
+into an explicit PowerShell block and a bash block. **~100 remote branches** cross-referenced
+against `gh pr list --state merged` (headRefName match) and deleted in one literal
+`git push origin --delete <100 names>` (no `$VAR` substitution — the rule-98b guard blocks
+non-literal tokens in that position). **`#1542`** (stale calibration-coverage recompute + a
+"banner never reads measured coverage" structural finding) closed as superseded — the structural
+finding was already fixed elsewhere under the same 2026-09-10 audit session (marker "AE1" in
+`app.js`/`i18n.js`, confirmed by reading both files on current master) and the coverage snapshot
+(n=77) was 13 days stale (current: n=86-87, ~70.9-71.3%). **Two branches GG named as "orphaned,
+fold into model work" turned out to have different actual states than assumed** — worth recording
+so a fresh session doesn't re-investigate: `feat/calibration-oos-validation-and-tanishq-last-
+confirmed` rebased to **zero diff against master** (`git rebase` reported "skipped previously
+applied commit" for both commits) — both ADR 027's OOS validation and the "last-confirmed Tanishq"
+hero display are already fully live (confirmed via grep: `ADR 027` throughout `ml/calibration.py`,
+`hero-last-confirmed` in `app.js`) — branch deleted, no M3/P work needed for it.
+`feat/macro-india-vix` (dated 2026-05-17) genuinely was unmerged but conflicted on rebase against
+4+ months of drift in `ml/features.py`/`ml/macro.py`/`tests/test_macro.py` — rather than fight the
+conflict, reimplemented the same logical change (identical `^INDIAVIX` ticker, identical
+`india_vix_level` naming) fresh against current master as `#1878` (open at time of writing):
+`ml/macro.py`/`ml/feature_store.py` (schema v3→v4, `n_macro_null` denominator 8→9)/
+`docs/FEATURE_STORE.md` updated; deliberately **not** wired into `ml.direction.dataset.FEATURE_COLS`
+yet (every pre-2026-09-23 row is null for `india_vix` by construction — accumulate first, per this
+repo's own established discipline for new candidate drivers, evaluate in M2 once there's enough
+history). `ml/features.py`'s `MACRO_FEATURE_COLS`/`ALL_FEATURE_COLS`/`TUNED_V1_FEATURE_COLS`/
+`MINIMAL_FEATURE_COLS` confirmed dead (repo-wide grep: nothing outside `ml/features.py`'s own tests
+imports them — retired-MLflow-pipeline leftovers) — left untouched. **M3 read-only check**:
+`#1825`'s freshness-stratified shadow band scoring merged 2026-09-21 but only runs via
+`weekly-backtest.yml` (Sunday 02:00 UTC) — `data/calibration_band_coverage.json` was last generated
+2026-09-20 (before #1825 merged), so it genuinely has **zero shadow-scored weeks yet**, not a bug;
+first real data lands 2026-09-27. ADR 027's OOS validation, separately, has kept accumulating since
+July: `n_oos` 22→55, `residual_std_oos` 80.09→59.35 (`data/calibration.json`, `fit_date
+2026-09-11`) — approaching the ADR's own re-sweep trigger (`n_oos` ≥ 60) but not there yet. **Not
+yet started this session:** M2 (direction model collapse fix + COMEX variant), M4 (Chronos
+companion), P1/P3/P5. Full test suite (1066 tests) run clean twice this session (once with output
+discarded after a working-tree mutation mid-run corrupted the read — noted here as a process
+lesson: never mutate a shared checkout while a long-running background command is still reading
+it; isolate in a worktree instead, or wait for the notification before touching anything).
+
+## 13. Continuation 2026-09-23: post-shutdown resume, branch sweep, M1 build starts
+
+Laptop shutdown cut off the prior session mid-audit. Resumed read-only first (four parallel
+research forks covering health/crash-debris, items a–i, model-work j–m, product n–o) — found **no
+crash damage**: main checkout clean, all 25 worktrees clean, no lock files, no lost work. Runner
+`gg-home-tanishq` confirmed online and installed as an auto-starting Windows service. Two real
+findings from that pass: (1) items **j** (M1 COMEX/USD-INR proxy) and **l** (M2 COMEX-targeted
+daily variant) in the prior hand-off brief both trace to the same public reply on **#1756** — the
+work was *promised* there but never built; GG's read: not a broken promise, a stated direction,
+still top priority as the core model work (see M1/M2 below). (2) `feat/macro-india-vix` was still
+undeleted despite being independently reimplemented as `#1878` weeks ago.
+
+**Item f (branch sweep), fresh run:** applied the rule literally — delete a branch only if its PR
+is merged/closed AND the branch's own tip commit is an ancestor of current master (i.e. it holds
+zero commits master doesn't already have). Checked all 12 non-open, non-dependabot, non-`chore/
+playwright-*` remote branches this way. Only 2 passed: `docs/phase-3-implementation-plan` (`#10`,
+merged 2026-05-18) and `fix/og-image-rebase-ordering` (`#5`, merged 2026-05-17) — both deleted. The
+other 10 closed/merged-by-title branches (`chore/verify-branch-protection-still-bites`,
+`docs/phase3-rescope-adr012`, `feat/coin-accent`, `feat/coverage-ci-resolvability`,
+`feat/deadman-tanishq-silence-alert`, `feat/phi20-stale-banner-fix`,
+`feat/psi3c3-chart-dedup-skeletons`, `fix/rederive-staleness-threshold-ladder`,
+`fix/sw-offline-data-fallback`, `scratch/skipci-proof`) each still hold commits absent from master
+(confirmed non-ancestor) — kept, not swept, since their PRs being closed-unmerged doesn't mean the
+work is worthless, only that GG didn't want it merged as-is at the time. `chore/playwright-1-63-
+retry` and `chore/playwright-install-debug` were never pushed to remote in the first place (local
+worktree branches only) — GG's "keep" instruction for them is a no-op here. 3 branches with no PR
+ever opened (`feat/psi3c-app-feel`, `tmp-pr12`, `worktree-agent-a369bed613f7ee7f5`) are outside the
+letter of the rule (no merged/closed PR to key off) — left alone, flagged for GG if a broader sweep
+is ever wanted. 6 dependabot branches all have OPEN PRs — kept.
+
+**Item i:** diffed `feat/macro-india-vix` against its own merge-base (4 files: `docs/
+NEXT_SESSION.md`, `ml/features.py`, `ml/macro.py`, `tests/test_macro.py` — a single India-VIX
+feature addition) and against current master (388 files differ — the branch is a ~4-month-old fork
+predating the entire post-Phase-5 architecture). Read the actual `ml/macro.py` diff: the branch
+adds the exact same `^INDIAVIX` ticker and `india_vix_level` feature, with the same code comment
+("mirrors the pattern of vix_level for consistent feature naming"), that `#1878` already shipped
+on master — and master's version is strictly better (adds a defensive `if "india_vix" in df.
+columns` guard the old branch lacks). Zero unique work. Deleted, per GG's "if not, delete it and
+record why."
+
+**Tanishq cron re-check:** the 00:07 UTC gap (flagged in the resume audit) **recurred and
+extended** — no `scrape-tanishq-selfhosted` run appears between 2026-09-22T21:13:01Z and at least
+2026-09-23T03:07Z (both the 00:07 and 03:07 slots produced no run, not even a cancelled one). The
+runner was confirmed online throughout. `check-price.yml` (the GitHub-hosted primary scraper,
+different cron offset) ran fine in that same window (2026-09-23T00:53:03Z, success) — so this is
+not a broader pipeline outage, and IBJA (the calibrated primary source) stayed fresh. Reads as the
+same intermittent GitHub Actions schedule-trigger delay pattern documented previously (~15%
+gap-rate on this specific self-hosted workflow), not a new regression — flagging, not treating as
+an incident.
+
+**Now starting M1** (data corpus — everything downstream depends on it), per GG's numbered spec.
+
+**M1 done, PR #1890 (DRAFT — see below).** `ml/inr_proxy.py`: COMEX x USD/INR x import-duty proxy,
+2013-01-01 to present (5,014 rows), three leakage traps handled and tested (T-1 time alignment,
+GLD-divergence futures-roll detection/ratio-adjustment, walk-forward-only premium calibration reusing
+`ml.calibration`'s Huber/recency-weight primitives). Validated on the real IBJA overlap (n=225
+walk-forward-OOS days): **direction agreement 67.1%** (95% CI 60.7-72.9%, Wilson) vs. 54.2% always-up
+baseline — the metric GG's spec named as the one that actually matters. MAE 0.98%, level correlation
+0.9988. Also extended `ml/calendar_events.py` with wedding-season/Budget-window/duty-proximity flags
+(the rest of the Indian demand calendar). Full writeup: `docs/adr/030-inr22k-proxy-history-for-
+pretraining.md`. FRED DFII10 (US real yields) needs a free API key — listed as a GG action item, not
+blocked on; `TIP` ETF (already wired) is the interim proxy.
+
+**Process note, learned the hard way:** attempted to self-merge #1890 after all CI checks passed
+(lint/pwa-js/etc. all green, `check_required_checks_positive.py` confirmed) — the CC session's own
+rule-70a merge-gate hook blocked it: gate 3 (reviewable diff ≤ ~400 lines) fails at #1890's 1096
+lines. I had incorrectly concluded no such gate applied to this repo (found no `scripts/
+merge_gate.py` file here) and said so explicitly in the PR body — wrong; the gate lives in the CC
+session's own hook config, not a repo-committed script. Converted #1890 to DRAFT immediately per
+rule 70a ("anything failing a gate → open as DRAFT, human merges") rather than arguing the size —
+GG's review/merge needed. Applied the lesson for the rest of this session: split by size *before*
+opening, and default to opening as DRAFT outright whenever a change is obviously going to exceed the
+guideline on its own merits, rather than attempting a merge and finding out.
+
+**M2 (direction model) — diagnosis + reframed-target shadow results done, split into two PRs.**
+
+Diagnosis (evidence-based, in `docs/adr/031-...md`): the h2 majority-class-collapse flag measures
+the **model's own predicted probability**, not the true label rate — real `label_binary_h2` swings
+33%-80% in rolling-30 terms across the dataset's history, but the model's last-30-real-fold
+`log_prob` values sit in a tight 0.547-0.669 band, hugging the 0.597 full-sample base rate and never
+once dropping below 0.5. Contributing causes, all measured: (1) 5 raw price-LEVEL features
+(`gold_usd`/`ibja_pm_916`/`ibja_am_916`/`tanishq_22k`/`usd_inr`) correlate 0.86-1.00 with each other
+and no return/momentum feature exists at all; (2) `tanishq_22k` correlates only -0.064 with
+`usd_inr` (vs 0.86-0.96 for every other level pair), consistent with known Tanishq scrape-quality
+gaps adding noise not signal; (3) growing class imbalance in the expanding window + unweighted
+regularization (`C=1.0`, no `class_weight`) shrinks the fit toward the base-rate-encoding intercept.
+
+**PR #1891** (small, foundational, mergeable on its own — CI green at last check, not yet merged):
+`ml.direction.dataset.build_dataset` gains an additive `extra_horizons` param (generalizes h1/h2's
+idx0-offset pattern to any N, e.g. 5/10, plus a new `window_min_pm916_hN` path-minimum column) and
+`ml.direction.models.fit_logistic`/`fit_lightgbm` gain an additive `class_weight` param. Both default
+to prior behavior exactly; `ml.direction.evaluate`/`gate` (the live pipeline) don't pass either, so
+zero behavior change there.
+
+**PR #1892** (DRAFT from the start, based on #1891's branch — depends on it merging, and its own
+809 hand-written lines already exceed gate 3 on their own merit, no point attempting a merge):
+`ml/direction/reframed_targets.py` (dead-zone, detrended/excess-return with an embargo-aware trend,
+buyer's-decision using the new path-aware window-min) + `ml/direction/evaluate_reframed.py` (an
+**embargo-aware** walk-forward harness — the real methodological fix here: the *existing* h1/h2
+harness's `dataset.iloc[:i]` expanding window silently assumes every prior row's label had already
+matured by the test date, true for h=1 but not generally true for h=5/h=10, where several of the
+nearest "prior" rows' labels mature AFTER the test row's own date). 3 models (class-weighted
+logistic, LightGBM wrapped in `CalibratedClassifierCV` — the live pipeline's own LightGBM usage is
+uncalibrated, unlike this shadow harness — and a simple ensemble) x 2 horizons x 4 targets (raw
+binary included as a control) = 8 combinations, each with Brier skill score vs. walk-forward
+climatology, ECE, the existing McNemar-style significance test, and two Diebold-Mariano tests
+(vs. always-up per spec, vs. climatology as a bonus consistency check), Newey-West lag=horizon-1.
+
+**Result, reported as plainly as a positive one would be: none of the 8 combinations reach
+significance vs. always-up.** `deadzone_h5` and `buyer_decision_h10` are *significantly worse* than
+always-up (p=0.0002, p=0.0059) — real negative findings. `detrended` is the one genuinely promising
+lead: positive Brier skill score at both horizons (+0.052 h5, +0.089 h10 — the only target beating
+climatology at either horizon) and roughly half the ECE of every other combination (0.116/0.070 vs.
+0.15-0.24 elsewhere) — doesn't clear significance with the current 183-row dataset and `FEATURE_COLS`
+as-is, but it's the only direction where removing the base-rate anchoring (the diagnosis's own
+finding) measurably helped rather than hurt. Per GG's explicit instruction, **not recommending
+retirement** — negative result on this round's specific levers, not a verdict on the model. Full
+per-combination numbers (n, accuracy, Brier, BSS, both DM tests, ECE) in `data/
+direction_reframed_results.json`.
+
+**Blocked, needs #1890 merged first:** the COMEX-targeted daily variant for #1756 — needs M1's
+`data/history_seed_inr22k_proxy.parquet` as the ground-truth series. Next step once #1890 lands:
+rebase, build a 5th target off the proxy's own daily changes, same embargo-aware protocol.
+
+**Not yet started this session:** M3 (offline adaptive-conformal + weekend-stratum eval — doesn't
+depend on the blocked items, could start next), M4 (Chronos companion — needs M1's proxy, so also
+blocked on #1890), P1/P3/P5.
+
+## Continuation 2026-09-23 (PM): #1892 fixed, M2 numbers, M1 realignment, COMEX variant, M2 fix, M3
+
+**GG merged #1890** (M1 proxy). **#1892 had a merge conflict** — rebased in an isolated worktree
+(`gold-rate-tracker-wt-m2direction`); the only conflict was `tests/test_count_baseline.json` (both
+#1890 and #1892 independently bumped the same generated file), resolved by merging both sides' entries
+then regenerating the whole file via `--update`. Confirmed and stated in #1892's body: zero
+`.github/workflows/` files touched, no change to `ml/inference.py`. Ran `check_required_checks_positive.py`.
+No clean split exists under the gate (`evaluate_reframed.py` genuinely depends on `reframed_targets.py`
+— splitting them would hurt reviewability, not help it) — handed back to GG to merge, as instructed.
+
+**Process correction, twice:** (1) attempted to self-merge #1890 believing no size gate applied to this
+repo (found no `scripts/merge_gate.py`) — wrong, the CC session's own rule-70a hook enforces it;
+converted to draft immediately. (2) After merging #1901 with `--delete-branch`, its stacked dependent
+PR (#1902) was silently auto-closed by GitHub (base branch gone) and could not be reopened or
+retargeted — recreated as a fresh PR (#1904) from the already-rebased branch. Also caught #1892 showing
+`isDraft: false` at one point (root cause not fully isolated — likely a side-effect of one of the
+several `gh pr edit`/rebase-push cycles on it) and corrected it back to draft before any merge risk.
+
+**M2 full numbers** (all 8 reframed-target combinations, all 3 models — GG asked for the complete
+table after the first report only gave ensemble numbers, which hid a real per-model finding):
+
+| target | horizon | model | n | Brier | BSS vs climatology | ECE | p (McNemar) | sig? | DM stat vs always-up | p (DM) |
+|---|---|---|---|---|---|---|---|---|---|---|
+| raw_binary | 5 | logistic_balanced | 150 | 0.2941 | -0.1985 | 0.1957 | 0.0784 | No | -1.505 | 0.132 |
+| raw_binary | 5 | gbm_calibrated | 150 | 0.2918 | -0.1893 | 0.2129 | 0.0003 | No | -1.629 | 0.103 |
+| raw_binary | 5 | ensemble | 150 | 0.2856 | -0.1637 | 0.2266 | 0.0034 | No | -1.786 | 0.074 |
+| deadzone | 5 | logistic_balanced | 132 | 0.3042 | -0.2593 | 0.2213 | 0.0015 | No | -0.837 | 0.403 |
+| deadzone | 5 | gbm_calibrated | 132 | 0.2886 | -0.1949 | 0.2464 | 0.0001 | No | -1.461 | 0.144 |
+| deadzone | 5 | ensemble | 132 | 0.2870 | -0.1882 | 0.1908 | 0.0002 | No | -1.361 | 0.174 |
+| detrended | 5 | logistic_balanced | 140 | 0.2664 | 0.0086 | 0.0947 | 0.5504 | No | -3.497 | 0.0005 |
+| detrended | 5 | gbm_calibrated | 140 | 0.2600 | 0.0325 | 0.1806 | 0.6908 | No | -3.193 | 0.0014 |
+| detrended | 5 | ensemble | 140 | 0.2549 | 0.0516 | 0.1158 | 0.6718 | No | -3.461 | 0.0005 |
+| buyer_decision | 5 | logistic_balanced | 150 | 0.2868 | -0.1046 | 0.1524 | 0.5546 | No | -3.539 | 0.0004 |
+| buyer_decision | 5 | gbm_calibrated | 150 | 0.2822 | -0.0868 | 0.1412 | 1.0000 | No | -3.263 | 0.0011 |
+| buyer_decision | 5 | ensemble | 150 | 0.2788 | -0.0738 | 0.1496 | 1.0000 | No | -3.507 | 0.0005 |
+| raw_binary | 10 | logistic_balanced | 137 | 0.2602 | -0.0740 | 0.2116 | 0.1325 | No | -0.689 | 0.491 |
+| raw_binary | 10 | gbm_calibrated | 137 | 0.2383 | 0.0161 | 0.2031 | 0.2188 | No | -1.625 | 0.104 |
+| raw_binary | 10 | ensemble | 137 | 0.2355 | 0.0278 | 0.1150 | 0.3438 | No | -1.292 | 0.196 |
+| deadzone | 10 | logistic_balanced | 122 | 0.2812 | -0.1171 | 0.2924 | 0.0029 | No | -0.541 | 0.588 |
+| deadzone | 10 | gbm_calibrated | 122 | 0.2723 | -0.0815 | 0.2416 | 0.2891 | No | -1.145 | 0.252 |
+| deadzone | 10 | ensemble | 122 | 0.2636 | -0.0471 | 0.1944 | 0.0225 | No | -0.969 | 0.333 |
+| **detrended** | **10** | **logistic_balanced** | **122** | **0.2227** | **0.1707** | **0.0946** | **0.0169** | **YES** | **-2.679** | **0.0074** |
+| detrended | 10 | gbm_calibrated | 122 | 0.2895 | -0.0780 | 0.2101 | 0.9152 | No | -1.885 | 0.059 |
+| detrended | 10 | ensemble | 122 | 0.2446 | 0.0893 | 0.0704 | 0.6570 | No | -2.381 | 0.017 |
+| buyer_decision | 10 | logistic_balanced | 137 | 0.3338 | -0.2459 | 0.2530 | 0.0869 | No | -1.659 | 0.097 |
+| buyer_decision | 10 | gbm_calibrated | 137 | 0.3081 | -0.1498 | 0.2551 | 0.0079 | No | -1.702 | 0.089 |
+| buyer_decision | 10 | ensemble | 137 | 0.3083 | -0.1507 | 0.2440 | 0.0059 | No | -1.855 | 0.064 |
+
+**Correction to the earlier report:** `detrended_h10` with the PLAIN logistic model (not the ensemble)
+IS significant — accuracy 64.75% vs 48.36% baseline (16.4pp edge), Brier 0.2227 vs 0.5164 baseline, BSS
++0.171 (best of all 24 rows), McNemar p=0.0169, DM p=0.0074 (both significant, consistent), ECE=0.095
+(under the 0.10 gate). It technically clears every one of `decide_direction_signal`'s 5 gates. Flagged
+with an explicit multiple-comparisons caveat: 1 nominally-significant result out of 24 tested is close
+to what chance alone predicts at p<0.05 (24×0.05≈1.2 expected false positives) — does NOT survive
+Bonferroni (0.05/24≈0.002 < 0.0169). Not a promotion recommendation on its own; item 4's COMEX variant
+is the natural higher-power replication test for the same "detrended" framing.
+
+**M1 label/feature role separation (PR #1901, merged; ADR write-up PR #1904, merged as recreated):**
+lag sweep shows the peak is at lag -1/0 (68.25%/68.65%, CIs overlap) — timing misalignment does NOT
+explain the ~33% disagreement, ruling out GG's item-3a hypothesis cleanly. Item 3b (magnitude buckets)
+was the real finding: 44% agreement on moves <20 Rs/g climbing monotonically to 85-100% on moves
+≥100 Rs/g (Wilson CIs, n=5-63/bucket) — a dead-zone label is well-supported. `ml/inr_proxy_labels.py`
+built the same-day (unlagged, correctly leakage-permissive for labels) counterpart to the T-1-lagged
+feature series. Full write-up: `docs/adr/032-...md`.
+
+**M2 INR flatline: diagnosed AND fixed (PR #1903, merged).** Root cause isolated cleanly by an E-vs-F
+contrast (identical features/data/walk-forward, only difference is calibration): the live pipeline's
+`ml.direction.models.fit_lightgbm` is UNCALIBRATED. Calibrating it alone: p=1.0 → p=0.0129. Combined
+with `class_weight="balanced"`: accuracy 65.84% vs 59.01% baseline, Brier 0.2303, ECE 0.0648, p=0.0034
+— survives Bonferroni across all 10 configs tested (0.05/10=0.005). Clears every one of
+`decide_direction_signal`'s 5 gates. Lighter regularization and class-weighting ALONE (on the existing
+logistic model) do nothing — ADR 031's base-rate-anchoring diagnosis is model-specific, not a data
+property. Does NOT replicate at h1 (49.08% vs 50.92% baseline, not significant) — an h2-specific fix,
+reported plainly as such. `ml/direction/config_sweep.py` is the reusable harness. Full write-up:
+`docs/adr/034-...md`. **Real promotion candidate for GG's review** (not self-promoted — shadow only).
+
+**M3 (independent, GG spec item 6): done (PR #1906).** `ml/calibration_adaptive.py` implements
+Adaptive Conformal Inference (Gibbs & Candès 2021), scored on the identical fit/scoring-set
+construction the static band uses. Result: statistically indistinguishable from the static band at
+68/80/90% (n=89, CIs overlap almost completely, ≤1.3pp difference). Gamma sensitivity: more aggressive
+adaptation (0.05/0.1) moves coverage further from target, not closer — the history is too short (n=89)
+for ACI's long-run convergence guarantees to help. Not recommending ACI as a replacement. Confirmed
+the weekend/carry-forward stratum's first live-scored result has NOT landed yet (`calibration_band_
+coverage.json` still dated 2026-09-20, no `stratified_shadow` key) — not cited, per GG's instruction;
+due 2026-09-27.
+
+**M2 item 4 (COMEX daily variant, #1756) — IN PROGRESS, running in background at write time.**
+`ml/direction/comex_daily.py` built: ground truth is GC=F itself (roll-adjusted via the same
+GLD-divergence method as M1), NOT the INR proxy — so genuinely not blocked on anything. Found and
+fixed a real bug before running the real evaluation: building on a full 7-day calendar (matching M1's
+convention) ffills weekends onto GC=F, and ~30% of "daily direction" labels came out as trivial ties
+(label_binary_h1 skewed to 35.7% "up" instead of a real market's ~50/50) — fixed by tracking genuine
+COMEX trading days explicitly and only scoring real trading-day targets; corrected dataset:
+n=3,452 real trading days over 13.7 years (2013-2026), up_frac=51.8% for h1 — a realistic daily split.
+Evaluation grid (4 targets × h=1, plus raw_binary/detrended × h=10 for the "does the M2 detrended lead
+replicate with real power" check, 6 combinations, min_train=250 ≈ 1 trading year) is running as a
+background job — ~15 min/combination measured on a 400-row subset (0.275s/fold), full run not yet
+complete at the time of this checkpoint. Results to be reported in a follow-up once it finishes.
+Also checked #1756: no reply yet from Headline Arena; the daily-lock-deadline (UTC) question the
+owner posed in the 2026-09-22 reply is still unanswered. Not posting anything, per instruction.
+
+**M4 (Chronos + M1 drivers): NOT STARTED.** Step 3 (M1 realignment) is done, so it's technically
+unblocked, but it needs actual neural-network inference (ChronosBoltPipeline) across ~250+ walk-forward
+folds × multiple variants (covariate-corrected Chronos, naive-plus-drift, an ensemble) — a materially
+different and heavier compute profile than everything else in this continuation. Deliberately not
+started this round rather than risk a rushed implementation on top of an already-long session; flagged
+as the clear next step once COMEX's results are in and reviewed.
+
+**P1/P3/P5: still not started.**
+
+## Checkpoint — 2026-09-23, continuation session (GG spec items 1-4)
+
+**Item 1 (can the direction signal ship itself?): answered, safeguard merged (PR #1908).** Traced the
+full path live: `weekly-backtest.yml` → `ml.direction.evaluate.run_walk_forward` → `decide_direction_
+signal` writes `data/direction_baseline.json` only; `app.js` never reads that file or calls the gate —
+the direction card is a hardcoded, permanently-"off" state (ADR 019/020) gated on an unrelated
+`chronos_companion.status` field. A passing gate does NOT auto-un-dark anything; there is no wiring
+path from gate to UI at all today. PR #1903 confirmed shadow-only by direct merge-commit diff
+inspection (touches only `ml/direction/config_sweep.py`, `docs/adr/034`, tests — zero touches to
+`gate.py`, `data/direction_baseline.json`, `app.js`). Both risk conditions GG asked about are FALSE.
+Built the mechanical safeguard anyway, per GG's pre-authorization: `ml.direction.gate.is_signal_
+promoted()` (checks for a committed `data/direction_promotion_record.json`) +
+`scripts/check_direction_signal_not_wired_without_promotion.py` (new CI guard, wired into `lint.yml`).
+439 lines — over the session's own merge-gate ceiling; GG's in-message "this keeps behaviour unchanged,
+merge it yourself" was treated as pre-authorization for this ONE merge; the hook did not block it.
+Full write-up: `docs/adr/036-...md`.
+
+**Item 2 (#1892's failing CI): fixed, still needs GG's own merge.** mypy failure was
+`.iloc[list[int]]` not matching CI's pandas-stubs overloads (local mypy has no pandas-stubs, so this
+was invisible locally) — fixed with `np.array(eligible, dtype=int)` before indexing. docs-freshness
+resolved itself on rebase. Rebased #1892's branch onto current `origin/master` directly (clean, no
+conflicts). Remains ~800+ lines even after the item-3 statistical-corrections work was split out into
+separate stacked PRs — no clean further split exists without hurting reviewability; stays with GG.
+
+**Item 3 (statistical corrections): built, verified, delivered as 3 stacked PRs — all merged into
+#1892's branch (not yet on master, since #1892 itself isn't merged).** `ml/direction/stats_corrections.py`
+(McNemar via `scipy.stats.binomtest`, moving block bootstrap, Bonferroni, Benjamini-Hochberg,
+forward-only power/n-for-power). `diebold_mariano_test` extended with `alternative` (one/two-sided) and
+HAC `effective_n`. Re-ran the full 24-row grid with all 4 corrections applied. **Result: ZERO of 24
+rows significant after Bonferroni (threshold 0.00208) — `detrended_h10` does NOT stand**: its original
+effective_n was inflated (122 raw → 28.9 effective after HAC at lag=9), p moved from the originally-
+reported 0.0169 to 0.106. Full corrected table + methodology: `docs/adr/037-...md`, raw output
+`data/direction_reframed_results_corrected.json`. PRs #1911→#1914→#1915 (stacked on #1892's branch),
+all green (lint+pwa-js required, boundary-leak-check/docs-freshness also clean after resolving two
+self-inflicted CI hiccups mid-session — see below). #1911/#1914 self-merged (367/111 lines); #1915
+(907 lines: 754-line generated JSON + 153-line ADR) opened as **draft**, all checks green, handed to GG
+— over the session's size gate and `data/` isn't a recognized generated-artifact carve-out path here.
+
+*Two self-inflicted CI issues this session, both diagnosed and fixed rather than worked around:*
+(a) `boundary-leak-check` false-positived twice across the 3 stacked PRs — confirmed via direct
+investigation of the script's own patch-id comparison logic that this was a genuine timing race (a
+PR's CI run compared against a sibling PR's branch mid-rebase, before that sibling's own force-push
+had landed), not a real leak; resolved by re-running once all 3 pushes had settled. (b) Accidentally
+committed the `docs-freshness` fix with `[skip ci]` in the message — copying the bot-commit convention
+onto a human/CC-authored commit, which per this session's own rule 34 suppresses CI entirely and
+silently blocked all 3 PRs' required checks from ever re-running against the new SHA. Caught by
+noticing `gh api .../check-runs` returned zero runs for the pushed SHA; fixed by amending the commit
+message to drop `[skip ci]` and re-pushing.
+
+**Item 4 (pre-registration): frozen and committed before Monday 2026-09-28's weekly eval, PRs
+#1916→#1917 open (stacked on #1892's branch via #1892→#1911→#1914→#1915... actually based directly on
+`feat/m2-reframed-target-evaluation`), CI pending at checkpoint time.** `ml.direction.preregistration`
+freezes ADR 034's config J (calibrated LightGBM + `class_weight="balanced"`, h2) as a single hypothesis
+BEFORE any new fold is scored — Bonferroni across the original 10 configs tried covers the number of
+configs, not the fact the same 161 folds also *chose* the winner, which is a separate, real validity
+gap. Re-derived the effect size under the new DM-HAC methodology: n=161, effective_n=119.38 (HAC at
+lag=1 shrinks usable information ~26%), p=0.00340 one-sided (reproduces ADR 034's accuracy numbers
+exactly: 65.84% vs 59.01%). **`PREREGISTERED_N_FOR_POWER = 135.9` (effective_n scale), frozen in code —
+the original 161-fold sample was itself nominally underpowered for its own observed effect (119.38 <
+135.9) despite reaching p=0.0034**, reported exactly as computed. Two shadow arms wired into
+`weekly-backtest.yml` as an additive, `continue-on-error: true` step: (1) live h2 arm, re-scores every
+weekly cron; (2) proxy dead-zone arm (ADR 032's ≥100 Rs/gram threshold, M1 calendar-only features,
+2013-2026 history) — **first-run result is an honest negative: accuracy 48.02% vs always-up baseline
+55.62%, worse, not significant in the "better" direction** — reported plainly, not glossed over;
+explicitly caveated as h1-equivalent framing (the proxy label is same-day), never pooled with the h2
+live arm's n. Full write-up: `docs/adr/038-...md`. Will NOT report the live arm as confirmatory before
+`effective_n >= 135.9` is reached, per GG's explicit instruction.
+
+**Item 5 (COMEX daily variant, corrected): re-run in progress at checkpoint time.** The original
+background run (reported in the prior checkpoint above) used a stale `evaluate_reframed.py` predating
+the item-3 corrections, so it has no raw per-fold data the new DM-HAC test needs — re-running from
+scratch against the corrected module (rebased `feat/m2-comex-daily-variant` onto `feat/m2-reframed-
+target-evaluation`) to get proper effective_n/accuracy-vs-always-up/Bonferroni-BH/sub-period numbers.
+Raw (uncorrected) first-pass numbers for reference, NOT the final report: `raw_binary_h1` n=3202
+acc=52.28% (not sig), `deadzone_h1` n=2621 acc=54.37% (not sig), `detrended_h1` n=3195 acc=50.86% (not
+sig), `buyer_decision_h1` n=162 acc=100%/BSS=-401.9 (degenerate — flagged as a likely framing bug, not
+a real finding, pending investigation), `raw_binary_h10` n=3190 acc=54.95% (not sig), `detrended_h10`
+n=3177 acc=50.77% (not sig, p=0.099 uncorrected McNemar). None of these were significant even before
+HAC correction — full corrected report pending the re-run's completion.
+
+**Item 6 (M3 CI widths): reported.** At n=89, Wilson CI widths are 19.3pp (68% level), 17.2pp (80%),
+12.1pp (90%) — meaning only a static-vs-ACI difference on that order could be reliably distinguished at
+this sample size; the observed differences (≤1.3pp) are far below the resolution n=89 offers, so
+"statistically indistinguishable" (ADR 035) is the expected result of an underpowered comparison, not
+evidence the methods are truly equivalent. Live stratified-shadow result still not landed (due
+2026-09-27) — not cited, per standing instruction.
+
+**Items 7/M4/P1/P3/P5: not yet reached this checkpoint.**
+
+## Checkpoint — 2026-09-23 (evening): the embargo leak, D1/D2 landed, analysis moved to Actions
+
+**The headline correction.** The direction walk-forwards had no embargo. The live evaluator and
+`ml.direction.config_sweep` both trained test day *i* on every earlier row. At h2 that includes
+~1.95 rows per fold whose labels matured after *i*'s `as_of_date` (measured). The ADR 034 "config J"
+result (65.84% vs 59.01%, one-sided HAC-DM p=0.0043 re-measured today) does not survive an
+embargo. On the same data it becomes 60.38% vs 59.75%, n=159, p=0.327
+(`reports/preregistration_embargo_a1.json`). The candidate's apparent edge was the leak.
+
+*Corrections to figures carried into this session:*
+- The embargoed candidate was noted as "57.8%, p=0.78". That figure is the *live logistic*
+  model's (57.76%, p=0.719). Re-running the original diagnostic on today's data gives config J
+  59.63%, p=0.327, n=161.
+- The frozen ADR 038 no-embargo figures (p 0.00340, effective n 119.38) do not reproduce exactly
+  today (0.0043, 112.5). Accuracy and mean loss difference are identical; the long-run variance
+  differs. Cause not isolated.
+- #1915 was already merged at session start, although the handover listed it as open.
+
+**D1 — pre-registration amendment A1 (#1925 and #1933 merged, the latter as 1003e46d on 2026-09-23,
+ahead of Sun 2026-09-27 02:00 UTC).** Embargo on `label_date_h2`, only `as_of_date > 2026-09-23` scored,
+config/test/alpha/135.9 frozen, dated amendment in ADR 038. Two defects found by running the step
+exactly as the workflow does:
+- `python scripts/run_preregistered_h2_shadow.py` could not import `ml` (`ModuleNotFoundError`).
+  Sunday's first run would have failed silently under `continue-on-error`.
+- It crashed formatting a `None` effective n, and wrote `NaN` (invalid JSON) when no day was
+  scored.
+
+The local end-to-end run after the fixes gives: live arm n=0 (no post-registration day exists
+yet), protocol `adr038-A1` recorded; proxy arm n=329, p=0.975. #1926 was superseded by #1933:
+#1926 carried #1925's pre-squash commit, and boundary-leak-check correctly caught it.
+
+**D2 — live evaluator embargo (#1930 merged), verified end-to-end on master.** Published README
+and status numbers, before → after, same data:
+
+| field | before | after |
+|---|---|---|
+| h1 accuracy / base rate | 48.5% (n=163) / 50.9% | 52.5% (n=162) / 51.2% |
+| h2 accuracy / base rate | 61.5% (n=161) / 59.0% | 58.5% (n=159) / 59.7% |
+| h2 p (McNemar) | 0.45 | 0.77 |
+
+The h2 persistence baseline fell from 65.2% to 51.6%: it had copied an unmatured label. One-sided
+HAC-DM: none of 6 model×horizon tests is significant before or after (Bonferroni 0.0083, BH).
+
+*Pipeline defect found:* the eval run for #1930 failed because its bot rebase conflicted with the
+previous run's refresh PR. #1932 re-published the leaky numbers for ~10 minutes, until the run for
+#1921 published the embargoed ones (#1934, re-injected by #1935). Not fixed yet. Two evaluator
+pushes in quick succession race.
+
+**Guard fixes.**
+- #1928 (merged): boundary-leak-check survives a closed PR's deleted base branch.
+- #1936 (merged): it ignores merge commits. #1933 was flagged because its merge-from-master and
+  #1921's resolved the same `tests/test_count_baseline.json` conflict identically.
+- #1921 (merged): the units guard.
+
+**Item 5 — COMEX re-run moved to GitHub Actions.**
+- #1931 (merged) adds `analysis.yml`: manual dispatch, GitHub-hosted, `contents: read`, no
+  secrets, no commits, artifact output.
+- The COMEX code existed only as untracked files in a worktree. It is now committed on
+  `feat/comex-direction-analysis` and dispatched as run 35857172862 (6 shards).
+- Primary baseline fixed before the run: the per-fold training-majority class. Always-up is a
+  straw baseline wherever "up" is the minority label (buyer_decision). On the smoke run, the same
+  predictions scored p=0.0009 vs always-up and p=0.84 vs majority.
+
+**Item 9a — proxy sub-period breakdown for config J** (`reports/proxy_subperiods_config_j.json`):
+- 2013–2017: no dead-zone test folds at all.
+- 2018–2021: n=34; predictions equal the majority baseline in every fold.
+- 2022–2026: n=295; 46.1% vs majority 53.2%, one-sided p=0.986.
+- The pre-registered proxy arm uses a same-day India VIX close (a contemporaneous feature).
+  Lagging it to the prior trading day gives 47.8% (p=0.953). Not significant either way.
+- The proxy arm stays as registered. The leak is reported to GG rather than changed unilaterally.
+
+**Item 5 result — COMEX (draft #1939, report `reports/comex_direction_run_35857172862.json`).**
+18 tests (6 target/horizon combos × 3 models, 2,621–3,201 folds each):
+- **0 significant** under Bonferroni (0.00278) or BH. 0 embargo violations.
+- Nominal best: deadzone h1 logistic, 55.0% vs 52.5% majority, p=0.010 uncorrected. Its edge sits
+  in 2018–2021 (p=0.017) and vanishes in 2022–2026, where it equals the majority class in every
+  fold.
+- M2's `detrended_h10` lead does not replicate (53.3% vs 51.3%, p=0.22, effective n 795).
+- buyer_decision: the models reproduce the 77% "no dip" majority. The earlier "100%" was the
+  units bug.
+
+**D3 — estimator presets: #1940 (draft, for GG).** Supersedes #1922/#1923. Presets 3–8/8–12/15–25%
+with typical values 5/10/20% (my rounded picks, flagged for GG), custom % or ₹/g, a rate-source
+line, and an "Estimate — stores vary." label. 145/145 PWA tests pass; a verifier subagent
+reviewed it. The new strings have no Hindi yet; the file's convention is to wait for
+native-speaker review.
+
+**Item 7:** #1919 synced to the embargoed numbers, with the two falsified phrases neutralised.
+Handed to GG with #1920.
+
+**Open for Sunday 2026-09-27:**
+- Behavioural check of the amended pre-registration step: log line
+  `live_h2 [adr038-A1]`, and an appended entry with `protocol_version`, `scored_as_of_dates` all
+  after 2026-09-23, and `train_max_label_dates` each earlier than its date.
+- The M3 stratified shadow result, with n and Wilson CIs.
+
+
+## Checkpoint — 2026-09-23 (night): A1 re-freeze, why direction is noise, R1–R4, the race fix
+
+**Correction to the previous checkpoint:** the COMEX PR it cites as #1939 was superseded by #1942 (merged).
+
+**A1 — second amendment to ADR 038 (#1949, merged; before any post-registration day was scored).**
+- The proxy arm now uses the prior trading day's India VIX.
+- The frozen reference figures (p 0.00340, effective n 119.38) came from **no committed code or data**. Each suspect was tested:
+  - run-to-run: bit-identical;
+  - sklearn 1.9.0 vs 1.9.1: identical;
+  - three data snapshots: identical;
+  - every Bartlett/uniform HAC bandwidth 0–5: none gives 0.10260.
+- Re-frozen from the deterministic pipeline: p 0.004299, effective n 112.525, n-for-power 144.17, per-fold digest pinned.
+- Reproduced exactly in two Windows venvs and on Linux (run 35867359498). The first Linux attempt failed only on 10-decimal probability float order, so the digest now pins decisions plus 6 decimals.
+- The 144.17 target counts autocorrelation twice (conservative); a consistent version would be ~101. Flagged for GG, not changed.
+
+**Race fix (#1950, merged, live-verified).** evaluate.py stamps `source_sha`. `scripts/prepare_direction_eval_publish.py` publishes only the newest computation and builds the publish commit on master. After two quick ml/direction merges, master's JSON carries the newest evaluator SHA (b461cf2f) and neither refresh conflicted. The first post-merge publish failed on a GitHub 500 and passed on re-run.
+
+**D — why direction is noise (ADR 040, draft #1955, run 35870505399).**
+- Not underfitting: capacity doesn't help. High-capacity models overfit (train 100%, validation ≈ majority).
+- Learning curves approach the baseline and never cross it.
+- The pipeline can only see edges of about 10 points of oracle accuracy (misses ≤ 5).
+- The series is near a random walk, with weak regime-dependent structure: 20-day variance ratio 1.36 when calm (momentum), 0.64 when volatile (reversal).
+- No feature family beats climatology alone.
+- Verdict: genuinely little signal, plus a detection limit.
+
+**R2 nowcast (#1957).**
+- Current MAE ₹61.4/g (0.44%) over 89 walk-forward days.
+- Adding IBJA's AM fix: same-day error ₹45 → ₹35/g (BH ✓, not Bonferroni on all days).
+- Weekend/holiday days (₹96/g) are unsolved. A COMEX × USD/INR adjustment makes them worse.
+  - *Superseded in part by ADR 058 (2026-09-25), re-run R2, exploratory:* the "makes them worse"
+    result came from a misaligned move (settle before the scored day / settle before the IBJA
+    date). Measured from the IBJA PM fix to the time the scored Tanishq board was first seen, the
+    adjustment makes carried-forward days **better**: M4 Rs 43.0/g vs M0 96.1 (published M4:
+    122.8), n = 28, DM one-sided p = 0.0026 (effective n 18.7); all days 44.7 vs 61.2, n = 90,
+    p = 0.0065. Post hoc (2026-04-17..09-24), with up to ~3 h of look-ahead on weekday holidays,
+    not yet compared with yesterday's Tanishq (Rs 46.0/g on #2015's weekend stratum, a
+    different day set), and it needs a forward pre-registered shadow
+    before anyone relies on it. #1957's explanation ("Tanishq doesn't re-price on days IBJA
+    doesn't publish") is not supported by the aligned numbers.
+
+**R3 buyer policy (draft #1956).** No pre-registered policy saves money reliably. Best: +₹8–12/g, not significant after correction.
+
+**R4 selective direction (draft #1958).** Fails its pre-registered criterion. The one Bonferroni-significant cell is on the INR proxy, consistent with the proxy's artificial day-to-day reversal. Nothing on real IBJA or COMEX.
+
+**R1 range forecast, U plain-language site:** executor agents in progress.
+- R1 branch: `feat/r1-range-forecast`.
+- U branch: `feat/plain-language-site`, for GG.
+
+**Data findings (FOUND, not fixed; GG's call where user-visible).**
+- `data/ibja_rates.parquet` is **not daily before 2025-Q2** (median gap 5–18 days) and has one row in 2026-Q1. Analyses now use dense segments only.
+- 13 of 182 rows in the INR direction dataset have "2-day" labels spanning 7–101 days. This affects the published direction numbers and the pre-registration's training rows. New post-registration days are daily.
+- COMEX analyses re-download from yfinance, and history revisions shift results slightly; datasets should be frozen as artifacts.
+
+**M3 (#1906, merged).** At n = 89, Wilson CI widths are 16–20 pp, so the comparison is underpowered. The static band under-covers at 90% (80.9%, CI 71.5–87.7%).
+
+## Checkpoint — 2026-09-24: G2 labels and v2 registration, G3 shadow, weekly range, regime test
+
+**PR state at session start.**
+- #1955 and #1964 were already merged.
+- #1956 (R3), #1958 (R4) and #1962 (plain-language site) conflicted. They were resolved by merging
+  master in, which needs no force-push.
+  - R3/R4 conflicted only in `tests/test_count_baseline.json`.
+  - #1962 conflicted only in README metric lines. **It re-conflicts every time docs-refresh rewrites
+    those lines**, so it was resolved twice. The PR's wording was kept verbatim and the values were
+    re-injected.
+  - A merge push on #1962 produced zero check runs because GitHub could not compute mergeability.
+    That is the #1539 shape again; `check_required_checks_positive.py` would have blocked it.
+- R3 (531 lines) and R4 (425 lines) are over the size gate and go to GG. So does #1962 (user-facing).
+
+**G2 — done before Sunday.**
+- #1980 builds labels only across consecutive IBJA publication days: at most one weekday without
+  a publication, i.e. one holiday; every such step since 2025-04 is a real holiday.
+- The brief's 13/182 h2 premise was verified, but the longest span is **122** days, not 101.
+- **h1 had the same defect** (10/184 labels, up to 101 days).
+- Rows 184 → 174; h2 labels 182 → 169.
+- Republished direction numbers (#1981, pre-approved):
+
+  | horizon | folds | always-up | logistic | LightGBM |
+  |---|---|---|---|---|
+  | h1 | 163 → 153 | 50.9% → 51.0% | 52.2% → 49.0% | 51.5% → 48.4% |
+  | h2 | 160 → 147 | 59.4% → 58.5% | 58.1% → 55.1% (p 0.42) | 55.0% → 55.8% |
+
+  Still no model beats always-up.
+- #1982 registers v2 (ADR 042):
+  - Same config, test, α and embargo. Consecutive-day labels. Registration date 2026-09-24.
+  - Reference re-frozen under the confirmatory protocol: n 146, effective n 111.31, 62.33% vs
+    58.90%, p 0.157, fold digest `f715a48e…`.
+  - `--check` reproduced on Windows (pinned venv) and on Linux (analysis run 35970400145).
+  - **Power target 891.70**, as max(144.17, v2 reference). This is flagged for GG, because it means
+    years before the test can be read.
+- On clean labels without the embargo, config J is *worse* than always-up (58.78% vs 59.46%). The
+  edge that selected it came from the leak plus the bridged labels.
+- **The A2b mystery is solved.** The first freeze (p 0.00340, effective n 119.38) reproduces exactly
+  under scikit-learn 1.7.2 / LightGBM 4.6.0 / pandas 2.2.3. Library versions are now part of the
+  frozen record.
+- The first v2-scoreable day is as_of 2026-09-25 (h2 label 09-29), so **Sunday 09-27 scores n = 0 by
+  construction**.
+
+**G3 — #1983 merged.** The R2 AM+PM nowcast runs as a forward shadow, append-only, from 2026-09-24.
+**The window ends 2026-10-22.** The expected sample is ~18–20 same-day days (effective n ~10–14),
+so only a gap as large as R2's can be confirmed.
+
+**Item 5, the weekly range.**
+- #1986 (model) and #1988 (ADR 043, measurement) are merged; #1989 (forward shadow) is pending.
+- The target is the whole path over 7 calendar days, with a real end date.
+- **Calibration did not narrow the range.** 7-day walk-forward: calibrated 84.0% [76.4, 89.5] at
+  8.89% width, vs raw 78.2% at 8.03% (n 119; about 24 non-overlapping weeks).
+- The brief's "85.6% over-coverage" premise did not reproduce under the path target. The promotion
+  PR waits for about 8–10 forward weeks.
+
+**7a, data sources.**
+- There is no free, legal daily MCX series: MCX blocks automated access, and Yahoo/stooq/investing
+  are unusable.
+- The WGC India premium series exists, but its terms forbid use without written permission.
+- The only free, clean option is a derived IBJA-vs-landed-parity premium from our own data. It needs
+  a dated duty table verified against CBIC.
+- GOLDBEES.NS has 17 years of history, under the same Yahoo-terms risk as the existing GC=F feed.
+  That risk needs GG's call.
+
+**7b, the volatility regime (ADR 044).**
+- Pre-registered (#1987) before any download.
+- **Found before the data:** D4's construction produces "momentum when calm" from pure noise. On iid
+  returns, calm-day VR(20) has a median of 1.16, with 17/40 false positives at nominal 5%.
+- On unseen GC=F 2001–2012 (n 2,816), the regime rule scores 50.4% vs always-up's 54.2% (p 0.999).
+  No secondary passes BH. The GLD check gives −4.7 points.
+- #1990 proposes withdrawing ADR 040's regime observation, for GG to confirm.
+
+**7c:** `scripts/analysis_pipeline_sensitivity.py` is running on Actions and separates the test
+floor from the learning floor.
+
+**P3:** not defined in the repo. The definition is needed from GG.
+
+**Process lessons.**
+- A `;` after pytest let a failing test get committed and pushed. It was fixed in the next commit.
+  Chain verification with `&&`.
+- Merge gate 3b correctly blocked #1988 until its body declared the reviewable/generated split.
+
+## Checkpoint — 2026-09-24 (PM): G1 target, G2 retraction, calibration floor, the derived premium, G3 hygiene
+
+**PR state at session start (verified, not taken from the brief).**
+- #1962 and #1956 were merged by GG.
+- **#1992 was not merged**, though the brief said it was. It was refreshed against master, passed
+  `check_required_checks_positive.py`, and was self-merged.
+- #1958 (R4): the baseline and ADR 039 conflicts were resolved by merging master in; both sides are
+  kept. All required checks pass. **It goes to GG**: 425 reviewable lines, over the gate.
+
+**#1962 verified live (Chrome, 412 px wide, EN and HI).**
+- No banned jargon was found. The main page and How-we-know text were run through
+  `BANNED_TERMS`.
+- Numbers render; there are no raw keys, `undefined` or `NaN`.
+- No console errors. There are two warnings about unused Devanagari font preloads on the EN page.
+- **Hindi falls back to English cleanly** for the calculator block and two #1962 lines.
+- **Found a hardcoded claim.** How-we-know labelled the next-day range "Right about 4 times out of
+  5", which is the 80% target, while the same page showed 73% measured (n 63). A fix is in draft
+  #2001, for GG: it floors the measured coverage.
+- **Also for GG:** the same page prints "p = 0.0000".
+
+**G1 — merged (#1997, ADR 042 Amendment B1).**
+- The power target is now sized for the smallest edge worth detecting: 5 points over always-up,
+  with the same conservative construction (std √0.16915).
+- **418.32 effective folds**, replacing 891.70.
+- Power:
+
+  | edge | at 144.17 | at 418.32 | at 891.70 |
+  |---|---|---|---|
+  | 3.4 points (the reference) | 25.9% | 52.3% | 80.0% |
+  | 5 points | 42.7% | 80.0% | 97.6% |
+
+- **Timeline:** about 0.51 effective folds per calendar day (0.664 labelled days × 0.762), so the
+  target is reached around **December 2028**, if IBJA capture has no gaps.
+- `--check` still reproduces the frozen reference.
+
+**G2 — merged (#1998).** ADR 040 now opens with a dated retraction note pointing to ADR 044, with
+inline markers. The original text is kept.
+
+**Item 6, calibration — ADR 045, #2000, goes to GG (601 lines).**
+- Registered at pushed commit `4b3686a5`, then run from that branch as analysis run 36000320396.
+  All 25 shards ran at `4b3686a5`, each on n = 3,201 COMEX test days.
+- **The floor does not come down.** Accuracy-test detections out of 100 seeds:
+
+  | learner | q = 0.15 | q = 0.20 |
+  |---|---|---|
+  | control | 57 | 86 (floor 0.20) |
+  | Platt | 34 | 29 |
+  | isotonic | 14 | 28 |
+  | temperature | 11 | 26 |
+  | ensemble + Platt | 34 | 98 (floor 0.20) |
+
+- The Brier test detected at most 2/100 for any learner. False alarms at q = 0: 0/100 everywhere.
+- Calibration cut the Brier deficit (−0.038 → −0.008) but did not beat climatology.
+- **Secondary, not the criterion:** the ensemble is steadier at q = 0.20 (paired 14 vs 2,
+  p = 0.0021), but its floor is no lower.
+
+**G4.**
+- **a. CBIC duty table — merged (#2004), `data/duty_cbic.json`, 2019 onward.**
+  - 2021–2024 rows were read in the notification text. The 2022 row was read from the Gazette. The
+    2023 and 2024 rows were re-read by me.
+  - 2026 was read on a third-party mirror only. SWS before 2022-07 is inferred.
+  - The 2013 rows are excluded: their notification numbers could not be verified.
+- **The live `data/duty_events.json` is wrong in three places (not changed; GG):**
+  - the 2024 cut is in force 07-24, not 07-23;
+  - the 2023-02-02 BCD/AIDC rebalancing is missing;
+  - the 2026 hike also moved AIDC 1→5% (total 6→15%).
+- **b. The derived premium (#2004).**
+  - 254 usable days, 183 of them dense. Mean −0.92%, sd 1.25 points.
+  - 2026-05-13 hike: +0.0% (n 14) before, −3.1% (n 6) after.
+  - Festivals: n 5 dense days, not readable.
+  - AR(1) is only 0.30. A third of the variance is the gold move between the COMEX close and
+    IBJA's fix (diagnostic, not usable for prediction). The residual AR(1) is 0.59.
+- **c. Sources (research, nothing switched):**
+  - **AMFI's terms prohibit storing or republishing site content**, so GOLDBEES NAV via AMFI is
+    also encumbered.
+  - SEBI circular HO/(68)2026-IMD-POD-2/I/5780/2026 (26 Feb 2026) exists on sebi.gov.in. Its body
+    was not read. Secondary sources say gold-ETF NAV moved from LBMA-fix-plus-AMC-adjustments to
+    MCX's polled domestic spot price from 2026-04-01. If so, NAV is a cleaner domestic price only
+    after that date.
+  - **No clean, free, daily COMEX replacement was found.**
+    - FRED's LBMA series was removed on 2022-01-31.
+    - LBMA moved its historical tables behind a licence in Nov 2025.
+    - CME needs a paid licence even for end-of-day data.
+    - The SSGA and iShares NAV CSVs prohibit redistribution.
+    - The World Bank Pink Sheet is CC BY 4.0 but monthly only.
+    - The Alpha Vantage and Twelve Data terms still need a first-hand read.
+  - **USD/INR has the same problem:** FBIL requires a licence to redistribute.
+- **d. Pre-registered, ADR 046 (#2006).** The test asks whether the premium's pull back to its
+  mean beats "yesterday's premium plus the global move" on next-fix IBJA error in ₹/g.
+  - Forward-only; read at n ≥ 120, about April 2027.
+  - The 2022–2026 run is exploratory only.
+
+**G3, code hygiene — #2005.**
+- 139 lines, almost all deletions:
+  - 9 dead Python symbols and the 6 tests that covered only them;
+  - 2 dead `app.js` functions, with the SW VERSION bumped.
+- Every removal was re-checked by grep on master.
+- Kept, with reasons in the PR: ADR-named, pre-registered and guard code.
+- Duplicated helpers (e.g. `_wilson_ci` ×3) are listed, not merged.
+- Headless tests pass on CI.
+- **SW VERSION hazard:** #2001 and #2005 both bump to "v54". Whichever merges second needs a new
+  VERSION.
+
+**Item 7, the weekly range.**
+- The forward shadow keeps running; the first entries are due on the Sunday 09-27 run.
+- **Draft copy for the promotion PR (GG):**
+
+  > **How much could the price move this week?**
+  > Over the next 7 days, the 22K price will most likely stay between ₹{low} and ₹{high}, about
+  > ₹{half} either way from today. Ranges like this have held {N} times out of 10 so far ({k} of
+  > {n} weeks checked). This shows how much gold usually moves in a week. It doesn't say which way
+  > it will go.
+
+  {N} comes from `times_out_of_ten(forward coverage)`, rounded down. There is one range statement
+  on the page, per ADR 043. The Hindi version needs native review.
+
+**Still to verify after Sunday 2026-09-27** (item 4):
+- v2 logs `[adr042-v2]` with n = 0 and the embargo recorded;
+- the M3 stratified shadow result, with n and Wilson CIs;
+- the first entries from the nowcast and weekly-range shadows.
+
+## Checkpoint — 2026-09-24 (evening): scorecard, weekend fix, range v2, features, day-of-week
+
+**Item 0, the scorecard (#2015, `reports/model_scorecard.json`, for GG, 566 lines).** Every model
+is scored against its simplest baseline on the same days.
+- **Nowcast** (n 90): ₹61.2/g [45.2, 77.2].
+  - It beats carry-forward (₹103.2, p 0.0007).
+  - It does **not** beat IBJA × a fixed markup (₹62.8, p 0.32).
+  - **Weekends:** carry-forward ₹46.0 beats the nowcast's ₹93.9.
+- **Morning variant:** ₹34.8 against ₹45.5 on IBJA days. This is in-sample; the forward shadow
+  decides.
+- **Fusion (shadow):** ₹45.6 overall; on weekends it ties carry-forward.
+- **Accuracy band:** 72.2% [62.2, 80.4]; stale-IBJA days 57.1%.
+- **Tomorrow's range:** 73.0% (n 63). A historical-simulation baseline covers the same days just
+  as well and is narrower.
+- **5-day volatility note:** says ±₹390; the median move was ₹218.
+- **Direction and Chronos:** do not beat their baselines. Chronos loses to no-change (p 0.00014).
+
+**PR state.** Merged:
+- #1958, #2000 (GG, after I fixed their baseline conflicts);
+- #2016 (day-of-week);
+- #2019 (feature flags);
+- #2021 (p-value fix, verified live in EN and HI).
+
+#2018 was closed and split into #2021 plus #2025, after the boundary-leak guard correctly refused
+duplicate commits across two PRs. **For GG:** #2015, #2017, #2020, #2022, #2024, #2025.
+
+**Item 4a, tomorrow's range v2 (#2017, ADR 047, frozen at `e0569575`).**
+- Retrospective, n 63: v2 covers 84.1% [73.2, 91.1] against the live 73.0%.
+- It is **31% wider**, which fails the pre-registered limit of 25%.
+- Forward n = 0.
+
+**Items 4b/4c, stale-IBJA days (#2024, ADR 048, frozen at `47d677ed`). Exploratory, n 28:**
+- live estimate ₹96.1, band 57.1%;
+- yesterday's Tanishq ₹52.5 (p 0.0078), band 75.0%;
+- same-day fusion ₹27.4 (n 16), band 87.5%.
+- **Process note:** the agent ran the pipeline once before its freeze commit, so this is
+  exploratory only.
+
+**Item 5.**
+- Flags merged, all OFF. Verified live: `?ff=` is ignored on the real host.
+- **F2** (#2020, ADR 049): on real IBJA, "about equally likely" holds at 1, 2 and 7 days. The
+  calibrated endpoint ranges meet 80% (walk-forward 84–86%).
+- **F1** (#2022):
+  - Tanishq charges 1.45% over IBJA on average (sd 1.55, n 148, AR(1) 0.76);
+  - GRT, Malabar and Kalyan are 1.0–1.2%;
+  - Kalyan snapshots have corrupt timestamps since 2026-09-08.
+- **F4:** running.
+
+**Item 7 (#2016, merged).** No weekday effect on untouched COMEX 2000–2012:
+- joint p 0.163;
+- an Indian Friday is not cheaper than Tuesday: 45.3% of 559 weeks, p 0.61.
+
+The site never advises a day. Of the brief's exploratory figures, all but two reproduce. The
+exceptions: the typical 2-day move is a median of ₹120/g (₹220 is 1 sd), and the cost of waiting
+2 days is 0.102% rather than 0.09%.
+
+**Terms (GG decisions).**
+- Tanishq's terms ban robots and allow only personal, non-commercial reproduction.
+- GRT bans scraping. Kalyan bans public reproduction. No Malabar terms page was found.
+- IBJA has no restriction.
+- Yahoo and FBIL data can't be redistributed.
+
+The D3 inventory lists every raw third-party file. It includes `reports/derived_premium.json`,
+which carries raw COMEX and USD/INR (I added it in #2004).
+
+**Environment.** Venvs under %TEMP% lose files mid-session. The persistent venv is
+`C:/Users/gaura/ml-projects/grt-venv`. Use `set -o pipefail` before piped verification chains.
+
+
+---
+
+## Checkpoint 2026-09-25: queue readiness, G1–G6, the volatility note, models 5a–5d, page_v2
+
+**Premises corrected.** #2017 and #2025 were already merged; the brief listed #2017 as unmerged.
+
+**Merged this session.**
+- #2040: ADR 047's shadow is wired into the weekly job.
+- #2047: ADR 049's shadow is wired in (#2020 itself was merged by GG).
+- #2054: ADR 059, the retailer-data mitigations. It records IBJA's terms and the binding rule that nothing commercial happens without a legal review of data rights.
+
+**Item 3, the live 5-day volatility note (#2039, waiting on GG).**
+- The wording and the measurement describe different things. The note said "about ±₹X over 5 days", but X was one standard deviation of a 5-day move (20-day volatility × √5), floored at half of an 80% interval's half-width.
+- On 2026-09-24 the floor was what set the number: raw 344.7, floor 364.9, shown as ₹350.
+- The median 5-day change over the last 30 days was ₹185 (24 pairs), so the note overstated moves about 1.9x.
+- The fix shows the measured median (`typical_move_5d`) and hides the note when there is no measurement.
+
+**Item 5, models.** All four were pre-registered and frozen before any outcome was computed.
+
+- **5a, Kalman nowcast** (#2050, ADR 055, frozen at `70d5474c`):
+  - Error falls to ₹30.3/g against ₹62.8 for IBJA × markup (n 90, effective n 68.8, p 1.5e-6), which passes Bonferroni and BH.
+  - On weekends it scores ₹16.3 against ₹46.0 for yesterday's Tanishq price (p 0.0025).
+  - It still **fails** its gate: the weekend band covers 96.2% [81.1, 99.3], which is too wide.
+  - An added check (exploratory) found that some retailer captures were taken after the target reading. With strictly earlier captures only, the overall and weekend wins hold, but the weekday wins lose Bonferroni.
+- **5b, adaptive ranges** (#2052, ADR 056): **negative.**
+  - Both variants cover 96.8% [89.1, 99.1] (n 63).
+  - Both are 1.63–1.65× wider than the live range, against a 1.25× limit.
+  - Winkler scores are significantly worse than ADR 047 v2.
+- **5c, markup reversion** (#2046, ADR 057, frozen at `79180541`):
+  - F1's AR(1) of 0.76 mostly comes from weekend carry-forward. On same-day pairs it is 0.43, and 0.24 once repeated days are removed.
+  - The historical test is exploratory. All four cells are inconclusive, with fewer than 15 signal days each.
+  - The forward shadow is pre-registered for a 2027 decision.
+- **5d, timing audit** (#2051, ADR 058):
+  - GC=F's daily close is the 13:30 ET settlement.
+  - With correct alignment, the FOMC effect reverses ADR 050: FOMC days move gold more than normal days (COMEX, next settlement: ratio 1.89, n 109, p 6e-9).
+  - It contradicts three earlier conclusions: ADR 032 ("timing misalignment ruled out"), R2's weekend finding, and ADR 046's premium mean reversion.
+
+**G1 (retailers).**
+- #2048 (polite access) and #2053 (the takedown switch, which reverts to IBJA × markup, with fallback proven on real data) are waiting on GG.
+- IBJA's API terms forbid republishing rates without written permission, which conflicts with the public `data/ibja_rates.parquet`. This is a GG decision.
+- Tanishq prices also appear, under other names, in `backtest.json`, `drift_metrics.json`, `metrics_history.json` and `commentary.json`.
+
+**G4 (#2049):** 10 claims inventoried, 6 of them previously ungated. **G5:** claude-config #36. **G2:** #2035 is ready, but over the size gate.
+
+**Live bug found:** the phone page scrolled 60px sideways. The cause is the hero glow's `right: -80px`. #2055 adds `main { overflow-x: clip }` plus a headless test, which fails on master in 6 of 8 cases.
+
+**Process notes.**
+- Ten parallel agents hit the API session limit, and the in-flight work was resumed from each agent's worktree. Run at most about 5 agents at once.
+- Six open PRs each set the service-worker VERSION to v58: #2037, #2038, #2039, #2049, #2053 and #2055. Whichever merges later takes the next number.
+
+
+---
+
+## Checkpoint 2026-09-25 (second brief): E1–E5, the Kalman leak audit, the SW version loop
+
+**Premises verified.** #2039 and claude-config #36 were merged by GG, and the `DATA_ENC_KEY` secret exists.
+
+**Hook gap (a GG action).** The merge-guard hook that actually runs is `~/.claude/scripts/merge_gate.py`. That checkout sits on the local branch `fix/gate4-real-checks-and-pr-scoped-waiver`, which carries unpushed commits and uncommitted edits, and it does **not** yet contain #36's analysis-only exemption. A dry run with #36's gate passes #2015, #2050, #2051, #2052 and #2061 once their PR bodies state the reviewable/generated split, but the active hook still denies them on size.
+
+**Merged this round.**
+- #2071: E5 wording P2–P5, all four passing the accuracy, neutrality and estimate-labelling tests. Verified live: service-worker `v61-20260925-retailer-wording`, new strings served.
+- #2077: the weekly-range shadow log no longer carries raw IBJA rates. The file had never been written, so none were published.
+
+**Item 3, Kalman leak audit** (#2070, stacked on #2050):
+- **Real leaks found:**
+  - GRT captures made after the target, on 24 of 56 days (median 403 min late);
+  - Malabar captures after the target, on 20 of 48 days;
+  - IBJA PM used before 17:00 IST on 6 days.
+- **After correcting them**, Kalman still beats IBJA × markup overall: ₹35.1 vs ₹62.4 (n 90, effective n 67.0, p 1.3e-4).
+- **It loses on every stratum to Tanishq's last reading before the target:**
+  - all days: ₹35.1 vs ₹13.9;
+  - weekdays: ₹40.0 vs ₹18.5;
+  - weekends: ₹22.9 vs ₹2.7.
+
+  That baseline was never tested before. The earlier weekend claim ("₹16.3 vs yesterday's ₹46.0") used the wrong baseline.
+- The band now over-covers on weekdays as well (92.2%).
+- **Kalman v2 was not started**, because the model is not sound as claimed.
+
+**E3 Tanishq update times** (#2078):
+- 72% [62, 79] of rate changes fall between 10:00 and 11:59 IST.
+- No change was dated to a Sunday across 17 Sundays.
+- Captures are a median 5.1 h apart, so each change is known only to within a median of 260 min. The pre-registered rule therefore calls for a measurement window (GG's decision).
+- **Staleness:** today 439 min mean. A timed schedule triggered from the laptop would give about 20 min if every visit ran; at the measured 38% runner-unavailability, about 165 min.
+- **GitHub scheduler:** 4.7 of 8 runs a day, a median of at least 102 min late.
+- **Kalyan:** identical across cities in 259 of 259 cycles.
+
+**E4:**
+- #2072: superseded notes for ADR 032, the R2 weekend finding and ADR 046. It waits on #2051.
+- #2073: the `drivers.py` fix. It uses hourly bars at each fix, which cut the unexplained spread from 1.35% to 0.63% and raise direction agreement from 68% to 90%, n 207. The lagged daily bar the brief asked for measured worse (1.55%).
+  - An independent verifier passed it with notes; all three notes are now fixed, each with a test that fails on the old code.
+  - One of them was a bug where the headline gave the rupee the wrong sign.
+
+**E1 encryption** (#2075, draft):
+- AES-256-GCM, with the file path and schema version bound in as associated data.
+- Round trip, tamper detection and key-leak tests all pass.
+- ADR 044 and ADR 052 `--check` reproduce exactly from the decrypted snapshots.
+- Git history still holds the old plaintext; it is not rewritten.
+
+**E2 hero** (#2069, stacked on #2053): no estimate is ever labelled as Tanishq's price. A property test covers 960 state combinations.
+
+**Item 1:** #2068 builds the service-worker VERSION from a hash of the shell files at deploy time. It stays inert until GG sets `PAGES_BUILD_MODE=actions` and switches the Pages source.
+
+## Checkpoint 2026-09-26 (cloud session): merge-train audit and recovery
+
+**Resume point for any later session.** This session ran in a cloud container and has no memory
+after it ends.
+
+**Environment.** The container's original `/home/user/repo` was a disconnected 2-commit "seed"
+snapshot with no remote. The earlier cloud session's figures came from that snapshot and are stale.
+Its local-only commit `69d83b1` on `docs/architecture-drift-fix` exists only there. This session
+attached the real repo and cloned it to `/home/user/gold-rate-tracker`: full history, 3171 commits,
+origin/master `e180bdf`. Push and REST API work. GraphQL is blocked, so `gh pr view` fails;
+`scripts/check_required_checks_positive.py` was run through a scratch shim that answers
+`gh pr view --json headRefOid` over REST. The repo's script was not modified.
+
+**Merge train: what happened (VERIFIED).**
+- Every merge GG made on 2026-09-26 was a squash merge: every merge commit has one parent. This
+  includes #2022 → `30c0e86` and #2028 → `e180bdf` on master.
+- After those two, every later train PR conflicted with master on `tests/test_count_baseline.json`,
+  and only on that file. #2086 also conflicts on five bot data files.
+- PRs merged after a skipped PR went into the skipped PR's branch, because their base was that
+  branch and it was never retargeted. They show "Merged", but the code is not on master.
+- Only #2022 and #2028 are on master, checked by merge-tree content equality.
+- GG's "#2029" is #2089. #2029 is a 2026-09-24 bot PR, and #2089 is the only unmerged, un-held
+  train PR missing from GG's conflict list.
+- Simulation from `1d78d59f`, master just before #2022: "Create a merge commit" merges all 24 in
+  order with 0 conflicts, and the result equals #2091's tip plus master's bot data. Squash
+  conflicts on every PR after #2028. The cause is the merge method, not master moving: the bot
+  commits touched only data, README, og.png and Lighthouse files, and all of those merged cleanly.
+- The stack tip `72806bf` (head of #2091) contains every train PR except the held #2078. Each
+  stranded branch's tree is byte-identical to a PR head inside that tip.
+
+**Recovery.**
+- **#2119** `fix/merge-train-recovery`: one merge commit bringing `72806bf` into master. Baseline
+  resolved as a union with the max per file, which equals the stack's version. Bot data files are
+  identical to master's. STOP for GG; merge with "Create a merge commit".
+- **#2120** `refactor/per-file-test-count-baseline` (item 2, stacked on #2119): one `.count` file
+  per test file. STOP for GG.
+
+**Open PRs from this session.** They must be merged in this order, each with **"Create a merge
+commit"**, never squash:
+
+| Order | PR | Branch | What | Merges |
+|---|---|---|---|---|
+| 1 | #2119 | `fix/merge-train-recovery` | the recovered train | GG |
+| 2 | #2120 | `refactor/per-file-test-count-baseline` | item 2, one `.count` file per test file | GG |
+| 3 | #2121 | `docs/architecture-drift-fix` | item 4, including a `_config.yml` line | GG |
+| 3 | #2122 | `fix/direction-eval-known-at-inputs` | 3b F1 | GG |
+| 3 | #2123 | `fix/nowcast-shadow-exclude-late-ibja` | 3c F2, ADR 063 | GG |
+| 3 | #2124 | `feat/history-off-tanishq-series` | 3d | GG |
+| 3 | #2078 | `feat/tanishq-timed-visits` | 3a mixed schedule; retargeted onto #2120 | GG |
+| 3 | this PR | `docs/checkpoint-2026-09-26-merge-train` | this checkpoint and the ADR 050 amendment A1 | self-merge (docs-only) |
+
+Items in order 3 are independent of each other once #2119 and #2120 are in.
+
+**Decisions and numbers (VERIFIED unless marked).**
+- **3a.** The schedule is section 4 variant A: 01:40, 07:30, 10:40, 11:10, 15:35, 19:50 IST. At
+  q = 0 it gives 19.7 min mean staleness (11.9–73.0), against U30's 304, and 0 h/day "not fresh".
+  T14 stays at 30 h. That rests on a simulation (INFERRED; it assumes independent misses): about
+  1 false alert per 65 weeks for the mixed schedule, against 1 per 54 for 4a.
+- **3b, F1.**
+  - h1: logistic 49.0% → 47.7% and LightGBM 48.4% → 51.0%, against always-up 51.0%, n = 155.
+  - h2: logistic 55.0% → 55.7% and LightGBM 55.7% → 59.1%, against 58.4%, n = 149.
+  - Nothing is significant (two-sided McNemar p ≥ 0.42). Late inputs dropped from 505 to 0 (h1)
+    and from 478 to 0 (h2).
+- **3c, F2.** The six late-IBJA days are in R2's historical data, not in the G3 window (a premise
+  in the brief was wrong). The decision now counts certified days only.
+- **3d.** Tested against the real app.js: with `prices.json` cut to today, the pre-change app
+  loses history, sparkline, comparisons and the good-price card. After the change, all of them
+  render from the estimate, labelled as such.
+- **3e.** ADR 050 amendment A1, in this PR.
+
+**Environment notes for the next cloud session.**
+- `gh pr view/list/diff` use GraphQL, which is blocked, so the repo's check scripts need a
+  REST shim. This session's shim was scratch-only.
+- `api.github.com` pagination via `--paginate` is blocked (numeric-ID URLs), and CI job logs
+  cannot be downloaded.
+- Playwright 1.62.1 needs browser build 1234 while the container ships 1194. This session used
+  a symlinked `PLAYWRIGHT_BROWSERS_PATH`.
+- `app.js`, `style.css`, `service-worker.js`, `CURRENT_STATE.md`, `docs/RUNBOOK.md`,
+  `ml/notifications.py` and `.github/workflows/lint.yml` are CRLF. Preserve that.
+
+**Next:**
+- After Sunday 2026-09-27's runs, record [adr042-v2] n = 0 with embargo, the M3 stratified
+  result (n and Wilson CIs), and the first nowcast and weekly-range shadow entries.
+- On 2026-10-22, the morning-rate decision, with F2 applied.
+
+### Checkpoint 2026-09-27 (Sunday runs)
+
+**Run.** `weekly-backtest.yml` run `36302778519` (scheduled, created 07:20Z, success) ran on
+master `8557e530`. That is master's own code: #2119 was not merged, so none of the train's code
+ran. Its results landed as #2143 (`da884b6c`). Every number below is VERIFIED from the committed
+files.
+
+- **[adr042-v2] live_h2:** n = 0. Embargo column `label_date_h2`, confirmatory after 2026-09-24,
+  consecutive-day labels, and no as_of date scored yet. `reached_preregistered_n` is false; the
+  power target is n = 418.3.
+  - The non-confirmatory proxy arm (`proxy_deadzone_h1_equivalent`): n 329, accuracy 52.6% vs
+    always-up 55.6%, DM p 0.789.
+- **M3 stratified band** (`data/calibration_band_coverage.json` → `stratified_shadow`). This is the
+  first result, the one ADR 035 named. Nominal target is 80%.
+
+  | | n | Production band | Stratified band |
+  |---|---|---|---|
+  | Pooled | 93 | 69.9% (Wilson 59.9–78.3%), p vs nominal 0.019 | 80.6% (71.5–87.4%), p 1.0 |
+  | Same-day | 63 | 77.8% (66.1–86.3%) | identical |
+  | Carry-forward | 30 | 53.3% (36.1–69.8%), p 0.0009 | 86.7% (70.3–94.7%) |
+
+  - On carry-forward days, the stratified band's mean half-width is Rs 204.1/g, against 78.1
+    for production.
+  - **Caveat (INFERRED from the file history):** last week's file had n = 86 and no stratified key,
+    so only about 7 of these 93 days are new since the stratified rule was written. The rest are
+    the development window it was built on. This is not yet out-of-sample evidence.
+- **Nowcast shadow (G3).** First 2 rows, logged by master's pre-#2090 runner, without
+  `inputs_known_after_target`.
+  - 09-25 is same-day: truth 14,055, M0 14,128.32, M3 14,047.10.
+  - 09-26 is a carry-forward day (gap 1).
+  - `n_same_day` = 1. No MAE or p is computed below 3 days.
+  - F2 certification with #2123's code: 09-25 passes. IBJA was fetched 12:56Z, before the
+    17:05Z reading. So 1 certified day and 0 excluded.
+- **Weekly-range shadow.** First 2 entries, as_of 09-25. The 1d band is 136,630.1–142,377.0 per
+  10 g (n_cal 193); the week band is 133,221.7–147,340.1 (n_cal 156). Neither is scored yet.
+
+**Readiness.**
+- #2119 had gone conflicting with master: #2143 rewrote `data/wait_or_buy_today.json` with
+  master's old script, which **republishes IBJA's price level (`price_t`) in a publicly served
+  file**. The train's script omits that level (`test_committed_wait_or_buy_today_has_no_ibja_level`).
+- I merged master in and kept the train's compliant version (`3c1bce59`). lint and pwa-js are
+  green, completed after master's last commit, and the positive check PASSES.
+- The full 8-PR sequence still dry-runs with 0 conflicts on master `2ce2c77e`.
+
+### Checkpoint 2026-09-28 (Monday eval)
+
+- **Run.** `eval-direction.yml` run `36409139893` (scheduled, created 10:20Z, success) ran on
+  master `1e60cb81`. #2122 (F1) is not merged, so master's harness ran: it has no feature leak
+  guard at all. Its results landed as #2168.
+- **Published numbers** (`data/direction_baseline.json`, as_of range 2025-04-15..2026-09-24,
+  VERIFIED):
+
+  | Horizon | n folds | Logistic | LightGBM | Always-up | p (logistic / LightGBM) |
+  |---|---|---|---|---|---|
+  | h1 | 155 | 49.03% | 48.39% | 50.97% | 0.818 / 0.724 |
+  | h2 | 149 | 55.03% | 55.70% | 58.39% | 0.424 / 0.694 |
+
+  Both gates are closed.
+- **Cross-check.** These equal the "before" row of ADR 061 A1 exactly. That row was computed
+  offline on the #2119 tree, whose guard only reports and does not change any number. So the
+  A1 "after" row (h1 47.7% / 51.0%, h2 55.7% / 59.1%) is what the first run after #2122 merges
+  should publish, unless new data rows arrive first.
+- **Merge train.** Still nothing merged. #2119 is at head `db8f023a` with green checks, and it
+  merges cleanly into current master. Master has moved since then only through bot commits:
+  data files plus the weekly auto-updated `docs/DIRECTION_SIGNAL_STATUS.md`.
+
+### Checkpoint 2026-09-28 (evening): train merged, live price and drop alerts fixed
+
+GG delegated merge and close authority on 2026-09-28 and asked that the site show the live
+price and that ntfy alert on a live price drop.
+
+**Merged.** All with "Create a merge commit". Each PR was brought up to date with master, got
+green lint and pwa-js, and passed `check_required_checks_positive.py` right before merging.
+- #2119 (`6ed44a9b`, 2 parents)
+- #2120 (`118fc85a`)
+- #2121 (`87dcd5bd`)
+- #2122 (`9c883457`)
+- #2123 (`d91ac564`)
+- #2124 (`47e254fe`)
+- #2125 (`45fac038`)
+- #2187 (`41b967d9`)
+
+**Closed as superseded**, after proving each head's tree equals a train PR head that is now an
+ancestor of master: #2070, #2086, #2089, #2073, #2053, #2091. (#2061 was already closed.)
+**Held:** #2078, the timed Tanishq visits. It needs GG's laptop Task Scheduler setup. Without that,
+it would cut GitHub's nominal visits from 8 a day to 6.
+
+**Incident (VERIFIED).**
+- IBJA's 22K AM fix on 09-28 was Rs 135,612 per 10 g, against Friday's PM of Rs 139,336 (−2.7%).
+- GitHub's scheduler created no Tanishq scrape between 05:13Z and 13:43Z, and no `check-price`
+  run between 07:31Z and 13:43Z.
+- The site showed Rs 14,040. Then, once Tanishq passed the 8 h window, it showed the IBJA
+  estimate of Rs 14,140, built from Friday's PM.
+- No drop alert fired.
+- Manual dispatches captured Tanishq at Rs 13,710 (13:45Z). That is live now.
+
+**#2187 fix.**
+- **Estimate:** uses a newer day's AM fix. On 81 days, MAE Rs 60.5/g vs Rs 151.6/g for the
+  previous PM; paired Wilcoxon p = 3.7e-7.
+- **T3:** compares with the last *different* price, once per change, only for changes first seen
+  within 24 h. The old "last two readings" rule went blind once a second scrape landed at the new
+  price.
+- **T15 (new):** the benchmark moved ≥ Rs 150/g between its two latest fixes.
+- **Unverified:** delivery of today's alert. The Actions cache and job logs cannot be read from
+  the cloud session. GG to confirm on the phone.

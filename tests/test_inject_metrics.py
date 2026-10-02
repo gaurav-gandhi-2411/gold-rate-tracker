@@ -137,6 +137,7 @@ def test_unclosed_frozen_block_raises(fixture_json):
         ("pct2", "88.54%"),
         ("num1", "0.9"),
         ("int", "0"),  # 0.8854 truncates to 0 -- exercises the int formatter, not a realistic use
+        ("frac10", "about 8 times out of 10"),  # 0.8854 floors to 8, not 9
     ],
 )
 def test_format_specifiers(fixture_json, fmt, expected):
@@ -144,6 +145,47 @@ def test_format_specifiers(fixture_json, fmt, expected):
     rendered, errors = inject_metrics.render_file(text)
     assert errors == []
     assert expected in rendered
+
+
+# ── frac10 (U2 plain-language format, docs/PLAIN_LANGUAGE_AUDIT.md) ──────────
+
+
+@pytest.mark.parametrize(
+    "value,expected",
+    [
+        (0.709, "about 7 times out of 10"),  # the motivating README case -- never "8"
+        (0.78, "about 7 times out of 10"),  # floors, never rounds to the nearest
+        (0.04, "less than 1 time out of 10"),  # floor(0.4) == 0 -- singular-safe zero case
+        (0.15, "about 1 time out of 10"),  # floor(1.5) == 1 -- singular "time", not "times"
+        (1.0, "about 10 times out of 10"),  # upper bound, clamped not overflowed
+    ],
+)
+def test_frac10_floors_never_overstates(tmp_path, monkeypatch, value, expected):
+    monkeypatch.setattr(inject_metrics, "ROOT", tmp_path)
+    (tmp_path / "data").mkdir()
+    (tmp_path / "data" / "m.json").write_text(json.dumps({"v": value}))
+    text = "<!--METRIC:data/m.json#v:frac10-->STALE<!--/METRIC-->"
+    rendered, errors = inject_metrics.render_file(text)
+    assert errors == []
+    assert expected in rendered
+
+
+def test_frac10_rejects_n_modifier(fixture_json):
+    # frac10 exists to replace the raw "value% (n=N, ...)" shape -- combining
+    # it with n= would silently reintroduce the exact pattern it's for.
+    text = _marker("coverage", "frac10", "|n=n")
+    rendered, errors = inject_metrics.render_file(text)
+    assert rendered == text
+    assert len(errors) == 1
+    assert "cannot be combined with frac10" in errors[0]
+
+
+def test_frac10_rejects_ci_modifier(fixture_json):
+    text = _marker("coverage", "frac10", "|ci=wilson_ci_low,wilson_ci_high")
+    rendered, errors = inject_metrics.render_file(text)
+    assert rendered == text
+    assert len(errors) == 1
+    assert "only supports pct1/pct2" in errors[0]
 
 
 def test_unknown_format_reports_error(fixture_json):

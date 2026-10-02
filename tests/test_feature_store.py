@@ -68,6 +68,7 @@ def _make_snapshot(as_of_date: str, **overrides: object) -> dict:
         "vix": 14.5,
         "crude_wti": 78.0,
         "tips": 2.1,
+        "india_vix": 13.2,
         # per-series asof dates
         "gold_usd_asof_date": "2026-06-06",
         "usd_inr_asof_date": "2026-06-06",
@@ -77,6 +78,7 @@ def _make_snapshot(as_of_date: str, **overrides: object) -> dict:
         "vix_asof_date": "2026-06-06",
         "crude_wti_asof_date": "2026-06-06",
         "tips_asof_date": "2026-06-06",
+        "india_vix_asof_date": "2026-06-06",
         # prices
         "ibja_pm_916": 74500.0,
         "ibja_am_916": 74400.0,
@@ -349,7 +351,7 @@ class TestPartialFlag:
 
 
 def _make_mock_macro_parquet(tmp_path: Path) -> Path:
-    """Write a minimal macro_cache.parquet with 5 rows and all 8 series."""
+    """Write a minimal macro_cache.parquet with 5 rows and all 9 series."""
 
     import pandas as pd
 
@@ -363,6 +365,7 @@ def _make_mock_macro_parquet(tmp_path: Path) -> Path:
         "vix": [18.0] * 5,
         "crude_wti": [72.0] * 5,
         "tips": [110.0] * 5,
+        "india_vix": [15.0] * 5,
     }
     df = pd.DataFrame(data, index=dates)
     out = tmp_path / "macro_cache.parquet"
@@ -405,21 +408,26 @@ def _make_mock_prices_json(tmp_path: Path) -> Path:
 
 
 def _make_mock_duty_json(tmp_path: Path, event_date: str = "2000-01-01") -> Path:
-    """Write a minimal duty_events.json with one past event."""
+    """Write a minimal duty_cbic.json-shaped table with one verified row."""
     import json
 
-    data = [
-        {
-            "date": event_date,
-            "event_type": "duty_change",
-            "direction": "cut",
-            "magnitude_pct": None,
-            "note": "Mock duty event for tests",
-            "source": "test",
-        }
-    ]
-    out = tmp_path / "duty_events.json"
-    out.write_text(json.dumps(data), encoding="utf-8")
+    table = {
+        "rows": [
+            {
+                "effective_date": event_date,
+                "bcd_pct": 10.0,
+                "aidc_pct": 0.0,
+                "sws_pct": 0.0,
+                "total_duty_pct": 10.0,
+                "notification": "test",
+                "source": "test",
+                "status": "Mock duty row for tests",
+            }
+        ],
+        "unverified_pre_2019": {"rows": []},
+    }
+    out = tmp_path / "duty_cbic.json"
+    out.write_text(json.dumps(table), encoding="utf-8")
     return out
 
 
@@ -673,7 +681,7 @@ def _make_backfill_ibja_parquet(
 
 
 def _make_backfill_macro_df(dates: list[str]) -> pd.DataFrame:
-    """Return a mock macro DataFrame with a UTC DatetimeIndex and all 8 series."""
+    """Return a mock macro DataFrame with a UTC DatetimeIndex and all 9 series."""
     index = pd.to_datetime(dates, utc=True)
     data = {
         "gold_usd": [3200.0] * len(dates),
@@ -684,26 +692,32 @@ def _make_backfill_macro_df(dates: list[str]) -> pd.DataFrame:
         "vix": [18.0] * len(dates),
         "crude_wti": [72.0] * len(dates),
         "tips": [110.0] * len(dates),
+        "india_vix": [15.0] * len(dates),
     }
     return pd.DataFrame(data, index=index)
 
 
 def _make_backfill_duty_json(tmp_path: Path) -> Path:
-    """Write a minimal duty_events.json for backfill tests."""
+    """Write a minimal duty_cbic.json-shaped table for backfill tests."""
     import json
 
-    data = [
-        {
-            "date": "2024-07-23",
-            "event_type": "duty_change",
-            "direction": "cut",
-            "magnitude_pct": None,
-            "note": "test",
-            "source": "test",
-        }
-    ]
-    out = tmp_path / "duty_events.json"
-    out.write_text(json.dumps(data), encoding="utf-8")
+    table = {
+        "rows": [
+            {
+                "effective_date": "2024-07-24",
+                "bcd_pct": 5.0,
+                "aidc_pct": 1.0,
+                "sws_pct": 0.0,
+                "total_duty_pct": 6.0,
+                "notification": "test",
+                "source": "test",
+                "status": "test",
+            }
+        ],
+        "unverified_pre_2019": {"rows": []},
+    }
+    out = tmp_path / "duty_cbic.json"
+    out.write_text(json.dumps(table), encoding="utf-8")
     return out
 
 
@@ -848,7 +862,7 @@ class TestBackfill:
 
 class TestNMacroNull:
     def test_n_macro_null_zero_when_all_macro_present(self, tmp_path: Path) -> None:
-        """capture_daily_snapshot sets n_macro_null=0 when all 8 series are available."""
+        """capture_daily_snapshot sets n_macro_null=0 when all 9 series are available."""
         store = _store_path(tmp_path)
         macro = _make_mock_macro_parquet(tmp_path)
         duty = _make_mock_duty_json(tmp_path)
@@ -858,8 +872,8 @@ class TestNMacroNull:
         df = load_snapshots(store)
         assert int(df.iloc[0]["n_macro_null"]) == 0
 
-    def test_n_macro_null_eight_when_macro_missing(self, tmp_path: Path) -> None:
-        """capture_daily_snapshot sets n_macro_null=8 when macro cache is unavailable."""
+    def test_n_macro_null_nine_when_macro_missing(self, tmp_path: Path) -> None:
+        """capture_daily_snapshot sets n_macro_null=9 when macro cache is unavailable."""
         store = _store_path(tmp_path)
         duty = _make_mock_duty_json(tmp_path)
 
@@ -870,7 +884,7 @@ class TestNMacroNull:
         )
 
         df = load_snapshots(store)
-        assert int(df.iloc[0]["n_macro_null"]) == 8
+        assert int(df.iloc[0]["n_macro_null"]) == 9
 
     def test_n_macro_null_column_always_written(self, tmp_path: Path) -> None:
         """n_macro_null column is present in the parquet after any append_snapshot call."""

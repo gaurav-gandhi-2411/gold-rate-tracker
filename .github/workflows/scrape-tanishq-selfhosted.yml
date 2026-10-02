@@ -43,6 +43,7 @@ on:
 permissions:
   contents: write # needed so the action can commit prices.json back to the repo
   pull-requests: write # needed to open/auto-merge the tanishq-sync PR (master requires status checks)
+  actions: write # needed to dispatch check-price.yml once a new reading is on master (step at the end)
 
 jobs:
   scrape-tanishq-selfhosted:
@@ -126,8 +127,27 @@ jobs:
         working-directory: scraper
         run: npx playwright install --with-deps chromium
 
+      - name: Check retailer takedown switch (ADR 059)
+        # config/retailers.json -- docs/RETAILER_TAKEDOWN.md. exit 0 = enabled,
+        # 10 = disabled (skip the live fetch), anything else = config error (fail).
+        id: switch
+        run: |
+          set +e
+          node scraper/retailer-enabled.mjs tanishq
+          code=$?
+          set -e
+          if [ "$code" -eq 0 ]; then
+            echo "enabled=true" >> "$GITHUB_OUTPUT"
+          elif [ "$code" -eq 10 ]; then
+            echo "enabled=false" >> "$GITHUB_OUTPUT"
+            echo "::notice::Tanishq is disabled in config/retailers.json -- no request sent (ADR 059)."
+          else
+            exit "$code"
+          fi
+
       - name: Scrape Tanishq and update prices.json
         id: scrape
+        if: steps.switch.outputs.enabled == 'true'
         working-directory: scraper
         continue-on-error: true
         # NTFY_TOPIC/DROP_THRESHOLD removed: update-and-notify.js no longer sends
@@ -193,8 +213,14 @@ jobs:
             fi
           fi
           OUTCOME="${{ steps.scrape.outcome }}"
+          # A deliberate takedown (switch says enabled=false, ADR 059) skips the scrape on
+          # purpose: that is not a failure, so it must not feed T12 a false "runner failing"
+          # alert every day. Keyed on the switch's explicit output, not on outcome=skipped,
+          # so a switch/config ERROR (no output) still counts as a failure.
           if [ "$OUTCOME" = "success" ]; then
             NEW_COUNT=0
+          elif [ "${{ steps.switch.outputs.enabled }}" = "false" ]; then
+            NEW_COUNT=$PRIOR_COUNT
           else
             NEW_COUNT=$((PRIOR_COUNT + 1))
           fi
@@ -237,6 +263,7 @@ jobs:
           fi
 
       - name: Sync Tanishq reading via bot PR
+        id: sync
         # Separate branch from bot/data-sync (used by check-price.yml's `check`
         # job) so the two jobs' commits never race for the same PR/branch.
         # always() so this still runs (and pushes the health-record commit)
@@ -251,3 +278,14 @@ jobs:
           token: ${{ secrets.CI_MERGE_PAT }}
           wait-minutes: "15"
           ntfy-topic: ${{ secrets.NTFY_TOPIC }}
+
+      - name: Refresh the site's price now (dispatch check-price)
+        # 2026-09-29: bot commits carry [skip ci], so a merged Tanishq reading reached the site only at
+        # check-price.yml's next SCHEDULED run -- which GitHub delayed or dropped for hours (09-28 and
+        # 09-29: ~8.5 h each). The sync step exits 0 only after its PR merged, so the reading is on
+        # master here. GITHUB_TOKEN may dispatch workflow_dispatch runs (unlike push events).
+        if: always() && steps.scrape.outcome == 'success' && steps.sync.outcome == 'success'
+        continue-on-error: true
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh workflow run check-price.yml --repo "${GITHUB_REPOSITORY}" --ref master

@@ -1,0 +1,22 @@
+{
+  "schema_version": 1,
+  "promoted": "direction",
+  "approved_by": "GG",
+  "approved_at": "2026-10-02",
+  "instruction": "Direction Signal is still off - why can't we ensure that we get a direction signal, please ensure it in this turn, no pushback.",
+  "model_version": "nextfix_ridge_mlp_v1",
+  "scope": "Show the next official-rate direction (up / down / too close to call) with its probability, only while ml.nextfix's forecast is active AND decide_direction_signal ships on ml.nextfix's own out-of-sample track record (data/nextfix_oos.json), re-checked every run. The stricter timing gate (buy/wait/sell) is NOT promoted.",
+  "evidence_at_promotion": {
+    "n_test_folds": 137,
+    "window": "2025-07-17 .. 2026-09-22",
+    "accuracy": 0.6569,
+    "always_up_accuracy": 0.4891,
+    "p_value": 0.0038,
+    "brier": 0.2193,
+    "always_up_brier": 0.5109,
+    "ece": 0.0643,
+    "direction_gate": "ship",
+    "timing_gate": "hold_dark (ECE 0.0643 > 0.05)"
+  },
+  "adr": "docs/adr/064-next-fix-model-and-direction-signal.md"
+}

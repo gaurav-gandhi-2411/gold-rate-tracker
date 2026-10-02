@@ -7,7 +7,8 @@ Tickers fetched daily from Yahoo Finance:
   ^TNX     — US 10-year Treasury yield (%)
   DX-Y.NYB — US Dollar Index (DXY)
   ^BSESN   — BSE Sensex
-  ^VIX     — CBOE Volatility Index
+  ^VIX     — CBOE Volatility Index (US)
+  ^INDIAVIX — NSE India VIX (domestic equity volatility)
 
 Usage (from repo root):
     python ml/macro.py          # incremental update — appends last 14 days to cache
@@ -15,9 +16,18 @@ Usage (from repo root):
 
 Reads:  data/macro_cache.parquet (if present)
 Writes: data/macro_cache.parquet (incremental merge, new data wins on overlap)
+        data/macro_intraday.parquet (last INTRADAY_LOOKBACK_DAYS of 1-hour GC=F / INR=X
+        closes, UTC index = bar START; read by ml/drivers.py to price each IBJA fix at its
+        own instant -- ADR 058 A16. Best effort: a failed fetch is logged, never fatal.)
 
 The cache is NOT committed to the repo — it is regenerated on every CI run by the
 "Fetch macro features" step (continue-on-error: true), and read by forecast.py.
+
+Each core series (usd_inr, gold_usd, ...) is forward-filled across weekends and
+holidays so every row has a value, but each also carries a companion
+"<col>_asof_date" column (e.g. usd_inr_asof_date) recording the date that value
+was ACTUALLY last observed — see _derive_features docstring for the timestamp
+convention (ADR 058 finding A4 / proposed fix #6).
 """
 
 from __future__ import annotations
@@ -42,6 +52,11 @@ sys.path.insert(0, str(Path(__file__).parent.parent))
 
 DATA_DIR = Path(__file__).parent.parent / "data"
 CACHE_PATH = DATA_DIR / "macro_cache.parquet"
+INTRADAY_PATH = DATA_DIR / "macro_intraday.parquet"
+# drivers.py needs a 30-day window plus a few days of slack; Yahoo serves 1-hour bars for up to
+# 730 days, so 60 days is well inside the limit and keeps the download small.
+INTRADAY_LOOKBACK_DAYS = 60
+INTRADAY_TICKERS: dict[str, str] = {"gold_usd": "GC=F", "usd_inr": "INR=X"}
 
 # Map internal column names → Yahoo Finance ticker symbols
 TICKER_MAP: dict[str, str] = {
@@ -53,6 +68,7 @@ TICKER_MAP: dict[str, str] = {
     "vix": "^VIX",
     "crude_wti": "CL=F",
     "tips": "TIP",
+    "india_vix": "^INDIAVIX",
 }
 
 # Calendar days of history to fetch on first run (cold start)
@@ -146,15 +162,54 @@ def _derive_features(df: pd.DataFrame) -> pd.DataFrame:
     Forward-fill core series across weekends/holidays, then compute derived features.
 
     Input columns expected: usd_inr, gold_usd, us_10y_yield, dxy, sensex, vix.
+
+    As-of tracking (ADR 058 finding A4 / proposed fix #6)
+    -------------------------------------------------------
+    The ffill below makes every core column NaN-free, but it also masks
+    staleness: a Saturday row's `usd_inr` is really Friday's close, and
+    nothing records that. For each core column this function adds a
+    companion `<col>_asof_date` column holding the date that column's value
+    was ACTUALLY last observed (the row's own date on a genuine reading,
+    forward-filled itself on filled rows) -- e.g. `usd_inr_asof_date`.
+    `<col>` itself is unchanged; this is purely additive.
+
+    Timestamp convention: the DataFrame index is a UTC daily DatetimeIndex
+    (one row per calendar day; see fetch_macro_features). Yahoo Finance
+    daily bars are dated by the exchange's own trading-day convention (e.g.
+    GC=F's Close is the COMEX settlement -- see ADR 058), not normalised to
+    a single clock across tickers; `<col>_asof_date` reports that bar's date
+    as-is, in the same UTC calendar-day index this module already uses
+    everywhere else.
     """
     df = df.copy()
     core = list(TICKER_MAP.keys())
+
+    # Capture each core column's true as-of date BEFORE ffill: the row's own
+    # UTC calendar date wherever a genuine (non-NaN) reading exists, NaT
+    # elsewhere -- then forward-fill that date series itself so every row,
+    # including ffilled ones, carries the date its current value was last
+    # actually observed. Computed strictly before `df[core] = df[core].ffill()`
+    # below so `.notna()` sees the real (pre-ffill) gaps.
+    row_dates = pd.Series(df.index.normalize(), index=df.index)
+    for col in core:
+        if col not in df.columns:
+            continue  # defensive: matches the "not found" NaN-fill path in _extract_close
+        asof_col = f"{col}_asof_date"
+        df[asof_col] = row_dates.where(df[col].notna())
+        df[asof_col] = df[asof_col].ffill()
 
     # Forward-fill so weekends and holidays inherit the last known value
     df[core] = df[core].ffill()
 
     # vix_level is the cleaned VIX series (same values, clearer name for features)
     df["vix_level"] = df["vix"]
+    # india_vix_level mirrors the pattern of vix_level for consistent feature naming.
+    # Conditional (unlike vix_level, which is always present): additive per
+    # TestMacroAdditionsAreAdditive, this function must still work when called with an
+    # older/smaller TICKER_MAP (e.g. the pre-india_vix "before" state in tests/test_macro.py)
+    # that never produced an "india_vix" column in the first place.
+    if "india_vix" in df.columns:
+        df["india_vix_level"] = df["india_vix"]
 
     # Daily % changes
     df["usd_inr_change_1d"] = df["usd_inr"].pct_change(1)
@@ -255,6 +310,33 @@ def update_macro_cache(
     return fetch_macro_features(start, end, cache_path=cache_path)
 
 
+def update_intraday_cache(
+    path: Path = INTRADAY_PATH, lookback_days: int = INTRADAY_LOOKBACK_DAYS
+) -> pd.DataFrame:
+    """Fetch 1-hour GC=F / INR=X closes for the last `lookback_days` and overwrite `path`.
+
+    Index: bar START time in UTC (Yahoo's labelling). Nothing is forward-filled -- a missing hour
+    stays missing, so a consumer can tell a feed gap from a flat market.
+    """
+    if yf is None:
+        raise ImportError("yfinance is required. Install it with: pip install yfinance")
+    raw = yf.download(
+        tickers=list(INTRADAY_TICKERS.values()),
+        period=f"{lookback_days}d",
+        interval="1h",
+        auto_adjust=True,
+        progress=False,
+        threads=False,
+    )
+    if raw.empty:
+        raise RuntimeError("yfinance returned no 1-hour bars for GC=F / INR=X")
+    raw.index = pd.to_datetime(raw.index, utc=True)
+    df = _extract_close(raw, INTRADAY_TICKERS).dropna(how="all")
+    path.parent.mkdir(parents=True, exist_ok=True)
+    df.to_parquet(path)
+    return df
+
+
 _MACRO_WARN_DAYS = 7  # log WARNING if cache is older than this
 _MACRO_STATUS_PATH = DATA_DIR / "macro_status.json"
 
@@ -322,12 +404,22 @@ def main() -> None:
 
     print(f"\nCache: {len(df)} rows  |  {df.index.min().date()} to {df.index.max().date()}")
 
+    try:
+        intraday = update_intraday_cache()
+        print(
+            f"Intraday: {len(intraday)} 1-hour bars  |  "
+            f"{intraday.index.min()} to {intraday.index.max()}"
+        )
+    except Exception as exc:  # best effort: drivers.py degrades visibly without it
+        print(f"Warning: intraday fetch failed ({exc}) -- driver attribution will be suppressed")
+
     display_cols = [
         "usd_inr",
         "gold_usd",
         "us_10y_yield",
         "dxy",
         "vix_level",
+        "india_vix_level",
         "usd_inr_change_1d",
         "gold_usd_change_1d",
         "gold_usd_5d_vol",

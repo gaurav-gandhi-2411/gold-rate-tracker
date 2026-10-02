@@ -1,0 +1,88 @@
+{
+  "adr": "044",
+  "generated_at_utc": "2026-09-24T08:19:29.678865+00:00",
+  "git_sha": "b9bcd7e80031468b868d400e3a954d0b394dd015",
+  "primary": {
+    "ticker": "GC=F",
+    "snapshot": "reports/vol_regime_prereg_gcf_2000_2012.csv",
+    "snapshot_sha256": "2db071aae050c593607f07518a4b36663916bc9fc9e288e3ee8292800437c6ac",
+    "first_scored": "2001-10-04",
+    "last_scored": "2012-12-28",
+    "calm_share": 0.4783380681818182,
+    "P1": {
+      "n": 2816,
+      "effective_n": 2899.8925437820444,
+      "rule_accuracy": 0.5042613636363636,
+      "always_up_accuracy": 0.5422585227272727,
+      "edge_points_vs_always_up": -3.799715909090906,
+      "p_one_sided_vs_always_up": 0.9985625451653335,
+      "p_one_sided_vs_50pct": 0.3255383170389168,
+      "confirmed": false
+    },
+    "secondary": {
+      "S1_calm_lag1_positive": {
+        "n": 1347,
+        "lag1_autocorrelation": -0.026312194857620087,
+        "p_one_sided": 0.8326884485113888,
+        "bh_significant": false
+      },
+      "S2_volatile_lag1_negative": {
+        "n": 1469,
+        "lag1_autocorrelation": 0.016212291838933347,
+        "p_one_sided": 0.7326333272957923,
+        "bh_significant": false
+      },
+      "S3_calm_rule_vs_up": {
+        "n": 1347,
+        "effective_n": 1675.482437716928,
+        "rule_accuracy": 0.48106904231625836,
+        "always_up_accuracy": 0.5560504825538233,
+        "edge_points_vs_always_up": -7.498144023756492,
+        "p_one_sided_vs_always_up": 0.9999990029387866,
+        "p_one_sided_vs_50pct": 0.9176731462199242,
+        "bh_significant": false
+      },
+      "S4_volatile_rule_vs_up": {
+        "n": 1469,
+        "effective_n": 1384.3148483906975,
+        "rule_accuracy": 0.5255275697753574,
+        "always_up_accuracy": 0.5296119809394146,
+        "edge_points_vs_always_up": -0.4084411164057222,
+        "p_one_sided_vs_always_up": 0.5835572806214402,
+        "p_one_sided_vs_50pct": 0.025184453326587253,
+        "bh_significant": false
+      },
+      "S5_d4_vr20_low_vol_above_1": {
+        "n": 1535,
+        "vr20": 0.9332242916341122,
+        "z_robust": -0.5346005576667896,
+        "p_one_sided": 0.7035369510361414,
+        "bh_significant": false
+      },
+      "S6_d4_vr20_high_vol_below_1": {
+        "n": 1534,
+        "vr20": 0.8377596629558977,
+        "z_robust": -1.1132039763016963,
+        "p_one_sided": 0.13281041765925355,
+        "bh_significant": false
+      }
+    }
+  },
+  "robustness_gld": {
+    "ticker": "GLD",
+    "snapshot": "reports/vol_regime_prereg_gld_2004_2012.csv",
+    "snapshot_sha256": "9aa4143f1b1e4326a686f885724966d360fd22aa85c75ee8b7e1939b2e141127",
+    "first_scored": "2005-12-16",
+    "last_scored": "2012-12-28",
+    "calm_share": 0.49322033898305084,
+    "P1": {
+      "n": 1770,
+      "effective_n": 1970.7059809436018,
+      "rule_accuracy": 0.4966101694915255,
+      "always_up_accuracy": 0.543502824858757,
+      "edge_points_vs_always_up": -4.689265536723153,
+      "p_one_sided_vs_always_up": 0.9985474542887098,
+      "p_one_sided_vs_50pct": 0.6122658828716919
+    }
+  }
+}
