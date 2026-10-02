@@ -1,5 +1,5 @@
 {
-  "predicted_at": "2026-10-02T18:22:17.775811+00:00",
+  "predicted_at": "2026-10-02T18:28:25.348957+00:00",
   "target_window": "5d",
   "headline": {
     "method": "nextfix_ridge_mlp_v1",
@@ -47,7 +47,7 @@
     ],
     "horizon_p90": [
       14338.84,
-      14440.35,
+      14440.36,
       14485.15,
       14527.31,
       14624.48
@@ -59,7 +59,7 @@
     "direction_consensus": 1.0
   },
   "driver_context": {
-    "computed_at": "2026-10-02T18:22:27.645611+00:00",
+    "computed_at": "2026-10-02T18:28:34.340461+00:00",
     "macro_staleness_days": 0.0,
     "macro_fresh": true,
     "premium_threshold_pct": 15.0,
