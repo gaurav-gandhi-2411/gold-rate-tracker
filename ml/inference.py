@@ -837,7 +837,10 @@ def main(now: datetime | None = None) -> None:
 
     # 3b. Next-fix model (ADR 064): when the global close after the latest IBJA fix is known and no
     # newer AM fix is out, the headline becomes the model's forecast and range instead of flat-hold.
-    next_fix = _next_fix_block(now, current_22k, calibration)
+    # The fix the displayed price reflects: the estimate tiers carry it in ibja_asof; a Tanishq
+    # reading reflects the latest fix published before it was read.
+    price_read_at = ibja_asof if price_source != "tanishq_scrape" and ibja_asof else scraped_at
+    next_fix = _next_fix_block(now, current_22k, calibration, price_read_at)
     if next_fix.get("active"):
         predicted_22k = next_fix["predicted_22k"]
         lower = next_fix["lower"]
@@ -940,8 +943,12 @@ def main(now: datetime | None = None) -> None:
 _DIRECTION_MIN_EDGE = 0.05
 
 
-def _next_fix_block(now: datetime, current_22k: int, calibration: dict) -> dict:
-    """forecast.json's ``next_fix`` block: the ADR 064 model's forecast, mapped to the shop price.
+def _next_fix_block(
+    now: datetime, current_22k: int, calibration: dict, scraped_at: str | None = None
+) -> dict:
+    """forecast.json's ``next_fix`` block: the next IBJA fix forecast (ADR 064/065), mapped to the
+    shop price. Active all day; ``mode`` says which window (after the US close: the model; after an
+    AM fix or a PM fix: hold that fix).
 
     Never raises: any failure returns {"active": False, "reason": "error: ..."} and the headline
     stays flat-hold (norm #8, inference must always write forecast.json).
@@ -955,10 +962,10 @@ def _next_fix_block(now: datetime, current_22k: int, calibration: dict) -> dict:
             from ml.macro import load_macro_features
 
             macro = load_macro_features()
-        except Exception as exc:  # the history seed alone still gives the track record
+        except Exception as exc:  # the label seed alone still gives the track record
             logger.warning("next_fix: macro cache unavailable (%s)", exc)
         out = nextfix.run(now=now, macro=macro, data_dir=DATA_DIR)
-        fc, ev = out["forecast"], out["eval"]
+        fc, ev, windows = out["forecast"], out["eval"], out.get("windows") or {}
         block: dict = {"active": bool(fc.get("active")), "reason": fc.get("reason")}
         if ev.get("ready"):
             d = ev["direction"]
@@ -969,8 +976,11 @@ def _next_fix_block(now: datetime, current_22k: int, calibration: dict) -> dict:
                 "mae_model": ev["mae_model"],
                 "mae_flat": ev["mae_flat"],
                 "mae_change_pct": ev["mae_change_pct"],
+                "mae_change_ci95": ev["mae_change_ci95"],
+                "dm_p": round(ev["dm_p"], 4),
                 "wilcoxon_p": round(ev["wilcoxon_p"], 4),
                 "direction_accuracy": round(d["accuracy"], 4),
+                "direction_accuracy_ci95": ev["direction_accuracy_ci95"],
                 "always_up_accuracy": round(d["always_up_accuracy"], 4),
                 "direction_p_value": round(d["p_value"], 4),
                 "direction_ece": round(d["ece"], 4),
@@ -978,36 +988,59 @@ def _next_fix_block(now: datetime, current_22k: int, calibration: dict) -> dict:
                 "direction_gate_reason": ev["direction_gate"]["reason"],
                 "timing_gate_ship": bool(ev["timing_gate"]["ship"]),
                 "range_coverage": ev["range_coverage"],
+                "range_coverage_ci95": ev["range_coverage_ci95"],
                 "range_n": ev["range_n"],
                 "range_mean_width_ibja": ev["range_mean_width"],
             }
+        block["windows"] = {
+            k: {kk: v for kk, v in rec.items() if kk not in ("conformal_q", "vol_now")}
+            for k, rec in windows.items()
+        }
         if not block["active"]:
             return block
         slope = float(calibration.get("slope") or 1.0) if calibration.get("valid", True) else 1.0
-        retail = nextfix.to_retail(fc, float(current_22k), slope)
-        p_up = float(fc["p_up"])
-        side = "up" if p_up >= 0.5 else "down"
-        prob = p_up if side == "up" else 1.0 - p_up
-        gate_ok = bool(block.get("track_record", {}).get("direction_gate_ship"))
+        ref = None
+        if scraped_at and out.get("ibja") is not None:
+            read_at = datetime.fromisoformat(scraped_at.replace("Z", "+00:00"))
+            ref = nextfix.ref_fix(out["ibja"], read_at)
+        retail = nextfix.to_retail(fc, float(current_22k), slope, ref)
+        mode = fc["mode"]
+        if mode == "after_us_close":
+            tr = block.get("track_record", {})
+            range_record = {"coverage": tr.get("range_coverage"), "n": tr.get("range_n")}
+        else:
+            rec = windows.get("am_to_pm" if mode == "after_morning_rate" else "pm_to_am", {})
+            range_record = {"coverage": rec.get("range_coverage"), "n": rec.get("n")}
         block.update(
+            mode=mode,
             model_version=fc["model_version"],
-            ibja_day=fc["d0"],
-            ibja_pm=fc["pm0"],
-            predicted_ibja_pm=fc["pred_pm1"],
-            p_up=round(p_up, 4),
+            base_kind=fc["base_kind"],
+            base_date=fc["base_date"],
+            base_ibja=fc["base"],
+            predicted_ibja=fc["pred"],
+            target_kind=fc["target_kind"],
+            range_record=range_record,
             **retail,
-            direction={
+        )
+        if mode == "after_us_close":
+            p_up = float(fc["p_up"])
+            side = "up" if p_up >= 0.5 else "down"
+            prob = p_up if side == "up" else 1.0 - p_up
+            gate_ok = bool(block.get("track_record", {}).get("direction_gate_ship"))
+            block["p_up"] = round(p_up, 4)
+            block["direction"] = {
                 "show": gate_ok and is_signal_promoted(),
                 "side": side if prob - 0.5 >= _DIRECTION_MIN_EDGE else "unclear",
                 "probability": round(prob, 4),
-            },
-        )
+            }
+        else:  # no evidence for a direction while holding the latest fix
+            block["direction"] = {"show": False, "side": "unclear", "probability": None}
         logger.info(
-            "next_fix: Rs.%d [%d-%d] p_up=%.3f show_direction=%s",
+            "next_fix: mode=%s Rs.%d [%d-%d] show_direction=%s",
+            mode,
             retail["predicted_22k"],
             retail["lower"],
             retail["upper"],
-            p_up,
             block["direction"]["show"],
         )
         return block

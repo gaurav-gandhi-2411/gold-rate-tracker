@@ -127,6 +127,24 @@ n=225, 95% CI 60.7–72.9%) in `docs/adr/030-inr22k-proxy-history-for-pretrainin
 Written by: `python -m ml.inr_proxy --build` (manual refresh — no CI job wired up yet; re-run when
 `duty_cbic.json` gains a new entry or the end date needs extending).
 
+**Dating (lagged one day on purpose).** The row dated D holds the global close of the trading day
+*before* D (Monday's row is Friday's close; weekend rows repeat it). ADR 030 lags the proxy as a leak
+control, so it can be used as a same-day feature (`ml/inr_proxy.py` `gc_lag = ...shift(1)`; pinned by
+`tests/test_inr_proxy.py::TestLeakageAlignment`). Code that needs the close *of* day D should read
+`history_seed_inr22k_label.parquet` instead.
+
+---
+
+## history_seed_inr22k_label.parquet
+
+The same-day companion of the proxy: the row dated D holds the global close **of** D (unlagged), with
+its own walk-forward duty adjustment and calibration. Columns `raw_pre_duty`, `raw_with_duty`,
+`label_22k_per_10g`, `is_walk_forward_oos`. Its `raw_pre_duty` on D equals the proxy's on D+1 (within
+0.02% over 5,013 days; roll adjustments differ slightly). Used as a label, and by `ml/nextfix.py` as
+the global price at each US close before `ml.macro`'s cache starts (ADR 065).
+
+Written by: `python -m ml.inr_proxy_labels --build` (manual refresh).
+
 ---
 
 ## commentary.json (retired 2026-08-10)
