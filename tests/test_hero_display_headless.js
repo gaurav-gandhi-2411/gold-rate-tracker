@@ -149,7 +149,8 @@ async function run() {
           if (e.line === "figure") assert("Tanishq line carries the dated Tanishq figure", TANISHQ_RE.test(s.line || "") && /14,040/.test(s.line || ""), s.line);
           if (e.line === "old-figure") {
             assert("old Tanishq line keeps its figure", TANISHQ_RE.test(s.line || "") && new RegExp(e.lineValue || "14,040").test(s.line || ""), s.line);
-            assert("old Tanishq line has a day and a time", /\d{1,2}:\d{2}/.test(s.line || "") && /Sept|सित|yesterday|कल/.test(s.line || ""), s.line);
+            // 2026-10-02: any month, not only "Sept" -- the fixture dates are relative to today.
+            assert("old Tanishq line has a day and a time", /\d{1,2}:\d{2}/.test(s.line || "") && /\b\d{1,2} (Jan|Feb|Mar|Apr|May|June?|July?|Aug|Sept?|Oct|Nov|Dec)\b|\d{1,2} (जन|फ़र|फर|मार्च|अप्रै|मई|जून|जुल|अग|सित|अक्तू|अक्टू|नव|दिस)|yesterday|कल/.test(s.line || ""), s.line);
           }
           if (e.approx) assert("no 'today's change' next to an estimate", s.change === false, String(s.change));
           if (process.env.CHART_JS_PATH) assert("chart says it is our estimate", /official|आधिकारिक/.test(s.chartNote || "") && !TANISHQ_RE.test(s.chartNote || ""), s.chartNote);
