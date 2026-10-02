@@ -45,6 +45,7 @@ on:
     branches: [master]
     paths:
       - "ml/inference.py"
+      - "ml/nextfix.py"
       - "ml/features.py"
       - "ml/macro.py"
       - "ml/ibja.py"
@@ -88,6 +89,12 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          # The tip of master when this job STARTS, not the commit that triggered the run. Runs
+          # queue behind each other (concurrency group above); a queued run used to check out its
+          # trigger commit, build its data on that, and fail the bot-PR rebase because the run
+          # ahead of it had already landed newer data (2026-10-02 09:01Z, run 36987403933).
+          ref: master
 
       # Tanishq scraping happens in scrape-tanishq-selfhosted.yml (its own
       # workflow file since audit 2026-09) — this job just reads whatever
