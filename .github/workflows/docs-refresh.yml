@@ -118,3 +118,8 @@ jobs:
             EXISTING_PR=$(gh pr list --repo "${GITHUB_REPOSITORY}" --head "$BRANCH" --state open --json number --jq '.[0].number')
           fi
           gh pr merge "$EXISTING_PR" --repo "${GITHUB_REPOSITORY}" --auto --squash
+          # 2026-10-02: the pull_request run this push triggers waits for manual approval
+          # ("action_required", 9 times 2026-09-28..30, PR #2184 never merged), so start Lint
+          # directly like bot-pr-sync does. Its post-required-check-status job sets the lint and
+          # pwa-js statuses on this head commit, which is what auto-merge waits for.
+          gh workflow run lint.yml --repo "${GITHUB_REPOSITORY}" --ref "${BRANCH}"
