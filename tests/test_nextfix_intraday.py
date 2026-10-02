@@ -112,3 +112,33 @@ def test_shadow_never_touches_the_forecast(tmp_path: Path):
     assert not (tmp_path / "forecast.json").exists()
     src = (Path(nfi.__file__)).read_text()
     assert "forecast.json" not in src.split('"""', 2)[2]
+
+
+def test_every_hour_scoring_treats_each_fix_as_one_observation():
+    # 6 fixes x 20 identical decisions: the CI must reflect 6 observations, not 120.
+    rng = np.random.default_rng(5)
+    rows = []
+    for f in range(6):
+        base = 13000.0
+        tgt = base + rng.normal(0, 100)
+        for h in range(20):
+            x = math.log(tgt / base) * 0.5
+            rows.append(
+                {
+                    "base_at": f"2026-08-0{f + 1}T06:30:00Z",
+                    "t": f"2026-08-0{f + 1}T{h:02d}:15:00Z",
+                    "window": "after_afternoon_rate",
+                    "target": round(tgt, 2),
+                    "base": base,
+                    "x_since_fix": x,
+                    "pred": {f"beta_{b}": round(base * math.exp(b * x), 2) for b in nfi.BETAS},
+                    "k": f"{f}-{h}",
+                }
+            )
+    res = nfi.score(rows, key="k")["after_afternoon_rate"]
+    assert res["n_fixes"] == 6 and res["n_decisions"] == 120
+    lo, hi = res["change_beta_1.0_ci95"]
+    per_fix = nfi.score(rows)["after_afternoon_rate"]
+    assert per_fix["n_decisions"] == 6
+    # clustered CI on 120 decisions equals the per-fix CI on 6 (same information)
+    assert [lo, hi] == per_fix["change_beta_1.0_ci95"]
