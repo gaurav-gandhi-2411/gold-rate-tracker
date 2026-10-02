@@ -835,6 +835,20 @@ def main(now: datetime | None = None) -> None:
         "vol_context": dict(vol_ctx),
     }
 
+    # 3b. Next-fix model (ADR 064): when the global close after the latest IBJA fix is known and no
+    # newer AM fix is out, the headline becomes the model's forecast and range instead of flat-hold.
+    next_fix = _next_fix_block(now, current_22k, calibration)
+    if next_fix.get("active"):
+        predicted_22k = next_fix["predicted_22k"]
+        lower = next_fix["lower"]
+        upper = next_fix["upper"]
+        headline.update(
+            method=next_fix["model_version"],
+            predicted_22k=predicted_22k,
+            lower=lower,
+            upper=upper,
+        )
+
     # 4. Chronos companion (read from probe; never call Chronos directly)
     probe: dict = _load_json(DATA_DIR / "chronos_probe.json") or {}
     from ml.notifications import STATE_PATH, load_state
@@ -904,9 +918,10 @@ def main(now: datetime | None = None) -> None:
         "lower": lower,
         "upper": upper,
         "target_time": target_time.isoformat(),
-        "model_status": "naive_headline",
-        "model_version": "naive_flat_hold",
+        "model_status": "nextfix_headline" if next_fix.get("active") else "naive_headline",
+        "model_version": next_fix["model_version"] if next_fix.get("active") else "naive_flat_hold",
         "warmup": False,
+        "next_fix": next_fix,
     }
 
     DATA_DIR.mkdir(exist_ok=True)
@@ -919,6 +934,86 @@ def main(now: datetime | None = None) -> None:
         chronos_companion.get("lean_direction"),
         chronos_companion.get("direction_acc_30f"),
     )
+
+
+# Direction wording: below this distance from 50% the next move is "too close to call".
+_DIRECTION_MIN_EDGE = 0.05
+
+
+def _next_fix_block(now: datetime, current_22k: int, calibration: dict) -> dict:
+    """forecast.json's ``next_fix`` block: the ADR 064 model's forecast, mapped to the shop price.
+
+    Never raises: any failure returns {"active": False, "reason": "error: ..."} and the headline
+    stays flat-hold (norm #8, inference must always write forecast.json).
+    """
+    try:
+        from ml import nextfix
+        from ml.direction.gate import is_signal_promoted
+
+        macro = None
+        try:
+            from ml.macro import load_macro_features
+
+            macro = load_macro_features()
+        except Exception as exc:  # the history seed alone still gives the track record
+            logger.warning("next_fix: macro cache unavailable (%s)", exc)
+        out = nextfix.run(now=now, macro=macro, data_dir=DATA_DIR)
+        fc, ev = out["forecast"], out["eval"]
+        block: dict = {"active": bool(fc.get("active")), "reason": fc.get("reason")}
+        if ev.get("ready"):
+            d = ev["direction"]
+            block["track_record"] = {
+                "n": ev["n"],
+                "first_d0": ev["first_d0"],
+                "last_d0": ev["last_d0"],
+                "mae_model": ev["mae_model"],
+                "mae_flat": ev["mae_flat"],
+                "mae_change_pct": ev["mae_change_pct"],
+                "wilcoxon_p": round(ev["wilcoxon_p"], 4),
+                "direction_accuracy": round(d["accuracy"], 4),
+                "always_up_accuracy": round(d["always_up_accuracy"], 4),
+                "direction_p_value": round(d["p_value"], 4),
+                "direction_ece": round(d["ece"], 4),
+                "direction_gate_ship": bool(ev["direction_gate"]["ship"]),
+                "direction_gate_reason": ev["direction_gate"]["reason"],
+                "timing_gate_ship": bool(ev["timing_gate"]["ship"]),
+                "range_coverage": ev["range_coverage"],
+                "range_n": ev["range_n"],
+                "range_mean_width_ibja": ev["range_mean_width"],
+            }
+        if not block["active"]:
+            return block
+        slope = float(calibration.get("slope") or 1.0) if calibration.get("valid", True) else 1.0
+        retail = nextfix.to_retail(fc, float(current_22k), slope)
+        p_up = float(fc["p_up"])
+        side = "up" if p_up >= 0.5 else "down"
+        prob = p_up if side == "up" else 1.0 - p_up
+        gate_ok = bool(block.get("track_record", {}).get("direction_gate_ship"))
+        block.update(
+            model_version=fc["model_version"],
+            ibja_day=fc["d0"],
+            ibja_pm=fc["pm0"],
+            predicted_ibja_pm=fc["pred_pm1"],
+            p_up=round(p_up, 4),
+            **retail,
+            direction={
+                "show": gate_ok and is_signal_promoted(),
+                "side": side if prob - 0.5 >= _DIRECTION_MIN_EDGE else "unclear",
+                "probability": round(prob, 4),
+            },
+        )
+        logger.info(
+            "next_fix: Rs.%d [%d-%d] p_up=%.3f show_direction=%s",
+            retail["predicted_22k"],
+            retail["lower"],
+            retail["upper"],
+            p_up,
+            block["direction"]["show"],
+        )
+        return block
+    except Exception as exc:
+        logger.warning("next_fix: failed (%s); headline stays flat-hold", exc)
+        return {"active": False, "reason": f"error: {type(exc).__name__}"}
 
 
 if __name__ == "__main__":
