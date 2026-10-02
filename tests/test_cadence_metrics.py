@@ -6,7 +6,8 @@ import json
 from datetime import UTC, datetime, timedelta
 from pathlib import Path
 
-from ml.cadence_metrics import WINDOW_DAYS, compute_median_gap, load_log, main
+import pytest
+from ml.cadence_metrics import WINDOW_DAYS, _percentile, compute_median_gap, load_log, main
 
 NOW = datetime(2026, 9, 4, 6, 0, 0, tzinfo=UTC)
 
@@ -46,6 +47,7 @@ def test_fewer_than_two_records_in_window_returns_none_not_zero() -> None:
     result = compute_median_gap([_record(1)], NOW)
     assert result["n"] == 0
     assert result["median_gap_hours"] is None
+    assert result["p90_gap_hours"] is None
     assert result["as_of"] is None
 
 
@@ -53,6 +55,7 @@ def test_empty_records_returns_none() -> None:
     result = compute_median_gap([], NOW)
     assert result["n"] == 0
     assert result["median_gap_hours"] is None
+    assert result["p90_gap_hours"] is None
 
 
 def test_regular_3h_cadence_computes_3h_median() -> None:
@@ -60,7 +63,28 @@ def test_regular_3h_cadence_computes_3h_median() -> None:
     result = compute_median_gap(records, NOW)
     assert result["n"] == 6
     assert result["median_gap_hours"] == 3.0
+    assert result["p90_gap_hours"] == 3.0  # uniform gaps -- p90 == median
     assert result["as_of"] == NOW.isoformat()
+
+
+def test_p90_reflects_the_tail_a_median_hides() -> None:
+    """X1b (audit 2026-09-05): a distribution with one long tail gap must
+    report a p90 well above the median -- proving the field actually
+    distinguishes 'typical' from 'worst case users actually see'."""
+    # gaps (oldest->newest): 3,3,3,3,3,3,3,3,3,20 -> median 3, p90 well above
+    hours_ago = [0, 3, 6, 9, 12, 15, 18, 21, 24, 27, 47]
+    records = [_record(h) for h in hours_ago]
+    result = compute_median_gap(records, NOW)
+    assert result["n"] == 10
+    assert result["median_gap_hours"] == 3.0
+    assert result["p90_gap_hours"] == pytest.approx(4.7)
+    assert result["p90_gap_hours"] > result["median_gap_hours"]
+
+
+def test_percentile_helper_matches_known_values() -> None:
+    assert _percentile([1.0, 2.0, 3.0, 4.0, 5.0], 0.5) == 3.0
+    assert _percentile([1.0, 2.0, 3.0, 4.0, 5.0], 0.9) == 4.6
+    assert _percentile([5.0], 0.9) == 5.0
 
 
 def test_degraded_cadence_with_one_dropped_tick() -> None:
@@ -115,6 +139,7 @@ def test_main_writes_output_file(tmp_path: Path, monkeypatch) -> None:
     written = json.loads(output_path.read_text(encoding="utf-8"))
     assert written["n"] == 2
     assert written["median_gap_hours"] == 3.0
+    assert written["p90_gap_hours"] == 3.0
     assert written["schema_version"] == 1
     assert "generated_at_utc" in written
 

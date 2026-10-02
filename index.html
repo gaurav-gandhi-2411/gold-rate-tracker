@@ -52,17 +52,19 @@
     </script>
 
     <title>Gold Rate Today · Is it a good price?</title>
-    <meta name="description" content="22K gold rate — an IBJA-calibrated estimate, confirmed against live Tanishq retail when reachable. See if today's price is high or low compared to recent weeks." />
+    <!-- U1 audit (2026-09-23, docs/PLAIN_LANGUAGE_AUDIT.md): was "an IBJA-calibrated
+         estimate" -- "calibrated" is jargon. Matches i18n.js's pageDescription fix. -->
+    <meta name="description" content="22K gold rate — closely matched to real shop prices, compared with Tanishq's listed rate when reachable. See if today's price is high or low compared to recent weeks." />
 
     <!-- OG / social sharing -->
     <meta property="og:title" content="Gold Rate Today · Is it a good price?" />
-    <meta property="og:description" content="22K gold rate — an IBJA-calibrated estimate, confirmed against live Tanishq retail when reachable. See if today's price is high or low compared to recent weeks." />
+    <meta property="og:description" content="22K gold rate — closely matched to real shop prices, compared with Tanishq's listed rate when reachable. See if today's price is high or low compared to recent weeks." />
     <meta property="og:image" content="https://gaurav-gandhi-2411.github.io/gold-rate-tracker/og.png" />
     <meta property="og:type" content="website" />
     <meta property="og:url" content="https://gaurav-gandhi-2411.github.io/gold-rate-tracker/" />
     <meta name="twitter:card" content="summary_large_image" />
     <meta name="twitter:title" content="Gold Rate Today · Is it a good price?" />
-    <meta name="twitter:description" content="22K gold rate — an IBJA-calibrated estimate, confirmed against live Tanishq retail when reachable. See if today's price is high or low compared to recent weeks." />
+    <meta name="twitter:description" content="22K gold rate — closely matched to real shop prices, compared with Tanishq's listed rate when reachable. See if today's price is high or low compared to recent weeks." />
     <meta name="twitter:image" content="https://gaurav-gandhi-2411.github.io/gold-rate-tracker/og.png" />
 
     <!-- PWA -->
@@ -155,7 +157,7 @@
          every session otherwise). Placed before the PWA/iOS panels below since
          it's relevant to essentially every visitor, not just a platform subset. -->
     <div class="first-visit-panel" id="first-visit-panel" hidden role="note" aria-live="polite">
-      <p data-i18n="firstVisitText">22K gold retail price, checked every 3 hours and confirmed against Tanishq's live rate when possible. We always say plainly when a price is an estimate.</p>
+      <p data-i18n="firstVisitText">The price of 22K gold in shops, checked on a regular schedule and compared with Tanishq's listed rate when possible. We always say plainly when a price is an estimate.</p>
       <button class="first-visit-close" id="first-visit-close" aria-label="Dismiss" data-i18n-attr="aria-label:dismissLabel">✕</button>
     </div>
 
@@ -203,9 +205,9 @@
 
         <p class="eyebrow" id="hero-eyebrow" hidden data-i18n="eyebrow">22K gold · per gram</p>
         <h1 class="hero-price" id="hero-price" hidden>—</h1>
+        <p class="hero-location" id="hero-location" hidden></p>
         <p class="hero-estimate-range" id="hero-estimate-range" hidden></p>
         <p class="hero-last-confirmed" id="hero-last-confirmed" hidden></p>
-        <p class="hero-location" id="hero-location" hidden data-i18n="heroLocation">Tanishq retail price · pan-India</p>
 
         <div class="hero-change" id="hero-change" hidden aria-live="polite">
           <span class="hero-change-arrow" aria-hidden="true"></span>
@@ -297,21 +299,73 @@
                      min="0" max="10000" step="0.1" value="20"
                      aria-label="Quantity in grams" data-i18n-attr="aria-label:calcGramsAriaLabel">
             </div>
-            <div class="calc-input-group">
-              <label for="calc-making" data-i18n="calcMakingLabel">Making charge (%)</label>
-              <input type="number" id="calc-making" class="calc-input" inputmode="decimal"
-                     min="0" max="100" step="0.5" value="0"
-                     aria-label="Making charge percentage" data-i18n-attr="aria-label:calcMakingAriaLabel">
-            </div>
           </div>
-          <p class="calc-making-hint" data-i18n="calcMakingHint">Varies by jeweler and design — enter yours if you know it.</p>
+          <!-- Making charge as jewellery-type PRESETS: nobody knows their jeweller's exact
+               making % before walking in, but most buyers know roughly what TYPE of piece
+               they want (a plain chain vs. an intricate/bridal design), and that predicts
+               the making-charge range far better than one flat range ever could. Preset
+               values/labels come from MAKING_CHARGE_PRESETS (app.js) via data-i18n on the
+               name/range spans below (kept in sync manually -- see that constant's own
+               comment for the source and date). "Custom" reveals a single value + unit
+               toggle (app.js's calcCustomUnit()/renderCalculator()) for a buyer who already
+               knows their jeweller's exact rate. -->
+          <fieldset class="calc-presets">
+            <legend data-i18n="calcPresetsLegend">Jewellery type</legend>
+            <div class="calc-preset-group">
+              <label class="calc-mode-option calc-preset-option">
+                <input type="radio" name="calc-preset" value="coins">
+                <span class="calc-preset-text">
+                  <span class="calc-preset-name" data-i18n="calcPresetCoins">Coins &amp; plain chains</span>
+                  <span class="calc-preset-range" data-i18n="calcPresetCoinsRange">3–8% of gold value, typically 5%</span>
+                </span>
+              </label>
+              <label class="calc-mode-option calc-preset-option">
+                <input type="radio" name="calc-preset" value="plain" checked>
+                <span class="calc-preset-text">
+                  <span class="calc-preset-name" data-i18n="calcPresetPlain">Plain bangles &amp; rings</span>
+                  <span class="calc-preset-range" data-i18n="calcPresetPlainRange">8–12% of gold value, typically 10%</span>
+                </span>
+              </label>
+              <label class="calc-mode-option calc-preset-option">
+                <input type="radio" name="calc-preset" value="intricate">
+                <span class="calc-preset-text">
+                  <span class="calc-preset-name" data-i18n="calcPresetIntricate">Intricate or antique designs</span>
+                  <span class="calc-preset-range" data-i18n="calcPresetIntricateRange">15–25% of gold value, typically 20%</span>
+                </span>
+              </label>
+              <label class="calc-mode-option calc-preset-option">
+                <input type="radio" name="calc-preset" value="custom">
+                <span class="calc-preset-text">
+                  <span class="calc-preset-name" data-i18n="calcPresetCustom">Custom</span>
+                  <span class="calc-preset-range" data-i18n="calcPresetCustomHint">Know your jeweller's exact rate? Enter it below.</span>
+                </span>
+              </label>
+            </div>
+            <div class="calc-custom-fields" id="calc-custom-fields" hidden>
+              <div class="calc-mode">
+                <label class="calc-mode-option">
+                  <input type="radio" name="calc-custom-unit" value="pct" checked>
+                  <span data-i18n="calcMakingModePct">% of gold value</span>
+                </label>
+                <label class="calc-mode-option">
+                  <input type="radio" name="calc-custom-unit" value="perGram">
+                  <span data-i18n="calcMakingModePerGram">₹ per gram</span>
+                </label>
+              </div>
+              <div class="calc-input-group">
+                <label for="calc-custom-value"><span data-i18n="calcCustomValueLabel">Making charge</span> (<span class="calc-custom-unit-label">%</span>)</label>
+                <input type="number" id="calc-custom-value" class="calc-input" inputmode="decimal"
+                       min="0" max="100" step="0.5" value="10">
+              </div>
+            </div>
+          </fieldset>
           <div class="calc-wrap" id="calc-wrap">
             <div class="calc-skeleton" id="calc-skeleton" aria-hidden="true">
               <div class="skel" style="height:16px;width:60%;border-radius:4px;margin-bottom:10px"></div>
               <div class="skel" style="height:32px;width:80%;border-radius:4px;margin-bottom:8px"></div>
               <div class="skel" style="height:14px;width:50%;border-radius:4px"></div>
             </div>
-            <div class="calc-results" id="calc-results"></div>
+            <div class="calc-results" id="calc-results" aria-live="polite"></div>
           </div>
         </div>
       </section>
@@ -390,7 +444,13 @@
             <button data-range="all" role="tab" aria-selected="false" data-i18n="rangeAll">All</button>
           </div>
         </div>
-        <p class="section-karat-note" data-i18n="sectionKaratNote">22K · per gram</p>
+        <div class="karat-toggle" role="group" aria-label="Gold purity" data-i18n-attr="aria-label:karatToggleAriaLabel">
+          <button type="button" data-karat="22" class="active" aria-pressed="true">22K</button>
+          <button type="button" data-karat="24" aria-pressed="false">24K</button>
+          <button type="button" data-karat="18" aria-pressed="false">18K</button>
+        </div>
+        <!-- GG 4c: says what the line is (estimate or Tanishq's rate); written by renderChart(). -->
+        <p class="section-karat-note chart-source-note" id="chart-source-note" hidden></p>
         <div class="chart-wrap">
           <canvas id="chart" role="img" aria-label="Gold price trend chart" data-i18n-attr="aria-label:chartCanvasAriaLabel"></canvas>
         </div>
@@ -399,7 +459,12 @@
       <!-- 7. HISTORY -->
       <section class="history-section reveal-on-scroll" id="section-history" aria-label="Price history" data-i18n-attr="aria-label:historyAriaLabel">
         <h2 data-i18n="historyHeading">History</h2>
-        <p class="section-karat-note" data-i18n="sectionKaratNote">22K · per gram</p>
+        <div class="karat-toggle" role="group" aria-label="Gold purity" data-i18n-attr="aria-label:karatToggleAriaLabel">
+          <button type="button" data-karat="22" class="active" aria-pressed="true">22K</button>
+          <button type="button" data-karat="24" aria-pressed="false">24K</button>
+          <button type="button" data-karat="18" aria-pressed="false">18K</button>
+        </div>
+        <p class="section-karat-note chart-source-note" id="history-source-note" hidden></p>
         <div class="history-wrap" id="history-wrap">
           <!-- Φ8C'/Ψ3C.3: skeleton overlay shown while history loads. Absolutely
                positioned over history-wrap (not a separate hidden/shown sibling) so
@@ -415,14 +480,12 @@
             <thead>
               <tr>
                 <th scope="col" data-i18n="thWhen">When</th>
-                <th scope="col" class="num">22K</th>
-                <th scope="col" class="num">24K</th>
-                <th scope="col" class="num">18K</th>
-                <th scope="col" class="num" data-i18n="thDelta">Δ 22K</th>
+                <th scope="col" class="num" id="history-th-price">22K</th>
+                <th scope="col" class="num" data-i18n="thDelta">Change</th>
               </tr>
             </thead>
             <tbody id="history-body">
-              <tr><td colspan="5" class="empty" data-i18n="loadingText">Loading…</td></tr>
+              <tr><td colspan="3" class="empty" data-i18n="loadingText">Loading…</td></tr>
             </tbody>
           </table>
           <!-- Mobile card list (<640px) -->
@@ -431,27 +494,10 @@
         <button class="history-show-all" id="history-show-all" hidden></button>
       </section>
 
-      <!-- 7b. PAST ESTIMATE TRACK RECORD — past estimates vs actual prices -->
-      <!-- Tier 1 CLS fix (2026-08-10): no `hidden` on the section itself -- h2/caption are
-           static text and track-record-chart-wrap already reserves a fixed height (see its
-           CSS rule), so nothing here changes size once rendered; only the section-level
-           hidden->visible pop-in was the risk. renderForecastVsActual()'s own
-           `!bt?.folds?.length` / `folds.length < 3` fallbacks still hide the section for the
-           rare-edge case, now happening after this initial state rather than instead of it. -->
-      <section class="track-record-section reveal-on-scroll" id="section-track-record"
-               aria-label="Past estimate accuracy — flat-hold vs actual prices" data-i18n-attr="aria-label:trackRecordAriaLabel">
-        <h2 data-i18n="trackRecordHeading">How past estimates have held up</h2>
-        <p class="track-record-caption" data-i18n="trackRecordCaption">30 recent five-day windows: flat-hold estimate (dashed) vs what actually happened (gold)</p>
-        <div class="track-record-chart-wrap">
-          <canvas id="track-record-chart" role="img"
-                  aria-label="Past flat-hold estimates vs actual gold prices" data-i18n-attr="aria-label:trackRecordChartAriaLabel"></canvas>
-        </div>
-      </section>
-
       <!-- 8. METHODOLOGY ACCORDION -->
       <details class="methodology reveal-on-scroll" id="section-info">
         <summary class="methodology-summary" data-i18n="methodologySummary">
-          How this works — and how accurate it's been
+          How this works
         </summary>
         <div class="methodology-body" id="methodology-body">
           <div class="meth-skeleton" aria-hidden="true">
@@ -462,18 +508,40 @@
             <div class="skel skel-meth-line"></div>
           </div>
         </div>
+        <!-- 7b. PAST ESTIMATE TRACK RECORD — past estimates vs actual prices -->
+        <!-- Tier 1 CLS fix (2026-08-10): no `hidden` on the section itself -- h2/caption are
+             static text and track-record-chart-wrap already reserves a fixed height (see its
+             CSS rule), so nothing here changes size once rendered; only the section-level
+             hidden->visible pop-in was the risk. renderForecastVsActual()'s own
+             `!bt?.folds?.length` / `folds.length < 3` fallbacks still hide the section for the
+             rare-edge case, now happening after this initial state rather than instead of it. -->
+        <section class="track-record-section" id="section-track-record"
+                 aria-label="Past estimate accuracy — flat-hold vs actual prices" data-i18n-attr="aria-label:trackRecordAriaLabel">
+          <h3 data-i18n="trackRecordHeading">How close our estimates have been</h3>
+          <p class="track-record-caption" data-i18n="trackRecordCaption">Our estimate (dashed) and the actual price (gold), recent weeks</p>
+          <div class="track-record-chart-wrap">
+            <canvas id="track-record-chart" role="img"
+                    aria-label="Past flat-hold estimates vs actual gold prices" data-i18n-attr="aria-label:trackRecordChartAriaLabel"></canvas>
+          </div>
+        </section>
+
       </details>
       </div>
       </div><!-- /.layout-grid -->
 
       <!-- 9. FOOTER -->
       <footer class="site-footer">
+        <!-- U1 audit (2026-09-23, docs/PLAIN_LANGUAGE_AUDIT.md): static pre-hydration
+             fallback, kept in sync by hand with i18n.js's footerBody (same fix AE2's
+             own comment in i18n.js already had to make for firstVisitText -- this file's
+             fallback text is a real, separate copy JS overwrites, not a template). -->
         <p data-i18n-html="footerBody">
-          We use <a href="https://ibjarates.com/" target="_blank" rel="noopener">IBJA</a>'s
-          official gold benchmark and calibrate it to match real shop prices, checking
-          against <a href="https://www.tanishq.co.in/gold-rate.html?lang=en_IN" target="_blank" rel="noopener">Tanishq</a>'s
-          live rate when we can.
-          Prices are checked every 3 hours — IBJA itself only updates once a day, so the
+          We use <a href="https://ibjarates.com/" target="_blank" rel="noopener">IBJA</a>
+          (the India Bullion and Jewellers Association, which publishes an official gold price every working day) and adjust it
+          to match real shop prices, comparing
+          with <a href="https://www.tanishq.co.in/gold-rate.html?lang=en_IN" target="_blank" rel="noopener">Tanishq</a>'s
+          listed rate when we can.
+          Prices are checked on a regular schedule — IBJA itself only updates once a day, so the
           number sometimes stays the same for a while.
         </p>
         <p class="muted" data-i18n="footerMuted">Not financial advice. Rates are indicative.</p>
@@ -508,35 +576,38 @@
       </a>
     </nav>
 
-    <!-- Sentry error tracking — replace the placeholder DSN with the one from sentry.io
-         (Project Settings → Client Keys → DSN). The site will work normally without it.
+    <!-- Sentry error tracking. The DSN is in app.js (SENTRY_DSN); initSentry() there runs both
+         at app.js load and from this tag's onload, so init happens whichever finishes first.
+         The site works normally without Sentry.
          Served from Sentry's own CDN (not jsdelivr's npm proxy) — the npm package no longer
          ships the prebuilt bundle jsdelivr would need, so an npm-path URL 404s.
          `async`, not `defer` — deliberately NOT in app.js's execution-order dependency
-         chain. Unlike Chart.js below (a hard, unguarded dependency — `new Chart(...)`
-         throws if it isn't loaded), every Sentry.* call in app.js is already guarded
-         with `typeof Sentry !== "undefined"`, so app.js tolerates Sentry loading late
+         chain. Like Chart.js below (also async now), every Sentry.* call in app.js is already
+         guarded with `typeof Sentry !== "undefined"`, so app.js tolerates Sentry loading late
          or not at all. render-smoke kept intermittently failing cold-load even after
          the original render-blocking fix (see app.js's init() comment) because app.js
          still had to wait for BOTH third-party scripts to finish, regardless of defer
          vs blocking, since deferred scripts execute in document order. Moving Sentry to
-         async removes it from that wait entirely — Chart.js is the one third-party
-         script app.js's own start time still depends on, which is unavoidable given it's
-         a real (not just guarded) dependency. Worth noting Sentry currently uses a
-         placeholder DSN and isn't actually reporting anywhere yet, so this has zero
-         functional cost today regardless. -->
+         async removes it from that wait entirely. Chart.js used to be the one third-party
+         script app.js's own start time still depended on; it is async too now (below). -->
     <script src="https://browser.sentry-cdn.com/7.120.4/bundle.min.js"
             integrity="sha384-HF4Kc49tTfBgl6JmNMfcrjBeW9pK13xSnnr307iG4PCNj8eRKhkvE9Tp27DigU1L"
-            crossorigin="anonymous" async></script>
+            crossorigin="anonymous" async
+            onload="if (window.__onSentryReady) window.__onSentryReady()"></script>
 
-    <!-- `defer`, not `async` like Sentry above — app.js calls `new Chart(...)`
-         unguarded, so this one genuinely must be loaded and executed before app.js
-         runs. Document order among deferred scripts is preserved, so Chart is still
-         guaranteed defined before app.js runs; not render-blocking either way (defer
-         never blocks HTML parsing, only gates when app.js itself starts). -->
+    <!-- `async` like Sentry above (was `defer`). As a deferred script it gated app.js: deferred
+         scripts run in document order, so a slow or failed jsdelivr request stalled app.js itself
+         and the page never left its loading skeleton (render-smoke run 35511515077, 2026-09-21;
+         reproduced in a real browser with the request aborted or hung). app.js now guards every
+         `new Chart(...)` (chartLibAvailable) and onload re-renders the charts when the library
+         arrives, so the price and every non-chart card render without waiting on the CDN. -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.6/dist/chart.umd.min.js"
             integrity="sha384-Sse/HDqcypGpyTDpvZOJNnG0TT3feGQUkF9H+mnRvic+LjR+K1NhTt8f51KIQ3v3"
-            crossorigin="anonymous" defer></script>
+            crossorigin="anonymous" async
+            onload="if (window.__onChartReady) window.__onChartReady()"></script>
+    <!-- flags.js must execute before app.js (both deferred; document order preserves this) --
+         renderFlaggedFeatures() reads FEATURE_FLAGS/isFeatureOn() from it. -->
+    <script src="flags.js" defer></script>
     <!-- i18n.js must execute before app.js (both deferred; document order preserves this) --
          app.js calls t()/getLang()/setLang() at its own top level (currentLang = getLang()). -->
     <script src="i18n.js" defer></script>
@@ -544,6 +615,9 @@
     <script>
       if ("serviceWorker" in navigator) {
         window.addEventListener("load", () => {
+          // Captured BEFORE register(): true only for a returning visitor whose existing worker is
+          // controlling this page. A first-time visitor has no controller yet (see controllerchange).
+          const hadController = !!navigator.serviceWorker.controller;
           navigator.serviceWorker.register("service-worker.js").then((registration) => {
             // Force SW byte-check on every page load (bypasses 24h browser SW cache).
             registration.update();
@@ -567,11 +641,17 @@
               registration.update().catch(() => {});
             }, 30 * 60 * 1000);
 
-            // When a new SW takes control (skipWaiting fires), reload once for
-            // fresh shell assets. `refreshing` guard prevents reload loops.
+            // When a NEW SW replaces an EXISTING one (skipWaiting fires), reload once for fresh
+            // shell assets. `refreshing` guard prevents reload loops.
+            // A first-time visitor has nothing to replace: the page they are looking at was just
+            // fetched from the network, so it already IS the fresh shell. controllerchange still
+            // fires for their first clients.claim(), and reloading then made every new visitor's
+            // price flash to the loading skeleton ~1s after first paint (measured: price at ~1.1s,
+            // skeleton at ~1.3s, price again at ~1.7s), and made the post-deploy render smoke test
+            // race that reload and page URGENT on a site that was fine (2026-09-21).
             let refreshing = false;
             navigator.serviceWorker.addEventListener("controllerchange", () => {
-              if (refreshing) return;
+              if (!hadController || refreshing) return;
               refreshing = true;
               window.location.reload();
             });

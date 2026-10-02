@@ -1,0 +1,459 @@
+{
+  "method": "LLM-consensus (not user testing): two model families rated each string blind to each other with the same rubric; temperature 0, seed 42",
+  "models": [
+    "gemma2:9b",
+    "qwen3:30b-a3b"
+  ],
+  "n_strings": 16,
+  "flag_agreement": 1.0,
+  "cohens_kappa_flags": 1.0,
+  "flag_rule": "model flags at score <= 2 or misleading; plus hard words named by both",
+  "flagged_by_either": [
+    "errCouldntLoadMethodology",
+    "hwkError"
+  ],
+  "consensus_hard_words": {
+    "footerBody": [
+      "benchmark rate",
+      "ibja"
+    ],
+    "firstVisitText": [
+      "retail price"
+    ],
+    "reliabilityCoverage": [
+      "estimated range"
+    ],
+    "calibrationConfidenceAppend": [
+      "estimate"
+    ],
+    "README.freshness": [
+      "typical gap",
+      "updates"
+    ],
+    "hwkIntro": [
+      "plain-language summary",
+      "technical detail",
+      "unrounded"
+    ]
+  },
+  "results": [
+    {
+      "key": "pageDescription",
+      "text": "22K gold rate — closely matched to real shop prices, confirmed against live Tanishq retail when reachable. See if today's price is high or low compared to recent weeks.",
+      "ratings": {
+        "gemma2:9b": {
+          "score": 3,
+          "hard_words": [
+            "live Tanishq retail"
+          ],
+          "misleading": false,
+          "why": "The phrase 'live Tanishq retail' is unclear to a general buyer."
+        },
+        "qwen3:30b-a3b": {
+          "score": 3,
+          "hard_words": [
+            "22K",
+            "confirmed against live Tanishq retail"
+          ],
+          "misleading": false,
+          "why": "Some terms may confuse average buyers."
+        }
+      },
+      "flag_by": [],
+      "consensus_hard_words": []
+    },
+    {
+      "key": "footerBody",
+      "text": "We use IBJA (the India Bullion and Jewellers Association's daily benchmark rate) and adjust it to match real shop prices, checking against Tanishq's live rate when we can. Prices are checked on a regular schedule — IBJA itself only updates once a day, so the number sometimes stays the same for a while.",
+      "ratings": {
+        "gemma2:9b": {
+          "score": 3,
+          "hard_words": [
+            "IBJA",
+            "benchmark rate"
+          ],
+          "misleading": false,
+          "why": "The text uses some industry jargon that might be unfamiliar to a general buyer."
+        },
+        "qwen3:30b-a3b": {
+          "score": 3,
+          "hard_words": [
+            "IBJA",
+            "benchmark rate",
+            "Tanishq"
+          ],
+          "misleading": false,
+          "why": "Some terms need explanation for average buyers."
+        }
+      },
+      "flag_by": [],
+      "consensus_hard_words": [
+        "benchmark rate",
+        "ibja"
+      ]
+    },
+    {
+      "key": "firstVisitText",
+      "text": "22K gold retail price, checked about every 3h (worst case recently ~6h, as of 2026-09-23) and confirmed against Tanishq's live rate when possible. We always say plainly when a price is an estimate.",
+      "ratings": {
+        "gemma2:9b": {
+          "score": 3,
+          "hard_words": [
+            "retail price",
+            "live rate"
+          ],
+          "misleading": false,
+          "why": "Some terms might need clarification for a general buyer."
+        },
+        "qwen3:30b-a3b": {
+          "score": 3,
+          "hard_words": [
+            "22K",
+            "retail price",
+            "confirmed against Tanishq's live rate"
+          ],
+          "misleading": false,
+          "why": "Some terms may need explanation for average buyers."
+        }
+      },
+      "flag_by": [],
+      "consensus_hard_words": [
+        "retail price"
+      ]
+    },
+    {
+      "key": "volNoteElevated",
+      "text": "Gold has been swinging more than usual lately — about ±₹180 over 5 days.",
+      "ratings": {
+        "gemma2:9b": {
+          "score": 3,
+          "hard_words": [
+            "±₹180"
+          ],
+          "misleading": false,
+          "why": "The plus/minus symbol and rupee amount are unusual for a general buyer."
+        },
+        "qwen3:30b-a3b": {
+          "score": 3,
+          "hard_words": [
+            "swinging",
+            "±"
+          ],
+          "misleading": false,
+          "why": "Some buyers may not know 'swinging' or '±'."
+        }
+      },
+      "flag_by": [],
+      "consensus_hard_words": []
+    },
+    {
+      "key": "volNoteCalm",
+      "text": "Gold has been steadier than usual lately — about ±₹90 over 5 days.",
+      "ratings": {
+        "gemma2:9b": {
+          "score": 3,
+          "hard_words": [
+            "±₹90"
+          ],
+          "misleading": false,
+          "why": "The plus/minus symbol and rupee amount are unusual for a general buyer."
+        },
+        "qwen3:30b-a3b": {
+          "score": 3,
+          "hard_words": [
+            "steadier",
+            "±"
+          ],
+          "misleading": false,
+          "why": "Some words need explanation for basic English readers."
+        }
+      },
+      "flag_by": [],
+      "consensus_hard_words": []
+    },
+    {
+      "key": "reliabilityCoverage",
+      "text": "Our estimated range has been right about 7 times out of 10 so far.",
+      "ratings": {
+        "gemma2:9b": {
+          "score": 3,
+          "hard_words": [
+            "estimated range"
+          ],
+          "misleading": false,
+          "why": "The phrase 'estimated range' might be unclear to some buyers."
+        },
+        "qwen3:30b-a3b": {
+          "score": 3,
+          "hard_words": [
+            "estimated range",
+            "7 times out of 10"
+          ],
+          "misleading": false,
+          "why": "Unclear how '7 times out of 10' relates to gold prices."
+        }
+      },
+      "flag_by": [],
+      "consensus_hard_words": [
+        "estimated range"
+      ]
+    },
+    {
+      "key": "calibrationConfidenceAppend",
+      "text": "Based on past comparisons, the real price has landed within about ₹90/gram of this estimate about 7 times out of 10 so far.",
+      "ratings": {
+        "gemma2:9b": {
+          "score": 3,
+          "hard_words": [
+            "past comparisons",
+            "real price",
+            "estimate"
+          ],
+          "misleading": false,
+          "why": "The phrasing is a bit technical and may require some thought."
+        },
+        "qwen3:30b-a3b": {
+          "score": 3,
+          "hard_words": [
+            "estimate",
+            "landed"
+          ],
+          "misleading": false,
+          "why": "Some words need effort to understand."
+        }
+      },
+      "flag_by": [],
+      "consensus_hard_words": [
+        "estimate"
+      ]
+    },
+    {
+      "key": "errCouldntLoadMethodology",
+      "text": "Couldn't load this section — check your connection and reload.",
+      "ratings": {
+        "gemma2:9b": {
+          "score": 1,
+          "hard_words": [],
+          "misleading": false,
+          "why": "The message is technical and doesn't explain the problem clearly."
+        },
+        "qwen3:30b-a3b": {
+          "score": 1,
+          "hard_words": [],
+          "misleading": false,
+          "why": "Confusing error message."
+        }
+      },
+      "flag_by": [
+        "gemma2:9b",
+        "qwen3:30b-a3b"
+      ],
+      "consensus_hard_words": []
+    },
+    {
+      "key": "accSummaryIntro",
+      "text": "We check our price estimate against real shop prices regularly, and adjust when it drifts too far off.",
+      "ratings": {
+        "gemma2:9b": {
+          "score": 3,
+          "hard_words": [],
+          "misleading": false,
+          "why": "It's understandable but could benefit from simpler wording."
+        },
+        "qwen3:30b-a3b": {
+          "score": 5,
+          "hard_words": [],
+          "misleading": false,
+          "why": "Clear and simple for all buyers."
+        }
+      },
+      "flag_by": [],
+      "consensus_hard_words": []
+    },
+    {
+      "key": "accSummaryDirectionOff",
+      "text": "We don't try to guess whether prices will rise or fall next — none of the methods we've tested could do it reliably, so we don't show a guess.",
+      "ratings": {
+        "gemma2:9b": {
+          "score": 4,
+          "hard_words": [],
+          "misleading": false,
+          "why": "It clearly states that price predictions are unreliable."
+        },
+        "qwen3:30b-a3b": {
+          "score": 5,
+          "hard_words": [],
+          "misleading": false,
+          "why": "Clear and simple statement."
+        }
+      },
+      "flag_by": [],
+      "consensus_hard_words": []
+    },
+    {
+      "key": "accSummaryLinkText",
+      "text": "See the full numbers and how we test all of this →",
+      "ratings": {
+        "gemma2:9b": {
+          "score": 3,
+          "hard_words": [
+            "→"
+          ],
+          "misleading": false,
+          "why": "The arrow symbol might confuse some buyers."
+        },
+        "qwen3:30b-a3b": {
+          "score": 3,
+          "hard_words": [
+            "See the full numbers",
+            "how we test all of this"
+          ],
+          "misleading": false,
+          "why": "Some words may need effort to understand."
+        }
+      },
+      "flag_by": [],
+      "consensus_hard_words": []
+    },
+    {
+      "key": "README.freshness",
+      "text": "The typical gap between updates was 4.6 (as of 2026-09-23) hours.",
+      "ratings": {
+        "gemma2:9b": {
+          "score": 3,
+          "hard_words": [
+            "typical gap",
+            "updates"
+          ],
+          "misleading": false,
+          "why": "The phrasing is a bit technical for a general buyer."
+        },
+        "qwen3:30b-a3b": {
+          "score": 3,
+          "hard_words": [
+            "typical gap",
+            "updates"
+          ],
+          "misleading": false,
+          "why": "Unclear what 'gap' means without context."
+        }
+      },
+      "flag_by": [],
+      "consensus_hard_words": [
+        "typical gap",
+        "updates"
+      ]
+    },
+    {
+      "key": "README.likelyRange",
+      "text": "It has actually landed inside the range about 7 times out of 10 so far — a bit narrower than it should be, so treat it as a guide. We re-check this every week; How we know has the exact numbers behind both figures.",
+      "ratings": {
+        "gemma2:9b": {
+          "score": 3,
+          "hard_words": [
+            "landed inside the range",
+            "a bit narrower than it should be",
+            "re-check this every week"
+          ],
+          "misleading": false,
+          "why": "The phrasing is vague and could be interpreted differently."
+        },
+        "qwen3:30b-a3b": {
+          "score": 3,
+          "hard_words": [
+            "landed",
+            "range",
+            "narrower",
+            "treat",
+            "guide",
+            "re-check",
+            "exact numbers",
+            "figures"
+          ],
+          "misleading": false,
+          "why": "Some terms like 'landed' and 'range' may confuse average buyers."
+        }
+      },
+      "flag_by": [],
+      "consensus_hard_words": []
+    },
+    {
+      "key": "hwkIntro",
+      "text": "This page has the full technical detail behind the plain-language summary on the main page — the same numbers, unrounded, plus how we test them.",
+      "ratings": {
+        "gemma2:9b": {
+          "score": 3,
+          "hard_words": [
+            "technical detail",
+            "plain-language summary",
+            "unrounded"
+          ],
+          "misleading": false,
+          "why": "Some phrases might require a bit of thought to understand."
+        },
+        "qwen3:30b-a3b": {
+          "score": 3,
+          "hard_words": [
+            "technical detail",
+            "plain-language summary",
+            "unrounded"
+          ],
+          "misleading": false,
+          "why": "Some terms may confuse average buyers."
+        }
+      },
+      "flag_by": [],
+      "consensus_hard_words": [
+        "plain-language summary",
+        "technical detail",
+        "unrounded"
+      ]
+    },
+    {
+      "key": "hwkEmpty",
+      "text": "Not enough data yet to show this — check back once a few more readings have come in.",
+      "ratings": {
+        "gemma2:9b": {
+          "score": 3,
+          "hard_words": [],
+          "misleading": false,
+          "why": "It implies waiting for more information before making a decision."
+        },
+        "qwen3:30b-a3b": {
+          "score": 3,
+          "hard_words": [],
+          "misleading": false,
+          "why": "Needs more data to be clear."
+        }
+      },
+      "flag_by": [],
+      "consensus_hard_words": []
+    },
+    {
+      "key": "hwkError",
+      "text": "Couldn't load this page's data. Check your connection and reload.",
+      "ratings": {
+        "gemma2:9b": {
+          "score": 1,
+          "hard_words": [],
+          "misleading": false,
+          "why": "The message is technical and doesn't explain the problem clearly."
+        },
+        "qwen3:30b-a3b": {
+          "score": 1,
+          "hard_words": [
+            "Couldn't load this page's data",
+            "Check your connection"
+          ],
+          "misleading": false,
+          "why": "Confusing error message for a gold buyer."
+        }
+      },
+      "flag_by": [
+        "gemma2:9b",
+        "qwen3:30b-a3b"
+      ],
+      "consensus_hard_words": []
+    }
+  ]
+}

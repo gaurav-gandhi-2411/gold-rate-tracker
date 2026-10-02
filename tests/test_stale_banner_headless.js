@@ -9,6 +9,7 @@ import http from "node:http";
 import path from "node:path";
 import fs from "node:fs";
 import pkg from "../scraper/node_modules/playwright/index.js";
+import { LOCAL_ONLY_ARGS } from "./helpers/local_only_browser.js";
 const { chromium } = pkg;
 
 // ─── Local HTTP server (serves repo root) ────────────────────────────────────
@@ -207,7 +208,8 @@ function assert(label, condition, detail = "") {
 
 async function run() {
   const { server, port } = await startServer(ROOT);
-  const browser = await chromium.launch({ headless: true });
+  // Third-party hosts (Chart.js / Sentry CDNs) are unreachable by design: see helpers/local_only_browser.js.
+  const browser = await chromium.launch({ headless: true, args: LOCAL_ONLY_ARGS });
   const base    = `http://127.0.0.1:${port}`;
 
   // ── Inject mock fetch (addInitScript runs before page scripts) ───────────────
@@ -279,12 +281,17 @@ async function run() {
     }
 
     // ── Scenario C: IBJA-primary, published today → "Estimated" banner (ADR 025) ──
-    console.log("\nScenario C: price_source=ibja_calibrated, IBJA 2h old → 'Estimated' banner");
+    console.log("\nScenario C: price_source=ibja_calibrated, IBJA published today (IST) → 'Estimated' banner");
     {
       const ctx  = await browser.newContext();
       const page = await ctx.newPage();
-      // scrape 9h old (stale — expected), IBJA 2h old (fresh, today) → IBJA-primary
-      await injectMockFetch(page, makeForecastIBJA(9, 2), makePrices(9));
+      // scrape 9h old (stale — expected), IBJA published earlier the SAME IST day → IBJA-primary.
+      // The app's isToday check compares IST day keys, so a fixed "2h ago" lands on the previous
+      // IST day between 00:00 and 02:00 IST (18:30–20:30 UTC) and flips the copy to the weekday
+      // form — capped at half the time elapsed since IST midnight so the fixture is always "today".
+      const istMsIntoDay = (Date.now() + 5.5 * 3_600_000) % 86_400_000;
+      const ibjaTodayAgeH = Math.min(2, istMsIntoDay / 3_600_000 / 2);
+      await injectMockFetch(page, makeForecastIBJA(9, ibjaTodayAgeH), makePrices(9));
 
       await page.goto(base, { waitUntil: "networkidle" });
       await page.waitForTimeout(500);
@@ -296,8 +303,8 @@ async function run() {
       assert("computed display !== 'none'",     state.display !== "none",   `got "${state.display}"`);
       assert('text includes "estimated price"',
         state.text.includes("estimated price"), `got "${state.text}"`);
-      assert('text includes "IBJA"',
-        state.text.includes("IBJA"),            `got "${state.text}"`);
+      assert('text names the official rate',
+        state.text.includes("official gold rate"), `got "${state.text}"`);
       assert('text includes "today"',
         state.text.includes("today"),           `got "${state.text}"`);
       assert('text does NOT include "last confirmed price"',
@@ -323,8 +330,8 @@ async function run() {
       assert("banner.hidden === false",         state.hidden === false);
       assert('text includes "estimated price"',
         state.text.includes("estimated price"), `got "${state.text}"`);
-      assert('text includes "close" (dated carry-forward qualifier)',
-        state.text.includes("close"),           `got "${state.text}"`);
+      assert('text names the day of the rate (dated carry-forward qualifier)',
+        /official gold rate on \w+day/.test(state.text), `got "${state.text}"`);
       assert('text does NOT include "today\'s"  (must not overclaim freshness)',
         !state.text.includes("today's"),        `got "${state.text}"`);
       assert('text does NOT include "last confirmed price"',

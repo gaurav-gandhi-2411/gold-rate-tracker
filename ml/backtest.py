@@ -29,6 +29,8 @@ from ml.chronos_forecast import (
     forecast_ibja,
     load_chronos_pipeline,
 )
+from ml.known_at import ibja_known_at
+from ml.leak_guard import KnownInput, assert_known_before
 from ml.metrics import (
     compute_decision_accuracy_h5,
     compute_dir_acc_h5,
@@ -52,6 +54,16 @@ def load_ibja_series(parquet_path: Path = IBJA_PARQUET) -> pd.Series:
     df = pd.read_parquet(parquet_path)
     df = df.sort_values("date").dropna(subset=["pm_916"])
     return df.set_index("date")["pm_916"] / 10.0
+
+
+def _assert_context_known(context: pd.Series, actuals_slice: pd.Series) -> None:
+    """ADR 061: every context value (an IBJA PM, known at its publication) must be known
+    strictly before the first actual is published -- the latest moment a forecast of the
+    window can be issued. Public availability, not fetched_at: the series is a historical
+    replay of IBJA's published record (ml.known_at docstring)."""
+    moment = ibja_known_at(actuals_slice.index[0], "pm")
+    inputs = [KnownInput(f"pm@{d}", "ibja_pm", ibja_known_at(d, "pm")) for d in context.index]
+    assert_known_before(moment, inputs, context=f"backtest fold ending {context.index[-1]}")
 
 
 def yield_folds(
@@ -78,6 +90,7 @@ def yield_folds(
         assert context.index[-1] < actuals_slice.index[0], (
             f"leakage: context ends {context.index[-1]}, actuals start {actuals_slice.index[0]}"
         )
+        _assert_context_known(context, actuals_slice)
         yield context, actuals_slice.values.tolist()
 
 
@@ -113,6 +126,7 @@ def run_backtest(
         assert context.index[-1] < actuals_slice.index[0], (
             f"leakage: context ends {context.index[-1]}, actuals start {actuals_slice.index[0]}"
         )
+        _assert_context_known(context, actuals_slice)
 
         actuals = actuals_slice.values.tolist()
         context_last = float(context.iloc[-1])

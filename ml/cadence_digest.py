@@ -30,12 +30,23 @@ Usage:
 from __future__ import annotations
 
 import json
+from datetime import UTC, datetime, timedelta
 from pathlib import Path
 
 DATA_DIR = Path(__file__).parent.parent / "data"
 CADENCE_METRICS_PATH = DATA_DIR / "cadence_metrics.json"
+# AE3a (audit 2026-09-10): check-price.yml's own catch-up-dispatch step now
+# classifies each firing as "late" (a schedule event fired recently, the
+# cycle was just slow) or "dropped" (no schedule event fired at all in the
+# preceding window -- AD1's finding, same audit: check-price's 06:07 UTC
+# slot stopped firing as a schedule event for 9 straight days, silently
+# absorbed by catch-up every time with nothing distinguishing it from an
+# ordinary slow cycle). This digest is where that distinction becomes
+# visible to a human instead of staying buried in per-run Actions logs.
+CATCHUP_LOG_PATH = DATA_DIR / "catchup_dispatch_log.jsonl"
 
 PROMISE_HOURS = 3  # the check-price.yml cron's design target, not a rolling number
+CATCHUP_WINDOW_DAYS = 7  # matches cadence_metrics.py's WINDOW_DAYS convention
 
 
 def load_cadence_metrics(path: Path = CADENCE_METRICS_PATH) -> dict | None:
@@ -53,10 +64,56 @@ def load_cadence_metrics(path: Path = CADENCE_METRICS_PATH) -> dict | None:
     return data
 
 
-def build_digest_body(metrics: dict) -> str:
+def load_catchup_log(path: Path = CATCHUP_LOG_PATH) -> list[dict]:
+    """Parse the append-only catch-up-dispatch log. Skips (does not raise
+    on) any malformed line -- same convention as ml.cadence_metrics.load_log,
+    a single corrupt append must not take down digest generation."""
+    if not path.exists():
+        return []
+    records: list[dict] = []
+    for line in path.read_text(encoding="utf-8").splitlines():
+        line = line.strip()
+        if not line:
+            continue
+        try:
+            records.append(json.loads(line))
+        except json.JSONDecodeError:
+            continue
+    return records
+
+
+def summarize_catchup_causes(
+    records: list[dict], window_days: int = CATCHUP_WINDOW_DAYS, now: datetime | None = None
+) -> dict | None:
+    """Counts catch-up firings in the trailing window by cause. Returns None
+    (not a zeroed dict) when there's nothing in the window -- distinct from
+    "zero dropped, N late", which is a real, reportable state."""
+    if not records:
+        return None
+    cutoff = (now or datetime.now(UTC)) - timedelta(days=window_days)
+    in_window = []
+    for r in records:
+        ts = r.get("timestamp")
+        if not isinstance(ts, str):
+            continue
+        try:
+            parsed = datetime.fromisoformat(ts.replace("Z", "+00:00"))
+        except ValueError:
+            continue
+        if parsed >= cutoff:
+            in_window.append(r)
+    if not in_window:
+        return None
+    dropped = sum(1 for r in in_window if r.get("cause") == "dropped")
+    late = sum(1 for r in in_window if r.get("cause") == "late")
+    unknown = len(in_window) - dropped - late
+    return {"total": len(in_window), "dropped": dropped, "late": late, "unknown": unknown}
+
+
+def build_digest_body(metrics: dict, catchup_summary: dict | None = None) -> str:
     """Builds the ntfy body text. Only ever states numbers taken directly
-    from `metrics` -- never fabricates a percentile or count metrics.json
-    doesn't actually carry."""
+    from `metrics`/`catchup_summary` -- never fabricates a percentile or
+    count either file doesn't actually carry."""
     median = metrics["median_gap_hours"]
     n = metrics["n"]
     as_of = str(metrics.get("as_of", ""))[:10]
@@ -72,6 +129,21 @@ def build_digest_body(metrics: dict) -> str:
         " This is a platform-side condition, not a repo bug -- see docs/RUNBOOK.md. "
         "No action needed unless the dead-man's switch pages separately."
     )
+    # AE3a: surfaces the late-vs-dropped split so a dropped-slot streak (AD1's
+    # finding shape -- a scheduled trigger silently not firing at all,
+    # absorbed by catch-up every cycle with nothing distinguishing it from
+    # ordinary lateness) becomes visible here instead of staying buried in
+    # per-run Actions logs. Omitted entirely when there's nothing to report --
+    # zero catch-up firings this week is not itself news.
+    if catchup_summary:
+        line += (
+            f" Catch-up fired {catchup_summary['total']}x this week: "
+            f"{catchup_summary['dropped']} due to the scheduled trigger not firing at all, "
+            f"{catchup_summary['late']} due to an ordinary slow cycle"
+        )
+        if catchup_summary["unknown"]:
+            line += f", {catchup_summary['unknown']} unclassified"
+        line += "."
     return line
 
 
@@ -85,7 +157,8 @@ def main() -> None:
     if metrics is None:
         print("No cadence data to digest this week -- skipping (not an error).")
         return
-    body = build_digest_body(metrics)
+    catchup_summary = summarize_catchup_causes(load_catchup_log(CATCHUP_LOG_PATH))
+    body = build_digest_body(metrics, catchup_summary)
     print(body)
 
 

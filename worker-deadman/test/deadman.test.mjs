@@ -17,7 +17,14 @@ import {
   TANISHQ_ESCALATE_HOURS,
   RUNNER_CONFIRMED_OFFLINE_HOURS,
 } from "../src/deadman.mjs";
-import { runCheck } from "../src/index.mjs";
+import { runCheck, safeTokenMatch } from "../src/index.mjs";
+import worker from "../src/index.mjs";
+import {
+  PR_TRIGGER_STALE_MINUTES,
+  MERGED_SETTLE_MINUTES,
+  MERGED_LOOKBACK_MINUTES,
+  REQUIRED_CONTEXTS,
+} from "../src/pr_trigger_health.mjs";
 
 const HOUR = 3_600_000;
 const NOW = Date.parse("2026-08-28T04:00:00Z");
@@ -212,6 +219,86 @@ test("runCheck: fresh payload sends no staleness alert (heartbeat is separate --
   const result = await runCheck(env, fetchImpl, NOW);
   assert.equal(result.level, "ok");
   assert.equal(result.sent, false);
+});
+
+// AC3 (audit 2026-09-10): the manual-trigger endpoint's response must be a
+// LIVE echo of deadman.mjs's real exported constants, not a hardcoded
+// literal that happens to match today -- otherwise a self-report that
+// echoes a fixed string is exactly instance #14 of the defect class this
+// whole audit exists to catch (a control emitting a plausible value
+// instead of actually verifying anything). Two things are checked, not
+// one: (1) the reported numbers equal the imported constants (below), and
+// (2) those same reported numbers are the ones actually driving
+// classification behavior in the SAME call, not a cosmetic second copy
+// (next test) -- JS `export const` bindings can't be monkey-patched from
+// a test importing the real module, so "would visibly differ if master's
+// changed" is proven by tying the reported value to observed behavior
+// instead of by mutating the constant.
+test("runCheck: response echoes the real threshold constants from deadman.mjs, not a hardcoded copy", async () => {
+  const fetchImpl = async (url) => {
+    if (url.includes("forecast.json")) {
+      return { ok: true, json: async () => ({ predicted_at: isoHoursAgo(0.5), scraped_at: isoHoursAgo(0.5) }) };
+    }
+    return { ok: true };
+  };
+  const env = { NTFY_TOPIC: "test-gold-topic", DEADMAN_STATE: fakeKv() };
+  const result = await runCheck(env, fetchImpl, NOW);
+  assert.deepEqual(result.thresholds, {
+    warnHours: WARN_THRESHOLD_HOURS,
+    escalateHours: ESCALATE_THRESHOLD_HOURS,
+    tanishqWarnHours: TANISHQ_WARN_HOURS,
+    tanishqEscalateHours: TANISHQ_ESCALATE_HOURS,
+    runnerConfirmedOfflineHours: RUNNER_CONFIRMED_OFFLINE_HOURS,
+    prTriggerStaleMinutes: PR_TRIGGER_STALE_MINUTES,
+    mergedSettleMinutes: MERGED_SETTLE_MINUTES,
+    mergedLookbackMinutes: MERGED_LOOKBACK_MINUTES,
+    requiredContexts: REQUIRED_CONTEXTS,
+  });
+});
+
+test("runCheck: the reported warnHours is the actual operative boundary, not just a cosmetic echo", async () => {
+  // Age the payload to exactly the reported warnHours minus a hair (still
+  // "ok"), then exactly at it (must flip to "warn") -- proving the number
+  // in result.thresholds.warnHours is the same number classifyStaleness
+  // actually used to decide result.level in that same call. If
+  // `thresholds` were ever hardcoded independently of the real constant,
+  // this pairing could silently drift while the deepEqual test above still
+  // passed (both sides copy-pasted the same wrong literal).
+  const belowFetch = async (url) => {
+    if (url.includes("forecast.json")) {
+      return {
+        ok: true,
+        json: async () => ({
+          predicted_at: isoHoursAgo(WARN_THRESHOLD_HOURS - 0.01),
+          scraped_at: isoHoursAgo(0.5),
+        }),
+      };
+    }
+    return { ok: true };
+  };
+  const belowResult = await runCheck(
+    { NTFY_TOPIC: "test-gold-topic", DEADMAN_STATE: fakeKv() },
+    belowFetch,
+    NOW,
+  );
+  assert.equal(belowResult.level, "ok");
+  assert.equal(belowResult.thresholds.warnHours, WARN_THRESHOLD_HOURS);
+
+  const atFetch = async (url) => {
+    if (url.includes("forecast.json")) {
+      return {
+        ok: true,
+        json: async () => ({
+          predicted_at: isoHoursAgo(WARN_THRESHOLD_HOURS),
+          scraped_at: isoHoursAgo(0.5),
+        }),
+      };
+    }
+    return { ok: true };
+  };
+  const atResult = await runCheck({ NTFY_TOPIC: "test-gold-topic", DEADMAN_STATE: fakeKv() }, atFetch, NOW);
+  assert.equal(atResult.level, "warn");
+  assert.equal(atResult.thresholds.warnHours, WARN_THRESHOLD_HOURS);
 });
 
 test("runCheck: repeated ESCALATE runs inside the reminder window only alert once", async () => {
@@ -607,4 +694,237 @@ test("runCheck: heartbeat body states the Tanishq channel too", async () => {
   const heartbeat = ntfyCalls.find((c) => c.headers.Priority === "1");
   assert.ok(heartbeat);
   assert.match(heartbeat.body, /Tanishq confirmation/);
+});
+
+// AI2: integration tests for the PR-trigger-health channel, proving the
+// actual wiring (index.mjs's fetchOpenPrTriggerHealth + the GITHUB_PR_
+// HEALTH_PAT gate) works end-to-end, not just the pure functions in
+// pr_trigger_health.test.mjs in isolation.
+
+function githubApiFetch({ openPrs, checkRunsBySha, failOn }) {
+  return async (url, opts) => {
+    if (url.includes("forecast.json")) {
+      return { ok: true, json: async () => ({ predicted_at: isoHoursAgo(0.2), scraped_at: isoHoursAgo(0.2) }) };
+    }
+    if (url.includes("/pulls?state=open")) {
+      if (failOn === "pulls") return { ok: false, status: 403 };
+      return { ok: true, json: async () => openPrs };
+    }
+    if (url.includes("/check-runs")) {
+      const sha = url.match(/commits\/([a-z0-9]+)\/check-runs/)[1];
+      if (failOn === "check-runs") return { ok: false, status: 500 };
+      return { ok: true, json: async () => ({ check_runs: checkRunsBySha[sha] || [] }) };
+    }
+    if (url.includes("/commits/")) {
+      const sha = url.match(/commits\/([a-z0-9]+)$/)[1];
+      if (failOn === "commit") return { ok: false, status: 404 };
+      return { ok: true, json: async () => ({ commit: { committer: { date: isoMinutesAgo(sha) } } }) };
+    }
+    // ntfy POST
+    return { ok: true };
+  };
+}
+
+function isoMinutesAgo(sha) {
+  // test helper: encode the desired age (minutes) into the fake sha itself,
+  // e.g. sha "age60" -> 60 minutes ago.
+  const m = /^age(\d+)$/.exec(sha);
+  const minutes = m ? Number(m[1]) : 0;
+  return new Date(NOW - minutes * 60_000).toISOString();
+}
+
+test("runCheck: PR trigger-health channel pages when a real stale PR is present", async () => {
+  const ntfyCalls = [];
+  const fetchImpl = async (url, opts) => {
+    const inner = githubApiFetch({
+      openPrs: [{ number: 1539, head: { ref: "fix/thing", sha: "age60" } }],
+      checkRunsBySha: {},
+    });
+    const resp = await inner(url, opts);
+    if (url.includes("ntfy.sh")) ntfyCalls.push(opts);
+    return resp;
+  };
+  const env = {
+    NTFY_TOPIC: "test-gold-topic",
+    DEADMAN_STATE: fakeKv(),
+    GITHUB_PR_HEALTH_PAT: "fake-token",
+  };
+  const result = await runCheck(env, fetchImpl, NOW);
+  assert.equal(result.prTriggerHealthSent, true);
+  assert.equal(result.prTriggerHealthStaleCount, 1);
+  const prAlert = ntfyCalls.find((c) => c.headers.Title.includes("required checks never started"));
+  assert.ok(prAlert);
+  assert.match(prAlert.body, /#1539/);
+});
+
+test("runCheck: PR trigger-health channel does not page for a fresh PR with no check-run yet", async () => {
+  const ntfyCalls = [];
+  const fetchImpl = async (url, opts) => {
+    const inner = githubApiFetch({
+      openPrs: [{ number: 9999, head: { ref: "feat/new", sha: "age1" } }],
+      checkRunsBySha: {},
+    });
+    const resp = await inner(url, opts);
+    if (url.includes("ntfy.sh")) ntfyCalls.push(opts);
+    return resp;
+  };
+  const env = {
+    NTFY_TOPIC: "test-gold-topic",
+    DEADMAN_STATE: fakeKv(),
+    GITHUB_PR_HEALTH_PAT: "fake-token",
+  };
+  const result = await runCheck(env, fetchImpl, NOW);
+  assert.equal(result.prTriggerHealthSent, false);
+  assert.equal(ntfyCalls.some((c) => c.headers.Title.includes("required checks never started")), false);
+});
+
+test("runCheck: PR trigger-health channel is skipped (not paged) when GITHUB_PR_HEALTH_PAT is unset", async () => {
+  let githubApiCalled = false;
+  const fetchImpl = async (url, opts) => {
+    if (url.includes("api.github.com")) githubApiCalled = true;
+    return githubApiFetch({ openPrs: [], checkRunsBySha: {} })(url, opts);
+  };
+  const env = { NTFY_TOPIC: "test-gold-topic", DEADMAN_STATE: fakeKv() }; // no GITHUB_PR_HEALTH_PAT
+  const result = await runCheck(env, fetchImpl, NOW);
+  assert.equal(result.prTriggerHealthSent, false);
+  assert.equal(githubApiCalled, false);
+});
+
+test("runCheck: PR trigger-health channel fails closed (pages honestly) on a GitHub API error, not silent", async () => {
+  const ntfyCalls = [];
+  const fetchImpl = async (url, opts) => {
+    const inner = githubApiFetch({ openPrs: [], checkRunsBySha: {}, failOn: "pulls" });
+    const resp = await inner(url, opts);
+    if (url.includes("ntfy.sh")) ntfyCalls.push(opts);
+    return resp;
+  };
+  const env = {
+    NTFY_TOPIC: "test-gold-topic",
+    DEADMAN_STATE: fakeKv(),
+    GITHUB_PR_HEALTH_PAT: "fake-token",
+  };
+  const result = await runCheck(env, fetchImpl, NOW);
+  assert.equal(result.prTriggerHealthSent, true);
+  const failureAlert = ntfyCalls.find((c) => c.headers.Title.includes("could not verify"));
+  assert.ok(failureAlert);
+  assert.match(failureAlert.body, /403/);
+  assert.match(failureAlert.body, /failing closed/);
+});
+
+// 2026-09-21: bot/ is no longer excluded (see fetchOpenPrTriggerHealth's comment) -- this test used
+// to assert that it was, which encoded the assumption that bot PRs always merge within minutes;
+// bot/docs-refresh sat open with zero check-runs for 10 days (#1578) and was skipped by construction.
+test("runCheck: PR trigger-health channel skips scratch/ branches but NOT bot/ ones", async () => {
+  const ntfyCalls = [];
+  const fetchImpl = async (url, opts) => {
+    const inner = githubApiFetch({
+      openPrs: [
+        { number: 1, head: { ref: "bot/data-sync", sha: "age60" } },
+        { number: 2, head: { ref: "scratch/proof", sha: "age60" } },
+      ],
+      checkRunsBySha: {},
+    });
+    const resp = await inner(url, opts);
+    if (url.includes("ntfy.sh")) ntfyCalls.push(opts);
+    return resp;
+  };
+  const env = {
+    NTFY_TOPIC: "test-gold-topic",
+    DEADMAN_STATE: fakeKv(),
+    GITHUB_PR_HEALTH_PAT: "fake-token",
+  };
+  const result = await runCheck(env, fetchImpl, NOW);
+  // Only the bot/ PR counts (60 min old, no check-run); the scratch/ PR is still skipped.
+  assert.equal(result.prTriggerHealthSent, true);
+  assert.equal(result.prTriggerHealthStaleCount, 1);
+});
+
+test("runCheck: PR trigger-health channel does not re-alert on the same stale PR within the dedup window", async () => {
+  const state = fakeKv();
+  const fetchImplFactory = () =>
+    githubApiFetch({
+      openPrs: [{ number: 1539, head: { ref: "fix/thing", sha: "age60" } }],
+      checkRunsBySha: {},
+    });
+  const env = { NTFY_TOPIC: "test-gold-topic", DEADMAN_STATE: state, GITHUB_PR_HEALTH_PAT: "fake-token" };
+
+  const first = await runCheck(env, fetchImplFactory(), NOW);
+  assert.equal(first.prTriggerHealthSent, true);
+
+  const second = await runCheck(env, fetchImplFactory(), NOW + 10 * 60_000); // 10 min later, well within 6h reminder window
+  assert.equal(second.prTriggerHealthSent, false);
+});
+
+// ---------------------------------------------------------------------------
+// S2 (audit continuation, 2026-09-23): the manual HTTP trigger used to run the
+// full check for ANY unauthenticated request. These pin the fix -- a shared
+// secret is required and the comparison never falls open on a missing secret.
+// ---------------------------------------------------------------------------
+
+test("safeTokenMatch: identical strings match", async () => {
+  assert.equal(await safeTokenMatch("abc123", "abc123"), true);
+});
+
+test("safeTokenMatch: different strings of the same length do not match", async () => {
+  assert.equal(await safeTokenMatch("abc123", "abc124"), false);
+});
+
+test("safeTokenMatch: different-length strings do not match", async () => {
+  assert.equal(await safeTokenMatch("short", "a-much-longer-token"), false);
+});
+
+test("safeTokenMatch: empty supplied value never matches a real token", async () => {
+  assert.equal(await safeTokenMatch("", "real-token"), false);
+});
+
+test("fetch(): no token supplied is rejected even when TRIGGER_TOKEN is configured", async () => {
+  const req = new Request("https://example.workers.dev/");
+  const resp = await worker.fetch(req, { TRIGGER_TOKEN: "secret-token" }, {});
+  assert.equal(resp.status, 401);
+});
+
+test("fetch(): wrong token is rejected", async () => {
+  const req = new Request("https://example.workers.dev/?token=nope");
+  const resp = await worker.fetch(req, { TRIGGER_TOKEN: "secret-token" }, {});
+  assert.equal(resp.status, 401);
+});
+
+test("fetch(): TRIGGER_TOKEN unconfigured denies every request -- never falls open on a missing secret", async () => {
+  const req = new Request("https://example.workers.dev/?token=anything");
+  const resp = await worker.fetch(req, {}, {});
+  assert.equal(resp.status, 401);
+});
+
+test("fetch(): correct token via ?token= query param is accepted and runs the check", async () => {
+  const realFetch = globalThis.fetch;
+  try {
+    globalThis.fetch = async () =>
+      new Response(
+        JSON.stringify({ predicted_at: new Date().toISOString(), scraped_at: new Date().toISOString() }),
+        { status: 200 },
+      );
+    const req = new Request("https://example.workers.dev/?token=secret-token");
+    const resp = await worker.fetch(req, { TRIGGER_TOKEN: "secret-token", NTFY_TOPIC: "test-topic" }, {});
+    assert.equal(resp.status, 200);
+    const body = await resp.json();
+    assert.ok("level" in body);
+  } finally {
+    globalThis.fetch = realFetch;
+  }
+});
+
+test("fetch(): correct token via X-Trigger-Token header is accepted", async () => {
+  const realFetch = globalThis.fetch;
+  try {
+    globalThis.fetch = async () =>
+      new Response(
+        JSON.stringify({ predicted_at: new Date().toISOString(), scraped_at: new Date().toISOString() }),
+        { status: 200 },
+      );
+    const req = new Request("https://example.workers.dev/", { headers: { "X-Trigger-Token": "secret-token" } });
+    const resp = await worker.fetch(req, { TRIGGER_TOKEN: "secret-token" }, {});
+    assert.equal(resp.status, 200);
+  } finally {
+    globalThis.fetch = realFetch;
+  }
 });

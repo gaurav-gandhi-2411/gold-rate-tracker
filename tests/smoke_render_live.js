@@ -55,12 +55,14 @@ async function assertRendered(page, label) {
   const reasons = [];
   try {
     // renderHero() is the earliest of the three to depend on the forecast fetch;
-    // renderMethodology() is the LAST step in app.js's init sequence — it waits on
-    // the forecast plus four more Promise.allSettled fetches (backtest/commentary/
-    // drift/coverage) after the history table already rendered. Wait for all
-    // three surfaces together (price, history, methodology), not just history, or
-    // this check races ahead and reports a false pass while something else is
-    // still stuck -- see the methodology-check regression note below.
+    // renderAccuracySummary() (U2, 2026-09-23 -- was renderMethodology() before
+    // the plain-language rework, docs/PLAIN_LANGUAGE_AUDIT.md) is the LAST step
+    // in app.js's init sequence — it waits on the forecast plus four more
+    // Promise.allSettled fetches (backtest/commentary/drift/coverage) after the
+    // history table already rendered. Wait for all three surfaces together
+    // (price, history, methodology), not just history, or this check races
+    // ahead and reports a false pass while something else is still stuck --
+    // see the methodology-check regression note below.
     //
     // Methodology's "still loading" signal is `.meth-skeleton`'s presence, not a
     // literal "Loading model details" text match: the skeleton-loader change
@@ -68,9 +70,10 @@ async function assertRendered(page, label) {
     // that never contained the string this check used to look for, which made
     // this half of the wait (and the standalone recheck below) silently vacuous
     // -- true from the very first paint, before any JS runs, so it could never
-    // again detect a genuinely stuck methodology panel. renderMethodology() does
-    // a full innerHTML replace, so `.meth-skeleton` existing at all is a reliable
-    // "still loading" signal regardless of what real content eventually replaces it.
+    // again detect a genuinely stuck methodology panel. renderAccuracySummary()
+    // does a full innerHTML replace, same as renderMethodology() before it, so
+    // `.meth-skeleton` existing at all is a reliable "still loading" signal
+    // regardless of what real content eventually replaces it.
     await page.waitForFunction(
       () => {
         const price = document.getElementById("hero-price");
@@ -114,10 +117,26 @@ async function runOnce() {
     const context = await browser.newContext();
     const page = await context.newPage();
 
+    // Evidence for whoever gets paged: a failure reason alone cannot tell "the site is stuck" from "the
+    // check raced something" (2026-09-21: a self-reload after the first service-worker install made this
+    // page URGENT on a healthy site, and nothing in the alert said so). Collected passively.
+    const evidence = { mainFrameNavigations: 0, pageErrors: [], consoleErrors: [], failedRequests: [] };
+    // Deduplicated and capped so the failure JSON stays readable in an alert.
+    const summarize = () => ({
+      mainFrameNavigations: evidence.mainFrameNavigations,
+      pageErrors: [...new Set(evidence.pageErrors)].slice(0, 5),
+      consoleErrors: [...new Set(evidence.consoleErrors)].slice(0, 5),
+      failedRequests: [...new Set(evidence.failedRequests)].slice(0, 5),
+    });
+    page.on("framenavigated", (f) => { if (f === page.mainFrame()) evidence.mainFrameNavigations++; });
+    page.on("pageerror", (e) => evidence.pageErrors.push(String(e).slice(0, 200)));
+    page.on("console", (m) => { if (m.type() === "error") evidence.consoleErrors.push(m.text().slice(0, 200)); });
+    page.on("requestfailed", (r) => evidence.failedRequests.push(`${r.url().slice(0, 100)} ${r.failure()?.errorText || ""}`));
+
     // Check 1: fresh load, no prior service-worker install.
     await page.goto(LIVE_URL, { waitUntil: "load" });
     const fresh = await assertRendered(page, "fresh-load");
-    results.checks.push({ name: "fresh-load", ...fresh });
+    results.checks.push({ name: "fresh-load", ...fresh, ...(fresh.ok ? {} : { evidence: summarize() }) });
 
     // Give the service-worker registration (fired on window 'load' in
     // index.html) a moment to install + activate before reloading.
@@ -126,7 +145,7 @@ async function runOnce() {
     // Check 2: same-context reload — service-worker now controls the page.
     await page.reload({ waitUntil: "load" });
     const returning = await assertRendered(page, "returning-visitor-reload");
-    results.checks.push({ name: "returning-visitor-reload", ...returning });
+    results.checks.push({ name: "returning-visitor-reload", ...returning, ...(returning.ok ? {} : { evidence: summarize() }) });
 
     // Check 3: live service-worker.js VERSION matches this checkout's.
     const localSwPath = path.join(__dirname, "..", "service-worker.js");

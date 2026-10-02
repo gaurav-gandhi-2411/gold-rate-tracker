@@ -68,7 +68,10 @@ def test_foreign_commits_no_match_passes():
 
     def fake_run(args, **kwargs):
         if args[:3] == ["gh", "pr", "view"] and args[3] == "100":
-            return _proc(returncode=0, stdout=json.dumps({"headRefOid": "head100"}))
+            return _proc(
+                returncode=0,
+                stdout=json.dumps({"headRefOid": "head100", "headRefName": "fix/something"}),
+            )
         if args[:2] == ["git", "fetch"]:
             return _proc(returncode=0)
         if args[:2] == ["git", "log"] and "head100" in args[2]:
@@ -85,6 +88,8 @@ def test_foreign_commits_no_match_passes():
             if "commitA" in inp:
                 return _proc(returncode=0, stdout="pidA fullshaA\n")
             return _proc(returncode=0, stdout="pidB fullshaB\n")
+        if args[:3] == ["gh", "pr", "list"] and "closed" in args:
+            return _proc(returncode=0, stdout=json.dumps([]))
         if args[:2] == ["gh", "pr"] and "list" in args:
             return _proc(
                 returncode=0,
@@ -105,7 +110,10 @@ def test_foreign_commits_shared_patch_id_fails():
 
     def fake_run(args, **kwargs):
         if args[:3] == ["gh", "pr", "view"] and args[3] == "100":
-            return _proc(returncode=0, stdout=json.dumps({"headRefOid": "head100"}))
+            return _proc(
+                returncode=0,
+                stdout=json.dumps({"headRefOid": "head100", "headRefName": "fix/something"}),
+            )
         if args[:2] == ["git", "fetch"]:
             return _proc(returncode=0)
         if args[:2] == ["git", "log"]:
@@ -115,6 +123,8 @@ def test_foreign_commits_shared_patch_id_fails():
         if args[:2] == ["git", "patch-id"]:
             # same patch-id regardless of which commit -- simulates identical content
             return _proc(returncode=0, stdout="sharedpid abcdefabcdef\n")
+        if args[:3] == ["gh", "pr", "list"] and "closed" in args:
+            return _proc(returncode=0, stdout=json.dumps([]))
         if args[:2] == ["gh", "pr"] and "list" in args:
             return _proc(
                 returncode=0,
@@ -133,7 +143,10 @@ def test_foreign_commits_shared_patch_id_fails():
 def test_foreign_commits_no_unique_commits_passes():
     def fake_run(args, **kwargs):
         if args[:3] == ["gh", "pr", "view"]:
-            return _proc(returncode=0, stdout=json.dumps({"headRefOid": "head100"}))
+            return _proc(
+                returncode=0,
+                stdout=json.dumps({"headRefOid": "head100", "headRefName": "fix/something"}),
+            )
         if args[:2] == ["git", "fetch"]:
             return _proc(returncode=0)
         if args[:2] == ["git", "log"]:
@@ -148,7 +161,10 @@ def test_foreign_commits_no_unique_commits_passes():
 def test_foreign_commits_skips_self_in_other_pr_list():
     def fake_run(args, **kwargs):
         if args[:3] == ["gh", "pr", "view"]:
-            return _proc(returncode=0, stdout=json.dumps({"headRefOid": "head100"}))
+            return _proc(
+                returncode=0,
+                stdout=json.dumps({"headRefOid": "head100", "headRefName": "fix/something"}),
+            )
         if args[:2] == ["git", "fetch"]:
             return _proc(returncode=0)
         if args[:2] == ["git", "log"]:
@@ -157,6 +173,8 @@ def test_foreign_commits_skips_self_in_other_pr_list():
             return _proc(returncode=0, stdout="diff")
         if args[:2] == ["git", "patch-id"]:
             return _proc(returncode=0, stdout="pid sha\n")
+        if args[:3] == ["gh", "pr", "list"] and "closed" in args:
+            return _proc(returncode=0, stdout=json.dumps([]))
         if args[:2] == ["gh", "pr"] and "list" in args:
             # only "other" PR in the list is this same PR -- must not compare against self
             return _proc(
@@ -178,7 +196,10 @@ def test_foreign_commits_empty_patch_id_not_an_error():
 
     def fake_run(args, **kwargs):
         if args[:3] == ["gh", "pr", "view"]:
-            return _proc(returncode=0, stdout=json.dumps({"headRefOid": "head100"}))
+            return _proc(
+                returncode=0,
+                stdout=json.dumps({"headRefOid": "head100", "headRefName": "fix/something"}),
+            )
         if args[:2] == ["git", "fetch"]:
             return _proc(returncode=0)
         if args[:2] == ["git", "log"]:
@@ -192,6 +213,156 @@ def test_foreign_commits_empty_patch_id_not_an_error():
     with patch("subprocess.run", side_effect=fake_run):
         errors = mod.check_foreign_commits(100, "owner/repo", "master")
     assert errors == []
+
+
+def test_foreign_commits_finds_leak_from_closed_source_pr():
+    """AA2a: a leak whose source PR has since been CLOSED (not open) must
+    still be caught -- the exact residual named in the module docstring."""
+
+    def fake_run(args, **kwargs):
+        if args[:3] == ["gh", "pr", "view"] and args[3] == "100":
+            return _proc(
+                returncode=0,
+                stdout=json.dumps({"headRefOid": "head100", "headRefName": "fix/target"}),
+            )
+        if args[:2] == ["git", "fetch"]:
+            return _proc(returncode=0)
+        if args[:2] == ["git", "log"]:
+            return _proc(returncode=0, stdout="leakedcommit\n")
+        if args[:2] == ["git", "show"]:
+            return _proc(returncode=0, stdout="identical diff content")
+        if args[:2] == ["git", "patch-id"]:
+            return _proc(returncode=0, stdout="sharedpid abcdefabcdef\n")
+        if args[:3] == ["gh", "pr", "list"] and "open" in args:
+            return _proc(returncode=0, stdout=json.dumps([]))
+        if args[:3] == ["gh", "pr", "list"] and "closed" in args:
+            return _proc(
+                returncode=0,
+                stdout=json.dumps(
+                    [
+                        {
+                            "number": 999,
+                            "baseRefName": "master",
+                            "headRefOid": "head999",
+                            "headRefName": "fix/source-now-closed",
+                        }
+                    ]
+                ),
+            )
+        raise AssertionError(f"unexpected call: {args}")
+
+    with patch("subprocess.run", side_effect=fake_run):
+        errors = mod.check_foreign_commits(100, "owner/repo", "master")
+    assert len(errors) == 1
+    assert "#999" in errors[0]
+
+
+def test_foreign_commits_skips_closed_pr_scan_for_bot_branch():
+    """AA2a: a bot-pr-sync `bot/`-branch PR under test must not trigger the
+    closed-PR comparison at all -- those PRs can neither source nor receive
+    this leak, and the scan is the expensive part."""
+
+    def fake_run(args, **kwargs):
+        if args[:3] == ["gh", "pr", "view"] and args[3] == "100":
+            return _proc(
+                returncode=0,
+                stdout=json.dumps({"headRefOid": "head100", "headRefName": "bot/data-sync"}),
+            )
+        if args[:2] == ["git", "fetch"]:
+            return _proc(returncode=0)
+        if args[:2] == ["git", "log"]:
+            return _proc(returncode=0, stdout="commitA\n")
+        if args[:2] == ["git", "show"]:
+            return _proc(returncode=0, stdout="diff")
+        if args[:2] == ["git", "patch-id"]:
+            return _proc(returncode=0, stdout="pid sha\n")
+        if args[:3] == ["gh", "pr", "list"] and "open" in args:
+            return _proc(returncode=0, stdout=json.dumps([]))
+        if args[:3] == ["gh", "pr", "list"] and "closed" in args:
+            raise AssertionError("closed-PR scan must be skipped for a bot/ PR under test")
+        raise AssertionError(f"unexpected call: {args}")
+
+    with patch("subprocess.run", side_effect=fake_run):
+        errors = mod.check_foreign_commits(100, "owner/repo", "master")
+    assert errors == []
+
+
+def test_recent_closed_prs_excludes_bot_branches_and_self():
+    def fake_run(args, **kwargs):
+        if args[:3] == ["gh", "pr", "list"]:
+            return _proc(
+                returncode=0,
+                stdout=json.dumps(
+                    [
+                        {
+                            "number": 1,
+                            "baseRefName": "master",
+                            "headRefOid": "sha1",
+                            "headRefName": "bot/data-sync",
+                        },
+                        {
+                            "number": 2,
+                            "baseRefName": "master",
+                            "headRefOid": "sha2",
+                            "headRefName": "fix/real-work",
+                        },
+                        {
+                            "number": 100,
+                            "baseRefName": "master",
+                            "headRefOid": "sha100",
+                            "headRefName": "fix/self",
+                        },
+                    ]
+                ),
+            )
+        raise AssertionError(f"unexpected call: {args}")
+
+    with patch("subprocess.run", side_effect=fake_run):
+        result = mod._recent_closed_prs("owner/repo", exclude_pr=100)
+    assert [p["number"] for p in result] == [2]
+
+
+def test_recent_closed_prs_excludes_scratch_branches():
+    """AG2 (audit 2026-09-11): scratch/-prefixed closed PRs are deliberate,
+    disposable audit-proof reconstructions (this repo's own established
+    convention, AA2a's #1526-#1530 and AF1b's #1561-#1563) -- comparing
+    against them produces a direction-blind false positive whenever the PR
+    under test is the ORIGINAL a scratch branch was built from, since a
+    commit copied INTO a scratch PR reads identically (same patch-id) to
+    one copied FROM it."""
+
+    def fake_run(args, **kwargs):
+        if args[:3] == ["gh", "pr", "list"]:
+            return _proc(
+                returncode=0,
+                stdout=json.dumps(
+                    [
+                        {
+                            "number": 1561,
+                            "baseRefName": "fix/wire-calibration",
+                            "headRefOid": "shaA",
+                            "headRefName": "scratch/reconstruct-1539",
+                        },
+                        {
+                            "number": 2,
+                            "baseRefName": "master",
+                            "headRefOid": "sha2",
+                            "headRefName": "fix/real-work",
+                        },
+                        {
+                            "number": 100,
+                            "baseRefName": "master",
+                            "headRefOid": "sha100",
+                            "headRefName": "fix/self",
+                        },
+                    ]
+                ),
+            )
+        raise AssertionError(f"unexpected call: {args}")
+
+    with patch("subprocess.run", side_effect=fake_run):
+        result = mod._recent_closed_prs("owner/repo", exclude_pr=100)
+    assert [p["number"] for p in result] == [2]
 
 
 # ---------------------------------------------------------------------------
@@ -350,3 +521,103 @@ def test_boundary_overlap_fails_closed_on_diff_failure():
 
     with patch("subprocess.run", side_effect=fake_run), pytest.raises(mod.BoundaryLeakError):
         mod.check_boundary_overlap(100, "owner/repo")
+
+
+# ---------------------------------------------------------------------------
+# Deleted base branch on a closed stacked PR (2026-09-23: #1916's base was
+# deleted when #1892 merged, which made this check fail for every PR).
+# ---------------------------------------------------------------------------
+
+
+def _deleted_base_fake_run(stacked_pid: str, fetch_stderr: str = "couldn't find remote ref"):
+    def fake_run(args, **kwargs):
+        if args[:3] == ["gh", "pr", "view"] and args[3] == "100":
+            return _proc(
+                returncode=0,
+                stdout=json.dumps({"headRefOid": "head100", "headRefName": "fix/target"}),
+            )
+        if args[:2] == ["git", "fetch"] and "gone-base" in args:
+            return _proc(returncode=128, stderr=f"fatal: {fetch_stderr} gone-base")
+        if args[:2] == ["git", "fetch"]:
+            return _proc(returncode=0)
+        if args[:2] == ["git", "log"]:
+            return _proc(returncode=0, stdout="owncommit\n")
+        if args[:3] == ["gh", "api", "repos/owner/repo/pulls/916/commits"]:
+            return _proc(returncode=0, stdout="stackedcommit\n")
+        if args[:2] == ["git", "show"] and "stackedcommit" in args:
+            return _proc(returncode=0, stdout="stacked diff")
+        if args[:2] == ["git", "show"]:
+            return _proc(returncode=0, stdout="own diff")
+        if args[:2] == ["git", "patch-id"]:
+            pid = stacked_pid if kwargs.get("input") == "stacked diff" else "ownpid"
+            return _proc(returncode=0, stdout=f"{pid} deadbeef\n")
+        if args[:3] == ["gh", "pr", "list"] and "open" in args:
+            return _proc(returncode=0, stdout=json.dumps([]))
+        if args[:3] == ["gh", "pr", "list"] and "closed" in args:
+            closed = [
+                {
+                    "number": 916,
+                    "baseRefName": "gone-base",
+                    "headRefOid": "head916",
+                    "headRefName": "feat/stacked",
+                }
+            ]
+            return _proc(returncode=0, stdout=json.dumps(closed))
+        raise AssertionError(f"unexpected call: {args}")
+
+    return fake_run
+
+
+def test_deleted_base_on_closed_pr_falls_back_and_passes_when_clean():
+    with patch("subprocess.run", side_effect=_deleted_base_fake_run("otherpid")):
+        assert mod.check_foreign_commits(100, "owner/repo", "master") == []
+
+
+def test_deleted_base_fallback_still_detects_a_real_leak():
+    with patch("subprocess.run", side_effect=_deleted_base_fake_run("ownpid")):
+        errors = mod.check_foreign_commits(100, "owner/repo", "master")
+    assert len(errors) == 1
+    assert "#916" in errors[0]
+
+
+def test_other_fetch_failures_still_fail_closed():
+    fake = _deleted_base_fake_run("otherpid", fetch_stderr="Authentication failed for")
+    with patch("subprocess.run", side_effect=fake), pytest.raises(mod.BoundaryLeakError):
+        mod.check_foreign_commits(100, "owner/repo", "master")
+
+
+def test_unique_commits_excludes_merge_commits():
+    """A merge's `git show` is only its conflict-resolution hunks; two PRs that
+    resolved the same generated-file conflict identically matched as a false
+    foreign commit (#1933 vs #1921). Merges must not be patch-id'd."""
+    seen: list[list[str]] = []
+
+    def fake_run(args, **kwargs):
+        seen.append(list(args))
+        if args[:2] == ["git", "fetch"]:
+            return _proc(returncode=0)
+        if args[:2] == ["git", "log"]:
+            return _proc(returncode=0, stdout="c1\nc2\n")
+        raise AssertionError(f"unexpected call: {args}")
+
+    with patch("subprocess.run", side_effect=fake_run):
+        assert mod._unique_commits("master", "head") == ["c1", "c2"]
+    log_calls = [a for a in seen if a[:2] == ["git", "log"]]
+    assert log_calls and "--no-merges" in log_calls[0]
+
+
+def test_api_commit_list_keeps_single_parent_commits_only():
+    seen: list[list[str]] = []
+
+    def fake_run(args, **kwargs):
+        seen.append(list(args))
+        if args[:2] == ["git", "fetch"]:
+            return _proc(returncode=0)
+        if args[:2] == ["gh", "api"]:
+            return _proc(returncode=0, stdout="c1\n")
+        raise AssertionError(f"unexpected call: {args}")
+
+    with patch("subprocess.run", side_effect=fake_run):
+        assert mod._pr_commits_via_api(916, "owner/repo") == ["c1"]
+    api_call = next(a for a in seen if a[:2] == ["gh", "api"])
+    assert "select((.parents | length) == 1)" in api_call[api_call.index("--jq") + 1]

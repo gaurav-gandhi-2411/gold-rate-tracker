@@ -87,14 +87,20 @@ runs:
         git rebase origin/master
 
         # Guard: the data-only guarantee otherwise lives only in each calling
-        # workflow's `git add <allowlist>` line (never `git add -A`) — six
-        # separate files, easy to weaken by accident later without the merge
-        # mechanism ever noticing. Independently verify the diff about to be
-        # pushed/merged is confined to those same data-only paths before it
-        # goes anywhere near a push or a merge. Allowlist mirrors the exact
-        # `git add` lines in check-price.yml, weekly-backtest.yml,
+        # workflow's `git add <allowlist>` line (never `git add -A`) — eight
+        # separate files (AF1, audit 2026-09-10: this comment previously
+        # said "six," naming check-price.yml, weekly-backtest.yml,
         # monthly-ibja-backfill.yml, eval-direction.yml, generate-og-image.yml,
-        # lighthouse.yml.
+        # lighthouse.yml -- stale, missing scrape-tanishq-selfhosted.yml and
+        # shadow-fusion.yml. scripts/check_bot_pr_sync_allowlist.py now
+        # discovers the real caller list by grepping for `uses:` rather than
+        # trusting an enumeration here, specifically so this exact comment
+        # can never silently drift out of sync with reality again -- this
+        # line is now descriptive, not authoritative) — easy to weaken by
+        # accident later without the merge mechanism ever noticing.
+        # Independently verify the diff about to be pushed/merged is
+        # confined to those same data-only paths before it goes anywhere
+        # near a push or a merge.
         BAD_FILES=$(git diff --name-only origin/master...HEAD | grep -v -E '^(data/|og\.png$|reports/lighthouse/)' || true)
         if [ -n "$BAD_FILES" ]; then
           echo "::error::bot-pr-sync diff includes file(s) outside the data-only allowlist (data/, og.png, reports/lighthouse/) — refusing to push/merge:"

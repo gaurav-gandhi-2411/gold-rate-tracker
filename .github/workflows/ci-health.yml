@@ -1,0 +1,231 @@
+name: CI Health Check
+
+# AG3 (production audit, 2026-09-11): PR #1541 broke `lint` (a required
+# status check) on master itself for ~34 minutes (2026-09-11T02:47:45Z ->
+# 03:21:21Z, verified via each commit's own named check-run conclusions,
+# not the workflow run's overall conclusion) -- an unrelated pre-existing
+# test hardcoded the exact cron string #1541 legitimately changed.
+# Discovered only because this session happened to be actively working
+# through PRs at that exact moment; nothing alerted. Behavioral check (AF3's
+# standard, not just reading config) found no existing mechanism anywhere
+# in this repo watches a required check's status on master itself --
+# ml/notifications.py's full T1-T13 alert catalog is entirely about price/
+# data state, never CI state, and no workflow queries check-run status for
+# its own sake.
+#
+# This is a small, independent, frequently-scheduled workflow whose only
+# job is noticing when that happens again. Deliberately NOT added as a step
+# inside lint.yml itself, or any workflow whose own breakage could plausibly
+# correlate with the kind of change that breaks a required check (the
+# instance #1 shape this audit's central finding is named for: a control
+# that can't see its own failure mode). It also deliberately does NOT
+# hand-copy which contexts are "required" -- it reads that list live from
+# branch protection, the same "read from the one real source, never a
+# duplicate" discipline scripts/check_bot_pr_sync_allowlist.py (AF1) used
+# for the allowlist regex.
+#
+# First-draft bug caught before shipping: checking master's TIP commit's
+# check-runs directly returns an EMPTY result most of the time -- the tip
+# is frequently a `[skip ci]` bot data-commit, which by design never
+# triggers lint.yml at all, so it has zero check-runs for "lint"/"pwa-js"
+# and would read as "missing" (a false alarm) on nearly every run. Fixed to
+# instead query lint.yml's own most recent actual run on master (regardless
+# of which commit triggered it -- [skip ci] commits are simply skipped by
+# construction, exactly as intended) and read job-level conclusions from
+# THAT run. Verified against live data before this shipped: master's tip
+# at write time (1680fed, a [skip ci] commit) has zero "lint"/"pwa-js"
+# check-runs; the actual most recent lint.yml run (triggered by #1564's
+# merge) shows both jobs green.
+#
+# No persisted dedup state: alerts every time it runs and finds a required
+# check red, at this cadence, until fixed. A few redundant pages during an
+# active incident cost far less than the 34 minutes this exact gap already
+# cost silently -- the same tradeoff already made throughout this repo's
+# alert catalog (e.g. T9_ESCALATE, worker-deadman's REMINDER_INTERVAL_HOURS).
+#
+# BUG FOUND LIVE, PARTIALLY FIXED SAME DAY (AH5, production audit,
+# 2026-09-11): this workflow's very first real run (manually dispatched
+# ~3h48m after merge, since the schedule trigger had not yet fired) failed
+# on every invocation -- `gh api .../branches/master/protection` returns
+# 403 "Resource not accessible by integration" for the default
+# `github.token`. Not a `permissions:` block gap fixable in this file:
+# branch protection reads require the calling token to have admin rights
+# on the repo, which the ephemeral Actions GITHUB_TOKEN structurally
+# cannot carry regardless of granted scopes.
+#
+# Tried CI_MERGE_PAT (bot-pr-sync's own PAT, used elsewhere for exactly
+# this class of privilege gap) as the fix -- confirmed live it ALSO 403s
+# ("Resource not accessible by personal access token"), so its scope
+# doesn't reach branch-protection admin reads either. STILL OPEN: no
+# credential currently available to this repo's Actions can make this
+# call succeed. Needs a PAT (or fine-grained token) with explicit
+# `Administration: read` repo permission -- a credential decision, not a
+# workflow-file fix, so left for GG rather than minted unilaterally. Left
+# on `github.token` in the meantime since swapping to a PAT that fails
+# identically has no benefit and a real cost (a second secret this step
+# now depends on for no gain).
+#
+# The other half WAS fixed and verified live: this exact rule-98a
+# "fail closed on unreadable state" guard did NOT fail closed on the 403.
+# `REQUIRED=$(gh api ... --jq '...' 2>/dev/null || echo "")` was written
+# assuming a failed `gh api` call would trip the `|| echo ""` fallback --
+# it did not. Verified: gh printed the 403's raw JSON error body to
+# stdout past the --jq filter, so REQUIRED ended up containing that
+# literal error text as a single "context", the `-z "$REQUIRED"`
+# closed-fail check never fired, and the script proceeded to treat the
+# error JSON as a check name -- producing a real ntfy push to production
+# with a garbled, misleading message ("Required check(s) not green ...
+# {"message":"Resource not accessible by integration"...} (missing)")
+# instead of the intended "could not verify, failing closed" message. A
+# control built specifically to apply rule 98a to CI health had its own
+# rule-98a gap on its first real invocation. Fixed by capturing `gh
+# api`'s own exit status explicitly (outside any `$(...) || fallback`
+# construction, proven not to reliably catch a non-2xx response through a
+# `--jq` filter) before ever parsing its output -- verified live with both
+# CI_MERGE_PAT and github.token: both now produce a clean, accurate
+# "could not read, failing closed" message with the real response body
+# (message ID unwc6g25Rskz for the github.token case), never a garbled
+# false alert. Also added an ntfy page to every "could not verify" exit
+# path (there was none before this fix -- only the "found a real red
+# check" branch paged), since silence on the inability to verify is the
+# exact failure shape this workflow exists to close and it can't exempt
+# itself.
+#
+# Net effect until a properly-scoped credential is provided: this
+# workflow will run (on schedule or dispatch), fail every time on the
+# branch-protection read, page once per run with an accurate "could not
+# verify master's CI state" message, and emit the same as a GitHub
+# Actions error annotation. It does not yet cover the CI-health gap it
+# was built for; it correctly reports that it cannot, rather than
+# reporting a false all-clear or a false alarm -- and now it says so out
+# loud instead of only in a run log nobody is watching.
+#
+# CREDENTIAL PROVIDED, WIRED IN AND VERIFIED (AI3, production audit,
+# 2026-09-11): GG provisioned a fine-grained PAT with `Administration:
+# read`, repo-scoped, as secret `CI_HEALTH_PAT`. Switched GH_TOKEN to it
+# and verified BOTH halves behaviorally, not just that the file parses:
+# (1) the branch-protection read itself now succeeds -- dispatched with
+# a temporary RUN_INFO override pointed at run 34555988607 (a real
+# historical run, 2026-09-11T02:47:43Z, where `lint` -- a required
+# context -- was genuinely red during the AG3 incident window); the read
+# resolved REQUIRED to the real "lint, pwa-js" contexts with no 403.
+# (2) That same run proved the actual failure case this workflow exists
+# to catch: it correctly identified `lint (failure)` and paged the
+# specific, accurate message (ntfy message ID 4kOa2UZVmKvl) -- not the
+# generic "could not verify" message, the real one. The override was
+# then reverted (this version queries the live most-recent run again,
+# as designed) and dispatched once more clean, confirming the un-
+# overridden path also succeeds end-to-end against master's real state.
+on:
+  schedule:
+    - cron: "17 */1 * * *" # hourly, offset from the top of the hour -- same
+    # anti-peak-load reasoning check-price.yml's own cron comment documents.
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Check required status checks on master's most recent lint.yml run
+        env:
+          # Branch protection reads require repo-admin rights that neither
+          # github.token nor CI_MERGE_PAT carry (see module comment above).
+          # CI_HEALTH_PAT is a fine-grained PAT provisioned specifically for
+          # this, with Administration: read, repo-scoped -- verified live.
+          GH_TOKEN: ${{ secrets.CI_HEALTH_PAT }}
+          NTFY_TOPIC: ${{ secrets.NTFY_TOPIC }}
+        run: |
+          set -e
+
+          # Read the required-contexts list live from branch protection --
+          # never a hardcoded copy of "lint, pwa-js" that could silently
+          # drift from whatever branch protection actually requires later.
+          #
+          # The gh api call's own success/failure is captured explicitly,
+          # BEFORE any --jq parsing -- proven necessary live (see module
+          # comment above): a `$(gh api ... --jq '...' 2>/dev/null || echo
+          # "")` one-liner did not reliably fall through to `echo ""` on a
+          # non-2xx response; gh printed the raw error body past the --jq
+          # filter instead, and it silently became the "required contexts"
+          # value. `set +e`/`set -e` bracket this specific call so its exit
+          # code can be checked on the next line rather than either killing
+          # the script immediately (losing the chance to emit a clear
+          # message) or being swallowed by a same-line `||`.
+          # Shared paging helper -- every "could not verify" exit below pages
+          # too, not just the "found a real red check" branch. Silence on
+          # the inability to verify is the exact failure shape this whole
+          # workflow exists to close (rule 98a); it can't exempt itself.
+          page() {
+            if [ -n "${NTFY_TOPIC}" ]; then
+              curl -s \
+                -H "Title: Gold Tracker: ci-health.yml could not verify master's CI state" \
+                -H "Priority: high" \
+                -H "Tags: warning,rotating_light" \
+                -d "$1" \
+                "https://ntfy.sh/${NTFY_TOPIC}" || true
+            fi
+          }
+
+          set +e
+          PROTECTION_RESPONSE=$(gh api "repos/${GITHUB_REPOSITORY}/branches/master/protection" 2>&1)
+          PROTECTION_STATUS=$?
+          set -e
+          if [ "$PROTECTION_STATUS" -ne 0 ]; then
+            MSG="Could not read master's required status checks from branch protection (gh api exit ${PROTECTION_STATUS}) -- failing closed rather than silently skipping this run. Response: ${PROTECTION_RESPONSE}"
+            echo "::error::${MSG}"
+            page "${MSG}"
+            exit 1
+          fi
+          REQUIRED=$(echo "$PROTECTION_RESPONSE" | jq -r '.required_status_checks.contexts[]?' 2>/dev/null)
+          if [ -z "$REQUIRED" ]; then
+            MSG="Branch protection response had no required_status_checks.contexts -- failing closed rather than silently skipping this run. Response: ${PROTECTION_RESPONSE}"
+            echo "::error::${MSG}"
+            page "${MSG}"
+            exit 1
+          fi
+
+          # Most recent ACTUAL lint.yml run on master -- not the tip
+          # commit's own check-runs, which are frequently empty ([skip ci]
+          # bot commits never trigger lint.yml at all; see the module
+          # comment above for how that first design was caught and fixed).
+          RUN_INFO=$(gh api "repos/${GITHUB_REPOSITORY}/actions/workflows/lint.yml/runs?branch=master&per_page=1" \
+            --jq '.workflow_runs[0] | {id, head_sha}')
+          RUN_ID=$(echo "$RUN_INFO" | jq -r '.id')
+          RUN_SHA=$(echo "$RUN_INFO" | jq -r '.head_sha')
+          if [ -z "$RUN_ID" ] || [ "$RUN_ID" = "null" ]; then
+            MSG="Could not find any lint.yml run on master -- failing closed."
+            echo "::error::${MSG}"
+            page "${MSG}"
+            exit 1
+          fi
+
+          JOBS=$(gh api "repos/${GITHUB_REPOSITORY}/actions/runs/${RUN_ID}/jobs" --jq '.jobs')
+
+          FAILING=""
+          while IFS= read -r CONTEXT; do
+            [ -z "$CONTEXT" ] && continue
+            CONCLUSION=$(echo "$JOBS" | jq -r --arg name "$CONTEXT" \
+              '[.[] | select(.name == $name)] | last | .conclusion // "missing"')
+            if [ "$CONCLUSION" != "success" ]; then
+              FAILING="${FAILING}${CONTEXT} (${CONCLUSION}), "
+            fi
+          done <<< "$REQUIRED"
+
+          if [ -n "$FAILING" ]; then
+            echo "::error::Required check(s) not green on master's most recent lint.yml run (${RUN_SHA}): ${FAILING}"
+            if [ -n "${NTFY_TOPIC}" ]; then
+              curl -s \
+                -H "Title: Gold Tracker: required CI check red on master" \
+                -H "Priority: high" \
+                -H "Tags: warning,rotating_light" \
+                -d "Required status check(s) not green on master's most recent lint.yml run (${RUN_SHA}): ${FAILING}Every open PR's own required check is blocked until this is fixed. https://github.com/${GITHUB_REPOSITORY}/actions/runs/${RUN_ID}" \
+                "https://ntfy.sh/${NTFY_TOPIC}" || true
+            fi
+            exit 1
+          fi
+
+          echo "OK: all required checks (${REQUIRED}) are green on master's most recent lint.yml run (${RUN_SHA})."

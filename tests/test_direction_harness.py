@@ -9,6 +9,7 @@ import json
 
 import numpy as np
 import pandas as pd
+import pytest
 from ml.direction.dataset import (
     DEAD_BAND_PER_GRAM,
     FEATURE_COLS,
@@ -22,8 +23,10 @@ from ml.direction.evaluate import (
     append_history,
     compute_calibration,
     detect_majority_class_collapse,
+    label_date_col_for,
     run_walk_forward,
 )
+from ml.direction.models import fit_lightgbm, fit_logistic
 
 # ---------------------------------------------------------------------------
 # make_label
@@ -131,6 +134,18 @@ def _make_ibja(dates: list[str], pm_916_vals: list[float]) -> pd.DataFrame:
 
 class TestBuildDataset:
     """Tests for build_dataset with injected DataFrames."""
+
+    def test_declares_inr_per_10g_units(self) -> None:
+        """INR-constant consumers (ml.direction.price_units) fail closed on an
+        undeclared frame, so build_dataset must declare its units."""
+        from ml.direction.price_units import INR_PER_10G, PRICE_UNITS_ATTR
+
+        snaps_df = _make_snapshots(["2025-01-01", "2025-01-02"], [70000.0, 71000.0])
+        ibja_df = _make_ibja(
+            ["2025-01-01", "2025-01-02", "2025-01-03"], [70000.0, 71000.0, 72000.0]
+        )
+        ds = build_dataset(snapshots_df=snaps_df, ibja_df=ibja_df)
+        assert ds.attrs[PRICE_UNITS_ATTR] == INR_PER_10G
 
     def test_label_comes_from_next_ibja_day(self) -> None:
         """Label for snapshot t must come from IBJA day t+1, not day t."""
@@ -260,6 +275,160 @@ class TestBuildDataset:
         assert ds.iloc[0]["label_binary_h2"] is None or pd.isna(ds.iloc[0]["label_binary_h2"])
 
 
+class TestConsecutiveIbjaDays:
+    """G2 / ADR 042: labels only across consecutive IBJA publication days. The real
+    record has holes of 14-101 days; 'the next IBJA row' used to bridge them."""
+
+    def test_h1_across_a_hole_drops_the_row(self) -> None:
+        # Thu 2025-01-02 -> next IBJA row Mon 2025-01-20: a 12-weekday hole.
+        snaps_df = _make_snapshots(["2025-01-02"], [70000.0])
+        ibja_df = _make_ibja(
+            ["2025-01-02", "2025-01-20", "2025-01-21"], [70000.0, 75000.0, 76000.0]
+        )
+        assert build_dataset(snapshots_df=snaps_df, ibja_df=ibja_df).empty
+
+    def test_h2_across_a_hole_is_none_but_h1_kept(self) -> None:
+        # Fri 2025-01-03 -> Mon 01-06 (consecutive), then a hole to Mon 01-27.
+        snaps_df = _make_snapshots(["2025-01-03"], [70000.0])
+        ibja_df = _make_ibja(
+            ["2025-01-03", "2025-01-06", "2025-01-27"], [70000.0, 71000.0, 60000.0]
+        )
+        row = build_dataset(snapshots_df=snaps_df, ibja_df=ibja_df).iloc[0]
+        assert row["label_date_h1"] == "2025-01-06"
+        assert row["label_binary_h2"] is None or pd.isna(row["label_binary_h2"])
+        assert row["label_date_h2"] is None or pd.isna(row["label_date_h2"])
+
+    def test_single_holiday_is_consecutive(self) -> None:
+        # Thu 2025-04-17 -> Mon 04-21 (Good Friday 04-18) -> Tue 04-22.
+        snaps_df = _make_snapshots(["2025-04-17"], [70000.0])
+        ibja_df = _make_ibja(
+            ["2025-04-17", "2025-04-21", "2025-04-22"], [70000.0, 71000.0, 69000.0]
+        )
+        row = build_dataset(snapshots_df=snaps_df, ibja_df=ibja_df).iloc[0]
+        assert row["label_date_h1"] == "2025-04-21"
+        assert row["label_date_h2"] == "2025-04-22"
+
+    def test_two_missing_weekdays_is_a_hole(self) -> None:
+        # Mon 2025-01-06 -> Thu 01-09: Tue and Wed both missing.
+        snaps_df = _make_snapshots(["2025-01-06"], [70000.0])
+        ibja_df = _make_ibja(
+            ["2025-01-06", "2025-01-09", "2025-01-10"], [70000.0, 71000.0, 72000.0]
+        )
+        assert build_dataset(snapshots_df=snaps_df, ibja_df=ibja_df).empty
+
+    def test_extra_horizon_across_a_hole_is_none(self) -> None:
+        snaps_df = _make_snapshots(["2025-01-06"], [70000.0])
+        dates = ["2025-01-06", "2025-01-07", "2025-01-08", "2025-02-03", "2025-02-04"]
+        ibja_df = _make_ibja(dates, [70000.0, 71000.0, 72000.0, 60000.0, 61000.0])
+        row = build_dataset(snapshots_df=snaps_df, ibja_df=ibja_df, extra_horizons=(4,)).iloc[0]
+        assert row["label_date_h2"] == "2025-01-08"
+        assert row["label_binary_h4"] is None or pd.isna(row["label_binary_h4"])
+        assert row["window_min_pm916_h4"] is None or pd.isna(row["window_min_pm916_h4"])
+
+    def test_require_consecutive_false_reproduces_the_old_bridging_labels(self) -> None:
+        snaps_df = _make_snapshots(["2025-01-02"], [70000.0])
+        ibja_df = _make_ibja(
+            ["2025-01-02", "2025-01-20", "2025-01-21"], [70000.0, 75000.0, 76000.0]
+        )
+        row = build_dataset(snapshots_df=snaps_df, ibja_df=ibja_df, require_consecutive=False).iloc[
+            0
+        ]
+        assert row["label_date_h1"] == "2025-01-20"
+        assert row["label_date_h2"] == "2025-01-21"
+
+
+# ---------------------------------------------------------------------------
+# extra_horizons (M2: 5/10-day reframed targets)
+# ---------------------------------------------------------------------------
+
+
+class TestExtraHorizons:
+    def test_h5_label_uses_correct_offset_and_stays_leak_free(self) -> None:
+        """h=N label day is idx0+(N-1); for N=5 that's the 5th future IBJA day."""
+        snaps_df = _make_snapshots(["2025-01-01"], [70000.0])
+        dates = [f"2025-01-{d:02d}" for d in range(1, 9)]  # 01-01 .. 01-08
+        vals = [70000.0, 71000.0, 71500.0, 72000.0, 68000.0, 73000.0, 74000.0, 75000.0]
+        ibja_df = _make_ibja(dates, vals)
+        ds = build_dataset(snapshots_df=snaps_df, ibja_df=ibja_df, extra_horizons=(5,))
+        row = ds.iloc[0]
+        # idx0 = index of 01-02 (=1, h=1 day). h=5 -> idx0+4 = index 5 -> 01-06 = 73000.0
+        assert row["label_date_h5"] == "2025-01-06"
+        assert row["next_pm916_h5"] == 73000.0
+        assert row["label_date_h5"] > row["as_of_date"]
+
+    def test_window_min_captures_a_dip_the_endpoint_misses(self) -> None:
+        """window_min_pm916_hN must reflect the lowest point in [t+1, t+N], not
+        just the endpoint (needed for the buyer's-decision target)."""
+        snaps_df = _make_snapshots(["2025-01-01"], [70000.0])
+        dates = [f"2025-01-{d:02d}" for d in range(1, 6)]
+        # Dips to 65000 on day 3, then recovers by day 5 (the h=4 endpoint).
+        vals = [70000.0, 69000.0, 65000.0, 68000.0, 71000.0]
+        ibja_df = _make_ibja(dates, vals)
+        ds = build_dataset(snapshots_df=snaps_df, ibja_df=ibja_df, extra_horizons=(4,))
+        row = ds.iloc[0]
+        assert row["next_pm916_h4"] == 71000.0  # endpoint alone looks like a rise
+        assert row["window_min_pm916_h4"] == 65000.0  # but it dipped along the way
+
+    def test_extra_horizon_none_when_insufficient_future_data(self) -> None:
+        snaps_df = _make_snapshots(["2025-01-01"], [70000.0])
+        ibja_df = _make_ibja(["2025-01-01", "2025-01-02"], [70000.0, 71000.0])
+        ds = build_dataset(snapshots_df=snaps_df, ibja_df=ibja_df, extra_horizons=(10,))
+        row = ds.iloc[0]
+        assert row["label_binary_h10"] is None or pd.isna(row["label_binary_h10"])
+        assert row["window_min_pm916_h10"] is None or pd.isna(row["window_min_pm916_h10"])
+
+    def test_default_extra_horizons_empty_does_not_add_columns(self) -> None:
+        """Backward-compat: no extra_horizons arg -> no h5/h10 columns at all."""
+        snaps_df = _make_snapshots(["2025-01-01"], [70000.0])
+        ibja_df = _make_ibja(["2025-01-01", "2025-01-02"], [70000.0, 71000.0])
+        ds = build_dataset(snapshots_df=snaps_df, ibja_df=ibja_df)
+        assert "label_binary_h5" not in ds.columns
+        assert "label_binary_h10" not in ds.columns
+
+
+# ---------------------------------------------------------------------------
+# class_weight passthrough (M2: class-weighted logistic/GBM)
+# ---------------------------------------------------------------------------
+
+
+class TestClassWeightPassthrough:
+    def test_fit_logistic_default_unchanged(self) -> None:
+        """No class_weight arg -> LogisticRegression.class_weight stays None
+        (existing ml.direction.evaluate callers see no behavior change).
+        Only 1 positive sample -> _safe_cv returns 0 -> bare-pipeline path,
+        whose class_weight is directly inspectable."""
+        rng = np.random.default_rng(0)
+        X = rng.normal(size=(40, 3))
+        y = [0] * 39 + [1]
+        model = fit_logistic(X, y, cv=3)
+        assert model.named_steps["clf"].class_weight is None
+
+    def test_fit_logistic_balanced_is_applied(self) -> None:
+        rng = np.random.default_rng(0)
+        X = rng.normal(size=(40, 3))
+        y = [0] * 39 + [1]
+        model = fit_logistic(X, y, cv=3, class_weight="balanced")
+        assert model.named_steps["clf"].class_weight == "balanced"
+
+    def test_fit_lightgbm_default_unchanged(self) -> None:
+        rng = np.random.default_rng(0)
+        X = rng.normal(size=(40, 3))
+        y = [0, 1] * 20
+        model = fit_lightgbm(X, y)
+        if model is None:  # pragma: no cover - only if lightgbm isn't installed
+            return
+        assert model.class_weight is None
+
+    def test_fit_lightgbm_balanced_is_applied(self) -> None:
+        rng = np.random.default_rng(0)
+        X = rng.normal(size=(40, 3))
+        y = [0, 1] * 20
+        model = fit_lightgbm(X, y, class_weight="balanced")
+        if model is None:  # pragma: no cover - only if lightgbm isn't installed
+            return
+        assert model.class_weight == "balanced"
+
+
 # ---------------------------------------------------------------------------
 # run_walk_forward smoke test
 # ---------------------------------------------------------------------------
@@ -297,6 +466,8 @@ def _make_synthetic_dataset(n: int = 35, seed: int = 42) -> pd.DataFrame:
         # Explicit per-horizon labels (h1 mirrors the unsuffixed columns).
         row["label_binary_h1"] = row["label_binary"]
         row["label_binary_h2"] = int(next2_price > price)
+        row["label_date_h1"] = row["label_date"]
+        row["label_date_h2"] = f"2025-{((i + 2) // 28) + 1:02d}-{((i + 2) % 28) + 1:02d}"
         row["ibja_pm_916_asof_date"] = row["as_of_date"]
         row["n_macro_null"] = 0
         rows.append(row)
@@ -532,3 +703,51 @@ class TestAppendHistory:
         assert rec["h2_logistic_ece"] == 0.0864
         assert rec["h1_prob_ship"] is False
         assert rec["h2_timing_ship"] is False
+
+
+class TestWalkForwardEmbargo:
+    """Training uses only labels that matured before the test day (2026-09-23 fix)."""
+
+    def test_label_date_col_mapping(self) -> None:
+        assert label_date_col_for("label_binary") == "label_date"
+        assert label_date_col_for("label_binary_h1") == "label_date_h1"
+        assert label_date_col_for("label_binary_h2") == "label_date_h2"
+
+    def test_missing_label_date_column_raises(self) -> None:
+        ds = _make_synthetic_dataset(n=35, seed=42).drop(columns=["label_date_h2"])
+        with pytest.raises(ValueError, match="label_date_h2"):
+            run_walk_forward(ds, min_train_size=MIN_TRAIN_SIZE, label_col="label_binary_h2")
+
+    @pytest.mark.parametrize(
+        ("label_col", "horizon"), [("label_binary", 1), ("label_binary_h2", 2)]
+    )
+    def test_train_size_excludes_unmatured_rows(
+        self, monkeypatch: pytest.MonkeyPatch, label_col: str, horizon: int
+    ) -> None:
+        # Consecutive daily rows: row j's label matures on row j+horizon's date,
+        # so for test row i only rows j <= i-horizon-1 are matured (strict <).
+        import ml.direction.evaluate as ev
+
+        sizes: list[int] = []
+        real_fit = ev.fit_logistic
+
+        def spy(X_train, y_train, **kwargs):  # type: ignore[no-untyped-def]
+            sizes.append(len(y_train))
+            return real_fit(X_train, y_train, **kwargs)
+
+        monkeypatch.setattr(ev, "fit_logistic", spy)
+        ds = _make_synthetic_dataset(n=40, seed=42)
+        run_walk_forward(ds, min_train_size=MIN_TRAIN_SIZE, label_col=label_col)
+        n = len(ds)
+        expected = [i - horizon for i in range(MIN_TRAIN_SIZE, n) if i - horizon >= MIN_TRAIN_SIZE]
+        assert sizes == expected
+
+    def test_persistence_uses_latest_matured_label(self) -> None:
+        # All labels 1 except the row right before each test day would matter
+        # only under the old leaky rule; with alternating labels the matured
+        # persistence (row i-3 at h2) differs from the leaky one (row i-1).
+        ds = _make_synthetic_dataset(n=40, seed=42)
+        ds["label_binary_h2"] = [i % 2 for i in range(len(ds))]
+        result = run_walk_forward(ds, min_train_size=MIN_TRAIN_SIZE, label_col="label_binary_h2")
+        # Row i-3 has the opposite parity of row i, so persistence is always wrong.
+        assert result["persistence_metrics"]["accuracy"] == 0.0

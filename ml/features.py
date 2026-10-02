@@ -97,27 +97,6 @@ MACRO_FEATURE_COLS: list[str] = [
 # Convenience alias: full feature set when macro data is available.
 ALL_FEATURE_COLS: list[str] = FEATURE_COLS + MACRO_FEATURE_COLS
 
-# Tuned feature set: full_v1 minus the 4 dead-weight features identified in
-# docs/FEATURE_INVENTORY.md (hour, akshaya_tritiya, dhanteras — regime is not
-# in ALL_FEATURE_COLS so omitting it has no effect here).
-# 43 ALL_FEATURE_COLS - 3 dead-weight = 40 active features.
-TUNED_V1_FEATURE_COLS: list[str] = [
-    c for c in ALL_FEATURE_COLS if c not in {"hour", "akshaya_tritiya", "dhanteras"}
-]
-
-# Minimal feature set for low-data regime.
-# 367 rows ÷ 8 features = 45:1 row/feature ratio vs prior 8.3:1 (44 features).
-# macro_gc_f → gold_usd, macro_inr_x → usd_inr (column names from MACRO_FEATURE_COLS).
-MINIMAL_FEATURE_COLS: list[str] = [
-    "lag_1",
-    "lag_7d",
-    "roll_7d_mean",
-    "roll_30d_mean",
-    "gold_usd",
-    "usd_inr",
-    "dow",
-]
-
 
 def _is_festival_window(d: date, festival_dates: list, window: int = 3) -> bool:
     return any(abs((d - fd).days) <= window for fd in festival_dates)

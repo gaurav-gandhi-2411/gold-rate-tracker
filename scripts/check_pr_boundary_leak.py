@@ -77,6 +77,26 @@ docstring discipline, rule 85a):
   running is invisible to it (there is nothing left to compare against) --
   the same blind spot check_boundary_overlap's label-gating had, moved from
   "labeled" to "still open," not eliminated.
+  FIXED (AA2a, audit 2026-09-10): check_foreign_commits now also compares
+  against PRs closed in the last CLOSED_PR_WINDOW_DAYS days, not just open
+  ones -- see its own docstring for the cost/false-positive numbers behind
+  the window and the bot/-branch exclusion. This closes the specific gap
+  above but keeps the same rebase blind spot noted below (patch-id
+  matching either way).
+  CONSIDERED, NOT IMPLEMENTED (AA2b, audit 2026-09-10): a broader
+  file-overlap + time-proximity signal was measured against this repo's
+  own last-30-days PR history (44 real non-bot, non-scratch PRs, 946
+  pairs) as a way to also catch a rebased leak that shifts patch-ids --
+  16.7% of pairs share at least one changed file, and 7.5% of ALL pairs
+  (71/946) share a file AND were created within 24h of each other, purely
+  from ordinary sequential work on the same files (e.g. this audit's own
+  Y1/Y2/Y3 PRs repeatedly touching docs/RUNBOOK.md and
+  worker-deadman/src/deadman.mjs within hours of each other). That is
+  ~1.6 false flags per real PR on average -- a gate at that noise level
+  either gets muted or trains reviewers to rubber-stamp it, which is
+  itself the "control that stops reporting" defect class this audit
+  exists to find. Not implemented; the rebase blind spot below remains
+  open on its merits, not from neglect.
 - check_file_level_residue trusts `gh pr diff --name-only` and local
   `git show --name-only` to agree on what a rename/mode-only change is
   called; a GitHub-side rename-detection quirk that diverges from git's own
@@ -99,6 +119,13 @@ import argparse
 import json
 import subprocess
 import sys
+from datetime import UTC, datetime, timedelta
+
+# AA2a (audit 2026-09-10): how far back check_foreign_commits looks for a
+# now-closed source PR. 30 days chosen to match this repo's own audit/
+# incident-retention horizon (docs/SESSION_AUDIT_2026-08.md); see
+# check_foreign_commits' docstring for the measured cost at this window.
+CLOSED_PR_WINDOW_DAYS = 30
 
 
 class BoundaryLeakError(Exception):
@@ -160,10 +187,17 @@ def _gh_pr_diff_names(pr_number: int, repo: str) -> set[str]:
 
 
 def _unique_commits(base_ref: str, head_sha: str) -> list[str]:
-    """Commits reachable from head_sha but not from origin/base_ref. Fetches
-    both first so this is correct even against a stale local clone."""
+    """Non-merge commits reachable from head_sha but not from origin/base_ref.
+    Fetches both first so this is correct even against a stale local clone.
+
+    Merge commits are excluded: `git show` of a merge prints only its
+    conflict-resolution hunks, so two unrelated PRs that each merged master
+    and resolved the same generated-file conflict (tests/test_count_baseline.json)
+    the same way got identical patch-ids and a false "foreign commit" (#1933
+    vs #1921, 2026-09-23). A merge's authored content is not what this check
+    is about; the PR's own commits are."""
     _git(["fetch", "origin", base_ref, head_sha])
-    log = _git(["log", f"origin/{base_ref}..{head_sha}", "--format=%H", "--reverse"])
+    log = _git(["log", f"origin/{base_ref}..{head_sha}", "--no-merges", "--format=%H", "--reverse"])
     return [line for line in log.splitlines() if line]
 
 
@@ -193,17 +227,175 @@ def _commit_patch_ids(base_ref: str, head_sha: str) -> dict[str, str]:
     return result
 
 
+def _pr_commits_via_api(pr_number: int, repo: str) -> list[str]:
+    """A PR's own commit list as GitHub recorded it — survives deletion of the
+    PR's base or head branch. Fetches refs/pull/N/head so the objects exist
+    locally for `git show`."""
+    _git(["fetch", "origin", f"refs/pull/{pr_number}/head"])
+    # --jq emits one sha per line across every page; raw --paginate output
+    # concatenates per-page JSON arrays and would not parse past 30 commits.
+    result = _run(
+        [
+            "gh",
+            "api",
+            f"repos/{repo}/pulls/{pr_number}/commits",
+            "--paginate",
+            "--jq",
+            # Single-parent commits only, matching _unique_commits' --no-merges.
+            ".[] | select((.parents | length) == 1) | .sha",
+        ]
+    )
+    if result.returncode != 0:
+        raise BoundaryLeakError(
+            f"gh api pulls/{pr_number}/commits failed (exit {result.returncode}): "
+            f"{result.stderr.strip()}"
+        )
+    shas = [line.strip() for line in result.stdout.splitlines() if line.strip()]
+    if not shas:
+        raise BoundaryLeakError(f"GitHub returned no commits for PR #{pr_number}")
+    return shas
+
+
+def _other_pr_patch_ids(other: dict, repo: str) -> dict[str, str]:
+    """Patch-ids for another PR's own commits. A closed/merged stacked PR's
+    base branch is routinely deleted afterwards (e.g. #1916's base,
+    feat/m2-reframed-target-evaluation, was deleted when #1892 merged on
+    2026-09-23) — that made `git fetch <base>` fail and this whole check fail
+    for EVERY PR for CLOSED_PR_WINDOW_DAYS. Only that specific failure falls
+    back to GitHub's recorded commit list; anything else still raises."""
+    try:
+        return _commit_patch_ids(other["baseRefName"], other["headRefOid"])
+    except BoundaryLeakError as exc:
+        if "couldn't find remote ref" not in str(exc):
+            raise
+    result: dict[str, str] = {}
+    for sha in _pr_commits_via_api(other["number"], repo):
+        patch_id = _patch_id_for_commit(sha)
+        if patch_id:
+            result[patch_id] = sha
+    return result
+
+
+def _recent_closed_prs(
+    repo: str, exclude_pr: int, window_days: int = CLOSED_PR_WINDOW_DAYS
+) -> list[dict]:
+    """PRs (merged or abandoned) closed within the last window_days, excluding
+    bot-pr-sync's reusable `bot/`-prefixed branches (.github/actions/bot-pr-sync
+    -- every caller passes a fixed, force-pushed branch name like
+    bot/data-sync), `scratch/`-prefixed branches (AG2, audit 2026-09-11 --
+    see below), and the PR under test itself.
+
+    Measured against this repo's actual history (2026-09-10, 30-day window):
+    745 closed PRs total, ~89% (663, sampled at 447/500) on bot/ branches --
+    each one a single, machine-authored, data-only commit that can neither
+    source nor receive a #1393-style leak (nothing here is a human building a
+    branch on top of another open PR's tip). Excluding them leaves ~79 real
+    candidates to compare against, not 745 -- the difference between ~1-2
+    minutes of added CI time on the ~2.6/day non-bot PRs that actually pay
+    this cost, versus an O(n^2) blowup if paid by every one of the ~25 bot
+    PRs/day too. See check_foreign_commits for where exclude_pr is also used
+    to skip this entirely when the PR under test IS itself a bot/ branch.
+
+    AG2 (audit 2026-09-11): this same closed-PR comparison (AA2a) has no
+    concept of DIRECTION -- a commit copied INTO a PR under test reads
+    identically to one copied FROM it, since both are "the same patch-id
+    appears on both branches." AF1b's own proof method (scratch/-prefixed
+    branches, deliberately built off a real PR's tip to reconstruct and
+    verify a historical incident, then closed+deleted) triggered exactly
+    this false positive against its own source PR -- 3 flags, one per
+    scratch PR, immediately after closing them (#1561/#1562/#1563 against
+    #1564). Investigated three candidate direction signals before choosing
+    this fix, all found unreliable or expensive to establish cheaply:
+    commit AUTHOR timestamp is preserved by rebase/cherry-pick and is
+    therefore IDENTICAL across both occurrences in exactly this scenario --
+    no signal. Commit COMMITTER timestamp differs (rebase/cherry-pick both
+    stamp a fresh committer-date) but is actively MISLEADING here: the
+    scratch branches' copy was created (committer-stamped) BEFORE the
+    source PR's own commit was rebased to a new SHA, so "earlier
+    committer-date wins" would call the derivative the original and the
+    original the copy -- backwards. "Which branch did this commit first
+    appear on" would need GitHub's push-event/ref history, which isn't
+    reliably or cheaply queryable via a stable API for this purpose.
+    Direction cannot be established cheaply from any of these -- see the
+    PR that introduced this comment for the full writeup.
+
+    Narrowed the comparison instead, following the EXACT precedent already
+    set by the bot/ exclusion above: PRs on a `scratch/`-prefixed branch are
+    -- by this repo's own established convention, first used by this same
+    AA2a work's own proof PRs (#1526-#1530) and reused identically by AF1b
+    (#1561-#1563) -- deliberately disposable reconstructions/proofs of
+    something that already exists elsewhere (an open PR, a historical
+    incident, or a hypothesis under test), never a PR someone intends to
+    land. Measured against this repo's real 30-day closed-PR history
+    (2026-09-11): 8 of 785 closed PRs (1.0%) are scratch/-prefixed -- all 8
+    confirmed audit-proof artifacts (5 from AA2a itself, 3 from AF1b), zero
+    genuine feature/fix work. Excluding them removes 100% of the currently-
+    observed false-positive instances (3/3) with zero measured true-positive
+    cost, since the convention has never (until this session) been used for
+    anything but throwaway proof work.
+
+    Residual gap this reopens, stated plainly: a PR carrying genuinely
+    dangerous, should-be-caught content, deliberately or carelessly named
+    with a `scratch/` prefix, would now slip past this specific comparison.
+    Narrower and more acceptable than excluding all closed-unmerged PRs
+    (would hide genuinely abandoned/rejected content resurfacing -- exactly
+    what this comparison exists to catch) or all branch-deleted closed PRs
+    (would gut most of this comparison's real coverage, since deleting a
+    branch after closing/merging is routine hygiene, not a leak signal)."""
+    cutoff = (datetime.now(UTC) - timedelta(days=window_days)).strftime("%Y-%m-%d")
+    prs = _gh_json(
+        [
+            "pr",
+            "list",
+            "--repo",
+            repo,
+            "--state",
+            "closed",
+            "--search",
+            f"closed:>={cutoff}",
+            "--json",
+            "number,baseRefName,headRefOid,headRefName",
+            "--limit",
+            "1000",
+        ]
+    )
+    return [
+        p
+        for p in prs
+        if p["number"] != exclude_pr
+        and not p["headRefName"].startswith("bot/")
+        and not p["headRefName"].startswith("scratch/")
+    ]
+
+
 def check_foreign_commits(pr_number: int, repo: str, base_ref: str) -> list[str]:
     """Returns a list of error messages (empty = pass). Flags any commit
     unique to this PR (relative to its own declared base) whose exact patch
-    content also appears as a commit on any OTHER currently open PR."""
-    pr = _gh_json(["pr", "view", str(pr_number), "--repo", repo, "--json", "headRefOid"])
+    content also appears as a commit on any OTHER currently open PR, or on a
+    PR closed in the last CLOSED_PR_WINDOW_DAYS days (AA2a, audit
+    2026-09-10) -- a leak whose source PR was merged/closed before this
+    check ran is otherwise invisible, since there is then nothing open left
+    to compare against. The closed-PR comparison is skipped when the PR
+    under test is itself a bot-pr-sync `bot/`-branch PR: those are always
+    single, machine-authored, data-only commits and structurally cannot be
+    on either end of this leak mechanism -- see _recent_closed_prs for the
+    measured cost this exclusion avoids.
+
+    KNOWN GAP, not fixed here: a leak whose source was rebased/force-pushed
+    enough to shift hunk boundaries changes its patch-id and slips past this
+    check regardless of the open/closed window -- see the module docstring's
+    AA2b entry for why a broader file-overlap+time-proximity signal was
+    measured and rejected (7.5% false-positive pair rate on this repo's own
+    real PR history, ~1.6 false flags per real PR)."""
+    pr = _gh_json(
+        ["pr", "view", str(pr_number), "--repo", repo, "--json", "headRefOid,headRefName"]
+    )
     head_sha = pr["headRefOid"]
     this_patch_ids = _commit_patch_ids(base_ref, head_sha)
     if not this_patch_ids:
         return []
 
-    other_prs = _gh_json(
+    other_open_prs = _gh_json(
         [
             "pr",
             "list",
@@ -215,19 +407,24 @@ def check_foreign_commits(pr_number: int, repo: str, base_ref: str) -> list[str]
             "number,baseRefName,headRefOid",
         ]
     )
+    candidates = list(other_open_prs)
+    is_bot_pr = pr["headRefName"].startswith("bot/")
+    if not is_bot_pr:
+        candidates.extend(_recent_closed_prs(repo, exclude_pr=pr_number))
+
     errors: list[str] = []
-    for other in other_prs:
+    for other in candidates:
         other_number = other["number"]
         if other_number == pr_number:
             continue
-        other_patch_ids = _commit_patch_ids(other["baseRefName"], other["headRefOid"])
+        other_patch_ids = _other_pr_patch_ids(other, repo)
         for pid, own_sha in this_patch_ids.items():
             other_sha = other_patch_ids.get(pid)
             if other_sha is None:
                 continue
             errors.append(
                 f"Commit {own_sha[:8]} carries the same content (patch-id {pid[:12]}) as "
-                f"commit {other_sha[:8]} on open PR #{other_number}'s branch -- this PR's "
+                f"commit {other_sha[:8]} on PR #{other_number}'s branch -- this PR's "
                 f"diff includes content that has not been reviewed as part of THIS PR. If "
                 f"#{other_number}'s content is meant to land here, merge or land #{other_number} "
                 f"first instead of carrying it in via this branch."

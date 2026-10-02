@@ -2,24 +2,34 @@
 // R3 (audit 2026-09-04): the seventh silent fallback -- when price_source
 // stays "ibja_calibrated" (ADR 025's normal steady state), the page
 // previously gave zero indication whether Tanishq confirmed 2h ago or
-// 3 weeks ago. Inlined from app.js's renderStaleBanner (app.js has no
-// module system -- same pattern as test_good_price.js/test_vol_regime.js).
+// 3 weeks ago. Drives the REAL renderStaleBanner from app.js
+// (tests/helpers/load_app.js); it used to test an inlined copy of the branch.
 //
 // Run: node --test tests/test_tier_degradation_visible.js  (from repo root)
 
 import { test } from "node:test";
 import assert from "node:assert/strict";
 
-const TIER_DEGRADED_THRESHOLD_H = 48;
+import { loadApp } from "./helpers/load_app.js";
 
-// Inline copy of the renderStaleBanner logic under test: given a forecast in
-// the ibja_calibrated tier, decide whether the long-silence note is appended.
-// Returns the appended-note key or null (no append -- routine steady state).
+const SENTINEL = "\u0000";
+const TIER_DEGRADED_THRESHOLD_H = loadApp().run("TIER_DEGRADED_THRESHOLD_H");
+
+// Runs the real renderStaleBanner under a fixed clock and reports whether it appended the
+// long-silence note: the note key, null (banner shown for the ibja_calibrated tier, no note), or
+// undefined (not this tier -- the note is not applicable).
 function tierDegradationNoteKey(forecast, nowMs) {
-  if (forecast.price_source !== "ibja_calibrated" || !forecast.ibja_asof) return undefined; // n/a, not this tier
-  if (!forecast.scraped_at) return null;
-  const scrapedAgeH = (nowMs - new Date(forecast.scraped_at).getTime()) / 3_600_000;
-  return scrapedAgeH > TIER_DEGRADED_THRESHOLD_H ? "bannerTanishqLongSilent" : null;
+  if (forecast.price_source !== "ibja_calibrated" || !forecast.ibja_asof) return undefined;
+  const app = loadApp({ nowMs });
+  try {
+    app.renderStaleBanner(forecast);
+    const banner = app.element("stale-banner");
+    if (banner.hidden) throw new Error("real renderStaleBanner hid the banner for an ibja_calibrated forecast");
+    const notePrefix = app.t("bannerTanishqLongSilent", { rel: SENTINEL }).split(SENTINEL)[0];
+    return banner.textContent.includes(notePrefix) ? "bannerTanishqLongSilent" : null;
+  } finally {
+    app.dispose();
+  }
 }
 
 const NOW = Date.parse("2026-09-04T12:00:00Z");

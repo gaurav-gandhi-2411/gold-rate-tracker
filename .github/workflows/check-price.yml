@@ -2,26 +2,45 @@ name: Check Gold Price
 
 on:
   schedule:
-    # Every 3 hours, at minute 7 (UTC), not minute 0. GitHub Actions documents
-    # that scheduled workflows can be delayed or dropped during periods of
-    # high load, and "high load times include the start of every hour"
-    # (https://docs.github.com/actions/using-workflows/events-that-trigger-workflows#schedule).
-    # This cron fired exactly on the hour; offsetting by 7 minutes moves it
-    # off that documented peak without changing the cadence. Fires at
-    # ~05:37, 08:37, 11:37, 14:37, 17:37, 20:37, 23:37, 02:37 IST (8 runs/day).
-    # T8 morning window 08-14 IST and evening window 18-22 IST each contain
-    # at least one 3h-cadence slot, so twice-daily digests are unaffected.
-    - cron: "7 */3 * * *"
+    # Every 3 hours, at minute 37, phase-shifted to start at hour 1 (UTC),
+    # not minute 7 / hour 0. #1222 (the original minute-of-hour dodge, :00 ->
+    # :07) addressed sub-hour queueing at the top of the hour; this is a
+    # DIFFERENT claim, addressed here for the first time: an hour-of-day
+    # contention specific to the 06:00 UTC slot, not sub-hour timing within
+    # it. AD1 (audit 2026-09-10): full available run history (736 scheduled
+    # runs, back to 2026-05-17) shows the OLD 06:07 UTC slot delayed
+    # (median ~66min, unremarkable) until ~2026-08-30, then abruptly stopped
+    # firing as a `schedule` event AT ALL for 9 straight days (2026-09-02
+    # through 2026-09-10) -- silently covered by the self-triggered catch-up
+    # dispatch this workflow used to carry (removed 2026-09-23: it was firing
+    # on ~92% of ticks and closing #1838's checkout-timing fix was meant to
+    # retire it outright -- see docs/RUNBOOK.md's "Scheduled-trigger
+    # reliability and catch-up" section for the removal note) every single day,
+    # each time producing one of the largest gaps in data/run_cadence_log.jsonl
+    # (e.g. 2026-09-07 04:22->12:18, a 7.9h gap). Two independent, separately-
+    # owned workflows sharing zero code with this one or each other
+    # (shadow-fusion.yml here, gg-portfolio's chat-canary.yml) show the same
+    # window (their own 06:15/06:00 UTC slots) landing ~255-335min late,
+    # essentially every day, continuously since 2026-08-30 (11 days at time
+    # of writing) -- not a 4-day blip, not sub-hour jitter. This shifts the
+    # whole 8-slot phase by +90min (hour offset 0->1, minute 7->37) so the
+    # slot that used to sit at 06:07 UTC now sits at 07:37 UTC, clear of the
+    # observed window; IST-window coverage is preserved (see below). Whether
+    # this actually helps is a hypothesis, not a fact -- see the PR that
+    # introduced this comment for the exact re-measurement to run after 7
+    # days of data.
+    #
+    # GitHub Actions separately documents that scheduled workflows can be
+    # delayed or dropped during periods of high load, and "high load times
+    # include the start of every hour"
+    # (https://docs.github.com/actions/using-workflows/events-that-trigger-workflows#schedule)
+    # -- minute 37 keeps clear of that too, same reasoning #1222 established.
+    # Fires at ~07:07, 10:07, 13:07, 16:07, 19:07, 22:07, 01:07, 04:07 IST
+    # (8 runs/day). T8 morning window 08-14 IST and evening window 18-22 IST
+    # each still contain at least one 3h-cadence slot (10:07/13:07 morning,
+    # 19:07 evening), so twice-daily digests are unaffected.
+    - cron: "37 1-22/3 * * *"
   workflow_dispatch: # allows manual run from the Actions tab
-    inputs:
-      catchup:
-        description: >-
-          Set by this workflow's own self-trigger step, never by hand. Marks
-          this run as a catch-up dispatch so its own detection step does not
-          re-trigger again -- without this flag a chain of missed ticks could
-          re-dispatch itself indefinitely.
-        type: boolean
-        default: false
   push:
     branches: [master]
     paths:
@@ -32,6 +51,7 @@ on:
       - "ml/chronos_forecast.py"
       - "ml/calibration.py"
       - "ml/notifications.py"
+      - "scripts/build_ibja_derived_prices.py"
       - "ml/drivers.py"
       - "ml/feature_store.py"
       - "ml/calendar_events.py"
@@ -68,67 +88,6 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-
-      - name: Detect missed cadence and self-trigger catch-up
-        # R2 (audit 2026-09-04): scheduled-trigger miss rate stepped from
-        # 0.0% to 18.5%+ at 2026-08-27T00:15 UTC (GitHub-reported Actions
-        # incident, not fixable from this repo -- see docs/RUNBOOK.md). This
-        # does NOT backfill the missed window's data -- IBJA/Tanishq only
-        # expose CURRENT readings, not historical lookback, so whatever the
-        # price was during a dropped tick is permanently unrecorded. What
-        # this DOES do: when a run finds the last commit is stale, it does
-        # not just do this tick's normal work and then passively wait up to
-        # 3h for the next scheduled slot -- which shares the same drop
-        # probability and could extend the gap further. It immediately
-        # dispatches one extra run via the REST API (independent of the
-        # `schedule` event path), giving the system a second, faster chance
-        # to land fresh data. `inputs.catchup` on the dispatch marks that
-        # run so its own copy of this step never re-dispatches -- bounded to
-        # one extra run per detected gap, never a chain.
-        #
-        # W1 (audit 2026-09-04): threshold = 4h, derived from the PRODUCT
-        # PROMISE (3h cron cadence) plus margin for ordinary jitter around a
-        # single tick -- roughly 1.33x the promise, deliberately BELOW
-        # worker-deadman's WARN=10h (Y1, audit 2026-09-05: the EVENT
-        # threshold, anchored to the measured gap distribution's own p95/p99
-        # -- see deadman.mjs) so this free, silent self-heal attempt always
-        # gets a chance to resolve a gap before a human would be paged. Not
-        # derived from the observed gap
-        # distribution (an earlier attempt at this threshold was, and
-        # briefly leaked to master by process accident before being
-        # reverted -- deriving alert/self-heal levels from a degraded-state
-        # sample encodes the degradation as normal). At the current
-        # (degraded) cadence this fires on a majority of ticks (empirically
-        # ~68% in a recent 28-gap sample) -- acceptable because the action
-        # is a few free CI minutes on a public repo, not a page.
-        if: github.event.inputs.catchup != 'true'
-        env:
-          GH_TOKEN: ${{ github.token }}
-        run: |
-          set -e
-          if [ ! -f data/forecast.json ]; then
-            echo "No data/forecast.json yet -- nothing to check."
-            exit 0
-          fi
-          PREDICTED_AT=$(python3 -c "import json; print(json.load(open('data/forecast.json')).get('predicted_at',''))" 2>/dev/null || echo "")
-          if [ -z "$PREDICTED_AT" ]; then
-            echo "predicted_at missing/unparseable -- skipping catch-up check."
-            exit 0
-          fi
-          PREDICTED_EPOCH=$(date -u -d "$PREDICTED_AT" +%s 2>/dev/null || echo "")
-          if [ -z "$PREDICTED_EPOCH" ]; then
-            echo "Could not parse predicted_at=$PREDICTED_AT -- skipping catch-up check."
-            exit 0
-          fi
-          NOW_EPOCH=$(date -u +%s)
-          GAP_HOURS=$(( (NOW_EPOCH - PREDICTED_EPOCH) / 3600 ))
-          echo "Last committed forecast is ${GAP_HOURS}h old."
-          if [ "$GAP_HOURS" -ge 4 ]; then
-            echo "Gap >= 4h -- at least one scheduled tick was likely dropped. Dispatching one catch-up run."
-            gh workflow run check-price.yml --repo "${GITHUB_REPOSITORY}" --ref master -f catchup=true
-          else
-            echo "Gap under 4h -- normal cadence, no catch-up needed."
-          fi
 
       # Tanishq scraping happens in scrape-tanishq-selfhosted.yml (its own
       # workflow file since audit 2026-09) — this job just reads whatever
@@ -206,6 +165,13 @@ jobs:
         continue-on-error: true
         run: python -m ml.calibration
 
+      - name: Build the trend chart's IBJA-based estimate series
+        # GG decision 4c (2026-09-25): the site's trend chart plots 22K = IBJA x calibration
+        # (one row per IBJA publishing day), labelled as our estimate in app.js. Rebuilt
+        # after this run's IBJA append + calibration refit; never touches prices.json.
+        continue-on-error: true
+        run: python scripts/build_ibja_derived_prices.py --public-out data/ibja_derived_prices.json
+
       - name: Compute rolling Tanishq scrape success rate
         # H3 (session dated 2026-08-28): reads whatever data/tanishq_scrape_
         # outcomes.jsonl already is on master at checkout time (same "read
@@ -242,6 +208,9 @@ jobs:
         continue-on-error: true
         env:
           NTFY_TOPIC: ${{ secrets.NTFY_TOPIC }}
+          # Public price digests go here (allowlisted trigger ids only, see ml/notification_routing.py).
+          # Unset or empty: they fall back to NTFY_TOPIC, so nothing is dropped while it is being set up.
+          NTFY_TOPIC_PUBLIC: ${{ secrets.NTFY_TOPIC_PUBLIC }}
         run: python -m ml.notifications
 
       - name: Save notification state
@@ -277,7 +246,7 @@ jobs:
           set -e
           git config user.name "gold-rate-bot"
           git config user.email "actions@users.noreply.github.com"
-          git add data/forecast.json data/drift_metrics.json data/metrics_history.json data/ibja_rates.parquet data/chronos_probe.json data/calibration.json data/feature_store/snapshots.parquet data/tanishq_scrape_success_rate.json data/cadence_metrics.json || true
+          git add data/forecast.json data/drift_metrics.json data/metrics_history.json data/ibja_rates.parquet data/chronos_probe.json data/calibration.json data/feature_store/snapshots.parquet data/tanishq_scrape_success_rate.json data/cadence_metrics.json data/ibja_derived_prices.json data/nextfix_oos.json || true
           if git diff --staged --quiet; then
             echo "No changes to commit."
             echo "changed=false" >> "$GITHUB_OUTPUT"
@@ -314,6 +283,40 @@ jobs:
           token: ${{ secrets.CI_MERGE_PAT }}
           wait-minutes: "15"
           ntfy-topic: ${{ secrets.NTFY_TOPIC }}
+
+      - name: Merge a stranded Tanishq reading PR
+        # 2026-09-29: a scrape job opened PR #2200 with the day's only Tanishq reading, then was
+        # cancelled mid-merge (the laptop runner restarted); the next scrape would have rebuilt the
+        # branch from master and dropped that reading. This merges such a PR when it is older than
+        # 30 min (its own job has given up), touches ONLY the three Tanishq data files, and both
+        # required checks (lint, pwa-js) are green on its head; then dispatches check-price so the
+        # reading reaches the site. Same merge the bot-pr-sync action performs (squash, CI_MERGE_PAT).
+        if: always()
+        continue-on-error: true
+        env:
+          GH_TOKEN: ${{ secrets.CI_MERGE_PAT }}
+          DISPATCH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          PR=$(gh pr list --repo "${GITHUB_REPOSITORY}" --head bot/tanishq-selfhosted-sync --state open \
+            --json number,headRefOid,createdAt --jq '.[0] // empty')
+          if [ -z "$PR" ]; then echo "No open Tanishq sync PR."; exit 0; fi
+          NUM=$(echo "$PR" | jq -r .number); SHA=$(echo "$PR" | jq -r .headRefOid)
+          AGE_MIN=$(( ( $(date +%s) - $(date -d "$(echo "$PR" | jq -r .createdAt)" +%s) ) / 60 ))
+          if [ "$AGE_MIN" -lt 30 ]; then echo "PR #$NUM is ${AGE_MIN} min old; its own job may still merge it."; exit 0; fi
+          for f in $(gh api "repos/${GITHUB_REPOSITORY}/pulls/${NUM}/files" --jq '.[].filename'); do
+            case "$f" in
+              data/prices.json|data/tanishq_scrape_outcomes.jsonl|data/tanishq_selfhosted_health.json) ;;
+              *) echo "PR #$NUM touches $f -- not a Tanishq data-only PR; leaving it."; exit 0 ;;
+            esac
+          done
+          GREEN=$(gh api "repos/${GITHUB_REPOSITORY}/commits/${SHA}/check-runs?per_page=100" \
+            --jq '[.check_runs[] | select((.name=="lint" or .name=="pwa-js") and .conclusion=="success") | .name] | unique | length')
+          if [ "$GREEN" -lt 2 ]; then echo "PR #$NUM: required checks not both green ($GREEN/2); leaving it."; exit 0; fi
+          gh api -X PUT "repos/${GITHUB_REPOSITORY}/pulls/${NUM}/merge" -f merge_method=squash -f sha="$SHA" \
+            -f commit_title="chore: append Tanishq reading (self-hosted scrape) [skip ci] (#${NUM})"
+          echo "Merged stranded PR #$NUM; dispatching check-price so the reading reaches the site."
+          GH_TOKEN="$DISPATCH_TOKEN" gh workflow run check-price.yml --repo "${GITHUB_REPOSITORY}" --ref master
 
       - name: Alert on stuck bot PR
         # Path-scoped required checks (only requiring lint/pwa-js on code-path
