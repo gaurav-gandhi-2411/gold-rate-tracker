@@ -494,3 +494,39 @@ test("today's read: a price still falling through the last week stays 'still sli
   assert.equal(recentWeekFalling(readings), true);
   assert.match(composeTodaysRead(readings), /still sliding/);
 });
+
+// ── Tests: next-move direction line in the good-price card (ADR 064) ──────────
+
+function renderCard(nextFix) {
+  const fresh = loadApp();
+  const readings = makeReadings(Array.from({ length: 30 }, (_, i) => 14000 - i * 5));
+  const fc = { headline: { lower: 13601, upper: 13872 }, next_fix: nextFix };
+  fresh.pure("renderModelSignal")(fc, readings, null, null, null);
+  return fresh.run('document.getElementById("model-signal-body").innerHTML');
+}
+
+const TRACK = { n: 143, direction_accuracy: 0.65, range_coverage: 0.805, range_n: 123 };
+
+test("direction line: shown with its chance and track record when inference allows it", () => {
+  const html = renderCard({ active: true, direction: { show: true, side: "up", probability: 0.66 }, track_record: TRACK });
+  assert.match(html, /good-price-direction" data-side="up">More likely to go <strong>up<\/strong> than down next \(about 66% chance\)/);
+  assert.match(html, /right 93 of the last 143 times/);
+  // the range's reliability quotes the model's own hit rate, not the flat-hold band's
+  assert.match(html, /about 8 times out of 10/);
+});
+
+test("direction line: a near coin flip reads 'too close to call'", () => {
+  const html = renderCard({ active: true, direction: { show: true, side: "unclear", probability: 0.52 }, track_record: TRACK });
+  assert.match(html, /too close to call/);
+  assert.ok(!/<strong>up<\/strong>|<strong>down<\/strong>/.test(html));
+});
+
+test("direction line: hidden unless inference says show, and when the model is inactive", () => {
+  for (const nf of [
+    { active: true, direction: { show: false, side: "up", probability: 0.7 }, track_record: TRACK },
+    { active: false, reason: "waiting_for_us_close" },
+    undefined,
+  ]) {
+    assert.ok(!/good-price-direction/.test(renderCard(nf)), JSON.stringify(nf));
+  }
+});
