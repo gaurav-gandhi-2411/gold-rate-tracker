@@ -22,6 +22,8 @@ const computeTrendResidual30d = app.pure("computeTrendResidual30d");
 const computeSupportDistance90d = app.pure("computeSupportDistance90d");
 
 const fmtINR = app.pure("fmtINR");
+const composeTodaysRead = app.pure("composeTodaysRead");
+const recentWeekFalling = app.pure("recentWeekFalling");
 
 // ── Test helpers ──────────────────────────────────────────────────────────────
 
@@ -464,4 +466,31 @@ test("computeTrendResidual30d: residZ uses the normal-consistent MAD scale (z -0
   const falling = computeTrendResidual30d(series(-8), 10);
   assert.ok(falling.residZ < -1, `residZ ${falling.residZ}`);
   assert.notEqual(falling.note, steadying.note);
+});
+
+// ── Tests: Today's read (composeTodaysRead) ───────────────────────────────────
+
+// Tanishq 22K, one reading a day, 2026-09-02 .. 2026-10-02: a slow slide, a Rs.330 step down
+// on 09-28, then flat for five days. The old rule said "still sliding" on this.
+const SEPT_STEP_THEN_FLAT = [
+  14245, 14260, 14231, 14195, 14205, 14170, 14100, 14125, 14150, 14110, 14090, 14120, 14135,
+  14160, 14175, 14110, 14080, 14095, 14060, 14050, 14040, 14075, 14040, 14040, 14040,
+  13710, 13685, 13755, 13725, 13725,
+];
+
+test("today's read: a flat week after a one-off step down is not 'still sliding'", () => {
+  const readings = makeReadings(SEPT_STEP_THEN_FLAT);
+  assert.equal(recentWeekFalling(readings), false);
+  const read = composeTodaysRead(readings);
+  assert.ok(!/still sliding/.test(read), read);
+  assert.match(read, /steadying/);
+});
+
+test("today's read: a price still falling through the last week stays 'still sliding'", () => {
+  // Rs.10/day slide with day-to-day noise, then Rs.60/day more over the last five days.
+  const prices = Array.from({ length: 30 }, (_, i) =>
+    Math.round(14300 - i * 10 + 15 * Math.sin(i * 1.7) - (i >= 25 ? (i - 24) * 60 : 0)));
+  const readings = makeReadings(prices);
+  assert.equal(recentWeekFalling(readings), true);
+  assert.match(composeTodaysRead(readings), /still sliding/);
 });
