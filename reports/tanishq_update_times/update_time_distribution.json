@@ -1,0 +1,368 @@
+{
+  "timestamp_convention": "prices.json timestamp = UTC capture instant (scraper/scrape.js); shown here in IST",
+  "captures_live": 694,
+  "captures_only_in_git_history": 6,
+  "first_capture_utc": "2026-05-09T10:25:46.887000+00:00",
+  "last_capture_utc": "2026-09-25T04:49:10.893000+00:00",
+  "change_intervals": 128,
+  "change_intervals_24h_or_longer_dropped": 13,
+  "change_intervals_used": 115,
+  "by_day_type_counts": {
+    "weekday": 96,
+    "saturday": 16,
+    "sunday": 0,
+    "mixed": 3
+  },
+  "resolution_limit": {
+    "gap_between_captures_h_all": {
+      "n": 693,
+      "p50": 3.0,
+      "p90": 7.4,
+      "p100": 101.4
+    },
+    "gap_between_captures_h_since_split": {
+      "n": 74,
+      "p50": 5.1,
+      "p90": 7.8,
+      "p100": 61.9
+    },
+    "change_interval_width_min_used": {
+      "n": 115,
+      "p10": 161.6,
+      "p50": 260.0,
+      "p90": 767.2
+    }
+  },
+  "pooled": {
+    "mass_by_ist_hour": [
+      0.0005,
+      0.0099,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.4778,
+      0.2389,
+      0.0,
+      0.0,
+      0.0409,
+      0.1164,
+      0.0112,
+      0.0325,
+      0.0148,
+      0.0572,
+      0.0,
+      0.0,
+      0.0,
+      0.0
+    ],
+    "mass_by_ist_hour_ci95": [
+      [
+        0.0,
+        0.008
+      ],
+      [
+        0.0,
+        0.029
+      ],
+      [
+        0.0,
+        0.003
+      ],
+      [
+        0.0,
+        0.021
+      ],
+      [
+        0.0,
+        0.0
+      ],
+      [
+        0.0,
+        0.0
+      ],
+      [
+        0.0,
+        0.0
+      ],
+      [
+        0.0,
+        0.0
+      ],
+      [
+        0.0,
+        0.0
+      ],
+      [
+        0.0,
+        0.0
+      ],
+      [
+        0.0,
+        0.762
+      ],
+      [
+        0.0,
+        0.719
+      ],
+      [
+        0.0,
+        0.0
+      ],
+      [
+        0.0,
+        0.0
+      ],
+      [
+        0.0,
+        0.124
+      ],
+      [
+        0.0,
+        0.226
+      ],
+      [
+        0.0,
+        0.164
+      ],
+      [
+        0.0,
+        0.139
+      ],
+      [
+        0.0,
+        0.113
+      ],
+      [
+        0.0,
+        0.109
+      ],
+      [
+        0.0,
+        0.066
+      ],
+      [
+        0.0,
+        0.0
+      ],
+      [
+        0.0,
+        0.0
+      ],
+      [
+        0.0,
+        0.0
+      ]
+    ],
+    "mass_by_ist_window": {
+      "10:00-11:59": {
+        "mass": 0.717,
+        "ci95": [
+          0.615,
+          0.79
+        ]
+      },
+      "12:00-13:59": {
+        "mass": 0.0,
+        "ci95": [
+          0.0,
+          0.0
+        ]
+      },
+      "14:00-19:59": {
+        "mass": 0.273,
+        "ci95": [
+          0.176,
+          0.365
+        ]
+      },
+      "20:00-09:59": {
+        "mass": 0.01,
+        "ci95": [
+          0.0,
+          0.08
+        ]
+      }
+    },
+    "top_innermost_intervals_ist": [
+      {
+        "from": "10:37",
+        "to": "10:38",
+        "width_min": 1,
+        "mass": 0.301
+      },
+      {
+        "from": "11:09",
+        "to": "11:10",
+        "width_min": 1,
+        "mass": 0.239
+      },
+      {
+        "from": "10:41",
+        "to": "10:59",
+        "width_min": 18,
+        "mass": 0.177
+      },
+      {
+        "from": "15:31",
+        "to": "15:32",
+        "width_min": 1,
+        "mass": 0.116
+      },
+      {
+        "from": "19:21",
+        "to": "19:48",
+        "width_min": 27,
+        "mass": 0.057
+      },
+      {
+        "from": "14:30",
+        "to": "14:31",
+        "width_min": 1,
+        "mass": 0.041
+      },
+      {
+        "from": "17:13",
+        "to": "17:14",
+        "width_min": 1,
+        "mass": 0.033
+      },
+      {
+        "from": "18:00",
+        "to": "18:01",
+        "width_min": 1,
+        "mass": 0.015
+      }
+    ]
+  },
+  "by_day_type": {
+    "weekday": {
+      "n_change_intervals": 96,
+      "mass_by_ist_hour": [
+        0.0034,
+        0.0086,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.3557,
+        0.3557,
+        0.0,
+        0.0,
+        0.0,
+        0.1493,
+        0.0176,
+        0.0405,
+        0.0289,
+        0.0402,
+        0.0,
+        0.0,
+        0.0,
+        0.0
+      ],
+      "top_innermost_intervals_ist": [
+        {
+          "from": "11:09",
+          "to": "11:10",
+          "mass": 0.356
+        },
+        {
+          "from": "10:37",
+          "to": "10:38",
+          "mass": 0.295
+        },
+        {
+          "from": "15:31",
+          "to": "15:32",
+          "mass": 0.149
+        },
+        {
+          "from": "10:41",
+          "to": "10:59",
+          "mass": 0.061
+        },
+        {
+          "from": "17:13",
+          "to": "17:14",
+          "mass": 0.04
+        },
+        {
+          "from": "19:21",
+          "to": "19:48",
+          "mass": 0.04
+        }
+      ]
+    },
+    "saturday": {
+      "n_change_intervals": 16,
+      "mass_by_ist_hour": [
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.7909,
+        0.1091,
+        0.0,
+        0.0,
+        0.1,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0
+      ],
+      "top_innermost_intervals_ist": [
+        {
+          "from": "10:02",
+          "to": "11:08",
+          "mass": 0.9
+        },
+        {
+          "from": "14:07",
+          "to": "14:53",
+          "mass": 0.1
+        }
+      ]
+    },
+    "sunday": {
+      "n_change_intervals": 0
+    }
+  },
+  "day_rates": {
+    "weekday": {
+      "ist_days_with_captures": 90,
+      "days_with_a_change_seen_lt12h": 65
+    },
+    "saturday": {
+      "ist_days_with_captures": 18,
+      "days_with_a_change_seen_lt12h": 14
+    },
+    "sunday": {
+      "ist_days_with_captures": 17,
+      "days_with_a_change_seen_lt12h": 1
+    }
+  },
+  "bootstrap": {
+    "B": 500,
+    "seed": 42,
+    "unit": "change interval"
+  }
+}

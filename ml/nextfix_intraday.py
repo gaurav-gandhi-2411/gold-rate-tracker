@@ -166,12 +166,32 @@ def update_shadow(entries: list[dict], events: list, g: pd.Series, now: datetime
 # ── scoring ──────────────────────────────────────────────────────────────────────────────────────
 
 
-def score(rows: list[dict], key: str = "base_at") -> dict:
-    """Error of each beta vs holding (beta 0), per window, one row per base fix (the last one).
+def _cluster_ci(
+    members: list[np.ndarray], stat, b: int | None = None, seed: int = 0
+) -> list[float]:
+    """95% bootstrap interval of ``stat(row indices)``, resampling whole base fixes (clusters).
 
-    Clustered by base fix: rows sharing ``key`` collapse to the latest logged row, so a day with
-    many runs counts once. Reports n, MAE per beta, the change vs holding with a 95% bootstrap CI
-    over base fixes, and the direction hit rate of sign(x_since_fix) when the fix moved.
+    Decisions made within one fix window share most of their information, so resampling rows (or
+    short blocks of rows) would overstate the evidence. Each draw picks base fixes with replacement
+    and keeps all of a picked fix's rows."""
+    rng = np.random.default_rng(seed)
+    b = b or nextfix.BOOTSTRAP_B
+    vals = []
+    for _ in range(b):
+        pick = rng.integers(0, len(members), size=len(members))
+        vals.append(stat(np.concatenate([members[c] for c in pick])))
+    lo, hi = np.nanpercentile(vals, [2.5, 97.5])
+    return [float(lo), float(hi)]
+
+
+def score(rows: list[dict], key: str = "base_at") -> dict:
+    """Error of each beta vs holding (beta 0), per window.
+
+    ``key="base_at"``: one row per base fix (its latest decision), so a day with many runs counts
+    once. Any other ``key``: every decision counts (one row per ``key``), but the confidence
+    interval and the Diebold-Mariano test still treat each base fix as ONE observation (cluster
+    bootstrap; DM on per-fix mean errors). Reports MAE per beta, the change vs holding with its
+    95% CI, and the direction hit rate of sign(x_since_fix) when the fix moved.
     """
     resolved = [r for r in rows if r.get("target") is not None]
     out: dict = {}
@@ -180,15 +200,20 @@ def score(rows: list[dict], key: str = "base_at") -> dict:
         for r in sorted((r for r in resolved if r["window"] == window), key=lambda r: r["t"]):
             last[r[key]] = r
         rs = list(last.values())
-        if len(rs) < 5:
-            out[window] = {"n_fixes": len(rs), "ready": False}
+        fixes = sorted({r["base_at"] for r in rs})
+        if len(fixes) < 5:
+            out[window] = {"n_fixes": len(fixes), "n_decisions": len(rs), "ready": False}
             continue
+        pos = {f: i for i, f in enumerate(fixes)}
+        cl = np.array([pos[r["base_at"]] for r in rs])
+        members = [np.flatnonzero(cl == i) for i in range(len(fixes))]
         tgt = np.array([r["target"] for r in rs])
         errs = {b: np.abs(np.array([r["pred"][f"beta_{b}"] for r in rs]) - tgt) for b in BETAS}
         hold = errs[0.0]
-        res: dict = {"n_fixes": len(rs), "ready": True}
+        res: dict = {"n_fixes": len(fixes), "n_decisions": len(rs), "ready": True}
         for b in BETAS:
             res[f"mae_beta_{b}"] = round(float(errs[b].mean()), 1)
+        hold_by_fix = np.array([hold[m].mean() for m in members])
         for b in BETAS[1:]:
             e = errs[b]
 
@@ -196,10 +221,9 @@ def score(rows: list[dict], key: str = "base_at") -> dict:
                 return 100.0 * (e[ix].mean() / max(hold[ix].mean(), 1e-9) - 1.0)
 
             res[f"change_beta_{b}_pct"] = round(_chg(np.arange(len(rs))), 1)
-            res[f"change_beta_{b}_ci95"] = [
-                round(v, 1) for v in nextfix.block_bootstrap_ci(len(rs), _chg)
-            ]
-            res[f"dm_p_beta_{b}"] = round(nextfix.diebold_mariano_p(e, hold), 4)
+            res[f"change_beta_{b}_ci95"] = [round(v, 1) for v in _cluster_ci(members, _chg)]
+            e_by_fix = np.array([e[m].mean() for m in members])
+            res[f"dm_p_beta_{b}"] = round(nextfix.diebold_mariano_p(e_by_fix, hold_by_fix), 4)
         moved = np.array([r["target"] != r["base"] for r in rs])
         hit = np.array([(r["x_since_fix"] > 0) == (r["target"] > r["base"]) for r in rs])
         nz = moved & np.array([r["x_since_fix"] != 0 for r in rs])

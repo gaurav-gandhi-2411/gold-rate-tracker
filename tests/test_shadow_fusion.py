@@ -72,7 +72,7 @@ def test_all_sources_healthy_produces_full_output(monkeypatch):
     _patch_national(monkeypatch)
     _patch_kalyan(
         monkeypatch,
-        {city: _reading("kalyan", 13100, city=city) for city in shadow_fusion.KALYAN_CITIES},
+        {city: _reading("kalyan", 13100, city=city) for city in shadow_fusion.SHADOW_KALYAN_CITIES},
     )
 
     result = shadow_fusion.run_shadow_cycle()
@@ -80,7 +80,7 @@ def test_all_sources_healthy_produces_full_output(monkeypatch):
     assert result["national_benchmark"] is not None
     assert result["national_failures"] == {}
     assert result["kalyan_failures"] == {}
-    for city in shadow_fusion.KALYAN_CITIES:
+    for city in shadow_fusion.SHADOW_KALYAN_CITIES:
         assert result["cities"][city]["coverage"] == "kalyan_anchored"
 
 
@@ -88,7 +88,7 @@ def test_one_national_source_down_still_produces_output(monkeypatch):
     _patch_national(monkeypatch, grt=SourceNetworkError("grt timed out"))
     _patch_kalyan(
         monkeypatch,
-        {city: _reading("kalyan", 13100, city=city) for city in shadow_fusion.KALYAN_CITIES},
+        {city: _reading("kalyan", 13100, city=city) for city in shadow_fusion.SHADOW_KALYAN_CITIES},
     )
 
     result = shadow_fusion.run_shadow_cycle()
@@ -114,7 +114,7 @@ def test_all_national_sources_down_raises(monkeypatch):
 
 def test_one_kalyan_city_down_falls_back_to_national_derived(monkeypatch):
     _patch_national(monkeypatch)
-    cities = list(shadow_fusion.KALYAN_CITIES)
+    cities = list(shadow_fusion.SHADOW_KALYAN_CITIES)
     down_city = cities[0]
     healthy_results = {c: _reading("kalyan", 13100, city=c) for c in cities}
     healthy_results[down_city] = SourceNetworkError("kalyan down for this city")
@@ -133,7 +133,7 @@ def test_structure_vs_network_failure_distinguishable(monkeypatch):
     _patch_national(monkeypatch, grt=SourceStructureError("grt page redesigned"))
     _patch_kalyan(
         monkeypatch,
-        {city: _reading("kalyan", 13100, city=city) for city in shadow_fusion.KALYAN_CITIES},
+        {city: _reading("kalyan", 13100, city=city) for city in shadow_fusion.SHADOW_KALYAN_CITIES},
     )
 
     result = shadow_fusion.run_shadow_cycle()
@@ -145,7 +145,7 @@ def test_output_written_to_disk(monkeypatch, tmp_path):
     _patch_national(monkeypatch)
     _patch_kalyan(
         monkeypatch,
-        {city: _reading("kalyan", 13100, city=city) for city in shadow_fusion.KALYAN_CITIES},
+        {city: _reading("kalyan", 13100, city=city) for city in shadow_fusion.SHADOW_KALYAN_CITIES},
     )
 
     shadow_fusion.run_shadow_cycle()
@@ -163,7 +163,7 @@ def test_output_ends_with_exactly_one_trailing_newline(monkeypatch):
     _patch_national(monkeypatch)
     _patch_kalyan(
         monkeypatch,
-        {city: _reading("kalyan", 13100, city=city) for city in shadow_fusion.KALYAN_CITIES},
+        {city: _reading("kalyan", 13100, city=city) for city in shadow_fusion.SHADOW_KALYAN_CITIES},
     )
 
     shadow_fusion.run_shadow_cycle()
@@ -171,3 +171,30 @@ def test_output_ends_with_exactly_one_trailing_newline(monkeypatch):
     raw = shadow_fusion.SHADOW_OUTPUT_PATH.read_bytes()
     assert raw.endswith(b"\n")
     assert not raw.endswith(b"\n\n")
+
+
+def test_shadow_fetches_exactly_one_kalyan_city(monkeypatch):
+    # GG decision E3: 1 Kalyan city per cycle (all 4 were identical in every cycle).
+    _patch_national(monkeypatch)
+    calls: list[str] = []
+
+    def fake_fetch(city):
+        calls.append(city)
+
+        class _Raw:
+            reading = _reading("kalyan", 13100, city=city)
+
+        return _Raw()
+
+    monkeypatch.setattr(shadow_fusion, "fetch_kalyan_city", fake_fetch)
+
+    result = shadow_fusion.run_shadow_cycle()
+
+    assert calls == ["Bangalore"]
+    assert list(result["cities"]) == ["Bangalore"]
+
+
+def test_shadow_cities_are_registered_kalyan_cities():
+    from ml.sources.kalyan import KALYAN_CITIES
+
+    assert set(shadow_fusion.SHADOW_KALYAN_CITIES) <= set(KALYAN_CITIES)
