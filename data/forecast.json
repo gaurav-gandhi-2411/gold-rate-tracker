@@ -1,5 +1,5 @@
 {
-  "predicted_at": "2026-10-01T23:23:42.750201+00:00",
+  "predicted_at": "2026-10-02T00:48:39.454728+00:00",
   "target_window": "5d",
   "headline": {
     "method": "naive_flat_hold",
@@ -10,15 +10,15 @@
     "naive_mae_recent_30": 128.5,
     "vol_context": {
       "half_width": 300,
-      "half_width_raw": 239.1,
+      "half_width_raw": 236.7,
       "method": "realized_20d",
       "window_days": 20,
-      "contiguous_days": 56,
+      "contiguous_days": 57,
       "is_floored": true,
       "is_degraded": false,
       "floor_fraction": 0.5,
       "static_pi_half": 599.9,
-      "baseline_half_width": 314,
+      "baseline_half_width": 311,
       "regime": "normal",
       "typical_move_5d": 160,
       "typical_move_pairs": 24,
@@ -59,7 +59,7 @@
     "direction_consensus": 1.0
   },
   "driver_context": {
-    "computed_at": "2026-10-01T23:23:42.774815+00:00",
+    "computed_at": "2026-10-02T00:48:39.480617+00:00",
     "macro_staleness_days": 0.0,
     "macro_fresh": true,
     "premium_threshold_pct": 15.0,
@@ -106,9 +106,9 @@
     },
     "alignment": "intraday_at_fix"
   },
-  "real_readings_count": 734,
+  "real_readings_count": 735,
   "current_22k": 13725,
-  "scraped_at": "2026-10-01T20:20:52.503Z",
+  "scraped_at": "2026-10-02T00:43:05.030Z",
   "price_source": "tanishq_scrape",
   "est_low": null,
   "est_high": null,
@@ -124,7 +124,7 @@
   "predicted_22k": 13725,
   "lower": 13517,
   "upper": 13933,
-  "target_time": "2026-10-02T00:00:00+00:00",
+  "target_time": "2026-10-03T00:00:00+00:00",
   "model_status": "naive_headline",
   "model_version": "naive_flat_hold",
   "warmup": false
