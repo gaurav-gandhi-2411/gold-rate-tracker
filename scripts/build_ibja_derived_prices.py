@@ -48,6 +48,8 @@ ROOT = Path(__file__).resolve().parent.parent
 DERIVED_SOURCE = "ibja_calibrated_derived"
 # IBJA's PM fix is published ~17:00 IST = 11:30 UTC (same constant as ml/inference.py).
 PUBLISH_UTC = "T11:30:00.000Z"
+# ...and its AM fix ~12:00 IST = 06:30 UTC (ml.known_at.IBJA_AM).
+AM_PUBLISH_UTC = "T06:30:00.000Z"
 
 
 def build_derived_prices(ibja: pd.DataFrame, calibration: dict) -> list[dict]:
@@ -87,6 +89,27 @@ def public_chart_rows(rows: list[dict]) -> list[dict]:
     return [{"timestamp": r["timestamp"], "22k": r["22k"]} for r in rows]
 
 
+def morning_chart_row(ibja: pd.DataFrame, calibration: dict, last_pm_day: str) -> dict | None:
+    """Today's point before IBJA's afternoon rate is out (GG 2026-09-29: the chart ended at
+    yesterday until ~17:00 IST). The latest day with an AM fix and no PM fix, if it is after
+    the last PM day, as 22K = slope x (am_916 / 10) + intercept at 06:30 UTC. The PM row
+    replaces it the same afternoon (one row per day). Chart series only, never prices.json.
+    """
+    if "am_916" not in ibja.columns:
+        return None
+    df = ibja.copy()
+    df["date"] = pd.to_datetime(df["date"]).dt.strftime("%Y-%m-%d")
+    am_only = df[df["am_916"].notna() & df["pm_916"].isna() & (df["date"] > last_pm_day)]
+    if am_only.empty:
+        return None
+    rec = am_only.sort_values("date").iloc[-1]
+    am916 = float(rec["am_916"])
+    if not math.isfinite(am916) or am916 <= 0:
+        return None
+    k22 = calibration["slope"] * (am916 / 10.0) + calibration["intercept"]
+    return {"timestamp": f"{rec['date']}{AM_PUBLISH_UTC}", "22k": round(k22)}
+
+
 def main(argv: list[str] | None = None) -> int:
     ap = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     ap.add_argument("--data-dir", type=Path, default=ROOT / "data")
@@ -112,6 +135,9 @@ def main(argv: list[str] | None = None) -> int:
             print("refusing: --public-out must not target prices.json", file=sys.stderr)
             return 1
         public = public_chart_rows(rows)
+        morning = morning_chart_row(ibja, calibration, rows[-1]["timestamp"][:10])
+        if morning is not None:
+            public.append(morning)
         args.public_out.write_text(json.dumps(public, indent=1) + "\n", encoding="utf-8")
         print(f"wrote {len(public)} chart rows to {args.public_out}")
         return 0

@@ -2298,6 +2298,17 @@ html.ptr-pulling {
   border-radius: var(--radius-sm);
 }
 .good-price-tomorrow strong { color: var(--gold); font-weight: 600; }
+.good-price-direction {
+  font-size: 14px;
+  color: var(--cream);
+  margin: 8px 0 0;
+  padding: 10px 14px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+}
+.good-price-direction strong { font-weight: 600; }
+.good-price-direction[data-side="up"] strong { color: var(--up); }
+.good-price-direction[data-side="down"] strong { color: var(--down); }
 
 .outlook-reliability { margin-top: 8px; }
 .outlook-reliability-note {

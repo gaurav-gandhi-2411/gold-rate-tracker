@@ -146,8 +146,8 @@ function renderFullMethodology(fc, bt, drift, coverage, bandCoverage) {
           </div>
           <div class="meth-stat">
             <div class="meth-stat-label">${tHwk("methMethodLabel")}</div>
-            <div class="meth-stat-value">${tHwk("methAssumeNoChange")}</div>
-            <div class="meth-stat-sub">${tHwk("methCoversMoves")}</div>
+            <div class="meth-stat-value">${tHwk(fc.next_fix?.active === true ? "methNextFixModel" : "methAssumeNoChange")}</div>
+            <div class="meth-stat-sub">${tHwk(fc.next_fix?.active === true ? "methNextFixModelSub" : "methCoversMoves")}</div>
           </div>
         </div>
         ${fc.target_time ? `<p class="meth-text" style="margin-top:8px">${tHwk("methTargetLine", { date: fmtIST(fc.target_time) })}</p>` : ""}
@@ -156,7 +156,25 @@ function renderFullMethodology(fc, bt, drift, coverage, bandCoverage) {
     `);
   }
 
-  if (fc?.chronos_companion?.status === "success") {
+  // ADR 064: the next-fix model's own out-of-sample record (forecast.json next_fix.track_record).
+  const nfTr = fc?.next_fix?.track_record;
+  const nfDirOn = nfTr?.direction_gate_ship === true && typeof nfTr.direction_accuracy === "number" && nfTr.n > 0;
+  if (nfDirOn) {
+    parts.push(`
+      <div class="meth-section">
+        <h3 class="meth-heading">${tHwk("methDirectionHeading")}</h3>
+        <div class="meth-stat">
+          <div class="meth-stat-label">${tHwk("methStatusLabel")}</div>
+          <div class="meth-stat-value">${tHwk("methDirectionOn")}</div>
+          <div class="meth-stat-sub">${tHwk("methDirectionOnSub", {
+            right: Math.round(nfTr.direction_accuracy * nfTr.n), n: nfTr.n,
+            upRight: Math.round(nfTr.always_up_accuracy * nfTr.n),
+          })}</div>
+        </div>
+        <p class="meth-note">${tHwk("methDirectionOnNote")}</p>
+      </div>
+    `);
+  } else if (fc?.chronos_companion?.status === "success") {
     parts.push(`
       <div class="meth-section">
         <h3 class="meth-heading">${tHwk("methDirectionHeading")}</h3>
@@ -207,6 +225,12 @@ function renderFullMethodology(fc, bt, drift, coverage, bandCoverage) {
     // current (rule 98a). P2 (coverage, independently sourced/gated above) and
     // the static P4 explainer are unaffected and keep rendering.
     const btFresh = isMeasurementFresh(bt.backtest_run_at, Date.now());
+    const nextFixHtml = nfTr && typeof nfTr.mae_model === "number" && nfTr.n > 0 ? `
+        <p class="meth-text"><strong>${tHwk("methNextFixStrong")}</strong><br>
+        ${tHwk("methNextFixP", {
+          n: nfTr.n, modelMae: fmtINR(Math.round(nfTr.mae_model)), flatMae: fmtINR(Math.round(nfTr.mae_flat)),
+          pct: Math.round(Math.abs(nfTr.mae_change_pct)),
+        })}</p>` : "";
     const p1Html = btFresh ? `
         <p class="meth-text"><strong>${tHwk("methAccurateP1Strong")}</strong><br>
         ${tHwk("methAccurateP1", {
@@ -220,6 +244,7 @@ function renderFullMethodology(fc, bt, drift, coverage, bandCoverage) {
     parts.push(`
       <div class="meth-section meth-how-good">
         <h3 class="meth-heading">${tHwk("methHowAccurateHeading")}</h3>
+        ${nextFixHtml}
         ${p1Html}
         <p class="meth-text"><strong>${tHwk("methAccurateP2Strong", {
           rangeStr,

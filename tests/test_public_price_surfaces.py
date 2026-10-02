@@ -80,6 +80,37 @@ def test_public_out_writes_the_chart_file_and_refuses_prices_json(tmp_path):
     assert not (data / "prices.json").exists()
 
 
+def test_chart_series_shows_todays_morning_rate_until_the_afternoon_rate(tmp_path):
+    data = tmp_path / "data"
+    data.mkdir()
+    ibja = pd.DataFrame(
+        {
+            "date": ["2026-09-29", "2026-09-30", "2026-10-01"],
+            "am_916": [135018.0, 135915.0, 136197.0],
+            "pm_916": [135263.0, 135465.0, None],
+            "pm_999": [147700.0, 147900.0, None],
+            "pm_750": [110700.0, 110900.0, None],
+        }
+    )
+    ibja.to_parquet(data / "ibja_rates.parquet")
+    (data / "calibration.json").write_text(json.dumps({"slope": 1.0, "intercept": 0.0}))
+    out = data / "ibja_derived_prices.json"
+    assert build.main(["--data-dir", str(data), "--public-out", str(out)]) == 0
+    assert json.loads(out.read_text())[1:] == [
+        {"timestamp": "2026-09-30T11:30:00.000Z", "22k": 13546},
+        {"timestamp": "2026-10-01T06:30:00.000Z", "22k": 13620},
+    ]
+    # once the afternoon rate is out, the day has one row, from it
+    ibja.loc[2, ["pm_916", "pm_999", "pm_750"]] = [135694.0, 148100.0, 111100.0]
+    ibja.to_parquet(data / "ibja_rates.parquet")
+    assert build.main(["--data-dir", str(data), "--public-out", str(out)]) == 0
+    assert [r["timestamp"] for r in json.loads(out.read_text())][1:] == [
+        "2026-09-30T11:30:00.000Z",
+        "2026-10-01T11:30:00.000Z",
+    ]
+    assert not (data / "prices.json").exists()
+
+
 def test_committed_chart_series_shape():
     rows = json.loads((REPO / "data" / "ibja_derived_prices.json").read_text(encoding="utf-8"))
     assert len(rows) >= 2
