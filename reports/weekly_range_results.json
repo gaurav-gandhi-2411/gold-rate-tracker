@@ -1,0 +1,154 @@
+{
+  "generated_at_utc": "2026-09-24T08:12:11.882899+00:00",
+  "git_sha": "2518e332c5784aa63bedfb5a15e453fd0b87d759",
+  "nominal": 0.8,
+  "truth": "IBJA PM 916 (data/ibja_rates.parquet), complete windows only",
+  "horizons": {
+    "1d": {
+      "first_as_of": "2025-05-12",
+      "last_as_of": "2026-09-22",
+      "walk_forward": {
+        "calibrated": {
+          "n": 161,
+          "coverage": 0.8509316770186336,
+          "wilson_95": [
+            0.7877725117847859,
+            0.8977346464775993
+          ],
+          "kupiec_p": 0.09405849334302141,
+          "mean_width_pct": 3.365276782500718,
+          "times_out_of_10": 8
+        },
+        "raw_historical_simulation": {
+          "n": 161,
+          "coverage": 0.8074534161490683,
+          "wilson_95": [
+            0.7396712252594928,
+            0.860905842598703
+          ],
+          "kupiec_p": 0.8122265727376083,
+          "mean_width_pct": 3.0832260177612425,
+          "times_out_of_10": 8
+        }
+      },
+      "holdout": {
+        "calibrated_on": [
+          "2025-05-12",
+          "2026-05-14"
+        ],
+        "tested_on": [
+          "2026-06-01",
+          "2026-09-22"
+        ],
+        "frozen_scale": 0.9931577760198383,
+        "calibrated": {
+          "n": 80,
+          "coverage": 0.8,
+          "wilson_95": [
+            0.6995375627182917,
+            0.8729715595603921
+          ],
+          "kupiec_p": 1.0,
+          "mean_width_pct": 3.4993774666148076,
+          "times_out_of_10": 8
+        },
+        "raw_historical_simulation": {
+          "n": 80,
+          "coverage": 0.8,
+          "wilson_95": [
+            0.6995375627182917,
+            0.8729715595603921
+          ],
+          "kupiec_p": 1.0,
+          "mean_width_pct": 3.5235162677503746,
+          "times_out_of_10": 8
+        }
+      }
+    },
+    "week": {
+      "first_as_of": "2025-07-15",
+      "last_as_of": "2026-09-15",
+      "walk_forward": {
+        "calibrated": {
+          "n": 119,
+          "coverage": 0.8403361344537815,
+          "wilson_95": [
+            0.7640500233011956,
+            0.8953364800635347
+          ],
+          "kupiec_p": 0.25814498716515555,
+          "mean_width_pct": 8.885066246382191,
+          "times_out_of_10": 8
+        },
+        "raw_historical_simulation": {
+          "n": 119,
+          "coverage": 0.7815126050420168,
+          "wilson_95": [
+            0.6991078796953264,
+            0.8463105860508086
+          ],
+          "kupiec_p": 0.6180581144241593,
+          "mean_width_pct": 8.029699261247298,
+          "times_out_of_10": 7
+        }
+      },
+      "walk_forward_non_overlapping": {
+        "calibrated": {
+          "n": 24,
+          "coverage": 0.875,
+          "wilson_95": [
+            0.6899611872949993,
+            0.9565566591987655
+          ],
+          "kupiec_p": 0.3313309558674976,
+          "mean_width_pct": 8.857772981379807,
+          "times_out_of_10": 8
+        },
+        "raw_historical_simulation": {
+          "n": 24,
+          "coverage": 0.7916666666666666,
+          "wilson_95": [
+            0.5952954674681135,
+            0.9075517464714814
+          ],
+          "kupiec_p": 0.9191211079487036,
+          "mean_width_pct": 7.999581509459852,
+          "times_out_of_10": 7
+        }
+      },
+      "holdout": {
+        "calibrated_on": [
+          "2025-07-15",
+          "2026-06-19"
+        ],
+        "tested_on": [
+          "2026-06-29",
+          "2026-09-15"
+        ],
+        "frozen_scale": 1.0857095691033585,
+        "calibrated": {
+          "n": 56,
+          "coverage": 0.875,
+          "wilson_95": [
+            0.7637452344180986,
+            0.9381093130428287
+          ],
+          "kupiec_p": 0.13783710299490715,
+          "mean_width_pct": 9.539778230807675,
+          "times_out_of_10": 8
+        },
+        "raw_historical_simulation": {
+          "n": 56,
+          "coverage": 0.8035714285714286,
+          "wilson_95": [
+            0.681553923735416,
+            0.8866140432567634
+          ],
+          "kupiec_p": 0.9466089771660204,
+          "mean_width_pct": 8.782643131586209,
+          "times_out_of_10": 8
+        }
+      }
+    }
+  }
+}

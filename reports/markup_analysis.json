@@ -1,0 +1,425 @@
+{
+ "generated_at": "2026-09-24",
+ "definition": "markup_pct = (retailer_22k_per_gram / ibja_22k_per_gram_in_force - 1) * 100",
+ "retailers": {
+  "tanishq": {
+   "history": {
+    "first_date": "2026-04-14",
+    "last_date": "2026-09-24",
+    "n_days": 148,
+    "n_same_day_fresh_ibja": 92,
+    "n_stale_ibja": 56,
+    "n_total": 148
+   },
+   "markup_pct_distribution": {
+    "n": 148,
+    "mean": 1.4478629608768212,
+    "median": 1.254475941512423,
+    "std": 1.5452043188669295,
+    "p10": 0.3816448964553576,
+    "p90": 2.2104395801239463
+   },
+   "stability": {
+    "day_to_day_change": {
+     "n": 147,
+     "mean": -0.05670755829700482,
+     "median": 0.0,
+     "std": 1.0194157868842577,
+     "p10": -0.8161683071141512,
+     "p90": 0.8585432861915043
+    },
+    "ar1_markup_pct": {
+     "n_pairs": 147,
+     "ar1": 0.7638195113505245
+    },
+    "category_transitions": {
+     "n_transitions": 137,
+     "matrix": {
+      "lower than usual": {
+       "lower than usual": 23,
+       "usual": 14,
+       "higher than usual": 4
+      },
+      "usual": {
+       "usual": 39,
+       "lower than usual": 13,
+       "higher than usual": 11
+      },
+      "higher than usual": {
+       "lower than usual": 4,
+       "usual": 11,
+       "higher than usual": 18
+      }
+     },
+     "share_changed": 0.41605839416058393
+    }
+   },
+   "base_rate_higher_than_usual": {
+    "n": 138,
+    "rate": 0.2391304347826087
+   },
+   "weekend_effect": {
+    "weekday": {
+     "n": 108,
+     "mean": 1.5204677314386947,
+     "median": 1.2912642928661233,
+     "std": 1.6917032862466896,
+     "p10": 0.7107369583218226,
+     "p90": 2.075997652582151
+    },
+    "weekend": {
+     "n": 40,
+     "mean": 1.2518300803597624,
+     "median": 1.2125767826093536,
+     "std": 1.0458709468691418,
+     "p10": -0.4604133458299353,
+     "p90": 2.2104395801239463
+    },
+    "weekend_days_with_prior_friday": 40,
+    "weekend_days_rate_moved_vs_prior_friday": 38
+   }
+  },
+  "grt": {
+   "history": {
+    "first_date": "2026-07-19",
+    "last_date": "2026-09-24",
+    "n_days": 68,
+    "n_same_day_fresh_ibja": 48,
+    "n_stale_ibja": 20,
+    "n_total": 68
+   },
+   "markup_pct_distribution": {
+    "n": 68,
+    "mean": 1.0830944266363716,
+    "median": 1.0423419539781098,
+    "std": 0.540530581711333,
+    "p10": 0.6095609311985717,
+    "p90": 1.7064846416382284
+   },
+   "stability": {
+    "day_to_day_change": {
+     "n": 67,
+     "mean": -0.003854036342829725,
+     "median": 0.0,
+     "std": 0.6282704005836001,
+     "p10": -0.7108499604406182,
+     "p90": 0.6845000027910997
+    },
+    "ar1_markup_pct": {
+     "n_pairs": 67,
+     "ar1": 0.3292059970993513
+    },
+    "category_transitions": {
+     "n_transitions": 57,
+     "matrix": {
+      "usual": {
+       "lower than usual": 6,
+       "usual": 8,
+       "higher than usual": 5
+      },
+      "lower than usual": {
+       "higher than usual": 5,
+       "usual": 6,
+       "lower than usual": 5
+      },
+      "higher than usual": {
+       "usual": 5,
+       "lower than usual": 5,
+       "higher than usual": 12
+      }
+     },
+     "share_changed": 0.5614035087719298
+    }
+   },
+   "base_rate_higher_than_usual": {
+    "n": 58,
+    "rate": 0.3793103448275862
+   }
+  },
+  "malabar": {
+   "history": {
+    "first_date": "2026-07-18",
+    "last_date": "2026-09-24",
+    "n_days": 59,
+    "n_same_day_fresh_ibja": 48,
+    "n_stale_ibja": 11,
+    "n_total": 59
+   },
+   "markup_pct_distribution": {
+    "n": 59,
+    "mean": 1.2122213500413783,
+    "median": 1.3682315658345878,
+    "std": 0.9256432017839067,
+    "p10": 0.01832612036032355,
+    "p90": 2.155945843075413
+   },
+   "stability": {
+    "day_to_day_change": {
+     "n": 58,
+     "mean": -0.018603975980481666,
+     "median": 0.018684900647336633,
+     "std": 1.160374939806882,
+     "p10": -1.100961428837488,
+     "p90": 1.06589384424578
+    },
+    "ar1_markup_pct": {
+     "n_pairs": 58,
+     "ar1": 0.2227283339702094
+    },
+    "category_transitions": {
+     "n_transitions": 48,
+     "matrix": {
+      "usual": {
+       "usual": 15,
+       "higher than usual": 4,
+       "lower than usual": 7
+      },
+      "higher than usual": {
+       "higher than usual": 4,
+       "usual": 6,
+       "lower than usual": 1
+      },
+      "lower than usual": {
+       "usual": 4,
+       "higher than usual": 3,
+       "lower than usual": 4
+      }
+     },
+     "share_changed": 0.5208333333333334
+    }
+   },
+   "base_rate_higher_than_usual": {
+    "n": 49,
+    "rate": 0.22448979591836735
+   }
+  },
+  "kalyan_bangalore": {
+   "history": {
+    "first_date": "2026-07-19",
+    "last_date": "2026-09-07",
+    "n_days": 42,
+    "n_same_day_fresh_ibja": 28,
+    "n_stale_ibja": 14,
+    "n_total": 42
+   },
+   "markup_pct_distribution": {
+    "n": 42,
+    "mean": 1.037317753910072,
+    "median": 1.0239951092770871,
+    "std": 0.6434188213973847,
+    "p10": 0.5295204016852351,
+    "p90": 1.6122016203577783
+   },
+   "stability": {
+    "day_to_day_change": {
+     "n": 41,
+     "mean": -0.010114128299291878,
+     "median": 0.0,
+     "std": 0.8684612311164129,
+     "p10": -0.7017923390171488,
+     "p90": 0.8921023340426437
+    },
+    "ar1_markup_pct": {
+     "n_pairs": 41,
+     "ar1": 0.1027352335792564
+    },
+    "category_transitions": {
+     "n_transitions": 31,
+     "matrix": {
+      "higher than usual": {
+       "usual": 4,
+       "lower than usual": 2,
+       "higher than usual": 4
+      },
+      "usual": {
+       "usual": 6,
+       "lower than usual": 4,
+       "higher than usual": 3
+      },
+      "lower than usual": {
+       "usual": 4,
+       "higher than usual": 2,
+       "lower than usual": 2
+      }
+     },
+     "share_changed": 0.6129032258064516
+    }
+   },
+   "base_rate_higher_than_usual": {
+    "n": 32,
+    "rate": 0.3125
+   }
+  },
+  "kalyan_chennai": {
+   "history": {
+    "first_date": "2026-07-19",
+    "last_date": "2026-09-07",
+    "n_days": 42,
+    "n_same_day_fresh_ibja": 28,
+    "n_stale_ibja": 14,
+    "n_total": 42
+   },
+   "markup_pct_distribution": {
+    "n": 42,
+    "mean": 1.037317753910072,
+    "median": 1.0239951092770871,
+    "std": 0.6434188213973847,
+    "p10": 0.5295204016852351,
+    "p90": 1.6122016203577783
+   },
+   "stability": {
+    "day_to_day_change": {
+     "n": 41,
+     "mean": -0.010114128299291878,
+     "median": 0.0,
+     "std": 0.8684612311164129,
+     "p10": -0.7017923390171488,
+     "p90": 0.8921023340426437
+    },
+    "ar1_markup_pct": {
+     "n_pairs": 41,
+     "ar1": 0.1027352335792564
+    },
+    "category_transitions": {
+     "n_transitions": 31,
+     "matrix": {
+      "higher than usual": {
+       "usual": 4,
+       "lower than usual": 2,
+       "higher than usual": 4
+      },
+      "usual": {
+       "usual": 6,
+       "lower than usual": 4,
+       "higher than usual": 3
+      },
+      "lower than usual": {
+       "usual": 4,
+       "higher than usual": 2,
+       "lower than usual": 2
+      }
+     },
+     "share_changed": 0.6129032258064516
+    }
+   },
+   "base_rate_higher_than_usual": {
+    "n": 32,
+    "rate": 0.3125
+   }
+  },
+  "kalyan_hyderabad": {
+   "history": {
+    "first_date": "2026-07-19",
+    "last_date": "2026-09-07",
+    "n_days": 42,
+    "n_same_day_fresh_ibja": 28,
+    "n_stale_ibja": 14,
+    "n_total": 42
+   },
+   "markup_pct_distribution": {
+    "n": 42,
+    "mean": 1.037317753910072,
+    "median": 1.0239951092770871,
+    "std": 0.6434188213973847,
+    "p10": 0.5295204016852351,
+    "p90": 1.6122016203577783
+   },
+   "stability": {
+    "day_to_day_change": {
+     "n": 41,
+     "mean": -0.010114128299291878,
+     "median": 0.0,
+     "std": 0.8684612311164129,
+     "p10": -0.7017923390171488,
+     "p90": 0.8921023340426437
+    },
+    "ar1_markup_pct": {
+     "n_pairs": 41,
+     "ar1": 0.1027352335792564
+    },
+    "category_transitions": {
+     "n_transitions": 31,
+     "matrix": {
+      "higher than usual": {
+       "usual": 4,
+       "lower than usual": 2,
+       "higher than usual": 4
+      },
+      "usual": {
+       "usual": 6,
+       "lower than usual": 4,
+       "higher than usual": 3
+      },
+      "lower than usual": {
+       "usual": 4,
+       "higher than usual": 2,
+       "lower than usual": 2
+      }
+     },
+     "share_changed": 0.6129032258064516
+    }
+   },
+   "base_rate_higher_than_usual": {
+    "n": 32,
+    "rate": 0.3125
+   }
+  },
+  "kalyan_ernakulam": {
+   "history": {
+    "first_date": "2026-07-19",
+    "last_date": "2026-09-07",
+    "n_days": 42,
+    "n_same_day_fresh_ibja": 28,
+    "n_stale_ibja": 14,
+    "n_total": 42
+   },
+   "markup_pct_distribution": {
+    "n": 42,
+    "mean": 1.037317753910072,
+    "median": 1.0239951092770871,
+    "std": 0.6434188213973847,
+    "p10": 0.5295204016852351,
+    "p90": 1.6122016203577783
+   },
+   "stability": {
+    "day_to_day_change": {
+     "n": 41,
+     "mean": -0.010114128299291878,
+     "median": 0.0,
+     "std": 0.8684612311164129,
+     "p10": -0.7017923390171488,
+     "p90": 0.8921023340426437
+    },
+    "ar1_markup_pct": {
+     "n_pairs": 41,
+     "ar1": 0.1027352335792564
+    },
+    "category_transitions": {
+     "n_transitions": 31,
+     "matrix": {
+      "higher than usual": {
+       "usual": 4,
+       "lower than usual": 2,
+       "higher than usual": 4
+      },
+      "usual": {
+       "usual": 6,
+       "lower than usual": 4,
+       "higher than usual": 3
+      },
+      "lower than usual": {
+       "usual": 4,
+       "higher than usual": 2,
+       "lower than usual": 2
+      }
+     },
+     "share_changed": 0.6129032258064516
+    }
+   },
+   "base_rate_higher_than_usual": {
+    "n": 32,
+    "rate": 0.3125
+   }
+  }
+ }
+}

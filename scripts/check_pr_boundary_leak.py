@@ -187,10 +187,17 @@ def _gh_pr_diff_names(pr_number: int, repo: str) -> set[str]:
 
 
 def _unique_commits(base_ref: str, head_sha: str) -> list[str]:
-    """Commits reachable from head_sha but not from origin/base_ref. Fetches
-    both first so this is correct even against a stale local clone."""
+    """Non-merge commits reachable from head_sha but not from origin/base_ref.
+    Fetches both first so this is correct even against a stale local clone.
+
+    Merge commits are excluded: `git show` of a merge prints only its
+    conflict-resolution hunks, so two unrelated PRs that each merged master
+    and resolved the same generated-file conflict (tests/test_count_baseline.json)
+    the same way got identical patch-ids and a false "foreign commit" (#1933
+    vs #1921, 2026-09-23). A merge's authored content is not what this check
+    is about; the PR's own commits are."""
     _git(["fetch", "origin", base_ref, head_sha])
-    log = _git(["log", f"origin/{base_ref}..{head_sha}", "--format=%H", "--reverse"])
+    log = _git(["log", f"origin/{base_ref}..{head_sha}", "--no-merges", "--format=%H", "--reverse"])
     return [line for line in log.splitlines() if line]
 
 
@@ -214,6 +221,55 @@ def _commit_patch_ids(base_ref: str, head_sha: str) -> dict[str, str]:
     relative to origin/base_ref."""
     result: dict[str, str] = {}
     for sha in _unique_commits(base_ref, head_sha):
+        patch_id = _patch_id_for_commit(sha)
+        if patch_id:
+            result[patch_id] = sha
+    return result
+
+
+def _pr_commits_via_api(pr_number: int, repo: str) -> list[str]:
+    """A PR's own commit list as GitHub recorded it — survives deletion of the
+    PR's base or head branch. Fetches refs/pull/N/head so the objects exist
+    locally for `git show`."""
+    _git(["fetch", "origin", f"refs/pull/{pr_number}/head"])
+    # --jq emits one sha per line across every page; raw --paginate output
+    # concatenates per-page JSON arrays and would not parse past 30 commits.
+    result = _run(
+        [
+            "gh",
+            "api",
+            f"repos/{repo}/pulls/{pr_number}/commits",
+            "--paginate",
+            "--jq",
+            # Single-parent commits only, matching _unique_commits' --no-merges.
+            ".[] | select((.parents | length) == 1) | .sha",
+        ]
+    )
+    if result.returncode != 0:
+        raise BoundaryLeakError(
+            f"gh api pulls/{pr_number}/commits failed (exit {result.returncode}): "
+            f"{result.stderr.strip()}"
+        )
+    shas = [line.strip() for line in result.stdout.splitlines() if line.strip()]
+    if not shas:
+        raise BoundaryLeakError(f"GitHub returned no commits for PR #{pr_number}")
+    return shas
+
+
+def _other_pr_patch_ids(other: dict, repo: str) -> dict[str, str]:
+    """Patch-ids for another PR's own commits. A closed/merged stacked PR's
+    base branch is routinely deleted afterwards (e.g. #1916's base,
+    feat/m2-reframed-target-evaluation, was deleted when #1892 merged on
+    2026-09-23) — that made `git fetch <base>` fail and this whole check fail
+    for EVERY PR for CLOSED_PR_WINDOW_DAYS. Only that specific failure falls
+    back to GitHub's recorded commit list; anything else still raises."""
+    try:
+        return _commit_patch_ids(other["baseRefName"], other["headRefOid"])
+    except BoundaryLeakError as exc:
+        if "couldn't find remote ref" not in str(exc):
+            raise
+    result: dict[str, str] = {}
+    for sha in _pr_commits_via_api(other["number"], repo):
         patch_id = _patch_id_for_commit(sha)
         if patch_id:
             result[patch_id] = sha
@@ -361,7 +417,7 @@ def check_foreign_commits(pr_number: int, repo: str, base_ref: str) -> list[str]
         other_number = other["number"]
         if other_number == pr_number:
             continue
-        other_patch_ids = _commit_patch_ids(other["baseRefName"], other["headRefOid"])
+        other_patch_ids = _other_pr_patch_ids(other, repo)
         for pid, own_sha in this_patch_ids.items():
             other_sha = other_patch_ids.get(pid)
             if other_sha is None:

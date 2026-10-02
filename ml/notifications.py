@@ -1,6 +1,6 @@
 """Notification system for gold-rate-tracker.
 
-Evaluates triggers (T1-T13) against current data files and dispatches
+Evaluates triggers (T1-T14) against current data files and dispatches
 ntfy push notifications. Designed to run as a CI step after the Chronos probe.
 
 Usage:
@@ -20,7 +20,9 @@ from pathlib import Path
 from statistics import median
 from zoneinfo import ZoneInfo
 
+from ml import public_copy, retailers
 from ml.ibja import compute_ibja_gap_business_days
+from ml.notification_routing import resolve_topic
 
 ROOT = Path(__file__).resolve().parent.parent
 DATA_DIR = ROOT / "data"
@@ -40,7 +42,12 @@ _CLICK_URL = "https://gaurav-gandhi-2411.github.io/gold-rate-tracker/"
 _QUIET_START_H = 22  # 22:00 IST
 _QUIET_END_H = 7  # 07:00 IST
 _MAX_QUEUE_AGE_H = 12  # discard queued alerts older than this
-_MAX_T123_PER_24H = 3  # T1+T2+T3 combined cap
+_MAX_T123_PER_24H = 3  # T1+T2+T3 combined cap (T15 counts toward it too)
+# T15 (2026-09-28): IBJA's 22K benchmark moved >= this many Rs per gram of shop price between its
+# two latest fixes. Same bar as T3. Exists because T3 only sees Tanishq readings: on 2026-09-28
+# IBJA's AM fell ~Rs.372/g while no Tanishq reading arrived for 8.5 h, so nothing alerted.
+_T15_IBJA_MOVE_THRESHOLD_RS = 150
+_IBJA_FIX_PUBLISH_UTC = {"am": (6, 30), "pm": (11, 30)}  # ml.known_at IBJA_AM / IBJA_PM
 
 _T8_MORNING_THRESHOLD_H = 8  # IST lower bound: fire T8_MORNING at/after 08:00
 _T8_MORNING_UPPER_H = 14  # IST upper bound: suppress T8_MORNING at/after 14:00
@@ -58,6 +65,21 @@ _T13_GAP_THRESHOLD_DAYS = 2
 # just queued-with-no-runner) trigger T12. At the ~3h schedule cadence that's
 # ~9h of the runner being online but genuinely failing -- see docs/RUNBOOK.md.
 _T12_CONSECUTIVE_FAILURE_THRESHOLD = 3
+# T14 (GG decision 4b, 2026-09-25): Tanishq has not updated. Measured on the newest real
+# Tanishq row in data/prices.json (every successful visit appends a row, even when the rate
+# is unchanged), in hours that do NOT fall on a Sunday (IST). Why 30, not counted:
+#   * visits (interim schedule, PR #2078) cluster in 10:00-12:30 IST, possibly plus 01:40;
+#     the longest legitimate weekday gap is a day whose only success is its first visit
+#     (10:00) to the next day's last one (12:30) = 26.5 h;
+#   * Tanishq never changes its rate on a Sunday (reports/tanishq_update_times, #2078), so a
+#     Sunday may be skipped; Saturday 10:00 -> Monday 12:30 is 50.5 h on the clock but
+#     26.5 h once Sunday is excluded -- the same worst case as a weekday;
+#   * 30 = that worst case + 3.5 h slack, so a normal weekend never alerts, while a real
+#     outage after a 10:00 visit alerts by 16:00 IST the next working day -- within a day.
+# A single clock-hour N cannot do both: it must exceed ~50 h for the weekend, which would
+# leave a Tuesday outage undetected until Thursday.
+_T14_TANISHQ_SILENT_THRESHOLD_H = 30.0
+_DERIVED_SOURCE_PREFIX = "ibja_calibrated"  # app.js DERIVED_SOURCE_PREFIX: not a Tanishq row
 
 SCHEMA_VERSION = 1
 
@@ -119,6 +141,62 @@ class NotificationState:
     last_t11_ist_date: str = ""  # IST date YYYY-MM-DD of last T11 send (once-per-day dedup)
     last_t12_ist_date: str = ""  # IST date YYYY-MM-DD of last T12 send (once-per-day dedup)
     last_t13_ist_date: str = ""  # IST date YYYY-MM-DD of last T13 send (once-per-day dedup)
+    last_t14_ist_date: str = ""  # IST date YYYY-MM-DD of last T14 send (once-per-day dedup)
+
+
+@dataclass(frozen=True)
+class IbjaMove:
+    """The latest IBJA 22K fix against the one before it (see compute_ibja_move)."""
+
+    fix_date: str  # YYYY-MM-DD of the latest fix
+    fix: str  # "am" or "pm"
+    published_utc: str  # when that fix is published (ISO)
+    delta_per_gram: int  # shop-price move it implies, Rs per gram (calibration slope)
+    estimate_now: int  # calibrated 22K estimate from the latest fix, Rs per gram
+
+
+def compute_ibja_move(ibja_path: Path, calibration: dict) -> IbjaMove | None:
+    """Latest IBJA 22K fix vs the previous fix, in shop-price Rs/g. None without a valid
+    calibration or two fixes. Fixes are ordered in time: each day's AM, then its PM."""
+    if not calibration.get("valid") or calibration.get("slope") is None:
+        return None
+    try:
+        import pandas as pd
+
+        df = pd.read_parquet(ibja_path)
+    except Exception as exc:
+        logger.warning("compute_ibja_move: could not read %s: %s", ibja_path, exc)
+        return None
+    fixes: list[tuple[str, str, float]] = []
+    for _, row in df.sort_values("date").iterrows():
+        d = str(row["date"])[:10]
+        for fix, col in (("am", "am_916"), ("pm", "pm_916")):
+            v = row.get(col)
+            if v is not None and v == v:  # not NaN
+                fixes.append((d, fix, float(v)))
+    if len(fixes) < 2:
+        return None
+    (_, _, v_prev), (d_new, fix, v_new) = fixes[-2], fixes[-1]
+    slope = float(calibration["slope"])
+    intercept = float(calibration.get("intercept") or 0.0)
+    hh, mm = _IBJA_FIX_PUBLISH_UTC[fix]
+    y, m, dd = (int(x) for x in d_new.split("-"))
+    return IbjaMove(
+        fix_date=d_new,
+        fix=fix,
+        published_utc=datetime(y, m, dd, hh, mm, tzinfo=UTC).isoformat(),
+        delta_per_gram=round(slope * (v_new - v_prev) / 10.0),
+        estimate_now=round(slope * v_new / 10.0 + intercept),
+    )
+
+
+@dataclass(frozen=True)
+class TanishqSilence:
+    """How long Tanishq has been silent: see compute_tanishq_silence."""
+
+    last_reading_utc: str  # timestamp of the newest real Tanishq row in prices.json
+    wall_hours: float  # clock hours since then
+    effective_hours: float  # the same span minus every hour that falls on a Sunday (IST)
 
 
 # ---------------------------------------------------------------------------
@@ -149,6 +227,7 @@ def load_state(path: Path = STATE_PATH) -> NotificationState:
             last_t11_ist_date=raw.get("last_t11_ist_date", ""),
             last_t12_ist_date=raw.get("last_t12_ist_date", ""),
             last_t13_ist_date=raw.get("last_t13_ist_date", ""),
+            last_t14_ist_date=raw.get("last_t14_ist_date", ""),
         )
     except Exception as exc:
         logger.warning("Could not load notification state (%s) — using fresh state.", exc)
@@ -175,6 +254,7 @@ def save_state(state: NotificationState, path: Path = STATE_PATH) -> None:
         "last_t11_ist_date": state.last_t11_ist_date,
         "last_t12_ist_date": state.last_t12_ist_date,
         "last_t13_ist_date": state.last_t13_ist_date,
+        "last_t14_ist_date": state.last_t14_ist_date,
     }
     path.write_text(json.dumps(data, indent=2) + "\n", encoding="utf-8")
 
@@ -397,6 +477,53 @@ def compute_selfhosted_consecutive_failures(path: Path = SELFHOSTED_HEALTH_JSON)
         return None
 
 
+def _hours_excluding_sundays(start: datetime, end: datetime) -> float:
+    """Hours in [start, end) that do not fall on a Sunday in IST (no DST in IST)."""
+    cur, end = start.astimezone(IST), end.astimezone(IST)
+    total = 0.0
+    while cur < end:
+        next_midnight = (cur + timedelta(days=1)).replace(hour=0, minute=0, second=0, microsecond=0)
+        seg_end = min(next_midnight, end)
+        if cur.weekday() != 6:  # Monday=0 .. Sunday=6
+            total += (seg_end - cur).total_seconds() / 3600.0
+        cur = seg_end
+    return total
+
+
+def compute_tanishq_silence(
+    prices: list[dict], now_ist: datetime, tanishq_enabled: bool = True
+) -> TanishqSilence | None:
+    """Age of the newest REAL Tanishq reading in prices.json (drives T14).
+
+    None -- no alert -- when Tanishq is switched off (config/retailers.json, ADR 059: a
+    takedown is deliberate silence) or prices.json has no real Tanishq row at all (e.g.
+    fully IBJA-derived after a takedown). IBJA-derived rows are never Tanishq readings.
+    Reads only the committed data file, so it runs on GitHub's own runner (check-price.yml)
+    and sees a stopped/paused self-hosted runner as what it is: no new readings.
+    """
+    if not tanishq_enabled:
+        return None
+    for row in reversed(prices):
+        src = row.get("source")
+        if isinstance(src, str) and src.startswith(_DERIVED_SOURCE_PREFIX):
+            continue
+        if not isinstance(row.get("22k"), (int, float)) or not row.get("timestamp"):
+            continue
+        try:
+            ts = datetime.fromisoformat(str(row["timestamp"]).replace("Z", "+00:00"))
+        except ValueError:
+            continue
+        if ts.tzinfo is None:
+            ts = ts.replace(tzinfo=UTC)
+        wall = max(0.0, (now_ist - ts).total_seconds() / 3600.0)
+        return TanishqSilence(
+            last_reading_utc=ts.astimezone(UTC).isoformat(),
+            wall_hours=wall,
+            effective_hours=_hours_excluding_sundays(ts, now_ist),
+        )
+    return None
+
+
 def compute_dir_acc_30f(backtest: dict) -> float:
     """Direction accuracy on the last 30 backtest folds (or all if fewer).
 
@@ -456,12 +583,7 @@ def _check_t1(
     sorted_p = sorted(prices, key=lambda p: p["timestamp"])
     current = int(sorted_p[-1]["22k"]) if sorted_p else 0
     abs_mom = abs(mom_pct)
-    title = "Gold: 22K prices are down this week"
-    body = (
-        f"Gold 22K: Rs.{current}. "
-        f"Prices are down {abs_mom:.1f}% over the past 7 days. "
-        "A recent trend -- not a forecast. Check the app for context."
-    )
+    title, body = public_copy.weekly_trend("down", current, abs_mom)
     return _make_alert("T1", title, body, 4, ["decline", "chart_with_downwards_trend"], now_ist)
 
 
@@ -497,12 +619,7 @@ def _check_t2(
     # matches T3/T8/T9 (see T1).
     sorted_p = sorted(prices, key=lambda p: p["timestamp"])
     current = int(sorted_p[-1]["22k"]) if sorted_p else 0
-    title = "Gold: 22K prices are up this week"
-    body = (
-        f"Gold 22K: Rs.{current}. "
-        f"Prices are up {mom_pct:.1f}% over the past 7 days. "
-        "A recent trend -- not a forecast. Check the app for context."
-    )
+    title, body = public_copy.weekly_trend("up", current, mom_pct)
     return _make_alert("T2", title, body, 3, ["rise", "chart_with_upwards_trend"], now_ist)
 
 
@@ -514,7 +631,14 @@ def _check_t3(
     state: NotificationState,
     now_ist: datetime,
 ) -> PendingAlert | None:
-    """T3 — Actual large move: |current - prev| >= Rs.150 (model-agnostic)."""
+    """T3 — Actual large move: |current - previous DIFFERENT price| >= Rs.150 (model-agnostic).
+
+    Compares the latest price with the last reading at a different price, not with the reading
+    just before it (2026-09-28): the scrape and this check run in separate workflows, so two
+    scrapes at the new price could land between checks, and the old "last two readings" rule
+    then never saw the move. Fires once per change -- skipped when T3 was already sent after the
+    change first appeared -- and only for a change first seen within the last 24 h, so a
+    notification-state cache miss cannot replay an old move."""
     if _in_cooldown("T3", state, 4.0):
         return None
     if _count_sent(state, ["T1", "T2", "T3"]) >= _MAX_T123_PER_24H:
@@ -525,16 +649,26 @@ def _check_t3(
         return None
     sorted_p = sorted(prices, key=lambda p: p["timestamp"])
     current = sorted_p[-1]["22k"]
-    prev = sorted_p[-2]["22k"]
+    k = len(sorted_p) - 1
+    while k > 0 and sorted_p[k - 1]["22k"] == current:
+        k -= 1
+    if k == 0:
+        return None
+    prev = sorted_p[k - 1]["22k"]
+    changed_at = datetime.fromisoformat(str(sorted_p[k]["timestamp"]).replace("Z", "+00:00"))
+    if changed_at.tzinfo is None:
+        changed_at = changed_at.replace(tzinfo=UTC)
+    if now_ist - changed_at > timedelta(hours=24):
+        return None
+    last = state.last_sent.get("T3")
+    if last and datetime.fromisoformat(last) >= changed_at:
+        return None
     delta = current - prev
     if abs(delta) < 150:
         return None
-    direction = "up" if delta > 0 else "down"
-    pct = delta / prev * 100.0
     abs_delta = abs(delta)
     priority = 5 if abs_delta >= 300 else 4
-    title = f"Gold: Rs.{abs_delta} {direction} detected ({pct:+.1f}%)"
-    body = f"Gold 22K: Rs.{current} ({pct:+.1f}% from Rs.{prev}). Check the app for context."
+    title, body = public_copy.price_move(int(current), int(prev))
     return _make_alert(
         "T3", title, body, priority, ["warning", "chart_with_upwards_trend"], now_ist
     )
@@ -571,8 +705,7 @@ def _check_t4(
         return None
 
     current = prices[-1]["22k"] if prices else 0
-    title = f"{title_prefix}Gold Weekly: 22K Rs.{current}"
-    body = f"Gold 22K: Rs.{current}. Check the app for the latest read."
+    title, body = public_copy.weekly_summary(int(current), delayed=bool(title_prefix))
     return _make_alert(
         "T4", title, body, 2, ["newspaper", "white_flower"], now_ist, bypass_quiet=True
     )
@@ -706,26 +839,7 @@ def _build_t8_content(
     Describes what already happened only -- no directional hint (2026-09-21; see the comment
     where it used to be appended).
     """
-    delta = (current - prior) if prior is not None else 0
-
-    if prior is None or abs(delta) < _T8_FLAT_THRESHOLD_RS:
-        scenario = "steady"
-    elif delta > 0:
-        scenario = "rose"
-    else:
-        scenario = "dropped"
-
-    delta_abs = abs(delta)
-
-    if scenario == "rose":
-        title = f"Gold {session}: Rs.{current} (up Rs.{delta_abs})"
-        body = f"Gold rose today - Rs.{current} (up Rs.{delta_abs} from yesterday)."
-    elif scenario == "dropped":
-        title = f"Gold {session}: Rs.{current} (down Rs.{delta_abs})"
-        body = f"Gold dropped today - Rs.{current} (down Rs.{delta_abs} from yesterday)."
-    else:
-        title = f"Gold {session}: Rs.{current}"
-        body = f"Gold held steady today - Rs.{current}."
+    title, body = public_copy.daily_digest(session, current, prior, _T8_FLAT_THRESHOLD_RS)
 
     # This used to append "Prices may edge up/ease a little." from chronos_companion.lean_direction.
     # Removed 2026-09-21: the README says "Refuses to predict tomorrow's direction" and the hint had
@@ -997,6 +1111,63 @@ def _check_t13_usable_snapshot_stall(
     return _make_alert("T13", title, body, 4, ["warning", "mag"], now_ist)
 
 
+def _check_t15_ibja_move(
+    move: IbjaMove | None, state: NotificationState, now_ist: datetime
+) -> PendingAlert | None:
+    """T15 -- IBJA's benchmark moved >= _T15_IBJA_MOVE_THRESHOLD_RS per gram between its two
+    latest fixes. Once per fix (skipped if T15 was already sent after this fix was published);
+    skipped if T3 fired in the last 4 h (the shop price already told the move); counts toward
+    the T1+T2+T3 cap. Retailer-neutral wording; respects quiet hours."""
+    if move is None or abs(move.delta_per_gram) < _T15_IBJA_MOVE_THRESHOLD_RS:
+        return None
+    last = state.last_sent.get("T15")
+    if last and datetime.fromisoformat(last) >= datetime.fromisoformat(move.published_utc):
+        return None
+    if _in_cooldown("T3", state, 4.0):
+        return None
+    if _count_sent(state, ["T1", "T2", "T3", "T15"]) >= _MAX_T123_PER_24H:
+        return None
+    priority = 5 if abs(move.delta_per_gram) >= 300 else 4
+    title, body = public_copy.ibja_move(move.delta_per_gram, move.estimate_now, move.fix)
+    return _make_alert(
+        "T15", title, body, priority, ["warning", "chart_with_downwards_trend"], now_ist
+    )
+
+
+def _check_t14_tanishq_silent(
+    silence: TanishqSilence | None,
+    state: NotificationState,
+    now_ist: datetime,
+) -> PendingAlert | None:
+    """T14 -- Tanishq has not updated: the newest real Tanishq reading is at least
+    _T14_TANISHQ_SILENT_THRESHOLD_H old, not counting Sunday hours (see the constant for
+    why 30). Once per IST calendar day.
+
+    Closes the gap T12 leaves by design: a self-hosted runner that is off, asleep or
+    paused never starts a job, so T12's failure counter never moves. T14 needs nothing
+    from that runner -- it runs in check-price.yml on a GitHub-hosted runner and reads
+    only data/prices.json -- so it fires for every cause of silence alike (runner off,
+    Tanishq blocking us, a broken sync PR). OPS topic only (ml/notification_routing.py).
+    """
+    if silence is None or silence.effective_hours < _T14_TANISHQ_SILENT_THRESHOLD_H:
+        return None
+    today_ist = now_ist.strftime("%Y-%m-%d")
+    if state.last_t14_ist_date == today_ist:
+        return None
+    last_ist = datetime.fromisoformat(silence.last_reading_utc).astimezone(IST)
+    title = f"Gold Tracker: Tanishq has not updated in {silence.wall_hours:.0f}h"
+    body = (
+        f"The newest Tanishq reading in data/prices.json is from "
+        f"{last_ist.strftime('%a %d %b %H:%M')} IST: {silence.wall_hours:.0f} h ago, "
+        f"{silence.effective_hours:.0f} h not counting Sundays (alert at "
+        f"{_T14_TANISHQ_SILENT_THRESHOLD_H:.0f} h). This check runs on GitHub's own runner, "
+        "so it fires even when the self-hosted runner is off or paused. Check the runner "
+        "host, recent scrape-tanishq-selfhosted runs and the Tanishq sync PR "
+        "(docs/RUNBOOK.md, T14)."
+    )
+    return _make_alert("T14", title, body, 4, ["warning", "hourglass"], now_ist)
+
+
 # ---------------------------------------------------------------------------
 # Public API
 # ---------------------------------------------------------------------------
@@ -1014,8 +1185,10 @@ def check_triggers(
     ibja_gap_days: int | None = None,
     selfhosted_consecutive_failures: int | None = None,
     usable_snapshot_gap_days: int | None = None,
+    tanishq_silence: TanishqSilence | None = None,
+    ibja_move: IbjaMove | None = None,
 ) -> list[PendingAlert]:
-    """Evaluate all triggers (T1–T13); return new alerts for this call.
+    """Evaluate all triggers (T1–T14); return new alerts for this call.
 
     Cooldowns and combined caps are enforced here.  Quiet-hours queuing and
     delivery of previously queued alerts is the caller's responsibility (see
@@ -1035,6 +1208,9 @@ def check_triggers(
         (same-day-IBJA) feature-store snapshot (see
         compute_usable_snapshot_gap_days). Drives T13 -- distinct from
         snapshot_gap_days/T10, which only checks that some row landed.
+    tanishq_silence: age of the newest real Tanishq reading (see
+        compute_tanishq_silence). Drives T14.
+    ibja_move: the latest IBJA fix vs the previous one (see compute_ibja_move). Drives T15.
     """
     alerts: list[PendingAlert] = []
     for fn in (_check_t1, _check_t2, _check_t3, _check_t4, _check_t5, _check_t7):
@@ -1066,6 +1242,12 @@ def check_triggers(
     t13 = _check_t13_usable_snapshot_stall(usable_snapshot_gap_days, state, now_ist)
     if t13 is not None:
         alerts.append(t13)
+    t14 = _check_t14_tanishq_silent(tanishq_silence, state, now_ist)
+    if t14 is not None:
+        alerts.append(t14)
+    t15 = _check_t15_ibja_move(ibja_move, state, now_ist)
+    if t15 is not None:
+        alerts.append(t15)
     return alerts
 
 
@@ -1076,18 +1258,21 @@ def send_pending(
 ) -> list[SentAlert]:
     """Send alerts via ntfy.sh; update state.last_sent / sent_today / last_t5_ist_date.
 
-    Reads NTFY_TOPIC from environment. Skips silently if NTFY_TOPIC is unset.
+    Topic per alert comes from ml.notification_routing: PUBLIC only for an allowlisted trigger id and
+    only when the public-topic secret is set; everything else (and PUBLIC with none) goes to
+    NTFY_TOPIC. Skips silently if the resolved topic is unset.
     Titles must be ASCII-only (ntfy header limitation — uses Rs. not the rupee symbol).
     """
-    topic = os.environ.get("NTFY_TOPIC", "")
     sent: list[SentAlert] = []
     _prune_sent_today(state)
 
     for alert in alerts:
+        audience, topic = resolve_topic(alert.trigger_id, os.environ)
         if not topic:
-            logger.info("NTFY_TOPIC not set — skipping %s (%s)", alert.trigger_id, alert.title)
+            logger.info("no topic configured — skipping %s (%s)", alert.trigger_id, alert.title)
             continue
         url = f"{_NTFY_BASE}/{topic}"
+        logger.info("routing %s to the %s topic", alert.trigger_id, audience)
         headers = {
             "Title": alert.title,
             "Priority": str(alert.priority),
@@ -1136,6 +1321,8 @@ def send_pending(
                 state.last_t12_ist_date = now_ist.strftime("%Y-%m-%d")
             if alert.trigger_id == "T13":
                 state.last_t13_ist_date = now_ist.strftime("%Y-%m-%d")
+            if alert.trigger_id == "T14":
+                state.last_t14_ist_date = now_ist.strftime("%Y-%m-%d")
             logger.info("Sent %s: %s", alert.trigger_id, alert.title)
         else:
             logger.warning("Failed to send %s", alert.trigger_id)
@@ -1190,6 +1377,8 @@ def _stamp_ist_dedup(trigger_id: str, state: NotificationState, now_ist: datetim
         state.last_t12_ist_date = today
     elif trigger_id == "T13":
         state.last_t13_ist_date = today
+    elif trigger_id == "T14":
+        state.last_t14_ist_date = today
 
 
 def queue_for_quiet_hours(
@@ -1253,7 +1442,7 @@ def main() -> None:
     import argparse
 
     logging.basicConfig(level=logging.INFO, format="%(levelname)s: %(message)s")
-    parser = argparse.ArgumentParser(description="Gold rate notification system (T1-T13)")
+    parser = argparse.ArgumentParser(description="Gold rate notification system (T1-T14)")
     parser.add_argument(
         "--simulate",
         action="store_true",
@@ -1288,6 +1477,13 @@ def main() -> None:
     usable_snapshot_gap_days = compute_usable_snapshot_gap_days(now_ist)
     ibja_gap_days = compute_ibja_gap_business_days(now_ist)
     selfhosted_consecutive_failures = compute_selfhosted_consecutive_failures()
+    try:
+        tanishq_enabled = retailers.is_enabled("tanishq")
+    except Exception as exc:  # a broken switch must not silence T14
+        logger.warning("retailers config unreadable (%s) -- treating Tanishq as enabled", exc)
+        tanishq_enabled = True
+    tanishq_silence = compute_tanishq_silence(prices, now_ist, tanishq_enabled)
+    ibja_move = compute_ibja_move(DATA_DIR / "ibja_rates.parquet", calibration)
 
     new_alerts = check_triggers(
         forecast,
@@ -1301,6 +1497,8 @@ def main() -> None:
         ibja_gap_days=ibja_gap_days,
         selfhosted_consecutive_failures=selfhosted_consecutive_failures,
         usable_snapshot_gap_days=usable_snapshot_gap_days,
+        tanishq_silence=tanishq_silence,
+        ibja_move=ibja_move,
     )
 
     if args.simulate:
@@ -1336,6 +1534,13 @@ def main() -> None:
             f"Selfhosted:   {selfhosted_str} consecutive failures  "
             f"(T12 gate: >= {_T12_CONSECUTIVE_FAILURE_THRESHOLD}x)"
         )
+        silence_str = (
+            "n/a"
+            if tanishq_silence is None
+            else f"{tanishq_silence.effective_hours:.1f}h excl. Sundays "
+            f"({tanishq_silence.wall_hours:.1f}h clock)"
+        )
+        print(f"Tanishq age:  {silence_str}  (T14 gate: >= {_T14_TANISHQ_SILENT_THRESHOLD_H:.0f}h)")
         print(f"\nTriggers fired ({len(new_alerts)}):")
         if new_alerts:
             for a in new_alerts:

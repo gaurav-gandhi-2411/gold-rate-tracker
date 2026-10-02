@@ -65,9 +65,28 @@ jobs:
       - name: Check no test file has lost tests (hollow-run guard)
         # AP5 (2026-09-21): a truncated test file produced a green, hollow run because the missing
         # tests were simply not collected. Fails if any file's test count falls below the committed
-        # baseline (tests/test_count_baseline.json) or a test file is missing/unlisted. Lowering the
+        # baseline (tests/test_count_baseline/, one .count file per test file) or a test file is missing/unlisted. Lowering the
         # baseline is an explicit `--update`, visible in the PR diff. Limits: see the script docstring.
         run: python scripts/check_test_counts.py
+      - name: Check plain-language compliance (U1/U3, docs/PLAIN_LANGUAGE_AUDIT.md)
+        # Fails if a banned statistical/ML jargon term (coverage, n=, calibrated,
+        # volatility, model, ...) appears in text an ordinary gold buyer would
+        # actually read -- index.html, i18n.js, app.js, ml/public_copy.py,
+        # README.md's first screen -- outside how-we-know.html, the designated
+        # technical-detail page. See the script's own module docstring for the
+        # exact scope per file and its stated blind spots.
+        run: python scripts/check_plain_language.py
+      - name: Retailer-language guard (ADR 059 -- no judgmental wording near a retailer name)
+        run: python scripts/check_retailer_language.py
+      - name: Check for hand-typed computed claims (accuracy/coverage/error)
+        # Fails if user-facing text contains a hand-typed accuracy/coverage/error
+        # claim as a literal digit ("N times out of M", "right N%", "coverage N%",
+        # Hindi "N में से M बार", ...) instead of a value computed from data/*.json.
+        # Scope differs from check_plain_language.py above: how-we-know.html IS
+        # scanned here (a hand-typed number is a defect there too, unlike jargon).
+        # See the script's own module docstring for exact scope, patterns, and
+        # the ALLOWLIST mechanism for genuine non-claims.
+        run: python scripts/check_computed_claims.py
 
   # PWA pure-function JS tests (app.js logic: comparisons, dedup, good-price,
   # scrape parsing, stale-banner, trend). These existed under tests/*.js but ran
@@ -102,14 +121,21 @@ jobs:
             tests/test_calculator.js \
             tests/test_calibration_confidence.js \
             tests/test_chart_cdn_resilience.js \
+            tests/test_claim_freshness.js \
             tests/test_comparisons.js \
             tests/test_dedup.js \
+            tests/test_feature_flags.js \
             tests/test_good_price.js \
+            tests/test_hero_display_state.js \
+            tests/test_page_v2.js \
+            tests/test_pvalue_format.js \
             tests/test_scrape.js \
             tests/test_sentry_init.js \
             tests/test_stale_banner.js \
             tests/test_tier_degradation_visible.js \
-            tests/test_vol_regime.js
+            tests/test_vol_regime.js \
+            tests/test_driver_headline_signs.js \
+            scraper/test_retailer_enabled.mjs
       - name: Run dead-man's-switch Worker tests
         # Code-quality gate only -- this does NOT wire the switch's own
         # operation into GitHub Actions. It runs entirely on Cloudflare
@@ -149,6 +175,18 @@ jobs:
         run: node tests/test_stale_banner_headless.js
       - name: Run the service-worker offline data-fallback test
         run: node tests/test_sw_offline_headless.js
+      - name: Run the feature-flag leak-detection headless test
+        run: node tests/test_feature_flags_headless.js
+      - name: Run the page_v2 (item 6) headless test
+        run: node tests/test_page_v2_headless.js
+      - name: Run the retailer-takedown fallback render test (ADR 059)
+        run: node tests/test_retailer_takedown_headless.js
+      - name: Run the hero display-state test (E2 + ADR 059 gates)
+        run: node tests/test_hero_display_headless.js
+      - name: Run the no-sideways-scroll test against the real page
+        run: node tests/test_no_horizontal_scroll_headless.js
+      - name: Run the history-series test (GG 3d; history readers keep working on a shortened prices.json)
+        run: node tests/test_history_series_headless.js
 
   # Forward lint+pwa-js's real result as commit statuses (bug #4, docs/RUNBOOK.md).
   # Branch protection's required_status_checks matches by context NAME across both
@@ -280,6 +318,27 @@ jobs:
           python-version: "3.12"
       - name: Verify every bot-pr-sync-calling workflow's git-add paths are allowlist-covered
         run: python scripts/check_bot_pr_sync_allowlist.py
+
+  # GG spec, 2026-09-23: a passing ml.direction.gate decision must never
+  # reach users without an explicit, GG-approved promotion record. Traced
+  # end to end (docs/adr/036) and confirmed true today, but that's a fact
+  # about the current code, not a structural guarantee -- this makes it one.
+  # Deliberately NOT path-filtered (same AF1-incident reasoning as
+  # bot-pr-sync-allowlist-check above): a required-adjacent check that only
+  # runs on some paths can produce "never ran" instead of "failed", which is
+  # worse than the few extra seconds of running it on every PR. See
+  # scripts/check_direction_signal_not_wired_without_promotion.py's own
+  # docstring for the full mechanism and its stated blind spots.
+  direction-signal-promotion-check:
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: "3.12"
+      - name: Verify no user-facing surface reads the direction gate without a promotion record
+        run: python scripts/check_direction_signal_not_wired_without_promotion.py
 
   # Fail if any <!--METRIC:...--> marker in README.md/docs/*.md doesn't
   # resolve, or resolves to text that differs from what's committed --

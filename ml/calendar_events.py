@@ -1,6 +1,9 @@
 from __future__ import annotations
 
 from datetime import date, timedelta
+from pathlib import Path
+
+from ml.duty_schedule import DUTY_TABLE_PATH, duty_change_proximity, get_duty_change_dates
 
 # ±3-day window applies to single-day festivals (Akshaya Tritiya, Dhanteras, Diwali).
 FESTIVAL_WINDOW_DAYS_BEFORE: int = 3
@@ -115,3 +118,98 @@ def get_festival_info(query_date: date) -> dict[str, object]:
         "festival_name": None,
         "days_to_next_festival": min_days,
     }
+
+
+# ---------------------------------------------------------------------------
+# Wedding season (M1: Indian demand calendar, GG spec 2026-09-23)
+#
+# Approximate solar-calendar windows for the two broad Indian wedding
+# seasons. Real auspicious dates (vivah muhurat) follow the lunar Hindu
+# calendar and exclude Kharmas/Malmas and Guru/Shukra Ast periods, which
+# shift year to year and require a panchang to compute exactly -- these
+# fixed month/day windows are a deliberately broad approximation of demand
+# seasonality, not a muhurat calendar. Good enough for a coarse "is this
+# roughly wedding season" feature; not precise enough to flag individual
+# auspicious dates.
+# ---------------------------------------------------------------------------
+
+WEDDING_SEASONS: list[dict] = [
+    {"name": "winter", "start": (11, 15), "end": (2, 15)},  # wraps year-end
+    {"name": "summer", "start": (4, 14), "end": (7, 15)},
+]
+
+
+def _month_day_in_range(query: date, start_md: tuple[int, int], end_md: tuple[int, int]) -> bool:
+    start = date(query.year, *start_md)
+    end = date(query.year, *end_md)
+    if start <= end:
+        return start <= query <= end
+    # Range wraps the year boundary (e.g. Nov 15 -> Feb 15).
+    return query >= start or query <= end
+
+
+def get_wedding_season_info(query_date: date) -> dict[str, object]:
+    """Returns {"is_wedding_season": bool, "wedding_season_name": str | None}."""
+    for season in WEDDING_SEASONS:
+        if _month_day_in_range(query_date, season["start"], season["end"]):
+            return {"is_wedding_season": True, "wedding_season_name": season["name"]}
+    return {"is_wedding_season": False, "wedding_season_name": None}
+
+
+# ---------------------------------------------------------------------------
+# Union Budget window (M1: duty/policy-announcement seasonality)
+#
+# The Union Budget has been presented on 2026-02-01 every year since the
+# 2017 reform (previously the last working day of February). Basic-customs-
+# duty changes on gold are announced in the Budget more often than at any
+# other time of year (see data/duty_cbic.json: 2019-07-06 and 2021-02-02
+# and 2022-07-01 are Budget-adjacent; only 2013's crisis-era hikes and
+# 2024/2026 are not). The window below covers pre-Budget speculation and
+# post-Budget adjustment, not just the single announcement day.
+# ---------------------------------------------------------------------------
+
+_BUDGET_ANCHOR_MONTH_DAY = (2, 1)
+_BUDGET_WINDOW_DAYS_BEFORE = 12
+_BUDGET_WINDOW_DAYS_AFTER = 14
+
+
+def get_budget_window_info(query_date: date) -> dict[str, object]:
+    """Returns {"is_budget_window": bool}."""
+    anchor = date(query_date.year, *_BUDGET_ANCHOR_MONTH_DAY)
+    in_window = (
+        (anchor - timedelta(days=_BUDGET_WINDOW_DAYS_BEFORE))
+        <= query_date
+        <= (anchor + timedelta(days=_BUDGET_WINDOW_DAYS_AFTER))
+    )
+    return {"is_budget_window": in_window}
+
+
+# ---------------------------------------------------------------------------
+# Duty/cess event proximity (data/duty_cbic.json — see ml.duty_schedule)
+# ---------------------------------------------------------------------------
+
+
+def get_duty_event_proximity(query_date: date, path: Path = DUTY_TABLE_PATH) -> dict[str, object]:
+    """Returns {"is_duty_event_recent": bool, "days_since_duty_event": int}.
+
+    days_since_duty_event is 9999 if no duty change event (verified rows only,
+    composition-only re-notifications like 2023-02-02 excluded — see
+    ml.duty_schedule) has occurred on or before query_date. is_duty_event_recent
+    is True within ml.duty_schedule.DUTY_EVENT_RECENCY_DAYS of the most recent one.
+    """
+    change_dates = get_duty_change_dates(path)
+    is_recent, days_since = duty_change_proximity(query_date, change_dates)
+    return {"is_duty_event_recent": is_recent, "days_since_duty_event": days_since}
+
+
+def get_demand_calendar_features(
+    query_date: date, duty_events_path: Path = DUTY_TABLE_PATH
+) -> dict[str, object]:
+    """Single entry point combining festival + wedding-season + budget-window
+    + duty-event-proximity flags for feature construction (M1)."""
+    features: dict[str, object] = {}
+    features.update(get_festival_info(query_date))
+    features.update(get_wedding_season_info(query_date))
+    features.update(get_budget_window_info(query_date))
+    features.update(get_duty_event_proximity(query_date, path=duty_events_path))
+    return features
