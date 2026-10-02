@@ -7,9 +7,10 @@
 A different model now drives the site's direction line: `ml/nextfix.py`. It uses how global gold
 and USD/INR moved after India's official rate was fixed, which the harness below never saw.
 
-- **Out-of-sample record:** 137 days (2025-07-17 .. 2026-09-22). It was right **65.7%** of the
-  time, against 48.9% for always-up (p = 0.004).
-- **Gates:** `decide_direction_signal` ships on it (Brier 0.219 vs 0.511, ECE 0.064). The timing
+- **Out-of-sample record** (same-day data, ADR 065): 138 days (2025-07-17 .. 2026-09-23). It
+  was right **65.2%** of the time, 95% CI [58.0, 72.5], against 48.6% for always-up (p = 0.004).
+  It is shown only in the window after the US close; elsewhere there is no evidence for a direction.
+- **Gates:** `decide_direction_signal` ships on it (Brier 0.220 vs 0.514, ECE 0.068). The timing
   gate does not pass (ECE > 0.05), so there is still no buy/wait/sell signal.
 - **Promotion:** GG promoted it on 2026-10-02 (`data/direction_promotion_record.json`).
 - **Re-checked every run:** if the record stops passing the gate, the line hides itself.

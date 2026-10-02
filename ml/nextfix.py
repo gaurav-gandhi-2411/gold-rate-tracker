@@ -16,12 +16,21 @@ Decision time and leakage. A forecast for the fix after IBJA day D uses only:
 It is only produced once the US close of D has happened (``US_CLOSE_UTC``) and before IBJA
 publishes a newer AM fix (after that, the shop price already reflects the next day's rate).
 
-Global series dating. ``ml.macro``'s daily cache is dated by trading day: the row dated D is the
-close of D, forward-filled over weekends. The committed history seed
-(data/history_seed_inr22k_proxy.parquet) is dated one day later (its row dated D is the close of
-the trading day BEFORE D; Monday's row is Friday's close) -- verified 2026-10-02 against the
-feature store: log-ratio spread 0.0037 when shifted by one day vs 0.0145 unshifted. ``global_series``
-handles both.
+Global series. ``ml.macro``'s daily cache (gold_usd x usd_inr), dated by trading day: the row
+dated D is the close of D. Before the cache starts, the committed label seed
+(data/history_seed_inr22k_label.parquet, ``raw_pre_duty``) fills in; it is dated the same way. The
+proxy seed (history_seed_inr22k_proxy.parquet) is NOT used: it is deliberately lagged one day
+(ADR 030, a leak control for models that use it as a same-day feature).
+
+All day (v2, GG 2026-10-02). The forecast is for the next IBJA fix, whatever the time:
+  * after the US close of D, before IBJA's next AM fix -- the model below, target the next PM fix;
+  * after an AM fix, before that day's PM fix -- the AM fix itself (the model added nothing here:
+    +2.7% error vs the AM fix, 95% CI [+0.4, +5.3], n=138), target that PM fix;
+  * after a PM fix, before the US close -- the PM fix (no edge without hourly prices; that is the
+    intraday shadow's job), target the next AM fix.
+Each window's range is split-conformal on that window's own walk-forward errors, scaled by recent
+volatility (80% target). Direction is shown only in the model window; elsewhere there is no evidence
+for it.
 
 Models. Point forecast of the next fix's log return: the average of a ridge regression and an
 ensemble of five small neural networks (one hidden layer, 16 tanh units). P(up): the average of a
@@ -50,7 +59,7 @@ logger = logging.getLogger(__name__)
 
 DATA_DIR = Path(__file__).resolve().parent.parent / "data"
 IBJA_PATH = DATA_DIR / "ibja_rates.parquet"
-PROXY_PATH = DATA_DIR / "history_seed_inr22k_proxy.parquet"
+LABEL_PATH = DATA_DIR / "history_seed_inr22k_label.parquet"
 OOS_PATH = DATA_DIR / "nextfix_oos.json"
 
 MODEL_VERSION = "nextfix_ridge_mlp_v1"
@@ -65,6 +74,9 @@ VOL_HALFLIFE = 10
 # The US close of D (GC=F settles 17:00 ET = 21:00 UTC in summer, 22:00 UTC in winter), plus margin.
 US_CLOSE_UTC = (22, 15)
 IBJA_AM_PUBLISH_UTC = (6, 30)
+IBJA_PM_PUBLISH_UTC = (11, 30)
+BOOTSTRAP_B = 2000
+BOOTSTRAP_BLOCK = 5  # consecutive days resampled together (errors are autocorrelated)
 MLP_MODELS = 5
 MLP_EPOCHS = 300
 
@@ -82,19 +94,19 @@ def load_ibja(path: Path = IBJA_PATH) -> pd.DataFrame:
     return df[["date", "pm", "am"]]
 
 
-def global_series(macro: pd.DataFrame | None = None, proxy_path: Path = PROXY_PATH) -> pd.Series:
+def global_series(macro: pd.DataFrame | None = None, label_path: Path = LABEL_PATH) -> pd.Series:
     """Daily global value of gold in rupees, dated by the trading day whose US close it is.
 
-    From ``ml.macro``'s cache (gold_usd x usd_inr) where available; the history seed fills earlier
-    dates, shifted back one day and rescaled to the cache's level over their overlap.
+    From ``ml.macro``'s cache (gold_usd x usd_inr) where available; the label seed fills earlier
+    dates, rescaled to the cache's level over their overlap so the series has no jump.
     """
     parts: list[pd.Series] = []
-    if proxy_path.exists():
-        px = pd.read_parquet(proxy_path)["raw_pre_duty"].dropna()
-        idx = pd.DatetimeIndex(px.index)
+    if label_path.exists():
+        lb = pd.read_parquet(label_path)["raw_pre_duty"].dropna()
+        idx = pd.DatetimeIndex(lb.index)
         idx = idx.tz_localize(None) if idx.tz is not None else idx
-        px.index = idx.normalize() - pd.Timedelta(days=1)
-        parts.append(px.astype(float))
+        lb.index = idx.normalize()
+        parts.append(lb.astype(float))
     if macro is not None and {"gold_usd", "usd_inr"} <= set(macro.columns):
         m = (macro["gold_usd"] * macro["usd_inr"]).dropna().astype(float)
         idx = pd.DatetimeIndex(m.index)
@@ -102,14 +114,14 @@ def global_series(macro: pd.DataFrame | None = None, proxy_path: Path = PROXY_PA
         m.index = idx.normalize()
         m = m[~m.index.duplicated(keep="last")]
         if parts:
-            px = parts[0]
-            overlap = px.index.intersection(m.index)
+            seed = parts[0]
+            overlap = seed.index.intersection(m.index)
             if len(overlap) >= 20:
-                scale = float(np.median(m.loc[overlap] / px.loc[overlap]))
-                px = px[px.index < m.index.min()] * scale
+                scale = float(np.median(m.loc[overlap] / seed.loc[overlap]))
+                seed = seed[seed.index < m.index.min()] * scale
             else:  # no overlap to rescale against: use the cache alone
-                px = px.iloc[0:0]
-            parts = [px, m]
+                seed = seed.iloc[0:0]
+            parts = [seed, m]
         else:
             parts = [m]
     if not parts:
@@ -119,6 +131,109 @@ def global_series(macro: pd.DataFrame | None = None, proxy_path: Path = PROXY_PA
     # Daily calendar, forward-filled: the value "at date t" is the latest close on or before t.
     full = pd.date_range(s.index.min(), s.index.max(), freq="D")
     return s.reindex(full).ffill()
+
+
+def load_ibja_full(path: Path = IBJA_PATH) -> pd.DataFrame:
+    """Every IBJA day, AM and PM in Rs./g of 22K (a day may have an AM fix and no PM fix yet)."""
+    df = pd.read_parquet(path)
+    df["date"] = pd.to_datetime(df["date"]).dt.tz_localize(None).dt.normalize()
+    df = df.sort_values("date").drop_duplicates("date", keep="last").reset_index(drop=True)
+    df["pm"] = df["pm_916"] / 10.0
+    df["am"] = df["am_916"] / 10.0 if "am_916" in df.columns else np.nan
+    return df[["date", "am", "pm"]]
+
+
+def fix_events(full: pd.DataFrame) -> list[tuple[datetime, str, pd.Timestamp, float]]:
+    """(publish time UTC, "am"/"pm", date, value) for every fix, oldest first."""
+    dates = [pd.Timestamp(d) for d in full["date"]]
+    am = full["am"].to_numpy(dtype=float)
+    pm = full["pm"].to_numpy(dtype=float)
+    out: list[tuple[datetime, str, pd.Timestamp, float]] = []
+    for d, a, p in zip(dates, am, pm, strict=True):
+        if np.isfinite(a):
+            out.append((_at(d, IBJA_AM_PUBLISH_UTC), "am", d, float(a)))
+        if np.isfinite(p):
+            out.append((_at(d, IBJA_PM_PUBLISH_UTC), "pm", d, float(p)))
+    return sorted(out, key=lambda e: e[0])
+
+
+def ref_fix(full: pd.DataFrame, at: datetime) -> float | None:
+    """The latest fix published at or before ``at``: the one a shop price read then reflects."""
+    past = [e for e in fix_events(full) if e[0] <= at]
+    return past[-1][3] if past else None
+
+
+def flat_pairs(full: pd.DataFrame, kind: str) -> pd.DataFrame:
+    """Walk-forward pairs for the windows that hold the latest fix (no model).
+
+    ``am_to_pm``: an AM fix and the same day's PM fix. ``pm_to_am``: a PM fix and the next IBJA
+    day's AM fix (gap <= MAX_GAP_DAYS).
+    """
+    rows = []
+    dates = [pd.Timestamp(d) for d in full["date"]]
+    am = full["am"].to_numpy(dtype=float)
+    pm = full["pm"].to_numpy(dtype=float)
+    for i, d in enumerate(dates):
+        if kind == "am_to_pm" and np.isfinite(am[i]) and np.isfinite(pm[i]):
+            rows.append({"d0": d, "base": float(am[i]), "target": float(pm[i])})
+        elif (
+            kind == "pm_to_am"
+            and np.isfinite(pm[i])
+            and i + 1 < len(dates)
+            and np.isfinite(am[i + 1])
+            and (dates[i + 1] - d).days <= MAX_GAP_DAYS
+        ):
+            rows.append({"d0": d, "base": float(pm[i]), "target": float(am[i + 1])})
+    df = pd.DataFrame(rows, columns=["d0", "base", "target"])
+    df["y"] = np.log(df["target"] / df["base"])
+    return df.reset_index(drop=True)
+
+
+def _ewm_vol(y: np.ndarray) -> np.ndarray:
+    """vol[i] = EWMA volatility of y[:i] (known before pair i); vol[len(y)] = including all."""
+    v = np.sqrt(pd.Series(np.r_[y, 0.0] ** 2).ewm(halflife=VOL_HALFLIFE).mean().shift(1)).to_numpy(
+        copy=True
+    )
+    v[0] = v[1] if len(v) > 1 and np.isfinite(v[1]) else 0.01
+    return v
+
+
+def flat_record(pairs: pd.DataFrame, since: str | None = None) -> dict:
+    """Walk-forward coverage of the volatility-scaled 80% band around the held fix, and the band
+    for the next pair. ``since``: score only pairs from this date (the model window's test span)."""
+    from ml.metrics import wilson_confidence_interval
+
+    n_all = len(pairs)
+    if n_all < MIN_CONFORMAL + 1:
+        return {"n": 0, "ready": False}
+    y = pairs["y"].to_numpy(dtype=float)
+    base = pairs["base"].to_numpy(dtype=float)
+    err = (pairs["target"] - pairs["base"]).to_numpy(dtype=float)
+    vol = _ewm_vol(y)
+    score = np.abs(err) / (vol[:n_all] * base)
+    hits, widths = [], []
+    first = (
+        0 if since is None else int(np.searchsorted(pairs["d0"].to_numpy(), np.datetime64(since)))
+    )
+    for k in range(max(MIN_CONFORMAL, first), n_all):
+        q = float(np.quantile(score[max(0, k - CONFORMAL_WINDOW) : k], NOMINAL))
+        half = q * vol[k] * base[k]
+        hits.append(abs(err[k]) <= half)
+        widths.append(2 * half)
+    q_now = float(np.quantile(score[-CONFORMAL_WINDOW:], NOMINAL))
+    k, n = int(np.sum(hits)), len(hits)
+    ci = [round(v, 3) for v in wilson_confidence_interval(k, n)] if n else None
+    return {
+        "n": n,
+        "ready": n >= MIN_CONFORMAL,
+        "first_d0": _day(pairs["d0"].iloc[n_all - n]) if n else None,
+        "last_d0": _day(pairs["d0"].iloc[-1]),
+        "range_coverage": round(k / n, 3) if n else None,
+        "range_coverage_ci95": ci,
+        "range_mean_width": round(float(np.mean(widths)), 1) if widths else None,
+        "conformal_q": q_now,
+        "vol_now": float(vol[n_all]),
+    }
 
 
 def build_pairs(ibja: pd.DataFrame, glob: pd.Series) -> pd.DataFrame:
@@ -296,6 +411,36 @@ def conformal_q(folds: list[dict]) -> float | None:
     return float(np.quantile(scores, NOMINAL)) if len(scores) >= MIN_CONFORMAL else None
 
 
+def block_bootstrap_ci(n: int, stat, b: int | None = None, seed: int = 0) -> list[float]:
+    """95% moving-block bootstrap interval of ``stat(indices)`` (blocks of BOOTSTRAP_BLOCK days)."""
+    rng = np.random.default_rng(seed)
+    b = b or BOOTSTRAP_B
+    k = math.ceil(n / BOOTSTRAP_BLOCK)
+    vals = []
+    for _ in range(b):
+        starts = rng.integers(0, n, size=k)
+        idx = (starts[:, None] + np.arange(BOOTSTRAP_BLOCK)[None, :]).ravel()[:n] % n
+        vals.append(stat(idx))
+    lo, hi = np.nanpercentile(vals, [2.5, 97.5])
+    return [float(lo), float(hi)]
+
+
+def diebold_mariano_p(err_a: np.ndarray, err_b: np.ndarray, lags: int = 4) -> float:
+    """Two-sided Diebold-Mariano p-value for equal mean absolute error (Newey-West variance)."""
+    from scipy.stats import norm
+
+    d = np.abs(err_a) - np.abs(err_b)
+    n = len(d)
+    dc = d - d.mean()
+    var = float(dc @ dc) / n
+    for lag in range(1, lags + 1):
+        var += 2.0 * (1.0 - lag / (lags + 1)) * float(dc[lag:] @ dc[:-lag]) / n
+    if var <= 0:
+        return 1.0
+    t = d.mean() / math.sqrt(var / n)
+    return float(2.0 * (1.0 - norm.cdf(abs(t))))
+
+
 def evaluate(folds: list[dict]) -> dict:
     """Score the track record: error vs flat-hold, direction metrics and gates, range coverage."""
     from scipy.stats import wilcoxon
@@ -322,6 +467,21 @@ def evaluate(folds: list[dict]) -> dict:
         pred = f["pm0"] * math.exp(f["ret"])
         hits.append(abs(f["pm1"] - pred) <= half)
         widths.append(2 * half)
+    from ml.metrics import wilson_confidence_interval
+
+    up = np.array(y_true, dtype=bool)
+    moved = np.array([f["pm1"] != f["pm0"] for f in folds])
+    hit = (np.array([f["p_up"] for f in folds]) > 0.5) == up
+
+    def _imp(ix: np.ndarray) -> float:
+        return 100.0 * (err_model[ix].mean() / err_flat[ix].mean() - 1.0)
+
+    def _acc(ix: np.ndarray) -> float:
+        sel = moved[ix]
+        return float(hit[ix][sel].mean()) if sel.any() else float("nan")
+
+    cov_k, cov_n = int(np.sum(hits)), len(hits)
+    cov_ci = wilson_confidence_interval(cov_k, cov_n) if cov_n else None
     return {
         "n": n,
         "ready": True,
@@ -330,7 +490,11 @@ def evaluate(folds: list[dict]) -> dict:
         "mae_model": round(float(err_model.mean()), 1),
         "mae_flat": round(float(err_flat.mean()), 1),
         "mae_change_pct": round(100.0 * (err_model.mean() / err_flat.mean() - 1.0), 1),
+        "mae_change_ci95": [round(v, 1) for v in block_bootstrap_ci(n, _imp)],
+        "dm_p": diebold_mariano_p(err_model, err_flat),
         "wilcoxon_p": float(wilcoxon(err_model, err_flat).pvalue),
+        "direction_accuracy_ci95": [round(v, 3) for v in block_bootstrap_ci(n, _acc)],
+        "range_coverage_ci95": [round(cov_ci[0], 3), round(cov_ci[1], 3)] if cov_ci else None,
         "direction": {k: v for k, v in m.items() if k != "reliability"},
         "direction_gate": decide_direction_signal(baseline),
         "timing_gate": decide_timing_signal(baseline),
@@ -348,78 +512,106 @@ def _at(day: pd.Timestamp, hm: tuple[int, int]) -> datetime:
     return datetime(day.year, day.month, day.day, hm[0], hm[1], tzinfo=UTC)
 
 
-def forecast(
-    ibja: pd.DataFrame,
-    glob: pd.Series,
-    folds: list[dict],
-    now: datetime,
-    newer_am: bool = False,
-) -> dict:
-    """Forecast the next fix after the latest IBJA PM day, or say why not.
-
-    Returns {"active": False, "reason": ...} outside the window where the inputs are known and
-    still relevant, and {"active": True, ...} with the next fix's prediction otherwise.
-    ``newer_am``: IBJA has published an AM fix for a later day (see ``newer_am_available``); the
-    shop price then already reflects the next day's rate, so this forecast no longer applies.
-    """
-    if ibja.empty:
-        return {"active": False, "reason": "no_ibja"}
-    d0 = ibja["date"].iloc[-1]
-    if now < _at(d0, US_CLOSE_UTC):
-        return {"active": False, "reason": "waiting_for_us_close", "d0": _day(d0)}
-    if newer_am:
-        return {"active": False, "reason": "newer_am_fix_published", "d0": _day(d0)}
+def _model_forecast(
+    full: pd.DataFrame, glob: pd.Series, folds: list[dict], d0: pd.Timestamp
+) -> dict | None:
+    """The model window: next PM fix after ``d0`` from the global close of ``d0``, or None."""
     if glob.empty or glob.index.max() < d0:
-        return {"active": False, "reason": "global_close_missing", "d0": _day(d0)}
+        return None
     q = conformal_q(folds)
     if q is None:
-        return {"active": False, "reason": "track_record_too_short", "d0": _day(d0)}
-    pairs = build_pairs(ibja, glob)
+        return None
+    pairs = build_pairs(
+        full.dropna(subset=["pm"])[["date", "pm", "am"]].reset_index(drop=True), glob
+    )
     if pairs.empty or not bool(pairs["last"].iloc[-1]) or pairs["d0"].iloc[-1] != d0:
-        return {"active": False, "reason": "features_unavailable", "d0": _day(d0)}
+        return None
     train = pairs[pairs["d1"].notna() & (pairs["d1"] <= d0)]
     if len(train) < MIN_TRAIN:
-        return {"active": False, "reason": "training_set_too_small", "d0": _day(d0)}
+        return None
     row = pairs.iloc[-1]
     p = predict(train, row, _resid_sd(folds))
-    pm0 = float(row["pm0"])
-    pred = pm0 * math.exp(p.ret)
-    half = q * p.vol * pm0
+    base = float(row["pm0"])
     return {
-        "active": True,
+        "mode": "after_us_close",
         "model_version": MODEL_VERSION,
-        "d0": _day(d0),
-        "pm0": round(pm0, 2),
-        "pred_pm1": round(pred, 2),
-        "half_width_pm": round(half, 2),
+        "base_kind": "pm",
+        "base_date": _day(d0),
+        "base": round(base, 2),
+        "target_kind": "pm",
+        "pred": round(base * math.exp(p.ret), 2),
+        "half_width": round(q * p.vol * base, 2),
         "p_up": round(p.p_up, 4),
-        "conformal_q": round(q, 4),
-        "vol": round(p.vol, 6),
     }
 
 
-def newer_am_available(raw_ibja_path: Path, d0: pd.Timestamp) -> bool:
-    """True when IBJA has published an AM fix for a day after ``d0``."""
-    try:
-        raw = pd.read_parquet(raw_ibja_path)
-    except (OSError, ValueError):
-        return False
-    raw["date"] = pd.to_datetime(raw["date"]).dt.tz_localize(None).dt.normalize()
-    if "am_916" not in raw.columns:
-        return False
-    return bool(((raw["date"] > d0) & raw["am_916"].notna()).any())
+def forecast(
+    full: pd.DataFrame,
+    glob: pd.Series,
+    folds: list[dict],
+    now: datetime,
+    windows: dict | None = None,
+) -> dict:
+    """Forecast the next IBJA fix at ``now``, whichever part of the day it is (see module doc).
+
+    ``windows``: ``flat_record`` results for "am_to_pm" and "pm_to_am" (computed if omitted).
+    Returns {"active": False, "reason": ...} only when there is no usable fix or track record.
+    """
+    pm_days = full.dropna(subset=["pm"])
+    if pm_days.empty:
+        return {"active": False, "reason": "no_ibja"}
+    windows = windows or {k: flat_record(flat_pairs(full, k)) for k in ("am_to_pm", "pm_to_am")}
+    d_pm = pm_days["date"].iloc[-1]
+    am_after = full[(full["date"] > d_pm) & full["am"].notna()]
+    if not am_after.empty:  # an AM fix is out and its PM fix is not: hold the AM fix
+        rec, kind = windows.get("am_to_pm", {}), "am_to_pm"
+        d, base, base_kind, target_kind, mode = (
+            am_after["date"].iloc[-1],
+            float(am_after["am"].iloc[-1]),
+            "am",
+            "pm",
+            "after_morning_rate",
+        )
+    else:
+        if now >= _at(d_pm, US_CLOSE_UTC):
+            fc = _model_forecast(full, glob, folds, d_pm)
+            if fc is not None:
+                return {"active": True, **fc}
+        rec, kind = windows.get("pm_to_am", {}), "pm_to_am"
+        d, base, base_kind, target_kind, mode = (
+            d_pm,
+            float(pm_days["pm"].iloc[-1]),
+            "pm",
+            "am",
+            "after_afternoon_rate",
+        )
+    if not rec.get("ready"):
+        return {"active": False, "reason": f"{kind}_record_too_short"}
+    return {
+        "active": True,
+        "mode": mode,
+        "model_version": f"hold_latest_fix_{kind}",
+        "base_kind": base_kind,
+        "base_date": _day(d),
+        "base": round(base, 2),
+        "target_kind": target_kind,
+        "pred": round(base, 2),
+        "half_width": round(rec["conformal_q"] * rec["vol_now"] * base, 2),
+        "p_up": None,
+    }
 
 
-def to_retail(fc: dict, current_22k: float, slope: float) -> dict:
+def to_retail(fc: dict, current_22k: float, slope: float, ref: float | None = None) -> dict:
     """Map the next-fix forecast onto the shop price shown on the site.
 
-    The shop price moves with IBJA by the calibration slope (data/calibration.json), so the
-    predicted change in the shop price is ``slope x (predicted fix - today's fix)``, anchored on the
-    current shop price; the range scales the same way.
+    The shop price moves with IBJA by the calibration slope (data/calibration.json). ``ref`` is the
+    fix the current shop price reflects (``ref_fix`` at its read time; the forecast's base fix when
+    unknown), so the predicted shop price is ``current + slope x (predicted fix - ref)`` -- a move
+    already in the shop price is not counted twice. The range scales by the same slope.
     """
-    delta = slope * (fc["pred_pm1"] - fc["pm0"])
-    half = slope * fc["half_width_pm"]
-    predicted = current_22k + delta
+    anchor = fc["base"] if ref is None else ref
+    predicted = current_22k + slope * (fc["pred"] - anchor)
+    half = slope * fc["half_width"]
     return {
         "predicted_22k": round(predicted),
         "lower": round(predicted - half),
@@ -435,23 +627,27 @@ def run(
     macro: pd.DataFrame | None = None,
     data_dir: Path = DATA_DIR,
 ) -> dict:
-    """Update the track record and return {"eval": ..., "forecast": ...} (used by ml.inference)."""
+    """Update the track record; return {"eval", "windows", "forecast", "ibja"} (ml.inference)."""
     now = now or datetime.now(UTC)
     ibja_path = data_dir / IBJA_PATH.name
     if not ibja_path.exists():
         return {
             "eval": {"n": 0, "ready": False},
+            "windows": {},
             "forecast": {"active": False, "reason": "no_ibja"},
+            "ibja": None,
         }
-    ibja = load_ibja(ibja_path)
-    glob = global_series(macro, data_dir / PROXY_PATH.name)
-    pairs = build_pairs(ibja, glob)
+    full = load_ibja_full(ibja_path)
+    glob = global_series(macro, data_dir / LABEL_PATH.name)
+    pairs = build_pairs(full.dropna(subset=["pm"]).reset_index(drop=True), glob)
     oos_path = data_dir / OOS_PATH.name
     folds = update_oos(pairs, load_oos(oos_path)) if not pairs.empty else load_oos(oos_path)
     save_oos(folds, oos_path)
     ev = evaluate(folds)
-    newer_am = not ibja.empty and newer_am_available(ibja_path, ibja["date"].iloc[-1])
-    return {"eval": ev, "forecast": forecast(ibja, glob, folds, now, newer_am=newer_am)}
+    since = ev.get("first_d0") if ev.get("ready") else None
+    windows = {k: flat_record(flat_pairs(full, k), since) for k in ("am_to_pm", "pm_to_am")}
+    fc = forecast(full, glob, folds, now, windows)
+    return {"eval": ev, "windows": windows, "forecast": fc, "ibja": full}
 
 
 def main() -> None:

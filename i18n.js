@@ -269,7 +269,8 @@ const STRINGS = {
     supportLine2Above: ({ amount }) => `₹${amount} above the usual price for the month.`,
     supportLine2At: "Right at the usual price for the month.",
     divergenceNote: "(These two don't quite agree — one counts days, the other measures the actual rupee gap. We go with the day-count for the headline above.)",
-    goodPriceTomorrow: ({ low, high }) => `Next working day: likely <strong>₹${low}</strong> – <strong>₹${high}</strong>.`,
+    // ADR 065: the range is for the next official-rate update (it changes twice each working day).
+    goodPriceTomorrow: ({ low, high }) => `Next price update: likely <strong>₹${low}</strong> – <strong>₹${high}</strong>.`,
     // ADR 064: the next move's direction, only when inference's next_fix.direction.show is true.
     directionUp: ({ pct }) => `More likely to go <strong>up</strong> than down next (about ${pct}% chance).`,
     directionDown: ({ pct }) => `More likely to go <strong>down</strong> than up next (about ${pct}% chance).`,
@@ -659,7 +660,7 @@ const STRINGS = {
     supportLine2Above: ({ amount }) => `इस महीने की सामान्य कीमत से ₹${amount} ज़्यादा।`,
     supportLine2At: "इस महीने की सामान्य कीमत के बराबर।",
     divergenceNote: "(यहां दोनों आंकड़े पूरी तरह नहीं मिलते — एक दिन गिनता है, दूसरा असल रुपये का फ़र्क़ नापता है। ऊपर के हेडलाइन के लिए हम दिन-गिनती वाला आंकड़ा इस्तेमाल करते हैं।)",
-    goodPriceTomorrow: ({ low, high }) => `अगला कामकाजी दिन: शायद <strong>₹${low}</strong> – <strong>₹${high}</strong>।`,
+    goodPriceTomorrow: ({ low, high }) => `अगला भाव अपडेट: शायद <strong>₹${low}</strong> – <strong>₹${high}</strong>।`,
     directionUp: ({ pct }) => `अगली बार कीमत के <strong>बढ़ने</strong> की संभावना ज़्यादा है (लगभग ${pct}%)।`,
     directionDown: ({ pct }) => `अगली बार कीमत के <strong>घटने</strong> की संभावना ज़्यादा है (लगभग ${pct}%)।`,
     directionUnclear: () => "अगली बार ऊपर या नीचे: कहना मुश्किल है।",

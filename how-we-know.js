@@ -146,8 +146,8 @@ function renderFullMethodology(fc, bt, drift, coverage, bandCoverage) {
           </div>
           <div class="meth-stat">
             <div class="meth-stat-label">${tHwk("methMethodLabel")}</div>
-            <div class="meth-stat-value">${tHwk(fc.next_fix?.active === true ? "methNextFixModel" : "methAssumeNoChange")}</div>
-            <div class="meth-stat-sub">${tHwk(fc.next_fix?.active === true ? "methNextFixModelSub" : "methCoversMoves")}</div>
+            <div class="meth-stat-value">${tHwk(fc.next_fix?.active !== true ? "methAssumeNoChange" : fc.next_fix.mode === "after_us_close" ? "methNextFixModel" : "methNextFixHold")}</div>
+            <div class="meth-stat-sub">${tHwk(fc.next_fix?.active !== true ? "methCoversMoves" : fc.next_fix.mode === "after_us_close" ? "methNextFixModelSub" : "methNextFixHoldSub")}</div>
           </div>
         </div>
         ${fc.target_time ? `<p class="meth-text" style="margin-top:8px">${tHwk("methTargetLine", { date: fmtIST(fc.target_time) })}</p>` : ""}

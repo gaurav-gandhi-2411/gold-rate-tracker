@@ -506,9 +506,10 @@ function renderCard(nextFix) {
 }
 
 const TRACK = { n: 143, direction_accuracy: 0.65, range_coverage: 0.805, range_n: 123 };
+const RANGE = { coverage: 0.805, n: 123 };
 
 test("direction line: shown with its chance and track record when inference allows it", () => {
-  const html = renderCard({ active: true, direction: { show: true, side: "up", probability: 0.66 }, track_record: TRACK });
+  const html = renderCard({ active: true, direction: { show: true, side: "up", probability: 0.66 }, track_record: TRACK, range_record: RANGE });
   assert.match(html, /good-price-direction" data-side="up">More likely to go <strong>up<\/strong> than down next \(about 66% chance\)/);
   assert.match(html, /right 93 of the last 143 times/);
   // the range's reliability quotes the model's own hit rate, not the flat-hold band's
@@ -516,7 +517,7 @@ test("direction line: shown with its chance and track record when inference allo
 });
 
 test("direction line: a near coin flip reads 'too close to call'", () => {
-  const html = renderCard({ active: true, direction: { show: true, side: "unclear", probability: 0.52 }, track_record: TRACK });
+  const html = renderCard({ active: true, direction: { show: true, side: "unclear", probability: 0.52 }, track_record: TRACK, range_record: RANGE });
   assert.match(html, /too close to call/);
   assert.ok(!/<strong>up<\/strong>|<strong>down<\/strong>/.test(html));
 });
@@ -529,4 +530,12 @@ test("direction line: hidden unless inference says show, and when the model is i
   ]) {
     assert.ok(!/good-price-direction/.test(renderCard(nf)), JSON.stringify(nf));
   }
+});
+
+test("next price update: label, and a held-fix window quotes its own coverage with no direction line", () => {
+  const html = renderCard({ active: true, mode: "after_morning_rate", direction: { show: false, side: "unclear", probability: null },
+    track_record: TRACK, range_record: { coverage: 0.79, n: 148 } });
+  assert.match(html, /Next price update: likely <strong>₹13,601<\/strong>/);
+  assert.ok(!/good-price-direction/.test(html));
+  assert.match(html, /about 7 times out of 10/);
 });
