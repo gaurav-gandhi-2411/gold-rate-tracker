@@ -1,5 +1,5 @@
 {
-  "predicted_at": "2026-10-02T18:04:14.281991+00:00",
+  "predicted_at": "2026-10-02T18:28:25.348957+00:00",
   "target_window": "5d",
   "headline": {
     "method": "nextfix_ridge_mlp_v1",
@@ -47,7 +47,7 @@
     ],
     "horizon_p90": [
       14338.84,
-      14440.35,
+      14440.36,
       14485.15,
       14527.31,
       14624.48
@@ -59,7 +59,7 @@
     "direction_consensus": 1.0
   },
   "driver_context": {
-    "computed_at": "2026-10-02T18:04:21.268183+00:00",
+    "computed_at": "2026-10-02T18:28:34.340461+00:00",
     "macro_staleness_days": 0.0,
     "macro_fresh": true,
     "premium_threshold_pct": 15.0,
@@ -135,33 +135,79 @@
       "n": 143,
       "first_d0": "2025-07-17",
       "last_d0": "2026-09-30",
-      "mae_model": 105.5,
+      "mae_model": 106.0,
       "mae_flat": 115.8,
-      "mae_change_pct": -8.9,
-      "wilcoxon_p": 0.0047,
-      "direction_accuracy": 0.6503,
+      "mae_change_pct": -8.5,
+      "mae_change_ci95": [
+        -14.1,
+        -2.5
+      ],
+      "dm_p": 0.0091,
+      "wilcoxon_p": 0.0072,
+      "direction_accuracy": 0.6434,
+      "direction_accuracy_ci95": [
+        0.573,
+        0.713
+      ],
       "always_up_accuracy": 0.4895,
-      "direction_p_value": 0.0052,
-      "direction_ece": 0.0586,
+      "direction_p_value": 0.0071,
+      "direction_ece": 0.06,
       "direction_gate_ship": true,
-      "direction_gate_reason": "logistic beats always-up OOS: acc 0.6503>0.4895, brier 0.2186<0.5105, ECE 0.0586<=0.1, p=0.0052 over 143 folds",
+      "direction_gate_reason": "logistic beats always-up OOS: acc 0.6434>0.4895, brier 0.2198<0.5105, ECE 0.0600<=0.1, p=0.0071 over 143 folds",
       "timing_gate_ship": false,
       "range_coverage": 0.805,
+      "range_coverage_ci95": [
+        0.726,
+        0.865
+      ],
       "range_n": 123,
       "range_mean_width_ibja": 352.5
     },
+    "windows": {
+      "am_to_pm": {
+        "n": 148,
+        "ready": true,
+        "first_d0": "2025-07-17",
+        "last_d0": "2026-10-01",
+        "range_coverage": 0.791,
+        "range_coverage_ci95": [
+          0.718,
+          0.848
+        ],
+        "range_mean_width": 127.3
+      },
+      "pm_to_am": {
+        "n": 144,
+        "ready": true,
+        "first_d0": "2025-07-17",
+        "last_d0": "2026-09-30",
+        "range_coverage": 0.792,
+        "range_coverage_ci95": [
+          0.718,
+          0.85
+        ],
+        "range_mean_width": 332.1
+      }
+    },
+    "mode": "after_us_close",
     "model_version": "nextfix_ridge_mlp_v1",
-    "ibja_day": "2026-10-01",
-    "ibja_pm": 13569.4,
-    "predicted_ibja_pm": 13571.77,
-    "p_up": 0.4949,
+    "base_kind": "pm",
+    "base_date": "2026-10-01",
+    "base_ibja": 13569.4,
+    "predicted_ibja": 13571.77,
+    "target_kind": "pm",
+    "range_record": {
+      "coverage": 0.805,
+      "n": 123
+    },
     "predicted_22k": 13822,
     "lower": 13687,
     "upper": 13958,
+    "p_up": 0.4948,
     "direction": {
       "show": true,
       "side": "unclear",
-      "probability": 0.5051
+      "probability": 0.5052
     }
   }
 }
