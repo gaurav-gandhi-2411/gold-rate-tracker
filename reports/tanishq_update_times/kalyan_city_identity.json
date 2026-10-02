@@ -1,0 +1,14 @@
+{
+  "source_file": "data/fusion_snapshots.parquet",
+  "cycles_with_2plus_cities": 259,
+  "cycles_all_cities_identical": 259,
+  "cycles_with_city_difference": 0,
+  "first_capture_utc": "2026-07-19T12:21:11Z",
+  "last_capture_utc": "2026-09-24T17:06:07Z",
+  "cities_seen": [
+    "Bangalore",
+    "Chennai",
+    "Ernakulam",
+    "Hyderabad"
+  ]
+}
