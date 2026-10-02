@@ -20,12 +20,12 @@ from __future__ import annotations
 import re
 from datetime import UTC, datetime
 
-import requests
+import requests  # noqa: F401 -- the tests' monkeypatch seam (grt.requests.get)
 
-from ml.sources.base import SourceNetworkError, SourceReading, SourceStructureError
+from ml.sources.base import SourceReading, SourceStructureError, validate_rate_22k
+from ml.sources.polite_http import polite_request
 
 _URL = "https://www.grtjewels.com/gold-rate/"
-_USER_AGENT = "gold-rate-tracker/1.0 (portfolio project; gaurav.gandhi2411@gmail.com)"
 _TIMEOUT = 20
 
 # Matches both the escaped-in-page-JSON form (\"purity\":\"22 KT\",\"amount\":13135)
@@ -40,11 +40,8 @@ def fetch_grt() -> SourceReading:
     :class:`SourceStructureError` if the expected embedded-JSON pattern is
     gone (the page changed).
     """
-    try:
-        resp = requests.get(_URL, headers={"User-Agent": _USER_AGENT}, timeout=_TIMEOUT)
-        resp.raise_for_status()
-    except requests.RequestException as exc:
-        raise SourceNetworkError(f"grt: request failed: {exc}") from exc
+    # Polite access (UA, per-host spacing, capped retry, Retry-After): ADR 059.
+    resp = polite_request("GET", _URL, source="grt", timeout=_TIMEOUT)
 
     m = _RATE_RE.search(resp.text)
     if not m:
@@ -52,7 +49,7 @@ def fetch_grt() -> SourceReading:
             "grt: 22 KT rate pattern not found in page — structure may have changed"
         )
 
-    rate = float(m.group(1))
+    rate = validate_rate_22k(float(m.group(1)), source="grt")
     return SourceReading(
         source="grt",
         city=None,

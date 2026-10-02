@@ -4,6 +4,7 @@ Operational procedures for gold-rate-tracker.
 
 ## Table of contents
 
+0. [Running your own copy](#running-your-own-copy) (fork setup, alerts, troubleshooting — moved here from the README)
 1. [Local development setup](#local-development-setup)
 2. [How to retrain](#how-to-retrain)
 3. [How to roll back a bad production model](#how-to-roll-back-a-bad-production-model)
@@ -17,6 +18,32 @@ Operational procedures for gold-rate-tracker.
 11. [Known constraints](#known-constraints)
 12. [Frontend PR device-check (required)](#frontend-pr-device-check-required)
 13. [Honesty-ADR audit: user-facing copy paths (required)](#honesty-adr-audit-user-facing-copy-paths-required)
+
+---
+
+## Running your own copy
+
+### Setup (~15 minutes)
+
+1. Fork / create a public repo and upload all files.
+2. **Settings → Secrets and variables → Actions → New repository secret:**
+   - `NTFY_TOPIC` — your OWN ntfy.sh topic (treat like a password; long & random).
+3. **Actions → Check Gold Price → Run workflow** (manual trigger; wait ~2 min).
+4. **Settings → Pages → Deploy from branch → `master` → `/` (root).**
+5. Install the PWA: iOS Safari → Share → Add to Home Screen · Android Chrome → Install app.
+6. Subscribe to alerts: install the ntfy app → **+** → enter your topic.
+
+### Notifications (bring your own ntfy topic)
+
+Alerts are delivered via [ntfy.sh](https://ntfy.sh) — free, no account. **Pick your own topic and keep it private:** anyone who knows a topic name can publish to it, so treat it like a password (a long random string, e.g. `gold-<yourname>-<16 random chars>`). Set it as the `NTFY_TOPIC` GitHub Actions secret and subscribe to it in the ntfy app.
+
+Alert types: a price-move alert (describes the recent trend), a twice-daily digest, and a data-staleness warning if scraping stalls. All copy is plain-language and ASCII-safe.
+
+### Troubleshooting
+
+- **Prices look stale:** the page banner will say so, honestly labeled either way. A Tanishq scrape miss alone is expected (its Cloudflare block, [ADR 025](adr/025-ibja-primary-source-decision.md)) and logged as a run annotation, not a hard failure — check the latest **Check Gold Price** run in Actions. An actual alert (ntfy T9/T9_ESCALATE) only fires when *IBJA* itself hasn't published in 2+ business days — that's the genuine failure signal.
+- **No notifications:** confirm `NTFY_TOPIC` has no URL prefix, you subscribed to the *exact* topic, and a price move actually occurred.
+- **Scraper DOM canary issue opened:** the canary now distinguishes a Cloudflare block (logged as a warning, no alert — expected steady state) from a real DOM/selector break (alerts + opens an issue) automatically. See the rest of this runbook if one still fires.
 
 ---
 
@@ -191,6 +218,224 @@ backstop — that state should be rare and, if it persists, will have already fi
 
 ---
 
+## Scheduled-trigger reliability and catch-up (added 2026-09-04)
+
+**REMOVED 2026-09-23:** the self-triggering catch-up step described below no
+longer exists in `check-price.yml`. Closing #1838 (a checkout-timing fix for
+this step) was meant to retire the mechanism outright, but the code stayed
+live afterward and kept firing — `data/catchup_dispatch_log.jsonl` shows it
+dispatching on very close to every tick in the days before removal (GG's
+decision, 2026-09-23). The section below is kept verbatim as the audit trail
+for why it existed and what it did; treat every present-tense description of
+it as historical, not current behavior. What this means for staleness
+detection: `worker-deadman`'s dead-man's-switch (WARN=10h/ESCALATE=16h,
+`data/forecast.json.predicted_at` age) is now the only backstop for a missed
+tick — it was always independent of this mechanism, not layered on top of
+it, so nothing is structurally uncovered. But the section below (2026-09-10
+entry) documented that catch-up was actively absorbing gaps *before* they
+reached that threshold — with it gone, expect the WARN/ESCALATE channel to
+fire somewhat more often than the pre-removal baseline until/unless the
+underlying scheduler-delay platform issue itself improves. Watch it, don't
+assume the margin discussed below still holds unchanged.
+
+`check-price.yml`'s scheduled-trigger miss rate stepped from 0.0% (152/152
+expected 3h slots fired cleanly across 39 clean days) to 18.5%+ starting
+**2026-08-27T00:15 UTC** and has stayed elevated since. This is a
+**GitHub-platform-side incident, not a defect in this repo**:
+[githubstatus.com's incident report](https://githubstatus.com/incidents/kz4khcgdsfdv)
+for 2026-08-26 15:02 UTC – 2026-08-27 01:00 UTC (recovery) describes
+"saturation of writes to the database primary used by the service processing
+triggers for Actions workflows" with "downstream throttles set ~10% too
+high to protect the system" — our step-change timestamp falls inside that
+recovery window. Corroborated cross-repo: `gg-portfolio`'s `chat-canary.yml`
+(unrelated repo, unrelated code, every-6h cron) shows the identical
+0.6%→17.1% miss-rate step at the same point, ruling out any repo-specific
+cause (no `.github/` change, no runner re-registration, no Actions-minutes
+quota — this repo is public, so minutes are unlimited and billing net cost
+is $0 regardless of usage).
+
+Since the drop is platform-side and may not fully recover, `check-price.yml`
+includes a **self-triggering catch-up** step (`Detect missed cadence and
+self-trigger catch-up`, runs immediately after checkout): if the last
+committed `data/forecast.json.predicted_at` is >= 4h old, it dispatches one
+extra `workflow_dispatch` run via the REST API
+(`gh workflow run check-price.yml -f catchup=true`) instead of passively
+waiting up to 3h for the next scheduled tick, which carries the same drop
+probability. The `catchup=true` input on the dispatched run prevents it
+from re-triggering again, bounding this to one extra run per detected gap.
+
+**What this does not fix:** IBJA and Tanishq only expose their *current*
+reading, not a historical lookback — so a genuinely missed window's price is
+never recoverable after the fact, catch-up or not. It also does not reduce
+the underlying platform miss rate; it only shortens how long the site stays
+stale once a run *does* fire and observes the gap.
+
+### Recovered on miss rate, not on latency — re-measured 2026-09-10, prior "WORSENED AGAIN" figures RETRACTED (AC2, production audit 2026-09-10)
+
+The miss rate above did recover to near-0% by 2026-08-30 (measured on the
+control workflows `shadow-fusion.yml`/`render-smoke.yml`, which share no
+code with `check-price.yml`). But miss rate only asks "did a run happen
+somewhere in the 6h window" — it cannot see how *late* within that window
+the run landed. Re-measuring with a delay-vs-nominal-slot metric found the
+recovery was one-dimensional: pre-incident median fire delay was
+51–134 minutes (two different clean weeks); as of the 2026-09-05 audit it
+was a *consistent* 245–288 minutes (~4.1–4.8h) every day, corroborated on
+two independent workflows.
+
+**CORRECTION (2026-09-10, later the same day as the AB3 entry below):** an
+independent re-measurement, controlling explicitly for two known analysis
+bugs (a window-matching bug that could let one late run's timestamp
+cascade into inflating later slots, and a run-fetch that must paginate
+fully and filter to `event=schedule` rather than pulling only the most
+recent N runs, which unrelated trigger types can crowd out), found the
+AB3 entry's headline numbers (242.5→618.6min median, a claimed ~2.5x
+platform-wide degradation) **do not reproduce** and are retracted. The
+re-measurement's own p90 *fell* slightly post-09-07 (309.6→300.1min) —
+a real, sustained ~2.5x median degradation cannot coexist with a falling
+p90 in the same data; that internal inconsistency is what flagged AB3's
+figures as wrong rather than as a genuine worsening. Corrected pooled
+figures, same three workflows/two repos, fully paginated, `event=schedule`
+filtered:
+
+| Window | n (pooled, 3 workflows) | Median delay | p90 | Max |
+|---|---|---|---|---|
+| 2026-08-29 → 09-07 | — | 225.3min (~3.8h) | 309.6min | 443.7min |
+| 2026-09-07 → 09-10 | — | 236.2min (~3.9h) | 300.1min | 371.0min |
+
+This is a modest, not a step-change, shift — the "WORSENED AGAIN...2.5x"
+framing below is retracted along with the "two most recent scheduled ticks
+show as outright misses on all three workflows simultaneously" claim; that
+specific reproduction was not found. What IS real and reproducible: every
+day 2026-09-07 through 09-10, the ~06:00 UTC scheduled tick specifically
+runs 296–371min late across all three workflows simultaneously, while
+other same-day ticks for the same workflows sit near baseline
+(~150–260min). This reads as an hour-of-day-specific contention pattern,
+not a uniform platform-wide slowdown — see the production audit's AD1
+findings for how far back this extends and whether a cron-hour shift is
+warranted.
+
+The retracted AB3 entry is left below, struck through in spirit but kept
+verbatim for the audit trail (rule: honest documentation names what didn't
+work, not just what shipped) rather than deleted:
+
+<details>
+<summary>Retracted 2026-09-10 (AB3 entry, superseded by the correction above)</summary>
+
+**That number is now 5 days stale and understates current reality by
+roughly 2.5x.** Re-measured 2026-09-10 across THREE independent scheduled
+workflows spanning TWO repos — `shadow-fusion.yml`, `render-smoke.yml`
+(this repo) and `chat-canary.yml` (`gg-portfolio`, cross-account control,
+same methodology as the original 2026-08-27 incident's cross-repo check) —
+using the actual `createdAt` of every `schedule`-event run against its
+nominal cron slot, trailing 7 days:
+
+| Window | n (pooled, 3 workflows) | Median delay | p90 | Max |
+|---|---|---|---|---|
+| Before 2026-09-07 09:00 UTC | 48 | 242.5min (~4.0h) | 297.5min | 386.3min |
+| From 2026-09-07 09:00 UTC onward | 30 | 618.6min (~10.3h) | 661.3min | 674.3min |
+
+The step change lands at the same point (2026-09-07, ~06:00–12:00 UTC) on
+all three workflows independently — not a code change in this repo (two of
+the three workflows share no code with each other or with
+`check-price.yml`; the third is a different repo entirely). **Additionally:
+the two most recent scheduled ticks (the trailing ~12h as of 2026-09-10
+09:00 UTC) show as outright misses on all three workflows simultaneously**
+— a synchronized triple-miss this recent has not been previously documented
+in this file. Searched githubstatus.com for a corroborating incident report
+(the 2026-08-27 incident had one); found none as of this writing — either
+unlisted/lower-severity, or not yet posted. Treat as **platform-side,
+unconfirmed cause**, not "confirmed platform incident" the way 2026-08-27
+was.
+
+</details>
+
+**Does this affect what users actually see?** Less than the raw numbers
+above suggest. `data/cadence_metrics.json` (the metric the page and
+`ml/cadence_digest.py` actually surface) measures the gap between
+*successful data commits*, which `check-price.yml`'s own self-triggering
+catch-up (4h threshold, above) actively protects — re-measured directly
+from `data/run_cadence_log.jsonl`'s trailing 7 days as of 2026-09-10:
+n=38, median 4.59h, p90 6.74h, p95 6.88h, max 7.93h — flat-to-slightly-better
+than the 2026-09-04 snapshot (median 4.83h, p90 7.35h) baked into PR #1406
+(open, GG reviewing). **#1406's numbers are not stale in the direction that
+matters** — the catch-up mechanism is absorbing the platform-side
+degradation before it reaches the commit-gap metric users see, for now. The
+dead-man's-switch WARN=10h threshold (600min) also has real margin against
+the current p90 (6.74h ≈ 404min) — not in danger of false-firing from this
+specific degradation today, but the margin has compressed as the underlying
+platform delay has grown, and the catch-up mechanism has no headroom
+guarantee if platform delay keeps climbing. Watch, don't ignore.
+
+**Miss rate alone is structurally blind to this** and should not be quoted
+on its own as evidence of health; pair it with a delay/gap distribution, or
+don't quote it. Same lesson as 2026-09-04, restated because the platform
+regressed again three days after this file last said "recovered."
+
+### Threshold ladder — DECIDED: Option C, merged #1403 (Y1, audit 2026-09-05)
+
+**GG decided.** Option C (condition/event split) was merged into
+`worker-deadman/src/deadman.mjs` in PR #1403 (2026-09-05) — the table below
+is a historical record of the three priced alternatives GG chose between,
+not an open decision. `WARN_THRESHOLD_HOURS=10` / `ESCALATE_THRESHOLD_HOURS=16`
+are what **master** carries today (AA1 audit, 2026-09-10, re-read directly
+from `worker-deadman/src/deadman.mjs` and confirmed against #1403's own PR
+body — "Option C is the current diff in this PR"). The weekly non-paging
+digest for the condition band (`ml/cadence_digest.py`) is also merged and
+confirmed **live**, not just designed: wired into `weekly-backtest.yml`'s
+Sunday 02:00 UTC cron, reads `data/cadence_metrics.json`, posts to ntfy.
+
+**Master is not the same claim as deployed.** The Cloudflare Worker only
+picks up a code change on an explicit `wrangler deploy` — merging to master
+does not redeploy it (see "Dead-man's switch" section below for the last
+known deploy-vs-master gap, and the exact command to check current deployed
+state before trusting these numbers describe production).
+
+`check-price.yml`'s catch-up threshold stays at 4h (~1.3x the 3h promise,
+deliberately below every WARN option below so the free, silent self-heal
+always gets first chance). All three options below were anchored to the
+same underlying data: `data/run_cadence_log.jsonl`'s gap-between-
+successful-commits log, 7-day window n=36 (median 4.62h, p90 7.06h, p95
+7.55h, p99 8.12h, max 8.18h) and 14-day window n=59 (median 4.24h, p90
+7.52h, p95 8.40h, p99 11.19h, max 12.18h — the wider window still carries
+some of the genuine Aug-27 incident tail).
+
+| # | Design | Thresholds | Anchor | Pages/month (projected) | First-page delay | Known failure mode |
+|---|---|---|---|---|---|---|
+| A | 3h-anchored 2-tier (this PR's original content, X1d) | WARN=6h / ESCALATE=12h | 2x / 4x the 3h product promise | ~34 (21.4% of a 28-gap sample exceed 6h) | ~6.5h (WARN + 30min cron) | Pages on ordinary platform slowness until the channel gets muted — a control that stops reporting |
+| B | measured-anchored 2-tier (X1d, reverted V1 attempt) | WARN≈9h / ESCALATE=10h | Current gap distribution directly | ~0 in-sample | ~9.5h | Self-referential ratchet: recalibrates every time the platform degrades, so degradation becomes the new "normal" forever — the same mistake that produced the original too-loose 6h catch-up threshold |
+| **C** | **condition/event split (Y1, this PR's current content)** | **WARN=10h / ESCALATE=16h** | **Gap distribution's own p95/p99 — a level normal cycles do not reach** | **0 false pages (0/36 over 7 days; 2/59 over 14 days, both the genuine Aug-27 incident, not false alarms)** | **~10.5h** | **Condition band (gaps 3h–10h, ~63% of all gaps over 14 days) is not silently dropped — routed to a weekly non-paging digest, `ml/cadence_digest.py`** |
+
+Option A pages on the CONDITION (platform slower than promised — account-
+wide, unfixable from this repo, already disclosed on the page) as if it
+were the EVENT (the pipeline has stopped — actionable, what a page is for).
+Option B avoids that but by re-deriving the boundary from whatever the
+platform currently looks like, which stops being an alert about the
+promise and starts being an alert about today's incident — a weaker,
+self-erasing signal. Option C is the only one of the three that separates
+the two: WARN/ESCALATE fire on the EVENT only (anchored to where normal
+cycles top out, not to the promise or to a rolling number), and the
+CONDITION band gets a non-paging weekly summary instead of either silence
+or a page.
+
+**Detection-delay vs. the dead-man's-switch's own coverage (Y1c):** Option
+C's ~10.5h first-page delay is checked against this repo's worst documented
+real incident (12h+, the event that motivated T9_ESCALATE and the #1351
+self-hosted-runner split) — a genuine improvement, not a regression traded
+for fewer pages. It is also checked against the Tanishq-silence channel's
+own WARN=48h: the two channels must not both be tuned loose in the same
+band, and 10.5h vs. 48h leaves a wide margin between them.
+
+If none of these three page rates is acceptable, the honest fix is
+changing what the page promises users (already done once — see the
+injected-cadence-metric fix, `i18n.js`'s `firstVisitText`/`footerBody`,
+`README.md`'s median-gap marker — both render the real measured cadence
+now, not a fixed "3 hours" claim), not silently raising the alarm threshold
+until it stops firing. The 3h cron itself is a separate, bigger decision
+(would mean admitting the *system*, not just the on-page copy, no longer
+targets 3h) and is left alone here.
+
+---
+
 ## Manual scraper re-run
 
 To re-scrape outside the 6-hour schedule (e.g. after fixing a broken selector):
@@ -224,7 +469,9 @@ expected values in `scraper/test_scrape.js`.
 
 ## Self-hosted runner for the Tanishq scrape (optional)
 
-`scrape-tanishq-selfhosted` in `check-price.yml` runs the exact same `scraper/scrape.js` as
+`scrape-tanishq-selfhosted` in `scrape-tanishq-selfhosted.yml` (its own workflow file since
+audit 2026-09 — previously lived inside `check-price.yml`, see "Why this job has its own
+workflow file" below) runs the exact same `scraper/scrape.js` as
 before, just on a `runs-on: [self-hosted, tanishq-scraper]` runner instead of `ubuntu-latest`
 — Tanishq's WAF blocks GitHub-hosted (datacenter) IPs but not residential ones (confirmed
 2026-07-23). No proxies, IP rotation, fingerprint spoofing, or CAPTCHA solving — same code,
@@ -247,8 +494,8 @@ What's already in our favor, checked 2026-07-23:
 - `default_workflow_permissions: read` — the auto-issued `GITHUB_TOKEN` can't push/write via
   the API even if a workflow did run (doesn't limit host-level shell access, see above).
 - Neither `lint.yml` nor `scraper-canary.yml` (the only two `pull_request`-triggered
-  workflows) reference `self-hosted` today, and this job lives only in `check-price.yml`,
-  which never triggers on `pull_request` at all.
+  workflows) reference `self-hosted` today, and this job lives only in
+  `scrape-tanishq-selfhosted.yml`, which never triggers on `pull_request` at all.
 
 What you must do / verify yourself:
 - **GitHub Settings → Actions → General → Fork pull request workflows from outside
@@ -286,7 +533,7 @@ runner. Nothing else in the pipeline depends on it.
    recognizable (e.g. `gg-home-tanishq`).
 4. **Labels:** when prompted (or via `./config.cmd --labels tanishq-scraper` if not prompted),
    add the custom label `tanishq-scraper` — this is what `runs-on: [self-hosted,
-   tanishq-scraper]` in `check-price.yml` targets. (Per the security section above: this
+   tanishq-scraper]` in `scrape-tanishq-selfhosted.yml` targets. (Per the security section above: this
    scopes *this job* to need that label, it does not stop some other job from targeting the
    runner via a bare `self-hosted` request — the fork-approval setting is what actually
    matters.)
@@ -309,10 +556,7 @@ job that never gets picked up after 24h — not before). Confirmed live: dispatc
 drift → inference → commentary → IBJA → calibration → Chronos probe → notifications → metrics
 → feature_store) ran to completion normally while the self-hosted job stayed queued the entire
 time — confirmed via `Forecast written: Rs.13466...` and `No alerts to send this cycle.` in
-that run's own logs. The two jobs share no `needs:` relationship and no concurrency group,
-specifically so a stuck/offline runner can never delay the next scheduled `check` run either —
-see the comments in `check-price.yml` for the mechanism (a shared concurrency group would have
-queued the *next* `check` run behind that same 24h window).
+that run's own logs.
 
 If you stop the runner mid-travel and forget to restart it for weeks, worst case: Tanishq
 enrichment silently stops landing, and the site keeps serving IBJA-calibrated /
@@ -321,6 +565,32 @@ specifically (T9/T11 alert on IBJA/fusion-tier health, not on "did the optional 
 enrichment run this cycle") — that's a deliberate, honest choice: an idle self-hosted runner
 isn't a system failure, it's just "enrichment currently unavailable," which is already the
 system's normal, expected steady state per ADR 025.
+
+### Why this job has its own workflow file (audit 2026-09)
+
+The "share no `needs:`, no shared concurrency group" design above was NOT sufficient to stop
+this job from delaying `check-price.yml`'s own scheduling — measured, not assumed. Over a
+6.93-day post-#1222 window, 28 of 55 expected `check-price.yml` scheduled ticks (50.9%) created
+no run at all; cross-referencing each missed tick's exact timestamp against the prior run's
+per-job completion times, 14 of those 28 (50.0%) coincided with a PRIOR `check-price.yml` run
+whose `scrape-tanishq-selfhosted` job was still sitting non-completed at that exact moment.
+`timeout-minutes: 25` on that job did **not** bound this — GitHub Actions only starts a job's
+timeout clock once a runner actually picks the job up and starts executing it; a job `queued`
+with no runner available accrues zero timeout-minutes clock time regardless of how long it
+waits (confirmed from the job's own recorded duration distribution: median 5.4min across 30
+runs, but the 8 `cancelled`-conclusion runs — all genuinely stuck in queue, not slow execution
+— ranged 2.31h to 5.94h, 6 of them past the 3h mark). A GitHub Actions workflow **run** stays
+non-`completed` until every one of its jobs finishes, independent of `needs:` or per-job
+`concurrency:` — so co-locating this job in `check-price.yml` meant it could hold that run open
+for hours, and the next scheduled trigger for the same workflow does not reliably fire while a
+prior run of it is still open.
+
+**Fix (`fix/selfhosted-job-cannot-block-schedule`):** this job moved into its own workflow file,
+`scrape-tanishq-selfhosted.yml`, with its own independent 3h cron. `check-price.yml`'s `check`
+job now always completes in minutes and can never again share an open workflow run with this
+job, no matter how long a self-hosted runner outage lasts. The 24h auto-cancel / graceful-
+degradation story above is unchanged in substance — it's now scoped to
+`scrape-tanishq-selfhosted.yml`'s own next tick, not `check-price.yml`'s.
 
 ### Self-hosted runner reliability — the "online but jobs keep failing" gap (T12)
 
@@ -358,6 +628,42 @@ The queued-forever / no-runner case above is **unchanged and still intentionally
 is scoped narrowly to "job started and failed," so a runner you've deliberately paused for travel
 still degrades exactly as documented, with no false alarm.
 
+### Tanishq has not updated — the runner-offline gap (T14)
+
+T12 stays silent when the self-hosted runner is off, asleep or paused (no job starts, so no
+failure is counted). GG decision 4b (2026-09-25) closes that gap on the GitHub side:
+
+- **T14** (`ml/notifications.py::_check_t14_tanishq_silent`) runs in `check-price.yml` on
+  `ubuntu-latest`, so it needs nothing from the self-hosted runner. It reads only
+  `data/prices.json`: the age of the newest **real** Tanishq row (IBJA-derived rows never
+  count), in hours that do **not** fall on a Sunday (IST). It fires at **30 h**, once per IST day,
+  to the OPS topic. Tanishq switched off in `config/retailers.json` means no T14 (a takedown is
+  deliberate silence).
+- **Why 30 h:** every successful visit appends a row even when the rate is unchanged, so the
+  age is "time since the last successful visit". With visits clustered in 10:00–12:30 IST
+  (PR #2078, possibly plus 01:40), the worst legitimate weekday gap is 10:00 → next day
+  12:30 = 26.5 h. Tanishq never changes on a Sunday, so a Sunday may be skipped: Saturday
+  10:00 → Monday 12:30 is 50.5 h on the clock but 26.5 h without Sunday. 30 h = 26.5 h + 3.5 h
+  slack: a normal weekend never alerts, and an outage after a 10:00 visit alerts by 16:00 IST
+  the next working day. A single clock-hour threshold cannot do both (it would have to exceed
+  ~50 h for weekends, leaving a Tuesday outage unseen until Thursday).
+- **What to do:** check the runner host, the recent `scrape-tanishq-selfhosted` runs and the
+  `bot/tanishq-selfhosted-sync` PR, in that order. `check-price.yml` itself is subject to
+  GitHub's cron lateness (median ~2 h, see PR #2078), so T14 lands up to that much after 30 h.
+
+### Public price data after E1 (GG decision 4c)
+
+- `data/ibja_derived_prices.json` — the trend chart's series: `{"timestamp", "22k"}` per IBJA
+  publishing day, 22K = IBJA pm_916 × frozen calibration. Built every `check-price.yml` run by
+  `scripts/build_ibja_derived_prices.py --public-out`; the page labels it as our estimate.
+- `data/prices.json`, once #2075's migration encrypts the raw history, must keep public only the
+  real Tanishq rows "today's change" needs (fields `timestamp`, `22k`, `24k`, `18k`, `source`):
+  every row on the newest reading's IST day plus the last row before that day — at most 7 rows
+  at 6 visits a day. `tests/test_hero_display_state.js` ("public Tanishq set") proves the page's
+  change is identical on that set and on the full history.
+- `data/wait_or_buy_today.json` carries no IBJA level: `price_t`, `range.lo` and `range.hi` are
+  dropped (`price_t = range.lo − range.lo_rs` exactly); page_v2 reads only `horizons.<N>.sentence`.
+
 ### Feature-store rows arriving but not usable — the T10 blind spot (T13)
 
 **Incident, 2026-06-07 to 2026-08-05 (~8 weeks, undetected):** `ml.feature_store.append_snapshot`
@@ -381,7 +687,9 @@ n=113 (93 h1 folds) for the whole window while the raw parquet grew normally und
   only the feature-store join was). The remaining rows were genuine non-trading days (weekends) or
   not-yet-published — correctly excluded, not a bug.
 - **T13** (`ml/notifications.py::_check_t13_usable_snapshot_stall`) fires once per IST day when the
-  most recent *usable* (same-day-IBJA) snapshot is >= 2 calendar days old, independent of T10 —
+  most recent *usable* (same-day-IBJA) snapshot is >= 2 **weekdays** behind (Mon-Fri days since it,
+  today excluded; IBJA publishes nothing on weekends, so calendar days made it fire every Sunday and
+  Monday — fixed 2026-09-21), independent of T10 —
   read via `compute_usable_snapshot_gap_days()`. T10 answers "did a row land"; T13 answers "is the
   dataset actually growing." Neither implies the other.
 
@@ -432,18 +740,88 @@ retired setup, kept for historical reference).
 
 ---
 
-## Dead-man's switch (added 2026-08-28, deploy pending owner action)
+## Dead-man's switch (last redeploy 2026-09-10, verified live same day — AB2, audit 2026-09-10)
 
 A second, unrelated Cloudflare Worker — `gold-rate-tracker-deadman`, on the
 same Cloudflare account the retired worker above ran on — independently
 checks the public site's `data/forecast.json` freshness and alerts to the
-existing ntfy topic at WARN (>=5h stale) / ESCALATE (>=10h stale). Unlike
-every other alert in this project, it does not run inside GitHub Actions,
-so it keeps working if GitHub Actions' own scheduling ever stops firing.
-Code and tests are complete; deployment is a manual owner step (Cloudflare
-resources/secrets can't be created from this session) — see
-[worker-deadman/README.md](../worker-deadman/README.md) for the exact
-deploy procedure and how to confirm it's live.
+existing ntfy topic at WARN / ESCALATE thresholds on `predicted_at` age. See
+"Threshold ladder" above for the decided Option C values. Unlike every other
+alert in this project, it does not run inside GitHub Actions, so it keeps
+working if GitHub Actions' own scheduling ever stops firing. See
+[worker-deadman/README.md](../worker-deadman/README.md) for the deploy
+procedure.
+
+**MASTER IS NOT THE SAME CLAIM AS DEPLOYED — this section is the record of
+the last time someone actually checked, not a standing guarantee.** A code
+change only reaches production on an explicit `wrangler deploy`; the gap
+between master and deployed has previously run 7+ days (2026-08-28 →
+2026-09-04) while every automated metric read healthy. Do not trust a
+threshold number, in this doc or anywhere else, that says "master carries
+X" as a claim about what's live — re-verify with the commands below.
+
+**How to check current deployed state (AB2, verified working 2026-09-10):**
+
+```bash
+cd worker-deadman
+wrangler deployments list          # timestamps of every past deploy
+wrangler versions view <version-id> --json   # bindings + a content etag
+                                              # for the currently active version
+```
+
+Cloudflare's `GET .../workers/scripts/{name}/content` API rejects an
+OAuth-login token with error 10405 ("method not allowed for this auth
+scheme") — confirmed 2026-09-10, needs a legacy API-key credential GG would
+have to provision separately, not available from a `wrangler login` session.
+`wrangler init --from-dash <name>` also does **not** reliably work around
+this: on this session it printed "SUCCESS" and crashed immediately after
+(`Assertion failed: !(handle->flags & UV_HANDLE_CLOSING)`, a Windows-specific
+wrangler/npm crash) and silently fell back to writing the generic
+create-cloudflare placeholder template — inspect the downloaded `src/`
+file's actual content before trusting it came from the dashboard, the
+"SUCCESS" message alone is not evidence. The reliable fallback: run
+`wrangler deploy --dry-run --outdir <dir>` against the local checkout and
+compare its printed `Total Upload: X KiB / gzip: Y KiB` line against the
+real deploy's own logged upload size (`~/.wrangler`'s (or, on this machine,
+`%APPDATA%\xdg.config\.wrangler`'s) `logs/wrangler-<timestamp>.log` for the
+deploy in question) — a byte-size match is corroborating, not conclusive
+(two different threshold values of the same digit-length produce identical
+bundle size), so also read the constants directly out of the dry-run
+`index.js` bundle (`grep -n "_THRESHOLD_HOURS\|_WARN_HOURS\|_ESCALATE_HOURS"
+index.js`) as the actual check.
+
+**Also note:** `wrangler kv key get`/`key list` default to **local**
+simulated storage, not the production namespace, unless you pass `--remote`
+explicitly — this cost a full round of this session's own verification (an
+apparently-empty KV namespace that was actually just the local default,
+confirmed the values were present once `--remote` was added). Always pass
+`--remote` when reading production KV state from the CLI.
+
+**Verified live 2026-09-10** (this session, AB2): `wrangler deployments
+list` shows the most recent deploy at `2026-09-10T08:41:36Z` (version
+`be46ae65...`), run from this machine's own `worker-deadman/` checkout.
+Hitting the Worker's public manual-trigger endpoint
+(`https://gold-rate-tracker-deadman.gg5678g.workers.dev/`) twice returned a
+correctly-computed live classification both times
+(`{"level":"ok","ageHours":4.45,...}`, matching `data/forecast.json`'s real
+age independently re-fetched at the same moment). Production KV (`--remote`)
+holds all three expected keys: `deadman:last_state`
+(`{"level":"ok","lastSentAtMs":...2026-09-05T11:00Z}`),
+`deadman:tanishq_last_state` (`{"level":"ok","lastSentAtMs":...2026-09-08T11:30Z}`),
+and `deadman:last_heartbeat_date_ist` = `2026-09-10` — the heartbeat fired
+today, from the cron (not from this session's manual triggers, which both
+reported `heartbeatSent: false`, i.e. already sent earlier that day).
+**Not yet verified:** the heartbeat repeating across an IST day rollover
+(one write only proves the redeploy took, not that it recurs) — re-check
+`deadman:last_heartbeat_date_ist` after the next IST midnight (~18:30 UTC)
+advances past `2026-09-10`. **Not yet verified:** exact byte-for-byte
+confirmation that the deployed threshold constants equal master's
+`WARN=10h`/`ESCALATE=16h` etc. — the dry-run bundle size (14.82 KiB / gzip
+4.05 KiB) matched the real deploy log's logged upload size exactly, and
+every other behavioral signal above is consistent with the deploy being
+sourced from this exact working tree, but that is strong circumstantial
+evidence, not a content hash match (the API path for a hash match is
+blocked per above).
 
 ---
 

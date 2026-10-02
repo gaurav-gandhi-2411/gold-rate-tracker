@@ -76,3 +76,4 @@ jobs:
           pr-body: "Automated OG image refresh from run ${{ github.run_id }}."
           token: ${{ secrets.CI_MERGE_PAT }}
           wait-minutes: "10"
+          ntfy-topic: ${{ secrets.NTFY_TOPIC }}

@@ -15,6 +15,7 @@ __pycache__/
 .claude/
 .claude/settings.local.json
 data/macro_cache.parquet
+data/macro_intraday.parquet
 data/macro_status.json
 data/notification_state.json
 data/*.pdf
@@ -30,3 +31,5 @@ scraper/spinner-check.mjs
 scraper/visual-audit.mjs
 scraper/*.png
 scripts/screenshot_*.mjs
+# ADR 046 option A: raw Yahoo 1-hour bars used by the premium test (E1: commit only encrypted)
+data/premium_nowcast_bars.json

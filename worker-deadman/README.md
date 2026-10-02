@@ -3,12 +3,63 @@
 Independently checks that the **public** site — `data/forecast.json`, fetched
 from `https://gaurav-gandhi-2411.github.io/gold-rate-tracker/data/forecast.json`,
 never anything under `github.com/.../repos/...` — is fresh, and alerts to the
-existing ntfy topic at **WARN (>=5h stale)** / **ESCALATE (>=10h stale)**.
-It also posts a low-priority **daily heartbeat** so its own silence is
-informative (G4a): without it, no ntfy message could ever distinguish "the
-site is fine" from "the switch itself died" (Cloudflare account issue, quota
-exhaustion, a bad deploy). One heartbeat per IST calendar day, independent of
-whether a WARN/ESCALATE also fired that day.
+existing ntfy topic on TWO independent channels:
+
+1. **Forecast staleness** — `predicted_at` age, **WARN (>=10h)** / **ESCALATE
+   (>=16h)** (Y1, audit 2026-09-05 — the third and current proposal in this
+   PR; see the PR body for all three priced alternatives). Catches "the
+   pipeline stopped running entirely." This is a CONDITION/EVENT split:
+   gaps past the 3h promise but below WARN are a platform-side condition
+   (unfixable from this repo, already disclosed on the page) routed to a
+   non-paging weekly digest (`ml/cadence_digest.py`) instead of paged on
+   directly. The two rejected alternatives both paged directly on the
+   condition band: the original WARN=5h/ESCALATE=10h ladder, and this PR's
+   own first version, WARN=6h/ESCALATE=12h (2x/4x the 3h promise) — both
+   project ~34-39 false pages/month, which is itself the "control that
+   stops reporting" failure this audit exists to find (a muted channel
+   reports nothing). WARN=10h/ESCALATE=16h are instead anchored to the
+   measured gap distribution's own p95/p99 (7.55h/8.12h over 7 days, n=36;
+   8.40h/11.19h over 14 days, n=59) — a level normal cycles do not reach —
+   never to the 3h promise or to a rolling self-updating number (the
+   ratchet risk of the measured-anchored alternative, also rejected). See
+   the constants' own comments in `src/deadman.mjs` for the full derivation
+   and false-alarm arithmetic.
+2. **Tanishq confirmation silence** (Q4, audit 2026-09-03; thresholds
+   recalibrated + corroboration added R2, audit 2026-09-04) — `scraped_at`
+   age (the last SUCCESSFUL Tanishq reading), **WARN (>=48h)** / **ESCALATE
+   (>=72h)**, corroborated by `tanishq_selfhosted_health.json` (also public,
+   same origin, zero new dependency): once past WARN, if that file's own
+   `last_updated_utc` is ALSO stale past 9h (3 missed 3h cycles — meaning
+   the self-hosted job hasn't executed at all, not just failed to scrape),
+   escalates immediately regardless of the 72h wait. Catches a scenario
+   channel 1 structurally cannot: the self-hosted runner dying permanently.
+   `predicted_at` stays fresh forever via the IBJA-calibrated fallback even
+   with Tanishq dead for weeks, T12 (`ml/notifications.py`) only fires when
+   the runner is online and jobs are *failing* (not when it's offline, by
+   design — see `docs/RUNBOOK.md`), and the page itself gives users no
+   indication Tanishq confirmation has stopped (`price_source` stays
+   `"ibja_calibrated"` and renders identically whether Tanishq confirmed 2h
+   ago or 3 weeks ago — see `fix/tier-degradation-visible`). Before this
+   channel existed, a permanent runner failure produced **zero alerts from
+   anything, ever**.
+
+   Thresholds derived from the observed gap distribution between successful
+   Tanishq readings over the last 30 days (n=154 gaps: median 2.93h, p90
+   5.99h, p95 14.21h, p99 29.43h, max 61.31h) against an explicit
+   false-alarm budget of **<=1 false WARN/month**: the original WARN=24h
+   produced ~4 false alarms/month (a muted alert is a non-functioning
+   control) and sat *below* the largest observed normal gap (61.31h, a
+   known/diagnosed transient runner outage, not a failure) — guaranteeing
+   false alarms. WARN=48h and ESCALATE=72h both clear the budget (1/month
+   and 0/month respectively in the same 30-day sample) — see the
+   constants' own comments in `src/deadman.mjs` for the full arithmetic.
+
+It also posts a low-priority **daily heartbeat** — stating BOTH channels'
+current level/age — so its own silence is informative (G4a): without it, no
+ntfy message could ever distinguish "the site is fine" from "the switch
+itself died" (Cloudflare account issue, quota exhaustion, a bad deploy). One
+heartbeat per IST calendar day, independent of whether either channel also
+fired that day.
 
 **Why this exists, and why it's not a GitHub Actions workflow:** every other
 alert in this project (T1–T13 in `ml/notifications.py`, the CI-scheduled
@@ -27,9 +78,15 @@ runs again.
 - `src/index.mjs` — the actual Worker: wires `deadman.mjs` to a real `fetch()`
   of the public site, a KV-backed "last alert sent" state (so a multi-hour
   outage doesn't re-alert every 30 min), and a POST to `ntfy.sh`.
-- `test/deadman.test.mjs` — 26 cases (`node --test`), including a synthetic
+- `test/deadman.test.mjs` — 58 cases (`node --test`), including a synthetic
   stale payload asserting the ESCALATE alert actually fires, dedup-window
-  behavior, and fail-closed handling of an unreachable/unparseable payload.
+  behavior, fail-closed handling of an unreachable/unparseable payload,
+  (Q4) the Tanishq-silence channel's own classification/dedup/alert-copy
+  cases plus the "one fetch failure alerts once, not twice" guard, and
+  (R2c) the health-file corroboration logic in both directions (stale
+  health escalates early; fresh health suppresses escalation and names the
+  scrape-failure hypothesis instead) plus its own fail-closed handling of a
+  missing/unparseable health signal.
   Wired into CI as a lint gate only (`.github/workflows/lint.yml`,
   `pwa-js` job) — this does **not** make the switch's own operation depend
   on GitHub Actions in any way; it only lints the source before deployment.
@@ -41,8 +98,17 @@ Everything below was verified against a live, already-authenticated
 Cloudflare account during this session (`wrangler whoami` →
 `gg5678g@gmail.com`, account ID `65e3c4a67e072063692db52be17bab3d`, same
 account the retired `gold-rate-tanishq-worker` ran on 2026-06-13–2026-06-25
-with zero billing issues). Nothing here has been deployed yet — the code is
-written and tested, not live.
+with zero billing issues).
+
+**STALE (AB1c, audit 2026-09-10): the line below said "nothing here has been
+deployed yet" as of this file's last edit (2026-09-05, PR #1403) — wrong
+even then, the Worker first deployed 2026-08-28. Steps 1–4 below are the
+original first-time setup (KV namespace creation, secret, first
+`wrangler deploy`); if the Worker is already live, skip to step 5 onward, or
+to `wrangler deploy` alone for a code-only redeploy — see docs/RUNBOOK.md's
+"Dead-man's switch" section for the currently-verified deploy state and the
+commands to re-check it, rather than trusting this file's own age.** ~~Nothing
+here has been deployed yet — the code is written and tested, not live.~~
 
 ### 1. Confirm you're logged in as the right account
 
@@ -86,6 +152,56 @@ wrangler secret put NTFY_TOPIC
 
 Paste your topic value when prompted (no echo).
 
+### 4a. (AI2, added 2026-09-11/12) Set the PR-trigger-health GitHub PAT
+
+Only needed once, and only for the PR-trigger-health channel
+(`src/pr_trigger_health.mjs`) — every other channel in this Worker has zero
+GitHub API dependency and does not need this. Mint a **fine-grained PAT**
+scoped to this repo only, with exactly three read-only repository
+permissions: **Pull requests: Read**, **Contents: Read**, **Checks: Read**.
+Nothing broader — this channel never writes anything and never reads file
+contents beyond a single commit's own metadata.
+
+```
+wrangler secret put GITHUB_PR_HEALTH_PAT
+```
+
+Paste the PAT when prompted (no echo). If this secret is never set, the
+channel is simply skipped (logged as absent, not paged about) — every other
+channel in this Worker keeps working exactly as before either way.
+
+### 4c. (S2, added 2026-09-23) Set the manual-trigger token — REQUIRED, closes a public exposure
+
+Before this, the Worker's `*.workers.dev` URL ran the **full check** for ANY
+HTTP request — no auth. On a public repo that URL is discoverable (it's
+printed in `wrangler deploy` output and referenced in this file's git
+history), so anyone could spend `GITHUB_PR_HEALTH_PAT`'s real GitHub API
+quota (up to ~2N+2 calls per hit) and read back internal operational state.
+`fetch()` now fails closed: if this secret isn't set, **every** request gets
+401, including ones that supply a token.
+
+```
+wrangler secret put TRIGGER_TOKEN
+```
+
+Paste a long random value (e.g. `openssl rand -hex 32`) when prompted — this
+is a bearer credential, treat it exactly like the other secrets on this page.
+It is NOT the same value as `NTFY_TOPIC` or `GITHUB_PR_HEALTH_PAT`.
+
+### 4b. (AL3a, added 2026-09-21) The merged-unchecked scan — no new secret
+
+The scan that pages when a PR **merges** with no `lint`/`pwa-js` check-run on its head SHA
+reuses the `GITHUB_PR_HEALTH_PAT` from step 4a (list closed PRs = *Pull requests: Read*,
+check-runs = *Checks: Read*) — nothing new to mint. It runs on the same */30 cron. Window:
+PRs merged 10–180 min ago (`MERGED_SETTLE_MINUTES` / `MERGED_LOOKBACK_MINUTES` in
+`src/pr_trigger_health.mjs`), one page per PR number, ever.
+
+After deploying, confirm the deployed bundle has it — GET the Worker's URL with `?token=<TRIGGER_TOKEN>`
+(step 4c) and read the **full body** (in PowerShell: `(Invoke-WebRequest "<url>?token=<TRIGGER_TOKEN>" -UseBasicParsing).Content`;
+the default table view truncates it). Expect `mergedUncheckedSent`, `mergedUncheckedCount`, and
+under `thresholds`: `mergedSettleMinutes: 10`, `mergedLookbackMinutes: 180`. A body without those
+keys means the old bundle is still running.
+
 ### 5. Deploy
 
 ```
@@ -95,36 +211,103 @@ wrangler deploy
 Expect output ending in a `https://gold-rate-tracker-deadman.<your-subdomain>.workers.dev`
 URL and a `Cron Trigger` line showing `*/30 * * * *`.
 
-### 6. Confirm it's live
+### 6. Confirm it's deployed (not yet proof it's live — see step 8)
 
 Two independent checks — do both:
 
-**a. Manual on-demand trigger.** The Worker also responds to a plain HTTP
-GET (separate from the cron path, for exactly this purpose). Visit the
-`*.workers.dev` URL printed in step 5, or:
+**a. Manual on-demand trigger.** The Worker also responds to an authenticated
+HTTP GET (separate from the cron path, for exactly this purpose) — it needs
+the `token` query param from step 4c or every request gets 401. Visit
+`<*.workers.dev URL printed by step 5>?token=<TRIGGER_TOKEN>`, or:
 
+```powershell
+# PowerShell: `curl` is an alias for Invoke-WebRequest here, NOT the real curl.exe -- without
+# -UseBasicParsing it tries to parse the response through IE's engine and shows a script-execution
+# security prompt on a fresh Windows install. Always pass it explicitly against this Worker.
+(Invoke-WebRequest "https://gold-rate-tracker-deadman.<your-subdomain>.workers.dev?token=<TRIGGER_TOKEN>" -UseBasicParsing).Content
 ```
-curl https://gold-rate-tracker-deadman.<your-subdomain>.workers.dev
+
+```bash
+# bash / real curl.exe
+curl "https://gold-rate-tracker-deadman.<your-subdomain>.workers.dev?token=<TRIGGER_TOKEN>"
 ```
 
 Expect a JSON body like `{"level":"ok","ageHours":1.2,"sent":false}` (or
 `"warn"`/`"escalate"` if the real site happens to be stale right now — if
 so, you should also receive a real ntfy notification within a few seconds).
+A non-200 response or a body missing `level`/`ageHours` means step 5 did
+not actually produce a working deployment — stop and re-check step 5's
+output before continuing.
 
-**b. Cron actually firing.** In the Cloudflare dashboard: **Workers &
-Pages → gold-rate-tracker-deadman → Triggers** tab, confirm the Cron
-Trigger `*/30 * * * *` is listed and enabled. After waiting up to 30
-minutes, **Logs** (or `wrangler tail` run locally) should show an
-invocation with `"source":"cron"` in the trace.
+**b. Cron registered.** In the Cloudflare dashboard, go to:
+`https://dash.cloudflare.com/<account-id>/workers/services/view/gold-rate-tracker-deadman/production/triggers`
+(replace `<account-id>` with `65e3c4a67e072063692db52be17bab3d`, the
+account confirmed in step 1) — the **Triggers** tab. Confirm a Cron Trigger
+row reads `*/30 * * * *` and its toggle is on/enabled. This confirms the
+trigger is *registered*, not that it has *fired* — that's step 8b.
 
-### 7. (Optional but recommended) Force a real end-to-end alert test
+### 7. Set up log visibility before you need it
 
-To see a real ntfy notification arrive without waiting for an actual
-outage: temporarily lower `WARN_THRESHOLD_HOURS`/`ESCALATE_THRESHOLD_HOURS`
-in `src/deadman.mjs` to something below the site's current real age (e.g.
-`0` / `0.01`), `wrangler deploy`, hit the `.workers.dev` URL once (step 6a),
-confirm the ntfy notification arrives, then **revert the thresholds back to
-5/10 and redeploy**. Do not leave the lowered thresholds live.
+Dashboard: `https://dash.cloudflare.com/<account-id>/workers/services/view/gold-rate-tracker-deadman/production/observability/logs`
+(**Workers & Pages → gold-rate-tracker-deadman → Logs** tab). Leave this
+tab open, or in a second terminal run:
+
+```
+wrangler tail gold-rate-tracker-deadman
+```
+
+Either surface will show you a live invocation the moment one happens —
+you need this open *before* step 8b, not after, since Cloudflare Logs only
+capture invocations from the moment observability is first queried onward
+in some dashboard views (`wrangler tail` always captures from when you
+start it).
+
+### 8. Mandatory: prove the Worker is genuinely live, not just deployed
+
+A successful `wrangler deploy` (step 5) and a green curl (step 6a) only
+prove the code runs when *you* invoke it by hand. Neither proves the cron
+trigger fires unattended, and neither proves an alert actually reaches
+ntfy end-to-end. Do both of the following before considering this
+deployment done — do not skip on the assumption steps 5–6 were enough.
+
+**a. Force a real ESCALATE alert (proves the alert path end-to-end).**
+
+1. In `worker-deadman/src/deadman.mjs`, temporarily change:
+   ```
+   export const WARN_THRESHOLD_HOURS = 10;
+   export const ESCALATE_THRESHOLD_HOURS = 16;
+   ```
+   to `0` and `0.01` respectively.
+2. `wrangler deploy`
+3. Hit the `.workers.dev` URL once (same command as step 6a).
+4. Confirm within a few seconds:
+   - the curl response body shows `"level":"escalate"`
+   - a real ntfy notification arrives on your phone/client for the topic
+     set in step 4, titled "Gold Tracker: dead-man's switch ESCALATE"
+5. **Revert** the two threshold values back to `10` and `16` in
+   `src/deadman.mjs`.
+6. `wrangler deploy` again. Re-run step 6a's curl and confirm `"level"`
+   has returned to `"ok"` (or `"warn"`, matching the site's real current
+   age — never `"escalate"` unless the site is genuinely stale). Do not
+   leave the lowered thresholds live even briefly longer than needed to
+   see the ntfy alert land.
+
+**b. Confirm the cron fires unattended (proves the Worker survives without
+being manually poked).**
+
+With step 7's log view already open, wait up to 30 minutes (the cron
+interval) without touching the Worker. Confirm a new invocation appears
+in Logs / `wrangler tail` with a trigger source of `cron` (not `fetch`/
+on-demand). If 30 minutes pass with zero cron-triggered invocations, the
+Trigger shown in step 6b is registered but not actually firing — treat
+that as undeployed and escalate rather than assuming it will start later.
+
+Both 8a and 8b must pass. 8a alone proves the alert *logic and delivery*
+work; 8b alone proves the *scheduler* works. Neither implies the other —
+this repo's own history is a scheduled-trigger silently not firing while
+everything else about the workflow looked healthy (`docs/RUNBOOK.md`,
+2026-08-27 and 2026-09-03 incidents), so do not accept "the Trigger is
+listed in the dashboard" as proof it will actually fire.
 
 ## What this does NOT do
 

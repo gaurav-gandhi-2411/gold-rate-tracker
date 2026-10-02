@@ -81,6 +81,17 @@ def test_empty_pm_916_column_raises(tmp_path):
         fetch_ibja_calibrated(data_dir=tmp_path)
 
 
+def test_implausible_date_raises_structure_error(tmp_path):
+    # Same corruption class as Kalyan/Malabar (see ml.sources.kalyan,
+    # ml.sources.malabar): a valid-looking but implausible date (e.g. an
+    # epoch placeholder from an upstream data issue) must fail closed rather
+    # than being silently stored as a corrupt observed_at.
+    _write_calibration(tmp_path)
+    _write_ibja_parquet(tmp_path, date="1970-01-01")
+    with pytest.raises(SourceStructureError, match="implausible observed_at"):
+        fetch_ibja_calibrated(data_dir=tmp_path)
+
+
 def test_latest_row_by_date_used(tmp_path):
     _write_calibration(tmp_path, slope=1.0, intercept=0.0)
     df = pd.DataFrame(

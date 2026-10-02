@@ -3,34 +3,15 @@ import assert from "node:assert/strict";
 
 // ── Inline the functions under test (no module system in app.js) ──────────────
 
-function dedupReadings(readings) {
-  if (readings.length === 0) return [];
-  const groups = [];
-  let g = { reading: readings[0], endTimestamp: readings[0].timestamp, count: 1 };
-  for (let i = 1; i < readings.length; i++) {
-    if (readings[i]["22k"] === g.reading["22k"]) {
-      g.endTimestamp = readings[i].timestamp;
-      g.count++;
-    } else {
-      groups.push(g);
-      g = { reading: readings[i], endTimestamp: readings[i].timestamp, count: 1 };
-    }
-  }
-  groups.push(g);
-  return groups;
-}
+import { loadApp } from "./helpers/load_app.js";
+
+// Real app.js, not a copy: see tests/helpers/load_app.js.
+const app = loadApp();
+const dedupReadings = app.pure("dedupReadings");
+const dedupeByISTDay = app.pure("dedupeByISTDay");
 
 // dedupeByISTDay: one reading per IST calendar day, latest timestamp wins.
 // renderChart calls this to produce one chart point per day.
-function dedupeByISTDay(readings) {
-  const byDay = new Map();
-  for (const r of readings) {
-    const key = new Date(r.timestamp).toLocaleDateString("en-IN", { timeZone: "Asia/Kolkata" });
-    byDay.set(key, r);
-  }
-  return [...byDay.values()];
-}
-
 // ── dedupReadings tests ───────────────────────────────────────────────────────
 
 const r = (price, ts) => ({ "22k": price, "24k": price * 1.1, "18k": price * 0.8, timestamp: ts });

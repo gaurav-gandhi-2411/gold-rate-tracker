@@ -35,7 +35,7 @@ def run_backfill(
     store_path : Path | None
         Path to feature store parquet. Defaults to STORE_PATH from feature_store.
     duty_events_path : Path | None
-        Path to duty_events.json. Defaults to data/duty_events.json.
+        Path to duty_cbic.json. Defaults to data/duty_cbic.json.
     start_date : str
         Earliest date to backfill (ISO, inclusive). Default '2025-01-01'.
     macro_df : pd.DataFrame | None
@@ -48,16 +48,13 @@ def run_backfill(
     int
         Number of new rows written to the store (0 if all dates already present).
     """
-    import json
-
+    from ml.duty_schedule import DUTY_TABLE_PATH, duty_change_proximity, get_duty_change_dates
     from ml.feature_store import _MACRO_SERIES, SCHEMA_VERSION, append_snapshot, load_snapshots
     from ml.feature_store import STORE_PATH as _DEFAULT_STORE_PATH
 
     _store_path: Path = store_path or _DEFAULT_STORE_PATH
     _ibja_path: Path = ibja_path or (Path(__file__).parent.parent / "data" / "ibja_rates.parquet")
-    _duty_path: Path = duty_events_path or (
-        Path(__file__).parent.parent / "data" / "duty_events.json"
-    )
+    _duty_path: Path = duty_events_path or DUTY_TABLE_PATH
 
     # ------------------------------------------------------------------
     # 1. Load existing store; extract set of dates already present
@@ -111,17 +108,16 @@ def run_backfill(
             logger.warning("run_backfill: macro load failed (%s) — partial mode", exc)
 
     # ------------------------------------------------------------------
-    # 4. Load duty events
+    # 4. Load duty change dates (data/duty_cbic.json — see ml.duty_schedule)
     # ------------------------------------------------------------------
-    duty_events: list[dict] = []
+    duty_change_dates: list[str] = []
     try:
         if _duty_path.exists():
-            with _duty_path.open("r", encoding="utf-8") as fh:
-                duty_events = json.load(fh)
+            duty_change_dates = get_duty_change_dates(_duty_path)
         else:
-            logger.warning("run_backfill: duty_events.json not found at %s", _duty_path)
+            logger.warning("run_backfill: duty_cbic.json not found at %s", _duty_path)
     except Exception as exc:
-        logger.warning("run_backfill: duty_events.json load failed — %s", exc)
+        logger.warning("run_backfill: duty_cbic.json load failed — %s", exc)
 
     # ------------------------------------------------------------------
     # 5. Backfill loop
@@ -198,13 +194,9 @@ def run_backfill(
         duty_change_active: bool = False
         days_since_last_duty_change: int = 9999
         try:
-            past_events = [e for e in duty_events if e.get("date", "") <= d]
-            if past_events:
-                latest_event = max(past_events, key=lambda e: e["date"])
-                event_date_obj = _date.fromisoformat(latest_event["date"])
-                days_delta = (d_obj - event_date_obj).days
-                days_since_last_duty_change = days_delta
-                duty_change_active = days_delta <= 30
+            duty_change_active, days_since_last_duty_change = duty_change_proximity(
+                d_obj, duty_change_dates
+            )
         except Exception as exc:
             logger.warning("run_backfill: duty compute failed for %s — %s", d, exc)
 

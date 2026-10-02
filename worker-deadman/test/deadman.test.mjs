@@ -3,15 +3,28 @@ import assert from "node:assert/strict";
 import {
   classifyStaleness,
   classifyFetchFailure,
+  classifyTanishqSilence,
   buildAlert,
+  buildTanishqAlert,
   decideAction,
+  decideTanishqAction,
   istDateString,
   shouldSendHeartbeat,
   buildHeartbeatAlert,
   WARN_THRESHOLD_HOURS,
   ESCALATE_THRESHOLD_HOURS,
+  TANISHQ_WARN_HOURS,
+  TANISHQ_ESCALATE_HOURS,
+  RUNNER_CONFIRMED_OFFLINE_HOURS,
 } from "../src/deadman.mjs";
-import { runCheck } from "../src/index.mjs";
+import { runCheck, safeTokenMatch } from "../src/index.mjs";
+import worker from "../src/index.mjs";
+import {
+  PR_TRIGGER_STALE_MINUTES,
+  MERGED_SETTLE_MINUTES,
+  MERGED_LOOKBACK_MINUTES,
+  REQUIRED_CONTEXTS,
+} from "../src/pr_trigger_health.mjs";
 
 const HOUR = 3_600_000;
 const NOW = Date.parse("2026-08-28T04:00:00Z");
@@ -164,14 +177,15 @@ function fakeKv(initial) {
   };
 }
 
-test("runCheck: stale payload (11h old) fires an ESCALATE ntfy POST with the right topic/priority", async () => {
-  const staleIso = isoHoursAgo(11);
+test("runCheck: stale payload (past ESCALATE_THRESHOLD_HOURS) fires an ESCALATE ntfy POST with the right topic/priority", async () => {
+  const staleHours = ESCALATE_THRESHOLD_HOURS + 1;
+  const staleIso = isoHoursAgo(staleHours);
   const ntfyCalls = [];
   const fetchImpl = async (url, opts) => {
     if (url.includes("forecast.json")) {
       return {
         ok: true,
-        json: async () => ({ predicted_at: staleIso }),
+        json: async () => ({ predicted_at: staleIso, scraped_at: isoHoursAgo(0.5) }),
       };
     }
     if (url.startsWith("https://ntfy.sh/")) {
@@ -191,13 +205,13 @@ test("runCheck: stale payload (11h old) fires an ESCALATE ntfy POST with the rig
   const escalateCall = ntfyCalls.find((c) => c.opts.headers.Priority === "5");
   assert.ok(escalateCall, "expected one ntfy call with Priority 5 (ESCALATE)");
   assert.equal(escalateCall.url, "https://ntfy.sh/test-gold-topic");
-  assert.match(escalateCall.opts.body, /11\.0h/);
+  assert.match(escalateCall.opts.body, new RegExp(`${staleHours}\\.0h`));
 });
 
 test("runCheck: fresh payload sends no staleness alert (heartbeat is separate -- see G4a tests)", async () => {
   const fetchImpl = async (url) => {
     if (url.includes("forecast.json")) {
-      return { ok: true, json: async () => ({ predicted_at: isoHoursAgo(0.5) }) };
+      return { ok: true, json: async () => ({ predicted_at: isoHoursAgo(0.5), scraped_at: isoHoursAgo(0.5) }) };
     }
     return { ok: true }; // heartbeat still fires on the first run of the day (G4a)
   };
@@ -207,12 +221,92 @@ test("runCheck: fresh payload sends no staleness alert (heartbeat is separate --
   assert.equal(result.sent, false);
 });
 
+// AC3 (audit 2026-09-10): the manual-trigger endpoint's response must be a
+// LIVE echo of deadman.mjs's real exported constants, not a hardcoded
+// literal that happens to match today -- otherwise a self-report that
+// echoes a fixed string is exactly instance #14 of the defect class this
+// whole audit exists to catch (a control emitting a plausible value
+// instead of actually verifying anything). Two things are checked, not
+// one: (1) the reported numbers equal the imported constants (below), and
+// (2) those same reported numbers are the ones actually driving
+// classification behavior in the SAME call, not a cosmetic second copy
+// (next test) -- JS `export const` bindings can't be monkey-patched from
+// a test importing the real module, so "would visibly differ if master's
+// changed" is proven by tying the reported value to observed behavior
+// instead of by mutating the constant.
+test("runCheck: response echoes the real threshold constants from deadman.mjs, not a hardcoded copy", async () => {
+  const fetchImpl = async (url) => {
+    if (url.includes("forecast.json")) {
+      return { ok: true, json: async () => ({ predicted_at: isoHoursAgo(0.5), scraped_at: isoHoursAgo(0.5) }) };
+    }
+    return { ok: true };
+  };
+  const env = { NTFY_TOPIC: "test-gold-topic", DEADMAN_STATE: fakeKv() };
+  const result = await runCheck(env, fetchImpl, NOW);
+  assert.deepEqual(result.thresholds, {
+    warnHours: WARN_THRESHOLD_HOURS,
+    escalateHours: ESCALATE_THRESHOLD_HOURS,
+    tanishqWarnHours: TANISHQ_WARN_HOURS,
+    tanishqEscalateHours: TANISHQ_ESCALATE_HOURS,
+    runnerConfirmedOfflineHours: RUNNER_CONFIRMED_OFFLINE_HOURS,
+    prTriggerStaleMinutes: PR_TRIGGER_STALE_MINUTES,
+    mergedSettleMinutes: MERGED_SETTLE_MINUTES,
+    mergedLookbackMinutes: MERGED_LOOKBACK_MINUTES,
+    requiredContexts: REQUIRED_CONTEXTS,
+  });
+});
+
+test("runCheck: the reported warnHours is the actual operative boundary, not just a cosmetic echo", async () => {
+  // Age the payload to exactly the reported warnHours minus a hair (still
+  // "ok"), then exactly at it (must flip to "warn") -- proving the number
+  // in result.thresholds.warnHours is the same number classifyStaleness
+  // actually used to decide result.level in that same call. If
+  // `thresholds` were ever hardcoded independently of the real constant,
+  // this pairing could silently drift while the deepEqual test above still
+  // passed (both sides copy-pasted the same wrong literal).
+  const belowFetch = async (url) => {
+    if (url.includes("forecast.json")) {
+      return {
+        ok: true,
+        json: async () => ({
+          predicted_at: isoHoursAgo(WARN_THRESHOLD_HOURS - 0.01),
+          scraped_at: isoHoursAgo(0.5),
+        }),
+      };
+    }
+    return { ok: true };
+  };
+  const belowResult = await runCheck(
+    { NTFY_TOPIC: "test-gold-topic", DEADMAN_STATE: fakeKv() },
+    belowFetch,
+    NOW,
+  );
+  assert.equal(belowResult.level, "ok");
+  assert.equal(belowResult.thresholds.warnHours, WARN_THRESHOLD_HOURS);
+
+  const atFetch = async (url) => {
+    if (url.includes("forecast.json")) {
+      return {
+        ok: true,
+        json: async () => ({
+          predicted_at: isoHoursAgo(WARN_THRESHOLD_HOURS),
+          scraped_at: isoHoursAgo(0.5),
+        }),
+      };
+    }
+    return { ok: true };
+  };
+  const atResult = await runCheck({ NTFY_TOPIC: "test-gold-topic", DEADMAN_STATE: fakeKv() }, atFetch, NOW);
+  assert.equal(atResult.level, "warn");
+  assert.equal(atResult.thresholds.warnHours, WARN_THRESHOLD_HOURS);
+});
+
 test("runCheck: repeated ESCALATE runs inside the reminder window only alert once", async () => {
-  const staleIso = isoHoursAgo(11);
+  const staleIso = isoHoursAgo(ESCALATE_THRESHOLD_HOURS + 1);
   let ntfyCount = 0;
   const fetchImpl = async (url) => {
     if (url.includes("forecast.json")) {
-      return { ok: true, json: async () => ({ predicted_at: staleIso }) };
+      return { ok: true, json: async () => ({ predicted_at: staleIso, scraped_at: isoHoursAgo(0.5) }) };
     }
     ntfyCount += 1;
     return { ok: true };
@@ -256,7 +350,13 @@ test("runCheck: missing NTFY_TOPIC skips cleanly instead of throwing", async () 
 test("runCheck: corrupt KV state does not crash, treated as first run", async () => {
   const fetchImpl = async (url) => {
     if (url.includes("forecast.json")) {
-      return { ok: true, json: async () => ({ predicted_at: isoHoursAgo(11) }) };
+      return {
+        ok: true,
+        json: async () => ({
+          predicted_at: isoHoursAgo(ESCALATE_THRESHOLD_HOURS + 1),
+          scraped_at: isoHoursAgo(0.5),
+        }),
+      };
     }
     return { ok: true };
   };
@@ -304,7 +404,7 @@ test("runCheck: sends a heartbeat on first run of the day, independent of stalen
   const ntfyCalls = [];
   const fetchImpl = async (url) => {
     if (url.includes("forecast.json")) {
-      return { ok: true, json: async () => ({ predicted_at: isoHoursAgo(0.5) }) }; // fresh -- no staleness alert
+      return { ok: true, json: async () => ({ predicted_at: isoHoursAgo(0.5), scraped_at: isoHoursAgo(0.5) }) }; // fresh -- no staleness alert
     }
     ntfyCalls.push(url);
     return { ok: true };
@@ -321,7 +421,7 @@ test("runCheck: does not re-send the heartbeat twice on the same IST day", async
   let ntfyCount = 0;
   const fetchImpl = async (url) => {
     if (url.includes("forecast.json")) {
-      return { ok: true, json: async () => ({ predicted_at: isoHoursAgo(0.5) }) };
+      return { ok: true, json: async () => ({ predicted_at: isoHoursAgo(0.5), scraped_at: isoHoursAgo(0.5) }) };
     }
     ntfyCount += 1;
     return { ok: true };
@@ -338,7 +438,13 @@ test("runCheck: heartbeat and a real ESCALATE alert can both fire in the same ru
   const priorities = [];
   const fetchImpl = async (url, opts) => {
     if (url.includes("forecast.json")) {
-      return { ok: true, json: async () => ({ predicted_at: isoHoursAgo(11) }) };
+      return {
+        ok: true,
+        json: async () => ({
+          predicted_at: isoHoursAgo(ESCALATE_THRESHOLD_HOURS + 1),
+          scraped_at: isoHoursAgo(0.5),
+        }),
+      };
     }
     ntfyCount += 1;
     priorities.push(opts.headers.Priority);
@@ -352,4 +458,473 @@ test("runCheck: heartbeat and a real ESCALATE alert can both fire in the same ru
   assert.equal(ntfyCount, 2);
   assert.ok(priorities.includes("5")); // ESCALATE
   assert.ok(priorities.includes("1")); // heartbeat
+});
+
+// --- Q4 (audit 2026-09-03): Tanishq-silence channel ---
+
+test("classifyTanishqSilence: fresh scraped_at is ok", () => {
+  const r = classifyTanishqSilence(isoHoursAgo(1), NOW);
+  assert.equal(r.level, "ok");
+});
+
+test("classifyTanishqSilence: exactly at WARN threshold is warn", () => {
+  const r = classifyTanishqSilence(isoHoursAgo(TANISHQ_WARN_HOURS), NOW);
+  assert.equal(r.level, "warn");
+});
+
+test("classifyTanishqSilence: just under WARN threshold is ok", () => {
+  const r = classifyTanishqSilence(isoHoursAgo(TANISHQ_WARN_HOURS - 0.01), NOW);
+  assert.equal(r.level, "ok");
+});
+
+test("classifyTanishqSilence: exactly at ESCALATE threshold is escalate", () => {
+  const r = classifyTanishqSilence(isoHoursAgo(TANISHQ_ESCALATE_HOURS), NOW);
+  assert.equal(r.level, "escalate");
+});
+
+test("classifyTanishqSilence: missing scraped_at is unverifiable, not ok", () => {
+  const r = classifyTanishqSilence(undefined, NOW);
+  assert.equal(r.level, "unverifiable");
+});
+
+test("classifyTanishqSilence: unparseable scraped_at is unverifiable, not ok", () => {
+  const r = classifyTanishqSilence("not-a-date", NOW);
+  assert.equal(r.level, "unverifiable");
+});
+
+// --- R2c (audit 2026-09-04): health-file corroboration ---
+
+test("classifyTanishqSilence: WARN-range gap + stale health file escalates immediately (corroborated)", () => {
+  const scrapedAt = isoHoursAgo(TANISHQ_WARN_HOURS + 1); // in WARN range, well under ESCALATE
+  const staleHealth = isoHoursAgo(RUNNER_CONFIRMED_OFFLINE_HOURS + 1);
+  const r = classifyTanishqSilence(scrapedAt, NOW, staleHealth);
+  assert.equal(r.level, "escalate");
+  assert.match(r.reason, /corroborated/);
+});
+
+test("classifyTanishqSilence: WARN-range gap + FRESH health file stays warn, not escalate", () => {
+  const scrapedAt = isoHoursAgo(TANISHQ_WARN_HOURS + 1);
+  const freshHealth = isoHoursAgo(RUNNER_CONFIRMED_OFFLINE_HOURS - 1);
+  const r = classifyTanishqSilence(scrapedAt, NOW, freshHealth);
+  assert.equal(r.level, "warn");
+  assert.equal(r.reason, "health-fresh");
+});
+
+test("classifyTanishqSilence: missing health signal does not escalate early -- falls back to plain thresholds", () => {
+  const scrapedAt = isoHoursAgo(TANISHQ_WARN_HOURS + 1);
+  const r = classifyTanishqSilence(scrapedAt, NOW, null);
+  assert.equal(r.level, "warn"); // plain threshold result, unaffected by absent corroboration
+  assert.equal(r.reason, null);
+});
+
+test("classifyTanishqSilence: unparseable health signal does not escalate early or crash", () => {
+  const scrapedAt = isoHoursAgo(TANISHQ_WARN_HOURS + 1);
+  const r = classifyTanishqSilence(scrapedAt, NOW, "not-a-date");
+  assert.equal(r.level, "warn");
+  assert.equal(r.reason, null);
+});
+
+test("classifyTanishqSilence: health corroboration is not consulted when scraped_at is still fresh (no wasted work)", () => {
+  const r = classifyTanishqSilence(isoHoursAgo(1), NOW, isoHoursAgo(100)); // health stale, but scraped_at fresh
+  assert.equal(r.level, "ok");
+});
+
+test("buildTanishqAlert: escalate corroborated by health file states so explicitly", () => {
+  const a = buildTanishqAlert(
+    "escalate",
+    50,
+    "corroborated: tanishq_selfhosted_health.json also stale (12.0h) -- nothing has run, not just failed",
+  );
+  assert.match(a.body, /corroborated/);
+});
+
+test("buildTanishqAlert: warn with confirmed-fresh health names the scrape-failure hypothesis", () => {
+  const a = buildTanishqAlert("warn", 50, "health-fresh");
+  assert.match(a.body, /still shows the job itself executing/);
+});
+
+test("buildTanishqAlert: warn with no health signal does not claim the job is fine", () => {
+  const a = buildTanishqAlert("warn", 50, null);
+  assert.doesNotMatch(a.body, /still shows the job itself executing/);
+  assert.match(a.body, /[Cc]ould not confirm/);
+});
+
+test("runCheck: fetches the health file only once scraped_at is already in WARN range", async () => {
+  let healthFetched = false;
+  const fetchImpl = async (url) => {
+    if (url.includes("forecast.json")) {
+      return { ok: true, json: async () => ({ predicted_at: isoHoursAgo(0.2), scraped_at: isoHoursAgo(1) }) };
+    }
+    if (url.includes("tanishq_selfhosted_health.json")) {
+      healthFetched = true;
+      return { ok: true, json: async () => ({ last_updated_utc: isoHoursAgo(1) }) };
+    }
+    return { ok: true };
+  };
+  const env = { NTFY_TOPIC: "test-gold-topic", DEADMAN_STATE: fakeKv() };
+  await runCheck(env, fetchImpl, NOW);
+  assert.equal(healthFetched, false); // scraped_at fresh -- no reason to spend the request
+});
+
+test("runCheck: corroborated offline escalates even though scraped_at alone would still be WARN", async () => {
+  const ntfyBodies = [];
+  const fetchImpl = async (url, opts) => {
+    if (url.includes("forecast.json")) {
+      return {
+        ok: true,
+        json: async () => ({
+          predicted_at: isoHoursAgo(0.2),
+          scraped_at: isoHoursAgo(TANISHQ_WARN_HOURS + 2), // WARN range, NOT past ESCALATE (72h) alone
+        }),
+      };
+    }
+    if (url.includes("tanishq_selfhosted_health.json")) {
+      return { ok: true, json: async () => ({ last_updated_utc: isoHoursAgo(RUNNER_CONFIRMED_OFFLINE_HOURS + 1) }) };
+    }
+    ntfyBodies.push(opts.body);
+    return { ok: true };
+  };
+  const env = { NTFY_TOPIC: "test-gold-topic", DEADMAN_STATE: fakeKv() };
+  const result = await runCheck(env, fetchImpl, NOW);
+  assert.equal(result.tanishqLevel, "escalate");
+  assert.ok(ntfyBodies.some((b) => b.includes("corroborated")));
+});
+
+test("buildTanishqAlert: escalate names the runner as the likely cause", () => {
+  const a = buildTanishqAlert("escalate", 80, null);
+  assert.equal(a.priority, 5);
+  assert.match(a.body, /80\.0h/);
+  assert.match(a.body, /self-hosted runner/);
+});
+
+test("buildTanishqAlert: warn is lower priority than the forecast-staleness WARN (4)", () => {
+  const a = buildTanishqAlert("warn", 30, null);
+  assert.equal(a.priority, 3);
+});
+
+test("buildTanishqAlert: ok returns null", () => {
+  assert.equal(buildTanishqAlert("ok", 1, null), null);
+});
+
+test("decideTanishqAction: first-ever run already past ESCALATE sends immediately", () => {
+  const { send, alert, nextState } = decideTanishqAction(
+    { level: "escalate", ageHours: 80, reason: null },
+    null,
+    NOW,
+  );
+  assert.equal(send, true);
+  assert.equal(alert.priority, 5);
+  assert.equal(nextState.level, "escalate");
+});
+
+test("decideTanishqAction: recovering to ok sends a distinct (non-forecast) recovery notice", () => {
+  const prev = { level: "escalate", lastSentAtMs: NOW - 2 * HOUR };
+  const { send, alert } = decideTanishqAction({ level: "ok", ageHours: 0.5, reason: null }, prev, NOW);
+  assert.equal(send, true);
+  assert.match(alert.title, /Tanishq confirmation resumed/);
+});
+
+test("runCheck: scraped_at far in the past fires a Tanishq-silence alert, independent of a fresh predicted_at", () => {
+  const ntfyBodies = [];
+  const fetchImpl = async (url, opts) => {
+    if (url.includes("forecast.json")) {
+      // predicted_at fresh (IBJA-calibrated fallback keeping it alive) --
+      // exactly the scenario Q4 exists for: forecast looks fine, Tanishq
+      // confirmation has actually been silent for days.
+      return {
+        ok: true,
+        json: async () => ({ predicted_at: isoHoursAgo(0.2), scraped_at: isoHoursAgo(100) }),
+      };
+    }
+    if (url.includes("tanishq_selfhosted_health.json")) {
+      return { ok: false, status: 404 }; // unavailable -- 100h already clears plain ESCALATE (72h) regardless
+    }
+    ntfyBodies.push(opts.body);
+    return { ok: true };
+  };
+  const env = { NTFY_TOPIC: "test-gold-topic", DEADMAN_STATE: fakeKv() };
+  return runCheck(env, fetchImpl, NOW).then((result) => {
+    assert.equal(result.level, "ok"); // forecast-staleness channel: fine
+    assert.equal(result.sent, false);
+    assert.equal(result.tanishqLevel, "escalate"); // Tanishq channel: not fine
+    assert.equal(result.tanishqSent, true);
+    assert.ok(ntfyBodies.some((b) => b.includes("Tanishq")));
+  });
+});
+
+test("runCheck: a single fetch failure does not double-alert (one root cause, one alert)", async () => {
+  let ntfyCount = 0;
+  const fetchImpl = async (url) => {
+    if (url.includes("forecast.json")) {
+      return {
+        ok: false,
+        status: 503,
+        json: async () => {
+          throw new Error("no body");
+        },
+      };
+    }
+    ntfyCount += 1;
+    return { ok: true };
+  };
+  const env = { NTFY_TOPIC: "test-gold-topic", DEADMAN_STATE: fakeKv() };
+  const result = await runCheck(env, fetchImpl, NOW);
+  assert.equal(result.level, "unverifiable");
+  assert.equal(result.tanishqSent, false); // Tanishq channel skipped, not a second "unverifiable" alert
+  // 2, not 3: the one "unverifiable" alert AND the once-per-day heartbeat --
+  // NOT a second near-identical "could not verify Tanishq" alert for the
+  // same underlying fetch failure.
+  assert.equal(ntfyCount, 2);
+});
+
+test("runCheck: heartbeat body states the Tanishq channel too", async () => {
+  const ntfyCalls = [];
+  const fetchImpl = async (url, opts) => {
+    if (url.includes("forecast.json")) {
+      return {
+        ok: true,
+        json: async () => ({ predicted_at: isoHoursAgo(0.2), scraped_at: isoHoursAgo(2) }),
+      };
+    }
+    ntfyCalls.push(opts);
+    return { ok: true };
+  };
+  const env = { NTFY_TOPIC: "test-gold-topic", DEADMAN_STATE: fakeKv() };
+  await runCheck(env, fetchImpl, NOW);
+  const heartbeat = ntfyCalls.find((c) => c.headers.Priority === "1");
+  assert.ok(heartbeat);
+  assert.match(heartbeat.body, /Tanishq confirmation/);
+});
+
+// AI2: integration tests for the PR-trigger-health channel, proving the
+// actual wiring (index.mjs's fetchOpenPrTriggerHealth + the GITHUB_PR_
+// HEALTH_PAT gate) works end-to-end, not just the pure functions in
+// pr_trigger_health.test.mjs in isolation.
+
+function githubApiFetch({ openPrs, checkRunsBySha, failOn }) {
+  return async (url, opts) => {
+    if (url.includes("forecast.json")) {
+      return { ok: true, json: async () => ({ predicted_at: isoHoursAgo(0.2), scraped_at: isoHoursAgo(0.2) }) };
+    }
+    if (url.includes("/pulls?state=open")) {
+      if (failOn === "pulls") return { ok: false, status: 403 };
+      return { ok: true, json: async () => openPrs };
+    }
+    if (url.includes("/check-runs")) {
+      const sha = url.match(/commits\/([a-z0-9]+)\/check-runs/)[1];
+      if (failOn === "check-runs") return { ok: false, status: 500 };
+      return { ok: true, json: async () => ({ check_runs: checkRunsBySha[sha] || [] }) };
+    }
+    if (url.includes("/commits/")) {
+      const sha = url.match(/commits\/([a-z0-9]+)$/)[1];
+      if (failOn === "commit") return { ok: false, status: 404 };
+      return { ok: true, json: async () => ({ commit: { committer: { date: isoMinutesAgo(sha) } } }) };
+    }
+    // ntfy POST
+    return { ok: true };
+  };
+}
+
+function isoMinutesAgo(sha) {
+  // test helper: encode the desired age (minutes) into the fake sha itself,
+  // e.g. sha "age60" -> 60 minutes ago.
+  const m = /^age(\d+)$/.exec(sha);
+  const minutes = m ? Number(m[1]) : 0;
+  return new Date(NOW - minutes * 60_000).toISOString();
+}
+
+test("runCheck: PR trigger-health channel pages when a real stale PR is present", async () => {
+  const ntfyCalls = [];
+  const fetchImpl = async (url, opts) => {
+    const inner = githubApiFetch({
+      openPrs: [{ number: 1539, head: { ref: "fix/thing", sha: "age60" } }],
+      checkRunsBySha: {},
+    });
+    const resp = await inner(url, opts);
+    if (url.includes("ntfy.sh")) ntfyCalls.push(opts);
+    return resp;
+  };
+  const env = {
+    NTFY_TOPIC: "test-gold-topic",
+    DEADMAN_STATE: fakeKv(),
+    GITHUB_PR_HEALTH_PAT: "fake-token",
+  };
+  const result = await runCheck(env, fetchImpl, NOW);
+  assert.equal(result.prTriggerHealthSent, true);
+  assert.equal(result.prTriggerHealthStaleCount, 1);
+  const prAlert = ntfyCalls.find((c) => c.headers.Title.includes("required checks never started"));
+  assert.ok(prAlert);
+  assert.match(prAlert.body, /#1539/);
+});
+
+test("runCheck: PR trigger-health channel does not page for a fresh PR with no check-run yet", async () => {
+  const ntfyCalls = [];
+  const fetchImpl = async (url, opts) => {
+    const inner = githubApiFetch({
+      openPrs: [{ number: 9999, head: { ref: "feat/new", sha: "age1" } }],
+      checkRunsBySha: {},
+    });
+    const resp = await inner(url, opts);
+    if (url.includes("ntfy.sh")) ntfyCalls.push(opts);
+    return resp;
+  };
+  const env = {
+    NTFY_TOPIC: "test-gold-topic",
+    DEADMAN_STATE: fakeKv(),
+    GITHUB_PR_HEALTH_PAT: "fake-token",
+  };
+  const result = await runCheck(env, fetchImpl, NOW);
+  assert.equal(result.prTriggerHealthSent, false);
+  assert.equal(ntfyCalls.some((c) => c.headers.Title.includes("required checks never started")), false);
+});
+
+test("runCheck: PR trigger-health channel is skipped (not paged) when GITHUB_PR_HEALTH_PAT is unset", async () => {
+  let githubApiCalled = false;
+  const fetchImpl = async (url, opts) => {
+    if (url.includes("api.github.com")) githubApiCalled = true;
+    return githubApiFetch({ openPrs: [], checkRunsBySha: {} })(url, opts);
+  };
+  const env = { NTFY_TOPIC: "test-gold-topic", DEADMAN_STATE: fakeKv() }; // no GITHUB_PR_HEALTH_PAT
+  const result = await runCheck(env, fetchImpl, NOW);
+  assert.equal(result.prTriggerHealthSent, false);
+  assert.equal(githubApiCalled, false);
+});
+
+test("runCheck: PR trigger-health channel fails closed (pages honestly) on a GitHub API error, not silent", async () => {
+  const ntfyCalls = [];
+  const fetchImpl = async (url, opts) => {
+    const inner = githubApiFetch({ openPrs: [], checkRunsBySha: {}, failOn: "pulls" });
+    const resp = await inner(url, opts);
+    if (url.includes("ntfy.sh")) ntfyCalls.push(opts);
+    return resp;
+  };
+  const env = {
+    NTFY_TOPIC: "test-gold-topic",
+    DEADMAN_STATE: fakeKv(),
+    GITHUB_PR_HEALTH_PAT: "fake-token",
+  };
+  const result = await runCheck(env, fetchImpl, NOW);
+  assert.equal(result.prTriggerHealthSent, true);
+  const failureAlert = ntfyCalls.find((c) => c.headers.Title.includes("could not verify"));
+  assert.ok(failureAlert);
+  assert.match(failureAlert.body, /403/);
+  assert.match(failureAlert.body, /failing closed/);
+});
+
+// 2026-09-21: bot/ is no longer excluded (see fetchOpenPrTriggerHealth's comment) -- this test used
+// to assert that it was, which encoded the assumption that bot PRs always merge within minutes;
+// bot/docs-refresh sat open with zero check-runs for 10 days (#1578) and was skipped by construction.
+test("runCheck: PR trigger-health channel skips scratch/ branches but NOT bot/ ones", async () => {
+  const ntfyCalls = [];
+  const fetchImpl = async (url, opts) => {
+    const inner = githubApiFetch({
+      openPrs: [
+        { number: 1, head: { ref: "bot/data-sync", sha: "age60" } },
+        { number: 2, head: { ref: "scratch/proof", sha: "age60" } },
+      ],
+      checkRunsBySha: {},
+    });
+    const resp = await inner(url, opts);
+    if (url.includes("ntfy.sh")) ntfyCalls.push(opts);
+    return resp;
+  };
+  const env = {
+    NTFY_TOPIC: "test-gold-topic",
+    DEADMAN_STATE: fakeKv(),
+    GITHUB_PR_HEALTH_PAT: "fake-token",
+  };
+  const result = await runCheck(env, fetchImpl, NOW);
+  // Only the bot/ PR counts (60 min old, no check-run); the scratch/ PR is still skipped.
+  assert.equal(result.prTriggerHealthSent, true);
+  assert.equal(result.prTriggerHealthStaleCount, 1);
+});
+
+test("runCheck: PR trigger-health channel does not re-alert on the same stale PR within the dedup window", async () => {
+  const state = fakeKv();
+  const fetchImplFactory = () =>
+    githubApiFetch({
+      openPrs: [{ number: 1539, head: { ref: "fix/thing", sha: "age60" } }],
+      checkRunsBySha: {},
+    });
+  const env = { NTFY_TOPIC: "test-gold-topic", DEADMAN_STATE: state, GITHUB_PR_HEALTH_PAT: "fake-token" };
+
+  const first = await runCheck(env, fetchImplFactory(), NOW);
+  assert.equal(first.prTriggerHealthSent, true);
+
+  const second = await runCheck(env, fetchImplFactory(), NOW + 10 * 60_000); // 10 min later, well within 6h reminder window
+  assert.equal(second.prTriggerHealthSent, false);
+});
+
+// ---------------------------------------------------------------------------
+// S2 (audit continuation, 2026-09-23): the manual HTTP trigger used to run the
+// full check for ANY unauthenticated request. These pin the fix -- a shared
+// secret is required and the comparison never falls open on a missing secret.
+// ---------------------------------------------------------------------------
+
+test("safeTokenMatch: identical strings match", async () => {
+  assert.equal(await safeTokenMatch("abc123", "abc123"), true);
+});
+
+test("safeTokenMatch: different strings of the same length do not match", async () => {
+  assert.equal(await safeTokenMatch("abc123", "abc124"), false);
+});
+
+test("safeTokenMatch: different-length strings do not match", async () => {
+  assert.equal(await safeTokenMatch("short", "a-much-longer-token"), false);
+});
+
+test("safeTokenMatch: empty supplied value never matches a real token", async () => {
+  assert.equal(await safeTokenMatch("", "real-token"), false);
+});
+
+test("fetch(): no token supplied is rejected even when TRIGGER_TOKEN is configured", async () => {
+  const req = new Request("https://example.workers.dev/");
+  const resp = await worker.fetch(req, { TRIGGER_TOKEN: "secret-token" }, {});
+  assert.equal(resp.status, 401);
+});
+
+test("fetch(): wrong token is rejected", async () => {
+  const req = new Request("https://example.workers.dev/?token=nope");
+  const resp = await worker.fetch(req, { TRIGGER_TOKEN: "secret-token" }, {});
+  assert.equal(resp.status, 401);
+});
+
+test("fetch(): TRIGGER_TOKEN unconfigured denies every request -- never falls open on a missing secret", async () => {
+  const req = new Request("https://example.workers.dev/?token=anything");
+  const resp = await worker.fetch(req, {}, {});
+  assert.equal(resp.status, 401);
+});
+
+test("fetch(): correct token via ?token= query param is accepted and runs the check", async () => {
+  const realFetch = globalThis.fetch;
+  try {
+    globalThis.fetch = async () =>
+      new Response(
+        JSON.stringify({ predicted_at: new Date().toISOString(), scraped_at: new Date().toISOString() }),
+        { status: 200 },
+      );
+    const req = new Request("https://example.workers.dev/?token=secret-token");
+    const resp = await worker.fetch(req, { TRIGGER_TOKEN: "secret-token", NTFY_TOPIC: "test-topic" }, {});
+    assert.equal(resp.status, 200);
+    const body = await resp.json();
+    assert.ok("level" in body);
+  } finally {
+    globalThis.fetch = realFetch;
+  }
+});
+
+test("fetch(): correct token via X-Trigger-Token header is accepted", async () => {
+  const realFetch = globalThis.fetch;
+  try {
+    globalThis.fetch = async () =>
+      new Response(
+        JSON.stringify({ predicted_at: new Date().toISOString(), scraped_at: new Date().toISOString() }),
+        { status: 200 },
+      );
+    const req = new Request("https://example.workers.dev/", { headers: { "X-Trigger-Token": "secret-token" } });
+    const resp = await worker.fetch(req, { TRIGGER_TOKEN: "secret-token" }, {});
+    assert.equal(resp.status, 200);
+  } finally {
+    globalThis.fetch = realFetch;
+  }
 });

@@ -2,16 +2,44 @@ name: Check Gold Price
 
 on:
   schedule:
-    # Every 3 hours, at minute 7 (UTC), not minute 0. GitHub Actions documents
-    # that scheduled workflows can be delayed or dropped during periods of
-    # high load, and "high load times include the start of every hour"
-    # (https://docs.github.com/actions/using-workflows/events-that-trigger-workflows#schedule).
-    # This cron fired exactly on the hour; offsetting by 7 minutes moves it
-    # off that documented peak without changing the cadence. Fires at
-    # ~05:37, 08:37, 11:37, 14:37, 17:37, 20:37, 23:37, 02:37 IST (8 runs/day).
-    # T8 morning window 08-14 IST and evening window 18-22 IST each contain
-    # at least one 3h-cadence slot, so twice-daily digests are unaffected.
-    - cron: "7 */3 * * *"
+    # Every 3 hours, at minute 37, phase-shifted to start at hour 1 (UTC),
+    # not minute 7 / hour 0. #1222 (the original minute-of-hour dodge, :00 ->
+    # :07) addressed sub-hour queueing at the top of the hour; this is a
+    # DIFFERENT claim, addressed here for the first time: an hour-of-day
+    # contention specific to the 06:00 UTC slot, not sub-hour timing within
+    # it. AD1 (audit 2026-09-10): full available run history (736 scheduled
+    # runs, back to 2026-05-17) shows the OLD 06:07 UTC slot delayed
+    # (median ~66min, unremarkable) until ~2026-08-30, then abruptly stopped
+    # firing as a `schedule` event AT ALL for 9 straight days (2026-09-02
+    # through 2026-09-10) -- silently covered by the self-triggered catch-up
+    # dispatch this workflow used to carry (removed 2026-09-23: it was firing
+    # on ~92% of ticks and closing #1838's checkout-timing fix was meant to
+    # retire it outright -- see docs/RUNBOOK.md's "Scheduled-trigger
+    # reliability and catch-up" section for the removal note) every single day,
+    # each time producing one of the largest gaps in data/run_cadence_log.jsonl
+    # (e.g. 2026-09-07 04:22->12:18, a 7.9h gap). Two independent, separately-
+    # owned workflows sharing zero code with this one or each other
+    # (shadow-fusion.yml here, gg-portfolio's chat-canary.yml) show the same
+    # window (their own 06:15/06:00 UTC slots) landing ~255-335min late,
+    # essentially every day, continuously since 2026-08-30 (11 days at time
+    # of writing) -- not a 4-day blip, not sub-hour jitter. This shifts the
+    # whole 8-slot phase by +90min (hour offset 0->1, minute 7->37) so the
+    # slot that used to sit at 06:07 UTC now sits at 07:37 UTC, clear of the
+    # observed window; IST-window coverage is preserved (see below). Whether
+    # this actually helps is a hypothesis, not a fact -- see the PR that
+    # introduced this comment for the exact re-measurement to run after 7
+    # days of data.
+    #
+    # GitHub Actions separately documents that scheduled workflows can be
+    # delayed or dropped during periods of high load, and "high load times
+    # include the start of every hour"
+    # (https://docs.github.com/actions/using-workflows/events-that-trigger-workflows#schedule)
+    # -- minute 37 keeps clear of that too, same reasoning #1222 established.
+    # Fires at ~07:07, 10:07, 13:07, 16:07, 19:07, 22:07, 01:07, 04:07 IST
+    # (8 runs/day). T8 morning window 08-14 IST and evening window 18-22 IST
+    # each still contain at least one 3h-cadence slot (10:07/13:07 morning,
+    # 19:07 evening), so twice-daily digests are unaffected.
+    - cron: "37 1-22/3 * * *"
   workflow_dispatch: # allows manual run from the Actions tab
   push:
     branches: [master]
@@ -23,11 +51,16 @@ on:
       - "ml/chronos_forecast.py"
       - "ml/calibration.py"
       - "ml/notifications.py"
+      - "scripts/build_ibja_derived_prices.py"
       - "ml/drivers.py"
       - "ml/feature_store.py"
       - "ml/calendar_events.py"
-      - "scraper/**"
       - ".github/workflows/check-price.yml"
+      # scraper/** removed (audit 2026-09, fix/selfhosted-job-cannot-block-
+      # schedule): the `check` job here never reads scraper/ code -- that
+      # trigger only ever mattered for scrape-tanishq-selfhosted, which now
+      # has its own file (scrape-tanishq-selfhosted.yml) with its own
+      # scraper/** push trigger.
 
 permissions:
   contents: write # needed so the action can commit prices.json back to the repo
@@ -37,11 +70,12 @@ permissions:
 jobs:
   check:
     runs-on: ubuntu-latest
-    # Own concurrency group (moved off the workflow level so it never shares
-    # a queue with scrape-tanishq-selfhosted below — see that job's comment
-    # for why: a self-hosted runner with no online worker queues for up to
-    # 24h, and a shared group would have blocked this job's own next
-    # scheduled run behind that window).
+    # Own concurrency group. scrape-tanishq-selfhosted used to live in this
+    # same file and was moved to scrape-tanishq-selfhosted.yml (audit 2026-09,
+    # fix/selfhosted-job-cannot-block-schedule) specifically so its queue
+    # state (a self-hosted runner with no online worker queues for up to 24h)
+    # can no longer leave THIS workflow's own run non-completed, which is
+    # what let it suppress this job's own next scheduled tick.
     concurrency:
       group: check-price
       cancel-in-progress: false
@@ -55,8 +89,9 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
-      # Tanishq scraping happens in the scrape-tanishq-selfhosted job below —
-      # this job just reads whatever data/prices.json already is on master at
+      # Tanishq scraping happens in scrape-tanishq-selfhosted.yml (its own
+      # workflow file since audit 2026-09) — this job just reads whatever
+      # data/prices.json already is on master at
       # checkout time (freshly updated if that job landed a reading recently,
       # last-known otherwise). Same tier-1 freshness gate in
       # ml.inference._select_price_source already handles both cases; no
@@ -130,6 +165,13 @@ jobs:
         continue-on-error: true
         run: python -m ml.calibration
 
+      - name: Build the trend chart's IBJA-based estimate series
+        # GG decision 4c (2026-09-25): the site's trend chart plots 22K = IBJA x calibration
+        # (one row per IBJA publishing day), labelled as our estimate in app.js. Rebuilt
+        # after this run's IBJA append + calibration refit; never touches prices.json.
+        continue-on-error: true
+        run: python scripts/build_ibja_derived_prices.py --public-out data/ibja_derived_prices.json
+
       - name: Compute rolling Tanishq scrape success rate
         # H3 (session dated 2026-08-28): reads whatever data/tanishq_scrape_
         # outcomes.jsonl already is on master at checkout time (same "read
@@ -166,6 +208,9 @@ jobs:
         continue-on-error: true
         env:
           NTFY_TOPIC: ${{ secrets.NTFY_TOPIC }}
+          # Public price digests go here (allowlisted trigger ids only, see ml/notification_routing.py).
+          # Unset or empty: they fall back to NTFY_TOPIC, so nothing is dropped while it is being set up.
+          NTFY_TOPIC_PUBLIC: ${{ secrets.NTFY_TOPIC_PUBLIC }}
         run: python -m ml.notifications
 
       - name: Save notification state
@@ -179,6 +224,18 @@ jobs:
         continue-on-error: true
         run: python -m ml.metrics --record
 
+      - name: Compute rolling data-cadence metric
+        # R2 (audit 2026-09-04): feeds README's injected cadence claim
+        # (scripts/inject_metrics.py marker) and the PWA's i18n.js cadence
+        # text (app.js fetches this step's output, data/cadence_metrics.json,
+        # directly). Reads data/run_cadence_log.jsonl, appended to by THIS
+        # run's own "Commit updated data files" step below -- so this metric
+        # reflects every commit up to and including the PREVIOUS run, not
+        # this one (which hasn't committed yet when this step runs). One run
+        # of lag is fine for a rolling weekly median.
+        continue-on-error: true
+        run: python -m ml.cadence_metrics
+
       - name: Capture feature-store snapshot
         continue-on-error: true
         run: python -m ml.feature_store
@@ -189,11 +246,19 @@ jobs:
           set -e
           git config user.name "gold-rate-bot"
           git config user.email "actions@users.noreply.github.com"
-          git add data/forecast.json data/drift_metrics.json data/metrics_history.json data/ibja_rates.parquet data/chronos_probe.json data/calibration.json data/feature_store/snapshots.parquet data/tanishq_scrape_success_rate.json || true
+          git add data/forecast.json data/drift_metrics.json data/metrics_history.json data/ibja_rates.parquet data/chronos_probe.json data/calibration.json data/feature_store/snapshots.parquet data/tanishq_scrape_success_rate.json data/cadence_metrics.json data/ibja_derived_prices.json data/nextfix_oos.json || true
           if git diff --staged --quiet; then
             echo "No changes to commit."
             echo "changed=false" >> "$GITHUB_OUTPUT"
           else
+            # R2 (audit 2026-09-04): one line per actual successful data
+            # commit -- ml.cadence_metrics reads this to compute the real
+            # observed interval between commits (feeds README's injected
+            # cadence claim and the PWA's i18n.js cadence text), not the
+            # nominal 3h cron value, which stopped being accurate once
+            # scheduled-trigger reliability degraded (see docs/RUNBOOK.md).
+            echo "{\"timestamp\": \"$(date -u +%Y-%m-%dT%H:%M:%SZ)\"}" >> data/run_cadence_log.jsonl
+            git add data/run_cadence_log.jsonl
             git commit -m "chore: update gold prices and forecast [skip ci]"
             echo "changed=true" >> "$GITHUB_OUTPUT"
           fi
@@ -217,6 +282,41 @@ jobs:
           pr-body: "Automated data sync from Check Gold Price run ${{ github.run_id }}."
           token: ${{ secrets.CI_MERGE_PAT }}
           wait-minutes: "15"
+          ntfy-topic: ${{ secrets.NTFY_TOPIC }}
+
+      - name: Merge a stranded Tanishq reading PR
+        # 2026-09-29: a scrape job opened PR #2200 with the day's only Tanishq reading, then was
+        # cancelled mid-merge (the laptop runner restarted); the next scrape would have rebuilt the
+        # branch from master and dropped that reading. This merges such a PR when it is older than
+        # 30 min (its own job has given up), touches ONLY the three Tanishq data files, and both
+        # required checks (lint, pwa-js) are green on its head; then dispatches check-price so the
+        # reading reaches the site. Same merge the bot-pr-sync action performs (squash, CI_MERGE_PAT).
+        if: always()
+        continue-on-error: true
+        env:
+          GH_TOKEN: ${{ secrets.CI_MERGE_PAT }}
+          DISPATCH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          PR=$(gh pr list --repo "${GITHUB_REPOSITORY}" --head bot/tanishq-selfhosted-sync --state open \
+            --json number,headRefOid,createdAt --jq '.[0] // empty')
+          if [ -z "$PR" ]; then echo "No open Tanishq sync PR."; exit 0; fi
+          NUM=$(echo "$PR" | jq -r .number); SHA=$(echo "$PR" | jq -r .headRefOid)
+          AGE_MIN=$(( ( $(date +%s) - $(date -d "$(echo "$PR" | jq -r .createdAt)" +%s) ) / 60 ))
+          if [ "$AGE_MIN" -lt 30 ]; then echo "PR #$NUM is ${AGE_MIN} min old; its own job may still merge it."; exit 0; fi
+          for f in $(gh api "repos/${GITHUB_REPOSITORY}/pulls/${NUM}/files" --jq '.[].filename'); do
+            case "$f" in
+              data/prices.json|data/tanishq_scrape_outcomes.jsonl|data/tanishq_selfhosted_health.json) ;;
+              *) echo "PR #$NUM touches $f -- not a Tanishq data-only PR; leaving it."; exit 0 ;;
+            esac
+          done
+          GREEN=$(gh api "repos/${GITHUB_REPOSITORY}/commits/${SHA}/check-runs?per_page=100" \
+            --jq '[.check_runs[] | select((.name=="lint" or .name=="pwa-js") and .conclusion=="success") | .name] | unique | length')
+          if [ "$GREEN" -lt 2 ]; then echo "PR #$NUM: required checks not both green ($GREEN/2); leaving it."; exit 0; fi
+          gh api -X PUT "repos/${GITHUB_REPOSITORY}/pulls/${NUM}/merge" -f merge_method=squash -f sha="$SHA" \
+            -f commit_title="chore: append Tanishq reading (self-hosted scrape) [skip ci] (#${NUM})"
+          echo "Merged stranded PR #$NUM; dispatching check-price so the reading reaches the site."
+          GH_TOKEN="$DISPATCH_TOKEN" gh workflow run check-price.yml --repo "${GITHUB_REPOSITORY}" --ref master
 
       - name: Alert on stuck bot PR
         # Path-scoped required checks (only requiring lint/pwa-js on code-path
@@ -260,206 +360,3 @@ jobs:
             -H "Tags: warning" \
             -d "bot/data-sync PR #${PR_NUM} has been open ${AGE_MIN} min without merging -- prices.json may be stale. https://github.com/${GITHUB_REPOSITORY}/pull/${PR_NUM}" \
             "https://ntfy.sh/${NTFY_TOPIC}" || true
-
-  scrape-tanishq-selfhosted:
-    # Tanishq's WAF blocks GitHub-hosted (datacenter) runner IPs but the
-    # identical scrape succeeds from a residential IP (confirmed empirically
-    # during the 2026-07-23 IBJA-outage diagnosis). This job runs the exact
-    # same scraper/scrape.js — same code, same headers, no proxies, IP
-    # rotation, fingerprint spoofing, or CAPTCHA solving — from a
-    # self-hosted runner on a normal home connection. See docs/RUNBOOK.md
-    # for the runner setup instructions and the security tradeoffs of
-    # self-hosted runners on a public repo.
-    #
-    # Tanishq stays opportunistic ENRICHMENT (ADR 025), never a hard
-    # dependency: this job is deliberately independent of `check` above (no
-    # `needs:` either direction, no shared concurrency group) so an
-    # offline/asleep runner can never block the primary pipeline. GitHub
-    # queues a job with no available runner for up to 24h before
-    # auto-cancelling it — sharing `check`'s concurrency group would have
-    # queued the NEXT scheduled `check` run behind that same 24h window.
-    # `continue-on-error: true` at the job level additionally guarantees
-    # this job's own failure never marks the workflow run as failed.
-    runs-on: [self-hosted, tanishq-scraper]
-    # 20min was tight-but-sufficient under normal conditions (healthy runs land
-    # in ~4min). Bumped to give headroom for actions/checkout's internal
-    # recreate-from-scratch fallback (observed 2026-07-30: ~8min) when the repo's
-    # local git state can't be cleanly reset -- e.g. after a mid-transfer
-    # connection drop on a prior run. See docs/RUNBOOK.md "Self-hosted runner
-    # reliability" for the incident this headroom was sized against.
-    timeout-minutes: 25
-    continue-on-error: true
-    concurrency:
-      group: tanishq-selfhosted-scrape
-      cancel-in-progress: false
-    # Every step below is bash-flavoured (||, set -e, heredocs) — fine on
-    # ubuntu-latest's default shell, but a Windows self-hosted runner
-    # defaults `run:` to Windows PowerShell 5.1, which doesn't support any
-    # of that syntax.
-    #
-    # `shell: bash` alone isn't enough on a fresh Windows install either:
-    # Git for Windows' installer adds `Git\cmd` to PATH by default but NOT
-    # `Git\bin` (where bash.exe actually lives), so the only "bash" reachable
-    # via a normal PATH lookup was Windows' own WSL launcher stub at
-    # C:\Windows\system32\bash.EXE — which fails immediately with "no
-    # installed distributions" since WSL was never set up. Confirmed live
-    # (run 29999091930). This also broke bot-pr-sync's own composite-action
-    # step below (it hardcodes `shell: bash` internally; a job-level
-    # `defaults.run.shell` override doesn't reach into a composite action's
-    # own step definitions, so pointing *this* job's default at Git's
-    # bash.exe directly wouldn't have fixed that step anyway — confirmed
-    # live, run 29999459405).
-    #
-    # Fixed at the host level instead (see docs/RUNBOOK.md): the runner
-    # Windows service has a PATH override scoped to *just its own process
-    # environment* (via its service registry key's Environment value, not
-    # the machine-wide PATH) that puts Git's bin dir first — so plain
-    # `shell: bash` now resolves correctly for every step in this job,
-    # including composite actions, without touching what "bash" resolves to
-    # anywhere else on the host.
-    defaults:
-      run:
-        shell: bash
-
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-
-      - name: Set up Node.js
-        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
-        with:
-          node-version: "20"
-          cache: "npm"
-          cache-dependency-path: scraper/package-lock.json
-
-      - name: Install scraper dependencies
-        working-directory: scraper
-        run: npm ci || npm install
-
-      - name: Install Playwright browsers
-        working-directory: scraper
-        run: npx playwright install --with-deps chromium
-
-      - name: Scrape Tanishq and update prices.json
-        id: scrape
-        working-directory: scraper
-        continue-on-error: true
-        # NTFY_TOPIC/DROP_THRESHOLD removed: update-and-notify.js no longer sends
-        # the drop-alert (retired in favour of T3 in ml/notifications.py). This
-        # step only appends the reading; ml.notifications (in the check job)
-        # does the alerting once it next reads this data.
-        # stderr captured separately (H3, session dated 2026-08-28): scrape.js
-        # already logs "[scraper] fetch_method=requests|playwright" to stderr
-        # (Phi24) -- redirecting it to its own file lets the health-recording
-        # step below read which path succeeded, without adding a field to the
-        # reading object itself (which would permanently change prices.json's
-        # schema for every future entry -- avoided on purpose).
-        run: |
-          set -e
-          node scrape.js 2> /tmp/scrape_stderr.log | tee /tmp/reading.json
-          cat /tmp/scrape_stderr.log  # still visible in the job log
-          cat /tmp/reading.json | node update-and-notify.js
-
-      - name: Flag scrape miss
-        # continue-on-error above means a CF-blocked run still reports green
-        # at the step level. Surface the miss as a run-summary annotation so
-        # it's visible operationally even though it's expected occasionally
-        # (a residential IP is not immune to CF, just far less likely to be
-        # blocked than a datacenter one) and never raises a user-facing
-        # alert — the site falls through to IBJA-calibrated / fusion-consensus.
-        if: steps.scrape.outcome == 'failure'
-        run: |
-          echo "::warning title=Scrape miss (self-hosted)::Tanishq scrape produced no reading this run from the self-hosted runner. prices.json not updated. Site continues serving the IBJA-calibrated/fusion-consensus estimate."
-
-      - name: Commit Tanishq reading and record job health
-        id: commit
-        # always() so a failure anywhere upstream (checkout, npm ci, playwright
-        # install, scrape itself) still gets recorded -- this is the health
-        # signal T12 (ml/notifications.py) reads to detect "runner is online and
-        # picking up jobs, but they keep failing" (docs/RUNBOOK.md), a distinct
-        # failure mode from "runner offline" (which stays silent by design).
-        if: always()
-        continue-on-error: true
-        run: |
-          set -e
-          if ! git rev-parse --is-inside-work-tree >/dev/null 2>&1; then
-            echo "No git working tree (checkout itself failed) -- skipping commit and health record."
-            echo "changed=false" >> "$GITHUB_OUTPUT"
-            exit 0
-          fi
-          git config user.name "gold-rate-bot"
-          git config user.email "actions@users.noreply.github.com"
-
-          if [ "${{ steps.scrape.outcome }}" = "success" ]; then
-            git add data/prices.json
-          fi
-
-          # Pure bash (no python3/jq assumed present on this Windows self-hosted
-          # host) -- the health record has a fixed, trivial 4-key schema, so a
-          # regex extraction of the prior count is simpler than adding a new
-          # runtime dependency to a job that has never needed Python.
-          HEALTH_FILE="data/tanishq_selfhosted_health.json"
-          PRIOR_COUNT=0
-          if [ -f "$HEALTH_FILE" ]; then
-            EXTRACTED=$(grep -o '"consecutive_job_failures": *[0-9]*' "$HEALTH_FILE" | grep -o '[0-9]*$' || true)
-            if [ -n "$EXTRACTED" ]; then
-              PRIOR_COUNT="$EXTRACTED"
-            fi
-          fi
-          OUTCOME="${{ steps.scrape.outcome }}"
-          if [ "$OUTCOME" = "success" ]; then
-            NEW_COUNT=0
-          else
-            NEW_COUNT=$((PRIOR_COUNT + 1))
-          fi
-          {
-            echo "{"
-            echo "  \"schema_version\": 1,"
-            echo "  \"consecutive_job_failures\": $NEW_COUNT,"
-            echo "  \"last_job_outcome\": \"$OUTCOME\","
-            echo "  \"last_updated_utc\": \"$(date -u +%Y-%m-%dT%H:%M:%SZ)\""
-            echo "}"
-          } > "$HEALTH_FILE"
-          git add "$HEALTH_FILE"
-
-          # H3 (session dated 2026-08-28): append one record per run to a
-          # rolling scrape-outcome log -- data/tanishq_scrape_outcomes.jsonl,
-          # same append-only-log convention as data/direction_eval_history.jsonl.
-          # fetch_method read from the stderr capture above (defaults to
-          # "none" when the scrape failed before either path logged anything,
-          # e.g. checkout/npm/playwright-install failing upstream). Still pure
-          # bash -- same host constraint as above; the rolling rate itself is
-          # computed separately by ml.scrape_metrics (Python, in the `check`
-          # job) from this raw log, not here.
-          FETCH_METHOD="none"
-          if [ -f /tmp/scrape_stderr.log ]; then
-            EXTRACTED_METHOD=$(grep -o 'fetch_method=[a-z]*' /tmp/scrape_stderr.log | tail -1 | cut -d= -f2 || true)
-            if [ -n "$EXTRACTED_METHOD" ]; then
-              FETCH_METHOD="$EXTRACTED_METHOD"
-            fi
-          fi
-          OUTCOMES_LOG="data/tanishq_scrape_outcomes.jsonl"
-          echo "{\"timestamp\": \"$(date -u +%Y-%m-%dT%H:%M:%SZ)\", \"outcome\": \"$OUTCOME\", \"fetch_method\": \"$FETCH_METHOD\"}" >> "$OUTCOMES_LOG"
-          git add "$OUTCOMES_LOG"
-
-          if git diff --staged --quiet; then
-            echo "No changes to commit."
-            echo "changed=false" >> "$GITHUB_OUTPUT"
-          else
-            git commit -m "chore: append Tanishq reading (self-hosted scrape) [skip ci]"
-            echo "changed=true" >> "$GITHUB_OUTPUT"
-          fi
-
-      - name: Sync Tanishq reading via bot PR
-        # Separate branch from bot/data-sync (used by the check job) so the
-        # two jobs' commits never race for the same PR/branch. always() so this
-        # still runs (and pushes the health-record commit) even when an upstream
-        # step failed -- the commit step above is if:always() too.
-        if: always() && steps.commit.outputs.changed == 'true'
-        uses: ./.github/actions/bot-pr-sync
-        with:
-          branch: bot/tanishq-selfhosted-sync
-          pr-title: "chore: append Tanishq reading (self-hosted scrape)"
-          pr-body: "Automated Tanishq-only data sync from the self-hosted scraper, run ${{ github.run_id }}."
-          token: ${{ secrets.CI_MERGE_PAT }}
-          wait-minutes: "15"

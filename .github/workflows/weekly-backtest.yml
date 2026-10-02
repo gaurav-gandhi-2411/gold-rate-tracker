@@ -61,13 +61,87 @@ jobs:
         continue-on-error: true
         run: python -m ml.metrics --resolve
 
+      - name: Post weekly cadence digest (low-priority, non-paging)
+        # Y1 (audit 2026-09-05): the "condition" band -- gaps past the 3h
+        # promise but below the dead-man's-switch page level -- routed here
+        # instead of paging on it. Piggybacks on this job's existing weekly
+        # cron (Sunday 02:00 UTC) rather than adding a new schedule.
+        # continue-on-error: true so a digest failure never blocks the
+        # backtest commit below; ml.cadence_digest itself is silent (exit 0,
+        # no ntfy call) when there's no data, never fabricating a claim.
+        continue-on-error: true
+        env:
+          NTFY_TOPIC: ${{ secrets.NTFY_TOPIC }}
+        run: |
+          set -e
+          BODY=$(python -m ml.cadence_digest)
+          if [ -n "$BODY" ] && [ -n "${NTFY_TOPIC}" ]; then
+            curl -s \
+              -H "Title: Gold Tracker: weekly cadence digest" \
+              -H "Priority: 1" \
+              -H "Tags: bar_chart" \
+              -d "$BODY" \
+              "https://ntfy.sh/${NTFY_TOPIC}" || true
+          fi
+
+      - name: Re-score IBJA-calibrated band coverage
+        # Separate from ml.metrics's coverage_metrics.json -- that scores
+        # headline.lower/upper (the naive flat-hold conformal PI); this scores
+        # the OTHER displayed band, the IBJA-calibrated tier's est_low/est_high
+        # (P5, audit 2026-09): previously a one-time reading frozen in
+        # ml.calibration.evaluate_empirical_band_coverage's docstring, not
+        # continuously monitored. continue-on-error so a transient data-read
+        # issue here never blocks the backtest commit below.
+        continue-on-error: true
+        run: python -m ml.calibration --score-coverage
+
+      - name: Score h2 pre-registration shadow arms (ADR 038)
+        # GG spec item 4 (2026-09-23): SHADOW ONLY -- never touches
+        # ml.direction.gate or data/direction_baseline.json. Appends this
+        # run's live-h2 and proxy-dead-zone results to
+        # data/preregistered_h2_shadow_results.json (append-only). continue-
+        # on-error: true so a transient failure (e.g. yfinance outage for the
+        # proxy arm's india_vix fetch) never blocks the backtest commit below.
+        continue-on-error: true
+        run: python scripts/run_preregistered_h2_shadow.py
+
+      - name: Score the morning-fix nowcast shadow (G3)
+        # SHADOW ONLY (G3, 2026-09-24): logs the R2 AM+PM nowcast next to the live
+        # PM-only estimate for each completed day after the merge date, append-only, to
+        # data/nowcast_shadow_log.json. The site keeps using the current estimate.
+        continue-on-error: true
+        run: python scripts/run_nowcast_shadow.py
+
+      - name: Score the weekly price range shadow (item 5)
+        # SHADOW ONLY (2026-09-24, ADR 043): issues the 1-day and 7-day ranges for each IBJA
+        # publication day after the merge date and scores them once complete, append-only, to
+        # data/weekly_range_shadow_log.json. Nothing on the site reads it.
+        continue-on-error: true
+        run: python scripts/run_weekly_range_shadow.py
+
+      - name: Score the next-day range v2 shadow (ADR 047)
+        # SHADOW ONLY (2026-09-25, ADR 047 / #2017): full recompute of the v2 next-day range's
+        # retrospective and forward (confirmatory, decision_date > the freeze date) blocks
+        # against metrics_history.json, to data/next_day_range_shadow.json. Nothing on the site
+        # reads it.
+        continue-on-error: true
+        run: python scripts/run_next_day_range_shadow.py --out data/next_day_range_shadow.json
+
+      - name: Score the buy-now-or-wait shadow (ADR 049)
+        # SHADOW ONLY (2026-09-25, ADR 049 / #2020): append-only -- issues the N=1/2/7 entries for
+        # each IBJA publication day after the confirmatory start and scores matured ones once, to
+        # data/wait_or_buy_shadow.json (+ data/wait_or_buy_today.json). Nothing on the site reads
+        # either file.
+        continue-on-error: true
+        run: python scripts/run_wait_or_buy_shadow.py
+
       - name: Commit backtest results
         id: commit
         run: |
           set -e
           git config user.name "gold-rate-bot"
           git config user.email "actions@users.noreply.github.com"
-          git add data/backtest.json data/metrics_history.json data/coverage_metrics.json || true
+          git add data/backtest.json data/metrics_history.json data/coverage_metrics.json data/calibration_band_coverage.json data/preregistered_h2_shadow_results.json data/nowcast_shadow_log.json data/weekly_range_shadow_log.json data/next_day_range_shadow.json data/wait_or_buy_shadow.json data/wait_or_buy_today.json || true
           if git diff --staged --quiet; then
             echo "No changes to commit."
             echo "changed=false" >> "$GITHUB_OUTPUT"
@@ -87,3 +161,4 @@ jobs:
           pr-body: "Automated backtest sync from Weekly Backtest run ${{ github.run_id }}."
           token: ${{ secrets.CI_MERGE_PAT }}
           wait-minutes: "10"
+          ntfy-topic: ${{ secrets.NTFY_TOPIC }}

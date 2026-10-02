@@ -5,7 +5,7 @@ compatibility_date = "2026-08-27"
 # Every 30 min: 48 invocations/day, well inside the Workers Free plan's
 # 100,000 requests/day and 5-cron-triggers-per-account limits (verified
 # 2026-08-27 against developers.cloudflare.com/workers/platform/limits/).
-# Gives WARN(5h)/ESCALATE(10h) thresholds ~30 min of resolution.
+# Gives WARN(10h)/ESCALATE(16h) thresholds ~30 min of resolution.
 [triggers]
 crons = ["*/30 * * * *"]
 
@@ -19,6 +19,11 @@ id = "cbaf40f06963460fa19e3624dd9e5542"
 # NTFY_TOPIC is set as a Wrangler secret (`wrangler secret put NTFY_TOPIC`),
 # never committed here -- same "treat it like a password" rule as the
 # GitHub Actions NTFY_TOPIC secret it must match (README.md).
+#
+# TRIGGER_TOKEN (S2, added 2026-09-23) is also a Wrangler secret, required
+# before the manual HTTP trigger (fetch()) will run the check for anyone --
+# see README.md step 4c. Unlike NTFY_TOPIC, nothing else has to match this
+# value; it only has to match what the caller supplies.
 
 # Observability: Workers Logs + Traces, so a cron-triggered run (no HTTP
 # response to inspect) is debuggable after the fact -- console.log/warn from
@@ -30,10 +35,24 @@ id = "cbaf40f06963460fa19e3624dd9e5542"
 # [observability.logs]/[observability.traces] enabled=true below -- directly
 # contradicting both this session's instruction and the nested settings
 # themselves. Flagged rather than applied verbatim (session dated 2026-08-28).
+#
+# U1 (audit 2026-09-04): removed `redact_query_string = false`, which every
+# deploy since 2026-08-28 has silently ignored ("Unexpected fields found in
+# observability field: redact_query_string" -- wrangler warns, does not
+# fail). Confirmed against wrangler 4.99.0's own config-schema.json (the
+# exact version this repo deploys with): the `Observability` definition has
+# `additionalProperties: false` and exactly four valid keys -- enabled,
+# head_sampling_rate, logs, traces. No field for redacting/filtering query
+# strings exists anywhere in the schema, at this level or nested under
+# logs/traces -- there is no correct name to rename this to. Whatever
+# produced this line (a "pasted reference config" per the comment above) was
+# either hallucinated or copied from an unrelated product; there is nothing
+# to preserve. If query-string redaction is ever needed, it has to happen in
+# the Worker's own code (e.g. stripping params before any console.log of a
+# URL) -- Workers Logs has no built-in redaction config.
 [observability]
 enabled = true
 head_sampling_rate = 1
-redact_query_string = false
 
 [observability.logs]
 enabled = true

@@ -246,7 +246,7 @@ def record_prediction(
         "actual_next_22k": None,
         "drop_threshold": DROP_THRESHOLD,
         "track": "real",
-        "model_version": fc.get("model_version", "lgbm-only"),
+        "model_version": fc.get("model_version", "unknown"),
         "real_readings_count": fc.get("real_readings_count", 0),
     }
 

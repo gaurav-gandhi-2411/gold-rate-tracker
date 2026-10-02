@@ -1,0 +1,117 @@
+{
+ "code_commit": "ae70692dffebca9d100deded92daf4dbf8dd6f59",
+ "generated_utc": "2026-09-25T07:10:14+00:00",
+ "target_definition": "last Tanishq 22K reading of the UTC date in data/prices.json (timestamps UTC 'Z'); T_d = its timestamp",
+ "availability_assumptions": {
+  "ibja_am": "value date 06:30 UTC (12:00 IST)",
+  "ibja_pm": "value date 11:30 UTC (17:00 IST)",
+  "grt_malabar": "capture_utc",
+  "comex": "close date + 1 day 00:00 UTC",
+  "tanishq": "reading timestamp"
+ },
+ "scored_days": 90,
+ "same_day_inputs_by_source": {
+  "comex": {
+   "day_source_pairs_used_same_day": 65,
+   "known_at_or_after_target": 0,
+   "weekday": 0,
+   "weekend": 0,
+   "median_minutes_after_target": null,
+   "max_minutes_after_target": null
+  },
+  "grt": {
+   "day_source_pairs_used_same_day": 56,
+   "known_at_or_after_target": 24,
+   "weekday": 19,
+   "weekend": 5,
+   "median_minutes_after_target": 402.8299833333333,
+   "max_minutes_after_target": 981.1256166666666
+  },
+  "ibja_am": {
+   "day_source_pairs_used_same_day": 62,
+   "known_at_or_after_target": 1,
+   "weekday": 1,
+   "weekend": 0,
+   "median_minutes_after_target": 117.09228333333334,
+   "max_minutes_after_target": 117.09228333333334
+  },
+  "ibja_pm": {
+   "day_source_pairs_used_same_day": 62,
+   "known_at_or_after_target": 6,
+   "weekday": 6,
+   "weekend": 0,
+   "median_minutes_after_target": 230.6245,
+   "max_minutes_after_target": 417.09228333333334
+  },
+  "malabar": {
+   "day_source_pairs_used_same_day": 48,
+   "known_at_or_after_target": 20,
+   "weekday": 18,
+   "weekend": 2,
+   "median_minutes_after_target": 320.75256666666667,
+   "max_minutes_after_target": 981.1256166666666
+  }
+ },
+ "anchor_perturbation_max_abs_diff_log": 0.0,
+ "strict_run_anchor_perturbation_max_abs_diff_log": 0.0,
+ "prior_day_inputs_known_after_target": 0,
+ "mle_training_includes_target_day": 0,
+ "mle_training_input_known_after_target": 0,
+ "ibja_used_before_fetched_at_descriptive": 12,
+ "set_A_targets_before_ibja_pm_publish": 9,
+ "set_A_targets_before_ibja_am_publish": 3,
+ "set_B_days_without_any_pre_target_retail_capture": 3,
+ "nowcast_change_when_leaks_removed": {
+  "strict_retail_only": {
+   "days_nowcast_changed": 55,
+   "mean_abs_change_rs_g_on_changed_days": 19.76053016670918,
+   "max_abs_change_rs_g": 280.6014232474172,
+   "changed_weekday": 41,
+   "changed_weekend": 14
+  },
+  "strict_ibja_only": {
+   "days_nowcast_changed": 90,
+   "mean_abs_change_rs_g_on_changed_days": 10.885387350534518,
+   "max_abs_change_rs_g": 90.00912039877949,
+   "changed_weekday": 64,
+   "changed_weekend": 26
+  },
+  "strict_all": {
+   "days_nowcast_changed": 90,
+   "mean_abs_change_rs_g_on_changed_days": 19.383810136415235,
+   "max_abs_change_rs_g": 281.86596316727264,
+   "changed_weekday": 64,
+   "changed_weekend": 26
+  },
+  "strict_all_same_run_guard": {
+   "days_nowcast_changed": 90,
+   "mean_abs_change_rs_g_on_changed_days": 19.383810136415235,
+   "max_abs_change_rs_g": 281.86596316727264,
+   "changed_weekday": 64,
+   "changed_weekend": 26
+  }
+ },
+ "baseline_leaks": {
+  "ibja_fixed_markup_days_using_pm_before_publish_set_A": 6,
+  "fusion_days_changed_by_strict_capture_filter_set_B": 15
+ },
+ "weekend_anatomy_strict_set_A": {
+  "n": 26,
+  "same_day_input_counts_by_source": {
+   "comex": 12,
+   "grt": 14,
+   "malabar": 9,
+   "ibja_pm": 1
+  },
+  "days_with_no_same_day_input": 8,
+  "target_equals_yesterday_last_reading": 13,
+  "target_equals_last_reading_before_target": 25,
+  "days_with_an_earlier_same_day_tanishq_reading": 24,
+  "median_abs_gap_kalman_vs_last_reading_before_target_rs_g": 5.64750411328896,
+  "median_abs_gap_kalman_vs_yesterday_rs_g": 21.803311868982746,
+  "mae_kalman": 22.90282192966676,
+  "mae_carry_yesterday": 45.96153846153846,
+  "mae_carry_last_reading_before_target": 2.6923076923076925,
+  "mae_ibja_fixed_markup_strict": 92.72563624435924
+ }
+}

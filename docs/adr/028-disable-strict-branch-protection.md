@@ -122,3 +122,48 @@ Reconsider `strict` (or move directly to a GitHub merge queue) if either becomes
   observed to date.
 
 No calendar-based revisit — this is a usage-pattern-triggered reassessment, not a scheduled one.
+
+## Follow-up (AJ4, production audit, 2026-09-11/12): the untested state
+
+This ADR's own proof (PR #676) constructed and tested exactly one state: a required check
+that **genuinely runs and reports `failure`**. Result: branch protection still refuses to merge
+(`mergeable: MERGEABLE`, `mergeStateStatus: BLOCKED`) with both `strict:false` and
+`enforce_admins:false` in effect — correctly documented above as "the gate still bites."
+
+It never tested the other state this ADR's own Consequences section already named in the
+abstract ("`enforce_admins:false` also means any future admin-level merge... bypasses required
+checks entirely, not just the `strict` re-verification"): a required check that **never reports
+at all** — no `failure`, no `success`, nothing. That is a different recorded state (`check-runs`
+`total_count: 0`, combined `status: "pending"`, never resolved) from a check that ran and failed,
+and this ADR's own #676 proof does not cover it.
+
+**Constructed and recorded, not assumed:** rather than build a new synthetic case, the real one
+already existed. PR #1539 (2026-09-10) and PR #1569 (2026-09-11) both merged with `lint` and
+`pwa-js` showing zero check-runs, permanently, against their actual head SHA — confirmed via
+`gh api repos/.../commits/{sha}/check-runs` (`total_count: 0` for both, still true as of this
+writing, weeks after merge) and `gh api repos/.../commits/{sha}/status` (`"pending"`, never
+resolved). Both were authored and merged by `gaurav-gandhi-2411`, the account holding this
+repo's admin rights. **Branch protection did not block either merge.**
+
+**What this changes about this ADR's risk assessment, stated explicitly:** it does not change
+the *decision* — `enforce_admins:false` already, correctly, anticipated that an admin merge
+bypasses required checks "entirely," and #1539/#1569 are that exact, already-accepted risk
+materializing, not a new one. What it changes is the *confidence level* behind "the gate still
+bites": that phrase, read on its own, could suggest required checks meaningfully gate admin
+merges except for the narrow `strict` re-verification skip. They do not. For an admin, a required
+check that never ran and a required check that failed outright are handled identically by branch
+protection — bypassable either way. #676 proved the narrower, better-case claim (a *failing*
+check still blocks a *non-admin*, or would-be-required-for-anyone-without-bypass, merge); it did
+not and could not prove required checks constrain an admin's own merges in the state that
+actually occurred twice.
+
+**What actually closes this gap, for anyone relying on required checks meaningfully gating their
+own merges:** not a branch-protection setting alone (`enforce_admins:true` would close it
+completely, at the cost this ADR's own text already names — see
+`docs/SESSION_AUDIT_2026-08.md` §7's Accepted-risk table for that trade-off, deliberately not
+decided here) — but `scripts/check_required_checks_positive.py` (AJ1, same continuation):
+invoked discipline that positively asserts every required context has a recorded `success`
+conclusion, treating absence identically to failure, before this session self-merges anything.
+That script's own docstring states plainly what it cannot catch: it is discipline, not a platform
+gate, and nothing stops a future merge from skipping it — the same class of gap this whole
+follow-up note documents.
