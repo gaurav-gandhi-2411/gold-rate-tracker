@@ -45,6 +45,8 @@ const STRINGS_HWK = {
     methAssumeNoChange: "Assume no change",
     methNextFixModel: "World prices after the official rate",
     methNextFixModelSub: "how gold and the rupee moved since India's rate was last set",
+    methNextFixHold: "Latest official rate",
+    methNextFixHoldSub: "our best guess until the world prices after it are in",
     methNextFixStrong: "For the next official rate, we use world prices",
     methNextFixP: ({ n, modelMae, flatMae, pct }) =>
       `India's official rate is set once each afternoon, but gold and the rupee keep trading worldwide until late at night. We use that later move to estimate the next rate. Tested on ${n} days it had not seen: off by ₹${modelMae}/g on average, against ₹${flatMae}/g for "no change" (${pct}% closer). For a week or more ahead, "no change" is still the best we have.`,
@@ -125,6 +127,8 @@ const STRINGS_HWK = {
     methAssumeNoChange: "कोई बदलाव न मानें",
     methNextFixModel: "आधिकारिक दर के बाद की दुनिया की कीमतें",
     methNextFixModelSub: "भारत की दर तय होने के बाद सोना और रुपया कितना बदले",
+    methNextFixHold: "सबसे ताज़ा आधिकारिक दर",
+    methNextFixHoldSub: "इसके बाद की दुनिया की कीमतें आने तक यही हमारा सबसे अच्छा अंदाज़ा है",
     methNextFixStrong: "अगली आधिकारिक दर के लिए हम दुनिया की कीमतें देखते हैं",
     methNextFixP: ({ n, modelMae, flatMae, pct }) =>
       `भारत की आधिकारिक दर रोज़ दोपहर एक बार तय होती है, पर सोना और रुपया देर रात तक दुनिया भर में बिकते-खरीदे जाते हैं। हम उस बाद के बदलाव से अगली दर का अंदाज़ा लगाते हैं। ${n} ऐसे दिनों पर जांचा जो इसने पहले नहीं देखे थे: औसतन ₹${modelMae}/ग्राम का फ़र्क, जबकि "कोई बदलाव नहीं" मानने पर ₹${flatMae}/ग्राम (${pct}% बेहतर)। एक हफ़्ते या उससे आगे के लिए "कोई बदलाव नहीं" ही अभी सबसे अच्छा है।`,

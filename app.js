@@ -1775,11 +1775,12 @@ function renderModelSignal(fc, readings, bt, coverage, drift) {
     // number asserted as current).
     const hasCoverage = coverage && typeof coverage.coverage === "number" && coverage.n > 0
       && isMeasurementFresh(coverage.generated_at_utc, Date.now());
-    // While the next-fix model sets the range, quote that range's own out-of-sample hit rate
-    // (rescored every run), not the flat-hold band's history in coverage_metrics.json.
-    const nfCov = nfOn && typeof nf.track_record?.range_coverage === "number" && nf.track_record.range_n > 0;
+    // While next_fix sets the range, quote the hit rate of the range for the current part of the
+    // day (next_fix.range_record, rescored every run), not the old flat-hold band's history.
+    const rr = nf?.range_record;
+    const nfCov = nfOn && typeof rr?.coverage === "number" && rr.n > 0;
     const coverageNote = nfCov
-      ? t("reliabilityCoverage", { pct: Math.round(nf.track_record.range_coverage * 100), n: nf.track_record.range_n })
+      ? t("reliabilityCoverage", { pct: Math.round(rr.coverage * 100), n: rr.n })
       : hasCoverage
       ? t("reliabilityCoverage", { pct: Math.round(coverage.coverage * 100), n: coverage.n })
       : t("reliabilityUnknown");
