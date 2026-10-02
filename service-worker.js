@@ -152,7 +152,7 @@
 // "today's change" only next to Tanishq's own latest reading; the trend chart plots
 // data/ibja_derived_prices.json labelled as our estimate (new #chart-source-note). app.js +
 // i18n.js + index.html changed.
-const VERSION = "v71-20261002-mobile-spacing";
+const VERSION = "v72-20261002-next-fix-model";
 const SHELL_CACHE = `gold-shell-${VERSION}`;
 
 const SHELL_FILES = [

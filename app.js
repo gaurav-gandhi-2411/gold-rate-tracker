@@ -1736,6 +1736,24 @@ function renderModelSignal(fc, readings, bt, coverage, drift) {
     ? `<p class="good-price-tomorrow">${t("goodPriceTomorrow", { low: fmtINR(rangeLower), high: fmtINR(rangeUpper) })}</p>`
     : "";
 
+  // Next move up or down (ADR 064, GG 2026-10-02). Shown only when inference says so:
+  // next_fix.direction.show is true only while the next-fix model is active, its own
+  // out-of-sample record passes the direction gate, and GG's promotion record exists.
+  const nf = fc?.next_fix;
+  const nfOn = nf?.active === true && hasRange;
+  let directionHtml = "";
+  if (nfOn && nf.direction?.show === true && typeof nf.direction.probability === "number") {
+    const pct = Math.round(nf.direction.probability * 100);
+    const side = nf.direction.side;
+    const key = side === "up" ? "directionUp" : side === "down" ? "directionDown" : "directionUnclear";
+    const tr = nf.track_record;
+    const record = tr && typeof tr.direction_accuracy === "number" && tr.n > 0
+      ? ` ${t("directionTrackRecord", { right: Math.round(tr.direction_accuracy * tr.n), n: tr.n })}`
+      : "";
+    // XSS-safe: t() catalogue literals with integer params only.
+    directionHtml = `<p class="good-price-direction" data-side="${side === "up" || side === "down" ? side : "unclear"}">${t(key, { pct })}${record}</p>`;
+  }
+
   // Reliability — plain-language promotion of coverage_metrics.json (empirical
   // hit-rate of the range stated above) + drift_metrics.json (recent vs historical
   // error), previously buried inside the collapsed methodology accordion
@@ -1757,7 +1775,12 @@ function renderModelSignal(fc, readings, bt, coverage, drift) {
     // number asserted as current).
     const hasCoverage = coverage && typeof coverage.coverage === "number" && coverage.n > 0
       && isMeasurementFresh(coverage.generated_at_utc, Date.now());
-    const coverageNote = hasCoverage
+    // While the next-fix model sets the range, quote that range's own out-of-sample hit rate
+    // (rescored every run), not the flat-hold band's history in coverage_metrics.json.
+    const nfCov = nfOn && typeof nf.track_record?.range_coverage === "number" && nf.track_record.range_n > 0;
+    const coverageNote = nfCov
+      ? t("reliabilityCoverage", { pct: Math.round(nf.track_record.range_coverage * 100), n: nf.track_record.range_n })
+      : hasCoverage
       ? t("reliabilityCoverage", { pct: Math.round(coverage.coverage * 100), n: coverage.n })
       : t("reliabilityUnknown");
 
@@ -1830,6 +1853,7 @@ function renderModelSignal(fc, readings, bt, coverage, drift) {
       <p class="good-price-verdict good-price-verdict--${signals.verdictType}">${signals.verdictLead}</p>
       <p class="good-price-proof">${signals.proofLine}</p>
       ${tomorrowRangeHtml}
+      ${directionHtml}
       ${reliabilityHtml}
       ${volatilityHtml}
     </div>

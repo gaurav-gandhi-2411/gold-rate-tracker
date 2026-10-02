@@ -11,6 +11,7 @@ from pathlib import Path
 from ml.direction.gate import (
     ECE_MAX_PROB,
     MIN_OOS_FOLDS,
+    PROMOTION_RECORD_PATH,
     decide_direction_signal,
     decide_timing_signal,
     is_signal_promoted,
@@ -381,12 +382,18 @@ class TestPromotionGateNeverWired:
         record.write_text('{"approved_by": "GG"}')
         assert is_signal_promoted(path=record) is True
 
-    def test_default_promotion_record_does_not_currently_exist(self) -> None:
-        """Regression guard: the repo must not accidentally ship a promotion
-        record — its mere presence is what the check script treats as
-        authorization, so an accidental commit of this file would silently
-        flip every future direction-signal wiring to 'promoted'."""
-        assert is_signal_promoted() is False
+    def test_committed_promotion_record_is_gg_approved_and_scoped(self) -> None:
+        """GG promoted the direction signal on 2026-10-02 (ADR 064). The record
+        must name GG, the approved model, and leave the timing signal dark --
+        its mere presence is what the check script treats as authorization."""
+        import json
+
+        assert is_signal_promoted() is True
+        record = json.loads(PROMOTION_RECORD_PATH.read_text(encoding="utf-8"))
+        assert record["approved_by"] == "GG"
+        assert record["promoted"] == "direction"
+        assert record["model_version"] == "nextfix_ridge_mlp_v1"
+        assert "timing gate" in record["scope"] and "NOT promoted" in record["scope"]
 
     def test_no_live_surface_references_the_gate_decision(self) -> None:
         """Static sweep matching scripts/check_direction_signal_not_wired_

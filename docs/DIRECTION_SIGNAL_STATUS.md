@@ -2,7 +2,22 @@
 
 *Auto-measured by `ml/direction/evaluate.py` (weekly via `.github/workflows/eval-direction.yml`). Latest run embedded below; live numbers are in `data/direction_baseline.json` (per-horizon, with embedded gate verdicts) and the trend in `data/direction_eval_history.jsonl`.*
 
-## Verdict (as of 2026-08-05)
+## Update 2026-10-02: the next-move signal is ON (ADR 064)
+
+A different model now drives the site's direction line: `ml/nextfix.py`. It uses how global gold
+and USD/INR moved after India's official rate was fixed, which the harness below never saw.
+
+- **Out-of-sample record:** 137 days (2025-07-17 .. 2026-09-22). It was right **65.7%** of the
+  time, against 48.9% for always-up (p = 0.004).
+- **Gates:** `decide_direction_signal` ships on it (Brier 0.219 vs 0.511, ECE 0.064). The timing
+  gate does not pass (ECE > 0.05), so there is still no buy/wait/sell signal.
+- **Promotion:** GG promoted it on 2026-10-02 (`data/direction_promotion_record.json`).
+- **Re-checked every run:** if the record stops passing the gate, the line hides itself.
+
+The section below describes the `ml/direction/` harness, which still runs weekly and is still
+dark.
+
+## Verdict for the ml/direction harness (as of 2026-08-05)
 
 **DARK at every horizon and for both signal types.** No model beats the always-up base rate out-of-sample with significance, so neither a calibrated direction probability nor a buy/wait/sell timing signal is shown to users. This is the gate (`ml/direction/gate.py`) working as designed (ADR 019, honest-baseline ADR 005), not a failure.
 
