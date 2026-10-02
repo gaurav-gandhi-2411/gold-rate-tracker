@@ -80,20 +80,20 @@ const STATES = [
   {
     name: "not fresh (20h) -> estimate + dated Tanishq figure",
     readings: tanishqRows(20, 14040), forecast: ibja(14100),
-    en: { price: "≈ ₹14,100", label: "Our estimate for today, based on the IBJA rate", line: "Tanishq's listed rate, checked 2:40 PM yesterday: ₹14,040" },
-    hi: { price: "≈ ₹14,100", label: "आज के लिए हमारा अनुमान, IBJA दर पर आधारित", line: "Tanishq की सूचीबद्ध दर, कल 2:40 pm जांची गई: ₹14,040" },
+    en: { price: "≈ ₹14,100", label: "Our estimate for today, from India's official gold rate", line: "Tanishq's listed rate, checked 2:40 PM yesterday: ₹14,040" },
+    hi: { price: "≈ ₹14,100", label: "आज के लिए हमारा अनुमान, भारत की आधिकारिक सोने की दर से", line: "Tanishq की सूचीबद्ध दर, कल 2:40 pm जांची गई: ₹14,040" },
   },
   {
     name: "stale 40h (past 36h) -> estimate + old Tanishq figure WITH date and time",
     readings: tanishqRows(40, 14040), forecast: ibja(14100),
-    en: { price: "≈ ₹14,100", label: "Our estimate for today, based on the IBJA rate", line: "Tanishq's listed rate when last checked, 6:40 PM, 23 Sept: ₹14,040 — not updated since" },
-    hi: { price: "≈ ₹14,100", label: "आज के लिए हमारा अनुमान, IBJA दर पर आधारित", line: "Tanishq की सूचीबद्ध दर, आख़िरी बार 23 सित॰, 6:40 pm जांची गई: ₹14,040 — तब से अपडेट नहीं हुई" },
+    en: { price: "≈ ₹14,100", label: "Our estimate for today, from India's official gold rate", line: "Tanishq's listed rate when last checked, 6:40 PM, 23 Sept: ₹14,040 — not updated since" },
+    hi: { price: "≈ ₹14,100", label: "आज के लिए हमारा अनुमान, भारत की आधिकारिक सोने की दर से", line: "Tanishq की सूचीबद्ध दर, आख़िरी बार 23 सित॰, 6:40 pm जांची गई: ₹14,040 — तब से अपडेट नहीं हुई" },
   },
   {
     name: "blocked for days (Tanishq 5 days old) -> estimate + old Tanishq figure WITH date and time",
     readings: tanishqRows(120, 13900), forecast: ibja(14100),
-    en: { price: "≈ ₹14,100", label: "Our estimate for today, based on the IBJA rate", line: "Tanishq's listed rate when last checked, 10:40 AM, 20 Sept: ₹13,900 — not updated since" },
-    hi: { price: "≈ ₹14,100", label: "आज के लिए हमारा अनुमान, IBJA दर पर आधारित", line: "Tanishq की सूचीबद्ध दर, आख़िरी बार 20 सित॰, 10:40 am जांची गई: ₹13,900 — तब से अपडेट नहीं हुई" },
+    en: { price: "≈ ₹14,100", label: "Our estimate for today, from India's official gold rate", line: "Tanishq's listed rate when last checked, 10:40 AM, 20 Sept: ₹13,900 — not updated since" },
+    hi: { price: "≈ ₹14,100", label: "आज के लिए हमारा अनुमान, भारत की आधिकारिक सोने की दर से", line: "Tanishq की सूचीबद्ध दर, आख़िरी बार 20 सित॰, 10:40 am जांची गई: ₹13,900 — तब से अपडेट नहीं हुई" },
   },
   {
     name: "fusion estimate (Tanishq + IBJA both down)",
@@ -110,14 +110,14 @@ const STATES = [
   {
     name: "Tanishq disabled (takedown: IBJA-derived history) -> estimate, no Tanishq name",
     readings: derivedRows(14100), forecast: ibja(14100),
-    en: { price: "≈ ₹14,100", label: "Our estimate for today, based on the IBJA rate", line: null },
-    hi: { price: "≈ ₹14,100", label: "आज के लिए हमारा अनुमान, IBJA दर पर आधारित", line: null },
+    en: { price: "≈ ₹14,100", label: "Our estimate for today, from India's official gold rate", line: null },
+    hi: { price: "≈ ₹14,100", label: "आज के लिए हमारा अनुमान, भारत की आधिकारिक सोने की दर से", line: null },
   },
   {
     name: "implausible fresh reading (+20% vs IBJA estimate) -> estimate, reading not shown",
     readings: tanishqRows(1, 16920), forecast: ibja(14100),
-    en: { price: "≈ ₹14,100", label: "Our estimate for today, based on the IBJA rate", line: null },
-    hi: { price: "≈ ₹14,100", label: "आज के लिए हमारा अनुमान, IBJA दर पर आधारित", line: null },
+    en: { price: "≈ ₹14,100", label: "Our estimate for today, from India's official gold rate", line: null },
+    hi: { price: "≈ ₹14,100", label: "आज के लिए हमारा अनुमान, भारत की आधिकारिक सोने की दर से", line: null },
   },
   {
     name: "implausible newer reading on a Tanishq-tier cycle -> the inference-gated reading",
@@ -267,11 +267,11 @@ for (const lang of ["en", "hi"]) {
     if (lang === "en") {
       assert.equal(got.label, "22K estimate (₹/g)");
       assert.equal(got.tooltip, "22K estimate: ≈ ₹14,016");
-      assert.equal(got.note, "Our estimate, based on the IBJA rate · one point per IBJA working day");
+      assert.equal(got.note, "per gram · Estimate from India's official daily gold rate");
     } else {
       assert.equal(got.label, "22K अनुमान (₹/ग्राम)");
       assert.equal(got.tooltip, "22K अनुमान: ≈ ₹14,016");
-      assert.equal(got.note, "हमारा अनुमान, IBJA दर पर आधारित · IBJA के हर कामकाजी दिन का एक बिंदु");
+      assert.equal(got.note, "प्रति ग्राम · भारत की आधिकारिक रोज़ाना सोने की दर से अनुमान");
     }
     assert.ok(!TANISHQ_RE.test(`${got.label} ${got.tooltip} ${got.note}`));
   });
@@ -283,7 +283,7 @@ test("chart: without the derived file it falls back to Tanishq rows only, labell
     const got = renderChartWith(mixed, derived, "en");
     assert.equal(got.estimate, false);
     assert.equal(got.label, "22K (₹/g)");
-    assert.equal(got.note, "Tanishq's listed 22K rate, as we checked it");
+    assert.equal(got.note, "per gram · Tanishq's listed rate");
     assert.ok(got.data.every((v) => v !== 14100 - 40), `derived row leaked into the Tanishq line ${got.data}`);
   }
 });

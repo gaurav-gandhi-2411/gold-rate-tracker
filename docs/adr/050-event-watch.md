@@ -1,6 +1,7 @@
 # ADR 050 — Pre-registration: F4 "Event watch" — does move SIZE spike around known calendar events?
 
-**Status:** Proposed 2026-09-24 (branch `feat/event-watch-model`). **Result recorded 2026-09-24:
+**Status:** Merged 2026-09-26 as #2028 (squash commit `e180bdf` on master). **The FOMC row is reversed by
+ADR 058; see Amendment A1 at the end.** Originally proposed 2026-09-24 (branch `feat/event-watch-model`). **Result recorded 2026-09-24:
 none of the 4 event types pass the pre-registered success gate; no card is surfaced (see
 Result).** Pre-registration only. The
 text, `data/events_calendar.json`, `ml/event_watch.py`, `scripts/analysis_event_watch.py`, and
@@ -289,3 +290,39 @@ alignment is plausible. Their registered results stand.
 
 Diagnostic: `grt-venv/event_timing_audit.py` (orchestrator scratch). It reuses
 `ml/event_watch.py`'s loader and the committed calendar.
+
+## Amendment A1 (2026-09-26): merged, and the FOMC row is reversed by ADR 058
+
+Nothing above this section changes. The pre-registration, the frozen artifacts and the result table
+stay as they were run.
+
+**Merge record.** #2028 was merged to master on 2026-09-26 as squash commit `e180bdf`. That commit is
+what the live site was built from on 2026-09-26 (Pages deployment for `e180bdf`, 13:18 UTC). The
+model outputs (`data/event_watch_today.json`, `data/events_calendar.json`) are served, but no page
+element reads them. Users see nothing from this ADR, which matches the result: no event type passed.
+
+**FOMC row reversed.** The result table above priced each FOMC decision on the wrong bar. The
+decision lands at 14:00 ET, after that day's 13:30 ET COMEX settlement, so its effect is in the
+*next* settlement. ADR 058 Part 2 re-ran FOMC with correct alignment (frozen commit `0aee0e9e`,
+`reports/timing_audit/fomc_aligned.json`; numbers quoted from that ADR, not re-run here). Window
+2013-01-01..2026-09-24, 109 priced decisions:
+
+- COMEX, next settlement: ratio of means **1.89**, n 109 (effective n 110.2) vs 2,399 normal days,
+  HAC one-sided p 6.0e-9. Passes Bonferroni and BH. It is a replication, not a confirmation, because
+  this ADR's own measurement audit had seen D+1 medians.
+- GLD, decision-day close: ratio **1.30**, n 109 (effective n 119.1), p 0.0008. Passes. Partly
+  contaminated, per ADR 058's pre-registration.
+- IBJA: n = 7, not testable. Whether the COMEX spike reaches the Indian price a buyer pays is
+  **unmeasured**.
+
+So this ADR's "FOMC days move gold less than a normal day (0.67x)" is **reversed, not just
+invalid**. The CPI, jobs-report and Budget rows were not re-run. They may carry the same bar
+misalignment, and their verdicts should be treated as unverified until someone checks.
+
+**Still open:** ADR 058 follow-up 4, not done here.
+- Add 2019-09-18 to `data/events_calendar.json`.
+- Add a release-time field and a scheduled/unscheduled flag.
+
+That file is a frozen artifact of this pre-registration and is served under `data/`, so changing it
+is not a docs-only edit. It needs its own PR. Any new F4 card needs a fresh pre-registration, per
+ADR 058.

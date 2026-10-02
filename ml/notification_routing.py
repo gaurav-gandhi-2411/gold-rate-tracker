@@ -24,7 +24,9 @@ OPS = "ops"
 # The ONLY trigger ids that may reach the public topic. Each one describes the gold price and nothing
 # about the system. Adding an id here is a product decision: it must also have public-standard copy
 # (ml/public_copy.py) and no directional forecast (tests/test_notification_copy_claims.py).
-PUBLIC_ALLOWLIST: frozenset[str] = frozenset({"T1", "T2", "T3", "T4", "T8_MORNING", "T8_EVENING"})
+PUBLIC_ALLOWLIST: frozenset[str] = frozenset(
+    {"T1", "T2", "T3", "T4", "T8_MORNING", "T8_EVENING", "T15"}
+)
 
 # Every OTHER trigger id ml/notifications.py can emit, classified as OPS on purpose. A test requires
 # that PUBLIC_ALLOWLIST | KNOWN_OPS covers every _make_alert id in the module, so a new trigger has

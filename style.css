@@ -593,6 +593,11 @@ main {
 }
 
 .freshness-pill {
+  /* May wrap to two lines when its text is long; never nowrap -- a one-line pill pushed the
+     header past a 390px screen and the phone zoomed the whole page out (2026-09-29). */
+  min-width: 0;
+  text-align: right;
+  line-height: 1.2;
   font-size: var(--ts-xs);
   font-family: var(--sans);
   font-weight: 500;
@@ -602,6 +607,12 @@ main {
   font-variant-numeric: tabular-nums;
 }
 .freshness-pill { transition: color 0.3s ease-out; }
+/* Small phones (360px): a tighter header so the pill has room for one line. */
+@media (max-width: 380px) {
+  .app-title { font-size: 17px; }
+  .app-header-right { gap: 2px; }
+  .freshness-pill { letter-spacing: 0.02em; }
+}
 .freshness-pill.freshness--ok    { color: var(--status-live); }
 .freshness-pill.freshness--warn  { color: var(--status-carryover); }
 .freshness-pill.freshness--stale { color: var(--status-stale); font-weight: 700; }
@@ -840,7 +851,9 @@ main {
 ═══════════════════════════════════════════════════════════════ */
 .hero-card {
   position: relative;
-  padding-top: clamp(32px, 6vw, 64px);
+  /* 2026-10-02: was clamp(32px, ...) -- with main's own top padding that left ~78px of
+     empty space between the header and the price on phones. */
+  padding-top: clamp(8px, 4vw, 64px);
   margin-bottom: clamp(28px, 6vw, 56px);
   /* CLS fix (2026-08-06): hero-skeleton was in normal flow, a sibling of the real
      eyebrow/price/location/change/verdict-banner/sparkline content it represents --
@@ -1552,9 +1565,32 @@ main { overflow-x: clip; }
 .section-karat-note {
   font-size: 12px;
   color: var(--cream-mute);
-  margin: -8px 0 12px;
+  margin: 8px 0 12px;         /* was -8px: pulled the note up into the cards above it */
   letter-spacing: 0.03em;
 }
+
+/* Karat filter (22K / 24K / 18K) for the trend chart and the history table. */
+.karat-toggle {
+  display: inline-flex;
+  gap: 4px;
+  margin: 0 0 var(--space-3, 12px);
+  padding: 3px;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 999px;
+}
+.karat-toggle button {
+  background: transparent; border: 0; cursor: pointer;
+  color: var(--cream-mute);
+  font-family: var(--sans); font-size: var(--ts-xs); font-weight: 600;
+  letter-spacing: 0.04em;
+  padding: 6px 14px; border-radius: 999px;
+  min-height: 36px; min-width: 48px;
+  transition: color 0.2s, background 0.2s;
+}
+.karat-toggle button:hover { color: var(--cream); }
+.karat-toggle button.active { background: var(--gold); color: var(--ink); }
+.karat-toggle button:focus-visible { outline: 2px solid var(--gold); outline-offset: 2px; }
 
 .history-wrap {
   position: relative;
@@ -2262,6 +2298,17 @@ html.ptr-pulling {
   border-radius: var(--radius-sm);
 }
 .good-price-tomorrow strong { color: var(--gold); font-weight: 600; }
+.good-price-direction {
+  font-size: 14px;
+  color: var(--cream);
+  margin: 8px 0 0;
+  padding: 10px 14px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+}
+.good-price-direction strong { font-weight: 600; }
+.good-price-direction[data-side="up"] strong { color: var(--up); }
+.good-price-direction[data-side="down"] strong { color: var(--down); }
 
 .outlook-reliability { margin-top: 8px; }
 .outlook-reliability-note {
@@ -2290,6 +2337,9 @@ html.ptr-pulling {
 .driver-context-section {
   margin-bottom: clamp(32px, 7vw, 48px);
 }
+/* Was unstyled (margin 0): the card sat flush under the heading and clipped the "g" of
+   "moving" on phones (GG, 2026-10-02). Same size and gap as the other section headings. */
+.driver-context-section h2 { font-size: clamp(22px, 3.5vw, 32px); margin-bottom: var(--space-5); }
 /* Tier 2 CLS fix (2026-08-10): same absolute-overlay pattern as
    .model-signal-wrap/.commentary-body/.history-wrap. min-height is measured
    from live production content (73.625px, mobile viewport, 2026-08-10,
@@ -2330,6 +2380,20 @@ html.ptr-pulling {
 .track-record-section {
   margin-bottom: clamp(40px, 9vw, 56px);
   scroll-margin-top: 64px;
+}
+/* Inside the "How this works" panel: align with the panel body's padding. */
+#section-info .track-record-section {
+  padding: 0 var(--space-6) var(--space-6);
+  margin-bottom: 0;
+}
+#section-info .track-record-section h3 {
+  font-family: var(--sans);
+  font-size: var(--ts-sm, 14px);
+  font-weight: 600;
+  margin-bottom: var(--space-2, 8px);
+}
+@media (max-width: 640px) {
+  #section-info .track-record-section { padding: 0 var(--space-4) var(--space-4); }
 }
 .track-record-section h2 {
   font-size: clamp(22px, 3.5vw, 32px);
@@ -2396,7 +2460,9 @@ html.ptr-pulling {
    this card's content changes, not treated as permanent headroom). */
 .model-signal-wrap {
   position: relative;
-  min-height: 720px;
+  /* 2026-09-29: 720px fitted the old long panel; the plain-language panel measures ~292px
+     (390px viewport), so 720px left a large empty gap below it. */
+  min-height: 300px;
 }
 .model-signal-skeleton {
   position: absolute;

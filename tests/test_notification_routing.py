@@ -33,7 +33,7 @@ _BOTH = {"NTFY_TOPIC": "ops-topic-aaaa", "NTFY_TOPIC_PUBLIC": "public-topic-bbbb
 
 def test_the_public_allowlist_is_exactly_the_price_messages():
     """Pinned on purpose: widening it must be a visible edit to this test as well as to the module."""
-    assert {"T1", "T2", "T3", "T4", "T8_MORNING", "T8_EVENING"} == PUBLIC_ALLOWLIST
+    assert {"T1", "T2", "T3", "T4", "T8_MORNING", "T8_EVENING", "T15"} == PUBLIC_ALLOWLIST
 
 
 @pytest.mark.parametrize("trigger_id", sorted(KNOWN_OPS))
@@ -198,6 +198,11 @@ def _public_outputs() -> dict[str, list[tuple[str, str]]]:
     out["price_move"] = [
         public_copy.price_move(c, p)
         for c, p in ((14350, 14200), (14000, 14200), (999, 1200), (25000, 24000))
+    ]
+    out["ibja_move"] = [
+        public_copy.ibja_move(d, e, f)
+        for d, e in ((-372, 13755), (150, 14215), (-2500, 99999))
+        for f in ("am", "pm")
     ]
     out["weekly_summary"] = [
         public_copy.weekly_summary(c, delayed=d) for c in (999, 14215) for d in (False, True)

@@ -60,6 +60,7 @@ on:
 permissions:
   contents: write # needed so the action can commit prices.json back to the repo
   pull-requests: write # needed to open/auto-merge the tanishq-sync PR (master requires status checks)
+  actions: write # needed to dispatch check-price.yml once a new reading is on master (step at the end)
 
 jobs:
   scrape-tanishq-selfhosted:
@@ -300,6 +301,7 @@ jobs:
           fi
 
       - name: Sync Tanishq reading via bot PR
+        id: sync
         # Separate branch from bot/data-sync (used by check-price.yml's `check`
         # job) so the two jobs' commits never race for the same PR/branch.
         # always() so this still runs (and pushes the health-record commit)
@@ -314,3 +316,14 @@ jobs:
           token: ${{ secrets.CI_MERGE_PAT }}
           wait-minutes: "15"
           ntfy-topic: ${{ secrets.NTFY_TOPIC }}
+
+      - name: Refresh the site's price now (dispatch check-price)
+        # 2026-09-29: bot commits carry [skip ci], so a merged Tanishq reading reached the site only at
+        # check-price.yml's next SCHEDULED run -- which GitHub delayed or dropped for hours (09-28 and
+        # 09-29: ~8.5 h each). The sync step exits 0 only after its PR merged, so the reading is on
+        # master here. GITHUB_TOKEN may dispatch workflow_dispatch runs (unlike push events).
+        if: always() && steps.scrape.outcome == 'success' && steps.sync.outcome == 'success'
+        continue-on-error: true
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh workflow run check-price.yml --repo "${GITHUB_REPOSITORY}" --ref master
