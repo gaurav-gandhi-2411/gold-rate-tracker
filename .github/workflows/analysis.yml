@@ -32,6 +32,7 @@ on:
           - selective_direction
           - pipeline_sensitivity
           - calibrated_floor
+          - macro_horizons
 
 permissions:
   contents: read

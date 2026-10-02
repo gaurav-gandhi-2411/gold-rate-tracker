@@ -1532,6 +1532,16 @@ Handed to GG with #1920.
 - Current MAE ₹61.4/g (0.44%) over 89 walk-forward days.
 - Adding IBJA's AM fix: same-day error ₹45 → ₹35/g (BH ✓, not Bonferroni on all days).
 - Weekend/holiday days (₹96/g) are unsolved. A COMEX × USD/INR adjustment makes them worse.
+  - *Superseded in part by ADR 058 (2026-09-25), re-run R2, exploratory:* the "makes them worse"
+    result came from a misaligned move (settle before the scored day / settle before the IBJA
+    date). Measured from the IBJA PM fix to the time the scored Tanishq board was first seen, the
+    adjustment makes carried-forward days **better**: M4 Rs 43.0/g vs M0 96.1 (published M4:
+    122.8), n = 28, DM one-sided p = 0.0026 (effective n 18.7); all days 44.7 vs 61.2, n = 90,
+    p = 0.0065. Post hoc (2026-04-17..09-24), with up to ~3 h of look-ahead on weekday holidays,
+    not yet compared with yesterday's Tanishq (Rs 46.0/g on #2015's weekend stratum, a
+    different day set), and it needs a forward pre-registered shadow
+    before anyone relies on it. #1957's explanation ("Tanishq doesn't re-price on days IBJA
+    doesn't publish") is not supported by the aligned numbers.
 
 **R3 buyer policy (draft #1956).** No pre-registered policy saves money reliably. Best: +₹8–12/g, not significant after correction.
 
@@ -1869,3 +1879,246 @@ which carries raw COMEX and USD/INR (I added it in #2004).
 **Process notes.**
 - Ten parallel agents hit the API session limit, and the in-flight work was resumed from each agent's worktree. Run at most about 5 agents at once.
 - Six open PRs each set the service-worker VERSION to v58: #2037, #2038, #2039, #2049, #2053 and #2055. Whichever merges later takes the next number.
+
+
+---
+
+## Checkpoint 2026-09-25 (second brief): E1–E5, the Kalman leak audit, the SW version loop
+
+**Premises verified.** #2039 and claude-config #36 were merged by GG, and the `DATA_ENC_KEY` secret exists.
+
+**Hook gap (a GG action).** The merge-guard hook that actually runs is `~/.claude/scripts/merge_gate.py`. That checkout sits on the local branch `fix/gate4-real-checks-and-pr-scoped-waiver`, which carries unpushed commits and uncommitted edits, and it does **not** yet contain #36's analysis-only exemption. A dry run with #36's gate passes #2015, #2050, #2051, #2052 and #2061 once their PR bodies state the reviewable/generated split, but the active hook still denies them on size.
+
+**Merged this round.**
+- #2071: E5 wording P2–P5, all four passing the accuracy, neutrality and estimate-labelling tests. Verified live: service-worker `v61-20260925-retailer-wording`, new strings served.
+- #2077: the weekly-range shadow log no longer carries raw IBJA rates. The file had never been written, so none were published.
+
+**Item 3, Kalman leak audit** (#2070, stacked on #2050):
+- **Real leaks found:**
+  - GRT captures made after the target, on 24 of 56 days (median 403 min late);
+  - Malabar captures after the target, on 20 of 48 days;
+  - IBJA PM used before 17:00 IST on 6 days.
+- **After correcting them**, Kalman still beats IBJA × markup overall: ₹35.1 vs ₹62.4 (n 90, effective n 67.0, p 1.3e-4).
+- **It loses on every stratum to Tanishq's last reading before the target:**
+  - all days: ₹35.1 vs ₹13.9;
+  - weekdays: ₹40.0 vs ₹18.5;
+  - weekends: ₹22.9 vs ₹2.7.
+
+  That baseline was never tested before. The earlier weekend claim ("₹16.3 vs yesterday's ₹46.0") used the wrong baseline.
+- The band now over-covers on weekdays as well (92.2%).
+- **Kalman v2 was not started**, because the model is not sound as claimed.
+
+**E3 Tanishq update times** (#2078):
+- 72% [62, 79] of rate changes fall between 10:00 and 11:59 IST.
+- No change was dated to a Sunday across 17 Sundays.
+- Captures are a median 5.1 h apart, so each change is known only to within a median of 260 min. The pre-registered rule therefore calls for a measurement window (GG's decision).
+- **Staleness:** today 439 min mean. A timed schedule triggered from the laptop would give about 20 min if every visit ran; at the measured 38% runner-unavailability, about 165 min.
+- **GitHub scheduler:** 4.7 of 8 runs a day, a median of at least 102 min late.
+- **Kalyan:** identical across cities in 259 of 259 cycles.
+
+**E4:**
+- #2072: superseded notes for ADR 032, the R2 weekend finding and ADR 046. It waits on #2051.
+- #2073: the `drivers.py` fix. It uses hourly bars at each fix, which cut the unexplained spread from 1.35% to 0.63% and raise direction agreement from 68% to 90%, n 207. The lagged daily bar the brief asked for measured worse (1.55%).
+  - An independent verifier passed it with notes; all three notes are now fixed, each with a test that fails on the old code.
+  - One of them was a bug where the headline gave the rupee the wrong sign.
+
+**E1 encryption** (#2075, draft):
+- AES-256-GCM, with the file path and schema version bound in as associated data.
+- Round trip, tamper detection and key-leak tests all pass.
+- ADR 044 and ADR 052 `--check` reproduce exactly from the decrypted snapshots.
+- Git history still holds the old plaintext; it is not rewritten.
+
+**E2 hero** (#2069, stacked on #2053): no estimate is ever labelled as Tanishq's price. A property test covers 960 state combinations.
+
+**Item 1:** #2068 builds the service-worker VERSION from a hash of the shell files at deploy time. It stays inert until GG sets `PAGES_BUILD_MODE=actions` and switches the Pages source.
+
+## Checkpoint 2026-09-26 (cloud session): merge-train audit and recovery
+
+**Resume point for any later session.** This session ran in a cloud container and has no memory
+after it ends.
+
+**Environment.** The container's original `/home/user/repo` was a disconnected 2-commit "seed"
+snapshot with no remote. The earlier cloud session's figures came from that snapshot and are stale.
+Its local-only commit `69d83b1` on `docs/architecture-drift-fix` exists only there. This session
+attached the real repo and cloned it to `/home/user/gold-rate-tracker`: full history, 3171 commits,
+origin/master `e180bdf`. Push and REST API work. GraphQL is blocked, so `gh pr view` fails;
+`scripts/check_required_checks_positive.py` was run through a scratch shim that answers
+`gh pr view --json headRefOid` over REST. The repo's script was not modified.
+
+**Merge train: what happened (VERIFIED).**
+- Every merge GG made on 2026-09-26 was a squash merge: every merge commit has one parent. This
+  includes #2022 → `30c0e86` and #2028 → `e180bdf` on master.
+- After those two, every later train PR conflicted with master on `tests/test_count_baseline.json`,
+  and only on that file. #2086 also conflicts on five bot data files.
+- PRs merged after a skipped PR went into the skipped PR's branch, because their base was that
+  branch and it was never retargeted. They show "Merged", but the code is not on master.
+- Only #2022 and #2028 are on master, checked by merge-tree content equality.
+- GG's "#2029" is #2089. #2029 is a 2026-09-24 bot PR, and #2089 is the only unmerged, un-held
+  train PR missing from GG's conflict list.
+- Simulation from `1d78d59f`, master just before #2022: "Create a merge commit" merges all 24 in
+  order with 0 conflicts, and the result equals #2091's tip plus master's bot data. Squash
+  conflicts on every PR after #2028. The cause is the merge method, not master moving: the bot
+  commits touched only data, README, og.png and Lighthouse files, and all of those merged cleanly.
+- The stack tip `72806bf` (head of #2091) contains every train PR except the held #2078. Each
+  stranded branch's tree is byte-identical to a PR head inside that tip.
+
+**Recovery.**
+- **#2119** `fix/merge-train-recovery`: one merge commit bringing `72806bf` into master. Baseline
+  resolved as a union with the max per file, which equals the stack's version. Bot data files are
+  identical to master's. STOP for GG; merge with "Create a merge commit".
+- **#2120** `refactor/per-file-test-count-baseline` (item 2, stacked on #2119): one `.count` file
+  per test file. STOP for GG.
+
+**Open PRs from this session.** They must be merged in this order, each with **"Create a merge
+commit"**, never squash:
+
+| Order | PR | Branch | What | Merges |
+|---|---|---|---|---|
+| 1 | #2119 | `fix/merge-train-recovery` | the recovered train | GG |
+| 2 | #2120 | `refactor/per-file-test-count-baseline` | item 2, one `.count` file per test file | GG |
+| 3 | #2121 | `docs/architecture-drift-fix` | item 4, including a `_config.yml` line | GG |
+| 3 | #2122 | `fix/direction-eval-known-at-inputs` | 3b F1 | GG |
+| 3 | #2123 | `fix/nowcast-shadow-exclude-late-ibja` | 3c F2, ADR 063 | GG |
+| 3 | #2124 | `feat/history-off-tanishq-series` | 3d | GG |
+| 3 | #2078 | `feat/tanishq-timed-visits` | 3a mixed schedule; retargeted onto #2120 | GG |
+| 3 | this PR | `docs/checkpoint-2026-09-26-merge-train` | this checkpoint and the ADR 050 amendment A1 | self-merge (docs-only) |
+
+Items in order 3 are independent of each other once #2119 and #2120 are in.
+
+**Decisions and numbers (VERIFIED unless marked).**
+- **3a.** The schedule is section 4 variant A: 01:40, 07:30, 10:40, 11:10, 15:35, 19:50 IST. At
+  q = 0 it gives 19.7 min mean staleness (11.9–73.0), against U30's 304, and 0 h/day "not fresh".
+  T14 stays at 30 h. That rests on a simulation (INFERRED; it assumes independent misses): about
+  1 false alert per 65 weeks for the mixed schedule, against 1 per 54 for 4a.
+- **3b, F1.**
+  - h1: logistic 49.0% → 47.7% and LightGBM 48.4% → 51.0%, against always-up 51.0%, n = 155.
+  - h2: logistic 55.0% → 55.7% and LightGBM 55.7% → 59.1%, against 58.4%, n = 149.
+  - Nothing is significant (two-sided McNemar p ≥ 0.42). Late inputs dropped from 505 to 0 (h1)
+    and from 478 to 0 (h2).
+- **3c, F2.** The six late-IBJA days are in R2's historical data, not in the G3 window (a premise
+  in the brief was wrong). The decision now counts certified days only.
+- **3d.** Tested against the real app.js: with `prices.json` cut to today, the pre-change app
+  loses history, sparkline, comparisons and the good-price card. After the change, all of them
+  render from the estimate, labelled as such.
+- **3e.** ADR 050 amendment A1, in this PR.
+
+**Environment notes for the next cloud session.**
+- `gh pr view/list/diff` use GraphQL, which is blocked, so the repo's check scripts need a
+  REST shim. This session's shim was scratch-only.
+- `api.github.com` pagination via `--paginate` is blocked (numeric-ID URLs), and CI job logs
+  cannot be downloaded.
+- Playwright 1.62.1 needs browser build 1234 while the container ships 1194. This session used
+  a symlinked `PLAYWRIGHT_BROWSERS_PATH`.
+- `app.js`, `style.css`, `service-worker.js`, `CURRENT_STATE.md`, `docs/RUNBOOK.md`,
+  `ml/notifications.py` and `.github/workflows/lint.yml` are CRLF. Preserve that.
+
+**Next:**
+- After Sunday 2026-09-27's runs, record [adr042-v2] n = 0 with embargo, the M3 stratified
+  result (n and Wilson CIs), and the first nowcast and weekly-range shadow entries.
+- On 2026-10-22, the morning-rate decision, with F2 applied.
+
+### Checkpoint 2026-09-27 (Sunday runs)
+
+**Run.** `weekly-backtest.yml` run `36302778519` (scheduled, created 07:20Z, success) ran on
+master `8557e530`. That is master's own code: #2119 was not merged, so none of the train's code
+ran. Its results landed as #2143 (`da884b6c`). Every number below is VERIFIED from the committed
+files.
+
+- **[adr042-v2] live_h2:** n = 0. Embargo column `label_date_h2`, confirmatory after 2026-09-24,
+  consecutive-day labels, and no as_of date scored yet. `reached_preregistered_n` is false; the
+  power target is n = 418.3.
+  - The non-confirmatory proxy arm (`proxy_deadzone_h1_equivalent`): n 329, accuracy 52.6% vs
+    always-up 55.6%, DM p 0.789.
+- **M3 stratified band** (`data/calibration_band_coverage.json` → `stratified_shadow`). This is the
+  first result, the one ADR 035 named. Nominal target is 80%.
+
+  | | n | Production band | Stratified band |
+  |---|---|---|---|
+  | Pooled | 93 | 69.9% (Wilson 59.9–78.3%), p vs nominal 0.019 | 80.6% (71.5–87.4%), p 1.0 |
+  | Same-day | 63 | 77.8% (66.1–86.3%) | identical |
+  | Carry-forward | 30 | 53.3% (36.1–69.8%), p 0.0009 | 86.7% (70.3–94.7%) |
+
+  - On carry-forward days, the stratified band's mean half-width is Rs 204.1/g, against 78.1
+    for production.
+  - **Caveat (INFERRED from the file history):** last week's file had n = 86 and no stratified key,
+    so only about 7 of these 93 days are new since the stratified rule was written. The rest are
+    the development window it was built on. This is not yet out-of-sample evidence.
+- **Nowcast shadow (G3).** First 2 rows, logged by master's pre-#2090 runner, without
+  `inputs_known_after_target`.
+  - 09-25 is same-day: truth 14,055, M0 14,128.32, M3 14,047.10.
+  - 09-26 is a carry-forward day (gap 1).
+  - `n_same_day` = 1. No MAE or p is computed below 3 days.
+  - F2 certification with #2123's code: 09-25 passes. IBJA was fetched 12:56Z, before the
+    17:05Z reading. So 1 certified day and 0 excluded.
+- **Weekly-range shadow.** First 2 entries, as_of 09-25. The 1d band is 136,630.1–142,377.0 per
+  10 g (n_cal 193); the week band is 133,221.7–147,340.1 (n_cal 156). Neither is scored yet.
+
+**Readiness.**
+- #2119 had gone conflicting with master: #2143 rewrote `data/wait_or_buy_today.json` with
+  master's old script, which **republishes IBJA's price level (`price_t`) in a publicly served
+  file**. The train's script omits that level (`test_committed_wait_or_buy_today_has_no_ibja_level`).
+- I merged master in and kept the train's compliant version (`3c1bce59`). lint and pwa-js are
+  green, completed after master's last commit, and the positive check PASSES.
+- The full 8-PR sequence still dry-runs with 0 conflicts on master `2ce2c77e`.
+
+### Checkpoint 2026-09-28 (Monday eval)
+
+- **Run.** `eval-direction.yml` run `36409139893` (scheduled, created 10:20Z, success) ran on
+  master `1e60cb81`. #2122 (F1) is not merged, so master's harness ran: it has no feature leak
+  guard at all. Its results landed as #2168.
+- **Published numbers** (`data/direction_baseline.json`, as_of range 2025-04-15..2026-09-24,
+  VERIFIED):
+
+  | Horizon | n folds | Logistic | LightGBM | Always-up | p (logistic / LightGBM) |
+  |---|---|---|---|---|---|
+  | h1 | 155 | 49.03% | 48.39% | 50.97% | 0.818 / 0.724 |
+  | h2 | 149 | 55.03% | 55.70% | 58.39% | 0.424 / 0.694 |
+
+  Both gates are closed.
+- **Cross-check.** These equal the "before" row of ADR 061 A1 exactly. That row was computed
+  offline on the #2119 tree, whose guard only reports and does not change any number. So the
+  A1 "after" row (h1 47.7% / 51.0%, h2 55.7% / 59.1%) is what the first run after #2122 merges
+  should publish, unless new data rows arrive first.
+- **Merge train.** Still nothing merged. #2119 is at head `db8f023a` with green checks, and it
+  merges cleanly into current master. Master has moved since then only through bot commits:
+  data files plus the weekly auto-updated `docs/DIRECTION_SIGNAL_STATUS.md`.
+
+### Checkpoint 2026-09-28 (evening): train merged, live price and drop alerts fixed
+
+GG delegated merge and close authority on 2026-09-28 and asked that the site show the live
+price and that ntfy alert on a live price drop.
+
+**Merged.** All with "Create a merge commit". Each PR was brought up to date with master, got
+green lint and pwa-js, and passed `check_required_checks_positive.py` right before merging.
+- #2119 (`6ed44a9b`, 2 parents)
+- #2120 (`118fc85a`)
+- #2121 (`87dcd5bd`)
+- #2122 (`9c883457`)
+- #2123 (`d91ac564`)
+- #2124 (`47e254fe`)
+- #2125 (`45fac038`)
+- #2187 (`41b967d9`)
+
+**Closed as superseded**, after proving each head's tree equals a train PR head that is now an
+ancestor of master: #2070, #2086, #2089, #2073, #2053, #2091. (#2061 was already closed.)
+**Held:** #2078, the timed Tanishq visits. It needs GG's laptop Task Scheduler setup. Without that,
+it would cut GitHub's nominal visits from 8 a day to 6.
+
+**Incident (VERIFIED).**
+- IBJA's 22K AM fix on 09-28 was Rs 135,612 per 10 g, against Friday's PM of Rs 139,336 (−2.7%).
+- GitHub's scheduler created no Tanishq scrape between 05:13Z and 13:43Z, and no `check-price`
+  run between 07:31Z and 13:43Z.
+- The site showed Rs 14,040. Then, once Tanishq passed the 8 h window, it showed the IBJA
+  estimate of Rs 14,140, built from Friday's PM.
+- No drop alert fired.
+- Manual dispatches captured Tanishq at Rs 13,710 (13:45Z). That is live now.
+
+**#2187 fix.**
+- **Estimate:** uses a newer day's AM fix. On 81 days, MAE Rs 60.5/g vs Rs 151.6/g for the
+  previous PM; paired Wilcoxon p = 3.7e-7.
+- **T3:** compares with the last *different* price, once per change, only for changes first seen
+  within 24 h. The old "last two readings" rule went blind once a second scrape landed at the new
+  price.
+- **T15 (new):** the benchmark moved ≥ Rs 150/g between its two latest fixes.
+- **Unverified:** delivery of today's alert. The Actions cache and job logs cannot be read from
+  the cloud session. GG to confirm on the phone.

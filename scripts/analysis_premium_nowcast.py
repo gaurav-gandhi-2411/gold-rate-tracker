@@ -16,6 +16,15 @@ pairs, rho clipped to [0, 1]). Everything C uses is known before t's AM fix.
 Primary test (H1): |error| of C < |error| of B1, one-sided paired HAC Diebold-Mariano, lag 1.
 Secondary (H2: C < B0, H3: B1 < B0), Holm over the two. alpha = 0.05.
 --since restricts scoring to days after a date (the confirmatory set is days after 2026-09-24).
+
+Addendum A1, option A (adopted 2026-09-25, ADR 046): the confirmatory run reads both parities on
+the fix clock instead of from day t-1 closes (--parity-clock fix_1h, the default):
+  parity(t) = GC=F x INR=X from the last Yahoo 1-hour bars that ENDED by 06:30 UTC on t (AM fix),
+  p(t')     = IBJA PM(t') / (the same product at 11:30 UTC on t' (PM fix), times duty) - 1.
+Every bar used is saved to BARS_ARCHIVE (append-only, never rewritten; archived bars win over a
+re-fetch), because Yahoo drops 1-hour bars after 730 days. That file holds raw Yahoo prices: it is
+gitignored and must only ever be committed encrypted (E1, ADR 060). --parity-clock t-1_close
+reproduces the registered exploratory run and can never be confirmatory.
 """
 
 from __future__ import annotations
@@ -38,6 +47,15 @@ CONFIRMATORY_MIN_N = 120
 MIN_PAIRS = 30
 ALPHA = 0.05
 HAC_LAG = 1
+
+# Addendum A1 option A (adopted 2026-09-25): parity is read at the fix, from 1-hour bars.
+PARITY_CLOCKS = ("fix_1h", "t-1_close")
+AM_CUTOFF_UTC = (6, 30)  # IBJA AM ~12:00 IST
+PM_CUTOFF_UTC = (11, 30)  # IBJA PM ~17:00 IST
+BAR_LENGTH = pd.Timedelta(hours=1)  # Yahoo labels intraday bars by their START time
+TICKERS = ("GC=F", "INR=X")
+TROY_OZ_TO_GRAM = 31.1034768  # same constant as scripts/analysis_derived_premium.py
+BARS_ARCHIVE = ROOT / "data" / "premium_nowcast_bars.json"  # raw Yahoo prices: E1, gitignored
 
 
 def _premium_module() -> Any:
@@ -97,6 +115,104 @@ def score_frame(d: pd.DataFrame) -> pd.DataFrame:
     return pd.DataFrame(rows).set_index("date") if rows else pd.DataFrame()
 
 
+def bar_known_by(bars: pd.Series, t_utc: pd.Timestamp) -> dict[str, Any] | None:
+    """The last bar (labelled by START time) that ENDED at or before t_utc, i.e. the latest
+    price known at t. None if no bar had ended by then."""
+    b = bars.dropna()
+    if b.empty:
+        return None
+    idx = pd.DatetimeIndex(b.index)
+    idx = idx.tz_localize("UTC") if idx.tz is None else idx.tz_convert("UTC")
+    pos = int((idx + BAR_LENGTH).searchsorted(t_utc, side="right")) - 1
+    if pos < 0:
+        return None
+    return {"bar_start_utc": idx[pos].isoformat(), "close": float(b.to_numpy()[pos])}
+
+
+def _cutoff(day: pd.Timestamp, hm: tuple[int, int]) -> pd.Timestamp:
+    return pd.Timestamp(day.year, day.month, day.day, hm[0], hm[1], tz="UTC")
+
+
+def fix_clock_bars(
+    dates: list[pd.Timestamp], bars: dict[str, pd.Series], archive: dict[str, Any]
+) -> tuple[dict[str, Any], int]:
+    """Bars used at each date's AM and PM cutoffs. Archived entries are kept as they are; only
+    missing (date, fix) entries are filled from `bars`, and only when both tickers have a bar.
+    Returns (updated archive dates, number of archived entries that disagree with a re-fetch of
+    the same bar)."""
+    out: dict[str, Any] = {k: dict(v) for k, v in archive.items()}
+    mismatches = 0
+    for day in dates:
+        key = str(day.date())
+        entry = out.setdefault(key, {})
+        for fix, hm in (("am", AM_CUTOFF_UTC), ("pm", PM_CUTOFF_UTC)):
+            got = {
+                tk: bar_known_by(bars.get(tk, pd.Series(dtype=float)), _cutoff(day, hm))
+                for tk in TICKERS
+            }
+            fresh = {k: v for k, v in got.items() if v is not None} if all(got.values()) else None
+            if fix in entry:
+                if fresh is not None and any(
+                    fresh[tk]["bar_start_utc"] == entry[fix][tk]["bar_start_utc"]
+                    and abs(fresh[tk]["close"] / entry[fix][tk]["close"] - 1) > 1e-9
+                    for tk in TICKERS
+                ):
+                    mismatches += 1
+            elif fresh is not None:
+                entry[fix] = fresh
+        if not entry:
+            del out[key]
+    return out, mismatches
+
+
+def apply_fix_clock(d: pd.DataFrame, archive: dict[str, Any]) -> pd.DataFrame:
+    """Replace landed_parity (AM-cutoff parity on t) and premium_pct (IBJA PM over the PM-cutoff
+    parity of the same day) with option A's fix-clock values. Days without bars become NaN and
+    drop out exactly as days without parity do in the registered test."""
+    conv = 10 / TROY_OZ_TO_GRAM
+
+    def parity(day: pd.Timestamp, fix: str) -> float:
+        e = archive.get(str(day.date()), {}).get(fix)
+        if e is None:
+            return float("nan")
+        return float(e["GC=F"]["close"] * e["INR=X"]["close"] * conv)
+
+    x = d.copy()
+    duty = 1 + x["duty_rate"]
+    x["landed_parity"] = pd.Series([parity(t, "am") for t in x.index], index=x.index) * duty
+    pm_parity = pd.Series([parity(t, "pm") for t in x.index], index=x.index) * duty
+    x["premium_pct"] = (x["pm_999"] / pm_parity - 1) * 100
+    return x
+
+
+def _fetch_hourly(ticker: str) -> pd.Series:
+    import yfinance as yf
+
+    df = yf.download(
+        ticker, period="729d", interval="1h", auto_adjust=True, progress=False, threads=False
+    )
+    if isinstance(df.columns, pd.MultiIndex):
+        df.columns = df.columns.get_level_values(0)
+    return df["Close"].dropna() if "Close" in df else pd.Series(dtype=float)
+
+
+def load_archive(path: Path) -> dict[str, Any]:
+    if not path.exists():
+        return {}
+    return dict(json.loads(path.read_text(encoding="utf-8"))["dates"])
+
+
+def save_archive(path: Path, dates: dict[str, Any]) -> None:
+    doc = {
+        "schema": 1,
+        "about": "ADR 046 addendum A1 option A: Yahoo 1-hour bars (Close; bar_start_utc is the "
+        "bar's START) used for parity at 06:30 UTC (am) and 11:30 UTC (pm). Append-only. Raw "
+        "third-party prices: commit only encrypted (E1, ADR 060).",
+        "dates": dict(sorted(dates.items())),
+    }
+    path.write_text(json.dumps(doc, indent=1) + "\n", encoding="utf-8")
+
+
 def _dm(loss_a: np.ndarray, loss_b: np.ndarray) -> dict[str, Any]:
     from ml.direction.evaluate_reframed import diebold_mariano_test
 
@@ -135,6 +251,8 @@ def main() -> int:
     ap = argparse.ArgumentParser()
     ap.add_argument("--since", default=REGISTERED_AFTER, help="score days strictly after this")
     ap.add_argument("--out", type=Path)
+    ap.add_argument("--parity-clock", choices=PARITY_CLOCKS, default="fix_1h")
+    ap.add_argument("--bars-archive", type=Path, default=BARS_ARCHIVE)
     args = ap.parse_args()
     prem = _premium_module()
     table = json.loads(prem.DUTY_TABLE.read_text(encoding="utf-8"))["rows"]
@@ -142,12 +260,22 @@ def main() -> int:
     start = (pd.Timestamp(ibja["date"].min()) - pd.Timedelta(days=15)).date().isoformat()
     end = (pd.Timestamp.today() + pd.Timedelta(days=1)).date().isoformat()
     d = prem.build(table, ibja, prem.load_drivers(start, end))
+    extra: dict[str, Any] = {"parity_clock": args.parity_clock}
+    if args.parity_clock == "fix_1h":
+        dates = list(d.dropna(subset=["pm_999", "duty_rate"]).index)
+        bars = {tk: _fetch_hourly(tk) for tk in TICKERS}
+        archive, mismatches = fix_clock_bars(dates, bars, load_archive(args.bars_archive))
+        save_archive(args.bars_archive, archive)
+        d = apply_fix_clock(d, archive)
+        extra |= {"bars_archive": str(args.bars_archive), "archive_refetch_mismatches": mismatches}
     s = score_frame(d)
     s = s[s.index > pd.Timestamp(args.since)] if len(s) else s
     res = {
         "since": args.since,
-        "confirmatory": args.since == REGISTERED_AFTER,
+        **extra,
+        "confirmatory": args.since == REGISTERED_AFTER and args.parity_clock == "fix_1h",
         "confirmatory_read_allowed": args.since == REGISTERED_AFTER
+        and args.parity_clock == "fix_1h"
         and len(s) >= CONFIRMATORY_MIN_N,
         **evaluate(s),
     }

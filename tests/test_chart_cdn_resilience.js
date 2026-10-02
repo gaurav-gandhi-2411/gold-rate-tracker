@@ -20,6 +20,11 @@ const folds = Array.from({ length: 5 }, (_, i) => ({
   actuals: [13500 + i],
   naive: [13490 + i],
 }));
+// G4 (2026-09-25): renderForecastVsActual now also gates on backtest_run_at
+// freshness (CLAIM_MAX_AGE_DAYS) -- these CDN-availability tests are not about
+// freshness, so this fixture is always fresh relative to NOW; see
+// test_claim_freshness.js for the freshness behaviour itself.
+const btFresh = { folds, backtest_run_at: new Date(NOW).toISOString() };
 
 // The stub DOM hands back a fresh element for every `.parentElement` read, so seed one to make the
 // wrapper's hidden state observable.
@@ -83,9 +88,9 @@ test("__onChartReady: Chart.js arriving AFTER the first render draws both charts
     const wrap = withChartWrap(ctx);
     const section = ctx.element("section-track-record");
     ctx.run("allReadings = " + JSON.stringify(readings));
-    ctx.run("lastBacktest = " + JSON.stringify({ folds }));
+    ctx.run("lastBacktest = " + JSON.stringify(btFresh));
     ctx.renderChart(readings, "30");
-    ctx.renderForecastVsActual({ folds });
+    ctx.renderForecastVsActual(btFresh);
     assert.equal(wrap.hidden, true, "precondition: hidden while Chart.js has not arrived");
     assert.equal(section.hidden, true);
 
@@ -133,7 +138,7 @@ test("renderForecastVsActual: CDN up builds the track-record chart", () => {
       destroy() {}
     };
     ctx.getComputedStyle = () => ({ getPropertyValue: () => "" });
-    ctx.renderForecastVsActual({ folds });
+    ctx.renderForecastVsActual(btFresh);
     assert.equal(built.length, 1, "the guard must not disable the chart when Chart.js loaded");
   } finally {
     ctx.dispose();

@@ -1,0 +1,44 @@
+{
+  "preregistered_n_for_power": 418.3229,
+  "runs": [
+    {
+      "n": 0,
+      "effective_n": null,
+      "dm_stat": null,
+      "p_value": null,
+      "mean_diff": null,
+      "gamma_0": null,
+      "long_run_var": null,
+      "accuracy": null,
+      "always_up_accuracy": null,
+      "significant_at_05": false,
+      "arm": "live_h2",
+      "protocol_version": "adr042-v2",
+      "embargo_label_date_col": "label_date_h2",
+      "confirmatory_after_as_of": "2026-09-24",
+      "consecutive_day_labels": true,
+      "scored_as_of_dates": [],
+      "train_max_label_dates": [],
+      "scored_at_utc": "2026-09-27T07:20:53.113944+00:00",
+      "preregistered_n_for_power": 418.3229,
+      "reached_preregistered_n": false
+    },
+    {
+      "n": 329,
+      "effective_n": 329.0,
+      "dm_stat": 0.801421897398141,
+      "p_value": 0.7885562787534135,
+      "mean_diff": 0.030395136778115502,
+      "gamma_0": 0.47324026939884145,
+      "long_run_var": 0.47324026939884145,
+      "accuracy": 0.5258358662613982,
+      "always_up_accuracy": 0.5562310030395137,
+      "significant_at_05": false,
+      "arm": "proxy_deadzone_h1_equivalent",
+      "protocol_version": "adr042-v2",
+      "confirmatory": false,
+      "scored_at_utc": "2026-09-27T07:21:13.872447+00:00",
+      "reached_preregistered_n": null
+    }
+  ]
+}

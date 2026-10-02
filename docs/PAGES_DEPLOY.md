@@ -88,6 +88,17 @@ step's byte output — see step 3 of the switch-over below, which exists specifi
 catch anything this static analysis couldn't (e.g. an undocumented Jekyll version
 difference).
 
+## Precondition before switching: the data commits must trigger a deploy
+
+The bots' price-data commits carry `[skip ci]` (check-price.yml's "Commit updated data files" and
+the stranded-reading merge; scrape-tanishq-selfhosted.yml likewise) and are merged with a token
+whose pushes do not start workflows. The legacy Pages builder ignores both, which is why the live
+price updates today. `pages-deploy.yml` would NOT run for those commits, so in `actions` mode the
+site's prices would freeze at the last human merge. Before step 1 below, give `pages-deploy.yml` a
+trigger those commits reach -- e.g. `workflow_run` on "Check Gold Price" and "Scrape Tanishq
+(self-hosted)" completing, or an explicit `gh workflow run pages-deploy.yml` from bot-pr-sync after
+it merges -- and verify one price update reaches the live site (review of #2068, 2026-10-02).
+
 ## GG's switch-over steps
 
 1. **Set the repository variable.** Settings → Secrets and variables → Actions →

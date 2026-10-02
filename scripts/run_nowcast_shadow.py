@@ -14,6 +14,18 @@ quietly re-score the window. The summary compares M3 against M0 on the same days
 one-sided HAC test R2 used.
 
 SHADOW ONLY: writes data/nowcast_shadow_log.json and nothing else; the site keeps using M0.
+
+Leak guard (ADR 061), REPORT mode: each logged day records the IBJA inputs that became known at
+or after the reading it estimates (the target is the day's last Tanishq reading; an IBJA fix is
+known at max(its assumed publication, this repo's fetched_at), ml.known_at). The registered M0/M3
+protocol is unchanged -- the report is how the leak is documented, not fixed (ADR 061 F2).
+
+GG decision F2 (2026-09-26, ADR 061 amendment A2): the 2026-10-22 decision compares M3 with M0
+only on CERTIFIED same-day days -- days whose IBJA inputs were all known strictly before the
+reading they estimate. Predictions are still logged for every day, unchanged; the uncertified
+days are excluded from the decision comparison and reported alongside (`all_same_day`). A logged
+day without the field (logged by the pre-#2090 runner) is certified at summary time from the same
+persisted timestamps, never by rewriting the logged row.
 """
 
 from __future__ import annotations
@@ -22,6 +34,7 @@ import importlib.util
 import json
 import subprocess
 import sys
+from collections.abc import Callable
 from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
@@ -31,6 +44,9 @@ import pandas as pd
 
 ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT))
+
+from ml.known_at import capture_known_at, ibja_known_at
+from ml.leak_guard import KnownInput, LeakGuard
 
 # Merge date of the shadow; only days strictly after it count (forward-only).
 SHADOW_AFTER = "2026-09-24"
@@ -51,7 +67,50 @@ def _load_r2() -> Any:
     return mod
 
 
-def new_rows(r2: Any, logged: set[str], today_utc: str) -> list[dict[str, Any]]:
+def target_timestamps() -> dict[str, str]:
+    """UTC date -> timestamp of its last Tanishq 22K reading (the value load_truth scores)."""
+    raw = json.loads((ROOT / "data" / "prices.json").read_text(encoding="utf-8"))
+    out: dict[str, str] = {}
+    for r in raw:
+        if r.get("22k") is not None:
+            out[str(r["timestamp"])[:10]] = str(r["timestamp"])
+    return out
+
+
+def ibja_fetched_at() -> dict[str, str | None]:
+    ib = pd.read_parquet(ROOT / "data" / "ibja_rates.parquet")
+    return {
+        str(d)[:10]: (None if pd.isna(f) else str(f))
+        for d, f in zip(ib["date"], ib["fetched_at"], strict=True)
+    }
+
+
+def inputs_known_after_target(
+    guard: LeakGuard, target_ts: str | None, ibja_date: str, fetched_at: str | None
+) -> list[str]:
+    """The IBJA inputs (AM, PM of ibja_date) not known strictly before the target reading.
+    No target timestamp means the day cannot be certified: reported, never passed silently."""
+    if target_ts is None:
+        guard.n_unchecked += 1
+        return ["target_timestamp_missing"]
+    inputs = [
+        KnownInput(
+            f"ibja_{fix}@{ibja_date}", f"ibja_{fix}", ibja_known_at(ibja_date, fix, fetched_at)
+        )
+        for fix in ("am", "pm")
+    ]
+    bad = guard.check(capture_known_at(target_ts), inputs, context=ibja_date)
+    return [v.input.source for v in bad]
+
+
+def new_rows(
+    r2: Any,
+    logged: set[str],
+    today_utc: str,
+    guard: LeakGuard | None = None,
+    targets: dict[str, str] | None = None,
+    fetched: dict[str, str | None] | None = None,
+) -> list[dict[str, Any]]:
     """Walk-forward M0/M3 predictions for unlogged, completed days after SHADOW_AFTER.
     Today (UTC) is skipped: its truth would be the latest Tanishq reading so far, not the
     last reading of the day."""
@@ -60,15 +119,22 @@ def new_rows(r2: Any, logged: set[str], today_utc: str) -> list[dict[str, Any]]:
     # M0/M3 do not use the global-move adjustment; an empty series leaves it unused.
     m = r2.build(truth, ibja, pd.Series(dtype=float, index=pd.DatetimeIndex([])))
     preds = r2.predict_all(m)
+    guard = guard or LeakGuard("nowcast shadow same-day IBJA inputs", mode="report")
+    targets = target_timestamps() if targets is None else targets
+    fetched = ibja_fetched_at() if fetched is None else fetched
     rows = []
     for k in range(len(m)):
         day = m.loc[k, "date"].strftime("%Y-%m-%d")
         if day <= SHADOW_AFTER or day >= today_utc or day in logged:
             continue
+        ibja_day = m.loc[k, "ibja_date"].strftime("%Y-%m-%d")
         rows.append(
             {
                 "date": day,
-                "ibja_date": m.loc[k, "ibja_date"].strftime("%Y-%m-%d"),
+                "ibja_date": ibja_day,
+                "inputs_known_after_target": inputs_known_after_target(
+                    guard, targets.get(day), ibja_day, fetched.get(ibja_day)
+                ),
                 "gap_days": int(m.loc[k, "gap_days"]),
                 "truth_rs_per_g": float(m.loc[k, "t22"]),
                 **{
@@ -80,32 +146,57 @@ def new_rows(r2: Any, logged: set[str], today_utc: str) -> list[dict[str, Any]]:
     return rows
 
 
-def summarise(days: list[dict[str, Any]]) -> dict[str, Any]:
-    """M3 vs M0 on same-day days where both exist (R2's headline comparison)."""
+def _mae_dm(ok: list[dict[str, Any]]) -> dict[str, Any]:
+    """M3 vs M0 on the given same-day days, with R2's one-sided HAC Diebold-Mariano test."""
     from ml.direction.evaluate_reframed import diebold_mariano_test
 
-    ok = [
-        d
-        for d in days
-        if d["gap_days"] == 0 and d["M0_current"] is not None and d["M3_am_pm"] is not None
-    ]
-    out: dict[str, Any] = {"n_same_day": len(ok), "n_all_logged": len(days)}
     if len(ok) < 3:
-        return out
+        return {}
     y = np.array([d["truth_rs_per_g"] for d in ok])
     e0 = np.abs(np.array([d["M0_current"] for d in ok]) - y)
     e3 = np.abs(np.array([d["M3_am_pm"] for d in ok]) - y)
     dm = diebold_mariano_test(e3.tolist(), e0.tolist(), 2, alternative="less")
-    out.update(
-        {
-            "mae_m0_rs_per_g": float(e0.mean()),
-            "mae_m3_rs_per_g": float(e3.mean()),
-            "p_one_sided_m3_better": dm["p_value"],
-            "effective_n": dm["effective_n"],
-            "first_day": ok[0]["date"],
-            "last_day": ok[-1]["date"],
-        }
-    )
+    return {
+        "mae_m0_rs_per_g": float(e0.mean()),
+        "mae_m3_rs_per_g": float(e3.mean()),
+        "p_one_sided_m3_better": dm["p_value"],
+        "effective_n": dm["effective_n"],
+        "first_day": ok[0]["date"],
+        "last_day": ok[-1]["date"],
+    }
+
+
+def summarise(
+    days: list[dict[str, Any]],
+    certify: Callable[[dict[str, Any]], list[str]] | None = None,
+) -> dict[str, Any]:
+    """M3 vs M0 on same-day days where both exist (R2's headline comparison).
+
+    Decision numbers (top level) use certified days only (GG decision F2): no IBJA input known
+    at or after the target reading. `certify(day)` supplies that list for a logged day that has
+    no `inputs_known_after_target` field; without it such a day counts as uncertified.
+    `all_same_day` keeps the uncertified days in, for comparison only."""
+    same_day = [
+        d
+        for d in days
+        if d["gap_days"] == 0 and d["M0_current"] is not None and d["M3_am_pm"] is not None
+    ]
+
+    def late(d: dict[str, Any]) -> list[str]:
+        if "inputs_known_after_target" in d:
+            return list(d["inputs_known_after_target"])
+        return certify(d) if certify is not None else ["not_certified"]
+
+    ok = [d for d in same_day if not late(d)]
+    out: dict[str, Any] = {
+        "n_same_day": len(ok),
+        "n_same_day_excluded_late_ibja": len(same_day) - len(ok),
+        "n_all_logged": len(days),
+        "n_days_input_known_after_target": sum(1 for d in days if late(d)),
+    }
+    out.update(_mae_dm(ok))
+    if len(same_day) != len(ok):
+        out["all_same_day"] = {"n_same_day": len(same_day), **_mae_dm(same_day)}
     return out
 
 
@@ -126,7 +217,15 @@ def main() -> int:
         row["logged_at_utc"] = now
         row["git_sha"] = sha
     log["days"] = sorted([*log["days"], *added], key=lambda d: d["date"])
-    summary = summarise(log["days"])
+    targets, fetched = target_timestamps(), ibja_fetched_at()
+    certify_guard = LeakGuard("nowcast shadow certification (summary only)", mode="report")
+
+    def certify(d: dict[str, Any]) -> list[str]:
+        return inputs_known_after_target(
+            certify_guard, targets.get(d["date"]), d["ibja_date"], fetched.get(d["ibja_date"])
+        )
+
+    summary = summarise(log["days"], certify)
     log["runs"].append({"run_at_utc": now, "git_sha": sha, "added": len(added), **summary})
     LOG_PATH.write_text(json.dumps(log, indent=2) + "\n", encoding="utf-8")
     print(

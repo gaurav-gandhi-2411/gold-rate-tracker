@@ -128,10 +128,19 @@ async function run() {
     // declares FEATURE_FLAGS as a page-scope `const`, which an addInitScript running before
     // it would only shadow, not override -- serving a genuinely different flags.js body is
     // the reliable way to simulate "a flag shipped on" here.
-    console.log(`\nViolation check: flags.js variant with markup_meter hardcoded true`);
+    console.log(`\nViolation check: flags.js variant with page_v2 hardcoded true`);
     {
+      // page_v2 (item 6), not markup_meter: markup_meter's real renderer (app.js's
+      // pv2BuildMarkupCard) is data-gated on data/markup_today.json, which does not exist on
+      // this branch (no producing pipeline merged yet) -- hardcoding markup_meter true alone
+      // would render nothing at all and this check would falsely look broken. page_v2's core
+      // content (job 1/2/3/5) only depends on data/prices.json and data/forecast.json, both
+      // always present in this repo, so it reliably renders a [data-feature="page_v2"]
+      // element whenever the flag is true, regardless of which optional data files exist --
+      // exactly the property this check needs to prove the leak-detection mechanism itself
+      // can fail loud.
       const flagsSrc = fs.readFileSync(path.join(ROOT, "flags.js"), "utf8");
-      const leaked = flagsSrc.replace("markup_meter: false,", "markup_meter: true,");
+      const leaked = flagsSrc.replace("page_v2: false,", "page_v2: true,");
       if (leaked === flagsSrc) {
         throw new Error("precondition failed: could not construct the flags.js violation variant");
       }
@@ -144,12 +153,12 @@ async function run() {
       await page.goto(base, { waitUntil: "networkidle" });
       await page.waitForTimeout(500);
       const featureCount = await countFeatureElements(page);
-      const markupMeterPresent = await page.evaluate(
-        () => document.querySelector('[data-feature="markup_meter"]') !== null
+      const pageV2Present = await page.evaluate(
+        () => document.querySelector('[data-feature="page_v2"]') !== null
       );
-      console.log(`  [data-feature] count: ${featureCount}, markup_meter element present: ${markupMeterPresent}`);
+      console.log(`  [data-feature] count: ${featureCount}, page_v2 element present: ${pageV2Present}`);
       assert("a flag hardcoded true DOES render a [data-feature] element (the check can fail)",
-        featureCount > 0 && markupMeterPresent);
+        featureCount > 0 && pageV2Present);
       await ctx.close();
     }
 

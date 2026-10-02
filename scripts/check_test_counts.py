@@ -1,5 +1,5 @@
 """scripts/check_test_counts.py -- fails if a test file's number of test definitions falls below the
-committed baseline (tests/test_count_baseline.json) without the baseline being updated in the same PR.
+committed baseline (tests/test_count_baseline/) without the baseline being updated in the same PR.
 
 The incident this closes (production audit continuation, 2026-09-21): a patch script truncated
 worker-deadman/test/pr_trigger_health.test.mjs to an empty file. `node --test` on the remaining
@@ -24,8 +24,18 @@ Rules (all fail closed, exit 1; exit 2 if the tree looks wrong):
     `--update` records it and is the only way to lower a baseline: the diff to the baseline file in the
     PR is the explicit, reviewable act.
 
+Storage (2026-09-26): one small file per test file, not one shared JSON. The baseline for
+`tests/test_x.py` lives at `tests/test_count_baseline/tests/test_x.py.count` and holds a single
+integer. The single `tests/test_count_baseline.json` it replaces was the conflict hotspot of the
+2026-09-26 merge train: every PR that added a test file added a line to the same JSON object, so
+any two such PRs conflicted there. With one file per test file, two PRs that add different test
+files touch different paths and cannot conflict; two PRs that change the SAME file's floor still
+conflict, which is correct (a human must decide the floor). The rules above are unchanged.
+The `.count` suffix keeps these files out of pytest collection and out of this script's own and
+check_test_registry_complete.py's test-file sweeps.
+
 Usage:
-    python scripts/check_test_counts.py [--repo-root PATH] [--baseline PATH]
+    python scripts/check_test_counts.py [--repo-root PATH] [--baseline DIR]
     python scripts/check_test_counts.py --update      # rewrite the baseline from the current tree
 """
 
@@ -33,12 +43,12 @@ from __future__ import annotations
 
 import argparse
 import ast
-import json
 import re
 import sys
 from pathlib import Path
 
-BASELINE_REL = "tests/test_count_baseline.json"
+BASELINE_REL = "tests/test_count_baseline"
+_COUNT_SUFFIX = ".count"
 _JS_SUFFIXES = (".js", ".mjs")
 _JS_TEST_LINE = re.compile(r"^\s*(?:test|it)(?:\.(?:skip|only|todo))?\s*\(", re.M)
 _SKIP_DIRS = {"node_modules", ".git", "__pycache__", ".venv", "venv"}
@@ -103,6 +113,37 @@ def compare(current: dict[str, int], baseline: dict[str, int]) -> tuple[list[str
     return failures, notes
 
 
+def read_baseline(baseline_dir: Path) -> dict[str, int]:
+    """Every `<test path>.count` file under baseline_dir, keyed by the test path it guards.
+    Raises ValueError on a file that is not a single non-negative integer."""
+    baseline: dict[str, int] = {}
+    for p in sorted(baseline_dir.rglob("*" + _COUNT_SUFFIX)):
+        rel = p.relative_to(baseline_dir).as_posix()[: -len(_COUNT_SUFFIX)]
+        text = p.read_text(encoding="utf-8").strip()
+        if not text.isdigit():
+            raise ValueError(f"{p}: expected a single non-negative integer, got {text!r}")
+        baseline[rel] = int(text)
+    return baseline
+
+
+def write_baseline(baseline_dir: Path, counts: dict[str, int]) -> None:
+    """Make baseline_dir hold exactly one `.count` file per entry in counts: write each, and delete
+    any whose test file no longer exists (the explicit, reviewable removal)."""
+    baseline_dir.mkdir(parents=True, exist_ok=True)
+    wanted = {path + _COUNT_SUFFIX for path in counts}
+    for p in baseline_dir.rglob("*" + _COUNT_SUFFIX):
+        if p.relative_to(baseline_dir).as_posix() not in wanted:
+            p.unlink()
+    for path, n in counts.items():
+        target = baseline_dir / (path + _COUNT_SUFFIX)
+        target.parent.mkdir(parents=True, exist_ok=True)
+        if not target.is_file() or target.read_text(encoding="utf-8").strip() != str(n):
+            target.write_text(f"{n}\n", encoding="utf-8", newline="\n")
+    for d in sorted((d for d in baseline_dir.rglob("*") if d.is_dir()), reverse=True):
+        if not any(d.iterdir()):
+            d.rmdir()
+
+
 def main() -> int:
     ap = argparse.ArgumentParser(description=__doc__.split("\n\n")[0])
     ap.add_argument("--repo-root", type=Path, default=Path(__file__).resolve().parent.parent)
@@ -123,26 +164,21 @@ def main() -> int:
         return 2
 
     if args.update:
-        payload = {
-            "_comment": "Minimum number of test definitions per file. Lowering an entry is a deliberate act "
-            "made with `python scripts/check_test_counts.py --update`; see scripts/check_test_counts.py.",
-            "files": dict(sorted(current.items())),
-        }
-        baseline_path.write_text(json.dumps(payload, indent=1) + "\n", encoding="utf-8")
+        write_baseline(baseline_path, current)
         print(
             f"baseline written: {len(current)} file(s), {sum(current.values())} test(s) -> {baseline_path}"
         )
         return 0
 
-    if not baseline_path.is_file():
+    if not baseline_path.is_dir():
         print(
             f"ERROR: baseline {baseline_path} missing -- create it with --update", file=sys.stderr
         )
         return 2
     try:
-        baseline = json.loads(baseline_path.read_text(encoding="utf-8"))["files"]
-        assert isinstance(baseline, dict) and baseline
-    except (KeyError, ValueError, AssertionError):
+        baseline = read_baseline(baseline_path)
+        assert baseline
+    except (ValueError, AssertionError):
         print(f"ERROR: baseline {baseline_path} is malformed or empty", file=sys.stderr)
         return 2
 
@@ -150,7 +186,7 @@ def main() -> int:
     for n in notes:
         print(f"note: {n}")
     if failures:
-        print(f"FAIL: {len(failures)} test-count regression(s) against {baseline_path.name}:")
+        print(f"FAIL: {len(failures)} test-count regression(s) against {baseline_path}:")
         for f in failures:
             print(f"  - {f}")
         print(

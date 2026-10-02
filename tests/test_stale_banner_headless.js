@@ -303,8 +303,8 @@ async function run() {
       assert("computed display !== 'none'",     state.display !== "none",   `got "${state.display}"`);
       assert('text includes "estimated price"',
         state.text.includes("estimated price"), `got "${state.text}"`);
-      assert('text includes "IBJA"',
-        state.text.includes("IBJA"),            `got "${state.text}"`);
+      assert('text names the official rate',
+        state.text.includes("official gold rate"), `got "${state.text}"`);
       assert('text includes "today"',
         state.text.includes("today"),           `got "${state.text}"`);
       assert('text does NOT include "last confirmed price"',
@@ -330,8 +330,8 @@ async function run() {
       assert("banner.hidden === false",         state.hidden === false);
       assert('text includes "estimated price"',
         state.text.includes("estimated price"), `got "${state.text}"`);
-      assert('text includes "close" (dated carry-forward qualifier)',
-        state.text.includes("close"),           `got "${state.text}"`);
+      assert('text names the day of the rate (dated carry-forward qualifier)',
+        /official gold rate on \w+day/.test(state.text), `got "${state.text}"`);
       assert('text does NOT include "today\'s"  (must not overclaim freshness)',
         !state.text.includes("today's"),        `got "${state.text}"`);
       assert('text does NOT include "last confirmed price"',
