@@ -765,3 +765,140 @@ test("AQ1c: a real GitHub error on one PR still fails closed (pages 'could not v
   assert.ok(alert, "an unverifiable scan must page");
   assert.match(alert.opts.body, /HTTP 500/);
 });
+
+// ---------------------------------------------------------------------------
+// AQ1b (2026-09-21): Telegram as a delivery channel, ntfy as the fallback
+// ---------------------------------------------------------------------------
+// ntfy.sh answered every Worker attempt since the #1797 deploy with 522 or 429 (4 of 4). Telegram is
+// tried first when configured; one message reaches the phone, not one per channel.
+
+const TG_TOKEN = "123456:SECRET-bot-token-value";
+const TG_CHAT = "987654";
+const STALE_WORLD = (nowMs, calls) => mockWorldFetch({ nowMs, ageHours: 11 }, calls); // WARN staleness -> one alert
+
+function withTelegram(base, tg) {
+  return async (url, opts) => (String(url).startsWith("https://api.telegram.org/") ? tg(url, opts) : base(url, opts));
+}
+const tgOk = (id = 4242) => async () => ({ ok: true, status: 200, json: async () => ({ ok: true, result: { message_id: id } }) });
+const captureErrors = () => {
+  const lines = [];
+  const orig = console.error;
+  console.error = (...a) => lines.push(a.join(" "));
+  return { lines, restore: () => (console.error = orig) };
+};
+// The first run of each IST day also sends the daily heartbeat; pre-seed today's date so each test
+// sees only the one alert it is about.
+const kvHeartbeatDone = () => {
+  const kv = fakeKv();
+  kv.put("deadman:last_heartbeat_date_ist", "2026-09-21");
+  return kv;
+};
+const TG_ENV = () => ({ NTFY_TOPIC: "t", TELEGRAM_BOT_TOKEN: TG_TOKEN, TELEGRAM_CHAT_ID: TG_CHAT, DEADMAN_STATE: kvHeartbeatDone() });
+
+test("AQ1b: Telegram succeeds -> delivered via telegram, ntfy is NOT also posted, message id recorded", async () => {
+  const nowMs = Date.parse("2026-09-21T12:00:00Z");
+  const ntfyCalls = [];
+  const tgCalls = [];
+  const world = withTelegram(STALE_WORLD(nowMs, ntfyCalls), async (u, o) => (tgCalls.push({ u, o }), tgOk(4242)()));
+  const r = await runCheck(TG_ENV(), world, nowMs);
+  assert.equal(r.sent, true);
+  assert.equal(ntfyCalls.length, 0, "one message reaches the phone, not one per channel");
+  assert.equal(tgCalls.length, 1);
+  assert.match(tgCalls[0].u, /^https:\/\/api\.telegram\.org\/bot.+\/sendMessage$/);
+  assert.equal(JSON.parse(tgCalls[0].o.body).chat_id, TG_CHAT);
+  assert.deepEqual(r.ntfy.channels.deliveredVia, ["telegram"]);
+  assert.equal(r.ntfy.lastDelivery.id, 4242);
+  assert.equal(r.ntfy.lastDelivery.channel, "telegram");
+});
+
+test("AQ1b: Telegram fails -> falls back to ntfy, and the fallback is visible (not a clean run)", async () => {
+  const nowMs = Date.parse("2026-09-21T12:00:00Z");
+  const ntfyCalls = [];
+  const world = withTelegram(STALE_WORLD(nowMs, ntfyCalls), async () => ({ ok: false, status: 502, json: async () => ({}) }));
+  const cap = captureErrors();
+  let r;
+  try {
+    r = await runCheck(TG_ENV(), world, nowMs);
+  } finally {
+    cap.restore();
+  }
+  assert.equal(r.sent, true);
+  assert.equal(ntfyCalls.length, 1);
+  assert.deepEqual(r.ntfy.channels.deliveredVia, ["ntfy"]);
+  assert.ok(cap.lines.some((l) => /used ntfy after telegram failed/.test(l)), cap.lines.join("|"));
+});
+
+test("AQ1b: both channels fail -> not sent, and BOTH failures are reported", async () => {
+  const nowMs = Date.parse("2026-09-21T12:00:00Z");
+  const ntfyCalls = [];
+  const world = withTelegram(
+    mockWorldFetch({ nowMs, ageHours: 11, ntfy: () => ({ ok: false, status: 522 }) }, ntfyCalls),
+    async () => ({ ok: false, status: 401, json: async () => ({ ok: false, description: "Unauthorized" }) }),
+  );
+  const cap = captureErrors();
+  let r;
+  try {
+    r = await runCheck(TG_ENV(), world, nowMs);
+  } finally {
+    cap.restore();
+  }
+  assert.equal(r.sent, false);
+  assert.equal(r.ntfy.failed, 1);
+  assert.match(r.ntfy.failures[0].error, /telegram: HTTP 401: Unauthorized/);
+  assert.match(r.ntfy.failures[0].error, /ntfy: HTTP 522/);
+});
+
+test("AQ1b: HTTP 200 with ok:false in the body is a FAILURE (Telegram reports some errors that way)", async () => {
+  const nowMs = Date.parse("2026-09-21T12:00:00Z");
+  const world = withTelegram(STALE_WORLD(nowMs, []), async () => ({ ok: true, status: 200, json: async () => ({ ok: false, description: "chat not found" }) }));
+  const cap = captureErrors();
+  let r;
+  try {
+    r = await runCheck({ ...TG_ENV(), NTFY_TOPIC: undefined }, world, nowMs);
+  } finally {
+    cap.restore();
+  }
+  assert.equal(r.sent, false);
+  assert.match(r.ntfy.failures[0].error, /chat not found/);
+});
+
+test("AQ1b: the bot token never appears in the response, KV or logs, even if a fetch error echoes the URL", async () => {
+  const nowMs = Date.parse("2026-09-21T12:00:00Z");
+  const env = { ...TG_ENV(), NTFY_TOPIC: undefined };
+  const world = withTelegram(STALE_WORLD(nowMs, []), async (u) => {
+    throw new Error(`fetch failed for ${u}`);
+  });
+  const cap = captureErrors();
+  let r;
+  try {
+    r = await runCheck(env, world, nowMs);
+  } finally {
+    cap.restore();
+  }
+  const everything = JSON.stringify(r) + cap.lines.join("\n") + (await env.DEADMAN_STATE.get("deadman:last_ntfy_delivery"));
+  assert.ok(!everything.includes("SECRET-bot-token-value"), "token leaked");
+  assert.ok(!everything.includes(TG_TOKEN), "token leaked");
+  assert.match(r.ntfy.failures[0].error, /\[redacted\]/);
+});
+
+test("AQ1b: a Worker configured with ONLY Telegram works (no NTFY_TOPIC needed), fingerprint is null", async () => {
+  const nowMs = Date.parse("2026-09-21T12:00:00Z");
+  const env = { ...TG_ENV(), NTFY_TOPIC: undefined };
+  const r = await runCheck(env, withTelegram(STALE_WORLD(nowMs, []), tgOk(7)), nowMs);
+  assert.equal(r.sent, true);
+  assert.equal(r.ntfy.topicFingerprint, null);
+  assert.equal(r.ntfy.channels.telegramConfigured, true);
+  assert.equal(r.ntfy.channels.ntfyConfigured, false);
+});
+
+test("AQ1b: ntfy-only deployments behave exactly as before (no Telegram calls)", async () => {
+  const nowMs = Date.parse("2026-09-21T12:00:00Z");
+  const ntfyCalls = [];
+  let tg = 0;
+  const world = withTelegram(STALE_WORLD(nowMs, ntfyCalls), async () => (tg++, tgOk()()));
+  const r = await runCheck({ NTFY_TOPIC: "t", DEADMAN_STATE: kvHeartbeatDone() }, world, nowMs);
+  assert.equal(tg, 0);
+  assert.equal(ntfyCalls.length, 1);
+  assert.equal(r.sent, true);
+  assert.equal(r.ntfy.channels.telegramConfigured, false);
+});
