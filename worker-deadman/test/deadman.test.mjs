@@ -17,7 +17,8 @@ import {
   TANISHQ_ESCALATE_HOURS,
   RUNNER_CONFIRMED_OFFLINE_HOURS,
 } from "../src/deadman.mjs";
-import { runCheck } from "../src/index.mjs";
+import { runCheck, safeTokenMatch } from "../src/index.mjs";
+import worker from "../src/index.mjs";
 import {
   PR_TRIGGER_STALE_MINUTES,
   MERGED_SETTLE_MINUTES,
@@ -852,4 +853,78 @@ test("runCheck: PR trigger-health channel does not re-alert on the same stale PR
 
   const second = await runCheck(env, fetchImplFactory(), NOW + 10 * 60_000); // 10 min later, well within 6h reminder window
   assert.equal(second.prTriggerHealthSent, false);
+});
+
+// ---------------------------------------------------------------------------
+// S2 (audit continuation, 2026-09-23): the manual HTTP trigger used to run the
+// full check for ANY unauthenticated request. These pin the fix -- a shared
+// secret is required and the comparison never falls open on a missing secret.
+// ---------------------------------------------------------------------------
+
+test("safeTokenMatch: identical strings match", async () => {
+  assert.equal(await safeTokenMatch("abc123", "abc123"), true);
+});
+
+test("safeTokenMatch: different strings of the same length do not match", async () => {
+  assert.equal(await safeTokenMatch("abc123", "abc124"), false);
+});
+
+test("safeTokenMatch: different-length strings do not match", async () => {
+  assert.equal(await safeTokenMatch("short", "a-much-longer-token"), false);
+});
+
+test("safeTokenMatch: empty supplied value never matches a real token", async () => {
+  assert.equal(await safeTokenMatch("", "real-token"), false);
+});
+
+test("fetch(): no token supplied is rejected even when TRIGGER_TOKEN is configured", async () => {
+  const req = new Request("https://example.workers.dev/");
+  const resp = await worker.fetch(req, { TRIGGER_TOKEN: "secret-token" }, {});
+  assert.equal(resp.status, 401);
+});
+
+test("fetch(): wrong token is rejected", async () => {
+  const req = new Request("https://example.workers.dev/?token=nope");
+  const resp = await worker.fetch(req, { TRIGGER_TOKEN: "secret-token" }, {});
+  assert.equal(resp.status, 401);
+});
+
+test("fetch(): TRIGGER_TOKEN unconfigured denies every request -- never falls open on a missing secret", async () => {
+  const req = new Request("https://example.workers.dev/?token=anything");
+  const resp = await worker.fetch(req, {}, {});
+  assert.equal(resp.status, 401);
+});
+
+test("fetch(): correct token via ?token= query param is accepted and runs the check", async () => {
+  const realFetch = globalThis.fetch;
+  try {
+    globalThis.fetch = async () =>
+      new Response(
+        JSON.stringify({ predicted_at: new Date().toISOString(), scraped_at: new Date().toISOString() }),
+        { status: 200 },
+      );
+    const req = new Request("https://example.workers.dev/?token=secret-token");
+    const resp = await worker.fetch(req, { TRIGGER_TOKEN: "secret-token", NTFY_TOPIC: "test-topic" }, {});
+    assert.equal(resp.status, 200);
+    const body = await resp.json();
+    assert.ok("level" in body);
+  } finally {
+    globalThis.fetch = realFetch;
+  }
+});
+
+test("fetch(): correct token via X-Trigger-Token header is accepted", async () => {
+  const realFetch = globalThis.fetch;
+  try {
+    globalThis.fetch = async () =>
+      new Response(
+        JSON.stringify({ predicted_at: new Date().toISOString(), scraped_at: new Date().toISOString() }),
+        { status: 200 },
+      );
+    const req = new Request("https://example.workers.dev/", { headers: { "X-Trigger-Token": "secret-token" } });
+    const resp = await worker.fetch(req, { TRIGGER_TOKEN: "secret-token" }, {});
+    assert.equal(resp.status, 200);
+  } finally {
+    globalThis.fetch = realFetch;
+  }
 });

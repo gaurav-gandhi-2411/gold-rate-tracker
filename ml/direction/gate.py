@@ -261,3 +261,34 @@ def load_baseline(path: Path = BASELINE_JSON) -> dict | None:
         return json.loads(text)
     except (FileNotFoundError, json.JSONDecodeError, OSError):
         return None
+
+
+# ---------------------------------------------------------------------------
+# Promotion gate — a passing decide_direction_signal/decide_timing_signal
+# gate is a MEASUREMENT, never an authorization by itself (GG spec,
+# 2026-09-23, item 1). Traced end to end: as of this addition, nothing in
+# app.js/notifications reads probability_gate/timing_gate at all (the
+# "Direction signal" UI section is a hardcoded DARK state gated on an
+# unrelated field, ADR 019/020) — this function exists so that if a FUTURE
+# change ever wires a user-facing surface to this gate's output, that wiring
+# is required to also check is_signal_promoted(), which is False unless GG
+# has committed an explicit promotion record. scripts/check_direction_
+# signal_not_wired_without_promotion.py enforces the "no wiring without a
+# record" half of this mechanically in CI; this function is the "and the
+# record must actually be present" half any future wiring would call.
+# ---------------------------------------------------------------------------
+
+PROMOTION_RECORD_PATH: Path = DATA_DIR / "direction_promotion_record.json"
+
+
+def is_signal_promoted(path: Path = PROMOTION_RECORD_PATH) -> bool:
+    """True only if an explicit, committed promotion record exists.
+
+    A passing gate (decide_direction_signal/decide_timing_signal returning
+    ship=True) is NOT sufficient on its own — this is a separate, human
+    (GG) authorization step. Any future code that wants to show the
+    direction/timing signal to a user MUST check this in addition to the
+    gate itself; a passing gate with no promotion record must still show
+    nothing.
+    """
+    return path.exists()

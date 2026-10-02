@@ -1,0 +1,2011 @@
+{
+  "generated_at_utc": "2026-09-23T04:05:14.524092+00:00",
+  "as_of_date_range": "2025-01-09 to 2026-09-21",
+  "n_base_rows": 183,
+  "results": {
+    "raw_binary_h5": {
+      "target": "raw_binary",
+      "horizon": 5,
+      "n_test_folds": 150,
+      "n_skipped_folds": 5,
+      "min_train_size": 20,
+      "climatology_brier": 0.24538844538793494,
+      "always_up_rate": 0.6266666666666667,
+      "logistic_balanced": {
+        "model": "logistic_balanced",
+        "n": 150,
+        "accuracy": 0.5666666666666667,
+        "brier": 0.294103145241051,
+        "log_loss": 0.8168526191000582,
+        "always_up_accuracy": 0.6266666666666667,
+        "always_up_brier": 0.37333333333333335,
+        "p_value": 0.0783538818359375,
+        "significant_at_05": false,
+        "n_discordant": 21,
+        "ece": 0.19573712857633827,
+        "reliability": [
+          {
+            "lo": 0.0,
+            "hi": 0.1,
+            "mean_pred": 0.0781,
+            "frac_pos": 1.0,
+            "count": 2
+          },
+          {
+            "lo": 0.2,
+            "hi": 0.3,
+            "mean_pred": 0.25,
+            "frac_pos": 1.0,
+            "count": 2
+          },
+          {
+            "lo": 0.3,
+            "hi": 0.4,
+            "mean_pred": 0.3338,
+            "frac_pos": 0.75,
+            "count": 4
+          },
+          {
+            "lo": 0.4,
+            "hi": 0.5,
+            "mean_pred": 0.4515,
+            "frac_pos": 0.6154,
+            "count": 13
+          },
+          {
+            "lo": 0.5,
+            "hi": 0.6,
+            "mean_pred": 0.5541,
+            "frac_pos": 0.7419,
+            "count": 31
+          },
+          {
+            "lo": 0.6,
+            "hi": 0.7,
+            "mean_pred": 0.6559,
+            "frac_pos": 0.6786,
+            "count": 56
+          },
+          {
+            "lo": 0.7,
+            "hi": 0.8,
+            "mean_pred": 0.7341,
+            "frac_pos": 0.5238,
+            "count": 21
+          },
+          {
+            "lo": 0.8,
+            "hi": 0.9,
+            "mean_pred": 0.8435,
+            "frac_pos": 0.3333,
+            "count": 21
+          }
+        ],
+        "brier_skill_score_vs_climatology": -0.19852075665625968,
+        "diebold_mariano_vs_always_up": {
+          "dm_stat": -1.505209886673922,
+          "p_value": 0.13227012413449435,
+          "mean_diff": -0.07923018809228231,
+          "n": 150
+        },
+        "diebold_mariano_vs_climatology": {
+          "dm_stat": 2.2734056696007983,
+          "p_value": 0.023001744802341406,
+          "mean_diff": 0.04871469985311608,
+          "n": 150
+        }
+      },
+      "gbm_calibrated": {
+        "model": "gbm_calibrated",
+        "n": 150,
+        "accuracy": 0.5066666666666667,
+        "brier": 0.291841845880658,
+        "log_loss": 0.796165166045271,
+        "always_up_accuracy": 0.6266666666666667,
+        "always_up_brier": 0.37333333333333335,
+        "p_value": 0.0002771615982055664,
+        "significant_at_05": false,
+        "n_discordant": 24,
+        "ece": 0.21286053010314354,
+        "reliability": [
+          {
+            "lo": 0.2,
+            "hi": 0.3,
+            "mean_pred": 0.2972,
+            "frac_pos": 1.0,
+            "count": 2
+          },
+          {
+            "lo": 0.3,
+            "hi": 0.4,
+            "mean_pred": 0.345,
+            "frac_pos": 0.9,
+            "count": 10
+          },
+          {
+            "lo": 0.4,
+            "hi": 0.5,
+            "mean_pred": 0.4526,
+            "frac_pos": 0.8333,
+            "count": 12
+          },
+          {
+            "lo": 0.5,
+            "hi": 0.6,
+            "mean_pred": 0.5639,
+            "frac_pos": 0.5714,
+            "count": 28
+          },
+          {
+            "lo": 0.6,
+            "hi": 0.7,
+            "mean_pred": 0.658,
+            "frac_pos": 0.7255,
+            "count": 51
+          },
+          {
+            "lo": 0.7,
+            "hi": 0.8,
+            "mean_pred": 0.749,
+            "frac_pos": 0.5161,
+            "count": 31
+          },
+          {
+            "lo": 0.8,
+            "hi": 0.9,
+            "mean_pred": 0.8321,
+            "frac_pos": 0.2,
+            "count": 15
+          },
+          {
+            "lo": 0.9,
+            "hi": 1.0,
+            "mean_pred": 0.9502,
+            "frac_pos": 1.0,
+            "count": 1
+          }
+        ],
+        "brier_skill_score_vs_climatology": -0.18930557394128633,
+        "diebold_mariano_vs_always_up": {
+          "dm_stat": -1.6284519620305642,
+          "p_value": 0.10342908728135347,
+          "mean_diff": -0.08149148745267533,
+          "n": 150
+        },
+        "diebold_mariano_vs_climatology": {
+          "dm_stat": 2.9827429015033555,
+          "p_value": 0.002856778595288212,
+          "mean_diff": 0.046453400492723035,
+          "n": 150
+        }
+      },
+      "ensemble": {
+        "model": "ensemble",
+        "n": 150,
+        "accuracy": 0.5533333333333333,
+        "brier": 0.28555696854543083,
+        "log_loss": 0.7849510494420727,
+        "always_up_accuracy": 0.6266666666666667,
+        "always_up_brier": 0.37333333333333335,
+        "p_value": 0.00341796875,
+        "significant_at_05": false,
+        "n_discordant": 13,
+        "ece": 0.22660805045996868,
+        "reliability": [
+          {
+            "lo": 0.1,
+            "hi": 0.2,
+            "mean_pred": 0.1809,
+            "frac_pos": 1.0,
+            "count": 1
+          },
+          {
+            "lo": 0.2,
+            "hi": 0.3,
+            "mean_pred": 0.2717,
+            "frac_pos": 1.0,
+            "count": 1
+          },
+          {
+            "lo": 0.3,
+            "hi": 0.4,
+            "mean_pred": 0.3512,
+            "frac_pos": 0.5,
+            "count": 2
+          },
+          {
+            "lo": 0.4,
+            "hi": 0.5,
+            "mean_pred": 0.4672,
+            "frac_pos": 1.0,
+            "count": 9
+          },
+          {
+            "lo": 0.5,
+            "hi": 0.6,
+            "mean_pred": 0.556,
+            "frac_pos": 0.8,
+            "count": 40
+          },
+          {
+            "lo": 0.6,
+            "hi": 0.7,
+            "mean_pred": 0.6518,
+            "frac_pos": 0.6167,
+            "count": 60
+          },
+          {
+            "lo": 0.7,
+            "hi": 0.8,
+            "mean_pred": 0.7358,
+            "frac_pos": 0.44,
+            "count": 25
+          },
+          {
+            "lo": 0.8,
+            "hi": 0.9,
+            "mean_pred": 0.8404,
+            "frac_pos": 0.1667,
+            "count": 12
+          }
+        ],
+        "brier_skill_score_vs_climatology": -0.16369362092006168,
+        "diebold_mariano_vs_always_up": {
+          "dm_stat": -1.7864359395661538,
+          "p_value": 0.07402870084870994,
+          "mean_diff": -0.08777636478790246,
+          "n": 150
+        },
+        "diebold_mariano_vs_climatology": {
+          "dm_stat": 2.9468704785995214,
+          "p_value": 0.0032100762910376446,
+          "mean_diff": 0.04016852315749591,
+          "n": 150
+        }
+      }
+    },
+    "deadzone_h5": {
+      "target": "deadzone",
+      "horizon": 5,
+      "n_test_folds": 132,
+      "n_skipped_folds": 4,
+      "min_train_size": 20,
+      "climatology_brier": 0.24152996538236923,
+      "always_up_rate": 0.6439393939393939,
+      "logistic_balanced": {
+        "model": "logistic_balanced",
+        "n": 132,
+        "accuracy": 0.5151515151515151,
+        "brier": 0.30416056834561667,
+        "log_loss": 0.8765032458174682,
+        "always_up_accuracy": 0.6439393939393939,
+        "always_up_brier": 0.3560606060606061,
+        "p_value": 0.0015137195587158203,
+        "significant_at_05": false,
+        "n_discordant": 27,
+        "ece": 0.2213144805884437,
+        "reliability": [
+          {
+            "lo": 0.0,
+            "hi": 0.1,
+            "mean_pred": 0.0481,
+            "frac_pos": 1.0,
+            "count": 5
+          },
+          {
+            "lo": 0.2,
+            "hi": 0.3,
+            "mean_pred": 0.2445,
+            "frac_pos": 0.5,
+            "count": 2
+          },
+          {
+            "lo": 0.3,
+            "hi": 0.4,
+            "mean_pred": 0.3818,
+            "frac_pos": 1.0,
+            "count": 2
+          },
+          {
+            "lo": 0.4,
+            "hi": 0.5,
+            "mean_pred": 0.467,
+            "frac_pos": 0.7778,
+            "count": 18
+          },
+          {
+            "lo": 0.5,
+            "hi": 0.6,
+            "mean_pred": 0.561,
+            "frac_pos": 0.6316,
+            "count": 19
+          },
+          {
+            "lo": 0.6,
+            "hi": 0.7,
+            "mean_pred": 0.6488,
+            "frac_pos": 0.7,
+            "count": 40
+          },
+          {
+            "lo": 0.7,
+            "hi": 0.8,
+            "mean_pred": 0.7577,
+            "frac_pos": 0.6154,
+            "count": 26
+          },
+          {
+            "lo": 0.8,
+            "hi": 0.9,
+            "mean_pred": 0.837,
+            "frac_pos": 0.2941,
+            "count": 17
+          },
+          {
+            "lo": 0.9,
+            "hi": 1.0,
+            "mean_pred": 0.9309,
+            "frac_pos": 0.6667,
+            "count": 3
+          }
+        ],
+        "brier_skill_score_vs_climatology": -0.25930779588402664,
+        "diebold_mariano_vs_always_up": {
+          "dm_stat": -0.8366582896054389,
+          "p_value": 0.4027846708522411,
+          "mean_diff": -0.05190003771498942,
+          "n": 132
+        },
+        "diebold_mariano_vs_climatology": {
+          "dm_stat": 2.0154976606389683,
+          "p_value": 0.043852530930780675,
+          "mean_diff": 0.06263060296324742,
+          "n": 132
+        }
+      },
+      "gbm_calibrated": {
+        "model": "gbm_calibrated",
+        "n": 132,
+        "accuracy": 0.5303030303030303,
+        "brier": 0.2886155142895764,
+        "log_loss": 0.8049694828283982,
+        "always_up_accuracy": 0.6439393939393939,
+        "always_up_brier": 0.3560606060606061,
+        "p_value": 6.103515625e-05,
+        "significant_at_05": false,
+        "n_discordant": 15,
+        "ece": 0.24635300720690767,
+        "reliability": [
+          {
+            "lo": 0.3,
+            "hi": 0.4,
+            "mean_pred": 0.3569,
+            "frac_pos": 1.0,
+            "count": 4
+          },
+          {
+            "lo": 0.4,
+            "hi": 0.5,
+            "mean_pred": 0.4594,
+            "frac_pos": 1.0,
+            "count": 11
+          },
+          {
+            "lo": 0.5,
+            "hi": 0.6,
+            "mean_pred": 0.5591,
+            "frac_pos": 0.4706,
+            "count": 17
+          },
+          {
+            "lo": 0.6,
+            "hi": 0.7,
+            "mean_pred": 0.6588,
+            "frac_pos": 0.8108,
+            "count": 37
+          },
+          {
+            "lo": 0.7,
+            "hi": 0.8,
+            "mean_pred": 0.7385,
+            "frac_pos": 0.725,
+            "count": 40
+          },
+          {
+            "lo": 0.8,
+            "hi": 0.9,
+            "mean_pred": 0.8374,
+            "frac_pos": 0.1364,
+            "count": 22
+          },
+          {
+            "lo": 0.9,
+            "hi": 1.0,
+            "mean_pred": 0.9043,
+            "frac_pos": 0.0,
+            "count": 1
+          }
+        ],
+        "brier_skill_score_vs_climatology": -0.19494702792949692,
+        "diebold_mariano_vs_always_up": {
+          "dm_stat": -1.4609723784817519,
+          "p_value": 0.1440230218103571,
+          "mean_diff": -0.06744509177102966,
+          "n": 132
+        },
+        "diebold_mariano_vs_climatology": {
+          "dm_stat": 3.282895876165199,
+          "p_value": 0.0010274660872160446,
+          "mean_diff": 0.04708554890720722,
+          "n": 132
+        }
+      },
+      "ensemble": {
+        "model": "ensemble",
+        "n": 132,
+        "accuracy": 0.5454545454545454,
+        "brier": 0.2869943815883595,
+        "log_loss": 0.7969406209981124,
+        "always_up_accuracy": 0.6439393939393939,
+        "always_up_brier": 0.3560606060606061,
+        "p_value": 0.000244140625,
+        "significant_at_05": false,
+        "n_discordant": 13,
+        "ece": 0.1907509154981329,
+        "reliability": [
+          {
+            "lo": 0.3,
+            "hi": 0.4,
+            "mean_pred": 0.3857,
+            "frac_pos": 1.0,
+            "count": 5
+          },
+          {
+            "lo": 0.4,
+            "hi": 0.5,
+            "mean_pred": 0.4457,
+            "frac_pos": 1.0,
+            "count": 8
+          },
+          {
+            "lo": 0.5,
+            "hi": 0.6,
+            "mean_pred": 0.548,
+            "frac_pos": 0.68,
+            "count": 25
+          },
+          {
+            "lo": 0.6,
+            "hi": 0.7,
+            "mean_pred": 0.6506,
+            "frac_pos": 0.6731,
+            "count": 52
+          },
+          {
+            "lo": 0.7,
+            "hi": 0.8,
+            "mean_pred": 0.7577,
+            "frac_pos": 0.6538,
+            "count": 26
+          },
+          {
+            "lo": 0.8,
+            "hi": 0.9,
+            "mean_pred": 0.8377,
+            "frac_pos": 0.2,
+            "count": 15
+          },
+          {
+            "lo": 0.9,
+            "hi": 1.0,
+            "mean_pred": 0.9411,
+            "frac_pos": 0.0,
+            "count": 1
+          }
+        ],
+        "brier_skill_score_vs_climatology": -0.18823509593940013,
+        "diebold_mariano_vs_always_up": {
+          "dm_stat": -1.3611875460614182,
+          "p_value": 0.17345442883486029,
+          "mean_diff": -0.06906622447224654,
+          "n": 132
+        },
+        "diebold_mariano_vs_climatology": {
+          "dm_stat": 2.9504373953550607,
+          "p_value": 0.0031732434615152627,
+          "mean_diff": 0.0454644162059903,
+          "n": 132
+        }
+      }
+    },
+    "detrended_h5": {
+      "target": "detrended",
+      "horizon": 5,
+      "n_test_folds": 140,
+      "n_skipped_folds": 5,
+      "min_train_size": 20,
+      "climatology_brier": 0.2687670506434951,
+      "always_up_rate": 0.4785714285714286,
+      "logistic_balanced": {
+        "model": "logistic_balanced",
+        "n": 140,
+        "accuracy": 0.5214285714285715,
+        "brier": 0.2664463365908515,
+        "log_loss": 0.7310840358313047,
+        "always_up_accuracy": 0.4785714285714286,
+        "always_up_brier": 0.5214285714285715,
+        "p_value": 0.5504125118224712,
+        "significant_at_05": false,
+        "n_discordant": 70,
+        "ece": 0.09474627188141861,
+        "reliability": [
+          {
+            "lo": 0.1,
+            "hi": 0.2,
+            "mean_pred": 0.1584,
+            "frac_pos": 0.5,
+            "count": 2
+          },
+          {
+            "lo": 0.2,
+            "hi": 0.3,
+            "mean_pred": 0.2545,
+            "frac_pos": 0.4,
+            "count": 5
+          },
+          {
+            "lo": 0.3,
+            "hi": 0.4,
+            "mean_pred": 0.3672,
+            "frac_pos": 0.3929,
+            "count": 28
+          },
+          {
+            "lo": 0.4,
+            "hi": 0.5,
+            "mean_pred": 0.4494,
+            "frac_pos": 0.5143,
+            "count": 35
+          },
+          {
+            "lo": 0.5,
+            "hi": 0.6,
+            "mean_pred": 0.555,
+            "frac_pos": 0.5405,
+            "count": 37
+          },
+          {
+            "lo": 0.6,
+            "hi": 0.7,
+            "mean_pred": 0.6376,
+            "frac_pos": 0.3529,
+            "count": 17
+          },
+          {
+            "lo": 0.7,
+            "hi": 0.8,
+            "mean_pred": 0.7513,
+            "frac_pos": 0.4545,
+            "count": 11
+          },
+          {
+            "lo": 0.8,
+            "hi": 0.9,
+            "mean_pred": 0.8453,
+            "frac_pos": 0.8,
+            "count": 5
+          }
+        ],
+        "brier_skill_score_vs_climatology": 0.008634667259573847,
+        "diebold_mariano_vs_always_up": {
+          "dm_stat": -3.4969603204323128,
+          "p_value": 0.00047059182319353354,
+          "mean_diff": -0.25498223483772,
+          "n": 140
+        },
+        "diebold_mariano_vs_climatology": {
+          "dm_stat": -0.12051312883040483,
+          "p_value": 0.9040766801393714,
+          "mean_diff": -0.002320714052643599,
+          "n": 140
+        }
+      },
+      "gbm_calibrated": {
+        "model": "gbm_calibrated",
+        "n": 140,
+        "accuracy": 0.44285714285714284,
+        "brier": 0.26002715190833203,
+        "log_loss": 0.7149875280188965,
+        "always_up_accuracy": 0.4785714285714286,
+        "always_up_brier": 0.5214285714285715,
+        "p_value": 0.6908264239959597,
+        "significant_at_05": false,
+        "n_discordant": 101,
+        "ece": 0.18063331604614652,
+        "reliability": [
+          {
+            "lo": 0.0,
+            "hi": 0.1,
+            "mean_pred": 0.0689,
+            "frac_pos": 0.5,
+            "count": 2
+          },
+          {
+            "lo": 0.1,
+            "hi": 0.2,
+            "mean_pred": 0.1601,
+            "frac_pos": 0.1111,
+            "count": 9
+          },
+          {
+            "lo": 0.2,
+            "hi": 0.3,
+            "mean_pred": 0.2604,
+            "frac_pos": 0.4118,
+            "count": 17
+          },
+          {
+            "lo": 0.3,
+            "hi": 0.4,
+            "mean_pred": 0.3642,
+            "frac_pos": 0.5769,
+            "count": 26
+          },
+          {
+            "lo": 0.4,
+            "hi": 0.5,
+            "mean_pred": 0.4531,
+            "frac_pos": 0.617,
+            "count": 47
+          },
+          {
+            "lo": 0.5,
+            "hi": 0.6,
+            "mean_pred": 0.5366,
+            "frac_pos": 0.3125,
+            "count": 32
+          },
+          {
+            "lo": 0.6,
+            "hi": 0.7,
+            "mean_pred": 0.6266,
+            "frac_pos": 0.5,
+            "count": 6
+          },
+          {
+            "lo": 0.7,
+            "hi": 0.8,
+            "mean_pred": 0.7545,
+            "frac_pos": 1.0,
+            "count": 1
+          }
+        ],
+        "brier_skill_score_vs_climatology": 0.032518490321777116,
+        "diebold_mariano_vs_always_up": {
+          "dm_stat": -3.1926830377025035,
+          "p_value": 0.0014095757778656015,
+          "mean_diff": -0.2614014195202394,
+          "n": 140
+        },
+        "diebold_mariano_vs_climatology": {
+          "dm_stat": -0.5303402510794287,
+          "p_value": 0.5958760439312696,
+          "mean_diff": -0.008739898735163,
+          "n": 140
+        }
+      },
+      "ensemble": {
+        "model": "ensemble",
+        "n": 140,
+        "accuracy": 0.5142857142857142,
+        "brier": 0.25488747710534404,
+        "log_loss": 0.7045902394507274,
+        "always_up_accuracy": 0.4785714285714286,
+        "always_up_brier": 0.5214285714285715,
+        "p_value": 0.6718086491746103,
+        "significant_at_05": false,
+        "n_discordant": 89,
+        "ece": 0.11584648928470337,
+        "reliability": [
+          {
+            "lo": 0.1,
+            "hi": 0.2,
+            "mean_pred": 0.1126,
+            "frac_pos": 1.0,
+            "count": 1
+          },
+          {
+            "lo": 0.2,
+            "hi": 0.3,
+            "mean_pred": 0.2622,
+            "frac_pos": 0.0,
+            "count": 9
+          },
+          {
+            "lo": 0.3,
+            "hi": 0.4,
+            "mean_pred": 0.3572,
+            "frac_pos": 0.4074,
+            "count": 27
+          },
+          {
+            "lo": 0.4,
+            "hi": 0.5,
+            "mean_pred": 0.4445,
+            "frac_pos": 0.5769,
+            "count": 52
+          },
+          {
+            "lo": 0.5,
+            "hi": 0.6,
+            "mean_pred": 0.5485,
+            "frac_pos": 0.4545,
+            "count": 33
+          },
+          {
+            "lo": 0.6,
+            "hi": 0.7,
+            "mean_pred": 0.646,
+            "frac_pos": 0.5556,
+            "count": 18
+          }
+        ],
+        "brier_skill_score_vs_climatology": 0.05164164842721575,
+        "diebold_mariano_vs_always_up": {
+          "dm_stat": -3.461043120446056,
+          "p_value": 0.0005380866159148123,
+          "mean_diff": -0.26654109432322737,
+          "n": 140
+        },
+        "diebold_mariano_vs_climatology": {
+          "dm_stat": -0.9053343098622721,
+          "p_value": 0.36528830514769006,
+          "mean_diff": -0.01387957353815097,
+          "n": 140
+        }
+      }
+    },
+    "buyer_decision_h5": {
+      "target": "buyer_decision",
+      "horizon": 5,
+      "n_test_folds": 150,
+      "n_skipped_folds": 5,
+      "min_train_size": 20,
+      "climatology_brier": 0.2596626904599311,
+      "always_up_rate": 0.48,
+      "logistic_balanced": {
+        "model": "logistic_balanced",
+        "n": 150,
+        "accuracy": 0.5266666666666666,
+        "brier": 0.28683030449906294,
+        "log_loss": 0.780274676810576,
+        "always_up_accuracy": 0.48,
+        "always_up_brier": 0.52,
+        "p_value": 0.5546010666648732,
+        "significant_at_05": false,
+        "n_discordant": 103,
+        "ece": 0.1524400734986641,
+        "reliability": [
+          {
+            "lo": 0.1,
+            "hi": 0.2,
+            "mean_pred": 0.1678,
+            "frac_pos": 0.6667,
+            "count": 6
+          },
+          {
+            "lo": 0.2,
+            "hi": 0.3,
+            "mean_pred": 0.2569,
+            "frac_pos": 0.8,
+            "count": 10
+          },
+          {
+            "lo": 0.3,
+            "hi": 0.4,
+            "mean_pred": 0.3517,
+            "frac_pos": 0.3889,
+            "count": 36
+          },
+          {
+            "lo": 0.4,
+            "hi": 0.5,
+            "mean_pred": 0.4459,
+            "frac_pos": 0.4314,
+            "count": 51
+          },
+          {
+            "lo": 0.5,
+            "hi": 0.6,
+            "mean_pred": 0.5474,
+            "frac_pos": 0.68,
+            "count": 25
+          },
+          {
+            "lo": 0.6,
+            "hi": 0.7,
+            "mean_pred": 0.6435,
+            "frac_pos": 0.3636,
+            "count": 11
+          },
+          {
+            "lo": 0.7,
+            "hi": 0.8,
+            "mean_pred": 0.7619,
+            "frac_pos": 0.1667,
+            "count": 6
+          },
+          {
+            "lo": 0.8,
+            "hi": 0.9,
+            "mean_pred": 0.839,
+            "frac_pos": 0.25,
+            "count": 4
+          },
+          {
+            "lo": 0.9,
+            "hi": 1.0,
+            "mean_pred": 0.9543,
+            "frac_pos": 1.0,
+            "count": 1
+          }
+        ],
+        "brier_skill_score_vs_climatology": -0.10462655990743541,
+        "diebold_mariano_vs_always_up": {
+          "dm_stat": -3.5392888370064113,
+          "p_value": 0.00040120660894649163,
+          "mean_diff": -0.23316969550093708,
+          "n": 150
+        },
+        "diebold_mariano_vs_climatology": {
+          "dm_stat": 1.6357462521962733,
+          "p_value": 0.10189270503652592,
+          "mean_diff": 0.027167614039131795,
+          "n": 150
+        }
+      },
+      "gbm_calibrated": {
+        "model": "gbm_calibrated",
+        "n": 150,
+        "accuracy": 0.4866666666666667,
+        "brier": 0.2822093672439026,
+        "log_loss": 0.7708561863256553,
+        "always_up_accuracy": 0.48,
+        "always_up_brier": 0.52,
+        "p_value": 1.0,
+        "significant_at_05": false,
+        "n_discordant": 125,
+        "ece": 0.1412225372107987,
+        "reliability": [
+          {
+            "lo": 0.0,
+            "hi": 0.1,
+            "mean_pred": 0.082,
+            "frac_pos": 0.0,
+            "count": 1
+          },
+          {
+            "lo": 0.1,
+            "hi": 0.2,
+            "mean_pred": 0.1693,
+            "frac_pos": 0.7273,
+            "count": 11
+          },
+          {
+            "lo": 0.2,
+            "hi": 0.3,
+            "mean_pred": 0.256,
+            "frac_pos": 0.4444,
+            "count": 18
+          },
+          {
+            "lo": 0.3,
+            "hi": 0.4,
+            "mean_pred": 0.3513,
+            "frac_pos": 0.5625,
+            "count": 32
+          },
+          {
+            "lo": 0.4,
+            "hi": 0.5,
+            "mean_pred": 0.4483,
+            "frac_pos": 0.4444,
+            "count": 63
+          },
+          {
+            "lo": 0.5,
+            "hi": 0.6,
+            "mean_pred": 0.5375,
+            "frac_pos": 0.3684,
+            "count": 19
+          },
+          {
+            "lo": 0.6,
+            "hi": 0.7,
+            "mean_pred": 0.6338,
+            "frac_pos": 0.6667,
+            "count": 3
+          },
+          {
+            "lo": 0.7,
+            "hi": 0.8,
+            "mean_pred": 0.7531,
+            "frac_pos": 0.3333,
+            "count": 3
+          }
+        ],
+        "brier_skill_score_vs_climatology": -0.08683063686983816,
+        "diebold_mariano_vs_always_up": {
+          "dm_stat": -3.2633425122581574,
+          "p_value": 0.0011010636098913729,
+          "mean_diff": -0.23779063275609738,
+          "n": 150
+        },
+        "diebold_mariano_vs_climatology": {
+          "dm_stat": 1.448516218424768,
+          "p_value": 0.1474727335061985,
+          "mean_diff": 0.022546676783971435,
+          "n": 150
+        }
+      },
+      "ensemble": {
+        "model": "ensemble",
+        "n": 150,
+        "accuracy": 0.47333333333333333,
+        "brier": 0.27882167662969815,
+        "log_loss": 0.7563622164005747,
+        "always_up_accuracy": 0.48,
+        "always_up_brier": 0.52,
+        "p_value": 1.0,
+        "significant_at_05": false,
+        "n_discordant": 115,
+        "ece": 0.14957184841059248,
+        "reliability": [
+          {
+            "lo": 0.1,
+            "hi": 0.2,
+            "mean_pred": 0.1799,
+            "frac_pos": 1.0,
+            "count": 1
+          },
+          {
+            "lo": 0.2,
+            "hi": 0.3,
+            "mean_pred": 0.2705,
+            "frac_pos": 0.619,
+            "count": 21
+          },
+          {
+            "lo": 0.3,
+            "hi": 0.4,
+            "mean_pred": 0.3505,
+            "frac_pos": 0.4103,
+            "count": 39
+          },
+          {
+            "lo": 0.4,
+            "hi": 0.5,
+            "mean_pred": 0.4454,
+            "frac_pos": 0.5185,
+            "count": 54
+          },
+          {
+            "lo": 0.5,
+            "hi": 0.6,
+            "mean_pred": 0.5406,
+            "frac_pos": 0.5294,
+            "count": 17
+          },
+          {
+            "lo": 0.6,
+            "hi": 0.7,
+            "mean_pred": 0.6428,
+            "frac_pos": 0.1875,
+            "count": 16
+          },
+          {
+            "lo": 0.7,
+            "hi": 0.8,
+            "mean_pred": 0.7307,
+            "frac_pos": 1.0,
+            "count": 2
+          }
+        ],
+        "brier_skill_score_vs_climatology": -0.07378413177430843,
+        "diebold_mariano_vs_always_up": {
+          "dm_stat": -3.5068399570538595,
+          "p_value": 0.0004534617912996808,
+          "mean_diff": -0.2411783233703019,
+          "n": 150
+        },
+        "diebold_mariano_vs_climatology": {
+          "dm_stat": 1.5906505043529113,
+          "p_value": 0.1116882516986053,
+          "mean_diff": 0.019158986169766995,
+          "n": 150
+        }
+      }
+    },
+    "raw_binary_h10": {
+      "target": "raw_binary",
+      "horizon": 10,
+      "n_test_folds": 137,
+      "n_skipped_folds": 10,
+      "min_train_size": 20,
+      "climatology_brier": 0.2422449447461795,
+      "always_up_rate": 0.6861313868613139,
+      "logistic_balanced": {
+        "model": "logistic_balanced",
+        "n": 137,
+        "accuracy": 0.6131386861313869,
+        "brier": 0.2601718796859946,
+        "log_loss": 0.7743231744838324,
+        "always_up_accuracy": 0.6861313868613139,
+        "always_up_brier": 0.31386861313868614,
+        "p_value": 0.13249816396273675,
+        "significant_at_05": false,
+        "n_discordant": 36,
+        "ece": 0.2115919414960425,
+        "reliability": [
+          {
+            "lo": 0.2,
+            "hi": 0.3,
+            "mean_pred": 0.2726,
+            "frac_pos": 1.0,
+            "count": 8
+          },
+          {
+            "lo": 0.3,
+            "hi": 0.4,
+            "mean_pred": 0.3546,
+            "frac_pos": 0.4667,
+            "count": 15
+          },
+          {
+            "lo": 0.4,
+            "hi": 0.5,
+            "mean_pred": 0.4291,
+            "frac_pos": 0.6154,
+            "count": 13
+          },
+          {
+            "lo": 0.5,
+            "hi": 0.6,
+            "mean_pred": 0.5528,
+            "frac_pos": 0.8947,
+            "count": 19
+          },
+          {
+            "lo": 0.6,
+            "hi": 0.7,
+            "mean_pred": 0.6511,
+            "frac_pos": 0.5714,
+            "count": 14
+          },
+          {
+            "lo": 0.7,
+            "hi": 0.8,
+            "mean_pred": 0.7507,
+            "frac_pos": 0.5312,
+            "count": 32
+          },
+          {
+            "lo": 0.8,
+            "hi": 0.9,
+            "mean_pred": 0.8422,
+            "frac_pos": 0.8462,
+            "count": 13
+          },
+          {
+            "lo": 0.9,
+            "hi": 1.0,
+            "mean_pred": 0.9731,
+            "frac_pos": 0.7826,
+            "count": 23
+          }
+        ],
+        "brier_skill_score_vs_climatology": -0.07400333971302753,
+        "diebold_mariano_vs_always_up": {
+          "dm_stat": -0.6888483377149129,
+          "p_value": 0.49091871318276925,
+          "mean_diff": -0.053696733452691575,
+          "n": 137
+        },
+        "diebold_mariano_vs_climatology": {
+          "dm_stat": 0.45733837107429526,
+          "p_value": 0.6474278538185008,
+          "mean_diff": 0.0179269349398151,
+          "n": 137
+        }
+      },
+      "gbm_calibrated": {
+        "model": "gbm_calibrated",
+        "n": 137,
+        "accuracy": 0.656934306569343,
+        "brier": 0.23833957434879824,
+        "log_loss": 0.6903080395710919,
+        "always_up_accuracy": 0.6861313868613139,
+        "always_up_brier": 0.31386861313868614,
+        "p_value": 0.21875,
+        "significant_at_05": false,
+        "n_discordant": 6,
+        "ece": 0.20314889142432413,
+        "reliability": [
+          {
+            "lo": 0.3,
+            "hi": 0.4,
+            "mean_pred": 0.3712,
+            "frac_pos": 0.5,
+            "count": 2
+          },
+          {
+            "lo": 0.4,
+            "hi": 0.5,
+            "mean_pred": 0.471,
+            "frac_pos": 1.0,
+            "count": 4
+          },
+          {
+            "lo": 0.5,
+            "hi": 0.6,
+            "mean_pred": 0.5459,
+            "frac_pos": 0.4737,
+            "count": 19
+          },
+          {
+            "lo": 0.6,
+            "hi": 0.7,
+            "mean_pred": 0.6587,
+            "frac_pos": 0.8696,
+            "count": 23
+          },
+          {
+            "lo": 0.7,
+            "hi": 0.8,
+            "mean_pred": 0.7435,
+            "frac_pos": 0.8438,
+            "count": 32
+          },
+          {
+            "lo": 0.8,
+            "hi": 0.9,
+            "mean_pred": 0.847,
+            "frac_pos": 0.5217,
+            "count": 46
+          },
+          {
+            "lo": 0.9,
+            "hi": 1.0,
+            "mean_pred": 0.9152,
+            "frac_pos": 0.8182,
+            "count": 11
+          }
+        ],
+        "brier_skill_score_vs_climatology": 0.016121576454250608,
+        "diebold_mariano_vs_always_up": {
+          "dm_stat": -1.6250688845534038,
+          "p_value": 0.1041478819698698,
+          "mean_diff": -0.07552903878988786,
+          "n": 137
+        },
+        "diebold_mariano_vs_climatology": {
+          "dm_stat": -0.292705436309607,
+          "p_value": 0.7697473142302536,
+          "mean_diff": -0.003905370397381178,
+          "n": 137
+        }
+      },
+      "ensemble": {
+        "model": "ensemble",
+        "n": 137,
+        "accuracy": 0.656934306569343,
+        "brier": 0.23549873786845105,
+        "log_loss": 0.6814660743570629,
+        "always_up_accuracy": 0.6861313868613139,
+        "always_up_brier": 0.31386861313868614,
+        "p_value": 0.34375,
+        "significant_at_05": false,
+        "n_discordant": 10,
+        "ece": 0.1150084110681443,
+        "reliability": [
+          {
+            "lo": 0.3,
+            "hi": 0.4,
+            "mean_pred": 0.3215,
+            "frac_pos": 1.0,
+            "count": 1
+          },
+          {
+            "lo": 0.4,
+            "hi": 0.5,
+            "mean_pred": 0.4803,
+            "frac_pos": 0.6667,
+            "count": 9
+          },
+          {
+            "lo": 0.5,
+            "hi": 0.6,
+            "mean_pred": 0.5597,
+            "frac_pos": 0.7241,
+            "count": 29
+          },
+          {
+            "lo": 0.6,
+            "hi": 0.7,
+            "mean_pred": 0.6344,
+            "frac_pos": 0.5938,
+            "count": 32
+          },
+          {
+            "lo": 0.7,
+            "hi": 0.8,
+            "mean_pred": 0.7579,
+            "frac_pos": 0.7568,
+            "count": 37
+          },
+          {
+            "lo": 0.8,
+            "hi": 0.9,
+            "mean_pred": 0.8207,
+            "frac_pos": 0.25,
+            "count": 8
+          },
+          {
+            "lo": 0.9,
+            "hi": 1.0,
+            "mean_pred": 0.9392,
+            "frac_pos": 0.8095,
+            "count": 21
+          }
+        ],
+        "brier_skill_score_vs_climatology": 0.027848700350783462,
+        "diebold_mariano_vs_always_up": {
+          "dm_stat": -1.2921199456198298,
+          "p_value": 0.196315609541859,
+          "mean_diff": -0.07836987527023509,
+          "n": 137
+        },
+        "diebold_mariano_vs_climatology": {
+          "dm_stat": -0.36413574098802814,
+          "p_value": 0.7157566487753491,
+          "mean_diff": -0.006746206877728406,
+          "n": 137
+        }
+      }
+    },
+    "deadzone_h10": {
+      "target": "deadzone",
+      "horizon": 10,
+      "n_test_folds": 122,
+      "n_skipped_folds": 9,
+      "min_train_size": 20,
+      "climatology_brier": 0.2517544372951596,
+      "always_up_rate": 0.6721311475409836,
+      "logistic_balanced": {
+        "model": "logistic_balanced",
+        "n": 122,
+        "accuracy": 0.5081967213114754,
+        "brier": 0.2812255642678014,
+        "log_loss": 0.8301529598572333,
+        "always_up_accuracy": 0.6721311475409836,
+        "always_up_brier": 0.32786885245901637,
+        "p_value": 0.002887247974285856,
+        "significant_at_05": false,
+        "n_discordant": 42,
+        "ece": 0.2923663991401533,
+        "reliability": [
+          {
+            "lo": 0.2,
+            "hi": 0.3,
+            "mean_pred": 0.2684,
+            "frac_pos": 1.0,
+            "count": 4
+          },
+          {
+            "lo": 0.3,
+            "hi": 0.4,
+            "mean_pred": 0.351,
+            "frac_pos": 0.6471,
+            "count": 17
+          },
+          {
+            "lo": 0.4,
+            "hi": 0.5,
+            "mean_pred": 0.4531,
+            "frac_pos": 0.7619,
+            "count": 21
+          },
+          {
+            "lo": 0.5,
+            "hi": 0.6,
+            "mean_pred": 0.5404,
+            "frac_pos": 0.7619,
+            "count": 21
+          },
+          {
+            "lo": 0.6,
+            "hi": 0.7,
+            "mean_pred": 0.6259,
+            "frac_pos": 0.3333,
+            "count": 6
+          },
+          {
+            "lo": 0.7,
+            "hi": 0.8,
+            "mean_pred": 0.7633,
+            "frac_pos": 0.3,
+            "count": 20
+          },
+          {
+            "lo": 0.8,
+            "hi": 0.9,
+            "mean_pred": 0.8511,
+            "frac_pos": 0.9231,
+            "count": 13
+          },
+          {
+            "lo": 0.9,
+            "hi": 1.0,
+            "mean_pred": 0.9808,
+            "frac_pos": 0.75,
+            "count": 20
+          }
+        ],
+        "brier_skill_score_vs_climatology": -0.11706298919406732,
+        "diebold_mariano_vs_always_up": {
+          "dm_stat": -0.5411124189093035,
+          "p_value": 0.5884300988334084,
+          "mean_diff": -0.04664328819121502,
+          "n": 122
+        },
+        "diebold_mariano_vs_climatology": {
+          "dm_stat": 0.7528764273553412,
+          "p_value": 0.45152417457153726,
+          "mean_diff": 0.029471126972641756,
+          "n": 122
+        }
+      },
+      "gbm_calibrated": {
+        "model": "gbm_calibrated",
+        "n": 122,
+        "accuracy": 0.639344262295082,
+        "brier": 0.272273978996113,
+        "log_loss": 0.7873574982848663,
+        "always_up_accuracy": 0.6721311475409836,
+        "always_up_brier": 0.32786885245901637,
+        "p_value": 0.2890625,
+        "significant_at_05": false,
+        "n_discordant": 8,
+        "ece": 0.24156674730246008,
+        "reliability": [
+          {
+            "lo": 0.4,
+            "hi": 0.5,
+            "mean_pred": 0.4526,
+            "frac_pos": 0.75,
+            "count": 8
+          },
+          {
+            "lo": 0.5,
+            "hi": 0.6,
+            "mean_pred": 0.5568,
+            "frac_pos": 0.7778,
+            "count": 9
+          },
+          {
+            "lo": 0.6,
+            "hi": 0.7,
+            "mean_pred": 0.6554,
+            "frac_pos": 0.8077,
+            "count": 26
+          },
+          {
+            "lo": 0.7,
+            "hi": 0.8,
+            "mean_pred": 0.7547,
+            "frac_pos": 0.8158,
+            "count": 38
+          },
+          {
+            "lo": 0.8,
+            "hi": 0.9,
+            "mean_pred": 0.8514,
+            "frac_pos": 0.2759,
+            "count": 29
+          },
+          {
+            "lo": 0.9,
+            "hi": 1.0,
+            "mean_pred": 0.9274,
+            "frac_pos": 0.75,
+            "count": 12
+          }
+        ],
+        "brier_skill_score_vs_climatology": -0.08150617689767281,
+        "diebold_mariano_vs_always_up": {
+          "dm_stat": -1.1452437879717383,
+          "p_value": 0.25210818414383906,
+          "mean_diff": -0.05559487346290338,
+          "n": 122
+        },
+        "diebold_mariano_vs_climatology": {
+          "dm_stat": 1.54926017809253,
+          "p_value": 0.12131918841466849,
+          "mean_diff": 0.0205195417009534,
+          "n": 122
+        }
+      },
+      "ensemble": {
+        "model": "ensemble",
+        "n": 122,
+        "accuracy": 0.5983606557377049,
+        "brier": 0.2635998187167337,
+        "log_loss": 0.758088150825152,
+        "always_up_accuracy": 0.6721311475409836,
+        "always_up_brier": 0.32786885245901637,
+        "p_value": 0.0224609375,
+        "significant_at_05": false,
+        "n_discordant": 13,
+        "ece": 0.19443263497301655,
+        "reliability": [
+          {
+            "lo": 0.4,
+            "hi": 0.5,
+            "mean_pred": 0.4673,
+            "frac_pos": 0.8462,
+            "count": 13
+          },
+          {
+            "lo": 0.5,
+            "hi": 0.6,
+            "mean_pred": 0.5628,
+            "frac_pos": 0.75,
+            "count": 32
+          },
+          {
+            "lo": 0.6,
+            "hi": 0.7,
+            "mean_pred": 0.637,
+            "frac_pos": 0.6,
+            "count": 25
+          },
+          {
+            "lo": 0.7,
+            "hi": 0.8,
+            "mean_pred": 0.7662,
+            "frac_pos": 0.6667,
+            "count": 21
+          },
+          {
+            "lo": 0.8,
+            "hi": 0.9,
+            "mean_pred": 0.8385,
+            "frac_pos": 0.4286,
+            "count": 14
+          },
+          {
+            "lo": 0.9,
+            "hi": 1.0,
+            "mean_pred": 0.9442,
+            "frac_pos": 0.7059,
+            "count": 17
+          }
+        ],
+        "brier_skill_score_vs_climatology": -0.047051331245003825,
+        "diebold_mariano_vs_always_up": {
+          "dm_stat": -0.9686201070431929,
+          "p_value": 0.3327347673974619,
+          "mean_diff": -0.06426903374228266,
+          "n": 122
+        },
+        "diebold_mariano_vs_climatology": {
+          "dm_stat": 0.6972437653030693,
+          "p_value": 0.48565025408078455,
+          "mean_diff": 0.01184538142157412,
+          "n": 122
+        }
+      }
+    },
+    "detrended_h10": {
+      "target": "detrended",
+      "horizon": 10,
+      "n_test_folds": 122,
+      "n_skipped_folds": 10,
+      "min_train_size": 20,
+      "climatology_brier": 0.2685826091600148,
+      "always_up_rate": 0.48360655737704916,
+      "logistic_balanced": {
+        "model": "logistic_balanced",
+        "n": 122,
+        "accuracy": 0.6475409836065574,
+        "brier": 0.2227241256381251,
+        "log_loss": 0.6306751033756455,
+        "always_up_accuracy": 0.48360655737704916,
+        "always_up_brier": 0.5163934426229508,
+        "p_value": 0.01685819004428113,
+        "significant_at_05": true,
+        "n_discordant": 64,
+        "ece": 0.09460587194592611,
+        "reliability": [
+          {
+            "lo": 0.0,
+            "hi": 0.1,
+            "mean_pred": 0.0868,
+            "frac_pos": 0.0,
+            "count": 5
+          },
+          {
+            "lo": 0.1,
+            "hi": 0.2,
+            "mean_pred": 0.1319,
+            "frac_pos": 0.3333,
+            "count": 3
+          },
+          {
+            "lo": 0.2,
+            "hi": 0.3,
+            "mean_pred": 0.2627,
+            "frac_pos": 0.0,
+            "count": 2
+          },
+          {
+            "lo": 0.3,
+            "hi": 0.4,
+            "mean_pred": 0.3678,
+            "frac_pos": 0.4444,
+            "count": 18
+          },
+          {
+            "lo": 0.4,
+            "hi": 0.5,
+            "mean_pred": 0.4499,
+            "frac_pos": 0.3611,
+            "count": 36
+          },
+          {
+            "lo": 0.5,
+            "hi": 0.6,
+            "mean_pred": 0.5469,
+            "frac_pos": 0.6129,
+            "count": 31
+          },
+          {
+            "lo": 0.6,
+            "hi": 0.7,
+            "mean_pred": 0.6502,
+            "frac_pos": 0.55,
+            "count": 20
+          },
+          {
+            "lo": 0.7,
+            "hi": 0.8,
+            "mean_pred": 0.739,
+            "frac_pos": 1.0,
+            "count": 4
+          },
+          {
+            "lo": 0.8,
+            "hi": 0.9,
+            "mean_pred": 0.8776,
+            "frac_pos": 1.0,
+            "count": 1
+          },
+          {
+            "lo": 0.9,
+            "hi": 1.0,
+            "mean_pred": 0.9065,
+            "frac_pos": 1.0,
+            "count": 2
+          }
+        ],
+        "brier_skill_score_vs_climatology": 0.170742564700339,
+        "diebold_mariano_vs_always_up": {
+          "dm_stat": -2.6791853768802327,
+          "p_value": 0.007380152306054599,
+          "mean_diff": -0.2936693169848257,
+          "n": 122
+        },
+        "diebold_mariano_vs_climatology": {
+          "dm_stat": -1.9466420796624924,
+          "p_value": 0.051577660040364126,
+          "mean_diff": -0.04585848352188974,
+          "n": 122
+        }
+      },
+      "gbm_calibrated": {
+        "model": "gbm_calibrated",
+        "n": 122,
+        "accuracy": 0.4672131147540984,
+        "brier": 0.2895389423384951,
+        "log_loss": 0.777889372444623,
+        "always_up_accuracy": 0.48360655737704916,
+        "always_up_brier": 0.5163934426229508,
+        "p_value": 0.9151865048428764,
+        "significant_at_05": false,
+        "n_discordant": 88,
+        "ece": 0.21009378447218346,
+        "reliability": [
+          {
+            "lo": 0.1,
+            "hi": 0.2,
+            "mean_pred": 0.1902,
+            "frac_pos": 1.0,
+            "count": 1
+          },
+          {
+            "lo": 0.2,
+            "hi": 0.3,
+            "mean_pred": 0.2499,
+            "frac_pos": 0.5455,
+            "count": 11
+          },
+          {
+            "lo": 0.3,
+            "hi": 0.4,
+            "mean_pred": 0.3548,
+            "frac_pos": 0.6857,
+            "count": 35
+          },
+          {
+            "lo": 0.4,
+            "hi": 0.5,
+            "mean_pred": 0.4464,
+            "frac_pos": 0.3415,
+            "count": 41
+          },
+          {
+            "lo": 0.5,
+            "hi": 0.6,
+            "mean_pred": 0.5452,
+            "frac_pos": 0.5417,
+            "count": 24
+          },
+          {
+            "lo": 0.6,
+            "hi": 0.7,
+            "mean_pred": 0.65,
+            "frac_pos": 0.1111,
+            "count": 9
+          },
+          {
+            "lo": 0.7,
+            "hi": 0.8,
+            "mean_pred": 0.7493,
+            "frac_pos": 0.0,
+            "count": 1
+          }
+        ],
+        "brier_skill_score_vs_climatology": -0.07802565193636579,
+        "diebold_mariano_vs_always_up": {
+          "dm_stat": -1.8853477569100363,
+          "p_value": 0.059382902421439177,
+          "mean_diff": -0.22685450028445567,
+          "n": 122
+        },
+        "diebold_mariano_vs_climatology": {
+          "dm_stat": 1.6974979461140043,
+          "p_value": 0.08960255907819059,
+          "mean_diff": 0.02095633317848032,
+          "n": 122
+        }
+      },
+      "ensemble": {
+        "model": "ensemble",
+        "n": 122,
+        "accuracy": 0.5245901639344263,
+        "brier": 0.2445906460884679,
+        "log_loss": 0.681475044998454,
+        "always_up_accuracy": 0.48360655737704916,
+        "always_up_brier": 0.5163934426229508,
+        "p_value": 0.6569924675863577,
+        "significant_at_05": false,
+        "n_discordant": 81,
+        "ece": 0.07043783495443977,
+        "reliability": [
+          {
+            "lo": 0.2,
+            "hi": 0.3,
+            "mean_pred": 0.2549,
+            "frac_pos": 0.1667,
+            "count": 6
+          },
+          {
+            "lo": 0.3,
+            "hi": 0.4,
+            "mean_pred": 0.3676,
+            "frac_pos": 0.5294,
+            "count": 17
+          },
+          {
+            "lo": 0.4,
+            "hi": 0.5,
+            "mean_pred": 0.4451,
+            "frac_pos": 0.4828,
+            "count": 58
+          },
+          {
+            "lo": 0.5,
+            "hi": 0.6,
+            "mean_pred": 0.5409,
+            "frac_pos": 0.4857,
+            "count": 35
+          },
+          {
+            "lo": 0.6,
+            "hi": 0.7,
+            "mean_pred": 0.6541,
+            "frac_pos": 0.5,
+            "count": 4
+          },
+          {
+            "lo": 0.7,
+            "hi": 0.8,
+            "mean_pred": 0.7099,
+            "frac_pos": 1.0,
+            "count": 2
+          }
+        ],
+        "brier_skill_score_vs_climatology": 0.08932805868027405,
+        "diebold_mariano_vs_always_up": {
+          "dm_stat": -2.380575360727514,
+          "p_value": 0.01728562497118924,
+          "mean_diff": -0.27180279653448286,
+          "n": 122
+        },
+        "diebold_mariano_vs_climatology": {
+          "dm_stat": -1.8302697334546363,
+          "p_value": 0.06720961486827304,
+          "mean_diff": -0.023991963071546902,
+          "n": 122
+        }
+      }
+    },
+    "buyer_decision_h10": {
+      "target": "buyer_decision",
+      "horizon": 10,
+      "n_test_folds": 137,
+      "n_skipped_folds": 10,
+      "min_train_size": 20,
+      "climatology_brier": 0.26792433405549737,
+      "always_up_rate": 0.5401459854014599,
+      "logistic_balanced": {
+        "model": "logistic_balanced",
+        "n": 137,
+        "accuracy": 0.43795620437956206,
+        "brier": 0.333797417428974,
+        "log_loss": 0.9029087019560058,
+        "always_up_accuracy": 0.5401459854014599,
+        "always_up_brier": 0.45985401459854014,
+        "p_value": 0.08694889972991102,
+        "significant_at_05": false,
+        "n_discordant": 58,
+        "ece": 0.2529788519831538,
+        "reliability": [
+          {
+            "lo": 0.2,
+            "hi": 0.3,
+            "mean_pred": 0.2594,
+            "frac_pos": 0.7143,
+            "count": 14
+          },
+          {
+            "lo": 0.3,
+            "hi": 0.4,
+            "mean_pred": 0.3585,
+            "frac_pos": 0.6552,
+            "count": 29
+          },
+          {
+            "lo": 0.4,
+            "hi": 0.5,
+            "mean_pred": 0.4531,
+            "frac_pos": 0.4667,
+            "count": 15
+          },
+          {
+            "lo": 0.5,
+            "hi": 0.6,
+            "mean_pred": 0.5541,
+            "frac_pos": 0.6176,
+            "count": 34
+          },
+          {
+            "lo": 0.6,
+            "hi": 0.7,
+            "mean_pred": 0.638,
+            "frac_pos": 0.5625,
+            "count": 16
+          },
+          {
+            "lo": 0.7,
+            "hi": 0.8,
+            "mean_pred": 0.7589,
+            "frac_pos": 0.2222,
+            "count": 9
+          },
+          {
+            "lo": 0.8,
+            "hi": 0.9,
+            "mean_pred": 0.8512,
+            "frac_pos": 0.3125,
+            "count": 16
+          },
+          {
+            "lo": 0.9,
+            "hi": 1.0,
+            "mean_pred": 0.9162,
+            "frac_pos": 0.25,
+            "count": 4
+          }
+        ],
+        "brier_skill_score_vs_climatology": -0.2458645035199818,
+        "diebold_mariano_vs_always_up": {
+          "dm_stat": -1.65904644020005,
+          "p_value": 0.0971064346441195,
+          "mean_diff": -0.1260565971695661,
+          "n": 137
+        },
+        "diebold_mariano_vs_climatology": {
+          "dm_stat": 2.9086436912764304,
+          "p_value": 0.0036300031723617288,
+          "mean_diff": 0.06587308337347664,
+          "n": 137
+        }
+      },
+      "gbm_calibrated": {
+        "model": "gbm_calibrated",
+        "n": 137,
+        "accuracy": 0.36496350364963503,
+        "brier": 0.30806344129651947,
+        "log_loss": 0.8201883277983044,
+        "always_up_accuracy": 0.5401459854014599,
+        "always_up_brier": 0.45985401459854014,
+        "p_value": 0.007905180027859783,
+        "significant_at_05": false,
+        "n_discordant": 76,
+        "ece": 0.25513804097667203,
+        "reliability": [
+          {
+            "lo": 0.1,
+            "hi": 0.2,
+            "mean_pred": 0.1783,
+            "frac_pos": 1.0,
+            "count": 2
+          },
+          {
+            "lo": 0.2,
+            "hi": 0.3,
+            "mean_pred": 0.2483,
+            "frac_pos": 0.9,
+            "count": 10
+          },
+          {
+            "lo": 0.3,
+            "hi": 0.4,
+            "mean_pred": 0.357,
+            "frac_pos": 0.6316,
+            "count": 38
+          },
+          {
+            "lo": 0.4,
+            "hi": 0.5,
+            "mean_pred": 0.4565,
+            "frac_pos": 0.5769,
+            "count": 26
+          },
+          {
+            "lo": 0.5,
+            "hi": 0.6,
+            "mean_pred": 0.5431,
+            "frac_pos": 0.3077,
+            "count": 39
+          },
+          {
+            "lo": 0.6,
+            "hi": 0.7,
+            "mean_pred": 0.646,
+            "frac_pos": 0.6875,
+            "count": 16
+          },
+          {
+            "lo": 0.7,
+            "hi": 0.8,
+            "mean_pred": 0.7307,
+            "frac_pos": 0.1667,
+            "count": 6
+          }
+        ],
+        "brier_skill_score_vs_climatology": -0.1498150863471317,
+        "diebold_mariano_vs_always_up": {
+          "dm_stat": -1.7016842145302256,
+          "p_value": 0.0888145811105816,
+          "mean_diff": -0.15179057330202067,
+          "n": 137
+        },
+        "diebold_mariano_vs_climatology": {
+          "dm_stat": 2.105791496482833,
+          "p_value": 0.03522246781611549,
+          "mean_diff": 0.040139107241022105,
+          "n": 137
+        }
+      },
+      "ensemble": {
+        "model": "ensemble",
+        "n": 137,
+        "accuracy": 0.35766423357664234,
+        "brier": 0.3082963349633826,
+        "log_loss": 0.8178679008088521,
+        "always_up_accuracy": 0.5401459854014599,
+        "always_up_brier": 0.45985401459854014,
+        "p_value": 0.005870707889737201,
+        "significant_at_05": false,
+        "n_discordant": 77,
+        "ece": 0.24402777473898168,
+        "reliability": [
+          {
+            "lo": 0.2,
+            "hi": 0.3,
+            "mean_pred": 0.2803,
+            "frac_pos": 1.0,
+            "count": 5
+          },
+          {
+            "lo": 0.3,
+            "hi": 0.4,
+            "mean_pred": 0.3608,
+            "frac_pos": 0.8182,
+            "count": 22
+          },
+          {
+            "lo": 0.4,
+            "hi": 0.5,
+            "mean_pred": 0.4497,
+            "frac_pos": 0.56,
+            "count": 50
+          },
+          {
+            "lo": 0.5,
+            "hi": 0.6,
+            "mean_pred": 0.5524,
+            "frac_pos": 0.4643,
+            "count": 28
+          },
+          {
+            "lo": 0.6,
+            "hi": 0.7,
+            "mean_pred": 0.6467,
+            "frac_pos": 0.3043,
+            "count": 23
+          },
+          {
+            "lo": 0.7,
+            "hi": 0.8,
+            "mean_pred": 0.7559,
+            "frac_pos": 0.4286,
+            "count": 7
+          },
+          {
+            "lo": 0.8,
+            "hi": 0.9,
+            "mean_pred": 0.8122,
+            "frac_pos": 0.0,
+            "count": 2
+          }
+        ],
+        "brier_skill_score_vs_climatology": -0.1506843379874656,
+        "diebold_mariano_vs_always_up": {
+          "dm_stat": -1.8552356654705224,
+          "p_value": 0.06356258068858933,
+          "mean_diff": -0.15155767963515754,
+          "n": 137
+        },
+        "diebold_mariano_vs_climatology": {
+          "dm_stat": 3.678983458903534,
+          "p_value": 0.0002341654532993509,
+          "mean_diff": 0.04037200090788522,
+          "n": 137
+        }
+      }
+    }
+  }
+}

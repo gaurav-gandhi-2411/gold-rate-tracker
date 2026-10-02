@@ -22,7 +22,25 @@ markdown -- the visible page shows plain text, never raw marker syntax):
   <field.path>      dot-separated path into that JSON (supports nested objects,
                     e.g. horizons.h1.logistic_metrics.accuracy)
   <format>          pct1 (80.0%), pct2 (80.00%), num1 (4.9), num2 (0.98),
-                    num3 (0.975), int (96), raw (verbatim)
+                    num3 (0.975), int (96), raw (verbatim), frac10 (a 0-1
+                    fraction rendered as a plain "about N times out of 10"
+                    phrase, always FLOORED so it never overstates -- 0.709
+                    becomes "about 7 times out of 10", not 8. For README's
+                    own first-screen bullets (docs/PLAIN_LANGUAGE_AUDIT.md,
+                    U2): never combined with n=/ci= -- the point of frac10 is
+                    to replace that raw-percentage-plus-sample-size shape,
+                    not sit next to it. Same floor/never-overstate rule as
+                    i18n.js's fractionOutOf10Phrase(), kept in sync by policy
+                    (docs/PLAIN_LANGUAGE_AUDIT.md), not by shared code -- one
+                    is Python driving static markdown, the other is JS
+                    driving a live page, and there's no runtime they share.
+                    pval2/pval4 (a p-value at 2/4 decimal places, rendering
+                    "= 0.42" normally but "< 0.01"/"< 0.0001" whenever the raw
+                    value would otherwise round to an all-zero string -- see
+                    _format_pvalue()'s docstring. The marker owns the leading
+                    "="/"<" operator, so author the surrounding text as
+                    "p<!--METRIC:...:pval2-->" with NO literal "=" before the
+                    marker, never "p=<!--METRIC...-->").
   n=<field>         optional sibling field (same file) supplying the sample size;
                     rendered as "(n=<value>, ...)" alongside the value
   asof=<field>      optional sibling field supplying the as-of date/timestamp;
@@ -135,7 +153,40 @@ def _format_value(value: object, fmt: str, source: str) -> str:
         return f"{value:.3f}"
     if fmt == "int":
         return str(int(value))
+    if fmt == "frac10":
+        return _format_frac10(value)
+    if fmt == "pval2":
+        return _format_pvalue(value, 2)
+    if fmt == "pval4":
+        return _format_pvalue(value, 4)
     raise MetricError(f"{source}: unknown format {fmt!r}")
+
+
+def _format_pvalue(value: float, decimals: int) -> str:
+    """Formats a p-value without ever printing an all-zero string ("0.00",
+    "0.0000") -- that reads as "exactly zero", which a p-value never literally
+    is. A value that rounds to zero at `decimals` places renders as
+    "< <smallest representable value>" instead (e.g. pval4 on 0.00003 ->
+    "< 0.0001"). Mirrors i18n.js's formatPValue() -- same threshold, same
+    rounds-to-zero rule -- kept in sync by policy, not shared code, same
+    Python-static-markdown vs JS-live-page split as this module's frac10/
+    i18n.js's fractionOutOf10Phrase pair (see module docstring)."""
+    smallest = 10**-decimals
+    if abs(value) < smallest / 2:
+        return f"< {smallest:.{decimals}f}"
+    return f"= {value:.{decimals}f}"
+
+
+def _format_frac10(value: float) -> str:
+    """0.709 -> "about 7 times out of 10". Floors, never rounds up -- see the
+    module docstring's frac10 entry for why this must match i18n.js's
+    fractionOutOf10Phrase()'s rounding policy."""
+    n = max(0, min(10, int(value * 10)))  # int() truncates toward zero == floor for value >= 0
+    if n == 0:
+        return "less than 1 time out of 10"
+    if n == 1:
+        return "about 1 time out of 10"
+    return f"about {n} times out of 10"
 
 
 def _format_asof(value: object) -> str:
@@ -162,6 +213,11 @@ def resolve_marker(json_path: str, field_path: str, fmt: str, modifiers_raw: str
     unresolved_note: str | None = None
     for key, field in re.findall(r"\|([a-z_]+)=([^<>|]+)", modifiers_raw):
         if key == "n":
+            # frac10 exists specifically to replace the raw "value% (n=N, ...)"
+            # shape (docs/PLAIN_LANGUAGE_AUDIT.md, U2) -- combining it with n=
+            # would silently reintroduce the exact banned pattern it's for.
+            if fmt == "frac10":
+                raise MetricError(f"{source}: n= cannot be combined with frac10 format")
             raw = _get_field(data, field, json_path)
             n_val = str(int(raw)) if isinstance(raw, int | float) else str(raw)
         elif key == "asof":

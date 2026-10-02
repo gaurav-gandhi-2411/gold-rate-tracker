@@ -31,6 +31,10 @@ const BACKTEST_URL  = "data/backtest.json";
 const DRIFT_URL     = "data/drift_metrics.json";
 const METRICS_URL   = "data/metrics_history.json";
 const COVERAGE_URL  = "data/coverage_metrics.json";
+// GG 4c (2026-09-25): the trend chart's series -- 22K = IBJA x frozen calibration, one row
+// per IBJA publishing day (scripts/build_ibja_derived_prices.py --public-out). An estimate,
+// never a retailer observation; see chartSeries().
+const DERIVED_PRICES_URL = "data/ibja_derived_prices.json";
 const CADENCE_URL   = "data/cadence_metrics.json"; // R2: real observed data-commit interval, see ml/cadence_metrics.py
 // AE1 (audit 2026-09-10): walk-forward MEASURED coverage of the IBJA-calibrated
 // tier's actual displayed band, see ml.calibration.save_calibration_band_coverage.
@@ -39,6 +43,15 @@ const CADENCE_URL   = "data/cadence_metrics.json"; // R2: real observed data-com
 // reflect this file even when it showed the band under-covering. See
 // renderStaleBanner()/deriveMeasuredBandCoverage() below.
 const CALIBRATION_BAND_COVERAGE_URL = "data/calibration_band_coverage.json";
+// page_v2 (item 6, flagged OFF) -- none of these five have a producing pipeline on
+// master as of this PR; every fetch below is caught to null on any failure (missing
+// file, malformed JSON) and every page_v2 reader treats null/malformed the same as
+// "not shipped yet": render nothing for that piece, never guess.
+const MARKUP_TODAY_URL = "data/markup_today.json"; // F1 markup_meter -- feat/markup-meter-model, unmerged
+const WAIT_OR_BUY_TODAY_URL = "data/wait_or_buy_today.json"; // F2 wait_or_buy -- PR #2020
+const EVENT_WATCH_TODAY_URL = "data/event_watch_today.json"; // F4 event_watch, ADR 050
+const NEXT_DAY_RANGE_SHADOW_URL = "data/next_day_range_shadow.json"; // job 3, no producing pipeline yet
+const WEEKLY_RANGE_SHADOW_LOG_URL = "data/weekly_range_shadow_log.json"; // job 3, scripts/run_weekly_range_shadow.py
 
 // Staleness threshold (hours) shared with Python inference.py _STALE_THRESHOLD_H.
 // Per ADR 025 this now gates Tanishq *enrichment* freshness, not primary staleness.
@@ -107,30 +120,107 @@ function fmtRelative(iso) {
   return t("relDaysAgo", { n: Math.round(diff / 86400) });
 }
 
-// Digit grouping stays en-IN regardless of UI language — Indian digit grouping
-// (₹13,33,330) is a REGIONAL convention, not a language one, and hi-IN's default
-// numbering system can silently switch to Devanagari digits (०१२३…) depending on the
-// browser's ICU data. numberingSystem:"latn" pins Arabic digits explicitly for the
-// Hindi date path below, matching how Indian Hindi media actually writes dates.
-function fmtDate(iso) {
-  const locale = currentLang === "hi" ? "hi-IN" : "en-IN";
-  return new Date(iso).toLocaleString(locale, {
-    day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit",
-    numberingSystem: "latn",
-  });
+// Retailer takedown (ADR 059, docs/RETAILER_TAKEDOWN.md): when a retailer is taken
+// down, prices.json is rebuilt from IBJA x calibration by
+// scripts/build_ibja_derived_prices.py and every row carries this source tag. Such a
+// row is NOT a Tanishq observation, so nothing that names Tanishq may be rendered
+// from it (hero location line, "Tanishq last confirmed", the long-silent banner
+// clause, the calculator's "Tanishq store rate"). Inert today: no live row has it.
+const DERIVED_SOURCE_PREFIX = "ibja_calibrated";
+function isDerivedReading(r) {
+  return !!r && typeof r.source === "string" && r.source.startsWith(DERIVED_SOURCE_PREFIX);
 }
 
-function fmtIST(iso) {
-  if (!iso) return "—";
-  const locale = currentLang === "hi" ? "hi-IN" : "en-IN";
-  try {
-    return new Intl.DateTimeFormat(locale, {
-      timeZone: "Asia/Kolkata",
-      day: "numeric", month: "short", year: "numeric",
-      hour: "2-digit", minute: "2-digit", hour12: true,
-      numberingSystem: "latn",
-    }).format(new Date(iso));
-  } catch (_) { return "—"; }
+// E2 (GG decision, 2026-09-25) + ADR 059 display gates. The hero names Tanishq only for a
+// real Tanishq reading, and only one that passes both gates below; every other figure it
+// shows is labelled as our estimate. Both constants mirror ml/inference.py (never a second,
+// drifting definition): TANISHQ_IBJA_MAX_DEVIATION = _TANISHQ_IBJA_MAX_DEVIATION (a
+// Tanishq figure >12% from the IBJA-based estimate is a suspected mis-read, not shown as
+// Tanishq's rate) and RETAILER_READING_MAX_AGE_H = _FUSION_MAX_AGE_H (a retailer-named
+// figure older than 36h is not shown). "Fresh" is STALE_THRESHOLD_H (ADR 025), unchanged.
+const TANISHQ_IBJA_MAX_DEVIATION = 0.12;
+const RETAILER_READING_MAX_AGE_H = 36;
+
+// "10:40 AM today" / "10:40 AM yesterday" / "10:40 AM, 21 Sept", IST, in the active language.
+function fmtCheckedWhen(iso, nowMs = Date.now()) {
+  const d = new Date(iso);
+  const time = new Intl.DateTimeFormat(currentLang === "hi" ? "hi-IN" : "en-US", {
+    timeZone: "Asia/Kolkata", hour: "numeric", minute: "2-digit", hour12: true, numberingSystem: "latn",
+  }).format(d);
+  const day = istDayKey(d);
+  if (day === istDayKey(new Date(nowMs))) return t("whenToday", { time });
+  if (day === istDayKey(new Date(nowMs - 86_400_000))) return t("whenYesterday", { time });
+  return t("whenOnDate", { time, date: fmtDateShort(iso) });
+}
+
+// Decides what the hero shows. Pure: readings = prices.json rows, forecast = forecast.json.
+// kind:
+//   "tanishq_live"      a real Tanishq reading, <= STALE_THRESHOLD_H old, plausible -> shown
+//                       as Tanishq's listed rate with its check time.
+//   "estimate"          our IBJA-based (or other-jewellers) estimate, labelled as ours;
+//                       tanishqLine optionally cites the last plausible Tanishq reading
+//                       WITH its figure and its date and time (GG decision 4b, 2026-09-25:
+//                       never a date alone). Past RETAILER_READING_MAX_AGE_H the wording
+//                       changes to say it has not updated since; the figure stays.
+//   "tanishq_last_only" no estimate exists this cycle (inference tier 4): the last Tanishq
+//                       reading, labelled "last checked" with its date and time.
+//   "empty"             nothing to show (the renderer keeps its existing "—" path).
+// A Tanishq takedown (IBJA-derived prices.json rows, ADR 059) never yields a Tanishq kind
+// or line: the rows are not Tanishq observations.
+// showChange (GG 4b/4c): "today's change" is Tanishq-vs-previous-Tanishq only, and only
+// when the hero figure IS that latest Tanishq row. Never next to an estimate: mixing a
+// Tanishq reading with the IBJA-based series produced false "+Rs.24" moves (E1 preview).
+function heroDisplayState(readings, forecast, nowMs = Date.now()) {
+  const latest = readings.length ? readings[readings.length - 1] : null;
+  const derived = isDerivedReading(latest);
+  const estimate = forecast
+    && (forecast.price_source === "ibja_calibrated" || forecast.price_source === "fusion_consensus")
+    && typeof forecast.current_22k === "number"
+    ? { value: forecast.current_22k, source: forecast.price_source }
+    : null;
+  const raw = latest && !derived && typeof latest["22k"] === "number" ? latest : null;
+  // Plausibility reference: the IBJA-based estimate when this cycle has one (ADR 059's
+  // gate exactly). On inference tier 1/4 forecast.current_22k is the Tanishq value that
+  // inference itself already gated against IBJA, so a newer reading is checked against it.
+  const ref = estimate ? estimate.value
+    : (forecast && typeof forecast.current_22k === "number" ? forecast.current_22k : null);
+  const passes = (v) => ref == null || Math.abs(v - ref) / ref <= TANISHQ_IBJA_MAX_DEVIATION;
+  // The Tanishq reading the hero may cite: the latest row if it passes the gate; failing
+  // that, on a Tanishq tier, the value inference gated at forecast.scraped_at; else none.
+  let tanishq = null;
+  if (raw && passes(raw["22k"])) {
+    tanishq = raw;
+  } else if (raw && !estimate && forecast && forecast.price_source === "tanishq_scrape"
+             && forecast.scraped_at && typeof forecast.current_22k === "number") {
+    tanishq = { "22k": forecast.current_22k, timestamp: forecast.scraped_at };
+  }
+  const ageH = tanishq ? (nowMs - new Date(tanishq.timestamp).getTime()) / 3_600_000 : Infinity;
+
+  if (tanishq && ageH <= STALE_THRESHOLD_H) {
+    return { kind: "tanishq_live", price: tanishq["22k"], approx: false,
+      labelKey: "heroLabelTanishqLive", labelParams: { when: fmtCheckedWhen(tanishq.timestamp, nowMs) },
+      tanishqLine: null, showChange: tanishq === raw };
+  }
+  if (estimate) {
+    let tanishqLine = null;
+    if (tanishq) {
+      const params = { when: fmtCheckedWhen(tanishq.timestamp, nowMs), price: fmtINR(tanishq["22k"]) };
+      tanishqLine = { key: ageH <= RETAILER_READING_MAX_AGE_H ? "heroTanishqLastRate" : "heroTanishqOldRate", params };
+    }
+    return { kind: "estimate", price: estimate.value, approx: true,
+      labelKey: estimate.source === "fusion_consensus" ? "heroLabelEstimateFusion" : "heroLabelEstimateIbja",
+      labelParams: {}, tanishqLine, showChange: false };
+  }
+  if (tanishq) {
+    return { kind: "tanishq_last_only", price: tanishq["22k"], approx: false,
+      labelKey: "heroLabelTanishqLastChecked", labelParams: { when: fmtCheckedWhen(tanishq.timestamp, nowMs) },
+      tanishqLine: null, showChange: tanishq === raw };
+  }
+  if (derived && typeof latest["22k"] === "number") {
+    return { kind: "estimate", price: latest["22k"], approx: true,
+      labelKey: "heroLabelEstimateIbja", labelParams: {}, tanishqLine: null, showChange: false };
+  }
+  return { kind: "empty", price: null, approx: false, labelKey: null, labelParams: {}, tanishqLine: null, showChange: false };
 }
 
 // Human-readable label for tier-3 fusion_sources (e.g. ["grt","malabar"] -> "GRT, Malabar").
@@ -186,6 +276,8 @@ let allReadings      = [];
 let currentRange     = "30";   // tracks active chart tab for refreshData()
 let pwaHelpDismissed = false; // D5: set true when user taps ✕; survives re-renders
 let chartPinnedIndex  = null;  // index of tapped chart point; null = no callout
+let derivedSeries     = null;  // data/ibja_derived_prices.json rows (GG 4c); null until loaded
+let chartIsEstimate   = false; // what the chart currently plots (drives the ≈ in its callout)
 let trackRecordChart  = null;  // Chart.js instance for forecast-vs-actual section
 let displayedPrice    = null;  // Φ16-4: last rendered hero price; drives number tick
 let _heroTickRaf      = null;  // Φ16-4: RAF handle; cancelled when a new tick starts
@@ -198,6 +290,14 @@ let lastCadenceMetric = null; // R2: cached so applyLanguage() can re-render the
 // calibration confidence clause without re-fetching. This is the WALK-FORWARD
 // MEASURED coverage of the band actually shown, data/calibration_band_coverage.json.
 let lastBandCoverage  = null;
+// page_v2 (item 6, flagged OFF) -- cached for symmetry with the vars above, even though
+// nothing currently re-renders page_v2 after its one call at the end of init() (see
+// renderFlaggedFeatures()'s own comment for why applyLanguage() does not need to).
+let lastMarkupToday          = null;
+let lastWaitOrBuy            = null;
+let lastEventWatch           = null;
+let lastNextDayRangeShadow   = null;
+let lastWeeklyRangeShadowLog = null;
 
 // Ψ3C.2: stagger card-enter animation across a list of elements.
 // Forces a reflow between remove/add so the animation restarts each time.
@@ -728,9 +828,9 @@ function computeSupportDistance90d(readings, percentile30d) {
 }
 
 // Typical week-over-week price movement, purely historical — distinct from
-// headline.vol_context's 5-day RECENT realized-vol estimate (computed server-side
-// in ml/volatility.py from just the last 20 days, feeding the "moving about ±₹X
-// over 5 days lately" note below). This one looks back further (90 days) and asks
+// headline.vol_context's typical 5-day move (computed server-side in
+// ml/volatility.py from the last 30 days, feeding the "over the past month ...
+// in 5 days" note below). This one looks back further (90 days) and asks
 // a different question: not "how choppy has it been lately" but "if I wait a
 // week, how much has the price actually tended to move, historically". Answers
 // "is waiting worth it?" without predicting anything — every comparison is
@@ -801,23 +901,29 @@ function computeAccuracyDrift(drift) {
 // Itemised "what will it cost me?" estimate for a gold jewellery purchase, the
 // way an Indian retail invoice is built up:
 //   gold value = ratePerGram × grams
-//   making     = gold value × makingPct/100   (making charges — design-dependent,
-//                                               jeweller-specific; the caller supplies it)
+//   making     = gold value × makingPct/100 + grams × makingPerGram
+//                (making charges — design-dependent, jeweller-specific; quoted
+//                 either as a % of gold value or a flat ₹/gram; the caller supplies it)
 //   GST        = (gold value + making) × gstPct/100   (3% on gold jewellery in India)
 //   total      = gold value + making + GST
 //
+// GST base: 3% on the WHOLE retail transaction value, making charges included
+// (HSN 7113; CBIC rate table: 1.5% CGST + 1.5% SGST). Some buyer guides quote
+// "5% GST on making charges" -- that rate is for B2B job work (a jeweller
+// paying an artisan to work gold the jeweller supplied), not a retail sale.
+//
 // No making-charge default is baked in here (it varies far too widely by design
-// to assume) — makingPct defaults to 0 so the bare metal+GST figure is the floor;
-// the UI layer owns the user-entered default and its framing. gstPct defaults to
-// the current 3% India rate. Returns null on any invalid (non-finite / negative)
+// to assume) — both making inputs default to 0 so the bare metal+GST figure is
+// the floor; the UI layer owns the default range and its framing. gstPct defaults
+// to the current 3% India rate. Returns null on any invalid (non-finite / negative)
 // input so the caller can show a neutral empty state rather than NaN.
-function computePurchaseCost({ ratePerGram, grams, makingPct = 0, gstPct = 3 }) {
-  const vals = [ratePerGram, grams, makingPct, gstPct];
+function computePurchaseCost({ ratePerGram, grams, makingPct = 0, makingPerGram = 0, gstPct = 3 }) {
+  const vals = [ratePerGram, grams, makingPct, makingPerGram, gstPct];
   if (!vals.every(Number.isFinite)) return null;
-  if (ratePerGram < 0 || grams < 0 || makingPct < 0 || gstPct < 0) return null;
+  if (vals.some((v) => v < 0)) return null;
 
   const goldValue = ratePerGram * grams;
-  const making = goldValue * (makingPct / 100);
+  const making = goldValue * (makingPct / 100) + grams * makingPerGram;
   const gst = (goldValue + making) * (gstPct / 100);
   const total = goldValue + making + gst;
 
@@ -827,6 +933,48 @@ function computePurchaseCost({ ratePerGram, grams, makingPct = 0, gstPct = 3 }) 
     gst: Math.round(gst),
     total: Math.round(total),
   };
+}
+
+// Jewellery-type making-charge PRESETS for the calculator. Ranges and typical values are
+// the product owner's (GG) chosen buyer-guide ranges (2026-09-23), not a market
+// measurement -- coins/plain chains sit at the low end of what a jeweller charges,
+// intricate/antique work at the top; "typical" is a rounded midpoint-ish value chosen for
+// display, not a computed mean. Replaces the earlier flat 6-25% range (see git history):
+// a single range spanning "plain chain" to "bridal antique" invented false precision for
+// buyers who know roughly what TYPE of piece they want but not a jeweller's exact %.
+// "custom" carries no low/high/typical of its own -- the UI collects a single value
+// (% or ₹/gram) instead; computePurchaseCostRange() special-cases it below.
+const MAKING_CHARGE_PRESETS = [
+  { id: "coins",      labelKey: "calcPresetCoins",      low: 3,  high: 8,  typical: 5  },
+  { id: "plain",      labelKey: "calcPresetPlain",      low: 8,  high: 12, typical: 10 },
+  { id: "intricate",  labelKey: "calcPresetIntricate",  low: 15, high: 25, typical: 20 },
+  { id: "custom",     labelKey: "calcPresetCustom" },
+];
+const DEFAULT_PRESET_ID = "plain"; // "Plain bangles & rings" -- the most common retail purchase
+
+// Typical/low/high cost breakdown for a preset, or a single (typical=low=high) breakdown
+// for a custom making charge -- a preset shows a buyer the plausible spread for that
+// jewellery TYPE, so low-high is tied to a named category rather than a free-form guess;
+// custom is a single jeweller-quoted figure, and inventing a range around a number the
+// buyer already knows exactly would only add false uncertainty. customUnit is "pct" (%
+// of gold value) or "perGram" (flat ₹/gram), only consulted when presetId === "custom".
+// Returns null on an unknown presetId or invalid custom input.
+function computePurchaseCostRange({ ratePerGram, grams, presetId, customValue, customUnit, gstPct = 3 }) {
+  if (presetId === "custom") {
+    if (customUnit !== "pct" && customUnit !== "perGram") return null;
+    if (!Number.isFinite(customValue) || customValue < 0) return null;
+    const one = computePurchaseCost(customUnit === "pct"
+      ? { ratePerGram, grams, makingPct: customValue, gstPct }
+      : { ratePerGram, grams, makingPerGram: customValue, gstPct });
+    return one ? { typical: one, low: one, high: one } : null;
+  }
+  const preset = MAKING_CHARGE_PRESETS.find((p) => p.id === presetId);
+  if (!preset) return null;
+  const at = (pct) => computePurchaseCost({ ratePerGram, grams, makingPct: pct, gstPct });
+  const typical = at(preset.typical);
+  const low = at(preset.low);
+  const high = at(preset.high);
+  return typical && low && high ? { typical, low, high } : null;
 }
 
 // ─── RENDERERS ────────────────────────────────────────────────────────────────
@@ -851,21 +999,30 @@ function weekdayLong(d) {
 // or the file missing/malformed, means "no current measurement" -- never a signal to fall
 // back to the design target (rule 98a: fail closed, not open). Returns null in every case
 // where the caller must NOT assert a specific coverage percentage.
-const BAND_COVERAGE_MAX_AGE_DAYS = 14;
+//
+// GG's G4 rule (freshness audit, 2026-09-25): this is the ONE constant every accuracy/coverage
+// claim page_v2 shows reads (directly here, or via RANGE_SHADOW_MAX_AGE_DAYS below, which
+// derives from it rather than repeating the literal) -- the stale-banner's own confidence
+// clause (renderStaleBanner) and page_v2's job 2/3 cards (computeConfidenceNote/
+// computeMoveRangeJob) all call deriveMeasuredBandCoverage, so none of them can independently
+// drift to a different cutoff again.
+// G4 follow-up (#2049, 2026-09-25): the age check itself now lives in i18n.js's
+// isMeasurementFresh (CLAIM_MAX_AGE_DAYS=14, same 14-day policy) so every accuracy/coverage
+// claim on the page -- not just this one -- shares one fail-closed freshness rule. This
+// constant is kept as an alias (not a second literal) so RANGE_SHADOW_MAX_AGE_DAYS below and
+// any other page_v2 caller of BAND_COVERAGE_MAX_AGE_DAYS keep deriving from the same single
+// source of truth instead of drifting from it.
+const BAND_COVERAGE_MAX_AGE_DAYS = CLAIM_MAX_AGE_DAYS;
 
 function deriveMeasuredBandCoverage(bandCoverage, nowMs = Date.now()) {
   if (
     !bandCoverage ||
     typeof bandCoverage.coverage !== "number" ||
     typeof bandCoverage.n !== "number" ||
-    typeof bandCoverage.generated_at_utc !== "string"
+    !isMeasurementFresh(bandCoverage.generated_at_utc, nowMs)
   ) {
     return null;
   }
-  const generatedMs = Date.parse(bandCoverage.generated_at_utc);
-  if (Number.isNaN(generatedMs)) return null;
-  const ageDays = (nowMs - generatedMs) / 86_400_000;
-  if (ageDays > BAND_COVERAGE_MAX_AGE_DAYS) return null;
   return { coverage: Math.round(bandCoverage.coverage * 1000) / 10, n: bandCoverage.n };
 }
 
@@ -878,6 +1035,10 @@ function renderStaleBanner(forecast, bandCoverage) {
   // Always reset first so a refresh-error or prior stale message is cleared on success.
   banner.hidden = true;
   if (!forecast) return;
+  // E2: a Tanishq reading newer than this forecast.json cycle can make the hero show
+  // Tanishq's live rate while price_source still says "estimate"; an estimate banner under
+  // it would contradict the hero, so the banner follows the hero's decision.
+  if (heroDisplayState(allReadings, forecast).kind === "tanishq_live") return;
 
   // Per ADR 025, IBJA-calibrated is now the PRIMARY display path (Tanishq not
   // enriching this cycle is the expected steady state, not an error) — trust
@@ -915,7 +1076,8 @@ function renderStaleBanner(forecast, bandCoverage) {
     // for TIER_DEGRADED_THRESHOLD_H, not just this cycle -- driven entirely
     // by forecast.scraped_at (the same field worker-deadman's Tanishq-
     // silence channel already watches), never hand-typed.
-    if (forecast.scraped_at) {
+    const latestReading = allReadings.length > 0 ? allReadings[allReadings.length - 1] : null;
+    if (forecast.scraped_at && !isDerivedReading(latestReading)) {
       const scrapedAgeH = (Date.now() - new Date(forecast.scraped_at).getTime()) / 3_600_000;
       if (scrapedAgeH > TIER_DEGRADED_THRESHOLD_H) {
         banner.textContent += t("bannerTanishqLongSilent", { rel: fmtRelative(forecast.scraped_at) });
@@ -1054,10 +1216,11 @@ function renderHero(readings, forecast) {
 
   if (skelEl) skelEl.hidden = true;
   if (eyeEl)  eyeEl.hidden  = false;
+  // Label line: revealed only once heroDisplayState() has decided what the figure is.
   const locEl = document.getElementById("hero-location");
-  if (locEl) locEl.hidden = false;
 
   if (readings.length === 0) {
+    if (locEl) locEl.hidden = true;
     priceEl.innerHTML = "—"; // XSS-safe: static literal string, no external data
     priceEl.hidden    = false;
     if (rangeEl) rangeEl.hidden = true;
@@ -1073,37 +1236,31 @@ function renderHero(readings, forecast) {
   }
 
   const latest    = readings[readings.length - 1];
-  const newPrice  = latest["22k"];
   const prevPrice = displayedPrice; // capture before update — animateNumberTick uses this as fromVal
+  // E2 + ADR 059: one decision (heroDisplayState) drives the figure, its label and the
+  // Tanishq line together, so an estimate can never carry a Tanishq label. The label is
+  // written directly (not via data-i18n) because it carries a time; applyLanguage()
+  // re-runs renderHero after the static strings, so a language switch stays right.
+  const hs = heroDisplayState(readings, forecast);
+  if (locEl) {
+    locEl.textContent = hs.labelKey ? t(hs.labelKey, hs.labelParams) : "";
+    locEl.hidden = !hs.labelKey;
+  }
+  const hasBand = hs.kind === "estimate" && forecast && forecast.est_low != null && forecast.est_high != null;
 
-  // ibja_calibrated (tier 2) and fusion_consensus (tier 3) render identically here
-  // — the distinguishing honest labeling lives in the banner/pill (renderStaleBanner/
-  // renderFreshness), not duplicated a third time in the hero itself.
-  // Deliberately NOT gated on est_low/est_high (G1d): a suppressed band (no
-  // residual_abs_quantiles and no on-the-fly fit possible — see ml/inference.py)
-  // must still show the ≈-prefixed calibrated estimate, just without the range
-  // line below it. Gating this whole tier on est_low/est_high being present used
-  // to be safe only because the old fallback ALWAYS produced a (sometimes
-  // unreliable) band; now that suppression is a real, reachable state, that
-  // gate would silently render the stale last-confirmed Tanishq reading as an
-  // unqualified "current" price — the opposite of what the stale-banner above
-  // it says. current_22k is always the right number for this tier regardless
-  // of whether a band could be sized.
-  const isEstimateTier = forecast && (
-    forecast.price_source === "ibja_calibrated" || forecast.price_source === "fusion_consensus"
-  ) && forecast.current_22k != null;
-  const hasBand = forecast && forecast.est_low != null && forecast.est_high != null;
-
-  if (isEstimateTier) {
-    // Estimate tier (IBJA-calibrated or fusion-consensus) — bounded range still
-    // shown (ADR 021 §4), but as a small secondary line below the hero, not
-    // jammed into the headline itself.
-    // The point estimate AND the range crammed into one giant number reads as
-    // garbled/stale at a glance; the ≈ prefix plus the stale-banner already signal
-    // "estimate" without a third hedge competing for attention in the headline.
-    // XSS-safe: rupee()/fmtINR wrap numbers only; all values are integers from forecast.json.
-    displayedPrice = forecast.current_22k;
-    priceEl.innerHTML = `≈ ${rupee(forecast.current_22k)}`;
+  if (hs.kind === "empty") {
+    priceEl.innerHTML = "—"; // XSS-safe: static literal string, no external data
+    priceEl.hidden = false;
+    if (rangeEl) rangeEl.hidden = true;
+    if (lastConfEl) lastConfEl.hidden = true;
+  } else if (hs.approx) {
+    // Our estimate (IBJA-calibrated, fusion consensus, or IBJA-derived history after a
+    // takedown). Deliberately NOT gated on est_low/est_high (G1d): a suppressed band still
+    // shows the ≈ estimate, just without the range line. The bounded range is a small
+    // secondary line (ADR 021 §4), never jammed into the headline.
+    // XSS-safe: rupee()/fmtINR wrap numbers only.
+    displayedPrice = hs.price;
+    priceEl.innerHTML = `≈ ${rupee(hs.price)}`;
     priceEl.hidden = false;
     if (rangeEl) {
       if (hasBand) {
@@ -1113,29 +1270,30 @@ function renderHero(readings, forecast) {
         rangeEl.hidden = true;
       }
     }
-    // Honest secondary line: the actual last-observed Tanishq reading, dated —
-    // never implied current. prices.json holds only genuine scraped Tanishq
-    // readings (never IBJA/estimate data), so `latest` here is always a real
-    // observation; this line naturally shows the freshest one once a scrape
-    // succeeds again (no separate "reachable again" wiring needed — same data,
-    // same render path, whatever `latest` currently is).
+    // The last Tanishq reading, dated and labelled as Tanishq's own listed rate -- never
+    // the estimate's figure. Absent after a takedown or when the reading failed the
+    // plausibility gate; figure-less when older than RETAILER_READING_MAX_AGE_H.
     if (lastConfEl) {
-      lastConfEl.textContent = t("heroLastConfirmed", { price: fmtINR(newPrice), date: fmtDateShort(latest.timestamp) });
-      lastConfEl.hidden = false;
+      if (hs.tanishqLine) {
+        lastConfEl.textContent = t(hs.tanishqLine.key, hs.tanishqLine.params);
+        lastConfEl.hidden = false;
+      } else {
+        lastConfEl.hidden = true;
+      }
     }
   } else {
-    displayedPrice = newPrice;
+    // A real Tanishq reading: live (fresh) or, with no estimate available, the last one.
+    // The label line says which and when; no second line repeating the same figure.
+    displayedPrice = hs.price;
     if (rangeEl) rangeEl.hidden = true;
-    // Hero already IS the last-confirmed Tanishq reading here — a secondary
-    // line repeating it would be pure noise, not honesty.
     if (lastConfEl) lastConfEl.hidden = true;
     // Φ16-4: tick when price changes on a live refresh; first render and no-change case are instant.
     // priceEl.hidden guard: element hidden means skeleton is still showing — don't animate there.
-    if (prevPrice !== null && prevPrice !== newPrice && !priceEl.hidden) {
-      animateNumberTick(priceEl, prevPrice, newPrice);
+    if (prevPrice !== null && prevPrice !== hs.price && !priceEl.hidden) {
+      animateNumberTick(priceEl, prevPrice, hs.price);
     } else {
       // XSS-safe: rupee() wraps a number with fmtINR (toLocaleString); numbers cannot contain HTML
-      priceEl.innerHTML = rupee(newPrice);
+      priceEl.innerHTML = rupee(hs.price);
     }
     priceEl.hidden = false;
   }
@@ -1146,9 +1304,12 @@ function renderHero(readings, forecast) {
   if (r24) r24.innerHTML = rupee(latest["24k"]);
   if (r18) r18.innerHTML = rupee(latest["18k"]);
 
-  // Today's change
-  const change = computeTodayChange(readings);
-  if (change !== null) {
+  // Today's change: Tanishq rows only (never an IBJA-derived row), and only when the hero
+  // shows Tanishq's own latest reading (hs.showChange, see heroDisplayState).
+  const change = hs.showChange ? computeTodayChange(readings.filter(r => !isDerivedReading(r))) : null;
+  if (change === null) {
+    if (changeEl) changeEl.hidden = true;
+  } else {
     const todayDelta = change.delta;
     const dir    = todayDelta > 0 ? "up" : todayDelta < 0 ? "down" : "flat";
     const arrow  = dir === "up" ? "↑" : dir === "down" ? "↓" : "→";
@@ -1164,37 +1325,81 @@ function renderHero(readings, forecast) {
     changeEl.hidden = false;
   }
 
-  // Verdict
-  const verdict = computeVerdict(readings, forecast);
+  // Verdict and sparkline read multi-day history, so they use the chart's series (historyRows).
+  // The flat-hold forecast is the displayed price: compare it only with a series it belongs to.
+  const hist = historyRows(readings);
+  const verdict = computeVerdict(hist.rows, hist.estimate ? null : forecast);
   document.getElementById("verdict-icon").textContent    = verdict.icon;
   document.getElementById("verdict-headline").textContent = verdict.headline;
   document.getElementById("verdict-reason").textContent  = verdict.reason;
   verdictEl.dataset.type = verdict.type;
   verdictEl.hidden       = false;
 
-  renderSparkline(readings);
+  renderSparkline(hist.rows, hist.estimate);
 }
 
 // ─── PURCHASE CALCULATOR ────────────────────────────────────────────────────
-// UI for computePurchaseCost() (defined above) — grams + optional making-charge
-// input, three karat totals. Honesty rule: the 22K figure uses exactly the same
-// rate and the same isEstimateTier gate renderHero() uses for the hero price
-// (recomputed here rather than shared via a module var, matching this file's
-// existing per-render-function style) -- when the hero price shows "≈", the
-// calculator's 22K total carries the same "≈" and the same estimated-price
-// note, so a buyer never sees a confident-looking total built on an estimate.
-// 24K/18K always come from the last real Tanishq reading (latest["24k"/"18k"])
-// -- same as the karat-strip cards above, which never show "≈" either; this
-// app has never estimated 24K/18K independently, only 22K, so inventing an
-// estimate qualifier for them here would claim more than the data supports.
+// UI for computePurchaseCostRange() (defined above) — grams + a jewellery-type making-
+// charge PRESET (or a custom % / ₹-per-gram figure), typical + low–high totals for three
+// karats, a visible "rate used" source line, and an always-visible "estimate, not a
+// quote" disclaimer. Honesty rule: the 22K figure uses exactly the same rate and the same
+// isEstimateTier gate renderHero() uses for the hero price (recomputed here rather than
+// shared via a module var, matching this file's existing per-render-function style) --
+// when the hero price shows "≈", the calculator's 22K total carries the same "≈" and the
+// same estimated-price note, so a buyer never sees a confident-looking total built on an
+// estimate. 24K/18K always come from the last real Tanishq reading (latest["24k"/"18k"])
+// -- same as the karat-strip cards above, which never show "≈" either; this app has never
+// estimated 24K/18K independently, only 22K, so inventing an estimate qualifier for them
+// here would claim more than the data supports.
 const CALC_GST_PCT = 3; // India's GST rate on gold jewellery — matches computePurchaseCost's own default
 
+function calcSelectedPresetId() {
+  const checked = document.querySelector('input[name="calc-preset"]:checked');
+  const val = checked && checked.value;
+  return MAKING_CHARGE_PRESETS.some((p) => p.id === val) ? val : DEFAULT_PRESET_ID;
+}
+
+function calcCustomUnit() {
+  const checked = document.querySelector('input[name="calc-custom-unit"]:checked');
+  return checked && checked.value === "perGram" ? "perGram" : "pct";
+}
+
+function fmtINRRange(lo, hi) {
+  return lo === hi ? `₹${fmtINR(lo)}` : `₹${fmtINR(lo)} – ₹${fmtINR(hi)}`;
+}
+
+// "Rate used" line shown near the results -- names WHICH source fed the 22K rate the
+// totals below are built on, using the exact isEstimateTier / price_source gate
+// renderHero() uses (never re-derived differently here). Distinct wording for
+// ibja_calibrated vs fusion_consensus since they carry different confidence: a single-
+// source calibrated estimate vs a live multi-retailer consensus.
+function calcRateSourceText(isEstimateTier, forecast, rate22, readingTimestamp, derivedHistory = false) {
+  if (isEstimateTier || derivedHistory) {
+    const key = forecast.price_source === "fusion_consensus" ? "calcRateUsedFusion" : "calcRateUsedIbja";
+    return t(key, { rate: fmtINR(rate22) });
+  }
+  return t("calcRateUsedTanishq", { rate: fmtINR(rate22), date: fmtDateShort(readingTimestamp) });
+}
+
 function renderCalculator(readings, forecast) {
-  const skelEl    = document.getElementById("calc-skeleton");
-  const resultsEl = document.getElementById("calc-results");
-  const gramsEl   = document.getElementById("calc-grams");
-  const makingEl  = document.getElementById("calc-making");
-  if (!resultsEl || !gramsEl || !makingEl) return;
+  const skelEl         = document.getElementById("calc-skeleton");
+  const resultsEl       = document.getElementById("calc-results");
+  const gramsEl         = document.getElementById("calc-grams");
+  const customFieldsEl  = document.getElementById("calc-custom-fields");
+  const customValueEl   = document.getElementById("calc-custom-value");
+  if (!resultsEl || !gramsEl || !customFieldsEl || !customValueEl) return;
+
+  const presetId = calcSelectedPresetId();
+  const isCustom = presetId === "custom";
+  // The custom value/unit inputs only apply once "Custom" is selected -- kept in the DOM
+  // (not removed) so a value entered there survives switching away and back, just hidden.
+  customFieldsEl.hidden = !isCustom;
+  const customUnit = calcCustomUnit();
+  // Mode-dependent copy is set here, not via data-i18n, so it survives a
+  // language switch (applyLanguage() re-runs this after applyStaticStrings()).
+  document.querySelectorAll(".calc-custom-unit-label").forEach((el) => {
+    el.textContent = customUnit === "perGram" ? "₹/g" : "%";
+  });
 
   if (!readings || readings.length === 0) {
     if (skelEl) skelEl.hidden = false;
@@ -1212,47 +1417,111 @@ function renderCalculator(readings, forecast) {
   const rate24 = latest["24k"];
   const rate18 = latest["18k"];
 
-  const grams     = parseFloat(gramsEl.value);
-  const makingPct = parseFloat(makingEl.value);
+  const grams = parseFloat(gramsEl.value);
 
   // grams === 0 is valid input to computePurchaseCost() (returns an all-zero
   // result, not null) -- but a ₹0 total reads as broken, not "you haven't
-  // entered anything yet". Treat <= 0 as the empty state explicitly.
-  const c22 = grams > 0 ? computePurchaseCost({ ratePerGram: rate22, grams, makingPct, gstPct: CALC_GST_PCT }) : null;
-  const c24 = grams > 0 ? computePurchaseCost({ ratePerGram: rate24, grams, makingPct, gstPct: CALC_GST_PCT }) : null;
-  const c18 = grams > 0 ? computePurchaseCost({ ratePerGram: rate18, grams, makingPct, gstPct: CALC_GST_PCT }) : null;
-
-  if (!c22 || !c24 || !c18) {
+  // entered anything yet". Treat <= 0 (or a missing rate) as the empty state.
+  const ratesOk = [rate22, rate24, rate18].every((r) => Number.isFinite(r) && r > 0);
+  if (!(grams > 0) || !ratesOk) {
     // XSS-safe: t() returns a catalogue literal only.
     resultsEl.innerHTML = `<p class="calc-empty">${t("calcEmptyState")}</p>`;
     return;
   }
 
-  // XSS-safe: every interpolated value is either fmtINR(number) or a t()
-  // catalogue literal — no external data reaches this template.
+  const customValue = parseFloat(customValueEl.value);
+  if (isCustom) {
+    // Grams and rates are valid past this point, so an invalid custom value can only mean
+    // a blank or negative entry -- say that, not "enter a quantity".
+    const customBad = !Number.isFinite(customValue) || customValue < 0;
+    customValueEl.setAttribute("aria-invalid", String(customBad));
+    if (customBad) {
+      resultsEl.innerHTML = `<p class="calc-empty calc-error">${t("calcCustomInvalid")}</p>`;
+      return;
+    }
+  } else {
+    customValueEl.setAttribute("aria-invalid", "false");
+  }
+
+  const costFor = (rate) => computePurchaseCostRange({
+    ratePerGram: rate, grams, presetId, customValue, customUnit, gstPct: CALC_GST_PCT,
+  });
+  const r22 = costFor(rate22);
+  const r24 = costFor(rate24);
+  const r18 = costFor(rate18);
+
+  // On the Tanishq path the 22K rate is the latest confirmed reading; past the
+  // same STALE_THRESHOLD_H the page's stale-banner uses, say how old it is.
+  // (The estimate tier already carries its own "≈" note below.)
+  const latestAgeH = (Date.now() - new Date(latest.timestamp).getTime()) / 3_600_000;
+  const staleNote = !isEstimateTier && latestAgeH > STALE_THRESHOLD_H
+    ? `<p class="calc-estimated-note">${t("calcStaleNote", { rel: fmtRelative(latest.timestamp) })}</p>`
+    : "";
+
+  const rateSourceText = calcRateSourceText(isEstimateTier, forecast, rate22, latest.timestamp, isDerivedReading(latest));
+
+  // Making-charge row label: presets show "Making charge (N%)" against the preset's own
+  // typical %; custom shows the same when quoted as a %, or the plain label when quoted
+  // ₹/gram (no % to name). Presets carry their own "Range ..." line right under the row,
+  // same pattern as the total's range line below -- inline next to the amount used to
+  // wrap onto its own line at narrow widths (e.g. 375px), reading as garbled two-line
+  // cell text instead of a clean row; custom never shows a range -- a single jeweller-
+  // quoted figure has no invented range around it.
+  const preset = MAKING_CHARGE_PRESETS.find((p) => p.id === presetId);
+  const makingLabel = !isCustom
+    ? t("calcRowMakingWithPct", { pct: preset.typical })
+    : customUnit === "pct"
+      ? t("calcRowMakingWithPct", { pct: customValue })
+      : t("calcRowMaking");
+  const makingRangeLine = !isCustom
+    ? `<p class="calc-result-range">${t("calcRangeLabel", { range: fmtINRRange(r22.low.making, r22.high.making) })}</p>`
+    : "";
+
+  // XSS-safe: every interpolated value is either fmtINR(number)/fmtINRRange(numbers) or a
+  // t() catalogue literal — no external data reaches this template.
   resultsEl.innerHTML = `
+    <p class="calc-rate-used">${rateSourceText}</p>
     <div class="calc-result-card">
       <div class="calc-result-karat">${isEstimateTier ? "≈ " : ""}${t("calcKaratLabel22")}</div>
-      <div class="calc-result-row"><span>${t("calcRowGoldValue")}</span><span>₹${fmtINR(c22.goldValue)}</span></div>
-      ${c22.making > 0 ? `<div class="calc-result-row"><span>${t("calcRowMaking")}</span><span>₹${fmtINR(c22.making)}</span></div>` : ""}
-      <div class="calc-result-row"><span>${t("calcRowGst", { pct: CALC_GST_PCT })}</span><span>₹${fmtINR(c22.gst)}</span></div>
-      <div class="calc-result-row calc-result-row--total"><span>${t("calcRowTotal")}</span><span>₹${fmtINR(c22.total)}</span></div>
-      ${isEstimateTier ? `<p class="calc-estimated-note">${t("calcEstimatedNote")}</p>` : ""}
+      <div class="calc-result-row"><span>${t("calcRowGoldValue")}</span><span>₹${fmtINR(r22.typical.goldValue)}</span></div>
+      ${r22.typical.making > 0 ? `<div class="calc-result-row"><span>${makingLabel}</span><span>₹${fmtINR(r22.typical.making)}</span></div>${makingRangeLine}` : ""}
+      <div class="calc-result-row"><span>${t("calcRowGst", { pct: CALC_GST_PCT })}</span><span>₹${fmtINR(r22.typical.gst)}</span></div>
+      <div class="calc-result-row calc-result-row--total"><span>${t("calcRowTotal")}</span><span>₹${fmtINR(r22.typical.total)}</span></div>
+      ${!isCustom ? `<p class="calc-result-range">${t("calcRangeLabel", { range: fmtINRRange(r22.low.total, r22.high.total) })}</p>` : ""}
+      <p class="calc-estimate-label">${t("calcEstimateStoresVary")}</p>
+      ${isEstimateTier ? `<p class="calc-estimated-note">${t("calcEstimatedNote")}</p>` : staleNote}
+      <p class="calc-disclaimer">${t("calcDisclaimer")}</p>
     </div>
-    <p class="calc-other-karats">${t("calcOtherKarats", { k24: fmtINR(c24.total), k18: fmtINR(c18.total) })}</p>
+    <p class="calc-other-karats">${t("calcOtherKaratsRange", {
+      k24: fmtINRRange(r24.low.total, r24.high.total),
+      k18: fmtINRRange(r18.low.total, r18.high.total),
+    })}</p>
   `;
 }
 
 function bindCalculatorInputs() {
-  const gramsEl  = document.getElementById("calc-grams");
-  const makingEl = document.getElementById("calc-making");
-  if (!gramsEl || !makingEl) return;
+  const gramsEl       = document.getElementById("calc-grams");
+  const customValueEl = document.getElementById("calc-custom-value");
+  if (!gramsEl || !customValueEl) return;
   const onInput = () => renderCalculator(allReadings, lastForecast);
-  gramsEl.addEventListener("input", onInput);
-  makingEl.addEventListener("input", onInput);
+  [gramsEl, customValueEl].forEach((el) => el.addEventListener("input", onInput));
+  document.querySelectorAll('input[name="calc-preset"]').forEach((radio) => {
+    radio.addEventListener("change", onInput);
+  });
+  document.querySelectorAll('input[name="calc-custom-unit"]').forEach((radio) => {
+    radio.addEventListener("change", () => {
+      // Switching units makes the old number meaningless (8% != ₹8/g) -- reset to a
+      // sane default for the new unit rather than reinterpret the same figure.
+      const perGram = calcCustomUnit() === "perGram";
+      customValueEl.value = perGram ? "400" : "10";
+      customValueEl.step  = perGram ? "10" : "0.5";
+      customValueEl.max   = perGram ? "10000" : "100";
+      onInput();
+    });
+  });
 }
 
-function renderSparkline(readings) {
+function renderSparkline(readings, estimate = false) {
   const wrap    = document.getElementById("sparkline-wrap");
   const svgEl   = document.getElementById("sparkline");
   const rangeEl = document.getElementById("sparkline-range");
@@ -1292,14 +1561,15 @@ function renderSparkline(readings) {
               stroke-width="1.5" stroke-linejoin="round" stroke-linecap="round"/>
   `;
 
-  rangeEl.textContent = t("sparklineRange", { min: fmtINR(min22k), max: fmtINR(max22k) });
+  rangeEl.textContent = t(estimate ? "sparklineRangeEstimate" : "sparklineRange", { min: fmtINR(min22k), max: fmtINR(max22k) });
   wrap.hidden = false;
 }
 
 function renderComparisons(readings) {
   const section = document.getElementById("comparison-section");
-  const cmp     = computeComparisons(readings);
-  if (!cmp || readings.length < 2) { section.hidden = true; return; }
+  const hist    = historyRows(readings);
+  const cmp     = computeComparisons(hist.rows);
+  if (!cmp || hist.rows.length < 2) { section.hidden = true; return; }
 
   function setCard(valueId, subId, cardId, delta, avgLabel) {
     const valEl  = document.getElementById(valueId);
@@ -1365,15 +1635,26 @@ function renderComparisons(readings) {
 // commentary.json / the Groq generation step this replaces is now unused by the
 // frontend — left in place rather than deleted here since retiring the pipeline
 // step itself is out of this session's scope (layout/copy only, no ml/ changes).
+// True when the last RECENT_DAYS daily prices still trend down (Theil-Sen slope at or below
+// -FLAT_SLOPE_INR_PER_DAY); false on too few days.
+const RECENT_DAYS = 5;
+function recentWeekFalling(rows) {
+  const daily = dedupeByISTDay(rows ?? []).slice(-RECENT_DAYS);
+  if (daily.length < RECENT_DAYS) return false;
+  const { slope } = theilSenFit(daily.map((r, i) => ({ x: i, y: r["22k"] })));
+  return slope <= -FLAT_SLOPE_INR_PER_DAY;
+}
+
 function composeTodaysRead(readings) {
-  const signals = computeGoodPriceSignals(readings ?? []);
+  const rows = historyRows(readings).rows; // the chart's series, same as the signals below
+  const signals = computeGoodPriceSignals(rows);
   if (!signals) {
     return t("readNoSignals");
   }
 
   const isCheap = signals.verdictType === "cheap" || signals.verdictType === "below-mid";
   const isHigh  = signals.verdictType === "high";
-  const trend   = computeTrendResidual30d(readings ?? [], signals.percentile30d);
+  const trend   = computeTrendResidual30d(rows, signals.percentile30d);
 
   if (!trend) {
     if (isCheap) return t("readNoTrendCheap");
@@ -1382,7 +1663,10 @@ function composeTodaysRead(readings) {
   }
 
   const { trendState, residZ } = trend;
-  if (isCheap && trendState === "falling" && residZ < STILL_FALLING_Z) {
+  // "Still sliding" also needs the last week to be falling. A one-off step down inside the
+  // 30-day window (2026-09-28: -Rs.330, then flat at 13,685-13,755 for five days) tilts the
+  // 30-day line and leaves today below it, which read as "still sliding" on a flat week.
+  if (isCheap && trendState === "falling" && residZ < STILL_FALLING_Z && recentWeekFalling(rows)) {
     return t("readCheapStillFalling");
   }
   if (isCheap) {
@@ -1425,14 +1709,12 @@ function renderModelSignal(fc, readings, bt, coverage, drift) {
   const skelEl = document.getElementById("model-signal-skeleton");
   if (skelEl) skelEl.hidden = true;
 
-  const signals = computeGoodPriceSignals(readings ?? []);
+  const histRows = historyRows(readings).rows; // multi-day history: the chart's series (GG 3d)
+  const signals = computeGoodPriceSignals(histRows);
   if (!signals) {
     section.hidden = true;
     return;
   }
-  const bandPos90d = computeBandPos90d(readings ?? []);
-  const trendResidual = computeTrendResidual30d(readings ?? [], signals.percentile30d);
-  const supportDistance90d = computeSupportDistance90d(readings ?? [], signals.percentile30d);
 
   const hl = fc?.headline;
   const hasPI = hl && typeof hl.lower === "number" && typeof hl.upper === "number";
@@ -1454,21 +1736,51 @@ function renderModelSignal(fc, readings, bt, coverage, drift) {
     ? `<p class="good-price-tomorrow">${t("goodPriceTomorrow", { low: fmtINR(rangeLower), high: fmtINR(rangeUpper) })}</p>`
     : "";
 
+  // Next move up or down (ADR 064, GG 2026-10-02). Shown only when inference says so:
+  // next_fix.direction.show is true only while the next-fix model is active, its own
+  // out-of-sample record passes the direction gate, and GG's promotion record exists.
+  const nf = fc?.next_fix;
+  const nfOn = nf?.active === true && hasRange;
+  let directionHtml = "";
+  if (nfOn && nf.direction?.show === true && typeof nf.direction.probability === "number") {
+    const pct = Math.round(nf.direction.probability * 100);
+    const side = nf.direction.side;
+    const key = side === "up" ? "directionUp" : side === "down" ? "directionDown" : "directionUnclear";
+    const tr = nf.track_record;
+    const record = tr && typeof tr.direction_accuracy === "number" && tr.n > 0
+      ? ` ${t("directionTrackRecord", { right: Math.round(tr.direction_accuracy * tr.n), n: tr.n })}`
+      : "";
+    // XSS-safe: t() catalogue literals with integer params only.
+    directionHtml = `<p class="good-price-direction" data-side="${side === "up" || side === "down" ? side : "unclear"}">${t(key, { pct })}${record}</p>`;
+  }
+
   // Reliability — plain-language promotion of coverage_metrics.json (empirical
   // hit-rate of the range stated above) + drift_metrics.json (recent vs historical
   // error), previously buried inside the collapsed methodology accordion
   // (methAccurateP2/methDriftHeading). Only rendered alongside the range statement
   // it's actually validating (hasRange) — a reliability claim with nothing to
-  // anchor it to reads as a floating, unverifiable assertion. Sample size (n)
-  // stays visible deliberately: "right 95% of the time" alone is pure reassurance;
-  // naming how many times we've actually checked is what makes it a real, honest
-  // claim instead of a vibe. computeAccuracyDrift() is shared with
-  // renderMethodology()'s own drift section so the two never disagree on the
-  // same underlying numbers.
+  // anchor it to reads as a floating, unverifiable assertion. U2 (2026-09-23):
+  // reliabilityCoverage now renders a floored "N times out of 10" phrase
+  // (i18n.js's fractionOutOf10Phrase) instead of the raw percentage+n -- the
+  // exact percentage and sample size aren't lost, they're on how-we-know.html
+  // (methAccurateP2CoveragePct, same coverage_metrics.json). computeAccuracyDrift()
+  // is shared with how-we-know.js's own drift section so the two never disagree
+  // on the same underlying numbers.
   let reliabilityHtml = "";
   if (hasRange) {
-    const hasCoverage = coverage && typeof coverage.coverage === "number" && coverage.n > 0;
-    const coverageNote = hasCoverage
+    // G4 (2026-09-25): coverage_metrics.json is re-scored weekly (weekly-backtest.yml);
+    // a coverage figure more than CLAIM_MAX_AGE_DAYS old is hidden the same way a
+    // missing one already was -- reliabilityUnknown covers both cases identically,
+    // there's no separate "stale" wording (rule 98a: fail closed, never a stale
+    // number asserted as current).
+    const hasCoverage = coverage && typeof coverage.coverage === "number" && coverage.n > 0
+      && isMeasurementFresh(coverage.generated_at_utc, Date.now());
+    // While the next-fix model sets the range, quote that range's own out-of-sample hit rate
+    // (rescored every run), not the flat-hold band's history in coverage_metrics.json.
+    const nfCov = nfOn && typeof nf.track_record?.range_coverage === "number" && nf.track_record.range_n > 0;
+    const coverageNote = nfCov
+      ? t("reliabilityCoverage", { pct: Math.round(nf.track_record.range_coverage * 100), n: nf.track_record.range_n })
+      : hasCoverage
       ? t("reliabilityCoverage", { pct: Math.round(coverage.coverage * 100), n: coverage.n })
       : t("reliabilityUnknown");
 
@@ -1487,14 +1799,20 @@ function renderModelSignal(fc, readings, bt, coverage, drift) {
     `;
   }
 
-  // Volatility context — dynamic realized-vol estimate (Phi10B) with static-PI fallback.
-  // Shows "has been moving about ±Rs.X lately" — magnitude only, no direction (ADR 005).
+  // Volatility context — the MEASURED typical 5-day move (vol_context.typical_move_5d:
+  // median absolute 5-calendar-day change over the past 30 days, ml/volatility.py).
+  // Magnitude only, no direction (ADR 005). Until 2026-09-25 this showed
+  // vol_context.half_width -- one standard deviation, floored -- which the sentence
+  // "about ±Rs.X over 5 days" presented as a typical move, overstating it ~1.9x;
+  // the degraded branch showed an 80% interval half-width, larger still. No
+  // measured figure (degraded estimate, too few pairs, or a cached forecast.json
+  // predating the field) -> no note at all, never a stand-in number.
   let volatilityHtml = "";
   if (hasPI) {
     const volCtx = hl.vol_context;
-    let Z, volNote;
-    if (volCtx && typeof volCtx.half_width === "number" && !volCtx.is_degraded) {
-      Z = Math.round(volCtx.half_width / 50) * 50;
+    let volNote = "";
+    if (volCtx && typeof volCtx.typical_move_5d === "number" && !volCtx.is_degraded) {
+      const Z = Math.round(volCtx.typical_move_5d / 10) * 10;
       const regime = volCtx.regime;
       if (regime === "elevated") {
         volNote = t("volNoteElevated", { z: fmtINR(Z) });
@@ -1503,37 +1821,23 @@ function renderModelSignal(fc, readings, bt, coverage, drift) {
       } else if (regime === "normal") {
         volNote = t("volNoteNormal", { z: fmtINR(Z) });
       } else {
-        // regime absent/unrecognized (e.g. a service-worker-cached forecast.json
-        // predating this field) -- do NOT default to "normal", that's a claim
-        // about current behaviour we don't actually have. Use the same
-        // magnitude-only, no-comparison copy as the degraded-vol-estimate
-        // branch below instead.
+        // regime absent/unrecognized -- do NOT default to "normal", that's a claim
+        // about current behaviour we don't actually have. Magnitude-only copy.
         volNote = t("volNoteFallback", { z: fmtINR(Z) });
       }
-    } else {
-      // Fallback: vol estimate degraded or absent → the dedicated 5-day static-PI
-      // reference (vol_context.static_pi_half). NOT hl.conformal_pi_half — since
-      // ADR 022 that field is the next-trading-day (h=1) band and would understate a
-      // "5 days" claim. Old cached forecast.json missing vol_context entirely still
-      // falls back to conformal_pi_half (pre-ADR-022 shape) rather than break.
-      const piHalf = hl.vol_context?.static_pi_half ?? hl.conformal_pi_half ?? (hl.upper - hl.lower) / 2;
-      Z = Math.round(piHalf / 50) * 50;
-      volNote = t("volNoteFallback", { z: fmtINR(Z) });
     }
 
     // Typical weekly movement — deliberately in the SAME card as the 5-day note
     // above rather than its own separate bordered block, so the two read as one
     // "how much does this move" cluster with two different timeframes, not two
     // unrelated stats competing for attention. See computeWeeklyMovement()'s own
-    // comment for exactly how it differs from the 5-day note (90-day historical
-    // median vs 20-day recent realized-vol).
-    const weeklyMovement = computeWeeklyMovement(readings ?? []);
+    // comment for exactly how it differs from the 5-day note (90-day median of
+    // 7-day changes vs 30-day median of 5-day changes).
 
     // XSS-safe: fmtINR() wraps numbers only; volNote/weeklyMovement.note are t()-built strings.
     volatilityHtml = `
       <div class="outlook-volatility">
-        <p class="outlook-volatility-note">${volNote}</p>
-        ${weeklyMovement ? `<p class="outlook-weekly-movement-note">${weeklyMovement.note}</p>` : ""}
+        ${volNote ? `<p class="outlook-volatility-note">${volNote}</p>` : ""}
       </div>
     `;
   }
@@ -1548,16 +1852,8 @@ function renderModelSignal(fc, readings, bt, coverage, drift) {
     <div class="outlook-card">
       <p class="good-price-verdict good-price-verdict--${signals.verdictType}">${signals.verdictLead}</p>
       <p class="good-price-proof">${signals.proofLine}</p>
-      ${signals.dataSuffNote ? `<p class="good-price-data-note">${signals.dataSuffNote}</p>` : ""}
-      <ul class="good-price-supporting">
-        <li>${signals.supportLine1}</li>
-        <li>${signals.supportLine2}</li>
-        ${signals.divergenceNote ? `<li class="good-price-divergence">${signals.divergenceNote}</li>` : ""}
-        ${trendResidual ? `<li class="good-price-trend">${trendResidual.note}</li>` : ""}
-        ${bandPos90d ? `<li class="good-price-band-90d">${bandPos90d.note}</li>` : ""}
-        ${supportDistance90d ? `<li class="good-price-support-90d">${supportDistance90d.note}</li>` : ""}
-      </ul>
       ${tomorrowRangeHtml}
+      ${directionHtml}
       ${reliabilityHtml}
       ${volatilityHtml}
     </div>
@@ -1580,6 +1876,32 @@ function renderModelSignal(fc, readings, bt, coverage, drift) {
 
 const _DC_DRIVER_THRESHOLD_PCT  = 2.0;  // mechanism sentence fires at >2% (clearly noticeable)
 const _DC_PREMIUM_THRESHOLD_PCT = 1.0;  // "premium moved" at >1% log-space %
+
+// Weekly headline (Rs/g, already rounded the way the page shows them). Each part is worded by
+// its own sign -- gold and the rupee can push in opposite directions, and the week's total can go
+// against either part -- so the page never says "the rupee added back" when it took money off.
+// A part within +/-_DC_PART_FLAT_RS is "roughly flat". Returns "" for a total that rounds to 0
+// (nothing to explain; ml/drivers.py already withholds the split in that case).
+const _DC_PART_FLAT_RS = 10;
+function driverHeadlineText(total, goldPt, inrPt) {
+  if (total === 0) return "";
+  const absTotal = fmtINR(Math.abs(total));
+  const goldAbs = Math.abs(goldPt);
+  const inrAbs = Math.abs(inrPt);
+  if (goldAbs <= _DC_PART_FLAT_RS && inrAbs <= _DC_PART_FLAT_RS) {
+    return t(total > 0 ? "driverUpMixed" : "driverDownMixed", { total: absTotal });
+  }
+  const gold = goldAbs <= _DC_PART_FLAT_RS
+    ? t("driverPartGoldFlat")
+    : t(goldPt > 0 ? "driverPartGoldAdded" : "driverPartGoldTookOff", { gold: fmtINR(goldAbs) });
+  const inr = inrAbs <= _DC_PART_FLAT_RS
+    ? t("driverPartRupeeFlat")
+    : t(inrPt > 0 ? "driverPartRupeeAdded" : "driverPartRupeeTookOff", { inr: fmtINR(inrAbs) });
+  const lead = t(total > 0 ? "driverWeekUp" : "driverWeekDown", { total: absTotal });
+  // The bigger part is named first
+  const [first, second] = inrAbs > goldAbs ? [inr, gold] : [gold, inr];
+  return t("driverHeadline", { lead, first, second });
+}
 
 function renderDriverContext(fc) {
   const section = document.getElementById("driver-context-section");
@@ -1637,36 +1959,13 @@ function renderDriverContext(fc) {
     typeof w7?.usdinr_contrib_rs_per_g === "number" &&
     typeof w7?.gold_usd_contrib_rs_per_g === "number"
   ) {
-    const total    = Math.round(w7.total_move_rs_per_g);
-    const inrPt    = Math.round(w7.usdinr_contrib_rs_per_g);
-    const goldPt   = Math.round(w7.gold_usd_contrib_rs_per_g);
-    const absTotal = Math.abs(total);
-    const inrAbs   = Math.abs(inrPt);
-    const goldAbs  = Math.abs(goldPt);
-    let headline;
-
-    if (total >= 0) {
-      if (inrAbs >= goldAbs && inrAbs > 10) {
-        headline = t("driverUpInrDominant", { total: fmtINR(absTotal), inr: fmtINR(inrAbs), gold: fmtINR(goldAbs) });
-      } else if (goldAbs > 10) {
-        headline = t("driverUpGoldDominant", { total: fmtINR(absTotal), gold: fmtINR(goldAbs), inr: fmtINR(inrAbs) });
-      } else {
-        headline = t("driverUpMixed", { total: fmtINR(absTotal) });
-      }
-    } else {
-      if (inrAbs >= goldAbs && inrAbs > 10) {
-        headline = t("driverDownInrDominant", { total: fmtINR(absTotal), inr: fmtINR(inrAbs) });
-      } else if (goldAbs > 10) {
-        const inrNote = inrAbs > 10
-          ? t("driverDownGoldDominantInrNoteAdded", { inr: fmtINR(inrAbs) })
-          : t("driverDownGoldDominantInrNoteFlat");
-        headline = t("driverDownGoldDominant", { total: fmtINR(absTotal), gold: fmtINR(goldAbs), inrNote });
-      } else {
-        headline = t("driverDownMixed", { total: fmtINR(absTotal) });
-      }
-    }
+    const headline = driverHeadlineText(
+      Math.round(w7.total_move_rs_per_g),
+      Math.round(w7.gold_usd_contrib_rs_per_g),
+      Math.round(w7.usdinr_contrib_rs_per_g),
+    );
     // XSS-safe: headline built from fmtINR(number) and catalogue string literals only
-    headlineHtml = `<p class="driver-headline">${headline}</p>`;
+    if (headline) headlineHtml = `<p class="driver-headline">${headline}</p>`;
   }
 
   // --- Driver-state supporting (30d, three-branch) ---
@@ -1731,7 +2030,8 @@ const CALLOUT_PLUGIN = {
     ctx.stroke();
     ctx.setLineDash([]);
     ctx.font = "bold 13px DM Sans, system-ui, sans-serif";
-    const pw = ctx.measureText(`₹${fmtINR(value)}`).width;
+    const valueText = `${chartIsEstimate ? "≈ " : ""}₹${fmtINR(value)}`;
+    const pw = ctx.measureText(valueText).width;
     ctx.font = "11px DM Sans, system-ui, sans-serif";
     const dw = ctx.measureText(label).width;
     const bW = Math.max(pw, dw) + 24;
@@ -1793,6 +2093,73 @@ function hexToRgba(hex, alpha) {
   return `rgba(${(n >> 16) & 255}, ${(n >> 8) & 255}, ${n & 255}, ${alpha})`;
 }
 
+// GG 4c (2026-09-25): which series the trend chart plots. Pure.
+//   1. data/ibja_derived_prices.json (>= 2 valid rows): our IBJA-based estimate -> estimate.
+//   2. prices.json is itself IBJA-derived (retailer takedown, ADR 059) -> estimate.
+//   3. fallback (derived file missing/unreadable): the real Tanishq rows only, labelled as
+//      Tanishq's listed rate. The two series are NEVER mixed in one line: a Tanishq
+//      reading next to the derived estimate reads as a false price move (E1 preview, "+Rs.24").
+function chartSeries(readings, derived) {
+  const valid = Array.isArray(derived)
+    ? derived.filter(r => r && typeof r.timestamp === "string" && typeof r["22k"] === "number" && Number.isFinite(r["22k"]))
+    : [];
+  if (valid.length >= 2) return { rows: valid, estimate: true };
+  const latest = readings.length ? readings[readings.length - 1] : null;
+  if (isDerivedReading(latest)) return { rows: readings.filter(isDerivedReading), estimate: true };
+  return { rows: readings.filter(r => !isDerivedReading(r)), estimate: false };
+}
+
+// GG 3d (2026-09-26): every multi-day history reader -- the hero verdict and sparkline, the
+// comparison cards, the history table and the good-price signals -- takes its rows from the same
+// series the trend chart plots (chartSeries above). Two reasons: they keep working once #2075
+// shortens prices.json to the rows "today's change" needs, and a Tanishq reading is never
+// compared against the IBJA-based estimate inside one number. Today's price, today's change and
+// the freshness label stay on prices.json. Pure apart from reading derivedSeries.
+function historyRows(readings) {
+  return chartSeries(readings ?? [], derivedSeries);
+}
+
+// Karat shown in the trend chart and history (2026-09-29): 22K, 24K or 18K, remembered per device.
+// Tanishq's 24K and 18K rates are its 22K rate x 24/22 and x 18/22 (all 726 readings in
+// prices.json, within rounding), so estimate rows -- which carry 22K only -- use the same ratio.
+const KARATS = [22, 24, 18];
+let currentKarat = (() => {
+  try {
+    const k = parseInt(localStorage.getItem("karat"), 10);
+    return KARATS.includes(k) ? k : 22;
+  } catch { return 22; }
+})();
+function karatValue(r, k = currentKarat) {
+  const v22 = r?.["22k"];
+  if (k === 22) return v22;
+  const own = r?.[`${k}k`];
+  if (typeof own === "number") return own;
+  return typeof v22 === "number" ? Math.round((v22 * k) / 22) : undefined;
+}
+function setKarat(k) {
+  if (!KARATS.includes(k)) return;
+  currentKarat = k;
+  try { localStorage.setItem("karat", String(k)); } catch {}
+  document.querySelectorAll(".karat-toggle button").forEach((b) => {
+    const on = Number(b.dataset.karat) === k;
+    b.classList.toggle("active", on);
+    b.setAttribute("aria-pressed", on ? "true" : "false");
+  });
+  if (allReadings.length) {
+    renderChart(allReadings, currentRange);
+    renderHistory(allReadings);
+  }
+}
+function bindKaratToggles() {
+  document.querySelectorAll(".karat-toggle button").forEach((b) => {
+    b.addEventListener("click", () => setKarat(Number(b.dataset.karat)));
+  });
+  setKarat(currentKarat);
+}
+function sourceNoteText(estimate) {
+  return `${t("perGram")} · ${t(estimate ? "chartNoteEstimate" : "chartNoteTanishq")}`;
+}
+
 // Chart.js comes from a third-party CDN (index.html). If that request fails -- blocked, offline,
 // a CDN outage -- `Chart` is undefined and `new Chart(...)` throws. Before this guard that throw
 // escaped renderChart(), which init() calls BEFORE renderHero(), so one CDN failure left the
@@ -1821,10 +2188,18 @@ function renderChart(readings, range) {
   }
   if (chartWrap) chartWrap.hidden = false;
 
-  let filtered = readings;
+  const series = chartSeries(readings, derivedSeries);
+  chartIsEstimate = series.estimate;
+  const noteEl = document.getElementById("chart-source-note");
+  if (noteEl) {
+    noteEl.textContent = sourceNoteText(series.estimate);
+    noteEl.hidden = false;
+  }
+
+  let filtered = series.rows;
   if (range !== "all") {
     const cutoff = Date.now() - parseInt(range, 10) * 86400 * 1000;
-    filtered     = readings.filter(r => new Date(r.timestamp).getTime() >= cutoff);
+    filtered     = series.rows.filter(r => new Date(r.timestamp).getTime() >= cutoff);
   }
 
   // One point per IST calendar day (latest reading wins) — same rule history uses.
@@ -1832,7 +2207,7 @@ function renderChart(readings, range) {
   // no fill, no doubled boundary dots. Matches the clean daily-line look of Tanishq.
   const chartPts = dedupeByISTDay(filtered);
   const labels   = chartPts.map(r => fmtDateShort(r.timestamp));
-  const data22   = chartPts.map(r => r["22k"]);
+  const data22   = chartPts.map(r => karatValue(r));
   const lastIdx  = data22.length - 1;
 
   const colors    = getChartColors();
@@ -1848,7 +2223,7 @@ function renderChart(readings, range) {
     data: {
       labels,
       datasets: [{
-        label: t("chart22kLabel"),
+        label: t(series.estimate ? "chartEstimateLabel" : "chart22kLabel", { k: currentKarat }),
         data: data22,
         borderColor: goldLine,
         // Gradient fill under the line (gold fading to transparent) instead
@@ -1901,7 +2276,7 @@ function renderChart(readings, range) {
           bodyColor: "#F5EDE0",
           padding: 12,
           callbacks: {
-            label: (c) => t("chart22kTooltip", { value: fmtINR(c.parsed.y) }),
+            label: (c) => t(series.estimate ? "chartEstimateTooltip" : "chart22kTooltip", { value: fmtINR(c.parsed.y), k: currentKarat }),
           },
         },
         phi8cCallout: {},
@@ -1933,7 +2308,18 @@ function renderHistory(readings) {
 
   if (skelEl) skelEl.hidden = true;
 
-  const EMPTY_TABLE = `<tr><td colspan="5" class="empty">${t("historyNoReadings")}</td></tr>`;
+  // Multi-day history: the chart's series (historyRows), shown for the chosen karat.
+  const hist = historyRows(readings);
+  readings = hist.rows;
+  const thPrice = document.getElementById("history-th-price");
+  if (thPrice) thPrice.textContent = `${currentKarat}K`;
+  const histNoteEl = document.getElementById("history-source-note");
+  if (histNoteEl) {
+    histNoteEl.textContent = sourceNoteText(hist.estimate);
+    histNoteEl.hidden = readings.length === 0;
+  }
+
+  const EMPTY_TABLE = `<tr><td colspan="3" class="empty">${t("historyNoReadings")}</td></tr>`;
   const EMPTY_CARDS = `<li class="hcard-empty">${t("historyNoReadings")}</li>`;
 
   if (readings.length === 0) {
@@ -1960,7 +2346,7 @@ function renderHistory(readings) {
       const nextGroup = groups[i + 1];
       let deltaCell = `<span class="delta-flat">—</span>`;
       if (nextGroup) {
-        const d = g.reading["22k"] - nextGroup.reading["22k"];
+        const d = karatValue(g.reading) - karatValue(nextGroup.reading);
         if (d > 0)      deltaCell = `<span class="delta-up">↑ ₹${fmtINR(d)}</span>`;
         else if (d < 0) deltaCell = `<span class="delta-down">↓ ₹${fmtINR(Math.abs(d))}</span>`;
         else            deltaCell = `<span class="delta-flat">·</span>`;
@@ -1976,9 +2362,7 @@ function renderHistory(readings) {
       }
       return `<tr>
         <td>${whenCell}</td>
-        <td class="num">${rupee(g.reading["22k"])}</td>
-        <td class="num">${rupee(g.reading["24k"])}</td>
-        <td class="num">${rupee(g.reading["18k"])}</td>
+        <td class="num">${rupee(karatValue(g.reading))}</td>
         <td class="num">${deltaCell}</td>
       </tr>`;
     }).join("");
@@ -1991,7 +2375,7 @@ function renderHistory(readings) {
       const nextGroup = groups[absIdx + 1];
       let deltaHtml   = "";
       if (nextGroup) {
-        const d = g.reading["22k"] - nextGroup.reading["22k"];
+        const d = karatValue(g.reading) - karatValue(nextGroup.reading);
         if (d > 0)      deltaHtml = `<span class="hcard-delta hcard-delta--up">↑ ₹${fmtINR(d)}</span>`;
         else if (d < 0) deltaHtml = `<span class="hcard-delta hcard-delta--down">↓ ₹${fmtINR(Math.abs(d))}</span>`;
       }
@@ -2005,7 +2389,7 @@ function renderHistory(readings) {
       }
       return `<li class="history-card">
         <span class="hcard-time">${timeLabel}</span>
-        <span class="hcard-price">${rupee(g.reading["22k"])}</span>
+        <span class="hcard-price">${rupee(karatValue(g.reading))}</span>
         ${deltaHtml}
       </li>`;
     }).join("");
@@ -2037,7 +2421,12 @@ function renderHistory(readings) {
 function renderForecastVsActual(bt) {
   const section = document.getElementById("section-track-record");
   if (!section) return;
-  if (!bt?.folds?.length) { section.hidden = true; return; }
+  // G4 (2026-09-25): this chart IS an accuracy claim -- "look how closely past
+  // estimates tracked reality" -- sourced from the same weekly backtest.json run
+  // as how-we-know.html's MAE/direction figures. A backtest.json more than
+  // CLAIM_MAX_AGE_DAYS old (weekly-backtest.yml stopped running) must not keep
+  // silently showing the same weeks-old folds as if they were current.
+  if (!bt?.folds?.length || !isMeasurementFresh(bt.backtest_run_at, Date.now())) { section.hidden = true; return; }
 
   const folds = bt.folds
     .filter(f => !f.sub_30_context)
@@ -2128,161 +2517,416 @@ function renderForecastVsActual(bt) {
   section.hidden = false;
 }
 
-function renderMethodology(fc, bt, drift, coverage) {
+// U2 (2026-09-23, docs/PLAIN_LANGUAGE_AUDIT.md): replaces the old renderMethodology(),
+// which built the FULL technical breakdown (verdict rule, next-day range with its
+// p-value, direction-signal detail, drift stats -- all still ML-reader framing even
+// though it was already tucked inside a collapsed accordion) directly into this same
+// #methodology-body element. That full breakdown now lives on how-we-know.html,
+// rendered by how-we-know.js/how-we-know-strings.js from the SAME data files (fc/bt/
+// drift/coverage) -- see that file's own header comment for why it's a separate,
+// deliberately duplicated render path rather than a shared function: app.js's init()
+// IIFE assumes index.html's full DOM (hero, calculator, chart canvas, etc.) and isn't
+// safe to load on a page that only has the accordion's content. This function keeps
+// only what a buyer actually needs here: whether the estimate is currently on track,
+// whether the direction signal is on, and a link to the full numbers.
+function renderAccuracySummary(fc, drift) {
   const body = document.getElementById("methodology-body");
   if (!body) return;
 
-  const parts = [];
-
-  // Hoist so direction-signal section and how-good section share the same all-windows accuracy.
-  const dirAll = bt && typeof bt.dir_acc_5d_chronos === "number"
-    ? `${Math.round(bt.dir_acc_5d_chronos * 100)}%`
-    : null;
-
-  // Verdict rule explanation
-  parts.push(`
-    <div class="meth-section">
-      <h3 class="meth-heading">${t("methHowWeCallTrendHeading")}</h3>
-      <p class="meth-text">${t("methHowWeCallTrendIntro")}</p>
-      <ul class="meth-list">
-        <li>${t("methRuleCheaper")}</li>
-        <li>${t("methRulePricier")}</li>
-        <li>${t("methRuleSteady")}</li>
-      </ul>
-    </div>
-  `);
-
-  // Forecast details
-  if (fc && typeof (fc.headline?.predicted_22k ?? fc.predicted_22k) === "number") {
-    const pred22k = fc.headline?.predicted_22k ?? fc.predicted_22k;
-    const lower   = fc.headline?.lower ?? fc.lower;
-    const upper   = fc.headline?.upper ?? fc.upper;
-    const hasPI   = typeof lower === "number" && typeof upper === "number";
-    parts.push(`
-      <div class="meth-section">
-        <h3 class="meth-heading">${t("methNextDayRangeHeading")}</h3>
-        <div class="meth-stats">
-          <div class="meth-stat">
-            <div class="meth-stat-label">${t("methEstimateLabel")}</div>
-            <div class="meth-stat-value">₹${fmtINR(pred22k)}</div>
-            ${hasPI ? `<div class="meth-stat-sub">${t("methRangeSub", { low: fmtINR(lower), high: fmtINR(upper) })}</div>` : ""}
-          </div>
-          <div class="meth-stat">
-            <div class="meth-stat-label">${t("methMethodLabel")}</div>
-            <div class="meth-stat-value">${t("methAssumeNoChange")}</div>
-            <div class="meth-stat-sub">${t("methCoversMoves")}</div>
-          </div>
-        </div>
-        ${fc.target_time ? `<p class="meth-text" style="margin-top:8px">${t("methTargetLine", { date: fmtIST(fc.target_time) })}</p>` : ""}
-        <p class="meth-text" style="margin-top:12px">${t("methNextDayExplainer")}</p>
-      </div>
-    `);
-  }
-
-  // Direction signal — DARK gate (ADR 019/020). We test direction models weekly;
-  // none beats the "gold usually rises" base rate with significance, so we show NO
-  // directional prediction and NO accuracy stat (a base-rate number dressed as
-  // model accuracy reads as an edge we don't have). Qualitative "off" only.
-  if (fc?.chronos_companion?.status === "success") {
-    parts.push(`
-      <div class="meth-section">
-        <h3 class="meth-heading">${t("methDirectionHeading")}</h3>
-        <div class="meth-stat">
-          <div class="meth-stat-label">${t("methStatusLabel")}</div>
-          <div class="meth-stat-value">${t("methDirectionOff")}</div>
-          <div class="meth-stat-sub">${t("methDirectionSub")}</div>
-        </div>
-        <p class="meth-note">${t("methDirectionNote")}</p>
-      </div>
-    `);
-  } else if (fc?.chronos_companion?.status === "failed") {
-    parts.push(`<p class="meth-text">${t("methDirectionUnavailable")}</p>`);
-  }
-
-  // "How good is this?" — honest track record panel (Φ8C', ADR 019/020/012)
-  if (bt && typeof bt.mae_5d_avg_naive === "number") {
-    const n           = bt.n_folds ?? "—";
-    const naiveMae    = fmtINR(Math.round(bt.mae_5d_avg_naive));
-    const chronosMae  = typeof bt.mae_5d_avg_chronos === "number"
-      ? fmtINR(Math.round(bt.mae_5d_avg_chronos))
-      : "—";
-    const maePctWorse = typeof bt.mae_5d_avg_chronos === "number"
-      ? Math.round(((bt.mae_5d_avg_chronos - bt.mae_5d_avg_naive) / bt.mae_5d_avg_naive) * 100)
-      : null;
-    const dirAllDisplay = dirAll ?? "—";
-    const pVal     = bt.wilcoxon_signed_rank_p != null
-      ? bt.wilcoxon_signed_rank_p.toFixed(4)
-      : "—";
-    const hl      = fc?.headline;
-    const rangeStr = hl && typeof hl.lower === "number" && typeof hl.upper === "number"
-      ? `₹${fmtINR(hl.lower)}–₹${fmtINR(hl.upper)}`
-      : t("methRangeStrFallback");
-
-    // Empirical coverage of the DISPLAYED band (headline.lower/upper), tracked from
-    // resolved live decisions — not bt.pi_coverage_80_5d_avg, which measures Chronos's
-    // own quantile PI (a different band, never shown as the headline range).
-    const hasCoverage = coverage && typeof coverage.coverage === "number" && coverage.n > 0;
-    const coverPct = hasCoverage ? Math.round(coverage.coverage * 100) : null;
-    const coverN   = hasCoverage ? coverage.n : null;
-
-    parts.push(`
-      <div class="meth-section meth-how-good">
-        <h3 class="meth-heading">${t("methHowAccurateHeading")}</h3>
-
-        <p class="meth-text"><strong>${t("methAccurateP1Strong")}</strong><br>
-        ${t("methAccurateP1", {
-          n, naiveMae,
-          chronosBullet: maePctWorse != null ? t("methAccurateP1ChronosBullet", { chronosMae, maePctWorse, pVal }) : "",
-        })}</p>
-
-        <p class="meth-text"><strong>${t("methAccurateP2Strong", {
-          rangeStr,
-          coverageText: hasCoverage ? t("methAccurateP2CoveragePct", { pct: coverPct, n: coverN }) : t("methAccurateP2CoverageUnknown"),
-        })}</strong><br>
-        ${t("methAccurateP2")}</p>
-
-        <p class="meth-text"><strong>${t("methAccurateP3Strong")}</strong><br>
-        ${t("methAccurateP3", { dirAllDisplay, n })}</p>
-
-        <p class="meth-text"><strong>${t("methAccurateP4Strong")}</strong><br>
-        ${t("methAccurateP4")}</p>
-      </div>
-    `);
-  }
-
-  // Live drift
   const accDrift = computeAccuracyDrift(drift);
-  if (accDrift) {
-    const rolling = accDrift.rolling != null ? Math.round(accDrift.rolling) : null;
-    const baseMae = accDrift.baseMae != null ? Math.round(accDrift.baseMae) : null;
-    const ratio   = accDrift.ratio != null ? accDrift.ratio.toFixed(2) : null;
-    const ratioLabelKey = accDrift.ratioLabelKey;
-    parts.push(`
-      <div class="meth-section">
-        <h3 class="meth-heading">${t("methDriftHeading")}</h3>
-        <div class="meth-stats">
-          <div class="meth-stat">
-            <div class="meth-stat-label">${t("methRecentError")}</div>
-            <div class="meth-stat-value">${rolling != null ? "₹" + fmtINR(rolling) : "—"}</div>
-          </div>
-          <div class="meth-stat">
-            <div class="meth-stat-label">${t("methHistoricalError")}</div>
-            <div class="meth-stat-value">${baseMae != null ? "₹" + fmtINR(baseMae) : "—"}</div>
-          </div>
-          <div class="meth-stat">
-            <div class="meth-stat-label">${t("methAccuracyDrift")}</div>
-            <div class="meth-stat-value">${ratio ?? "—"}</div>
-            <div class="meth-stat-sub">${ratioLabelKey === "ratioRetrain" ? t("ratioRetrainSub") : (ratioLabelKey ? t(ratioLabelKey) : "")}</div>
-          </div>
-        </div>
-      </div>
-    `);
+  const driftKey = accDrift?.ratioLabelKey === "ratioRetrain" ? "reliabilityDriftRetrain"
+    : accDrift?.ratioLabelKey === "ratioWatch" ? "reliabilityDriftWatch"
+    : accDrift?.ratioLabelKey === "ratioOnTrack" ? "reliabilityDriftOnTrack"
+    : null;
+  const driftSentence = driftKey ? ` ${t(driftKey)}` : "";
+
+  const directionOffParagraph = fc?.chronos_companion?.status === "success"
+    ? `<p class="meth-text">${t("accSummaryDirectionOff")}</p>`
+    : "";
+
+  // XSS-safe: driftSentence/directionOffParagraph are t() catalogue literals only.
+  body.innerHTML = `
+    <p class="meth-text">${t("accSummaryIntro")}${driftSentence}</p>
+    ${directionOffParagraph}
+    <p class="meth-text"><a class="how-we-know-link" href="how-we-know.html">${t("accSummaryLinkText")}</a></p>
+  `;
+}
+
+// PAGE V2 (item 6, flagged OFF -- STOP gate for GG) ------------------------------------
+// A proposed page built around the product's five jobs, each answered ONCE: price now,
+// how sure, how much it could move, is it a good price, what will I pay. Everything below
+// is gated behind isFeatureOn("page_v2"); each optional card (F1-F4) is ADDITIONALLY gated
+// behind its own flag. With every flag off (the merge default) renderFlaggedFeatures() below
+// adds NOTHING to the DOM -- same "flags off -> zero-diff DOM" guarantee the old inert
+// scaffold this replaces had, still proven by tests/test_feature_flags_headless.js.
+//
+// Pure data/build functions (no DOM) are kept separate from the one DOM-mounting function
+// (renderFlaggedFeatures itself) so tests/test_page_v2.js can exercise them directly via
+// tests/helpers/load_app.js -- see that file for why a DOM-touching function can't be
+// meaningfully unit-tested the same way.
+
+// -- JOB 1: PRICE NOW -- reuses the exact tier logic renderHero() already applies (see its
+// own isEstimateTier comment) -- never a second, possibly-diverging read of price_source.
+function computePriceNowJob(readings, forecast) {
+  if (!readings || readings.length === 0) return null;
+  const latest = readings[readings.length - 1];
+  const isEstimateTier = forecast && (
+    forecast.price_source === "ibja_calibrated" || forecast.price_source === "fusion_consensus"
+  ) && forecast.current_22k != null;
+  const price = isEstimateTier ? forecast.current_22k : latest["22k"];
+  const sourceKey = forecast?.price_source === "fusion_consensus" ? "pv2SourceConsensus"
+    : forecast?.price_source === "ibja_calibrated" ? "pv2SourceEstimate"
+    : "pv2SourceConfirmed";
+  return { price, sourceLabel: t(sourceKey) };
+}
+
+// -- JOB 2: HOW SURE -- the band's measured coverage stated once, in plain words. Reuses
+// deriveMeasuredBandCoverage (same fail-closed 14-day staleness rule as the stale-banner's
+// own confidence clause) so this page never disagrees with that one about the same number.
+function computeConfidenceNote(bandCoverage) {
+  const measured = deriveMeasuredBandCoverage(bandCoverage);
+  return measured ? t("pv2ConfidenceNote", { frac: fractionOutOf10Phrase(measured.coverage) }) : null;
+}
+
+// -- JOB 3: HOW MUCH COULD IT MOVE (1-day + 7-day) --------------------------------------
+// weekly_range_shadow_log.json (scripts/run_weekly_range_shadow.py, ml/weekly_range.py) issues
+// BOTH a "1d" and a "week" range per publication day, forward-only from 2026-09-24 -- so on
+// this file alone, entries only start appearing after that date and there is nothing to read
+// for a while yet. next_day_range_shadow.json has no producing pipeline on master as of this
+// PR; its shape is unknown, so it is read defensively (lo/hi numbers only, several plausible
+// key names) and simply ignored if absent or malformed -- same "render nothing" contract as
+// every other not-yet-shipped data file this page reads. RANGE_SHADOW_MAX_AGE_DAYS is
+// BAND_COVERAGE_MAX_AGE_DAYS itself, not a separately-maintained duplicate literal (GG's G4
+// freshness audit, 2026-09-25 -- one constant governs every accuracy/coverage/freshness claim
+// page_v2 shows) -- fails closed (no range shown) rather than asserting a stale one. There is
+// deliberately NO live fallback for the 7-day statement: forecast.json's own headline window
+// is 5 trading days, not 7, and item 3 of the brief explicitly forbids reusing the 5-day
+// volatility note here (no competing bands) -- so until weekly_range_shadow_log.json has a
+// matured "week" entry, that statement is simply omitted rather than mismatch the horizon it
+// claims.
+const RANGE_SHADOW_MAX_AGE_DAYS = BAND_COVERAGE_MAX_AGE_DAYS;
+
+function pickRangeShadowEntry(shadowLog, horizon, nowMs = Date.now()) {
+  const entries = Array.isArray(shadowLog?.entries) ? shadowLog.entries : [];
+  const matching = entries.filter(e =>
+    e && e.horizon === horizon && typeof e.lo === "number" && typeof e.hi === "number" && typeof e.as_of === "string"
+  );
+  if (matching.length === 0) return null;
+  matching.sort((a, b) => (a.as_of < b.as_of ? 1 : -1)); // descending YYYY-MM-DD, lexical sort is safe here
+  const latest = matching[0];
+  const ageDays = (nowMs - Date.parse(latest.as_of)) / 86_400_000;
+  // rule 98a: fail closed on a FUTURE as_of too (ageDays < 0), same reasoning as
+  // deriveMeasuredBandCoverage above -- ageDays <= MAX alone let a future date pass as fresh.
+  if (!(ageDays >= 0 && ageDays <= RANGE_SHADOW_MAX_AGE_DAYS)) return null;
+  return { low: latest.lo, high: latest.hi };
+}
+
+function computeMoveRangeJob(fc, nextDayRangeShadow, weeklyRangeShadowLog, bandCoverage, nowMs = Date.now()) {
+  const measured = deriveMeasuredBandCoverage(bandCoverage);
+  const oddsClause = measured ? t("pv2RangeOddsClause", { frac: fractionOutOf10Phrase(measured.coverage) }) : "";
+
+  let oneDay = (nextDayRangeShadow && typeof nextDayRangeShadow.lo === "number" && typeof nextDayRangeShadow.hi === "number")
+    ? { low: nextDayRangeShadow.lo, high: nextDayRangeShadow.hi }
+    : pickRangeShadowEntry(weeklyRangeShadowLog, "1d", nowMs);
+  if (!oneDay) {
+    // Brief's own explicit final fallback: the current live next-trading-day conformal band,
+    // same source as renderModelSignal()'s tomorrowRangeHtml (hl.lower/upper).
+    const hl = fc?.headline;
+    const lower = hl?.lower ?? fc?.lower;
+    const upper = hl?.upper ?? fc?.upper;
+    if (typeof lower === "number" && typeof upper === "number") oneDay = { low: lower, high: upper };
+  }
+  const sevenDay = pickRangeShadowEntry(weeklyRangeShadowLog, "week", nowMs);
+
+  return {
+    oneDayNote: oneDay
+      ? t("pv2RangeOneDay", { low: fmtINR(Math.round(oneDay.low)), high: fmtINR(Math.round(oneDay.high)) }) + oddsClause
+      : null,
+    sevenDayNote: sevenDay
+      ? t("pv2RangeSevenDay", { low: fmtINR(Math.round(sevenDay.low)), high: fmtINR(Math.round(sevenDay.high)) }) + oddsClause
+      : null,
+  };
+}
+
+// -- JOB 4a: WEEKLY PRICE COMPARISON (F3, good_price_v2) --------------------------------
+// One reading per distinct week (the LATEST reading recorded that week), comparing today's
+// price against each of the past `windowWeeks` weeks -- the brief's own worked example
+// ("lower than on 7 of the last 10 weeks"). Purely descriptive: never implies a future move,
+// mirrors computeGoodPriceSignals' data-sufficiency degrade (a plain "not enough weeks yet"
+// note instead of guessing). Today's own week is excluded -- comparing today to itself is
+// vacuous. weekKeyIST groups by Monday-start week in IST; the key itself is never shown,
+// only used to dedupe.
+function weekKeyIST(date) {
+  // Timezone-independent: read the IST calendar date as parts, then do the Monday
+  // arithmetic in UTC. (The earlier version re-parsed a locale string as the viewer's
+  // local time and read it back with toISOString(), so around midnight one IST week
+  // could land under two keys -- "13 weeks" then covered only ~6.5 real weeks.)
+  const parts = new Intl.DateTimeFormat("en-CA", {
+    timeZone: "Asia/Kolkata", year: "numeric", month: "2-digit", day: "2-digit",
+  }).formatToParts(date);
+  const get = (type) => Number(parts.find((x) => x.type === type).value);
+  const utc = new Date(Date.UTC(get("year"), get("month") - 1, get("day")));
+  const dayIdx = (utc.getUTCDay() + 6) % 7; // Monday=0 ... Sunday=6
+  utc.setUTCDate(utc.getUTCDate() - dayIdx);
+  return utc.toISOString().slice(0, 10);
+}
+
+const MIN_WEEKS_COMPARISON = 3; // below this, an "N of M weeks" claim is too thin to be honest
+
+function computeWeeklyPriceComparison(readings, windowWeeks) {
+  if (!readings || readings.length < 2) return null;
+  const latestReading = readings[readings.length - 1];
+  const current = latestReading["22k"];
+  const currentWeek = weekKeyIST(new Date(latestReading.timestamp));
+
+  const byWeek = new Map();
+  for (const r of readings) {
+    const wk = weekKeyIST(new Date(r.timestamp));
+    if (wk === currentWeek) continue;
+    const prior = byWeek.get(wk);
+    if (!prior || new Date(r.timestamp) > new Date(prior.timestamp)) byWeek.set(wk, r);
+  }
+  const weeks = [...byWeek.values()]
+    .sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp))
+    .slice(0, windowWeeks);
+  const n = weeks.length;
+  if (n < MIN_WEEKS_COMPARISON) {
+    return { n, lower: null, higher: null, note: t("pv2WeeklyTooLittleData") };
   }
 
-  // XSS-safe: parts[] contains only hardcoded HTML templates with numeric/boolean
-  // values from forecast.json and backtest.json. Today's-read text is rendered
-  // separately via textContent in renderTodaysRead().
-  body.innerHTML = parts.join("");
+  const lower  = weeks.filter(r => current < r["22k"]).length; // today cheaper than that week's reading
+  const higher = weeks.filter(r => current > r["22k"]).length;
+  const note = lower === higher
+    ? t("pv2WeeklyAboutSame", { n })
+    : lower > higher
+      ? t("pv2WeeklyLower", { count: lower, n })
+      : t("pv2WeeklyHigher", { count: higher, n });
+  return { n, lower, higher, note };
+}
+
+// Plain descriptor, not a DOM node -- kept side-effect-free so it's directly unit-testable;
+// pv2MountCard() (below) is the only place that turns one of these into real DOM.
+function pv2BuildGoodPriceCard(readings) {
+  const histRows = historyRows(readings).rows; // multi-day history: the chart's series (GG 3d)
+  const cmp30 = computeWeeklyPriceComparison(histRows, 4);  // ~last month, weekly cadence
+  const cmp90 = computeWeeklyPriceComparison(histRows, 13); // ~last three months, weekly cadence
+  if (!cmp30 && !cmp90) return null;
+  const paragraphs = [];
+  if (cmp30) paragraphs.push(`${t("pv2Weekly30dLabel")} ${cmp30.note}`);
+  if (cmp90) paragraphs.push(`${t("pv2Weekly90dLabel")} ${cmp90.note}`);
+  return { className: "pv2-good-price", dataFeature: "good_price_v2", heading: t("pv2Job4Heading"), paragraphs };
+}
+
+// -- F1: STORE MARKUP METER (markup_meter) -----------------------------------------------
+// data/markup_today.json has no producing pipeline on master as of this PR (see
+// feat/markup-meter-model, unmerged) -- schema below is a defensive best guess, accepting a
+// few plausible field-name shapes, and returns null (render nothing) if none of them resolve
+// to an honest "higher/lower/usual" classification. Update this reader once that branch's
+// real schema lands. Tanishq vs the market only (no store-to-store comparison -- terms
+// decision pending GG, see PR body).
+const MARKUP_LOW_TERTILE = 33, MARKUP_HIGH_TERTILE = 67; // placeholder percentile split, see comment above
+
+function readMarkupToday(markupToday) {
+  if (!markupToday || typeof markupToday.markup_pct !== "number") return null;
+  const pct = markupToday.markup_pct;
+  if (markupToday.category === "higher" || markupToday.category === "lower" || markupToday.category === "usual") {
+    return { pct, categoryKey: markupToday.category };
+  }
+  if (typeof markupToday.usual_low_pct === "number" && typeof markupToday.usual_high_pct === "number") {
+    const categoryKey = pct < markupToday.usual_low_pct ? "lower" : pct > markupToday.usual_high_pct ? "higher" : "usual";
+    return { pct, categoryKey };
+  }
+  if (typeof markupToday.percentile === "number") {
+    const categoryKey = markupToday.percentile <= MARKUP_LOW_TERTILE ? "lower"
+      : markupToday.percentile >= MARKUP_HIGH_TERTILE ? "higher" : "usual";
+    return { pct, categoryKey };
+  }
+  return null; // can't honestly classify -- render nothing rather than guess
+}
+
+function pv2BuildMarkupCard(markupToday) {
+  const m = readMarkupToday(markupToday);
+  if (!m) return null;
+  const suffixKey = m.categoryKey === "higher" ? "pv2MarkupSuffixHigher"
+    : m.categoryKey === "lower" ? "pv2MarkupSuffixLower" : "pv2MarkupSuffixUsual";
+  const line = t("pv2MarkupLine", { pct: Math.round(m.pct), suffix: t(suffixKey) });
+  return { className: "pv2-markup", dataFeature: "markup_meter", heading: t("pv2MarkupHeading"), paragraphs: [line] };
+}
+
+// -- F2/F4: WAIT-OR-BUY (wait_or_buy) + EVENT WATCH (event_watch) -----------------------
+// Both render their sentence(s) verbatim, exactly as their own pipeline produced them --
+// never rebuilt or re-worded here (the brief is explicit: never add an expected-saving
+// figure on top of wait_or_buy's own sentence, for instance). F2's real producer (PR #2020 /
+// ADR 049, now on master) ships data/wait_or_buy_today.json with sentences nested under
+// `horizons.<N>.sentence` (N = "1"/"2"/"7"), never a top-level `sentence`/`sentences` --
+// that top-level shape was this reader's original guess before the real pipeline shipped
+// and is kept below for back-compat (F4/event_watch has no producing pipeline yet and its
+// eventual shape is unknown, so it may still use it). Horizon keys are read numerically
+// ascending (1-day statement before 7-day) and any horizon missing/malformed `sentence` is
+// skipped rather than failing the whole card -- but a payload with zero usable sentences
+// anywhere still returns null (render nothing, never a blank card).
+function pv2ExtractSentences(payload) {
+  if (!payload) return null;
+  if (Array.isArray(payload.sentences) && payload.sentences.length > 0 && payload.sentences.every(s => typeof s === "string")) {
+    return payload.sentences;
+  }
+  if (typeof payload.sentence === "string" && payload.sentence.length > 0) return [payload.sentence];
+  if (payload.horizons && typeof payload.horizons === "object" && !Array.isArray(payload.horizons)) {
+    const horizonKeys = Object.keys(payload.horizons)
+      .filter(k => Number.isFinite(Number(k)))
+      .sort((a, b) => Number(a) - Number(b));
+    const sentences = horizonKeys
+      .map(k => payload.horizons[k]?.sentence)
+      .filter(s => typeof s === "string" && s.length > 0);
+    if (sentences.length > 0) return sentences;
+  }
+  return null;
+}
+
+function pv2BuildWaitOrBuyCard(waitOrBuy) {
+  const sentences = pv2ExtractSentences(waitOrBuy);
+  if (!sentences) return null;
+  return { className: "pv2-wait-or-buy", dataFeature: "wait_or_buy", heading: t("pv2WaitOrBuyHeading"), paragraphs: sentences };
+}
+
+function pv2BuildEventWatchCard(eventWatch) {
+  const sentences = pv2ExtractSentences(eventWatch);
+  if (!sentences) return null;
+  return { className: "pv2-event-watch", dataFeature: "event_watch", heading: t("pv2EventWatchHeading"), paragraphs: sentences };
+}
+
+// Turns a card descriptor (see the pv2Build*Card functions above) into a real DOM node via
+// textContent assignment only, never innerHTML -- F2/F4's sentence content originates
+// outside the i18n catalogue (produced by a separate pipeline, see their builders' own
+// comment), so this path never HTML-parses anything that came from a data file.
+function pv2MountCard(descriptor) {
+  if (!descriptor) return null;
+  const card = document.createElement("div");
+  card.className = `pv2-card ${descriptor.className}`;
+  card.dataset.feature = descriptor.dataFeature;
+  const h = document.createElement("h3");
+  h.textContent = descriptor.heading;
+  card.appendChild(h);
+  for (const para of descriptor.paragraphs) {
+    const el = document.createElement("p");
+    el.textContent = para;
+    card.appendChild(el);
+  }
+  return card;
+}
+
+// Pure -- returns an HTML string, no DOM -- so tests/test_page_v2.js can assert on its
+// content directly. XSS-safe: rupee()/fmtINR wrap numbers only; every other interpolated
+// value is a t() catalogue string (pv2Source*/pv2Confidence*/pv2Range*) -- no external data
+// reaches this innerHTML (F1-F4's data-sourced content is mounted separately via
+// pv2MountCard()'s textContent path, never through this function).
+function pv2BuildCoreHtml(fc, readings, bandCoverage, nextDayRangeShadow, weeklyRangeShadowLog) {
+  const priceJob = computePriceNowJob(readings, fc);
+  const confidenceNote = computeConfidenceNote(bandCoverage);
+  const moveJob = computeMoveRangeJob(fc, nextDayRangeShadow, weeklyRangeShadowLog, bandCoverage);
+
+  const priceHtml = priceJob
+    ? `<p class="pv2-price-value">${rupee(priceJob.price)}</p><p class="pv2-price-source">${priceJob.sourceLabel}</p>`
+    : `<p>${t("pv2PriceUnavailable")}</p>`;
+
+  const confidenceHtml = `<p>${confidenceNote ?? t("pv2ConfidenceUnknown")}</p>`;
+
+  const moveParas = [moveJob.oneDayNote, moveJob.sevenDayNote].filter(Boolean);
+  const moveHtml = moveParas.length
+    ? moveParas.map(para => `<p>${para}</p>`).join("")
+    : `<p>${t("pv2RangeUnavailable")}</p>`;
+
+  return `
+    <div class="pv2-card pv2-price-now" data-feature="page_v2" data-pv2-job="price_now">
+      <h3>${t("pv2Job1Heading")}</h3>
+      ${priceHtml}
+    </div>
+    <div class="pv2-card pv2-confidence" data-feature="page_v2" data-pv2-job="how_sure">
+      <h3>${t("pv2Job2Heading")}</h3>
+      ${confidenceHtml}
+    </div>
+    <div class="pv2-card pv2-move-range" data-feature="page_v2" data-pv2-job="how_much_move">
+      <h3>${t("pv2Job3Heading")}</h3>
+      ${moveHtml}
+    </div>
+    <div class="pv2-slot" id="pv2-good-price-slot" data-feature="page_v2" data-pv2-job="good_price"></div>
+    <div class="pv2-card pv2-what-you-pay" data-feature="page_v2" data-pv2-job="what_you_pay">
+      <h3>${t("pv2Job5Heading")}</h3>
+      <div class="pv2-slot" id="pv2-calculator-slot"></div>
+    </div>
+    <div class="pv2-slot" id="pv2-extras-slot" data-feature="page_v2"></div>
+  `;
+}
+
+// Real per-flag renderers, replacing the old inert demo scaffold now that a first real
+// feature ships behind every flag in FEATURE_FLAGS. page_v2 gates the whole five-jobs
+// surface; each optional card (F1-F4) is ADDITIONALLY gated by its own flag, checked here
+// (not inside the pv2Build*Card functions themselves, which stay flag-agnostic and pure so
+// they can be unit-tested without loading flags.js -- see tests/helpers/load_app.js, which
+// does not load flags.js). A sub-flag can in principle be true while page_v2 is not (GG only
+// ever ships them together in practice, see PR body) -- in that edge case the card mounts
+// directly on <body> instead of inside the (nonexistent) page_v2 container, so the flag's
+// effect stays independently provable end to end -- tests/test_feature_flags_headless.js's
+// own generic "a flag hardcoded true DOES render a [data-feature] element" check relies on
+// exactly this (see that test's own comment for which flag it now hardcodes and why).
+//
+// Called exactly once, from init() -- NOT re-called from applyLanguage() on a language
+// toggle: every page_v2 string is English-only by design (see i18n.js's own comment on the
+// pv2* keys) and fmtINR/rupee are locale-invariant ("en-IN" always, see their own
+// definitions), so a language toggle has nothing to change here yet. Revisit once Hindi
+// copy is added for these keys. Also NOT re-called from refreshData() -- page_v2 does not
+// yet refresh live; flagged OFF today, so this has no visible effect either way (left as a
+// documented follow-up, see PR body).
+function renderFlaggedFeatures(fc, readings, bandCoverage, extras = {}) {
+  const {
+    markupToday = null, waitOrBuy = null, eventWatch = null,
+    nextDayRangeShadow = null, weeklyRangeShadowLog = null,
+  } = extras;
+
+  const goodPriceEl = isFeatureOn("good_price_v2") ? pv2MountCard(pv2BuildGoodPriceCard(readings)) : null;
+  const markupEl    = isFeatureOn("markup_meter") ? pv2MountCard(pv2BuildMarkupCard(markupToday)) : null;
+  const waitEl      = isFeatureOn("wait_or_buy")   ? pv2MountCard(pv2BuildWaitOrBuyCard(waitOrBuy)) : null;
+  const eventEl     = isFeatureOn("event_watch")   ? pv2MountCard(pv2BuildEventWatchCard(eventWatch)) : null;
+
+  if (!isFeatureOn("page_v2")) {
+    [goodPriceEl, markupEl, waitEl, eventEl].forEach(el => { if (el) document.body.appendChild(el); });
+    return;
+  }
+
+  const container = document.createElement("section");
+  container.id = "page-v2";
+  container.className = "pv2-container";
+  container.dataset.feature = "page_v2";
+  container.setAttribute("aria-label", t("pv2AriaLabel"));
+  container.innerHTML = pv2BuildCoreHtml(fc, readings, bandCoverage, nextDayRangeShadow, weeklyRangeShadowLog);
+
+  // Single container toggle (brief's own requirement): .layout-grid already wraps every
+  // pre-existing section (hero + everything else) as ONE div -- no HTML change needed to
+  // hide them all, which is what keeps the flags-off DOM byte-for-byte identical to
+  // master's (nothing here runs at all when page_v2 is off).
+  const oldSections = document.querySelector(".layout-grid");
+  if (oldSections) oldSections.hidden = true;
+  // Mounted directly after the hidden .layout-grid -- i.e. where the old sections were,
+  // above the site footer -- not appended after the footer at the end of <main>.
+  if (oldSections) oldSections.after(container);
+  else (document.querySelector("main") ?? document.body).appendChild(container);
+
+  // Job 5: relocate the existing, unchanged calculator -- bindCalculatorInputs() already
+  // bound its listeners in init() to this exact node, and renderCalculator()'s own reads/
+  // writes are all by child id (calc-grams, calc-results, ...), never relative to this
+  // section's position in the tree -- so moving the live node (not cloning it) keeps every
+  // bit of its behaviour intact.
+  const calcSection = document.getElementById("calculator-section");
+  const calcSlot = container.querySelector("#pv2-calculator-slot");
+  if (calcSection && calcSlot) calcSlot.appendChild(calcSection);
+
+  const goodPriceSlot = container.querySelector("#pv2-good-price-slot");
+  if (goodPriceSlot && goodPriceEl) goodPriceSlot.appendChild(goodPriceEl);
+  if (goodPriceSlot && markupEl) goodPriceSlot.appendChild(markupEl);
+
+  const extrasSlot = container.querySelector("#pv2-extras-slot");
+  if (extrasSlot && waitEl) extrasSlot.appendChild(waitEl);
+  if (extrasSlot && eventEl) extrasSlot.appendChild(eventEl);
 }
 
 // D3: Lightweight data re-fetch — prices + forecast only.
@@ -2294,8 +2938,11 @@ async function refreshData() {
   try {
     const freshPromise = load();
     const fcPromise    = loadJSON(FORECAST_URL).catch(() => null);
+    const derivedPromise = loadJSON(DERIVED_PRICES_URL).catch(() => null);
     const fresh = await freshPromise;
     const fc    = await fcPromise;
+    const derived = await derivedPromise;
+    if (derived) derivedSeries = derived; // keep the last good series on a failed re-fetch
     allReadings  = fresh;
     lastForecast = fc;
     renderFreshness(allReadings, fc);
@@ -2372,6 +3019,15 @@ const NAV_SECTIONS = [
   "section-info",
 ];
 
+let navLockedUntil = 0;
+function setActiveNav(activeId) {
+  document.querySelectorAll(".bottom-nav-item").forEach(item => {
+    const isActive = item.dataset.section === activeId;
+    item.classList.toggle("active", isActive);
+    item.setAttribute("aria-current", isActive ? "page" : "false");
+  });
+}
+
 function initBottomNav() {
   const navItems = document.querySelectorAll(".bottom-nav-item");
 
@@ -2392,6 +3048,10 @@ function initBottomNav() {
       const el = document.getElementById(sectionId);
       if (!el) return;
       if (el.tagName === "DETAILS" && !el.open) el.open = true;
+      // Highlight the tapped tab now and hold it while the smooth scroll runs: the last
+      // section (Info) sits at the page bottom and can never reach the scrollspy line.
+      navLockedUntil = Date.now() + 1200;
+      setActiveNav(sectionId);
       requestAnimationFrame(() => {
         el.scrollIntoView({ behavior: "smooth", block: "start" });
       });
@@ -2410,6 +3070,7 @@ function initBottomNav() {
     .filter(Boolean);
 
   function updateActiveNav() {
+    if (Date.now() < navLockedUntil) return;
     const scrollY = window.scrollY;
     const trigger = scrollY + HEADER_H + THRESHOLD;
     let activeId = sectionEls[0]?.id;
@@ -2419,12 +3080,11 @@ function initBottomNav() {
       const elTop = el.getBoundingClientRect().top + scrollY;
       if (elTop <= trigger) activeId = el.id;
     }
-
-    navItems.forEach(item => {
-      const isActive = item.dataset.section === activeId;
-      item.classList.toggle("active", isActive);
-      item.setAttribute("aria-current", isActive ? "page" : "false");
-    });
+    // At the bottom of the page the last section is the one being read, even though its top
+    // can't scroll up to the trigger line.
+    const atBottom = window.innerHeight + scrollY >= document.documentElement.scrollHeight - 4;
+    if (atBottom && sectionEls.length) activeId = sectionEls[sectionEls.length - 1].id;
+    setActiveNav(activeId);
   }
 
   let ticking = false;
@@ -2679,7 +3339,7 @@ function applyLanguage(lang) {
   renderDriverContext(lastForecast);
   renderCalculator(allReadings, lastForecast);
   renderForecastVsActual(lastBacktest);
-  renderMethodology(lastForecast, lastBacktest, lastDrift, lastCoverage);
+  renderAccuracySummary(lastForecast, lastDrift);
   updateOfflineBanner();
   const toggle = document.getElementById("lang-toggle");
   if (toggle) toggle.textContent = lang === "hi" ? "EN" : "हिं"; // shows the OTHER language — tapping switches to it
@@ -2704,6 +3364,7 @@ function applyLanguage(lang) {
   }
 
   bindRangeToggle();
+  bindKaratToggles();
   bindCalculatorInputs();
   initBottomNav();
   initPullToRefresh();
@@ -2885,14 +3546,27 @@ function applyLanguage(lang) {
   const driftPromise = loadJSON(DRIFT_URL);
   const coveragePromise = loadJSON(COVERAGE_URL);
   const cadencePromise = loadJSON(CADENCE_URL);
+  const derivedPromise = loadJSON(DERIVED_PRICES_URL).catch(() => null); // GG 4c chart series
   const bandCoveragePromise = loadJSON(CALIBRATION_BAND_COVERAGE_URL); // AE1: measured band coverage
+  // page_v2 (item 6, flagged OFF) -- none of these five files exist on master yet; each
+  // pre-catches to null exactly like fcPromise above, so a 404 never surfaces as a Sentry
+  // event and every page_v2 reader sees the same "not shipped yet" null it would see once
+  // these genuinely start 404ing only intermittently.
+  const markupTodayPromise = loadJSON(MARKUP_TODAY_URL).catch(() => null);
+  const waitOrBuyPromise = loadJSON(WAIT_OR_BUY_TODAY_URL).catch(() => null);
+  const eventWatchPromise = loadJSON(EVENT_WATCH_TODAY_URL).catch(() => null);
+  const nextDayRangeShadowPromise = loadJSON(NEXT_DAY_RANGE_SHADOW_URL).catch(() => null);
+  const weeklyRangeShadowLogPromise = loadJSON(WEEKLY_RANGE_SHADOW_LOG_URL).catch(() => null);
   // These five are only actually consumed much later (via Promise.allSettled, after
   // awaiting price+forecast and rendering the hero) — attach an inert catch to each
   // now so an early rejection (e.g. a timeout firing while we're still waiting on
   // prices) doesn't surface as a spurious unhandledrejection console error / Sentry
   // event in the meantime. Promise.allSettled below still sees the real outcome —
   // this doesn't replace the promise, just marks it handled.
-  [btPromise, driftPromise, coveragePromise, cadencePromise, bandCoveragePromise].forEach(p => p.catch(() => {}));
+  [
+    btPromise, driftPromise, coveragePromise, cadencePromise, bandCoveragePromise,
+    markupTodayPromise, waitOrBuyPromise, eventWatchPromise, nextDayRangeShadowPromise, weeklyRangeShadowLogPromise,
+  ].forEach(p => p.catch(() => {}));
 
   // Load prices (critical path)
   try {
@@ -2940,8 +3614,11 @@ function applyLanguage(lang) {
     return;
   }
 
-  // Render everything that doesn't need forecast immediately.
+  // Render everything that doesn't need forecast immediately. The derived series is fetched in
+  // parallel with prices (null on failure) and is awaited first: comparisons and history read
+  // the same series as the chart (historyRows, GG 3d).
   renderFreshness(allReadings);
+  derivedSeries = await derivedPromise;
   renderComparisons(allReadings);
   renderHistory(allReadings);
   renderChart(allReadings, "30");
@@ -2972,16 +3649,27 @@ function applyLanguage(lang) {
   updateOfflineBanner(); // update offline banner text now allReadings is populated
 
   // Remaining optional data (already in flight above; all gracefully degrade on failure).
-  const [bt, drift, coverage, cadence, bandCoverage] = await Promise.allSettled([
+  const [
+    bt, drift, coverage, cadence, bandCoverage,
+    markupToday, waitOrBuy, eventWatch, nextDayRangeShadow, weeklyRangeShadowLog,
+  ] = await Promise.allSettled([
     btPromise,
     driftPromise,
     coveragePromise,
     cadencePromise,
     bandCoveragePromise,
+    markupTodayPromise,
+    waitOrBuyPromise,
+    eventWatchPromise,
+    nextDayRangeShadowPromise,
+    weeklyRangeShadowLogPromise,
   ]);
 
   // Report any optional-fetch failures so silent pipeline breaks surface in Sentry.
   if (typeof Sentry !== "undefined") {
+    // page_v2's five fetches are pre-caught to null above (same reasoning as fcPromise), so
+    // they never reach "rejected" here regardless of a genuine 404 -- intentionally excluded
+    // from this Sentry sweep, which only reports promises that CAN still show "rejected".
     const optionalUrls = [
       BACKTEST_URL, DRIFT_URL, COVERAGE_URL, CADENCE_URL, CALIBRATION_BAND_COVERAGE_URL,
     ];
@@ -2996,6 +3684,11 @@ function applyLanguage(lang) {
   lastCoverage = coverage.status === "fulfilled" ? coverage.value : null;
   lastCadenceMetric = cadence.status === "fulfilled" ? cadence.value : null;
   lastBandCoverage = bandCoverage.status === "fulfilled" ? bandCoverage.value : null;
+  lastMarkupToday = markupToday.status === "fulfilled" ? markupToday.value : null;
+  lastWaitOrBuy = waitOrBuy.status === "fulfilled" ? waitOrBuy.value : null;
+  lastEventWatch = eventWatch.status === "fulfilled" ? eventWatch.value : null;
+  lastNextDayRangeShadow = nextDayRangeShadow.status === "fulfilled" ? nextDayRangeShadow.value : null;
+  lastWeeklyRangeShadowLog = weeklyRangeShadowLog.status === "fulfilled" ? weeklyRangeShadowLog.value : null;
   renderCadenceStrings(lastCadenceMetric); // override the "still loading" fallback with the real number
   renderModelSignal(fc, allReadings, btData, lastCoverage, lastDrift);  // re-render — coverage/drift now loaded
   // AE1 (audit 2026-09-10): reinstates the re-render G2 removed. G2 was correct
@@ -3009,7 +3702,16 @@ function applyLanguage(lang) {
   // figure once it lands.
   renderStaleBanner(fc, lastBandCoverage);
   renderForecastVsActual(btData);
-  renderMethodology(fc, btData, lastDrift, lastCoverage);
+  renderAccuracySummary(fc, lastDrift);
+  // page_v2 (item 6, flagged OFF): no-op while every flag in FEATURE_FLAGS stays false --
+  // see renderFlaggedFeatures()'s own comment for the full per-flag gating story.
+  renderFlaggedFeatures(fc, allReadings, lastBandCoverage, {
+    markupToday: lastMarkupToday,
+    waitOrBuy: lastWaitOrBuy,
+    eventWatch: lastEventWatch,
+    nextDayRangeShadow: lastNextDayRangeShadow,
+    weeklyRangeShadowLog: lastWeeklyRangeShadowLog,
+  });
 
   // Dismiss chart callout when tapping outside the chart canvas (Φ8C'/Ψ3C.3)
   const chartCanvas = document.getElementById("chart");

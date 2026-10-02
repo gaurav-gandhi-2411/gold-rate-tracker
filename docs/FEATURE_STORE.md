@@ -27,7 +27,7 @@ The following columns are defined in `_ALL_COLUMNS` in `ml/feature_store.py` (`S
 | `schema_version` | int | No | Integer schema version. Currently `1`. Increment when columns are added or semantics change. |
 | `source` | str | No | Provenance tag. Either `live_pit` (written by live CI pipeline) or `backfill_yfinance` (reconstructed from historical data). |
 | `partial` | bool | Yes | `True` if the macro cache was unavailable at capture time; macro columns will be null. Uses pandas nullable boolean (`pd.BooleanDtype`). |
-| `n_macro_null` | int | No | Count of null values across the **canonical 8 macro series** (denominator = 8). `n_macro_null == 0` means all 8 series are present. `partial=True` implies `n_macro_null == 8`. Per-series presence is recoverable without a separate column: `df['tips'].notna()` tells you whether TIPS is present for each row. The canonical 8 series (fixed; documented below) are the denominator for all time. |
+| `n_macro_null` | int | No | Count of null values across the **canonical 9 macro series** (denominator = 9, bumped from 8 in schema v4 when `india_vix` was added). `n_macro_null == 0` means all 9 series are present. `partial=True` implies `n_macro_null == 9`. Per-series presence is recoverable without a separate column: `df['tips'].notna()` tells you whether TIPS is present for each row. "Canonical" here means "the denominator schema v4 onward" — not literally fixed forever; the schema version changelog below is the source of truth for what the denominator was at any point in this table's history. |
 | `gold_usd` | float | Yes | Gold spot price in USD/oz (ticker `GC=F` via yfinance). Null when `partial=True`. |
 | `usd_inr` | float | Yes | USD/INR exchange rate (ticker `INR=X` via yfinance). Null when `partial=True`. |
 | `us_10y_yield` | float | Yes | US 10-year Treasury yield in % (ticker `^TNX` via yfinance). Null when `partial=True`. |
@@ -36,6 +36,7 @@ The following columns are defined in `_ALL_COLUMNS` in `ml/feature_store.py` (`S
 | `vix` | float | Yes | CBOE Volatility Index (ticker `^VIX` via yfinance). Null when `partial=True`. |
 | `crude_wti` | float | Yes | WTI crude oil futures price in USD/barrel (ticker `CL=F` via yfinance). Null when `partial=True`. |
 | `tips` | float | Yes | iShares TIPS Bond ETF price, USD (ticker `TIP` via yfinance; proxy for real rate expectations). Null when `partial=True`. |
+| `india_vix` | float | Yes | NSE India VIX, domestic equity volatility index (ticker `^INDIAVIX` via yfinance). Null when `partial=True`, and null for every row captured before schema v4 (2026-09-23) by construction — the ticker did not exist in `TICKER_MAP` before then. Not yet in `ml.direction.dataset.FEATURE_COLS` — added to the corpus first, deliberately not wired into the live direction model until enough history has accumulated to evaluate it (same discipline `docs/DIRECTION_SIGNAL_STATUS.md` already applies to other candidate drivers). |
 | `gold_usd_asof_date` | str | Yes | ISO date of the last non-null `gold_usd` observation in the macro cache (may lag `as_of_date` on weekends/holidays). |
 | `usd_inr_asof_date` | str | Yes | ISO date of the last non-null `usd_inr` observation. |
 | `us_10y_yield_asof_date` | str | Yes | ISO date of the last non-null `us_10y_yield` observation. |
@@ -44,6 +45,7 @@ The following columns are defined in `_ALL_COLUMNS` in `ml/feature_store.py` (`S
 | `vix_asof_date` | str | Yes | ISO date of the last non-null `vix` observation. |
 | `crude_wti_asof_date` | str | Yes | ISO date of the last non-null `crude_wti` observation. |
 | `tips_asof_date` | str | Yes | ISO date of the last non-null `tips` observation. |
+| `india_vix_asof_date` | str | Yes | ISO date of the last non-null `india_vix` observation. |
 | `ibja_pm_916` | float | Yes | IBJA PM fix for 916 hallmark gold in INR/g (22K daily closing benchmark). Null only if IBJA parquet unavailable. |
 | `ibja_am_916` | float | Yes | IBJA AM fix for 916 hallmark gold in INR/g. Null if AM fix not available or IBJA parquet unavailable. |
 | `tanishq_22k` | float | Yes | Tanishq 22K retail price in INR/g scraped from tanishq.com. `None` for all backfill rows (historical scrapes not available). **Φ22 H5 (IBJA-calibrated display estimate) is display-only and is NEVER written here — only genuinely scraped retail prices are stored (ADR 021 §5).** |
@@ -56,7 +58,7 @@ The following columns are defined in `_ALL_COLUMNS` in `ml/feature_store.py` (`S
 | `is_festival_window` | bool | No | `True` if `as_of_date` falls within the window of a tracked Indian gold-buying festival. |
 | `festival_name` | str | Yes | Name of the active festival (e.g. `"Akshaya Tritiya"`). `None` if `is_festival_window=False`. |
 | `days_to_next_festival` | int | No | Calendar days from `as_of_date` to the nearest upcoming festival anchor date. `0` when currently inside a festival window. |
-| `duty_change_active` | bool | No | `True` when `as_of_date` falls within 30 calendar days of a duty change event in `data/duty_events.json`. |
+| `duty_change_active` | bool | No | `True` when `as_of_date` falls within 30 calendar days of a duty change event derived from `data/duty_cbic.json`. |
 | `days_since_last_duty_change` | int | No | Calendar days between the most recent past duty event and `as_of_date`. `9999` if no event is on record before `as_of_date`. |
 
 ### Canonical macro series (fixed denominator for `n_macro_null`)
@@ -115,6 +117,7 @@ When `asof_date == as_of_date`, the value was observed on that day. **No separat
 | 1 | Initial schema (2026-06-07). |
 | 2 | Added `ibja_pm_916_asof_date`, `ibja_am_916_asof_date`, `tanishq_22k_asof_date` to complete the observation-date stamp pattern already present on macro fields. Existing rows (2026-06-07, 2026-06-08) were migrated once with their verified true observation dates. This was the only permitted exception to the immutability contract: the migration added correct provenance that was always factually true; no recorded observation value was altered. |
 | 3 | Added `n_macro_null` (integer count of null values across the canonical 8 macro series). Patched 109 `backfill_yfinance` rows that had null `crude_wti`/`tips` because the macro cache only held ~5 days of history for those series at backfill time — true historical closes fetched from yfinance (CL=F, TIP) and written for all dates where data existed; genuinely missing dates left null (no imputation). `live_pit` rows were not touched. All 116 rows had `n_macro_null` computed and `schema_version` bumped to 3. |
+| 4 | Added `india_vix`/`india_vix_asof_date` (M1, 2026-09-23) — `n_macro_null` denominator 8 -> 9. No historical backfill performed for this column (unlike v3's crude/tips patch): every row captured before this change is null for `india_vix` by construction, since the ticker did not exist in `TICKER_MAP` before today. A future backfill against yfinance's real `^INDIAVIX` history (same pattern as v3) is possible but not done here — flagged as a candidate follow-up, not committed to. |
 
 ---
 
@@ -192,29 +195,29 @@ for row in feature_store_rows:
 
 ---
 
-## 6. Duty Events (`data/duty_events.json`)
+## 6. Duty Events (`data/duty_cbic.json`)
 
-`data/duty_events.json` is an **append-only** list of India gold import duty changes. Each entry has the following fields:
+`data/duty_cbic.json` is the **single source of truth** for India gold import duty rates
+(D2 migration, 2026-09-24; retired the old `data/duty_events.json`). It has two keys:
 
-| Field | Type | Notes |
-|-------|------|-------|
-| `date` | str | ISO date of the policy change. |
-| `event_type` | str | Always `"duty_change"` in current entries. |
-| `direction` | str | `"cut"` or `"increase"`. |
-| `magnitude_pct` | float \| null | Percentage-point change in duty rate. `null` if the exact split between customs duty and cess components is unverified. |
-| `note` | str | Free-text context (budget announcement, observable price impact, caveats). |
-| `source` | str | Canonical source for the event (e.g. `"Union Budget 2024-25 public announcement"`). |
+| Key | Contents |
+|-----|----------|
+| `rows` | CBIC-notification-cited rows, 2019-07-06 onward. Each row: `effective_date`, `bcd_pct`, `aidc_pct`, `sws_pct`, `total_duty_pct` (= BCD+AIDC+SWS, ex-GST), `notification`, `effective_date_basis`, `source`, `status`. |
+| `unverified_pre_2019.rows` | Press-sourced-only 2013 current-account-deficit-crisis hikes (no CBIC notification number found), BCD-only. Read **only** by `ml.inr_proxy`'s long-history pretraining proxy — every live/feature-store/premium consumer reads `rows` only. |
 
-**How it feeds the feature store:**
+`ml.duty_schedule` is the single reader module: `load_verified_rows()`, `load_all_rows_including_unverified()`, `get_duty_change_dates()`, `duty_change_proximity()`.
 
-- At snapshot time, the most recent event with `date <= as_of_date` is found.
+**How duty CHANGE EVENTS feed the feature store:**
+
+- A "duty change event" is a verified row whose `total_duty_pct` differs from the immediately-preceding verified row. Composition-only re-notifications (total unchanged, e.g. 2023-02-02: BCD 12.5%→10%, AIDC 2.5%→5%, SWS unchanged, total stays 15.0%) are **excluded** — a real CBIC notification, but not a rate change.
+- At snapshot time, the most recent change event with `effective_date <= as_of_date` is found.
 - `duty_change_active = True` for any snapshot within 30 calendar days of that event.
 - `days_since_last_duty_change` is the exact calendar-day distance from that event to `as_of_date`.
 - If no past event exists, `days_since_last_duty_change = 9999` and `duty_change_active = False`.
 
-**Current entries:** one event — 2024-07-23, Union Budget 2024-25 duty cut. `magnitude_pct` is `null` because the exact split between basic customs duty and Agriculture Infrastructure Development Cess (AIDC) components was not independently verified; direction (cut) and significant local price impact are both verifiable from public record.
+**Current verified change-event dates:** 2019-07-06, 2021-02-02, 2022-07-01, 2024-07-24, 2026-05-13 (2023-02-02 is a verified row but not a change event, per above).
 
-**To add a new event:** append a new JSON object to the array. **Never edit existing entries.**
+**To add a new event:** append a new JSON object to `rows`. **Never edit existing entries** (each row's `status`/`source` documents its own verification state — corrections get a new row plus a note, not a silent edit).
 
 ---
 

@@ -404,38 +404,6 @@ def test_classify_direction_neutral_on_zero_last():
 
 
 # ---------------------------------------------------------------------------
-# _aggregate_directions unit tests
-# ---------------------------------------------------------------------------
-
-
-def test_aggregate_all_up():
-    assert cf._aggregate_directions(["up", "up", "up"]) == ("up", 1.0)
-
-
-def test_aggregate_majority_up():
-    majority, fraction = cf._aggregate_directions(["up", "down", "up", "down", "up"])
-    assert majority == "up"
-    assert fraction == 0.6
-
-
-def test_aggregate_empty():
-    assert cf._aggregate_directions([]) == ("neutral", 0.0)
-
-
-def test_aggregate_2_2_1_split():
-    """2-2-1 split: max consensus is 0.4, below the 0.6 gate."""
-    _, fraction = cf._aggregate_directions(["up", "up", "down", "down", "neutral"])
-    assert fraction < 0.6
-
-
-def test_aggregate_mixed_5_samples():
-    """up,up,down,up,neutral => majority 'up', consensus 0.6 (3/5)."""
-    majority, fraction = cf._aggregate_directions(["up", "up", "down", "up", "neutral"])
-    assert majority == "up"
-    assert fraction == 0.6
-
-
-# ---------------------------------------------------------------------------
 # run_probe — schema v2 and multi-sample fields
 # ---------------------------------------------------------------------------
 

@@ -9,6 +9,7 @@ import http from "node:http";
 import path from "node:path";
 import fs from "node:fs";
 import pkg from "../scraper/node_modules/playwright/index.js";
+import { LOCAL_ONLY_ARGS } from "./helpers/local_only_browser.js";
 const { chromium } = pkg;
 
 // ─── Local HTTP server (serves repo root) ────────────────────────────────────
@@ -207,7 +208,8 @@ function assert(label, condition, detail = "") {
 
 async function run() {
   const { server, port } = await startServer(ROOT);
-  const browser = await chromium.launch({ headless: true });
+  // Third-party hosts (Chart.js / Sentry CDNs) are unreachable by design: see helpers/local_only_browser.js.
+  const browser = await chromium.launch({ headless: true, args: LOCAL_ONLY_ARGS });
   const base    = `http://127.0.0.1:${port}`;
 
   // ── Inject mock fetch (addInitScript runs before page scripts) ───────────────
@@ -301,8 +303,8 @@ async function run() {
       assert("computed display !== 'none'",     state.display !== "none",   `got "${state.display}"`);
       assert('text includes "estimated price"',
         state.text.includes("estimated price"), `got "${state.text}"`);
-      assert('text includes "IBJA"',
-        state.text.includes("IBJA"),            `got "${state.text}"`);
+      assert('text names the official rate',
+        state.text.includes("official gold rate"), `got "${state.text}"`);
       assert('text includes "today"',
         state.text.includes("today"),           `got "${state.text}"`);
       assert('text does NOT include "last confirmed price"',
@@ -328,8 +330,8 @@ async function run() {
       assert("banner.hidden === false",         state.hidden === false);
       assert('text includes "estimated price"',
         state.text.includes("estimated price"), `got "${state.text}"`);
-      assert('text includes "close" (dated carry-forward qualifier)',
-        state.text.includes("close"),           `got "${state.text}"`);
+      assert('text names the day of the rate (dated carry-forward qualifier)',
+        /official gold rate on \w+day/.test(state.text), `got "${state.text}"`);
       assert('text does NOT include "today\'s"  (must not overclaim freshness)',
         !state.text.includes("today's"),        `got "${state.text}"`);
       assert('text does NOT include "last confirmed price"',

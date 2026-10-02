@@ -149,3 +149,26 @@ def test_non_json_response_raises_structure_error(monkeypatch):
     monkeypatch.setattr(malabar.requests, "get", lambda *a, **kw: _FakeResponse(None))
     with pytest.raises(SourceStructureError):
         malabar.fetch_malabar()
+
+
+def test_epoch_entry_date_raises_structure_error(monkeypatch):
+    # Same corruption class as Kalyan's placeholder updated_time (see
+    # ml.sources.kalyan): if this endpoint ever substitutes an epoch/sentinel
+    # entry_date+entry_time, it must not be silently stored as 1970.
+    payload = {
+        "data": {
+            "getMetalRate": {
+                "items": [
+                    {
+                        "entry_date": "1970-01-01 00:00:00",
+                        "entry_time": "00:00:00",
+                        "purity": "22k",
+                        "rate": "13135.00",
+                    },
+                ]
+            }
+        }
+    }
+    monkeypatch.setattr(malabar.requests, "get", lambda *a, **kw: _FakeResponse(payload))
+    with pytest.raises(SourceStructureError, match="implausible observed_at"):
+        malabar.fetch_malabar()

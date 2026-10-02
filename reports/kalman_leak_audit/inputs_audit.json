@@ -1,0 +1,5282 @@
+{
+ "code_commit": "ae70692dffebca9d100deded92daf4dbf8dd6f59",
+ "generated_utc": "2026-09-25T07:10:14+00:00",
+ "note": "derived: source names, timestamps and deltas only",
+ "days": [
+  {
+   "date": "2026-06-12",
+   "day_type": "ibja_day",
+   "set_A": true,
+   "set_B": false,
+   "target_utc": "2026-06-12T17:36:15Z",
+   "registered_same_day_inputs": [
+    {
+     "source": "ibja_am",
+     "obs_time_utc": "2026-06-12T00:00:00Z",
+     "known_at_utc": "2026-06-12T06:30:00Z",
+     "target_utc": "2026-06-12T17:36:15Z",
+     "known_minus_target_s": -39975.515,
+     "strictly_earlier": true,
+     "fetched_at_utc": "2026-06-12T14:52:04Z",
+     "used_in_strict_rescore": true
+    },
+    {
+     "source": "ibja_pm",
+     "obs_time_utc": "2026-06-12T00:00:00Z",
+     "known_at_utc": "2026-06-12T11:30:00Z",
+     "target_utc": "2026-06-12T17:36:15Z",
+     "known_minus_target_s": -21975.515,
+     "strictly_earlier": true,
+     "fetched_at_utc": "2026-06-12T14:52:04Z",
+     "used_in_strict_rescore": true
+    },
+    {
+     "source": "comex",
+     "obs_time_utc": "2026-06-11T00:00:00Z",
+     "known_at_utc": "2026-06-12T00:00:00Z",
+     "target_utc": "2026-06-12T17:36:15Z",
+     "known_minus_target_s": -63375.515,
+     "strictly_earlier": true,
+     "fetched_at_utc": null,
+     "used_in_strict_rescore": true
+    }
+   ],
+   "strict_added_inputs": [],
+   "filter_state_prior_days": {
+    "last_anchor_utc": "2026-06-11T20:17:11Z",
+    "max_known_at_utc": "2026-06-11T20:17:11Z",
+    "max_known_minus_target_s": -76743.977
+   },
+   "noise_params_mle": {
+    "block_start": "2026-06-12",
+    "train_days_before": 59,
+    "train_includes_target_day": false,
+    "max_known_at_utc": "2026-06-11T20:17:11Z",
+    "max_known_minus_target_s": -76743.977
+   },
+   "anchor_perturbation_abs_diff_log": 0.0
+  },
+  {
+   "date": "2026-06-13",
+   "day_type": "weekend",
+   "set_A": true,
+   "set_B": false,
+   "target_utc": "2026-06-13T21:30:57Z",
+   "registered_same_day_inputs": [
+    {
+     "source": "comex",
+     "obs_time_utc": "2026-06-12T00:00:00Z",
+     "known_at_utc": "2026-06-13T00:00:00Z",
+     "target_utc": "2026-06-13T21:30:57Z",
+     "known_minus_target_s": -77457.422,
+     "strictly_earlier": true,
+     "fetched_at_utc": null,
+     "used_in_strict_rescore": true
+    }
+   ],
+   "strict_added_inputs": [],
+   "filter_state_prior_days": {
+    "last_anchor_utc": "2026-06-12T17:36:15Z",
+    "max_known_at_utc": "2026-06-12T17:36:15Z",
+    "max_known_minus_target_s": -100481.907
+   },
+   "noise_params_mle": {
+    "block_start": "2026-06-12",
+    "train_days_before": 59,
+    "train_includes_target_day": false,
+    "max_known_at_utc": "2026-06-11T20:17:11Z",
+    "max_known_minus_target_s": -177225.884
+   },
+   "anchor_perturbation_abs_diff_log": 0.0
+  },
+  {
+   "date": "2026-06-14",
+   "day_type": "weekend",
+   "set_A": true,
+   "set_B": false,
+   "target_utc": "2026-06-14T21:30:02Z",
+   "registered_same_day_inputs": [],
+   "strict_added_inputs": [],
+   "filter_state_prior_days": {
+    "last_anchor_utc": "2026-06-13T21:30:57Z",
+    "max_known_at_utc": "2026-06-13T21:30:57Z",
+    "max_known_minus_target_s": -86344.953
+   },
+   "noise_params_mle": {
+    "block_start": "2026-06-12",
+    "train_days_before": 59,
+    "train_includes_target_day": false,
+    "max_known_at_utc": "2026-06-11T20:17:11Z",
+    "max_known_minus_target_s": -263570.837
+   },
+   "anchor_perturbation_abs_diff_log": 0.0
+  },
+  {
+   "date": "2026-06-15",
+   "day_type": "ibja_day",
+   "set_A": true,
+   "set_B": false,
+   "target_utc": "2026-06-15T21:30:03Z",
+   "registered_same_day_inputs": [
+    {
+     "source": "ibja_am",
+     "obs_time_utc": "2026-06-15T00:00:00Z",
+     "known_at_utc": "2026-06-15T06:30:00Z",
+     "target_utc": "2026-06-15T21:30:03Z",
+     "known_minus_target_s": -54003.652,
+     "strictly_earlier": true,
+     "fetched_at_utc": "2026-06-15T11:58:26Z",
+     "used_in_strict_rescore": true
+    },
+    {
+     "source": "ibja_pm",
+     "obs_time_utc": "2026-06-15T00:00:00Z",
+     "known_at_utc": "2026-06-15T11:30:00Z",
+     "target_utc": "2026-06-15T21:30:03Z",
+     "known_minus_target_s": -36003.652,
+     "strictly_earlier": true,
+     "fetched_at_utc": "2026-06-15T11:58:26Z",
+     "used_in_strict_rescore": true
+    }
+   ],
+   "strict_added_inputs": [],
+   "filter_state_prior_days": {
+    "last_anchor_utc": "2026-06-14T21:30:02Z",
+    "max_known_at_utc": "2026-06-14T21:30:02Z",
+    "max_known_minus_target_s": -86401.277
+   },
+   "noise_params_mle": {
+    "block_start": "2026-06-12",
+    "train_days_before": 59,
+    "train_includes_target_day": false,
+    "max_known_at_utc": "2026-06-11T20:17:11Z",
+    "max_known_minus_target_s": -349972.114
+   },
+   "anchor_perturbation_abs_diff_log": 0.0
+  },
+  {
+   "date": "2026-06-16",
+   "day_type": "ibja_day",
+   "set_A": true,
+   "set_B": false,
+   "target_utc": "2026-06-16T22:51:56Z",
+   "registered_same_day_inputs": [
+    {
+     "source": "ibja_am",
+     "obs_time_utc": "2026-06-16T00:00:00Z",
+     "known_at_utc": "2026-06-16T06:30:00Z",
+     "target_utc": "2026-06-16T22:51:56Z",
+     "known_minus_target_s": -58916.185,
+     "strictly_earlier": true,
+     "fetched_at_utc": "2026-06-16T12:32:06Z",
+     "used_in_strict_rescore": true
+    },
+    {
+     "source": "ibja_pm",
+     "obs_time_utc": "2026-06-16T00:00:00Z",
+     "known_at_utc": "2026-06-16T11:30:00Z",
+     "target_utc": "2026-06-16T22:51:56Z",
+     "known_minus_target_s": -40916.185,
+     "strictly_earlier": true,
+     "fetched_at_utc": "2026-06-16T12:32:06Z",
+     "used_in_strict_rescore": true
+    },
+    {
+     "source": "comex",
+     "obs_time_utc": "2026-06-15T00:00:00Z",
+     "known_at_utc": "2026-06-16T00:00:00Z",
+     "target_utc": "2026-06-16T22:51:56Z",
+     "known_minus_target_s": -82316.185,
+     "strictly_earlier": true,
+     "fetched_at_utc": null,
+     "used_in_strict_rescore": true
+    }
+   ],
+   "strict_added_inputs": [],
+   "filter_state_prior_days": {
+    "last_anchor_utc": "2026-06-15T21:30:03Z",
+    "max_known_at_utc": "2026-06-15T21:30:03Z",
+    "max_known_minus_target_s": -91312.533
+   },
+   "noise_params_mle": {
+    "block_start": "2026-06-12",
+    "train_days_before": 59,
+    "train_includes_target_day": false,
+    "max_known_at_utc": "2026-06-11T20:17:11Z",
+    "max_known_minus_target_s": -441284.647
+   },
+   "anchor_perturbation_abs_diff_log": 0.0
+  },
+  {
+   "date": "2026-06-17",
+   "day_type": "ibja_day",
+   "set_A": true,
+   "set_B": false,
+   "target_utc": "2026-06-17T21:30:59Z",
+   "registered_same_day_inputs": [
+    {
+     "source": "ibja_am",
+     "obs_time_utc": "2026-06-17T00:00:00Z",
+     "known_at_utc": "2026-06-17T06:30:00Z",
+     "target_utc": "2026-06-17T21:30:59Z",
+     "known_minus_target_s": -54059.404,
+     "strictly_earlier": true,
+     "fetched_at_utc": "2026-06-17T12:31:58Z",
+     "used_in_strict_rescore": true
+    },
+    {
+     "source": "ibja_pm",
+     "obs_time_utc": "2026-06-17T00:00:00Z",
+     "known_at_utc": "2026-06-17T11:30:00Z",
+     "target_utc": "2026-06-17T21:30:59Z",
+     "known_minus_target_s": -36059.404,
+     "strictly_earlier": true,
+     "fetched_at_utc": "2026-06-17T12:31:58Z",
+     "used_in_strict_rescore": true
+    },
+    {
+     "source": "comex",
+     "obs_time_utc": "2026-06-16T00:00:00Z",
+     "known_at_utc": "2026-06-17T00:00:00Z",
+     "target_utc": "2026-06-17T21:30:59Z",
+     "known_minus_target_s": -77459.404,
+     "strictly_earlier": true,
+     "fetched_at_utc": null,
+     "used_in_strict_rescore": true
+    }
+   ],
+   "strict_added_inputs": [],
+   "filter_state_prior_days": {
+    "last_anchor_utc": "2026-06-16T22:51:56Z",
+    "max_known_at_utc": "2026-06-16T22:51:56Z",
+    "max_known_minus_target_s": -81543.219
+   },
+   "noise_params_mle": {
+    "block_start": "2026-06-12",
+    "train_days_before": 59,
+    "train_includes_target_day": false,
+    "max_known_at_utc": "2026-06-11T20:17:11Z",
+    "max_known_minus_target_s": -522827.866
+   },
+   "anchor_perturbation_abs_diff_log": 0.0
+  },
+  {
+   "date": "2026-06-18",
+   "day_type": "ibja_day",
+   "set_A": true,
+   "set_B": false,
+   "target_utc": "2026-06-18T22:55:26Z",
+   "registered_same_day_inputs": [
+    {
+     "source": "ibja_am",
+     "obs_time_utc": "2026-06-18T00:00:00Z",
+     "known_at_utc": "2026-06-18T06:30:00Z",
+     "target_utc": "2026-06-18T22:55:26Z",
+     "known_minus_target_s": -59126.422,
+     "strictly_earlier": true,
+     "fetched_at_utc": "2026-06-18T12:32:06Z",
+     "used_in_strict_rescore": true
+    },
+    {
+     "source": "ibja_pm",
+     "obs_time_utc": "2026-06-18T00:00:00Z",
+     "known_at_utc": "2026-06-18T11:30:00Z",
+     "target_utc": "2026-06-18T22:55:26Z",
+     "known_minus_target_s": -41126.422,
+     "strictly_earlier": true,
+     "fetched_at_utc": "2026-06-18T12:32:06Z",
+     "used_in_strict_rescore": true
+    },
+    {
+     "source": "comex",
+     "obs_time_utc": "2026-06-17T00:00:00Z",
+     "known_at_utc": "2026-06-18T00:00:00Z",
+     "target_utc": "2026-06-18T22:55:26Z",
+     "known_minus_target_s": -82526.422,
+     "strictly_earlier": true,
+     "fetched_at_utc": null,
+     "used_in_strict_rescore": true
+    }
+   ],
+   "strict_added_inputs": [],
+   "filter_state_prior_days": {
+    "last_anchor_utc": "2026-06-17T21:30:59Z",
+    "max_known_at_utc": "2026-06-17T21:30:59Z",
+    "max_known_minus_target_s": -91467.018
+   },
+   "noise_params_mle": {
+    "block_start": "2026-06-12",
+    "train_days_before": 59,
+    "train_includes_target_day": false,
+    "max_known_at_utc": "2026-06-11T20:17:11Z",
+    "max_known_minus_target_s": -614294.884
+   },
+   "anchor_perturbation_abs_diff_log": 0.0
+  },
+  {
+   "date": "2026-06-19",
+   "day_type": "ibja_day",
+   "set_A": true,
+   "set_B": false,
+   "target_utc": "2026-06-19T21:30:58Z",
+   "registered_same_day_inputs": [
+    {
+     "source": "ibja_am",
+     "obs_time_utc": "2026-06-19T00:00:00Z",
+     "known_at_utc": "2026-06-19T06:30:00Z",
+     "target_utc": "2026-06-19T21:30:58Z",
+     "known_minus_target_s": -54058.833,
+     "strictly_earlier": true,
+     "fetched_at_utc": "2026-06-19T12:31:56Z",
+     "used_in_strict_rescore": true
+    },
+    {
+     "source": "ibja_pm",
+     "obs_time_utc": "2026-06-19T00:00:00Z",
+     "known_at_utc": "2026-06-19T11:30:00Z",
+     "target_utc": "2026-06-19T21:30:58Z",
+     "known_minus_target_s": -36058.833,
+     "strictly_earlier": true,
+     "fetched_at_utc": "2026-06-19T12:31:56Z",
+     "used_in_strict_rescore": true
+    },
+    {
+     "source": "comex",
+     "obs_time_utc": "2026-06-18T00:00:00Z",
+     "known_at_utc": "2026-06-19T00:00:00Z",
+     "target_utc": "2026-06-19T21:30:58Z",
+     "known_minus_target_s": -77458.833,
+     "strictly_earlier": true,
+     "fetched_at_utc": null,
+     "used_in_strict_rescore": true
+    }
+   ],
+   "strict_added_inputs": [],
+   "filter_state_prior_days": {
+    "last_anchor_utc": "2026-06-18T22:55:26Z",
+    "max_known_at_utc": "2026-06-18T22:55:26Z",
+    "max_known_minus_target_s": -81332.411
+   },
+   "noise_params_mle": {
+    "block_start": "2026-06-19",
+    "train_days_before": 66,
+    "train_includes_target_day": false,
+    "max_known_at_utc": "2026-06-18T22:55:26Z",
+    "max_known_minus_target_s": -81332.411
+   },
+   "anchor_perturbation_abs_diff_log": 0.0
+  },
+  {
+   "date": "2026-06-20",
+   "day_type": "weekend",
+   "set_A": true,
+   "set_B": false,
+   "target_utc": "2026-06-20T21:30:58Z",
+   "registered_same_day_inputs": [],
+   "strict_added_inputs": [],
+   "filter_state_prior_days": {
+    "last_anchor_utc": "2026-06-19T21:30:58Z",
+    "max_known_at_utc": "2026-06-19T21:30:58Z",
+    "max_known_minus_target_s": -86399.916
+   },
+   "noise_params_mle": {
+    "block_start": "2026-06-19",
+    "train_days_before": 66,
+    "train_includes_target_day": false,
+    "max_known_at_utc": "2026-06-18T22:55:26Z",
+    "max_known_minus_target_s": -167732.327
+   },
+   "anchor_perturbation_abs_diff_log": 0.0
+  },
+  {
+   "date": "2026-06-21",
+   "day_type": "weekend",
+   "set_A": true,
+   "set_B": false,
+   "target_utc": "2026-06-21T21:30:10Z",
+   "registered_same_day_inputs": [],
+   "strict_added_inputs": [],
+   "filter_state_prior_days": {
+    "last_anchor_utc": "2026-06-20T21:30:58Z",
+    "max_known_at_utc": "2026-06-20T21:30:58Z",
+    "max_known_minus_target_s": -86352.176
+   },
+   "noise_params_mle": {
+    "block_start": "2026-06-19",
+    "train_days_before": 66,
+    "train_includes_target_day": false,
+    "max_known_at_utc": "2026-06-18T22:55:26Z",
+    "max_known_minus_target_s": -254084.503
+   },
+   "anchor_perturbation_abs_diff_log": 0.0
+  },
+  {
+   "date": "2026-06-22",
+   "day_type": "ibja_day",
+   "set_A": true,
+   "set_B": false,
+   "target_utc": "2026-06-22T22:45:02Z",
+   "registered_same_day_inputs": [
+    {
+     "source": "ibja_am",
+     "obs_time_utc": "2026-06-22T00:00:00Z",
+     "known_at_utc": "2026-06-22T06:30:00Z",
+     "target_utc": "2026-06-22T22:45:02Z",
+     "known_minus_target_s": -58502.269,
+     "strictly_earlier": true,
+     "fetched_at_utc": "2026-06-22T11:47:50Z",
+     "used_in_strict_rescore": true
+    },
+    {
+     "source": "ibja_pm",
+     "obs_time_utc": "2026-06-22T00:00:00Z",
+     "known_at_utc": "2026-06-22T11:30:00Z",
+     "target_utc": "2026-06-22T22:45:02Z",
+     "known_minus_target_s": -40502.269,
+     "strictly_earlier": true,
+     "fetched_at_utc": "2026-06-22T11:47:50Z",
+     "used_in_strict_rescore": true
+    }
+   ],
+   "strict_added_inputs": [],
+   "filter_state_prior_days": {
+    "last_anchor_utc": "2026-06-21T21:30:10Z",
+    "max_known_at_utc": "2026-06-21T21:30:10Z",
+    "max_known_minus_target_s": -90891.344
+   },
+   "noise_params_mle": {
+    "block_start": "2026-06-19",
+    "train_days_before": 66,
+    "train_includes_target_day": false,
+    "max_known_at_utc": "2026-06-18T22:55:26Z",
+    "max_known_minus_target_s": -344975.847
+   },
+   "anchor_perturbation_abs_diff_log": 0.0
+  },
+  {
+   "date": "2026-06-23",
+   "day_type": "ibja_day",
+   "set_A": true,
+   "set_B": false,
+   "target_utc": "2026-06-23T22:10:27Z",
+   "registered_same_day_inputs": [
+    {
+     "source": "ibja_am",
+     "obs_time_utc": "2026-06-23T00:00:00Z",
+     "known_at_utc": "2026-06-23T06:30:00Z",
+     "target_utc": "2026-06-23T22:10:27Z",
+     "known_minus_target_s": -56427.174,
+     "strictly_earlier": true,
+     "fetched_at_utc": "2026-06-23T11:58:54Z",
+     "used_in_strict_rescore": true
+    },
+    {
+     "source": "ibja_pm",
+     "obs_time_utc": "2026-06-23T00:00:00Z",
+     "known_at_utc": "2026-06-23T11:30:00Z",
+     "target_utc": "2026-06-23T22:10:27Z",
+     "known_minus_target_s": -38427.174,
+     "strictly_earlier": true,
+     "fetched_at_utc": "2026-06-23T11:58:54Z",
+     "used_in_strict_rescore": true
+    },
+    {
+     "source": "comex",
+     "obs_time_utc": "2026-06-22T00:00:00Z",
+     "known_at_utc": "2026-06-23T00:00:00Z",
+     "target_utc": "2026-06-23T22:10:27Z",
+     "known_minus_target_s": -79827.174,
+     "strictly_earlier": true,
+     "fetched_at_utc": null,
+     "used_in_strict_rescore": true
+    }
+   ],
+   "strict_added_inputs": [],
+   "filter_state_prior_days": {
+    "last_anchor_utc": "2026-06-22T22:45:02Z",
+    "max_known_at_utc": "2026-06-22T22:45:02Z",
+    "max_known_minus_target_s": -84324.905
+   },
+   "noise_params_mle": {
+    "block_start": "2026-06-19",
+    "train_days_before": 66,
+    "train_includes_target_day": false,
+    "max_known_at_utc": "2026-06-18T22:55:26Z",
+    "max_known_minus_target_s": -429300.752
+   },
+   "anchor_perturbation_abs_diff_log": 0.0
+  },
+  {
+   "date": "2026-06-24",
+   "day_type": "ibja_day",
+   "set_A": true,
+   "set_B": false,
+   "target_utc": "2026-06-24T22:14:34Z",
+   "registered_same_day_inputs": [
+    {
+     "source": "ibja_am",
+     "obs_time_utc": "2026-06-24T00:00:00Z",
+     "known_at_utc": "2026-06-24T06:30:00Z",
+     "target_utc": "2026-06-24T22:14:34Z",
+     "known_minus_target_s": -56674.054,
+     "strictly_earlier": true,
+     "fetched_at_utc": "2026-06-24T11:44:20Z",
+     "used_in_strict_rescore": true
+    },
+    {
+     "source": "ibja_pm",
+     "obs_time_utc": "2026-06-24T00:00:00Z",
+     "known_at_utc": "2026-06-24T11:30:00Z",
+     "target_utc": "2026-06-24T22:14:34Z",
+     "known_minus_target_s": -38674.054,
+     "strictly_earlier": true,
+     "fetched_at_utc": "2026-06-24T11:44:20Z",
+     "used_in_strict_rescore": true
+    },
+    {
+     "source": "comex",
+     "obs_time_utc": "2026-06-23T00:00:00Z",
+     "known_at_utc": "2026-06-24T00:00:00Z",
+     "target_utc": "2026-06-24T22:14:34Z",
+     "known_minus_target_s": -80074.054,
+     "strictly_earlier": true,
+     "fetched_at_utc": null,
+     "used_in_strict_rescore": true
+    }
+   ],
+   "strict_added_inputs": [],
+   "filter_state_prior_days": {
+    "last_anchor_utc": "2026-06-23T22:10:27Z",
+    "max_known_at_utc": "2026-06-23T22:10:27Z",
+    "max_known_minus_target_s": -86646.88
+   },
+   "noise_params_mle": {
+    "block_start": "2026-06-19",
+    "train_days_before": 66,
+    "train_includes_target_day": false,
+    "max_known_at_utc": "2026-06-18T22:55:26Z",
+    "max_known_minus_target_s": -515947.632
+   },
+   "anchor_perturbation_abs_diff_log": 0.0
+  },
+  {
+   "date": "2026-06-25",
+   "day_type": "ibja_day",
+   "set_A": true,
+   "set_B": false,
+   "target_utc": "2026-06-25T22:19:45Z",
+   "registered_same_day_inputs": [
+    {
+     "source": "ibja_am",
+     "obs_time_utc": "2026-06-25T00:00:00Z",
+     "known_at_utc": "2026-06-25T06:30:00Z",
+     "target_utc": "2026-06-25T22:19:45Z",
+     "known_minus_target_s": -56985.906,
+     "strictly_earlier": true,
+     "fetched_at_utc": "2026-06-25T11:39:15Z",
+     "used_in_strict_rescore": true
+    },
+    {
+     "source": "ibja_pm",
+     "obs_time_utc": "2026-06-25T00:00:00Z",
+     "known_at_utc": "2026-06-25T11:30:00Z",
+     "target_utc": "2026-06-25T22:19:45Z",
+     "known_minus_target_s": -38985.906,
+     "strictly_earlier": true,
+     "fetched_at_utc": "2026-06-25T11:39:15Z",
+     "used_in_strict_rescore": true
+    },
+    {
+     "source": "comex",
+     "obs_time_utc": "2026-06-24T00:00:00Z",
+     "known_at_utc": "2026-06-25T00:00:00Z",
+     "target_utc": "2026-06-25T22:19:45Z",
+     "known_minus_target_s": -80385.906,
+     "strictly_earlier": true,
+     "fetched_at_utc": null,
+     "used_in_strict_rescore": true
+    }
+   ],
+   "strict_added_inputs": [],
+   "filter_state_prior_days": {
+    "last_anchor_utc": "2026-06-24T22:14:34Z",
+    "max_known_at_utc": "2026-06-24T22:14:34Z",
+    "max_known_minus_target_s": -86711.852
+   },
+   "noise_params_mle": {
+    "block_start": "2026-06-19",
+    "train_days_before": 66,
+    "train_includes_target_day": false,
+    "max_known_at_utc": "2026-06-18T22:55:26Z",
+    "max_known_minus_target_s": -602659.484
+   },
+   "anchor_perturbation_abs_diff_log": 0.0
+  },
+  {
+   "date": "2026-06-26",
+   "day_type": "weekday_no_ibja",
+   "set_A": true,
+   "set_B": false,
+   "target_utc": "2026-06-26T22:10:05Z",
+   "registered_same_day_inputs": [
+    {
+     "source": "comex",
+     "obs_time_utc": "2026-06-25T00:00:00Z",
+     "known_at_utc": "2026-06-26T00:00:00Z",
+     "target_utc": "2026-06-26T22:10:05Z",
+     "known_minus_target_s": -79805.274,
+     "strictly_earlier": true,
+     "fetched_at_utc": null,
+     "used_in_strict_rescore": true
+    }
+   ],
+   "strict_added_inputs": [],
+   "filter_state_prior_days": {
+    "last_anchor_utc": "2026-06-25T22:19:45Z",
+    "max_known_at_utc": "2026-06-25T22:19:45Z",
+    "max_known_minus_target_s": -85819.368
+   },
+   "noise_params_mle": {
+    "block_start": "2026-06-26",
+    "train_days_before": 73,
+    "train_includes_target_day": false,
+    "max_known_at_utc": "2026-06-25T22:19:45Z",
+    "max_known_minus_target_s": -85819.368
+   },
+   "anchor_perturbation_abs_diff_log": 0.0
+  },
+  {
+   "date": "2026-06-27",
+   "day_type": "weekend",
+   "set_A": true,
+   "set_B": false,
+   "target_utc": "2026-06-27T22:00:46Z",
+   "registered_same_day_inputs": [
+    {
+     "source": "comex",
+     "obs_time_utc": "2026-06-26T00:00:00Z",
+     "known_at_utc": "2026-06-27T00:00:00Z",
+     "target_utc": "2026-06-27T22:00:46Z",
+     "known_minus_target_s": -79246.342,
+     "strictly_earlier": true,
+     "fetched_at_utc": null,
+     "used_in_strict_rescore": true
+    }
+   ],
+   "strict_added_inputs": [],
+   "filter_state_prior_days": {
+    "last_anchor_utc": "2026-06-26T22:10:05Z",
+    "max_known_at_utc": "2026-06-26T22:10:05Z",
+    "max_known_minus_target_s": -85841.068
+   },
+   "noise_params_mle": {
+    "block_start": "2026-06-26",
+    "train_days_before": 73,
+    "train_includes_target_day": false,
+    "max_known_at_utc": "2026-06-25T22:19:45Z",
+    "max_known_minus_target_s": -171660.436
+   },
+   "anchor_perturbation_abs_diff_log": 0.0
+  },
+  {
+   "date": "2026-06-28",
+   "day_type": "weekend",
+   "set_A": true,
+   "set_B": false,
+   "target_utc": "2026-06-28T22:00:24Z",
+   "registered_same_day_inputs": [],
+   "strict_added_inputs": [],
+   "filter_state_prior_days": {
+    "last_anchor_utc": "2026-06-27T22:00:46Z",
+    "max_known_at_utc": "2026-06-27T22:00:46Z",
+    "max_known_minus_target_s": -86377.854
+   },
+   "noise_params_mle": {
+    "block_start": "2026-06-26",
+    "train_days_before": 73,
+    "train_includes_target_day": false,
+    "max_known_at_utc": "2026-06-25T22:19:45Z",
+    "max_known_minus_target_s": -258038.29
+   },
+   "anchor_perturbation_abs_diff_log": 0.0
+  },
+  {
+   "date": "2026-06-29",
+   "day_type": "ibja_day",
+   "set_A": true,
+   "set_B": false,
+   "target_utc": "2026-06-29T22:07:28Z",
+   "registered_same_day_inputs": [
+    {
+     "source": "ibja_am",
+     "obs_time_utc": "2026-06-29T00:00:00Z",
+     "known_at_utc": "2026-06-29T06:30:00Z",
+     "target_utc": "2026-06-29T22:07:28Z",
+     "known_minus_target_s": -56248.432,
+     "strictly_earlier": true,
+     "fetched_at_utc": "2026-06-29T15:41:11Z",
+     "used_in_strict_rescore": true
+    },
+    {
+     "source": "ibja_pm",
+     "obs_time_utc": "2026-06-29T00:00:00Z",
+     "known_at_utc": "2026-06-29T11:30:00Z",
+     "target_utc": "2026-06-29T22:07:28Z",
+     "known_minus_target_s": -38248.432,
+     "strictly_earlier": true,
+     "fetched_at_utc": "2026-06-29T15:41:11Z",
+     "used_in_strict_rescore": true
+    }
+   ],
+   "strict_added_inputs": [],
+   "filter_state_prior_days": {
+    "last_anchor_utc": "2026-06-28T22:00:24Z",
+    "max_known_at_utc": "2026-06-28T22:00:24Z",
+    "max_known_minus_target_s": -86824.236
+   },
+   "noise_params_mle": {
+    "block_start": "2026-06-26",
+    "train_days_before": 73,
+    "train_includes_target_day": false,
+    "max_known_at_utc": "2026-06-25T22:19:45Z",
+    "max_known_minus_target_s": -344862.526
+   },
+   "anchor_perturbation_abs_diff_log": 0.0
+  },
+  {
+   "date": "2026-06-30",
+   "day_type": "ibja_day",
+   "set_A": true,
+   "set_B": false,
+   "target_utc": "2026-06-30T22:13:56Z",
+   "registered_same_day_inputs": [
+    {
+     "source": "ibja_am",
+     "obs_time_utc": "2026-06-30T00:00:00Z",
+     "known_at_utc": "2026-06-30T06:30:00Z",
+     "target_utc": "2026-06-30T22:13:56Z",
+     "known_minus_target_s": -56636.042,
+     "strictly_earlier": true,
+     "fetched_at_utc": "2026-06-30T11:43:59Z",
+     "used_in_strict_rescore": true
+    },
+    {
+     "source": "ibja_pm",
+     "obs_time_utc": "2026-06-30T00:00:00Z",
+     "known_at_utc": "2026-06-30T11:30:00Z",
+     "target_utc": "2026-06-30T22:13:56Z",
+     "known_minus_target_s": -38636.042,
+     "strictly_earlier": true,
+     "fetched_at_utc": "2026-06-30T11:43:59Z",
+     "used_in_strict_rescore": true
+    },
+    {
+     "source": "comex",
+     "obs_time_utc": "2026-06-29T00:00:00Z",
+     "known_at_utc": "2026-06-30T00:00:00Z",
+     "target_utc": "2026-06-30T22:13:56Z",
+     "known_minus_target_s": -80036.042,
+     "strictly_earlier": true,
+     "fetched_at_utc": null,
+     "used_in_strict_rescore": true
+    }
+   ],
+   "strict_added_inputs": [],
+   "filter_state_prior_days": {
+    "last_anchor_utc": "2026-06-29T22:07:28Z",
+    "max_known_at_utc": "2026-06-29T22:07:28Z",
+    "max_known_minus_target_s": -86787.61
+   },
+   "noise_params_mle": {
+    "block_start": "2026-06-26",
+    "train_days_before": 73,
+    "train_includes_target_day": false,
+    "max_known_at_utc": "2026-06-25T22:19:45Z",
+    "max_known_minus_target_s": -431650.136
+   },
+   "anchor_perturbation_abs_diff_log": 0.0
+  },
+  {
+   "date": "2026-07-01",
+   "day_type": "ibja_day",
+   "set_A": true,
+   "set_B": false,
+   "target_utc": "2026-07-01T22:15:47Z",
+   "registered_same_day_inputs": [
+    {
+     "source": "ibja_am",
+     "obs_time_utc": "2026-07-01T00:00:00Z",
+     "known_at_utc": "2026-07-01T06:30:00Z",
+     "target_utc": "2026-07-01T22:15:47Z",
+     "known_minus_target_s": -56747.481,
+     "strictly_earlier": true,
+     "fetched_at_utc": "2026-07-01T14:28:31Z",
+     "used_in_strict_rescore": true
+    },
+    {
+     "source": "ibja_pm",
+     "obs_time_utc": "2026-07-01T00:00:00Z",
+     "known_at_utc": "2026-07-01T11:30:00Z",
+     "target_utc": "2026-07-01T22:15:47Z",
+     "known_minus_target_s": -38747.481,
+     "strictly_earlier": true,
+     "fetched_at_utc": "2026-07-01T14:28:31Z",
+     "used_in_strict_rescore": true
+    },
+    {
+     "source": "comex",
+     "obs_time_utc": "2026-06-30T00:00:00Z",
+     "known_at_utc": "2026-07-01T00:00:00Z",
+     "target_utc": "2026-07-01T22:15:47Z",
+     "known_minus_target_s": -80147.481,
+     "strictly_earlier": true,
+     "fetched_at_utc": null,
+     "used_in_strict_rescore": true
+    }
+   ],
+   "strict_added_inputs": [],
+   "filter_state_prior_days": {
+    "last_anchor_utc": "2026-06-30T22:13:56Z",
+    "max_known_at_utc": "2026-06-30T22:13:56Z",
+    "max_known_minus_target_s": -86511.439
+   },
+   "noise_params_mle": {
+    "block_start": "2026-06-26",
+    "train_days_before": 73,
+    "train_includes_target_day": false,
+    "max_known_at_utc": "2026-06-25T22:19:45Z",
+    "max_known_minus_target_s": -518161.575
+   },
+   "anchor_perturbation_abs_diff_log": 0.0
+  },
+  {
+   "date": "2026-07-02",
+   "day_type": "ibja_day",
+   "set_A": true,
+   "set_B": false,
+   "target_utc": "2026-07-02T22:04:13Z",
+   "registered_same_day_inputs": [
+    {
+     "source": "ibja_am",
+     "obs_time_utc": "2026-07-02T00:00:00Z",
+     "known_at_utc": "2026-07-02T06:30:00Z",
+     "target_utc": "2026-07-02T22:04:13Z",
+     "known_minus_target_s": -56053.735,
+     "strictly_earlier": true,
+     "fetched_at_utc": "2026-07-02T13:52:00Z",
+     "used_in_strict_rescore": true
+    },
+    {
+     "source": "ibja_pm",
+     "obs_time_utc": "2026-07-02T00:00:00Z",
+     "known_at_utc": "2026-07-02T11:30:00Z",
+     "target_utc": "2026-07-02T22:04:13Z",
+     "known_minus_target_s": -38053.735,
+     "strictly_earlier": true,
+     "fetched_at_utc": "2026-07-02T13:52:00Z",
+     "used_in_strict_rescore": true
+    },
+    {
+     "source": "comex",
+     "obs_time_utc": "2026-07-01T00:00:00Z",
+     "known_at_utc": "2026-07-02T00:00:00Z",
+     "target_utc": "2026-07-02T22:04:13Z",
+     "known_minus_target_s": -79453.735,
+     "strictly_earlier": true,
+     "fetched_at_utc": null,
+     "used_in_strict_rescore": true
+    }
+   ],
+   "strict_added_inputs": [],
+   "filter_state_prior_days": {
+    "last_anchor_utc": "2026-07-01T22:15:47Z",
+    "max_known_at_utc": "2026-07-01T22:15:47Z",
+    "max_known_minus_target_s": -85706.254
+   },
+   "noise_params_mle": {
+    "block_start": "2026-06-26",
+    "train_days_before": 73,
+    "train_includes_target_day": false,
+    "max_known_at_utc": "2026-06-25T22:19:45Z",
+    "max_known_minus_target_s": -603867.829
+   },
+   "anchor_perturbation_abs_diff_log": 0.0
+  },
+  {
+   "date": "2026-07-03",
+   "day_type": "ibja_day",
+   "set_A": true,
+   "set_B": false,
+   "target_utc": "2026-07-03T22:02:49Z",
+   "registered_same_day_inputs": [
+    {
+     "source": "ibja_am",
+     "obs_time_utc": "2026-07-03T00:00:00Z",
+     "known_at_utc": "2026-07-03T06:30:00Z",
+     "target_utc": "2026-07-03T22:02:49Z",
+     "known_minus_target_s": -55969.093,
+     "strictly_earlier": true,
+     "fetched_at_utc": "2026-07-03T13:55:43Z",
+     "used_in_strict_rescore": true
+    },
+    {
+     "source": "ibja_pm",
+     "obs_time_utc": "2026-07-03T00:00:00Z",
+     "known_at_utc": "2026-07-03T11:30:00Z",
+     "target_utc": "2026-07-03T22:02:49Z",
+     "known_minus_target_s": -37969.093,
+     "strictly_earlier": true,
+     "fetched_at_utc": "2026-07-03T13:55:43Z",
+     "used_in_strict_rescore": true
+    },
+    {
+     "source": "comex",
+     "obs_time_utc": "2026-07-02T00:00:00Z",
+     "known_at_utc": "2026-07-03T00:00:00Z",
+     "target_utc": "2026-07-03T22:02:49Z",
+     "known_minus_target_s": -79369.093,
+     "strictly_earlier": true,
+     "fetched_at_utc": null,
+     "used_in_strict_rescore": true
+    }
+   ],
+   "strict_added_inputs": [],
+   "filter_state_prior_days": {
+    "last_anchor_utc": "2026-07-02T22:04:13Z",
+    "max_known_at_utc": "2026-07-02T22:04:13Z",
+    "max_known_minus_target_s": -86315.358
+   },
+   "noise_params_mle": {
+    "block_start": "2026-07-03",
+    "train_days_before": 80,
+    "train_includes_target_day": false,
+    "max_known_at_utc": "2026-07-02T22:04:13Z",
+    "max_known_minus_target_s": -86315.358
+   },
+   "anchor_perturbation_abs_diff_log": 0.0
+  },
+  {
+   "date": "2026-07-04",
+   "day_type": "weekend",
+   "set_A": true,
+   "set_B": false,
+   "target_utc": "2026-07-04T19:06:07Z",
+   "registered_same_day_inputs": [],
+   "strict_added_inputs": [],
+   "filter_state_prior_days": {
+    "last_anchor_utc": "2026-07-03T22:02:49Z",
+    "max_known_at_utc": "2026-07-03T22:02:49Z",
+    "max_known_minus_target_s": -75798.714
+   },
+   "noise_params_mle": {
+    "block_start": "2026-07-03",
+    "train_days_before": 80,
+    "train_includes_target_day": false,
+    "max_known_at_utc": "2026-07-02T22:04:13Z",
+    "max_known_minus_target_s": -162114.072
+   },
+   "anchor_perturbation_abs_diff_log": 0.0
+  },
+  {
+   "date": "2026-07-05",
+   "day_type": "weekend",
+   "set_A": true,
+   "set_B": false,
+   "target_utc": "2026-07-05T21:59:03Z",
+   "registered_same_day_inputs": [],
+   "strict_added_inputs": [],
+   "filter_state_prior_days": {
+    "last_anchor_utc": "2026-07-04T19:06:07Z",
+    "max_known_at_utc": "2026-07-04T19:06:07Z",
+    "max_known_minus_target_s": -96776.164
+   },
+   "noise_params_mle": {
+    "block_start": "2026-07-03",
+    "train_days_before": 80,
+    "train_includes_target_day": false,
+    "max_known_at_utc": "2026-07-02T22:04:13Z",
+    "max_known_minus_target_s": -258890.236
+   },
+   "anchor_perturbation_abs_diff_log": 0.0
+  },
+  {
+   "date": "2026-07-06",
+   "day_type": "ibja_day",
+   "set_A": true,
+   "set_B": false,
+   "target_utc": "2026-07-06T22:11:21Z",
+   "registered_same_day_inputs": [
+    {
+     "source": "ibja_am",
+     "obs_time_utc": "2026-07-06T00:00:00Z",
+     "known_at_utc": "2026-07-06T06:30:00Z",
+     "target_utc": "2026-07-06T22:11:21Z",
+     "known_minus_target_s": -56481.155,
+     "strictly_earlier": true,
+     "fetched_at_utc": "2026-07-06T12:43:52Z",
+     "used_in_strict_rescore": true
+    },
+    {
+     "source": "ibja_pm",
+     "obs_time_utc": "2026-07-06T00:00:00Z",
+     "known_at_utc": "2026-07-06T11:30:00Z",
+     "target_utc": "2026-07-06T22:11:21Z",
+     "known_minus_target_s": -38481.155,
+     "strictly_earlier": true,
+     "fetched_at_utc": "2026-07-06T12:43:52Z",
+     "used_in_strict_rescore": true
+    }
+   ],
+   "strict_added_inputs": [],
+   "filter_state_prior_days": {
+    "last_anchor_utc": "2026-07-05T21:59:03Z",
+    "max_known_at_utc": "2026-07-05T21:59:03Z",
+    "max_known_minus_target_s": -87137.184
+   },
+   "noise_params_mle": {
+    "block_start": "2026-07-03",
+    "train_days_before": 80,
+    "train_includes_target_day": false,
+    "max_known_at_utc": "2026-07-02T22:04:13Z",
+    "max_known_minus_target_s": -346027.42
+   },
+   "anchor_perturbation_abs_diff_log": 0.0
+  },
+  {
+   "date": "2026-07-07",
+   "day_type": "ibja_day",
+   "set_A": true,
+   "set_B": false,
+   "target_utc": "2026-07-07T22:09:23Z",
+   "registered_same_day_inputs": [
+    {
+     "source": "ibja_am",
+     "obs_time_utc": "2026-07-07T00:00:00Z",
+     "known_at_utc": "2026-07-07T06:30:00Z",
+     "target_utc": "2026-07-07T22:09:23Z",
+     "known_minus_target_s": -56363.643,
+     "strictly_earlier": true,
+     "fetched_at_utc": "2026-07-07T11:45:28Z",
+     "used_in_strict_rescore": true
+    },
+    {
+     "source": "ibja_pm",
+     "obs_time_utc": "2026-07-07T00:00:00Z",
+     "known_at_utc": "2026-07-07T11:30:00Z",
+     "target_utc": "2026-07-07T22:09:23Z",
+     "known_minus_target_s": -38363.643,
+     "strictly_earlier": true,
+     "fetched_at_utc": "2026-07-07T11:45:28Z",
+     "used_in_strict_rescore": true
+    },
+    {
+     "source": "comex",
+     "obs_time_utc": "2026-07-06T00:00:00Z",
+     "known_at_utc": "2026-07-07T00:00:00Z",
+     "target_utc": "2026-07-07T22:09:23Z",
+     "known_minus_target_s": -79763.643,
+     "strictly_earlier": true,
+     "fetched_at_utc": null,
+     "used_in_strict_rescore": true
+    }
+   ],
+   "strict_added_inputs": [],
+   "filter_state_prior_days": {
+    "last_anchor_utc": "2026-07-06T22:11:21Z",
+    "max_known_at_utc": "2026-07-06T22:11:21Z",
+    "max_known_minus_target_s": -86282.488
+   },
+   "noise_params_mle": {
+    "block_start": "2026-07-03",
+    "train_days_before": 80,
+    "train_includes_target_day": false,
+    "max_known_at_utc": "2026-07-02T22:04:13Z",
+    "max_known_minus_target_s": -432309.908
+   },
+   "anchor_perturbation_abs_diff_log": 0.0
+  },
+  {
+   "date": "2026-07-08",
+   "day_type": "ibja_day",
+   "set_A": true,
+   "set_B": false,
+   "target_utc": "2026-07-08T19:20:00Z",
+   "registered_same_day_inputs": [
+    {
+     "source": "ibja_am",
+     "obs_time_utc": "2026-07-08T00:00:00Z",
+     "known_at_utc": "2026-07-08T06:30:00Z",
+     "target_utc": "2026-07-08T19:20:00Z",
+     "known_minus_target_s": -46200.542,
+     "strictly_earlier": true,
+     "fetched_at_utc": "2026-07-08T13:56:02Z",
+     "used_in_strict_rescore": true
+    },
+    {
+     "source": "ibja_pm",
+     "obs_time_utc": "2026-07-08T00:00:00Z",
+     "known_at_utc": "2026-07-08T11:30:00Z",
+     "target_utc": "2026-07-08T19:20:00Z",
+     "known_minus_target_s": -28200.542,
+     "strictly_earlier": true,
+     "fetched_at_utc": "2026-07-08T13:56:02Z",
+     "used_in_strict_rescore": true
+    },
+    {
+     "source": "comex",
+     "obs_time_utc": "2026-07-07T00:00:00Z",
+     "known_at_utc": "2026-07-08T00:00:00Z",
+     "target_utc": "2026-07-08T19:20:00Z",
+     "known_minus_target_s": -69600.542,
+     "strictly_earlier": true,
+     "fetched_at_utc": null,
+     "used_in_strict_rescore": true
+    }
+   ],
+   "strict_added_inputs": [],
+   "filter_state_prior_days": {
+    "last_anchor_utc": "2026-07-07T22:09:23Z",
+    "max_known_at_utc": "2026-07-07T22:09:23Z",
+    "max_known_minus_target_s": -76236.899
+   },
+   "noise_params_mle": {
+    "block_start": "2026-07-03",
+    "train_days_before": 80,
+    "train_includes_target_day": false,
+    "max_known_at_utc": "2026-07-02T22:04:13Z",
+    "max_known_minus_target_s": -508546.807
+   },
+   "anchor_perturbation_abs_diff_log": 0.0
+  },
+  {
+   "date": "2026-07-09",
+   "day_type": "ibja_day",
+   "set_A": true,
+   "set_B": false,
+   "target_utc": "2026-07-09T22:19:17Z",
+   "registered_same_day_inputs": [
+    {
+     "source": "ibja_am",
+     "obs_time_utc": "2026-07-09T00:00:00Z",
+     "known_at_utc": "2026-07-09T06:30:00Z",
+     "target_utc": "2026-07-09T22:19:17Z",
+     "known_minus_target_s": -56957.496,
+     "strictly_earlier": true,
+     "fetched_at_utc": "2026-07-09T11:54:33Z",
+     "used_in_strict_rescore": true
+    },
+    {
+     "source": "ibja_pm",
+     "obs_time_utc": "2026-07-09T00:00:00Z",
+     "known_at_utc": "2026-07-09T11:30:00Z",
+     "target_utc": "2026-07-09T22:19:17Z",
+     "known_minus_target_s": -38957.496,
+     "strictly_earlier": true,
+     "fetched_at_utc": "2026-07-09T11:54:33Z",
+     "used_in_strict_rescore": true
+    },
+    {
+     "source": "comex",
+     "obs_time_utc": "2026-07-08T00:00:00Z",
+     "known_at_utc": "2026-07-09T00:00:00Z",
+     "target_utc": "2026-07-09T22:19:17Z",
+     "known_minus_target_s": -80357.496,
+     "strictly_earlier": true,
+     "fetched_at_utc": null,
+     "used_in_strict_rescore": true
+    }
+   ],
+   "strict_added_inputs": [],
+   "filter_state_prior_days": {
+    "last_anchor_utc": "2026-07-08T19:20:00Z",
+    "max_known_at_utc": "2026-07-08T19:20:00Z",
+    "max_known_minus_target_s": -97156.954
+   },
+   "noise_params_mle": {
+    "block_start": "2026-07-03",
+    "train_days_before": 80,
+    "train_includes_target_day": false,
+    "max_known_at_utc": "2026-07-02T22:04:13Z",
+    "max_known_minus_target_s": -605703.761
+   },
+   "anchor_perturbation_abs_diff_log": 0.0
+  },
+  {
+   "date": "2026-07-10",
+   "day_type": "ibja_day",
+   "set_A": true,
+   "set_B": false,
+   "target_utc": "2026-07-10T16:53:43Z",
+   "registered_same_day_inputs": [
+    {
+     "source": "ibja_am",
+     "obs_time_utc": "2026-07-10T00:00:00Z",
+     "known_at_utc": "2026-07-10T06:30:00Z",
+     "target_utc": "2026-07-10T16:53:43Z",
+     "known_minus_target_s": -37423.356,
+     "strictly_earlier": true,
+     "fetched_at_utc": "2026-07-10T11:48:43Z",
+     "used_in_strict_rescore": true
+    },
+    {
+     "source": "ibja_pm",
+     "obs_time_utc": "2026-07-10T00:00:00Z",
+     "known_at_utc": "2026-07-10T11:30:00Z",
+     "target_utc": "2026-07-10T16:53:43Z",
+     "known_minus_target_s": -19423.356,
+     "strictly_earlier": true,
+     "fetched_at_utc": "2026-07-10T11:48:43Z",
+     "used_in_strict_rescore": true
+    },
+    {
+     "source": "comex",
+     "obs_time_utc": "2026-07-09T00:00:00Z",
+     "known_at_utc": "2026-07-10T00:00:00Z",
+     "target_utc": "2026-07-10T16:53:43Z",
+     "known_minus_target_s": -60823.356,
+     "strictly_earlier": true,
+     "fetched_at_utc": null,
+     "used_in_strict_rescore": true
+    }
+   ],
+   "strict_added_inputs": [],
+   "filter_state_prior_days": {
+    "last_anchor_utc": "2026-07-09T22:19:17Z",
+    "max_known_at_utc": "2026-07-09T22:19:17Z",
+    "max_known_minus_target_s": -66865.86
+   },
+   "noise_params_mle": {
+    "block_start": "2026-07-10",
+    "train_days_before": 87,
+    "train_includes_target_day": false,
+    "max_known_at_utc": "2026-07-09T22:19:17Z",
+    "max_known_minus_target_s": -66865.86
+   },
+   "anchor_perturbation_abs_diff_log": 0.0
+  },
+  {
+   "date": "2026-07-11",
+   "day_type": "weekend",
+   "set_A": true,
+   "set_B": false,
+   "target_utc": "2026-07-11T21:44:33Z",
+   "registered_same_day_inputs": [
+    {
+     "source": "comex",
+     "obs_time_utc": "2026-07-10T00:00:00Z",
+     "known_at_utc": "2026-07-11T00:00:00Z",
+     "target_utc": "2026-07-11T21:44:33Z",
+     "known_minus_target_s": -78273.916,
+     "strictly_earlier": true,
+     "fetched_at_utc": null,
+     "used_in_strict_rescore": true
+    }
+   ],
+   "strict_added_inputs": [],
+   "filter_state_prior_days": {
+    "last_anchor_utc": "2026-07-10T16:53:43Z",
+    "max_known_at_utc": "2026-07-10T16:53:43Z",
+    "max_known_minus_target_s": -103850.56
+   },
+   "noise_params_mle": {
+    "block_start": "2026-07-10",
+    "train_days_before": 87,
+    "train_includes_target_day": false,
+    "max_known_at_utc": "2026-07-09T22:19:17Z",
+    "max_known_minus_target_s": -170716.42
+   },
+   "anchor_perturbation_abs_diff_log": 0.0
+  },
+  {
+   "date": "2026-07-12",
+   "day_type": "weekend",
+   "set_A": true,
+   "set_B": false,
+   "target_utc": "2026-07-12T10:24:28Z",
+   "registered_same_day_inputs": [],
+   "strict_added_inputs": [],
+   "filter_state_prior_days": {
+    "last_anchor_utc": "2026-07-11T21:44:33Z",
+    "max_known_at_utc": "2026-07-11T21:44:33Z",
+    "max_known_minus_target_s": -45594.691
+   },
+   "noise_params_mle": {
+    "block_start": "2026-07-10",
+    "train_days_before": 87,
+    "train_includes_target_day": false,
+    "max_known_at_utc": "2026-07-09T22:19:17Z",
+    "max_known_minus_target_s": -216311.111
+   },
+   "anchor_perturbation_abs_diff_log": 0.0
+  },
+  {
+   "date": "2026-07-16",
+   "day_type": "ibja_day",
+   "set_A": true,
+   "set_B": false,
+   "target_utc": "2026-07-16T20:12:27Z",
+   "registered_same_day_inputs": [
+    {
+     "source": "ibja_am",
+     "obs_time_utc": "2026-07-16T00:00:00Z",
+     "known_at_utc": "2026-07-16T06:30:00Z",
+     "target_utc": "2026-07-16T20:12:27Z",
+     "known_minus_target_s": -49347.59,
+     "strictly_earlier": true,
+     "fetched_at_utc": "2026-07-16T14:58:14Z",
+     "used_in_strict_rescore": true
+    },
+    {
+     "source": "ibja_pm",
+     "obs_time_utc": "2026-07-16T00:00:00Z",
+     "known_at_utc": "2026-07-16T11:30:00Z",
+     "target_utc": "2026-07-16T20:12:27Z",
+     "known_minus_target_s": -31347.59,
+     "strictly_earlier": true,
+     "fetched_at_utc": "2026-07-16T14:58:14Z",
+     "used_in_strict_rescore": true
+    },
+    {
+     "source": "comex",
+     "obs_time_utc": "2026-07-15T00:00:00Z",
+     "known_at_utc": "2026-07-16T00:00:00Z",
+     "target_utc": "2026-07-16T20:12:27Z",
+     "known_minus_target_s": -72747.59,
+     "strictly_earlier": true,
+     "fetched_at_utc": null,
+     "used_in_strict_rescore": true
+    }
+   ],
+   "strict_added_inputs": [],
+   "filter_state_prior_days": {
+    "last_anchor_utc": "2026-07-12T10:24:28Z",
+    "max_known_at_utc": "2026-07-15T11:30:00Z",
+    "max_known_minus_target_s": -117747.59
+   },
+   "noise_params_mle": {
+    "block_start": "2026-07-10",
+    "train_days_before": 87,
+    "train_includes_target_day": false,
+    "max_known_at_utc": "2026-07-09T22:19:17Z",
+    "max_known_minus_target_s": -597190.094
+   },
+   "anchor_perturbation_abs_diff_log": 0.0
+  },
+  {
+   "date": "2026-07-17",
+   "day_type": "ibja_day",
+   "set_A": true,
+   "set_B": false,
+   "target_utc": "2026-07-17T16:12:28Z",
+   "registered_same_day_inputs": [
+    {
+     "source": "ibja_am",
+     "obs_time_utc": "2026-07-17T00:00:00Z",
+     "known_at_utc": "2026-07-17T06:30:00Z",
+     "target_utc": "2026-07-17T16:12:28Z",
+     "known_minus_target_s": -34948.488,
+     "strictly_earlier": true,
+     "fetched_at_utc": "2026-07-17T14:42:50Z",
+     "used_in_strict_rescore": true
+    },
+    {
+     "source": "ibja_pm",
+     "obs_time_utc": "2026-07-17T00:00:00Z",
+     "known_at_utc": "2026-07-17T11:30:00Z",
+     "target_utc": "2026-07-17T16:12:28Z",
+     "known_minus_target_s": -16948.488,
+     "strictly_earlier": true,
+     "fetched_at_utc": "2026-07-17T14:42:50Z",
+     "used_in_strict_rescore": true
+    },
+    {
+     "source": "comex",
+     "obs_time_utc": "2026-07-16T00:00:00Z",
+     "known_at_utc": "2026-07-17T00:00:00Z",
+     "target_utc": "2026-07-17T16:12:28Z",
+     "known_minus_target_s": -58348.488,
+     "strictly_earlier": true,
+     "fetched_at_utc": null,
+     "used_in_strict_rescore": true
+    }
+   ],
+   "strict_added_inputs": [],
+   "filter_state_prior_days": {
+    "last_anchor_utc": "2026-07-16T20:12:27Z",
+    "max_known_at_utc": "2026-07-16T20:12:27Z",
+    "max_known_minus_target_s": -72000.898
+   },
+   "noise_params_mle": {
+    "block_start": "2026-07-17",
+    "train_days_before": 94,
+    "train_includes_target_day": false,
+    "max_known_at_utc": "2026-07-16T20:12:27Z",
+    "max_known_minus_target_s": -72000.898
+   },
+   "anchor_perturbation_abs_diff_log": 0.0
+  },
+  {
+   "date": "2026-07-18",
+   "day_type": "weekend",
+   "set_A": true,
+   "set_B": false,
+   "target_utc": "2026-07-18T15:53:24Z",
+   "registered_same_day_inputs": [
+    {
+     "source": "comex",
+     "obs_time_utc": "2026-07-17T00:00:00Z",
+     "known_at_utc": "2026-07-18T00:00:00Z",
+     "target_utc": "2026-07-18T15:53:24Z",
+     "known_minus_target_s": -57204.364,
+     "strictly_earlier": true,
+     "fetched_at_utc": null,
+     "used_in_strict_rescore": true
+    }
+   ],
+   "strict_added_inputs": [],
+   "filter_state_prior_days": {
+    "last_anchor_utc": "2026-07-17T16:12:28Z",
+    "max_known_at_utc": "2026-07-17T16:12:28Z",
+    "max_known_minus_target_s": -85255.876
+   },
+   "noise_params_mle": {
+    "block_start": "2026-07-17",
+    "train_days_before": 94,
+    "train_includes_target_day": false,
+    "max_known_at_utc": "2026-07-16T20:12:27Z",
+    "max_known_minus_target_s": -157256.774
+   },
+   "anchor_perturbation_abs_diff_log": 0.0
+  },
+  {
+   "date": "2026-07-19",
+   "day_type": "weekend",
+   "set_A": true,
+   "set_B": true,
+   "target_utc": "2026-07-19T19:01:21Z",
+   "registered_same_day_inputs": [
+    {
+     "source": "grt",
+     "obs_time_utc": "2026-07-19T19:22:51Z",
+     "known_at_utc": "2026-07-19T19:22:51Z",
+     "target_utc": "2026-07-19T19:01:21Z",
+     "known_minus_target_s": 1289.079,
+     "strictly_earlier": false,
+     "fetched_at_utc": null,
+     "used_in_strict_rescore": false
+    },
+    {
+     "source": "malabar",
+     "obs_time_utc": "2026-07-19T19:22:51Z",
+     "known_at_utc": "2026-07-19T19:22:51Z",
+     "target_utc": "2026-07-19T19:01:21Z",
+     "known_minus_target_s": 1289.079,
+     "strictly_earlier": false,
+     "fetched_at_utc": null,
+     "used_in_strict_rescore": false
+    }
+   ],
+   "strict_added_inputs": [
+    {
+     "source": "grt",
+     "obs_time_utc": "2026-07-19T14:12:19Z",
+     "known_at_utc": "2026-07-19T14:12:19Z",
+     "known_minus_target_s": -17342.921
+    },
+    {
+     "source": "malabar",
+     "obs_time_utc": "2026-07-19T14:12:19Z",
+     "known_at_utc": "2026-07-19T14:12:19Z",
+     "known_minus_target_s": -17342.921
+    }
+   ],
+   "filter_state_prior_days": {
+    "last_anchor_utc": "2026-07-18T15:53:24Z",
+    "max_known_at_utc": "2026-07-18T15:53:24Z",
+    "max_known_minus_target_s": -97677.557
+   },
+   "noise_params_mle": {
+    "block_start": "2026-07-17",
+    "train_days_before": 94,
+    "train_includes_target_day": false,
+    "max_known_at_utc": "2026-07-16T20:12:27Z",
+    "max_known_minus_target_s": -254934.331
+   },
+   "anchor_perturbation_abs_diff_log": 0.0
+  },
+  {
+   "date": "2026-07-21",
+   "day_type": "ibja_day",
+   "set_A": true,
+   "set_B": true,
+   "target_utc": "2026-07-21T08:22:07Z",
+   "registered_same_day_inputs": [
+    {
+     "source": "ibja_am",
+     "obs_time_utc": "2026-07-21T00:00:00Z",
+     "known_at_utc": "2026-07-21T06:30:00Z",
+     "target_utc": "2026-07-21T08:22:07Z",
+     "known_minus_target_s": -6727.863,
+     "strictly_earlier": true,
+     "fetched_at_utc": "2026-07-21T13:40:14Z",
+     "used_in_strict_rescore": true
+    },
+    {
+     "source": "ibja_pm",
+     "obs_time_utc": "2026-07-21T00:00:00Z",
+     "known_at_utc": "2026-07-21T11:30:00Z",
+     "target_utc": "2026-07-21T08:22:07Z",
+     "known_minus_target_s": 11272.137,
+     "strictly_earlier": false,
+     "fetched_at_utc": "2026-07-21T13:40:14Z",
+     "used_in_strict_rescore": false
+    },
+    {
+     "source": "grt",
+     "obs_time_utc": "2026-07-21T19:48:27Z",
+     "known_at_utc": "2026-07-21T19:48:27Z",
+     "target_utc": "2026-07-21T08:22:07Z",
+     "known_minus_target_s": 41179.137,
+     "strictly_earlier": false,
+     "fetched_at_utc": null,
+     "used_in_strict_rescore": false
+    },
+    {
+     "source": "malabar",
+     "obs_time_utc": "2026-07-21T19:48:27Z",
+     "known_at_utc": "2026-07-21T19:48:27Z",
+     "target_utc": "2026-07-21T08:22:07Z",
+     "known_minus_target_s": 41179.137,
+     "strictly_earlier": false,
+     "fetched_at_utc": null,
+     "used_in_strict_rescore": false
+    },
+    {
+     "source": "comex",
+     "obs_time_utc": "2026-07-20T00:00:00Z",
+     "known_at_utc": "2026-07-21T00:00:00Z",
+     "target_utc": "2026-07-21T08:22:07Z",
+     "known_minus_target_s": -30127.863,
+     "strictly_earlier": true,
+     "fetched_at_utc": null,
+     "used_in_strict_rescore": true
+    }
+   ],
+   "strict_added_inputs": [
+    {
+     "source": "grt",
+     "obs_time_utc": "2026-07-21T03:40:22Z",
+     "known_at_utc": "2026-07-21T03:40:22Z",
+     "known_minus_target_s": -16905.863
+    }
+   ],
+   "filter_state_prior_days": {
+    "last_anchor_utc": "2026-07-19T19:01:21Z",
+    "max_known_at_utc": "2026-07-20T19:54:57Z",
+    "max_known_minus_target_s": -44830.863
+   },
+   "noise_params_mle": {
+    "block_start": "2026-07-17",
+    "train_days_before": 94,
+    "train_includes_target_day": false,
+    "max_known_at_utc": "2026-07-16T20:12:27Z",
+    "max_known_minus_target_s": -389380.273
+   },
+   "anchor_perturbation_abs_diff_log": 0.0
+  },
+  {
+   "date": "2026-07-22",
+   "day_type": "ibja_day",
+   "set_A": true,
+   "set_B": true,
+   "target_utc": "2026-07-22T22:01:54Z",
+   "registered_same_day_inputs": [
+    {
+     "source": "ibja_am",
+     "obs_time_utc": "2026-07-22T00:00:00Z",
+     "known_at_utc": "2026-07-22T06:30:00Z",
+     "target_utc": "2026-07-22T22:01:54Z",
+     "known_minus_target_s": -55914.434,
+     "strictly_earlier": true,
+     "fetched_at_utc": "2026-07-22T13:43:53Z",
+     "used_in_strict_rescore": true
+    },
+    {
+     "source": "ibja_pm",
+     "obs_time_utc": "2026-07-22T00:00:00Z",
+     "known_at_utc": "2026-07-22T11:30:00Z",
+     "target_utc": "2026-07-22T22:01:54Z",
+     "known_minus_target_s": -37914.434,
+     "strictly_earlier": true,
+     "fetched_at_utc": "2026-07-22T13:43:53Z",
+     "used_in_strict_rescore": true
+    },
+    {
+     "source": "grt",
+     "obs_time_utc": "2026-07-22T19:41:09Z",
+     "known_at_utc": "2026-07-22T19:41:09Z",
+     "target_utc": "2026-07-22T22:01:54Z",
+     "known_minus_target_s": -8445.434,
+     "strictly_earlier": true,
+     "fetched_at_utc": null,
+     "used_in_strict_rescore": true
+    },
+    {
+     "source": "malabar",
+     "obs_time_utc": "2026-07-22T19:41:09Z",
+     "known_at_utc": "2026-07-22T19:41:09Z",
+     "target_utc": "2026-07-22T22:01:54Z",
+     "known_minus_target_s": -8445.434,
+     "strictly_earlier": true,
+     "fetched_at_utc": null,
+     "used_in_strict_rescore": true
+    },
+    {
+     "source": "comex",
+     "obs_time_utc": "2026-07-21T00:00:00Z",
+     "known_at_utc": "2026-07-22T00:00:00Z",
+     "target_utc": "2026-07-22T22:01:54Z",
+     "known_minus_target_s": -79314.434,
+     "strictly_earlier": true,
+     "fetched_at_utc": null,
+     "used_in_strict_rescore": true
+    }
+   ],
+   "strict_added_inputs": [
+    {
+     "source": "ibja_pm",
+     "obs_time_utc": "2026-07-21T00:00:00Z",
+     "known_at_utc": "2026-07-21T11:30:00Z",
+     "known_minus_target_s": -124314.434
+    }
+   ],
+   "filter_state_prior_days": {
+    "last_anchor_utc": "2026-07-21T08:22:07Z",
+    "max_known_at_utc": "2026-07-21T19:48:27Z",
+    "max_known_minus_target_s": -94407.434
+   },
+   "noise_params_mle": {
+    "block_start": "2026-07-17",
+    "train_days_before": 94,
+    "train_includes_target_day": false,
+    "max_known_at_utc": "2026-07-16T20:12:27Z",
+    "max_known_minus_target_s": -524966.844
+   },
+   "anchor_perturbation_abs_diff_log": 0.0
+  },
+  {
+   "date": "2026-07-23",
+   "day_type": "ibja_day",
+   "set_A": true,
+   "set_B": true,
+   "target_utc": "2026-07-23T22:02:18Z",
+   "registered_same_day_inputs": [
+    {
+     "source": "ibja_am",
+     "obs_time_utc": "2026-07-23T00:00:00Z",
+     "known_at_utc": "2026-07-23T06:30:00Z",
+     "target_utc": "2026-07-23T22:02:18Z",
+     "known_minus_target_s": -55938.571,
+     "strictly_earlier": true,
+     "fetched_at_utc": "2026-07-23T13:48:35Z",
+     "used_in_strict_rescore": true
+    },
+    {
+     "source": "ibja_pm",
+     "obs_time_utc": "2026-07-23T00:00:00Z",
+     "known_at_utc": "2026-07-23T11:30:00Z",
+     "target_utc": "2026-07-23T22:02:18Z",
+     "known_minus_target_s": -37938.571,
+     "strictly_earlier": true,
+     "fetched_at_utc": "2026-07-23T13:48:35Z",
+     "used_in_strict_rescore": true
+    },
+    {
+     "source": "grt",
+     "obs_time_utc": "2026-07-23T19:42:28Z",
+     "known_at_utc": "2026-07-23T19:42:28Z",
+     "target_utc": "2026-07-23T22:02:18Z",
+     "known_minus_target_s": -8390.571,
+     "strictly_earlier": true,
+     "fetched_at_utc": null,
+     "used_in_strict_rescore": true
+    },
+    {
+     "source": "malabar",
+     "obs_time_utc": "2026-07-23T19:42:28Z",
+     "known_at_utc": "2026-07-23T19:42:28Z",
+     "target_utc": "2026-07-23T22:02:18Z",
+     "known_minus_target_s": -8390.571,
+     "strictly_earlier": true,
+     "fetched_at_utc": null,
+     "used_in_strict_rescore": true
+    },
+    {
+     "source": "comex",
+     "obs_time_utc": "2026-07-22T00:00:00Z",
+     "known_at_utc": "2026-07-23T00:00:00Z",
+     "target_utc": "2026-07-23T22:02:18Z",
+     "known_minus_target_s": -79338.571,
+     "strictly_earlier": true,
+     "fetched_at_utc": null,
+     "used_in_strict_rescore": true
+    }
+   ],
+   "strict_added_inputs": [],
+   "filter_state_prior_days": {
+    "last_anchor_utc": "2026-07-22T22:01:54Z",
+    "max_known_at_utc": "2026-07-22T22:01:54Z",
+    "max_known_minus_target_s": -86424.137
+   },
+   "noise_params_mle": {
+    "block_start": "2026-07-17",
+    "train_days_before": 94,
+    "train_includes_target_day": false,
+    "max_known_at_utc": "2026-07-16T20:12:27Z",
+    "max_known_minus_target_s": -611390.981
+   },
+   "anchor_perturbation_abs_diff_log": 0.0
+  },
+  {
+   "date": "2026-07-24",
+   "day_type": "ibja_day",
+   "set_A": true,
+   "set_B": true,
+   "target_utc": "2026-07-24T22:02:59Z",
+   "registered_same_day_inputs": [
+    {
+     "source": "ibja_am",
+     "obs_time_utc": "2026-07-24T00:00:00Z",
+     "known_at_utc": "2026-07-24T06:30:00Z",
+     "target_utc": "2026-07-24T22:02:59Z",
+     "known_minus_target_s": -55979.092,
+     "strictly_earlier": true,
+     "fetched_at_utc": "2026-07-24T13:28:26Z",
+     "used_in_strict_rescore": true
+    },
+    {
+     "source": "ibja_pm",
+     "obs_time_utc": "2026-07-24T00:00:00Z",
+     "known_at_utc": "2026-07-24T11:30:00Z",
+     "target_utc": "2026-07-24T22:02:59Z",
+     "known_minus_target_s": -37979.092,
+     "strictly_earlier": true,
+     "fetched_at_utc": "2026-07-24T13:28:26Z",
+     "used_in_strict_rescore": true
+    },
+    {
+     "source": "grt",
+     "obs_time_utc": "2026-07-24T14:08:45Z",
+     "known_at_utc": "2026-07-24T14:08:45Z",
+     "target_utc": "2026-07-24T22:02:59Z",
+     "known_minus_target_s": -28454.092,
+     "strictly_earlier": true,
+     "fetched_at_utc": null,
+     "used_in_strict_rescore": true
+    },
+    {
+     "source": "comex",
+     "obs_time_utc": "2026-07-23T00:00:00Z",
+     "known_at_utc": "2026-07-24T00:00:00Z",
+     "target_utc": "2026-07-24T22:02:59Z",
+     "known_minus_target_s": -79379.092,
+     "strictly_earlier": true,
+     "fetched_at_utc": null,
+     "used_in_strict_rescore": true
+    }
+   ],
+   "strict_added_inputs": [],
+   "filter_state_prior_days": {
+    "last_anchor_utc": "2026-07-23T22:02:18Z",
+    "max_known_at_utc": "2026-07-23T22:02:18Z",
+    "max_known_minus_target_s": -86440.521
+   },
+   "noise_params_mle": {
+    "block_start": "2026-07-24",
+    "train_days_before": 101,
+    "train_includes_target_day": false,
+    "max_known_at_utc": "2026-07-23T22:02:18Z",
+    "max_known_minus_target_s": -86440.521
+   },
+   "anchor_perturbation_abs_diff_log": 0.0
+  },
+  {
+   "date": "2026-07-25",
+   "day_type": "weekend",
+   "set_A": true,
+   "set_B": true,
+   "target_utc": "2026-07-25T21:52:24Z",
+   "registered_same_day_inputs": [
+    {
+     "source": "grt",
+     "obs_time_utc": "2026-07-25T19:31:51Z",
+     "known_at_utc": "2026-07-25T19:31:51Z",
+     "target_utc": "2026-07-25T21:52:24Z",
+     "known_minus_target_s": -8433.826,
+     "strictly_earlier": true,
+     "fetched_at_utc": null,
+     "used_in_strict_rescore": true
+    },
+    {
+     "source": "malabar",
+     "obs_time_utc": "2026-07-25T19:31:51Z",
+     "known_at_utc": "2026-07-25T19:31:51Z",
+     "target_utc": "2026-07-25T21:52:24Z",
+     "known_minus_target_s": -8433.826,
+     "strictly_earlier": true,
+     "fetched_at_utc": null,
+     "used_in_strict_rescore": true
+    },
+    {
+     "source": "comex",
+     "obs_time_utc": "2026-07-24T00:00:00Z",
+     "known_at_utc": "2026-07-25T00:00:00Z",
+     "target_utc": "2026-07-25T21:52:24Z",
+     "known_minus_target_s": -78744.826,
+     "strictly_earlier": true,
+     "fetched_at_utc": null,
+     "used_in_strict_rescore": true
+    }
+   ],
+   "strict_added_inputs": [],
+   "filter_state_prior_days": {
+    "last_anchor_utc": "2026-07-24T22:02:59Z",
+    "max_known_at_utc": "2026-07-24T22:02:59Z",
+    "max_known_minus_target_s": -85765.734
+   },
+   "noise_params_mle": {
+    "block_start": "2026-07-24",
+    "train_days_before": 101,
+    "train_includes_target_day": false,
+    "max_known_at_utc": "2026-07-23T22:02:18Z",
+    "max_known_minus_target_s": -172206.255
+   },
+   "anchor_perturbation_abs_diff_log": 0.0
+  },
+  {
+   "date": "2026-07-26",
+   "day_type": "weekend",
+   "set_A": true,
+   "set_B": true,
+   "target_utc": "2026-07-26T05:58:28Z",
+   "registered_same_day_inputs": [
+    {
+     "source": "grt",
+     "obs_time_utc": "2026-07-26T19:32:22Z",
+     "known_at_utc": "2026-07-26T19:32:22Z",
+     "target_utc": "2026-07-26T05:58:28Z",
+     "known_minus_target_s": 48833.052,
+     "strictly_earlier": false,
+     "fetched_at_utc": null,
+     "used_in_strict_rescore": false
+    }
+   ],
+   "strict_added_inputs": [
+    {
+     "source": "grt",
+     "obs_time_utc": "2026-07-26T03:51:37Z",
+     "known_at_utc": "2026-07-26T03:51:37Z",
+     "known_minus_target_s": -7611.948
+    }
+   ],
+   "filter_state_prior_days": {
+    "last_anchor_utc": "2026-07-25T21:52:24Z",
+    "max_known_at_utc": "2026-07-25T21:52:24Z",
+    "max_known_minus_target_s": -29164.122
+   },
+   "noise_params_mle": {
+    "block_start": "2026-07-24",
+    "train_days_before": 101,
+    "train_includes_target_day": false,
+    "max_known_at_utc": "2026-07-23T22:02:18Z",
+    "max_known_minus_target_s": -201370.377
+   },
+   "anchor_perturbation_abs_diff_log": 0.0
+  },
+  {
+   "date": "2026-07-30",
+   "day_type": "ibja_day",
+   "set_A": true,
+   "set_B": true,
+   "target_utc": "2026-07-30T22:03:23Z",
+   "registered_same_day_inputs": [
+    {
+     "source": "ibja_am",
+     "obs_time_utc": "2026-07-30T00:00:00Z",
+     "known_at_utc": "2026-07-30T06:30:00Z",
+     "target_utc": "2026-07-30T22:03:23Z",
+     "known_minus_target_s": -56003.589,
+     "strictly_earlier": true,
+     "fetched_at_utc": "2026-07-30T13:50:06Z",
+     "used_in_strict_rescore": true
+    },
+    {
+     "source": "ibja_pm",
+     "obs_time_utc": "2026-07-30T00:00:00Z",
+     "known_at_utc": "2026-07-30T11:30:00Z",
+     "target_utc": "2026-07-30T22:03:23Z",
+     "known_minus_target_s": -38003.589,
+     "strictly_earlier": true,
+     "fetched_at_utc": "2026-07-30T13:50:06Z",
+     "used_in_strict_rescore": true
+    },
+    {
+     "source": "grt",
+     "obs_time_utc": "2026-07-30T19:48:06Z",
+     "known_at_utc": "2026-07-30T19:48:06Z",
+     "target_utc": "2026-07-30T22:03:23Z",
+     "known_minus_target_s": -8117.589,
+     "strictly_earlier": true,
+     "fetched_at_utc": null,
+     "used_in_strict_rescore": true
+    },
+    {
+     "source": "malabar",
+     "obs_time_utc": "2026-07-30T19:48:06Z",
+     "known_at_utc": "2026-07-30T19:48:06Z",
+     "target_utc": "2026-07-30T22:03:23Z",
+     "known_minus_target_s": -8117.589,
+     "strictly_earlier": true,
+     "fetched_at_utc": null,
+     "used_in_strict_rescore": true
+    },
+    {
+     "source": "comex",
+     "obs_time_utc": "2026-07-29T00:00:00Z",
+     "known_at_utc": "2026-07-30T00:00:00Z",
+     "target_utc": "2026-07-30T22:03:23Z",
+     "known_minus_target_s": -79403.589,
+     "strictly_earlier": true,
+     "fetched_at_utc": null,
+     "used_in_strict_rescore": true
+    }
+   ],
+   "strict_added_inputs": [],
+   "filter_state_prior_days": {
+    "last_anchor_utc": "2026-07-26T05:58:28Z",
+    "max_known_at_utc": "2026-07-29T19:40:12Z",
+    "max_known_minus_target_s": -94991.589
+   },
+   "noise_params_mle": {
+    "block_start": "2026-07-24",
+    "train_days_before": 101,
+    "train_includes_target_day": false,
+    "max_known_at_utc": "2026-07-23T22:02:18Z",
+    "max_known_minus_target_s": -604865.018
+   },
+   "anchor_perturbation_abs_diff_log": 0.0
+  },
+  {
+   "date": "2026-07-31",
+   "day_type": "ibja_day",
+   "set_A": true,
+   "set_B": true,
+   "target_utc": "2026-07-31T22:01:44Z",
+   "registered_same_day_inputs": [
+    {
+     "source": "ibja_am",
+     "obs_time_utc": "2026-07-31T00:00:00Z",
+     "known_at_utc": "2026-07-31T06:30:00Z",
+     "target_utc": "2026-07-31T22:01:44Z",
+     "known_minus_target_s": -55904.504,
+     "strictly_earlier": true,
+     "fetched_at_utc": "2026-07-31T13:55:38Z",
+     "used_in_strict_rescore": true
+    },
+    {
+     "source": "ibja_pm",
+     "obs_time_utc": "2026-07-31T00:00:00Z",
+     "known_at_utc": "2026-07-31T11:30:00Z",
+     "target_utc": "2026-07-31T22:01:44Z",
+     "known_minus_target_s": -37904.504,
+     "strictly_earlier": true,
+     "fetched_at_utc": "2026-07-31T13:55:38Z",
+     "used_in_strict_rescore": true
+    },
+    {
+     "source": "grt",
+     "obs_time_utc": "2026-07-31T19:49:00Z",
+     "known_at_utc": "2026-07-31T19:49:00Z",
+     "target_utc": "2026-07-31T22:01:44Z",
+     "known_minus_target_s": -7964.504,
+     "strictly_earlier": true,
+     "fetched_at_utc": null,
+     "used_in_strict_rescore": true
+    },
+    {
+     "source": "malabar",
+     "obs_time_utc": "2026-07-31T19:49:00Z",
+     "known_at_utc": "2026-07-31T19:49:00Z",
+     "target_utc": "2026-07-31T22:01:44Z",
+     "known_minus_target_s": -7964.504,
+     "strictly_earlier": true,
+     "fetched_at_utc": null,
+     "used_in_strict_rescore": true
+    },
+    {
+     "source": "comex",
+     "obs_time_utc": "2026-07-30T00:00:00Z",
+     "known_at_utc": "2026-07-31T00:00:00Z",
+     "target_utc": "2026-07-31T22:01:44Z",
+     "known_minus_target_s": -79304.504,
+     "strictly_earlier": true,
+     "fetched_at_utc": null,
+     "used_in_strict_rescore": true
+    }
+   ],
+   "strict_added_inputs": [],
+   "filter_state_prior_days": {
+    "last_anchor_utc": "2026-07-30T22:03:23Z",
+    "max_known_at_utc": "2026-07-30T22:03:23Z",
+    "max_known_minus_target_s": -86300.915
+   },
+   "noise_params_mle": {
+    "block_start": "2026-07-31",
+    "train_days_before": 108,
+    "train_includes_target_day": false,
+    "max_known_at_utc": "2026-07-30T22:03:23Z",
+    "max_known_minus_target_s": -86300.915
+   },
+   "anchor_perturbation_abs_diff_log": 0.0
+  },
+  {
+   "date": "2026-08-01",
+   "day_type": "weekend",
+   "set_A": true,
+   "set_B": true,
+   "target_utc": "2026-08-01T15:58:54Z",
+   "registered_same_day_inputs": [
+    {
+     "source": "grt",
+     "obs_time_utc": "2026-08-01T19:30:39Z",
+     "known_at_utc": "2026-08-01T19:30:39Z",
+     "target_utc": "2026-08-01T15:58:54Z",
+     "known_minus_target_s": 12704.766,
+     "strictly_earlier": false,
+     "fetched_at_utc": null,
+     "used_in_strict_rescore": false
+    },
+    {
+     "source": "malabar",
+     "obs_time_utc": "2026-08-01T19:30:39Z",
+     "known_at_utc": "2026-08-01T19:30:39Z",
+     "target_utc": "2026-08-01T15:58:54Z",
+     "known_minus_target_s": 12704.766,
+     "strictly_earlier": false,
+     "fetched_at_utc": null,
+     "used_in_strict_rescore": false
+    },
+    {
+     "source": "comex",
+     "obs_time_utc": "2026-07-31T00:00:00Z",
+     "known_at_utc": "2026-08-01T00:00:00Z",
+     "target_utc": "2026-08-01T15:58:54Z",
+     "known_minus_target_s": -57534.234,
+     "strictly_earlier": true,
+     "fetched_at_utc": null,
+     "used_in_strict_rescore": true
+    }
+   ],
+   "strict_added_inputs": [
+    {
+     "source": "grt",
+     "obs_time_utc": "2026-08-01T13:50:40Z",
+     "known_at_utc": "2026-08-01T13:50:40Z",
+     "known_minus_target_s": -7694.234
+    },
+    {
+     "source": "malabar",
+     "obs_time_utc": "2026-08-01T13:50:40Z",
+     "known_at_utc": "2026-08-01T13:50:40Z",
+     "known_minus_target_s": -7694.234
+    }
+   ],
+   "filter_state_prior_days": {
+    "last_anchor_utc": "2026-07-31T22:01:44Z",
+    "max_known_at_utc": "2026-07-31T22:01:44Z",
+    "max_known_minus_target_s": -64629.73
+   },
+   "noise_params_mle": {
+    "block_start": "2026-07-31",
+    "train_days_before": 108,
+    "train_includes_target_day": false,
+    "max_known_at_utc": "2026-07-30T22:03:23Z",
+    "max_known_minus_target_s": -150930.645
+   },
+   "anchor_perturbation_abs_diff_log": 0.0
+  },
+  {
+   "date": "2026-08-04",
+   "day_type": "ibja_day",
+   "set_A": true,
+   "set_B": true,
+   "target_utc": "2026-08-04T22:08:50Z",
+   "registered_same_day_inputs": [
+    {
+     "source": "ibja_am",
+     "obs_time_utc": "2026-08-04T00:00:00Z",
+     "known_at_utc": "2026-08-04T06:30:00Z",
+     "target_utc": "2026-08-04T22:08:50Z",
+     "known_minus_target_s": -56330.333,
+     "strictly_earlier": true,
+     "fetched_at_utc": "2026-08-04T14:01:31Z",
+     "used_in_strict_rescore": true
+    },
+    {
+     "source": "ibja_pm",
+     "obs_time_utc": "2026-08-04T00:00:00Z",
+     "known_at_utc": "2026-08-04T11:30:00Z",
+     "target_utc": "2026-08-04T22:08:50Z",
+     "known_minus_target_s": -38330.333,
+     "strictly_earlier": true,
+     "fetched_at_utc": "2026-08-04T14:01:31Z",
+     "used_in_strict_rescore": true
+    },
+    {
+     "source": "grt",
+     "obs_time_utc": "2026-08-04T19:53:23Z",
+     "known_at_utc": "2026-08-04T19:53:23Z",
+     "target_utc": "2026-08-04T22:08:50Z",
+     "known_minus_target_s": -8127.333,
+     "strictly_earlier": true,
+     "fetched_at_utc": null,
+     "used_in_strict_rescore": true
+    },
+    {
+     "source": "malabar",
+     "obs_time_utc": "2026-08-04T19:53:23Z",
+     "known_at_utc": "2026-08-04T19:53:23Z",
+     "target_utc": "2026-08-04T22:08:50Z",
+     "known_minus_target_s": -8127.333,
+     "strictly_earlier": true,
+     "fetched_at_utc": null,
+     "used_in_strict_rescore": true
+    },
+    {
+     "source": "comex",
+     "obs_time_utc": "2026-08-03T00:00:00Z",
+     "known_at_utc": "2026-08-04T00:00:00Z",
+     "target_utc": "2026-08-04T22:08:50Z",
+     "known_minus_target_s": -79730.333,
+     "strictly_earlier": true,
+     "fetched_at_utc": null,
+     "used_in_strict_rescore": true
+    }
+   ],
+   "strict_added_inputs": [],
+   "filter_state_prior_days": {
+    "last_anchor_utc": "2026-08-01T15:58:54Z",
+    "max_known_at_utc": "2026-08-03T19:58:53Z",
+    "max_known_minus_target_s": -94197.333
+   },
+   "noise_params_mle": {
+    "block_start": "2026-07-31",
+    "train_days_before": 108,
+    "train_includes_target_day": false,
+    "max_known_at_utc": "2026-07-30T22:03:23Z",
+    "max_known_minus_target_s": -432326.744
+   },
+   "anchor_perturbation_abs_diff_log": 0.0
+  },
+  {
+   "date": "2026-08-05",
+   "day_type": "ibja_day",
+   "set_A": true,
+   "set_B": true,
+   "target_utc": "2026-08-05T16:29:29Z",
+   "registered_same_day_inputs": [
+    {
+     "source": "ibja_am",
+     "obs_time_utc": "2026-08-05T00:00:00Z",
+     "known_at_utc": "2026-08-05T06:30:00Z",
+     "target_utc": "2026-08-05T16:29:29Z",
+     "known_minus_target_s": -35969.265,
+     "strictly_earlier": true,
+     "fetched_at_utc": "2026-08-05T11:43:51Z",
+     "used_in_strict_rescore": true
+    },
+    {
+     "source": "ibja_pm",
+     "obs_time_utc": "2026-08-05T00:00:00Z",
+     "known_at_utc": "2026-08-05T11:30:00Z",
+     "target_utc": "2026-08-05T16:29:29Z",
+     "known_minus_target_s": -17969.265,
+     "strictly_earlier": true,
+     "fetched_at_utc": "2026-08-05T11:43:51Z",
+     "used_in_strict_rescore": true
+    },
+    {
+     "source": "grt",
+     "obs_time_utc": "2026-08-05T19:51:22Z",
+     "known_at_utc": "2026-08-05T19:51:22Z",
+     "target_utc": "2026-08-05T16:29:29Z",
+     "known_minus_target_s": 12112.735,
+     "strictly_earlier": false,
+     "fetched_at_utc": null,
+     "used_in_strict_rescore": false
+    },
+    {
+     "source": "malabar",
+     "obs_time_utc": "2026-08-05T19:51:22Z",
+     "known_at_utc": "2026-08-05T19:51:22Z",
+     "target_utc": "2026-08-05T16:29:29Z",
+     "known_minus_target_s": 12112.735,
+     "strictly_earlier": false,
+     "fetched_at_utc": null,
+     "used_in_strict_rescore": false
+    },
+    {
+     "source": "comex",
+     "obs_time_utc": "2026-08-04T00:00:00Z",
+     "known_at_utc": "2026-08-05T00:00:00Z",
+     "target_utc": "2026-08-05T16:29:29Z",
+     "known_minus_target_s": -59369.265,
+     "strictly_earlier": true,
+     "fetched_at_utc": null,
+     "used_in_strict_rescore": true
+    }
+   ],
+   "strict_added_inputs": [
+    {
+     "source": "grt",
+     "obs_time_utc": "2026-08-05T14:29:35Z",
+     "known_at_utc": "2026-08-05T14:29:35Z",
+     "known_minus_target_s": -7194.265
+    },
+    {
+     "source": "malabar",
+     "obs_time_utc": "2026-08-05T14:29:35Z",
+     "known_at_utc": "2026-08-05T14:29:35Z",
+     "known_minus_target_s": -7194.265
+    }
+   ],
+   "filter_state_prior_days": {
+    "last_anchor_utc": "2026-08-04T22:08:50Z",
+    "max_known_at_utc": "2026-08-04T22:08:50Z",
+    "max_known_minus_target_s": -66038.932
+   },
+   "noise_params_mle": {
+    "block_start": "2026-07-31",
+    "train_days_before": 108,
+    "train_includes_target_day": false,
+    "max_known_at_utc": "2026-07-30T22:03:23Z",
+    "max_known_minus_target_s": -498365.676
+   },
+   "anchor_perturbation_abs_diff_log": 0.0
+  },
+  {
+   "date": "2026-08-06",
+   "day_type": "ibja_day",
+   "set_A": true,
+   "set_B": true,
+   "target_utc": "2026-08-06T14:29:16Z",
+   "registered_same_day_inputs": [
+    {
+     "source": "ibja_am",
+     "obs_time_utc": "2026-08-06T00:00:00Z",
+     "known_at_utc": "2026-08-06T06:30:00Z",
+     "target_utc": "2026-08-06T14:29:16Z",
+     "known_minus_target_s": -28756.628,
+     "strictly_earlier": true,
+     "fetched_at_utc": "2026-08-06T13:06:51Z",
+     "used_in_strict_rescore": true
+    },
+    {
+     "source": "ibja_pm",
+     "obs_time_utc": "2026-08-06T00:00:00Z",
+     "known_at_utc": "2026-08-06T11:30:00Z",
+     "target_utc": "2026-08-06T14:29:16Z",
+     "known_minus_target_s": -10756.628,
+     "strictly_earlier": true,
+     "fetched_at_utc": "2026-08-06T13:06:51Z",
+     "used_in_strict_rescore": true
+    },
+    {
+     "source": "grt",
+     "obs_time_utc": "2026-08-06T14:29:01Z",
+     "known_at_utc": "2026-08-06T14:29:01Z",
+     "target_utc": "2026-08-06T14:29:16Z",
+     "known_minus_target_s": -15.628,
+     "strictly_earlier": true,
+     "fetched_at_utc": null,
+     "used_in_strict_rescore": true
+    },
+    {
+     "source": "comex",
+     "obs_time_utc": "2026-08-05T00:00:00Z",
+     "known_at_utc": "2026-08-06T00:00:00Z",
+     "target_utc": "2026-08-06T14:29:16Z",
+     "known_minus_target_s": -52156.628,
+     "strictly_earlier": true,
+     "fetched_at_utc": null,
+     "used_in_strict_rescore": true
+    }
+   ],
+   "strict_added_inputs": [],
+   "filter_state_prior_days": {
+    "last_anchor_utc": "2026-08-05T16:29:29Z",
+    "max_known_at_utc": "2026-08-05T19:51:22Z",
+    "max_known_minus_target_s": -67074.628
+   },
+   "noise_params_mle": {
+    "block_start": "2026-07-31",
+    "train_days_before": 108,
+    "train_includes_target_day": false,
+    "max_known_at_utc": "2026-07-30T22:03:23Z",
+    "max_known_minus_target_s": -577553.039
+   },
+   "anchor_perturbation_abs_diff_log": 0.0
+  },
+  {
+   "date": "2026-08-07",
+   "day_type": "ibja_day",
+   "set_A": true,
+   "set_B": true,
+   "target_utc": "2026-08-07T12:54:54Z",
+   "registered_same_day_inputs": [
+    {
+     "source": "ibja_am",
+     "obs_time_utc": "2026-08-07T00:00:00Z",
+     "known_at_utc": "2026-08-07T06:30:00Z",
+     "target_utc": "2026-08-07T12:54:54Z",
+     "known_minus_target_s": -23094.158,
+     "strictly_earlier": true,
+     "fetched_at_utc": "2026-08-07T12:54:22Z",
+     "used_in_strict_rescore": true
+    },
+    {
+     "source": "ibja_pm",
+     "obs_time_utc": "2026-08-07T00:00:00Z",
+     "known_at_utc": "2026-08-07T11:30:00Z",
+     "target_utc": "2026-08-07T12:54:54Z",
+     "known_minus_target_s": -5094.158,
+     "strictly_earlier": true,
+     "fetched_at_utc": "2026-08-07T12:54:22Z",
+     "used_in_strict_rescore": true
+    },
+    {
+     "source": "grt",
+     "obs_time_utc": "2026-08-07T19:12:06Z",
+     "known_at_utc": "2026-08-07T19:12:06Z",
+     "target_utc": "2026-08-07T12:54:54Z",
+     "known_minus_target_s": 22631.842,
+     "strictly_earlier": false,
+     "fetched_at_utc": null,
+     "used_in_strict_rescore": false
+    },
+    {
+     "source": "malabar",
+     "obs_time_utc": "2026-08-07T19:12:06Z",
+     "known_at_utc": "2026-08-07T19:12:06Z",
+     "target_utc": "2026-08-07T12:54:54Z",
+     "known_minus_target_s": 22631.842,
+     "strictly_earlier": false,
+     "fetched_at_utc": null,
+     "used_in_strict_rescore": false
+    },
+    {
+     "source": "comex",
+     "obs_time_utc": "2026-08-06T00:00:00Z",
+     "known_at_utc": "2026-08-07T00:00:00Z",
+     "target_utc": "2026-08-07T12:54:54Z",
+     "known_minus_target_s": -46494.158,
+     "strictly_earlier": true,
+     "fetched_at_utc": null,
+     "used_in_strict_rescore": true
+    }
+   ],
+   "strict_added_inputs": [
+    {
+     "source": "grt",
+     "obs_time_utc": "2026-08-07T07:39:08Z",
+     "known_at_utc": "2026-08-07T07:39:08Z",
+     "known_minus_target_s": -18946.158
+    },
+    {
+     "source": "malabar",
+     "obs_time_utc": "2026-08-07T07:39:08Z",
+     "known_at_utc": "2026-08-07T07:39:08Z",
+     "known_minus_target_s": -18946.158
+    }
+   ],
+   "filter_state_prior_days": {
+    "last_anchor_utc": "2026-08-06T14:29:16Z",
+    "max_known_at_utc": "2026-08-06T14:29:16Z",
+    "max_known_minus_target_s": -80737.53
+   },
+   "noise_params_mle": {
+    "block_start": "2026-08-07",
+    "train_days_before": 115,
+    "train_includes_target_day": false,
+    "max_known_at_utc": "2026-08-06T14:29:16Z",
+    "max_known_minus_target_s": -80737.53
+   },
+   "anchor_perturbation_abs_diff_log": 0.0
+  },
+  {
+   "date": "2026-08-10",
+   "day_type": "ibja_day",
+   "set_A": true,
+   "set_B": true,
+   "target_utc": "2026-08-10T13:01:26Z",
+   "registered_same_day_inputs": [
+    {
+     "source": "ibja_am",
+     "obs_time_utc": "2026-08-10T00:00:00Z",
+     "known_at_utc": "2026-08-10T06:30:00Z",
+     "target_utc": "2026-08-10T13:01:26Z",
+     "known_minus_target_s": -23486.638,
+     "strictly_earlier": true,
+     "fetched_at_utc": "2026-08-10T12:58:26Z",
+     "used_in_strict_rescore": true
+    },
+    {
+     "source": "ibja_pm",
+     "obs_time_utc": "2026-08-10T00:00:00Z",
+     "known_at_utc": "2026-08-10T11:30:00Z",
+     "target_utc": "2026-08-10T13:01:26Z",
+     "known_minus_target_s": -5486.638,
+     "strictly_earlier": true,
+     "fetched_at_utc": "2026-08-10T12:58:26Z",
+     "used_in_strict_rescore": true
+    },
+    {
+     "source": "grt",
+     "obs_time_utc": "2026-08-10T13:40:00Z",
+     "known_at_utc": "2026-08-10T13:40:00Z",
+     "target_utc": "2026-08-10T13:01:26Z",
+     "known_minus_target_s": 2313.362,
+     "strictly_earlier": false,
+     "fetched_at_utc": null,
+     "used_in_strict_rescore": false
+    },
+    {
+     "source": "malabar",
+     "obs_time_utc": "2026-08-10T13:40:00Z",
+     "known_at_utc": "2026-08-10T13:40:00Z",
+     "target_utc": "2026-08-10T13:01:26Z",
+     "known_minus_target_s": 2313.362,
+     "strictly_earlier": false,
+     "fetched_at_utc": null,
+     "used_in_strict_rescore": false
+    }
+   ],
+   "strict_added_inputs": [
+    {
+     "source": "grt",
+     "obs_time_utc": "2026-08-10T08:01:15Z",
+     "known_at_utc": "2026-08-10T08:01:15Z",
+     "known_minus_target_s": -18011.638
+    },
+    {
+     "source": "malabar",
+     "obs_time_utc": "2026-08-10T08:01:15Z",
+     "known_at_utc": "2026-08-10T08:01:15Z",
+     "known_minus_target_s": -18011.638
+    }
+   ],
+   "filter_state_prior_days": {
+    "last_anchor_utc": "2026-08-07T12:54:54Z",
+    "max_known_at_utc": "2026-08-09T18:58:06Z",
+    "max_known_minus_target_s": -65000.638
+   },
+   "noise_params_mle": {
+    "block_start": "2026-08-07",
+    "train_days_before": 115,
+    "train_includes_target_day": false,
+    "max_known_at_utc": "2026-08-06T14:29:16Z",
+    "max_known_minus_target_s": -340330.01
+   },
+   "anchor_perturbation_abs_diff_log": 0.0
+  },
+  {
+   "date": "2026-08-11",
+   "day_type": "ibja_day",
+   "set_A": true,
+   "set_B": true,
+   "target_utc": "2026-08-11T21:42:17Z",
+   "registered_same_day_inputs": [
+    {
+     "source": "ibja_am",
+     "obs_time_utc": "2026-08-11T00:00:00Z",
+     "known_at_utc": "2026-08-11T06:30:00Z",
+     "target_utc": "2026-08-11T21:42:17Z",
+     "known_minus_target_s": -54737.869,
+     "strictly_earlier": true,
+     "fetched_at_utc": "2026-08-11T12:54:24Z",
+     "used_in_strict_rescore": true
+    },
+    {
+     "source": "ibja_pm",
+     "obs_time_utc": "2026-08-11T00:00:00Z",
+     "known_at_utc": "2026-08-11T11:30:00Z",
+     "target_utc": "2026-08-11T21:42:17Z",
+     "known_minus_target_s": -36737.869,
+     "strictly_earlier": true,
+     "fetched_at_utc": "2026-08-11T12:54:24Z",
+     "used_in_strict_rescore": true
+    },
+    {
+     "source": "grt",
+     "obs_time_utc": "2026-08-11T19:17:13Z",
+     "known_at_utc": "2026-08-11T19:17:13Z",
+     "target_utc": "2026-08-11T21:42:17Z",
+     "known_minus_target_s": -8704.869,
+     "strictly_earlier": true,
+     "fetched_at_utc": null,
+     "used_in_strict_rescore": true
+    },
+    {
+     "source": "malabar",
+     "obs_time_utc": "2026-08-11T19:17:13Z",
+     "known_at_utc": "2026-08-11T19:17:13Z",
+     "target_utc": "2026-08-11T21:42:17Z",
+     "known_minus_target_s": -8704.869,
+     "strictly_earlier": true,
+     "fetched_at_utc": null,
+     "used_in_strict_rescore": true
+    },
+    {
+     "source": "comex",
+     "obs_time_utc": "2026-08-10T00:00:00Z",
+     "known_at_utc": "2026-08-11T00:00:00Z",
+     "target_utc": "2026-08-11T21:42:17Z",
+     "known_minus_target_s": -78137.869,
+     "strictly_earlier": true,
+     "fetched_at_utc": null,
+     "used_in_strict_rescore": true
+    }
+   ],
+   "strict_added_inputs": [],
+   "filter_state_prior_days": {
+    "last_anchor_utc": "2026-08-10T13:01:26Z",
+    "max_known_at_utc": "2026-08-10T13:40:00Z",
+    "max_known_minus_target_s": -115337.869
+   },
+   "noise_params_mle": {
+    "block_start": "2026-08-07",
+    "train_days_before": 115,
+    "train_includes_target_day": false,
+    "max_known_at_utc": "2026-08-06T14:29:16Z",
+    "max_known_minus_target_s": -457981.241
+   },
+   "anchor_perturbation_abs_diff_log": 0.0
+  },
+  {
+   "date": "2026-08-12",
+   "day_type": "ibja_day",
+   "set_A": true,
+   "set_B": true,
+   "target_utc": "2026-08-12T21:41:56Z",
+   "registered_same_day_inputs": [
+    {
+     "source": "ibja_am",
+     "obs_time_utc": "2026-08-12T00:00:00Z",
+     "known_at_utc": "2026-08-12T06:30:00Z",
+     "target_utc": "2026-08-12T21:41:56Z",
+     "known_minus_target_s": -54716.954,
+     "strictly_earlier": true,
+     "fetched_at_utc": "2026-08-12T12:59:51Z",
+     "used_in_strict_rescore": true
+    },
+    {
+     "source": "ibja_pm",
+     "obs_time_utc": "2026-08-12T00:00:00Z",
+     "known_at_utc": "2026-08-12T11:30:00Z",
+     "target_utc": "2026-08-12T21:41:56Z",
+     "known_minus_target_s": -36716.954,
+     "strictly_earlier": true,
+     "fetched_at_utc": "2026-08-12T12:59:51Z",
+     "used_in_strict_rescore": true
+    },
+    {
+     "source": "grt",
+     "obs_time_utc": "2026-08-12T19:16:53Z",
+     "known_at_utc": "2026-08-12T19:16:53Z",
+     "target_utc": "2026-08-12T21:41:56Z",
+     "known_minus_target_s": -8703.954,
+     "strictly_earlier": true,
+     "fetched_at_utc": null,
+     "used_in_strict_rescore": true
+    },
+    {
+     "source": "malabar",
+     "obs_time_utc": "2026-08-12T19:16:53Z",
+     "known_at_utc": "2026-08-12T19:16:53Z",
+     "target_utc": "2026-08-12T21:41:56Z",
+     "known_minus_target_s": -8703.954,
+     "strictly_earlier": true,
+     "fetched_at_utc": null,
+     "used_in_strict_rescore": true
+    },
+    {
+     "source": "comex",
+     "obs_time_utc": "2026-08-11T00:00:00Z",
+     "known_at_utc": "2026-08-12T00:00:00Z",
+     "target_utc": "2026-08-12T21:41:56Z",
+     "known_minus_target_s": -78116.954,
+     "strictly_earlier": true,
+     "fetched_at_utc": null,
+     "used_in_strict_rescore": true
+    }
+   ],
+   "strict_added_inputs": [],
+   "filter_state_prior_days": {
+    "last_anchor_utc": "2026-08-11T21:42:17Z",
+    "max_known_at_utc": "2026-08-11T21:42:17Z",
+    "max_known_minus_target_s": -86379.085
+   },
+   "noise_params_mle": {
+    "block_start": "2026-08-07",
+    "train_days_before": 115,
+    "train_includes_target_day": false,
+    "max_known_at_utc": "2026-08-06T14:29:16Z",
+    "max_known_minus_target_s": -544360.326
+   },
+   "anchor_perturbation_abs_diff_log": 0.0
+  },
+  {
+   "date": "2026-08-13",
+   "day_type": "ibja_day",
+   "set_A": true,
+   "set_B": true,
+   "target_utc": "2026-08-13T18:58:43Z",
+   "registered_same_day_inputs": [
+    {
+     "source": "ibja_am",
+     "obs_time_utc": "2026-08-13T00:00:00Z",
+     "known_at_utc": "2026-08-13T06:30:00Z",
+     "target_utc": "2026-08-13T18:58:43Z",
+     "known_minus_target_s": -44923.259,
+     "strictly_earlier": true,
+     "fetched_at_utc": "2026-08-13T13:00:31Z",
+     "used_in_strict_rescore": true
+    },
+    {
+     "source": "ibja_pm",
+     "obs_time_utc": "2026-08-13T00:00:00Z",
+     "known_at_utc": "2026-08-13T11:30:00Z",
+     "target_utc": "2026-08-13T18:58:43Z",
+     "known_minus_target_s": -26923.259,
+     "strictly_earlier": true,
+     "fetched_at_utc": "2026-08-13T13:00:31Z",
+     "used_in_strict_rescore": true
+    },
+    {
+     "source": "grt",
+     "obs_time_utc": "2026-08-13T19:17:13Z",
+     "known_at_utc": "2026-08-13T19:17:13Z",
+     "target_utc": "2026-08-13T18:58:43Z",
+     "known_minus_target_s": 1109.741,
+     "strictly_earlier": false,
+     "fetched_at_utc": null,
+     "used_in_strict_rescore": false
+    },
+    {
+     "source": "malabar",
+     "obs_time_utc": "2026-08-13T19:17:13Z",
+     "known_at_utc": "2026-08-13T19:17:13Z",
+     "target_utc": "2026-08-13T18:58:43Z",
+     "known_minus_target_s": 1109.741,
+     "strictly_earlier": false,
+     "fetched_at_utc": null,
+     "used_in_strict_rescore": false
+    },
+    {
+     "source": "comex",
+     "obs_time_utc": "2026-08-12T00:00:00Z",
+     "known_at_utc": "2026-08-13T00:00:00Z",
+     "target_utc": "2026-08-13T18:58:43Z",
+     "known_minus_target_s": -68323.259,
+     "strictly_earlier": true,
+     "fetched_at_utc": null,
+     "used_in_strict_rescore": true
+    }
+   ],
+   "strict_added_inputs": [
+    {
+     "source": "grt",
+     "obs_time_utc": "2026-08-13T13:42:02Z",
+     "known_at_utc": "2026-08-13T13:42:02Z",
+     "known_minus_target_s": -19001.259
+    },
+    {
+     "source": "malabar",
+     "obs_time_utc": "2026-08-13T13:42:02Z",
+     "known_at_utc": "2026-08-13T13:42:02Z",
+     "known_minus_target_s": -19001.259
+    }
+   ],
+   "filter_state_prior_days": {
+    "last_anchor_utc": "2026-08-12T21:41:56Z",
+    "max_known_at_utc": "2026-08-12T21:41:56Z",
+    "max_known_minus_target_s": -76606.305
+   },
+   "noise_params_mle": {
+    "block_start": "2026-08-07",
+    "train_days_before": 115,
+    "train_includes_target_day": false,
+    "max_known_at_utc": "2026-08-06T14:29:16Z",
+    "max_known_minus_target_s": -620966.631
+   },
+   "anchor_perturbation_abs_diff_log": 0.0
+  },
+  {
+   "date": "2026-08-14",
+   "day_type": "ibja_day",
+   "set_A": true,
+   "set_B": true,
+   "target_utc": "2026-08-14T21:22:02Z",
+   "registered_same_day_inputs": [
+    {
+     "source": "ibja_am",
+     "obs_time_utc": "2026-08-14T00:00:00Z",
+     "known_at_utc": "2026-08-14T06:30:00Z",
+     "target_utc": "2026-08-14T21:22:02Z",
+     "known_minus_target_s": -53522.351,
+     "strictly_earlier": true,
+     "fetched_at_utc": "2026-08-14T12:56:55Z",
+     "used_in_strict_rescore": true
+    },
+    {
+     "source": "ibja_pm",
+     "obs_time_utc": "2026-08-14T00:00:00Z",
+     "known_at_utc": "2026-08-14T11:30:00Z",
+     "target_utc": "2026-08-14T21:22:02Z",
+     "known_minus_target_s": -35522.351,
+     "strictly_earlier": true,
+     "fetched_at_utc": "2026-08-14T12:56:55Z",
+     "used_in_strict_rescore": true
+    },
+    {
+     "source": "grt",
+     "obs_time_utc": "2026-08-14T19:10:28Z",
+     "known_at_utc": "2026-08-14T19:10:28Z",
+     "target_utc": "2026-08-14T21:22:02Z",
+     "known_minus_target_s": -7894.351,
+     "strictly_earlier": true,
+     "fetched_at_utc": null,
+     "used_in_strict_rescore": true
+    },
+    {
+     "source": "malabar",
+     "obs_time_utc": "2026-08-14T13:37:20Z",
+     "known_at_utc": "2026-08-14T13:37:20Z",
+     "target_utc": "2026-08-14T21:22:02Z",
+     "known_minus_target_s": -27882.351,
+     "strictly_earlier": true,
+     "fetched_at_utc": null,
+     "used_in_strict_rescore": true
+    },
+    {
+     "source": "comex",
+     "obs_time_utc": "2026-08-13T00:00:00Z",
+     "known_at_utc": "2026-08-14T00:00:00Z",
+     "target_utc": "2026-08-14T21:22:02Z",
+     "known_minus_target_s": -76922.351,
+     "strictly_earlier": true,
+     "fetched_at_utc": null,
+     "used_in_strict_rescore": true
+    }
+   ],
+   "strict_added_inputs": [],
+   "filter_state_prior_days": {
+    "last_anchor_utc": "2026-08-13T18:58:43Z",
+    "max_known_at_utc": "2026-08-13T19:17:13Z",
+    "max_known_minus_target_s": -93889.351
+   },
+   "noise_params_mle": {
+    "block_start": "2026-08-14",
+    "train_days_before": 122,
+    "train_includes_target_day": false,
+    "max_known_at_utc": "2026-08-13T19:17:13Z",
+    "max_known_minus_target_s": -93889.351
+   },
+   "anchor_perturbation_abs_diff_log": 0.0
+  },
+  {
+   "date": "2026-08-15",
+   "day_type": "weekend",
+   "set_A": true,
+   "set_B": true,
+   "target_utc": "2026-08-15T21:17:49Z",
+   "registered_same_day_inputs": [
+    {
+     "source": "grt",
+     "obs_time_utc": "2026-08-15T18:45:32Z",
+     "known_at_utc": "2026-08-15T18:45:32Z",
+     "target_utc": "2026-08-15T21:17:49Z",
+     "known_minus_target_s": -9137.496,
+     "strictly_earlier": true,
+     "fetched_at_utc": null,
+     "used_in_strict_rescore": true
+    },
+    {
+     "source": "malabar",
+     "obs_time_utc": "2026-08-15T18:45:32Z",
+     "known_at_utc": "2026-08-15T18:45:32Z",
+     "target_utc": "2026-08-15T21:17:49Z",
+     "known_minus_target_s": -9137.496,
+     "strictly_earlier": true,
+     "fetched_at_utc": null,
+     "used_in_strict_rescore": true
+    },
+    {
+     "source": "comex",
+     "obs_time_utc": "2026-08-14T00:00:00Z",
+     "known_at_utc": "2026-08-15T00:00:00Z",
+     "target_utc": "2026-08-15T21:17:49Z",
+     "known_minus_target_s": -76669.496,
+     "strictly_earlier": true,
+     "fetched_at_utc": null,
+     "used_in_strict_rescore": true
+    }
+   ],
+   "strict_added_inputs": [],
+   "filter_state_prior_days": {
+    "last_anchor_utc": "2026-08-14T21:22:02Z",
+    "max_known_at_utc": "2026-08-14T21:22:02Z",
+    "max_known_minus_target_s": -86147.145
+   },
+   "noise_params_mle": {
+    "block_start": "2026-08-14",
+    "train_days_before": 122,
+    "train_includes_target_day": false,
+    "max_known_at_utc": "2026-08-13T19:17:13Z",
+    "max_known_minus_target_s": -180036.496
+   },
+   "anchor_perturbation_abs_diff_log": 0.0
+  },
+  {
+   "date": "2026-08-16",
+   "day_type": "weekend",
+   "set_A": true,
+   "set_B": true,
+   "target_utc": "2026-08-16T21:16:26Z",
+   "registered_same_day_inputs": [
+    {
+     "source": "grt",
+     "obs_time_utc": "2026-08-16T18:45:08Z",
+     "known_at_utc": "2026-08-16T18:45:08Z",
+     "target_utc": "2026-08-16T21:16:26Z",
+     "known_minus_target_s": -9078.881,
+     "strictly_earlier": true,
+     "fetched_at_utc": null,
+     "used_in_strict_rescore": true
+    }
+   ],
+   "strict_added_inputs": [],
+   "filter_state_prior_days": {
+    "last_anchor_utc": "2026-08-15T21:17:49Z",
+    "max_known_at_utc": "2026-08-15T21:17:49Z",
+    "max_known_minus_target_s": -86317.385
+   },
+   "noise_params_mle": {
+    "block_start": "2026-08-14",
+    "train_days_before": 122,
+    "train_includes_target_day": false,
+    "max_known_at_utc": "2026-08-13T19:17:13Z",
+    "max_known_minus_target_s": -266353.881
+   },
+   "anchor_perturbation_abs_diff_log": 0.0
+  },
+  {
+   "date": "2026-08-17",
+   "day_type": "ibja_day",
+   "set_A": true,
+   "set_B": true,
+   "target_utc": "2026-08-17T21:22:48Z",
+   "registered_same_day_inputs": [
+    {
+     "source": "ibja_am",
+     "obs_time_utc": "2026-08-17T00:00:00Z",
+     "known_at_utc": "2026-08-17T06:30:00Z",
+     "target_utc": "2026-08-17T21:22:48Z",
+     "known_minus_target_s": -53568.558,
+     "strictly_earlier": true,
+     "fetched_at_utc": "2026-08-17T12:35:16Z",
+     "used_in_strict_rescore": true
+    },
+    {
+     "source": "ibja_pm",
+     "obs_time_utc": "2026-08-17T00:00:00Z",
+     "known_at_utc": "2026-08-17T11:30:00Z",
+     "target_utc": "2026-08-17T21:22:48Z",
+     "known_minus_target_s": -35568.558,
+     "strictly_earlier": true,
+     "fetched_at_utc": "2026-08-17T12:35:16Z",
+     "used_in_strict_rescore": true
+    },
+    {
+     "source": "grt",
+     "obs_time_utc": "2026-08-17T18:55:39Z",
+     "known_at_utc": "2026-08-17T18:55:39Z",
+     "target_utc": "2026-08-17T21:22:48Z",
+     "known_minus_target_s": -8829.558,
+     "strictly_earlier": true,
+     "fetched_at_utc": null,
+     "used_in_strict_rescore": true
+    },
+    {
+     "source": "malabar",
+     "obs_time_utc": "2026-08-17T18:55:39Z",
+     "known_at_utc": "2026-08-17T18:55:39Z",
+     "target_utc": "2026-08-17T21:22:48Z",
+     "known_minus_target_s": -8829.558,
+     "strictly_earlier": true,
+     "fetched_at_utc": null,
+     "used_in_strict_rescore": true
+    }
+   ],
+   "strict_added_inputs": [],
+   "filter_state_prior_days": {
+    "last_anchor_utc": "2026-08-16T21:16:26Z",
+    "max_known_at_utc": "2026-08-16T21:16:26Z",
+    "max_known_minus_target_s": -86781.677
+   },
+   "noise_params_mle": {
+    "block_start": "2026-08-14",
+    "train_days_before": 122,
+    "train_includes_target_day": false,
+    "max_known_at_utc": "2026-08-13T19:17:13Z",
+    "max_known_minus_target_s": -353135.558
+   },
+   "anchor_perturbation_abs_diff_log": 0.0
+  },
+  {
+   "date": "2026-08-18",
+   "day_type": "ibja_day",
+   "set_A": true,
+   "set_B": true,
+   "target_utc": "2026-08-18T09:29:07Z",
+   "registered_same_day_inputs": [
+    {
+     "source": "ibja_am",
+     "obs_time_utc": "2026-08-18T00:00:00Z",
+     "known_at_utc": "2026-08-18T06:30:00Z",
+     "target_utc": "2026-08-18T09:29:07Z",
+     "known_minus_target_s": -10747.546,
+     "strictly_earlier": true,
+     "fetched_at_utc": "2026-08-18T12:37:06Z",
+     "used_in_strict_rescore": true
+    },
+    {
+     "source": "ibja_pm",
+     "obs_time_utc": "2026-08-18T00:00:00Z",
+     "known_at_utc": "2026-08-18T11:30:00Z",
+     "target_utc": "2026-08-18T09:29:07Z",
+     "known_minus_target_s": 7252.454,
+     "strictly_earlier": false,
+     "fetched_at_utc": "2026-08-18T12:37:06Z",
+     "used_in_strict_rescore": false
+    },
+    {
+     "source": "grt",
+     "obs_time_utc": "2026-08-18T18:54:09Z",
+     "known_at_utc": "2026-08-18T18:54:09Z",
+     "target_utc": "2026-08-18T09:29:07Z",
+     "known_minus_target_s": 33901.454,
+     "strictly_earlier": false,
+     "fetched_at_utc": null,
+     "used_in_strict_rescore": false
+    },
+    {
+     "source": "malabar",
+     "obs_time_utc": "2026-08-18T18:54:09Z",
+     "known_at_utc": "2026-08-18T18:54:09Z",
+     "target_utc": "2026-08-18T09:29:07Z",
+     "known_minus_target_s": 33901.454,
+     "strictly_earlier": false,
+     "fetched_at_utc": null,
+     "used_in_strict_rescore": false
+    },
+    {
+     "source": "comex",
+     "obs_time_utc": "2026-08-17T00:00:00Z",
+     "known_at_utc": "2026-08-18T00:00:00Z",
+     "target_utc": "2026-08-18T09:29:07Z",
+     "known_minus_target_s": -34147.546,
+     "strictly_earlier": true,
+     "fetched_at_utc": null,
+     "used_in_strict_rescore": true
+    }
+   ],
+   "strict_added_inputs": [
+    {
+     "source": "grt",
+     "obs_time_utc": "2026-08-18T07:01:16Z",
+     "known_at_utc": "2026-08-18T07:01:16Z",
+     "known_minus_target_s": -8871.546
+    },
+    {
+     "source": "malabar",
+     "obs_time_utc": "2026-08-18T07:01:16Z",
+     "known_at_utc": "2026-08-18T07:01:16Z",
+     "known_minus_target_s": -8871.546
+    }
+   ],
+   "filter_state_prior_days": {
+    "last_anchor_utc": "2026-08-17T21:22:48Z",
+    "max_known_at_utc": "2026-08-17T21:22:48Z",
+    "max_known_minus_target_s": -43578.988
+   },
+   "noise_params_mle": {
+    "block_start": "2026-08-14",
+    "train_days_before": 122,
+    "train_includes_target_day": false,
+    "max_known_at_utc": "2026-08-13T19:17:13Z",
+    "max_known_minus_target_s": -396714.546
+   },
+   "anchor_perturbation_abs_diff_log": 0.0
+  },
+  {
+   "date": "2026-08-20",
+   "day_type": "ibja_day",
+   "set_A": true,
+   "set_B": true,
+   "target_utc": "2026-08-20T21:24:25Z",
+   "registered_same_day_inputs": [
+    {
+     "source": "ibja_am",
+     "obs_time_utc": "2026-08-20T00:00:00Z",
+     "known_at_utc": "2026-08-20T06:30:00Z",
+     "target_utc": "2026-08-20T21:24:25Z",
+     "known_minus_target_s": -53665.375,
+     "strictly_earlier": true,
+     "fetched_at_utc": "2026-08-20T12:39:15Z",
+     "used_in_strict_rescore": true
+    },
+    {
+     "source": "ibja_pm",
+     "obs_time_utc": "2026-08-20T00:00:00Z",
+     "known_at_utc": "2026-08-20T11:30:00Z",
+     "target_utc": "2026-08-20T21:24:25Z",
+     "known_minus_target_s": -35665.375,
+     "strictly_earlier": true,
+     "fetched_at_utc": "2026-08-20T12:39:15Z",
+     "used_in_strict_rescore": true
+    },
+    {
+     "source": "grt",
+     "obs_time_utc": "2026-08-20T18:56:04Z",
+     "known_at_utc": "2026-08-20T18:56:04Z",
+     "target_utc": "2026-08-20T21:24:25Z",
+     "known_minus_target_s": -8901.375,
+     "strictly_earlier": true,
+     "fetched_at_utc": null,
+     "used_in_strict_rescore": true
+    },
+    {
+     "source": "malabar",
+     "obs_time_utc": "2026-08-20T18:56:04Z",
+     "known_at_utc": "2026-08-20T18:56:04Z",
+     "target_utc": "2026-08-20T21:24:25Z",
+     "known_minus_target_s": -8901.375,
+     "strictly_earlier": true,
+     "fetched_at_utc": null,
+     "used_in_strict_rescore": true
+    },
+    {
+     "source": "comex",
+     "obs_time_utc": "2026-08-19T00:00:00Z",
+     "known_at_utc": "2026-08-20T00:00:00Z",
+     "target_utc": "2026-08-20T21:24:25Z",
+     "known_minus_target_s": -77065.375,
+     "strictly_earlier": true,
+     "fetched_at_utc": null,
+     "used_in_strict_rescore": true
+    }
+   ],
+   "strict_added_inputs": [],
+   "filter_state_prior_days": {
+    "last_anchor_utc": "2026-08-18T09:29:07Z",
+    "max_known_at_utc": "2026-08-19T18:51:16Z",
+    "max_known_minus_target_s": -95589.375
+   },
+   "noise_params_mle": {
+    "block_start": "2026-08-14",
+    "train_days_before": 122,
+    "train_includes_target_day": false,
+    "max_known_at_utc": "2026-08-13T19:17:13Z",
+    "max_known_minus_target_s": -612432.375
+   },
+   "anchor_perturbation_abs_diff_log": 0.0
+  },
+  {
+   "date": "2026-08-21",
+   "day_type": "ibja_day",
+   "set_A": true,
+   "set_B": true,
+   "target_utc": "2026-08-21T21:20:55Z",
+   "registered_same_day_inputs": [
+    {
+     "source": "ibja_am",
+     "obs_time_utc": "2026-08-21T00:00:00Z",
+     "known_at_utc": "2026-08-21T06:30:00Z",
+     "target_utc": "2026-08-21T21:20:55Z",
+     "known_minus_target_s": -53455.074,
+     "strictly_earlier": true,
+     "fetched_at_utc": "2026-08-21T12:37:57Z",
+     "used_in_strict_rescore": true
+    },
+    {
+     "source": "ibja_pm",
+     "obs_time_utc": "2026-08-21T00:00:00Z",
+     "known_at_utc": "2026-08-21T11:30:00Z",
+     "target_utc": "2026-08-21T21:20:55Z",
+     "known_minus_target_s": -35455.074,
+     "strictly_earlier": true,
+     "fetched_at_utc": "2026-08-21T12:37:57Z",
+     "used_in_strict_rescore": true
+    },
+    {
+     "source": "grt",
+     "obs_time_utc": "2026-08-21T18:53:02Z",
+     "known_at_utc": "2026-08-21T18:53:02Z",
+     "target_utc": "2026-08-21T21:20:55Z",
+     "known_minus_target_s": -8873.074,
+     "strictly_earlier": true,
+     "fetched_at_utc": null,
+     "used_in_strict_rescore": true
+    },
+    {
+     "source": "malabar",
+     "obs_time_utc": "2026-08-21T18:53:02Z",
+     "known_at_utc": "2026-08-21T18:53:02Z",
+     "target_utc": "2026-08-21T21:20:55Z",
+     "known_minus_target_s": -8873.074,
+     "strictly_earlier": true,
+     "fetched_at_utc": null,
+     "used_in_strict_rescore": true
+    },
+    {
+     "source": "comex",
+     "obs_time_utc": "2026-08-20T00:00:00Z",
+     "known_at_utc": "2026-08-21T00:00:00Z",
+     "target_utc": "2026-08-21T21:20:55Z",
+     "known_minus_target_s": -76855.074,
+     "strictly_earlier": true,
+     "fetched_at_utc": null,
+     "used_in_strict_rescore": true
+    }
+   ],
+   "strict_added_inputs": [],
+   "filter_state_prior_days": {
+    "last_anchor_utc": "2026-08-20T21:24:25Z",
+    "max_known_at_utc": "2026-08-20T21:24:25Z",
+    "max_known_minus_target_s": -86189.699
+   },
+   "noise_params_mle": {
+    "block_start": "2026-08-21",
+    "train_days_before": 129,
+    "train_includes_target_day": false,
+    "max_known_at_utc": "2026-08-20T21:24:25Z",
+    "max_known_minus_target_s": -86189.699
+   },
+   "anchor_perturbation_abs_diff_log": 0.0
+  },
+  {
+   "date": "2026-08-22",
+   "day_type": "weekend",
+   "set_A": true,
+   "set_B": true,
+   "target_utc": "2026-08-22T21:18:16Z",
+   "registered_same_day_inputs": [
+    {
+     "source": "grt",
+     "obs_time_utc": "2026-08-22T18:46:54Z",
+     "known_at_utc": "2026-08-22T18:46:54Z",
+     "target_utc": "2026-08-22T21:18:16Z",
+     "known_minus_target_s": -9082.645,
+     "strictly_earlier": true,
+     "fetched_at_utc": null,
+     "used_in_strict_rescore": true
+    },
+    {
+     "source": "malabar",
+     "obs_time_utc": "2026-08-22T18:46:54Z",
+     "known_at_utc": "2026-08-22T18:46:54Z",
+     "target_utc": "2026-08-22T21:18:16Z",
+     "known_minus_target_s": -9082.645,
+     "strictly_earlier": true,
+     "fetched_at_utc": null,
+     "used_in_strict_rescore": true
+    },
+    {
+     "source": "comex",
+     "obs_time_utc": "2026-08-21T00:00:00Z",
+     "known_at_utc": "2026-08-22T00:00:00Z",
+     "target_utc": "2026-08-22T21:18:16Z",
+     "known_minus_target_s": -76696.645,
+     "strictly_earlier": true,
+     "fetched_at_utc": null,
+     "used_in_strict_rescore": true
+    }
+   ],
+   "strict_added_inputs": [],
+   "filter_state_prior_days": {
+    "last_anchor_utc": "2026-08-21T21:20:55Z",
+    "max_known_at_utc": "2026-08-21T21:20:55Z",
+    "max_known_minus_target_s": -86241.571
+   },
+   "noise_params_mle": {
+    "block_start": "2026-08-21",
+    "train_days_before": 129,
+    "train_includes_target_day": false,
+    "max_known_at_utc": "2026-08-20T21:24:25Z",
+    "max_known_minus_target_s": -172431.27
+   },
+   "anchor_perturbation_abs_diff_log": 0.0
+  },
+  {
+   "date": "2026-08-23",
+   "day_type": "weekend",
+   "set_A": true,
+   "set_B": true,
+   "target_utc": "2026-08-23T21:18:00Z",
+   "registered_same_day_inputs": [
+    {
+     "source": "grt",
+     "obs_time_utc": "2026-08-23T18:46:13Z",
+     "known_at_utc": "2026-08-23T18:46:13Z",
+     "target_utc": "2026-08-23T21:18:00Z",
+     "known_minus_target_s": -9107.959,
+     "strictly_earlier": true,
+     "fetched_at_utc": null,
+     "used_in_strict_rescore": true
+    }
+   ],
+   "strict_added_inputs": [],
+   "filter_state_prior_days": {
+    "last_anchor_utc": "2026-08-22T21:18:16Z",
+    "max_known_at_utc": "2026-08-22T21:18:16Z",
+    "max_known_minus_target_s": -86384.314
+   },
+   "noise_params_mle": {
+    "block_start": "2026-08-21",
+    "train_days_before": 129,
+    "train_includes_target_day": false,
+    "max_known_at_utc": "2026-08-20T21:24:25Z",
+    "max_known_minus_target_s": -258815.584
+   },
+   "anchor_perturbation_abs_diff_log": 0.0
+  },
+  {
+   "date": "2026-08-24",
+   "day_type": "ibja_day",
+   "set_A": true,
+   "set_B": true,
+   "target_utc": "2026-08-24T21:25:28Z",
+   "registered_same_day_inputs": [
+    {
+     "source": "ibja_am",
+     "obs_time_utc": "2026-08-24T00:00:00Z",
+     "known_at_utc": "2026-08-24T06:30:00Z",
+     "target_utc": "2026-08-24T21:25:28Z",
+     "known_minus_target_s": -53728.059,
+     "strictly_earlier": true,
+     "fetched_at_utc": "2026-08-24T12:40:53Z",
+     "used_in_strict_rescore": true
+    },
+    {
+     "source": "ibja_pm",
+     "obs_time_utc": "2026-08-24T00:00:00Z",
+     "known_at_utc": "2026-08-24T11:30:00Z",
+     "target_utc": "2026-08-24T21:25:28Z",
+     "known_minus_target_s": -35728.059,
+     "strictly_earlier": true,
+     "fetched_at_utc": "2026-08-24T12:40:53Z",
+     "used_in_strict_rescore": true
+    },
+    {
+     "source": "grt",
+     "obs_time_utc": "2026-08-24T18:56:48Z",
+     "known_at_utc": "2026-08-24T18:56:48Z",
+     "target_utc": "2026-08-24T21:25:28Z",
+     "known_minus_target_s": -8920.059,
+     "strictly_earlier": true,
+     "fetched_at_utc": null,
+     "used_in_strict_rescore": true
+    },
+    {
+     "source": "malabar",
+     "obs_time_utc": "2026-08-24T18:56:48Z",
+     "known_at_utc": "2026-08-24T18:56:48Z",
+     "target_utc": "2026-08-24T21:25:28Z",
+     "known_minus_target_s": -8920.059,
+     "strictly_earlier": true,
+     "fetched_at_utc": null,
+     "used_in_strict_rescore": true
+    }
+   ],
+   "strict_added_inputs": [],
+   "filter_state_prior_days": {
+    "last_anchor_utc": "2026-08-23T21:18:00Z",
+    "max_known_at_utc": "2026-08-23T21:18:00Z",
+    "max_known_minus_target_s": -86847.1
+   },
+   "noise_params_mle": {
+    "block_start": "2026-08-21",
+    "train_days_before": 129,
+    "train_includes_target_day": false,
+    "max_known_at_utc": "2026-08-20T21:24:25Z",
+    "max_known_minus_target_s": -345662.684
+   },
+   "anchor_perturbation_abs_diff_log": 0.0
+  },
+  {
+   "date": "2026-08-25",
+   "day_type": "ibja_day",
+   "set_A": true,
+   "set_B": true,
+   "target_utc": "2026-08-25T21:24:53Z",
+   "registered_same_day_inputs": [
+    {
+     "source": "ibja_am",
+     "obs_time_utc": "2026-08-25T00:00:00Z",
+     "known_at_utc": "2026-08-25T06:30:00Z",
+     "target_utc": "2026-08-25T21:24:53Z",
+     "known_minus_target_s": -53693.01,
+     "strictly_earlier": true,
+     "fetched_at_utc": "2026-08-25T12:39:14Z",
+     "used_in_strict_rescore": true
+    },
+    {
+     "source": "ibja_pm",
+     "obs_time_utc": "2026-08-25T00:00:00Z",
+     "known_at_utc": "2026-08-25T11:30:00Z",
+     "target_utc": "2026-08-25T21:24:53Z",
+     "known_minus_target_s": -35693.01,
+     "strictly_earlier": true,
+     "fetched_at_utc": "2026-08-25T12:39:14Z",
+     "used_in_strict_rescore": true
+    },
+    {
+     "source": "grt",
+     "obs_time_utc": "2026-08-25T18:54:49Z",
+     "known_at_utc": "2026-08-25T18:54:49Z",
+     "target_utc": "2026-08-25T21:24:53Z",
+     "known_minus_target_s": -9004.01,
+     "strictly_earlier": true,
+     "fetched_at_utc": null,
+     "used_in_strict_rescore": true
+    },
+    {
+     "source": "malabar",
+     "obs_time_utc": "2026-08-25T18:54:49Z",
+     "known_at_utc": "2026-08-25T18:54:49Z",
+     "target_utc": "2026-08-25T21:24:53Z",
+     "known_minus_target_s": -9004.01,
+     "strictly_earlier": true,
+     "fetched_at_utc": null,
+     "used_in_strict_rescore": true
+    },
+    {
+     "source": "comex",
+     "obs_time_utc": "2026-08-24T00:00:00Z",
+     "known_at_utc": "2026-08-25T00:00:00Z",
+     "target_utc": "2026-08-25T21:24:53Z",
+     "known_minus_target_s": -77093.01,
+     "strictly_earlier": true,
+     "fetched_at_utc": null,
+     "used_in_strict_rescore": true
+    }
+   ],
+   "strict_added_inputs": [],
+   "filter_state_prior_days": {
+    "last_anchor_utc": "2026-08-24T21:25:28Z",
+    "max_known_at_utc": "2026-08-24T21:25:28Z",
+    "max_known_minus_target_s": -86364.951
+   },
+   "noise_params_mle": {
+    "block_start": "2026-08-21",
+    "train_days_before": 129,
+    "train_includes_target_day": false,
+    "max_known_at_utc": "2026-08-20T21:24:25Z",
+    "max_known_minus_target_s": -432027.635
+   },
+   "anchor_perturbation_abs_diff_log": 0.0
+  },
+  {
+   "date": "2026-08-26",
+   "day_type": "ibja_day",
+   "set_A": true,
+   "set_B": true,
+   "target_utc": "2026-08-26T19:44:11Z",
+   "registered_same_day_inputs": [
+    {
+     "source": "ibja_am",
+     "obs_time_utc": "2026-08-26T00:00:00Z",
+     "known_at_utc": "2026-08-26T06:30:00Z",
+     "target_utc": "2026-08-26T19:44:11Z",
+     "known_minus_target_s": -47651.081,
+     "strictly_earlier": true,
+     "fetched_at_utc": "2026-08-26T12:42:34Z",
+     "used_in_strict_rescore": true
+    },
+    {
+     "source": "ibja_pm",
+     "obs_time_utc": "2026-08-26T00:00:00Z",
+     "known_at_utc": "2026-08-26T11:30:00Z",
+     "target_utc": "2026-08-26T19:44:11Z",
+     "known_minus_target_s": -29651.081,
+     "strictly_earlier": true,
+     "fetched_at_utc": "2026-08-26T12:42:34Z",
+     "used_in_strict_rescore": true
+    },
+    {
+     "source": "grt",
+     "obs_time_utc": "2026-08-26T19:59:18Z",
+     "known_at_utc": "2026-08-26T19:59:18Z",
+     "target_utc": "2026-08-26T19:44:11Z",
+     "known_minus_target_s": 906.919,
+     "strictly_earlier": false,
+     "fetched_at_utc": null,
+     "used_in_strict_rescore": false
+    },
+    {
+     "source": "malabar",
+     "obs_time_utc": "2026-08-26T19:59:18Z",
+     "known_at_utc": "2026-08-26T19:59:18Z",
+     "target_utc": "2026-08-26T19:44:11Z",
+     "known_minus_target_s": 906.919,
+     "strictly_earlier": false,
+     "fetched_at_utc": null,
+     "used_in_strict_rescore": false
+    },
+    {
+     "source": "comex",
+     "obs_time_utc": "2026-08-25T00:00:00Z",
+     "known_at_utc": "2026-08-26T00:00:00Z",
+     "target_utc": "2026-08-26T19:44:11Z",
+     "known_minus_target_s": -71051.081,
+     "strictly_earlier": true,
+     "fetched_at_utc": null,
+     "used_in_strict_rescore": true
+    }
+   ],
+   "strict_added_inputs": [
+    {
+     "source": "grt",
+     "obs_time_utc": "2026-08-26T13:13:12Z",
+     "known_at_utc": "2026-08-26T13:13:12Z",
+     "known_minus_target_s": -23459.081
+    },
+    {
+     "source": "malabar",
+     "obs_time_utc": "2026-08-26T13:13:12Z",
+     "known_at_utc": "2026-08-26T13:13:12Z",
+     "known_minus_target_s": -23459.081
+    }
+   ],
+   "filter_state_prior_days": {
+    "last_anchor_utc": "2026-08-25T21:24:53Z",
+    "max_known_at_utc": "2026-08-25T21:24:53Z",
+    "max_known_minus_target_s": -80358.071
+   },
+   "noise_params_mle": {
+    "block_start": "2026-08-21",
+    "train_days_before": 129,
+    "train_includes_target_day": false,
+    "max_known_at_utc": "2026-08-20T21:24:25Z",
+    "max_known_minus_target_s": -512385.706
+   },
+   "anchor_perturbation_abs_diff_log": 0.0
+  },
+  {
+   "date": "2026-08-27",
+   "day_type": "ibja_day",
+   "set_A": true,
+   "set_B": true,
+   "target_utc": "2026-08-27T19:11:51Z",
+   "registered_same_day_inputs": [
+    {
+     "source": "ibja_am",
+     "obs_time_utc": "2026-08-27T00:00:00Z",
+     "known_at_utc": "2026-08-27T06:30:00Z",
+     "target_utc": "2026-08-27T19:11:51Z",
+     "known_minus_target_s": -45711.546,
+     "strictly_earlier": true,
+     "fetched_at_utc": "2026-08-27T12:34:36Z",
+     "used_in_strict_rescore": true
+    },
+    {
+     "source": "ibja_pm",
+     "obs_time_utc": "2026-08-27T00:00:00Z",
+     "known_at_utc": "2026-08-27T11:30:00Z",
+     "target_utc": "2026-08-27T19:11:51Z",
+     "known_minus_target_s": -27711.546,
+     "strictly_earlier": true,
+     "fetched_at_utc": "2026-08-27T12:34:36Z",
+     "used_in_strict_rescore": true
+    },
+    {
+     "source": "grt",
+     "obs_time_utc": "2026-08-27T22:13:29Z",
+     "known_at_utc": "2026-08-27T22:13:29Z",
+     "target_utc": "2026-08-27T19:11:51Z",
+     "known_minus_target_s": 10897.454,
+     "strictly_earlier": false,
+     "fetched_at_utc": null,
+     "used_in_strict_rescore": false
+    },
+    {
+     "source": "malabar",
+     "obs_time_utc": "2026-08-27T09:37:04Z",
+     "known_at_utc": "2026-08-27T09:37:04Z",
+     "target_utc": "2026-08-27T19:11:51Z",
+     "known_minus_target_s": -34487.546,
+     "strictly_earlier": true,
+     "fetched_at_utc": null,
+     "used_in_strict_rescore": true
+    },
+    {
+     "source": "comex",
+     "obs_time_utc": "2026-08-26T00:00:00Z",
+     "known_at_utc": "2026-08-27T00:00:00Z",
+     "target_utc": "2026-08-27T19:11:51Z",
+     "known_minus_target_s": -69111.546,
+     "strictly_earlier": true,
+     "fetched_at_utc": null,
+     "used_in_strict_rescore": true
+    }
+   ],
+   "strict_added_inputs": [
+    {
+     "source": "grt",
+     "obs_time_utc": "2026-08-27T09:37:04Z",
+     "known_at_utc": "2026-08-27T09:37:04Z",
+     "known_minus_target_s": -34487.546
+    }
+   ],
+   "filter_state_prior_days": {
+    "last_anchor_utc": "2026-08-26T19:44:11Z",
+    "max_known_at_utc": "2026-08-26T19:59:18Z",
+    "max_known_minus_target_s": -83553.546
+   },
+   "noise_params_mle": {
+    "block_start": "2026-08-21",
+    "train_days_before": 129,
+    "train_includes_target_day": false,
+    "max_known_at_utc": "2026-08-20T21:24:25Z",
+    "max_known_minus_target_s": -596846.171
+   },
+   "anchor_perturbation_abs_diff_log": 0.0
+  },
+  {
+   "date": "2026-08-28",
+   "day_type": "ibja_day",
+   "set_A": true,
+   "set_B": true,
+   "target_utc": "2026-08-28T06:31:13Z",
+   "registered_same_day_inputs": [
+    {
+     "source": "ibja_am",
+     "obs_time_utc": "2026-08-28T00:00:00Z",
+     "known_at_utc": "2026-08-28T06:30:00Z",
+     "target_utc": "2026-08-28T06:31:13Z",
+     "known_minus_target_s": -73.885,
+     "strictly_earlier": true,
+     "fetched_at_utc": "2026-08-28T15:15:24Z",
+     "used_in_strict_rescore": true
+    },
+    {
+     "source": "ibja_pm",
+     "obs_time_utc": "2026-08-28T00:00:00Z",
+     "known_at_utc": "2026-08-28T11:30:00Z",
+     "target_utc": "2026-08-28T06:31:13Z",
+     "known_minus_target_s": 17926.115,
+     "strictly_earlier": false,
+     "fetched_at_utc": "2026-08-28T15:15:24Z",
+     "used_in_strict_rescore": false
+    },
+    {
+     "source": "grt",
+     "obs_time_utc": "2026-08-28T22:15:19Z",
+     "known_at_utc": "2026-08-28T22:15:19Z",
+     "target_utc": "2026-08-28T06:31:13Z",
+     "known_minus_target_s": 56645.115,
+     "strictly_earlier": false,
+     "fetched_at_utc": null,
+     "used_in_strict_rescore": false
+    },
+    {
+     "source": "malabar",
+     "obs_time_utc": "2026-08-28T22:15:19Z",
+     "known_at_utc": "2026-08-28T22:15:19Z",
+     "target_utc": "2026-08-28T06:31:13Z",
+     "known_minus_target_s": 56645.115,
+     "strictly_earlier": false,
+     "fetched_at_utc": null,
+     "used_in_strict_rescore": false
+    },
+    {
+     "source": "comex",
+     "obs_time_utc": "2026-08-27T00:00:00Z",
+     "known_at_utc": "2026-08-28T00:00:00Z",
+     "target_utc": "2026-08-28T06:31:13Z",
+     "known_minus_target_s": -23473.885,
+     "strictly_earlier": true,
+     "fetched_at_utc": null,
+     "used_in_strict_rescore": true
+    }
+   ],
+   "strict_added_inputs": [],
+   "filter_state_prior_days": {
+    "last_anchor_utc": "2026-08-27T19:11:51Z",
+    "max_known_at_utc": "2026-08-27T22:13:29Z",
+    "max_known_minus_target_s": -29864.885
+   },
+   "noise_params_mle": {
+    "block_start": "2026-08-28",
+    "train_days_before": 136,
+    "train_includes_target_day": false,
+    "max_known_at_utc": "2026-08-27T22:13:29Z",
+    "max_known_minus_target_s": -29864.885
+   },
+   "anchor_perturbation_abs_diff_log": 0.0
+  },
+  {
+   "date": "2026-08-29",
+   "day_type": "weekend",
+   "set_A": true,
+   "set_B": true,
+   "target_utc": "2026-08-29T23:14:09Z",
+   "registered_same_day_inputs": [
+    {
+     "source": "grt",
+     "obs_time_utc": "2026-08-29T20:52:45Z",
+     "known_at_utc": "2026-08-29T20:52:45Z",
+     "target_utc": "2026-08-29T23:14:09Z",
+     "known_minus_target_s": -8484.705,
+     "strictly_earlier": true,
+     "fetched_at_utc": null,
+     "used_in_strict_rescore": true
+    },
+    {
+     "source": "malabar",
+     "obs_time_utc": "2026-08-29T20:52:45Z",
+     "known_at_utc": "2026-08-29T20:52:45Z",
+     "target_utc": "2026-08-29T23:14:09Z",
+     "known_minus_target_s": -8484.705,
+     "strictly_earlier": true,
+     "fetched_at_utc": null,
+     "used_in_strict_rescore": true
+    },
+    {
+     "source": "comex",
+     "obs_time_utc": "2026-08-28T00:00:00Z",
+     "known_at_utc": "2026-08-29T00:00:00Z",
+     "target_utc": "2026-08-29T23:14:09Z",
+     "known_minus_target_s": -83649.705,
+     "strictly_earlier": true,
+     "fetched_at_utc": null,
+     "used_in_strict_rescore": true
+    }
+   ],
+   "strict_added_inputs": [
+    {
+     "source": "ibja_pm",
+     "obs_time_utc": "2026-08-28T00:00:00Z",
+     "known_at_utc": "2026-08-28T11:30:00Z",
+     "known_minus_target_s": -128649.705
+    }
+   ],
+   "filter_state_prior_days": {
+    "last_anchor_utc": "2026-08-28T06:31:13Z",
+    "max_known_at_utc": "2026-08-28T22:15:19Z",
+    "max_known_minus_target_s": -89930.705
+   },
+   "noise_params_mle": {
+    "block_start": "2026-08-28",
+    "train_days_before": 136,
+    "train_includes_target_day": false,
+    "max_known_at_utc": "2026-08-27T22:13:29Z",
+    "max_known_minus_target_s": -176440.705
+   },
+   "anchor_perturbation_abs_diff_log": 0.0
+  },
+  {
+   "date": "2026-08-30",
+   "day_type": "weekend",
+   "set_A": true,
+   "set_B": true,
+   "target_utc": "2026-08-30T05:13:33Z",
+   "registered_same_day_inputs": [
+    {
+     "source": "grt",
+     "obs_time_utc": "2026-08-30T21:01:03Z",
+     "known_at_utc": "2026-08-30T21:01:03Z",
+     "target_utc": "2026-08-30T05:13:33Z",
+     "known_minus_target_s": 56849.769,
+     "strictly_earlier": false,
+     "fetched_at_utc": null,
+     "used_in_strict_rescore": false
+    }
+   ],
+   "strict_added_inputs": [],
+   "filter_state_prior_days": {
+    "last_anchor_utc": "2026-08-29T23:14:09Z",
+    "max_known_at_utc": "2026-08-29T23:14:09Z",
+    "max_known_minus_target_s": -21563.526
+   },
+   "noise_params_mle": {
+    "block_start": "2026-08-28",
+    "train_days_before": 136,
+    "train_includes_target_day": false,
+    "max_known_at_utc": "2026-08-27T22:13:29Z",
+    "max_known_minus_target_s": -198004.231
+   },
+   "anchor_perturbation_abs_diff_log": 0.0
+  },
+  {
+   "date": "2026-08-31",
+   "day_type": "ibja_day",
+   "set_A": true,
+   "set_B": true,
+   "target_utc": "2026-08-31T13:33:08Z",
+   "registered_same_day_inputs": [
+    {
+     "source": "ibja_am",
+     "obs_time_utc": "2026-08-31T00:00:00Z",
+     "known_at_utc": "2026-08-31T06:30:00Z",
+     "target_utc": "2026-08-31T13:33:08Z",
+     "known_minus_target_s": -25388.204,
+     "strictly_earlier": true,
+     "fetched_at_utc": "2026-08-31T13:31:08Z",
+     "used_in_strict_rescore": true
+    },
+    {
+     "source": "ibja_pm",
+     "obs_time_utc": "2026-08-31T00:00:00Z",
+     "known_at_utc": "2026-08-31T11:30:00Z",
+     "target_utc": "2026-08-31T13:33:08Z",
+     "known_minus_target_s": -7388.204,
+     "strictly_earlier": true,
+     "fetched_at_utc": "2026-08-31T13:31:08Z",
+     "used_in_strict_rescore": true
+    },
+    {
+     "source": "grt",
+     "obs_time_utc": "2026-08-31T22:47:10Z",
+     "known_at_utc": "2026-08-31T22:47:10Z",
+     "target_utc": "2026-08-31T13:33:08Z",
+     "known_minus_target_s": 33241.796,
+     "strictly_earlier": false,
+     "fetched_at_utc": null,
+     "used_in_strict_rescore": false
+    },
+    {
+     "source": "malabar",
+     "obs_time_utc": "2026-08-31T22:47:10Z",
+     "known_at_utc": "2026-08-31T22:47:10Z",
+     "target_utc": "2026-08-31T13:33:08Z",
+     "known_minus_target_s": 33241.796,
+     "strictly_earlier": false,
+     "fetched_at_utc": null,
+     "used_in_strict_rescore": false
+    }
+   ],
+   "strict_added_inputs": [
+    {
+     "source": "grt",
+     "obs_time_utc": "2026-08-31T05:27:01Z",
+     "known_at_utc": "2026-08-31T05:27:01Z",
+     "known_minus_target_s": -29167.204
+    },
+    {
+     "source": "malabar",
+     "obs_time_utc": "2026-08-31T05:27:01Z",
+     "known_at_utc": "2026-08-31T05:27:01Z",
+     "known_minus_target_s": -29167.204
+    }
+   ],
+   "filter_state_prior_days": {
+    "last_anchor_utc": "2026-08-30T05:13:33Z",
+    "max_known_at_utc": "2026-08-30T21:01:03Z",
+    "max_known_minus_target_s": -59525.204
+   },
+   "noise_params_mle": {
+    "block_start": "2026-08-28",
+    "train_days_before": 136,
+    "train_includes_target_day": false,
+    "max_known_at_utc": "2026-08-27T22:13:29Z",
+    "max_known_minus_target_s": -314379.204
+   },
+   "anchor_perturbation_abs_diff_log": 0.0
+  },
+  {
+   "date": "2026-09-01",
+   "day_type": "ibja_day",
+   "set_A": true,
+   "set_B": true,
+   "target_utc": "2026-09-01T06:56:37Z",
+   "registered_same_day_inputs": [
+    {
+     "source": "ibja_am",
+     "obs_time_utc": "2026-09-01T00:00:00Z",
+     "known_at_utc": "2026-09-01T06:30:00Z",
+     "target_utc": "2026-09-01T06:56:37Z",
+     "known_minus_target_s": -1597.197,
+     "strictly_earlier": true,
+     "fetched_at_utc": "2026-09-01T14:06:16Z",
+     "used_in_strict_rescore": true
+    },
+    {
+     "source": "ibja_pm",
+     "obs_time_utc": "2026-09-01T00:00:00Z",
+     "known_at_utc": "2026-09-01T11:30:00Z",
+     "target_utc": "2026-09-01T06:56:37Z",
+     "known_minus_target_s": 16402.803,
+     "strictly_earlier": false,
+     "fetched_at_utc": "2026-09-01T14:06:16Z",
+     "used_in_strict_rescore": false
+    },
+    {
+     "source": "grt",
+     "obs_time_utc": "2026-09-01T20:59:25Z",
+     "known_at_utc": "2026-09-01T20:59:25Z",
+     "target_utc": "2026-09-01T06:56:37Z",
+     "known_minus_target_s": 50567.803,
+     "strictly_earlier": false,
+     "fetched_at_utc": null,
+     "used_in_strict_rescore": false
+    },
+    {
+     "source": "malabar",
+     "obs_time_utc": "2026-09-01T20:59:25Z",
+     "known_at_utc": "2026-09-01T20:59:25Z",
+     "target_utc": "2026-09-01T06:56:37Z",
+     "known_minus_target_s": 50567.803,
+     "strictly_earlier": false,
+     "fetched_at_utc": null,
+     "used_in_strict_rescore": false
+    },
+    {
+     "source": "comex",
+     "obs_time_utc": "2026-08-31T00:00:00Z",
+     "known_at_utc": "2026-09-01T00:00:00Z",
+     "target_utc": "2026-09-01T06:56:37Z",
+     "known_minus_target_s": -24997.197,
+     "strictly_earlier": true,
+     "fetched_at_utc": null,
+     "used_in_strict_rescore": true
+    }
+   ],
+   "strict_added_inputs": [
+    {
+     "source": "grt",
+     "obs_time_utc": "2026-09-01T05:01:23Z",
+     "known_at_utc": "2026-09-01T05:01:23Z",
+     "known_minus_target_s": -6914.197
+    },
+    {
+     "source": "malabar",
+     "obs_time_utc": "2026-09-01T05:01:23Z",
+     "known_at_utc": "2026-09-01T05:01:23Z",
+     "known_minus_target_s": -6914.197
+    }
+   ],
+   "filter_state_prior_days": {
+    "last_anchor_utc": "2026-08-31T13:33:08Z",
+    "max_known_at_utc": "2026-08-31T22:47:10Z",
+    "max_known_minus_target_s": -29367.197
+   },
+   "noise_params_mle": {
+    "block_start": "2026-08-28",
+    "train_days_before": 136,
+    "train_includes_target_day": false,
+    "max_known_at_utc": "2026-08-27T22:13:29Z",
+    "max_known_minus_target_s": -376988.197
+   },
+   "anchor_perturbation_abs_diff_log": 0.0
+  },
+  {
+   "date": "2026-09-02",
+   "day_type": "ibja_day",
+   "set_A": true,
+   "set_B": true,
+   "target_utc": "2026-09-02T11:10:28Z",
+   "registered_same_day_inputs": [
+    {
+     "source": "ibja_am",
+     "obs_time_utc": "2026-09-02T00:00:00Z",
+     "known_at_utc": "2026-09-02T06:30:00Z",
+     "target_utc": "2026-09-02T11:10:28Z",
+     "known_minus_target_s": -16828.764,
+     "strictly_earlier": true,
+     "fetched_at_utc": "2026-09-02T16:29:13Z",
+     "used_in_strict_rescore": true
+    },
+    {
+     "source": "ibja_pm",
+     "obs_time_utc": "2026-09-02T00:00:00Z",
+     "known_at_utc": "2026-09-02T11:30:00Z",
+     "target_utc": "2026-09-02T11:10:28Z",
+     "known_minus_target_s": 1171.236,
+     "strictly_earlier": false,
+     "fetched_at_utc": "2026-09-02T16:29:13Z",
+     "used_in_strict_rescore": false
+    },
+    {
+     "source": "grt",
+     "obs_time_utc": "2026-09-02T20:59:22Z",
+     "known_at_utc": "2026-09-02T20:59:22Z",
+     "target_utc": "2026-09-02T11:10:28Z",
+     "known_minus_target_s": 35333.236,
+     "strictly_earlier": false,
+     "fetched_at_utc": null,
+     "used_in_strict_rescore": false
+    },
+    {
+     "source": "malabar",
+     "obs_time_utc": "2026-09-02T20:59:22Z",
+     "known_at_utc": "2026-09-02T20:59:22Z",
+     "target_utc": "2026-09-02T11:10:28Z",
+     "known_minus_target_s": 35333.236,
+     "strictly_earlier": false,
+     "fetched_at_utc": null,
+     "used_in_strict_rescore": false
+    },
+    {
+     "source": "comex",
+     "obs_time_utc": "2026-09-01T00:00:00Z",
+     "known_at_utc": "2026-09-02T00:00:00Z",
+     "target_utc": "2026-09-02T11:10:28Z",
+     "known_minus_target_s": -40228.764,
+     "strictly_earlier": true,
+     "fetched_at_utc": null,
+     "used_in_strict_rescore": true
+    }
+   ],
+   "strict_added_inputs": [
+    {
+     "source": "ibja_pm",
+     "obs_time_utc": "2026-09-01T00:00:00Z",
+     "known_at_utc": "2026-09-01T11:30:00Z",
+     "known_minus_target_s": -85228.764
+    },
+    {
+     "source": "grt",
+     "obs_time_utc": "2026-09-02T04:24:54Z",
+     "known_at_utc": "2026-09-02T04:24:54Z",
+     "known_minus_target_s": -24334.764
+    }
+   ],
+   "filter_state_prior_days": {
+    "last_anchor_utc": "2026-09-01T06:56:37Z",
+    "max_known_at_utc": "2026-09-01T20:59:25Z",
+    "max_known_minus_target_s": -51063.764
+   },
+   "noise_params_mle": {
+    "block_start": "2026-08-28",
+    "train_days_before": 136,
+    "train_includes_target_day": false,
+    "max_known_at_utc": "2026-08-27T22:13:29Z",
+    "max_known_minus_target_s": -478619.764
+   },
+   "anchor_perturbation_abs_diff_log": 0.0
+  },
+  {
+   "date": "2026-09-03",
+   "day_type": "ibja_day",
+   "set_A": true,
+   "set_B": true,
+   "target_utc": "2026-09-03T19:32:15Z",
+   "registered_same_day_inputs": [
+    {
+     "source": "ibja_am",
+     "obs_time_utc": "2026-09-03T00:00:00Z",
+     "known_at_utc": "2026-09-03T06:30:00Z",
+     "target_utc": "2026-09-03T19:32:15Z",
+     "known_minus_target_s": -46935.025,
+     "strictly_earlier": true,
+     "fetched_at_utc": "2026-09-03T16:19:23Z",
+     "used_in_strict_rescore": true
+    },
+    {
+     "source": "ibja_pm",
+     "obs_time_utc": "2026-09-03T00:00:00Z",
+     "known_at_utc": "2026-09-03T11:30:00Z",
+     "target_utc": "2026-09-03T19:32:15Z",
+     "known_minus_target_s": -28935.025,
+     "strictly_earlier": true,
+     "fetched_at_utc": "2026-09-03T16:19:23Z",
+     "used_in_strict_rescore": true
+    },
+    {
+     "source": "grt",
+     "obs_time_utc": "2026-09-03T20:58:16Z",
+     "known_at_utc": "2026-09-03T20:58:16Z",
+     "target_utc": "2026-09-03T19:32:15Z",
+     "known_minus_target_s": 5160.975,
+     "strictly_earlier": false,
+     "fetched_at_utc": null,
+     "used_in_strict_rescore": false
+    },
+    {
+     "source": "malabar",
+     "obs_time_utc": "2026-09-03T20:58:16Z",
+     "known_at_utc": "2026-09-03T20:58:16Z",
+     "target_utc": "2026-09-03T19:32:15Z",
+     "known_minus_target_s": 5160.975,
+     "strictly_earlier": false,
+     "fetched_at_utc": null,
+     "used_in_strict_rescore": false
+    },
+    {
+     "source": "comex",
+     "obs_time_utc": "2026-09-02T00:00:00Z",
+     "known_at_utc": "2026-09-03T00:00:00Z",
+     "target_utc": "2026-09-03T19:32:15Z",
+     "known_minus_target_s": -70335.025,
+     "strictly_earlier": true,
+     "fetched_at_utc": null,
+     "used_in_strict_rescore": true
+    }
+   ],
+   "strict_added_inputs": [
+    {
+     "source": "ibja_pm",
+     "obs_time_utc": "2026-09-02T00:00:00Z",
+     "known_at_utc": "2026-09-02T11:30:00Z",
+     "known_minus_target_s": -115335.025
+    },
+    {
+     "source": "grt",
+     "obs_time_utc": "2026-09-03T16:22:17Z",
+     "known_at_utc": "2026-09-03T16:22:17Z",
+     "known_minus_target_s": -11398.025
+    },
+    {
+     "source": "malabar",
+     "obs_time_utc": "2026-09-03T16:22:17Z",
+     "known_at_utc": "2026-09-03T16:22:17Z",
+     "known_minus_target_s": -11398.025
+    }
+   ],
+   "filter_state_prior_days": {
+    "last_anchor_utc": "2026-09-02T11:10:28Z",
+    "max_known_at_utc": "2026-09-02T20:59:22Z",
+    "max_known_minus_target_s": -81173.025
+   },
+   "noise_params_mle": {
+    "block_start": "2026-08-28",
+    "train_days_before": 136,
+    "train_includes_target_day": false,
+    "max_known_at_utc": "2026-08-27T22:13:29Z",
+    "max_known_minus_target_s": -595126.025
+   },
+   "anchor_perturbation_abs_diff_log": 0.0
+  },
+  {
+   "date": "2026-09-04",
+   "day_type": "ibja_day",
+   "set_A": true,
+   "set_B": true,
+   "target_utc": "2026-09-04T23:01:14Z",
+   "registered_same_day_inputs": [
+    {
+     "source": "ibja_am",
+     "obs_time_utc": "2026-09-04T00:00:00Z",
+     "known_at_utc": "2026-09-04T06:30:00Z",
+     "target_utc": "2026-09-04T23:01:14Z",
+     "known_minus_target_s": -59474.534,
+     "strictly_earlier": true,
+     "fetched_at_utc": "2026-09-04T15:21:08Z",
+     "used_in_strict_rescore": true
+    },
+    {
+     "source": "ibja_pm",
+     "obs_time_utc": "2026-09-04T00:00:00Z",
+     "known_at_utc": "2026-09-04T11:30:00Z",
+     "target_utc": "2026-09-04T23:01:14Z",
+     "known_minus_target_s": -41474.534,
+     "strictly_earlier": true,
+     "fetched_at_utc": "2026-09-04T15:21:08Z",
+     "used_in_strict_rescore": true
+    },
+    {
+     "source": "grt",
+     "obs_time_utc": "2026-09-04T20:43:23Z",
+     "known_at_utc": "2026-09-04T20:43:23Z",
+     "target_utc": "2026-09-04T23:01:14Z",
+     "known_minus_target_s": -8271.534,
+     "strictly_earlier": true,
+     "fetched_at_utc": null,
+     "used_in_strict_rescore": true
+    },
+    {
+     "source": "malabar",
+     "obs_time_utc": "2026-09-04T20:43:23Z",
+     "known_at_utc": "2026-09-04T20:43:23Z",
+     "target_utc": "2026-09-04T23:01:14Z",
+     "known_minus_target_s": -8271.534,
+     "strictly_earlier": true,
+     "fetched_at_utc": null,
+     "used_in_strict_rescore": true
+    },
+    {
+     "source": "comex",
+     "obs_time_utc": "2026-09-03T00:00:00Z",
+     "known_at_utc": "2026-09-04T00:00:00Z",
+     "target_utc": "2026-09-04T23:01:14Z",
+     "known_minus_target_s": -82874.534,
+     "strictly_earlier": true,
+     "fetched_at_utc": null,
+     "used_in_strict_rescore": true
+    }
+   ],
+   "strict_added_inputs": [],
+   "filter_state_prior_days": {
+    "last_anchor_utc": "2026-09-03T19:32:15Z",
+    "max_known_at_utc": "2026-09-03T20:58:16Z",
+    "max_known_minus_target_s": -93778.534
+   },
+   "noise_params_mle": {
+    "block_start": "2026-09-04",
+    "train_days_before": 143,
+    "train_includes_target_day": false,
+    "max_known_at_utc": "2026-09-03T20:58:16Z",
+    "max_known_minus_target_s": -93778.534
+   },
+   "anchor_perturbation_abs_diff_log": 0.0
+  },
+  {
+   "date": "2026-09-05",
+   "day_type": "weekend",
+   "set_A": true,
+   "set_B": true,
+   "target_utc": "2026-09-05T20:17:47Z",
+   "registered_same_day_inputs": [
+    {
+     "source": "grt",
+     "obs_time_utc": "2026-09-05T20:17:24Z",
+     "known_at_utc": "2026-09-05T20:17:24Z",
+     "target_utc": "2026-09-05T20:17:47Z",
+     "known_minus_target_s": -23.193,
+     "strictly_earlier": true,
+     "fetched_at_utc": null,
+     "used_in_strict_rescore": true
+    },
+    {
+     "source": "malabar",
+     "obs_time_utc": "2026-09-05T20:17:24Z",
+     "known_at_utc": "2026-09-05T20:17:24Z",
+     "target_utc": "2026-09-05T20:17:47Z",
+     "known_minus_target_s": -23.193,
+     "strictly_earlier": true,
+     "fetched_at_utc": null,
+     "used_in_strict_rescore": true
+    },
+    {
+     "source": "comex",
+     "obs_time_utc": "2026-09-04T00:00:00Z",
+     "known_at_utc": "2026-09-05T00:00:00Z",
+     "target_utc": "2026-09-05T20:17:47Z",
+     "known_minus_target_s": -73067.193,
+     "strictly_earlier": true,
+     "fetched_at_utc": null,
+     "used_in_strict_rescore": true
+    }
+   ],
+   "strict_added_inputs": [],
+   "filter_state_prior_days": {
+    "last_anchor_utc": "2026-09-04T23:01:14Z",
+    "max_known_at_utc": "2026-09-04T23:01:14Z",
+    "max_known_minus_target_s": -76592.659
+   },
+   "noise_params_mle": {
+    "block_start": "2026-09-04",
+    "train_days_before": 143,
+    "train_includes_target_day": false,
+    "max_known_at_utc": "2026-09-03T20:58:16Z",
+    "max_known_minus_target_s": -170371.193
+   },
+   "anchor_perturbation_abs_diff_log": 0.0
+  },
+  {
+   "date": "2026-09-08",
+   "day_type": "ibja_day",
+   "set_A": true,
+   "set_B": true,
+   "target_utc": "2026-09-08T23:22:50Z",
+   "registered_same_day_inputs": [
+    {
+     "source": "ibja_am",
+     "obs_time_utc": "2026-09-08T00:00:00Z",
+     "known_at_utc": "2026-09-08T06:30:00Z",
+     "target_utc": "2026-09-08T23:22:50Z",
+     "known_minus_target_s": -60770.355,
+     "strictly_earlier": true,
+     "fetched_at_utc": "2026-09-08T16:32:43Z",
+     "used_in_strict_rescore": true
+    },
+    {
+     "source": "ibja_pm",
+     "obs_time_utc": "2026-09-08T00:00:00Z",
+     "known_at_utc": "2026-09-08T11:30:00Z",
+     "target_utc": "2026-09-08T23:22:50Z",
+     "known_minus_target_s": -42770.355,
+     "strictly_earlier": true,
+     "fetched_at_utc": "2026-09-08T16:32:43Z",
+     "used_in_strict_rescore": true
+    },
+    {
+     "source": "grt",
+     "obs_time_utc": "2026-09-08T21:05:58Z",
+     "known_at_utc": "2026-09-08T21:05:58Z",
+     "target_utc": "2026-09-08T23:22:50Z",
+     "known_minus_target_s": -8212.355,
+     "strictly_earlier": true,
+     "fetched_at_utc": null,
+     "used_in_strict_rescore": true
+    },
+    {
+     "source": "malabar",
+     "obs_time_utc": "2026-09-08T21:05:58Z",
+     "known_at_utc": "2026-09-08T21:05:58Z",
+     "target_utc": "2026-09-08T23:22:50Z",
+     "known_minus_target_s": -8212.355,
+     "strictly_earlier": true,
+     "fetched_at_utc": null,
+     "used_in_strict_rescore": true
+    }
+   ],
+   "strict_added_inputs": [],
+   "filter_state_prior_days": {
+    "last_anchor_utc": "2026-09-05T20:17:47Z",
+    "max_known_at_utc": "2026-09-07T21:28:26Z",
+    "max_known_minus_target_s": -93264.355
+   },
+   "noise_params_mle": {
+    "block_start": "2026-09-04",
+    "train_days_before": 143,
+    "train_includes_target_day": false,
+    "max_known_at_utc": "2026-09-03T20:58:16Z",
+    "max_known_minus_target_s": -440674.355
+   },
+   "anchor_perturbation_abs_diff_log": 0.0
+  },
+  {
+   "date": "2026-09-09",
+   "day_type": "ibja_day",
+   "set_A": true,
+   "set_B": true,
+   "target_utc": "2026-09-09T04:32:54Z",
+   "registered_same_day_inputs": [
+    {
+     "source": "ibja_am",
+     "obs_time_utc": "2026-09-09T00:00:00Z",
+     "known_at_utc": "2026-09-09T06:30:00Z",
+     "target_utc": "2026-09-09T04:32:54Z",
+     "known_minus_target_s": 7025.537,
+     "strictly_earlier": false,
+     "fetched_at_utc": "2026-09-09T16:30:20Z",
+     "used_in_strict_rescore": false
+    },
+    {
+     "source": "ibja_pm",
+     "obs_time_utc": "2026-09-09T00:00:00Z",
+     "known_at_utc": "2026-09-09T11:30:00Z",
+     "target_utc": "2026-09-09T04:32:54Z",
+     "known_minus_target_s": 25025.537,
+     "strictly_earlier": false,
+     "fetched_at_utc": "2026-09-09T16:30:20Z",
+     "used_in_strict_rescore": false
+    },
+    {
+     "source": "grt",
+     "obs_time_utc": "2026-09-09T20:54:02Z",
+     "known_at_utc": "2026-09-09T20:54:02Z",
+     "target_utc": "2026-09-09T04:32:54Z",
+     "known_minus_target_s": 58867.537,
+     "strictly_earlier": false,
+     "fetched_at_utc": null,
+     "used_in_strict_rescore": false
+    },
+    {
+     "source": "malabar",
+     "obs_time_utc": "2026-09-09T20:54:02Z",
+     "known_at_utc": "2026-09-09T20:54:02Z",
+     "target_utc": "2026-09-09T04:32:54Z",
+     "known_minus_target_s": 58867.537,
+     "strictly_earlier": false,
+     "fetched_at_utc": null,
+     "used_in_strict_rescore": false
+    },
+    {
+     "source": "comex",
+     "obs_time_utc": "2026-09-08T00:00:00Z",
+     "known_at_utc": "2026-09-09T00:00:00Z",
+     "target_utc": "2026-09-09T04:32:54Z",
+     "known_minus_target_s": -16374.463,
+     "strictly_earlier": true,
+     "fetched_at_utc": null,
+     "used_in_strict_rescore": true
+    }
+   ],
+   "strict_added_inputs": [],
+   "filter_state_prior_days": {
+    "last_anchor_utc": "2026-09-08T23:22:50Z",
+    "max_known_at_utc": "2026-09-08T23:22:50Z",
+    "max_known_minus_target_s": -18604.108
+   },
+   "noise_params_mle": {
+    "block_start": "2026-09-04",
+    "train_days_before": 143,
+    "train_includes_target_day": false,
+    "max_known_at_utc": "2026-09-03T20:58:16Z",
+    "max_known_minus_target_s": -459278.463
+   },
+   "anchor_perturbation_abs_diff_log": 0.0
+  },
+  {
+   "date": "2026-09-10",
+   "day_type": "ibja_day",
+   "set_A": true,
+   "set_B": true,
+   "target_utc": "2026-09-10T23:07:02Z",
+   "registered_same_day_inputs": [
+    {
+     "source": "ibja_am",
+     "obs_time_utc": "2026-09-10T00:00:00Z",
+     "known_at_utc": "2026-09-10T06:30:00Z",
+     "target_utc": "2026-09-10T23:07:02Z",
+     "known_minus_target_s": -59822.929,
+     "strictly_earlier": true,
+     "fetched_at_utc": "2026-09-10T18:51:41Z",
+     "used_in_strict_rescore": true
+    },
+    {
+     "source": "ibja_pm",
+     "obs_time_utc": "2026-09-10T00:00:00Z",
+     "known_at_utc": "2026-09-10T11:30:00Z",
+     "target_utc": "2026-09-10T23:07:02Z",
+     "known_minus_target_s": -41822.929,
+     "strictly_earlier": true,
+     "fetched_at_utc": "2026-09-10T18:51:41Z",
+     "used_in_strict_rescore": true
+    },
+    {
+     "source": "grt",
+     "obs_time_utc": "2026-09-10T20:48:42Z",
+     "known_at_utc": "2026-09-10T20:48:42Z",
+     "target_utc": "2026-09-10T23:07:02Z",
+     "known_minus_target_s": -8300.929,
+     "strictly_earlier": true,
+     "fetched_at_utc": null,
+     "used_in_strict_rescore": true
+    },
+    {
+     "source": "malabar",
+     "obs_time_utc": "2026-09-10T20:48:42Z",
+     "known_at_utc": "2026-09-10T20:48:42Z",
+     "target_utc": "2026-09-10T23:07:02Z",
+     "known_minus_target_s": -8300.929,
+     "strictly_earlier": true,
+     "fetched_at_utc": null,
+     "used_in_strict_rescore": true
+    },
+    {
+     "source": "comex",
+     "obs_time_utc": "2026-09-09T00:00:00Z",
+     "known_at_utc": "2026-09-10T00:00:00Z",
+     "target_utc": "2026-09-10T23:07:02Z",
+     "known_minus_target_s": -83222.929,
+     "strictly_earlier": true,
+     "fetched_at_utc": null,
+     "used_in_strict_rescore": true
+    }
+   ],
+   "strict_added_inputs": [
+    {
+     "source": "ibja_am",
+     "obs_time_utc": "2026-09-09T00:00:00Z",
+     "known_at_utc": "2026-09-09T06:30:00Z",
+     "known_minus_target_s": -146222.929
+    },
+    {
+     "source": "ibja_pm",
+     "obs_time_utc": "2026-09-09T00:00:00Z",
+     "known_at_utc": "2026-09-09T11:30:00Z",
+     "known_minus_target_s": -128222.929
+    }
+   ],
+   "filter_state_prior_days": {
+    "last_anchor_utc": "2026-09-09T04:32:54Z",
+    "max_known_at_utc": "2026-09-09T20:54:02Z",
+    "max_known_minus_target_s": -94380.929
+   },
+   "noise_params_mle": {
+    "block_start": "2026-09-04",
+    "train_days_before": 143,
+    "train_includes_target_day": false,
+    "max_known_at_utc": "2026-09-03T20:58:16Z",
+    "max_known_minus_target_s": -612526.929
+   },
+   "anchor_perturbation_abs_diff_log": 0.0
+  },
+  {
+   "date": "2026-09-11",
+   "day_type": "ibja_day",
+   "set_A": true,
+   "set_B": true,
+   "target_utc": "2026-09-11T23:13:05Z",
+   "registered_same_day_inputs": [
+    {
+     "source": "ibja_am",
+     "obs_time_utc": "2026-09-11T00:00:00Z",
+     "known_at_utc": "2026-09-11T06:30:00Z",
+     "target_utc": "2026-09-11T23:13:05Z",
+     "known_minus_target_s": -60185.402,
+     "strictly_earlier": true,
+     "fetched_at_utc": "2026-09-11T14:35:44Z",
+     "used_in_strict_rescore": true
+    },
+    {
+     "source": "ibja_pm",
+     "obs_time_utc": "2026-09-11T00:00:00Z",
+     "known_at_utc": "2026-09-11T11:30:00Z",
+     "target_utc": "2026-09-11T23:13:05Z",
+     "known_minus_target_s": -42185.402,
+     "strictly_earlier": true,
+     "fetched_at_utc": "2026-09-11T14:35:44Z",
+     "used_in_strict_rescore": true
+    },
+    {
+     "source": "grt",
+     "obs_time_utc": "2026-09-11T20:55:11Z",
+     "known_at_utc": "2026-09-11T20:55:11Z",
+     "target_utc": "2026-09-11T23:13:05Z",
+     "known_minus_target_s": -8274.402,
+     "strictly_earlier": true,
+     "fetched_at_utc": null,
+     "used_in_strict_rescore": true
+    },
+    {
+     "source": "malabar",
+     "obs_time_utc": "2026-09-11T20:55:11Z",
+     "known_at_utc": "2026-09-11T20:55:11Z",
+     "target_utc": "2026-09-11T23:13:05Z",
+     "known_minus_target_s": -8274.402,
+     "strictly_earlier": true,
+     "fetched_at_utc": null,
+     "used_in_strict_rescore": true
+    },
+    {
+     "source": "comex",
+     "obs_time_utc": "2026-09-10T00:00:00Z",
+     "known_at_utc": "2026-09-11T00:00:00Z",
+     "target_utc": "2026-09-11T23:13:05Z",
+     "known_minus_target_s": -83585.402,
+     "strictly_earlier": true,
+     "fetched_at_utc": null,
+     "used_in_strict_rescore": true
+    }
+   ],
+   "strict_added_inputs": [],
+   "filter_state_prior_days": {
+    "last_anchor_utc": "2026-09-10T23:07:02Z",
+    "max_known_at_utc": "2026-09-10T23:07:02Z",
+    "max_known_minus_target_s": -86762.473
+   },
+   "noise_params_mle": {
+    "block_start": "2026-09-11",
+    "train_days_before": 150,
+    "train_includes_target_day": false,
+    "max_known_at_utc": "2026-09-10T23:07:02Z",
+    "max_known_minus_target_s": -86762.473
+   },
+   "anchor_perturbation_abs_diff_log": 0.0
+  },
+  {
+   "date": "2026-09-12",
+   "day_type": "weekend",
+   "set_A": true,
+   "set_B": true,
+   "target_utc": "2026-09-12T23:00:17Z",
+   "registered_same_day_inputs": [
+    {
+     "source": "grt",
+     "obs_time_utc": "2026-09-12T20:30:36Z",
+     "known_at_utc": "2026-09-12T20:30:36Z",
+     "target_utc": "2026-09-12T23:00:17Z",
+     "known_minus_target_s": -8981.405,
+     "strictly_earlier": true,
+     "fetched_at_utc": null,
+     "used_in_strict_rescore": true
+    },
+    {
+     "source": "malabar",
+     "obs_time_utc": "2026-09-12T20:30:36Z",
+     "known_at_utc": "2026-09-12T20:30:36Z",
+     "target_utc": "2026-09-12T23:00:17Z",
+     "known_minus_target_s": -8981.405,
+     "strictly_earlier": true,
+     "fetched_at_utc": null,
+     "used_in_strict_rescore": true
+    },
+    {
+     "source": "comex",
+     "obs_time_utc": "2026-09-11T00:00:00Z",
+     "known_at_utc": "2026-09-12T00:00:00Z",
+     "target_utc": "2026-09-12T23:00:17Z",
+     "known_minus_target_s": -82817.405,
+     "strictly_earlier": true,
+     "fetched_at_utc": null,
+     "used_in_strict_rescore": true
+    }
+   ],
+   "strict_added_inputs": [],
+   "filter_state_prior_days": {
+    "last_anchor_utc": "2026-09-11T23:13:05Z",
+    "max_known_at_utc": "2026-09-11T23:13:05Z",
+    "max_known_minus_target_s": -85632.003
+   },
+   "noise_params_mle": {
+    "block_start": "2026-09-11",
+    "train_days_before": 150,
+    "train_includes_target_day": false,
+    "max_known_at_utc": "2026-09-10T23:07:02Z",
+    "max_known_minus_target_s": -172394.476
+   },
+   "anchor_perturbation_abs_diff_log": 0.0
+  },
+  {
+   "date": "2026-09-13",
+   "day_type": "weekend",
+   "set_A": true,
+   "set_B": true,
+   "target_utc": "2026-09-13T11:53:49Z",
+   "registered_same_day_inputs": [
+    {
+     "source": "grt",
+     "obs_time_utc": "2026-09-13T20:44:57Z",
+     "known_at_utc": "2026-09-13T20:44:57Z",
+     "target_utc": "2026-09-13T11:53:49Z",
+     "known_minus_target_s": 31867.252,
+     "strictly_earlier": false,
+     "fetched_at_utc": null,
+     "used_in_strict_rescore": false
+    }
+   ],
+   "strict_added_inputs": [
+    {
+     "source": "grt",
+     "obs_time_utc": "2026-09-13T11:45:11Z",
+     "known_at_utc": "2026-09-13T11:45:11Z",
+     "known_minus_target_s": -518.748
+    }
+   ],
+   "filter_state_prior_days": {
+    "last_anchor_utc": "2026-09-12T23:00:17Z",
+    "max_known_at_utc": "2026-09-12T23:00:17Z",
+    "max_known_minus_target_s": -46412.343
+   },
+   "noise_params_mle": {
+    "block_start": "2026-09-11",
+    "train_days_before": 150,
+    "train_includes_target_day": false,
+    "max_known_at_utc": "2026-09-10T23:07:02Z",
+    "max_known_minus_target_s": -218806.819
+   },
+   "anchor_perturbation_abs_diff_log": 0.0
+  },
+  {
+   "date": "2026-09-14",
+   "day_type": "weekday_no_ibja",
+   "set_A": true,
+   "set_B": true,
+   "target_utc": "2026-09-14T14:38:07Z",
+   "registered_same_day_inputs": [
+    {
+     "source": "grt",
+     "obs_time_utc": "2026-09-14T21:46:35Z",
+     "known_at_utc": "2026-09-14T21:46:35Z",
+     "target_utc": "2026-09-14T14:38:07Z",
+     "known_minus_target_s": 25707.756,
+     "strictly_earlier": false,
+     "fetched_at_utc": null,
+     "used_in_strict_rescore": false
+    },
+    {
+     "source": "malabar",
+     "obs_time_utc": "2026-09-14T21:46:35Z",
+     "known_at_utc": "2026-09-14T21:46:35Z",
+     "target_utc": "2026-09-14T14:38:07Z",
+     "known_minus_target_s": 25707.756,
+     "strictly_earlier": false,
+     "fetched_at_utc": null,
+     "used_in_strict_rescore": false
+    }
+   ],
+   "strict_added_inputs": [
+    {
+     "source": "grt",
+     "obs_time_utc": "2026-09-14T12:38:13Z",
+     "known_at_utc": "2026-09-14T12:38:13Z",
+     "known_minus_target_s": -7194.244
+    },
+    {
+     "source": "malabar",
+     "obs_time_utc": "2026-09-14T12:38:13Z",
+     "known_at_utc": "2026-09-14T12:38:13Z",
+     "known_minus_target_s": -7194.244
+    }
+   ],
+   "filter_state_prior_days": {
+    "last_anchor_utc": "2026-09-13T11:53:49Z",
+    "max_known_at_utc": "2026-09-13T20:44:57Z",
+    "max_known_minus_target_s": -64390.244
+   },
+   "noise_params_mle": {
+    "block_start": "2026-09-11",
+    "train_days_before": 150,
+    "train_includes_target_day": false,
+    "max_known_at_utc": "2026-09-10T23:07:02Z",
+    "max_known_minus_target_s": -315064.315
+   },
+   "anchor_perturbation_abs_diff_log": 0.0
+  },
+  {
+   "date": "2026-09-16",
+   "day_type": "ibja_day",
+   "set_A": true,
+   "set_B": true,
+   "target_utc": "2026-09-16T21:15:50Z",
+   "registered_same_day_inputs": [
+    {
+     "source": "ibja_am",
+     "obs_time_utc": "2026-09-16T00:00:00Z",
+     "known_at_utc": "2026-09-16T06:30:00Z",
+     "target_utc": "2026-09-16T21:15:50Z",
+     "known_minus_target_s": -53150.779,
+     "strictly_earlier": true,
+     "fetched_at_utc": "2026-09-16T12:47:58Z",
+     "used_in_strict_rescore": true
+    },
+    {
+     "source": "ibja_pm",
+     "obs_time_utc": "2026-09-16T00:00:00Z",
+     "known_at_utc": "2026-09-16T11:30:00Z",
+     "target_utc": "2026-09-16T21:15:50Z",
+     "known_minus_target_s": -35150.779,
+     "strictly_earlier": true,
+     "fetched_at_utc": "2026-09-16T12:47:58Z",
+     "used_in_strict_rescore": true
+    },
+    {
+     "source": "grt",
+     "obs_time_utc": "2026-09-16T21:14:46Z",
+     "known_at_utc": "2026-09-16T21:14:46Z",
+     "target_utc": "2026-09-16T21:15:50Z",
+     "known_minus_target_s": -64.779,
+     "strictly_earlier": true,
+     "fetched_at_utc": null,
+     "used_in_strict_rescore": true
+    },
+    {
+     "source": "malabar",
+     "obs_time_utc": "2026-09-16T21:14:46Z",
+     "known_at_utc": "2026-09-16T21:14:46Z",
+     "target_utc": "2026-09-16T21:15:50Z",
+     "known_minus_target_s": -64.779,
+     "strictly_earlier": true,
+     "fetched_at_utc": null,
+     "used_in_strict_rescore": true
+    },
+    {
+     "source": "comex",
+     "obs_time_utc": "2026-09-15T00:00:00Z",
+     "known_at_utc": "2026-09-16T00:00:00Z",
+     "target_utc": "2026-09-16T21:15:50Z",
+     "known_minus_target_s": -76550.779,
+     "strictly_earlier": true,
+     "fetched_at_utc": null,
+     "used_in_strict_rescore": true
+    }
+   ],
+   "strict_added_inputs": [],
+   "filter_state_prior_days": {
+    "last_anchor_utc": "2026-09-14T14:38:07Z",
+    "max_known_at_utc": "2026-09-15T21:16:42Z",
+    "max_known_minus_target_s": -86348.779
+   },
+   "noise_params_mle": {
+    "block_start": "2026-09-11",
+    "train_days_before": 150,
+    "train_includes_target_day": false,
+    "max_known_at_utc": "2026-09-10T23:07:02Z",
+    "max_known_minus_target_s": -511727.85
+   },
+   "anchor_perturbation_abs_diff_log": 0.0
+  },
+  {
+   "date": "2026-09-17",
+   "day_type": "ibja_day",
+   "set_A": true,
+   "set_B": true,
+   "target_utc": "2026-09-17T16:53:59Z",
+   "registered_same_day_inputs": [
+    {
+     "source": "ibja_am",
+     "obs_time_utc": "2026-09-17T00:00:00Z",
+     "known_at_utc": "2026-09-17T06:30:00Z",
+     "target_utc": "2026-09-17T16:53:59Z",
+     "known_minus_target_s": -37439.534,
+     "strictly_earlier": true,
+     "fetched_at_utc": "2026-09-17T12:45:29Z",
+     "used_in_strict_rescore": true
+    },
+    {
+     "source": "ibja_pm",
+     "obs_time_utc": "2026-09-17T00:00:00Z",
+     "known_at_utc": "2026-09-17T11:30:00Z",
+     "target_utc": "2026-09-17T16:53:59Z",
+     "known_minus_target_s": -19439.534,
+     "strictly_earlier": true,
+     "fetched_at_utc": "2026-09-17T12:45:29Z",
+     "used_in_strict_rescore": true
+    },
+    {
+     "source": "grt",
+     "obs_time_utc": "2026-09-17T21:18:18Z",
+     "known_at_utc": "2026-09-17T21:18:18Z",
+     "target_utc": "2026-09-17T16:53:59Z",
+     "known_minus_target_s": 15858.466,
+     "strictly_earlier": false,
+     "fetched_at_utc": null,
+     "used_in_strict_rescore": false
+    },
+    {
+     "source": "malabar",
+     "obs_time_utc": "2026-09-17T21:18:18Z",
+     "known_at_utc": "2026-09-17T21:18:18Z",
+     "target_utc": "2026-09-17T16:53:59Z",
+     "known_minus_target_s": 15858.466,
+     "strictly_earlier": false,
+     "fetched_at_utc": null,
+     "used_in_strict_rescore": false
+    },
+    {
+     "source": "comex",
+     "obs_time_utc": "2026-09-16T00:00:00Z",
+     "known_at_utc": "2026-09-17T00:00:00Z",
+     "target_utc": "2026-09-17T16:53:59Z",
+     "known_minus_target_s": -60839.534,
+     "strictly_earlier": true,
+     "fetched_at_utc": null,
+     "used_in_strict_rescore": true
+    }
+   ],
+   "strict_added_inputs": [
+    {
+     "source": "grt",
+     "obs_time_utc": "2026-09-17T11:35:23Z",
+     "known_at_utc": "2026-09-17T11:35:23Z",
+     "known_minus_target_s": -19116.534
+    },
+    {
+     "source": "malabar",
+     "obs_time_utc": "2026-09-17T11:35:23Z",
+     "known_at_utc": "2026-09-17T11:35:23Z",
+     "known_minus_target_s": -19116.534
+    }
+   ],
+   "filter_state_prior_days": {
+    "last_anchor_utc": "2026-09-16T21:15:50Z",
+    "max_known_at_utc": "2026-09-16T21:15:50Z",
+    "max_known_minus_target_s": -70688.755
+   },
+   "noise_params_mle": {
+    "block_start": "2026-09-11",
+    "train_days_before": 150,
+    "train_includes_target_day": false,
+    "max_known_at_utc": "2026-09-10T23:07:02Z",
+    "max_known_minus_target_s": -582416.605
+   },
+   "anchor_perturbation_abs_diff_log": 0.0
+  },
+  {
+   "date": "2026-09-18",
+   "day_type": "ibja_day",
+   "set_A": true,
+   "set_B": true,
+   "target_utc": "2026-09-18T23:15:31Z",
+   "registered_same_day_inputs": [
+    {
+     "source": "ibja_am",
+     "obs_time_utc": "2026-09-18T00:00:00Z",
+     "known_at_utc": "2026-09-18T06:30:00Z",
+     "target_utc": "2026-09-18T23:15:31Z",
+     "known_minus_target_s": -60331.06,
+     "strictly_earlier": true,
+     "fetched_at_utc": "2026-09-18T12:21:02Z",
+     "used_in_strict_rescore": true
+    },
+    {
+     "source": "ibja_pm",
+     "obs_time_utc": "2026-09-18T00:00:00Z",
+     "known_at_utc": "2026-09-18T11:30:00Z",
+     "target_utc": "2026-09-18T23:15:31Z",
+     "known_minus_target_s": -42331.06,
+     "strictly_earlier": true,
+     "fetched_at_utc": "2026-09-18T12:21:02Z",
+     "used_in_strict_rescore": true
+    },
+    {
+     "source": "grt",
+     "obs_time_utc": "2026-09-18T20:51:35Z",
+     "known_at_utc": "2026-09-18T20:51:35Z",
+     "target_utc": "2026-09-18T23:15:31Z",
+     "known_minus_target_s": -8636.06,
+     "strictly_earlier": true,
+     "fetched_at_utc": null,
+     "used_in_strict_rescore": true
+    },
+    {
+     "source": "malabar",
+     "obs_time_utc": "2026-09-18T20:51:35Z",
+     "known_at_utc": "2026-09-18T20:51:35Z",
+     "target_utc": "2026-09-18T23:15:31Z",
+     "known_minus_target_s": -8636.06,
+     "strictly_earlier": true,
+     "fetched_at_utc": null,
+     "used_in_strict_rescore": true
+    },
+    {
+     "source": "comex",
+     "obs_time_utc": "2026-09-17T00:00:00Z",
+     "known_at_utc": "2026-09-18T00:00:00Z",
+     "target_utc": "2026-09-18T23:15:31Z",
+     "known_minus_target_s": -83731.06,
+     "strictly_earlier": true,
+     "fetched_at_utc": null,
+     "used_in_strict_rescore": true
+    }
+   ],
+   "strict_added_inputs": [],
+   "filter_state_prior_days": {
+    "last_anchor_utc": "2026-09-17T16:53:59Z",
+    "max_known_at_utc": "2026-09-17T21:18:18Z",
+    "max_known_minus_target_s": -93433.06
+   },
+   "noise_params_mle": {
+    "block_start": "2026-09-18",
+    "train_days_before": 157,
+    "train_includes_target_day": false,
+    "max_known_at_utc": "2026-09-17T21:18:18Z",
+    "max_known_minus_target_s": -93433.06
+   },
+   "anchor_perturbation_abs_diff_log": 0.0
+  },
+  {
+   "date": "2026-09-19",
+   "day_type": "weekend",
+   "set_A": true,
+   "set_B": true,
+   "target_utc": "2026-09-19T22:57:06Z",
+   "registered_same_day_inputs": [
+    {
+     "source": "grt",
+     "obs_time_utc": "2026-09-19T20:35:02Z",
+     "known_at_utc": "2026-09-19T20:35:02Z",
+     "target_utc": "2026-09-19T22:57:06Z",
+     "known_minus_target_s": -8524.36,
+     "strictly_earlier": true,
+     "fetched_at_utc": null,
+     "used_in_strict_rescore": true
+    },
+    {
+     "source": "malabar",
+     "obs_time_utc": "2026-09-19T20:35:02Z",
+     "known_at_utc": "2026-09-19T20:35:02Z",
+     "target_utc": "2026-09-19T22:57:06Z",
+     "known_minus_target_s": -8524.36,
+     "strictly_earlier": true,
+     "fetched_at_utc": null,
+     "used_in_strict_rescore": true
+    },
+    {
+     "source": "comex",
+     "obs_time_utc": "2026-09-18T00:00:00Z",
+     "known_at_utc": "2026-09-19T00:00:00Z",
+     "target_utc": "2026-09-19T22:57:06Z",
+     "known_minus_target_s": -82626.36,
+     "strictly_earlier": true,
+     "fetched_at_utc": null,
+     "used_in_strict_rescore": true
+    }
+   ],
+   "strict_added_inputs": [],
+   "filter_state_prior_days": {
+    "last_anchor_utc": "2026-09-18T23:15:31Z",
+    "max_known_at_utc": "2026-09-18T23:15:31Z",
+    "max_known_minus_target_s": -85295.3
+   },
+   "noise_params_mle": {
+    "block_start": "2026-09-18",
+    "train_days_before": 157,
+    "train_includes_target_day": false,
+    "max_known_at_utc": "2026-09-17T21:18:18Z",
+    "max_known_minus_target_s": -178728.36
+   },
+   "anchor_perturbation_abs_diff_log": 0.0
+  },
+  {
+   "date": "2026-09-20",
+   "day_type": "weekend",
+   "set_A": true,
+   "set_B": true,
+   "target_utc": "2026-09-20T23:12:03Z",
+   "registered_same_day_inputs": [
+    {
+     "source": "grt",
+     "obs_time_utc": "2026-09-20T20:45:41Z",
+     "known_at_utc": "2026-09-20T20:45:41Z",
+     "target_utc": "2026-09-20T23:12:03Z",
+     "known_minus_target_s": -8782.695,
+     "strictly_earlier": true,
+     "fetched_at_utc": null,
+     "used_in_strict_rescore": true
+    }
+   ],
+   "strict_added_inputs": [],
+   "filter_state_prior_days": {
+    "last_anchor_utc": "2026-09-19T22:57:06Z",
+    "max_known_at_utc": "2026-09-19T22:57:06Z",
+    "max_known_minus_target_s": -87297.335
+   },
+   "noise_params_mle": {
+    "block_start": "2026-09-18",
+    "train_days_before": 157,
+    "train_includes_target_day": false,
+    "max_known_at_utc": "2026-09-17T21:18:18Z",
+    "max_known_minus_target_s": -266025.695
+   },
+   "anchor_perturbation_abs_diff_log": 0.0
+  },
+  {
+   "date": "2026-09-21",
+   "day_type": "ibja_day",
+   "set_A": true,
+   "set_B": true,
+   "target_utc": "2026-09-21T13:20:49Z",
+   "registered_same_day_inputs": [
+    {
+     "source": "ibja_am",
+     "obs_time_utc": "2026-09-21T00:00:00Z",
+     "known_at_utc": "2026-09-21T06:30:00Z",
+     "target_utc": "2026-09-21T13:20:49Z",
+     "known_minus_target_s": -24649.753,
+     "strictly_earlier": true,
+     "fetched_at_utc": "2026-09-21T12:05:45Z",
+     "used_in_strict_rescore": true
+    },
+    {
+     "source": "ibja_pm",
+     "obs_time_utc": "2026-09-21T00:00:00Z",
+     "known_at_utc": "2026-09-21T11:30:00Z",
+     "target_utc": "2026-09-21T13:20:49Z",
+     "known_minus_target_s": -6649.753,
+     "strictly_earlier": true,
+     "fetched_at_utc": "2026-09-21T12:05:45Z",
+     "used_in_strict_rescore": true
+    },
+    {
+     "source": "grt",
+     "obs_time_utc": "2026-09-21T21:56:42Z",
+     "known_at_utc": "2026-09-21T21:56:42Z",
+     "target_utc": "2026-09-21T13:20:49Z",
+     "known_minus_target_s": 30952.247,
+     "strictly_earlier": false,
+     "fetched_at_utc": null,
+     "used_in_strict_rescore": false
+    },
+    {
+     "source": "malabar",
+     "obs_time_utc": "2026-09-21T21:56:42Z",
+     "known_at_utc": "2026-09-21T21:56:42Z",
+     "target_utc": "2026-09-21T13:20:49Z",
+     "known_minus_target_s": 30952.247,
+     "strictly_earlier": false,
+     "fetched_at_utc": null,
+     "used_in_strict_rescore": false
+    }
+   ],
+   "strict_added_inputs": [
+    {
+     "source": "grt",
+     "obs_time_utc": "2026-09-21T12:41:44Z",
+     "known_at_utc": "2026-09-21T12:41:44Z",
+     "known_minus_target_s": -2345.753
+    },
+    {
+     "source": "malabar",
+     "obs_time_utc": "2026-09-21T12:41:44Z",
+     "known_at_utc": "2026-09-21T12:41:44Z",
+     "known_minus_target_s": -2345.753
+    }
+   ],
+   "filter_state_prior_days": {
+    "last_anchor_utc": "2026-09-20T23:12:03Z",
+    "max_known_at_utc": "2026-09-20T23:12:03Z",
+    "max_known_minus_target_s": -50926.058
+   },
+   "noise_params_mle": {
+    "block_start": "2026-09-18",
+    "train_days_before": 157,
+    "train_includes_target_day": false,
+    "max_known_at_utc": "2026-09-17T21:18:18Z",
+    "max_known_minus_target_s": -316951.753
+   },
+   "anchor_perturbation_abs_diff_log": 0.0
+  },
+  {
+   "date": "2026-09-22",
+   "day_type": "ibja_day",
+   "set_A": true,
+   "set_B": true,
+   "target_utc": "2026-09-22T21:14:52Z",
+   "registered_same_day_inputs": [
+    {
+     "source": "ibja_am",
+     "obs_time_utc": "2026-09-22T00:00:00Z",
+     "known_at_utc": "2026-09-22T06:30:00Z",
+     "target_utc": "2026-09-22T21:14:52Z",
+     "known_minus_target_s": -53092.211,
+     "strictly_earlier": true,
+     "fetched_at_utc": "2026-09-22T12:48:25Z",
+     "used_in_strict_rescore": true
+    },
+    {
+     "source": "ibja_pm",
+     "obs_time_utc": "2026-09-22T00:00:00Z",
+     "known_at_utc": "2026-09-22T11:30:00Z",
+     "target_utc": "2026-09-22T21:14:52Z",
+     "known_minus_target_s": -35092.211,
+     "strictly_earlier": true,
+     "fetched_at_utc": "2026-09-22T12:48:25Z",
+     "used_in_strict_rescore": true
+    },
+    {
+     "source": "grt",
+     "obs_time_utc": "2026-09-22T21:14:56Z",
+     "known_at_utc": "2026-09-22T21:14:56Z",
+     "target_utc": "2026-09-22T21:14:52Z",
+     "known_minus_target_s": 3.789,
+     "strictly_earlier": false,
+     "fetched_at_utc": null,
+     "used_in_strict_rescore": false
+    },
+    {
+     "source": "malabar",
+     "obs_time_utc": "2026-09-22T21:14:56Z",
+     "known_at_utc": "2026-09-22T21:14:56Z",
+     "target_utc": "2026-09-22T21:14:52Z",
+     "known_minus_target_s": 3.789,
+     "strictly_earlier": false,
+     "fetched_at_utc": null,
+     "used_in_strict_rescore": false
+    },
+    {
+     "source": "comex",
+     "obs_time_utc": "2026-09-21T00:00:00Z",
+     "known_at_utc": "2026-09-22T00:00:00Z",
+     "target_utc": "2026-09-22T21:14:52Z",
+     "known_minus_target_s": -76492.211,
+     "strictly_earlier": true,
+     "fetched_at_utc": null,
+     "used_in_strict_rescore": true
+    }
+   ],
+   "strict_added_inputs": [
+    {
+     "source": "grt",
+     "obs_time_utc": "2026-09-22T16:54:07Z",
+     "known_at_utc": "2026-09-22T16:54:07Z",
+     "known_minus_target_s": -15645.211
+    },
+    {
+     "source": "malabar",
+     "obs_time_utc": "2026-09-22T16:54:07Z",
+     "known_at_utc": "2026-09-22T16:54:07Z",
+     "known_minus_target_s": -15645.211
+    }
+   ],
+   "filter_state_prior_days": {
+    "last_anchor_utc": "2026-09-21T13:20:49Z",
+    "max_known_at_utc": "2026-09-21T21:56:42Z",
+    "max_known_minus_target_s": -83890.211
+   },
+   "noise_params_mle": {
+    "block_start": "2026-09-18",
+    "train_days_before": 157,
+    "train_includes_target_day": false,
+    "max_known_at_utc": "2026-09-17T21:18:18Z",
+    "max_known_minus_target_s": -431794.211
+   },
+   "anchor_perturbation_abs_diff_log": 0.0
+  },
+  {
+   "date": "2026-09-23",
+   "day_type": "ibja_day",
+   "set_A": true,
+   "set_B": true,
+   "target_utc": "2026-09-23T21:28:02Z",
+   "registered_same_day_inputs": [
+    {
+     "source": "ibja_am",
+     "obs_time_utc": "2026-09-23T00:00:00Z",
+     "known_at_utc": "2026-09-23T06:30:00Z",
+     "target_utc": "2026-09-23T21:28:02Z",
+     "known_minus_target_s": -53882.541,
+     "strictly_earlier": true,
+     "fetched_at_utc": "2026-09-23T12:58:52Z",
+     "used_in_strict_rescore": true
+    },
+    {
+     "source": "ibja_pm",
+     "obs_time_utc": "2026-09-23T00:00:00Z",
+     "known_at_utc": "2026-09-23T11:30:00Z",
+     "target_utc": "2026-09-23T21:28:02Z",
+     "known_minus_target_s": -35882.541,
+     "strictly_earlier": true,
+     "fetched_at_utc": "2026-09-23T12:58:52Z",
+     "used_in_strict_rescore": true
+    },
+    {
+     "source": "grt",
+     "obs_time_utc": "2026-09-23T21:27:22Z",
+     "known_at_utc": "2026-09-23T21:27:22Z",
+     "target_utc": "2026-09-23T21:28:02Z",
+     "known_minus_target_s": -40.541,
+     "strictly_earlier": true,
+     "fetched_at_utc": null,
+     "used_in_strict_rescore": true
+    },
+    {
+     "source": "malabar",
+     "obs_time_utc": "2026-09-23T21:27:22Z",
+     "known_at_utc": "2026-09-23T21:27:22Z",
+     "target_utc": "2026-09-23T21:28:02Z",
+     "known_minus_target_s": -40.541,
+     "strictly_earlier": true,
+     "fetched_at_utc": null,
+     "used_in_strict_rescore": true
+    },
+    {
+     "source": "comex",
+     "obs_time_utc": "2026-09-22T00:00:00Z",
+     "known_at_utc": "2026-09-23T00:00:00Z",
+     "target_utc": "2026-09-23T21:28:02Z",
+     "known_minus_target_s": -77282.541,
+     "strictly_earlier": true,
+     "fetched_at_utc": null,
+     "used_in_strict_rescore": true
+    }
+   ],
+   "strict_added_inputs": [],
+   "filter_state_prior_days": {
+    "last_anchor_utc": "2026-09-22T21:14:52Z",
+    "max_known_at_utc": "2026-09-22T21:14:56Z",
+    "max_known_minus_target_s": -87186.541
+   },
+   "noise_params_mle": {
+    "block_start": "2026-09-18",
+    "train_days_before": 157,
+    "train_includes_target_day": false,
+    "max_known_at_utc": "2026-09-17T21:18:18Z",
+    "max_known_minus_target_s": -518984.541
+   },
+   "anchor_perturbation_abs_diff_log": 0.0
+  },
+  {
+   "date": "2026-09-24",
+   "day_type": "ibja_day",
+   "set_A": true,
+   "set_B": true,
+   "target_utc": "2026-09-24T17:05:31Z",
+   "registered_same_day_inputs": [
+    {
+     "source": "ibja_am",
+     "obs_time_utc": "2026-09-24T00:00:00Z",
+     "known_at_utc": "2026-09-24T06:30:00Z",
+     "target_utc": "2026-09-24T17:05:31Z",
+     "known_minus_target_s": -38131.389,
+     "strictly_earlier": true,
+     "fetched_at_utc": "2026-09-24T12:52:14Z",
+     "used_in_strict_rescore": true
+    },
+    {
+     "source": "ibja_pm",
+     "obs_time_utc": "2026-09-24T00:00:00Z",
+     "known_at_utc": "2026-09-24T11:30:00Z",
+     "target_utc": "2026-09-24T17:05:31Z",
+     "known_minus_target_s": -20131.389,
+     "strictly_earlier": true,
+     "fetched_at_utc": "2026-09-24T12:52:14Z",
+     "used_in_strict_rescore": true
+    },
+    {
+     "source": "grt",
+     "obs_time_utc": "2026-09-24T18:21:58Z",
+     "known_at_utc": "2026-09-24T18:21:58Z",
+     "target_utc": "2026-09-24T17:05:31Z",
+     "known_minus_target_s": 4586.611,
+     "strictly_earlier": false,
+     "fetched_at_utc": null,
+     "used_in_strict_rescore": false
+    },
+    {
+     "source": "malabar",
+     "obs_time_utc": "2026-09-24T18:21:58Z",
+     "known_at_utc": "2026-09-24T18:21:58Z",
+     "target_utc": "2026-09-24T17:05:31Z",
+     "known_minus_target_s": 4586.611,
+     "strictly_earlier": false,
+     "fetched_at_utc": null,
+     "used_in_strict_rescore": false
+    },
+    {
+     "source": "comex",
+     "obs_time_utc": "2026-09-23T00:00:00Z",
+     "known_at_utc": "2026-09-24T00:00:00Z",
+     "target_utc": "2026-09-24T17:05:31Z",
+     "known_minus_target_s": -61531.389,
+     "strictly_earlier": true,
+     "fetched_at_utc": null,
+     "used_in_strict_rescore": true
+    }
+   ],
+   "strict_added_inputs": [
+    {
+     "source": "grt",
+     "obs_time_utc": "2026-09-24T11:39:24Z",
+     "known_at_utc": "2026-09-24T11:39:24Z",
+     "known_minus_target_s": -19567.389
+    },
+    {
+     "source": "malabar",
+     "obs_time_utc": "2026-09-24T11:39:24Z",
+     "known_at_utc": "2026-09-24T11:39:24Z",
+     "known_minus_target_s": -19567.389
+    }
+   ],
+   "filter_state_prior_days": {
+    "last_anchor_utc": "2026-09-23T21:28:02Z",
+    "max_known_at_utc": "2026-09-23T21:28:02Z",
+    "max_known_minus_target_s": -70648.848
+   },
+   "noise_params_mle": {
+    "block_start": "2026-09-18",
+    "train_days_before": 157,
+    "train_includes_target_day": false,
+    "max_known_at_utc": "2026-09-17T21:18:18Z",
+    "max_known_minus_target_s": -589633.389
+   },
+   "anchor_perturbation_abs_diff_log": 0.0
+  }
+ ]
+}
