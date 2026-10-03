@@ -2,7 +2,7 @@
  "schema_version": 1,
  "note": "Shadow only (ADR 066): hourly world-price forecasts of the next IBJA fix.",
  "summary": {
-  "generated_at": "2026-10-03T01:22:45.219411Z",
+  "generated_at": "2026-10-03T06:23:58.568926Z",
   "n_entries": 6,
   "after_morning_rate": {
    "n_fixes": 0,
