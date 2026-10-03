@@ -619,8 +619,10 @@ every run failed for 4 days straight while `gh api .../actions/runners` still re
   playwright/scrape failures alike) and reset to 0 on success. It commits via the same
   `bot/tanishq-selfhosted-sync` PR path as the price reading itself.
 - **T12** (`ml/notifications.py::_check_t12_selfhosted_runner`) fires once per IST day when that
-  counter reaches 3 — meaning the runner genuinely executed and failed 3 times in a row, not
-  "no runner available." Read via `compute_selfhosted_consecutive_failures()`.
+  counter reaches 2 (was 3 until 2026-10-03; with the 6-visit schedule 3 meant 12-14 h) — meaning
+  the runner genuinely executed and failed 2 times in a row, not "no runner available." Read via
+  `compute_selfhosted_consecutive_failures()`. A run whose setup failed (npm ci, Playwright install)
+  is logged as `setup_failed` and counts.
 - `timeout-minutes` bumped 20 → 25 to give the recreate-fallback path enough headroom to not get
   cancelled purely on timing when the host has just woken from an extended outage.
 

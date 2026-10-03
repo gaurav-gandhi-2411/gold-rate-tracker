@@ -239,6 +239,12 @@ jobs:
             fi
           fi
           OUTCOME="${{ steps.scrape.outcome }}"
+          # The scrape is also "skipped" when an earlier step failed (npm ci, Playwright install):
+          # record that as setup_failed so the log says what happened (2026-10-02, #1846). The
+          # takedown switch's own skip is told apart by its enabled=false output below.
+          if [ "$OUTCOME" = "skipped" ] && [ "${{ steps.switch.outcome }}" != "success" ]; then
+            OUTCOME="setup_failed"
+          fi
           # A deliberate takedown (switch says enabled=false, ADR 059) skips the scrape on
           # purpose: that is not a failure, so it must not feed T12 a false "runner failing"
           # alert every day. Keyed on the switch's explicit output, not on outcome=skipped,
