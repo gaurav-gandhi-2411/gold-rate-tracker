@@ -63,17 +63,28 @@ def _health_script() -> str:
     script = "\n".join(lines)
     script = script.replace("${{ steps.scrape.outcome }}", "$SCRAPE_OUTCOME")
     script = script.replace("${{ steps.switch.outputs.enabled }}", "$SWITCH_ENABLED")
+    script = script.replace("${{ steps.switch.outcome }}", "$SWITCH_OUTCOME")
     assert "${{" not in script, "unexpected GitHub expression left in the extracted script"
     return "set -e\n" + script + "\n"
 
 
-def _run_cycle(workdir: Path, outcome: str, switch_enabled: str) -> int:
+def _run_cycle(
+    workdir: Path, outcome: str, switch_enabled: str, switch_outcome: str | None = None
+) -> int:
+    # The switch step ran (success) whenever it set enabled; otherwise it was skipped or failed.
+    if switch_outcome is None:
+        switch_outcome = "success" if switch_enabled in ("true", "false") else "failure"
     bash = shutil.which("bash")
     subprocess.run(
         [bash, "-c", _health_script()],
         cwd=workdir,
         check=True,
-        env={"SCRAPE_OUTCOME": outcome, "SWITCH_ENABLED": switch_enabled, "PATH": "/usr/bin:/bin"},
+        env={
+            "SCRAPE_OUTCOME": outcome,
+            "SWITCH_ENABLED": switch_enabled,
+            "SWITCH_OUTCOME": switch_outcome,
+            "PATH": "/usr/bin:/bin",
+        },
     )
     raw = json.loads((workdir / "data" / "tanishq_selfhosted_health.json").read_text())
     return int(raw["consecutive_job_failures"])
@@ -144,3 +155,11 @@ def test_takedown_skip_is_not_a_failure_but_a_switch_error_is(workdir: Path):
     assert _run_cycle(workdir, "skipped", "false") == 1
     # Switch step itself errored (no output) -> scrape skipped -> still a failure.
     assert _run_cycle(workdir, "skipped", "") == 2
+
+
+def test_a_setup_failure_counts_and_is_logged_as_setup_failed(workdir: Path):
+    # 2026-10-02/03: Playwright install failed, so the switch and the scrape were both skipped.
+    assert _run_cycle(workdir, "skipped", "", switch_outcome="skipped") == 1
+    raw = json.loads((workdir / "data" / "tanishq_selfhosted_health.json").read_text())
+    assert raw["last_job_outcome"] == "setup_failed"
+    assert _run_cycle(workdir, "skipped", "", switch_outcome="skipped") == 2  # T12 threshold

@@ -61,10 +61,12 @@ _T10_GAP_THRESHOLD_DAYS = 2  # >=2 calendar days with no new PIT snapshot trigge
 # days: IBJA publishes no weekend rate, so a usable snapshot cannot exist on a Saturday or
 # Sunday and a calendar-day gap crossed 2 every Sunday and 3 every Monday (AN4, 2026-09-21).
 _T13_GAP_THRESHOLD_DAYS = 2
-# >=3 consecutive scrape-tanishq-selfhosted job failures (job actually ran, not
-# just queued-with-no-runner) trigger T12. At the ~3h schedule cadence that's
-# ~9h of the runner being online but genuinely failing -- see docs/RUNBOOK.md.
-_T12_CONSECUTIVE_FAILURE_THRESHOLD = 3
+# >=2 consecutive scrape-tanishq-selfhosted job failures (job actually ran, not
+# just queued-with-no-runner) trigger T12 -- see docs/RUNBOOK.md. Was 3, sized for the old
+# 3-hourly cadence (~9 h). With the 6-visit schedule (#2078, gaps up to ~6 h) 3 meant 12-14 h:
+# on 2026-10-02/03 a broken Playwright install (#1846) failed 2 runs over 11 h and T12 never
+# fired. 2 keeps it to ~6-8 h.
+_T12_CONSECUTIVE_FAILURE_THRESHOLD = 2
 # T14 (GG decision 4b, 2026-09-25; threshold re-derived for decision 3a, 2026-09-26): Tanishq has
 # not updated. Measured on the newest real Tanishq row in data/prices.json (every successful visit
 # appends a row, even when the rate is unchanged), in hours that do NOT fall on a Sunday (IST).
