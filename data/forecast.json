@@ -1,5 +1,5 @@
 {
-  "predicted_at": "2026-10-03T17:34:09.248519+00:00",
+  "predicted_at": "2026-10-03T18:04:51.250126+00:00",
   "target_window": "5d",
   "headline": {
     "method": "nextfix_ridge_mlp_v1",
@@ -47,7 +47,7 @@
     ],
     "horizon_p90": [
       14338.84,
-      14440.35,
+      14440.36,
       14485.15,
       14527.31,
       14624.48
@@ -59,7 +59,7 @@
     "direction_consensus": 1.0
   },
   "driver_context": {
-    "computed_at": "2026-10-03T17:34:16.653605+00:00",
+    "computed_at": "2026-10-03T18:04:57.510645+00:00",
     "macro_staleness_days": 0.0,
     "macro_fresh": true,
     "premium_threshold_pct": 15.0,
@@ -106,9 +106,9 @@
     },
     "alignment": "intraday_at_fix"
   },
-  "real_readings_count": 744,
+  "real_readings_count": 745,
   "current_22k": 13720,
-  "scraped_at": "2026-10-03T14:43:27.856Z",
+  "scraped_at": "2026-10-03T17:59:04.294Z",
   "price_source": "tanishq_scrape",
   "est_low": null,
   "est_high": null,
