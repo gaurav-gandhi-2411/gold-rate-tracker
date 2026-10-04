@@ -39,6 +39,83 @@
       "confirmatory": false,
       "scored_at_utc": "2026-09-27T07:21:13.872447+00:00",
       "reached_preregistered_n": null
+    },
+    {
+      "n": 3,
+      "effective_n": 4.0,
+      "dm_stat": -0.7071067811865475,
+      "p_value": 0.23975006109347674,
+      "mean_diff": -0.3333333333333333,
+      "gamma_0": 0.888888888888889,
+      "long_run_var": 0.6666666666666667,
+      "accuracy": 0.6666666666666666,
+      "always_up_accuracy": 0.3333333333333333,
+      "significant_at_05": false,
+      "arm": "live_h2",
+      "leak_guard": {
+        "labels": {
+          "name": "config_sweep label_binary_h2 training labels",
+          "mode": "raise",
+          "n_checks": 3,
+          "n_inputs_checked": 513,
+          "n_unchecked": 0,
+          "n_violations": 0,
+          "n_checks_with_violation": 0,
+          "violations_by_source": {},
+          "max_late_by_s": null,
+          "examples": []
+        },
+        "features": null
+      },
+      "protocol_version": "adr042-v2",
+      "embargo_label_date_col": "label_date_h2",
+      "confirmatory_after_as_of": "2026-09-24",
+      "consecutive_day_labels": true,
+      "scored_as_of_dates": [
+        "2026-09-25",
+        "2026-09-28",
+        "2026-09-29"
+      ],
+      "train_max_label_dates": [
+        "2026-09-24",
+        "2026-09-25",
+        "2026-09-28"
+      ],
+      "scored_at_utc": "2026-10-04T07:35:31.221427+00:00",
+      "preregistered_n_for_power": 418.3229,
+      "reached_preregistered_n": false
+    },
+    {
+      "n": 329,
+      "effective_n": 329.0,
+      "dm_stat": 0.801421897398141,
+      "p_value": 0.7885562787534135,
+      "mean_diff": 0.030395136778115502,
+      "gamma_0": 0.47324026939884145,
+      "long_run_var": 0.47324026939884145,
+      "accuracy": 0.5258358662613982,
+      "always_up_accuracy": 0.5562310030395137,
+      "significant_at_05": false,
+      "arm": "proxy_deadzone_h1_equivalent",
+      "leak_guard": {
+        "labels": null,
+        "features": {
+          "name": "config_sweep label_binary_deadzone features",
+          "mode": "raise",
+          "n_checks": 329,
+          "n_inputs_checked": 329,
+          "n_unchecked": 0,
+          "n_violations": 0,
+          "n_checks_with_violation": 0,
+          "violations_by_source": {},
+          "max_late_by_s": null,
+          "examples": []
+        }
+      },
+      "protocol_version": "adr042-v2",
+      "confirmatory": false,
+      "scored_at_utc": "2026-10-04T07:36:02.165974+00:00",
+      "reached_preregistered_n": null
     }
   ]
 }
