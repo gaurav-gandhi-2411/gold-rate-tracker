@@ -1,6 +1,6 @@
 {
-  "capture_utc": "2026-10-03T21:10:38Z",
-  "as_of_date": "2026-10-03",
+  "capture_utc": "2026-10-04T05:45:44Z",
+  "as_of_date": "2026-10-04",
   "national_failures": {},
   "kalyan_failures": {
     "Bangalore": "structure: kalyan: implausible observed_at '1969-12-31T18:30:00+00:00' (year before 2020) \u2014 source likely sent a placeholder timestamp"
