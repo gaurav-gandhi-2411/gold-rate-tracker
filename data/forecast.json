@@ -1,5 +1,5 @@
 {
-  "predicted_at": "2026-10-04T17:48:25.293632+00:00",
+  "predicted_at": "2026-10-04T22:29:08.815132+00:00",
   "target_window": "5d",
   "headline": {
     "method": "nextfix_ridge_mlp_v1",
@@ -59,7 +59,7 @@
     "direction_consensus": 1.0
   },
   "driver_context": {
-    "computed_at": "2026-10-04T17:48:34.528443+00:00",
+    "computed_at": "2026-10-04T22:29:14.036392+00:00",
     "macro_staleness_days": 0.0,
     "macro_fresh": true,
     "premium_threshold_pct": 15.0,
