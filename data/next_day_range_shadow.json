@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
-  "generated_at_utc": "2026-09-27T07:21:21.870029+00:00",
-  "git_sha": "8557e530ecc94341751ade07e3334f0b8c3ee813",
+  "generated_at_utc": "2026-10-04T07:36:16.376222+00:00",
+  "git_sha": "43b2cee09b8aa6eb315295fa90bcedd877f2b808",
   "frozen_at": "2026-09-24",
   "min_decision_date": "2026-07-18",
   "retrospective": {
@@ -89,87 +89,87 @@
     "note": "Decisions since 2026-07-18 (ADR 022 fix) through the freeze date 2026-09-24: the same decision days the displayed naive flat-hold range has already been scored on. v2 itself was never computed on any of these days before this PR -- this is a genuine backtest of v2, but on days that are held-out-but-already-seen for the DISPLAYED range's own coverage figure, not a forward shadow."
   },
   "forward": {
-    "n": 1,
+    "n": 8,
     "v2": {
-      "n": 1,
-      "k": 1,
-      "coverage": 1.0,
+      "n": 8,
+      "k": 7,
+      "coverage": 0.875,
       "wilson95": [
-        0.20654931437723742,
-        1.0
+        0.5291118177871466,
+        0.9775825085499433
       ],
-      "p_below_80": 1.0,
-      "mean_width": 579.0744684879119
+      "p_below_80": 0.8322278399999999,
+      "mean_width": 572.7936493489926
     },
     "displayed": {
-      "n": 1,
-      "k": 1,
-      "coverage": 1.0,
+      "n": 8,
+      "k": 7,
+      "coverage": 0.875,
       "wilson95": [
-        0.20654931437723742,
-        1.0
+        0.5291118177871466,
+        0.9775825085499433
       ],
-      "p_below_80": 1.0,
-      "mean_width": 506.0
+      "p_below_80": 0.8322278399999999,
+      "mean_width": 449.75
     },
     "by_stratum": {
       "mon_thu": {
         "v2": {
-          "n": 0,
-          "k": 0,
-          "coverage": null,
+          "n": 4,
+          "k": 3,
+          "coverage": 0.75,
           "wilson95": [
-            null,
-            null
+            0.3006418425824019,
+            0.9544127391902995
           ],
-          "p_below_80": null,
-          "mean_width": null
+          "p_below_80": 0.5903999999999999,
+          "mean_width": 569.7317005349705
         },
         "displayed": {
-          "n": 0,
-          "k": 0,
-          "coverage": null,
+          "n": 4,
+          "k": 3,
+          "coverage": 0.75,
           "wilson95": [
-            null,
-            null
+            0.3006418425824019,
+            0.9544127391902995
           ],
-          "p_below_80": null,
-          "mean_width": null
+          "p_below_80": 0.5903999999999999,
+          "mean_width": 416.0
         }
       },
       "fri_sun": {
         "v2": {
-          "n": 1,
-          "k": 1,
+          "n": 4,
+          "k": 4,
           "coverage": 1.0,
           "wilson95": [
-            0.20654931437723742,
+            0.5101091635454027,
             1.0
           ],
           "p_below_80": 1.0,
-          "mean_width": 579.0744684879119
+          "mean_width": 575.8555981630147
         },
         "displayed": {
-          "n": 1,
-          "k": 1,
+          "n": 4,
+          "k": 4,
           "coverage": 1.0,
           "wilson95": [
-            0.20654931437723742,
+            0.5101091635454027,
             1.0
           ],
           "p_below_80": 1.0,
-          "mean_width": 506.0
+          "mean_width": 483.5
         }
       }
     },
     "success": {
       "coverage_wilson_ci_contains_80": true,
       "coverage_ge_displayed": true,
-      "width_not_more_than_25pct_wider": true,
-      "overall": true
+      "width_not_more_than_25pct_wider": false,
+      "overall": false
     },
     "first_decision_date": "2026-09-25",
-    "last_decision_date": "2026-09-25"
+    "last_decision_date": "2026-10-02"
   },
   "rows": [
     {
@@ -1151,6 +1151,104 @@
       "hi_displayed": 14293.0,
       "hit_displayed": true,
       "width_displayed": 506.0
+    },
+    {
+      "decision_date": "2026-09-26",
+      "weekday": "Saturday",
+      "current_22k": 14055.0,
+      "actual_next_22k": 14040.0,
+      "lo_v2": 13782.2,
+      "hi_v2": 14361.6,
+      "hit_v2": true,
+      "width_v2": 579.4419561464292,
+      "lo_displayed": 13887.0,
+      "hi_displayed": 14393.0,
+      "hit_displayed": true,
+      "width_displayed": 506.0
+    },
+    {
+      "decision_date": "2026-09-27",
+      "weekday": "Sunday",
+      "current_22k": 14040.0,
+      "actual_next_22k": 14040.0,
+      "lo_v2": 13767.5,
+      "hi_v2": 14346.3,
+      "hit_v2": true,
+      "width_v2": 578.8235549125475,
+      "lo_displayed": 13887.0,
+      "hi_displayed": 14393.0,
+      "hit_displayed": true,
+      "width_displayed": 506.0
+    },
+    {
+      "decision_date": "2026-09-28",
+      "weekday": "Monday",
+      "current_22k": 14040.0,
+      "actual_next_22k": 13685.0,
+      "lo_v2": 13767.5,
+      "hi_v2": 14346.3,
+      "hit_v2": false,
+      "width_v2": 578.8235549125475,
+      "lo_displayed": 13932.0,
+      "hi_displayed": 14348.0,
+      "hit_displayed": false,
+      "width_displayed": 416.0
+    },
+    {
+      "decision_date": "2026-09-29",
+      "weekday": "Tuesday",
+      "current_22k": 13710.0,
+      "actual_next_22k": 13755.0,
+      "lo_v2": 13443.8,
+      "hi_v2": 14009.2,
+      "hit_v2": true,
+      "width_v2": 565.4637438012305,
+      "lo_displayed": 13547.0,
+      "hi_displayed": 13963.0,
+      "hit_displayed": true,
+      "width_displayed": 416.0
+    },
+    {
+      "decision_date": "2026-09-30",
+      "weekday": "Wednesday",
+      "current_22k": 13755.0,
+      "actual_next_22k": 13755.0,
+      "lo_v2": 13487.9,
+      "hi_v2": 14055.2,
+      "hit_v2": true,
+      "width_v2": 567.319751713052,
+      "lo_displayed": 13547.0,
+      "hi_displayed": 13963.0,
+      "hit_displayed": true,
+      "width_displayed": 416.0
+    },
+    {
+      "decision_date": "2026-10-01",
+      "weekday": "Thursday",
+      "current_22k": 13755.0,
+      "actual_next_22k": 13725.0,
+      "lo_v2": 13487.9,
+      "hi_v2": 14055.2,
+      "hit_v2": true,
+      "width_v2": 567.319751713052,
+      "lo_displayed": 13547.0,
+      "hi_displayed": 13963.0,
+      "hit_displayed": true,
+      "width_displayed": 416.0
+    },
+    {
+      "decision_date": "2026-10-02",
+      "weekday": "Friday",
+      "current_22k": 13725.0,
+      "actual_next_22k": 13720.0,
+      "lo_v2": 13458.5,
+      "hi_v2": 14024.5,
+      "hit_v2": true,
+      "width_v2": 566.0824131051704,
+      "lo_displayed": 13517.0,
+      "hi_displayed": 13933.0,
+      "hit_displayed": true,
+      "width_displayed": 416.0
     }
   ]
 }
