@@ -1,7 +1,9 @@
 # Usage analytics (item 5c): $0, cookieless, merged OFF
 
-Status: proposal plus inert code. Nothing is live. Needs GG: pick a provider, create the account,
-flip the flag. Supersedes section 3 of `p5-product-proposals.md`, which was written from recall.
+Status: GG decided (D7, 2026-10-05): GoatCounter, cookieless, no IP storage, a short plain-language
+privacy note on the site, flag stays OFF. The code is GoatCounter-specific and inert. Nothing is
+live. Needs GG only to turn it on: see "To turn it on" below. Supersedes section 3 of
+`p5-product-proposals.md`, which was written from recall.
 
 ## Constraints (from GG and the project's stance)
 
@@ -62,7 +64,7 @@ referrer URL). No cookie, no localStorage, no sessionStorage, no IndexedDB.
 | PWA installs | Partly | `pwa/installed` fires only on browsers that raise `appinstalled` (Chromium); iOS Safari "Add to Home Screen" does not. `mode/standalone` counts visits made from an installed app, which shows the installed base is active |
 | Language split | Yes | `lang/en`, `lang/hi` events |
 | Which cards are viewed | Not in this PR | Needs an IntersectionObserver on stable card ids in `app.js`; deliberately not added, to keep this change out of the render path. Follow-up if GG wants it |
-| Referrers | Yes, origin only | `r` parameter |
+| Referrers | Maybe, origin only | We send the `r` parameter. GoatCounter's pixel page says "The tracking pixel won't allow recording the referrer or screen size" (VERIFIED 2026-10-05, goatcounter.com/help/pixel) while its own parameter table lists `r`. Whether `r` is honoured is UNVERIFIED until the first real count is checked in the dashboard (step 4 of "To turn it on") |
 | Bounce | Weak | GoatCounter reports it as single-page visits; on a one-page app this is mostly "did not open How we know" |
 | Notification opt-in funnel | No | There is no push-notification opt-in in the page; if one is added, add one event per step |
 | Geography | Provider-side, coarse | Not sent by us |
@@ -87,40 +89,108 @@ over-counted by people who open the page several times a day and under-counted b
 
 ## Implementation (behind a flag, OFF)
 
-- `flags.js`: `analytics: false`. `analytics.js`: `ANALYTICS_ENDPOINT = ""`. Both must change to
-  turn it on; the code refuses a non-https endpoint, Do Not Track, Global Privacy Control, and
-  offline.
-- While off: no request, no DOM read, no listener, no storage. Proved by
+- `flags.js`: `analytics: false`. `analytics.js`: `ANALYTICS_SITE_CODE = ""`. Both must change to
+  turn it on. The endpoint is built from the code as `https://<code>.goatcounter.com/count`, so it
+  is always https and always GoatCounter's own domain; a code that is not a plain lowercase DNS
+  label is refused. It also refuses Do Not Track, Global Privacy Control, and offline.
+- GoatCounter URL shape (VERIFIED against goatcounter.com/help/pixel, 2026-10-05):
+  `https://<code>.goatcounter.com/count?p=<path>` for a page view; `p=<event name>&e=true` for an
+  event; `r=<referrer origin>` when the visitor came from another site. We never send `t` (title),
+  `q` (campaign query), `s` (screen size) or `b`. Pinned by `tests/test_analytics.js`.
+- While off: no request, no DOM read, no listener, no storage, and no privacy note. Proved by
   `tests/test_analytics.js` (stubs throw on any touch) and `tests/test_analytics_off_headless.js`
   (real page: identical DOM with and without the script; a flag-on variant shows the beacon the
   check would catch).
-- Service worker: `analytics.js` is a precached shell file; VERSION bumped (legacy mode, hand
-  bump). The worker's fetch handler is untouched, so a cross-origin image is passed through to the
-  network and never cached. A failed request offline is a dropped image, not a worker error.
-- Flipping it on later is a separate human change: set the endpoint, set the flag true, bump the
-  service-worker VERSION, update README and SECURITY, add the privacy copy below, and add the
-  vendor to the "who sees your visit" disclosure.
+- Service worker: `analytics.js` is a precached shell file; VERSION bumped to
+  `v76-20261005-analytics-flag-off` (legacy mode, hand bump; v74 is the merged direction wording,
+  v75 is reserved for the Hindi PR #2397). The worker's fetch handler is untouched, so a
+  cross-origin image falls through to the network and is never cached. A failed request offline is
+  a dropped image, not a worker error. No Content-Security-Policy exists (checked: no CSP meta tag
+  in `index.html`, no `_headers` file, no `connect-src`/`img-src` anywhere in the repo), so the
+  GoatCounter host needs no allowlist entry today.
 
-## Privacy copy (not live; for the flip PR)
+## Privacy note (implemented, flag-gated)
 
-English, for the footer or How we know:
+English only; Hindi falls back to English through `t()` (do not add Hindi without a native
+speaker). The note is the i18n key `privacyNote` in `i18n.js`. `analytics.js` adds it to the page
+footer as `<p id="privacy-note" class="muted">` only when counting is actually on (flag on, site
+code set, and the browser is not sending Do Not Track or Global Privacy Control). While the flag is
+off the page contains no such element and makes no claim about counting; the DOM-equality headless
+test asserts this. Text as written:
 
-> We count visits to this page without cookies and without storing who you are. Each count records
-> which page was opened, the language, whether the page runs as an installed app, and the website
-> you came from (the site name only). Your IP address is used by our counting service to tell
-> visits apart for a few hours and is not stored. We do not know who you are and cannot see you
-> across visits. If your browser sends Do Not Track, we send nothing.
+> We count how many people visit this page, nothing more. The count uses no cookies, keeps no name
+> or address, and is skipped if your browser asks not to be tracked. Counts are kept by GoatCounter
+> (goatcounter.com).
 
-Hindi: PLACEHOLDER. Needs a native-speaker review before use, like the other Hindi strings; do not
-machine-translate into the page.
+It passes `scripts/check_plain_language.py` and `scripts/check_retailer_language.py`.
 
-README line to replace "No accounts, no ads, no analytics": "No accounts and no ads. Visit counts
-come from a cookieless counter (GoatCounter) that stores no personal data; see the privacy note."
+### Flip PR text for README and SECURITY (NOT applied; the flag is off, so today's text is true)
+
+`README.md`, the sentence that now reads "No accounts, no ads, no analytics." becomes:
+"No accounts and no ads. It counts visits with GoatCounter, a cookieless counter that keeps no
+name, cookie or IP address; the page says so in its footer." (Keep the jsDelivr and Sentry
+sentence after it unchanged.)
+
+`SECURITY.md`, the table row "PWA frontend | Static HTML/JS; no backend, no cookies, no auth"
+becomes: "Static HTML/JS; no backend, no cookies, no auth. Visit counts go to GoatCounter as an
+image request (page path, language, installed-app yes/no, referring site name); see the privacy
+note in the footer." The "no cookies" claim stays true: the counter sets none.
+
+## To turn it on (GG: nothing here has been done)
+
+1. Create the GoatCounter account and site.
+   - Open https://www.goatcounter.com/signup (free; the form shows no plan choice or payment step,
+     VERIFIED on the signup page text 2026-10-05; the free-use terms are at
+     goatcounter.com/terms).
+   - Fields (as listed on the signup page, 2026-10-05): "Account name" (this becomes your address
+     `https://<account-name>.goatcounter.com`; this is the site code), "Site domain" (optional;
+     enter `gaurav-gandhi-2411.github.io`), "Email address" (password resets and notices),
+     "Password" (at least 8 characters), and a human check ("Fill in 9 here"). Verify the email
+     when it arrives.
+   - Choose a short lowercase code with only letters, digits and hyphens, for example
+     `gold-rate-tracker`. Whether GoatCounter accepts other characters is UNVERIFIED; the code
+     refuses anything outside that set.
+   - In the dashboard, under Settings, leave "collect" options at their defaults; do not enable
+     any "collect IP/User-Agent/location/screen size" setting if one is offered (the pixel sends
+     none of them, and the privacy note says no address is kept).
+2. Set the values (one small PR from a branch named `feat/analytics-on`).
+   - `analytics.js`: change `const ANALYTICS_SITE_CODE = "";` to `const ANALYTICS_SITE_CODE =
+     "<your code>";` (the only place the code lives).
+   - `flags.js`: change `analytics: false,` to `analytics: true,`.
+   - CSP / allowlists: none needed. There is no CSP meta tag in `index.html` and no headers file.
+     The service worker's fetch handler needs no change: the image request to
+     `https://<code>.goatcounter.com/count` is cross-origin and falls through to the network
+     without being cached. If a CSP is ever added, allow `img-src https://<code>.goatcounter.com`.
+3. Flip PR checklist.
+   - Bump `VERSION` in `service-worker.js` to the next free number (run
+     `python scripts/check_sw_version_guard.py --base origin/master`).
+   - Apply the README and SECURITY wording above, in the same PR (the page footer note appears
+     automatically when the flag is on).
+   - Update the "who sees your visit" disclosure if the page has one, and `tests/test_analytics.js`
+     expectations "the shipped flag is off and the shipped site code is empty" (that test is meant
+     to fail on the flip; change it to the new shipped values).
+   - Run `node --test tests/test_analytics.js`, `node tests/test_analytics_off_headless.js` (its
+     flag-off section will need to be rewritten to flag-on, since the page is now counted), and
+     the plain-language checks. Get a human merge.
+4. How to verify after it is live.
+   - Open the live site in a normal window with Do Not Track off, then open
+     `https://<code>.goatcounter.com`. Within about a minute the dashboard should show one visit
+     for the page path and the `lang/en` event under the events view.
+   - Check that the Referrers list shows an origin only. If it stays empty for visits from another
+     site, the pixel is not honouring `r` (see the Referrers row above); that is a known limit,
+     not a fault.
+   - Check that no cookie is set (browser dev tools, Application, Cookies) and that the only new
+     request is the image GET to `<code>.goatcounter.com/count`.
+   - With Do Not Track on, confirm no new count appears and the footer note is absent.
+5. How to switch it off. Set `analytics: false` in `flags.js` (or empty the site code), bump the
+   service-worker VERSION, and revert the README and SECURITY wording to "no analytics". The page
+   then makes no request and shows no note. The GoatCounter account can be deleted from its
+   settings; deleting it is optional because nothing calls it any more.
 
 ## Open decisions for GG
 
-1. Provider (recommendation: GoatCounter). You create the account; no key or account exists in the
-   repo, and none is needed beyond the public endpoint URL.
+1. DECIDED (D7, 2026-10-05): GoatCounter. You create the account; no key or account exists in the
+   repo, and none is needed beyond the public site code.
 2. Whether a lawyer confirms the "no consent banner" position for India before launch.
 3. Whether to add card-view events (follow-up, touches `app.js`).
 4. Whether the thresholds above are the ones you want to hold yourself to.

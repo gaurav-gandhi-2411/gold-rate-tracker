@@ -39,7 +39,8 @@ function startServer(root) {
 }
 
 const NONLOCAL_HOST = "example.test";
-const BEACON_HOST = "beacon.example.test";
+const SITE_CODE = "testcode";
+const BEACON_HOST = `${SITE_CODE}.goatcounter.com`;
 const ARGS = [
   `--host-resolver-rules=MAP ${NONLOCAL_HOST} 127.0.0.1, MAP ${BEACON_HOST} 127.0.0.1, MAP * ~NOTFOUND, EXCLUDE 127.0.0.1, EXCLUDE localhost`,
 ];
@@ -60,7 +61,7 @@ async function load(browser, base, { blockAnalytics = false, variant = false } =
   if (variant) {
     const flags = fs.readFileSync(path.join(ROOT, "flags.js"), "utf8").replace("analytics: false,", "analytics: true,");
     const an = fs.readFileSync(path.join(ROOT, "analytics.js"), "utf8")
-      .replace('const ANALYTICS_ENDPOINT = "";', `const ANALYTICS_ENDPOINT = "https://${BEACON_HOST}/count";`);
+      .replace('const ANALYTICS_SITE_CODE = "";', `const ANALYTICS_SITE_CODE = "${SITE_CODE}";`);
     await page.route("**/flags.js", (r) => r.fulfill({ status: 200, contentType: "application/javascript", body: flags }));
     await page.route("**/analytics.js", (r) => r.fulfill({ status: 200, contentType: "application/javascript", body: an }));
   }
@@ -85,6 +86,8 @@ async function run() {
       `len ${withJs.html.length} vs ${without.html.length}`);
     assert("no request to any beacon/count URL",
       !withJs.requests.some((u) => u.includes("/count") || u.includes(BEACON_HOST)));
+    assert("no privacy note is rendered while the flag is off",
+      !withJs.html.includes("privacy-note") && !withJs.html.includes("GoatCounter"));
     assert("analytics.js adds no cookie and no localStorage entry",
       withJs.storage.cookie === without.storage.cookie && withJs.storage.ls === without.storage.ls);
 
@@ -94,6 +97,14 @@ async function run() {
       on.requests.some((u) => u.startsWith(`https://${BEACON_HOST}/count?`)));
     assert("the beacon carries no query string from the page URL",
       !on.requests.some((u) => u.includes(BEACON_HOST) && u.includes("ff=")));
+    assert("every beacon is https://<code>.goatcounter.com/count with only p/e/r parameters",
+      on.requests.filter((u) => u.includes(BEACON_HOST)).every((u) => {
+        const x = new URL(u);
+        return x.protocol === "https:" && x.pathname === "/count" &&
+          [...x.searchParams.keys()].every((k) => ["p", "e", "r"].includes(k));
+      }));
+    assert("the privacy note is rendered only when on (and the off DOM never has it)",
+      on.html.includes('id="privacy-note"') && on.html.includes("GoatCounter"));
   } finally {
     await browser.close();
     server.close();
