@@ -971,6 +971,7 @@ def _next_fix_block(
             d = ev["direction"]
             block["track_record"] = {
                 "n": ev["n"],
+                "n_forward": ev.get("n_forward", 0),
                 "first_d0": ev["first_d0"],
                 "last_d0": ev["last_d0"],
                 "mae_model": ev["mae_model"],
@@ -992,6 +993,14 @@ def _next_fix_block(
                 "range_n": ev["range_n"],
                 "range_mean_width_ibja": ev["range_mean_width"],
             }
+        dm = out.get("demotion") or {}
+        block["demotion"] = {  # ADR 068: sticky; the notification trigger T16 reads this
+            "demoted": bool(dm.get("demoted")),
+            "since": dm.get("since"),
+            "reasons": dm.get("reasons", []),
+            "rules_breaching_now": dm.get("rules_breaching_now", []),
+            "checked": bool(dm.get("checked")),
+        }
         block["windows"] = {
             k: {kk: v for kk, v in rec.items() if kk not in ("conformal_q", "vol_now")}
             for k, rec in windows.items()
@@ -1022,6 +1031,17 @@ def _next_fix_block(
             range_record=range_record,
             **retail,
         )
+        sh, shev = fc.get("shadow"), out.get("shadow_eval") or {}
+        if sh is not None:  # ADR 069: the ensemble, scored beside the live model, never shown
+            block["shadow_ensemble"] = {
+                "model_version": sh["model_version"],
+                "predicted_ibja": sh["pred"],
+                "p_up": sh["p_up"],
+                "track_record": {
+                    k: shev.get(k)
+                    for k in ("n", "mae_model", "mae_flat", "mae_change_pct", "last_d0")
+                },
+            }
         if mode == "after_us_close":
             p_up = float(fc["p_up"])
             side = "up" if p_up >= 0.5 else "down"

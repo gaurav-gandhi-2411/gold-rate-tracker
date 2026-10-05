@@ -8,6 +8,18 @@
   "n_checks": 143,
   "n_inputs_checked": 147041,
   "n_unchecked": 0,
+  "n_violations": 0,
+  "n_checks_with_violation": 0,
+  "violations_by_source": {},
+  "max_late_by_s": null,
+  "examples": []
+ },
+ "legacy_conservative": {
+  "name": "nextfix/legacy",
+  "mode": "report",
+  "n_checks": 143,
+  "n_inputs_checked": 147041,
+  "n_unchecked": 0,
   "n_violations": 143,
   "n_checks_with_violation": 143,
   "violations_by_source": {
@@ -36,17 +48,5 @@
     "input": "usd_inr(D) [usdinr] known_at 2025-07-23T23:59:00+00:00 (+6240s)"
    }
   ]
- },
- "usdinr_pinned": {
-  "name": "nextfix/pinned",
-  "mode": "report",
-  "n_checks": 143,
-  "n_inputs_checked": 147041,
-  "n_unchecked": 0,
-  "n_violations": 0,
-  "n_checks_with_violation": 0,
-  "violations_by_source": {},
-  "max_late_by_s": null,
-  "examples": []
  }
 }

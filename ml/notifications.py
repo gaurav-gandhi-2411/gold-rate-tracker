@@ -1139,6 +1139,36 @@ def _check_t15_ibja_move(
     )
 
 
+def _check_t16_model_demoted(
+    forecast: dict, state: NotificationState, now_ist: datetime
+) -> PendingAlert | None:
+    """T16 -- the live next-fix model was switched back to "hold" by ml.demotion (ADR 068).
+
+    Reads forecast.json's ``next_fix.demotion``. Once per demotion (skipped if T16 was already sent
+    after the demotion's ``since``), bypasses quiet hours, goes to the private topic only (T16 is not
+    on the public allowlist). The site has already fallen back to hold by the time this fires; it is
+    an alert to GG that the model needs a look, and re-promotion is a human edit of
+    data/model_demotion_state.json.
+    """
+    dm = (forecast.get("next_fix") or {}).get("demotion") or {}
+    if dm.get("demoted") is not True or not dm.get("since"):
+        return None
+    last = state.last_sent.get("T16")
+    if last and datetime.fromisoformat(last) >= datetime.fromisoformat(dm["since"]):
+        return None
+    rules = ", ".join(r.get("rule", "?") for r in dm.get("reasons", [])) or "unknown rule"
+    title = "Gold Tracker: next-rate model switched off"
+    body = (
+        f"The model behind the next-rate range was switched off on its own (rule: {rules}; "
+        f"since {dm['since']}). The site now holds the last official rate and shows no up/down "
+        "line. Look at data/model_demotion_state.json and the weekly scorecard; to bring the "
+        "model back, a person has to reset that file (ADR 068)."
+    )
+    return _make_alert(
+        "T16", title, body, 5, ["rotating_light", "warning"], now_ist, bypass_quiet=True
+    )
+
+
 def _check_t14_tanishq_silent(
     silence: TanishqSilence | None,
     state: NotificationState,
@@ -1253,6 +1283,9 @@ def check_triggers(
     t15 = _check_t15_ibja_move(ibja_move, state, now_ist)
     if t15 is not None:
         alerts.append(t15)
+    t16 = _check_t16_model_demoted(forecast, state, now_ist)
+    if t16 is not None:
+        alerts.append(t16)
     return alerts
 
 
