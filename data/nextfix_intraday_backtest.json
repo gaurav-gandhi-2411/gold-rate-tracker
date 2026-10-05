@@ -1,32 +1,32 @@
 {
- "generated_at": "2026-10-05T11:16:40.168070Z",
+ "generated_at": "2026-10-05T16:34:30.785376Z",
  "ready": true,
  "bars_from": "2026-07-27T05:00:00Z",
- "bars_to": "2026-10-05T11:00:00Z",
- "n_decisions": 1132,
+ "bars_to": "2026-10-05T17:00:00Z",
+ "n_decisions": 1137,
  "scored_on_last_decision_per_fix": {
   "after_morning_rate": {
-   "n_fixes": 47,
-   "n_decisions": 47,
+   "n_fixes": 48,
+   "n_decisions": 48,
    "n_excluded_logged_after_target": 0,
    "ready": true,
    "mae_beta_0.0": 39.1,
-   "mae_beta_0.5": 23.8,
-   "mae_beta_1.0": 34.0,
-   "change_beta_0.5_pct": -39.2,
+   "mae_beta_0.5": 23.5,
+   "mae_beta_1.0": 34.5,
+   "change_beta_0.5_pct": -40.0,
    "change_beta_0.5_ci95": [
-    -54.0,
-    -19.1
+    -54.5,
+    -21.6
    ],
    "dm_p_beta_0.5": 0.0,
-   "change_beta_1.0_pct": -13.1,
+   "change_beta_1.0_pct": -11.8,
    "change_beta_1.0_ci95": [
-    -35.3,
-    23.6
+    -33.3,
+    22.5
    ],
-   "dm_p_beta_1.0": 0.3518,
-   "direction_hit_rate": 0.739,
-   "direction_n": 46
+   "dm_p_beta_1.0": 0.3971,
+   "direction_hit_rate": 0.745,
+   "direction_n": 47
   },
   "after_afternoon_rate": {
    "n_fixes": 46,
@@ -77,27 +77,27 @@
  },
  "scored_on_every_hour": {
   "after_morning_rate": {
-   "n_fixes": 47,
-   "n_decisions": 233,
+   "n_fixes": 48,
+   "n_decisions": 238,
    "n_excluded_logged_after_target": 0,
    "ready": true,
    "mae_beta_0.0": 39.4,
-   "mae_beta_0.5": 32.2,
-   "mae_beta_1.0": 38.1,
-   "change_beta_0.5_pct": -18.4,
+   "mae_beta_0.5": 31.6,
+   "mae_beta_1.0": 38.3,
+   "change_beta_0.5_pct": -19.6,
    "change_beta_0.5_ci95": [
-    -30.6,
-    -0.3
+    -31.2,
+    -3.0
    ],
-   "dm_p_beta_0.5": 0.0007,
-   "change_beta_1.0_pct": -3.4,
+   "dm_p_beta_0.5": 0.0002,
+   "change_beta_1.0_pct": -2.6,
    "change_beta_1.0_ci95": [
-    -25.4,
-    32.4
+    -24.2,
+    30.3
    ],
-   "dm_p_beta_1.0": 0.7563,
-   "direction_hit_rate": 0.687,
-   "direction_n": 230
+   "dm_p_beta_1.0": 0.8111,
+   "direction_hit_rate": 0.694,
+   "direction_n": 235
   },
   "after_afternoon_rate": {
    "n_fixes": 46,
