@@ -182,8 +182,8 @@ const STRINGS = {
     loadingText: "Loading…",
     historyCardsAriaLabel: "Price readings",
     trackRecordAriaLabel: "Our past estimates and the actual gold prices",
-    trackRecordHeading: "How close our estimates have been",
-    trackRecordCaption: "Our estimate (dashed) and the actual price (gold), recent weeks",
+    trackRecordHeading: "A test on past weeks",
+    trackRecordCaption: "In a test on past weeks: a simple estimate (dashed) and the actual price (gold). These are past results, not our live estimates.",
     trackRecordChartAriaLabel: "Our past estimates and the actual gold prices",
     methodologySummary: "How this works",
     // U1 audit (2026-09-23): "calibrate it to match" -> "adjust it to match" (no
@@ -582,8 +582,6 @@ const STRINGS = {
     loadingText: "लोड हो रहा है…",
     historyCardsAriaLabel: "कीमत की रीडिंग",
     trackRecordAriaLabel: "हमारे पुराने अनुमान और असली कीमतें",
-    trackRecordHeading: "हमारे अनुमान कितने सही रहे",
-    trackRecordCaption: "हमारा अनुमान (डैश वाली लाइन) और असली कीमत (सुनहरी), हाल के हफ्ते",
     trackRecordChartAriaLabel: "हमारे पुराने अनुमान और असली कीमतें",
     methodologySummary: "यह कैसे काम करता है",
     // U1 audit (2026-09-23): dropped the literal "n=${params.n}" clause (same
