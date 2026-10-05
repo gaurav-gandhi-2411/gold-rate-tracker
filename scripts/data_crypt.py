@@ -118,6 +118,17 @@ REGISTRY: dict[str, dict[str, str]] = {
     },
     "reports/fhs_ranges/shadow.json": {"category": "raw Tanishq current/next-day prices"},
     "data/premium_nowcast_bars.json": {"category": "raw Yahoo Finance 1-hour bars (ADR 046)"},
+    # Added 2026-10-05 (GG decisions 1, 2, 5), after the field-by-field review in ADR 060.
+    "data/nextfix_oos.json": {"category": "raw IBJA PM fix series (pm0/pm1 per fold, ADR 059)"},
+    "data/nextfix_intraday_shadow.json": {
+        "category": "raw IBJA fix levels (base/target) and COMEX-in-INR per entry (ADR 059/066)"
+    },
+    "data/weekly_range_shadow_log.json": {
+        "category": "lo/hi are IBJA level x exp(scale x q): the IBJA rate is exactly recoverable"
+    },
+    "reports/tanishq_update_times/kalyan_city_identity.json": {
+        "category": "derived from raw retailer snapshots (ADR 059 treats retailer data as raw)"
+    },
 }
 
 

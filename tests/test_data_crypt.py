@@ -410,3 +410,42 @@ def test_real_process_wrong_key_and_tamper_fail_cleanly(repo: Path) -> None:
     assert ok.returncode == 0 and (repo / IBJA).read_bytes() == b"rows " * 100
     for out in (bad.stdout + bad.stderr, ok.stdout + ok.stderr):
         assert TEST_KEY not in out and OTHER_KEY not in out
+
+
+_WORKFLOWS = Path(__file__).resolve().parent.parent / ".github" / "workflows"
+
+
+def _workflow_encrypt_paths() -> dict[str, set[str]]:
+    """Workflow file -> paths named in its `data_crypt.py encrypt ...` commands."""
+    out: dict[str, set[str]] = {}
+    for wf in sorted(_WORKFLOWS.glob("*.yml")):
+        for m in re.finditer(r"data_crypt\.py encrypt ([^\n]+)", wf.read_text(encoding="utf-8")):
+            out.setdefault(wf.name, set()).update(
+                tok for tok in m.group(1).split() if not tok.startswith("-")
+            )
+    return out
+
+
+def test_every_path_a_workflow_encrypts_is_registered() -> None:
+    """A typo or an unregistered path in a producer's encrypt line would fail only at run time."""
+    for wf, paths in _workflow_encrypt_paths().items():
+        for p in paths:
+            assert p in dc.REGISTRY, f"{wf} encrypts {p}, which is not in REGISTRY"
+
+
+@pytest.mark.parametrize(
+    ("logical", "producer"),
+    [
+        ("data/nextfix_oos.json", "check-price.yml"),
+        ("data/nextfix_intraday_shadow.json", "check-price.yml"),
+        ("data/weekly_range_shadow_log.json", "weekly-backtest.yml"),
+    ],
+)
+def test_own_model_files_holding_the_ibja_series_are_sealed_by_their_producer(
+    logical: str, producer: str
+) -> None:
+    """GG 2026-10-05: these three carry the raw IBJA series (or lo/hi that invert to it). Each must
+    be registered AND re-encrypted by the workflow that writes it, or the bot would try to commit
+    plaintext into an ignored path and the ciphertext would go stale."""
+    assert logical in dc.REGISTRY
+    assert logical in _workflow_encrypt_paths()[producer]

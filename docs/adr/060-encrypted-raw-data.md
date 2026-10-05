@@ -76,7 +76,7 @@ What was swept:
 | `data/prices.json` | yes: 713 Tanishq readings | **yes** (chart, history, cards, og.png, dead-man Worker) | **STOP for GG.** See "Live-read files". |
 | `data/backtest.json`, `drift_metrics.json`, `metrics_history.json`, `commentary.json` | yes: Tanishq series and values | **yes** | Follow the `prices.json` decision. |
 | `data/forecast.json` | one latest Tanishq value on tier 1 | **yes** | Keep. This is E2's "current price". |
-| `data/wait_or_buy_today.json` | yes: IBJA `price_t` and IBJA-scale range per horizon | page_v2 only (flagged off) | **STOP (page_v2).** Plan below. |
+| `data/wait_or_buy_today.json` | yes: IBJA `price_t` (dropped by the producer since 2026-09-25) | page_v2 only (flagged off) | **Done on master (GG 4c).** See "GG decisions of 2026-10-05" below. |
 | `data/weekly_range_shadow_log.json` (created by the first weekly run) | yes: `ibja_pm_916`, `path_low`/`path_high` | page_v2 only (flagged off) | **STOP (page_v2).** Superseded by the 2026-10-05 update below: the shipped file holds only forecast ranges (no `ibja_pm_916`/`path_*` fields), so it is classed derived and left public pending GG. |
 | `archive/history_seed_v1_uniform_premium.json`, `data/history_seed_inr22k_*.parquet` | derived (products of Yahoo series × constants, #2038's reasoning) | no | Keep. |
 | `data/chronos_probe.json`, `calibration*.json`, `coverage/cadence` metrics, `preregistered_h2_shadow_results.json`, other `reports/*` | derived (forecasts, fitted constants, aggregates) | some | Keep. |
@@ -94,11 +94,11 @@ Sweep scope (rule 85b): every tracked `.json`/`.jsonl` (and the parquet/CSV file
 | `reports/fhs_ranges/shadow.json` | Tanishq `current_22k`/`actual_next_22k`, 63 rows | raw | **Register** | Tanishq daily prices. No site reader. |
 | `data/premium_nowcast_bars.json` (gitignored) | Yahoo 1-hour bars | raw | **Register** | Already gitignored (ADR 046 option A); registration gives it an encrypted home. Never tracked, so the migration skips it. |
 | `data/stale_day_shadow.json` | own-model MAE/coverage aggregates | derived | Keep public | Checked in full: only dates, counts, MAE, coverage intervals. No price level. (ADR's "raw until shown otherwise" is now shown.) |
-| `data/weekly_range_shadow_log.json` | own-model 1d/week ranges (`lo`/`hi` on the IBJA per-10 g scale, `scale`, `n_cal`, `result.inside`) | derived forecast | **GG decision (page_v2)**; recommend keep public | The ADR text predicted `ibja_pm_916`/`path_low`/`path_high` fields; the file that shipped has none. It holds only forecast ranges, the same class as `forecast.json` `lower`/`upper`, and ADR 060's own plan would publish exactly `lo`/`hi` in a public file anyway. Encrypting it would turn page_v2's range card off (its reader matches this schema). A forecast range is within a few percent of IBJA, so GG should confirm it is acceptable as derived. |
-| `data/wait_or_buy_today.json` | IBJA `price_t` | raw-adjacent | **GG decision (page_v2)** | Unchanged from the ADR: recommend dropping `price_t` and keeping `lo_rs`/`hi_rs`. |
-| `data/nextfix_oos.json` | one fold per IBJA day, **`pm0`/`pm1` = IBJA PM fix** (142 folds) plus returns and own probabilities | **raw IBJA series inside an own-model file** | **GG decision**, recommend register (or strip `pm0`/`pm1`) | The IBJA PM fix history is exactly what ADR 059 says cannot be published. No site file reads it (grep of `app.js`, `how-we-know.js`, `service-worker.js`, `og.html`: none), only `ml/nextfix.py`, `check-price.yml` and analysis scripts. Not registered here because the brief for this PR said own-model outputs stay public and because #2411 rewrites the same producer path; do it right after #2411. |
-| `data/nextfix_intraday_shadow.json` | `base`/`target` = IBJA fix per entry, `g_fix`/`g_now` = COMEX in INR | raw IBJA values per entry (15 entries) | **GG decision**, recommend register | Same reasoning, smaller. Producer: `check-price.yml`. |
-| `data/nextfix_p3_oos.json` (in #2411, not yet on master) | same `pm0`/`pm1` IBJA PM series | raw inside own-model | **GG decision**; must be handled in or right after #2411 | Same finding. Registering it before #2411 merges would conflict; after it merges, add the entry in a follow-up. |
+| `data/weekly_range_shadow_log.json` | own-model 1d/week ranges (`lo`/`hi` on the IBJA per-10 g scale) | **raw: the IBJA rate is exactly recoverable** | **Registered** (GG decision 2, 2026-10-05) | Field-by-field verdict and the 10/10 recovery test are in "GG decisions of 2026-10-05" below. page_v2 is flagged off, so no visible change. Supersedes the "recommend keep public" text this row had. |
+| `data/wait_or_buy_today.json` | rupee moves only; `price_t`, `lo`, `hi` already dropped by the producer (GG 4c, 2026-09-25) | derived | Keep public | Nothing left to drop; asserted by `tests/test_public_price_surfaces.py`. See below. |
+| `data/nextfix_oos.json` | `pm0`/`pm1` = IBJA `pm_916` / 10 (143 of 143 folds) | raw IBJA series | **Registered** (GG decision 1, 2026-10-05) | Verification table below. `forecast.json` `next_fix` stays the public output. |
+| `data/nextfix_intraday_shadow.json` | `base`/`target` = IBJA `pm_916`/`am_916` / 10 (15 of 15, 8 of 8) | raw IBJA values | **Registered** (GG decision 1) | Same. `nextfix_intraday_backtest.json` was checked and stays public (aggregates only). |
+| `data/nextfix_p3_oos.json` (in #2411, not yet on master), `data/nextfix_p3_variants_oos.json` (#2418) | same `pm0`/`pm1` IBJA PM series | raw inside own-model | **Register right after both merge** | Exact registry and `.gitignore` lines are in "GG decisions of 2026-10-05" below. Not added here: see the reason there. |
 | `data/model_demotion_state.json` (#2411) | own demotion state | derived | Keep public | Booleans and reasons. Verified from the PR diff only. |
 | `data/model_scorecard_weekly.json` (#2395) | own scorecard | not checked on disk (file not on master) | Re-run this sweep when #2395 merges | Unverified. |
 | `data/prices.json`, `backtest.json`, `drift_metrics.json`, `metrics_history.json`, `commentary.json` | Tanishq series | raw | **GG decision (STOP, live-read)** | Unchanged from "Live-read files" below. Recommendation unchanged: ADR 059 option B. |
@@ -108,6 +108,57 @@ Sweep scope (rule 85b): every tracked `.json`/`.jsonl` (and the parquet/CSV file
 | `reports/*` other than those above (`kalman_*`, `leak_guard`, `timing_audit`, `model_audit_2026-10`, `r1`-`r4`, `*_run_*.json`, `plain-language-u4`, `tanishq_update_times`, `lighthouse`, `model_scorecard`, `markup_analysis`, `markup_reversion/{historical_test,step1_persistence}`, `premium_nowcast_exploratory`, `fhs_ranges/results`, `wait_or_buy_results`, `weekly_range_results`, `dow/vol_regime results`, `event_watch_results`) | statistics, p-values, counts, timings, ratios | derived | Keep public | No price-level numbers. Known residual: `reports/drivers_timing/before_after.json` carries a 168-value daily IBJA percent-change series; with one public anchor price it chains back to levels. ADR 060 never treated return series as raw; flagged for GG, not decided here. |
 
 **Kalyan.** Kalyan is a retired source, but `data/fusion_snapshots.parquet` (1,827 rows of GRT/Malabar/Kalyan readings) and `data/shadow_fusion_output.json` (Kalyan values) are its retained history. ADR 060 treats retailer rates as raw whether or not the source is live (Context, third bullet), so the right treatment is: stay registered and encrypted, keep the history rather than delete it. The retirement PR must therefore not remove those two REGISTRY entries, not re-add plaintext, and not delete `data/encrypted/data/fusion_snapshots.parquet.*` after migration. If it stops the producer (`shadow-fusion.yml`), the ciphertext simply stops changing.
+
+### GG decisions of 2026-10-05, applied (items 1, 2, 3, 4, 5)
+
+**1. Own-model files that carry the raw IBJA PM-fix series: registered.** Verified against `data/ibja_rates.parquet` as on master `6953306a` (273 rows), not assumed:
+
+| Path | What was checked | Result |
+|---|---|---|
+| `data/nextfix_oos.json` | 143 folds; `pm0` and `pm1` against IBJA `pm_916` / 10 on `d0` and `d1` | 143/143 equal on both (within 0.06). It is the raw IBJA PM fix, one row per day. **Registered.** |
+| `data/nextfix_intraday_shadow.json` | 15 entries; `base` against IBJA `am_916`/`pm_916` / 10 on `base_date`; the 8 filled `target`s on `target_date` | 15/15 and 8/8 equal. `g_fix`/`g_now` are Yahoo COMEX in INR. **Registered.** |
+| `data/nextfix_intraday_backtest.json` | every key and value range listed | Only counts, MAE aggregates (23.8 .. 110.5), change percentages, intervals, p-values, hit rates and timestamps. No rate and no price level (no value in the 9,000-20,000 or 60,000-200,000 band; the `n_decisions` counts reach 1,132 and are counts). **Stays public.** |
+
+The public output stays `forecast.json` `next_fix` (the latest forecast and the numbers derived from it). `app.js`, `how-we-know.js` and `service-worker.js` name none of the three files; only `ml/nextfix.py`, `ml/nextfix_intraday.py`, `check-price.yml`, analysis scripts and tests do. `check-price.yml` already decrypts every registered path before `ml.inference`; its `encrypt` step now also names the two files, so they are re-sealed before the commit step.
+
+Consequences to know: `tests/test_nextfix.py::test_committed_track_record_passes_the_direction_gate_as_recorded` reads the real OOS file and now skips when it is absent (the lint job has no key). `docs/ADR066_CHECK_HOWTO.md` step 1 now starts with a decrypt, because the 2026-10-16 check reads the shadow log.
+
+**P3 files, to add right after #2411 / #2418 merge (NOT added here).** `data/nextfix_p3_oos.json` (#2411) and `data/nextfix_p3_variants_oos.json` (#2418) are not on master. `data_crypt.py guard` on this branch passes only for paths that exist or are registered, and a `.gitignore` line for a file another PR adds would make that PR's bot `git add` skip it. So nothing is added now. Right after both merge, one follow-up PR adds exactly:
+
+```python
+    "data/nextfix_p3_oos.json": {"category": "raw IBJA PM fix series (pm0/pm1 per fold, ADR 059)"},
+    "data/nextfix_p3_variants_oos.json": {"category": "raw IBJA PM fix series (pm0/pm1 per fold, ADR 059)"},
+```
+
+to `REGISTRY` in `scripts/data_crypt.py`, these two lines to `.gitignore` (CRLF file):
+
+```
+/data/nextfix_p3_oos.json
+/data/nextfix_p3_variants_oos.json
+```
+
+and the two paths to the `encrypt` line of the step that writes them (check `#2411`'s workflow edit), and the migration must run after that PR. Until then those two files stay public plaintext. The registry and guard do tolerate a registered path that is absent on disk (guard needs only the ignore line); the reason not to pre-register is the `.gitignore` interaction above.
+
+**2. `data/weekly_range_shadow_log.json`: raw IBJA rate recoverable, so registered.** Field by field over the committed file and both git revisions of it (`da884b6c`, `8964e759`), 10 entries:
+
+| Key | Type | Range | Could it be a rate or level? |
+|---|---|---|---|
+| `shadow_after`, `entries[].as_of`, `window_end`, `issued_at_utc`, `result.scored_at_utc`, `result.scored_days[]`, `runs[].run_at_utc` | date/time strings | 2026-09-24 .. 2026-10-05 | No |
+| `entries[].horizon` | `1d` / `week` | | No |
+| `entries[].git_sha`, `runs[].git_sha` | commit ids | | No |
+| `entries[].scale` | float | 1.0094 .. 1.0720 | No (public conformal scale) |
+| `entries[].n_cal`, `runs[].issued`/`scored`, `summary.*` counts, `coverage`, `wilson_95`, `times_out_of_10` | int/float | counts 0..197, probabilities 0.30..0.95 | No |
+| `entries[].result.inside` | bool | | No |
+| **`entries[].lo`** | float | **129,327 .. 136,630** (per 10 g) | **Yes: inside the 60,000-200,000 band** |
+| **`entries[].hi`** | float | **138,215 .. 147,340** (per 10 g) | **Yes** |
+
+`lo` and `hi` are `price x exp(scale x q)` with `price` = the IBJA `pm_916` rate of `as_of` (`scripts/run_weekly_range_shadow.py` lines 59-74) and `q` from `ml.weekly_range.base_range` over the public proxy series. Recomputing `lo / exp(scale x q_lo)` with the repo's own code and public proxy gave the IBJA rate with **0.000% error for 10 of 10 entries** (and the same from `hi`), e.g. 2026-09-25 -> 139,336 (IBJA `pm_916`). Even without the proxy, `lo/price` takes only a handful of values (1d: 0.98058-0.98059; week: 0.95612-0.95653), so one known day anchors the rest. Verdict: a raw IBJA rate series is recoverable, so **registered**. Cost: page_v2's job-3 reader (`pickRangeShadowEntry`, flag `page_v2` is `false` in `flags.js`) fetches this file and treats a missing file as "no range" (`loadJSON(...).catch(() => null)`), so nothing visible changes today. **Before page_v2 is switched on,** its 1-day/7-day range needs a public source; this ADR's earlier plan (a separate public `{as_of, horizon, window_end, lo, hi}` file) would publish the same recoverable levels, so it needs a delta form (rupee moves, like `wait_or_buy_today.json`) or GG's decision. Open question for GG, recorded in the PR body.
+
+**3. `data/prices.json`: NOT done (STOP).** See "Live-read files" below: the page side is ready (verified), but trimming only this file leaves the same Tanishq series public in four other files and needs a pipeline redesign that cannot be rehearsed without the key.
+
+**4. `data/wait_or_buy_today.json`: already done on master (GG decision 4c, 2026-09-25).** `scripts/run_wait_or_buy_shadow.py` `public_today_entry` drops `as_of`, `n`, `price_t` and `range.lo`/`range.hi`; `tests/test_public_price_surfaces.py::test_committed_wait_or_buy_today_has_no_ibja_level` asserts no key `price_t` and no number in 60,000-200,000 anywhere in the committed file (re-run in this PR: passes). The remaining numbers are rupee moves (`lo_rs`/`hi_rs`/`x_rs`, -5,898 .. 7,718) that cannot be turned into a level without the dropped `lo`/`hi`. The page's reader takes only `horizons.<N>.sentence`. Nothing to implement.
+
+**5. `data/fusion_snapshots.parquet` was already registered** (first table, since the first version of this ADR) and its producer `shadow-fusion.yml` already decrypts, encrypts and commits it; the readers (`ml.markup`, `ml.fusion_snapshot_store`, `ml.stale_day_estimate` via `scripts/run_stale_day_shadow.py`, analysis scripts) get the plaintext because `decrypt-data` runs `decrypt --all` and encryption is byte-level (a parquet and a JSON file take the same path; `test_cli_full_round_trip_every_registered_path` covers every registered path, including this parquet). **`reports/tanishq_update_times/kalyan_city_identity.json` is registered** as GG decided. It holds no rate (counts of cycles, two UTC timestamps, city names: verified key by key), so this is precautionary; ADR 059's addendum cites it as evidence, and after the migration that evidence is readable only with the key. It has no CI producer (`scripts/analysis_tanishq_update_times.py` is run by hand, then `data_crypt.py encrypt` seals it).
 
 ### CI wiring
 
@@ -201,6 +252,21 @@ What the preview shows GG must decide before this ships:
 4. **page_v2 files.**
    - `wait_or_buy_today.json`: drop `price_t` and publish the range as a rupee move (`lo_rs`/`hi_rs`, already in the file).
    - `weekly_range_shadow_log.json`: encrypt the log, and have `run_weekly_range_shadow.py` also write a public `{as_of, horizon, window_end, lo, hi}` file for page_v2. Otherwise raw IBJA rows start being published on 2026-09-27.
+
+**Status, 2026-10-05 (GG: trim the public `prices.json` to today's readings plus the last earlier one, history in an encrypted file; implement only if nothing visible depends on the full public history).**
+
+What reads the public `data/prices.json` history, sweep: `app.js`, `how-we-know.js`, `og.html`, `service-worker.js`, `worker-deadman/`, `ml/`, `scripts/`, `scraper/`, `.github/workflows/`:
+
+- **The page (`app.js`, `loadJSON(DATA_URL)` into `allReadings`).** Latest reading: the hero, the freshness label, the stale banner, the calculator. Today's readings plus the one before: `computeTodayChange`. Every multi-day reader (hero verdict and 7-day sparkline, week/month comparison cards, history table, the 22K/24K/18K switch, good-price signals, 90-day band position, support distance, "today's read", model signal) goes through `historyRows` -> `chartSeries`, which since GG 3d (2026-09-26) takes `data/ibja_derived_prices.json` (265 rows, 2022-01-19 .. 2026-10-05, public) when it has 2 or more valid rows. `tests/test_history_series_headless.js` ("short-prices": prices.json holds only today's two readings) was written for exactly this trim. Conclusion for the page: **nothing visible depends on the full public history while `ibja_derived_prices.json` loads.** The one dependency left is the fallback: if that file is missing or unreadable, the multi-day cards fall back to Tanishq rows and would shrink with a trimmed file (the "no-derived" test state).
+- **Not the page:** `how-we-know.js` does not fetch `prices.json`; `og.html` is a hand-run helper that reads fields (`price_22k`) the file does not have; `worker-deadman/` only mentions it in comments; `service-worker.js` caches every `/data/*.json` network-first by pattern, not by name.
+- **Pipeline (not visible, but they need the full file):** `ml.inference`, `ml.calibration` (refit and band coverage), `ml.drift`, `ml.metrics`, `ml.drivers`, `ml.feature_store`, `ml.volatility`, `ml.markup`, `ml.notifications`, `scripts/run_*_shadow.py`, `analysis_*` scripts, and the scraper itself (`scraper/update-and-notify.js` reads the file and appends to it).
+
+Why this is not implemented here (a STOP, with the exact question):
+
+1. **It would not remove the Tanishq history from the public repo.** `data/backtest.json` (`folds[].actuals`/`naive`), `data/drift_metrics.json` (`actual_22k`), `data/metrics_history.json` (`current_22k`, `actual_next_22k`) and `data/commentary.json` carry the same series (ADR 059 lists them as following the `prices.json` decision). The page reads `backtest.json` (forecast-vs-actual chart, the MAE/direction lines of how-we-know) and `drift_metrics.json` (the "recent vs usual error" line); `metrics_history.json` has a URL constant in `app.js` that nothing fetches, and `commentary.json` is no longer read by the page (`composeTodaysRead` replaced it), so those two can be encrypted without a visible change. Encrypting or rebuilding those on derived actuals **does change what is rendered** (the forecast-vs-actual chart's actual line becomes the IBJA-based estimate; accuracy figures change value), so it needs GG's approval of the new numbers.
+2. **The write path needs a redesign that cannot be rehearsed without the key and races with a live flow.** The self-hosted scrape job appends to `prices.json` and opens its own bot PR, with no Python and no key on that host. A workable design: the scrape flow stays as is; `check-price` (has the key) merges any public rows into an encrypted `data/prices_history.json`, runs the pipeline on the merged file, then writes the trimmed public file. Two bot PRs would then edit `prices.json` (a textual conflict leaves a PR open, which the existing "bot PR open too long" alert reports; no row is lost because the next run absorbs whatever is public). It also needs a one-time seed step in `data_crypt.py migrate`, and the lint pytest job (no key) reads the real file in several tests.
+
+Question for GG: (a) approve the four follower files being rebuilt on derived actuals or encrypted (and which visible numbers may change), then (b) approve the write-path design above as a separate PR. The preview in `reports/screenshots/e1-encrypt/` already shows the chart change.
 
 ## Relation to #2038 (supersede, don't build on it)
 

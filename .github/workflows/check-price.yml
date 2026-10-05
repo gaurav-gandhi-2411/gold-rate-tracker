@@ -271,13 +271,15 @@ jobs:
         run: python -m ml.feature_store
 
       - name: Re-encrypt raw data files (ADR 060)
-        # Before the migration PR lands both paths are still tracked plaintext and this is a
-        # no-op; afterwards it re-encrypts only a file whose plaintext changed.
+        # Before the migration PR lands every path is still tracked plaintext and this is a
+        # no-op; afterwards it re-encrypts only a file whose plaintext changed. nextfix_oos.json and
+        # nextfix_intraday_shadow.json (written by ml.inference / ml.nextfix_intraday above) hold the
+        # raw IBJA fix series; forecast.json's next_fix block stays the public output (GG, 2026-10-05).
         id: seal
         continue-on-error: true
         env:
           DATA_ENC_KEY: ${{ secrets.DATA_ENC_KEY }}
-        run: python scripts/data_crypt.py encrypt data/ibja_rates.parquet data/feature_store/snapshots.parquet
+        run: python scripts/data_crypt.py encrypt data/ibja_rates.parquet data/feature_store/snapshots.parquet data/nextfix_oos.json data/nextfix_intraday_shadow.json
 
       - name: Commit updated data files
         id: commit
