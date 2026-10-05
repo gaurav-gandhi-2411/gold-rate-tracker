@@ -154,6 +154,13 @@ jobs:
               sys.exit(1)
           '
 
+      # Moved ahead of drift/inference (2026-10-05 model audit): inference used to run first, so every
+      # forecast was built from the previous run's IBJA rows and a fix published since stayed unseen
+      # until the next run (observed 2026-10-05: AM fix fetched 07:13:46Z, inference ran 07:13:34Z).
+      - name: Append IBJA rates
+        continue-on-error: true
+        run: python -m ml.ibja
+
       - name: Check forecast drift
         continue-on-error: true
         env:
@@ -171,10 +178,6 @@ jobs:
         # by "Fetch macro features" above.
         continue-on-error: true
         run: python -m ml.nextfix_intraday
-
-      - name: Append IBJA rates
-        continue-on-error: true
-        run: python -m ml.ibja
 
       - name: Refit calibration if needed
         continue-on-error: true

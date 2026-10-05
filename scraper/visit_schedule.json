@@ -6,5 +6,5 @@
   "source": "reports/tanishq_update_times/morning_schedule_evaluation.json -> q0.interim_section4",
   "visits_ist": ["01:40", "07:30", "10:40", "11:10", "15:35", "19:50"],
   "tolerance_min": 10,
-  "effective_from_utc": null
+  "effective_from_utc": "2026-10-05T07:34:22Z"
 }

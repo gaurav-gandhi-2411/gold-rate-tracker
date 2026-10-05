@@ -184,6 +184,24 @@ def _cluster_ci(
     return [float(lo), float(hi)]
 
 
+def logged_after_target(r: dict) -> bool:
+    """True when the decision was made at or after the target fix was published.
+
+    Such an entry is not a forecast: the answer was already out. It happens when a run builds its
+    events from IBJA rows fetched before the newest fix (2026-10-05 07:13Z: the AM fix, published
+    06:30Z, was the target of an entry whose base was still the previous PM fix). Rows without a
+    ``target_date`` (the every-hour backtest, which only keeps decisions made before the target) are
+    never flagged. Scoring correctness fix (ADR 066 note, 2026-10-05); the pre-registered promotion
+    rule is unchanged.
+    """
+    date, kind, t = r.get("target_date"), r.get("target_kind"), r.get("t")
+    if not date or kind not in ("am", "pm") or not t:
+        return False
+    clock = nextfix.IBJA_AM_PUBLISH_UTC if kind == "am" else nextfix.IBJA_PM_PUBLISH_UTC
+    published = nextfix._at(pd.Timestamp(date), clock)
+    return datetime.fromisoformat(str(t).replace("Z", "+00:00")) >= published
+
+
 def score(rows: list[dict], key: str = "base_at") -> dict:
     """Error of each beta vs holding (beta 0), per window.
 
@@ -197,12 +215,19 @@ def score(rows: list[dict], key: str = "base_at") -> dict:
     out: dict = {}
     for window in ("after_morning_rate", "after_afternoon_rate", "after_us_close"):
         last: dict = {}
-        for r in sorted((r for r in resolved if r["window"] == window), key=lambda r: r["t"]):
+        in_window = [r for r in resolved if r["window"] == window]
+        n_late = sum(1 for r in in_window if logged_after_target(r))
+        for r in sorted((r for r in in_window if not logged_after_target(r)), key=lambda r: r["t"]):
             last[r[key]] = r
         rs = list(last.values())
         fixes = sorted({r["base_at"] for r in rs})
         if len(fixes) < 5:
-            out[window] = {"n_fixes": len(fixes), "n_decisions": len(rs), "ready": False}
+            out[window] = {
+                "n_fixes": len(fixes),
+                "n_decisions": len(rs),
+                "n_excluded_logged_after_target": n_late,
+                "ready": False,
+            }
             continue
         pos = {f: i for i, f in enumerate(fixes)}
         cl = np.array([pos[r["base_at"]] for r in rs])
@@ -210,7 +235,12 @@ def score(rows: list[dict], key: str = "base_at") -> dict:
         tgt = np.array([r["target"] for r in rs])
         errs = {b: np.abs(np.array([r["pred"][f"beta_{b}"] for r in rs]) - tgt) for b in BETAS}
         hold = errs[0.0]
-        res: dict = {"n_fixes": len(fixes), "n_decisions": len(rs), "ready": True}
+        res: dict = {
+            "n_fixes": len(fixes),
+            "n_decisions": len(rs),
+            "n_excluded_logged_after_target": n_late,
+            "ready": True,
+        }
         for b in BETAS:
             res[f"mae_beta_{b}"] = round(float(errs[b].mean()), 1)
         hold_by_fix = np.array([hold[m].mean() for m in members])
