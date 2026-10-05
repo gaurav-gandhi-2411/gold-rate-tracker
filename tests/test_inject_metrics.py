@@ -270,3 +270,60 @@ def test_all_modifiers_combined(fixture_json):
     rendered, errors = inject_metrics.render_file(text)
     assert errors == []
     assert "88.5% (n=96, 95% CI [54.9%, 83.7%], as of 2026-08-23) — not yet resolvable" in rendered
+
+
+# ── --grace-minutes (2026-10-05): drift is tolerated only inside the refresh window ──────────────
+
+
+def _run_check(monkeypatch, tmp_path, argv, age):
+    monkeypatch.setattr(inject_metrics, "ROOT", tmp_path)
+    monkeypatch.setattr(inject_metrics, "newest_source_age_minutes", lambda text, now=None: age)
+    (tmp_path / "README.md").write_text(
+        _marker("coverage", "pct1", stale="99.9% (stale)"), encoding="utf-8"
+    )
+    monkeypatch.setattr(sys, "argv", ["inject_metrics.py", *argv])
+    return inject_metrics.main()
+
+
+def test_drift_inside_the_grace_window_is_tolerated(fixture_json, tmp_path, monkeypatch, capsys):
+    assert _run_check(monkeypatch, tmp_path, ["--check", "--grace-minutes", "45"], 10.0) == 0
+    assert "tolerated" in capsys.readouterr().out
+
+
+def test_drift_older_than_the_grace_window_still_fails(fixture_json, tmp_path, monkeypatch):
+    assert _run_check(monkeypatch, tmp_path, ["--check", "--grace-minutes", "45"], 300.0) == 1
+
+
+def test_unknown_commit_age_fails_closed(fixture_json, tmp_path, monkeypatch):
+    assert _run_check(monkeypatch, tmp_path, ["--check", "--grace-minutes", "45"], None) == 1
+
+
+def test_without_the_flag_the_check_is_as_strict_as_before(fixture_json, tmp_path, monkeypatch):
+    assert _run_check(monkeypatch, tmp_path, ["--check"], 1.0) == 1
+
+
+def test_an_unresolvable_marker_always_fails_even_in_the_grace_window(
+    fixture_json, tmp_path, monkeypatch
+):
+    monkeypatch.setattr(inject_metrics, "ROOT", tmp_path)
+    monkeypatch.setattr(inject_metrics, "newest_source_age_minutes", lambda text, now=None: 1.0)
+    (tmp_path / "README.md").write_text(
+        "<!--METRIC:data/metrics.json#no_such_field:int-->1<!--/METRIC-->", encoding="utf-8"
+    )
+    monkeypatch.setattr(sys, "argv", ["inject_metrics.py", "--check", "--grace-minutes", "45"])
+    assert inject_metrics.main() == 1
+
+
+def test_newest_source_age_reads_git_and_fails_closed_without_it(tmp_path, monkeypatch):
+    import subprocess
+
+    monkeypatch.setattr(inject_metrics, "ROOT", tmp_path)
+    text = _marker("coverage", "pct1")
+    assert inject_metrics.newest_source_age_minutes(text) is None  # not a git repo: no age
+
+    def run(*a, **k):
+        return subprocess.CompletedProcess(a, 0, stdout="1000\n", stderr="")
+
+    monkeypatch.setattr(subprocess, "run", run)
+    assert inject_metrics.newest_source_age_minutes(text, now=1000 + 600) == pytest.approx(10.0)
+    assert inject_metrics.newest_source_age_minutes("no markers here") is None
