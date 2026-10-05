@@ -1,0 +1,343 @@
+{
+  "fault_injection": {
+    "detail": {
+      "feature_store": {
+        "asof_after_as_of": true,
+        "asof_bad_string": true,
+        "capture_epoch": true,
+        "capture_future": true,
+        "gold_jump_x1.5": true,
+        "gold_usd_per_oz_as_inr": true,
+        "nan_core": true,
+        "negative_vix": true,
+        "tanishq_per_10g": true,
+        "tanishq_vs_ibja_off": true,
+        "usd_inr_string": true
+      },
+      "fusion_snapshots": {
+        "cross_source_disagreement": true,
+        "duplicate_row": true,
+        "future_observed_at": true,
+        "jump_x1.3": true,
+        "kalyan_1969_placeholder": true,
+        "kalyan_1970_placeholder": true,
+        "naive_observed_at": true,
+        "nan_rate": true,
+        "national_source_with_city": true,
+        "negative_rate": true,
+        "per_10g_in_rate": true,
+        "string_rate": true,
+        "unknown_source": true
+      },
+      "history_seed_proxy": {
+        "duplicate_date": true,
+        "epoch_date": true,
+        "future_date": true,
+        "jump_x1.5": true,
+        "naive_index": true,
+        "nan": true,
+        "negative": true,
+        "per_g_in_per_10g_field": true,
+        "string": true
+      },
+      "ibja_rates": {
+        "bad_date_string": true,
+        "duplicate_date": true,
+        "empty": true,
+        "epoch_date": true,
+        "future_date": true,
+        "future_fetched_at": true,
+        "jump_x1.5": true,
+        "naive_fetched_at": true,
+        "nan_am": true,
+        "negative": true,
+        "per_g_in_per_10g_field": true,
+        "purity_ratio_broken": true,
+        "string_number": true
+      },
+      "shadow_fusion_output": {
+        "benchmark_nan": true,
+        "benchmark_per_10g": true,
+        "benchmark_string": true,
+        "capture_epoch": true,
+        "capture_future": true,
+        "missing_key": true,
+        "not_object": true
+      },
+      "tanishq_prices": {
+        "duplicate_timestamp": true,
+        "empty": true,
+        "epoch_placeholder": true,
+        "future_timestamp": true,
+        "jump_x1.3": true,
+        "karat_ratio_broken": true,
+        "missing_field": true,
+        "naive_timestamp": true,
+        "nan": true,
+        "negative": true,
+        "per_10g_in_per_g_field": true,
+        "string_number": true,
+        "timestamp_before_previous": true,
+        "wrong_container": true,
+        "zero": true
+      },
+      "tanishq_scrape_outcomes": {
+        "duplicate_timestamp": true,
+        "epoch_timestamp": true,
+        "future_timestamp": true,
+        "missing_outcome": true,
+        "numeric_timestamp": true
+      }
+    },
+    "summary": {
+      "feature_store": {
+        "missed": [],
+        "n_faults": 11,
+        "n_flagged_block": 11
+      },
+      "fusion_snapshots": {
+        "missed": [],
+        "n_faults": 13,
+        "n_flagged_block": 13
+      },
+      "history_seed_proxy": {
+        "missed": [],
+        "n_faults": 9,
+        "n_flagged_block": 9
+      },
+      "ibja_rates": {
+        "missed": [],
+        "n_faults": 13,
+        "n_flagged_block": 13
+      },
+      "shadow_fusion_output": {
+        "missed": [],
+        "n_faults": 7,
+        "n_flagged_block": 7
+      },
+      "tanishq_prices": {
+        "missed": [],
+        "n_faults": 15,
+        "n_flagged_block": 15
+      },
+      "tanishq_scrape_outcomes": {
+        "missed": [],
+        "n_faults": 5,
+        "n_flagged_block": 5
+      }
+    }
+  },
+  "generated_for_commit": "1189d22a7222a05cc4f42927f275d62fab1b8970",
+  "head_replay": {
+    "feature_store": {
+      "block_rows_sample": [],
+      "counts_by_code": {},
+      "n_block": 0,
+      "n_rows": 232,
+      "n_warn": 0,
+      "status": "pass"
+    },
+    "fusion_snapshots": {
+      "block_rows_sample": [
+        "row 87 kalyan/Bangalore cap=2026-07-22T08:42:22Z",
+        "row 88 kalyan/Chennai cap=2026-07-22T08:42:22Z",
+        "row 89 kalyan/Hyderabad cap=2026-07-22T08:42:22Z",
+        "row 90 kalyan/Ernakulam cap=2026-07-22T08:42:22Z",
+        "row 115 kalyan/Bangalore cap=2026-07-23T08:43:27Z"
+      ],
+      "counts_by_code": {
+        "block:STALE_BLOCK": 1,
+        "block:TS_EPOCH_PLACEHOLDER": 445
+      },
+      "n_block": 446,
+      "n_rows": 1935,
+      "n_warn": 0,
+      "status": "block"
+    },
+    "history_seed_label": {
+      "block_rows_sample": [],
+      "counts_by_code": {},
+      "n_block": 0,
+      "n_rows": 5014,
+      "n_warn": 0,
+      "status": "pass"
+    },
+    "history_seed_proxy": {
+      "block_rows_sample": [],
+      "counts_by_code": {},
+      "n_block": 0,
+      "n_rows": 5014,
+      "n_warn": 0,
+      "status": "pass"
+    },
+    "ibja_rates": {
+      "block_rows_sample": [],
+      "counts_by_code": {
+        "warn:NULL_VALUE": 8,
+        "warn:RATIO_WARN": 1,
+        "warn:TS_ORDER": 3
+      },
+      "n_block": 0,
+      "n_rows": 273,
+      "n_warn": 12,
+      "status": "warn"
+    },
+    "macro_daily": {
+      "block_rows_sample": [],
+      "counts_by_code": {},
+      "n_block": 0,
+      "n_rows": 0,
+      "n_warn": 0,
+      "status": "not_committed"
+    },
+    "macro_intraday": {
+      "block_rows_sample": [],
+      "counts_by_code": {},
+      "n_block": 0,
+      "n_rows": 0,
+      "n_warn": 0,
+      "status": "not_committed"
+    },
+    "shadow_fusion_output": {
+      "block_rows_sample": [],
+      "counts_by_code": {
+        "warn:SOURCE_REPORTED_FAILURE": 1
+      },
+      "n_block": 0,
+      "n_rows": 1,
+      "n_warn": 1,
+      "status": "warn"
+    },
+    "tanishq_prices": {
+      "block_rows_sample": [],
+      "counts_by_code": {
+        "warn:GAP_WARN": 5
+      },
+      "n_block": 0,
+      "n_rows": 751,
+      "n_warn": 5,
+      "status": "warn"
+    },
+    "tanishq_scrape_outcomes": {
+      "block_rows_sample": [],
+      "counts_by_code": {
+        "warn:GAP_WARN": 1
+      },
+      "n_block": 0,
+      "n_rows": 190,
+      "n_warn": 1,
+      "status": "warn"
+    }
+  },
+  "reference_now": "2026-10-05T08:35:55.107758+00:00",
+  "revision_union_replay": {
+    "feature_store": {
+      "block_rows_sample": [],
+      "counts_by_code": {
+        "warn:SCHEMA_MISSING_FIELD": 6
+      },
+      "n_block": 0,
+      "n_rows": 428,
+      "n_warn": 6,
+      "revisions": 162,
+      "status": "warn"
+    },
+    "fusion_snapshots": {
+      "block_rows_sample": [
+        "row 87 kalyan/Bangalore cap=2026-07-22T08:42:22Z",
+        "row 88 kalyan/Chennai cap=2026-07-22T08:42:22Z",
+        "row 89 kalyan/Hyderabad cap=2026-07-22T08:42:22Z",
+        "row 90 kalyan/Ernakulam cap=2026-07-22T08:42:22Z",
+        "row 115 kalyan/Bangalore cap=2026-07-23T08:43:27Z"
+      ],
+      "counts_by_code": {
+        "block:TS_EPOCH_PLACEHOLDER": 445
+      },
+      "n_block": 445,
+      "n_rows": 1935,
+      "n_warn": 0,
+      "revisions": 301,
+      "status": "block"
+    },
+    "ibja_rates": {
+      "block_rows_sample": [],
+      "counts_by_code": {
+        "warn:NULL_VALUE": 82,
+        "warn:RATIO_WARN": 5
+      },
+      "n_block": 0,
+      "n_rows": 347,
+      "n_warn": 87,
+      "revisions": 170,
+      "status": "warn"
+    },
+    "tanishq_prices": {
+      "block_rows_sample": [
+        "row 25 @ 2026-05-09T10:25:46.887Z",
+        "row 25 @ 2026-05-09T10:25:46.887Z",
+        "row 26 @ 2026-05-09T13:39:42.277Z",
+        "row 26 @ 2026-05-09T13:39:42.277Z"
+      ],
+      "counts_by_code": {
+        "block:UNIT_SUSPECT_PER_G": 4
+      },
+      "n_block": 4,
+      "n_rows": 757,
+      "n_warn": 0,
+      "revisions": 736,
+      "status": "block"
+    }
+  },
+  "time_split_jump_limits": {
+    "fusion_grt_per_capture": {
+      "block_limit": 0.1057,
+      "n_derive": 149,
+      "n_test": 150,
+      "p999_first_half": 0.0264,
+      "test_max_step": 0.0217,
+      "test_over_block": 0,
+      "test_over_warn": 0,
+      "warn_limit": 0.0528
+    },
+    "ibja_pm_916_gap_scaled": {
+      "block_limit": 0.0987,
+      "n_derive": 131,
+      "n_test": 132,
+      "p999_first_half": 0.0247,
+      "test_max_step": 0.0598,
+      "test_over_block": 0,
+      "test_over_warn": 1,
+      "warn_limit": 0.0493
+    },
+    "seed_label_daily": {
+      "block_limit": 0.2035,
+      "n_derive": 2506,
+      "n_test": 2507,
+      "p999_first_half": 0.0509,
+      "test_max_step": 0.1169,
+      "test_over_block": 0,
+      "test_over_warn": 1,
+      "warn_limit": 0.1018
+    },
+    "seed_proxy_daily": {
+      "block_limit": 0.2034,
+      "n_derive": 2506,
+      "n_test": 2507,
+      "p999_first_half": 0.0508,
+      "test_max_step": 0.1169,
+      "test_over_block": 0,
+      "test_over_warn": 1,
+      "warn_limit": 0.1017
+    },
+    "tanishq_22k_per_reading": {
+      "block_limit": 0.1775,
+      "n_derive": 375,
+      "n_test": 375,
+      "p999_first_half": 0.0444,
+      "test_max_step": 0.0317,
+      "test_over_block": 0,
+      "test_over_warn": 0,
+      "warn_limit": 0.0887
+    }
+  }
+}
