@@ -1740,18 +1740,19 @@ function renderModelSignal(fc, readings, bt, coverage, drift) {
   // next_fix.direction.show is true only while the next-fix model is active, its own
   // out-of-sample record passes the direction gate, and GG's promotion record exists.
   const nf = fc?.next_fix;
-  const nfOn = nf?.active === true && hasRange;
+  // Claims older than CLAIM_MAX_AGE_DAYS are hidden: next_fix's figures are as old as forecast.json.
+  const nfOn = nf?.active === true && hasRange && isMeasurementFresh(fc?.predicted_at, Date.now());
   let directionHtml = "";
   if (nfOn && nf.direction?.show === true && typeof nf.direction.probability === "number") {
     const pct = Math.round(nf.direction.probability * 100);
     const side = nf.direction.side;
     const key = side === "up" ? "directionUp" : side === "down" ? "directionDown" : "directionUnclear";
-    const tr = nf.track_record;
-    const record = tr && typeof tr.direction_accuracy === "number" && tr.n > 0
-      ? ` ${t("directionTrackRecord", { right: Math.round(tr.direction_accuracy * tr.n), n: tr.n })}`
-      : "";
+    // No track-record sentence here: nf.track_record is a walk-forward re-run on past days, not
+    // calls made live, and must not be worded as "our calls". A live record may be shown only once
+    // real forward calls exist (computed, never hand-typed).
     // XSS-safe: t() catalogue literals with integer params only.
-    directionHtml = `<p class="good-price-direction" data-side="${side === "up" || side === "down" ? side : "unclear"}">${t(key, { pct })}${record}</p>`;
+    directionHtml = `<p class="good-price-direction" data-side="${side === "up" || side === "down" ? side : "unclear"}">${t(key, { pct })}</p>`
+      + `<p class="good-price-direction-why">${t("directionWhy")}</p>`;
   }
 
   // Reliability — plain-language promotion of coverage_metrics.json (empirical
@@ -1780,7 +1781,7 @@ function renderModelSignal(fc, readings, bt, coverage, drift) {
     const rr = nf?.range_record;
     const nfCov = nfOn && typeof rr?.coverage === "number" && rr.n > 0;
     const coverageNote = nfCov
-      ? t("reliabilityCoverage", { pct: Math.round(rr.coverage * 100), n: rr.n })
+      ? t("reliabilityCoverageTested", { pct: Math.round(rr.coverage * 100), n: rr.n })
       : hasCoverage
       ? t("reliabilityCoverage", { pct: Math.round(coverage.coverage * 100), n: coverage.n })
       : t("reliabilityUnknown");

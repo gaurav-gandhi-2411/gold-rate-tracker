@@ -272,10 +272,10 @@ const STRINGS = {
     // ADR 065: the range is for the next official-rate update (it changes twice each working day).
     goodPriceTomorrow: ({ low, high }) => `Next price update: likely <strong>₹${low}</strong> – <strong>₹${high}</strong>.`,
     // ADR 064: the next move's direction, only when inference's next_fix.direction.show is true.
-    directionUp: ({ pct }) => `More likely to go <strong>up</strong> than down next (about ${pct}% chance).`,
-    directionDown: ({ pct }) => `More likely to go <strong>down</strong> than up next (about ${pct}% chance).`,
-    directionUnclear: () => "Up or down next: too close to call.",
-    directionTrackRecord: ({ right, n }) => `Our up-or-down call has been right ${right} of the last ${n} times.`,
+    directionUp: ({ pct }) => `World gold prices have moved since India's last official rate was set, so the next official rate is more likely to be <strong>higher</strong> (about ${pct}% chance).`,
+    directionDown: ({ pct }) => `World gold prices have moved since India's last official rate was set, so the next official rate is more likely to be <strong>lower</strong> (about ${pct}% chance).`,
+    directionUnclear: () => "World gold prices have not moved enough since India's last official rate to say whether the next one will be higher or lower.",
+    directionWhy: () => "India's official rate follows world gold and the rupee with a delay. We do not predict gold prices themselves.",
     // U1 audit (2026-09-23): "volatile"/"volatility" are on the banned-term list
     // (docs/PLAIN_LANGUAGE_AUDIT.md) -- reworded to "swinging"/"bouncing around",
     // same meaning, no jargon.
@@ -293,6 +293,9 @@ const STRINGS = {
     // comment above). The exact percentage and n are not lost -- they're on
     // how-we-know.html (methAccurateP2CoveragePct), unrounded.
     reliabilityCoverage: ({ pct }) => `The real price has stayed inside the range we show ${fractionOutOf10Phrase(pct)} so far.`,
+    // Range hit rate from the walk-forward re-run on past days (next_fix.range_record): worded
+    // as a test on past days, never as what the shown ranges did live.
+    reliabilityCoverageTested: ({ pct }) => `In a test on past days, the real price stayed inside a range like this ${fractionOutOf10Phrase(pct)}.`,
     reliabilityUnknown: "Still building a track record for this — check back later.",
     reliabilityDriftOnTrack: "Recent accuracy has stayed in line with the historical average.",
     reliabilityDriftWatch: "Recent accuracy has drifted a bit from the historical average — we're keeping an eye on it.",
@@ -661,10 +664,6 @@ const STRINGS = {
     supportLine2At: "इस महीने की सामान्य कीमत के बराबर।",
     divergenceNote: "(यहां दोनों आंकड़े पूरी तरह नहीं मिलते — एक दिन गिनता है, दूसरा असल रुपये का फ़र्क़ नापता है। ऊपर के हेडलाइन के लिए हम दिन-गिनती वाला आंकड़ा इस्तेमाल करते हैं।)",
     goodPriceTomorrow: ({ low, high }) => `अगला भाव अपडेट: शायद <strong>₹${low}</strong> – <strong>₹${high}</strong>।`,
-    directionUp: ({ pct }) => `अगली बार कीमत के <strong>बढ़ने</strong> की संभावना ज़्यादा है (लगभग ${pct}%)।`,
-    directionDown: ({ pct }) => `अगली बार कीमत के <strong>घटने</strong> की संभावना ज़्यादा है (लगभग ${pct}%)।`,
-    directionUnclear: () => "अगली बार ऊपर या नीचे: कहना मुश्किल है।",
-    directionTrackRecord: ({ right, n }) => `ऊपर-नीचे का हमारा अनुमान पिछली ${n} में से ${right} बार सही रहा है।`,
     volNoteElevated: ({ z }) => `हाल में सोने में सामान्य से ज़्यादा उतार-चढ़ाव रहा है। पिछले एक महीने में इसकी कीमत 5 दिनों में आमतौर पर करीब ₹${z} ऊपर या नीचे गई।`,
     volNoteCalm: ({ z }) => `हाल में सोना सामान्य से ज़्यादा स्थिर रहा है। पिछले एक महीने में इसकी कीमत 5 दिनों में आमतौर पर करीब ₹${z} ऊपर या नीचे गई।`,
     volNoteNormal: ({ z }) => `पिछले एक महीने में सोने की कीमत 5 दिनों में आमतौर पर करीब ₹${z} ऊपर या नीचे गई — यह सामान्य के आसपास है।`,
