@@ -187,3 +187,4 @@
 {"timestamp": "2026-10-04T11:49:15Z", "outcome": "success", "fetch_method": "playwright", "trigger": "schedule", "slot_ist": "", "blocked": false}
 {"timestamp": "2026-10-04T15:20:38Z", "outcome": "success", "fetch_method": "playwright", "trigger": "schedule", "slot_ist": "", "blocked": false}
 {"timestamp": "2026-10-05T07:07:19Z", "outcome": "success", "fetch_method": "playwright", "trigger": "schedule", "slot_ist": "", "blocked": false}
+{"timestamp": "2026-10-05T07:34:06Z", "outcome": "success", "fetch_method": "playwright", "trigger": "workflow_dispatch", "slot_ist": "11:10", "blocked": false}
