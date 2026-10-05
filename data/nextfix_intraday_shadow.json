@@ -2,8 +2,8 @@
  "schema_version": 1,
  "note": "Shadow only (ADR 066): hourly world-price forecasts of the next IBJA fix.",
  "summary": {
-  "generated_at": "2026-10-05T01:12:13.447488Z",
-  "n_entries": 7,
+  "generated_at": "2026-10-05T07:13:41.621326Z",
+  "n_entries": 8,
   "after_morning_rate": {
    "n_fixes": 0,
    "n_decisions": 0,
@@ -181,6 +181,29 @@
    "target": null,
    "target_date": null,
    "t": "2026-10-05T01:12:13.447488Z"
+  },
+  {
+   "logged_at": "2026-10-05T07:13:41.621326Z",
+   "base_kind": "pm",
+   "base_date": "2026-10-01",
+   "base_at": "2026-10-01T11:30:00Z",
+   "base": 13569.4,
+   "window": "after_us_close",
+   "target_kind": "am",
+   "g_fix": 405091.26,
+   "g_fix_bar_end": "2026-10-01T11:00:00Z",
+   "g_now": 402838.03,
+   "g_now_bar_end": "2026-10-05T07:00:00Z",
+   "x_since_fix": -0.005577812495316264,
+   "hours_since_fix": 91.73,
+   "pred": {
+    "beta_0.0": 13569.4,
+    "beta_0.5": 13531.61,
+    "beta_1.0": 13493.92
+   },
+   "target": null,
+   "target_date": null,
+   "t": "2026-10-05T07:13:41.621326Z"
   }
  ]
 }
