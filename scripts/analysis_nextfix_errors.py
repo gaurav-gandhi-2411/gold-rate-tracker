@@ -86,8 +86,10 @@ def main() -> None:
         "all": f,
         "gap_1_day": f[f["gap"] == 1],
         "gap_over_1_day": f[f["gap"] > 1],
-        **{f"decision_{d}": f[f["d0"].dt.day_name() == d] for d in
-           ("Monday", "Tuesday", "Wednesday", "Thursday", "Friday")},
+        **{
+            f"decision_{d}": f[f["d0"].dt.day_name() == d]
+            for d in ("Monday", "Tuesday", "Wednesday", "Thursday", "Friday")
+        },
         "calm": f[f["vol_tercile"] == "calm"],
         "middle_vol": f[f["vol_tercile"] == "middle"],
         "volatile": f[f["vol_tercile"] == "volatile"],
@@ -113,8 +115,10 @@ def main() -> None:
     Path(args.out).parent.mkdir(parents=True, exist_ok=True)
     Path(args.out).write_text(json.dumps(out, indent=1, default=float) + "\n")
     print(json.dumps(out, indent=1, default=float))
-    if any(isinstance(v, dict) and v.get("mae_model") is not None and math.isnan(v["mae_model"])
-           for v in out.values()):
+    if any(
+        isinstance(v, dict) and v.get("mae_model") is not None and math.isnan(v["mae_model"])
+        for v in out.values()
+    ):
         raise SystemExit("NaN in a stratum")
 
 
