@@ -186,8 +186,8 @@ const STRINGS = {
     loadingText: "Loading…",
     historyCardsAriaLabel: "Price readings",
     trackRecordAriaLabel: "Our past estimates and the actual gold prices",
-    trackRecordHeading: "How close our estimates have been",
-    trackRecordCaption: "Our estimate (dashed) and the actual price (gold), recent weeks",
+    trackRecordHeading: "A test on past weeks",
+    trackRecordCaption: "In a test on past weeks: a simple estimate (dashed) and the actual price (gold). These are past results, not our live estimates.",
     trackRecordChartAriaLabel: "Our past estimates and the actual gold prices",
     methodologySummary: "How this works",
     // U1 audit (2026-09-23): "calibrate it to match" -> "adjust it to match" (no
@@ -276,10 +276,10 @@ const STRINGS = {
     // ADR 065: the range is for the next official-rate update (it changes twice each working day).
     goodPriceTomorrow: ({ low, high }) => `Next price update: likely <strong>₹${low}</strong> – <strong>₹${high}</strong>.`,
     // ADR 064: the next move's direction, only when inference's next_fix.direction.show is true.
-    directionUp: ({ pct }) => `More likely to go <strong>up</strong> than down next (about ${pct}% chance).`,
-    directionDown: ({ pct }) => `More likely to go <strong>down</strong> than up next (about ${pct}% chance).`,
-    directionUnclear: () => "Up or down next: too close to call.",
-    directionTrackRecord: ({ right, n }) => `Our up-or-down call has been right ${right} of the last ${n} times.`,
+    directionUp: ({ pct }) => `World gold prices have moved since India's last official rate was set, so the next official rate is more likely to be <strong>higher</strong> (about ${pct}% chance).`,
+    directionDown: ({ pct }) => `World gold prices have moved since India's last official rate was set, so the next official rate is more likely to be <strong>lower</strong> (about ${pct}% chance).`,
+    directionUnclear: () => "World gold prices have not moved enough since India's last official rate to say whether the next one will be higher or lower.",
+    directionWhy: () => "India's official rate follows world gold and the rupee with a delay. We do not predict gold prices themselves.",
     // U1 audit (2026-09-23): "volatile"/"volatility" are on the banned-term list
     // (docs/PLAIN_LANGUAGE_AUDIT.md) -- reworded to "swinging"/"bouncing around",
     // same meaning, no jargon.
@@ -297,6 +297,9 @@ const STRINGS = {
     // comment above). The exact percentage and n are not lost -- they're on
     // how-we-know.html (methAccurateP2CoveragePct), unrounded.
     reliabilityCoverage: ({ pct }) => `The real price has stayed inside the range we show ${fractionOutOf10Phrase(pct)} so far.`,
+    // Range hit rate from the walk-forward re-run on past days (next_fix.range_record): worded
+    // as a test on past days, never as what the shown ranges did live.
+    reliabilityCoverageTested: ({ pct }) => `In a test on past days, the real price stayed inside a range like this ${fractionOutOf10Phrase(pct)}.`,
     reliabilityUnknown: "Still building a track record for this — check back later.",
     reliabilityDriftOnTrack: "Recent accuracy has stayed in line with the historical average.",
     reliabilityDriftWatch: "Recent accuracy has drifted a bit from the historical average — we're keeping an eye on it.",
@@ -338,7 +341,7 @@ const STRINGS = {
     // size (weeks measured) moves to how-we-know.html's "Band accuracy" section,
     // which reads the same calibration_band_coverage.json field.
     calibrationConfidenceAppend: ({ amount, coverage, n }) => coverage != null && n != null
-      ? ` Based on past comparisons, the real price has landed within about ₹${amount}/gram of this estimate ${fractionOutOf10Phrase(coverage)} so far.`
+      ? ` In a test on past days, the real price landed within about ₹${amount}/gram of this estimate ${fractionOutOf10Phrase(coverage)}.`
       : ` Based on past comparisons, the real price lands within about ₹${amount}/gram of this estimate.`,
     // R3: appended only when Tanishq confirmation itself has been silent for
     // TIER_DEGRADED_THRESHOLD_H, not just this cycle -- distinct from the
@@ -474,7 +477,7 @@ const STRINGS = {
     pv2SourceConfirmed: "Confirmed live at Tanishq.",
     pv2PriceUnavailable: "We don't have a price to show right now.",
     pv2Job2Heading: "2. How sure are we?",
-    pv2ConfidenceNote: ({ frac }) => `We show a range, not just one number, because gold prices move day to day. That range has held the real price ${frac} so far.`,
+    pv2ConfidenceNote: ({ frac }) => `We show a range, not just one number, because gold prices move day to day. In a test on past days, that range held the real price ${frac}.`,
     pv2ConfidenceUnknown: "We don't have a recent enough track record to say how often our range holds — check back soon.",
     pv2Job3Heading: "3. How much could it move?",
     pv2RangeOneDay: ({ low, high }) => `By the next trading day: likely between ₹${low} and ₹${high}.`,
@@ -597,8 +600,6 @@ const STRINGS = {
     loadingText: "लोड हो रहा है…",
     historyCardsAriaLabel: "दर्ज किए गए भाव",
     trackRecordAriaLabel: "हमारे पुराने अनुमान और असली भाव",
-    trackRecordHeading: "हमारे अनुमान असली भाव के कितने क़रीब रहे",
-    trackRecordCaption: "हमारा अनुमान (टूटी लाइन) और असली भाव (सुनहरी लाइन), पिछले कुछ हफ़्ते",
     trackRecordChartAriaLabel: "हमारे पुराने अनुमान और असली भाव",
     methodologySummary: "यह कैसे काम करता है",
     footerBody: (params) => `भाव <a href="https://ibjarates.com/" target="_blank" rel="noopener">IBJA</a> (भारत का आधिकारिक रोज़ का सोने का भाव) से लिए जाते हैं और दुकान के भाव से मिलाकर ठीक किए जाते हैं; जब मिल सके तब <a href="https://www.tanishq.co.in/gold-rate.html?lang=en_IN" target="_blank" rel="noopener">Tanishq</a> का बताया भाव भी देखा जाता है।`,
@@ -674,10 +675,6 @@ const STRINGS = {
     supportLine2At: "इस महीने के आम भाव के बराबर।",
     divergenceNote: "(इन दोनों में पूरी तरह मेल नहीं है — एक दिन गिनता है, दूसरा रुपये का असली फ़र्क़ नापता है। ऊपर की हेडलाइन के लिए हम दिनों की गिनती वाला तरीक़ा लेते हैं।)",
     goodPriceTomorrow: ({ low, high }) => `अगला भाव अपडेट: शायद <strong>₹${low}</strong> – <strong>₹${high}</strong> के बीच।`,
-    directionUp: ({ pct }) => `अगली बार भाव के <strong>बढ़ने</strong> की संभावना ज़्यादा है (लगभग ${pct}%)।`,
-    directionDown: ({ pct }) => `अगली बार भाव के <strong>घटने</strong> की संभावना ज़्यादा है (लगभग ${pct}%)।`,
-    directionUnclear: () => "अगली बार भाव ऊपर जाएगा या नीचे: कहना मुश्किल है।",
-    directionTrackRecord: ({ right, n }) => `ऊपर-नीचे का हमारा अंदाज़ा पिछली ${n} बार में से ${right} बार सही रहा है।`,
     volNoteElevated: ({ z }) => `हाल में सोने के भाव में आम से ज़्यादा उतार-चढ़ाव रहा है। पिछले एक महीने में 5 दिनों के अंदर भाव आम तौर पर करीब ₹${z} ऊपर या नीचे गया।`,
     volNoteCalm: ({ z }) => `हाल में सोने का भाव आम से ज़्यादा टिका रहा है। पिछले एक महीने में 5 दिनों के अंदर भाव आम तौर पर करीब ₹${z} ऊपर या नीचे गया।`,
     volNoteNormal: ({ z }) => `पिछले एक महीने में 5 दिनों के अंदर सोने का भाव आम तौर पर करीब ₹${z} ऊपर या नीचे गया — यह आम चाल के आसपास ही है।`,
@@ -715,9 +712,6 @@ const STRINGS = {
     // ── State banners ────────────────────────────────────────────────────────────
     bannerIbjaToday: "यह आज का अनुमानित भाव है, जो भारत के आधिकारिक रोज़ के भाव से निकाला गया है — हम इसे अभी दुकान के भाव से मिला नहीं पाए।",
     bannerIbjaCarryForward: ({ weekday }) => `यह एक अनुमानित भाव है, जो ${weekday} के भारत के आधिकारिक भाव (सबसे ताज़ा) से निकाला गया है — हम इसे अभी दुकान के भाव से मिला नहीं पाए।`,
-    calibrationConfidenceAppend: ({ amount, coverage, n }) => coverage != null && n != null
-      ? ` पिछली तुलनाओं के हिसाब से असली भाव अब तक ${fractionOutOf10Phrase(coverage)} इस अनुमान से करीब ₹${amount}/ग्राम के अंदर रहा है।`
-      : ` पिछली तुलनाओं के हिसाब से असली भाव इस अनुमान से आम तौर पर करीब ₹${amount}/ग्राम के अंदर ही रहता है।`,
     bannerTanishqLongSilent: ({ rel }) => ` हाल में हम Tanishq का बताया भाव पढ़ नहीं पाए — आख़िरी बार सफलतापूर्वक ${rel} देखा था।`,
     bannerFusion: ({ sources }) => `यह दूसरे ज्वेलर्स के भाव (${sources}) पर आधारित अनुमानित भाव है — हम अभी Tanishq या आधिकारिक भाव तक नहीं पहुंच पाए।`,
     bannerStaleConfirmed: ({ rel }) => `ताज़ा भाव नहीं मिल पाया — यह आख़िरी पक्का भाव है, जो ${rel} का है।`,
@@ -824,7 +818,6 @@ const STRINGS = {
     pv2SourceConfirmed: "Tanishq पर अभी का पक्का भाव।",
     pv2PriceUnavailable: "अभी दिखाने के लिए कोई भाव नहीं है।",
     pv2Job2Heading: "2. हमें कितना भरोसा है?",
-    pv2ConfidenceNote: ({ frac }) => `हम सिर्फ़ एक आंकड़ा नहीं, एक रेंज दिखाते हैं, क्योंकि सोने का भाव रोज़ बदलता है। असली भाव अब तक ${frac} इस रेंज के अंदर रहा है।`,
     pv2ConfidenceUnknown: "हमारे पास इतना ताज़ा रिकॉर्ड नहीं है कि बता सकें हमारी रेंज कितनी बार सही रहती है — कुछ समय बाद फिर देखें।",
     pv2Job3Heading: "3. भाव कितना बदल सकता है?",
     pv2RangeOneDay: ({ low, high }) => `अगले कारोबारी दिन तक: ₹${low} से ₹${high} के बीच रहने की संभावना है।`,
