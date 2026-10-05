@@ -1,0 +1,48 @@
+name: Scraper dependency guard
+
+# Item 5a (2026-10-05). A PR that changes scraper/package*.json must cite a verified proof run on
+# the self-hosted runner (install + real scrape, scratch PLAYWRIGHT_BROWSERS_PATH). Dependabot's
+# Playwright bump #1846 broke the laptop scraper for ~11 h; #2316 reverted it. See
+# scripts/check_scraper_dependency_change.py for the mechanism and its stated blind spots.
+#
+# Deliberately NOT path-filtered (same reasoning as lint.yml's bot-pr-sync-allowlist-check): a check
+# that is skipped on some paths reads as "never ran" instead of "passed" once it is made required.
+# The script itself decides, from the PR's file list, whether proof is needed, and passes in a few
+# seconds when it is not.
+#
+# `edited` is in the trigger types because the proof is cited in the PR BODY: editing the body to
+# add the run link must re-run the check.
+#
+# This workflow is its own file so lint.yml's required contexts ("lint", "pwa-js") and its
+# commit-status forwarding are untouched. The job name below is the check name to add to branch
+# protection's required status checks (GG step, docs/TANISHQ_TIMED_VISITS.md section 11).
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened, edited]
+
+permissions:
+  contents: read
+  pull-requests: read
+  actions: read # reads the cited run, its jobs and its job log
+
+concurrency:
+  group: scraper-dependency-guard-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+jobs:
+  scraper-dependency-guard:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: "3.12"
+      - name: Require a verified self-hosted proof run for scraper dependency changes
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          python scripts/check_scraper_dependency_change.py \
+            --pr "${{ github.event.pull_request.number }}" \
+            --repo "${{ github.repository }}"
