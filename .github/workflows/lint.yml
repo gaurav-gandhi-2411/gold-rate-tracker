@@ -87,6 +87,11 @@ jobs:
         # See the script's own module docstring for exact scope, patterns, and
         # the ALLOWLIST mechanism for genuine non-claims.
         run: python scripts/check_computed_claims.py
+      - name: Every .portfolio/metrics.json metric must have a committed artifact
+        # Moved here from ci.yml (which triggered on `main` only, so it never ran: default branch
+        # is master). A metric without a committed artifact behind it can silently drift from what
+        # the portfolio site shows (2026-08-05 audit). Reads .portfolio/metrics.json + `git ls-files`.
+        run: python scripts/check_manifest_provenance.py
 
   # PWA pure-function JS tests (app.js logic: comparisons, dedup, good-price,
   # scrape parsing, stale-banner, trend). These existed under tests/*.js but ran
