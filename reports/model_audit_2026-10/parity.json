@@ -1,0 +1,104 @@
+{
+ "preregistration": "docs/adr/067-nextfix-parity-baseline-preregistration.md",
+ "retrospective": {
+  "first_d0": "2025-07-17",
+  "last_d0": "2026-09-30",
+  "results": [
+   {
+    "rule": "P1",
+    "n": 143,
+    "n_eff": 120.9,
+    "mae_ensemble": 105.95,
+    "mae_rule": 149.81,
+    "change_pct_ensemble_vs_rule": -29.27,
+    "change_pct_ci95": [
+     -38.7,
+     -18.6
+    ],
+    "dm_p_two_sided": 1.529640935626908e-05,
+    "direction_n_moved": 143,
+    "direction_acc_ensemble": 0.6434,
+    "direction_acc_rule": 0.6294,
+    "mcnemar_only_ensemble": 16,
+    "mcnemar_only_rule": 14,
+    "mcnemar_p": 0.8555355519056321,
+    "dm_p_bh": 4.588922806880724e-05,
+    "dm_p_bonferroni": 4.588922806880724e-05,
+    "clearly_beats": true
+   },
+   {
+    "rule": "P2",
+    "n": 143,
+    "n_eff": 50.9,
+    "mae_ensemble": 105.95,
+    "mae_rule": 158.33,
+    "change_pct_ensemble_vs_rule": -33.08,
+    "change_pct_ci95": [
+     -49.06,
+     -8.46
+    ],
+    "dm_p_two_sided": 0.033193868631683054,
+    "direction_n_moved": 143,
+    "direction_acc_ensemble": 0.6434,
+    "direction_acc_rule": 0.6434,
+    "mcnemar_only_ensemble": 19,
+    "mcnemar_only_rule": 19,
+    "mcnemar_p": 1.0,
+    "dm_p_bh": 0.04979080294752458,
+    "dm_p_bonferroni": 0.09958160589504916,
+    "clearly_beats": false
+   },
+   {
+    "rule": "P3",
+    "n": 143,
+    "n_eff": 143.0,
+    "mae_ensemble": 105.95,
+    "mae_rule": 107.27,
+    "change_pct_ensemble_vs_rule": -1.23,
+    "change_pct_ci95": [
+     -4.23,
+     1.59
+    ],
+    "dm_p_two_sided": 0.4130807107195378,
+    "direction_n_moved": 143,
+    "direction_acc_ensemble": 0.6434,
+    "direction_acc_rule": 0.6294,
+    "mcnemar_only_ensemble": 16,
+    "mcnemar_only_rule": 14,
+    "mcnemar_p": 0.8555355519056321,
+    "dm_p_bh": 0.4130807107195378,
+    "dm_p_bonferroni": 1.0,
+    "clearly_beats": false
+   }
+  ],
+  "decision": "recommend the simplest rule the ensemble does not clearly beat: P2"
+ },
+ "forward": {
+  "n": 0,
+  "scored": false
+ },
+ "exploratory_post_hoc": {
+  "label": "EXPLORATORY, post hoc",
+  "n": 143,
+  "mae_flat": 115.77,
+  "mae_p3": 107.27,
+  "p3_vs_flat_pct": -7.34,
+  "p3_vs_flat_ci95": [
+   -13.24,
+   -1.47
+  ],
+  "dm_p_two_sided": 0.023169752954874445,
+  "n_eff": 94.8,
+  "always_up_accuracy": 0.4895,
+  "p3_direction_accuracy": 0.6294,
+  "p3_slope_last": 0.2623,
+  "p3_slope_range": [
+   0.0627,
+   0.2779
+  ]
+ },
+ "strata_gap_days": {
+  "consecutive_1_day": 114,
+  "multi_day_gap": 29
+ }
+}

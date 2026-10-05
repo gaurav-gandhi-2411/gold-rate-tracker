@@ -182,8 +182,8 @@ const STRINGS = {
     loadingText: "Loading…",
     historyCardsAriaLabel: "Price readings",
     trackRecordAriaLabel: "Our past estimates and the actual gold prices",
-    trackRecordHeading: "How close our estimates have been",
-    trackRecordCaption: "Our estimate (dashed) and the actual price (gold), recent weeks",
+    trackRecordHeading: "A test on past weeks",
+    trackRecordCaption: "In a test on past weeks: a simple estimate (dashed) and the actual price (gold). These are past results, not our live estimates.",
     trackRecordChartAriaLabel: "Our past estimates and the actual gold prices",
     methodologySummary: "How this works",
     // U1 audit (2026-09-23): "calibrate it to match" -> "adjust it to match" (no
@@ -194,6 +194,8 @@ const STRINGS = {
     // "n=${params.n}" clause below (same fix as firstVisitText above).
     footerBody: (params) => `Prices come from <a href="https://ibjarates.com/" target="_blank" rel="noopener">IBJA</a>, India's official daily gold rate, adjusted to match shop prices, and from <a href="https://www.tanishq.co.in/gold-rate.html?lang=en_IN" target="_blank" rel="noopener">Tanishq</a>'s listed rate when available.`,
     footerMuted: "Not financial advice. Rates are indicative.",
+    // Shown only while visit counting is on (analytics.js adds it to the footer). English only: Hindi falls back to this.
+    privacyNote: "We count how many people visit this page, nothing more. The count uses no cookies, keeps no name or address, and is skipped if your browser asks not to be tracked. Counts are kept by GoatCounter (goatcounter.com).",
     bottomNavAriaLabel: "Page sections",
     navHome: "Home",
     navTrend: "Trend",
@@ -272,10 +274,10 @@ const STRINGS = {
     // ADR 065: the range is for the next official-rate update (it changes twice each working day).
     goodPriceTomorrow: ({ low, high }) => `Next price update: likely <strong>₹${low}</strong> – <strong>₹${high}</strong>.`,
     // ADR 064: the next move's direction, only when inference's next_fix.direction.show is true.
-    directionUp: ({ pct }) => `More likely to go <strong>up</strong> than down next (about ${pct}% chance).`,
-    directionDown: ({ pct }) => `More likely to go <strong>down</strong> than up next (about ${pct}% chance).`,
-    directionUnclear: () => "Up or down next: too close to call.",
-    directionTrackRecord: ({ right, n }) => `Our up-or-down call has been right ${right} of the last ${n} times.`,
+    directionUp: ({ pct }) => `World gold prices have moved since India's last official rate was set, so the next official rate is more likely to be <strong>higher</strong> (about ${pct}% chance).`,
+    directionDown: ({ pct }) => `World gold prices have moved since India's last official rate was set, so the next official rate is more likely to be <strong>lower</strong> (about ${pct}% chance).`,
+    directionUnclear: () => "World gold prices have not moved enough since India's last official rate to say whether the next one will be higher or lower.",
+    directionWhy: () => "India's official rate follows world gold and the rupee with a delay. We do not predict gold prices themselves.",
     // U1 audit (2026-09-23): "volatile"/"volatility" are on the banned-term list
     // (docs/PLAIN_LANGUAGE_AUDIT.md) -- reworded to "swinging"/"bouncing around",
     // same meaning, no jargon.
@@ -293,6 +295,9 @@ const STRINGS = {
     // comment above). The exact percentage and n are not lost -- they're on
     // how-we-know.html (methAccurateP2CoveragePct), unrounded.
     reliabilityCoverage: ({ pct }) => `The real price has stayed inside the range we show ${fractionOutOf10Phrase(pct)} so far.`,
+    // Range hit rate from the walk-forward re-run on past days (next_fix.range_record): worded
+    // as a test on past days, never as what the shown ranges did live.
+    reliabilityCoverageTested: ({ pct }) => `In a test on past days, the real price stayed inside a range like this ${fractionOutOf10Phrase(pct)}.`,
     reliabilityUnknown: "Still building a track record for this — check back later.",
     reliabilityDriftOnTrack: "Recent accuracy has stayed in line with the historical average.",
     reliabilityDriftWatch: "Recent accuracy has drifted a bit from the historical average — we're keeping an eye on it.",
@@ -334,7 +339,7 @@ const STRINGS = {
     // size (weeks measured) moves to how-we-know.html's "Band accuracy" section,
     // which reads the same calibration_band_coverage.json field.
     calibrationConfidenceAppend: ({ amount, coverage, n }) => coverage != null && n != null
-      ? ` Based on past comparisons, the real price has landed within about ₹${amount}/gram of this estimate ${fractionOutOf10Phrase(coverage)} so far.`
+      ? ` In a test on past days, the real price landed within about ₹${amount}/gram of this estimate ${fractionOutOf10Phrase(coverage)}.`
       : ` Based on past comparisons, the real price lands within about ₹${amount}/gram of this estimate.`,
     // R3: appended only when Tanishq confirmation itself has been silent for
     // TIER_DEGRADED_THRESHOLD_H, not just this cycle -- distinct from the
@@ -470,7 +475,7 @@ const STRINGS = {
     pv2SourceConfirmed: "Confirmed live at Tanishq.",
     pv2PriceUnavailable: "We don't have a price to show right now.",
     pv2Job2Heading: "2. How sure are we?",
-    pv2ConfidenceNote: ({ frac }) => `We show a range, not just one number, because gold prices move day to day. That range has held the real price ${frac} so far.`,
+    pv2ConfidenceNote: ({ frac }) => `We show a range, not just one number, because gold prices move day to day. In a test on past days, that range held the real price ${frac}.`,
     pv2ConfidenceUnknown: "We don't have a recent enough track record to say how often our range holds — check back soon.",
     pv2Job3Heading: "3. How much could it move?",
     pv2RangeOneDay: ({ low, high }) => `By the next trading day: likely between ₹${low} and ₹${high}.`,
@@ -579,8 +584,6 @@ const STRINGS = {
     loadingText: "लोड हो रहा है…",
     historyCardsAriaLabel: "कीमत की रीडिंग",
     trackRecordAriaLabel: "हमारे पुराने अनुमान और असली कीमतें",
-    trackRecordHeading: "हमारे अनुमान कितने सही रहे",
-    trackRecordCaption: "हमारा अनुमान (डैश वाली लाइन) और असली कीमत (सुनहरी), हाल के हफ्ते",
     trackRecordChartAriaLabel: "हमारे पुराने अनुमान और असली कीमतें",
     methodologySummary: "यह कैसे काम करता है",
     // U1 audit (2026-09-23): dropped the literal "n=${params.n}" clause (same
@@ -661,10 +664,6 @@ const STRINGS = {
     supportLine2At: "इस महीने की सामान्य कीमत के बराबर।",
     divergenceNote: "(यहां दोनों आंकड़े पूरी तरह नहीं मिलते — एक दिन गिनता है, दूसरा असल रुपये का फ़र्क़ नापता है। ऊपर के हेडलाइन के लिए हम दिन-गिनती वाला आंकड़ा इस्तेमाल करते हैं।)",
     goodPriceTomorrow: ({ low, high }) => `अगला भाव अपडेट: शायद <strong>₹${low}</strong> – <strong>₹${high}</strong>।`,
-    directionUp: ({ pct }) => `अगली बार कीमत के <strong>बढ़ने</strong> की संभावना ज़्यादा है (लगभग ${pct}%)।`,
-    directionDown: ({ pct }) => `अगली बार कीमत के <strong>घटने</strong> की संभावना ज़्यादा है (लगभग ${pct}%)।`,
-    directionUnclear: () => "अगली बार ऊपर या नीचे: कहना मुश्किल है।",
-    directionTrackRecord: ({ right, n }) => `ऊपर-नीचे का हमारा अनुमान पिछली ${n} में से ${right} बार सही रहा है।`,
     volNoteElevated: ({ z }) => `हाल में सोने में सामान्य से ज़्यादा उतार-चढ़ाव रहा है। पिछले एक महीने में इसकी कीमत 5 दिनों में आमतौर पर करीब ₹${z} ऊपर या नीचे गई।`,
     volNoteCalm: ({ z }) => `हाल में सोना सामान्य से ज़्यादा स्थिर रहा है। पिछले एक महीने में इसकी कीमत 5 दिनों में आमतौर पर करीब ₹${z} ऊपर या नीचे गई।`,
     volNoteNormal: ({ z }) => `पिछले एक महीने में सोने की कीमत 5 दिनों में आमतौर पर करीब ₹${z} ऊपर या नीचे गई — यह सामान्य के आसपास है।`,
@@ -833,7 +832,6 @@ const STRINGS = {
     pv2SourceConfirmed: "Tanishq पर लाइव पुष्टि की गई कीमत।",
     pv2PriceUnavailable: "अभी दिखाने के लिए कोई कीमत उपलब्ध नहीं है।",
     pv2Job2Heading: "2. हमें कितना भरोसा है?",
-    pv2ConfidenceNote: ({ frac }) => `हम सिर्फ़ एक आंकड़ा नहीं, एक दायरा दिखाते हैं, क्योंकि सोने की कीमत रोज़ बदलती है। अब तक असली कीमत इस दायरे के भीतर ${frac} रही है।`,
     pv2ConfidenceUnknown: "हमारे पास इतना हाल का रिकॉर्ड नहीं है कि बता सकें हमारा दायरा कितनी बार सही रहता है — कुछ समय बाद फिर देखें।",
     pv2Job3Heading: "3. कीमत कितनी बदल सकती है?",
     pv2RangeOneDay: ({ low, high }) => `अगले कारोबारी दिन तक: यह ₹${low} से ₹${high} के बीच रहने की संभावना है।`,

@@ -166,10 +166,11 @@
 // "today's change" only next to Tanishq's own latest reading; the trend chart plots
 // data/ibja_derived_prices.json labelled as our estimate (new #chart-source-note). app.js +
 // i18n.js + index.html changed.
-// 2026-10-05 (v74): new analytics.js (item 5c), merged OFF -- inert unless FEATURE_FLAGS.analytics
-// is on and its endpoint is set. flags.js + index.html changed too; analytics.js is a new
-// precached shell file (below). Nothing renders or is requested differently with the flag off.
-const VERSION = "v74-20261005-analytics-flag-off";
+// 2026-10-05 (v76; analytics flag-off PR #2391, after v74 direction wording and v75 Hindi): new
+// analytics.js (item 5c, GoatCounter), merged OFF -- inert unless FEATURE_FLAGS.analytics is on
+// and ANALYTICS_SITE_CODE is set. flags.js + index.html + i18n.js changed too; analytics.js is a
+// new precached shell file (below). Nothing renders or is requested differently with the flag off.
+const VERSION = "v76-20261005-analytics-flag-off";
 const SHELL_CACHE = `gold-shell-${VERSION}`;
 
 const SHELL_FILES = [

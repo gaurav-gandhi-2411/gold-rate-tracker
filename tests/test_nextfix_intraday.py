@@ -142,3 +142,35 @@ def test_every_hour_scoring_treats_each_fix_as_one_observation():
     assert per_fix["n_decisions"] == 6
     # clustered CI on 120 decisions equals the per-fix CI on 6 (same information)
     assert [lo, hi] == per_fix["change_beta_1.0_ci95"]
+
+
+def test_entries_logged_after_their_target_fix_was_published_are_not_scored():
+    # 2026-10-05: an entry logged 07:13Z whose target was the 06:30Z AM fix was kept as the "latest
+    # decision" for its base fix. It must be excluded, and counted.
+    def row(base_at: str, t: str, target_date: str, target_kind: str, tgt: float) -> dict:
+        return {
+            "base_at": base_at,
+            "t": t,
+            "window": "after_afternoon_rate",
+            "target": tgt,
+            "target_date": target_date,
+            "target_kind": target_kind,
+            "base": 13000.0,
+            "x_since_fix": 0.0,
+            "pred": {f"beta_{b}": 13000.0 for b in nfi.BETAS},
+        }
+
+    rows = []
+    for f in range(6):
+        d = f"2026-08-0{f + 1}"
+        nxt = f"2026-08-0{f + 2}"
+        # a genuine decision, made before the next AM fix (06:30Z) was published
+        rows.append(row(f"{d}T11:30:00Z", f"{d}T20:15:00Z", nxt, "am", 13100.0))
+        # a later entry, logged after that AM fix was already out: the answer was known
+        rows.append(row(f"{d}T11:30:00Z", f"{nxt}T07:13:00Z", nxt, "am", 13100.0))
+    res = nfi.score(rows)["after_afternoon_rate"]
+    assert res["n_fixes"] == 6 and res["n_decisions"] == 6
+    assert res["n_excluded_logged_after_target"] == 6
+    assert nfi.logged_after_target(rows[1]) and not nfi.logged_after_target(rows[0])
+    # rows without a target date (the every-hour backtest) are never flagged
+    assert not nfi.logged_after_target({"t": "2026-08-01T00:00:00Z", "target": 1.0})
