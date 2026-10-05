@@ -107,7 +107,7 @@ const STRINGS_HWK = {
     // (data/calibration_band_coverage.json via app.js's deriveMeasuredBandCoverage,
     // duplicated in how-we-know.js — see that file's own comment).
     methBandAccuracyHeading: "Band accuracy (measured)",
-    methBandAccuracyText: ({ amount, pct, n, asOf }) => `The real price has landed within about ₹${amount}/gram of the displayed estimate ${pct}% of the time so far (n=${n} weeks measured, as of ${asOf}).`,
+    methBandAccuracyText: ({ amount, pct, n, asOf }) => `In a test on past weeks, the real price landed within about ₹${amount}/gram of the displayed estimate ${pct}% of the time (n=${n} weeks measured, as of ${asOf}).`,
     methBandAccuracyUnknown: "No measurement in the last 14 days — the next weekly re-check will refresh this.",
   },
 

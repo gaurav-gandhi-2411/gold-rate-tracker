@@ -337,7 +337,7 @@ const STRINGS = {
     // size (weeks measured) moves to how-we-know.html's "Band accuracy" section,
     // which reads the same calibration_band_coverage.json field.
     calibrationConfidenceAppend: ({ amount, coverage, n }) => coverage != null && n != null
-      ? ` Based on past comparisons, the real price has landed within about ₹${amount}/gram of this estimate ${fractionOutOf10Phrase(coverage)} so far.`
+      ? ` In a test on past days, the real price landed within about ₹${amount}/gram of this estimate ${fractionOutOf10Phrase(coverage)}.`
       : ` Based on past comparisons, the real price lands within about ₹${amount}/gram of this estimate.`,
     // R3: appended only when Tanishq confirmation itself has been silent for
     // TIER_DEGRADED_THRESHOLD_H, not just this cycle -- distinct from the
@@ -473,7 +473,7 @@ const STRINGS = {
     pv2SourceConfirmed: "Confirmed live at Tanishq.",
     pv2PriceUnavailable: "We don't have a price to show right now.",
     pv2Job2Heading: "2. How sure are we?",
-    pv2ConfidenceNote: ({ frac }) => `We show a range, not just one number, because gold prices move day to day. That range has held the real price ${frac} so far.`,
+    pv2ConfidenceNote: ({ frac }) => `We show a range, not just one number, because gold prices move day to day. In a test on past days, that range held the real price ${frac}.`,
     pv2ConfidenceUnknown: "We don't have a recent enough track record to say how often our range holds — check back soon.",
     pv2Job3Heading: "3. How much could it move?",
     pv2RangeOneDay: ({ low, high }) => `By the next trading day: likely between ₹${low} and ₹${high}.`,
@@ -832,7 +832,6 @@ const STRINGS = {
     pv2SourceConfirmed: "Tanishq पर लाइव पुष्टि की गई कीमत।",
     pv2PriceUnavailable: "अभी दिखाने के लिए कोई कीमत उपलब्ध नहीं है।",
     pv2Job2Heading: "2. हमें कितना भरोसा है?",
-    pv2ConfidenceNote: ({ frac }) => `हम सिर्फ़ एक आंकड़ा नहीं, एक दायरा दिखाते हैं, क्योंकि सोने की कीमत रोज़ बदलती है। अब तक असली कीमत इस दायरे के भीतर ${frac} रही है।`,
     pv2ConfidenceUnknown: "हमारे पास इतना हाल का रिकॉर्ड नहीं है कि बता सकें हमारा दायरा कितनी बार सही रहता है — कुछ समय बाद फिर देखें।",
     pv2Job3Heading: "3. कीमत कितनी बदल सकती है?",
     pv2RangeOneDay: ({ low, high }) => `अगले कारोबारी दिन तक: यह ₹${low} से ₹${high} के बीच रहने की संभावना है।`,
