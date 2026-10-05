@@ -85,13 +85,27 @@ Modes:
                                                   exit 1 if any file would change,
                                                   or if any marker can't be
                                                   resolved. Used by CI.
+    ... --check --grace-minutes N                a file whose only problem is value drift
+                                                  is tolerated (warning, exit 0) while the
+                                                  newest commit of any data file its markers
+                                                  read is younger than N minutes (see below).
+
+WHY --grace-minutes (2026-10-05, docs-freshness was red on master and on every PR): data files
+reach master through bot PRs every few hours and the README is refreshed by a SEPARATE bot PR
+(docs-refresh.yml) 5-15 minutes later, so for that long the tree is inconsistent by design and
+a point-in-time equality check fails any CI run that lands in the window (about one run in
+eight). The grace window covers exactly that lag; drift older than N minutes still fails, which
+is the real signal (the refresh stopped working). Unresolvable markers always fail. If the
+commit age cannot be read (no git history, git error) the check is strict: fail closed.
 """
 
 from __future__ import annotations
 
 import json
 import re
+import subprocess
 import sys
+import time
 from datetime import datetime
 from functools import cache
 from pathlib import Path
@@ -306,6 +320,35 @@ def render_file(text: str) -> tuple[str, list[str]]:
     return rendered_text, errors
 
 
+def newest_source_age_minutes(text: str, now: float | None = None) -> float | None:
+    """Minutes since the newest commit of any data file the markers in ``text`` read.
+
+    None when it cannot be determined (no git, shallow history without the file): callers must
+    then treat the drift as real (fail closed).
+    """
+    paths = sorted({m.group(1) for m in METRIC_RE.finditer(text)})
+    if not paths:
+        return None
+    newest = 0
+    for rel in paths:
+        try:
+            out = subprocess.run(
+                ["git", "log", "-1", "--format=%ct", "--", rel],
+                cwd=ROOT,
+                capture_output=True,
+                text=True,
+                check=False,
+                timeout=30,
+            )
+            stamp = int(out.stdout.strip())
+        except (OSError, ValueError, subprocess.SubprocessError):
+            return None
+        if out.returncode != 0:
+            return None
+        newest = max(newest, stamp)
+    return ((now if now is not None else time.time()) - newest) / 60.0
+
+
 def target_files() -> list[Path]:
     seen: set[Path] = set()
     files: list[Path] = []
@@ -317,8 +360,15 @@ def target_files() -> list[Path]:
     return files
 
 
+def _grace_minutes(argv: list[str]) -> float | None:
+    if "--grace-minutes" not in argv:
+        return None
+    return float(argv[argv.index("--grace-minutes") + 1])
+
+
 def main() -> int:
     check_mode = "--check" in sys.argv[1:]
+    grace = _grace_minutes(sys.argv[1:])
     any_errors = False
     any_changes = False
 
@@ -337,6 +387,15 @@ def main() -> int:
                 print(f"FAIL: {path.relative_to(ROOT)}: unresolved marker {e}")
 
         if rendered != original:
+            if check_mode and grace is not None:
+                age = newest_source_age_minutes(original)
+                if age is not None and age < grace:
+                    print(
+                        f"WARN: {path.relative_to(ROOT)}: text differs from a fresh resolve, but the "
+                        f"newest data commit it reads is {age:.0f} min old (< {grace:.0f}): inside "
+                        "the docs-refresh window, tolerated."
+                    )
+                    continue
             any_changes = True
             if check_mode:
                 print(
