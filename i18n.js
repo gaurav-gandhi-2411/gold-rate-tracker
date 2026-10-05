@@ -576,7 +576,7 @@ const STRINGS = {
     calcStaleNote: ({ rel }) => `यह आख़िरी पक्के भाव से निकाला गया है, जो ${rel} का है।`,
     calcEstimateStoresVary: "अनुमान — हर दुकान पर थोड़ा फ़र्क़ होता है।",
     calcDisclaimer: "आपके ज्वेलर का बिल अलग होगा — हॉलमार्किंग (HUID) शुल्क, नग, वेस्टेज और दुकान का अपना भाव इसमें शामिल नहीं हैं।",
-    calcEmptyState: "ख़र्च देखने के लिए ग्राम डालें।",
+    calcEmptyState: "ख़र्च देखने के लिए ग्राम में मात्रा डालें।",
 
     commentaryAriaLabel: "बाज़ार का हाल",
     todaysReadEyebrow: "आज का हाल",
@@ -586,7 +586,7 @@ const STRINGS = {
     driverHeading: "भाव किस वजह से बदल रहा है?",
     chartAriaLabel: "भाव का ट्रेंड चार्ट",
     priceTrendHeading: "भाव का ट्रेंड",
-    rangeToggleAriaLabel: "चार्ट कितने समय का दिखाना है",
+    rangeToggleAriaLabel: "चार्ट की अवधि",
     rangeAll: "सारे",
     sectionKaratNote: "22 कैरेट · प्रति ग्राम",
     chartCanvasAriaLabel: "सोने के भाव का ट्रेंड चार्ट",
@@ -691,7 +691,7 @@ const STRINGS = {
     reliabilityUnknown: "अभी इसका रिकॉर्ड बन रहा है — कुछ समय बाद फिर देखें।",
     reliabilityDriftOnTrack: "हाल में हमारे अनुमान उतने ही सही रहे हैं जितने आम तौर पर रहते आए हैं।",
     reliabilityDriftWatch: "हाल में हमारे अनुमान आम तौर से थोड़े कम सही रहे हैं — हम नज़र रखे हुए हैं।",
-    reliabilityDriftRetrain: "हाल में हमारे अनुमान असली भाव से आम से ज़्यादा दूर रहे हैं — हम उन्हें सुधार रहे हैं।",
+    reliabilityDriftRetrain: "हाल के हमारे अनुमान आम से ज़्यादा ग़लत रहे हैं — हम उन्हें सुधार रहे हैं।",
 
     // ── 90-day band position ────────────────────────────────────────────────────
     band90dCheaper: ({ pct, n }) => `पिछले 90 दिनों में: ${n} दिनों में से ${pct}% दिनों के भाव से सस्ता।`,

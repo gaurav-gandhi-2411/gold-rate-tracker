@@ -1,0 +1,1172 @@
+[
+ {
+  "id": "u0028",
+  "key": "trendDirUp",
+  "variant": "full",
+  "en": "up",
+  "hi_new": "बढ़त",
+  "why": "all judges flag",
+  "scores": {
+   "gemma2:9b": {
+    "natural": 1,
+    "correct": 1,
+    "glossary": 5,
+    "grammar": 5
+   },
+   "llama3.1:8b": {
+    "natural": 2,
+    "correct": 1,
+    "glossary": 1,
+    "grammar": 5
+   },
+   "qwen3:30b-a3b": {
+    "natural": 1,
+    "correct": 1,
+    "glossary": 1,
+    "grammar": 1
+   }
+  },
+  "worst_by_criterion": {
+   "natural": 1,
+   "correct": 1,
+   "glossary": 1,
+   "grammar": 1
+  },
+  "notes": {
+   "gemma2:9b": "Needs a Hindi word for 'up'",
+   "llama3.1:8b": "Literal translation, no context fit",
+   "qwen3:30b-a3b": "Wrong word, should be 'Up'"
+  }
+ },
+ {
+  "id": "u0346",
+  "key": "methAssumeNoChange",
+  "variant": "full",
+  "en": "Assume no change",
+  "hi_new": "कोई बदलाव न मानना",
+  "why": "all judges flag",
+  "scores": {
+   "gemma2:9b": {
+    "natural": 3,
+    "correct": 5,
+    "glossary": 5,
+    "grammar": 5
+   },
+   "llama3.1:8b": {
+    "natural": 2,
+    "correct": 1,
+    "glossary": 1,
+    "grammar": 5
+   },
+   "qwen3:30b-a3b": {
+    "natural": 1,
+    "correct": 1,
+    "glossary": 1,
+    "grammar": 1
+   }
+  },
+  "worst_by_criterion": {
+   "natural": 1,
+   "correct": 1,
+   "glossary": 1,
+   "grammar": 1
+  },
+  "notes": {
+   "gemma2:9b": "Literal translation, but context is short",
+   "llama3.1:8b": "Literal translation, no context fit",
+   "qwen3:30b-a3b": "Wrong translation, should be 'No change'."
+  }
+ },
+ {
+  "id": "u0415",
+  "key": "dirWordUnchanged",
+  "variant": "full",
+  "en": "unchanged",
+  "hi_new": "जस का तस रहा",
+  "why": "all judges flag",
+  "scores": {
+   "gemma2:9b": {
+    "natural": 1,
+    "correct": 1,
+    "glossary": 1,
+    "grammar": 1
+   },
+   "llama3.1:8b": {
+    "natural": 1,
+    "correct": 1,
+    "glossary": 1,
+    "grammar": 5
+   },
+   "qwen3:30b-a3b": {
+    "natural": 1,
+    "correct": 1,
+    "glossary": 1,
+    "grammar": 1
+   }
+  },
+  "worst_by_criterion": {
+   "natural": 1,
+   "correct": 1,
+   "glossary": 1,
+   "grammar": 1
+  },
+  "notes": {
+   "gemma2:9b": "Too literal, not shopper-like",
+   "llama3.1:8b": "Literal translation, no effort to adapt to Hindi",
+   "qwen3:30b-a3b": "Wrong translation, not Hindi."
+  }
+ },
+ {
+  "id": "u0304",
+  "key": "calcEmptyState",
+  "variant": "full",
+  "en": "Enter a quantity to see the cost.",
+  "hi_new": "ख़र्च देखने के लिए ग्राम में मात्रा डालें।",
+  "why": "all judges flag",
+  "scores": {
+   "gemma2:9b": {
+    "natural": 4,
+    "correct": 3,
+    "glossary": 5,
+    "grammar": 5
+   },
+   "llama3.1:8b": {
+    "natural": 2,
+    "correct": 2,
+    "glossary": 1,
+    "grammar": 5
+   },
+   "qwen3:30b-a3b": {
+    "natural": 2,
+    "correct": 3,
+    "glossary": 3,
+    "grammar": 3
+   }
+  },
+  "worst_by_criterion": {
+   "natural": 2,
+   "correct": 2,
+   "glossary": 1,
+   "grammar": 3
+  },
+  "notes": {
+   "gemma2:9b": "Grammatically fine, but 'ग्राम में मात्रा डालें' is a bit formal for a website",
+   "llama3.1:8b": "uses सोने की कीमत instead of सोने का भाव",
+   "qwen3:30b-a3b": "खर्च should be कीमत/भाव"
+  }
+ },
+ {
+  "id": "u0558",
+  "key": "ratioWatch",
+  "variant": "full",
+  "en": "watch",
+  "hi_new": "नज़र रखनी होगी",
+  "why": "all judges flag",
+  "scores": {
+   "gemma2:9b": {
+    "natural": 1,
+    "correct": 1,
+    "glossary": 5,
+    "grammar": 5
+   },
+   "llama3.1:8b": {
+    "natural": 2,
+    "correct": 2,
+    "glossary": 1,
+    "grammar": 5
+   },
+   "qwen3:30b-a3b": {
+    "natural": 3,
+    "correct": 4,
+    "glossary": 1,
+    "grammar": 5
+   }
+  },
+  "worst_by_criterion": {
+   "natural": 1,
+   "correct": 1,
+   "glossary": 1,
+   "grammar": 5
+  },
+  "notes": {
+   "gemma2:9b": "literal translation, not how a shopper would say it",
+   "llama3.1:8b": "Literal translation, expected more idiomatic expression",
+   "qwen3:30b-a3b": "Not a glossary term."
+  }
+ },
+ {
+  "id": "u0201",
+  "key": "calcRowGoldValue",
+  "variant": "full",
+  "en": "Gold value",
+  "hi_new": "सोने की कीमत",
+  "why": "all judges flag",
+  "scores": {
+   "gemma2:9b": {
+    "natural": 2,
+    "correct": 1,
+    "glossary": 1,
+    "grammar": 5
+   },
+   "llama3.1:8b": {
+    "natural": 2,
+    "correct": 2,
+    "glossary": 1,
+    "grammar": 5
+   },
+   "qwen3:30b-a3b": {
+    "natural": 2,
+    "correct": 3,
+    "glossary": 1,
+    "grammar": 5
+   }
+  },
+  "worst_by_criterion": {
+   "natural": 2,
+   "correct": 1,
+   "glossary": 1,
+   "grammar": 5
+  },
+  "notes": {
+   "gemma2:9b": "Too literal, 'कीमत' is formal",
+   "llama3.1:8b": "uses सोने की कीमत instead of सोने का भाव",
+   "qwen3:30b-a3b": "Uses 'कीमत' instead of 'भाव'"
+  }
+ },
+ {
+  "id": "u0123",
+  "key": "bottomNavAriaLabel",
+  "variant": "full",
+  "en": "Page sections",
+  "hi_new": "पेज के हिस्से",
+  "why": "majority flags (2 of 3)",
+  "scores": {
+   "gemma2:9b": {
+    "natural": 3,
+    "correct": 5,
+    "glossary": 5,
+    "grammar": 5
+   },
+   "llama3.1:8b": {
+    "natural": 4,
+    "correct": 5,
+    "glossary": 5,
+    "grammar": 5
+   },
+   "qwen3:30b-a3b": {
+    "natural": 1,
+    "correct": 1,
+    "glossary": 1,
+    "grammar": 1
+   }
+  },
+  "worst_by_criterion": {
+   "natural": 1,
+   "correct": 1,
+   "glossary": 1,
+   "grammar": 1
+  },
+  "notes": {
+   "gemma2:9b": "Literal translation, but contextually appropriate",
+   "llama3.1:8b": "Literal translation, but common phrase",
+   "qwen3:30b-a3b": "Wrong context, not a label."
+  }
+ },
+ {
+  "id": "u0355",
+  "key": "noChangeLabel",
+  "variant": "full",
+  "en": "no change",
+  "hi_new": "कोई बदलाव नहीं",
+  "why": "majority flags (2 of 3)",
+  "scores": {
+   "gemma2:9b": {
+    "natural": 1,
+    "correct": 1,
+    "glossary": 1,
+    "grammar": 1
+   },
+   "llama3.1:8b": {
+    "natural": 2,
+    "correct": 5,
+    "glossary": 5,
+    "grammar": 5
+   },
+   "qwen3:30b-a3b": {
+    "natural": 5,
+    "correct": 5,
+    "glossary": 5,
+    "grammar": 5
+   }
+  },
+  "worst_by_criterion": {
+   "natural": 1,
+   "correct": 1,
+   "glossary": 1,
+   "grammar": 1
+  },
+  "notes": {
+   "gemma2:9b": "Literal translation, not natural Hindi",
+   "llama3.1:8b": "Literal translation, no adaptation to Hindi style",
+   "qwen3:30b-a3b": "Perfect match."
+  }
+ },
+ {
+  "id": "u0371",
+  "key": "thDelta",
+  "variant": "full",
+  "en": "Change",
+  "hi_new": "बदलाव",
+  "why": "majority flags (2 of 3)",
+  "scores": {
+   "gemma2:9b": {
+    "natural": 1,
+    "correct": 1,
+    "glossary": 1,
+    "grammar": 1
+   },
+   "llama3.1:8b": {
+    "natural": 2,
+    "correct": 1,
+    "glossary": 1,
+    "grammar": 5
+   },
+   "qwen3:30b-a3b": {
+    "natural": 5,
+    "correct": 5,
+    "glossary": 5,
+    "grammar": 5
+   }
+  },
+  "worst_by_criterion": {
+   "natural": 1,
+   "correct": 1,
+   "glossary": 1,
+   "grammar": 1
+  },
+  "notes": {
+   "gemma2:9b": "Too short, needs to translate 'Change'",
+   "llama3.1:8b": "Literal translation, no context fit",
+   "qwen3:30b-a3b": "Perfect match."
+  }
+ },
+ {
+  "id": "u0373",
+  "key": "calcPresetCustom",
+  "variant": "full",
+  "en": "Custom",
+  "hi_new": "अपना",
+  "why": "majority flags (2 of 3)",
+  "scores": {
+   "gemma2:9b": {
+    "natural": 4,
+    "correct": 5,
+    "glossary": 5,
+    "grammar": 5
+   },
+   "llama3.1:8b": {
+    "natural": 1,
+    "correct": 1,
+    "glossary": 1,
+    "grammar": 1
+   },
+   "qwen3:30b-a3b": {
+    "natural": 1,
+    "correct": 1,
+    "glossary": 1,
+    "grammar": 1
+   }
+  },
+  "worst_by_criterion": {
+   "natural": 1,
+   "correct": 1,
+   "glossary": 1,
+   "grammar": 1
+  },
+  "notes": {
+   "gemma2:9b": "Good, natural phrasing for a shopper",
+   "llama3.1:8b": "Literal translation, no context fit",
+   "qwen3:30b-a3b": "Wrong word, no context."
+  }
+ },
+ {
+  "id": "u0583",
+  "key": "rangeAll",
+  "variant": "full",
+  "en": "All",
+  "hi_new": "सारे",
+  "why": "majority flags (2 of 3)",
+  "scores": {
+   "gemma2:9b": {
+    "natural": 5,
+    "correct": 5,
+    "glossary": 5,
+    "grammar": 5
+   },
+   "llama3.1:8b": {
+    "natural": 1,
+    "correct": 1,
+    "glossary": 1,
+    "grammar": 5
+   },
+   "qwen3:30b-a3b": {
+    "natural": 1,
+    "correct": 1,
+    "glossary": 1,
+    "grammar": 1
+   }
+  },
+  "worst_by_criterion": {
+   "natural": 1,
+   "correct": 1,
+   "glossary": 1,
+   "grammar": 1
+  },
+  "notes": {
+   "gemma2:9b": "Literal translation, good for this context",
+   "llama3.1:8b": "Literal translation of 'All', no context adaptation",
+   "qwen3:30b-a3b": "Wrong word, no context."
+  }
+ },
+ {
+  "id": "u0154",
+  "key": "calcMakingModePct",
+  "variant": "full",
+  "en": "% of gold value",
+  "hi_new": "सोने की कीमत का %",
+  "why": "majority flags (2 of 3)",
+  "scores": {
+   "gemma2:9b": {
+    "natural": 2,
+    "correct": 1,
+    "glossary": 1,
+    "grammar": 3
+   },
+   "llama3.1:8b": {
+    "natural": 4,
+    "correct": 5,
+    "glossary": 5,
+    "grammar": 5
+   },
+   "qwen3:30b-a3b": {
+    "natural": 1,
+    "correct": 3,
+    "glossary": 1,
+    "grammar": 4
+   }
+  },
+  "worst_by_criterion": {
+   "natural": 1,
+   "correct": 1,
+   "glossary": 1,
+   "grammar": 3
+  },
+  "notes": {
+   "gemma2:9b": "Uses 'कीमत' instead of 'भाव'",
+   "llama3.1:8b": "Literal translation, but correct and grammatically sound.",
+   "qwen3:30b-a3b": "Uses 'कीमत' instead of 'भाव'"
+  }
+ },
+ {
+  "id": "u0228",
+  "key": "calcPresetCustomHint",
+  "variant": "full",
+  "en": "Know your jeweller's exact rate? Enter it below.",
+  "hi_new": "अपने ज्वेलर का मेकिंग चार्ज पता है? नीचे डालें।",
+  "why": "majority flags (2 of 3)",
+  "scores": {
+   "gemma2:9b": {
+    "natural": 2,
+    "correct": 1,
+    "glossary": 2,
+    "grammar": 5
+   },
+   "llama3.1:8b": {
+    "natural": 4,
+    "correct": 4,
+    "glossary": 4,
+    "grammar": 5
+   },
+   "qwen3:30b-a3b": {
+    "natural": 3,
+    "correct": 4,
+    "glossary": 1,
+    "grammar": 4
+   }
+  },
+  "worst_by_criterion": {
+   "natural": 2,
+   "correct": 1,
+   "glossary": 1,
+   "grammar": 4
+  },
+  "notes": {
+   "gemma2:9b": "Missing 'gold rate'",
+   "llama3.1:8b": "Uses 'मेकिंग चार्ज' instead of 'सोने का भाव' which is more relevant to the context.",
+   "qwen3:30b-a3b": "Uses 'ज्वेलर' but wrong term for rate."
+  }
+ },
+ {
+  "id": "u0589",
+  "key": "thWhen",
+  "variant": "full",
+  "en": "When",
+  "hi_new": "कब",
+  "why": "majority flags (2 of 3)",
+  "scores": {
+   "gemma2:9b": {
+    "natural": 1,
+    "correct": 1,
+    "glossary": 5,
+    "grammar": 5
+   },
+   "llama3.1:8b": {
+    "natural": 2,
+    "correct": 1,
+    "glossary": 1,
+    "grammar": 5
+   },
+   "qwen3:30b-a3b": {
+    "natural": 5,
+    "correct": 5,
+    "glossary": 5,
+    "grammar": 5
+   }
+  },
+  "worst_by_criterion": {
+   "natural": 1,
+   "correct": 1,
+   "glossary": 1,
+   "grammar": 5
+  },
+  "notes": {
+   "gemma2:9b": "Too short to judge naturalness",
+   "llama3.1:8b": "Literal translation, no context fit",
+   "qwen3:30b-a3b": "Perfect match."
+  }
+ },
+ {
+  "id": "u0210",
+  "key": "trendDirDown",
+  "variant": "full",
+  "en": "down",
+  "hi_new": "गिरावट",
+  "why": "majority flags (2 of 3)",
+  "scores": {
+   "gemma2:9b": {
+    "natural": 3,
+    "correct": 5,
+    "glossary": 5,
+    "grammar": 5
+   },
+   "llama3.1:8b": {
+    "natural": 2,
+    "correct": 1,
+    "glossary": 1,
+    "grammar": 5
+   },
+   "qwen3:30b-a3b": {
+    "natural": 5,
+    "correct": 5,
+    "glossary": 5,
+    "grammar": 5
+   }
+  },
+  "worst_by_criterion": {
+   "natural": 2,
+   "correct": 1,
+   "glossary": 1,
+   "grammar": 5
+  },
+  "notes": {
+   "gemma2:9b": "Good, but 'गिरावट' is formal",
+   "llama3.1:8b": "Literal translation of 'down' doesn't convey the intended meaning of price decrease.",
+   "qwen3:30b-a3b": "Perfect match for 'down' label."
+  }
+ },
+ {
+  "id": "u0535",
+  "key": "methRangeStrFallback",
+  "variant": "full",
+  "en": "the current range",
+  "hi_new": "मौजूदा",
+  "why": "majority flags (2 of 3)",
+  "scores": {
+   "gemma2:9b": {
+    "natural": 3,
+    "correct": 1,
+    "glossary": 5,
+    "grammar": 5
+   },
+   "llama3.1:8b": {
+    "natural": 2,
+    "correct": 2,
+    "glossary": 1,
+    "grammar": 5
+   },
+   "qwen3:30b-a3b": {
+    "natural": 5,
+    "correct": 5,
+    "glossary": 5,
+    "grammar": 5
+   }
+  },
+  "worst_by_criterion": {
+   "natural": 2,
+   "correct": 1,
+   "glossary": 1,
+   "grammar": 5
+  },
+  "notes": {
+   "gemma2:9b": "Missing 'रेंज', too short",
+   "llama3.1:8b": "Literal translation, no range concept used",
+   "qwen3:30b-a3b": "Perfect match."
+  }
+ },
+ {
+  "id": "u0008",
+  "key": "ratioRetrainSub",
+  "variant": "full",
+  "en": "may need recalibration",
+  "hi_new": "इसे फिर से ठीक करने की ज़रूरत हो सकती है",
+  "why": "majority flags (2 of 3)",
+  "scores": {
+   "gemma2:9b": {
+    "natural": 3,
+    "correct": 5,
+    "glossary": 5,
+    "grammar": 5
+   },
+   "llama3.1:8b": {
+    "natural": 2,
+    "correct": 2,
+    "glossary": 1,
+    "grammar": 5
+   },
+   "qwen3:30b-a3b": {
+    "natural": 5,
+    "correct": 5,
+    "glossary": 5,
+    "grammar": 5
+   }
+  },
+  "worst_by_criterion": {
+   "natural": 2,
+   "correct": 2,
+   "glossary": 1,
+   "grammar": 5
+  },
+  "notes": {
+   "gemma2:9b": "Slightly formal, but context allows",
+   "llama3.1:8b": "Literal translation, no glossary term used",
+   "qwen3:30b-a3b": "Perfect match."
+  }
+ },
+ {
+  "id": "u0102",
+  "key": "karatToggleAriaLabel",
+  "variant": "full",
+  "en": "Gold purity",
+  "hi_new": "सोने की शुद्धता",
+  "why": "majority flags (2 of 3)",
+  "scores": {
+   "gemma2:9b": {
+    "natural": 3,
+    "correct": 1,
+    "glossary": 5,
+    "grammar": 5
+   },
+   "llama3.1:8b": {
+    "natural": 4,
+    "correct": 5,
+    "glossary": 5,
+    "grammar": 5
+   },
+   "qwen3:30b-a3b": {
+    "natural": 3,
+    "correct": 4,
+    "glossary": 1,
+    "grammar": 5
+   }
+  },
+  "worst_by_criterion": {
+   "natural": 3,
+   "correct": 1,
+   "glossary": 1,
+   "grammar": 5
+  },
+  "notes": {
+   "gemma2:9b": "Literal, not shopper-friendly",
+   "llama3.1:8b": "uses 'शुद्धता' instead of 'पारदर्शिता' or 'पवित्रता'",
+   "qwen3:30b-a3b": "Incorrect glossary term used."
+  }
+ },
+ {
+  "id": "u0148",
+  "key": "calcPresetIntricateRange",
+  "variant": "full",
+  "en": "15–25% of gold value, typically 20%",
+  "hi_new": "सोने की कीमत का 15–25%, आम तौर पर 20%",
+  "why": "majority flags (2 of 3)",
+  "scores": {
+   "gemma2:9b": {
+    "natural": 4,
+    "correct": 5,
+    "glossary": 4,
+    "grammar": 5
+   },
+   "llama3.1:8b": {
+    "natural": 4,
+    "correct": 4,
+    "glossary": 1,
+    "grammar": 5
+   },
+   "qwen3:30b-a3b": {
+    "natural": 2,
+    "correct": 3,
+    "glossary": 1,
+    "grammar": 4
+   }
+  },
+  "worst_by_criterion": {
+   "natural": 2,
+   "correct": 3,
+   "glossary": 1,
+   "grammar": 4
+  },
+  "notes": {
+   "gemma2:9b": "Good, but 'सोने की कीमत' is less common",
+   "llama3.1:8b": "uses सोने की कीमत instead of सोने का भाव",
+   "qwen3:30b-a3b": "Uses 'कीमत' instead of 'भाव'"
+  }
+ },
+ {
+  "id": "u0446",
+  "key": "freshnessOkAria",
+  "variant": "full",
+  "en": "Updated {rel}",
+  "hi_new": "{rel} अपडेट हुआ",
+  "why": "majority flags (2 of 3)",
+  "scores": {
+   "gemma2:9b": {
+    "natural": 5,
+    "correct": 5,
+    "glossary": 5,
+    "grammar": 5
+   },
+   "llama3.1:8b": {
+    "natural": 2,
+    "correct": 2,
+    "glossary": 1,
+    "grammar": 5
+   },
+   "qwen3:30b-a3b": {
+    "natural": 3,
+    "correct": 5,
+    "glossary": 5,
+    "grammar": 5
+   }
+  },
+  "worst_by_criterion": {
+   "natural": 2,
+   "correct": 2,
+   "glossary": 1,
+   "grammar": 5
+  },
+  "notes": {
+   "gemma2:9b": "Very natural, accurate, and uses glossary terms correctly.",
+   "llama3.1:8b": "Literal translation, missed 'rel' context",
+   "qwen3:30b-a3b": "Good but unnatural phrasing."
+  }
+ },
+ {
+  "id": "u0452",
+  "key": "calcPresetPlainRange",
+  "variant": "full",
+  "en": "8–12% of gold value, typically 10%",
+  "hi_new": "सोने की कीमत का 8–12%, आम तौर पर 10%",
+  "why": "majority flags (2 of 3)",
+  "scores": {
+   "gemma2:9b": {
+    "natural": 4,
+    "correct": 5,
+    "glossary": 4,
+    "grammar": 5
+   },
+   "llama3.1:8b": {
+    "natural": 4,
+    "correct": 4,
+    "glossary": 1,
+    "grammar": 5
+   },
+   "qwen3:30b-a3b": {
+    "natural": 2,
+    "correct": 3,
+    "glossary": 1,
+    "grammar": 4
+   }
+  },
+  "worst_by_criterion": {
+   "natural": 2,
+   "correct": 3,
+   "glossary": 1,
+   "grammar": 4
+  },
+  "notes": {
+   "gemma2:9b": "Good, but 'सोने की कीमत' is less natural",
+   "llama3.1:8b": "uses सोने की कीमत instead of सोने का भाव",
+   "qwen3:30b-a3b": "Uses 'कीमत' instead of 'भाव'"
+  }
+ },
+ {
+  "id": "u0472",
+  "key": "calcPresetCoinsRange",
+  "variant": "full",
+  "en": "3–8% of gold value, typically 5%",
+  "hi_new": "सोने की कीमत का 3–8%, आम तौर पर 5%",
+  "why": "majority flags (2 of 3)",
+  "scores": {
+   "gemma2:9b": {
+    "natural": 4,
+    "correct": 5,
+    "glossary": 4,
+    "grammar": 5
+   },
+   "llama3.1:8b": {
+    "natural": 4,
+    "correct": 5,
+    "glossary": 1,
+    "grammar": 5
+   },
+   "qwen3:30b-a3b": {
+    "natural": 2,
+    "correct": 3,
+    "glossary": 1,
+    "grammar": 4
+   }
+  },
+  "worst_by_criterion": {
+   "natural": 2,
+   "correct": 3,
+   "glossary": 1,
+   "grammar": 4
+  },
+  "notes": {
+   "gemma2:9b": "Good, but 'सोने की कीमत' is less natural",
+   "llama3.1:8b": "uses सोने की कीमत instead of सोने का भाव",
+   "qwen3:30b-a3b": "Uses 'कीमत' instead of 'भाव'"
+  }
+ },
+ {
+  "id": "u0338",
+  "key": "calcAriaLabel",
+  "variant": "full",
+  "en": "Purchase cost calculator",
+  "hi_new": "ख़रीद का ख़र्च निकालने वाला कैलकुलेटर",
+  "why": "majority flags (2 of 3)",
+  "scores": {
+   "gemma2:9b": {
+    "natural": 4,
+    "correct": 5,
+    "glossary": 5,
+    "grammar": 5
+   },
+   "llama3.1:8b": {
+    "natural": 2,
+    "correct": 4,
+    "glossary": 1,
+    "grammar": 5
+   },
+   "qwen3:30b-a3b": {
+    "natural": 3,
+    "correct": 4,
+    "glossary": 2,
+    "grammar": 4
+   }
+  },
+  "worst_by_criterion": {
+   "natural": 2,
+   "correct": 4,
+   "glossary": 1,
+   "grammar": 4
+  },
+  "notes": {
+   "gemma2:9b": "Clear, concise, and natural for a shopper",
+   "llama3.1:8b": "Literal translation, missing 'cost' in Hindi",
+   "qwen3:30b-a3b": "खरीद का खर्च"
+  }
+ },
+ {
+  "id": "u0564",
+  "key": "methAccuracyDrift",
+  "variant": "full",
+  "en": "Accuracy drift",
+  "hi_new": "सही रहने में बदलाव",
+  "why": "majority flags (2 of 3)",
+  "scores": {
+   "gemma2:9b": {
+    "natural": 3,
+    "correct": 4,
+    "glossary": 5,
+    "grammar": 5
+   },
+   "llama3.1:8b": {
+    "natural": 5,
+    "correct": 5,
+    "glossary": 5,
+    "grammar": 5
+   },
+   "qwen3:30b-a3b": {
+    "natural": 3,
+    "correct": 4,
+    "glossary": 1,
+    "grammar": 4
+   }
+  },
+  "worst_by_criterion": {
+   "natural": 3,
+   "correct": 4,
+   "glossary": 1,
+   "grammar": 4
+  },
+  "notes": {
+   "gemma2:9b": "Could be more natural, but accurate",
+   "llama3.1:8b": "Accurate translation of 'Accuracy drift'",
+   "qwen3:30b-a3b": "Uses 'सही' but should be 'सही भाव'"
+  }
+ },
+ {
+  "id": "u0398",
+  "key": "driverPartRupeeTookOff",
+  "variant": "full",
+  "en": "a stronger rupee took off about ₹{inr}",
+  "hi_new": "मज़बूत रुपये से करीब ₹{inr} घटे",
+  "why": "majority flags (2 of 3)",
+  "scores": {
+   "gemma2:9b": {
+    "natural": 3,
+    "correct": 2,
+    "glossary": 5,
+    "grammar": 4
+   },
+   "llama3.1:8b": {
+    "natural": 4,
+    "correct": 5,
+    "glossary": 5,
+    "grammar": 5
+   },
+   "qwen3:30b-a3b": {
+    "natural": 3,
+    "correct": 4,
+    "glossary": 4,
+    "grammar": 5
+   }
+  },
+  "worst_by_criterion": {
+   "natural": 3,
+   "correct": 2,
+   "glossary": 4,
+   "grammar": 4
+  },
+  "notes": {
+   "gemma2:9b": "Glosses well, but 'घटे' is too passive",
+   "llama3.1:8b": "uses 'करीब' instead of 'took off'",
+   "qwen3:30b-a3b": "Uses 'घटे' instead of 'कम'"
+  }
+ },
+ {
+  "id": "u0475",
+  "key": "driverPartGoldTookOff",
+  "variant": "full",
+  "en": "global gold prices took off about ₹{gold}",
+  "hi_new": "दुनिया के बाज़ार में सोने के भाव से करीब ₹{gold} घटे",
+  "why": "majority flags (2 of 3)",
+  "scores": {
+   "gemma2:9b": {
+    "natural": 3,
+    "correct": 2,
+    "glossary": 5,
+    "grammar": 4
+   },
+   "llama3.1:8b": {
+    "natural": 4,
+    "correct": 5,
+    "glossary": 5,
+    "grammar": 5
+   },
+   "qwen3:30b-a3b": {
+    "natural": 3,
+    "correct": 4,
+    "glossary": 4,
+    "grammar": 5
+   }
+  },
+  "worst_by_criterion": {
+   "natural": 3,
+   "correct": 2,
+   "glossary": 4,
+   "grammar": 4
+  },
+  "notes": {
+   "gemma2:9b": "Glossed well, but 'घटे' is wrong tense",
+   "llama3.1:8b": "uses 'से' instead of 'के' for 'बाज़ार में'",
+   "qwen3:30b-a3b": "Incorrect verb tense; should be 'बढ़े' not 'घटे'"
+  }
+ },
+ {
+  "id": "u0406",
+  "key": "methRangeSub",
+  "variant": "full",
+  "en": "Right {times} so far: ₹{low} – ₹{high}",
+  "hi_new": "अब तक लगभग 10 में से {n} बार सही: ₹{low} – ₹{high}",
+  "why": "majority flags (2 of 3)",
+  "scores": {
+   "gemma2:9b": {
+    "natural": 3,
+    "correct": 4,
+    "glossary": 5,
+    "grammar": 5
+   },
+   "llama3.1:8b": {
+    "natural": 4,
+    "correct": 5,
+    "glossary": 5,
+    "grammar": 5
+   },
+   "qwen3:30b-a3b": {
+    "natural": 3,
+    "correct": 4,
+    "glossary": 3,
+    "grammar": 4
+   }
+  },
+  "worst_by_criterion": {
+   "natural": 3,
+   "correct": 4,
+   "glossary": 3,
+   "grammar": 4
+  },
+  "notes": {
+   "gemma2:9b": "A bit formal, but understandable. 'लगभग' is good for 'around'",
+   "llama3.1:8b": "uses आम instead of usual",
+   "qwen3:30b-a3b": "Uses 'लगभग' instead of 'अनुमानित'"
+  }
+ },
+ {
+  "id": "u0581",
+  "key": "todaysReadEyebrow",
+  "variant": "full",
+  "en": "Today's read",
+  "hi_new": "आज का हाल",
+  "why": "majority flags (2 of 3)",
+  "scores": {
+   "gemma2:9b": {
+    "natural": 4,
+    "correct": 3,
+    "glossary": 5,
+    "grammar": 5
+   },
+   "llama3.1:8b": {
+    "natural": 4,
+    "correct": 5,
+    "glossary": 5,
+    "grammar": 5
+   },
+   "qwen3:30b-a3b": {
+    "natural": 3,
+    "correct": 4,
+    "glossary": 3,
+    "grammar": 5
+   }
+  },
+  "worst_by_criterion": {
+   "natural": 3,
+   "correct": 3,
+   "glossary": 3,
+   "grammar": 5
+  },
+  "notes": {
+   "gemma2:9b": "Sounds colloquial, but 'हाल' is vague for 'reading'",
+   "llama3.1:8b": "Literal translation, but common usage",
+   "qwen3:30b-a3b": "आज का हाल is unnatural for 'Today's read'"
+  }
+ },
+ {
+  "id": "u0292",
+  "key": "pv2RangeOddsClause",
+  "variant": "full",
+  "en": " A range like this has held {frac} in the past.",
+  "hi_new": " ऐसी रेंज पहले {frac} सही साबित हुई है।",
+  "why": "majority flags (2 of 3)",
+  "scores": {
+   "gemma2:9b": {
+    "natural": 4,
+    "correct": 3,
+    "glossary": 5,
+    "grammar": 5
+   },
+   "llama3.1:8b": {
+    "natural": 4,
+    "correct": 4,
+    "glossary": 4,
+    "grammar": 5
+   },
+   "qwen3:30b-a3b": {
+    "natural": 3,
+    "correct": 4,
+    "glossary": 4,
+    "grammar": 5
+   }
+  },
+  "worst_by_criterion": {
+   "natural": 3,
+   "correct": 3,
+   "glossary": 4,
+   "grammar": 5
+  },
+  "notes": {
+   "gemma2:9b": "Literal, but understandable. 'सही साबित हुई है' is a bit formal for a shopper",
+   "llama3.1:8b": "uses सही instead of accurate, but accurate is allowed on technical page",
+   "qwen3:30b-a3b": "सही साबित हुई is unnatural"
+  }
+ },
+ {
+  "id": "u0566",
+  "key": "appTitle",
+  "variant": "full",
+  "en": "Gold Tracker",
+  "hi_new": "Gold Tracker",
+  "why": "majority flags (2 of 3)",
+  "scores": {
+   "gemma2:9b": {
+    "natural": 5,
+    "correct": 5,
+    "glossary": 5,
+    "grammar": 5
+   },
+   "llama3.1:8b": {
+    "natural": 2,
+    "correct": 5,
+    "glossary": 5,
+    "grammar": 5
+   },
+   "qwen3:30b-a3b": {
+    "natural": 1,
+    "correct": 5,
+    "glossary": 5,
+    "grammar": 5
+   }
+  },
+  "worst_by_criterion": {
+   "natural": 1,
+   "correct": 5,
+   "glossary": 5,
+   "grammar": 5
+  },
+  "notes": {
+   "gemma2:9b": "Direct translation, good for a label",
+   "llama3.1:8b": "Literal translation, no context adaptation",
+   "qwen3:30b-a3b": "Not a Hindi phrase."
+  }
+ }
+]

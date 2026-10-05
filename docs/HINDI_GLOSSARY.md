@@ -2,7 +2,7 @@
 
 Status: DRAFT for GG review. Written 2026-10-05, before any string was rewritten, so every
 Hindi string in `i18n.js` and `how-we-know-strings.js` is worded to this table. Not reviewed by
-a native speaker; see `reports/hindi_audit_2026-10/SUMMARY.md` for the LLM-consensus evidence
+a native speaker; see `reports/hindi_audit_2026-10/summary_stats.json` and the PR body for the LLM-consensus evidence
 (labelled "LLM consensus, not native review").
 
 Register: everyday spoken Hindi, as a buyer talks to a jeweller or a family member. Common English
@@ -77,5 +77,5 @@ Rules that apply everywhere:
 
 - Buttons and labels: shortest natural form, no full stop, no sentence verb ("शेयर करें", "बंद करें").
 - Sentences: full sentence with danda, spoken order (subject, object, verb), no literal English word order.
-- Notifications: none exist in Hindi today (see `reports/hindi_audit_2026-10/INVENTORY.md`); if added they follow the sentence rule and the same glossary.
+- Notifications: none exist in Hindi today (see `docs/HINDI_INVENTORY.md`); if added they follow the sentence rule and the same glossary.
 - Aria labels: a short noun phrase that reads well aloud by a screen reader.
