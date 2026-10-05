@@ -74,3 +74,38 @@ Direction of a rule = sign of its forecast. Direction of E = `p_up > 0.5` (as pu
   the last ~60 days (ADR 066 shadow), so it is out of this test.
 - Holiday and weekend gaps (pm1 several days after pm0): the world moved on days after D that no
   feature sees. They are reported as a stratum, not removed.
+
+## Results
+
+Pre-registration hash (sha256 of this file as committed in `bcaa0bac`, before this section):
+`04133349a0f114cffaea3d57ec233e7797708cd031d8f82383ce646fd22ccaab`. Frozen at commit `bcaa0bac`;
+run 2026-10-05 on that commit's code plus one post-hoc function (marked below). Artifact:
+`reports/model_audit_2026-10/parity.json`. Retrospective sample: 143 folds, 2025-07-17 ..
+2026-09-30. Forward sample: **n = 0** (the 2026-10-01 forecast resolves with the 2026-10-05 PM fix);
+not scored.
+
+| Rule | MAE Rs./g (E = 105.95) | E vs rule, 95% block-bootstrap CI | n_eff | DM p (Bonferroni) | Direction E / rule (McNemar p) | Clearly beaten by E? |
+|---|---|---|---|---|---|---|
+| P1 `x_glob` | 149.81 | -29.3% [-38.7, -18.6] | 120.9 | 1.5e-5 (4.6e-5) | 64.3% / 62.9% (0.86) | **yes** |
+| P2 `bdev` | 158.33 | -33.1% [-49.1, -8.5] | 50.9 | 0.033 (0.100) | 64.3% / 64.3% (1.00) | no (fails Bonferroni) |
+| P3 `b * x_glob` | 107.27 | **-1.2% [-4.2, +1.6]** | 143.0 | 0.41 (1.00) | 64.3% / 62.9% (0.86) | no |
+
+Flat-hold (always the last fix): MAE 115.77; always-up direction 48.95%. All numbers VERIFIED
+(measured by `scripts/analysis_nextfix_parity.py`).
+
+**Mechanical outcome of the frozen rule:** "recommend the simplest rule E does not clearly beat" =
+P2. That outcome is an artefact of low power (P2's n_eff is 51), not a sensible recommendation: P2
+and P1 are worse than flat-hold itself (MAE 158 and 150 vs 116). Reported as is, not edited.
+
+**What the data say (reading, not part of the registered test):**
+- The literal rule "last fix x the world's overnight move" (P1) is **worse than flat-hold**: the
+  fix already reflects most of day D's world move (it was published at 11:30 UTC, mid-day).
+- A single fitted slope on that move (P3, b about 0.19, range 0.06-0.28 across the walk) captures
+  nearly all of the ensemble's edge. **EXPLORATORY, post hoc** (added after the results above were
+  seen): P3 vs flat-hold = -7.3% MAE, CI [-13.2, -1.5], DM p = 0.023, n_eff 94.8; P3 direction
+  accuracy 62.9% vs always-up 48.95%.
+- The ensemble's additional gain over P3 is 1.2% with an interval that includes zero, on a sample
+  that favours the ensemble (see Limits). Ridge + 5 networks is therefore **not shown to be better
+  than a one-parameter regression**. Decision for GG (nothing changes from this ADR): keep the
+  ensemble, or ship P3 as the simpler, explainable alternative. Neither is demonstrably better on
+  143 days.

@@ -1,0 +1,102 @@
+{
+ "committed_record": {
+  "n": 143,
+  "mae_model": 106.0,
+  "mae_flat": 115.8,
+  "mae_change_pct": -8.5,
+  "mae_change_ci95": [
+   -14.1,
+   -2.5
+  ],
+  "dm_p": 0.009080229138113127,
+  "wilcoxon_p": 0.007226016605889209,
+  "range_coverage": 0.805,
+  "range_coverage_ci95": [
+   0.726,
+   0.865
+  ],
+  "range_mean_width": 352.5,
+  "direction_accuracy": 0.6433566433566433,
+  "always_up_accuracy": 0.48951048951048953,
+  "direction_gate": {
+   "ship": true,
+   "basis": "model_calibrated",
+   "reason": "logistic beats always-up OOS: acc 0.6434>0.4895, brier 0.2198<0.5105, ECE 0.0600<=0.1, p=0.0071 over 143 folds"
+  }
+ },
+ "reproduction": {
+  "vs_committed": {
+   "n_common": 143,
+   "only_in_rebuild": [],
+   "only_in_committed": [],
+   "max_abs_diff_ret": 0.004752718268936327,
+   "max_abs_diff_p_up": 0.1991983293170848,
+   "n_direction_flips": 6
+  },
+  "scored": {
+   "n": 143,
+   "mae_model": 105.6,
+   "mae_flat": 115.8,
+   "mae_change_pct": -8.8,
+   "mae_change_ci95": [
+    -13.8,
+    -3.3
+   ],
+   "dm_p": 0.0038937506495706486,
+   "wilcoxon_p": 0.004606244798484676,
+   "range_coverage": 0.813,
+   "range_coverage_ci95": [
+    0.735,
+    0.872
+   ],
+   "range_mean_width": 354.3,
+   "direction_accuracy": 0.6433566433566433,
+   "always_up_accuracy": 0.48951048951048953,
+   "direction_gate": {
+    "ship": true,
+    "basis": "model_calibrated",
+    "reason": "logistic beats always-up OOS: acc 0.6434>0.4895, brier 0.2205<0.5105, ECE 0.0532<=0.1, p=0.0092 over 143 folds"
+   }
+  }
+ },
+ "independent_ridge": {
+  "n": 143,
+  "max_abs_diff_vs_sklearn_ridgecv": 6.938893903907228e-18,
+  "note": "RidgeCV's default (gcv) selection can differ from explicit LOO at ties"
+ },
+ "usdinr_lagged": {
+  "vs_committed": {
+   "n_common": 143,
+   "only_in_rebuild": [],
+   "only_in_committed": [],
+   "max_abs_diff_ret": 0.01037962775793699,
+   "max_abs_diff_p_up": 0.38971804911109703,
+   "n_direction_flips": 24
+  },
+  "scored": {
+   "n": 143,
+   "mae_model": 107.7,
+   "mae_flat": 115.8,
+   "mae_change_pct": -7.0,
+   "mae_change_ci95": [
+    -12.5,
+    -1.0
+   ],
+   "dm_p": 0.025987429525659467,
+   "wilcoxon_p": 0.033333954568312125,
+   "range_coverage": 0.789,
+   "range_coverage_ci95": [
+    0.708,
+    0.851
+   ],
+   "range_mean_width": 345.4,
+   "direction_accuracy": 0.6153846153846154,
+   "always_up_accuracy": 0.48951048951048953,
+   "direction_gate": {
+    "ship": true,
+    "basis": "model_calibrated",
+    "reason": "logistic beats always-up OOS: acc 0.6154>0.4895, brier 0.2238<0.5105, ECE 0.0427<=0.1, p=0.0385 over 143 folds"
+   }
+  }
+ }
+}

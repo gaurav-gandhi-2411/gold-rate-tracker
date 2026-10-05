@@ -149,6 +149,36 @@ def summarise(folds: pd.DataFrame) -> dict:
     return {"results": res, "decision": decision(res)}
 
 
+def exploratory_p3_vs_flat(folds: pd.DataFrame) -> dict:
+    """POST HOC (added after the pre-registered results were seen; not part of ADR 067's test):
+    how much of the ensemble's edge over flat-hold the one-parameter rule P3 already has."""
+    pm0, pm1 = folds["pm0"].to_numpy(float), folds["pm1"].to_numpy(float)
+    err_flat = np.abs(pm1 - pm0)
+    err_p3 = np.abs(pm1 - pm0 * np.exp(folds["P3"].to_numpy(float)))
+
+    def rel(ix: np.ndarray) -> float:
+        return 100.0 * (err_p3[ix].mean() / err_flat[ix].mean() - 1.0)
+
+    up = pm1 > pm0
+    return {
+        "label": "EXPLORATORY, post hoc",
+        "n": len(folds),
+        "mae_flat": round(float(err_flat.mean()), 2),
+        "mae_p3": round(float(err_p3.mean()), 2),
+        "p3_vs_flat_pct": round(rel(np.arange(len(folds))), 2),
+        "p3_vs_flat_ci95": [round(v, 2) for v in nf.block_bootstrap_ci(len(folds), rel, seed=SEED)],
+        "dm_p_two_sided": nf.diebold_mariano_p(err_p3, err_flat, DM_LAGS),
+        "n_eff": round(effective_n(err_p3 - err_flat), 1),
+        "always_up_accuracy": round(float(up.mean()), 4),
+        "p3_direction_accuracy": round(float(((folds["P3"].to_numpy(float) > 0) == up).mean()), 4),
+        "p3_slope_last": round(float(folds["P3_b"].iloc[-1]), 4),
+        "p3_slope_range": [
+            round(float(folds["P3_b"].min()), 4),
+            round(float(folds["P3_b"].max()), 4),
+        ],
+    }
+
+
 def stratum_gap(folds: pd.DataFrame) -> pd.Series:
     """Calendar days between pm0's and pm1's IBJA dates (1 = consecutive weekdays)."""
     return (pd.to_datetime(folds["d1"]) - pd.to_datetime(folds["d0"])).dt.days
@@ -189,6 +219,7 @@ def main() -> None:
     out["forward"] = (
         {"n": len(fwd), **summarise(fwd)} if len(fwd) >= 20 else {"n": len(fwd), "scored": False}
     )
+    out["exploratory_post_hoc"] = exploratory_p3_vs_flat(m)
     gap = stratum_gap(m)
     out["strata_gap_days"] = {
         "consecutive_1_day": int((gap == 1).sum()),

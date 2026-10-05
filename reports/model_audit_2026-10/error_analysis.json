@@ -1,0 +1,203 @@
+{
+ "all": {
+  "n": 143,
+  "mae_model": 106.0,
+  "mae_hold": 115.8,
+  "change_pct": -8.5,
+  "direction_accuracy": 0.643,
+  "calibration_slope_y_on_ret": 1.64,
+  "change_pct_ci95": [
+   -14.5,
+   -2.5
+  ]
+ },
+ "gap_1_day": {
+  "n": 114,
+  "mae_model": 107.3,
+  "mae_hold": 113.6,
+  "change_pct": -5.5,
+  "direction_accuracy": 0.623,
+  "calibration_slope_y_on_ret": 1.54,
+  "change_pct_ci95": [
+   -11.7,
+   0.8
+  ]
+ },
+ "gap_over_1_day": {
+  "n": 29,
+  "mae_model": 100.5,
+  "mae_hold": 124.1,
+  "change_pct": -19.1,
+  "direction_accuracy": 0.724,
+  "calibration_slope_y_on_ret": 1.95,
+  "change_pct_ci95": [
+   -32.0,
+   -4.4
+  ]
+ },
+ "decision_Monday": {
+  "n": 29,
+  "mae_model": 91.3,
+  "mae_hold": 85.6,
+  "change_pct": 6.7,
+  "direction_accuracy": 0.655,
+  "calibration_slope_y_on_ret": 0.54,
+  "change_pct_ci95": [
+   -4.3,
+   17.3
+  ]
+ },
+ "decision_Tuesday": {
+  "n": 29,
+  "mae_model": 125.5,
+  "mae_hold": 132.6,
+  "change_pct": -5.4,
+  "direction_accuracy": 0.724,
+  "calibration_slope_y_on_ret": 1.79,
+  "change_pct_ci95": [
+   -15.3,
+   5.5
+  ]
+ },
+ "decision_Wednesday": {
+  "n": 29,
+  "mae_model": 106.8,
+  "mae_hold": 112.2,
+  "change_pct": -4.8,
+  "direction_accuracy": 0.448,
+  "calibration_slope_y_on_ret": 1.53,
+  "change_pct_ci95": [
+   -17.6,
+   10.2
+  ]
+ },
+ "decision_Thursday": {
+  "n": 29,
+  "mae_model": 109.0,
+  "mae_hold": 128.0,
+  "change_pct": -14.9,
+  "direction_accuracy": 0.655,
+  "calibration_slope_y_on_ret": 2.15,
+  "change_pct_ci95": [
+   -24.3,
+   -6.3
+  ]
+ },
+ "decision_Friday": {
+  "n": 27,
+  "mae_model": 96.4,
+  "mae_hold": 120.7,
+  "change_pct": -20.1,
+  "direction_accuracy": 0.741,
+  "calibration_slope_y_on_ret": 2.01,
+  "change_pct_ci95": [
+   -32.7,
+   -6.2
+  ]
+ },
+ "calm": {
+  "n": 48,
+  "mae_model": 88.2,
+  "mae_hold": 98.9,
+  "change_pct": -10.7,
+  "direction_accuracy": 0.688,
+  "calibration_slope_y_on_ret": 2.52,
+  "change_pct_ci95": [
+   -17.3,
+   -4.2
+  ]
+ },
+ "middle_vol": {
+  "n": 47,
+  "mae_model": 101.8,
+  "mae_hold": 111.4,
+  "change_pct": -8.6,
+  "direction_accuracy": 0.532,
+  "calibration_slope_y_on_ret": 1.35,
+  "change_pct_ci95": [
+   -18.6,
+   0.6
+  ]
+ },
+ "volatile": {
+  "n": 48,
+  "mae_model": 127.7,
+  "mae_hold": 137.0,
+  "change_pct": -6.8,
+  "direction_accuracy": 0.708,
+  "calibration_slope_y_on_ret": 1.48,
+  "change_pct_ci95": [
+   -16.2,
+   5.2
+  ]
+ },
+ "event_between": {
+  "n": 19,
+  "mae_model": 91.1,
+  "mae_hold": 102.0,
+  "change_pct": -10.7,
+  "direction_accuracy": 0.684,
+  "calibration_slope_y_on_ret": 2.11,
+  "change_pct_ci95": [
+   -22.7,
+   5.0
+  ]
+ },
+ "no_event_between": {
+  "n": 124,
+  "mae_model": 108.2,
+  "mae_hold": 117.9,
+  "change_pct": -8.2,
+  "direction_accuracy": 0.637,
+  "calibration_slope_y_on_ret": 1.58,
+  "change_pct_ci95": [
+   -14.8,
+   -1.9
+  ]
+ },
+ "large_move_top_decile (conditions on outcome)": {
+  "n": 15,
+  "mae_model": 303.2,
+  "mae_hold": 344.8,
+  "change_pct": -12.1,
+  "direction_accuracy": 0.733,
+  "calibration_slope_y_on_ret": 3.44,
+  "change_pct_ci95": [
+   -21.0,
+   -6.2
+  ]
+ },
+ "other_days": {
+  "n": 128,
+  "mae_model": 82.8,
+  "mae_hold": 88.9,
+  "change_pct": -6.8,
+  "direction_accuracy": 0.633,
+  "calibration_slope_y_on_ret": 1.14,
+  "change_pct_ci95": [
+   -14.2,
+   1.0
+  ]
+ },
+ "other_windows_hold_the_fix": {
+  "am_to_pm": {
+   "n": 264,
+   "mae_hold": 29.8,
+   "median_abs_move": 18.4,
+   "share_unchanged": 0.0
+  },
+  "pm_to_am": {
+   "n": 210,
+   "mae_hold": 91.7,
+   "median_abs_move": 64.8,
+   "share_unchanged": 0.0
+  }
+ },
+ "event_types_in_calendar": [
+  "fomc_decision",
+  "india_budget",
+  "us_cpi",
+  "us_jobs_report"
+ ],
+ "note": "Descriptive strata for diagnosis; not confirmatory tests."
+}
