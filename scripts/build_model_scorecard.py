@@ -25,9 +25,18 @@ effective n shown next to it uses an AR(1) correction.
 Marking: VERIFIED = computed in this run from the raw per-prediction records. INFERRED = copied
 from a number the producing job computed earlier (not re-measured here), or a stated approximation.
 
-Demotion hook: ml/demotion.py (feat/model-audit-2026-10) is NOT on master, so nothing here imports
-it. `demotion_status(model_id)` is the single place to add it later: return
-{"state": ..., "reason": ..., "source": ...} for a model and the JSON/markdown pick it up.
+Live next-fix model (ADR 069): P3 (data/nextfix_p3_oos.json; folds flagged `retro` are re-runs on
+past days and are shown only in the "earlier history" column, never as live calls). The old
+ridge + neural-net ensemble (data/nextfix_oos.json) is then scored as a shadow on the same days.
+While data/nextfix_p3_oos.json does not exist, the P3 row says so and the ensemble row behaves as
+before (live, from data/nextfix_oos.json). Two ADR 071 shadow variants of P3 are compared with P3
+and get no verdict before VARIANT_MIN_FORWARD_N forward days (ADR 071's frozen rule).
+
+Demotion (ADR 068): ml/demotion.py is on master but nothing here imports it: the rules run in the
+check-price job, which writes data/model_demotion_state.json (sticky state) and
+forecast.json next_fix.demotion. `demotion_status(model_id, data_dir)` is the single place that
+reads the state file; the "demotion monitor" row reads both files. A missing, unreadable or
+malformed state file is "no data", never "not demoted".
 
 Usage:
     python scripts/build_model_scorecard.py                 # compute -> JSON + markdown
@@ -42,7 +51,7 @@ import json
 import math
 import subprocess
 import sys
-from datetime import UTC, datetime
+from datetime import UTC, date, datetime
 from pathlib import Path
 from typing import Any
 
@@ -55,6 +64,13 @@ SCRIPT_REL = "scripts/build_model_scorecard.py"
 # Fewer forward observations than this and no verdict is shown (20 = ml.nextfix.MIN_CONFORMAL, the
 # repo's own minimum for calling a range record "ready").
 MIN_FORWARD_N = 20
+# ADR 071 (frozen): no verdict on a P3 variant before 40 forward decision days (about 8 weeks).
+VARIANT_MIN_FORWARD_N = 40
+VARIANT_ALPHA = 0.025  # ADR 071: 0.05 / 2 variants, one-sided
+VARIANT_MIN_GAIN = 0.02  # ADR 071: at least 2% lower error (champion-challenger margin)
+P3_FILE = "nextfix_p3_oos.json"
+P3_VARIANTS_FILE = "nextfix_p3_variants_oos.json"
+DEMOTION_STATE_FILE = "model_demotion_state.json"
 NOMINAL = 0.8
 ALPHA = 0.05
 # A coverage row is amber (not green) while its Wilson interval is wider than +/- this.
@@ -66,6 +82,14 @@ FORWARD_STARTS: dict[str, dict[str, str]] = {
     "nextfix": {
         "date": "2026-10-01",
         "basis": "promoted 2026-10-02 (ADR 064/065); forward from decision day d0 >= 2026-10-01",
+    },
+    "p3": {
+        "date": "2026-10-05",
+        "basis": "ADR 069: P3 live from decision day d0 >= 2026-10-05 (folds with retro false)",
+    },
+    "p3_variants": {
+        "date": "2026-10-05",
+        "basis": "ADR 071: forward folds only (retro false), d0 >= 2026-10-05, compared with P3",
     },
     "intraday": {
         "date": "2026-10-02",
@@ -112,9 +136,35 @@ FORWARD_STARTS: dict[str, dict[str, str]] = {
 LIGHTS = {"green": "GREEN", "amber": "AMBER", "red": "RED", "grey": "GREY"}
 
 
-def demotion_status(model_id: str) -> dict[str, Any] | None:
-    """HOOK (see module docstring): demotion state per model, None until ml.demotion lands."""
-    return None
+LIVE_MODEL_ID = "nextfix_p3"  # the only model ADR 068's demotion rules watch today
+
+
+def read_demotion_state(data_dir: Path) -> dict[str, Any] | None:
+    """The sticky state file (ADR 068) or None when it is missing, unreadable or malformed.
+
+    Fail closed: a state that cannot be validated is None ("unknown"), never "not demoted".
+    """
+    s = _read_json(DEMOTION_STATE_FILE, data_dir)
+    if not isinstance(s, dict) or not isinstance(s.get("demoted"), bool):
+        return None
+    if not isinstance(s.get("reasons", []), list):
+        return None
+    return s
+
+
+def demotion_status(model_id: str, data_dir: Path = DATA) -> dict[str, Any] | None:
+    """Demotion state for a model: {"state", "reason", "source"} or None when not watched/unknown."""
+    if model_id != LIVE_MODEL_ID:
+        return None
+    s = read_demotion_state(data_dir)
+    if s is None:
+        return None
+    reasons = ", ".join(str(r) for r in s.get("reasons", [])) or "none"
+    return {
+        "state": "demoted" if s["demoted"] else "not demoted",
+        "reason": reasons,
+        "source": f"data/{DEMOTION_STATE_FILE}",
+    }
 
 
 # --- small stats (pure python; numpy/scipy only inside the helpers that need ml.*) --------------
@@ -262,7 +312,7 @@ def base_row(
         "verdict_kind": "no_data",
         "sentence": "",
         "sources": sources,
-        "demotion": demotion_status(row_id),
+        "demotion": None,  # filled by build_rows from the state file (needs the data dir)
     }
 
 
@@ -378,15 +428,163 @@ def _coverage_block(
 # --- the models ----------------------------------------------------------------------------------
 
 
-def row_nextfix(data_dir: Path) -> list[dict[str, Any]]:
-    start = FORWARD_STARTS["nextfix"]["date"]
+def _fold_err(f: dict[str, Any]) -> float:
+    """Absolute error (Rs/g) of a next-fix fold's forecast against the fix that was published."""
+    return abs(f["pm1"] - f["pm0"] * math.exp(f["ret"]))
+
+
+def _hold_err(f: dict[str, Any]) -> float:
+    return abs(f["pm1"] - f["pm0"])
+
+
+def _pair_stats(e_model: list[float], e_base: list[float]) -> dict[str, Any]:
+    """Paired absolute-error comparison on the same days (lower = better): mean difference,
+    Newey-West interval, one-sided HAC Diebold-Mariano p and its effective n."""
+    n = len(e_model)
+    out: dict[str, Any] = {
+        "n": n,
+        "model": None,
+        "baseline": None,
+        "diff": None,
+        "ci95": None,
+        "p_one_sided": None,
+        "effective_n": None,
+        "p_kind": "one-sided HAC Diebold-Mariano (lag 1)",
+    }
+    if not n:
+        return out
+    ci = hac_mean_ci([a - b for a, b in zip(e_model, e_base, strict=True)])
+    dm = dm_less(e_model, e_base)
+    out.update(
+        model=round(sum(e_model) / n, 2),
+        baseline=round(sum(e_base) / n, 2),
+        diff=round(ci["mean"], 2),
+        ci95=[round(v, 2) for v in ci["ci95"]] if ci["ci95"] else None,
+        p_one_sided=None if dm["p_one_sided"] is None else round(dm["p_one_sided"], 4),
+        effective_n=None if dm["effective_n"] is None else round(dm["effective_n"], 1),
+    )
+    return out
+
+
+def _no_record(row: dict[str, Any], file: str, extra: str = "") -> dict[str, Any]:
+    """The record does not exist (yet): say so, never a verdict."""
+    row["verdict"], row["verdict_kind"] = "grey", "no_data"
+    row["sentence"] = f"No data: record not present yet (data/{file}){extra}."
+    row["forward"]["extras"].append(f"no data: record not present yet (data/{file})")
+    return row
+
+
+def _p3_split(
+    data_dir: Path,
+) -> tuple[bool, list[dict[str, Any]], list[dict[str, Any]]]:
+    """(file_exists, forward folds, retrospective folds) of the P3 record.
+
+    Forward = flagged `retro` false AND decision day >= the P3 start (ADR 069). Everything else is
+    a re-run on past days. A fold with no `retro` flag is never counted as forward (fail closed).
+    """
+    start = FORWARD_STARTS["p3"]["date"]
+    exists = (data_dir / P3_FILE).exists()
+    doc = _read_json(P3_FILE, data_dir)
+    folds = doc.get("folds") if isinstance(doc, dict) else None
+    if not isinstance(folds, list):
+        return exists, [], []
+    good = [f for f in folds if isinstance(f, dict) and {"d0", "pm0", "pm1", "ret"} <= f.keys()]
+    fwd = [f for f in good if f.get("retro") is False and f["d0"] >= start]
+    old = [f for f in good if not (f.get("retro") is False and f["d0"] >= start)]
+    return exists, fwd, old
+
+
+def _retro_text(old: list[dict[str, Any]], what: str) -> tuple[str, str]:
+    """Text for the earlier-history column of a next-fix model: re-runs, not live calls."""
+    rm = [_fold_err(f) for f in old]
+    rb = [_hold_err(f) for f in old]
+    ci = hac_mean_ci([a - b for a, b in zip(rm, rb, strict=True)])
+    text = (
+        f"{what}: re-run on past days, NOT live calls; n={len(old)} ({old[0]['d0']} to "
+        f"{old[-1]['d0']}): error {sum(rm) / len(rm):.1f} vs hold {sum(rb) / len(rb):.1f} Rs/g, "
+        f"change {100 * (sum(rm) / sum(rb) - 1):+.1f}%"
+        + (f", diff 95% CI [{ci['ci95'][0]:+.1f}, {ci['ci95'][1]:+.1f}]" if ci["ci95"] else "")
+    )
+    return text, "VERIFIED"
+
+
+def _direction_extra(fwd: list[dict[str, Any]]) -> str | None:
+    moved = [f for f in fwd if f["pm1"] != f["pm0"] and "p_up" in f and "y" in f]
+    if not moved:
+        return None
+    ok = sum((f["p_up"] > 0.5) == (f["y"] > 0) for f in moved)
+    ups = sum(f["y"] > 0 for f in moved)
+    return f"direction right {ok}/{len(moved)} moves vs always-up {ups}/{len(moved)}"
+
+
+def _gate_from_forecast(row: dict[str, Any], data_dir: Path) -> None:
+    nf = (_read_json("forecast.json", data_dir) or {}).get("next_fix") or {}
+    tr = nf.get("track_record") or {}
+    if not tr:
+        return
+    shown = (nf.get("direction") or {}).get("show")
+    row["gate"] = {
+        "text": (
+            f"direction gate {'ship' if tr.get('direction_gate_ship') else 'no ship'}, "
+            f"timing gate {'ship' if tr.get('timing_gate_ship') else 'no ship'}; "
+            f"direction shown to users: {'yes' if shown else 'no'}"
+        ),
+        "passes": bool(tr.get("direction_gate_ship")),
+        "marking": "INFERRED",
+    }
+    if "n_forward" in tr:
+        row["forward"]["extras"].append(
+            f"forecast.json reports n_forward={tr['n_forward']} (copied, not re-measured here)"
+        )
+
+
+def row_p3(data_dir: Path) -> dict[str, Any]:
+    """The LIVE next-fix model (ADR 069): P3, forward only from decision day 2026-10-05."""
     row = base_row(
-        "nextfix_model",
-        "ml.nextfix model window (ridge + nets)",
+        LIVE_MODEL_ID,
+        "ml.nextfix P3 (live next-fix forecast)",
         "LIVE",
         "next IBJA PM fix (22K, Rs/g), forecast after the US close",
-        "nextfix",
-        ["data/nextfix_oos.json", "data/forecast.json"],
+        "p3",
+        [f"data/{P3_FILE}", "data/forecast.json", f"data/{DEMOTION_STATE_FILE}"],
+    )
+    row["forward"].update(
+        metric="mean absolute error of the next fix", baseline_name="holding the last fix"
+    )
+    exists, fwd, old = _p3_split(data_dir)
+    if not fwd and not old:
+        if exists:
+            return no_data(row, f"data/{P3_FILE} is unreadable or has no usable folds")
+        return _no_record(row, P3_FILE)
+    _loss_block(row, [_fold_err(f) for f in fwd], [_hold_err(f) for f in fwd], "Rs/g")
+    if fwd:
+        row["forward"]["first_date"], row["forward"]["last_date"] = fwd[0]["d0"], fwd[-1]["d0"]
+        extra = _direction_extra(fwd)
+        if extra:
+            row["forward"]["extras"].append(extra)
+    if old:
+        text, mark = _retro_text(old, "P3 history")
+        row["retrospective"].update(text=text, marking=mark)
+    _gate_from_forecast(row, data_dir)
+    _finish_point(row, "P3")
+    return row
+
+
+def row_nextfix(data_dir: Path) -> list[dict[str, Any]]:
+    """P3 row, then the ensemble row. With the P3 record present the ensemble is the SHADOW,
+    scored on the same forward days as P3 and compared with it; without it the ensemble row
+    behaves exactly as before (live, from data/nextfix_oos.json)."""
+    p3_row = row_p3(data_dir)
+    p3_exists, p3_fwd, _ = _p3_split(data_dir)
+    shadow = p3_exists
+    start = FORWARD_STARTS["p3" if shadow else "nextfix"]["date"]
+    row = base_row(
+        "nextfix_ensemble_shadow" if shadow else "nextfix_model",
+        "shadow: ridge+neural-net ensemble" if shadow else "ml.nextfix model window (ridge + nets)",
+        "SHADOW" if shadow else "LIVE",
+        "next IBJA PM fix (22K, Rs/g), forecast after the US close",
+        "p3" if shadow else "nextfix",
+        ["data/nextfix_oos.json", "data/forecast.json"] + ([f"data/{P3_FILE}"] if shadow else []),
     )
     row["forward"].update(
         metric="mean absolute error of the next fix", baseline_name="holding the last fix"
@@ -394,53 +592,285 @@ def row_nextfix(data_dir: Path) -> list[dict[str, Any]]:
     oos = _read_json("nextfix_oos.json", data_dir)
     folds = (oos or {}).get("folds") if isinstance(oos, dict) else None
     if not folds:
-        return [no_data(row, "data/nextfix_oos.json is missing or empty")]
+        return [p3_row, no_data(row, "data/nextfix_oos.json is missing or empty")]
     fwd = [f for f in folds if f["d0"] >= start]
     old = [f for f in folds if f["d0"] < start]
-    em = [abs(f["pm1"] - f["pm0"] * math.exp(f["ret"])) for f in fwd]
-    eb = [abs(f["pm1"] - f["pm0"]) for f in fwd]
-    _loss_block(row, em, eb, "Rs/g")
+    _loss_block(row, [_fold_err(f) for f in fwd], [_hold_err(f) for f in fwd], "Rs/g")
     if fwd:
         row["forward"]["first_date"], row["forward"]["last_date"] = fwd[0]["d0"], fwd[-1]["d0"]
-        moved = [f for f in fwd if f["pm1"] != f["pm0"]]
-        if moved:
-            ok = sum((f["p_up"] > 0.5) == (f["y"] > 0) for f in moved)
-            ups = sum(f["y"] > 0 for f in moved)
-            row["forward"]["extras"].append(
-                f"direction right {ok}/{len(moved)} moves vs always-up {ups}/{len(moved)}"
-            )
+        extra = _direction_extra(fwd)
+        if extra:
+            row["forward"]["extras"].append(extra)
     if old:
-        rm = [abs(f["pm1"] - f["pm0"] * math.exp(f["ret"])) for f in old]
-        rb = [abs(f["pm1"] - f["pm0"]) for f in old]
-        ci = hac_mean_ci([a - b for a, b in zip(rm, rb, strict=True)])
-        row["retrospective"].update(
-            text=(
-                f"n={len(old)} ({old[0]['d0']} to {old[-1]['d0']}): error {sum(rm) / len(rm):.1f} vs "
-                f"hold {sum(rb) / len(rb):.1f} Rs/g, change {100 * (sum(rm) / sum(rb) - 1):+.1f}%"
-                + (
-                    f", diff 95% CI [{ci['ci95'][0]:+.1f}, {ci['ci95'][1]:+.1f}]"
-                    if ci["ci95"]
-                    else ""
-                )
-            ),
-            marking="VERIFIED",
-        )
-    fc = _read_json("forecast.json", data_dir) or {}
-    nf = fc.get("next_fix") or {}
-    tr = nf.get("track_record") or {}
-    if tr:
-        shown = (nf.get("direction") or {}).get("show")
+        if shadow:
+            text, mark = _retro_text(old, "ensemble history")
+            row["retrospective"].update(text=text, marking=mark)
+        else:
+            rm = [_fold_err(f) for f in old]
+            rb = [_hold_err(f) for f in old]
+            ci = hac_mean_ci([a - b for a, b in zip(rm, rb, strict=True)])
+            row["retrospective"].update(
+                text=(
+                    f"n={len(old)} ({old[0]['d0']} to {old[-1]['d0']}): error "
+                    f"{sum(rm) / len(rm):.1f} vs hold {sum(rb) / len(rb):.1f} Rs/g, "
+                    f"change {100 * (sum(rm) / sum(rb) - 1):+.1f}%"
+                    + (
+                        f", diff 95% CI [{ci['ci95'][0]:+.1f}, {ci['ci95'][1]:+.1f}]"
+                        if ci["ci95"]
+                        else ""
+                    )
+                ),
+                marking="VERIFIED",
+            )
+    if shadow:
+        row["status_note"] = "not shown to users; scored on the same days as P3"
+        _add_pair_vs_p3(row, "P3 vs the ensemble", p3_fwd, fwd, min_n=MIN_FORWARD_N)
         row["gate"] = {
-            "text": (
-                f"direction gate {'ship' if tr.get('direction_gate_ship') else 'no ship'}, "
-                f"timing gate {'ship' if tr.get('timing_gate_ship') else 'no ship'}; "
-                f"direction shown to users: {'yes' if shown else 'no'}"
-            ),
-            "passes": bool(tr.get("direction_gate_ship")),
+            "text": "shadow since ADR 069; nothing shown to users",
+            "passes": None,
             "marking": "INFERRED",
         }
-    _finish_point(row, "the model")
-    return [row]
+    else:
+        _gate_from_forecast(row, data_dir)
+    _finish_point(row, "the ensemble" if shadow else "the model")
+    return [p3_row, row]
+
+
+def _add_pair_vs_p3(
+    row: dict[str, Any],
+    label: str,
+    p3_fwd: list[dict[str, Any]],
+    other_fwd: list[dict[str, Any]],
+    min_n: int,
+    p3_is_model: bool = True,
+) -> dict[str, Any]:
+    """Paired comparison on the days both records scored. Stored in row['forward']['paired'] and
+    summarised in extras. `p3_is_model`: the first-listed model in `label` is P3 (H1: P3's error is
+    lower); otherwise the other record is the model (H1: its error is lower than P3's)."""
+    other = {f["d0"]: f for f in other_fwd}
+    common = [(f, other[f["d0"]]) for f in p3_fwd if f["d0"] in other]
+    e_p3 = [_fold_err(a) for a, _ in common]
+    e_ot = [_fold_err(b) for _, b in common]
+    st = _pair_stats(e_p3, e_ot) if p3_is_model else _pair_stats(e_ot, e_p3)
+    st["label"] = label
+    st["min_n"] = min_n
+    st["marking"] = "VERIFIED"
+    row["forward"]["paired"] = st
+    n = st["n"]
+    if n < min_n:
+        row["forward"]["extras"].append(f"{label}, same days: too early (n={n}, need {min_n})")
+        return st
+    ci = st["ci95"]
+    row["forward"]["extras"].append(
+        f"{label}, same days: n={n}, eff. n={st['effective_n']}, error {st['model']} vs "
+        f"{st['baseline']} Rs/g, diff {st['diff']:+.2f}"
+        + (f", 95% [{ci[0]:+.2f}, {ci[1]:+.2f}]" if ci else "")
+        + (f", one-sided p={st['p_one_sided']:.3f}" if st["p_one_sided"] is not None else "")
+        + " (V; lower error is better, the first-named model's error is listed first)"
+    )
+    return st
+
+
+def _variant_verdict(
+    row: dict[str, Any], v_fwd: list[dict[str, Any]], p3_fwd: list[dict[str, Any]], name: str
+) -> None:
+    """ADR 071's frozen rule. No verdict below VARIANT_MIN_FORWARD_N forward days."""
+    st = row["forward"]["paired"]
+    n = st["n"]
+    row["forward"]["n"] = n
+    if n < VARIANT_MIN_FORWARD_N:
+        row["verdict"], row["verdict_kind"] = "grey", "too_early"
+        row["sentence"] = (
+            f"Too early (n={n}, need {VARIANT_MIN_FORWARD_N} by ADR 071's frozen rule); P3 stays."
+        )
+        return
+    # direction: exact McNemar on days the fix moved (reported in the frozen rule as a guard)
+    pv = {f["d0"]: f for f in p3_fwd}
+    only_p3 = only_v = 0
+    for f in v_fwd:
+        g = pv.get(f["d0"])
+        if g is None or f["pm1"] == f["pm0"]:
+            continue
+        ok_v = (f["p_up"] > 0.5) == (f["y"] > 0)
+        ok_p = (g["p_up"] > 0.5) == (g["y"] > 0)
+        only_p3 += ok_p and not ok_v
+        only_v += ok_v and not ok_p
+    p_dir_lower = mcnemar_one_sided(only_p3, only_v)  # small = variant reliably less accurate
+    row["forward"]["extras"].append(
+        f"direction on days the fix moved, only one right: P3 {only_p3} vs {name} {only_v}"
+        + ("" if p_dir_lower is None else f" (exact McNemar one-sided p={p_dir_lower:.3f})")
+    )
+    row["verdict_kind"] = "scored"
+    gain = None if not st["baseline"] else 1 - st["model"] / st["baseline"]
+    clearly = (
+        gain is not None
+        and gain >= VARIANT_MIN_GAIN
+        and st["p_one_sided"] is not None
+        and st["p_one_sided"] < VARIANT_ALPHA
+        and (p_dir_lower is None or p_dir_lower >= VARIANT_ALPHA)
+    )
+    if clearly:
+        row["verdict"] = "green"
+        row["sentence"] = (
+            f"{name} clearly beats P3 under ADR 071's frozen rule: recommend to GG; nothing ships "
+            "automatically."
+        )
+    elif st["ci95"] and st["ci95"][0] > 0:
+        row["verdict"] = "red"
+        row["sentence"] = f"{name} is reliably less accurate than P3; P3 stays."
+    else:
+        row["verdict"] = "amber"
+        row["sentence"] = f"{name} does not clearly beat P3 (ADR 071's rule); P3 stays."
+
+
+def _variant_rows(data_dir: Path) -> list[dict[str, Any]]:
+    specs = [
+        (
+            "p3_roll60",
+            "shadow: P3 on the last 60 days (ADR 071 V1)",
+            "slope fitted on the 60 most recent resolved days",
+        ),
+        ("p3_monday", "shadow: P3 Monday slope (ADR 071 V2)", "slope fitted on Monday days only"),
+    ]
+    _, p3_fwd, p3_old = _p3_split(data_dir)
+    p3_exists = (data_dir / P3_FILE).exists()
+    doc = _read_json(P3_VARIANTS_FILE, data_dir)
+    variants = doc.get("variants") if isinstance(doc, dict) else None
+    rows = []
+    for vid, name, what in specs:
+        row = base_row(
+            vid,
+            name,
+            "SHADOW",
+            f"next IBJA PM fix, like P3 but with the {what}",
+            "p3_variants",
+            [f"data/{P3_VARIANTS_FILE}", f"data/{P3_FILE}"],
+        )
+        row["forward"].update(
+            metric="mean absolute error of the next fix", baseline_name="P3 (the live model)"
+        )
+        row["status_note"] = "not shown to users; compared with P3 only"
+        row["gate"] = {
+            "text": f"ADR 071: needs {VARIANT_MIN_FORWARD_N} forward days, error at least 2% lower, "
+            f"one-sided p < {VARIANT_ALPHA}, direction not worse",
+            "passes": None,
+            "marking": "INFERRED",
+        }
+        folds = variants.get(vid) if isinstance(variants, dict) else None
+        if not isinstance(folds, list) or not folds:
+            rows.append(_no_record(row, P3_VARIANTS_FILE))
+            continue
+        if not p3_exists:
+            rows.append(_no_record(row, P3_FILE))
+            continue
+        good = [f for f in folds if isinstance(f, dict) and {"d0", "pm0", "pm1", "ret"} <= f.keys()]
+        start = FORWARD_STARTS["p3_variants"]["date"]
+        v_fwd = [f for f in good if f.get("retro") is False and f["d0"] >= start]
+        v_old = [f for f in good if not (f.get("retro") is False and f["d0"] >= start)]
+        st = _add_pair_vs_p3(row, f"{name} vs P3", p3_fwd, v_fwd, VARIANT_MIN_FORWARD_N, False)
+        f = row["forward"]
+        f.update(
+            unit="Rs/g",
+            model=st["model"],
+            baseline=st["baseline"],
+            diff=st["diff"],
+            ci95=st["ci95"],
+            p_one_sided=st["p_one_sided"],
+            p_kind=st["p_kind"] + f"; frozen alpha {VARIANT_ALPHA} (ADR 071)",
+            effective_n=st["effective_n"],
+        )
+        if st["n"]:
+            days = sorted(x["d0"] for x in v_fwd if x["d0"] in {y["d0"] for y in p3_fwd})
+            f["first_date"], f["last_date"] = days[0], days[-1]
+        if vid == "p3_monday" and v_fwd:
+            mon = [
+                (x, y)
+                for x in v_fwd
+                for y in p3_fwd
+                if x["d0"] == y["d0"] and date.fromisoformat(x["d0"]).weekday() == 0
+            ]
+            if mon:
+                a = [_fold_err(x) for x, _ in mon]
+                b = [_fold_err(y) for _, y in mon]
+                f["extras"].append(
+                    f"Monday decisions only (reported, not used for the verdict): n={len(mon)}, "
+                    f"error {sum(a) / len(a):.1f} vs P3 {sum(b) / len(b):.1f} Rs/g"
+                )
+        if v_old:
+            rm = [_fold_err(x) for x in v_old]
+            old_p3 = {x["d0"]: x for x in p3_old}
+            pairs = [(x, old_p3[x["d0"]]) for x in v_old if x["d0"] in old_p3]
+            txt = f"n={len(v_old)} re-run days ({v_old[0]['d0']} to {v_old[-1]['d0']}): "
+            txt += f"variant error {sum(rm) / len(rm):.1f} Rs/g"
+            if pairs:
+                rp = [_fold_err(y) for _, y in pairs]
+                txt += f" vs P3 {sum(rp) / len(rp):.1f} on {len(pairs)} shared days"
+            row["retrospective"].update(
+                text=f"re-run on past days, NOT live calls; {txt}", marking="VERIFIED"
+            )
+        _variant_verdict(row, v_fwd, p3_fwd, name)
+        rows.append(row)
+    return rows
+
+
+def row_demotion_monitor(data_dir: Path) -> dict[str, Any]:
+    """ADR 068 monitor: the sticky state file plus the rules breaching now (from forecast.json)."""
+    row = base_row(
+        "demotion_monitor",
+        "demotion monitor (ADR 068, watches P3)",
+        "LIVE",
+        "whether the live next-fix model has been switched back to holding the last fix",
+        "p3",
+        [f"data/{DEMOTION_STATE_FILE}", "data/forecast.json"],
+    )
+    row["forward"]["marking"] = "INFERRED"  # copied from files the check-price job wrote
+    s = read_demotion_state(data_dir)
+    if s is None:
+        exists = (data_dir / DEMOTION_STATE_FILE).exists()
+        why = (
+            f"data/{DEMOTION_STATE_FILE} is unreadable or malformed"
+            if exists
+            else f"data/{DEMOTION_STATE_FILE} is not present yet"
+        )
+        return no_data(row, why + "; this is not the same as 'not demoted'")
+    dm = ((_read_json("forecast.json", data_dir) or {}).get("next_fix") or {}).get("demotion")
+    breaching: list[str] | None = None
+    if isinstance(dm, dict) and isinstance(dm.get("rules_breaching_now"), list):
+        breaching = [str(x) for x in dm["rules_breaching_now"]]
+    ex = row["forward"]["extras"]
+    ex.append(f"demoted: {'yes' if s['demoted'] else 'no'}")
+    ex.append(f"since: {s.get('since') or 'n/a'}")
+    ex.append(f"reasons recorded: {', '.join(str(r) for r in s['reasons']) or 'none'}")
+    ex.append(f"state file last checked: {s.get('last_checked') or 'n/a'}")
+    ex.append(
+        "rules breaching now (forecast.json): "
+        + ("not available yet" if breaching is None else (", ".join(breaching) or "none"))
+    )
+    ex.append(
+        f"live record {s.get('model_version', 'n/a')}; re-promotion is never automatic "
+        "(a person decides)"
+    )
+    row["verdict_kind"] = "monitor"
+    row["gate"] = {
+        "text": "ADR 068 rules: error, direction, range; a breach must repeat on 3 daily checks",
+        "passes": None,
+        "marking": "INFERRED",
+    }
+    if s["demoted"]:
+        row["verdict"] = "red"
+        row["sentence"] = "The live next-fix model is switched off; the page holds the last fix."
+    elif breaching:
+        row["verdict"] = "amber"
+        row["sentence"] = "Not demoted, but a monitoring rule is breaching right now."
+    elif breaching is None:
+        row["verdict"] = "amber"
+        row["sentence"] = (
+            "Not demoted according to the state file; the live rule readout is not available yet."
+        )
+    else:
+        row["verdict"] = "green"
+        row["sentence"] = "Not demoted, and no monitoring rule is breaching."
+    return row
 
 
 def _hold_rows(data_dir: Path) -> list[dict[str, Any]]:
@@ -574,6 +1004,16 @@ def _intraday_rows(data_dir: Path) -> list[dict[str, Any]]:
             row["forward"]["last_date"] = max(r["base_date"] for r in rs)
         row["forward"]["extras"].append(
             "one decision per base fix, logged before the target fix was published"
+        )
+        summ = ((doc or {}).get("summary") or {}).get(wkey) if isinstance(doc, dict) else None
+        late = summ.get("n_excluded_logged_after_target") if isinstance(summ, dict) else None
+        row["forward"]["extras"].append(
+            "ADR 066 scoring correction: entries logged after their target fix was published are "
+            + (
+                f"excluded; the shadow job reports {late} excluded so far (I)"
+                if late is not None
+                else "excluded; the shadow job's count is not in its summary (n/a)"
+            )
         )
         row["gate"] = {
             "text": "ADR 066 promotion: >= 14 days of shadow AND an interval that excludes zero",
@@ -1062,6 +1502,8 @@ def _git(args: list[str]) -> str:
 def build_rows(data_dir: Path = DATA) -> list[dict[str, Any]]:
     producers = [
         lambda: row_nextfix(data_dir),
+        lambda: _variant_rows(data_dir),
+        lambda: [row_demotion_monitor(data_dir)],
         lambda: _hold_rows(data_dir),
         lambda: _intraday_rows(data_dir),
         lambda: [row_calibration_band(data_dir)],
@@ -1085,11 +1527,16 @@ def build_rows(data_dir: Path = DATA) -> list[dict[str, Any]]:
                     "sentence": f"No forward data: builder error {type(exc).__name__}: {exc}",
                 }
             )
-    # Benjamini-Hochberg over every model-vs-baseline test that reached MIN_FORWARD_N.
+    for r in rows:
+        r["demotion"] = demotion_status(r["id"], data_dir)
+    # Benjamini-Hochberg over every model-vs-baseline test that reached MIN_FORWARD_N. The ADR 071
+    # variants are excluded: their frozen rule has its own alpha (0.025) and its own minimum n.
     fam = [
         r
         for r in rows
         if r["forward"]["n"] >= MIN_FORWARD_N
+        and r["verdict_kind"] != "monitor"
+        and not r["id"].startswith("p3_")
         and r["forward"]["p_one_sided"] is not None
         and r["forward"]["p_kind"]
         and "HAC" in r["forward"]["p_kind"]
@@ -1146,6 +1593,8 @@ def _cell_forward(r: dict[str, Any]) -> str:
     head = f"since {start}: n={f['n']}"
     if f["effective_n"] is not None:
         head += f", eff. n={f['effective_n']}"
+    if r["verdict_kind"] == "monitor":
+        return "state check (I): not a forward score"
     if r["verdict_kind"] in ("no_data", "too_early") or f["model"] is None:
         return head + (" (V)" if f["marking"] == "VERIFIED" else " (I)")
     tag = "V" if f["marking"] == "VERIFIED" else "I"
@@ -1240,8 +1689,15 @@ def render(doc: dict[str, Any]) -> str:
         "evidence; RED = reliably worse; GREY = too early or no forward data. It is a summary of "
         "evidence, not advice to trade.",
         "- (I) numbers are copied from the job that produced them and inherit its errors.",
-        "- Demotion status is not wired yet; `demotion_status()` in the script is the hook "
-        "(ml/demotion.py is not on master).",
+        "- Demotion (ADR 068): the rules run in the check-price job and write "
+        "`data/model_demotion_state.json`; this page only reads that file and the live readout in "
+        "`forecast.json`. A missing or unreadable state file shows as no data, never as "
+        '"not demoted". `demotion_status()` in the script is the one place that reads it.',
+        "- Past tests are never live calls: days a record flags as re-runs on past data (the P3 "
+        "record's `retro` days, and any day before a row's start date) sit in the earlier-history "
+        "column, labelled as re-runs. Only days from a row's start date on were issued live.",
+        f"- The two P3 variants (ADR 071) get no verdict before {VARIANT_MIN_FORWARD_N} forward "
+        "days; the rule was fixed before any forward data existed.",
         "",
     ]
     return "\n".join(lines)

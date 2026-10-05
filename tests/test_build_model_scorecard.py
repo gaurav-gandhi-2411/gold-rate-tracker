@@ -64,7 +64,7 @@ def test_empty_data_dir_yields_no_data_everywhere(tmp_path: Path) -> None:
     for r in rows:
         assert r["verdict"] == "grey", r["id"]
         assert r["verdict_kind"] == "no_data", r["id"]
-        assert r["sentence"].startswith("No forward data"), r["id"]
+        assert r["sentence"].startswith(("No forward data", "No data")), r["id"]
         assert r["forward"]["n"] == 0 or r["id"].startswith("hold_"), r["id"]
 
 
@@ -72,6 +72,9 @@ def test_empty_data_dir_yields_no_data_everywhere(tmp_path: Path) -> None:
 def test_malformed_files_never_produce_a_verdict(tmp_path: Path, content: str) -> None:
     for name in (
         "nextfix_oos.json",
+        "nextfix_p3_oos.json",
+        "nextfix_p3_variants_oos.json",
+        "model_demotion_state.json",
         "nextfix_intraday_shadow.json",
         "weekly_range_shadow_log.json",
         "next_day_range_shadow.json",
@@ -247,4 +250,316 @@ def test_every_row_has_provenance_and_marking(tmp_path: Path) -> None:
         assert r["forward"]["marking"] in ("VERIFIED", "INFERRED")
         assert r["retrospective"]["marking"] in ("VERIFIED", "INFERRED")
         assert r["forward_start"] and r["forward_start_basis"]
-        assert "demotion" in r  # the documented hook is present, None until ml.demotion exists
+        assert "demotion" in r  # the documented hook is present (None unless the row is watched)
+
+
+# --- ADR 069 / 071 / 068: P3 live, ensemble shadow, variants, demotion monitor -------------------
+
+P3_START = bms.FORWARD_STARTS["p3"]["date"]  # 2026-10-05
+
+
+def _pfold(d0: str, model_err: float, flat_err: float, retro: bool | None) -> dict:
+    f = _fold(d0, model_err, flat_err)
+    if retro is not None:
+        f["retro"] = retro
+    return f
+
+
+def _p3_files(
+    tmp: Path,
+    n_retro: int = 30,
+    n_fwd: int = 25,
+    p3_err: float = 20.0,
+    ens_err: float = 80.0,
+) -> None:
+    """P3 record: n_retro re-run days then n_fwd live days. Ensemble: same days, no retro flag."""
+    retro_days = _days("2026-09-01", n_retro)
+    fwd_days = _days(P3_START, n_fwd)
+    p3 = [_pfold(d, p3_err + (i % 5), 100.0 + (i % 7), True) for i, d in enumerate(retro_days)]
+    p3 += [_pfold(d, p3_err + (i % 5), 100.0 + (i % 7), False) for i, d in enumerate(fwd_days)]
+    ens = [_pfold(d, ens_err + (i % 5), 100.0 + (i % 7), None) for i, d in enumerate(retro_days)]
+    ens += [_pfold(d, ens_err + (i % 5), 100.0 + (i % 7), None) for i, d in enumerate(fwd_days)]
+    _write(tmp, "nextfix_p3_oos.json", {"folds": p3})
+    _write(tmp, "nextfix_oos.json", {"folds": ens})
+
+
+def test_p3_absent_says_no_record_and_the_old_row_still_works(tmp_path: Path) -> None:
+    new = [_fold(d, 20.0, 100.0) for d in _days("2026-10-01", 25)]
+    _write(tmp_path, "nextfix_oos.json", {"folds": new})
+    rows = bms.build_rows(tmp_path)
+    p3 = _row(rows, "nextfix_p3")
+    assert p3["verdict"] == "grey" and p3["verdict_kind"] == "no_data"
+    assert "record not present yet" in p3["sentence"]
+    assert p3["forward"]["n"] == 0
+    old = _row(rows, "nextfix_model")  # exactly as before: live, from nextfix_oos.json, start 10-01
+    assert old["status"] == "LIVE"
+    assert old["forward_start"] == START
+    assert old["forward"]["n"] == 25
+    assert not any(r["id"] == "nextfix_ensemble_shadow" for r in rows)
+    # variants cannot be judged without P3
+    for vid in ("p3_roll60", "p3_monday"):
+        assert "record not present yet" in _row(rows, vid)["sentence"]
+
+
+def test_p3_forward_is_retro_false_only_and_retro_days_are_labelled_past_tests(
+    tmp_path: Path,
+) -> None:
+    _p3_files(tmp_path, n_retro=30, n_fwd=5)
+    rows = bms.build_rows(tmp_path)
+    p3 = _row(rows, "nextfix_p3")
+    assert p3["status"] == "LIVE"
+    assert p3["forward"]["n"] == 5
+    assert p3["forward"]["first_date"] == P3_START
+    assert p3["verdict_kind"] == "too_early"
+    # the 30 re-run days (far better than hold) must not leak into the forward numbers
+    assert p3["forward"]["model"] == pytest.approx(22.0, abs=3.0)
+    txt = p3["retrospective"]["text"]
+    assert "n=30" in txt and "NOT live calls" in txt
+    assert p3["retrospective"]["marking"] == "VERIFIED"
+    assert "nextfix_model" not in {r["id"] for r in rows}
+
+
+def test_p3_fold_without_retro_flag_or_flagged_retro_is_never_forward(tmp_path: Path) -> None:
+    folds = [
+        _pfold("2026-10-05", 10.0, 100.0, None),  # no flag: fail closed
+        _pfold("2026-10-06", 10.0, 100.0, True),  # flagged re-run even though the day is late
+        _pfold("2026-10-07", 10.0, 100.0, False),
+        _pfold("2026-10-04", 10.0, 100.0, False),  # before the live start: not forward
+    ]
+    _write(tmp_path, "nextfix_p3_oos.json", {"folds": folds})
+    p3 = _row(bms.build_rows(tmp_path), "nextfix_p3")
+    assert p3["forward"]["n"] == 1
+    assert p3["forward"]["first_date"] == "2026-10-07"
+
+
+def test_p3_file_present_but_unreadable_is_no_data_not_a_record_absent_message(
+    tmp_path: Path,
+) -> None:
+    (tmp_path / "nextfix_p3_oos.json").write_text("{not json", encoding="utf-8")
+    p3 = _row(bms.build_rows(tmp_path), "nextfix_p3")
+    assert p3["verdict_kind"] == "no_data"
+    assert "unreadable" in p3["sentence"]
+
+
+def test_ensemble_becomes_a_shadow_scored_on_the_p3_days_with_a_paired_comparison(
+    tmp_path: Path,
+) -> None:
+    _p3_files(tmp_path, n_fwd=40, p3_err=20.0, ens_err=80.0)
+    rows = bms.build_rows(tmp_path)
+    ens = _row(rows, "nextfix_ensemble_shadow")
+    assert ens["name"] == "shadow: ridge+neural-net ensemble"
+    assert ens["status"] == "SHADOW"
+    assert ens["forward_start"] == P3_START
+    assert ens["forward"]["n"] == 40
+    assert ens["forward"]["first_date"] == P3_START
+    assert "NOT live calls" in ens["retrospective"]["text"]
+    pr = ens["forward"]["paired"]
+    assert pr["n"] == 40
+    assert pr["effective_n"] is not None
+    assert pr["model"] < pr["baseline"]  # P3 error below the ensemble's
+    assert pr["diff"] < 0 and pr["ci95"][1] < 0
+    assert pr["p_one_sided"] < 0.05
+    assert pr["marking"] == "VERIFIED"
+    assert any("P3 vs the ensemble" in x and "one-sided p=" in x for x in ens["forward"]["extras"])
+
+
+def test_paired_comparison_is_too_early_below_the_minimum(tmp_path: Path) -> None:
+    _p3_files(tmp_path, n_fwd=bms.MIN_FORWARD_N - 1)
+    ens = _row(bms.build_rows(tmp_path), "nextfix_ensemble_shadow")
+    assert any("too early (n=19" in x for x in ens["forward"]["extras"])
+    assert ens["verdict_kind"] == "too_early"
+
+
+def test_paired_comparison_uses_only_days_both_records_scored(tmp_path: Path) -> None:
+    _p3_files(tmp_path, n_fwd=25)
+    ens_doc = json.loads((tmp_path / "nextfix_oos.json").read_text(encoding="utf-8"))
+    ens_doc["folds"] = [f for f in ens_doc["folds"] if f["d0"] < "2026-10-15"]  # drop 15 days
+    _write(tmp_path, "nextfix_oos.json", ens_doc)
+    ens = _row(bms.build_rows(tmp_path), "nextfix_ensemble_shadow")
+    assert ens["forward"]["n"] == 10
+    assert ens["forward"]["paired"]["n"] == 10
+
+
+def _variant_files(tmp: Path, n_fwd: int, v_err: float, p3_err: float = 100.0) -> None:
+    fwd_days = _days(P3_START, n_fwd)
+    retro_days = _days("2026-09-01", 10)
+    p3 = [_pfold(d, p3_err + (i % 7), 100.0, True) for i, d in enumerate(retro_days)]
+    p3 += [_pfold(d, p3_err + (i % 7), 100.0, False) for i, d in enumerate(fwd_days)]
+    v = [_pfold(d, v_err + (i % 5), 100.0, True) for i, d in enumerate(retro_days)]
+    v += [_pfold(d, v_err + (i % 5), 100.0, False) for i, d in enumerate(fwd_days)]
+    _write(tmp, "nextfix_p3_oos.json", {"folds": p3})
+    _write(tmp, "nextfix_p3_variants_oos.json", {"variants": {"p3_roll60": v, "p3_monday": v}})
+    _write(tmp, "nextfix_oos.json", {"folds": p3})
+
+
+def test_variants_get_no_verdict_before_40_forward_days_even_if_they_look_great(
+    tmp_path: Path,
+) -> None:
+    _variant_files(tmp_path, n_fwd=39, v_err=1.0)
+    for vid in ("p3_roll60", "p3_monday"):
+        r = _row(bms.build_rows(tmp_path), vid)
+        assert r["verdict"] == "grey" and r["verdict_kind"] == "too_early"
+        assert "Too early (n=39" in r["sentence"]
+        assert r["forward"]["n"] == 39  # 39 >= MIN_FORWARD_N (20): still no verdict
+        assert "NOT live calls" in r["retrospective"]["text"]
+
+
+def test_variant_clearly_better_at_40_days_is_green_and_recommends_not_ships(
+    tmp_path: Path,
+) -> None:
+    _variant_files(tmp_path, n_fwd=bms.VARIANT_MIN_FORWARD_N, v_err=40.0)
+    r = _row(bms.build_rows(tmp_path), "p3_roll60")
+    assert r["verdict_kind"] == "scored" and r["verdict"] == "green"
+    assert "nothing ships automatically" in r["sentence"]
+    assert r["forward"]["n"] == bms.VARIANT_MIN_FORWARD_N
+
+
+def test_variant_that_is_only_marginally_better_is_not_green(tmp_path: Path) -> None:
+    _variant_files(tmp_path, n_fwd=bms.VARIANT_MIN_FORWARD_N, v_err=99.0)  # about 1% better
+    r = _row(bms.build_rows(tmp_path), "p3_monday")
+    assert r["verdict"] in ("amber", "red") and r["verdict_kind"] == "scored"
+    assert "P3 stays" in r["sentence"]
+
+
+def test_variant_reliably_worse_is_red(tmp_path: Path) -> None:
+    _variant_files(tmp_path, n_fwd=bms.VARIANT_MIN_FORWARD_N, v_err=200.0)
+    assert _row(bms.build_rows(tmp_path), "p3_roll60")["verdict"] == "red"
+
+
+def test_variants_file_absent_means_record_not_present(tmp_path: Path) -> None:
+    _p3_files(tmp_path)
+    r = _row(bms.build_rows(tmp_path), "p3_roll60")
+    assert r["verdict_kind"] == "no_data"
+    assert "record not present yet" in r["sentence"]
+
+
+def test_variants_are_outside_the_benjamini_hochberg_family(tmp_path: Path) -> None:
+    _variant_files(tmp_path, n_fwd=bms.VARIANT_MIN_FORWARD_N, v_err=40.0)
+    assert _row(bms.build_rows(tmp_path), "p3_roll60")["forward"]["bh_significant"] is None
+
+
+def _state(demoted: bool = False, **kw: object) -> dict:
+    return {
+        "schema_version": 1,
+        "model_version": "nextfix_p3_v1",
+        "demoted": demoted,
+        "since": "2026-10-20" if demoted else None,
+        "reasons": ["error"] if demoted else [],
+        "last_checked": "2026-10-21T00:00:00+00:00",
+        "history": [],
+        **kw,
+    }
+
+
+def test_demotion_monitor_not_demoted_with_live_readout_is_green(tmp_path: Path) -> None:
+    _write(tmp_path, "model_demotion_state.json", _state())
+    _write(
+        tmp_path,
+        "forecast.json",
+        {"next_fix": {"demotion": {"demoted": False, "rules_breaching_now": []}}},
+    )
+    rows = bms.build_rows(tmp_path)
+    m = _row(rows, "demotion_monitor")
+    assert m["verdict"] == "green" and m["verdict_kind"] == "monitor"
+    assert "demoted: no" in m["forward"]["extras"]
+    assert "rules breaching now (forecast.json): none" in m["forward"]["extras"]
+    assert _row(rows, "nextfix_p3")["demotion"]["state"] == "not demoted"
+    md = bms.render(bms.build(tmp_path))
+    assert "demotion: not demoted" in md
+
+
+def test_demotion_monitor_breach_now_is_amber_and_demoted_is_red(tmp_path: Path) -> None:
+    _write(tmp_path, "model_demotion_state.json", _state())
+    _write(
+        tmp_path,
+        "forecast.json",
+        {"next_fix": {"demotion": {"rules_breaching_now": ["direction"]}}},
+    )
+    m = _row(bms.build_rows(tmp_path), "demotion_monitor")
+    assert m["verdict"] == "amber" and "direction" in " ".join(m["forward"]["extras"])
+    _write(tmp_path, "model_demotion_state.json", _state(demoted=True))
+    rows = bms.build_rows(tmp_path)
+    assert _row(rows, "demotion_monitor")["verdict"] == "red"
+    assert _row(rows, "nextfix_p3")["demotion"]["state"] == "demoted"
+    assert "since: 2026-10-20" in _row(rows, "demotion_monitor")["forward"]["extras"]
+
+
+def test_demotion_state_without_live_readout_is_amber_not_green(tmp_path: Path) -> None:
+    _write(tmp_path, "model_demotion_state.json", _state())
+    m = _row(bms.build_rows(tmp_path), "demotion_monitor")
+    assert m["verdict"] == "amber"
+    assert "not available yet" in " ".join(m["forward"]["extras"])
+
+
+def test_demotion_state_absent_is_no_data_not_not_demoted(tmp_path: Path) -> None:
+    rows = bms.build_rows(tmp_path)
+    m = _row(rows, "demotion_monitor")
+    assert m["verdict_kind"] == "no_data" and m["verdict"] == "grey"
+    assert "not present yet" in m["forward"]["extras"][0]
+    assert _row(rows, "nextfix_p3")["demotion"] is None
+
+
+@pytest.mark.parametrize(
+    "content",
+    [
+        "{not json",
+        "[]",
+        '{"demoted": "no"}',
+        '{"demoted": null}',
+        '{"demoted": false, "reasons": 5}',
+    ],
+)
+def test_demotion_state_corrupt_is_no_data_never_green(tmp_path: Path, content: str) -> None:
+    (tmp_path / "model_demotion_state.json").write_text(content, encoding="utf-8")
+    rows = bms.build_rows(tmp_path)
+    m = _row(rows, "demotion_monitor")
+    assert m["verdict"] == "grey" and m["verdict_kind"] == "no_data"
+    assert "unreadable or malformed" in m["sentence"]
+    assert _row(rows, "nextfix_p3")["demotion"] is None
+
+
+def test_intraday_rows_report_the_excluded_late_entries_from_the_shadow_summary(
+    tmp_path: Path,
+) -> None:
+    _write(
+        tmp_path,
+        "nextfix_intraday_shadow.json",
+        {"entries": [], "summary": {"after_us_close": {"n_excluded_logged_after_target": 3}}},
+    )
+    rows = bms.build_rows(tmp_path)
+    # empty entries list means no data (fail closed); with entries the count is read from summary
+    assert _row(rows, "intraday_after_us_close")["verdict_kind"] == "no_data"
+    entry = {
+        "logged_at": "2026-10-05T01:12:00Z",
+        "window": "after_us_close",
+        "base_at": "2026-10-01T11:30:00Z",
+        "base_date": "2026-10-01",
+        "target": 100.0,
+        "target_kind": "am",
+        "target_date": "2026-10-05",
+        "pred": {"beta_0.0": 90.0, "beta_0.5": 95.0, "beta_1.0": 99.0},
+    }
+    _write(
+        tmp_path,
+        "nextfix_intraday_shadow.json",
+        {"entries": [entry], "summary": {"after_us_close": {"n_excluded_logged_after_target": 3}}},
+    )
+    rows = bms.build_rows(tmp_path)
+    assert "3 excluded so far" in " ".join(
+        _row(rows, "intraday_after_us_close")["forward"]["extras"]
+    )
+    # an unreported count is stated as such, never invented
+    assert "not in its summary" in " ".join(
+        _row(rows, "intraday_after_afternoon_rate")["forward"]["extras"]
+    )
+
+
+def test_render_never_calls_a_retro_figure_live(tmp_path: Path) -> None:
+    _p3_files(tmp_path, n_retro=30, n_fwd=3)
+    md = bms.render(bms.build(tmp_path))
+    checked = 0
+    for line in md.splitlines():
+        if line.startswith("| **ml.nextfix P3") or line.startswith("| **shadow: ridge"):
+            assert "NOT live calls" in line
+            checked += 1
+    assert checked == 2
