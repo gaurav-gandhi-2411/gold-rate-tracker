@@ -25,7 +25,6 @@ from dataclasses import dataclass
 from datetime import UTC, datetime, timedelta
 
 import requests  # noqa: F401 -- the tests' monkeypatch seam (<adapter>.requests.*)
-
 from ml.sources.base import (
     SourceReading,
     SourceStructureError,

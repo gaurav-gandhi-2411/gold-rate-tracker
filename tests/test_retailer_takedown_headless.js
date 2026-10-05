@@ -1,7 +1,7 @@
 // tests/test_retailer_takedown_headless.js — ADR 059 (G1d) takedown fallback proof.
 //
 // Drives the REAL app.js/index.html in headless Chromium with the output of the REAL
-// pipeline run with Tanishq (and Kalyan) switched off in config/retailers.json:
+// pipeline run with Tanishq (and GRT) switched off in config/retailers.json:
 // tests/fixtures/retailer_takedown/{forecast.json,prices.json}, produced and
 // drift-checked by tests/test_retailer_takedown.py. Timestamps are shifted by
 // (now - pipeline_now) so the page sees them as current; nothing else is edited.

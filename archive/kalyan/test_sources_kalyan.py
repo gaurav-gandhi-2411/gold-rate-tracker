@@ -1,8 +1,11 @@
-"""Tests for ml.sources.kalyan — all HTTP mocked, no live requests."""
+"""Tests for the ARCHIVED Kalyan adapter (archive/kalyan/kalyan.py, retired by ADR 070).
+
+Not collected by CI (testpaths = tests). Run on demand: pytest archive/kalyan. All HTTP mocked.
+"""
 
 from __future__ import annotations
 
-import ml.sources.kalyan as kalyan
+import archive.kalyan.kalyan as kalyan
 import pytest
 from ml.sources.base import SourceNetworkError, SourceStructureError
 

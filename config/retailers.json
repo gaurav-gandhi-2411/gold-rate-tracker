@@ -3,7 +3,6 @@
   "retailers": {
     "tanishq": { "enabled": true },
     "grt": { "enabled": true },
-    "malabar": { "enabled": true },
-    "kalyan": { "enabled": true }
+    "malabar": { "enabled": true }
   }
 }

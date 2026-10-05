@@ -7,8 +7,8 @@ access policy lives in one place instead of four copies:
   three Python adapters already sent before this module existed; it names the project
   and a contact address, so an operator who sees our traffic can reach us.
 * **Per-host spacing.** Requests to the same host inside one process are spaced at
-  least :data:`MIN_HOST_INTERVAL_S` apart. Kalyan is fetched once per registered city
-  back to back; without this that was four POSTs to one host in well under a second.
+  least :data:`MIN_HOST_INTERVAL_S` apart. The retired Kalyan adapter fetched once per
+  registered city back to back (four POSTs to one host in well under a second) before this existed.
 * **A hard cap on attempts** (:data:`MAX_ATTEMPTS`, i.e. at most one retry) and only
   for failures a retry can plausibly fix: a connection error / timeout, or HTTP
   502/503/504.

@@ -26,12 +26,10 @@ Self-contained fixtures (norm: do NOT import helpers from sibling test modules).
 from __future__ import annotations
 
 import json
-import types
 from datetime import UTC, datetime, timedelta, timezone
 
 import ml.inference as inf
 import ml.sources.grt as grt_mod
-import ml.sources.kalyan as kalyan_mod
 import ml.sources.malabar as malabar_mod
 import pandas as pd
 import pytest
@@ -50,7 +48,6 @@ def _disable_fusion(monkeypatch) -> None:
     """Never let a unit test hit the real network via the tier-3 fusion fallback."""
     monkeypatch.setattr(grt_mod, "fetch_grt", _raise_network)
     monkeypatch.setattr(malabar_mod, "fetch_malabar", _raise_network)
-    monkeypatch.setattr(kalyan_mod, "fetch_kalyan_city", _raise_network)
 
 
 # ---------------------------------------------------------------------------
@@ -332,19 +329,6 @@ def _fake_national_reading(source: str, rate_22k: float) -> SourceReading:
     )
 
 
-def _fake_kalyan_raw(rate_22k: float) -> object:
-    """Stand-in for KalyanRawReading — only `.reading` is consumed by _try_fusion_fallback."""
-    return types.SimpleNamespace(
-        reading=SourceReading(
-            source="kalyan",
-            city="Bangalore",
-            rate_22k=rate_22k,
-            observed_at=datetime(2026, 3, 15, 12, 0, tzinfo=UTC),
-            attribution="Kalyan Jewellers — BENGALURU board rate",
-        )
-    )
-
-
 @pytest.mark.smoke
 def test_ibja_stale_fusion_succeeds_serves_consensus_t9_still_fires_on_its_own_schedule(
     tmp_path, monkeypatch
@@ -363,7 +347,6 @@ def test_ibja_stale_fusion_succeeds_serves_consensus_t9_still_fires_on_its_own_s
     monkeypatch.setattr(
         malabar_mod, "fetch_malabar", lambda: _fake_national_reading("malabar", 14100.0)
     )
-    monkeypatch.setattr(kalyan_mod, "fetch_kalyan_city", lambda _city: _fake_kalyan_raw(14080.0))
 
     inf.main(now=now)
     fc = json.loads((tmp_path / "forecast.json").read_text())
@@ -371,7 +354,7 @@ def test_ibja_stale_fusion_succeeds_serves_consensus_t9_still_fires_on_its_own_s
     assert fc["price_source"] == "fusion_consensus", (
         "tier 3 must serve the live consensus estimate when both Tanishq and IBJA fail"
     )
-    assert fc["fusion_sources"] == ["grt", "malabar", "kalyan"]
+    assert fc["fusion_sources"] == ["grt", "malabar"]
 
     # T9 fires — driven purely by IBJA's own parquet gap, independent of which
     # display tier is currently active.

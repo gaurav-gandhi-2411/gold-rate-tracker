@@ -226,7 +226,7 @@ function heroDisplayState(readings, forecast, nowMs = Date.now()) {
 // Human-readable label for tier-3 fusion_sources (e.g. ["grt","malabar"] -> "GRT, Malabar").
 // Never crashes on a missing/null sources list — falls back to a generic label.
 function fusionSourcesLabel(sources) {
-  const NAMES = { grt: t("fusionSourceGrt"), malabar: t("fusionSourceMalabar"), kalyan: t("fusionSourceKalyan") };
+  const NAMES = { grt: t("fusionSourceGrt"), malabar: t("fusionSourceMalabar") };
   const labels = (sources || []).map(s => NAMES[s] || s);
   return labels.length ? labels.join(", ") : t("fusionSourceFallback");
 }
@@ -1087,8 +1087,8 @@ function renderStaleBanner(forecast, bandCoverage) {
     return;
   }
 
-  // Tier 3: both Tanishq and IBJA unavailable this cycle — live GRT/Malabar/
-  // Kalyan consensus (ADR 026) is the only estimate available.
+  // Tier 3: both Tanishq and IBJA unavailable this cycle — live GRT/Malabar
+  // consensus (ADR 026; Kalyan retired, ADR 070) is the only estimate available.
   if (forecast.price_source === "fusion_consensus") {
     banner.textContent = t("bannerFusion", { sources: fusionSourcesLabel(forecast.fusion_sources) });
     banner.hidden = false;

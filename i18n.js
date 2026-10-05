@@ -349,7 +349,6 @@ const STRINGS = {
     bannerRefreshFailed: ({ rel }) => `Couldn't refresh — this is the last update, from ${rel}`,
     fusionSourceGrt: "GRT",
     fusionSourceMalabar: "Malabar",
-    fusionSourceKalyan: "Kalyan",
     fusionSourceFallback: "retail consensus",
 
     // ── Freshness pill ───────────────────────────────────────────────────────────
@@ -716,7 +715,6 @@ const STRINGS = {
     bannerRefreshFailed: ({ rel }) => `रीफ़्रेश नहीं हो पाया — यह आख़िरी अपडेट है, ${rel}`,
     fusionSourceGrt: "GRT",
     fusionSourceMalabar: "Malabar",
-    fusionSourceKalyan: "Kalyan",
     fusionSourceFallback: "बाज़ार की औसत दर",
 
     // ── Freshness pill ───────────────────────────────────────────────────────────
