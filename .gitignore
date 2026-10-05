@@ -46,6 +46,9 @@ scripts/screenshot_*.mjs
 /data/wait_or_buy_shadow.json
 /data/nowcast_shadow_log.json
 /reports/derived_premium.json
+/data/markup_today.json
+/reports/markup_reversion/shadow.json
+/reports/fhs_ranges/shadow.json
 /.data_crypt_state.json
 # ADR 046 option A: raw Yahoo 1-hour bars used by the premium test (E1: commit only encrypted)
-data/premium_nowcast_bars.json
+/data/premium_nowcast_bars.json

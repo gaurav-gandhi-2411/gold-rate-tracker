@@ -108,6 +108,16 @@ REGISTRY: dict[str, dict[str, str]] = {
     "data/wait_or_buy_shadow.json": {"category": "raw IBJA prices per entry"},
     "data/nowcast_shadow_log.json": {"category": "raw Tanishq daily truth"},
     "reports/derived_premium.json": {"category": "raw IBJA pm_999 and Yahoo COMEX/USD-INR"},
+    # Added after master moved on (2026-10-05 merge): each inverts to a raw retailer price over
+    # the public IBJA rate, or is raw Yahoo bars.
+    "data/markup_today.json": {
+        "category": "retailer markup_pct over public IBJA: inverts to price"
+    },
+    "reports/markup_reversion/shadow.json": {
+        "category": "retailer markup_pct/markup_rs over public IBJA: inverts to price"
+    },
+    "reports/fhs_ranges/shadow.json": {"category": "raw Tanishq current/next-day prices"},
+    "data/premium_nowcast_bars.json": {"category": "raw Yahoo Finance 1-hour bars (ADR 046)"},
 }
 
 
