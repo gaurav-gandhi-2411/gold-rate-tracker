@@ -497,10 +497,10 @@ test("today's read: a price still falling through the last week stays 'still sli
 
 // ── Tests: next-move direction line in the good-price card (ADR 064) ──────────
 
-function renderCard(nextFix) {
+function renderCard(nextFix, predictedAt = new Date().toISOString()) {
   const fresh = loadApp();
   const readings = makeReadings(Array.from({ length: 30 }, (_, i) => 14000 - i * 5));
-  const fc = { headline: { lower: 13601, upper: 13872 }, next_fix: nextFix };
+  const fc = { headline: { lower: 13601, upper: 13872 }, next_fix: nextFix, predicted_at: predictedAt };
   fresh.pure("renderModelSignal")(fc, readings, null, null, null);
   return fresh.run('document.getElementById("model-signal-body").innerHTML');
 }
@@ -508,17 +508,27 @@ function renderCard(nextFix) {
 const TRACK = { n: 143, direction_accuracy: 0.65, range_coverage: 0.805, range_n: 123 };
 const RANGE = { coverage: 0.805, n: 123 };
 
-test("direction line: shown with its chance and track record when inference allows it", () => {
+test("direction line: says what it is about (the next official rate) and why, and never quotes a backtest as live calls", () => {
   const html = renderCard({ active: true, direction: { show: true, side: "up", probability: 0.66 }, track_record: TRACK, range_record: RANGE });
-  assert.match(html, /good-price-direction" data-side="up">More likely to go <strong>up<\/strong> than down next \(about 66% chance\)/);
-  assert.match(html, /right 93 of the last 143 times/);
-  // the range's reliability quotes the model's own hit rate, not the flat-hold band's
-  assert.match(html, /about 8 times out of 10/);
+  assert.match(html, /good-price-direction" data-side="up">World gold prices have moved since India's last official rate was set, so the next official rate is more likely to be <strong>higher<\/strong> \(about 66% chance\)/);
+  assert.match(html, /India's official rate follows world gold and the rupee with a delay/);
+  // D1 (2026-10-05): the 143 walk-forward days are not calls made live
+  assert.ok(!/right \d+ of the last/.test(html), "no 'right N of the last M times' claim");
+  assert.ok(!/Our up-or-down call/.test(html));
+  // the range's hit rate is worded as a test on past days
+  assert.match(html, /In a test on past days, the real price stayed inside a range like this about 8 times out of 10/);
+});
+
+test("direction line: hidden once forecast.json is older than 14 days (claims older than 14 days hidden)", () => {
+  const old = new Date(Date.now() - 15 * 86400e3).toISOString();
+  const html = renderCard({ active: true, direction: { show: true, side: "up", probability: 0.66 }, track_record: TRACK, range_record: RANGE }, old);
+  assert.ok(!/good-price-direction/.test(html));
+  assert.ok(!/stayed inside a range like this/.test(html));
 });
 
 test("direction line: a near coin flip reads 'too close to call'", () => {
   const html = renderCard({ active: true, direction: { show: true, side: "unclear", probability: 0.52 }, track_record: TRACK, range_record: RANGE });
-  assert.match(html, /too close to call/);
+  assert.match(html, /not moved enough since India's last official rate/);
   assert.ok(!/<strong>up<\/strong>|<strong>down<\/strong>/.test(html));
 });
 

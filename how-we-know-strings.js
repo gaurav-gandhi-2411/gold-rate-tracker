@@ -51,7 +51,7 @@ const STRINGS_HWK = {
     methNextFixP: ({ n, modelMae, flatMae, pct }) =>
       `India's official rate is set once each afternoon, but gold and the rupee keep trading worldwide until late at night. We use that later move to estimate the next rate. Tested on ${n} days it had not seen: off by ₹${modelMae}/g on average, against ₹${flatMae}/g for "no change" (${pct}% closer). For a week or more ahead, "no change" is still the best we have.`,
     methDirectionOn: "On — for the next price move only",
-    methDirectionOnSub: ({ right, n, upRight }) => `right ${right} of ${n} times, against ${upRight} for "gold usually rises"`,
+    methDirectionOnSub: ({ right, n, upRight }) => `Tested on ${n} past days it had not seen: right ${right} times, against ${upRight} for "gold usually rises". These are past results, not live calls.`,
     methDirectionOnNote: "We show whether the next move is more likely up or down, with its chance, only while it keeps beating \"gold usually rises\" on days it has not seen — we re-check this every few hours. It is not advice to buy or sell; that would need a much stronger record.",
     methCoversMoves: "Covers most of the usual day-to-day moves",
     methTargetLine: ({ date }) => `Target: ${date}`,
@@ -107,7 +107,7 @@ const STRINGS_HWK = {
     // (data/calibration_band_coverage.json via app.js's deriveMeasuredBandCoverage,
     // duplicated in how-we-know.js — see that file's own comment).
     methBandAccuracyHeading: "Band accuracy (measured)",
-    methBandAccuracyText: ({ amount, pct, n, asOf }) => `The real price has landed within about ₹${amount}/gram of the displayed estimate ${pct}% of the time so far (n=${n} weeks measured, as of ${asOf}).`,
+    methBandAccuracyText: ({ amount, pct, n, asOf }) => `In a test on past weeks, the real price landed within about ₹${amount}/gram of the displayed estimate ${pct}% of the time (n=${n} weeks measured, as of ${asOf}).`,
     methBandAccuracyUnknown: "No measurement in the last 14 days — the next weekly re-check will refresh this.",
   },
 
@@ -133,7 +133,6 @@ const STRINGS_HWK = {
     methNextFixP: ({ n, modelMae, flatMae, pct }) =>
       `भारत की आधिकारिक दर रोज़ दोपहर एक बार तय होती है, पर सोना और रुपया देर रात तक दुनिया भर में बिकते-खरीदे जाते हैं। हम उस बाद के बदलाव से अगली दर का अंदाज़ा लगाते हैं। ${n} ऐसे दिनों पर जांचा जो इसने पहले नहीं देखे थे: औसतन ₹${modelMae}/ग्राम का फ़र्क, जबकि "कोई बदलाव नहीं" मानने पर ₹${flatMae}/ग्राम (${pct}% बेहतर)। एक हफ़्ते या उससे आगे के लिए "कोई बदलाव नहीं" ही अभी सबसे अच्छा है।`,
     methDirectionOn: "चालू — सिर्फ़ अगले बदलाव के लिए",
-    methDirectionOnSub: ({ right, n, upRight }) => `${n} में से ${right} बार सही, जबकि "सोना आमतौर पर बढ़ता है" ${upRight} बार`,
     methDirectionOnNote: "हम यह तभी दिखाते हैं कि अगला बदलाव ऊपर या नीचे होने की संभावना ज़्यादा है, जब तक यह नए दिनों पर \"सोना आमतौर पर बढ़ता है\" से बेहतर रहता है — इसे हर कुछ घंटों में दोबारा जांचा जाता है। यह ख़रीदने या बेचने की सलाह नहीं है।",
     methCoversMoves: "ज़्यादातर सामान्य रोज़ाना घट-बढ़ को कवर करता है",
     methTargetLine: ({ date }) => `लक्ष्य समय: ${date}`,
