@@ -1,0 +1,201 @@
+{
+ "adr": "066",
+ "run_at": "2026-10-05T11:36:11.651979Z",
+ "repo_sha": "dd12fcee720dc79f3507029b0ace687d32c501f6",
+ "data_file_sha256": {
+  "nextfix_intraday_shadow.json": "af2c32fb65a38393519abb38aab7235380b5c7b90694959575f03183716c0b09",
+  "nextfix_intraday_backtest.json": "0260eca10e84512ea1245e7a757a2e652481a3bb7dae4f1e341f1c5fbf320c44",
+  "ibja_rates.parquet": "1241ecc5c393efa40c889cfe9aa4e6028377088bbd86e9bccbe2cd6bded5bdfa",
+  "macro_intraday.parquet": "acf1dbd65e523f8f5fdd16ca7501d72f4b085deaa29ebab741272c580cf01ed9"
+ },
+ "backtest_source": "recomputed_from_cached_hourly_bars",
+ "backtest_fallback_reason": null,
+ "backtest_bars": [
+  "2026-07-27T05:00:00Z",
+  "2026-10-05T11:00:00Z"
+ ],
+ "shadow_entries_loaded": 15,
+ "out_of_scope": {
+  "windows": [
+   "after_us_close"
+  ],
+  "reason": "after_us_close is the live model's window (ADR 065), not evaluated here."
+ },
+ "windows": {
+  "after_morning_rate": {
+   "window": "after_morning_rate",
+   "shadow": {
+    "n_entries": 7,
+    "distinct_days": 1,
+    "calendar_span_days": 1,
+    "n_resolved_base_fixes": 0,
+    "n_excluded_logged_after_target": 0
+   },
+   "backtest": {
+    "n_fixes": 47,
+    "chosen_beta": 0.5,
+    "chosen_beta_rule": "lower backtest MAE of {0.5, 1.0} in this window (ties -> 0.5)",
+    "chosen": {
+     "beta": 0.5,
+     "mae": 23.8,
+     "change_pct": -39.2,
+     "ci95": [
+      -54.0,
+      -19.1
+     ],
+     "dm_p": 0.0
+    },
+    "other_beta_reported_only": {
+     "beta": 1.0,
+     "mae": 34.0,
+     "change_pct": -13.1,
+     "ci95": [
+      -35.3,
+      23.6
+     ],
+     "dm_p": 0.3518
+    },
+    "other_beta_cond2": {
+     "pass": false,
+     "ci95_upper": 23.6,
+     "dm_p": 0.3518,
+     "detail": "CI [-35.3, 23.6] (need upper < 0), DM p 0.3518 (need < 0.05)"
+    }
+   },
+   "conditions": {
+    "1_shadow_length": {
+     "pass": false,
+     "calendar_span_days": 1,
+     "need_days": 14,
+     "n_resolved_base_fixes": 0,
+     "need_fixes": 8,
+     "n_excluded_logged_after_target": 0,
+     "detail": "1/14 days, 0/8 resolved base fixes"
+    },
+    "2_backtest_ci_dm": {
+     "pass": true,
+     "ci95_upper": -19.1,
+     "dm_p": 0.0,
+     "detail": "CI [-54.0, -19.1] (need upper < 0), DM p 0.0 (need < 0.05)"
+    },
+    "3_shadow_agrees": {
+     "pass": false,
+     "detail": "no shadow point estimate yet (score needs >= 5 resolved fixes)"
+    },
+    "4_range_coverage": {
+     "pass": true,
+     "n_pairs": 47,
+     "n_scored": 27,
+     "coverage": 0.778,
+     "wilson95": [
+      0.592,
+      0.894
+     ],
+     "nominal": 0.8,
+     "mean_width": 94.7,
+     "detail": "coverage 0.778 on n=27, Wilson95 [0.592, 0.894] (need to contain 0.8)"
+    }
+   },
+   "direction_line": {
+    "required_for_any_direction_line": true,
+    "ship": false,
+    "n": 46,
+    "accuracy": 0.739,
+    "always_up_accuracy": 0.478,
+    "p_value": 0.0227,
+    "ece": 0.261,
+    "reason": "poorly calibrated: ECE 0.2609 > 0.1",
+    "detail": "hard up/down calls as probabilities 1.0/0.0; decide_direction_signal: poorly calibrated: ECE 0.2609 > 0.1"
+   },
+   "verdict": "too early (n=0 resolved base fixes, 1 calendar days; need >= 8 and >= 14). Also failing: ['3_shadow_agrees']"
+  },
+  "after_afternoon_rate": {
+   "window": "after_afternoon_rate",
+   "shadow": {
+    "n_entries": 0,
+    "distinct_days": 0,
+    "calendar_span_days": 0,
+    "n_resolved_base_fixes": 0,
+    "n_excluded_logged_after_target": 0
+   },
+   "backtest": {
+    "n_fixes": 46,
+    "chosen_beta": 0.5,
+    "chosen_beta_rule": "lower backtest MAE of {0.5, 1.0} in this window (ties -> 0.5)",
+    "chosen": {
+     "beta": 0.5,
+     "mae": 84.3,
+     "change_pct": -23.7,
+     "ci95": [
+      -34.8,
+      -9.5
+     ],
+     "dm_p": 0.0081
+    },
+    "other_beta_reported_only": {
+     "beta": 1.0,
+     "mae": 84.5,
+     "change_pct": -23.6,
+     "ci95": [
+      -42.4,
+      3.3
+     ],
+     "dm_p": 0.1239
+    },
+    "other_beta_cond2": {
+     "pass": false,
+     "ci95_upper": 3.3,
+     "dm_p": 0.1239,
+     "detail": "CI [-42.4, 3.3] (need upper < 0), DM p 0.1239 (need < 0.05)"
+    }
+   },
+   "conditions": {
+    "1_shadow_length": {
+     "pass": false,
+     "calendar_span_days": 0,
+     "need_days": 14,
+     "n_resolved_base_fixes": 0,
+     "need_fixes": 8,
+     "n_excluded_logged_after_target": 0,
+     "detail": "0/14 days, 0/8 resolved base fixes"
+    },
+    "2_backtest_ci_dm": {
+     "pass": true,
+     "ci95_upper": -9.5,
+     "dm_p": 0.0081,
+     "detail": "CI [-34.8, -9.5] (need upper < 0), DM p 0.0081 (need < 0.05)"
+    },
+    "3_shadow_agrees": {
+     "pass": false,
+     "detail": "no shadow point estimate yet (score needs >= 5 resolved fixes)"
+    },
+    "4_range_coverage": {
+     "pass": true,
+     "n_pairs": 46,
+     "n_scored": 26,
+     "coverage": 0.731,
+     "wilson95": [
+      0.539,
+      0.863
+     ],
+     "nominal": 0.8,
+     "mean_width": 234.2,
+     "detail": "coverage 0.731 on n=26, Wilson95 [0.539, 0.863] (need to contain 0.8)"
+    }
+   },
+   "direction_line": {
+    "required_for_any_direction_line": true,
+    "ship": false,
+    "n": 46,
+    "accuracy": 0.696,
+    "always_up_accuracy": 0.543,
+    "p_value": 0.1435,
+    "ece": 0.304,
+    "reason": "not significant vs always-up: p=0.1435, acc=0.6957 vs baseline=0.5435",
+    "detail": "hard up/down calls as probabilities 1.0/0.0; decide_direction_signal: not significant vs always-up: p=0.1435, acc=0.6957 vs baseline=0.5435"
+   },
+   "verdict": "too early (n=0 resolved base fixes, 0 calendar days; need >= 8 and >= 14). Also failing: ['3_shadow_agrees']"
+  }
+ },
+ "note": "Read-only analysis. Promotion is GG's decision and, per ADR 066, a separate PR; this report changes nothing live."
+}
