@@ -92,6 +92,11 @@ jobs:
         # See the script's own module docstring for exact scope, patterns, and
         # the ALLOWLIST mechanism for genuine non-claims.
         run: python scripts/check_computed_claims.py
+      - name: Every .portfolio/metrics.json metric must have a committed artifact
+        # Moved here from ci.yml (which triggered on `main` only, so it never ran: default branch
+        # is master). A metric without a committed artifact behind it can silently drift from what
+        # the portfolio site shows (2026-08-05 audit). Reads .portfolio/metrics.json + `git ls-files`.
+        run: python scripts/check_manifest_provenance.py
 
   # PWA pure-function JS tests (app.js logic: comparisons, dedup, good-price,
   # scrape parsing, stale-banner, trend). These existed under tests/*.js but ran
@@ -348,11 +353,16 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          # --grace-minutes reads data files' commit times (see scripts/inject_metrics.py)
+          fetch-depth: 0
       - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
         with:
           python-version: "3.12"
       - name: Every METRIC marker must resolve and match committed text
-        run: python scripts/inject_metrics.py --check
+        # 45 min = the docs-refresh PR's usual lag behind a data update (5-15 min) plus CI; drift
+        # older than that still fails, so a stalled refresh is still caught.
+        run: python scripts/inject_metrics.py --check --grace-minutes 45
 
   # Dependency vulnerability audit — informational only, not a required check.
   # Neither lint nor pwa-js depends on this job; a finding here should not block
