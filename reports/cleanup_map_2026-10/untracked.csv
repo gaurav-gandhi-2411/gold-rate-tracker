@@ -1,0 +1,17 @@
+path,size,class,evidence
+mlruns/,empty,DELETE,local-only; MLflow retired by ADR 024; 0 files
+mlflow-db/,0.6 MB,DELETE,local-only; MLflow retired by ADR 024; docker-compose.yml gone
+.mypy_cache/,"454 MB / 22,394 files",DELETE,regenerable tool cache (gitignored); largest single item on disk
+.pytest_cache/ .ruff_cache/,0.1 MB,DELETE,regenerable tool caches
+ml/models/ ml/training/ ml/tuning/,__pycache__ only,DELETE,ghost directories of modules deleted by PR #29/ADR 024; contain only .pyc
+models/,"20.8 MB / 36 files (local/lgbm, nbeats, tft, optuna)",ARCHIVE,"UNCERTAIN: pre-Chronos trained artifacts referenced by ADR 001/007/008; not regenerable without retraining; move out of the repo dir, do not delete without GG"
+worker/,"5 files, 61 KB (gitignored)",ARCHIVE,UNCERTAIN: retired Phi25 clean-IP Worker (ADR/RUNBOOK; retired 2026-07-16); GG must still revoke its PAT manually
+logs/,"9 files, 0.2 MB",DELETE,GPU-utilization logs from 2026-05-10/11 N-BEATS/TFT runs (retired models)
+"scraper/psi3c*.png, scraper/*screenshot*.mjs, spinner-check.mjs, visual-audit.mjs, verify-*.mjs, debug-standalone.mjs, scripts/screenshot_psi3b.mjs",~45 files,DELETE,gitignored one-off verification artifacts; sibling of the 3 tracked scraper one-offs in batch B1
+scraper/node_modules/,16.8 MB,KEEP,installed dependencies (playwright/lighthouse)
+worker-deadman/.wrangler/,local,KEEP,wrangler dev state
+"__pycache__ dirs (ml, ml/*, scripts, tests)",bytecode,DELETE,regenerable
+"data/macro_cache.parquet, macro_status.json, notification_state.json, ibja_30day_sample.pdf",runtime caches (gitignored),KEEP,runtime state read by macro.py / notifications.py
+.env,secret file (gitignored),KEEP,"never touched, never read"
+.claude/scheduled_tasks.lock,lock,KEEP,session lock
+"reports/model_audit_2026-10/ (untracked, other session)",n/a,KEEP,belongs to another workstream; excluded from this analysis
