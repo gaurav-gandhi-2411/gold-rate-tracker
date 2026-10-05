@@ -5,7 +5,6 @@ from __future__ import annotations
 import math
 
 import numpy as np
-
 from ml.demotion import (
     DemotionParams,
     binom_p_lower,
