@@ -2309,6 +2309,12 @@ html.ptr-pulling {
 .good-price-direction strong { font-weight: 600; }
 .good-price-direction[data-side="up"] strong { color: var(--up); }
 .good-price-direction[data-side="down"] strong { color: var(--down); }
+.good-price-direction-why {
+  font-size: 13px;
+  color: var(--cream-dim, var(--cream));
+  opacity: 0.8;
+  margin: 6px 0 0;
+}
 
 .outlook-reliability { margin-top: 8px; }
 .outlook-reliability-note {

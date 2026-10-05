@@ -1,0 +1,52 @@
+{
+ "n_folds": 143,
+ "decision_moment": "US close of D + margin = 22:15 UTC on D (ml.nextfix.US_CLOSE_UTC)",
+ "negative_control_flagged": true,
+ "repo_conventions": {
+  "name": "nextfix/repo",
+  "mode": "report",
+  "n_checks": 143,
+  "n_inputs_checked": 147041,
+  "n_unchecked": 0,
+  "n_violations": 143,
+  "n_checks_with_violation": 143,
+  "violations_by_source": {
+   "usdinr": 143
+  },
+  "max_late_by_s": 6240.0,
+  "examples": [
+   {
+    "context": "D=2025-07-17",
+    "input": "usd_inr(D) [usdinr] known_at 2025-07-17T23:59:00+00:00 (+6240s)"
+   },
+   {
+    "context": "D=2025-07-18",
+    "input": "usd_inr(D) [usdinr] known_at 2025-07-18T23:59:00+00:00 (+6240s)"
+   },
+   {
+    "context": "D=2025-07-21",
+    "input": "usd_inr(D) [usdinr] known_at 2025-07-21T23:59:00+00:00 (+6240s)"
+   },
+   {
+    "context": "D=2025-07-22",
+    "input": "usd_inr(D) [usdinr] known_at 2025-07-22T23:59:00+00:00 (+6240s)"
+   },
+   {
+    "context": "D=2025-07-23",
+    "input": "usd_inr(D) [usdinr] known_at 2025-07-23T23:59:00+00:00 (+6240s)"
+   }
+  ]
+ },
+ "usdinr_pinned": {
+  "name": "nextfix/pinned",
+  "mode": "report",
+  "n_checks": 143,
+  "n_inputs_checked": 147041,
+  "n_unchecked": 0,
+  "n_violations": 0,
+  "n_checks_with_violation": 0,
+  "violations_by_source": {},
+  "max_late_by_s": null,
+  "examples": []
+ }
+}
