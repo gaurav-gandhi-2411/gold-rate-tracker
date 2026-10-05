@@ -1,13 +1,13 @@
 Unused files (9)
-backfill-history.js       
-desktop-nav-check.mjs     
-norm14-check.mjs          
-test_hybrid_scrape.mjs    
-test_polite_access.mjs    
-test_retailer_enabled.mjs 
-test_scrape.js            
+backfill-history.js
+desktop-nav-check.mjs
+norm14-check.mjs
+test_hybrid_scrape.mjs
+test_polite_access.mjs
+test_retailer_enabled.mjs
+test_scrape.js
 test_scraper_hardening.mjs
-test_update_and_notify.js 
+test_update_and_notify.js
 Unused dependencies (1)
 lighthouse  package.json:13:6
 Unused exports (4)

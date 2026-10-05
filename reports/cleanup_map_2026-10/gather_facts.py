@@ -12,6 +12,7 @@ NOT covered: dynamically built paths (f-strings with variables), `getattr` dispa
   files, and git-history usage.
 Writes facts.json next to this file's CWD-independent output path given as argv[1].
 """
+
 from __future__ import annotations
 
 import ast
@@ -35,8 +36,24 @@ def git_files() -> list[str]:
 
 FILES = git_files()
 TEXT_EXT = {
-    ".py", ".js", ".mjs", ".json", ".md", ".yml", ".yaml", ".ps1", ".toml", ".html",
-    ".txt", ".lock", ".jsonl", ".csv", ".webmanifest", ".cfg", ".ini", "",
+    ".py",
+    ".js",
+    ".mjs",
+    ".json",
+    ".md",
+    ".yml",
+    ".yaml",
+    ".ps1",
+    ".toml",
+    ".html",
+    ".txt",
+    ".lock",
+    ".jsonl",
+    ".csv",
+    ".webmanifest",
+    ".cfg",
+    ".ini",
+    "",
 }
 
 
@@ -111,11 +128,13 @@ for f in PY:
 CLI_M = re.compile(r"python3?\s+-m\s+((?:ml|scripts)(?:\.[A-Za-z_0-9]+)+)")
 CLI_P = re.compile(r"python3?\s+((?:ml|scripts)/[A-Za-z_0-9/\-]+\.py)")
 NODE_P = re.compile(r"node\s+((?:scraper|scripts|worker-deadman|tests)/[A-Za-z_0-9/\-\.]+\.m?js)")
-PATH_ANY = re.compile(r"(?<![A-Za-z0-9_])((?:ml|scripts|scraper|tests|data|reports|docs|config|archive|worker-deadman)/[A-Za-z0-9_\-\./]+)")
+PATH_ANY = re.compile(
+    r"(?<![A-Za-z0-9_])((?:ml|scripts|scraper|tests|data|reports|docs|config|archive|worker-deadman)/[A-Za-z0-9_\-\./]+)"
+)
 
 wf_files = [f for f in FILES if f.startswith(".github/")]
 roots_wf: dict[str, set[str]] = defaultdict(set)  # file -> workflows referencing it
-for w in wf_files + ["Makefile"]:
+for w in [*wf_files, "Makefile"]:
     t = TEXT.get(w) or ""
     for m in CLI_M.finditer(t):
         for r in resolve(m.group(1)):
@@ -130,6 +149,7 @@ for w in wf_files + ["Makefile"]:
         p = m.group(1).rstrip(".,:;)'\"")
         if p in TEXT:
             roots_wf[p].add(w)
+
 
 # reachability from workflow roots over python import graph
 def reach(roots: set[str]) -> set[str]:
@@ -147,6 +167,7 @@ wf_roots = {f for f in roots_wf if f.endswith(".py")}
 prod_reach = reach(wf_roots)
 test_files = [f for f in PY if f.startswith("tests/")]
 test_reach = reach(set(test_files))
+
 
 # who references a given path (any tracked text file), by category
 def cat(f: str) -> str:
@@ -201,13 +222,24 @@ for f in FILES:
             continue
         if any(n in t for n in ns):
             found[cat(g)].append(g)
-    refs[f] = {k: v[:12] for k, v in found.items()} | {"_counts": {k: len(v) for k, v in found.items()}}  # type: ignore[dict-item]
+    refs[f] = {k: v[:12] for k, v in found.items()} | {
+        "_counts": {k: len(v) for k, v in found.items()}
+    }  # type: ignore[dict-item]
 
 # JS surface: script tags / shell list / fetches
 index = TEXT.get("index.html") or ""
 sw = TEXT.get("service-worker.js") or ""
 fetches = set()
-for f in ("app.js", "flags.js", "how-we-know.js", "i18n.js", "how-we-know-strings.js", "index.html", "how-we-know.html", "service-worker.js"):
+for f in (
+    "app.js",
+    "flags.js",
+    "how-we-know.js",
+    "i18n.js",
+    "how-we-know-strings.js",
+    "index.html",
+    "how-we-know.html",
+    "service-worker.js",
+):
     for m in re.finditer(r"""['"`]((?:\./)?data/[A-Za-z0-9_\-\./]+)['"`]""", TEXT.get(f) or ""):
         fetches.add((f, m.group(1).lstrip("./") if m.group(1).startswith("./") else m.group(1)))
 script_tags = re.findall(r"""<script[^>]+src=['"]([^'"]+)['"]""", index)
@@ -224,4 +256,13 @@ out = {
     "py_files": PY,
 }
 OUT.write_text(json.dumps(out, indent=1))
-print(len(FILES), "files;", len(PY), "py;", len(prod_reach), "prod-reach;", len(test_reach), "test-reach")
+print(
+    len(FILES),
+    "files;",
+    len(PY),
+    "py;",
+    len(prod_reach),
+    "prod-reach;",
+    len(test_reach),
+    "test-reach",
+)
