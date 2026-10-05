@@ -1,5 +1,5 @@
 {
- "generated_at": "2026-10-05T10:47:09.191359Z",
+ "generated_at": "2026-10-05T11:16:40.168070Z",
  "ready": true,
  "bars_from": "2026-07-27T05:00:00Z",
  "bars_to": "2026-10-05T11:00:00Z",
@@ -8,6 +8,7 @@
   "after_morning_rate": {
    "n_fixes": 47,
    "n_decisions": 47,
+   "n_excluded_logged_after_target": 0,
    "ready": true,
    "mae_beta_0.0": 39.1,
    "mae_beta_0.5": 23.8,
@@ -30,6 +31,7 @@
   "after_afternoon_rate": {
    "n_fixes": 46,
    "n_decisions": 46,
+   "n_excluded_logged_after_target": 0,
    "ready": true,
    "mae_beta_0.0": 110.5,
    "mae_beta_0.5": 84.3,
@@ -52,6 +54,7 @@
   "after_us_close": {
    "n_fixes": 46,
    "n_decisions": 46,
+   "n_excluded_logged_after_target": 0,
    "ready": true,
    "mae_beta_0.0": 110.5,
    "mae_beta_0.5": 51.1,
@@ -76,6 +79,7 @@
   "after_morning_rate": {
    "n_fixes": 47,
    "n_decisions": 233,
+   "n_excluded_logged_after_target": 0,
    "ready": true,
    "mae_beta_0.0": 39.4,
    "mae_beta_0.5": 32.2,
@@ -98,6 +102,7 @@
   "after_afternoon_rate": {
    "n_fixes": 46,
    "n_decisions": 460,
+   "n_excluded_logged_after_target": 0,
    "ready": true,
    "mae_beta_0.0": 110.5,
    "mae_beta_0.5": 90.9,
@@ -120,6 +125,7 @@
   "after_us_close": {
    "n_fixes": 46,
    "n_decisions": 439,
+   "n_excluded_logged_after_target": 0,
    "ready": true,
    "mae_beta_0.0": 105.8,
    "mae_beta_0.5": 66.4,
