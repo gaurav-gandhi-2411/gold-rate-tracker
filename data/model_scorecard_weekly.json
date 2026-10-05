@@ -1,9 +1,9 @@
 {
  "schema_version": 1,
- "generated_at_utc": "2026-10-05T08:31:36Z",
+ "generated_at_utc": "2026-10-05T16:35:13Z",
  "script": "scripts/build_model_scorecard.py",
- "git_sha": "1189d22a7222a05cc4f42927f275d62fab1b8970",
- "script_blob_sha": "272cae8240b3e81aba71e3989b386c6296b33728",
+ "git_sha": "30def1d244906cd7fffa046e77a5f1bc8a8541dc",
+ "script_blob_sha": "c5a16f49ba4375612348d955fbad22fca2d24e5a",
  "min_forward_n": 20,
  "nominal_coverage": 0.8,
  "alpha": 0.05,
@@ -11,6 +11,14 @@
   "nextfix": {
    "date": "2026-10-01",
    "basis": "promoted 2026-10-02 (ADR 064/065); forward from decision day d0 >= 2026-10-01"
+  },
+  "p3": {
+   "date": "2026-10-05",
+   "basis": "ADR 069: P3 live from decision day d0 >= 2026-10-05 (folds with retro false)"
+  },
+  "p3_variants": {
+   "date": "2026-10-05",
+   "basis": "ADR 071: forward folds only (retro false), d0 >= 2026-10-05, compared with P3"
   },
   "intraday": {
    "date": "2026-10-02",
@@ -55,6 +63,54 @@
  },
  "models": [
   {
+   "id": "nextfix_p3",
+   "name": "ml.nextfix P3 (live next-fix forecast)",
+   "status": "LIVE",
+   "status_note": "",
+   "predicts": "next IBJA PM fix (22K, Rs/g), forecast after the US close",
+   "forward_start": "2026-10-05",
+   "forward_start_basis": "ADR 069: P3 live from decision day d0 >= 2026-10-05 (folds with retro false)",
+   "forward": {
+    "n": 0,
+    "effective_n": null,
+    "metric": "mean absolute error of the next fix",
+    "unit": null,
+    "model": null,
+    "baseline": null,
+    "baseline_name": "holding the last fix",
+    "diff": null,
+    "ci95": null,
+    "p_one_sided": null,
+    "p_kind": null,
+    "bh_significant": null,
+    "first_date": null,
+    "last_date": null,
+    "marking": "VERIFIED",
+    "extras": [
+     "no data: record not present yet (data/nextfix_p3_oos.json)"
+    ]
+   },
+   "retrospective": {
+    "label": "walk-forward over earlier history, NOT forward",
+    "text": "none",
+    "marking": "INFERRED"
+   },
+   "gate": {
+    "text": "no gate recorded",
+    "passes": null,
+    "marking": "INFERRED"
+   },
+   "verdict": "grey",
+   "verdict_kind": "no_data",
+   "sentence": "No data: record not present yet (data/nextfix_p3_oos.json).",
+   "sources": [
+    "data/nextfix_p3_oos.json",
+    "data/forecast.json",
+    "data/model_demotion_state.json"
+   ],
+   "demotion": null
+  },
+  {
    "id": "nextfix_model",
    "name": "ml.nextfix model window (ridge + nets)",
    "status": "LIVE",
@@ -97,6 +153,147 @@
    "sentence": "No forward data: no resolved forecast on or after 2026-10-01 yet.",
    "sources": [
     "data/nextfix_oos.json",
+    "data/forecast.json"
+   ],
+   "demotion": null
+  },
+  {
+   "id": "p3_roll60",
+   "name": "shadow: P3 on the last 60 days (ADR 071 V1)",
+   "status": "SHADOW",
+   "status_note": "not shown to users; compared with P3 only",
+   "predicts": "next IBJA PM fix, like P3 but with the slope fitted on the 60 most recent resolved days",
+   "forward_start": "2026-10-05",
+   "forward_start_basis": "ADR 071: forward folds only (retro false), d0 >= 2026-10-05, compared with P3",
+   "forward": {
+    "n": 0,
+    "effective_n": null,
+    "metric": "mean absolute error of the next fix",
+    "unit": null,
+    "model": null,
+    "baseline": null,
+    "baseline_name": "P3 (the live model)",
+    "diff": null,
+    "ci95": null,
+    "p_one_sided": null,
+    "p_kind": null,
+    "bh_significant": null,
+    "first_date": null,
+    "last_date": null,
+    "marking": "VERIFIED",
+    "extras": [
+     "no data: record not present yet (data/nextfix_p3_variants_oos.json)"
+    ]
+   },
+   "retrospective": {
+    "label": "walk-forward over earlier history, NOT forward",
+    "text": "none",
+    "marking": "INFERRED"
+   },
+   "gate": {
+    "text": "ADR 071: needs 40 forward days, error at least 2% lower, one-sided p < 0.025, direction not worse",
+    "passes": null,
+    "marking": "INFERRED"
+   },
+   "verdict": "grey",
+   "verdict_kind": "no_data",
+   "sentence": "No data: record not present yet (data/nextfix_p3_variants_oos.json).",
+   "sources": [
+    "data/nextfix_p3_variants_oos.json",
+    "data/nextfix_p3_oos.json"
+   ],
+   "demotion": null
+  },
+  {
+   "id": "p3_monday",
+   "name": "shadow: P3 Monday slope (ADR 071 V2)",
+   "status": "SHADOW",
+   "status_note": "not shown to users; compared with P3 only",
+   "predicts": "next IBJA PM fix, like P3 but with the slope fitted on Monday days only",
+   "forward_start": "2026-10-05",
+   "forward_start_basis": "ADR 071: forward folds only (retro false), d0 >= 2026-10-05, compared with P3",
+   "forward": {
+    "n": 0,
+    "effective_n": null,
+    "metric": "mean absolute error of the next fix",
+    "unit": null,
+    "model": null,
+    "baseline": null,
+    "baseline_name": "P3 (the live model)",
+    "diff": null,
+    "ci95": null,
+    "p_one_sided": null,
+    "p_kind": null,
+    "bh_significant": null,
+    "first_date": null,
+    "last_date": null,
+    "marking": "VERIFIED",
+    "extras": [
+     "no data: record not present yet (data/nextfix_p3_variants_oos.json)"
+    ]
+   },
+   "retrospective": {
+    "label": "walk-forward over earlier history, NOT forward",
+    "text": "none",
+    "marking": "INFERRED"
+   },
+   "gate": {
+    "text": "ADR 071: needs 40 forward days, error at least 2% lower, one-sided p < 0.025, direction not worse",
+    "passes": null,
+    "marking": "INFERRED"
+   },
+   "verdict": "grey",
+   "verdict_kind": "no_data",
+   "sentence": "No data: record not present yet (data/nextfix_p3_variants_oos.json).",
+   "sources": [
+    "data/nextfix_p3_variants_oos.json",
+    "data/nextfix_p3_oos.json"
+   ],
+   "demotion": null
+  },
+  {
+   "id": "demotion_monitor",
+   "name": "demotion monitor (ADR 068, watches P3)",
+   "status": "LIVE",
+   "status_note": "",
+   "predicts": "whether the live next-fix model has been switched back to holding the last fix",
+   "forward_start": "2026-10-05",
+   "forward_start_basis": "ADR 069: P3 live from decision day d0 >= 2026-10-05 (folds with retro false)",
+   "forward": {
+    "n": 0,
+    "effective_n": null,
+    "metric": null,
+    "unit": null,
+    "model": null,
+    "baseline": null,
+    "baseline_name": null,
+    "diff": null,
+    "ci95": null,
+    "p_one_sided": null,
+    "p_kind": null,
+    "bh_significant": null,
+    "first_date": null,
+    "last_date": null,
+    "marking": "INFERRED",
+    "extras": [
+     "no forward data: data/model_demotion_state.json is not present yet; this is not the same as 'not demoted'"
+    ]
+   },
+   "retrospective": {
+    "label": "walk-forward over earlier history, NOT forward",
+    "text": "none",
+    "marking": "INFERRED"
+   },
+   "gate": {
+    "text": "no gate recorded",
+    "passes": null,
+    "marking": "INFERRED"
+   },
+   "verdict": "grey",
+   "verdict_kind": "no_data",
+   "sentence": "No forward data: data/model_demotion_state.json is not present yet; this is not the same as 'not demoted'.",
+   "sources": [
+    "data/model_demotion_state.json",
     "data/forecast.json"
    ],
    "demotion": null
@@ -227,6 +424,7 @@
     "marking": "VERIFIED",
     "extras": [
      "one decision per base fix, logged before the target fix was published",
+     "ADR 066 scoring correction: entries logged after their target fix was published are excluded; the shadow job reports 0 excluded so far (I)",
      "no forward data: no resolved forecast on or after 2026-10-02 yet"
     ]
    },
@@ -274,6 +472,7 @@
     "marking": "VERIFIED",
     "extras": [
      "one decision per base fix, logged before the target fix was published",
+     "ADR 066 scoring correction: entries logged after their target fix was published are excluded; the shadow job reports 0 excluded so far (I)",
      "no forward data: no resolved forecast on or after 2026-10-02 yet"
     ]
    },
@@ -321,7 +520,8 @@
     "marking": "VERIFIED",
     "extras": [
      "beta 0.5 error 2.5 Rs/g (reported, not used for the verdict)",
-     "one decision per base fix, logged before the target fix was published"
+     "one decision per base fix, logged before the target fix was published",
+     "ADR 066 scoring correction: entries logged after their target fix was published are excluded; the shadow job reports 1 excluded so far (I)"
     ]
    },
    "retrospective": {
@@ -418,11 +618,11 @@
    },
    "retrospective": {
     "label": "walk-forward over earlier history, NOT forward",
-    "text": "n=156 folds to 2026-09-25: logistic 0.481, lightgbm 0.513 vs always-up 0.506, p=0.672",
+    "text": "n=159 folds to 2026-09-30: logistic 0.478, lightgbm 0.509 vs always-up 0.509, p=0.583",
     "marking": "INFERRED"
    },
    "gate": {
-    "text": "probability gate no ship (stays dark): not significant vs always-up: p=0.6718, acc=0.4808 vs baseline=0.5064",
+    "text": "probability gate no ship (stays dark): not significant vs always-up: p=0.5831, acc=0.4780 vs baseline=0.5094",
     "passes": false,
     "marking": "INFERRED"
    },
@@ -464,11 +664,11 @@
    },
    "retrospective": {
     "label": "walk-forward over earlier history, NOT forward",
-    "text": "n=150 folds to 2026-09-24: logistic 0.560, lightgbm 0.587 vs always-up 0.580, p=0.607",
+    "text": "n=153 folds to 2026-09-29: logistic 0.562, lightgbm 0.588 vs always-up 0.575, p=0.815",
     "marking": "INFERRED"
    },
    "gate": {
-    "text": "probability gate no ship (stays dark): not significant vs always-up: p=0.6072, acc=0.5600 vs baseline=0.5800",
+    "text": "probability gate no ship (stays dark): not significant vs always-up: p=0.8145, acc=0.5621 vs baseline=0.5752",
     "passes": false,
     "marking": "INFERRED"
    },
