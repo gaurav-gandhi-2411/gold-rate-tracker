@@ -724,9 +724,15 @@ def run(
     ev = evaluate(folds, MODEL_VERSION)
     # Shadow: the ridge + neural-net ensemble keeps its own record and is scored beside P3.
     oos_path = data_dir / OOS_PATH.name
-    shadow_folds = update_oos(pairs, load_oos(oos_path)) if not pairs.empty else load_oos(oos_path)
-    save_oos(shadow_folds, oos_path, ENSEMBLE_VERSION)
-    shadow_ev = evaluate(shadow_folds, ENSEMBLE_VERSION)
+    try:  # the shadow must never take the live forecast down (ADR 069)
+        shadow_folds = (
+            update_oos(pairs, load_oos(oos_path)) if not pairs.empty else load_oos(oos_path)
+        )
+        save_oos(shadow_folds, oos_path, ENSEMBLE_VERSION)
+        shadow_ev = evaluate(shadow_folds, ENSEMBLE_VERSION)
+    except Exception as exc:
+        logger.warning("nextfix shadow ensemble record failed (%s); live P3 unaffected", exc)
+        shadow_folds, shadow_ev = load_oos(oos_path), {"n": 0, "ready": False}
     since = ev.get("first_d0") if ev.get("ready") else None
     windows = {k: flat_record(flat_pairs(full, k), since) for k in ("am_to_pm", "pm_to_am")}
     demotion = _demotion(data_dir, folds, ev, now)

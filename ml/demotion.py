@@ -161,19 +161,35 @@ def empty_state(model_version: str) -> dict:
 
 
 def load_state(path, model_version: str) -> dict:
-    """The persisted state, or a fresh one when missing/unreadable for THIS model version.
+    """The persisted state for THIS model version.
 
-    Fails open to "not demoted" only because the rules themselves re-evaluate the record on every
-    run: an unreadable file cannot hide a degraded model for longer than one run, and a state
-    written for another model version is never applied to this one.
+    * file missing: a fresh "not demoted" state (first run);
+    * file present but unreadable, not a JSON object, or ``demoted`` not a bool: FAIL CLOSED, a
+      demoted state with reason ``state_unreadable`` (the hold figure is the safe one; T16 alerts
+      and a person repairs the file; rule 98a). Never silently re-promotes a demoted model;
+    * a state written for another model version is not applied to this one.
     """
     import json
+    from datetime import UTC, datetime
 
+    if not path.exists():
+        return empty_state(model_version)
     try:
         data = json.loads(path.read_text(encoding="utf-8"))
+        ok = isinstance(data, dict) and isinstance(data.get("demoted"), bool)
     except (OSError, ValueError):
-        return empty_state(model_version)
-    if not isinstance(data, dict) or data.get("model_version") != model_version:
+        data, ok = None, False
+    if not ok:
+        now = datetime.now(UTC).isoformat()
+        reasons = [{"rule": "state_unreadable", "path": str(path.name)}]
+        return {
+            **empty_state(model_version),
+            "demoted": True,
+            "since": now,
+            "reasons": reasons,
+            "history": [{"at": now, "event": "demoted", "reasons": reasons}],
+        }
+    if data.get("model_version") != model_version:
         return empty_state(model_version)
     return {**empty_state(model_version), **data}
 

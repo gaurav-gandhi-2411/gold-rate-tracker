@@ -1154,8 +1154,14 @@ def _check_t16_model_demoted(
     if dm.get("demoted") is not True or not dm.get("since"):
         return None
     last = state.last_sent.get("T16")
-    if last and datetime.fromisoformat(last) >= datetime.fromisoformat(dm["since"]):
-        return None
+    try:
+        if last and datetime.fromisoformat(last) >= datetime.fromisoformat(dm["since"]):
+            return None
+    except (
+        TypeError,
+        ValueError,
+    ):  # a hand-edited or naive timestamp: alert rather than stay silent
+        pass
     rules = ", ".join(r.get("rule", "?") for r in dm.get("reasons", [])) or "unknown rule"
     title = "Gold Tracker: next-rate model switched off"
     body = (

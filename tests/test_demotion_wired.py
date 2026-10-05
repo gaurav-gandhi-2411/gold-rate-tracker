@@ -180,3 +180,35 @@ def test_state_for_another_model_version_is_not_applied(tmp_path: Path):
 
 def test_hac_helper_unchanged_sanity():
     assert math.isclose(demotion.binom_p_lower(0, 3, 0.5), 0.125)
+
+
+def test_a_failing_shadow_ensemble_cannot_take_the_live_run_down(tmp_path: Path, monkeypatch):
+    _, macro, now = _setup(tmp_path)
+
+    def boom(*a, **k):
+        raise ImportError("No module named torch")
+
+    monkeypatch.setattr(nextfix, "predict", boom)  # the ensemble's point model
+    out = nextfix.run(now=now, macro=macro, data_dir=tmp_path)
+    assert out["forecast"]["model_version"] == nextfix.MODEL_VERSION
+    assert out["shadow_eval"]["ready"] is False and "shadow" not in out["forecast"]
+    assert (tmp_path / "nextfix_p3_oos.json").exists()
+
+
+@pytest.mark.parametrize("bad", ["{not json", "[]", '"false"', '{"demoted": "false"}'])
+def test_a_corrupt_state_file_fails_closed_not_open(tmp_path: Path, bad: str):
+    path = tmp_path / "s.json"
+    path.write_text(bad)
+    st = demotion.load_state(path, "nextfix_p3_v1")
+    assert st["demoted"] is True and st["reasons"][0]["rule"] == "state_unreadable"
+    assert st["since"]  # so T16 alerts once
+
+
+def test_a_naive_since_timestamp_still_alerts():
+    fc = {
+        "next_fix": {"demotion": {"demoted": True, "since": "2026-10-06T07:00:00", "reasons": []}}
+    }
+    state = notifications.NotificationState()
+    state.last_sent["T16"] = "2026-10-06T07:05:00+00:00"
+    alert = notifications._check_t16_model_demoted(fc, state, datetime.now(notifications.IST))
+    assert alert is not None  # cannot compare naive with aware: alert rather than stay silent
