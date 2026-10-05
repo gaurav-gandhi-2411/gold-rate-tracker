@@ -25,10 +25,10 @@ const SUPPORTED_LANGS = ["en", "hi"];
 // The exact percentage/sample-size this rounds away is not lost -- it's preserved,
 // unrounded, on how-we-know.html (how-we-know-strings.js's methAccurateP2/
 // methBandAccuracy* keys read the same source data).
-function fractionOutOf10Phrase(pct) {
+function fractionOutOf10Phrase(pct, forceLang) {
   const n = Math.max(0, Math.min(10, Math.floor(pct / 10)));
   // currentLang is a `let` declared further down this file; this only runs at call time.
-  if (typeof currentLang !== "undefined" && currentLang === "hi") {
+  if (forceLang !== "en" && typeof currentLang !== "undefined" && currentLang === "hi") {
     if (n === 0) return "10 में से 1 बार भी नहीं";
     return `लगभग 10 में से ${n} बार`;
   }
@@ -296,10 +296,10 @@ const STRINGS = {
     // one. fractionOutOf10Phrase floors so this never overstates (see its own
     // comment above). The exact percentage and n are not lost -- they're on
     // how-we-know.html (methAccurateP2CoveragePct), unrounded.
-    reliabilityCoverage: ({ pct }) => `The real price has stayed inside the range we show ${fractionOutOf10Phrase(pct)} so far.`,
+    reliabilityCoverage: ({ pct }) => `The real price has stayed inside the range we show ${fractionOutOf10Phrase(pct, "en")} so far.`,
     // Range hit rate from the walk-forward re-run on past days (next_fix.range_record): worded
     // as a test on past days, never as what the shown ranges did live.
-    reliabilityCoverageTested: ({ pct }) => `In a test on past days, the real price stayed inside a range like this ${fractionOutOf10Phrase(pct)}.`,
+    reliabilityCoverageTested: ({ pct }) => `In a test on past days, the real price stayed inside a range like this ${fractionOutOf10Phrase(pct, "en")}.`,
     reliabilityUnknown: "Still building a track record for this — check back later.",
     reliabilityDriftOnTrack: "Recent accuracy has stayed in line with the historical average.",
     reliabilityDriftWatch: "Recent accuracy has drifted a bit from the historical average — we're keeping an eye on it.",
@@ -341,7 +341,7 @@ const STRINGS = {
     // size (weeks measured) moves to how-we-know.html's "Band accuracy" section,
     // which reads the same calibration_band_coverage.json field.
     calibrationConfidenceAppend: ({ amount, coverage, n }) => coverage != null && n != null
-      ? ` In a test on past days, the real price landed within about ₹${amount}/gram of this estimate ${fractionOutOf10Phrase(coverage)}.`
+      ? ` In a test on past days, the real price landed within about ₹${amount}/gram of this estimate ${fractionOutOf10Phrase(coverage, "en")}.`
       : ` Based on past comparisons, the real price lands within about ₹${amount}/gram of this estimate.`,
     // R3: appended only when Tanishq confirmation itself has been silent for
     // TIER_DEGRADED_THRESHOLD_H, not just this cycle -- distinct from the
@@ -683,8 +683,7 @@ const STRINGS = {
     weeklyMovementSuffAppend: ({ n }) => ` (90 दिनों के इस दायरे में अभी सिर्फ़ ${n} अलग-अलग दिन हैं — इसे मोटा अंदाज़ा ही समझें।)`,
 
     // ── Reliability (promoted from methodology accordion) ──────────────────────
-    // ${fractionOutOf10Phrase(pct)} is language-aware (see its definition at the top of this file).
-    reliabilityCoverage: ({ pct }) => `असली भाव अब तक ${fractionOutOf10Phrase(pct)} हमारी दिखाई रेंज के अंदर रहा है।`,
+    // reliabilityCoverage / calibrationConfidenceAppend have no hi entry on purpose (#2400 rule: Hindi falls back to English until reviewed).
     reliabilityUnknown: "अभी इसका रिकॉर्ड बन रहा है — कुछ समय बाद फिर देखें।",
     reliabilityDriftOnTrack: "हाल में हमारे अनुमान उतने ही सही रहे हैं जितने आम तौर पर रहते आए हैं।",
     reliabilityDriftWatch: "हाल में हमारे अनुमान आम तौर से थोड़े कम सही रहे हैं — हम नज़र रखे हुए हैं।",
