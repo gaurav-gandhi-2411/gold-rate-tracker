@@ -6,6 +6,13 @@ Base: `origin/master` at `55d672c9`. Machine-readable map: `reports/cleanup_map_
 `reports/cleanup_map_2026-10/untracked.csv`. Reproduce with `gather_facts.py` then `classify.py` in the
 same directory (stdlib only).
 
+**Execution status, 2026-10-05 (the map itself is a snapshot at `55d672c9`):** B1 dead code is
+PR #2419 (10 files; `inspect-tanishq.js` and `capture-screenshots.js` kept: still referenced);
+B4 screenshot retention is PR #2417, merged (269 files, 51.13 MB; the map's 315 files / 76.6 MB
+overstated what the approved rule allows once directory-level mentions are honoured);
+`ci.yml` was resolved by PR #2415, merged (its one unique step moved into `lint`, file deleted).
+B2 and B3 are not approved and untouched. Counts below are the original snapshot.
+
 ## 1. Headline
 
 | Class | Tracked files | of which UNCERTAIN |
