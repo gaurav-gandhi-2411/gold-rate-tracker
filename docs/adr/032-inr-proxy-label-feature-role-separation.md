@@ -1,5 +1,44 @@
 # ADR 032 — M1 Follow-up: Separating the Proxy's Label and Feature Roles
 
+> ## Superseded in part by ADR 058 (2026-09-25)
+>
+> *Added after the fact. The original text below is unchanged. Source:
+> [ADR 058](058-timing-audit.md), re-run R1, `reports/timing_audit/audit.json` at `924ee298`
+> (PR #2051).*
+>
+> **No longer holds: finding (a), "timing misalignment does NOT explain the ~33% disagreement".**
+> The lag sweep below only moved *daily closes* by whole days. Yahoo's GC=F daily close is the
+> COMEX settlement at 13:30 ET, which is 6-7 hours *after* IBJA's PM fix of the same date. No
+> daily lag lines the two up. Read at the fix instead (GC=F x INR=X 1-hour bars known at 11:30
+> UTC), the proxy agrees with IBJA far more often:
+>
+> | Proxy value | n | direction agreement [Wilson 95%] | corr. of changes |
+> |---|---|---|---|
+> | daily close, same day (this ADR's label, lag 0) | 207 | 67.1% [60.5, 73.2] | 0.74 |
+> | daily close, previous day (ADR 030 feature, lag -1) | 207 | 67.1% [60.5, 73.2] | 0.70 |
+> | COMEX x FX known at the PM fix | 208 | **90.4% [85.6, 93.7]** | **0.93** |
+>
+> - McNemar, one-sided, aligned beats lag 0: 58 vs 10 discordant pairs, p = 1.2e-9.
+> - Consecutive-business-day pairs only: 90.0% (n = 180) vs 63.7% (n = 179).
+> - **Exploratory.** This re-measures a published result after seeing it. It covers only
+>   2024-05-25..2026-09-24, because Yahoo keeps 730 days of 1-hour bars.
+>
+> **Also no longer holds:**
+> - The ~100 Rs/g dead-zone rule in finding (b) was fitted to labels whose misses were mostly
+>   the clock, not local noise. From 2024-05 it should be re-derived on fix-aligned labels. Before
+>   2024-05 it cannot be fixed this way.
+> - The Decision table's claim that "this ADR's lag sweep confirms no accuracy is being left on
+>   the table by keeping the lag". The sweep never tested values between the daily closes.
+>
+> **Still holds:** the separation of label and feature roles, and the leakage safety of the
+> T-1-lagged feature series (ADR 058 A1: conservative, about 17 h stale for COMEX and 30 h for FX
+> at the PM fix).
+>
+> **Proposed follow-up (ADR 058 fix 1, not done here):** from 2024-05, build labels from COMEX x
+> FX known at each IBJA fix, and re-derive the dead-zone threshold on them.
+
+---
+
 **Status:** Accepted, implemented 2026-09-23. **Numbered 032** (031 is #1892's ADR, still open) to
 avoid a collision once both land.
 

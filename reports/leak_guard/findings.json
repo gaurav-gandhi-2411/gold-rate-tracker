@@ -1,0 +1,258 @@
+{
+ "git_sha": "18fbd132eda99950cd4153e287717762ce1767fb",
+ "generated_at_utc": "2026-09-25T11:29:54+00:00",
+ "F1_direction_test_row_features": {
+  "h1": {
+   "n_test_folds": 154,
+   "logistic_accuracy": 0.4935064935064935,
+   "always_up": 0.5064935064935064,
+   "leak_guard": {
+    "labels": {
+     "name": "direction label_binary_h1 training labels",
+     "mode": "raise",
+     "n_checks": 154,
+     "n_inputs_checked": 14867,
+     "n_unchecked": 0,
+     "n_violations": 0,
+     "n_checks_with_violation": 0,
+     "violations_by_source": {},
+     "max_late_by_s": null,
+     "examples": []
+    },
+    "features": {
+     "name": "direction label_binary_h1 test-row features",
+     "mode": "report",
+     "n_checks": 154,
+     "n_inputs_checked": 1612,
+     "n_unchecked": 0,
+     "n_violations": 505,
+     "n_checks_with_violation": 82,
+     "violations_by_source": {
+      "feature:crude_wti": 80,
+      "feature:dxy": 81,
+      "feature:gold_usd": 21,
+      "feature:tips": 80,
+      "feature:us_10y_yield": 81,
+      "feature:usd_inr": 81,
+      "feature:vix": 81
+     },
+     "max_late_by_s": 19740.0,
+     "examples": [
+      {
+       "context": "as_of=2025-05-16",
+       "input": "usd_inr [feature:usd_inr] known_at 2025-05-16T23:59:00+00:00 (+19740s)"
+      },
+      {
+       "context": "as_of=2025-05-19",
+       "input": "usd_inr [feature:usd_inr] known_at 2025-05-19T23:59:00+00:00 (+19740s)"
+      },
+      {
+       "context": "as_of=2025-05-20",
+       "input": "usd_inr [feature:usd_inr] known_at 2025-05-20T23:59:00+00:00 (+19740s)"
+      },
+      {
+       "context": "as_of=2025-05-21",
+       "input": "usd_inr [feature:usd_inr] known_at 2025-05-21T23:59:00+00:00 (+19740s)"
+      },
+      {
+       "context": "as_of=2025-05-22",
+       "input": "usd_inr [feature:usd_inr] known_at 2025-05-22T23:59:00+00:00 (+19740s)"
+      }
+     ]
+    }
+   }
+  },
+  "h2": {
+   "n_test_folds": 148,
+   "logistic_accuracy": 0.5472972972972973,
+   "always_up": 0.581081081081081,
+   "leak_guard": {
+    "labels": {
+     "name": "direction label_binary_h2 training labels",
+     "mode": "raise",
+     "n_checks": 148,
+     "n_inputs_checked": 13855,
+     "n_unchecked": 0,
+     "n_violations": 0,
+     "n_checks_with_violation": 0,
+     "violations_by_source": {},
+     "max_late_by_s": null,
+     "examples": []
+    },
+    "features": {
+     "name": "direction label_binary_h2 test-row features",
+     "mode": "report",
+     "n_checks": 148,
+     "n_inputs_checked": 1551,
+     "n_unchecked": 0,
+     "n_violations": 478,
+     "n_checks_with_violation": 77,
+     "violations_by_source": {
+      "feature:crude_wti": 75,
+      "feature:dxy": 77,
+      "feature:gold_usd": 20,
+      "feature:tips": 75,
+      "feature:us_10y_yield": 77,
+      "feature:usd_inr": 77,
+      "feature:vix": 77
+     },
+     "max_late_by_s": 19740.0,
+     "examples": [
+      {
+       "context": "as_of=2025-05-19",
+       "input": "usd_inr [feature:usd_inr] known_at 2025-05-19T23:59:00+00:00 (+19740s)"
+      },
+      {
+       "context": "as_of=2025-05-20",
+       "input": "usd_inr [feature:usd_inr] known_at 2025-05-20T23:59:00+00:00 (+19740s)"
+      },
+      {
+       "context": "as_of=2025-05-21",
+       "input": "usd_inr [feature:usd_inr] known_at 2025-05-21T23:59:00+00:00 (+19740s)"
+      },
+      {
+       "context": "as_of=2025-05-22",
+       "input": "usd_inr [feature:usd_inr] known_at 2025-05-22T23:59:00+00:00 (+19740s)"
+      },
+      {
+       "context": "as_of=2025-05-23",
+       "input": "usd_inr [feature:usd_inr] known_at 2025-05-23T23:59:00+00:00 (+19740s)"
+      }
+     ]
+    }
+   }
+  },
+  "dataset_rows_by_source": {
+   "backfill_yfinance": 103,
+   "live_pit": 72
+  }
+ },
+ "F2_r2_same_day_nowcast": {
+  "scored_same_day_days": 62,
+  "leaky_days_public": [
+   "2026-07-21",
+   "2026-08-18",
+   "2026-08-28",
+   "2026-09-01",
+   "2026-09-02",
+   "2026-09-09"
+  ],
+  "leaky_days_repo_fetch": [
+   "2026-07-21",
+   "2026-08-18",
+   "2026-08-28",
+   "2026-09-01",
+   "2026-09-02",
+   "2026-09-09"
+  ],
+  "guard_public": {
+   "name": "r2 same-day IBJA, public publish times",
+   "mode": "report",
+   "n_checks": 62,
+   "n_inputs_checked": 124,
+   "n_unchecked": 0,
+   "n_violations": 7,
+   "n_checks_with_violation": 6,
+   "violations_by_source": {
+    "ibja_am": 1,
+    "ibja_pm": 6
+   },
+   "max_late_by_s": 25025.537,
+   "examples": [
+    {
+     "context": "2026-07-21",
+     "input": "pm [ibja_pm] known_at 2026-07-21T11:30:00+00:00 (+11272s)"
+    },
+    {
+     "context": "2026-08-18",
+     "input": "pm [ibja_pm] known_at 2026-08-18T11:30:00+00:00 (+7252s)"
+    },
+    {
+     "context": "2026-08-28",
+     "input": "pm [ibja_pm] known_at 2026-08-28T11:30:00+00:00 (+17926s)"
+    },
+    {
+     "context": "2026-09-01",
+     "input": "pm [ibja_pm] known_at 2026-09-01T11:30:00+00:00 (+16403s)"
+    },
+    {
+     "context": "2026-09-02",
+     "input": "pm [ibja_pm] known_at 2026-09-02T11:30:00+00:00 (+1171s)"
+    }
+   ]
+  },
+  "guard_repo_fetch": {
+   "name": "r2 same-day IBJA, incl. this repo's fetched_at",
+   "mode": "report",
+   "n_checks": 62,
+   "n_inputs_checked": 124,
+   "n_unchecked": 0,
+   "n_violations": 12,
+   "n_checks_with_violation": 6,
+   "violations_by_source": {
+    "ibja_am": 6,
+    "ibja_pm": 6
+   },
+   "max_late_by_s": 43045.788555,
+   "examples": [
+    {
+     "context": "2026-07-21",
+     "input": "am [ibja_am] known_at 2026-07-21T13:40:14.666998+00:00 (+19087s)"
+    },
+    {
+     "context": "2026-08-18",
+     "input": "am [ibja_am] known_at 2026-08-18T12:37:06.695693+00:00 (+11279s)"
+    },
+    {
+     "context": "2026-08-28",
+     "input": "am [ibja_am] known_at 2026-08-28T15:15:24.592658+00:00 (+31451s)"
+    },
+    {
+     "context": "2026-09-01",
+     "input": "am [ibja_am] known_at 2026-09-01T14:06:16.647295+00:00 (+25779s)"
+    },
+    {
+     "context": "2026-09-02",
+     "input": "am [ibja_am] known_at 2026-09-02T16:29:13.622296+00:00 (+19125s)"
+    }
+   ]
+  },
+  "mae_all_same_day": {
+   "n": 62,
+   "effective_n": 50.02,
+   "mae_m0": 45.48,
+   "mae_m3": 34.79,
+   "p_one_sided_m3_better": 0.00196
+  },
+  "mae_excluding_public_leaks": {
+   "n": 56,
+   "effective_n": 42.44,
+   "mae_m0": 41.73,
+   "mae_m3": 32.93,
+   "p_one_sided_m3_better": 0.00527
+  },
+  "mae_excluding_repo_fetch_leaks": {
+   "n": 56,
+   "effective_n": 42.44,
+   "mae_m0": 41.73,
+   "mae_m3": 32.93,
+   "p_one_sided_m3_better": 0.00527
+  },
+  "note": "exploratory; R2 (reports/r2_nowcast_results.json) is not re-registered"
+ },
+ "F3_live_rows_ibja_after_capture": {
+  "live_rows": 108,
+  "ibja_am_916": {
+   "rows_published_after_capture": 37,
+   "first_capture": "2026-06-07T18:37:55+00:00",
+   "last_capture": "2026-08-03T19:26:07+00:00",
+   "max_hours_after_capture": 11.98
+  },
+  "ibja_pm_916": {
+   "rows_published_after_capture": 38,
+   "first_capture": "2026-06-07T18:37:55+00:00",
+   "last_capture": "2026-08-03T19:26:07+00:00",
+   "max_hours_after_capture": 16.98
+  }
+ }
+}

@@ -40,7 +40,7 @@ def test_issued_range_contains_the_price_and_has_real_end_dates() -> None:
     week = mod._issue(proxy, ibja, "week", friday)
     day = mod._issue(proxy, ibja, "1d", friday)
     assert week is not None and day is not None
-    assert week["lo"] < week["ibja_pm_916"] < week["hi"]
+    assert week["lo"] < float(ibja.loc[friday]) < week["hi"]
     assert week["window_end"] == (friday + pd.Timedelta(days=7)).strftime("%Y-%m-%d")
     assert day["window_end"] == (friday + pd.Timedelta(days=3)).strftime("%Y-%m-%d")  # Monday
 
@@ -61,3 +61,22 @@ def test_summary_reports_rounded_down_coverage() -> None:
     assert s["week"]["n_scored"] == 10
     assert s["week"]["times_out_of_10"] == 8
     assert s["1d"] == {"n_issued": 1, "n_scored": 0}
+
+
+def test_log_entries_never_carry_a_raw_ibja_rate() -> None:
+    # ADR 059/060: the public log must hold only the issued range and the inside/outside verdict,
+    # never the IBJA rate itself (the issue-day rate, or the scored path's low/high).
+    proxy, ibja = _data()
+    t = ibja.index[-20]
+    for horizon in ("1d", "week"):
+        entry = mod._issue(proxy, ibja, horizon, t)
+        assert entry is not None
+        result = mod._score(entry, ibja)
+        assert result is not None
+        # The rates this entry is about: the issue-day rate and every rate on the scored path.
+        days = [t] + [pd.Timestamp(d) for d in result["scored_days"]]
+        raw = {float(ibja.loc[d]) for d in days} | {round(float(ibja.loc[d]), 1) for d in days}
+        for block in (entry, result):
+            assert not {"ibja_pm_916", "path_low", "path_high", "price"} & block.keys()
+            numbers = [v for v in block.values() if isinstance(v, float)]
+            assert not raw & set(numbers), f"raw IBJA value leaked into {sorted(block)}"

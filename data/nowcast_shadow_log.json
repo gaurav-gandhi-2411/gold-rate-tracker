@@ -1,0 +1,139 @@
+{
+  "shadow_after": "2026-09-24",
+  "window_ends": "2026-10-22",
+  "days": [
+    {
+      "date": "2026-09-25",
+      "ibja_date": "2026-09-25",
+      "gap_days": 0,
+      "truth_rs_per_g": 14055.0,
+      "M0_current": 14128.32,
+      "M3_am_pm": 14047.1,
+      "logged_at_utc": "2026-09-27T07:21:14.338708+00:00",
+      "git_sha": "8557e530ecc94341751ade07e3334f0b8c3ee813"
+    },
+    {
+      "date": "2026-09-26",
+      "ibja_date": "2026-09-25",
+      "gap_days": 1,
+      "truth_rs_per_g": 14040.0,
+      "M0_current": 14122.03,
+      "M3_am_pm": 14050.78,
+      "logged_at_utc": "2026-09-27T07:21:14.338708+00:00",
+      "git_sha": "8557e530ecc94341751ade07e3334f0b8c3ee813"
+    },
+    {
+      "date": "2026-09-27",
+      "ibja_date": "2026-09-25",
+      "inputs_known_after_target": [],
+      "gap_days": 2,
+      "truth_rs_per_g": 14040.0,
+      "M0_current": 14122.03,
+      "M3_am_pm": 14050.78,
+      "logged_at_utc": "2026-10-04T07:36:02.820442+00:00",
+      "git_sha": "43b2cee09b8aa6eb315295fa90bcedd877f2b808"
+    },
+    {
+      "date": "2026-09-28",
+      "ibja_date": "2026-09-28",
+      "inputs_known_after_target": [],
+      "gap_days": 0,
+      "truth_rs_per_g": 13710.0,
+      "M0_current": 13738.29,
+      "M3_am_pm": 13752.23,
+      "logged_at_utc": "2026-10-04T07:36:02.820442+00:00",
+      "git_sha": "43b2cee09b8aa6eb315295fa90bcedd877f2b808"
+    },
+    {
+      "date": "2026-09-29",
+      "ibja_date": "2026-09-29",
+      "inputs_known_after_target": [
+        "ibja_am",
+        "ibja_pm"
+      ],
+      "gap_days": 0,
+      "truth_rs_per_g": 13685.0,
+      "M0_current": 13705.66,
+      "M3_am_pm": 13694.65,
+      "logged_at_utc": "2026-10-04T07:36:02.820442+00:00",
+      "git_sha": "43b2cee09b8aa6eb315295fa90bcedd877f2b808"
+    },
+    {
+      "date": "2026-09-30",
+      "ibja_date": "2026-09-30",
+      "inputs_known_after_target": [],
+      "gap_days": 0,
+      "truth_rs_per_g": 13755.0,
+      "M0_current": 13723.42,
+      "M3_am_pm": 13775.31,
+      "logged_at_utc": "2026-10-04T07:36:02.820442+00:00",
+      "git_sha": "43b2cee09b8aa6eb315295fa90bcedd877f2b808"
+    },
+    {
+      "date": "2026-10-01",
+      "ibja_date": "2026-10-01",
+      "inputs_known_after_target": [],
+      "gap_days": 0,
+      "truth_rs_per_g": 13725.0,
+      "M0_current": 13749.55,
+      "M3_am_pm": 13798.61,
+      "logged_at_utc": "2026-10-04T07:36:02.820442+00:00",
+      "git_sha": "43b2cee09b8aa6eb315295fa90bcedd877f2b808"
+    },
+    {
+      "date": "2026-10-02",
+      "ibja_date": "2026-10-01",
+      "inputs_known_after_target": [],
+      "gap_days": 1,
+      "truth_rs_per_g": 13820.0,
+      "M0_current": 13732.67,
+      "M3_am_pm": 13783.84,
+      "logged_at_utc": "2026-10-04T07:36:02.820442+00:00",
+      "git_sha": "43b2cee09b8aa6eb315295fa90bcedd877f2b808"
+    },
+    {
+      "date": "2026-10-03",
+      "ibja_date": "2026-10-01",
+      "inputs_known_after_target": [],
+      "gap_days": 2,
+      "truth_rs_per_g": 13720.0,
+      "M0_current": 13732.67,
+      "M3_am_pm": 13783.84,
+      "logged_at_utc": "2026-10-04T07:36:02.820442+00:00",
+      "git_sha": "43b2cee09b8aa6eb315295fa90bcedd877f2b808"
+    }
+  ],
+  "runs": [
+    {
+      "run_at_utc": "2026-09-27T07:21:14.338708+00:00",
+      "git_sha": "8557e530ecc94341751ade07e3334f0b8c3ee813",
+      "added": 2,
+      "n_same_day": 1,
+      "n_all_logged": 2
+    },
+    {
+      "run_at_utc": "2026-10-04T07:36:02.820442+00:00",
+      "git_sha": "43b2cee09b8aa6eb315295fa90bcedd877f2b808",
+      "added": 7,
+      "n_same_day": 4,
+      "n_same_day_excluded_late_ibja": 1,
+      "n_all_logged": 9,
+      "n_days_input_known_after_target": 1,
+      "mae_m0_rs_per_g": 39.434999999999945,
+      "mae_m3_rs_per_g": 36.01249999999982,
+      "p_one_sided_m3_better": 0.42164017086733535,
+      "effective_n": 5.8068934419809475,
+      "first_day": "2026-09-25",
+      "last_day": "2026-10-01",
+      "all_same_day": {
+        "n_same_day": 5,
+        "mae_m0_rs_per_g": 35.67999999999993,
+        "mae_m3_rs_per_g": 30.73999999999978,
+        "p_one_sided_m3_better": 0.36417405459892493,
+        "effective_n": 6.927706664516403,
+        "first_day": "2026-09-25",
+        "last_day": "2026-10-01"
+      }
+    }
+  ]
+}

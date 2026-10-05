@@ -46,7 +46,7 @@ import pandas as pd
 
 from ml.inr_proxy import (
     DATA_DIR,
-    DUTY_EVENTS_PATH,
+    DUTY_TABLE_PATH,
     GRAMS_PER_QUOTE_UNIT,
     IBJA_PARQUET_PATH,
     PROXY_START_DATE,
@@ -90,7 +90,7 @@ def _build_raw_unlagged(start: str, end: str) -> pd.Series:
 def build_label_series(
     start: str = PROXY_START_DATE,
     end: str | None = None,
-    duty_events_path: Path = DUTY_EVENTS_PATH,
+    duty_events_path: Path = DUTY_TABLE_PATH,
     ibja_path: Path = IBJA_PARQUET_PATH,
 ) -> pd.DataFrame:
     """Build the LABEL-only proxy series: same-day drivers, roll-adjusted,

@@ -138,7 +138,6 @@ def capture_daily_snapshot(
     """
     import json
     from datetime import UTC, datetime, timedelta, timezone
-    from datetime import date as _date
 
     from ml.calendar_events import get_festival_info
 
@@ -257,29 +256,23 @@ def capture_daily_snapshot(
         logger.warning("feature_store: prices.json load failed — %s", exc)
 
     # ------------------------------------------------------------------
-    # 6. Load duty events
+    # 6. Load duty events (data/duty_cbic.json — see ml.duty_schedule)
     # ------------------------------------------------------------------
+    from ml.duty_schedule import DUTY_TABLE_PATH, duty_change_proximity, get_duty_change_dates
+
     duty_change_active: bool = False
     days_since_last_duty_change: int = 9999
 
-    _duty_path: Path = duty_events_path or (
-        Path(__file__).parent.parent / "data" / "duty_events.json"
-    )
+    _duty_path: Path = duty_events_path or DUTY_TABLE_PATH
     try:
         if not _duty_path.exists():
-            raise FileNotFoundError(f"duty_events.json not found: {_duty_path}")
-        with _duty_path.open("r", encoding="utf-8") as fh:
-            duty_events = json.load(fh)
-        # Find the most recent event on or before as_of_date
-        past_events = [e for e in duty_events if e.get("date", "") <= as_of_date]
-        if past_events:
-            latest_event = max(past_events, key=lambda e: e["date"])
-            event_date = _date.fromisoformat(latest_event["date"])
-            days_delta = (as_of_date_obj - event_date).days
-            days_since_last_duty_change = days_delta
-            duty_change_active = days_delta <= 30
+            raise FileNotFoundError(f"duty_cbic.json not found: {_duty_path}")
+        change_dates = get_duty_change_dates(_duty_path)
+        duty_change_active, days_since_last_duty_change = duty_change_proximity(
+            as_of_date_obj, change_dates
+        )
     except Exception as exc:
-        logger.warning("feature_store: duty_events.json load failed — %s", exc)
+        logger.warning("feature_store: duty_cbic.json load failed — %s", exc)
 
     # ------------------------------------------------------------------
     # 7. Festival / calendar info

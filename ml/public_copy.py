@@ -41,6 +41,17 @@ def price_move(current: int, prev: int) -> tuple[str, str]:
     )
 
 
+def ibja_move(delta_per_gram: int, estimate_now: int, fix: str) -> tuple[str, str]:
+    """T15: the official gold benchmark moved between its two latest daily rates (am/pm)."""
+    direction = "up" if delta_per_gram > 0 else "down"
+    when = "this morning" if fix == "am" else "this afternoon"
+    return (
+        f"Gold benchmark {direction} {rs(abs(delta_per_gram))}",
+        f"The official gold rate moved {direction} {when}, about {rs(abs(delta_per_gram))} "
+        f"{_PER_GRAM} for 22K. Our estimate now: {rs(estimate_now)} {_PER_GRAM}.",
+    )
+
+
 def weekly_summary(current: int, delayed: bool = False) -> tuple[str, str]:
     """T4: the Sunday summary. `delayed` is the Monday make-up send."""
     body = f"22K gold is {rs(current)} {_PER_GRAM}. Open the app to see this week's prices."

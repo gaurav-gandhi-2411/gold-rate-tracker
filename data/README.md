@@ -111,21 +111,39 @@ Written by: `ml/backtest.py` (overwrites on each weekly Actions run).
 Long-history (2013-01-01+) INR 22K/10g **proxy** for M1/M2/M4 model pretraining — a PRETRAINING
 INPUT, never a production price source (`ml.sources.ibja`/`ml.calibration` remain the only source
 used for live pricing). Built from COMEX gold futures × USD/INR × the import duty/cess schedule
-(`duty_events.json`) plus a walk-forward-calibrated premium against real IBJA. Full construction
+(`duty_cbic.json`) plus a walk-forward-calibrated premium against real IBJA. Full construction
 methodology, leakage controls, and validation results (67.1% direction agreement vs. real IBJA,
 n=225, 95% CI 60.7–72.9%) in `docs/adr/030-inr22k-proxy-history-for-pretraining.md`.
 
 | Column | Type | Description |
 |---|---|---|
 | `raw_pre_duty` | float | COMEX × FX × purity, before duty, before calibration (INR/10g) |
-| `duty_pct` | float | Effective cumulative import duty+cess rate in force on that date (%) |
+| `duty_pct` | float | Total import duty+cess rate in force on that date (%) — BCD+AIDC+SWS, ex-GST |
 | `raw_with_duty` | float | `raw_pre_duty × (1 + duty_pct/100)` |
 | `proxy_22k_per_10g` | float | **The column to use** — final calibrated proxy |
 | `is_walk_forward_oos` | bool | `True` where the calibration used a genuine walk-forward fold (no future data); `False` where it uses the frozen first fold |
 | `roll_adjusted` | bool | `True` on days GC=F was ratio-adjusted for a detected futures-roll discontinuity |
 
 Written by: `python -m ml.inr_proxy --build` (manual refresh — no CI job wired up yet; re-run when
-`duty_events.json` gains a new entry or the end date needs extending).
+`duty_cbic.json` gains a new entry or the end date needs extending).
+
+**Dating (lagged one day on purpose).** The row dated D holds the global close of the trading day
+*before* D (Monday's row is Friday's close; weekend rows repeat it). ADR 030 lags the proxy as a leak
+control, so it can be used as a same-day feature (`ml/inr_proxy.py` `gc_lag = ...shift(1)`; pinned by
+`tests/test_inr_proxy.py::TestLeakageAlignment`). Code that needs the close *of* day D should read
+`history_seed_inr22k_label.parquet` instead.
+
+---
+
+## history_seed_inr22k_label.parquet
+
+The same-day companion of the proxy: the row dated D holds the global close **of** D (unlagged), with
+its own walk-forward duty adjustment and calibration. Columns `raw_pre_duty`, `raw_with_duty`,
+`label_22k_per_10g`, `is_walk_forward_oos`. Its `raw_pre_duty` on D equals the proxy's on D+1 (within
+0.02% over 5,013 days; roll adjustments differ slightly). Used as a label, and by `ml/nextfix.py` as
+the global price at each US close before `ml.macro`'s cache starts (ADR 065).
+
+Written by: `python -m ml.inr_proxy_labels --build` (manual refresh).
 
 ---
 

@@ -659,3 +659,246 @@ test("AN8: a merged PR whose required check was still running (conclusion null) 
   assert.equal(flagged.length, 1);
   assert.match(flagged[0].problems[0], /lint/);
 });
+
+// ---------------------------------------------------------------------------
+// AQ1c (2026-09-21): the merged scan must not abort on a busy merge day
+// ---------------------------------------------------------------------------
+// It used one 10s AbortController for the whole scan and read check-runs sequentially. Run against the
+// real repo on a day with ~36 merges in 6h: 30 of 31 calls succeeded and the 31st was aborted, so it
+// paged "could not verify" on every tick. These tests give each check-runs call real latency and honour
+// the abort signal, which is what makes the shared-timeout bug observable.
+
+const GREEN = (sha) => [
+  { name: "lint", conclusion: "success", started_at: "2026-09-21T10:00:00Z", head_sha: sha },
+  { name: "pwa-js", conclusion: "success", started_at: "2026-09-21T10:00:01Z", head_sha: sha },
+];
+
+function latencyWorld({ nowMs, closed, delayMs, statusBySha = {}, checkRunsBySha = {} }, ntfyCalls, stats) {
+  const base = mockWorldFetch({ nowMs, closed, checkRunsBySha }, ntfyCalls);
+  return async (url, opts = {}) => {
+    const m = url.match(/commits\/([0-9a-f]+)\/check-runs/);
+    if (!m) return base(url, opts);
+    stats.checkRunCalls.push(m[1]);
+    stats.inFlight++;
+    stats.maxInFlight = Math.max(stats.maxInFlight, stats.inFlight);
+    try {
+      await new Promise((resolve, reject) => {
+        const t = setTimeout(resolve, delayMs);
+        opts.signal?.addEventListener("abort", () => { clearTimeout(t); reject(new Error("This operation was aborted")); });
+      });
+    } finally {
+      stats.inFlight--;
+    }
+    const status = statusBySha[m[1]] || 200;
+    return { ok: status === 200, status, json: async () => ({ check_runs: checkRunsBySha[m[1]] ?? GREEN(m[1]) }) };
+  };
+}
+
+const manyMerged = (nowMs, n) =>
+  Array.from({ length: n }, (_, i) =>
+    closedPr({
+      number: 2000 + i,
+      branch: i % 2 ? "bot/data-sync" : `fix/thing-${i}`,
+      headSha: (0xabc000 + i).toString(16),
+      mergedAtIso: new Date(nowMs - (20 + i) * 60_000).toISOString(),
+    }),
+  );
+
+test("AQ1c: 30 merged PRs with per-call latency verify fine (the old shared-timeout scan aborted)", async () => {
+  const nowMs = Date.parse("2026-09-21T12:00:00Z");
+  const calls = [];
+  const stats = { checkRunCalls: [], inFlight: 0, maxInFlight: 0 };
+  const world = latencyWorld({ nowMs, closed: manyMerged(nowMs, 30), delayMs: 350 }, calls, stats);
+  const started = Date.now();
+  const result = await runCheck({ NTFY_TOPIC: "t", GITHUB_PR_HEALTH_PAT: "pat", DEADMAN_STATE: fakeKv() }, world, nowMs);
+  const elapsed = Date.now() - started;
+  assert.equal(stats.checkRunCalls.length, 30, "every merged PR is verified");
+  assert.equal(result.mergedUncheckedCount, 0);
+  assert.equal(calls.filter((c) => c.opts.headers.Title.includes("could not verify")).length, 0, "no false 'could not verify'");
+  // Sequential would take 30 * 350ms = 10.5s, past the 10s budget that used to abort the scan.
+  assert.ok(elapsed < 6000, `scan took ${elapsed}ms; it should be concurrent (~2s), not sequential (~10.5s)`);
+});
+
+test("AQ1c: concurrency is bounded (not sequential, not unbounded)", async () => {
+  const nowMs = Date.parse("2026-09-21T12:00:00Z");
+  const stats = { checkRunCalls: [], inFlight: 0, maxInFlight: 0 };
+  const world = latencyWorld({ nowMs, closed: manyMerged(nowMs, 30), delayMs: 60 }, [], stats);
+  await runCheck({ NTFY_TOPIC: "t", GITHUB_PR_HEALTH_PAT: "pat", DEADMAN_STATE: fakeKv() }, world, nowMs);
+  assert.ok(stats.maxInFlight >= 2, `expected concurrent reads, saw max ${stats.maxInFlight}`);
+  assert.ok(stats.maxInFlight <= 6, `expected at most 6 in flight, saw ${stats.maxInFlight}`);
+});
+
+test("AQ1c: a merged PR seen passing is not re-read on later ticks (steady state costs ~0 subrequests)", async () => {
+  const nowMs = Date.parse("2026-09-21T12:00:00Z");
+  const env = { NTFY_TOPIC: "t", GITHUB_PR_HEALTH_PAT: "pat", DEADMAN_STATE: fakeKv() };
+  const closed = manyMerged(nowMs, 12);
+  const first = { checkRunCalls: [], inFlight: 0, maxInFlight: 0 };
+  await runCheck(env, latencyWorld({ nowMs, closed, delayMs: 5 }, [], first), nowMs);
+  assert.equal(first.checkRunCalls.length, 12);
+  const second = { checkRunCalls: [], inFlight: 0, maxInFlight: 0 };
+  await runCheck(env, latencyWorld({ nowMs: nowMs + 30 * MINUTE, closed, delayMs: 5 }, [], second), nowMs + 30 * MINUTE);
+  assert.equal(second.checkRunCalls.length, 0, "already-verified PRs must be served from the cache");
+});
+
+test("AQ1c: a PR that did NOT pass is re-read every tick and still pages (the cache never hides a failure)", async () => {
+  const nowMs = Date.parse("2026-09-21T12:00:00Z");
+  const env = { NTFY_TOPIC: "t", GITHUB_PR_HEALTH_PAT: "pat", DEADMAN_STATE: fakeKv() };
+  const closed = manyMerged(nowMs, 5);
+  const badSha = closed[2].head.sha;
+  const calls = [];
+  const s1 = { checkRunCalls: [], inFlight: 0, maxInFlight: 0 };
+  const r1 = await runCheck(env, latencyWorld({ nowMs, closed, delayMs: 5, checkRunsBySha: { [badSha]: [] } }, calls, s1), nowMs);
+  assert.equal(r1.mergedUncheckedCount, 1);
+  const s2 = { checkRunCalls: [], inFlight: 0, maxInFlight: 0 };
+  await runCheck(env, latencyWorld({ nowMs: nowMs + 30 * MINUTE, closed, delayMs: 5, checkRunsBySha: { [badSha]: [] } }, calls, s2), nowMs + 30 * MINUTE);
+  assert.deepEqual(s2.checkRunCalls, [badSha], "only the failing PR is re-read");
+});
+
+test("AQ1c: a real GitHub error on one PR still fails closed (pages 'could not verify'), it is not swallowed", async () => {
+  const nowMs = Date.parse("2026-09-21T12:00:00Z");
+  const calls = [];
+  const closed = manyMerged(nowMs, 8);
+  const stats = { checkRunCalls: [], inFlight: 0, maxInFlight: 0 };
+  const world = latencyWorld({ nowMs, closed, delayMs: 5, statusBySha: { [closed[4].head.sha]: 500 } }, calls, stats);
+  await runCheck({ NTFY_TOPIC: "t", GITHUB_PR_HEALTH_PAT: "pat", DEADMAN_STATE: fakeKv() }, world, nowMs);
+  const alert = calls.find((c) => c.opts.headers.Title.includes("could not verify"));
+  assert.ok(alert, "an unverifiable scan must page");
+  assert.match(alert.opts.body, /HTTP 500/);
+});
+
+// ---------------------------------------------------------------------------
+// AQ1b (2026-09-21): Telegram as a delivery channel, ntfy as the fallback
+// ---------------------------------------------------------------------------
+// ntfy.sh answered every Worker attempt since the #1797 deploy with 522 or 429 (4 of 4). Telegram is
+// tried first when configured; one message reaches the phone, not one per channel.
+
+const TG_TOKEN = "123456:SECRET-bot-token-value";
+const TG_CHAT = "987654";
+const STALE_WORLD = (nowMs, calls) => mockWorldFetch({ nowMs, ageHours: 11 }, calls); // WARN staleness -> one alert
+
+function withTelegram(base, tg) {
+  return async (url, opts) => (String(url).startsWith("https://api.telegram.org/") ? tg(url, opts) : base(url, opts));
+}
+const tgOk = (id = 4242) => async () => ({ ok: true, status: 200, json: async () => ({ ok: true, result: { message_id: id } }) });
+const captureErrors = () => {
+  const lines = [];
+  const orig = console.error;
+  console.error = (...a) => lines.push(a.join(" "));
+  return { lines, restore: () => (console.error = orig) };
+};
+// The first run of each IST day also sends the daily heartbeat; pre-seed today's date so each test
+// sees only the one alert it is about.
+const kvHeartbeatDone = () => {
+  const kv = fakeKv();
+  kv.put("deadman:last_heartbeat_date_ist", "2026-09-21");
+  return kv;
+};
+const TG_ENV = () => ({ NTFY_TOPIC: "t", TELEGRAM_BOT_TOKEN: TG_TOKEN, TELEGRAM_CHAT_ID: TG_CHAT, DEADMAN_STATE: kvHeartbeatDone() });
+
+test("AQ1b: Telegram succeeds -> delivered via telegram, ntfy is NOT also posted, message id recorded", async () => {
+  const nowMs = Date.parse("2026-09-21T12:00:00Z");
+  const ntfyCalls = [];
+  const tgCalls = [];
+  const world = withTelegram(STALE_WORLD(nowMs, ntfyCalls), async (u, o) => (tgCalls.push({ u, o }), tgOk(4242)()));
+  const r = await runCheck(TG_ENV(), world, nowMs);
+  assert.equal(r.sent, true);
+  assert.equal(ntfyCalls.length, 0, "one message reaches the phone, not one per channel");
+  assert.equal(tgCalls.length, 1);
+  assert.match(tgCalls[0].u, /^https:\/\/api\.telegram\.org\/bot.+\/sendMessage$/);
+  assert.equal(JSON.parse(tgCalls[0].o.body).chat_id, TG_CHAT);
+  assert.deepEqual(r.ntfy.channels.deliveredVia, ["telegram"]);
+  assert.equal(r.ntfy.lastDelivery.id, 4242);
+  assert.equal(r.ntfy.lastDelivery.channel, "telegram");
+});
+
+test("AQ1b: Telegram fails -> falls back to ntfy, and the fallback is visible (not a clean run)", async () => {
+  const nowMs = Date.parse("2026-09-21T12:00:00Z");
+  const ntfyCalls = [];
+  const world = withTelegram(STALE_WORLD(nowMs, ntfyCalls), async () => ({ ok: false, status: 502, json: async () => ({}) }));
+  const cap = captureErrors();
+  let r;
+  try {
+    r = await runCheck(TG_ENV(), world, nowMs);
+  } finally {
+    cap.restore();
+  }
+  assert.equal(r.sent, true);
+  assert.equal(ntfyCalls.length, 1);
+  assert.deepEqual(r.ntfy.channels.deliveredVia, ["ntfy"]);
+  assert.ok(cap.lines.some((l) => /used ntfy after telegram failed/.test(l)), cap.lines.join("|"));
+});
+
+test("AQ1b: both channels fail -> not sent, and BOTH failures are reported", async () => {
+  const nowMs = Date.parse("2026-09-21T12:00:00Z");
+  const ntfyCalls = [];
+  const world = withTelegram(
+    mockWorldFetch({ nowMs, ageHours: 11, ntfy: () => ({ ok: false, status: 522 }) }, ntfyCalls),
+    async () => ({ ok: false, status: 401, json: async () => ({ ok: false, description: "Unauthorized" }) }),
+  );
+  const cap = captureErrors();
+  let r;
+  try {
+    r = await runCheck(TG_ENV(), world, nowMs);
+  } finally {
+    cap.restore();
+  }
+  assert.equal(r.sent, false);
+  assert.equal(r.ntfy.failed, 1);
+  assert.match(r.ntfy.failures[0].error, /telegram: HTTP 401: Unauthorized/);
+  assert.match(r.ntfy.failures[0].error, /ntfy: HTTP 522/);
+});
+
+test("AQ1b: HTTP 200 with ok:false in the body is a FAILURE (Telegram reports some errors that way)", async () => {
+  const nowMs = Date.parse("2026-09-21T12:00:00Z");
+  const world = withTelegram(STALE_WORLD(nowMs, []), async () => ({ ok: true, status: 200, json: async () => ({ ok: false, description: "chat not found" }) }));
+  const cap = captureErrors();
+  let r;
+  try {
+    r = await runCheck({ ...TG_ENV(), NTFY_TOPIC: undefined }, world, nowMs);
+  } finally {
+    cap.restore();
+  }
+  assert.equal(r.sent, false);
+  assert.match(r.ntfy.failures[0].error, /chat not found/);
+});
+
+test("AQ1b: the bot token never appears in the response, KV or logs, even if a fetch error echoes the URL", async () => {
+  const nowMs = Date.parse("2026-09-21T12:00:00Z");
+  const env = { ...TG_ENV(), NTFY_TOPIC: undefined };
+  const world = withTelegram(STALE_WORLD(nowMs, []), async (u) => {
+    throw new Error(`fetch failed for ${u}`);
+  });
+  const cap = captureErrors();
+  let r;
+  try {
+    r = await runCheck(env, world, nowMs);
+  } finally {
+    cap.restore();
+  }
+  const everything = JSON.stringify(r) + cap.lines.join("\n") + (await env.DEADMAN_STATE.get("deadman:last_ntfy_delivery"));
+  assert.ok(!everything.includes("SECRET-bot-token-value"), "token leaked");
+  assert.ok(!everything.includes(TG_TOKEN), "token leaked");
+  assert.match(r.ntfy.failures[0].error, /\[redacted\]/);
+});
+
+test("AQ1b: a Worker configured with ONLY Telegram works (no NTFY_TOPIC needed), fingerprint is null", async () => {
+  const nowMs = Date.parse("2026-09-21T12:00:00Z");
+  const env = { ...TG_ENV(), NTFY_TOPIC: undefined };
+  const r = await runCheck(env, withTelegram(STALE_WORLD(nowMs, []), tgOk(7)), nowMs);
+  assert.equal(r.sent, true);
+  assert.equal(r.ntfy.topicFingerprint, null);
+  assert.equal(r.ntfy.channels.telegramConfigured, true);
+  assert.equal(r.ntfy.channels.ntfyConfigured, false);
+});
+
+test("AQ1b: ntfy-only deployments behave exactly as before (no Telegram calls)", async () => {
+  const nowMs = Date.parse("2026-09-21T12:00:00Z");
+  const ntfyCalls = [];
+  let tg = 0;
+  const world = withTelegram(STALE_WORLD(nowMs, ntfyCalls), async () => (tg++, tgOk()()));
+  const r = await runCheck({ NTFY_TOPIC: "t", DEADMAN_STATE: kvHeartbeatDone() }, world, nowMs);
+  assert.equal(tg, 0);
+  assert.equal(ntfyCalls.length, 1);
+  assert.equal(r.sent, true);
+  assert.equal(r.ntfy.channels.telegramConfigured, false);
+});

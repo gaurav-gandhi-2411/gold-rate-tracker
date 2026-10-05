@@ -59,6 +59,9 @@ const KV_TANISHQ_STATE_KEY = "deadman:tanishq_last_state"; // Q4: independent de
 const KV_HEARTBEAT_KEY = "deadman:last_heartbeat_date_ist";
 const KV_PR_TRIGGER_HEALTH_KEY = "deadman:pr_trigger_health_state"; // AI2: own key, own dedup state
 const KV_MERGED_UNCHECKED_KEY = "deadman:merged_unchecked_state"; // AL3a: PR number -> alerted-at
+// AQ1c: PR number -> head SHA of merged PRs already seen with every required context SUCCESS, so a
+// merged PR is read once rather than every tick. Pruned to the lookback window on every write.
+const KV_MERGED_VERIFIED_KEY = "deadman:merged_verified";
 const KV_LAST_DELIVERY_KEY = "deadman:last_ntfy_delivery"; // AN3: last delivery attempt, echoed by ?trigger=1
 const FETCH_TIMEOUT_MS = 10_000;
 const GITHUB_REPO = "gaurav-gandhi-2411/gold-rate-tracker";
@@ -195,60 +198,107 @@ async function fetchOpenPrTriggerHealth(fetchImpl, token) {
   }
 }
 
+// Concurrent GitHub reads per scan. Bounded so a busy merge day cannot fan out without limit.
+const MERGED_SCAN_CONCURRENCY = 6;
+
+/** One GET with ITS OWN timeout (a shared one is what broke the scan, see fetchRecentlyMergedPrs). */
+async function getJson(fetchImpl, url, headers) {
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), FETCH_TIMEOUT_MS);
+  try {
+    const resp = await fetchImpl(url, { headers, signal: controller.signal });
+    if (!resp.ok) return { ok: false, status: resp.status, data: null };
+    return { ok: true, status: resp.status, data: await resp.json() };
+  } finally {
+    clearTimeout(timeout);
+  }
+}
+
+/** Run `fn` over `items` with at most `limit` in flight; results keep input order. */
+async function mapLimit(items, limit, fn) {
+  const out = new Array(items.length);
+  let next = 0;
+  const worker = async () => {
+    while (next < items.length) {
+      const i = next++;
+      out[i] = await fn(items[i]);
+    }
+  };
+  await Promise.all(Array.from({ length: Math.min(limit, items.length) }, worker));
+  return out;
+}
+
 /**
- * AL3a: PRs merged inside the lookback window, each with whether its head SHA (the head at
- * merge time) has a lint/pwa-js check-run. Same fail-closed batching as the open-PR fetch above:
- * one failed API call fails the whole batch, never a silently shorter list. Bot PRs are NOT
- * excluded here -- 355/355 merged bot PRs had check-runs, so a bot PR merged without one is
- * exactly the anomaly this scan exists to surface.
+ * AL3a: PRs merged inside the lookback window, each with whether every required context is SUCCESS
+ * on its head SHA. Same fail-closed batching as the open-PR fetch above: one failed API call fails
+ * the whole batch, never a silently shorter list. Bot PRs are NOT excluded here -- 355/355 merged
+ * bot PRs had check-runs, so a bot PR merged without one is exactly the anomaly this scan exists
+ * to surface.
+ *
+ * AQ1c (2026-09-21): this used ONE AbortController (10s) for the whole scan and awaited one
+ * check-runs call per merged PR in sequence. On a normal day that is a handful of calls; on a day
+ * with ~36 merges in 6h it exhausted the budget mid-scan ("This operation was aborted"), so the
+ * scan paged "could not verify" on every tick. Reproduced by running this function against the
+ * real repo: 30 of 31 calls succeeded, the 31st was aborted. Now: a timeout per request, bounded
+ * concurrency, and `verified` (PR number -> head SHA of PRs already seen passing) so each merged PR
+ * is read once instead of every 30 minutes, which also keeps the per-invocation subrequest count
+ * near zero in steady state. Returns `verifiedNext` (only PRs still inside the lookback).
  */
-async function fetchRecentlyMergedPrs(fetchImpl, token, nowMs) {
+async function fetchRecentlyMergedPrs(fetchImpl, token, nowMs, verified = {}) {
   const headers = {
     "User-Agent": "gold-rate-tracker-deadman-switch",
     Authorization: `Bearer ${token}`,
     Accept: "application/vnd.github+json",
   };
-  const controller = new AbortController();
-  const timeout = setTimeout(() => controller.abort(), FETCH_TIMEOUT_MS);
   try {
     // sort=updated desc: anything merged in the last few hours is among the first page.
-    const listResp = await fetchImpl(
+    const list = await getJson(
+      fetchImpl,
       `https://api.github.com/repos/${GITHUB_REPO}/pulls?state=closed&sort=updated&direction=desc&per_page=50`,
-      { headers, signal: controller.signal },
+      headers,
     );
-    if (!listResp.ok) return { mergedPrs: null, failure: `list closed PRs HTTP ${listResp.status}` };
-    const closed = await listResp.json();
+    if (!list.ok) return { mergedPrs: null, failure: `list closed PRs HTTP ${list.status}` };
     const cutoffMs = nowMs - MERGED_LOOKBACK_MINUTES * 60_000;
-    const recent = closed.filter((p) => p.merged_at && Date.parse(p.merged_at) >= cutoffMs);
+    const recent = list.data.filter((p) => p.merged_at && Date.parse(p.merged_at) >= cutoffMs);
 
-    const mergedPrs = [];
-    for (const p of recent) {
+    const results = await mapLimit(recent, MERGED_SCAN_CONCURRENCY, async (p) => {
       const sha = p.head.sha;
-      const checksResp = await fetchImpl(
-        `https://api.github.com/repos/${GITHUB_REPO}/commits/${sha}/check-runs?per_page=100`,
-        { headers, signal: controller.signal },
-      );
-      if (!checksResp.ok) return { mergedPrs: null, failure: `check-runs ${sha} HTTP ${checksResp.status}` };
-      const checkData = await checksResp.json();
-      // AN8: the same predicate scripts/check_required_checks_positive.py applies before a self-merge --
-      // every required context SUCCESS, not merely present (#1541 merged over a failing lint).
-      const { allPass, results } = evaluateRequiredChecks(REQUIRED_CONTEXTS, checkData.check_runs || []);
-      mergedPrs.push({
-        number: p.number,
-        branch: p.head.ref,
-        headSha: sha,
-        mergedAtIso: p.merged_at,
-        requiredOk: allPass,
-        problems: Object.entries(results)
-          .filter(([, v]) => v !== "SUCCESS")
-          .map(([context, v]) => `${context}: ${v}`),
-      });
-    }
-    return { mergedPrs, failure: null };
+      const base = { number: p.number, branch: p.head.ref, headSha: sha, mergedAtIso: p.merged_at };
+      if (verified[String(p.number)] === sha) return { pr: { ...base, requiredOk: true, problems: [] } };
+      try {
+        const checks = await getJson(
+          fetchImpl,
+          `https://api.github.com/repos/${GITHUB_REPO}/commits/${sha}/check-runs?per_page=100`,
+          headers,
+        );
+        if (!checks.ok) return { failure: `check-runs ${sha} HTTP ${checks.status}` };
+        // AN8: the same predicate scripts/check_required_checks_positive.py applies before a self-merge --
+        // every required context SUCCESS, not merely present (#1541 merged over a failing lint).
+        const { allPass, results: perContext } = evaluateRequiredChecks(
+          REQUIRED_CONTEXTS,
+          checks.data.check_runs || [],
+        );
+        return {
+          pr: {
+            ...base,
+            requiredOk: allPass,
+            problems: Object.entries(perContext)
+              .filter(([, v]) => v !== "SUCCESS")
+              .map(([context, v]) => `${context}: ${v}`),
+          },
+        };
+      } catch (err) {
+        return { failure: `check-runs ${sha}: ${String(err && err.message ? err.message : err)}` };
+      }
+    });
+    const failed = results.find((r) => r.failure);
+    if (failed) return { mergedPrs: null, failure: failed.failure };
+    const mergedPrs = results.map((r) => r.pr);
+    const verifiedNext = {};
+    for (const pr of mergedPrs) if (pr.requiredOk) verifiedNext[String(pr.number)] = pr.headSha;
+    return { mergedPrs, failure: null, verifiedNext };
   } catch (err) {
     return { mergedPrs: null, failure: String(err && err.message ? err.message : err) };
-  } finally {
-    clearTimeout(timeout);
   }
 }
 
@@ -285,6 +335,69 @@ async function postToNtfy(fetchImpl, topic, alert) {
   } catch (err) {
     return { ok: false, status: null, id: null, error: String(err && err.message ? err.message : err) };
   }
+}
+
+/**
+ * Telegram Bot API sendMessage (AQ1b). Free, reachable from Cloudflare Workers, independent of GitHub
+ * Actions, and it answers synchronously with `result.message_id`, which is evidence Telegram accepted
+ * the message. ok requires BOTH an HTTP 2xx and `ok: true` in the body.
+ *
+ * The bot token is part of the request URL, and a fetch failure message can echo that URL, so every
+ * error string is scrubbed of the token before it can reach a response, a KV record or a log line.
+ */
+async function postToTelegram(fetchImpl, token, chatId, alert) {
+  const scrub = (s) => String(s).split(token).join("[redacted]");
+  try {
+    const resp = await fetchImpl(`https://api.telegram.org/bot${token}/sendMessage`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ chat_id: chatId, text: `${alert.title}\n${alert.body}`, disable_web_page_preview: true }),
+    });
+    const status = resp && resp.status !== undefined ? resp.status : null;
+    let data = null;
+    if (resp && typeof resp.json === "function") {
+      try {
+        data = await resp.json();
+      } catch {
+        // an unparseable body is judged by the status alone below
+      }
+    }
+    const ok = Boolean(resp && resp.ok) && Boolean(data && data.ok === true);
+    const id = ok && data.result ? data.result.message_id ?? null : null;
+    const why = data && data.description ? `: ${scrub(data.description)}` : "";
+    return { ok, status, id, error: ok ? null : `HTTP ${status ?? "no response"}${why}` };
+  } catch (err) {
+    return { ok: false, status: null, id: null, error: scrub(err && err.message ? err.message : err) };
+  }
+}
+
+/**
+ * Deliver one alert over the configured channels: Telegram first (when TELEGRAM_BOT_TOKEN and
+ * TELEGRAM_CHAT_ID are set), then ntfy as the fallback. One message reaches the phone, not one per
+ * channel. ok means SOME channel confirmed; `attempts` records every channel tried, so a fallback
+ * that only worked because the first path was down is visible instead of hidden.
+ */
+async function postAlert(fetchImpl, env, alert) {
+  const attempts = [];
+  if (env.TELEGRAM_BOT_TOKEN && env.TELEGRAM_CHAT_ID) {
+    const r = await postToTelegram(fetchImpl, env.TELEGRAM_BOT_TOKEN, env.TELEGRAM_CHAT_ID, alert);
+    attempts.push({ channel: "telegram", ...r });
+    if (r.ok) return { ...r, channel: "telegram", attempts };
+  }
+  if (env.NTFY_TOPIC) {
+    const r = await postToNtfy(fetchImpl, env.NTFY_TOPIC, alert);
+    attempts.push({ channel: "ntfy", ...r });
+    if (r.ok) return { ...r, channel: "ntfy", attempts };
+  }
+  const last = attempts[attempts.length - 1];
+  return {
+    ok: false,
+    status: last ? last.status : null,
+    id: null,
+    channel: last ? last.channel : null,
+    error: last ? attempts.map((a) => `${a.channel}: ${a.error}`).join("; ") : "no delivery channel configured",
+    attempts,
+  };
 }
 
 // First 4 bytes of sha256(topic) as hex: lets GG compare the Worker's NTFY_TOPIC secret with the
@@ -324,8 +437,8 @@ async function loadState(env, kvKey) {
 }
 
 export async function runCheck(env, fetchImpl, nowMs) {
-  if (!env.NTFY_TOPIC) {
-    return { skipped: "NTFY_TOPIC secret not set" };
+  if (!env.NTFY_TOPIC && !(env.TELEGRAM_BOT_TOKEN && env.TELEGRAM_CHAT_ID)) {
+    return { skipped: "no delivery channel configured (NTFY_TOPIC, or TELEGRAM_BOT_TOKEN and TELEGRAM_CHAT_ID)" };
   }
 
   const { predictedAtIso, scrapedAtIso, failure } = await fetchForecast(fetchImpl);
@@ -338,9 +451,13 @@ export async function runCheck(env, fetchImpl, nowMs) {
   // BEFORE sending, so a failed send also suppressed the retry for the whole reminder interval.
   const deliveries = [];
   const deliver = async (toSend) => {
-    const r = await postToNtfy(fetchImpl, env.NTFY_TOPIC, toSend);
-    deliveries.push({ title: toSend.title, ok: r.ok, status: r.status, id: r.id, error: r.error });
-    if (!r.ok) console.error(`ntfy delivery FAILED for "${toSend.title}": ${r.error}`);
+    const r = await postAlert(fetchImpl, env, toSend);
+    deliveries.push({ title: toSend.title, ok: r.ok, status: r.status, id: r.id, error: r.error, channel: r.channel });
+    if (!r.ok) console.error(`delivery FAILED for "${toSend.title}": ${r.error}`);
+    else if (r.attempts.length > 1) {
+      // A fallback that worked only because the first path failed must not look like a clean run.
+      console.error(`delivery for "${toSend.title}" used ${r.channel} after ${r.attempts[0].channel} failed: ${r.attempts[0].error}`);
+    }
     return r.ok;
   };
 
@@ -434,14 +551,20 @@ export async function runCheck(env, fetchImpl, nowMs) {
   let mergedUncheckedSent = false;
   let mergedUncheckedCount = 0;
   if (env.GITHUB_PR_HEALTH_PAT) {
-    const { mergedPrs, failure: mergedFetchFailure } = await fetchRecentlyMergedPrs(
+    const verified = (await loadState(env, KV_MERGED_VERIFIED_KEY)) || {};
+    const { mergedPrs, failure: mergedFetchFailure, verifiedNext } = await fetchRecentlyMergedPrs(
       fetchImpl,
       env.GITHUB_PR_HEALTH_PAT,
       nowMs,
+      verified,
     );
     if (mergedFetchFailure) {
       mergedUncheckedSent = await deliver(buildMergedUncheckedFetchFailureAlert(mergedFetchFailure));
     } else {
+      // Verification is independent of whether an alert is delivered: a PR seen passing stays passed.
+      if (env.DEADMAN_STATE) {
+        await env.DEADMAN_STATE.put(KV_MERGED_VERIFIED_KEY, JSON.stringify(verifiedNext));
+      }
       const flagged = classifyMergedUnchecked(mergedPrs, nowMs);
       mergedUncheckedCount = flagged.length;
       const previousMergedState = await loadState(env, KV_MERGED_UNCHECKED_KEY);
@@ -483,11 +606,11 @@ export async function runCheck(env, fetchImpl, nowMs) {
   if (env.DEADMAN_STATE && lastAttempt) {
     await env.DEADMAN_STATE.put(
       KV_LAST_DELIVERY_KEY,
-      JSON.stringify({ atMs: nowMs, ok: lastAttempt.ok, status: lastAttempt.status, id: lastAttempt.id, title: lastAttempt.title }),
+      JSON.stringify({ atMs: nowMs, ok: lastAttempt.ok, status: lastAttempt.status, id: lastAttempt.id, channel: lastAttempt.channel, title: lastAttempt.title }),
     );
   }
   const lastDelivery = lastAttempt
-    ? { atMs: nowMs, ok: lastAttempt.ok, status: lastAttempt.status, id: lastAttempt.id, title: lastAttempt.title }
+    ? { atMs: nowMs, ok: lastAttempt.ok, status: lastAttempt.status, id: lastAttempt.id, channel: lastAttempt.channel, title: lastAttempt.title }
     : await loadState(env, KV_LAST_DELIVERY_KEY);
 
   return {
@@ -507,8 +630,14 @@ export async function runCheck(env, fetchImpl, nowMs) {
       delivered: deliveries.length - failed.length,
       failed: failed.length,
       failures: failed.map((d) => ({ title: d.title, status: d.status, error: d.error })),
-      topicFingerprint: await topicFingerprint(env.NTFY_TOPIC),
+      topicFingerprint: env.NTFY_TOPIC ? await topicFingerprint(env.NTFY_TOPIC) : null,
       lastDelivery,
+      // Which channels this deployment is configured with, and which one carried each delivery.
+      channels: {
+        telegramConfigured: Boolean(env.TELEGRAM_BOT_TOKEN && env.TELEGRAM_CHAT_ID),
+        ntfyConfigured: Boolean(env.NTFY_TOPIC),
+        deliveredVia: deliveries.filter((d) => d.ok).map((d) => d.channel),
+      },
     },
     // AC3 (audit 2026-09-10): echoes the constants this exact deployment is
     // actually running with, not a hardcoded copy of master's current

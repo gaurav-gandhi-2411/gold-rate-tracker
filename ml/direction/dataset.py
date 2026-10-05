@@ -28,6 +28,8 @@ import pandas as pd
 
 from ml.direction.price_units import INR_PER_10G, declare_units
 
+PROVENANCE_COLS: tuple[str, ...] = ("source", "capture_utc")
+
 # ---------------------------------------------------------------------------
 # Paths
 # ---------------------------------------------------------------------------
@@ -263,6 +265,13 @@ def build_dataset(
             binary_h2 = float(binary_h2_int)
 
         feature_vals = {col: row[col] for col in FEATURE_COLS}
+        # Provenance for ml.direction.leak_checks (ADR 061): when each feature became known.
+        # Not model inputs -- every harness selects feature columns explicitly.
+        provenance = {col: row.get(col) for col in PROVENANCE_COLS if col in row.index} | {
+            f"{col}_asof_date": row.get(f"{col}_asof_date")
+            for col in FEATURE_COLS
+            if f"{col}_asof_date" in row.index and col != "ibja_pm_916"
+        }
 
         row_out: dict = {
             "as_of_date": as_of,
@@ -287,6 +296,7 @@ def build_dataset(
             "label_date_h2": label_date_h2,
             "ibja_pm_916_asof_date": ibja_asof,
             "n_macro_null": n_macro_null_val,
+            **provenance,
         }
 
         # Extra horizons (M2: 5/10-day reframed targets). idx0 + (N-1) is the

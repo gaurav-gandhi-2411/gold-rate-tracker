@@ -2,7 +2,23 @@
 
 *Auto-measured by `ml/direction/evaluate.py` (weekly via `.github/workflows/eval-direction.yml`). Latest run embedded below; live numbers are in `data/direction_baseline.json` (per-horizon, with embedded gate verdicts) and the trend in `data/direction_eval_history.jsonl`.*
 
-## Verdict (as of 2026-08-05)
+## Update 2026-10-02: the next-move signal is ON (ADR 064)
+
+A different model now drives the site's direction line: `ml/nextfix.py`. It uses how global gold
+and USD/INR moved after India's official rate was fixed, which the harness below never saw.
+
+- **Out-of-sample record** (same-day data, ADR 065): 138 days (2025-07-17 .. 2026-09-23). It
+  was right **65.2%** of the time, 95% CI [58.0, 72.5], against 48.6% for always-up (p = 0.004).
+  It is shown only in the window after the US close; elsewhere there is no evidence for a direction.
+- **Gates:** `decide_direction_signal` ships on it (Brier 0.220 vs 0.514, ECE 0.068). The timing
+  gate does not pass (ECE > 0.05), so there is still no buy/wait/sell signal.
+- **Promotion:** GG promoted it on 2026-10-02 (`data/direction_promotion_record.json`).
+- **Re-checked every run:** if the record stops passing the gate, the line hides itself.
+
+The section below describes the `ml/direction/` harness, which still runs weekly and is still
+dark.
+
+## Verdict for the ml/direction harness (as of 2026-08-05)
 
 **DARK at every horizon and for both signal types.** No model beats the always-up base rate out-of-sample with significance, so neither a calibrated direction probability nor a buy/wait/sell timing signal is shown to users. This is the gate (`ml/direction/gate.py`) working as designed (ADR 019, honest-baseline ADR 005), not a failure.
 
@@ -56,15 +72,17 @@ Dataset: 150 labelled rows (h=1) / 148 (h=2), 2025-01-09 → 2026-08-03, from th
 
 ## Majority-class collapse (G3, session dated 2026-08-28)
 
-Beyond "not significant yet" above, the logistic model's own *predictions*
-— not just the labels' base rate — have stopped varying. In its most
-recent 30 folds, at **both** horizons, it predicted "up" every single
-time, exactly matching the always-up baseline's own prediction every fold:
+On 2026-08-28 the logistic model's own *predictions* — not just the
+labels' base rate — had stopped varying: in its most recent 30 folds, at
+both horizons, it predicted "up" every time, matching the always-up
+baseline every fold. That no longer holds (eval of 2026-09-28, after the
+F1 late-input fix in #2122): the live table below shows neither horizon
+collapsed. Read the table, not this paragraph, for the current state:
 
 | Horizon | N folds | Trailing-30 "up" fraction | Majority-class collapse |
 |---|---|---|---|
-| h=1 | <!--METRIC:data/direction_baseline.json#horizons.h1.n_test_folds:int-->154<!--/METRIC--> | <!--METRIC:data/direction_baseline.json#horizons.h1.trailing_30_fold_up_fraction:pct1-->0.0%<!--/METRIC--> | <!--METRIC:data/direction_baseline.json#horizons.h1.majority_class_collapse:raw-->True<!--/METRIC--> |
-| h=2 | <!--METRIC:data/direction_baseline.json#horizons.h2.n_test_folds:int-->148<!--/METRIC--> | <!--METRIC:data/direction_baseline.json#horizons.h2.trailing_30_fold_up_fraction:pct1-->86.7%<!--/METRIC--> | <!--METRIC:data/direction_baseline.json#horizons.h2.majority_class_collapse:raw-->False<!--/METRIC--> |
+| h=1 | <!--METRIC:data/direction_baseline.json#horizons.h1.n_test_folds:int-->156<!--/METRIC--> | <!--METRIC:data/direction_baseline.json#horizons.h1.trailing_30_fold_up_fraction:pct1-->30.0%<!--/METRIC--> | <!--METRIC:data/direction_baseline.json#horizons.h1.majority_class_collapse:raw-->False<!--/METRIC--> |
+| h=2 | <!--METRIC:data/direction_baseline.json#horizons.h2.n_test_folds:int-->150<!--/METRIC--> | <!--METRIC:data/direction_baseline.json#horizons.h2.trailing_30_fold_up_fraction:pct1-->83.3%<!--/METRIC--> | <!--METRIC:data/direction_baseline.json#horizons.h2.majority_class_collapse:raw-->False<!--/METRIC--> |
 
 (`majority_class_collapse` fires at a trailing-30-fold fraction >= 0.95
 either direction — see `ml/direction/evaluate.py`'s
@@ -74,10 +92,9 @@ above is live, not hand-typed.)
 
 **Why this matters for the significance test above:** a model that always
 agrees with a trivial baseline can never generate a *new* discordant pair
-against it. This is not just "not yet significant" — the gate's p-value is
-currently **structurally frozen** at either horizon, regardless of how many
-more weekly runs pass, for as long as this trailing-window behavior
-persists.
+against it. While a horizon shows `True` above, its p-value is
+**structurally frozen**, regardless of how many more weekly runs pass; with
+`False` at both horizons, as of the latest eval, the p-values can move again.
 
 **The arithmetic** (point-in-time, measured 2026-08-28 — a derived
 calculation across multiple discordant-pair counts and an extrapolation

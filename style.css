@@ -247,6 +247,11 @@
   --ts-xs:   11px;  --ts-sm:  13px;  --ts-base: 16px;
   --ts-md:   20px;  --ts-lg:  24px;  --ts-xl:   32px;
   --ts-2xl:  40px;  --ts-3xl: 56px;
+  --ts-4xl:  96px;   /* page_v2's price -- the one display-size figure */
+
+  /* Line heights + weights -- the rest of the type scale */
+  --lh-tight: 1;     --lh-snug: 1.3;     --lh-body: 1.55;
+  --fw-regular: 400; --fw-medium: 500;   --fw-semibold: 600;
 
   /* Radii */
   --radius-sm: 10px;
@@ -588,6 +593,11 @@ main {
 }
 
 .freshness-pill {
+  /* May wrap to two lines when its text is long; never nowrap -- a one-line pill pushed the
+     header past a 390px screen and the phone zoomed the whole page out (2026-09-29). */
+  min-width: 0;
+  text-align: right;
+  line-height: 1.2;
   font-size: var(--ts-xs);
   font-family: var(--sans);
   font-weight: 500;
@@ -597,6 +607,12 @@ main {
   font-variant-numeric: tabular-nums;
 }
 .freshness-pill { transition: color 0.3s ease-out; }
+/* Small phones (360px): a tighter header so the pill has room for one line. */
+@media (max-width: 380px) {
+  .app-title { font-size: 17px; }
+  .app-header-right { gap: 2px; }
+  .freshness-pill { letter-spacing: 0.02em; }
+}
 .freshness-pill.freshness--ok    { color: var(--status-live); }
 .freshness-pill.freshness--warn  { color: var(--status-carryover); }
 .freshness-pill.freshness--stale { color: var(--status-stale); font-weight: 700; }
@@ -835,7 +851,9 @@ main {
 ═══════════════════════════════════════════════════════════════ */
 .hero-card {
   position: relative;
-  padding-top: clamp(32px, 6vw, 64px);
+  /* 2026-10-02: was clamp(32px, ...) -- with main's own top padding that left ~78px of
+     empty space between the header and the price on phones. */
+  padding-top: clamp(8px, 4vw, 64px);
   margin-bottom: clamp(28px, 6vw, 56px);
   /* CLS fix (2026-08-06): hero-skeleton was in normal flow, a sibling of the real
      eyebrow/price/location/change/verdict-banner/sparkline content it represents --
@@ -879,6 +897,13 @@ main {
 @media (max-width: 420px) {
   .hero-card::before { opacity: 0.75; }
 }
+/* The glow above reaches 80px past the hero card's right edge on purpose, but on a
+   phone that pushes the page 60px wider than the screen and lets it scroll sideways
+   (measured 2026-09-25: scrollWidth 450 at a 390px viewport, EN and HI). Clip
+   horizontal overflow on <main>, not the root: on the root `clip` is treated as
+   `hidden`, which still lets the page be scrolled sideways (verified). On <main> it
+   creates no scroll container, so the sticky header and nav keep working. */
+main { overflow-x: clip; }
 
 .eyebrow {
   margin: 0 0 12px;
@@ -1540,9 +1565,32 @@ main {
 .section-karat-note {
   font-size: 12px;
   color: var(--cream-mute);
-  margin: -8px 0 12px;
+  margin: 8px 0 12px;         /* was -8px: pulled the note up into the cards above it */
   letter-spacing: 0.03em;
 }
+
+/* Karat filter (22K / 24K / 18K) for the trend chart and the history table. */
+.karat-toggle {
+  display: inline-flex;
+  gap: 4px;
+  margin: 0 0 var(--space-3, 12px);
+  padding: 3px;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 999px;
+}
+.karat-toggle button {
+  background: transparent; border: 0; cursor: pointer;
+  color: var(--cream-mute);
+  font-family: var(--sans); font-size: var(--ts-xs); font-weight: 600;
+  letter-spacing: 0.04em;
+  padding: 6px 14px; border-radius: 999px;
+  min-height: 36px; min-width: 48px;
+  transition: color 0.2s, background 0.2s;
+}
+.karat-toggle button:hover { color: var(--cream); }
+.karat-toggle button.active { background: var(--gold); color: var(--ink); }
+.karat-toggle button:focus-visible { outline: 2px solid var(--gold); outline-offset: 2px; }
 
 .history-wrap {
   position: relative;
@@ -2250,6 +2298,17 @@ html.ptr-pulling {
   border-radius: var(--radius-sm);
 }
 .good-price-tomorrow strong { color: var(--gold); font-weight: 600; }
+.good-price-direction {
+  font-size: 14px;
+  color: var(--cream);
+  margin: 8px 0 0;
+  padding: 10px 14px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+}
+.good-price-direction strong { font-weight: 600; }
+.good-price-direction[data-side="up"] strong { color: var(--up); }
+.good-price-direction[data-side="down"] strong { color: var(--down); }
 
 .outlook-reliability { margin-top: 8px; }
 .outlook-reliability-note {
@@ -2278,6 +2337,9 @@ html.ptr-pulling {
 .driver-context-section {
   margin-bottom: clamp(32px, 7vw, 48px);
 }
+/* Was unstyled (margin 0): the card sat flush under the heading and clipped the "g" of
+   "moving" on phones (GG, 2026-10-02). Same size and gap as the other section headings. */
+.driver-context-section h2 { font-size: clamp(22px, 3.5vw, 32px); margin-bottom: var(--space-5); }
 /* Tier 2 CLS fix (2026-08-10): same absolute-overlay pattern as
    .model-signal-wrap/.commentary-body/.history-wrap. min-height is measured
    from live production content (73.625px, mobile viewport, 2026-08-10,
@@ -2318,6 +2380,20 @@ html.ptr-pulling {
 .track-record-section {
   margin-bottom: clamp(40px, 9vw, 56px);
   scroll-margin-top: 64px;
+}
+/* Inside the "How this works" panel: align with the panel body's padding. */
+#section-info .track-record-section {
+  padding: 0 var(--space-6) var(--space-6);
+  margin-bottom: 0;
+}
+#section-info .track-record-section h3 {
+  font-family: var(--sans);
+  font-size: var(--ts-sm, 14px);
+  font-weight: 600;
+  margin-bottom: var(--space-2, 8px);
+}
+@media (max-width: 640px) {
+  #section-info .track-record-section { padding: 0 var(--space-4) var(--space-4); }
 }
 .track-record-section h2 {
   font-size: clamp(22px, 3.5vw, 32px);
@@ -2384,7 +2460,9 @@ html.ptr-pulling {
    this card's content changes, not treated as permanent headroom). */
 .model-signal-wrap {
   position: relative;
-  min-height: 720px;
+  /* 2026-09-29: 720px fitted the old long panel; the plain-language panel measures ~292px
+     (390px viewport), so 720px left a large empty gap below it. */
+  min-height: 300px;
 }
 .model-signal-skeleton {
   position: absolute;
@@ -2408,6 +2486,168 @@ html.ptr-pulling {
 .meth-how-good { background: rgba(224,155,46,0.04); border-radius: var(--radius-lg); padding: clamp(12px, 3vw, 20px); }
 .meth-how-good .meth-text { margin-bottom: 16px; }
 .meth-how-good .meth-text:last-child { margin-bottom: 0; }
+
+/* ===================================================================
+   PAGE V2 (item 6, flagged OFF) -- five-jobs view, layout pass (G6)
+   Tokens only (rule 15b). Every selector below is scoped to #page-v2 / .pv2-* or to
+   a [hidden]/:has(#page-v2) state that only exists once renderFlaggedFeatures() has
+   mounted page_v2 -- so with every flag off none of these rules match anything and
+   the live page renders exactly as before.
+   Hierarchy, in the order a buyer asks: price (the one bold element: display face,
+   largest size, the only gold fill) > how sure > how much it could move > is it a
+   good price > what will I pay. The price is deliberately NOT a card -- it is the
+   page's lead answer, set on the page itself; the supporting answers are quiet,
+   identical-weight cards on one grid whose left-to-right order carries the rank.
+   No shadows, gradients or all-caps labels here; the one border that is not a card
+   edge (under the price) separates "the answer" from "the detail behind it".
+=================================================================== */
+
+/* `hidden` alone loses to `.layout-grid { display: grid }` at >=1024px (author CSS
+   beats the UA's [hidden] rule), which left every old section visible above page_v2
+   on desktop. Only ever matches once page_v2 has set .hidden -- never on the live page. */
+.layout-grid[hidden] { display: none; }
+
+.pv2-container {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: var(--space-4);
+  align-items: stretch;
+  margin-bottom: var(--space-8);
+  font-variant-numeric: tabular-nums;
+  font-feature-settings: "tnum" 1, "lnum" 1;
+}
+
+/* Job 1 -- the price. The page's single dominant element. */
+.pv2-price-now {
+  padding: 0 0 var(--space-6);
+  border-bottom: 1px solid var(--line);
+}
+.pv2-price-now > h3 {
+  margin: 0 0 var(--space-2);
+  font-family: var(--sans);
+  font-size: var(--ts-base);
+  font-weight: var(--fw-medium);
+  line-height: var(--lh-snug);
+  letter-spacing: normal;
+  color: var(--cream-dim);
+}
+.pv2-price-now .pv2-price-value {
+  margin: 0 0 var(--space-2);
+  font-family: var(--display);
+  font-weight: var(--fw-regular);
+  font-size: clamp(var(--ts-3xl), 11vw, var(--ts-4xl));
+  line-height: var(--lh-tight);
+  letter-spacing: -0.03em;
+  color: var(--gold);
+}
+.pv2-price-value .rupee {
+  font-style: italic;
+  margin-right: 0.05em;
+  opacity: 0.7;
+}
+.pv2-price-now > p {
+  margin: 0;
+  font-size: var(--ts-base);
+  line-height: var(--lh-body);
+  color: var(--cream-dim);
+}
+.pv2-price-now .pv2-price-source { color: var(--cream-mute); font-size: var(--ts-sm); }
+
+/* Jobs 2-4, 5 and F1-F4 -- quiet supporting cards, one treatment for all of them. */
+.pv2-card:not(.pv2-price-now) {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  min-width: 0;
+  padding: var(--space-5);
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-lg);
+}
+.pv2-card:not(.pv2-price-now) > h3 {
+  margin: 0 0 var(--space-1);
+  font-family: var(--sans);
+  font-size: var(--ts-sm);
+  font-weight: var(--fw-semibold);
+  line-height: var(--lh-snug);
+  letter-spacing: normal;
+  color: var(--cream-dim);
+}
+.pv2-card:not(.pv2-price-now) > p {
+  margin: 0;
+  max-width: 65ch;
+  font-size: var(--ts-base);
+  line-height: var(--lh-body);
+  color: var(--cream);
+}
+
+/* Slots are layout-only wrappers: their card(s) stretch to the slot's full row height. */
+.pv2-slot { display: flex; flex-direction: column; gap: var(--space-4); min-width: 0; }
+.pv2-slot > .pv2-card { flex: 1 1 auto; }
+.pv2-slot:empty { display: none; }
+
+/* Job 5 -- the relocated live calculator. The outer page_v2 card is the one frame;
+   the calculator's own card chrome and its duplicate heading ("How much would you
+   pay?" restates job 5's question) are dropped here so nothing nests three deep.
+   The h2 stays in the accessibility tree (visually hidden, not display:none). */
+#page-v2 .calculator-section { margin: 0; }
+#page-v2 .calculator-section > h2 {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+#page-v2 .calculator-card {
+  padding: 0;
+  background: none;
+  border: 0;
+  box-shadow: none;
+}
+#page-v2 .calc-result-row--total { font-size: var(--ts-md); }
+
+/* Phones (<=480px): one column in hierarchy order, 16px side gutters on the page and
+   its header so the content edge and the logo line up. */
+@media (max-width: 480px) {
+  body:has(#page-v2) main,
+  body:has(#page-v2) .app-header {
+    padding-left: var(--space-4);
+    padding-right: var(--space-4);
+  }
+  .pv2-card:not(.pv2-price-now) { padding: var(--space-4); }
+}
+
+/* Tablet and up: price across the top, then the three supporting answers side by side
+   (equal widths, equal heights), then the calculator across the full width. */
+@media (min-width: 768px) {
+  .pv2-container {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: var(--space-5);
+  }
+  .pv2-price-now,
+  .pv2-what-you-pay,
+  #pv2-extras-slot { grid-column: 1 / -1; }
+  /* Empty state: with no "good price" card the row keeps two equal halves, never a hole. */
+  .pv2-container:has(#pv2-good-price-slot:empty) { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .pv2-slot { gap: var(--space-5); }
+  /* F2/F4 side by side when both exist; a lone card takes the full width. */
+  #pv2-extras-slot { flex-direction: row; flex-wrap: wrap; }
+  #pv2-extras-slot > .pv2-card { flex: 1 1 0; }
+  .pv2-card:not(.pv2-price-now) { padding: var(--space-6); }
+  /* Calculator: inputs on the left, the running total on the right. */
+  #page-v2 .calculator-card {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    column-gap: var(--space-7);
+    grid-template-rows: auto 1fr; /* extra height from the tall results column goes below the presets, not between grams and presets */
+    align-items: start;
+  }
+  #page-v2 .calc-inputs,
+  #page-v2 .calc-presets { grid-column: 1; }
+  #page-v2 .calc-wrap { grid-column: 2; grid-row: 1 / span 2; }
+}
 
 /* ═══════════════════════════════════════════════════════════════
    SCROLL REVEALS (feel-alive pass)

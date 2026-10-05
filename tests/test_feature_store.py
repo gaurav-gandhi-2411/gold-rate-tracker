@@ -408,21 +408,26 @@ def _make_mock_prices_json(tmp_path: Path) -> Path:
 
 
 def _make_mock_duty_json(tmp_path: Path, event_date: str = "2000-01-01") -> Path:
-    """Write a minimal duty_events.json with one past event."""
+    """Write a minimal duty_cbic.json-shaped table with one verified row."""
     import json
 
-    data = [
-        {
-            "date": event_date,
-            "event_type": "duty_change",
-            "direction": "cut",
-            "magnitude_pct": None,
-            "note": "Mock duty event for tests",
-            "source": "test",
-        }
-    ]
-    out = tmp_path / "duty_events.json"
-    out.write_text(json.dumps(data), encoding="utf-8")
+    table = {
+        "rows": [
+            {
+                "effective_date": event_date,
+                "bcd_pct": 10.0,
+                "aidc_pct": 0.0,
+                "sws_pct": 0.0,
+                "total_duty_pct": 10.0,
+                "notification": "test",
+                "source": "test",
+                "status": "Mock duty row for tests",
+            }
+        ],
+        "unverified_pre_2019": {"rows": []},
+    }
+    out = tmp_path / "duty_cbic.json"
+    out.write_text(json.dumps(table), encoding="utf-8")
     return out
 
 
@@ -693,21 +698,26 @@ def _make_backfill_macro_df(dates: list[str]) -> pd.DataFrame:
 
 
 def _make_backfill_duty_json(tmp_path: Path) -> Path:
-    """Write a minimal duty_events.json for backfill tests."""
+    """Write a minimal duty_cbic.json-shaped table for backfill tests."""
     import json
 
-    data = [
-        {
-            "date": "2024-07-23",
-            "event_type": "duty_change",
-            "direction": "cut",
-            "magnitude_pct": None,
-            "note": "test",
-            "source": "test",
-        }
-    ]
-    out = tmp_path / "duty_events.json"
-    out.write_text(json.dumps(data), encoding="utf-8")
+    table = {
+        "rows": [
+            {
+                "effective_date": "2024-07-24",
+                "bcd_pct": 5.0,
+                "aidc_pct": 1.0,
+                "sws_pct": 0.0,
+                "total_duty_pct": 6.0,
+                "notification": "test",
+                "source": "test",
+                "status": "test",
+            }
+        ],
+        "unverified_pre_2019": {"rows": []},
+    }
+    out = tmp_path / "duty_cbic.json"
+    out.write_text(json.dumps(table), encoding="utf-8")
     return out
 
 

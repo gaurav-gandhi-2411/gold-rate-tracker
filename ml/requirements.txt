@@ -1,18 +1,18 @@
 lightgbm>=4.7.0
-pandas>=3.0.5
+pandas>=3.0.6
 numpy>=2.4.6
-scikit-learn>=1.9.0
+scikit-learn>=1.9.1
 requests>=2.34.2
 pyyaml>=6.0.3
-lxml>=6.1.2
+lxml>=6.1.3
 pdfplumber>=0.11.10
 pytest>=9.1.1
-yfinance>=1.5.2
+yfinance>=1.7.0
 pyarrow>=25.0.1
 # >=2.3.0 relaxes the upstream transformers pin from <5 to <6, letting the
 # lockfile clear all 4 transformers CVEs pip-audit previously flagged
 # (2026-07-19 — see ml/requirements-inference.lock resolution).
-chronos-forecasting>=2.3.1
+chronos-forecasting>=2.3.2
 jsonschema>=4.26.0
 # Explicit minimum-version pins for transitive deps with published CVEs below
 # the version otherwise resolved (pip-audit finding, 2026-07-18).

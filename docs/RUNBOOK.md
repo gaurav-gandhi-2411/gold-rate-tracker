@@ -619,14 +619,55 @@ every run failed for 4 days straight while `gh api .../actions/runners` still re
   playwright/scrape failures alike) and reset to 0 on success. It commits via the same
   `bot/tanishq-selfhosted-sync` PR path as the price reading itself.
 - **T12** (`ml/notifications.py::_check_t12_selfhosted_runner`) fires once per IST day when that
-  counter reaches 3 — meaning the runner genuinely executed and failed 3 times in a row, not
-  "no runner available." Read via `compute_selfhosted_consecutive_failures()`.
+  counter reaches 2 (was 3 until 2026-10-03; with the 6-visit schedule 3 meant 12-14 h) — meaning
+  the runner genuinely executed and failed 2 times in a row, not "no runner available." Read via
+  `compute_selfhosted_consecutive_failures()`. A run whose setup failed (npm ci, Playwright install)
+  is logged as `setup_failed` and counts.
 - `timeout-minutes` bumped 20 → 25 to give the recreate-fallback path enough headroom to not get
   cancelled purely on timing when the host has just woken from an extended outage.
 
 The queued-forever / no-runner case above is **unchanged and still intentionally silent** — T12
 is scoped narrowly to "job started and failed," so a runner you've deliberately paused for travel
 still degrades exactly as documented, with no false alarm.
+
+### Tanishq has not updated — the runner-offline gap (T14)
+
+T12 stays silent when the self-hosted runner is off, asleep or paused (no job starts, so no
+failure is counted). GG decision 4b (2026-09-25) closes that gap on the GitHub side:
+
+- **T14** (`ml/notifications.py::_check_t14_tanishq_silent`) runs in `check-price.yml` on
+  `ubuntu-latest`, so it needs nothing from the self-hosted runner. It reads only
+  `data/prices.json`: the age of the newest **real** Tanishq row (IBJA-derived rows never
+  count), in hours that do **not** fall on a Sunday (IST). It fires at **30 h**, once per IST day,
+  to the OPS topic. Tanishq switched off in `config/retailers.json` means no T14 (a takedown is
+  deliberate silence).
+- **Why 30 h** (re-derived 2026-09-26 for the 3a mixed schedule, `docs/TANISHQ_TIMED_VISITS.md`
+  section 10). Every successful visit appends a row, even when the rate is unchanged, so the age
+  is "time since the last successful visit".
+  - Visits are at 01:40, 07:30, 10:40, 11:10, 15:35 and 19:50 IST. With every visit on time, the
+    longest gap is 5.8 h.
+  - 38% of visits find no runner (measured). Treating those misses as independent (an
+    assumption), a simulation of 20,000 weeks gives about **one false alert per 65 weeks at
+    30 h**. The old 10:00–12:30 schedule at 30 h gave about one per 54 weeks.
+  - 24 h would give about one false alert per 7 weeks.
+  - A real outage right after a visit alerts 30 non-Sunday hours later, the same as before.
+  - Sundays are still excluded, so a normal weekend never alerts.
+- **What to do:** check the runner host, the recent `scrape-tanishq-selfhosted` runs and the
+  `bot/tanishq-selfhosted-sync` PR, in that order. `check-price.yml` itself is subject to
+  GitHub's cron lateness (median ~2 h, see PR #2078), so T14 lands up to that much after 30 h.
+
+### Public price data after E1 (GG decision 4c)
+
+- `data/ibja_derived_prices.json` — the trend chart's series: `{"timestamp", "22k"}` per IBJA
+  publishing day, 22K = IBJA pm_916 × frozen calibration. Built every `check-price.yml` run by
+  `scripts/build_ibja_derived_prices.py --public-out`; the page labels it as our estimate.
+- `data/prices.json`, once #2075's migration encrypts the raw history, must keep public only the
+  real Tanishq rows "today's change" needs (fields `timestamp`, `22k`, `24k`, `18k`, `source`):
+  every row on the newest reading's IST day plus the last row before that day — at most 7 rows
+  at 6 visits a day. `tests/test_hero_display_state.js` ("public Tanishq set") proves the page's
+  change is identical on that set and on the full history.
+- `data/wait_or_buy_today.json` carries no IBJA level: `price_t`, `range.lo` and `range.hi` are
+  dropped (`price_t = range.lo − range.lo_rs` exactly); page_v2 reads only `horizons.<N>.sentence`.
 
 ### Feature-store rows arriving but not usable — the T10 blind spot (T13)
 

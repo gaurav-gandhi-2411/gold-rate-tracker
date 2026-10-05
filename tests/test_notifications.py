@@ -2620,8 +2620,8 @@ def test_t11_fires_alongside_t9_when_both_conditions_met():
 _T12_NOW_IST = _ist(2026, 6, 7, 14, 0)
 
 
-def test_t12_fires_at_three_consecutive_failures():
-    """T12 fires once consecutive_job_failures reaches the threshold (3)."""
+def test_t12_fires_at_two_consecutive_failures():
+    """T12 fires once consecutive_job_failures reaches the threshold (2)."""
     alerts = check_triggers(
         _forecast(),
         _probe(),
@@ -2629,19 +2629,19 @@ def test_t12_fires_at_three_consecutive_failures():
         _backtest_accurate(),
         NotificationState(),
         _T12_NOW_IST,
-        selfhosted_consecutive_failures=3,
+        selfhosted_consecutive_failures=2,
     )
     t12 = [a for a in alerts if a.trigger_id == "T12"]
-    assert len(t12) == 1, "T12 must fire at 3 consecutive failures"
-    assert "3x" in t12[0].title
-    assert "3 runs in a row" in t12[0].body
+    assert len(t12) == 1, "T12 must fire at 2 consecutive failures"
+    assert "2x" in t12[0].title
+    assert "2 runs in a row" in t12[0].body
 
 
 def test_t12_no_fire_below_threshold():
     """T12 does not fire below the threshold, and is silent when the health
     record is missing (None) -- mirrors T9/T10's "missing store isn't a
     failure" convention, since a never-run/reset record isn't itself a signal."""
-    for count in (None, 0, 1, 2):
+    for count in (None, 0, 1):
         alerts = check_triggers(
             _forecast(),
             _probe(),

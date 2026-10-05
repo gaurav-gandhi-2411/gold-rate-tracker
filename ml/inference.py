@@ -70,6 +70,31 @@ _STALE_THRESHOLD_H: int = 8
 _IBJA_DISPLAY_MAX_AGE_DAYS: int = 14
 # IBJA publishes pm_916 ~17:00 IST = 11:30 UTC on each trading day.
 _IBJA_PUBLISH_UTC: tuple[int, int] = (11, 30)
+# ...and am_916 ~12:00 IST = 06:30 UTC (ml.known_at.IBJA_AM). Used when it is newer than the
+# latest PM (2026-09-28): on 81 days with a Tanishq reading between the two fixes, today's AM
+# estimated Tanishq with mean abs error Rs.60.5/g vs Rs.151.6/g for the previous day's PM
+# (AM closer on 61/81, paired one-sided Wilcoxon p=3.7e-7; both arms with the same calibration).
+_IBJA_AM_PUBLISH_UTC: tuple[int, int] = (6, 30)
+# ADR 059 (G1b): a fresh Tanishq reading is shown as the confirmed retail price only
+# if it sits within this fraction of the same cycle's IBJA-calibrated estimate.
+# Measured 2026-09-25 over all 712 prices.json readings vs the then-current
+# calibration: |deviation| p50 0.24%, max 9.53% (2026-04-16, before a premium-regime
+# shift) -- so 12% trips on none of the recorded history. It exists to catch a gross
+# mis-scrape (wrong page, cached months-old figure) that still passes the scraper's
+# range/karat-ratio checks, not ordinary premium drift.
+_TANISHQ_IBJA_MAX_DEVIATION: float = 0.12
+# ADR 059 (G1b): tier 3 names retailers on the page (bannerFusion). A reading whose
+# own observed_at is older than this is not "their rate today" and is dropped rather
+# than shown. Kalyan's board carries its own updated_time; GRT's observed_at is the
+# fetch time (the page has no timestamp), so this binds on Kalyan/Malabar only.
+_FUSION_MAX_AGE_H: float = 36.0
+
+
+class RetailerDisabledNoSourceError(RuntimeError):
+    """Tanishq is switched off (config/retailers.json) and IBJA-calibrated and the
+    fusion tier both failed this cycle. The last-resort tier would display the last
+    Tanishq reading, which a takedown forbids -- fail loudly instead, so the workflow
+    step fails and the site keeps its previous (non-Tanishq) forecast.json."""
 
 
 def _load_json(path: Path) -> dict | list | None:
@@ -304,7 +329,11 @@ def _try_ibja_calibrated(
             fallback_rows = [
                 {"date": r["timestamp"][:10], "22k": float(r["22k"])}
                 for r in fallback_prices_raw
-                if r.get("timestamp") and r.get("22k") is not None
+                if r.get("timestamp")
+                and r.get("22k") is not None
+                # ADR 059: IBJA-derived rows (retailer takedown) are not observations;
+                # fitting IBJA against them yields a meaningless zero-width band.
+                and not str(r.get("source", "")).startswith("ibja_calibrated")
             ]
             fallback_tanishq_df = (
                 pd.DataFrame(fallback_rows).sort_values("date").groupby("date").last().reset_index()
@@ -351,6 +380,17 @@ def _try_ibja_calibrated(
         latest_ibja = valid_rows.iloc[-1]
         ibja_date_str: str = str(latest_ibja["date"])[:10]  # "YYYY-MM-DD"
         pm_916 = float(latest_ibja["pm_916"])
+        ibja_fix = "pm"
+        # A newer day's AM fix beats the previous day's PM (see _IBJA_AM_PUBLISH_UTC): on a
+        # morning when the market moves, the PM-only estimate showed yesterday's level all day.
+        has_am = "am_916" in ibja_df.columns
+        am_rows = (ibja_df[ibja_df["am_916"].notna()] if has_am else ibja_df.iloc[0:0]).copy()
+        am_rows["_d"] = am_rows["date"].astype(str).str[:10]
+        newer_am = am_rows[am_rows["_d"] > ibja_date_str].sort_values("_d")
+        if not newer_am.empty:
+            ibja_date_str = str(newer_am.iloc[-1]["_d"])
+            pm_916 = float(newer_am.iloc[-1]["am_916"])
+            ibja_fix = "am"
     except FileNotFoundError:
         logger.info("_try_ibja_calibrated: ibja_rates.parquet not found — skipping")
         return None
@@ -361,7 +401,8 @@ def _try_ibja_calibrated(
     # IBJA publication datetime: ~17:00 IST = 11:30 UTC on the row's date
     try:
         y, m, d = int(ibja_date_str[:4]), int(ibja_date_str[5:7]), int(ibja_date_str[8:10])
-        ibja_asof_dt = datetime(y, m, d, _IBJA_PUBLISH_UTC[0], _IBJA_PUBLISH_UTC[1], tzinfo=UTC)
+        publish = _IBJA_AM_PUBLISH_UTC if ibja_fix == "am" else _IBJA_PUBLISH_UTC
+        ibja_asof_dt = datetime(y, m, d, publish[0], publish[1], tzinfo=UTC)
     except Exception as exc:
         logger.warning("_try_ibja_calibrated: could not parse ibja date %r: %s", ibja_date_str, exc)
         return None
@@ -400,12 +441,13 @@ def _try_ibja_calibrated(
 
     band_str = f"[Rs.{est_low}-Rs.{est_high}]" if band_half_width is not None else "[no band]"
     logger.info(
-        "_try_ibja_calibrated: ibja_per_g=%.2f -> Rs.%d %s  ibja_date=%s  "
+        "_try_ibja_calibrated: ibja_per_g=%.2f -> Rs.%d %s  ibja_date=%s (%s fix)  "
         "band_method=%s  freshness=%s (gap=%dd)",
         ibja_per_g,
         ibja_calibrated_22k,
         band_str,
         ibja_date_str,
+        ibja_fix,
         band_method,
         freshness_stratum,
         gap_days,
@@ -427,6 +469,7 @@ def _try_ibja_calibrated(
 
 def _try_fusion_fallback(
     data_dir: Path,
+    now: datetime | None = None,
 ) -> tuple[int, str, int, int, str | None, list[str], None, None, None, None, float, None] | None:
     """Tier 3: live GRT + Malabar + Kalyan consensus, only reached when both
     Tanishq and IBJA-calibrated are unavailable this cycle. Reuses ml.fusion's
@@ -436,17 +479,38 @@ def _try_fusion_fallback(
     deterministically) -- band_unavailable_reason is always None on this tier.
     """
     from ml.fusion import fuse_city_price, fuse_national_benchmark
+    from ml.retailers import is_enabled
     from ml.sources.base import SourceNetworkError, SourceStructureError
     from ml.sources.grt import fetch_grt
     from ml.sources.kalyan import fetch_kalyan_city
     from ml.sources.malabar import fetch_malabar
 
+    now_utc = now or datetime.now(UTC)
+
+    def _fresh(reading) -> bool:
+        age_h = (now_utc - reading.observed_at).total_seconds() / 3600
+        if age_h > _FUSION_MAX_AGE_H:
+            logger.warning(
+                "_try_fusion_fallback: %s reading is %.1fh old (> %.0fh) — not shown",
+                reading.source,
+                age_h,
+                _FUSION_MAX_AGE_H,
+            )
+            return False
+        return True
+
     national_readings = []
     for name, fetch_fn in (("grt", fetch_grt), ("malabar", fetch_malabar)):
+        if not is_enabled(name):  # ADR 059 takedown switch: never fetched, never shown
+            logger.info("_try_fusion_fallback: %s disabled in config/retailers.json", name)
+            continue
         try:
-            national_readings.append(fetch_fn())
+            reading = fetch_fn()
         except (SourceNetworkError, SourceStructureError) as exc:
             logger.warning("_try_fusion_fallback: %s failed: %s", name, exc)
+            continue
+        if _fresh(reading):
+            national_readings.append(reading)
 
     if not national_readings:
         logger.warning("_try_fusion_fallback: all national sources failed — no fallback available")
@@ -455,10 +519,14 @@ def _try_fusion_fallback(
     national = fuse_national_benchmark(national_readings)
 
     kalyan_reading = None
-    try:
-        kalyan_reading = fetch_kalyan_city(_FUSION_FALLBACK_CITY).reading
-    except (SourceNetworkError, SourceStructureError) as exc:
-        logger.warning("_try_fusion_fallback: kalyan/%s failed: %s", _FUSION_FALLBACK_CITY, exc)
+    if is_enabled("kalyan"):
+        try:
+            candidate = fetch_kalyan_city(_FUSION_FALLBACK_CITY).reading
+            kalyan_reading = candidate if _fresh(candidate) else None
+        except (SourceNetworkError, SourceStructureError) as exc:
+            logger.warning("_try_fusion_fallback: kalyan/%s failed: %s", _FUSION_FALLBACK_CITY, exc)
+    else:
+        logger.info("_try_fusion_fallback: kalyan disabled in config/retailers.json")
 
     city_fused = fuse_city_price(kalyan_reading, national, city=_FUSION_FALLBACK_CITY)
     current = round(city_fused.value)
@@ -565,17 +633,40 @@ def _select_price_source(
         None,
     )
 
-    try:
-        scraped_dt = datetime.fromisoformat(scraped_at.replace("Z", "+00:00"))
-        scrape_age_h = (now - scraped_dt).total_seconds() / 3600
-    except Exception:
-        logger.warning("_select_price_source: could not parse scraped_at %r", scraped_at)
-        return _noop
+    from ml.retailers import is_enabled
 
-    if scrape_age_h <= _STALE_THRESHOLD_H:
-        return _noop  # tier 1: Tanishq fresh — wins outright, no need to check anything else
+    # ADR 059 takedown switch: with Tanishq off, tiers 1 and 4 (both of which display
+    # a Tanishq reading) are skipped entirely; only IBJA-calibrated / fusion remain.
+    tanishq_on = is_enabled("tanishq")
+    ibja_result = None
+    if tanishq_on:
+        try:
+            scraped_dt = datetime.fromisoformat(scraped_at.replace("Z", "+00:00"))
+            scrape_age_h = (now - scraped_dt).total_seconds() / 3600
+        except Exception:
+            logger.warning("_select_price_source: could not parse scraped_at %r", scraped_at)
+            return _noop
 
-    ibja_result = _try_ibja_calibrated(calibration, data_dir, now)
+        if scrape_age_h <= _STALE_THRESHOLD_H:
+            # tier 1: Tanishq fresh — wins, unless it disagrees grossly with the
+            # same cycle's IBJA-calibrated estimate (ADR 059 plausibility gate).
+            ibja_result = _try_ibja_calibrated(calibration, data_dir, now)
+            if ibja_result is None:
+                return _noop
+            deviation = abs(current_22k - ibja_result[0]) / ibja_result[0]
+            if deviation <= _TANISHQ_IBJA_MAX_DEVIATION:
+                return _noop
+            logger.warning(
+                "_select_price_source: fresh Tanishq Rs.%d is %.1f%% from IBJA-calibrated "
+                "Rs.%d (> %.0f%%) — treated as suspect, not displayed this cycle",
+                current_22k,
+                deviation * 100,
+                ibja_result[0],
+                _TANISHQ_IBJA_MAX_DEVIATION * 100,
+            )
+
+    if ibja_result is None:
+        ibja_result = _try_ibja_calibrated(calibration, data_dir, now)
     if ibja_result is not None:
         (
             current,
@@ -606,10 +697,16 @@ def _select_price_source(
             band_unavailable_reason,
         )
 
-    fusion_result = _try_fusion_fallback(data_dir)
+    fusion_result = _try_fusion_fallback(data_dir, now)
     if fusion_result is not None:
         return fusion_result  # tier 3
 
+    if not tanishq_on:
+        raise RetailerDisabledNoSourceError(
+            "Tanishq is disabled (config/retailers.json) and neither IBJA-calibrated nor "
+            "the fusion tier produced a price this cycle — refusing to fall back to a "
+            "Tanishq reading; forecast.json left unchanged"
+        )
     return _noop  # tier 4: last-known Tanishq price, everything else failed
 
 
@@ -738,6 +835,23 @@ def main(now: datetime | None = None) -> None:
         "vol_context": dict(vol_ctx),
     }
 
+    # 3b. Next-fix model (ADR 064): when the global close after the latest IBJA fix is known and no
+    # newer AM fix is out, the headline becomes the model's forecast and range instead of flat-hold.
+    # The fix the displayed price reflects: the estimate tiers carry it in ibja_asof; a Tanishq
+    # reading reflects the latest fix published before it was read.
+    price_read_at = ibja_asof if price_source != "tanishq_scrape" and ibja_asof else scraped_at
+    next_fix = _next_fix_block(now, current_22k, calibration, price_read_at)
+    if next_fix.get("active"):
+        predicted_22k = next_fix["predicted_22k"]
+        lower = next_fix["lower"]
+        upper = next_fix["upper"]
+        headline.update(
+            method=next_fix["model_version"],
+            predicted_22k=predicted_22k,
+            lower=lower,
+            upper=upper,
+        )
+
     # 4. Chronos companion (read from probe; never call Chronos directly)
     probe: dict = _load_json(DATA_DIR / "chronos_probe.json") or {}
     from ml.notifications import STATE_PATH, load_state
@@ -807,9 +921,10 @@ def main(now: datetime | None = None) -> None:
         "lower": lower,
         "upper": upper,
         "target_time": target_time.isoformat(),
-        "model_status": "naive_headline",
-        "model_version": "naive_flat_hold",
+        "model_status": "nextfix_headline" if next_fix.get("active") else "naive_headline",
+        "model_version": next_fix["model_version"] if next_fix.get("active") else "naive_flat_hold",
         "warmup": False,
+        "next_fix": next_fix,
     }
 
     DATA_DIR.mkdir(exist_ok=True)
@@ -822,6 +937,116 @@ def main(now: datetime | None = None) -> None:
         chronos_companion.get("lean_direction"),
         chronos_companion.get("direction_acc_30f"),
     )
+
+
+# Direction wording: below this distance from 50% the next move is "too close to call".
+_DIRECTION_MIN_EDGE = 0.05
+
+
+def _next_fix_block(
+    now: datetime, current_22k: int, calibration: dict, scraped_at: str | None = None
+) -> dict:
+    """forecast.json's ``next_fix`` block: the next IBJA fix forecast (ADR 064/065), mapped to the
+    shop price. Active all day; ``mode`` says which window (after the US close: the model; after an
+    AM fix or a PM fix: hold that fix).
+
+    Never raises: any failure returns {"active": False, "reason": "error: ..."} and the headline
+    stays flat-hold (norm #8, inference must always write forecast.json).
+    """
+    try:
+        from ml import nextfix
+        from ml.direction.gate import is_signal_promoted
+
+        macro = None
+        try:
+            from ml.macro import load_macro_features
+
+            macro = load_macro_features()
+        except Exception as exc:  # the label seed alone still gives the track record
+            logger.warning("next_fix: macro cache unavailable (%s)", exc)
+        out = nextfix.run(now=now, macro=macro, data_dir=DATA_DIR)
+        fc, ev, windows = out["forecast"], out["eval"], out.get("windows") or {}
+        block: dict = {"active": bool(fc.get("active")), "reason": fc.get("reason")}
+        if ev.get("ready"):
+            d = ev["direction"]
+            block["track_record"] = {
+                "n": ev["n"],
+                "first_d0": ev["first_d0"],
+                "last_d0": ev["last_d0"],
+                "mae_model": ev["mae_model"],
+                "mae_flat": ev["mae_flat"],
+                "mae_change_pct": ev["mae_change_pct"],
+                "mae_change_ci95": ev["mae_change_ci95"],
+                "dm_p": round(ev["dm_p"], 4),
+                "wilcoxon_p": round(ev["wilcoxon_p"], 4),
+                "direction_accuracy": round(d["accuracy"], 4),
+                "direction_accuracy_ci95": ev["direction_accuracy_ci95"],
+                "always_up_accuracy": round(d["always_up_accuracy"], 4),
+                "direction_p_value": round(d["p_value"], 4),
+                "direction_ece": round(d["ece"], 4),
+                "direction_gate_ship": bool(ev["direction_gate"]["ship"]),
+                "direction_gate_reason": ev["direction_gate"]["reason"],
+                "timing_gate_ship": bool(ev["timing_gate"]["ship"]),
+                "range_coverage": ev["range_coverage"],
+                "range_coverage_ci95": ev["range_coverage_ci95"],
+                "range_n": ev["range_n"],
+                "range_mean_width_ibja": ev["range_mean_width"],
+            }
+        block["windows"] = {
+            k: {kk: v for kk, v in rec.items() if kk not in ("conformal_q", "vol_now")}
+            for k, rec in windows.items()
+        }
+        if not block["active"]:
+            return block
+        slope = float(calibration.get("slope") or 1.0) if calibration.get("valid", True) else 1.0
+        ref = None
+        if scraped_at and out.get("ibja") is not None:
+            read_at = datetime.fromisoformat(scraped_at.replace("Z", "+00:00"))
+            ref = nextfix.ref_fix(out["ibja"], read_at)
+        retail = nextfix.to_retail(fc, float(current_22k), slope, ref)
+        mode = fc["mode"]
+        if mode == "after_us_close":
+            tr = block.get("track_record", {})
+            range_record = {"coverage": tr.get("range_coverage"), "n": tr.get("range_n")}
+        else:
+            rec = windows.get("am_to_pm" if mode == "after_morning_rate" else "pm_to_am", {})
+            range_record = {"coverage": rec.get("range_coverage"), "n": rec.get("n")}
+        block.update(
+            mode=mode,
+            model_version=fc["model_version"],
+            base_kind=fc["base_kind"],
+            base_date=fc["base_date"],
+            base_ibja=fc["base"],
+            predicted_ibja=fc["pred"],
+            target_kind=fc["target_kind"],
+            range_record=range_record,
+            **retail,
+        )
+        if mode == "after_us_close":
+            p_up = float(fc["p_up"])
+            side = "up" if p_up >= 0.5 else "down"
+            prob = p_up if side == "up" else 1.0 - p_up
+            gate_ok = bool(block.get("track_record", {}).get("direction_gate_ship"))
+            block["p_up"] = round(p_up, 4)
+            block["direction"] = {
+                "show": gate_ok and is_signal_promoted(),
+                "side": side if prob - 0.5 >= _DIRECTION_MIN_EDGE else "unclear",
+                "probability": round(prob, 4),
+            }
+        else:  # no evidence for a direction while holding the latest fix
+            block["direction"] = {"show": False, "side": "unclear", "probability": None}
+        logger.info(
+            "next_fix: mode=%s Rs.%d [%d-%d] show_direction=%s",
+            mode,
+            retail["predicted_22k"],
+            retail["lower"],
+            retail["upper"],
+            block["direction"]["show"],
+        )
+        return block
+    except Exception as exc:
+        logger.warning("next_fix: failed (%s); headline stays flat-hold", exc)
+        return {"active": False, "reason": f"error: {type(exc).__name__}"}
 
 
 if __name__ == "__main__":

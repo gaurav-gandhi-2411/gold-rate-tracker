@@ -45,12 +45,15 @@ on:
     branches: [master]
     paths:
       - "ml/inference.py"
+      - "ml/nextfix.py"
+      - "ml/nextfix_intraday.py"
       - "ml/features.py"
       - "ml/macro.py"
       - "ml/ibja.py"
       - "ml/chronos_forecast.py"
       - "ml/calibration.py"
       - "ml/notifications.py"
+      - "scripts/build_ibja_derived_prices.py"
       - "ml/drivers.py"
       - "ml/feature_store.py"
       - "ml/calendar_events.py"
@@ -87,6 +90,12 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          # The tip of master when this job STARTS, not the commit that triggered the run. Runs
+          # queue behind each other (concurrency group above); a queued run used to check out its
+          # trigger commit, build its data on that, and fail the bot-PR rebase because the run
+          # ahead of it had already landed newer data (2026-10-02 09:01Z, run 36987403933).
+          ref: master
 
       # Tanishq scraping happens in scrape-tanishq-selfhosted.yml (its own
       # workflow file since audit 2026-09) — this job just reads whatever
@@ -168,6 +177,13 @@ jobs:
         continue-on-error: true
         run: python -m ml.inference
 
+      - name: Next-fix hourly shadow (ADR 066)
+        # Shadow only: logs hourly world-price forecasts of the next IBJA fix and replays the cached
+        # 60 days of 1-hour bars. Never touches forecast.json; reads macro_intraday.parquet written
+        # by "Fetch macro features" above.
+        continue-on-error: true
+        run: python -m ml.nextfix_intraday
+
       - name: Append IBJA rates
         continue-on-error: true
         run: python -m ml.ibja
@@ -175,6 +191,13 @@ jobs:
       - name: Refit calibration if needed
         continue-on-error: true
         run: python -m ml.calibration
+
+      - name: Build the trend chart's IBJA-based estimate series
+        # GG decision 4c (2026-09-25): the site's trend chart plots 22K = IBJA x calibration
+        # (one row per IBJA publishing day), labelled as our estimate in app.js. Rebuilt
+        # after this run's IBJA append + calibration refit; never touches prices.json.
+        continue-on-error: true
+        run: python scripts/build_ibja_derived_prices.py --public-out data/ibja_derived_prices.json
 
       - name: Compute rolling Tanishq scrape success rate
         # H3 (session dated 2026-08-28): reads whatever data/tanishq_scrape_
@@ -264,7 +287,7 @@ jobs:
           # ibja_rates.parquet and feature_store/snapshots.parquet are added as plaintext only while
           # still tracked (pre-migration). Once migrated they are gitignored, git refuses them
           # (covered by `|| true`), and data/encrypted/ carries them instead. ADR 060.
-          git add data/forecast.json data/drift_metrics.json data/metrics_history.json data/ibja_rates.parquet data/chronos_probe.json data/calibration.json data/feature_store/snapshots.parquet data/tanishq_scrape_success_rate.json data/cadence_metrics.json || true
+          git add data/forecast.json data/drift_metrics.json data/metrics_history.json data/ibja_rates.parquet data/chronos_probe.json data/calibration.json data/feature_store/snapshots.parquet data/tanishq_scrape_success_rate.json data/cadence_metrics.json data/ibja_derived_prices.json data/nextfix_oos.json data/nextfix_intraday_shadow.json data/nextfix_intraday_backtest.json || true
           git add data/encrypted/ || true
           # Fails the commit if the key, or its base64/hex form, is in any file about to be committed.
           python scripts/data_crypt.py scan-key --changed
@@ -304,6 +327,40 @@ jobs:
           token: ${{ secrets.CI_MERGE_PAT }}
           wait-minutes: "15"
           ntfy-topic: ${{ secrets.NTFY_TOPIC }}
+
+      - name: Merge a stranded Tanishq reading PR
+        # 2026-09-29: a scrape job opened PR #2200 with the day's only Tanishq reading, then was
+        # cancelled mid-merge (the laptop runner restarted); the next scrape would have rebuilt the
+        # branch from master and dropped that reading. This merges such a PR when it is older than
+        # 30 min (its own job has given up), touches ONLY the three Tanishq data files, and both
+        # required checks (lint, pwa-js) are green on its head; then dispatches check-price so the
+        # reading reaches the site. Same merge the bot-pr-sync action performs (squash, CI_MERGE_PAT).
+        if: always()
+        continue-on-error: true
+        env:
+          GH_TOKEN: ${{ secrets.CI_MERGE_PAT }}
+          DISPATCH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          PR=$(gh pr list --repo "${GITHUB_REPOSITORY}" --head bot/tanishq-selfhosted-sync --state open \
+            --json number,headRefOid,createdAt --jq '.[0] // empty')
+          if [ -z "$PR" ]; then echo "No open Tanishq sync PR."; exit 0; fi
+          NUM=$(echo "$PR" | jq -r .number); SHA=$(echo "$PR" | jq -r .headRefOid)
+          AGE_MIN=$(( ( $(date +%s) - $(date -d "$(echo "$PR" | jq -r .createdAt)" +%s) ) / 60 ))
+          if [ "$AGE_MIN" -lt 30 ]; then echo "PR #$NUM is ${AGE_MIN} min old; its own job may still merge it."; exit 0; fi
+          for f in $(gh api "repos/${GITHUB_REPOSITORY}/pulls/${NUM}/files" --jq '.[].filename'); do
+            case "$f" in
+              data/prices.json|data/tanishq_scrape_outcomes.jsonl|data/tanishq_selfhosted_health.json) ;;
+              *) echo "PR #$NUM touches $f -- not a Tanishq data-only PR; leaving it."; exit 0 ;;
+            esac
+          done
+          GREEN=$(gh api "repos/${GITHUB_REPOSITORY}/commits/${SHA}/check-runs?per_page=100" \
+            --jq '[.check_runs[] | select((.name=="lint" or .name=="pwa-js") and .conclusion=="success") | .name] | unique | length')
+          if [ "$GREEN" -lt 2 ]; then echo "PR #$NUM: required checks not both green ($GREEN/2); leaving it."; exit 0; fi
+          gh api -X PUT "repos/${GITHUB_REPOSITORY}/pulls/${NUM}/merge" -f merge_method=squash -f sha="$SHA" \
+            -f commit_title="chore: append Tanishq reading (self-hosted scrape) [skip ci] (#${NUM})"
+          echo "Merged stranded PR #$NUM; dispatching check-price so the reading reaches the site."
+          GH_TOKEN="$DISPATCH_TOKEN" gh workflow run check-price.yml --repo "${GITHUB_REPOSITORY}" --ref master
 
       - name: Alert on stuck bot PR
         # Path-scoped required checks (only requiring lint/pwa-js on code-path
