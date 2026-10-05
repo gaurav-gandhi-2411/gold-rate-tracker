@@ -1,0 +1,209 @@
+{
+ "source": "data/nextfix_oos.json",
+ "n_folds": 143,
+ "seed": 42,
+ "proposed": {
+  "still_good": {
+   "error": {
+    "share_demoted_within_horizon": 0.0425,
+    "median_days_to_demotion": 63.0
+   },
+   "direction": {
+    "share_demoted_within_horizon": 0.0,
+    "median_days_to_demotion": null
+   },
+   "any": {
+    "share_demoted_within_horizon": 0.0425,
+    "median_days_to_demotion": 63.0
+   },
+   "horizon_days": 120,
+   "n_sims": 400
+  },
+  "edge_lost": {
+   "error": {
+    "share_demoted_within_horizon": 0.8,
+    "median_days_to_demotion": 52.5
+   },
+   "direction": {
+    "share_demoted_within_horizon": 0.2025,
+    "median_days_to_demotion": 64.0
+   },
+   "any": {
+    "share_demoted_within_horizon": 0.8025,
+    "median_days_to_demotion": 53.0
+   },
+   "horizon_days": 120,
+   "n_sims": 400
+  }
+ },
+ "persist_1": {
+  "still_good": {
+   "error": {
+    "share_demoted_within_horizon": 0.0475,
+    "median_days_to_demotion": 65.0
+   },
+   "direction": {
+    "share_demoted_within_horizon": 0.0,
+    "median_days_to_demotion": null
+   },
+   "any": {
+    "share_demoted_within_horizon": 0.0475,
+    "median_days_to_demotion": 65.0
+   },
+   "horizon_days": 120,
+   "n_sims": 400
+  },
+  "edge_lost": {
+   "error": {
+    "share_demoted_within_horizon": 0.8975,
+    "median_days_to_demotion": 41.0
+   },
+   "direction": {
+    "share_demoted_within_horizon": 0.375,
+    "median_days_to_demotion": 66.0
+   },
+   "any": {
+    "share_demoted_within_horizon": 0.9,
+    "median_days_to_demotion": 41.0
+   },
+   "horizon_days": 120,
+   "n_sims": 400
+  }
+ },
+ "persist_5": {
+  "still_good": {
+   "error": {
+    "share_demoted_within_horizon": 0.01,
+    "median_days_to_demotion": 38.0
+   },
+   "direction": {
+    "share_demoted_within_horizon": 0.0,
+    "median_days_to_demotion": null
+   },
+   "any": {
+    "share_demoted_within_horizon": 0.01,
+    "median_days_to_demotion": 38.0
+   },
+   "horizon_days": 120,
+   "n_sims": 400
+  },
+  "edge_lost": {
+   "error": {
+    "share_demoted_within_horizon": 0.765,
+    "median_days_to_demotion": 49.5
+   },
+   "direction": {
+    "share_demoted_within_horizon": 0.2,
+    "median_days_to_demotion": 62.0
+   },
+   "any": {
+    "share_demoted_within_horizon": 0.7725,
+    "median_days_to_demotion": 49.0
+   },
+   "horizon_days": 120,
+   "n_sims": 400
+  }
+ },
+ "window_60": {
+  "still_good": {
+   "error": {
+    "share_demoted_within_horizon": 0.0175,
+    "median_days_to_demotion": 57.0
+   },
+   "direction": {
+    "share_demoted_within_horizon": 0.0,
+    "median_days_to_demotion": null
+   },
+   "any": {
+    "share_demoted_within_horizon": 0.0175,
+    "median_days_to_demotion": 57.0
+   },
+   "horizon_days": 120,
+   "n_sims": 400
+  },
+  "edge_lost": {
+   "error": {
+    "share_demoted_within_horizon": 0.75,
+    "median_days_to_demotion": 46.0
+   },
+   "direction": {
+    "share_demoted_within_horizon": 0.225,
+    "median_days_to_demotion": 65.0
+   },
+   "any": {
+    "share_demoted_within_horizon": 0.76,
+    "median_days_to_demotion": 46.5
+   },
+   "horizon_days": 120,
+   "n_sims": 400
+  }
+ },
+ "dir_floor_55": {
+  "still_good": {
+   "error": {
+    "share_demoted_within_horizon": 0.035,
+    "median_days_to_demotion": 69.0
+   },
+   "direction": {
+    "share_demoted_within_horizon": 0.0,
+    "median_days_to_demotion": null
+   },
+   "any": {
+    "share_demoted_within_horizon": 0.035,
+    "median_days_to_demotion": 69.0
+   },
+   "horizon_days": 120,
+   "n_sims": 400
+  },
+  "edge_lost": {
+   "error": {
+    "share_demoted_within_horizon": 0.825,
+    "median_days_to_demotion": 50.0
+   },
+   "direction": {
+    "share_demoted_within_horizon": 0.5875,
+    "median_days_to_demotion": 60.0
+   },
+   "any": {
+    "share_demoted_within_horizon": 0.8525,
+    "median_days_to_demotion": 48.0
+   },
+   "horizon_days": 120,
+   "n_sims": 400
+  }
+ },
+ "dir_floor_60": {
+  "still_good": {
+   "error": {
+    "share_demoted_within_horizon": 0.0325,
+    "median_days_to_demotion": 65.0
+   },
+   "direction": {
+    "share_demoted_within_horizon": 0.0325,
+    "median_days_to_demotion": 68.0
+   },
+   "any": {
+    "share_demoted_within_horizon": 0.0575,
+    "median_days_to_demotion": 68.0
+   },
+   "horizon_days": 120,
+   "n_sims": 400
+  },
+  "edge_lost": {
+   "error": {
+    "share_demoted_within_horizon": 0.8075,
+    "median_days_to_demotion": 50.0
+   },
+   "direction": {
+    "share_demoted_within_horizon": 0.8475,
+    "median_days_to_demotion": 51.0
+   },
+   "any": {
+    "share_demoted_within_horizon": 0.8975,
+    "median_days_to_demotion": 44.0
+   },
+   "horizon_days": 120,
+   "n_sims": 400
+  }
+ }
+}

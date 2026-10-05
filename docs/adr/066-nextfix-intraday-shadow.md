@@ -62,3 +62,13 @@ record.
   enough to see a large effect, not a small one.
 - IBJA's exact fixing instants are not recorded. The repo convention (AM 06:30 UTC, PM 11:30 UTC)
   is used, as in ADR 058.
+
+## Scoring correction, 2026-10-05 (not a change to the promotion rule)
+
+`score()` kept, per base fix, the latest shadow entry even when that entry was logged **after its
+target fix was published** (2026-10-05 07:13Z: the AM fix, published 06:30Z, was the target of an
+entry whose base was still the previous PM fix, because check-price then ran inference before the
+IBJA append; fixed in #2390). Such an entry is not a forecast. `ml.nextfix_intraday.logged_after_target`
+now drops it before scoring and each window reports `n_excluded_logged_after_target`. The rule above
+(14 days, 8 resolved fixes, CI below 0 with DM p < 0.05, shadow agrees, range refit) is unchanged.
+This is a scoring correctness fix made before the 2026-10-16 check; no result had been read.
