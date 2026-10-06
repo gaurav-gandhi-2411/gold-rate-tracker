@@ -1,5 +1,5 @@
 {
-  "capture_utc": "2026-10-06T00:00:13Z",
+  "capture_utc": "2026-10-06T06:14:03Z",
   "as_of_date": "2026-10-06",
   "national_failures": {},
   "kalyan_failures": {
@@ -7,8 +7,8 @@
   },
   "snapshot_rows_persisted": 3,
   "national_benchmark": {
-    "value": 13707.083333333334,
-    "band_half_width": 137.07083333333335,
+    "value": 13698.333333333334,
+    "band_half_width": 136.98333333333335,
     "disagreement": false,
     "sources_used": [
       "ibja",
@@ -23,8 +23,8 @@
   },
   "cities": {
     "Bangalore": {
-      "value": 13707.083333333334,
-      "band_half_width": 205.60625000000005,
+      "value": 13698.333333333334,
+      "band_half_width": 205.47500000000002,
       "coverage": "national_derived",
       "attribution": "National retail consensus (ibja, grt, malabar) \u2014 no Kalyan reading for Bangalore this cycle",
       "markup": null
