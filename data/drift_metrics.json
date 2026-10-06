@@ -1008,5 +1008,15 @@
     "residual": 14.0,
     "model_version": "nextfix_ridge_mlp_v1",
     "baseline_mae": 247.87
+  },
+  {
+    "ts": "2026-10-06T05:46:00.629045+00:00",
+    "target_time": "2026-10-07T00:00:00+00:00",
+    "actual_ts": "2026-10-06T05:41:20.941Z",
+    "actual_22k": 13705.0,
+    "forecast_22k": 13706.0,
+    "residual": -1.0,
+    "model_version": "nextfix_ridge_mlp_v1",
+    "baseline_mae": 247.87
   }
 ]
