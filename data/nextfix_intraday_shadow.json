@@ -2,8 +2,8 @@
  "schema_version": 1,
  "note": "Shadow only (ADR 066): hourly world-price forecasts of the next IBJA fix.",
  "summary": {
-  "generated_at": "2026-10-06T05:46:14.169923Z",
-  "n_entries": 20,
+  "generated_at": "2026-10-06T08:03:59.132978Z",
+  "n_entries": 21,
   "after_morning_rate": {
    "n_fixes": 1,
    "n_decisions": 1,
@@ -11,14 +11,14 @@
    "ready": false
   },
   "after_afternoon_rate": {
-   "n_fixes": 0,
-   "n_decisions": 0,
+   "n_fixes": 1,
+   "n_decisions": 1,
    "n_excluded_logged_after_target": 0,
    "ready": false
   },
   "after_us_close": {
-   "n_fixes": 1,
-   "n_decisions": 1,
+   "n_fixes": 2,
+   "n_decisions": 2,
    "n_excluded_logged_after_target": 1,
    "ready": false
   }
@@ -388,8 +388,8 @@
     "beta_0.5": 13532.38,
     "beta_1.0": 13489.99
    },
-   "target": null,
-   "target_date": null,
+   "target": 13490.7,
+   "target_date": "2026-10-06",
    "t": "2026-10-05T16:34:30.785376Z"
   },
   {
@@ -411,8 +411,8 @@
     "beta_0.5": 13528.21,
     "beta_1.0": 13481.68
    },
-   "target": null,
-   "target_date": null,
+   "target": 13490.7,
+   "target_date": "2026-10-06",
    "t": "2026-10-06T00:56:48.589820Z"
   },
   {
@@ -434,8 +434,8 @@
     "beta_0.5": 13531.79,
     "beta_1.0": 13488.81
    },
-   "target": null,
-   "target_date": null,
+   "target": 13490.7,
+   "target_date": "2026-10-06",
    "t": "2026-10-06T04:55:10.277105Z"
   },
   {
@@ -457,8 +457,8 @@
     "beta_0.5": 13513.57,
     "beta_1.0": 13452.52
    },
-   "target": null,
-   "target_date": null,
+   "target": 13490.7,
+   "target_date": "2026-10-06",
    "t": "2026-10-06T05:16:39.770917Z"
   },
   {
@@ -480,9 +480,32 @@
     "beta_0.5": 13513.57,
     "beta_1.0": 13452.52
    },
+   "target": 13490.7,
+   "target_date": "2026-10-06",
+   "t": "2026-10-06T05:46:14.169923Z"
+  },
+  {
+   "logged_at": "2026-10-06T08:03:59.132978Z",
+   "base_kind": "am",
+   "base_date": "2026-10-06",
+   "base_at": "2026-10-06T06:30:00Z",
+   "base": 13490.7,
+   "window": "after_morning_rate",
+   "target_kind": "pm",
+   "g_fix": 399845.58,
+   "g_fix_bar_end": "2026-10-06T06:00:00Z",
+   "g_now": 401730.83,
+   "g_now_bar_end": "2026-10-06T08:00:00Z",
+   "x_since_fix": 0.0047038792571998615,
+   "hours_since_fix": 1.57,
+   "pred": {
+    "beta_0.0": 13490.7,
+    "beta_0.5": 13522.47,
+    "beta_1.0": 13554.31
+   },
    "target": null,
    "target_date": null,
-   "t": "2026-10-06T05:46:14.169923Z"
+   "t": "2026-10-06T08:03:59.132978Z"
   }
  ]
 }
