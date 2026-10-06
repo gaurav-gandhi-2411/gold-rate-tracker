@@ -1,14 +1,14 @@
 {
-  "capture_utc": "2026-10-05T14:28:24Z",
-  "as_of_date": "2026-10-05",
+  "capture_utc": "2026-10-06T00:00:13Z",
+  "as_of_date": "2026-10-06",
   "national_failures": {},
   "kalyan_failures": {
     "Bangalore": "structure: kalyan: implausible observed_at '1969-12-31T18:30:00+00:00' (year before 2020) \u2014 source likely sent a placeholder timestamp"
   },
   "snapshot_rows_persisted": 3,
   "national_benchmark": {
-    "value": 13705.0,
-    "band_half_width": 137.05,
+    "value": 13707.083333333334,
+    "band_half_width": 137.07083333333335,
     "disagreement": false,
     "sources_used": [
       "ibja",
@@ -23,8 +23,8 @@
   },
   "cities": {
     "Bangalore": {
-      "value": 13705.0,
-      "band_half_width": 205.57500000000002,
+      "value": 13707.083333333334,
+      "band_half_width": 205.60625000000005,
       "coverage": "national_derived",
       "attribution": "National retail consensus (ibja, grt, malabar) \u2014 no Kalyan reading for Bangalore this cycle",
       "markup": null
