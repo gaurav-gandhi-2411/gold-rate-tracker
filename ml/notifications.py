@@ -1162,7 +1162,15 @@ def _check_t16_model_demoted(
         ValueError,
     ):  # a hand-edited or naive timestamp: alert rather than stay silent
         pass
-    rules = ", ".join(r.get("rule", "?") for r in dm.get("reasons", [])) or "unknown rule"
+    # the state file is hand-editable: tolerate reasons that are None, strings or missing keys, so
+    # a malformed file still alerts (generic text) instead of raising and hiding the alert
+    reasons = dm.get("reasons")
+    names = [
+        str(r["rule"])
+        for r in (reasons if isinstance(reasons, list) else [])
+        if isinstance(r, dict) and r.get("rule")
+    ]
+    rules = ", ".join(names) or "unknown rule"
     title = "Gold Tracker: next-rate model switched off"
     body = (
         f"The model behind the next-rate range was switched off on its own (rule: {rules}; "
@@ -1289,7 +1297,11 @@ def check_triggers(
     t15 = _check_t15_ibja_move(ibja_move, state, now_ist)
     if t15 is not None:
         alerts.append(t15)
-    t16 = _check_t16_model_demoted(forecast, state, now_ist)
+    try:  # one trigger's bug must not drop the alerts the other triggers already produced
+        t16 = _check_t16_model_demoted(forecast, state, now_ist)
+    except Exception:
+        logger.exception("T16 check failed; the other triggers' alerts are kept")
+        t16 = None
     if t16 is not None:
         alerts.append(t16)
     return alerts
