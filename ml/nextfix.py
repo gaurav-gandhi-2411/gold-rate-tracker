@@ -801,7 +801,10 @@ def run(
     save_oos(folds, p3_path, MODEL_VERSION)
     ev = evaluate(folds, MODEL_VERSION)
     if not pairs.empty:
-        update_variants(pairs, data_dir)
+        try:  # shadow variants must never take the live forecast down (ADR 069, ADR 071)
+            update_variants(pairs, data_dir)
+        except Exception as exc:
+            logger.warning("nextfix slope-variant shadow failed (%s); live P3 unaffected", exc)
     # Shadow: the ridge + neural-net ensemble keeps its own record and is scored beside P3.
     oos_path = data_dir / OOS_PATH.name
     try:  # the shadow must never take the live forecast down (ADR 069)
