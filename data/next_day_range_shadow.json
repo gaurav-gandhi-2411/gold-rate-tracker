@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
-  "generated_at_utc": "2026-10-04T07:36:16.376222+00:00",
-  "git_sha": "43b2cee09b8aa6eb315295fa90bcedd877f2b808",
+  "generated_at_utc": "2026-10-07T18:28:41.471375+00:00",
+  "git_sha": "2b1b55eb05425a2ff5d8b61853034c0b7d6e5832",
   "frozen_at": "2026-09-24",
   "min_decision_date": "2026-07-18",
   "retrospective": {
@@ -89,76 +89,76 @@
     "note": "Decisions since 2026-07-18 (ADR 022 fix) through the freeze date 2026-09-24: the same decision days the displayed naive flat-hold range has already been scored on. v2 itself was never computed on any of these days before this PR -- this is a genuine backtest of v2, but on days that are held-out-but-already-seen for the DISPLAYED range's own coverage figure, not a forward shadow."
   },
   "forward": {
-    "n": 8,
+    "n": 12,
     "v2": {
-      "n": 8,
-      "k": 7,
-      "coverage": 0.875,
+      "n": 12,
+      "k": 11,
+      "coverage": 0.9166666666666666,
       "wilson95": [
-        0.5291118177871466,
-        0.9775825085499433
+        0.646120088858883,
+        0.9851349055950828
       ],
-      "p_below_80": 0.8322278399999999,
-      "mean_width": 572.7936493489926
+      "p_below_80": 0.931280523264,
+      "mean_width": 570.8111018405167
     },
     "displayed": {
-      "n": 8,
-      "k": 7,
-      "coverage": 0.875,
+      "n": 12,
+      "k": 11,
+      "coverage": 0.9166666666666666,
       "wilson95": [
-        0.5291118177871466,
-        0.9775825085499433
+        0.646120088858883,
+        0.9851349055950828
       ],
-      "p_below_80": 0.8322278399999999,
-      "mean_width": 449.75
+      "p_below_80": 0.931280523264,
+      "mean_width": 389.4166666666667
     },
     "by_stratum": {
       "mon_thu": {
         "v2": {
-          "n": 4,
-          "k": 3,
-          "coverage": 0.75,
+          "n": 6,
+          "k": 5,
+          "coverage": 0.8333333333333334,
           "wilson95": [
-            0.3006418425824019,
-            0.9544127391902995
+            0.4364971778135299,
+            0.9699466302516934
           ],
-          "p_below_80": 0.5903999999999999,
-          "mean_width": 569.7317005349705
+          "p_below_80": 0.7378559999999998,
+          "mean_width": 568.4056645666933
         },
         "displayed": {
-          "n": 4,
-          "k": 3,
-          "coverage": 0.75,
+          "n": 6,
+          "k": 5,
+          "coverage": 0.8333333333333334,
           "wilson95": [
-            0.3006418425824019,
-            0.9544127391902995
+            0.4364971778135299,
+            0.9699466302516934
           ],
-          "p_below_80": 0.5903999999999999,
-          "mean_width": 416.0
+          "p_below_80": 0.7378559999999998,
+          "mean_width": 366.1666666666667
         }
       },
       "fri_sun": {
         "v2": {
-          "n": 4,
-          "k": 4,
+          "n": 6,
+          "k": 6,
           "coverage": 1.0,
           "wilson95": [
-            0.5101091635454027,
+            0.6096657120978346,
             1.0
           ],
           "p_below_80": 1.0,
-          "mean_width": 575.8555981630147
+          "mean_width": 573.2165391143402
         },
         "displayed": {
-          "n": 4,
-          "k": 4,
+          "n": 6,
+          "k": 6,
           "coverage": 1.0,
           "wilson95": [
-            0.5101091635454027,
+            0.6096657120978346,
             1.0
           ],
           "p_below_80": 1.0,
-          "mean_width": 483.5
+          "mean_width": 412.6666666666667
         }
       }
     },
@@ -169,7 +169,7 @@
       "overall": false
     },
     "first_decision_date": "2026-09-25",
-    "last_decision_date": "2026-10-02"
+    "last_decision_date": "2026-10-06"
   },
   "rows": [
     {
@@ -1249,6 +1249,62 @@
       "hi_displayed": 13933.0,
       "hit_displayed": true,
       "width_displayed": 416.0
+    },
+    {
+      "decision_date": "2026-10-03",
+      "weekday": "Saturday",
+      "current_22k": 13820.0,
+      "actual_next_22k": 13720.0,
+      "lo_v2": 13551.6,
+      "hi_v2": 14121.6,
+      "hit_v2": true,
+      "width_v2": 570.0006520301249,
+      "lo_displayed": 13687.0,
+      "hi_displayed": 13958.0,
+      "hit_displayed": true,
+      "width_displayed": 271.0
+    },
+    {
+      "decision_date": "2026-10-04",
+      "weekday": "Sunday",
+      "current_22k": 13720.0,
+      "actual_next_22k": 13720.0,
+      "lo_v2": 13453.6,
+      "hi_v2": 14019.4,
+      "hit_v2": true,
+      "width_v2": 565.8761900038571,
+      "lo_displayed": 13587.0,
+      "hi_displayed": 13858.0,
+      "hit_displayed": true,
+      "width_displayed": 271.0
+    },
+    {
+      "decision_date": "2026-10-05",
+      "weekday": "Monday",
+      "current_22k": 13720.0,
+      "actual_next_22k": 13720.0,
+      "lo_v2": 13453.6,
+      "hi_v2": 14019.4,
+      "hit_v2": true,
+      "width_v2": 565.8761900038571,
+      "lo_displayed": 13614.0,
+      "hi_displayed": 13885.0,
+      "hit_displayed": true,
+      "width_displayed": 271.0
+    },
+    {
+      "decision_date": "2026-10-06",
+      "weekday": "Tuesday",
+      "current_22k": 13720.0,
+      "actual_next_22k": 13755.0,
+      "lo_v2": 13453.7,
+      "hi_v2": 14019.3,
+      "hit_v2": true,
+      "width_v2": 565.6309952564206,
+      "lo_displayed": 13620.0,
+      "hi_displayed": 13882.0,
+      "hit_displayed": true,
+      "width_displayed": 262.0
     }
   ]
 }

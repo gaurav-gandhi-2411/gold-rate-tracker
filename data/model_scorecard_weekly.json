@@ -1,0 +1,1123 @@
+{
+ "schema_version": 1,
+ "generated_at_utc": "2026-10-07T18:28:44Z",
+ "script": "scripts/build_model_scorecard.py",
+ "git_sha": "2b1b55eb05425a2ff5d8b61853034c0b7d6e5832",
+ "script_blob_sha": "fc0a141fbad07fb222efe3f97263c36bd440c2d4",
+ "min_forward_n": 20,
+ "nominal_coverage": 0.8,
+ "alpha": 0.05,
+ "forward_starts": {
+  "nextfix": {
+   "date": "2026-10-01",
+   "basis": "promoted 2026-10-02 (ADR 064/065); forward from decision day d0 >= 2026-10-01"
+  },
+  "p3": {
+   "date": "2026-10-05",
+   "basis": "ADR 069: P3 live from decision day d0 >= 2026-10-05 (folds with retro false)"
+  },
+  "p3_variants": {
+   "date": "2026-10-05",
+   "basis": "ADR 071: forward folds only (retro false), d0 >= 2026-10-05, compared with P3"
+  },
+  "intraday": {
+   "date": "2026-10-02",
+   "basis": "ADR 066 shadow, first entry logged 2026-10-02"
+  },
+  "weekly_range": {
+   "date": "2026-09-24",
+   "basis": "ADR 043 shadow_after in data/weekly_range_shadow_log.json; as_of > this date"
+  },
+  "next_day_range": {
+   "date": "2026-09-24",
+   "basis": "ADR 047 frozen_at in data/next_day_range_shadow.json; decision_date > this date"
+  },
+  "wait_or_buy": {
+   "date": "2026-09-24",
+   "basis": "ADR 049 confirmatory_after in data/wait_or_buy_shadow.json; as_of > this date"
+  },
+  "nowcast": {
+   "date": "2026-09-24",
+   "basis": "ADR 061/063 shadow_after in data/nowcast_shadow_log.json; date > this date"
+  },
+  "h2": {
+   "date": "2026-09-24",
+   "basis": "ADR 038/042 confirmatory_after_as_of in the h2 shadow results; as_of > this date"
+  },
+  "chronos": {
+   "date": "2026-10-05",
+   "basis": "no promotion date exists; counted from this scorecard's first run (2026-10-05)"
+  },
+  "direction": {
+   "date": "2026-10-05",
+   "basis": "no forward ledger exists for h1/h2; counted from this scorecard's first run"
+  },
+  "calibration_band": {
+   "date": "2026-10-05",
+   "basis": "no per-day ledger exists; counted from this scorecard's first run"
+  },
+  "fusion": {
+   "date": "data",
+   "basis": "first as_of_date in data/fusion_snapshots.parquet (every snapshot is forward)"
+  }
+ },
+ "models": [
+  {
+   "id": "nextfix_p3",
+   "name": "ml.nextfix P3 (live next-fix forecast)",
+   "status": "LIVE",
+   "status_note": "",
+   "predicts": "next IBJA PM fix (22K, Rs/g), forecast after the US close",
+   "forward_start": "2026-10-05",
+   "forward_start_basis": "ADR 069: P3 live from decision day d0 >= 2026-10-05 (folds with retro false)",
+   "forward": {
+    "n": 0,
+    "effective_n": null,
+    "metric": "mean absolute error of the next fix",
+    "unit": "Rs/g",
+    "model": null,
+    "baseline": null,
+    "baseline_name": "holding the last fix",
+    "diff": null,
+    "ci95": null,
+    "p_one_sided": null,
+    "p_kind": null,
+    "bh_significant": null,
+    "first_date": null,
+    "last_date": null,
+    "marking": "VERIFIED",
+    "extras": [
+     "forecast.json reports n_forward=0 (copied, not re-measured here)",
+     "no forward data: no resolved forecast on or after 2026-10-05 yet"
+    ]
+   },
+   "retrospective": {
+    "label": "walk-forward over earlier history, NOT forward",
+    "text": "P3 history: re-run on past days, NOT live calls; n=145 (2025-07-17 to 2026-10-05): error 106.1 vs hold 114.5 Rs/g, change -7.3%, diff 95% CI [-14.6, -2.2]",
+    "marking": "VERIFIED"
+   },
+   "gate": {
+    "text": "direction gate ship, timing gate no ship; direction shown to users: no",
+    "passes": true,
+    "marking": "INFERRED"
+   },
+   "verdict": "grey",
+   "verdict_kind": "no_data",
+   "sentence": "No forward data: no resolved forecast on or after 2026-10-05 yet.",
+   "sources": [
+    "data/nextfix_p3_oos.json",
+    "data/forecast.json",
+    "data/model_demotion_state.json"
+   ],
+   "demotion": {
+    "state": "not demoted",
+    "reason": "none",
+    "source": "data/model_demotion_state.json"
+   }
+  },
+  {
+   "id": "nextfix_ensemble_shadow",
+   "name": "shadow: ridge+neural-net ensemble",
+   "status": "SHADOW",
+   "status_note": "not shown to users; scored on the same days as P3",
+   "predicts": "next IBJA PM fix (22K, Rs/g), forecast after the US close",
+   "forward_start": "2026-10-05",
+   "forward_start_basis": "ADR 069: P3 live from decision day d0 >= 2026-10-05 (folds with retro false)",
+   "forward": {
+    "n": 1,
+    "effective_n": null,
+    "metric": "mean absolute error of the next fix",
+    "unit": "Rs/g",
+    "model": 25.55,
+    "baseline": 39.4,
+    "baseline_name": "holding the last fix",
+    "diff": -13.85,
+    "ci95": null,
+    "p_one_sided": null,
+    "p_kind": "one-sided HAC Diebold-Mariano (lag 1)",
+    "bh_significant": null,
+    "first_date": "2026-10-05",
+    "last_date": "2026-10-05",
+    "marking": "VERIFIED",
+    "extras": [
+     "direction right 1/1 moves vs always-up 0/1",
+     "P3 vs the ensemble, same days: too early (n=0, need 20)"
+    ],
+    "paired": {
+     "n": 0,
+     "model": null,
+     "baseline": null,
+     "diff": null,
+     "ci95": null,
+     "p_one_sided": null,
+     "effective_n": null,
+     "p_kind": "one-sided HAC Diebold-Mariano (lag 1)",
+     "label": "P3 vs the ensemble",
+     "min_n": 20,
+     "marking": "VERIFIED"
+    }
+   },
+   "retrospective": {
+    "label": "walk-forward over earlier history, NOT forward",
+    "text": "ensemble history: re-run on past days, NOT live calls; n=144 (2025-07-17 to 2026-10-01): error 105.2 vs hold 115.0 Rs/g, change -8.5%, diff 95% CI [-16.5, -3.1]",
+    "marking": "VERIFIED"
+   },
+   "gate": {
+    "text": "shadow since ADR 069; nothing shown to users",
+    "passes": null,
+    "marking": "INFERRED"
+   },
+   "verdict": "grey",
+   "verdict_kind": "too_early",
+   "sentence": "Too early (n=1, need 20) to say whether the ensemble beats holding the last fix.",
+   "sources": [
+    "data/nextfix_oos.json",
+    "data/forecast.json",
+    "data/nextfix_p3_oos.json"
+   ],
+   "demotion": null
+  },
+  {
+   "id": "p3_roll60",
+   "name": "shadow: P3 on the last 60 days (ADR 071 V1)",
+   "status": "SHADOW",
+   "status_note": "not shown to users; compared with P3 only",
+   "predicts": "next IBJA PM fix, like P3 but with the slope fitted on the 60 most recent resolved days",
+   "forward_start": "2026-10-05",
+   "forward_start_basis": "ADR 071: forward folds only (retro false), d0 >= 2026-10-05, compared with P3",
+   "forward": {
+    "n": 0,
+    "effective_n": null,
+    "metric": "mean absolute error of the next fix",
+    "unit": "Rs/g",
+    "model": null,
+    "baseline": null,
+    "baseline_name": "P3 (the live model)",
+    "diff": null,
+    "ci95": null,
+    "p_one_sided": null,
+    "p_kind": "one-sided HAC Diebold-Mariano (lag 1); frozen alpha 0.025 (ADR 071)",
+    "bh_significant": null,
+    "first_date": null,
+    "last_date": null,
+    "marking": "VERIFIED",
+    "extras": [
+     "shadow: P3 on the last 60 days (ADR 071 V1) vs P3, same days: too early (n=0, need 40)"
+    ],
+    "paired": {
+     "n": 0,
+     "model": null,
+     "baseline": null,
+     "diff": null,
+     "ci95": null,
+     "p_one_sided": null,
+     "effective_n": null,
+     "p_kind": "one-sided HAC Diebold-Mariano (lag 1)",
+     "label": "shadow: P3 on the last 60 days (ADR 071 V1) vs P3",
+     "min_n": 40,
+     "marking": "VERIFIED"
+    }
+   },
+   "retrospective": {
+    "label": "walk-forward over earlier history, NOT forward",
+    "text": "re-run on past days, NOT live calls; n=145 re-run days (2025-07-17 to 2026-10-05): variant error 106.9 Rs/g vs P3 106.1 on 145 shared days",
+    "marking": "VERIFIED"
+   },
+   "gate": {
+    "text": "ADR 071: needs 40 forward days, error at least 2% lower, one-sided p < 0.025, direction not worse",
+    "passes": null,
+    "marking": "INFERRED"
+   },
+   "verdict": "grey",
+   "verdict_kind": "too_early",
+   "sentence": "Too early (n=0, need 40 by ADR 071's frozen rule); P3 stays.",
+   "sources": [
+    "data/nextfix_p3_variants_oos.json",
+    "data/nextfix_p3_oos.json"
+   ],
+   "demotion": null
+  },
+  {
+   "id": "p3_monday",
+   "name": "shadow: P3 Monday slope (ADR 071 V2)",
+   "status": "SHADOW",
+   "status_note": "not shown to users; compared with P3 only",
+   "predicts": "next IBJA PM fix, like P3 but with the slope fitted on Monday days only",
+   "forward_start": "2026-10-05",
+   "forward_start_basis": "ADR 071: forward folds only (retro false), d0 >= 2026-10-05, compared with P3",
+   "forward": {
+    "n": 0,
+    "effective_n": null,
+    "metric": "mean absolute error of the next fix",
+    "unit": "Rs/g",
+    "model": null,
+    "baseline": null,
+    "baseline_name": "P3 (the live model)",
+    "diff": null,
+    "ci95": null,
+    "p_one_sided": null,
+    "p_kind": "one-sided HAC Diebold-Mariano (lag 1); frozen alpha 0.025 (ADR 071)",
+    "bh_significant": null,
+    "first_date": null,
+    "last_date": null,
+    "marking": "VERIFIED",
+    "extras": [
+     "shadow: P3 Monday slope (ADR 071 V2) vs P3, same days: too early (n=0, need 40)"
+    ],
+    "paired": {
+     "n": 0,
+     "model": null,
+     "baseline": null,
+     "diff": null,
+     "ci95": null,
+     "p_one_sided": null,
+     "effective_n": null,
+     "p_kind": "one-sided HAC Diebold-Mariano (lag 1)",
+     "label": "shadow: P3 Monday slope (ADR 071 V2) vs P3",
+     "min_n": 40,
+     "marking": "VERIFIED"
+    }
+   },
+   "retrospective": {
+    "label": "walk-forward over earlier history, NOT forward",
+    "text": "re-run on past days, NOT live calls; n=145 re-run days (2025-07-17 to 2026-10-05): variant error 105.2 Rs/g vs P3 106.1 on 145 shared days",
+    "marking": "VERIFIED"
+   },
+   "gate": {
+    "text": "ADR 071: needs 40 forward days, error at least 2% lower, one-sided p < 0.025, direction not worse",
+    "passes": null,
+    "marking": "INFERRED"
+   },
+   "verdict": "grey",
+   "verdict_kind": "too_early",
+   "sentence": "Too early (n=0, need 40 by ADR 071's frozen rule); P3 stays.",
+   "sources": [
+    "data/nextfix_p3_variants_oos.json",
+    "data/nextfix_p3_oos.json"
+   ],
+   "demotion": null
+  },
+  {
+   "id": "demotion_monitor",
+   "name": "demotion monitor (ADR 068, watches P3)",
+   "status": "LIVE",
+   "status_note": "",
+   "predicts": "whether the live next-fix model has been switched back to holding the last fix",
+   "forward_start": "2026-10-05",
+   "forward_start_basis": "ADR 069: P3 live from decision day d0 >= 2026-10-05 (folds with retro false)",
+   "forward": {
+    "n": 0,
+    "effective_n": null,
+    "metric": null,
+    "unit": null,
+    "model": null,
+    "baseline": null,
+    "baseline_name": null,
+    "diff": null,
+    "ci95": null,
+    "p_one_sided": null,
+    "p_kind": null,
+    "bh_significant": null,
+    "first_date": null,
+    "last_date": null,
+    "marking": "INFERRED",
+    "extras": [
+     "demoted: no",
+     "since: n/a",
+     "reasons recorded: none",
+     "state file last checked: 2026-10-07T17:31:43.991278+00:00",
+     "rules breaching now (forecast.json): none",
+     "live record nextfix_p3_v1; re-promotion is never automatic (a person decides)"
+    ]
+   },
+   "retrospective": {
+    "label": "walk-forward over earlier history, NOT forward",
+    "text": "none",
+    "marking": "INFERRED"
+   },
+   "gate": {
+    "text": "ADR 068 rules: error, direction, range; a breach must repeat on 3 daily checks",
+    "passes": null,
+    "marking": "INFERRED"
+   },
+   "verdict": "green",
+   "verdict_kind": "monitor",
+   "sentence": "Not demoted, and no monitoring rule is breaching.",
+   "sources": [
+    "data/model_demotion_state.json",
+    "data/forecast.json"
+   ],
+   "demotion": null
+  },
+  {
+   "id": "hold_am_to_pm",
+   "name": "nextfix hold: after the morning fix",
+   "status": "LIVE",
+   "status_note": "",
+   "predicts": "that day's PM fix, by holding the latest fix with a volatility-scaled range",
+   "forward_start": "2026-10-01",
+   "forward_start_basis": "promoted 2026-10-02 (ADR 064/065); forward from decision day d0 >= 2026-10-01",
+   "forward": {
+    "n": 3,
+    "effective_n": null,
+    "metric": "coverage of the 80% range",
+    "unit": "share of days inside",
+    "model": 1.0,
+    "baseline": 0.8,
+    "baseline_name": "the 80% it promises",
+    "diff": 0.2,
+    "ci95": [
+     0.4385,
+     1.0
+    ],
+    "p_one_sided": 1.0,
+    "p_kind": "exact one-sided binomial, coverage below 80% (days treated as independent)",
+    "bh_significant": null,
+    "first_date": "2026-10-01",
+    "last_date": "2026-10-07",
+    "marking": "VERIFIED",
+    "extras": [
+     "effective n unavailable (hit order not exposed by ml.nextfix.flat_record)",
+     "mean range width Rs 106"
+    ]
+   },
+   "retrospective": {
+    "label": "walk-forward over earlier history, NOT forward",
+    "text": "n=243: coverage 0.790 (95% 0.735-0.837)",
+    "marking": "VERIFIED"
+   },
+   "gate": {
+    "text": "range ready when n >= 20 (ml.nextfix)",
+    "passes": null,
+    "marking": "INFERRED"
+   },
+   "verdict": "grey",
+   "verdict_kind": "too_early",
+   "sentence": "Too early (n=3, need 20) to judge the hold range.",
+   "sources": [
+    "data/ibja_rates.parquet"
+   ],
+   "demotion": null
+  },
+  {
+   "id": "hold_pm_to_am",
+   "name": "nextfix hold: after the afternoon fix",
+   "status": "LIVE",
+   "status_note": "",
+   "predicts": "the next AM fix, by holding the latest fix with a volatility-scaled range",
+   "forward_start": "2026-10-01",
+   "forward_start_basis": "promoted 2026-10-02 (ADR 064/065); forward from decision day d0 >= 2026-10-01",
+   "forward": {
+    "n": 2,
+    "effective_n": null,
+    "metric": "coverage of the 80% range",
+    "unit": "share of days inside",
+    "model": 1.0,
+    "baseline": 0.8,
+    "baseline_name": "the 80% it promises",
+    "diff": 0.2,
+    "ci95": [
+     0.3424,
+     1.0
+    ],
+    "p_one_sided": 1.0,
+    "p_kind": "exact one-sided binomial, coverage below 80% (days treated as independent)",
+    "bh_significant": null,
+    "first_date": "2026-10-01",
+    "last_date": "2026-10-05",
+    "marking": "VERIFIED",
+    "extras": [
+     "effective n unavailable (hit order not exposed by ml.nextfix.flat_record)",
+     "mean range width Rs 333"
+    ]
+   },
+   "retrospective": {
+    "label": "walk-forward over earlier history, NOT forward",
+    "text": "n=189: coverage 0.804 (95% 0.742-0.855)",
+    "marking": "VERIFIED"
+   },
+   "gate": {
+    "text": "range ready when n >= 20 (ml.nextfix)",
+    "passes": null,
+    "marking": "INFERRED"
+   },
+   "verdict": "grey",
+   "verdict_kind": "too_early",
+   "sentence": "Too early (n=2, need 20) to judge the hold range.",
+   "sources": [
+    "data/ibja_rates.parquet"
+   ],
+   "demotion": null
+  },
+  {
+   "id": "intraday_after_morning_rate",
+   "name": "nextfix_intraday shadow (after the morning fix)",
+   "status": "SHADOW",
+   "status_note": "",
+   "predicts": "next IBJA fix from the hourly world gold price (pass-through beta 1.0)",
+   "forward_start": "2026-10-02",
+   "forward_start_basis": "ADR 066 shadow, first entry logged 2026-10-02",
+   "forward": {
+    "n": 2,
+    "effective_n": null,
+    "metric": "mean absolute error of the next fix",
+    "unit": "Rs/g",
+    "model": 60.12,
+    "baseline": 41.3,
+    "baseline_name": "holding the last fix",
+    "diff": 18.83,
+    "ci95": null,
+    "p_one_sided": null,
+    "p_kind": "one-sided HAC Diebold-Mariano (lag 1)",
+    "bh_significant": null,
+    "first_date": "2026-10-05",
+    "last_date": "2026-10-06",
+    "marking": "VERIFIED",
+    "extras": [
+     "beta 0.5 error 9.3 Rs/g (reported, not used for the verdict)",
+     "one decision per base fix, logged before the target fix was published",
+     "ADR 066 scoring correction: entries logged after their target fix was published are excluded; the shadow job reports 0 excluded so far (I)"
+    ]
+   },
+   "retrospective": {
+    "label": "walk-forward over earlier history, NOT forward",
+    "text": "none",
+    "marking": "INFERRED"
+   },
+   "gate": {
+    "text": "ADR 066 promotion: >= 14 days of shadow AND an interval that excludes zero",
+    "passes": false,
+    "marking": "INFERRED"
+   },
+   "verdict": "grey",
+   "verdict_kind": "too_early",
+   "sentence": "Too early (n=2, need 20) to say whether the hourly pass-through beats holding the last fix.",
+   "sources": [
+    "data/nextfix_intraday_shadow.json"
+   ],
+   "demotion": null
+  },
+  {
+   "id": "intraday_after_afternoon_rate",
+   "name": "nextfix_intraday shadow (after the afternoon fix)",
+   "status": "SHADOW",
+   "status_note": "",
+   "predicts": "next IBJA fix from the hourly world gold price (pass-through beta 1.0)",
+   "forward_start": "2026-10-02",
+   "forward_start_basis": "ADR 066 shadow, first entry logged 2026-10-02",
+   "forward": {
+    "n": 1,
+    "effective_n": null,
+    "metric": "mean absolute error of the next fix",
+    "unit": "Rs/g",
+    "model": 0.71,
+    "baseline": 84.2,
+    "baseline_name": "holding the last fix",
+    "diff": -83.49,
+    "ci95": null,
+    "p_one_sided": null,
+    "p_kind": "one-sided HAC Diebold-Mariano (lag 1)",
+    "bh_significant": null,
+    "first_date": "2026-10-05",
+    "last_date": "2026-10-05",
+    "marking": "VERIFIED",
+    "extras": [
+     "beta 0.5 error 41.7 Rs/g (reported, not used for the verdict)",
+     "one decision per base fix, logged before the target fix was published",
+     "ADR 066 scoring correction: entries logged after their target fix was published are excluded; the shadow job reports 0 excluded so far (I)"
+    ]
+   },
+   "retrospective": {
+    "label": "walk-forward over earlier history, NOT forward",
+    "text": "none",
+    "marking": "INFERRED"
+   },
+   "gate": {
+    "text": "ADR 066 promotion: >= 14 days of shadow AND an interval that excludes zero",
+    "passes": false,
+    "marking": "INFERRED"
+   },
+   "verdict": "grey",
+   "verdict_kind": "too_early",
+   "sentence": "Too early (n=1, need 20) to say whether the hourly pass-through beats holding the last fix.",
+   "sources": [
+    "data/nextfix_intraday_shadow.json"
+   ],
+   "demotion": null
+  },
+  {
+   "id": "intraday_after_us_close",
+   "name": "nextfix_intraday shadow (after the US close)",
+   "status": "SHADOW",
+   "status_note": "",
+   "predicts": "next IBJA fix from the hourly world gold price (pass-through beta 1.0)",
+   "forward_start": "2026-10-02",
+   "forward_start_basis": "ADR 066 shadow, first entry logged 2026-10-02",
+   "forward": {
+    "n": 2,
+    "effective_n": null,
+    "metric": "mean absolute error of the next fix",
+    "unit": "Rs/g",
+    "model": 37.7,
+    "baseline": 58.25,
+    "baseline_name": "holding the last fix",
+    "diff": -20.54,
+    "ci95": null,
+    "p_one_sided": null,
+    "p_kind": "one-sided HAC Diebold-Mariano (lag 1)",
+    "bh_significant": null,
+    "first_date": "2026-10-01",
+    "last_date": "2026-10-05",
+    "marking": "VERIFIED",
+    "extras": [
+     "beta 0.5 error 12.7 Rs/g (reported, not used for the verdict)",
+     "one decision per base fix, logged before the target fix was published",
+     "ADR 066 scoring correction: entries logged after their target fix was published are excluded; the shadow job reports 1 excluded so far (I)"
+    ]
+   },
+   "retrospective": {
+    "label": "walk-forward over earlier history, NOT forward",
+    "text": "none",
+    "marking": "INFERRED"
+   },
+   "gate": {
+    "text": "ADR 066 promotion: >= 14 days of shadow AND an interval that excludes zero",
+    "passes": false,
+    "marking": "INFERRED"
+   },
+   "verdict": "grey",
+   "verdict_kind": "too_early",
+   "sentence": "Too early (n=2, need 20) to say whether the hourly pass-through beats holding the last fix.",
+   "sources": [
+    "data/nextfix_intraday_shadow.json"
+   ],
+   "demotion": null
+  },
+  {
+   "id": "calibration_band",
+   "name": "IBJA-calibrated displayed band",
+   "status": "LIVE",
+   "status_note": "",
+   "predicts": "Tanishq 22K range shown on the IBJA-calibrated tier",
+   "forward_start": "2026-10-05",
+   "forward_start_basis": "no per-day ledger exists; counted from this scorecard's first run",
+   "forward": {
+    "n": 0,
+    "effective_n": null,
+    "metric": null,
+    "unit": null,
+    "model": null,
+    "baseline": null,
+    "baseline_name": null,
+    "diff": null,
+    "ci95": null,
+    "p_one_sided": null,
+    "p_kind": null,
+    "bh_significant": null,
+    "first_date": null,
+    "last_date": null,
+    "marking": "VERIFIED",
+    "extras": [
+     "no forward data: the file is a walk-forward re-score of history with no per-day ledger of issued bands"
+    ]
+   },
+   "retrospective": {
+    "label": "walk-forward over earlier history, NOT forward",
+    "text": "n=103: coverage 0.718 (95% 0.625-0.796) vs 0.80 promised; stratified shadow band 0.825",
+    "marking": "INFERRED"
+   },
+   "gate": {
+    "text": "resolvable at n: True; below 80% (p vs nominal 0.048)",
+    "passes": false,
+    "marking": "INFERRED"
+   },
+   "verdict": "grey",
+   "verdict_kind": "no_data",
+   "sentence": "No forward data: this band has no per-day ledger of issued ranges, so only the retrospective miss is known (72% inside vs 80% promised, n=103).",
+   "sources": [
+    "data/calibration_band_coverage.json"
+   ],
+   "demotion": null
+  },
+  {
+   "id": "direction_h1",
+   "name": "ml.direction (h1 up/down)",
+   "status": "DARK",
+   "status_note": "flag off; nothing shown to users",
+   "predicts": "whether the price is higher after 1 IBJA reading(s)",
+   "forward_start": "2026-10-05",
+   "forward_start_basis": "no forward ledger exists for h1/h2; counted from this scorecard's first run",
+   "forward": {
+    "n": 0,
+    "effective_n": null,
+    "metric": null,
+    "unit": null,
+    "model": null,
+    "baseline": null,
+    "baseline_name": null,
+    "diff": null,
+    "ci95": null,
+    "p_one_sided": null,
+    "p_kind": null,
+    "bh_significant": null,
+    "first_date": null,
+    "last_date": null,
+    "marking": "VERIFIED",
+    "extras": [
+     "no forward data: the harness re-scores history each Monday and keeps no forward ledger"
+    ]
+   },
+   "retrospective": {
+    "label": "walk-forward over earlier history, NOT forward",
+    "text": "n=159 folds to 2026-09-30: logistic 0.478, lightgbm 0.509 vs always-up 0.509, p=0.583",
+    "marking": "INFERRED"
+   },
+   "gate": {
+    "text": "probability gate no ship (stays dark): not significant vs always-up: p=0.5831, acc=0.4780 vs baseline=0.5094",
+    "passes": false,
+    "marking": "INFERRED"
+   },
+   "verdict": "grey",
+   "verdict_kind": "no_data",
+   "sentence": "No forward data: the harness re-scores history each Monday and keeps no forward ledger.",
+   "sources": [
+    "data/direction_baseline.json"
+   ],
+   "demotion": null
+  },
+  {
+   "id": "direction_h2",
+   "name": "ml.direction (h2 up/down)",
+   "status": "DARK",
+   "status_note": "flag off; nothing shown to users",
+   "predicts": "whether the price is higher after 2 IBJA reading(s)",
+   "forward_start": "2026-10-05",
+   "forward_start_basis": "no forward ledger exists for h1/h2; counted from this scorecard's first run",
+   "forward": {
+    "n": 0,
+    "effective_n": null,
+    "metric": null,
+    "unit": null,
+    "model": null,
+    "baseline": null,
+    "baseline_name": null,
+    "diff": null,
+    "ci95": null,
+    "p_one_sided": null,
+    "p_kind": null,
+    "bh_significant": null,
+    "first_date": null,
+    "last_date": null,
+    "marking": "VERIFIED",
+    "extras": [
+     "no forward data: the harness re-scores history each Monday and keeps no forward ledger; the forward arm is the h2 pre-registration row"
+    ]
+   },
+   "retrospective": {
+    "label": "walk-forward over earlier history, NOT forward",
+    "text": "n=153 folds to 2026-09-29: logistic 0.562, lightgbm 0.588 vs always-up 0.575, p=0.815",
+    "marking": "INFERRED"
+   },
+   "gate": {
+    "text": "probability gate no ship (stays dark): not significant vs always-up: p=0.8145, acc=0.5621 vs baseline=0.5752",
+    "passes": false,
+    "marking": "INFERRED"
+   },
+   "verdict": "grey",
+   "verdict_kind": "no_data",
+   "sentence": "No forward data: the harness re-scores history each Monday and keeps no forward ledger; the forward arm is the h2 pre-registration row.",
+   "sources": [
+    "data/direction_baseline.json"
+   ],
+   "demotion": null
+  },
+  {
+   "id": "direction_h2_prereg",
+   "name": "h2 pre-registration shadow (live h2 arm)",
+   "status": "SHADOW",
+   "status_note": "",
+   "predicts": "up/down after 2 IBJA readings (ADR 038/042)",
+   "forward_start": "2026-09-24",
+   "forward_start_basis": "ADR 038/042 confirmatory_after_as_of in the h2 shadow results; as_of > this date",
+   "forward": {
+    "n": 4,
+    "effective_n": 3.0,
+    "metric": "accuracy",
+    "unit": "share correct",
+    "model": 0.5,
+    "baseline": 0.5,
+    "baseline_name": "always predict up",
+    "diff": null,
+    "ci95": null,
+    "p_one_sided": 0.5,
+    "p_kind": "as reported by the job (HAC DM)",
+    "bh_significant": null,
+    "first_date": null,
+    "last_date": null,
+    "marking": "INFERRED",
+    "extras": [
+     "pre-registered n for power: 418.3229; reached: False"
+    ]
+   },
+   "retrospective": {
+    "label": "walk-forward over earlier history, NOT forward",
+    "text": "proxy dead-zone arm, n=329: accuracy 0.5258358662613982 vs always-up 0.5562310030395137",
+    "marking": "INFERRED"
+   },
+   "gate": {
+    "text": "needs the pre-registered n before any claim",
+    "passes": null,
+    "marking": "INFERRED"
+   },
+   "verdict": "grey",
+   "verdict_kind": "too_early",
+   "sentence": "Too early (n=4, need 20; pre-registered target 418.3229).",
+   "sources": [
+    "data/preregistered_h2_shadow_results.json"
+   ],
+   "demotion": null
+  },
+  {
+   "id": "chronos",
+   "name": "Chronos (chronos-bolt-tiny) walk-forward",
+   "status": "DARK",
+   "status_note": "computed every cycle; only a status string is shown",
+   "predicts": "5-day price path",
+   "forward_start": "2026-10-05",
+   "forward_start_basis": "no promotion date exists; counted from this scorecard's first run (2026-10-05)",
+   "forward": {
+    "n": 0,
+    "effective_n": null,
+    "metric": "mean absolute error over 5 days",
+    "unit": "Rs/g",
+    "model": null,
+    "baseline": null,
+    "baseline_name": "holding the last price",
+    "diff": null,
+    "ci95": null,
+    "p_one_sided": null,
+    "p_kind": null,
+    "bh_significant": null,
+    "first_date": null,
+    "last_date": null,
+    "marking": "VERIFIED",
+    "extras": [
+     "5-day folds overlap; effective n is the HAC figure",
+     "no forward data: no resolved forecast on or after 2026-10-05 yet"
+    ]
+   },
+   "retrospective": {
+    "label": "walk-forward over earlier history, NOT forward",
+    "text": "n=254 folds: Chronos 292.1 vs hold 247.5 Rs/g, diff 95% CI [+17, +72] (lag 4)",
+    "marking": "VERIFIED"
+   },
+   "gate": {
+    "text": "not promoted; base-rate fallback in use",
+    "passes": false,
+    "marking": "INFERRED"
+   },
+   "verdict": "grey",
+   "verdict_kind": "no_data",
+   "sentence": "No forward data: no resolved forecast on or after 2026-10-05 yet.",
+   "sources": [
+    "data/backtest.json"
+   ],
+   "demotion": null
+  },
+  {
+   "id": "weekly_range_1d",
+   "name": "ml.weekly_range shadow (1-day range)",
+   "status": "SHADOW",
+   "status_note": "read by the page only under page_v2 (off)",
+   "predicts": "1-day range for the price",
+   "forward_start": "2026-09-24",
+   "forward_start_basis": "ADR 043 shadow_after in data/weekly_range_shadow_log.json; as_of > this date",
+   "forward": {
+    "n": 6,
+    "effective_n": 6.0,
+    "metric": "coverage of the 80% range",
+    "unit": "share of days inside",
+    "model": 0.833,
+    "baseline": 0.8,
+    "baseline_name": "the 80% it promises",
+    "diff": 0.033,
+    "ci95": [
+     0.4365,
+     0.9699
+    ],
+    "p_one_sided": 0.7379,
+    "p_kind": "exact one-sided binomial, coverage below 80% (days treated as independent)",
+    "bh_significant": null,
+    "first_date": "2026-09-25",
+    "last_date": "2026-10-05",
+    "marking": "VERIFIED",
+    "extras": []
+   },
+   "retrospective": {
+    "label": "walk-forward over earlier history, NOT forward",
+    "text": "none",
+    "marking": "INFERRED"
+   },
+   "gate": {
+    "text": "needs about 8-10 weeks of forward days (ADR 043)",
+    "passes": null,
+    "marking": "INFERRED"
+   },
+   "verdict": "grey",
+   "verdict_kind": "too_early",
+   "sentence": "Too early (n=6, need 20) to judge the 1-day range.",
+   "sources": [
+    "data/weekly_range_shadow_log.json"
+   ],
+   "demotion": null
+  },
+  {
+   "id": "weekly_range_week",
+   "name": "ml.weekly_range shadow (7-day range)",
+   "status": "SHADOW",
+   "status_note": "read by the page only under page_v2 (off)",
+   "predicts": "7-day range for the price",
+   "forward_start": "2026-09-24",
+   "forward_start_basis": "ADR 043 shadow_after in data/weekly_range_shadow_log.json; as_of > this date",
+   "forward": {
+    "n": 3,
+    "effective_n": null,
+    "metric": "coverage of the 80% range",
+    "unit": "share of days inside",
+    "model": 1.0,
+    "baseline": 0.8,
+    "baseline_name": "the 80% it promises",
+    "diff": 0.2,
+    "ci95": [
+     0.4385,
+     1.0
+    ],
+    "p_one_sided": 1.0,
+    "p_kind": "exact one-sided binomial, coverage below 80% (days treated as independent)",
+    "bh_significant": null,
+    "first_date": "2026-09-25",
+    "last_date": "2026-09-29",
+    "marking": "VERIFIED",
+    "extras": []
+   },
+   "retrospective": {
+    "label": "walk-forward over earlier history, NOT forward",
+    "text": "none",
+    "marking": "INFERRED"
+   },
+   "gate": {
+    "text": "needs about 8-10 weeks of forward days (ADR 043)",
+    "passes": null,
+    "marking": "INFERRED"
+   },
+   "verdict": "grey",
+   "verdict_kind": "too_early",
+   "sentence": "Too early (n=3, need 20) to judge the 7-day range.",
+   "sources": [
+    "data/weekly_range_shadow_log.json"
+   ],
+   "demotion": null
+  },
+  {
+   "id": "next_day_range_v2",
+   "name": "ml.next_day_range v2 shadow",
+   "status": "SHADOW",
+   "status_note": "",
+   "predicts": "next-day range (vs the displayed range)",
+   "forward_start": "2026-09-24",
+   "forward_start_basis": "ADR 047 frozen_at in data/next_day_range_shadow.json; decision_date > this date",
+   "forward": {
+    "n": 12,
+    "effective_n": 12.0,
+    "metric": "coverage of the 80% range",
+    "unit": "share of days inside",
+    "model": 0.917,
+    "baseline": 0.8,
+    "baseline_name": "the 80% it promises",
+    "diff": 0.117,
+    "ci95": [
+     0.6461,
+     0.9851
+    ],
+    "p_one_sided": 0.9313,
+    "p_kind": "exact one-sided binomial, coverage below 80% (days treated as independent)",
+    "bh_significant": null,
+    "first_date": "2026-09-25",
+    "last_date": "2026-10-06",
+    "marking": "VERIFIED",
+    "extras": [
+     "mean range width Rs 571",
+     "displayed range (baseline) coverage 11/12",
+     "v2 vs displayed, days only one hit: 0 vs 0",
+     "v2 is +47% wider than the displayed range"
+    ]
+   },
+   "retrospective": {
+    "label": "walk-forward over earlier history, NOT forward",
+    "text": "n=69: v2 0.855 vs displayed 0.754; failed the width bar (ADR 047)",
+    "marking": "VERIFIED"
+   },
+   "gate": {
+    "text": "ADR 047: coverage not below displayed AND width <= +25%",
+    "passes": false,
+    "marking": "INFERRED"
+   },
+   "verdict": "grey",
+   "verdict_kind": "too_early",
+   "sentence": "Too early (n=12, need 20) to judge the v2 range.",
+   "sources": [
+    "data/next_day_range_shadow.json"
+   ],
+   "demotion": null
+  },
+  {
+   "id": "wait_or_buy",
+   "name": "ml.wait_or_buy shadow (buy now or wait)",
+   "status": "SHADOW",
+   "status_note": "flag off; nothing shown to users",
+   "predicts": "chance the price is lower after waiting N days (N=1 scored here)",
+   "forward_start": "2026-09-24",
+   "forward_start_basis": "ADR 049 confirmatory_after in data/wait_or_buy_shadow.json; as_of > this date",
+   "forward": {
+    "n": 6,
+    "effective_n": 5.0,
+    "metric": "Brier score of the lower-price chance (N=1)",
+    "unit": "Brier",
+    "model": 0.25,
+    "baseline": 0.25,
+    "baseline_name": "a flat 50% chance",
+    "diff": 0.0,
+    "ci95": [
+     -0.0,
+     0.01
+    ],
+    "p_one_sided": 0.6673,
+    "p_kind": "one-sided HAC Diebold-Mariano (lag 1)",
+    "bh_significant": null,
+    "first_date": "2026-09-25",
+    "last_date": "2026-10-05",
+    "marking": "VERIFIED",
+    "extras": [
+     "N=2: 5 scored so far",
+     "N=7: 3 scored so far"
+    ]
+   },
+   "retrospective": {
+    "label": "walk-forward over earlier history, NOT forward",
+    "text": "none",
+    "marking": "INFERRED"
+   },
+   "gate": {
+    "text": "needs about 8 weeks forward (ADR 049); flag off",
+    "passes": null,
+    "marking": "INFERRED"
+   },
+   "verdict": "grey",
+   "verdict_kind": "too_early",
+   "sentence": "Too early (n=6, need 20) to say whether the chance estimate beats a flat 50% chance.",
+   "sources": [
+    "data/wait_or_buy_shadow.json"
+   ],
+   "demotion": null
+  },
+  {
+   "id": "nowcast_m3",
+   "name": "nowcast shadow: morning-rate estimate (M3)",
+   "status": "SHADOW",
+   "status_note": "",
+   "predicts": "same-day Tanishq 22K from IBJA AM+PM",
+   "forward_start": "2026-09-24",
+   "forward_start_basis": "ADR 061/063 shadow_after in data/nowcast_shadow_log.json; date > this date",
+   "forward": {
+    "n": 10,
+    "effective_n": 8.4,
+    "metric": "mean absolute error of today's rate",
+    "unit": "Rs/g",
+    "model": 35.04,
+    "baseline": 47.33,
+    "baseline_name": "the live estimate (M0)",
+    "diff": -12.29,
+    "ci95": [
+     -44.97,
+     20.39
+    ],
+    "p_one_sided": 0.2323,
+    "p_kind": "one-sided HAC Diebold-Mariano (lag 1)",
+    "bh_significant": null,
+    "first_date": "2026-09-25",
+    "last_date": "2026-10-06",
+    "marking": "VERIFIED",
+    "extras": [
+     "2 day(s) excluded: an input was published after the target (ADR 063)"
+    ]
+   },
+   "retrospective": {
+    "label": "walk-forward over earlier history, NOT forward",
+    "text": "none",
+    "marking": "INFERRED"
+   },
+   "gate": {
+    "text": "shadow window ends 2026-10-22 (ADR 061/063)",
+    "passes": null,
+    "marking": "INFERRED"
+   },
+   "verdict": "grey",
+   "verdict_kind": "too_early",
+   "sentence": "Too early (n=10, need 20) to say whether the morning-rate estimate beats the live estimate (M0).",
+   "sources": [
+    "data/nowcast_shadow_log.json"
+   ],
+   "demotion": null
+  },
+  {
+   "id": "shadow_fusion",
+   "name": "ml.shadow_fusion national benchmark",
+   "status": "SHADOW",
+   "status_note": "",
+   "predicts": "same-day Tanishq 22K from the national retail average",
+   "forward_start": "2026-07-19",
+   "forward_start_basis": "first as_of_date in data/fusion_snapshots.parquet (every snapshot is forward)",
+   "forward": {
+    "n": 68,
+    "effective_n": 68.8,
+    "metric": "mean absolute gap to Tanishq (same day)",
+    "unit": "Rs/g",
+    "model": 41.32,
+    "baseline": 94.63,
+    "baseline_name": "yesterday's Tanishq rate",
+    "diff": -53.31,
+    "ci95": [
+     -78.59,
+     -28.03
+    ],
+    "p_one_sided": 0.0,
+    "p_kind": "one-sided HAC Diebold-Mariano (lag 1)",
+    "bh_significant": true,
+    "first_date": "2026-07-19",
+    "last_date": "2026-10-06",
+    "marking": "VERIFIED",
+    "extras": [
+     "benchmark is the last national snapshot of the day; Tanishq is the day's last reading"
+    ]
+   },
+   "retrospective": {
+    "label": "walk-forward over earlier history, NOT forward",
+    "text": "none",
+    "marking": "INFERRED"
+   },
+   "gate": {
+    "text": "Phase D promotion pending a go from GG (ADR 026)",
+    "passes": false,
+    "marking": "INFERRED"
+   },
+   "verdict": "green",
+   "verdict_kind": "scored",
+   "sentence": "ml.shadow_fusion national benchmark is reliably more accurate than yesterday's Tanishq rate.",
+   "sources": [
+    "data/fusion_snapshots.parquet",
+    "data/prices.json"
+   ],
+   "demotion": null
+  }
+ ]
+}
