@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "generated_at_utc": "2026-10-07T18:28:11.633210+00:00",
+  "generated_at_utc": "2026-10-07T19:16:02.884560+00:00",
   "band_source": "IBJA-calibrated tier's displayed est_low/est_high (recency-weighted empirical residual quantile, ml.calibration)",
   "nominal_pct": 80,
   "coverage": 0.7184,

@@ -1,9 +1,9 @@
 {
  "schema_version": 1,
- "generated_at_utc": "2026-10-07T18:28:44Z",
+ "generated_at_utc": "2026-10-07T19:16:56Z",
  "script": "scripts/build_model_scorecard.py",
- "git_sha": "2b1b55eb05425a2ff5d8b61853034c0b7d6e5832",
- "script_blob_sha": "fc0a141fbad07fb222efe3f97263c36bd440c2d4",
+ "git_sha": "467c24d26d5e75ccc6d4f22ceb88a754e78e8606",
+ "script_blob_sha": "80fcfed281ea3dee0da7215086e97b3918bc990b",
  "min_forward_n": 20,
  "nominal_coverage": 0.8,
  "alpha": 0.05,
@@ -13,12 +13,12 @@
    "basis": "promoted 2026-10-02 (ADR 064/065); forward from decision day d0 >= 2026-10-01"
   },
   "p3": {
-   "date": "2026-10-05",
-   "basis": "ADR 069: P3 live from decision day d0 >= 2026-10-05 (folds with retro false)"
+   "date": "2026-10-07",
+   "basis": "ADR 069: P3 live from decision day d0 >= 2026-10-07 (ml.nextfix.P3_FORWARD_FROM; folds with retro false)"
   },
   "p3_variants": {
-   "date": "2026-10-05",
-   "basis": "ADR 071: forward folds only (retro false), d0 >= 2026-10-05, compared with P3"
+   "date": "2026-10-07",
+   "basis": "ADR 071: forward folds only (retro false), d0 >= 2026-10-07 (ml.nextfix.P3_FORWARD_FROM), compared with P3"
   },
   "intraday": {
    "date": "2026-10-02",
@@ -68,8 +68,8 @@
    "status": "LIVE",
    "status_note": "",
    "predicts": "next IBJA PM fix (22K, Rs/g), forecast after the US close",
-   "forward_start": "2026-10-05",
-   "forward_start_basis": "ADR 069: P3 live from decision day d0 >= 2026-10-05 (folds with retro false)",
+   "forward_start": "2026-10-07",
+   "forward_start_basis": "ADR 069: P3 live from decision day d0 >= 2026-10-07 (ml.nextfix.P3_FORWARD_FROM; folds with retro false)",
    "forward": {
     "n": 0,
     "effective_n": null,
@@ -88,7 +88,7 @@
     "marking": "VERIFIED",
     "extras": [
      "forecast.json reports n_forward=0 (copied, not re-measured here)",
-     "no forward data: no resolved forecast on or after 2026-10-05 yet"
+     "no forward data: no resolved forecast on or after 2026-10-07 yet"
     ]
    },
    "retrospective": {
@@ -103,7 +103,7 @@
    },
    "verdict": "grey",
    "verdict_kind": "no_data",
-   "sentence": "No forward data: no resolved forecast on or after 2026-10-05 yet.",
+   "sentence": "No forward data: no resolved forecast on or after 2026-10-07 yet.",
    "sources": [
     "data/nextfix_p3_oos.json",
     "data/forecast.json",
@@ -121,27 +121,27 @@
    "status": "SHADOW",
    "status_note": "not shown to users; scored on the same days as P3",
    "predicts": "next IBJA PM fix (22K, Rs/g), forecast after the US close",
-   "forward_start": "2026-10-05",
-   "forward_start_basis": "ADR 069: P3 live from decision day d0 >= 2026-10-05 (folds with retro false)",
+   "forward_start": "2026-10-07",
+   "forward_start_basis": "ADR 069: P3 live from decision day d0 >= 2026-10-07 (ml.nextfix.P3_FORWARD_FROM; folds with retro false)",
    "forward": {
-    "n": 1,
+    "n": 0,
     "effective_n": null,
     "metric": "mean absolute error of the next fix",
     "unit": "Rs/g",
-    "model": 25.55,
-    "baseline": 39.4,
+    "model": null,
+    "baseline": null,
     "baseline_name": "holding the last fix",
-    "diff": -13.85,
+    "diff": null,
     "ci95": null,
     "p_one_sided": null,
-    "p_kind": "one-sided HAC Diebold-Mariano (lag 1)",
+    "p_kind": null,
     "bh_significant": null,
-    "first_date": "2026-10-05",
-    "last_date": "2026-10-05",
+    "first_date": null,
+    "last_date": null,
     "marking": "VERIFIED",
     "extras": [
-     "direction right 1/1 moves vs always-up 0/1",
-     "P3 vs the ensemble, same days: too early (n=0, need 20)"
+     "P3 vs the ensemble, same days: too early (n=0, need 20)",
+     "no forward data: no resolved forecast on or after 2026-10-07 yet"
     ],
     "paired": {
      "n": 0,
@@ -159,7 +159,7 @@
    },
    "retrospective": {
     "label": "walk-forward over earlier history, NOT forward",
-    "text": "ensemble history: re-run on past days, NOT live calls; n=144 (2025-07-17 to 2026-10-01): error 105.2 vs hold 115.0 Rs/g, change -8.5%, diff 95% CI [-16.5, -3.1]",
+    "text": "ensemble history: re-run on past days, NOT live calls; n=145 (2025-07-17 to 2026-10-05): error 104.7 vs hold 114.5 Rs/g, change -8.6%, diff 95% CI [-16.4, -3.2]",
     "marking": "VERIFIED"
    },
    "gate": {
@@ -168,8 +168,8 @@
     "marking": "INFERRED"
    },
    "verdict": "grey",
-   "verdict_kind": "too_early",
-   "sentence": "Too early (n=1, need 20) to say whether the ensemble beats holding the last fix.",
+   "verdict_kind": "no_data",
+   "sentence": "No forward data: no resolved forecast on or after 2026-10-07 yet.",
    "sources": [
     "data/nextfix_oos.json",
     "data/forecast.json",
@@ -183,8 +183,8 @@
    "status": "SHADOW",
    "status_note": "not shown to users; compared with P3 only",
    "predicts": "next IBJA PM fix, like P3 but with the slope fitted on the 60 most recent resolved days",
-   "forward_start": "2026-10-05",
-   "forward_start_basis": "ADR 071: forward folds only (retro false), d0 >= 2026-10-05, compared with P3",
+   "forward_start": "2026-10-07",
+   "forward_start_basis": "ADR 071: forward folds only (retro false), d0 >= 2026-10-07 (ml.nextfix.P3_FORWARD_FROM), compared with P3",
    "forward": {
     "n": 0,
     "effective_n": null,
@@ -243,8 +243,8 @@
    "status": "SHADOW",
    "status_note": "not shown to users; compared with P3 only",
    "predicts": "next IBJA PM fix, like P3 but with the slope fitted on Monday days only",
-   "forward_start": "2026-10-05",
-   "forward_start_basis": "ADR 071: forward folds only (retro false), d0 >= 2026-10-05, compared with P3",
+   "forward_start": "2026-10-07",
+   "forward_start_basis": "ADR 071: forward folds only (retro false), d0 >= 2026-10-07 (ml.nextfix.P3_FORWARD_FROM), compared with P3",
    "forward": {
     "n": 0,
     "effective_n": null,
@@ -303,8 +303,8 @@
    "status": "LIVE",
    "status_note": "",
    "predicts": "whether the live next-fix model has been switched back to holding the last fix",
-   "forward_start": "2026-10-05",
-   "forward_start_basis": "ADR 069: P3 live from decision day d0 >= 2026-10-05 (folds with retro false)",
+   "forward_start": "2026-10-07",
+   "forward_start_basis": "ADR 069: P3 live from decision day d0 >= 2026-10-07 (ml.nextfix.P3_FORWARD_FROM; folds with retro false)",
    "forward": {
     "n": 0,
     "effective_n": null,
@@ -325,7 +325,7 @@
      "demoted: no",
      "since: n/a",
      "reasons recorded: none",
-     "state file last checked: 2026-10-07T17:31:43.991278+00:00",
+     "state file last checked: 2026-10-07T18:58:36.907379+00:00",
      "rules breaching now (forecast.json): none",
      "live record nextfix_p3_v1; re-promotion is never automatic (a person decides)"
     ]
