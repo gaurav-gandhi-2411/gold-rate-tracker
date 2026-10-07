@@ -278,7 +278,10 @@ def load_champion(path: Path) -> dict[str, Any]:
 
 
 def save_champion(path: Path, state: dict[str, Any]) -> None:
-    path.write_text(json.dumps(state, indent=1) + "\n", encoding="utf-8")
+    # atomic (temp file + os.replace): a torn write would read as an unreadable champion file
+    from ml.demotion import atomic_write_text
+
+    atomic_write_text(path, json.dumps(state, indent=1) + "\n")
 
 
 def promote(
