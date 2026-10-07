@@ -171,6 +171,7 @@
 // and ANALYTICS_SITE_CODE is set. flags.js + index.html + i18n.js changed too; analytics.js is a
 // new precached shell file (below). Nothing renders or is requested differently with the flag off.
 // 2026-10-07 (v80): Kalyan retired (PR #2420): its unused label was removed from app.js and i18n.js.
+// 2026-10-07 (v81): Hindi wording, part 1 of 3 (i18n.js: natural Hindi from docs/HINDI_GLOSSARY.md, plus the fractionOutOf10Phrase language fix). Hindi only; English unchanged.
 // 2026-10-07 (v82): Hindi wording, part 2 of 3 (i18n.js strings pinned by test_hero_display_state.js / test_driver_headline_signs.js, updated here). Hindi only; English unchanged.
 const VERSION = "v82-20261007-hindi-wording-2";
 const SHELL_CACHE = `gold-shell-${VERSION}`;

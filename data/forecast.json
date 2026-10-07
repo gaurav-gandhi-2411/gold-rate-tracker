@@ -1,5 +1,5 @@
 {
-  "predicted_at": "2026-10-07T12:44:01.221805+00:00",
+  "predicted_at": "2026-10-07T17:31:43.991278+00:00",
   "target_window": "5d",
   "headline": {
     "method": "hold_latest_fix_pm_to_am",
@@ -59,7 +59,7 @@
     "direction_consensus": 1.0
   },
   "driver_context": {
-    "computed_at": "2026-10-07T12:44:01.726464+00:00",
+    "computed_at": "2026-10-07T17:31:44.349087+00:00",
     "macro_staleness_days": 0.0,
     "macro_fresh": true,
     "premium_threshold_pct": 15.0,
@@ -106,9 +106,9 @@
     },
     "alignment": "intraday_at_fix"
   },
-  "real_readings_count": 759,
+  "real_readings_count": 762,
   "current_22k": 13755,
-  "scraped_at": "2026-10-07T12:26:47.407Z",
+  "scraped_at": "2026-10-07T14:21:57.191Z",
   "price_source": "tanishq_scrape",
   "est_low": null,
   "est_high": null,
@@ -133,27 +133,28 @@
     "reason": null,
     "track_record": {
       "n": 145,
+      "n_forward": 0,
       "first_d0": "2025-07-17",
       "last_d0": "2026-10-05",
-      "mae_model": 104.7,
+      "mae_model": 106.1,
       "mae_flat": 114.5,
-      "mae_change_pct": -8.6,
+      "mae_change_pct": -7.3,
       "mae_change_ci95": [
-        -14.4,
-        -2.4
+        -13.0,
+        -1.4
       ],
-      "dm_p": 0.0084,
-      "wilcoxon_p": 0.0064,
-      "direction_accuracy": 0.6414,
+      "dm_p": 0.023,
+      "wilcoxon_p": 0.0235,
+      "direction_accuracy": 0.6345,
       "direction_accuracy_ci95": [
-        0.572,
+        0.552,
         0.71
       ],
       "always_up_accuracy": 0.4897,
-      "direction_p_value": 0.0081,
-      "direction_ece": 0.0587,
+      "direction_p_value": 0.0139,
+      "direction_ece": 0.0602,
       "direction_gate_ship": true,
-      "direction_gate_reason": "logistic beats always-up OOS: acc 0.6414>0.4897, brier 0.2199<0.5103, ECE 0.0587<=0.1, p=0.0081 over 145 folds",
+      "direction_gate_reason": "logistic beats always-up OOS: acc 0.6345>0.4897, brier 0.2235<0.5103, ECE 0.0602<=0.1, p=0.0139 over 145 folds",
       "timing_gate_ship": false,
       "range_coverage": 0.808,
       "range_coverage_ci95": [
@@ -161,7 +162,14 @@
         0.867
       ],
       "range_n": 125,
-      "range_mean_width_ibja": 351.1
+      "range_mean_width_ibja": 360.5
+    },
+    "demotion": {
+      "demoted": false,
+      "since": null,
+      "reasons": [],
+      "rules_breaching_now": [],
+      "checked": true
     },
     "windows": {
       "am_to_pm": {

@@ -1,0 +1,33 @@
+{
+ "adr": "docs/adr/069-p3-live-forecast.md",
+ "sample": {
+  "n": 143,
+  "last_d0": "2026-09-30",
+  "adr067_n": 143
+ },
+ "mae": {
+  "rebuilt": 107.27,
+  "adr067": 107.27,
+  "tolerance": 0.05
+ },
+ "direction_accuracy": {
+  "rebuilt": 0.6294,
+  "adr067": 0.6294
+ },
+ "leak_guard": {
+  "name": "p3/repo",
+  "mode": "report",
+  "n_checks": 143,
+  "n_inputs_checked": 147041,
+  "n_unchecked": 0,
+  "n_violations": 0,
+  "n_checks_with_violation": 0,
+  "violations_by_source": {},
+  "max_late_by_s": null,
+  "examples": []
+ },
+ "negative_control_flagged": true,
+ "n_folds_total": 145,
+ "n_forward": 0,
+ "pass": true
+}

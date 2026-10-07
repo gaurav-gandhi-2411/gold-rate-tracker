@@ -1,0 +1,83 @@
+{
+ "preregistration": "docs/adr/071-p3-slope-variants-preregistration.md",
+ "n_forward": 0,
+ "forward": {
+  "scored": false,
+  "reason": "n_forward 0 < 40"
+ },
+ "retrospective_EXPLORATORY": {
+  "results": {
+   "p3_roll60": {
+    "n": 143,
+    "n_eff": 91.2,
+    "mae_variant": 108.09,
+    "mae_live": 107.27,
+    "change_pct_variant_vs_live": 0.76,
+    "change_pct_ci95": [
+     -3.68,
+     5.39
+    ],
+    "dm_p_one_sided_variant_better": 0.635873683002771,
+    "direction_acc_variant": 0.6294,
+    "direction_acc_live": 0.6294,
+    "mcnemar_p": 1.0,
+    "calibration_slope_variant": 1.009043940216475,
+    "calibration_slope_live": 1.640783733132953,
+    "clearly_beats": false,
+    "monday_stratum": {
+     "n": 29,
+     "n_eff": 28.4,
+     "mae_variant": 101.2,
+     "mae_live": 92.28,
+     "change_pct_variant_vs_live": 9.67,
+     "change_pct_ci95": [
+      2.38,
+      17.48
+     ],
+     "dm_p_one_sided_variant_better": 0.9874390479502525,
+     "direction_acc_variant": 0.5862,
+     "direction_acc_live": 0.5862,
+     "mcnemar_p": 1.0,
+     "calibration_slope_variant": 0.3323081935648132,
+     "calibration_slope_live": 0.5697987549538627
+    }
+   },
+   "p3_monday": {
+    "n": 143,
+    "n_eff": 143.0,
+    "mae_variant": 106.42,
+    "mae_live": 107.27,
+    "change_pct_variant_vs_live": -0.79,
+    "change_pct_ci95": [
+     -1.91,
+     0.17
+    ],
+    "dm_p_one_sided_variant_better": 0.07207787590482995,
+    "direction_acc_variant": 0.6294,
+    "direction_acc_live": 0.6294,
+    "mcnemar_p": 1.0,
+    "calibration_slope_variant": 1.7900727752954484,
+    "calibration_slope_live": 1.640783733132953,
+    "clearly_beats": false,
+    "monday_stratum": {
+     "n": 29,
+     "n_eff": 29.0,
+     "mae_variant": 88.09,
+     "mae_live": 92.28,
+     "change_pct_variant_vs_live": -4.54,
+     "change_pct_ci95": [
+      -10.0,
+      -0.16
+     ],
+     "dm_p_one_sided_variant_better": 0.033470490223035464,
+     "direction_acc_variant": 0.5862,
+     "direction_acc_live": 0.5862,
+     "mcnemar_p": 1.0,
+     "calibration_slope_variant": 0.7431922107499105,
+     "calibration_slope_live": 0.5697987549538627
+    }
+   }
+  },
+  "decision": "P3 stays: no variant clearly beats it (or n_forward < 40)"
+ }
+}

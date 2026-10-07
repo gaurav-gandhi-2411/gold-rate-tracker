@@ -1,0 +1,590 @@
+{"id": "u0000", "model": "llama3.1:8b", "scores": {"natural": 4, "correct": 5, "glossary": 5, "grammar": 5}, "note": "uses सटीक instead of सही for accuracy", "raw": null}
+{"id": "u0001", "model": "llama3.1:8b", "scores": {"natural": 4, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Literal translation, but common phrase", "raw": null}
+{"id": "u0003", "model": "llama3.1:8b", "scores": {"natural": 4, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Minor variation in wording, but faithful to English source.", "raw": null}
+{"id": "u0005", "model": "llama3.1:8b", "scores": {"natural": 4, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Minor variation in phrase order, but idiomatic.", "raw": null}
+{"id": "u0006", "model": "llama3.1:8b", "scores": {"natural": 4, "correct": 5, "glossary": 5, "grammar": 5}, "note": "uses 'आम भाव' instead of 'सोने का भाव' for clarity", "raw": null}
+{"id": "u0007", "model": "llama3.1:8b", "scores": {"natural": 5, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Sounds like everyday spoken Hindi, faithful translation, uses glossary terms, grammatical.", "raw": null}
+{"id": "u0008", "model": "llama3.1:8b", "scores": {"natural": 2, "correct": 2, "glossary": 1, "grammar": 5}, "note": "Literal translation, no glossary term used", "raw": null}
+{"id": "u0010", "model": "llama3.1:8b", "scores": {"natural": 5, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Literal translation, but idiomatic Hindi", "raw": null}
+{"id": "u0012", "model": "llama3.1:8b", "scores": {"natural": 4, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Uses 'एंटीक' instead of 'अन्तिक' or 'पुराना' for more natural sound", "raw": null}
+{"id": "u0013", "model": "llama3.1:8b", "scores": {"natural": 5, "correct": 5, "glossary": 5, "grammar": 5}, "note": "faithful translation, no issues found", "raw": null}
+{"id": "u0014", "model": "llama3.1:8b", "scores": {"natural": 5, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Literal translation, but correct and natural", "raw": null}
+{"id": "u0016", "model": "llama3.1:8b", "scores": {"natural": 4, "correct": 5, "glossary": 5, "grammar": 5}, "note": "uses 'भाव बदल सकती हैं' instead of 'भाव को प्रभावित कर सकती हैं'", "raw": null}
+{"id": "u0017", "model": "llama3.1:8b", "scores": {"natural": 4, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Literal translation, but common phrase", "raw": null}
+{"id": "u0018", "model": "llama3.1:8b", "scores": {"natural": 4, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Minor deviation in phrase order, but overall natural flow.", "raw": null}
+{"id": "u0020", "model": "llama3.1:8b", "scores": {"natural": 4, "correct": 5, "glossary": 5, "grammar": 5}, "note": "uses आम for usual, but not a major issue", "raw": null}
+{"id": "u0021", "model": "llama3.1:8b", "scores": {"natural": 4, "correct": 5, "glossary": 5, "grammar": 5}, "note": "uses 'ज़्यादातर' instead of 'आम'", "raw": null}
+{"id": "u0022", "model": "llama3.1:8b", "scores": {"natural": 4, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Uses 'आधिकारिक भाव' instead of 'official rate'", "raw": null}
+{"id": "u0025", "model": "llama3.1:8b", "scores": {"natural": 5, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Sounds like everyday spoken Hindi, faithful translation, uses glossary terms, grammatical and correct.", "raw": null}
+{"id": "u0026", "model": "llama3.1:8b", "scores": {"natural": 5, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Sounds like everyday spoken Hindi, faithful translation, uses glossary terms, grammatical and correct.", "raw": null}
+{"id": "u0028", "model": "llama3.1:8b", "scores": {"natural": 2, "correct": 1, "glossary": 1, "grammar": 5}, "note": "Literal translation, no context fit", "raw": null}
+{"id": "u0029", "model": "llama3.1:8b", "scores": {"natural": 5, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Literal translation, but correct and natural Hindi.", "raw": null}
+{"id": "u0030", "model": "llama3.1:8b", "scores": {"natural": 5, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Literal translation, but correct and natural.", "raw": null}
+{"id": "u0032", "model": "llama3.1:8b", "scores": {"natural": 4, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Uses 'बढ़ा है' instead of 'बढ़ा हुआ है' for better naturalness", "raw": null}
+{"id": "u0033", "model": "llama3.1:8b", "scores": {"natural": 5, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Literal translation, but common phrase in Hindi", "raw": null}
+{"id": "u0035", "model": "llama3.1:8b", "scores": {"natural": 4, "correct": 5, "glossary": 5, "grammar": 5}, "note": "uses 'छोटी अवधि' instead of 'रेंज'", "raw": null}
+{"id": "u0036", "model": "llama3.1:8b", "scores": {"natural": 5, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Sounds like everyday spoken Hindi, faithful translation, uses glossary term, grammatical and correct.", "raw": null}
+{"id": "u0037", "model": "llama3.1:8b", "scores": {"natural": 4, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Minor variation in phrase structure, but faithful translation.", "raw": null}
+{"id": "u0040", "model": "llama3.1:8b", "scores": {"natural": 4, "correct": 5, "glossary": 5, "grammar": 5}, "note": "uses 'बंद भाव' instead of 'भाव'", "raw": null}
+{"id": "u0042", "model": "llama3.1:8b", "scores": {"natural": 4, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Literal translation, but correct and grammatical", "raw": null}
+{"id": "u0043", "model": "llama3.1:8b", "scores": {"natural": 4, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Literal translation, but common phrase in Hindi", "raw": null}
+{"id": "u0046", "model": "llama3.1:8b", "scores": {"natural": 4, "correct": 4, "glossary": 4, "grammar": 5}, "note": "uses 'भारत में' instead of 'भारत में सोना' for better clarity", "raw": null}
+{"id": "u0048", "model": "llama3.1:8b", "scores": {"natural": 4, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Uses आम instead of सामान्य, but still understandable", "raw": null}
+{"id": "u0051", "model": "llama3.1:8b", "scores": {"natural": 4, "correct": 5, "glossary": 4, "grammar": 5}, "note": "uses 'दुकानों' instead of 'ज्वेलर'", "raw": null}
+{"id": "u0052", "model": "llama3.1:8b", "scores": {"natural": 5, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Literal translation, but idiomatic", "raw": null}
+{"id": "u0054", "model": "llama3.1:8b", "scores": {"natural": 4, "correct": 5, "glossary": 5, "grammar": 5}, "note": "uses कमज़ोर instead of weakened", "raw": null}
+{"id": "u0056", "model": "llama3.1:8b", "scores": {"natural": 4, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Minor phrase structure adjustment for natural flow", "raw": null}
+{"id": "u0057", "model": "llama3.1:8b", "scores": {"natural": 4, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Literal translation, but common phrase", "raw": null}
+{"id": "u0060", "model": "llama3.1:8b", "scores": {"natural": 4, "correct": 4, "glossary": 4, "grammar": 5}, "note": "Uses 'महंगा हुआ है' instead of 'सस्ता हुआ है' or 'महंगा हो गया है' for a more natural tone.", "raw": null}
+{"id": "u0062", "model": "llama3.1:8b", "scores": {"natural": 4, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Uses 'आधिकारिक रोज़' instead of 'आधिकारिक दैनिक' for 'official daily'", "raw": null}
+{"id": "u0063", "model": "llama3.1:8b", "scores": {"natural": 5, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Literal translation, but correct and natural", "raw": null}
+{"id": "u0065", "model": "llama3.1:8b", "scores": {"natural": 4, "correct": 4, "glossary": 4, "grammar": 5}, "note": "Minor variation in phrase order, but grammatically correct.", "raw": null}
+{"id": "u0066", "model": "llama3.1:8b", "scores": {"natural": 5, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Natural and correct translation of the English source.", "raw": null}
+{"id": "u0067", "model": "llama3.1:8b", "scores": {"natural": 5, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Accurate translation, good idiomatic expression", "raw": null}
+{"id": "u0068", "model": "llama3.1:8b", "scores": {"natural": 5, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Literal translation, but correct and natural", "raw": null}
+{"id": "u0070", "model": "llama3.1:8b", "scores": {"natural": 4, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Literal translation, but common phrase in Hindi", "raw": null}
+{"id": "u0071", "model": "llama3.1:8b", "scores": {"natural": 4, "correct": 5, "glossary": 5, "grammar": 5}, "note": "uses भाव स्थिर which is not in glossary, but is a common expression", "raw": null}
+{"id": "u0072", "model": "llama3.1:8b", "scores": {"natural": 4, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Literal translation, but correct and grammatical", "raw": null}
+{"id": "u0075", "model": "llama3.1:8b", "scores": {"natural": 5, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Faithful translation, uses correct glossary terms, no issues", "raw": null}
+{"id": "u0076", "model": "llama3.1:8b", "scores": {"natural": 4, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Minor phrase structure adjustment for better flow", "raw": null}
+{"id": "u0077", "model": "llama3.1:8b", "scores": {"natural": 4, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Literal translation, but common phrase", "raw": null}
+{"id": "u0078", "model": "llama3.1:8b", "scores": {"natural": 4, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Literal translation, but common phrase", "raw": null}
+{"id": "u0079", "model": "llama3.1:8b", "scores": {"natural": 4, "correct": 5, "glossary": 5, "grammar": 5}, "note": "uses अनुमान instead of अनुमानित, but still correct", "raw": null}
+{"id": "u0084", "model": "llama3.1:8b", "scores": {"natural": 4, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Literal translation, but correct and grammatical.", "raw": null}
+{"id": "u0085", "model": "llama3.1:8b", "scores": {"natural": 4, "correct": 5, "glossary": 5, "grammar": 5}, "note": "uses सामान्य instead of आम for usual", "raw": null}
+{"id": "u0086", "model": "llama3.1:8b", "scores": {"natural": 5, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Literal translation, but common phrase in Hindi", "raw": null}
+{"id": "u0089", "model": "llama3.1:8b", "scores": {"natural": 5, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Literal translation, but correct and natural Hindi", "raw": null}
+{"id": "u0090", "model": "llama3.1:8b", "scores": {"natural": 5, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Sounds like everyday spoken Hindi, faithful translation, uses glossary terms, grammatical and correct.", "raw": null}
+{"id": "u0093", "model": "llama3.1:8b", "scores": {"natural": 4, "correct": 5, "glossary": 5, "grammar": 5}, "note": "uses 'अपडेट' instead of 'अपडेट कर देगी'", "raw": null}
+{"id": "u0094", "model": "llama3.1:8b", "scores": {"natural": 4, "correct": 5, "glossary": 5, "grammar": 5}, "note": "uses साइट पर दिया instead of सूचीबद्ध", "raw": null}
+{"id": "u0096", "model": "llama3.1:8b", "scores": {"natural": 5, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Literal translation, but common term for info", "raw": null}
+{"id": "u0098", "model": "llama3.1:8b", "scores": {"natural": 5, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Literal translation, but common phrase", "raw": null}
+{"id": "u0099", "model": "llama3.1:8b", "scores": {"natural": 4, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Literal translation, but common usage", "raw": null}
+{"id": "u0101", "model": "llama3.1:8b", "scores": {"natural": 4, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Uses 'हिसाब' instead of 'रेंज' for price band, but still clear", "raw": null}
+{"id": "u0102", "model": "llama3.1:8b", "scores": {"natural": 4, "correct": 5, "glossary": 5, "grammar": 5}, "note": "uses 'शुद्धता' instead of 'पारदर्शिता' or 'पवित्रता'", "raw": null}
+{"id": "u0103", "model": "llama3.1:8b", "scores": {"natural": 5, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Literal translation, but correct and natural", "raw": null}
+{"id": "u0104", "model": "llama3.1:8b", "scores": {"natural": 2, "correct": 5, "glossary": 1, "grammar": 5}, "note": "Literal translation, no adaptation to Hindi style", "raw": null}
+{"id": "u0105", "model": "llama3.1:8b", "scores": {"natural": 4, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Literal translation, but common phrase", "raw": null}
+{"id": "u0108", "model": "llama3.1:8b", "scores": {"natural": 4, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Literal translation, but common usage", "raw": null}
+{"id": "u0109", "model": "llama3.1:8b", "scores": {"natural": 5, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Literal translation, but idiomatic Hindi", "raw": null}
+{"id": "u0114", "model": "llama3.1:8b", "scores": {"natural": 4, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Minor variation in phrase order, but overall natural and idiomatic.", "raw": null}
+{"id": "u0119", "model": "llama3.1:8b", "scores": {"natural": 4, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Literal translation, but correct and grammatical", "raw": null}
+{"id": "u0120", "model": "llama3.1:8b", "scores": {"natural": 4, "correct": 5, "glossary": 5, "grammar": 5}, "note": "uses 'हिसाब' instead of 'रेंज'", "raw": null}
+{"id": "u0122", "model": "llama3.1:8b", "scores": {"natural": 5, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Correctly uses 24 कैरेट, a common term in Hindi", "raw": null}
+{"id": "u0123", "model": "llama3.1:8b", "scores": {"natural": 4, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Literal translation, but common phrase", "raw": null}
+{"id": "u0126", "model": "llama3.1:8b", "scores": {"natural": 5, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Literal translation, but common usage", "raw": null}
+{"id": "u0127", "model": "llama3.1:8b", "scores": {"natural": 4, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Minor variation in sentence structure, but faithful translation.", "raw": null}
+{"id": "u0132", "model": "llama3.1:8b", "scores": {"natural": 5, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Literal translation, but common usage in Hindi", "raw": null}
+{"id": "u0133", "model": "llama3.1:8b", "scores": {"natural": 4, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Literal translation, but common phrase", "raw": null}
+{"id": "u0135", "model": "llama3.1:8b", "scores": {"natural": 4, "correct": 5, "glossary": 5, "grammar": 5}, "note": "uses 'भाव' instead of 'पुराने भाव' for history section, but correct in this context", "raw": null}
+{"id": "u0136", "model": "llama3.1:8b", "scores": {"natural": 4, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Minor variation in phrase order, but faithful translation.", "raw": null}
+{"id": "u0138", "model": "llama3.1:8b", "scores": {"natural": 5, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Natural and correct translation, no glossary term used, grammatically correct", "raw": null}
+{"id": "u0140", "model": "llama3.1:8b", "scores": {"natural": 4, "correct": 5, "glossary": 5, "grammar": 5}, "note": "uses 'अनुमान' instead of 'अनुमानित'", "raw": null}
+{"id": "u0141", "model": "llama3.1:8b", "scores": {"natural": 5, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Sounds natural and idiomatic, faithful translation, uses glossary terms, grammatically correct.", "raw": null}
+{"id": "u0142", "model": "llama3.1:8b", "scores": {"natural": 4, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Minor phrase structure, but idiomatic Hindi", "raw": null}
+{"id": "u0144", "model": "llama3.1:8b", "scores": {"natural": 4, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Literal translation, but correct and grammatical", "raw": null}
+{"id": "u0147", "model": "llama3.1:8b", "scores": {"natural": 5, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Literal translation, but common phrase", "raw": null}
+{"id": "u0148", "model": "llama3.1:8b", "scores": {"natural": 4, "correct": 4, "glossary": 1, "grammar": 5}, "note": "uses सोने की कीमत instead of सोने का भाव", "raw": null}
+{"id": "u0149", "model": "llama3.1:8b", "scores": {"natural": 4, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Minor variation in phrase order, but faithful to English meaning", "raw": null}
+{"id": "u0150", "model": "llama3.1:8b", "scores": {"natural": 4, "correct": 5, "glossary": 5, "grammar": 5}, "note": "uses 'अनुमान' instead of 'अनुमानित' for estimate", "raw": null}
+{"id": "u0151", "model": "llama3.1:8b", "scores": {"natural": 4, "correct": 5, "glossary": 5, "grammar": 5}, "note": "uses 'पुराना' instead of 'पुराने'", "raw": null}
+{"id": "u0153", "model": "llama3.1:8b", "scores": {"natural": 4, "correct": 5, "glossary": 5, "grammar": 5}, "note": "uses 'ग़लती' instead of 'भाव' for 'error'", "raw": null}
+{"id": "u0154", "model": "llama3.1:8b", "scores": {"natural": 4, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Literal translation, but correct and grammatically sound.", "raw": null}
+{"id": "u0155", "model": "llama3.1:8b", "scores": {"natural": 4, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Minor variation in phrase order, but idiomatic.", "raw": null}
+{"id": "u0156", "model": "llama3.1:8b", "scores": {"natural": 4, "correct": 5, "glossary": 5, "grammar": 5}, "note": "uses 'आसान सवाल' instead of 'आसान प्रश्न'", "raw": null}
+{"id": "u0157", "model": "llama3.1:8b", "scores": {"natural": 5, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Literal translation, but correct and natural", "raw": null}
+{"id": "u0158", "model": "llama3.1:8b", "scores": {"natural": 4, "correct": 5, "glossary": 5, "grammar": 5}, "note": "uses 'दुकानों' instead of 'ज्वेलर'", "raw": null}
+{"id": "u0159", "model": "llama3.1:8b", "scores": {"natural": 5, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Natural and correct translation, uses glossary terms, no grammatical errors.", "raw": null}
+{"id": "u0160", "model": "llama3.1:8b", "scores": {"natural": 4, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Uses 'भाव' instead of 'सोने का भाव' for Tanishq's rate", "raw": null}
+{"id": "u0161", "model": "llama3.1:8b", "scores": {"natural": 4, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Minor variation in sentence structure, but overall good translation.", "raw": null}
+{"id": "u0162", "model": "llama3.1:8b", "scores": {"natural": 5, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Direct translation of English source, but common usage in Hindi.", "raw": null}
+{"id": "u0164", "model": "llama3.1:8b", "scores": {"natural": 5, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Literal translation, but common usage in Hindi", "raw": null}
+{"id": "u0165", "model": "llama3.1:8b", "scores": {"natural": 4, "correct": 5, "glossary": 5, "grammar": 5}, "note": "uses 'आम भाव' instead of 'रेंज' for price band, but still clear", "raw": null}
+{"id": "u0170", "model": "llama3.1:8b", "scores": {"natural": 5, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Literal translation, but common usage in Hindi", "raw": null}
+{"id": "u0172", "model": "llama3.1:8b", "scores": {"natural": 4, "correct": 5, "glossary": 5, "grammar": 5}, "note": "uses 'आम भाव' instead of 'सोने का भाव'", "raw": null}
+{"id": "u0173", "model": "llama3.1:8b", "scores": {"natural": 5, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Sounds natural and idiomatic, faithful translation, uses glossary terms, grammatically correct.", "raw": null}
+{"id": "u0175", "model": "llama3.1:8b", "scores": {"natural": 4, "correct": 5, "glossary": 5, "grammar": 5}, "note": "uses 'ज़्यादा बराबरी से चलने लगे' instead of 'आम तौर पर बढ़ने के बजाय'", "raw": null}
+{"id": "u0180", "model": "llama3.1:8b", "scores": {"natural": 5, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Literal translation, but idiomatic Hindi equivalent", "raw": null}
+{"id": "u0181", "model": "llama3.1:8b", "scores": {"natural": 5, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Good use of रीफ़्रेश and {rel} token", "raw": null}
+{"id": "u0184", "model": "llama3.1:8b", "scores": {"natural": 5, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Sounds like everyday spoken Hindi, faithful translation, uses glossary terms, grammatical and correct.", "raw": null}
+{"id": "u0188", "model": "llama3.1:8b", "scores": {"natural": 5, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Literal translation, but idiomatic Hindi", "raw": null}
+{"id": "u0190", "model": "llama3.1:8b", "scores": {"natural": 4, "correct": 5, "glossary": 5, "grammar": 5}, "note": "uses अनुमान instead of अनुमानित, but still correct", "raw": null}
+{"id": "u0194", "model": "llama3.1:8b", "scores": {"natural": 4, "correct": 4, "glossary": 4, "grammar": 5}, "note": "Literal translation of 'price move' as 'चाल' is uncommon in Hindi.", "raw": null}
+{"id": "u0195", "model": "llama3.1:8b", "scores": {"natural": 4, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Literal translation, but common usage", "raw": null}
+{"id": "u0196", "model": "llama3.1:8b", "scores": {"natural": 4, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Literal translation, but common phrase in Hindi", "raw": null}
+{"id": "u0200", "model": "llama3.1:8b", "scores": {"natural": 4, "correct": 4, "glossary": 4, "grammar": 5}, "note": "Uses 'आधिकारिक भाव' instead of 'सोने का भाव' for global gold price", "raw": null}
+{"id": "u0201", "model": "llama3.1:8b", "scores": {"natural": 2, "correct": 2, "glossary": 1, "grammar": 5}, "note": "uses सोने की कीमत instead of सोने का भाव", "raw": null}
+{"id": "u0203", "model": "llama3.1:8b", "scores": {"natural": 4, "correct": 5, "glossary": 5, "grammar": 5}, "note": "uses 'भाव' instead of 'दर' for price, but still clear", "raw": null}
+{"id": "u0204", "model": "llama3.1:8b", "scores": {"natural": 4, "correct": 5, "glossary": 5, "grammar": 5}, "note": "uses 'आसपास' instead of 'रेंज'", "raw": null}
+{"id": "u0205", "model": "llama3.1:8b", "scores": {"natural": 5, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Perfect translation, no issues found.", "raw": null}
+{"id": "u0206", "model": "llama3.1:8b", "scores": {"natural": 4, "correct": 5, "glossary": 5, "grammar": 5}, "note": "uses आम तौर पर instead of usual/normal", "raw": null}
+{"id": "u0207", "model": "llama3.1:8b", "scores": {"natural": 4, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Minor phrase structure adjustment for better flow", "raw": null}
+{"id": "u0208", "model": "llama3.1:8b", "scores": {"natural": 4, "correct": 5, "glossary": 5, "grammar": 5}, "note": "uses 'दायरे' instead of 'रेंज'", "raw": null}
+{"id": "u0210", "model": "llama3.1:8b", "scores": {"natural": 2, "correct": 1, "glossary": 1, "grammar": 5}, "note": "Literal translation of 'down' doesn't convey the intended meaning of price decrease.", "raw": null}
+{"id": "u0211", "model": "llama3.1:8b", "scores": {"natural": 4, "correct": 5, "glossary": 5, "grammar": 5}, "note": "uses दुनिया के भाव instead of recommended दुनिया के बाज़ार में सोने का भाव", "raw": null}
+{"id": "u0212", "model": "llama3.1:8b", "scores": {"natural": 4, "correct": 5, "glossary": 5, "grammar": 5}, "note": "uses 'भाव' instead of 'reading'", "raw": null}
+{"id": "u0214", "model": "llama3.1:8b", "scores": {"natural": 5, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Sounds like everyday spoken Hindi, faithful translation, uses glossary terms, grammatical and correct.", "raw": null}
+{"id": "u0215", "model": "llama3.1:8b", "scores": {"natural": 4, "correct": 5, "glossary": 5, "grammar": 5}, "note": "uses 'टिका' instead of 'भाव' for price movement", "raw": null}
+{"id": "u0217", "model": "llama3.1:8b", "scores": {"natural": 4, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Minor variation in phrase 'बाद की चाल' instead of 'बाद की चाल से'", "raw": null}
+{"id": "u0218", "model": "llama3.1:8b", "scores": {"natural": 4, "correct": 5, "glossary": 5, "grammar": 5}, "note": "uses रेंज for range, but रेंज is not in glossary for price band", "raw": null}
+{"id": "u0220", "model": "llama3.1:8b", "scores": {"natural": 4, "correct": 5, "glossary": 5, "grammar": 5}, "note": "uses 'हमारा अनुमान' instead of 'अनुमानित भाव'", "raw": null}
+{"id": "u0221", "model": "llama3.1:8b", "scores": {"natural": 4, "correct": 5, "glossary": 5, "grammar": 5}, "note": "uses 'भाव' instead of 'पुराने भाव' for history section, but correct here", "raw": null}
+{"id": "u0222", "model": "llama3.1:8b", "scores": {"natural": 5, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Perfect translation, no room for improvement", "raw": null}
+{"id": "u0224", "model": "llama3.1:8b", "scores": {"natural": 4, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Minor variation in phrase 'हर कुछ घंटों में' instead of 'हर कुछ घंटों में दोबारा'", "raw": null}
+{"id": "u0225", "model": "llama3.1:8b", "scores": {"natural": 4, "correct": 5, "glossary": 5, "grammar": 5}, "note": "uses 'भाव' instead of 'दर' for reading, but is otherwise accurate", "raw": null}
+{"id": "u0226", "model": "llama3.1:8b", "scores": {"natural": 5, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Literal translation, but correct and grammatically sound.", "raw": null}
+{"id": "u0228", "model": "llama3.1:8b", "scores": {"natural": 4, "correct": 4, "glossary": 4, "grammar": 5}, "note": "Uses 'मेकिंग चार्ज' instead of 'सोने का भाव' which is more relevant to the context.", "raw": null}
+{"id": "u0230", "model": "llama3.1:8b", "scores": {"natural": 4, "correct": 5, "glossary": 5, "grammar": 5}, "note": "uses 'ज़्यादा से ज़्यादा' instead of 'worst case'", "raw": null}
+{"id": "u0234", "model": "llama3.1:8b", "scores": {"natural": 5, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Sounds like everyday spoken Hindi, faithful translation, uses glossary terms, grammatical and correct.", "raw": null}
+{"id": "u0236", "model": "llama3.1:8b", "scores": {"natural": 5, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Natural and correct translation of the English source.", "raw": null}
+{"id": "u0238", "model": "llama3.1:8b", "scores": {"natural": 4, "correct": 5, "glossary": 5, "grammar": 5}, "note": "uses 'सबसे कम भाव' instead of 'lowest price'", "raw": null}
+{"id": "u0239", "model": "llama3.1:8b", "scores": {"natural": 4, "correct": 5, "glossary": 5, "grammar": 5}, "note": "uses आम instead of सामान्य", "raw": null}
+{"id": "u0241", "model": "llama3.1:8b", "scores": {"natural": 4, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Literal translation, but correct and grammatically sound.", "raw": null}
+{"id": "u0242", "model": "llama3.1:8b", "scores": {"natural": 4, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Minor tone difference, but idiomatic expression.", "raw": null}
+{"id": "u0243", "model": "llama3.1:8b", "scores": {"natural": 4, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Minor variation in phrase order, but overall natural flow.", "raw": null}
+{"id": "u0245", "model": "llama3.1:8b", "scores": {"natural": 5, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Literal translation, but correct and natural", "raw": null}
+{"id": "u0246", "model": "llama3.1:8b", "scores": {"natural": 4, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Minor phrase structure is natural, but not a common way to express the idea.", "raw": null}
+{"id": "u0248", "model": "llama3.1:8b", "scores": {"natural": 5, "correct": 5, "glossary": 5, "grammar": 5}, "note": "faithful translation, no issues found", "raw": null}
+{"id": "u0249", "model": "llama3.1:8b", "scores": {"natural": 5, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Literal translation, but correct and natural", "raw": null}
+{"id": "u0257", "model": "llama3.1:8b", "scores": {"natural": 4, "correct": 5, "glossary": 5, "grammar": 5}, "note": "uses 'सबसे कम भाव' instead of 'सबसे नीचे भाव'", "raw": null}
+{"id": "u0260", "model": "llama3.1:8b", "scores": {"natural": 5, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Uses रेंज correctly for price band", "raw": null}
+{"id": "u0262", "model": "llama3.1:8b", "scores": {"natural": 5, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Literal translation, but common phrase in Hindi", "raw": null}
+{"id": "u0263", "model": "llama3.1:8b", "scores": {"natural": 4, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Uses 'कैरेट' instead of 'कैरेट' with 'सोने का भाव'", "raw": null}
+{"id": "u0266", "model": "llama3.1:8b", "scores": {"natural": 5, "correct": 5, "glossary": 5, "grammar": 5}, "note": "faithful translation, good vocabulary choice", "raw": null}
+{"id": "u0268", "model": "llama3.1:8b", "scores": {"natural": 5, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Literal translation, but correct and natural", "raw": null}
+{"id": "u0269", "model": "llama3.1:8b", "scores": {"natural": 4, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Minor variation in wording, but faithful to English source.", "raw": null}
+{"id": "u0274", "model": "llama3.1:8b", "scores": {"natural": 4, "correct": 5, "glossary": 5, "grammar": 5}, "note": "uses 'पक्का' instead of 'बताया' or 'साइट पर दिया'", "raw": null}
+{"id": "u0275", "model": "llama3.1:8b", "scores": {"natural": 4, "correct": 5, "glossary": 5, "grammar": 5}, "note": "uses 'भाव' instead of 'prices'", "raw": null}
+{"id": "u0276", "model": "llama3.1:8b", "scores": {"natural": 4, "correct": 5, "glossary": 5, "grammar": 5}, "note": "uses 'कुछ समय बाद' instead of 'इस हफ़्ते / इस महीने'", "raw": null}
+{"id": "u0277", "model": "llama3.1:8b", "scores": {"natural": 4, "correct": 5, "glossary": 5, "grammar": 5}, "note": "uses 'आम तौर पर' instead of 'आम' for usual", "raw": null}
+{"id": "u0278", "model": "llama3.1:8b", "scores": {"natural": 4, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Literal translation, but common phrase in Hindi", "raw": null}
+{"id": "u0281", "model": "llama3.1:8b", "scores": {"natural": 4, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Minor variation in phrase order, but faithful translation.", "raw": null}
+{"id": "u0283", "model": "llama3.1:8b", "scores": {"natural": 4, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Uses 'बाज़ार' instead of 'बाज़ार में', but still clear and idiomatic.", "raw": null}
+{"id": "u0285", "model": "llama3.1:8b", "scores": {"natural": 4, "correct": 5, "glossary": 5, "grammar": 5}, "note": "uses भाव instead of सोने का भाव, but still correct", "raw": null}
+{"id": "u0287", "model": "llama3.1:8b", "scores": {"natural": 4, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Minor deviation in phrase order, but correct usage of glossary terms.", "raw": null}
+{"id": "u0292", "model": "llama3.1:8b", "scores": {"natural": 4, "correct": 4, "glossary": 4, "grammar": 5}, "note": "uses सही instead of accurate, but accurate is allowed on technical page", "raw": null}
+{"id": "u0295", "model": "llama3.1:8b", "scores": {"natural": 4, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Minor deviation in phrase order, but overall natural flow.", "raw": null}
+{"id": "u0296", "model": "llama3.1:8b", "scores": {"natural": 4, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Minor variation in phrase structure, but faithful to English meaning.", "raw": null}
+{"id": "u0298", "model": "llama3.1:8b", "scores": {"natural": 5, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Literal translation, but correct and natural", "raw": null}
+{"id": "u0300", "model": "llama3.1:8b", "scores": {"natural": 4, "correct": 5, "glossary": 5, "grammar": 5}, "note": "uses 'संभावना है' instead of 'संभावना है कि'", "raw": null}
+{"id": "u0301", "model": "llama3.1:8b", "scores": {"natural": 4, "correct": 5, "glossary": 5, "grammar": 5}, "note": "uses 'आम तौर पर' instead of 'आम'", "raw": null}
+{"id": "u0303", "model": "llama3.1:8b", "scores": {"natural": 4, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Uses 'ज्वेलर्स' instead of 'ज्वेलर' for plural, but correct otherwise.", "raw": null}
+{"id": "u0306", "model": "llama3.1:8b", "scores": {"natural": 5, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Literal translation, but correct and natural", "raw": null}
+{"id": "u0307", "model": "llama3.1:8b", "scores": {"natural": 5, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Literal translation, but common phrase", "raw": null}
+{"id": "u0308", "model": "llama3.1:8b", "scores": {"natural": 4, "correct": 5, "glossary": 5, "grammar": 5}, "note": "uses 'बीते कल' instead of 'कल' for better naturalness", "raw": null}
+{"id": "u0309", "model": "llama3.1:8b", "scores": {"natural": 4, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Minor variation in phrase order, but faithful translation.", "raw": null}
+{"id": "u0312", "model": "llama3.1:8b", "scores": {"natural": 4, "correct": 5, "glossary": 5, "grammar": 5}, "note": "uses 'आम भाव' instead of 'सोने का भाव'", "raw": null}
+{"id": "u0313", "model": "llama3.1:8b", "scores": {"natural": 4, "correct": 5, "glossary": 5, "grammar": 5}, "note": "uses 'सबसे कम' instead of 'floor', but still understandable", "raw": null}
+{"id": "u0314", "model": "llama3.1:8b", "scores": {"natural": 4, "correct": 5, "glossary": 5, "grammar": 5}, "note": "uses 'अख़िरी बार' instead of 'इस हफ़्ते / इस महीने' for more natural phrasing", "raw": null}
+{"id": "u0315", "model": "llama3.1:8b", "scores": {"natural": 4, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Uses 'भाव' instead of 'दर' for price, but still clear and idiomatic.", "raw": null}
+{"id": "u0316", "model": "llama3.1:8b", "scores": {"natural": 4, "correct": 5, "glossary": 1, "grammar": 5}, "note": "uses अनुमान instead of अनुमानित", "raw": null}
+{"id": "u0317", "model": "llama3.1:8b", "scores": {"natural": 4, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Literal translation, but common phrase", "raw": null}
+{"id": "u0318", "model": "llama3.1:8b", "scores": {"natural": 4, "correct": 5, "glossary": 5, "grammar": 5}, "note": "uses साइट पर दिया instead of बताया भाव", "raw": null}
+{"id": "u0319", "model": "llama3.1:8b", "scores": {"natural": 5, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Natural and correct translation, uses glossary terms, no grammatical errors.", "raw": null}
+{"id": "u0321", "model": "llama3.1:8b", "scores": {"natural": 4, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Literal translation, but correct and grammatical", "raw": null}
+{"id": "u0323", "model": "llama3.1:8b", "scores": {"natural": 4, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Uses 'भाव' instead of 'सोने का भाव' for gold price, but still correct.", "raw": null}
+{"id": "u0324", "model": "llama3.1:8b", "scores": {"natural": 5, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Literal translation, but common phrase in Hindi", "raw": null}
+{"id": "u0325", "model": "llama3.1:8b", "scores": {"natural": 5, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Sounds natural and idiomatic, faithful translation, uses glossary terms, grammatically correct.", "raw": null}
+{"id": "u0327", "model": "llama3.1:8b", "scores": {"natural": 4, "correct": 5, "glossary": 5, "grammar": 5}, "note": "uses 'भाव' instead of 'दर'", "raw": null}
+{"id": "u0328", "model": "llama3.1:8b", "scores": {"natural": 5, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Sounds like everyday spoken Hindi, faithful translation, uses glossary terms, grammatical and correct.", "raw": null}
+{"id": "u0329", "model": "llama3.1:8b", "scores": {"natural": 4, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Literal translation, but common phrase", "raw": null}
+{"id": "u0332", "model": "llama3.1:8b", "scores": {"natural": 5, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Literal translation, but idiomatic", "raw": null}
+{"id": "u0333", "model": "llama3.1:8b", "scores": {"natural": 4, "correct": 5, "glossary": 5, "grammar": 5}, "note": "uses 'भाव' instead of 'दर' for usual price", "raw": null}
+{"id": "u0334", "model": "llama3.1:8b", "scores": {"natural": 4, "correct": 5, "glossary": 5, "grammar": 5}, "note": "uses 'दुनिया के भाव' instead of 'दुनिया के बाज़ार में सोने का भाव'", "raw": null}
+{"id": "u0336", "model": "llama3.1:8b", "scores": {"natural": 4, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Literal translation avoided, good use of सोने का भाव", "raw": null}
+{"id": "u0338", "model": "llama3.1:8b", "scores": {"natural": 2, "correct": 4, "glossary": 1, "grammar": 5}, "note": "Literal translation, missing 'cost' in Hindi", "raw": null}
+{"id": "u0340", "model": "llama3.1:8b", "scores": {"natural": 4, "correct": 5, "glossary": 5, "grammar": 5}, "note": "uses 'भाव' instead of 'दर' for price", "raw": null}
+{"id": "u0343", "model": "llama3.1:8b", "scores": {"natural": 4, "correct": 5, "glossary": 5, "grammar": 5}, "note": "uses 'अंदाज़ा' instead of 'अनुमान'", "raw": null}
+{"id": "u0344", "model": "llama3.1:8b", "scores": {"natural": 4, "correct": 5, "glossary": 5, "grammar": 5}, "note": "uses 'अनुमान' instead of 'अनुमानित'", "raw": null}
+{"id": "u0345", "model": "llama3.1:8b", "scores": {"natural": 4, "correct": 4, "glossary": 4, "grammar": 5}, "note": "Minor deviation from natural spoken Hindi, but overall good translation.", "raw": null}
+{"id": "u0346", "model": "llama3.1:8b", "scores": {"natural": 2, "correct": 1, "glossary": 1, "grammar": 5}, "note": "Literal translation, no context fit", "raw": null}
+{"id": "u0347", "model": "llama3.1:8b", "scores": {"natural": 4, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Uses 'बाज़ार भाव' instead of 'सोने का भाव' for global market rate", "raw": null}
+{"id": "u0349", "model": "llama3.1:8b", "scores": {"natural": 4, "correct": 5, "glossary": 5, "grammar": 5}, "note": "uses 'भारत में' instead of 'भारत में सोना' for better clarity", "raw": null}
+{"id": "u0350", "model": "llama3.1:8b", "scores": {"natural": 4, "correct": 5, "glossary": 5, "grammar": 5}, "note": "uses 'बताया' instead of 'साइट पर दिया'", "raw": null}
+{"id": "u0351", "model": "llama3.1:8b", "scores": {"natural": 5, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Sounds like everyday spoken Hindi, faithful translation, uses glossary terms, grammatical and correct.", "raw": null}
+{"id": "u0352", "model": "llama3.1:8b", "scores": {"natural": 4, "correct": 4, "glossary": 4, "grammar": 5}, "note": "uses अनुमान instead of अनुमानित", "raw": null}
+{"id": "u0354", "model": "llama3.1:8b", "scores": {"natural": 5, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Sounds like everyday spoken Hindi, faithful translation, uses glossary terms, grammatically correct.", "raw": null}
+{"id": "u0355", "model": "llama3.1:8b", "scores": {"natural": 2, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Literal translation, no adaptation to Hindi style", "raw": null}
+{"id": "u0357", "model": "llama3.1:8b", "scores": {"natural": 5, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Literal translation, but correct and natural", "raw": null}
+{"id": "u0358", "model": "llama3.1:8b", "scores": {"natural": 5, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Literal translation, but correct and natural", "raw": null}
+{"id": "u0359", "model": "llama3.1:8b", "scores": {"natural": 4, "correct": 5, "glossary": 5, "grammar": 5}, "note": "uses 'औसत ग़लती' instead of 'औसत त्रुटि' which is more common in Hindi", "raw": null}
+{"id": "u0361", "model": "llama3.1:8b", "scores": {"natural": 4, "correct": 5, "glossary": 5, "grammar": 5}, "note": "uses 'औसत' instead of 'average'", "raw": null}
+{"id": "u0364", "model": "llama3.1:8b", "scores": {"natural": 4, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Literal translation, but common phrase", "raw": null}
+{"id": "u0365", "model": "llama3.1:8b", "scores": {"natural": 4, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Literal translation, but common usage", "raw": null}
+{"id": "u0368", "model": "llama3.1:8b", "scores": {"natural": 4, "correct": 5, "glossary": 5, "grammar": 5}, "note": "uses iOS directly, but otherwise good", "raw": null}
+{"id": "u0370", "model": "llama3.1:8b", "scores": {"natural": 5, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Literal translation, but correct and natural", "raw": null}
+{"id": "u0371", "model": "llama3.1:8b", "scores": {"natural": 2, "correct": 1, "glossary": 1, "grammar": 5}, "note": "Literal translation, no context fit", "raw": null}
+{"id": "u0372", "model": "llama3.1:8b", "scores": {"natural": 5, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Literal translation, but common phrase", "raw": null}
+{"id": "u0373", "model": "llama3.1:8b", "scores": {"natural": 1, "correct": 1, "glossary": 1, "grammar": 1}, "note": "Literal translation, no context fit", "raw": null}
+{"id": "u0375", "model": "llama3.1:8b", "scores": {"natural": 4, "correct": 5, "glossary": 5, "grammar": 5}, "note": "uses रेंज for range, but रेंज is not in glossary for price band", "raw": null}
+{"id": "u0376", "model": "llama3.1:8b", "scores": {"natural": 4, "correct": 5, "glossary": 5, "grammar": 5}, "note": "uses 'अंदाज़ा' instead of 'अनुमान'", "raw": null}
+{"id": "u0380", "model": "llama3.1:8b", "scores": {"natural": 5, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Literal translation, but correct and grammatical", "raw": null}
+{"id": "u0382", "model": "llama3.1:8b", "scores": {"natural": 4, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Uses 22 कैरेट instead of 22 कैरेट / 22 के.टी.", "raw": null}
+{"id": "u0386", "model": "llama3.1:8b", "scores": {"natural": 5, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Literal translation, but correct and natural", "raw": null}
+{"id": "u0388", "model": "llama3.1:8b", "scores": {"natural": 4, "correct": 5, "glossary": 5, "grammar": 5}, "note": "uses 'ज़्यादा' instead of 'ज्यादा'", "raw": null}
+{"id": "u0391", "model": "llama3.1:8b", "scores": {"natural": 5, "correct": 5, "glossary": 5, "grammar": 5}, "note": "faithful translation, good vocabulary choice", "raw": null}
+{"id": "u0392", "model": "llama3.1:8b", "scores": {"natural": 4, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Minor deviation in phrase order, but overall natural flow.", "raw": null}
+{"id": "u0393", "model": "llama3.1:8b", "scores": {"natural": 4, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Literal translation of 'measured' is not used.", "raw": null}
+{"id": "u0396", "model": "llama3.1:8b", "scores": {"natural": 5, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Literal translation, but correct and natural", "raw": null}
+{"id": "u0397", "model": "llama3.1:8b", "scores": {"natural": 5, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Literal translation, but common usage in India", "raw": null}
+{"id": "u0398", "model": "llama3.1:8b", "scores": {"natural": 4, "correct": 5, "glossary": 5, "grammar": 5}, "note": "uses 'करीब' instead of 'took off'", "raw": null}
+{"id": "u0399", "model": "llama3.1:8b", "scores": {"natural": 4, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Minor deviation in phrase structure, but overall good translation", "raw": null}
+{"id": "u0400", "model": "llama3.1:8b", "scores": {"natural": 4, "correct": 5, "glossary": 5, "grammar": 5}, "note": "uses 'आम तौर पर' instead of 'आम'", "raw": null}
+{"id": "u0402", "model": "llama3.1:8b", "scores": {"natural": 4, "correct": 5, "glossary": 5, "grammar": 5}, "note": "uses 'आम चाल' instead of 'आम' for usual/normal", "raw": null}
+{"id": "u0405", "model": "llama3.1:8b", "scores": {"natural": 5, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Literal translation, but correct and natural-sounding.", "raw": null}
+{"id": "u0406", "model": "llama3.1:8b", "scores": {"natural": 4, "correct": 5, "glossary": 5, "grammar": 5}, "note": "uses आम instead of usual", "raw": null}
+{"id": "u0407", "model": "llama3.1:8b", "scores": {"natural": 4, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Uses 'सुनहरी लाइन' instead of 'सोने का भाव'", "raw": null}
+{"id": "u0408", "model": "llama3.1:8b", "scores": {"natural": 5, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Commonly used phrase in everyday Hindi", "raw": null}
+{"id": "u0410", "model": "llama3.1:8b", "scores": {"natural": 4, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Minor phrase structure adjustment for better flow", "raw": null}
+{"id": "u0411", "model": "llama3.1:8b", "scores": {"natural": 4, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Literal translation, but common phrase in Hindi", "raw": null}
+{"id": "u0413", "model": "llama3.1:8b", "scores": {"natural": 5, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Literal translation, but correct and natural", "raw": null}
+{"id": "u0415", "model": "llama3.1:8b", "scores": {"natural": 1, "correct": 1, "glossary": 1, "grammar": 5}, "note": "Literal translation, no effort to adapt to Hindi", "raw": null}
+{"id": "u0416", "model": "llama3.1:8b", "scores": {"natural": 4, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Literal translation, but correct and grammatical.", "raw": null}
+{"id": "u0417", "model": "llama3.1:8b", "scores": {"natural": 4, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Uses 'सही' instead of 'सही भाव' for accuracy, but overall good.", "raw": null}
+{"id": "u0419", "model": "llama3.1:8b", "scores": {"natural": 4, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Minor variation in phrase order, but overall natural and idiomatic.", "raw": null}
+{"id": "u0421", "model": "llama3.1:8b", "scores": {"natural": 4, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Literal translation, but correct and grammatical", "raw": null}
+{"id": "u0426", "model": "llama3.1:8b", "scores": {"natural": 5, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Literal translation, but correct and natural", "raw": null}
+{"id": "u0427", "model": "llama3.1:8b", "scores": {"natural": 4, "correct": 5, "glossary": 5, "grammar": 5}, "note": "accurate translation, good idiomatic expression", "raw": null}
+{"id": "u0431", "model": "llama3.1:8b", "scores": {"natural": 5, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Literal translation, but common phrase in Hindi", "raw": null}
+{"id": "u0433", "model": "llama3.1:8b", "scores": {"natural": 4, "correct": 5, "glossary": 5, "grammar": 5}, "note": "uses सोने का भाव instead of सोने की कीमत", "raw": null}
+{"id": "u0434", "model": "llama3.1:8b", "scores": {"natural": 4, "correct": 5, "glossary": 5, "grammar": 5}, "note": "uses 'कमज़ोर' instead of 'सस्ता' for weaker rupee", "raw": null}
+{"id": "u0435", "model": "llama3.1:8b", "scores": {"natural": 4, "correct": 5, "glossary": 5, "grammar": 5}, "note": "uses 'अंदर' instead of 'के अंदर'", "raw": null}
+{"id": "u0436", "model": "llama3.1:8b", "scores": {"natural": 4, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Minor phrase structure adjustment for better flow", "raw": null}
+{"id": "u0440", "model": "llama3.1:8b", "scores": {"natural": 4, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Minor deviation in wording, but accurate translation.", "raw": null}
+{"id": "u0441", "model": "llama3.1:8b", "scores": {"natural": 5, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Natural translation, correct meaning, uses glossary terms, grammatically correct.", "raw": null}
+{"id": "u0442", "model": "llama3.1:8b", "scores": {"natural": 4, "correct": 5, "glossary": 5, "grammar": 5}, "note": "uses 'भाव' instead of 'दर' for price, but still clear", "raw": null}
+{"id": "u0444", "model": "llama3.1:8b", "scores": {"natural": 4, "correct": 5, "glossary": 5, "grammar": 5}, "note": "uses अनुमान instead of अनुमानित, but still correct", "raw": null}
+{"id": "u0445", "model": "llama3.1:8b", "scores": {"natural": 4, "correct": 4, "glossary": 1, "grammar": 5}, "note": "uses 'सस्ता' instead of 'सस्ता / महंगा'", "raw": null}
+{"id": "u0446", "model": "llama3.1:8b", "scores": {"natural": 2, "correct": 2, "glossary": 1, "grammar": 5}, "note": "Literal translation, missed 'rel' context", "raw": null}
+{"id": "u0448", "model": "llama3.1:8b", "scores": {"natural": 5, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Faithful translation, no room for improvement", "raw": null}
+{"id": "u0449", "model": "llama3.1:8b", "scores": {"natural": 4, "correct": 5, "glossary": 5, "grammar": 5}, "note": "uses 'भाव' instead of 'भाव से' for better flow", "raw": null}
+{"id": "u0451", "model": "llama3.1:8b", "scores": {"natural": 5, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Literal translation, but correct and natural", "raw": null}
+{"id": "u0452", "model": "llama3.1:8b", "scores": {"natural": 4, "correct": 4, "glossary": 1, "grammar": 5}, "note": "uses सोने की कीमत instead of सोने का भाव", "raw": null}
+{"id": "u0453", "model": "llama3.1:8b", "scores": {"natural": 4, "correct": 5, "glossary": 4, "grammar": 5}, "note": "uses अनुमान instead of अनुमानित", "raw": null}
+{"id": "u0454", "model": "llama3.1:8b", "scores": {"natural": 5, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Literal translation, but common usage in Hindi", "raw": null}
+{"id": "u0455", "model": "llama3.1:8b", "scores": {"natural": 5, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Literal translation, but correct and natural", "raw": null}
+{"id": "u0458", "model": "llama3.1:8b", "scores": {"natural": 4, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Minor variation in wording, but accurate translation.", "raw": null}
+{"id": "u0459", "model": "llama3.1:8b", "scores": {"natural": 4, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Minor variation in phrase 'कमज़ोर निकले'", "raw": null}
+{"id": "u0464", "model": "llama3.1:8b", "scores": {"natural": 4, "correct": 5, "glossary": 5, "grammar": 5}, "note": "uses सोना instead of सोने का भाव, but otherwise correct", "raw": null}
+{"id": "u0470", "model": "llama3.1:8b", "scores": {"natural": 4, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Literal translation, but common phrase", "raw": null}
+{"id": "u0471", "model": "llama3.1:8b", "scores": {"natural": 4, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Uses 'दुकानों के औसत भाव' instead of 'रेंज' for price band", "raw": null}
+{"id": "u0472", "model": "llama3.1:8b", "scores": {"natural": 4, "correct": 5, "glossary": 1, "grammar": 5}, "note": "uses सोने की कीमत instead of सोने का भाव", "raw": null}
+{"id": "u0474", "model": "llama3.1:8b", "scores": {"natural": 1, "correct": 1, "glossary": 1, "grammar": 5}, "note": "Literal translation, but correct and grammatically sound.", "raw": null}
+{"id": "u0475", "model": "llama3.1:8b", "scores": {"natural": 4, "correct": 5, "glossary": 5, "grammar": 5}, "note": "uses 'से' instead of 'के' for 'बाज़ार में'", "raw": null}
+{"id": "u0477", "model": "llama3.1:8b", "scores": {"natural": 4, "correct": 5, "glossary": 5, "grammar": 5}, "note": "uses आम तौर पर instead of usual phrase", "raw": null}
+{"id": "u0478", "model": "llama3.1:8b", "scores": {"natural": 4, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Minor deviation from English tone, but idiomatic Hindi", "raw": null}
+{"id": "u0479", "model": "llama3.1:8b", "scores": {"natural": 5, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Literal translation, but correct and natural", "raw": null}
+{"id": "u0480", "model": "llama3.1:8b", "scores": {"natural": 5, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Faithful translation, no room for improvement", "raw": null}
+{"id": "u0482", "model": "llama3.1:8b", "scores": {"natural": 4, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Minor variation in phrase structure, but accurate translation.", "raw": null}
+{"id": "u0483", "model": "llama3.1:8b", "scores": {"natural": 4, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Minor deviation in phrase structure, but faithful translation.", "raw": null}
+{"id": "u0484", "model": "llama3.1:8b", "scores": {"natural": 4, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Minor variation in phrase order", "raw": null}
+{"id": "u0485", "model": "llama3.1:8b", "scores": {"natural": 4, "correct": 5, "glossary": 5, "grammar": 5}, "note": "uses 'ज़्यादातर' instead of 'आम' for 'usual'", "raw": null}
+{"id": "u0487", "model": "llama3.1:8b", "scores": {"natural": 4, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Uses 'सस्ता हुआ है' instead of 'सस्ता है' for better naturalness", "raw": null}
+{"id": "u0488", "model": "llama3.1:8b", "scores": {"natural": 2, "correct": 1, "glossary": 1, "grammar": 5}, "note": "Literal translation, no consideration for Hindi usage", "raw": null}
+{"id": "u0493", "model": "llama3.1:8b", "scores": {"natural": 5, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Natural and correct translation of the English source.", "raw": null}
+{"id": "u0494", "model": "llama3.1:8b", "scores": {"natural": 5, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Literal translation, but common usage in Hindi", "raw": null}
+{"id": "u0497", "model": "llama3.1:8b", "scores": {"natural": 4, "correct": 5, "glossary": 5, "grammar": 5}, "note": "uses 'भाव' correctly for price", "raw": null}
+{"id": "u0498", "model": "llama3.1:8b", "scores": {"natural": 4, "correct": 5, "glossary": 5, "grammar": 5}, "note": "uses 'ज़्यादातर' instead of 'आम' for 'usual'", "raw": null}
+{"id": "u0499", "model": "llama3.1:8b", "scores": {"natural": 4, "correct": 5, "glossary": 5, "grammar": 5}, "note": "uses 'कारोबारी दिन' instead of 'हफ़्ते/महीने' for timing", "raw": null}
+{"id": "u0500", "model": "llama3.1:8b", "scores": {"natural": 5, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Natural and correct translation, good use of glossary terms, no errors in grammar.", "raw": null}
+{"id": "u0504", "model": "llama3.1:8b", "scores": {"natural": 4, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Literal translation, but common phrase in Hindi", "raw": null}
+{"id": "u0505", "model": "llama3.1:8b", "scores": {"natural": 4, "correct": 4, "glossary": 4, "grammar": 5}, "note": "Minor translation nuances, but mostly accurate.", "raw": null}
+{"id": "u0506", "model": "llama3.1:8b", "scores": {"natural": 4, "correct": 5, "glossary": 5, "grammar": 5}, "note": "uses 'सही' instead of 'सटीक' in similar context", "raw": null}
+{"id": "u0507", "model": "llama3.1:8b", "scores": {"natural": 4, "correct": 4, "glossary": 4, "grammar": 5}, "note": "Minor deviation in phrase order, but grammatically correct.", "raw": null}
+{"id": "u0510", "model": "llama3.1:8b", "scores": {"natural": 4, "correct": 5, "glossary": 5, "grammar": 5}, "note": "uses सोने के भाव instead of सोने का भाव", "raw": null}
+{"id": "u0511", "model": "llama3.1:8b", "scores": {"natural": 5, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Literal translation, but correct and natural in this context.", "raw": null}
+{"id": "u0512", "model": "llama3.1:8b", "scores": {"natural": 4, "correct": 5, "glossary": 5, "grammar": 5}, "note": "uses भाव instead of reading, but correct in context", "raw": null}
+{"id": "u0513", "model": "llama3.1:8b", "scores": {"natural": 4, "correct": 5, "glossary": 5, "grammar": 5}, "note": "uses 'भारत में' instead of 'दुनिया के बाज़ार में'", "raw": null}
+{"id": "u0514", "model": "llama3.1:8b", "scores": {"natural": 5, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Literal translation, but correct and natural", "raw": null}
+{"id": "u0516", "model": "llama3.1:8b", "scores": {"natural": 4, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Uses 'शायद' which is not a direct translation of 'likely', but conveys the same meaning.", "raw": null}
+{"id": "u0517", "model": "llama3.1:8b", "scores": {"natural": 5, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Sounds like everyday spoken Hindi, faithful translation, uses glossary terms, grammatically correct.", "raw": null}
+{"id": "u0519", "model": "llama3.1:8b", "scores": {"natural": 4, "correct": 5, "glossary": 5, "grammar": 5}, "note": "uses मोटा अंदाज़ा instead of अनुमानित", "raw": null}
+{"id": "u0520", "model": "llama3.1:8b", "scores": {"natural": 4, "correct": 5, "glossary": 5, "grammar": 5}, "note": "uses भाव instead of सोने का भाव, but still correct", "raw": null}
+{"id": "u0521", "model": "llama3.1:8b", "scores": {"natural": 4, "correct": 5, "glossary": 5, "grammar": 5}, "note": "uses 'टिका' instead of 'स्थिर' or 'अस्थिर' for 'roughly flat'", "raw": null}
+{"id": "u0522", "model": "llama3.1:8b", "scores": {"natural": 4, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Uses 'भाव' instead of 'सोने का भाव' for Tanishq's rate, but still correct.", "raw": null}
+{"id": "u0523", "model": "llama3.1:8b", "scores": {"natural": 5, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Sounds like everyday spoken Hindi, faithful translation, uses glossary terms, grammatically correct.", "raw": null}
+{"id": "u0525", "model": "llama3.1:8b", "scores": {"natural": 4, "correct": 5, "glossary": 1, "grammar": 5}, "note": "uses से instead of सस्ता/महंगा", "raw": null}
+{"id": "u0526", "model": "llama3.1:8b", "scores": {"natural": 5, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Exact translation, no issues found", "raw": null}
+{"id": "u0528", "model": "llama3.1:8b", "scores": {"natural": 4, "correct": 5, "glossary": 5, "grammar": 5}, "note": "uses 'ज़्यादातर' instead of 'आम'", "raw": null}
+{"id": "u0529", "model": "llama3.1:8b", "scores": {"natural": 4, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Uses 22 कैरेट instead of 22 कैरेट / 22 के.टी.", "raw": null}
+{"id": "u0530", "model": "llama3.1:8b", "scores": {"natural": 4, "correct": 5, "glossary": 5, "grammar": 5}, "note": "uses 'और' instead of 'and'", "raw": null}
+{"id": "u0532", "model": "llama3.1:8b", "scores": {"natural": 5, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Literal translation, but correct and natural", "raw": null}
+{"id": "u0533", "model": "llama3.1:8b", "scores": {"natural": 4, "correct": 5, "glossary": 5, "grammar": 5}, "note": "uses 'हफ़्तों' instead of 'हफ़्ते' for consistency", "raw": null}
+{"id": "u0534", "model": "llama3.1:8b", "scores": {"natural": 4, "correct": 4, "glossary": 4, "grammar": 5}, "note": "uses 'रिकॉर्ड' instead of 'प्रदर्शनी' or 'सूची'", "raw": null}
+{"id": "u0535", "model": "llama3.1:8b", "scores": {"natural": 2, "correct": 2, "glossary": 1, "grammar": 5}, "note": "Literal translation, no range concept used", "raw": null}
+{"id": "u0539", "model": "llama3.1:8b", "scores": {"natural": 4, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Uses 'सफलतापूर्वक' instead of 'सफलतापूर्वक देखा था', which is a bit formal for a banner.", "raw": null}
+{"id": "u0541", "model": "llama3.1:8b", "scores": {"natural": 5, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Literal translation, but correct and natural", "raw": null}
+{"id": "u0542", "model": "llama3.1:8b", "scores": {"natural": 5, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Literal translation, but correct and natural", "raw": null}
+{"id": "u0543", "model": "llama3.1:8b", "scores": {"natural": 4, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Minor variation in phrase order, but idiomatic.", "raw": null}
+{"id": "u0545", "model": "llama3.1:8b", "scores": {"natural": 4, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Literal translation, but correct and grammatical.", "raw": null}
+{"id": "u0546", "model": "llama3.1:8b", "scores": {"natural": 4, "correct": 5, "glossary": 5, "grammar": 5}, "note": "uses अनुमानित twice, better to use अनुमान", "raw": null}
+{"id": "u0548", "model": "llama3.1:8b", "scores": {"natural": 5, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Literal translation, but common phrase in Hindi", "raw": null}
+{"id": "u0550", "model": "llama3.1:8b", "scores": {"natural": 4, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Uses 'काफ़ी हफ़्तों' instead of 'काफ़ी हफ़्तों का भाव' for better naturalness", "raw": null}
+{"id": "u0551", "model": "llama3.1:8b", "scores": {"natural": 5, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Correctly uses 18 कैरेट, a common way to express carat weight in Hindi.", "raw": null}
+{"id": "u0552", "model": "llama3.1:8b", "scores": {"natural": 4, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Minor variation in phrase structure, but faithful to English source.", "raw": null}
+{"id": "u0553", "model": "llama3.1:8b", "scores": {"natural": 5, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Literal translation, but idiomatic and correct.", "raw": null}
+{"id": "u0554", "model": "llama3.1:8b", "scores": {"natural": 4, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Literal translation, but uses correct glossary terms.", "raw": null}
+{"id": "u0557", "model": "llama3.1:8b", "scores": {"natural": 4, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Literal translation, but common phrase", "raw": null}
+{"id": "u0558", "model": "llama3.1:8b", "scores": {"natural": 2, "correct": 2, "glossary": 1, "grammar": 5}, "note": "Literal translation, expected more idiomatic expression", "raw": null}
+{"id": "u0559", "model": "llama3.1:8b", "scores": {"natural": 4, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Minor deviation from natural spoken Hindi, but overall good translation.", "raw": null}
+{"id": "u0560", "model": "llama3.1:8b", "scores": {"natural": 4, "correct": 5, "glossary": 5, "grammar": 5}, "note": "uses 'भाव' instead of 'दर' for price", "raw": null}
+{"id": "u0561", "model": "llama3.1:8b", "scores": {"natural": 4, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Minor variation in phrase structure, but faithful to English meaning.", "raw": null}
+{"id": "u0564", "model": "llama3.1:8b", "scores": {"natural": 5, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Accurate translation of 'Accuracy drift'", "raw": null}
+{"id": "u0565", "model": "llama3.1:8b", "scores": {"natural": 4, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Literal translation, but common phrase", "raw": null}
+{"id": "u0566", "model": "llama3.1:8b", "scores": {"natural": 2, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Literal translation, no context adaptation", "raw": null}
+{"id": "u0567", "model": "llama3.1:8b", "scores": {"natural": 4, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Minor variation in phrase order, but idiomatic Hindi", "raw": null}
+{"id": "u0570", "model": "llama3.1:8b", "scores": {"natural": 5, "correct": 5, "glossary": 5, "grammar": 5}, "note": "exact translation of English phrase", "raw": null}
+{"id": "u0571", "model": "llama3.1:8b", "scores": {"natural": 2, "correct": 1, "glossary": 1, "grammar": 5}, "note": "Literal translation, lacks context understanding", "raw": null}
+{"id": "u0573", "model": "llama3.1:8b", "scores": {"natural": 5, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Literal translation, but correct and natural-sounding.", "raw": null}
+{"id": "u0574", "model": "llama3.1:8b", "scores": {"natural": 4, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Uses 'आधिकारिक' instead of 'official', but still clear and accurate.", "raw": null}
+{"id": "u0575", "model": "llama3.1:8b", "scores": {"natural": 4, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Uses 'भाव' instead of 'दर' for price, but still clear.", "raw": null}
+{"id": "u0578", "model": "llama3.1:8b", "scores": {"natural": 5, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Literal translation, but common phrase", "raw": null}
+{"id": "u0579", "model": "llama3.1:8b", "scores": {"natural": 4, "correct": 5, "glossary": 5, "grammar": 5}, "note": "uses 'भाव' instead of 'दर' for price, but is otherwise accurate", "raw": null}
+{"id": "u0580", "model": "llama3.1:8b", "scores": {"natural": 5, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Literal translation, but common usage", "raw": null}
+{"id": "u0581", "model": "llama3.1:8b", "scores": {"natural": 4, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Literal translation, but common usage", "raw": null}
+{"id": "u0582", "model": "llama3.1:8b", "scores": {"natural": 5, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Literal translation, but correct and natural", "raw": null}
+{"id": "u0583", "model": "llama3.1:8b", "scores": {"natural": 1, "correct": 1, "glossary": 1, "grammar": 5}, "note": "Literal translation of 'All', no context adaptation", "raw": null}
+{"id": "u0585", "model": "llama3.1:8b", "scores": {"natural": 4, "correct": 5, "glossary": 5, "grammar": 5}, "note": "uses आम instead of usual", "raw": null}
+{"id": "u0586", "model": "llama3.1:8b", "scores": {"natural": 4, "correct": 5, "glossary": 5, "grammar": 5}, "note": "uses आम instead of सामान्य, but still sounds natural", "raw": null}
+{"id": "u0588", "model": "llama3.1:8b", "scores": {"natural": 4, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Uses 'ख़रीदने का सुझाव' instead of 'ख़रीदने का विचार' or 'ख़रीदने की सलाह'", "raw": null}
+{"id": "u0589", "model": "llama3.1:8b", "scores": {"natural": 2, "correct": 1, "glossary": 1, "grammar": 5}, "note": "Literal translation, no context fit", "raw": null}
+{"id": "u0002", "model": "llama3.1:8b", "scores": {"natural": 4, "correct": 5, "glossary": 5, "grammar": 5}, "note": "uses कीमत instead of भाव, but still correct", "raw": null}
+{"id": "u0004", "model": "llama3.1:8b", "scores": {"natural": 4, "correct": 5, "glossary": 5, "grammar": 5}, "note": "uses 'हिसाब' instead of 'रेंज'", "raw": null}
+{"id": "u0009", "model": "llama3.1:8b", "scores": {"natural": 4, "correct": 4, "glossary": 2, "grammar": 5}, "note": "Uses वैश्विक instead of दुनिया के बाज़ार में सोने का भाव", "raw": null}
+{"id": "u0011", "model": "llama3.1:8b", "scores": {"natural": 4, "correct": 5, "glossary": 5, "grammar": 5}, "note": "uses 'ज़्यादातर' instead of 'आम' for 'usual'", "raw": null}
+{"id": "u0015", "model": "llama3.1:8b", "scores": {"natural": 4, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Uses 'सस्ता हुआ है' instead of 'सस्ता है' for better naturalness", "raw": null}
+{"id": "u0019", "model": "llama3.1:8b", "scores": {"natural": 4, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Good use of मोटा अंदाज़ा for 'rough indication'", "raw": null}
+{"id": "u0023", "model": "llama3.1:8b", "scores": {"natural": 4, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Minor variation in phrase order, but faithful translation.", "raw": null}
+{"id": "u0024", "model": "llama3.1:8b", "scores": {"natural": 4, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Literal translation, but common usage", "raw": null}
+{"id": "u0027", "model": "llama3.1:8b", "scores": {"natural": 4, "correct": 5, "glossary": 5, "grammar": 5}, "note": "uses सस्ता instead of सस्ता / महंगा for better nuance", "raw": null}
+{"id": "u0031", "model": "llama3.1:8b", "scores": {"natural": 5, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Literal translation, but correct and natural", "raw": null}
+{"id": "u0034", "model": "llama3.1:8b", "scores": {"natural": 4, "correct": 5, "glossary": 5, "grammar": 5}, "note": "uses 'इतिहास' instead of 'पुराने भाव' for history section", "raw": null}
+{"id": "u0038", "model": "llama3.1:8b", "scores": {"natural": 4, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Literal translation, but correct and grammatically sound.", "raw": null}
+{"id": "u0039", "model": "llama3.1:8b", "scores": {"natural": 4, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Literal translation, but common usage", "raw": null}
+{"id": "u0041", "model": "llama3.1:8b", "scores": {"natural": 5, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Natural and correct translation of the English source.", "raw": null}
+{"id": "u0044", "model": "llama3.1:8b", "scores": {"natural": 4, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Literal translation, but common phrase", "raw": null}
+{"id": "u0045", "model": "llama3.1:8b", "scores": {"natural": 4, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Literal translation, but correct and grammatical", "raw": null}
+{"id": "u0047", "model": "llama3.1:8b", "scores": {"natural": 5, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Literal translation, but correct and natural", "raw": null}
+{"id": "u0049", "model": "llama3.1:8b", "scores": {"natural": 4, "correct": 4, "glossary": 4, "grammar": 5}, "note": "uses 'आसपास' instead of 'रेंज'", "raw": null}
+{"id": "u0050", "model": "llama3.1:8b", "scores": {"natural": 4, "correct": 5, "glossary": 5, "grammar": 5}, "note": "uses 'सही' instead of 'सटीक' in similar context", "raw": null}
+{"id": "u0053", "model": "llama3.1:8b", "scores": {"natural": 4, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Minor phrase structure adjustment for better flow", "raw": null}
+{"id": "u0055", "model": "llama3.1:8b", "scores": {"natural": 4, "correct": 5, "glossary": 5, "grammar": 5}, "note": "uses 'सामान्य' instead of 'आम'", "raw": null}
+{"id": "u0058", "model": "llama3.1:8b", "scores": {"natural": 4, "correct": 5, "glossary": 5, "grammar": 5}, "note": "uses सटीकता instead of सही for accuracy", "raw": null}
+{"id": "u0059", "model": "llama3.1:8b", "scores": {"natural": 4, "correct": 5, "glossary": 5, "grammar": 5}, "note": "uses official rate instead of official rate today", "raw": null}
+{"id": "u0061", "model": "llama3.1:8b", "scores": {"natural": 5, "correct": 5, "glossary": 5, "grammar": 5}, "note": "faithful translation, no issues found", "raw": null}
+{"id": "u0064", "model": "llama3.1:8b", "scores": {"natural": 4, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Literal translation, but common phrase in Hindi", "raw": null}
+{"id": "u0069", "model": "llama3.1:8b", "scores": {"natural": 4, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Literal translation, but common phrase", "raw": null}
+{"id": "u0073", "model": "llama3.1:8b", "scores": {"natural": 4, "correct": 5, "glossary": 5, "grammar": 5}, "note": "uses सोने की कीमत instead of सोने का भाव", "raw": null}
+{"id": "u0074", "model": "llama3.1:8b", "scores": {"natural": 4, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Uses 'हिसाब' instead of 'रेंज' for price band, but still clear", "raw": null}
+{"id": "u0080", "model": "llama3.1:8b", "scores": {"natural": 5, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Literal translation, but common usage", "raw": null}
+{"id": "u0081", "model": "llama3.1:8b", "scores": {"natural": 4, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Uses 'बाज़ार दर' instead of 'सोने का भाव' for market rate, but still correct.", "raw": null}
+{"id": "u0082", "model": "llama3.1:8b", "scores": {"natural": 4, "correct": 5, "glossary": 5, "grammar": 5}, "note": "uses 'आमतौर पर' instead of 'आम' for usual", "raw": null}
+{"id": "u0083", "model": "llama3.1:8b", "scores": {"natural": 5, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Literal translation, but common phrase", "raw": null}
+{"id": "u0087", "model": "llama3.1:8b", "scores": {"natural": 4, "correct": 5, "glossary": 5, "grammar": 5}, "note": "uses 'संभावना' instead of 'अनुमान'", "raw": null}
+{"id": "u0088", "model": "llama3.1:8b", "scores": {"natural": 4, "correct": 4, "glossary": 2, "grammar": 5}, "note": "Uses वैश्विक instead of recommended दुनिया के बाज़ार में सोने का भाव", "raw": null}
+{"id": "u0091", "model": "llama3.1:8b", "scores": {"natural": 4, "correct": 5, "glossary": 5, "grammar": 5}, "note": "uses 'स्थिर' instead of 'स्थिर रहा'", "raw": null}
+{"id": "u0092", "model": "llama3.1:8b", "scores": {"natural": 4, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Minor deviation in phrase structure, but accurate translation.", "raw": null}
+{"id": "u0095", "model": "llama3.1:8b", "scores": {"natural": 4, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Minor deviation in 'फ़र्क़' instead of 'भाव' for accuracy", "raw": null}
+{"id": "u0097", "model": "llama3.1:8b", "scores": {"natural": 4, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Minor change in wording, but faithful to English source.", "raw": null}
+{"id": "u0100", "model": "llama3.1:8b", "scores": {"natural": 4, "correct": 4, "glossary": 4, "grammar": 5}, "note": "Uses सामान्य instead of आम for usual/normal", "raw": null}
+{"id": "u0106", "model": "llama3.1:8b", "scores": {"natural": 4, "correct": 5, "glossary": 5, "grammar": 5}, "note": "uses सस्ता instead of cheaper, but common usage", "raw": null}
+{"id": "u0107", "model": "llama3.1:8b", "scores": {"natural": 5, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Literal translation, but idiomatic Hindi", "raw": null}
+{"id": "u0110", "model": "llama3.1:8b", "scores": {"natural": 4, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Literal translation, but correct and grammatical", "raw": null}
+{"id": "u0111", "model": "llama3.1:8b", "scores": {"natural": 5, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Literal translation, but common usage.", "raw": null}
+{"id": "u0112", "model": "llama3.1:8b", "scores": {"natural": 4, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Literal translation, but correct and grammatically sound.", "raw": null}
+{"id": "u0113", "model": "llama3.1:8b", "scores": {"natural": 4, "correct": 4, "glossary": 2, "grammar": 5}, "note": "Uses वैश्विक instead of recommended दुनिया के बाज़ार में सोने का भाव", "raw": null}
+{"id": "u0115", "model": "llama3.1:8b", "scores": {"natural": 5, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Literal translation, but correct and natural", "raw": null}
+{"id": "u0116", "model": "llama3.1:8b", "scores": {"natural": 4, "correct": 5, "glossary": 5, "grammar": 5}, "note": "uses 'आज जैसी' instead of 'आज की कीमत'", "raw": null}
+{"id": "u0117", "model": "llama3.1:8b", "scores": {"natural": 5, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Literal translation, but common question", "raw": null}
+{"id": "u0118", "model": "llama3.1:8b", "scores": {"natural": 5, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Literal translation, but idiomatic Hindi", "raw": null}
+{"id": "u0121", "model": "llama3.1:8b", "scores": {"natural": 4, "correct": 5, "glossary": 5, "grammar": 5}, "note": "uses रेंज correctly, but could be more idiomatic", "raw": null}
+{"id": "u0124", "model": "llama3.1:8b", "scores": {"natural": 4, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Uses 'बाज़ार के मुक़ाबले' instead of 'दुनिया के बाज़ार में सोने का भाव' for global gold price comparison", "raw": null}
+{"id": "u0125", "model": "llama3.1:8b", "scores": {"natural": 4, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Uses 'सूचीबद्ध दर' instead of 'सूचीबद्ध भाव'", "raw": null}
+{"id": "u0128", "model": "llama3.1:8b", "scores": {"natural": 4, "correct": 5, "glossary": 5, "grammar": 5}, "note": "uses 'कीमत घटना' instead of 'कीमत घटना' which is more common in spoken Hindi", "raw": null}
+{"id": "u0129", "model": "llama3.1:8b", "scores": {"natural": 4, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Literal translation, but idiomatic expression fits", "raw": null}
+{"id": "u0130", "model": "llama3.1:8b", "scores": {"natural": 4, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Uses 'सूचीबद्ध दर' instead of 'बताया भाव' or 'साइट पर दिया भाव'", "raw": null}
+{"id": "u0131", "model": "llama3.1:8b", "scores": {"natural": 4, "correct": 5, "glossary": 4, "grammar": 5}, "note": "uses जौहरियों instead of ज्वेलर", "raw": null}
+{"id": "u0134", "model": "llama3.1:8b", "scores": {"natural": 4, "correct": 5, "glossary": 5, "grammar": 5}, "note": "uses रेंज for range, but correct otherwise", "raw": null}
+{"id": "u0137", "model": "llama3.1:8b", "scores": {"natural": 4, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Literal translation, but correct and grammatically sound", "raw": null}
+{"id": "u0139", "model": "llama3.1:8b", "scores": {"natural": 1, "correct": 1, "glossary": 1, "grammar": 5}, "note": "Literal translation, no adaptation to Hindi style", "raw": null}
+{"id": "u0143", "model": "llama3.1:8b", "scores": {"natural": 4, "correct": 5, "glossary": 5, "grammar": 5}, "note": "uses 'आधिकारिक सोने की दर' instead of 'सोने का भाव'", "raw": null}
+{"id": "u0145", "model": "llama3.1:8b", "scores": {"natural": 5, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Literal translation, but correct and natural", "raw": null}
+{"id": "u0146", "model": "llama3.1:8b", "scores": {"natural": 2, "correct": 1, "glossary": 1, "grammar": 5}, "note": "Literal translation, no adaptation to Hindi conventions", "raw": null}
+{"id": "u0152", "model": "llama3.1:8b", "scores": {"natural": 4, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Literal translation, but common phrase", "raw": null}
+{"id": "u0163", "model": "llama3.1:8b", "scores": {"natural": 4, "correct": 5, "glossary": 5, "grammar": 5}, "note": "uses 'औसत' instead of 'avg'", "raw": null}
+{"id": "u0166", "model": "llama3.1:8b", "scores": {"natural": 4, "correct": 5, "glossary": 4, "grammar": 5}, "note": "uses सामान्य instead of आम", "raw": null}
+{"id": "u0167", "model": "llama3.1:8b", "scores": {"natural": 4, "correct": 4, "glossary": 2, "grammar": 5}, "note": "Uses वैश्विक instead of recommended दुनिया के बाज़ार में सोने का भाव", "raw": null}
+{"id": "u0168", "model": "llama3.1:8b", "scores": {"natural": 4, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Literal translation, but correct and grammatically sound.", "raw": null}
+{"id": "u0169", "model": "llama3.1:8b", "scores": {"natural": 4, "correct": 5, "glossary": 5, "grammar": 5}, "note": "uses अनुमानित instead of अनुमान", "raw": null}
+{"id": "u0171", "model": "llama3.1:8b", "scores": {"natural": 5, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Literal translation, but correct and natural Hindi.", "raw": null}
+{"id": "u0174", "model": "llama3.1:8b", "scores": {"natural": 5, "correct": 5, "glossary": 5, "grammar": 5}, "note": "No issues found, good translation.", "raw": null}
+{"id": "u0176", "model": "llama3.1:8b", "scores": {"natural": 5, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Literal translation, but common usage", "raw": null}
+{"id": "u0178", "model": "llama3.1:8b", "scores": {"natural": 4, "correct": 5, "glossary": 5, "grammar": 5}, "note": "uses 'ग्राम' instead of 'ग्राम' with '₹'", "raw": null}
+{"id": "u0179", "model": "llama3.1:8b", "scores": {"natural": 4, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Minor variation in sentence structure", "raw": null}
+{"id": "u0182", "model": "llama3.1:8b", "scores": {"natural": 4, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Minor deviation in phrase structure, but faithful to English meaning.", "raw": null}
+{"id": "u0183", "model": "llama3.1:8b", "scores": {"natural": 4, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Minor variation in phrase 'कीमत अटकी रहे' instead of 'कीमतें अटकी रहें'", "raw": null}
+{"id": "u0185", "model": "llama3.1:8b", "scores": {"natural": 5, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Literal translation, but idiomatic Hindi equivalent", "raw": null}
+{"id": "u0186", "model": "llama3.1:8b", "scores": {"natural": 4, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Minor phrase structure is natural, but not everyday spoken Hindi.", "raw": null}
+{"id": "u0187", "model": "llama3.1:8b", "scores": {"natural": 4, "correct": 5, "glossary": 5, "grammar": 5}, "note": "uses सोने की कीमत instead of सोने का भाव", "raw": null}
+{"id": "u0189", "model": "llama3.1:8b", "scores": {"natural": 4, "correct": 4, "glossary": 2, "grammar": 5}, "note": "Uses वैश्विक instead of recommended दुनिया के बाज़ार में सोने का भाव", "raw": null}
+{"id": "u0191", "model": "llama3.1:8b", "scores": {"natural": 5, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Literal translation, but correct and natural Hindi.", "raw": null}
+{"id": "u0192", "model": "llama3.1:8b", "scores": {"natural": 4, "correct": 4, "glossary": 4, "grammar": 5}, "note": "Uses सामान्य instead of आम for usual", "raw": null}
+{"id": "u0193", "model": "llama3.1:8b", "scores": {"natural": 4, "correct": 4, "glossary": 1, "grammar": 5}, "note": "Literal translation, expected more idiomatic expression", "raw": null}
+{"id": "u0197", "model": "llama3.1:8b", "scores": {"natural": 4, "correct": 5, "glossary": 5, "grammar": 5}, "note": "uses 'ज़्यादा' instead of 'से ज़्यादा'", "raw": null}
+{"id": "u0198", "model": "llama3.1:8b", "scores": {"natural": 4, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Literal translation, but common term used", "raw": null}
+{"id": "u0199", "model": "llama3.1:8b", "scores": {"natural": 4, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Uses 'सामान्य' instead of 'आम' for 'usual'", "raw": null}
+{"id": "u0202", "model": "llama3.1:8b", "scores": {"natural": 4, "correct": 5, "glossary": 5, "grammar": 5}, "note": "uses 'न्यूनतम' instead of 'न्यूनतम भाव'", "raw": null}
+{"id": "u0209", "model": "llama3.1:8b", "scores": {"natural": 4, "correct": 5, "glossary": 4, "grammar": 5}, "note": "Uses सोने की कीमत instead of सोने का भाव", "raw": null}
+{"id": "u0213", "model": "llama3.1:8b", "scores": {"natural": 4, "correct": 5, "glossary": 5, "grammar": 5}, "note": "uses सामान्य instead of आम", "raw": null}
+{"id": "u0216", "model": "llama3.1:8b", "scores": {"natural": 4, "correct": 5, "glossary": 5, "grammar": 5}, "note": "uses 'कीमत बढ़ना' instead of 'कीमत बढ़ना' which is more common in spoken Hindi", "raw": null}
+{"id": "u0219", "model": "llama3.1:8b", "scores": {"natural": 4, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Minor change in wording, but accurate translation.", "raw": null}
+{"id": "u0223", "model": "llama3.1:8b", "scores": {"natural": 4, "correct": 5, "glossary": 5, "grammar": 5}, "note": "uses सामान्य instead of आम", "raw": null}
+{"id": "u0227", "model": "llama3.1:8b", "scores": {"natural": 4, "correct": 5, "glossary": 5, "grammar": 5}, "note": "uses 'रेंज' instead of recommended 'रेंज' (price band)", "raw": null}
+{"id": "u0229", "model": "llama3.1:8b", "scores": {"natural": 4, "correct": 5, "glossary": 5, "grammar": 5}, "note": "uses 'आयातित' instead of 'आयातित सोना'", "raw": null}
+{"id": "u0231", "model": "llama3.1:8b", "scores": {"natural": 4, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Minor phrase order adjustment for better flow", "raw": null}
+{"id": "u0232", "model": "llama3.1:8b", "scores": {"natural": 2, "correct": 4, "glossary": 1, "grammar": 5}, "note": "Uses सटीकता instead of अनुमानित, which is more suitable for the context of price changes.", "raw": null}
+{"id": "u0233", "model": "llama3.1:8b", "scores": {"natural": 4, "correct": 5, "glossary": 5, "grammar": 5}, "note": "uses सोने की कीमत instead of सोने का भाव", "raw": null}
+{"id": "u0235", "model": "llama3.1:8b", "scores": {"natural": 4, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Uses सूचीबद्ध instead of बताया भाव/Tanishq की साइट पर दिया भाव", "raw": null}
+{"id": "u0237", "model": "llama3.1:8b", "scores": {"natural": 5, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Literal translation, but correct and grammatically sound", "raw": null}
+{"id": "u0240", "model": "llama3.1:8b", "scores": {"natural": 4, "correct": 4, "glossary": 4, "grammar": 5}, "note": "Uses 'कीमत' instead of 'भाव' which is more common in gold market context", "raw": null}
+{"id": "u0244", "model": "llama3.1:8b", "scores": {"natural": 4, "correct": 5, "glossary": 5, "grammar": 5}, "note": "uses 'खुदरा' instead of 'शॉप'", "raw": null}
+{"id": "u0247", "model": "llama3.1:8b", "scores": {"natural": 4, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Uses 'बढ़ने' instead of 'बढ़ने की संभावना' for better naturalness", "raw": null}
+{"id": "u0250", "model": "llama3.1:8b", "scores": {"natural": 5, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Literal translation, but correct and natural Hindi", "raw": null}
+{"id": "u0251", "model": "llama3.1:8b", "scores": {"natural": 4, "correct": 4, "glossary": 2, "grammar": 5}, "note": "Uses वैश्विक instead of दुनिया के बाज़ार में सोने का भाव", "raw": null}
+{"id": "u0252", "model": "llama3.1:8b", "scores": {"natural": 5, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Sounds like everyday spoken Hindi, faithful translation, uses glossary terms, grammatical and correct.", "raw": null}
+{"id": "u0253", "model": "llama3.1:8b", "scores": {"natural": 4, "correct": 5, "glossary": 5, "grammar": 5}, "note": "uses 'औसत' instead of 'अनुमानित' for better naturalness", "raw": null}
+{"id": "u0254", "model": "llama3.1:8b", "scores": {"natural": 5, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Translation is a direct and natural-sounding equivalent of the English source.", "raw": null}
+{"id": "u0255", "model": "llama3.1:8b", "scores": {"natural": 4, "correct": 4, "glossary": 4, "grammar": 5}, "note": "Minor deviation from natural spoken Hindi, but overall good translation.", "raw": null}
+{"id": "u0256", "model": "llama3.1:8b", "scores": {"natural": 4, "correct": 4, "glossary": 2, "grammar": 5}, "note": "Uses वैश्विक instead of recommended दुनिया के बाज़ार में सोने का भाव", "raw": null}
+{"id": "u0258", "model": "llama3.1:8b", "scores": {"natural": 2, "correct": 4, "glossary": 1, "grammar": 5}, "note": "Literal translation, missing 'what'", "raw": null}
+{"id": "u0259", "model": "llama3.1:8b", "scores": {"natural": 4, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Literal translation, but common phrase", "raw": null}
+{"id": "u0261", "model": "llama3.1:8b", "scores": {"natural": 4, "correct": 5, "glossary": 5, "grammar": 5}, "note": "uses आम instead of accurate", "raw": null}
+{"id": "u0264", "model": "llama3.1:8b", "scores": {"natural": 4, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Uses 'रोज़ाना' instead of 'आज का' or 'इस हफ़्ते' for 'today'", "raw": null}
+{"id": "u0265", "model": "llama3.1:8b", "scores": {"natural": 4, "correct": 2, "glossary": 1, "grammar": 5}, "note": "Uses वैश्विक instead of recommended दुनिया के बाज़ार में सोने का भाव", "raw": null}
+{"id": "u0267", "model": "llama3.1:8b", "scores": {"natural": 4, "correct": 5, "glossary": 5, "grammar": 5}, "note": "uses अनुमान instead of अनुमानित", "raw": null}
+{"id": "u0270", "model": "llama3.1:8b", "scores": {"natural": 4, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Uses 'त्रुटि' instead of 'भाव' or 'दर', which is more common in this context.", "raw": null}
+{"id": "u0271", "model": "llama3.1:8b", "scores": {"natural": 4, "correct": 5, "glossary": 2, "grammar": 5}, "note": "uses कीमतें instead of भाव", "raw": null}
+{"id": "u0272", "model": "llama3.1:8b", "scores": {"natural": 4, "correct": 5, "glossary": 5, "grammar": 5}, "note": "uses आम instead of सामान्य, but still clear", "raw": null}
+{"id": "u0273", "model": "llama3.1:8b", "scores": {"natural": 5, "correct": 5, "glossary": 5, "grammar": 5}, "note": "uses 'सामान्य' instead of 'आम' for 'usual'", "raw": null}
+{"id": "u0279", "model": "llama3.1:8b", "scores": {"natural": 5, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Literal translation, but correct and natural", "raw": null}
+{"id": "u0280", "model": "llama3.1:8b", "scores": {"natural": 4, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Minor variation in phrase structure, but overall natural and idiomatic.", "raw": null}
+{"id": "u0282", "model": "llama3.1:8b", "scores": {"natural": 4, "correct": 5, "glossary": 5, "grammar": 5}, "note": "uses 'रोज़ाना' instead of 'इस हफ़्ते'", "raw": null}
+{"id": "u0284", "model": "llama3.1:8b", "scores": {"natural": 4, "correct": 5, "glossary": 1, "grammar": 5}, "note": "Literal translation, no glossary term used", "raw": null}
+{"id": "u0286", "model": "llama3.1:8b", "scores": {"natural": 5, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Literal translation, but common phrase", "raw": null}
+{"id": "u0288", "model": "llama3.1:8b", "scores": {"natural": 4, "correct": 5, "glossary": 4, "grammar": 5}, "note": "uses सामान्य instead of आम", "raw": null}
+{"id": "u0289", "model": "llama3.1:8b", "scores": {"natural": 5, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Literal translation, but correct and natural", "raw": null}
+{"id": "u0290", "model": "llama3.1:8b", "scores": {"natural": 4, "correct": 5, "glossary": 5, "grammar": 5}, "note": "uses 'औसत दर' instead of 'सोने का भाव' for gold price", "raw": null}
+{"id": "u0291", "model": "llama3.1:8b", "scores": {"natural": 4, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Uses 'कीमत' instead of 'भाव', which is more common in gold market context.", "raw": null}
+{"id": "u0293", "model": "llama3.1:8b", "scores": {"natural": 4, "correct": 5, "glossary": 5, "grammar": 5}, "note": "uses 'करीब' instead of 'जोड़े' for a more natural sound", "raw": null}
+{"id": "u0294", "model": "llama3.1:8b", "scores": {"natural": 4, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Minor variation in phrase order, but idiomatic", "raw": null}
+{"id": "u0297", "model": "llama3.1:8b", "scores": {"natural": 4, "correct": 5, "glossary": 5, "grammar": 5}, "note": "uses 'अंदाज़ा' instead of 'अनुमान'", "raw": null}
+{"id": "u0299", "model": "llama3.1:8b", "scores": {"natural": 4, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Uses 'सामान्य दायरे' instead of 'आम रेंज'", "raw": null}
+{"id": "u0302", "model": "llama3.1:8b", "scores": {"natural": 4, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Literal translation, but common phrase", "raw": null}
+{"id": "u0305", "model": "llama3.1:8b", "scores": {"natural": 4, "correct": 5, "glossary": 4, "grammar": 5}, "note": "मॉडल आज़माए should be मॉडल आज़माए गए", "raw": null}
+{"id": "u0310", "model": "llama3.1:8b", "scores": {"natural": 5, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Natural and correct translation, good use of glossary terms, no grammatical errors.", "raw": null}
+{"id": "u0311", "model": "llama3.1:8b", "scores": {"natural": 4, "correct": 4, "glossary": 4, "grammar": 5}, "note": "Uses सोने की कीमत instead of सोने का भाव", "raw": null}
+{"id": "u0320", "model": "llama3.1:8b", "scores": {"natural": 4, "correct": 5, "glossary": 4, "grammar": 5}, "note": "Uses 'सामान्य' instead of 'आम'", "raw": null}
+{"id": "u0322", "model": "llama3.1:8b", "scores": {"natural": 4, "correct": 5, "glossary": 5, "grammar": 5}, "note": "uses official instead of सोने का भाव", "raw": null}
+{"id": "u0326", "model": "llama3.1:8b", "scores": {"natural": 4, "correct": 5, "glossary": 5, "grammar": 5}, "note": "uses official instead of Tanishq's listed rate", "raw": null}
+{"id": "u0330", "model": "llama3.1:8b", "scores": {"natural": 4, "correct": 5, "glossary": 5, "grammar": 5}, "note": "uses 'कीमत' instead of 'भाव'", "raw": null}
+{"id": "u0331", "model": "llama3.1:8b", "scores": {"natural": 4, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Minor phrase structure changes, but faithful to English meaning.", "raw": null}
+{"id": "u0335", "model": "llama3.1:8b", "scores": {"natural": 4, "correct": 5, "glossary": 5, "grammar": 5}, "note": "uses सामान्य instead of आम for usual/normal", "raw": null}
+{"id": "u0337", "model": "llama3.1:8b", "scores": {"natural": 4, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Literal translation, but common phrase", "raw": null}
+{"id": "u0339", "model": "llama3.1:8b", "scores": {"natural": 4, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Literal translation, but common phrase", "raw": null}
+{"id": "u0341", "model": "llama3.1:8b", "scores": {"natural": 4, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Minor phrase structure changes, but faithful to English source.", "raw": null}
+{"id": "u0342", "model": "llama3.1:8b", "scores": {"natural": 4, "correct": 5, "glossary": 5, "grammar": 5}, "note": "uses 'सुनहरी' instead of 'सोने का भाव'", "raw": null}
+{"id": "u0348", "model": "llama3.1:8b", "scores": {"natural": 4, "correct": 5, "glossary": 5, "grammar": 5}, "note": "uses सोने की कीमत instead of सोने का भाव", "raw": null}
+{"id": "u0353", "model": "llama3.1:8b", "scores": {"natural": 4, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Minor deviation from natural spoken Hindi, but faithful translation.", "raw": null}
+{"id": "u0356", "model": "llama3.1:8b", "scores": {"natural": 4, "correct": 5, "glossary": 5, "grammar": 5}, "note": "uses 'खुदरा' instead of 'शॉप'", "raw": null}
+{"id": "u0360", "model": "llama3.1:8b", "scores": {"natural": 4, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Literal translation, but correct and grammatical", "raw": null}
+{"id": "u0362", "model": "llama3.1:8b", "scores": {"natural": 4, "correct": 4, "glossary": 4, "grammar": 5}, "note": "IBJA पर आधारित अनुमान is a bit formal, but not incorrect.", "raw": null}
+{"id": "u0363", "model": "llama3.1:8b", "scores": {"natural": 4, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Literal translation, but common phrase", "raw": null}
+{"id": "u0366", "model": "llama3.1:8b", "scores": {"natural": 4, "correct": 4, "glossary": 4, "grammar": 5}, "note": "uses सही instead of accurate, but accurate is allowed on technical page", "raw": null}
+{"id": "u0367", "model": "llama3.1:8b", "scores": {"natural": 4, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Literal translation, but correct and grammatical", "raw": null}
+{"id": "u0369", "model": "llama3.1:8b", "scores": {"natural": 4, "correct": 5, "glossary": 5, "grammar": 5}, "note": "uses 'औसत' instead of '30-दिन औसत'", "raw": null}
+{"id": "u0374", "model": "llama3.1:8b", "scores": {"natural": 4, "correct": 4, "glossary": 2, "grammar": 5}, "note": "uses सामान्य instead of आम", "raw": null}
+{"id": "u0377", "model": "llama3.1:8b", "scores": {"natural": 5, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Literal translation, but common phrase in Hindi", "raw": null}
+{"id": "u0378", "model": "llama3.1:8b", "scores": {"natural": 4, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Uses 'आधिकारिक' instead of 'official', but still clear and accurate.", "raw": null}
+{"id": "u0379", "model": "llama3.1:8b", "scores": {"natural": 4, "correct": 5, "glossary": 5, "grammar": 5}, "note": "uses सूचीबद्ध instead of बताया भाव", "raw": null}
+{"id": "u0381", "model": "llama3.1:8b", "scores": {"natural": 4, "correct": 5, "glossary": 5, "grammar": 5}, "note": "uses informal 'बार' instead of formal 'बारें'", "raw": null}
+{"id": "u0384", "model": "llama3.1:8b", "scores": {"natural": 5, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Literal translation, but idiomatic and correct.", "raw": null}
+{"id": "u0385", "model": "llama3.1:8b", "scores": {"natural": 4, "correct": 5, "glossary": 5, "grammar": 5}, "note": "uses 'सामान्य' instead of 'आम' for 'usual'", "raw": null}
+{"id": "u0387", "model": "llama3.1:8b", "scores": {"natural": 4, "correct": 5, "glossary": 5, "grammar": 5}, "note": "uses 'अंदर' instead of 'के अंदर'", "raw": null}
+{"id": "u0389", "model": "llama3.1:8b", "scores": {"natural": 3, "correct": 4, "glossary": 2, "grammar": 5}, "note": "Uses 'औसत दर' instead of 'सोने का भाव' which is more common in retail context.", "raw": null}
+{"id": "u0390", "model": "llama3.1:8b", "scores": {"natural": 4, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Literal translation, but common phrase", "raw": null}
+{"id": "u0394", "model": "llama3.1:8b", "scores": {"natural": 4, "correct": 5, "glossary": 5, "grammar": 5}, "note": "uses 'पिछली' instead of 'पिछले' for grammatical agreement", "raw": null}
+{"id": "u0395", "model": "llama3.1:8b", "scores": {"natural": 4, "correct": 5, "glossary": 5, "grammar": 5}, "note": "uses 22K instead of 22 कैरेट", "raw": null}
+{"id": "u0401", "model": "llama3.1:8b", "scores": {"natural": 4, "correct": 5, "glossary": 5, "grammar": 5}, "note": "uses 7-दिन instead of 7-दिन औसत से", "raw": null}
+{"id": "u0403", "model": "llama3.1:8b", "scores": {"natural": 4, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Literal translation, but correct and grammatically sound.", "raw": null}
+{"id": "u0404", "model": "llama3.1:8b", "scores": {"natural": 2, "correct": 1, "glossary": 1, "grammar": 5}, "note": "Literal translation, no adaptation to Hindi conventions", "raw": null}
+{"id": "u0409", "model": "llama3.1:8b", "scores": {"natural": 4, "correct": 5, "glossary": 5, "grammar": 5}, "note": "uses अनुमान instead of अनुमानित, but still correct", "raw": null}
+{"id": "u0412", "model": "llama3.1:8b", "scores": {"natural": 5, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Literal translation, but idiomatic Hindi", "raw": null}
+{"id": "u0414", "model": "llama3.1:8b", "scores": {"natural": 4, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Minor variation in phrase 'बाद के बदलाव' instead of 'बाद के बदलाव से'", "raw": null}
+{"id": "u0418", "model": "llama3.1:8b", "scores": {"natural": 4, "correct": 5, "glossary": 5, "grammar": 5}, "note": "uses 'सामान्य ट्रेंड' instead of 'आम' for 'usual trend'", "raw": null}
+{"id": "u0420", "model": "llama3.1:8b", "scores": {"natural": 4, "correct": 5, "glossary": 5, "grammar": 5}, "note": "uses 'दुनिया की कीमतें' instead of 'दुनिया के बाज़ार में सोने का भाव'", "raw": null}
+{"id": "u0422", "model": "llama3.1:8b", "scores": {"natural": 4, "correct": 5, "glossary": 5, "grammar": 5}, "note": "uses सोने की कीमत instead of सोने का भाव", "raw": null}
+{"id": "u0423", "model": "llama3.1:8b", "scores": {"natural": 4, "correct": 4, "glossary": 4, "grammar": 5}, "note": "Uses 'सामान्य दायरे' instead of recommended 'रेंज'", "raw": null}
+{"id": "u0424", "model": "llama3.1:8b", "scores": {"natural": 4, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Uses 'कीमत इतिहास' instead of 'पुराने भाव' for history", "raw": null}
+{"id": "u0425", "model": "llama3.1:8b", "scores": {"natural": 4, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Literal translation, but common phrase in Hindi", "raw": null}
+{"id": "u0428", "model": "llama3.1:8b", "scores": {"natural": 4, "correct": 5, "glossary": 5, "grammar": 5}, "note": "uses 'पुराना' instead of 'पुराने'", "raw": null}
+{"id": "u0429", "model": "llama3.1:8b", "scores": {"natural": 4, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Uses 'गिरावट आई है' instead of 'गिरी है' for better naturalness", "raw": null}
+{"id": "u0430", "model": "llama3.1:8b", "scores": {"natural": 4, "correct": 5, "glossary": 5, "grammar": 5}, "note": "uses 'औसत दर' instead of 'अनुमान', which is more accurate for retail consensus estimate", "raw": null}
+{"id": "u0432", "model": "llama3.1:8b", "scores": {"natural": 4, "correct": 5, "glossary": 5, "grammar": 5}, "note": "uses 'सटीकता' instead of 'सही' for accuracy", "raw": null}
+{"id": "u0437", "model": "llama3.1:8b", "scores": {"natural": 4, "correct": 5, "glossary": 4, "grammar": 5}, "note": "uses अनुमान instead of अनुमानित", "raw": null}
+{"id": "u0438", "model": "llama3.1:8b", "scores": {"natural": 4, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Uses 'कारोबारी दिन' instead of 'हफ़्ते/महीने' for timing, but still clear.", "raw": null}
+{"id": "u0439", "model": "llama3.1:8b", "scores": {"natural": 4, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Uses सोने का भाव instead of सोने की कीमत, but still clear and understandable.", "raw": null}
+{"id": "u0443", "model": "llama3.1:8b", "scores": {"natural": 4, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Uses 'सामान्य' instead of 'आम' for 'usual'", "raw": null}
+{"id": "u0447", "model": "llama3.1:8b", "scores": {"natural": 4, "correct": 5, "glossary": 5, "grammar": 5}, "note": "uses 'घटाए' instead of 'घटा' for better clarity", "raw": null}
+{"id": "u0450", "model": "llama3.1:8b", "scores": {"natural": 4, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Literal translation, but correct", "raw": null}
+{"id": "u0456", "model": "llama3.1:8b", "scores": {"natural": 4, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Literal translation, but correct and grammatical.", "raw": null}
+{"id": "u0457", "model": "llama3.1:8b", "scores": {"natural": 4, "correct": 5, "glossary": 5, "grammar": 5}, "note": "uses 'सबसे कम कीमत' instead of 'lowest price'", "raw": null}
+{"id": "u0460", "model": "llama3.1:8b", "scores": {"natural": 4, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Uses 'घटने' instead of 'गिरने', which is more idiomatic in Hindi.", "raw": null}
+{"id": "u0461", "model": "llama3.1:8b", "scores": {"natural": 4, "correct": 5, "glossary": 5, "grammar": 5}, "note": "uses 'हफ्तों' instead of 'हफ़्ते' for a more natural tone", "raw": null}
+{"id": "u0462", "model": "llama3.1:8b", "scores": {"natural": 4, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Minor phrase structure is natural, but slightly formal.", "raw": null}
+{"id": "u0463", "model": "llama3.1:8b", "scores": {"natural": 4, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Uses 'हिसाब से' instead of 'के हिसाब से'", "raw": null}
+{"id": "u0465", "model": "llama3.1:8b", "scores": {"natural": 5, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Literal translation, but correct and natural", "raw": null}
+{"id": "u0466", "model": "llama3.1:8b", "scores": {"natural": 4, "correct": 4, "glossary": 4, "grammar": 5}, "note": "Uses 'सामान्य' instead of 'आम'", "raw": null}
+{"id": "u0467", "model": "llama3.1:8b", "scores": {"natural": 4, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Minor deviation in phrase structure, but accurate translation", "raw": null}
+{"id": "u0468", "model": "llama3.1:8b", "scores": {"natural": 5, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Straightforward translation, no issues found.", "raw": null}
+{"id": "u0469", "model": "llama3.1:8b", "scores": {"natural": 5, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Literal translation, but common phrase in Hindi", "raw": null}
+{"id": "u0473", "model": "llama3.1:8b", "scores": {"natural": 4, "correct": 4, "glossary": 2, "grammar": 5}, "note": "Used जौहरियों instead of ज्वेलर", "raw": null}
+{"id": "u0476", "model": "llama3.1:8b", "scores": {"natural": 5, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Literal translation, but correct and natural", "raw": null}
+{"id": "u0481", "model": "llama3.1:8b", "scores": {"natural": 4, "correct": 4, "glossary": 4, "grammar": 5}, "note": "Minor variation in phrase structure, but overall good translation.", "raw": null}
+{"id": "u0486", "model": "llama3.1:8b", "scores": {"natural": 4, "correct": 4, "glossary": 2, "grammar": 5}, "note": "Uses 'जौहरियों' instead of 'ज्वेलर'", "raw": null}
+{"id": "u0489", "model": "llama3.1:8b", "scores": {"natural": 4, "correct": 5, "glossary": 5, "grammar": 5}, "note": "uses 'रोज़ाना' instead of 'इस हफ़्ते'", "raw": null}
+{"id": "u0490", "model": "llama3.1:8b", "scores": {"natural": 4, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Minor phrase order adjustment for natural flow", "raw": null}
+{"id": "u0491", "model": "llama3.1:8b", "scores": {"natural": 4, "correct": 4, "glossary": 4, "grammar": 5}, "note": "Uses 'महंगा हुआ है' instead of 'सस्ता हुआ है' or 'महंगा हो गया है' for a more natural tone.", "raw": null}
+{"id": "u0492", "model": "llama3.1:8b", "scores": {"natural": 4, "correct": 5, "glossary": 5, "grammar": 5}, "note": "uses अनुमान instead of अनुमानित", "raw": null}
+{"id": "u0495", "model": "llama3.1:8b", "scores": {"natural": 4, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Literal translation of 'price move' as 'बदलाव' could be better", "raw": null}
+{"id": "u0496", "model": "llama3.1:8b", "scores": {"natural": 4, "correct": 5, "glossary": 5, "grammar": 5}, "note": "uses सोना instead of सोने का भाव, but still correct", "raw": null}
+{"id": "u0501", "model": "llama3.1:8b", "scores": {"natural": 4, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Minor deviation in phrase structure, but accurate translation.", "raw": null}
+{"id": "u0502", "model": "llama3.1:8b", "scores": {"natural": 4, "correct": 5, "glossary": 5, "grammar": 5}, "note": "uses 22K instead of 22 कैरेट", "raw": null}
+{"id": "u0503", "model": "llama3.1:8b", "scores": {"natural": 5, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Literal translation, but common usage in Hindi", "raw": null}
+{"id": "u0508", "model": "llama3.1:8b", "scores": {"natural": 4, "correct": 4, "glossary": 2, "grammar": 5}, "note": "uses 'सामान्य' instead of 'आम'", "raw": null}
+{"id": "u0509", "model": "llama3.1:8b", "scores": {"natural": 4, "correct": 5, "glossary": 5, "grammar": 5}, "note": "uses 'ज़्यादा' instead of 'ज्यादा'", "raw": null}
+{"id": "u0515", "model": "llama3.1:8b", "scores": {"natural": 4, "correct": 5, "glossary": 5, "grammar": 5}, "note": "uses 'औसत' instead of 'अनुमानित' for estimated value", "raw": null}
+{"id": "u0518", "model": "llama3.1:8b", "scores": {"natural": 5, "correct": 5, "glossary": 5, "grammar": 5}, "note": "No issues found, translation is accurate and natural", "raw": null}
+{"id": "u0524", "model": "llama3.1:8b", "scores": {"natural": 2, "correct": 2, "glossary": 1, "grammar": 5}, "note": "Literal translation, lacks context", "raw": null}
+{"id": "u0527", "model": "llama3.1:8b", "scores": {"natural": 4, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Minor deviation from English source, but overall good translation", "raw": null}
+{"id": "u0531", "model": "llama3.1:8b", "scores": {"natural": 1, "correct": 1, "glossary": 1, "grammar": 5}, "note": "Literal translation, no changes expected", "raw": null}
+{"id": "u0536", "model": "llama3.1:8b", "scores": {"natural": 5, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Literal translation, but common phrase in Hindi", "raw": null}
+{"id": "u0537", "model": "llama3.1:8b", "scores": {"natural": 4, "correct": 5, "glossary": 5, "grammar": 5}, "note": "uses सटीकता instead of अनुमानित", "raw": null}
+{"id": "u0538", "model": "llama3.1:8b", "scores": {"natural": 4, "correct": 5, "glossary": 5, "grammar": 5}, "note": "uses अनुमानित twice, better to use अनुमान", "raw": null}
+{"id": "u0540", "model": "llama3.1:8b", "scores": {"natural": 4, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Minor tone difference, but faithful translation.", "raw": null}
+{"id": "u0544", "model": "llama3.1:8b", "scores": {"natural": 5, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Literal translation, but correct and natural", "raw": null}
+{"id": "u0547", "model": "llama3.1:8b", "scores": {"natural": 2, "correct": 2, "glossary": 1, "grammar": 5}, "note": "uses वैश्विक instead of recommended दुनिया के बाज़ार में सोने का भाव", "raw": null}
+{"id": "u0549", "model": "llama3.1:8b", "scores": {"natural": 2, "correct": 2, "glossary": 1, "grammar": 5}, "note": "uses सटीक instead of सही for accuracy, which is correct in this context", "raw": null}
+{"id": "u0555", "model": "llama3.1:8b", "scores": {"natural": 5, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Literal translation, but common phrase", "raw": null}
+{"id": "u0556", "model": "llama3.1:8b", "scores": {"natural": 4, "correct": 4, "glossary": 2, "grammar": 5}, "note": "uses वैश्विक instead of recommended दुनिया के बाज़ार में सोने का भाव", "raw": null}
+{"id": "u0562", "model": "llama3.1:8b", "scores": {"natural": 5, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Literal translation, but correct and natural", "raw": null}
+{"id": "u0563", "model": "llama3.1:8b", "scores": {"natural": 4, "correct": 5, "glossary": 5, "grammar": 5}, "note": "uses 'कल' instead of 'कल ही' for better naturalness", "raw": null}
+{"id": "u0568", "model": "llama3.1:8b", "scores": {"natural": 4, "correct": 5, "glossary": 5, "grammar": 5}, "note": "uses दायरा instead of रेंज", "raw": null}
+{"id": "u0569", "model": "llama3.1:8b", "scores": {"natural": 4, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Minor deviation from English tone, but accurate translation.", "raw": null}
+{"id": "u0572", "model": "llama3.1:8b", "scores": {"natural": 4, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Minor deviation in phrase structure, but accurate translation.", "raw": null}
+{"id": "u0576", "model": "llama3.1:8b", "scores": {"natural": 4, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Minor deviation in word order, but idiomatic.", "raw": null}
+{"id": "u0577", "model": "llama3.1:8b", "scores": {"natural": 2, "correct": 4, "glossary": 1, "grammar": 5}, "note": "Literal translation, missing 'prices'", "raw": null}
+{"id": "u0584", "model": "llama3.1:8b", "scores": {"natural": 5, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Sounds like everyday spoken Hindi, faithful translation, uses glossary terms, grammatical and correct.", "raw": null}
+{"id": "u0587", "model": "llama3.1:8b", "scores": {"natural": 4, "correct": 5, "glossary": 5, "grammar": 5}, "note": "uses 'न्यूनतम' instead of 'न्यूनतम भाव'", "raw": null}
+{"id": "u0177", "model": "llama3.1:8b", "scores": {"natural": 4, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Minor deviation from usual phraseology, but accurate translation.", "raw": null}
+{"id": "u0304", "model": "llama3.1:8b", "scores": {"natural": 2, "correct": 2, "glossary": 1, "grammar": 5}, "note": "uses सोने की कीमत instead of सोने का भाव", "raw": null}
+{"id": "u0383", "model": "llama3.1:8b", "scores": {"natural": 4, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Uses 'चार्ट की अवधि' instead of 'चार्ट की रेंज' which is more natural and fits the context.", "raw": null}

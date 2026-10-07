@@ -1,0 +1,5902 @@
+[
+ {
+  "key": "hwkIntro",
+  "variant": "full",
+  "kind": "sentence",
+  "screen": "how-we-know.html",
+  "en": "This page shows the full detail behind the short summary on the main page — the exact numbers, and how we check them.",
+  "which": "new",
+  "hi": "यहां मुख्य पेज के छोटे सार के पीछे की पूरी जानकारी है — सटीक आंकड़े, और हम उन्हें कैसे जांचते हैं।",
+  "id": "u0000"
+ },
+ {
+  "key": "methAccurateP4Strong",
+  "variant": "full",
+  "kind": "short label",
+  "screen": "how-we-know.html",
+  "en": "What would change this",
+  "which": "new",
+  "hi": "इसमें बदलाव कब होगा",
+  "id": "u0001"
+ },
+ {
+  "key": "verdictHeadlineFlat",
+  "variant": "full",
+  "kind": "short label",
+  "screen": "main page (index.html)",
+  "en": "Steady this week",
+  "which": "old",
+  "hi": "इस हफ्ते कीमत स्थिर है",
+  "id": "u0002"
+ },
+ {
+  "key": "verdictReasonUp",
+  "variant": "full",
+  "kind": "sentence",
+  "screen": "main page (index.html)",
+  "en": "Up ₹{delta} this week, and ₹{avgDelta} above the usual price for the month.",
+  "which": "new",
+  "hi": "इस हफ़्ते भाव ₹{delta} बढ़ा है, और महीने के आम भाव से ₹{avgDelta} ज़्यादा है।",
+  "id": "u0003"
+ },
+ {
+  "key": "readNoTrendCheap",
+  "variant": "full",
+  "kind": "sentence",
+  "screen": "main page (index.html)",
+  "en": "Today's price is on the low side for the month.",
+  "which": "old",
+  "hi": "आज की कीमत इस महीने के हिसाब से कम है।",
+  "id": "u0004"
+ },
+ {
+  "key": "readFalling",
+  "variant": "full",
+  "kind": "sentence",
+  "screen": "main page (index.html)",
+  "en": "Prices have eased over the past month, though today isn't especially cheap yet.",
+  "which": "new",
+  "hi": "पिछले एक महीने में भाव नरम पड़ा है, हालांकि आज का भाव अभी ख़ास सस्ता नहीं है।",
+  "id": "u0005"
+ },
+ {
+  "key": "supportLine2At",
+  "variant": "full",
+  "kind": "sentence",
+  "screen": "main page (index.html)",
+  "en": "Right at the usual price for the month.",
+  "which": "new",
+  "hi": "इस महीने के आम भाव के बराबर।",
+  "id": "u0006"
+ },
+ {
+  "key": "calcEstimateStoresVary",
+  "variant": "full",
+  "kind": "sentence",
+  "screen": "main page (index.html)",
+  "en": "Estimate — stores vary.",
+  "which": "new",
+  "hi": "अनुमान — हर दुकान पर थोड़ा फ़र्क़ होता है।",
+  "id": "u0007"
+ },
+ {
+  "key": "ratioRetrainSub",
+  "variant": "full",
+  "kind": "sentence",
+  "screen": "how-we-know.html",
+  "en": "may need recalibration",
+  "which": "new",
+  "hi": "इसे फिर से ठीक करने की ज़रूरत हो सकती है",
+  "id": "u0008"
+ },
+ {
+  "key": "driverPremiumDominated",
+  "variant": "full",
+  "kind": "sentence",
+  "screen": "main page (index.html)",
+  "en": "Indian gold has moved more than the global price or rupee explain — likely import costs or festival demand at home.",
+  "which": "old",
+  "hi": "भारत में सोने की कीमत वैश्विक कीमत या रुपये से ज़्यादा बदली है — शायद आयात लागत या त्योहारी मांग की वजह से।",
+  "id": "u0009"
+ },
+ {
+  "key": "pv2PriceUnavailable",
+  "variant": "full",
+  "kind": "sentence",
+  "screen": "main page (index.html)",
+  "en": "We don't have a price to show right now.",
+  "which": "new",
+  "hi": "अभी दिखाने के लिए कोई भाव नहीं है।",
+  "id": "u0010"
+ },
+ {
+  "key": "pv2WeeklyAboutSame",
+  "variant": "full",
+  "kind": "sentence",
+  "screen": "main page (index.html)",
+  "en": "About the same as most of the last {n} weeks.",
+  "which": "old",
+  "hi": "पिछले {n} हफ्तों के ज़्यादातर हफ्तों जैसी ही — लगभग बराबर।",
+  "id": "u0011"
+ },
+ {
+  "key": "calcPresetIntricate",
+  "variant": "full",
+  "kind": "short label",
+  "screen": "main page (index.html)",
+  "en": "Intricate or antique designs",
+  "which": "new",
+  "hi": "बारीक काम या एंटीक डिज़ाइन",
+  "id": "u0012"
+ },
+ {
+  "key": "pv2Weekly90dLabel",
+  "variant": "full",
+  "kind": "label",
+  "screen": "main page (index.html)",
+  "en": "Compared with the last three months:",
+  "which": "new",
+  "hi": "पिछले तीन महीनों की तुलना में:",
+  "id": "u0013"
+ },
+ {
+  "key": "chartFlatHoldEstimate",
+  "variant": "full",
+  "kind": "short label",
+  "screen": "main page (index.html)",
+  "en": "Our estimate",
+  "which": "new",
+  "hi": "हमारा अनुमान",
+  "id": "u0014"
+ },
+ {
+  "key": "driverWeekDown",
+  "variant": "full",
+  "kind": "sentence",
+  "screen": "main page (index.html)",
+  "en": "Gold is down about ₹{total} this week",
+  "which": "old",
+  "hi": "इस हफ्ते सोना करीब ₹{total} सस्ता हुआ है",
+  "id": "u0015"
+ },
+ {
+  "key": "pv2EventWatchHeading",
+  "variant": "full",
+  "kind": "heading",
+  "screen": "main page (index.html)",
+  "en": "Upcoming events that could move the price",
+  "which": "new",
+  "hi": "आने वाली ऐसी बातें जो भाव बदल सकती हैं",
+  "id": "u0016"
+ },
+ {
+  "key": "unknownTime",
+  "variant": "full",
+  "kind": "short label",
+  "screen": "main page (index.html)",
+  "en": "an unknown time",
+  "which": "new",
+  "hi": "किसी अनजान समय",
+  "id": "u0017"
+ },
+ {
+  "key": "accSummaryIntro",
+  "variant": "full",
+  "kind": "sentence",
+  "screen": "main page (index.html)",
+  "en": "We regularly compare our estimate with real shop prices and correct it when it drifts.",
+  "which": "new",
+  "hi": "हम अपने अनुमान को नियमित रूप से दुकान के असली भाव से मिलाते हैं, और भाव से दूर जाने पर उसे ठीक करते हैं।",
+  "id": "u0018"
+ },
+ {
+  "key": "methNextDayExplainer",
+  "variant": "full",
+  "kind": "sentence",
+  "screen": "how-we-know.html",
+  "en": "This is just for the next reading, not several days out — based on how much the price has typically moved by the next check over our last 30 test runs. (The \"moves about ±₹X over 5 days\" note on the main page is a separate, longer-range estimate.)",
+  "which": "old",
+  "hi": "यह सिर्फ़ अगली रीडिंग के लिए है, कई दिन आगे के लिए नहीं — पिछले 30 टेस्ट रन में अगली रीडिंग तक कीमत आमतौर पर कितनी बदली, उस पर आधारित है। (मुख्य पेज वाला \"5 दिनों में करीब ±₹X\" वाला नोट एक अलग, लंबे समय का अनुमान है।)",
+  "id": "u0019"
+ },
+ {
+  "key": "directionUnclear",
+  "variant": "full",
+  "kind": "sentence",
+  "screen": "main page (index.html)",
+  "en": "Up or down next: too close to call.",
+  "which": "new",
+  "hi": "अगली बार भाव ऊपर जाएगा या नीचे: कहना मुश्किल है।",
+  "id": "u0020"
+ },
+ {
+  "key": "methCoversMoves",
+  "variant": "full",
+  "kind": "sentence",
+  "screen": "how-we-know.html",
+  "en": "Covers most of the usual day-to-day moves",
+  "which": "new",
+  "hi": "रोज़ की ज़्यादातर आम घट-बढ़ इसमें आ जाती है",
+  "id": "u0021"
+ },
+ {
+  "key": "freshnessAsOfCloseAria",
+  "variant": "full",
+  "kind": "aria-label",
+  "screen": "main page (index.html)",
+  "en": "Estimated shop price, from {weekday}'s official rate",
+  "which": "new",
+  "hi": "दुकान के भाव का अनुमान, {weekday} के आधिकारिक भाव से",
+  "id": "u0022"
+ },
+ {
+  "key": "supportNotCheapAtSupport",
+  "variant": "full",
+  "kind": "sentence",
+  "screen": "main page (index.html)",
+  "en": "Right at its lowest price in 3 months (₹{low}), even though it's not among the cheapest days this month.",
+  "which": "old",
+  "hi": "अपनी 3-महीने की सबसे कम कीमत (₹{low}) पर है, भले ही यह इस महीने के सबसे सस्ते दिनों में शामिल न हो।",
+  "id": "u0023"
+ },
+ {
+  "key": "unknownTime",
+  "variant": "full",
+  "kind": "short label",
+  "screen": "main page (index.html)",
+  "en": "an unknown time",
+  "which": "old",
+  "hi": "अज्ञात समय",
+  "id": "u0024"
+ },
+ {
+  "key": "avgLabel30d",
+  "variant": "full",
+  "kind": "label",
+  "screen": "main page (index.html)",
+  "en": "30d avg",
+  "which": "new",
+  "hi": "30 दिन का औसत",
+  "id": "u0025"
+ },
+ {
+  "key": "cmpAtLow",
+  "variant": "full",
+  "kind": "label",
+  "screen": "main page (index.html)",
+  "en": "at low",
+  "which": "new",
+  "hi": "सबसे कम पर",
+  "id": "u0026"
+ },
+ {
+  "key": "band90dCheaper",
+  "variant": "full",
+  "kind": "sentence",
+  "screen": "main page (index.html)",
+  "en": "Over the past 90 days: cheaper than {pct}% of the {n} days.",
+  "which": "old",
+  "hi": "पिछले 90 दिनों में: {n} दिनों में से {pct}% से सस्ता।",
+  "id": "u0027"
+ },
+ {
+  "key": "trendDirUp",
+  "variant": "full",
+  "kind": "short label",
+  "screen": "main page (index.html)",
+  "en": "up",
+  "which": "new",
+  "hi": "बढ़त",
+  "id": "u0028"
+ },
+ {
+  "key": "fusionSourceMalabar",
+  "variant": "full",
+  "kind": "short label",
+  "screen": "main page (index.html)",
+  "en": "Malabar",
+  "which": "new",
+  "hi": "Malabar",
+  "id": "u0029"
+ },
+ {
+  "key": "errCouldntLoadHistory",
+  "variant": "full",
+  "kind": "banner/message",
+  "screen": "main page (index.html)",
+  "en": "Couldn't load price history.",
+  "which": "new",
+  "hi": "पुराने भाव लोड नहीं हो पाए।",
+  "id": "u0030"
+ },
+ {
+  "key": "methAccurateP2Strong",
+  "variant": "full",
+  "kind": "sentence",
+  "screen": "how-we-know.html",
+  "en": "Our {rangeStr} range has been right {coverageText}",
+  "which": "old",
+  "hi": "हमारी {rangeStr} रेंज {coverageText}",
+  "id": "u0031"
+ },
+ {
+  "key": "driverGoldUp",
+  "variant": "full",
+  "kind": "sentence",
+  "screen": "main page (index.html)",
+  "en": "Global gold prices are up about {pct}% this month.",
+  "which": "new",
+  "hi": "दुनिया के बाज़ार में सोने का भाव इस महीने करीब {pct}% बढ़ा है।",
+  "id": "u0032"
+ },
+ {
+  "key": "dismissLabel",
+  "variant": "full",
+  "kind": "label",
+  "screen": "main page (index.html)",
+  "en": "Dismiss",
+  "which": "new",
+  "hi": "बंद करें",
+  "id": "u0033"
+ },
+ {
+  "key": "modelSignalAriaLabel",
+  "variant": "full",
+  "kind": "aria-label",
+  "screen": "main page (index.html)",
+  "en": "How today's price compares to recent history",
+  "which": "old",
+  "hi": "आज की कीमत हाल के इतिहास से कैसे मिलती है",
+  "id": "u0034"
+ },
+ {
+  "key": "pv2RangeUnavailable",
+  "variant": "full",
+  "kind": "sentence",
+  "screen": "main page (index.html)",
+  "en": "We don't have a short-term range to show today.",
+  "which": "new",
+  "hi": "आज दिखाने के लिए कोई छोटी अवधि की रेंज नहीं है।",
+  "id": "u0035"
+ },
+ {
+  "key": "priceTrendHeading",
+  "variant": "full",
+  "kind": "heading",
+  "screen": "main page (index.html)",
+  "en": "Price trend",
+  "which": "new",
+  "hi": "भाव का ट्रेंड",
+  "id": "u0036"
+ },
+ {
+  "key": "readNoSignals",
+  "variant": "full",
+  "kind": "sentence",
+  "screen": "main page (index.html)",
+  "en": "We don't have enough price history yet to say much about today — check back once a few more readings come in.",
+  "which": "new",
+  "hi": "आज के बारे में कुछ कहने लायक़ पुराना भाव अभी हमारे पास नहीं है — कुछ और भाव दर्ज होने के बाद फिर देखें।",
+  "id": "u0037"
+ },
+ {
+  "key": "shareTextWithPrice",
+  "variant": "full",
+  "kind": "sentence",
+  "screen": "main page (index.html)",
+  "en": "Today's 22K gold price is ₹{price}/gram — check Gold Tracker",
+  "which": "old",
+  "hi": "आज 22K सोने की कीमत ₹{price}/ग्राम है — Gold Tracker पर देखें",
+  "id": "u0038"
+ },
+ {
+  "key": "historyCardsAriaLabel",
+  "variant": "full",
+  "kind": "aria-label",
+  "screen": "main page (index.html)",
+  "en": "Price readings",
+  "which": "old",
+  "hi": "कीमत की रीडिंग",
+  "id": "u0039"
+ },
+ {
+  "key": "freshnessAsOfClose",
+  "variant": "full",
+  "kind": "sentence",
+  "screen": "main page (index.html)",
+  "en": "As of {weekday} close",
+  "which": "new",
+  "hi": "{weekday} के बंद भाव के अनुसार",
+  "id": "u0040"
+ },
+ {
+  "key": "methDirectionSub",
+  "variant": "full",
+  "kind": "sentence",
+  "screen": "how-we-know.html",
+  "en": "no model beats \"gold usually rises\" yet",
+  "which": "old",
+  "hi": "\"सोना आमतौर पर बढ़ता है\" वाले अंदाज़े को अभी कोई मॉडल मात नहीं दे पाया",
+  "id": "u0041"
+ },
+ {
+  "key": "methNextFixModel",
+  "variant": "full",
+  "kind": "sentence",
+  "screen": "how-we-know.html",
+  "en": "World prices after the official rate",
+  "which": "new",
+  "hi": "आधिकारिक भाव के बाद दुनिया के भाव",
+  "id": "u0042"
+ },
+ {
+  "key": "pv2WaitOrBuyHeading",
+  "variant": "full",
+  "kind": "heading",
+  "screen": "main page (index.html)",
+  "en": "Should I wait or buy now?",
+  "which": "new",
+  "hi": "इंतज़ार करूं या अभी ख़रीदूं?",
+  "id": "u0043"
+ },
+ {
+  "key": "commentaryAriaLabel",
+  "variant": "full",
+  "kind": "aria-label",
+  "screen": "main page (index.html)",
+  "en": "Market commentary",
+  "which": "old",
+  "hi": "बाज़ार पर टिप्पणी",
+  "id": "u0044"
+ },
+ {
+  "key": "errCouldntLoadHistory",
+  "variant": "full",
+  "kind": "banner/message",
+  "screen": "main page (index.html)",
+  "en": "Couldn't load price history.",
+  "which": "old",
+  "hi": "कीमत का इतिहास लोड नहीं हो पाया।",
+  "id": "u0045"
+ },
+ {
+  "key": "driverMechanismStronger",
+  "variant": "full",
+  "kind": "sentence",
+  "screen": "main page (index.html)",
+  "en": " a stronger rupee makes imported gold cheaper in India.",
+  "which": "new",
+  "hi": " मज़बूत रुपये से बाहर से आया सोना भारत में सस्ता पड़ता है।",
+  "id": "u0046"
+ },
+ {
+  "key": "methEstimateLabel",
+  "variant": "full",
+  "kind": "label",
+  "screen": "how-we-know.html",
+  "en": "22K estimate",
+  "which": "old",
+  "hi": "22K अनुमान",
+  "id": "u0047"
+ },
+ {
+  "key": "pv2MarkupSuffixHigher",
+  "variant": "full",
+  "kind": "short label",
+  "screen": "main page (index.html)",
+  "en": " — higher than usual.",
+  "which": "new",
+  "hi": " — आम से ज़्यादा।",
+  "id": "u0048"
+ },
+ {
+  "key": "supportLine1Mid",
+  "variant": "full",
+  "kind": "sentence",
+  "screen": "main page (index.html)",
+  "en": "Right around the middle for this month.",
+  "which": "old",
+  "hi": "इस महीने के बीचोंबीच के आसपास।",
+  "id": "u0049"
+ },
+ {
+  "key": "pv2ConfidenceUnknown",
+  "variant": "full",
+  "kind": "sentence",
+  "screen": "main page (index.html)",
+  "en": "We don't have a recent enough track record to say how often our range holds — check back soon.",
+  "which": "old",
+  "hi": "हमारे पास इतना हाल का रिकॉर्ड नहीं है कि बता सकें हमारा दायरा कितनी बार सही रहता है — कुछ समय बाद फिर देखें।",
+  "id": "u0050"
+ },
+ {
+  "key": "freshnessConsensusAria",
+  "variant": "full",
+  "kind": "aria-label",
+  "screen": "main page (index.html)",
+  "en": "Retail consensus estimate, updated {rel}",
+  "which": "new",
+  "hi": "दुकानों के औसत भाव का अनुमान, {rel} अपडेट हुआ",
+  "id": "u0051"
+ },
+ {
+  "key": "verdictHeadlineUnknown",
+  "variant": "full",
+  "kind": "short label",
+  "screen": "main page (index.html)",
+  "en": "Not enough data yet",
+  "which": "new",
+  "hi": "अभी काफ़ी डेटा नहीं है",
+  "id": "u0052"
+ },
+ {
+  "key": "readFalling",
+  "variant": "full",
+  "kind": "sentence",
+  "screen": "main page (index.html)",
+  "en": "Prices have eased over the past month, though today isn't especially cheap yet.",
+  "which": "old",
+  "hi": "पिछले महीने कीमत में नरमी रही है, हालांकि आज की कीमत अभी ख़ास कम नहीं है।",
+  "id": "u0053"
+ },
+ {
+  "key": "driverRupeeWeakened",
+  "variant": "full",
+  "kind": "sentence",
+  "screen": "main page (index.html)",
+  "en": "The rupee has weakened about {pct}% this month —{mechanism}",
+  "which": "new",
+  "hi": "रुपया इस महीने करीब {pct}% कमज़ोर हुआ है —{mechanism}",
+  "id": "u0054"
+ },
+ {
+  "key": "volNoteCalm",
+  "variant": "full",
+  "kind": "sentence",
+  "screen": "main page (index.html)",
+  "en": "Gold has been steadier than usual lately. Over the past month, its price typically went up or down by about ₹{z} in 5 days.",
+  "which": "old",
+  "hi": "हाल में सोना सामान्य से ज़्यादा स्थिर रहा है। पिछले एक महीने में इसकी कीमत 5 दिनों में आमतौर पर करीब ₹{z} ऊपर या नीचे गई।",
+  "id": "u0055"
+ },
+ {
+  "key": "weeklyMovementSuffAppend",
+  "variant": "full",
+  "kind": "sentence",
+  "screen": "main page (index.html)",
+  "en": " (Only {n} distinct days in this 90-day window so far — treat as indicative.)",
+  "which": "new",
+  "hi": " (90 दिनों के इस दायरे में अभी सिर्फ़ {n} अलग-अलग दिन हैं — इसे मोटा अंदाज़ा ही समझें।)",
+  "id": "u0056"
+ },
+ {
+  "key": "methDirectionHeading",
+  "variant": "full",
+  "kind": "heading",
+  "screen": "how-we-know.html",
+  "en": "Direction signal",
+  "which": "new",
+  "hi": "ऊपर या नीचे का संकेत",
+  "id": "u0057"
+ },
+ {
+  "key": "reliabilityDriftWatch",
+  "variant": "full",
+  "kind": "sentence",
+  "screen": "main page (index.html)",
+  "en": "Recent accuracy has drifted a bit from the historical average — we're keeping an eye on it.",
+  "which": "old",
+  "hi": "हाल की सटीकता ऐतिहासिक औसत से थोड़ी अलग हुई है — हम नज़र बनाए हुए हैं।",
+  "id": "u0058"
+ },
+ {
+  "key": "freshnessAsOfCloseAria",
+  "variant": "full",
+  "kind": "aria-label",
+  "screen": "main page (index.html)",
+  "en": "Estimated shop price, from {weekday}'s official rate",
+  "which": "old",
+  "hi": "अनुमानित दुकान की कीमत, {weekday} की आधिकारिक दर से",
+  "id": "u0059"
+ },
+ {
+  "key": "driverWeekUp",
+  "variant": "full",
+  "kind": "sentence",
+  "screen": "main page (index.html)",
+  "en": "Gold is up about ₹{total} this week",
+  "which": "new",
+  "hi": "इस हफ़्ते सोना करीब ₹{total} महंगा हुआ है",
+  "id": "u0060"
+ },
+ {
+  "key": "footerMuted",
+  "variant": "full",
+  "kind": "sentence",
+  "screen": "main page (index.html)",
+  "en": "Not financial advice. Rates are indicative.",
+  "which": "old",
+  "hi": "यह वित्तीय सलाह नहीं है। दरें संकेतात्मक हैं।",
+  "id": "u0061"
+ },
+ {
+  "key": "chartNoteEstimate",
+  "variant": "full",
+  "kind": "sentence",
+  "screen": "main page (index.html)",
+  "en": "Estimate from India's official daily gold rate",
+  "which": "new",
+  "hi": "भारत के आधिकारिक रोज़ के भाव से निकाला अनुमान",
+  "id": "u0062"
+ },
+ {
+  "key": "calcOtherKaratsRange",
+  "variant": "full",
+  "kind": "sentence",
+  "screen": "main page (index.html)",
+  "en": "24 KT: {k24} · 18 KT: {k18}",
+  "which": "new",
+  "hi": "24 कैरेट: {k24} · 18 कैरेट: {k18}",
+  "id": "u0063"
+ },
+ {
+  "key": "dirWordDown",
+  "variant": "full",
+  "kind": "short label",
+  "screen": "main page (index.html)",
+  "en": "edged down",
+  "which": "old",
+  "hi": "थोड़ी घटी",
+  "id": "u0064"
+ },
+ {
+  "key": "heroLabelEstimateIbja",
+  "variant": "full",
+  "kind": "sentence",
+  "screen": "main page (index.html)",
+  "en": "Our estimate for today, from India's official gold rate",
+  "which": "new",
+  "hi": "आज के लिए हमारा अनुमान, भारत के आधिकारिक रोज़ के भाव से",
+  "id": "u0065"
+ },
+ {
+  "key": "verdictReasonUp",
+  "variant": "avgDelta=null",
+  "kind": "sentence",
+  "screen": "main page (index.html)",
+  "en": "Up ₹{delta} this week.",
+  "which": "new",
+  "hi": "इस हफ़्ते भाव ₹{delta} बढ़ा है।",
+  "id": "u0066"
+ },
+ {
+  "key": "footerMuted",
+  "variant": "full",
+  "kind": "sentence",
+  "screen": "main page (index.html)",
+  "en": "Not financial advice. Rates are indicative.",
+  "which": "new",
+  "hi": "यह निवेश की सलाह नहीं है। भाव मोटे अंदाज़े के लिए हैं।",
+  "id": "u0067"
+ },
+ {
+  "key": "historySince",
+  "variant": "full",
+  "kind": "short label",
+  "screen": "main page (index.html)",
+  "en": "Since {date}",
+  "which": "new",
+  "hi": "{date} से",
+  "id": "u0068"
+ },
+ {
+  "key": "cmpAtLow",
+  "variant": "full",
+  "kind": "label",
+  "screen": "main page (index.html)",
+  "en": "at low",
+  "which": "old",
+  "hi": "न्यूनतम पर",
+  "id": "u0069"
+ },
+ {
+  "key": "cmpAtAvg",
+  "variant": "full",
+  "kind": "label",
+  "screen": "main page (index.html)",
+  "en": "at avg",
+  "which": "new",
+  "hi": "औसत के बराबर",
+  "id": "u0070"
+ },
+ {
+  "key": "verdictHeadlineFlat",
+  "variant": "full",
+  "kind": "short label",
+  "screen": "main page (index.html)",
+  "en": "Steady this week",
+  "which": "new",
+  "hi": "इस हफ़्ते भाव स्थिर है",
+  "id": "u0071"
+ },
+ {
+  "key": "pv2Weekly30dLabel",
+  "variant": "full",
+  "kind": "label",
+  "screen": "main page (index.html)",
+  "en": "Compared with the last month:",
+  "which": "new",
+  "hi": "पिछले महीने की तुलना में:",
+  "id": "u0072"
+ },
+ {
+  "key": "volNoteFallback",
+  "variant": "full",
+  "kind": "sentence",
+  "screen": "main page (index.html)",
+  "en": "Over the past month, gold's price typically went up or down by about ₹{z} in 5 days.",
+  "which": "old",
+  "hi": "पिछले एक महीने में सोने की कीमत 5 दिनों में आमतौर पर करीब ₹{z} ऊपर या नीचे गई।",
+  "id": "u0073"
+ },
+ {
+  "key": "readNoTrendHigh",
+  "variant": "full",
+  "kind": "sentence",
+  "screen": "main page (index.html)",
+  "en": "Today's price is on the higher side for the month.",
+  "which": "old",
+  "hi": "आज की कीमत इस महीने के हिसाब से ज़्यादा है।",
+  "id": "u0074"
+ },
+ {
+  "key": "heroEstimatedRange",
+  "variant": "full",
+  "kind": "sentence",
+  "screen": "main page (index.html)",
+  "en": "estimated range ₹{low}–₹{high}",
+  "which": "new",
+  "hi": "अनुमानित रेंज ₹{low}–₹{high}",
+  "id": "u0075"
+ },
+ {
+  "key": "firstVisitText",
+  "variant": "full",
+  "kind": "sentence",
+  "screen": "main page (index.html)",
+  "en": "The price of 22K gold in shops, checked about every {hours}h (worst case recently ~{p90Hours}h, as of {asOf}) and compared with Tanishq's listed rate when possible. We always say plainly when a price is an estimate.",
+  "which": "new",
+  "hi": "दुकानों में 22 कैरेट सोने का भाव, लगभग हर {hours} घंटे में जांचा जाता है (हाल में ज़्यादा से ज़्यादा ~{p90Hours} घंटे की देरी; {asOf} तक) और जब हो सके तब Tanishq के बताए भाव से मिलाया जाता है। भाव अनुमानित हो तो हम साफ़ बता देते हैं।",
+  "id": "u0076"
+ },
+ {
+  "key": "driverHeading",
+  "variant": "full",
+  "kind": "heading",
+  "screen": "main page (index.html)",
+  "en": "What's moving the price?",
+  "which": "new",
+  "hi": "भाव किस वजह से बदल रहा है?",
+  "id": "u0077"
+ },
+ {
+  "key": "pv2Job2Heading",
+  "variant": "full",
+  "kind": "heading",
+  "screen": "main page (index.html)",
+  "en": "2. How sure are we?",
+  "which": "new",
+  "hi": "2. हमें कितना भरोसा है?",
+  "id": "u0078"
+ },
+ {
+  "key": "trackRecordAriaLabel",
+  "variant": "full",
+  "kind": "aria-label",
+  "screen": "main page (index.html)",
+  "en": "Our past estimates and the actual gold prices",
+  "which": "new",
+  "hi": "हमारे पुराने अनुमान और असली भाव",
+  "id": "u0079"
+ },
+ {
+  "key": "chartWhatHappened",
+  "variant": "full",
+  "kind": "short label",
+  "screen": "main page (index.html)",
+  "en": "Actual price",
+  "which": "old",
+  "hi": "असली कीमत",
+  "id": "u0080"
+ },
+ {
+  "key": "pv2MarkupLine",
+  "variant": "full",
+  "kind": "sentence",
+  "screen": "main page (index.html)",
+  "en": "Tanishq is charging about {pct}% above the market rate today{suffix}",
+  "which": "old",
+  "hi": "Tanishq का आज का भाव बाज़ार दर से करीब {pct}% ज़्यादा है{suffix}",
+  "id": "u0081"
+ },
+ {
+  "key": "volNoteElevated",
+  "variant": "full",
+  "kind": "sentence",
+  "screen": "main page (index.html)",
+  "en": "Gold has been swinging more than usual lately. Over the past month, its price typically went up or down by about ₹{z} in 5 days.",
+  "which": "old",
+  "hi": "हाल में सोने में सामान्य से ज़्यादा उतार-चढ़ाव रहा है। पिछले एक महीने में इसकी कीमत 5 दिनों में आमतौर पर करीब ₹{z} ऊपर या नीचे गई।",
+  "id": "u0082"
+ },
+ {
+  "key": "pv2Job1Heading",
+  "variant": "full",
+  "kind": "heading",
+  "screen": "main page (index.html)",
+  "en": "1. What's the price now?",
+  "which": "old",
+  "hi": "1. अभी कीमत क्या है?",
+  "id": "u0083"
+ },
+ {
+  "key": "calcCustomInvalid",
+  "variant": "full",
+  "kind": "sentence",
+  "screen": "main page (index.html)",
+  "en": "Enter a making charge of 0 or more.",
+  "which": "new",
+  "hi": "मेकिंग चार्ज 0 या उससे ज़्यादा डालें।",
+  "id": "u0084"
+ },
+ {
+  "key": "cmpAboveLowest",
+  "variant": "full",
+  "kind": "label",
+  "screen": "main page (index.html)",
+  "en": "above this month's lowest",
+  "which": "new",
+  "hi": "इस महीने के सबसे कम भाव से ऊपर",
+  "id": "u0085"
+ },
+ {
+  "key": "errPriceUnavailable",
+  "variant": "full",
+  "kind": "banner/message",
+  "screen": "main page (index.html)",
+  "en": "Price unavailable",
+  "which": "new",
+  "hi": "भाव उपलब्ध नहीं",
+  "id": "u0086"
+ },
+ {
+  "key": "pv2RangeSevenDay",
+  "variant": "full",
+  "kind": "sentence",
+  "screen": "main page (index.html)",
+  "en": "Over the next 7 days: likely between ₹{low} and ₹{high}.",
+  "which": "old",
+  "hi": "अगले 7 दिनों में: यह ₹{low} से ₹{high} के बीच रहने की संभावना है।",
+  "id": "u0087"
+ },
+ {
+  "key": "driverDownMixed",
+  "variant": "full",
+  "kind": "sentence",
+  "screen": "main page (index.html)",
+  "en": "Gold is down about ₹{total} this week, from a mix of global prices and the rupee.",
+  "which": "old",
+  "hi": "इस हफ्ते सोना करीब ₹{total} सस्ता हुआ है, वैश्विक कीमतों और रुपये दोनों के मिले-जुले असर से।",
+  "id": "u0088"
+ },
+ {
+  "key": "sparklineRange",
+  "variant": "full",
+  "kind": "short label",
+  "screen": "main page (index.html)",
+  "en": "₹{min} – ₹{max}",
+  "which": "new",
+  "hi": "₹{min} – ₹{max}",
+  "id": "u0089"
+ },
+ {
+  "key": "methHowWeCallTrendHeading",
+  "variant": "full",
+  "kind": "heading",
+  "screen": "how-we-know.html",
+  "en": "How we call a trend",
+  "which": "new",
+  "hi": "हम ट्रेंड कैसे तय करते हैं",
+  "id": "u0090"
+ },
+ {
+  "key": "driverPartRupeeFlat",
+  "variant": "full",
+  "kind": "short label",
+  "screen": "main page (index.html)",
+  "en": "the rupee was roughly flat",
+  "which": "old",
+  "hi": "रुपया लगभग स्थिर रहा",
+  "id": "u0091"
+ },
+ {
+  "key": "supportSuffAppend",
+  "variant": "full",
+  "kind": "sentence",
+  "screen": "main page (index.html)",
+  "en": " (Only {n} distinct days in this 90-day window so far — treat as indicative.)",
+  "which": "old",
+  "hi": " (इस 90-दिन के दायरे में अभी तक सिर्फ़ {n} अलग दिन हैं — इसे संकेत के तौर पर लें।)",
+  "id": "u0092"
+ },
+ {
+  "key": "methBandAccuracyUnknown",
+  "variant": "full",
+  "kind": "sentence",
+  "screen": "how-we-know.html",
+  "en": "No measurement in the last 14 days — the next weekly re-check will refresh this.",
+  "which": "new",
+  "hi": "पिछले 14 दिनों में कोई माप नहीं हुआ — अगली साप्ताहिक जांच इसे अपडेट कर देगी।",
+  "id": "u0093"
+ },
+ {
+  "key": "heroLabelTanishqLastChecked",
+  "variant": "full",
+  "kind": "sentence",
+  "screen": "main page (index.html)",
+  "en": "Tanishq's listed 22K rate, last checked {when}",
+  "which": "new",
+  "hi": "Tanishq की साइट पर दिया 22 कैरेट भाव, आख़िरी बार {when} देखा गया",
+  "id": "u0094"
+ },
+ {
+  "key": "methAccurateP1ChronosBullet",
+  "variant": "full",
+  "kind": "sentence",
+  "screen": "how-we-know.html",
+  "en": "&bull; Our AI model was off by ₹{chronosMae}/g — {maePctWorse}% worse (p&thinsp;{pValOp}&thinsp;{pValText})<br>",
+  "which": "old",
+  "hi": "&bull; हमारे AI मॉडल में ₹{chronosMae}/ग्राम का फ़र्क़ आया — {maePctWorse}% ज़्यादा ख़राब (p&thinsp;{pValOp}&thinsp;{pValText})<br>",
+  "id": "u0095"
+ },
+ {
+  "key": "navInfo",
+  "variant": "full",
+  "kind": "label",
+  "screen": "main page (index.html)",
+  "en": "Info",
+  "which": "new",
+  "hi": "जानकारी",
+  "id": "u0096"
+ },
+ {
+  "key": "verdictReasonFlatBarely",
+  "variant": "full",
+  "kind": "sentence",
+  "screen": "main page (index.html)",
+  "en": "Barely moved this week — nothing to react to.",
+  "which": "old",
+  "hi": "इस हफ्ते कीमत में मुश्किल से बदलाव आया है — घबराने की कोई बात नहीं।",
+  "id": "u0097"
+ },
+ {
+  "key": "loadingText",
+  "variant": "full",
+  "kind": "short label",
+  "screen": "main page (index.html)",
+  "en": "Loading…",
+  "which": "new",
+  "hi": "लोड हो रहा है…",
+  "id": "u0098"
+ },
+ {
+  "key": "freshnessStale",
+  "variant": "full",
+  "kind": "short label",
+  "screen": "main page (index.html)",
+  "en": "Stale · {rel}",
+  "which": "new",
+  "hi": "पुराना · {rel}",
+  "id": "u0099"
+ },
+ {
+  "key": "verdictLeadMid",
+  "variant": "full",
+  "kind": "sentence",
+  "screen": "main page (index.html)",
+  "en": "You're paying about the usual amount this month",
+  "which": "old",
+  "hi": "आप इस महीने लगभग सामान्य कीमत दे रहे हैं",
+  "id": "u0100"
+ },
+ {
+  "key": "readNoTrendHigh",
+  "variant": "full",
+  "kind": "sentence",
+  "screen": "main page (index.html)",
+  "en": "Today's price is on the higher side for the month.",
+  "which": "new",
+  "hi": "आज का भाव इस महीने के हिसाब से ज़्यादा है।",
+  "id": "u0101"
+ },
+ {
+  "key": "karatToggleAriaLabel",
+  "variant": "full",
+  "kind": "aria-label",
+  "screen": "main page (index.html)",
+  "en": "Gold purity",
+  "which": "new",
+  "hi": "सोने की शुद्धता",
+  "id": "u0102"
+ },
+ {
+  "key": "sectionKaratNote",
+  "variant": "full",
+  "kind": "short label",
+  "screen": "main page (index.html)",
+  "en": "22K · per gram",
+  "which": "new",
+  "hi": "22 कैरेट · प्रति ग्राम",
+  "id": "u0103"
+ },
+ {
+  "key": "calcRangeLabel",
+  "variant": "full",
+  "kind": "label",
+  "screen": "main page (index.html)",
+  "en": "Range {range}",
+  "which": "new",
+  "hi": "रेंज {range}",
+  "id": "u0104"
+ },
+ {
+  "key": "shareTextGeneric",
+  "variant": "full",
+  "kind": "sentence",
+  "screen": "main page (index.html)",
+  "en": "Check today's gold price on Gold Tracker",
+  "which": "new",
+  "hi": "Gold Tracker पर आज का सोने का भाव देखें",
+  "id": "u0105"
+ },
+ {
+  "key": "proofLineCheaper",
+  "variant": "full",
+  "kind": "sentence",
+  "screen": "main page (index.html)",
+  "en": "Cheaper than {days} of the last {total} days.",
+  "which": "old",
+  "hi": "पिछले {total} दिनों में से {days} दिनों से सस्ता।",
+  "id": "u0106"
+ },
+ {
+  "key": "installPromptText",
+  "variant": "full",
+  "kind": "sentence",
+  "screen": "main page (index.html)",
+  "en": "Add this to your Home Screen for quicker access: tap <strong>Share</strong>, then <strong>Add to Home Screen</strong>.",
+  "which": "old",
+  "hi": "तेज़ी से खोलने के लिए इसे होम स्क्रीन पर जोड़ें: <strong>Share</strong> दबाएं, फिर <strong>Add to Home Screen</strong>।",
+  "id": "u0107"
+ },
+ {
+  "key": "chartWhatHappened",
+  "variant": "full",
+  "kind": "short label",
+  "screen": "main page (index.html)",
+  "en": "Actual price",
+  "which": "new",
+  "hi": "असली भाव",
+  "id": "u0108"
+ },
+ {
+  "key": "pv2Job1Heading",
+  "variant": "full",
+  "kind": "heading",
+  "screen": "main page (index.html)",
+  "en": "1. What's the price now?",
+  "which": "new",
+  "hi": "1. अभी भाव क्या है?",
+  "id": "u0109"
+ },
+ {
+  "key": "heroFallbackReason",
+  "variant": "full",
+  "kind": "short label",
+  "screen": "main page (index.html)",
+  "en": "Awaiting first price reading.",
+  "which": "old",
+  "hi": "पहली कीमत रीडिंग का इंतज़ार है।",
+  "id": "u0110"
+ },
+ {
+  "key": "sectionKaratNote",
+  "variant": "full",
+  "kind": "short label",
+  "screen": "main page (index.html)",
+  "en": "22K · per gram",
+  "which": "old",
+  "hi": "22K · प्रति ग्राम",
+  "id": "u0111"
+ },
+ {
+  "key": "calcEmptyState",
+  "variant": "full",
+  "kind": "sentence",
+  "screen": "main page (index.html)",
+  "en": "Enter a quantity to see the cost.",
+  "which": "old",
+  "hi": "कीमत देखने के लिए मात्रा डालें।",
+  "id": "u0112"
+ },
+ {
+  "key": "driverGoldUp",
+  "variant": "full",
+  "kind": "sentence",
+  "screen": "main page (index.html)",
+  "en": "Global gold prices are up about {pct}% this month.",
+  "which": "old",
+  "hi": "वैश्विक सोने की कीमतें इस महीने करीब {pct}% बढ़ी हैं।",
+  "id": "u0113"
+ },
+ {
+  "key": "driverUpMixed",
+  "variant": "full",
+  "kind": "sentence",
+  "screen": "main page (index.html)",
+  "en": "Gold is up about ₹{total} this week, from a mix of global prices and the rupee.",
+  "which": "new",
+  "hi": "इस हफ़्ते सोना करीब ₹{total} महंगा हुआ है, दुनिया के बाज़ार के भाव और रुपये, दोनों के मिले-जुले असर से।",
+  "id": "u0114"
+ },
+ {
+  "key": "accSummaryLinkText",
+  "variant": "full",
+  "kind": "short label",
+  "screen": "main page (index.html)",
+  "en": "See the numbers behind this →",
+  "which": "old",
+  "hi": "इसके पीछे के आंकड़े देखें →",
+  "id": "u0115"
+ },
+ {
+  "key": "methAccurateP1Strong",
+  "variant": "full",
+  "kind": "sentence",
+  "screen": "how-we-know.html",
+  "en": "We assume tomorrow's price is about the same as today's",
+  "which": "old",
+  "hi": "हम मानते हैं कि कल की कीमत आज जैसी ही रहेगी",
+  "id": "u0116"
+ },
+ {
+  "key": "pv2Job4Heading",
+  "variant": "full",
+  "kind": "heading",
+  "screen": "main page (index.html)",
+  "en": "4. Is it a good price?",
+  "which": "old",
+  "hi": "4. क्या यह अच्छी कीमत है?",
+  "id": "u0117"
+ },
+ {
+  "key": "historyNoReadings",
+  "variant": "full",
+  "kind": "sentence",
+  "screen": "main page (index.html)",
+  "en": "No readings yet.",
+  "which": "old",
+  "hi": "अभी तक कोई रीडिंग नहीं।",
+  "id": "u0118"
+ },
+ {
+  "key": "pwaHelpBtnLabel",
+  "variant": "full",
+  "kind": "label",
+  "screen": "main page (index.html)",
+  "en": "About auto-refresh on iPhone",
+  "which": "new",
+  "hi": "iPhone पर ऑटो-रीफ़्रेश के बारे में",
+  "id": "u0119"
+ },
+ {
+  "key": "readNoTrendCheap",
+  "variant": "full",
+  "kind": "sentence",
+  "screen": "main page (index.html)",
+  "en": "Today's price is on the low side for the month.",
+  "which": "new",
+  "hi": "आज का भाव इस महीने के हिसाब से कम है।",
+  "id": "u0120"
+ },
+ {
+  "key": "band90dSuffAppend",
+  "variant": "full",
+  "kind": "sentence",
+  "screen": "main page (index.html)",
+  "en": " (Only {n} distinct days in this window so far — treat as indicative.)",
+  "which": "old",
+  "hi": " (इस दायरे में अभी तक सिर्फ़ {n} अलग दिन हैं — इसे संकेत के तौर पर लें।)",
+  "id": "u0121"
+ },
+ {
+  "key": "karatLabel24",
+  "variant": "full",
+  "kind": "label",
+  "screen": "main page (index.html)",
+  "en": "24 KT",
+  "which": "new",
+  "hi": "24 कैरेट",
+  "id": "u0122"
+ },
+ {
+  "key": "bottomNavAriaLabel",
+  "variant": "full",
+  "kind": "aria-label",
+  "screen": "main page (index.html)",
+  "en": "Page sections",
+  "which": "new",
+  "hi": "पेज के हिस्से",
+  "id": "u0123"
+ },
+ {
+  "key": "pv2MarkupHeading",
+  "variant": "full",
+  "kind": "heading",
+  "screen": "main page (index.html)",
+  "en": "How Tanishq compares to the market",
+  "which": "old",
+  "hi": "Tanishq बाज़ार के मुक़ाबले कैसा है",
+  "id": "u0124"
+ },
+ {
+  "key": "bannerTanishqLongSilent",
+  "variant": "full",
+  "kind": "banner/message",
+  "screen": "main page (index.html)",
+  "en": " We haven't been able to read Tanishq's listed rate recently — the last successful check was {rel}.",
+  "which": "old",
+  "hi": " हाल में हम Tanishq की सूचीबद्ध दर नहीं पढ़ पाए — आख़िरी सफल जांच {rel} हुई थी।",
+  "id": "u0125"
+ },
+ {
+  "key": "historyShowLess",
+  "variant": "full",
+  "kind": "short label",
+  "screen": "main page (index.html)",
+  "en": "Show less",
+  "which": "new",
+  "hi": "कम दिखाएं",
+  "id": "u0126"
+ },
+ {
+  "key": "driverAllFlat",
+  "variant": "full",
+  "kind": "sentence",
+  "screen": "main page (index.html)",
+  "en": "Nothing much moved this month — global prices, the rupee, and local demand have all been quiet.",
+  "which": "new",
+  "hi": "इस महीने कुछ ख़ास नहीं बदला — दुनिया के भाव, रुपया और यहां की मांग, सब शांत रहे।",
+  "id": "u0127"
+ },
+ {
+  "key": "methRuleCheaper",
+  "variant": "full",
+  "kind": "sentence",
+  "screen": "how-we-know.html",
+  "en": "<strong>Getting cheaper:</strong> price has dropped more than ₹100 in a week, and the estimate or monthly average agrees",
+  "which": "old",
+  "hi": "<strong>कीमत घटना:</strong> एक हफ्ते में कीमत ₹100 से ज़्यादा गिरी हो, और अनुमान या महीने का औसत भी इससे सहमत हो",
+  "id": "u0128"
+ },
+ {
+  "key": "directionUnclear",
+  "variant": "full",
+  "kind": "sentence",
+  "screen": "main page (index.html)",
+  "en": "Up or down next: too close to call.",
+  "which": "old",
+  "hi": "अगली बार ऊपर या नीचे: कहना मुश्किल है।",
+  "id": "u0129"
+ },
+ {
+  "key": "heroTanishqOldRate",
+  "variant": "full",
+  "kind": "sentence",
+  "screen": "main page (index.html)",
+  "en": "Tanishq's listed rate when last checked, {when}: ₹{price} — not updated since",
+  "which": "old",
+  "hi": "Tanishq की सूचीबद्ध दर, आख़िरी बार {when} जांची गई: ₹{price} — तब से अपडेट नहीं हुई",
+  "id": "u0130"
+ },
+ {
+  "key": "heroLabelEstimateFusion",
+  "variant": "full",
+  "kind": "sentence",
+  "screen": "main page (index.html)",
+  "en": "Our estimate for today, based on other jewellers' listed rates",
+  "which": "old",
+  "hi": "आज के लिए हमारा अनुमान, दूसरे जौहरियों की सूचीबद्ध दरों पर आधारित",
+  "id": "u0131"
+ },
+ {
+  "key": "calcGramsLabel",
+  "variant": "full",
+  "kind": "label",
+  "screen": "main page (index.html)",
+  "en": "Grams",
+  "which": "new",
+  "hi": "ग्राम",
+  "id": "u0132"
+ },
+ {
+  "key": "pv2Job5Heading",
+  "variant": "full",
+  "kind": "heading",
+  "screen": "main page (index.html)",
+  "en": "5. What will I pay?",
+  "which": "new",
+  "hi": "5. मुझे कितना देना होगा?",
+  "id": "u0133"
+ },
+ {
+  "key": "band90dMoreExpensive",
+  "variant": "full",
+  "kind": "sentence",
+  "screen": "main page (index.html)",
+  "en": "Over the past 90 days: more expensive than {pct}% of the {n} days.",
+  "which": "old",
+  "hi": "पिछले 90 दिनों में: {n} दिनों में से {pct}% से महंगा।",
+  "id": "u0134"
+ },
+ {
+  "key": "supportLine1Mid",
+  "variant": "full",
+  "kind": "sentence",
+  "screen": "main page (index.html)",
+  "en": "Right around the middle for this month.",
+  "which": "new",
+  "hi": "इस महीने के बीच के भाव के आसपास।",
+  "id": "u0135"
+ },
+ {
+  "key": "supportNotCheapNotAtSupport",
+  "variant": "full",
+  "kind": "sentence",
+  "screen": "main page (index.html)",
+  "en": "{pct}% above its lowest price in 3 months (₹{low}, over the last {n} days).",
+  "which": "new",
+  "hi": "3 महीने के सबसे कम भाव (₹{low}) से {pct}% ऊपर (पिछले {n} दिनों में)।",
+  "id": "u0136"
+ },
+ {
+  "key": "pv2EventWatchHeading",
+  "variant": "full",
+  "kind": "heading",
+  "screen": "main page (index.html)",
+  "en": "Upcoming events that could move the price",
+  "which": "old",
+  "hi": "आने वाली घटनाएं जो कीमत बदल सकती हैं",
+  "id": "u0137"
+ },
+ {
+  "key": "relMinAgo",
+  "variant": "full",
+  "kind": "label",
+  "screen": "main page (index.html)",
+  "en": "{n} min ago",
+  "which": "new",
+  "hi": "{n} मिनट पहले",
+  "id": "u0138"
+ },
+ {
+  "key": "calcKaratLabel22",
+  "variant": "full",
+  "kind": "short label",
+  "screen": "main page (index.html)",
+  "en": "22 KT",
+  "which": "old",
+  "hi": "22 KT",
+  "id": "u0139"
+ },
+ {
+  "key": "calibrationConfidenceAppend",
+  "variant": "full",
+  "kind": "sentence",
+  "screen": "main page (index.html)",
+  "en": " Based on past comparisons, the real price has landed within about ₹{amount}/gram of this estimate about 7 times out of 10 so far.",
+  "which": "new",
+  "hi": " पिछली तुलनाओं के हिसाब से असली भाव अब तक लगभग 10 में से 7 बार इस अनुमान से करीब ₹{amount}/ग्राम के अंदर रहा है।",
+  "id": "u0140"
+ },
+ {
+  "key": "verdictHeadlineUp",
+  "variant": "full",
+  "kind": "sentence",
+  "screen": "main page (index.html)",
+  "en": "Getting pricier this week",
+  "which": "new",
+  "hi": "इस हफ़्ते सोना महंगा हो रहा है",
+  "id": "u0141"
+ },
+ {
+  "key": "methRuleSteady",
+  "variant": "full",
+  "kind": "sentence",
+  "screen": "how-we-know.html",
+  "en": "<strong>Steady:</strong> everything else — movement within ₹100 either way, or the two checks disagree",
+  "which": "new",
+  "hi": "<strong>स्थिर:</strong> बाक़ी सब मामले — ₹100 के अंदर घट-बढ़, या दोनों जांच एक-दूसरे से न मिलें",
+  "id": "u0142"
+ },
+ {
+  "key": "bannerIbjaToday",
+  "variant": "full",
+  "kind": "banner/message",
+  "screen": "main page (index.html)",
+  "en": "This is today's estimated price, from India's official gold rate — we couldn't check it against the shop rate just now.",
+  "which": "old",
+  "hi": "यह आज की अनुमानित कीमत है, भारत की आधिकारिक सोने की दर से — हम इसे अभी दुकान की कीमत से जांच नहीं पाए।",
+  "id": "u0143"
+ },
+ {
+  "key": "methAccurateP3Strong",
+  "variant": "full",
+  "kind": "sentence",
+  "screen": "how-we-know.html",
+  "en": "About the direction signal",
+  "which": "new",
+  "hi": "ऊपर-नीचे के संकेत के बारे में",
+  "id": "u0144"
+ },
+ {
+  "key": "rangeAll",
+  "variant": "full",
+  "kind": "short label",
+  "screen": "main page (index.html)",
+  "en": "All",
+  "which": "old",
+  "hi": "सभी",
+  "id": "u0145"
+ },
+ {
+  "key": "karatLabel18",
+  "variant": "full",
+  "kind": "label",
+  "screen": "main page (index.html)",
+  "en": "18 KT",
+  "which": "old",
+  "hi": "18 KT",
+  "id": "u0146"
+ },
+ {
+  "key": "cmpNotEnoughData",
+  "variant": "full",
+  "kind": "label",
+  "screen": "main page (index.html)",
+  "en": "not enough data",
+  "which": "new",
+  "hi": "काफ़ी डेटा नहीं",
+  "id": "u0147"
+ },
+ {
+  "key": "calcPresetIntricateRange",
+  "variant": "full",
+  "kind": "sentence",
+  "screen": "main page (index.html)",
+  "en": "15–25% of gold value, typically 20%",
+  "which": "new",
+  "hi": "सोने की कीमत का 15–25%, आम तौर पर 20%",
+  "id": "u0148"
+ },
+ {
+  "key": "methRulePricier",
+  "variant": "full",
+  "kind": "sentence",
+  "screen": "how-we-know.html",
+  "en": "<strong>Getting pricier:</strong> price has climbed more than ₹100 in a week, and the estimate or monthly average agrees",
+  "which": "new",
+  "hi": "<strong>महंगा हो रहा है:</strong> एक हफ़्ते में भाव ₹100 से ज़्यादा बढ़ा हो, और अनुमान या महीने का औसत भी यही दिखाए",
+  "id": "u0149"
+ },
+ {
+  "key": "reliabilityDriftOnTrack",
+  "variant": "full",
+  "kind": "sentence",
+  "screen": "main page (index.html)",
+  "en": "Recent accuracy has stayed in line with the historical average.",
+  "which": "new",
+  "hi": "हाल में हमारे अनुमान उतने ही सही रहे हैं जितने आम तौर पर रहते आए हैं।",
+  "id": "u0150"
+ },
+ {
+  "key": "freshnessStaleAria",
+  "variant": "full",
+  "kind": "aria-label",
+  "screen": "main page (index.html)",
+  "en": "Data stale, last updated {rel}",
+  "which": "new",
+  "hi": "भाव पुराना है, आख़िरी बार {rel} अपडेट हुआ",
+  "id": "u0151"
+ },
+ {
+  "key": "todaysReadEyebrow",
+  "variant": "full",
+  "kind": "heading",
+  "screen": "main page (index.html)",
+  "en": "Today's read",
+  "which": "old",
+  "hi": "आज का सार",
+  "id": "u0152"
+ },
+ {
+  "key": "methRecentError",
+  "variant": "full",
+  "kind": "short label",
+  "screen": "how-we-know.html",
+  "en": "Recent avg. error",
+  "which": "new",
+  "hi": "हाल की औसत ग़लती",
+  "id": "u0153"
+ },
+ {
+  "key": "calcMakingModePct",
+  "variant": "full",
+  "kind": "short label",
+  "screen": "main page (index.html)",
+  "en": "% of gold value",
+  "which": "new",
+  "hi": "सोने की कीमत का %",
+  "id": "u0154"
+ },
+ {
+  "key": "readHighSlowed",
+  "variant": "full",
+  "kind": "sentence",
+  "screen": "main page (index.html)",
+  "en": "Today's price is on the higher side for the month, though the climb has slowed.",
+  "which": "new",
+  "hi": "आज का भाव इस महीने के हिसाब से ज़्यादा है, हालांकि चढ़ने की रफ़्तार धीमी हो गई है।",
+  "id": "u0155"
+ },
+ {
+  "key": "pv2AriaLabel",
+  "variant": "full",
+  "kind": "aria-label",
+  "screen": "main page (index.html)",
+  "en": "A five-question view of today's gold price",
+  "which": "new",
+  "hi": "आज के सोने के भाव पर पांच आसान सवाल",
+  "id": "u0156"
+ },
+ {
+  "key": "fusionSourceKalyan",
+  "variant": "full",
+  "kind": "short label",
+  "screen": "main page (index.html)",
+  "en": "Kalyan",
+  "which": "new",
+  "hi": "Kalyan",
+  "id": "u0157"
+ },
+ {
+  "key": "freshnessConsensus",
+  "variant": "full",
+  "kind": "sentence",
+  "screen": "main page (index.html)",
+  "en": "Consensus estimate · {rel}",
+  "which": "new",
+  "hi": "दुकानों के औसत भाव का अनुमान · {rel}",
+  "id": "u0158"
+ },
+ {
+  "key": "errCouldntLoadPrice",
+  "variant": "full",
+  "kind": "banner/message",
+  "screen": "main page (index.html)",
+  "en": "Couldn't load the latest price. Check your connection and try again.",
+  "which": "new",
+  "hi": "ताज़ा भाव लोड नहीं हो पाया। अपना इंटरनेट जांचें और फिर कोशिश करें।",
+  "id": "u0159"
+ },
+ {
+  "key": "pv2SourceEstimate",
+  "variant": "full",
+  "kind": "sentence",
+  "screen": "main page (index.html)",
+  "en": "An estimate, matched to India's official gold rate and Tanishq's own numbers.",
+  "which": "new",
+  "hi": "एक अनुमान, जो भारत के आधिकारिक भाव और Tanishq के भाव से मिलाकर बनाया गया है।",
+  "id": "u0160"
+ },
+ {
+  "key": "methDirectionNote",
+  "variant": "full",
+  "kind": "sentence",
+  "screen": "how-we-know.html",
+  "en": "We test our price-direction models every week. So far, none of them beat just assuming \"gold usually goes up\" — so we don't show a chance-of-rising percentage or tell you to buy or sell. The trend labels on the main page (Getting cheaper/pricier/Steady) describe what already happened this week — they're not a prediction of what happens next.",
+  "which": "new",
+  "hi": "हम हर हफ़्ते भाव के ऊपर-नीचे जाने का अंदाज़ा लगाने वाले अपने मॉडल जांचते हैं। अभी तक कोई भी सिर्फ़ \"सोना आम तौर पर बढ़ता है\" मान लेने से बेहतर नहीं निकला — इसलिए हम बढ़ने की संभावना का प्रतिशत नहीं दिखाते, और ख़रीदने-बेचने को भी नहीं कहते। मुख्य पेज के ट्रेंड लेबल (सस्ता हो रहा है / महंगा हो रहा है / स्थिर) बताते हैं कि इस हफ़्ते क्या हो चुका है — वे आगे क्या होगा, इसका अंदाज़ा नहीं हैं।",
+  "id": "u0161"
+ },
+ {
+  "key": "historyAriaLabel",
+  "variant": "full",
+  "kind": "aria-label",
+  "screen": "main page (index.html)",
+  "en": "Price history",
+  "which": "new",
+  "hi": "पुराने भाव",
+  "id": "u0162"
+ },
+ {
+  "key": "cmpHeading30d",
+  "variant": "full",
+  "kind": "label",
+  "screen": "main page (index.html)",
+  "en": "vs 30-day avg",
+  "which": "old",
+  "hi": "30-दिन औसत से",
+  "id": "u0163"
+ },
+ {
+  "key": "methStatusLabel",
+  "variant": "full",
+  "kind": "label",
+  "screen": "how-we-know.html",
+  "en": "Status",
+  "which": "new",
+  "hi": "स्थिति",
+  "id": "u0164"
+ },
+ {
+  "key": "verdictReasonDown",
+  "variant": "full",
+  "kind": "sentence",
+  "screen": "main page (index.html)",
+  "en": "Down ₹{delta} this week, and ₹{avgDelta} below the usual price for the month.",
+  "which": "new",
+  "hi": "इस हफ़्ते भाव ₹{delta} घटा है, और महीने के आम भाव से ₹{avgDelta} कम है।",
+  "id": "u0165"
+ },
+ {
+  "key": "supportLine2Below",
+  "variant": "full",
+  "kind": "sentence",
+  "screen": "main page (index.html)",
+  "en": "₹{amount} below the usual price for the month.",
+  "which": "old",
+  "hi": "इस महीने की सामान्य कीमत से ₹{amount} कम।",
+  "id": "u0166"
+ },
+ {
+  "key": "driverAllFlat",
+  "variant": "full",
+  "kind": "sentence",
+  "screen": "main page (index.html)",
+  "en": "Nothing much moved this month — global prices, the rupee, and local demand have all been quiet.",
+  "which": "old",
+  "hi": "इस महीने ज़्यादा कुछ नहीं बदला — वैश्विक कीमतें, रुपया, और स्थानीय मांग, सब स्थिर रहे।",
+  "id": "u0167"
+ },
+ {
+  "key": "pv2SourceConfirmed",
+  "variant": "full",
+  "kind": "sentence",
+  "screen": "main page (index.html)",
+  "en": "Confirmed live at Tanishq.",
+  "which": "old",
+  "hi": "Tanishq पर लाइव पुष्टि की गई कीमत।",
+  "id": "u0168"
+ },
+ {
+  "key": "freshnessEstimatedAria",
+  "variant": "full",
+  "kind": "aria-label",
+  "screen": "main page (index.html)",
+  "en": "Estimated shop price, official rate updated {rel}",
+  "which": "old",
+  "hi": "अनुमानित दुकान की कीमत, आधिकारिक दर {rel} अपडेट हुई",
+  "id": "u0169"
+ },
+ {
+  "key": "shareLabel",
+  "variant": "full",
+  "kind": "label",
+  "screen": "main page (index.html)",
+  "en": "Share",
+  "which": "new",
+  "hi": "शेयर करें",
+  "id": "u0170"
+ },
+ {
+  "key": "eyebrow",
+  "variant": "full",
+  "kind": "heading",
+  "screen": "main page (index.html)",
+  "en": "22K gold · per gram",
+  "which": "old",
+  "hi": "22K सोना · प्रति ग्राम",
+  "id": "u0171"
+ },
+ {
+  "key": "supportLine1BelowMid",
+  "variant": "full",
+  "kind": "sentence",
+  "screen": "main page (index.html)",
+  "en": "A bit below the usual price this month.",
+  "which": "new",
+  "hi": "इस महीने के आम भाव से थोड़ा कम।",
+  "id": "u0172"
+ },
+ {
+  "key": "verdictHeadlineDown",
+  "variant": "full",
+  "kind": "sentence",
+  "screen": "main page (index.html)",
+  "en": "Getting cheaper this week",
+  "which": "new",
+  "hi": "इस हफ़्ते सोना सस्ता हो रहा है",
+  "id": "u0173"
+ },
+ {
+  "key": "methDirectionNote",
+  "variant": "full",
+  "kind": "sentence",
+  "screen": "how-we-know.html",
+  "en": "We test our price-direction models every week. So far, none of them beat just assuming \"gold usually goes up\" — so we don't show a chance-of-rising percentage or tell you to buy or sell. The trend labels on the main page (Getting cheaper/pricier/Steady) describe what already happened this week — they're not a prediction of what happens next.",
+  "which": "old",
+  "hi": "हम हर हफ्ते अपने दिशा-संकेत मॉडल टेस्ट करते हैं। अभी तक कोई भी सिर्फ़ \"सोना आमतौर पर बढ़ता है\" मान लेने से बेहतर नहीं निकला — इसलिए हम बढ़ने की संभावना वाला प्रतिशत नहीं दिखाते, न ही ख़रीदने-बेचने को कहते हैं। मुख्य पेज पर दिए गए ट्रेंड लेबल (कीमत घटना/बढ़ना/स्थिर) बताते हैं कि इस हफ्ते क्या हुआ — यह आगे क्या होगा, इसका अंदाज़ा नहीं है।",
+  "id": "u0174"
+ },
+ {
+  "key": "methAccurateP4",
+  "variant": "full",
+  "kind": "sentence",
+  "screen": "how-we-know.html",
+  "en": "If gold started moving up and down more evenly (not mostly up), or if a model started reliably beating the \"gold usually rises\" guess in testing, we'd turn this back on. We'll update this section if that happens.",
+  "which": "new",
+  "hi": "अगर सोना ऊपर-नीचे ज़्यादा बराबरी से चलने लगे (ज़्यादातर बढ़ने के बजाय), या कोई मॉडल टेस्ट में \"सोना आम तौर पर बढ़ता है\" वाले अंदाज़े को लगातार मात देने लगे, तो हम इसे फिर चालू करेंगे। ऐसा होने पर हम यह हिस्सा अपडेट करेंगे।",
+  "id": "u0175"
+ },
+ {
+  "key": "historyHeading",
+  "variant": "full",
+  "kind": "heading",
+  "screen": "main page (index.html)",
+  "en": "History",
+  "which": "old",
+  "hi": "इतिहास",
+  "id": "u0176"
+ },
+ {
+  "key": "reliabilityDriftRetrain",
+  "variant": "full",
+  "kind": "sentence",
+  "screen": "main page (index.html)",
+  "en": "Our recent estimates have been further off than usual — we're adjusting them.",
+  "which": "new",
+  "hi": "हाल के हमारे अनुमान आम से ज़्यादा ग़लत रहे हैं — हम उन्हें सुधार रहे हैं।",
+  "id": "u0177"
+ },
+ {
+  "key": "chart22kLabel",
+  "variant": "full",
+  "kind": "label",
+  "screen": "main page (index.html)",
+  "en": "{k}K (₹/g)",
+  "which": "old",
+  "hi": "{k}K (₹/ग्राम)",
+  "id": "u0178"
+ },
+ {
+  "key": "methAccurateP2",
+  "variant": "full",
+  "kind": "sentence",
+  "screen": "how-we-know.html",
+  "en": "It's based on just the last 30 test runs, so it's a small sample. We narrowed this range in July 2026 after realizing it had been sized for 5-day moves but only ever checked against next-day prices — so the percentage above may look better than it really is for a while, until enough checks have happened under the corrected, narrower range. We'll call it fully proven once that settles.",
+  "which": "old",
+  "hi": "यह सिर्फ़ पिछले 30 टेस्ट रन पर आधारित है, तो यह एक छोटा सैंपल है। जुलाई 2026 में हमने इस रेंज को छोटा किया, यह पता चलने के बाद कि यह 5-दिन के बदलाव के हिसाब से बनाई गई थी लेकिन हमेशा अगले-दिन की कीमतों के हिसाब से जांची जाती थी — इसलिए ऊपर दिया गया प्रतिशत कुछ समय तक असल से बेहतर दिख सकता है, जब तक कि सही, छोटी रेंज के तहत काफ़ी जांच न हो जाए। जब यह स्थिर हो जाएगा, तब हम इसे पूरी तरह सही मानेंगे।",
+  "id": "u0179"
+ },
+ {
+  "key": "methDirectionOff",
+  "variant": "full",
+  "kind": "short label",
+  "screen": "how-we-know.html",
+  "en": "Off — not yet reliable",
+  "which": "new",
+  "hi": "बंद — अभी भरोसे लायक़ नहीं",
+  "id": "u0180"
+ },
+ {
+  "key": "bannerRefreshFailed",
+  "variant": "full",
+  "kind": "banner/message",
+  "screen": "main page (index.html)",
+  "en": "Couldn't refresh — this is the last update, from {rel}",
+  "which": "new",
+  "hi": "रीफ़्रेश नहीं हो पाया — यह आख़िरी अपडेट है, जो {rel} का है",
+  "id": "u0181"
+ },
+ {
+  "key": "accSummaryIntro",
+  "variant": "full",
+  "kind": "sentence",
+  "screen": "main page (index.html)",
+  "en": "We regularly compare our estimate with real shop prices and correct it when it drifts.",
+  "which": "old",
+  "hi": "हम अपने अनुमान को नियमित रूप से दुकान की असली कीमतों से मिलाते हैं और ज़रूरत पड़ने पर सुधारते हैं।",
+  "id": "u0182"
+ },
+ {
+  "key": "pwaHelpPanelText",
+  "variant": "full",
+  "kind": "sentence",
+  "screen": "main page (index.html)",
+  "en": "iOS limits how often home-screen apps update in the background. Tap <strong>↻</strong> to get the latest prices. If prices remain stuck, open the App Switcher (swipe up and hold), then swipe this app away and reopen from Home Screen — that forces a full reload.",
+  "which": "old",
+  "hi": "iOS होम-स्क्रीन ऐप्स को बैकग्राउंड में कम बार अपडेट करता है। ताज़ी कीमत के लिए <strong>↻</strong> दबाएं। अगर कीमत अटकी रहे, तो ऐप स्विचर खोलें (ऊपर स्वाइप करके दबाए रखें), फिर इस ऐप को स्वाइप करके हटाएं और होम स्क्रीन से दोबारा खोलें — इससे पूरा रीलोड हो जाएगा।",
+  "id": "u0183"
+ },
+ {
+  "key": "pv2MarkupSuffixLower",
+  "variant": "full",
+  "kind": "short label",
+  "screen": "main page (index.html)",
+  "en": " — lower than usual.",
+  "which": "new",
+  "hi": " — आम से कम।",
+  "id": "u0184"
+ },
+ {
+  "key": "methDirectionUnavailable",
+  "variant": "full",
+  "kind": "sentence",
+  "screen": "how-we-know.html",
+  "en": "Direction signal unavailable this cycle.",
+  "which": "old",
+  "hi": "इस बार दिशा का संकेत उपलब्ध नहीं है।",
+  "id": "u0185"
+ },
+ {
+  "key": "readCheapStillFalling",
+  "variant": "full",
+  "kind": "sentence",
+  "screen": "main page (index.html)",
+  "en": "Today's price is on the low side for the month, and it's still sliding — it hasn't leveled off yet.",
+  "which": "old",
+  "hi": "आज की कीमत इस महीने के हिसाब से कम है, और अभी भी गिर रही है — अभी स्थिर नहीं हुई है।",
+  "id": "u0186"
+ },
+ {
+  "key": "shareTextGeneric",
+  "variant": "full",
+  "kind": "sentence",
+  "screen": "main page (index.html)",
+  "en": "Check today's gold price on Gold Tracker",
+  "which": "old",
+  "hi": "Gold Tracker पर आज की सोने की कीमत देखें",
+  "id": "u0187"
+ },
+ {
+  "key": "installPromptText",
+  "variant": "full",
+  "kind": "sentence",
+  "screen": "main page (index.html)",
+  "en": "Add this to your Home Screen for quicker access: tap <strong>Share</strong>, then <strong>Add to Home Screen</strong>.",
+  "which": "new",
+  "hi": "जल्दी खोलने के लिए इसे होम स्क्रीन पर जोड़ लें: <strong>Share</strong> दबाएं, फिर <strong>Add to Home Screen</strong>।",
+  "id": "u0188"
+ },
+ {
+  "key": "driverUpMixed",
+  "variant": "full",
+  "kind": "sentence",
+  "screen": "main page (index.html)",
+  "en": "Gold is up about ₹{total} this week, from a mix of global prices and the rupee.",
+  "which": "old",
+  "hi": "इस हफ्ते सोना करीब ₹{total} महंगा हुआ है, वैश्विक कीमतों और रुपये दोनों के मिले-जुले असर से।",
+  "id": "u0189"
+ },
+ {
+  "key": "trackRecordChartAriaLabel",
+  "variant": "full",
+  "kind": "aria-label",
+  "screen": "main page (index.html)",
+  "en": "Our past estimates and the actual gold prices",
+  "which": "new",
+  "hi": "हमारे पुराने अनुमान और असली भाव",
+  "id": "u0190"
+ },
+ {
+  "key": "goodPriceTomorrow",
+  "variant": "full",
+  "kind": "sentence",
+  "screen": "main page (index.html)",
+  "en": "Next price update: likely <strong>₹{low}</strong> – <strong>₹{high}</strong>.",
+  "which": "old",
+  "hi": "अगला भाव अपडेट: शायद <strong>₹{low}</strong> – <strong>₹{high}</strong>।",
+  "id": "u0191"
+ },
+ {
+  "key": "verdictLeadCheap",
+  "variant": "full",
+  "kind": "sentence",
+  "screen": "main page (index.html)",
+  "en": "You're paying less than usual this month",
+  "which": "old",
+  "hi": "आप इस महीने सामान्य से कम कीमत दे रहे हैं",
+  "id": "u0192"
+ },
+ {
+  "key": "dirWordUp",
+  "variant": "full",
+  "kind": "short label",
+  "screen": "main page (index.html)",
+  "en": "edged up",
+  "which": "old",
+  "hi": "थोड़ी बढ़ी",
+  "id": "u0193"
+ },
+ {
+  "key": "methDirectionOn",
+  "variant": "full",
+  "kind": "sentence",
+  "screen": "how-we-know.html",
+  "en": "On — for the next price move only",
+  "which": "new",
+  "hi": "चालू — सिर्फ़ अगली चाल के लिए",
+  "id": "u0194"
+ },
+ {
+  "key": "calcGramsAriaLabel",
+  "variant": "full",
+  "kind": "aria-label",
+  "screen": "main page (index.html)",
+  "en": "Quantity in grams",
+  "which": "new",
+  "hi": "ग्राम में मात्रा",
+  "id": "u0195"
+ },
+ {
+  "key": "commentaryAriaLabel",
+  "variant": "full",
+  "kind": "aria-label",
+  "screen": "main page (index.html)",
+  "en": "Market commentary",
+  "which": "new",
+  "hi": "बाज़ार का हाल",
+  "id": "u0196"
+ },
+ {
+  "key": "cmpAboveLowest",
+  "variant": "full",
+  "kind": "label",
+  "screen": "main page (index.html)",
+  "en": "above this month's lowest",
+  "which": "old",
+  "hi": "इस महीने के न्यूनतम से ज़्यादा",
+  "id": "u0197"
+ },
+ {
+  "key": "calcGramsAriaLabel",
+  "variant": "full",
+  "kind": "aria-label",
+  "screen": "main page (index.html)",
+  "en": "Quantity in grams",
+  "which": "old",
+  "hi": "मात्रा (ग्राम में)",
+  "id": "u0198"
+ },
+ {
+  "key": "verdictReasonUp",
+  "variant": "full",
+  "kind": "sentence",
+  "screen": "main page (index.html)",
+  "en": "Up ₹{delta} this week, and ₹{avgDelta} above the usual price for the month.",
+  "which": "old",
+  "hi": "इस हफ्ते ₹{delta} की बढ़ोतरी हुई है, और यह महीने के सामान्य दाम से ₹{avgDelta} ज़्यादा है।",
+  "id": "u0199"
+ },
+ {
+  "key": "freshnessEstimatedAria",
+  "variant": "full",
+  "kind": "aria-label",
+  "screen": "main page (index.html)",
+  "en": "Estimated shop price, official rate updated {rel}",
+  "which": "new",
+  "hi": "दुकान के भाव का अनुमान, आधिकारिक भाव {rel} अपडेट हुआ",
+  "id": "u0200"
+ },
+ {
+  "key": "calcRowGoldValue",
+  "variant": "full",
+  "kind": "short label",
+  "screen": "main page (index.html)",
+  "en": "Gold value",
+  "which": "new",
+  "hi": "सोने की कीमत",
+  "id": "u0201"
+ },
+ {
+  "key": "cmpHeadingFloor",
+  "variant": "full",
+  "kind": "label",
+  "screen": "main page (index.html)",
+  "en": "30-day floor",
+  "which": "old",
+  "hi": "30-दिन का न्यूनतम",
+  "id": "u0202"
+ },
+ {
+  "key": "verdictLeadHigh",
+  "variant": "full",
+  "kind": "sentence",
+  "screen": "main page (index.html)",
+  "en": "You're paying a bit more than usual this month",
+  "which": "new",
+  "hi": "इस महीने आप आम भाव से थोड़ा ज़्यादा दे रहे हैं",
+  "id": "u0203"
+ },
+ {
+  "key": "readNoTrendMid",
+  "variant": "full",
+  "kind": "sentence",
+  "screen": "main page (index.html)",
+  "en": "Today's price is sitting around its usual range this month.",
+  "which": "new",
+  "hi": "आज का भाव इस महीने के आम भाव के आसपास है।",
+  "id": "u0204"
+ },
+ {
+  "key": "offlineNoData",
+  "variant": "full",
+  "kind": "banner/message",
+  "screen": "main page (index.html)",
+  "en": "You're offline — no prices loaded yet",
+  "which": "new",
+  "hi": "आप ऑफ़लाइन हैं — अभी तक कोई भाव लोड नहीं हुआ",
+  "id": "u0205"
+ },
+ {
+  "key": "methDirectionOnSub",
+  "variant": "full",
+  "kind": "sentence",
+  "screen": "how-we-know.html",
+  "en": "right {right} of {n} times, against {upRight} for \"gold usually rises\"",
+  "which": "new",
+  "hi": "{n} में से {right} बार सही, जबकि \"सोना आम तौर पर बढ़ता है\" वाला अंदाज़ा {upRight} बार सही रहा",
+  "id": "u0206"
+ },
+ {
+  "key": "methHowWeCallTrendIntro",
+  "variant": "full",
+  "kind": "sentence",
+  "screen": "how-we-know.html",
+  "en": "We only call a trend when two separate checks agree — that way one odd reading doesn't set off a false alarm.",
+  "which": "new",
+  "hi": "हम ट्रेंड तभी बताते हैं जब दो अलग जांच एक-दूसरे से मेल खाएं — इससे एक अजीब भाव की वजह से झूठा संकेत नहीं मिलता।",
+  "id": "u0207"
+ },
+ {
+  "key": "band90dSuffAppend",
+  "variant": "full",
+  "kind": "sentence",
+  "screen": "main page (index.html)",
+  "en": " (Only {n} distinct days in this window so far — treat as indicative.)",
+  "which": "new",
+  "hi": " (इस दायरे में अभी सिर्फ़ {n} अलग-अलग दिन हैं — इसे मोटा अंदाज़ा ही समझें।)",
+  "id": "u0208"
+ },
+ {
+  "key": "heroAriaLabel",
+  "variant": "full",
+  "kind": "aria-label",
+  "screen": "main page (index.html)",
+  "en": "Current 22K gold price and buying verdict",
+  "which": "old",
+  "hi": "मौजूदा 22K सोने की कीमत और ख़रीद का सुझाव",
+  "id": "u0209"
+ },
+ {
+  "key": "trendDirDown",
+  "variant": "full",
+  "kind": "short label",
+  "screen": "main page (index.html)",
+  "en": "down",
+  "which": "new",
+  "hi": "गिरावट",
+  "id": "u0210"
+ },
+ {
+  "key": "driverStateUnavailable",
+  "variant": "full",
+  "kind": "sentence",
+  "screen": "main page (index.html)",
+  "en": "Global prices and the rupee have been quiet this month — local demand data isn't available to check separately.",
+  "which": "new",
+  "hi": "इस महीने दुनिया के भाव और रुपया शांत रहे हैं — यहां की मांग का डेटा अलग से जांचने के लिए उपलब्ध नहीं है।",
+  "id": "u0211"
+ },
+ {
+  "key": "verdictReasonUnknown",
+  "variant": "full",
+  "kind": "sentence",
+  "screen": "main page (index.html)",
+  "en": "Check back once we've collected a few more readings.",
+  "which": "new",
+  "hi": "कुछ और भाव दर्ज होने के बाद फिर देखें।",
+  "id": "u0212"
+ },
+ {
+  "key": "verdictLeadBelowMid",
+  "variant": "full",
+  "kind": "sentence",
+  "screen": "main page (index.html)",
+  "en": "You're paying a little less than usual this month",
+  "which": "old",
+  "hi": "आप इस महीने सामान्य से थोड़ी कम कीमत दे रहे हैं",
+  "id": "u0213"
+ },
+ {
+  "key": "avgLabel7d",
+  "variant": "full",
+  "kind": "label",
+  "screen": "main page (index.html)",
+  "en": "7d avg",
+  "which": "new",
+  "hi": "7 दिन का औसत",
+  "id": "u0214"
+ },
+ {
+  "key": "driverPartRupeeFlat",
+  "variant": "full",
+  "kind": "short label",
+  "screen": "main page (index.html)",
+  "en": "the rupee was roughly flat",
+  "which": "new",
+  "hi": "रुपया लगभग टिका रहा",
+  "id": "u0215"
+ },
+ {
+  "key": "methRulePricier",
+  "variant": "full",
+  "kind": "sentence",
+  "screen": "how-we-know.html",
+  "en": "<strong>Getting pricier:</strong> price has climbed more than ₹100 in a week, and the estimate or monthly average agrees",
+  "which": "old",
+  "hi": "<strong>कीमत बढ़ना:</strong> एक हफ्ते में कीमत ₹100 से ज़्यादा बढ़ी हो, और अनुमान या महीने का औसत भी इससे सहमत हो",
+  "id": "u0216"
+ },
+ {
+  "key": "methNextFixP",
+  "variant": "full",
+  "kind": "sentence",
+  "screen": "how-we-know.html",
+  "en": "India's official rate is set once each afternoon, but gold and the rupee keep trading worldwide until late at night. We use that later move to estimate the next rate. Tested on {n} days it had not seen: off by ₹{modelMae}/g on average, against ₹{flatMae}/g for \"no change\" ({pct}% closer). For a week or more ahead, \"no change\" is still the best we have.",
+  "which": "new",
+  "hi": "भारत का आधिकारिक भाव रोज़ दोपहर में एक बार तय होता है, पर सोना और रुपया देर रात तक दुनिया भर में बिकते-ख़रीदे जाते हैं। उस बाद की चाल से हम अगले भाव का अनुमान लगाते हैं। ऐसे {n} दिनों पर जांचा जो इसने पहले नहीं देखे थे: औसतन ₹{modelMae}/ग्राम का फ़र्क़, जबकि \"कोई बदलाव नहीं\" मानने पर ₹{flatMae}/ग्राम ({pct}% बेहतर)। एक हफ़्ते या उससे आगे के लिए \"कोई बदलाव नहीं\" ही अभी हमारे पास सबसे अच्छा अंदाज़ा है।",
+  "id": "u0217"
+ },
+ {
+  "key": "band90dMoreExpensive",
+  "variant": "full",
+  "kind": "sentence",
+  "screen": "main page (index.html)",
+  "en": "Over the past 90 days: more expensive than {pct}% of the {n} days.",
+  "which": "new",
+  "hi": "पिछले 90 दिनों में: {n} दिनों में से {pct}% दिनों के भाव से महंगा।",
+  "id": "u0218"
+ },
+ {
+  "key": "verdictReasonUp",
+  "variant": "avgDelta=null",
+  "kind": "sentence",
+  "screen": "main page (index.html)",
+  "en": "Up ₹{delta} this week.",
+  "which": "old",
+  "hi": "इस हफ्ते ₹{delta} की बढ़ोतरी हुई है।",
+  "id": "u0219"
+ },
+ {
+  "key": "calcRateUsedIbja",
+  "variant": "full",
+  "kind": "sentence",
+  "screen": "main page (index.html)",
+  "en": "Rate used: 22K ₹{rate}/g — our estimate",
+  "which": "new",
+  "hi": "इस्तेमाल हुआ भाव: 22 कैरेट ₹{rate}/ग्राम — हमारा अनुमान",
+  "id": "u0220"
+ },
+ {
+  "key": "cmpLowestPrice",
+  "variant": "full",
+  "kind": "label",
+  "screen": "main page (index.html)",
+  "en": "this month's lowest price",
+  "which": "new",
+  "hi": "इस महीने का सबसे कम भाव",
+  "id": "u0221"
+ },
+ {
+  "key": "langToggleAriaLabel",
+  "variant": "full",
+  "kind": "aria-label",
+  "screen": "main page (index.html)",
+  "en": "Switch language",
+  "which": "new",
+  "hi": "भाषा बदलें",
+  "id": "u0222"
+ },
+ {
+  "key": "verdictLeadHigh",
+  "variant": "full",
+  "kind": "sentence",
+  "screen": "main page (index.html)",
+  "en": "You're paying a bit more than usual this month",
+  "which": "old",
+  "hi": "आप इस महीने सामान्य से थोड़ी ज़्यादा कीमत दे रहे हैं",
+  "id": "u0223"
+ },
+ {
+  "key": "methDirectionOnNote",
+  "variant": "full",
+  "kind": "sentence",
+  "screen": "how-we-know.html",
+  "en": "We show whether the next move is more likely up or down, with its chance, only while it keeps beating \"gold usually rises\" on days it has not seen — we re-check this every few hours. It is not advice to buy or sell; that would need a much stronger record.",
+  "which": "new",
+  "hi": "हम यह तभी दिखाते हैं कि अगली चाल ऊपर की ओर होने की संभावना ज़्यादा है या नीचे की, और कितनी — जब तक यह नए दिनों पर \"सोना आम तौर पर बढ़ता है\" वाले अंदाज़े से बेहतर रहता है; इसे हर कुछ घंटों में दोबारा जांचा जाता है। यह ख़रीदने या बेचने की सलाह नहीं है; उसके लिए इससे कहीं मज़बूत रिकॉर्ड चाहिए।",
+  "id": "u0224"
+ },
+ {
+  "key": "methRuleCheaper",
+  "variant": "full",
+  "kind": "sentence",
+  "screen": "how-we-know.html",
+  "en": "<strong>Getting cheaper:</strong> price has dropped more than ₹100 in a week, and the estimate or monthly average agrees",
+  "which": "new",
+  "hi": "<strong>सस्ता हो रहा है:</strong> एक हफ़्ते में भाव ₹100 से ज़्यादा गिरा हो, और अनुमान या महीने का औसत भी यही दिखाए",
+  "id": "u0225"
+ },
+ {
+  "key": "calcRowGst",
+  "variant": "full",
+  "kind": "short label",
+  "screen": "main page (index.html)",
+  "en": "GST ({pct}%)",
+  "which": "new",
+  "hi": "GST ({pct}%)",
+  "id": "u0226"
+ },
+ {
+  "key": "methRangeStrFallback",
+  "variant": "full",
+  "kind": "short label",
+  "screen": "how-we-know.html",
+  "en": "the current range",
+  "which": "old",
+  "hi": "मौजूदा रेंज",
+  "id": "u0227"
+ },
+ {
+  "key": "calcPresetCustomHint",
+  "variant": "full",
+  "kind": "sentence",
+  "screen": "main page (index.html)",
+  "en": "Know your jeweller's exact rate? Enter it below.",
+  "which": "new",
+  "hi": "अपने ज्वेलर का मेकिंग चार्ज पता है? नीचे डालें।",
+  "id": "u0228"
+ },
+ {
+  "key": "driverMechanismWeaker",
+  "variant": "full",
+  "kind": "sentence",
+  "screen": "main page (index.html)",
+  "en": " a weaker rupee makes imported gold pricier in India.",
+  "which": "old",
+  "hi": " कमज़ोर रुपये से भारत में आयातित सोना महंगा हो जाता है।",
+  "id": "u0229"
+ },
+ {
+  "key": "firstVisitText",
+  "variant": "p90Hours=null",
+  "kind": "sentence",
+  "screen": "main page (index.html)",
+  "en": "The price of 22K gold in shops, checked about every {hours}h (worst case recently ~{hours}h, as of {asOf}) and compared with Tanishq's listed rate when possible. We always say plainly when a price is an estimate.",
+  "which": "new",
+  "hi": "दुकानों में 22 कैरेट सोने का भाव, लगभग हर {hours} घंटे में जांचा जाता है (हाल में ज़्यादा से ज़्यादा ~{hours} घंटे की देरी; {asOf} तक) और जब हो सके तब Tanishq के बताए भाव से मिलाया जाता है। भाव अनुमानित हो तो हम साफ़ बता देते हैं।",
+  "id": "u0230"
+ },
+ {
+  "key": "methAccurateP3",
+  "variant": "full",
+  "kind": "sentence",
+  "screen": "how-we-know.html",
+  "en": "Our AI was right {dirAllDisplay} of the time across {n} test windows. But gold has historically risen far more often than it's fallen — so just guessing \"up\" every time would score close to as well, with no model needed. We don't claim any edge here. The Getting cheaper/pricier labels on the main page come from the recent 7-day trend, not from this AI.",
+  "which": "old",
+  "hi": "हमारा AI {n} टेस्ट विंडो में {dirAllDisplay} बार सही निकला। लेकिन सोना इतिहास में गिरने से कहीं ज़्यादा बार बढ़ा है — तो बिना किसी मॉडल के हर बार सिर्फ़ \"बढ़ेगा\" कहने पर भी लगभग उतना ही सही होगा। हम यहां कोई बढ़त होने का दावा नहीं करते। मुख्य पेज पर दिए गए \"कीमत घटना/बढ़ना\" वाले लेबल हाल के 7-दिन के ट्रेंड से आते हैं, इस AI से नहीं।",
+  "id": "u0231"
+ },
+ {
+  "key": "methAccuracyDrift",
+  "variant": "full",
+  "kind": "short label",
+  "screen": "how-we-know.html",
+  "en": "Accuracy drift",
+  "which": "old",
+  "hi": "सटीकता में बदलाव",
+  "id": "u0232"
+ },
+ {
+  "key": "weeklyMovementNote",
+  "variant": "full",
+  "kind": "sentence",
+  "screen": "main page (index.html)",
+  "en": "Looking back, gold has typically moved about ₹{amount} from one week to the next (based on {pairs} weekly comparisons).",
+  "which": "old",
+  "hi": "पीछे देखने पर, सोने की कीमत आमतौर पर एक हफ्ते में करीब ₹{amount} तक बदलती रही है ({pairs} हफ्तों की तुलना पर आधारित)।",
+  "id": "u0233"
+ },
+ {
+  "key": "whenToday",
+  "variant": "full",
+  "kind": "short label",
+  "screen": "main page (index.html)",
+  "en": "{time} today",
+  "which": "new",
+  "hi": "आज {time}",
+  "id": "u0234"
+ },
+ {
+  "key": "footerBody",
+  "variant": "full",
+  "kind": "sentence",
+  "screen": "main page (index.html)",
+  "en": "Prices come from <a href=\"https://ibjarates.com/\" target=\"_blank\" rel=\"noopener\">IBJA</a>, India's official daily gold rate, adjusted to match shop prices, and from <a href=\"https://www.tanishq.co.in/gold-rate.html?lang=en_IN\" target=\"_blank\" rel=\"noopener\">Tanishq</a>'s listed rate when available.",
+  "which": "old",
+  "hi": "कीमतें <a href=\"https://ibjarates.com/\" target=\"_blank\" rel=\"noopener\">IBJA</a> (भारत की आधिकारिक रोज़ाना सोने की दर) से ली जाती हैं और दुकान की कीमतों से मिलाई जाती हैं; जब उपलब्ध हो तो <a href=\"https://www.tanishq.co.in/gold-rate.html?lang=en_IN\" target=\"_blank\" rel=\"noopener\">Tanishq</a> की सूचीबद्ध दर भी देखी जाती है।",
+  "id": "u0235"
+ },
+ {
+  "key": "relHoursAgo",
+  "variant": "full",
+  "kind": "label",
+  "screen": "main page (index.html)",
+  "en": "{n}h ago",
+  "which": "new",
+  "hi": "{n} घंटे पहले",
+  "id": "u0236"
+ },
+ {
+  "key": "navHistory",
+  "variant": "full",
+  "kind": "label",
+  "screen": "main page (index.html)",
+  "en": "History",
+  "which": "old",
+  "hi": "इतिहास",
+  "id": "u0237"
+ },
+ {
+  "key": "supportCheapNotAtSupport",
+  "variant": "full",
+  "kind": "sentence",
+  "screen": "main page (index.html)",
+  "en": "Cheap, but still {pct}% above its lowest price in 3 months (₹{low}).",
+  "which": "new",
+  "hi": "सस्ता है, पर 3 महीने के सबसे कम भाव (₹{low}) से अभी {pct}% ऊपर है।",
+  "id": "u0238"
+ },
+ {
+  "key": "trendFlat",
+  "variant": "full",
+  "kind": "sentence",
+  "screen": "main page (index.html)",
+  "en": "Prices have been steady this month, close to their usual trend.",
+  "which": "new",
+  "hi": "इस महीने भाव टिका रहा है, अपने आम ट्रेंड के क़रीब।",
+  "id": "u0239"
+ },
+ {
+  "key": "verdictHeadlineDown",
+  "variant": "full",
+  "kind": "sentence",
+  "screen": "main page (index.html)",
+  "en": "Getting cheaper this week",
+  "which": "old",
+  "hi": "इस हफ्ते कीमत घट रही है",
+  "id": "u0240"
+ },
+ {
+  "key": "hwkBackLink",
+  "variant": "full",
+  "kind": "short label",
+  "screen": "how-we-know.html",
+  "en": "← Back to Gold Rate Today",
+  "which": "new",
+  "hi": "← आज सोने का भाव पर वापस",
+  "id": "u0241"
+ },
+ {
+  "key": "supportSuffAppend",
+  "variant": "full",
+  "kind": "sentence",
+  "screen": "main page (index.html)",
+  "en": " (Only {n} distinct days in this 90-day window so far — treat as indicative.)",
+  "which": "new",
+  "hi": " (90 दिनों के इस दायरे में अभी सिर्फ़ {n} अलग-अलग दिन हैं — इसे मोटा अंदाज़ा ही समझें।)",
+  "id": "u0242"
+ },
+ {
+  "key": "pageDescription",
+  "variant": "full",
+  "kind": "sentence",
+  "screen": "main page (index.html)",
+  "en": "22K gold rate — closely matched to real shop prices, compared with Tanishq's listed rate when reachable. See if today's price is high or low compared to recent weeks.",
+  "which": "new",
+  "hi": "22 कैरेट सोने का भाव — असली दुकान के भाव के क़रीब, और जब मिल सके तब Tanishq के बताए भाव से मिलाकर। देखें कि आज का भाव पिछले कुछ हफ़्तों के मुक़ाबले ऊपर है या नीचे।",
+  "id": "u0243"
+ },
+ {
+  "key": "firstVisitText",
+  "variant": "p90Hours=null",
+  "kind": "sentence",
+  "screen": "main page (index.html)",
+  "en": "The price of 22K gold in shops, checked about every {hours}h (worst case recently ~{hours}h, as of {asOf}) and compared with Tanishq's listed rate when possible. We always say plainly when a price is an estimate.",
+  "which": "old",
+  "hi": "22K सोने की खुदरा कीमत, लगभग हर {hours} घंटे में जांची जाती है (हाल में सबसे धीमी बार ~{hours} घंटे तक; {asOf} तक) और जब संभव हो तो Tanishq की सूचीबद्ध दर से मिलाकर देखी जाती है। कीमत अनुमानित हो तो हम साफ़ बता देते हैं।",
+  "id": "u0244"
+ },
+ {
+  "key": "chartTooltipLabeled",
+  "variant": "full",
+  "kind": "short label",
+  "screen": "main page (index.html)",
+  "en": "{label}: ₹{value}",
+  "which": "new",
+  "hi": "{label}: ₹{value}",
+  "id": "u0245"
+ },
+ {
+  "key": "readCheapStillFalling",
+  "variant": "full",
+  "kind": "sentence",
+  "screen": "main page (index.html)",
+  "en": "Today's price is on the low side for the month, and it's still sliding — it hasn't leveled off yet.",
+  "which": "new",
+  "hi": "आज का भाव इस महीने के हिसाब से कम है, और अभी भी गिर रहा है — अभी टिका नहीं है।",
+  "id": "u0246"
+ },
+ {
+  "key": "directionUp",
+  "variant": "full",
+  "kind": "sentence",
+  "screen": "main page (index.html)",
+  "en": "More likely to go <strong>up</strong> than down next (about {pct}% chance).",
+  "which": "old",
+  "hi": "अगली बार कीमत के <strong>बढ़ने</strong> की संभावना ज़्यादा है (लगभग {pct}%)।",
+  "id": "u0247"
+ },
+ {
+  "key": "methAccurateP1Strong",
+  "variant": "full",
+  "kind": "sentence",
+  "screen": "how-we-know.html",
+  "en": "We assume tomorrow's price is about the same as today's",
+  "which": "new",
+  "hi": "हम मानते हैं कि कल का भाव आज जैसा ही रहेगा",
+  "id": "u0248"
+ },
+ {
+  "key": "historyRangeCard",
+  "variant": "full",
+  "kind": "short label",
+  "screen": "main page (index.html)",
+  "en": "{from}–{to}",
+  "which": "new",
+  "hi": "{from}–{to}",
+  "id": "u0249"
+ },
+ {
+  "key": "calcOtherKaratsRange",
+  "variant": "full",
+  "kind": "sentence",
+  "screen": "main page (index.html)",
+  "en": "24 KT: {k24} · 18 KT: {k18}",
+  "which": "old",
+  "hi": "24 KT: {k24} · 18 KT: {k18}",
+  "id": "u0250"
+ },
+ {
+  "key": "driverStateUnavailable",
+  "variant": "full",
+  "kind": "sentence",
+  "screen": "main page (index.html)",
+  "en": "Global prices and the rupee have been quiet this month — local demand data isn't available to check separately.",
+  "which": "old",
+  "hi": "इस महीने वैश्विक कीमतें और रुपया स्थिर रहे हैं — स्थानीय मांग का डेटा अलग से जांचने के लिए उपलब्ध नहीं है।",
+  "id": "u0251"
+ },
+ {
+  "key": "avgLabel7d",
+  "variant": "full",
+  "kind": "label",
+  "screen": "main page (index.html)",
+  "en": "7d avg",
+  "which": "old",
+  "hi": "7-दिन औसत",
+  "id": "u0252"
+ },
+ {
+  "key": "comparisonAriaLabel",
+  "variant": "full",
+  "kind": "aria-label",
+  "screen": "main page (index.html)",
+  "en": "How today's price compares to recent averages",
+  "which": "old",
+  "hi": "आज की कीमत हाल के औसत से कैसे मिलती है",
+  "id": "u0253"
+ },
+ {
+  "key": "errCouldntLoadPrice",
+  "variant": "full",
+  "kind": "banner/message",
+  "screen": "main page (index.html)",
+  "en": "Couldn't load the latest price. Check your connection and try again.",
+  "which": "old",
+  "hi": "ताज़ी कीमत लोड नहीं हो पाई। अपना कनेक्शन जांचें और फिर कोशिश करें।",
+  "id": "u0254"
+ },
+ {
+  "key": "bannerIbjaCarryForward",
+  "variant": "full",
+  "kind": "banner/message",
+  "screen": "main page (index.html)",
+  "en": "This is an estimated price, from India's official gold rate on {weekday} (the latest one) — we couldn't check it against the shop rate just now.",
+  "which": "old",
+  "hi": "यह एक अनुमानित कीमत है, {weekday} की भारत की आधिकारिक सोने की दर से (सबसे हाल की) — हम इसे अभी दुकान की कीमत से जांच नहीं पाए।",
+  "id": "u0255"
+ },
+ {
+  "key": "driverGoldDown",
+  "variant": "full",
+  "kind": "sentence",
+  "screen": "main page (index.html)",
+  "en": "Global gold prices are down about {pct}% this month.",
+  "which": "old",
+  "hi": "वैश्विक सोने की कीमतें इस महीने करीब {pct}% गिरी हैं।",
+  "id": "u0256"
+ },
+ {
+  "key": "supportCheapAtSupport",
+  "variant": "full",
+  "kind": "sentence",
+  "screen": "main page (index.html)",
+  "en": "Cheap, and sitting right at its 3-month low (₹{low}) — it hasn't dropped below this in {n} days.",
+  "which": "new",
+  "hi": "सस्ता है, और 3 महीने के सबसे कम भाव (₹{low}) पर है — पिछले {n} दिनों में यह इससे नीचे नहीं गया।",
+  "id": "u0257"
+ },
+ {
+  "key": "methAccurateP4Strong",
+  "variant": "full",
+  "kind": "short label",
+  "screen": "how-we-know.html",
+  "en": "What would change this",
+  "which": "old",
+  "hi": "यह कब बदलेगा",
+  "id": "u0258"
+ },
+ {
+  "key": "bottomNavAriaLabel",
+  "variant": "full",
+  "kind": "aria-label",
+  "screen": "main page (index.html)",
+  "en": "Page sections",
+  "which": "old",
+  "hi": "पेज के सेक्शन",
+  "id": "u0259"
+ },
+ {
+  "key": "methNextDayRangeHeading",
+  "variant": "full",
+  "kind": "heading",
+  "screen": "how-we-know.html",
+  "en": "Next trading day range",
+  "which": "new",
+  "hi": "अगले कारोबारी दिन की रेंज",
+  "id": "u0260"
+ },
+ {
+  "key": "methDirectionOnSub",
+  "variant": "full",
+  "kind": "sentence",
+  "screen": "how-we-know.html",
+  "en": "right {right} of {n} times, against {upRight} for \"gold usually rises\"",
+  "which": "old",
+  "hi": "{n} में से {right} बार सही, जबकि \"सोना आमतौर पर बढ़ता है\" {upRight} बार",
+  "id": "u0261"
+ },
+ {
+  "key": "hwkHeading",
+  "variant": "full",
+  "kind": "heading",
+  "screen": "how-we-know.html",
+  "en": "How we know",
+  "which": "new",
+  "hi": "हम कैसे जानते हैं",
+  "id": "u0262"
+ },
+ {
+  "key": "shareTextWithPrice",
+  "variant": "full",
+  "kind": "sentence",
+  "screen": "main page (index.html)",
+  "en": "Today's 22K gold price is ₹{price}/gram — check Gold Tracker",
+  "which": "new",
+  "hi": "आज 22 कैरेट सोने का भाव ₹{price}/ग्राम है — Gold Tracker पर देखें",
+  "id": "u0263"
+ },
+ {
+  "key": "chartNoteEstimate",
+  "variant": "full",
+  "kind": "sentence",
+  "screen": "main page (index.html)",
+  "en": "Estimate from India's official daily gold rate",
+  "which": "old",
+  "hi": "भारत की आधिकारिक रोज़ाना सोने की दर से अनुमान",
+  "id": "u0264"
+ },
+ {
+  "key": "driverPartGoldAdded",
+  "variant": "full",
+  "kind": "sentence",
+  "screen": "main page (index.html)",
+  "en": "global gold prices added about ₹{gold}",
+  "which": "old",
+  "hi": "वैश्विक सोने की कीमतों ने करीब ₹{gold} जोड़े",
+  "id": "u0265"
+ },
+ {
+  "key": "errCouldntLoadMethodology",
+  "variant": "full",
+  "kind": "banner/message",
+  "screen": "main page (index.html)",
+  "en": "This part didn't load — usually because the internet connection dropped. Today's gold price above is not affected. Please refresh the page to try again.",
+  "which": "new",
+  "hi": "यह हिस्सा लोड नहीं हुआ — आम तौर पर इंटरनेट कट जाने से ऐसा होता है। ऊपर दिया आज का सोने का भाव इससे प्रभावित नहीं है। दोबारा कोशिश करने के लिए पेज रीफ़्रेश करें।",
+  "id": "u0266"
+ },
+ {
+  "key": "trackRecordAriaLabel",
+  "variant": "full",
+  "kind": "aria-label",
+  "screen": "main page (index.html)",
+  "en": "Our past estimates and the actual gold prices",
+  "which": "old",
+  "hi": "हमारे पुराने अनुमान और असली कीमतें",
+  "id": "u0267"
+ },
+ {
+  "key": "historyRange",
+  "variant": "full",
+  "kind": "short label",
+  "screen": "main page (index.html)",
+  "en": "{from} – {to}",
+  "which": "new",
+  "hi": "{from} – {to}",
+  "id": "u0268"
+ },
+ {
+  "key": "driverRupeeStrengthened",
+  "variant": "full",
+  "kind": "sentence",
+  "screen": "main page (index.html)",
+  "en": "The rupee has strengthened about {pct}% this month —{mechanism}",
+  "which": "new",
+  "hi": "रुपया इस महीने करीब {pct}% मज़बूत हुआ है —{mechanism}",
+  "id": "u0269"
+ },
+ {
+  "key": "methRecentError",
+  "variant": "full",
+  "kind": "short label",
+  "screen": "how-we-know.html",
+  "en": "Recent avg. error",
+  "which": "old",
+  "hi": "हाल की औसत त्रुटि",
+  "id": "u0270"
+ },
+ {
+  "key": "karatAriaLabel",
+  "variant": "full",
+  "kind": "aria-label",
+  "screen": "main page (index.html)",
+  "en": "24K and 18K gold prices",
+  "which": "old",
+  "hi": "24K और 18K सोने की कीमतें",
+  "id": "u0271"
+ },
+ {
+  "key": "pv2MarkupSuffixHigher",
+  "variant": "full",
+  "kind": "short label",
+  "screen": "main page (index.html)",
+  "en": " — higher than usual.",
+  "which": "old",
+  "hi": " — सामान्य से ज़्यादा।",
+  "id": "u0272"
+ },
+ {
+  "key": "trendFlat",
+  "variant": "full",
+  "kind": "sentence",
+  "screen": "main page (index.html)",
+  "en": "Prices have been steady this month, close to their usual trend.",
+  "which": "old",
+  "hi": "इस महीने कीमत स्थिर रही है, अपने सामान्य ट्रेंड के करीब।",
+  "id": "u0273"
+ },
+ {
+  "key": "pv2SourceConfirmed",
+  "variant": "full",
+  "kind": "sentence",
+  "screen": "main page (index.html)",
+  "en": "Confirmed live at Tanishq.",
+  "which": "new",
+  "hi": "Tanishq पर अभी का पक्का भाव।",
+  "id": "u0274"
+ },
+ {
+  "key": "accSummaryDirectionOff",
+  "variant": "full",
+  "kind": "sentence",
+  "screen": "main page (index.html)",
+  "en": "We don't guess whether prices will rise or fall next.",
+  "which": "new",
+  "hi": "हम यह अंदाज़ा नहीं लगाते कि भाव आगे बढ़ेगा या घटेगा।",
+  "id": "u0275"
+ },
+ {
+  "key": "reliabilityUnknown",
+  "variant": "full",
+  "kind": "sentence",
+  "screen": "main page (index.html)",
+  "en": "Still building a track record for this — check back later.",
+  "which": "new",
+  "hi": "अभी इसका रिकॉर्ड बन रहा है — कुछ समय बाद फिर देखें।",
+  "id": "u0276"
+ },
+ {
+  "key": "volNoteElevated",
+  "variant": "full",
+  "kind": "sentence",
+  "screen": "main page (index.html)",
+  "en": "Gold has been swinging more than usual lately. Over the past month, its price typically went up or down by about ₹{z} in 5 days.",
+  "which": "new",
+  "hi": "हाल में सोने के भाव में आम से ज़्यादा उतार-चढ़ाव रहा है। पिछले एक महीने में 5 दिनों के अंदर भाव आम तौर पर करीब ₹{z} ऊपर या नीचे गया।",
+  "id": "u0277"
+ },
+ {
+  "key": "fusionSourceFallback",
+  "variant": "full",
+  "kind": "short label",
+  "screen": "main page (index.html)",
+  "en": "retail consensus",
+  "which": "new",
+  "hi": "दुकानों का औसत भाव",
+  "id": "u0278"
+ },
+ {
+  "key": "chart22kTooltip",
+  "variant": "full",
+  "kind": "short label",
+  "screen": "main page (index.html)",
+  "en": "{k}K: ₹{value}",
+  "which": "old",
+  "hi": "{k}K: ₹{value}",
+  "id": "u0279"
+ },
+ {
+  "key": "verdictReasonFlatMoved",
+  "variant": "full",
+  "kind": "sentence",
+  "screen": "main page (index.html)",
+  "en": "Prices {dirWord} ₹{amount} this week — that's normal movement, nothing to react to.",
+  "which": "old",
+  "hi": "इस हफ्ते कीमत {dirWord} है, ₹{amount} तक — यह सामान्य उतार-चढ़ाव है, घबराने की बात नहीं।",
+  "id": "u0280"
+ },
+ {
+  "key": "pv2ConfidenceNote",
+  "variant": "full",
+  "kind": "sentence",
+  "screen": "main page (index.html)",
+  "en": "We show a range, not just one number, because gold prices move day to day. That range has held the real price {frac} so far.",
+  "which": "new",
+  "hi": "हम सिर्फ़ एक आंकड़ा नहीं, एक रेंज दिखाते हैं, क्योंकि सोने का भाव रोज़ बदलता है। असली भाव अब तक {frac} इस रेंज के अंदर रहा है।",
+  "id": "u0281"
+ },
+ {
+  "key": "trendRising",
+  "variant": "full",
+  "kind": "sentence",
+  "screen": "main page (index.html)",
+  "en": "Prices have been climbing about ₹{slope} a day this month.",
+  "which": "old",
+  "hi": "इस महीने कीमत में रोज़ाना करीब ₹{slope} की बढ़ोतरी हो रही है।",
+  "id": "u0282"
+ },
+ {
+  "key": "driverGoldDown",
+  "variant": "full",
+  "kind": "sentence",
+  "screen": "main page (index.html)",
+  "en": "Global gold prices are down about {pct}% this month.",
+  "which": "new",
+  "hi": "दुनिया के बाज़ार में सोने का भाव इस महीने करीब {pct}% घटा है।",
+  "id": "u0283"
+ },
+ {
+  "key": "historyAriaLabel",
+  "variant": "full",
+  "kind": "aria-label",
+  "screen": "main page (index.html)",
+  "en": "Price history",
+  "which": "old",
+  "hi": "कीमत का इतिहास",
+  "id": "u0284"
+ },
+ {
+  "key": "verdictReasonDown",
+  "variant": "avgDelta=null",
+  "kind": "sentence",
+  "screen": "main page (index.html)",
+  "en": "Down ₹{delta} this week.",
+  "which": "new",
+  "hi": "इस हफ़्ते भाव ₹{delta} घटा है।",
+  "id": "u0285"
+ },
+ {
+  "key": "freshnessAwaiting",
+  "variant": "full",
+  "kind": "short label",
+  "screen": "main page (index.html)",
+  "en": "Awaiting first reading",
+  "which": "old",
+  "hi": "पहली रीडिंग का इंतज़ार",
+  "id": "u0286"
+ },
+ {
+  "key": "calcRateUsedTanishq",
+  "variant": "full",
+  "kind": "sentence",
+  "screen": "main page (index.html)",
+  "en": "Rate used: 22K ₹{rate}/g — Tanishq's listed rate on {date}",
+  "which": "new",
+  "hi": "इस्तेमाल हुआ भाव: 22 कैरेट ₹{rate}/ग्राम — {date} को Tanishq का बताया भाव",
+  "id": "u0287"
+ },
+ {
+  "key": "volNoteNormal",
+  "variant": "full",
+  "kind": "sentence",
+  "screen": "main page (index.html)",
+  "en": "Over the past month, gold's price typically went up or down by about ₹{z} in 5 days — about as much as usual.",
+  "which": "old",
+  "hi": "पिछले एक महीने में सोने की कीमत 5 दिनों में आमतौर पर करीब ₹{z} ऊपर या नीचे गई — यह सामान्य के आसपास है।",
+  "id": "u0288"
+ },
+ {
+  "key": "methTargetLine",
+  "variant": "full",
+  "kind": "short label",
+  "screen": "how-we-know.html",
+  "en": "Target: {date}",
+  "which": "old",
+  "hi": "लक्ष्य समय: {date}",
+  "id": "u0289"
+ },
+ {
+  "key": "freshnessConsensus",
+  "variant": "full",
+  "kind": "sentence",
+  "screen": "main page (index.html)",
+  "en": "Consensus estimate · {rel}",
+  "which": "old",
+  "hi": "औसत दर का अनुमान · {rel}",
+  "id": "u0290"
+ },
+ {
+  "key": "verdictHeadlineUp",
+  "variant": "full",
+  "kind": "sentence",
+  "screen": "main page (index.html)",
+  "en": "Getting pricier this week",
+  "which": "old",
+  "hi": "इस हफ्ते कीमत बढ़ रही है",
+  "id": "u0291"
+ },
+ {
+  "key": "pv2RangeOddsClause",
+  "variant": "full",
+  "kind": "sentence",
+  "screen": "main page (index.html)",
+  "en": " A range like this has held {frac} in the past.",
+  "which": "new",
+  "hi": " ऐसी रेंज पहले {frac} सही साबित हुई है।",
+  "id": "u0292"
+ },
+ {
+  "key": "driverPartRupeeAdded",
+  "variant": "full",
+  "kind": "sentence",
+  "screen": "main page (index.html)",
+  "en": "a weaker rupee added about ₹{inr}",
+  "which": "old",
+  "hi": "कमज़ोर रुपये ने करीब ₹{inr} जोड़े",
+  "id": "u0293"
+ },
+ {
+  "key": "readHighSlowed",
+  "variant": "full",
+  "kind": "sentence",
+  "screen": "main page (index.html)",
+  "en": "Today's price is on the higher side for the month, though the climb has slowed.",
+  "which": "old",
+  "hi": "आज की कीमत इस महीने के हिसाब से ज़्यादा है, हालांकि बढ़त धीमी पड़ गई है।",
+  "id": "u0294"
+ },
+ {
+  "key": "pv2SourceConsensus",
+  "variant": "full",
+  "kind": "sentence",
+  "screen": "main page (index.html)",
+  "en": "An estimate from other jewellers' rates — Tanishq and the official rate were both unavailable just now.",
+  "which": "new",
+  "hi": "दूसरे ज्वेलर्स के भाव से बना अनुमान — अभी Tanishq और आधिकारिक भाव, दोनों नहीं मिल पाए।",
+  "id": "u0295"
+ },
+ {
+  "key": "readCheapSteadying",
+  "variant": "full",
+  "kind": "sentence",
+  "screen": "main page (index.html)",
+  "en": "Today's price is on the low side for the month, and it looks like it's steadying after a recent dip.",
+  "which": "new",
+  "hi": "आज का भाव इस महीने के हिसाब से कम है, और हाल की गिरावट के बाद अब टिकता दिख रहा है।",
+  "id": "u0296"
+ },
+ {
+  "key": "accSummaryDirectionOff",
+  "variant": "full",
+  "kind": "sentence",
+  "screen": "main page (index.html)",
+  "en": "We don't guess whether prices will rise or fall next.",
+  "which": "old",
+  "hi": "हम यह अंदाज़ा नहीं लगाते कि कीमत आगे बढ़ेगी या घटेगी।",
+  "id": "u0297"
+ },
+ {
+  "key": "historyNoReadings",
+  "variant": "full",
+  "kind": "sentence",
+  "screen": "main page (index.html)",
+  "en": "No readings yet.",
+  "which": "new",
+  "hi": "अभी तक कोई भाव दर्ज नहीं हुआ।",
+  "id": "u0298"
+ },
+ {
+  "key": "readFlat",
+  "variant": "full",
+  "kind": "sentence",
+  "screen": "main page (index.html)",
+  "en": "Prices have been fairly steady this month — today sits around the usual range.",
+  "which": "old",
+  "hi": "इस महीने कीमत काफ़ी स्थिर रही है — आज की कीमत सामान्य दायरे में है।",
+  "id": "u0299"
+ },
+ {
+  "key": "pv2RangeSevenDay",
+  "variant": "full",
+  "kind": "sentence",
+  "screen": "main page (index.html)",
+  "en": "Over the next 7 days: likely between ₹{low} and ₹{high}.",
+  "which": "new",
+  "hi": "अगले 7 दिनों में: ₹{low} से ₹{high} के बीच रहने की संभावना है।",
+  "id": "u0300"
+ },
+ {
+  "key": "volNoteCalm",
+  "variant": "full",
+  "kind": "sentence",
+  "screen": "main page (index.html)",
+  "en": "Gold has been steadier than usual lately. Over the past month, its price typically went up or down by about ₹{z} in 5 days.",
+  "which": "new",
+  "hi": "हाल में सोने का भाव आम से ज़्यादा टिका रहा है। पिछले एक महीने में 5 दिनों के अंदर भाव आम तौर पर करीब ₹{z} ऊपर या नीचे गया।",
+  "id": "u0301"
+ },
+ {
+  "key": "pv2Job3Heading",
+  "variant": "full",
+  "kind": "heading",
+  "screen": "main page (index.html)",
+  "en": "3. How much could it move?",
+  "which": "old",
+  "hi": "3. कीमत कितनी बदल सकती है?",
+  "id": "u0302"
+ },
+ {
+  "key": "heroLabelEstimateFusion",
+  "variant": "full",
+  "kind": "sentence",
+  "screen": "main page (index.html)",
+  "en": "Our estimate for today, based on other jewellers' listed rates",
+  "which": "new",
+  "hi": "आज के लिए हमारा अनुमान, दूसरे ज्वेलर्स के बताए भाव पर आधारित",
+  "id": "u0303"
+ },
+ {
+  "key": "calcEmptyState",
+  "variant": "full",
+  "kind": "sentence",
+  "screen": "main page (index.html)",
+  "en": "Enter a quantity to see the cost.",
+  "which": "new",
+  "hi": "ख़र्च देखने के लिए ग्राम में मात्रा डालें।",
+  "id": "u0304"
+ },
+ {
+  "key": "methAccurateP1",
+  "variant": "full",
+  "kind": "sentence",
+  "screen": "how-we-know.html",
+  "en": "Gold prices are hard to predict even a few days out — every model we tried did worse than simply guessing \"no change.\" Tested over {n} time windows from 2022–2026:<br>&bull; Guessing \"no change\" was off by ₹{naiveMae}/g on average<br>{chronosBullet}So \"no change\" is what we go with.",
+  "which": "old",
+  "hi": "सोने की कीमत का कुछ दिन आगे का अंदाज़ा लगाना भी मुश्किल है — हमने जितने भी मॉडल आज़माए, वे सब सिर्फ़ \"कोई बदलाव नहीं\" मान लेने से भी कमज़ोर निकले। 2022–2026 के बीच {n} टाइम विंडो पर टेस्ट किया गया:<br>&bull; \"कोई बदलाव नहीं\" मानने पर औसतन ₹{naiveMae}/ग्राम का फ़र्क़ आया<br>{chronosBullet}इसलिए हम \"कोई बदलाव नहीं\" वाला अंदाज़ा ही इस्तेमाल करते हैं।",
+  "id": "u0305"
+ },
+ {
+  "key": "karatSub18",
+  "variant": "full",
+  "kind": "label",
+  "screen": "main page (index.html)",
+  "en": "per gram · 75% pure",
+  "which": "new",
+  "hi": "प्रति ग्राम · 75% शुद्ध",
+  "id": "u0306"
+ },
+ {
+  "key": "refreshLabel",
+  "variant": "full",
+  "kind": "label",
+  "screen": "main page (index.html)",
+  "en": "Refresh data",
+  "which": "new",
+  "hi": "डेटा रीफ़्रेश करें",
+  "id": "u0307"
+ },
+ {
+  "key": "whenYesterday",
+  "variant": "full",
+  "kind": "short label",
+  "screen": "main page (index.html)",
+  "en": "{time} yesterday",
+  "which": "new",
+  "hi": "बीते कल {time}",
+  "id": "u0308"
+ },
+ {
+  "key": "methBandAccuracyText",
+  "variant": "full",
+  "kind": "sentence",
+  "screen": "how-we-know.html",
+  "en": "The real price has landed within about ₹{amount}/gram of the displayed estimate {pct}% of the time so far (n={n} weeks measured, as of {asOf}).",
+  "which": "new",
+  "hi": "असली भाव अब तक {pct}% बार दिखाए गए अनुमान से करीब ₹{amount}/ग्राम के अंदर रहा है ({n} हफ़्ते नापे गए, {asOf} तक)।",
+  "id": "u0309"
+ },
+ {
+  "key": "methHowWeCallTrendIntro",
+  "variant": "full",
+  "kind": "sentence",
+  "screen": "how-we-know.html",
+  "en": "We only call a trend when two separate checks agree — that way one odd reading doesn't set off a false alarm.",
+  "which": "old",
+  "hi": "हम ट्रेंड तभी बताते हैं जब दो अलग जांच एक-दूसरे से सहमत हों — इससे एक अजीब रीडिंग की वजह से झूठी चेतावनी नहीं मिलती।",
+  "id": "u0310"
+ },
+ {
+  "key": "pv2ConfidenceNote",
+  "variant": "full",
+  "kind": "sentence",
+  "screen": "main page (index.html)",
+  "en": "We show a range, not just one number, because gold prices move day to day. That range has held the real price {frac} so far.",
+  "which": "old",
+  "hi": "हम सिर्फ़ एक आंकड़ा नहीं, एक दायरा दिखाते हैं, क्योंकि सोने की कीमत रोज़ बदलती है। अब तक असली कीमत इस दायरे के भीतर {frac} रही है।",
+  "id": "u0311"
+ },
+ {
+  "key": "supportLine2Below",
+  "variant": "full",
+  "kind": "sentence",
+  "screen": "main page (index.html)",
+  "en": "₹{amount} below the usual price for the month.",
+  "which": "new",
+  "hi": "इस महीने के आम भाव से ₹{amount} कम।",
+  "id": "u0312"
+ },
+ {
+  "key": "cmpHeadingFloor",
+  "variant": "full",
+  "kind": "label",
+  "screen": "main page (index.html)",
+  "en": "30-day floor",
+  "which": "new",
+  "hi": "30 दिन का सबसे कम",
+  "id": "u0313"
+ },
+ {
+  "key": "freshnessNotUpdatingAria",
+  "variant": "full",
+  "kind": "aria-label",
+  "screen": "main page (index.html)",
+  "en": "Not updating, last updated {rel}",
+  "which": "new",
+  "hi": "अपडेट नहीं हो रहा, आख़िरी बार {rel} अपडेट हुआ",
+  "id": "u0314"
+ },
+ {
+  "key": "directionUp",
+  "variant": "full",
+  "kind": "sentence",
+  "screen": "main page (index.html)",
+  "en": "More likely to go <strong>up</strong> than down next (about {pct}% chance).",
+  "which": "new",
+  "hi": "अगली बार भाव के <strong>बढ़ने</strong> की संभावना ज़्यादा है (लगभग {pct}%)।",
+  "id": "u0315"
+ },
+ {
+  "key": "sparklineRangeEstimate",
+  "variant": "full",
+  "kind": "short label",
+  "screen": "main page (index.html)",
+  "en": "₹{min} – ₹{max} (estimate)",
+  "which": "new",
+  "hi": "₹{min} – ₹{max} (अनुमान)",
+  "id": "u0316"
+ },
+ {
+  "key": "goodPriceHeading",
+  "variant": "full",
+  "kind": "heading",
+  "screen": "main page (index.html)",
+  "en": "Is today a good time to buy?",
+  "which": "new",
+  "hi": "क्या आज ख़रीदने का सही समय है?",
+  "id": "u0317"
+ },
+ {
+  "key": "heroLabelTanishqLive",
+  "variant": "full",
+  "kind": "sentence",
+  "screen": "main page (index.html)",
+  "en": "Tanishq's listed 22K rate, checked {when}",
+  "which": "new",
+  "hi": "Tanishq की साइट पर दिया 22 कैरेट भाव, {when} देखा गया",
+  "id": "u0318"
+ },
+ {
+  "key": "hwkEmpty",
+  "variant": "full",
+  "kind": "sentence",
+  "screen": "how-we-know.html",
+  "en": "Not enough data yet to show this — check back once a few more readings have come in.",
+  "which": "new",
+  "hi": "यह दिखाने के लिए अभी काफ़ी डेटा नहीं है — कुछ और भाव दर्ज होने के बाद फिर देखें।",
+  "id": "u0319"
+ },
+ {
+  "key": "supportLine2Above",
+  "variant": "full",
+  "kind": "sentence",
+  "screen": "main page (index.html)",
+  "en": "₹{amount} above the usual price for the month.",
+  "which": "old",
+  "hi": "इस महीने की सामान्य कीमत से ₹{amount} ज़्यादा।",
+  "id": "u0320"
+ },
+ {
+  "key": "pv2Job3Heading",
+  "variant": "full",
+  "kind": "heading",
+  "screen": "main page (index.html)",
+  "en": "3. How much could it move?",
+  "which": "new",
+  "hi": "3. भाव कितना बदल सकता है?",
+  "id": "u0321"
+ },
+ {
+  "key": "heroLabelEstimateIbja",
+  "variant": "full",
+  "kind": "sentence",
+  "screen": "main page (index.html)",
+  "en": "Our estimate for today, from India's official gold rate",
+  "which": "old",
+  "hi": "आज के लिए हमारा अनुमान, भारत की आधिकारिक सोने की दर से",
+  "id": "u0322"
+ },
+ {
+  "key": "chartAriaLabel",
+  "variant": "full",
+  "kind": "aria-label",
+  "screen": "main page (index.html)",
+  "en": "Price trend chart",
+  "which": "new",
+  "hi": "भाव का ट्रेंड चार्ट",
+  "id": "u0323"
+ },
+ {
+  "key": "methHowAccurateHeading",
+  "variant": "full",
+  "kind": "heading",
+  "screen": "how-we-know.html",
+  "en": "How accurate is this?",
+  "which": "new",
+  "hi": "यह कितना सही है?",
+  "id": "u0324"
+ },
+ {
+  "key": "calcPresetCoins",
+  "variant": "full",
+  "kind": "short label",
+  "screen": "main page (index.html)",
+  "en": "Coins & plain chains",
+  "which": "new",
+  "hi": "सिक्के और सादी चेन",
+  "id": "u0325"
+ },
+ {
+  "key": "pv2SourceEstimate",
+  "variant": "full",
+  "kind": "sentence",
+  "screen": "main page (index.html)",
+  "en": "An estimate, matched to India's official gold rate and Tanishq's own numbers.",
+  "which": "old",
+  "hi": "एक अनुमान, जो भारत की आधिकारिक सोने की दर और Tanishq के आंकड़ों से मिलाकर बनाया गया है।",
+  "id": "u0326"
+ },
+ {
+  "key": "verdictLeadCheap",
+  "variant": "full",
+  "kind": "sentence",
+  "screen": "main page (index.html)",
+  "en": "You're paying less than usual this month",
+  "which": "new",
+  "hi": "इस महीने आप आम भाव से कम दे रहे हैं",
+  "id": "u0327"
+ },
+ {
+  "key": "sparklineLabelLeft",
+  "variant": "full",
+  "kind": "short label",
+  "screen": "main page (index.html)",
+  "en": "7 days",
+  "which": "new",
+  "hi": "7 दिन",
+  "id": "u0328"
+ },
+ {
+  "key": "calcHeading",
+  "variant": "full",
+  "kind": "heading",
+  "screen": "main page (index.html)",
+  "en": "How much would you pay?",
+  "which": "new",
+  "hi": "आपको कितना पड़ेगा?",
+  "id": "u0329"
+ },
+ {
+  "key": "offlineWithTime",
+  "variant": "full",
+  "kind": "banner/message",
+  "screen": "main page (index.html)",
+  "en": "You're offline — showing prices from {rel}",
+  "which": "old",
+  "hi": "आप ऑफ़लाइन हैं — {rel} की कीमत दिखाई जा रही है",
+  "id": "u0330"
+ },
+ {
+  "key": "methAccurateP4",
+  "variant": "full",
+  "kind": "sentence",
+  "screen": "how-we-know.html",
+  "en": "If gold started moving up and down more evenly (not mostly up), or if a model started reliably beating the \"gold usually rises\" guess in testing, we'd turn this back on. We'll update this section if that happens.",
+  "which": "old",
+  "hi": "अगर सोना ऊपर-नीचे ज़्यादा बराबर मात्रा में होने लगे (सिर्फ़ बढ़ने के बजाय), या कोई मॉडल टेस्टिंग में \"सोना आमतौर पर बढ़ता है\" वाले अंदाज़े को लगातार मात देने लगे, तो हम इसे फिर से चालू करेंगे। ऐसा होने पर हम इस सेक्शन को अपडेट करेंगे।",
+  "id": "u0331"
+ },
+ {
+  "key": "pv2Job4Heading",
+  "variant": "full",
+  "kind": "heading",
+  "screen": "main page (index.html)",
+  "en": "4. Is it a good price?",
+  "which": "new",
+  "hi": "4. क्या यह अच्छा भाव है?",
+  "id": "u0332"
+ },
+ {
+  "key": "verdictLeadMid",
+  "variant": "full",
+  "kind": "sentence",
+  "screen": "main page (index.html)",
+  "en": "You're paying about the usual amount this month",
+  "which": "new",
+  "hi": "इस महीने आप लगभग आम भाव ही दे रहे हैं",
+  "id": "u0333"
+ },
+ {
+  "key": "methNextFixStrong",
+  "variant": "full",
+  "kind": "sentence",
+  "screen": "how-we-know.html",
+  "en": "For the next official rate, we use world prices",
+  "which": "new",
+  "hi": "अगले आधिकारिक भाव के लिए हम दुनिया के भाव देखते हैं",
+  "id": "u0334"
+ },
+ {
+  "key": "cmpLowestPrice",
+  "variant": "full",
+  "kind": "label",
+  "screen": "main page (index.html)",
+  "en": "this month's lowest price",
+  "which": "old",
+  "hi": "इस महीने की सबसे कम कीमत",
+  "id": "u0335"
+ },
+ {
+  "key": "methAccurateP2CoveragePct",
+  "variant": "full",
+  "kind": "sentence",
+  "screen": "how-we-know.html",
+  "en": "{pct}% of the time (checked {n} times so far)",
+  "which": "new",
+  "hi": "{pct}% बार सही रही है (अब तक {n} बार जांची गई)",
+  "id": "u0336"
+ },
+ {
+  "key": "calcAriaLabel",
+  "variant": "full",
+  "kind": "aria-label",
+  "screen": "main page (index.html)",
+  "en": "Purchase cost calculator",
+  "which": "old",
+  "hi": "ख़रीद लागत कैलकुलेटर",
+  "id": "u0337"
+ },
+ {
+  "key": "calcAriaLabel",
+  "variant": "full",
+  "kind": "aria-label",
+  "screen": "main page (index.html)",
+  "en": "Purchase cost calculator",
+  "which": "new",
+  "hi": "ख़रीद का ख़र्च निकालने वाला कैलकुलेटर",
+  "id": "u0338"
+ },
+ {
+  "key": "driverHeading",
+  "variant": "full",
+  "kind": "heading",
+  "screen": "main page (index.html)",
+  "en": "What's moving the price?",
+  "which": "old",
+  "hi": "कीमत को क्या हिला रहा है?",
+  "id": "u0339"
+ },
+ {
+  "key": "verdictLeadBelowMid",
+  "variant": "full",
+  "kind": "sentence",
+  "screen": "main page (index.html)",
+  "en": "You're paying a little less than usual this month",
+  "which": "new",
+  "hi": "इस महीने आप आम भाव से थोड़ा कम दे रहे हैं",
+  "id": "u0340"
+ },
+ {
+  "key": "methDirectionOnNote",
+  "variant": "full",
+  "kind": "sentence",
+  "screen": "how-we-know.html",
+  "en": "We show whether the next move is more likely up or down, with its chance, only while it keeps beating \"gold usually rises\" on days it has not seen — we re-check this every few hours. It is not advice to buy or sell; that would need a much stronger record.",
+  "which": "old",
+  "hi": "हम यह तभी दिखाते हैं कि अगला बदलाव ऊपर या नीचे होने की संभावना ज़्यादा है, जब तक यह नए दिनों पर \"सोना आमतौर पर बढ़ता है\" से बेहतर रहता है — इसे हर कुछ घंटों में दोबारा जांचा जाता है। यह ख़रीदने या बेचने की सलाह नहीं है।",
+  "id": "u0341"
+ },
+ {
+  "key": "trackRecordCaption",
+  "variant": "full",
+  "kind": "sentence",
+  "screen": "main page (index.html)",
+  "en": "Our estimate (dashed) and the actual price (gold), recent weeks",
+  "which": "old",
+  "hi": "हमारा अनुमान (डैश वाली लाइन) और असली कीमत (सुनहरी), हाल के हफ्ते",
+  "id": "u0342"
+ },
+ {
+  "key": "directionTrackRecord",
+  "variant": "full",
+  "kind": "sentence",
+  "screen": "main page (index.html)",
+  "en": "Our up-or-down call has been right {right} of the last {n} times.",
+  "which": "new",
+  "hi": "ऊपर-नीचे का हमारा अंदाज़ा पिछली {n} बार में से {right} बार सही रहा है।",
+  "id": "u0343"
+ },
+ {
+  "key": "calibrationConfidenceAppend",
+  "variant": "coverage=null",
+  "kind": "sentence",
+  "screen": "main page (index.html)",
+  "en": " Based on past comparisons, the real price lands within about ₹{amount}/gram of this estimate.",
+  "which": "new",
+  "hi": " पिछली तुलनाओं के हिसाब से असली भाव इस अनुमान से आम तौर पर करीब ₹{amount}/ग्राम के अंदर ही रहता है।",
+  "id": "u0344"
+ },
+ {
+  "key": "bannerIbjaCarryForward",
+  "variant": "full",
+  "kind": "banner/message",
+  "screen": "main page (index.html)",
+  "en": "This is an estimated price, from India's official gold rate on {weekday} (the latest one) — we couldn't check it against the shop rate just now.",
+  "which": "new",
+  "hi": "यह एक अनुमानित भाव है, जो {weekday} के भारत के आधिकारिक भाव (सबसे ताज़ा) से निकाला गया है — हम इसे अभी दुकान के भाव से मिला नहीं पाए।",
+  "id": "u0345"
+ },
+ {
+  "key": "methAssumeNoChange",
+  "variant": "full",
+  "kind": "short label",
+  "screen": "how-we-know.html",
+  "en": "Assume no change",
+  "which": "new",
+  "hi": "कोई बदलाव न मानना",
+  "id": "u0346"
+ },
+ {
+  "key": "pv2MarkupLine",
+  "variant": "full",
+  "kind": "sentence",
+  "screen": "main page (index.html)",
+  "en": "Tanishq is charging about {pct}% above the market rate today{suffix}",
+  "which": "new",
+  "hi": "Tanishq का आज का भाव बाज़ार भाव से करीब {pct}% ज़्यादा है{suffix}",
+  "id": "u0347"
+ },
+ {
+  "key": "chartCanvasAriaLabel",
+  "variant": "full",
+  "kind": "aria-label",
+  "screen": "main page (index.html)",
+  "en": "Gold price trend chart",
+  "which": "old",
+  "hi": "सोने की कीमत का ट्रेंड चार्ट",
+  "id": "u0348"
+ },
+ {
+  "key": "driverMechanismWeaker",
+  "variant": "full",
+  "kind": "sentence",
+  "screen": "main page (index.html)",
+  "en": " a weaker rupee makes imported gold pricier in India.",
+  "which": "new",
+  "hi": " कमज़ोर रुपये से बाहर से आया सोना भारत में महंगा पड़ता है।",
+  "id": "u0349"
+ },
+ {
+  "key": "heroTanishqLastRate",
+  "variant": "full",
+  "kind": "sentence",
+  "screen": "main page (index.html)",
+  "en": "Tanishq's listed rate, checked {when}: ₹{price}",
+  "which": "new",
+  "hi": "Tanishq का बताया भाव, {when} देखा गया: ₹{price}",
+  "id": "u0350"
+ },
+ {
+  "key": "ratioRetrain",
+  "variant": "full",
+  "kind": "short label",
+  "screen": "how-we-know.html",
+  "en": "retraining recommended",
+  "which": "new",
+  "hi": "दोबारा ट्रेनिंग की सलाह",
+  "id": "u0351"
+ },
+ {
+  "key": "trackRecordHeading",
+  "variant": "full",
+  "kind": "heading",
+  "screen": "main page (index.html)",
+  "en": "How close our estimates have been",
+  "which": "new",
+  "hi": "हमारे अनुमान असली भाव के कितने क़रीब रहे",
+  "id": "u0352"
+ },
+ {
+  "key": "reliabilityDriftRetrain",
+  "variant": "full",
+  "kind": "sentence",
+  "screen": "main page (index.html)",
+  "en": "Our recent estimates have been further off than usual — we're adjusting them.",
+  "which": "old",
+  "hi": "हमारे हाल के अनुमान सामान्य से ज़्यादा दूर रहे हैं — हम उन्हें ठीक कर रहे हैं।",
+  "id": "u0353"
+ },
+ {
+  "key": "historyShowMore",
+  "variant": "full",
+  "kind": "short label",
+  "screen": "main page (index.html)",
+  "en": "Show {n} more",
+  "which": "new",
+  "hi": "{n} और दिखाएं",
+  "id": "u0354"
+ },
+ {
+  "key": "noChangeLabel",
+  "variant": "full",
+  "kind": "label",
+  "screen": "main page (index.html)",
+  "en": "no change",
+  "which": "new",
+  "hi": "कोई बदलाव नहीं",
+  "id": "u0355"
+ },
+ {
+  "key": "firstVisitText",
+  "variant": "full",
+  "kind": "sentence",
+  "screen": "main page (index.html)",
+  "en": "The price of 22K gold in shops, checked about every {hours}h (worst case recently ~{p90Hours}h, as of {asOf}) and compared with Tanishq's listed rate when possible. We always say plainly when a price is an estimate.",
+  "which": "old",
+  "hi": "22K सोने की खुदरा कीमत, लगभग हर {hours} घंटे में जांची जाती है (हाल में सबसे धीमी बार ~{p90Hours} घंटे तक; {asOf} तक) और जब संभव हो तो Tanishq की सूचीबद्ध दर से मिलाकर देखी जाती है। कीमत अनुमानित हो तो हम साफ़ बता देते हैं।",
+  "id": "u0356"
+ },
+ {
+  "key": "cmpHeading7d",
+  "variant": "full",
+  "kind": "label",
+  "screen": "main page (index.html)",
+  "en": "vs 7-day avg",
+  "which": "new",
+  "hi": "7 दिन के औसत से",
+  "id": "u0357"
+ },
+ {
+  "key": "hwkPageTitle",
+  "variant": "full",
+  "kind": "sentence",
+  "screen": "how-we-know.html",
+  "en": "How we know · Gold Rate Today",
+  "which": "new",
+  "hi": "हम कैसे जानते हैं · आज सोने का भाव",
+  "id": "u0358"
+ },
+ {
+  "key": "methHistoricalError",
+  "variant": "full",
+  "kind": "short label",
+  "screen": "how-we-know.html",
+  "en": "Historical avg. error",
+  "which": "new",
+  "hi": "पहले की औसत ग़लती",
+  "id": "u0359"
+ },
+ {
+  "key": "methNextFixModel",
+  "variant": "full",
+  "kind": "sentence",
+  "screen": "how-we-know.html",
+  "en": "World prices after the official rate",
+  "which": "old",
+  "hi": "आधिकारिक दर के बाद की दुनिया की कीमतें",
+  "id": "u0360"
+ },
+ {
+  "key": "cmpHeading30d",
+  "variant": "full",
+  "kind": "label",
+  "screen": "main page (index.html)",
+  "en": "vs 30-day avg",
+  "which": "new",
+  "hi": "30 दिन के औसत से",
+  "id": "u0361"
+ },
+ {
+  "key": "pageDescription",
+  "variant": "full",
+  "kind": "sentence",
+  "screen": "main page (index.html)",
+  "en": "22K gold rate — closely matched to real shop prices, compared with Tanishq's listed rate when reachable. See if today's price is high or low compared to recent weeks.",
+  "which": "old",
+  "hi": "22K सोने का भाव — IBJA पर आधारित अनुमान, जब संभव हो तो Tanishq की सूचीबद्ध दर से मिलाकर देखा गया। देखें कि आज की कीमत हाल के हफ्तों के मुक़ाबले ज़्यादा है या कम।",
+  "id": "u0362"
+ },
+ {
+  "key": "pv2MarkupSuffixLower",
+  "variant": "full",
+  "kind": "short label",
+  "screen": "main page (index.html)",
+  "en": " — lower than usual.",
+  "which": "old",
+  "hi": " — सामान्य से कम।",
+  "id": "u0363"
+ },
+ {
+  "key": "methEstimateLabel",
+  "variant": "full",
+  "kind": "label",
+  "screen": "how-we-know.html",
+  "en": "22K estimate",
+  "which": "new",
+  "hi": "22 कैरेट अनुमान",
+  "id": "u0364"
+ },
+ {
+  "key": "historyCardsAriaLabel",
+  "variant": "full",
+  "kind": "aria-label",
+  "screen": "main page (index.html)",
+  "en": "Price readings",
+  "which": "new",
+  "hi": "दर्ज किए गए भाव",
+  "id": "u0365"
+ },
+ {
+  "key": "pv2RangeOddsClause",
+  "variant": "full",
+  "kind": "sentence",
+  "screen": "main page (index.html)",
+  "en": " A range like this has held {frac} in the past.",
+  "which": "old",
+  "hi": " ऐसा दायरा पहले {frac} सही साबित हुआ है।",
+  "id": "u0366"
+ },
+ {
+  "key": "bannerStaleConfirmed",
+  "variant": "full",
+  "kind": "banner/message",
+  "screen": "main page (index.html)",
+  "en": "We couldn't get a live price update — this is the last confirmed price, from {rel}.",
+  "which": "old",
+  "hi": "हमें ताज़ी कीमत नहीं मिल पाई — यह आख़िरी पुष्टि की गई कीमत है, {rel}।",
+  "id": "u0367"
+ },
+ {
+  "key": "pwaHelpPanelText",
+  "variant": "full",
+  "kind": "sentence",
+  "screen": "main page (index.html)",
+  "en": "iOS limits how often home-screen apps update in the background. Tap <strong>↻</strong> to get the latest prices. If prices remain stuck, open the App Switcher (swipe up and hold), then swipe this app away and reopen from Home Screen — that forces a full reload.",
+  "which": "new",
+  "hi": "iOS बैकग्राउंड में होम-स्क्रीन ऐप्स को कम बार अपडेट करता है। ताज़ा भाव के लिए <strong>↻</strong> दबाएं। अगर भाव अटका रहे, तो ऐप स्विचर खोलें (ऊपर स्वाइप करके रोके रखें), इस ऐप को स्वाइप करके हटा दें और होम स्क्रीन से दोबारा खोलें — इससे पूरा रीलोड हो जाएगा।",
+  "id": "u0368"
+ },
+ {
+  "key": "avgLabel30d",
+  "variant": "full",
+  "kind": "label",
+  "screen": "main page (index.html)",
+  "en": "30d avg",
+  "which": "old",
+  "hi": "30-दिन औसत",
+  "id": "u0369"
+ },
+ {
+  "key": "methTargetLine",
+  "variant": "full",
+  "kind": "short label",
+  "screen": "how-we-know.html",
+  "en": "Target: {date}",
+  "which": "new",
+  "hi": "किस दिन के लिए: {date}",
+  "id": "u0370"
+ },
+ {
+  "key": "thDelta",
+  "variant": "full",
+  "kind": "label",
+  "screen": "main page (index.html)",
+  "en": "Change",
+  "which": "new",
+  "hi": "बदलाव",
+  "id": "u0371"
+ },
+ {
+  "key": "hwkLoading",
+  "variant": "full",
+  "kind": "short label",
+  "screen": "how-we-know.html",
+  "en": "Loading…",
+  "which": "new",
+  "hi": "लोड हो रहा है…",
+  "id": "u0372"
+ },
+ {
+  "key": "calcPresetCustom",
+  "variant": "full",
+  "kind": "short label",
+  "screen": "main page (index.html)",
+  "en": "Custom",
+  "which": "new",
+  "hi": "अपना",
+  "id": "u0373"
+ },
+ {
+  "key": "supportLine2At",
+  "variant": "full",
+  "kind": "sentence",
+  "screen": "main page (index.html)",
+  "en": "Right at the usual price for the month.",
+  "which": "old",
+  "hi": "इस महीने की सामान्य कीमत के बराबर।",
+  "id": "u0374"
+ },
+ {
+  "key": "band90dCheaper",
+  "variant": "full",
+  "kind": "sentence",
+  "screen": "main page (index.html)",
+  "en": "Over the past 90 days: cheaper than {pct}% of the {n} days.",
+  "which": "new",
+  "hi": "पिछले 90 दिनों में: {n} दिनों में से {pct}% दिनों के भाव से सस्ता।",
+  "id": "u0375"
+ },
+ {
+  "key": "methNextFixHoldSub",
+  "variant": "full",
+  "kind": "sentence",
+  "screen": "how-we-know.html",
+  "en": "our best guess until the world prices after it are in",
+  "which": "new",
+  "hi": "इसके बाद के दुनिया के भाव आने तक यही हमारा सबसे अच्छा अंदाज़ा है",
+  "id": "u0376"
+ },
+ {
+  "key": "errPriceUnavailable",
+  "variant": "full",
+  "kind": "banner/message",
+  "screen": "main page (index.html)",
+  "en": "Price unavailable",
+  "which": "old",
+  "hi": "कीमत उपलब्ध नहीं",
+  "id": "u0377"
+ },
+ {
+  "key": "methNextFixHold",
+  "variant": "full",
+  "kind": "short label",
+  "screen": "how-we-know.html",
+  "en": "Latest official rate",
+  "which": "old",
+  "hi": "सबसे ताज़ा आधिकारिक दर",
+  "id": "u0378"
+ },
+ {
+  "key": "heroTanishqLastRate",
+  "variant": "full",
+  "kind": "sentence",
+  "screen": "main page (index.html)",
+  "en": "Tanishq's listed rate, checked {when}: ₹{price}",
+  "which": "old",
+  "hi": "Tanishq की सूचीबद्ध दर, {when} जांची गई: ₹{price}",
+  "id": "u0379"
+ },
+ {
+  "key": "methRangeSub",
+  "variant": "n=null",
+  "kind": "sentence",
+  "screen": "how-we-know.html",
+  "en": "Range: ₹{low} – ₹{high}",
+  "which": "new",
+  "hi": "रेंज: ₹{low} – ₹{high}",
+  "id": "u0380"
+ },
+ {
+  "key": "methAccurateP2CoveragePct",
+  "variant": "full",
+  "kind": "sentence",
+  "screen": "how-we-know.html",
+  "en": "{pct}% of the time (checked {n} times so far)",
+  "which": "old",
+  "hi": "अब तक {pct}% बार सही रही है (अब तक {n} बार जांची गई)",
+  "id": "u0381"
+ },
+ {
+  "key": "chart22kTooltip",
+  "variant": "full",
+  "kind": "short label",
+  "screen": "main page (index.html)",
+  "en": "{k}K: ₹{value}",
+  "which": "new",
+  "hi": "{k} कैरेट: ₹{value}",
+  "id": "u0382"
+ },
+ {
+  "key": "rangeToggleAriaLabel",
+  "variant": "full",
+  "kind": "aria-label",
+  "screen": "main page (index.html)",
+  "en": "Chart time range",
+  "which": "new",
+  "hi": "चार्ट की अवधि",
+  "id": "u0383"
+ },
+ {
+  "key": "sparklineAria",
+  "variant": "full",
+  "kind": "aria-label",
+  "screen": "main page (index.html)",
+  "en": "7-day price trend: {dir} ₹{delta}",
+  "which": "old",
+  "hi": "7-दिन का कीमत ट्रेंड: {dir} ₹{delta}",
+  "id": "u0384"
+ },
+ {
+  "key": "methCoversMoves",
+  "variant": "full",
+  "kind": "sentence",
+  "screen": "how-we-know.html",
+  "en": "Covers most of the usual day-to-day moves",
+  "which": "old",
+  "hi": "ज़्यादातर सामान्य रोज़ाना घट-बढ़ को कवर करता है",
+  "id": "u0385"
+ },
+ {
+  "key": "accSummaryLinkText",
+  "variant": "full",
+  "kind": "short label",
+  "screen": "main page (index.html)",
+  "en": "See the numbers behind this →",
+  "which": "new",
+  "hi": "इनके पीछे के आंकड़े देखें →",
+  "id": "u0386"
+ },
+ {
+  "key": "methRuleSteady",
+  "variant": "full",
+  "kind": "sentence",
+  "screen": "how-we-know.html",
+  "en": "<strong>Steady:</strong> everything else — movement within ₹100 either way, or the two checks disagree",
+  "which": "old",
+  "hi": "<strong>स्थिर:</strong> बाकी सभी मामले — ₹100 के अंदर घट-बढ़, या दोनों जांच आपस में असहमत हों",
+  "id": "u0387"
+ },
+ {
+  "key": "pv2WeeklyHigher",
+  "variant": "full",
+  "kind": "sentence",
+  "screen": "main page (index.html)",
+  "en": "Higher than on {count} of the last {n} weeks.",
+  "which": "new",
+  "hi": "पिछले {n} हफ़्तों में से {count} हफ़्तों से ज़्यादा।",
+  "id": "u0388"
+ },
+ {
+  "key": "fusionSourceFallback",
+  "variant": "full",
+  "kind": "short label",
+  "screen": "main page (index.html)",
+  "en": "retail consensus",
+  "which": "old",
+  "hi": "बाज़ार की औसत दर",
+  "id": "u0389"
+ },
+ {
+  "key": "pv2WaitOrBuyHeading",
+  "variant": "full",
+  "kind": "heading",
+  "screen": "main page (index.html)",
+  "en": "Should I wait or buy now?",
+  "which": "old",
+  "hi": "क्या इंतज़ार करूं या अभी खरीदूं?",
+  "id": "u0390"
+ },
+ {
+  "key": "hwkError",
+  "variant": "full",
+  "kind": "sentence",
+  "screen": "how-we-know.html",
+  "en": "This page didn't load — usually because the internet connection dropped. The gold price on the main page is not affected. Please refresh this page to try again.",
+  "which": "new",
+  "hi": "यह पेज लोड नहीं हुआ — आम तौर पर इंटरनेट कट जाने से ऐसा होता है। मुख्य पेज पर सोने का भाव इससे प्रभावित नहीं है। दोबारा कोशिश करने के लिए यह पेज रीफ़्रेश करें।",
+  "id": "u0391"
+ },
+ {
+  "key": "calcDisclaimer",
+  "variant": "full",
+  "kind": "sentence",
+  "screen": "main page (index.html)",
+  "en": "Your jeweller's bill will differ — hallmarking (HUID) fees, stones, wastage and store pricing aren't included.",
+  "which": "new",
+  "hi": "आपके ज्वेलर का बिल अलग होगा — हॉलमार्किंग (HUID) शुल्क, नग, वेस्टेज और दुकान का अपना भाव इसमें शामिल नहीं हैं।",
+  "id": "u0392"
+ },
+ {
+  "key": "methBandAccuracyHeading",
+  "variant": "full",
+  "kind": "heading",
+  "screen": "how-we-know.html",
+  "en": "Band accuracy (measured)",
+  "which": "new",
+  "hi": "रेंज कितनी सही रही (नापा हुआ)",
+  "id": "u0393"
+ },
+ {
+  "key": "directionTrackRecord",
+  "variant": "full",
+  "kind": "sentence",
+  "screen": "main page (index.html)",
+  "en": "Our up-or-down call has been right {right} of the last {n} times.",
+  "which": "old",
+  "hi": "ऊपर-नीचे का हमारा अनुमान पिछली {n} में से {right} बार सही रहा है।",
+  "id": "u0394"
+ },
+ {
+  "key": "heroLabelTanishqLastChecked",
+  "variant": "full",
+  "kind": "sentence",
+  "screen": "main page (index.html)",
+  "en": "Tanishq's listed 22K rate, last checked {when}",
+  "which": "old",
+  "hi": "Tanishq की सूचीबद्ध 22K दर, आख़िरी बार {when} जांची गई",
+  "id": "u0395"
+ },
+ {
+  "key": "calcCustomValueLabel",
+  "variant": "full",
+  "kind": "label",
+  "screen": "main page (index.html)",
+  "en": "Making charge",
+  "which": "new",
+  "hi": "मेकिंग चार्ज",
+  "id": "u0396"
+ },
+ {
+  "key": "calcMakingModePerGram",
+  "variant": "full",
+  "kind": "short label",
+  "screen": "main page (index.html)",
+  "en": "₹ per gram",
+  "which": "new",
+  "hi": "₹ प्रति ग्राम",
+  "id": "u0397"
+ },
+ {
+  "key": "driverPartRupeeTookOff",
+  "variant": "full",
+  "kind": "sentence",
+  "screen": "main page (index.html)",
+  "en": "a stronger rupee took off about ₹{inr}",
+  "which": "new",
+  "hi": "मज़बूत रुपये से करीब ₹{inr} घटे",
+  "id": "u0398"
+ },
+ {
+  "key": "trendCheapSteadying",
+  "variant": "full",
+  "kind": "sentence",
+  "screen": "main page (index.html)",
+  "en": "Cheap, and steadying — despite the recent dip, today's price is back close to its usual trend for the month.",
+  "which": "new",
+  "hi": "सस्ता है, और टिक रहा है — हाल की गिरावट के बावजूद आज का भाव इस महीने के आम ट्रेंड के फिर से क़रीब आ गया है।",
+  "id": "u0399"
+ },
+ {
+  "key": "methNextDayExplainer",
+  "variant": "full",
+  "kind": "sentence",
+  "screen": "how-we-know.html",
+  "en": "This is just for the next reading, not several days out — based on how much the price has typically moved by the next check over our last 30 test runs. (The \"moves about ±₹X over 5 days\" note on the main page is a separate, longer-range estimate.)",
+  "which": "new",
+  "hi": "यह सिर्फ़ अगले भाव के लिए है, कई दिन आगे के लिए नहीं — हमारे पिछले 30 टेस्ट में अगली जांच तक भाव आम तौर पर कितना बदला, उस पर आधारित है। (मुख्य पेज का \"5 दिनों में करीब ±₹X\" वाला नोट एक अलग, लंबे समय का अनुमान है।)",
+  "id": "u0400"
+ },
+ {
+  "key": "cmpHeading7d",
+  "variant": "full",
+  "kind": "label",
+  "screen": "main page (index.html)",
+  "en": "vs 7-day avg",
+  "which": "old",
+  "hi": "7-दिन औसत से",
+  "id": "u0401"
+ },
+ {
+  "key": "volNoteNormal",
+  "variant": "full",
+  "kind": "sentence",
+  "screen": "main page (index.html)",
+  "en": "Over the past month, gold's price typically went up or down by about ₹{z} in 5 days — about as much as usual.",
+  "which": "new",
+  "hi": "पिछले एक महीने में 5 दिनों के अंदर सोने का भाव आम तौर पर करीब ₹{z} ऊपर या नीचे गया — यह आम चाल के आसपास ही है।",
+  "id": "u0402"
+ },
+ {
+  "key": "chartNoteTanishq",
+  "variant": "full",
+  "kind": "short label",
+  "screen": "main page (index.html)",
+  "en": "Tanishq's listed rate",
+  "which": "old",
+  "hi": "Tanishq की सूचीबद्ध दर",
+  "id": "u0403"
+ },
+ {
+  "key": "karatLabel24",
+  "variant": "full",
+  "kind": "label",
+  "screen": "main page (index.html)",
+  "en": "24 KT",
+  "which": "old",
+  "hi": "24 KT",
+  "id": "u0404"
+ },
+ {
+  "key": "karatAriaLabel",
+  "variant": "full",
+  "kind": "aria-label",
+  "screen": "main page (index.html)",
+  "en": "24K and 18K gold prices",
+  "which": "new",
+  "hi": "24 कैरेट और 18 कैरेट सोने का भाव",
+  "id": "u0405"
+ },
+ {
+  "key": "methRangeSub",
+  "variant": "full",
+  "kind": "sentence",
+  "screen": "how-we-know.html",
+  "en": "Right {times} so far: ₹{low} – ₹{high}",
+  "which": "new",
+  "hi": "अब तक लगभग 10 में से {n} बार सही: ₹{low} – ₹{high}",
+  "id": "u0406"
+ },
+ {
+  "key": "trackRecordCaption",
+  "variant": "full",
+  "kind": "sentence",
+  "screen": "main page (index.html)",
+  "en": "Our estimate (dashed) and the actual price (gold), recent weeks",
+  "which": "new",
+  "hi": "हमारा अनुमान (टूटी लाइन) और असली भाव (सुनहरी लाइन), पिछले कुछ हफ़्ते",
+  "id": "u0407"
+ },
+ {
+  "key": "todayLabel",
+  "variant": "full",
+  "kind": "label",
+  "screen": "main page (index.html)",
+  "en": "today",
+  "which": "new",
+  "hi": "आज",
+  "id": "u0408"
+ },
+ {
+  "key": "trackRecordHeading",
+  "variant": "full",
+  "kind": "heading",
+  "screen": "main page (index.html)",
+  "en": "How close our estimates have been",
+  "which": "old",
+  "hi": "हमारे अनुमान कितने सही रहे",
+  "id": "u0409"
+ },
+ {
+  "key": "verdictReasonFlatBarely",
+  "variant": "full",
+  "kind": "sentence",
+  "screen": "main page (index.html)",
+  "en": "Barely moved this week — nothing to react to.",
+  "which": "new",
+  "hi": "इस हफ़्ते भाव में मुश्किल से कोई बदलाव हुआ — इसमें कुछ करने की ज़रूरत नहीं।",
+  "id": "u0410"
+ },
+ {
+  "key": "pv2MarkupSuffixUsual",
+  "variant": "full",
+  "kind": "short label",
+  "screen": "main page (index.html)",
+  "en": " — about usual.",
+  "which": "new",
+  "hi": " — लगभग आम।",
+  "id": "u0411"
+ },
+ {
+  "key": "pv2PriceUnavailable",
+  "variant": "full",
+  "kind": "sentence",
+  "screen": "main page (index.html)",
+  "en": "We don't have a price to show right now.",
+  "which": "old",
+  "hi": "अभी दिखाने के लिए कोई कीमत उपलब्ध नहीं है।",
+  "id": "u0412"
+ },
+ {
+  "key": "pwaHelpBtnTitle",
+  "variant": "full",
+  "kind": "label",
+  "screen": "main page (index.html)",
+  "en": "About auto-refresh",
+  "which": "new",
+  "hi": "ऑटो-रीफ़्रेश के बारे में",
+  "id": "u0413"
+ },
+ {
+  "key": "methNextFixP",
+  "variant": "full",
+  "kind": "sentence",
+  "screen": "how-we-know.html",
+  "en": "India's official rate is set once each afternoon, but gold and the rupee keep trading worldwide until late at night. We use that later move to estimate the next rate. Tested on {n} days it had not seen: off by ₹{modelMae}/g on average, against ₹{flatMae}/g for \"no change\" ({pct}% closer). For a week or more ahead, \"no change\" is still the best we have.",
+  "which": "old",
+  "hi": "भारत की आधिकारिक दर रोज़ दोपहर एक बार तय होती है, पर सोना और रुपया देर रात तक दुनिया भर में बिकते-खरीदे जाते हैं। हम उस बाद के बदलाव से अगली दर का अंदाज़ा लगाते हैं। {n} ऐसे दिनों पर जांचा जो इसने पहले नहीं देखे थे: औसतन ₹{modelMae}/ग्राम का फ़र्क, जबकि \"कोई बदलाव नहीं\" मानने पर ₹{flatMae}/ग्राम ({pct}% बेहतर)। एक हफ़्ते या उससे आगे के लिए \"कोई बदलाव नहीं\" ही अभी सबसे अच्छा है।",
+  "id": "u0414"
+ },
+ {
+  "key": "dirWordUnchanged",
+  "variant": "full",
+  "kind": "short label",
+  "screen": "main page (index.html)",
+  "en": "unchanged",
+  "which": "new",
+  "hi": "जस का तस रहा",
+  "id": "u0415"
+ },
+ {
+  "key": "fusionSourceGrt",
+  "variant": "full",
+  "kind": "short label",
+  "screen": "main page (index.html)",
+  "en": "GRT",
+  "which": "new",
+  "hi": "GRT",
+  "id": "u0416"
+ },
+ {
+  "key": "pageTitle",
+  "variant": "full",
+  "kind": "sentence",
+  "screen": "main page (index.html)",
+  "en": "Gold Rate Today · Is it a good price?",
+  "which": "new",
+  "hi": "आज सोने का भाव · क्या यह सही भाव है?",
+  "id": "u0417"
+ },
+ {
+  "key": "trendCheapStillFalling",
+  "variant": "full",
+  "kind": "sentence",
+  "screen": "main page (index.html)",
+  "en": "Cheap, but still falling — today is well below its usual trend for the month (dropping about ₹{slope} a day).",
+  "which": "old",
+  "hi": "सस्ता है, लेकिन अभी भी गिर रहा है — आज की कीमत इस महीने के सामान्य ट्रेंड से काफ़ी नीचे है (करीब ₹{slope} रोज़ाना गिरावट)।",
+  "id": "u0418"
+ },
+ {
+  "key": "driverDownMixed",
+  "variant": "full",
+  "kind": "sentence",
+  "screen": "main page (index.html)",
+  "en": "Gold is down about ₹{total} this week, from a mix of global prices and the rupee.",
+  "which": "new",
+  "hi": "इस हफ़्ते सोना करीब ₹{total} सस्ता हुआ है, दुनिया के बाज़ार के भाव और रुपये, दोनों के मिले-जुले असर से।",
+  "id": "u0419"
+ },
+ {
+  "key": "methNextFixHoldSub",
+  "variant": "full",
+  "kind": "sentence",
+  "screen": "how-we-know.html",
+  "en": "our best guess until the world prices after it are in",
+  "which": "old",
+  "hi": "इसके बाद की दुनिया की कीमतें आने तक यही हमारा सबसे अच्छा अंदाज़ा है",
+  "id": "u0420"
+ },
+ {
+  "key": "calcStaleNote",
+  "variant": "full",
+  "kind": "sentence",
+  "screen": "main page (index.html)",
+  "en": "Uses the last confirmed price, from {rel}.",
+  "which": "new",
+  "hi": "यह आख़िरी पक्के भाव से निकाला गया है, जो {rel} का है।",
+  "id": "u0421"
+ },
+ {
+  "key": "pv2AriaLabel",
+  "variant": "full",
+  "kind": "aria-label",
+  "screen": "main page (index.html)",
+  "en": "A five-question view of today's gold price",
+  "which": "old",
+  "hi": "आज सोने की कीमत — पांच आसान सवालों में",
+  "id": "u0422"
+ },
+ {
+  "key": "readNoTrendMid",
+  "variant": "full",
+  "kind": "sentence",
+  "screen": "main page (index.html)",
+  "en": "Today's price is sitting around its usual range this month.",
+  "which": "old",
+  "hi": "आज की कीमत इस महीने के सामान्य दायरे में है।",
+  "id": "u0423"
+ },
+ {
+  "key": "pv2WeeklyTooLittleData",
+  "variant": "full",
+  "kind": "sentence",
+  "screen": "main page (index.html)",
+  "en": "We don't have enough weeks of price history yet to say.",
+  "which": "old",
+  "hi": "यह बताने के लिए अभी हमारे पास पर्याप्त हफ्तों का कीमत इतिहास नहीं है।",
+  "id": "u0424"
+ },
+ {
+  "key": "priceTrendHeading",
+  "variant": "full",
+  "kind": "heading",
+  "screen": "main page (index.html)",
+  "en": "Price trend",
+  "which": "old",
+  "hi": "कीमत का ट्रेंड",
+  "id": "u0425"
+ },
+ {
+  "key": "freshnessEstimated",
+  "variant": "full",
+  "kind": "short label",
+  "screen": "main page (index.html)",
+  "en": "Estimated · {rel}",
+  "which": "new",
+  "hi": "अनुमानित · {rel}",
+  "id": "u0426"
+ },
+ {
+  "key": "methAccurateP2",
+  "variant": "full",
+  "kind": "sentence",
+  "screen": "how-we-know.html",
+  "en": "It's based on just the last 30 test runs, so it's a small sample. We narrowed this range in July 2026 after realizing it had been sized for 5-day moves but only ever checked against next-day prices — so the percentage above may look better than it really is for a while, until enough checks have happened under the corrected, narrower range. We'll call it fully proven once that settles.",
+  "which": "new",
+  "hi": "यह सिर्फ़ पिछले 30 टेस्ट पर आधारित है, इसलिए नमूना छोटा है। जुलाई 2026 में हमने इस रेंज को छोटा किया, क्योंकि पता चला कि इसे 5 दिन की चाल के हिसाब से बनाया गया था पर हमेशा अगले दिन के भाव से जांचा जाता था — इसलिए ऊपर का प्रतिशत कुछ समय तक असल से बेहतर दिख सकता है, जब तक सुधारी हुई, छोटी रेंज पर काफ़ी जांच न हो जाएं। जब यह टिक जाएगा, तब हम इसे पूरी तरह पक्का मानेंगे।",
+  "id": "u0427"
+ },
+ {
+  "key": "freshnessStaleAria",
+  "variant": "full",
+  "kind": "aria-label",
+  "screen": "main page (index.html)",
+  "en": "Data stale, last updated {rel}",
+  "which": "old",
+  "hi": "डेटा पुराना है, आख़िरी बार {rel} अपडेट हुआ",
+  "id": "u0428"
+ },
+ {
+  "key": "verdictReasonDown",
+  "variant": "avgDelta=null",
+  "kind": "sentence",
+  "screen": "main page (index.html)",
+  "en": "Down ₹{delta} this week.",
+  "which": "old",
+  "hi": "इस हफ्ते ₹{delta} की गिरावट आई है।",
+  "id": "u0429"
+ },
+ {
+  "key": "freshnessConsensusAria",
+  "variant": "full",
+  "kind": "aria-label",
+  "screen": "main page (index.html)",
+  "en": "Retail consensus estimate, updated {rel}",
+  "which": "old",
+  "hi": "खुदरा बाज़ार की औसत दर का अनुमान, {rel} अपडेट हुआ",
+  "id": "u0430"
+ },
+ {
+  "key": "calcPresetsLegend",
+  "variant": "full",
+  "kind": "short label",
+  "screen": "main page (index.html)",
+  "en": "Jewellery type",
+  "which": "new",
+  "hi": "गहने का प्रकार",
+  "id": "u0431"
+ },
+ {
+  "key": "reliabilityDriftOnTrack",
+  "variant": "full",
+  "kind": "sentence",
+  "screen": "main page (index.html)",
+  "en": "Recent accuracy has stayed in line with the historical average.",
+  "which": "old",
+  "hi": "हाल की सटीकता ऐतिहासिक औसत के मुताबिक बनी हुई है।",
+  "id": "u0432"
+ },
+ {
+  "key": "modelSignalAriaLabel",
+  "variant": "full",
+  "kind": "aria-label",
+  "screen": "main page (index.html)",
+  "en": "How today's price compares to recent history",
+  "which": "new",
+  "hi": "आज का भाव हाल के भाव से कैसा है",
+  "id": "u0433"
+ },
+ {
+  "key": "driverPartRupeeAdded",
+  "variant": "full",
+  "kind": "sentence",
+  "screen": "main page (index.html)",
+  "en": "a weaker rupee added about ₹{inr}",
+  "which": "new",
+  "hi": "कमज़ोर रुपये से करीब ₹{inr} बढ़े",
+  "id": "u0434"
+ },
+ {
+  "key": "reliabilityCoverage",
+  "variant": "full",
+  "kind": "sentence",
+  "screen": "main page (index.html)",
+  "en": "The real price has stayed inside the range we show about 7 times out of 10 so far.",
+  "which": "new",
+  "hi": "असली भाव अब तक लगभग 10 में से 7 बार हमारी दिखाई रेंज के अंदर रहा है।",
+  "id": "u0435"
+ },
+ {
+  "key": "hwkPageDescription",
+  "variant": "full",
+  "kind": "sentence",
+  "screen": "how-we-know.html",
+  "en": "The full numbers behind Gold Rate Today's estimate: how the range is built, how accurate it has actually been, and why there's no rising/falling forecast.",
+  "which": "new",
+  "hi": "आज के सोने के भाव के अनुमान के पीछे के पूरे आंकड़े: रेंज कैसे बनती है, यह असल में कितनी सही रही है, और भाव के बढ़ने-घटने का अंदाज़ा क्यों नहीं दिखाया जाता।",
+  "id": "u0436"
+ },
+ {
+  "key": "chartEstimateLabel",
+  "variant": "full",
+  "kind": "label",
+  "screen": "main page (index.html)",
+  "en": "{k}K estimate (₹/g)",
+  "which": "old",
+  "hi": "{k}K अनुमान (₹/ग्राम)",
+  "id": "u0437"
+ },
+ {
+  "key": "pv2RangeOneDay",
+  "variant": "full",
+  "kind": "sentence",
+  "screen": "main page (index.html)",
+  "en": "By the next trading day: likely between ₹{low} and ₹{high}.",
+  "which": "old",
+  "hi": "अगले कारोबारी दिन तक: यह ₹{low} से ₹{high} के बीच रहने की संभावना है।",
+  "id": "u0438"
+ },
+ {
+  "key": "pageTitle",
+  "variant": "full",
+  "kind": "sentence",
+  "screen": "main page (index.html)",
+  "en": "Gold Rate Today · Is it a good price?",
+  "which": "old",
+  "hi": "आज सोने का भाव · क्या यह सही कीमत है?",
+  "id": "u0439"
+ },
+ {
+  "key": "divergenceNote",
+  "variant": "full",
+  "kind": "sentence",
+  "screen": "main page (index.html)",
+  "en": "(These two don't quite agree — one counts days, the other measures the actual rupee gap. We go with the day-count for the headline above.)",
+  "which": "new",
+  "hi": "(इन दोनों में पूरी तरह मेल नहीं है — एक दिन गिनता है, दूसरा रुपये का असली फ़र्क़ नापता है। ऊपर की हेडलाइन के लिए हम दिनों की गिनती वाला तरीक़ा लेते हैं।)",
+  "id": "u0440"
+ },
+ {
+  "key": "methDirectionUnavailable",
+  "variant": "full",
+  "kind": "sentence",
+  "screen": "how-we-know.html",
+  "en": "Direction signal unavailable this cycle.",
+  "which": "new",
+  "hi": "इस बार ऊपर-नीचे का संकेत उपलब्ध नहीं है।",
+  "id": "u0441"
+ },
+ {
+  "key": "proofLinePricier",
+  "variant": "full",
+  "kind": "sentence",
+  "screen": "main page (index.html)",
+  "en": "Pricier than {days} of the last {total} days.",
+  "which": "new",
+  "hi": "पिछले {total} में से {days} दिनों के भाव से महंगा।",
+  "id": "u0442"
+ },
+ {
+  "key": "verdictReasonDown",
+  "variant": "full",
+  "kind": "sentence",
+  "screen": "main page (index.html)",
+  "en": "Down ₹{delta} this week, and ₹{avgDelta} below the usual price for the month.",
+  "which": "old",
+  "hi": "इस हफ्ते ₹{delta} की गिरावट आई है, और यह महीने के सामान्य दाम से ₹{avgDelta} कम है।",
+  "id": "u0443"
+ },
+ {
+  "key": "methDriftHeading",
+  "variant": "full",
+  "kind": "heading",
+  "screen": "how-we-know.html",
+  "en": "Estimate accuracy — last 7 days",
+  "which": "new",
+  "hi": "अनुमान कितना सही रहा — पिछले 7 दिन",
+  "id": "u0444"
+ },
+ {
+  "key": "cmpCheaperThan",
+  "variant": "full",
+  "kind": "label",
+  "screen": "main page (index.html)",
+  "en": "cheaper than {avgLabel}",
+  "which": "new",
+  "hi": "{avgLabel} से सस्ता",
+  "id": "u0445"
+ },
+ {
+  "key": "freshnessOkAria",
+  "variant": "full",
+  "kind": "aria-label",
+  "screen": "main page (index.html)",
+  "en": "Updated {rel}",
+  "which": "new",
+  "hi": "{rel} अपडेट हुआ",
+  "id": "u0446"
+ },
+ {
+  "key": "driverPartRupeeTookOff",
+  "variant": "full",
+  "kind": "sentence",
+  "screen": "main page (index.html)",
+  "en": "a stronger rupee took off about ₹{inr}",
+  "which": "old",
+  "hi": "मज़बूत रुपये ने करीब ₹{inr} घटाए",
+  "id": "u0447"
+ },
+ {
+  "key": "navHistory",
+  "variant": "full",
+  "kind": "label",
+  "screen": "main page (index.html)",
+  "en": "History",
+  "which": "new",
+  "hi": "पुराने भाव",
+  "id": "u0448"
+ },
+ {
+  "key": "driverPartGoldAdded",
+  "variant": "full",
+  "kind": "sentence",
+  "screen": "main page (index.html)",
+  "en": "global gold prices added about ₹{gold}",
+  "which": "new",
+  "hi": "दुनिया के बाज़ार में सोने के भाव से करीब ₹{gold} बढ़े",
+  "id": "u0449"
+ },
+ {
+  "key": "methAssumeNoChange",
+  "variant": "full",
+  "kind": "short label",
+  "screen": "how-we-know.html",
+  "en": "Assume no change",
+  "which": "old",
+  "hi": "कोई बदलाव न मानें",
+  "id": "u0450"
+ },
+ {
+  "key": "whenOnDate",
+  "variant": "full",
+  "kind": "short label",
+  "screen": "main page (index.html)",
+  "en": "{time}, {date}",
+  "which": "new",
+  "hi": "{date}, {time}",
+  "id": "u0451"
+ },
+ {
+  "key": "calcPresetPlainRange",
+  "variant": "full",
+  "kind": "sentence",
+  "screen": "main page (index.html)",
+  "en": "8–12% of gold value, typically 10%",
+  "which": "new",
+  "hi": "सोने की कीमत का 8–12%, आम तौर पर 10%",
+  "id": "u0452"
+ },
+ {
+  "key": "chartEstimateTooltip",
+  "variant": "full",
+  "kind": "sentence",
+  "screen": "main page (index.html)",
+  "en": "{k}K estimate: ≈ ₹{value}",
+  "which": "new",
+  "hi": "{k} कैरेट अनुमान: ≈ ₹{value}",
+  "id": "u0453"
+ },
+ {
+  "key": "methMethodLabel",
+  "variant": "full",
+  "kind": "label",
+  "screen": "how-we-know.html",
+  "en": "Method",
+  "which": "new",
+  "hi": "तरीक़ा",
+  "id": "u0454"
+ },
+ {
+  "key": "perGram",
+  "variant": "full",
+  "kind": "short label",
+  "screen": "main page (index.html)",
+  "en": "per gram",
+  "which": "new",
+  "hi": "प्रति ग्राम",
+  "id": "u0455"
+ },
+ {
+  "key": "methNextFixStrong",
+  "variant": "full",
+  "kind": "sentence",
+  "screen": "how-we-know.html",
+  "en": "For the next official rate, we use world prices",
+  "which": "old",
+  "hi": "अगली आधिकारिक दर के लिए हम दुनिया की कीमतें देखते हैं",
+  "id": "u0456"
+ },
+ {
+  "key": "supportCheapNotAtSupport",
+  "variant": "full",
+  "kind": "sentence",
+  "screen": "main page (index.html)",
+  "en": "Cheap, but still {pct}% above its lowest price in 3 months (₹{low}).",
+  "which": "old",
+  "hi": "सस्ता है, लेकिन अभी भी अपनी 3-महीने की सबसे कम कीमत (₹{low}) से {pct}% ऊपर है।",
+  "id": "u0457"
+ },
+ {
+  "key": "footerBody",
+  "variant": "full",
+  "kind": "sentence",
+  "screen": "main page (index.html)",
+  "en": "Prices come from <a href=\"https://ibjarates.com/\" target=\"_blank\" rel=\"noopener\">IBJA</a>, India's official daily gold rate, adjusted to match shop prices, and from <a href=\"https://www.tanishq.co.in/gold-rate.html?lang=en_IN\" target=\"_blank\" rel=\"noopener\">Tanishq</a>'s listed rate when available.",
+  "which": "new",
+  "hi": "भाव <a href=\"https://ibjarates.com/\" target=\"_blank\" rel=\"noopener\">IBJA</a> (भारत का आधिकारिक रोज़ का सोने का भाव) से लिए जाते हैं और दुकान के भाव से मिलाकर ठीक किए जाते हैं; जब मिल सके तब <a href=\"https://www.tanishq.co.in/gold-rate.html?lang=en_IN\" target=\"_blank\" rel=\"noopener\">Tanishq</a> का बताया भाव भी देखा जाता है।",
+  "id": "u0458"
+ },
+ {
+  "key": "methAccurateP1",
+  "variant": "full",
+  "kind": "sentence",
+  "screen": "how-we-know.html",
+  "en": "Gold prices are hard to predict even a few days out — every model we tried did worse than simply guessing \"no change.\" Tested over {n} time windows from 2022–2026:<br>&bull; Guessing \"no change\" was off by ₹{naiveMae}/g on average<br>{chronosBullet}So \"no change\" is what we go with.",
+  "which": "new",
+  "hi": "सोने के भाव का कुछ दिन आगे का अंदाज़ा लगाना भी मुश्किल है — हमने जितने भी मॉडल आज़माए, सब सिर्फ़ \"कोई बदलाव नहीं\" मान लेने से भी कमज़ोर निकले। 2022–2026 के बीच {n} अलग-अलग समय-खंडों पर टेस्ट किया गया:<br>&bull; \"कोई बदलाव नहीं\" मानने पर औसतन ₹{naiveMae}/ग्राम का फ़र्क़ आया<br>{chronosBullet}इसलिए हम \"कोई बदलाव नहीं\" वाला अंदाज़ा ही रखते हैं।",
+  "id": "u0459"
+ },
+ {
+  "key": "directionDown",
+  "variant": "full",
+  "kind": "sentence",
+  "screen": "main page (index.html)",
+  "en": "More likely to go <strong>down</strong> than up next (about {pct}% chance).",
+  "which": "old",
+  "hi": "अगली बार कीमत के <strong>घटने</strong> की संभावना ज़्यादा है (लगभग {pct}%)।",
+  "id": "u0460"
+ },
+ {
+  "key": "pv2WeeklyLower",
+  "variant": "full",
+  "kind": "sentence",
+  "screen": "main page (index.html)",
+  "en": "Lower than on {count} of the last {n} weeks.",
+  "which": "old",
+  "hi": "पिछले {n} हफ्तों में से {count} हफ्तों से कम।",
+  "id": "u0461"
+ },
+ {
+  "key": "readCheapSteadying",
+  "variant": "full",
+  "kind": "sentence",
+  "screen": "main page (index.html)",
+  "en": "Today's price is on the low side for the month, and it looks like it's steadying after a recent dip.",
+  "which": "old",
+  "hi": "आज की कीमत इस महीने के हिसाब से कम है, और हाल की गिरावट के बाद अब स्थिर होती दिख रही है।",
+  "id": "u0462"
+ },
+ {
+  "key": "readHighRising",
+  "variant": "full",
+  "kind": "sentence",
+  "screen": "main page (index.html)",
+  "en": "Today's price is on the higher side for the month, and it's still climbing.",
+  "which": "old",
+  "hi": "आज की कीमत इस महीने के हिसाब से ज़्यादा है, और अभी भी बढ़ रही है।",
+  "id": "u0463"
+ },
+ {
+  "key": "methNextFixModelSub",
+  "variant": "full",
+  "kind": "sentence",
+  "screen": "how-we-know.html",
+  "en": "how gold and the rupee moved since India's rate was last set",
+  "which": "new",
+  "hi": "भारत का भाव तय होने के बाद सोना और रुपया कितना बदले",
+  "id": "u0464"
+ },
+ {
+  "key": "bannerRefreshFailed",
+  "variant": "full",
+  "kind": "banner/message",
+  "screen": "main page (index.html)",
+  "en": "Couldn't refresh — this is the last update, from {rel}",
+  "which": "old",
+  "hi": "रीफ़्रेश नहीं हो पाया — यह आख़िरी अपडेट है, {rel}",
+  "id": "u0465"
+ },
+ {
+  "key": "supportLine1BelowMid",
+  "variant": "full",
+  "kind": "sentence",
+  "screen": "main page (index.html)",
+  "en": "A bit below the usual price this month.",
+  "which": "old",
+  "hi": "इस महीने की सामान्य कीमत से थोड़ा कम।",
+  "id": "u0466"
+ },
+ {
+  "key": "methAccurateP2CoverageUnknown",
+  "variant": "full",
+  "kind": "sentence",
+  "screen": "how-we-know.html",
+  "en": "close to on target so far — still building a track record",
+  "which": "old",
+  "hi": "अब तक लगभग लक्ष्य के अनुसार रही है — अभी इसका रिकॉर्ड बन रहा है",
+  "id": "u0467"
+ },
+ {
+  "key": "driverMechanismStronger",
+  "variant": "full",
+  "kind": "sentence",
+  "screen": "main page (index.html)",
+  "en": " a stronger rupee makes imported gold cheaper in India.",
+  "which": "old",
+  "hi": " मज़बूत रुपये से भारत में आयातित सोना सस्ता हो जाता है।",
+  "id": "u0468"
+ },
+ {
+  "key": "methDirectionHeading",
+  "variant": "full",
+  "kind": "heading",
+  "screen": "how-we-know.html",
+  "en": "Direction signal",
+  "which": "old",
+  "hi": "दिशा का संकेत",
+  "id": "u0469"
+ },
+ {
+  "key": "freshnessAwaiting",
+  "variant": "full",
+  "kind": "short label",
+  "screen": "main page (index.html)",
+  "en": "Awaiting first reading",
+  "which": "new",
+  "hi": "पहले भाव का इंतज़ार",
+  "id": "u0470"
+ },
+ {
+  "key": "calcRateUsedFusion",
+  "variant": "full",
+  "kind": "sentence",
+  "screen": "main page (index.html)",
+  "en": "Rate used: 22K ₹{rate}/g — market-consensus estimate",
+  "which": "new",
+  "hi": "इस्तेमाल हुआ भाव: 22 कैरेट ₹{rate}/ग्राम — दुकानों के औसत भाव का अनुमान",
+  "id": "u0471"
+ },
+ {
+  "key": "calcPresetCoinsRange",
+  "variant": "full",
+  "kind": "sentence",
+  "screen": "main page (index.html)",
+  "en": "3–8% of gold value, typically 5%",
+  "which": "new",
+  "hi": "सोने की कीमत का 3–8%, आम तौर पर 5%",
+  "id": "u0472"
+ },
+ {
+  "key": "pv2SourceConsensus",
+  "variant": "full",
+  "kind": "sentence",
+  "screen": "main page (index.html)",
+  "en": "An estimate from other jewellers' rates — Tanishq and the official rate were both unavailable just now.",
+  "which": "old",
+  "hi": "दूसरे जौहरियों की दरों से बना अनुमान — अभी Tanishq और आधिकारिक दर, दोनों उपलब्ध नहीं थे।",
+  "id": "u0473"
+ },
+ {
+  "key": "shareCopied",
+  "variant": "full",
+  "kind": "short label",
+  "screen": "main page (index.html)",
+  "en": "Link copied!",
+  "which": "new",
+  "hi": "लिंक कॉपी हो गया!",
+  "id": "u0474"
+ },
+ {
+  "key": "driverPartGoldTookOff",
+  "variant": "full",
+  "kind": "sentence",
+  "screen": "main page (index.html)",
+  "en": "global gold prices took off about ₹{gold}",
+  "which": "new",
+  "hi": "दुनिया के बाज़ार में सोने के भाव से करीब ₹{gold} घटे",
+  "id": "u0475"
+ },
+ {
+  "key": "methDirectionOff",
+  "variant": "full",
+  "kind": "short label",
+  "screen": "how-we-know.html",
+  "en": "Off — not yet reliable",
+  "which": "old",
+  "hi": "बंद — अभी भरोसेमंद नहीं",
+  "id": "u0476"
+ },
+ {
+  "key": "weeklyMovementNote",
+  "variant": "full",
+  "kind": "sentence",
+  "screen": "main page (index.html)",
+  "en": "Looking back, gold has typically moved about ₹{amount} from one week to the next (based on {pairs} weekly comparisons).",
+  "which": "new",
+  "hi": "पीछे देखें तो सोने का भाव आम तौर पर एक हफ़्ते से अगले हफ़्ते में करीब ₹{amount} बदलता रहा है ({pairs} हफ़्तों की तुलना के आधार पर)।",
+  "id": "u0477"
+ },
+ {
+  "key": "reliabilityDriftWatch",
+  "variant": "full",
+  "kind": "sentence",
+  "screen": "main page (index.html)",
+  "en": "Recent accuracy has drifted a bit from the historical average — we're keeping an eye on it.",
+  "which": "new",
+  "hi": "हाल में हमारे अनुमान आम तौर से थोड़े कम सही रहे हैं — हम नज़र रखे हुए हैं।",
+  "id": "u0478"
+ },
+ {
+  "key": "calcRowMaking",
+  "variant": "full",
+  "kind": "short label",
+  "screen": "main page (index.html)",
+  "en": "Making charge",
+  "which": "new",
+  "hi": "मेकिंग चार्ज",
+  "id": "u0479"
+ },
+ {
+  "key": "historyHeading",
+  "variant": "full",
+  "kind": "heading",
+  "screen": "main page (index.html)",
+  "en": "History",
+  "which": "new",
+  "hi": "पुराने भाव",
+  "id": "u0480"
+ },
+ {
+  "key": "readNoSignals",
+  "variant": "full",
+  "kind": "sentence",
+  "screen": "main page (index.html)",
+  "en": "We don't have enough price history yet to say much about today — check back once a few more readings come in.",
+  "which": "old",
+  "hi": "अभी इतना कीमत का इतिहास नहीं है कि आज के बारे में कुछ ठोस कहा जा सके — कुछ और रीडिंग आने के बाद फिर देखें।",
+  "id": "u0481"
+ },
+ {
+  "key": "readFlat",
+  "variant": "full",
+  "kind": "sentence",
+  "screen": "main page (index.html)",
+  "en": "Prices have been fairly steady this month — today sits around the usual range.",
+  "which": "new",
+  "hi": "इस महीने भाव काफ़ी टिका रहा है — आज का भाव आम भाव के आसपास है।",
+  "id": "u0482"
+ },
+ {
+  "key": "bannerFusion",
+  "variant": "full",
+  "kind": "banner/message",
+  "screen": "main page (index.html)",
+  "en": "This is an estimated price based on other jewellers' rates ({sources}) — we couldn't reach Tanishq or the official rate just now.",
+  "which": "new",
+  "hi": "यह दूसरे ज्वेलर्स के भाव ({sources}) पर आधारित अनुमानित भाव है — हम अभी Tanishq या आधिकारिक भाव तक नहीं पहुंच पाए।",
+  "id": "u0483"
+ },
+ {
+  "key": "methAccurateP3",
+  "variant": "full",
+  "kind": "sentence",
+  "screen": "how-we-know.html",
+  "en": "Our AI was right {dirAllDisplay} of the time across {n} test windows. But gold has historically risen far more often than it's fallen — so just guessing \"up\" every time would score close to as well, with no model needed. We don't claim any edge here. The Getting cheaper/pricier labels on the main page come from the recent 7-day trend, not from this AI.",
+  "which": "new",
+  "hi": "हमारा AI {n} टेस्ट में {dirAllDisplay} बार सही निकला। लेकिन सोना इतिहास में गिरने से कहीं ज़्यादा बार बढ़ा है — इसलिए बिना किसी मॉडल के हर बार सिर्फ़ \"बढ़ेगा\" कहने पर भी लगभग उतना ही सही निकलता। हम यहां किसी बढ़त का दावा नहीं करते। मुख्य पेज के \"सस्ता / महंगा हो रहा है\" वाले लेबल हाल के 7 दिन के ट्रेंड से आते हैं, इस AI से नहीं।",
+  "id": "u0484"
+ },
+ {
+  "key": "supportLine1High",
+  "variant": "full",
+  "kind": "sentence",
+  "screen": "main page (index.html)",
+  "en": "Pricier than most days this month.",
+  "which": "new",
+  "hi": "इस महीने के ज़्यादातर दिनों से महंगा।",
+  "id": "u0485"
+ },
+ {
+  "key": "bannerFusion",
+  "variant": "full",
+  "kind": "banner/message",
+  "screen": "main page (index.html)",
+  "en": "This is an estimated price based on other jewellers' rates ({sources}) — we couldn't reach Tanishq or the official rate just now.",
+  "which": "old",
+  "hi": "यह अन्य जौहरियों की दरों ({sources}) पर आधारित एक अनुमानित कीमत है — हम अभी Tanishq या आधिकारिक दर तक नहीं पहुंच पाए।",
+  "id": "u0486"
+ },
+ {
+  "key": "driverWeekDown",
+  "variant": "full",
+  "kind": "sentence",
+  "screen": "main page (index.html)",
+  "en": "Gold is down about ₹{total} this week",
+  "which": "new",
+  "hi": "इस हफ़्ते सोना करीब ₹{total} सस्ता हुआ है",
+  "id": "u0487"
+ },
+ {
+  "key": "navHome",
+  "variant": "full",
+  "kind": "label",
+  "screen": "main page (index.html)",
+  "en": "Home",
+  "which": "new",
+  "hi": "होम",
+  "id": "u0488"
+ },
+ {
+  "key": "trendFalling",
+  "variant": "full",
+  "kind": "sentence",
+  "screen": "main page (index.html)",
+  "en": "Prices have been slipping about ₹{slope} a day this month.",
+  "which": "old",
+  "hi": "इस महीने कीमत में रोज़ाना करीब ₹{slope} की गिरावट आ रही है।",
+  "id": "u0489"
+ },
+ {
+  "key": "supportNotCheapNotAtSupport",
+  "variant": "full",
+  "kind": "sentence",
+  "screen": "main page (index.html)",
+  "en": "{pct}% above its lowest price in 3 months (₹{low}, over the last {n} days).",
+  "which": "old",
+  "hi": "अपनी 3-महीने की सबसे कम कीमत (₹{low}) से {pct}% ऊपर (पिछले {n} दिनों में)।",
+  "id": "u0490"
+ },
+ {
+  "key": "driverWeekUp",
+  "variant": "full",
+  "kind": "sentence",
+  "screen": "main page (index.html)",
+  "en": "Gold is up about ₹{total} this week",
+  "which": "old",
+  "hi": "इस हफ्ते सोना करीब ₹{total} महंगा हुआ है",
+  "id": "u0491"
+ },
+ {
+  "key": "trackRecordChartAriaLabel",
+  "variant": "full",
+  "kind": "aria-label",
+  "screen": "main page (index.html)",
+  "en": "Our past estimates and the actual gold prices",
+  "which": "old",
+  "hi": "हमारे पुराने अनुमान और असली कीमतें",
+  "id": "u0492"
+ },
+ {
+  "key": "methDirectionSub",
+  "variant": "full",
+  "kind": "sentence",
+  "screen": "how-we-know.html",
+  "en": "no model beats \"gold usually rises\" yet",
+  "which": "new",
+  "hi": "\"सोना आम तौर पर बढ़ता है\" वाले अंदाज़े को अभी कोई मॉडल मात नहीं दे पाया",
+  "id": "u0493"
+ },
+ {
+  "key": "navTrend",
+  "variant": "full",
+  "kind": "label",
+  "screen": "main page (index.html)",
+  "en": "Trend",
+  "which": "new",
+  "hi": "ट्रेंड",
+  "id": "u0494"
+ },
+ {
+  "key": "methDirectionOn",
+  "variant": "full",
+  "kind": "sentence",
+  "screen": "how-we-know.html",
+  "en": "On — for the next price move only",
+  "which": "old",
+  "hi": "चालू — सिर्फ़ अगले बदलाव के लिए",
+  "id": "u0495"
+ },
+ {
+  "key": "methNextFixModelSub",
+  "variant": "full",
+  "kind": "sentence",
+  "screen": "how-we-know.html",
+  "en": "how gold and the rupee moved since India's rate was last set",
+  "which": "old",
+  "hi": "भारत की दर तय होने के बाद सोना और रुपया कितना बदले",
+  "id": "u0496"
+ },
+ {
+  "key": "offlineWithTime",
+  "variant": "full",
+  "kind": "banner/message",
+  "screen": "main page (index.html)",
+  "en": "You're offline — showing prices from {rel}",
+  "which": "new",
+  "hi": "आप ऑफ़लाइन हैं — {rel} का भाव दिखा रहे हैं",
+  "id": "u0497"
+ },
+ {
+  "key": "pv2WeeklyAboutSame",
+  "variant": "full",
+  "kind": "sentence",
+  "screen": "main page (index.html)",
+  "en": "About the same as most of the last {n} weeks.",
+  "which": "new",
+  "hi": "पिछले {n} हफ़्तों में से ज़्यादातर के लगभग बराबर।",
+  "id": "u0498"
+ },
+ {
+  "key": "pv2RangeOneDay",
+  "variant": "full",
+  "kind": "sentence",
+  "screen": "main page (index.html)",
+  "en": "By the next trading day: likely between ₹{low} and ₹{high}.",
+  "which": "new",
+  "hi": "अगले कारोबारी दिन तक: ₹{low} से ₹{high} के बीच रहने की संभावना है।",
+  "id": "u0499"
+ },
+ {
+  "key": "readRising",
+  "variant": "full",
+  "kind": "sentence",
+  "screen": "main page (index.html)",
+  "en": "Prices have climbed over the past month, though today isn't especially expensive yet.",
+  "which": "new",
+  "hi": "पिछले एक महीने में भाव चढ़ा है, हालांकि आज का भाव अभी ख़ास महंगा नहीं है।",
+  "id": "u0500"
+ },
+ {
+  "key": "weeklyMovementSuffAppend",
+  "variant": "full",
+  "kind": "sentence",
+  "screen": "main page (index.html)",
+  "en": " (Only {n} distinct days in this 90-day window so far — treat as indicative.)",
+  "which": "old",
+  "hi": " (इस 90-दिन के दायरे में अभी तक सिर्फ़ {n} अलग दिन हैं — इसे संकेत के तौर पर लें।)",
+  "id": "u0501"
+ },
+ {
+  "key": "heroLabelTanishqLive",
+  "variant": "full",
+  "kind": "sentence",
+  "screen": "main page (index.html)",
+  "en": "Tanishq's listed 22K rate, checked {when}",
+  "which": "old",
+  "hi": "Tanishq की सूचीबद्ध 22K दर, {when} जांची गई",
+  "id": "u0502"
+ },
+ {
+  "key": "methMethodLabel",
+  "variant": "full",
+  "kind": "label",
+  "screen": "how-we-know.html",
+  "en": "Method",
+  "which": "old",
+  "hi": "तरीका",
+  "id": "u0503"
+ },
+ {
+  "key": "dirWordUp",
+  "variant": "full",
+  "kind": "short label",
+  "screen": "main page (index.html)",
+  "en": "edged up",
+  "which": "new",
+  "hi": "थोड़ा ऊपर गया",
+  "id": "u0504"
+ },
+ {
+  "key": "methAccurateP1ChronosBullet",
+  "variant": "full",
+  "kind": "sentence",
+  "screen": "how-we-know.html",
+  "en": "&bull; Our AI model was off by ₹{chronosMae}/g — {maePctWorse}% worse (p&thinsp;{pValOp}&thinsp;{pValText})<br>",
+  "which": "new",
+  "hi": "&bull; हमारे AI मॉडल में ₹{chronosMae}/ग्राम का फ़र्क़ आया — {maePctWorse}% ज़्यादा ग़लत (p&thinsp;{pValOp}&thinsp;{pValText})<br>",
+  "id": "u0505"
+ },
+ {
+  "key": "pv2ConfidenceUnknown",
+  "variant": "full",
+  "kind": "sentence",
+  "screen": "main page (index.html)",
+  "en": "We don't have a recent enough track record to say how often our range holds — check back soon.",
+  "which": "new",
+  "hi": "हमारे पास इतना ताज़ा रिकॉर्ड नहीं है कि बता सकें हमारी रेंज कितनी बार सही रहती है — कुछ समय बाद फिर देखें।",
+  "id": "u0506"
+ },
+ {
+  "key": "bannerIbjaToday",
+  "variant": "full",
+  "kind": "banner/message",
+  "screen": "main page (index.html)",
+  "en": "This is today's estimated price, from India's official gold rate — we couldn't check it against the shop rate just now.",
+  "which": "new",
+  "hi": "यह आज का अनुमानित भाव है, जो भारत के आधिकारिक रोज़ के भाव से निकाला गया है — हम इसे अभी दुकान के भाव से मिला नहीं पाए।",
+  "id": "u0507"
+ },
+ {
+  "key": "pv2MarkupSuffixUsual",
+  "variant": "full",
+  "kind": "short label",
+  "screen": "main page (index.html)",
+  "en": " — about usual.",
+  "which": "old",
+  "hi": " — करीब सामान्य।",
+  "id": "u0508"
+ },
+ {
+  "key": "pv2WeeklyHigher",
+  "variant": "full",
+  "kind": "sentence",
+  "screen": "main page (index.html)",
+  "en": "Higher than on {count} of the last {n} weeks.",
+  "which": "old",
+  "hi": "पिछले {n} हफ्तों में से {count} हफ्तों से ज़्यादा।",
+  "id": "u0509"
+ },
+ {
+  "key": "chartCanvasAriaLabel",
+  "variant": "full",
+  "kind": "aria-label",
+  "screen": "main page (index.html)",
+  "en": "Gold price trend chart",
+  "which": "new",
+  "hi": "सोने के भाव का ट्रेंड चार्ट",
+  "id": "u0510"
+ },
+ {
+  "key": "calcKaratLabel22",
+  "variant": "full",
+  "kind": "short label",
+  "screen": "main page (index.html)",
+  "en": "22 KT",
+  "which": "new",
+  "hi": "22 कैरेट",
+  "id": "u0511"
+ },
+ {
+  "key": "trendFalling",
+  "variant": "full",
+  "kind": "sentence",
+  "screen": "main page (index.html)",
+  "en": "Prices have been slipping about ₹{slope} a day this month.",
+  "which": "new",
+  "hi": "इस महीने भाव रोज़ करीब ₹{slope} घट रहा है।",
+  "id": "u0512"
+ },
+ {
+  "key": "driverPremiumDominated",
+  "variant": "full",
+  "kind": "sentence",
+  "screen": "main page (index.html)",
+  "en": "Indian gold has moved more than the global price or rupee explain — likely import costs or festival demand at home.",
+  "which": "new",
+  "hi": "भारत में सोने का भाव दुनिया के भाव और रुपये से जितना समझ आता है, उससे ज़्यादा बदला है — शायद आयात के ख़र्च या यहां त्योहारों की मांग की वजह से।",
+  "id": "u0513"
+ },
+ {
+  "key": "freshnessNotUpdating",
+  "variant": "full",
+  "kind": "short label",
+  "screen": "main page (index.html)",
+  "en": "Not updating · {rel}",
+  "which": "new",
+  "hi": "अपडेट नहीं हो रहा · {rel}",
+  "id": "u0514"
+ },
+ {
+  "key": "methHistoricalError",
+  "variant": "full",
+  "kind": "short label",
+  "screen": "how-we-know.html",
+  "en": "Historical avg. error",
+  "which": "old",
+  "hi": "ऐतिहासिक औसत त्रुटि",
+  "id": "u0515"
+ },
+ {
+  "key": "goodPriceTomorrow",
+  "variant": "full",
+  "kind": "sentence",
+  "screen": "main page (index.html)",
+  "en": "Next price update: likely <strong>₹{low}</strong> – <strong>₹{high}</strong>.",
+  "which": "new",
+  "hi": "अगला भाव अपडेट: शायद <strong>₹{low}</strong> – <strong>₹{high}</strong> के बीच।",
+  "id": "u0516"
+ },
+ {
+  "key": "calcPresetPlain",
+  "variant": "full",
+  "kind": "short label",
+  "screen": "main page (index.html)",
+  "en": "Plain bangles & rings",
+  "which": "new",
+  "hi": "सादी चूड़ियां और अंगूठियां",
+  "id": "u0517"
+ },
+ {
+  "key": "offlineNoData",
+  "variant": "full",
+  "kind": "banner/message",
+  "screen": "main page (index.html)",
+  "en": "You're offline — no prices loaded yet",
+  "which": "old",
+  "hi": "आप ऑफ़लाइन हैं — अभी तक कोई कीमत लोड नहीं हुई",
+  "id": "u0518"
+ },
+ {
+  "key": "dataSuffNote",
+  "variant": "full",
+  "kind": "sentence",
+  "screen": "main page (index.html)",
+  "en": "Only {n} distinct days in the window — treat as indicative.",
+  "which": "new",
+  "hi": "इसमें सिर्फ़ {n} अलग-अलग दिन हैं — इसे मोटा अंदाज़ा ही समझें।",
+  "id": "u0519"
+ },
+ {
+  "key": "trendRising",
+  "variant": "full",
+  "kind": "sentence",
+  "screen": "main page (index.html)",
+  "en": "Prices have been climbing about ₹{slope} a day this month.",
+  "which": "new",
+  "hi": "इस महीने भाव रोज़ करीब ₹{slope} बढ़ रहा है।",
+  "id": "u0520"
+ },
+ {
+  "key": "driverPartGoldFlat",
+  "variant": "full",
+  "kind": "sentence",
+  "screen": "main page (index.html)",
+  "en": "global gold prices were roughly flat",
+  "which": "new",
+  "hi": "दुनिया के बाज़ार में सोने का भाव लगभग टिका रहा",
+  "id": "u0521"
+ },
+ {
+  "key": "pv2MarkupHeading",
+  "variant": "full",
+  "kind": "heading",
+  "screen": "main page (index.html)",
+  "en": "How Tanishq compares to the market",
+  "which": "new",
+  "hi": "Tanishq का भाव बाज़ार के मुक़ाबले कैसा है",
+  "id": "u0522"
+ },
+ {
+  "key": "heroFallbackReason",
+  "variant": "full",
+  "kind": "short label",
+  "screen": "main page (index.html)",
+  "en": "Awaiting first price reading.",
+  "which": "new",
+  "hi": "पहले भाव का इंतज़ार है।",
+  "id": "u0523"
+ },
+ {
+  "key": "ratioRetrainSub",
+  "variant": "full",
+  "kind": "sentence",
+  "screen": "how-we-know.html",
+  "en": "may need recalibration",
+  "which": "old",
+  "hi": "दोबारा कैलिब्रेशन की ज़रूरत हो सकती है",
+  "id": "u0524"
+ },
+ {
+  "key": "cmpPricierThan",
+  "variant": "full",
+  "kind": "label",
+  "screen": "main page (index.html)",
+  "en": "pricier than {avgLabel}",
+  "which": "new",
+  "hi": "{avgLabel} से महंगा",
+  "id": "u0525"
+ },
+ {
+  "key": "calcRowTotal",
+  "variant": "full",
+  "kind": "short label",
+  "screen": "main page (index.html)",
+  "en": "Total",
+  "which": "new",
+  "hi": "कुल",
+  "id": "u0526"
+ },
+ {
+  "key": "trendCheapSteadying",
+  "variant": "full",
+  "kind": "sentence",
+  "screen": "main page (index.html)",
+  "en": "Cheap, and steadying — despite the recent dip, today's price is back close to its usual trend for the month.",
+  "which": "old",
+  "hi": "सस्ता है, और स्थिर हो रहा है — हाल की गिरावट के बावजूद, आज की कीमत इस महीने के सामान्य ट्रेंड के फिर से करीब आ गई है।",
+  "id": "u0527"
+ },
+ {
+  "key": "supportLine1Cheap",
+  "variant": "full",
+  "kind": "sentence",
+  "screen": "main page (index.html)",
+  "en": "Cheaper than most days this month.",
+  "which": "new",
+  "hi": "इस महीने के ज़्यादातर दिनों से सस्ता।",
+  "id": "u0528"
+ },
+ {
+  "key": "chart22kLabel",
+  "variant": "full",
+  "kind": "label",
+  "screen": "main page (index.html)",
+  "en": "{k}K (₹/g)",
+  "which": "new",
+  "hi": "{k} कैरेट (₹/ग्राम)",
+  "id": "u0529"
+ },
+ {
+  "key": "driverHeadline",
+  "variant": "full",
+  "kind": "sentence",
+  "screen": "main page (index.html)",
+  "en": "{lead} — {first}, and {second}.",
+  "which": "new",
+  "hi": "{lead} — {first}, और {second}।",
+  "id": "u0530"
+ },
+ {
+  "key": "dirWordUnchanged",
+  "variant": "full",
+  "kind": "short label",
+  "screen": "main page (index.html)",
+  "en": "unchanged",
+  "which": "old",
+  "hi": "जस की तस रही",
+  "id": "u0531"
+ },
+ {
+  "key": "chartNoteTanishq",
+  "variant": "full",
+  "kind": "short label",
+  "screen": "main page (index.html)",
+  "en": "Tanishq's listed rate",
+  "which": "new",
+  "hi": "Tanishq का बताया भाव",
+  "id": "u0532"
+ },
+ {
+  "key": "pv2WeeklyLower",
+  "variant": "full",
+  "kind": "sentence",
+  "screen": "main page (index.html)",
+  "en": "Lower than on {count} of the last {n} weeks.",
+  "which": "new",
+  "hi": "पिछले {n} हफ़्तों में से {count} हफ़्तों से कम।",
+  "id": "u0533"
+ },
+ {
+  "key": "methAccurateP2CoverageUnknown",
+  "variant": "full",
+  "kind": "sentence",
+  "screen": "how-we-know.html",
+  "en": "close to on target so far — still building a track record",
+  "which": "new",
+  "hi": "अब तक लगभग सही रही है — रिकॉर्ड अभी बन रहा है",
+  "id": "u0534"
+ },
+ {
+  "key": "methRangeStrFallback",
+  "variant": "full",
+  "kind": "short label",
+  "screen": "how-we-know.html",
+  "en": "the current range",
+  "which": "new",
+  "hi": "मौजूदा",
+  "id": "u0535"
+ },
+ {
+  "key": "rangeToggleAriaLabel",
+  "variant": "full",
+  "kind": "aria-label",
+  "screen": "main page (index.html)",
+  "en": "Chart time range",
+  "which": "old",
+  "hi": "चार्ट की रेंज",
+  "id": "u0536"
+ },
+ {
+  "key": "methDriftHeading",
+  "variant": "full",
+  "kind": "heading",
+  "screen": "how-we-know.html",
+  "en": "Estimate accuracy — last 7 days",
+  "which": "old",
+  "hi": "अनुमान की सटीकता — पिछले 7 दिन",
+  "id": "u0537"
+ },
+ {
+  "key": "calcEstimatedNote",
+  "variant": "full",
+  "kind": "sentence",
+  "screen": "main page (index.html)",
+  "en": "Today's price is an estimate, so this total is too.",
+  "which": "old",
+  "hi": "आज की कीमत अनुमानित है, इसलिए यह कुल भी अनुमानित है।",
+  "id": "u0538"
+ },
+ {
+  "key": "bannerTanishqLongSilent",
+  "variant": "full",
+  "kind": "banner/message",
+  "screen": "main page (index.html)",
+  "en": " We haven't been able to read Tanishq's listed rate recently — the last successful check was {rel}.",
+  "which": "new",
+  "hi": " हाल में हम Tanishq का बताया भाव पढ़ नहीं पाए — आख़िरी बार सफलतापूर्वक {rel} देखा था।",
+  "id": "u0539"
+ },
+ {
+  "key": "divergenceNote",
+  "variant": "full",
+  "kind": "sentence",
+  "screen": "main page (index.html)",
+  "en": "(These two don't quite agree — one counts days, the other measures the actual rupee gap. We go with the day-count for the headline above.)",
+  "which": "old",
+  "hi": "(यहां दोनों आंकड़े पूरी तरह नहीं मिलते — एक दिन गिनता है, दूसरा असल रुपये का फ़र्क़ नापता है। ऊपर के हेडलाइन के लिए हम दिन-गिनती वाला आंकड़ा इस्तेमाल करते हैं।)",
+  "id": "u0540"
+ },
+ {
+  "key": "karatSub24",
+  "variant": "full",
+  "kind": "label",
+  "screen": "main page (index.html)",
+  "en": "per gram · 99.9% pure",
+  "which": "new",
+  "hi": "प्रति ग्राम · 99.9% शुद्ध",
+  "id": "u0541"
+ },
+ {
+  "key": "calcRowMakingWithPct",
+  "variant": "full",
+  "kind": "short label",
+  "screen": "main page (index.html)",
+  "en": "Making charge ({pct}%)",
+  "which": "new",
+  "hi": "मेकिंग चार्ज ({pct}%)",
+  "id": "u0542"
+ },
+ {
+  "key": "readHighRising",
+  "variant": "full",
+  "kind": "sentence",
+  "screen": "main page (index.html)",
+  "en": "Today's price is on the higher side for the month, and it's still climbing.",
+  "which": "new",
+  "hi": "आज का भाव इस महीने के हिसाब से ज़्यादा है, और अभी भी चढ़ रहा है।",
+  "id": "u0543"
+ },
+ {
+  "key": "chartEstimateTooltip",
+  "variant": "full",
+  "kind": "sentence",
+  "screen": "main page (index.html)",
+  "en": "{k}K estimate: ≈ ₹{value}",
+  "which": "old",
+  "hi": "{k}K अनुमान: ≈ ₹{value}",
+  "id": "u0544"
+ },
+ {
+  "key": "bannerStaleConfirmed",
+  "variant": "full",
+  "kind": "banner/message",
+  "screen": "main page (index.html)",
+  "en": "We couldn't get a live price update — this is the last confirmed price, from {rel}.",
+  "which": "new",
+  "hi": "ताज़ा भाव नहीं मिल पाया — यह आख़िरी पक्का भाव है, जो {rel} का है।",
+  "id": "u0545"
+ },
+ {
+  "key": "calcEstimatedNote",
+  "variant": "full",
+  "kind": "sentence",
+  "screen": "main page (index.html)",
+  "en": "Today's price is an estimate, so this total is too.",
+  "which": "new",
+  "hi": "आज का भाव अनुमानित है, इसलिए यह कुल भी अनुमानित है।",
+  "id": "u0546"
+ },
+ {
+  "key": "driverPartGoldTookOff",
+  "variant": "full",
+  "kind": "sentence",
+  "screen": "main page (index.html)",
+  "en": "global gold prices took off about ₹{gold}",
+  "which": "old",
+  "hi": "वैश्विक सोने की कीमतों ने करीब ₹{gold} घटाए",
+  "id": "u0547"
+ },
+ {
+  "key": "methodologySummary",
+  "variant": "full",
+  "kind": "short label",
+  "screen": "main page (index.html)",
+  "en": "How this works",
+  "which": "new",
+  "hi": "यह कैसे काम करता है",
+  "id": "u0548"
+ },
+ {
+  "key": "methHowAccurateHeading",
+  "variant": "full",
+  "kind": "heading",
+  "screen": "how-we-know.html",
+  "en": "How accurate is this?",
+  "which": "old",
+  "hi": "यह कितना सटीक है?",
+  "id": "u0549"
+ },
+ {
+  "key": "pv2WeeklyTooLittleData",
+  "variant": "full",
+  "kind": "sentence",
+  "screen": "main page (index.html)",
+  "en": "We don't have enough weeks of price history yet to say.",
+  "which": "new",
+  "hi": "यह बताने के लिए अभी हमारे पास काफ़ी हफ़्तों का भाव नहीं है।",
+  "id": "u0550"
+ },
+ {
+  "key": "karatLabel18",
+  "variant": "full",
+  "kind": "label",
+  "screen": "main page (index.html)",
+  "en": "18 KT",
+  "which": "new",
+  "hi": "18 कैरेट",
+  "id": "u0551"
+ },
+ {
+  "key": "trendCheapStillFalling",
+  "variant": "full",
+  "kind": "sentence",
+  "screen": "main page (index.html)",
+  "en": "Cheap, but still falling — today is well below its usual trend for the month (dropping about ₹{slope} a day).",
+  "which": "new",
+  "hi": "सस्ता है, पर अभी भी गिर रहा है — आज का भाव इस महीने के आम ट्रेंड से काफ़ी नीचे है (रोज़ करीब ₹{slope} की गिरावट)।",
+  "id": "u0552"
+ },
+ {
+  "key": "sparklineAria",
+  "variant": "full",
+  "kind": "aria-label",
+  "screen": "main page (index.html)",
+  "en": "7-day price trend: {dir} ₹{delta}",
+  "which": "new",
+  "hi": "7 दिन का भाव ट्रेंड: {dir} ₹{delta}",
+  "id": "u0553"
+ },
+ {
+  "key": "chartEstimateLabel",
+  "variant": "full",
+  "kind": "label",
+  "screen": "main page (index.html)",
+  "en": "{k}K estimate (₹/g)",
+  "which": "new",
+  "hi": "{k} कैरेट अनुमान (₹/ग्राम)",
+  "id": "u0554"
+ },
+ {
+  "key": "chartAriaLabel",
+  "variant": "full",
+  "kind": "aria-label",
+  "screen": "main page (index.html)",
+  "en": "Price trend chart",
+  "which": "old",
+  "hi": "कीमत का ट्रेंड चार्ट",
+  "id": "u0555"
+ },
+ {
+  "key": "driverPartGoldFlat",
+  "variant": "full",
+  "kind": "sentence",
+  "screen": "main page (index.html)",
+  "en": "global gold prices were roughly flat",
+  "which": "old",
+  "hi": "वैश्विक सोने की कीमतें लगभग स्थिर रहीं",
+  "id": "u0556"
+ },
+ {
+  "key": "driverAriaLabel",
+  "variant": "full",
+  "kind": "aria-label",
+  "screen": "main page (index.html)",
+  "en": "What is driving gold prices",
+  "which": "new",
+  "hi": "सोने का भाव किस वजह से बदल रहा है",
+  "id": "u0557"
+ },
+ {
+  "key": "ratioWatch",
+  "variant": "full",
+  "kind": "short label",
+  "screen": "how-we-know.html",
+  "en": "watch",
+  "which": "new",
+  "hi": "नज़र रखनी होगी",
+  "id": "u0558"
+ },
+ {
+  "key": "heroTanishqOldRate",
+  "variant": "full",
+  "kind": "sentence",
+  "screen": "main page (index.html)",
+  "en": "Tanishq's listed rate when last checked, {when}: ₹{price} — not updated since",
+  "which": "new",
+  "hi": "Tanishq का बताया भाव, आख़िरी बार {when} देखा गया: ₹{price} — तब से अपडेट नहीं हुआ",
+  "id": "u0559"
+ },
+ {
+  "key": "proofLineCheaper",
+  "variant": "full",
+  "kind": "sentence",
+  "screen": "main page (index.html)",
+  "en": "Cheaper than {days} of the last {total} days.",
+  "which": "new",
+  "hi": "पिछले {total} में से {days} दिनों के भाव से सस्ता।",
+  "id": "u0560"
+ },
+ {
+  "key": "verdictReasonFlatMoved",
+  "variant": "full",
+  "kind": "sentence",
+  "screen": "main page (index.html)",
+  "en": "Prices {dirWord} ₹{amount} this week — that's normal movement, nothing to react to.",
+  "which": "new",
+  "hi": "इस हफ़्ते भाव {dirWord}, ₹{amount} तक — यह आम उतार-चढ़ाव है, इसमें कुछ करने की ज़रूरत नहीं।",
+  "id": "u0561"
+ },
+ {
+  "key": "methAccurateP3Strong",
+  "variant": "full",
+  "kind": "sentence",
+  "screen": "how-we-know.html",
+  "en": "About the direction signal",
+  "which": "old",
+  "hi": "दिशा के संकेत के बारे में",
+  "id": "u0562"
+ },
+ {
+  "key": "whenYesterday",
+  "variant": "full",
+  "kind": "short label",
+  "screen": "main page (index.html)",
+  "en": "{time} yesterday",
+  "which": "old",
+  "hi": "कल {time}",
+  "id": "u0563"
+ },
+ {
+  "key": "methAccuracyDrift",
+  "variant": "full",
+  "kind": "short label",
+  "screen": "how-we-know.html",
+  "en": "Accuracy drift",
+  "which": "new",
+  "hi": "सही रहने में बदलाव",
+  "id": "u0564"
+ },
+ {
+  "key": "dirWordDown",
+  "variant": "full",
+  "kind": "short label",
+  "screen": "main page (index.html)",
+  "en": "edged down",
+  "which": "new",
+  "hi": "थोड़ा नीचे आया",
+  "id": "u0565"
+ },
+ {
+  "key": "appTitle",
+  "variant": "full",
+  "kind": "short label",
+  "screen": "main page (index.html)",
+  "en": "Gold Tracker",
+  "which": "new",
+  "hi": "Gold Tracker",
+  "id": "u0566"
+ },
+ {
+  "key": "supportNotCheapAtSupport",
+  "variant": "full",
+  "kind": "sentence",
+  "screen": "main page (index.html)",
+  "en": "Right at its lowest price in 3 months (₹{low}), even though it's not among the cheapest days this month.",
+  "which": "new",
+  "hi": "3 महीने के सबसे कम भाव (₹{low}) पर है, भले ही यह इस महीने के सबसे सस्ते दिनों में नहीं है।",
+  "id": "u0567"
+ },
+ {
+  "key": "pv2RangeUnavailable",
+  "variant": "full",
+  "kind": "sentence",
+  "screen": "main page (index.html)",
+  "en": "We don't have a short-term range to show today.",
+  "which": "old",
+  "hi": "आज दिखाने के लिए कोई छोटी अवधि का दायरा उपलब्ध नहीं है।",
+  "id": "u0568"
+ },
+ {
+  "key": "dataSuffNote",
+  "variant": "full",
+  "kind": "sentence",
+  "screen": "main page (index.html)",
+  "en": "Only {n} distinct days in the window — treat as indicative.",
+  "which": "old",
+  "hi": "इस दायरे में सिर्फ़ {n} अलग दिन हैं — इसे संकेत के तौर पर लें, पक्का आंकड़ा नहीं।",
+  "id": "u0569"
+ },
+ {
+  "key": "relJustNow",
+  "variant": "full",
+  "kind": "label",
+  "screen": "main page (index.html)",
+  "en": "just now",
+  "which": "new",
+  "hi": "अभी-अभी",
+  "id": "u0570"
+ },
+ {
+  "key": "ratioOnTrack",
+  "variant": "full",
+  "kind": "short label",
+  "screen": "how-we-know.html",
+  "en": "on track",
+  "which": "new",
+  "hi": "ठीक चल रहा है",
+  "id": "u0571"
+ },
+ {
+  "key": "readRising",
+  "variant": "full",
+  "kind": "sentence",
+  "screen": "main page (index.html)",
+  "en": "Prices have climbed over the past month, though today isn't especially expensive yet.",
+  "which": "old",
+  "hi": "पिछले महीने कीमत बढ़ी है, हालांकि आज की कीमत अभी ख़ास ज़्यादा नहीं है।",
+  "id": "u0572"
+ },
+ {
+  "key": "eyebrow",
+  "variant": "full",
+  "kind": "heading",
+  "screen": "main page (index.html)",
+  "en": "22K gold · per gram",
+  "which": "new",
+  "hi": "22 कैरेट सोना · प्रति ग्राम",
+  "id": "u0573"
+ },
+ {
+  "key": "methNextFixHold",
+  "variant": "full",
+  "kind": "short label",
+  "screen": "how-we-know.html",
+  "en": "Latest official rate",
+  "which": "new",
+  "hi": "सबसे ताज़ा आधिकारिक भाव",
+  "id": "u0574"
+ },
+ {
+  "key": "directionDown",
+  "variant": "full",
+  "kind": "sentence",
+  "screen": "main page (index.html)",
+  "en": "More likely to go <strong>down</strong> than up next (about {pct}% chance).",
+  "which": "new",
+  "hi": "अगली बार भाव के <strong>घटने</strong> की संभावना ज़्यादा है (लगभग {pct}%)।",
+  "id": "u0575"
+ },
+ {
+  "key": "proofLinePricier",
+  "variant": "full",
+  "kind": "sentence",
+  "screen": "main page (index.html)",
+  "en": "Pricier than {days} of the last {total} days.",
+  "which": "old",
+  "hi": "पिछले {total} दिनों में से {days} दिनों से महंगा।",
+  "id": "u0576"
+ },
+ {
+  "key": "driverAriaLabel",
+  "variant": "full",
+  "kind": "aria-label",
+  "screen": "main page (index.html)",
+  "en": "What is driving gold prices",
+  "which": "old",
+  "hi": "सोने की कीमत को क्या प्रभावित कर रहा है",
+  "id": "u0577"
+ },
+ {
+  "key": "sinceLastLabel",
+  "variant": "full",
+  "kind": "label",
+  "screen": "main page (index.html)",
+  "en": "since last",
+  "which": "new",
+  "hi": "पिछली बार से",
+  "id": "u0578"
+ },
+ {
+  "key": "comparisonAriaLabel",
+  "variant": "full",
+  "kind": "aria-label",
+  "screen": "main page (index.html)",
+  "en": "How today's price compares to recent averages",
+  "which": "new",
+  "hi": "आज का भाव हाल के औसत से कैसा है",
+  "id": "u0579"
+ },
+ {
+  "key": "relDaysAgo",
+  "variant": "full",
+  "kind": "label",
+  "screen": "main page (index.html)",
+  "en": "{n}d ago",
+  "which": "new",
+  "hi": "{n} दिन पहले",
+  "id": "u0580"
+ },
+ {
+  "key": "todaysReadEyebrow",
+  "variant": "full",
+  "kind": "heading",
+  "screen": "main page (index.html)",
+  "en": "Today's read",
+  "which": "new",
+  "hi": "आज का हाल",
+  "id": "u0581"
+ },
+ {
+  "key": "methAccurateP2Strong",
+  "variant": "full",
+  "kind": "sentence",
+  "screen": "how-we-know.html",
+  "en": "Our {rangeStr} range has been right {coverageText}",
+  "which": "new",
+  "hi": "हमारी रेंज ({rangeStr}) {coverageText}",
+  "id": "u0582"
+ },
+ {
+  "key": "rangeAll",
+  "variant": "full",
+  "kind": "short label",
+  "screen": "main page (index.html)",
+  "en": "All",
+  "which": "new",
+  "hi": "सारे",
+  "id": "u0583"
+ },
+ {
+  "key": "verdictReasonUnknown",
+  "variant": "full",
+  "kind": "sentence",
+  "screen": "main page (index.html)",
+  "en": "Check back once we've collected a few more readings.",
+  "which": "old",
+  "hi": "कुछ और रीडिंग जमा होने के बाद फिर देखें।",
+  "id": "u0584"
+ },
+ {
+  "key": "supportLine2Above",
+  "variant": "full",
+  "kind": "sentence",
+  "screen": "main page (index.html)",
+  "en": "₹{amount} above the usual price for the month.",
+  "which": "new",
+  "hi": "इस महीने के आम भाव से ₹{amount} ज़्यादा।",
+  "id": "u0585"
+ },
+ {
+  "key": "volNoteFallback",
+  "variant": "full",
+  "kind": "sentence",
+  "screen": "main page (index.html)",
+  "en": "Over the past month, gold's price typically went up or down by about ₹{z} in 5 days.",
+  "which": "new",
+  "hi": "पिछले एक महीने में 5 दिनों के अंदर सोने का भाव आम तौर पर करीब ₹{z} ऊपर या नीचे गया।",
+  "id": "u0586"
+ },
+ {
+  "key": "supportCheapAtSupport",
+  "variant": "full",
+  "kind": "sentence",
+  "screen": "main page (index.html)",
+  "en": "Cheap, and sitting right at its 3-month low (₹{low}) — it hasn't dropped below this in {n} days.",
+  "which": "old",
+  "hi": "सस्ता है, और अपने 3-महीने के न्यूनतम (₹{low}) पर टिका है — पिछले {n} दिनों में यह इससे नीचे नहीं गया।",
+  "id": "u0587"
+ },
+ {
+  "key": "heroAriaLabel",
+  "variant": "full",
+  "kind": "aria-label",
+  "screen": "main page (index.html)",
+  "en": "Current 22K gold price and buying verdict",
+  "which": "new",
+  "hi": "22 कैरेट सोने का आज का भाव और ख़रीदने का सुझाव",
+  "id": "u0588"
+ },
+ {
+  "key": "thWhen",
+  "variant": "full",
+  "kind": "label",
+  "screen": "main page (index.html)",
+  "en": "When",
+  "which": "new",
+  "hi": "कब",
+  "id": "u0589"
+ }
+]
