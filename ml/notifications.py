@@ -1206,14 +1206,21 @@ def _check_t17_model_promoted(
     raw_change = ch.get("last_change")
     change: dict = raw_change if isinstance(raw_change, dict) else {}
     old_id, new_id = change.get("from") or "unknown", change.get("to") or "unknown"
-    what = "rolled back" if change.get("event") == "rolled_back" else "promoted"
     title = "Gold Tracker: next-rate model changed"
-    body = (
-        f"The model behind the next-rate range was {what} on its own: {old_id} to {new_id} "
-        f"(since {since}). It goes live on the next run, and the daily checks that can switch a "
-        "model off apply to it from its first day. To undo it, run: python -m ml.promotion "
-        "rollback (ADR 072)."
-    )
+    if change.get("event") == "rolled_back":
+        body = (
+            f"The model behind the next-rate range was rolled back by a person: {old_id} to "
+            f"{new_id} (since {since}). It goes live on the next run and stays there: the "
+            "automatic switch is paused until a person runs: python -m ml.promotion unpin "
+            "(ADR 072)."
+        )
+    else:
+        body = (
+            f"The model behind the next-rate range was promoted on its own: {old_id} to "
+            f"{new_id} (since {since}). It goes live on the next run, and the daily checks "
+            "that can switch a model off apply to it from its first day. To undo it, run: "
+            "python -m ml.promotion rollback (ADR 072)."
+        )
     return _make_alert(
         "T17", title, body, 4, ["information_source", "warning"], now_ist, bypass_quiet=True
     )

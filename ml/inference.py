@@ -988,7 +988,17 @@ def _next_fix_block(
         if ch:  # ADR 072: which model is live; the notification trigger T17 reads this
             block["champion"] = {
                 k: ch.get(k)
-                for k in ("id", "since", "promoted_now", "unreadable", "history_len", "last_change")
+                for k in (
+                    "id",
+                    "since",
+                    "promoted_now",
+                    "unreadable",
+                    "pinned",
+                    "fallback",
+                    "effective_id",
+                    "history_len",
+                    "last_change",
+                )
             }
         block["windows"] = {
             k: {kk: v for kk, v in rec.items() if kk not in ("conformal_q", "vol_now")}

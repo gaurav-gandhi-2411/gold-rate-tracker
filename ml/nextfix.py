@@ -79,7 +79,8 @@ ENSEMBLE_VERSION = "nextfix_ridge_mlp_v1"
 # the day GG approved it (2026-10-05, when the ensemble was still live): counting an earlier day
 # as forward would present a re-run as a live call.
 P3_FORWARD_FROM = "2026-10-07"
-STATE_FILE = "model_demotion_state.json"  # ADR 068: sticky demotion state of the live model
+STATE_FILE = "model_demotion_state.json"  # ADR 068: sticky demotion state of P3 (back-compat name)
+STATE_FILE_PREFIX = "model_demotion_state__"  # ADR 072: any other model gets its own file
 # ADR 072 step 2: champion id -> (record source, model_version label, predictor function name).
 # Predictors are looked up by name at call time so tests (and the demotion tests) can substitute them.
 # Sources: "p3" = data/nextfix_p3_oos.json, "ensemble" = data/nextfix_oos.json, "variant" = the
@@ -90,6 +91,17 @@ CHAMPION_REGISTRY: dict[str, tuple[str, str, str]] = {
     "p3_monday": ("variant", "nextfix_p3_monday_v1", "predict_p3_monday"),
     "ensemble": ("ensemble", ENSEMBLE_VERSION, "predict"),
 }
+
+
+def demotion_state_file(model_version: str) -> str:
+    """File name of one model's sticky demotion state under data/ (ADR 072): P3 keeps the original
+    name (its existing file is untouched), every other model gets ``model_demotion_state__<v>.json``
+    so a champion change can never overwrite or launder another model's state."""
+    if model_version == MODEL_VERSION:
+        return STATE_FILE
+    return f"{STATE_FILE_PREFIX}{model_version}.json"
+
+
 FEATURES = ["x_glob", "x_prev", "bdev"]
 MAX_GAP_DAYS = 4  # consecutive IBJA days only (weekends/holidays allowed)
 BASIS_WINDOW = 20  # pairs in the rolling mean the basis deviation is measured from
@@ -844,6 +856,13 @@ def run(
         shadow_folds, shadow_ev = load_oos(oos_path), {"n": 0, "ready": False}
     records = {"p3": folds, "ensemble": shadow_folds, **load_variant_folds(data_dir)}
     cid = cstate["champion"]
+    fallback = False
+    if cid != "p3" and not records.get(cid):
+        # the champion's own record is missing or empty: holding the page silently would hide a
+        # broken switch, so P3 runs this run, loudly; the champion file is NOT touched (ADR 072)
+        logger.error("champion %s has no record of its own; using P3 for this run", cid)
+        fallback = True
+        cid = "p3"
     _source, live_version, predictor_name = CHAMPION_REGISTRY[cid]
     if cid == "p3":  # the default path, exactly as before ADR 072
         live_folds, ev = folds, p3_ev
@@ -869,6 +888,8 @@ def run(
         shadow_version=sh_version,
     )
     champion = _promotion_step(data_dir, cstate, records, now)
+    if fallback:
+        champion.update(fallback="record_missing", effective_id="p3")
     return {
         "eval": ev,
         "shadow_eval": sh_ev,
@@ -906,6 +927,15 @@ def load_variant_folds(data_dir: Path) -> dict[str, list[dict]]:
     return {k: v for k, v in variants.items() if k in VARIANT_PREDICTORS and isinstance(v, list)}
 
 
+def _promotion_blocked(data_dir: Path, cid: str) -> bool:
+    """True when challenger ``cid`` is demoted, or its own state file cannot be read, so it must
+    not be promoted (ADR 072: a model returning as champion would find that sticky state anyway)."""
+    from ml import demotion as dm
+
+    version = CHAMPION_REGISTRY[cid][1]
+    return bool(dm.load_state(data_dir / demotion_state_file(version), version).get("demoted"))
+
+
 def _promotion_step(
     data_dir: Path, cstate: dict, records: dict[str, list[dict]], now: datetime
 ) -> dict:
@@ -914,23 +944,30 @@ def _promotion_step(
     A promotion is written to data/champion_state.json and takes effect on the NEXT run (one run,
     one model: this run's forecast is already built). Fail closed: any exception is logged at error
     level and leaves the champion file and the live forecast exactly as they were. Never promotes
-    when the champion file was unreadable (a person must repair it) or when the champion has no
-    forward-day record of its own. Returns the ``champion`` block ml.inference publishes.
+    when the champion file was unreadable (a person must repair it), while it is pinned (after a
+    rollback, until a person unpins), when the champion has no forward-day record of its own, or a
+    challenger whose own demotion state says demoted or cannot be read. Never raises. Returns the
+    ``champion`` block ml.inference publishes.
     """
     from ml import promotion
 
     path = data_dir / promotion.CHAMPION_FILE
     state = {k: v for k, v in cstate.items() if k != "unreadable"}
-    hist = state["history"]
+    raw_hist = state.get("history")
+    hist = raw_hist if isinstance(raw_hist, list) else []
     block = {
-        "id": state["champion"],
-        "since": state["since"],
+        "id": state.get("champion", promotion.DEFAULT_CHAMPION),
+        "since": state.get("since"),
         "promoted_now": False,
-        "unreadable": bool(cstate.get("unreadable")),
+        "unreadable": bool(cstate.get("unreadable")) or not isinstance(raw_hist, list),
+        "pinned": state.get("pinned") is not False,  # anything but a real False reads as pinned
         "history_len": len(hist),
         "last_change": _last_change(hist),
     }
     if block["unreadable"]:
+        return block
+    if block["pinned"]:
+        logger.info("champion is pinned (rolled back); the promotion rule is not applied (ADR 072)")
         return block
     try:
         cid = state["champion"]
@@ -939,6 +976,15 @@ def _promotion_step(
             return block
         verdict = promotion.decide(cid, recs)
         to = verdict.get("promote")
+        if to and _promotion_blocked(data_dir, to):
+            logger.info("challenger %s would be promoted but its own state is demoted; skipped", to)
+            rows = verdict.get("challengers") or {}
+            ok = [
+                c
+                for c, r in rows.items()
+                if c != to and r.get("promotable") and not _promotion_blocked(data_dir, c)
+            ]
+            to = min(ok, key=lambda c: rows[c]["mae_challenger"]) if ok else None
         if not to:
             return block
         if to == cid or to not in recs:
@@ -981,7 +1027,7 @@ def _demotion(
     """
     from ml import demotion as dm
 
-    path = data_dir / STATE_FILE
+    path = data_dir / demotion_state_file(model_version)
     iso_now = now.astimezone(UTC).isoformat()
     state: dict = {}
     try:

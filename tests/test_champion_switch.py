@@ -63,6 +63,11 @@ def _fc_block(out: dict) -> dict:
     return {"next_fix": {"active": True, "champion": out["champion"]}}
 
 
+def _mstate(tmp_path: Path, version: str) -> dict:
+    """The sticky demotion state of one model (ADR 072: per-model files)."""
+    return json.loads((tmp_path / nextfix.demotion_state_file(version)).read_text())
+
+
 def _variant_folds(tmp_path: Path, name: str) -> list[dict]:
     data = json.loads((tmp_path / nextfix.P3_VARIANTS_PATH.name).read_text())
     return data["variants"][name]
@@ -100,7 +105,8 @@ def test_champion_p3_roll60_uses_variant_folds_label_and_fresh_demotion_state(tm
     fc = out["forecast"]
     # ... the new champion starts clean: same rules, its own sticky state keyed by its version
     assert out["demotion"]["demoted"] is False and out["demotion"]["checked"] is True
-    assert _state(tmp_path)["model_version"] == ROLL and _state(tmp_path)["demoted"] is False
+    assert _mstate(tmp_path, ROLL)["demoted"] is False
+    assert _state(tmp_path) == old  # P3's own file is untouched by the other model
     assert fc["mode"] == "after_us_close" and fc["model_version"] == ROLL
     folds = _variant_folds(tmp_path, "p3_roll60")
     assert out["eval"] == nextfix.evaluate(folds, ROLL)
@@ -123,7 +129,7 @@ def test_champion_p3_monday_label_and_folds(tmp_path: Path):
     out = nextfix.run(now=now, macro=macro, data_dir=tmp_path)
     assert out["forecast"]["model_version"] == MONDAY
     assert out["eval"] == nextfix.evaluate(_variant_folds(tmp_path, "p3_monday"), MONDAY)
-    assert _state(tmp_path)["model_version"] == MONDAY
+    assert _mstate(tmp_path, MONDAY)["model_version"] == MONDAY
 
 
 def test_champion_ensemble(tmp_path: Path):
@@ -134,7 +140,8 @@ def test_champion_ensemble(tmp_path: Path):
     assert out["forecast"]["model_version"] == nextfix.ENSEMBLE_VERSION
     assert out["eval"] == nextfix.evaluate(ens, nextfix.ENSEMBLE_VERSION)
     assert out["forecast"]["shadow"]["model_version"] == nextfix.MODEL_VERSION
-    assert _state(tmp_path)["model_version"] == nextfix.ENSEMBLE_VERSION
+    ens_state = _mstate(tmp_path, nextfix.ENSEMBLE_VERSION)
+    assert ens_state["model_version"] == nextfix.ENSEMBLE_VERSION
 
 
 # --- 3. unreadable or unknown champion file: P3, flagged, never a challenger --------------------
@@ -347,3 +354,204 @@ def test_inference_next_fix_block_carries_the_champion(tmp_path: Path, monkeypat
     block2 = inference._next_fix_block(now, 14000, {"slope": 1.0, "valid": True})
     assert block2["model_version"] == ROLL and block2["champion"]["id"] == "p3_roll60"
     assert block2["shadow_ensemble"]["shadow_model_version"] == nextfix.MODEL_VERSION
+
+
+# --- 8. review fixes (verifier findings on PR #2507) --------------------------------------------
+def _promote_then_settle(tmp_path: Path, monkeypatch):
+    """Promote p3 -> p3_roll60, run once as roll60, return (macro, now)."""
+    _forward_everywhere(monkeypatch)
+    macro, now, _ = _prepared(tmp_path)
+    monkeypatch.setattr(promotion, "decide", _winner("p3_roll60"))
+    nextfix.run(now=now, macro=macro, data_dir=tmp_path)
+    monkeypatch.setattr(promotion, "decide", lambda *a, **k: {"promote": None, "challengers": {}})
+    nextfix.run(now=now, macro=macro, data_dir=tmp_path)
+    return macro, now
+
+
+def _champ(tmp_path: Path) -> dict:
+    return json.loads((tmp_path / CHAMP).read_text(encoding="utf-8"))
+
+
+def test_h1_rollback_pins_and_the_rule_does_not_repromote_the_same_challenger(
+    tmp_path: Path, monkeypatch
+):
+    macro, now = _promote_then_settle(tmp_path, monkeypatch)
+    assert promotion.main(["rollback", "--data-dir", str(tmp_path)]) == 0
+    st = _champ(tmp_path)
+    assert st["champion"] == "p3" and st["pinned"] is True
+    assert st["history"][-1]["event"] == "rolled_back" and st["history"][-1]["pinned"] is True
+    before = (tmp_path / CHAMP).read_bytes()
+    monkeypatch.setattr(promotion, "decide", _winner("p3_roll60"))  # same evidence again
+    out = nextfix.run(now=now, macro=macro, data_dir=tmp_path)
+    assert out["champion"]["id"] == "p3" and out["champion"]["promoted_now"] is False
+    assert out["champion"]["pinned"] is True
+    assert (tmp_path / CHAMP).read_bytes() == before
+
+
+def test_h1_unpin_is_an_explicit_event_and_lets_the_rule_run_again(tmp_path: Path, monkeypatch):
+    macro, now = _promote_then_settle(tmp_path, monkeypatch)
+    promotion.main(["rollback", "--data-dir", str(tmp_path)])
+    assert promotion.main(["unpin", "--data-dir", str(tmp_path)]) == 0
+    st = _champ(tmp_path)
+    assert st["pinned"] is False and st["history"][-1]["event"] == "unpinned"
+    monkeypatch.setattr(promotion, "decide", _winner("p3_roll60"))
+    out = nextfix.run(now=now, macro=macro, data_dir=tmp_path)
+    assert out["champion"]["promoted_now"] is True
+    # unpinning something that is not pinned changes nothing
+    before = (tmp_path / CHAMP).read_bytes()
+    assert promotion.main(["unpin", "--data-dir", str(tmp_path)]) == 1
+    assert (tmp_path / CHAMP).read_bytes() == before
+
+
+def test_h1_rollback_without_a_promotion_after_the_last_rollback_raises_and_writes_nothing(
+    tmp_path: Path, monkeypatch
+):
+    _promote_then_settle(tmp_path, monkeypatch)
+    promotion.main(["rollback", "--data-dir", str(tmp_path)])
+    before = (tmp_path / CHAMP).read_bytes()
+    with pytest.raises(ValueError):
+        promotion.rollback(promotion.load_champion(tmp_path / CHAMP))
+    assert promotion.main(["rollback", "--data-dir", str(tmp_path)]) == 1
+    assert (tmp_path / CHAMP).read_bytes() == before
+    # also: nothing was ever promoted
+    (tmp_path / CHAMP).unlink()
+    assert promotion.main(["rollback", "--data-dir", str(tmp_path)]) == 1
+    assert not (tmp_path / CHAMP).exists()
+
+
+def test_h1_show_prints_pinned_and_pinned_survives_load_save(tmp_path: Path, capsys):
+    st = {**promotion.empty_champion(), "pinned": True}
+    promotion.save_champion(tmp_path / CHAMP, st)
+    assert promotion.load_champion(tmp_path / CHAMP)["pinned"] is True
+    assert promotion.empty_champion()["pinned"] is False
+    assert promotion.main(["show", "--data-dir", str(tmp_path)]) == 0
+    assert '"pinned": true' in capsys.readouterr().out
+
+
+@pytest.mark.parametrize("bad", ['"yes"', "1", "null", "[]"])
+def test_h1_malformed_pinned_value_is_treated_as_pinned(tmp_path: Path, bad: str):
+    (tmp_path / CHAMP).write_text(
+        '{"champion": "p3", "since": null, "history": [], "pinned": ' + bad + "}", encoding="utf-8"
+    )
+    st = promotion.load_champion(tmp_path / CHAMP)
+    assert st["pinned"] is True and not st.get("unreadable")
+
+
+def test_h1_t17_wording_rollback_is_by_a_person_promotion_is_on_its_own():
+    now_ist = datetime.now(notifications.IST)
+    promoted = notifications._check_t17_model_promoted(
+        _champion_block("2026-10-20T07:00:00+00:00", True),
+        notifications.NotificationState(),
+        now_ist,
+    )
+    assert promoted is not None and "on its own" in promoted.body
+    rolled = _champion_block("2026-10-21T07:00:00+00:00")
+    rolled["next_fix"]["champion"]["last_change"] = {
+        "event": "rolled_back",
+        "from": "p3_roll60",
+        "to": "p3",
+    }
+    alert = notifications._check_t17_model_promoted(
+        rolled, notifications.NotificationState(), now_ist
+    )
+    assert alert is not None
+    assert "rolled back by a person" in alert.body and "on its own" not in alert.body
+
+
+def test_h2_demotion_state_is_per_model_and_survives_champion_changes(tmp_path: Path):
+    macro, now, _ = _prepared(tmp_path)
+    assert nextfix.demotion_state_file(nextfix.MODEL_VERSION) == "model_demotion_state.json"
+    assert nextfix.demotion_state_file(ROLL) == f"model_demotion_state__{ROLL}.json"
+    p3 = _state(tmp_path)
+    p3.update(demoted=True, since="2026-10-01T00:00:00+00:00", reasons=[{"rule": "error"}])
+    (tmp_path / nextfix.STATE_FILE).write_text(json.dumps(p3))
+    p3_bytes = (tmp_path / nextfix.STATE_FILE).read_bytes()
+    # roll60 becomes champion: its own file, P3's file untouched
+    _write_champion(tmp_path, "p3_roll60")
+    nextfix.run(now=now, macro=macro, data_dir=tmp_path)
+    assert (tmp_path / nextfix.STATE_FILE).read_bytes() == p3_bytes
+    assert _mstate(tmp_path, ROLL)["model_version"] == ROLL
+    # P3 returns as champion: it finds its OWN sticky demotion, not a fresh start
+    _write_champion(tmp_path, "p3")
+    out = nextfix.run(now=now, macro=macro, data_dir=tmp_path)
+    assert out["demotion"]["demoted"] is True
+    assert out["forecast"]["model_version"].startswith("hold_latest_fix")
+
+
+@pytest.mark.parametrize("how", ["demoted", "unreadable"])
+def test_h2_a_challenger_whose_own_state_is_demoted_or_unreadable_is_not_promoted(
+    tmp_path: Path, monkeypatch, caplog, how: str
+):
+    from ml import demotion
+
+    _forward_everywhere(monkeypatch)
+    macro, now, _ = _prepared(tmp_path)
+    path = tmp_path / nextfix.demotion_state_file(ROLL)
+    if how == "demoted":
+        st = {**demotion.empty_state(ROLL), "demoted": True, "since": "2026-10-01T00:00:00+00:00"}
+        path.write_text(json.dumps(st))
+    else:
+        path.write_text("{nope")
+    monkeypatch.setattr(promotion, "decide", _winner("p3_roll60"))
+    with caplog.at_level(logging.INFO):
+        out = nextfix.run(now=now, macro=macro, data_dir=tmp_path)
+    assert out["champion"]["promoted_now"] is False and not (tmp_path / CHAMP).exists()
+    assert any("p3_roll60" in r.getMessage() for r in caplog.records)
+
+
+def test_h2_workflow_stages_per_model_state_files_with_a_guarded_line():
+    root = Path(__file__).resolve().parent.parent
+    yml = (root / ".github/workflows/check-price.yml").read_text(encoding="utf-8")
+    assert 'compgen -G "data/model_demotion_state__*.json"' in yml
+    assert "git add data/model_demotion_state__*.json || true" in yml
+
+
+@pytest.mark.parametrize("hist", ["null", "[1, 2]", '"x"', "{}", '[{"event": "promoted"}, 3]'])
+def test_m1_malformed_history_in_a_valid_champion_file_is_unreadable_not_a_crash(
+    tmp_path: Path, hist: str
+):
+    (tmp_path / CHAMP).write_text(
+        '{"champion": "p3_roll60", "since": null, "history": ' + hist + "}", encoding="utf-8"
+    )
+    st = promotion.load_champion(tmp_path / CHAMP)
+    assert st["unreadable"] is True and st["champion"] == "p3"
+    macro, now, _ = _prepared(tmp_path)
+    out = nextfix.run(now=now, macro=macro, data_dir=tmp_path)
+    assert out["champion"]["unreadable"] is True and out["champion"]["id"] == "p3"
+    assert out["forecast"]["model_version"] == nextfix.MODEL_VERSION
+    block = nextfix._promotion_step(tmp_path, {**st, "history": None}, {}, now)  # never raises
+    assert block["unreadable"] is True
+
+
+def test_m2_a_missing_champion_record_falls_back_to_p3_loudly_without_writing(
+    tmp_path: Path, monkeypatch, caplog
+):
+    macro, now, base = _prepared(tmp_path)
+    _write_champion(tmp_path, "p3_roll60")
+    before = (tmp_path / CHAMP).read_bytes()
+    monkeypatch.setattr(nextfix, "load_variant_folds", lambda d: {"p3_roll60": []})
+    with caplog.at_level(logging.ERROR):
+        out = nextfix.run(now=now, macro=macro, data_dir=tmp_path)
+    assert out["forecast"]["model_version"] == nextfix.MODEL_VERSION
+    assert out["forecast"] == base["forecast"]
+    ch = out["champion"]
+    assert ch["id"] == "p3_roll60" and ch["fallback"] == "record_missing"
+    assert ch["effective_id"] == "p3"
+    assert (tmp_path / CHAMP).read_bytes() == before
+    assert any(r.levelno == logging.ERROR for r in caplog.records)
+    monkeypatch.setattr(nextfix, "load_variant_folds", lambda d: {})  # absent altogether
+    again = nextfix.run(now=now, macro=macro, data_dir=tmp_path)
+    assert again["champion"]["fallback"] == "record_missing"
+
+
+def test_m2_fallback_and_pin_are_published_by_inference(tmp_path: Path, monkeypatch):
+    from ml import inference
+
+    macro, now, _ = _prepared(tmp_path)
+    monkeypatch.setattr(inference, "DATA_DIR", tmp_path)
+    monkeypatch.setattr("ml.macro.load_macro_features", lambda: macro)
+    monkeypatch.setattr(nextfix, "load_variant_folds", lambda d: {})
+    _write_champion(tmp_path, "p3_roll60")
+    ch = inference._next_fix_block(now, 14000, {"slope": 1.0, "valid": True})["champion"]
+    assert ch["fallback"] == "record_missing" and ch["effective_id"] == "p3"
+    assert ch["pinned"] is False
