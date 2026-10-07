@@ -1,5 +1,5 @@
 {
-  "predicted_at": "2026-10-07T20:55:07.484643+00:00",
+  "predicted_at": "2026-10-07T21:07:46.179254+00:00",
   "target_window": "5d",
   "headline": {
     "method": "hold_latest_fix_pm_to_am",
@@ -59,7 +59,7 @@
     "direction_consensus": 1.0
   },
   "driver_context": {
-    "computed_at": "2026-10-07T20:55:08.230658+00:00",
+    "computed_at": "2026-10-07T21:07:46.654262+00:00",
     "macro_staleness_days": 0.0,
     "macro_fresh": true,
     "premium_threshold_pct": 15.0,
@@ -170,6 +170,17 @@
       "reasons": [],
       "rules_breaching_now": [],
       "checked": true
+    },
+    "champion": {
+      "id": "p3",
+      "since": null,
+      "promoted_now": false,
+      "unreadable": false,
+      "pinned": false,
+      "fallback": null,
+      "effective_id": null,
+      "history_len": 0,
+      "last_change": null
     },
     "windows": {
       "am_to_pm": {
