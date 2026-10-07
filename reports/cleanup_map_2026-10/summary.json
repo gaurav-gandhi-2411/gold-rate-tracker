@@ -1,0 +1,195 @@
+{
+ "tracked_files": 1053,
+ "by_class": {
+  "KEEP": 695,
+  "DELETE": 326,
+  "ARCHIVE": 32
+ },
+ "by_class_confidence": {
+  "KEEP/HIGH": 662,
+  "KEEP/UNCERTAIN": 25,
+  "KEEP/MED": 8,
+  "DELETE/HIGH": 11,
+  "ARCHIVE/HIGH": 18,
+  "ARCHIVE/MED": 12,
+  "DELETE/UNCERTAIN": 315,
+  "ARCHIVE/UNCERTAIN": 2
+ },
+ "by_area": {
+  "(root)": {
+   "KEEP": 25
+  },
+  ".claude": {
+   "KEEP": 2
+  },
+  ".github": {
+   "KEEP": 18
+  },
+  ".portfolio": {
+   "KEEP": 1
+  },
+  "archive": {
+   "KEEP": 3
+  },
+  "config": {
+   "KEEP": 1
+  },
+  "data": {
+   "KEEP": 42,
+   "DELETE": 1,
+   "ARCHIVE": 2
+  },
+  "docs": {
+   "KEEP": 74,
+   "ARCHIVE": 11,
+   "DELETE": 29
+  },
+  "fonts": {
+   "KEEP": 6
+  },
+  "icons": {
+   "KEEP": 2
+  },
+  "ml": {
+   "KEEP": 78,
+   "ARCHIVE": 6,
+   "DELETE": 1
+  },
+  "notebooks": {
+   "ARCHIVE": 1
+  },
+  "reports": {
+   "KEEP": 58,
+   "DELETE": 286
+  },
+  "scraper": {
+   "KEEP": 13,
+   "DELETE": 3
+  },
+  "scripts": {
+   "KEEP": 68,
+   "DELETE": 6,
+   "ARCHIVE": 7
+  },
+  "tests": {
+   "KEEP": 296,
+   "ARCHIVE": 5
+  },
+  "worker-deadman": {
+   "KEEP": 8
+  }
+ },
+ "batches": {
+  "B1": {
+   "files": 12,
+   "lines": 837,
+   "bytes": 37257,
+   "uncertain": 1
+  },
+  "B3": {
+   "files": 19,
+   "lines": 2981,
+   "bytes": 113990,
+   "uncertain": 1
+  },
+  "B2": {
+   "files": 12,
+   "lines": 2623,
+   "bytes": 133890,
+   "uncertain": 0
+  },
+  "B4": {
+   "files": 315,
+   "lines": 0,
+   "bytes": 76567862,
+   "uncertain": 315
+  }
+ },
+ "area_totals": {
+  "(root)": {
+   "files": 25,
+   "bytes": 858878,
+   "lines": 10406
+  },
+  ".claude": {
+   "files": 2,
+   "bytes": 4629,
+   "lines": 88
+  },
+  ".github": {
+   "files": 18,
+   "bytes": 135707,
+   "lines": 2784
+  },
+  ".portfolio": {
+   "files": 1,
+   "bytes": 522,
+   "lines": 16
+  },
+  "archive": {
+   "files": 3,
+   "bytes": 84897,
+   "lines": 3262
+  },
+  "config": {
+   "files": 1,
+   "bytes": 620,
+   "lines": 9
+  },
+  "data": {
+   "files": 45,
+   "bytes": 1555853,
+   "lines": 42931
+  },
+  "docs": {
+   "files": 114,
+   "bytes": 24291535,
+   "lines": 18458
+  },
+  "fonts": {
+   "files": 6,
+   "bytes": 388032,
+   "lines": 0
+  },
+  "icons": {
+   "files": 2,
+   "bytes": 26498,
+   "lines": 0
+  },
+  "ml": {
+   "files": 85,
+   "bytes": 936207,
+   "lines": 22642
+  },
+  "notebooks": {
+   "files": 1,
+   "bytes": 16319,
+   "lines": 449
+  },
+  "reports": {
+   "files": 344,
+   "bytes": 58618072,
+   "lines": 71862
+  },
+  "scraper": {
+   "files": 16,
+   "bytes": 144634,
+   "lines": 3644
+  },
+  "scripts": {
+   "files": 81,
+   "bytes": 780027,
+   "lines": 19002
+  },
+  "tests": {
+   "files": 301,
+   "bytes": 1782025,
+   "lines": 36085
+  },
+  "worker-deadman": {
+   "files": 8,
+   "bytes": 179219,
+   "lines": 4034
+  }
+ }
+}

@@ -612,6 +612,9 @@
          app.js calls t()/getLang()/setLang() at its own top level (currentLang = getLang()). -->
     <script src="i18n.js" defer></script>
     <script src="app.js" defer></script>
+    <!-- analytics.js: inert (no request, no DOM, no storage) unless FEATURE_FLAGS.analytics is on
+         AND its endpoint is set. After app.js so it can never delay first render. -->
+    <script src="analytics.js" defer></script>
     <script>
       if ("serviceWorker" in navigator) {
         window.addEventListener("load", () => {
