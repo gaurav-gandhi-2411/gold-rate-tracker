@@ -259,26 +259,42 @@ def decide(
 
 # --- champion state (the one-file switch) --------------------------------------------------------
 def empty_champion() -> dict[str, Any]:
-    return {"schema_version": SCHEMA, "champion": DEFAULT_CHAMPION, "since": None, "history": []}
+    return {
+        "schema_version": SCHEMA,
+        "champion": DEFAULT_CHAMPION,
+        "since": None,
+        "history": [],
+        "pinned": False,  # True after a rollback: the rule does nothing until a person unpins
+    }
 
 
 def load_champion(path: Path) -> dict[str, Any]:
-    """Missing file: the default champion (P3). Unreadable or unknown id: FAIL CLOSED to P3 and say
-    so (``unreadable`` True), never to an arbitrary challenger (rule 98a)."""
+    """Missing file: the default champion (P3). Unreadable, unknown id or a malformed ``history``
+    (not a list of objects): FAIL CLOSED to P3 and say so (``unreadable`` True), never to an
+    arbitrary challenger (rule 98a). A ``pinned`` that is not a bool reads as pinned True."""
     if not path.exists():
         return empty_champion()
     try:
         data = json.loads(path.read_text(encoding="utf-8"))
         ok = isinstance(data, dict) and data.get("champion") in LIVE_CAPABLE
+        if ok:
+            hist = data.get("history", [])
+            ok = isinstance(hist, list) and all(isinstance(e, dict) for e in hist)
     except (OSError, ValueError):
         data, ok = None, False
     if not ok:
         return {**empty_champion(), "unreadable": True}
-    return {**empty_champion(), **data}
+    state = {**empty_champion(), **data}
+    if not isinstance(state["pinned"], bool):
+        state["pinned"] = True  # fail closed: a garbled pin must not let the rule run
+    return state
 
 
 def save_champion(path: Path, state: dict[str, Any]) -> None:
-    path.write_text(json.dumps(state, indent=1) + "\n", encoding="utf-8")
+    # atomic (temp file + os.replace): a torn write would read as an unreadable champion file
+    from ml.demotion import atomic_write_text
+
+    atomic_write_text(path, json.dumps(state, indent=1) + "\n")
 
 
 def promote(
@@ -299,22 +315,50 @@ def promote(
 
 
 def rollback(state: dict[str, Any], now: datetime | None = None) -> dict[str, Any]:
-    """The one-command undo: the previous champion is live again, logged as a rollback."""
-    promos = [e for e in state["history"] if e["event"] == "promoted"]
-    if not promos:
-        raise ValueError("nothing to roll back")
+    """The one-command undo: the previous champion is live again, logged as a rollback, and the
+    state is PINNED so the rule cannot re-promote the same challenger from the same evidence on the
+    next run. Raises ValueError (nothing written by the caller) unless the latest champion change
+    is a promotion that is still in force."""
+    changes = [e for e in state["history"] if e.get("event") in ("promoted", "rolled_back")]
+    if not changes or changes[-1].get("event") != "promoted":
+        raise ValueError("nothing to roll back: no promotion after the last rollback")
+    last = changes[-1]
+    if state["champion"] != last.get("to") or last.get("from") not in LIVE_CAPABLE:
+        raise ValueError("nothing to roll back: the champion is not the last promoted model")
     at = (now or datetime.now(UTC)).isoformat()
-    prev = promos[-1]["from"]
-    event = {"at": at, "event": "rolled_back", "from": state["champion"], "to": prev}
-    return {**state, "champion": prev, "since": at, "history": [*state["history"], event]}
+    prev = last["from"]
+    event = {
+        "at": at,
+        "event": "rolled_back",
+        "from": state["champion"],
+        "to": prev,
+        "pinned": True,
+    }
+    return {
+        **state,
+        "champion": prev,
+        "since": at,
+        "pinned": True,
+        "history": [*state["history"], event],
+    }
+
+
+def unpin(state: dict[str, Any], now: datetime | None = None) -> dict[str, Any]:
+    """A person's explicit act: let the rule run again. Logs an ``unpinned`` event."""
+    if state.get("pinned") is not True:
+        raise ValueError("not pinned")
+    at = (now or datetime.now(UTC)).isoformat()
+    event = {"at": at, "event": "unpinned", "champion": state["champion"]}
+    return {**state, "pinned": False, "history": [*state["history"], event]}
 
 
 def main(argv: list[str] | None = None) -> int:
-    """``python -m ml.promotion rollback`` : the one-command undo (ADR 072)."""
+    """``python -m ml.promotion rollback|unpin|show`` (ADR 072). rollback and unpin are a person's
+    explicit acts; a refused one (ValueError, unreadable file) writes nothing and exits 1."""
     import argparse
 
     ap = argparse.ArgumentParser(prog="python -m ml.promotion")
-    ap.add_argument("action", choices=["rollback", "show"])
+    ap.add_argument("action", choices=["rollback", "unpin", "show"])
     ap.add_argument(
         "--data-dir", type=Path, default=Path(__file__).resolve().parent.parent / "data"
     )
@@ -323,9 +367,19 @@ def main(argv: list[str] | None = None) -> int:
     state = load_champion(path)
     if args.action == "show":
         print(json.dumps(state, indent=1))
+        print(f"pinned: {state['pinned']}")
         return 0
-    save_champion(path, rollback(state))
-    print(f"champion is now {load_champion(path)['champion']}")
+    if state.get("unreadable"):
+        print(f"refused: {path} is unreadable; repair it first")
+        return 1
+    try:
+        new = rollback(state) if args.action == "rollback" else unpin(state)
+    except ValueError as exc:
+        print(f"refused: {exc}")
+        return 1
+    save_champion(path, new)
+    loaded = load_champion(path)
+    print(f"champion is now {loaded['champion']} (pinned: {loaded['pinned']})")
     return 0
 
 

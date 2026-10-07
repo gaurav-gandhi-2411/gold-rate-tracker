@@ -44,6 +44,7 @@ KNOWN_OPS: frozenset[str] = frozenset(
         "T13",  # direction dataset stalled
         "T14",  # Tanishq has not updated (GitHub-side, runner-independent)
         "T16",  # live next-rate model switched off by its demotion rules (ADR 068)
+        "T17",  # live next-rate model changed by the promotion rule or a rollback (ADR 072)
     }
 )
 
