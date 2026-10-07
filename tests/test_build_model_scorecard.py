@@ -599,3 +599,21 @@ def test_shadow_ensemble_counts_the_same_forward_days_as_p3(tmp_path: Path) -> N
     p3_row, ens_row = _row(rows, "nextfix_p3"), _row(rows, "nextfix_ensemble_shadow")
     assert p3_row["forward"]["n"] == ens_row["forward"]["n"] == 4
     assert ens_row["forward"]["first_date"] == p3_row["forward"]["first_date"] == P3_START
+
+
+def test_demotion_monitor_is_red_when_the_page_is_held_but_the_state_file_says_ok(
+    tmp_path: Path,
+) -> None:
+    """A monitor that cannot run fails closed on the page and writes nothing to the state file."""
+    _write(tmp_path, "model_demotion_state.json", _state())
+    held = {"demoted": True, "checked": False, "reasons": [{"rule": "monitor_failed"}]}
+    _write(tmp_path, "forecast.json", {"next_fix": {"demotion": held}})
+    m = _row(bms.build_rows(tmp_path), "demotion_monitor")
+    assert m["verdict"] == "red" and "could not run" in m["sentence"]
+
+
+def test_a_bom_state_file_is_read_by_the_scorecard_too(tmp_path: Path) -> None:
+    (tmp_path / "model_demotion_state.json").write_bytes(
+        b"\xef\xbb\xbf" + json.dumps(_state(demoted=True)).encode()
+    )
+    assert _row(bms.build_rows(tmp_path), "demotion_monitor")["verdict"] == "red"

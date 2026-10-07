@@ -346,3 +346,14 @@ def test_a_naive_since_timestamp_still_alerts():
     state.last_sent["T16"] = "2026-10-06T07:05:00+00:00"
     alert = notifications._check_t16_model_demoted(fc, state, datetime.now(notifications.IST))
     assert alert is not None  # cannot compare naive with aware: alert rather than stay silent
+
+
+def test_an_unreadable_state_file_is_held_but_never_overwritten(tmp_path: Path):
+    """The unreadable original is the evidence a person needs; fail closed every run, keep it."""
+    _, macro, now = _setup(tmp_path)
+    bad = tmp_path / nextfix.STATE_FILE
+    bad.write_text('{"demoted": false}', encoding="utf-8")  # no model_version: cannot tell whose
+    r1 = nextfix.run(now=now, macro=macro, data_dir=tmp_path)["demotion"]
+    r2 = nextfix.run(now=now, macro=macro, data_dir=tmp_path)["demotion"]
+    assert r1["demoted"] is r2["demoted"] is True and r1["since"] == r2["since"]
+    assert bad.read_text(encoding="utf-8") == '{"demoted": false}'

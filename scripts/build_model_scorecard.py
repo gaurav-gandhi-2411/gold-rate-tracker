@@ -264,7 +264,7 @@ def bh_flags(pvals: list[float | None]) -> list[bool | None]:
 def _read_json(name: str, data_dir: Path) -> Any:
     """Parsed JSON or None for missing / empty / malformed (callers turn None into 'no data')."""
     try:
-        text = (data_dir / name).read_text(encoding="utf-8")
+        text = (data_dir / name).read_text(encoding="utf-8-sig")  # a BOM is not corruption
         return json.loads(text) if text.strip() else None
     except (OSError, ValueError):
         return None
@@ -858,9 +858,14 @@ def row_demotion_monitor(data_dir: Path) -> dict[str, Any]:
         "passes": None,
         "marking": "INFERRED",
     }
-    if s["demoted"]:
+    # the page can be held without the state file saying so (a monitor that could not run fails
+    # closed and writes nothing): the forecast's own readout is authoritative for what users see
+    held = isinstance(dm, dict) and dm.get("demoted") is True
+    if s["demoted"] or held:
         row["verdict"] = "red"
-        row["sentence"] = "The live next-fix model is switched off; the page holds the last fix."
+        row["sentence"] = "The live next-fix model is switched off; the page holds the last fix" + (
+            " (the monitor itself could not run)." if held and dm.get("checked") is False else "."
+        )
     elif breaching:
         row["verdict"] = "amber"
         row["sentence"] = "Not demoted, but a monitoring rule is breaching right now."

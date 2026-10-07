@@ -226,6 +226,9 @@ def load_state(path, model_version: str) -> dict:
             "since": now,
             "reasons": reasons,
             "history": [{"at": now, "event": "demoted", "reasons": reasons}],
+            # tells the caller NOT to write this over the file: the unreadable original is the
+            # evidence a person needs to repair it, and the next run fails closed the same way
+            "unreadable": True,
         }
     if data["model_version"] != model_version:
         return empty_state(model_version)

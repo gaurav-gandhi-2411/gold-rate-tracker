@@ -851,8 +851,11 @@ def _demotion(data_dir: Path, folds: list[dict], ev: dict, now: datetime) -> dic
     try:
         state = dm.load_state(path, MODEL_VERSION)
         status = dm.demotion_status(folds, ev.get("range_hits") if ev.get("ready") else None)
+        keep_file = bool(state.get("unreadable"))  # never overwrite an unreadable original
         state, newly = dm.apply_status(state, status, iso_now)
-        dm.save_state(path, state)
+        if not keep_file:
+            state.pop("unreadable", None)
+            dm.save_state(path, state)
     except Exception as exc:
         logger.error("demotion monitor failed (%s); failing closed to the hold figure", exc)
         prior = state.get("reasons") if state.get("demoted") else None
