@@ -70,8 +70,6 @@ Kept:
 - Frozen reports that mention Kalyan (`reports/markup_analysis.json`,
   `reports/timing_audit/*`, `reports/silent_fallbacks_audit.md`,
   `reports/tanishq_update_times/kalyan_city_identity.json`) are unchanged.
-- `scripts/check_retailer_language.py` still lists "kalyan" as a retailer name; it is a copy-policy
-  list, and removing it would only weaken the check.
 
 ## Consequences
 
@@ -87,8 +85,6 @@ What was lost, stated plainly:
   tier 4.
 - ADR 026's Phase D (promotion of the shadow fusion) loses its city dimension. The remaining
   shadow data is national-only and starts from the same 301/300/296-row history.
-- Kalyan's published terms (see `docs/SESSION_AUDIT_2026-08.md`) already restricted public
-  reproduction; retiring removes that exposure on the live path.
 
 Follow-ups, not done here:
 
@@ -100,11 +96,7 @@ Follow-ups, not done here:
 - `data/shadow_fusion_output.json` still carries the old `cities` / `kalyan_failures` blocks until
   the next scheduled cycle rewrites it (the file is bot-regenerated; not hand-edited here).
 - `shadow-fusion.yml` triggers on `ml/**` pushes to master, so merging this PR starts one cycle.
-
-Residual risks: a consumer outside this repo reading `shadow_fusion_output.json["cities"]` would
-see the key vanish (none found by grep in app, scripts, workflows, or tests); and the `kalyan`
-key disappearing from `config/retailers.json` would break any stale branch that still lists it
-(the loader rejects unknown keys loudly, by design).
+  A stale branch still listing `kalyan` in `config/retailers.json` fails the loader loudly.
 
 ## Alternatives
 
