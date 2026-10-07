@@ -173,7 +173,8 @@
 // 2026-10-07 (v80): Kalyan retired (PR #2420): its unused label was removed from app.js and i18n.js.
 // 2026-10-07 (v81): Hindi wording, part 1 of 3 (i18n.js: natural Hindi from docs/HINDI_GLOSSARY.md, plus the fractionOutOf10Phrase language fix). Hindi only; English unchanged.
 // 2026-10-07 (v82): Hindi wording, part 2 of 3 (i18n.js strings pinned by test_hero_display_state.js / test_driver_headline_signs.js, updated here). Hindi only; English unchanged.
-const VERSION = "v82-20261007-hindi-wording-2";
+// 2026-10-07 (v83): Hindi wording, part 3 of 3 (how-we-know-strings.js). Hindi only; English unchanged.
+const VERSION = "v83-20261007-hindi-wording-3";
 const SHELL_CACHE = `gold-shell-${VERSION}`;
 
 const SHELL_FILES = [
