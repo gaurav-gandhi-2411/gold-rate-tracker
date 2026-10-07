@@ -1724,8 +1724,13 @@ def main() -> int:
     else:
         doc = build(args.data_dir)
         args.out_json.write_text(json.dumps(doc, indent=1) + "\n", encoding="utf-8", newline="\n")
-    args.out_md.write_text(render(doc), encoding="utf-8", newline="\n")
     n = len(doc["models"])
+    if args.json_only:
+        # The weekly job commits through bot-pr-sync, which rebases: a modified file it did not
+        # stage (the markdown) makes that rebase fail ("You have unstaged changes").
+        print(f"OK: {n} model rows -> {args.out_json.name}")
+        return 0
+    args.out_md.write_text(render(doc), encoding="utf-8", newline="\n")
     print(f"OK: {n} model rows -> {args.out_json.name}, {args.out_md.name}")
     return 0
 
