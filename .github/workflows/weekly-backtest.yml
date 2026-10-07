@@ -145,6 +145,18 @@ jobs:
         continue-on-error: true
         run: python scripts/build_model_scorecard.py --json-only
 
+      - name: Measure how on time the inputs were (JSON)
+        # Brief 3d: Tanishq visit slots served within 45 minutes and the overnight model window's
+        # lateness, from GitHub's run list and the git history of forecast.json. Writes
+        # data/input_timeliness_weekly.json only. The shallow clone is deepened to 10 days first.
+        # continue-on-error: true so a failure never blocks the backtest commit.
+        continue-on-error: true
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          git fetch --quiet --shallow-since="10 days ago" origin master
+          python scripts/build_timeliness_report.py
+
       - name: Build the weekly model status (JSON)
         # ADR 072: the forward comparison of every challenger with the live model, the days still
         # needed and the earliest decision date. Writes data/model_status_weekly.json only (data/ is
@@ -159,7 +171,7 @@ jobs:
           set -e
           git config user.name "gold-rate-bot"
           git config user.email "actions@users.noreply.github.com"
-          git add data/backtest.json data/metrics_history.json data/coverage_metrics.json data/calibration_band_coverage.json data/preregistered_h2_shadow_results.json data/nowcast_shadow_log.json data/weekly_range_shadow_log.json data/next_day_range_shadow.json data/wait_or_buy_shadow.json data/wait_or_buy_today.json data/model_scorecard_weekly.json data/model_status_weekly.json || true
+          git add data/backtest.json data/metrics_history.json data/coverage_metrics.json data/calibration_band_coverage.json data/preregistered_h2_shadow_results.json data/nowcast_shadow_log.json data/weekly_range_shadow_log.json data/next_day_range_shadow.json data/wait_or_buy_shadow.json data/wait_or_buy_today.json data/model_scorecard_weekly.json data/model_status_weekly.json data/input_timeliness_weekly.json || true
           if git diff --staged --quiet; then
             echo "No changes to commit."
             echo "changed=false" >> "$GITHUB_OUTPUT"
