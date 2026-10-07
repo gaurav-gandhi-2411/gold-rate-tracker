@@ -65,6 +65,9 @@ IBJA_PATH = DATA_DIR / "ibja_rates.parquet"
 LABEL_PATH = DATA_DIR / "history_seed_inr22k_label.parquet"
 OOS_PATH = DATA_DIR / "nextfix_oos.json"  # the ensemble's record: SHADOW since ADR 069
 P3_OOS_PATH = DATA_DIR / "nextfix_p3_oos.json"  # the live model's record (ADR 069)
+P3_VARIANTS_PATH = DATA_DIR / "nextfix_p3_variants_oos.json"  # ADR 071: shadow slope variants
+ROLL_WINDOW = 60  # V1: most recent resolved pairs the slope is fitted on
+MONDAY_MIN = 15  # V2: Monday pairs needed before Monday gets its own slope
 
 # Live model (ADR 067/069): one fitted slope on the world move, pm0 x exp(b x move).
 MODEL_VERSION = "nextfix_p3_v1"
@@ -366,6 +369,78 @@ def predict_p3(train: pd.DataFrame, row: pd.Series, resid_sd: float | None = Non
     s = resid_sd if resid_sd and resid_sd > 0 else float(y.std()) or 0.01
     vol = float(np.sqrt((train["y"] ** 2).ewm(halflife=VOL_HALFLIFE).mean().iloc[-1]))
     return Prediction(ret=ret, p_up=float(norm.cdf(ret / s)), vol=vol)
+
+
+def _p3_from_slope(
+    train: pd.DataFrame, row: pd.Series, b: float, resid_sd: float | None
+) -> Prediction:
+    from scipy.stats import norm
+
+    y = train["y"].to_numpy(dtype=float)
+    ret = b * float(row["x_glob"])
+    s = resid_sd if resid_sd and resid_sd > 0 else float(y.std()) or 0.01
+    vol = float(np.sqrt((train["y"] ** 2).ewm(halflife=VOL_HALFLIFE).mean().iloc[-1]))
+    return Prediction(ret=ret, p_up=float(norm.cdf(ret / s)), vol=vol)
+
+
+def _slope(x: np.ndarray, y: np.ndarray) -> float:
+    denom = float(x @ x)
+    return float(x @ y / denom) if denom > 0 else 0.0
+
+
+def predict_p3_roll60(
+    train: pd.DataFrame, row: pd.Series, resid_sd: float | None = None
+) -> Prediction:
+    """ADR 071 V1: P3's slope fitted on the ROLL_WINDOW most recent resolved pairs only."""
+    t = train.sort_values("d0").tail(ROLL_WINDOW)
+    b = _slope(t["x_glob"].to_numpy(dtype=float), t["y"].to_numpy(dtype=float))
+    return _p3_from_slope(train, row, b, resid_sd)
+
+
+def predict_p3_monday(
+    train: pd.DataFrame, row: pd.Series, resid_sd: float | None = None
+) -> Prediction:
+    """ADR 071 V2: on Monday decisions, a slope fitted on resolved MONDAY pairs only (at least
+    MONDAY_MIN of them); every other day, and Mondays before that, exactly P3."""
+    t = train
+    if pd.Timestamp(row["d0"]).dayofweek == 0:
+        mon = train[pd.to_datetime(train["d0"]).dt.dayofweek == 0]
+        if len(mon) >= MONDAY_MIN:
+            t = mon
+    b = _slope(t["x_glob"].to_numpy(dtype=float), t["y"].to_numpy(dtype=float))
+    return _p3_from_slope(train, row, b, resid_sd)
+
+
+VARIANT_PREDICTORS = {"p3_roll60": "predict_p3_roll60", "p3_monday": "predict_p3_monday"}
+
+
+def update_variants(pairs: pd.DataFrame, data_dir: Path) -> dict[str, int]:
+    """Append resolved decision days to the ADR 071 shadow records. Never raises (shadow only)."""
+    path = data_dir / P3_VARIANTS_PATH.name
+    try:
+        data = json.loads(path.read_text())
+        old = data.get("variants", {}) if isinstance(data, dict) else {}
+    except (OSError, ValueError):
+        old = {}
+    out: dict[str, list[dict]] = {}
+    for name, fn_name in VARIANT_PREDICTORS.items():
+        try:
+            out[name] = update_oos(
+                pairs,
+                list(old.get(name, [])),
+                globals()[fn_name],
+                forward_from=P3_FORWARD_FROM,
+            )
+        except Exception as exc:
+            logger.warning("variant %s failed: %s", name, exc)
+            out[name] = list(old.get(name, []))
+    payload = {
+        "schema_version": 1,
+        "note": "ADR 071 shadow variants of P3; one out-of-sample fold per decision day.",
+        "variants": {k: sorted(v, key=lambda f: f["d0"]) for k, v in out.items()},
+    }
+    path.write_text(json.dumps(payload, indent=1) + "\n")
+    return {k: len(v) for k, v in out.items()}
 
 
 # ── out-of-sample track record ───────────────────────────────────────────────────────────────────
@@ -725,6 +800,8 @@ def run(
     )
     save_oos(folds, p3_path, MODEL_VERSION)
     ev = evaluate(folds, MODEL_VERSION)
+    if not pairs.empty:
+        update_variants(pairs, data_dir)
     # Shadow: the ridge + neural-net ensemble keeps its own record and is scored beside P3.
     oos_path = data_dir / OOS_PATH.name
     try:  # the shadow must never take the live forecast down (ADR 069)
