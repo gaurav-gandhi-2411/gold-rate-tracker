@@ -72,7 +72,10 @@ MODEL_VERSION = "nextfix_p3_v1"
 ENSEMBLE_VERSION = "nextfix_ridge_mlp_v1"
 # P3 forecasts for decision days from here on were issued live; earlier days in its record are a
 # walk-forward re-run on past data (flagged ``retro``) and are never worded as live calls.
-P3_FORWARD_FROM = "2026-10-05"
+# The first decision day whose forecast P3 issues live is the day this merged (2026-10-07), not
+# the day GG approved it (2026-10-05, when the ensemble was still live): counting an earlier day
+# as forward would present a re-run as a live call.
+P3_FORWARD_FROM = "2026-10-07"
 FEATURES = ["x_glob", "x_prev", "bdev"]
 MAX_GAP_DAYS = 4  # consecutive IBJA days only (weekends/holidays allowed)
 BASIS_WINDOW = 20  # pairs in the rolling mean the basis deviation is measured from

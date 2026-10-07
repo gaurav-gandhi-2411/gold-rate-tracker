@@ -25,7 +25,7 @@ explainable in one line. The comparison favoured the ensemble (its design was ch
    it is shown. A shadow failure never affects the live forecast.
 3. **Two records.** `data/nextfix_p3_oos.json` (live) and `data/nextfix_oos.json` (shadow), one
    out-of-sample fold per day, each trained only on fixes known before it. P3's folds carry
-   `retro: true` for decision days before `P3_FORWARD_FROM = 2026-10-05` (a re-run on past data, not
+   `retro: true` for decision days before `P3_FORWARD_FROM = 2026-10-07` (the day P3 went live; GG approved it on 2026-10-05, when the ensemble was still the live model) (a re-run on past data, not
    issued live) and `false` after. `next_fix.track_record.n_forward` counts the forward ones. Forward
    and retrospective results are never mixed in any published claim.
 4. **Clock.** `ml/known_at.py` pins the USD/INR daily value at 20:00 UTC of its date (was 23:59,
@@ -52,7 +52,7 @@ explainable in one line. The comparison favoured the ensemble (its design was ch
 
 - The visible forecast changes slightly (a different point and width; expected mean width within a
   few Rs. of before). The direction line and the page wording are unchanged by this ADR (D1).
-- Forward n for P3 is 0 on 2026-10-05; "validated" means nothing until forward calls accrue. ADR 068's
+- Forward n for P3 is 0 on 2026-10-07; "validated" means nothing until forward calls accrue. ADR 068's
   demotion rules (wired separately, D3) watch it.
 - Rollback: set `MODEL_VERSION` back to the ensemble by making `run()` use `predict` for the live
   record (one call site) or revert this ADR's commit; the ensemble record is intact.
