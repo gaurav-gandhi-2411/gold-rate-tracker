@@ -18,6 +18,11 @@ The live model has no scored real days yet (counting from 2026-10-07). Nothing i
 
 A challenger replaces the live model only if it beats it by at least 5%, is statistically clear after allowing for several challengers, keeps its range at target and is not worse on up/down. Days needed is sized from how noisy the daily difference actually is. No conclusion before the earliest decision date.
 
+## Were the inputs on time?
+
+- Jeweller price visits: **7 of 18** scheduled visits since the schedule began (2026-10-05) ran within 45 minutes of their time (11 did not; the report cannot tell a laptop that was off from a failed visit).
+- Overnight model forecast: published on **2 of 5** nights, typically 194 minutes after the US gold close.
+
 ## Dates
 
 - 2026-10-16: hourly world-price check (ADR 066), exactly as written in advance.
