@@ -976,6 +976,14 @@ def _next_fix_block(
                 "range_n": ev["range_n"],
                 "range_mean_width_ibja": ev["range_mean_width"],
             }
+        dm = out.get("demotion") or {}
+        block["demotion"] = {  # ADR 068: sticky; the notification trigger T16 reads this
+            "demoted": bool(dm.get("demoted")),
+            "since": dm.get("since"),
+            "reasons": dm.get("reasons", []),
+            "rules_breaching_now": dm.get("rules_breaching_now", []),
+            "checked": bool(dm.get("checked")),
+        }
         block["windows"] = {
             k: {kk: v for kk, v in rec.items() if kk not in ("conformal_q", "vol_now")}
             for k, rec in windows.items()

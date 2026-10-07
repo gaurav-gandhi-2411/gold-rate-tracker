@@ -73,6 +73,7 @@ ENSEMBLE_VERSION = "nextfix_ridge_mlp_v1"
 # P3 forecasts for decision days from here on were issued live; earlier days in its record are a
 # walk-forward re-run on past data (flagged ``retro``) and are never worded as live calls.
 P3_FORWARD_FROM = "2026-10-05"
+STATE_FILE = "model_demotion_state.json"  # ADR 068: sticky demotion state of the live model
 FEATURES = ["x_glob", "x_prev", "bdev"]
 MAX_GAP_DAYS = 4  # consecutive IBJA days only (weekends/holidays allowed)
 BASIS_WINDOW = 20  # pairs in the rolling mean the basis deviation is measured from
@@ -541,6 +542,7 @@ def evaluate(folds: list[dict], model_version: str = MODEL_VERSION) -> dict:
         "timing_gate": decide_timing_signal(baseline),
         "range_coverage": round(float(np.mean(hits)), 3) if hits else None,
         "range_n": len(hits),
+        "range_hits": [bool(h) for h in hits],  # per fold, oldest first (ml.demotion's range rule)
         "range_mean_width": round(float(np.mean(widths)), 1) if widths else None,
         "range_nominal": NOMINAL,
     }
@@ -599,8 +601,13 @@ def forecast(
     now: datetime,
     windows: dict | None = None,
     shadow_folds: list[dict] | None = None,
+    demoted: bool = False,
 ) -> dict:
     """Forecast the next IBJA fix at ``now``, whichever part of the day it is (see module doc).
+
+    ``demoted``: ml.demotion has switched the live model off (ADR 068); the model window then holds
+    the latest fix like every other window, so the headline falls back to "hold" and no direction
+    is shown.
 
     ``folds``: the LIVE model's (P3) out-of-sample record. ``shadow_folds``: the ensemble's; when
     given and the model window is open, the ensemble's forecast for the same day is returned under
@@ -624,7 +631,7 @@ def forecast(
             "after_morning_rate",
         )
     else:
-        if now >= _at(d_pm, US_CLOSE_UTC):
+        if now >= _at(d_pm, US_CLOSE_UTC) and not demoted:
             fc = _model_forecast(full, glob, folds, d_pm)
             if fc is not None:
                 out = {"active": True, **fc}
@@ -649,7 +656,7 @@ def forecast(
         )
     if not rec.get("ready"):
         return {"active": False, "reason": f"{kind}_record_too_short"}
-    return {
+    out = {
         "active": True,
         "mode": mode,
         "model_version": f"hold_latest_fix_{kind}",
@@ -661,6 +668,9 @@ def forecast(
         "half_width": round(rec["conformal_q"] * rec["vol_now"] * base, 2),
         "p_up": None,
     }
+    if demoted:
+        out["demoted"] = True
+    return out
 
 
 def to_retail(fc: dict, current_22k: float, slope: float, ref: float | None = None) -> dict:
@@ -725,13 +735,52 @@ def run(
         shadow_folds, shadow_ev = load_oos(oos_path), {"n": 0, "ready": False}
     since = ev.get("first_d0") if ev.get("ready") else None
     windows = {k: flat_record(flat_pairs(full, k), since) for k in ("am_to_pm", "pm_to_am")}
-    fc = forecast(full, glob, folds, now, windows, shadow_folds)
+    demotion = _demotion(data_dir, folds, ev, now)
+    fc = forecast(full, glob, folds, now, windows, shadow_folds, demoted=demotion["demoted"])
     return {
         "eval": ev,
         "shadow_eval": shadow_ev,
         "windows": windows,
         "forecast": fc,
+        "demotion": demotion,
         "ibja": full,
+    }
+
+
+def _demotion(data_dir: Path, folds: list[dict], ev: dict, now: datetime) -> dict:
+    """Run ADR 068's rules on the live model's record and keep the sticky state file.
+
+    Returns {"demoted", "since", "reasons", "newly_demoted", "checked"}. Never raises: if the rules
+    themselves fail the model stays as it is and the failure is logged (a broken monitor must not
+    silently switch the live model off, and cannot silently hide a degraded one for more than a run
+    because the rules re-run on every cycle).
+    """
+    from ml import demotion as dm
+
+    path = data_dir / STATE_FILE
+    state = dm.load_state(path, MODEL_VERSION)
+    try:
+        status = dm.demotion_status(folds, ev.get("range_hits") if ev.get("ready") else None)
+        state, newly = dm.apply_status(state, status, now.astimezone(UTC).isoformat())
+        dm.save_state(path, state)
+    except Exception as exc:
+        logger.warning("demotion check failed (%s); live model unchanged", exc)
+        return {
+            "demoted": bool(state.get("demoted")),
+            "since": state.get("since"),
+            "reasons": state.get("reasons", []),
+            "newly_demoted": False,
+            "checked": False,
+        }
+    return {
+        "demoted": bool(state["demoted"]),
+        "since": state["since"],
+        "reasons": state["reasons"],
+        "newly_demoted": newly,
+        "checked": True,
+        "params": status["params"],
+        "rules": {k: status[k] for k in ("error", "direction", "range") if k in status},
+        "rules_breaching_now": [k for k, v in status["demote"].items() if v],
     }
 
 
