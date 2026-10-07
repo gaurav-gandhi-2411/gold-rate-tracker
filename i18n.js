@@ -697,8 +697,6 @@ const STRINGS = {
     // native-speaker review (see the pending-review list near the calc* keys
     // above). t() falls back to the reworded English until it's added here.
     reliabilityUnknown: "अभी इसका रिकॉर्ड बन रहा है — कुछ समय बाद फिर देखें।",
-    reliabilityDriftOnTrack: "हाल की सटीकता ऐतिहासिक औसत के मुताबिक बनी हुई है।",
-    reliabilityDriftWatch: "हाल की सटीकता ऐतिहासिक औसत से थोड़ी अलग हुई है — हम नज़र बनाए हुए हैं।",
     reliabilityDriftRetrain: "हमारे हाल के अनुमान सामान्य से ज़्यादा दूर रहे हैं — हम उन्हें ठीक कर रहे हैं।",
 
     // ── 90-day band position ────────────────────────────────────────────────────
