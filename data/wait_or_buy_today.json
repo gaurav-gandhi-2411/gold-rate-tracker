@@ -1,7 +1,7 @@
 {
   "as_of": "2026-10-07",
-  "generated_at_utc": "2026-10-07T18:28:42.898933+00:00",
-  "git_sha": "2b1b55eb05425a2ff5d8b61853034c0b7d6e5832",
+  "generated_at_utc": "2026-10-07T19:16:54.016786+00:00",
+  "git_sha": "467c24d26d5e75ccc6d4f22ceb88a754e78e8606",
   "horizons": {
     "1": {
       "prob": {
@@ -38,7 +38,7 @@
         "n_cal": 199
       },
       "volatility": {
-        "realized_vol_20d": 0.008809601724681568,
+        "realized_vol_20d": 0.008809601724681565,
         "percentile": 0.41652846876727473,
         "category": "about_as_usual"
       },
@@ -79,7 +79,7 @@
         "n_cal": 185
       },
       "volatility": {
-        "realized_vol_20d": 0.008809601724681568,
+        "realized_vol_20d": 0.008809601724681565,
         "percentile": 0.41652846876727473,
         "category": "about_as_usual"
       },
@@ -120,7 +120,7 @@
         "n_cal": 164
       },
       "volatility": {
-        "realized_vol_20d": 0.008809601724681568,
+        "realized_vol_20d": 0.008809601724681565,
         "percentile": 0.41652846876727473,
         "category": "about_as_usual"
       },

@@ -1,6 +1,6 @@
 {
  "schema_version": 1,
- "generated_at": "2026-10-07T19:04:10.903573+00:00",
+ "generated_at": "2026-10-07T19:16:58.702087+00:00",
  "days": 7,
  "tanishq_slots": {
   "days": 7,
@@ -25,8 +25,8 @@
  },
  "overnight_window": {
   "available": true,
-  "nights": 5,
-  "nights_without_model_forecast": 3,
+  "nights": 4,
+  "nights_without_model_forecast": 2,
   "nights_with_model_forecast": 2,
   "minutes_after_us_close": [
    167,
