@@ -92,6 +92,12 @@ jobs:
         continue-on-error: true
         run: python scripts/build_model_scorecard.py --render-only
 
+      - name: Render the weekly model status page
+        # ADR 072: docs/MODEL_STATUS.md is a pure function of data/model_status_weekly.json
+        # (written by Weekly Backtest). Stdlib only for rendering.
+        continue-on-error: true
+        run: python scripts/build_model_status.py --render-only
+
       - name: Commit, open PR, and enable auto-merge if anything changed
         env:
           GH_TOKEN: ${{ secrets.CI_MERGE_PAT }}
@@ -99,7 +105,7 @@ jobs:
           set -e
           git config user.name "gold-rate-bot"
           git config user.email "actions@users.noreply.github.com"
-          git add README.md docs/DIRECTION_SIGNAL_STATUS.md docs/MODEL_SCORECARD.md
+          git add README.md docs/DIRECTION_SIGNAL_STATUS.md docs/MODEL_SCORECARD.md docs/MODEL_STATUS.md
           if git diff --staged --quiet; then
             echo "No doc drift to refresh."
             exit 0
