@@ -1183,6 +1183,41 @@ def _check_t16_model_demoted(
     )
 
 
+def _check_t17_model_promoted(
+    forecast: dict, state: NotificationState, now_ist: datetime
+) -> PendingAlert | None:
+    """T17 -- the live next-fix model was changed by the promotion rule (ADR 072) or rolled back.
+
+    Reads forecast.json's ``next_fix.champion``. Same once-per-event pattern as T16: skipped if T17
+    was already sent after the champion's ``since``; a run where ``promoted_now`` is true with no
+    usable ``since`` still alerts. Bypasses quiet hours, private topic only (not on the public
+    allowlist). Names the old and new model ids and the one-command undo.
+    """
+    ch = (forecast.get("next_fix") or {}).get("champion") or {}
+    since = ch.get("since")
+    if not since and ch.get("promoted_now") is not True:
+        return None
+    last = state.last_sent.get("T17")
+    try:
+        if since and last and datetime.fromisoformat(last) >= datetime.fromisoformat(since):
+            return None
+    except (TypeError, ValueError):
+        pass  # a hand-edited or naive timestamp: alert rather than stay silent
+    change = ch.get("last_change") if isinstance(ch.get("last_change"), dict) else {}
+    old_id, new_id = change.get("from") or "unknown", change.get("to") or "unknown"
+    what = "rolled back" if change.get("event") == "rolled_back" else "promoted"
+    title = "Gold Tracker: next-rate model changed"
+    body = (
+        f"The model behind the next-rate range was {what} on its own: {old_id} to {new_id} "
+        f"(since {since}). It goes live on the next run, and the daily checks that can switch a "
+        "model off apply to it from its first day. To undo it, run: python -m ml.promotion "
+        "rollback (ADR 072)."
+    )
+    return _make_alert(
+        "T17", title, body, 4, ["information_source", "warning"], now_ist, bypass_quiet=True
+    )
+
+
 def _check_t14_tanishq_silent(
     silence: TanishqSilence | None,
     state: NotificationState,
@@ -1304,6 +1339,13 @@ def check_triggers(
         t16 = None
     if t16 is not None:
         alerts.append(t16)
+    try:  # same isolation as T16: a bug here cannot drop the other triggers' alerts
+        t17 = _check_t17_model_promoted(forecast, state, now_ist)
+    except Exception:
+        logger.exception("T17 check failed; the other triggers' alerts are kept")
+        t17 = None
+    if t17 is not None:
+        alerts.append(t17)
     return alerts
 
 
