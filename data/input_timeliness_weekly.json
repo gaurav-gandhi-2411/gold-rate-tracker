@@ -1,11 +1,11 @@
 {
  "schema_version": 1,
- "generated_at": "2026-10-07T19:16:58.702087+00:00",
+ "generated_at": "2026-10-07T23:39:36.987235+00:00",
  "days": 7,
  "tanishq_slots": {
   "days": 7,
-  "slots": 18,
-  "served": 7,
+  "slots": 19,
+  "served": 8,
   "missed": 11,
   "window_minutes": 45,
   "missed_slots_ist": [
@@ -21,18 +21,125 @@
    "2026-10-07T11:10:00+05:30",
    "2026-10-07T15:35:00+05:30"
   ],
+  "classification": {
+   "no_dispatch": 5,
+   "dispatched_failed": 0,
+   "dispatched_cancelled": 0,
+   "late": 6,
+   "dispatched_other": 0,
+   "unknown": 0
+  },
+  "per_slot": [
+   {
+    "slot_ist": "2026-10-05T01:40:00+05:30",
+    "served": false,
+    "class": "no_dispatch"
+   },
+   {
+    "slot_ist": "2026-10-05T07:30:00+05:30",
+    "served": false,
+    "class": "late"
+   },
+   {
+    "slot_ist": "2026-10-05T10:40:00+05:30",
+    "served": false,
+    "class": "late"
+   },
+   {
+    "slot_ist": "2026-10-05T11:10:00+05:30",
+    "served": false,
+    "class": "late"
+   },
+   {
+    "slot_ist": "2026-10-05T15:35:00+05:30",
+    "served": true,
+    "class": "served"
+   },
+   {
+    "slot_ist": "2026-10-05T19:50:00+05:30",
+    "served": false,
+    "class": "late"
+   },
+   {
+    "slot_ist": "2026-10-06T01:40:00+05:30",
+    "served": false,
+    "class": "no_dispatch"
+   },
+   {
+    "slot_ist": "2026-10-06T07:30:00+05:30",
+    "served": false,
+    "class": "late"
+   },
+   {
+    "slot_ist": "2026-10-06T10:40:00+05:30",
+    "served": true,
+    "class": "served"
+   },
+   {
+    "slot_ist": "2026-10-06T11:10:00+05:30",
+    "served": true,
+    "class": "served"
+   },
+   {
+    "slot_ist": "2026-10-06T15:35:00+05:30",
+    "served": true,
+    "class": "served"
+   },
+   {
+    "slot_ist": "2026-10-06T19:50:00+05:30",
+    "served": true,
+    "class": "served"
+   },
+   {
+    "slot_ist": "2026-10-07T01:40:00+05:30",
+    "served": true,
+    "class": "served"
+   },
+   {
+    "slot_ist": "2026-10-07T07:30:00+05:30",
+    "served": false,
+    "class": "no_dispatch"
+   },
+   {
+    "slot_ist": "2026-10-07T10:40:00+05:30",
+    "served": false,
+    "class": "no_dispatch"
+   },
+   {
+    "slot_ist": "2026-10-07T11:10:00+05:30",
+    "served": false,
+    "class": "no_dispatch"
+   },
+   {
+    "slot_ist": "2026-10-07T15:35:00+05:30",
+    "served": false,
+    "class": "late"
+   },
+   {
+    "slot_ist": "2026-10-07T19:50:00+05:30",
+    "served": true,
+    "class": "served"
+   },
+   {
+    "slot_ist": "2026-10-08T01:40:00+05:30",
+    "served": true,
+    "class": "served"
+   }
+  ],
+  "attribution_note": "from GitHub run data only; no_dispatch cannot tell a laptop that was off or asleep from a scheduler that did not fire or a task that did not run (only the laptop's own log knows)",
   "marking": "INFERRED"
  },
  "overnight_window": {
   "available": true,
-  "nights": 4,
+  "nights": 5,
   "nights_without_model_forecast": 2,
-  "nights_with_model_forecast": 2,
+  "nights_with_model_forecast": 3,
   "minutes_after_us_close": [
+   13,
    167,
    194
   ],
-  "median_minutes_after_us_close": 194,
+  "median_minutes_after_us_close": 167,
   "marking": "VERIFIED"
  }
 }
