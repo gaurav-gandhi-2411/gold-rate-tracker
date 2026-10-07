@@ -601,3 +601,43 @@ Everything else is unchanged: at least 20 changes bracketed to ≤ 30 min since
 `effective_from_utc`, and improvement ≥ 5 min with a one-sided 95% lower bound above 0
 (B = 200, seed 42) before it prints PROPOSE. At most one proposal per 4 weeks. The script
 never edits the schedule.
+
+## 11. Changing scraper dependencies (item 5a, 2026-10-05)
+
+Playwright bumps broke the laptop scraper twice (2026-08: 1.63.0 deleted the working Chromium
+cache, #1806; 2026-10-02: #1846 failed at "Install Playwright browsers" for about 11 h, #2316).
+GitHub-hosted CI cannot see that failure, so:
+
+1. `.github/dependabot.yml` ignores playwright, playwright-core, playwright-chromium,
+   `@playwright/*`, `puppeteer*`, `chromium*` and `@sparticuz/chromium*` for `/scraper` (all update
+   types). Other dependencies still get Dependabot PRs.
+2. Any PR that changes `scraper/package*.json` (or `npm-shrinkwrap.json`) fails the check
+   `scraper-dependency-guard` (`.github/workflows/scraper-dependency-guard.yml`,
+   `scripts/check_scraper_dependency_change.py`) unless its body cites a proof run that the script
+   verifies through the gh API.
+
+Producing the proof run (author of the dependency PR, after pushing the PR branch):
+
+```
+gh workflow run scrape-tanishq-selfhosted.yml --ref <pr-branch> -f dependency_proof=true
+gh run list --workflow scrape-tanishq-selfhosted.yml --branch <pr-branch> --limit 1
+```
+
+`dependency_proof=true` sets `PLAYWRIGHT_BROWSERS_PATH` to a scratch directory under the runner's
+temp folder, so the production browser cache is never touched or garbage-collected; installs
+dependencies and browsers from the PR branch; runs the real scrape (one normal Tanishq visit); and
+skips the commit/sync steps, so no data, health record or outcomes-log line is written. It shares
+the `tanishq-selfhosted-scrape` concurrency group, so it never overlaps a production run. A normal
+run (no input) behaves exactly as before. Paste the run URL into the PR body; editing the body
+re-runs the check.
+
+The check passes only if the cited run: is this workflow, `workflow_dispatch`, completed/success;
+ran on the PR's own branch at the PR head (or an ancestor with no change under `scraper/` since);
+ran on a `self-hosted` runner; has the scratch-cache, install-dependencies, install-browsers and
+"real scrape succeeded" steps all `success`; and logged the `DEPENDENCY_PROOF` marker with a
+`pw-proof-<run id>` browsers path. Any fetch or parse failure is a FAIL. An emergency revert of a
+dependency change is also gated: dispatch the proof run on the revert branch (about 5 minutes), or
+merge as an admin.
+
+GG, once: add `scraper-dependency-guard` to branch protection's required status checks (Settings >
+Branches > master > required checks). Until then the check runs and reports but does not block.
