@@ -100,3 +100,95 @@ def test_a_failing_source_is_recorded_and_never_raises(monkeypatch) -> None:
         and "gh not installed" in doc["tanishq_slots"]["error"]
     )
     assert doc["overnight_window"]["available"] is False
+
+
+# --- attribution of missed slots (what GitHub's run list can and cannot tell) -----------------------
+
+
+def _row2(when_utc: datetime, conclusion: str, event: str = "workflow_dispatch") -> dict:
+    return {
+        "createdAt": when_utc.strftime("%Y-%m-%dT%H:%M:%SZ"),
+        "event": event,
+        "conclusion": conclusion,
+        "status": "completed" if conclusion else "in_progress",
+    }
+
+
+def _slot(day: int, hm: str) -> datetime:
+    h, m = map(int, hm.split(":"))
+    return datetime(2026, 10, day, h, m, tzinfo=IST)
+
+
+def _classes(rep: dict) -> dict[str, str]:
+    return {p["slot_ist"][11:16]: p["class"] for p in rep["per_slot"]}
+
+
+def test_missed_slots_are_attributed_to_a_cause(monkeypatch) -> None:
+    mod = _load()
+    now = datetime(2026, 10, 8, 0, 30, tzinfo=IST).astimezone(UTC)
+    rows = [
+        _row2((_slot(7, "01:40") + timedelta(minutes=2)).astimezone(UTC), "success"),  # served
+        # 07:30: nothing at all -> no_dispatch (laptop off / scheduler idle)
+        _row2((_slot(7, "10:40") + timedelta(minutes=5)).astimezone(UTC), "failure"),
+        _row2((_slot(7, "11:10") + timedelta(minutes=5)).astimezone(UTC), "cancelled"),
+        _row2((_slot(7, "15:35") + timedelta(hours=2)).astimezone(UTC), "success"),  # late
+        _row2((_slot(7, "19:50") + timedelta(minutes=1)).astimezone(UTC), "timed_out"),
+    ]
+    monkeypatch.setattr(mod, "_run", lambda cmd: json.dumps(rows))
+    rep = mod.slot_report(now, days=1)
+    assert _classes(rep) == {
+        "01:40": "served",
+        "07:30": "no_dispatch",
+        "10:40": "dispatched_failed",
+        "11:10": "dispatched_cancelled",
+        "15:35": "late",
+        "19:50": "dispatched_failed",
+    }
+    assert rep["classification"] == {
+        "no_dispatch": 1,
+        "dispatched_failed": 2,
+        "dispatched_cancelled": 1,
+        "late": 1,
+        "dispatched_other": 0,
+        "unknown": 0,
+    }
+    assert sum(rep["classification"].values()) == rep["missed"]
+
+
+def test_late_means_within_six_hours_only(monkeypatch) -> None:
+    mod = _load()
+    now = datetime(2026, 10, 8, 12, 0, tzinfo=IST).astimezone(UTC)
+    # a success 7h after the slot is too late to be "caught up"
+    rows = [_row2((_slot(7, "01:40") + timedelta(hours=7)).astimezone(UTC), "success")]
+    monkeypatch.setattr(mod, "_run", lambda cmd: json.dumps(rows))
+    assert _classes(mod.slot_report(now, days=1))["01:40"] == "no_dispatch"
+
+
+def test_a_push_run_never_counts_as_a_dispatch_attribution(monkeypatch) -> None:
+    mod = _load()
+    now = datetime(2026, 10, 8, 0, 30, tzinfo=IST).astimezone(UTC)
+    rows = [_row2(_slot(7, "07:30").astimezone(UTC), "failure", event="push")]
+    monkeypatch.setattr(mod, "_run", lambda cmd: json.dumps(rows))
+    assert _classes(mod.slot_report(now, days=1))["07:30"] == "no_dispatch"
+
+
+def test_runs_are_listed_without_a_status_filter(monkeypatch) -> None:
+    mod = _load()
+    seen: list[list[str]] = []
+    monkeypatch.setattr(mod, "_run", lambda cmd: seen.append(cmd) or "[]")
+    mod.slot_report(datetime(2026, 10, 8, tzinfo=UTC), days=1)
+    assert seen and all("--status" not in c for c in seen)
+    assert all("createdAt,event,conclusion,status" in c for c in seen)
+
+
+def test_slots_older_than_a_full_run_listing_are_unknown_not_no_dispatch(monkeypatch) -> None:
+    mod = _load()
+    now = datetime(2026, 10, 8, 0, 30, tzinfo=IST).astimezone(UTC)
+    # the listing hit its limit and its oldest run is newer than the slots: nothing is knowable
+    rows = [
+        _row2((_slot(7, "20:00") + timedelta(minutes=i)).astimezone(UTC), "success")
+        for i in range(mod.RUN_LIMIT)
+    ]
+    monkeypatch.setattr(mod, "_run", lambda cmd: json.dumps(rows))
+    cls = _classes(mod.slot_report(now, days=1))
+    assert cls["07:30"] == "unknown" and cls["01:40"] == "unknown"

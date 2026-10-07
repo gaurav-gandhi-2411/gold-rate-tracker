@@ -116,6 +116,34 @@ def test_timeliness_section_is_computed_and_never_guessed(tmp_path, monkeypatch)
     assert "**7 of 18**" in md and "**3 of 4**" in md and "20 minutes" in md
 
 
+def test_timeliness_attribution_is_stated_in_plain_words_and_old_json_still_renders(
+    tmp_path, monkeypatch
+) -> None:
+    mod = _load_module()
+    monkeypatch.setattr(mod, "DATA", tmp_path)
+    _write(tmp_path, [], [])
+    slots = {"slots": 18, "served": 7, "missed": 11, "window_minutes": 45}
+    path = tmp_path / "input_timeliness_weekly.json"
+    path.write_text(json.dumps({"tanishq_slots": slots}))  # old JSON: no classification
+    md = mod.render(mod.compute())
+    assert "cannot tell" in md and "never dispatched" not in md
+    cls = {
+        "no_dispatch": 7,
+        "dispatched_cancelled": 2,
+        "dispatched_failed": 1,
+        "late": 1,
+        "dispatched_other": 0,
+        "unknown": 0,
+    }
+    path.write_text(json.dumps({"tanishq_slots": {**slots, "classification": cls}}))
+    md = mod.render(mod.compute())
+    assert "Of the 11 not run on time: 7 never dispatched" in md
+    assert "2 dispatched then cancelled in a catch-up burst" in md
+    assert "1 dispatched and failed" in md and "1 ran late" in md
+    assert "does not tell a laptop that was off from a scheduler" in md
+    assert "cannot tell a laptop that was off from a failed visit" not in md
+
+
 def test_demotion_shown_is_the_live_champions_own_not_p3s(tmp_path, monkeypatch) -> None:
     mod = _load_module()
     monkeypatch.setattr(mod, "DATA", tmp_path)

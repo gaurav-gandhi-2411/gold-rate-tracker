@@ -697,3 +697,73 @@ def test_scorecard_state_file_naming_matches_ml_nextfix() -> None:
     for v in (nextfix.MODEL_VERSION, ROLL_V, nextfix.ENSEMBLE_VERSION):
         assert bms.demotion_state_file(v) == nextfix.demotion_state_file(v)
     assert bms.P3_MODEL_VERSION == nextfix.MODEL_VERSION
+
+
+# --- champion != P3: version comes from the champion id, wording must not call P3 live ------------
+
+
+def _hold_switched(tmp: Path, champ: str, **extra: object) -> None:
+    """A HOLD window: forecast.json's next_fix.model_version is not a model version at all."""
+    _switched(tmp, champ=champ, **extra)
+    doc = json.loads((tmp / "forecast.json").read_text(encoding="utf-8"))
+    doc["next_fix"]["model_version"] = "hold_latest_fix_pm_to_am"
+    _write(tmp, "forecast.json", doc)
+
+
+def test_champion_version_map_equals_ml_nextfix_registry() -> None:
+    from ml import nextfix
+
+    assert {k: v[1] for k, v in nextfix.CHAMPION_REGISTRY.items()} == bms.CHAMPION_VERSIONS
+
+
+@pytest.mark.parametrize(
+    ("champ", "ver"),
+    [
+        ("p3_roll60", "nextfix_p3_roll60_v1"),
+        ("p3_monday", "nextfix_p3_monday_v1"),
+        ("ensemble", "nextfix_ridge_mlp_v1"),
+    ],
+)
+@pytest.mark.parametrize("hold", [True, False])
+def test_demotion_monitor_uses_the_champions_version_in_hold_and_model_windows(
+    tmp_path: Path, champ: str, ver: str, hold: bool
+) -> None:
+    (_hold_switched if hold else _switched)(tmp_path, champ)
+    _write(tmp_path, f"model_demotion_state__{ver}.json", _state(model_version=ver))
+    m = _row(bms.build_rows(tmp_path), "demotion_monitor")
+    assert m["verdict_kind"] != "no_data", m["sentence"]
+    assert f"data/model_demotion_state__{ver}.json" in m["sources"]
+    assert "hold_latest_fix" not in json.dumps(m)
+
+
+def test_demotion_monitor_fallback_run_reads_p3s_file(tmp_path: Path) -> None:
+    _hold_switched(tmp_path, "p3_roll60", effective_id="p3", fallback="record_missing")
+    _write(tmp_path, "model_demotion_state.json", _state())
+    m = _row(bms.build_rows(tmp_path), "demotion_monitor")
+    assert m["verdict_kind"] != "no_data" and "data/model_demotion_state.json" in m["sources"]
+
+
+def test_demotion_monitor_p3_champion_in_hold_window_reads_p3_file(tmp_path: Path) -> None:
+    _hold_switched(tmp_path, "p3")
+    _write(tmp_path, "model_demotion_state.json", _state())
+    m = _row(bms.build_rows(tmp_path), "demotion_monitor")
+    assert m["verdict_kind"] != "no_data" and "data/model_demotion_state.json" in m["sources"]
+
+
+def test_p3_row_is_not_called_live_when_another_model_is(tmp_path: Path) -> None:
+    _switched(tmp_path, "p3_roll60")
+    assert "live next-fix forecast" not in _row(bms.build_rows(tmp_path), "nextfix_p3")["name"]
+    _switched(tmp_path, "p3")
+    assert "live next-fix forecast" in _row(bms.build_rows(tmp_path), "nextfix_p3")["name"]
+
+
+def test_variant_that_is_the_champion_does_not_say_nothing_ships_automatically(
+    tmp_path: Path,
+) -> None:
+    _variant_files(tmp_path, n_fwd=bms.VARIANT_MIN_FORWARD_N, v_err=40.0)
+    _write(tmp_path, "forecast.json", {"next_fix": {"champion": {"id": "p3_roll60"}}})
+    r = _row(bms.build_rows(tmp_path), "p3_roll60")
+    assert "nothing ships automatically" not in r["sentence"]
+    assert "already the live model" in r["sentence"]
+    other = _row(bms.build_rows(tmp_path), "p3_monday")
+    assert "nothing ships automatically" in other["sentence"]
