@@ -1,0 +1,353 @@
+{"id": "u0000", "model": "qwen3:30b-a3b", "scores": {"natural": 4, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Good but 'सटीक' should be 'सही'", "raw": null}
+{"id": "u0001", "model": "qwen3:30b-a3b", "scores": {"natural": 4, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Good translation, but 'कब' is slightly off.", "raw": null}
+{"id": "u0003", "model": "qwen3:30b-a3b", "scores": {"natural": 4, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Good but 'भाव' should be 'सोने का भाव'", "raw": null}
+{"id": "u0005", "model": "qwen3:30b-a3b", "scores": {"natural": 4, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Good natural flow, minor tweak needed.", "raw": null}
+{"id": "u0006", "model": "qwen3:30b-a3b", "scores": {"natural": 4, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Good but 'आम भाव' could be clearer.", "raw": null}
+{"id": "u0007", "model": "qwen3:30b-a3b", "scores": {"natural": 4, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Good natural flow, fits context.", "raw": null}
+{"id": "u0008", "model": "qwen3:30b-a3b", "scores": {"natural": 5, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Perfect match.", "raw": null}
+{"id": "u0010", "model": "qwen3:30b-a3b", "scores": {"natural": 4, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Good but 'भाव' is better than 'कीमत'", "raw": null}
+{"id": "u0012", "model": "qwen3:30b-a3b", "scores": {"natural": 3, "correct": 4, "glossary": 3, "grammar": 4}, "note": "बारीक काम is informal, but 'एंटीक' is loanword.", "raw": null}
+{"id": "u0013", "model": "qwen3:30b-a3b", "scores": {"natural": 5, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Perfect match.", "raw": null}
+{"id": "u0014", "model": "qwen3:30b-a3b", "scores": {"natural": 5, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Perfect match.", "raw": null}
+{"id": "u0016", "model": "qwen3:30b-a3b", "scores": {"natural": 4, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Good but 'बातें' slightly off.", "raw": null}
+{"id": "u0017", "model": "qwen3:30b-a3b", "scores": {"natural": 3, "correct": 4, "glossary": 1, "grammar": 5}, "note": "Uses 'अनजान' instead of 'अनुमानित'", "raw": null}
+{"id": "u0018", "model": "qwen3:30b-a3b", "scores": {"natural": 4, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Minor tweak for natural flow.", "raw": null}
+{"id": "u0020", "model": "qwen3:30b-a3b", "scores": {"natural": 4, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Good natural flow, no glossary errors.", "raw": null}
+{"id": "u0021", "model": "qwen3:30b-a3b", "scores": {"natural": 3, "correct": 4, "glossary": 2, "grammar": 4}, "note": "आम घट-बढ़ is non-standard", "raw": null}
+{"id": "u0022", "model": "qwen3:30b-a3b", "scores": {"natural": 4, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Good but 'दुकान के भाव' could be more natural as 'दुकान का भाव'", "raw": null}
+{"id": "u0025", "model": "qwen3:30b-a3b", "scores": {"natural": 5, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Perfect match.", "raw": null}
+{"id": "u0026", "model": "qwen3:30b-a3b", "scores": {"natural": 5, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Perfect match for 'at low'", "raw": null}
+{"id": "u0028", "model": "qwen3:30b-a3b", "scores": {"natural": 1, "correct": 1, "glossary": 1, "grammar": 1}, "note": "Wrong word, should be 'Up'", "raw": null}
+{"id": "u0029", "model": "qwen3:30b-a3b", "scores": {"natural": 5, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Brand name, no glossary needed.", "raw": null}
+{"id": "u0030", "model": "qwen3:30b-a3b", "scores": {"natural": 5, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Perfect match.", "raw": null}
+{"id": "u0032", "model": "qwen3:30b-a3b", "scores": {"natural": 5, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Perfect match.", "raw": null}
+{"id": "u0033", "model": "qwen3:30b-a3b", "scores": {"natural": 5, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Perfect match.", "raw": null}
+{"id": "u0035", "model": "qwen3:30b-a3b", "scores": {"natural": 4, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Good but 'अवधि' not ideal.", "raw": null}
+{"id": "u0036", "model": "qwen3:30b-a3b", "scores": {"natural": 4, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Good but 'ट्रेंड' is loanword; 'भाव' is correct.", "raw": null}
+{"id": "u0037", "model": "qwen3:30b-a3b", "scores": {"natural": 4, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Minor tweak needed for 'कहने लायक़'", "raw": null}
+{"id": "u0040", "model": "qwen3:30b-a3b", "scores": {"natural": 3, "correct": 4, "glossary": 3, "grammar": 4}, "note": "बंद भाव not standard term", "raw": null}
+{"id": "u0042", "model": "qwen3:30b-a3b", "scores": {"natural": 4, "correct": 5, "glossary": 3, "grammar": 5}, "note": "Uses 'भाव' but 'दुनिया के भाव' not 'दुनिया के बाज़ार में सोने का भाव'", "raw": null}
+{"id": "u0043", "model": "qwen3:30b-a3b", "scores": {"natural": 5, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Perfectly natural and accurate.", "raw": null}
+{"id": "u0046", "model": "qwen3:30b-a3b", "scores": {"natural": 4, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Good natural flow.", "raw": null}
+{"id": "u0048", "model": "qwen3:30b-a3b", "scores": {"natural": 5, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Perfect match.", "raw": null}
+{"id": "u0051", "model": "qwen3:30b-a3b", "scores": {"natural": 3, "correct": 4, "glossary": 3, "grammar": 4}, "note": "दुकानों के औसत भाव", "raw": null}
+{"id": "u0052", "model": "qwen3:30b-a3b", "scores": {"natural": 5, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Perfect match.", "raw": null}
+{"id": "u0054", "model": "qwen3:30b-a3b", "scores": {"natural": 5, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Perfect match.", "raw": null}
+{"id": "u0056", "model": "qwen3:30b-a3b", "scores": {"natural": 4, "correct": 5, "glossary": 4, "grammar": 5}, "note": "Uses 'दायरे' instead of 'रेंज'", "raw": null}
+{"id": "u0057", "model": "qwen3:30b-a3b", "scores": {"natural": 4, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Good but 'संकेत' is not in glossary.", "raw": null}
+{"id": "u0060", "model": "qwen3:30b-a3b", "scores": {"natural": 5, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Perfect match.", "raw": null}
+{"id": "u0062", "model": "qwen3:30b-a3b", "scores": {"natural": 3, "correct": 4, "glossary": 3, "grammar": 4}, "note": "भाव should be सोने का भाव, not just भाव.", "raw": null}
+{"id": "u0063", "model": "qwen3:30b-a3b", "scores": {"natural": 5, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Perfect match to glossary and context.", "raw": null}
+{"id": "u0065", "model": "qwen3:30b-a3b", "scores": {"natural": 3, "correct": 3, "glossary": 2, "grammar": 4}, "note": "Incorrect glossary term used.", "raw": null}
+{"id": "u0066", "model": "qwen3:30b-a3b", "scores": {"natural": 4, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Good but 'बढ़ा है' slightly off.", "raw": null}
+{"id": "u0067", "model": "qwen3:30b-a3b", "scores": {"natural": 4, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Good but 'मोटे अंदाज़े' should be 'मोटा अंदाज़ा'", "raw": null}
+{"id": "u0068", "model": "qwen3:30b-a3b", "scores": {"natural": 5, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Perfect match.", "raw": null}
+{"id": "u0070", "model": "qwen3:30b-a3b", "scores": {"natural": 5, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Perfect match.", "raw": null}
+{"id": "u0071", "model": "qwen3:30b-a3b", "scores": {"natural": 5, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Perfect match.", "raw": null}
+{"id": "u0072", "model": "qwen3:30b-a3b", "scores": {"natural": 5, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Perfect match.", "raw": null}
+{"id": "u0075", "model": "qwen3:30b-a3b", "scores": {"natural": 5, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Perfect match.", "raw": null}
+{"id": "u0076", "model": "qwen3:30b-a3b", "scores": {"natural": 4, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Minor tweak for naturalness.", "raw": null}
+{"id": "u0077", "model": "qwen3:30b-a3b", "scores": {"natural": 5, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Perfect match.", "raw": null}
+{"id": "u0078", "model": "qwen3:30b-a3b", "scores": {"natural": 5, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Perfectly natural and accurate.", "raw": null}
+{"id": "u0079", "model": "qwen3:30b-a3b", "scores": {"natural": 3, "correct": 4, "glossary": 3, "grammar": 4}, "note": "असली भाव is wrong; should be भाव/दर्ज किया भाव.", "raw": null}
+{"id": "u0084", "model": "qwen3:30b-a3b", "scores": {"natural": 4, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Good but 'डालें' slightly formal.", "raw": null}
+{"id": "u0085", "model": "qwen3:30b-a3b", "scores": {"natural": 4, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Good but 'ऊपर' could be clearer.", "raw": null}
+{"id": "u0086", "model": "qwen3:30b-a3b", "scores": {"natural": 5, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Perfect match.", "raw": null}
+{"id": "u0089", "model": "qwen3:30b-a3b", "scores": {"natural": 5, "correct": 5, "glossary": 5, "grammar": 5}, "note": "No changes needed.", "raw": null}
+{"id": "u0090", "model": "qwen3:30b-a3b", "scores": {"natural": 4, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Good translation, no issues.", "raw": null}
+{"id": "u0093", "model": "qwen3:30b-a3b", "scores": {"natural": 4, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Good translation, minor tweak needed.", "raw": null}
+{"id": "u0094", "model": "qwen3:30b-a3b", "scores": {"natural": 4, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Good but 'दिया भाव' should be 'दिया भाव'.", "raw": null}
+{"id": "u0096", "model": "qwen3:30b-a3b", "scores": {"natural": 5, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Perfect match.", "raw": null}
+{"id": "u0098", "model": "qwen3:30b-a3b", "scores": {"natural": 5, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Perfect match.", "raw": null}
+{"id": "u0099", "model": "qwen3:30b-a3b", "scores": {"natural": 4, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Good, but 'पुराना' is slightly off.", "raw": null}
+{"id": "u0101", "model": "qwen3:30b-a3b", "scores": {"natural": 5, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Perfect match.", "raw": null}
+{"id": "u0102", "model": "qwen3:30b-a3b", "scores": {"natural": 3, "correct": 4, "glossary": 1, "grammar": 5}, "note": "Incorrect glossary term used.", "raw": null}
+{"id": "u0103", "model": "qwen3:30b-a3b", "scores": {"natural": 5, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Perfect match.", "raw": null}
+{"id": "u0104", "model": "qwen3:30b-a3b", "scores": {"natural": 5, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Perfect match.", "raw": null}
+{"id": "u0105", "model": "qwen3:30b-a3b", "scores": {"natural": 5, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Perfect match.", "raw": null}
+{"id": "u0108", "model": "qwen3:30b-a3b", "scores": {"natural": 5, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Perfect match.", "raw": null}
+{"id": "u0109", "model": "qwen3:30b-a3b", "scores": {"natural": 5, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Perfect match.", "raw": null}
+{"id": "u0114", "model": "qwen3:30b-a3b", "scores": {"natural": 4, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Good use of 'भाव' and 'रुपये'", "raw": null}
+{"id": "u0119", "model": "qwen3:30b-a3b", "scores": {"natural": 5, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Perfect match.", "raw": null}
+{"id": "u0120", "model": "qwen3:30b-a3b", "scores": {"natural": 5, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Perfect match.", "raw": null}
+{"id": "u0122", "model": "qwen3:30b-a3b", "scores": {"natural": 5, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Perfect match per glossary.", "raw": null}
+{"id": "u0123", "model": "qwen3:30b-a3b", "scores": {"natural": 1, "correct": 1, "glossary": 1, "grammar": 1}, "note": "Wrong context, not a label.", "raw": null}
+{"id": "u0126", "model": "qwen3:30b-a3b", "scores": {"natural": 5, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Perfect match for label.", "raw": null}
+{"id": "u0127", "model": "qwen3:30b-a3b", "scores": {"natural": 4, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Good but 'भाव' should be 'भाव' not 'भाव'", "raw": null}
+{"id": "u0132", "model": "qwen3:30b-a3b", "scores": {"natural": 5, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Perfect match.", "raw": null}
+{"id": "u0133", "model": "qwen3:30b-a3b", "scores": {"natural": 5, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Perfectly natural and accurate.", "raw": null}
+{"id": "u0135", "model": "qwen3:30b-a3b", "scores": {"natural": 3, "correct": 4, "glossary": 4, "grammar": 4}, "note": "के आसपास is unnatural", "raw": null}
+{"id": "u0136", "model": "qwen3:30b-a3b", "scores": {"natural": 5, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Perfect match.", "raw": null}
+{"id": "u0138", "model": "qwen3:30b-a3b", "scores": {"natural": 5, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Perfect match.", "raw": null}
+{"id": "u0140", "model": "qwen3:30b-a3b", "scores": {"natural": 5, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Perfect match.", "raw": null}
+{"id": "u0141", "model": "qwen3:30b-a3b", "scores": {"natural": 5, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Perfect match.", "raw": null}
+{"id": "u0142", "model": "qwen3:30b-a3b", "scores": {"natural": 4, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Good, but 'मामले' could be 'मामलों'.", "raw": null}
+{"id": "u0144", "model": "qwen3:30b-a3b", "scores": {"natural": 4, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Good translation, but 'संकेत' is slightly off.", "raw": null}
+{"id": "u0147", "model": "qwen3:30b-a3b", "scores": {"natural": 3, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Not natural for label.", "raw": null}
+{"id": "u0148", "model": "qwen3:30b-a3b", "scores": {"natural": 2, "correct": 3, "glossary": 1, "grammar": 4}, "note": "Uses 'कीमत' instead of 'भाव'", "raw": null}
+{"id": "u0149", "model": "qwen3:30b-a3b", "scores": {"natural": 4, "correct": 4, "glossary": 4, "grammar": 4}, "note": "Minor tense mismatch in 'बढ़ा हो'", "raw": null}
+{"id": "u0150", "model": "qwen3:30b-a3b", "scores": {"natural": 4, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Good natural flow, no glossary errors.", "raw": null}
+{"id": "u0151", "model": "qwen3:30b-a3b", "scores": {"natural": 4, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Good, but 'भाव' is better than 'दर्ज किया भाव'", "raw": null}
+{"id": "u0153", "model": "qwen3:30b-a3b", "scores": {"natural": 3, "correct": 4, "glossary": 1, "grammar": 4}, "note": "ग़लती should be त्रुटि", "raw": null}
+{"id": "u0154", "model": "qwen3:30b-a3b", "scores": {"natural": 1, "correct": 3, "glossary": 1, "grammar": 4}, "note": "Uses 'कीमत' instead of 'भाव'", "raw": null}
+{"id": "u0155", "model": "qwen3:30b-a3b", "scores": {"natural": 5, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Perfect match.", "raw": null}
+{"id": "u0156", "model": "qwen3:30b-a3b", "scores": {"natural": 4, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Good natural phrasing.", "raw": null}
+{"id": "u0157", "model": "qwen3:30b-a3b", "scores": {"natural": 5, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Proper name, no glossary needed.", "raw": null}
+{"id": "u0158", "model": "qwen3:30b-a3b", "scores": {"natural": 4, "correct": 5, "glossary": 4, "grammar": 5}, "note": "Uses 'दुकानों' instead of 'ज्वेलर'", "raw": null}
+{"id": "u0159", "model": "qwen3:30b-a3b", "scores": {"natural": 4, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Good, but 'इंटरनेट' is loanword.", "raw": null}
+{"id": "u0160", "model": "qwen3:30b-a3b", "scores": {"natural": 4, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Good but 'भाव' should be 'भाव' not 'भाव'.", "raw": null}
+{"id": "u0161", "model": "qwen3:30b-a3b", "scores": {"natural": 4, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Good natural flow, minor tweak needed for 'अंदाज़ा' vs 'अनुमान'", "raw": null}
+{"id": "u0162", "model": "qwen3:30b-a3b", "scores": {"natural": 5, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Perfect match per glossary.", "raw": null}
+{"id": "u0164", "model": "qwen3:30b-a3b", "scores": {"natural": 5, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Perfect match.", "raw": null}
+{"id": "u0165", "model": "qwen3:30b-a3b", "scores": {"natural": 4, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Good but 'घटा है' could be more natural.", "raw": null}
+{"id": "u0170", "model": "qwen3:30b-a3b", "scores": {"natural": 5, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Perfect match for button label.", "raw": null}
+{"id": "u0172", "model": "qwen3:30b-a3b", "scores": {"natural": 4, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Good but 'आम भाव' should be 'आम भाव के अनुसार'.", "raw": null}
+{"id": "u0173", "model": "qwen3:30b-a3b", "scores": {"natural": 5, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Perfect match.", "raw": null}
+{"id": "u0175", "model": "qwen3:30b-a3b", "scores": {"natural": 4, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Good natural flow, minor tweak needed for 'अंदाज़े' to 'अनुमान'.", "raw": null}
+{"id": "u0180", "model": "qwen3:30b-a3b", "scores": {"natural": 5, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Perfect match.", "raw": null}
+{"id": "u0181", "model": "qwen3:30b-a3b", "scores": {"natural": 4, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Good natural flow, no glossary errors.", "raw": null}
+{"id": "u0184", "model": "qwen3:30b-a3b", "scores": {"natural": 5, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Perfect match.", "raw": null}
+{"id": "u0188", "model": "qwen3:30b-a3b", "scores": {"natural": 3, "correct": 4, "glossary": 3, "grammar": 4}, "note": "Share/Add to Home Screen not translated", "raw": null}
+{"id": "u0190", "model": "qwen3:30b-a3b", "scores": {"natural": 3, "correct": 4, "glossary": 3, "grammar": 4}, "note": "असली भाव is wrong; should be भाव/दर्ज किया भाव.", "raw": null}
+{"id": "u0194", "model": "qwen3:30b-a3b", "scores": {"natural": 3, "correct": 4, "glossary": 3, "grammar": 4}, "note": "सिर्फ़ अगली चाल के लिए is unnatural.", "raw": null}
+{"id": "u0195", "model": "qwen3:30b-a3b", "scores": {"natural": 4, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Good but 'मात्रा' is less common than 'मात्रा' in this context.", "raw": null}
+{"id": "u0196", "model": "qwen3:30b-a3b", "scores": {"natural": 4, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Good, but 'हाल' is slightly formal.", "raw": null}
+{"id": "u0201", "model": "qwen3:30b-a3b", "scores": {"natural": 2, "correct": 3, "glossary": 1, "grammar": 5}, "note": "Uses 'कीमत' instead of 'भाव'", "raw": null}
+{"id": "u0203", "model": "qwen3:30b-a3b", "scores": {"natural": 4, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Good but 'भाव' should be 'भाव' not 'भाव'", "raw": null}
+{"id": "u0204", "model": "qwen3:30b-a3b", "scores": {"natural": 5, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Perfect match.", "raw": null}
+{"id": "u0205", "model": "qwen3:30b-a3b", "scores": {"natural": 4, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Good offline message.", "raw": null}
+{"id": "u0206", "model": "qwen3:30b-a3b", "scores": {"natural": 4, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Good natural flow, fits context.", "raw": null}
+{"id": "u0207", "model": "qwen3:30b-a3b", "scores": {"natural": 4, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Good use of 'ट्रेंड' and 'भाव'", "raw": null}
+{"id": "u0208", "model": "qwen3:30b-a3b", "scores": {"natural": 4, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Good use of 'मोटा अंदाज़ा'.", "raw": null}
+{"id": "u0210", "model": "qwen3:30b-a3b", "scores": {"natural": 5, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Perfect match for 'down' label.", "raw": null}
+{"id": "u0211", "model": "qwen3:30b-a3b", "scores": {"natural": 4, "correct": 5, "glossary": 4, "grammar": 5}, "note": "शांत रहे हैं is natural but 'भाव' should be 'भाव' not 'भाव'", "raw": null}
+{"id": "u0212", "model": "qwen3:30b-a3b", "scores": {"natural": 5, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Perfect match.", "raw": null}
+{"id": "u0214", "model": "qwen3:30b-a3b", "scores": {"natural": 5, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Perfect match.", "raw": null}
+{"id": "u0215", "model": "qwen3:30b-a3b", "scores": {"natural": 4, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Good natural phrasing.", "raw": null}
+{"id": "u0217", "model": "qwen3:30b-a3b", "scores": {"natural": 4, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Good but 'भाव' used twice.", "raw": null}
+{"id": "u0218", "model": "qwen3:30b-a3b", "scores": {"natural": 4, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Good but {n} should be before {pct}", "raw": null}
+{"id": "u0220", "model": "qwen3:30b-a3b", "scores": {"natural": 4, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Good but 'इस्तेमाल हुआ' is slightly off.", "raw": null}
+{"id": "u0221", "model": "qwen3:30b-a3b", "scores": {"natural": 5, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Perfect match.", "raw": null}
+{"id": "u0222", "model": "qwen3:30b-a3b", "scores": {"natural": 5, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Perfect match.", "raw": null}
+{"id": "u0224", "model": "qwen3:30b-a3b", "scores": {"natural": 4, "correct": 4, "glossary": 3, "grammar": 5}, "note": "Uses 'अंदाज़े' instead of 'अनुमान' for 'estimate'", "raw": null}
+{"id": "u0225", "model": "qwen3:30b-a3b", "scores": {"natural": 4, "correct": 4, "glossary": 4, "grammar": 4}, "note": "Minor tense mismatch in 'गिरा हो'", "raw": null}
+{"id": "u0226", "model": "qwen3:30b-a3b", "scores": {"natural": 5, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Perfect match.", "raw": null}
+{"id": "u0228", "model": "qwen3:30b-a3b", "scores": {"natural": 3, "correct": 4, "glossary": 1, "grammar": 4}, "note": "Uses 'ज्वेलर' but wrong term for rate.", "raw": null}
+{"id": "u0230", "model": "qwen3:30b-a3b", "scores": {"natural": 4, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Minor tense adjustment for naturalness.", "raw": null}
+{"id": "u0234", "model": "qwen3:30b-a3b", "scores": {"natural": 5, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Perfect match.", "raw": null}
+{"id": "u0236", "model": "qwen3:30b-a3b", "scores": {"natural": 5, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Perfect match.", "raw": null}
+{"id": "u0238", "model": "qwen3:30b-a3b", "scores": {"natural": 5, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Perfect match.", "raw": null}
+{"id": "u0239", "model": "qwen3:30b-a3b", "scores": {"natural": 4, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Good but 'ट्रेंड' should be 'ट्रेंड' (not 'ट्रेंड')", "raw": null}
+{"id": "u0241", "model": "qwen3:30b-a3b", "scores": {"natural": 4, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Good but 'पर' should be 'पर वापस'", "raw": null}
+{"id": "u0242", "model": "qwen3:30b-a3b", "scores": {"natural": 4, "correct": 5, "glossary": 4, "grammar": 5}, "note": "Uses 'दायरे' instead of 'रेंज'", "raw": null}
+{"id": "u0243", "model": "qwen3:30b-a3b", "scores": {"natural": 4, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Minor tweak for natural flow.", "raw": null}
+{"id": "u0245", "model": "qwen3:30b-a3b", "scores": {"natural": 5, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Perfect match.", "raw": null}
+{"id": "u0246", "model": "qwen3:30b-a3b", "scores": {"natural": 4, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Good but 'टिका' is slightly off.", "raw": null}
+{"id": "u0248", "model": "qwen3:30b-a3b", "scores": {"natural": 4, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Good natural flow, no glossary errors.", "raw": null}
+{"id": "u0249", "model": "qwen3:30b-a3b", "scores": {"natural": 5, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Perfect match.", "raw": null}
+{"id": "u0257", "model": "qwen3:30b-a3b", "scores": {"natural": 5, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Perfect match.", "raw": null}
+{"id": "u0260", "model": "qwen3:30b-a3b", "scores": {"natural": 4, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Good but 'कारोबारी' not standard.", "raw": null}
+{"id": "u0262", "model": "qwen3:30b-a3b", "scores": {"natural": 5, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Perfect heading match.", "raw": null}
+{"id": "u0263", "model": "qwen3:30b-a3b", "scores": {"natural": 4, "correct": 5, "glossary": 5, "grammar": 5}, "note": "22 कैरेट matches glossary.", "raw": null}
+{"id": "u0266", "model": "qwen3:30b-a3b", "scores": {"natural": 4, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Minor tweak for 'internet connection dropped'", "raw": null}
+{"id": "u0268", "model": "qwen3:30b-a3b", "scores": {"natural": 5, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Perfect match.", "raw": null}
+{"id": "u0269", "model": "qwen3:30b-a3b", "scores": {"natural": 5, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Perfect match.", "raw": null}
+{"id": "u0274", "model": "qwen3:30b-a3b", "scores": {"natural": 4, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Good but 'पक्का' is slightly off.", "raw": null}
+{"id": "u0275", "model": "qwen3:30b-a3b", "scores": {"natural": 5, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Perfect match.", "raw": null}
+{"id": "u0276", "model": "qwen3:30b-a3b", "scores": {"natural": 4, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Good natural flow, no glossary issues.", "raw": null}
+{"id": "u0277", "model": "qwen3:30b-a3b", "scores": {"natural": 4, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Good but 'आम' should be 'आम तौर पर' for naturalness.", "raw": null}
+{"id": "u0278", "model": "qwen3:30b-a3b", "scores": {"natural": 3, "correct": 4, "glossary": 3, "grammar": 5}, "note": "Uses 'दुकान' but should be 'ज्वेलर'", "raw": null}
+{"id": "u0281", "model": "qwen3:30b-a3b", "scores": {"natural": 4, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Good natural flow, minor tweak needed.", "raw": null}
+{"id": "u0283", "model": "qwen3:30b-a3b", "scores": {"natural": 5, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Perfect match.", "raw": null}
+{"id": "u0285", "model": "qwen3:30b-a3b", "scores": {"natural": 5, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Perfect match.", "raw": null}
+{"id": "u0287", "model": "qwen3:30b-a3b", "scores": {"natural": 4, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Good but 'इस्तेमाल हुआ भाव' should be 'सोने का भाव'", "raw": null}
+{"id": "u0292", "model": "qwen3:30b-a3b", "scores": {"natural": 3, "correct": 4, "glossary": 4, "grammar": 5}, "note": "सही साबित हुई is unnatural", "raw": null}
+{"id": "u0295", "model": "qwen3:30b-a3b", "scores": {"natural": 4, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Good but 'भाव' should be 'भाव' not 'भाव'.", "raw": null}
+{"id": "u0296", "model": "qwen3:30b-a3b", "scores": {"natural": 4, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Good natural flow, no glossary errors.", "raw": null}
+{"id": "u0298", "model": "qwen3:30b-a3b", "scores": {"natural": 5, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Perfect match.", "raw": null}
+{"id": "u0300", "model": "qwen3:30b-a3b", "scores": {"natural": 5, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Perfect match.", "raw": null}
+{"id": "u0301", "model": "qwen3:30b-a3b", "scores": {"natural": 4, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Good but 'टिका' slightly off.", "raw": null}
+{"id": "u0303", "model": "qwen3:30b-a3b", "scores": {"natural": 4, "correct": 5, "glossary": 4, "grammar": 5}, "note": "ज्वेलर्स should be ज्वेलर (not plural)", "raw": null}
+{"id": "u0306", "model": "qwen3:30b-a3b", "scores": {"natural": 4, "correct": 5, "glossary": 5, "grammar": 5}, "note": "75% शुद्ध is natural for purity in gold context.", "raw": null}
+{"id": "u0307", "model": "qwen3:30b-a3b", "scores": {"natural": 4, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Good but 'रीफ़्रेश' is loanword, not standard Hindi.", "raw": null}
+{"id": "u0308", "model": "qwen3:30b-a3b", "scores": {"natural": 5, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Perfect match.", "raw": null}
+{"id": "u0309", "model": "qwen3:30b-a3b", "scores": {"natural": 4, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Good but 'असली भाव' could be 'सही भाव' for naturalness.", "raw": null}
+{"id": "u0312", "model": "qwen3:30b-a3b", "scores": {"natural": 5, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Perfect match.", "raw": null}
+{"id": "u0313", "model": "qwen3:30b-a3b", "scores": {"natural": 4, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Good, but 'सबसे कम' is slightly off.", "raw": null}
+{"id": "u0314", "model": "qwen3:30b-a3b", "scores": {"natural": 3, "correct": 4, "glossary": 4, "grammar": 5}, "note": "अपडेट नहीं हो रहा is unnatural for 'Not updating'", "raw": null}
+{"id": "u0315", "model": "qwen3:30b-a3b", "scores": {"natural": 4, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Good natural flow, no glossary errors.", "raw": null}
+{"id": "u0316", "model": "qwen3:30b-a3b", "scores": {"natural": 4, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Good use of अनुमान.", "raw": null}
+{"id": "u0317", "model": "qwen3:30b-a3b", "scores": {"natural": 5, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Perfectly natural and accurate.", "raw": null}
+{"id": "u0318", "model": "qwen3:30b-a3b", "scores": {"natural": 4, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Good but 'देखा गया' is passive; better active voice.", "raw": null}
+{"id": "u0319", "model": "qwen3:30b-a3b", "scores": {"natural": 4, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Good but 'भाव' better than 'डेटा'", "raw": null}
+{"id": "u0321", "model": "qwen3:30b-a3b", "scores": {"natural": 5, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Perfect match.", "raw": null}
+{"id": "u0323", "model": "qwen3:30b-a3b", "scores": {"natural": 4, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Good but 'ट्रेंड' is loanword, should be 'प्रवृत्ति'", "raw": null}
+{"id": "u0324", "model": "qwen3:30b-a3b", "scores": {"natural": 5, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Perfect match.", "raw": null}
+{"id": "u0325", "model": "qwen3:30b-a3b", "scores": {"natural": 5, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Perfect match.", "raw": null}
+{"id": "u0327", "model": "qwen3:30b-a3b", "scores": {"natural": 3, "correct": 4, "glossary": 3, "grammar": 4}, "note": "आम भाव should be आम भाव नहीं, but 'आम' is correct for 'usual'", "raw": null}
+{"id": "u0328", "model": "qwen3:30b-a3b", "scores": {"natural": 5, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Perfect match.", "raw": null}
+{"id": "u0329", "model": "qwen3:30b-a3b", "scores": {"natural": 5, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Perfectly natural and accurate.", "raw": null}
+{"id": "u0332", "model": "qwen3:30b-a3b", "scores": {"natural": 5, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Perfect match.", "raw": null}
+{"id": "u0333", "model": "qwen3:30b-a3b", "scores": {"natural": 3, "correct": 4, "glossary": 4, "grammar": 4}, "note": "आम भाव is incorrect term.", "raw": null}
+{"id": "u0334", "model": "qwen3:30b-a3b", "scores": {"natural": 4, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Good but 'भाव' should be 'भाव' not 'भाव'", "raw": null}
+{"id": "u0336", "model": "qwen3:30b-a3b", "scores": {"natural": 5, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Perfect match.", "raw": null}
+{"id": "u0338", "model": "qwen3:30b-a3b", "scores": {"natural": 3, "correct": 4, "glossary": 2, "grammar": 4}, "note": "खरीद का खर्च", "raw": null}
+{"id": "u0340", "model": "qwen3:30b-a3b", "scores": {"natural": 3, "correct": 4, "glossary": 3, "grammar": 4}, "note": "आम भाव should be सोने का भाव", "raw": null}
+{"id": "u0343", "model": "qwen3:30b-a3b", "scores": {"natural": 5, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Perfect match.", "raw": null}
+{"id": "u0344", "model": "qwen3:30b-a3b", "scores": {"natural": 5, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Perfect match.", "raw": null}
+{"id": "u0345", "model": "qwen3:30b-a3b", "scores": {"natural": 4, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Minor tweak for naturalness.", "raw": null}
+{"id": "u0346", "model": "qwen3:30b-a3b", "scores": {"natural": 1, "correct": 1, "glossary": 1, "grammar": 1}, "note": "Wrong translation, should be 'No change'.", "raw": null}
+{"id": "u0347", "model": "qwen3:30b-a3b", "scores": {"natural": 4, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Good but 'आज का भाव' could be more natural.", "raw": null}
+{"id": "u0349", "model": "qwen3:30b-a3b", "scores": {"natural": 4, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Good translation.", "raw": null}
+{"id": "u0350", "model": "qwen3:30b-a3b", "scores": {"natural": 4, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Good use of glossary terms.", "raw": null}
+{"id": "u0351", "model": "qwen3:30b-a3b", "scores": {"natural": 4, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Good translation, but 'ट्रेनिंग' is loanword.", "raw": null}
+{"id": "u0352", "model": "qwen3:30b-a3b", "scores": {"natural": 4, "correct": 5, "glossary": 5, "grammar": 5}, "note": "असली भाव is not in glossary; should be सोने का भाव.", "raw": null}
+{"id": "u0354", "model": "qwen3:30b-a3b", "scores": {"natural": 4, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Good, but 'और' could be omitted.", "raw": null}
+{"id": "u0355", "model": "qwen3:30b-a3b", "scores": {"natural": 5, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Perfect match.", "raw": null}
+{"id": "u0357", "model": "qwen3:30b-a3b", "scores": {"natural": 5, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Perfect match.", "raw": null}
+{"id": "u0358", "model": "qwen3:30b-a3b", "scores": {"natural": 4, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Good but 'जानते हैं' slightly formal.", "raw": null}
+{"id": "u0359", "model": "qwen3:30b-a3b", "scores": {"natural": 3, "correct": 4, "glossary": 3, "grammar": 5}, "note": "पहले की औसत ग़लती is not natural Hindi for 'Historical avg. error'", "raw": null}
+{"id": "u0361", "model": "qwen3:30b-a3b", "scores": {"natural": 5, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Perfect match.", "raw": null}
+{"id": "u0364", "model": "qwen3:30b-a3b", "scores": {"natural": 5, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Perfect match.", "raw": null}
+{"id": "u0365", "model": "qwen3:30b-a3b", "scores": {"natural": 4, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Good use of 'दर्ज किए गए भाव'", "raw": null}
+{"id": "u0368", "model": "qwen3:30b-a3b", "scores": {"natural": 4, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Good but 'भाव' should be 'भाव' not 'भाव'", "raw": null}
+{"id": "u0370", "model": "qwen3:30b-a3b", "scores": {"natural": 5, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Perfect match.", "raw": null}
+{"id": "u0371", "model": "qwen3:30b-a3b", "scores": {"natural": 5, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Perfect match.", "raw": null}
+{"id": "u0372", "model": "qwen3:30b-a3b", "scores": {"natural": 5, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Perfect match.", "raw": null}
+{"id": "u0373", "model": "qwen3:30b-a3b", "scores": {"natural": 1, "correct": 1, "glossary": 1, "grammar": 1}, "note": "Wrong word, no context.", "raw": null}
+{"id": "u0375", "model": "qwen3:30b-a3b", "scores": {"natural": 4, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Good but {n} should be before {pct}", "raw": null}
+{"id": "u0376", "model": "qwen3:30b-a3b", "scores": {"natural": 4, "correct": 5, "glossary": 4, "grammar": 5}, "note": "अंदाज़ा is informal, not अनुमान", "raw": null}
+{"id": "u0380", "model": "qwen3:30b-a3b", "scores": {"natural": 5, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Perfect match.", "raw": null}
+{"id": "u0382", "model": "qwen3:30b-a3b", "scores": {"natural": 5, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Perfect match.", "raw": null}
+{"id": "u0386", "model": "qwen3:30b-a3b", "scores": {"natural": 4, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Good but 'आंकड़े' not ideal.", "raw": null}
+{"id": "u0388", "model": "qwen3:30b-a3b", "scores": {"natural": 4, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Good but 'ज़्यादा' should be 'अधिक'", "raw": null}
+{"id": "u0391", "model": "qwen3:30b-a3b", "scores": {"natural": 5, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Perfect match.", "raw": null}
+{"id": "u0392", "model": "qwen3:30b-a3b", "scores": {"natural": 4, "correct": 5, "glossary": 4, "grammar": 5}, "note": "HUID not explained as per glossary.", "raw": null}
+{"id": "u0393", "model": "qwen3:30b-a3b", "scores": {"natural": 4, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Good but 'नापा हुआ' is odd.", "raw": null}
+{"id": "u0396", "model": "qwen3:30b-a3b", "scores": {"natural": 5, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Perfect match per glossary.", "raw": null}
+{"id": "u0397", "model": "qwen3:30b-a3b", "scores": {"natural": 5, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Perfect match.", "raw": null}
+{"id": "u0398", "model": "qwen3:30b-a3b", "scores": {"natural": 3, "correct": 4, "glossary": 4, "grammar": 5}, "note": "Uses 'घटे' instead of 'कम'", "raw": null}
+{"id": "u0399", "model": "qwen3:30b-a3b", "scores": {"natural": 4, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Good use of 'ट्रेंड' and 'आम'", "raw": null}
+{"id": "u0400", "model": "qwen3:30b-a3b", "scores": {"natural": 4, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Good natural flow, minor tweak needed.", "raw": null}
+{"id": "u0402", "model": "qwen3:30b-a3b", "scores": {"natural": 4, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Good but 'चाल' is odd.", "raw": null}
+{"id": "u0405", "model": "qwen3:30b-a3b", "scores": {"natural": 5, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Perfect match.", "raw": null}
+{"id": "u0406", "model": "qwen3:30b-a3b", "scores": {"natural": 3, "correct": 4, "glossary": 3, "grammar": 4}, "note": "Uses 'लगभग' instead of 'अनुमानित'", "raw": null}
+{"id": "u0407", "model": "qwen3:30b-a3b", "scores": {"natural": 3, "correct": 4, "glossary": 3, "grammar": 4}, "note": "टूटी लाइन not standard term", "raw": null}
+{"id": "u0408", "model": "qwen3:30b-a3b", "scores": {"natural": 5, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Perfect match for 'today' label.", "raw": null}
+{"id": "u0410", "model": "qwen3:30b-a3b", "scores": {"natural": 4, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Good but 'मुश्किल से' slightly off.", "raw": null}
+{"id": "u0411", "model": "qwen3:30b-a3b", "scores": {"natural": 4, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Good natural phrasing.", "raw": null}
+{"id": "u0413", "model": "qwen3:30b-a3b", "scores": {"natural": 4, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Good but 'auto-refresh' is loanword.", "raw": null}
+{"id": "u0415", "model": "qwen3:30b-a3b", "scores": {"natural": 1, "correct": 1, "glossary": 1, "grammar": 1}, "note": "Wrong translation, not Hindi.", "raw": null}
+{"id": "u0416", "model": "qwen3:30b-a3b", "scores": {"natural": 5, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Perfect match.", "raw": null}
+{"id": "u0417", "model": "qwen3:30b-a3b", "scores": {"natural": 5, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Perfect match.", "raw": null}
+{"id": "u0419", "model": "qwen3:30b-a3b", "scores": {"natural": 4, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Good use of 'सस्ता' and 'भाव'", "raw": null}
+{"id": "u0421", "model": "qwen3:30b-a3b", "scores": {"natural": 3, "correct": 4, "glossary": 3, "grammar": 4}, "note": "अनुमानित नहीं, भाव गलत", "raw": null}
+{"id": "u0426", "model": "qwen3:30b-a3b", "scores": {"natural": 5, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Perfect match.", "raw": null}
+{"id": "u0427", "model": "qwen3:30b-a3b", "scores": {"natural": 4, "correct": 4, "glossary": 3, "grammar": 5}, "note": "कुछ गलत ग्लोसरी उपयोग", "raw": null}
+{"id": "u0431", "model": "qwen3:30b-a3b", "scores": {"natural": 5, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Perfect match.", "raw": null}
+{"id": "u0433", "model": "qwen3:30b-a3b", "scores": {"natural": 4, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Good but 'हाल के भाव' could be 'पुराने भाव' for accuracy.", "raw": null}
+{"id": "u0434", "model": "qwen3:30b-a3b", "scores": {"natural": 4, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Good but 'करीब' slightly informal for price context.", "raw": null}
+{"id": "u0435", "model": "qwen3:30b-a3b", "scores": {"natural": 4, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Good natural flow, fits context.", "raw": null}
+{"id": "u0436", "model": "qwen3:30b-a3b", "scores": {"natural": 5, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Perfect match.", "raw": null}
+{"id": "u0440", "model": "qwen3:30b-a3b", "scores": {"natural": 4, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Good natural flow.", "raw": null}
+{"id": "u0441", "model": "qwen3:30b-a3b", "scores": {"natural": 4, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Direction signal not in glossary.", "raw": null}
+{"id": "u0442", "model": "qwen3:30b-a3b", "scores": {"natural": 4, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Good but 'भाव' should be 'भाव से' for clarity.", "raw": null}
+{"id": "u0444", "model": "qwen3:30b-a3b", "scores": {"natural": 5, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Perfect match.", "raw": null}
+{"id": "u0445", "model": "qwen3:30b-a3b", "scores": {"natural": 5, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Perfect match.", "raw": null}
+{"id": "u0446", "model": "qwen3:30b-a3b", "scores": {"natural": 3, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Good but unnatural phrasing.", "raw": null}
+{"id": "u0448", "model": "qwen3:30b-a3b", "scores": {"natural": 5, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Perfect match per glossary.", "raw": null}
+{"id": "u0449", "model": "qwen3:30b-a3b", "scores": {"natural": 4, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Good but 'से' should be 'से बढ़े' for natural flow.", "raw": null}
+{"id": "u0451", "model": "qwen3:30b-a3b", "scores": {"natural": 5, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Perfect match.", "raw": null}
+{"id": "u0452", "model": "qwen3:30b-a3b", "scores": {"natural": 2, "correct": 3, "glossary": 1, "grammar": 4}, "note": "Uses 'कीमत' instead of 'भाव'", "raw": null}
+{"id": "u0453", "model": "qwen3:30b-a3b", "scores": {"natural": 4, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Good use of {k} and {value}", "raw": null}
+{"id": "u0454", "model": "qwen3:30b-a3b", "scores": {"natural": 5, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Perfect match.", "raw": null}
+{"id": "u0455", "model": "qwen3:30b-a3b", "scores": {"natural": 5, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Perfect match.", "raw": null}
+{"id": "u0458", "model": "qwen3:30b-a3b", "scores": {"natural": 4, "correct": 5, "glossary": 4, "grammar": 5}, "note": "Minor glossary tweak needed.", "raw": null}
+{"id": "u0459", "model": "qwen3:30b-a3b", "scores": {"natural": 4, "correct": 5, "glossary": 3, "grammar": 5}, "note": "अंदाज़ा vs अनुमान", "raw": null}
+{"id": "u0464", "model": "qwen3:30b-a3b", "scores": {"natural": 4, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Good but 'भाव' should be 'भाव' not 'भाव'", "raw": null}
+{"id": "u0470", "model": "qwen3:30b-a3b", "scores": {"natural": 3, "correct": 4, "glossary": 1, "grammar": 5}, "note": "Uses 'भाव' but should be 'भाव का' for 'price reading'", "raw": null}
+{"id": "u0471", "model": "qwen3:30b-a3b", "scores": {"natural": 3, "correct": 4, "glossary": 3, "grammar": 4}, "note": "22K not 22 कैरेट, 'औसत' not 'अनुमान'", "raw": null}
+{"id": "u0472", "model": "qwen3:30b-a3b", "scores": {"natural": 2, "correct": 3, "glossary": 1, "grammar": 4}, "note": "Uses 'कीमत' instead of 'भाव'", "raw": null}
+{"id": "u0474", "model": "qwen3:30b-a3b", "scores": {"natural": 5, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Perfect match.", "raw": null}
+{"id": "u0475", "model": "qwen3:30b-a3b", "scores": {"natural": 3, "correct": 4, "glossary": 4, "grammar": 5}, "note": "Incorrect verb tense; should be 'बढ़े' not 'घटे'", "raw": null}
+{"id": "u0477", "model": "qwen3:30b-a3b", "scores": {"natural": 4, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Good natural flow, minor tweak needed.", "raw": null}
+{"id": "u0478", "model": "qwen3:30b-a3b", "scores": {"natural": 4, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Good natural flow, minor tweak needed.", "raw": null}
+{"id": "u0479", "model": "qwen3:30b-a3b", "scores": {"natural": 5, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Perfect match per glossary.", "raw": null}
+{"id": "u0480", "model": "qwen3:30b-a3b", "scores": {"natural": 5, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Perfect match per glossary.", "raw": null}
+{"id": "u0482", "model": "qwen3:30b-a3b", "scores": {"natural": 4, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Good but 'टिका' slightly off.", "raw": null}
+{"id": "u0483", "model": "qwen3:30b-a3b", "scores": {"natural": 4, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Minor tweak needed for 'jewellers'", "raw": null}
+{"id": "u0484", "model": "qwen3:30b-a3b", "scores": {"natural": 4, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Minor tweak needed for '7-day trend'", "raw": null}
+{"id": "u0485", "model": "qwen3:30b-a3b", "scores": {"natural": 4, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Good but 'ज़्यादातर' is slightly off.", "raw": null}
+{"id": "u0487", "model": "qwen3:30b-a3b", "scores": {"natural": 5, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Perfect match.", "raw": null}
+{"id": "u0488", "model": "qwen3:30b-a3b", "scores": {"natural": 5, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Perfect match for label.", "raw": null}
+{"id": "u0493", "model": "qwen3:30b-a3b", "scores": {"natural": 4, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Good natural flow, no errors.", "raw": null}
+{"id": "u0494", "model": "qwen3:30b-a3b", "scores": {"natural": 5, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Loanword kept per glossary.", "raw": null}
+{"id": "u0497", "model": "qwen3:30b-a3b", "scores": {"natural": 4, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Good offline message.", "raw": null}
+{"id": "u0498", "model": "qwen3:30b-a3b", "scores": {"natural": 3, "correct": 4, "glossary": 3, "grammar": 4}, "note": "Uses 'हफ़्तों' but should be 'हफ़्ते'", "raw": null}
+{"id": "u0499", "model": "qwen3:30b-a3b", "scores": {"natural": 5, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Perfect match.", "raw": null}
+{"id": "u0500", "model": "qwen3:30b-a3b", "scores": {"natural": 4, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Good but 'ख़ास' slightly off.", "raw": null}
+{"id": "u0504", "model": "qwen3:30b-a3b", "scores": {"natural": 4, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Good natural phrasing.", "raw": null}
+{"id": "u0505", "model": "qwen3:30b-a3b", "scores": {"natural": 4, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Good but 'ग़लत' should be 'गलत'", "raw": null}
+{"id": "u0506", "model": "qwen3:30b-a3b", "scores": {"natural": 4, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Good natural flow, fits context.", "raw": null}
+{"id": "u0507", "model": "qwen3:30b-a3b", "scores": {"natural": 3, "correct": 4, "glossary": 3, "grammar": 4}, "note": "Uses 'रोज़ के भाव' instead of 'भाव'", "raw": null}
+{"id": "u0510", "model": "qwen3:30b-a3b", "scores": {"natural": 4, "correct": 5, "glossary": 4, "grammar": 5}, "note": "सोने के भाव is slightly off; should be सोने का भाव per glossary.", "raw": null}
+{"id": "u0511", "model": "qwen3:30b-a3b", "scores": {"natural": 5, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Perfect match per glossary.", "raw": null}
+{"id": "u0512", "model": "qwen3:30b-a3b", "scores": {"natural": 4, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Good use of 'भाव' and 'घट रहा'.", "raw": null}
+{"id": "u0513", "model": "qwen3:30b-a3b", "scores": {"natural": 3, "correct": 4, "glossary": 4, "grammar": 4}, "note": "समझ आता है is unnatural.", "raw": null}
+{"id": "u0514", "model": "qwen3:30b-a3b", "scores": {"natural": 4, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Good, but 'अपडेट' is loanword.", "raw": null}
+{"id": "u0516", "model": "qwen3:30b-a3b", "scores": {"natural": 4, "correct": 5, "glossary": 5, "grammar": 5}, "note": "अगला भाव अपडेट is slightly off.", "raw": null}
+{"id": "u0517", "model": "qwen3:30b-a3b", "scores": {"natural": 5, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Perfect match.", "raw": null}
+{"id": "u0519", "model": "qwen3:30b-a3b", "scores": {"natural": 5, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Perfect match.", "raw": null}
+{"id": "u0520", "model": "qwen3:30b-a3b", "scores": {"natural": 5, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Perfect match.", "raw": null}
+{"id": "u0521", "model": "qwen3:30b-a3b", "scores": {"natural": 4, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Good but 'टिका' is slightly off.", "raw": null}
+{"id": "u0522", "model": "qwen3:30b-a3b", "scores": {"natural": 4, "correct": 5, "glossary": 4, "grammar": 5}, "note": "Uses 'भाव' but 'बाज़ार' not 'दुनिया के बाज़ार'", "raw": null}
+{"id": "u0523", "model": "qwen3:30b-a3b", "scores": {"natural": 5, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Perfect match.", "raw": null}
+{"id": "u0525", "model": "qwen3:30b-a3b", "scores": {"natural": 4, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Good use of {avgLabel} and 'महंगा'", "raw": null}
+{"id": "u0526", "model": "qwen3:30b-a3b", "scores": {"natural": 5, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Perfect match.", "raw": null}
+{"id": "u0528", "model": "qwen3:30b-a3b", "scores": {"natural": 5, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Perfect match.", "raw": null}
+{"id": "u0529", "model": "qwen3:30b-a3b", "scores": {"natural": 5, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Perfect match.", "raw": null}
+{"id": "u0530", "model": "qwen3:30b-a3b", "scores": {"natural": 4, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Good use of 'और' for 'and'", "raw": null}
+{"id": "u0532", "model": "qwen3:30b-a3b", "scores": {"natural": 5, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Perfect match per glossary.", "raw": null}
+{"id": "u0533", "model": "qwen3:30b-a3b", "scores": {"natural": 5, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Perfectly natural and accurate.", "raw": null}
+{"id": "u0534", "model": "qwen3:30b-a3b", "scores": {"natural": 5, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Perfect match.", "raw": null}
+{"id": "u0535", "model": "qwen3:30b-a3b", "scores": {"natural": 5, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Perfect match.", "raw": null}
+{"id": "u0539", "model": "qwen3:30b-a3b", "scores": {"natural": 4, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Minor tweak for natural flow.", "raw": null}
+{"id": "u0541", "model": "qwen3:30b-a3b", "scores": {"natural": 5, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Perfect match.", "raw": null}
+{"id": "u0542", "model": "qwen3:30b-a3b", "scores": {"natural": 5, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Perfect match.", "raw": null}
+{"id": "u0543", "model": "qwen3:30b-a3b", "scores": {"natural": 5, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Perfect match.", "raw": null}
+{"id": "u0545", "model": "qwen3:30b-a3b", "scores": {"natural": 4, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Good but 'पक्का' not standard.", "raw": null}
+{"id": "u0546", "model": "qwen3:30b-a3b", "scores": {"natural": 4, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Good natural flow, minor tweak needed.", "raw": null}
+{"id": "u0548", "model": "qwen3:30b-a3b", "scores": {"natural": 5, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Perfect match, no issues.", "raw": null}
+{"id": "u0550", "model": "qwen3:30b-a3b", "scores": {"natural": 4, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Good but 'काफ़ी' could be 'पर्याप्त' for accuracy.", "raw": null}
+{"id": "u0551", "model": "qwen3:30b-a3b", "scores": {"natural": 5, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Perfect match per glossary.", "raw": null}
+{"id": "u0552", "model": "qwen3:30b-a3b", "scores": {"natural": 4, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Good use of 'सस्ता' and 'गिर रहा है'", "raw": null}
+{"id": "u0553", "model": "qwen3:30b-a3b", "scores": {"natural": 5, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Perfect match.", "raw": null}
+{"id": "u0554", "model": "qwen3:30b-a3b", "scores": {"natural": 4, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Good but 'अनुमान' better than 'अनुमानित'", "raw": null}
+{"id": "u0557", "model": "qwen3:30b-a3b", "scores": {"natural": 5, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Perfect match.", "raw": null}
+{"id": "u0558", "model": "qwen3:30b-a3b", "scores": {"natural": 3, "correct": 4, "glossary": 1, "grammar": 5}, "note": "Not a glossary term.", "raw": null}
+{"id": "u0559", "model": "qwen3:30b-a3b", "scores": {"natural": 5, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Perfect match.", "raw": null}
+{"id": "u0560", "model": "qwen3:30b-a3b", "scores": {"natural": 4, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Good but 'भाव' should be 'भाव से' for comparison.", "raw": null}
+{"id": "u0561", "model": "qwen3:30b-a3b", "scores": {"natural": 4, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Good use of 'भाव' and 'आम'.", "raw": null}
+{"id": "u0564", "model": "qwen3:30b-a3b", "scores": {"natural": 3, "correct": 4, "glossary": 1, "grammar": 4}, "note": "Uses 'सही' but should be 'सही भाव'", "raw": null}
+{"id": "u0565", "model": "qwen3:30b-a3b", "scores": {"natural": 4, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Good translation, but 'थोड़ा' is slightly informal for a label.", "raw": null}
+{"id": "u0566", "model": "qwen3:30b-a3b", "scores": {"natural": 1, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Not a Hindi phrase.", "raw": null}
+{"id": "u0567", "model": "qwen3:30b-a3b", "scores": {"natural": 5, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Perfect match.", "raw": null}
+{"id": "u0570", "model": "qwen3:30b-a3b", "scores": {"natural": 5, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Perfect match.", "raw": null}
+{"id": "u0571", "model": "qwen3:30b-a3b", "scores": {"natural": 5, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Perfect match for label.", "raw": null}
+{"id": "u0573", "model": "qwen3:30b-a3b", "scores": {"natural": 5, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Perfect match.", "raw": null}
+{"id": "u0574", "model": "qwen3:30b-a3b", "scores": {"natural": 4, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Good but 'official' better as 'आधिकारिक'.", "raw": null}
+{"id": "u0575", "model": "qwen3:30b-a3b", "scores": {"natural": 4, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Good but 'अगली बार' could be 'अगले हफ़्ते' for clarity.", "raw": null}
+{"id": "u0578", "model": "qwen3:30b-a3b", "scores": {"natural": 5, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Perfect match.", "raw": null}
+{"id": "u0579", "model": "qwen3:30b-a3b", "scores": {"natural": 4, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Good but 'हाल' could be 'हाल के दिनों' for clarity.", "raw": null}
+{"id": "u0580", "model": "qwen3:30b-a3b", "scores": {"natural": 5, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Perfect match.", "raw": null}
+{"id": "u0581", "model": "qwen3:30b-a3b", "scores": {"natural": 3, "correct": 4, "glossary": 3, "grammar": 5}, "note": "आज का हाल is unnatural for 'Today's read'", "raw": null}
+{"id": "u0582", "model": "qwen3:30b-a3b", "scores": {"natural": 3, "correct": 4, "glossary": 4, "grammar": 5}, "note": "Missing 'है' after rangeStr", "raw": null}
+{"id": "u0583", "model": "qwen3:30b-a3b", "scores": {"natural": 1, "correct": 1, "glossary": 1, "grammar": 1}, "note": "Wrong word, no context.", "raw": null}
+{"id": "u0585", "model": "qwen3:30b-a3b", "scores": {"natural": 5, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Perfect match.", "raw": null}
+{"id": "u0586", "model": "qwen3:30b-a3b", "scores": {"natural": 5, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Perfect match.", "raw": null}
+{"id": "u0588", "model": "qwen3:30b-a3b", "scores": {"natural": 5, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Perfect match.", "raw": null}
+{"id": "u0589", "model": "qwen3:30b-a3b", "scores": {"natural": 5, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Perfect match.", "raw": null}
+{"id": "u0177", "model": "qwen3:30b-a3b", "scores": {"natural": 4, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Good natural flow, no glossary errors.", "raw": null}
+{"id": "u0304", "model": "qwen3:30b-a3b", "scores": {"natural": 2, "correct": 3, "glossary": 3, "grammar": 3}, "note": "खर्च should be कीमत/भाव", "raw": null}
+{"id": "u0383", "model": "qwen3:30b-a3b", "scores": {"natural": 3, "correct": 4, "glossary": 3, "grammar": 5}, "note": "अवधि is not in glossary; should be रेंज or दायरा.", "raw": null}
+{"id": "u0200", "model": "qwen3:30b-a3b", "scores": null, "note": null, "raw": {"parse_error": "{\"natural\": 3, \"correct\": 4, \"glossary\": 3, \"grammar\": 4, \"note\": \"अनुमानित भाव नहीं, अनुमान भाव नहीं, अनुमानित भाव नहीं, अनुमानित भाव नहीं, अनुमानित भाव नहीं, अनुमानित भाव नहीं, अनुमानित भाव नहीं,"}}
