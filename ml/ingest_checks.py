@@ -1709,9 +1709,7 @@ def check_shadow_fusion_output(
             "capture_utc",
             "as_of_date",
             "national_failures",
-            "kalyan_failures",
             "national_benchmark",
-            "cities",
         ),
         source=src,
         where="root",
@@ -1788,7 +1786,11 @@ def check_shadow_fusion_output(
                     used,
                 )
             )
-    if isinstance(obj["cities"], Mapping):
+    # Kalyan was retired (ADR 070): the per-city map and the Kalyan failure map are gone from new
+    # files, so they are checked only when an older file still carries them.
+    if "cities" not in obj:
+        pass
+    elif isinstance(obj["cities"], Mapping):
         for city, c in obj["cities"].items():
             if not isinstance(c, Mapping):
                 out.append(
@@ -1815,6 +1817,8 @@ def check_shadow_fusion_output(
             _v(src, "schema", "block", SCHEMA_BAD_TYPE, "cities is not an object", obj["cities"])
         )
     for key in ("national_failures", "kalyan_failures"):
+        if key not in obj:
+            continue  # kalyan_failures: retired with Kalyan (ADR 070)
         fails = obj[key]
         if not isinstance(fails, Mapping):
             out.append(

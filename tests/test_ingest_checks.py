@@ -649,7 +649,7 @@ def test_shadow_pass_and_reported_failure_is_warn_with_kalyan_text():
         (lambda o: o["national_benchmark"].__setitem__("value", float("nan")), ic.VALUE_NOT_FINITE),
         (lambda o: o.__setitem__("capture_utc", "2027-01-01T00:00:00Z"), ic.TS_FUTURE),
         (lambda o: o.__setitem__("capture_utc", "1970-01-01T00:00:00Z"), ic.TS_EPOCH_PLACEHOLDER),
-        (lambda o: o.pop("cities"), ic.SCHEMA_MISSING_FIELD),
+        (lambda o: o.pop("national_failures"), ic.SCHEMA_MISSING_FIELD),
         (lambda o: o["national_benchmark"].__setitem__("sources_used", []), ic.SCHEMA_BAD_TYPE),
         (lambda o: o["cities"]["Bangalore"].__setitem__("value", -1), ic.VALUE_NON_POSITIVE),
         (
@@ -1010,3 +1010,11 @@ def test_checks_never_read_the_clock_now_is_a_parameter():
         field_name="f",
         now=datetime(2026, 10, 5, 7, 0, tzinfo=UTC) - timedelta(days=1),
     )
+
+
+def test_shadow_without_the_retired_kalyan_keys_passes():
+    """ADR 070 retired Kalyan: new files carry neither `cities` nor `kalyan_failures`."""
+    o = shadow_obj()
+    o.pop("cities")
+    o.pop("kalyan_failures")
+    assert run_shadow(o).status == "pass"

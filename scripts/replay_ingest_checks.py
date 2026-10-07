@@ -314,7 +314,7 @@ def _inject() -> dict[str, dict[str, bool]]:
         "capture_epoch": run_shadow(
             lambda o: o.__setitem__("capture_utc", "1970-01-01T00:00:00Z"), ic.TS_EPOCH_PLACEHOLDER
         ),
-        "missing_key": run_shadow(lambda o: o.pop("cities"), ic.SCHEMA_MISSING_FIELD),
+        "missing_key": run_shadow(lambda o: o.pop("national_failures"), ic.SCHEMA_MISSING_FIELD),
         "not_object": blocked(ic.check_shadow_fusion_output([], now=NOW)),
     }
 
