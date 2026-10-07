@@ -456,3 +456,18 @@ test("pv2BuildCoreHtml degrades to the unavailable copy when there is no data at
   assert.ok(html.includes("We don't have a recent enough track record"));
   assert.ok(html.includes("We don't have a short-term range to show today."));
 });
+
+test("computeMoveRangeJob: freshness follows the injected clock, never the real one (2026-10-06 date bomb)", () => {
+  // A fixture dated relative to a fixed nowMs must stay "fresh" however old that nowMs is on the
+  // real clock; the test used to fail once the real date passed fixture + 14 days.
+  for (const iso of ["2020-03-10T12:00:00Z", "2031-01-01T12:00:00Z"]) {
+    const nowMs = Date.parse(iso);
+    const fc = { headline: { lower: 13900, upper: 14100 } };
+    const bandCoverage = { coverage: 0.75, n: 60, generated_at_utc: new Date(nowMs - 2 * 86400e3).toISOString() };
+    const job = computeMoveRangeJob(fc, null, null, bandCoverage, nowMs);
+    assert.ok(job.oneDayNote.includes("times out of 10"), iso + ": " + job.oneDayNote);
+    // and a measurement older than 14 days of THAT clock is hidden
+    const old = { ...bandCoverage, generated_at_utc: new Date(nowMs - 15 * 86400e3).toISOString() };
+    assert.ok(!computeMoveRangeJob(fc, null, null, old, nowMs).oneDayNote.includes("times out of 10"));
+  }
+});
