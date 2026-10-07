@@ -72,6 +72,21 @@ cannot be estimated and the row says so. No conclusion is drawn before that date
   `decide`, and the T17 alert. It needs an independent verifier because it changes live behaviour.
   No promotion can happen before step 2 merges; the earliest qualifying date (below) is weeks away.
 
+**Step 2 delivered (2026-10-08, branch `feat/champion-switch-wiring`; the rule and its hash are
+unchanged).** `ml.nextfix.run` loads `data/champion_state.json` and uses the champion's own record,
+version label and predictor everywhere the P3 constants were used (`CHAMPION_REGISTRY`: `p3`,
+`p3_roll60`, `p3_monday`, `ensemble`); with no file the output is identical to before. After the
+day's records and the demotion check, `promotion.decide` runs and a winner is written atomically.
+**A promotion takes effect on the NEXT run** (one run, one model: the forecast of the run that
+promotes was already built by the old champion). The whole step fails closed: any exception is
+logged at error level and leaves the champion file and the live forecast untouched; an unreadable
+champion file means P3, flagged, and never a promotion; a champion with no forward-day record of its
+own is never compared. The demotion state is keyed by model version, so the new champion starts with
+a fresh state and the same rules. While a challenger is champion, the shadow is P3 on its own record
+(`next_fix.shadow_ensemble.shadow_model_version` names it). `forecast.json` carries
+`next_fix.champion`; alert T17 (private topic, once per change) names the old and new model and the
+undo command. `check-price.yml` commits the file once it exists.
+
 ## Pre-registered challengers (forward from the stated day)
 
 | Id | What it is | Counts forward from | Switchable |
