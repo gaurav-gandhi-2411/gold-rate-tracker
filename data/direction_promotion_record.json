@@ -18,5 +18,13 @@
     "direction_gate": "ship",
     "timing_gate": "hold_dark (ECE 0.0643 > 0.05)"
   },
-  "adr": "docs/adr/064-next-fix-model-and-direction-signal.md"
+  "adr": "docs/adr/064-next-fix-model-and-direction-signal.md",
+  "extended_to": {
+    "model_version": "nextfix_p3_v1",
+    "approved_by": "GG",
+    "approved_at": "2026-10-05",
+    "instruction": "D2: make P3 the live next-fix forecast, ensemble in shadow; D3: direction floor 0.55 in the demotion rules.",
+    "adr": "docs/adr/069-p3-live-forecast.md",
+    "scope": "The direction line may be shown from P3's own out-of-sample record (data/nextfix_p3_oos.json) under the same gate, re-checked every run. The ensemble's direction is never shown."
+  }
 }
