@@ -1,0 +1,1354 @@
+{
+ "gemma2:9b": {
+  "family": "Google Gemma",
+  "cells_right": 31,
+  "cells_total": 32,
+  "accuracy": 0.969,
+  "parse_failures": 0,
+  "kept": true,
+  "rows": [
+   {
+    "case": "G1",
+    "scores": {
+     "natural": 5,
+     "correct": 5,
+     "glossary": 5,
+     "grammar": 5
+    },
+    "cells": {
+     "natural": {
+      "score": 5,
+      "want_pass": true,
+      "ok": true
+     },
+     "correct": {
+      "score": 5,
+      "want_pass": true,
+      "ok": true
+     },
+     "glossary": {
+      "score": 5,
+      "want_pass": true,
+      "ok": true
+     },
+     "grammar": {
+      "score": 5,
+      "want_pass": true,
+      "ok": true
+     }
+    },
+    "note": "Direct translation, fits context"
+   },
+   {
+    "case": "G2",
+    "scores": {
+     "natural": 5,
+     "correct": 5,
+     "glossary": 5,
+     "grammar": 5
+    },
+    "cells": {
+     "natural": {
+      "score": 5,
+      "want_pass": true,
+      "ok": true
+     },
+     "correct": {
+      "score": 5,
+      "want_pass": true,
+      "ok": true
+     },
+     "glossary": {
+      "score": 5,
+      "want_pass": true,
+      "ok": true
+     },
+     "grammar": {
+      "score": 5,
+      "want_pass": true,
+      "ok": true
+     }
+    },
+    "note": "Natural, accurate, uses glossary terms"
+   },
+   {
+    "case": "G3",
+    "scores": {
+     "natural": 4,
+     "correct": 5,
+     "glossary": 5,
+     "grammar": 5
+    },
+    "cells": {
+     "natural": {
+      "score": 4,
+      "want_pass": true,
+      "ok": true
+     },
+     "correct": {
+      "score": 5,
+      "want_pass": true,
+      "ok": true
+     },
+     "glossary": {
+      "score": 5,
+      "want_pass": true,
+      "ok": true
+     },
+     "grammar": {
+      "score": 5,
+      "want_pass": true,
+      "ok": true
+     }
+    },
+    "note": "Good phrasing, but could be more concise"
+   },
+   {
+    "case": "G4",
+    "scores": {
+     "natural": 5,
+     "correct": 5,
+     "glossary": 5,
+     "grammar": 5
+    },
+    "cells": {
+     "natural": {
+      "score": 5,
+      "want_pass": true,
+      "ok": true
+     },
+     "correct": {
+      "score": 5,
+      "want_pass": true,
+      "ok": true
+     },
+     "glossary": {
+      "score": 5,
+      "want_pass": true,
+      "ok": true
+     },
+     "grammar": {
+      "score": 5,
+      "want_pass": true,
+      "ok": true
+     }
+    },
+    "note": "Accurate and natural for a screen label"
+   },
+   {
+    "case": "G5",
+    "scores": {
+     "natural": 5,
+     "correct": 5,
+     "glossary": 5,
+     "grammar": 5
+    },
+    "cells": {
+     "natural": {
+      "score": 5,
+      "want_pass": true,
+      "ok": true
+     },
+     "correct": {
+      "score": 5,
+      "want_pass": true,
+      "ok": true
+     },
+     "glossary": {
+      "score": 5,
+      "want_pass": true,
+      "ok": true
+     },
+     "grammar": {
+      "score": 5,
+      "want_pass": true,
+      "ok": true
+     }
+    },
+    "note": "Natural, accurate, uses glossary terms correctly"
+   },
+   {
+    "case": "G6",
+    "scores": {
+     "natural": 5,
+     "correct": 5,
+     "glossary": 5,
+     "grammar": 5
+    },
+    "cells": {
+     "natural": {
+      "score": 5,
+      "want_pass": true,
+      "ok": true
+     },
+     "correct": {
+      "score": 5,
+      "want_pass": true,
+      "ok": true
+     },
+     "glossary": {
+      "score": 5,
+      "want_pass": true,
+      "ok": true
+     },
+     "grammar": {
+      "score": 5,
+      "want_pass": true,
+      "ok": true
+     }
+    },
+    "note": "Natural, accurate, uses glossary terms correctly"
+   },
+   {
+    "case": "B1",
+    "scores": {
+     "natural": 1,
+     "correct": 1,
+     "glossary": 5,
+     "grammar": 5
+    },
+    "cells": {
+     "correct": {
+      "score": 1,
+      "want_pass": false,
+      "ok": true
+     }
+    },
+    "note": "Incorrect meaning, should be 'सस्ता'"
+   },
+   {
+    "case": "B2",
+    "scores": {
+     "natural": 1,
+     "correct": 1,
+     "glossary": 5,
+     "grammar": 5
+    },
+    "cells": {
+     "correct": {
+      "score": 1,
+      "want_pass": false,
+      "ok": true
+     }
+    },
+    "note": "Incorrect meaning, unrelated to 'offline'"
+   },
+   {
+    "case": "B3",
+    "scores": {
+     "natural": 4,
+     "correct": 3,
+     "glossary": 5,
+     "grammar": 5
+    },
+    "cells": {
+     "correct": {
+      "score": 3,
+      "want_pass": false,
+      "ok": true
+     }
+    },
+    "note": "Missing 'down' equivalent, but natural otherwise"
+   },
+   {
+    "case": "N1",
+    "scores": {
+     "natural": 3,
+     "correct": 4,
+     "glossary": 5,
+     "grammar": 2
+    },
+    "cells": {
+     "grammar": {
+      "score": 2,
+      "want_pass": false,
+      "ok": true
+     }
+    },
+    "note": " 'होना रही है' is awkward, 'रहती हैं' better"
+   },
+   {
+    "case": "N2",
+    "scores": {
+     "natural": 2,
+     "correct": 1,
+     "glossary": 5,
+     "grammar": 3
+    },
+    "cells": {
+     "natural": {
+      "score": 2,
+      "want_pass": false,
+      "ok": true
+     }
+    },
+    "note": "Too formal, 'न्यूनीकरण प्रक्रिया' is not common speech"
+   },
+   {
+    "case": "V1",
+    "scores": {
+     "natural": 1,
+     "correct": 1,
+     "glossary": 1,
+     "grammar": 5
+    },
+    "cells": {
+     "glossary": {
+      "score": 1,
+      "want_pass": false,
+      "ok": true
+     }
+    },
+    "note": "Use मेकिंग चार्ज instead"
+   },
+   {
+    "case": "V2",
+    "scores": {
+     "natural": 2,
+     "correct": 3,
+     "glossary": 1,
+     "grammar": 4
+    },
+    "cells": {
+     "glossary": {
+      "score": 1,
+      "want_pass": false,
+      "ok": true
+     }
+    },
+    "note": "Literal, not shopper-like"
+   },
+   {
+    "case": "V3",
+    "scores": {
+     "natural": 3,
+     "correct": 5,
+     "glossary": 5,
+     "grammar": 5
+    },
+    "cells": {
+     "glossary": {
+      "score": 5,
+      "want_pass": false,
+      "ok": false
+     }
+    },
+    "note": "Good, but 'आकलन' is less common than 'अनुमान'"
+   }
+  ]
+ },
+ "qwen3:8b": {
+  "family": "Alibaba Qwen",
+  "cells_right": 27,
+  "cells_total": 32,
+  "accuracy": 0.844,
+  "parse_failures": 0,
+  "kept": false,
+  "rows": [
+   {
+    "case": "G1",
+    "scores": {
+     "natural": 5,
+     "correct": 5,
+     "glossary": 5,
+     "grammar": 5
+    },
+    "cells": {
+     "natural": {
+      "score": 5,
+      "want_pass": true,
+      "ok": true
+     },
+     "correct": {
+      "score": 5,
+      "want_pass": true,
+      "ok": true
+     },
+     "glossary": {
+      "score": 5,
+      "want_pass": true,
+      "ok": true
+     },
+     "grammar": {
+      "score": 5,
+      "want_pass": true,
+      "ok": true
+     }
+    },
+    "note": "Perfect match for 'Share' as a call-to-action"
+   },
+   {
+    "case": "G2",
+    "scores": {
+     "natural": 5,
+     "correct": 5,
+     "glossary": 5,
+     "grammar": 5
+    },
+    "cells": {
+     "natural": {
+      "score": 5,
+      "want_pass": true,
+      "ok": true
+     },
+     "correct": {
+      "score": 5,
+      "want_pass": true,
+      "ok": true
+     },
+     "glossary": {
+      "score": 5,
+      "want_pass": true,
+      "ok": true
+     },
+     "grammar": {
+      "score": 5,
+      "want_pass": true,
+      "ok": true
+     }
+    },
+    "note": "Natural, correct, uses glossary terms, grammatically correct."
+   },
+   {
+    "case": "G3",
+    "scores": {
+     "natural": 3,
+     "correct": 2,
+     "glossary": 1,
+     "grammar": 5
+    },
+    "cells": {
+     "natural": {
+      "score": 3,
+      "want_pass": true,
+      "ok": false
+     },
+     "correct": {
+      "score": 2,
+      "want_pass": true,
+      "ok": false
+     },
+     "glossary": {
+      "score": 1,
+      "want_pass": true,
+      "ok": false
+     },
+     "grammar": {
+      "score": 5,
+      "want_pass": true,
+      "ok": true
+     }
+    },
+    "note": "भाव के आसपास अच्छा होता है, लेकिन 'इस महीने के बीच के' अनुमान नहीं देता"
+   },
+   {
+    "case": "G4",
+    "scores": {
+     "natural": 5,
+     "correct": 5,
+     "glossary": 5,
+     "grammar": 5
+    },
+    "cells": {
+     "natural": {
+      "score": 5,
+      "want_pass": true,
+      "ok": true
+     },
+     "correct": {
+      "score": 5,
+      "want_pass": true,
+      "ok": true
+     },
+     "glossary": {
+      "score": 5,
+      "want_pass": true,
+      "ok": true
+     },
+     "grammar": {
+      "score": 5,
+      "want_pass": true,
+      "ok": true
+     }
+    },
+    "note": "Perfect match for 'history (section)'"
+   },
+   {
+    "case": "G5",
+    "scores": {
+     "natural": 5,
+     "correct": 5,
+     "glossary": 5,
+     "grammar": 5
+    },
+    "cells": {
+     "natural": {
+      "score": 5,
+      "want_pass": true,
+      "ok": true
+     },
+     "correct": {
+      "score": 5,
+      "want_pass": true,
+      "ok": true
+     },
+     "glossary": {
+      "score": 5,
+      "want_pass": true,
+      "ok": true
+     },
+     "grammar": {
+      "score": 5,
+      "want_pass": true,
+      "ok": true
+     }
+    },
+    "note": "Natural, correct, uses glossary term 'भाव', proper grammar"
+   },
+   {
+    "case": "G6",
+    "scores": {
+     "natural": 5,
+     "correct": 5,
+     "glossary": 5,
+     "grammar": 5
+    },
+    "cells": {
+     "natural": {
+      "score": 5,
+      "want_pass": true,
+      "ok": true
+     },
+     "correct": {
+      "score": 5,
+      "want_pass": true,
+      "ok": true
+     },
+     "glossary": {
+      "score": 5,
+      "want_pass": true,
+      "ok": true
+     },
+     "grammar": {
+      "score": 5,
+      "want_pass": true,
+      "ok": true
+     }
+    },
+    "note": "Natural, correct, uses glossary terms, grammatically correct."
+   },
+   {
+    "case": "B1",
+    "scores": {
+     "natural": 2,
+     "correct": 1,
+     "glossary": 1,
+     "grammar": 5
+    },
+    "cells": {
+     "correct": {
+      "score": 1,
+      "want_pass": false,
+      "ok": true
+     }
+    },
+    "note": "महंगा is incorrect; should be सस्ता"
+   },
+   {
+    "case": "B2",
+    "scores": {
+     "natural": 1,
+     "correct": 1,
+     "glossary": 1,
+     "grammar": 5
+    },
+    "cells": {
+     "correct": {
+      "score": 1,
+      "want_pass": false,
+      "ok": true
+     }
+    },
+    "note": "Incorrect meaning: 'account closed' vs 'offline'"
+   },
+   {
+    "case": "B3",
+    "scores": {
+     "natural": 5,
+     "correct": 5,
+     "glossary": 5,
+     "grammar": 5
+    },
+    "cells": {
+     "correct": {
+      "score": 5,
+      "want_pass": false,
+      "ok": false
+     }
+    },
+    "note": "Natural, correct, uses glossary term 'भाव', grammatically correct."
+   },
+   {
+    "case": "N1",
+    "scores": {
+     "natural": 3,
+     "correct": 2,
+     "glossary": 1,
+     "grammar": 5
+    },
+    "cells": {
+     "grammar": {
+      "score": 5,
+      "want_pass": false,
+      "ok": false
+     }
+    },
+    "note": "कीमतें इस महीने काफी स्थिर रही हैं।"
+   },
+   {
+    "case": "N2",
+    "scores": {
+     "natural": 1,
+     "correct": 1,
+     "glossary": 1,
+     "grammar": 2
+    },
+    "cells": {
+     "natural": {
+      "score": 1,
+      "want_pass": false,
+      "ok": true
+     }
+    },
+    "note": "अनुवाद अस्पष्ट और अनुमानित भाव के बजाए 'मूल्य न्यूनीकरण प्रक्रिया' का उपयोग करता है"
+   },
+   {
+    "case": "V1",
+    "scores": {
+     "natural": 1,
+     "correct": 1,
+     "glossary": 1,
+     "grammar": 5
+    },
+    "cells": {
+     "glossary": {
+      "score": 1,
+      "want_pass": false,
+      "ok": true
+     }
+    },
+    "note": "गलत शब्द उपयोग"
+   },
+   {
+    "case": "V2",
+    "scores": {
+     "natural": 3,
+     "correct": 2,
+     "glossary": 1,
+     "grammar": 5
+    },
+    "cells": {
+     "glossary": {
+      "score": 1,
+      "want_pass": false,
+      "ok": true
+     }
+    },
+    "note": "सोने का भाव के बजाए सोने की कीमत लिखा"
+   },
+   {
+    "case": "V3",
+    "scores": {
+     "natural": 3,
+     "correct": 2,
+     "glossary": 1,
+     "grammar": 5
+    },
+    "cells": {
+     "glossary": {
+      "score": 1,
+      "want_pass": false,
+      "ok": true
+     }
+    },
+    "note": "गलत शब्द और अनुवाद शैली"
+   }
+  ]
+ },
+ "llama3.1:8b": {
+  "family": "Meta Llama",
+  "cells_right": 29,
+  "cells_total": 32,
+  "accuracy": 0.906,
+  "parse_failures": 0,
+  "kept": true,
+  "rows": [
+   {
+    "case": "G1",
+    "scores": {
+     "natural": 5,
+     "correct": 5,
+     "glossary": 5,
+     "grammar": 5
+    },
+    "cells": {
+     "natural": {
+      "score": 5,
+      "want_pass": true,
+      "ok": true
+     },
+     "correct": {
+      "score": 5,
+      "want_pass": true,
+      "ok": true
+     },
+     "glossary": {
+      "score": 5,
+      "want_pass": true,
+      "ok": true
+     },
+     "grammar": {
+      "score": 5,
+      "want_pass": true,
+      "ok": true
+     }
+    },
+    "note": "Literal translation, but common usage"
+   },
+   {
+    "case": "G2",
+    "scores": {
+     "natural": 5,
+     "correct": 5,
+     "glossary": 5,
+     "grammar": 5
+    },
+    "cells": {
+     "natural": {
+      "score": 5,
+      "want_pass": true,
+      "ok": true
+     },
+     "correct": {
+      "score": 5,
+      "want_pass": true,
+      "ok": true
+     },
+     "glossary": {
+      "score": 5,
+      "want_pass": true,
+      "ok": true
+     },
+     "grammar": {
+      "score": 5,
+      "want_pass": true,
+      "ok": true
+     }
+    },
+    "note": "Perfect translation, uses सोने का भाव correctly"
+   },
+   {
+    "case": "G3",
+    "scores": {
+     "natural": 4,
+     "correct": 5,
+     "glossary": 5,
+     "grammar": 5
+    },
+    "cells": {
+     "natural": {
+      "score": 4,
+      "want_pass": true,
+      "ok": true
+     },
+     "correct": {
+      "score": 5,
+      "want_pass": true,
+      "ok": true
+     },
+     "glossary": {
+      "score": 5,
+      "want_pass": true,
+      "ok": true
+     },
+     "grammar": {
+      "score": 5,
+      "want_pass": true,
+      "ok": true
+     }
+    },
+    "note": "uses 'भाव' instead of 'पुराने भाव' for history section"
+   },
+   {
+    "case": "G4",
+    "scores": {
+     "natural": 5,
+     "correct": 5,
+     "glossary": 5,
+     "grammar": 5
+    },
+    "cells": {
+     "natural": {
+      "score": 5,
+      "want_pass": true,
+      "ok": true
+     },
+     "correct": {
+      "score": 5,
+      "want_pass": true,
+      "ok": true
+     },
+     "glossary": {
+      "score": 5,
+      "want_pass": true,
+      "ok": true
+     },
+     "grammar": {
+      "score": 5,
+      "want_pass": true,
+      "ok": true
+     }
+    },
+    "note": "Perfect translation, no room for improvement"
+   },
+   {
+    "case": "G5",
+    "scores": {
+     "natural": 5,
+     "correct": 5,
+     "glossary": 5,
+     "grammar": 5
+    },
+    "cells": {
+     "natural": {
+      "score": 5,
+      "want_pass": true,
+      "ok": true
+     },
+     "correct": {
+      "score": 5,
+      "want_pass": true,
+      "ok": true
+     },
+     "glossary": {
+      "score": 5,
+      "want_pass": true,
+      "ok": true
+     },
+     "grammar": {
+      "score": 5,
+      "want_pass": true,
+      "ok": true
+     }
+    },
+    "note": "Perfect translation, no issues found."
+   },
+   {
+    "case": "G6",
+    "scores": {
+     "natural": 4,
+     "correct": 5,
+     "glossary": 5,
+     "grammar": 5
+    },
+    "cells": {
+     "natural": {
+      "score": 4,
+      "want_pass": true,
+      "ok": true
+     },
+     "correct": {
+      "score": 5,
+      "want_pass": true,
+      "ok": true
+     },
+     "glossary": {
+      "score": 5,
+      "want_pass": true,
+      "ok": true
+     },
+     "grammar": {
+      "score": 5,
+      "want_pass": true,
+      "ok": true
+     }
+    },
+    "note": "Literal translation, but common phrase"
+   },
+   {
+    "case": "B1",
+    "scores": {
+     "natural": 4,
+     "correct": 4,
+     "glossary": 4,
+     "grammar": 5
+    },
+    "cells": {
+     "correct": {
+      "score": 4,
+      "want_pass": false,
+      "ok": false
+     }
+    },
+    "note": "Uses 'ज़्यादातर' instead of 'आम'"
+   },
+   {
+    "case": "B2",
+    "scores": {
+     "natural": 2,
+     "correct": 1,
+     "glossary": 1,
+     "grammar": 5
+    },
+    "cells": {
+     "correct": {
+      "score": 1,
+      "want_pass": false,
+      "ok": true
+     }
+    },
+    "note": "Literal translation, no relevance to offline context"
+   },
+   {
+    "case": "B3",
+    "scores": {
+     "natural": 4,
+     "correct": 5,
+     "glossary": 5,
+     "grammar": 5
+    },
+    "cells": {
+     "correct": {
+      "score": 5,
+      "want_pass": false,
+      "ok": false
+     }
+    },
+    "note": "Uses 'भाव' instead of 'कीमत' or 'दर', which is acceptable in this context."
+   },
+   {
+    "case": "N1",
+    "scores": {
+     "natural": 4,
+     "correct": 5,
+     "glossary": 5,
+     "grammar": 5
+    },
+    "cells": {
+     "grammar": {
+      "score": 5,
+      "want_pass": false,
+      "ok": false
+     }
+    },
+    "note": "Minor deviation in phrase structure, but accurate translation."
+   },
+   {
+    "case": "N2",
+    "scores": {
+     "natural": 2,
+     "correct": 1,
+     "glossary": 1,
+     "grammar": 5
+    },
+    "cells": {
+     "natural": {
+      "score": 2,
+      "want_pass": false,
+      "ok": true
+     }
+    },
+    "note": "Literal translation, unnatural phrase"
+   },
+   {
+    "case": "V1",
+    "scores": {
+     "natural": 2,
+     "correct": 1,
+     "glossary": 1,
+     "grammar": 5
+    },
+    "cells": {
+     "glossary": {
+      "score": 1,
+      "want_pass": false,
+      "ok": true
+     }
+    },
+    "note": "Literal translation, not recommended for everyday use"
+   },
+   {
+    "case": "V2",
+    "scores": {
+     "natural": 4,
+     "correct": 4,
+     "glossary": 2,
+     "grammar": 5
+    },
+    "cells": {
+     "glossary": {
+      "score": 2,
+      "want_pass": false,
+      "ok": true
+     }
+    },
+    "note": "Uses स्वर्ण मूल्य instead of सोने का भाव"
+   },
+   {
+    "case": "V3",
+    "scores": {
+     "natural": 2,
+     "correct": 4,
+     "glossary": 1,
+     "grammar": 5
+    },
+    "cells": {
+     "glossary": {
+      "score": 1,
+      "want_pass": false,
+      "ok": true
+     }
+    },
+    "note": "Uses 'आकलन' instead of 'अनुमान'"
+   }
+  ]
+ },
+ "qwen3:30b-a3b": {
+  "family": "Alibaba Qwen (larger MoE)",
+  "cells_right": 30,
+  "cells_total": 32,
+  "accuracy": 0.938,
+  "parse_failures": 0,
+  "kept": true,
+  "rows": [
+   {
+    "case": "G1",
+    "scores": {
+     "natural": 5,
+     "correct": 5,
+     "glossary": 5,
+     "grammar": 5
+    },
+    "cells": {
+     "natural": {
+      "score": 5,
+      "want_pass": true,
+      "ok": true
+     },
+     "correct": {
+      "score": 5,
+      "want_pass": true,
+      "ok": true
+     },
+     "glossary": {
+      "score": 5,
+      "want_pass": true,
+      "ok": true
+     },
+     "grammar": {
+      "score": 5,
+      "want_pass": true,
+      "ok": true
+     }
+    },
+    "note": "Perfect match."
+   },
+   {
+    "case": "G2",
+    "scores": {
+     "natural": 5,
+     "correct": 5,
+     "glossary": 5,
+     "grammar": 5
+    },
+    "cells": {
+     "natural": {
+      "score": 5,
+      "want_pass": true,
+      "ok": true
+     },
+     "correct": {
+      "score": 5,
+      "want_pass": true,
+      "ok": true
+     },
+     "glossary": {
+      "score": 5,
+      "want_pass": true,
+      "ok": true
+     },
+     "grammar": {
+      "score": 5,
+      "want_pass": true,
+      "ok": true
+     }
+    },
+    "note": "Perfect match."
+   },
+   {
+    "case": "G3",
+    "scores": {
+     "natural": 4,
+     "correct": 5,
+     "glossary": 5,
+     "grammar": 5
+    },
+    "cells": {
+     "natural": {
+      "score": 4,
+      "want_pass": true,
+      "ok": true
+     },
+     "correct": {
+      "score": 5,
+      "want_pass": true,
+      "ok": true
+     },
+     "glossary": {
+      "score": 5,
+      "want_pass": true,
+      "ok": true
+     },
+     "grammar": {
+      "score": 5,
+      "want_pass": true,
+      "ok": true
+     }
+    },
+    "note": "Good but 'भाव' should be singular."
+   },
+   {
+    "case": "G4",
+    "scores": {
+     "natural": 5,
+     "correct": 5,
+     "glossary": 5,
+     "grammar": 5
+    },
+    "cells": {
+     "natural": {
+      "score": 5,
+      "want_pass": true,
+      "ok": true
+     },
+     "correct": {
+      "score": 5,
+      "want_pass": true,
+      "ok": true
+     },
+     "glossary": {
+      "score": 5,
+      "want_pass": true,
+      "ok": true
+     },
+     "grammar": {
+      "score": 5,
+      "want_pass": true,
+      "ok": true
+     }
+    },
+    "note": "Perfect match per glossary."
+   },
+   {
+    "case": "G5",
+    "scores": {
+     "natural": 4,
+     "correct": 5,
+     "glossary": 5,
+     "grammar": 5
+    },
+    "cells": {
+     "natural": {
+      "score": 4,
+      "want_pass": true,
+      "ok": true
+     },
+     "correct": {
+      "score": 5,
+      "want_pass": true,
+      "ok": true
+     },
+     "glossary": {
+      "score": 5,
+      "want_pass": true,
+      "ok": true
+     },
+     "grammar": {
+      "score": 5,
+      "want_pass": true,
+      "ok": true
+     }
+    },
+    "note": "Good offline message."
+   },
+   {
+    "case": "G6",
+    "scores": {
+     "natural": 5,
+     "correct": 5,
+     "glossary": 5,
+     "grammar": 5
+    },
+    "cells": {
+     "natural": {
+      "score": 5,
+      "want_pass": true,
+      "ok": true
+     },
+     "correct": {
+      "score": 5,
+      "want_pass": true,
+      "ok": true
+     },
+     "glossary": {
+      "score": 5,
+      "want_pass": true,
+      "ok": true
+     },
+     "grammar": {
+      "score": 5,
+      "want_pass": true,
+      "ok": true
+     }
+    },
+    "note": "Perfectly natural and accurate."
+   },
+   {
+    "case": "B1",
+    "scores": {
+     "natural": 2,
+     "correct": 3,
+     "glossary": 3,
+     "grammar": 4
+    },
+    "cells": {
+     "correct": {
+      "score": 3,
+      "want_pass": false,
+      "ok": true
+     }
+    },
+    "note": "Wrong comparison direction."
+   },
+   {
+    "case": "B2",
+    "scores": {
+     "natural": 1,
+     "correct": 1,
+     "glossary": 1,
+     "grammar": 5
+    },
+    "cells": {
+     "correct": {
+      "score": 1,
+      "want_pass": false,
+      "ok": true
+     }
+    },
+    "note": "Wrong meaning, not offline message."
+   },
+   {
+    "case": "B3",
+    "scores": {
+     "natural": 3,
+     "correct": 4,
+     "glossary": 3,
+     "grammar": 5
+    },
+    "cells": {
+     "correct": {
+      "score": 4,
+      "want_pass": false,
+      "ok": false
+     }
+    },
+    "note": "Missing {delta} placeholder."
+   },
+   {
+    "case": "N1",
+    "scores": {
+     "natural": 3,
+     "correct": 4,
+     "glossary": 3,
+     "grammar": 4
+    },
+    "cells": {
+     "grammar": {
+      "score": 4,
+      "want_pass": false,
+      "ok": false
+     }
+    },
+    "note": "महीना → महीने (typo)"
+   },
+   {
+    "case": "N2",
+    "scores": {
+     "natural": 1,
+     "correct": 1,
+     "glossary": 1,
+     "grammar": 1
+    },
+    "cells": {
+     "natural": {
+      "score": 1,
+      "want_pass": false,
+      "ok": true
+     }
+    },
+    "note": "Wrong terms, not natural."
+   },
+   {
+    "case": "V1",
+    "scores": {
+     "natural": 1,
+     "correct": 1,
+     "glossary": 1,
+     "grammar": 5
+    },
+    "cells": {
+     "glossary": {
+      "score": 1,
+      "want_pass": false,
+      "ok": true
+     }
+    },
+    "note": "Glossary term rejected."
+   },
+   {
+    "case": "V2",
+    "scores": {
+     "natural": 2,
+     "correct": 3,
+     "glossary": 1,
+     "grammar": 4
+    },
+    "cells": {
+     "glossary": {
+      "score": 1,
+      "want_pass": false,
+      "ok": true
+     }
+    },
+    "note": "Uses 'स्वर्ण मूल्य' instead of 'सोने का भाव'"
+   },
+   {
+    "case": "V3",
+    "scores": {
+     "natural": 2,
+     "correct": 3,
+     "glossary": 1,
+     "grammar": 4
+    },
+    "cells": {
+     "glossary": {
+      "score": 1,
+      "want_pass": false,
+      "ok": true
+     }
+    },
+    "note": "Uses 'आकलन' instead of 'अनुमान' and 'स्टोर' instead of 'दुकान'"
+   }
+  ]
+ }
+}

@@ -1,0 +1,590 @@
+{"id": "u0000", "model": "gemma2:9b", "scores": {"natural": 4, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Good, but 'सटीक' is usually more technical", "raw": null}
+{"id": "u0001", "model": "gemma2:9b", "scores": {"natural": 3, "correct": 1, "glossary": 5, "grammar": 5}, "note": "Literal, not shopper-like", "raw": null}
+{"id": "u0003", "model": "gemma2:9b", "scores": {"natural": 5, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Natural, accurate, uses glossary terms", "raw": null}
+{"id": "u0005", "model": "gemma2:9b", "scores": {"natural": 5, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Natural, accurate, uses glossary terms", "raw": null}
+{"id": "u0006", "model": "gemma2:9b", "scores": {"natural": 5, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Natural, accurate, uses glossary terms correctly", "raw": null}
+{"id": "u0007", "model": "gemma2:9b", "scores": {"natural": 4, "correct": 3, "glossary": 5, "grammar": 5}, "note": "Good naturalness, but 'stores vary' is better as 'दुकानों में थोड़ा फ़र्क़ होता है'", "raw": null}
+{"id": "u0008", "model": "gemma2:9b", "scores": {"natural": 3, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Slightly formal, but context allows", "raw": null}
+{"id": "u0010", "model": "gemma2:9b", "scores": {"natural": 5, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Very natural, accurate, and grammatically correct.", "raw": null}
+{"id": "u0012", "model": "gemma2:9b", "scores": {"natural": 5, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Natural, accurate, uses glossary terms correctly", "raw": null}
+{"id": "u0013", "model": "gemma2:9b", "scores": {"natural": 5, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Natural phrasing, accurate translation", "raw": null}
+{"id": "u0014", "model": "gemma2:9b", "scores": {"natural": 5, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Natural, accurate, uses glossary term", "raw": null}
+{"id": "u0016", "model": "gemma2:9b", "scores": {"natural": 5, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Very natural, accurate, and uses glossary terms", "raw": null}
+{"id": "u0017", "model": "gemma2:9b", "scores": {"natural": 4, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Natural, accurate, uses glossary terms", "raw": null}
+{"id": "u0018", "model": "gemma2:9b", "scores": {"natural": 5, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Good use of 'भाव' for price, natural phrasing", "raw": null}
+{"id": "u0020", "model": "gemma2:9b", "scores": {"natural": 5, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Natural, accurate, uses glossary terms", "raw": null}
+{"id": "u0021", "model": "gemma2:9b", "scores": {"natural": 4, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Good use of 'आम घट-बढ़'", "raw": null}
+{"id": "u0022", "model": "gemma2:9b", "scores": {"natural": 4, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Good, but could be more colloquial", "raw": null}
+{"id": "u0025", "model": "gemma2:9b", "scores": {"natural": 5, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Natural phrasing, accurate translation", "raw": null}
+{"id": "u0026", "model": "gemma2:9b", "scores": {"natural": 5, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Natural, accurate, uses glossary terms correctly", "raw": null}
+{"id": "u0028", "model": "gemma2:9b", "scores": {"natural": 1, "correct": 1, "glossary": 5, "grammar": 5}, "note": "Needs a Hindi word for 'up'", "raw": null}
+{"id": "u0029", "model": "gemma2:9b", "scores": {"natural": 5, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Matches English exactly, good for a label", "raw": null}
+{"id": "u0030", "model": "gemma2:9b", "scores": {"natural": 5, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Very natural, accurate, and grammatically correct.", "raw": null}
+{"id": "u0032", "model": "gemma2:9b", "scores": {"natural": 5, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Natural, accurate, uses glossary terms", "raw": null}
+{"id": "u0033", "model": "gemma2:9b", "scores": {"natural": 5, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Very natural, accurate, and uses glossary terms correctly.", "raw": null}
+{"id": "u0035", "model": "gemma2:9b", "scores": {"natural": 5, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Natural, accurate, uses glossary terms correctly", "raw": null}
+{"id": "u0036", "model": "gemma2:9b", "scores": {"natural": 5, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Natural, accurate, uses glossary terms", "raw": null}
+{"id": "u0037", "model": "gemma2:9b", "scores": {"natural": 5, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Good, natural phrasing", "raw": null}
+{"id": "u0040", "model": "gemma2:9b", "scores": {"natural": 5, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Very natural phrasing", "raw": null}
+{"id": "u0042", "model": "gemma2:9b", "scores": {"natural": 4, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Accurate and natural phrasing", "raw": null}
+{"id": "u0043", "model": "gemma2:9b", "scores": {"natural": 5, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Perfect for a shopper's question", "raw": null}
+{"id": "u0046", "model": "gemma2:9b", "scores": {"natural": 5, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Good, natural phrasing", "raw": null}
+{"id": "u0048", "model": "gemma2:9b", "scores": {"natural": 5, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Natural, accurate, uses glossary terms correctly", "raw": null}
+{"id": "u0051", "model": "gemma2:9b", "scores": {"natural": 4, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Good use of 'दुकानों के औसत भाव का अनुमान'", "raw": null}
+{"id": "u0052", "model": "gemma2:9b", "scores": {"natural": 5, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Natural, accurate, uses glossary terms", "raw": null}
+{"id": "u0054", "model": "gemma2:9b", "scores": {"natural": 5, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Very natural, accurate, and uses glossary terms correctly.", "raw": null}
+{"id": "u0056", "model": "gemma2:9b", "scores": {"natural": 4, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Good use of 'मोटा अंदाज़ा'", "raw": null}
+{"id": "u0057", "model": "gemma2:9b", "scores": {"natural": 3, "correct": 4, "glossary": 5, "grammar": 5}, "note": "Could be more idiomatic, but understandable", "raw": null}
+{"id": "u0060", "model": "gemma2:9b", "scores": {"natural": 5, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Natural, accurate, uses glossary terms", "raw": null}
+{"id": "u0062", "model": "gemma2:9b", "scores": {"natural": 4, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Good, but could be more colloquial", "raw": null}
+{"id": "u0063", "model": "gemma2:9b", "scores": {"natural": 5, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Natural, accurate, uses glossary terms", "raw": null}
+{"id": "u0065", "model": "gemma2:9b", "scores": {"natural": 4, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Good, but 'आधिकारिक रोज़ के भाव' is a bit formal", "raw": null}
+{"id": "u0066", "model": "gemma2:9b", "scores": {"natural": 4, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Good, but could be more natural", "raw": null}
+{"id": "u0067", "model": "gemma2:9b", "scores": {"natural": 5, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Natural, accurate, uses glossary terms", "raw": null}
+{"id": "u0068", "model": "gemma2:9b", "scores": {"natural": 5, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Very natural, accurate, and uses glossary terms correctly.", "raw": null}
+{"id": "u0070", "model": "gemma2:9b", "scores": {"natural": 3, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Slightly formal, but understandable", "raw": null}
+{"id": "u0071", "model": "gemma2:9b", "scores": {"natural": 5, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Natural, accurate, uses glossary terms correctly", "raw": null}
+{"id": "u0072", "model": "gemma2:9b", "scores": {"natural": 5, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Natural phrasing, accurate translation", "raw": null}
+{"id": "u0075", "model": "gemma2:9b", "scores": {"natural": 5, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Accurate and natural phrasing", "raw": null}
+{"id": "u0076", "model": "gemma2:9b", "scores": {"natural": 5, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Good use of everyday language", "raw": null}
+{"id": "u0077", "model": "gemma2:9b", "scores": {"natural": 5, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Natural, accurate, uses glossary terms", "raw": null}
+{"id": "u0078", "model": "gemma2:9b", "scores": {"natural": 5, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Natural, accurate, uses glossary terms correctly", "raw": null}
+{"id": "u0079", "model": "gemma2:9b", "scores": {"natural": 5, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Natural, accurate, uses glossary terms", "raw": null}
+{"id": "u0084", "model": "gemma2:9b", "scores": {"natural": 5, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Natural, accurate, uses glossary terms correctly", "raw": null}
+{"id": "u0085", "model": "gemma2:9b", "scores": {"natural": 5, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Natural, accurate, uses glossary terms correctly", "raw": null}
+{"id": "u0086", "model": "gemma2:9b", "scores": {"natural": 5, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Very natural, accurate, and uses glossary terms", "raw": null}
+{"id": "u0089", "model": "gemma2:9b", "scores": {"natural": 5, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Literal translation, but fits the context", "raw": null}
+{"id": "u0090", "model": "gemma2:9b", "scores": {"natural": 3, "correct": 3, "glossary": 5, "grammar": 5}, "note": "Good start, but lacks specificity", "raw": null}
+{"id": "u0093", "model": "gemma2:9b", "scores": {"natural": 5, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Accurate and natural", "raw": null}
+{"id": "u0094", "model": "gemma2:9b", "scores": {"natural": 5, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Natural phrasing, accurate translation", "raw": null}
+{"id": "u0096", "model": "gemma2:9b", "scores": {"natural": 5, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Good, common word for 'info'", "raw": null}
+{"id": "u0098", "model": "gemma2:9b", "scores": {"natural": 5, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Accurate translation, natural phrasing", "raw": null}
+{"id": "u0099", "model": "gemma2:9b", "scores": {"natural": 5, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Natural, accurate, uses glossary terms", "raw": null}
+{"id": "u0101", "model": "gemma2:9b", "scores": {"natural": 5, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Natural, accurate, uses glossary terms correctly", "raw": null}
+{"id": "u0102", "model": "gemma2:9b", "scores": {"natural": 3, "correct": 1, "glossary": 5, "grammar": 5}, "note": "Literal, not shopper-friendly", "raw": null}
+{"id": "u0103", "model": "gemma2:9b", "scores": {"natural": 5, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Accurate and natural phrasing for a gold price display.", "raw": null}
+{"id": "u0104", "model": "gemma2:9b", "scores": {"natural": 5, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Perfect match, natural phrasing", "raw": null}
+{"id": "u0105", "model": "gemma2:9b", "scores": {"natural": 5, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Natural and accurate translation", "raw": null}
+{"id": "u0108", "model": "gemma2:9b", "scores": {"natural": 5, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Natural, accurate, uses glossary terms correctly", "raw": null}
+{"id": "u0109", "model": "gemma2:9b", "scores": {"natural": 5, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Very natural, accurate, and uses glossary terms correctly.", "raw": null}
+{"id": "u0114", "model": "gemma2:9b", "scores": {"natural": 5, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Good use of 'महंगा हुआ है'", "raw": null}
+{"id": "u0119", "model": "gemma2:9b", "scores": {"natural": 5, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Natural phrasing, accurate, uses glossary terms", "raw": null}
+{"id": "u0120", "model": "gemma2:9b", "scores": {"natural": 5, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Natural, accurate, uses glossary terms correctly", "raw": null}
+{"id": "u0122", "model": "gemma2:9b", "scores": {"natural": 5, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Natural, accurate, uses glossary term", "raw": null}
+{"id": "u0123", "model": "gemma2:9b", "scores": {"natural": 3, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Literal translation, but contextually appropriate", "raw": null}
+{"id": "u0126", "model": "gemma2:9b", "scores": {"natural": 5, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Accurate translation, natural phrasing", "raw": null}
+{"id": "u0127", "model": "gemma2:9b", "scores": {"natural": 5, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Very natural, accurate, and uses glossary terms well.", "raw": null}
+{"id": "u0132", "model": "gemma2:9b", "scores": {"natural": 5, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Perfect for a main page label", "raw": null}
+{"id": "u0133", "model": "gemma2:9b", "scores": {"natural": 5, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Very natural, accurate, and concise", "raw": null}
+{"id": "u0135", "model": "gemma2:9b", "scores": {"natural": 4, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Good, but could be more colloquial", "raw": null}
+{"id": "u0136", "model": "gemma2:9b", "scores": {"natural": 4, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Good phrasing, but could be more natural", "raw": null}
+{"id": "u0138", "model": "gemma2:9b", "scores": {"natural": 5, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Natural, accurate, uses glossary terms correctly", "raw": null}
+{"id": "u0140", "model": "gemma2:9b", "scores": {"natural": 5, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Very natural and accurate translation", "raw": null}
+{"id": "u0141", "model": "gemma2:9b", "scores": {"natural": 5, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Natural, accurate, uses glossary terms", "raw": null}
+{"id": "u0142", "model": "gemma2:9b", "scores": {"natural": 4, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Good use of 'घट-बढ़'", "raw": null}
+{"id": "u0144", "model": "gemma2:9b", "scores": {"natural": 3, "correct": 1, "glossary": 5, "grammar": 5}, "note": "Too vague, needs 'gold price' or 'rate'", "raw": null}
+{"id": "u0147", "model": "gemma2:9b", "scores": {"natural": 5, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Natural, accurate, uses glossary terms", "raw": null}
+{"id": "u0148", "model": "gemma2:9b", "scores": {"natural": 4, "correct": 5, "glossary": 4, "grammar": 5}, "note": "Good, but 'सोने की कीमत' is less common", "raw": null}
+{"id": "u0149", "model": "gemma2:9b", "scores": {"natural": 4, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Good use of 'महंगा हो रहा है'", "raw": null}
+{"id": "u0150", "model": "gemma2:9b", "scores": {"natural": 4, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Good use of 'अनुमान' and 'आम तौर पर'", "raw": null}
+{"id": "u0151", "model": "gemma2:9b", "scores": {"natural": 5, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Natural, accurate, uses glossary terms", "raw": null}
+{"id": "u0153", "model": "gemma2:9b", "scores": {"natural": 4, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Good, but 'ग़लती' is formal, 'भिन्नता' might be better", "raw": null}
+{"id": "u0154", "model": "gemma2:9b", "scores": {"natural": 2, "correct": 1, "glossary": 1, "grammar": 3}, "note": "Uses 'कीमत' instead of 'भाव'", "raw": null}
+{"id": "u0155", "model": "gemma2:9b", "scores": {"natural": 5, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Natural, accurate, uses glossary terms", "raw": null}
+{"id": "u0156", "model": "gemma2:9b", "scores": {"natural": 5, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Natural, accurate, uses glossary terms", "raw": null}
+{"id": "u0157", "model": "gemma2:9b", "scores": {"natural": 5, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Direct match, good for a label", "raw": null}
+{"id": "u0158", "model": "gemma2:9b", "scores": {"natural": 4, "correct": 3, "glossary": 5, "grammar": 5}, "note": "Good, but 'दुकानों के औसत भाव' is a bit formal", "raw": null}
+{"id": "u0159", "model": "gemma2:9b", "scores": {"natural": 5, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Natural, accurate, uses glossary terms", "raw": null}
+{"id": "u0160", "model": "gemma2:9b", "scores": {"natural": 4, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Good, but could be more colloquial", "raw": null}
+{"id": "u0161", "model": "gemma2:9b", "scores": {"natural": 5, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Very natural, accurate, and uses glossary terms well.", "raw": null}
+{"id": "u0162", "model": "gemma2:9b", "scores": {"natural": 5, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Accurate and natural for a website", "raw": null}
+{"id": "u0164", "model": "gemma2:9b", "scores": {"natural": 3, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Literal, but contextually appropriate", "raw": null}
+{"id": "u0165", "model": "gemma2:9b", "scores": {"natural": 5, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Natural, accurate, uses glossary terms correctly", "raw": null}
+{"id": "u0170", "model": "gemma2:9b", "scores": {"natural": 5, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Direct translation, fits context", "raw": null}
+{"id": "u0172", "model": "gemma2:9b", "scores": {"natural": 5, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Natural, accurate, uses glossary terms", "raw": null}
+{"id": "u0173", "model": "gemma2:9b", "scores": {"natural": 5, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Natural, accurate, uses glossary terms", "raw": null}
+{"id": "u0175", "model": "gemma2:9b", "scores": {"natural": 5, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Good use of colloquialisms", "raw": null}
+{"id": "u0180", "model": "gemma2:9b", "scores": {"natural": 5, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Natural, accurate, uses glossary terms correctly", "raw": null}
+{"id": "u0181", "model": "gemma2:9b", "scores": {"natural": 5, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Natural, accurate, uses glossary terms", "raw": null}
+{"id": "u0184", "model": "gemma2:9b", "scores": {"natural": 5, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Natural, accurate, uses glossary term", "raw": null}
+{"id": "u0188", "model": "gemma2:9b", "scores": {"natural": 5, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Clear, concise, natural language", "raw": null}
+{"id": "u0190", "model": "gemma2:9b", "scores": {"natural": 5, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Natural, accurate, uses glossary terms", "raw": null}
+{"id": "u0194", "model": "gemma2:9b", "scores": {"natural": 4, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Very natural, accurate, and uses glossary terms well", "raw": null}
+{"id": "u0195", "model": "gemma2:9b", "scores": {"natural": 5, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Natural, accurate, uses glossary terms correctly", "raw": null}
+{"id": "u0196", "model": "gemma2:9b", "scores": {"natural": 3, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Good, but could be more specific", "raw": null}
+{"id": "u0200", "model": "gemma2:9b", "scores": {"natural": 4, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Good, natural phrasing", "raw": null}
+{"id": "u0201", "model": "gemma2:9b", "scores": {"natural": 2, "correct": 1, "glossary": 1, "grammar": 5}, "note": "Too literal, 'कीमत' is formal", "raw": null}
+{"id": "u0203", "model": "gemma2:9b", "scores": {"natural": 5, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Natural, accurate, uses glossary terms", "raw": null}
+{"id": "u0204", "model": "gemma2:9b", "scores": {"natural": 4, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Good, natural phrasing", "raw": null}
+{"id": "u0205", "model": "gemma2:9b", "scores": {"natural": 5, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Natural, accurate, uses glossary terms", "raw": null}
+{"id": "u0206", "model": "gemma2:9b", "scores": {"natural": 3, "correct": 4, "glossary": 5, "grammar": 4}, "note": "A bit formal, but understandable", "raw": null}
+{"id": "u0207", "model": "gemma2:9b", "scores": {"natural": 4, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Good use of 'भाव'", "raw": null}
+{"id": "u0208", "model": "gemma2:9b", "scores": {"natural": 4, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Good use of 'मोटा अंदाज़ा'", "raw": null}
+{"id": "u0210", "model": "gemma2:9b", "scores": {"natural": 3, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Good, but 'गिरावट' is formal", "raw": null}
+{"id": "u0211", "model": "gemma2:9b", "scores": {"natural": 5, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Natural, accurate, uses glossary terms", "raw": null}
+{"id": "u0212", "model": "gemma2:9b", "scores": {"natural": 5, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Natural, accurate, uses glossary terms", "raw": null}
+{"id": "u0214", "model": "gemma2:9b", "scores": {"natural": 5, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Natural and accurate translation", "raw": null}
+{"id": "u0215", "model": "gemma2:9b", "scores": {"natural": 4, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Accurate, natural phrasing", "raw": null}
+{"id": "u0217", "model": "gemma2:9b", "scores": {"natural": 5, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Very natural, accurate, and uses glossary terms well.", "raw": null}
+{"id": "u0218", "model": "gemma2:9b", "scores": {"natural": 4, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Good use of 'भाव से महंगा'", "raw": null}
+{"id": "u0220", "model": "gemma2:9b", "scores": {"natural": 5, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Natural, accurate, uses glossary terms", "raw": null}
+{"id": "u0221", "model": "gemma2:9b", "scores": {"natural": 5, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Natural, accurate, uses glossary terms correctly", "raw": null}
+{"id": "u0222", "model": "gemma2:9b", "scores": {"natural": 5, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Very natural, accurate, and uses glossary terms", "raw": null}
+{"id": "u0224", "model": "gemma2:9b", "scores": {"natural": 5, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Good use of everyday language", "raw": null}
+{"id": "u0225", "model": "gemma2:9b", "scores": {"natural": 5, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Very natural, accurate, and uses glossary terms", "raw": null}
+{"id": "u0226", "model": "gemma2:9b", "scores": {"natural": 5, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Perfectly natural, accurate, and uses glossary terms", "raw": null}
+{"id": "u0228", "model": "gemma2:9b", "scores": {"natural": 2, "correct": 1, "glossary": 2, "grammar": 5}, "note": "Missing 'gold rate'", "raw": null}
+{"id": "u0230", "model": "gemma2:9b", "scores": {"natural": 5, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Very natural, accurate, and uses glossary terms well.", "raw": null}
+{"id": "u0234", "model": "gemma2:9b", "scores": {"natural": 5, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Very natural, accurate, and grammatically correct.", "raw": null}
+{"id": "u0236", "model": "gemma2:9b", "scores": {"natural": 5, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Natural and accurate for a shopper", "raw": null}
+{"id": "u0238", "model": "gemma2:9b", "scores": {"natural": 5, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Natural, accurate, uses glossary terms correctly", "raw": null}
+{"id": "u0239", "model": "gemma2:9b", "scores": {"natural": 5, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Good, natural phrasing", "raw": null}
+{"id": "u0241", "model": "gemma2:9b", "scores": {"natural": 4, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Natural, accurate, uses glossary terms correctly", "raw": null}
+{"id": "u0242", "model": "gemma2:9b", "scores": {"natural": 5, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Good use of 'मोटा अंदाज़ा'", "raw": null}
+{"id": "u0243", "model": "gemma2:9b", "scores": {"natural": 5, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Natural, accurate, uses glossary terms well", "raw": null}
+{"id": "u0245", "model": "gemma2:9b", "scores": {"natural": 5, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Literal translation, but natural for a price label", "raw": null}
+{"id": "u0246", "model": "gemma2:9b", "scores": {"natural": 5, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Good, natural phrasing", "raw": null}
+{"id": "u0248", "model": "gemma2:9b", "scores": {"natural": 5, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Natural, accurate, uses glossary terms", "raw": null}
+{"id": "u0249", "model": "gemma2:9b", "scores": {"natural": 5, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Literal translation, fits context", "raw": null}
+{"id": "u0257", "model": "gemma2:9b", "scores": {"natural": 5, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Very natural and accurate translation", "raw": null}
+{"id": "u0260", "model": "gemma2:9b", "scores": {"natural": 5, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Accurate and natural phrasing", "raw": null}
+{"id": "u0262", "model": "gemma2:9b", "scores": {"natural": 5, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Very natural, accurate, and uses glossary terms", "raw": null}
+{"id": "u0263", "model": "gemma2:9b", "scores": {"natural": 5, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Natural, accurate, uses glossary terms", "raw": null}
+{"id": "u0266", "model": "gemma2:9b", "scores": {"natural": 5, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Natural, accurate, uses glossary terms", "raw": null}
+{"id": "u0268", "model": "gemma2:9b", "scores": {"natural": 5, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Literal translation, but natural for this context", "raw": null}
+{"id": "u0269", "model": "gemma2:9b", "scores": {"natural": 5, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Very natural, accurate, and uses glossary terms correctly.", "raw": null}
+{"id": "u0274", "model": "gemma2:9b", "scores": {"natural": 4, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Good, but could be more natural", "raw": null}
+{"id": "u0275", "model": "gemma2:9b", "scores": {"natural": 5, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Natural, accurate, uses glossary terms correctly", "raw": null}
+{"id": "u0276", "model": "gemma2:9b", "scores": {"natural": 5, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Good, natural phrasing", "raw": null}
+{"id": "u0277", "model": "gemma2:9b", "scores": {"natural": 4, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Good use of 'आम से ज़्यादा'", "raw": null}
+{"id": "u0278", "model": "gemma2:9b", "scores": {"natural": 5, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Accurate and natural phrasing for retail consensus", "raw": null}
+{"id": "u0281", "model": "gemma2:9b", "scores": {"natural": 5, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Very natural and accurate translation", "raw": null}
+{"id": "u0283", "model": "gemma2:9b", "scores": {"natural": 5, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Natural, accurate, uses glossary terms", "raw": null}
+{"id": "u0285", "model": "gemma2:9b", "scores": {"natural": 5, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Natural, accurate, uses glossary terms correctly", "raw": null}
+{"id": "u0287", "model": "gemma2:9b", "scores": {"natural": 4, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Good, but could be more colloquial", "raw": null}
+{"id": "u0292", "model": "gemma2:9b", "scores": {"natural": 4, "correct": 3, "glossary": 5, "grammar": 5}, "note": "Literal, but understandable. 'सही साबित हुई है' is a bit formal for a shopper", "raw": null}
+{"id": "u0295", "model": "gemma2:9b", "scores": {"natural": 5, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Good, natural phrasing", "raw": null}
+{"id": "u0296", "model": "gemma2:9b", "scores": {"natural": 5, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Natural, accurate, uses glossary terms", "raw": null}
+{"id": "u0298", "model": "gemma2:9b", "scores": {"natural": 5, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Accurate and natural phrasing", "raw": null}
+{"id": "u0300", "model": "gemma2:9b", "scores": {"natural": 5, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Natural phrasing, accurate translation", "raw": null}
+{"id": "u0301", "model": "gemma2:9b", "scores": {"natural": 4, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Good, but could be more colloquial", "raw": null}
+{"id": "u0303", "model": "gemma2:9b", "scores": {"natural": 5, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Natural, accurate, uses glossary terms", "raw": null}
+{"id": "u0306", "model": "gemma2:9b", "scores": {"natural": 5, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Very natural and accurate translation", "raw": null}
+{"id": "u0307", "model": "gemma2:9b", "scores": {"natural": 5, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Direct translation, natural for a website", "raw": null}
+{"id": "u0308", "model": "gemma2:9b", "scores": {"natural": 5, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Very natural phrasing", "raw": null}
+{"id": "u0309", "model": "gemma2:9b", "scores": {"natural": 5, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Very natural, accurate, and uses glossary terms correctly.", "raw": null}
+{"id": "u0312", "model": "gemma2:9b", "scores": {"natural": 5, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Natural, accurate, uses glossary terms correctly", "raw": null}
+{"id": "u0313", "model": "gemma2:9b", "scores": {"natural": 4, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Natural, accurate, uses glossary terms", "raw": null}
+{"id": "u0314", "model": "gemma2:9b", "scores": {"natural": 5, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Very natural, accurate, and uses glossary terms correctly.", "raw": null}
+{"id": "u0315", "model": "gemma2:9b", "scores": {"natural": 4, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Good use of 'भाव के बढ़ने'", "raw": null}
+{"id": "u0316", "model": "gemma2:9b", "scores": {"natural": 5, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Accurate and natural phrasing for a price range.", "raw": null}
+{"id": "u0317", "model": "gemma2:9b", "scores": {"natural": 4, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Good, but could be more colloquial", "raw": null}
+{"id": "u0318", "model": "gemma2:9b", "scores": {"natural": 4, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Good, natural phrasing", "raw": null}
+{"id": "u0319", "model": "gemma2:9b", "scores": {"natural": 5, "correct": 5, "glossary": 5, "grammar": 5}, "note": "This is natural, accurate, and uses glossary terms correctly.", "raw": null}
+{"id": "u0321", "model": "gemma2:9b", "scores": {"natural": 5, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Very natural phrasing, accurate translation", "raw": null}
+{"id": "u0323", "model": "gemma2:9b", "scores": {"natural": 5, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Natural, accurate, uses glossary terms", "raw": null}
+{"id": "u0324", "model": "gemma2:9b", "scores": {"natural": 5, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Natural, accurate, uses glossary terms", "raw": null}
+{"id": "u0325", "model": "gemma2:9b", "scores": {"natural": 5, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Accurate and natural wording for the product category", "raw": null}
+{"id": "u0327", "model": "gemma2:9b", "scores": {"natural": 4, "correct": 4, "glossary": 5, "grammar": 5}, "note": "Good, but could be more natural", "raw": null}
+{"id": "u0328", "model": "gemma2:9b", "scores": {"natural": 5, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Natural, accurate, uses glossary term", "raw": null}
+{"id": "u0329", "model": "gemma2:9b", "scores": {"natural": 5, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Natural, accurate, uses glossary terms", "raw": null}
+{"id": "u0332", "model": "gemma2:9b", "scores": {"natural": 5, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Very natural, accurate, and uses glossary terms correctly.", "raw": null}
+{"id": "u0333", "model": "gemma2:9b", "scores": {"natural": 5, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Natural, accurate, uses glossary terms", "raw": null}
+{"id": "u0334", "model": "gemma2:9b", "scores": {"natural": 5, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Natural, accurate, uses glossary terms", "raw": null}
+{"id": "u0336", "model": "gemma2:9b", "scores": {"natural": 4, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Natural, accurate, uses glossary terms", "raw": null}
+{"id": "u0338", "model": "gemma2:9b", "scores": {"natural": 4, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Clear, concise, and natural for a shopper", "raw": null}
+{"id": "u0340", "model": "gemma2:9b", "scores": {"natural": 4, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Good, but could be more colloquial", "raw": null}
+{"id": "u0343", "model": "gemma2:9b", "scores": {"natural": 5, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Good use of 'अंदाज़ा' for 'call', natural phrasing", "raw": null}
+{"id": "u0344", "model": "gemma2:9b", "scores": {"natural": 5, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Natural, accurate, uses glossary terms", "raw": null}
+{"id": "u0345", "model": "gemma2:9b", "scores": {"natural": 4, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Good, but could be more colloquial", "raw": null}
+{"id": "u0346", "model": "gemma2:9b", "scores": {"natural": 3, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Literal translation, but context is short", "raw": null}
+{"id": "u0347", "model": "gemma2:9b", "scores": {"natural": 4, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Good use of 'ज़्यादा है'", "raw": null}
+{"id": "u0349", "model": "gemma2:9b", "scores": {"natural": 5, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Accurate and natural phrasing", "raw": null}
+{"id": "u0350", "model": "gemma2:9b", "scores": {"natural": 5, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Very natural, accurate, and uses glossary terms correctly.", "raw": null}
+{"id": "u0351", "model": "gemma2:9b", "scores": {"natural": 5, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Natural, accurate, uses glossary terms", "raw": null}
+{"id": "u0352", "model": "gemma2:9b", "scores": {"natural": 4, "correct": 4, "glossary": 5, "grammar": 5}, "note": "Good, but could be more specific about 'estimates'", "raw": null}
+{"id": "u0354", "model": "gemma2:9b", "scores": {"natural": 5, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Very natural and accurate translation", "raw": null}
+{"id": "u0355", "model": "gemma2:9b", "scores": {"natural": 1, "correct": 1, "glossary": 1, "grammar": 1}, "note": "Literal translation, not natural Hindi", "raw": null}
+{"id": "u0357", "model": "gemma2:9b", "scores": {"natural": 5, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Very natural, accurate, and uses glossary terms correctly.", "raw": null}
+{"id": "u0358", "model": "gemma2:9b", "scores": {"natural": 5, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Accurate and natural phrasing", "raw": null}
+{"id": "u0359", "model": "gemma2:9b", "scores": {"natural": 5, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Accurate and natural phrasing", "raw": null}
+{"id": "u0361", "model": "gemma2:9b", "scores": {"natural": 5, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Natural phrasing, accurate translation", "raw": null}
+{"id": "u0364", "model": "gemma2:9b", "scores": {"natural": 5, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Natural, accurate, uses glossary terms", "raw": null}
+{"id": "u0365", "model": "gemma2:9b", "scores": {"natural": 5, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Accurate and natural for a screen label", "raw": null}
+{"id": "u0368", "model": "gemma2:9b", "scores": {"natural": 5, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Good, natural phrasing", "raw": null}
+{"id": "u0370", "model": "gemma2:9b", "scores": {"natural": 5, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Natural phrasing, accurate, uses glossary terms", "raw": null}
+{"id": "u0371", "model": "gemma2:9b", "scores": {"natural": 1, "correct": 1, "glossary": 1, "grammar": 1}, "note": "Too short, needs to translate 'Change'", "raw": null}
+{"id": "u0372", "model": "gemma2:9b", "scores": {"natural": 5, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Accurate translation, natural phrasing", "raw": null}
+{"id": "u0373", "model": "gemma2:9b", "scores": {"natural": 4, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Good, natural phrasing for a shopper", "raw": null}
+{"id": "u0375", "model": "gemma2:9b", "scores": {"natural": 4, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Good, but could be more colloquial", "raw": null}
+{"id": "u0376", "model": "gemma2:9b", "scores": {"natural": 5, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Good, natural phrasing", "raw": null}
+{"id": "u0380", "model": "gemma2:9b", "scores": {"natural": 5, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Direct translation, natural for this context", "raw": null}
+{"id": "u0382", "model": "gemma2:9b", "scores": {"natural": 5, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Natural, accurate, uses glossary terms correctly", "raw": null}
+{"id": "u0386", "model": "gemma2:9b", "scores": {"natural": 5, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Direct, natural phrasing for a shopper", "raw": null}
+{"id": "u0388", "model": "gemma2:9b", "scores": {"natural": 5, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Natural and accurate translation", "raw": null}
+{"id": "u0391", "model": "gemma2:9b", "scores": {"natural": 5, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Natural, accurate, uses glossary terms", "raw": null}
+{"id": "u0392", "model": "gemma2:9b", "scores": {"natural": 5, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Natural, accurate, uses glossary terms", "raw": null}
+{"id": "u0393", "model": "gemma2:9b", "scores": {"natural": 3, "correct": 4, "glossary": 5, "grammar": 5}, "note": "Good, but 'रेंज कितनी सही रही' is a bit awkward", "raw": null}
+{"id": "u0396", "model": "gemma2:9b", "scores": {"natural": 5, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Correct term used", "raw": null}
+{"id": "u0397", "model": "gemma2:9b", "scores": {"natural": 5, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Very natural and accurate translation.", "raw": null}
+{"id": "u0398", "model": "gemma2:9b", "scores": {"natural": 3, "correct": 2, "glossary": 5, "grammar": 4}, "note": "Glosses well, but 'घटे' is too passive", "raw": null}
+{"id": "u0399", "model": "gemma2:9b", "scores": {"natural": 5, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Natural, accurate, uses glossary terms well", "raw": null}
+{"id": "u0400", "model": "gemma2:9b", "scores": {"natural": 4, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Good flow, uses glossary terms correctly", "raw": null}
+{"id": "u0402", "model": "gemma2:9b", "scores": {"natural": 4, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Good use of 'आम तौर पर', 'करीब'", "raw": null}
+{"id": "u0405", "model": "gemma2:9b", "scores": {"natural": 5, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Accurate and natural phrasing", "raw": null}
+{"id": "u0406", "model": "gemma2:9b", "scores": {"natural": 3, "correct": 4, "glossary": 5, "grammar": 5}, "note": "A bit formal, but understandable. 'लगभग' is good for 'around'", "raw": null}
+{"id": "u0407", "model": "gemma2:9b", "scores": {"natural": 5, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Good use of everyday language", "raw": null}
+{"id": "u0408", "model": "gemma2:9b", "scores": {"natural": 5, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Very natural, accurate, and uses the correct glossary term.", "raw": null}
+{"id": "u0410", "model": "gemma2:9b", "scores": {"natural": 5, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Natural, accurate, uses glossary terms", "raw": null}
+{"id": "u0411", "model": "gemma2:9b", "scores": {"natural": 4, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Natural, accurate, uses glossary terms", "raw": null}
+{"id": "u0413", "model": "gemma2:9b", "scores": {"natural": 5, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Good, concise, natural phrasing", "raw": null}
+{"id": "u0415", "model": "gemma2:9b", "scores": {"natural": 1, "correct": 1, "glossary": 1, "grammar": 1}, "note": "Too literal, not shopper-like", "raw": null}
+{"id": "u0416", "model": "gemma2:9b", "scores": {"natural": 1, "correct": 1, "glossary": 1, "grammar": 1}, "note": "Missing brand name translation", "raw": null}
+{"id": "u0417", "model": "gemma2:9b", "scores": {"natural": 5, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Natural, accurate, uses glossary terms", "raw": null}
+{"id": "u0419", "model": "gemma2:9b", "scores": {"natural": 5, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Good use of 'करिब' for 'about'", "raw": null}
+{"id": "u0421", "model": "gemma2:9b", "scores": {"natural": 4, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Good, but could be more colloquial", "raw": null}
+{"id": "u0426", "model": "gemma2:9b", "scores": {"natural": 5, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Accurate and natural phrasing", "raw": null}
+{"id": "u0427", "model": "gemma2:9b", "scores": {"natural": 5, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Very natural, accurate, and grammatically sound", "raw": null}
+{"id": "u0431", "model": "gemma2:9b", "scores": {"natural": 5, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Accurate, natural phrasing for a shopper", "raw": null}
+{"id": "u0433", "model": "gemma2:9b", "scores": {"natural": 5, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Very natural, accurate, and uses glossary terms", "raw": null}
+{"id": "u0434", "model": "gemma2:9b", "scores": {"natural": 4, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Good, but could be more colloquial", "raw": null}
+{"id": "u0435", "model": "gemma2:9b", "scores": {"natural": 4, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Good use of 'रेंज', natural phrasing", "raw": null}
+{"id": "u0436", "model": "gemma2:9b", "scores": {"natural": 5, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Very natural, accurate, and uses glossary terms well.", "raw": null}
+{"id": "u0440", "model": "gemma2:9b", "scores": {"natural": 5, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Accurate translation, natural phrasing", "raw": null}
+{"id": "u0441", "model": "gemma2:9b", "scores": {"natural": 4, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Good, natural phrasing", "raw": null}
+{"id": "u0442", "model": "gemma2:9b", "scores": {"natural": 4, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Good, but could be more colloquial", "raw": null}
+{"id": "u0444", "model": "gemma2:9b", "scores": {"natural": 4, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Good, natural phrasing", "raw": null}
+{"id": "u0445", "model": "gemma2:9b", "scores": {"natural": 5, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Very natural and accurate translation", "raw": null}
+{"id": "u0446", "model": "gemma2:9b", "scores": {"natural": 5, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Very natural, accurate, and uses glossary terms correctly.", "raw": null}
+{"id": "u0448", "model": "gemma2:9b", "scores": {"natural": 5, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Accurate and natural for a website label", "raw": null}
+{"id": "u0449", "model": "gemma2:9b", "scores": {"natural": 4, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Good, but could be more colloquial", "raw": null}
+{"id": "u0451", "model": "gemma2:9b", "scores": {"natural": 5, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Natural word order for Hindi", "raw": null}
+{"id": "u0452", "model": "gemma2:9b", "scores": {"natural": 4, "correct": 5, "glossary": 4, "grammar": 5}, "note": "Good, but 'सोने की कीमत' is less natural", "raw": null}
+{"id": "u0453", "model": "gemma2:9b", "scores": {"natural": 5, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Natural, accurate, uses glossary terms correctly", "raw": null}
+{"id": "u0454", "model": "gemma2:9b", "scores": {"natural": 3, "correct": 1, "glossary": 5, "grammar": 5}, "note": "Needs to be more specific than 'method'", "raw": null}
+{"id": "u0455", "model": "gemma2:9b", "scores": {"natural": 5, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Accurate, natural phrasing for price per gram", "raw": null}
+{"id": "u0458", "model": "gemma2:9b", "scores": {"natural": 4, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Good flow, uses glossary terms well", "raw": null}
+{"id": "u0459", "model": "gemma2:9b", "scores": {"natural": 5, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Very natural, accurate, and uses glossary terms well.", "raw": null}
+{"id": "u0464", "model": "gemma2:9b", "scores": {"natural": 4, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Good, but could be more natural", "raw": null}
+{"id": "u0470", "model": "gemma2:9b", "scores": {"natural": 5, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Natural, accurate, uses glossary terms", "raw": null}
+{"id": "u0471", "model": "gemma2:9b", "scores": {"natural": 4, "correct": 4, "glossary": 5, "grammar": 5}, "note": "Good, but 'दुकानों के औसत भाव का अनुमान' is a bit formal", "raw": null}
+{"id": "u0472", "model": "gemma2:9b", "scores": {"natural": 4, "correct": 5, "glossary": 4, "grammar": 5}, "note": "Good, but 'सोने की कीमत' is less natural", "raw": null}
+{"id": "u0474", "model": "gemma2:9b", "scores": {"natural": 5, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Natural, accurate, uses glossary terms", "raw": null}
+{"id": "u0475", "model": "gemma2:9b", "scores": {"natural": 3, "correct": 2, "glossary": 5, "grammar": 4}, "note": "Glossed well, but 'घटे' is wrong tense", "raw": null}
+{"id": "u0477", "model": "gemma2:9b", "scores": {"natural": 5, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Natural, accurate, uses glossary terms", "raw": null}
+{"id": "u0478", "model": "gemma2:9b", "scores": {"natural": 4, "correct": 3, "glossary": 5, "grammar": 5}, "note": " 'नज़र रखे हुए हैं' is a bit formal", "raw": null}
+{"id": "u0479", "model": "gemma2:9b", "scores": {"natural": 5, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Perfect match, natural phrasing", "raw": null}
+{"id": "u0480", "model": "gemma2:9b", "scores": {"natural": 5, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Accurate and natural for a heading", "raw": null}
+{"id": "u0482", "model": "gemma2:9b", "scores": {"natural": 4, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Good everyday language, accurate, uses glossary terms", "raw": null}
+{"id": "u0483", "model": "gemma2:9b", "scores": {"natural": 5, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Natural, accurate, uses glossary terms", "raw": null}
+{"id": "u0484", "model": "gemma2:9b", "scores": {"natural": 4, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Good use of colloquialisms, accurate translation", "raw": null}
+{"id": "u0485", "model": "gemma2:9b", "scores": {"natural": 5, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Natural, accurate, uses glossary terms correctly", "raw": null}
+{"id": "u0487", "model": "gemma2:9b", "scores": {"natural": 5, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Natural phrasing, accurate translation", "raw": null}
+{"id": "u0488", "model": "gemma2:9b", "scores": {"natural": 5, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Direct translation, good for a homepage", "raw": null}
+{"id": "u0493", "model": "gemma2:9b", "scores": {"natural": 5, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Natural, accurate, uses glossary terms", "raw": null}
+{"id": "u0494", "model": "gemma2:9b", "scores": {"natural": 5, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Perfect match, common word", "raw": null}
+{"id": "u0497", "model": "gemma2:9b", "scores": {"natural": 5, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Very natural, accurate, and uses glossary terms well.", "raw": null}
+{"id": "u0498", "model": "gemma2:9b", "scores": {"natural": 5, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Good, natural phrasing", "raw": null}
+{"id": "u0499", "model": "gemma2:9b", "scores": {"natural": 5, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Natural phrasing, accurate translation", "raw": null}
+{"id": "u0500", "model": "gemma2:9b", "scores": {"natural": 5, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Natural, accurate, uses glossary terms", "raw": null}
+{"id": "u0504", "model": "gemma2:9b", "scores": {"natural": 5, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Natural phrasing, accurate, uses no glossary terms", "raw": null}
+{"id": "u0505", "model": "gemma2:9b", "scores": {"natural": 3, "correct": 2, "glossary": 5, "grammar": 4}, "note": " 'ज़्यादा ग़लत' is awkward", "raw": null}
+{"id": "u0506", "model": "gemma2:9b", "scores": {"natural": 5, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Good, natural phrasing", "raw": null}
+{"id": "u0507", "model": "gemma2:9b", "scores": {"natural": 4, "correct": 4, "glossary": 5, "grammar": 5}, "note": "Good, but 'आधिकारिक रोज़ के भाव' is a bit formal", "raw": null}
+{"id": "u0510", "model": "gemma2:9b", "scores": {"natural": 5, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Natural, accurate, uses glossary terms", "raw": null}
+{"id": "u0511", "model": "gemma2:9b", "scores": {"natural": 5, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Natural, accurate, uses glossary term", "raw": null}
+{"id": "u0512", "model": "gemma2:9b", "scores": {"natural": 5, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Natural phrasing, accurate translation", "raw": null}
+{"id": "u0513", "model": "gemma2:9b", "scores": {"natural": 5, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Natural, accurate, uses glossary terms", "raw": null}
+{"id": "u0514", "model": "gemma2:9b", "scores": {"natural": 5, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Natural, accurate, uses glossary terms", "raw": null}
+{"id": "u0516", "model": "gemma2:9b", "scores": {"natural": 4, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Good phrasing, uses 'के बीच' for range", "raw": null}
+{"id": "u0517", "model": "gemma2:9b", "scores": {"natural": 5, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Accurate and natural wording", "raw": null}
+{"id": "u0519", "model": "gemma2:9b", "scores": {"natural": 5, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Natural and accurate", "raw": null}
+{"id": "u0520", "model": "gemma2:9b", "scores": {"natural": 4, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Good, natural phrasing", "raw": null}
+{"id": "u0521", "model": "gemma2:9b", "scores": {"natural": 5, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Natural, accurate, uses glossary terms", "raw": null}
+{"id": "u0522", "model": "gemma2:9b", "scores": {"natural": 5, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Direct, natural comparison", "raw": null}
+{"id": "u0523", "model": "gemma2:9b", "scores": {"natural": 5, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Natural, accurate, uses glossary terms correctly", "raw": null}
+{"id": "u0525", "model": "gemma2:9b", "scores": {"natural": 5, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Natural and accurate translation", "raw": null}
+{"id": "u0526", "model": "gemma2:9b", "scores": {"natural": 5, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Accurate, natural, and concise", "raw": null}
+{"id": "u0528", "model": "gemma2:9b", "scores": {"natural": 5, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Natural, accurate, uses glossary terms correctly", "raw": null}
+{"id": "u0529", "model": "gemma2:9b", "scores": {"natural": 5, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Natural, accurate, uses glossary terms correctly.", "raw": null}
+{"id": "u0530", "model": "gemma2:9b", "scores": {"natural": 5, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Natural, accurate, uses glossary terms", "raw": null}
+{"id": "u0532", "model": "gemma2:9b", "scores": {"natural": 5, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Accurate and natural phrasing", "raw": null}
+{"id": "u0533", "model": "gemma2:9b", "scores": {"natural": 5, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Good, natural phrasing", "raw": null}
+{"id": "u0534", "model": "gemma2:9b", "scores": {"natural": 5, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Natural, accurate, uses glossary terms", "raw": null}
+{"id": "u0535", "model": "gemma2:9b", "scores": {"natural": 3, "correct": 1, "glossary": 5, "grammar": 5}, "note": "Missing 'रेंज', too short", "raw": null}
+{"id": "u0539", "model": "gemma2:9b", "scores": {"natural": 4, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Good, but 'सफलतापूर्वक देखा था' is a bit formal", "raw": null}
+{"id": "u0541", "model": "gemma2:9b", "scores": {"natural": 5, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Very natural and accurate translation", "raw": null}
+{"id": "u0542", "model": "gemma2:9b", "scores": {"natural": 5, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Perfect for a main page label", "raw": null}
+{"id": "u0543", "model": "gemma2:9b", "scores": {"natural": 5, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Natural, accurate, uses glossary terms", "raw": null}
+{"id": "u0545", "model": "gemma2:9b", "scores": {"natural": 5, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Natural, accurate, uses glossary terms", "raw": null}
+{"id": "u0546", "model": "gemma2:9b", "scores": {"natural": 5, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Natural and accurate translation", "raw": null}
+{"id": "u0548", "model": "gemma2:9b", "scores": {"natural": 5, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Accurate, natural phrasing", "raw": null}
+{"id": "u0550", "model": "gemma2:9b", "scores": {"natural": 5, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Very natural, accurate, and uses glossary terms correctly.", "raw": null}
+{"id": "u0551", "model": "gemma2:9b", "scores": {"natural": 5, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Natural, accurate, uses glossary term", "raw": null}
+{"id": "u0552", "model": "gemma2:9b", "scores": {"natural": 5, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Good use of colloquialisms like 'सस्ता है'", "raw": null}
+{"id": "u0553", "model": "gemma2:9b", "scores": {"natural": 5, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Natural, accurate, uses glossary terms", "raw": null}
+{"id": "u0554", "model": "gemma2:9b", "scores": {"natural": 5, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Natural, accurate, uses glossary terms correctly", "raw": null}
+{"id": "u0557", "model": "gemma2:9b", "scores": {"natural": 5, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Very natural phrasing, accurate, uses glossary terms", "raw": null}
+{"id": "u0558", "model": "gemma2:9b", "scores": {"natural": 1, "correct": 1, "glossary": 5, "grammar": 5}, "note": "literal translation, not how a shopper would say it", "raw": null}
+{"id": "u0559", "model": "gemma2:9b", "scores": {"natural": 5, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Very natural and accurate translation", "raw": null}
+{"id": "u0560", "model": "gemma2:9b", "scores": {"natural": 4, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Good, but could be more colloquial", "raw": null}
+{"id": "u0561", "model": "gemma2:9b", "scores": {"natural": 5, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Good use of everyday language", "raw": null}
+{"id": "u0564", "model": "gemma2:9b", "scores": {"natural": 3, "correct": 4, "glossary": 5, "grammar": 5}, "note": "Could be more natural, but accurate", "raw": null}
+{"id": "u0565", "model": "gemma2:9b", "scores": {"natural": 4, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Natural phrasing, accurate, uses glossary terms", "raw": null}
+{"id": "u0566", "model": "gemma2:9b", "scores": {"natural": 5, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Direct translation, good for a label", "raw": null}
+{"id": "u0567", "model": "gemma2:9b", "scores": {"natural": 5, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Very natural, accurate, and uses glossary terms well.", "raw": null}
+{"id": "u0570", "model": "gemma2:9b", "scores": {"natural": 5, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Very natural, accurate, and uses glossary terms correctly.", "raw": null}
+{"id": "u0571", "model": "gemma2:9b", "scores": {"natural": 4, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Natural, accurate, uses glossary terms", "raw": null}
+{"id": "u0573", "model": "gemma2:9b", "scores": {"natural": 5, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Natural, accurate, uses glossary terms correctly", "raw": null}
+{"id": "u0574", "model": "gemma2:9b", "scores": {"natural": 5, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Very natural, accurate, and uses glossary terms", "raw": null}
+{"id": "u0575", "model": "gemma2:9b", "scores": {"natural": 4, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Good, natural phrasing", "raw": null}
+{"id": "u0578", "model": "gemma2:9b", "scores": {"natural": 3, "correct": 2, "glossary": 5, "grammar": 5}, "note": "literal, not how a shopper would phrase it", "raw": null}
+{"id": "u0579", "model": "gemma2:9b", "scores": {"natural": 5, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Very natural phrasing, accurate, uses glossary terms", "raw": null}
+{"id": "u0580", "model": "gemma2:9b", "scores": {"natural": 5, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Natural phrasing, accurate translation", "raw": null}
+{"id": "u0581", "model": "gemma2:9b", "scores": {"natural": 4, "correct": 3, "glossary": 5, "grammar": 5}, "note": "Sounds colloquial, but 'हाल' is vague for 'reading'", "raw": null}
+{"id": "u0582", "model": "gemma2:9b", "scores": {"natural": 5, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Very natural, accurate, and uses glossary terms correctly.", "raw": null}
+{"id": "u0583", "model": "gemma2:9b", "scores": {"natural": 5, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Literal translation, good for this context", "raw": null}
+{"id": "u0585", "model": "gemma2:9b", "scores": {"natural": 5, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Natural, accurate, uses glossary terms correctly", "raw": null}
+{"id": "u0586", "model": "gemma2:9b", "scores": {"natural": 5, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Natural, accurate, uses glossary terms", "raw": null}
+{"id": "u0588", "model": "gemma2:9b", "scores": {"natural": 5, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Natural, accurate, uses glossary terms", "raw": null}
+{"id": "u0589", "model": "gemma2:9b", "scores": {"natural": 1, "correct": 1, "glossary": 5, "grammar": 5}, "note": "Too short to judge naturalness", "raw": null}
+{"id": "u0002", "model": "gemma2:9b", "scores": {"natural": 4, "correct": 4, "glossary": 5, "grammar": 5}, "note": "Good, natural phrasing", "raw": null}
+{"id": "u0004", "model": "gemma2:9b", "scores": {"natural": 5, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Natural and accurate translation", "raw": null}
+{"id": "u0009", "model": "gemma2:9b", "scores": {"natural": 5, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Natural, accurate, uses glossary terms", "raw": null}
+{"id": "u0011", "model": "gemma2:9b", "scores": {"natural": 5, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Good natural phrasing", "raw": null}
+{"id": "u0015", "model": "gemma2:9b", "scores": {"natural": 5, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Natural phrasing, accurate translation", "raw": null}
+{"id": "u0019", "model": "gemma2:9b", "scores": {"natural": 5, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Natural, accurate, uses glossary terms correctly", "raw": null}
+{"id": "u0023", "model": "gemma2:9b", "scores": {"natural": 5, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Very natural, accurate, and grammatically correct.", "raw": null}
+{"id": "u0024", "model": "gemma2:9b", "scores": {"natural": 3, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Literal, but context allows it", "raw": null}
+{"id": "u0027", "model": "gemma2:9b", "scores": {"natural": 5, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Natural, accurate, uses glossary terms correctly", "raw": null}
+{"id": "u0031", "model": "gemma2:9b", "scores": {"natural": 5, "correct": 5, "glossary": 5, "grammar": 5}, "note": "<=12 words", "raw": null}
+{"id": "u0034", "model": "gemma2:9b", "scores": {"natural": 3, "correct": 4, "glossary": 5, "grammar": 5}, "note": "Good, but 'कीमत' is less common than 'भाव' here", "raw": null}
+{"id": "u0038", "model": "gemma2:9b", "scores": {"natural": 4, "correct": 4, "glossary": 3, "grammar": 5}, "note": "Uses 'कीमत' instead of 'भाव'", "raw": null}
+{"id": "u0039", "model": "gemma2:9b", "scores": {"natural": 3, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Good, but a bit formal", "raw": null}
+{"id": "u0041", "model": "gemma2:9b", "scores": {"natural": 5, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Accurate, natural, and uses glossary terms", "raw": null}
+{"id": "u0044", "model": "gemma2:9b", "scores": {"natural": 3, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Good, but a bit formal for a shopper", "raw": null}
+{"id": "u0045", "model": "gemma2:9b", "scores": {"natural": 5, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Accurate translation, natural phrasing", "raw": null}
+{"id": "u0047", "model": "gemma2:9b", "scores": {"natural": 5, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Accurate and natural phrasing", "raw": null}
+{"id": "u0049", "model": "gemma2:9b", "scores": {"natural": 4, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Slightly formal, but understandable", "raw": null}
+{"id": "u0050", "model": "gemma2:9b", "scores": {"natural": 4, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Good, but 'दायरा' is a bit formal for this context", "raw": null}
+{"id": "u0053", "model": "gemma2:9b", "scores": {"natural": 5, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Natural, accurate, uses glossary terms", "raw": null}
+{"id": "u0055", "model": "gemma2:9b", "scores": {"natural": 4, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Good, but 'आमतौर पर करीब' is a bit formal", "raw": null}
+{"id": "u0058", "model": "gemma2:9b", "scores": {"natural": 5, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Good, natural phrasing", "raw": null}
+{"id": "u0059", "model": "gemma2:9b", "scores": {"natural": 4, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Good, but could be more colloquial", "raw": null}
+{"id": "u0061", "model": "gemma2:9b", "scores": {"natural": 3, "correct": 4, "glossary": 5, "grammar": 5}, "note": "Literal, but glossary terms used well", "raw": null}
+{"id": "u0064", "model": "gemma2:9b", "scores": {"natural": 4, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Natural, accurate, uses glossary terms", "raw": null}
+{"id": "u0069", "model": "gemma2:9b", "scores": {"natural": 5, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Natural, accurate, uses glossary terms", "raw": null}
+{"id": "u0073", "model": "gemma2:9b", "scores": {"natural": 4, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Good, but 'करीब' is a bit formal", "raw": null}
+{"id": "u0074", "model": "gemma2:9b", "scores": {"natural": 5, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Natural, accurate, uses glossary terms correctly", "raw": null}
+{"id": "u0080", "model": "gemma2:9b", "scores": {"natural": 3, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Literal, but common phrase", "raw": null}
+{"id": "u0081", "model": "gemma2:9b", "scores": {"natural": 5, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Natural phrasing, accurate translation", "raw": null}
+{"id": "u0082", "model": "gemma2:9b", "scores": {"natural": 4, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Good, but 'आमतौर पर करीब' is a bit formal", "raw": null}
+{"id": "u0083", "model": "gemma2:9b", "scores": {"natural": 5, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Very natural, accurate, and uses glossary terms correctly.", "raw": null}
+{"id": "u0087", "model": "gemma2:9b", "scores": {"natural": 5, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Natural phrasing, accurate translation", "raw": null}
+{"id": "u0088", "model": "gemma2:9b", "scores": {"natural": 5, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Natural, accurate, uses glossary terms", "raw": null}
+{"id": "u0091", "model": "gemma2:9b", "scores": {"natural": 5, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Accurate and natural phrasing", "raw": null}
+{"id": "u0092", "model": "gemma2:9b", "scores": {"natural": 4, "correct": 4, "glossary": 5, "grammar": 5}, "note": "Good, but 'संकेत के तौर पर' is a bit formal", "raw": null}
+{"id": "u0095", "model": "gemma2:9b", "scores": {"natural": 3, "correct": 2, "glossary": 5, "grammar": 4}, "note": " 'ज़्यादा ख़राब' is awkward", "raw": null}
+{"id": "u0097", "model": "gemma2:9b", "scores": {"natural": 4, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Good everyday language, accurate, uses glossary terms", "raw": null}
+{"id": "u0100", "model": "gemma2:9b", "scores": {"natural": 4, "correct": 3, "glossary": 5, "grammar": 5}, "note": "Should say 'आम' instead of 'सामान्य'", "raw": null}
+{"id": "u0106", "model": "gemma2:9b", "scores": {"natural": 4, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Good, natural phrasing", "raw": null}
+{"id": "u0107", "model": "gemma2:9b", "scores": {"natural": 5, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Clear, concise, natural language", "raw": null}
+{"id": "u0110", "model": "gemma2:9b", "scores": {"natural": 4, "correct": 3, "glossary": 1, "grammar": 5}, "note": "Uses 'रीडिंग' instead of 'भाव'", "raw": null}
+{"id": "u0111", "model": "gemma2:9b", "scores": {"natural": 5, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Natural, accurate, uses glossary terms correctly", "raw": null}
+{"id": "u0112", "model": "gemma2:9b", "scores": {"natural": 5, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Very natural and accurate translation", "raw": null}
+{"id": "u0113", "model": "gemma2:9b", "scores": {"natural": 4, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Good, natural phrasing", "raw": null}
+{"id": "u0115", "model": "gemma2:9b", "scores": {"natural": 5, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Natural, accurate, uses glossary terms correctly", "raw": null}
+{"id": "u0116", "model": "gemma2:9b", "scores": {"natural": 5, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Natural and accurate translation", "raw": null}
+{"id": "u0117", "model": "gemma2:9b", "scores": {"natural": 5, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Natural, accurate, uses glossary terms correctly", "raw": null}
+{"id": "u0118", "model": "gemma2:9b", "scores": {"natural": 5, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Natural, accurate, uses glossary terms correctly", "raw": null}
+{"id": "u0121", "model": "gemma2:9b", "scores": {"natural": 4, "correct": 4, "glossary": 5, "grammar": 5}, "note": "Good, but 'संकेत के तौर पर' is a bit formal", "raw": null}
+{"id": "u0124", "model": "gemma2:9b", "scores": {"natural": 5, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Direct, natural comparison", "raw": null}
+{"id": "u0125", "model": "gemma2:9b", "scores": {"natural": 3, "correct": 3, "glossary": 5, "grammar": 5}, "note": "Could be more colloquial", "raw": null}
+{"id": "u0128", "model": "gemma2:9b", "scores": {"natural": 4, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Good, natural phrasing", "raw": null}
+{"id": "u0129", "model": "gemma2:9b", "scores": {"natural": 5, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Accurate translation, natural phrasing", "raw": null}
+{"id": "u0130", "model": "gemma2:9b", "scores": {"natural": 4, "correct": 3, "glossary": 5, "grammar": 5}, "note": "Lit. 'listed rate', not 'rate listed'", "raw": null}
+{"id": "u0131", "model": "gemma2:9b", "scores": {"natural": 3, "correct": 3, "glossary": 2, "grammar": 4}, "note": "jweller is not glossary term", "raw": null}
+{"id": "u0134", "model": "gemma2:9b", "scores": {"natural": 5, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Natural, accurate, uses glossary terms correctly", "raw": null}
+{"id": "u0137", "model": "gemma2:9b", "scores": {"natural": 3, "correct": 5, "glossary": 5, "grammar": 4}, "note": "A bit formal, but understandable", "raw": null}
+{"id": "u0139", "model": "gemma2:9b", "scores": {"natural": 1, "correct": 1, "glossary": 1, "grammar": 1}, "note": "Should use 22 कैरेट", "raw": null}
+{"id": "u0143", "model": "gemma2:9b", "scores": {"natural": 4, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Good, but 'आधिकारिक' is formal", "raw": null}
+{"id": "u0145", "model": "gemma2:9b", "scores": {"natural": 1, "correct": 1, "glossary": 1, "grammar": 1}, "note": "Too short, doesn't convey meaning", "raw": null}
+{"id": "u0146", "model": "gemma2:9b", "scores": {"natural": 5, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Literal match, but contextually appropriate", "raw": null}
+{"id": "u0152", "model": "gemma2:9b", "scores": {"natural": 3, "correct": 4, "glossary": 5, "grammar": 5}, "note": "Could be 'आज का भाव' for more naturalness", "raw": null}
+{"id": "u0163", "model": "gemma2:9b", "scores": {"natural": 4, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Natural, accurate, uses glossary terms", "raw": null}
+{"id": "u0166", "model": "gemma2:9b", "scores": {"natural": 4, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Good, but could be more colloquial", "raw": null}
+{"id": "u0167", "model": "gemma2:9b", "scores": {"natural": 5, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Natural, accurate, uses glossary terms", "raw": null}
+{"id": "u0168", "model": "gemma2:9b", "scores": {"natural": 3, "correct": 4, "glossary": 5, "grammar": 5}, "note": "A bit formal, but understandable. 'कीमत' is fine here", "raw": null}
+{"id": "u0169", "model": "gemma2:9b", "scores": {"natural": 4, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Good, but could be more colloquial", "raw": null}
+{"id": "u0171", "model": "gemma2:9b", "scores": {"natural": 5, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Accurate and natural phrasing", "raw": null}
+{"id": "u0174", "model": "gemma2:9b", "scores": {"natural": 5, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Very natural, accurate, and uses glossary terms well.", "raw": null}
+{"id": "u0176", "model": "gemma2:9b", "scores": {"natural": 5, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Direct translation, fits context", "raw": null}
+{"id": "u0178", "model": "gemma2:9b", "scores": {"natural": 5, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Natural, accurate, uses glossary terms correctly", "raw": null}
+{"id": "u0179", "model": "gemma2:9b", "scores": {"natural": 5, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Very natural, accurate, and grammatically sound.", "raw": null}
+{"id": "u0182", "model": "gemma2:9b", "scores": {"natural": 5, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Good use of 'मिलाते हैं' for comparison", "raw": null}
+{"id": "u0183", "model": "gemma2:9b", "scores": {"natural": 5, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Natural, accurate, uses glossary terms", "raw": null}
+{"id": "u0185", "model": "gemma2:9b", "scores": {"natural": 5, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Accurate translation, natural phrasing", "raw": null}
+{"id": "u0186", "model": "gemma2:9b", "scores": {"natural": 4, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Good, but could be more colloquial", "raw": null}
+{"id": "u0187", "model": "gemma2:9b", "scores": {"natural": 4, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Good, but could be more conversational", "raw": null}
+{"id": "u0189", "model": "gemma2:9b", "scores": {"natural": 5, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Natural, accurate, uses glossary terms", "raw": null}
+{"id": "u0191", "model": "gemma2:9b", "scores": {"natural": 5, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Natural, accurate, uses glossary terms correctly", "raw": null}
+{"id": "u0192", "model": "gemma2:9b", "scores": {"natural": 3, "correct": 4, "glossary": 1, "grammar": 5}, "note": "Should use 'आम' not 'सामान्य'", "raw": null}
+{"id": "u0193", "model": "gemma2:9b", "scores": {"natural": 5, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Natural, accurate, uses glossary terms correctly", "raw": null}
+{"id": "u0197", "model": "gemma2:9b", "scores": {"natural": 5, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Natural, accurate, uses glossary terms correctly", "raw": null}
+{"id": "u0198", "model": "gemma2:9b", "scores": {"natural": 5, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Grammatically correct, natural phrasing", "raw": null}
+{"id": "u0199", "model": "gemma2:9b", "scores": {"natural": 4, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Good, but could be more colloquial", "raw": null}
+{"id": "u0202", "model": "gemma2:9b", "scores": {"natural": 5, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Natural, accurate, uses glossary terms", "raw": null}
+{"id": "u0209", "model": "gemma2:9b", "scores": {"natural": 4, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Good, but 'ख़रीद का सुझाव' is a bit formal", "raw": null}
+{"id": "u0213", "model": "gemma2:9b", "scores": {"natural": 3, "correct": 4, "glossary": 2, "grammar": 5}, "note": "Uses 'सामान्य' instead of 'आम'", "raw": null}
+{"id": "u0216", "model": "gemma2:9b", "scores": {"natural": 4, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Good, natural phrasing", "raw": null}
+{"id": "u0219", "model": "gemma2:9b", "scores": {"natural": 4, "correct": 4, "glossary": 5, "grammar": 5}, "note": "Good phrasing, but 'बढ़ोतरी' is a bit formal for a homepage", "raw": null}
+{"id": "u0223", "model": "gemma2:9b", "scores": {"natural": 4, "correct": 5, "glossary": 3, "grammar": 5}, "note": " 'थोड़ी ज़्यादा' is a bit informal", "raw": null}
+{"id": "u0227", "model": "gemma2:9b", "scores": {"natural": 5, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Direct translation, natural for this context", "raw": null}
+{"id": "u0229", "model": "gemma2:9b", "scores": {"natural": 5, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Accurate and natural phrasing", "raw": null}
+{"id": "u0231", "model": "gemma2:9b", "scores": {"natural": 4, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Good use of colloquialisms, accurate translation", "raw": null}
+{"id": "u0232", "model": "gemma2:9b", "scores": {"natural": 3, "correct": 4, "glossary": 5, "grammar": 5}, "note": "Good, but 'सटीकता' is formal", "raw": null}
+{"id": "u0233", "model": "gemma2:9b", "scores": {"natural": 4, "correct": 4, "glossary": 5, "grammar": 5}, "note": "Good, but 'कीमत' is a bit formal", "raw": null}
+{"id": "u0235", "model": "gemma2:9b", "scores": {"natural": 4, "correct": 4, "glossary": 4, "grammar": 5}, "note": "Good, but could be more colloquial", "raw": null}
+{"id": "u0237", "model": "gemma2:9b", "scores": {"natural": 5, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Direct translation, good for this context", "raw": null}
+{"id": "u0240", "model": "gemma2:9b", "scores": {"natural": 4, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Good, natural phrasing", "raw": null}
+{"id": "u0244", "model": "gemma2:9b", "scores": {"natural": 4, "correct": 4, "glossary": 5, "grammar": 5}, "note": "Good, but 'खुदरा कीमत' is a bit formal", "raw": null}
+{"id": "u0247", "model": "gemma2:9b", "scores": {"natural": 5, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Natural, accurate, uses glossary terms", "raw": null}
+{"id": "u0250", "model": "gemma2:9b", "scores": {"natural": 5, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Literal translation, natural for this context", "raw": null}
+{"id": "u0251", "model": "gemma2:9b", "scores": {"natural": 5, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Accurate and natural phrasing", "raw": null}
+{"id": "u0252", "model": "gemma2:9b", "scores": {"natural": 3, "correct": 5, "glossary": 5, "grammar": 4}, "note": "A bit formal, but understandable", "raw": null}
+{"id": "u0253", "model": "gemma2:9b", "scores": {"natural": 3, "correct": 4, "glossary": 5, "grammar": 5}, "note": "Literal, but understandable", "raw": null}
+{"id": "u0254", "model": "gemma2:9b", "scores": {"natural": 5, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Natural, accurate, and grammatically correct.", "raw": null}
+{"id": "u0255", "model": "gemma2:9b", "scores": {"natural": 4, "correct": 4, "glossary": 5, "grammar": 5}, "note": "Good, but 'आधिकारिक' is formal", "raw": null}
+{"id": "u0256", "model": "gemma2:9b", "scores": {"natural": 4, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Good, natural phrasing", "raw": null}
+{"id": "u0258", "model": "gemma2:9b", "scores": {"natural": 3, "correct": 1, "glossary": 5, "grammar": 5}, "note": "Literal, not how a shopper would ask", "raw": null}
+{"id": "u0259", "model": "gemma2:9b", "scores": {"natural": 3, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Good, but a bit formal for a shopper", "raw": null}
+{"id": "u0261", "model": "gemma2:9b", "scores": {"natural": 4, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Good, but could be more colloquial", "raw": null}
+{"id": "u0264", "model": "gemma2:9b", "scores": {"natural": 4, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Good, but could be more colloquial", "raw": null}
+{"id": "u0265", "model": "gemma2:9b", "scores": {"natural": 4, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Good, but could be more colloquial", "raw": null}
+{"id": "u0267", "model": "gemma2:9b", "scores": {"natural": 4, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Accurate, natural phrasing", "raw": null}
+{"id": "u0270", "model": "gemma2:9b", "scores": {"natural": 2, "correct": 1, "glossary": 5, "grammar": 5}, "note": "literal translation, 'error' unclear", "raw": null}
+{"id": "u0271", "model": "gemma2:9b", "scores": {"natural": 3, "correct": 4, "glossary": 1, "grammar": 5}, "note": "Uses 'कीमत' instead of 'भाव'", "raw": null}
+{"id": "u0272", "model": "gemma2:9b", "scores": {"natural": 3, "correct": 5, "glossary": 1, "grammar": 5}, "note": "Uses 'सामान्य' instead of 'आम'", "raw": null}
+{"id": "u0273", "model": "gemma2:9b", "scores": {"natural": 5, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Natural, accurate, uses glossary terms", "raw": null}
+{"id": "u0279", "model": "gemma2:9b", "scores": {"natural": 5, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Literal translation, but natural for this context", "raw": null}
+{"id": "u0280", "model": "gemma2:9b", "scores": {"natural": 5, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Natural, accurate, uses glossary terms", "raw": null}
+{"id": "u0282", "model": "gemma2:9b", "scores": {"natural": 5, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Natural, accurate, uses glossary terms correctly", "raw": null}
+{"id": "u0284", "model": "gemma2:9b", "scores": {"natural": 5, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Accurate and natural phrasing for price history", "raw": null}
+{"id": "u0286", "model": "gemma2:9b", "scores": {"natural": 4, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Accurate, natural phrasing", "raw": null}
+{"id": "u0288", "model": "gemma2:9b", "scores": {"natural": 4, "correct": 4, "glossary": 5, "grammar": 5}, "note": "Good, but 'आमतौर पर करीब' is a bit formal", "raw": null}
+{"id": "u0289", "model": "gemma2:9b", "scores": {"natural": 1, "correct": 1, "glossary": 5, "grammar": 5}, "note": "Literal translation, not natural speech", "raw": null}
+{"id": "u0290", "model": "gemma2:9b", "scores": {"natural": 3, "correct": 4, "glossary": 5, "grammar": 5}, "note": "A bit formal, but understandable", "raw": null}
+{"id": "u0291", "model": "gemma2:9b", "scores": {"natural": 4, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Natural, accurate, uses glossary terms", "raw": null}
+{"id": "u0293", "model": "gemma2:9b", "scores": {"natural": 5, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Natural, accurate, uses glossary terms", "raw": null}
+{"id": "u0294", "model": "gemma2:9b", "scores": {"natural": 5, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Good, natural phrasing", "raw": null}
+{"id": "u0297", "model": "gemma2:9b", "scores": {"natural": 5, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Natural, accurate, uses glossary terms correctly", "raw": null}
+{"id": "u0299", "model": "gemma2:9b", "scores": {"natural": 4, "correct": 3, "glossary": 5, "grammar": 5}, "note": "Uses 'दायरे में' which is less common than 'रेंज'", "raw": null}
+{"id": "u0302", "model": "gemma2:9b", "scores": {"natural": 5, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Very natural phrasing", "raw": null}
+{"id": "u0305", "model": "gemma2:9b", "scores": {"natural": 4, "correct": 4, "glossary": 5, "grammar": 5}, "note": "Good attempt, some phrasing could be more natural", "raw": null}
+{"id": "u0310", "model": "gemma2:9b", "scores": {"natural": 5, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Good use of 'ट्रेंड', 'रीफ़्रेश', natural phrasing", "raw": null}
+{"id": "u0311", "model": "gemma2:9b", "scores": {"natural": 4, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Good use of 'दायरा', natural phrasing", "raw": null}
+{"id": "u0320", "model": "gemma2:9b", "scores": {"natural": 5, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Natural, accurate, uses glossary terms correctly", "raw": null}
+{"id": "u0322", "model": "gemma2:9b", "scores": {"natural": 4, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Good, but could be more colloquial", "raw": null}
+{"id": "u0326", "model": "gemma2:9b", "scores": {"natural": 4, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Good, natural phrasing", "raw": null}
+{"id": "u0330", "model": "gemma2:9b", "scores": {"natural": 3, "correct": 4, "glossary": 1, "grammar": 5}, "note": "Uses 'कीमत' instead of 'भाव'", "raw": null}
+{"id": "u0331", "model": "gemma2:9b", "scores": {"natural": 5, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Good use of everyday language", "raw": null}
+{"id": "u0335", "model": "gemma2:9b", "scores": {"natural": 4, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Very natural, accurate, and uses glossary terms", "raw": null}
+{"id": "u0337", "model": "gemma2:9b", "scores": {"natural": 5, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Natural, accurate, uses glossary terms", "raw": null}
+{"id": "u0339", "model": "gemma2:9b", "scores": {"natural": 5, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Very natural, accurate, and uses glossary terms correctly.", "raw": null}
+{"id": "u0341", "model": "gemma2:9b", "scores": {"natural": 5, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Good use of everyday language", "raw": null}
+{"id": "u0342", "model": "gemma2:9b", "scores": {"natural": 4, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Good use of 'हाल के हफ्ते'", "raw": null}
+{"id": "u0348", "model": "gemma2:9b", "scores": {"natural": 3, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Good, but a bit formal for a shopper", "raw": null}
+{"id": "u0353", "model": "gemma2:9b", "scores": {"natural": 5, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Accurate and natural phrasing", "raw": null}
+{"id": "u0356", "model": "gemma2:9b", "scores": {"natural": 4, "correct": 4, "glossary": 5, "grammar": 5}, "note": "Good, but 'खुदरा कीमत' is a bit formal", "raw": null}
+{"id": "u0360", "model": "gemma2:9b", "scores": {"natural": 3, "correct": 4, "glossary": 5, "grammar": 5}, "note": "Literal, but glossary terms good", "raw": null}
+{"id": "u0362", "model": "gemma2:9b", "scores": {"natural": 3, "correct": 3, "glossary": 4, "grammar": 4}, "note": "Some phrasing is stiff, but understandable", "raw": null}
+{"id": "u0363", "model": "gemma2:9b", "scores": {"natural": 3, "correct": 5, "glossary": 1, "grammar": 5}, "note": "Glossary term 'आम' is used", "raw": null}
+{"id": "u0366", "model": "gemma2:9b", "scores": {"natural": 3, "correct": 2, "glossary": 5, "grammar": 4}, "note": "literal, 'सही साबित हुआ है' is awkward", "raw": null}
+{"id": "u0367", "model": "gemma2:9b", "scores": {"natural": 5, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Natural, accurate, uses glossary terms", "raw": null}
+{"id": "u0369", "model": "gemma2:9b", "scores": {"natural": 4, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Natural phrasing, accurate, uses glossary terms", "raw": null}
+{"id": "u0374", "model": "gemma2:9b", "scores": {"natural": 4, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Good, but could be more colloquial", "raw": null}
+{"id": "u0377", "model": "gemma2:9b", "scores": {"natural": 5, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Very natural, accurate, and uses glossary terms", "raw": null}
+{"id": "u0378", "model": "gemma2:9b", "scores": {"natural": 5, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Very natural, accurate, and uses glossary terms", "raw": null}
+{"id": "u0379", "model": "gemma2:9b", "scores": {"natural": 3, "correct": 4, "glossary": 5, "grammar": 5}, "note": "Lit. 'listed rate', but not common speech", "raw": null}
+{"id": "u0381", "model": "gemma2:9b", "scores": {"natural": 4, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Natural, accurate, uses glossary terms correctly", "raw": null}
+{"id": "u0384", "model": "gemma2:9b", "scores": {"natural": 3, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Literal, but common phrasing", "raw": null}
+{"id": "u0385", "model": "gemma2:9b", "scores": {"natural": 5, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Good everyday Hindi, accurate, uses glossary terms", "raw": null}
+{"id": "u0387", "model": "gemma2:9b", "scores": {"natural": 4, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Good use of 'घट-बढ़'", "raw": null}
+{"id": "u0389", "model": "gemma2:9b", "scores": {"natural": 4, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Good, but could be more colloquial", "raw": null}
+{"id": "u0390", "model": "gemma2:9b", "scores": {"natural": 5, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Very natural, accurate, and uses glossary terms correctly.", "raw": null}
+{"id": "u0394", "model": "gemma2:9b", "scores": {"natural": 4, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Good use of 'अनुमान' for 'call', fits context well", "raw": null}
+{"id": "u0395", "model": "gemma2:9b", "scores": {"natural": 4, "correct": 3, "glossary": 5, "grammar": 5}, "note": "सूचीबद्ध is not ideal, but common", "raw": null}
+{"id": "u0401", "model": "gemma2:9b", "scores": {"natural": 4, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Natural, accurate, uses glossary terms", "raw": null}
+{"id": "u0403", "model": "gemma2:9b", "scores": {"natural": 3, "correct": 4, "glossary": 1, "grammar": 5}, "note": "Uses 'सूचीबद्ध' instead of 'बताया'", "raw": null}
+{"id": "u0404", "model": "gemma2:9b", "scores": {"natural": 1, "correct": 1, "glossary": 1, "grammar": 1}, "note": "Literal, not natural Hindi", "raw": null}
+{"id": "u0409", "model": "gemma2:9b", "scores": {"natural": 4, "correct": 3, "glossary": 5, "grammar": 5}, "note": "Good, but 'सही' is too general for 'estimates have been'", "raw": null}
+{"id": "u0412", "model": "gemma2:9b", "scores": {"natural": 5, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Very natural, accurate, and grammatically correct.", "raw": null}
+{"id": "u0414", "model": "gemma2:9b", "scores": {"natural": 5, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Very natural, accurate, and uses glossary terms well.", "raw": null}
+{"id": "u0418", "model": "gemma2:9b", "scores": {"natural": 4, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Good, but 'काफ़ी' is a bit formal", "raw": null}
+{"id": "u0420", "model": "gemma2:9b", "scores": {"natural": 5, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Good natural phrasing", "raw": null}
+{"id": "u0422", "model": "gemma2:9b", "scores": {"natural": 3, "correct": 2, "glossary": 5, "grammar": 5}, "note": "Good, but 'कीमत' is less common than 'भाव'", "raw": null}
+{"id": "u0423", "model": "gemma2:9b", "scores": {"natural": 3, "correct": 4, "glossary": 5, "grammar": 5}, "note": "Uses 'दायरे में' which is less common than 'रेंज'", "raw": null}
+{"id": "u0424", "model": "gemma2:9b", "scores": {"natural": 5, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Accurate and natural phrasing", "raw": null}
+{"id": "u0425", "model": "gemma2:9b", "scores": {"natural": 5, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Natural, accurate, uses glossary terms", "raw": null}
+{"id": "u0428", "model": "gemma2:9b", "scores": {"natural": 5, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Very natural, accurate, and grammatically correct.", "raw": null}
+{"id": "u0429", "model": "gemma2:9b", "scores": {"natural": 4, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Good phrasing, natural for a shopper", "raw": null}
+{"id": "u0430", "model": "gemma2:9b", "scores": {"natural": 4, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Good, but could be more colloquial", "raw": null}
+{"id": "u0432", "model": "gemma2:9b", "scores": {"natural": 5, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Well-written, natural, and accurate", "raw": null}
+{"id": "u0437", "model": "gemma2:9b", "scores": {"natural": 5, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Natural, accurate, uses glossary terms correctly", "raw": null}
+{"id": "u0438", "model": "gemma2:9b", "scores": {"natural": 5, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Natural, accurate, uses glossary terms correctly", "raw": null}
+{"id": "u0439", "model": "gemma2:9b", "scores": {"natural": 5, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Natural, accurate, uses glossary terms", "raw": null}
+{"id": "u0443", "model": "gemma2:9b", "scores": {"natural": 4, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Good, natural phrasing", "raw": null}
+{"id": "u0447", "model": "gemma2:9b", "scores": {"natural": 3, "correct": 2, "glossary": 5, "grammar": 4}, "note": "Word choice is a bit off, 'घटाए' implies a reduction, not a gain", "raw": null}
+{"id": "u0450", "model": "gemma2:9b", "scores": {"natural": 3, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Literal translation, but context allows", "raw": null}
+{"id": "u0456", "model": "gemma2:9b", "scores": {"natural": 4, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Natural, accurate, uses glossary terms", "raw": null}
+{"id": "u0457", "model": "gemma2:9b", "scores": {"natural": 5, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Natural, accurate, uses glossary terms correctly", "raw": null}
+{"id": "u0460", "model": "gemma2:9b", "scores": {"natural": 5, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Natural, accurate, uses glossary terms correctly", "raw": null}
+{"id": "u0461", "model": "gemma2:9b", "scores": {"natural": 5, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Good, natural phrasing", "raw": null}
+{"id": "u0462", "model": "gemma2:9b", "scores": {"natural": 5, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Natural, accurate, uses glossary terms", "raw": null}
+{"id": "u0463", "model": "gemma2:9b", "scores": {"natural": 5, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Natural, accurate, uses glossary terms", "raw": null}
+{"id": "u0465", "model": "gemma2:9b", "scores": {"natural": 5, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Very natural, accurate, and grammatically correct.", "raw": null}
+{"id": "u0466", "model": "gemma2:9b", "scores": {"natural": 4, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Good, but could be more colloquial", "raw": null}
+{"id": "u0467", "model": "gemma2:9b", "scores": {"natural": 5, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Good translation, natural and accurate", "raw": null}
+{"id": "u0468", "model": "gemma2:9b", "scores": {"natural": 5, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Good, natural phrasing", "raw": null}
+{"id": "u0469", "model": "gemma2:9b", "scores": {"natural": 3, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Literal, but fits context", "raw": null}
+{"id": "u0473", "model": "gemma2:9b", "scores": {"natural": 4, "correct": 4, "glossary": 5, "grammar": 5}, "note": "Good, but 'दूसरे जौहरियों' is a bit formal", "raw": null}
+{"id": "u0476", "model": "gemma2:9b", "scores": {"natural": 5, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Natural, accurate, uses glossary terms correctly", "raw": null}
+{"id": "u0481", "model": "gemma2:9b", "scores": {"natural": 4, "correct": 3, "glossary": 5, "grammar": 5}, "note": "Uses 'रीडिंग' instead of 'भाव'/'दर्ज किया भाव'", "raw": null}
+{"id": "u0486", "model": "gemma2:9b", "scores": {"natural": 4, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Good, but could be more colloquial", "raw": null}
+{"id": "u0489", "model": "gemma2:9b", "scores": {"natural": 5, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Natural phrasing, accurate translation", "raw": null}
+{"id": "u0490", "model": "gemma2:9b", "scores": {"natural": 4, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Good, but could be more colloquial", "raw": null}
+{"id": "u0491", "model": "gemma2:9b", "scores": {"natural": 5, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Natural, accurate, uses glossary terms", "raw": null}
+{"id": "u0492", "model": "gemma2:9b", "scores": {"natural": 4, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Good, but could be more conversational", "raw": null}
+{"id": "u0495", "model": "gemma2:9b", "scores": {"natural": 5, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Very natural, accurate, and uses glossary terms correctly.", "raw": null}
+{"id": "u0496", "model": "gemma2:9b", "scores": {"natural": 4, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Good, but could be more natural", "raw": null}
+{"id": "u0501", "model": "gemma2:9b", "scores": {"natural": 4, "correct": 4, "glossary": 5, "grammar": 5}, "note": "Good, but 'संकेत के तौर पर' is a bit formal", "raw": null}
+{"id": "u0502", "model": "gemma2:9b", "scores": {"natural": 3, "correct": 3, "glossary": 5, "grammar": 5}, "note": "Good, but 'जांचि गई' is formal", "raw": null}
+{"id": "u0503", "model": "gemma2:9b", "scores": {"natural": 1, "correct": 1, "glossary": 5, "grammar": 5}, "note": "Too general, needs context", "raw": null}
+{"id": "u0508", "model": "gemma2:9b", "scores": {"natural": 3, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Slightly unnatural, but context-appropriate", "raw": null}
+{"id": "u0509", "model": "gemma2:9b", "scores": {"natural": 5, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Good use of 'से ज़्यादा' for 'higher than'", "raw": null}
+{"id": "u0515", "model": "gemma2:9b", "scores": {"natural": 3, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Literal translation, but accurate", "raw": null}
+{"id": "u0518", "model": "gemma2:9b", "scores": {"natural": 5, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Natural, accurate, uses glossary terms", "raw": null}
+{"id": "u0524", "model": "gemma2:9b", "scores": {"natural": 5, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Accurate and natural phrasing", "raw": null}
+{"id": "u0527", "model": "gemma2:9b", "scores": {"natural": 4, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Good, but 'स्थिर हो रहा है' is a bit formal", "raw": null}
+{"id": "u0531", "model": "gemma2:9b", "scores": {"natural": 1, "correct": 1, "glossary": 1, "grammar": 1}, "note": "Needs Hindi translation", "raw": null}
+{"id": "u0536", "model": "gemma2:9b", "scores": {"natural": 5, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Natural, accurate, uses glossary terms", "raw": null}
+{"id": "u0537", "model": "gemma2:9b", "scores": {"natural": 5, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Accurate and natural phrasing", "raw": null}
+{"id": "u0538", "model": "gemma2:9b", "scores": {"natural": 5, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Natural and accurate translation", "raw": null}
+{"id": "u0540", "model": "gemma2:9b", "scores": {"natural": 5, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Accurate translation, natural phrasing", "raw": null}
+{"id": "u0544", "model": "gemma2:9b", "scores": {"natural": 5, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Natural, accurate, uses glossary terms correctly", "raw": null}
+{"id": "u0547", "model": "gemma2:9b", "scores": {"natural": 3, "correct": 1, "glossary": 5, "grammar": 4}, "note": "Took off is not common Hindi", "raw": null}
+{"id": "u0549", "model": "gemma2:9b", "scores": {"natural": 3, "correct": 5, "glossary": 1, "grammar": 5}, "note": "Uses 'सटीक' which is more technical", "raw": null}
+{"id": "u0555", "model": "gemma2:9b", "scores": {"natural": 5, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Natural, accurate, uses glossary terms", "raw": null}
+{"id": "u0556", "model": "gemma2:9b", "scores": {"natural": 4, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Good, but could be more colloquial", "raw": null}
+{"id": "u0562", "model": "gemma2:9b", "scores": {"natural": 1, "correct": 1, "glossary": 5, "grammar": 5}, "note": "Too short to judge naturalness", "raw": null}
+{"id": "u0563", "model": "gemma2:9b", "scores": {"natural": 5, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Very natural phrasing", "raw": null}
+{"id": "u0568", "model": "gemma2:9b", "scores": {"natural": 4, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Good, natural phrasing", "raw": null}
+{"id": "u0569", "model": "gemma2:9b", "scores": {"natural": 4, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Good use of 'संकेत'", "raw": null}
+{"id": "u0572", "model": "gemma2:9b", "scores": {"natural": 5, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Natural, accurate, uses glossary terms", "raw": null}
+{"id": "u0576", "model": "gemma2:9b", "scores": {"natural": 5, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Good, natural phrasing", "raw": null}
+{"id": "u0577", "model": "gemma2:9b", "scores": {"natural": 3, "correct": 2, "glossary": 1, "grammar": 5}, "note": "literal, 'कीमत' not 'भाव'", "raw": null}
+{"id": "u0584", "model": "gemma2:9b", "scores": {"natural": 5, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Natural, accurate, uses glossary terms correctly", "raw": null}
+{"id": "u0587", "model": "gemma2:9b", "scores": {"natural": 5, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Very natural and accurate translation", "raw": null}
+{"id": "u0177", "model": "gemma2:9b", "scores": {"natural": 5, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Good use of 'हम' for 'we', natural phrasing", "raw": null}
+{"id": "u0304", "model": "gemma2:9b", "scores": {"natural": 4, "correct": 3, "glossary": 5, "grammar": 5}, "note": "Grammatically fine, but 'ग्राम में मात्रा डालें' is a bit formal for a website", "raw": null}
+{"id": "u0383", "model": "gemma2:9b", "scores": {"natural": 4, "correct": 5, "glossary": 5, "grammar": 5}, "note": "Good, natural phrasing", "raw": null}
