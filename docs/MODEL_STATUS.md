@@ -21,7 +21,7 @@ A challenger replaces the live model only if it beats it by at least 5%, is stat
 ## Were the inputs on time?
 
 - Jeweller price visits: **7 of 18** scheduled visits since the schedule began (2026-10-05) ran within 45 minutes of their time (11 did not; the report cannot tell a laptop that was off from a failed visit).
-- Overnight model forecast: published on **2 of 5** nights, typically 194 minutes after the US gold close.
+- Overnight model forecast: published on **2 of 4** nights, typically 194 minutes after the US gold close.
 
 ## Dates
 
