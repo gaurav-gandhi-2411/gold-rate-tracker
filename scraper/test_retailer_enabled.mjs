@@ -45,7 +45,7 @@ test("disabled retailer reads false; unknown name throws", () => {
 
 test("malformed configs fail loudly, never default on or off", () => {
   const missing = allOn();
-  delete missing.retailers.kalyan;
+  delete missing.retailers.malabar;
   const nonBool = allOn();
   nonBool.retailers.grt.enabled = "false";
   for (const bad of ["{not json", { nope: 1 }, missing, nonBool]) {

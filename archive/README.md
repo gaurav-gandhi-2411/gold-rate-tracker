@@ -6,3 +6,6 @@ Deprecated artifacts retained for reference. Not used by any live code path.
   Workers egress, and moved here from the repo root 2026-09-26. See docs/PROGRESS.md (Φ25 entry) and
   docs/RUNBOOK.md. Older mentions of "spec.md" in docs/PROGRESS.md, ADR 015 and
   scripts/run_phi7d.py refer to earlier phase specs that used the same root path, not to this file.
+- `kalyan/`: the Kalyan Jewellers city-rate adapter (`kalyan.py`) and its mocked tests, retired 2026-10-05
+  (docs/adr/070-retire-kalyan.md). Kept so ADR 026 and the frozen shadow-fusion results stay reproducible.
+  Run the tests on demand with `pytest archive/kalyan`; CI does not collect them. Nothing imports it.

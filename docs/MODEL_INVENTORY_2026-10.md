@@ -17,8 +17,8 @@ NOT recomputed here, except rows 1 and 1b, which section "Re-verification" of
 | 7 | `ml.chronos_forecast` (chronos-bolt-tiny) | 5-day p10/p50/p90, calibrated | IBJA history | flat-hold | dir_acc_30f 0.333 < 0.55: base-rate fallback | LIVE-computed, only `status` shown | "Run Chronos probe" every cycle |
 | 8 | `ml.backtest` walk-forward Chronos vs naive | h1-5 error | IBJA, leak guard | naive | n 252, Chronos worse (MAE5d 291.9 vs 247.9) | LIVE (how-we-know copy; feeds headline interval fields) | weekly Sunday |
 | 9 | `ml.drift`, `ml.metrics` | monitors | forecast vs later price | naive MAE | coverage 0.766 (n 77) | LIVE-shown | check-price |
-| 10 | `ml.fusion` fallback | retail consensus | GRT, Malabar, Kalyan | n/a | tier 3 | LIVE fallback (not current tier) | inference |
-| 11 | `ml.shadow_fusion` | city/national benchmark | board fetches | Tanishq | Phase D pending; Kalyan `observed_at` 1969/1970 placeholder seen | SHADOW | `shadow-fusion.yml` every 6 h |
+| 10 | `ml.fusion` fallback | retail consensus | GRT, Malabar (Kalyan retired 2026-10-05, ADR 070) | n/a | tier 3 | LIVE fallback (not current tier) | inference |
+| 11 | `ml.shadow_fusion` | national benchmark | board fetches (IBJA, GRT, Malabar) | Tanishq | Phase D pending; Kalyan retired 2026-10-05 (ADR 070, placeholder `observed_at` 1969/1970 rows, none stored since 2026-09-24) | SHADOW | `shadow-fusion.yml` every 6 h |
 | 12 | `ml.direction` logistic + LightGBM (ADR 019/031/040) | h1/h2 direction | feature store; leak guard | always-up | h1 0.481 vs 0.506 (p 0.67), h2 0.56 vs 0.58 (p 0.61): no ship | DARK/SHADOW | `eval-direction.yml` Monday |
 | 13 | `ml.feature_store` snapshots | data for row 12 | macro per cycle | n/a | n/a | capture only | every cycle |
 | 14 | h2 pre-registration shadow (ADR 038/042) | h2 direction | proxy / store | always-up | n 329, 0.526 vs 0.556, p 0.79 | SHADOW | weekly |

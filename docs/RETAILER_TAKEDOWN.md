@@ -2,12 +2,12 @@
 
 **Purpose:** Remove a named retailer's data from the live site within hours of a request. The site then falls back cleanly to IBJA × calibration. **Decision record:** ADR 059 (G1). **Switch:** `config/retailers.json`.
 
-Retailers covered: `tanishq` (live enrichment + price history), `grt`, `malabar`, `kalyan` (fusion tier + shadow research data).
+Retailers covered: `tanishq` (live enrichment + price history), `grt`, `malabar` (fusion tier + shadow research data). Kalyan was retired on 2026-10-05 (ADR 070) and is no longer a switch; its historical rows in `data/fusion_snapshots.parquet` stay.
 
 **Roles.** **GG** is the owner and the only person who can merge to `master` or edit repo settings. **CC** is a Claude Code session: it prepares branches and PRs and never merges. "GG or CC" means CC prepares and GG merges.
 
 **Expected time.**
-- A fusion retailer (GRT, Malabar, Kalyan): about 30 minutes to live.
+- A fusion retailer (GRT, Malabar): about 30 minutes to live.
 - Tanishq: 1 to 3 hours to live. Most of that is the PR, CI and the Pages deploy. Tanishq is the hardest case because `data/prices.json`, the site's whole price history, is Tanishq data.
 
 ---
@@ -40,7 +40,7 @@ What the flag does once merged (all tested, see §6):
 The PR takes time, so stop traffic first:
 
 - **Tanishq:** GitHub → Actions → *Scrape Tanishq (self-hosted)* → ⋯ → **Disable workflow**. Also disable *Scraper canary*, which fetches live on Mondays. Or run `gh workflow disable scrape-tanishq-selfhosted.yml && gh workflow disable scraper-canary.yml`.
-- **GRT, Malabar or Kalyan:** run `gh workflow disable shadow-fusion.yml`. This stops all three; re-enable it after step 1 is merged. The tier-3 fallback in `check-price.yml` only fetches when Tanishq and IBJA both fail, and the merged flag covers it.
+- **GRT or Malabar:** run `gh workflow disable shadow-fusion.yml`. This stops both; re-enable it after step 1 is merged. The tier-3 fallback in `check-price.yml` only fetches when Tanishq and IBJA both fail, and the merged flag covers it.
 
 ## 3. Regenerate the files the site serves (Tanishq only; 10 min, CC)
 
@@ -83,7 +83,7 @@ For a fusion retailer, step 3 is not needed. The live site shows fusion data onl
 
 ## 6. Proof this works (already in CI)
 
-`tests/test_retailer_takedown.py` runs the real pipeline (`build_ibja_derived_prices` → `ml.inference.main`) with Tanishq and Kalyan disabled. It asserts:
+`tests/test_retailer_takedown.py` runs the real pipeline (`build_ibja_derived_prices` → `ml.inference.main`) with Tanishq and GRT disabled. It asserts:
 - a valid `ibja_calibrated` `forecast.json`
 - no fetch of a disabled source
 - a loud failure instead of a Tanishq fallback

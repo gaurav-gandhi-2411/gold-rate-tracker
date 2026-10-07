@@ -11,13 +11,13 @@ GST status of the two sides being compared (spec item: state VERIFIED vs INFERRE
     sampling (21 aligned trading days, median tanishq/ibja_916_pm ratio 1.017 -- consistent with a
     markup-only ratio, no embedded 3% GST). Both sides of the Tanishq/IBJA comparison are pre-GST,
     so markup_pct for "tanishq" is a genuine board-rate/board-rate markup, not contaminated by GST.
-  * GRT, Malabar and Kalyan's GST treatment on their displayed board rate has NOT been independently
-    verified by this repo -- INFERRED only, not verified: ml/sources/{grt,kalyan,malabar}.py's own
+  * GRT and Malabar's GST (and Kalyan's, retired, ADR 070) treatment on their displayed board rate has NOT been independently
+    verified by this repo -- INFERRED only, not verified: ml/sources/{grt,malabar}.py's (and archive/kalyan/kalyan.py's) own
     docstrings make no GST claim either way, and no sampling exercise like ml/calibration.py's has
     been run against them. It is inferred (not verified) that they follow the same "board rate is
     pre-GST, GST/making charges added at billing" convention common to Indian jewellery retail,
     because that is the market-wide display norm Tanishq itself follows -- but this has not been
-    checked directly. Do not read markup_pct for grt/malabar/kalyan_* as a verified pure-markup
+    checked directly. Do not read markup_pct for grt/malabar as a verified pure-markup
     number until that GST check is done the same way ml/calibration.py did it for Tanishq.
 
 Timing -- pairing a retailer reading with "the IBJA rate in force" at read time:
@@ -54,7 +54,6 @@ from zoneinfo import ZoneInfo
 import pandas as pd
 
 from ml.ibja import IBJA_PARQUET, load_ibja_parquet
-from ml.sources.kalyan import KALYAN_CITIES
 
 ROOT = Path(__file__).resolve().parent.parent
 DATA_DIR = ROOT / "data"
@@ -81,12 +80,11 @@ CATEGORY_HIGHER = "higher than usual"
 MARKUP_TODAY_SCHEMA_VERSION = 1
 
 # (retailer_key, fusion `source` value, fusion `city` value or None for national).
-# Kalyan cities are pulled from ml.sources.kalyan.KALYAN_CITIES so this list can
-# never drift from the set of cities that source module actually registers.
+# Kalyan rows (kalyan_<city>) were dropped 2026-10-05 (ADR 070): the source is retired;
+# its historical rows stay in data/fusion_snapshots.parquet and load via load_fusion_readings.
 FUSION_RETAILERS: tuple[tuple[str, str, str | None], ...] = (
     ("grt", "grt", None),
     ("malabar", "malabar", None),
-    *((f"kalyan_{city_name.lower()}", "kalyan", city_name) for city_name in KALYAN_CITIES),
 )
 
 
@@ -363,7 +361,7 @@ def compute_rolling_positions(daily: list[DailyMarkupRow]) -> list[MarkupPositio
 # KNOWN ISSUE (found building this module, not fixed by it -- out of scope for F1): 441/1811
 # rows in data/fusion_snapshots.parquet as of 2026-09-24, all source="kalyan" spread across all
 # 4 registered cities, carry observed_at="1969-12-31T18:30:00+00:00" -- epoch (1970-01-01
-# 00:00:00) minus the 5:30h IST-offset subtraction in ml/sources/kalyan.py's
+# 00:00:00) minus the 5:30h IST-offset subtraction in archive/kalyan/kalyan.py's
 # fetch_kalyan_city, i.e. Kalyan's own `updated_time` field failed to parse on those captures
 # and something upstream substituted a naive epoch datetime rather than raising. This filter
 # only prevents that bad data from corrupting markup_pct; it does not fix the root cause.

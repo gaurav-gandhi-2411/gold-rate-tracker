@@ -170,7 +170,8 @@
 // analytics.js (item 5c, GoatCounter), merged OFF -- inert unless FEATURE_FLAGS.analytics is on
 // and ANALYTICS_SITE_CODE is set. flags.js + index.html + i18n.js changed too; analytics.js is a
 // new precached shell file (below). Nothing renders or is requested differently with the flag off.
-const VERSION = "v79-20261007-analytics-flag-off";
+// 2026-10-07 (v80): Kalyan retired (PR #2420): its unused label was removed from app.js and i18n.js.
+const VERSION = "v80-20261007-retire-kalyan";
 const SHELL_CACHE = `gold-shell-${VERSION}`;
 
 const SHELL_FILES = [

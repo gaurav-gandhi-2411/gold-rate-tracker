@@ -1,7 +1,12 @@
-"""Tests for ml.shadow_fusion — the orchestrator, all sources mocked."""
+"""Tests for ml.shadow_fusion — the orchestrator, all sources mocked.
+
+Kalyan and the per-city layer were retired 2026-10-05 (ADR 070); this driver now fuses the
+national sources only (IBJA, GRT, Malabar).
+"""
 
 from __future__ import annotations
 
+import json
 from datetime import UTC, datetime
 
 import ml.shadow_fusion as shadow_fusion
@@ -52,44 +57,18 @@ def _patch_national(monkeypatch, *, ibja=None, grt=None, malabar=None):
     )
 
 
-def _patch_kalyan(monkeypatch, city_results: dict):
-    def fake_fetch(city):
-        result = city_results.get(city)
-        if isinstance(result, Exception):
-            raise result
-        if result is None:
-            raise SourceNetworkError(f"no fixture for {city}")
-
-        class _Raw:
-            reading = result
-
-        return _Raw()
-
-    monkeypatch.setattr(shadow_fusion, "fetch_kalyan_city", fake_fetch)
-
-
 def test_all_sources_healthy_produces_full_output(monkeypatch):
     _patch_national(monkeypatch)
-    _patch_kalyan(
-        monkeypatch,
-        {city: _reading("kalyan", 13100, city=city) for city in shadow_fusion.SHADOW_KALYAN_CITIES},
-    )
 
     result = shadow_fusion.run_shadow_cycle()
 
     assert result["national_benchmark"] is not None
     assert result["national_failures"] == {}
-    assert result["kalyan_failures"] == {}
-    for city in shadow_fusion.SHADOW_KALYAN_CITIES:
-        assert result["cities"][city]["coverage"] == "kalyan_anchored"
+    assert set(result["national_benchmark"]["sources_used"]) == {"ibja", "grt", "malabar"}
 
 
 def test_one_national_source_down_still_produces_output(monkeypatch):
     _patch_national(monkeypatch, grt=SourceNetworkError("grt timed out"))
-    _patch_kalyan(
-        monkeypatch,
-        {city: _reading("kalyan", 13100, city=city) for city in shadow_fusion.SHADOW_KALYAN_CITIES},
-    )
 
     result = shadow_fusion.run_shadow_cycle()
 
@@ -106,47 +85,21 @@ def test_all_national_sources_down_raises(monkeypatch):
         grt=SourceNetworkError("grt down"),
         malabar=SourceNetworkError("malabar down"),
     )
-    _patch_kalyan(monkeypatch, {})
 
     with pytest.raises(RuntimeError, match="ALL national sources failed"):
         shadow_fusion.run_shadow_cycle()
 
 
-def test_one_kalyan_city_down_falls_back_to_national_derived(monkeypatch):
-    _patch_national(monkeypatch)
-    cities = list(shadow_fusion.SHADOW_KALYAN_CITIES)
-    down_city = cities[0]
-    healthy_results = {c: _reading("kalyan", 13100, city=c) for c in cities}
-    healthy_results[down_city] = SourceNetworkError("kalyan down for this city")
-    _patch_kalyan(monkeypatch, healthy_results)
-
-    result = shadow_fusion.run_shadow_cycle()
-
-    assert down_city in result["kalyan_failures"]
-    assert result["cities"][down_city]["coverage"] == "national_derived"
-    for c in cities:
-        if c != down_city:
-            assert result["cities"][c]["coverage"] == "kalyan_anchored"
-
-
 def test_structure_vs_network_failure_distinguishable(monkeypatch):
     _patch_national(monkeypatch, grt=SourceStructureError("grt page redesigned"))
-    _patch_kalyan(
-        monkeypatch,
-        {city: _reading("kalyan", 13100, city=city) for city in shadow_fusion.SHADOW_KALYAN_CITIES},
-    )
 
     result = shadow_fusion.run_shadow_cycle()
 
     assert result["national_failures"]["grt"].startswith("structure:")
 
 
-def test_output_written_to_disk(monkeypatch, tmp_path):
+def test_output_written_to_disk(monkeypatch):
     _patch_national(monkeypatch)
-    _patch_kalyan(
-        monkeypatch,
-        {city: _reading("kalyan", 13100, city=city) for city in shadow_fusion.SHADOW_KALYAN_CITIES},
-    )
 
     shadow_fusion.run_shadow_cycle()
 
@@ -161,10 +114,6 @@ def test_output_ends_with_exactly_one_trailing_newline(monkeypatch):
     # (found 2026-07-19, PR #262 timed out this way -- see ml.shadow_fusion's
     # _write_output).
     _patch_national(monkeypatch)
-    _patch_kalyan(
-        monkeypatch,
-        {city: _reading("kalyan", 13100, city=city) for city in shadow_fusion.SHADOW_KALYAN_CITIES},
-    )
 
     shadow_fusion.run_shadow_cycle()
 
@@ -173,28 +122,27 @@ def test_output_ends_with_exactly_one_trailing_newline(monkeypatch):
     assert not raw.endswith(b"\n\n")
 
 
-def test_shadow_fetches_exactly_one_kalyan_city(monkeypatch):
-    # GG decision E3: 1 Kalyan city per cycle (all 4 were identical in every cycle).
+def test_kalyan_is_retired_from_the_shadow_cycle(monkeypatch):
+    """ADR 070: no Kalyan fetcher, no Kalyan/city keys in the output, no Kalyan snapshot rows."""
     _patch_national(monkeypatch)
-    calls: list[str] = []
-
-    def fake_fetch(city):
-        calls.append(city)
-
-        class _Raw:
-            reading = _reading("kalyan", 13100, city=city)
-
-        return _Raw()
-
-    monkeypatch.setattr(shadow_fusion, "fetch_kalyan_city", fake_fetch)
+    persisted: list[dict] = []
+    monkeypatch.setattr(
+        shadow_fusion,
+        "append_snapshot_rows",
+        lambda rows, store_path=None: persisted.extend(rows) or len(rows),
+    )
 
     result = shadow_fusion.run_shadow_cycle()
 
-    assert calls == ["Bangalore"]
-    assert list(result["cities"]) == ["Bangalore"]
-
-
-def test_shadow_cities_are_registered_kalyan_cities():
-    from ml.sources.kalyan import KALYAN_CITIES
-
-    assert set(shadow_fusion.SHADOW_KALYAN_CITIES) <= set(KALYAN_CITIES)
+    assert set(shadow_fusion._NATIONAL_FETCHERS) == {"ibja", "grt", "malabar"}
+    assert not hasattr(shadow_fusion, "fetch_kalyan_city")
+    assert not hasattr(shadow_fusion, "SHADOW_KALYAN_CITIES")
+    assert "kalyan_failures" not in result and "cities" not in result
+    assert {row["source"] for row in persisted} == {"ibja", "grt", "malabar"}
+    assert all(row["city"] is None for row in persisted)
+    # The on-disk summary is valid JSON with the national benchmark populated.
+    on_disk = json.loads(shadow_fusion.SHADOW_OUTPUT_PATH.read_text(encoding="utf-8"))
+    assert on_disk["national_benchmark"]["value"] == pytest.approx(
+        result["national_benchmark"]["value"]
+    )
+    assert on_disk["snapshot_rows_persisted"] == 3

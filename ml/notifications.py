@@ -1023,7 +1023,7 @@ def _check_t11_fusion_fallback(
     now_ist: datetime,
 ) -> PendingAlert | None:
     """T11 -- both Tanishq and IBJA unavailable this cycle: the site is serving
-    ml.inference's tier-3 fusion-consensus fallback (GRT/Malabar/Kalyan, ADR 026)
+    ml.inference's tier-3 fusion-consensus fallback (GRT/Malabar, ADR 026; Kalyan retired, ADR 070)
     instead of either primary source. Fires the same cycle this happens, unlike
     T9 (which gates on IBJA's own business-day-staleness and can take up to 2
     business days to trip) -- this is the fast, precise signal for "both primary
@@ -1036,7 +1036,7 @@ def _check_t11_fusion_fallback(
     if state.last_t11_ist_date == today_ist:
         return None
     sources = forecast.get("fusion_sources") or []
-    names = {"grt": "GRT", "malabar": "Malabar", "kalyan": "Kalyan"}
+    names = {"grt": "GRT", "malabar": "Malabar"}
     sources_str = ", ".join(names.get(s, s) for s in sources) or "retail consensus"
     current = forecast.get("current_22k", 0)
     title = "Gold Tracker: Tanishq and IBJA both unavailable"

@@ -24,7 +24,9 @@ DEFAULT_CONFIG_PATH = ROOT / "config" / "retailers.json"
 
 # Every retailer any code path scrapes. A config that omits one of these is an error:
 # "not mentioned" must never be read as either on or off.
-KNOWN_RETAILERS: frozenset[str] = frozenset({"tanishq", "grt", "malabar", "kalyan"})
+KNOWN_RETAILERS: frozenset[str] = frozenset(
+    {"tanishq", "grt", "malabar"}
+)  # kalyan removed 2026-10-05, ADR 070
 
 
 class RetailerConfigError(RuntimeError):

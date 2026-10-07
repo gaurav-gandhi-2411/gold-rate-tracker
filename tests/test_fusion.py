@@ -11,9 +11,8 @@ from ml.fusion import (
     DISAGREEMENT_BAND_MULTIPLIER,
     DISAGREEMENT_THRESHOLD_PCT,
     NATIONAL_DERIVED_BAND_MULTIPLIER,
-    compute_city_markup,
     default_weight_fn,
-    fuse_city_price,
+    degraded_band_half_width,
     fuse_national_benchmark,
 )
 from ml.sources.base import SourceReading
@@ -160,72 +159,20 @@ def test_disagreement_threshold_boundary_just_over_is_disagreement():
 
 
 # ---------------------------------------------------------------------------
-# compute_city_markup
+# degraded_band_half_width (live tier-3 fallback band; ADR 070 replaced fuse_city_price)
 # ---------------------------------------------------------------------------
 
 
-def test_city_markup_above_national():
-    national = fuse_national_benchmark([reading("ibja", 13000)])
-    city_reading = reading("kalyan", 13260, city="Bangalore")
-    markup = compute_city_markup(city_reading, national)
-    assert markup == pytest.approx(13260 / 13000)
-
-
-def test_city_markup_below_national():
-    national = fuse_national_benchmark([reading("ibja", 13000)])
-    city_reading = reading("kalyan", 12870, city="Chennai")
-    markup = compute_city_markup(city_reading, national)
-    assert markup == pytest.approx(12870 / 13000)
-
-
-def test_city_markup_equal_national_is_one():
-    national = fuse_national_benchmark([reading("ibja", 13000)])
-    city_reading = reading("kalyan", 13000, city="Hyderabad")
-    assert compute_city_markup(city_reading, national) == pytest.approx(1.0)
-
-
-# ---------------------------------------------------------------------------
-# fuse_city_price — coverage states
-# ---------------------------------------------------------------------------
-
-
-def test_fuse_city_price_with_local_source_is_kalyan_anchored():
-    """A same-cycle Kalyan reading yields coverage="kalyan_anchored", NOT "city_specific" --
-    43/43 accumulated shadow cycles show zero city-to-city variation (ADR 026 update), so
-    the label must never claim location-specific pricing."""
+def test_degraded_band_is_wider_than_national_band():
     national = fuse_national_benchmark([reading("ibja", 13000), reading("grt", 13050)])
-    city_reading = reading("kalyan", 13135, city="Bangalore")
-    result = fuse_city_price(city_reading, national, city="Bangalore")
-    assert result.coverage == "kalyan_anchored"
-    assert result.markup is not None
-    # value == national.value * markup == city_reading.rate_22k algebraically (v1, no smoothing).
-    assert result.value == pytest.approx(city_reading.rate_22k)
-    assert "National retail consensus" in result.attribution
-    assert result.band_half_width == national.band_half_width
-
-
-def test_fuse_city_price_without_local_source_is_national_derived():
-    national = fuse_national_benchmark([reading("ibja", 13000), reading("grt", 13050)])
-    result = fuse_city_price(None, national, city="Pune")
-    assert result.coverage == "national_derived"
-    assert result.markup is None
-    assert result.value == national.value
-    assert "Pune" in result.attribution
-    assert "National retail consensus" in result.attribution
-
-
-def test_fuse_city_price_national_derived_band_is_wider_than_national():
-    national = fuse_national_benchmark([reading("ibja", 13000), reading("grt", 13050)])
-    result = fuse_city_price(None, national, city="Pune")
-    assert result.band_half_width == pytest.approx(
+    assert degraded_band_half_width(national) == pytest.approx(
         national.band_half_width * NATIONAL_DERIVED_BAND_MULTIPLIER
     )
-    assert result.band_half_width > national.band_half_width
+    assert degraded_band_half_width(national) > national.band_half_width
 
 
-def test_fuse_city_price_never_fabricates_a_number_when_uncovered():
-    # The whole point: an uncovered city gets the national value, not something
-    # invented to look city-specific.
-    national = fuse_national_benchmark([reading("ibja", 13000)])
-    result = fuse_city_price(None, national, city="SomeTownNeverRegistered")
-    assert result.value == national.value
+def test_city_layer_is_gone():
+    import ml.fusion as fusion
+
+    for name in ("fuse_city_price", "compute_city_markup", "FusedCityPrice"):
+        assert not hasattr(fusion, name), name

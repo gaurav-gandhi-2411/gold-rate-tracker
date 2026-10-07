@@ -2587,7 +2587,7 @@ def test_t11_dedup_once_per_ist_day():
     """T11 does not fire again the same IST day it already fired."""
     state = NotificationState(last_t11_ist_date="2026-06-07")
     alerts = check_triggers(
-        _forecast_fusion(["grt", "malabar", "kalyan"]),
+        _forecast_fusion(["grt", "malabar"]),
         _probe(),
         _prices_aged(1.0, _T11_NOW_IST),
         _backtest_accurate(),
