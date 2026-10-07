@@ -617,3 +617,83 @@ def test_a_bom_state_file_is_read_by_the_scorecard_too(tmp_path: Path) -> None:
         b"\xef\xbb\xbf" + json.dumps(_state(demoted=True)).encode()
     )
     assert _row(bms.build_rows(tmp_path), "demotion_monitor")["verdict"] == "red"
+
+
+# --- ADR 072: after a champion switch the P3 row and the monitor must not show another model ------
+
+ROLL_V = "nextfix_p3_roll60_v1"
+
+
+def _switched(tmp: Path, champ: str = "p3_roll60", **champ_extra: object) -> None:
+    p3 = [_fold(d, 50.0, 100.0) for d in _days("2026-10-07", 25)]
+    _write(tmp, "nextfix_p3_oos.json", {"folds": p3})
+    _write(
+        tmp,
+        "forecast.json",
+        {
+            "next_fix": {
+                "model_version": ROLL_V,
+                "champion": {"id": champ, **champ_extra},
+                "track_record": {"direction_gate_ship": True, "timing_gate_ship": True},
+                "direction": {"show": True},
+                "demotion": {"demoted": False, "rules_breaching_now": []},
+            }
+        },
+    )
+
+
+def test_after_a_switch_the_p3_row_does_not_present_the_champions_readouts_as_p3s(
+    tmp_path: Path,
+) -> None:
+    _switched(tmp_path)
+    _write(tmp_path, "model_demotion_state.json", _state())  # P3's own, stale
+    p3 = _row(bms.build_rows(tmp_path), "nextfix_p3")
+    why = "the live model is p3_roll60, not P3"
+    assert why in p3["gate"]["text"] and p3["gate"]["passes"] is None
+    assert p3["demotion"]["state"] == "unavailable" and why in p3["demotion"]["reason"]
+    assert "direction gate" not in p3["gate"]["text"]
+    assert not any("n_forward" in x for x in p3["forward"]["extras"])
+
+
+def test_with_p3_as_champion_the_p3_row_is_unchanged(tmp_path: Path) -> None:
+    _switched(tmp_path, champ="p3")
+    _write(tmp_path, "model_demotion_state.json", _state())
+    p3 = _row(bms.build_rows(tmp_path), "nextfix_p3")
+    assert "direction gate ship" in p3["gate"]["text"]
+    assert p3["demotion"]["state"] == "not demoted"
+    # a fallback run (champion file names p3_roll60 but P3 is what ran) is still P3's data
+    _switched(tmp_path, champ="p3_roll60", effective_id="p3", fallback="record_missing")
+    assert "direction gate" in _row(bms.build_rows(tmp_path), "nextfix_p3")["gate"]["text"]
+
+
+def test_demotion_monitor_reads_the_live_champions_own_state_file_and_names_it(
+    tmp_path: Path,
+) -> None:
+    _switched(tmp_path)
+    _write(tmp_path, "model_demotion_state.json", _state())  # P3: not demoted
+    _write(
+        tmp_path,
+        f"model_demotion_state__{ROLL_V}.json",
+        _state(demoted=True, model_version=ROLL_V),
+    )
+    m = _row(bms.build_rows(tmp_path), "demotion_monitor")
+    assert m["verdict"] == "red"
+    assert any(ROLL_V in x and "p3_roll60" in x for x in m["forward"]["extras"])
+    assert f"data/model_demotion_state__{ROLL_V}.json" in m["sources"]
+
+
+def test_demotion_monitor_without_the_champions_file_is_no_data_not_p3s_state(
+    tmp_path: Path,
+) -> None:
+    _switched(tmp_path)
+    _write(tmp_path, "model_demotion_state.json", _state())
+    m = _row(bms.build_rows(tmp_path), "demotion_monitor")
+    assert m["verdict_kind"] == "no_data" and "p3_roll60" in m["sentence"]
+
+
+def test_scorecard_state_file_naming_matches_ml_nextfix() -> None:
+    from ml import nextfix
+
+    for v in (nextfix.MODEL_VERSION, ROLL_V, nextfix.ENSEMBLE_VERSION):
+        assert bms.demotion_state_file(v) == nextfix.demotion_state_file(v)
+    assert bms.P3_MODEL_VERSION == nextfix.MODEL_VERSION
