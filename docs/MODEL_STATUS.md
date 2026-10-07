@@ -20,8 +20,8 @@ A challenger replaces the live model only if it beats it by at least 5%, is stat
 
 ## Were the inputs on time?
 
-- Jeweller price visits: **8 of 19** scheduled visits since the schedule began (2026-10-05) ran within 45 minutes of their time (11 did not). Of the 11 not run on time: 5 never dispatched (laptop off or scheduler idle), 6 ran late (within 6 hours, after the laptop came back). Inferred from GitHub run records only, which does not tell a laptop that was off from a scheduler that did not fire.
-- Overnight model forecast: published on **3 of 5** nights, typically 167 minutes after the US gold close.
+- Jeweller price visits: **7 of 18** scheduled visits since the schedule began (2026-10-05) ran within 45 minutes of their time (11 did not; the report cannot tell a laptop that was off from a failed visit).
+- Overnight model forecast: published on **2 of 4** nights, typically 194 minutes after the US gold close.
 
 ## Dates
 
