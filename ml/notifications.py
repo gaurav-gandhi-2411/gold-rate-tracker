@@ -1203,7 +1203,8 @@ def _check_t17_model_promoted(
             return None
     except (TypeError, ValueError):
         pass  # a hand-edited or naive timestamp: alert rather than stay silent
-    change = ch.get("last_change") if isinstance(ch.get("last_change"), dict) else {}
+    raw_change = ch.get("last_change")
+    change: dict = raw_change if isinstance(raw_change, dict) else {}
     old_id, new_id = change.get("from") or "unknown", change.get("to") or "unknown"
     what = "rolled back" if change.get("event") == "rolled_back" else "promoted"
     title = "Gold Tracker: next-rate model changed"
