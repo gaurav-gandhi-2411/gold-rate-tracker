@@ -149,6 +149,17 @@ jobs:
       # weekly_range_shadow_log hold raw prices (the last one's lo/hi invert to the IBJA rate).
       # Their plaintext is added below only while still tracked (pre-migration); afterwards git
       # refuses the ignored paths and data/encrypted/ carries them.
+
+      - name: Build the forward model scorecard (JSON)
+        # Item 2g: one forward-scored scorecard of every model, computed from the data files the
+        # steps above just updated. Writes data/model_scorecard_weekly.json only: data/ is already
+        # inside bot-pr-sync's data-only allow-list, so no allow-list is widened. The human page
+        # docs/MODEL_SCORECARD.md is rendered from that JSON by docs-refresh.yml (its own PR path,
+        # since docs/ is outside the bot-pr-sync allow-list). continue-on-error: true so a
+        # scorecard failure never blocks the backtest commit below.
+        continue-on-error: true
+        run: python scripts/build_model_scorecard.py --json-only
+
       - name: Commit backtest results
         id: commit
         env:
@@ -157,7 +168,7 @@ jobs:
           set -e
           git config user.name "gold-rate-bot"
           git config user.email "actions@users.noreply.github.com"
-          git add data/backtest.json data/metrics_history.json data/coverage_metrics.json data/calibration_band_coverage.json data/preregistered_h2_shadow_results.json data/nowcast_shadow_log.json data/weekly_range_shadow_log.json data/next_day_range_shadow.json data/wait_or_buy_shadow.json data/wait_or_buy_today.json || true
+          git add data/backtest.json data/metrics_history.json data/coverage_metrics.json data/calibration_band_coverage.json data/preregistered_h2_shadow_results.json data/nowcast_shadow_log.json data/weekly_range_shadow_log.json data/next_day_range_shadow.json data/wait_or_buy_shadow.json data/wait_or_buy_today.json data/model_scorecard_weekly.json || true
           git add data/encrypted/ || true
           python scripts/data_crypt.py scan-key --changed
           if git diff --staged --quiet; then

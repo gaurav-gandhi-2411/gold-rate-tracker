@@ -5,7 +5,6 @@ from __future__ import annotations
 from datetime import UTC, datetime
 
 import ml.sources.grt as grt
-import ml.sources.kalyan as kalyan
 import pytest
 import requests
 from ml.sources import polite_http
@@ -183,21 +182,6 @@ def test_same_host_requests_are_spaced(monkeypatch):
 
 
 # ── Adapters actually go through the policy ─────────────────────────────────
-
-
-def test_kalyan_cities_share_one_host_cooloff(monkeypatch):
-    """A 429 on the first Kalyan city must stop the remaining cities hitting the host."""
-    calls = []
-
-    def post(url, **kw):
-        calls.append(url)
-        return _Resp(429)
-
-    monkeypatch.setattr(kalyan.requests, "post", post)
-    for city in kalyan.KALYAN_CITIES:
-        with pytest.raises(SourceNetworkError):
-            kalyan.fetch_kalyan_city(city)
-    assert len(calls) == 1
 
 
 def test_grt_uses_polite_user_agent(monkeypatch):

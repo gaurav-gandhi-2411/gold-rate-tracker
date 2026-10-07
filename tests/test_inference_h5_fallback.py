@@ -11,7 +11,6 @@ from datetime import UTC, datetime, timedelta
 
 import ml.inference as inf
 import ml.sources.grt as grt_mod
-import ml.sources.kalyan as kalyan_mod
 import ml.sources.malabar as malabar_mod
 import pandas as pd
 import pytest
@@ -112,7 +111,6 @@ def _disable_fusion(monkeypatch: object) -> None:
     """
     monkeypatch.setattr(grt_mod, "fetch_grt", _raise_network)
     monkeypatch.setattr(malabar_mod, "fetch_malabar", _raise_network)
-    monkeypatch.setattr(kalyan_mod, "fetch_kalyan_city", _raise_network)
 
 
 def _make_prices_with_last_ts(n: int, last_ts: datetime, last_22k: int = 14320) -> list[dict]:
@@ -746,21 +744,6 @@ def test_tier2_band_complete_for_every_reachable_schema_version(
 # ---------------------------------------------------------------------------
 
 
-def _fake_kalyan_raw(rate_22k: float) -> object:
-    """Build a stand-in for KalyanRawReading — only `.reading` is consumed."""
-    import types
-
-    return types.SimpleNamespace(
-        reading=SourceReading(
-            source="kalyan",
-            city="Bangalore",
-            rate_22k=rate_22k,
-            observed_at=datetime(2026, 3, 15, 12, 0, tzinfo=UTC),
-            attribution="Kalyan Jewellers — BENGALURU board rate",
-        )
-    )
-
-
 def _fake_national_reading(source: str, rate_22k: float) -> SourceReading:
     return SourceReading(
         source=source,
@@ -773,7 +756,7 @@ def _fake_national_reading(source: str, rate_22k: float) -> SourceReading:
 
 @pytest.mark.smoke
 def test_fusion_fallback_fires_when_ibja_also_fails(tmp_path: object, monkeypatch: object) -> None:
-    """Tanishq stale + IBJA parquet missing + all 3 fusion sources succeed →
+    """Tanishq stale + IBJA parquet missing + both fusion sources succeed →
     tier 3 fusion_consensus serves a sensible, wider-banded estimate."""
     monkeypatch.setattr(inf, "DATA_DIR", tmp_path)
 
@@ -793,17 +776,16 @@ def test_fusion_fallback_fires_when_ibja_also_fails(tmp_path: object, monkeypatc
     monkeypatch.setattr(
         malabar_mod, "fetch_malabar", lambda: _fake_national_reading("malabar", 14100.0)
     )
-    monkeypatch.setattr(kalyan_mod, "fetch_kalyan_city", lambda _city: _fake_kalyan_raw(14080.0))
 
-    from ml.fusion import fuse_city_price, fuse_national_benchmark
+    from ml.fusion import degraded_band_half_width, fuse_national_benchmark
 
     national = fuse_national_benchmark(
         [_fake_national_reading("grt", 14000.0), _fake_national_reading("malabar", 14100.0)]
     )
-    city_fused = fuse_city_price(_fake_kalyan_raw(14080.0).reading, national, city="Bangalore")
-    expected_current = round(city_fused.value)
-    expected_low = round(city_fused.value - city_fused.band_half_width)
-    expected_high = round(city_fused.value + city_fused.band_half_width)
+    band = degraded_band_half_width(national)
+    expected_current = round(national.value)
+    expected_low = round(national.value - band)
+    expected_high = round(national.value + band)
 
     inf.main(now=now)
 
@@ -811,7 +793,7 @@ def test_fusion_fallback_fires_when_ibja_also_fails(tmp_path: object, monkeypatc
 
     assert fc["price_source"] == "fusion_consensus"
     assert fc["current_22k"] == expected_current
-    assert fc["fusion_sources"] == ["grt", "malabar", "kalyan"]
+    assert fc["fusion_sources"] == ["grt", "malabar"]
     assert fc["est_low"] < fc["current_22k"] < fc["est_high"]
     assert fc["est_low"] == expected_low
     assert fc["est_high"] == expected_high
@@ -823,7 +805,7 @@ def test_fusion_fallback_fires_when_ibja_also_fails(tmp_path: object, monkeypatc
 
 @pytest.mark.smoke
 def test_fusion_fallback_partial_sources(tmp_path: object, monkeypatch: object) -> None:
-    """Only GRT succeeds; Malabar and Kalyan fail → still serves fusion_consensus,
+    """Only GRT succeeds; Malabar fails → still serves fusion_consensus,
     fusion_sources reflects exactly what actually contributed."""
     monkeypatch.setattr(inf, "DATA_DIR", tmp_path)
 
@@ -841,7 +823,6 @@ def test_fusion_fallback_partial_sources(tmp_path: object, monkeypatch: object) 
 
     monkeypatch.setattr(grt_mod, "fetch_grt", lambda: _fake_national_reading("grt", 14000.0))
     monkeypatch.setattr(malabar_mod, "fetch_malabar", _raise_network)
-    monkeypatch.setattr(kalyan_mod, "fetch_kalyan_city", _raise_network)
 
     inf.main(now=now)
 
@@ -856,7 +837,7 @@ def test_fusion_fallback_partial_sources(tmp_path: object, monkeypatch: object) 
 def test_fusion_fallback_all_sources_fail_last_resort(
     tmp_path: object, monkeypatch: object
 ) -> None:
-    """IBJA AND all 3 fusion sources fail → true last resort, unchanged behaviour:
+    """IBJA AND both fusion sources fail → true last resort, unchanged behaviour:
     serves the last-known Tanishq price with fusion_sources=None."""
     monkeypatch.setattr(inf, "DATA_DIR", tmp_path)
     _disable_fusion(monkeypatch)
@@ -892,7 +873,6 @@ def test_tier1_fresh_scrape_never_calls_fusion(tmp_path: object, monkeypatch: ob
 
     monkeypatch.setattr(grt_mod, "fetch_grt", _fail_if_called)
     monkeypatch.setattr(malabar_mod, "fetch_malabar", _fail_if_called)
-    monkeypatch.setattr(kalyan_mod, "fetch_kalyan_city", _fail_if_called)
 
     now = datetime(2026, 3, 15, 13, 30, tzinfo=UTC)
     last_ts = datetime(2026, 3, 15, 12, 0, tzinfo=UTC)  # 1.5h before now → fresh

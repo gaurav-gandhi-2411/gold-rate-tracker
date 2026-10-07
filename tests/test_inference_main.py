@@ -8,7 +8,6 @@ from datetime import UTC, datetime, timedelta
 
 import ml.inference as inf
 import ml.sources.grt as grt_mod
-import ml.sources.kalyan as kalyan_mod
 import ml.sources.malabar as malabar_mod
 import numpy as np
 import pytest
@@ -28,7 +27,6 @@ def _disable_fusion(monkeypatch) -> None:
     """
     monkeypatch.setattr(grt_mod, "fetch_grt", _raise_network)
     monkeypatch.setattr(malabar_mod, "fetch_malabar", _raise_network)
-    monkeypatch.setattr(kalyan_mod, "fetch_kalyan_city", _raise_network)
 
 
 def _make_prices(n: int, base: int = 14400) -> list[dict]:

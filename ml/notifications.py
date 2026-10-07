@@ -1023,7 +1023,7 @@ def _check_t11_fusion_fallback(
     now_ist: datetime,
 ) -> PendingAlert | None:
     """T11 -- both Tanishq and IBJA unavailable this cycle: the site is serving
-    ml.inference's tier-3 fusion-consensus fallback (GRT/Malabar/Kalyan, ADR 026)
+    ml.inference's tier-3 fusion-consensus fallback (GRT/Malabar, ADR 026; Kalyan retired, ADR 070)
     instead of either primary source. Fires the same cycle this happens, unlike
     T9 (which gates on IBJA's own business-day-staleness and can take up to 2
     business days to trip) -- this is the fast, precise signal for "both primary
@@ -1036,7 +1036,7 @@ def _check_t11_fusion_fallback(
     if state.last_t11_ist_date == today_ist:
         return None
     sources = forecast.get("fusion_sources") or []
-    names = {"grt": "GRT", "malabar": "Malabar", "kalyan": "Kalyan"}
+    names = {"grt": "GRT", "malabar": "Malabar"}
     sources_str = ", ".join(names.get(s, s) for s in sources) or "retail consensus"
     current = forecast.get("current_22k", 0)
     title = "Gold Tracker: Tanishq and IBJA both unavailable"
@@ -1136,6 +1136,42 @@ def _check_t15_ibja_move(
     title, body = public_copy.ibja_move(move.delta_per_gram, move.estimate_now, move.fix)
     return _make_alert(
         "T15", title, body, priority, ["warning", "chart_with_downwards_trend"], now_ist
+    )
+
+
+def _check_t16_model_demoted(
+    forecast: dict, state: NotificationState, now_ist: datetime
+) -> PendingAlert | None:
+    """T16 -- the live next-fix model was switched back to "hold" by ml.demotion (ADR 068).
+
+    Reads forecast.json's ``next_fix.demotion``. Once per demotion (skipped if T16 was already sent
+    after the demotion's ``since``), bypasses quiet hours, goes to the private topic only (T16 is not
+    on the public allowlist). The site has already fallen back to hold by the time this fires; it is
+    an alert to GG that the model needs a look, and re-promotion is a human edit of
+    data/model_demotion_state.json.
+    """
+    dm = (forecast.get("next_fix") or {}).get("demotion") or {}
+    if dm.get("demoted") is not True or not dm.get("since"):
+        return None
+    last = state.last_sent.get("T16")
+    try:
+        if last and datetime.fromisoformat(last) >= datetime.fromisoformat(dm["since"]):
+            return None
+    except (
+        TypeError,
+        ValueError,
+    ):  # a hand-edited or naive timestamp: alert rather than stay silent
+        pass
+    rules = ", ".join(r.get("rule", "?") for r in dm.get("reasons", [])) or "unknown rule"
+    title = "Gold Tracker: next-rate model switched off"
+    body = (
+        f"The model behind the next-rate range was switched off on its own (rule: {rules}; "
+        f"since {dm['since']}). The site now holds the last official rate and shows no up/down "
+        "line. Look at data/model_demotion_state.json and the weekly scorecard; to bring the "
+        "model back, a person has to reset that file (ADR 068)."
+    )
+    return _make_alert(
+        "T16", title, body, 5, ["rotating_light", "warning"], now_ist, bypass_quiet=True
     )
 
 
@@ -1253,6 +1289,9 @@ def check_triggers(
     t15 = _check_t15_ibja_move(ibja_move, state, now_ist)
     if t15 is not None:
         alerts.append(t15)
+    t16 = _check_t16_model_demoted(forecast, state, now_ist)
+    if t16 is not None:
+        alerts.append(t16)
     return alerts
 
 

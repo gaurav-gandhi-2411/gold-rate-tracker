@@ -216,13 +216,6 @@ def _build_chronos_companion(
     }
 
 
-_FUSION_FALLBACK_CITY = "Bangalore"  # matches Kalyan's KALYAN_CITIES key and the site's
-# hardcoded "Bengaluru" identity (index.html) -- an arbitrary anchor tag, not a claim of
-# Bangalore-specific pricing: 43/43 accumulated shadow cycles show Kalyan's rate is
-# identical across every registered city (ADR 026 update, 2026-07-30), so this fallback
-# is a national retail consensus regardless of which city tag routes the Kalyan fetch.
-
-
 def _try_ibja_calibrated(
     calibration: dict,
     data_dir: Path,
@@ -471,18 +464,18 @@ def _try_fusion_fallback(
     data_dir: Path,
     now: datetime | None = None,
 ) -> tuple[int, str, int, int, str | None, list[str], None, None, None, None, float, None] | None:
-    """Tier 3: live GRT + Malabar + Kalyan consensus, only reached when both
+    """Tier 3: live GRT + Malabar national consensus, only reached when both
     Tanishq and IBJA-calibrated are unavailable this cycle. Reuses ml.fusion's
-    tested national-benchmark + city-markup engine (ADR 026) — not new modelling.
+    tested national-benchmark engine (ADR 026) — not new modelling. Kalyan was
+    retired from this tier 2026-10-05 (ADR 070).
     Returns None if every fusion source also fails this cycle (true last resort).
-    band_half_width is always populated here (fuse_city_price computes it
+    band_half_width is always populated here (degraded_band_half_width computes it
     deterministically) -- band_unavailable_reason is always None on this tier.
     """
-    from ml.fusion import fuse_city_price, fuse_national_benchmark
+    from ml.fusion import degraded_band_half_width, fuse_national_benchmark
     from ml.retailers import is_enabled
     from ml.sources.base import SourceNetworkError, SourceStructureError
     from ml.sources.grt import fetch_grt
-    from ml.sources.kalyan import fetch_kalyan_city
     from ml.sources.malabar import fetch_malabar
 
     now_utc = now or datetime.now(UTC)
@@ -518,21 +511,11 @@ def _try_fusion_fallback(
 
     national = fuse_national_benchmark(national_readings)
 
-    kalyan_reading = None
-    if is_enabled("kalyan"):
-        try:
-            candidate = fetch_kalyan_city(_FUSION_FALLBACK_CITY).reading
-            kalyan_reading = candidate if _fresh(candidate) else None
-        except (SourceNetworkError, SourceStructureError) as exc:
-            logger.warning("_try_fusion_fallback: kalyan/%s failed: %s", _FUSION_FALLBACK_CITY, exc)
-    else:
-        logger.info("_try_fusion_fallback: kalyan disabled in config/retailers.json")
-
-    city_fused = fuse_city_price(kalyan_reading, national, city=_FUSION_FALLBACK_CITY)
-    current = round(city_fused.value)
-    est_low = round(city_fused.value - city_fused.band_half_width)
-    est_high = round(city_fused.value + city_fused.band_half_width)
-    sources_used = list(national.sources_used) + (["kalyan"] if kalyan_reading is not None else [])
+    band_half_width = degraded_band_half_width(national)
+    current = round(national.value)
+    est_low = round(national.value - band_half_width)
+    est_high = round(national.value + band_half_width)
+    sources_used = list(national.sources_used)
 
     logger.info(
         "_try_fusion_fallback: consensus Rs.%d [Rs.%d-Rs.%d] from %s",
@@ -552,7 +535,7 @@ def _try_fusion_fallback(
         None,
         None,
         None,
-        city_fused.band_half_width,
+        band_half_width,
         None,
     )
 
@@ -598,7 +581,7 @@ def _select_price_source(
     Tier 2 gates (see _try_ibja_calibrated): calibration.valid, slope/intercept/
       residual_std present, IBJA pm_916 row exists and age <= _IBJA_DISPLAY_MAX_AGE_DAYS.
     Tier 3 (see _try_fusion_fallback): fires only when both Tanishq and IBJA are
-      unavailable this cycle — a live GRT/Malabar/Kalyan consensus fetch. An
+      unavailable this cycle — a live GRT/Malabar consensus fetch. An
       individual fusion source failing is normal (same as any single source going
       quiet); only "all national fusion sources failed too" makes tier 3 itself
       return None and fall through to the final last-known-Tanishq-price noop.
@@ -971,6 +954,7 @@ def _next_fix_block(
             d = ev["direction"]
             block["track_record"] = {
                 "n": ev["n"],
+                "n_forward": ev.get("n_forward", 0),
                 "first_d0": ev["first_d0"],
                 "last_d0": ev["last_d0"],
                 "mae_model": ev["mae_model"],
@@ -992,6 +976,14 @@ def _next_fix_block(
                 "range_n": ev["range_n"],
                 "range_mean_width_ibja": ev["range_mean_width"],
             }
+        dm = out.get("demotion") or {}
+        block["demotion"] = {  # ADR 068: sticky; the notification trigger T16 reads this
+            "demoted": bool(dm.get("demoted")),
+            "since": dm.get("since"),
+            "reasons": dm.get("reasons", []),
+            "rules_breaching_now": dm.get("rules_breaching_now", []),
+            "checked": bool(dm.get("checked")),
+        }
         block["windows"] = {
             k: {kk: v for kk, v in rec.items() if kk not in ("conformal_q", "vol_now")}
             for k, rec in windows.items()
@@ -1022,6 +1014,17 @@ def _next_fix_block(
             range_record=range_record,
             **retail,
         )
+        sh, shev = fc.get("shadow"), out.get("shadow_eval") or {}
+        if sh is not None:  # ADR 069: the ensemble, scored beside the live model, never shown
+            block["shadow_ensemble"] = {
+                "model_version": sh["model_version"],
+                "predicted_ibja": sh["pred"],
+                "p_up": sh["p_up"],
+                "track_record": {
+                    k: shev.get(k)
+                    for k in ("n", "mae_model", "mae_flat", "mae_change_pct", "last_d0")
+                },
+            }
         if mode == "after_us_close":
             p_up = float(fc["p_up"])
             side = "up" if p_up >= 0.5 else "down"

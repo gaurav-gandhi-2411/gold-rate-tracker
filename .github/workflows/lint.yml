@@ -128,6 +128,7 @@ jobs:
       - name: Run PWA pure-function tests
         run: |
           node --test \
+            tests/test_analytics.js \
             tests/test_calculator.js \
             tests/test_calibration_confidence.js \
             tests/test_chart_cdn_resilience.js \
@@ -187,6 +188,8 @@ jobs:
         run: node tests/test_sw_offline_headless.js
       - name: Run the feature-flag leak-detection headless test
         run: node tests/test_feature_flags_headless.js
+      - name: Run the analytics-off headless test (flag off = identical DOM, no beacon; item 5c)
+        run: node tests/test_analytics_off_headless.js
       - name: Run the page_v2 (item 6) headless test
         run: node tests/test_page_v2_headless.js
       - name: Run the retailer-takedown fallback render test (ADR 059)

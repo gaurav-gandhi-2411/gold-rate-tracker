@@ -1,24 +1,18 @@
-"""Two-layer, reliability-weighted retail-price fusion (ADR 026, Option 1).
+"""Reliability-weighted national retail-price fusion (ADR 026, Option 1).
 
-    retail_price(location) = fused_national_benchmark x location_markup(location)
+    retail_price = fused_national_benchmark
 
 National benchmark: a reliability-weighted consensus of national-level
-sources (IBJA, GRT, Malabar today). City price: the national benchmark
-scaled by a markup derived from a real local source (Kalyan today) where
-one exists, honestly labeled national-derived elsewhere.
+sources (IBJA, GRT, Malabar today).
 
-HONEST LABELING (ADR 026 update, 2026-07-30): 43/43 accumulated shadow
-cycles show Kalyan's rate_22k identical across all four registered cities
-(Bangalore/Chennai/Hyderabad/Ernakulam) -- zero observed city-to-city
-variation. Indian retail gold pricing is a national metal rate; the
-store-to-store variation that DOES exist (making charges) isn't captured by
-this scrape. The two-layer architecture and the Kalyan-vs-national markup
-are still real, useful signal (a fourth independent source disagreeing with
-IBJA/GRT/Malabar is meaningful) -- what's NOT real is per-city
-differentiation. `coverage="kalyan_anchored"` (not "city_specific") and
-callers must present this as a *national retail consensus*, never as
-location-specific pricing, until a source with genuine city-differentiated
-metal pricing is found.
+RETIRED 2026-10-05 (ADR 070): the city layer (``fuse_city_price`` /
+``FusedCityPrice`` / ``compute_city_markup``) existed only to scale the
+national benchmark by a markup from Kalyan, the one city-granular source.
+Kalyan stored no valid data after 2026-09-08 and was retired, so the layer was
+removed. There is no city-granular source now: every price this module produces
+is a NATIONAL retail consensus and must be presented that way. Even while Kalyan
+worked, 43/43 shadow cycles showed an identical rate across its four cities
+(ADR 026 update, 2026-07-30), so no per-city differentiation was ever observed.
 
 THE WEIGHTING SEAM (read this before touching weights): ``DEFAULT_WEIGHTS``
 and ``default_weight_fn`` are a deliberately simple, static placeholder.
@@ -60,9 +54,9 @@ DISAGREEMENT_THRESHOLD_PCT: float = 0.02
 BASE_BAND_PCT: float = 0.01
 # Multiplier applied to the band when sources disagree beyond the threshold.
 DISAGREEMENT_BAND_MULTIPLIER: float = 2.0
-# Multiplier applied when a city has no local source (national-derived) --
-# wider than the national band itself, since a national number is a weaker
-# proxy for a specific city's actual retail price than a local reading.
+# Multiplier applied to the band on the live tier-3 fallback (national consensus
+# with no IBJA anchor) -- wider than the shadow-fusion band because that
+# consensus has no calibrated anchor to check it against.
 NATIONAL_DERIVED_BAND_MULTIPLIER: float = 1.5
 
 WeightFn = Callable[[list[SourceReading]], dict[str, float]]
@@ -82,23 +76,6 @@ class FusedBenchmark:
     disagreement: bool
     sources_used: tuple[str, ...]
     weights_used: dict[str, float]
-
-
-@dataclass(frozen=True)
-class FusedCityPrice:
-    """The final fused price for one Kalyan-registered location tag.
-
-    Despite the ``city`` field, this is NOT verified city-differentiated
-    pricing (see module docstring) -- treat ``value`` as the national retail
-    consensus, optionally Kalyan-anchored, never as a location-specific price.
-    """
-
-    city: str | None
-    value: float
-    band_half_width: float
-    coverage: str  # "kalyan_anchored" | "national_derived" -- neither implies city-specific pricing
-    attribution: str
-    markup: float | None  # None when coverage == "national_derived"
 
 
 def fuse_national_benchmark(
@@ -138,51 +115,11 @@ def fuse_national_benchmark(
     )
 
 
-def compute_city_markup(city_reading: SourceReading, national: FusedBenchmark) -> float:
-    """City rate expressed as a multiple of the national benchmark.
+def degraded_band_half_width(national: FusedBenchmark) -> float:
+    """Wider band for the live tier-3 fallback, which has no IBJA anchor.
 
-    Computed fresh each cycle -- no smoothing yet (ADR 026: there's no
-    history to smooth over on day one). Option 2 is expected to replace a
-    single-cycle markup with a rolling/EMA-smoothed one once
-    ``data/fusion_snapshots.parquet`` has enough history.
+    Identical to the band the fallback served while Kalyan was unavailable
+    (``national.band_half_width * NATIONAL_DERIVED_BAND_MULTIPLIER``), so retiring
+    Kalyan changes no number the fallback served in practice.
     """
-    return city_reading.rate_22k / national.value
-
-
-def fuse_city_price(
-    city_reading: SourceReading | None,
-    national: FusedBenchmark,
-    *,
-    city: str,
-) -> FusedCityPrice:
-    """Combine the national benchmark with a same-cycle Kalyan reading if one exists.
-
-    ``city_reading is None`` means no local source covers this tag this
-    cycle (either it isn't a registered city, or the local source failed) --
-    the result is honestly labeled ``"national_derived"``. When a reading
-    IS available, the result is labeled ``"kalyan_anchored"`` -- real signal
-    from a fourth independent source, but NOT verified city-specific pricing
-    (see module docstring): every registered city has produced the identical
-    value in 43/43 accumulated shadow cycles.
-    """
-    if city_reading is not None:
-        markup = compute_city_markup(city_reading, national)
-        value = national.value * markup
-        return FusedCityPrice(
-            city=city,
-            value=value,
-            band_half_width=national.band_half_width,
-            coverage="kalyan_anchored",
-            attribution=f"National retail consensus, Kalyan-anchored ({city_reading.attribution})",
-            markup=markup,
-        )
-
-    sources_note = ", ".join(national.sources_used)
-    return FusedCityPrice(
-        city=city,
-        value=national.value,
-        band_half_width=national.band_half_width * NATIONAL_DERIVED_BAND_MULTIPLIER,
-        coverage="national_derived",
-        attribution=f"National retail consensus ({sources_note}) — no Kalyan reading for {city} this cycle",
-        markup=None,
-    )
+    return national.band_half_width * NATIONAL_DERIVED_BAND_MULTIPLIER

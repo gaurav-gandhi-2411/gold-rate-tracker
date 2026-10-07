@@ -1,19 +1,20 @@
 name: Shadow Fusion
 
-# Runs the Kalyan-anchored city-fusion system (ADR 026) in SHADOW MODE: fetch
-# all four sources, fuse a national benchmark + per-city prices, and persist
-# both to data/fusion_snapshots.parquet and data/shadow_fusion_output.json.
+# Runs the national retail-price fusion system (ADR 026) in SHADOW MODE: fetch
+# IBJA, GRT and Malabar, fuse a national benchmark, and persist it to
+# data/fusion_snapshots.parquet and data/shadow_fusion_output.json.
+# Kalyan and the per-city layer were retired 2026-10-05 (ADR 070).
 # This NEVER touches data/forecast.json, app.js, or anything the live site
 # displays — it exists purely to accumulate history for Phase C's
 # validation gate, ahead of any promotion decision (Phase D).
 #
 # Deliberately a looser 6h cadence than check-price.yml's 3h — these are
-# three new, unproven scraping relationships with third-party sites; starting
+# unproven scraping relationships with third-party sites; starting
 # polite and infrequent is the right default until there's a reason to
 # tighten it (ADR 026).
 #
 # A single source failing is normal (ADR 025's precedent, extended to all
-# four sources here) and does not fail this job. Only every national source
+# all sources here) and does not fail this job. Only every national source
 # failing in the same cycle does -- see ml/shadow_fusion.py.
 
 on:
@@ -92,7 +93,7 @@ jobs:
           from pathlib import Path
 
           output = json.loads(Path('data/shadow_fusion_output.json').read_text(encoding='utf-8'))
-          failures = {**output.get('national_failures', {}), **output.get('kalyan_failures', {})}
+          failures = output.get('national_failures', {})
           if failures:
               print(f'::warning title=Shadow fusion: per-source failures this cycle::{failures}')
           "

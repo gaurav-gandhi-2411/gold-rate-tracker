@@ -69,61 +69,61 @@ const STATES = [
     name: "fresh Tanishq (1h old, plausible)",
     readings: tanishqRows(1, 14040), forecast: tier1(14040, 1),
     en: { price: "₹14,040", label: "Tanishq's listed 22K rate, checked 9:40 AM today", line: null },
-    hi: { price: "₹14,040", label: "Tanishq की सूचीबद्ध 22K दर, आज 9:40 am जांची गई", line: null },
+    hi: { price: "₹14,040", label: "Tanishq की साइट पर दिया 22 कैरेट भाव, आज 9:40 am देखा गया", line: null },
   },
   {
     name: "fresh Tanishq newer than an estimate-tier forecast.json",
     readings: tanishqRows(2, 14040), forecast: ibja(14100),
     en: { price: "₹14,040", label: "Tanishq's listed 22K rate, checked 8:40 AM today", line: null },
-    hi: { price: "₹14,040", label: "Tanishq की सूचीबद्ध 22K दर, आज 8:40 am जांची गई", line: null },
+    hi: { price: "₹14,040", label: "Tanishq की साइट पर दिया 22 कैरेट भाव, आज 8:40 am देखा गया", line: null },
   },
   {
     name: "not fresh (20h) -> estimate + dated Tanishq figure",
     readings: tanishqRows(20, 14040), forecast: ibja(14100),
     en: { price: "≈ ₹14,100", label: "Our estimate for today, from India's official gold rate", line: "Tanishq's listed rate, checked 2:40 PM yesterday: ₹14,040" },
-    hi: { price: "≈ ₹14,100", label: "आज के लिए हमारा अनुमान, भारत की आधिकारिक सोने की दर से", line: "Tanishq की सूचीबद्ध दर, कल 2:40 pm जांची गई: ₹14,040" },
+    hi: { price: "≈ ₹14,100", label: "आज के लिए हमारा अनुमान, भारत के आधिकारिक रोज़ के भाव से", line: "Tanishq का बताया भाव, बीते कल 2:40 pm देखा गया: ₹14,040" },
   },
   {
     name: "stale 40h (past 36h) -> estimate + old Tanishq figure WITH date and time",
     readings: tanishqRows(40, 14040), forecast: ibja(14100),
     en: { price: "≈ ₹14,100", label: "Our estimate for today, from India's official gold rate", line: "Tanishq's listed rate when last checked, 6:40 PM, 23 Sept: ₹14,040 — not updated since" },
-    hi: { price: "≈ ₹14,100", label: "आज के लिए हमारा अनुमान, भारत की आधिकारिक सोने की दर से", line: "Tanishq की सूचीबद्ध दर, आख़िरी बार 23 सित॰, 6:40 pm जांची गई: ₹14,040 — तब से अपडेट नहीं हुई" },
+    hi: { price: "≈ ₹14,100", label: "आज के लिए हमारा अनुमान, भारत के आधिकारिक रोज़ के भाव से", line: "Tanishq का बताया भाव, आख़िरी बार 23 सित॰, 6:40 pm देखा गया: ₹14,040 — तब से अपडेट नहीं हुआ" },
   },
   {
     name: "blocked for days (Tanishq 5 days old) -> estimate + old Tanishq figure WITH date and time",
     readings: tanishqRows(120, 13900), forecast: ibja(14100),
     en: { price: "≈ ₹14,100", label: "Our estimate for today, from India's official gold rate", line: "Tanishq's listed rate when last checked, 10:40 AM, 20 Sept: ₹13,900 — not updated since" },
-    hi: { price: "≈ ₹14,100", label: "आज के लिए हमारा अनुमान, भारत की आधिकारिक सोने की दर से", line: "Tanishq की सूचीबद्ध दर, आख़िरी बार 20 सित॰, 10:40 am जांची गई: ₹13,900 — तब से अपडेट नहीं हुई" },
+    hi: { price: "≈ ₹14,100", label: "आज के लिए हमारा अनुमान, भारत के आधिकारिक रोज़ के भाव से", line: "Tanishq का बताया भाव, आख़िरी बार 20 सित॰, 10:40 am देखा गया: ₹13,900 — तब से अपडेट नहीं हुआ" },
   },
   {
     name: "fusion estimate (Tanishq + IBJA both down)",
     readings: tanishqRows(20, 14040), forecast: fusion(14080),
     en: { price: "≈ ₹14,080", label: "Our estimate for today, based on other jewellers' listed rates", line: "Tanishq's listed rate, checked 2:40 PM yesterday: ₹14,040" },
-    hi: { price: "≈ ₹14,080", label: "आज के लिए हमारा अनुमान, दूसरे जौहरियों की सूचीबद्ध दरों पर आधारित", line: "Tanishq की सूचीबद्ध दर, कल 2:40 pm जांची गई: ₹14,040" },
+    hi: { price: "≈ ₹14,080", label: "आज के लिए हमारा अनुमान, दूसरे ज्वेलर्स के बताए भाव पर आधारित", line: "Tanishq का बताया भाव, बीते कल 2:40 pm देखा गया: ₹14,040" },
   },
   {
     name: "no estimate this cycle (inference tier 4) -> last Tanishq reading, dated",
     readings: tanishqRows(30, 14040), forecast: tier1(14040, 30),
     en: { price: "₹14,040", label: "Tanishq's listed 22K rate, last checked 4:40 AM yesterday", line: null },
-    hi: { price: "₹14,040", label: "Tanishq की सूचीबद्ध 22K दर, आख़िरी बार कल 4:40 am जांची गई", line: null },
+    hi: { price: "₹14,040", label: "Tanishq की साइट पर दिया 22 कैरेट भाव, आख़िरी बार बीते कल 4:40 am देखा गया", line: null },
   },
   {
     name: "Tanishq disabled (takedown: IBJA-derived history) -> estimate, no Tanishq name",
     readings: derivedRows(14100), forecast: ibja(14100),
     en: { price: "≈ ₹14,100", label: "Our estimate for today, from India's official gold rate", line: null },
-    hi: { price: "≈ ₹14,100", label: "आज के लिए हमारा अनुमान, भारत की आधिकारिक सोने की दर से", line: null },
+    hi: { price: "≈ ₹14,100", label: "आज के लिए हमारा अनुमान, भारत के आधिकारिक रोज़ के भाव से", line: null },
   },
   {
     name: "implausible fresh reading (+20% vs IBJA estimate) -> estimate, reading not shown",
     readings: tanishqRows(1, 16920), forecast: ibja(14100),
     en: { price: "≈ ₹14,100", label: "Our estimate for today, from India's official gold rate", line: null },
-    hi: { price: "≈ ₹14,100", label: "आज के लिए हमारा अनुमान, भारत की आधिकारिक सोने की दर से", line: null },
+    hi: { price: "≈ ₹14,100", label: "आज के लिए हमारा अनुमान, भारत के आधिकारिक रोज़ के भाव से", line: null },
   },
   {
     name: "implausible newer reading on a Tanishq-tier cycle -> the inference-gated reading",
     readings: tanishqRows(1, 17000), forecast: tier1(14040, 3),
     en: { price: "₹14,040", label: "Tanishq's listed 22K rate, checked 7:40 AM today", line: null },
-    hi: { price: "₹14,040", label: "Tanishq की सूचीबद्ध 22K दर, आज 7:40 am जांची गई", line: null },
+    hi: { price: "₹14,040", label: "Tanishq की साइट पर दिया 22 कैरेट भाव, आज 7:40 am देखा गया", line: null },
   },
 ];
 
@@ -269,9 +269,9 @@ for (const lang of ["en", "hi"]) {
       assert.equal(got.tooltip, "22K estimate: ≈ ₹14,016");
       assert.equal(got.note, "per gram · Estimate from India's official daily gold rate");
     } else {
-      assert.equal(got.label, "22K अनुमान (₹/ग्राम)");
-      assert.equal(got.tooltip, "22K अनुमान: ≈ ₹14,016");
-      assert.equal(got.note, "प्रति ग्राम · भारत की आधिकारिक रोज़ाना सोने की दर से अनुमान");
+      assert.equal(got.label, "22 कैरेट अनुमान (₹/ग्राम)");
+      assert.equal(got.tooltip, "22 कैरेट अनुमान: ≈ ₹14,016");
+      assert.equal(got.note, "प्रति ग्राम · भारत के आधिकारिक रोज़ के भाव से निकाला अनुमान");
     }
     assert.ok(!TANISHQ_RE.test(`${got.label} ${got.tooltip} ${got.note}`));
   });
@@ -361,7 +361,7 @@ test("property: an estimate is never labelled as Tanishq's price; every Tanishq 
               assert.equal(v, tv, `line figure is not the Tanishq reading ${ctx}`);
               assert.ok(/\d{1,2}:\d{2}/.test(g.line), `Tanishq line without a time ${ctx}`);
               assert.ok(Math.abs(v - est) / est <= 0.12, `implausible line figure ${ctx}`);
-              const saysOld = /not updated since|तब से अपडेट नहीं हुई/.test(g.line);
+              const saysOld = /not updated since|तब से अपडेट नहीं हुआ/.test(g.line);
               assert.equal(saysOld, age > 36, `old-reading wording wrong for age ${age} ${ctx}`);
             }
             // Today's change only next to Tanishq's own latest reading, never an estimate.

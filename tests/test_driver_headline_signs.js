@@ -23,9 +23,9 @@ const WORDS = {
   },
   hi: { // gold clause checked with its verb below
     up: "महंगा हुआ है", down: "सस्ता हुआ है",
-    goldFlat: "वैश्विक सोने की कीमतें लगभग स्थिर रहीं",
-    inrAdded: "कमज़ोर रुपये ने", inrTookOff: "मज़बूत रुपये ने",
-    inrFlat: "रुपया लगभग स्थिर रहा",
+    goldFlat: "दुनिया के बाज़ार में सोने का भाव लगभग टिका रहा",
+    inrAdded: "कमज़ोर रुपये से", inrTookOff: "मज़बूत रुपये से",
+    inrFlat: "रुपया लगभग टिका रहा",
   },
 };
 
@@ -84,9 +84,9 @@ for (const lang of ["en", "hi"]) {
         assert.equal(has(headline, w.goldAdded), gold > 10, ctx);
         assert.equal(has(headline, w.goldTookOff), gold < -10, ctx);
       } else {
-        const goldClause = headline.match(/वैश्विक सोने की कीमतों ने करीब ₹[\d,]+ (जोड़े|घटाए)/);
+        const goldClause = headline.match(/सोने के भाव से करीब ₹[\d,]+ (बढ़े|घटे)/);
         assert.equal(Boolean(goldClause), Math.abs(gold) > 10, ctx);
-        if (goldClause) assert.equal(goldClause[1], gold > 0 ? "जोड़े" : "घटाए", ctx);
+        if (goldClause) assert.equal(goldClause[1], gold > 0 ? "बढ़े" : "घटे", ctx);
       }
       assert.equal(has(headline, w.goldFlat), Math.abs(gold) <= 10, ctx);
       // Rupee part follows the rupee's own sign (+ = weaker rupee = adds to the price)
@@ -94,7 +94,7 @@ for (const lang of ["en", "hi"]) {
       assert.equal(has(headline, w.inrTookOff), inr < -10, ctx);
       assert.equal(has(headline, w.inrFlat), Math.abs(inr) <= 10, ctx);
       if (lang === "hi" && Math.abs(inr) > 10) {
-        assert.ok(new RegExp(`रुपये ने करीब ₹[\\d,]+ ${inr > 0 ? "जोड़े" : "घटाए"}`).test(headline), ctx);
+        assert.ok(new RegExp(`रुपये से करीब ₹[\\d,]+ ${inr > 0 ? "बढ़े" : "घटे"}`).test(headline), ctx);
       }
       // Old wording that assumed a sign must never come back
       assert.ok(!/added back|plus a bit from|वापस जोड़/.test(headline), ctx);

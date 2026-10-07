@@ -279,7 +279,7 @@ jobs:
         continue-on-error: true
         env:
           DATA_ENC_KEY: ${{ secrets.DATA_ENC_KEY }}
-        run: python scripts/data_crypt.py encrypt data/ibja_rates.parquet data/feature_store/snapshots.parquet data/nextfix_oos.json data/nextfix_intraday_shadow.json
+        run: python scripts/data_crypt.py encrypt data/ibja_rates.parquet data/feature_store/snapshots.parquet data/nextfix_oos.json data/nextfix_p3_oos.json data/nextfix_p3_variants_oos.json data/nextfix_intraday_shadow.json
 
       - name: Commit updated data files
         id: commit
@@ -292,7 +292,7 @@ jobs:
           # ibja_rates.parquet and feature_store/snapshots.parquet are added as plaintext only while
           # still tracked (pre-migration). Once migrated they are gitignored, git refuses them
           # (covered by `|| true`), and data/encrypted/ carries them instead. ADR 060.
-          git add data/forecast.json data/drift_metrics.json data/metrics_history.json data/ibja_rates.parquet data/chronos_probe.json data/calibration.json data/feature_store/snapshots.parquet data/tanishq_scrape_success_rate.json data/cadence_metrics.json data/ibja_derived_prices.json data/nextfix_oos.json data/nextfix_intraday_shadow.json data/nextfix_intraday_backtest.json || true
+          git add data/forecast.json data/drift_metrics.json data/metrics_history.json data/ibja_rates.parquet data/chronos_probe.json data/calibration.json data/feature_store/snapshots.parquet data/tanishq_scrape_success_rate.json data/cadence_metrics.json data/ibja_derived_prices.json data/nextfix_oos.json data/nextfix_p3_oos.json data/nextfix_p3_variants_oos.json data/model_demotion_state.json data/nextfix_intraday_shadow.json data/nextfix_intraday_backtest.json || true
           git add data/encrypted/ || true
           # Fails the commit if the key, or its base64/hex form, is in any file about to be committed.
           python scripts/data_crypt.py scan-key --changed

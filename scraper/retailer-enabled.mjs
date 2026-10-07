@@ -17,7 +17,7 @@ import { fileURLToPath } from "node:url";
 
 const __filename = fileURLToPath(import.meta.url);
 export const DEFAULT_CONFIG_PATH = resolve(dirname(__filename), "..", "config", "retailers.json");
-export const KNOWN_RETAILERS = ["tanishq", "grt", "malabar", "kalyan"];
+export const KNOWN_RETAILERS = ["tanishq", "grt", "malabar"]; // kalyan removed 2026-10-05, ADR 070
 export const EXIT_DISABLED = 10;
 
 export function loadRetailerFlags(path = process.env.RETAILERS_CONFIG_PATH ?? DEFAULT_CONFIG_PATH) {

@@ -1,8 +1,10 @@
-# ADR 068: automatic demotion of a live model to "hold" (PROPOSED; thresholds are GG's)
+# ADR 068: automatic demotion of a live model to "hold"
 
-**Status:** Proposed 2026-10-05. Built (`ml/demotion.py`, `tests/test_demotion.py`,
-`scripts/simulate_demotion.py`) and NOT wired: nothing on the live path imports it. Turning it on,
-and every number below, is GG's decision.
+**Status:** Accepted and wired 2026-10-05 (GG decision D3: direction floor 0.55, persistence 3,
+windows 40/40/60; "if the live model trips it, the site falls back to 'hold' automatically and an
+alert reaches GG through the existing GitHub-side ntfy path"). Built in `ml/demotion.py`, called
+from `ml.nextfix.run`; alert T16 in `ml/notifications.py`. Tests: `tests/test_demotion.py`,
+`tests/test_demotion_wired.py`.
 
 ## Context
 
@@ -47,7 +49,7 @@ Per rule: with floor 0.50 the **direction rule almost never fires** on a model w
 (20% within 120 days): a model guessing at 50% is not "below 50%". Floor 0.55 catches 59%
 (0% false); floor 0.60 catches 85% (3.3% false). The error rule carries nearly all of the detection.
 
-## Decisions for GG
+## Decisions (answered by GG, 2026-10-05, D3)
 
 1. Turn it on at all, and the action on demotion.
 2. `persist` (false-demotion vs detection delay), window sizes, alpha.
@@ -60,7 +62,30 @@ Per rule: with floor 0.50 the **direction rule almost never fires** on a model w
 - A model that lost its edge gradually is caught later than one that lost it abruptly.
 - Daily re-testing inflates false alarms; `persist` is the control and is simulated, not derived.
 
+## Wired behaviour (D3)
+
+- Every `ml.nextfix.run` evaluates the rules on the LIVE model's record (P3, ADR 069), including
+  its re-run days, and keeps `data/model_demotion_state.json` (committed by check-price's bot PR).
+- **On a trip:** `forecast()` skips the model window, so the headline holds the latest fix with the
+  flat-hold range and no direction line is shown (hold windows never show one). Any rule trips the
+  whole model; the range rule does not demote the range alone.
+- **Sticky:** nothing re-promotes. Resetting the state file while the record is still degraded
+  re-demotes at the next run. To bring the model back: wait until the record recovers (or rebuild
+  it), then set `demoted` to false in the state file in a human PR.
+- **Alert T16:** priority 5, bypasses quiet hours, once per demotion (deduped on `since`), private
+  topic only (`NTFY_TOPIC`; T16 is not on the public allowlist).
+- **A broken monitor** never switches the model off and never raises; `next_fix.demotion.checked`
+  is false and the rules re-run on every cycle. A state file written for another model version is
+  ignored.
+- **Proof (tests):** a healthy synthetic record: not demoted, no alert. An inverted model: demoted
+  on the run, mode `after_afternoon_rate`, `demoted` true, `p_up` null, alert built once, state
+  persisted; stays demoted when the record looks healthy again; reset-with-degraded-record re-fires.
+- Evaluated on the real P3 record at wiring time: error rule not breached (model MAE 104.2 vs hold
+  125.7 over the last 40 folds, p worse 0.985), direction not breached (28 of 40, p below floor
+  0.98). Operating characteristics at these settings are in the table above (row "direction floor
+  0.55").
+
 ## Rollback
 
-Not wired. To wire: call `demotion_status(folds, hits)` from `ml.nextfix.run` and act on
-`demote_any`; remove the call to revert.
+Remove the `_demotion` call in `ml.nextfix.run` (the live model then never demotes) or delete
+`data/model_demotion_state.json`; the alert needs no removal (it only reads the state).

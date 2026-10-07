@@ -1,8 +1,9 @@
-"""ml.demotion -- pre-registered rules that switch a live model back to "hold" (ADR 068, PROPOSED).
+"""ml.demotion -- pre-registered rules that switch a live model back to "hold" (ADR 068, WIRED).
 
-Built READY and NOT WIRED: nothing imports this module on the live path. The thresholds in
-``DemotionParams`` are PROPOSALS with measured operating characteristics
-(scripts/simulate_demotion.py); GG sets the numbers. Pure functions over the model's own
+Wired into ``ml.nextfix.run`` (GG decision D3, 2026-10-05) with GG's settings: direction floor
+0.55, persistence 3, windows 40/40/60. Their operating characteristics are in ADR 068
+(scripts/simulate_demotion.py). A demotion is sticky: ``apply_status`` keeps a model demoted until a
+human edits ``data/model_demotion_state.json``. Pure functions over the model's own
 out-of-sample record (``ml.nextfix`` folds: pm0, pm1, ret, p_up, vol), so the rules score exactly
 what users were shown, in time order, with nothing from the future.
 
@@ -37,13 +38,13 @@ import numpy as np
 
 @dataclass(frozen=True)
 class DemotionParams:
-    """PROPOSED defaults. Every value is GG's to set (ADR 068)."""
+    """GG's approved settings (D3, 2026-10-05; ADR 068). Changing any value is GG's decision."""
 
     err_window: int = 40
     err_alpha: float = 0.05
     hac_lags: int = 4
     dir_window: int = 40
-    dir_floor: float = 0.50
+    dir_floor: float = 0.55  # 0.50 would be nearly inert: a model guessing at 50% is not below 50%
     dir_alpha: float = 0.05
     cov_window: int = 60
     cov_nominal: float = 0.80
@@ -140,3 +141,85 @@ def demotion_status(
         out[name] = fn(0)
     out["demote_any"] = any(out["demote"].values())
     return out
+
+
+# ── sticky state (data/model_demotion_state.json) ───────────────────────────────────────────────
+
+STATE_SCHEMA = 1
+
+
+def empty_state(model_version: str) -> dict:
+    return {
+        "schema_version": STATE_SCHEMA,
+        "model_version": model_version,
+        "demoted": False,
+        "since": None,
+        "reasons": [],
+        "last_checked": None,
+        "history": [],
+    }
+
+
+def load_state(path, model_version: str) -> dict:
+    """The persisted state for THIS model version.
+
+    * file missing: a fresh "not demoted" state (first run);
+    * file present but unreadable, not a JSON object, or ``demoted`` not a bool: FAIL CLOSED, a
+      demoted state with reason ``state_unreadable`` (the hold figure is the safe one; T16 alerts
+      and a person repairs the file; rule 98a). Never silently re-promotes a demoted model;
+    * a state written for another model version is not applied to this one.
+    """
+    import json
+    from datetime import UTC, datetime
+
+    if not path.exists():
+        return empty_state(model_version)
+    try:
+        data = json.loads(path.read_text(encoding="utf-8"))
+        ok = isinstance(data, dict) and isinstance(data.get("demoted"), bool)
+    except (OSError, ValueError):
+        data, ok = None, False
+    if not ok:
+        now = datetime.now(UTC).isoformat()
+        reasons = [{"rule": "state_unreadable", "path": str(path.name)}]
+        return {
+            **empty_state(model_version),
+            "demoted": True,
+            "since": now,
+            "reasons": reasons,
+            "history": [{"at": now, "event": "demoted", "reasons": reasons}],
+        }
+    if data.get("model_version") != model_version:
+        return empty_state(model_version)
+    return {**empty_state(model_version), **data}
+
+
+def save_state(path, state: dict) -> None:
+    import json
+
+    path.write_text(json.dumps(state, indent=1) + "\n", encoding="utf-8")
+
+
+def _reasons(status: dict) -> list[dict]:
+    out = []
+    for rule, flag in status["demote"].items():
+        if flag:
+            keep = {k: v for k, v in status[rule].items() if k != "breach"}
+            out.append({"rule": rule, **keep})
+    return out
+
+
+def apply_status(state: dict, status: dict, now_iso: str) -> tuple[dict, bool]:
+    """Fold today's ``demotion_status`` into the sticky state. Returns (new state, newly_demoted).
+
+    Once demoted a model stays demoted: nothing here re-promotes it (a human edits the file).
+    """
+    new = {**state, "last_checked": now_iso, "history": list(state.get("history", []))}
+    if state.get("demoted"):
+        return new, False
+    if status.get("demote_any"):
+        reasons = _reasons(status)
+        new.update(demoted=True, since=now_iso, reasons=reasons)
+        new["history"].append({"at": now_iso, "event": "demoted", "reasons": reasons})
+        return new, True
+    return new, False

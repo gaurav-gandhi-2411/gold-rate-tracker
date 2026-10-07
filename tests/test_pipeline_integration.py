@@ -20,7 +20,6 @@ from zoneinfo import ZoneInfo
 import ml.calibration as cal
 import ml.inference as inf
 import ml.sources.grt as grt_mod
-import ml.sources.kalyan as kalyan_mod
 import ml.sources.malabar as malabar_mod
 import pandas as pd
 import pytest
@@ -38,7 +37,6 @@ def _disable_fusion(monkeypatch) -> None:
     """Never let a unit test hit the real network via the tier-3 fusion fallback."""
     monkeypatch.setattr(grt_mod, "fetch_grt", _raise_network)
     monkeypatch.setattr(malabar_mod, "fetch_malabar", _raise_network)
-    monkeypatch.setattr(kalyan_mod, "fetch_kalyan_city", _raise_network)
 
 
 # ---------------------------------------------------------------------------

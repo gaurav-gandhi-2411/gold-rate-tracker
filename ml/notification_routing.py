@@ -43,6 +43,7 @@ KNOWN_OPS: frozenset[str] = frozenset(
         "T12",  # Tanishq self-hosted runner failing
         "T13",  # direction dataset stalled
         "T14",  # Tanishq has not updated (GitHub-side, runner-independent)
+        "T16",  # live next-rate model switched off by its demotion rules (ADR 068)
     }
 )
 

@@ -1,0 +1,16 @@
+pytest tests -q -m 'not integration' (CI parity), venv grt-venv, base 55d672c9, 2026-10-05
+wall 642 s
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+============================ slowest 10 durations =============================
+96.97s call     tests/test_leak_guard_replays.py::TestLeak2SameDayIndiaVix::test_prior_day_vix_passes
+41.17s call     tests/test_stamp_sw_version.py::test_one_byte_change_in_every_shell_file_changes_version
+35.12s call     tests/test_event_watch.py::TestBlockBootstrapDiffTest::test_ratio_below_threshold_fails_gate_even_if_significant
+32.76s call     tests/test_evaluate_reframed.py::TestRunWalkForwardReframed::test_raw_binary_h5_smoke
+20.26s call     tests/test_nextfix.py::test_the_model_beats_flat_hold_when_the_fix_lags_the_global_price
+15.60s call     tests/test_direction_harness.py::TestRunWalkForward::test_deterministic_with_seed_42
+14.99s call     tests/test_config_sweep.py::TestRunConfigSweep::test_gbm_uncalibrated_vs_calibrated_both_run
+13.90s call     tests/test_prepare_direction_eval_publish.py::test_older_code_run_stands_down_newer_publishes_without_conflict
+13.64s call     tests/test_preregistration.py::TestAmendmentA1::test_live_arm_builds_consecutive_day_labels
+12.09s call     tests/test_preregistration.py::TestAmendmentA1::test_live_arm_scores_only_post_registration_days_with_embargo
+1976 passed, 1 skipped, 1 deselected, 19 warnings in 638.28s (0:10:38)
+EXIT=0

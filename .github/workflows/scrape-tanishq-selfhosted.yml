@@ -51,6 +51,15 @@ on:
         description: "Scheduled IST visit slot this run serves (HH:MM), set by scripts/win/tanishq_dispatch.ps1"
         required: false
         default: ""
+      dependency_proof:
+        description: >-
+          Dependency PROOF run (scripts/check_scraper_dependency_change.py). Dispatch this on the PR
+          branch of any change to scraper/package*.json: it installs deps and browsers into a scratch
+          PLAYWRIGHT_BROWSERS_PATH (the production browser cache is never touched, so Playwright
+          cannot garbage-collect it), runs a real scrape, and commits nothing to the repo.
+        type: boolean
+        required: false
+        default: false
   push:
     branches: [master]
     paths:
@@ -135,12 +144,27 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
+      - name: Use a scratch browser cache (dependency proof run only)
+        # Proof runs only (workflow_dispatch with dependency_proof=true). 2026-10: a trial of
+        # Playwright 1.63.0 on this runner deleted the working production Chromium
+        # ("Removing unused browser ...chromium-1234"), and #1846 then broke the install. A
+        # scratch path keeps the production cache out of reach. Normal runs skip this step.
+        if: ${{ inputs.dependency_proof == true }}
+        run: |
+          set -e
+          SCRATCH="${RUNNER_TEMP}/pw-proof-${GITHUB_RUN_ID}"
+          mkdir -p "$SCRATCH"
+          echo "PLAYWRIGHT_BROWSERS_PATH=$SCRATCH" >> "$GITHUB_ENV"
+          echo "Dependency proof run: PLAYWRIGHT_BROWSERS_PATH=$SCRATCH"
+
       - name: Set up Node.js
         uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
         with:
           node-version: "20"
-          cache: "npm"
-          cache-dependency-path: scraper/package-lock.json
+          # No `cache: npm` here (2026-10-05): this job runs on the laptop, which keeps its own npm
+          # cache, so restoring GitHub's copy only adds time (22-63 s per run) and, twice in the last
+          # 12 successful runs (2026-10-04T11:16Z, 2026-10-05T10:05Z), stalled for ~10 min at
+          # "Received 0 of 32195634 (0.0%)" before the scrape could start. `npm ci` below needs ~25 s.
 
       - name: Install scraper dependencies
         working-directory: scraper
@@ -189,6 +213,21 @@ jobs:
           cat /tmp/scrape_stderr.log  # still visible in the job log
           cat /tmp/reading.json | node update-and-notify.js
 
+      - name: "Dependency proof: real scrape succeeded with scratch browsers"
+        # Fails the run unless the scrape step really succeeded, so a green step here is the
+        # evidence scripts/check_scraper_dependency_change.py looks for. The marker line is
+        # parsed from this job's log. Skipped on every normal run.
+        if: ${{ always() && inputs.dependency_proof == true }}
+        run: |
+          set -e
+          if [ "${{ steps.scrape.outcome }}" != "success" ]; then
+            echo "Proof FAILED: scrape step outcome is '${{ steps.scrape.outcome }}' (install/scrape did not succeed)."
+            exit 1
+          fi
+          N=$(ls -1 "$PLAYWRIGHT_BROWSERS_PATH" | wc -l | tr -d ' ')
+          PW=$(cd scraper && node -p "require('playwright/package.json').version")
+          echo "DEPENDENCY_PROOF scratch_browsers_path=$PLAYWRIGHT_BROWSERS_PATH browsers_installed=$N playwright=$PW head_sha=$GITHUB_SHA scrape=success"
+
       - name: Flag scrape miss
         # continue-on-error above means a CF-blocked run still reports green
         # at the step level. Surface the miss as a run-summary annotation so
@@ -207,7 +246,9 @@ jobs:
         # signal T12 (ml/notifications.py) reads to detect "runner is online and
         # picking up jobs, but they keep failing" (docs/RUNBOOK.md), a distinct
         # failure mode from "runner offline" (which stays silent by design).
-        if: always()
+        # A dependency proof run (dependency_proof=true) commits nothing: no health record, no
+        # outcomes-log line, no bot PR, so it can never alter production data.
+        if: ${{ always() && inputs.dependency_proof != true }}
         continue-on-error: true
         env:
           # via env, never interpolated into the script body (workflow_dispatch input)

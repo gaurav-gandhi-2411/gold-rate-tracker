@@ -1,6 +1,10 @@
 # ADR 026 — Kalyan-Anchored City-Level Consensus (Fusion Foundation, Option 1)
 
 **Status:** Accepted — Phases A/B implemented, Phase C (shadow) live, Phase D (promotion) pending.
+**Update 2026-10-05:** Kalyan, the only city-granular source this ADR was built around,
+was retired (ADR 070). The city layer is removed from code; the national benchmark and the
+tier-3 GRT/Malabar fallback continue. Everything below describes the system as it was
+built and measured; it is kept unchanged as the historical record.
 **Update 2026-07-30:** the city-level precision this ADR originally targeted is not supported by
 accumulated data — see "Update: city-differentiation finding" below. The two-layer architecture
 stands; the *labeling* of its output changes from "city-specific" to "national retail consensus."

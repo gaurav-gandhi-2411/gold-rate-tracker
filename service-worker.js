@@ -166,7 +166,15 @@
 // "today's change" only next to Tanishq's own latest reading; the trend chart plots
 // data/ibja_derived_prices.json labelled as our estimate (new #chart-source-note). app.js +
 // i18n.js + index.html changed.
-const VERSION = "v74-20261005-direction-wording";
+// 2026-10-05 (v79; analytics flag-off PR #2391, after v74 direction wording and v75 Hindi): new
+// analytics.js (item 5c, GoatCounter), merged OFF -- inert unless FEATURE_FLAGS.analytics is on
+// and ANALYTICS_SITE_CODE is set. flags.js + index.html + i18n.js changed too; analytics.js is a
+// new precached shell file (below). Nothing renders or is requested differently with the flag off.
+// 2026-10-07 (v80): Kalyan retired (PR #2420): its unused label was removed from app.js and i18n.js.
+// 2026-10-07 (v81): Hindi wording, part 1 of 3 (i18n.js: natural Hindi from docs/HINDI_GLOSSARY.md, plus the fractionOutOf10Phrase language fix). Hindi only; English unchanged.
+// 2026-10-07 (v82): Hindi wording, part 2 of 3 (i18n.js strings pinned by test_hero_display_state.js / test_driver_headline_signs.js, updated here). Hindi only; English unchanged.
+// 2026-10-07 (v83): Hindi wording, part 3 of 3 (how-we-know-strings.js). Hindi only; English unchanged.
+const VERSION = "v83-20261007-hindi-wording-3";
 const SHELL_CACHE = `gold-shell-${VERSION}`;
 
 const SHELL_FILES = [
@@ -174,6 +182,7 @@ const SHELL_FILES = [
   "./index.html",
   "./style.css",
   "./flags.js",
+  "./analytics.js",
   "./app.js",
   "./i18n.js",
   "./how-we-know.html",

@@ -2,7 +2,7 @@
 
 Also produces the committed fixture the headless render test drives the real app.js
 with (tests/fixtures/retailer_takedown/): the output of the REAL pipeline
-(scripts/build_ibja_derived_prices.py -> ml.inference.main) with Tanishq and Kalyan
+(scripts/build_ibja_derived_prices.py -> ml.inference.main) with Tanishq and GRT
 switched off. Regenerate after an intentional pipeline change with
 ``UPDATE_TAKEDOWN_FIXTURE=1 pytest tests/test_retailer_takedown.py``.
 """
@@ -11,7 +11,6 @@ from __future__ import annotations
 
 import json
 import os
-import types
 from datetime import UTC, datetime, timedelta
 from pathlib import Path
 
@@ -19,7 +18,6 @@ import ml.calibration as calibration_mod
 import ml.inference as inf
 import ml.shadow_fusion as shadow
 import ml.sources.grt as grt_mod
-import ml.sources.kalyan as kalyan_mod
 import ml.sources.malabar as malabar_mod
 import pandas as pd
 import pytest
@@ -183,9 +181,9 @@ def test_missing_config_fails_loudly(tmp_path):
 
 
 def test_disabled_listing_and_unknown_name(switch):
-    switch(tanishq=False, kalyan=False)
-    assert disabled_retailers() == ["kalyan", "tanishq"]
-    assert is_enabled("grt") is True
+    switch(tanishq=False, grt=False)
+    assert disabled_retailers() == ["grt", "tanishq"]
+    assert is_enabled("malabar") is True
     with pytest.raises(RetailerConfigError):
         is_enabled("joyalukkas")
 
@@ -227,26 +225,24 @@ def test_tanishq_disabled_and_everything_else_down_fails_loudly(tmp_path, monkey
     (tmp_path / "ibja_rates.parquet").unlink()
     for mod, name in ((grt_mod, "fetch_grt"), (malabar_mod, "fetch_malabar")):
         monkeypatch.setattr(mod, name, _raise_network)
-    monkeypatch.setattr(kalyan_mod, "fetch_kalyan_city", _raise_network)
     with pytest.raises(inf.RetailerDisabledNoSourceError):
         inf.main(now=NOW)
     assert not (tmp_path / "forecast.json").exists()  # previous file is left untouched
 
 
 def test_fusion_tier_never_fetches_a_disabled_retailer(tmp_path, monkeypatch, switch):
-    switch(kalyan=False)
+    switch(grt=False)
     calls: list[str] = []
 
-    def kalyan_fetch(_city):
-        calls.append("kalyan")
+    def grt_fetch():
+        calls.append("grt")
         raise AssertionError("disabled retailer must not be fetched")
 
-    monkeypatch.setattr(grt_mod, "fetch_grt", lambda: _reading("grt", 14000.0))
+    monkeypatch.setattr(grt_mod, "fetch_grt", grt_fetch)
     monkeypatch.setattr(malabar_mod, "fetch_malabar", lambda: _reading("malabar", 14100.0))
-    monkeypatch.setattr(kalyan_mod, "fetch_kalyan_city", kalyan_fetch)
     result = inf._try_fusion_fallback(tmp_path, NOW)
     assert result is not None and result[1] == "fusion_consensus"
-    assert result[5] == ["grt", "malabar"]
+    assert result[5] == ["malabar"]
     assert calls == []
 
 
@@ -254,21 +250,16 @@ def test_fusion_tier_drops_a_stale_retailer_reading(tmp_path, monkeypatch, switc
     old = NOW - timedelta(hours=inf._FUSION_MAX_AGE_H + 1)
     monkeypatch.setattr(grt_mod, "fetch_grt", lambda: _reading("grt", 14000.0))
     monkeypatch.setattr(malabar_mod, "fetch_malabar", lambda: _reading("malabar", 14100.0, old))
-    monkeypatch.setattr(
-        kalyan_mod,
-        "fetch_kalyan_city",
-        lambda _c: types.SimpleNamespace(reading=_reading("kalyan", 14080.0, old)),
-    )
     result = inf._try_fusion_fallback(tmp_path, NOW)
     assert result is not None
-    assert result[5] == ["grt"]  # the two stale boards are not shown by name
+    assert result[5] == ["grt"]  # the stale board is not shown by name
 
 
 # ── shadow fusion + calibration ─────────────────────────────────────────────
 
 
 def test_shadow_fusion_skips_disabled_retailers(monkeypatch, switch):
-    switch(grt=False, kalyan=False)
+    switch(grt=False)
     fetched: list[str] = []
     monkeypatch.setitem(
         shadow._NATIONAL_FETCHERS, "ibja", lambda: fetched.append("ibja") or _reading("ibja", 1e4)
@@ -281,11 +272,9 @@ def test_shadow_fusion_skips_disabled_retailers(monkeypatch, switch):
         "malabar",
         lambda: fetched.append("malabar") or _reading("malabar", 1e4),
     )
-    monkeypatch.setattr(shadow, "fetch_kalyan_city", lambda _c: fetched.append("kalyan"))
     _readings, failures = shadow._fetch_national_readings()
-    k_readings, k_failures = shadow._fetch_kalyan_readings()
     assert fetched == ["ibja", "malabar"]
-    assert failures == {} and k_readings == {} and k_failures == {}
+    assert failures == {}
 
 
 def test_calibration_does_not_refit_or_score_when_tanishq_disabled(tmp_path, switch):
@@ -317,15 +306,12 @@ def _run_takedown_pipeline(data_dir: Path) -> tuple[dict, list[dict]]:
 
 
 def test_takedown_end_to_end_produces_valid_ibja_forecast(tmp_path, monkeypatch, switch):
-    """Tanishq AND a fusion retailer (Kalyan) off: the real pipeline still writes a
+    """Tanishq AND a fusion retailer (GRT) off: the real pipeline still writes a
     valid forecast.json via IBJA x markup, and never touches a disabled source."""
-    switch(tanishq=False, kalyan=False)
+    switch(tanishq=False, grt=False)
     monkeypatch.setattr(inf, "DATA_DIR", tmp_path)
-    for mod, name in ((grt_mod, "fetch_grt"), (malabar_mod, "fetch_malabar")):
-        monkeypatch.setattr(mod, name, _raise_network)
-    monkeypatch.setattr(
-        kalyan_mod, "fetch_kalyan_city", lambda _c: pytest.fail("kalyan is disabled")
-    )
+    monkeypatch.setattr(grt_mod, "fetch_grt", lambda: pytest.fail("grt is disabled"))
+    monkeypatch.setattr(malabar_mod, "fetch_malabar", _raise_network)
 
     fc, prices = _run_takedown_pipeline(tmp_path)
 
