@@ -172,6 +172,7 @@ function renderFullMethodology(fc, bt, drift, coverage, bandCoverage) {
           })}</div>
         </div>
         <p class="meth-note">${tHwk("methDirectionOnNote")}</p>
+        <p class="meth-note">${tHwk("methDirectionSource")}</p>
       </div>
     `);
   } else if (fc?.chronos_companion?.status === "success") {
