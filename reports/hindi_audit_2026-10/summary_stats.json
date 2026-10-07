@@ -1,0 +1,191 @@
+{
+ "label": "LLM consensus, not native review",
+ "judges_kept": [
+  "gemma2:9b",
+  "llama3.1:8b",
+  "qwen3:30b-a3b"
+ ],
+ "judges_dropped": [
+  "qwen3:8b"
+ ],
+ "per_judge": {
+  "gemma2:9b": {
+   "n_scored": 590,
+   "n_parse_fail": 0
+  },
+  "llama3.1:8b": {
+   "n_scored": 590,
+   "n_parse_fail": 0
+  },
+  "qwen3:30b-a3b": {
+   "n_scored": 352,
+   "n_parse_fail": 1
+  }
+ },
+ "agreement": {
+  "gemma2:9b vs llama3.1:8b": {
+   "n": 353,
+   "natural": {
+    "pct_agree": 0.912,
+    "kappa": 0.37,
+    "pass_rate_a": 0.909,
+    "pass_rate_b": 0.941,
+    "within1": 0.949
+   },
+   "correct": {
+    "pct_agree": 0.924,
+    "kappa": 0.333,
+    "pass_rate_a": 0.926,
+    "pass_rate_b": 0.952,
+    "within1": 0.926
+   },
+   "glossary": {
+    "pct_agree": 0.926,
+    "kappa": 0.162,
+    "pass_rate_a": 0.98,
+    "pass_rate_b": 0.929,
+    "within1": 0.926
+   },
+   "grammar": {
+    "pct_agree": 0.983,
+    "kappa": -0.005,
+    "pass_rate_a": 0.986,
+    "pass_rate_b": 0.997,
+    "within1": 0.983
+   },
+   "overall": {
+    "pct_agree": 0.884,
+    "kappa": 0.307,
+    "pass_rate_a": 0.892,
+    "pass_rate_b": 0.924,
+    "within1": 0.904
+   }
+  },
+  "gemma2:9b vs qwen3:30b-a3b": {
+   "n": 352,
+   "natural": {
+    "pct_agree": 0.832,
+    "kappa": 0.217,
+    "pass_rate_a": 0.909,
+    "pass_rate_b": 0.849,
+    "within1": 0.895
+   },
+   "correct": {
+    "pct_agree": 0.918,
+    "kappa": 0.218,
+    "pass_rate_a": 0.926,
+    "pass_rate_b": 0.963,
+    "within1": 0.918
+   },
+   "glossary": {
+    "pct_agree": 0.872,
+    "kappa": 0.121,
+    "pass_rate_a": 0.98,
+    "pass_rate_b": 0.869,
+    "within1": 0.872
+   },
+   "grammar": {
+    "pct_agree": 0.972,
+    "kappa": 0.153,
+    "pass_rate_a": 0.986,
+    "pass_rate_b": 0.98,
+    "within1": 0.974
+   },
+   "overall": {
+    "pct_agree": 0.821,
+    "kappa": 0.238,
+    "pass_rate_a": 0.892,
+    "pass_rate_b": 0.838,
+    "within1": 0.866
+   }
+  },
+  "llama3.1:8b vs qwen3:30b-a3b": {
+   "n": 352,
+   "natural": {
+    "pct_agree": 0.852,
+    "kappa": 0.232,
+    "pass_rate_a": 0.94,
+    "pass_rate_b": 0.849,
+    "within1": 0.946
+   },
+   "correct": {
+    "pct_agree": 0.955,
+    "kappa": 0.443,
+    "pass_rate_a": 0.952,
+    "pass_rate_b": 0.963,
+    "within1": 0.963
+   },
+   "glossary": {
+    "pct_agree": 0.866,
+    "kappa": 0.271,
+    "pass_rate_a": 0.929,
+    "pass_rate_b": 0.869,
+    "within1": 0.872
+   },
+   "grammar": {
+    "pct_agree": 0.983,
+    "kappa": 0.246,
+    "pass_rate_a": 0.997,
+    "pass_rate_b": 0.98,
+    "within1": 0.983
+   },
+   "overall": {
+    "pct_agree": 0.841,
+    "kappa": 0.256,
+    "pass_rate_a": 0.923,
+    "pass_rate_b": 0.838,
+    "within1": 0.923
+   }
+  }
+ },
+ "old_vs_new": {
+  "gemma2:9b": {
+   "natural": {
+    "old_mean": 4.19,
+    "new_mean": 4.6,
+    "n_pairs": 237
+   },
+   "correct": {
+    "old_mean": 4.55,
+    "new_mean": 4.81,
+    "n_pairs": 237
+   },
+   "glossary": {
+    "old_mean": 4.73,
+    "new_mean": 4.98,
+    "n_pairs": 237
+   },
+   "grammar": {
+    "old_mean": 4.9,
+    "new_mean": 4.97,
+    "n_pairs": 237
+   }
+  },
+  "llama3.1:8b": {
+   "natural": {
+    "old_mean": 4.07,
+    "new_mean": 4.12,
+    "n_pairs": 237
+   },
+   "correct": {
+    "old_mean": 4.76,
+    "new_mean": 4.86,
+    "n_pairs": 237
+   },
+   "glossary": {
+    "old_mean": 4.52,
+    "new_mean": 4.83,
+    "n_pairs": 237
+   },
+   "grammar": {
+    "old_mean": 5.0,
+    "new_mean": 5.0,
+    "n_pairs": 237
+   }
+  },
+  "qwen3:30b-a3b": {}
+ },
+ "n_new_strings_scored_by_all_kept": 352,
+ "n_contested": 30,
+ "n_flagged_by_one_judge_only": 56
+}
