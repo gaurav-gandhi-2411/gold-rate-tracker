@@ -19,15 +19,19 @@ const SUPPORTED_LANGS = ["en", "hi"];
 // Converts a measured percentage into an honest "N times out of 10" phrase for
 // plain-language surfaces (main page). Always FLOORS, never rounds up, so the
 // claim can't overstate accuracy -- 78% becomes "about 7 times out of 10", not 8
-// (docs/PLAIN_LANGUAGE_AUDIT.md). English-only: reliabilityCoverage and
-// calibrationConfidenceAppend below call this directly; their hi equivalents are
-// on the pending-native-review list further down (STRINGS.hi has no entry for
-// either key right now) rather than a machine translation of the reworded English.
+// (docs/PLAIN_LANGUAGE_AUDIT.md). Language-aware (2026-10): in Hindi it returns the
+// matching Hindi phrase, so a Hindi sentence never carries an English fragment
+// (pv2ConfidenceNote/pv2RangeOddsClause already interpolated this into hi text).
 // The exact percentage/sample-size this rounds away is not lost -- it's preserved,
 // unrounded, on how-we-know.html (how-we-know-strings.js's methAccurateP2/
 // methBandAccuracy* keys read the same source data).
-function fractionOutOf10Phrase(pct) {
+function fractionOutOf10Phrase(pct, forceLang) {
   const n = Math.max(0, Math.min(10, Math.floor(pct / 10)));
+  // currentLang is a `let` declared further down this file; this only runs at call time.
+  if (forceLang !== "en" && typeof currentLang !== "undefined" && currentLang === "hi") {
+    if (n === 0) return "10 में से 1 बार भी नहीं";
+    return `लगभग 10 में से ${n} बार`;
+  }
   if (n === 0) return "less than 1 time out of 10";
   if (n === 1) return "about 1 time out of 10";
   return `about ${n} times out of 10`;
@@ -295,10 +299,10 @@ const STRINGS = {
     // one. fractionOutOf10Phrase floors so this never overstates (see its own
     // comment above). The exact percentage and n are not lost -- they're on
     // how-we-know.html (methAccurateP2CoveragePct), unrounded.
-    reliabilityCoverage: ({ pct }) => `The real price has stayed inside the range we show ${fractionOutOf10Phrase(pct)} so far.`,
+    reliabilityCoverage: ({ pct }) => `The real price has stayed inside the range we show ${fractionOutOf10Phrase(pct, "en")} so far.`,
     // Range hit rate from the walk-forward re-run on past days (next_fix.range_record): worded
     // as a test on past days, never as what the shown ranges did live.
-    reliabilityCoverageTested: ({ pct }) => `In a test on past days, the real price stayed inside a range like this ${fractionOutOf10Phrase(pct)}.`,
+    reliabilityCoverageTested: ({ pct }) => `In a test on past days, the real price stayed inside a range like this ${fractionOutOf10Phrase(pct, "en")}.`,
     reliabilityUnknown: "Still building a track record for this — check back later.",
     reliabilityDriftOnTrack: "Recent accuracy has stayed in line with the historical average.",
     reliabilityDriftWatch: "Recent accuracy has drifted a bit from the historical average — we're keeping an eye on it.",
@@ -340,7 +344,7 @@ const STRINGS = {
     // size (weeks measured) moves to how-we-know.html's "Band accuracy" section,
     // which reads the same calibration_band_coverage.json field.
     calibrationConfidenceAppend: ({ amount, coverage, n }) => coverage != null && n != null
-      ? ` In a test on past days, the real price landed within about ₹${amount}/gram of this estimate ${fractionOutOf10Phrase(coverage)}.`
+      ? ` In a test on past days, the real price landed within about ₹${amount}/gram of this estimate ${fractionOutOf10Phrase(coverage, "en")}.`
       : ` Based on past comparisons, the real price lands within about ₹${amount}/gram of this estimate.`,
     // R3: appended only when Tanishq confirmation itself has been silent for
     // TIER_DEGRADED_THRESHOLD_H, not just this cycle -- distinct from the
@@ -505,6 +509,8 @@ const STRINGS = {
   },
 
   hi: {
+    // Hindi wording follows docs/HINDI_GLOSSARY.md (one concept, one wording). Rewritten 2026-10 for
+    // natural spoken Hindi; LLM-consensus checked, NOT native-reviewed (reports/hindi_audit_2026-10/).
     // ── Static shell (index.html) ──────────────────────────────────────────────
     pageTitle: "आज सोने का भाव · क्या यह सही कीमत है?",
     pageDescription: "22K सोने का भाव — IBJA पर आधारित अनुमान, जब संभव हो तो Tanishq की सूचीबद्ध दर से मिलाकर देखा गया। देखें कि आज की कीमत हाल के हफ्तों के मुक़ाबले ज़्यादा है या कम।",
@@ -517,7 +523,7 @@ const STRINGS = {
     refreshLabel: "डेटा रीफ़्रेश करें",
     pwaHelpBtnLabel: "iPhone पर ऑटो-रीफ़्रेश के बारे में",
     pwaHelpBtnTitle: "ऑटो-रीफ़्रेश के बारे में",
-    pwaHelpPanelText: 'iOS होम-स्क्रीन ऐप्स को बैकग्राउंड में कम बार अपडेट करता है। ताज़ी कीमत के लिए <strong>↻</strong> दबाएं। अगर कीमत अटकी रहे, तो ऐप स्विचर खोलें (ऊपर स्वाइप करके दबाए रखें), फिर इस ऐप को स्वाइप करके हटाएं और होम स्क्रीन से दोबारा खोलें — इससे पूरा रीलोड हो जाएगा।',
+    pwaHelpPanelText: 'iOS बैकग्राउंड में होम-स्क्रीन ऐप्स को कम बार अपडेट करता है। ताज़ा भाव के लिए <strong>↻</strong> दबाएं। अगर भाव अटका रहे, तो ऐप स्विचर खोलें (ऊपर स्वाइप करके रोके रखें), इस ऐप को स्वाइप करके हटा दें और होम स्क्रीन से दोबारा खोलें — इससे पूरा रीलोड हो जाएगा।',
     dismissLabel: "बंद करें",
     installPromptText: 'तेज़ी से खोलने के लिए इसे होम स्क्रीन पर जोड़ें: <strong>Share</strong> दबाएं, फिर <strong>Add to Home Screen</strong>।',
     // U1 audit (2026-09-23): dropped the literal "n=${params.n}" clause, same
@@ -526,65 +532,79 @@ const STRINGS = {
       ? `22K सोने की खुदरा कीमत, लगभग हर ${params.hours} घंटे में जांची जाती है (हाल में सबसे धीमी बार ~${params.p90Hours ?? params.hours} घंटे तक; ${params.asOf} तक) और जब संभव हो तो Tanishq की सूचीबद्ध दर से मिलाकर देखी जाती है। कीमत अनुमानित हो तो हम साफ़ बता देते हैं।`
       : "22K सोने की खुदरा कीमत, नियमित समय पर जांची जाती है और जब संभव हो तो Tanishq की सूचीबद्ध दर से मिलाकर देखी जाती है। कीमत अनुमानित हो तो हम साफ़ बता देते हैं।",
     shareLabel: "शेयर करें",
-    shareTextWithPrice: ({ price }) => `आज 22K सोने की कीमत ₹${price}/ग्राम है — Gold Tracker पर देखें`,
-    shareTextGeneric: "Gold Tracker पर आज की सोने की कीमत देखें",
+    shareTextWithPrice: ({ price }) => `आज 22 कैरेट सोने का भाव ₹${price}/ग्राम है — Gold Tracker पर देखें`,
+    shareTextGeneric: "Gold Tracker पर आज का सोने का भाव देखें",
     shareCopied: "लिंक कॉपी हो गया!",
-    heroAriaLabel: "मौजूदा 22K सोने की कीमत और ख़रीद का सुझाव",
-    eyebrow: "22K सोना · प्रति ग्राम",
+    heroAriaLabel: "22 कैरेट सोने का आज का भाव और ख़रीदने का सुझाव",
+    eyebrow: "22 कैरेट सोना · प्रति ग्राम",
     todayLabel: "आज",
     sinceLastLabel: "पिछली बार से",
     sparklineLabelLeft: "7 दिन",
-    comparisonAriaLabel: "आज की कीमत हाल के औसत से कैसे मिलती है",
-    cmpHeading7d: "7-दिन औसत से",
-    cmpHeading30d: "30-दिन औसत से",
-    cmpHeadingFloor: "30-दिन का न्यूनतम",
-    karatAriaLabel: "24K और 18K सोने की कीमतें",
-    karatLabel24: "24 KT",
-    karatLabel18: "18 KT",
+    comparisonAriaLabel: "आज का भाव हाल के औसत से कैसा है",
+    cmpHeading7d: "7 दिन के औसत से",
+    cmpHeading30d: "30 दिन के औसत से",
+    cmpHeadingFloor: "30 दिन का सबसे कम",
+    karatAriaLabel: "24 कैरेट और 18 कैरेट सोने का भाव",
+    karatLabel24: "24 कैरेट",
+    karatLabel18: "18 कैरेट",
     karatSub24: "प्रति ग्राम · 99.9% शुद्ध",
     karatSub18: "प्रति ग्राम · 75% शुद्ध",
 
     // ── Purchase calculator ─────────────────────────────────────────────────────
-    calcAriaLabel: "ख़रीद लागत कैलकुलेटर",
+    calcAriaLabel: "ख़रीद का ख़र्च निकालने वाला कैलकुलेटर",
     calcHeading: "आपको कितना पड़ेगा?",
     calcGramsLabel: "ग्राम",
-    calcGramsAriaLabel: "मात्रा (ग्राम में)",
-    // Calculator range/estimate strings added 2026-09 (calcMakingMode*, calcStaleNote,
-    // calcDisclaimer) and the jewellery-type presets added 2026-09-23 (calcPresetsLegend,
-    // calcPresetCoins/Plain/Intricate/Custom + their *Range/*Hint variants,
-    // calcCustomValueLabel, calcCustomInvalid, calcRowMakingWithPct, calcRangeLabel,
-    // calcRateUsedIbja/Fusion/Tanishq, calcEstimateStoresVary) have NO Hindi entry yet on
-    // purpose: pending native-speaker review rather than machine translation. t() falls
-    // back to the English string until they're added here.
-    calcKaratLabel22: "22 KT",
+    calcGramsAriaLabel: "ग्राम में मात्रा",
+    calcPresetsLegend: "गहने का प्रकार",
+    calcPresetCoins: "सिक्के और सादी चेन",
+    calcPresetCoinsRange: "सोने की कीमत का 3–8%, आम तौर पर 5%",
+    calcPresetPlain: "सादी चूड़ियां और अंगूठियां",
+    calcPresetPlainRange: "सोने की कीमत का 8–12%, आम तौर पर 10%",
+    calcPresetIntricate: "बारीक काम या एंटीक डिज़ाइन",
+    calcPresetIntricateRange: "सोने की कीमत का 15–25%, आम तौर पर 20%",
+    calcPresetCustom: "अपना",
+    calcPresetCustomHint: "अपने ज्वेलर का मेकिंग चार्ज पता है? नीचे डालें।",
+    calcMakingModePct: "सोने की कीमत का %",
+    calcMakingModePerGram: "₹ प्रति ग्राम",
+    calcCustomValueLabel: "मेकिंग चार्ज",
+    calcCustomInvalid: "मेकिंग चार्ज 0 या उससे ज़्यादा डालें।",
+    calcKaratLabel22: "22 कैरेट",
     calcRowGoldValue: "सोने की कीमत",
     calcRowMaking: "मेकिंग चार्ज",
+    calcRowMakingWithPct: ({ pct }) => `मेकिंग चार्ज (${pct}%)`,
     calcRowGst: ({ pct }) => `GST (${pct}%)`,
     calcRowTotal: "कुल",
-    calcOtherKaratsRange: ({ k24, k18 }) => `24 KT: ${k24} · 18 KT: ${k18}`,
-    calcEstimatedNote: "आज की कीमत अनुमानित है, इसलिए यह कुल भी अनुमानित है।",
-    calcEmptyState: "कीमत देखने के लिए मात्रा डालें।",
+    calcRangeLabel: ({ range }) => `रेंज ${range}`,
+    calcOtherKaratsRange: ({ k24, k18 }) => `24 कैरेट: ${k24} · 18 कैरेट: ${k18}`,
+    calcRateUsedIbja: ({ rate }) => `इस्तेमाल हुआ भाव: 22 कैरेट ₹${rate}/ग्राम — हमारा अनुमान`,
+    calcRateUsedFusion: ({ rate }) => `इस्तेमाल हुआ भाव: 22 कैरेट ₹${rate}/ग्राम — दुकानों के औसत भाव का अनुमान`,
+    calcRateUsedTanishq: ({ rate, date }) => `इस्तेमाल हुआ भाव: 22 कैरेट ₹${rate}/ग्राम — ${date} को Tanishq का बताया भाव`,
+    calcEstimatedNote: "आज का भाव अनुमानित है, इसलिए यह कुल भी अनुमानित है।",
+    calcStaleNote: ({ rel }) => `यह आख़िरी पक्के भाव से निकाला गया है, जो ${rel} का है।`,
+    calcEstimateStoresVary: "अनुमान — हर दुकान पर थोड़ा फ़र्क़ होता है।",
+    calcDisclaimer: "आपके ज्वेलर का बिल अलग होगा — हॉलमार्किंग (HUID) शुल्क, नग, वेस्टेज और दुकान का अपना भाव इसमें शामिल नहीं हैं।",
+    calcEmptyState: "ख़र्च देखने के लिए ग्राम में मात्रा डालें।",
 
-    commentaryAriaLabel: "बाज़ार पर टिप्पणी",
-    todaysReadEyebrow: "आज का सार",
-    modelSignalAriaLabel: "आज की कीमत हाल के इतिहास से कैसे मिलती है",
+    commentaryAriaLabel: "बाज़ार का हाल",
+    todaysReadEyebrow: "आज का हाल",
+    modelSignalAriaLabel: "आज का भाव हाल के भाव से कैसा है",
     goodPriceHeading: "क्या आज ख़रीदने का सही समय है?",
-    driverAriaLabel: "सोने की कीमत को क्या प्रभावित कर रहा है",
-    driverHeading: "कीमत को क्या हिला रहा है?",
-    chartAriaLabel: "कीमत का ट्रेंड चार्ट",
-    priceTrendHeading: "कीमत का ट्रेंड",
-    rangeToggleAriaLabel: "चार्ट की रेंज",
-    rangeAll: "सभी",
-    sectionKaratNote: "22K · प्रति ग्राम",
-    chartCanvasAriaLabel: "सोने की कीमत का ट्रेंड चार्ट",
-    historyAriaLabel: "कीमत का इतिहास",
-    historyHeading: "इतिहास",
+    driverAriaLabel: "सोने का भाव किस वजह से बदल रहा है",
+    driverHeading: "भाव किस वजह से बदल रहा है?",
+    chartAriaLabel: "भाव का ट्रेंड चार्ट",
+    priceTrendHeading: "भाव का ट्रेंड",
+    rangeToggleAriaLabel: "चार्ट की अवधि",
+    rangeAll: "सारे",
+    sectionKaratNote: "22 कैरेट · प्रति ग्राम",
+    chartCanvasAriaLabel: "सोने के भाव का ट्रेंड चार्ट",
+    historyAriaLabel: "पुराने भाव",
+    historyHeading: "पुराने भाव",
     thWhen: "कब",
     thDelta: "बदलाव",
     loadingText: "लोड हो रहा है…",
-    historyCardsAriaLabel: "कीमत की रीडिंग",
-    trackRecordAriaLabel: "हमारे पुराने अनुमान और असली कीमतें",
-    trackRecordChartAriaLabel: "हमारे पुराने अनुमान और असली कीमतें",
+    historyCardsAriaLabel: "दर्ज किए गए भाव",
+    trackRecordAriaLabel: "हमारे पुराने अनुमान और असली भाव",
+    trackRecordChartAriaLabel: "हमारे पुराने अनुमान और असली भाव",
     methodologySummary: "यह कैसे काम करता है",
     // U1 audit (2026-09-23): dropped the literal "n=${params.n}" clause (same
     // fix as the EN string). "कैलिब्रेट करते हैं" (a transliterated loanword for
@@ -596,62 +616,62 @@ const STRINGS = {
     bottomNavAriaLabel: "पेज के सेक्शन",
     navHome: "होम",
     navTrend: "ट्रेंड",
-    navHistory: "इतिहास",
+    navHistory: "पुराने भाव",
     navInfo: "जानकारी",
     langToggleAriaLabel: "भाषा बदलें",
 
     // ── Verdict (computeVerdict) ────────────────────────────────────────────────
     verdictHeadlineUnknown: "अभी काफ़ी डेटा नहीं है",
-    verdictReasonUnknown: "कुछ और रीडिंग जमा होने के बाद फिर देखें।",
-    verdictHeadlineDown: "इस हफ्ते कीमत घट रही है",
-    verdictHeadlineUp: "इस हफ्ते कीमत बढ़ रही है",
-    verdictHeadlineFlat: "इस हफ्ते कीमत स्थिर है",
+    verdictReasonUnknown: "कुछ और भाव दर्ज होने के बाद फिर देखें।",
+    verdictHeadlineDown: "इस हफ़्ते सोना सस्ता हो रहा है",
+    verdictHeadlineUp: "इस हफ़्ते सोना महंगा हो रहा है",
+    verdictHeadlineFlat: "इस हफ़्ते भाव स्थिर है",
     verdictReasonDown: ({ delta, avgDelta }) =>
       avgDelta != null
-        ? `इस हफ्ते ₹${delta} की गिरावट आई है, और यह महीने के सामान्य दाम से ₹${avgDelta} कम है।`
-        : `इस हफ्ते ₹${delta} की गिरावट आई है।`,
+        ? `इस हफ़्ते भाव ₹${delta} घटा है, और महीने के आम भाव से ₹${avgDelta} कम है।`
+        : `इस हफ़्ते भाव ₹${delta} घटा है।`,
     verdictReasonUp: ({ delta, avgDelta }) =>
       avgDelta != null
-        ? `इस हफ्ते ₹${delta} की बढ़ोतरी हुई है, और यह महीने के सामान्य दाम से ₹${avgDelta} ज़्यादा है।`
-        : `इस हफ्ते ₹${delta} की बढ़ोतरी हुई है।`,
-    verdictReasonFlatBarely: "इस हफ्ते कीमत में मुश्किल से बदलाव आया है — घबराने की कोई बात नहीं।",
+        ? `इस हफ़्ते भाव ₹${delta} बढ़ा है, और महीने के आम भाव से ₹${avgDelta} ज़्यादा है।`
+        : `इस हफ़्ते भाव ₹${delta} बढ़ा है।`,
+    verdictReasonFlatBarely: "इस हफ़्ते भाव में मुश्किल से कोई बदलाव हुआ — इसमें कुछ करने की ज़रूरत नहीं।",
     verdictReasonFlatMoved: ({ dirWord, amount }) =>
-      `इस हफ्ते कीमत ${dirWord} है, ₹${amount} तक — यह सामान्य उतार-चढ़ाव है, घबराने की बात नहीं।`,
-    dirWordUp: "थोड़ी बढ़ी",
-    dirWordDown: "थोड़ी घटी",
-    dirWordUnchanged: "जस की तस रही",
-    heroFallbackReason: "पहली कीमत रीडिंग का इंतज़ार है।",
+      `इस हफ़्ते भाव ${dirWord}, ₹${amount} तक — यह आम उतार-चढ़ाव है, इसमें कुछ करने की ज़रूरत नहीं।`,
+    dirWordUp: "थोड़ा ऊपर गया",
+    dirWordDown: "थोड़ा नीचे आया",
+    dirWordUnchanged: "जस का तस रहा",
+    heroFallbackReason: "पहले भाव का इंतज़ार है।",
     noChangeLabel: "कोई बदलाव नहीं",
 
     // ── Comparison cards ────────────────────────────────────────────────────────
-    avgLabel7d: "7-दिन औसत",
-    avgLabel30d: "30-दिन औसत",
+    avgLabel7d: "7 दिन का औसत",
+    avgLabel30d: "30 दिन का औसत",
     cmpCheaperThan: ({ avgLabel }) => `${avgLabel} से सस्ता`,
     cmpPricierThan: ({ avgLabel }) => `${avgLabel} से महंगा`,
     cmpAtAvg: "औसत के बराबर",
     cmpNotEnoughData: "काफ़ी डेटा नहीं",
-    cmpAtLow: "न्यूनतम पर",
-    cmpLowestPrice: "इस महीने की सबसे कम कीमत",
-    cmpAboveLowest: "इस महीने के न्यूनतम से ज़्यादा",
+    cmpAtLow: "सबसे कम पर",
+    cmpLowestPrice: "इस महीने का सबसे कम भाव",
+    cmpAboveLowest: "इस महीने के सबसे कम भाव से ऊपर",
 
     // ── Today's read (composeTodaysRead) ───────────────────────────────────────
-    readNoSignals: "अभी इतना कीमत का इतिहास नहीं है कि आज के बारे में कुछ ठोस कहा जा सके — कुछ और रीडिंग आने के बाद फिर देखें।",
-    readNoTrendCheap: "आज की कीमत इस महीने के हिसाब से कम है।",
-    readNoTrendHigh: "आज की कीमत इस महीने के हिसाब से ज़्यादा है।",
-    readNoTrendMid: "आज की कीमत इस महीने के सामान्य दायरे में है।",
-    readCheapStillFalling: "आज की कीमत इस महीने के हिसाब से कम है, और अभी भी गिर रही है — अभी स्थिर नहीं हुई है।",
-    readCheapSteadying: "आज की कीमत इस महीने के हिसाब से कम है, और हाल की गिरावट के बाद अब स्थिर होती दिख रही है।",
-    readHighRising: "आज की कीमत इस महीने के हिसाब से ज़्यादा है, और अभी भी बढ़ रही है।",
-    readHighSlowed: "आज की कीमत इस महीने के हिसाब से ज़्यादा है, हालांकि बढ़त धीमी पड़ गई है।",
-    readFalling: "पिछले महीने कीमत में नरमी रही है, हालांकि आज की कीमत अभी ख़ास कम नहीं है।",
-    readRising: "पिछले महीने कीमत बढ़ी है, हालांकि आज की कीमत अभी ख़ास ज़्यादा नहीं है।",
-    readFlat: "इस महीने कीमत काफ़ी स्थिर रही है — आज की कीमत सामान्य दायरे में है।",
+    readNoSignals: "आज के बारे में कुछ कहने लायक़ पुराना भाव अभी हमारे पास नहीं है — कुछ और भाव दर्ज होने के बाद फिर देखें।",
+    readNoTrendCheap: "आज का भाव इस महीने के हिसाब से कम है।",
+    readNoTrendHigh: "आज का भाव इस महीने के हिसाब से ज़्यादा है।",
+    readNoTrendMid: "आज का भाव इस महीने के आम भाव के आसपास है।",
+    readCheapStillFalling: "आज का भाव इस महीने के हिसाब से कम है, और अभी भी गिर रहा है — अभी टिका नहीं है।",
+    readCheapSteadying: "आज का भाव इस महीने के हिसाब से कम है, और हाल की गिरावट के बाद अब टिकता दिख रहा है।",
+    readHighRising: "आज का भाव इस महीने के हिसाब से ज़्यादा है, और अभी भी चढ़ रहा है।",
+    readHighSlowed: "आज का भाव इस महीने के हिसाब से ज़्यादा है, हालांकि चढ़ने की रफ़्तार धीमी हो गई है।",
+    readFalling: "पिछले एक महीने में भाव नरम पड़ा है, हालांकि आज का भाव अभी ख़ास सस्ता नहीं है।",
+    readRising: "पिछले एक महीने में भाव चढ़ा है, हालांकि आज का भाव अभी ख़ास महंगा नहीं है।",
+    readFlat: "इस महीने भाव काफ़ी टिका रहा है — आज का भाव आम भाव के आसपास है।",
 
     // ── Good-price signals ──────────────────────────────────────────────────────
-    verdictLeadCheap: "आप इस महीने सामान्य से कम कीमत दे रहे हैं",
-    verdictLeadBelowMid: "आप इस महीने सामान्य से थोड़ी कम कीमत दे रहे हैं",
-    verdictLeadMid: "आप इस महीने लगभग सामान्य कीमत दे रहे हैं",
-    verdictLeadHigh: "आप इस महीने सामान्य से थोड़ी ज़्यादा कीमत दे रहे हैं",
+    verdictLeadCheap: "इस महीने आप आम भाव से कम दे रहे हैं",
+    verdictLeadBelowMid: "इस महीने आप आम भाव से थोड़ा कम दे रहे हैं",
+    verdictLeadMid: "इस महीने आप लगभग आम भाव ही दे रहे हैं",
+    verdictLeadHigh: "इस महीने आप आम भाव से थोड़ा ज़्यादा दे रहे हैं",
     supportLine1Cheap: "इस महीने के ज़्यादातर दिनों से सस्ता।",
     supportLine1BelowMid: "इस महीने की सामान्य कीमत से थोड़ा कम।",
     supportLine1Mid: "इस महीने के बीचोंबीच के आसपास।",
@@ -677,8 +697,6 @@ const STRINGS = {
     // native-speaker review (see the pending-review list near the calc* keys
     // above). t() falls back to the reworded English until it's added here.
     reliabilityUnknown: "अभी इसका रिकॉर्ड बन रहा है — कुछ समय बाद फिर देखें।",
-    reliabilityDriftOnTrack: "हाल की सटीकता ऐतिहासिक औसत के मुताबिक बनी हुई है।",
-    reliabilityDriftWatch: "हाल की सटीकता ऐतिहासिक औसत से थोड़ी अलग हुई है — हम नज़र बनाए हुए हैं।",
     reliabilityDriftRetrain: "हमारे हाल के अनुमान सामान्य से ज़्यादा दूर रहे हैं — हम उन्हें ठीक कर रहे हैं।",
 
     // ── 90-day band position ────────────────────────────────────────────────────
