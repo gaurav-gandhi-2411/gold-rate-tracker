@@ -89,3 +89,21 @@ Per rule: with floor 0.50 the **direction rule almost never fires** on a model w
 
 Remove the `_demotion` call in `ml.nextfix.run` (the live model then never demotes) or delete
 `data/model_demotion_state.json`; the alert needs no removal (it only reads the state).
+
+## 2026-10-07 verifier note
+
+Two corrections to how this ADR reads against the code, found by an independent verifier:
+
+1. **Whole-model demotion.** Any single rule (error, direction or range) demotes the WHOLE model to
+   holding the last fix, point and range together. There is no range-only demotion; the earlier
+   wording "demote the range (not the point)" was wrong and has been removed from `ml/demotion.py`.
+2. **What the windows score today.** The 40/40/60 windows score the model record, which until forward
+   n >= 40 (P3 forward from decision day 2026-10-07) is mostly retrospective re-run folds, not
+   forecasts users were shown. The rules only score purely published forecasts once forward n reaches
+   the window length.
+
+Also changed the same day (rule 98a, fail closed): a monitor that cannot run now holds the model
+(reason `monitor_failed`, `checked` false, nothing written to the state file) instead of leaving it
+unchanged, and a state file with a missing `model_version` or malformed `history` / `reasons` is
+treated as unreadable (demoted, reason `state_unreadable`). This supersedes the "A broken monitor
+never switches the model off" bullet above.

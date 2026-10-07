@@ -158,16 +158,150 @@ def test_t16_is_part_of_check_triggers():
     assert "T16" in {a.trigger_id for a in alerts}
 
 
-def test_a_broken_monitor_never_switches_the_live_model_off(tmp_path: Path, monkeypatch):
+def test_a_broken_monitor_fails_closed_and_writes_nothing(tmp_path: Path, monkeypatch):
+    # rule 98a: a monitor that cannot verify the model holds it (it used to fail open)
     _, macro, now = _setup(tmp_path)
 
     def boom(*a, **k):
         raise RuntimeError("monitor bug")
 
-    monkeypatch.setattr(demotion, "demotion_status", boom)
+    with monkeypatch.context() as m:
+        m.setattr(demotion, "demotion_status", boom)
+        out = nextfix.run(now=now, macro=macro, data_dir=tmp_path)
+    dm = out["demotion"]
+    assert dm["checked"] is False and dm["demoted"] is True and dm["newly_demoted"] is False
+    assert dm["reasons"][0]["rule"] == "monitor_failed" and dm["since"]
+    assert out["forecast"]["mode"] == "after_afternoon_rate" and out["forecast"]["demoted"] is True
+    assert not (tmp_path / nextfix.STATE_FILE).exists()  # not sticky: heals on the next good run
+    healthy = nextfix.run(now=now, macro=macro, data_dir=tmp_path)
+    assert healthy["demotion"]["demoted"] is False and healthy["demotion"]["checked"] is True
+
+
+@pytest.mark.parametrize(
+    "field",
+    [{"history": None}, {"history": "x"}, {"reasons": None}, {"reasons": ["error"]}],
+)
+def test_a_valid_bool_state_with_a_malformed_field_fails_closed(tmp_path: Path, field: dict):
+    state = {**demotion.empty_state(nextfix.MODEL_VERSION), **field}
+    path = tmp_path / "s.json"
+    path.write_text(json.dumps(state))
+    st = demotion.load_state(path, nextfix.MODEL_VERSION)
+    assert st["demoted"] is True and st["reasons"][0]["rule"] == "state_unreadable"
+    # end to end: the published forecast is the hold figure and no exception escapes
+    _, macro, now = _setup(tmp_path)
+    (tmp_path / nextfix.STATE_FILE).write_text(json.dumps(state))
     out = nextfix.run(now=now, macro=macro, data_dir=tmp_path)
-    assert out["demotion"]["checked"] is False and out["demotion"]["demoted"] is False
-    assert out["forecast"]["mode"] == "after_us_close"
+    assert out["demotion"]["demoted"] is True
+    assert out["forecast"]["mode"] == "after_afternoon_rate"
+
+
+def test_t16_names_a_monitor_failed_reason():
+    dm = {
+        "demoted": True,
+        "since": "2026-10-07T00:00:00+00:00",
+        "checked": False,
+        "reasons": [{"rule": "monitor_failed", "error": "RuntimeError"}],
+    }
+    alert = notifications._check_t16_model_demoted(
+        {"next_fix": {"demotion": dm}}, notifications.NotificationState(), datetime.now(UTC)
+    )
+    assert alert is not None and "monitor_failed" in alert.body
+
+
+def test_state_missing_model_version_fails_closed_but_other_version_starts_fresh(
+    tmp_path: Path,
+):
+    path = tmp_path / "s.json"
+    path.write_text('{"demoted": true}')
+    st = demotion.load_state(path, "nextfix_p3_v1")
+    assert st["demoted"] is True and st["reasons"][0]["rule"] == "state_unreadable"
+    # a present, different version is a fresh state by design (documented in load_state)
+    path.write_text(json.dumps({**demotion.empty_state("other_version"), "demoted": True}))
+    assert demotion.load_state(path, "nextfix_p3_v1")["demoted"] is False
+
+
+def test_unreadable_state_since_is_stable_across_runs_even_if_unwritable(tmp_path: Path):
+    path = tmp_path / "state_as_dir"
+    path.mkdir()  # cannot be read or rewritten as a file
+    a = demotion.load_state(path, "m")
+    b = demotion.load_state(path, "m")
+    assert a["demoted"] is True and a["since"] == b["since"]
+    f = tmp_path / "bad.json"
+    f.write_text("{nope")
+    assert demotion.load_state(f, "m")["since"] == demotion.load_state(f, "m")["since"]
+    # end to end with an unwritable state path: held, and `since` does not move between runs
+    _, macro, now = _setup(tmp_path)
+    (tmp_path / nextfix.STATE_FILE).mkdir()
+    r1 = nextfix.run(now=now, macro=macro, data_dir=tmp_path)["demotion"]
+    r2 = nextfix.run(now=now, macro=macro, data_dir=tmp_path)["demotion"]
+    assert r1["demoted"] is r2["demoted"] is True and r1["since"] == r2["since"]
+
+
+def test_t16_tolerates_malformed_reasons_and_cannot_drop_other_triggers(monkeypatch):
+    now_ist = datetime.now(notifications.IST)
+    for reasons in (None, ["error"], [None, {"x": 1}], "error"):
+        dm = {"demoted": True, "since": "2026-10-06T07:00:00+00:00", "reasons": reasons}
+        alert = notifications._check_t16_model_demoted(
+            {"next_fix": {"demotion": dm}}, notifications.NotificationState(), now_ist
+        )
+        assert alert is not None and "unknown rule" in alert.body
+        assert "forecast" not in (alert.title + alert.body).lower()
+
+    def boom(*a, **k):
+        raise TypeError("bad")
+
+    monkeypatch.setattr(notifications, "_check_t16_model_demoted", boom)
+    fc = {"next_fix": {"demotion": {"demoted": True, "since": "x"}}}
+    alerts = notifications.check_triggers(
+        fc,
+        {"status": "missing"},
+        [],
+        {},
+        notifications.NotificationState(),
+        datetime(2026, 10, 6, 14, 0, tzinfo=notifications.IST),
+    )  # must not raise
+    assert isinstance(alerts, list)
+
+
+def test_a_bom_state_file_is_read_and_saves_are_atomic(tmp_path: Path, monkeypatch):
+    import os
+
+    path = tmp_path / "s.json"
+    good = {**demotion.empty_state("m"), "demoted": True, "since": "2026-10-06T07:00:00+00:00"}
+    path.write_bytes(b"\xef\xbb\xbf" + json.dumps(good).encode())  # Notepad "UTF-8 with BOM"
+    assert demotion.load_state(path, "m")["since"] == good["since"]
+
+    def boom(*a, **k):
+        raise OSError("disk full")
+
+    with monkeypatch.context() as m:
+        m.setattr(os, "replace", boom)
+        with pytest.raises(OSError):
+            demotion.save_state(path, {**good, "since": "changed"})
+    # a failed replace leaves the old file intact and no temp file behind
+    assert json.loads(path.read_text(encoding="utf-8-sig"))["since"] == good["since"]
+    assert [p.name for p in tmp_path.iterdir()] == ["s.json"]
+    demotion.save_state(path, {**good, "since": "changed"})
+    assert json.loads(path.read_text())["since"] == "changed"
+
+
+def test_update_variants_writes_atomically(tmp_path: Path, monkeypatch):
+    import os
+
+    target = tmp_path / nextfix.P3_VARIANTS_PATH.name
+    target.write_text('{"variants": {}}')
+    monkeypatch.setattr(nextfix, "update_oos", lambda *a, **k: [])
+    seen: list[str] = []
+    real_replace = os.replace
+
+    def spy(src, dst):
+        seen.append(str(dst))
+        real_replace(src, dst)
+
+    monkeypatch.setattr(os, "replace", spy)
+    nextfix.update_variants(pd.DataFrame(), tmp_path)
+    assert seen == [str(target)]
+    assert [p.name for p in tmp_path.iterdir()] == [target.name]
 
 
 def test_state_for_another_model_version_is_not_applied(tmp_path: Path):
