@@ -84,12 +84,14 @@ FORWARD_STARTS: dict[str, dict[str, str]] = {
         "basis": "promoted 2026-10-02 (ADR 064/065); forward from decision day d0 >= 2026-10-01",
     },
     "p3": {
-        "date": "2026-10-05",
-        "basis": "ADR 069: P3 live from decision day d0 >= 2026-10-05 (folds with retro false)",
+        "date": "2026-10-07",
+        "basis": "ADR 069: P3 live from decision day d0 >= 2026-10-07 (ml.nextfix.P3_FORWARD_FROM; "
+        "folds with retro false)",
     },
     "p3_variants": {
-        "date": "2026-10-05",
-        "basis": "ADR 071: forward folds only (retro false), d0 >= 2026-10-05, compared with P3",
+        "date": "2026-10-07",
+        "basis": "ADR 071: forward folds only (retro false), d0 >= 2026-10-07 "
+        "(ml.nextfix.P3_FORWARD_FROM), compared with P3",
     },
     "intraday": {
         "date": "2026-10-02",
@@ -262,7 +264,7 @@ def bh_flags(pvals: list[float | None]) -> list[bool | None]:
 def _read_json(name: str, data_dir: Path) -> Any:
     """Parsed JSON or None for missing / empty / malformed (callers turn None into 'no data')."""
     try:
-        text = (data_dir / name).read_text(encoding="utf-8")
+        text = (data_dir / name).read_text(encoding="utf-8-sig")  # a BOM is not corruption
         return json.loads(text) if text.strip() else None
     except (OSError, ValueError):
         return None
@@ -539,7 +541,7 @@ def _gate_from_forecast(row: dict[str, Any], data_dir: Path) -> None:
 
 
 def row_p3(data_dir: Path) -> dict[str, Any]:
-    """The LIVE next-fix model (ADR 069): P3, forward only from decision day 2026-10-05."""
+    """The LIVE next-fix model (ADR 069): P3, forward only from decision day 2026-10-07."""
     row = base_row(
         LIVE_MODEL_ID,
         "ml.nextfix P3 (live next-fix forecast)",
@@ -856,9 +858,14 @@ def row_demotion_monitor(data_dir: Path) -> dict[str, Any]:
         "passes": None,
         "marking": "INFERRED",
     }
-    if s["demoted"]:
+    # the page can be held without the state file saying so (a monitor that could not run fails
+    # closed and writes nothing): the forecast's own readout is authoritative for what users see
+    held = isinstance(dm, dict) and dm.get("demoted") is True
+    if s["demoted"] or held:
         row["verdict"] = "red"
-        row["sentence"] = "The live next-fix model is switched off; the page holds the last fix."
+        row["sentence"] = "The live next-fix model is switched off; the page holds the last fix" + (
+            " (the monitor itself could not run)." if held and dm.get("checked") is False else "."
+        )
     elif breaching:
         row["verdict"] = "amber"
         row["sentence"] = "Not demoted, but a monitoring rule is breaching right now."

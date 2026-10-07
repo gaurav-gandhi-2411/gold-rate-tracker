@@ -4,8 +4,13 @@ Wired into ``ml.nextfix.run`` (GG decision D3, 2026-10-05) with GG's settings: d
 0.55, persistence 3, windows 40/40/60. Their operating characteristics are in ADR 068
 (scripts/simulate_demotion.py). A demotion is sticky: ``apply_status`` keeps a model demoted until a
 human edits ``data/model_demotion_state.json``. Pure functions over the model's own
-out-of-sample record (``ml.nextfix`` folds: pm0, pm1, ret, p_up, vol), so the rules score exactly
-what users were shown, in time order, with nothing from the future.
+out-of-sample record (``ml.nextfix`` folds: pm0, pm1, ret, p_up, vol), in time order, with nothing
+from the future.
+
+What is scored (verifier note, 2026-10-07): the record holds the model's own out-of-sample folds.
+Until at least 40 forward decision days exist (P3 forward from 2026-10-07), the 40/40/60 windows
+are filled mostly by retrospective re-run folds, not by forecasts users were shown. Only once
+forward n >= the window do the rules score purely what was published.
 
 Why a rolling window: ``ml.direction.gate.decide_direction_signal`` re-checks the CUMULATIVE
 record every run. With 143+ days banked, a regime change has to outweigh months of earlier wins
@@ -19,9 +24,11 @@ Three independent rules, each against the baseline users would otherwise see:
              model is worse at ``err_alpha``.
   direction  last ``dir_window`` folds: accuracy on days the fix moved. Demote when a one-sided exact
              binomial test rejects "true accuracy >= dir_floor" at ``dir_alpha``.
-  range      last ``cov_window`` folds: coverage of the 80% range. Demote the range (not the point)
-             when a one-sided exact binomial test rejects "true coverage >= nominal - cov_slack" at
-             ``cov_alpha``.
+  range      last ``cov_window`` folds: coverage of the 80% range. Demote when a one-sided exact
+             binomial test rejects "true coverage >= nominal - cov_slack" at ``cov_alpha``.
+
+Any single rule demotes the WHOLE model to holding the last fix (point and range together, ADR
+068 and ``ml.nextfix.forecast``); there is no range-only demotion.
 
 A breach only counts after ``persist`` consecutive daily checks, to keep one bad week from flipping
 a model that is fine on average (daily re-testing inflates false alarms; the simulation measures it).
@@ -160,27 +167,58 @@ def empty_state(model_version: str) -> dict:
     }
 
 
+def _stable_since(path) -> str:
+    """A ``since`` that does not change between runs while the same unreadable file sits there.
+
+    ``datetime.now()`` would move every run, so T16 (which fires when its last send is older than
+    ``since``) would re-fire every cycle if the file cannot be rewritten. The file's mtime is stable
+    until someone touches it; a fixed epoch is the fallback when even stat fails.
+    """
+    from datetime import UTC, datetime
+
+    try:
+        return datetime.fromtimestamp(path.stat().st_mtime, UTC).isoformat()
+    except (OSError, OverflowError, ValueError):
+        return "1970-01-01T00:00:00+00:00"
+
+
+def _shape_ok(data: object) -> bool:
+    """True when ``data`` is a state object whose fields ``apply_status`` and T16 can use."""
+    if not isinstance(data, dict) or not isinstance(data.get("demoted"), bool):
+        return False
+    if not isinstance(data.get("model_version"), str):  # missing = cannot tell whose state it is
+        return False
+    if "history" in data and not isinstance(data["history"], list):
+        return False
+    reasons = data.get("reasons", [])
+    return isinstance(reasons, list) and all(isinstance(r, dict) for r in reasons)
+
+
 def load_state(path, model_version: str) -> dict:
     """The persisted state for THIS model version.
 
     * file missing: a fresh "not demoted" state (first run);
-    * file present but unreadable, not a JSON object, or ``demoted`` not a bool: FAIL CLOSED, a
-      demoted state with reason ``state_unreadable`` (the hold figure is the safe one; T16 alerts
-      and a person repairs the file; rule 98a). Never silently re-promotes a demoted model;
-    * a state written for another model version is not applied to this one.
+    * file present but unreadable, not a JSON object, ``demoted`` not a bool, ``model_version``
+      missing, or ``history`` / ``reasons`` malformed: FAIL CLOSED, a demoted state with reason
+      ``state_unreadable`` (the hold figure is the safe one; T16 alerts and a person repairs the
+      file; rule 98a). Never silently re-promotes a demoted model. Its ``since`` is stable across
+      runs (see ``_stable_since``);
+    * a well-formed state written for ANOTHER model version is not applied to this one: a version
+      bump or champion switch starts a fresh state by design (the new model earns its own record).
+      The old file is overwritten on the next save;
+    * a BOM (Notepad "UTF-8 with BOM") is accepted: it is not corruption.
     """
     import json
-    from datetime import UTC, datetime
 
     if not path.exists():
         return empty_state(model_version)
     try:
-        data = json.loads(path.read_text(encoding="utf-8"))
-        ok = isinstance(data, dict) and isinstance(data.get("demoted"), bool)
+        data = json.loads(path.read_text(encoding="utf-8-sig"))
+        ok = _shape_ok(data)
     except (OSError, ValueError):
         data, ok = None, False
     if not ok:
-        now = datetime.now(UTC).isoformat()
+        now = _stable_since(path)
         reasons = [{"rule": "state_unreadable", "path": str(path.name)}]
         return {
             **empty_state(model_version),
@@ -188,16 +226,37 @@ def load_state(path, model_version: str) -> dict:
             "since": now,
             "reasons": reasons,
             "history": [{"at": now, "event": "demoted", "reasons": reasons}],
+            # tells the caller NOT to write this over the file: the unreadable original is the
+            # evidence a person needs to repair it, and the next run fails closed the same way
+            "unreadable": True,
         }
-    if data.get("model_version") != model_version:
+    if data["model_version"] != model_version:
         return empty_state(model_version)
     return {**empty_state(model_version), **data}
+
+
+def atomic_write_text(path, text: str) -> None:
+    """Write via a temp file in the same directory, then ``os.replace``: a crash or a full disk
+    leaves the old file intact rather than a half-written one that would read as corrupt."""
+    import os
+    import tempfile
+    from pathlib import Path
+
+    path = Path(path)
+    fd, tmp = tempfile.mkstemp(dir=path.parent, prefix=path.name + ".", suffix=".tmp")
+    try:
+        with os.fdopen(fd, "w", encoding="utf-8", newline="") as fh:
+            fh.write(text)
+        os.replace(tmp, path)
+    except BaseException:
+        Path(tmp).unlink(missing_ok=True)  # our own half-written temp file
+        raise
 
 
 def save_state(path, state: dict) -> None:
     import json
 
-    path.write_text(json.dumps(state, indent=1) + "\n", encoding="utf-8")
+    atomic_write_text(path, json.dumps(state, indent=1) + "\n")
 
 
 def _reasons(status: dict) -> list[dict]:

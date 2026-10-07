@@ -265,7 +265,7 @@ def test_every_row_has_provenance_and_marking(tmp_path: Path) -> None:
 
 # --- ADR 069 / 071 / 068: P3 live, ensemble shadow, variants, demotion monitor -------------------
 
-P3_START = bms.FORWARD_STARTS["p3"]["date"]  # 2026-10-05
+P3_START = bms.FORWARD_STARTS["p3"]["date"]  # 2026-10-07 (ml.nextfix.P3_FORWARD_FROM)
 
 
 def _pfold(d0: str, model_err: float, flat_err: float, retro: bool | None) -> dict:
@@ -383,11 +383,13 @@ def test_paired_comparison_is_too_early_below_the_minimum(tmp_path: Path) -> Non
 def test_paired_comparison_uses_only_days_both_records_scored(tmp_path: Path) -> None:
     _p3_files(tmp_path, n_fwd=25)
     ens_doc = json.loads((tmp_path / "nextfix_oos.json").read_text(encoding="utf-8"))
-    ens_doc["folds"] = [f for f in ens_doc["folds"] if f["d0"] < "2026-10-15"]  # drop 15 days
+    # drop the later days
+    ens_doc["folds"] = [f for f in ens_doc["folds"] if f["d0"] < "2026-10-15"]
     _write(tmp_path, "nextfix_oos.json", ens_doc)
     ens = _row(bms.build_rows(tmp_path), "nextfix_ensemble_shadow")
-    assert ens["forward"]["n"] == 10
-    assert ens["forward"]["paired"]["n"] == 10
+    # forward days left: 2026-10-07 .. 2026-10-14 = 8 (it said 10 when the start was wrongly 10-05)
+    assert ens["forward"]["n"] == 8
+    assert ens["forward"]["paired"]["n"] == 8
 
 
 def _variant_files(tmp: Path, n_fwd: int, v_err: float, p3_err: float = 100.0) -> None:
@@ -573,3 +575,45 @@ def test_render_never_calls_a_retro_figure_live(tmp_path: Path) -> None:
             assert "NOT live calls" in line
             checked += 1
     assert checked == 2
+
+
+def test_p3_forward_starts_equal_the_live_code_constant() -> None:
+    # the scorecard once said 2026-10-05 while ml.nextfix flags retro folds before P3_FORWARD_FROM
+    from ml import nextfix
+
+    assert bms.FORWARD_STARTS["p3"]["date"] == nextfix.P3_FORWARD_FROM
+    assert bms.FORWARD_STARTS["p3_variants"]["date"] == nextfix.P3_FORWARD_FROM
+    assert nextfix.P3_FORWARD_FROM in bms.FORWARD_STARTS["p3"]["basis"]
+    assert nextfix.P3_FORWARD_FROM in bms.FORWARD_STARTS["p3_variants"]["basis"]
+
+
+def test_shadow_ensemble_counts_the_same_forward_days_as_p3(tmp_path: Path) -> None:
+    # P3 treats the 10-05 and 10-06 folds as retro; the ensemble must not count them as forward
+    _p3_files(tmp_path, n_retro=0, n_fwd=0)
+    days = _days("2026-10-05", 6)  # 10-05 .. 10-10
+    p3 = [_pfold(d, 20.0, 100.0, d < P3_START) for d in days]
+    ens = [_pfold(d, 80.0, 100.0, None) for d in days]
+    _write(tmp_path, "nextfix_p3_oos.json", {"folds": p3})
+    _write(tmp_path, "nextfix_oos.json", {"folds": ens})
+    rows = bms.build_rows(tmp_path)
+    p3_row, ens_row = _row(rows, "nextfix_p3"), _row(rows, "nextfix_ensemble_shadow")
+    assert p3_row["forward"]["n"] == ens_row["forward"]["n"] == 4
+    assert ens_row["forward"]["first_date"] == p3_row["forward"]["first_date"] == P3_START
+
+
+def test_demotion_monitor_is_red_when_the_page_is_held_but_the_state_file_says_ok(
+    tmp_path: Path,
+) -> None:
+    """A monitor that cannot run fails closed on the page and writes nothing to the state file."""
+    _write(tmp_path, "model_demotion_state.json", _state())
+    held = {"demoted": True, "checked": False, "reasons": [{"rule": "monitor_failed"}]}
+    _write(tmp_path, "forecast.json", {"next_fix": {"demotion": held}})
+    m = _row(bms.build_rows(tmp_path), "demotion_monitor")
+    assert m["verdict"] == "red" and "could not run" in m["sentence"]
+
+
+def test_a_bom_state_file_is_read_by_the_scorecard_too(tmp_path: Path) -> None:
+    (tmp_path / "model_demotion_state.json").write_bytes(
+        b"\xef\xbb\xbf" + json.dumps(_state(demoted=True)).encode()
+    )
+    assert _row(bms.build_rows(tmp_path), "demotion_monitor")["verdict"] == "red"

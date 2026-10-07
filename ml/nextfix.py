@@ -439,7 +439,9 @@ def update_variants(pairs: pd.DataFrame, data_dir: Path) -> dict[str, int]:
         "note": "ADR 071 shadow variants of P3; one out-of-sample fold per decision day.",
         "variants": {k: sorted(v, key=lambda f: f["d0"]) for k, v in out.items()},
     }
-    path.write_text(json.dumps(payload, indent=1) + "\n")
+    from ml.demotion import atomic_write_text  # a torn write would drop both variant records
+
+    atomic_write_text(path, json.dumps(payload, indent=1) + "\n")
     return {k: len(v) for k, v in out.items()}
 
 
@@ -833,25 +835,38 @@ def run(
 def _demotion(data_dir: Path, folds: list[dict], ev: dict, now: datetime) -> dict:
     """Run ADR 068's rules on the live model's record and keep the sticky state file.
 
-    Returns {"demoted", "since", "reasons", "newly_demoted", "checked"}. Never raises: if the rules
-    themselves fail the model stays as it is and the failure is logged (a broken monitor must not
-    silently switch the live model off, and cannot silently hide a degraded one for more than a run
-    because the rules re-run on every cycle).
+    Returns {"demoted", "since", "reasons", "newly_demoted", "checked"}. Never raises. FAILS CLOSED
+    (rule 98a): if the monitor itself cannot run (any exception), the published forecast is the
+    hold figure, reason ``monitor_failed``, ``checked`` False, and NOTHING is written to the state
+    file, so a transient fault self-heals on the next healthy run instead of becoming a sticky
+    demotion. Failing open would let a degraded model keep showing exactly when its safety net is
+    broken. ``since`` is the start of the current UTC day (or the persisted one when the state file
+    already says demoted), so T16 alerts at most once a day while the monitor stays broken.
     """
     from ml import demotion as dm
 
     path = data_dir / STATE_FILE
-    state = dm.load_state(path, MODEL_VERSION)
+    iso_now = now.astimezone(UTC).isoformat()
+    state: dict = {}
     try:
+        state = dm.load_state(path, MODEL_VERSION)
         status = dm.demotion_status(folds, ev.get("range_hits") if ev.get("ready") else None)
-        state, newly = dm.apply_status(state, status, now.astimezone(UTC).isoformat())
-        dm.save_state(path, state)
+        keep_file = bool(state.get("unreadable"))  # never overwrite an unreadable original
+        state, newly = dm.apply_status(state, status, iso_now)
+        if not keep_file:
+            state.pop("unreadable", None)
+            dm.save_state(path, state)
     except Exception as exc:
-        logger.warning("demotion check failed (%s); live model unchanged", exc)
+        logger.error("demotion monitor failed (%s); failing closed to the hold figure", exc)
+        prior = state.get("reasons") if state.get("demoted") else None
+        reasons = [{"rule": "monitor_failed", "error": type(exc).__name__}]
+        if isinstance(prior, list):
+            reasons += [r for r in prior if isinstance(r, dict)]
+        since = state.get("since") if state.get("demoted") else None
         return {
-            "demoted": bool(state.get("demoted")),
-            "since": state.get("since"),
-            "reasons": state.get("reasons", []),
+            "demoted": True,
+            "since": since or now.astimezone(UTC).strftime("%Y-%m-%dT00:00:00+00:00"),
+            "reasons": reasons,
             "newly_demoted": False,
             "checked": False,
         }
