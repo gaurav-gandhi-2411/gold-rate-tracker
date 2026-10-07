@@ -194,6 +194,9 @@ const STRINGS = {
     // "n=${params.n}" clause below (same fix as firstVisitText above).
     footerBody: (params) => `Prices come from <a href="https://ibjarates.com/" target="_blank" rel="noopener">IBJA</a>, India's official daily gold rate, adjusted to match shop prices, and from <a href="https://www.tanishq.co.in/gold-rate.html?lang=en_IN" target="_blank" rel="noopener">Tanishq</a>'s listed rate when available.`,
     footerMuted: "Not financial advice. Rates are indicative.",
+    // Shown only while visit counting is on (analytics.js adds it to the footer). English only: Hindi falls back to this
+    // through t() (no Hindi key on purpose; do not machine-translate it).
+    privacyNote: "We count how many people visit this page, nothing more. The count uses no cookies, keeps no name or address, and is skipped if your browser asks not to be tracked. Counts are kept by GoatCounter (goatcounter.com).",
     bottomNavAriaLabel: "Page sections",
     navHome: "Home",
     navTrend: "Trend",

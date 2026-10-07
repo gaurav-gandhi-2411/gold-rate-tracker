@@ -139,8 +139,10 @@ jobs:
         uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
         with:
           node-version: "20"
-          cache: "npm"
-          cache-dependency-path: scraper/package-lock.json
+          # No `cache: npm` here (2026-10-05): this job runs on the laptop, which keeps its own npm
+          # cache, so restoring GitHub's copy only adds time (22-63 s per run) and, twice in the last
+          # 12 successful runs (2026-10-04T11:16Z, 2026-10-05T10:05Z), stalled for ~10 min at
+          # "Received 0 of 32195634 (0.0%)" before the scrape could start. `npm ci` below needs ~25 s.
 
       - name: Install scraper dependencies
         working-directory: scraper

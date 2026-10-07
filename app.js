@@ -2624,7 +2624,10 @@ function pickRangeShadowEntry(shadowLog, horizon, nowMs = Date.now()) {
 }
 
 function computeMoveRangeJob(fc, nextDayRangeShadow, weeklyRangeShadowLog, bandCoverage, nowMs = Date.now()) {
-  const measured = deriveMeasuredBandCoverage(bandCoverage);
+  // nowMs must reach the freshness check too: tests (and any caller) pass a fixed clock, and a
+  // silent fallback to Date.now() made test_page_v2 fail on 2026-10-06 once a fixture aged past
+  // 14 days of the real clock, which turned every bot PR's pwa-js check red.
+  const measured = deriveMeasuredBandCoverage(bandCoverage, nowMs);
   const oddsClause = measured ? t("pv2RangeOddsClause", { frac: fractionOutOf10Phrase(measured.coverage) }) : "";
 
   let oneDay = (nextDayRangeShadow && typeof nextDayRangeShadow.lo === "number" && typeof nextDayRangeShadow.hi === "number")

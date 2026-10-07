@@ -2677,5 +2677,43 @@
     "track": "real",
     "model_version": "nextfix_ridge_mlp_v1",
     "real_readings_count": 749
+  },
+  {
+    "decision_date": "2026-10-06",
+    "predicted_at": "2026-10-06T00:56:38.787891+00:00",
+    "current_22k": 13720,
+    "predicted_22k": 13751,
+    "delta": 31.0,
+    "lower": 13620,
+    "upper": 13882,
+    "decision": "neutral",
+    "outcome_window_days": 5,
+    "outcome_resolved_at": null,
+    "outcome": "pending",
+    "min_future_price": null,
+    "actual_next_22k": null,
+    "drop_threshold": 100.0,
+    "track": "real",
+    "model_version": "nextfix_ridge_mlp_v1",
+    "real_readings_count": 754
+  },
+  {
+    "decision_date": "2026-10-07",
+    "predicted_at": "2026-10-07T12:10:24.301249+00:00",
+    "current_22k": 13705,
+    "predicted_22k": 13712,
+    "delta": 7.0,
+    "lower": 13550,
+    "upper": 13874,
+    "decision": "neutral",
+    "outcome_window_days": 5,
+    "outcome_resolved_at": null,
+    "outcome": "pending",
+    "min_future_price": null,
+    "actual_next_22k": null,
+    "drop_threshold": 100.0,
+    "track": "real",
+    "model_version": "hold_latest_fix_pm_to_am",
+    "real_readings_count": 758
   }
 ]
