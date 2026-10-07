@@ -507,10 +507,10 @@ const STRINGS = {
     // F4 (event_watch): heading only -- same verbatim-sentence contract as F2 above.
     pv2EventWatchHeading: "Upcoming events that could move the price",
   },
-    // Hindi wording follows docs/HINDI_GLOSSARY.md (one concept, one wording). Rewritten 2026-10 for
-    // natural spoken Hindi; LLM-consensus checked, NOT native-reviewed (reports/hindi_audit_2026-10/).
 
   hi: {
+    // Hindi wording follows docs/HINDI_GLOSSARY.md (one concept, one wording). Rewritten 2026-10 for
+    // natural spoken Hindi; LLM-consensus checked, NOT native-reviewed (reports/hindi_audit_2026-10/).
     // ── Static shell (index.html) ──────────────────────────────────────────────
     pageTitle: "आज सोने का भाव · क्या यह सही कीमत है?",
     pageDescription: "22K सोने का भाव — IBJA पर आधारित अनुमान, जब संभव हो तो Tanishq की सूचीबद्ध दर से मिलाकर देखा गया। देखें कि आज की कीमत हाल के हफ्तों के मुक़ाबले ज़्यादा है या कम।",
@@ -567,11 +567,11 @@ const STRINGS = {
     calcMakingModePct: "सोने की कीमत का %",
     calcMakingModePerGram: "₹ प्रति ग्राम",
     calcCustomValueLabel: "मेकिंग चार्ज",
-    calcRowMakingWithPct: ({ pct }) => `मेकिंग चार्ज (${pct}%)`,
     calcCustomInvalid: "मेकिंग चार्ज 0 या उससे ज़्यादा डालें।",
     calcKaratLabel22: "22 कैरेट",
     calcRowGoldValue: "सोने की कीमत",
     calcRowMaking: "मेकिंग चार्ज",
+    calcRowMakingWithPct: ({ pct }) => `मेकिंग चार्ज (${pct}%)`,
     calcRowGst: ({ pct }) => `GST (${pct}%)`,
     calcRowTotal: "कुल",
     calcRangeLabel: ({ range }) => `रेंज ${range}`,
