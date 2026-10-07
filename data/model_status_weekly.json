@@ -1,0 +1,62 @@
+{
+ "schema_version": 1,
+ "generated_at": "2026-10-07T18:36:29.825641+00:00",
+ "rule_sha256": "0782301d8890788287be983c63d3d4e9bbd9eb0d8cd5d50d213960207dc44902",
+ "common_start": "2026-10-07",
+ "champion": "p3",
+ "champion_state_unreadable": false,
+ "champion_history": [],
+ "live": {
+  "n": 0,
+  "since": "2026-10-07"
+ },
+ "challengers": {
+  "ensemble": {
+   "since": "2026-10-07",
+   "n": 0,
+   "first_day": null,
+   "last_day": null,
+   "status": "too early",
+   "p_better": null,
+   "bh_significant": false,
+   "live_capable": true,
+   "promotable": false,
+   "first_reachable": null
+  },
+  "p3_roll60": {
+   "since": "2026-10-07",
+   "n": 0,
+   "first_day": null,
+   "last_day": null,
+   "status": "too early",
+   "p_better": null,
+   "bh_significant": false,
+   "live_capable": true,
+   "promotable": false,
+   "first_reachable": null
+  },
+  "p3_monday": {
+   "since": "2026-10-07",
+   "n": 0,
+   "first_day": null,
+   "last_day": null,
+   "status": "too early",
+   "p_better": null,
+   "bh_significant": false,
+   "live_capable": true,
+   "promotable": false,
+   "first_reachable": null
+  }
+ },
+ "promote": null,
+ "not_yet": {
+  "hourly": "Hourly world-price model (own check on 2026-10-16, then it joins)",
+  "p3_hourly": "Live model averaged with the hourly model (joins after the hourly model does)"
+ },
+ "demotion": {
+  "demoted": false,
+  "since": null,
+  "reasons": [],
+  "last_checked": "2026-10-07T17:31:43.991278+00:00"
+ }
+}
