@@ -437,6 +437,8 @@ def test_every_path_a_workflow_encrypts_is_registered() -> None:
     ("logical", "producer"),
     [
         ("data/nextfix_oos.json", "check-price.yml"),
+        ("data/nextfix_p3_oos.json", "check-price.yml"),
+        ("data/nextfix_p3_variants_oos.json", "check-price.yml"),
         ("data/nextfix_intraday_shadow.json", "check-price.yml"),
         ("data/weekly_range_shadow_log.json", "weekly-backtest.yml"),
     ],

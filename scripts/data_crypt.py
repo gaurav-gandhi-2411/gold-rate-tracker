@@ -120,6 +120,12 @@ REGISTRY: dict[str, dict[str, str]] = {
     "data/premium_nowcast_bars.json": {"category": "raw Yahoo Finance 1-hour bars (ADR 046)"},
     # Added 2026-10-05 (GG decisions 1, 2, 5), after the field-by-field review in ADR 060.
     "data/nextfix_oos.json": {"category": "raw IBJA PM fix series (pm0/pm1 per fold, ADR 059)"},
+    # Added after master moved on (2026-10-08 merge): P3 went live (ADR 069) and the ADR 071
+    # variants log, both with the same pm0/pm1 per fold as nextfix_oos.json.
+    "data/nextfix_p3_oos.json": {"category": "raw IBJA PM fix series (pm0/pm1 per fold, ADR 069)"},
+    "data/nextfix_p3_variants_oos.json": {
+        "category": "raw IBJA PM fix series (pm0/pm1 per fold, ADR 071)"
+    },
     "data/nextfix_intraday_shadow.json": {
         "category": "raw IBJA fix levels (base/target) and COMEX-in-INR per entry (ADR 059/066)"
     },
