@@ -72,6 +72,52 @@ cannot be estimated and the row says so. No conclusion is drawn before that date
   `decide`, and the T17 alert. It needs an independent verifier because it changes live behaviour.
   No promotion can happen before step 2 merges; the earliest qualifying date (below) is weeks away.
 
+**Step 2 delivered (2026-10-08, branch `feat/champion-switch-wiring`; the rule and its hash are
+unchanged).** `ml.nextfix.run` loads `data/champion_state.json` and uses the champion's own record,
+version label and predictor everywhere the P3 constants were used (`CHAMPION_REGISTRY`: `p3`,
+`p3_roll60`, `p3_monday`, `ensemble`); with no file the output is identical to before. After the
+day's records and the demotion check, `promotion.decide` runs and a winner is written atomically.
+**A promotion takes effect on the NEXT run** (one run, one model: the forecast of the run that
+promotes was already built by the old champion). The whole step fails closed: any exception is
+logged at error level and leaves the champion file and the live forecast untouched; an unreadable
+champion file means P3, flagged, and never a promotion; a champion with no forward-day record of its
+own is never compared. The demotion state is keyed by model version, so the new champion starts with
+a fresh state and the same rules. While a challenger is champion, the shadow is P3 on its own record
+(`next_fix.shadow_ensemble.shadow_model_version` names it). `forecast.json` carries
+`next_fix.champion`; alert T17 (private topic, once per change) names the old and new model and the
+undo command. `check-price.yml` commits the file once it exists.
+
+**Step 2, verifier fixes (2026-10-08; rule and hash still unchanged).**
+
+- **Pin.** `python -m ml.promotion rollback` now also sets `pinned: true` in the champion file and in
+  the rollback event; while pinned, the rule does nothing (logged at info), so the next run cannot
+  re-promote the same challenger from the same evidence. `python -m ml.promotion unpin` is a person's
+  explicit act (event `unpinned`); `show` prints the pin. A rollback is refused (exit 1, nothing
+  written) unless the latest champion change is a promotion still in force, so a second rollback
+  fails. A `pinned` value that is not a real boolean reads as pinned. T17 for a rollback says it
+  was "rolled back by a person" and names `unpin`; for a promotion it keeps "on its own".
+- **Demotion state per model.** `data/model_demotion_state.json` stays P3's file (existing file
+  untouched); any other model uses `data/model_demotion_state__<model_version>.json`
+  (`ml.nextfix.demotion_state_file`). A champion change no longer overwrites another model's sticky
+  state, and a model that returns as champion finds its own. A challenger whose own state says
+  demoted, or cannot be read, is skipped by the promotion step (the next promotable challenger, if
+  any, is considered). `check-price.yml` has a second guarded `git add` for the per-model files. The
+  scorecard's demotion monitor and the status page read the live champion's file.
+- **Bad champion file.** A valid champion id with a `history` that is not a list of objects reads
+  as unreadable (P3, flagged); the promotion step never raises from a champion file problem.
+- **Missing champion record.** If the champion (not P3) has no record of its own, that run uses P3,
+  logs at error level and publishes `next_fix.champion.fallback = "record_missing"` with
+  `effective_id = "p3"`; the champion file is not written.
+- **Scorecard.** When `forecast.json` says another model is live, the P3 row's gate and demotion
+  readouts read "unavailable: the live model is <id>, not P3" instead of the champion's numbers.
+
+Known and left as is (documented, not fixed): an unreadable champion file is only a log line and the
+published `unreadable` flag (no alert); an ensemble champion's `n_forward` counts only folds with
+`retro` False (ensemble folds carry no flag); the BH family excludes non-switchable challengers
+until they have a live predictor; `scripts/check_bot_pr_sync_allowlist.py` does not parse guarded
+`if [ -f ... ]` lines (the runtime guard in the action still enforces `data/` only); a champion
+change has no cooldown beyond the pin.
+
 ## Pre-registered challengers (forward from the stated day)
 
 | Id | What it is | Counts forward from | Switchable |

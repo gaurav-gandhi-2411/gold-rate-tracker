@@ -79,7 +79,29 @@ ENSEMBLE_VERSION = "nextfix_ridge_mlp_v1"
 # the day GG approved it (2026-10-05, when the ensemble was still live): counting an earlier day
 # as forward would present a re-run as a live call.
 P3_FORWARD_FROM = "2026-10-07"
-STATE_FILE = "model_demotion_state.json"  # ADR 068: sticky demotion state of the live model
+STATE_FILE = "model_demotion_state.json"  # ADR 068: sticky demotion state of P3 (back-compat name)
+STATE_FILE_PREFIX = "model_demotion_state__"  # ADR 072: any other model gets its own file
+# ADR 072 step 2: champion id -> (record source, model_version label, predictor function name).
+# Predictors are looked up by name at call time so tests (and the demotion tests) can substitute them.
+# Sources: "p3" = data/nextfix_p3_oos.json, "ensemble" = data/nextfix_oos.json, "variant" = the
+# same-named list under "variants" in data/nextfix_p3_variants_oos.json.
+CHAMPION_REGISTRY: dict[str, tuple[str, str, str]] = {
+    "p3": ("p3", MODEL_VERSION, "predict_p3"),
+    "p3_roll60": ("variant", "nextfix_p3_roll60_v1", "predict_p3_roll60"),
+    "p3_monday": ("variant", "nextfix_p3_monday_v1", "predict_p3_monday"),
+    "ensemble": ("ensemble", ENSEMBLE_VERSION, "predict"),
+}
+
+
+def demotion_state_file(model_version: str) -> str:
+    """File name of one model's sticky demotion state under data/ (ADR 072): P3 keeps the original
+    name (its existing file is untouched), every other model gets ``model_demotion_state__<v>.json``
+    so a champion change can never overwrite or launder another model's state."""
+    if model_version == MODEL_VERSION:
+        return STATE_FILE
+    return f"{STATE_FILE_PREFIX}{model_version}.json"
+
+
 FEATURES = ["x_glob", "x_prev", "bdev"]
 MAX_GAP_DAYS = 4  # consecutive IBJA days only (weekends/holidays allowed)
 BASIS_WINDOW = 20  # pairs in the rolling mean the basis deviation is measured from
@@ -682,6 +704,10 @@ def forecast(
     windows: dict | None = None,
     shadow_folds: list[dict] | None = None,
     demoted: bool = False,
+    predictor=None,
+    model_version: str = MODEL_VERSION,
+    shadow_predictor=None,
+    shadow_version: str = ENSEMBLE_VERSION,
 ) -> dict:
     """Forecast the next IBJA fix at ``now``, whichever part of the day it is (see module doc).
 
@@ -689,7 +715,10 @@ def forecast(
     the latest fix like every other window, so the headline falls back to "hold" and no direction
     is shown.
 
-    ``folds``: the LIVE model's (P3) out-of-sample record. ``shadow_folds``: the ensemble's; when
+    ``predictor`` / ``model_version``: the live champion's (ADR 072; P3 when omitted), with
+    ``shadow_predictor`` / ``shadow_version`` for the shadow (the ensemble when omitted).
+
+    ``folds``: the LIVE model's (P3 unless the champion file says otherwise) out-of-sample record. ``shadow_folds``: the ensemble's; when
     given and the model window is open, the ensemble's forecast for the same day is returned under
     ``shadow`` (never headline, never shown). ``windows``: ``flat_record`` results for "am_to_pm"
     and "pm_to_am" (computed if omitted). Returns {"active": False, "reason": ...} only when there
@@ -712,13 +741,18 @@ def forecast(
         )
     else:
         if now >= _at(d_pm, US_CLOSE_UTC) and not demoted:
-            fc = _model_forecast(full, glob, folds, d_pm)
+            fc = _model_forecast(full, glob, folds, d_pm, predictor, model_version)
             if fc is not None:
                 out = {"active": True, **fc}
                 if shadow_folds is not None:
                     try:
                         sh = _model_forecast(
-                            full, glob, shadow_folds, d_pm, predict, ENSEMBLE_VERSION
+                            full,
+                            glob,
+                            shadow_folds,
+                            d_pm,
+                            shadow_predictor or predict,
+                            shadow_version,
                         )
                     except Exception as exc:  # shadow must never take the live forecast down
                         logger.warning("nextfix shadow ensemble failed: %s", exc)
@@ -789,10 +823,12 @@ def run(
             "forecast": {"active": False, "reason": "no_ibja"},
             "ibja": None,
         }
+    cstate = _load_champion(data_dir)
     full = load_ibja_full(ibja_path)
     glob = global_series(macro, data_dir / LABEL_PATH.name)
     pairs = build_pairs(full.dropna(subset=["pm"]).reset_index(drop=True), glob)
-    # Live model: P3 (ADR 069). Its record is cheap (no networks) and rebuilt from the pairs if absent.
+    # P3 (ADR 069) is the default live model; ``cstate`` (ADR 072) says whether another champion is.
+    # Its record is cheap (no networks) and rebuilt from the pairs if absent.
     p3_path = data_dir / P3_OOS_PATH.name
     p3_old = load_oos(p3_path)
     folds = (
@@ -801,7 +837,7 @@ def run(
         else p3_old
     )
     save_oos(folds, p3_path, MODEL_VERSION)
-    ev = evaluate(folds, MODEL_VERSION)
+    p3_ev = evaluate(folds, MODEL_VERSION)
     if not pairs.empty:
         try:  # shadow variants must never take the live forecast down (ADR 069, ADR 071)
             update_variants(pairs, data_dir)
@@ -818,21 +854,167 @@ def run(
     except Exception as exc:
         logger.warning("nextfix shadow ensemble record failed (%s); live P3 unaffected", exc)
         shadow_folds, shadow_ev = load_oos(oos_path), {"n": 0, "ready": False}
+    records = {"p3": folds, "ensemble": shadow_folds, **load_variant_folds(data_dir)}
+    cid = cstate["champion"]
+    fallback = False
+    if cid != "p3" and not records.get(cid):
+        # the champion's own record is missing or empty: holding the page silently would hide a
+        # broken switch, so P3 runs this run, loudly; the champion file is NOT touched (ADR 072)
+        logger.error("champion %s has no record of its own; using P3 for this run", cid)
+        fallback = True
+        cid = "p3"
+    _source, live_version, predictor_name = CHAMPION_REGISTRY[cid]
+    if cid == "p3":  # the default path, exactly as before ADR 072
+        live_folds, ev = folds, p3_ev
+        sh_folds, sh_ev, sh_version, sh_predictor = shadow_folds, shadow_ev, ENSEMBLE_VERSION, None
+    else:  # the shadow is the previous incumbent's analogue: P3 on P3's own record
+        live_folds = records.get(cid, [])
+        ev = evaluate(live_folds, live_version)
+        sh_folds, sh_ev, sh_version, sh_predictor = folds, p3_ev, MODEL_VERSION, predict_p3
     since = ev.get("first_d0") if ev.get("ready") else None
     windows = {k: flat_record(flat_pairs(full, k), since) for k in ("am_to_pm", "pm_to_am")}
-    demotion = _demotion(data_dir, folds, ev, now)
-    fc = forecast(full, glob, folds, now, windows, shadow_folds, demoted=demotion["demoted"])
+    demotion = _demotion(data_dir, live_folds, ev, now, live_version)
+    fc = forecast(
+        full,
+        glob,
+        live_folds,
+        now,
+        windows,
+        sh_folds,
+        demoted=demotion["demoted"],
+        predictor=globals()[predictor_name],
+        model_version=live_version,
+        shadow_predictor=sh_predictor,
+        shadow_version=sh_version,
+    )
+    champion = _promotion_step(data_dir, cstate, records, now)
+    if fallback:
+        champion.update(fallback="record_missing", effective_id="p3")
     return {
         "eval": ev,
-        "shadow_eval": shadow_ev,
+        "shadow_eval": sh_ev,
         "windows": windows,
         "forecast": fc,
         "demotion": demotion,
+        "champion": champion,
         "ibja": full,
     }
 
 
-def _demotion(data_dir: Path, folds: list[dict], ev: dict, now: datetime) -> dict:
+def _load_champion(data_dir: Path) -> dict:
+    """The champion state (ADR 072): missing file = P3. Unreadable file or unknown id = P3 with
+    ``unreadable`` True, logged at error level; never an arbitrary challenger (rule 98a)."""
+    from ml import promotion
+
+    cstate = promotion.load_champion(data_dir / promotion.CHAMPION_FILE)
+    if cstate.get("unreadable") or cstate.get("champion") not in CHAMPION_REGISTRY:
+        logger.error(
+            "champion file %s is unreadable or names an unknown model; using P3 and promoting "
+            "nothing until a person repairs it (ADR 072)",
+            data_dir / promotion.CHAMPION_FILE,
+        )
+        return {**promotion.empty_champion(), "unreadable": True}
+    return cstate
+
+
+def load_variant_folds(data_dir: Path) -> dict[str, list[dict]]:
+    """The ADR 071 variant records by champion id ({} when the file is missing or malformed)."""
+    try:
+        data = json.loads((data_dir / P3_VARIANTS_PATH.name).read_text())
+        variants = data.get("variants", {}) if isinstance(data, dict) else {}
+    except (OSError, ValueError):
+        return {}
+    return {k: v for k, v in variants.items() if k in VARIANT_PREDICTORS and isinstance(v, list)}
+
+
+def _promotion_blocked(data_dir: Path, cid: str) -> bool:
+    """True when challenger ``cid`` is demoted, or its own state file cannot be read, so it must
+    not be promoted (ADR 072: a model returning as champion would find that sticky state anyway)."""
+    from ml import demotion as dm
+
+    version = CHAMPION_REGISTRY[cid][1]
+    return bool(dm.load_state(data_dir / demotion_state_file(version), version).get("demoted"))
+
+
+def _promotion_step(
+    data_dir: Path, cstate: dict, records: dict[str, list[dict]], now: datetime
+) -> dict:
+    """Apply the frozen promotion rule (ADR 072) AFTER the day's records and the demotion check.
+
+    A promotion is written to data/champion_state.json and takes effect on the NEXT run (one run,
+    one model: this run's forecast is already built). Fail closed: any exception is logged at error
+    level and leaves the champion file and the live forecast exactly as they were. Never promotes
+    when the champion file was unreadable (a person must repair it), while it is pinned (after a
+    rollback, until a person unpins), when the champion has no forward-day record of its own, or a
+    challenger whose own demotion state says demoted or cannot be read. Never raises. Returns the
+    ``champion`` block ml.inference publishes.
+    """
+    from ml import promotion
+
+    path = data_dir / promotion.CHAMPION_FILE
+    state = {k: v for k, v in cstate.items() if k != "unreadable"}
+    raw_hist = state.get("history")
+    hist = raw_hist if isinstance(raw_hist, list) else []
+    block = {
+        "id": state.get("champion", promotion.DEFAULT_CHAMPION),
+        "since": state.get("since"),
+        "promoted_now": False,
+        "unreadable": bool(cstate.get("unreadable")) or not isinstance(raw_hist, list),
+        "pinned": state.get("pinned") is not False,  # anything but a real False reads as pinned
+        "history_len": len(hist),
+        "last_change": _last_change(hist),
+    }
+    if block["unreadable"]:
+        return block
+    if block["pinned"]:
+        logger.info("champion is pinned (rolled back); the promotion rule is not applied (ADR 072)")
+        return block
+    try:
+        cid = state["champion"]
+        recs = {k: v for k, v in records.items() if isinstance(v, list)}
+        if cid not in recs or not promotion.forward_days(recs[cid], promotion.RULE["common_start"]):
+            return block
+        verdict = promotion.decide(cid, recs)
+        to = verdict.get("promote")
+        if to and _promotion_blocked(data_dir, to):
+            logger.info("challenger %s would be promoted but its own state is demoted; skipped", to)
+            rows = verdict.get("challengers") or {}
+            ok = [
+                c
+                for c, r in rows.items()
+                if c != to and r.get("promotable") and not _promotion_blocked(data_dir, c)
+            ]
+            to = min(ok, key=lambda c: rows[c]["mae_challenger"]) if ok else None
+        if not to:
+            return block
+        if to == cid or to not in recs:
+            raise ValueError(f"promotion target {to!r} is not a different, recorded model")
+        evidence = json.loads(json.dumps(verdict["challengers"][to], default=str))
+        new_state = promotion.promote(state, to, evidence, now)
+        promotion.save_champion(path, new_state)
+        logger.warning("champion promoted %s -> %s (takes effect next run): %s", cid, to, evidence)
+        block.update(
+            since=new_state["since"],
+            promoted_now=True,
+            history_len=len(new_state["history"]),
+            last_change=_last_change(new_state["history"]),
+        )
+    except Exception as exc:
+        logger.error("promotion step failed (%s); champion and live forecast unchanged", exc)
+    return block
+
+
+def _last_change(history: list) -> dict | None:
+    """The latest champion change as {event, from, to, at} (no evidence rows): small, JSON-safe."""
+    for ev in reversed(history):
+        if isinstance(ev, dict) and ev.get("event") in ("promoted", "rolled_back"):
+            return {k: ev.get(k) for k in ("event", "from", "to", "at")}
+    return None
+
+
+def _demotion(
+    data_dir: Path, folds: list[dict], ev: dict, now: datetime, model_version: str = MODEL_VERSION
+) -> dict:
     """Run ADR 068's rules on the live model's record and keep the sticky state file.
 
     Returns {"demoted", "since", "reasons", "newly_demoted", "checked"}. Never raises. FAILS CLOSED
@@ -845,11 +1027,11 @@ def _demotion(data_dir: Path, folds: list[dict], ev: dict, now: datetime) -> dic
     """
     from ml import demotion as dm
 
-    path = data_dir / STATE_FILE
+    path = data_dir / demotion_state_file(model_version)
     iso_now = now.astimezone(UTC).isoformat()
     state: dict = {}
     try:
-        state = dm.load_state(path, MODEL_VERSION)
+        state = dm.load_state(path, model_version)
         status = dm.demotion_status(folds, ev.get("range_hits") if ev.get("ready") else None)
         keep_file = bool(state.get("unreadable"))  # never overwrite an unreadable original
         state, newly = dm.apply_status(state, status, iso_now)

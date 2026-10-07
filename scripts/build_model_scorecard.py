@@ -141,12 +141,47 @@ LIGHTS = {"green": "GREEN", "amber": "AMBER", "red": "RED", "grey": "GREY"}
 LIVE_MODEL_ID = "nextfix_p3"  # the only model ADR 068's demotion rules watch today
 
 
-def read_demotion_state(data_dir: Path) -> dict[str, Any] | None:
-    """The sticky state file (ADR 068) or None when it is missing, unreadable or malformed.
+P3_MODEL_VERSION = "nextfix_p3_v1"  # P3 keeps the original state file name (ml.nextfix)
+
+
+def demotion_state_file(model_version: str) -> str:
+    """Same naming as ml.nextfix.demotion_state_file (a test keeps them equal; this script does
+    not import ml.*): P3 the original file, any other model its own ``__<version>`` file."""
+    if model_version == P3_MODEL_VERSION:
+        return DEMOTION_STATE_FILE
+    return f"model_demotion_state__{model_version}.json"
+
+
+def live_champion(data_dir: Path) -> tuple[str | None, str | None]:
+    """(model id, model version) the live forecast was built by, from forecast.json (ADR 072).
+
+    The id is ``effective_id`` when the run fell back to P3, else the champion id. (None, None)
+    when forecast.json names no champion (older file): callers then read P3 as before.
+    """
+    nf = (_read_json("forecast.json", data_dir) or {}).get("next_fix")
+    nf = nf if isinstance(nf, dict) else {}
+    ch = nf.get("champion")
+    if not isinstance(ch, dict) or not isinstance(ch.get("id"), str):
+        return None, None
+    eff = ch.get("effective_id")
+    cid = eff if isinstance(eff, str) else ch["id"]
+    ver = nf.get("model_version")
+    return cid, ver if isinstance(ver, str) else None
+
+
+def not_p3_reason(data_dir: Path) -> str | None:
+    """ "the live model is <id>, not P3" when another model is live, else None."""
+    cid, _ = live_champion(data_dir)
+    return f"the live model is {cid}, not P3" if cid not in (None, "p3") else None
+
+
+def read_demotion_state(data_dir: Path, name: str = DEMOTION_STATE_FILE) -> dict[str, Any] | None:
+    """A sticky state file (ADR 068; ``name`` per model, ADR 072) or None when it is missing,
+    unreadable or malformed.
 
     Fail closed: a state that cannot be validated is None ("unknown"), never "not demoted".
     """
-    s = _read_json(DEMOTION_STATE_FILE, data_dir)
+    s = _read_json(name, data_dir)
     if not isinstance(s, dict) or not isinstance(s.get("demoted"), bool):
         return None
     if not isinstance(s.get("reasons", []), list):
@@ -158,6 +193,9 @@ def demotion_status(model_id: str, data_dir: Path = DATA) -> dict[str, Any] | No
     """Demotion state for a model: {"state", "reason", "source"} or None when not watched/unknown."""
     if model_id != LIVE_MODEL_ID:
         return None
+    other = not_p3_reason(data_dir)
+    if other:  # P3's own file is stale while another model is live: do not show it as current
+        return {"state": "unavailable", "reason": other, "source": f"data/{DEMOTION_STATE_FILE}"}
     s = read_demotion_state(data_dir)
     if s is None:
         return None
@@ -520,6 +558,11 @@ def _direction_extra(fwd: list[dict[str, Any]]) -> str | None:
 
 
 def _gate_from_forecast(row: dict[str, Any], data_dir: Path) -> None:
+    other = not_p3_reason(data_dir)
+    if other:  # forecast.json's gates and n_forward describe the live model, not P3 (ADR 072)
+        row["gate"] = {"text": f"unavailable: {other}", "passes": None, "marking": "INFERRED"}
+        row["forward"]["extras"].append(f"direction and timing gates unavailable: {other}")
+        return
     nf = (_read_json("forecast.json", data_dir) or {}).get("next_fix") or {}
     tr = nf.get("track_record") or {}
     if not tr:
@@ -826,15 +869,25 @@ def row_demotion_monitor(data_dir: Path) -> dict[str, Any]:
         [f"data/{DEMOTION_STATE_FILE}", "data/forecast.json"],
     )
     row["forward"]["marking"] = "INFERRED"  # copied from files the check-price job wrote
-    s = read_demotion_state(data_dir)
+    cid, ver = live_champion(data_dir)
+    name = DEMOTION_STATE_FILE
+    if cid not in (None, "p3"):  # ADR 072: the live champion's own per-model state file
+        if ver is None:
+            return no_data(row, f"the live model is {cid} but forecast.json names no version")
+        name = demotion_state_file(ver)
+        row["sources"] = [f"data/{name}", "data/forecast.json"]
+    s = read_demotion_state(data_dir, name)
+    who = f"the live model {cid}" if cid not in (None, "p3") else "P3"
     if s is None:
-        exists = (data_dir / DEMOTION_STATE_FILE).exists()
+        exists = (data_dir / name).exists()
         why = (
-            f"data/{DEMOTION_STATE_FILE} is unreadable or malformed"
+            f"data/{name} ({who}) is unreadable or malformed"
             if exists
-            else f"data/{DEMOTION_STATE_FILE} is not present yet"
+            else f"data/{name} ({who}) is not present yet"
         )
         return no_data(row, why + "; this is not the same as 'not demoted'")
+    if cid not in (None, "p3"):
+        row["forward"]["extras"].append(f"state of the live model {cid} ({ver})")
     dm = ((_read_json("forecast.json", data_dir) or {}).get("next_fix") or {}).get("demotion")
     breaching: list[str] | None = None
     if isinstance(dm, dict) and isinstance(dm.get("rules_breaching_now"), list):

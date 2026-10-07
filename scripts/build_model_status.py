@@ -128,7 +128,10 @@ def compute(now: datetime | None = None) -> dict[str, Any]:
         out["promote"] = dec["promote"]
     out["not_yet"] = NOT_YET
     out["timeliness"] = _load("input_timeliness_weekly.json")
-    dem = _load("model_demotion_state.json")
+    from ml import nextfix
+
+    # ADR 072: the LIVE champion's own state file, never another model's
+    dem = _load(nextfix.demotion_state_file(nextfix.CHAMPION_REGISTRY[champ][1]))
     out["demotion"] = (
         {k: dem.get(k) for k in ("demoted", "since", "reasons", "last_checked")}
         if isinstance(dem, dict)

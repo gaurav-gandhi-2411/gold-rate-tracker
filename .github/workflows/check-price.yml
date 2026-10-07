@@ -265,6 +265,11 @@ jobs:
           git config user.name "gold-rate-bot"
           git config user.email "actions@users.noreply.github.com"
           git add data/forecast.json data/drift_metrics.json data/metrics_history.json data/ibja_rates.parquet data/chronos_probe.json data/calibration.json data/feature_store/snapshots.parquet data/tanishq_scrape_success_rate.json data/cadence_metrics.json data/ibja_derived_prices.json data/nextfix_oos.json data/nextfix_p3_oos.json data/nextfix_p3_variants_oos.json data/model_demotion_state.json data/nextfix_intraday_shadow.json data/nextfix_intraday_backtest.json || true
+          # ADR 072: exists only after a promotion. Its own line, because one missing pathspec makes
+          # git add stage NOTHING from the whole command (verified), so it cannot join the list above.
+          if [ -f data/champion_state.json ]; then git add data/champion_state.json || true; fi
+          # ADR 072: one demotion state file per model other than P3; none exist until a champion switch.
+          if compgen -G "data/model_demotion_state__*.json" > /dev/null; then git add data/model_demotion_state__*.json || true; fi
           if git diff --staged --quiet; then
             echo "No changes to commit."
             echo "changed=false" >> "$GITHUB_OUTPUT"

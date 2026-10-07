@@ -984,6 +984,22 @@ def _next_fix_block(
             "rules_breaching_now": dm.get("rules_breaching_now", []),
             "checked": bool(dm.get("checked")),
         }
+        ch = out.get("champion")
+        if ch:  # ADR 072: which model is live; the notification trigger T17 reads this
+            block["champion"] = {
+                k: ch.get(k)
+                for k in (
+                    "id",
+                    "since",
+                    "promoted_now",
+                    "unreadable",
+                    "pinned",
+                    "fallback",
+                    "effective_id",
+                    "history_len",
+                    "last_change",
+                )
+            }
         block["windows"] = {
             k: {kk: v for kk, v in rec.items() if kk not in ("conformal_q", "vol_now")}
             for k, rec in windows.items()
@@ -1025,6 +1041,8 @@ def _next_fix_block(
                     for k in ("n", "mae_model", "mae_flat", "mae_change_pct", "last_d0")
                 },
             }
+            if (ch or {}).get("id", "p3") != "p3":  # the shadow is P3 then, not the ensemble
+                block["shadow_ensemble"]["shadow_model_version"] = sh["model_version"]
         if mode == "after_us_close":
             p_up = float(fc["p_up"])
             side = "up" if p_up >= 0.5 else "down"

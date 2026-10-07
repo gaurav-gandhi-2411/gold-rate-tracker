@@ -114,3 +114,19 @@ def test_timeliness_section_is_computed_and_never_guessed(tmp_path, monkeypatch)
     )
     md = mod.render(mod.compute())
     assert "**7 of 18**" in md and "**3 of 4**" in md and "20 minutes" in md
+
+
+def test_demotion_shown_is_the_live_champions_own_not_p3s(tmp_path, monkeypatch) -> None:
+    mod = _load_module()
+    monkeypatch.setattr(mod, "DATA", tmp_path)
+    _write(tmp_path, _folds(30, 0.5), _folds(30, 0.2))
+    st = {"champion": "p3_roll60", "since": None, "history": []}
+    (tmp_path / "champion_state.json").write_text(json.dumps(st))
+    (tmp_path / "model_demotion_state.json").write_text(  # P3's file: demoted, not the champion's
+        json.dumps({"demoted": True, "since": "2026-10-20T00:00:00+00:00", "reasons": []})
+    )
+    assert mod.compute()["demotion"] is None
+    (tmp_path / "model_demotion_state__nextfix_p3_roll60_v1.json").write_text(
+        json.dumps({"demoted": False, "since": None, "reasons": []})
+    )
+    assert mod.compute()["demotion"]["demoted"] is False
