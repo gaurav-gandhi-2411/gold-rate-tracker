@@ -51,6 +51,7 @@ const STRINGS_HWK = {
     methDirectionOn: "On — for the next price move only",
     methDirectionOnSub: ({ right, n, upRight }) => `Tested on ${n} past days it had not seen: right ${right} times, against ${upRight} for "gold usually rises". These are past results, not live calls.`,
     methDirectionOnNote: "We show whether the next move is more likely up or down, with its chance, only while it keeps beating \"gold usually rises\" on days it has not seen — we re-check this every few hours. It is not advice to buy or sell; that would need a much stronger record.",
+    methDirectionSource: "The chance comes from the same estimate that gives the price range above, not from any other model: it looks at how far world gold and the rupee have moved since India's last official rate was set, and how closely India's rate has followed those moves in the past. Other models we run in the background are never used for this number.",
     methCoversMoves: "Covers most of the usual day-to-day moves",
     methTargetLine: ({ date }) => `Target: ${date}`,
     methNextDayExplainer: 'This is just for the next reading, not several days out — based on how much the price has typically moved by the next check over our last 30 test runs. (The "moves about ±₹X over 5 days" note on the main page is a separate, longer-range estimate.)',
