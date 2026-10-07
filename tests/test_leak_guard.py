@@ -144,8 +144,13 @@ class TestSourceConventions:
         assert ka.comex_daily_known_at("2026-07-20") == pd.Timestamp("2026-07-20T17:30Z")
         assert ka.comex_daily_known_at("2026-01-20") == pd.Timestamp("2026-01-20T18:30Z")
 
-    def test_usdinr_daily_is_conservatively_end_of_utc_day(self) -> None:
-        assert ka.usdinr_daily_known_at("2026-07-20") == pd.Timestamp("2026-07-20T23:59Z")
+    def test_usdinr_daily_uses_the_measured_clock_not_the_end_of_day(self) -> None:
+        # Measured 2026-10-05 (reports/model_audit_2026-10/inrx_daily_clock.json): latest match
+        # ends 19:00 UTC, so 20:00 UTC. The old 23:59 convention is kept as a named constant.
+        assert ka.usdinr_daily_known_at("2026-07-20") == pd.Timestamp("2026-07-20T20:00Z")
+        assert ka.at_utc("2026-07-20", ka.USDINR_SNAPSHOT_CONSERVATIVE) == pd.Timestamp(
+            "2026-07-20T23:59Z"
+        )
 
     def test_hourly_bar_is_known_one_hour_after_its_start(self) -> None:
         assert ka.hourly_bar_known_at("2026-07-20T13:00Z") == pd.Timestamp("2026-07-20T14:00Z")

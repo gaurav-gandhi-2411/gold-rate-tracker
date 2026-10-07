@@ -32,10 +32,13 @@ Each window's range is split-conformal on that window's own walk-forward errors,
 volatility (80% target). Direction is shown only in the model window; elsewhere there is no evidence
 for it.
 
-Models. Point forecast of the next fix's log return: the average of a ridge regression and an
-ensemble of five small neural networks (one hidden layer, 16 tanh units). P(up): the average of a
-logistic regression and the two point models' implied probabilities. Range: split-conformal on the
-model's own out-of-sample errors, scaled by recent volatility (80% target).
+Models. LIVE (ADR 069, GG decision D2 2026-10-05): P3, ``pm0 x exp(b x world move)`` with one
+slope ``b`` fitted by least squares through the origin on resolved pairs (ADR 067). P(up) =
+Phi(forecast / residual spread); range: split-conformal on P3's own out-of-sample errors, scaled by
+recent volatility (80% target). SHADOW: the ADR 064 ensemble, the average of a ridge regression and
+five small neural networks (one hidden layer, 16 tanh units), P(up) the average of a logistic
+regression and the two point models' implied probabilities. It keeps its own record
+(``nextfix_oos.json``) and its forecast is returned under ``shadow``; nothing from it is shown.
 
 Track record. ``data/nextfix_oos.json`` holds one out-of-sample forecast per resolved pair,
 computed with training data restricted to before that pair's decision time. Each run appends the
@@ -60,9 +63,23 @@ logger = logging.getLogger(__name__)
 DATA_DIR = Path(__file__).resolve().parent.parent / "data"
 IBJA_PATH = DATA_DIR / "ibja_rates.parquet"
 LABEL_PATH = DATA_DIR / "history_seed_inr22k_label.parquet"
-OOS_PATH = DATA_DIR / "nextfix_oos.json"
+OOS_PATH = DATA_DIR / "nextfix_oos.json"  # the ensemble's record: SHADOW since ADR 069
+P3_OOS_PATH = DATA_DIR / "nextfix_p3_oos.json"  # the live model's record (ADR 069)
+P3_VARIANTS_PATH = DATA_DIR / "nextfix_p3_variants_oos.json"  # ADR 071: shadow slope variants
+ROLL_WINDOW = 60  # V1: most recent resolved pairs the slope is fitted on
+MONDAY_MIN = 15  # V2: Monday pairs needed before Monday gets its own slope
 
-MODEL_VERSION = "nextfix_ridge_mlp_v1"
+# Live model (ADR 067/069): one fitted slope on the world move, pm0 x exp(b x move).
+MODEL_VERSION = "nextfix_p3_v1"
+# The ridge + neural-net ensemble of ADR 064: runs on every cycle in shadow, scored beside P3.
+ENSEMBLE_VERSION = "nextfix_ridge_mlp_v1"
+# P3 forecasts for decision days from here on were issued live; earlier days in its record are a
+# walk-forward re-run on past data (flagged ``retro``) and are never worded as live calls.
+# The first decision day whose forecast P3 issues live is the day this merged (2026-10-07), not
+# the day GG approved it (2026-10-05, when the ensemble was still live): counting an earlier day
+# as forward would present a re-run as a live call.
+P3_FORWARD_FROM = "2026-10-07"
+STATE_FILE = "model_demotion_state.json"  # ADR 068: sticky demotion state of the live model
 FEATURES = ["x_glob", "x_prev", "bdev"]
 MAX_GAP_DAYS = 4  # consecutive IBJA days only (weekends/holidays allowed)
 BASIS_WINDOW = 20  # pairs in the rolling mean the basis deviation is measured from
@@ -335,6 +352,97 @@ def predict(train: pd.DataFrame, row: pd.Series, resid_sd: float | None = None) 
     return Prediction(ret=ret, p_up=p_up, vol=vol)
 
 
+def predict_p3(train: pd.DataFrame, row: pd.Series, resid_sd: float | None = None) -> Prediction:
+    """P3 (ADR 067): the next fix's log return is ``b x`` the world move over the decision day,
+    ``b`` least squares through the origin on pairs whose target fix is already known.
+
+    P(up) = Phi(ret / s), s the recent out-of-sample residual spread (the same form the ensemble
+    uses for its point models), so the direction gate sees a calibrated-by-construction probability.
+    """
+    from scipy.stats import norm
+
+    x = train["x_glob"].to_numpy(dtype=float)
+    y = train["y"].to_numpy(dtype=float)
+    denom = float(x @ x)
+    b = float(x @ y / denom) if denom > 0 else 0.0
+    ret = b * float(row["x_glob"])
+    s = resid_sd if resid_sd and resid_sd > 0 else float(y.std()) or 0.01
+    vol = float(np.sqrt((train["y"] ** 2).ewm(halflife=VOL_HALFLIFE).mean().iloc[-1]))
+    return Prediction(ret=ret, p_up=float(norm.cdf(ret / s)), vol=vol)
+
+
+def _p3_from_slope(
+    train: pd.DataFrame, row: pd.Series, b: float, resid_sd: float | None
+) -> Prediction:
+    from scipy.stats import norm
+
+    y = train["y"].to_numpy(dtype=float)
+    ret = b * float(row["x_glob"])
+    s = resid_sd if resid_sd and resid_sd > 0 else float(y.std()) or 0.01
+    vol = float(np.sqrt((train["y"] ** 2).ewm(halflife=VOL_HALFLIFE).mean().iloc[-1]))
+    return Prediction(ret=ret, p_up=float(norm.cdf(ret / s)), vol=vol)
+
+
+def _slope(x: np.ndarray, y: np.ndarray) -> float:
+    denom = float(x @ x)
+    return float(x @ y / denom) if denom > 0 else 0.0
+
+
+def predict_p3_roll60(
+    train: pd.DataFrame, row: pd.Series, resid_sd: float | None = None
+) -> Prediction:
+    """ADR 071 V1: P3's slope fitted on the ROLL_WINDOW most recent resolved pairs only."""
+    t = train.sort_values("d0").tail(ROLL_WINDOW)
+    b = _slope(t["x_glob"].to_numpy(dtype=float), t["y"].to_numpy(dtype=float))
+    return _p3_from_slope(train, row, b, resid_sd)
+
+
+def predict_p3_monday(
+    train: pd.DataFrame, row: pd.Series, resid_sd: float | None = None
+) -> Prediction:
+    """ADR 071 V2: on Monday decisions, a slope fitted on resolved MONDAY pairs only (at least
+    MONDAY_MIN of them); every other day, and Mondays before that, exactly P3."""
+    t = train
+    if pd.Timestamp(row["d0"]).dayofweek == 0:
+        mon = train[pd.to_datetime(train["d0"]).dt.dayofweek == 0]
+        if len(mon) >= MONDAY_MIN:
+            t = mon
+    b = _slope(t["x_glob"].to_numpy(dtype=float), t["y"].to_numpy(dtype=float))
+    return _p3_from_slope(train, row, b, resid_sd)
+
+
+VARIANT_PREDICTORS = {"p3_roll60": "predict_p3_roll60", "p3_monday": "predict_p3_monday"}
+
+
+def update_variants(pairs: pd.DataFrame, data_dir: Path) -> dict[str, int]:
+    """Append resolved decision days to the ADR 071 shadow records. Never raises (shadow only)."""
+    path = data_dir / P3_VARIANTS_PATH.name
+    try:
+        data = json.loads(path.read_text())
+        old = data.get("variants", {}) if isinstance(data, dict) else {}
+    except (OSError, ValueError):
+        old = {}
+    out: dict[str, list[dict]] = {}
+    for name, fn_name in VARIANT_PREDICTORS.items():
+        try:
+            out[name] = update_oos(
+                pairs,
+                list(old.get(name, [])),
+                globals()[fn_name],
+                forward_from=P3_FORWARD_FROM,
+            )
+        except Exception as exc:
+            logger.warning("variant %s failed: %s", name, exc)
+            out[name] = list(old.get(name, []))
+    payload = {
+        "schema_version": 1,
+        "note": "ADR 071 shadow variants of P3; one out-of-sample fold per decision day.",
+        "variants": {k: sorted(v, key=lambda f: f["d0"]) for k, v in out.items()},
+    }
+    path.write_text(json.dumps(payload, indent=1) + "\n")
+    return {k: len(v) for k, v in out.items()}
+
+
 # ── out-of-sample track record ───────────────────────────────────────────────────────────────────
 
 
@@ -350,10 +458,12 @@ def load_oos(path: Path = OOS_PATH) -> list[dict]:
     return list(data.get("folds", [])) if isinstance(data, dict) else []
 
 
-def save_oos(folds: list[dict], path: Path = OOS_PATH) -> None:
+def save_oos(
+    folds: list[dict], path: Path = OOS_PATH, model_version: str = ENSEMBLE_VERSION
+) -> None:
     payload = {
         "schema_version": 1,
-        "model_version": MODEL_VERSION,
+        "model_version": model_version,
         "note": "One out-of-sample forecast per IBJA day, trained only on fixes known before it.",
         "folds": sorted(folds, key=lambda f: f["d0"]),
     }
@@ -365,8 +475,16 @@ def _resid_sd(folds: list[dict]) -> float | None:
     return float(np.std(errs)) if len(errs) >= MIN_CONFORMAL else None
 
 
-def update_oos(pairs: pd.DataFrame, folds: list[dict]) -> list[dict]:
-    """Append an out-of-sample forecast for every resolved pair not yet in ``folds``."""
+def update_oos(
+    pairs: pd.DataFrame, folds: list[dict], predictor=None, forward_from: str | None = None
+) -> list[dict]:
+    """Append an out-of-sample forecast for every resolved pair not yet in ``folds``.
+
+    ``predictor``: ``predict`` (the ensemble) when omitted. ``forward_from``: when given, each new
+    fold is flagged ``retro`` if its decision day is earlier (a re-run on past data, not a forecast
+    issued live), so scorers can keep forward and retrospective results apart.
+    """
+    predictor = predictor or predict  # looked up at call time so tests can substitute it
     done = {f["d0"] for f in folds}
     out = list(folds)
     resolved = pairs[pairs["d1"].notna()].reset_index(drop=True)
@@ -378,19 +496,20 @@ def update_oos(pairs: pd.DataFrame, folds: list[dict]) -> list[dict]:
         train = resolved[resolved["d1"] <= row["d0"]]
         if len(train) < MIN_TRAIN:
             continue
-        p = predict(train, row, _resid_sd([f for f in out if f["d0"] < key]))
-        out.append(
-            {
-                "d0": key,
-                "d1": _day(row["d1"]),
-                "pm0": round(float(row["pm0"]), 2),
-                "pm1": round(float(row["pm1"]), 2),
-                "y": float(row["y"]),
-                "ret": p.ret,
-                "p_up": p.p_up,
-                "vol": p.vol,
-            }
-        )
+        p = predictor(train, row, _resid_sd([f for f in out if f["d0"] < key]))
+        fold = {
+            "d0": key,
+            "d1": _day(row["d1"]),
+            "pm0": round(float(row["pm0"]), 2),
+            "pm1": round(float(row["pm1"]), 2),
+            "y": float(row["y"]),
+            "ret": p.ret,
+            "p_up": p.p_up,
+            "vol": p.vol,
+        }
+        if forward_from is not None:
+            fold["retro"] = key < forward_from
+        out.append(fold)
         out.sort(key=lambda f: f["d0"])
     return out
 
@@ -441,7 +560,7 @@ def diebold_mariano_p(err_a: np.ndarray, err_b: np.ndarray, lags: int = 4) -> fl
     return float(2.0 * (1.0 - norm.cdf(abs(t))))
 
 
-def evaluate(folds: list[dict]) -> dict:
+def evaluate(folds: list[dict], model_version: str = MODEL_VERSION) -> dict:
     """Score the track record: error vs flat-hold, direction metrics and gates, range coverage."""
     from scipy.stats import wilcoxon
 
@@ -454,7 +573,7 @@ def evaluate(folds: list[dict]) -> dict:
     err_model = np.array([abs(f["pm1"] - f["pm0"] * math.exp(f["ret"])) for f in folds])
     err_flat = np.array([abs(f["pm1"] - f["pm0"]) for f in folds])
     y_true = [1 if f["y"] > 0 else 0 for f in folds]
-    m = compute_direction_metrics(y_true, [f["p_up"] for f in folds], MODEL_VERSION)
+    m = compute_direction_metrics(y_true, [f["p_up"] for f in folds], model_version)
     baseline = {"n_test_folds": n, "logistic_metrics": m}
     # Range coverage, walk-forward: each fold's range uses only the errors before it.
     hits, widths = [], []
@@ -484,6 +603,7 @@ def evaluate(folds: list[dict]) -> dict:
     cov_ci = wilson_confidence_interval(cov_k, cov_n) if cov_n else None
     return {
         "n": n,
+        "n_forward": sum(1 for f in folds if f.get("retro") is False),
         "ready": True,
         "first_d0": folds[0]["d0"],
         "last_d0": folds[-1]["d0"],
@@ -500,6 +620,7 @@ def evaluate(folds: list[dict]) -> dict:
         "timing_gate": decide_timing_signal(baseline),
         "range_coverage": round(float(np.mean(hits)), 3) if hits else None,
         "range_n": len(hits),
+        "range_hits": [bool(h) for h in hits],  # per fold, oldest first (ml.demotion's range rule)
         "range_mean_width": round(float(np.mean(widths)), 1) if widths else None,
         "range_nominal": NOMINAL,
     }
@@ -513,9 +634,15 @@ def _at(day: pd.Timestamp, hm: tuple[int, int]) -> datetime:
 
 
 def _model_forecast(
-    full: pd.DataFrame, glob: pd.Series, folds: list[dict], d0: pd.Timestamp
+    full: pd.DataFrame,
+    glob: pd.Series,
+    folds: list[dict],
+    d0: pd.Timestamp,
+    predictor=None,
+    model_version: str = MODEL_VERSION,
 ) -> dict | None:
     """The model window: next PM fix after ``d0`` from the global close of ``d0``, or None."""
+    predictor = predictor or predict_p3
     if glob.empty or glob.index.max() < d0:
         return None
     q = conformal_q(folds)
@@ -530,11 +657,11 @@ def _model_forecast(
     if len(train) < MIN_TRAIN:
         return None
     row = pairs.iloc[-1]
-    p = predict(train, row, _resid_sd(folds))
+    p = predictor(train, row, _resid_sd(folds))
     base = float(row["pm0"])
     return {
         "mode": "after_us_close",
-        "model_version": MODEL_VERSION,
+        "model_version": model_version,
         "base_kind": "pm",
         "base_date": _day(d0),
         "base": round(base, 2),
@@ -551,11 +678,20 @@ def forecast(
     folds: list[dict],
     now: datetime,
     windows: dict | None = None,
+    shadow_folds: list[dict] | None = None,
+    demoted: bool = False,
 ) -> dict:
     """Forecast the next IBJA fix at ``now``, whichever part of the day it is (see module doc).
 
-    ``windows``: ``flat_record`` results for "am_to_pm" and "pm_to_am" (computed if omitted).
-    Returns {"active": False, "reason": ...} only when there is no usable fix or track record.
+    ``demoted``: ml.demotion has switched the live model off (ADR 068); the model window then holds
+    the latest fix like every other window, so the headline falls back to "hold" and no direction
+    is shown.
+
+    ``folds``: the LIVE model's (P3) out-of-sample record. ``shadow_folds``: the ensemble's; when
+    given and the model window is open, the ensemble's forecast for the same day is returned under
+    ``shadow`` (never headline, never shown). ``windows``: ``flat_record`` results for "am_to_pm"
+    and "pm_to_am" (computed if omitted). Returns {"active": False, "reason": ...} only when there
+    is no usable fix or track record.
     """
     pm_days = full.dropna(subset=["pm"])
     if pm_days.empty:
@@ -573,10 +709,21 @@ def forecast(
             "after_morning_rate",
         )
     else:
-        if now >= _at(d_pm, US_CLOSE_UTC):
+        if now >= _at(d_pm, US_CLOSE_UTC) and not demoted:
             fc = _model_forecast(full, glob, folds, d_pm)
             if fc is not None:
-                return {"active": True, **fc}
+                out = {"active": True, **fc}
+                if shadow_folds is not None:
+                    try:
+                        sh = _model_forecast(
+                            full, glob, shadow_folds, d_pm, predict, ENSEMBLE_VERSION
+                        )
+                    except Exception as exc:  # shadow must never take the live forecast down
+                        logger.warning("nextfix shadow ensemble failed: %s", exc)
+                        sh = None
+                    if sh is not None:
+                        out["shadow"] = sh
+                return out
         rec, kind = windows.get("pm_to_am", {}), "pm_to_am"
         d, base, base_kind, target_kind, mode = (
             d_pm,
@@ -587,7 +734,7 @@ def forecast(
         )
     if not rec.get("ready"):
         return {"active": False, "reason": f"{kind}_record_too_short"}
-    return {
+    out = {
         "active": True,
         "mode": mode,
         "model_version": f"hold_latest_fix_{kind}",
@@ -599,6 +746,9 @@ def forecast(
         "half_width": round(rec["conformal_q"] * rec["vol_now"] * base, 2),
         "p_up": None,
     }
+    if demoted:
+        out["demoted"] = True
+    return out
 
 
 def to_retail(fc: dict, current_22k: float, slope: float, ref: float | None = None) -> dict:
@@ -640,14 +790,81 @@ def run(
     full = load_ibja_full(ibja_path)
     glob = global_series(macro, data_dir / LABEL_PATH.name)
     pairs = build_pairs(full.dropna(subset=["pm"]).reset_index(drop=True), glob)
+    # Live model: P3 (ADR 069). Its record is cheap (no networks) and rebuilt from the pairs if absent.
+    p3_path = data_dir / P3_OOS_PATH.name
+    p3_old = load_oos(p3_path)
+    folds = (
+        update_oos(pairs, p3_old, predict_p3, forward_from=P3_FORWARD_FROM)
+        if not pairs.empty
+        else p3_old
+    )
+    save_oos(folds, p3_path, MODEL_VERSION)
+    ev = evaluate(folds, MODEL_VERSION)
+    if not pairs.empty:
+        try:  # shadow variants must never take the live forecast down (ADR 069, ADR 071)
+            update_variants(pairs, data_dir)
+        except Exception as exc:
+            logger.warning("nextfix slope-variant shadow failed (%s); live P3 unaffected", exc)
+    # Shadow: the ridge + neural-net ensemble keeps its own record and is scored beside P3.
     oos_path = data_dir / OOS_PATH.name
-    folds = update_oos(pairs, load_oos(oos_path)) if not pairs.empty else load_oos(oos_path)
-    save_oos(folds, oos_path)
-    ev = evaluate(folds)
+    try:  # the shadow must never take the live forecast down (ADR 069)
+        shadow_folds = (
+            update_oos(pairs, load_oos(oos_path)) if not pairs.empty else load_oos(oos_path)
+        )
+        save_oos(shadow_folds, oos_path, ENSEMBLE_VERSION)
+        shadow_ev = evaluate(shadow_folds, ENSEMBLE_VERSION)
+    except Exception as exc:
+        logger.warning("nextfix shadow ensemble record failed (%s); live P3 unaffected", exc)
+        shadow_folds, shadow_ev = load_oos(oos_path), {"n": 0, "ready": False}
     since = ev.get("first_d0") if ev.get("ready") else None
     windows = {k: flat_record(flat_pairs(full, k), since) for k in ("am_to_pm", "pm_to_am")}
-    fc = forecast(full, glob, folds, now, windows)
-    return {"eval": ev, "windows": windows, "forecast": fc, "ibja": full}
+    demotion = _demotion(data_dir, folds, ev, now)
+    fc = forecast(full, glob, folds, now, windows, shadow_folds, demoted=demotion["demoted"])
+    return {
+        "eval": ev,
+        "shadow_eval": shadow_ev,
+        "windows": windows,
+        "forecast": fc,
+        "demotion": demotion,
+        "ibja": full,
+    }
+
+
+def _demotion(data_dir: Path, folds: list[dict], ev: dict, now: datetime) -> dict:
+    """Run ADR 068's rules on the live model's record and keep the sticky state file.
+
+    Returns {"demoted", "since", "reasons", "newly_demoted", "checked"}. Never raises: if the rules
+    themselves fail the model stays as it is and the failure is logged (a broken monitor must not
+    silently switch the live model off, and cannot silently hide a degraded one for more than a run
+    because the rules re-run on every cycle).
+    """
+    from ml import demotion as dm
+
+    path = data_dir / STATE_FILE
+    state = dm.load_state(path, MODEL_VERSION)
+    try:
+        status = dm.demotion_status(folds, ev.get("range_hits") if ev.get("ready") else None)
+        state, newly = dm.apply_status(state, status, now.astimezone(UTC).isoformat())
+        dm.save_state(path, state)
+    except Exception as exc:
+        logger.warning("demotion check failed (%s); live model unchanged", exc)
+        return {
+            "demoted": bool(state.get("demoted")),
+            "since": state.get("since"),
+            "reasons": state.get("reasons", []),
+            "newly_demoted": False,
+            "checked": False,
+        }
+    return {
+        "demoted": bool(state["demoted"]),
+        "since": state["since"],
+        "reasons": state["reasons"],
+        "newly_demoted": newly,
+        "checked": True,
+        "params": status["params"],
+        "rules": {k: status[k] for k in ("error", "direction", "range") if k in status},
+        "rules_breaching_now": [k for k, v in status["demote"].items() if v],
+    }
 
 
 def main() -> None:

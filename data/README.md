@@ -153,6 +153,6 @@ Was a rolling list of LLM-generated market notes, written by `ml/commentary.py` 
 Retired once "Today's read" in the PWA moved to a deterministic client-side sentence
 (`composeTodaysRead()` in `app.js`) composed from signals already computed for the good-price
 card — no remaining consumer read this file, so the generation step was removed rather than
-left running with nowhere for its output to go. The file itself is left in the repo as a
-historical artifact (its past entries aren't reproducible) but nothing produces or reads it
-going forward.
+left running with nowhere for its output to go. The file itself was deleted from the tree
+(dead-code cleanup B1); its past entries aren't reproducible but remain in git history
+(last content commit 8012aac7). Nothing produces or reads it.
