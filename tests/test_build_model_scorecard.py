@@ -230,6 +230,16 @@ def test_markdown_is_a_pure_function_of_the_json(tmp_path: Path) -> None:
     assert bms.render(json.loads(out_json.read_text(encoding="utf-8"))).encode() == first_md
 
 
+def test_json_only_writes_no_markdown(tmp_path: Path) -> None:
+    """The weekly job runs --json-only; a markdown file written anyway is an unstaged change that
+    makes bot-pr-sync's rebase fail (2026-10-07 Weekly Backtest run 37665483075)."""
+    out_json, out_md = tmp_path / "s.json", tmp_path / "s.md"
+    cli = [sys.executable, str(ROOT / "scripts" / "build_model_scorecard.py")]
+    args = ["--out-json", str(out_json), "--out-md", str(out_md), "--data-dir", str(tmp_path)]
+    subprocess.run([*cli, "--json-only", *args], check=True, capture_output=True)
+    assert out_json.exists() and not out_md.exists()
+
+
 def test_render_only_needs_no_heavy_imports() -> None:
     code = (
         "import importlib.util, json, sys;"
