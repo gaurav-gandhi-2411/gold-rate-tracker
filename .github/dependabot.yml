@@ -11,6 +11,22 @@ updates:
         update-types:
           - "minor"
           - "patch"
+    ignore:
+      # Scraper browser dependencies are NEVER auto-bumped (all update types: no `versions` or
+      # `update-types` key means ignore everything). A Playwright bump broke the self-hosted
+      # laptop scraper twice: 2026-08 (1.63.0 deleted the working browser cache, #1806 revert)
+      # and 2026-10-02 (#1846, install failed for ~11 h, reverted in #2316). A bump here is a
+      # deliberate, hand-made PR that must carry a proof run on the self-hosted runner
+      # (scripts/check_scraper_dependency_change.py, docs/TANISHQ_TIMED_VISITS.md section 11).
+      # Note: this ignores version-update PRs; GitHub security-update PRs may still open and
+      # are caught by the same CI gate.
+      - dependency-name: "playwright"
+      - dependency-name: "playwright-core"
+      - dependency-name: "playwright-chromium"
+      - dependency-name: "@playwright/*"
+      - dependency-name: "puppeteer*"
+      - dependency-name: "chromium*"
+      - dependency-name: "@sparticuz/chromium*"
 
   - package-ecosystem: "pip"
     directory: "/ml"

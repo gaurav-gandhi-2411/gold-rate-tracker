@@ -6,10 +6,11 @@ the forecast used -- the features, the history behind the rolling basis, and eve
 (features and the label that makes the pair trainable) -- with the instant it became known, and
 asserts each is known strictly before the decision moment.
 
-Two runs, because the repo's USD/INR clock is a stated convention, not a measurement (ADR 058):
-  * ``repo_conventions``: usd_inr bar dated D known at 23:59 UTC of D (conservative);
-  * ``usdinr_pinned``: usd_inr known at ``USDINR_PINNED_UTC`` of D, from this audit's hourly-bar
-    check (reports/model_audit_2026-10/inrx_daily_clock.json).
+Two runs:
+  * ``repo_conventions``: the clocks ml.known_at defines today (usd_inr measured: 20:00 UTC of D);
+  * ``legacy_conservative``: usd_inr known at 23:59 UTC of D (the convention before 2026-10-05),
+    kept to show what the guard said then. The measured clock came from hourly-bar matching
+    (reports/model_audit_2026-10/inrx_daily_clock.json, scripts/audit_inrx_daily_clock.py).
 A negative control (a deliberately leaky input) must be flagged, or the run is not trusted.
 
     python scripts/audit_nextfix_leak.py [--out reports/model_audit_2026-10/leak_audit.json]
@@ -20,7 +21,6 @@ from __future__ import annotations
 import argparse
 import json
 import sys
-from datetime import time
 from pathlib import Path
 
 import pandas as pd
@@ -33,7 +33,6 @@ from ml.leak_guard import KnownInput, LeakGuard, TimingLeakError
 
 # Latest UTC hour of D at which the daily INR=X value was seen to be set (hourly-bar match over
 # the last ~60 days). Early-day: 0-9 UTC; 12:00 leaves margin.
-USDINR_PINNED_UTC = time(12, 0)
 
 
 def decision_moment(d0: pd.Timestamp) -> pd.Timestamp:
@@ -105,13 +104,14 @@ def main() -> None:
         full.dropna(subset=["pm"]).reset_index(drop=True), nf.global_series(macro)
     )
     folds = nf.load_oos()
-    pinned = ka.Clock("usdinr_pinned", "UTC", USDINR_PINNED_UTC)
     out = {
         "n_folds": len(folds),
         "decision_moment": "US close of D + margin = 22:15 UTC on D (ml.nextfix.US_CLOSE_UTC)",
         "negative_control_flagged": negative_control(pairs),
-        "repo_conventions": audit(folds, pairs, ka.USDINR_SNAPSHOT_CONSERVATIVE, "nextfix/repo"),
-        "usdinr_pinned": audit(folds, pairs, pinned, "nextfix/pinned"),
+        "repo_conventions": audit(folds, pairs, ka.MACRO_DAILY_CLOCKS["usd_inr"], "nextfix/repo"),
+        "legacy_conservative": audit(
+            folds, pairs, ka.USDINR_SNAPSHOT_CONSERVATIVE, "nextfix/legacy"
+        ),
     }
     Path(args.out).parent.mkdir(parents=True, exist_ok=True)
     Path(args.out).write_text(json.dumps(out, indent=1, default=str) + "\n")
