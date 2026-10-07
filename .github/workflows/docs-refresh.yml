@@ -85,6 +85,13 @@ jobs:
       - name: Refresh injected doc metrics
         run: python scripts/inject_metrics.py
 
+      - name: Render the model scorecard page
+        # Item 2g: docs/MODEL_SCORECARD.md is a pure function of data/model_scorecard_weekly.json
+        # (written by Weekly Backtest). Stdlib only, so no dependency install is needed here.
+        # continue-on-error: true so a render failure never blocks the README marker refresh.
+        continue-on-error: true
+        run: python scripts/build_model_scorecard.py --render-only
+
       - name: Commit, open PR, and enable auto-merge if anything changed
         env:
           GH_TOKEN: ${{ secrets.CI_MERGE_PAT }}
@@ -92,7 +99,7 @@ jobs:
           set -e
           git config user.name "gold-rate-bot"
           git config user.email "actions@users.noreply.github.com"
-          git add README.md docs/DIRECTION_SIGNAL_STATUS.md
+          git add README.md docs/DIRECTION_SIGNAL_STATUS.md docs/MODEL_SCORECARD.md
           if git diff --staged --quiet; then
             echo "No doc drift to refresh."
             exit 0
