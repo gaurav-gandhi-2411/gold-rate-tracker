@@ -98,9 +98,10 @@ Sweep scope (rule 85b): every tracked `.json`/`.jsonl` (and the parquet/CSV file
 | `data/wait_or_buy_today.json` | rupee moves only; `price_t`, `lo`, `hi` already dropped by the producer (GG 4c, 2026-09-25) | derived | Keep public | Nothing left to drop; asserted by `tests/test_public_price_surfaces.py`. See below. |
 | `data/nextfix_oos.json` | `pm0`/`pm1` = IBJA `pm_916` / 10 (143 of 143 folds) | raw IBJA series | **Registered** (GG decision 1, 2026-10-05) | Verification table below. `forecast.json` `next_fix` stays the public output. |
 | `data/nextfix_intraday_shadow.json` | `base`/`target` = IBJA `pm_916`/`am_916` / 10 (15 of 15, 8 of 8) | raw IBJA values | **Registered** (GG decision 1) | Same. `nextfix_intraday_backtest.json` was checked and stays public (aggregates only). |
-| `data/nextfix_p3_oos.json` (in #2411, not yet on master), `data/nextfix_p3_variants_oos.json` (#2418) | same `pm0`/`pm1` IBJA PM series | raw inside own-model | **Register right after both merge** | Exact registry and `.gitignore` lines are in "GG decisions of 2026-10-05" below. Not added here: see the reason there. |
-| `data/model_demotion_state.json` (#2411) | own demotion state | derived | Keep public | Booleans and reasons. Verified from the PR diff only. |
-| `data/model_scorecard_weekly.json` (#2395) | own scorecard | not checked on disk (file not on master) | Re-run this sweep when #2395 merges | Unverified. |
+| `data/nextfix_p3_oos.json`, `data/nextfix_p3_variants_oos.json` | `pm0`/`pm1` = IBJA `pm_916` / 10 (145 of 145 folds each; 145 of 145 for both `p3_roll60` and `p3_monday`, 290/290 values each) | raw IBJA series | **Registered** (2026-10-08 update, same rule as `nextfix_oos.json`) | Verified against `data/ibja_rates.parquet` (275 rows) on the 2026-10-08 merge of master. Both are written by `ml.inference` in `check-price.yml`, whose `encrypt` step now names them. Details in "2026-10-08 update" below. |
+| `data/model_demotion_state.json` | own demotion state | derived | Keep public | Booleans, reasons and timestamps; 180 bytes, no rate or price. Checked on disk 2026-10-08. |
+| `data/model_scorecard_weekly.json` | own scorecard (`models[]`: per-model n, MAE, intervals, p-values, verdict text) | derived | Keep public | Checked on disk 2026-10-08: no `pm0`/`pm1`/per-day series; its retrospective text carries aggregate MAE only. It is the input of the public `docs/MODEL_SCORECARD.md`. |
+| `data/model_status_weekly.json` (feat/model-status-weekly, not yet on master) | counts, dates, p-values, status strings | derived | Keep public | Checked on that branch's committed copy 2026-10-08: no rate and no price level. Not on this branch, so no workflow here touches it. |
 | `data/prices.json`, `backtest.json`, `drift_metrics.json`, `metrics_history.json`, `commentary.json` | Tanishq series | raw | **GG decision (STOP, live-read)** | Unchanged from "Live-read files" below. Recommendation unchanged: ADR 059 option B. |
 | `data/forecast.json`, `chronos_probe.json` | own forecast; one latest `base_ibja`/`ibja_last_value`/`current_22k` | derived (single latest value) | Keep public | E2's displayed current price. A single latest value is the displayed product, not a history. |
 | `data/ibja_derived_prices.json`, `archive/history_seed_v1_uniform_premium.json`, `data/history_seed_inr22k_*.parquet` | IBJA/Yahoo x public constants | derived | Keep public | ADR 059 option B series; unchanged. |
@@ -123,21 +124,7 @@ The public output stays `forecast.json` `next_fix` (the latest forecast and the 
 
 Consequences to know: `tests/test_nextfix.py::test_committed_track_record_passes_the_direction_gate_as_recorded` reads the real OOS file and now skips when it is absent (the lint job has no key). `docs/ADR066_CHECK_HOWTO.md` step 1 now starts with a decrypt, because the 2026-10-16 check reads the shadow log.
 
-**P3 files, to add right after #2411 / #2418 merge (NOT added here).** `data/nextfix_p3_oos.json` (#2411) and `data/nextfix_p3_variants_oos.json` (#2418) are not on master. `data_crypt.py guard` on this branch passes only for paths that exist or are registered, and a `.gitignore` line for a file another PR adds would make that PR's bot `git add` skip it. So nothing is added now. Right after both merge, one follow-up PR adds exactly:
-
-```python
-    "data/nextfix_p3_oos.json": {"category": "raw IBJA PM fix series (pm0/pm1 per fold, ADR 059)"},
-    "data/nextfix_p3_variants_oos.json": {"category": "raw IBJA PM fix series (pm0/pm1 per fold, ADR 059)"},
-```
-
-to `REGISTRY` in `scripts/data_crypt.py`, these two lines to `.gitignore` (CRLF file):
-
-```
-/data/nextfix_p3_oos.json
-/data/nextfix_p3_variants_oos.json
-```
-
-and the two paths to the `encrypt` line of the step that writes them (check `#2411`'s workflow edit), and the migration must run after that PR. Until then those two files stay public plaintext. The registry and guard do tolerate a registered path that is absent on disk (guard needs only the ignore line); the reason not to pre-register is the `.gitignore` interaction above.
+**2026-10-08 update: P3 files registered.** #2411 and #2418 are on master, so the follow-up the previous text deferred is applied here: `data/nextfix_p3_oos.json` and `data/nextfix_p3_variants_oos.json` are in `REGISTRY` (`scripts/data_crypt.py`), in `.gitignore` (CRLF file) and in the `encrypt` line of the `check-price.yml` step that follows `ml.inference`. The migration workflow takes its list from `REGISTRY`, so it needs no edit. `data/model_demotion_state.json` (derived) and `data/model_scorecard_weekly.json` (aggregates) stay public. Consumers: `ml/nextfix.py` (check-price, decrypted by the top-of-job step), `scripts/build_model_scorecard.py` (weekly-backtest, which decrypts at the top; `docs-refresh.yml` runs `--render-only` from the public JSON only), `scripts/check_adr066_promotion.py` and the analysis scripts (see `docs/ADR066_CHECK_HOWTO.md`). Migration must run after this PR merges.
 
 **2. `data/weekly_range_shadow_log.json`: raw IBJA rate recoverable, so registered.** Field by field over the committed file and both git revisions of it (`da884b6c`, `8964e759`), 10 entries:
 
