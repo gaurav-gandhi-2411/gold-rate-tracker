@@ -127,6 +127,7 @@ def compute(now: datetime | None = None) -> dict[str, Any]:
         out["challengers"] = rows
         out["promote"] = dec["promote"]
     out["not_yet"] = NOT_YET
+    out["timeliness"] = _load("input_timeliness_weekly.json")
     dem = _load("model_demotion_state.json")
     out["demotion"] = (
         {k: dem.get(k) for k in ("demoted", "since", "reasons", "last_checked")}
@@ -139,6 +140,34 @@ def compute(now: datetime | None = None) -> dict[str, Any]:
 # --- rendering (plain language, numbers only from the JSON) --------------------------------------
 def _money(x: float | None) -> str:
     return "n/a" if x is None else f"Rs.{x:,.0f}"
+
+
+def _timeliness_lines(t: dict[str, Any] | None) -> list[str]:
+    """Plain sentences from data/input_timeliness_weekly.json; nothing is guessed when it is absent."""
+    if not isinstance(t, dict):
+        return ["No timeliness report has been produced yet."]
+    out: list[str] = []
+    sl = t.get("tanishq_slots") or {}
+    if sl.get("slots"):
+        out.append(
+            f"- Jeweller price visits: **{sl['served']} of {sl['slots']}** scheduled visits since "
+            f"the schedule began (2026-10-05) ran within {sl['window_minutes']} minutes of "
+            f"their time ({sl['missed']} did not; the report cannot tell a laptop that was "
+            "off from a failed visit)."
+        )
+    else:
+        out.append("- Jeweller price visits: not measured this week.")
+    ow = t.get("overnight_window") or {}
+    if ow.get("available") and ow.get("nights"):
+        med = ow.get("median_minutes_after_us_close")
+        out.append(
+            f"- Overnight model forecast: published on **{ow['nights_with_model_forecast']} of "
+            f"{ow['nights']}** nights"
+            + (f", typically {med} minutes after the US gold close." if med is not None else ".")
+        )
+    else:
+        out.append("- Overnight model forecast: not measured this week.")
+    return out
 
 
 def render(s: dict[str, Any]) -> str:
@@ -212,6 +241,8 @@ def render(s: dict[str, Any]) -> str:
         ]
     else:
         lines.append("No challenger has real days yet.")
+    lines += ["", "## Were the inputs on time?", ""]
+    lines += _timeliness_lines(s.get("timeliness"))
     lines += ["", "## Dates", ""]
     lines += [
         "- 2026-10-16: hourly world-price check (ADR 066), exactly as written in advance.",

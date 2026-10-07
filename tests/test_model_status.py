@@ -91,3 +91,26 @@ def test_demotion_and_unreadable_champion_state_are_shown(tmp_path, monkeypatch)
     )
     md = mod.render(mod.compute())
     assert "switched off" in md and "could not be read" in md
+
+
+def test_timeliness_section_is_computed_and_never_guessed(tmp_path, monkeypatch) -> None:
+    mod = _load_module()
+    monkeypatch.setattr(mod, "DATA", tmp_path)
+    _write(tmp_path, [], [])
+    md = mod.render(mod.compute())
+    assert "No timeliness report has been produced yet." in md
+    (tmp_path / "input_timeliness_weekly.json").write_text(
+        json.dumps(
+            {
+                "tanishq_slots": {"slots": 18, "served": 7, "missed": 11, "window_minutes": 45},
+                "overnight_window": {
+                    "available": True,
+                    "nights": 4,
+                    "nights_with_model_forecast": 3,
+                    "median_minutes_after_us_close": 20,
+                },
+            }
+        )
+    )
+    md = mod.render(mod.compute())
+    assert "**7 of 18**" in md and "**3 of 4**" in md and "20 minutes" in md

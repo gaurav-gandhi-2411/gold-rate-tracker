@@ -1,0 +1,38 @@
+{
+ "schema_version": 1,
+ "generated_at": "2026-10-07T19:16:58.702087+00:00",
+ "days": 7,
+ "tanishq_slots": {
+  "days": 7,
+  "slots": 18,
+  "served": 7,
+  "missed": 11,
+  "window_minutes": 45,
+  "missed_slots_ist": [
+   "2026-10-05T01:40:00+05:30",
+   "2026-10-05T07:30:00+05:30",
+   "2026-10-05T10:40:00+05:30",
+   "2026-10-05T11:10:00+05:30",
+   "2026-10-05T19:50:00+05:30",
+   "2026-10-06T01:40:00+05:30",
+   "2026-10-06T07:30:00+05:30",
+   "2026-10-07T07:30:00+05:30",
+   "2026-10-07T10:40:00+05:30",
+   "2026-10-07T11:10:00+05:30",
+   "2026-10-07T15:35:00+05:30"
+  ],
+  "marking": "INFERRED"
+ },
+ "overnight_window": {
+  "available": true,
+  "nights": 4,
+  "nights_without_model_forecast": 2,
+  "nights_with_model_forecast": 2,
+  "minutes_after_us_close": [
+   167,
+   194
+  ],
+  "median_minutes_after_us_close": 194,
+  "marking": "VERIFIED"
+ }
+}
