@@ -1,5 +1,5 @@
 {
-  "predicted_at": "2026-10-07T12:10:24.301249+00:00",
+  "predicted_at": "2026-10-07T12:37:27.101718+00:00",
   "target_window": "5d",
   "headline": {
     "method": "hold_latest_fix_pm_to_am",
@@ -28,29 +28,29 @@
   "chronos_companion": {
     "status": "success",
     "lean_direction": "up",
-    "lean_strength_pct": 0.67,
+    "lean_strength_pct": 0.958,
     "direction_acc_30f": 0.333,
     "direction_prob_basis": "base_rate_fallback",
     "horizon_p10": [
-      13404.05,
-      13299.11,
-      13217.94,
-      13176.52,
-      13144.56
+      13392.72,
+      13307.43,
+      13244.82,
+      13208.04,
+      13173.49
     ],
     "horizon_p50": [
-      13844.32,
-      13838.87,
-      13835.48,
-      13850.3,
-      13889.36
+      13823.17,
+      13832.18,
+      13843.64,
+      13858.11,
+      13887.47
     ],
     "horizon_p90": [
-      14338.08,
-      14426.73,
-      14497.07,
-      14555.23,
-      14647.03
+      14303.49,
+      14403.12,
+      14485.84,
+      14539.77,
+      14616.87
     ],
     "model_version": "amazon/chronos-bolt-tiny@a0e552de",
     "calibration_applied": true,
@@ -59,7 +59,7 @@
     "direction_consensus": 1.0
   },
   "driver_context": {
-    "computed_at": "2026-10-07T12:10:33.465733+00:00",
+    "computed_at": "2026-10-07T12:37:27.415285+00:00",
     "macro_staleness_days": 0.0,
     "macro_fresh": true,
     "premium_threshold_pct": 15.0,
