@@ -18,9 +18,14 @@ Timestamp conventions (VERIFIED = measured, ASSUMED = stated convention, not mea
                      repo knew; the capture is.
   COMEX GC=F daily   bar dated D = the 13:30 America/New_York settlement on D (17:30 UTC summer,
                      18:30 UTC winter). VERIFIED against 5-minute bars in ADR 058 (#2051).
-  USD/INR INR=X      the daily bar is a single snapshot with no exact clock (ADR 058: closest to
-    daily            00:00-02:00 UTC of D, not pinned down). Treated as known only at 23:59 UTC
-                     of D -- the conservative end, so the guard can over-block, never under-block.
+  USD/INR INR=X      the daily bar is a single snapshot (ADR 058: closest to 00:00-02:00 UTC of D).
+    daily            MEASURED 2026-10-05 (reports/model_audit_2026-10/inrx_daily_clock.json,
+                     scripts/audit_inrx_daily_clock.py): matching each daily value to the 1-hour
+                     bars of the same day over 60 weekdays, 57 matched a bar starting 00:00-09:00
+                     UTC, 1 at 11:00 and 2 at 17:00-18:00 (the latest ends 19:00 UTC); median gap
+                     1.8 bp. Known at 20:00 UTC of D: the latest observed match plus one hour of
+                     margin. ``USDINR_SNAPSHOT_CONSERVATIVE`` (23:59 UTC, the pre-measurement
+                     convention) is kept for ADR 058's frozen analysis and for comparison.
   Hourly bars        (any Yahoo intraday series) labelled by bar START: known at start + 1 h.
   Other macro daily  (ml/macro.py TICKER_MAP) bar dated D = that exchange's close on D. ASSUMED
                      (published exchange hours, not measured here): ^TNX 15:00 America/Chicago,
@@ -71,13 +76,15 @@ IBJA_AM = Clock("ibja_am", IST, time(12, 0))
 IBJA_PM = Clock("ibja_pm", IST, time(17, 0))
 COMEX_SETTLE = Clock("comex_settle", "America/New_York", time(13, 30))
 USDINR_SNAPSHOT_CONSERVATIVE = Clock("usdinr_yahoo_conservative", "UTC", time(23, 59))
+# Measured (see the module docstring): the latest observed match ends 19:00 UTC; +1 h margin.
+USDINR_SNAPSHOT_MEASURED = Clock("usdinr_yahoo_measured", "UTC", time(20, 0))
 HOURLY_BAR = pd.Timedelta(hours=1)
 
 # Keyed by ml/macro.py TICKER_MAP column names. tests/test_known_at.py fails if a macro column
 # is added there without a clock here -- a new series cannot enter the store with no known_at.
 MACRO_DAILY_CLOCKS: dict[str, Clock] = {
     "gold_usd": COMEX_SETTLE,
-    "usd_inr": USDINR_SNAPSHOT_CONSERVATIVE,
+    "usd_inr": USDINR_SNAPSHOT_MEASURED,
     "us_10y_yield": Clock("cboe_tnx_close", "America/Chicago", time(15, 0)),
     "dxy": Clock("ice_dxy_close", "America/New_York", time(17, 0)),
     "sensex": Clock("bse_close", IST, time(15, 30)),
@@ -124,8 +131,8 @@ def comex_daily_known_at(bar_date: Any) -> pd.Timestamp:
 
 
 def usdinr_daily_known_at(bar_date: Any) -> pd.Timestamp:
-    """INR=X daily bar dated D: 23:59 UTC on D (conservative, see module docstring)."""
-    return at_utc(bar_date, USDINR_SNAPSHOT_CONSERVATIVE)
+    """INR=X daily bar dated D: 20:00 UTC on D (measured, see module docstring)."""
+    return at_utc(bar_date, USDINR_SNAPSHOT_MEASURED)
 
 
 def macro_daily_known_at(column: str, bar_date: Any) -> pd.Timestamp:
