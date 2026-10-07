@@ -88,6 +88,34 @@ def negative_control(pairs: pd.DataFrame) -> bool:
     return False
 
 
+def _audit_record(folds: list[dict], pairs: pd.DataFrame, label: str) -> dict:
+    return {
+        "n_folds": len(folds),
+        "repo_conventions": audit(folds, pairs, ka.MACRO_DAILY_CLOCKS["usd_inr"], f"{label}/repo"),
+        "legacy_conservative": audit(
+            folds, pairs, ka.USDINR_SNAPSHOT_CONSERVATIVE, f"{label}/legacy"
+        ),
+    }
+
+
+def build_report(pairs: pd.DataFrame, ensemble_folds: list[dict], p3_folds: list[dict]) -> dict:
+    """Audit the LIVE P3 record and the shadow ensemble record separately.
+
+    nf.load_oos() with no path reads the shadow ensemble (data/nextfix_oos.json), not the P3 record
+    users are shown (data/nextfix_p3_oos.json, ADR 069), so auditing only it said nothing about the
+    live model. The top-level ``n_folds`` / ``repo_conventions`` / ``legacy_conservative`` keys keep
+    their old meaning (the ensemble) so earlier reports stay comparable; ``p3_live`` is new.
+    """
+    ens = _audit_record(ensemble_folds, pairs, "nextfix/ensemble")
+    return {
+        **ens,
+        "decision_moment": "US close of D + margin = 22:15 UTC on D (ml.nextfix.US_CLOSE_UTC)",
+        "negative_control_flagged": negative_control(pairs),
+        "ensemble_shadow": ens,
+        "p3_live": _audit_record(p3_folds, pairs, "nextfix/p3"),
+    }
+
+
 def main() -> None:
     ap = argparse.ArgumentParser()
     ap.add_argument("--out", default="reports/model_audit_2026-10/leak_audit.json")
@@ -103,16 +131,7 @@ def main() -> None:
     pairs = nf.build_pairs(
         full.dropna(subset=["pm"]).reset_index(drop=True), nf.global_series(macro)
     )
-    folds = nf.load_oos()
-    out = {
-        "n_folds": len(folds),
-        "decision_moment": "US close of D + margin = 22:15 UTC on D (ml.nextfix.US_CLOSE_UTC)",
-        "negative_control_flagged": negative_control(pairs),
-        "repo_conventions": audit(folds, pairs, ka.MACRO_DAILY_CLOCKS["usd_inr"], "nextfix/repo"),
-        "legacy_conservative": audit(
-            folds, pairs, ka.USDINR_SNAPSHOT_CONSERVATIVE, "nextfix/legacy"
-        ),
-    }
+    out = build_report(pairs, nf.load_oos(), nf.load_oos(nf.P3_OOS_PATH))
     Path(args.out).parent.mkdir(parents=True, exist_ok=True)
     Path(args.out).write_text(json.dumps(out, indent=1, default=str) + "\n")
     print(json.dumps(out, indent=1, default=str))
