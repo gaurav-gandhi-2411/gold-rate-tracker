@@ -78,3 +78,33 @@ def test_binom_p_lower_matches_hand_value() -> None:
     # P(X <= 0 | n=3, p=0.5) = 1/8
     assert abs(binom_p_lower(0, 3, 0.5) - 0.125) < 1e-12
     assert binom_p_lower(0, 0, 0.5) == 1.0
+
+
+def _null_series(paths: int, ar: float, seed: int = 42) -> np.ndarray:
+    """Zero-mean AR(1) with unit-variance t(4) innovations: the F7 review's null."""
+    rng = np.random.default_rng(seed)
+    e = rng.standard_t(4, size=(paths, 90)) / math.sqrt(2.0)
+    x = np.zeros_like(e)
+    for i in range(1, 90):
+        x[:, i] = ar * x[:, i - 1] + e[:, i]
+    return x[:, 50:]  # 40 observations after a burn-in
+
+
+def test_hac_size_under_a_true_null_is_near_nominal() -> None:
+    # F7: the normal-tail version rejected ~9% here at nominal 5%; the t(lags) tail must be <= 6%
+    x = _null_series(3000, ar=0.3)
+    rate = np.mean([hac_one_sided_p_worse(row, 4) < 0.05 for row in x])
+    assert rate <= 0.06
+
+
+def test_hac_keeps_power_against_a_clearly_worse_model() -> None:
+    # mean loss difference of 1.0 sd (a clearly worse model) must still be caught almost always
+    x = _null_series(500, ar=0.3) + 1.0
+    rate = np.mean([hac_one_sided_p_worse(row, 4) < 0.05 for row in x])
+    assert rate >= 0.9
+
+
+def test_hac_p_is_a_valid_probability_on_degenerate_input() -> None:
+    assert hac_one_sided_p_worse(np.zeros(40), 4) == 1.0
+    assert hac_one_sided_p_worse(np.full(40, 2.0), 4) == 0.0
+    assert hac_one_sided_p_worse(np.array([1.0]), 4) == 1.0

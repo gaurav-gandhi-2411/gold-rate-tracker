@@ -1,0 +1,205 @@
+{
+ "seed": 42,
+ "paths": 5000,
+ "single_paths": 20000,
+ "checks": 121,
+ "params": {
+  "window": 40,
+  "lags": 4,
+  "alpha": 0.05,
+  "persist": 3
+ },
+ "source": "data/nextfix_p3_oos.json",
+ "real_p3": {
+  "n_folds": 145,
+  "mae_model_over_mae_hold": 0.9266,
+  "mean_loss_diff": -8.407,
+  "sd_loss_diff": 36.329,
+  "lag1_autocorr": 0.096,
+  "mean_hold_err": 114.486
+ },
+ "single_check_size_n40": {
+  "t4_ar0.0": {
+   "old": 0.0741,
+   "new": 0.0326
+  },
+  "t4_ar0.3": {
+   "old": 0.0907,
+   "new": 0.0454
+  },
+  "t4_ar0.5": {
+   "old": 0.1177,
+   "new": 0.0668
+  },
+  "real_p3_demeaned (model exactly as good as holding)": {
+   "old": 0.1279,
+   "new": 0.0722
+  }
+ },
+ "candidate_single_check_size_n40": {
+  "old_normal_nw4": {
+   "ar0.0": 0.0748,
+   "ar0.3": 0.093,
+   "ar0.5": 0.1148,
+   "real_p3_demeaned": 0.1323
+  },
+  "t_df_n-1_nw4": {
+   "ar0.0": 0.0699,
+   "ar0.3": 0.0871,
+   "ar0.5": 0.1094,
+   "real_p3_demeaned": 0.127
+  },
+  "t_df_n-1_nw4_x_n/(n-1)": {
+   "ar0.0": 0.068,
+   "ar0.3": 0.0847,
+   "ar0.5": 0.1058,
+   "real_p3_demeaned": 0.1241
+  },
+  "t_df_5_nw4": {
+   "ar0.0": 0.0401,
+   "ar0.3": 0.0546,
+   "ar0.5": 0.0739,
+   "real_p3_demeaned": 0.0878
+  },
+  "t_df_4_nw4 (CHOSEN)": {
+   "ar0.0": 0.0324,
+   "ar0.3": 0.0468,
+   "ar0.5": 0.0639,
+   "real_p3_demeaned": 0.0763
+  },
+  "t_df_3_nw4": {
+   "ar0.0": 0.0212,
+   "ar0.3": 0.0335,
+   "ar0.5": 0.0481,
+   "real_p3_demeaned": 0.0587
+  }
+ },
+ "sequential_121_checks_persist3": {
+  "null_t4_ar0.3": {
+   "old": {
+    "any_single_check_breach_within_121": 0.6424,
+    "full_rule": {
+     "within_40": 0.2644,
+     "mean_day_within_40": 16.0,
+     "within_121": 0.5628,
+     "mean_day_within_121": 49.0
+    }
+   },
+   "new": {
+    "any_single_check_breach_within_121": 0.438,
+    "full_rule": {
+     "within_40": 0.1506,
+     "mean_day_within_40": 17.8,
+     "within_121": 0.3628,
+     "mean_day_within_121": 53.7
+    }
+   }
+  },
+  "null_t4_ar0.0": {
+   "old": {
+    "any_single_check_breach_within_121": 0.5984,
+    "full_rule": {
+     "within_40": 0.2144,
+     "mean_day_within_40": 16.3,
+     "within_121": 0.4816,
+     "mean_day_within_121": 51.0
+    }
+   },
+   "new": {
+    "any_single_check_breach_within_121": 0.3692,
+    "full_rule": {
+     "within_40": 0.1128,
+     "mean_day_within_40": 17.4,
+     "within_121": 0.2762,
+     "mean_day_within_121": 54.8
+    }
+   }
+  },
+  "null_t4_ar0.5": {
+   "old": {
+    "any_single_check_breach_within_121": 0.6814,
+    "full_rule": {
+     "within_40": 0.3058,
+     "mean_day_within_40": 15.4,
+     "within_121": 0.62,
+     "mean_day_within_121": 47.0
+    }
+   },
+   "new": {
+    "any_single_check_breach_within_121": 0.4984,
+    "full_rule": {
+     "within_40": 0.1942,
+     "mean_day_within_40": 16.1,
+     "within_121": 0.4352,
+     "mean_day_within_121": 51.4
+    }
+   }
+  },
+  "null_real_as_good_as_holding": {
+   "old": {
+    "any_single_check_breach_within_121": 0.7498,
+    "full_rule": {
+     "within_40": 0.3372,
+     "mean_day_within_40": 15.3,
+     "within_121": 0.6596,
+     "mean_day_within_121": 45.5
+    }
+   },
+   "new": {
+    "any_single_check_breach_within_121": 0.5914,
+    "full_rule": {
+     "within_40": 0.222,
+     "mean_day_within_40": 16.6,
+     "within_121": 0.4778,
+     "mean_day_within_121": 49.7
+    }
+   }
+  },
+  "real_10pct_worse_than_holding": {
+   "old": {
+    "any_single_check_breach_within_121": 0.9976,
+    "full_rule": {
+     "within_40": 0.877,
+     "mean_day_within_40": 9.2,
+     "within_121": 0.9944,
+     "mean_day_within_121": 15.4
+    }
+   },
+   "new": {
+    "any_single_check_breach_within_121": 0.9912,
+    "full_rule": {
+     "within_40": 0.7866,
+     "mean_day_within_40": 10.7,
+     "within_121": 0.9812,
+     "mean_day_within_121": 21.3
+    }
+   }
+  },
+  "real_p3_effect (model WITH skill)": {
+   "old": {
+    "any_single_check_breach_within_121": 0.0962,
+    "full_rule": {
+     "within_40": 0.0268,
+     "mean_day_within_40": 17.6,
+     "within_121": 0.0628,
+     "mean_day_within_121": 53.3
+    }
+   },
+   "new": {
+    "any_single_check_breach_within_121": 0.0406,
+    "full_rule": {
+     "within_40": 0.0102,
+     "mean_day_within_40": 18.4,
+     "within_121": 0.022,
+     "mean_day_within_121": 51.0
+    }
+   }
+  }
+ },
+ "direction_range_exact_size": {
+  "direction_n40_true_acc_0.55": 0.0405,
+  "direction_n30_true_acc_0.55": 0.0334,
+  "range_n60_true_cov_0.75": 0.0298,
+  "range_n30_true_cov_0.75": 0.0216
+ }
+}

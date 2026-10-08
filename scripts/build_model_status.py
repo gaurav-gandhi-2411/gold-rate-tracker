@@ -149,6 +149,27 @@ def _money(x: float | None) -> str:
     return "n/a" if x is None else f"Rs.{x:,.0f}"
 
 
+def _miss_attribution(sl: dict[str, Any]) -> str | None:
+    """Plain words for why visits were missed, from GitHub run data; None for old JSON."""
+    c = sl.get("classification")
+    if not isinstance(c, dict) or not sl.get("missed"):
+        return None
+    parts = [
+        (c.get("no_dispatch", 0), "never dispatched (laptop off or scheduler idle)"),
+        (c.get("dispatched_cancelled", 0), "dispatched then cancelled in a catch-up burst"),
+        (c.get("dispatched_failed", 0), "dispatched and failed"),
+        (c.get("late", 0), "ran late (within 6 hours, after the laptop came back)"),
+        (c.get("dispatched_other", 0), "dispatched with another outcome"),
+        (c.get("unknown", 0), "too old to attribute"),
+    ]
+    shown = ", ".join(f"{n} {txt}" for n, txt in parts if n)
+    return (
+        f"Of the {sl['missed']} not run on time: {shown or 'none attributed'}. Inferred from "
+        "GitHub run records only, which does not tell a laptop that was off from a scheduler "
+        "that did not fire."
+    )
+
+
 def _timeliness_lines(t: dict[str, Any] | None) -> list[str]:
     """Plain sentences from data/input_timeliness_weekly.json; nothing is guessed when it is absent."""
     if not isinstance(t, dict):
@@ -156,11 +177,16 @@ def _timeliness_lines(t: dict[str, Any] | None) -> list[str]:
     out: list[str] = []
     sl = t.get("tanishq_slots") or {}
     if sl.get("slots"):
+        why = _miss_attribution(sl)
         out.append(
             f"- Jeweller price visits: **{sl['served']} of {sl['slots']}** scheduled visits since "
             f"the schedule began (2026-10-05) ran within {sl['window_minutes']} minutes of "
-            f"their time ({sl['missed']} did not; the report cannot tell a laptop that was "
-            "off from a failed visit)."
+            f"their time ({sl['missed']} did not"
+            + (
+                f"). {why}"
+                if why
+                else "; the report cannot tell a laptop that was off from a failed visit)."
+            )
         )
     else:
         out.append("- Jeweller price visits: not measured this week.")
