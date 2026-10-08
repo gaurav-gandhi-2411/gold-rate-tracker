@@ -97,6 +97,33 @@ def _live_summary(folds: list[dict], since: str) -> dict[str, Any]:
     return out
 
 
+def _autocorr(champ: list[dict], chall: list[dict], max_lag: int = 4) -> dict[str, Any] | None:
+    """Lag 1-4 autocorrelation of the daily difference series the promotion rule tests (ADR 072
+    Amendment 1: the 5%-per-challenger guarantee assumes modest autocorrelation, so it is watched
+    on forward days; None below 20 days)."""
+    import math
+
+    import numpy as np
+    from ml import promotion as pr
+
+    a, b = (
+        pr.forward_days(champ, pr.RULE["common_start"]),
+        pr.forward_days(chall, pr.RULE["common_start"]),
+    )
+    days = sorted(set(a) & set(b))
+    if len(days) < 20:
+        return None
+    la = np.array([abs(a[d]["pm1"] - a[d]["pm0"] * math.exp(a[d]["ret"])) for d in days])
+    lb = np.array([abs(b[d]["pm1"] - b[d]["pm0"] * math.exp(b[d]["ret"])) for d in days])
+    e = 0.95 * la - lb
+    e = e - e.mean()
+    den = float(e @ e)
+    if den <= 0:
+        return None
+    lags = [round(float(e[k:] @ e[:-k]) / den, 3) for k in range(1, max_lag + 1)]
+    return {"n": len(days), "lags": lags, "high": bool(max(lags) > 0.4)}
+
+
 def compute(now: datetime | None = None) -> dict[str, Any]:
     from ml import promotion as pr
 
@@ -130,6 +157,11 @@ def compute(now: datetime | None = None) -> dict[str, Any]:
             rows[cid] = r
         out["challengers"] = rows
         out["promote"] = dec["promote"]
+        out["autocorr"] = {
+            cid: ac
+            for cid in rows
+            if cid in recs and (ac := _autocorr(recs[champ], recs[cid])) is not None
+        }
     out["not_yet"] = NOT_YET
     out["timeliness"] = _load("input_timeliness_weekly.json")
     from ml import nextfix
@@ -281,6 +313,19 @@ def render(s: dict[str, Any]) -> str:
             "up/down. Nothing is judged before 20 real days. A challenger that has not qualified "
             "180 days after its start date is retired, not promoted.",
         ]
+        for cid, ac in (s.get("autocorr") or {}).items():
+            lines.append("")
+            lines.append(
+                f"Pattern check, {NAMES.get(cid, cid)} ({ac['n']} days): the daily differences "
+                f"repeat from one day to the next by {ac['lags'][0]:+.2f} (1 day) to "
+                f"{ac['lags'][-1]:+.2f} (4 days)."
+                + (
+                    " That is high: the promotion rule's safety margin is not reliable until a "
+                    "new written rule says otherwise."
+                    if ac["high"]
+                    else ""
+                )
+            )
     else:
         lines.append("No challenger has real days yet.")
     lines += ["", "## Were the inputs on time?", ""]

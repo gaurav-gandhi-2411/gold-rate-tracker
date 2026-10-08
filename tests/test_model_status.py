@@ -191,3 +191,18 @@ def test_a_challenger_past_the_horizon_is_shown_as_retired(tmp_path, monkeypatch
     assert s["challengers"]["ensemble"]["retired"] is True and s["promote"] is None
     md = mod.render(s)
     assert "retired: 180 days passed without qualifying" in md
+
+
+def test_autocorrelation_of_the_daily_difference_is_reported_from_20_days(tmp_path, monkeypatch):
+    """ADR 072 Amendment 1: the safety margin assumes modest autocorrelation, so it is watched."""
+    mod = _load_module()
+    monkeypatch.setattr(mod, "DATA", tmp_path)
+    _write(tmp_path, _folds(10, 0.2), _folds(10, 0.9))
+    s = mod.compute()
+    assert s["autocorr"] == {} and "Pattern check" not in mod.render(s)
+    # alternating wins and losses: lag-1 is strongly negative but lag-2 strongly positive, so it is flagged
+    _write(tmp_path, _folds(30, 0.2), _folds(30, 0.9))
+    s = mod.compute()
+    ac = s["autocorr"]["ensemble"]
+    assert ac["n"] == 30 and len(ac["lags"]) == 4 and ac["lags"][0] < -0.5 and ac["high"] is True
+    assert "Pattern check" in mod.render(s)

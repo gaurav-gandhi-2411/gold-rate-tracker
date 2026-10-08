@@ -1,6 +1,6 @@
 {
  "schema_version": 1,
- "generated_at": "2026-10-08T00:52:44.328691+00:00",
+ "generated_at": "2026-10-08T01:24:39.066197+00:00",
  "rule_sha256": "1bbc5dd3eeaefeeed10671a4700378f4d68f63790da8a25acfc1fccf12c91290",
  "common_start": "2026-10-07",
  "champion": "p3",
@@ -67,6 +67,7 @@
   }
  },
  "promote": null,
+ "autocorr": {},
  "not_yet": {
   "hourly": "Hourly world-price model (own check on 2026-10-16, then it joins)",
   "p3_hourly": "Live model averaged with the hourly model (joins after the hourly model does)"
