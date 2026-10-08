@@ -10,11 +10,15 @@ Weekday mapping (frozen): an Indian buying day sees the previous US session's cl
 Tuesday <-> COMEX Monday close and Indian Friday <-> COMEX Thursday close.
 
 Usage: python scripts/analysis_dow_prereg.py [--out reports/dow_prereg_results.json]
+       python scripts/analysis_dow_prereg.py --check   # compare with the registered result
+
+The snapshots are stored encrypted since ADR 060; decrypt them first with scripts/data_crypt.py.
 """
 
 from __future__ import annotations
 
 import argparse
+import hashlib
 import json
 import math
 import subprocess
@@ -44,8 +48,26 @@ INDIAN_TUE_SEES = 0
 INDIAN_FRI_SEES = 3
 
 
+VOL_REGISTERED_RESULTS = ROOT / "reports" / "vol_regime_prereg_results.json"
+VOL_RESULT_BLOCK = {"gcf": "primary", "gld": "robustness_gld"}
+REGISTERED_RESULTS = ROOT / "reports" / "dow_prereg_results.json"
+
+
 def load_close(key: str) -> pd.Series:
-    df = pd.read_csv(ROOT / SNAPSHOTS[key])
+    """The ADR 044 frozen snapshot, verified against the SHA-256 ADR 044's registered result
+    recorded. Stored encrypted since ADR 060: decrypt it first (see data_crypt.py)."""
+    path = ROOT / SNAPSHOTS[key]
+    if not path.exists():
+        raise SystemExit(
+            f"{SNAPSHOTS[key]} is missing. It is stored encrypted (ADR 060): run "
+            f"`python scripts/data_crypt.py decrypt {SNAPSHOTS[key]}` with DATA_ENC_KEY set."
+        )
+    vol = json.loads(VOL_REGISTERED_RESULTS.read_text(encoding="utf-8"))
+    pinned = vol[VOL_RESULT_BLOCK[key]]["snapshot_sha256"]
+    sha = hashlib.sha256(path.read_bytes()).hexdigest()
+    if sha != pinned:
+        raise SystemExit(f"{SNAPSHOTS[key]}: SHA-256 {sha} is not the frozen {pinned}")
+    df = pd.read_csv(path)
     s = pd.Series(df["close"].to_numpy(dtype=float), index=pd.to_datetime(df["date"]))
     s.index = s.index.tz_localize(None) if s.index.tz is not None else s.index
     return s.dropna().sort_index()
@@ -178,11 +200,58 @@ def run() -> dict[str, Any]:
     return out
 
 
+def check_against_registered(res: dict[str, Any], registered: dict[str, Any]) -> list[str]:
+    """Differences in the frozen-snapshot blocks (gcf, gld). forward_ibja and verdict are left
+    out: the forward arm reads IBJA weeks after the registration date, so it grows by design."""
+    diffs: list[str] = []
+
+    def walk(a: Any, b: Any, where: str) -> None:
+        if isinstance(a, dict) and isinstance(b, dict):
+            for k in sorted(set(a) | set(b)):
+                if k not in a or k not in b:
+                    diffs.append(f"{where}.{k}: present in only one side")
+                else:
+                    walk(a[k], b[k], f"{where}.{k}")
+        elif isinstance(a, list) and isinstance(b, list) and len(a) == len(b):
+            for i, (x, y) in enumerate(zip(a, b, strict=True)):
+                walk(x, y, f"{where}[{i}]")
+        elif isinstance(a, float) and isinstance(b, float):
+            if not math.isclose(a, b, rel_tol=1e-9, abs_tol=1e-12):
+                diffs.append(f"{where}: {a!r} != {b!r}")
+        elif a != b:
+            diffs.append(f"{where}: {a!r} != {b!r}")
+
+    for block in SNAPSHOTS:
+        walk(res[block], registered[block], block)
+    return diffs
+
+
 def main() -> int:
     ap = argparse.ArgumentParser()
-    ap.add_argument("--out", type=Path, default=ROOT / "reports" / "dow_prereg_results.json")
+    ap.add_argument("--out", type=Path, default=REGISTERED_RESULTS)
+    ap.add_argument(
+        "--check",
+        action="store_true",
+        help="re-run and compare the frozen-snapshot blocks with the registered result; "
+        "writes nothing, exits 1 on any difference",
+    )
     args = ap.parse_args()
     res = run()
+    if args.check:
+        registered = json.loads(REGISTERED_RESULTS.read_text(encoding="utf-8"))
+        # JSON round trip first: the registered file has string keys where a fresh run has ints.
+        diffs = check_against_registered(json.loads(json.dumps(res)), registered)
+        for d in diffs:
+            print(f"MISMATCH {d}")
+        g = res["gcf"]
+        print(
+            f"ADR 052 --check: {'REPRODUCED' if not diffs else 'DIFFERS'} "
+            f"(registered result at {registered.get('git_sha', '?')[:8]}); GC=F P1 p="
+            f"{g['P1_joint_weekday'].get('p_value')} P2 n_weeks="
+            f"{g['P2_indian_fri_vs_tue']['n_weeks']} p_one_sided="
+            f"{g['P2_indian_fri_vs_tue']['p_one_sided']}"
+        )
+        return 1 if diffs else 0
     res["git_sha"] = subprocess.run(
         ["git", "rev-parse", "HEAD"], capture_output=True, text=True, check=False, cwd=ROOT
     ).stdout.strip()
