@@ -1,11 +1,11 @@
 {
-  "capture_utc": "2026-10-08T13:21:17Z",
+  "capture_utc": "2026-10-08T23:18:00Z",
   "as_of_date": "2026-10-08",
   "national_failures": {},
   "snapshot_rows_persisted": 3,
   "national_benchmark": {
-    "value": 13710.833333333334,
-    "band_half_width": 137.10833333333335,
+    "value": 13706.25,
+    "band_half_width": 137.0625,
     "disagreement": false,
     "sources_used": [
       "ibja",
