@@ -1,7 +1,7 @@
 {
  "schema_version": 1,
- "generated_at": "2026-10-08T01:24:39.066197+00:00",
- "rule_sha256": "1bbc5dd3eeaefeeed10671a4700378f4d68f63790da8a25acfc1fccf12c91290",
+ "generated_at": "2026-10-08T05:52:06.369251+00:00",
+ "rule_sha256": "2499a124d6e0673e73827cfcd380fa09f189715a607a2a2fe542320350846c73",
  "common_start": "2026-10-07",
  "champion": "p3",
  "champion_state_unreadable": false,
@@ -114,6 +114,6 @@
   "demoted": false,
   "since": null,
   "reasons": [],
-  "last_checked": "2026-10-07T23:45:29.580274+00:00"
+  "last_checked": "2026-10-08T05:17:01.093049+00:00"
  }
 }

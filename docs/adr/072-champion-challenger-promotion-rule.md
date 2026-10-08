@@ -159,8 +159,10 @@ median of 90 days and `p3_roll60` 55.
   case, since a gain of exactly 5% is not worth promoting) it is 3.5% / 2.2% for any of three; each
   challenger is below its 1.67% level except `p3_roll60` (3.1% / 2.2%), which is above it. The cause
   is persistence in its daily difference (lag 1-4 autocorrelation 0.12 to 0.19): with a longer
-  resampling block (20 or 40 days) `p3_roll60` at the boundary is promoted in 9.2% / 8.0% of paths,
-  and more Newey-West lags (8, 12, 20) did not change that (8.6% to 9.1%). This is the Amendment 1
+  resampling block (20 or 40 days) `p3_roll60` at the boundary is promoted in 9.2% / 8.1% of paths
+  (additive gain; `reports/promotion_v3_simulation.json`, `power_block_sensitivity`). An exploratory
+  run, not committed, of more Newey-West lags (8, 12, 20; 6,000 paths) gave 8.0% to 9.1% for the same
+  cell, so more lags did not help. This is the Amendment 1
   autocorrelation caveat measured on a challenger: the guarantee is approximate for `p3_roll60` until
   forward days show its real autocorrelation, and the weekly status page reports it.
 
