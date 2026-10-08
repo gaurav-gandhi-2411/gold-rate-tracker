@@ -100,19 +100,25 @@ def _subprocess_cli(root: Path, *args: str, key: str | None) -> subprocess.Compl
 
 @pytest.fixture(autouse=True)
 def cheap_scrypt(request: pytest.FixtureRequest, monkeypatch: pytest.MonkeyPatch) -> Iterator[None]:
-    """Production scrypt costs ~0.1-0.7 s per call; tests use n=2**10 unless marked real_kdf.
-    The header records n and decryption checks it, so both sides see the same value."""
-    if "real_kdf" not in request.keywords:
+    """Production scrypt costs ~0.1-0.7 s per call; tests use n=2**10 unless they request the
+    ``real_kdf`` fixture. The header records n and decryption checks it, so both sides see the same
+    value. (A fixture, not a marker: no pytest marker registration, so no pyproject.toml change.)"""
+    if "real_kdf" not in request.fixturenames:
         monkeypatch.setattr(dc, "SCRYPT_N", 2**10)
     dc.key_id.cache_clear()
     yield
     dc.key_id.cache_clear()
 
 
+@pytest.fixture
+def real_kdf() -> None:
+    """Request this fixture to run a test at the production scrypt cost."""
+
+
 # ---------------------------------------------------------------- format
 
 
-@pytest.mark.real_kdf
+@pytest.mark.usefixtures("real_kdf")
 def test_round_trip_and_header_binds_path() -> None:
     key = TEST_KEY.encode()
     data = os.urandom(5000)
@@ -398,7 +404,7 @@ def test_mask_key_prints_only_mask_commands(repo: Path) -> None:
     assert f"::add-mask::{TEST_KEY}" in lines
 
 
-@pytest.mark.real_kdf
+@pytest.mark.usefixtures("real_kdf")
 def test_real_process_wrong_key_and_tamper_fail_cleanly(repo: Path) -> None:
     """One true subprocess run at production scrypt cost: exit codes, no traceback, no key."""
     _put(repo, IBJA, b"rows " * 100)
