@@ -6,6 +6,10 @@ JSON, recorded in docs/adr/072-champion-challenger-promotion-rule.md, and tests/
 fails if either moves without the other. Changing the rule is GG's decision (a new ADR), never a
 tuning step.
 
+Rule version 3 (Amendment 2, 2026-10-08) changes only the horizon unit: 180 DECISION days
+(days the champion issued a live forecast), not 180 calendar days. Everything below is as in
+version 2.
+
 Rule version 2 (Amendment 1, 2026-10-08) replaces the fixed-sample test of version 1, which needed
 about 400 forward days, with an anytime-valid test: a one-sided normal-mixture confidence sequence
 (Waudby-Smith et al. 2021, asymptotic form) for the mean of
@@ -44,7 +48,7 @@ import numpy as np
 
 # --- the frozen rule (ADR 072, version 2 = Amendment 1) ------------------------------------------
 RULE: dict[str, Any] = {
-    "version": 2,  # 1 = fixed-n Diebold-Mariano + BH (superseded); 2 = confidence sequence
+    "version": 3,  # 1 = fixed-n Diebold-Mariano + BH; 2 = confidence sequence; 3 = horizon unit
     "design": "one-sided normal-mixture confidence sequence on the mean of "
     "e = (1 - min_gain) * loss_champion - loss_challenger; promote when the lower bound > 0",
     "min_gain": 0.05,  # challenger mean |error| at least 5% below the champion's (ratio of means)
@@ -58,7 +62,11 @@ RULE: dict[str, Any] = {
     "variance_inflation": 1.5,
     "mix_sd": 0.3,  # sd of the normal mixing distribution over the tilt, in units of 1/sigma
     "min_forward_days": 20,  # no look before this many days both models issued live
-    "horizon_days": 180,  # calendar days since registration; at or after it: retired, not promoted
+    "horizon_days": 180,  # decision days since registration; at or after it: retired, not promoted
+    "horizon_unit": "decision_days",  # days the champion issued a live forecast (v2: calendar days)
+    # Evaluated and rejected (ADR 072 Amendment 2): a control variate on the hold forecast's
+    # same-day error. Frozen here so adopting it later is a visible, hashed change.
+    "control_variate": "none",
     "coverage_nominal": 0.80,  # challenger's own 80% range; promotion needs it not below target
     "coverage_alpha": 0.05,  # exact one-sided binomial: coverage significantly below 0.80 blocks
     "direction_rule": "challenger direction hit-rate >= champion's on the same days",
@@ -72,7 +80,7 @@ RULE: dict[str, Any] = {
     # not live-capable, so never promotable: registered on the first day they have a forward record
     "registered_on_first_record": ["hourly", "p3_hourly"],
 }
-RULE_SHA256 = "1bbc5dd3eeaefeeed10671a4700378f4d68f63790da8a25acfc1fccf12c91290"
+RULE_SHA256 = "2499a124d6e0673e73827cfcd380fa09f189715a607a2a2fe542320350846c73"
 
 CHAMPION_FILE = "champion_state.json"
 DEFAULT_CHAMPION = "p3"
@@ -260,7 +268,10 @@ def compare(
     first_look = int(rule["min_forward_days"])
     reg = registration_date(cid, out["first_day"], rule)
     clock = as_of or out["last_day"]
-    since_reg = (date.fromisoformat(clock) - date.fromisoformat(reg)).days if reg and clock else 0
+    # Horizon clock: decision days (days the CHAMPION issued a live forecast) after the registration
+    # day, up to ``clock``. Counted on the champion's record, so a day the challenger missed still
+    # uses up its horizon. Registration day = 0.
+    since_reg = sum(1 for d in a if reg < d <= clock) if reg and clock else 0
     horizon = int(rule["horizon_days"])
     base: dict[str, Any] = {
         "first_look_day": first_look,
@@ -332,7 +343,7 @@ def decide(
     """Compare every challenger in ``records`` with the champion and say who, if anyone, is promoted.
 
     A challenger is promotable only when ALL hold: it has a live predictor (LIVE_CAPABLE); it is not
-    retired (180 calendar days since registration, ``horizon_left`` 0); at least ``min_forward_days``
+    retired (180 decision days since registration, ``horizon_left`` 0); at least ``min_forward_days``
     forward days; the confidence-sequence lower bound of its error gain clears ``min_gain`` at the
     per-challenger level alpha / family_size; coverage not below target; direction not worse. At
     most one is promoted: the lowest mean error. ``as_of`` (default: the champion's last forward
