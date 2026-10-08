@@ -1,6 +1,6 @@
 # Model status
 
-Updated 2026-10-07. Computed from real forecast days only; no backtest figure appears here. Rule: ADR 072 (frozen, hash `0782301d8890`).
+Updated 2026-10-08. Computed from real forecast days only; no backtest figure appears here. Rule: ADR 072 (frozen, hash `1bbc5dd3eeae`).
 
 ## What is live and how it is doing
 
@@ -8,15 +8,15 @@ The live model has no scored real days yet (counting from 2026-10-07). Nothing i
 
 ## What is being tested
 
-| Challenger | Real days | Days needed | Earliest decision | Error vs live | Verdict |
-|---|---|---|---|---|---|
-| Earlier model (ridge + small neural nets), now running in the background | 0 | not yet known | not yet known | n/a | too early |
-| Live model re-fitted on the last 60 days only | 0 | not yet known | not yet known | n/a | too early |
-| Live model with its own Monday setting | 0 | not yet known | not yet known | n/a | too early |
-| Hourly world-price model (own check on 2026-10-16, then it joins) | 0 | not yet known | not yet known | n/a | not started |
-| Live model averaged with the hourly model (joins after the hourly model does) | 0 | not yet known | not yet known | n/a | not started |
+| Challenger | Real days | Where it stands | Error vs live | Verdict |
+|---|---|---|---|---|
+| Earlier model (ridge + small neural nets), now running in the background | 0 | first look after 20 days (0 so far), earliest 2026-11-04 | n/a | too early |
+| Live model re-fitted on the last 60 days only | 0 | first look after 20 days (0 so far), earliest 2026-11-04 | n/a | too early |
+| Live model with its own Monday setting | 0 | first look after 20 days (0 so far), earliest 2026-11-04 | n/a | too early |
+| Hourly world-price model (own check on 2026-10-16, then it joins) | 0 | not started | n/a | not started |
+| Live model averaged with the hourly model (joins after the hourly model does) | 0 | not started | n/a | not started |
 
-A challenger replaces the live model only if it beats it by at least 5%, is statistically clear after allowing for several challengers, keeps its range at target and is not worse on up/down. Days needed is sized from how noisy the daily difference actually is. No conclusion before the earliest decision date.
+A challenger replaces the live model only if we can be confident it beats it by more than 5% (the safe estimate in the table is the lower bound of its gain, adjusted for looking every day and for three challengers), keeps its range at target and is not worse on up/down. Nothing is judged before 20 real days. A challenger that has not qualified 180 days after its start date is retired, not promoted.
 
 ## Were the inputs on time?
 
