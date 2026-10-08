@@ -2707,6 +2707,534 @@
           "v3": 1.0
         }
       }
+    },
+    "40": {
+      "decision_days_v2_horizon": 128,
+      "0%": {
+        "ensemble": {
+          "v2": {
+            "promoted_share": 0.0,
+            "ci95": [
+              0.0,
+              0.00038401247776654115
+            ],
+            "median_days_given_promoted": null,
+            "expected_days_to_decision": 128.0,
+            "promoted_by_day": {
+              "40": 0.0,
+              "60": 0.0,
+              "90": 0.0,
+              "128": 0.0
+            }
+          },
+          "v3": {
+            "promoted_share": 0.0,
+            "ci95": [
+              0.0,
+              0.00038401247776654115
+            ],
+            "median_days_given_promoted": null,
+            "expected_days_to_decision": 180.0,
+            "promoted_by_day": {
+              "40": 0.0,
+              "60": 0.0,
+              "90": 0.0,
+              "128": 0.0,
+              "180": 0.0
+            }
+          }
+        },
+        "p3_roll60": {
+          "v2": {
+            "promoted_share": 0.0,
+            "ci95": [
+              0.0,
+              0.00038401247776654115
+            ],
+            "median_days_given_promoted": null,
+            "expected_days_to_decision": 128.0,
+            "promoted_by_day": {
+              "40": 0.0,
+              "60": 0.0,
+              "90": 0.0,
+              "128": 0.0
+            }
+          },
+          "v3": {
+            "promoted_share": 0.0,
+            "ci95": [
+              0.0,
+              0.00038401247776654115
+            ],
+            "median_days_given_promoted": null,
+            "expected_days_to_decision": 180.0,
+            "promoted_by_day": {
+              "40": 0.0,
+              "60": 0.0,
+              "90": 0.0,
+              "128": 0.0,
+              "180": 0.0
+            }
+          }
+        },
+        "p3_monday": {
+          "v2": {
+            "promoted_share": 0.0,
+            "ci95": [
+              0.0,
+              0.00038401247776654115
+            ],
+            "median_days_given_promoted": null,
+            "expected_days_to_decision": 128.0,
+            "promoted_by_day": {
+              "40": 0.0,
+              "60": 0.0,
+              "90": 0.0,
+              "128": 0.0
+            }
+          },
+          "v3": {
+            "promoted_share": 0.0,
+            "ci95": [
+              0.0,
+              0.00038401247776654115
+            ],
+            "median_days_given_promoted": null,
+            "expected_days_to_decision": 180.0,
+            "promoted_by_day": {
+              "40": 0.0,
+              "60": 0.0,
+              "90": 0.0,
+              "128": 0.0,
+              "180": 0.0
+            }
+          }
+        },
+        "any_of_three": {
+          "v2": 0.0,
+          "v3": 0.0
+        }
+      },
+      "5%": {
+        "ensemble": {
+          "v2": {
+            "promoted_share": 0.0067,
+            "ci95": [
+              0.005279610297613358,
+              0.008499256412951111
+            ],
+            "median_days_given_promoted": 74.0,
+            "expected_days_to_decision": 127.6615,
+            "promoted_by_day": {
+              "40": 0.0,
+              "60": 0.0025,
+              "90": 0.0047,
+              "128": 0.0067
+            }
+          },
+          "v3": {
+            "promoted_share": 0.0082,
+            "ci95": [
+              0.006611570524524473,
+              0.010166144148606698
+            ],
+            "median_days_given_promoted": 82.0,
+            "expected_days_to_decision": 179.2742,
+            "promoted_by_day": {
+              "40": 0.0,
+              "60": 0.0025,
+              "90": 0.0047,
+              "128": 0.0067,
+              "180": 0.0082
+            }
+          }
+        },
+        "p3_roll60": {
+          "v2": {
+            "promoted_share": 0.08,
+            "ci95": [
+              0.07484251364446862,
+              0.08548005683685525
+            ],
+            "median_days_given_promoted": 20.0,
+            "expected_days_to_decision": 119.4391,
+            "promoted_by_day": {
+              "40": 0.0798,
+              "60": 0.0798,
+              "90": 0.0798,
+              "128": 0.08
+            }
+          },
+          "v3": {
+            "promoted_share": 0.0808,
+            "ci95": [
+              0.07561803474939251,
+              0.08630392131196694
+            ],
+            "median_days_given_promoted": 20.0,
+            "expected_days_to_decision": 167.2538,
+            "promoted_by_day": {
+              "40": 0.0798,
+              "60": 0.0798,
+              "90": 0.0798,
+              "128": 0.08,
+              "180": 0.0808
+            }
+          }
+        },
+        "p3_monday": {
+          "v2": {
+            "promoted_share": 0.025,
+            "ci95": [
+              0.022117511790473388,
+              0.028247300063404826
+            ],
+            "median_days_given_promoted": 20.0,
+            "expected_days_to_decision": 125.4963,
+            "promoted_by_day": {
+              "40": 0.0222,
+              "60": 0.0227,
+              "90": 0.0248,
+              "128": 0.025
+            }
+          },
+          "v3": {
+            "promoted_share": 0.025,
+            "ci95": [
+              0.022117511790473388,
+              0.028247300063404826
+            ],
+            "median_days_given_promoted": 20.0,
+            "expected_days_to_decision": 176.1963,
+            "promoted_by_day": {
+              "40": 0.0222,
+              "60": 0.0227,
+              "90": 0.0248,
+              "128": 0.025,
+              "180": 0.025
+            }
+          }
+        },
+        "any_of_three": {
+          "v2": 0.0861,
+          "v3": 0.0879
+        }
+      },
+      "10%": {
+        "ensemble": {
+          "v2": {
+            "promoted_share": 0.3291,
+            "ci95": [
+              0.319957389737853,
+              0.3383738657270476
+            ],
+            "median_days_given_promoted": 44.0,
+            "expected_days_to_decision": 104.6845,
+            "promoted_by_day": {
+              "40": 0.1459,
+              "60": 0.1911,
+              "90": 0.2585,
+              "128": 0.3291
+            }
+          },
+          "v3": {
+            "promoted_share": 0.4095,
+            "ci95": [
+              0.3998984068804981,
+              0.41917109937797753
+            ],
+            "median_days_given_promoted": 66.0,
+            "expected_days_to_decision": 137.4442,
+            "promoted_by_day": {
+              "40": 0.1459,
+              "60": 0.1911,
+              "90": 0.2585,
+              "128": 0.3291,
+              "180": 0.4095
+            }
+          }
+        },
+        "p3_roll60": {
+          "v2": {
+            "promoted_share": 0.5225,
+            "ci95": [
+              0.5127031633696045,
+              0.5322795560688959
+            ],
+            "median_days_given_promoted": 54.0,
+            "expected_days_to_decision": 89.6367,
+            "promoted_by_day": {
+              "40": 0.1757,
+              "60": 0.3076,
+              "90": 0.4587,
+              "128": 0.5225
+            }
+          },
+          "v3": {
+            "promoted_share": 0.5473,
+            "ci95": [
+              0.5375276421329684,
+              0.5570360302866348
+            ],
+            "median_days_given_promoted": 55.0,
+            "expected_days_to_decision": 113.952,
+            "promoted_by_day": {
+              "40": 0.1757,
+              "60": 0.3076,
+              "90": 0.4587,
+              "128": 0.5225,
+              "180": 0.5473
+            }
+          }
+        },
+        "p3_monday": {
+          "v2": {
+            "promoted_share": 0.9946,
+            "ci95": [
+              0.9929614322232757,
+              0.9958587026337177
+            ],
+            "median_days_given_promoted": 35.0,
+            "expected_days_to_decision": 41.8054,
+            "promoted_by_day": {
+              "40": 0.6254,
+              "60": 0.7686,
+              "90": 0.945,
+              "128": 0.9946
+            }
+          },
+          "v3": {
+            "promoted_share": 0.9998,
+            "ci95": [
+              0.9992709889064336,
+              0.9999451522207908
+            ],
+            "median_days_given_promoted": 35.0,
+            "expected_days_to_decision": 41.8804,
+            "promoted_by_day": {
+              "40": 0.6254,
+              "60": 0.7686,
+              "90": 0.945,
+              "128": 0.9946,
+              "180": 0.9998
+            }
+          }
+        },
+        "any_of_three": {
+          "v2": 0.9946,
+          "v3": 0.9998
+        }
+      },
+      "20%": {
+        "ensemble": {
+          "v2": {
+            "promoted_share": 0.9948,
+            "ci95": [
+              0.9931878145647504,
+              0.9960321666872518
+            ],
+            "median_days_given_promoted": 28.0,
+            "expected_days_to_decision": 40.4798,
+            "promoted_by_day": {
+              "40": 0.6478,
+              "60": 0.7664,
+              "90": 0.9337,
+              "128": 0.9948
+            }
+          },
+          "v3": {
+            "promoted_share": 1.0,
+            "ci95": [
+              0.9996159875222334,
+              0.9999999999999999
+            ],
+            "median_days_given_promoted": 28.0,
+            "expected_days_to_decision": 40.5471,
+            "promoted_by_day": {
+              "40": 0.6478,
+              "60": 0.7664,
+              "90": 0.9337,
+              "128": 0.9948,
+              "180": 1.0
+            }
+          }
+        },
+        "p3_roll60": {
+          "v2": {
+            "promoted_share": 0.9741,
+            "ci95": [
+              0.9708000125327206,
+              0.9770358668358611
+            ],
+            "median_days_given_promoted": 21.0,
+            "expected_days_to_decision": 39.2555,
+            "promoted_by_day": {
+              "40": 0.7441,
+              "60": 0.7562,
+              "90": 0.9129,
+              "128": 0.9741
+            }
+          },
+          "v3": {
+            "promoted_share": 0.9959,
+            "ci95": [
+              0.9944429742856884,
+              0.9969761621388626
+            ],
+            "median_days_given_promoted": 22.0,
+            "expected_days_to_decision": 39.876,
+            "promoted_by_day": {
+              "40": 0.7441,
+              "60": 0.7562,
+              "90": 0.9129,
+              "128": 0.9741,
+              "180": 0.9959
+            }
+          }
+        },
+        "p3_monday": {
+          "v2": {
+            "promoted_share": 1.0,
+            "ci95": [
+              0.9996159875222334,
+              0.9999999999999999
+            ],
+            "median_days_given_promoted": 20.0,
+            "expected_days_to_decision": 20.0,
+            "promoted_by_day": {
+              "40": 1.0,
+              "60": 1.0,
+              "90": 1.0,
+              "128": 1.0
+            }
+          },
+          "v3": {
+            "promoted_share": 1.0,
+            "ci95": [
+              0.9996159875222334,
+              0.9999999999999999
+            ],
+            "median_days_given_promoted": 20.0,
+            "expected_days_to_decision": 20.0,
+            "promoted_by_day": {
+              "40": 1.0,
+              "60": 1.0,
+              "90": 1.0,
+              "128": 1.0,
+              "180": 1.0
+            }
+          }
+        },
+        "any_of_three": {
+          "v2": 1.0,
+          "v3": 1.0
+        }
+      },
+      "40%": {
+        "ensemble": {
+          "v2": {
+            "promoted_share": 1.0,
+            "ci95": [
+              0.9996159875222334,
+              0.9999999999999999
+            ],
+            "median_days_given_promoted": 20.0,
+            "expected_days_to_decision": 20.7124,
+            "promoted_by_day": {
+              "40": 1.0,
+              "60": 1.0,
+              "90": 1.0,
+              "128": 1.0
+            }
+          },
+          "v3": {
+            "promoted_share": 1.0,
+            "ci95": [
+              0.9996159875222334,
+              0.9999999999999999
+            ],
+            "median_days_given_promoted": 20.0,
+            "expected_days_to_decision": 20.7124,
+            "promoted_by_day": {
+              "40": 1.0,
+              "60": 1.0,
+              "90": 1.0,
+              "128": 1.0,
+              "180": 1.0
+            }
+          }
+        },
+        "p3_roll60": {
+          "v2": {
+            "promoted_share": 1.0,
+            "ci95": [
+              0.9996159875222334,
+              0.9999999999999999
+            ],
+            "median_days_given_promoted": 20.0,
+            "expected_days_to_decision": 21.3449,
+            "promoted_by_day": {
+              "40": 1.0,
+              "60": 1.0,
+              "90": 1.0,
+              "128": 1.0
+            }
+          },
+          "v3": {
+            "promoted_share": 1.0,
+            "ci95": [
+              0.9996159875222334,
+              0.9999999999999999
+            ],
+            "median_days_given_promoted": 20.0,
+            "expected_days_to_decision": 21.3449,
+            "promoted_by_day": {
+              "40": 1.0,
+              "60": 1.0,
+              "90": 1.0,
+              "128": 1.0,
+              "180": 1.0
+            }
+          }
+        },
+        "p3_monday": {
+          "v2": {
+            "promoted_share": 1.0,
+            "ci95": [
+              0.9996159875222334,
+              0.9999999999999999
+            ],
+            "median_days_given_promoted": 20.0,
+            "expected_days_to_decision": 20.0,
+            "promoted_by_day": {
+              "40": 1.0,
+              "60": 1.0,
+              "90": 1.0,
+              "128": 1.0
+            }
+          },
+          "v3": {
+            "promoted_share": 1.0,
+            "ci95": [
+              0.9996159875222334,
+              0.9999999999999999
+            ],
+            "median_days_given_promoted": 20.0,
+            "expected_days_to_decision": 20.0,
+            "promoted_by_day": {
+              "40": 1.0,
+              "60": 1.0,
+              "90": 1.0,
+              "128": 1.0,
+              "180": 1.0
+            }
+          }
+        },
+        "any_of_three": {
+          "v2": 1.0,
+          "v3": 1.0
+        }
+      }
     }
   },
   "regime_size": {
