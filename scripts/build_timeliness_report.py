@@ -7,7 +7,9 @@ numbers are reproducible and nothing is typed in by hand:
      ``DAYS`` days, was there a SUCCESSFUL run started by a dispatch within ``SLOT_WINDOW_MIN``
      minutes after the slot? A catch-up burst after the laptop was off serves the slot late, so a
      slot counts as served only inside the window. Approximation (INFERRED): a manual dispatch that
-     lands inside a window counts as serving it.
+     lands inside a window counts as serving it. Each missed slot is attributed from the same run
+     data (no_dispatch / dispatched_failed / dispatched_cancelled / late / ...); the laptop's own
+     scheduler log is not readable from CI, so "laptop off" vs "scheduler idle" stays one class.
   2. The overnight model window: for each recent night, how long after the US close (22:15 UTC)
      did the first check-price run that wrote a model forecast (``mode`` after_us_close) finish,
      and how many nights fell back to holding instead. Needs full git history of data/forecast.json;
@@ -40,6 +42,16 @@ SLOT_WINDOW_MIN = 45
 US_CLOSE_UTC = (22, 15)
 DISPATCH_EVENTS = {"workflow_dispatch", "repository_dispatch"}
 SCRAPE_WORKFLOW = "scrape-tanishq-selfhosted.yml"
+RUN_LIMIT = 300  # gh run list --limit; a full listing means older runs went unseen
+LATE_HOURS = 6  # a success this soon after a missed window is a catch-up, not a coincidence
+MISS_CLASSES = (
+    "no_dispatch",
+    "dispatched_failed",
+    "dispatched_cancelled",
+    "late",
+    "dispatched_other",
+    "unknown",
+)
 
 
 def _run(cmd: list[str]) -> str:
@@ -48,10 +60,41 @@ def _run(cmd: list[str]) -> str:
     ).stdout
 
 
+def classify_missed(
+    slot: datetime, runs: list[tuple[datetime, dict]], covered_from: datetime | None
+) -> str:
+    """Why a slot with no successful in-window dispatched run was missed (GitHub run data only).
+
+    Priority: what happened inside the window first (failed, then cancelled, then any other
+    outcome), then a successful run after the window within ``LATE_HOURS`` (the laptop came back
+    and caught up), else ``no_dispatch``. ``unknown`` when the run listing was cut off by its limit
+    before this slot, so absence of a run proves nothing. Whether a ``no_dispatch`` slot was a
+    laptop that was off, a scheduler that did not fire or a task that did not run is NOT knowable
+    from GitHub: only the laptop knows.
+    """
+    s = slot.astimezone(UTC)
+    end = s + timedelta(minutes=SLOT_WINDOW_MIN)
+    inside = [r.get("conclusion") or "" for t, r in runs if s <= t < end]
+    if "failure" in inside or "timed_out" in inside or "startup_failure" in inside:
+        return "dispatched_failed"
+    if "cancelled" in inside:
+        return "dispatched_cancelled"
+    if inside:
+        return "dispatched_other"  # still running, skipped or neutral
+    if any(
+        r.get("conclusion") == "success" and end <= t < s + timedelta(hours=LATE_HOURS)
+        for t, r in runs
+    ):
+        return "late"
+    return "unknown" if covered_from is not None and s < covered_from else "no_dispatch"
+
+
 def slot_report(now: datetime, days: int) -> dict[str, Any]:
-    # One listing per dispatch event with the success filter applied by GitHub: an unfiltered list
-    # is dominated by push and schedule runs and would not reach back far enough.
+    # One listing per dispatch event, NOT filtered by status, so a failed or cancelled run can be
+    # told from no run at all (an unfiltered list across events would be dominated by push and
+    # schedule runs and would not reach back far enough, hence the per-event listing).
     runs: list[tuple[datetime, dict]] = []
+    covered_from: datetime | None = None  # set when a listing hit its limit: older is unseen
     for event in sorted(DISPATCH_EVENTS):
         raw = _run(
             [
@@ -62,21 +105,24 @@ def slot_report(now: datetime, days: int) -> dict[str, Any]:
                 SCRAPE_WORKFLOW,
                 "--event",
                 event,
-                "--status",
-                "success",
                 "--limit",
-                "300",
+                str(RUN_LIMIT),
                 "--json",
-                "createdAt,event,conclusion",
+                "createdAt,event,conclusion,status",
             ]
         )
-        runs += [
+        listed = [
             (datetime.fromisoformat(r["createdAt"].replace("Z", "+00:00")), r)
             for r in json.loads(raw)
-            if r["event"] in DISPATCH_EVENTS and r["conclusion"] == "success"
+            if r["event"] in DISPATCH_EVENTS
         ]
+        runs += listed
+        if len(listed) >= RUN_LIMIT:
+            oldest = min(t for t, _ in listed)
+            covered_from = oldest if covered_from is None else max(covered_from, oldest)
     start = (now.astimezone(IST) - timedelta(days=days)).replace(hour=0, minute=0, second=0)
     rows, served, total = [], 0, 0
+    classification = dict.fromkeys(MISS_CLASSES, 0)
     day = max(start, datetime.fromisoformat(SCHEDULE_START_IST).replace(tzinfo=IST))
     while day.date() <= now.astimezone(IST).date():
         for hm in SLOTS_IST:
@@ -86,14 +132,18 @@ def slot_report(now: datetime, days: int) -> dict[str, Any]:
                 continue  # window not over yet
             hit = [
                 t
-                for t, _ in runs
-                if slot.astimezone(UTC)
+                for t, r in runs
+                if r.get("conclusion") == "success"
+                and slot.astimezone(UTC)
                 <= t
                 < slot.astimezone(UTC) + timedelta(minutes=SLOT_WINDOW_MIN)
             ]
             total += 1
             served += bool(hit)
-            rows.append({"slot_ist": slot.isoformat(), "served": bool(hit)})
+            cls = "served" if hit else classify_missed(slot, runs, covered_from)
+            if not hit:
+                classification[cls] += 1
+            rows.append({"slot_ist": slot.isoformat(), "served": bool(hit), "class": cls})
         day += timedelta(days=1)
     return {
         "days": days,
@@ -102,6 +152,13 @@ def slot_report(now: datetime, days: int) -> dict[str, Any]:
         "missed": total - served,
         "window_minutes": SLOT_WINDOW_MIN,
         "missed_slots_ist": [r["slot_ist"] for r in rows if not r["served"]],
+        "classification": classification,
+        "per_slot": rows,
+        "attribution_note": (
+            "from GitHub run data only; no_dispatch cannot tell a laptop that was off or asleep "
+            "from a scheduler that did not fire or a task that did not run (only the laptop's own "
+            "log knows)"
+        ),
         "marking": "INFERRED",
     }
 

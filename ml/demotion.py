@@ -21,7 +21,7 @@ Three independent rules, each against the baseline users would otherwise see:
 
   error      last ``err_window`` folds: paired |error| of the model minus |error| of holding the last
              fix. Demote when the model is worse AND the one-sided HAC (Newey-West) test says the
-             model is worse at ``err_alpha``.
+             model is worse at ``err_alpha`` (Student-t tail, ``hac_lags`` degrees of freedom).
   direction  last ``dir_window`` folds: accuracy on days the fix moved. Demote when a one-sided exact
              binomial test rejects "true accuracy >= dir_floor" at ``dir_alpha``.
   range      last ``cov_window`` folds: coverage of the 80% range. Demote when a one-sided exact
@@ -62,8 +62,19 @@ class DemotionParams:
 
 
 def hac_one_sided_p_worse(diff: np.ndarray, lags: int) -> float:
-    """One-sided p that mean(diff) > 0 (the model is worse), Newey-West variance, normal tail."""
-    from scipy.stats import norm
+    """One-sided p that mean(diff) > 0 (the model is worse): Newey-West variance, Student-t tail.
+
+    Behaviour change 2026-10-08 (ADR 068 amendment, F7): the reference was the normal tail. On a
+    window of 40 with 4 lags the Bartlett long-run variance rests on few effective observations and
+    is biased low, so a normal tail rejected a true null far too often at nominal 5% (7.4-11.8% for
+    t(4) data with AR(1) 0.0-0.5, 12.8% on the real P3 loss series;
+    scripts/simulate_demotion_size.py). The reference is now Student-t with ``lags`` degrees of
+    freedom (a fixed-b style choice: the variance estimate behaves like a chi-square on about as
+    many degrees of freedom as it has lags, not on n - 1; plain n - 1 still left 8.7% at AR 0.3).
+    Single-check size is now ~4.5% at AR 0.3 (6.4% at AR 0.5, 7.6% on the skewed real series). The
+    cost is power: the one-sided 5% critical value moves from 1.64 to 2.13.
+    """
+    from scipy.stats import t as student_t
 
     n = len(diff)
     if n < 2:
@@ -75,7 +86,7 @@ def hac_one_sided_p_worse(diff: np.ndarray, lags: int) -> float:
     if var <= 0:
         return 0.0 if diff.mean() > 0 else 1.0
     t = diff.mean() / math.sqrt(var / n)
-    return float(1.0 - norm.cdf(t))
+    return float(student_t.sf(t, df=max(1, min(lags, n - 1))))
 
 
 def binom_p_lower(k: int, n: int, p0: float) -> float:

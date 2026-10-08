@@ -144,6 +144,17 @@ LIVE_MODEL_ID = "nextfix_p3"  # the only model ADR 068's demotion rules watch to
 P3_MODEL_VERSION = "nextfix_p3_v1"  # P3 keeps the original state file name (ml.nextfix)
 
 
+# Mirrors ml.nextfix.CHAMPION_REGISTRY (id -> model version); a test keeps them equal. The version
+# is derived from the champion id because forecast.json's next_fix.model_version is
+# ``hold_latest_fix_<kind>`` in HOLD windows, not a model version.
+CHAMPION_VERSIONS = {
+    "p3": P3_MODEL_VERSION,
+    "p3_roll60": "nextfix_p3_roll60_v1",
+    "p3_monday": "nextfix_p3_monday_v1",
+    "ensemble": "nextfix_ridge_mlp_v1",
+}
+
+
 def demotion_state_file(model_version: str) -> str:
     """Same naming as ml.nextfix.demotion_state_file (a test keeps them equal; this script does
     not import ml.*): P3 the original file, any other model its own ``__<version>`` file."""
@@ -155,7 +166,8 @@ def demotion_state_file(model_version: str) -> str:
 def live_champion(data_dir: Path) -> tuple[str | None, str | None]:
     """(model id, model version) the live forecast was built by, from forecast.json (ADR 072).
 
-    The id is ``effective_id`` when the run fell back to P3, else the champion id. (None, None)
+    The id is ``effective_id`` when the run fell back to P3, else the champion id; the version is
+    derived from the id (CHAMPION_VERSIONS), None for an unknown id. (None, None)
     when forecast.json names no champion (older file): callers then read P3 as before.
     """
     nf = (_read_json("forecast.json", data_dir) or {}).get("next_fix")
@@ -165,8 +177,7 @@ def live_champion(data_dir: Path) -> tuple[str | None, str | None]:
         return None, None
     eff = ch.get("effective_id")
     cid = eff if isinstance(eff, str) else ch["id"]
-    ver = nf.get("model_version")
-    return cid, ver if isinstance(ver, str) else None
+    return cid, CHAMPION_VERSIONS.get(cid)
 
 
 def not_p3_reason(data_dir: Path) -> str | None:
@@ -585,9 +596,12 @@ def _gate_from_forecast(row: dict[str, Any], data_dir: Path) -> None:
 
 def row_p3(data_dir: Path) -> dict[str, Any]:
     """The LIVE next-fix model (ADR 069): P3, forward only from decision day 2026-10-07."""
+    cid, _ = live_champion(data_dir)
     row = base_row(
         LIVE_MODEL_ID,
-        "ml.nextfix P3 (live next-fix forecast)",
+        "ml.nextfix P3 (live next-fix forecast)"
+        if cid in (None, "p3")
+        else f"ml.nextfix P3 (the live model is now {cid}; P3 is kept as the reference)",
         "LIVE",
         "next IBJA PM fix (22K, Rs/g), forecast after the US close",
         "p3",
@@ -717,7 +731,11 @@ def _add_pair_vs_p3(
 
 
 def _variant_verdict(
-    row: dict[str, Any], v_fwd: list[dict[str, Any]], p3_fwd: list[dict[str, Any]], name: str
+    row: dict[str, Any],
+    v_fwd: list[dict[str, Any]],
+    p3_fwd: list[dict[str, Any]],
+    name: str,
+    is_champion: bool = False,
 ) -> None:
     """ADR 071's frozen rule. No verdict below VARIANT_MIN_FORWARD_N forward days."""
     st = row["forward"]["paired"]
@@ -725,8 +743,13 @@ def _variant_verdict(
     row["forward"]["n"] = n
     if n < VARIANT_MIN_FORWARD_N:
         row["verdict"], row["verdict_kind"] = "grey", "too_early"
+        tail = (
+            f"{name} is the live model and ADR 068's monitor watches it."
+            if is_champion
+            else "P3 stays."
+        )
         row["sentence"] = (
-            f"Too early (n={n}, need {VARIANT_MIN_FORWARD_N} by ADR 071's frozen rule); P3 stays."
+            f"Too early (n={n}, need {VARIANT_MIN_FORWARD_N} by ADR 071's frozen rule); {tail}"
         )
         return
     # direction: exact McNemar on days the fix moved (reported in the frozen rule as a guard)
@@ -757,15 +780,25 @@ def _variant_verdict(
     if clearly:
         row["verdict"] = "green"
         row["sentence"] = (
-            f"{name} clearly beats P3 under ADR 071's frozen rule: recommend to GG; nothing ships "
-            "automatically."
+            f"{name} clearly beats P3 under ADR 071's frozen rule and is already the live model."
+            if is_champion
+            else f"{name} clearly beats P3 under ADR 071's frozen rule: recommend to GG; nothing "
+            "ships automatically."
         )
     elif st["ci95"] and st["ci95"][0] > 0:
         row["verdict"] = "red"
-        row["sentence"] = f"{name} is reliably less accurate than P3; P3 stays."
+        row["sentence"] = f"{name} is reliably less accurate than P3" + (
+            "; it is the live model, so ADR 068's monitor and a person decide."
+            if is_champion
+            else "; P3 stays."
+        )
     else:
         row["verdict"] = "amber"
-        row["sentence"] = f"{name} does not clearly beat P3 (ADR 071's rule); P3 stays."
+        row["sentence"] = f"{name} does not clearly beat P3 (ADR 071's rule)" + (
+            "; it is the live model anyway and ADR 068's monitor watches it."
+            if is_champion
+            else "; P3 stays."
+        )
 
 
 def _variant_rows(data_dir: Path) -> list[dict[str, Any]]:
@@ -778,6 +811,7 @@ def _variant_rows(data_dir: Path) -> list[dict[str, Any]]:
         ("p3_monday", "shadow: P3 Monday slope (ADR 071 V2)", "slope fitted on Monday days only"),
     ]
     _, p3_fwd, p3_old = _p3_split(data_dir)
+    live_id, _ = live_champion(data_dir)
     p3_exists = (data_dir / P3_FILE).exists()
     doc = _read_json(P3_VARIANTS_FILE, data_dir)
     variants = doc.get("variants") if isinstance(doc, dict) else None
@@ -853,7 +887,7 @@ def _variant_rows(data_dir: Path) -> list[dict[str, Any]]:
             row["retrospective"].update(
                 text=f"re-run on past days, NOT live calls; {txt}", marking="VERIFIED"
             )
-        _variant_verdict(row, v_fwd, p3_fwd, name)
+        _variant_verdict(row, v_fwd, p3_fwd, name, vid == live_id)
         rows.append(row)
     return rows
 
