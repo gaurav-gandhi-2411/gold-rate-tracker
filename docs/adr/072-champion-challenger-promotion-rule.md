@@ -80,7 +80,23 @@ arrives in the next part of this split (part B); the report files are committed 
 - Wrongful promotion at 0% true gain: 0.0% per challenger. At the 5% boundary: 0.4%, 1.5%, 0.7%;
   2.1% for any of the three (under the 5% requirement).
 - A challenger 20% better is promoted in a median of 20-33 days (v1: 40-120 days, or stalled).
-- It is stricter, not faster, for true gains of 5-10%: those are mostly retired at day 180.
+- It is stricter, not faster, for true gains of 5-10%: those are mostly retired at day 180. An
+  independent paired bootstrap on the real losses found power at a true 10% gain of about 10%
+  (ensemble) and 21% (roll60), roughly half the report's 21% and 37%; treat the report's figures as
+  an upper end. At 20% gain roll60 is promoted in 98.7% of paths within the horizon (the others
+  99.8% and 100%).
+- **Assumption behind "at most 5% for any of three":** it holds when the daily difference series
+  has modest autocorrelation (an independent check found 0.1% to 3.1% per challenger at AR 0 to
+  0.5, and 0.5% for any of three on block bootstraps of the real losses). It does NOT hold for
+  strongly autocorrelated series: at AR 0.6 a challenger at exactly the 5% boundary is promoted in
+  4.6% of paths (about 13% for any of three if independent), at AR 0.7 in 7.3%. The retrospective
+  lag 1-4 autocorrelations are -0.17 to +0.19, but those folds are not consecutive days, so real
+  daily autocorrelation is unknown until forward days exist. The weekly status page therefore
+  reports the lag 1-4 autocorrelation of the forward series once it has 20 days; if it exceeds 0.4
+  the first-look rule is to be re-examined by a new ADR before any promotion is trusted.
+- The 1.5x variance inflation and the mixture scale were chosen after reading the same
+  retrospective simulation that reports the 2.1%, so that figure is in-sample for the tuning; the
+  independent AR and bootstrap checks above are the out-of-sample evidence.
 
 ## Decision: the rule (v1, superseded by Amendment 1)
 
