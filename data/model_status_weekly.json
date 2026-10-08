@@ -1,7 +1,7 @@
 {
  "schema_version": 1,
- "generated_at": "2026-10-07T19:17:01.042600+00:00",
- "rule_sha256": "0782301d8890788287be983c63d3d4e9bbd9eb0d8cd5d50d213960207dc44902",
+ "generated_at": "2026-10-07T23:57:21.673390+00:00",
+ "rule_sha256": "1bbc5dd3eeaefeeed10671a4700378f4d68f63790da8a25acfc1fccf12c91290",
  "common_start": "2026-10-07",
  "champion": "p3",
  "champion_state_unreadable": false,
@@ -16,36 +16,54 @@
    "n": 0,
    "first_day": null,
    "last_day": null,
+   "first_look_day": 20,
+   "looks_started": false,
+   "lower_bound": null,
+   "gain_estimate": null,
+   "registered": "2026-10-07",
+   "days_since_registration": 0,
+   "horizon_left": 180,
+   "retired": false,
    "status": "too early",
-   "p_better": null,
-   "bh_significant": false,
    "live_capable": true,
    "promotable": false,
-   "first_reachable": null
+   "first_reachable": "2026-11-04"
   },
   "p3_roll60": {
    "since": "2026-10-07",
    "n": 0,
    "first_day": null,
    "last_day": null,
+   "first_look_day": 20,
+   "looks_started": false,
+   "lower_bound": null,
+   "gain_estimate": null,
+   "registered": "2026-10-07",
+   "days_since_registration": 0,
+   "horizon_left": 180,
+   "retired": false,
    "status": "too early",
-   "p_better": null,
-   "bh_significant": false,
    "live_capable": true,
    "promotable": false,
-   "first_reachable": null
+   "first_reachable": "2026-11-04"
   },
   "p3_monday": {
    "since": "2026-10-07",
    "n": 0,
    "first_day": null,
    "last_day": null,
+   "first_look_day": 20,
+   "looks_started": false,
+   "lower_bound": null,
+   "gain_estimate": null,
+   "registered": "2026-10-07",
+   "days_since_registration": 0,
+   "horizon_left": 180,
+   "retired": false,
    "status": "too early",
-   "p_better": null,
-   "bh_significant": false,
    "live_capable": true,
    "promotable": false,
-   "first_reachable": null
+   "first_reachable": "2026-11-04"
   }
  },
  "promote": null,
@@ -95,6 +113,6 @@
   "demoted": false,
   "since": null,
   "reasons": [],
-  "last_checked": "2026-10-07T18:58:36.907379+00:00"
+  "last_checked": "2026-10-07T22:21:16.545513+00:00"
  }
 }
