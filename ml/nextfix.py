@@ -527,12 +527,16 @@ def update_oos(
     """
     predictor = predictor or predict  # looked up at call time so tests can substitute it
     local = rlg.LeakCheck()  # its input count is not the published one (see absorb_violations)
-    known = rlg.KnownCache()  # one clock cache for every fold of this call
+    try:
+        known: rlg.KnownCache | None = rlg.KnownCache()  # one clock cache for every fold
+    except Exception as exc:  # fail closed (rule 98a): a missing clock must not raise out of run()
+        local.guard_error(exc, "update_oos clocks")
+        known = None
     done = {f["d0"] for f in folds}
     out = list(folds)
     resolved = pairs[pairs["d1"].notna()].reset_index(drop=True)
     try:
-        clocks = rlg.PairClocks(resolved, known) if len(resolved) else None
+        clocks = rlg.PairClocks(resolved, known) if known is not None and len(resolved) else None
     except Exception as exc:  # fail closed: no fold is built from inputs that cannot be dated
         local.guard_error(exc, "update_oos")
         clocks = None

@@ -198,3 +198,16 @@ def test_update_oos_skips_a_fold_whose_training_set_leaks_and_logs(monkeypatch, 
         out = nextfix.update_oos(pairs, [], nextfix.predict_p3)
     assert out == [] and _guard_errors(caplog)
     assert len(nextfix.update_oos(pairs, [], nextfix.predict_p3)) > 0
+
+
+def test_a_missing_usd_inr_clock_fails_closed_and_never_raises_out_of_update_oos(monkeypatch):
+    """Verifier finding: KnownCache() was built outside any try, so a missing clock key raised."""
+    import pandas as pd
+    from ml import known_at as ka
+    from ml import nextfix
+
+    clocks = dict(ka.MACRO_DAILY_CLOCKS)
+    clocks.pop("usd_inr")
+    monkeypatch.setattr(ka, "MACRO_DAILY_CLOCKS", clocks)
+    pairs = pd.DataFrame(columns=["d0", "d1", "pm0", "pm1", "y"])
+    assert nextfix.update_oos(pairs, [], predictor=lambda *a, **k: None) == []
