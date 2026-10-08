@@ -107,3 +107,84 @@ Also changed the same day (rule 98a, fail closed): a monitor that cannot run now
 unchanged, and a state file with a missing `model_version` or malformed `history` / `reasons` is
 treated as unreadable (demoted, reason `state_unreadable`). This supersedes the "A broken monitor
 never switches the model off" bullet above.
+
+## 2026-10-08 amendment: small-sample size of the error test (finding F7)
+
+**Who:** Claude Code, under GG's delegation of 2026-10-08. **Thresholds are unchanged**: demotion
+floor 0.55, persistence 3, windows 40/40/60, alphas 0.05, minimum 30 folds.
+
+**Finding (independent review, reproduced here).** The error rule used a normal-tail Newey-West
+p-value with 4 lags on a window of 40. With so few effective observations the variance estimate is
+biased low, so the test rejects a true "no difference" far more than 5% of the time. A model that
+is exactly as good as holding was flagged by a single check 7.4% to 12.8% of the time (tables
+below).
+
+**Decision.** Demoting a model that truly has no skill is correct behaviour, not a false alarm. The
+problem is that the inflated size also inflates the WRONGFUL demotion of a model that does have
+skill. `hac_one_sided_p_worse` (same name and signature) now uses a Student-t tail with `lags`
+(4) degrees of freedom instead of the normal tail. Chosen by simulation among: t with n-1 degrees of
+freedom (still 8.7% at AR 0.3), the same with a Hansen-Hodrick style n/(n-1) variance rescale (8.5%),
+t with 5, 4 and 3 degrees of freedom. A bootstrap was also tried in a scratch run (studentized
+circular block bootstrap, 399 resamples: 5.7% / 6.9% / 7.7% at AR 0.0 / 0.3 / 0.5 on 1500 paths,
+not committed); it was no better than the t(4) tail and far slower, so it was not adopted.
+`error_breach` and `demotion_status` are untouched. Direction and range rules were checked and not
+changed (exact binomial, sizes below). Rule definitions in the proposal table above that say
+"Newey-West (4 lags) test" now mean the Student-t version.
+
+VERIFIED: `scripts/simulate_demotion_size.py`, seed 42, 5000 paths per sequential scenario, 20000
+per single-check cell; outputs `reports/model_audit_2026-10/demotion_test_size.json` and
+`.md`. The P3 series (`data/nextfix_p3_oos.json`, 145 folds): model MAE / hold MAE 0.9266, mean loss
+difference -8.41, sd 36.33, lag-1 autocorrelation 0.096; futures are moving-block bootstraps (blocks
+of 5) of it.
+
+Single-check size at nominal 5% (n = 40, true mean difference zero):
+
+| Null | OLD | NEW |
+|---|---|---|
+| t(4), AR(1) 0.0 | 7.41% | 3.26% |
+| t(4), AR(1) 0.3 | 9.07% | 4.54% |
+| t(4), AR(1) 0.5 | 11.77% | 6.68% |
+| real P3 loss series, demeaned (model exactly as good as holding) | 12.79% | 7.22% |
+
+Full rule (persistence 3, 121 daily checks; "day" = daily check number, check 1 uses 30 folds):
+
+| Scenario | Test | Demoted within 40 | Mean day (within 40) | Demoted within 121 | Mean day (within 121) |
+|---|---|---|---|---|---|
+| WRONGFUL: model WITH P3's effect | OLD | 2.68% | 17.6 | 6.28% | 53.3 |
+| | NEW | 1.02% | 18.4 | 2.20% | 51.0 |
+| No skill: exactly as good as holding | OLD | 33.72% | 15.3 | 65.96% | 45.5 |
+| | NEW | 22.20% | 16.6 | 47.78% | 49.7 |
+| No skill: 10% worse than holding | OLD | 87.70% | 9.2 | 99.44% | 15.4 |
+| | NEW | 78.66% | 10.7 | 98.12% | 21.3 |
+| Synthetic null t(4), AR 0.0 | OLD | 21.44% | 16.3 | 48.16% | 51.0 |
+| | NEW | 11.28% | 17.4 | 27.62% | 54.8 |
+| Synthetic null t(4), AR 0.3 | OLD | 26.44% | 16.0 | 56.28% | 49.0 |
+| | NEW | 15.06% | 17.8 | 36.28% | 53.7 |
+| Synthetic null t(4), AR 0.5 | OLD | 30.58% | 15.4 | 62.00% | 47.0 |
+| | NEW | 19.42% | 16.1 | 43.52% | 51.4 |
+
+Direction and range rules (exact binomial probability of a breach at the edge of the null, a single
+check): direction at true accuracy 0.55: 4.05% (n = 40), 3.34% (n = 30); range at true coverage
+0.75: 2.98% (n = 60), 2.16% (n = 30). Not inflated; unchanged.
+
+**Consequences and caveats.**
+- Wrongful demotion of a model with P3's measured effect falls from 6.3% to 2.2% over 121 checks.
+- The catch rate for a model 10% worse than holding stays 98.1% within 121 checks (was 99.4%) but
+  slower: mean day 21.3 (was 15.4); within 40 checks 78.7% (was 87.7%). That is the price of the
+  larger critical value (one-sided 5%: 2.13 instead of 1.64).
+- The size is not exactly 5% everywhere: 4.5% at AR 0.3, 6.7% at AR 0.5, and 7.2% on the real P3
+  loss series, which is skewed and heavy-tailed. The residual comes from the skew, not from the
+  small-sample bias this fixes. t with 3 degrees of freedom would reach 5.9% there but costs more
+  power; not adopted.
+- Re-testing every day on overlapping windows compounds any single-check size: even a perfectly
+  sized test demotes a no-skill model within 121 checks far more often than 5%. For a no-skill
+  model that is the desired behaviour; for a skilled one the 2.2% above is the residual risk.
+- On the real committed record the status is unchanged: nothing demoted before or after (error
+  p-value over the last 40 folds 0.975 old, 0.939 new; direction not breached).
+- Would the sequential logic of ADR 072 / `ml/promotion.py` help the demotion monitor's power? In
+  my view, qualitatively yes: a rule that accumulates evidence across checks with a pre-set error
+  budget (a sequential test) would spend the 5% once over the whole horizon instead of per daily
+  check, and could use a lower critical value per look than the persistence-3 workaround, so it
+  would likely detect a worse model sooner at a lower wrongful-demotion rate. This is untested for
+  the demotion monitor; D1's executor simulates it. `docs/adr/072` and `ml/promotion.py` were not
+  touched here.
