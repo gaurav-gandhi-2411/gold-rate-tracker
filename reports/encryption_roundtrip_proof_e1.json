@@ -1,0 +1,328 @@
+{
+ "source_commit": "1e6515edba16b5a73c90bcfce709cdce447bf3f2",
+ "test_key_id": "9f730bb83f9a5514",
+ "files": {
+  "reports/vol_regime_prereg_gcf_2000_2012.csv": {
+   "sha256_at_1c4a372e": "2db071aae050c593607f07518a4b36663916bc9fc9e288e3ee8292800437c6ac",
+   "adr044_pinned": "2db071aae050c593607f07518a4b36663916bc9fc9e288e3ee8292800437c6ac",
+   "plaintext_bytes": 71888,
+   "ciphertext_bytes": 72143,
+   "original_sha256": "2db071aae050c593607f07518a4b36663916bc9fc9e288e3ee8292800437c6ac",
+   "manifest_sha256": "2db071aae050c593607f07518a4b36663916bc9fc9e288e3ee8292800437c6ac",
+   "decrypted_sha256": "2db071aae050c593607f07518a4b36663916bc9fc9e288e3ee8292800437c6ac",
+   "byte_identical": true,
+   "round_trip_ok": true
+  },
+  "reports/vol_regime_prereg_gld_2004_2012.csv": {
+   "sha256_at_1c4a372e": "9aa4143f1b1e4326a686f885724966d360fd22aa85c75ee8b7e1939b2e141127",
+   "adr044_pinned": "9aa4143f1b1e4326a686f885724966d360fd22aa85c75ee8b7e1939b2e141127",
+   "plaintext_bytes": 45773,
+   "ciphertext_bytes": 46028,
+   "original_sha256": "9aa4143f1b1e4326a686f885724966d360fd22aa85c75ee8b7e1939b2e141127",
+   "manifest_sha256": "9aa4143f1b1e4326a686f885724966d360fd22aa85c75ee8b7e1939b2e141127",
+   "decrypted_sha256": "9aa4143f1b1e4326a686f885724966d360fd22aa85c75ee8b7e1939b2e141127",
+   "byte_identical": true,
+   "round_trip_ok": true
+  },
+  "data/ibja_rates.parquet": {
+   "plaintext_bytes": 28466,
+   "ciphertext_bytes": 28701,
+   "original_sha256": "d6d32de14cdfdd49cf68b3502c56676dba4fa98dcfe41a207869be18d92805cd",
+   "manifest_sha256": "d6d32de14cdfdd49cf68b3502c56676dba4fa98dcfe41a207869be18d92805cd",
+   "decrypted_sha256": "d6d32de14cdfdd49cf68b3502c56676dba4fa98dcfe41a207869be18d92805cd",
+   "byte_identical": true,
+   "round_trip_ok": true
+  },
+  "data/fusion_snapshots.parquet": {
+   "plaintext_bytes": 23474,
+   "ciphertext_bytes": 23715,
+   "original_sha256": "26067253739b6b328bb68d4bb385cf01835e2dc79f31794d73606fbf2c6a7637",
+   "manifest_sha256": "26067253739b6b328bb68d4bb385cf01835e2dc79f31794d73606fbf2c6a7637",
+   "decrypted_sha256": "26067253739b6b328bb68d4bb385cf01835e2dc79f31794d73606fbf2c6a7637",
+   "byte_identical": true,
+   "round_trip_ok": true
+  },
+  "data/shadow_fusion_output.json": {
+   "plaintext_bytes": 916,
+   "ciphertext_bytes": 1158,
+   "original_sha256": "31156c4c2421e38dc8b7eaf2947483fc7faf41589ebe569936c59f7c8fa9d134",
+   "manifest_sha256": "31156c4c2421e38dc8b7eaf2947483fc7faf41589ebe569936c59f7c8fa9d134",
+   "decrypted_sha256": "31156c4c2421e38dc8b7eaf2947483fc7faf41589ebe569936c59f7c8fa9d134",
+   "byte_identical": true,
+   "round_trip_ok": true
+  },
+  "data/feature_store/snapshots.parquet": {
+   "plaintext_bytes": 55415,
+   "ciphertext_bytes": 55663,
+   "original_sha256": "ebabfa31626ad31e5d716d31fa227f2a5ed75e8e45c9db9868d3a9a9b024c42f",
+   "manifest_sha256": "ebabfa31626ad31e5d716d31fa227f2a5ed75e8e45c9db9868d3a9a9b024c42f",
+   "decrypted_sha256": "ebabfa31626ad31e5d716d31fa227f2a5ed75e8e45c9db9868d3a9a9b024c42f",
+   "byte_identical": true,
+   "round_trip_ok": true
+  },
+  "data/next_day_range_shadow.json": {
+   "plaintext_bytes": 34681,
+   "ciphertext_bytes": 34924,
+   "original_sha256": "e17d48d539c920f3351a1766b99e27eed840915f7eb8ea33929d51e8f95351bf",
+   "manifest_sha256": "e17d48d539c920f3351a1766b99e27eed840915f7eb8ea33929d51e8f95351bf",
+   "decrypted_sha256": "e17d48d539c920f3351a1766b99e27eed840915f7eb8ea33929d51e8f95351bf",
+   "byte_identical": true,
+   "round_trip_ok": true
+  },
+  "data/wait_or_buy_shadow.json": {
+   "plaintext_bytes": 35135,
+   "ciphertext_bytes": 35375,
+   "original_sha256": "b2f3c93212c614282218cb47dbae37b046d8ac795c05239a60a32b047f4f322f",
+   "manifest_sha256": "b2f3c93212c614282218cb47dbae37b046d8ac795c05239a60a32b047f4f322f",
+   "decrypted_sha256": "b2f3c93212c614282218cb47dbae37b046d8ac795c05239a60a32b047f4f322f",
+   "byte_identical": true,
+   "round_trip_ok": true
+  },
+  "data/nowcast_shadow_log.json": {
+   "plaintext_bytes": 6117,
+   "ciphertext_bytes": 6357,
+   "original_sha256": "382b403eef3a9355feedba43ae9670c104dbeb4c3b11642c065560571846c34c",
+   "manifest_sha256": "382b403eef3a9355feedba43ae9670c104dbeb4c3b11642c065560571846c34c",
+   "decrypted_sha256": "382b403eef3a9355feedba43ae9670c104dbeb4c3b11642c065560571846c34c",
+   "byte_identical": true,
+   "round_trip_ok": true
+  },
+  "reports/derived_premium.json": {
+   "plaintext_bytes": 74741,
+   "ciphertext_bytes": 74981,
+   "original_sha256": "7ae1fa304c5b3df95c2df253e6819d2baf38d67259b67d93709497ad526eb3ba",
+   "manifest_sha256": "7ae1fa304c5b3df95c2df253e6819d2baf38d67259b67d93709497ad526eb3ba",
+   "decrypted_sha256": "7ae1fa304c5b3df95c2df253e6819d2baf38d67259b67d93709497ad526eb3ba",
+   "byte_identical": true,
+   "round_trip_ok": true
+  },
+  "data/markup_today.json": {
+   "plaintext_bytes": 744,
+   "ciphertext_bytes": 978,
+   "original_sha256": "ec792fb9976eeb3db0997c5b0964561f7312e890e92613b29e5356a8c9056e70",
+   "manifest_sha256": "ec792fb9976eeb3db0997c5b0964561f7312e890e92613b29e5356a8c9056e70",
+   "decrypted_sha256": "ec792fb9976eeb3db0997c5b0964561f7312e890e92613b29e5356a8c9056e70",
+   "byte_identical": true,
+   "round_trip_ok": true
+  },
+  "reports/markup_reversion/shadow.json": {
+   "plaintext_bytes": 500,
+   "ciphertext_bytes": 748,
+   "original_sha256": "96ea7055efe24710ad9814e2ca525608bc3ddcd84cc7f202f80cc8ffda062f50",
+   "manifest_sha256": "96ea7055efe24710ad9814e2ca525608bc3ddcd84cc7f202f80cc8ffda062f50",
+   "decrypted_sha256": "96ea7055efe24710ad9814e2ca525608bc3ddcd84cc7f202f80cc8ffda062f50",
+   "byte_identical": true,
+   "round_trip_ok": true
+  },
+  "reports/fhs_ranges/shadow.json": {
+   "plaintext_bytes": 50877,
+   "ciphertext_bytes": 51119,
+   "original_sha256": "c7cd38781ecf4022162cef83671ba795b9dbf19ead46f8312e247bc8d60305f8",
+   "manifest_sha256": "c7cd38781ecf4022162cef83671ba795b9dbf19ead46f8312e247bc8d60305f8",
+   "decrypted_sha256": "c7cd38781ecf4022162cef83671ba795b9dbf19ead46f8312e247bc8d60305f8",
+   "byte_identical": true,
+   "round_trip_ok": true
+  },
+  "data/nextfix_oos.json": {
+   "plaintext_bytes": 31836,
+   "ciphertext_bytes": 32069,
+   "original_sha256": "7cfbe2ddc68839d1a8e71aebc12610d0c71094c2ee71e3ee22d4bc2f987e0f98",
+   "manifest_sha256": "7cfbe2ddc68839d1a8e71aebc12610d0c71094c2ee71e3ee22d4bc2f987e0f98",
+   "decrypted_sha256": "7cfbe2ddc68839d1a8e71aebc12610d0c71094c2ee71e3ee22d4bc2f987e0f98",
+   "byte_identical": true,
+   "round_trip_ok": true
+  },
+  "data/nextfix_p3_oos.json": {
+   "plaintext_bytes": 34449,
+   "ciphertext_bytes": 34685,
+   "original_sha256": "39d8fedf1e596216d99750c3ce0ebcc0ad5feb7b570296e6b9517ecd5bf75796",
+   "manifest_sha256": "39d8fedf1e596216d99750c3ce0ebcc0ad5feb7b570296e6b9517ecd5bf75796",
+   "decrypted_sha256": "39d8fedf1e596216d99750c3ce0ebcc0ad5feb7b570296e6b9517ecd5bf75796",
+   "byte_identical": true,
+   "round_trip_ok": true
+  },
+  "data/nextfix_p3_variants_oos.json": {
+   "plaintext_bytes": 71938,
+   "ciphertext_bytes": 72183,
+   "original_sha256": "6c478223707893c44ef5397772e15e3326d26c10e96d21bbf89b0222a76bdfce",
+   "manifest_sha256": "6c478223707893c44ef5397772e15e3326d26c10e96d21bbf89b0222a76bdfce",
+   "decrypted_sha256": "6c478223707893c44ef5397772e15e3326d26c10e96d21bbf89b0222a76bdfce",
+   "byte_identical": true,
+   "round_trip_ok": true
+  },
+  "data/nextfix_intraday_shadow.json": {
+   "plaintext_bytes": 20720,
+   "ciphertext_bytes": 20965,
+   "original_sha256": "747ff8f50734c65514bfa2f69207dccca35963525e9772cf3b4eb532eb370c5a",
+   "manifest_sha256": "747ff8f50734c65514bfa2f69207dccca35963525e9772cf3b4eb532eb370c5a",
+   "decrypted_sha256": "747ff8f50734c65514bfa2f69207dccca35963525e9772cf3b4eb532eb370c5a",
+   "byte_identical": true,
+   "round_trip_ok": true
+  },
+  "data/weekly_range_shadow_log.json": {
+   "plaintext_bytes": 7158,
+   "ciphertext_bytes": 7403,
+   "original_sha256": "22cf95100bd89ee8d0adc02d158241633e33f5ac582bbf148a5088b92bfeacf5",
+   "manifest_sha256": "22cf95100bd89ee8d0adc02d158241633e33f5ac582bbf148a5088b92bfeacf5",
+   "decrypted_sha256": "22cf95100bd89ee8d0adc02d158241633e33f5ac582bbf148a5088b92bfeacf5",
+   "byte_identical": true,
+   "round_trip_ok": true
+  },
+  "reports/tanishq_update_times/kalyan_city_identity.json": {
+   "plaintext_bytes": 358,
+   "ciphertext_bytes": 624,
+   "original_sha256": "31fa824e2b7136e42e7cc83b63fbc12163a1e226acbd05e0356857da29469e84",
+   "manifest_sha256": "31fa824e2b7136e42e7cc83b63fbc12163a1e226acbd05e0356857da29469e84",
+   "decrypted_sha256": "31fa824e2b7136e42e7cc83b63fbc12163a1e226acbd05e0356857da29469e84",
+   "byte_identical": true,
+   "round_trip_ok": true
+  }
+ },
+ "migrate_stdout": "data/premium_nowcast_bars.json: not tracked, skipped\ndata_crypt migrate: 19 file(s) encrypted and untracked: reports/vol_regime_prereg_gcf_2000_2012.csv, reports/vol_regime_prereg_gld_2004_2012.csv, data/ibja_rates.parquet, data/fusion_snapshots.parquet, data/shadow_fusion_output.json, data/feature_store/snapshots.parquet, data/next_day_range_shadow.json, data/wait_or_buy_shadow.json, data/nowcast_shadow_log.json, reports/derived_premium.json, data/markup_today.json, reports/markup_reversion/shadow.json, reports/fhs_ranges/shadow.json, data/nextfix_oos.json, data/nextfix_p3_oos.json, data/nextfix_p3_variants_oos.json, data/nextfix_intraday_shadow.json, data/weekly_range_shadow_log.json, reports/tanishq_update_times/kalyan_city_identity.json",
+ "guard_after_migrate": "data_crypt guard: 20 registered, 19 migrated, 0 problem(s)",
+ "scan_ciphertext_for_test_key": "data_crypt scan-key: scanned 39 file(s), 0 hit(s)",
+ "plaintext_absent_in_fresh_clone": "19/19",
+ "tamper": {
+  "reports/vol_regime_prereg_gcf_2000_2012.csv": {
+   "exit": 1,
+   "plaintext_written": false,
+   "stderr": "data_crypt: ERROR: authentication failed for reports/vol_regime_prereg_gcf_2000_2012.csv: the ciphertext or its header was modified (or the "
+  },
+  "reports/vol_regime_prereg_gld_2004_2012.csv": {
+   "exit": 1,
+   "plaintext_written": false,
+   "stderr": "data_crypt: ERROR: authentication failed for reports/vol_regime_prereg_gld_2004_2012.csv: the ciphertext or its header was modified (or the "
+  },
+  "data/ibja_rates.parquet": {
+   "exit": 1,
+   "plaintext_written": false,
+   "stderr": "data_crypt: ERROR: authentication failed for data/ibja_rates.parquet: the ciphertext or its header was modified (or the key is wrong)"
+  },
+  "data/fusion_snapshots.parquet": {
+   "exit": 1,
+   "plaintext_written": false,
+   "stderr": "data_crypt: ERROR: authentication failed for data/fusion_snapshots.parquet: the ciphertext or its header was modified (or the key is wrong)"
+  },
+  "data/shadow_fusion_output.json": {
+   "exit": 1,
+   "plaintext_written": false,
+   "stderr": "data_crypt: ERROR: authentication failed for data/shadow_fusion_output.json: the ciphertext or its header was modified (or the key is wrong)"
+  },
+  "data/feature_store/snapshots.parquet": {
+   "exit": 1,
+   "plaintext_written": false,
+   "stderr": "data_crypt: ERROR: authentication failed for data/feature_store/snapshots.parquet: the ciphertext or its header was modified (or the key is "
+  },
+  "data/next_day_range_shadow.json": {
+   "exit": 1,
+   "plaintext_written": false,
+   "stderr": "data_crypt: ERROR: authentication failed for data/next_day_range_shadow.json: the ciphertext or its header was modified (or the key is wrong"
+  },
+  "data/wait_or_buy_shadow.json": {
+   "exit": 1,
+   "plaintext_written": false,
+   "stderr": "data_crypt: ERROR: authentication failed for data/wait_or_buy_shadow.json: the ciphertext or its header was modified (or the key is wrong)"
+  },
+  "data/nowcast_shadow_log.json": {
+   "exit": 1,
+   "plaintext_written": false,
+   "stderr": "data_crypt: ERROR: authentication failed for data/nowcast_shadow_log.json: the ciphertext or its header was modified (or the key is wrong)"
+  },
+  "reports/derived_premium.json": {
+   "exit": 1,
+   "plaintext_written": false,
+   "stderr": "data_crypt: ERROR: authentication failed for reports/derived_premium.json: the ciphertext or its header was modified (or the key is wrong)"
+  },
+  "data/markup_today.json": {
+   "exit": 1,
+   "plaintext_written": false,
+   "stderr": "data_crypt: ERROR: authentication failed for data/markup_today.json: the ciphertext or its header was modified (or the key is wrong)"
+  },
+  "reports/markup_reversion/shadow.json": {
+   "exit": 1,
+   "plaintext_written": false,
+   "stderr": "data_crypt: ERROR: authentication failed for reports/markup_reversion/shadow.json: the ciphertext or its header was modified (or the key is "
+  },
+  "reports/fhs_ranges/shadow.json": {
+   "exit": 1,
+   "plaintext_written": false,
+   "stderr": "data_crypt: ERROR: authentication failed for reports/fhs_ranges/shadow.json: the ciphertext or its header was modified (or the key is wrong)"
+  },
+  "data/nextfix_oos.json": {
+   "exit": 1,
+   "plaintext_written": false,
+   "stderr": "data_crypt: ERROR: authentication failed for data/nextfix_oos.json: the ciphertext or its header was modified (or the key is wrong)"
+  },
+  "data/nextfix_p3_oos.json": {
+   "exit": 1,
+   "plaintext_written": false,
+   "stderr": "data_crypt: ERROR: authentication failed for data/nextfix_p3_oos.json: the ciphertext or its header was modified (or the key is wrong)"
+  },
+  "data/nextfix_p3_variants_oos.json": {
+   "exit": 1,
+   "plaintext_written": false,
+   "stderr": "data_crypt: ERROR: authentication failed for data/nextfix_p3_variants_oos.json: the ciphertext or its header was modified (or the key is wro"
+  },
+  "data/nextfix_intraday_shadow.json": {
+   "exit": 1,
+   "plaintext_written": false,
+   "stderr": "data_crypt: ERROR: authentication failed for data/nextfix_intraday_shadow.json: the ciphertext or its header was modified (or the key is wro"
+  },
+  "data/weekly_range_shadow_log.json": {
+   "exit": 1,
+   "plaintext_written": false,
+   "stderr": "data_crypt: ERROR: authentication failed for data/weekly_range_shadow_log.json: the ciphertext or its header was modified (or the key is wro"
+  },
+  "reports/tanishq_update_times/kalyan_city_identity.json": {
+   "exit": 1,
+   "plaintext_written": false,
+   "stderr": "data_crypt: ERROR: authentication failed for reports/tanishq_update_times/kalyan_city_identity.json: the ciphertext or its header was modifi"
+  }
+ },
+ "wrong_key": {
+  "exit": 1,
+  "plaintext_written": false,
+  "stderr": "data_crypt: ERROR: wrong key for data/ibja_rates.parquet: DATA_ENC_KEY has key id 244e306c1572d428, the file was encrypted under key id 9f730bb83f9a5514"
+ },
+ "no_key": {
+  "exit": 1,
+  "stderr": "data_crypt: ERROR: DATA_ENC_KEY is not set"
+ },
+ "verify_hash_only": [
+  "reports/vol_regime_prereg_gcf_2000_2012.csv: ok (plaintext on disk matches manifest)",
+  "reports/vol_regime_prereg_gld_2004_2012.csv: ok (plaintext on disk matches manifest)",
+  "data/ibja_rates.parquet: ok (plaintext on disk matches manifest)",
+  "data/fusion_snapshots.parquet: ok (plaintext on disk matches manifest)",
+  "data/shadow_fusion_output.json: ok (plaintext on disk matches manifest)",
+  "data/feature_store/snapshots.parquet: ok (plaintext on disk matches manifest)",
+  "data/next_day_range_shadow.json: ok (plaintext on disk matches manifest)",
+  "data/wait_or_buy_shadow.json: ok (plaintext on disk matches manifest)",
+  "data/nowcast_shadow_log.json: ok (plaintext on disk matches manifest)",
+  "reports/derived_premium.json: ok (plaintext on disk matches manifest)",
+  "data/markup_today.json: ok (plaintext on disk matches manifest)",
+  "reports/markup_reversion/shadow.json: ok (plaintext on disk matches manifest)",
+  "reports/fhs_ranges/shadow.json: ok (plaintext on disk matches manifest)",
+  "data/premium_nowcast_bars.json: not-migrated",
+  "data/nextfix_oos.json: ok (plaintext on disk matches manifest)",
+  "data/nextfix_p3_oos.json: ok (plaintext on disk matches manifest)",
+  "data/nextfix_p3_variants_oos.json: ok (plaintext on disk matches manifest)",
+  "data/nextfix_intraday_shadow.json: ok (plaintext on disk matches manifest)",
+  "data/weekly_range_shadow_log.json: ok (plaintext on disk matches manifest)",
+  "reports/tanishq_update_times/kalyan_city_identity.json: ok (plaintext on disk matches manifest)"
+ ],
+ "check::scripts/analysis_vol_regime_prereg.py": {
+  "exit": 0,
+  "stdout": "ADR 044 --check: REPRODUCED (registered result at b9bcd7e8); GC=F P1 n=2816 rule_accuracy=0.504261 p_vs_always_up=0.998563",
+  "stderr": ""
+ },
+ "check::scripts/analysis_dow_prereg.py": {
+  "exit": 0,
+  "stdout": "ADR 052 --check: REPRODUCED (registered result at e887b01f); GC=F P1 p=0.16281525397400864 P2 n_weeks=559 p_one_sided=0.6074461359867424",
+  "stderr": ""
+ },
+ "missing_snapshot": {
+  "exit": 1,
+  "stderr": "reports/vol_regime_prereg_gcf_2000_2012.csv is missing. It is stored encrypted (ADR 060): run `python scripts/data_crypt.py decrypt reports/vol_regime_prereg_gcf_2000_2012.csv` with DATA_ENC_KEY set."
+ },
+ "test_key_in_working_files": []
+}
