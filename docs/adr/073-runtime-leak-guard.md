@@ -65,6 +65,15 @@ Structural only, NOT checked at run time:
 - the IBJA publish times are the repo convention (12:00 / 17:00 IST, ADR 058, not independently
   verified). A fix really published earlier than the convention, read in the minutes between,
   would be flagged;
+- whether the value USED came from the row the recorded source date names: the guard dates an
+  input from the `g0_src` / `gprev_src` columns it is handed, so a bug that changes the value
+  used (for example reading the next day's value) while leaving the recorded source date
+  unchanged passes (found by the independent review, 2026-10-08, with a constructed mutation);
+- the fold targets that feed the spread behind `p_up` and the conformal band (`_resid_sd`),
+  which are not individually checked;
+- freshness: a day with no macro row passes the guard with the previous close forward-filled
+  (the guard checks 'known before', not 'fresh'); the forecast is then base-plus-zero, as on
+  master;
 - the shadow ensemble's forecast in `forecast()` (same inputs as the live model, so a violation
   there would have been caught for the live model first); violations found while updating the
   shadow or variant records are logged and keep those records from growing but do not hold the live
@@ -88,7 +97,18 @@ Structural only, NOT checked at run time:
   unchanged (verified by running before/after on the committed data, PR description).
 - Failure mode to know: a fold the guard rejects stops the record from growing until the cause is
   fixed, and a violation holds the live forecast for that run. Both self-heal on the next clean run;
-  nothing sticky is written (unlike demotion).
+  nothing sticky is written (unlike demotion). While a record is frozen forward scoring and the
+  track record stop growing and nothing alerts: the only signal is the ERROR log and
+  `next_fix.leak_guard.violations`.
+- Wording corrections (independent review, 2026-10-08): (1) an exception inside the guard, or a
+  base fix that fails its check, gives an INACTIVE next-fix block with reason `leak_guard`, not
+  the hold figure (the hold figure is the result when the model's own inputs fail); (2) the
+  'never raises out of `run()`' claim was false for one path (the USD/INR clock cache was built
+  outside the try); fixed on 2026-10-08, with a test; (3) the ERROR text for shadow and variant
+  record violations says 'failing closed to the hold figure' although those violations do not
+  hold the live forecast; (4) the base-fix check rests on the assumed IBJA publish times: since
+  2025-01-10 no row (0 of 206) was fetched before 06:30Z (AM) or 11:30Z (PM), so it has not
+  triggered on real data.
 
 ## Alternatives
 
