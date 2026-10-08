@@ -188,7 +188,15 @@ jobs:
           set -e
           git config user.name "gold-rate-bot"
           git config user.email "actions@users.noreply.github.com"
-          git add data/backtest.json data/metrics_history.json data/coverage_metrics.json data/calibration_band_coverage.json data/preregistered_h2_shadow_results.json data/nowcast_shadow_log.json data/weekly_range_shadow_log.json data/next_day_range_shadow.json data/wait_or_buy_shadow.json data/wait_or_buy_today.json data/model_scorecard_weekly.json data/model_status_weekly.json data/input_timeliness_weekly.json || true
+          # ADR 060: each registered raw-data path is added on its own line. After the migration these
+          # are untracked and gitignored; if one is also missing, a multi-path `git add` aborts and
+          # stages NOTHING (verified), taking the public files with it. One line each, literal paths
+          # (check_bot_pr_sync_allowlist.py cannot resolve a loop).
+          git add data/backtest.json data/metrics_history.json data/coverage_metrics.json data/calibration_band_coverage.json data/preregistered_h2_shadow_results.json data/wait_or_buy_today.json data/model_scorecard_weekly.json data/model_status_weekly.json data/input_timeliness_weekly.json || true
+          git add data/nowcast_shadow_log.json || true
+          git add data/weekly_range_shadow_log.json || true
+          git add data/next_day_range_shadow.json || true
+          git add data/wait_or_buy_shadow.json || true
           git add data/encrypted/ || true
           python scripts/data_crypt.py scan-key --changed
           if git diff --staged --quiet; then
