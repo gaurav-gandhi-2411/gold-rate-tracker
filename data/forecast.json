@@ -1,11 +1,11 @@
 {
-  "predicted_at": "2026-10-08T07:57:32.035413+00:00",
+  "predicted_at": "2026-10-08T10:13:39.240115+00:00",
   "target_window": "5d",
   "headline": {
     "method": "hold_latest_fix_am_to_pm",
-    "predicted_22k": 13727,
-    "lower": 13676,
-    "upper": 13778,
+    "predicted_22k": 13755,
+    "lower": 13704,
+    "upper": 13806,
     "conformal_pi_half": 244.8,
     "naive_mae_recent_30": 133.6,
     "vol_context": {
@@ -59,7 +59,7 @@
     "direction_consensus": 1.0
   },
   "driver_context": {
-    "computed_at": "2026-10-08T07:57:32.781520+00:00",
+    "computed_at": "2026-10-08T10:13:39.995723+00:00",
     "macro_staleness_days": 0.0,
     "macro_fresh": true,
     "premium_threshold_pct": 15.0,
@@ -73,10 +73,10 @@
         "delta_pct_gold_usd": -1.541,
         "delta_pct_usdinr": 0.453,
         "delta_pct_premium": 0.631,
-        "total_move_rs_per_g": 0.0,
-        "gold_usd_contrib_rs_per_g": null,
-        "usdinr_contrib_rs_per_g": null,
-        "premium_contrib_rs_per_g": null,
+        "total_move_rs_per_g": 30.0,
+        "gold_usd_contrib_rs_per_g": 101.2,
+        "usdinr_contrib_rs_per_g": -29.8,
+        "premium_contrib_rs_per_g": -41.5,
         "premium_share_pct": 138.2,
         "attribution_valid": false,
         "attribution_valid_reason": "premium share 138.2% exceeds 15% threshold"
@@ -106,9 +106,9 @@
     },
     "alignment": "intraday_at_fix"
   },
-  "real_readings_count": 766,
+  "real_readings_count": 767,
   "current_22k": 13755,
-  "scraped_at": "2026-10-08T05:42:22.242Z",
+  "scraped_at": "2026-10-08T10:06:25.773Z",
   "price_source": "tanishq_scrape",
   "est_low": null,
   "est_high": null,
@@ -121,9 +121,9 @@
   "band_half_width": null,
   "band_unavailable_reason": null,
   "model_fallback": false,
-  "predicted_22k": 13727,
-  "lower": 13676,
-  "upper": 13778,
+  "predicted_22k": 13755,
+  "lower": 13704,
+  "upper": 13806,
   "target_time": "2026-10-09T00:00:00+00:00",
   "model_status": "nextfix_headline",
   "model_version": "hold_latest_fix_am_to_pm",
@@ -224,9 +224,9 @@
       "coverage": 0.793,
       "n": 150
     },
-    "predicted_22k": 13727,
-    "lower": 13676,
-    "upper": 13778,
+    "predicted_22k": 13755,
+    "lower": 13704,
+    "upper": 13806,
     "direction": {
       "show": false,
       "side": "unclear",
