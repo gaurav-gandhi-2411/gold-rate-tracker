@@ -1,0 +1,83 @@
+{
+ "schema_version": 1,
+ "generated_at": "2026-10-08T05:41:34.507407+00:00",
+ "marking": "VERIFIED from the laptop's System event log and the dispatcher log",
+ "evidence": {
+  "event_log_from": "2026-10-03T18:16:28.742778+05:30",
+  "dispatch_log_lines": 19,
+  "tasks_created_ist": "2026-10-05T12:59:58.207069+05:30",
+  "task_scheduler_history_enabled": false
+ },
+ "slots": [
+  {
+   "slot_ist": "2026-10-05T01:40:00+05:30",
+   "class": "before_schedule_installed",
+   "detail": "the timed visits were created after this slot; the laptop was also shut down",
+   "dispatch_delay_min": null
+  },
+  {
+   "slot_ist": "2026-10-05T07:30:00+05:30",
+   "class": "before_schedule_installed",
+   "detail": "the timed visits were created after this slot; the laptop was also shut down",
+   "dispatch_delay_min": null
+  },
+  {
+   "slot_ist": "2026-10-05T10:40:00+05:30",
+   "class": "before_schedule_installed",
+   "detail": "the timed visits were created after this slot; the laptop was also shut down",
+   "dispatch_delay_min": null
+  },
+  {
+   "slot_ist": "2026-10-05T11:10:00+05:30",
+   "class": "before_schedule_installed",
+   "detail": "the timed visits were created after this slot; the laptop was also shut down",
+   "dispatch_delay_min": 112
+  },
+  {
+   "slot_ist": "2026-10-05T19:50:00+05:30",
+   "class": "laptop_off",
+   "detail": "the laptop was shut down (not asleep); dispatched 125 min after the slot",
+   "dispatch_delay_min": 125
+  },
+  {
+   "slot_ist": "2026-10-06T01:40:00+05:30",
+   "class": "laptop_off",
+   "detail": "the laptop was shut down (not asleep); dispatched 517 min after the slot",
+   "dispatch_delay_min": 517
+  },
+  {
+   "slot_ist": "2026-10-06T07:30:00+05:30",
+   "class": "laptop_off",
+   "detail": "the laptop was shut down (not asleep); dispatched 167 min after the slot",
+   "dispatch_delay_min": 167
+  },
+  {
+   "slot_ist": "2026-10-07T07:30:00+05:30",
+   "class": "laptop_off",
+   "detail": "the laptop was shut down (not asleep); dispatched 596 min after the slot",
+   "dispatch_delay_min": 596
+  },
+  {
+   "slot_ist": "2026-10-07T10:40:00+05:30",
+   "class": "laptop_off",
+   "detail": "the laptop was shut down (not asleep); dispatched 406 min after the slot",
+   "dispatch_delay_min": 406
+  },
+  {
+   "slot_ist": "2026-10-07T11:10:00+05:30",
+   "class": "laptop_off",
+   "detail": "the laptop was shut down (not asleep); dispatched 376 min after the slot",
+   "dispatch_delay_min": 376
+  },
+  {
+   "slot_ist": "2026-10-07T15:35:00+05:30",
+   "class": "laptop_off",
+   "detail": "the laptop was shut down (not asleep); dispatched 111 min after the slot",
+   "dispatch_delay_min": 111
+  }
+ ],
+ "counts": {
+  "before_schedule_installed": 4,
+  "laptop_off": 7
+ }
+}

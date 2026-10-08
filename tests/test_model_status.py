@@ -206,3 +206,16 @@ def test_autocorrelation_of_the_daily_difference_is_reported_from_20_days(tmp_pa
     ac = s["autocorr"]["ensemble"]
     assert ac["n"] == 30 and len(ac["lags"]) == 4 and ac["lags"][0] < -0.5 and ac["high"] is True
     assert "Pattern check" in mod.render(s)
+
+
+def test_laptop_attribution_lines_explain_missed_visits_in_plain_words() -> None:
+    mod = _load_module()
+    assert mod._laptop_lines(None) == [] and mod._laptop_lines({"counts": {}}) == []
+    att = {
+        "generated_at": "2026-10-08T05:41:34+00:00",
+        "counts": {"laptop_off": 7, "before_schedule_installed": 4},
+    }
+    (line,) = mod._laptop_lines(att)
+    assert "Why those 11 visits were missed" in line and "checked 2026-10-08" in line
+    assert "7 happened while the laptop was shut down" in line
+    assert "4 were before the timed visits were set up on 2026-10-05" in line

@@ -164,6 +164,13 @@ def compute(now: datetime | None = None) -> dict[str, Any]:
         }
     out["not_yet"] = NOT_YET
     out["timeliness"] = _load("input_timeliness_weekly.json")
+    att = _load("laptop_attribution.json")
+    out["laptop_attribution"] = (
+        {k: att.get(k) for k in ("generated_at", "counts", "evidence")}
+        | {"slots": len(att.get("slots") or [])}
+        if isinstance(att, dict)
+        else None
+    )
     from ml import nextfix
 
     # ADR 072: the LIVE champion's own state file, never another model's
@@ -200,6 +207,32 @@ def _miss_attribution(sl: dict[str, Any]) -> str | None:
         "GitHub run records only, which does not tell a laptop that was off from a scheduler "
         "that did not fire."
     )
+
+
+LAPTOP_WORDS = {
+    "before_schedule_installed": "were before the timed visits were set up on 2026-10-05",
+    "laptop_off": "happened while the laptop was shut down",
+    "asleep_wake_timer_failed": "happened while the laptop was asleep on mains power and its wake timer did not fire",
+    "asleep_modern_standby_on_battery": "happened while the laptop was asleep on battery",
+    "task_ran_dispatch_skipped": "were skipped by the visit dispatcher on purpose (it logs why)",
+    "dispatched_but_run_late": "were requested on time but the run started late",
+    "task_did_not_run_while_on": "were missed with the laptop on and nothing logged",
+    "unknown": "could not be attributed (the laptop's log does not reach back that far)",
+}
+
+
+def _laptop_lines(att: dict[str, Any] | None) -> list[str]:
+    """Why visits were missed, from the laptop's own event log; empty until the file exists."""
+    if not isinstance(att, dict) or not att.get("counts"):
+        return []
+    total = sum(att["counts"].values())
+    parts = "; ".join(f"{n} {LAPTOP_WORDS.get(k, k)}" for k, n in att["counts"].items() if n)
+    when = str(att.get("generated_at") or "")[:10]
+    return [
+        f"- Why those {total} visits were missed (from the laptop's own records, checked {when}): "
+        f"{parts}. A laptop that is shut down cannot run a visit; the dispatcher also catches up "
+        "once when the laptop is back, which records one late reading, not the missed ones."
+    ]
 
 
 def _timeliness_lines(t: dict[str, Any] | None) -> list[str]:
@@ -330,6 +363,7 @@ def render(s: dict[str, Any]) -> str:
         lines.append("No challenger has real days yet.")
     lines += ["", "## Were the inputs on time?", ""]
     lines += _timeliness_lines(s.get("timeliness"))
+    lines += _laptop_lines(s.get("laptop_attribution"))
     lines += ["", "## Dates", ""]
     lines += [
         "- 2026-10-16: hourly world-price check (ADR 066), exactly as written in advance.",
