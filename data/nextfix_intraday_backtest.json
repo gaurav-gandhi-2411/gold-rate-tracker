@@ -1,8 +1,8 @@
 {
- "generated_at": "2026-10-08T17:34:23.014190Z",
+ "generated_at": "2026-10-08T23:55:11.545943Z",
  "ready": true,
  "bars_from": "2026-07-30T05:00:00Z",
- "bars_to": "2026-10-08T15:00:00Z",
+ "bars_to": "2026-10-08T20:00:00Z",
  "n_decisions": 1137,
  "scored_on_last_decision_per_fix": {
   "after_morning_rate": {
@@ -12,20 +12,20 @@
    "ready": true,
    "mae_beta_0.0": 39.7,
    "mae_beta_0.5": 22.1,
-   "mae_beta_1.0": 30.0,
-   "change_beta_0.5_pct": -44.4,
+   "mae_beta_1.0": 29.9,
+   "change_beta_0.5_pct": -44.3,
    "change_beta_0.5_ci95": [
-    -56.0,
-    -30.9
+    -55.8,
+    -30.8
    ],
    "dm_p_beta_0.5": 0.0,
-   "change_beta_1.0_pct": -24.5,
+   "change_beta_1.0_pct": -24.7,
    "change_beta_1.0_ci95": [
-    -41.4,
-    -2.3
+    -41.5,
+    -2.6
    ],
-   "dm_p_beta_1.0": 0.0202,
-   "direction_hit_rate": 0.766,
+   "dm_p_beta_1.0": 0.0197,
+   "direction_hit_rate": 0.745,
    "direction_n": 47
   },
   "after_afternoon_rate": {
@@ -42,10 +42,10 @@
     -14.1
    ],
    "dm_p_beta_0.5": 0.0009,
-   "change_beta_1.0_pct": -28.8,
+   "change_beta_1.0_pct": -28.7,
    "change_beta_1.0_ci95": [
-    -46.9,
-    -5.4
+    -46.8,
+    -5.3
    ],
    "dm_p_beta_1.0": 0.0375,
    "direction_hit_rate": 0.689,
@@ -84,19 +84,19 @@
    "mae_beta_0.0": 40.3,
    "mae_beta_0.5": 29.4,
    "mae_beta_1.0": 38.2,
-   "change_beta_0.5_pct": -27.1,
+   "change_beta_0.5_pct": -27.0,
    "change_beta_0.5_ci95": [
     -35.7,
-    -15.1
+    -15.0
    ],
    "dm_p_beta_0.5": 0.0,
-   "change_beta_1.0_pct": -5.2,
+   "change_beta_1.0_pct": -5.3,
    "change_beta_1.0_ci95": [
     -25.9,
     18.5
    ],
-   "dm_p_beta_1.0": 0.2115,
-   "direction_hit_rate": 0.74,
+   "dm_p_beta_1.0": 0.2114,
+   "direction_hit_rate": 0.736,
    "direction_n": 254
   },
   "after_afternoon_rate": {
@@ -109,7 +109,7 @@
    "mae_beta_1.0": 83.2,
    "change_beta_0.5_pct": -19.2,
    "change_beta_0.5_ci95": [
-    -25.9,
+    -26.0,
     -11.7
    ],
    "dm_p_beta_0.5": 0.0001,
@@ -130,7 +130,7 @@
    "mae_beta_0.0": 106.0,
    "mae_beta_0.5": 65.5,
    "mae_beta_1.0": 67.2,
-   "change_beta_0.5_pct": -38.3,
+   "change_beta_0.5_pct": -38.2,
    "change_beta_0.5_ci95": [
     -46.7,
     -28.5
