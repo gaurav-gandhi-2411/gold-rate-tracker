@@ -1,0 +1,32 @@
+name: Decrypt raw data files
+description: >
+  ADR 060. Decrypts every migrated path in scripts/data_crypt.py's REGISTRY into the runner
+  workspace (plaintext is gitignored), after masking the key and its base64/hex forms in the
+  log. Before the migration PR lands, nothing is encrypted yet and this is a no-op that does
+  not need the key. Needs Python with `cryptography` installed (ml/requirements*.txt pins it).
+  The key is passed to the script through the environment only, never on a command line.
+
+inputs:
+  key:
+    description: "The DATA_ENC_KEY secret (pass secrets.DATA_ENC_KEY)"
+    required: true
+
+runs:
+  using: composite
+  steps:
+    - name: Mask key forms
+      shell: bash
+      env:
+        DATA_ENC_KEY: ${{ inputs.key }}
+      run: |
+        set -euo pipefail
+        # GitHub masks the secret's exact string by itself; this also masks its base64/hex
+        # forms. Only ::add-mask:: commands are printed, and the runner consumes them.
+        if [ -n "${DATA_ENC_KEY}" ]; then python scripts/data_crypt.py mask-key; fi
+    - name: Decrypt
+      shell: bash
+      env:
+        DATA_ENC_KEY: ${{ inputs.key }}
+      run: |
+        set -euo pipefail
+        python scripts/data_crypt.py decrypt --all

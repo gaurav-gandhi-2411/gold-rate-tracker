@@ -54,6 +54,11 @@ jobs:
             --index-strategy unsafe-best-match \
             -r ml/requirements-inference.lock
 
+      - name: Decrypt raw data files (ADR 060)
+        uses: ./.github/actions/decrypt-data
+        with:
+          key: ${{ secrets.DATA_ENC_KEY }}
+
       - name: Run walk-forward direction eval
         run: python -m ml.direction.evaluate
 

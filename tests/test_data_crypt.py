@@ -437,3 +437,23 @@ def test_every_path_a_workflow_encrypts_is_registered() -> None:
     for wf, paths in _workflow_encrypt_paths().items():
         for p in paths:
             assert p in dc.REGISTRY, f"{wf} encrypts {p}, which is not in REGISTRY"
+
+
+@pytest.mark.parametrize(
+    ("logical", "producer"),
+    [
+        ("data/nextfix_oos.json", "check-price.yml"),
+        ("data/nextfix_p3_oos.json", "check-price.yml"),
+        ("data/nextfix_p3_variants_oos.json", "check-price.yml"),
+        ("data/nextfix_intraday_shadow.json", "check-price.yml"),
+        ("data/weekly_range_shadow_log.json", "weekly-backtest.yml"),
+    ],
+)
+def test_own_model_files_holding_the_ibja_series_are_sealed_by_their_producer(
+    logical: str, producer: str
+) -> None:
+    """GG 2026-10-05: these three carry the raw IBJA series (or lo/hi that invert to it). Each must
+    be registered AND re-encrypted by the workflow that writes it, or the bot would try to commit
+    plaintext into an ignored path and the ciphertext would go stale."""
+    assert logical in dc.REGISTRY
+    assert logical in _workflow_encrypt_paths()[producer]
