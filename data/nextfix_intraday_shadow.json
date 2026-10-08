@@ -2,8 +2,8 @@
  "schema_version": 1,
  "note": "Shadow only (ADR 066): hourly world-price forecasts of the next IBJA fix.",
  "summary": {
-  "generated_at": "2026-10-08T06:23:32.072516Z",
-  "n_entries": 47,
+  "generated_at": "2026-10-08T07:57:33.402143Z",
+  "n_entries": 48,
   "after_morning_rate": {
    "n_fixes": 2,
    "n_decisions": 2,
@@ -11,14 +11,14 @@
    "ready": false
   },
   "after_afternoon_rate": {
-   "n_fixes": 1,
-   "n_decisions": 1,
+   "n_fixes": 2,
+   "n_decisions": 2,
    "n_excluded_logged_after_target": 0,
    "ready": false
   },
   "after_us_close": {
-   "n_fixes": 2,
-   "n_decisions": 2,
+   "n_fixes": 3,
+   "n_decisions": 3,
    "n_excluded_logged_after_target": 1,
    "ready": false
   }
@@ -549,8 +549,8 @@
     "beta_0.5": 13542.48,
     "beta_1.0": 13549.46
    },
-   "target": null,
-   "target_date": null,
+   "target": 13507.6,
+   "target_date": "2026-10-08",
    "t": "2026-10-07T12:10:34.963370Z"
   },
   {
@@ -572,8 +572,8 @@
     "beta_0.5": 13542.48,
     "beta_1.0": 13549.46
    },
-   "target": null,
-   "target_date": null,
+   "target": 13507.6,
+   "target_date": "2026-10-08",
    "t": "2026-10-07T12:37:27.914440Z"
   },
   {
@@ -595,8 +595,8 @@
     "beta_0.5": 13542.48,
     "beta_1.0": 13549.46
    },
-   "target": null,
-   "target_date": null,
+   "target": 13507.6,
+   "target_date": "2026-10-08",
    "t": "2026-10-07T12:44:02.342585Z"
   },
   {
@@ -618,8 +618,8 @@
     "beta_0.5": 13542.48,
     "beta_1.0": 13549.46
    },
-   "target": null,
-   "target_date": null,
+   "target": 13507.6,
+   "target_date": "2026-10-08",
    "t": "2026-10-07T13:26:32.793578Z"
   },
   {
@@ -641,8 +641,8 @@
     "beta_0.5": 13542.48,
     "beta_1.0": 13549.46
    },
-   "target": null,
-   "target_date": null,
+   "target": 13507.6,
+   "target_date": "2026-10-08",
    "t": "2026-10-07T13:50:00.033861Z"
   },
   {
@@ -664,8 +664,8 @@
     "beta_0.5": 13542.48,
     "beta_1.0": 13549.46
    },
-   "target": null,
-   "target_date": null,
+   "target": 13507.6,
+   "target_date": "2026-10-08",
    "t": "2026-10-07T13:59:34.162894Z"
   },
   {
@@ -687,8 +687,8 @@
     "beta_0.5": 13542.48,
     "beta_1.0": 13549.46
    },
-   "target": null,
-   "target_date": null,
+   "target": 13507.6,
+   "target_date": "2026-10-08",
    "t": "2026-10-07T14:05:26.744768Z"
   },
   {
@@ -710,8 +710,8 @@
     "beta_0.5": 13542.48,
     "beta_1.0": 13549.46
    },
-   "target": null,
-   "target_date": null,
+   "target": 13507.6,
+   "target_date": "2026-10-08",
    "t": "2026-10-07T14:16:58.053027Z"
   },
   {
@@ -733,8 +733,8 @@
     "beta_0.5": 13542.48,
     "beta_1.0": 13549.46
    },
-   "target": null,
-   "target_date": null,
+   "target": 13507.6,
+   "target_date": "2026-10-08",
    "t": "2026-10-07T14:29:34.831848Z"
   },
   {
@@ -756,8 +756,8 @@
     "beta_0.5": 13542.48,
     "beta_1.0": 13549.46
    },
-   "target": null,
-   "target_date": null,
+   "target": 13507.6,
+   "target_date": "2026-10-08",
    "t": "2026-10-07T15:27:07.132689Z"
   },
   {
@@ -779,8 +779,8 @@
     "beta_0.5": 13515.84,
     "beta_1.0": 13496.21
    },
-   "target": null,
-   "target_date": null,
+   "target": 13507.6,
+   "target_date": "2026-10-08",
    "t": "2026-10-07T17:31:44.869561Z"
   },
   {
@@ -802,8 +802,8 @@
     "beta_0.5": 13515.84,
     "beta_1.0": 13496.21
    },
-   "target": null,
-   "target_date": null,
+   "target": 13507.6,
+   "target_date": "2026-10-08",
    "t": "2026-10-07T18:51:49.758417Z"
   },
   {
@@ -825,8 +825,8 @@
     "beta_0.5": 13515.84,
     "beta_1.0": 13496.21
    },
-   "target": null,
-   "target_date": null,
+   "target": 13507.6,
+   "target_date": "2026-10-08",
    "t": "2026-10-07T18:58:37.686482Z"
   },
   {
@@ -848,8 +848,8 @@
     "beta_0.5": 13509.93,
     "beta_1.0": 13484.4
    },
-   "target": null,
-   "target_date": null,
+   "target": 13507.6,
+   "target_date": "2026-10-08",
    "t": "2026-10-07T20:17:52.909286Z"
   },
   {
@@ -871,8 +871,8 @@
     "beta_0.5": 13509.93,
     "beta_1.0": 13484.4
    },
-   "target": null,
-   "target_date": null,
+   "target": 13507.6,
+   "target_date": "2026-10-08",
    "t": "2026-10-07T20:55:09.002432Z"
   },
   {
@@ -894,8 +894,8 @@
     "beta_0.5": 13509.44,
     "beta_1.0": 13483.42
    },
-   "target": null,
-   "target_date": null,
+   "target": 13507.6,
+   "target_date": "2026-10-08",
    "t": "2026-10-07T21:07:47.272714Z"
   },
   {
@@ -917,8 +917,8 @@
     "beta_0.5": 13509.44,
     "beta_1.0": 13483.42
    },
-   "target": null,
-   "target_date": null,
+   "target": 13507.6,
+   "target_date": "2026-10-08",
    "t": "2026-10-07T21:18:29.406911Z"
   },
   {
@@ -940,8 +940,8 @@
     "beta_0.5": 13509.93,
     "beta_1.0": 13484.4
    },
-   "target": null,
-   "target_date": null,
+   "target": 13507.6,
+   "target_date": "2026-10-08",
    "t": "2026-10-07T22:21:27.274112Z"
   },
   {
@@ -963,8 +963,8 @@
     "beta_0.5": 13509.93,
     "beta_1.0": 13484.4
    },
-   "target": null,
-   "target_date": null,
+   "target": 13507.6,
+   "target_date": "2026-10-08",
    "t": "2026-10-07T23:45:36.637706Z"
   },
   {
@@ -986,8 +986,8 @@
     "beta_0.5": 13525.19,
     "beta_1.0": 13514.89
    },
-   "target": null,
-   "target_date": null,
+   "target": 13507.6,
+   "target_date": "2026-10-08",
    "t": "2026-10-08T01:34:18.019067Z"
   },
   {
@@ -1009,8 +1009,8 @@
     "beta_0.5": 13525.19,
     "beta_1.0": 13514.89
    },
-   "target": null,
-   "target_date": null,
+   "target": 13507.6,
+   "target_date": "2026-10-08",
    "t": "2026-10-08T01:43:08.160278Z"
   },
   {
@@ -1032,8 +1032,8 @@
     "beta_0.5": 13549.66,
     "beta_1.0": 13563.84
    },
-   "target": null,
-   "target_date": null,
+   "target": 13507.6,
+   "target_date": "2026-10-08",
    "t": "2026-10-08T02:09:54.324783Z"
   },
   {
@@ -1055,8 +1055,8 @@
     "beta_0.5": 13557.38,
     "beta_1.0": 13579.29
    },
-   "target": null,
-   "target_date": null,
+   "target": 13507.6,
+   "target_date": "2026-10-08",
    "t": "2026-10-08T05:17:11.321414Z"
   },
   {
@@ -1078,8 +1078,8 @@
     "beta_0.5": 13557.38,
     "beta_1.0": 13579.29
    },
-   "target": null,
-   "target_date": null,
+   "target": 13507.6,
+   "target_date": "2026-10-08",
    "t": "2026-10-08T05:50:47.969850Z"
   },
   {
@@ -1101,9 +1101,32 @@
     "beta_0.5": 13532.13,
     "beta_1.0": 13528.76
    },
+   "target": 13507.6,
+   "target_date": "2026-10-08",
+   "t": "2026-10-08T06:23:32.072516Z"
+  },
+  {
+   "logged_at": "2026-10-08T07:57:33.402143Z",
+   "base_kind": "am",
+   "base_date": "2026-10-08",
+   "base_at": "2026-10-08T06:30:00Z",
+   "base": 13507.6,
+   "window": "after_morning_rate",
+   "target_kind": "pm",
+   "g_fix": 400729.5,
+   "g_fix_bar_end": "2026-10-08T06:00:00Z",
+   "g_now": 401201.48,
+   "g_now_bar_end": "2026-10-08T07:00:00Z",
+   "x_since_fix": 0.0011771319243640927,
+   "hours_since_fix": 1.46,
+   "pred": {
+    "beta_0.0": 13507.6,
+    "beta_0.5": 13515.55,
+    "beta_1.0": 13523.51
+   },
    "target": null,
    "target_date": null,
-   "t": "2026-10-08T06:23:32.072516Z"
+   "t": "2026-10-08T07:57:33.402143Z"
   }
  ]
 }
