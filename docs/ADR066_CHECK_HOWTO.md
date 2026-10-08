@@ -8,7 +8,12 @@ It is read-only: it never edits `ml/` or `data/`; its only write is `reports/adr
 ## Steps (venv: `C:\Users\gaura\ml-projects\grt-venv`)
 
 1. `git fetch` and check out current `master` (the shadow log and backtest JSON are committed by
-   the check-price bot, so they must be current).
+   the check-price bot, so they must be current). Once the ADR 060 migration has run, the shadow log
+   `data/nextfix_intraday_shadow.json` is committed only as ciphertext: put your offline copy of the
+   key in the environment (never on the command line) and run
+   `python scripts/data_crypt.py decrypt --all` first (the check also reads `data/ibja_rates.parquet`,
+   which ADR 060 encrypts too). The backtest JSON stays public. Without the decrypt the script
+   reports `no data` for every window.
 2. Refresh the cached hourly bars so the backtest is recomputed (needed for conditions 4 and 5):
    `python -c "from ml import macro; macro.update_intraday_cache()"` (writes the gitignored
    `data/macro_intraday.parquet`; needs network). Without that file the script falls back to

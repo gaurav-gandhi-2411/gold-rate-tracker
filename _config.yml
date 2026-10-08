@@ -38,3 +38,4 @@ exclude:
   - data/direction_eval_history.jsonl
   - data/duty_cbic.json
   - data/ibja_rates.parquet
+  - data/encrypted/
