@@ -1,6 +1,6 @@
 # Model status
 
-Updated 2026-10-08. Computed from real forecast days only; no backtest figure appears here. Rule: ADR 072 (frozen, hash `1bbc5dd3eeae`).
+Updated 2026-10-08. Computed from real forecast days only; no backtest figure appears here. Rule: ADR 072 (frozen, hash `2499a124d6e0`).
 
 ## What is live and how it is doing
 
@@ -16,7 +16,7 @@ The live model has no scored real days yet (counting from 2026-10-07). Nothing i
 | Hourly world-price model (own check on 2026-10-16, then it joins) | 0 | not started | n/a | not started |
 | Live model averaged with the hourly model (joins after the hourly model does) | 0 | not started | n/a | not started |
 
-A challenger replaces the live model only if we can be confident it beats it by more than 5% (the safe estimate in the table is the lower bound of its gain, adjusted for looking every day and for three challengers), keeps its range at target and is not worse on up/down. Nothing is judged before 20 real days. A challenger that has not qualified 180 days after its start date is retired, not promoted.
+A challenger replaces the live model only if we can be confident it beats it by more than 5% (the safe estimate in the table is the lower bound of its gain, adjusted for looking every day and for three challengers), keeps its range at target and is not worse on up/down. Nothing is judged before 20 real days. A challenger that has not qualified 180 decision days (days with an official rate) after its start date is retired, not promoted.
 
 ## Were the inputs on time?
 
@@ -30,5 +30,5 @@ A challenger replaces the live model only if we can be confident it beats it by 
 
 ## Anything that fired
 
-- Automatic fallback has not triggered (last checked 2026-10-07).
+- Automatic fallback has not triggered (last checked 2026-10-08).
 - Live model changes: none.

@@ -180,7 +180,7 @@ def test_once_looking_the_lower_bound_and_days_left_are_shown(tmp_path, monkeypa
     row = s["challengers"]["ensemble"]
     assert row["looks_started"] and row["lower_bound"] is not None
     md = mod.render(s)
-    assert "safe estimate of the gain" in md and f"{row['horizon_left']} days left" in md
+    assert "safe estimate of the gain" in md and f"{row['horizon_left']} decision days left" in md
 
 
 def test_a_challenger_past_the_horizon_is_shown_as_retired(tmp_path, monkeypatch) -> None:
@@ -190,7 +190,7 @@ def test_a_challenger_past_the_horizon_is_shown_as_retired(tmp_path, monkeypatch
     s = mod.compute()
     assert s["challengers"]["ensemble"]["retired"] is True and s["promote"] is None
     md = mod.render(s)
-    assert "retired: 180 days passed without qualifying" in md
+    assert "retired: 180 decision days passed without qualifying" in md
 
 
 def test_autocorrelation_of_the_daily_difference_is_reported_from_20_days(tmp_path, monkeypatch):

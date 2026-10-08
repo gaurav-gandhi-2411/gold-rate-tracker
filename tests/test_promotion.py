@@ -134,16 +134,46 @@ def test_never_promotes_at_or_after_the_horizon_and_retires() -> None:
     assert late["promote"] is None  # ... but a retired challenger is never promoted
 
 
-def test_horizon_boundary_is_calendar_days_since_registration() -> None:
-    recs = _paired(60, champ_skill=0.1, chall_skill=0.8)
-    reg = date.fromisoformat(pr.RULE["registered"]["p3_roll60"])
+def _weekday_dates(start: str, n: int) -> list[str]:
+    out, d = [], date.fromisoformat(start)
+    while len(out) < n:
+        if d.weekday() < 5:
+            out.append(d.isoformat())
+        d += timedelta(days=1)
+    return out
+
+
+def test_horizon_counts_decision_days_not_calendar_days() -> None:
+    """Amendment 2: 180 DECISION days (days the champion issued), so weekends and holidays do not
+    use up the horizon. 190 weekday records span about 266 calendar days."""
+    recs = _paired(190, champ_skill=0.1, chall_skill=0.8)
+    days = _weekday_dates("2026-10-07", 190)  # the registration day itself is a weekday
+    for key in recs:
+        for f, d in zip(recs[key], days, strict=True):
+            f["d0"] = d
+    reg = pr.RULE["registered"]["p3_roll60"]
+    assert reg == days[0]
     h = pr.RULE["horizon_days"]
-    last = (reg + timedelta(days=h - 1)).isoformat()
-    first_retired = (reg + timedelta(days=h)).isoformat()
-    ok = pr.decide("p3", recs, as_of=last)["challengers"]["p3_roll60"]
-    gone = pr.decide("p3", recs, as_of=first_retired)["challengers"]["p3_roll60"]
-    assert ok["days_since_registration"] == h - 1 and ok["horizon_left"] == 1 and ok["promotable"]
+    ok = pr.decide("p3", recs, as_of=days[h - 1])["challengers"]["p3_roll60"]
+    gone = pr.decide("p3", recs, as_of=days[h])["challengers"]["p3_roll60"]
+    assert ok["days_since_registration"] == h - 1 and ok["horizon_left"] == 1 and not ok["retired"]
     assert gone["days_since_registration"] == h and gone["retired"] and not gone["promotable"]
+    # 180 calendar days after registration is only ~129 decision days: still inside the horizon
+    cal180 = (date.fromisoformat(reg) + timedelta(days=180)).isoformat()
+    inside = pr.decide("p3", recs, as_of=cal180)["challengers"]["p3_roll60"]
+    assert not inside["retired"] and inside["days_since_registration"] < h
+
+
+def test_missing_challenger_days_still_use_up_the_horizon() -> None:
+    """The clock is the champion's record: a challenger that skipped days is not given extra time."""
+    recs = _paired(190, champ_skill=0.1, chall_skill=0.8)
+    days = _weekday_dates("2026-10-07", 190)
+    for key in recs:
+        for f, d in zip(recs[key], days, strict=True):
+            f["d0"] = d
+    recs["p3_roll60"] = recs["p3_roll60"][::2]  # issued on every second decision day only
+    row = pr.decide("p3", recs, as_of=days[-1])["challengers"]["p3_roll60"]
+    assert row["retired"] and row["days_since_registration"] >= pr.RULE["horizon_days"]
 
 
 def test_registry_is_part_of_the_frozen_rule() -> None:
@@ -153,7 +183,8 @@ def test_registry_is_part_of_the_frozen_rule() -> None:
     assert not set(pr.RULE["registered_on_first_record"]) & set(pr.LIVE_CAPABLE)
     moved = {**pr.RULE, "registered": {**reg, "p3_monday": "2026-11-01"}}
     assert pr.rule_sha256(moved) != pr.RULE_SHA256
-    assert pr.RULE["version"] == 2
+    assert pr.RULE["version"] == 3
+    assert pr.RULE["horizon_unit"] == "decision_days" and pr.RULE["control_variate"] == "none"
 
 
 def test_alpha_is_split_over_every_challenger_a_champion_can_face() -> None:
@@ -219,7 +250,8 @@ def test_confidence_sequence_is_valid_on_an_autocorrelated_null() -> None:
 
 def test_adr_records_the_amendment_and_the_superseded_hash() -> None:
     text = Path("docs/adr/072-champion-challenger-promotion-rule.md").read_text(encoding="utf-8")
-    assert "Amendment 1" in text and "superseded (v1)" in text
+    assert "Amendment 1" in text and "Amendment 2" in text and "superseded (v1)" in text
+    assert "1bbc5dd3eeaefeeed10671a4700378f4d68f63790da8a25acfc1fccf12c91290" in text  # v2 hash
     assert "0782301d8890788287be983c63d3d4e9bbd9eb0d8cd5d50d213960207dc44902" in text  # v1 hash
     assert (
         pr.RULE_SHA256 in text

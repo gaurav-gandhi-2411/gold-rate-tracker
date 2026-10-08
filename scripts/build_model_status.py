@@ -239,7 +239,7 @@ def _challenger_cells(r: dict[str, Any]) -> tuple[str, str, str]:
     """(error vs live, where it stands, verdict) for one challenger row, in plain words."""
     if r["retired"]:
         gain = f"{r['gain'] * 100:+.1f}%" if r.get("gain_estimate") is not None else "n/a"
-        return gain, "retired: 180 days passed without qualifying", "retired"
+        return gain, "retired: 180 decision days passed without qualifying", "retired"
     if r["n"] < r["first_look_day"]:
         date = r.get("first_reachable")
         stand = f"first look after {r['first_look_day']} days ({r['n']} so far)"
@@ -247,10 +247,10 @@ def _challenger_cells(r: dict[str, Any]) -> tuple[str, str, str]:
     gain = f"{r['gain'] * 100:+.1f}%"
     lb = r.get("lower_bound")
     if lb is None:  # 20+ days but the daily difference is flat: no safe estimate exists
-        return gain, f"no safe estimate yet; {r['horizon_left']} days left", "not yet"
+        return gain, f"no safe estimate yet; {r['horizon_left']} decision days left", "not yet"
     stand = (
         f"safe estimate of the gain {lb * 100:+.1f}% (needs more than +5%); "
-        f"{r['horizon_left']} days left"
+        f"{r['horizon_left']} decision days left"
     )
     return gain, stand, "qualifies" if r["promotable"] else "not yet"
 
@@ -311,7 +311,7 @@ def render(s: dict[str, Any]) -> str:
             "than 5% (the safe estimate in the table is the lower bound of its gain, adjusted for looking "
             "every day and for three challengers), keeps its range at target and is not worse on "
             "up/down. Nothing is judged before 20 real days. A challenger that has not qualified "
-            "180 days after its start date is retired, not promoted.",
+            "180 decision days (days with an official rate) after its start date is retired, not promoted.",
         ]
         for cid, ac in (s.get("autocorr") or {}).items():
             lines.append("")

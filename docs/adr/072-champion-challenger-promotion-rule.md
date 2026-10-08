@@ -20,7 +20,7 @@ The live model is P3 (ADR 069), forward from decision day 2026-10-07 (`P3_FORWAR
 demotion rules (ADR 068) can only move a model **down to holding**. This ADR is the other direction:
 how a challenger replaces the live model.
 
-## Amendment 1 (2026-10-08): a sequential promotion test replaces the fixed sample (rule v2, in force)
+## Amendment 1 (2026-10-08): a sequential promotion test replaces the fixed sample (rule v2; its horizon unit is superseded by Amendment 2)
 
 **Decision.** The fixed-sample test below (marked superseded (v1)) is replaced by a pre-registered
 sequential test that is valid at every look. **Made by:** Claude Code, under GG's delegation of
@@ -59,7 +59,7 @@ challenger's mean error is more than 5% below the champion's, so no ratio enters
 | `alpha`, `family_size` | 0.05 Bonferroni on the sequence level: 0.05 / 3 = 0.0167 per challenger |
 | `hac_lags`, variance | 4; max(Newey-West, sample variance) x 1.5 |
 | `mix_sd` | 0.3 |
-| `horizon_days` | **180** calendar days from registration (2026-10-07); then **retired**, never promoted |
+| `horizon_days` | **180** calendar days from registration (2026-10-07); then **retired**, never promoted (unit superseded: Amendment 2 counts decision days) |
 | coverage, direction | unchanged from v1 |
 | switchable | `p3`, `p3_roll60`, `p3_monday`, `ensemble` (live-capable only) |
 
@@ -97,6 +97,112 @@ arrives in the next part of this split (part B); the report files are committed 
 - The 1.5x variance inflation and the mixture scale were chosen after reading the same
   retrospective simulation that reports the 2.1%, so that figure is in-sample for the tuning; the
   independent AR and bootstrap checks above are the out-of-sample evidence.
+
+## Amendment 2 (2026-10-08): the horizon counts decision days; a control variate was tested and rejected (rule v3, in force)
+
+Decided for GG under his 2026-10-07 delegation, before any challenger has 20 forward days (VERIFIED:
+every forward count in the committed records is 0 at the time of writing). Only one number's unit
+changes; alpha, the 5% minimum gain, the first look, the mixture, the variance rule, the coverage and
+direction gates and the registry do not.
+
+### What changed
+
+| Item | v2 (Amendment 1) | v3 (this amendment) |
+|---|---|---|
+| `horizon_days` | 180 CALENDAR days from registration (about 128 decision days) | **180 DECISION days** after the registration day. A decision day is a day the champion issued a live forecast, i.e. a day with an official rate; the clock is the champion's record, so a day a challenger missed still uses up its horizon |
+| `version`, `horizon_unit` | 2, none | 3, `decision_days` |
+| `control_variate` | not in the rule | `none`: evaluated and rejected (below); frozen in the hash so adopting it later is a visible change |
+
+Rule hash of v3 (SHA-256 of canonical JSON of `ml.promotion.RULE`, checked by `tests/test_promotion.py`):
+
+`2499a124d6e0673e73827cfcd380fa09f189715a607a2a2fe542320350846c73`
+
+The v2 hash `1bbc5dd3eeaefeeed10671a4700378f4d68f63790da8a25acfc1fccf12c91290` and the v1 hash above
+are kept so each supersession is checkable. Retirement is still never a promotion.
+
+### Why the earlier power numbers disagreed (reconciled)
+
+Three different figures were in circulation for "a challenger that is truly 10% better":
+- "99.5%" (the Amendment 1 summary) was the chance that ANY of the three is promoted. That is carried
+  almost entirely by `p3_monday`, whose daily difference from P3 is small (sd of the daily e is 0.087
+  of the champion's mean error, against 0.237 for `ensemble` and 0.208 for `p3_roll60`), so it is
+  decided quickly. It says nothing about the other two.
+- Per challenger, Amendment 1's own report had 21% (`ensemble`) and 37% (`p3_roll60`).
+- The independent bootstrap had about 10% and 21%. The difference is the construction of "10% better":
+  Amendment 1 added a constant to the daily difference (the gain does not depend on the day's error).
+  A challenger that is better by the same SHARE on every day also inherits the day-to-day variation of
+  the champion's error, which makes the difference noisier.
+
+`scripts/simulate_promotion_v3.py` reports both constructions with a different resampler (a circular
+fixed-block bootstrap of the real days, block 10, same days for all three challengers; seed 42,
+10,000 paths per cell) and takes the proportional one as the realistic case.
+
+### Realistic chance of promotion within 180 decision days (VERIFIED: `reports/promotion_v3_simulation.json`)
+
+Per challenger; "additive" / "proportional" gain. Wilson 95% half-widths are at most 1 point.
+
+| True gain | `ensemble` | `p3_roll60` | `p3_monday` | any of three (additive / proportional) |
+|---|---|---|---|---|
+| 0% | 0.0% | 0.0% | 0.0% | 0.0% |
+| 5% (the boundary) | 0.6% / 0.0% | 3.1% / 2.2% | 0.7% / 0.0% | 3.5% / 2.2% |
+| 10% | 31.3% / 11.3% | 47.6% / 27.7% | 100% / 100% | 100% / 100% |
+| 20% | 100% / 100% | 99.8% / 99.9% | 100% / 100% | 100% / 100% |
+| 40% | 100% / 100% | 100% / 100% | 100% / 100% | 100% / 100% |
+
+Chance within the v2 horizon (128 decision days) was 22.0% / 5.4% for `ensemble` and 40.0% / 20.8% for
+`p3_roll60` at a true 10% gain, so the correction of the unit is worth 6 to 9 points there.
+Days to decision, given promoted, at a true 20% gain: median 31 (`ensemble`), 23 (`p3_roll60`), 20
+(`p3_monday`); at 40% all three decide at the first look, day 20. At a true 10% gain `ensemble` has a
+median of 90 days and `p3_roll60` 55.
+
+- **Wrongful promotion at 0% true gain: 0.0% in every cell.** At the 5% boundary (the largest wrongful
+  case, since a gain of exactly 5% is not worth promoting) it is 3.5% / 2.2% for any of three; each
+  challenger is below its 1.67% level except `p3_roll60` (3.1% / 2.2%), which is above it. The cause
+  is persistence in its daily difference (lag 1-4 autocorrelation 0.12 to 0.19): with a longer
+  resampling block (20 or 40 days) `p3_roll60` at the boundary is promoted in 9.2% / 8.1% of paths
+  (additive gain; `reports/promotion_v3_simulation.json`, `power_block_sensitivity`). An exploratory
+  run, not committed, of more Newey-West lags (8, 12, 20; 6,000 paths) gave 8.0% to 9.1% for the same
+  cell, so more lags did not help. This is the Amendment 1
+  autocorrelation caveat measured on a challenger: the guarantee is approximate for `p3_roll60` until
+  forward days show its real autocorrelation, and the weekly status page reports it.
+
+### Power at a true 10% gain is below 50% for two of three: the options (not adopted)
+
+For `ensemble` (11% to 31%) and `p3_roll60` (28% to 48%) a real 10% gain is more likely than not to be
+retired unrecognised. That is the price of holding alpha at 0.05 across three challengers and the
+minimum gain at 5%. Neither was loosened. Options, with their costs (VERIFIED: same report):
+
+| Option | Power at a true 10% gain (`ensemble` / `p3_roll60`, additive / proportional) | Cost |
+|---|---|---|
+| Keep 180 decision days (adopted) | 31% / 48% and 11% / 28% | Most real 10% improvements are retired; 20% or more is found reliably in 20 to 60 days |
+| 270 decision days | 49% / 59% and 27% / 40% | A model is evaluated for about 13 months; decisions come 3 months later |
+| 360 decision days | 65% / 69% and 49% / 53% | About 17 months; the autocorrelation caveat has longer to matter |
+| Lower alpha or the 5% bar | rejected, not simulated | Changes what a promotion certifies; GG's decision |
+
+A longer horizon is one number and a new hash; CC will not change it without a new ADR.
+
+### Control variate (hold forecast's same-day error): tested, rejected
+
+Method: `e' = e - theta x (H - mu_H)`, with `H` the hold forecast's absolute error that day, `theta`
+the least-squares slope and `mu_H` (114.49 Rs./g) both frozen from the 145-day retrospective record.
+- **Variance reduction on the real record** (in sample / fitted on the first half and applied to the
+  second half): `ensemble` 1.5% / 1.9%, `p3_roll60` 2.7% / 0.9%, `p3_monday` 45.9% / 29.6%. For the
+  two challengers that need more power it is negligible; for the one that does not (`p3_monday`,
+  already at 100% power at a true 10%) it is large.
+- **Power with it at a true 10% gain** (additive / proportional): `ensemble` 27.8% / 6.0% (worse),
+  `p3_roll60` 53.5% / 40.6%, `p3_monday` 100% / 96.3%.
+- **It breaks the size when the volatility regime moves.** `mu_H` is a constant, so when the forward
+  window is calmer or more volatile than the record, `theta x (mean H - mu_H)` shifts the mean of
+  `e'`. At the 5% boundary and a 30% calmer window `p3_roll60` is promoted in 13.6% of paths (plain:
+  3.1%); at a 30% more volatile window `p3_monday` in 12.2% (plain: 0.7%). Estimating `mu_H` from the
+  forward days instead would restore the size but, by algebra (INFERRED, not simulated), also remove
+  the variance reduction, because the adjusted mean then equals the plain mean.
+- Conclusion: not adopted. Alpha and the 5% minimum gain are unchanged; `control_variate` is frozen
+  as `none`.
+
+Not covered: the retrospective record is 145 days of re-run history, not forward days; the bootstrap
+cannot create regimes the record did not contain; the status page's lag 1-4 autocorrelation of the
+forward series is the live check on the autocorrelation assumption.
 
 ## Decision: the rule (v1, superseded by Amendment 1)
 
