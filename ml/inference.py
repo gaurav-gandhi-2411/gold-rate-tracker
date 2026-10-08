@@ -984,6 +984,10 @@ def _next_fix_block(
             "rules_breaching_now": dm.get("rules_breaching_now", []),
             "checked": bool(dm.get("checked")),
         }
+        lgi = fc.get("leak_guard")  # ADR 073: the runtime leak guard (names and times, no rates)
+        block["leak_guard"] = (
+            lgi if isinstance(lgi, dict) else {"checked": False, "n_inputs": 0, "violations": []}
+        )
         ch = out.get("champion")
         if ch:  # ADR 072: which model is live; the notification trigger T17 reads this
             block["champion"] = {

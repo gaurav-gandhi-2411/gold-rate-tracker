@@ -58,6 +58,8 @@ from pathlib import Path
 import numpy as np
 import pandas as pd
 
+from ml import runtime_leak_guard as rlg
+
 logger = logging.getLogger(__name__)
 
 DATA_DIR = Path(__file__).resolve().parent.parent / "data"
@@ -169,7 +171,11 @@ def global_series(macro: pd.DataFrame | None = None, label_path: Path = LABEL_PA
     s = s[~s.index.duplicated(keep="last")]
     # Daily calendar, forward-filled: the value "at date t" is the latest close on or before t.
     full = pd.date_range(s.index.min(), s.index.max(), freq="D")
-    return s.reindex(full).ffill()
+    out = s.reindex(full).ffill()
+    # The date of the observation behind each value (the leak guard, ADR 073, dates its known-at
+    # from this, not from the calendar day, so a value that came from a later row is caught).
+    out.attrs["source_date"] = pd.Series(s.index, index=s.index).reindex(full).ffill()
+    return out
 
 
 def load_ibja_full(path: Path = IBJA_PATH) -> pd.DataFrame:
@@ -283,6 +289,7 @@ def build_pairs(ibja: pd.DataFrame, glob: pd.Series) -> pd.DataFrame:
     rows = []
     dates = list(ibja["date"])
     pm = list(ibja["pm"])
+    src = glob.attrs.get("source_date")  # ADR 073: which row each world value came from
     for i, d0 in enumerate(dates):
         c0, cp = d0, d0 - pd.Timedelta(days=1)
         if c0 not in glob.index or cp not in glob.index:
@@ -297,6 +304,8 @@ def build_pairs(ibja: pd.DataFrame, glob: pd.Series) -> pd.DataFrame:
                 "pm1": pm[i + 1] if nxt else np.nan,
                 "g0": float(glob.loc[c0]),
                 "gprev": float(glob.loc[cp]),
+                "g0_src": src.loc[c0] if src is not None else c0,
+                "gprev_src": src.loc[cp] if src is not None else cp,
                 "pmprev": pm[i - 1] if prev_ok else np.nan,
                 "last": i == len(dates) - 1,
             }
@@ -500,18 +509,37 @@ def _resid_sd(folds: list[dict]) -> float | None:
 
 
 def update_oos(
-    pairs: pd.DataFrame, folds: list[dict], predictor=None, forward_from: str | None = None
+    pairs: pd.DataFrame,
+    folds: list[dict],
+    predictor=None,
+    forward_from: str | None = None,
+    guard: rlg.LeakCheck | None = None,
 ) -> list[dict]:
     """Append an out-of-sample forecast for every resolved pair not yet in ``folds``.
+
+    ``guard`` (ADR 073): every new fold's inputs are checked against its decision day's US close
+    first; a fold whose inputs were not yet known is NOT appended (logged at ERROR, recorded in
+    ``guard``) and the walk stops there, so a bad record is never persisted.
 
     ``predictor``: ``predict`` (the ensemble) when omitted. ``forward_from``: when given, each new
     fold is flagged ``retro`` if its decision day is earlier (a re-run on past data, not a forecast
     issued live), so scorers can keep forward and retrospective results apart.
     """
     predictor = predictor or predict  # looked up at call time so tests can substitute it
+    local = rlg.LeakCheck()  # its input count is not the published one (see absorb_violations)
+    try:
+        known: rlg.KnownCache | None = rlg.KnownCache()  # one clock cache for every fold
+    except Exception as exc:  # fail closed (rule 98a): a missing clock must not raise out of run()
+        local.guard_error(exc, "update_oos clocks")
+        known = None
     done = {f["d0"] for f in folds}
     out = list(folds)
     resolved = pairs[pairs["d1"].notna()].reset_index(drop=True)
+    try:
+        clocks = rlg.PairClocks(resolved, known) if known is not None and len(resolved) else None
+    except Exception as exc:  # fail closed: no fold is built from inputs that cannot be dated
+        local.guard_error(exc, "update_oos")
+        clocks = None
     for i in range(MIN_TRAIN, len(resolved)):
         row = resolved.iloc[i]
         key = _day(row["d0"])
@@ -520,6 +548,10 @@ def update_oos(
         train = resolved[resolved["d1"] <= row["d0"]]
         if len(train) < MIN_TRAIN:
             continue
+        if clocks is None or not local.check_fold(
+            _at(row["d0"], US_CLOSE_UTC), clocks, train.index.to_numpy(), i
+        ):
+            break
         p = predictor(train, row, _resid_sd([f for f in out if f["d0"] < key]))
         fold = {
             "d0": key,
@@ -535,6 +567,8 @@ def update_oos(
             fold["retro"] = key < forward_from
         out.append(fold)
         out.sort(key=lambda f: f["d0"])
+    if guard is not None:
+        guard.absorb_violations(local)
     return out
 
 
@@ -664,8 +698,13 @@ def _model_forecast(
     d0: pd.Timestamp,
     predictor=None,
     model_version: str = MODEL_VERSION,
+    now: datetime | None = None,
+    lg: rlg.LeakCheck | None = None,
 ) -> dict | None:
-    """The model window: next PM fix after ``d0`` from the global close of ``d0``, or None."""
+    """The model window: next PM fix after ``d0`` from the global close of ``d0``, or None.
+
+    ``now`` / ``lg`` (ADR 073): when both are given, every input is checked against the issue time
+    first and a violation returns None (the caller then holds); ``lg`` records what was found."""
     predictor = predictor or predict_p3
     if glob.empty or glob.index.max() < d0:
         return None
@@ -681,6 +720,9 @@ def _model_forecast(
     if len(train) < MIN_TRAIN:
         return None
     row = pairs.iloc[-1]
+    close = _at(d0, US_CLOSE_UTC)
+    if lg is not None and now is not None and not lg.check_forecast(now, train, row, d0, close):
+        return None
     p = predictor(train, row, _resid_sd(folds))
     base = float(row["pm0"])
     return {
@@ -708,8 +750,14 @@ def forecast(
     model_version: str = MODEL_VERSION,
     shadow_predictor=None,
     shadow_version: str = ENSEMBLE_VERSION,
+    lg: rlg.LeakCheck | None = None,
 ) -> dict:
     """Forecast the next IBJA fix at ``now``, whichever part of the day it is (see module doc).
+
+    ``lg`` (ADR 073): the run's leak guard. Every input of the model window is checked against
+    ``now`` (ml.runtime_leak_guard); on a violation, or one ``lg`` already holds from the run's
+    record update, the model is skipped and the hold figure is published with reason
+    ``leak_guard``. The result carries ``leak_guard`` (checked, n_inputs, violations).
 
     ``demoted``: ml.demotion has switched the live model off (ADR 068); the model window then holds
     the latest fix like every other window, so the headline falls back to "hold" and no direction
@@ -724,6 +772,7 @@ def forecast(
     and "pm_to_am" (computed if omitted). Returns {"active": False, "reason": ...} only when there
     is no usable fix or track record.
     """
+    lg = lg if lg is not None else rlg.LeakCheck()
     pm_days = full.dropna(subset=["pm"])
     if pm_days.empty:
         return {"active": False, "reason": "no_ibja"}
@@ -740,10 +789,10 @@ def forecast(
             "after_morning_rate",
         )
     else:
-        if now >= _at(d_pm, US_CLOSE_UTC) and not demoted:
-            fc = _model_forecast(full, glob, folds, d_pm, predictor, model_version)
+        if now >= _at(d_pm, US_CLOSE_UTC) and not demoted and not lg.violations:
+            fc = _model_forecast(full, glob, folds, d_pm, predictor, model_version, now, lg)
             if fc is not None:
-                out = {"active": True, **fc}
+                out = {"active": True, **fc, "leak_guard": lg.info()}
                 if shadow_folds is not None:
                     try:
                         sh = _model_forecast(
@@ -768,8 +817,14 @@ def forecast(
             "am",
             "after_afternoon_rate",
         )
+    if not lg.check_base(now, base_kind, d):  # the hold figure itself must have been published
+        return {"active": False, "reason": "leak_guard", "leak_guard": lg.info()}
     if not rec.get("ready"):
-        return {"active": False, "reason": f"{kind}_record_too_short"}
+        return {
+            "active": False,
+            "reason": "leak_guard" if lg.violations else f"{kind}_record_too_short",
+            "leak_guard": lg.info(),
+        }
     out = {
         "active": True,
         "mode": mode,
@@ -781,7 +836,10 @@ def forecast(
         "pred": round(base, 2),
         "half_width": round(rec["conformal_q"] * rec["vol_now"] * base, 2),
         "p_up": None,
+        "leak_guard": lg.info(),
     }
+    if lg.violations:  # ADR 073: held because an input was not yet known (logged at ERROR)
+        out["reason"] = "leak_guard"
     if demoted:
         out["demoted"] = True
     return out
@@ -831,8 +889,9 @@ def run(
     # Its record is cheap (no networks) and rebuilt from the pairs if absent.
     p3_path = data_dir / P3_OOS_PATH.name
     p3_old = load_oos(p3_path)
+    lg = rlg.LeakCheck()  # ADR 073: one guard per run; the live record's update feeds it too
     folds = (
-        update_oos(pairs, p3_old, predict_p3, forward_from=P3_FORWARD_FROM)
+        update_oos(pairs, p3_old, predict_p3, forward_from=P3_FORWARD_FROM, guard=lg)
         if not pairs.empty
         else p3_old
     )
@@ -886,6 +945,7 @@ def run(
         model_version=live_version,
         shadow_predictor=sh_predictor,
         shadow_version=sh_version,
+        lg=lg,
     )
     champion = _promotion_step(data_dir, cstate, records, now)
     if fallback:
