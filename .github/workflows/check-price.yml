@@ -292,7 +292,17 @@ jobs:
           # ibja_rates.parquet and feature_store/snapshots.parquet are added as plaintext only while
           # still tracked (pre-migration). Once migrated they are gitignored, git refuses them
           # (covered by `|| true`), and data/encrypted/ carries them instead. ADR 060.
-          git add data/forecast.json data/drift_metrics.json data/metrics_history.json data/ibja_rates.parquet data/chronos_probe.json data/calibration.json data/feature_store/snapshots.parquet data/tanishq_scrape_success_rate.json data/cadence_metrics.json data/ibja_derived_prices.json data/nextfix_oos.json data/nextfix_p3_oos.json data/nextfix_p3_variants_oos.json data/model_demotion_state.json data/nextfix_intraday_shadow.json data/nextfix_intraday_backtest.json || true
+          # ADR 060: each registered raw-data path is added on its own line. After the migration these
+          # are untracked and gitignored; if one is also missing, a multi-path `git add` aborts and
+          # stages NOTHING (verified), taking the public files with it. One line each, literal paths
+          # (check_bot_pr_sync_allowlist.py cannot resolve a loop).
+          git add data/forecast.json data/drift_metrics.json data/metrics_history.json data/chronos_probe.json data/calibration.json data/tanishq_scrape_success_rate.json data/cadence_metrics.json data/ibja_derived_prices.json data/model_demotion_state.json data/nextfix_intraday_backtest.json || true
+          git add data/ibja_rates.parquet || true
+          git add data/feature_store/snapshots.parquet || true
+          git add data/nextfix_oos.json || true
+          git add data/nextfix_p3_oos.json || true
+          git add data/nextfix_p3_variants_oos.json || true
+          git add data/nextfix_intraday_shadow.json || true
           # ADR 072: exists only after a promotion. Its own line, because one missing pathspec makes
           # git add stage NOTHING from the whole command (verified), so it cannot join the list above.
           if [ -f data/champion_state.json ]; then git add data/champion_state.json || true; fi

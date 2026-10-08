@@ -111,7 +111,12 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "actions@users.noreply.github.com"
           # Plaintext only while still tracked (pre-migration); afterwards gitignored. ADR 060.
-          git add data/fusion_snapshots.parquet data/shadow_fusion_output.json || true
+          # ADR 060: each registered raw-data path is added on its own line. After the migration these
+          # are untracked and gitignored; if one is also missing, a multi-path `git add` aborts and
+          # stages NOTHING (verified), taking the public files with it. One line each, literal paths
+          # (check_bot_pr_sync_allowlist.py cannot resolve a loop).
+          git add data/fusion_snapshots.parquet || true
+          git add data/shadow_fusion_output.json || true
           git add data/encrypted/ || true
           python scripts/data_crypt.py scan-key --changed
           if git diff --staged --quiet; then
