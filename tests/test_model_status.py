@@ -158,3 +158,36 @@ def test_demotion_shown_is_the_live_champions_own_not_p3s(tmp_path, monkeypatch)
         json.dumps({"demoted": False, "since": None, "reasons": []})
     )
     assert mod.compute()["demotion"]["demoted"] is False
+
+
+def test_before_the_first_look_the_table_says_so_and_shows_no_gain(tmp_path, monkeypatch) -> None:
+    mod = _load_module()
+    monkeypatch.setattr(mod, "DATA", tmp_path)
+    _write(tmp_path, _folds(10, 0.2), _folds(10, 0.9))
+    s = mod.compute()
+    md = mod.render(s)
+    assert "first look after 20 days (10 so far)" in md
+    row = s["challengers"]["ensemble"]
+    assert row["looks_started"] is False and row["lower_bound"] is None
+    assert "safe estimate of the gain" not in md
+
+
+def test_once_looking_the_lower_bound_and_days_left_are_shown(tmp_path, monkeypatch) -> None:
+    mod = _load_module()
+    monkeypatch.setattr(mod, "DATA", tmp_path)
+    _write(tmp_path, _folds(60, 0.1), _folds(60, 0.9))
+    s = mod.compute()
+    row = s["challengers"]["ensemble"]
+    assert row["looks_started"] and row["lower_bound"] is not None
+    md = mod.render(s)
+    assert "safe estimate of the gain" in md and f"{row['horizon_left']} days left" in md
+
+
+def test_a_challenger_past_the_horizon_is_shown_as_retired(tmp_path, monkeypatch) -> None:
+    mod = _load_module()
+    monkeypatch.setattr(mod, "DATA", tmp_path)
+    _write(tmp_path, _folds(200, 0.1), _folds(200, 0.9))
+    s = mod.compute()
+    assert s["challengers"]["ensemble"]["retired"] is True and s["promote"] is None
+    md = mod.render(s)
+    assert "retired: 180 days passed without qualifying" in md

@@ -120,8 +120,12 @@ def compute(now: datetime | None = None) -> dict[str, Any]:
         first = out["live"].get("last_day") or pr.RULE["common_start"]
         for cid, r in dec["challengers"].items():
             per_day = 5 / 7
-            n_have = r["n"]
-            r["first_reachable"] = pr.first_reachable(n_have, r.get("n_required"), first, per_day)
+            # date of the first look (day 20); None once looking has started
+            r["first_reachable"] = (
+                None
+                if r["looks_started"]
+                else pr.first_reachable(r["n"], r["first_look_day"], first, per_day)
+            )
             r["promotable"] = bool(r.get("promotable"))
             rows[cid] = r
         out["challengers"] = rows
@@ -199,6 +203,26 @@ def _timeliness_lines(t: dict[str, Any] | None) -> list[str]:
     return out
 
 
+def _challenger_cells(r: dict[str, Any]) -> tuple[str, str, str]:
+    """(error vs live, where it stands, verdict) for one challenger row, in plain words."""
+    if r["retired"]:
+        gain = f"{r['gain'] * 100:+.1f}%" if r.get("gain_estimate") is not None else "n/a"
+        return gain, "retired: 180 days passed without qualifying", "retired"
+    if r["n"] < r["first_look_day"]:
+        date = r.get("first_reachable")
+        stand = f"first look after {r['first_look_day']} days ({r['n']} so far)"
+        return "n/a", stand + (f", earliest {date}" if date else ""), "too early"
+    gain = f"{r['gain'] * 100:+.1f}%"
+    lb = r.get("lower_bound")
+    if lb is None:  # 20+ days but the daily difference is flat: no safe estimate exists
+        return gain, f"no safe estimate yet; {r['horizon_left']} days left", "not yet"
+    stand = (
+        f"safe estimate of the gain {lb * 100:+.1f}% (needs more than +5%); "
+        f"{r['horizon_left']} days left"
+    )
+    return gain, stand, "qualifies" if r["promotable"] else "not yet"
+
+
 def render(s: dict[str, Any]) -> str:
     live = s.get("live", {})
     lines = [
@@ -241,32 +265,21 @@ def render(s: dict[str, Any]) -> str:
     rows = s.get("challengers", {})
     if rows:
         lines += [
-            "| Challenger | Real days | Days needed | Earliest decision | Error vs live | Verdict |",
-            "|---|---|---|---|---|---|",
+            "| Challenger | Real days | Where it stands | Error vs live | Verdict |",
+            "|---|---|---|---|---|",
         ]
         for cid, r in rows.items():
-            need = r.get("n_required")
-            if r["status"] != "scored":
-                gain, verdict = "n/a", "too early"
-            else:
-                gain = f"{r['gain'] * 100:+.1f}%"
-                verdict = (
-                    "qualifies"
-                    if r["promotable"]
-                    else ("not yet" if need and r["n"] < need else "no")
-                )
-            lines.append(
-                f"| {NAMES.get(cid, cid)} | {r['n']} | {need if need else 'not yet known'} | "
-                f"{r.get('first_reachable') or 'not yet known'} | {gain} | {verdict} |"
-            )
+            gain, stand, verdict = _challenger_cells(r)
+            lines.append(f"| {NAMES.get(cid, cid)} | {r['n']} | {stand} | {gain} | {verdict} |")
         for text in s.get("not_yet", {}).values():
-            lines.append(f"| {text} | 0 | not yet known | not yet known | n/a | not started |")
+            lines.append(f"| {text} | 0 | not started | n/a | not started |")
         lines += [
             "",
-            "A challenger replaces the live model only if it beats it by at least 5%, is "
-            "statistically clear after allowing for several challengers, keeps its range at "
-            "target and is not worse on up/down. Days needed is sized from how noisy the daily "
-            "difference actually is. No conclusion before the earliest decision date.",
+            "A challenger replaces the live model only if we can be confident it beats it by more "
+            "than 5% (the safe estimate in the table is the lower bound of its gain, adjusted for looking "
+            "every day and for three challengers), keeps its range at target and is not worse on "
+            "up/down. Nothing is judged before 20 real days. A challenger that has not qualified "
+            "180 days after its start date is retired, not promoted.",
         ]
     else:
         lines.append("No challenger has real days yet.")
