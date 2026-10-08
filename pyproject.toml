@@ -4,6 +4,7 @@ testpaths = ["tests"]
 markers = [
     "integration: requires external services (e.g. live network calls)",
     "smoke: fast end-to-end smoke tests for the live CI hot path",
+    "real_kdf: runs data_crypt at the production scrypt cost (tests/test_data_crypt.py)",
 ]
 addopts = "-v --strict-markers"
 

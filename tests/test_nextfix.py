@@ -374,6 +374,10 @@ def test_inference_block_holding_a_fix_shows_no_direction_and_its_own_coverage(m
 # ── the committed track record backs the promotion record ────────────────────────────────────────
 
 
+@pytest.mark.skipif(
+    not (REPO / "data" / "nextfix_oos.json").exists(),
+    reason="ADR 060: the track record is committed as ciphertext; run `data_crypt.py decrypt` first",
+)
 def test_committed_track_record_passes_the_direction_gate_as_recorded():
     folds = nextfix.load_oos(REPO / "data" / "nextfix_oos.json")
     ev = nextfix.evaluate(folds)
