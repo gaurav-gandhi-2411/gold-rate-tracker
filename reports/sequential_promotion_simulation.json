@@ -1,0 +1,934 @@
+{
+ "script": "scripts/simulate_sequential_promotion.py",
+ "seed": 42,
+ "paths": 10000,
+ "mean_block_length": 6,
+ "rule_sha256": "1bbc5dd3eeaefeeed10671a4700378f4d68f63790da8a25acfc1fccf12c91290",
+ "inputs_sha256": {
+  "nextfix_p3_oos.json": "39d8fedf1e596216d99750c3ce0ebcc0ad5feb7b570296e6b9517ecd5bf75796",
+  "nextfix_oos.json": "7cfbe2ddc68839d1a8e71aebc12610d0c71094c2ee71e3ee22d4bc2f987e0f98",
+  "nextfix_p3_variants_oos.json": "6c478223707893c44ef5397772e15e3326d26c10e96d21bbf89b0222a76bdfce"
+ },
+ "retro_days_shared": 145,
+ "retro_first_day": "2025-07-17",
+ "retro_last_day": "2026-10-05",
+ "forward_folds_with_retro_false": {
+  "p3": 0,
+  "ensemble": 0,
+  "p3_roll60": 0,
+  "p3_monday": 0
+ },
+ "folds_total": {
+  "p3": 145,
+  "ensemble": 145,
+  "p3_roll60": 145,
+  "p3_monday": 145
+ },
+ "champion_mean_error_retro": 106.0796797327433,
+ "real_series": {
+  "ensemble": {
+   "sd_over_champion_mae": 0.2371768378292143,
+   "acf_lag1_to_4": [
+    -0.10710756916347815,
+    -0.1658507473481081,
+    0.041239223524760234,
+    0.03941097314219931
+   ],
+   "long_run_sd_over_champion_mae": 0.19534543825579803,
+   "retrospective_gain_NOT_EVIDENCE": 0.013112577947172186
+  },
+  "p3_roll60": {
+   "sd_over_champion_mae": 0.20752526147870345,
+   "acf_lag1_to_4": [
+    0.11531149986143693,
+    0.1860925601726204,
+    0.15680618798390092,
+    0.15327258932020113
+   ],
+   "long_run_sd_over_champion_mae": 0.2620546518156128,
+   "retrospective_gain_NOT_EVIDENCE": -0.007727530367328411
+  },
+  "p3_monday": {
+   "sd_over_champion_mae": 0.08670712639270155,
+   "acf_lag1_to_4": [
+    -0.02580184707663115,
+    0.0453543375934727,
+    -0.016963593511079914,
+    0.00660750122882395
+   ],
+   "long_run_sd_over_champion_mae": 0.08680307437283588,
+   "retrospective_gain_NOT_EVIDENCE": 0.007871225706798709
+  }
+ },
+ "decision_days_in_horizon": 128,
+ "per_challenger_level": 0.016666666666666666,
+ "promotion": {
+  "decision_days_in_horizon": 128,
+  "gains": {
+   "0%": {
+    "new_rule": {
+     "ensemble": {
+      "promoted_share": 0.0,
+      "promoted_ci95": [
+       0.0,
+       0.00038401247776654115
+      ],
+      "retired_share": 1.0,
+      "expected_days_to_decision": 128.0,
+      "median_days_to_decision": 128.0,
+      "median_days_given_promoted": null,
+      "expected_calendar_days_to_decision": 178.0,
+      "median_calendar_days_to_decision": 178.0
+     },
+     "p3_roll60": {
+      "promoted_share": 0.0,
+      "promoted_ci95": [
+       0.0,
+       0.00038401247776654115
+      ],
+      "retired_share": 1.0,
+      "expected_days_to_decision": 128.0,
+      "median_days_to_decision": 128.0,
+      "median_days_given_promoted": null,
+      "expected_calendar_days_to_decision": 178.0,
+      "median_calendar_days_to_decision": 178.0
+     },
+     "p3_monday": {
+      "promoted_share": 0.0,
+      "promoted_ci95": [
+       0.0,
+       0.00038401247776654115
+      ],
+      "retired_share": 1.0,
+      "expected_days_to_decision": 128.0,
+      "median_days_to_decision": 128.0,
+      "median_days_given_promoted": null,
+      "expected_calendar_days_to_decision": 178.0,
+      "median_calendar_days_to_decision": 178.0
+     }
+    },
+    "old_rule": {
+     "ensemble": {
+      "promoted_within_horizon_share": 0.027,
+      "promoted_within_horizon_ci95": [
+       0.02400022561640319,
+       0.030363050187563956
+      ],
+      "promoted_within_600_days_share": 0.0283,
+      "median_days_given_promoted_within_600": 63.0,
+      "never_decided_within_600_share": 0.9717
+     },
+     "p3_roll60": {
+      "promoted_within_horizon_share": 0.0305,
+      "promoted_within_horizon_ci95": [
+       0.027305733318065892,
+       0.034054854398556884
+      ],
+      "promoted_within_600_days_share": 0.043,
+      "median_days_given_promoted_within_600": 91.0,
+      "never_decided_within_600_share": 0.957
+     },
+     "p3_monday": {
+      "promoted_within_horizon_share": 0.0,
+      "promoted_within_horizon_ci95": [
+       0.0,
+       0.00038401247776654115
+      ],
+      "promoted_within_600_days_share": 0.0,
+      "median_days_given_promoted_within_600": null,
+      "never_decided_within_600_share": 1.0
+     }
+    },
+    "any_of_three_promoted_share": 0.0,
+    "any_of_three_promoted_ci95": [
+     0.0,
+     0.00038401247776654115
+    ]
+   },
+   "5%": {
+    "new_rule": {
+     "ensemble": {
+      "promoted_share": 0.0044,
+      "promoted_ci95": [
+       0.003279423444651482,
+       0.005901209723310713
+      ],
+      "retired_share": 0.9956,
+      "expected_days_to_decision": 127.6321,
+      "median_days_to_decision": 128.0,
+      "median_days_given_promoted": 35.5,
+      "expected_calendar_days_to_decision": 177.4883,
+      "median_calendar_days_to_decision": 178.0
+     },
+     "p3_roll60": {
+      "promoted_share": 0.0146,
+      "promoted_ci95": [
+       0.012428546627434934,
+       0.017144252685980823
+      ],
+      "retired_share": 0.9854,
+      "expected_days_to_decision": 126.6859,
+      "median_days_to_decision": 128.0,
+      "median_days_given_promoted": 20.0,
+      "expected_calendar_days_to_decision": 176.1757,
+      "median_calendar_days_to_decision": 178.0
+     },
+     "p3_monday": {
+      "promoted_share": 0.0067,
+      "promoted_ci95": [
+       0.005279610297613358,
+       0.008499256412951111
+      ],
+      "retired_share": 0.9933,
+      "expected_days_to_decision": 127.3275,
+      "median_days_to_decision": 128.0,
+      "median_days_given_promoted": 21.0,
+      "expected_calendar_days_to_decision": 177.0649,
+      "median_calendar_days_to_decision": 178.0
+     }
+    },
+    "old_rule": {
+     "ensemble": {
+      "promoted_within_horizon_share": 0.6339,
+      "promoted_within_horizon_ci95": [
+       0.6244082034578176,
+       0.6432889580006367
+      ],
+      "promoted_within_600_days_share": 0.8729,
+      "median_days_given_promoted_within_600": 100.0,
+      "never_decided_within_600_share": 0.1271
+     },
+     "p3_roll60": {
+      "promoted_within_horizon_share": 0.3899,
+      "promoted_within_horizon_ci95": [
+       0.38038456540658555,
+       0.3994999941410186
+      ],
+      "promoted_within_600_days_share": 0.8381,
+      "median_days_given_promoted_within_600": 136.0,
+      "never_decided_within_600_share": 0.16190000000000004
+     },
+     "p3_monday": {
+      "promoted_within_horizon_share": 0.7706,
+      "promoted_within_horizon_ci95": [
+       0.7622562531185251,
+       0.7787359193285075
+      ],
+      "promoted_within_600_days_share": 0.9003,
+      "median_days_given_promoted_within_600": 40.0,
+      "never_decided_within_600_share": 0.09970000000000001
+     }
+    },
+    "any_of_three_promoted_share": 0.021,
+    "any_of_three_promoted_ci95": [
+     0.018368138862062164,
+     0.023999745091638186
+    ]
+   },
+   "10%": {
+    "new_rule": {
+     "ensemble": {
+      "promoted_share": 0.2059,
+      "promoted_ci95": [
+       0.1980882432398026,
+       0.21393763289961967
+      ],
+      "retired_share": 0.7941,
+      "expected_days_to_decision": 115.5439,
+      "median_days_to_decision": 128.0,
+      "median_days_given_promoted": 67.0,
+      "expected_calendar_days_to_decision": 160.7255,
+      "median_calendar_days_to_decision": 178.0
+     },
+     "p3_roll60": {
+      "promoted_share": 0.3742,
+      "promoted_ci95": [
+       0.3647652602118696,
+       0.38373135732753627
+      ],
+      "retired_share": 0.6258,
+      "expected_days_to_decision": 102.4014,
+      "median_days_to_decision": 128.0,
+      "median_days_given_promoted": 54.0,
+      "expected_calendar_days_to_decision": 142.478,
+      "median_calendar_days_to_decision": 178.0
+     },
+     "p3_monday": {
+      "promoted_share": 0.9948,
+      "promoted_ci95": [
+       0.9931878145647504,
+       0.9960321666872518
+      ],
+      "retired_share": 0.005199999999999982,
+      "expected_days_to_decision": 42.1004,
+      "median_days_to_decision": 35.0,
+      "median_days_given_promoted": 35.0,
+      "expected_calendar_days_to_decision": 58.6448,
+      "median_calendar_days_to_decision": 49.0
+     }
+    },
+    "old_rule": {
+     "ensemble": {
+      "promoted_within_horizon_share": 0.9322,
+      "promoted_within_horizon_ci95": [
+       0.927104694336764,
+       0.9369633652774545
+      ],
+      "promoted_within_600_days_share": 1.0,
+      "median_days_given_promoted_within_600": 86.0,
+      "never_decided_within_600_share": 0.0
+     },
+     "p3_roll60": {
+      "promoted_within_horizon_share": 0.542,
+      "promoted_within_horizon_ci95": [
+       0.5322203689507053,
+       0.5517473740011624
+      ],
+      "promoted_within_600_days_share": 1.0,
+      "median_days_given_promoted_within_600": 122.0,
+      "never_decided_within_600_share": 0.0
+     },
+     "p3_monday": {
+      "promoted_within_horizon_share": 1.0,
+      "promoted_within_horizon_ci95": [
+       0.9996159875222334,
+       0.9999999999999999
+      ],
+      "promoted_within_600_days_share": 1.0,
+      "median_days_given_promoted_within_600": 40.0,
+      "never_decided_within_600_share": 0.0
+     }
+    },
+    "any_of_three_promoted_share": 0.9951,
+    "any_of_three_promoted_ci95": [
+     0.9935283587352335,
+     0.996291392109282
+    ]
+   },
+   "20%": {
+    "new_rule": {
+     "ensemble": {
+      "promoted_share": 0.9977,
+      "promoted_ci95": [
+       0.9965508971999048,
+       0.9984668567797265
+      ],
+      "retired_share": 0.0022999999999999687,
+      "expected_days_to_decision": 39.1647,
+      "median_days_to_decision": 33.0,
+      "median_days_given_promoted": 32.0,
+      "expected_calendar_days_to_decision": 54.5121,
+      "median_calendar_days_to_decision": 45.0
+     },
+     "p3_roll60": {
+      "promoted_share": 0.9869,
+      "promoted_ci95": [
+       0.9844770406527583,
+       0.9889490079963925
+      ],
+      "retired_share": 0.0131,
+      "expected_days_to_decision": 36.1916,
+      "median_days_to_decision": 24.0,
+      "median_days_given_promoted": 24.0,
+      "expected_calendar_days_to_decision": 50.396,
+      "median_calendar_days_to_decision": 34.0
+     },
+     "p3_monday": {
+      "promoted_share": 1.0,
+      "promoted_ci95": [
+       0.9996159875222334,
+       0.9999999999999999
+      ],
+      "retired_share": 0.0,
+      "expected_days_to_decision": 20.0449,
+      "median_days_to_decision": 20.0,
+      "median_days_given_promoted": 20.0,
+      "expected_calendar_days_to_decision": 28.0519,
+      "median_calendar_days_to_decision": 28.0
+     }
+    },
+    "old_rule": {
+     "ensemble": {
+      "promoted_within_horizon_share": 0.9334,
+      "promoted_within_horizon_ci95": [
+       0.9283448452411199,
+       0.938122292743152
+      ],
+      "promoted_within_600_days_share": 1.0,
+      "median_days_given_promoted_within_600": 85.0,
+      "never_decided_within_600_share": 0.0
+     },
+     "p3_roll60": {
+      "promoted_within_horizon_share": 0.5475,
+      "promoted_within_horizon_ci95": [
+       0.5377279384120296,
+       0.5572355804025825
+      ],
+      "promoted_within_600_days_share": 1.0,
+      "median_days_given_promoted_within_600": 121.0,
+      "never_decided_within_600_share": 0.0
+     },
+     "p3_monday": {
+      "promoted_within_horizon_share": 1.0,
+      "promoted_within_horizon_ci95": [
+       0.9996159875222334,
+       0.9999999999999999
+      ],
+      "promoted_within_600_days_share": 1.0,
+      "median_days_given_promoted_within_600": 40.0,
+      "never_decided_within_600_share": 0.0
+     }
+    },
+    "any_of_three_promoted_share": 1.0,
+    "any_of_three_promoted_ci95": [
+     0.9996159875222334,
+     0.9999999999999999
+    ]
+   },
+   "40%": {
+    "new_rule": {
+     "ensemble": {
+      "promoted_share": 1.0,
+      "promoted_ci95": [
+       0.9996159875222334,
+       0.9999999999999999
+      ],
+      "retired_share": 0.0,
+      "expected_days_to_decision": 20.3612,
+      "median_days_to_decision": 20.0,
+      "median_days_given_promoted": 20.0,
+      "expected_calendar_days_to_decision": 28.4602,
+      "median_calendar_days_to_decision": 28.0
+     },
+     "p3_roll60": {
+      "promoted_share": 1.0,
+      "promoted_ci95": [
+       0.9996159875222334,
+       0.9999999999999999
+      ],
+      "retired_share": 0.0,
+      "expected_days_to_decision": 20.8537,
+      "median_days_to_decision": 20.0,
+      "median_days_given_promoted": 20.0,
+      "expected_calendar_days_to_decision": 29.1451,
+      "median_calendar_days_to_decision": 28.0
+     },
+     "p3_monday": {
+      "promoted_share": 1.0,
+      "promoted_ci95": [
+       0.9996159875222334,
+       0.9999999999999999
+      ],
+      "retired_share": 0.0,
+      "expected_days_to_decision": 20.0,
+      "median_days_to_decision": 20.0,
+      "median_days_given_promoted": 20.0,
+      "expected_calendar_days_to_decision": 28.0,
+      "median_calendar_days_to_decision": 28.0
+     }
+    },
+    "old_rule": {
+     "ensemble": {
+      "promoted_within_horizon_share": 0.9334,
+      "promoted_within_horizon_ci95": [
+       0.9283448452411199,
+       0.938122292743152
+      ],
+      "promoted_within_600_days_share": 1.0,
+      "median_days_given_promoted_within_600": 85.0,
+      "never_decided_within_600_share": 0.0
+     },
+     "p3_roll60": {
+      "promoted_within_horizon_share": 0.5475,
+      "promoted_within_horizon_ci95": [
+       0.5377279384120296,
+       0.5572355804025825
+      ],
+      "promoted_within_600_days_share": 1.0,
+      "median_days_given_promoted_within_600": 121.0,
+      "never_decided_within_600_share": 0.0
+     },
+     "p3_monday": {
+      "promoted_within_horizon_share": 1.0,
+      "promoted_within_horizon_ci95": [
+       0.9996159875222334,
+       0.9999999999999999
+      ],
+      "promoted_within_600_days_share": 1.0,
+      "median_days_given_promoted_within_600": 40.0,
+      "never_decided_within_600_share": 0.0
+     }
+    },
+    "any_of_three_promoted_share": 1.0,
+    "any_of_three_promoted_ci95": [
+     0.9996159875222334,
+     0.9999999999999999
+    ]
+   }
+  }
+ },
+ "size_by_variance_inflation": [
+  {
+   "variance_floor_iid": false,
+   "variance_inflation": 1.0,
+   "true_gain": 0.05,
+   "rate": {
+    "ensemble": [
+     0.0709,
+     0.06603255566562975,
+     0.07609700384278949
+    ],
+    "p3_roll60": [
+     0.1,
+     0.09427272771877031,
+     0.1060344822634429
+    ],
+    "p3_monday": [
+     0.0334,
+     0.030053597525647686,
+     0.03710476291860403
+    ],
+    "any_of_three": [
+     0.1664,
+     0.1592285736011291,
+     0.1738276395240367
+    ]
+   }
+  },
+  {
+   "variance_floor_iid": false,
+   "variance_inflation": 1.0,
+   "true_gain": 0.0,
+   "rate": {
+    "ensemble": [
+     0.0016,
+     0.0009851240465054562,
+     0.0025976595913322323
+    ],
+    "p3_roll60": [
+     0.0007,
+     0.00033912200289172947,
+     0.0014443528574059384
+    ],
+    "p3_monday": [
+     0.0,
+     0.0,
+     0.00038401247776654115
+    ],
+    "any_of_three": [
+     0.0023,
+     0.0015331432202735716,
+     0.0034491028000952426
+    ]
+   }
+  },
+  {
+   "variance_floor_iid": false,
+   "variance_inflation": 1.5,
+   "true_gain": 0.05,
+   "rate": {
+    "ensemble": [
+     0.0316,
+     0.02834713368381799,
+     0.03521260920535371
+    ],
+    "p3_roll60": [
+     0.0414,
+     0.037668302008397436,
+     0.045483914236210024
+    ],
+    "p3_monday": [
+     0.0167,
+     0.014367586879045928,
+     0.019403599581963207
+    ],
+    "any_of_three": [
+     0.0722,
+     0.0672897467283361,
+     0.07743881434764094
+    ]
+   }
+  },
+  {
+   "variance_floor_iid": false,
+   "variance_inflation": 1.5,
+   "true_gain": 0.0,
+   "rate": {
+    "ensemble": [
+     0.0002,
+     5.4847779209068104e-05,
+     0.0007290110935663664
+    ],
+    "p3_roll60": [
+     0.0,
+     0.0,
+     0.00038401247776654115
+    ],
+    "p3_monday": [
+     0.0,
+     0.0,
+     0.00038401247776654115
+    ],
+    "any_of_three": [
+     0.0002,
+     5.4847779209068104e-05,
+     0.0007290110935663664
+    ]
+   }
+  },
+  {
+   "variance_floor_iid": true,
+   "variance_inflation": 1.0,
+   "true_gain": 0.05,
+   "rate": {
+    "ensemble": [
+     0.0207,
+     0.01808791880259837,
+     0.023680195558588635
+    ],
+    "p3_roll60": [
+     0.0467,
+     0.042735692122319625,
+     0.05101245359002351
+    ],
+    "p3_monday": [
+     0.0182,
+     0.01575898252601672,
+     0.02101105189755912
+    ],
+    "any_of_three": [
+     0.0708,
+     0.06593586874790835,
+     0.07599376756300644
+    ]
+   }
+  },
+  {
+   "variance_floor_iid": true,
+   "variance_inflation": 1.0,
+   "true_gain": 0.0,
+   "rate": {
+    "ensemble": [
+     0.0,
+     0.0,
+     0.00038401247776654115
+    ],
+    "p3_roll60": [
+     0.0003,
+     0.00010203035287762114,
+     0.0008817517174022601
+    ],
+    "p3_monday": [
+     0.0,
+     0.0,
+     0.00038401247776654115
+    ],
+    "any_of_three": [
+     0.0003,
+     0.00010203035287762114,
+     0.0008817517174022601
+    ]
+   }
+  },
+  {
+   "variance_floor_iid": true,
+   "variance_inflation": 1.25,
+   "true_gain": 0.05,
+   "rate": {
+    "ensemble": [
+     0.0082,
+     0.006611570524524473,
+     0.010166144148606698
+    ],
+    "p3_roll60": [
+     0.0249,
+     0.02202350577814466,
+     0.0281413828782291
+    ],
+    "p3_monday": [
+     0.0113,
+     0.009407877170523231,
+     0.013567456625245786
+    ],
+    "any_of_three": [
+     0.0363,
+     0.03280855009870041,
+     0.040147583073180275
+    ]
+   }
+  },
+  {
+   "variance_floor_iid": true,
+   "variance_inflation": 1.25,
+   "true_gain": 0.0,
+   "rate": {
+    "ensemble": [
+     0.0,
+     0.0,
+     0.00038401247776654115
+    ],
+    "p3_roll60": [
+     0.0001,
+     1.765221952685649e-05,
+     0.0005662834557441313
+    ],
+    "p3_monday": [
+     0.0,
+     0.0,
+     0.00038401247776654115
+    ],
+    "any_of_three": [
+     0.0001,
+     1.765221952685649e-05,
+     0.0005662834557441313
+    ]
+   }
+  },
+  {
+   "variance_floor_iid": true,
+   "variance_inflation": 1.5,
+   "true_gain": 0.05,
+   "rate": {
+    "ensemble": [
+     0.0043,
+     0.003194057070363735,
+     0.005786652900094014
+    ],
+    "p3_roll60": [
+     0.0157,
+     0.013442838237481967,
+     0.018329116248482703
+    ],
+    "p3_monday": [
+     0.0075,
+     0.005987873201081926,
+     0.009390379089518116
+    ],
+    "any_of_three": [
+     0.0224,
+     0.019677748743144846,
+     0.025489059975617755
+    ]
+   }
+  },
+  {
+   "variance_floor_iid": true,
+   "variance_inflation": 1.5,
+   "true_gain": 0.0,
+   "rate": {
+    "ensemble": [
+     0.0,
+     0.0,
+     0.00038401247776654115
+    ],
+    "p3_roll60": [
+     0.0,
+     0.0,
+     0.00038401247776654115
+    ],
+    "p3_monday": [
+     0.0,
+     0.0,
+     0.00038401247776654115
+    ],
+    "any_of_three": [
+     0.0,
+     0.0,
+     0.00038401247776654115
+    ]
+   }
+  },
+  {
+   "variance_floor_iid": true,
+   "variance_inflation": 2.0,
+   "true_gain": 0.05,
+   "rate": {
+    "ensemble": [
+     0.0007,
+     0.00033912200289172947,
+     0.0014443528574059384
+    ],
+    "p3_roll60": [
+     0.0093,
+     0.007598035355507109,
+     0.011378834490172973
+    ],
+    "p3_monday": [
+     0.0035,
+     0.0025177633965021086,
+     0.0048635609939200655
+    ],
+    "any_of_three": [
+     0.0114,
+     0.009498839268955254,
+     0.013676417724318211
+    ]
+   }
+  },
+  {
+   "variance_floor_iid": true,
+   "variance_inflation": 2.0,
+   "true_gain": 0.0,
+   "rate": {
+    "ensemble": [
+     0.0,
+     0.0,
+     0.00038401247776654115
+    ],
+    "p3_roll60": [
+     0.0,
+     0.0,
+     0.00038401247776654115
+    ],
+    "p3_monday": [
+     0.0,
+     0.0,
+     0.00038401247776654115
+    ],
+    "any_of_three": [
+     0.0,
+     0.0,
+     0.00038401247776654115
+    ]
+   }
+  }
+ ],
+ "demotion": {
+  "hold_mean_error": 114.48620689655178,
+  "horizon_days": 128,
+  "scenarios": {
+   "model better than holding by 20% (false-alarm check)": {
+    "current_rolling_40_persist_3": {
+     "fired_share": 0.0,
+     "fired_ci95": [
+      0.0,
+      0.00038401247776654115
+     ],
+     "fired_before_change_share": null,
+     "median_days_to_fire": null,
+     "median_days_after_change": null
+    },
+    "sequential_bound": {
+     "fired_share": 0.0,
+     "fired_ci95": [
+      0.0,
+      0.00038401247776654115
+     ],
+     "fired_before_change_share": null,
+     "median_days_to_fire": null,
+     "median_days_after_change": null
+    }
+   },
+   "model equal to holding (boundary)": {
+    "current_rolling_40_persist_3": {
+     "fired_share": 0.679,
+     "fired_ci95": [
+      0.6697822891145223,
+      0.6880802344184372
+     ],
+     "fired_before_change_share": null,
+     "median_days_to_fire": 60.0,
+     "median_days_after_change": null
+    },
+    "sequential_bound": {
+     "fired_share": 0.0312,
+     "fired_ci95": [
+      0.027968312104671673,
+      0.034791737994482215
+     ],
+     "fired_before_change_share": null,
+     "median_days_to_fire": 60.0,
+     "median_days_after_change": null
+    }
+   },
+   "model worse by 10% from day 1": {
+    "current_rolling_40_persist_3": {
+     "fired_share": 0.9909,
+     "fired_ci95": [
+      0.9888411273081713,
+      0.9925818492411574
+     ],
+     "fired_before_change_share": null,
+     "median_days_to_fire": 32.0,
+     "median_days_after_change": null
+    },
+    "sequential_bound": {
+     "fired_share": 0.6952,
+     "fired_ci95": [
+      0.6861041375097979,
+      0.7041459440188821
+     ],
+     "fired_before_change_share": null,
+     "median_days_to_fire": 39.0,
+     "median_days_after_change": null
+    }
+   },
+   "model worse by 20% from day 1": {
+    "current_rolling_40_persist_3": {
+     "fired_share": 0.9999,
+     "fired_ci95": [
+      0.9994337165442557,
+      0.999982347780473
+     ],
+     "fired_before_change_share": null,
+     "median_days_to_fire": 32.0,
+     "median_days_after_change": null
+    },
+    "sequential_bound": {
+     "fired_share": 0.9796,
+     "fired_ci95": [
+      0.9766395056997387,
+      0.9821921495315876
+     ],
+     "fired_before_change_share": null,
+     "median_days_to_fire": 23.0,
+     "median_days_after_change": null
+    }
+   },
+   "model worse by 40% from day 1": {
+    "current_rolling_40_persist_3": {
+     "fired_share": 1.0,
+     "fired_ci95": [
+      0.9996159875222334,
+      0.9999999999999999
+     ],
+     "fired_before_change_share": null,
+     "median_days_to_fire": 32.0,
+     "median_days_after_change": null
+    },
+    "sequential_bound": {
+     "fired_share": 1.0,
+     "fired_ci95": [
+      0.9996159875222334,
+      0.9999999999999999
+     ],
+     "fired_before_change_share": null,
+     "median_days_to_fire": 20.0,
+     "median_days_after_change": null
+    }
+   },
+   "good (-20%) for 60 days, then worse by 20%": {
+    "current_rolling_40_persist_3": {
+     "fired_share": 0.974,
+     "fired_ci95": [
+      0.9706942200980652,
+      0.976941736073012
+     ],
+     "fired_before_change_share": 0.0,
+     "median_days_to_fire": 93.0,
+     "median_days_after_change": 33.0
+    },
+    "sequential_bound": {
+     "fired_share": 0.0,
+     "fired_ci95": [
+      0.0,
+      0.00038401247776654115
+     ],
+     "fired_before_change_share": 0.0,
+     "median_days_to_fire": null,
+     "median_days_after_change": null
+    }
+   }
+  }
+ }
+}
