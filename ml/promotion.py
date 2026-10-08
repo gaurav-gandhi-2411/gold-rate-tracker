@@ -1,15 +1,27 @@
-"""Champion / challenger promotion rule (ADR 072), applied by code on FORWARD days only.
+"""Champion / challenger promotion rule (ADR 072, amended by Amendment 1), applied by code on
+FORWARD days only.
 
 The rule's numbers live in ``RULE`` and are frozen: ``RULE_SHA256`` is the hash of their canonical
 JSON, recorded in docs/adr/072-champion-challenger-promotion-rule.md, and tests/test_promotion.py
 fails if either moves without the other. Changing the rule is GG's decision (a new ADR), never a
 tuning step.
 
+Rule version 2 (Amendment 1, 2026-10-08) replaces the fixed-sample test of version 1, which needed
+about 400 forward days, with an anytime-valid test: a one-sided normal-mixture confidence sequence
+(Waudby-Smith et al. 2021, asymptotic form) for the mean of
+
+    e_t = (1 - min_gain) * loss_champion_t - loss_challenger_t
+
+on the days both models issued live. mean(e) > 0 is exactly "the challenger's mean error is more than
+``min_gain`` below the champion's", so the 5% gain is built into the series and no ratio (and so no
+plug-in denominator) enters the decision. The bound is valid at EVERY look, so the rule can look
+each day from ``min_forward_days`` on without inflating false promotions.
+
 What this module does (pure functions, no network):
   * ``compare``: one challenger vs the champion on the days both issued a forecast live;
-  * ``required_n``: forward days needed for 80% power at a 5% error difference, from the observed
-    long-run variance of the day-to-day error difference;
-  * ``decide``: promote at most one challenger, Benjamini-Hochberg across all eligible ones;
+  * ``cs_lower_bounds``: the confidence-sequence lower bound after each forward day;
+  * ``decide``: promote at most one challenger; alpha is split across the registered challengers
+    (Bonferroni on the confidence-sequence level), retired challengers never promote;
   * ``load_champion`` / ``save_champion``: the one-file state that says which model is live.
 
 Marking: every number returned is computed here from the per-day records handed in (VERIFIED when
@@ -24,25 +36,43 @@ import hashlib
 import json
 import math
 from datetime import UTC, date, datetime, timedelta
+from functools import lru_cache
 from pathlib import Path
 from typing import Any
 
 import numpy as np
 
-# --- the frozen rule (ADR 072) -------------------------------------------------------------------
+# --- the frozen rule (ADR 072, version 2 = Amendment 1) ------------------------------------------
 RULE: dict[str, Any] = {
-    "min_gain": 0.05,  # challenger mean |error| at least 5% below the champion's
-    "alpha": 0.05,  # one-sided HAC Diebold-Mariano, then Benjamini-Hochberg across challengers
-    "hac_lags": 4,  # Newey-West lags (same as ml.demotion and ml.nextfix)
-    "power": 0.80,  # power used to size the forward window
-    "effect": 0.05,  # the difference the window must be able to detect (fraction of champion MAE)
-    "min_days": 40,  # never fewer forward days than ADR 071's frozen floor
+    "version": 2,  # 1 = fixed-n Diebold-Mariano + BH (superseded); 2 = confidence sequence
+    "design": "one-sided normal-mixture confidence sequence on the mean of "
+    "e = (1 - min_gain) * loss_champion - loss_challenger; promote when the lower bound > 0",
+    "min_gain": 0.05,  # challenger mean |error| at least 5% below the champion's (ratio of means)
+    "alpha": 0.05,  # family-wise error over all registered live-capable challengers
+    "family_size": 3,  # challengers per champion (len(LIVE_CAPABLE) - 1); Bonferroni: alpha / 3 each
+    "hac_lags": 4,  # Newey-West lags for the long-run variance plug-in
+    # Measured, not assumed (scripts/simulate_sequential_promotion.py): the plain Newey-West plug-in
+    # is anti-conservative at 20-40 days (false-promotion rate 7-10% per challenger at the 5%-gain
+    # boundary). The variance used is max(Newey-West, plain sample variance) x variance_inflation.
+    "variance_floor_iid": True,
+    "variance_inflation": 1.5,
+    "mix_sd": 0.3,  # sd of the normal mixing distribution over the tilt, in units of 1/sigma
+    "min_forward_days": 20,  # no look before this many days both models issued live
+    "horizon_days": 180,  # calendar days since registration; at or after it: retired, not promoted
     "coverage_nominal": 0.80,  # challenger's own 80% range; promotion needs it not below target
     "coverage_alpha": 0.05,  # exact one-sided binomial: coverage significantly below 0.80 blocks
     "direction_rule": "challenger direction hit-rate >= champion's on the same days",
     "common_start": "2026-10-07",  # first decision day P3 was live: no earlier day is compared
+    "registered": {  # day each challenger started counting; its 180-day clock starts here
+        "ensemble": "2026-10-07",
+        "p3": "2026-10-07",  # a challenger only after another model has been promoted
+        "p3_roll60": "2026-10-07",
+        "p3_monday": "2026-10-07",
+    },
+    # not live-capable, so never promotable: registered on the first day they have a forward record
+    "registered_on_first_record": ["hourly", "p3_hourly"],
 }
-RULE_SHA256 = "0782301d8890788287be983c63d3d4e9bbd9eb0d8cd5d50d213960207dc44902"
+RULE_SHA256 = "1bbc5dd3eeaefeeed10671a4700378f4d68f63790da8a25acfc1fccf12c91290"
 
 CHAMPION_FILE = "champion_state.json"
 DEFAULT_CHAMPION = "p3"
@@ -94,35 +124,95 @@ def _long_run_var(d: np.ndarray, lags: int) -> float:
     return var
 
 
-def _dm_p_better(d: np.ndarray, lags: int) -> float:
-    """One-sided p that mean(d) < 0, i.e. the challenger (first argument of d) has lower loss."""
-    from scipy.stats import norm
+def running_long_run_var(e: np.ndarray, lags: int) -> np.ndarray:
+    """Newey-West long-run variance of ``e[..., :n]`` for every n (last axis), Bartlett weights.
 
-    n = len(d)
-    if n < 2:
-        return 1.0
-    var = _long_run_var(d, lags)
-    if var <= 0:
-        return 0.0 if d.mean() < 0 else 1.0
-    return float(norm.cdf(d.mean() / math.sqrt(var / n)))
-
-
-def required_n(d: np.ndarray, champion_mae: float, rule: dict[str, Any] = RULE) -> int | None:
-    """Forward days for ``power`` at an ``effect`` x champion-MAE difference, one-sided ``alpha``.
-
-    n = ((z_alpha + z_power) * sigma_LR / delta)^2, sigma_LR the long-run sd of the daily loss
-    difference d (Newey-West), delta = effect x champion MAE. None when d cannot be estimated.
+    Same estimator as ``_long_run_var`` (mean-centred, divided by n, lags capped at n - 1) but for
+    all prefixes at once through cumulative sums, so a simulation can look after every day. Entries
+    are NaN for n < 2. Accepts any leading shape.
     """
-    from scipy.stats import norm
+    e = np.asarray(e, dtype=float)
+    t_len = e.shape[-1]
+    zero = np.zeros((*e.shape[:-1], 1))
+    c1 = np.concatenate([zero, np.cumsum(e, axis=-1)], axis=-1)  # c1[..., n] = sum of first n
+    n = np.arange(1, t_len + 1)
+    m = c1[..., 1:] / n
+    var = (np.concatenate([zero, np.cumsum(e * e, axis=-1)], axis=-1)[..., 1:]) - n * m * m
+    for lag in range(1, lags + 1):
+        if lag >= t_len:
+            break
+        prod = np.zeros_like(e)
+        prod[..., lag:] = e[..., lag:] * e[..., :-lag]
+        q = np.cumsum(prod, axis=-1)
+        # sum over t > lag of (e_t - m)(e_{t-lag} - m), expanded around the running mean m
+        s_hi = c1[..., 1:] - c1[..., [lag]]
+        idx = np.clip(n - lag, 0, t_len)
+        s_lo = np.take_along_axis(c1, np.broadcast_to(idx, c1[..., 1:].shape).copy(), axis=-1)
+        lag_sum = q - m * (s_hi + s_lo) + np.maximum(n - lag, 0) * m * m
+        w = np.where(n > lag, 2.0 * (1.0 - lag / (lags + 1)), 0.0)
+        var = var + w * lag_sum
+    out = var / n
+    out[..., :1] = np.nan
+    return np.maximum(out, 0.0)
 
-    if len(d) < 10 or champion_mae <= 0:
-        return None
-    var = _long_run_var(d, rule["hac_lags"])
-    if var <= 0:
-        return None
-    delta = rule["effect"] * champion_mae
-    z = norm.ppf(1 - rule["alpha"]) + norm.ppf(rule["power"])
-    return max(rule["min_days"], math.ceil((z * math.sqrt(var) / delta) ** 2))
+
+@lru_cache(maxsize=4096)
+def mixture_boundary(t: int, level: float, mix_sd: float) -> float:
+    """``s*`` such that the one-sided normal-mixture martingale equals 1 / ``level`` after t days.
+
+    With S the running sum of (e_t - m) in units of sigma, V = t, and a tilt lambda ~ N(0, mix_sd^2)
+    restricted to lambda > 0 (the one-sided mixture), the martingale is
+        M = 2 / (mix_sd * sqrt(a)) * exp(S^2 / (2a)) * Phi(S / sqrt(a)),   a = t + 1 / mix_sd^2.
+    By Ville's inequality P(M_t >= 1 / level for some t) <= level; ``s*`` is the S where M = 1/level
+    (M increases in S, so it is unique). The lower bound on the mean is mean - sigma * s* / t.
+    """
+    from scipy.optimize import brentq
+    from scipy.special import log_ndtr
+
+    a = t + 1.0 / mix_sd**2
+    target = math.log(1.0 / level)
+
+    def f(s: float) -> float:
+        return (
+            math.log(2.0 / mix_sd)
+            - 0.5 * math.log(a)
+            + s * s / (2 * a)
+            + float(log_ndtr(s / math.sqrt(a)))
+        ) - target
+
+    return float(brentq(f, 0.0, 60.0 * math.sqrt(a)))
+
+
+def cs_level(rule: dict[str, Any] = RULE) -> float:
+    """Per-challenger confidence-sequence level: the family-wise alpha split across the family."""
+    return float(rule["alpha"]) / int(rule["family_size"])
+
+
+def cs_lower_bounds(e: np.ndarray, rule: dict[str, Any] = RULE) -> np.ndarray:
+    """Lower confidence-sequence bound on mean(e) after each day (last axis); NaN before the first
+    look (``min_forward_days``) and wherever the long-run variance is zero (fail closed: no bound).
+
+    ``e`` is (1 - min_gain) * loss_champion - loss_challenger per forward day. The bound is
+    mean_n - sqrt(inflation * NW_n) * s*(n) / n and is valid at every n at once.
+    """
+    e = np.asarray(e, dtype=float)
+    t_len = e.shape[-1]
+    n = np.arange(1, t_len + 1)
+    mean = np.cumsum(e, axis=-1) / n
+    var = running_long_run_var(e, int(rule["hac_lags"]))
+    if rule["variance_floor_iid"]:
+        mean_sq = np.cumsum(e * e, axis=-1) / n
+        with np.errstate(invalid="ignore"):
+            var = np.fmax(var, np.maximum(mean_sq - mean * mean, 0.0))
+    var = var * float(rule["variance_inflation"])
+    s_star = np.array(
+        [mixture_boundary(int(k), cs_level(rule), float(rule["mix_sd"])) for k in n], dtype=float
+    )
+    with np.errstate(invalid="ignore"):
+        lower = mean - np.sqrt(var) * s_star / n
+    lower = np.where(var > 0, lower, np.nan)
+    lower[..., : int(rule["min_forward_days"]) - 1] = np.nan
+    return lower
 
 
 def first_reachable(
@@ -137,27 +227,67 @@ def first_reachable(
 
 
 # --- one comparison ------------------------------------------------------------------------------
+def registration_date(
+    cid: str | None, first_day: str | None, rule: dict[str, Any] = RULE
+) -> str | None:
+    """The day challenger ``cid`` started counting: the frozen registry, or for models registered
+    "on the day they get a record" (and any unregistered id) its first forward day."""
+    reg = rule["registered"].get(cid) if cid else None
+    return reg if reg else first_day
+
+
 def compare(
     champion: list[dict],
     challenger: list[dict],
     since: str | None = None,
     rule: dict[str, Any] = RULE,
+    *,
+    cid: str | None = None,
+    as_of: str | None = None,
 ) -> dict[str, Any]:
-    """Challenger vs champion on the forward days both issued. Keys documented in ADR 072."""
+    """Challenger vs champion on the forward days both issued. Keys documented in ADR 072.
+
+    ``cid`` selects the registration date (horizon clock); ``as_of`` is the date the horizon is
+    measured at (default: the last day both models issued, so the clock is the data's own, never
+    the wall clock).
+    """
     since = since or rule["common_start"]
     a, b = forward_days(champion, since), forward_days(challenger, since)
     days = sorted(set(a) & set(b))
     n = len(days)
     out: dict[str, Any] = {"since": since, "n": n, "first_day": days[0] if days else None}
     out["last_day"] = days[-1] if days else None
+    first_look = int(rule["min_forward_days"])
+    reg = registration_date(cid, out["first_day"], rule)
+    clock = as_of or out["last_day"]
+    since_reg = (date.fromisoformat(clock) - date.fromisoformat(reg)).days if reg and clock else 0
+    horizon = int(rule["horizon_days"])
+    base: dict[str, Any] = {
+        "first_look_day": first_look,
+        "looks_started": False,
+        "lower_bound": None,
+        "gain_estimate": None,
+        "registered": reg,
+        "days_since_registration": since_reg,
+        "horizon_left": max(0, horizon - since_reg),
+        "retired": since_reg >= horizon,
+    }
     if n < 2:
-        return {**out, "status": "too early", "p_better": None}
+        return {**out, **base, "status": "too early"}
     la = np.array([_loss(a[d]) for d in days])
     lb = np.array([_loss(b[d]) for d in days])
-    diff = lb - la  # negative: the challenger is better
     gain = 1.0 - float(lb.mean() / la.mean()) if la.mean() > 0 else 0.0
-    p = _dm_p_better(diff, rule["hac_lags"])
-    n_need = required_n(diff, float(la.mean()), rule)
+    # e > 0 on average  <=>  challenger mean error more than min_gain below the champion's
+    e = (1.0 - rule["min_gain"]) * la - lb
+    lower_e = float(cs_lower_bounds(e, rule)[-1])
+    looking = n >= first_look and not math.isnan(lower_e)
+    if looking and la.mean() > 0:
+        # the same bound on the gain scale (champion's mean loss as the unit; display only: the
+        # decision is lower_e > 0, which is the same as this exceeding min_gain)
+        base["lower_bound"] = round(rule["min_gain"] + lower_e / float(la.mean()), 4)
+    base["looks_started"] = bool(looking)
+    base["gain_estimate"] = round(gain, 4) if n >= first_look else None
+    base["lower_bound_clears"] = bool(looking and lower_e > 0)
     hits_b = range_hits(challenger)
     cov = [hits_b[d] for d in days if d in hits_b]
     cov_k, cov_n = int(sum(cov)), len(cov)
@@ -178,11 +308,10 @@ def compare(
     dir_ok = bool(moved) and dir_b is not None and dir_a is not None and dir_b >= dir_a
     return {
         **out,
+        **base,
         "mae_champion": round(float(la.mean()), 2),
         "mae_challenger": round(float(lb.mean()), 2),
         "gain": round(gain, 4),
-        "p_better": p,
-        "n_required": n_need,
         "coverage_n": cov_n,
         "coverage": round(cov_k / cov_n, 3) if cov_n else None,
         "coverage_p_below": cov_p,
@@ -194,57 +323,41 @@ def compare(
     }
 
 
-def bh_reject(pvals: list[float], alpha: float) -> list[bool]:
-    """Benjamini-Hochberg: which hypotheses are rejected at FDR ``alpha``."""
-    m = len(pvals)
-    order = sorted(range(m), key=lambda i: pvals[i])
-    cutoff = -1
-    for rank, i in enumerate(order, start=1):
-        if pvals[i] <= alpha * rank / m:
-            cutoff = rank
-    rej = [False] * m
-    for rank, i in enumerate(order, start=1):
-        rej[i] = rank <= cutoff
-    return rej
-
-
 def decide(
     champion_id: str,
     records: dict[str, list[dict]],
     rule: dict[str, Any] = RULE,
+    as_of: str | None = None,
 ) -> dict[str, Any]:
     """Compare every challenger in ``records`` with the champion and say who, if anyone, is promoted.
 
-    A challenger is promotable only when ALL hold: forward n >= max(min_days, n_required); mean
-    error at least ``min_gain`` below the champion's; BH-adjusted one-sided HAC DM significant
-    across every challenger that has enough days; coverage not below target; direction not worse;
-    and it has a live predictor (LIVE_CAPABLE). At most one is promoted: the lowest error.
+    A challenger is promotable only when ALL hold: it has a live predictor (LIVE_CAPABLE); it is not
+    retired (180 calendar days since registration, ``horizon_left`` 0); at least ``min_forward_days``
+    forward days; the confidence-sequence lower bound of its error gain clears ``min_gain`` at the
+    per-challenger level alpha / family_size; coverage not below target; direction not worse. At
+    most one is promoted: the lowest mean error. ``as_of`` (default: the champion's last forward
+    day) is the date the horizon clock is read at.
     """
     champ = records[champion_id]
+    if as_of is None:
+        mine = forward_days(champ, rule["common_start"])
+        as_of = max(mine) if mine else None
     rows: dict[str, dict[str, Any]] = {}
     for cid, folds in records.items():
         if cid == champion_id:
             continue
-        rows[cid] = compare(champ, folds, rule=rule)
-    ripe = [
-        cid
-        for cid, r in rows.items()
-        if r["status"] == "scored" and r["n_required"] is not None and r["n"] >= r["n_required"]
-    ]
-    rejected = dict(
-        zip(ripe, bh_reject([rows[c]["p_better"] for c in ripe], rule["alpha"]), strict=True)
-    )
+        rows[cid] = compare(champ, folds, rule=rule, cid=cid, as_of=as_of)
     winners = []
     for cid, r in rows.items():
-        r["bh_significant"] = bool(rejected.get(cid, False))
         r["live_capable"] = cid in LIVE_CAPABLE
         r["promotable"] = bool(
-            cid in ripe
-            and r["bh_significant"]
-            and r["gain"] >= rule["min_gain"]
+            r["status"] == "scored"
+            and r["live_capable"]
+            and not r["retired"]
+            and r["looks_started"]
+            and r["lower_bound_clears"]
             and r["coverage_ok"]
             and r["direction_ok"]
-            and r["live_capable"]
         )
         if r["promotable"]:
             winners.append(cid)
