@@ -1,6 +1,8 @@
 # ADR 072: forward champion/challenger promotion rule, pre-registered
 
-**Status:** Proposed 2026-10-07 (GG brief of 2026-10-07, item 3). Pre-registration: this text and
+**Status:** Proposed 2026-10-07 (GG brief of 2026-10-07, item 3); **amended 2026-10-08 (Amendment 1:
+the promotion test is now the sequential rule v2; the v1 text below is superseded (v1))**.
+Pre-registration of v1: this text and
 `ml/promotion.py` (`RULE`, `RULE_SHA256`) are frozen by the commit that adds this file, **before any
 challenger has been scored against the live model under this rule**. Results go below a `## Results`
 heading. Changing a number below is a new ADR and GG's decision, never a tuning step
@@ -18,7 +20,88 @@ The live model is P3 (ADR 069), forward from decision day 2026-10-07 (`P3_FORWAR
 demotion rules (ADR 068) can only move a model **down to holding**. This ADR is the other direction:
 how a challenger replaces the live model.
 
-## Decision: the rule (frozen)
+## Amendment 1 (2026-10-08): a sequential promotion test replaces the fixed sample (rule v2, in force)
+
+**Decision.** The fixed-sample test below (marked superseded (v1)) is replaced by a pre-registered
+sequential test that is valid at every look. **Made by:** Claude Code, under GG's delegation of
+2026-10-07 (the choice of a sequential test was relayed as GG's decision of 2026-10-08). **When:**
+2026-10-08, before any challenger has 10 forward days.
+
+**Verified at amendment time.** Forward folds (`retro` false, decision day on or after 2026-10-07)
+in `data/nextfix_p3_oos.json`, `data/nextfix_oos.json`, `data/nextfix_p3_variants_oos.json`: `p3` 0,
+`ensemble` 0, `p3_roll60` 0, `p3_monday` 0 (zero forward days). The amendment changes the rule
+before any forward evidence exists, so it cannot be tuned to an outcome.
+
+**Why, and honest notes.**
+- The brief that asked for this amendment sized v1 at ~407-421 forward days. That did not reproduce
+  on real data: the v1 formula on the retrospective loss differences gives 80.9 (`ensemble`), 171.6
+  (`p3_roll60`) and 10.4 (`p3_monday`, so the 40-day floor), against the synthetic figure. The
+  forward variance is unknown until forward days exist.
+- The structural problem stands without that number: v1 sizes n from the noisiest first days, is
+  re-checked daily with no allowance for the repeated look, and certifies "better than zero" while
+  requiring only an observed 5% gain.
+- The asymptotic confidence sequence is anti-conservative at small n on these series (false
+  promotion at the 5% boundary with plain Newey-West: 7.1% `ensemble`, 10.0% `p3_roll60`, 3.3%
+  `p3_monday`, 16.6% any of three). It is fixed by the variance `max(Newey-West, iid) x 1.5`.
+- The horizon is 180 CALENDAR days (about 128 decision days). That is a GG judgement call, not a
+  derived number.
+
+### The rule (frozen, v2)
+
+Per day `e_t = 0.95 * loss_champion_t - loss_challenger_t` on days both models issued live (`retro`
+not true, on or after `common_start`); loss `|pm1 - pm0 * exp(ret)|`. `mean(e) > 0` means the
+challenger's mean error is more than 5% below the champion's, so no ratio enters the decision.
+
+| Parameter | Value |
+|---|---|
+| `version`, test | 2; one-sided normal-mixture confidence sequence on `mean(e)` (Waudby-Smith et al. 2021, asymptotic) |
+| `min_gain`, `min_forward_days` | 5% (built into `e`); **20** (no look before, then a look every day) |
+| `alpha`, `family_size` | 0.05 Bonferroni on the sequence level: 0.05 / 3 = 0.0167 per challenger |
+| `hac_lags`, variance | 4; max(Newey-West, sample variance) x 1.5 |
+| `mix_sd` | 0.3 |
+| `horizon_days` | **180** calendar days from registration (2026-10-07); then **retired**, never promoted |
+| coverage, direction | unchanged from v1 |
+| switchable | `p3`, `p3_roll60`, `p3_monday`, `ensemble` (live-capable only) |
+
+PROMOTE only when the lower bound `L_e > 0`, every gate holds and the challenger is live-capable and
+not retired; at most one promotion per run (lowest mean error). Retirement uses the data's own
+clock. Adding a live-capable challenger changes `family_size` and needs a new ADR.
+
+Rule hash of v2 (SHA-256 of canonical JSON of `ml.promotion.RULE`, checked by
+`tests/test_promotion.py`):
+
+`1bbc5dd3eeaefeeed10671a4700378f4d68f63790da8a25acfc1fccf12c91290`
+
+### Simulation result (full tables: `reports/sequential_promotion_simulation.md`)
+
+Seed 42, 10,000 paths per cell, stationary-bootstrap of the retrospective loss differences, 128
+decision days. The script `scripts/simulate_sequential_promotion.py` that produces the report
+arrives in the next part of this split (part B); the report files are committed here unchanged.
+- Wrongful promotion at 0% true gain: 0.0% per challenger. At the 5% boundary: 0.4%, 1.5%, 0.7%;
+  2.1% for any of the three (under the 5% requirement).
+- A challenger 20% better is promoted in a median of 20-33 days (v1: 40-120 days, or stalled).
+- It is stricter, not faster, for true gains of 5-10%: those are mostly retired at day 180. An
+  independent paired bootstrap on the real losses found power at a true 10% gain of about 10%
+  (ensemble) and 21% (roll60), roughly half the report's 21% and 37%; treat the report's figures as
+  an upper end. At 20% gain roll60 is promoted in 98.7% of paths within the horizon (the others
+  99.8% and 100%).
+- **Assumption behind "at most 5% for any of three":** it holds when the daily difference series
+  has modest autocorrelation (an independent check found 0.1% to 3.1% per challenger at AR 0 to
+  0.5, and 0.5% for any of three on block bootstraps of the real losses). It does NOT hold for
+  strongly autocorrelated series: at AR 0.6 a challenger at exactly the 5% boundary is promoted in
+  4.6% of paths (about 13% for any of three if independent), at AR 0.7 in 7.3%. The retrospective
+  lag 1-4 autocorrelations are -0.17 to +0.19, but those folds are not consecutive days, so real
+  daily autocorrelation is unknown until forward days exist. The weekly status page therefore
+  reports the lag 1-4 autocorrelation of the forward series once it has 20 days; if it exceeds 0.4
+  the first-look rule is to be re-examined by a new ADR before any promotion is trusted.
+- The 1.5x variance inflation and the mixture scale were chosen after reading the same
+  retrospective simulation that reports the 2.1%, so that figure is in-sample for the tuning; the
+  independent AR and bootstrap checks above are the out-of-sample evidence.
+
+## Decision: the rule (v1, superseded by Amendment 1)
+
+**superseded (v1).** Kept verbatim as the record of what was pre-registered on 2026-10-07; the v1
+parameters below are no longer applied. The v1 hash is kept so the supersession is checkable.
 
 All comparisons use decision days both models issued **live** (`retro` not true, decision day on or
 after `common_start`). Nothing older than a model's own registration date counts. Loss is the
@@ -39,11 +122,11 @@ absolute error of the forecast next fix, `|pm1 - pm0 * exp(ret)|`, in Rs./g.
 A challenger is promoted only when **all** hold. If more than one qualifies, the lowest mean error
 is promoted; at most one promotion per run.
 
-Rule hash (SHA-256 of the canonical JSON of `ml.promotion.RULE`):
+Rule hash of v1, superseded (v1) (SHA-256 of the canonical JSON of the v1 `RULE`):
 
 `0782301d8890788287be983c63d3d4e9bbd9eb0d8cd5d50d213960207dc44902`
 
-### Required n is computed, not assumed
+### Required n is computed, not assumed (v1, superseded)
 
 Each run reports, per challenger, the observed `sigma_LR`, the required n, the current n, and the
 calendar date the window is first reachable at the observed fold rate (5 decision days per 7
@@ -132,6 +215,8 @@ change has no cooldown beyond the pin.
 `alpha = 0.025`, 2% gain) for their stated verdict; the rule above is the one that can switch the
 live model, and it is stricter on gain (5%).
 
+
+
 Retrospective numbers (written before the dates above) are shown in a separate column and never
 counted.
 
@@ -173,7 +258,10 @@ hash**, and forward days count from that merge. Nothing here is a result.
 - **A fixed N for every challenger:** rejected; the required n depends on the observed variance of
   the loss difference, which differs by challenger.
 - **Bonferroni:** valid but stricter than needed for a handful of positively correlated challengers;
-  BH was the brief's choice.
+  BH was the brief's choice. (Amendment 1 uses Bonferroni on the sequence level after all: BH on
+  p-values from different looks is not valid, and only three challengers are registered.)
+- **Group-sequential alpha spending, e-value BH (considered for Amendment 1):** rejected for a
+  daily job whose look dates cannot be fixed in advance, and for needless machinery at m = 3.
 
 ## Results
 
