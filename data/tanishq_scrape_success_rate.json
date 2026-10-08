@@ -1,13 +1,13 @@
 {
   "window_days": 7,
-  "n": 34,
-  "n_success": 32,
+  "n": 35,
+  "n_success": 33,
   "n_failure": 2,
   "n_requests_path": 0,
-  "n_playwright_fallback": 32,
-  "success_rate": 0.9411764705882353,
-  "wilson_ci_low": 0.8090606311053629,
-  "wilson_ci_high": 0.9837176869361576,
+  "n_playwright_fallback": 33,
+  "success_rate": 0.9428571428571428,
+  "wilson_ci_low": 0.8139261926062996,
+  "wilson_ci_high": 0.984187170385956,
   "schema_version": 1,
-  "generated_at_utc": "2026-10-08T01:43:11.232019+00:00"
+  "generated_at_utc": "2026-10-08T02:09:57.777356+00:00"
 }
