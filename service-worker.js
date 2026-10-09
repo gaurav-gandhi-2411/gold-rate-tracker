@@ -192,7 +192,9 @@
 // marks) instead of the raw official rates; data/backtest.json is scores only. app.js, i18n.js, index.html changed.
 // 2026-10-09 (v91): the page no longer requests three encrypted research files (page_v2 is off), so there are no
 // 404s in the console. app.js changed.
-const VERSION = "v91-20261009-no-404s";
+// 2026-10-09 (v92): the 'test on past days' chart plots the error of the estimate the page actually shows (the
+// next-rate model) instead of the older median model; caption reworded. app.js, i18n.js, index.html changed.
+const VERSION = "v92-20261009-past-days-p3";
 const SHELL_CACHE = `gold-shell-${VERSION}`;
 
 const SHELL_FILES = [

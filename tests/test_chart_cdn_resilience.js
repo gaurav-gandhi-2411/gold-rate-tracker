@@ -15,16 +15,19 @@ const readings = Array.from({ length: 10 }, (_, i) => ({
   "22k": 13500 + i * 10,
   "24k": 14700 + i * 10,
 }));
-const folds = Array.from({ length: 5 }, (_, i) => ({
-  context_end_date: new Date(NOW - (5 - i) * DAY).toISOString().slice(0, 10),
-  err_chronos_p50: [10 - i * 5],
-  in_pi_80: [i % 2 === 0],
+// Item 3 (2026-10-09): the chart reads P3's own daily error and range hit (data/backtest.json
+// `p3_past_errors.rows`: day, signed error in Rs/g, in_range, retro), not the older Chronos folds.
+const rows = Array.from({ length: 5 }, (_, i) => ({
+  day: new Date(NOW - (5 - i) * DAY).toISOString().slice(0, 10),
+  err: 10 - i * 5,
+  in_range: i % 2 === 0,
+  retro: i < 2,
 }));
 // G4 (2026-09-25): renderForecastVsActual now also gates on backtest_run_at
 // freshness (CLAIM_MAX_AGE_DAYS) -- these CDN-availability tests are not about
 // freshness, so this fixture is always fresh relative to NOW; see
 // test_claim_freshness.js for the freshness behaviour itself.
-const btFresh = { folds, backtest_run_at: new Date(NOW).toISOString() };
+const btFresh = { folds: [], p3_past_errors: { rows }, backtest_run_at: new Date(NOW).toISOString() };
 
 // The stub DOM hands back a fresh element for every `.parentElement` read, so seed one to make the
 // wrapper's hidden state observable.
@@ -54,7 +57,7 @@ test("renderForecastVsActual: CDN down hides the track-record section instead of
     const section = ctx.element("section-track-record");
     section.hidden = false;
     ctx.getComputedStyle = () => ({ getPropertyValue: () => "" }); // exists in every browser; the vm sandbox has none
-    assert.doesNotThrow(() => ctx.renderForecastVsActual({ folds }));
+    assert.doesNotThrow(() => ctx.renderForecastVsActual({ p3_past_errors: { rows } }));
     assert.equal(section.hidden, true);
   } finally {
     ctx.dispose();
@@ -145,15 +148,37 @@ test("renderForecastVsActual: CDN up builds the track-record chart", () => {
   }
 });
 
-test("renderForecastVsActual plots the daily ERROR with inside/outside marks, never a price level", () => {
-  const legacy = folds.map((f, i) => ({
-    context_end_date: f.context_end_date,
-    actuals: [13500 + i],
-    naive: [13490 + i],
-    chronos_p50: [13500 + i + f.err_chronos_p50[0]],
-    in_pi_80: f.in_pi_80,
-  }));
-  for (const [name, bt] of [["scores-only", btFresh], ["file written before the switch", { ...btFresh, folds: legacy }]]) {
+test("renderForecastVsActual plots P3's daily ERROR with inside/outside marks, never a price level", () => {
+  const ctx = loadApp({ nowMs: NOW });
+  try {
+    const built = [];
+    ctx.Chart = class {
+      constructor(el, config) { built.push(config); }
+      destroy() {}
+    };
+    ctx.getComputedStyle = () => ({ getPropertyValue: () => "" });
+    ctx.renderForecastVsActual(btFresh);
+    const cfg = built[0];
+    assert.deepEqual(cfg.data.datasets[0].data, [10, 5, 0, -5, -10]);
+    assert.deepEqual(cfg.data.datasets[1].data, [10, null, 0, null, -10], "inside the range");
+    assert.deepEqual(cfg.data.datasets[2].data, [null, 5, null, -5, null], "outside the range");
+    assert.ok(cfg.options.scales.y.min < 0 && cfg.options.scales.y.max > 0, "axis spans zero");
+    for (const d of cfg.data.datasets) for (const v of d.data) assert.ok(v === null || Math.abs(v) < 1000, "no price level");
+  } finally {
+    ctx.dispose();
+  }
+});
+
+test("renderForecastVsActual never falls back to the older median model's folds", () => {
+  const chronosOnly = {
+    folds: Array.from({ length: 6 }, (_, i) => ({
+      context_end_date: "2026-09-1" + i,
+      err_chronos_p50: [[300], [200], [100], [0], [-100], [-200]][i],
+      in_pi_80: [true],
+    })),
+    backtest_run_at: new Date(NOW).toISOString(),
+  };
+  for (const bt of [chronosOnly, { ...btFresh, p3_past_errors: { rows: rows.slice(0, 2) } }]) {
     const ctx = loadApp({ nowMs: NOW });
     try {
       const built = [];
@@ -162,13 +187,11 @@ test("renderForecastVsActual plots the daily ERROR with inside/outside marks, ne
         destroy() {}
       };
       ctx.getComputedStyle = () => ({ getPropertyValue: () => "" });
+      const section = ctx.element("section-track-record");
+      section.hidden = false;
       ctx.renderForecastVsActual(bt);
-      const cfg = built[0];
-      assert.deepEqual(cfg.data.datasets[0].data, [10, 5, 0, -5, -10], name);
-      assert.deepEqual(cfg.data.datasets[1].data, [10, null, 0, null, -10], name + ": inside the range");
-      assert.deepEqual(cfg.data.datasets[2].data, [null, 5, null, -5, null], name + ": outside the range");
-      assert.ok(cfg.options.scales.y.min < 0 && cfg.options.scales.y.max > 0, "axis spans zero");
-      for (const d of cfg.data.datasets) for (const v of d.data) assert.ok(v === null || Math.abs(v) < 1000, "no price level");
+      assert.equal(built.length, 0, "no chart without at least 3 of P3's own days");
+      assert.equal(section.hidden, true);
     } finally {
       ctx.dispose();
     }

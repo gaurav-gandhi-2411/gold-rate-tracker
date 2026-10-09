@@ -308,6 +308,20 @@ def _print_report(result: dict) -> None:
     print()
 
 
+def p3_past_errors() -> dict | None:
+    """P3's daily error and range hit for the past-days chart, or None when its record or the
+    calibration slope cannot be read (the chart then hides itself; it never falls back to a
+    different model)."""
+    from ml import nextfix
+
+    try:
+        slope = float(json.loads((DATA_DIR / "calibration.json").read_text())["slope"])
+        return nextfix.past_error_series(nextfix.load_oos(nextfix.P3_OOS_PATH), slope)
+    except Exception as exc:  # fail closed: no series rather than a wrong one
+        logger.warning("p3 past-error series unavailable: %s", exc)
+        return None
+
+
 def main() -> None:
     logging.basicConfig(level=logging.INFO, format="%(levelname)s %(name)s: %(message)s")
     parser = argparse.ArgumentParser(description="Walk-forward h=5 backtest (Chronos vs naive)")
@@ -355,7 +369,11 @@ def main() -> None:
     _print_report(result)
 
     DATA_DIR.mkdir(exist_ok=True)
-    BACKTEST_JSON.write_text(json.dumps(scores_only(result), indent=2) + "\n")
+    out = scores_only(result)
+    series = p3_past_errors()
+    if series is not None:
+        out["p3_past_errors"] = series  # the page's "test on past days" chart (item 3)
+    BACKTEST_JSON.write_text(json.dumps(out, indent=2) + "\n")
     print(f"Backtest written to {BACKTEST_JSON} ({result['n_folds']} folds).")
 
 
