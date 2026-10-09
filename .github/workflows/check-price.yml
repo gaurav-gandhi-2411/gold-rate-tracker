@@ -296,7 +296,8 @@ jobs:
           # are untracked and gitignored; if one is also missing, a multi-path `git add` aborts and
           # stages NOTHING (verified), taking the public files with it. One line each, literal paths
           # (check_bot_pr_sync_allowlist.py cannot resolve a loop).
-          git add data/forecast.json data/drift_metrics.json data/metrics_history.json data/chronos_probe.json data/calibration.json data/tanishq_scrape_success_rate.json data/cadence_metrics.json data/ibja_derived_prices.json data/model_demotion_state.json data/nextfix_intraday_backtest.json || true
+          git add data/forecast.json data/drift_metrics.json data/chronos_probe.json data/calibration.json data/tanishq_scrape_success_rate.json data/cadence_metrics.json data/ibja_derived_prices.json data/model_demotion_state.json data/nextfix_intraday_backtest.json || true
+          git add data/metrics_history.json || true
           git add data/ibja_rates.parquet || true
           git add data/feature_store/snapshots.parquet || true
           git add data/nextfix_oos.json || true
