@@ -1,127 +1,127 @@
 {
-  "as_of": "2026-10-07",
-  "generated_at_utc": "2026-10-07T19:16:54.016786+00:00",
-  "git_sha": "467c24d26d5e75ccc6d4f22ceb88a754e78e8606",
+  "as_of": "2026-10-09",
+  "generated_at_utc": "2026-10-09T15:13:07.033261+00:00",
+  "git_sha": "3926febcee68f67fa52e5be90f7d58c271cd99e4",
   "horizons": {
     "1": {
       "prob": {
-        "n": 200,
-        "p_hat": 0.505,
+        "n": 202,
+        "p_hat": 0.504950495049505,
         "naive_wilson_95": [
-          0.4362700003352748,
-          0.5735415464009526
+          0.43655652325561506,
+          0.5731596923768352
         ],
-        "effective_n": 200.0,
+        "effective_n": 202.0,
         "effective_n_wilson_95": [
-          0.4362700003352748,
-          0.5735415464009526
+          0.43655652325561506,
+          0.5731596923768352
         ],
-        "non_overlap_n": 200,
+        "non_overlap_n": 202,
         "non_overlap_stride": 1,
         "non_overlap_wilson_95": [
-          0.4362700003352748,
-          0.5735415464009526
+          0.43655652325561506,
+          0.5731596923768352
         ],
-        "dm_stat": 0.14142842783549564,
-        "p_value_two_sided": 0.8875314978075077,
-        "mean_diff": 0.005,
-        "gamma_0": 0.24997499999999997,
-        "long_run_var": 0.24997499999999997,
+        "dm_stat": 0.1407264067921421,
+        "p_value_two_sided": 0.8880860830858868,
+        "mean_diff": 0.0049504950495049506,
+        "gamma_0": 0.24997549259876475,
+        "long_run_var": 0.24997549259876475,
         "about_equally_likely": true,
         "times_out_of_10": 5
       },
       "range": {
         "scale": 1.009415178652106,
-        "lo_rs": -2627.4,
-        "hi_rs": 2952.8,
-        "x_rs": 2952.8,
-        "n_cal": 199
+        "lo_rs": -2657.0,
+        "hi_rs": 2986.0,
+        "x_rs": 2986.0,
+        "n_cal": 201
       },
       "volatility": {
-        "realized_vol_20d": 0.008809601724681565,
-        "percentile": 0.41652846876727473,
+        "realized_vol_20d": 0.008867055907038011,
+        "percentile": 0.4223327805417358,
         "category": "about_as_usual"
       },
       "sentence": "Waiting 1 day: prices are about equally likely to go up or down. This week they've been moving about as usual."
     },
     "2": {
       "prob": {
-        "n": 186,
-        "p_hat": 0.46236559139784944,
+        "n": 188,
+        "p_hat": 0.4627659574468085,
         "naive_wilson_95": [
-          0.3921997539298267,
-          0.5340545000831333
+          0.3929507253671543,
+          0.5340723483414064
         ],
-        "effective_n": 145.13774858602443,
+        "effective_n": 146.94768377749955,
         "effective_n_wilson_95": [
-          0.3829474220720596,
-          0.5431484379984101
+          0.3839641791630502,
+          0.5431115725168926
         ],
-        "non_overlap_n": 93,
+        "non_overlap_n": 94,
         "non_overlap_stride": 2,
         "non_overlap_wilson_95": [
-          0.3747394097477208,
-          0.5736298108228027
+          0.3805716814684006,
+          0.5785458536929419
         ],
-        "dm_stat": -0.9093666132492797,
-        "p_value_two_sided": 0.36315663906944673,
-        "mean_diff": -0.03763440860215054,
-        "gamma_0": 0.24858365128916632,
-        "long_run_var": 0.3185701830863121,
+        "dm_stat": -0.9052303354910994,
+        "p_value_two_sided": 0.36534337404298944,
+        "mean_diff": -0.03723404255319149,
+        "gamma_0": 0.24861362607514711,
+        "long_run_var": 0.3180680395949482,
         "about_equally_likely": true,
         "times_out_of_10": 4
       },
       "range": {
         "scale": 0.9977637536896294,
-        "lo_rs": -3446.7,
-        "hi_rs": 4174.0,
-        "x_rs": 4174.0,
-        "n_cal": 185
+        "lo_rs": -3485.5,
+        "hi_rs": 4221.0,
+        "x_rs": 4221.0,
+        "n_cal": 187
       },
       "volatility": {
-        "realized_vol_20d": 0.008809601724681565,
-        "percentile": 0.41652846876727473,
+        "realized_vol_20d": 0.008867055907038011,
+        "percentile": 0.4223327805417358,
         "category": "about_as_usual"
       },
       "sentence": "Waiting 2 days: prices are about equally likely to go up or down. This week they've been moving about as usual."
     },
     "7": {
       "prob": {
-        "n": 164,
-        "p_hat": 0.4695121951219512,
+        "n": 166,
+        "p_hat": 0.4759036144578313,
         "naive_wilson_95": [
-          0.39470455761881196,
-          0.5457154073274944
+          0.40133776124618836,
+          0.5515594874259051
         ],
-        "effective_n": 57.48198693073133,
+        "effective_n": 58.5257033102996,
         "effective_n_wilson_95": [
-          0.3498716798112527,
-          0.6008198378125882
+          0.35265876715068556,
+          0.5996020482998292
         ],
-        "non_overlap_n": 33,
+        "non_overlap_n": 34,
         "non_overlap_stride": 5,
         "non_overlap_wilson_95": [
-          0.35218375448914147,
-          0.674959578918663
+          0.36736712980068925,
+          0.6854849552491152
         ],
-        "dm_stat": -0.4631598464138397,
-        "p_value_two_sided": 0.6432497954321776,
-        "mean_diff": -0.03048780487804878,
-        "gamma_0": 0.249070493753718,
-        "long_run_var": 0.7106149796949974,
+        "dm_stat": -0.36911367902159165,
+        "p_value_two_sided": 0.7120429933906005,
+        "mean_diff": -0.024096385542168676,
+        "gamma_0": 0.24941936420380315,
+        "long_run_var": 0.7074432619512826,
         "about_equally_likely": true,
         "times_out_of_10": 4
       },
       "range": {
         "scale": 1.0440063706816163,
-        "lo_rs": -5787.8,
-        "hi_rs": 7566.6,
-        "x_rs": 7566.6,
-        "n_cal": 164
+        "lo_rs": -5852.9,
+        "hi_rs": 7651.8,
+        "x_rs": 7651.8,
+        "n_cal": 166
       },
       "volatility": {
-        "realized_vol_20d": 0.008809601724681565,
-        "percentile": 0.41652846876727473,
+        "realized_vol_20d": 0.008867055907038011,
+        "percentile": 0.4223327805417358,
         "category": "about_as_usual"
       },
       "sentence": "Waiting 7 days: prices are about equally likely to go up or down. This week they've been moving about as usual."

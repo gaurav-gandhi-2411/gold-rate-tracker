@@ -1,38 +1,49 @@
 {
  "schema_version": 1,
- "generated_at": "2026-10-09T10:39:22.391794+00:00",
+ "generated_at": "2026-10-09T15:13:14.524129+00:00",
  "rule_sha256": "e4efabec2193950ee4bf0193b00b3f17eed8c0cf5f81da4394d13acb51fdbdfa",
  "common_start": "2026-10-07",
  "champion": "p3",
  "champion_state_unreadable": false,
  "champion_history": [],
  "live": {
-  "n": 1,
+  "n": 2,
   "since": "2026-10-07",
-  "mae_model": 27.4,
-  "mae_hold": 11.1,
-  "change_pct": 146.8,
+  "mae_model": 81.3,
+  "mae_hold": 87.2,
+  "change_pct": -6.8,
   "direction_hit": 1.0,
-  "direction_n": 1,
-  "coverage": 1.0,
-  "coverage_n": 1,
-  "last_day": "2026-10-07"
+  "direction_n": 2,
+  "coverage": 0.5,
+  "coverage_n": 2,
+  "last_day": "2026-10-08"
  },
  "challengers": {
   "ensemble": {
    "since": "2026-10-07",
-   "n": 1,
+   "n": 2,
    "first_day": "2026-10-07",
-   "last_day": "2026-10-07",
+   "last_day": "2026-10-08",
    "first_look_day": 20,
    "looks_started": false,
    "lower_bound": null,
    "gain_estimate": null,
    "registered": "2026-10-07",
-   "days_since_registration": 0,
-   "horizon_left": 180,
+   "days_since_registration": 1,
+   "horizon_left": 179,
    "retired": false,
-   "status": "too early",
+   "lower_bound_clears": false,
+   "mae_champion": 81.34,
+   "mae_challenger": 81.12,
+   "gain": 0.0027,
+   "coverage_n": 2,
+   "coverage": 0.5,
+   "coverage_p_below": 0.35999999999999993,
+   "coverage_ok": true,
+   "direction_champion": 1.0,
+   "direction_challenger": 1.0,
+   "direction_ok": true,
+   "status": "scored",
    "live_capable": true,
    "blocked_reason": null,
    "promotable": false,
@@ -40,18 +51,29 @@
   },
   "p3_roll60": {
    "since": "2026-10-07",
-   "n": 1,
+   "n": 2,
    "first_day": "2026-10-07",
-   "last_day": "2026-10-07",
+   "last_day": "2026-10-08",
    "first_look_day": 20,
    "looks_started": false,
    "lower_bound": null,
    "gain_estimate": null,
    "registered": "2026-10-07",
-   "days_since_registration": 0,
-   "horizon_left": 180,
+   "days_since_registration": 1,
+   "horizon_left": 179,
    "retired": false,
-   "status": "too early",
+   "lower_bound_clears": false,
+   "mae_champion": 81.34,
+   "mae_challenger": 83.58,
+   "gain": -0.0275,
+   "coverage_n": 2,
+   "coverage": 1.0,
+   "coverage_p_below": 1.0,
+   "coverage_ok": true,
+   "direction_champion": 1.0,
+   "direction_challenger": 1.0,
+   "direction_ok": true,
+   "status": "scored",
    "live_capable": true,
    "blocked_reason": null,
    "promotable": false,
@@ -59,18 +81,29 @@
   },
   "p3_monday": {
    "since": "2026-10-07",
-   "n": 1,
+   "n": 2,
    "first_day": "2026-10-07",
-   "last_day": "2026-10-07",
+   "last_day": "2026-10-08",
    "first_look_day": 20,
    "looks_started": false,
    "lower_bound": null,
    "gain_estimate": null,
    "registered": "2026-10-07",
-   "days_since_registration": 0,
-   "horizon_left": 180,
+   "days_since_registration": 1,
+   "horizon_left": 179,
    "retired": false,
-   "status": "too early",
+   "lower_bound_clears": false,
+   "mae_champion": 81.34,
+   "mae_challenger": 81.34,
+   "gain": 0.0,
+   "coverage_n": 2,
+   "coverage": 0.5,
+   "coverage_p_below": 0.35999999999999993,
+   "coverage_ok": true,
+   "direction_champion": 1.0,
+   "direction_challenger": 1.0,
+   "direction_ok": true,
+   "status": "scored",
    "live_capable": true,
    "blocked_reason": null,
    "promotable": false,
@@ -85,13 +118,13 @@
  },
  "timeliness": {
   "schema_version": 1,
-  "generated_at": "2026-10-07T19:16:58.702087+00:00",
+  "generated_at": "2026-10-09T15:13:12.040535+00:00",
   "days": 7,
   "tanishq_slots": {
    "days": 7,
-   "slots": 18,
-   "served": 7,
-   "missed": 11,
+   "slots": 30,
+   "served": 14,
+   "missed": 16,
    "window_minutes": 45,
    "missed_slots_ist": [
     "2026-10-05T01:40:00+05:30",
@@ -104,41 +137,210 @@
     "2026-10-07T07:30:00+05:30",
     "2026-10-07T10:40:00+05:30",
     "2026-10-07T11:10:00+05:30",
-    "2026-10-07T15:35:00+05:30"
+    "2026-10-07T15:35:00+05:30",
+    "2026-10-09T01:40:00+05:30",
+    "2026-10-09T07:30:00+05:30",
+    "2026-10-09T10:40:00+05:30",
+    "2026-10-09T11:10:00+05:30",
+    "2026-10-09T15:35:00+05:30"
    ],
+   "classification": {
+    "no_dispatch": 6,
+    "dispatched_failed": 0,
+    "dispatched_cancelled": 1,
+    "late": 9,
+    "dispatched_other": 0,
+    "unknown": 0
+   },
+   "per_slot": [
+    {
+     "slot_ist": "2026-10-05T01:40:00+05:30",
+     "served": false,
+     "class": "no_dispatch"
+    },
+    {
+     "slot_ist": "2026-10-05T07:30:00+05:30",
+     "served": false,
+     "class": "late"
+    },
+    {
+     "slot_ist": "2026-10-05T10:40:00+05:30",
+     "served": false,
+     "class": "late"
+    },
+    {
+     "slot_ist": "2026-10-05T11:10:00+05:30",
+     "served": false,
+     "class": "late"
+    },
+    {
+     "slot_ist": "2026-10-05T15:35:00+05:30",
+     "served": true,
+     "class": "served"
+    },
+    {
+     "slot_ist": "2026-10-05T19:50:00+05:30",
+     "served": false,
+     "class": "late"
+    },
+    {
+     "slot_ist": "2026-10-06T01:40:00+05:30",
+     "served": false,
+     "class": "no_dispatch"
+    },
+    {
+     "slot_ist": "2026-10-06T07:30:00+05:30",
+     "served": false,
+     "class": "late"
+    },
+    {
+     "slot_ist": "2026-10-06T10:40:00+05:30",
+     "served": true,
+     "class": "served"
+    },
+    {
+     "slot_ist": "2026-10-06T11:10:00+05:30",
+     "served": true,
+     "class": "served"
+    },
+    {
+     "slot_ist": "2026-10-06T15:35:00+05:30",
+     "served": true,
+     "class": "served"
+    },
+    {
+     "slot_ist": "2026-10-06T19:50:00+05:30",
+     "served": true,
+     "class": "served"
+    },
+    {
+     "slot_ist": "2026-10-07T01:40:00+05:30",
+     "served": true,
+     "class": "served"
+    },
+    {
+     "slot_ist": "2026-10-07T07:30:00+05:30",
+     "served": false,
+     "class": "no_dispatch"
+    },
+    {
+     "slot_ist": "2026-10-07T10:40:00+05:30",
+     "served": false,
+     "class": "no_dispatch"
+    },
+    {
+     "slot_ist": "2026-10-07T11:10:00+05:30",
+     "served": false,
+     "class": "no_dispatch"
+    },
+    {
+     "slot_ist": "2026-10-07T15:35:00+05:30",
+     "served": false,
+     "class": "late"
+    },
+    {
+     "slot_ist": "2026-10-07T19:50:00+05:30",
+     "served": true,
+     "class": "served"
+    },
+    {
+     "slot_ist": "2026-10-08T01:40:00+05:30",
+     "served": true,
+     "class": "served"
+    },
+    {
+     "slot_ist": "2026-10-08T07:30:00+05:30",
+     "served": true,
+     "class": "served"
+    },
+    {
+     "slot_ist": "2026-10-08T10:40:00+05:30",
+     "served": true,
+     "class": "served"
+    },
+    {
+     "slot_ist": "2026-10-08T11:10:00+05:30",
+     "served": true,
+     "class": "served"
+    },
+    {
+     "slot_ist": "2026-10-08T15:35:00+05:30",
+     "served": true,
+     "class": "served"
+    },
+    {
+     "slot_ist": "2026-10-08T19:50:00+05:30",
+     "served": true,
+     "class": "served"
+    },
+    {
+     "slot_ist": "2026-10-09T01:40:00+05:30",
+     "served": false,
+     "class": "no_dispatch"
+    },
+    {
+     "slot_ist": "2026-10-09T07:30:00+05:30",
+     "served": false,
+     "class": "late"
+    },
+    {
+     "slot_ist": "2026-10-09T10:40:00+05:30",
+     "served": false,
+     "class": "late"
+    },
+    {
+     "slot_ist": "2026-10-09T11:10:00+05:30",
+     "served": false,
+     "class": "late"
+    },
+    {
+     "slot_ist": "2026-10-09T15:35:00+05:30",
+     "served": false,
+     "class": "dispatched_cancelled"
+    },
+    {
+     "slot_ist": "2026-10-09T19:50:00+05:30",
+     "served": true,
+     "class": "served"
+    }
+   ],
+   "attribution_note": "from GitHub run data only; no_dispatch cannot tell a laptop that was off or asleep from a scheduler that did not fire or a task that did not run (only the laptop's own log knows)",
    "marking": "INFERRED"
   },
   "overnight_window": {
    "available": true,
    "nights": 4,
-   "nights_without_model_forecast": 2,
-   "nights_with_model_forecast": 2,
+   "nights_without_model_forecast": 0,
+   "nights_with_model_forecast": 4,
    "minutes_after_us_close": [
+    13,
+    108,
     167,
     194
    ],
-   "median_minutes_after_us_close": 194,
+   "median_minutes_after_us_close": 167,
    "marking": "VERIFIED"
   }
  },
  "laptop_attribution": {
-  "generated_at": "2026-10-09T08:36:29.493670+00:00",
+  "generated_at": "2026-10-09T14:04:25.430467+00:00",
   "counts": {
    "before_schedule_installed": 4,
-   "laptop_off": 11
+   "laptop_off": 11,
+   "dispatched_but_run_late": 1
   },
   "evidence": {
    "event_log_from": "2026-10-03T18:16:28.742778+05:30",
-   "dispatch_log_lines": 24,
+   "dispatch_log_lines": 25,
    "tasks_created_ist": "2026-10-05T12:59:58.207069+05:30",
    "task_scheduler_history_enabled": false
   },
-  "slots": 15
+  "slots": 16
  },
  "demotion": {
   "demoted": false,
   "since": null,
   "reasons": [],
-  "last_checked": "2026-10-08T23:55:01.363921+00:00"
+  "last_checked": "2026-10-09T14:30:01.158402+00:00"
  }
 }
