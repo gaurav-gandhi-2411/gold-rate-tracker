@@ -1,7 +1,7 @@
 {
  "schema_version": 1,
- "generated_at": "2026-10-09T10:20:49.287313+00:00",
- "rule_sha256": "e9b2cc5fdddc8b3e8ee503ec512ab30177c83b1b598cbd4a044607bf0d5a0bd4",
+ "generated_at": "2026-10-09T10:39:22.391794+00:00",
+ "rule_sha256": "e4efabec2193950ee4bf0193b00b3f17eed8c0cf5f81da4394d13acb51fdbdfa",
  "common_start": "2026-10-07",
  "champion": "p3",
  "champion_state_unreadable": false,
@@ -34,7 +34,7 @@
    "retired": false,
    "status": "too early",
    "live_capable": true,
-   "blocked_reason": "size proof failed on synthetic autocorrelation 0.4-0.5 and its held-out rate is at the allowance (Amendment 5)",
+   "blocked_reason": null,
    "promotable": false,
    "first_reachable": "2026-11-03"
   },
@@ -72,7 +72,7 @@
    "retired": false,
    "status": "too early",
    "live_capable": true,
-   "blocked_reason": "size proof failed on a held-out resampler (Amendment 4)",
+   "blocked_reason": null,
    "promotable": false,
    "first_reachable": "2026-11-03"
   }
