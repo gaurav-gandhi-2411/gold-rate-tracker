@@ -219,3 +219,19 @@ def test_laptop_attribution_lines_explain_missed_visits_in_plain_words() -> None
     assert "Why those 11 visits were missed" in line and "checked 2026-10-08" in line
     assert "7 happened while the laptop was shut down" in line
     assert "4 were before the timed visits were set up on 2026-10-05" in line
+
+
+def test_blocked_challenger_is_labelled_held_back() -> None:
+    mod = _load_module()
+    row = {
+        "retired": False,
+        "n": 30,
+        "first_look_day": 20,
+        "gain": 0.12,
+        "lower_bound": 0.07,
+        "horizon_left": 100,
+        "promotable": False,
+        "blocked_reason": "size above its allowance at the 5% boundary",
+    }
+    _gain, stand, verdict = mod._challenger_cells(row)
+    assert verdict == "held back" and "held back until a known flaw" in stand
