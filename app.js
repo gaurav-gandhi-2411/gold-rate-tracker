@@ -1786,12 +1786,10 @@ function renderModelSignal(fc, readings, bt, coverage, drift) {
       ? t("reliabilityCoverage", { pct: Math.round(coverage.coverage * 100), n: coverage.n })
       : t("reliabilityUnknown");
 
-    const accDrift = computeAccuracyDrift(drift);
-    const driftKeySuffix = accDrift?.ratioLabelKey === "ratioOnTrack" ? "OnTrack"
-      : accDrift?.ratioLabelKey === "ratioWatch" ? "Watch"
-      : accDrift?.ratioLabelKey === "ratioRetrain" ? "Retrain"
-      : null;
-    const driftNote = driftKeySuffix ? t(`reliabilityDrift${driftKeySuffix}`) : "";
+    // Page audit (2026-10-09): the "recent accuracy has stayed in line with the historical average"
+    // sentence compared a short-lag miss with a 5-day-ahead backtest error, so it could not fail.
+    // Removed; the tested hit rate above is the claim.
+    const driftNote = "";
 
     // XSS-safe: coverageNote/driftNote are t() catalogue literals only.
     reliabilityHtml = `
@@ -2535,12 +2533,9 @@ function renderAccuracySummary(fc, drift) {
   const body = document.getElementById("methodology-body");
   if (!body) return;
 
-  const accDrift = computeAccuracyDrift(drift);
-  const driftKey = accDrift?.ratioLabelKey === "ratioRetrain" ? "reliabilityDriftRetrain"
-    : accDrift?.ratioLabelKey === "ratioWatch" ? "reliabilityDriftWatch"
-    : accDrift?.ratioLabelKey === "ratioOnTrack" ? "reliabilityDriftOnTrack"
-    : null;
-  const driftSentence = driftKey ? ` ${t(driftKey)}` : "";
+  // Page audit (2026-10-09): the recent-vs-historical drift verdict is no longer stated (see the
+  // reliability note above); no sentence here either.
+  const driftSentence = "";
 
   const directionOffParagraph = fc?.chronos_companion?.status === "success"
     ? `<p class="meth-text">${t("accSummaryDirectionOff")}</p>`

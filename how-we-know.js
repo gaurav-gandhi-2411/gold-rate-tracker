@@ -22,6 +22,18 @@ const fmtINR = (n) =>
     ? n.toLocaleString("en-IN", { maximumFractionDigits: 0 })
     : "—";
 
+// Date only: next_fix.target_time is midnight UTC of the target day, which prints as 05:30 am in IST,
+// a time nothing is published or measured at (page audit, 2026-10-09). Show the day, not a clock time.
+function fmtISTDate(iso) {
+  if (!iso) return "—";
+  const locale = currentLang === "hi" ? "hi-IN" : "en-IN";
+  try {
+    return new Intl.DateTimeFormat(locale, {
+      timeZone: "Asia/Kolkata", day: "numeric", month: "short", year: "numeric", numberingSystem: "latn",
+    }).format(new Date(iso));
+  } catch (_) { return "—"; }
+}
+
 function fmtIST(iso) {
   if (!iso) return "—";
   const locale = currentLang === "hi" ? "hi-IN" : "en-IN";
@@ -131,10 +143,16 @@ function renderFullMethodology(fc, bt, drift, coverage, bandCoverage) {
     // the same coverage figure the "How accurate" section shows unrounded.
     // G4 (2026-09-25): stale coverage (>CLAIM_MAX_AGE_DAYS) falls to methRangeSub's
     // own no-times fallback (plain "Range: ₹X – ₹Y"), same as a missing measurement.
-    const covOk   = coverage && typeof coverage.coverage === "number" && coverage.n > 0
-      && isMeasurementFresh(coverage.generated_at_utc, Date.now());
-    const timesN  = covOk ? Math.max(0, Math.min(10, Math.floor(coverage.coverage * 10 + 1e-9))) : null;
-    const times   = covOk ? fractionOutOf10Phrase(coverage.coverage * 100) : null;
+    // Page audit (2026-10-09): while the next-fix model sets the range, quote the hit rate of THAT
+    // range (next_fix.range_record, a test on past days), as the main page does -- not the retired
+    // flat-hold band's live record, which belongs to a different range.
+    const rr      = fc?.next_fix?.range_record;
+    const nfCov   = fc?.next_fix?.active === true && typeof rr?.coverage === "number" && rr.n > 0;
+    const covSrc  = nfCov ? { coverage: rr.coverage, n: rr.n } : coverage;
+    const covOk   = nfCov || (coverage && typeof coverage.coverage === "number" && coverage.n > 0
+      && isMeasurementFresh(coverage.generated_at_utc, Date.now()));
+    const timesN  = covOk ? Math.max(0, Math.min(10, Math.floor(covSrc.coverage * 10 + 1e-9))) : null;
+    const times   = covOk ? fractionOutOf10Phrase(covSrc.coverage * 100) : null;
     parts.push(`
       <div class="meth-section">
         <h3 class="meth-heading">${tHwk("methNextDayRangeHeading")}</h3>
@@ -142,7 +160,7 @@ function renderFullMethodology(fc, bt, drift, coverage, bandCoverage) {
           <div class="meth-stat">
             <div class="meth-stat-label">${tHwk("methEstimateLabel")}</div>
             <div class="meth-stat-value">₹${fmtINR(pred22k)}</div>
-            ${hasPI ? `<div class="meth-stat-sub">${tHwk("methRangeSub", { low: fmtINR(lower), high: fmtINR(upper), times, n: timesN })}</div>` : ""}
+            ${hasPI ? `<div class="meth-stat-sub">${tHwk(nfCov ? "methRangeSubTested" : "methRangeSub", { low: fmtINR(lower), high: fmtINR(upper), times, n: timesN })}</div>` : ""}
           </div>
           <div class="meth-stat">
             <div class="meth-stat-label">${tHwk("methMethodLabel")}</div>
@@ -150,7 +168,7 @@ function renderFullMethodology(fc, bt, drift, coverage, bandCoverage) {
             <div class="meth-stat-sub">${tHwk(fc.next_fix?.active !== true ? "methCoversMoves" : fc.next_fix.mode === "after_us_close" ? "methNextFixModelSub" : "methNextFixHoldSub")}</div>
           </div>
         </div>
-        ${fc.target_time ? `<p class="meth-text" style="margin-top:8px">${tHwk("methTargetLine", { date: fmtIST(fc.target_time) })}</p>` : ""}
+        ${fc.target_time ? `<p class="meth-text" style="margin-top:8px">${tHwk("methTargetLine", { date: fmtISTDate(fc.target_time) })}</p>` : ""}
         <p class="meth-text" style="margin-top:12px">${tHwk("methNextDayExplainer")}</p>
       </div>
     `);
@@ -214,10 +232,13 @@ function renderFullMethodology(fc, bt, drift, coverage, bandCoverage) {
     // G4 (2026-09-25): stale coverage (>CLAIM_MAX_AGE_DAYS) falls to the same
     // "still building a track record" wording as a genuinely missing measurement
     // (methAccurateP2CoverageUnknown already covers both -- no new string needed).
-    const hasCoverage = coverage && typeof coverage.coverage === "number" && coverage.n > 0
-      && isMeasurementFresh(coverage.generated_at_utc, Date.now());
-    const coverPct = hasCoverage ? Math.round(coverage.coverage * 100) : null;
-    const coverN   = hasCoverage ? coverage.n : null;
+    const rrA       = fc?.next_fix?.range_record;
+    const nfCovA    = fc?.next_fix?.active === true && typeof rrA?.coverage === "number" && rrA.n > 0;
+    const covSrcA   = nfCovA ? { coverage: rrA.coverage, n: rrA.n } : coverage;
+    const hasCoverage = nfCovA || (coverage && typeof coverage.coverage === "number" && coverage.n > 0
+      && isMeasurementFresh(coverage.generated_at_utc, Date.now()));
+    const coverPct = hasCoverage ? Math.round(covSrcA.coverage * 100) : null;
+    const coverN   = hasCoverage ? covSrcA.n : null;
 
     // G4 (2026-09-25): P1 (naive/AI MAE + p-value) and P3 (direction accuracy)
     // both come from this SAME weekly backtest.json run -- when backtest_run_at
@@ -249,9 +270,11 @@ function renderFullMethodology(fc, bt, drift, coverage, bandCoverage) {
         ${p1Html}
         <p class="meth-text"><strong>${tHwk("methAccurateP2Strong", {
           rangeStr,
-          coverageText: hasCoverage ? tHwk("methAccurateP2CoveragePct", { pct: coverPct, n: coverN }) : tHwk("methAccurateP2CoverageUnknown"),
+          coverageText: hasCoverage
+            ? tHwk(nfCovA ? "methAccurateP2CoverageTested" : "methAccurateP2CoveragePct", { pct: coverPct, n: coverN })
+            : tHwk("methAccurateP2CoverageUnknown"),
         })}</strong><br>
-        ${tHwk("methAccurateP2")}</p>
+        ${tHwk(nfCovA ? "methAccurateP2Tested" : "methAccurateP2")}</p>
         ${p3Html}
         <p class="meth-text"><strong>${tHwk("methAccurateP4Strong")}</strong><br>
         ${tHwk("methAccurateP4")}</p>
@@ -259,33 +282,10 @@ function renderFullMethodology(fc, bt, drift, coverage, bandCoverage) {
     `);
   }
 
-  const accDrift = computeAccuracyDrift(drift);
-  if (accDrift) {
-    const rolling = accDrift.rolling != null ? Math.round(accDrift.rolling) : null;
-    const baseMae = accDrift.baseMae != null ? Math.round(accDrift.baseMae) : null;
-    const ratio   = accDrift.ratio != null ? accDrift.ratio.toFixed(2) : null;
-    const ratioLabelKey = accDrift.ratioLabelKey;
-    parts.push(`
-      <div class="meth-section">
-        <h3 class="meth-heading">${tHwk("methDriftHeading")}</h3>
-        <div class="meth-stats">
-          <div class="meth-stat">
-            <div class="meth-stat-label">${tHwk("methRecentError")}</div>
-            <div class="meth-stat-value">${rolling != null ? "₹" + fmtINR(rolling) : "—"}</div>
-          </div>
-          <div class="meth-stat">
-            <div class="meth-stat-label">${tHwk("methHistoricalError")}</div>
-            <div class="meth-stat-value">${baseMae != null ? "₹" + fmtINR(baseMae) : "—"}</div>
-          </div>
-          <div class="meth-stat">
-            <div class="meth-stat-label">${tHwk("methAccuracyDrift")}</div>
-            <div class="meth-stat-value">${ratio ?? "—"}</div>
-            <div class="meth-stat-sub">${ratioLabelKey === "ratioRetrain" ? tHwk("ratioRetrainSub") : (ratioLabelKey ? tHwk(ratioLabelKey) : "")}</div>
-          </div>
-        </div>
-      </div>
-    `);
-  }
+  // Removed 2026-10-09 (page audit): the "Estimate accuracy - last 7 days" block compared the newest
+  // reading's gap to the previous run's forecast (hours ahead, about a third of them exactly 0) with a
+  // 5-day-ahead backtest error, so "on track" could never fail. The live model's real record is the
+  // next-rate paragraph above; computeAccuracyDrift() stays defined but nothing renders it.
 
   // Band accuracy (measured) — the exact numbers the main page's stale-banner
   // used to assert inline (i18n.js's calibrationConfidenceAppend), now a
