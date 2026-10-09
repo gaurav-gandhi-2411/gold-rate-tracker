@@ -200,7 +200,7 @@ const STRINGS = {
     footerMuted: "Not financial advice. Rates are indicative.",
     // Shown only while visit counting is on (analytics.js adds it to the footer). English only: Hindi falls back to this
     // through t() (no Hindi key on purpose; do not machine-translate it).
-    privacyNote: "We count how many people visit this page, nothing more. The count uses no cookies, keeps no name or address, and is skipped if your browser asks not to be tracked. Counts are kept by GoatCounter (goatcounter.com).",
+    privacyNote: "We count visits to this page. The count uses no cookies and stores nothing in your browser. For each visit it records which page was opened, your browser's language setting, the website you came from, the hour, and whether the app is installed. GoatCounter, the free service that keeps the counts, says it does not store your internet address or your full browser details: it uses them only in memory, for up to 8 hours, so that one visit to a page is not counted twice. Nothing is sent if your browser asks not to be tracked.",
     bottomNavAriaLabel: "Page sections",
     navHome: "Home",
     navTrend: "Trend",

@@ -176,7 +176,9 @@
 // 2026-10-07 (v83): Hindi wording, part 3 of 3 (how-we-know-strings.js). Hindi only; English unchanged.
 // 2026-10-08 (v84): how-we-know page says where the up/down chance comes from (how-we-know-strings.js,
 // how-we-know.js). English only; Hindi falls back to English.
-const VERSION = "v84-20261008-direction-source-note";
+// 2026-10-09 (v85): visit counting ON (analytics.js site code gold-rate-tracker, flags.js analytics true,
+// i18n.js privacyNote text, footer note appears). analytics.js, flags.js and i18n.js are precached.
+const VERSION = "v85-20261009-analytics-on";
 const SHELL_CACHE = `gold-shell-${VERSION}`;
 
 const SHELL_FILES = [
