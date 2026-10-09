@@ -132,10 +132,12 @@ test("reliabilityCoverage: missing generated_at_utc (old cached shape) falls to 
 // This chart IS an accuracy claim (past estimate vs actual) sourced from the same
 // weekly backtest.json run as how-we-know.html's MAE/direction figures.
 
-const folds = Array.from({ length: 5 }, (_, i) => ({
-  context_end_date: new Date(NOW - (5 - i) * DAY_MS).toISOString().slice(0, 10),
-  err_chronos_p50: [10 - i * 5],
-  in_pi_80: [i % 2 === 0],
+// Item 3 (2026-10-09): the chart reads P3's own daily error and range hit (`p3_past_errors.rows`).
+const rows = Array.from({ length: 5 }, (_, i) => ({
+  day: new Date(NOW - (5 - i) * DAY_MS).toISOString().slice(0, 10),
+  err: 10 - i * 5,
+  in_range: i % 2 === 0,
+  retro: false,
 }));
 
 function trackRecordHidden(backtestRunAt) {
@@ -145,7 +147,7 @@ function trackRecordHidden(backtestRunAt) {
     app.getComputedStyle = () => ({ getPropertyValue: () => "" });
     const section = app.element("section-track-record");
     section.hidden = false;
-    app.renderForecastVsActual({ folds, backtest_run_at: backtestRunAt });
+    app.renderForecastVsActual({ p3_past_errors: { rows }, backtest_run_at: backtestRunAt });
     return section.hidden;
   } finally {
     app.dispose();

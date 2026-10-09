@@ -2426,31 +2426,22 @@ function renderForecastVsActual(bt) {
   // as how-we-know.html's MAE/direction figures. A backtest.json more than
   // CLAIM_MAX_AGE_DAYS old (weekly-backtest.yml stopped running) must not keep
   // silently showing the same weeks-old folds as if they were current.
-  if (!bt?.folds?.length || !isMeasurementFresh(bt.backtest_run_at, Date.now())) { section.hidden = true; return; }
+  const series = bt?.p3_past_errors?.rows;
+  if (!Array.isArray(series) || !isMeasurementFresh(bt.backtest_run_at, Date.now())) { section.hidden = true; return; }
 
-  const folds = bt.folds
-    .filter(f => !f.sub_30_context)
-    .slice(-30);
-
-  if (folds.length < 3) { section.hidden = true; return; }
-
-  // 2026-10-09 (ADR 060): backtest.json no longer carries price levels, so the chart plots the test's
-  // one-day-ahead ERROR (estimate minus the official rate, Rs/g) per day, with a mark for whether the
-  // official rate stayed inside the 80% range. Folds without a numeric error are skipped.
-  // A file written before the switch still has the levels: derive the same error from them (the page never
-  // draws the levels). Once data/backtest.json is scores only, only the first branch is used.
-  const foldErr = f =>
-    Array.isArray(f.err_chronos_p50) && typeof f.err_chronos_p50[0] === "number" ? f.err_chronos_p50[0]
-      : Array.isArray(f.chronos_p50) && Array.isArray(f.actuals)
-        && typeof f.chronos_p50[0] === "number" && typeof f.actuals[0] === "number"
-        ? Math.round((f.chronos_p50[0] - f.actuals[0]) * 100) / 100
-        : null;
-  const pts = folds
-    .filter(f => foldErr(f) !== null)
-    .map(f => ({
-      label: fmtDateShort(f.context_end_date + "T00:00:00Z"),
-      err: foldErr(f),
-      inRange: Array.isArray(f.in_pi_80) ? f.in_pi_80[0] === true : null,
+  // 2026-10-09 (item 3): the chart plots the error of the estimate this page actually shows (the next-rate
+  // model, P3), not the older Chronos median, which is not shown anywhere. Each point is one past decision
+  // day: the estimate minus the official rate that followed (shop-price scale, Rs/g), and whether that rate
+  // landed inside the range the same model would have shown that day. The series is scores only (no price
+  // levels, ADR 060) and comes from data/backtest.json's p3_past_errors. Missing or short: the section hides;
+  // it never falls back to another model's numbers.
+  const pts = series
+    .filter(r => typeof r?.err === "number" && typeof r?.day === "string")
+    .slice(-30)
+    .map(r => ({
+      label: fmtDateShort(r.day + "T00:00:00Z"),
+      err: r.err,
+      inRange: r.in_range === true ? true : r.in_range === false ? false : null,
     }));
   if (pts.length < 3) { section.hidden = true; return; }
 

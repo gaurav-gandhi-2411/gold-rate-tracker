@@ -185,10 +185,10 @@ const STRINGS = {
     thDelta: "Change",
     loadingText: "Loading…",
     historyCardsAriaLabel: "Price readings",
-    trackRecordAriaLabel: "How far the estimate was from the official rate each day, in a test on past weeks",
-    trackRecordHeading: "A test on past weeks",
-    trackRecordCaption: "In a test on past weeks: how far the one-day-ahead estimate was from the official rate each day, in ₹ per gram. Above the line means the estimate was too high, below the line too low. A filled dot means the official rate stayed inside the estimate's range that day; a hollow diamond means it fell outside. These are past results, not our live estimates.",
-    trackRecordChartAriaLabel: "Daily gap between the estimate and the official rate in a test on past weeks, with marks for days inside or outside the range",
+    trackRecordAriaLabel: "How far the estimate was from the official rate each day, in a test on past days",
+    trackRecordHeading: "A test on past days",
+    trackRecordCaption: "In a test on past days: how far the estimate of the next official rate was from the rate that followed, each day, in ₹ per gram. Above the line means the estimate was too high, below the line too low. A filled dot means the official rate landed inside the estimate's range; a hollow diamond means it fell outside. Days before 7 October are the same method run again on past data; later days are estimates made at the time. This is a look back, not today's estimate.",
+    trackRecordChartAriaLabel: "Daily gap between the estimate and the official rate in a test on past days, with marks for days inside or outside the range",
     methodologySummary: "How this works",
     // U1 audit (2026-09-23): "calibrate it to match" -> "adjust it to match" (no
     // jargon), and IBJA now gets its one plain-words explanation right here, the
