@@ -3602,7 +3602,9 @@ function applyLanguage(lang) {
   // they are requested only when page_v2 is on (it is off; scripts + tests/test_page_v2_inputs.py
   // refuse a flag-on build while they are encrypted). Off = no request, so no 404 in the console.
   const pv2Inputs = (url) =>
-    isFeatureOn("page_v2") ? loadJSON(url).catch(() => null) : Promise.resolve(null);
+    typeof isFeatureOn === "function" && isFeatureOn("page_v2")
+      ? loadJSON(url).catch(() => null)
+      : Promise.resolve(null); // flags.js absent (a bare test sandbox): same as off
   const markupTodayPromise = pv2Inputs(MARKUP_TODAY_URL);
   const waitOrBuyPromise = loadJSON(WAIT_OR_BUY_TODAY_URL).catch(() => null);
   const eventWatchPromise = loadJSON(EVENT_WATCH_TODAY_URL).catch(() => null);
