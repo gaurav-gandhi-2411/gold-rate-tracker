@@ -219,6 +219,8 @@ LAPTOP_WORDS = {
     "asleep_wake_timer_failed": "happened while the laptop was asleep on mains power and its wake timer did not fire",
     "asleep_modern_standby_on_battery": "happened while the laptop was asleep on battery",
     "task_ran_dispatch_skipped": "were skipped by the visit dispatcher on purpose (it logs why)",
+    "dispatched_run_cancelled": "were requested on time but the run was cancelled before it finished",
+    "dispatched_run_failed": "were requested on time but the run failed",
     "dispatched_but_run_late": "were requested on time but the run started late",
     "task_did_not_run_while_on": "were missed with the laptop on and nothing logged",
     "unknown": "could not be attributed (the laptop's log does not reach back that far)",
