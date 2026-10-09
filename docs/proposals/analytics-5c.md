@@ -173,7 +173,7 @@ note in the footer." The "no cookies" claim stays true: the counter sets none.
      flag-off section will need to be rewritten to flag-on, since the page is now counted), and
      the plain-language checks. Get a human merge.
 4. How to verify after it is live.
-   - Open the live site in a normal window with Do Not Track off, then open
+   - Open the live site in a normal window (Do Not Track no longer matters: it is not honoured since 2026-10-09), then open
      `https://<code>.goatcounter.com`. Within about a minute the dashboard should show one visit
      for the page path and the `lang/en` event under the events view.
    - Check that the Referrers list shows an origin only. If it stays empty for visits from another
@@ -181,7 +181,7 @@ note in the footer." The "no cookies" claim stays true: the counter sets none.
      not a fault.
    - Check that no cookie is set (browser dev tools, Application, Cookies) and that the only new
      request is the image GET to `<code>.goatcounter.com/count`.
-   - With Do Not Track on, confirm no new count appears and the footer note is absent.
+   - With the browser sending Global Privacy Control (or offline), confirm no new count appears and the footer note is absent. (Do Not Track on: the count IS sent; see analytics.js for why.)
 5. How to switch it off. Set `analytics: false` in `flags.js` (or empty the site code), bump the
    service-worker VERSION, and revert the README and SECURITY wording to "no analytics". The page
    then makes no request and shows no note. The GoatCounter account can be deleted from its
