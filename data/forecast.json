@@ -1,5 +1,5 @@
 {
-  "predicted_at": "2026-10-09T15:12:06.523070+00:00",
+  "predicted_at": "2026-10-09T17:09:58.525304+00:00",
   "target_window": "5d",
   "headline": {
     "method": "hold_latest_fix_pm_to_am",
@@ -7,17 +7,17 @@
     "lower": 13693,
     "upper": 14027,
     "conformal_pi_half": 244.8,
-    "naive_mae_recent_30": 133.6,
+    "naive_mae_recent_30": 134.1,
     "vol_context": {
-      "half_width": 254,
+      "half_width": 223,
       "half_width_raw": 222.6,
       "method": "realized_20d",
       "window_days": 20,
       "contiguous_days": 64,
-      "is_floored": true,
+      "is_floored": false,
       "is_degraded": false,
       "floor_fraction": 0.5,
-      "static_pi_half": 508.3,
+      "static_pi_half": 413.5,
       "baseline_half_width": 300,
       "regime": "calm",
       "typical_move_5d": 98,
@@ -59,7 +59,7 @@
     "direction_consensus": 1.0
   },
   "driver_context": {
-    "computed_at": "2026-10-09T15:12:07.307074+00:00",
+    "computed_at": "2026-10-09T17:09:59.308746+00:00",
     "macro_staleness_days": 0.0,
     "macro_fresh": true,
     "premium_threshold_pct": 15.0,
