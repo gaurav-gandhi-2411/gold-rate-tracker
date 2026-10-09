@@ -3588,11 +3588,19 @@ function applyLanguage(lang) {
   // pre-catches to null exactly like fcPromise above, so a 404 never surfaces as a Sentry
   // event and every page_v2 reader sees the same "not shipped yet" null it would see once
   // these genuinely start 404ing only intermittently.
-  const markupTodayPromise = loadJSON(MARKUP_TODAY_URL).catch(() => null);
+  // ADR 060 (2026-10-09): markup_today.json, next_day_range_shadow.json and
+  // weekly_range_shadow_log.json are encrypted raw research records and are NOT served, so
+  // they are requested only when page_v2 is on (it is off; scripts + tests/test_page_v2_inputs.py
+  // refuse a flag-on build while they are encrypted). Off = no request, so no 404 in the console.
+  const pv2Inputs = (url) =>
+    typeof isFeatureOn === "function" && isFeatureOn("page_v2")
+      ? loadJSON(url).catch(() => null)
+      : Promise.resolve(null); // flags.js absent (a bare test sandbox): same as off
+  const markupTodayPromise = pv2Inputs(MARKUP_TODAY_URL);
   const waitOrBuyPromise = loadJSON(WAIT_OR_BUY_TODAY_URL).catch(() => null);
   const eventWatchPromise = loadJSON(EVENT_WATCH_TODAY_URL).catch(() => null);
-  const nextDayRangeShadowPromise = loadJSON(NEXT_DAY_RANGE_SHADOW_URL).catch(() => null);
-  const weeklyRangeShadowLogPromise = loadJSON(WEEKLY_RANGE_SHADOW_LOG_URL).catch(() => null);
+  const nextDayRangeShadowPromise = pv2Inputs(NEXT_DAY_RANGE_SHADOW_URL);
+  const weeklyRangeShadowLogPromise = pv2Inputs(WEEKLY_RANGE_SHADOW_LOG_URL);
   // These five are only actually consumed much later (via Promise.allSettled, after
   // awaiting price+forecast and rendering the hero) — attach an inert catch to each
   // now so an early rejection (e.g. a timeout firing while we're still waiting on
