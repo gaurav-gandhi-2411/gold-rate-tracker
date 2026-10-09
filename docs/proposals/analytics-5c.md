@@ -61,8 +61,8 @@ referrer URL). No cookie, no localStorage, no sessionStorage, no IndexedDB.
 |---|---|---|
 | Daily / weekly unique visitors | Approximately | GoatCounter's per-8-hour-session count; a person visiting on two days counts twice. Treat as "visits", not "people" |
 | Returning rate | No | Recognising a returning browser needs stored state or an identifier; we have neither by design. Weekly visits per day is a rough proxy only |
-| PWA installs | Partly | `pwa/installed` fires only on browsers that raise `appinstalled` (Chromium); iOS Safari "Add to Home Screen" does not. `mode/standalone` counts visits made from an installed app, which shows the installed base is active |
-| Language split | Yes | `lang/en`, `lang/hi` events |
+| PWA installs | Partly | Installed-app launches are the same single page view under a path starting `/app` (changed 2026-10-09; the old `pwa/installed` and `mode/standalone` events are gone because every event counted as an extra visit), so the share of `/app` paths shows the installed base is active |
+| Language split | Yes | GoatCounter's own Languages panel (read from the browser; the separate `lang/*` events were removed 2026-10-09 because each counted as an extra visit) |
 | Which cards are viewed | Not in this PR | Needs an IntersectionObserver on stable card ids in `app.js`; deliberately not added, to keep this change out of the render path. Follow-up if GG wants it |
 | Referrers | Maybe, origin only | We send the `r` parameter. GoatCounter's pixel page says "The tracking pixel won't allow recording the referrer or screen size" (VERIFIED 2026-10-05, goatcounter.com/help/pixel) while its own parameter table lists `r`. Whether `r` is honoured is UNVERIFIED until the first real count is checked in the dashboard (step 4 of "To turn it on") |
 | Bounce | Weak | GoatCounter reports it as single-page visits; on a one-page app this is mostly "did not open How we know" |
@@ -77,7 +77,7 @@ points to be revised after four weeks of real counts.
 | Signal (4-week window, after excluding GG's own visits) | Not worth it | Worth testing a paid offer | Strong |
 |---|---|---|---|
 | Median weekly visits (sessions) | under 200 | 500 to 2,000 | over 2,000 |
-| Share of visits with `mode/standalone` | under 5% | 5% to 15% | over 15% |
+| Share of visits under `/app` paths | under 5% | 5% to 15% | over 15% |
 | Referrers dominated by one origin (for example search) | one-off spike | steady week over week | steady and growing |
 | Direct plus installed-app visits as a share of all (a proxy for habit, since returning is unmeasurable) | under 20% | 20% to 40% | over 40% |
 
@@ -92,7 +92,7 @@ over-counted by people who open the page several times a day and under-counted b
 - `flags.js`: `analytics: false`. `analytics.js`: `ANALYTICS_SITE_CODE = ""`. Both must change to
   turn it on. The endpoint is built from the code as `https://<code>.goatcounter.com/count`, so it
   is always https and always GoatCounter's own domain; a code that is not a plain lowercase DNS
-  label is refused. It also refuses Global Privacy Control and offline (Do Not Track stopped being honoured on 2026-10-09: see analytics.js).
+  label is refused. It also refuses Do Not Track, Global Privacy Control and offline (Do Not Track was briefly not honoured on 2026-10-09 and is honoured again by GG's decision: see analytics.js).
 - GoatCounter URL shape (VERIFIED against goatcounter.com/help/pixel, 2026-10-05):
   `https://<code>.goatcounter.com/count?p=<path>` for a page view; `p=<event name>&e=true` for an
   event; `r=<referrer origin>` when the visitor came from another site. We never send `t` (title),
@@ -173,15 +173,15 @@ note in the footer." The "no cookies" claim stays true: the counter sets none.
      flag-off section will need to be rewritten to flag-on, since the page is now counted), and
      the plain-language checks. Get a human merge.
 4. How to verify after it is live.
-   - Open the live site in a normal window (Do Not Track no longer matters: it is not honoured since 2026-10-09), then open
+   - Open the live site in a normal window (with Do Not Track off in that browser: it is honoured), then open
      `https://<code>.goatcounter.com`. Within about a minute the dashboard should show one visit
-     for the page path and the `lang/en` event under the events view.
+     for the page path (and no separate language or app-mode entries).
    - Check that the Referrers list shows an origin only. If it stays empty for visits from another
      site, the pixel is not honouring `r` (see the Referrers row above); that is a known limit,
      not a fault.
    - Check that no cookie is set (browser dev tools, Application, Cookies) and that the only new
      request is the image GET to `<code>.goatcounter.com/count`.
-   - With the browser sending Global Privacy Control (or offline), confirm no new count appears and the footer note is absent. (Do Not Track on: the count IS sent; see analytics.js for why.)
+   - With the browser sending Global Privacy Control (or offline), confirm no new count appears and the footer note is absent. (Do Not Track on: also no count, and no footer note.)
 5. How to switch it off. Set `analytics: false` in `flags.js` (or empty the site code), bump the
    service-worker VERSION, and revert the README and SECURITY wording to "no analytics". The page
    then makes no request and shows no note. The GoatCounter account can be deleted from its
