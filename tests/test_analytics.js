@@ -1,5 +1,9 @@
 // tests/test_analytics.js -- analytics.js (GoatCounter pixel) behind its flag, no browser required.
 //
+// Shipped state (2026-10-09): flag ON, site code gold-rate-tracker. The OFF cases below patch the
+// shipped flag/code back to off/empty in memory, so they still prove the stubs record nothing
+// when disabled; `shipped: true` loads the files exactly as served.
+//
 // Loads the REAL flags.js + analytics.js into a fresh vm context with recording stubs. The
 // property under test is "OFF means off": with the flag off, or the site code empty, nothing is
 // requested, no listener registered, and the DOM/storage are never touched. The "on" cases use a
@@ -15,8 +19,15 @@ import vm from "node:vm";
 import { fileURLToPath } from "node:url";
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
-const FLAGS = fs.readFileSync(path.join(ROOT, "flags.js"), "utf8");
-const ANALYTICS = fs.readFileSync(path.join(ROOT, "analytics.js"), "utf8");
+const FLAGS_SHIPPED = fs.readFileSync(path.join(ROOT, "flags.js"), "utf8");
+const ANALYTICS_SHIPPED = fs.readFileSync(path.join(ROOT, "analytics.js"), "utf8");
+const SHIPPED_CODE = "gold-rate-tracker";
+// the OFF/empty baseline the patch-based cases start from
+const FLAGS = FLAGS_SHIPPED.replace("analytics: true,", "analytics: false,");
+const ANALYTICS = ANALYTICS_SHIPPED.replace(
+  `const ANALYTICS_SITE_CODE = "${SHIPPED_CODE}";`,
+  'const ANALYTICS_SITE_CODE = "";'
+);
 const CODE = "examplecode";
 const ENDPOINT = `https://${CODE}.goatcounter.com/count`;
 
@@ -25,6 +36,7 @@ function boom(what) {
 }
 
 function load({
+  shipped = false,
   flagOn = false,
   code = "",
   hostname = "gaurav-gandhi-2411.github.io",
@@ -73,6 +85,10 @@ function load({
   vm.createContext(sandbox);
   let flags = FLAGS;
   let analytics = ANALYTICS;
+  if (shipped) {
+    flags = FLAGS_SHIPPED;
+    analytics = ANALYTICS_SHIPPED;
+  }
   if (flagOn) flags = flags.replace("analytics: false,", "analytics: true,");
   if (code) analytics = analytics.replace('const ANALYTICS_SITE_CODE = "";', `const ANALYTICS_SITE_CODE = "${code}";`);
   if (flagOn) assert.notEqual(flags, FLAGS, "precondition: flag patch applied");
@@ -82,9 +98,24 @@ function load({
   return { sandbox, log, urls: () => log.images.map((i) => i.src) };
 }
 
-test("the shipped flag is off and the shipped site code is empty", () => {
-  assert.match(FLAGS, /analytics: false/);
-  assert.match(ANALYTICS, /const ANALYTICS_SITE_CODE = "";/);
+test("the shipped flag is on and the shipped site code is gold-rate-tracker", () => {
+  assert.match(FLAGS_SHIPPED, /analytics: true/);
+  assert.match(ANALYTICS_SHIPPED, /const ANALYTICS_SITE_CODE = "gold-rate-tracker";/);
+  assert.notEqual(FLAGS, FLAGS_SHIPPED, "baseline really is the off state");
+  assert.notEqual(ANALYTICS, ANALYTICS_SHIPPED);
+});
+
+test("SHIPPED (as served): view + language event go to the account's own endpoint, nothing else", () => {
+  const { log, urls, sandbox } = load({ shipped: true });
+  const endpoint = `https://${SHIPPED_CODE}.goatcounter.com/count`;
+  assert.equal(sandbox.analyticsEndpoint(SHIPPED_CODE), endpoint);
+  const u = urls();
+  assert.equal(u.length, 2);
+  assert.ok(u.every((x) => x.startsWith(endpoint + "?")));
+  assert.equal(new URL(u[0]).searchParams.get("p"), "/index.html");
+  assert.equal(new URL(u[1]).searchParams.get("p"), "lang/en");
+  assert.equal(log.notes.length, 1);
+  assert.equal(log.notes[0].id, "privacy-note");
 });
 
 test("OFF (shipped defaults): no request, no listener, no DOM read, no note, no storage touch", () => {

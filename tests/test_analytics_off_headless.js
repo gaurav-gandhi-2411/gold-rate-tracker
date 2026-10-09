@@ -1,9 +1,13 @@
-// tests/test_analytics_off_headless.js -- with FEATURE_FLAGS.analytics off (as shipped), the REAL
-// page is byte-for-byte the same DOM with analytics.js present as with analytics.js blocked, and
-// makes no request an analytics call would make. This is the evidence for "flag off = no visual
-// change" in the PR body (rule 15c substitute evidence), and a leak check: it also proves the
-// check can fail by serving a variant with the flag and an endpoint switched on and asserting the
-// beacon request IS seen.
+// tests/test_analytics_off_headless.js -- the REAL page with visit counting as shipped (2026-10-09:
+// flag ON, site code gold-rate-tracker), in headless Chromium. (File name kept: lint.yml runs it.)
+//
+// Proves, in a real browser:
+//   1. as shipped, the page renders identically with analytics.js present as with it blocked, except
+//      for exactly one added element: the privacy note in the footer;
+//   2. the counter sends view + language requests to https://gold-rate-tracker.goatcounter.com/count
+//      with only p/e/r parameters, sets no cookie, writes no localStorage, raises no page error;
+//   3. violation check: a variant served with the flag OFF sends nothing, renders no note, and
+//      its DOM equals the analytics-blocked DOM (so the checks above can fail).
 //
 // Run: node tests/test_analytics_off_headless.js  (from repo root)
 // Requires: scraper/node_modules (npm ci in scraper/ first)
@@ -39,7 +43,7 @@ function startServer(root) {
 }
 
 const NONLOCAL_HOST = "example.test";
-const SITE_CODE = "testcode";
+const SITE_CODE = "gold-rate-tracker";
 const BEACON_HOST = `${SITE_CODE}.goatcounter.com`;
 const ARGS = [
   `--host-resolver-rules=MAP ${NONLOCAL_HOST} 127.0.0.1, MAP ${BEACON_HOST} 127.0.0.1, MAP * ~NOTFOUND, EXCLUDE 127.0.0.1, EXCLUDE localhost`,
@@ -52,25 +56,35 @@ function assert(label, ok, detail = "") {
   if (!ok) failures++;
 }
 
-async function load(browser, base, { blockAnalytics = false, variant = false } = {}) {
+const NOTE_RE = /<p [^>]*id="privacy-note"[^>]*>[\s\S]*?<\/p>/;
+// The page animates cards in with class changes whose ORDER depends on timing (card-enter /
+// reveal-visible); compare class sets, not their order, so the check is not flaky.
+const norm = (html) =>
+  html.replace(/class="([^"]*)"/g, (_m, c) => `class="${c.split(/\s+/).sort().join(" ")}"`);
+
+async function load(browser, base, { blockAnalytics = false, flagOff = false } = {}) {
   const ctx = await browser.newContext({ serviceWorkers: "block" });
   const page = await ctx.newPage();
   const requests = [];
+  const pageErrors = [];
   page.on("request", (r) => requests.push(r.url()));
+  page.on("pageerror", (e) => pageErrors.push(String(e)));
   if (blockAnalytics) await page.route("**/analytics.js", (r) => r.abort());
-  if (variant) {
-    const flags = fs.readFileSync(path.join(ROOT, "flags.js"), "utf8").replace("analytics: false,", "analytics: true,");
-    const an = fs.readFileSync(path.join(ROOT, "analytics.js"), "utf8")
-      .replace('const ANALYTICS_SITE_CODE = "";', `const ANALYTICS_SITE_CODE = "${SITE_CODE}";`);
+  if (flagOff) {
+    const flags = fs.readFileSync(path.join(ROOT, "flags.js"), "utf8").replace("analytics: true,", "analytics: false,");
     await page.route("**/flags.js", (r) => r.fulfill({ status: 200, contentType: "application/javascript", body: flags }));
-    await page.route("**/analytics.js", (r) => r.fulfill({ status: 200, contentType: "application/javascript", body: an }));
   }
   await page.goto(base, { waitUntil: "networkidle" });
   await page.waitForTimeout(500);
   const html = await page.evaluate(() => document.documentElement.outerHTML);
-  const storage = await page.evaluate(() => ({ ls: localStorage.length, cookie: document.cookie }));
+  const storage = await page.evaluate(() => ({
+    ls: localStorage.length,
+    ss: sessionStorage.length,
+    cookie: document.cookie,
+  }));
+  const cookies = await ctx.cookies();
   await ctx.close();
-  return { html, requests, storage };
+  return { html, requests, storage, cookies, pageErrors };
 }
 
 async function run() {
@@ -78,38 +92,41 @@ async function run() {
   const browser = await chromium.launch({ headless: true, args: ARGS });
   const base = `http://${NONLOCAL_HOST}:${port}`;
   try {
-    console.log("\nFlag OFF (as shipped): with analytics.js vs analytics.js blocked");
-    const withJs = await load(browser, base);
-    const without = await load(browser, base, { blockAnalytics: true });
-    assert("analytics.js was requested", withJs.requests.some((u) => u.endsWith("/analytics.js")));
-    assert("DOM is identical with and without analytics.js", withJs.html === without.html,
-      `len ${withJs.html.length} vs ${without.html.length}`);
-    assert("no request to any beacon/count URL",
-      !withJs.requests.some((u) => u.includes("/count") || u.includes(BEACON_HOST)));
-    assert("no privacy note is rendered while the flag is off",
-      !withJs.html.includes("privacy-note") && !withJs.html.includes("GoatCounter"));
-    assert("analytics.js adds no cookie and no localStorage entry",
-      withJs.storage.cookie === without.storage.cookie && withJs.storage.ls === without.storage.ls);
+    console.log("\nAs shipped (flag ON, site code gold-rate-tracker): with analytics.js vs analytics.js blocked");
+    const on = await load(browser, base);
+    const blocked = await load(browser, base, { blockAnalytics: true });
+    assert("analytics.js was requested", on.requests.some((u) => u.endsWith("/analytics.js")));
+    const beacons = on.requests.filter((u) => u.includes(BEACON_HOST));
+    assert("a view and a language request go to https://gold-rate-tracker.goatcounter.com/count",
+      beacons.length >= 2 && beacons.every((u) => u.startsWith(`https://${BEACON_HOST}/count?`)), JSON.stringify(beacons));
+    assert("every request carries only p / e / r parameters (no title, screen size, query string)",
+      beacons.every((u) => [...new URL(u).searchParams.keys()].every((k) => ["p", "e", "r"].includes(k))));
+    assert("the language event is sent", beacons.some((u) => new URL(u).searchParams.get("p") === "lang/en"));
+    assert("the privacy note is rendered once in the footer",
+      (on.html.match(/id="privacy-note"/g) || []).length === 1 && on.html.includes("GoatCounter"));
+    assert("the blocked-analytics page has no note and sent no beacon",
+      !blocked.html.includes("privacy-note") && !blocked.requests.some((u) => u.includes(BEACON_HOST)));
+    assert("the page is identical except for exactly the one privacy-note element",
+      norm(on.html.replace(NOTE_RE, "")) === norm(blocked.html),
+      `len ${on.html.replace(NOTE_RE, "").length} vs ${blocked.html.length}`);
+    assert("no cookie is set (browser cookie jar and document.cookie)",
+      on.cookies.length === 0 && on.storage.cookie === "");
+    assert("no localStorage or sessionStorage entry is written",
+      on.storage.ls === blocked.storage.ls && on.storage.ss === blocked.storage.ss);
+    assert("no page error is raised", on.pageErrors.length === 0, on.pageErrors.join(" | "));
 
-    console.log("\nViolation check: flag ON + endpoint set (variant) DOES send a beacon");
-    const on = await load(browser, base, { variant: true });
-    assert("the beacon request is observed (the check can fail)",
-      on.requests.some((u) => u.startsWith(`https://${BEACON_HOST}/count?`)));
-    assert("the beacon carries no query string from the page URL",
-      !on.requests.some((u) => u.includes(BEACON_HOST) && u.includes("ff=")));
-    assert("every beacon is https://<code>.goatcounter.com/count with only p/e/r parameters",
-      on.requests.filter((u) => u.includes(BEACON_HOST)).every((u) => {
-        const x = new URL(u);
-        return x.protocol === "https:" && x.pathname === "/count" &&
-          [...x.searchParams.keys()].every((k) => ["p", "e", "r"].includes(k));
-      }));
-    assert("the privacy note is rendered only when on (and the off DOM never has it)",
-      on.html.includes('id="privacy-note"') && on.html.includes("GoatCounter"));
+    console.log("\nViolation check: the same page served with the flag OFF sends nothing");
+    const off = await load(browser, base, { flagOff: true });
+    assert("no request to any beacon/count URL",
+      !off.requests.some((u) => u.includes("/count") || u.includes(BEACON_HOST)));
+    assert("no privacy note is rendered while the flag is off",
+      !off.html.includes("privacy-note"));
+    assert("the flag-off DOM is identical to the analytics-blocked DOM", norm(off.html) === norm(blocked.html));
   } finally {
     await browser.close();
     server.close();
   }
-  console.log(`\n${failures === 0 ? "PASS" : "FAIL"}  ${failures === 0 ? "All analytics-off checks passed." : `${failures} check(s) failed.`}\n`);
+  console.log(`\n${failures === 0 ? "PASS" : "FAIL"}  ${failures === 0 ? "All analytics checks passed." : `${failures} check(s) failed.`}\n`);
   process.exit(failures === 0 ? 0 : 1);
 }
 

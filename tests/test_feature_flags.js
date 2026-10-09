@@ -26,13 +26,18 @@ function loadFlags({ hostname = "gaurav-gandhi-2411.github.io", search = "" } = 
   return sandbox;
 }
 
-test("FEATURE_FLAGS: every declared flag defaults to false", () => {
+// Flags that were deliberately switched on and shipped on. Adding a name here is a conscious,
+// reviewed act: every other flag must still default off.
+const SHIPPED_ON = new Set(["analytics"]); // visit counting, switched on 2026-10-09
+
+test("FEATURE_FLAGS: every declared flag defaults to false unless it is on the shipped-on list", () => {
   const ctx = loadFlags();
   const names = Object.keys(ctx.FEATURE_FLAGS);
   assert.ok(names.length > 0, "flag registry must not be empty");
   for (const name of names) {
-    assert.equal(ctx.FEATURE_FLAGS[name], false, `${name} must default off`);
+    assert.equal(ctx.FEATURE_FLAGS[name], SHIPPED_ON.has(name), `${name} has an unexpected default`);
   }
+  for (const name of SHIPPED_ON) assert.ok(name in ctx.FEATURE_FLAGS, `${name} listed but not declared`);
 });
 
 test("FEATURE_FLAGS: is frozen -- callers cannot flip a flag at runtime", () => {

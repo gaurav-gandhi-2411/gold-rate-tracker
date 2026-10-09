@@ -6,6 +6,11 @@
 // a request. While ON the only visible change is one short privacy note in the footer (i18n key
 // privacyNote, English; Hindi falls back to English); while OFF nothing is rendered.
 //
+// ON since 2026-10-09 (GG created the GoatCounter site `gold-rate-tracker` and set Data collection:
+// User-Agent, Screen size and Country/Region/Location OFF; Referrer, Language and Sessions ON).
+// Provider facts below were read from goatcounter.com/help/{sessions,gdpr,pixel} and /privacy on
+// 2026-10-09; the footer note (i18n privacyNote) claims nothing beyond them.
+//
 // Privacy shape (what a count contains, and what it never does):
 //   - Sends only: the page path (no query string, no hash, no title), the page language (en/hi),
 //     whether the page runs as an installed app, and the referring ORIGIN (never the full
@@ -17,18 +22,21 @@
 //     https://www.goatcounter.com/help/pixel). No screen size, no fingerprinting inputs.
 //   - Sends nothing if the browser says Do Not Track or Global Privacy Control, or while offline
 //     (nothing is queued: a missed count is a missed count).
-//   - GoatCounter builds a per-visit key from site + User-Agent + IP in memory only, and states
-//     that the IP address and User-Agent are never stored to the database or disk
-//     (https://www.goatcounter.com/help/sessions). That is the provider's statement, not ours.
+//   - GoatCounter builds a per-visit key from site + User-Agent + IP in memory only, keeps the
+//     key -> random id mapping for 8 hours, and states that the IP address and User-Agent are
+//     never stored to the database or disk (https://www.goatcounter.com/help/sessions). Its
+//     privacy policy (https://www.goatcounter.com/privacy) adds that it stores no cookies,
+//     localStorage, cache or other information in the visitor's browser, and keeps no IP
+//     addresses; it states no retention period for the aggregate counts, so none is claimed.
+//     Those are the provider's statements, not ours.
 //
 // Plain global script, no module system, loaded after flags.js, i18n.js and app.js (index.html);
 // same convention as flags.js. The function names are prefixed `analytics` to avoid clashing with
 // app.js globals.
 
 // The GoatCounter site code (the "<code>" in https://<code>.goatcounter.com). Empty = disabled
-// even if the flag is on. GG sets this (and flips the flag) only after creating the GoatCounter
-// account; see "To turn it on" in docs/proposals/analytics-5c.md. No account exists yet.
-const ANALYTICS_SITE_CODE = "";
+// even if the flag is on.
+const ANALYTICS_SITE_CODE = "gold-rate-tracker";
 
 // Pure: the count endpoint for a site code, or "" when the code is not a plausible GoatCounter
 // code (lowercase letters, digits, hyphens; DNS-label length). Always https, always the
