@@ -182,7 +182,10 @@
 // owner's own Edge); Global Privacy Control is still honoured. analytics.js and i18n.js (privacyNote) changed.
 // 2026-10-09 (v87): the header line about how often prices are checked now measures real price checks (gaps
 // between successful Tanishq readings, longest wait counts a wait still going). app.js, i18n.js changed.
-const VERSION = "v87-20261009-price-check-interval";
+// 2026-10-09 (v88): page-claims audit: the "estimate accuracy" drift block and verdict sentence are gone, how-we-know
+// quotes the next-rate range's own tested hit rate, the target shows a date not a clock time, the direction record
+// admits the days also picked the model. app.js, how-we-know.js, how-we-know-strings.js changed.
+const VERSION = "v88-20261009-page-claims-audit";
 const SHELL_CACHE = `gold-shell-${VERSION}`;
 
 const SHELL_FILES = [
