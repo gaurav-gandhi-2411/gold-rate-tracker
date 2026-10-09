@@ -28,7 +28,7 @@ A challenger replaces the live model only if we can be confident it beats it by 
 
 - Jeweller price visits: **14 of 30** scheduled visits since the schedule began (2026-10-05) ran within 45 minutes of their time (16 did not). Of the 16 not run on time: 6 never dispatched (laptop off or scheduler idle), 1 dispatched then cancelled in a catch-up burst, 9 ran late (within 6 hours, after the laptop came back). Inferred from GitHub run records only, which does not tell a laptop that was off from a scheduler that did not fire.
 - Overnight model forecast: published on **4 of 4** nights, typically 167 minutes after the US gold close.
-- Why those 16 visits were missed (from the laptop's own records, checked 2026-10-09): 4 were before the timed visits were set up on 2026-10-05; 11 happened while the laptop was shut down; 1 were requested on time but the run started late. A laptop that is shut down cannot run a visit; the dispatcher also catches up once when the laptop is back, which records one late reading, not the missed ones.
+- Why those 16 visits were missed (from the laptop's own records, checked 2026-10-09): 4 were before the timed visits were set up on 2026-10-05; 11 happened while the laptop was shut down; 1 were requested on time but the run was cancelled before it finished. A laptop that is shut down cannot run a visit; the dispatcher also catches up once when the laptop is back, which records one late reading, not the missed ones.
 
 ## Dates
 
