@@ -588,6 +588,50 @@ def conformal_q(folds: list[dict]) -> float | None:
     return float(np.quantile(scores, NOMINAL)) if len(scores) >= MIN_CONFORMAL else None
 
 
+def past_error_series(folds: list[dict], slope: float, last: int = 30) -> dict | None:
+    """The page's "test on past days" chart: P3's own daily error and range hit, scores only.
+
+    For each resolved decision day, in order: the estimate the page would have shown for the next
+    official rate (``pm0 x exp(ret)``, the record's out-of-sample forecast), the range it would have
+    shown (``conformal_q`` of the folds BEFORE that day x the day's volatility x ``pm0``: the live
+    rule, no look-ahead), and what the official rate then was. Published per day: the signed error
+    on the shop-price scale (estimate minus official rate, x the calibration ``slope``, Rs/g) and
+    whether the official rate landed inside the range. No price level is published and neither
+    the estimate nor the official rate can be recovered from an error alone (ADR 060).
+    ``retro`` marks days re-run on past data rather than issued live. None when no day qualifies.
+    """
+    rows: list[dict] = []
+    for i, f in enumerate(folds):
+        q = conformal_q(folds[:i])
+        if q is None or not f.get("vol", 0) > 0:
+            continue
+        err = f["pm0"] * math.exp(f["ret"]) - f["pm1"]
+        if not math.isfinite(
+            err
+        ):  # a NaN would make data/backtest.json invalid JSON for every reader
+            continue
+        rows.append(
+            {
+                "day": f["d0"],
+                "err": round(slope * err, 1),
+                "in_range": bool(abs(err) <= q * f["vol"] * f["pm0"]),
+                "retro": bool(f.get("retro", False)),
+            }
+        )
+    rows = rows[-last:]
+    if not rows:
+        return None
+    return {
+        "schema": "p3_past_errors_v1",
+        "model_version": MODEL_VERSION,
+        "n": len(rows),
+        "n_in_range": sum(r["in_range"] for r in rows),
+        "n_retro": sum(r["retro"] for r in rows),
+        "mean_abs_err": round(sum(abs(r["err"]) for r in rows) / len(rows), 1),
+        "rows": rows,
+    }
+
+
 def block_bootstrap_ci(n: int, stat, b: int | None = None, seed: int = 0) -> list[float]:
     """95% moving-block bootstrap interval of ``stat(indices)`` (blocks of BOOTSTRAP_BLOCK days)."""
     rng = np.random.default_rng(seed)

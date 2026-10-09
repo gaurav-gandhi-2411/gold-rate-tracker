@@ -516,12 +516,12 @@
              `!bt?.folds?.length` / `folds.length < 3` fallbacks still hide the section for the
              rare-edge case, now happening after this initial state rather than instead of it. -->
         <section class="track-record-section" id="section-track-record"
-                 aria-label="How far the estimate was from the official rate each day, in a test on past weeks" data-i18n-attr="aria-label:trackRecordAriaLabel">
-          <h3 data-i18n="trackRecordHeading">A test on past weeks</h3>
-          <p class="track-record-caption" data-i18n="trackRecordCaption">In a test on past weeks: how far the one-day-ahead estimate was from the official rate each day, in ₹ per gram. Above the line means the estimate was too high, below the line too low. A filled dot means the official rate stayed inside the estimate's range that day; a hollow diamond means it fell outside. These are past results, not our live estimates.</p>
+                 aria-label="How far the estimate was from the official rate each day, in a test on past days" data-i18n-attr="aria-label:trackRecordAriaLabel">
+          <h3 data-i18n="trackRecordHeading">A test on past days</h3>
+          <p class="track-record-caption" data-i18n="trackRecordCaption">In a test on past days: how far the estimate of the next official rate was from the rate that followed, each day, in ₹ per gram. Above the line means the estimate was too high, below the line too low. A filled dot means the official rate landed inside the estimate's range; a hollow diamond means it fell outside. Days before 7 October are the same method run again on past data; later days are estimates made at the time. This is a look back, not today's estimate.</p>
           <div class="track-record-chart-wrap">
             <canvas id="track-record-chart" role="img"
-                    aria-label="Daily gap between the estimate and the official rate in a test on past weeks, with marks for days inside or outside the range" data-i18n-attr="aria-label:trackRecordChartAriaLabel"></canvas>
+                    aria-label="Daily gap between the estimate and the official rate in a test on past days, with marks for days inside or outside the range" data-i18n-attr="aria-label:trackRecordChartAriaLabel"></canvas>
           </div>
         </section>
 
