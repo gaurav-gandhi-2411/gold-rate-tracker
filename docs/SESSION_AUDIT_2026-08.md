@@ -2122,3 +2122,27 @@ it would cut GitHub's nominal visits from 8 a day to 6.
 - **T15 (new):** the benchmark moved ≥ Rs 150/g between its two latest fixes.
 - **Unverified:** delivery of today's alert. The Actions cache and job logs cannot be read from
   the cloud session. GG to confirm on the phone.
+
+## Checkpoint 2026-10-09: a required check that does not run on every PR blocks the PRs it skips
+
+**What happened.** `scraper-dependency-guard` was made a required check on 2026-10-08. The bot's data PRs
+are pushed with a PAT and a `[skip ci]` commit, which fires no `pull_request` workflow, so the check never
+reported on them and every bot PR sat at "base branch policy prohibits the merge" from about 07:58 UTC until
+GG un-required the check and #2593 landed (last merged Tanishq reading 2026-10-08 14:21 UTC; sync resumed
+2026-10-09 13:24 UTC).
+
+**Two lessons.**
+1. A required check whose workflow can be skipped (path filter, job-level `if:`, `[skip ci]` on the head
+   commit, a PAT push) blocks exactly the PRs it skips. "Not path-filtered" in the workflow comment was true
+   and not enough: `[skip ci]` skips every `pull_request` workflow.
+2. A status post that hides its own errors (`>/dev/null`, `|| true`) turns a fix into a silent failure: #2588
+   posted the status with the PAT, which cannot create commit statuses, discarded the error, and reported
+   success while nothing changed. #2593 dispatches the workflow and forwards the status with `github.token`.
+
+**Control added.** `scripts/check_required_checks_skippable.py` (run in the full pytest suite by
+`tests/test_required_checks_skippable.py`; `--live` also compares with branch protection). For each required
+check it fails when: the producing job is not found; the `pull_request` trigger is path-filtered; the job has an
+`if:`; the workflow has no `workflow_dispatch`, never forwards a commit status, or is not dispatched by
+`bot-pr-sync`; or a status post discards its output. Surface (rule 85a): workflow YAML only; it cannot see
+rulesets or org-level required workflows, and it cannot prove the runtime status context name. The runtime
+proof is a real bot PR showing the status on its head SHA.
