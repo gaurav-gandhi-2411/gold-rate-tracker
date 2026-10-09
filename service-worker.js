@@ -178,7 +178,9 @@
 // how-we-know.js). English only; Hindi falls back to English.
 // 2026-10-09 (v85): visit counting ON (analytics.js site code gold-rate-tracker, flags.js analytics true,
 // i18n.js privacyNote text, footer note appears). analytics.js, flags.js and i18n.js are precached.
-const VERSION = "v85-20261009-analytics-on";
+// 2026-10-09 (v86): visit counting no longer stops for the legacy Do Not Track header (it silenced the site
+// owner's own Edge); Global Privacy Control is still honoured. analytics.js and i18n.js (privacyNote) changed.
+const VERSION = "v86-20261009-analytics-dnt";
 const SHELL_CACHE = `gold-shell-${VERSION}`;
 
 const SHELL_FILES = [

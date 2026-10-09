@@ -214,15 +214,21 @@ test("ON: same-site referrer is dropped; standalone adds a mode event; install f
   assert.equal(new URL(urls().at(-1)).searchParams.get("p"), "pwa/installed");
 });
 
-test("ON: Do Not Track, Global Privacy Control and offline each suppress every request", () => {
-  for (const opts of [{ dnt: "1" }, { dnt: "yes" }, { gpc: true }, { online: false }]) {
+test("ON: Global Privacy Control and offline each suppress every request; Do Not Track alone does not", () => {
+  for (const opts of [{ gpc: true }, { online: false }]) {
     const { log } = load({ flagOn: true, code: CODE, ...opts });
     assert.equal(log.images.length, 0, JSON.stringify(opts));
   }
+  // Do Not Track (legacy header) is deliberately not honoured: it silenced the owner's own browser
+  for (const dnt of ["1", "yes"]) {
+    const { log, urls } = load({ flagOn: true, code: CODE, dnt });
+    assert.equal(urls().length, 2, dnt);
+    assert.equal(log.notes.length, 1, dnt);
+  }
 });
 
-test("ON but refused by Do Not Track / GPC: no privacy note either (nothing is being counted)", () => {
-  for (const opts of [{ dnt: "1" }, { gpc: true }]) {
+test("ON but refused by GPC: no privacy note either (nothing is being counted)", () => {
+  for (const opts of [{ gpc: true }]) {
     const { log } = load({ flagOn: true, code: CODE, ...opts });
     assert.equal(log.notes.length, 0, JSON.stringify(opts));
   }
