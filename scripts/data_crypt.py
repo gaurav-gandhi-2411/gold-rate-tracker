@@ -126,6 +126,12 @@ REGISTRY: dict[str, dict[str, str]] = {
     "data/nextfix_p3_variants_oos.json": {
         "category": "raw IBJA PM fix series (pm0/pm1 per fold, ADR 071)"
     },
+    # Added 2026-10-09 (second migration): the decision log carries the Tanishq shop reading
+    # (current_22k, actual_next_22k) and the forecast level per decision day. The page does not
+    # read it (METRICS_URL is unused); the coverage metrics and four shadows are computed from it in CI.
+    "data/metrics_history.json": {
+        "category": "raw Tanishq reading and forecast level per decision day (ADR 059)"
+    },
     "data/nextfix_intraday_shadow.json": {
         "category": "raw IBJA fix levels (base/target) and COMEX-in-INR per entry (ADR 059/066)"
     },

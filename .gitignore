@@ -58,6 +58,8 @@ scripts/screenshot_*.mjs
 # 2026-10-08: P3 live record and ADR 071 variants carry the same raw pm0/pm1 per fold.
 /data/nextfix_p3_oos.json
 /data/nextfix_p3_variants_oos.json
+# 2026-10-09: the decision log carries the Tanishq reading and forecast level per day.
+/data/metrics_history.json
 /data/nextfix_intraday_shadow.json
 /data/weekly_range_shadow_log.json
 /reports/tanishq_update_times/kalyan_city_identity.json
