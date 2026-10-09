@@ -1,0 +1,273 @@
+{
+  "seed": 42,
+  "paths": 10000,
+  "horizon_decision_days": 180,
+  "allowance": 0.016666666666666666,
+  "k_base": 1.5,
+  "k_grid": [
+    1.5,
+    1.75,
+    2.0,
+    2.25,
+    2.5,
+    2.75,
+    3.0,
+    3.25,
+    3.5,
+    3.75,
+    4.0,
+    4.25,
+    4.5,
+    4.75,
+    5.0,
+    5.25,
+    5.5,
+    5.75,
+    6.0
+  ],
+  "record_days": 146,
+  "challengers": {
+    "ensemble": {
+      "k": 1.5,
+      "boundary_rate_by_k": {
+        "1.50": {
+          "block10": 0.0058,
+          "block20": 0.0073,
+          "block40": 0.0088,
+          "block60": 0.0,
+          "stationary20": 0.0057
+        }
+      },
+      "k_tested": 1.5,
+      "held_out": {
+        "block30_seed7": {
+          "rate": 0.0161,
+          "upper95": 0.018759200164546727,
+          "rate_at_base_k": 0.0161,
+          "passes": true
+        },
+        "stationary40_seed8": {
+          "rate": 0.0052,
+          "upper95": 0.006812185435249619,
+          "rate_at_base_k": 0.0052,
+          "passes": true
+        },
+        "ar1_phi0.2_seed9": {
+          "rate": 0.0062,
+          "upper95": 0.007939487839368499,
+          "rate_at_base_k": 0.0062,
+          "passes": true
+        },
+        "ar1_phi0.3_seed9": {
+          "rate": 0.0123,
+          "upper95": 0.014655307587280184,
+          "rate_at_base_k": 0.0123,
+          "passes": true
+        },
+        "ar1_phi0.4_seed9": {
+          "rate": 0.0207,
+          "upper95": 0.023680195558588635,
+          "rate_at_base_k": 0.0207,
+          "passes": false
+        },
+        "ar1_phi0.5_seed9": {
+          "rate": 0.0316,
+          "upper95": 0.03521260920535371,
+          "rate_at_base_k": 0.0316,
+          "passes": false
+        }
+      },
+      "power": {
+        "10%": {
+          "before_k": 0.309,
+          "after_k": 0.309
+        },
+        "20%": {
+          "before_k": 1.0,
+          "after_k": 1.0
+        }
+      },
+      "proof_passes": false
+    },
+    "p3_roll60": {
+      "k": 3.0,
+      "boundary_rate_by_k": {
+        "1.50": {
+          "block10": 0.0241,
+          "block20": 0.0722,
+          "block40": 0.0718,
+          "block60": 0.0711,
+          "stationary20": 0.0437
+        },
+        "1.75": {
+          "block10": 0.0174,
+          "block20": 0.0516,
+          "block40": 0.0563,
+          "block60": 0.0566,
+          "stationary20": 0.0325
+        },
+        "2.00": {
+          "block10": 0.0118,
+          "block20": 0.0399,
+          "block40": 0.0364,
+          "block60": 0.0369,
+          "stationary20": 0.0242
+        },
+        "2.25": {
+          "block10": 0.0093,
+          "block20": 0.0342,
+          "block40": 0.0293,
+          "block60": 0.0292,
+          "stationary20": 0.0192
+        },
+        "2.50": {
+          "block10": 0.0069,
+          "block20": 0.0262,
+          "block40": 0.0157,
+          "block60": 0.0143,
+          "stationary20": 0.0119
+        },
+        "2.75": {
+          "block10": 0.0055,
+          "block20": 0.019,
+          "block40": 0.0157,
+          "block60": 0.0143,
+          "stationary20": 0.0104
+        },
+        "3.00": {
+          "block10": 0.0044,
+          "block20": 0.0111,
+          "block40": 0.0093,
+          "block60": 0.0073,
+          "stationary20": 0.0075
+        }
+      },
+      "k_tested": 3.0,
+      "held_out": {
+        "block30_seed7": {
+          "rate": 0.0117,
+          "upper95": 0.014003060445948328,
+          "rate_at_base_k": 0.0692,
+          "passes": true
+        },
+        "stationary40_seed8": {
+          "rate": 0.0059,
+          "upper95": 0.007602455881038837,
+          "rate_at_base_k": 0.0495,
+          "passes": true
+        },
+        "ar1_phi0.2_seed9": {
+          "rate": 0.0002,
+          "upper95": 0.0007290110935663664,
+          "rate_at_base_k": 0.0062,
+          "passes": true
+        },
+        "ar1_phi0.3_seed9": {
+          "rate": 0.0007,
+          "upper95": 0.0014443528574059384,
+          "rate_at_base_k": 0.0123,
+          "passes": true
+        },
+        "ar1_phi0.4_seed9": {
+          "rate": 0.0017,
+          "upper95": 0.0027210084945534863,
+          "rate_at_base_k": 0.0207,
+          "passes": true
+        },
+        "ar1_phi0.5_seed9": {
+          "rate": 0.0047,
+          "upper95": 0.006243919362283228,
+          "rate_at_base_k": 0.0316,
+          "passes": true
+        }
+      },
+      "power": {
+        "10%": {
+          "before_k": 0.4784,
+          "after_k": 0.1723
+        },
+        "20%": {
+          "before_k": 0.9984,
+          "after_k": 0.968
+        }
+      },
+      "proof_passes": true
+    },
+    "p3_monday": {
+      "k": 2.0,
+      "boundary_rate_by_k": {
+        "1.50": {
+          "block10": 0.0076,
+          "block20": 0.0327,
+          "block40": 0.024,
+          "block60": 0.021,
+          "stationary20": 0.0174
+        },
+        "1.75": {
+          "block10": 0.0042,
+          "block20": 0.0287,
+          "block40": 0.0228,
+          "block60": 0.021,
+          "stationary20": 0.0134
+        },
+        "2.00": {
+          "block10": 0.003,
+          "block20": 0.0158,
+          "block40": 0.015,
+          "block60": 0.0145,
+          "stationary20": 0.0091
+        }
+      },
+      "k_tested": 2.0,
+      "held_out": {
+        "block30_seed7": {
+          "rate": 0.0198,
+          "upper95": 0.022720623396531057,
+          "rate_at_base_k": 0.0311,
+          "passes": false
+        },
+        "stationary40_seed8": {
+          "rate": 0.012,
+          "upper95": 0.014329352799272863,
+          "rate_at_base_k": 0.0201,
+          "passes": true
+        },
+        "ar1_phi0.2_seed9": {
+          "rate": 0.0019,
+          "upper95": 0.0029658188761467565,
+          "rate_at_base_k": 0.0062,
+          "passes": true
+        },
+        "ar1_phi0.3_seed9": {
+          "rate": 0.0039,
+          "upper95": 0.005326672558490487,
+          "rate_at_base_k": 0.0123,
+          "passes": true
+        },
+        "ar1_phi0.4_seed9": {
+          "rate": 0.0081,
+          "upper95": 0.010055527451274538,
+          "rate_at_base_k": 0.0207,
+          "passes": true
+        },
+        "ar1_phi0.5_seed9": {
+          "rate": 0.0151,
+          "upper95": 0.017683227262051765,
+          "rate_at_base_k": 0.0316,
+          "passes": true
+        }
+      },
+      "power": {
+        "10%": {
+          "before_k": 0.9999,
+          "after_k": 0.9985
+        },
+        "20%": {
+          "before_k": 1.0,
+          "after_k": 1.0
+        }
+      },
+      "proof_passes": false
+    }
+  }
+}
