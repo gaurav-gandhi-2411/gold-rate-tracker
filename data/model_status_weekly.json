@@ -1,7 +1,7 @@
 {
  "schema_version": 1,
- "generated_at": "2026-10-09T08:17:16.425555+00:00",
- "rule_sha256": "2a1ec6b814a3fa818eecee46102446f1a3c8b9e428fd4d406b441b6f6f8a410f",
+ "generated_at": "2026-10-09T08:28:51.296993+00:00",
+ "rule_sha256": "ce9e1eeeb49cbbf03e4d0b254f09b282285ecdb9318509039dcfd15289615836",
  "common_start": "2026-10-07",
  "champion": "p3",
  "champion_state_unreadable": false,
@@ -53,7 +53,7 @@
    "retired": false,
    "status": "too early",
    "live_capable": true,
-   "blocked_reason": "size above its allowance at the 5% boundary",
+   "blocked_reason": null,
    "promotable": false,
    "first_reachable": "2026-11-03"
   },
@@ -72,7 +72,7 @@
    "retired": false,
    "status": "too early",
    "live_capable": true,
-   "blocked_reason": null,
+   "blocked_reason": "size proof failed on a held-out resampler (Amendment 4)",
    "promotable": false,
    "first_reachable": "2026-11-03"
   }

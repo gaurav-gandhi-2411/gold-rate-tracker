@@ -280,7 +280,12 @@ def _challenger_cells(r: dict[str, Any]) -> tuple[str, str, str]:
     if r["n"] < r["first_look_day"]:
         date = r.get("first_reachable")
         stand = f"first look after {r['first_look_day']} days ({r['n']} so far)"
-        return "n/a", stand + (f", earliest {date}" if date else ""), "too early"
+        held = (
+            "; held back until a known flaw in its safety margin is fixed"
+            if r.get("blocked_reason")
+            else ""
+        )
+        return "n/a", stand + (f", earliest {date}" if date else "") + held, "too early"
     gain = f"{r['gain'] * 100:+.1f}%"
     lb = r.get("lower_bound")
     if lb is None:  # 20+ days but the daily difference is flat: no safe estimate exists

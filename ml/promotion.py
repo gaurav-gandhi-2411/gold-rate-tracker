@@ -48,7 +48,7 @@ import numpy as np
 
 # --- the frozen rule (ADR 072, version 2 = Amendment 1) ------------------------------------------
 RULE: dict[str, Any] = {
-    "version": 4,  # 1 = fixed-n DM + BH; 2 = confidence sequence; 3 = horizon unit; 4 = roll60 held back
+    "version": 5,  # 1 = fixed-n DM + BH; 2 = CS; 3 = horizon unit; 4 = roll60 held back; 5 = calibrated sizes
     "design": "one-sided normal-mixture confidence sequence on the mean of "
     "e = (1 - min_gain) * loss_champion - loss_challenger; promote when the lower bound > 0",
     "min_gain": 0.05,  # challenger mean |error| at least 5% below the champion's (ratio of means)
@@ -60,6 +60,11 @@ RULE: dict[str, Any] = {
     # boundary). The variance used is max(Newey-West, plain sample variance) x variance_inflation.
     "variance_floor_iid": True,
     "variance_inflation": 1.5,
+    # ADR 072 Amendment 4: a challenger listed here uses its own calibrated inflation instead.
+    # p3_roll60: smallest value on a 0.25 grid that keeps its wrongful-promotion rate at the 5%
+    # boundary at or under 1.67% on every calibration resampler, proven on held-out ones
+    # (scripts/calibrate_challenger_size.py, reports/challenger_size_calibration.md).
+    "variance_inflation_by_challenger": {"p3_roll60": 3.0},
     "mix_sd": 0.3,  # sd of the normal mixing distribution over the tilt, in units of 1/sigma
     "min_forward_days": 20,  # no look before this many days both models issued live
     "horizon_days": 180,  # decision days since registration; at or after it: retired, not promoted
@@ -70,7 +75,7 @@ RULE: dict[str, Any] = {
     # ADR 072 Amendment 3: a challenger listed here is still scored and reported but can never be
     # promoted. p3_roll60 is promoted at the 5% boundary in 8-9% of resampled paths against its
     # 1.67% allowance (reports/promotion_v3_simulation.md, block 20 and 40) until its size is fixed.
-    "promotion_blocked": {"p3_roll60": "size above its allowance at the 5% boundary"},
+    "promotion_blocked": {"p3_monday": "size proof failed on a held-out resampler (Amendment 4)"},
     "coverage_nominal": 0.80,  # challenger's own 80% range; promotion needs it not below target
     "coverage_alpha": 0.05,  # exact one-sided binomial: coverage significantly below 0.80 blocks
     "direction_rule": "challenger direction hit-rate >= champion's on the same days",
@@ -84,7 +89,7 @@ RULE: dict[str, Any] = {
     # not live-capable, so never promotable: registered on the first day they have a forward record
     "registered_on_first_record": ["hourly", "p3_hourly"],
 }
-RULE_SHA256 = "2a1ec6b814a3fa818eecee46102446f1a3c8b9e428fd4d406b441b6f6f8a410f"
+RULE_SHA256 = "ce9e1eeeb49cbbf03e4d0b254f09b282285ecdb9318509039dcfd15289615836"
 
 CHAMPION_FILE = "champion_state.json"
 DEFAULT_CHAMPION = "p3"
@@ -200,7 +205,9 @@ def cs_level(rule: dict[str, Any] = RULE) -> float:
     return float(rule["alpha"]) / int(rule["family_size"])
 
 
-def cs_lower_bounds(e: np.ndarray, rule: dict[str, Any] = RULE) -> np.ndarray:
+def cs_lower_bounds(
+    e: np.ndarray, rule: dict[str, Any] = RULE, cid: str | None = None
+) -> np.ndarray:
     """Lower confidence-sequence bound on mean(e) after each day (last axis); NaN before the first
     look (``min_forward_days``) and wherever the long-run variance is zero (fail closed: no bound).
 
@@ -216,7 +223,8 @@ def cs_lower_bounds(e: np.ndarray, rule: dict[str, Any] = RULE) -> np.ndarray:
         mean_sq = np.cumsum(e * e, axis=-1) / n
         with np.errstate(invalid="ignore"):
             var = np.fmax(var, np.maximum(mean_sq - mean * mean, 0.0))
-    var = var * float(rule["variance_inflation"])
+    infl = rule.get("variance_inflation_by_challenger", {}).get(cid, rule["variance_inflation"])
+    var = var * float(infl)
     s_star = np.array(
         [mixture_boundary(int(k), cs_level(rule), float(rule["mix_sd"])) for k in n], dtype=float
     )
@@ -294,7 +302,7 @@ def compare(
     gain = 1.0 - float(lb.mean() / la.mean()) if la.mean() > 0 else 0.0
     # e > 0 on average  <=>  challenger mean error more than min_gain below the champion's
     e = (1.0 - rule["min_gain"]) * la - lb
-    lower_e = float(cs_lower_bounds(e, rule)[-1])
+    lower_e = float(cs_lower_bounds(e, rule, cid)[-1])
     looking = n >= first_look and not math.isnan(lower_e)
     if looking and la.mean() > 0:
         # the same bound on the gain scale (champion's mean loss as the unit; display only: the
@@ -347,6 +355,8 @@ def decide(
     """Compare every challenger in ``records`` with the champion and say who, if anyone, is promoted.
 
     A challenger is promotable only when ALL hold: it has a live predictor (LIVE_CAPABLE); it is not
+    listed in ``rule['promotion_blocked']`` (ADR 072 Amendments 3-4; its bound uses its own
+    ``variance_inflation_by_challenger`` entry, if any); it is not
     retired (180 decision days since registration, ``horizon_left`` 0); at least ``min_forward_days``
     forward days; the confidence-sequence lower bound of its error gain clears ``min_gain`` at the
     per-challenger level alpha / family_size; coverage not below target; direction not worse. At
@@ -365,11 +375,12 @@ def decide(
     winners = []
     for cid, r in rows.items():
         r["live_capable"] = cid in LIVE_CAPABLE
-        r["blocked_reason"] = rule.get("promotion_blocked", {}).get(cid)
+        held = rule.get("promotion_blocked", {})
+        r["blocked_reason"] = held.get(cid) if cid in held else None
         r["promotable"] = bool(
             r["status"] == "scored"
             and r["live_capable"]
-            and not r["blocked_reason"]
+            and cid not in held
             and not r["retired"]
             and r["looks_started"]
             and r["lower_bound_clears"]
