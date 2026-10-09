@@ -1,40 +1,19 @@
 # For GG: things only your account or decision can clear
 
 Kept current by CC. Last updated 2026-10-09 (CC). The weekly one-screen model note is `docs/MODEL_STATUS.md`.
-Short on purpose: two clicks, one check, and a few optional items.
+Short on purpose: no clicks, one check (once the analytics PR is live), and a few optional items.
 
-## 1. Two clicks (about 2 minutes), in this order
+## 1. One check (30 seconds, only after the analytics PR is live)
 
-Both are green and ready; both need you only because the merge gate refuses to let CC merge workflow files
-or a 10,000-line data move. Open each, click **Squash and merge**, confirm.
+**Open https://gold-rate-tracker.goatcounter.com tomorrow; each visit should count once, and referrers should
+show where visitors came from.** (Direct visits and the installed app have no referrer; installed-app launches
+show as a separate path starting `/app`.)
+- A browser that already visited needs about **3 reloads** before it runs the new code (the app's service worker).
+- Your Edge has "Send Do Not Track requests" on. The site now honours that again by decision, so your own
+  Edge will NOT be counted. To test, turn it off under Edge Settings > Privacy > "Send Do Not Track requests"
+  or use a browser without it.
 
-1. **Restore data sync: https://github.com/gaurav-gandhi-2411/gold-rate-tracker/pull/2593**
-   Data sync has been blocked since about 07:58 UTC (the new required check never reports on the bot's
-   branches; #2588 was not enough, CC's mistake). This one makes the bot start that check and forward its
-   result the way it already does for `lint`. Until it merges the site's prices and forecast do not
-   update. CC confirms right after: the waiting bot PRs merge and the next price run succeeds.
-2. **Encrypt the raw data: https://github.com/gaurav-gandhi-2411/gold-rate-tracker/pull/2596**
-   The one-time encryption CC ran today (19 files, every one verified). Rollback if ever needed: revert
-   the PR; the plaintext is in git history. After the click CC checks that three price runs say
-   "decrypted" and that the live site is unchanged.
-
-If you would rather unblock sync at once: untick `scraper-dependency-guard` under Settings > Branches >
-master for now and re-tick it after #2593 merges.
-
-## 2. One check (30 seconds)
-
-**Open https://gold-rate-tracker.goatcounter.com and confirm a visit appears.**
-
-What CC found: your Edge has "Send Do Not Track requests" switched on, and the page used to send nothing in
-that case. That is fixed and live (PR #2591). Two things to know before you look:
-- The page is cached by the app's service worker: a browser that already visited needs about **3 reloads**
-  before it runs the new code. Reload the live site 3 times, then check the dashboard.
-- CC's own test visits from this laptop (same address and browser name as yours) were counted around
-  10:50 to 11:20 UTC today. So look for the total page views to go UP after your reloads, not for "a" visit.
-Also confirm under Settings > Data collection that individual pageviews, User-Agent, screen size and
-location are OFF (the footer note says exactly that).
-
-## 3. Optional (nothing is blocked on these)
+## 2. Optional (nothing is blocked on these)
 
 | # | Item | Exact steps |
 |---|---|---|

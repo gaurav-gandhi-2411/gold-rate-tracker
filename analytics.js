@@ -12,16 +12,17 @@
 // 2026-10-09; the footer note (i18n privacyNote) claims nothing beyond them.
 //
 // Privacy shape (what a count contains, and what it never does):
-//   - Sends only: the page path (no query string, no hash, no title), the page language (en/hi),
-//     whether the page runs as an installed app, and the referring ORIGIN (never the full
-//     referrer URL).
+//   - ONE request per page load, and nothing else: the page path (no query string, no hash, no
+//     title) and the referring page's origin and path (never its query string or hash). An
+//     installed-app launch is the same single request under a distinct path (/app + path), so a
+//     visit counts once. The language is not sent: GoatCounter reads it from the browser.
 //   - Never reads or writes a cookie, localStorage, sessionStorage or IndexedDB, so it cannot
 //     recognise a returning browser. "Returning visitors" is therefore not measurable by design.
 //   - No script is loaded from the provider: the count is one image GET to the account's own
 //     https://<code>.goatcounter.com/count (GoatCounter's documented tracking pixel,
 //     https://www.goatcounter.com/help/pixel). No screen size, no fingerprinting inputs.
-//   - Sends nothing if the browser sends a Global Privacy Control signal, or while offline
-//     (nothing is queued: a missed count is a missed count).
+//   - Sends nothing if the browser sends a Do Not Track or Global Privacy Control signal, or
+//     while offline (nothing is queued: a missed count is a missed count).
 //   - GoatCounter builds a per-visit key from site + User-Agent + IP in memory only, keeps the
 //     key -> random id mapping for 8 hours, and states that the IP address and User-Agent are
 //     never stored to the database or disk (https://www.goatcounter.com/help/sessions). Its
@@ -59,15 +60,28 @@ function analyticsBuildUrl(endpoint, { kind, path, referrer }) {
   return endpoint + "?" + q.toString();
 }
 
-// Pure: reduce a document.referrer to its origin, or "" when same-site/empty/unparseable.
-function analyticsReferrerOrigin(referrer, ownOrigin) {
+// Pure: reduce a document.referrer to origin + path (no query string, no hash, no credentials),
+// or "" when empty/unparseable/not http(s) or when it is this site itself. `ownBase` is this
+// site's path prefix (github.io hosts many sites on one origin, so the origin alone is not
+// "this site").
+function analyticsReferrerClean(referrer, ownOrigin, ownBase) {
   try {
     if (!referrer) return "";
-    const o = new URL(referrer).origin;
-    return o === ownOrigin ? "" : o;
+    const u = new URL(referrer);
+    if (u.protocol !== "https:" && u.protocol !== "http:") return "";
+    if (u.origin === ownOrigin && (u.pathname === ownBase || u.pathname.startsWith(ownBase + "/"))) {
+      return "";
+    }
+    return u.origin + (u.pathname === "/" ? "" : u.pathname);
   } catch {
     return "";
   }
+}
+
+// Pure: this site's path prefix ("/gold-rate-tracker") from a page path.
+function analyticsSiteBase(pathname) {
+  const seg = String(pathname || "").split("/")[1] || "";
+  return seg && !seg.includes(".") ? "/" + seg : "";
 }
 
 // True only if every gate passes. Fails closed: any exception means "not enabled".
@@ -75,11 +89,12 @@ function analyticsEnabled() {
   try {
     if (typeof isFeatureOn !== "function" || !isFeatureOn("analytics")) return false;
     if (!analyticsEndpoint(ANALYTICS_SITE_CODE)) return false;
-    // Global Privacy Control is the current, legally recognised opt-out signal: honoured. The legacy
-    // Do Not Track header is NOT: it was found switched on in the site owner's own Edge (2026-10-09), which
-    // silently stopped every count from that browser, and GoatCounter itself ignores it because it keeps
-    // no cookie, no identifier and no stored address (https://www.goatcounter.com/help/faq). Revert =
-    // re-add: if (navigator.doNotTrack === "1" || navigator.doNotTrack === "yes") return false;
+    // The site's stance is no tracking, so an explicit "don't track me" is respected: Do Not Track
+    // (restored 2026-10-09 after a brief removal; GoatCounter itself ignores it, we do not) and Global
+    // Privacy Control. Consequence: a browser with either signal on is never counted, so the counts
+    // understate visitors who have a signal on.
+    if (navigator.doNotTrack === "1" || navigator.doNotTrack === "yes") return false;
+    if (window.doNotTrack === "1" || (navigator.msDoNotTrack === "1")) return false;
     if (navigator.globalPrivacyControl === true) return false;
     return true;
   } catch {
@@ -126,15 +141,13 @@ function analyticsRenderPrivacyNote() {
 function initAnalytics() {
   if (!analyticsEnabled()) return;
   analyticsRenderPrivacyNote();
-  const ref = analyticsReferrerOrigin(document.referrer, location.origin);
-  analyticsSend({ kind: "view", path: location.pathname, referrer: ref });
-  const lang = document.documentElement.lang === "hi" ? "hi" : "en";
-  analyticsSend({ kind: "event", path: "lang/" + lang });
+  const ref = analyticsReferrerClean(document.referrer, location.origin, analyticsSiteBase(location.pathname));
   const standalone =
     (window.matchMedia && window.matchMedia("(display-mode: standalone)").matches) ||
     navigator.standalone === true;
-  if (standalone) analyticsSend({ kind: "event", path: "mode/standalone" });
-  window.addEventListener("appinstalled", () => analyticsSend({ kind: "event", path: "pwa/installed" }));
+  // One request per visit. GoatCounter counts every request (events included) as a visit, so the
+  // language and app-mode used to inflate the total about 2.5x; the language comes from the browser.
+  analyticsSend({ kind: "view", path: (standalone ? "/app" : "") + location.pathname, referrer: ref });
 }
 
 initAnalytics();

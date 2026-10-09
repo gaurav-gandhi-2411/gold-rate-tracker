@@ -185,7 +185,10 @@
 // 2026-10-09 (v88): page-claims audit: the "estimate accuracy" drift block and verdict sentence are gone, how-we-know
 // quotes the next-rate range's own tested hit rate, the target shows a date not a clock time, the direction record
 // admits the days also picked the model. app.js, how-we-know.js, how-we-know-strings.js changed.
-const VERSION = "v88-20261009-page-claims-audit";
+// 2026-10-09 (v89): visit counting honours Do Not Track again (and Global Privacy Control); one count per visit
+// (the separate language and app-mode events are gone; an app launch is one distinct path); the referrer is
+// sent as origin + path. analytics.js and i18n.js (privacyNote) changed.
+const VERSION = "v89-20261009-analytics-honour-dnt";
 const SHELL_CACHE = `gold-shell-${VERSION}`;
 
 const SHELL_FILES = [
