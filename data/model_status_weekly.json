@@ -1,6 +1,6 @@
 {
  "schema_version": 1,
- "generated_at": "2026-10-09T15:13:14.524129+00:00",
+ "generated_at": "2026-10-09T15:23:43.935130+00:00",
  "rule_sha256": "e4efabec2193950ee4bf0193b00b3f17eed8c0cf5f81da4394d13acb51fdbdfa",
  "common_start": "2026-10-07",
  "champion": "p3",
@@ -118,7 +118,7 @@
  },
  "timeliness": {
   "schema_version": 1,
-  "generated_at": "2026-10-09T15:13:12.040535+00:00",
+  "generated_at": "2026-10-09T15:23:39.854377+00:00",
   "days": 7,
   "tanishq_slots": {
    "days": 7,
@@ -341,6 +341,6 @@
   "demoted": false,
   "since": null,
   "reasons": [],
-  "last_checked": "2026-10-09T14:30:01.158402+00:00"
+  "last_checked": "2026-10-09T15:12:06.523070+00:00"
  }
 }
