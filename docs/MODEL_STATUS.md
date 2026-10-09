@@ -1,6 +1,6 @@
 # Model status
 
-Updated 2026-10-09. Computed from real forecast days only; no backtest figure appears here. Rule: ADR 072 (frozen, hash `2a1ec6b814a3`).
+Updated 2026-10-09. Computed from real forecast days only; no backtest figure appears here. Rule: ADR 072 (frozen, hash `ce9e1eeeb49c`).
 
 ## What is live and how it is doing
 
@@ -18,7 +18,7 @@ Only 1 day so far: too few to say whether this is good or bad.
 |---|---|---|---|---|
 | Earlier model (ridge + small neural nets), now running in the background | 1 | first look after 20 days (1 so far), earliest 2026-11-03 | n/a | too early |
 | Live model re-fitted on the last 60 days only | 1 | first look after 20 days (1 so far), earliest 2026-11-03 | n/a | too early |
-| Live model with its own Monday setting | 1 | first look after 20 days (1 so far), earliest 2026-11-03 | n/a | too early |
+| Live model with its own Monday setting | 1 | first look after 20 days (1 so far), earliest 2026-11-03; held back until a known flaw in its safety margin is fixed | n/a | too early |
 | Hourly world-price model (own check on 2026-10-16, then it joins) | 0 | not started | n/a | not started |
 | Live model averaged with the hourly model (joins after the hourly model does) | 0 | not started | n/a | not started |
 

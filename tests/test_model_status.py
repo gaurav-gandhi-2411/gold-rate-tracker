@@ -235,3 +235,16 @@ def test_blocked_challenger_is_labelled_held_back() -> None:
     }
     _gain, stand, verdict = mod._challenger_cells(row)
     assert verdict == "held back" and "held back until a known flaw" in stand
+
+
+def test_blocked_challenger_is_marked_even_before_its_first_look() -> None:
+    mod = _load_module()
+    row = {
+        "retired": False,
+        "n": 3,
+        "first_look_day": 20,
+        "first_reachable": "2026-11-04",
+        "blocked_reason": "x",
+    }
+    _gain, stand, verdict = mod._challenger_cells(row)
+    assert verdict == "too early" and "held back until a known flaw" in stand
