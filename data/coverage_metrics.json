@@ -1,6 +1,6 @@
 {
   "schema_version": 2,
-  "generated_at_utc": "2026-10-09T15:22:47.102249+00:00",
+  "generated_at_utc": "2026-10-09T20:42:22.882968+00:00",
   "band_source": "naive_flat_hold conformal PI (headline.lower/upper), calibrated on the last 30 backtest folds' next-trading-day (h=1) naive errors (ADR 022)",
   "nominal_pct": 80,
   "coverage": 0.7711,

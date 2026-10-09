@@ -1,5 +1,5 @@
 {
-  "backtest_run_at": "2026-10-09T15:22:32.051849+00:00",
+  "backtest_run_at": "2026-10-09T20:42:07.719907+00:00",
   "n_folds": 256,
   "n_folds_sub_30_context": 22,
   "horizon": 5,
@@ -5950,5 +5950,195 @@
       ],
       "dir_correct_5d": true
     }
-  ]
+  ],
+  "p3_past_errors": {
+    "schema": "p3_past_errors_v1",
+    "model_version": "nextfix_p3_v1",
+    "n": 30,
+    "n_in_range": 24,
+    "n_retro": 28,
+    "mean_abs_err": 101.4,
+    "rows": [
+      {
+        "day": "2026-08-25",
+        "err": 63.6,
+        "in_range": true,
+        "retro": true
+      },
+      {
+        "day": "2026-08-26",
+        "err": 157.9,
+        "in_range": true,
+        "retro": true
+      },
+      {
+        "day": "2026-08-27",
+        "err": -27.6,
+        "in_range": true,
+        "retro": true
+      },
+      {
+        "day": "2026-08-28",
+        "err": 239.5,
+        "in_range": false,
+        "retro": true
+      },
+      {
+        "day": "2026-08-31",
+        "err": 201.3,
+        "in_range": false,
+        "retro": true
+      },
+      {
+        "day": "2026-09-01",
+        "err": 101.6,
+        "in_range": true,
+        "retro": true
+      },
+      {
+        "day": "2026-09-02",
+        "err": -246.4,
+        "in_range": false,
+        "retro": true
+      },
+      {
+        "day": "2026-09-03",
+        "err": 3.2,
+        "in_range": true,
+        "retro": true
+      },
+      {
+        "day": "2026-09-04",
+        "err": 147.4,
+        "in_range": true,
+        "retro": true
+      },
+      {
+        "day": "2026-09-07",
+        "err": -37.4,
+        "in_range": true,
+        "retro": true
+      },
+      {
+        "day": "2026-09-08",
+        "err": -68.6,
+        "in_range": true,
+        "retro": true
+      },
+      {
+        "day": "2026-09-09",
+        "err": 51.5,
+        "in_range": true,
+        "retro": true
+      },
+      {
+        "day": "2026-09-10",
+        "err": 89.9,
+        "in_range": true,
+        "retro": true
+      },
+      {
+        "day": "2026-09-11",
+        "err": 121.5,
+        "in_range": true,
+        "retro": true
+      },
+      {
+        "day": "2026-09-15",
+        "err": -120.0,
+        "in_range": true,
+        "retro": true
+      },
+      {
+        "day": "2026-09-16",
+        "err": 103.3,
+        "in_range": true,
+        "retro": true
+      },
+      {
+        "day": "2026-09-17",
+        "err": -157.9,
+        "in_range": false,
+        "retro": true
+      },
+      {
+        "day": "2026-09-18",
+        "err": 45.0,
+        "in_range": true,
+        "retro": true
+      },
+      {
+        "day": "2026-09-21",
+        "err": 83.7,
+        "in_range": true,
+        "retro": true
+      },
+      {
+        "day": "2026-09-22",
+        "err": -7.8,
+        "in_range": true,
+        "retro": true
+      },
+      {
+        "day": "2026-09-23",
+        "err": 61.4,
+        "in_range": true,
+        "retro": true
+      },
+      {
+        "day": "2026-09-24",
+        "err": -139.6,
+        "in_range": true,
+        "retro": true
+      },
+      {
+        "day": "2026-09-25",
+        "err": 421.8,
+        "in_range": false,
+        "retro": true
+      },
+      {
+        "day": "2026-09-28",
+        "err": -118.0,
+        "in_range": true,
+        "retro": true
+      },
+      {
+        "day": "2026-09-29",
+        "err": -3.5,
+        "in_range": true,
+        "retro": true
+      },
+      {
+        "day": "2026-09-30",
+        "err": -14.6,
+        "in_range": true,
+        "retro": true
+      },
+      {
+        "day": "2026-10-01",
+        "err": 3.2,
+        "in_range": true,
+        "retro": true
+      },
+      {
+        "day": "2026-10-05",
+        "err": 38.9,
+        "in_range": true,
+        "retro": true
+      },
+      {
+        "day": "2026-10-07",
+        "err": -27.8,
+        "in_range": true,
+        "retro": false
+      },
+      {
+        "day": "2026-10-08",
+        "err": -137.1,
+        "in_range": false,
+        "retro": false
+      }
+    ]
+  }
 }

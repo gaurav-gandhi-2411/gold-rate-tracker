@@ -1,6 +1,6 @@
 {
  "schema_version": 1,
- "generated_at": "2026-10-09T15:23:43.935130+00:00",
+ "generated_at": "2026-10-09T20:43:26.185310+00:00",
  "rule_sha256": "e4efabec2193950ee4bf0193b00b3f17eed8c0cf5f81da4394d13acb51fdbdfa",
  "common_start": "2026-10-07",
  "champion": "p3",
@@ -118,7 +118,7 @@
  },
  "timeliness": {
   "schema_version": 1,
-  "generated_at": "2026-10-09T15:23:39.854377+00:00",
+  "generated_at": "2026-10-09T20:43:23.691691+00:00",
   "days": 7,
   "tanishq_slots": {
    "days": 7,
@@ -323,15 +323,15 @@
   }
  },
  "laptop_attribution": {
-  "generated_at": "2026-10-09T14:04:25.430467+00:00",
+  "generated_at": "2026-10-09T18:59:17.450831+00:00",
   "counts": {
    "before_schedule_installed": 4,
    "laptop_off": 11,
-   "dispatched_but_run_late": 1
+   "dispatched_run_cancelled": 1
   },
   "evidence": {
    "event_log_from": "2026-10-03T18:16:28.742778+05:30",
-   "dispatch_log_lines": 25,
+   "dispatch_log_lines": 26,
    "tasks_created_ist": "2026-10-05T12:59:58.207069+05:30",
    "task_scheduler_history_enabled": false
   },
@@ -341,6 +341,6 @@
   "demoted": false,
   "since": null,
   "reasons": [],
-  "last_checked": "2026-10-09T15:12:06.523070+00:00"
+  "last_checked": "2026-10-09T20:20:50.426395+00:00"
  }
 }

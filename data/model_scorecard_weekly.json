@@ -1,8 +1,8 @@
 {
  "schema_version": 1,
- "generated_at_utc": "2026-10-09T15:23:37Z",
+ "generated_at_utc": "2026-10-09T20:43:20Z",
  "script": "scripts/build_model_scorecard.py",
- "git_sha": "598800a39dbdff39b01016bea2ffcf34922c88cb",
+ "git_sha": "2d1e93f7471785ccc4fa6a2bf9b5b703dd2d70b8",
  "script_blob_sha": "3858ff5a827aa502e70aad9887ea374d5d542e3a",
  "min_forward_n": 20,
  "nominal_coverage": 0.8,
@@ -325,7 +325,7 @@
      "demoted: no",
      "since: n/a",
      "reasons recorded: none",
-     "state file last checked: 2026-10-09T15:12:06.523070+00:00",
+     "state file last checked: 2026-10-09T20:20:50.426395+00:00",
      "rules breaching now (forecast.json): none",
      "live record nextfix_p3_v1; re-promotion is never automatic (a person decides)"
     ]
