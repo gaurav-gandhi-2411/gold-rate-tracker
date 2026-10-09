@@ -226,7 +226,7 @@ With `p3_roll60` held back, the largest possible family-wise wrongful promotion 
 2. Prove it on resamplers not used for the calibration (block 30, a different seed, a stationary bootstrap with mean block 40, and an AR(1) series with the challenger's own standard deviation and autocorrelation 0.2 to 0.5): boundary rate at most 1.67% (upper Wilson bound reported), and report what it costs in power at a true 10% and 20% gain.
 3. Only then remove the block, in a new amendment with a new hash. If the proof fails, the challenger stays blocked.
 
-## Amendment 4 (2026-10-09): calibrated sizes; `p3_roll60` released, `p3_monday` held back (rule v5, in force)
+## Amendment 4 (2026-10-09): calibrated sizes; `p3_roll60` released, `p3_monday` held back (rule v5; superseded by Amendment 5)
 
 Decided before any challenger has 20 forward days (forward n is 1 for the live model and 0 for every challenger at the time of writing). The calibration and proof procedure was pre-registered in Amendment 3 and in the docstring of `scripts/calibrate_challenger_size.py` before it was run; the results are in `reports/challenger_size_calibration.{json,md}` (VERIFIED: seed 42, 10,000 paths of 180 decision days, 146 real days; the report was reproduced byte for byte on a second run).
 
@@ -263,6 +263,26 @@ Boundary = a true gain of exactly the 5% bar, the worst wrongful case; allowance
 ### Not covered
 
 The retrospective record is 146 days, 145 of them re-run history; the resamplers cannot create persistence the record did not contain beyond the synthetic AR(1) cases; the calibration is in sample for the real-series resamplers (that is why the proof uses resamplers not used for it). The forward series' own autocorrelation, reported weekly, is the live check.
+
+## Amendment 5 (2026-10-09): the ensemble is held back too; round 2 of the size calibration is pre-registered (rule v6, in force)
+
+**Correction of Amendment 4.** Amendment 4 kept the ensemble eligible although it failed the size proof that Amendment 3 pre-registered (synthetic autocorrelation 0.4 and 0.5: 2.07% and 3.16% against a 1.67% allowance; held-out real-series block 30: 1.61%, at the allowance, not under it), and justified that after the fact as a "deviation". A pre-registered rule means something only if it is followed, including when the result is inconvenient. GG has asked for the pre-registered consequence to be applied: **the ensemble is held back like `p3_monday`**, until it passes. The reasoning given in Amendment 4 for exempting it is withdrawn; the numbers in Amendment 4 stand.
+
+Decided before any challenger has 20 forward days (forward n: live model 1, challengers 0 at the time of writing). Only `RULE["promotion_blocked"]` changes: it now lists `p3_monday` and `ensemble`. `p3_roll60` (inflation 3.0, proof passed) is the only challenger that can currently be promoted. Alpha, the 5% minimum gain, the first look, the horizon, the family size (3) and every other value are unchanged.
+
+Rule hash of v6 (SHA-256 of canonical JSON of `ml.promotion.RULE`, checked by `tests/test_promotion.py`):
+
+`e9b2cc5fdddc8b3e8ee503ec512ab30177c83b1b598cbd4a044607bf0d5a0bd4`
+
+The v5 hash `ce9e1eeeb49cbbf03e4d0b254f09b282285ecdb9318509039dcfd15289615836` and the earlier hashes above are kept.
+
+### Round 2 of the calibration (pre-registered here, before it is run)
+
+For the two held-back challengers (`ensemble`, `p3_monday`), same procedure and pass criteria as Amendment 3, with these changes, all fixed now:
+1. **Calibration resamplers** (the smallest inflation on a 0.25 grid, from 1.5 up to 8, for which the boundary rate is at most 1.67% on every one of them): circular blocks of 10, 20, 30, 40 and 60 days; stationary bootstrap of mean block 20; and synthetic AR(1) series with the challenger's own standard deviation and autocorrelation 0.2, 0.3, 0.4 and 0.5 (seed 42; 10,000 paths of 180 decision days). Block 30 and AR(1) 0.4-0.5 are now in the calibration set because they were the held-out resamplers that failed in round 1.
+2. **Held-out proof** on resamplers not used above: circular block 25 (seed 11); stationary bootstrap of mean block 30 (seed 12); synthetic AR(1) 0.25, 0.35 and 0.45 (seed 13). Pass = the point rate is at most 1.67% and its upper 95% Wilson bound at most 2.67% on every one.
+3. **Consequence:** a challenger that passes is released by a new amendment with its calibrated inflation in `variance_inflation_by_challenger`; one that fails stays held back. The cost in power at a true 10% and 20% gain is reported either way. The ensemble is not exempted for having negative retrospective autocorrelation.
+4. **Deadline:** before the first look of any challenger (about 2026-11-03).
 
 ## Decision: the rule (v1, superseded by Amendment 1)
 

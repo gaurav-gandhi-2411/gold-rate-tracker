@@ -48,7 +48,7 @@ import numpy as np
 
 # --- the frozen rule (ADR 072, version 2 = Amendment 1) ------------------------------------------
 RULE: dict[str, Any] = {
-    "version": 5,  # 1 = fixed-n DM + BH; 2 = CS; 3 = horizon unit; 4 = roll60 held back; 5 = calibrated sizes
+    "version": 6,  # 1 = fixed-n DM + BH; 2 = CS; 3 = horizon unit; 4 = roll60 held back; 5 = calibrated; 6 = ensemble held back
     "design": "one-sided normal-mixture confidence sequence on the mean of "
     "e = (1 - min_gain) * loss_champion - loss_challenger; promote when the lower bound > 0",
     "min_gain": 0.05,  # challenger mean |error| at least 5% below the champion's (ratio of means)
@@ -75,7 +75,10 @@ RULE: dict[str, Any] = {
     # ADR 072 Amendment 3: a challenger listed here is still scored and reported but can never be
     # promoted. p3_roll60 is promoted at the 5% boundary in 8-9% of resampled paths against its
     # 1.67% allowance (reports/promotion_v3_simulation.md, block 20 and 40) until its size is fixed.
-    "promotion_blocked": {"p3_monday": "size proof failed on a held-out resampler (Amendment 4)"},
+    "promotion_blocked": {
+        "p3_monday": "size proof failed on a held-out resampler (Amendment 4)",
+        "ensemble": "size proof failed on synthetic autocorrelation 0.4-0.5 and its held-out rate is at the allowance (Amendment 5)",
+    },
     "coverage_nominal": 0.80,  # challenger's own 80% range; promotion needs it not below target
     "coverage_alpha": 0.05,  # exact one-sided binomial: coverage significantly below 0.80 blocks
     "direction_rule": "challenger direction hit-rate >= champion's on the same days",
@@ -89,7 +92,7 @@ RULE: dict[str, Any] = {
     # not live-capable, so never promotable: registered on the first day they have a forward record
     "registered_on_first_record": ["hourly", "p3_hourly"],
 }
-RULE_SHA256 = "ce9e1eeeb49cbbf03e4d0b254f09b282285ecdb9318509039dcfd15289615836"
+RULE_SHA256 = "e9b2cc5fdddc8b3e8ee503ec512ab30177c83b1b598cbd4a044607bf0d5a0bd4"
 
 CHAMPION_FILE = "champion_state.json"
 DEFAULT_CHAMPION = "p3"
