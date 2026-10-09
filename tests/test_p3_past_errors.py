@@ -85,3 +85,11 @@ def test_only_errors_and_flags_are_published() -> None:
 def test_missing_record_or_slope_gives_no_series(tmp_path, monkeypatch) -> None:
     monkeypatch.setattr(nextfix, "P3_OOS_PATH", tmp_path / "absent.json")
     assert backtest.p3_past_errors() is None
+
+
+def test_a_non_finite_error_is_skipped_never_published() -> None:
+    folds = _folds()
+    folds[35]["ret"] = float("nan")
+    s = nextfix.past_error_series(folds, 1.0, last=100)
+    assert folds[35]["d0"] not in {r["day"] for r in s["rows"]}
+    json.loads(json.dumps(s, allow_nan=False))  # strict JSON: no NaN/Infinity anywhere

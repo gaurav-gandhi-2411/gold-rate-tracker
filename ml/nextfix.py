@@ -606,6 +606,10 @@ def past_error_series(folds: list[dict], slope: float, last: int = 30) -> dict |
         if q is None or not f.get("vol", 0) > 0:
             continue
         err = f["pm0"] * math.exp(f["ret"]) - f["pm1"]
+        if not math.isfinite(
+            err
+        ):  # a NaN would make data/backtest.json invalid JSON for every reader
+            continue
         rows.append(
             {
                 "day": f["d0"],
