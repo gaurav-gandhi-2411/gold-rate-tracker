@@ -115,6 +115,26 @@ async function run() {
       on.storage.ls === blocked.storage.ls && on.storage.ss === blocked.storage.ss);
     assert("no page error is raised", on.pageErrors.length === 0, on.pageErrors.join(" | "));
 
+    console.log("\nA browser with Do Not Track switched on (as the site owner's Edge was) is still counted");
+    const dntBrowser = await chromium.launch({ headless: true, args: ARGS });
+    try {
+      const dctx = await dntBrowser.newContext({ serviceWorkers: "block" });
+      const pg = await dctx.newPage();
+      // headless Chromium ignores the DNT switch, so report it the way a browser with the setting on does
+      await pg.addInitScript(() => Object.defineProperty(Navigator.prototype, "doNotTrack", { get: () => "1" }));
+      const reqs = [];
+      pg.on("request", (r) => reqs.push(r.url()));
+      await pg.goto(base, { waitUntil: "networkidle" });
+      await pg.waitForTimeout(500);
+      const dnt = await pg.evaluate(() => navigator.doNotTrack);
+      assert("the browser really reports Do Not Track = 1", dnt === "1", String(dnt));
+      assert("the count requests are still sent", reqs.filter((u) => u.includes(BEACON_HOST)).length >= 2);
+      assert("the privacy note is shown", (await pg.content()).includes('id="privacy-note"'));
+      await dctx.close();
+    } finally {
+      await dntBrowser.close();
+    }
+
     console.log("\nViolation check: the same page served with the flag OFF sends nothing");
     const off = await load(browser, base, { flagOff: true });
     assert("no request to any beacon/count URL",

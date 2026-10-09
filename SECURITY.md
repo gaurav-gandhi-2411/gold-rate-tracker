@@ -25,7 +25,7 @@ This project scrapes a public webpage, stores JSON data in a repo, and serves a 
 | `scraper/scrape.js` | Runs only in GitHub Actions; no user input |
 | `ml/*.py` | Reads local JSON files; no network calls except Groq API |
 | `data/*.json` | Public read-only JSON; no authentication |
-| PWA frontend | Static HTML/JS; no backend, no cookies, no auth. Visit counting: one image request to `gold-rate-tracker.goatcounter.com` (page path, language, referring site origin, whether it runs as an installed app; no cookie, nothing stored in the browser; skipped on Do Not Track / Global Privacy Control) |
+| PWA frontend | Static HTML/JS; no backend, no cookies, no auth. Visit counting: one image request to `gold-rate-tracker.goatcounter.com` (page path, language, referring site origin, whether it runs as an installed app; no cookie, nothing stored in the browser; skipped when the browser sends Global Privacy Control) |
 
 Supply-chain risks (compromised npm/pip packages) are mitigated by pinning versions in `scraper/package-lock.json` and `ml/requirements.txt`, and by Dependabot alerts.
 
