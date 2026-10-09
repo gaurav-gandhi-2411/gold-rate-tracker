@@ -109,7 +109,7 @@ const STRINGS = {
     // banned pattern (docs/PLAIN_LANGUAGE_AUDIT.md). The hours/worst-case/as-of
     // figures it sat next to are unaffected and stay in place.
     firstVisitText: (params) => params
-      ? `The price of 22K gold in shops, checked about every ${params.hours}h (worst case recently ~${params.p90Hours ?? params.hours}h, as of ${params.asOf}) and compared with Tanishq's listed rate when possible. We always say plainly when a price is an estimate.`
+      ? `The price of 22K gold in shops: Tanishq's listed rate is read about every ${params.hours}h (longest gap in the last ${params.days} days: ${params.longestHours}h, as of ${params.asOf}) and our figure is compared with it when possible. We always say plainly when a price is an estimate.`
       : "The price of 22K gold in shops, checked on a regular schedule and compared with Tanishq's listed rate when possible. We always say plainly when a price is an estimate.",
     shareLabel: "Share",
     shareTextWithPrice: ({ price }) => `Today's 22K gold price is ₹${price}/gram — check Gold Tracker`,
@@ -527,7 +527,7 @@ const STRINGS = {
     dismissLabel: "बंद करें",
     installPromptText: 'जल्दी खोलने के लिए इसे होम स्क्रीन पर जोड़ लें: <strong>Share</strong> दबाएं, फिर <strong>Add to Home Screen</strong>।',
     firstVisitText: (params) => params
-      ? `दुकानों में 22 कैरेट सोने का भाव, लगभग हर ${params.hours} घंटे में जांचा जाता है (हाल में ज़्यादा से ज़्यादा ~${params.p90Hours ?? params.hours} घंटे की देरी; ${params.asOf} तक) और जब हो सके तब Tanishq के बताए भाव से मिलाया जाता है। भाव अनुमानित हो तो हम साफ़ बता देते हैं।`
+      ? `दुकानों में 22 कैरेट सोने का भाव: Tanishq का बताया भाव लगभग हर ${params.hours} घंटे में पढ़ा जाता है (पिछले ${params.days} दिनों में सबसे लंबा अंतर ${params.longestHours} घंटे; ${params.asOf} तक) और जब हो सके तब हमारे भाव को उससे मिलाया जाता है। भाव अनुमानित हो तो हम साफ़ बता देते हैं।`
       : "दुकानों में 22 कैरेट सोने का भाव, तय समय पर जांचा जाता है और जब हो सके तब Tanishq के बताए भाव से मिलाया जाता है। भाव अनुमानित हो तो हम साफ़ बता देते हैं।",
     shareLabel: "शेयर करें",
     shareTextWithPrice: ({ price }) => `आज 22 कैरेट सोने का भाव ₹${price}/ग्राम है — Gold Tracker पर देखें`,

@@ -3278,12 +3278,15 @@ function renderCadenceStrings(metric) {
   // alone hides the tail users actually experience. Falls back to omitting
   // the worst-case clause (not a fabricated number) if an older cached
   // cadence_metrics.json predating this field is ever served.
-  const params = metric && typeof metric.median_gap_hours === "number"
+  // 2026-10-09: the figures now come from metric.price_checks (gaps between real, successful price
+  // readings), NOT the top-level data-commit gap, which is a different thing (see ml/cadence_metrics.py).
+  const pc = metric && metric.price_checks;
+  const params = pc && typeof pc.median_gap_hours === "number" && typeof pc.longest_gap_hours === "number"
     ? {
-        hours: metric.median_gap_hours.toFixed(1),
-        p90Hours: typeof metric.p90_gap_hours === "number" ? metric.p90_gap_hours.toFixed(1) : null,
-        n: metric.n,
-        asOf: String(metric.as_of).slice(0, 10),
+        hours: pc.median_gap_hours.toFixed(1),
+        longestHours: pc.longest_gap_hours.toFixed(1),
+        days: pc.window_days,
+        asOf: String(pc.as_of).slice(0, 10),
       }
     : null;
   const firstVisitEl = document.querySelector('[data-i18n="firstVisitText"]');

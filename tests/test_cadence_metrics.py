@@ -140,7 +140,7 @@ def test_main_writes_output_file(tmp_path: Path, monkeypatch) -> None:
     assert written["n"] == 2
     assert written["median_gap_hours"] == 3.0
     assert written["p90_gap_hours"] == 3.0
-    assert written["schema_version"] == 1
+    assert written["schema_version"] == 2
     assert "generated_at_utc" in written
 
 
@@ -156,3 +156,59 @@ def test_main_handles_missing_log_file(tmp_path: Path, monkeypatch) -> None:
     written = json.loads(output_path.read_text(encoding="utf-8"))
     assert written["n"] == 0
     assert written["median_gap_hours"] is None
+
+
+# ---------------------------------------------------------------------------
+# compute_price_check_gaps (2026-10-09): real price checks, not data commits
+# ---------------------------------------------------------------------------
+
+
+def _outcome(hours_ago: float, outcome: str = "success") -> dict:
+    return {"timestamp": (NOW - timedelta(hours=hours_ago)).isoformat(), "outcome": outcome}
+
+
+def test_price_check_gaps_use_successful_readings_only() -> None:
+    from ml.cadence_metrics import compute_price_check_gaps
+
+    rows = [
+        _outcome(30),
+        _outcome(24),  # gap 6h
+        _outcome(20, "skipped"),  # not a reading: ignored
+        _outcome(14, "blocked"),  # not a reading: ignored
+        _outcome(10),  # gap 14h from the previous success
+        _outcome(8),  # gap 2h
+        {"outcome": "success"},  # no timestamp: ignored
+    ]
+    out = compute_price_check_gaps(rows, NOW)
+    assert out["readings"] == 4 and out["n"] == 3
+    assert out["median_gap_hours"] == pytest.approx(6.0)
+    assert out["longest_gap_hours"] == pytest.approx(14.0)
+    assert out["as_of"].startswith((NOW - timedelta(hours=8)).strftime("%Y-%m-%dT%H"))
+
+
+def test_price_check_gaps_respect_the_window_and_fail_to_none() -> None:
+    from ml.cadence_metrics import compute_price_check_gaps
+
+    old = _outcome(24 * (WINDOW_DAYS + 1))
+    assert compute_price_check_gaps([old, _outcome(2)], NOW)["median_gap_hours"] is None
+    assert compute_price_check_gaps([], NOW)["readings"] == 0
+
+
+def test_main_writes_price_checks_next_to_the_data_commit_fields(
+    tmp_path: Path, monkeypatch
+) -> None:
+    import ml.cadence_metrics as cm
+
+    log = tmp_path / "run_cadence_log.jsonl"
+    log.write_text("".join(json.dumps(_record(h)) + "\n" for h in (50, 47, 44)))
+    outcomes = tmp_path / "tanishq_scrape_outcomes.jsonl"
+    outcomes.write_text("".join(json.dumps(_outcome(h)) + "\n" for h in (50, 40, 20)))
+    monkeypatch.setattr(cm, "CADENCE_LOG_PATH", log)
+    monkeypatch.setattr(cm, "OUTCOMES_LOG_PATH", outcomes)
+    monkeypatch.setattr(cm, "OUTPUT_PATH", tmp_path / "cadence_metrics.json")
+    cm.main(NOW)
+    data = json.loads((tmp_path / "cadence_metrics.json").read_text())
+    assert data["schema_version"] == 2
+    assert data["median_gap_hours"] == pytest.approx(3.0)  # data commits, unchanged meaning
+    assert data["price_checks"]["median_gap_hours"] == pytest.approx(15.0)
+    assert data["price_checks"]["longest_gap_hours"] == pytest.approx(20.0)

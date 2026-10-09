@@ -1,5 +1,13 @@
 """
-cadence_metrics.py -- Rolling measured interval between successful data runs.
+cadence_metrics.py -- Rolling measured interval between successful data runs, and (2026-10-09)
+between real PRICE CHECKS.
+
+The page and the README used to quote the data-commit interval as how often "the price is checked".
+That figure (1.0h median, ~4.5h worst) measures how often check-price.yml committed a change, which is
+not how often a shop price is read: Tanishq is visited by up to 6 timed visits a day plus the scheduled
+runs, and IBJA publishes twice a day. The page now uses ``price_checks`` (below): the gaps between
+consecutive SUCCESSFUL readings in data/tanishq_scrape_outcomes.jsonl, the log every scrape appends to.
+The old top-level fields stay (the weekly digest uses them) and still mean data commits.
 
 R2 (audit 2026-09-04): i18n.js/README.md hand-typed "checked every 3 hours"
 as a present-tense claim. Actual scheduled-trigger reliability stepped from
@@ -29,6 +37,7 @@ Usage:
 
 from __future__ import annotations
 
+import itertools
 import json
 import statistics
 from datetime import UTC, datetime, timedelta
@@ -36,6 +45,7 @@ from pathlib import Path
 
 DATA_DIR = Path(__file__).parent.parent / "data"
 CADENCE_LOG_PATH = DATA_DIR / "run_cadence_log.jsonl"
+OUTCOMES_LOG_PATH = DATA_DIR / "tanishq_scrape_outcomes.jsonl"
 OUTPUT_PATH = DATA_DIR / "cadence_metrics.json"
 
 # 7 days: matches scrape_metrics.py's existing "weekly" window convention.
@@ -133,6 +143,43 @@ def compute_median_gap(
     }
 
 
+def compute_price_check_gaps(
+    outcomes: list[dict], now: datetime, window_days: int = WINDOW_DAYS
+) -> dict:
+    """Gaps between consecutive SUCCESSFUL Tanishq readings in the rolling window.
+
+    ``readings`` is the number of successful readings; ``n`` the number of gaps. Median and the longest
+    gap are reported (a median alone hides a laptop-off day). All None when fewer than 2 readings."""
+    cutoff = now - timedelta(days=window_days)
+    stamps: list[datetime] = []
+    for r in outcomes:
+        if r.get("outcome") != "success" or not r.get("timestamp"):
+            continue
+        try:
+            ts = datetime.fromisoformat(str(r["timestamp"]).replace("Z", "+00:00"))
+        except ValueError:
+            continue
+        if ts >= cutoff:
+            stamps.append(ts)
+    stamps.sort()
+    out: dict = {
+        "window_days": window_days,
+        "readings": len(stamps),
+        "n": max(len(stamps) - 1, 0),
+        "median_gap_hours": None,
+        "longest_gap_hours": None,
+        "as_of": None,
+        "source": "successful readings in data/tanishq_scrape_outcomes.jsonl",
+    }
+    if len(stamps) < 2:
+        return out
+    gaps = [(b - a).total_seconds() / 3600.0 for a, b in itertools.pairwise(stamps)]
+    out["median_gap_hours"] = statistics.median(gaps)
+    out["longest_gap_hours"] = max(gaps)
+    out["as_of"] = stamps[-1].isoformat()
+    return out
+
+
 def main(now: datetime | None = None) -> None:
     if now is None:
         now = datetime.now(UTC)
@@ -142,7 +189,8 @@ def main(now: datetime | None = None) -> None:
     # before any test could patch it.
     records = load_log(CADENCE_LOG_PATH)
     result = compute_median_gap(records, now)
-    result["schema_version"] = 1
+    result["price_checks"] = compute_price_check_gaps(load_log(OUTCOMES_LOG_PATH), now)
+    result["schema_version"] = 2
     result["generated_at_utc"] = now.isoformat()
 
     OUTPUT_PATH.parent.mkdir(exist_ok=True)
