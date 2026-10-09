@@ -128,3 +128,53 @@ def test_run_drift_check_residual_correct(tmp_path, monkeypatch):
 
     assert entry is not None
     assert entry["residual"] == pytest.approx(150.0)
+
+
+# ---------------------------------------------------------------------------
+# scores only (ADR 060, 2026-10-09)
+# ---------------------------------------------------------------------------
+
+
+def test_new_entry_and_written_file_carry_no_price_levels(tmp_path, monkeypatch, capsys):
+    """The drift file and the run's log line publish the score (residual), never the shop reading or
+    the forecast level."""
+    monkeypatch.setattr(drift, "DRIFT_METRICS_PATH", tmp_path / "drift_metrics.json")
+    monkeypatch.setattr(drift, "FORECAST_PATH", tmp_path / "forecast.json")
+    monkeypatch.setattr(drift, "PRICES_PATH", tmp_path / "prices.json")
+    monkeypatch.setattr(drift, "BACKTEST_PATH", tmp_path / "backtest.json")
+    _write_forecast(tmp_path / "forecast.json", predicted_22k=14400.0)
+    _write_prices(tmp_path / "prices.json", price_22k=14450.0)
+
+    entry = drift.run_drift_check()
+
+    assert entry["residual"] == 50.0
+    assert "actual_22k" not in entry and "forecast_22k" not in entry
+    written = json.loads((tmp_path / "drift_metrics.json").read_text())
+    assert all("actual_22k" not in r and "forecast_22k" not in r for r in written)
+    out = capsys.readouterr().out
+    assert "14450" not in out and "14400" not in out and "residual=+50" in out
+
+
+def test_committed_drift_history_has_scores_only_and_the_same_rolling_error() -> None:
+    """The page's recent error is mean |residual| over the last 7 days: stripping the levels leaves the
+    residuals, so the number is unchanged (the committed file is compared with its git parent)."""
+    import subprocess
+
+    root = Path(__file__).resolve().parent.parent
+    now = json.loads((root / "data" / "drift_metrics.json").read_text())
+    assert all("actual_22k" not in r and "forecast_22k" not in r for r in now)
+    old = subprocess.run(
+        ["git", "show", "origin/master:data/drift_metrics.json"],
+        cwd=root,
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+    if old.returncode != 0 or not old.stdout.strip():
+        pytest.skip("origin/master not available")
+    prev = json.loads(old.stdout)
+    # rows in the committed file are a subset/superset by timestamp: compare the residuals they share
+    shared = {r["ts"]: r["residual"] for r in prev}
+    for r in now:
+        if r["ts"] in shared:
+            assert r["residual"] == shared[r["ts"]]
