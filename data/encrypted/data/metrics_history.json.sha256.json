@@ -1,0 +1,10 @@
+{
+ "category": "raw Tanishq reading and forecast level per decision day (ADR 059)",
+ "ciphertext": "data/encrypted/data/metrics_history.json.enc",
+ "ciphertext_sha256": "9aca5bc205a0f92266d9612cf71c7e732dfaf06c7a10f94df0d538581eae6183",
+ "format": "GRTENC v1, AES-256-GCM, scrypt",
+ "key_id": "88fadeb62be0b8f4",
+ "path": "data/metrics_history.json",
+ "plaintext_bytes": 76625,
+ "plaintext_sha256": "964a65857ba57a542677f34dae4e5f62a130ced16601d616970d6a9c47411c2d"
+}
