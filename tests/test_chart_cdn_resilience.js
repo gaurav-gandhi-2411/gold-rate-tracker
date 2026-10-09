@@ -17,8 +17,8 @@ const readings = Array.from({ length: 10 }, (_, i) => ({
 }));
 const folds = Array.from({ length: 5 }, (_, i) => ({
   context_end_date: new Date(NOW - (5 - i) * DAY).toISOString().slice(0, 10),
-  actuals: [13500 + i],
-  naive: [13490 + i],
+  err_chronos_p50: [10 - i * 5],
+  in_pi_80: [i % 2 === 0],
 }));
 // G4 (2026-09-25): renderForecastVsActual now also gates on backtest_run_at
 // freshness (CLAIM_MAX_AGE_DAYS) -- these CDN-availability tests are not about
@@ -142,5 +142,35 @@ test("renderForecastVsActual: CDN up builds the track-record chart", () => {
     assert.equal(built.length, 1, "the guard must not disable the chart when Chart.js loaded");
   } finally {
     ctx.dispose();
+  }
+});
+
+test("renderForecastVsActual plots the daily ERROR with inside/outside marks, never a price level", () => {
+  const legacy = folds.map((f, i) => ({
+    context_end_date: f.context_end_date,
+    actuals: [13500 + i],
+    naive: [13490 + i],
+    chronos_p50: [13500 + i + f.err_chronos_p50[0]],
+    in_pi_80: f.in_pi_80,
+  }));
+  for (const [name, bt] of [["scores-only", btFresh], ["file written before the switch", { ...btFresh, folds: legacy }]]) {
+    const ctx = loadApp({ nowMs: NOW });
+    try {
+      const built = [];
+      ctx.Chart = class {
+        constructor(el, config) { built.push(config); }
+        destroy() {}
+      };
+      ctx.getComputedStyle = () => ({ getPropertyValue: () => "" });
+      ctx.renderForecastVsActual(bt);
+      const cfg = built[0];
+      assert.deepEqual(cfg.data.datasets[0].data, [10, 5, 0, -5, -10], name);
+      assert.deepEqual(cfg.data.datasets[1].data, [10, null, 0, null, -10], name + ": inside the range");
+      assert.deepEqual(cfg.data.datasets[2].data, [null, 5, null, -5, null], name + ": outside the range");
+      assert.ok(cfg.options.scales.y.min < 0 && cfg.options.scales.y.max > 0, "axis spans zero");
+      for (const d of cfg.data.datasets) for (const v of d.data) assert.ok(v === null || Math.abs(v) < 1000, "no price level");
+    } finally {
+      ctx.dispose();
+    }
   }
 });

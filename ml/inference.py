@@ -120,6 +120,20 @@ def _compute_conformal_pi(backtest: dict, horizon_idx: int = 4) -> tuple[float, 
     _MIN_CONFORMAL_FOLDS valid fold errors are available.  None signals the caller
     to write model_status='insufficient_backtest_history' rather than a fabricated PI.
     """
+    # Scores-only backtest.json (2026-10-09, ADR 060) carries these aggregates instead of the folds' price
+    # levels; used only when its window and percentile are exactly this module's, else fall back to folds.
+    agg = backtest.get("naive_error_recent")
+    if (
+        isinstance(agg, dict)
+        and agg.get("folds_window") == _CONFORMAL_FOLDS
+        and agg.get("pct") == _CONFORMAL_PCT
+        and isinstance(agg.get("n"), int)
+        and agg["n"] >= _MIN_CONFORMAL_FOLDS
+        and 0 <= horizon_idx < len(agg.get("p_by_h", []))
+        and horizon_idx < len(agg.get("mean_by_h", []))
+    ):
+        return float(agg["p_by_h"][horizon_idx]), float(agg["mean_by_h"][horizon_idx])
+
     folds: list[dict] = backtest.get("folds", [])
     recent = folds[-_CONFORMAL_FOLDS:]
 

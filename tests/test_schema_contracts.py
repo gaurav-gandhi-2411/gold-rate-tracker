@@ -138,13 +138,23 @@ BACKTEST_SCHEMA: dict = {
             "type": "array",
             "items": {
                 "type": "object",
-                "required": ["fold_id", "actuals", "naive", "chronos_p50"],
+                "required": ["fold_id"],
                 "properties": {
                     "fold_id": {"type": "integer"},
                     "actuals": {"type": "array"},
                     "naive": {"type": "array"},
                     "chronos_p50": {"type": "array"},
+                    "err_chronos_p50": {"type": "array", "items": {"type": "number"}},
+                    "in_pi_80": {"type": "array", "items": {"type": "boolean"}},
+                    "dir_correct_5d": {"type": "boolean"},
                 },
+                # Either shape: the scores-only file (ADR 060, 2026-10-09: no price levels) or one
+                # written before the switch (the levels). The committed file moves from the second to
+                # the first when it is regenerated.
+                "anyOf": [
+                    {"required": ["err_chronos_p50", "in_pi_80", "dir_correct_5d"]},
+                    {"required": ["actuals", "naive", "chronos_p50"]},
+                ],
             },
         },
     },

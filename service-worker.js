@@ -188,7 +188,9 @@
 // 2026-10-09 (v89): visit counting honours Do Not Track again (and Global Privacy Control); one count per visit
 // (the separate language and app-mode events are gone; an app launch is one distinct path); the referrer is
 // sent as origin + path. analytics.js and i18n.js (privacyNote) changed.
-const VERSION = "v89-20261009-analytics-honour-dnt";
+// 2026-10-09 (v90): the 'test on past weeks' chart plots the estimate's daily ERROR (Rs/g, with inside/outside-range
+// marks) instead of the raw official rates; data/backtest.json is scores only. app.js, i18n.js, index.html changed.
+const VERSION = "v90-20261009-error-chart";
 const SHELL_CACHE = `gold-shell-${VERSION}`;
 
 const SHELL_FILES = [

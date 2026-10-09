@@ -2434,9 +2434,32 @@ function renderForecastVsActual(bt) {
 
   if (folds.length < 3) { section.hidden = true; return; }
 
-  const labels  = folds.map(f => fmtDateShort(f.context_end_date + "T00:00:00Z"));
-  const actuals = folds.map(f => typeof f.actuals[0] === "number" ? f.actuals[0] : null);
-  const naives  = folds.map(f => typeof f.naive[0]   === "number" ? f.naive[0]   : null);
+  // 2026-10-09 (ADR 060): backtest.json no longer carries price levels, so the chart plots the test's
+  // one-day-ahead ERROR (estimate minus the official rate, Rs/g) per day, with a mark for whether the
+  // official rate stayed inside the 80% range. Folds without a numeric error are skipped.
+  // A file written before the switch still has the levels: derive the same error from them (the page never
+  // draws the levels). Once data/backtest.json is scores only, only the first branch is used.
+  const foldErr = f =>
+    Array.isArray(f.err_chronos_p50) && typeof f.err_chronos_p50[0] === "number" ? f.err_chronos_p50[0]
+      : Array.isArray(f.chronos_p50) && Array.isArray(f.actuals)
+        && typeof f.chronos_p50[0] === "number" && typeof f.actuals[0] === "number"
+        ? Math.round((f.chronos_p50[0] - f.actuals[0]) * 100) / 100
+        : null;
+  const pts = folds
+    .filter(f => foldErr(f) !== null)
+    .map(f => ({
+      label: fmtDateShort(f.context_end_date + "T00:00:00Z"),
+      err: foldErr(f),
+      inRange: Array.isArray(f.in_pi_80) ? f.in_pi_80[0] === true : null,
+    }));
+  if (pts.length < 3) { section.hidden = true; return; }
+
+  const labels  = pts.map(p => p.label);
+  const errs    = pts.map(p => p.err);
+  const inside  = pts.map(p => (p.inRange === true ? p.err : null));
+  const outside = pts.map(p => (p.inRange === false ? p.err : null));
+  // symmetric axis in steps of 200 so the zero line (no error) is always a tick
+  const bound   = Math.max(200, Math.ceil(Math.max(...errs.map(Math.abs)) / 200) * 200);
 
   const colors    = getChartColors();
   const goldLine  = colors.gold;
@@ -2453,29 +2476,35 @@ function renderForecastVsActual(bt) {
       labels,
       datasets: [
         {
-          label: t("chartWhatHappened"),
-          data: actuals,
-          borderColor: goldLine,
-          backgroundColor: "transparent",
-          fill: false,
-          borderWidth: 2,
-          pointRadius: 3,
-          pointBackgroundColor: goldLine,
-          pointBorderWidth: 0,
-          tension: 0.1,
-          spanGaps: true,
-        },
-        {
-          label: t("chartFlatHoldEstimate"),
-          data: naives,
-          borderColor: "#6B5E4E",
+          // the error line itself: no legend entry, no points (the two mark sets below carry them)
+          label: "",
+          data: errs,
+          borderColor: hexToRgba(goldLine, 0.45),
           backgroundColor: "transparent",
           fill: false,
           borderWidth: 1.5,
           pointRadius: 0,
-          borderDash: [5, 4],
           tension: 0,
           spanGaps: true,
+        },
+        {
+          label: t("chartErrInRange"),
+          data: inside,
+          showLine: false,
+          borderColor: goldLine,
+          backgroundColor: goldLine,
+          pointRadius: 3.5,
+          pointStyle: "circle",
+        },
+        {
+          label: t("chartErrOutRange"),
+          data: outside,
+          showLine: false,
+          borderColor: "#C8553D",
+          backgroundColor: "transparent",
+          borderWidth: 2,
+          pointRadius: 4.5,
+          pointStyle: "rectRot",
         },
       ],
     },
@@ -2485,7 +2514,12 @@ function renderForecastVsActual(bt) {
       plugins: {
         legend: {
           display: true,
-          labels: { color: axisColor, font: { family: "DM Sans", size: 11 }, boxWidth: 24 },
+          labels: {
+            color: axisColor,
+            font: { family: "DM Sans", size: 11 },
+            usePointStyle: true,
+            filter: (item) => item.text !== "",
+          },
         },
         tooltip: {
           backgroundColor: "#241E16",
@@ -2494,8 +2528,13 @@ function renderForecastVsActual(bt) {
           titleColor: axisColor,
           bodyColor: "#F5EDE0",
           padding: 12,
+          filter: (item) => item.datasetIndex !== 0,
           callbacks: {
-            label: (c) => t("chartTooltipLabeled", { label: c.dataset.label, value: fmtINR(c.parsed.y) }),
+            label: (c) => {
+              const v = c.parsed.y;
+              const key = v > 0 ? "chartErrTooHigh" : v < 0 ? "chartErrTooLow" : "chartErrExact";
+              return t(key, { value: fmtINR(Math.abs(v)), label: c.dataset.label });
+            },
           },
         },
       },
@@ -2506,8 +2545,11 @@ function renderForecastVsActual(bt) {
           border: { color: gridColor },
         },
         y: {
-          ticks:  { color: axisColor, font: { family: "DM Sans", size: 11 }, callback: v => "₹" + fmtINR(v) },
-          grid:   { color: hexToRgba(gridColor, 0.5) },
+          min: -bound,
+          max: bound,
+          ticks:  { color: axisColor, stepSize: bound / 2, font: { family: "DM Sans", size: 11 }, callback: v => (v > 0 ? "+" : v < 0 ? "-" : "") + "₹" + fmtINR(Math.abs(v)) },
+          // the zero line (no error) is drawn stronger than the other grid lines
+          grid:   { color: (g) => (g.tick && g.tick.value === 0 ? axisColor : hexToRgba(gridColor, 0.5)) },
           border: { display: false },
         },
       },
