@@ -971,6 +971,15 @@ def committed():
     from pathlib import Path
 
     data = Path(ic.__file__).resolve().parent.parent / "data"
+    # ADR 060: after the migration the raw IBJA / fusion files are committed only as ciphertext, and the
+    # lint job has no key. Without them these replay checks would report FILE_MISSING, not a data fault.
+    missing = [
+        f for f in ("ibja_rates.parquet", "fusion_snapshots.parquet") if not (data / f).exists()
+    ]
+    if missing:
+        pytest.skip(
+            f"ADR 060: {missing} are ciphertext-only here; run scripts/data_crypt.py decrypt --all"
+        )
     now = pd.Timestamp(datetime.now(UTC))
     reports = ic.evaluate_all(data, now, check_newest_staleness=False)
     return reports, ic.build_status(reports, now)
