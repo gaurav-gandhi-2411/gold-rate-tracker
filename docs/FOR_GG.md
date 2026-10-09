@@ -36,7 +36,7 @@ this section is here, #2558 was ready when CC last looked (see the report that p
 | Item | State |
 |---|---|
 | `scraper-dependency-guard` as a required check | Done by you, 2026-10-08. |
-| GoatCounter account and settings | Done by you, 2026-10-08 (site `gold-rate-tracker`; User-Agent, screen size and location collection off; referrer, language and sessions on). CC wires and checks it in the next PRs. |
+| GoatCounter visit counting | **Live since 2026-10-09 (PR #2581).** Verified in a real browser on the live site: two count requests (page and language), both answered 200, no cookie, no console error, the footer note shows. GoatCounter's numbers are not public (403/401 without your login), so the one-step check is yours, 30 seconds: open https://gold-rate-tracker.goatcounter.com, you should see the test visit from 2026-10-09 (path `/gold-rate-tracker/` and the event `lang/en`); and under Settings > Data collection confirm individual pageviews, User-Agent, screen size and location are all OFF (the footer note claims exactly that). |
 | The three runaway python processes | Stopped by you, 2026-10-08. |
 | Sleep instead of Shut down | Done by you. CC checks every visit slot with `scripts/laptop_attribution.py` and reports any miss while the laptop was on or asleep. |
 | Promotion horizon | Decided: **180 decision days** (rule v3, ADR 072 Amendment 2, hash `2499a124…846c73`). CC will not loosen the 0.05 error rate or the 5% minimum gain. |
