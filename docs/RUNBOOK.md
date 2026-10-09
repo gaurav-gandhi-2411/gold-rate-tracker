@@ -350,8 +350,9 @@ was.
 </details>
 
 **Does this affect what users actually see?** Less than the raw numbers
-above suggest. `data/cadence_metrics.json` (the metric the page and
-`ml/cadence_digest.py` actually surface) measures the gap between
+above suggest. `data/cadence_metrics.json`'s top-level fields (what
+`ml/cadence_digest.py` surfaces; the page and README now use its `price_checks` block, the gaps between
+successful Tanishq readings, since 2026-10-09) measure the gap between
 *successful data commits*, which `check-price.yml`'s own self-triggering
 catch-up (4h threshold, above) actively protects — re-measured directly
 from `data/run_cadence_log.jsonl`'s trailing 7 days as of 2026-09-10:
