@@ -118,3 +118,19 @@ def test_parse_events_maps_ids_and_power_flag() -> None:
     ]
     ev = la.parse_events(raw)
     assert [e["kind"] for e in ev] == ["boot", "power"] and ev[1]["ac"] is True
+
+
+def test_a_cancelled_or_failed_run_is_not_labelled_late() -> None:
+    slot = _t("2026-10-06T12:00")
+    base = _ev(("2026-10-06T08:00", "boot"))
+    on_log = la.parse_dispatch_log("2026-10-06T12:00:05+05:30 slot=12:00 DISPATCHED")
+    key = slot.isoformat()
+    cancelled = la.classify_slot(slot, base, on_log, INSTALLED, {key: "dispatched_cancelled"})
+    assert cancelled["class"] == "dispatched_run_cancelled"
+    assert "cancelled" in cancelled["detail"]
+    failed = la.classify_slot(slot, base, on_log, INSTALLED, {key: "dispatched_failed"})
+    assert failed["class"] == "dispatched_run_failed"
+    assert la.classify_slot(slot, base, on_log, INSTALLED, {key: "late"})["class"] == (
+        "dispatched_but_run_late"
+    )
+    assert la.classify_slot(slot, base, on_log, INSTALLED)["class"] == "dispatched_but_run_late"

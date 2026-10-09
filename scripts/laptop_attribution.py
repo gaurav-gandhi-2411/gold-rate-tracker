@@ -18,6 +18,8 @@ Classes (first match wins):
   asleep_modern_standby_on_battery   asleep (event 42/506) on battery at the slot
   asleep_wake_timer_failed       asleep on mains at the slot: the wake timer should have fired
   task_ran_dispatch_skipped      the laptop was on and the dispatcher logged SKIP/FAIL (reason kept)
+  dispatched_run_cancelled       dispatched on time, but GitHub shows the run was cancelled
+  dispatched_run_failed          dispatched on time, but GitHub shows the run failed
   dispatched_but_run_late        the dispatcher logged DISPATCHED but the run was not on time
   task_did_not_run_while_on      the laptop was on and nothing was logged for the slot
   unknown                        the event log does not reach back to the slot
@@ -47,6 +49,8 @@ CLASSES = (
     "asleep_modern_standby_on_battery",
     "asleep_wake_timer_failed",
     "task_ran_dispatch_skipped",
+    "dispatched_run_cancelled",
+    "dispatched_run_failed",
     "dispatched_but_run_late",
     "task_did_not_run_while_on",
     "unknown",
@@ -143,7 +147,9 @@ def classify_slot(
     events: list[dict[str, Any]],
     dispatches: list[dict[str, Any]],
     installed: datetime,
+    github: dict[str, str] | None = None,
 ) -> dict[str, Any]:
+    # ``github`` maps slot_ist -> the run class from build_timeliness_report (GitHub run data).
     hhmm = slot.strftime("%H:%M")
     later = [
         d for d in dispatches if d["slot"] == hhmm and slot <= d["t"] <= slot + timedelta(hours=12)
@@ -173,6 +179,12 @@ def classify_slot(
     elif first["status"] != "DISPATCHED":
         cls = "task_ran_dispatch_skipped"
         detail = f"{first['status']} {first['reason']}".strip()
+    elif (github or {}).get(slot.isoformat()) == "dispatched_cancelled":
+        cls = "dispatched_run_cancelled"
+        detail = f"dispatched {late_min} min after the slot; the run was cancelled"
+    elif (github or {}).get(slot.isoformat()) == "dispatched_failed":
+        cls = "dispatched_run_failed"
+        detail = f"dispatched {late_min} min after the slot; the run failed"
     else:
         cls, detail = "dispatched_but_run_late", f"dispatched {late_min} min after the slot"
     return {
@@ -216,7 +228,11 @@ def main(argv: list[str] | None = None) -> int:
             ["powershell", "-NoProfile", "-Command", ps], capture_output=True, text=True, check=True
         ).stdout.strip()
     )
-    rows = [classify_slot(s, events, dispatches, installed) for s in missed]
+    github = {
+        datetime.fromisoformat(r["slot_ist"]).astimezone(IST).isoformat(): r["class"]
+        for r in (rep.get("tanishq_slots") or {}).get("per_slot", [])
+    }
+    rows = [classify_slot(s, events, dispatches, installed, github) for s in missed]
     prev = json.loads(OUT.read_text(encoding="utf-8")) if OUT.exists() else None
     out = {
         "schema_version": 1,

@@ -25,3 +25,14 @@ format. **Do not compress.** Do not drop an item because nothing changed: say "n
    the order to do them in. READY means every required check green, no conflicts against current
    master, a per-spec-item table in the PR body, and `scripts/check_required_checks_positive.py`
    passing. Re-check readiness immediately before reporting. Never report complete on green CI alone.
+
+## Process safety (GG, 2026-10-09): scripts go in files, never into an interpreter's stdin
+
+A command of the form `python - <<EOF ...`, `python -` or any interpreter left reading stdin hangs
+the session when the input is empty or never closes. It happened twice.
+
+- Write every script to a file (scratchpad or the repo) and run it as `python path/to/script.py`.
+- Never pipe or heredoc a script into an interpreter (`python`, `node`, `bash -s`, `powershell -`).
+- Put `timeout N` on every command that can run long, and record the PID of any background process
+  you start so you can stop it by PID. Never kill by process name.
+- Before ending a session, list the background tasks and stop any you started that are still running.

@@ -1,10 +1,10 @@
 {
  "schema_version": 1,
- "generated_at": "2026-10-09T14:04:25.430467+00:00",
+ "generated_at": "2026-10-09T18:59:17.450831+00:00",
  "marking": "VERIFIED from the laptop's System event log and the dispatcher log",
  "evidence": {
   "event_log_from": "2026-10-03T18:16:28.742778+05:30",
-  "dispatch_log_lines": 25,
+  "dispatch_log_lines": 26,
   "tasks_created_ist": "2026-10-05T12:59:58.207069+05:30",
   "task_scheduler_history_enabled": false
  },
@@ -101,14 +101,14 @@
   },
   {
    "slot_ist": "2026-10-09T15:35:00+05:30",
-   "class": "dispatched_but_run_late",
-   "detail": "dispatched 0 min after the slot",
+   "class": "dispatched_run_cancelled",
+   "detail": "dispatched 0 min after the slot; the run was cancelled",
    "dispatch_delay_min": 0
   }
  ],
  "counts": {
   "before_schedule_installed": 4,
   "laptop_off": 11,
-  "dispatched_but_run_late": 1
+  "dispatched_run_cancelled": 1
  }
 }
