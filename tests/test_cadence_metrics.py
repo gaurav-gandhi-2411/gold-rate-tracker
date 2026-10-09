@@ -212,3 +212,19 @@ def test_main_writes_price_checks_next_to_the_data_commit_fields(
     assert data["median_gap_hours"] == pytest.approx(3.0)  # data commits, unchanged meaning
     assert data["price_checks"]["median_gap_hours"] == pytest.approx(15.0)
     assert data["price_checks"]["longest_gap_hours"] == pytest.approx(20.0)
+
+
+def test_longest_wait_includes_the_gap_still_open_and_naive_stamps_are_read_as_utc() -> None:
+    from ml.cadence_metrics import compute_price_check_gaps
+
+    rows = [_outcome(30), _outcome(26), _outcome(24)]  # gaps 4h, 2h; the last reading is 24h old
+    out = compute_price_check_gaps(rows, NOW)
+    assert out["median_gap_hours"] == pytest.approx(3.0)
+    assert out["open_gap_hours"] == pytest.approx(24.0)
+    assert out["longest_gap_hours"] == pytest.approx(24.0)  # the open wait beats every closed gap
+    naive = {
+        "timestamp": (NOW - timedelta(hours=5)).replace(tzinfo=None).isoformat(),
+        "outcome": "success",
+    }
+    out2 = compute_price_check_gaps([_outcome(9), naive], NOW)  # no TypeError
+    assert out2["readings"] == 2 and out2["median_gap_hours"] == pytest.approx(4.0)

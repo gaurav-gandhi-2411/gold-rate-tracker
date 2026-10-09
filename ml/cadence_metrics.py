@@ -149,7 +149,9 @@ def compute_price_check_gaps(
     """Gaps between consecutive SUCCESSFUL Tanishq readings in the rolling window.
 
     ``readings`` is the number of successful readings; ``n`` the number of gaps. Median and the longest
-    gap are reported (a median alone hides a laptop-off day). All None when fewer than 2 readings."""
+    wait are reported (a median alone hides a laptop-off day). The longest wait INCLUDES the gap still
+    open now (last reading to ``now``), so a current outage is not hidden. All None when fewer than 2
+    readings."""
     cutoff = now - timedelta(days=window_days)
     stamps: list[datetime] = []
     for r in outcomes:
@@ -159,6 +161,8 @@ def compute_price_check_gaps(
             ts = datetime.fromisoformat(str(r["timestamp"]).replace("Z", "+00:00"))
         except ValueError:
             continue
+        if ts.tzinfo is None:  # a naive stamp is read as UTC, never a crash
+            ts = ts.replace(tzinfo=UTC)
         if ts >= cutoff:
             stamps.append(ts)
     stamps.sort()
@@ -168,6 +172,7 @@ def compute_price_check_gaps(
         "n": max(len(stamps) - 1, 0),
         "median_gap_hours": None,
         "longest_gap_hours": None,
+        "open_gap_hours": None,
         "as_of": None,
         "source": "successful readings in data/tanishq_scrape_outcomes.jsonl",
     }
@@ -175,7 +180,9 @@ def compute_price_check_gaps(
         return out
     gaps = [(b - a).total_seconds() / 3600.0 for a, b in itertools.pairwise(stamps)]
     out["median_gap_hours"] = statistics.median(gaps)
-    out["longest_gap_hours"] = max(gaps)
+    open_gap = max((now - stamps[-1]).total_seconds() / 3600.0, 0.0)
+    out["open_gap_hours"] = open_gap
+    out["longest_gap_hours"] = max(max(gaps), open_gap)
     out["as_of"] = stamps[-1].isoformat()
     return out
 

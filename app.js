@@ -35,7 +35,7 @@ const COVERAGE_URL  = "data/coverage_metrics.json";
 // per IBJA publishing day (scripts/build_ibja_derived_prices.py --public-out). An estimate,
 // never a retailer observation; see chartSeries().
 const DERIVED_PRICES_URL = "data/ibja_derived_prices.json";
-const CADENCE_URL   = "data/cadence_metrics.json"; // R2: real observed data-commit interval, see ml/cadence_metrics.py
+const CADENCE_URL   = "data/cadence_metrics.json"; // R2: measured price-check interval (price_checks block), see ml/cadence_metrics.py
 // AE1 (audit 2026-09-10): walk-forward MEASURED coverage of the IBJA-calibrated
 // tier's actual displayed band, see ml.calibration.save_calibration_band_coverage.
 // Previously fetched by nothing -- the on-page confidence claim rendered
@@ -3286,7 +3286,7 @@ function renderCadenceStrings(metric) {
         hours: pc.median_gap_hours.toFixed(1),
         longestHours: pc.longest_gap_hours.toFixed(1),
         days: pc.window_days,
-        asOf: String(pc.as_of).slice(0, 10),
+        asOf: String(metric.generated_at_utc || pc.as_of).slice(0, 10), // when the figures were computed
       }
     : null;
   const firstVisitEl = document.querySelector('[data-i18n="firstVisitText"]');
