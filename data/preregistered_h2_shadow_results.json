@@ -274,6 +274,168 @@
       "confirmatory": false,
       "scored_at_utc": "2026-10-07T19:16:36.903024+00:00",
       "reached_preregistered_n": null
+    },
+    {
+      "n": 5,
+      "effective_n": 3.8095238095238093,
+      "dm_stat": 0.0,
+      "p_value": 0.5,
+      "mean_diff": 0.0,
+      "gamma_0": 0.8,
+      "long_run_var": 1.05,
+      "accuracy": 0.6,
+      "always_up_accuracy": 0.6,
+      "significant_at_05": false,
+      "arm": "live_h2",
+      "leak_guard": {
+        "labels": {
+          "name": "config_sweep label_binary_h2 training labels",
+          "mode": "raise",
+          "n_checks": 5,
+          "n_inputs_checked": 862,
+          "n_unchecked": 0,
+          "n_violations": 0,
+          "n_checks_with_violation": 0,
+          "violations_by_source": {},
+          "max_late_by_s": null,
+          "examples": []
+        },
+        "features": null
+      },
+      "protocol_version": "adr042-v2",
+      "embargo_label_date_col": "label_date_h2",
+      "confirmatory_after_as_of": "2026-09-24",
+      "consecutive_day_labels": true,
+      "scored_as_of_dates": [
+        "2026-09-25",
+        "2026-09-28",
+        "2026-09-29",
+        "2026-09-30",
+        "2026-10-07"
+      ],
+      "train_max_label_dates": [
+        "2026-09-24",
+        "2026-09-25",
+        "2026-09-28",
+        "2026-09-29",
+        "2026-10-05"
+      ],
+      "scored_at_utc": "2026-10-09T15:12:40.664575+00:00",
+      "preregistered_n_for_power": 418.3229,
+      "reached_preregistered_n": false
+    },
+    {
+      "n": 329,
+      "effective_n": 329.0,
+      "dm_stat": 0.801421897398141,
+      "p_value": 0.7885562787534135,
+      "mean_diff": 0.030395136778115502,
+      "gamma_0": 0.47324026939884145,
+      "long_run_var": 0.47324026939884145,
+      "accuracy": 0.5258358662613982,
+      "always_up_accuracy": 0.5562310030395137,
+      "significant_at_05": false,
+      "arm": "proxy_deadzone_h1_equivalent",
+      "leak_guard": {
+        "labels": null,
+        "features": {
+          "name": "config_sweep label_binary_deadzone features",
+          "mode": "raise",
+          "n_checks": 329,
+          "n_inputs_checked": 329,
+          "n_unchecked": 0,
+          "n_violations": 0,
+          "n_checks_with_violation": 0,
+          "violations_by_source": {},
+          "max_late_by_s": null,
+          "examples": []
+        }
+      },
+      "protocol_version": "adr042-v2",
+      "confirmatory": false,
+      "scored_at_utc": "2026-10-09T15:12:58.080327+00:00",
+      "reached_preregistered_n": null
+    },
+    {
+      "n": 5,
+      "effective_n": 3.8095238095238093,
+      "dm_stat": 0.0,
+      "p_value": 0.5,
+      "mean_diff": 0.0,
+      "gamma_0": 0.8,
+      "long_run_var": 1.05,
+      "accuracy": 0.6,
+      "always_up_accuracy": 0.6,
+      "significant_at_05": false,
+      "arm": "live_h2",
+      "leak_guard": {
+        "labels": {
+          "name": "config_sweep label_binary_h2 training labels",
+          "mode": "raise",
+          "n_checks": 5,
+          "n_inputs_checked": 862,
+          "n_unchecked": 0,
+          "n_violations": 0,
+          "n_checks_with_violation": 0,
+          "violations_by_source": {},
+          "max_late_by_s": null,
+          "examples": []
+        },
+        "features": null
+      },
+      "protocol_version": "adr042-v2",
+      "embargo_label_date_col": "label_date_h2",
+      "confirmatory_after_as_of": "2026-09-24",
+      "consecutive_day_labels": true,
+      "scored_as_of_dates": [
+        "2026-09-25",
+        "2026-09-28",
+        "2026-09-29",
+        "2026-09-30",
+        "2026-10-07"
+      ],
+      "train_max_label_dates": [
+        "2026-09-24",
+        "2026-09-25",
+        "2026-09-28",
+        "2026-09-29",
+        "2026-10-05"
+      ],
+      "scored_at_utc": "2026-10-09T15:22:52.435941+00:00",
+      "preregistered_n_for_power": 418.3229,
+      "reached_preregistered_n": false
+    },
+    {
+      "n": 329,
+      "effective_n": 329.0,
+      "dm_stat": 0.801421897398141,
+      "p_value": 0.7885562787534135,
+      "mean_diff": 0.030395136778115502,
+      "gamma_0": 0.47324026939884145,
+      "long_run_var": 0.47324026939884145,
+      "accuracy": 0.5258358662613982,
+      "always_up_accuracy": 0.5562310030395137,
+      "significant_at_05": false,
+      "arm": "proxy_deadzone_h1_equivalent",
+      "leak_guard": {
+        "labels": null,
+        "features": {
+          "name": "config_sweep label_binary_deadzone features",
+          "mode": "raise",
+          "n_checks": 329,
+          "n_inputs_checked": 329,
+          "n_unchecked": 0,
+          "n_violations": 0,
+          "n_checks_with_violation": 0,
+          "violations_by_source": {},
+          "max_late_by_s": null,
+          "examples": []
+        }
+      },
+      "protocol_version": "adr042-v2",
+      "confirmatory": false,
+      "scored_at_utc": "2026-10-09T15:23:20.437032+00:00",
+      "reached_preregistered_n": null
     }
   ]
 }

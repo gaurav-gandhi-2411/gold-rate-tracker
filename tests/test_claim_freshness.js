@@ -134,8 +134,8 @@ test("reliabilityCoverage: missing generated_at_utc (old cached shape) falls to 
 
 const folds = Array.from({ length: 5 }, (_, i) => ({
   context_end_date: new Date(NOW - (5 - i) * DAY_MS).toISOString().slice(0, 10),
-  actuals: [13500 + i],
-  naive: [13490 + i],
+  err_chronos_p50: [10 - i * 5],
+  in_pi_80: [i % 2 === 0],
 }));
 
 function trackRecordHidden(backtestRunAt) {

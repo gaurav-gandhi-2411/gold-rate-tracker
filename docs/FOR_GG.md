@@ -1,9 +1,9 @@
 # For GG: things only your account or decision can clear
 
 Kept current by CC. Last updated 2026-10-09 (CC). The weekly one-screen model note is `docs/MODEL_STATUS.md`.
-Short on purpose: no clicks, one check (once the analytics PR is live), and a few optional items.
+Short on purpose: two small items, one check, and a few optional items.
 
-## 1. One check (30 seconds, only after the analytics PR is live)
+## 1. One check (30 seconds; the analytics fix is live)
 
 **Open https://gold-rate-tracker.goatcounter.com tomorrow; each visit should count once, and referrers should
 show where visitors came from.** (Direct visits and the installed app have no referrer; installed-app launches
@@ -13,7 +13,20 @@ show as a separate path starting `/app`.)
   Edge will NOT be counted. To test, turn it off under Edge Settings > Privacy > "Send Do Not Track requests"
   or use a browser without it.
 
-## 2. Optional (nothing is blocked on these)
+## 2. Two small items (about 2 minutes, nothing is blocked on them)
+
+1. **Re-add the required check `scraper-dependency-guard`** (GitHub > Settings > Branches > master > required
+   status checks > add `scraper-dependency-guard`). CC proved both halves first: on a real bot PR the dispatched
+   guard posts a success status on the PR's head commit (PR #2579, 13:19 UTC today), and a normal PR that
+   changes `scraper/package.json` without a proof run still fails it (PR #2471). A new test
+   (`tests/test_required_checks_skippable.py`) now fails CI if any required check can be skipped by paths or
+   by a skip-ci commit.
+2. **Encrypt one more file (optional, when you have a minute): https://github.com/gaurav-gandhi-2411/gold-rate-tracker/pull/2610**
+   Registers `data/metrics_history.json` (it holds the Tanishq shop reading per day; the page never reads it).
+   Click **Squash and merge**. Then tell CC; CC runs the migration workflow and opens the second PR, which is the
+   one other click (same as before: rollback = revert the PR, the plaintext stays in git history).
+
+## 3. Optional (nothing is blocked on these)
 
 | # | Item | Exact steps |
 |---|---|---|

@@ -465,6 +465,17 @@ if __name__ == "__main__":
 # ============================================================
 
 
+def fold_mae_5d(fold: dict, which: str) -> float:
+    """One backtest fold's mean absolute error over its horizons, for ``which`` in
+    {"chronos", "naive"}. A scores-only backtest.json (ADR 060, 2026-10-09) stores the mean
+    (``mae_<which>_5d``) because the per-horizon lists are one step from the price levels;
+    a file written before the switch has the lists."""
+    key = f"mae_{which}_5d"
+    if key in fold:
+        return float(fold[key])
+    return float(np.mean(fold[f"mae_{which}_per_h"]))
+
+
 def compute_mae_per_horizon(
     actuals: np.ndarray,
     preds: np.ndarray,
