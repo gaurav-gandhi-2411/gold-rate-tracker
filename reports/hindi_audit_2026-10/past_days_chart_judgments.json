@@ -1,0 +1,358 @@
+{
+ "label": "LLM consensus, not native review",
+ "what": "the nine new Hindi strings of the 'A test on past days' chart (item 3, 2026-10-09)",
+ "judges": [
+  "gemma2:9b",
+  "llama3.1:8b",
+  "qwen3:30b-a3b"
+ ],
+ "method": "same rubric, glossary, temperature 0 and seed 42 as scripts/hindi_audit_judge.py; blind: the judge sees the English source, the candidate, the kind and the screen only; zero spend (local Ollama)",
+ "contested_rule": "contested = a majority (2 of 3) scored at least one criterion 3 or lower",
+ "judges_flagging_per_string": {
+  "trackRecordHeading": 1,
+  "trackRecordAriaLabel": 1,
+  "trackRecordCaption": 0,
+  "trackRecordChartAriaLabel": 1,
+  "chartErrInRange": 0,
+  "chartErrOutRange": 0,
+  "chartErrTooHigh": 0,
+  "chartErrTooLow": 0,
+  "chartErrExact": 1
+ },
+ "contested": [],
+ "results": [
+  {
+   "key": "trackRecordHeading",
+   "en": "A test on past days",
+   "hi": "बीते दिनों की जाँच",
+   "judges": {
+    "gemma2:9b": {
+     "scores": {
+      "natural": 5,
+      "correct": 5,
+      "glossary": 5,
+      "grammar": 5
+     },
+     "note": "Accurate and natural phrasing",
+     "raw_error": null
+    },
+    "llama3.1:8b": {
+     "scores": {
+      "natural": 4,
+      "correct": 5,
+      "glossary": 5,
+      "grammar": 5
+     },
+     "note": "uses 'बीते दिनों' instead of 'पुराने दिनों' or 'पिछले दिनों' for a more natural sound",
+     "raw_error": null
+    },
+    "qwen3:30b-a3b": {
+     "scores": {
+      "natural": 3,
+      "correct": 4,
+      "glossary": 3,
+      "grammar": 4
+     },
+     "note": "बीते दिनों की जाँच is literal, not natural for chart title.",
+     "raw_error": null
+    }
+   }
+  },
+  {
+   "key": "trackRecordAriaLabel",
+   "en": "How far the estimate was from the official rate each day, in a test on past days",
+   "hi": "बीते दिनों की जाँच में हर दिन अनुमान आधिकारिक भाव से कितना दूर था",
+   "judges": {
+    "gemma2:9b": {
+     "scores": {
+      "natural": 4,
+      "correct": 5,
+      "glossary": 5,
+      "grammar": 5
+     },
+     "note": "Good, but could be more colloquial",
+     "raw_error": null
+    },
+    "llama3.1:8b": {
+     "scores": {
+      "natural": 4,
+      "correct": 5,
+      "glossary": 5,
+      "grammar": 5
+     },
+     "note": "uses 'आधिकारिक भाव' instead of 'सोने का भाव' for gold rate",
+     "raw_error": null
+    },
+    "qwen3:30b-a3b": {
+     "scores": {
+      "natural": 3,
+      "correct": 4,
+      "glossary": 4,
+      "grammar": 4
+     },
+     "note": "अनुमान आधिकारिक भाव से कितना दूर था is unnatural.",
+     "raw_error": null
+    }
+   }
+  },
+  {
+   "key": "trackRecordCaption",
+   "en": "In a test on past days: how far the estimate of the next official rate was from the rate that followed, each day, in ₹ per gram. Above the line means the estimate was too high, below the line too low. A filled dot means the official rate landed inside the estimate's range; a hollow diamond means it fell outside. Days before 7 October are the same method run again on past data; later days are estimates made at the time. This is a look back, not today's estimate.",
+   "hi": "बीते दिनों की जाँच: अगले आधिकारिक भाव का अनुमान, उसके बाद आए भाव से हर दिन कितना दूर रहा, ₹ प्रति ग्राम में। लाइन के ऊपर का मतलब अनुमान ज़्यादा था, नीचे का मतलब कम। भरा हुआ बिंदु यानी आधिकारिक भाव अनुमान की रेंज के अंदर आया; खोखला हीरा यानी रेंज से बाहर गया। 7 अक्टूबर से पहले के दिन उसी तरीक़े को पुराने आँकड़ों पर दोबारा चलाकर निकाले गए हैं; बाद के दिन उस समय किए गए अनुमान हैं। यह पीछे मुड़कर देखना है, आज का अनुमान नहीं।",
+   "judges": {
+    "gemma2:9b": {
+     "scores": {
+      "natural": 5,
+      "correct": 5,
+      "glossary": 5,
+      "grammar": 5
+     },
+     "note": "Very natural, accurate, and uses glossary terms well.",
+     "raw_error": null
+    },
+    "llama3.1:8b": {
+     "scores": {
+      "natural": 4,
+      "correct": 5,
+      "glossary": 5,
+      "grammar": 5
+     },
+     "note": "Minor variation in phrase 'आधिकारिक भाव का अनुमान' instead of 'अनुमानित भाव'",
+     "raw_error": null
+    },
+    "qwen3:30b-a3b": {
+     "scores": {
+      "natural": 4,
+      "correct": 5,
+      "glossary": 5,
+      "grammar": 5
+     },
+     "note": "Minor tweak: 'भाव' not 'भाव का'",
+     "raw_error": null
+    }
+   }
+  },
+  {
+   "key": "trackRecordChartAriaLabel",
+   "en": "Daily gap between the estimate and the official rate in a test on past days, with marks for days inside or outside the range",
+   "hi": "बीते दिनों की जाँच में अनुमान और आधिकारिक भाव का रोज़ का फ़र्क़, रेंज के अंदर या बाहर रहे दिनों के निशान के साथ",
+   "judges": {
+    "gemma2:9b": {
+     "scores": {
+      "natural": 4,
+      "correct": 5,
+      "glossary": 5,
+      "grammar": 5
+     },
+     "note": "Good, natural phrasing",
+     "raw_error": null
+    },
+    "llama3.1:8b": {
+     "scores": {
+      "natural": 4,
+      "correct": 5,
+      "glossary": 5,
+      "grammar": 5
+     },
+     "note": "Uses 'आधिकारिक भाव' instead of 'सोने का भाव' for global gold price, but otherwise correct.",
+     "raw_error": null
+    },
+    "qwen3:30b-a3b": {
+     "scores": {
+      "natural": 3,
+      "correct": 4,
+      "glossary": 3,
+      "grammar": 4
+     },
+     "note": "अनुमान और आधिकारिक भाव का रोज़ का फ़र्क़ is unnatural",
+     "raw_error": null
+    }
+   }
+  },
+  {
+   "key": "chartErrInRange",
+   "en": "Official rate inside the range",
+   "hi": "आधिकारिक भाव रेंज के अंदर",
+   "judges": {
+    "gemma2:9b": {
+     "scores": {
+      "natural": 5,
+      "correct": 5,
+      "glossary": 5,
+      "grammar": 5
+     },
+     "note": "Accurate and natural phrasing for a chart legend",
+     "raw_error": null
+    },
+    "llama3.1:8b": {
+     "scores": {
+      "natural": 4,
+      "correct": 5,
+      "glossary": 5,
+      "grammar": 5
+     },
+     "note": "uses 'भाव' instead of 'रेट'",
+     "raw_error": null
+    },
+    "qwen3:30b-a3b": {
+     "scores": {
+      "natural": 4,
+      "correct": 5,
+      "glossary": 5,
+      "grammar": 5
+     },
+     "note": "Good but 'भाव' should be 'भाव' not 'भाव'",
+     "raw_error": null
+    }
+   }
+  },
+  {
+   "key": "chartErrOutRange",
+   "en": "Official rate outside the range",
+   "hi": "आधिकारिक भाव रेंज के बाहर",
+   "judges": {
+    "gemma2:9b": {
+     "scores": {
+      "natural": 5,
+      "correct": 5,
+      "glossary": 5,
+      "grammar": 5
+     },
+     "note": "Accurate and natural for a chart legend",
+     "raw_error": null
+    },
+    "llama3.1:8b": {
+     "scores": {
+      "natural": 4,
+      "correct": 5,
+      "glossary": 5,
+      "grammar": 5
+     },
+     "note": "Literal translation, but correct and grammatical",
+     "raw_error": null
+    },
+    "qwen3:30b-a3b": {
+     "scores": {
+      "natural": 4,
+      "correct": 5,
+      "glossary": 5,
+      "grammar": 5
+     },
+     "note": "Good but 'भाव' should be 'भाव' not 'भाव'",
+     "raw_error": null
+    }
+   }
+  },
+  {
+   "key": "chartErrTooHigh",
+   "en": "₹{value} too high",
+   "hi": "₹{value} ज़्यादा",
+   "judges": {
+    "gemma2:9b": {
+     "scores": {
+      "natural": 5,
+      "correct": 5,
+      "glossary": 5,
+      "grammar": 5
+     },
+     "note": "Natural, accurate, uses glossary terms correctly",
+     "raw_error": null
+    },
+    "llama3.1:8b": {
+     "scores": {
+      "natural": 5,
+      "correct": 5,
+      "glossary": 5,
+      "grammar": 5
+     },
+     "note": "Sounds like everyday spoken Hindi, direct translation of the English source.",
+     "raw_error": null
+    },
+    "qwen3:30b-a3b": {
+     "scores": {
+      "natural": 4,
+      "correct": 5,
+      "glossary": 5,
+      "grammar": 5
+     },
+     "note": "Good but 'ज़्यादा' is slightly informal for tooltip.",
+     "raw_error": null
+    }
+   }
+  },
+  {
+   "key": "chartErrTooLow",
+   "en": "₹{value} too low",
+   "hi": "₹{value} कम",
+   "judges": {
+    "gemma2:9b": {
+     "scores": {
+      "natural": 5,
+      "correct": 5,
+      "glossary": 5,
+      "grammar": 5
+     },
+     "note": "Very natural, accurate, and uses glossary terms correctly.",
+     "raw_error": null
+    },
+    "llama3.1:8b": {
+     "scores": {
+      "natural": 5,
+      "correct": 5,
+      "glossary": 5,
+      "grammar": 5
+     },
+     "note": "Literal translation, but common phrase",
+     "raw_error": null
+    },
+    "qwen3:30b-a3b": {
+     "scores": {
+      "natural": 5,
+      "correct": 5,
+      "glossary": 5,
+      "grammar": 5
+     },
+     "note": "Perfect match.",
+     "raw_error": null
+    }
+   }
+  },
+  {
+   "key": "chartErrExact",
+   "en": "Exactly right",
+   "hi": "बिल्कुल सही",
+   "judges": {
+    "gemma2:9b": {
+     "scores": {
+      "natural": 5,
+      "correct": 5,
+      "glossary": 5,
+      "grammar": 5
+     },
+     "note": "Natural, accurate, uses glossary terms correctly",
+     "raw_error": null
+    },
+    "llama3.1:8b": {
+     "scores": {
+      "natural": 1,
+      "correct": 1,
+      "glossary": 1,
+      "grammar": 5
+     },
+     "note": "Literal translation, expected more context-specific wording",
+     "raw_error": null
+    },
+    "qwen3:30b-a3b": {
+     "scores": {
+      "natural": 5,
+      "correct": 5,
+      "glossary": 5,
+      "grammar": 5
+     },
+     "note": "Perfect match.",
+     "raw_error": null
+    }
+   }
+  }
+ ]
+}

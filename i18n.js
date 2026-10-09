@@ -776,6 +776,17 @@ const STRINGS = {
     chartWhatHappened: "असली भाव",
     chartFlatHoldEstimate: "हमारा अनुमान",
     chartTooltipLabeled: ({ label, value }) => `${label}: ₹${value}`,
+    // 2026-10-09 (item 3): the past-days chart. LLM consensus (three local judges, blind), not native review;
+    // see reports/hindi_audit_2026-10/past_days_chart_judgments.json.
+    trackRecordHeading: "बीते दिनों की जाँच",
+    trackRecordAriaLabel: "बीते दिनों की जाँच में हर दिन अनुमान आधिकारिक भाव से कितना दूर था",
+    trackRecordCaption: "बीते दिनों की जाँच: अगले आधिकारिक भाव का अनुमान, उसके बाद आए भाव से हर दिन कितना दूर रहा, ₹ प्रति ग्राम में। लाइन के ऊपर का मतलब अनुमान ज़्यादा था, नीचे का मतलब कम। भरा हुआ बिंदु यानी आधिकारिक भाव अनुमान की रेंज के अंदर आया; खोखला हीरा यानी रेंज से बाहर गया। 7 अक्टूबर से पहले के दिन उसी तरीक़े को पुराने आँकड़ों पर दोबारा चलाकर निकाले गए हैं; बाद के दिन उस समय किए गए अनुमान हैं। यह पीछे मुड़कर देखना है, आज का अनुमान नहीं।",
+    trackRecordChartAriaLabel: "बीते दिनों की जाँच में अनुमान और आधिकारिक भाव का रोज़ का फ़र्क़, रेंज के अंदर या बाहर रहे दिनों के निशान के साथ",
+    chartErrInRange: "आधिकारिक भाव रेंज के अंदर",
+    chartErrOutRange: "आधिकारिक भाव रेंज के बाहर",
+    chartErrTooHigh: ({ value }) => `₹${value} ज़्यादा`,
+    chartErrTooLow: ({ value }) => `₹${value} कम`,
+    chartErrExact: "बिल्कुल सही",
 
     // ── Driver context ────────────────────────────────────────────────────────────
     driverHeadline: ({ lead, first, second }) => `${lead} — ${first}, और ${second}।`,
