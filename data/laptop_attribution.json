@@ -1,10 +1,10 @@
 {
  "schema_version": 1,
- "generated_at": "2026-10-08T05:41:34.507407+00:00",
+ "generated_at": "2026-10-09T08:36:29.493670+00:00",
  "marking": "VERIFIED from the laptop's System event log and the dispatcher log",
  "evidence": {
   "event_log_from": "2026-10-03T18:16:28.742778+05:30",
-  "dispatch_log_lines": 19,
+  "dispatch_log_lines": 24,
   "tasks_created_ist": "2026-10-05T12:59:58.207069+05:30",
   "task_scheduler_history_enabled": false
  },
@@ -74,10 +74,34 @@
    "class": "laptop_off",
    "detail": "the laptop was shut down (not asleep); dispatched 111 min after the slot",
    "dispatch_delay_min": 111
+  },
+  {
+   "slot_ist": "2026-10-09T01:40:00+05:30",
+   "class": "laptop_off",
+   "detail": "the laptop was shut down (not asleep); dispatched 693 min after the slot",
+   "dispatch_delay_min": 693
+  },
+  {
+   "slot_ist": "2026-10-09T07:30:00+05:30",
+   "class": "laptop_off",
+   "detail": "the laptop was shut down (not asleep); dispatched 343 min after the slot",
+   "dispatch_delay_min": 343
+  },
+  {
+   "slot_ist": "2026-10-09T10:40:00+05:30",
+   "class": "laptop_off",
+   "detail": "the laptop was shut down (not asleep); dispatched 153 min after the slot",
+   "dispatch_delay_min": 153
+  },
+  {
+   "slot_ist": "2026-10-09T11:10:00+05:30",
+   "class": "laptop_off",
+   "detail": "the laptop was shut down (not asleep); no catch-up dispatch logged",
+   "dispatch_delay_min": null
   }
  ],
  "counts": {
   "before_schedule_installed": 4,
-  "laptop_off": 7
+  "laptop_off": 11
  }
 }
