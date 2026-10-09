@@ -10,10 +10,10 @@
     "n": 31,
     "median_gap_hours": 3.26,
     "longest_gap_hours": 26.317777777777778,
-    "open_gap_hours": 20.51056934611111,
+    "open_gap_hours": 22.948372065833336,
     "as_of": "2026-10-08T14:21:53+00:00",
     "source": "successful readings in data/tanishq_scrape_outcomes.jsonl"
   },
   "schema_version": 2,
-  "generated_at_utc": "2026-10-09T10:52:31.049646+00:00"
+  "generated_at_utc": "2026-10-09T13:18:47.139437+00:00"
 }
