@@ -4,6 +4,16 @@ Kept current by CC. Last updated 2026-10-09 (CC). The weekly one-screen model no
 CC does everything it is allowed to do itself. What is left here is the one click below, plus a few
 optional items that need your account or your judgement.
 
+## 0. URGENT (found 2026-10-09 09:30 UTC): data sync is blocked
+
+**https://github.com/gaurav-gandhi-2411/gold-rate-tracker/pull/2588** : open it, click **Squash and merge**, confirm.
+
+Why: since `scraper-dependency-guard` became a required check, every bot data PR stops at "the base branch policy prohibits the merge" (the guard only runs on human PRs, never on the bot branches). The site's data has not updated since about 2026-10-08 23:55 UTC. PR #2588 makes the bot post that check for its own data-only PRs; it needs your click because it edits `.github/actions/`.
+
+Faster alternative, if you prefer: GitHub > Settings > Branches > master > untick `scraper-dependency-guard` for now; the waiting bot PRs merge on the next sync run; re-tick it after #2588 merges. CC does not post the status by hand for the waiting PRs (that would be a manual bypass of a required check).
+
+After either, CC confirms the next sync run says "Merged." and removes this section.
+
 ## 1. The one click (about 1 minute)
 
 **Encryption, last step (ADR 060): https://github.com/gaurav-gandhi-2411/gold-rate-tracker/pull/2558**
@@ -26,7 +36,7 @@ this section is here, #2558 was ready when CC last looked (see the report that p
 | Item | State |
 |---|---|
 | `scraper-dependency-guard` as a required check | Done by you, 2026-10-08. |
-| GoatCounter account and settings | Done by you, 2026-10-08 (site `gold-rate-tracker`; User-Agent, screen size and location collection off; referrer, language and sessions on). CC wires and checks it in the next PRs. |
+| GoatCounter visit counting | **Live since 2026-10-09 (PR #2581).** Verified in a real browser on the live site: two count requests (page and language), both answered 200, no cookie, no console error, the footer note shows. GoatCounter's numbers are not public (403/401 without your login), so the one-step check is yours, 30 seconds: open https://gold-rate-tracker.goatcounter.com, you should see the test visit from 2026-10-09 (path `/gold-rate-tracker/` and the event `lang/en`); and under Settings > Data collection confirm individual pageviews, User-Agent, screen size and location are all OFF (the footer note claims exactly that). |
 | The three runaway python processes | Stopped by you, 2026-10-08. |
 | Sleep instead of Shut down | Done by you. CC checks every visit slot with `scripts/laptop_attribution.py` and reports any miss while the laptop was on or asleep. |
 | Promotion horizon | Decided: **180 decision days** (rule v3, ADR 072 Amendment 2, hash `2499a124…846c73`). CC will not loosen the 0.05 error rate or the 5% minimum gain. |
