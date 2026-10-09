@@ -180,7 +180,9 @@
 // i18n.js privacyNote text, footer note appears). analytics.js, flags.js and i18n.js are precached.
 // 2026-10-09 (v86): visit counting no longer stops for the legacy Do Not Track header (it silenced the site
 // owner's own Edge); Global Privacy Control is still honoured. analytics.js and i18n.js (privacyNote) changed.
-const VERSION = "v86-20261009-analytics-dnt";
+// 2026-10-09 (v87): the header line about how often prices are checked now measures real price checks (gaps
+// between successful Tanishq readings, longest wait counts a wait still going). app.js, i18n.js changed.
+const VERSION = "v87-20261009-price-check-interval";
 const SHELL_CACHE = `gold-shell-${VERSION}`;
 
 const SHELL_FILES = [

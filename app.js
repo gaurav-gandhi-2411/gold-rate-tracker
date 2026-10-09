@@ -35,7 +35,7 @@ const COVERAGE_URL  = "data/coverage_metrics.json";
 // per IBJA publishing day (scripts/build_ibja_derived_prices.py --public-out). An estimate,
 // never a retailer observation; see chartSeries().
 const DERIVED_PRICES_URL = "data/ibja_derived_prices.json";
-const CADENCE_URL   = "data/cadence_metrics.json"; // R2: real observed data-commit interval, see ml/cadence_metrics.py
+const CADENCE_URL   = "data/cadence_metrics.json"; // R2: measured price-check interval (price_checks block), see ml/cadence_metrics.py
 // AE1 (audit 2026-09-10): walk-forward MEASURED coverage of the IBJA-calibrated
 // tier's actual displayed band, see ml.calibration.save_calibration_band_coverage.
 // Previously fetched by nothing -- the on-page confidence claim rendered
@@ -3278,12 +3278,15 @@ function renderCadenceStrings(metric) {
   // alone hides the tail users actually experience. Falls back to omitting
   // the worst-case clause (not a fabricated number) if an older cached
   // cadence_metrics.json predating this field is ever served.
-  const params = metric && typeof metric.median_gap_hours === "number"
+  // 2026-10-09: the figures now come from metric.price_checks (gaps between real, successful price
+  // readings), NOT the top-level data-commit gap, which is a different thing (see ml/cadence_metrics.py).
+  const pc = metric && metric.price_checks;
+  const params = pc && typeof pc.median_gap_hours === "number" && typeof pc.longest_gap_hours === "number"
     ? {
-        hours: metric.median_gap_hours.toFixed(1),
-        p90Hours: typeof metric.p90_gap_hours === "number" ? metric.p90_gap_hours.toFixed(1) : null,
-        n: metric.n,
-        asOf: String(metric.as_of).slice(0, 10),
+        hours: pc.median_gap_hours.toFixed(1),
+        longestHours: pc.longest_gap_hours.toFixed(1),
+        days: pc.window_days,
+        asOf: String(metric.generated_at_utc || pc.as_of).slice(0, 10), // when the figures were computed
       }
     : null;
   const firstVisitEl = document.querySelector('[data-i18n="firstVisitText"]');
