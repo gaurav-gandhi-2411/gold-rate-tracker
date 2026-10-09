@@ -105,15 +105,15 @@ test("the shipped flag is on and the shipped site code is gold-rate-tracker", ()
   assert.notEqual(ANALYTICS, ANALYTICS_SHIPPED);
 });
 
-test("SHIPPED (as served): view + language event go to the account's own endpoint, nothing else", () => {
+test("SHIPPED (as served): exactly one page view goes to the account's own endpoint, nothing else", () => {
   const { log, urls, sandbox } = load({ shipped: true });
   const endpoint = `https://${SHIPPED_CODE}.goatcounter.com/count`;
   assert.equal(sandbox.analyticsEndpoint(SHIPPED_CODE), endpoint);
   const u = urls();
-  assert.equal(u.length, 2);
+  assert.equal(u.length, 1);
   assert.ok(u.every((x) => x.startsWith(endpoint + "?")));
   assert.equal(new URL(u[0]).searchParams.get("p"), "/index.html");
-  assert.equal(new URL(u[1]).searchParams.get("p"), "lang/en");
+  assert.equal(log.listeners.length, 0);
   assert.equal(log.notes.length, 1);
   assert.equal(log.notes[0].id, "privacy-note");
 });
@@ -167,63 +167,71 @@ test("analyticsEndpoint builds only https://<code>.goatcounter.com/count", () =>
   assert.equal(sandbox.analyticsEndpoint("http://x"), "");
 });
 
-test("ON: sends a page view, a language event, adds the privacy note, registers the install listener", () => {
+test("ON: ONE request per visit (page view with a cleaned referrer), plus the privacy note", () => {
   const { log, urls } = load({
     flagOn: true,
     code: CODE,
-    referrer: "https://www.google.com/search?q=gold+rate+secret",
+    referrer: "https://www.google.com/search?q=gold+rate+secret#frag",
     lang: "hi",
     search: "?token=abc123&utm=x",
   });
   const u = urls();
-  assert.equal(u.length, 2);
+  assert.equal(u.length, 1);
   const view = new URL(u[0]);
   assert.equal(view.protocol, "https:");
   assert.equal(view.origin + view.pathname, ENDPOINT);
   assert.equal(view.searchParams.get("p"), "/index.html");
   assert.equal(view.searchParams.get("e"), null);
-  // Only p (and r when there is an outside referrer) -- no title, screen size, campaign query.
+  // Only p and r -- no title, screen size, campaign query, language or app-mode event.
   assert.deepEqual([...view.searchParams.keys()].sort(), ["p", "r"]);
-  for (const k of ["t", "s", "q", "b"]) assert.equal(view.searchParams.has(k), false, k);
+  for (const k of ["t", "s", "q", "b", "e"]) assert.equal(view.searchParams.has(k), false, k);
   // Page query string and hash never leave the browser.
   assert.ok(!u[0].includes("token") && !u[0].includes("abc123") && !u[0].includes("section-trend"));
-  // Referrer is reduced to its origin: the search query must never leave the browser.
-  assert.equal(view.searchParams.get("r"), "https://www.google.com");
-  assert.ok(!u[0].includes("secret"));
-  const ev = new URL(u[1]);
-  assert.equal(ev.searchParams.get("p"), "lang/hi");
-  assert.equal(ev.searchParams.get("e"), "true");
-  assert.deepEqual([...ev.searchParams.keys()].sort(), ["e", "p"]);
-  assert.deepEqual(log.listeners.map((l) => l.type), ["appinstalled"]);
+  // Referrer: origin + path; its query string and hash never leave the browser.
+  assert.equal(view.searchParams.get("r"), "https://www.google.com/search");
+  assert.ok(!u[0].includes("secret") && !u[0].includes("frag"));
+  assert.equal(log.listeners.length, 0, "no install listener: no second event");
   assert.equal(log.images.every((i) => i.referrerPolicy === "no-referrer"), true);
   assert.equal(log.notes.length, 1);
   assert.equal(log.notes[0].id, "privacy-note");
   assert.equal(log.notes[0].textContent, "<<privacyNote>>");
 });
 
-test("ON: same-site referrer is dropped; standalone adds a mode event; install fires an event", () => {
-  const { log, urls } = load({
+test("ON: a referrer from this site is dropped; another site on the same github.io origin is kept", () => {
+  const own = load({
     flagOn: true,
     code: CODE,
     referrer: "https://gaurav-gandhi-2411.github.io/gold-rate-tracker/how-we-know.html",
-    standalone: true,
+    pathname: "/gold-rate-tracker/",
   });
-  assert.equal(new URL(urls()[0]).searchParams.get("r"), null);
-  assert.deepEqual(urls().map((x) => new URL(x).searchParams.get("p")), ["/index.html", "lang/en", "mode/standalone"]);
-  log.listeners[0].fn();
-  assert.equal(new URL(urls().at(-1)).searchParams.get("p"), "pwa/installed");
+  assert.equal(new URL(own.urls()[0]).searchParams.get("r"), null);
+  const other = load({
+    flagOn: true,
+    code: CODE,
+    referrer: "https://gaurav-gandhi-2411.github.io/portfolio/?a=1",
+    pathname: "/gold-rate-tracker/",
+  });
+  assert.equal(new URL(other.urls()[0]).searchParams.get("r"), "https://gaurav-gandhi-2411.github.io/portfolio/");
 });
 
-test("ON: Global Privacy Control and offline each suppress every request; Do Not Track alone does not", () => {
-  for (const opts of [{ gpc: true }, { online: false }]) {
+test("ON: an installed-app launch is the SAME single request under a distinct path", () => {
+  const { urls, log } = load({ flagOn: true, code: CODE, standalone: true, pathname: "/gold-rate-tracker/" });
+  assert.equal(urls().length, 1);
+  assert.equal(new URL(urls()[0]).searchParams.get("p"), "/app/gold-rate-tracker/");
+  assert.equal(log.listeners.length, 0);
+});
+
+test("ON: Do Not Track, Global Privacy Control and offline each suppress every request and the note", () => {
+  const cases = [{ dnt: "1" }, { dnt: "yes" }, { gpc: true }, { online: false }];
+  for (const opts of cases) {
     const { log } = load({ flagOn: true, code: CODE, ...opts });
     assert.equal(log.images.length, 0, JSON.stringify(opts));
+    assert.equal(log.notes.length, opts.online === false ? 1 : 0, JSON.stringify(opts));
   }
-  // Do Not Track (legacy header) is deliberately not honoured: it silenced the owner's own browser
-  for (const dnt of ["1", "yes"]) {
-    const { log, urls } = load({ flagOn: true, code: CODE, dnt });
-    assert.equal(urls().length, 2, dnt);
-    assert.equal(log.notes.length, 1, dnt);
+  // Do Not Track "0" / unset is not a signal.
+  for (const dnt of ["0", null, "unspecified"]) {
+    const { urls } = load({ flagOn: true, code: CODE, dnt });
+    assert.equal(urls().length, 1, String(dnt));
   }
 });
 
@@ -242,16 +250,21 @@ test("ON never touches cookies or storage (the stubs throw on any access)", () =
   // load() would throw if analytics.js read document.cookie / localStorage / sessionStorage /
   // indexedDB; reaching the assertion proves it did not.
   const { log } = load({ flagOn: true, code: CODE, standalone: true });
-  assert.ok(log.images.length >= 3);
+  assert.equal(log.images.length, 1);
 });
 
-test("analyticsBuildUrl / analyticsReferrerOrigin are pure and strip detail", () => {
+test("analyticsBuildUrl / analyticsReferrerClean are pure and strip detail", () => {
   const { sandbox } = load();
   assert.equal(
     sandbox.analyticsBuildUrl(ENDPOINT, { kind: "view", path: "/x", referrer: "" }),
     ENDPOINT + "?p=%2Fx"
   );
-  assert.equal(sandbox.analyticsReferrerOrigin("not a url", "https://a.b"), "");
-  assert.equal(sandbox.analyticsReferrerOrigin("", "https://a.b"), "");
-  assert.equal(sandbox.analyticsReferrerOrigin("https://t.co/abc?x=1#y", "https://a.b"), "https://t.co");
+  const c = (r) => sandbox.analyticsReferrerClean(r, "https://a.b", "/site");
+  assert.equal(c("not a url"), "");
+  assert.equal(c(""), "");
+  assert.equal(c("javascript:alert(1)"), "");
+  assert.equal(c("https://t.co/abc?x=1#y"), "https://t.co/abc");
+  assert.equal(c("https://u:p@t.co/"), "https://t.co");
+  assert.equal(c("https://a.b/site/x.html"), "");
+  assert.equal(c("https://a.b/sitemap"), "https://a.b/sitemap");
 });
