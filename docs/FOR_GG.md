@@ -1,7 +1,7 @@
 # For GG: things only your account or decision can clear
 
 Kept current by CC. Last updated 2026-10-09 (CC). The weekly one-screen model note is `docs/MODEL_STATUS.md`.
-Short on purpose: two small items, one check, and a few optional items.
+Short on purpose: one check, two small items, and a few optional items.
 
 ## 1. One check (30 seconds; the analytics fix is live)
 
@@ -15,16 +15,17 @@ show as a separate path starting `/app`.)
 
 ## 2. Two small items (about 2 minutes, nothing is blocked on them)
 
-1. **Re-add the required check `scraper-dependency-guard`** (GitHub > Settings > Branches > master > required
-   status checks > add `scraper-dependency-guard`). CC proved both halves first: on a real bot PR the dispatched
-   guard posts a success status on the PR's head commit (PR #2579, 13:19 UTC today), and a normal PR that
-   changes `scraper/package.json` without a proof run still fails it (PR #2471). A new test
-   (`tests/test_required_checks_skippable.py`) now fails CI if any required check can be skipped by paths or
-   by a skip-ci commit.
-2. **Encrypt one more file (optional, when you have a minute): https://github.com/gaurav-gandhi-2411/gold-rate-tracker/pull/2610**
-   Registers `data/metrics_history.json` (it holds the Tanishq shop reading per day; the page never reads it).
-   Click **Squash and merge**. Then tell CC; CC runs the migration workflow and opens the second PR, which is the
-   one other click (same as before: rollback = revert the PR, the plaintext stays in git history).
+1. **Encrypt one more file (optional): https://github.com/gaurav-gandhi-2411/gold-rate-tracker/pull/2628**
+   It is the metrics-history file (the Tanishq shop reading per day; the page never reads it). CC ran the
+   migration and checked the PR: one encrypted file plus its checksum, the plaintext removed, `verify --all`
+   green. It is a draft, so click **Ready for review**, then **Squash and merge**. Rollback if ever needed:
+   revert the PR (the plaintext stays in git history, the producers re-encrypt on their next run).
+2. **Required check `scraper-dependency-guard`: it is not set yet.** At 19:00 UTC on 2026-10-09 master's required
+   checks were only `lint` and `pwa-js` (read from the GitHub branch-protection API), so the re-add did not save.
+   GitHub > Settings > Branches > master > Edit > required status checks > add `scraper-dependency-guard` > Save.
+   CC proved it first: on real bot PRs (#2625, #2626) the dispatched guard posts a success status on the head
+   commit and they merged on their own; a normal PR touching `scraper/package.json` without a proof run still
+   fails it (PR #2471). If a bot PR ever blocks, remove the check again the same way and tell CC.
 
 ## 3. Optional (nothing is blocked on these)
 
