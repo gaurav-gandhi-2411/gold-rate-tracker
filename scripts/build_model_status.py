@@ -184,6 +184,10 @@ def compute(now: datetime | None = None) -> dict[str, Any]:
 
 
 # --- rendering (plain language, numbers only from the JSON) --------------------------------------
+def _day(n: int) -> str:
+    return "day" if n == 1 else "days"
+
+
 def _money(x: float | None) -> str:
     return "n/a" if x is None else f"Rs.{x:,.0f}"
 
@@ -285,6 +289,12 @@ def _challenger_cells(r: dict[str, Any]) -> tuple[str, str, str]:
         f"safe estimate of the gain {lb * 100:+.1f}% (needs more than +5%); "
         f"{r['horizon_left']} decision days left"
     )
+    if r.get("blocked_reason"):
+        return (
+            gain,
+            stand + "; held back until a known flaw in its safety margin is fixed",
+            "held back",
+        )
     return gain, stand, "qualifies" if r["promotable"] else "not yet"
 
 
@@ -317,15 +327,15 @@ def render(s: dict[str, Any]) -> str:
         if live.get("direction_hit") is not None:
             lines.append(
                 f"- Right about up or down on **{live['direction_hit'] * 100:.0f}%** of "
-                f"{live['direction_n']} days the rate moved."
+                f"{live['direction_n']} {_day(live['direction_n'])} the rate moved."
             )
         if live.get("coverage") is not None:
             lines.append(
                 f"- The stated range held the actual rate on **{live['coverage'] * 100:.0f}%** of "
-                f"{live['coverage_n']} days (target 80%)."
+                f"{live['coverage_n']} {_day(live['coverage_n'])} (target 80%)."
             )
         if n < 20:
-            lines += ["", f"Only {n} days so far: too few to say whether this is good or bad."]
+            lines += ["", f"Only {n} {_day(n)} so far: too few to say whether this is good or bad."]
     lines += ["", "## What is being tested", ""]
     rows = s.get("challengers", {})
     if rows:

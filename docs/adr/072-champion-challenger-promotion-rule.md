@@ -98,7 +98,7 @@ arrives in the next part of this split (part B); the report files are committed 
   retrospective simulation that reports the 2.1%, so that figure is in-sample for the tuning; the
   independent AR and bootstrap checks above are the out-of-sample evidence.
 
-## Amendment 2 (2026-10-08): the horizon counts decision days; a control variate was tested and rejected (rule v3, in force)
+## Amendment 2 (2026-10-08): the horizon counts decision days; a control variate was tested and rejected (rule v3; superseded by Amendment 3 for p3_roll60)
 
 Decided for GG under his 2026-10-07 delegation, before any challenger has 20 forward days (VERIFIED:
 every forward count in the committed records is 0 at the time of writing). Only one number's unit
@@ -203,6 +203,28 @@ the least-squares slope and `mu_H` (114.49 Rs./g) both frozen from the 145-day r
 Not covered: the retrospective record is 145 days of re-run history, not forward days; the bootstrap
 cannot create regimes the record did not contain; the status page's lag 1-4 autocorrelation of the
 forward series is the live check on the autocorrelation assumption.
+
+## Amendment 3 (2026-10-09): the rolling-slope challenger cannot be promoted until its size is fixed (rule v4, in force)
+
+Decided before any challenger has 20 forward days (VERIFIED: forward n is 1 for the live model and 0 for every challenger at the time of writing). Only one thing changes: `RULE["promotion_blocked"] = {"p3_roll60": ...}`. A listed challenger is still scored, still shown on the status page and still counts in the family size (3), but `decide()` can never return it as promotable (`blocked_reason` is published and the status page says "held back"). Alpha, the 5% minimum gain, the first look, the variance rule, the horizon and every other value are unchanged.
+
+Rule hash of v4 (SHA-256 of canonical JSON of `ml.promotion.RULE`, checked by `tests/test_promotion.py`):
+
+`2a1ec6b814a3fa818eecee46102446f1a3c8b9e428fd4d406b441b6f6f8a410f`
+
+The v3 hash `2499a124d6e0673e73827cfcd380fa09f189715a607a2a2fe542320350846c73`, the v2 hash `1bbc5dd3eeaefeeed10671a4700378f4d68f63790da8a25acfc1fccf12c91290` and the v1 hash `0782301d8890788287be983c63d3d4e9bbd9eb0d8cd5d50d213960207dc44902` are kept so each supersession is checkable.
+
+### Why
+
+At a true gain of exactly 5% (the boundary, the worst wrongful case) `p3_roll60` is promoted in 9.2% of resampled paths with a 20-day block and 8.1% with a 40-day block (VERIFIED: `reports/promotion_v3_simulation.json`, `power_block_sensitivity`, additive gain, 10,000 paths, seed 42), against its allowance of 0.05 / 3 = 1.67%. Its daily difference from the live model is persistent (lag 1-4 autocorrelation 0.12 to 0.19), and the Newey-West lags of the rule do not capture slower persistence; more lags did not help (exploratory run, ADR Amendment 2). The other two challengers at the same boundary: `ensemble` 0.7% / 0.8%, `p3_monday` 2.6% / 2.5%. `p3_monday` is also above its 1.67% allowance but by 0.8 to 0.9 points, not 6; the fix below is calibrated for both.
+
+With `p3_roll60` held back, the largest possible family-wise wrongful promotion at the 5% boundary is the other two challengers' sum, at most 0.8% + 2.6% = 3.4% (a Bonferroni upper bound, INFERRED from the two block rows above), inside the 5% family-wise level.
+
+### What happens next (pre-registered here)
+
+1. Calibrate a challenger-specific variance inflation with a stationary and a block bootstrap of the challenger's own daily series: the smallest value on a 0.25 grid for which the wrongful-promotion rate at the 5% boundary is at most 1.67% for every block length in {10, 20, 40, 60} and the stationary bootstrap (mean block 20), at 10,000 paths.
+2. Prove it on resamplers not used for the calibration (block 30, a different seed, a stationary bootstrap with mean block 40, and an AR(1) series with the challenger's own standard deviation and autocorrelation 0.2 to 0.5): boundary rate at most 1.67% (upper Wilson bound reported), and report what it costs in power at a true 10% and 20% gain.
+3. Only then remove the block, in a new amendment with a new hash. If the proof fails, the challenger stays blocked.
 
 ## Decision: the rule (v1, superseded by Amendment 1)
 

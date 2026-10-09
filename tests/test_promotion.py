@@ -49,7 +49,7 @@ def _paired(n: int, champ_skill: float, chall_skill: float) -> dict[str, list[di
         for skill, bucket in ((champ_skill, champ), (chall_skill, chall)):
             ret = skill * f["y"] + float(rng.normal(0, 0.002))
             bucket.append({**f, "ret": ret, "p_up": 0.5 + (0.3 if ret > 0 else -0.3)})
-    return {"p3": champ, "p3_roll60": chall}
+    return {"p3": champ, "p3_monday": chall}
 
 
 def test_rule_is_frozen_by_hash() -> None:
@@ -76,17 +76,17 @@ def test_retro_and_pre_start_days_are_never_compared() -> None:
 def test_strong_challenger_is_promoted_after_the_minimum_days() -> None:
     recs = _paired(60, champ_skill=0.1, chall_skill=0.8)
     out = pr.decide("p3", recs)
-    row = out["challengers"]["p3_roll60"]
+    row = out["challengers"]["p3_monday"]
     assert row["n"] == 60 and row["looks_started"] and not row["retired"]
     assert row["lower_bound"] > pr.RULE["min_gain"] and row["gain_estimate"] > 0.5
-    assert row["promotable"] and out["promote"] == "p3_roll60"
+    assert row["promotable"] and out["promote"] == "p3_monday"
     at_first_look = pr.decide("p3", {k: v[:20] for k, v in recs.items()})
-    assert at_first_look["challengers"]["p3_roll60"]["looks_started"]
+    assert at_first_look["challengers"]["p3_monday"]["looks_started"]
 
 
 def test_no_look_before_the_first_look_day() -> None:
     recs = _paired(19, champ_skill=0.0, chall_skill=0.95)  # a huge, obvious gain
-    row = pr.decide("p3", recs)["challengers"]["p3_roll60"]
+    row = pr.decide("p3", recs)["challengers"]["p3_monday"]
     assert row["n"] == 19 and row["first_look_day"] == 20
     assert not row["looks_started"] and row["lower_bound"] is None and not row["promotable"]
     assert row["gain_estimate"] is None  # no number is shown before the first look
@@ -115,7 +115,7 @@ def test_identical_models_have_no_bound_and_fail_closed() -> None:
 
 def test_hourly_without_live_predictor_is_scored_but_not_switchable() -> None:
     recs = _paired(60, champ_skill=0.1, chall_skill=0.8)
-    recs["hourly"] = recs.pop("p3_roll60")
+    recs["hourly"] = recs.pop("p3_monday")
     out = pr.decide("p3", recs)
     row = out["challengers"]["hourly"]
     assert row["lower_bound_clears"] and not row["live_capable"] and not row["promotable"]
@@ -126,9 +126,9 @@ def test_hourly_without_live_predictor_is_scored_but_not_switchable() -> None:
 def test_never_promotes_at_or_after_the_horizon_and_retires() -> None:
     recs = _paired(200, champ_skill=0.1, chall_skill=0.8)  # 200 consecutive calendar days
     early = pr.decide("p3", {k: v[:150] for k, v in recs.items()})
-    assert early["promote"] == "p3_roll60" and not early["challengers"]["p3_roll60"]["retired"]
+    assert early["promote"] == "p3_monday" and not early["challengers"]["p3_monday"]["retired"]
     late = pr.decide("p3", recs)  # champion clock is now 199 days after registration
-    row = late["challengers"]["p3_roll60"]
+    row = late["challengers"]["p3_monday"]
     assert row["lower_bound_clears"] is True  # the evidence is as strong as ever ...
     assert row["retired"] and row["horizon_left"] == 0 and not row["promotable"]
     assert late["promote"] is None  # ... but a retired challenger is never promoted
@@ -151,16 +151,16 @@ def test_horizon_counts_decision_days_not_calendar_days() -> None:
     for key in recs:
         for f, d in zip(recs[key], days, strict=True):
             f["d0"] = d
-    reg = pr.RULE["registered"]["p3_roll60"]
+    reg = pr.RULE["registered"]["p3_monday"]
     assert reg == days[0]
     h = pr.RULE["horizon_days"]
-    ok = pr.decide("p3", recs, as_of=days[h - 1])["challengers"]["p3_roll60"]
-    gone = pr.decide("p3", recs, as_of=days[h])["challengers"]["p3_roll60"]
+    ok = pr.decide("p3", recs, as_of=days[h - 1])["challengers"]["p3_monday"]
+    gone = pr.decide("p3", recs, as_of=days[h])["challengers"]["p3_monday"]
     assert ok["days_since_registration"] == h - 1 and ok["horizon_left"] == 1 and not ok["retired"]
     assert gone["days_since_registration"] == h and gone["retired"] and not gone["promotable"]
     # 180 calendar days after registration is only ~129 decision days: still inside the horizon
     cal180 = (date.fromisoformat(reg) + timedelta(days=180)).isoformat()
-    inside = pr.decide("p3", recs, as_of=cal180)["challengers"]["p3_roll60"]
+    inside = pr.decide("p3", recs, as_of=cal180)["challengers"]["p3_monday"]
     assert not inside["retired"] and inside["days_since_registration"] < h
 
 
@@ -171,8 +171,8 @@ def test_missing_challenger_days_still_use_up_the_horizon() -> None:
     for key in recs:
         for f, d in zip(recs[key], days, strict=True):
             f["d0"] = d
-    recs["p3_roll60"] = recs["p3_roll60"][::2]  # issued on every second decision day only
-    row = pr.decide("p3", recs, as_of=days[-1])["challengers"]["p3_roll60"]
+    recs["p3_monday"] = recs["p3_monday"][::2]  # issued on every second decision day only
+    row = pr.decide("p3", recs, as_of=days[-1])["challengers"]["p3_monday"]
     assert row["retired"] and row["days_since_registration"] >= pr.RULE["horizon_days"]
 
 
@@ -183,7 +183,7 @@ def test_registry_is_part_of_the_frozen_rule() -> None:
     assert not set(pr.RULE["registered_on_first_record"]) & set(pr.LIVE_CAPABLE)
     moved = {**pr.RULE, "registered": {**reg, "p3_monday": "2026-11-01"}}
     assert pr.rule_sha256(moved) != pr.RULE_SHA256
-    assert pr.RULE["version"] == 3
+    assert pr.RULE["version"] == 4
     assert pr.RULE["horizon_unit"] == "decision_days" and pr.RULE["control_variate"] == "none"
 
 
@@ -197,7 +197,7 @@ def test_coverage_below_target_is_reported_and_blocks() -> None:
     # errors that keep growing: each day's range, built from earlier days, is too narrow
     rng = np.random.default_rng(3)
     grown = []
-    for i, f in enumerate(recs["p3_roll60"]):
+    for i, f in enumerate(recs["p3_monday"]):
         noise = float(rng.normal(0, 0.002 * (1 + i / 20)))
         grown.append({**f, "ret": f["y"] + noise})
     row = pr.compare(recs["p3"], grown)
@@ -207,8 +207,8 @@ def test_coverage_below_target_is_reported_and_blocks() -> None:
 def test_direction_worse_blocks_promotion() -> None:
     recs = _paired(60, champ_skill=0.1, chall_skill=0.8)
     # lower error but the stated direction is always wrong
-    recs["p3_roll60"] = [{**f, "p_up": 1.0 - f["p_up"]} for f in recs["p3_roll60"]]
-    row = pr.decide("p3", recs)["challengers"]["p3_roll60"]
+    recs["p3_monday"] = [{**f, "p_up": 1.0 - f["p_up"]} for f in recs["p3_monday"]]
+    row = pr.decide("p3", recs)["challengers"]["p3_monday"]
     assert row["lower_bound_clears"] and not row["direction_ok"] and not row["promotable"]
 
 
@@ -216,7 +216,7 @@ def test_coverage_below_target_blocks_promotion(monkeypatch) -> None:
     recs = _paired(60, champ_skill=0.1, chall_skill=0.8)
     # the challenger's own range misses every day: coverage 0 while its error is much lower
     monkeypatch.setattr(pr, "range_hits", lambda folds: {f["d0"]: False for f in folds})
-    row = pr.decide("p3", recs)["challengers"]["p3_roll60"]
+    row = pr.decide("p3", recs)["challengers"]["p3_monday"]
     assert row["lower_bound_clears"] and not row["coverage_ok"] and not row["promotable"]
 
 
@@ -250,7 +250,12 @@ def test_confidence_sequence_is_valid_on_an_autocorrelated_null() -> None:
 
 def test_adr_records_the_amendment_and_the_superseded_hash() -> None:
     text = Path("docs/adr/072-champion-challenger-promotion-rule.md").read_text(encoding="utf-8")
-    assert "Amendment 1" in text and "Amendment 2" in text and "superseded (v1)" in text
+    assert (
+        "Amendment 1" in text
+        and "Amendment 2" in text
+        and "Amendment 3" in text
+        and "superseded (v1)" in text
+    )
     assert "1bbc5dd3eeaefeeed10671a4700378f4d68f63790da8a25acfc1fccf12c91290" in text  # v2 hash
     assert "0782301d8890788287be983c63d3d4e9bbd9eb0d8cd5d50d213960207dc44902" in text  # v1 hash
     assert (
@@ -269,10 +274,10 @@ def test_champion_state_roundtrip_and_rollback(tmp_path) -> None:
     path = tmp_path / pr.CHAMPION_FILE
     state = pr.load_champion(path)
     assert state["champion"] == "p3" and state["history"] == []
-    new = pr.promote(state, "p3_roll60", {"gain": 0.07})
+    new = pr.promote(state, "p3_monday", {"gain": 0.07})
     pr.save_champion(path, new)
     loaded = pr.load_champion(path)
-    assert loaded["champion"] == "p3_roll60" and loaded["history"][0]["to"] == "p3_roll60"
+    assert loaded["champion"] == "p3_monday" and loaded["history"][0]["to"] == "p3_monday"
     back = pr.rollback(loaded)
     assert back["champion"] == "p3" and back["history"][-1]["event"] == "rolled_back"
     with pytest.raises(ValueError):
@@ -297,3 +302,18 @@ def test_unreadable_champion_state_fails_closed_to_p3(tmp_path, content) -> None
 def test_decide_output_is_json_serialisable() -> None:
     out = pr.decide("p3", _paired(120, 0.1, 0.8))
     json.dumps(out, default=float)
+
+
+def test_a_blocked_challenger_is_scored_but_never_promoted() -> None:
+    """Amendment 3: p3_roll60 is held back (its size is above its allowance) however strong it looks."""
+    recs = _paired(60, champ_skill=0.1, chall_skill=0.8)
+    recs["p3_roll60"] = recs.pop("p3_monday")
+    out = pr.decide("p3", recs)
+    row = out["challengers"]["p3_roll60"]
+    assert row["status"] == "scored" and row["lower_bound_clears"] and row["coverage_ok"]
+    assert row["blocked_reason"] and not row["promotable"] and out["promote"] is None
+    # the same evidence under an unblocked id is promoted, so the block is the only thing in the way
+    recs["p3_monday"] = recs.pop("p3_roll60")
+    ok = pr.decide("p3", recs)
+    assert ok["challengers"]["p3_monday"]["blocked_reason"] is None and ok["promote"] == "p3_monday"
+    assert pr.RULE["promotion_blocked"].keys() == {"p3_roll60"}

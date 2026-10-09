@@ -1,18 +1,24 @@
 # Model status
 
-Updated 2026-10-08. Computed from real forecast days only; no backtest figure appears here. Rule: ADR 072 (frozen, hash `2499a124d6e0`).
+Updated 2026-10-09. Computed from real forecast days only; no backtest figure appears here. Rule: ADR 072 (frozen, hash `2a1ec6b814a3`).
 
 ## What is live and how it is doing
 
-The live model has no scored real days yet (counting from 2026-10-07). Nothing is claimed until it has some.
+Real days scored since 2026-10-07: **1** (latest 2026-10-07).
+
+- Average miss on the next official rate: **Rs.27** per gram vs **Rs.11** if we had just repeated the last rate (+146.8%).
+- Right about up or down on **100%** of 1 day the rate moved.
+- The stated range held the actual rate on **100%** of 1 day (target 80%).
+
+Only 1 day so far: too few to say whether this is good or bad.
 
 ## What is being tested
 
 | Challenger | Real days | Where it stands | Error vs live | Verdict |
 |---|---|---|---|---|
-| Earlier model (ridge + small neural nets), now running in the background | 0 | first look after 20 days (0 so far), earliest 2026-11-04 | n/a | too early |
-| Live model re-fitted on the last 60 days only | 0 | first look after 20 days (0 so far), earliest 2026-11-04 | n/a | too early |
-| Live model with its own Monday setting | 0 | first look after 20 days (0 so far), earliest 2026-11-04 | n/a | too early |
+| Earlier model (ridge + small neural nets), now running in the background | 1 | first look after 20 days (1 so far), earliest 2026-11-03 | n/a | too early |
+| Live model re-fitted on the last 60 days only | 1 | first look after 20 days (1 so far), earliest 2026-11-03 | n/a | too early |
+| Live model with its own Monday setting | 1 | first look after 20 days (1 so far), earliest 2026-11-03 | n/a | too early |
 | Hourly world-price model (own check on 2026-10-16, then it joins) | 0 | not started | n/a | not started |
 | Live model averaged with the hourly model (joins after the hourly model does) | 0 | not started | n/a | not started |
 
@@ -22,6 +28,7 @@ A challenger replaces the live model only if we can be confident it beats it by 
 
 - Jeweller price visits: **7 of 18** scheduled visits since the schedule began (2026-10-05) ran within 45 minutes of their time (11 did not; the report cannot tell a laptop that was off from a failed visit).
 - Overnight model forecast: published on **2 of 4** nights, typically 194 minutes after the US gold close.
+- Why those 11 visits were missed (from the laptop's own records, checked 2026-10-08): 4 were before the timed visits were set up on 2026-10-05; 7 happened while the laptop was shut down. A laptop that is shut down cannot run a visit; the dispatcher also catches up once when the laptop is back, which records one late reading, not the missed ones.
 
 ## Dates
 
