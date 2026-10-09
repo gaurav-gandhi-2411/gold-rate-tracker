@@ -85,10 +85,20 @@ def sha256(path: Path) -> str:
 
 
 def horizon_days(rule: dict[str, Any]) -> tuple[int, np.ndarray]:
-    """Weekday decision days inside the horizon: counted from the first registration date, one
-    per Mon-Fri calendar day for ``horizon_days`` calendar days (public holidays ignored, so the
-    count is an upper bound). Returns (count, calendar-day offset of each decision day)."""
+    """Decision days inside the horizon. Rule v3 (ADR 072 Amendment 2) counts DECISION days: the
+    horizon is ``horizon_days`` days the champion issued a live forecast, so the count is exactly
+    ``horizon_days``. The calendar-day offset of each one assumes a Mon-Fri decision day on every
+    weekday from the first registration date (public holidays ignored, so offsets are a lower bound).
+    A v2 rule (no ``horizon_unit``) counted calendar days; that old meaning is kept for it.
+    Returns (count, calendar-day offset of each decision day)."""
     start = date.fromisoformat(rule["common_start"])
+    if rule.get("horizon_unit") == "decision_days":
+        offs, k = [], 0
+        while len(offs) < int(rule["horizon_days"]):
+            if (start + timedelta(days=k)).weekday() < 5:
+                offs.append(k)
+            k += 1
+        return len(offs), np.array(offs)
     offs = [
         k for k in range(int(rule["horizon_days"])) if (start + timedelta(days=k)).weekday() < 5
     ]
@@ -395,7 +405,7 @@ def render(r: dict[str, Any]) -> str:
         f"{r['retro_last_day']}). Those retrospective folds give variance and autocorrelation only; "
         "they are NOT evidence of any gain, and the gain in each row is set by hand. The 145 folds "
         "are not consecutive trading days, so real daily autocorrelation may differ. Rule hash "
-        f"`{r['rule_sha256'][:12]}`. Horizon: {n_h} weekday decision days in 180 calendar days "
+        f"`{r['rule_sha256'][:12]}`. Horizon: {n_h} decision days "
         "(holidays ignored). Per-challenger level alpha/3 = "
         f"{r['per_challenger_level']:.4f}; family-wise alpha 0.05.",
         "",
