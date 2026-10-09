@@ -15,7 +15,7 @@ import numpy as np
 
 from ml.backtest import load_ibja_series, run_backtest
 from ml.experiments.drift_naive import apply_gate, run_drift_naive_experiment
-from ml.metrics import compute_wilcoxon_p
+from ml.metrics import compute_wilcoxon_p, fold_mae_5d
 
 ROOT = Path(__file__).resolve().parent.parent.parent
 BACKTEST_JSON = ROOT / "data" / "backtest.json"
@@ -42,8 +42,8 @@ def extract_ge30ctx_gate_metrics(
             "beats_naive": False,
         }
 
-    mae_c_per_fold = [float(np.mean(f["mae_chronos_per_h"])) for f in ge30]
-    mae_n_per_fold = [float(np.mean(f["mae_naive_per_h"])) for f in ge30]
+    mae_c_per_fold = [fold_mae_5d(f, "chronos") for f in ge30]
+    mae_n_per_fold = [fold_mae_5d(f, "naive") for f in ge30]
 
     mae_variant = float(np.mean(mae_c_per_fold))
     mae_naive = float(np.mean(mae_n_per_fold))
@@ -128,8 +128,8 @@ def load_h5_reference() -> dict[str, Any]:
     n = len(ge30)
     if n == 0:
         return {}
-    mae_c = float(np.mean([np.mean(f["mae_chronos_per_h"]) for f in ge30]))
-    mae_n = float(np.mean([np.mean(f["mae_naive_per_h"]) for f in ge30]))
+    mae_c = float(np.mean([fold_mae_5d(f, "chronos") for f in ge30]))
+    mae_n = float(np.mean([fold_mae_5d(f, "naive") for f in ge30]))
     pct = (mae_n - mae_c) / mae_n if mae_n > 0 else 0.0
     return {
         "horizon": 5,

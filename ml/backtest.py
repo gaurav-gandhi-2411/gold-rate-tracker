@@ -258,6 +258,8 @@ def scores_only(result: dict) -> dict:
             "err_chronos_p50": [
                 round(p - a, 2) for p, a in zip(f["chronos_p50"], f["actuals"], strict=True)
             ],
+            "mae_chronos_5d": round(float(np.mean(f["mae_chronos_per_h"])), 2),
+            "mae_naive_5d": round(float(np.mean(f["mae_naive_per_h"])), 2),
             "in_pi_80": f["in_pi_80"],
             "dir_correct_5d": bool(
                 (f["chronos_p50"][-1] - f["naive"][0]) * (f["actuals"][-1] - f["naive"][0]) > 0

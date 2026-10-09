@@ -1203,6 +1203,8 @@ def _direction_rows(data_dir: Path) -> list[dict[str, Any]]:
 
 
 def row_chronos(data_dir: Path) -> dict[str, Any]:
+    from ml.metrics import fold_mae_5d  # per-fold MAE; works for scores-only and older files
+
     start = FORWARD_STARTS["chronos"]["date"]
     row = base_row(
         "chronos",
@@ -1228,18 +1230,18 @@ def row_chronos(data_dir: Path) -> dict[str, Any]:
     old = [f for f in folds if f["context_end_date"] < start]
     _loss_block(
         row,
-        [mean(f["mae_chronos_per_h"]) for f in fwd],
-        [mean(f["mae_naive_per_h"]) for f in fwd],
+        [fold_mae_5d(f, "chronos") for f in fwd],
+        [fold_mae_5d(f, "naive") for f in fwd],
         "Rs/g",
     )
     row["forward"]["extras"].append("5-day folds overlap; effective n is the HAC figure")
     if old:
-        d = [mean(f["mae_chronos_per_h"]) - mean(f["mae_naive_per_h"]) for f in old]
+        d = [fold_mae_5d(f, "chronos") - fold_mae_5d(f, "naive") for f in old]
         ci = hac_mean_ci(d, lag=4)
         row["retrospective"].update(
             text=(
-                f"n={len(old)} folds: Chronos {mean([mean(f['mae_chronos_per_h']) for f in old]):.1f} vs "
-                f"hold {mean([mean(f['mae_naive_per_h']) for f in old]):.1f} Rs/g"
+                f"n={len(old)} folds: Chronos {mean([fold_mae_5d(f, 'chronos') for f in old]):.1f} vs "
+                f"hold {mean([fold_mae_5d(f, 'naive') for f in old]):.1f} Rs/g"
                 + (
                     f", diff 95% CI [{ci['ci95'][0]:+.0f}, {ci['ci95'][1]:+.0f}] (lag 4)"
                     if ci["ci95"]

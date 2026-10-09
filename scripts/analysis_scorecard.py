@@ -443,8 +443,10 @@ def direction() -> dict[str, Any]:
 def chronos() -> dict[str, Any]:
     bt = json.loads((DATA / "backtest.json").read_text(encoding="utf-8"))
     f = pd.DataFrame(bt["folds"])
-    mc = np.array([np.mean(v) for v in f["mae_chronos_per_h"]])
-    mn = np.array([np.mean(v) for v in f["mae_naive_per_h"]])
+    from ml.metrics import fold_mae_5d
+
+    mc = np.array([fold_mae_5d(r, "chronos") for r in bt["folds"]])
+    mn = np.array([fold_mae_5d(r, "naive") for r in bt["folds"]])
     inpi = np.array([np.mean(v) for v in f["in_pi_80"]])
     return {
         "backtest_run_at": bt["backtest_run_at"],

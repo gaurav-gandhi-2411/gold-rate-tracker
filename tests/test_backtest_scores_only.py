@@ -97,3 +97,49 @@ def test_inference_ignores_aggregates_with_a_different_window_or_percentile():
 
 def test_too_few_recent_folds_gives_no_band():
     assert _compute_conformal_pi(scores_only(_levels_result(12)), 0) is None
+
+
+def test_per_fold_mae_is_the_same_from_either_shape():
+    from ml.metrics import fold_mae_5d
+
+    old = _levels_result(12)
+    new = scores_only(old)
+    for a, b in zip(old["folds"], new["folds"], strict=True):
+        for which in ("chronos", "naive"):
+            assert abs(fold_mae_5d(a, which) - fold_mae_5d(b, which)) < 0.006
+
+
+def test_scorecard_chronos_row_is_the_same_from_either_shape(tmp_path):
+    import importlib.util
+
+    spec = importlib.util.spec_from_file_location(
+        "bms", ROOT / "scripts" / "build_model_scorecard.py"
+    )
+    bms = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(bms)
+    start = bms.FORWARD_STARTS["chronos"]["date"]
+    old = _levels_result(40)
+    for f in old["folds"]:
+        f["context_end_date"] = "2026-09-01"  # all before the forward start: retrospective block
+    assert start > "2026-09-01"
+    rows = []
+    for name, bt in (("levels", old), ("scores", scores_only(old))):
+        d = tmp_path / name
+        d.mkdir()
+        (d / "backtest.json").write_text(json.dumps(bt), encoding="utf-8")
+        rows.append(bms.row_chronos(d))
+    # identical row (retrospective means, CI, status) from either file shape; no builder-error row
+    assert rows[0] == rows[1]
+    assert "builder error" not in json.dumps(rows[1])
+
+
+def test_the_contract_schema_accepts_both_shapes():
+    import pytest
+
+    jsonschema = pytest.importorskip("jsonschema")
+    from tests.test_schema_contracts import BACKTEST_SCHEMA
+
+    old = {**_levels_result(8), "dir_acc_5d_chronos": 0.5, "dir_acc_5d_naive": 0.5}
+    new = scores_only(old)
+    jsonschema.validate(old, {**BACKTEST_SCHEMA, "required": ["n_folds", "folds"]})
+    jsonschema.validate(new, {**BACKTEST_SCHEMA, "required": ["n_folds", "folds"]})
