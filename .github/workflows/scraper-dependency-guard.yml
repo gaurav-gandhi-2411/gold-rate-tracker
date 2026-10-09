@@ -20,14 +20,25 @@ name: Scraper dependency guard
 on:
   pull_request:
     types: [opened, synchronize, reopened, edited]
+  # bot-pr-sync's branches are pushed with a PAT and never fire the pull_request trigger (that is why
+  # lint.yml is dispatched and forwarded as commit statuses). Since this check became required
+  # (2026-10-08) every bot PR sat at "base branch policy prohibits the merge" (2026-10-09). The action
+  # now dispatches this workflow with the PR number, and the last step forwards the result as a
+  # commit status, exactly as lint.yml does.
+  workflow_dispatch:
+    inputs:
+      pr:
+        description: "PR number to check (set by bot-pr-sync)"
+        required: true
 
 permissions:
   contents: read
   pull-requests: read
   actions: read # reads the cited run, its jobs and its job log
+  statuses: write # forwards the result as a commit status for dispatched runs
 
 concurrency:
-  group: scraper-dependency-guard-${{ github.event.pull_request.number }}
+  group: scraper-dependency-guard-${{ github.event.pull_request.number || inputs.pr }}
   cancel-in-progress: true
 
 jobs:
@@ -44,5 +55,15 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           python scripts/check_scraper_dependency_change.py \
-            --pr "${{ github.event.pull_request.number }}" \
+            --pr "${{ github.event.pull_request.number || inputs.pr }}" \
             --repo "${{ github.repository }}"
+      - name: Forward the result as a commit status (dispatched runs only)
+        if: success() && github.event_name == 'workflow_dispatch'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TARGET_SHA: ${{ github.sha }}
+        run: |
+          gh api "repos/${GITHUB_REPOSITORY}/statuses/${TARGET_SHA}" \
+            -f state=success -f context=scraper-dependency-guard \
+            -f description="Forwarded from run ${GITHUB_RUN_ID} (job result: success)" \
+            -f target_url="${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}"

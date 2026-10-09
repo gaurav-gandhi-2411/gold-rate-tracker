@@ -143,15 +143,10 @@ runs:
         fi
 
         gh workflow run lint.yml --ref "${BRANCH}"
+        # scraper-dependency-guard is a required check; its pull_request trigger never fires for these
+        # PAT-pushed branches, so dispatch it too (it forwards its result as a commit status).
+        gh workflow run scraper-dependency-guard.yml --ref "${BRANCH}" -f pr="${PR_NUM}"
 
-        # scraper-dependency-guard became a REQUIRED check on 2026-10-08. Its workflow only runs on
-        # pull_request events, which never fire for these bot branches (that is why lint is dispatched
-        # and forwarded as a commit status), so without this every bot PR sat at "base branch policy
-        # prohibits the merge" and data sync stopped. The guard only has a job to do when a PR changes
-        # scraper/package*.json; the allowlist check above has already refused any diff outside
-        # data/, og.png and reports/lighthouse/, so for a PR that gets this far the guard's condition
-        # cannot hold. Post the status for the current head SHA (re-posted if the SHA changes).
-        GUARD_POSTED=""
         ITERATIONS=$(( WAIT_MINUTES * 6 ))  # one iteration per 10s
         echo "Waiting up to ${WAIT_MINUTES} minutes for PR #${PR_NUM} (${BRANCH}) to pass checks and merge..."
         for i in $(seq 1 "${ITERATIONS}"); do
@@ -175,18 +170,11 @@ runs:
               gh pr update-branch "${PR_NUM}" || true
               sleep 5
               gh workflow run lint.yml --ref "${BRANCH}" || true
+              gh workflow run scraper-dependency-guard.yml --ref "${BRANCH}" -f pr="${PR_NUM}" || true
             fi
           fi
 
           CURRENT_SHA=$(gh pr view "${PR_NUM}" --json headRefOid --jq '.headRefOid' 2>/dev/null || echo "")
-          if [ -n "$CURRENT_SHA" ] && [ "$CURRENT_SHA" != "$GUARD_POSTED" ]; then
-            if gh api "repos/${GITHUB_REPOSITORY}/statuses/${CURRENT_SHA}" \
-              -f state=success -f context=scraper-dependency-guard \
-              -f description="bot-pr-sync: diff confined to data/ (no scraper/package*.json), proof not applicable" \
-              >/dev/null 2>&1; then
-              GUARD_POSTED="$CURRENT_SHA"
-            fi
-          fi
           if [ -n "$CURRENT_SHA" ]; then
             PASS_COUNT=$(gh api "repos/${GITHUB_REPOSITORY}/commits/${CURRENT_SHA}/check-runs" \
               --jq '[.check_runs[] | select((.name=="lint" or .name=="pwa-js") and .conclusion=="success")] | length' 2>/dev/null || echo 0)
