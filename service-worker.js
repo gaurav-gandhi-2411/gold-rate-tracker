@@ -190,7 +190,9 @@
 // sent as origin + path. analytics.js and i18n.js (privacyNote) changed.
 // 2026-10-09 (v90): the 'test on past weeks' chart plots the estimate's daily ERROR (Rs/g, with inside/outside-range
 // marks) instead of the raw official rates; data/backtest.json is scores only. app.js, i18n.js, index.html changed.
-const VERSION = "v90-20261009-error-chart";
+// 2026-10-09 (v91): the page no longer requests three encrypted research files (page_v2 is off), so there are no
+// 404s in the console. app.js changed.
+const VERSION = "v91-20261009-no-404s";
 const SHELL_CACHE = `gold-shell-${VERSION}`;
 
 const SHELL_FILES = [
