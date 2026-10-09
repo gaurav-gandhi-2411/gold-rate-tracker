@@ -48,7 +48,7 @@ import numpy as np
 
 # --- the frozen rule (ADR 072, version 2 = Amendment 1) ------------------------------------------
 RULE: dict[str, Any] = {
-    "version": 5,  # 1 = fixed-n DM + BH; 2 = CS; 3 = horizon unit; 4 = roll60 held back; 5 = calibrated sizes
+    "version": 7,  # 1 = fixed-n DM + BH; 2 = CS; 3 = horizon unit; 4-6 = holds; 7 = all three calibrated, none held
     "design": "one-sided normal-mixture confidence sequence on the mean of "
     "e = (1 - min_gain) * loss_champion - loss_challenger; promote when the lower bound > 0",
     "min_gain": 0.05,  # challenger mean |error| at least 5% below the champion's (ratio of means)
@@ -64,7 +64,7 @@ RULE: dict[str, Any] = {
     # p3_roll60: smallest value on a 0.25 grid that keeps its wrongful-promotion rate at the 5%
     # boundary at or under 1.67% on every calibration resampler, proven on held-out ones
     # (scripts/calibrate_challenger_size.py, reports/challenger_size_calibration.md).
-    "variance_inflation_by_challenger": {"p3_roll60": 3.0},
+    "variance_inflation_by_challenger": {"p3_roll60": 3.0, "ensemble": 2.0, "p3_monday": 2.25},
     "mix_sd": 0.3,  # sd of the normal mixing distribution over the tilt, in units of 1/sigma
     "min_forward_days": 20,  # no look before this many days both models issued live
     "horizon_days": 180,  # decision days since registration; at or after it: retired, not promoted
@@ -75,7 +75,7 @@ RULE: dict[str, Any] = {
     # ADR 072 Amendment 3: a challenger listed here is still scored and reported but can never be
     # promoted. p3_roll60 is promoted at the 5% boundary in 8-9% of resampled paths against its
     # 1.67% allowance (reports/promotion_v3_simulation.md, block 20 and 40) until its size is fixed.
-    "promotion_blocked": {"p3_monday": "size proof failed on a held-out resampler (Amendment 4)"},
+    "promotion_blocked": {},  # empty since Amendment 6: round 2 passed for ensemble and p3_monday
     "coverage_nominal": 0.80,  # challenger's own 80% range; promotion needs it not below target
     "coverage_alpha": 0.05,  # exact one-sided binomial: coverage significantly below 0.80 blocks
     "direction_rule": "challenger direction hit-rate >= champion's on the same days",
@@ -89,7 +89,7 @@ RULE: dict[str, Any] = {
     # not live-capable, so never promotable: registered on the first day they have a forward record
     "registered_on_first_record": ["hourly", "p3_hourly"],
 }
-RULE_SHA256 = "ce9e1eeeb49cbbf03e4d0b254f09b282285ecdb9318509039dcfd15289615836"
+RULE_SHA256 = "e4efabec2193950ee4bf0193b00b3f17eed8c0cf5f81da4394d13acb51fdbdfa"
 
 CHAMPION_FILE = "champion_state.json"
 DEFAULT_CHAMPION = "p3"
