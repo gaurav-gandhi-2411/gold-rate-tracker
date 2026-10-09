@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import importlib.util
 import sys
+from datetime import date, timedelta
 from pathlib import Path
 
 import numpy as np
@@ -35,9 +36,18 @@ def test_bootstrap_indices_are_deterministic_and_in_range() -> None:
     assert 0.7 < float(step.mean()) < 0.95
 
 
-def test_horizon_is_weekdays_inside_180_calendar_days() -> None:
+def test_horizon_is_180_decision_days_under_rule_v3() -> None:
     n, offs = sim.horizon_days(pr.RULE)
-    assert n == len(offs) and 125 <= n <= 130 and offs.max() < pr.RULE["horizon_days"]
+    assert n == len(offs) == pr.RULE["horizon_days"] == 180
+    assert offs.max() > 180  # 180 weekday decision days span about 250 calendar days
+    start = date.fromisoformat(pr.RULE["common_start"])
+    assert all((start + timedelta(days=int(k))).weekday() < 5 for k in offs)
+
+
+def test_a_v2_rule_still_counts_calendar_days() -> None:
+    rule = {k: v for k, v in pr.RULE.items() if k != "horizon_unit"}
+    n, offs = sim.horizon_days(rule)
+    assert n == len(offs) and 125 <= n <= 130 and offs.max() < rule["horizon_days"]
 
 
 def test_rolling_error_rule_matches_ml_demotion_estimator() -> None:
