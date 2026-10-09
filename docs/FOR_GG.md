@@ -4,6 +4,16 @@ Kept current by CC. Last updated 2026-10-09 (CC). The weekly one-screen model no
 CC does everything it is allowed to do itself. What is left here is the one click below, plus a few
 optional items that need your account or your judgement.
 
+## 0. URGENT (found 2026-10-09 09:30 UTC): data sync is blocked
+
+**https://github.com/gaurav-gandhi-2411/gold-rate-tracker/pull/2588** : open it, click **Squash and merge**, confirm.
+
+Why: since `scraper-dependency-guard` became a required check, every bot data PR stops at "the base branch policy prohibits the merge" (the guard only runs on human PRs, never on the bot branches). The site's data has not updated since about 2026-10-08 23:55 UTC. PR #2588 makes the bot post that check for its own data-only PRs; it needs your click because it edits `.github/actions/`.
+
+Faster alternative, if you prefer: GitHub > Settings > Branches > master > untick `scraper-dependency-guard` for now; the waiting bot PRs merge on the next sync run; re-tick it after #2588 merges. CC does not post the status by hand for the waiting PRs (that would be a manual bypass of a required check).
+
+After either, CC confirms the next sync run says "Merged." and removes this section.
+
 ## 1. The one click (about 1 minute)
 
 **Encryption, last step (ADR 060): https://github.com/gaurav-gandhi-2411/gold-rate-tracker/pull/2558**
