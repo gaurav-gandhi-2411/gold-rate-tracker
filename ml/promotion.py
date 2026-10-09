@@ -355,6 +355,8 @@ def decide(
     """Compare every challenger in ``records`` with the champion and say who, if anyone, is promoted.
 
     A challenger is promotable only when ALL hold: it has a live predictor (LIVE_CAPABLE); it is not
+    listed in ``rule['promotion_blocked']`` (ADR 072 Amendments 3-4; its bound uses its own
+    ``variance_inflation_by_challenger`` entry, if any); it is not
     retired (180 decision days since registration, ``horizon_left`` 0); at least ``min_forward_days``
     forward days; the confidence-sequence lower bound of its error gain clears ``min_gain`` at the
     per-challenger level alpha / family_size; coverage not below target; direction not worse. At
@@ -373,11 +375,12 @@ def decide(
     winners = []
     for cid, r in rows.items():
         r["live_capable"] = cid in LIVE_CAPABLE
-        r["blocked_reason"] = rule.get("promotion_blocked", {}).get(cid)
+        held = rule.get("promotion_blocked", {})
+        r["blocked_reason"] = held.get(cid) if cid in held else None
         r["promotable"] = bool(
             r["status"] == "scored"
             and r["live_capable"]
-            and not r["blocked_reason"]
+            and cid not in held
             and not r["retired"]
             and r["looks_started"]
             and r["lower_bound_clears"]

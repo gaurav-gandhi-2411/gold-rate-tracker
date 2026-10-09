@@ -333,3 +333,12 @@ def test_roll60_uses_its_calibrated_inflation_and_is_promotable_again() -> None:
     recs["p3_roll60"] = recs.pop("ensemble")
     row = pr.decide("p3", recs)["challengers"]["p3_roll60"]
     assert row["blocked_reason"] is None and row["promotable"]
+    # the live path (decide -> compare) applies the inflation: on identical evidence roll60's bound
+    # is lower than an unblocked challenger's, by the factor sqrt(3.0 / 1.5) on the half-width
+    recs["ensemble"] = [dict(f) for f in recs["p3_roll60"]]
+    rows = pr.decide("p3", recs)["challengers"]
+    lb_roll, lb_ens = rows["p3_roll60"]["lower_bound"], rows["ensemble"]["lower_bound"]
+    assert lb_roll < lb_ens
+    mean_gain = rows["ensemble"]["gain"]
+    ratio = (mean_gain - lb_roll) / (mean_gain - lb_ens)
+    assert abs(ratio - (3.0 / 1.5) ** 0.5) < 0.05, ratio
