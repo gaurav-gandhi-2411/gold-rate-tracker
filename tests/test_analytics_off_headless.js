@@ -57,6 +57,10 @@ function assert(label, ok, detail = "") {
 }
 
 const NOTE_RE = /<p [^>]*id="privacy-note"[^>]*>[\s\S]*?<\/p>/;
+// The page animates cards in with class changes whose ORDER depends on timing (card-enter /
+// reveal-visible); compare class sets, not their order, so the check is not flaky.
+const norm = (html) =>
+  html.replace(/class="([^"]*)"/g, (_m, c) => `class="${c.split(/\s+/).sort().join(" ")}"`);
 
 async function load(browser, base, { blockAnalytics = false, flagOff = false } = {}) {
   const ctx = await browser.newContext({ serviceWorkers: "block" });
@@ -103,7 +107,7 @@ async function run() {
     assert("the blocked-analytics page has no note and sent no beacon",
       !blocked.html.includes("privacy-note") && !blocked.requests.some((u) => u.includes(BEACON_HOST)));
     assert("the page is identical except for exactly the one privacy-note element",
-      on.html.replace(NOTE_RE, "") === blocked.html,
+      norm(on.html.replace(NOTE_RE, "")) === norm(blocked.html),
       `len ${on.html.replace(NOTE_RE, "").length} vs ${blocked.html.length}`);
     assert("no cookie is set (browser cookie jar and document.cookie)",
       on.cookies.length === 0 && on.storage.cookie === "");
@@ -117,7 +121,7 @@ async function run() {
       !off.requests.some((u) => u.includes("/count") || u.includes(BEACON_HOST)));
     assert("no privacy note is rendered while the flag is off",
       !off.html.includes("privacy-note"));
-    assert("the flag-off DOM is identical to the analytics-blocked DOM", off.html === blocked.html);
+    assert("the flag-off DOM is identical to the analytics-blocked DOM", norm(off.html) === norm(blocked.html));
   } finally {
     await browser.close();
     server.close();
