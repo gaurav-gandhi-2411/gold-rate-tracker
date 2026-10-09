@@ -1,0 +1,10 @@
+{
+ "category": "retailer markup_pct/markup_rs over public IBJA: inverts to price",
+ "ciphertext": "data/encrypted/reports/markup_reversion/shadow.json.enc",
+ "ciphertext_sha256": "c4687e1921c0b7a8e274694d4d8dcee91160ca34bf4f97f023d2740852685d1b",
+ "format": "GRTENC v1, AES-256-GCM, scrypt",
+ "key_id": "88fadeb62be0b8f4",
+ "path": "reports/markup_reversion/shadow.json",
+ "plaintext_bytes": 500,
+ "plaintext_sha256": "96ea7055efe24710ad9814e2ca525608bc3ddcd84cc7f202f80cc8ffda062f50"
+}

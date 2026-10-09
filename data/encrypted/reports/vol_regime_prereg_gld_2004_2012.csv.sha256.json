@@ -1,0 +1,10 @@
+{
+ "category": "frozen research snapshot (Yahoo Finance GLD closes, ADR 044)",
+ "ciphertext": "data/encrypted/reports/vol_regime_prereg_gld_2004_2012.csv.enc",
+ "ciphertext_sha256": "c43545c56985f33377b585b38e95f89f30ea2aebb0e3e5177af8b508db60ac60",
+ "format": "GRTENC v1, AES-256-GCM, scrypt",
+ "key_id": "88fadeb62be0b8f4",
+ "path": "reports/vol_regime_prereg_gld_2004_2012.csv",
+ "plaintext_bytes": 45773,
+ "plaintext_sha256": "9aa4143f1b1e4326a686f885724966d360fd22aa85c75ee8b7e1939b2e141127"
+}
