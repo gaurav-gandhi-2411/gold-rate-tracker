@@ -529,6 +529,16 @@ def compute_tanishq_silence(
     return None
 
 
+def _fold_dir_correct(fold: dict) -> bool:
+    """Whether one fold's 5-day direction call was right. A scores-only backtest.json (ADR 060, 2026-10-09)
+    stores the verdict (``dir_correct_5d``) instead of the price levels it is derived from."""
+    if "dir_correct_5d" in fold:
+        return bool(fold["dir_correct_5d"])
+    return (fold["chronos_p50"][-1] - fold["naive"][0]) * (
+        fold["actuals"][-1] - fold["naive"][0]
+    ) > 0
+
+
 def compute_dir_acc_30f(backtest: dict) -> float:
     """Direction accuracy on the last 30 backtest folds (or all if fewer).
 
@@ -539,12 +549,7 @@ def compute_dir_acc_30f(backtest: dict) -> float:
     if not folds:
         return 0.0
     recent = folds[-30:]
-    correct = sum(
-        1
-        for fold in recent
-        if (fold["chronos_p50"][-1] - fold["naive"][0]) * (fold["actuals"][-1] - fold["naive"][0])
-        > 0
-    )
+    correct = sum(1 for fold in recent if _fold_dir_correct(fold))
     return correct / len(recent)
 
 

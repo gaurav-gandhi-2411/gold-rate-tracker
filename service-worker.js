@@ -185,7 +185,9 @@
 // 2026-10-09 (v88): page-claims audit: the "estimate accuracy" drift block and verdict sentence are gone, how-we-know
 // quotes the next-rate range's own tested hit rate, the target shows a date not a clock time, the direction record
 // admits the days also picked the model. app.js, how-we-know.js, how-we-know-strings.js changed.
-const VERSION = "v88-20261009-page-claims-audit";
+// 2026-10-09 (v90): the 'test on past weeks' chart plots the estimate's daily ERROR (Rs/g, with inside/outside-range
+// marks) instead of the raw official rates; data/backtest.json is scores only. app.js, i18n.js, index.html changed.
+const VERSION = "v90-20261009-error-chart";
 const SHELL_CACHE = `gold-shell-${VERSION}`;
 
 const SHELL_FILES = [

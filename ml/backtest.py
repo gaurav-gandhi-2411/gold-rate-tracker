@@ -46,6 +46,11 @@ IBJA_PARQUET = DATA_DIR / "ibja_rates.parquet"
 BACKTEST_JSON = DATA_DIR / "backtest.json"
 
 _HORIZON = 5
+# ml/inference.py builds its conformal band from the last 30 folds' absolute flat-hold errors at the
+# 80th percentile. The scores-only file carries those aggregates instead of the folds' levels; inference
+# checks both numbers match its own before using them (else it falls back to folds, then to None).
+CONFORMAL_FOLDS = 30
+CONFORMAL_PCT = 80
 logger = logging.getLogger(__name__)
 
 
@@ -216,6 +221,53 @@ def run_backtest(
     }
 
 
+def scores_only(result: dict) -> dict:
+    """The publishable form of a backtest result: scores, no price levels (ADR 060, 2026-10-09).
+
+    The folds of ``run_backtest`` carry the raw IBJA series (``actuals``), the context's last value
+    (``naive``) and the model's quantiles, and a flat-hold error per fold is a day-over-day change of that
+    series, so none of them are published. What is kept: per fold the model's SIGNED one-to-five-day error
+    in Rs/g (``err_chronos_p50``, which needs the model to reproduce), whether each day fell inside the 80%
+    range, and whether the 5-day direction was right; plus the recent flat-hold error aggregates the
+    conformal band needs (``naive_error_recent``: 80th percentile and mean over the last 30 folds, per
+    horizon). Idempotent: an already scores-only result is returned unchanged.
+    """
+    if result.get("schema") == "scores_only_v1":
+        return result
+    folds = result["folds"]
+    recent = [
+        f for f in folds[-CONFORMAL_FOLDS:] if len(f["actuals"]) >= 5 and len(f["naive"]) >= 5
+    ]
+    err = np.abs(np.array([f["actuals"] for f in recent]) - np.array([f["naive"] for f in recent]))
+    h = err.shape[1] if len(recent) else 0
+    out = {k: v for k, v in result.items() if k != "folds"}
+    out["schema"] = "scores_only_v1"
+    out["naive_error_recent"] = {
+        "folds_window": CONFORMAL_FOLDS,
+        "pct": CONFORMAL_PCT,
+        "n": len(recent),
+        "p_by_h": [round(float(np.percentile(err[:, i], CONFORMAL_PCT)), 1) for i in range(h)],
+        "mean_by_h": [round(float(np.mean(err[:, i])), 1) for i in range(h)],
+    }
+    out["folds"] = [
+        {
+            "fold_id": f["fold_id"],
+            "context_end_date": f["context_end_date"],
+            "context_size": f["context_size"],
+            "sub_30_context": f["sub_30_context"],
+            "err_chronos_p50": [
+                round(p - a, 2) for p, a in zip(f["chronos_p50"], f["actuals"], strict=True)
+            ],
+            "in_pi_80": f["in_pi_80"],
+            "dir_correct_5d": bool(
+                (f["chronos_p50"][-1] - f["naive"][0]) * (f["actuals"][-1] - f["naive"][0]) > 0
+            ),
+        }
+        for f in folds
+    ]
+    return out
+
+
 def _print_report(result: dict) -> None:
     n = result["n_folds"]
     mc = result["mae_5d_avg_chronos"]
@@ -262,6 +314,11 @@ def main() -> None:
     group.add_argument(
         "--report", action="store_true", help="Print headline from data/backtest.json"
     )
+    group.add_argument(
+        "--to-scores-only",
+        action="store_true",
+        help="Rewrite data/backtest.json without price levels (one-off conversion; idempotent)",
+    )
     args = parser.parse_args()
 
     if args.report:
@@ -270,6 +327,13 @@ def main() -> None:
             raise SystemExit(1)
         result = json.loads(BACKTEST_JSON.read_text())
         _print_report(result)
+        raise SystemExit(0)
+
+    if args.to_scores_only:
+        BACKTEST_JSON.write_text(
+            json.dumps(scores_only(json.loads(BACKTEST_JSON.read_text())), indent=2) + "\n"
+        )
+        print(f"Rewrote {BACKTEST_JSON} as scores only.")
         raise SystemExit(0)
 
     # --run path
@@ -289,7 +353,7 @@ def main() -> None:
     _print_report(result)
 
     DATA_DIR.mkdir(exist_ok=True)
-    BACKTEST_JSON.write_text(json.dumps(result, indent=2) + "\n")
+    BACKTEST_JSON.write_text(json.dumps(scores_only(result), indent=2) + "\n")
     print(f"Backtest written to {BACKTEST_JSON} ({result['n_folds']} folds).")
 
 

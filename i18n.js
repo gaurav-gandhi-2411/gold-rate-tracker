@@ -185,10 +185,10 @@ const STRINGS = {
     thDelta: "Change",
     loadingText: "Loading…",
     historyCardsAriaLabel: "Price readings",
-    trackRecordAriaLabel: "Our past estimates and the actual gold prices",
+    trackRecordAriaLabel: "How far the estimate was from the official rate each day, in a test on past weeks",
     trackRecordHeading: "A test on past weeks",
-    trackRecordCaption: "In a test on past weeks: a simple estimate (dashed) and the actual price (gold). These are past results, not our live estimates.",
-    trackRecordChartAriaLabel: "Our past estimates and the actual gold prices",
+    trackRecordCaption: "In a test on past weeks: how far the one-day-ahead estimate was from the official rate each day, in ₹ per gram. Above the line means the estimate was too high, below the line too low. A filled dot means the official rate stayed inside the estimate's range that day; a hollow diamond means it fell outside. These are past results, not our live estimates.",
+    trackRecordChartAriaLabel: "Daily gap between the estimate and the official rate in a test on past weeks, with marks for days inside or outside the range",
     methodologySummary: "How this works",
     // U1 audit (2026-09-23): "calibrate it to match" -> "adjust it to match" (no
     // jargon), and IBJA now gets its one plain-words explanation right here, the
@@ -415,6 +415,11 @@ const STRINGS = {
     chartNoteTanishq: "Tanishq's listed rate",
     chartWhatHappened: "Actual price",
     chartFlatHoldEstimate: "Our estimate",
+    chartErrInRange: "Official rate inside the range",
+    chartErrOutRange: "Official rate outside the range",
+    chartErrTooHigh: ({ value }) => `₹${value} too high`,
+    chartErrTooLow: ({ value }) => `₹${value} too low`,
+    chartErrExact: () => "Exactly right",
     chartTooltipLabeled: ({ label, value }) => `${label}: ₹${value}`,
 
     // ── Driver context ────────────────────────────────────────────────────────────
@@ -601,8 +606,6 @@ const STRINGS = {
     thDelta: "बदलाव",
     loadingText: "लोड हो रहा है…",
     historyCardsAriaLabel: "दर्ज किए गए भाव",
-    trackRecordAriaLabel: "हमारे पुराने अनुमान और असली भाव",
-    trackRecordChartAriaLabel: "हमारे पुराने अनुमान और असली भाव",
     methodologySummary: "यह कैसे काम करता है",
     footerBody: (params) => `भाव <a href="https://ibjarates.com/" target="_blank" rel="noopener">IBJA</a> (भारत का आधिकारिक रोज़ का सोने का भाव) से लिए जाते हैं और दुकान के भाव से मिलाकर ठीक किए जाते हैं; जब मिल सके तब <a href="https://www.tanishq.co.in/gold-rate.html?lang=en_IN" target="_blank" rel="noopener">Tanishq</a> का बताया भाव भी देखा जाता है।`,
     footerMuted: "यह निवेश की सलाह नहीं है। भाव मोटे अंदाज़े के लिए हैं।",
