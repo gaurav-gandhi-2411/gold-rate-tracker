@@ -1,0 +1,10 @@
+{
+ "category": "frozen research snapshot (Yahoo Finance GC=F closes, ADR 044/052)",
+ "ciphertext": "data/encrypted/reports/vol_regime_prereg_gcf_2000_2012.csv.enc",
+ "ciphertext_sha256": "0ae86141d52f13908c9c7d9fa841ab5ac140e019557cfff072cd1975cfca5d20",
+ "format": "GRTENC v1, AES-256-GCM, scrypt",
+ "key_id": "88fadeb62be0b8f4",
+ "path": "reports/vol_regime_prereg_gcf_2000_2012.csv",
+ "plaintext_bytes": 71888,
+ "plaintext_sha256": "2db071aae050c593607f07518a4b36663916bc9fc9e288e3ee8292800437c6ac"
+}
