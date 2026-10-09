@@ -1,0 +1,10 @@
+{
+ "category": "derived from raw retailer snapshots (ADR 059 treats retailer data as raw)",
+ "ciphertext": "data/encrypted/reports/tanishq_update_times/kalyan_city_identity.json.enc",
+ "ciphertext_sha256": "8eca958063283b061447ba5d9440b9d6b745c384c4a3e12f5c96a8e92cf39731",
+ "format": "GRTENC v1, AES-256-GCM, scrypt",
+ "key_id": "88fadeb62be0b8f4",
+ "path": "reports/tanishq_update_times/kalyan_city_identity.json",
+ "plaintext_bytes": 358,
+ "plaintext_sha256": "31fa824e2b7136e42e7cc83b63fbc12163a1e226acbd05e0356857da29469e84"
+}

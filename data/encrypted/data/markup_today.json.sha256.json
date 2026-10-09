@@ -1,0 +1,10 @@
+{
+ "category": "retailer markup_pct over public IBJA: inverts to price",
+ "ciphertext": "data/encrypted/data/markup_today.json.enc",
+ "ciphertext_sha256": "7306fe76d49c9c571a334c31af488a0dd0dcb7dfdaeae70183e2934f6d944c9c",
+ "format": "GRTENC v1, AES-256-GCM, scrypt",
+ "key_id": "88fadeb62be0b8f4",
+ "path": "data/markup_today.json",
+ "plaintext_bytes": 744,
+ "plaintext_sha256": "ec792fb9976eeb3db0997c5b0964561f7312e890e92613b29e5356a8c9056e70"
+}

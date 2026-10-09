@@ -1,0 +1,10 @@
+{
+ "category": "raw IBJA pm_999 and Yahoo COMEX/USD-INR",
+ "ciphertext": "data/encrypted/reports/derived_premium.json.enc",
+ "ciphertext_sha256": "a656e9a838706c7200d470cdc48b404c2ba19a481e76111c80bfd53f7f950ed2",
+ "format": "GRTENC v1, AES-256-GCM, scrypt",
+ "key_id": "88fadeb62be0b8f4",
+ "path": "reports/derived_premium.json",
+ "plaintext_bytes": 74741,
+ "plaintext_sha256": "7ae1fa304c5b3df95c2df253e6819d2baf38d67259b67d93709497ad526eb3ba"
+}
