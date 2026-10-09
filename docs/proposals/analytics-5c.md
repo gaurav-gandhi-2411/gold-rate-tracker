@@ -136,7 +136,7 @@ becomes: "Static HTML/JS; no backend, no cookies, no auth. Visit counts go to Go
 image request (page path, language, installed-app yes/no, referring site name); see the privacy
 note in the footer." The "no cookies" claim stays true: the counter sets none.
 
-## To turn it on (GG: nothing here has been done)
+## To turn it on (DONE 2026-10-09: GG created the site `gold-rate-tracker` with User-Agent, screen size and location collection off and referrer, language and sessions on; CC set the code, the flag and the note. The steps below are kept as the record)
 
 1. Create the GoatCounter account and site.
    - Open https://www.goatcounter.com/signup (free; the form shows no plan choice or payment step,

@@ -19,7 +19,7 @@ const FEATURE_FLAGS = Object.freeze({
   good_price_v2: false,
   event_watch: false,
   page_v2: false,
-  analytics: false, // analytics.js; also needs ANALYTICS_ENDPOINT set there (item 5c, STOP for GG)
+  analytics: true, // analytics.js (item 5c): ON 2026-10-09 with site code gold-rate-tracker
 });
 
 // Returns true only if:
