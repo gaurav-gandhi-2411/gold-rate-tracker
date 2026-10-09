@@ -1,6 +1,6 @@
 # Model status
 
-Updated 2026-10-09. Computed from real forecast days only; no backtest figure appears here. Rule: ADR 072 (frozen, hash `2a1ec6b814a3`).
+Updated 2026-10-09. Computed from real forecast days only; no backtest figure appears here. Rule: ADR 072 (frozen, hash `ce9e1eeeb49c`).
 
 ## What is live and how it is doing
 

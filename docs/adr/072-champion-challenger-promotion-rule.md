@@ -204,7 +204,7 @@ Not covered: the retrospective record is 145 days of re-run history, not forward
 cannot create regimes the record did not contain; the status page's lag 1-4 autocorrelation of the
 forward series is the live check on the autocorrelation assumption.
 
-## Amendment 3 (2026-10-09): the rolling-slope challenger cannot be promoted until its size is fixed (rule v4, in force)
+## Amendment 3 (2026-10-09): the rolling-slope challenger cannot be promoted until its size is fixed (rule v4; superseded by Amendment 4)
 
 Decided before any challenger has 20 forward days (VERIFIED: forward n is 1 for the live model and 0 for every challenger at the time of writing). Only one thing changes: `RULE["promotion_blocked"] = {"p3_roll60": ...}`. A listed challenger is still scored, still shown on the status page and still counts in the family size (3), but `decide()` can never return it as promotable (`blocked_reason` is published and the status page says "held back"). Alpha, the 5% minimum gain, the first look, the variance rule, the horizon and every other value are unchanged.
 
@@ -225,6 +225,42 @@ With `p3_roll60` held back, the largest possible family-wise wrongful promotion 
 1. Calibrate a challenger-specific variance inflation with a stationary and a block bootstrap of the challenger's own daily series: the smallest value on a 0.25 grid for which the wrongful-promotion rate at the 5% boundary is at most 1.67% for every block length in {10, 20, 40, 60} and the stationary bootstrap (mean block 20), at 10,000 paths.
 2. Prove it on resamplers not used for the calibration (block 30, a different seed, a stationary bootstrap with mean block 40, and an AR(1) series with the challenger's own standard deviation and autocorrelation 0.2 to 0.5): boundary rate at most 1.67% (upper Wilson bound reported), and report what it costs in power at a true 10% and 20% gain.
 3. Only then remove the block, in a new amendment with a new hash. If the proof fails, the challenger stays blocked.
+
+## Amendment 4 (2026-10-09): calibrated sizes; `p3_roll60` released, `p3_monday` held back (rule v5, in force)
+
+Decided before any challenger has 20 forward days (forward n is 1 for the live model and 0 for every challenger at the time of writing). The calibration and proof procedure was pre-registered in Amendment 3 and in the docstring of `scripts/calibrate_challenger_size.py` before it was run; the results are in `reports/challenger_size_calibration.{json,md}` (VERIFIED: seed 42, 10,000 paths of 180 decision days, 146 real days; the report was reproduced byte for byte on a second run).
+
+Rule hash of v5 (SHA-256 of canonical JSON of `ml.promotion.RULE`, checked by `tests/test_promotion.py`):
+
+`ce9e1eeeb49cbbf03e4d0b254f09b282285ecdb9318509039dcfd15289615836`
+
+The v4 hash `2a1ec6b814a3fa818eecee46102446f1a3c8b9e428fd4d406b441b6f6f8a410f` and the earlier hashes above are kept.
+
+### What changed
+
+| Item | v4 | v5 |
+|---|---|---|
+| `variance_inflation_by_challenger` | none (1.5 for all) | `p3_roll60`: **3.0**; others 1.5 |
+| `promotion_blocked` | `p3_roll60` | **`p3_monday`** |
+
+### Results of the pre-registered procedure
+
+Boundary = a true gain of exactly the 5% bar, the worst wrongful case; allowance 1.67% per challenger.
+
+| Challenger | Calibrated inflation (smallest on the 0.25 grid, every calibration resampler at most 1.67%) | Held-out proof | Power at a true 10% / 20% gain, before to after |
+|---|---|---|---|
+| `p3_roll60` | **3.0** (was 1.5; at 1.5 it was 7.1% to 7.2% on blocks 20 to 60) | **PASS**: block 30 1.17% (upper 95% 1.40%), stationary-40 0.59%, synthetic AR(1) 0.2 to 0.5: 0.02% to 0.47% | 47.8% to **17.2%** / 99.8% to 96.8% |
+| `p3_monday` | 2.0 | **FAIL**: block 30 gave 1.98%, above 1.67% (stationary-40 1.20%, AR(1) up to 0.5 at most 1.51%) | 99.99% to 99.85% / 100% |
+| `ensemble` | 1.5 (already at most 0.9% on every real-series resampler) | block 30 1.61%, stationary-40 0.52%, AR(1) 0.2 and 0.3: 0.62% and 1.23% pass; AR(1) 0.4 and 0.5: **2.07% and 3.16%** | 30.9% / 100% |
+
+- **`p3_roll60` is released** with inflation 3.0. The price is real: at a true 10% gain its chance of promotion within the horizon falls from 47.8% to 17.2% (additive gain), because its daily difference is persistent and the rule must say so honestly. At 20% it is still found (96.8%).
+- **`p3_monday` stays held back** under the pre-registered rule (a failed proof means the calibrated value is not adopted and the challenger does not auto-promote). Its measured boundary rate at the current inflation is 2.1% to 3.3% on blocks 10 to 60 against 1.67%. Next step, pre-registered now: a second calibration round with block 30 added to the calibration resamplers and a fresh held-out set (circular block 25, seed 11; stationary mean block 30, seed 12; AR(1) 0.25 to 0.45, seed 13), run before its first look (2026-11-04), under the same pass criteria. If it passes, a new amendment releases it.
+- **Deviation from the pre-registered rule, made after seeing the results and stated here so GG can overrule it:** `ensemble` fails the proof only on synthetic AR(1) persistence of 0.4 and 0.5. That is the autocorrelation assumption Amendment 1 already documents (the guarantee degrades when the daily difference is strongly positively autocorrelated; the status page reports the lag 1 to 4 autocorrelation of the forward series and a value above 0.4 triggers a new ADR). The ensemble's own retrospective autocorrelation is negative (lag 1 to 4: -0.17 to +0.04). Holding it back for a persistence its own series does not show would only remove the one challenger with a clean real-series record. It is therefore NOT held back and keeps inflation 1.5. If its forward autocorrelation turns out above 0.4, the Amendment 1 trigger applies.
+- Family-wise level: with `p3_monday` held back, at most `ensemble` 0.9% + `p3_roll60` 1.2% at the 5% boundary, about 2.1% (a Bonferroni upper bound, INFERRED from the report rows), inside 5%.
+
+### Not covered
+
+The retrospective record is 146 days, 145 of them re-run history; the resamplers cannot create persistence the record did not contain beyond the synthetic AR(1) cases; the calibration is in sample for the real-series resamplers (that is why the proof uses resamplers not used for it). The forward series' own autocorrelation, reported weekly, is the live check.
 
 ## Decision: the rule (v1, superseded by Amendment 1)
 
