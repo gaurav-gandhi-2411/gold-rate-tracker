@@ -21,7 +21,9 @@ def test_accuracy_drift_verdict_is_no_longer_rendered_anywhere() -> None:
     hwk = _text("how-we-know.js")
     assert 'tHwk("methDriftHeading")' not in hwk and 'tHwk("methRecentError")' not in hwk
     app = _text("app.js")
-    assert re.search(r"const driftNote = \"\";", app) and re.search(r"const driftSentence = \"\";", app)
+    assert re.search(r"const driftNote = \"\";", app) and re.search(
+        r"const driftSentence = \"\";", app
+    )
     assert "reliabilityDrift${" not in app
 
 
