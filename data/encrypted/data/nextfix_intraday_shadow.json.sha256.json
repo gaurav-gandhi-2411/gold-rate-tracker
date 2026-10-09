@@ -1,10 +1,10 @@
 {
  "category": "raw IBJA fix levels (base/target) and COMEX-in-INR per entry (ADR 059/066)",
  "ciphertext": "data/encrypted/data/nextfix_intraday_shadow.json.enc",
- "ciphertext_sha256": "9240787bff417c8a991ba4c745bd4d9df31e90591548a671f72e350b58770967",
+ "ciphertext_sha256": "a727da6cb9c1a5268a9c896e790a8e61206dfdc052cf00ee57f2ab43dc155d09",
  "format": "GRTENC v1, AES-256-GCM, scrypt",
  "key_id": "88fadeb62be0b8f4",
  "path": "data/nextfix_intraday_shadow.json",
- "plaintext_bytes": 34928,
- "plaintext_sha256": "7f77954df768601f29d05eb0aa0214df0211b965cf896ac4b71bfa0e34aa8f79"
+ "plaintext_bytes": 35534,
+ "plaintext_sha256": "49a93ca6afdf291057ab15509a92b28b67a81f739219fa482e4c298d3c245cc5"
 }
