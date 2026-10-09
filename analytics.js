@@ -20,7 +20,7 @@
 //   - No script is loaded from the provider: the count is one image GET to the account's own
 //     https://<code>.goatcounter.com/count (GoatCounter's documented tracking pixel,
 //     https://www.goatcounter.com/help/pixel). No screen size, no fingerprinting inputs.
-//   - Sends nothing if the browser says Do Not Track or Global Privacy Control, or while offline
+//   - Sends nothing if the browser sends a Global Privacy Control signal, or while offline
 //     (nothing is queued: a missed count is a missed count).
 //   - GoatCounter builds a per-visit key from site + User-Agent + IP in memory only, keeps the
 //     key -> random id mapping for 8 hours, and states that the IP address and User-Agent are
@@ -75,7 +75,11 @@ function analyticsEnabled() {
   try {
     if (typeof isFeatureOn !== "function" || !isFeatureOn("analytics")) return false;
     if (!analyticsEndpoint(ANALYTICS_SITE_CODE)) return false;
-    if (navigator.doNotTrack === "1" || navigator.doNotTrack === "yes") return false;
+    // Global Privacy Control is the current, legally recognised opt-out signal: honoured. The legacy
+    // Do Not Track header is NOT: it was found switched on in the site owner's own Edge (2026-10-09), which
+    // silently stopped every count from that browser, and GoatCounter itself ignores it because it keeps
+    // no cookie, no identifier and no stored address (https://www.goatcounter.com/help/faq). Revert =
+    // re-add: if (navigator.doNotTrack === "1" || navigator.doNotTrack === "yes") return false;
     if (navigator.globalPrivacyControl === true) return false;
     return true;
   } catch {
