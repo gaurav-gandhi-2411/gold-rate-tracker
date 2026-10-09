@@ -97,11 +97,10 @@ async function run() {
     const blocked = await load(browser, base, { blockAnalytics: true });
     assert("analytics.js was requested", on.requests.some((u) => u.endsWith("/analytics.js")));
     const beacons = on.requests.filter((u) => u.includes(BEACON_HOST));
-    assert("a view and a language request go to https://gold-rate-tracker.goatcounter.com/count",
-      beacons.length >= 2 && beacons.every((u) => u.startsWith(`https://${BEACON_HOST}/count?`)), JSON.stringify(beacons));
-    assert("every request carries only p / e / r parameters (no title, screen size, query string)",
-      beacons.every((u) => [...new URL(u).searchParams.keys()].every((k) => ["p", "e", "r"].includes(k))));
-    assert("the language event is sent", beacons.some((u) => new URL(u).searchParams.get("p") === "lang/en"));
+    assert("exactly ONE request per visit goes to https://gold-rate-tracker.goatcounter.com/count",
+      beacons.length === 1 && beacons.every((u) => u.startsWith(`https://${BEACON_HOST}/count?`)), JSON.stringify(beacons));
+    assert("the request carries only p / r parameters (no title, screen size, query string, event)",
+      beacons.every((u) => [...new URL(u).searchParams.keys()].every((k) => ["p", "r"].includes(k))));
     assert("the privacy note is rendered once in the footer",
       (on.html.match(/id="privacy-note"/g) || []).length === 1 && on.html.includes("GoatCounter"));
     assert("the blocked-analytics page has no note and sent no beacon",
@@ -115,7 +114,7 @@ async function run() {
       on.storage.ls === blocked.storage.ls && on.storage.ss === blocked.storage.ss);
     assert("no page error is raised", on.pageErrors.length === 0, on.pageErrors.join(" | "));
 
-    console.log("\nA browser with Do Not Track switched on (as the site owner's Edge was) is still counted");
+    console.log("\nA browser with Do Not Track switched on is not counted");
     const dntBrowser = await chromium.launch({ headless: true, args: ARGS });
     try {
       const dctx = await dntBrowser.newContext({ serviceWorkers: "block" });
@@ -128,8 +127,8 @@ async function run() {
       await pg.waitForTimeout(500);
       const dnt = await pg.evaluate(() => navigator.doNotTrack);
       assert("the browser really reports Do Not Track = 1", dnt === "1", String(dnt));
-      assert("the count requests are still sent", reqs.filter((u) => u.includes(BEACON_HOST)).length >= 2);
-      assert("the privacy note is shown", (await pg.content()).includes('id="privacy-note"'));
+      assert("no count request is sent", reqs.filter((u) => u.includes(BEACON_HOST)).length === 0);
+      assert("no privacy note is shown (nothing is being counted)", !(await pg.content()).includes('id="privacy-note"'));
       await dctx.close();
     } finally {
       await dntBrowser.close();

@@ -112,8 +112,8 @@ def run_drift_check() -> dict | None:
         "ts": now.isoformat(),
         "target_time": target_time_str,
         "actual_ts": actual_ts,
-        "actual_22k": actual_22k,
-        "forecast_22k": prev_forecast_22k,
+        # Scores only (ADR 060, 2026-10-09): the shop reading and the forecast LEVELS are not published
+        # here (a Tanishq price series, and the old forecast); the residual and the baseline are the score.
         "residual": residual,
         "model_version": model_version,
     }
@@ -124,10 +124,8 @@ def run_drift_check() -> dict | None:
 
     DRIFT_METRICS_PATH.parent.mkdir(exist_ok=True)
     DRIFT_METRICS_PATH.write_text(json.dumps(entries, indent=2) + "\n")
-    print(
-        f"drift: residual={residual:+.0f} "
-        f"(actual={actual_22k:.0f}, forecast={prev_forecast_22k:.0f})"
-    )
+    # no price levels in the log either: Actions logs of this public repository are public
+    print(f"drift: residual={residual:+.0f}")
 
     rolling_mae = _rolling_7d_mae(entries, now)
     if rolling_mae is None:
