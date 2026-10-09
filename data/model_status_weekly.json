@@ -1,21 +1,29 @@
 {
  "schema_version": 1,
- "generated_at": "2026-10-08T05:52:06.369251+00:00",
- "rule_sha256": "2499a124d6e0673e73827cfcd380fa09f189715a607a2a2fe542320350846c73",
+ "generated_at": "2026-10-09T08:17:16.425555+00:00",
+ "rule_sha256": "2a1ec6b814a3fa818eecee46102446f1a3c8b9e428fd4d406b441b6f6f8a410f",
  "common_start": "2026-10-07",
  "champion": "p3",
  "champion_state_unreadable": false,
  "champion_history": [],
  "live": {
-  "n": 0,
-  "since": "2026-10-07"
+  "n": 1,
+  "since": "2026-10-07",
+  "mae_model": 27.4,
+  "mae_hold": 11.1,
+  "change_pct": 146.8,
+  "direction_hit": 1.0,
+  "direction_n": 1,
+  "coverage": 1.0,
+  "coverage_n": 1,
+  "last_day": "2026-10-07"
  },
  "challengers": {
   "ensemble": {
    "since": "2026-10-07",
-   "n": 0,
-   "first_day": null,
-   "last_day": null,
+   "n": 1,
+   "first_day": "2026-10-07",
+   "last_day": "2026-10-07",
    "first_look_day": 20,
    "looks_started": false,
    "lower_bound": null,
@@ -26,14 +34,15 @@
    "retired": false,
    "status": "too early",
    "live_capable": true,
+   "blocked_reason": null,
    "promotable": false,
-   "first_reachable": "2026-11-04"
+   "first_reachable": "2026-11-03"
   },
   "p3_roll60": {
    "since": "2026-10-07",
-   "n": 0,
-   "first_day": null,
-   "last_day": null,
+   "n": 1,
+   "first_day": "2026-10-07",
+   "last_day": "2026-10-07",
    "first_look_day": 20,
    "looks_started": false,
    "lower_bound": null,
@@ -44,14 +53,15 @@
    "retired": false,
    "status": "too early",
    "live_capable": true,
+   "blocked_reason": "size above its allowance at the 5% boundary",
    "promotable": false,
-   "first_reachable": "2026-11-04"
+   "first_reachable": "2026-11-03"
   },
   "p3_monday": {
    "since": "2026-10-07",
-   "n": 0,
-   "first_day": null,
-   "last_day": null,
+   "n": 1,
+   "first_day": "2026-10-07",
+   "last_day": "2026-10-07",
    "first_look_day": 20,
    "looks_started": false,
    "lower_bound": null,
@@ -62,8 +72,9 @@
    "retired": false,
    "status": "too early",
    "live_capable": true,
+   "blocked_reason": null,
    "promotable": false,
-   "first_reachable": "2026-11-04"
+   "first_reachable": "2026-11-03"
   }
  },
  "promote": null,
@@ -110,10 +121,24 @@
    "marking": "VERIFIED"
   }
  },
+ "laptop_attribution": {
+  "generated_at": "2026-10-08T05:41:34.507407+00:00",
+  "counts": {
+   "before_schedule_installed": 4,
+   "laptop_off": 7
+  },
+  "evidence": {
+   "event_log_from": "2026-10-03T18:16:28.742778+05:30",
+   "dispatch_log_lines": 19,
+   "tasks_created_ist": "2026-10-05T12:59:58.207069+05:30",
+   "task_scheduler_history_enabled": false
+  },
+  "slots": 11
+ },
  "demotion": {
   "demoted": false,
   "since": null,
   "reasons": [],
-  "last_checked": "2026-10-08T05:17:01.093049+00:00"
+  "last_checked": "2026-10-08T23:55:01.363921+00:00"
  }
 }

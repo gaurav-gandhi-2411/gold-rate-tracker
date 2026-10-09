@@ -48,7 +48,7 @@ import numpy as np
 
 # --- the frozen rule (ADR 072, version 2 = Amendment 1) ------------------------------------------
 RULE: dict[str, Any] = {
-    "version": 3,  # 1 = fixed-n Diebold-Mariano + BH; 2 = confidence sequence; 3 = horizon unit
+    "version": 4,  # 1 = fixed-n DM + BH; 2 = confidence sequence; 3 = horizon unit; 4 = roll60 held back
     "design": "one-sided normal-mixture confidence sequence on the mean of "
     "e = (1 - min_gain) * loss_champion - loss_challenger; promote when the lower bound > 0",
     "min_gain": 0.05,  # challenger mean |error| at least 5% below the champion's (ratio of means)
@@ -67,6 +67,10 @@ RULE: dict[str, Any] = {
     # Evaluated and rejected (ADR 072 Amendment 2): a control variate on the hold forecast's
     # same-day error. Frozen here so adopting it later is a visible, hashed change.
     "control_variate": "none",
+    # ADR 072 Amendment 3: a challenger listed here is still scored and reported but can never be
+    # promoted. p3_roll60 is promoted at the 5% boundary in 8-9% of resampled paths against its
+    # 1.67% allowance (reports/promotion_v3_simulation.md, block 20 and 40) until its size is fixed.
+    "promotion_blocked": {"p3_roll60": "size above its allowance at the 5% boundary"},
     "coverage_nominal": 0.80,  # challenger's own 80% range; promotion needs it not below target
     "coverage_alpha": 0.05,  # exact one-sided binomial: coverage significantly below 0.80 blocks
     "direction_rule": "challenger direction hit-rate >= champion's on the same days",
@@ -80,7 +84,7 @@ RULE: dict[str, Any] = {
     # not live-capable, so never promotable: registered on the first day they have a forward record
     "registered_on_first_record": ["hourly", "p3_hourly"],
 }
-RULE_SHA256 = "2499a124d6e0673e73827cfcd380fa09f189715a607a2a2fe542320350846c73"
+RULE_SHA256 = "2a1ec6b814a3fa818eecee46102446f1a3c8b9e428fd4d406b441b6f6f8a410f"
 
 CHAMPION_FILE = "champion_state.json"
 DEFAULT_CHAMPION = "p3"
@@ -361,9 +365,11 @@ def decide(
     winners = []
     for cid, r in rows.items():
         r["live_capable"] = cid in LIVE_CAPABLE
+        r["blocked_reason"] = rule.get("promotion_blocked", {}).get(cid)
         r["promotable"] = bool(
             r["status"] == "scored"
             and r["live_capable"]
+            and not r["blocked_reason"]
             and not r["retired"]
             and r["looks_started"]
             and r["lower_bound_clears"]
