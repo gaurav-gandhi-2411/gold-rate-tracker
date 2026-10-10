@@ -41,3 +41,11 @@ It is read-only: it never edits `ml/` or `data/`; its only write is `reports/adr
 ## After the check
 
 Promotion is GG's decision and, per the ADR, a separate PR. The script never promotes anything.
+
+## A live predictor now exists in shadow (2026-10-10)
+
+`ml.nextfix.predict_hourly` and a shadow record (`hourly_shadow` in
+`data/nextfix_p3_variants_oos.json`) were added so that a pass can be acted on quickly. They do not
+change this check: the script reads `data/nextfix_intraday_shadow.json` and the cached bars, never the
+`hourly_shadow` record, and it never promotes. See ADR 066, "Live predictor built, 2026-10-10", for
+what it takes to bring the model into the challenger pool (an ADR 072 amendment).

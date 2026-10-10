@@ -246,6 +246,25 @@ class LeakCheck:
                 self._by_name[name]["count"] += int(bad.size) - 1
         return clean
 
+    def check_bar_ends(self, moment: datetime, ends: list[Any], context: str) -> bool:
+        """Hourly bars (ADR 066 predictor): a bar is known when it ends, so every bar end must be
+        strictly before ``moment``. A missing end (NaT) is a deny, never a pass. True when clean;
+        never raises."""
+        try:
+            t = to_utc(moment, what="decision moment")
+            for k, e in enumerate(ends):
+                self.n_inputs += 1
+                if e is None or pd.isna(e):
+                    raise ValueError(f"hourly bar {k} has no end time; cannot certify it")
+                known = to_utc(e, what="hourly bar end")
+                if known.value >= t.value:
+                    self._record(f"hourly_bar_{k}", "hourly_bar", known.value, t, context)
+                    return False
+        except Exception as exc:  # fail closed: an unverifiable input is a violation
+            self.guard_error(exc, moment)
+            return False
+        return True
+
     def check_fold(
         self,
         moment: datetime,

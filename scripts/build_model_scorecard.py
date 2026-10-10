@@ -152,6 +152,7 @@ CHAMPION_VERSIONS = {
     "p3_roll60": "nextfix_p3_roll60_v1",
     "p3_monday": "nextfix_p3_monday_v1",
     "ensemble": "nextfix_ridge_mlp_v1",
+    "hourly": "nextfix_hourly_v1",  # shadow; selectable only if the pool is opened (ADR 066)
 }
 
 
