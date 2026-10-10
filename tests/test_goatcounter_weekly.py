@@ -103,3 +103,19 @@ def test_workflow_never_prints_uploads_or_commits_the_numbers() -> None:
     )  # the sentence is only handed to curl as a file
     assert "contents: read" in wf and "GOATCOUNTER_TOKEN" in wf and "NTFY_TOPIC" in wf
     assert "--data-binary" in wf
+
+
+def test_basic_auth_is_tried_when_bearer_is_refused(tmp_path: Path) -> None:
+    seen: list[str] = []
+
+    def fetch(url: str, headers: dict[str, str]) -> dict[str, Any]:
+        seen.append(headers["Authorization"].split()[0])
+        if headers["Authorization"].startswith("Bearer"):
+            raise urllib.error.HTTPError(url, 401, "Unauthorized", {}, None)  # type: ignore[arg-type]
+        return {"stats": []} if "/toprefs" in url else {"total": 4}
+
+    out = tmp_path / "v.txt"
+    assert gw.run("tok", out, NOW, fetch=fetch) == "written"
+    assert seen == ["Bearer", "Basic", "Basic"]
+    assert out.read_text(encoding="utf-8") == "Visitors in the last 7 days: 4.
+"

@@ -19,6 +19,7 @@ Rules this keeps (the repo and its run logs are public):
 from __future__ import annotations
 
 import argparse
+import base64
 import json
 import os
 import urllib.error
@@ -92,9 +93,19 @@ def run(
     start, end = window(now or datetime.now(UTC))
     base = f"https://{site}.goatcounter.com/api/v0/stats"
     query = urllib.parse.urlencode({"start": start, "end": end})
-    headers = {"Authorization": f"Bearer {token}", "Content-Type": "application/json"}
+    # The API page documents Bearer; its OpenAPI file lists only HTTP Basic (empty user, token as
+    # password). Try Bearer, and on a 401/403 try Basic once before giving up.
+    basic = base64.b64encode(f":{token}".encode()).decode()
+    schemes = (f"Bearer {token}", f"Basic {basic}")
     try:
-        total = fetch(f"{base}/total?{query}", headers)
+        for i, auth in enumerate(schemes):
+            headers = {"Authorization": auth, "Content-Type": "application/json"}
+            try:
+                total = fetch(f"{base}/total?{query}", headers)
+                break
+            except urllib.error.HTTPError as err:
+                if err.code not in (401, 403) or i == len(schemes) - 1:
+                    raise
         refs = fetch(f"{base}/toprefs?{query}&limit=20", headers)
     except urllib.error.HTTPError as err:
         return f"skipped: GoatCounter answered HTTP {err.code}"
