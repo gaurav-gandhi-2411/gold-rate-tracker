@@ -2753,5 +2753,24 @@
     "track": "real",
     "model_version": "hold_latest_fix_pm_to_am",
     "real_readings_count": 768
+  },
+  {
+    "decision_date": "2026-10-10",
+    "predicted_at": "2026-10-10T02:09:08.732715+00:00",
+    "current_22k": 13860,
+    "predicted_22k": 13916,
+    "delta": 56.0,
+    "lower": 13775,
+    "upper": 14057,
+    "decision": "neutral",
+    "outcome_window_days": 5,
+    "outcome_resolved_at": null,
+    "outcome": "pending",
+    "min_future_price": null,
+    "actual_next_22k": null,
+    "drop_threshold": 100.0,
+    "track": "real",
+    "model_version": "nextfix_p3_v1",
+    "real_readings_count": 772
   }
 ]
