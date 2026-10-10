@@ -117,7 +117,13 @@ REGISTRY: dict[str, dict[str, str]] = {
         "category": "retailer markup_pct/markup_rs over public IBJA: inverts to price"
     },
     "reports/fhs_ranges/shadow.json": {"category": "raw Tanishq current/next-day prices"},
-    "data/premium_nowcast_bars.json": {"category": "raw Yahoo Finance 1-hour bars (ADR 046)"},
+    "data/premium_nowcast_bars.json": {
+        "category": "raw Yahoo Finance 1-hour bars (ADR 046)",
+        # Registered so it has an encrypted home if a workflow ever commits it, but nothing does:
+        # only scripts/analysis_premium_nowcast.py writes it, run by hand, and it is gitignored
+        # (ADR 046 option A, ADR 060). guard counts it separately instead of as 'unmigrated'.
+        "untracked_by_design": "gitignored local archive; no workflow commits it (ADR 046/060)",
+    },
     # Added 2026-10-05 (GG decisions 1, 2, 5), after the field-by-field review in ADR 060.
     "data/nextfix_oos.json": {"category": "raw IBJA PM fix series (pm0/pm1 per fold, ADR 059)"},
     # Added after master moved on (2026-10-08 merge): P3 went live (ADR 069) and the ADR 071
@@ -142,6 +148,10 @@ REGISTRY: dict[str, dict[str, str]] = {
         "category": "derived from raw retailer snapshots (ADR 059 treats retailer data as raw)"
     },
 }
+
+
+def untracked_by_design(logical: str) -> bool:
+    return "untracked_by_design" in REGISTRY[logical]
 
 
 class CryptError(Exception):
@@ -479,6 +489,10 @@ def guard(p: Paths) -> list[str]:
         enc_exists = p.enc(logical).exists()
         if meta_exists != enc_exists:
             problems.append(f"{logical}: ciphertext and manifest entry must both exist or neither")
+        if untracked_by_design(logical) and _git_tracked(p.root, logical):
+            problems.append(
+                f"{logical}: flagged untracked_by_design but git tracks it; migrate it or drop the flag"
+            )
         if (meta_exists or enc_exists) and _git_tracked(p.root, logical):
             problems.append(f"{logical}: plaintext is tracked by git although it has ciphertext")
         ignored = subprocess.run(
@@ -586,9 +600,10 @@ def _run(args: argparse.Namespace, p: Paths) -> int:
         for msg in problems:
             print(f"data_crypt guard: FAIL: {msg}", file=sys.stderr)
         migrated = sum(p.meta(lp).exists() for lp in REGISTRY)
+        by_design = sum(untracked_by_design(lp) and not p.meta(lp).exists() for lp in REGISTRY)
         print(
             f"data_crypt guard: {len(REGISTRY)} registered, {migrated} migrated, "
-            f"{len(problems)} problem(s)"
+            f"{by_design} untracked by design, {len(problems)} problem(s)"
         )
         return 1 if problems else 0
     if args.cmd == "manifest":
