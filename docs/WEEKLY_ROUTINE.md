@@ -30,6 +30,11 @@ Data on master (public, no decrypting):
 - `gh run list --workflow check-price.yml --limit 15` and `--workflow ci-health.yml --limit 3`:
   the last success is recent. The GitHub cron (`37 1-22/3 * * *`) runs late or skips; a timed visit
   or a push/dispatch run covers it. A gap of several hours with no run at all is the finding.
+  ci-health no longer relies on its own cron: every check-price run and every timed visit starts it
+  when its last run is more than 2 h old (the cron stays as fallback). Daily proof:
+  `gh run list --workflow ci-health.yml --limit 100 --json createdAt,event --jq '[.[]|.createdAt[0:10]]|group_by(.)|map({day:.[0],runs:length})'`
+  lists runs per day; a day with 0 is the finding. `event` shows who started it (`schedule` or
+  `workflow_dispatch`).
 - Stale periods this week: compare the longest gap above with the previous week's note.
 
 ## 2. Timed visits and attribution
@@ -39,9 +44,13 @@ Slots (IST): 01:40, 07:30, 10:40, 11:10, 15:35, 19:50 = 20:10, 02:00, 05:10, 05:
    For each slot since your last check: a `workflow_dispatch` run created within about 2 minutes
    of the slot and `success` is on time. Anything else: `cancelled`, `failure`, a late dispatch or no
    dispatch. List every slot, none skipped.
-2. `data/laptop_attribution.json` (counts by class: `laptop_off`, `dispatched_run_cancelled`, ...)
-   is rebuilt only on the laptop from its event log (`scripts/laptop_attribution.py`); CC cannot
-   refresh it. Report its `generated_at` and say it is stale if older than the slots you list.
+2. Current attribution is `%LOCALAPPDATA%\gold-rate-tracker\laptop_attribution.json` (counts by
+   class: `laptop_off`, `dispatched_run_cancelled`, ...). `scripts/win/tanishq_dispatch.ps1` rebuilds
+   it after every visit it triggers (`scripts/laptop_attribution.py` over the laptop's event log; its
+   outcome is a line in `side_tasks.log` next to it: `ATTRIBUTION exit=0`). Report its `generated_at`.
+   If a session runs on another machine, or the file is older than the last slot you list, run
+   `powershell -File scripts/win/tanishq_dispatch.ps1 -SideTasksOnly` (triggers no visit). The copy
+   in the repo, `data/laptop_attribution.json`, is only the seed and is not refreshed any more.
 3. A cancelled run: read its job steps (`gh run view <id> --json jobs`) for the cause before saying
    anything (the 2026-10-09 case was the bot-PR sync step waiting out the 25-minute timeout).
 
