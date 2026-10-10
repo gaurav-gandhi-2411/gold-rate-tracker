@@ -1,0 +1,40 @@
+# Sends one ntfy push to GG's existing alert topic (the NTFY_TOPIC secret every other alert uses).
+# Dispatch it when a PR needs GG's click, e.g. the encrypted-data migration, which CC may not merge
+# (data deletion gate). The message is a dispatch input, so it is public: PR link and plain words only.
+name: Notify GG
+
+on:
+  workflow_dispatch:
+    inputs:
+      title:
+        description: "Notification title"
+        required: true
+        default: "Gold Tracker: needs your click"
+      message:
+        description: "Notification body (public: no secrets, links and plain words only)"
+        required: true
+
+permissions:
+  contents: read
+
+jobs:
+  notify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    steps:
+      - name: Send ntfy push
+        env:
+          NTFY_TOPIC: ${{ secrets.NTFY_TOPIC }}
+          TITLE: ${{ inputs.title }}
+          MESSAGE: ${{ inputs.message }}
+        run: |
+          set -euo pipefail
+          if [ -z "${NTFY_TOPIC}" ]; then
+            echo "::error::NTFY_TOPIC is not set; nothing was sent"
+            exit 1
+          fi
+          code=$(curl -s -o /dev/null -w '%{http_code}' \
+            -H "Title: ${TITLE}" -H "Priority: high" -H "Tags: pencil2" \
+            -d "${MESSAGE}" "https://ntfy.sh/${NTFY_TOPIC}")
+          echo "ntfy responded HTTP ${code}"
+          [ "${code}" = "200" ]
