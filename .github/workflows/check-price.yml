@@ -279,7 +279,7 @@ jobs:
         continue-on-error: true
         env:
           DATA_ENC_KEY: ${{ secrets.DATA_ENC_KEY }}
-        run: python scripts/data_crypt.py encrypt data/ibja_rates.parquet data/feature_store/snapshots.parquet data/nextfix_oos.json data/nextfix_p3_oos.json data/nextfix_p3_variants_oos.json data/nextfix_intraday_shadow.json
+        run: python scripts/data_crypt.py encrypt data/ibja_rates.parquet data/feature_store/snapshots.parquet data/nextfix_oos.json data/nextfix_p3_oos.json data/nextfix_p3_variants_oos.json data/nextfix_intraday_shadow.json data/metrics_history.json
 
       - name: Commit updated data files
         id: commit
