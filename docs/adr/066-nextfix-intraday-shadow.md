@@ -72,3 +72,39 @@ IBJA append; fixed in #2390). Such an entry is not a forecast. `ml.nextfix_intra
 now drops it before scoring and each window reports `n_excluded_logged_after_target`. The rule above
 (14 days, 8 resolved fixes, CI below 0 with DM p < 0.05, shadow agrees, range refit) is unchanged.
 This is a scoring correctness fix made before the 2026-10-16 check; no result had been read.
+
+## Live predictor built, 2026-10-10 (not a change to the rule or the check)
+
+GG asked for the hourly model to be switchable the day its check passes. The check itself is
+untouched: `ml/nextfix_intraday.py`, `scripts/check_adr066_promotion.py` and the rule above are not
+edited by this change, and no result had been read when it was written.
+
+What exists now, **in shadow only** (nothing reaches the page or `forecast.json` unless the pool is
+opened):
+- `ml.nextfix.predict_hourly`: for the decision day D, the next PM fix is `pm0 x exp(x_hourly)`, with
+  `x_hourly = ln(G(US close of D) / G(PM fix of D))`, G read from the cached 1-hour bars by
+  `nextfix_intraday.value_at` (last bar that ended by the instant, within 6 h). It is the beta = 1.0
+  pass-through the scorecard already reports as "the hourly pass-through". Nothing is fitted. P(up)
+  and the volatility come from the training pairs exactly as for P3, so the range and direction
+  machinery are the same.
+- Its own record, one fold per decision day, in the `hourly_shadow` key of
+  `data/nextfix_p3_variants_oos.json` (already encrypted, ADR 060). It is deliberately **not** under
+  `variants`, so no scorer, status page or promotion step reads it as a registered challenger.
+  Folds before `HOURLY_FORWARD_FROM` (2026-10-12, the first decision day the merged code issues) are
+  walk-forward re-runs on the cached bars and carry `retro: true`; they are never counted.
+- Runtime leak guard (ADR 073): both bar readings must have ended strictly before the decision
+  moment (the US close), a missing bar end is a deny, and a violation stops the record walk and, if
+  the model is ever live, holds the fix. Negative control in `tests/test_nextfix_hourly.py`.
+- `CHAMPION_REGISTRY["hourly"]` and `nextfix.run` support the hourly model as champion, with its own
+  sticky demotion state (`model_demotion_state__nextfix_hourly_v1.json`) under the unchanged ADR 068
+  rules. Test: opening the pool in a test runs it live and creates that file.
+
+What it does **not** do: it is not in `ml.promotion.LIVE_CAPABLE`, not in `RULE["registered"]`, and
+the frozen rule (hash `e4efabec2193...`, version 7) is unchanged, so it cannot be promoted. A
+champion file naming it fails closed to P3. If the 2026-10-16 check passes for a window, entering the
+challenger pool is a rule amendment (new ADR 072 amendment and hash: add it to `LIVE_CAPABLE`,
+`registered`, and the family size / alpha split), which is GG's decision; this change makes that
+amendment the only missing piece. Two things the amendment must settle, because the 2026-10-16 check
+does not cover them: the check's windows are `after_morning_rate` and `after_afternoon_rate`, while
+the P3-style record here is the `after_us_close` window (target the next PM fix); and the beta (here
+1.0, not chosen by the check's beta rule).

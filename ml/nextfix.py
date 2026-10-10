@@ -54,6 +54,7 @@ import math
 from dataclasses import dataclass
 from datetime import UTC, datetime
 from pathlib import Path
+from typing import Any
 
 import numpy as np
 import pandas as pd
@@ -81,6 +82,14 @@ ENSEMBLE_VERSION = "nextfix_ridge_mlp_v1"
 # the day GG approved it (2026-10-05, when the ensemble was still live): counting an earlier day
 # as forward would present a re-run as a live call.
 P3_FORWARD_FROM = "2026-10-07"
+# Hourly world-price model (ADR 066), built as a LIVE-CAPABLE shadow on 2026-10-10: one forecast
+# per decision day from the first one the merged code issues (Monday 2026-10-12; earlier days in
+# its record are walk-forward re-runs, flagged ``retro``). It is NOT in the challenger pool: the
+# pool is closed by ``ml.promotion.LIVE_CAPABLE`` / the frozen rule, and the ADR 066 check of
+# 2026-10-16 is untouched by this record (see docs/adr/066, 'Live predictor').
+HOURLY_VERSION = "nextfix_hourly_v1"
+HOURLY_FORWARD_FROM = "2026-10-12"
+HOURLY_KEY = "hourly_shadow"  # top-level key in P3_VARIANTS_PATH, apart from "variants"
 STATE_FILE = "model_demotion_state.json"  # ADR 068: sticky demotion state of P3 (back-compat name)
 STATE_FILE_PREFIX = "model_demotion_state__"  # ADR 072: any other model gets its own file
 # ADR 072 step 2: champion id -> (record source, model_version label, predictor function name).
@@ -92,6 +101,9 @@ CHAMPION_REGISTRY: dict[str, tuple[str, str, str]] = {
     "p3_roll60": ("variant", "nextfix_p3_roll60_v1", "predict_p3_roll60"),
     "p3_monday": ("variant", "nextfix_p3_monday_v1", "predict_p3_monday"),
     "ensemble": ("ensemble", ENSEMBLE_VERSION, "predict"),
+    # Selectable only if ml.promotion.LIVE_CAPABLE (and the frozen rule) are amended to admit it;
+    # until then a champion file naming it fails closed to P3 (ADR 072).
+    "hourly": ("hourly", HOURLY_VERSION, "predict_hourly"),
 }
 
 
@@ -281,10 +293,40 @@ def flat_record(pairs: pd.DataFrame, since: str | None = None) -> dict:
     }
 
 
-def build_pairs(ibja: pd.DataFrame, glob: pd.Series) -> pd.DataFrame:
+def hourly_columns(pairs: pd.DataFrame, bars: pd.Series | None) -> pd.DataFrame:
+    """Add the hourly world move of each decision day D: ``x_hourly`` = ln(G(US close of D) /
+    G(PM fix of D)), G = gold_usd x usd_inr from the last 1-hour bar that ended by each instant
+    (ml.nextfix_intraday.value_at, within MAX_BAR_GAP), plus the two bar ends (``h_fix_end``,
+    ``h_now_end``) the runtime leak guard checks. NaN / NaT where the bars do not cover the day.
+    The decision moment is the US close, the same one P3 uses, so a record and a live forecast
+    read the same instants."""
+    from ml import nextfix_intraday as ni
+
+    pairs = pairs.assign(x_hourly=np.nan, h_fix_end=pd.NaT, h_now_end=pd.NaT)
+    if bars is None or bars.empty or pairs.empty:
+        return pairs
+    xs, e0, e1 = [], [], []
+    for d0 in pairs["d0"]:
+        a = ni.value_at(bars, _at(d0, IBJA_PM_PUBLISH_UTC))
+        b = ni.value_at(bars, _at(d0, US_CLOSE_UTC))
+        if a is None or b is None or not (a[0] > 0 and b[0] > 0):
+            xs.append(np.nan)
+            e0.append(pd.NaT)
+            e1.append(pd.NaT)
+        else:
+            xs.append(math.log(b[0] / a[0]))
+            e0.append(pd.Timestamp(a[1]))
+            e1.append(pd.Timestamp(b[1]))
+    return pairs.assign(
+        x_hourly=xs, h_fix_end=pd.to_datetime(e0, utc=True), h_now_end=pd.to_datetime(e1, utc=True)
+    )
+
+
+def build_pairs(ibja: pd.DataFrame, glob: pd.Series, bars: pd.Series | None = None) -> pd.DataFrame:
     """One row per IBJA day D: features known at D's US close, and the next fix if it is known.
 
     The last row (the latest IBJA day) has no target yet; it is the one ``forecast`` predicts.
+    ``bars`` (hourly world prices, optional) adds the hourly columns of ``hourly_columns``.
     """
     rows = []
     dates = list(ibja["date"])
@@ -320,7 +362,7 @@ def build_pairs(ibja: pd.DataFrame, glob: pd.Series) -> pd.DataFrame:
     df["x_prev"] = pd.Series(np.log(df["pm0"] / df["pmprev"]), index=df.index).fillna(0.0)
     df["basis"] = np.log(df["g0"] / df["pm0"])
     df["bdev"] = df["basis"] - df["basis"].rolling(BASIS_WINDOW, min_periods=5).mean().shift(1)
-    return df.dropna(subset=["bdev"]).reset_index(drop=True)
+    return hourly_columns(df.dropna(subset=["bdev"]).reset_index(drop=True), bars)
 
 
 # ── models ───────────────────────────────────────────────────────────────────────────────────────
@@ -402,6 +444,25 @@ def predict_p3(train: pd.DataFrame, row: pd.Series, resid_sd: float | None = Non
     return Prediction(ret=ret, p_up=float(norm.cdf(ret / s)), vol=vol)
 
 
+def predict_hourly(
+    train: pd.DataFrame, row: pd.Series, resid_sd: float | None = None
+) -> Prediction:
+    """ADR 066 hourly pass-through (beta 1.0, the scorecard's headline): the next PM fix is the
+    PM fix times the world move (gold x USD/INR) from that fix to the US close, read from 1-hour
+    bars. No parameter is fitted: ``ret = x_hourly``. P(up) = Phi(ret / s) and the volatility come
+    from ``train`` exactly as for P3, so the range and direction machinery are the same.
+    A row without a finite ``x_hourly`` has no forecast (ValueError; callers skip the day)."""
+    from scipy.stats import norm
+
+    x = float(row["x_hourly"])
+    if not math.isfinite(x):
+        raise ValueError("no hourly world move for this decision day")
+    y = train["y"].to_numpy(dtype=float)
+    s = resid_sd if resid_sd and resid_sd > 0 else float(y.std()) or 0.01
+    vol = float(np.sqrt((train["y"] ** 2).ewm(halflife=VOL_HALFLIFE).mean().iloc[-1]))
+    return Prediction(ret=x, p_up=float(norm.cdf(x / s)), vol=vol)
+
+
 def _p3_from_slope(
     train: pd.DataFrame, row: pd.Series, b: float, resid_sd: float | None
 ) -> Prediction:
@@ -448,6 +509,7 @@ VARIANT_PREDICTORS = {"p3_roll60": "predict_p3_roll60", "p3_monday": "predict_p3
 def update_variants(pairs: pd.DataFrame, data_dir: Path) -> dict[str, int]:
     """Append resolved decision days to the ADR 071 shadow records. Never raises (shadow only)."""
     path = data_dir / P3_VARIANTS_PATH.name
+    data: Any = {}
     try:
         data = json.loads(path.read_text())
         old = data.get("variants", {}) if isinstance(data, dict) else {}
@@ -469,6 +531,25 @@ def update_variants(pairs: pd.DataFrame, data_dir: Path) -> dict[str, int]:
         "schema_version": 1,
         "note": "ADR 071 shadow variants of P3; one out-of-sample fold per decision day.",
         "variants": {k: sorted(v, key=lambda f: f["d0"]) for k, v in out.items()},
+    }
+    # The hourly model's own record (ADR 066 predictor, shadow). Kept under its own key, NOT in
+    # "variants", so no scorer, status page or promotion step reads it as a registered challenger.
+    try:
+        old_h = data.get(HOURLY_KEY, {}).get("folds", []) if isinstance(data, dict) else []
+    except (NameError, AttributeError):
+        old_h = []
+    try:
+        hf = update_oos(
+            pairs, list(old_h), predict_hourly, forward_from=HOURLY_FORWARD_FROM, hourly=True
+        )
+    except Exception as exc:
+        logger.warning("hourly shadow record failed: %s", exc)
+        hf = list(old_h)
+    payload[HOURLY_KEY] = {
+        "model_version": HOURLY_VERSION,
+        "forward_from": HOURLY_FORWARD_FROM,
+        "note": "ADR 066 hourly pass-through (beta 1.0) as a live-capable shadow; not a registered challenger.",
+        "folds": sorted(hf, key=lambda f: f["d0"]),
     }
     from ml.demotion import atomic_write_text  # a torn write would drop both variant records
 
@@ -514,8 +595,13 @@ def update_oos(
     predictor=None,
     forward_from: str | None = None,
     guard: rlg.LeakCheck | None = None,
+    hourly: bool = False,
 ) -> list[dict]:
     """Append an out-of-sample forecast for every resolved pair not yet in ``folds``.
+
+    ``hourly``: the hourly model's record. A day whose hourly world move is not available (the
+    cached bars start about 60 days back) gets no fold and is not retried; for the others the two
+    bar ends are also checked against the decision day's US close (``check_bar_ends``).
 
     ``guard`` (ADR 073): every new fold's inputs are checked against its decision day's US close
     first; a fold whose inputs were not yet known is NOT appended (logged at ERROR, recorded in
@@ -548,8 +634,14 @@ def update_oos(
         train = resolved[resolved["d1"] <= row["d0"]]
         if len(train) < MIN_TRAIN:
             continue
+        if hourly and not math.isfinite(float(row.get("x_hourly", math.nan))):
+            continue
         if clocks is None or not local.check_fold(
             _at(row["d0"], US_CLOSE_UTC), clocks, train.index.to_numpy(), i
+        ):
+            break
+        if hourly and not local.check_bar_ends(
+            _at(row["d0"], US_CLOSE_UTC), [row["h_fix_end"], row["h_now_end"]], "hourly bars"
         ):
             break
         p = predictor(train, row, _resid_sd([f for f in out if f["d0"] < key]))
@@ -756,6 +848,7 @@ def _model_forecast(
     model_version: str = MODEL_VERSION,
     now: datetime | None = None,
     lg: rlg.LeakCheck | None = None,
+    bars: pd.Series | None = None,
 ) -> dict | None:
     """The model window: next PM fix after ``d0`` from the global close of ``d0``, or None.
 
@@ -768,7 +861,7 @@ def _model_forecast(
     if q is None:
         return None
     pairs = build_pairs(
-        full.dropna(subset=["pm"])[["date", "pm", "am"]].reset_index(drop=True), glob
+        full.dropna(subset=["pm"])[["date", "pm", "am"]].reset_index(drop=True), glob, bars
     )
     if pairs.empty or not bool(pairs["last"].iloc[-1]) or pairs["d0"].iloc[-1] != d0:
         return None
@@ -779,6 +872,13 @@ def _model_forecast(
     close = _at(d0, US_CLOSE_UTC)
     if lg is not None and now is not None and not lg.check_forecast(now, train, row, d0, close):
         return None
+    if predictor is predict_hourly:  # its two bar readings are inputs too (ADR 073)
+        if lg is not None and not lg.check_bar_ends(
+            close, [row["h_fix_end"], row["h_now_end"]], "hourly bars (live)"
+        ):
+            return None
+        if not math.isfinite(float(row["x_hourly"])):
+            return None
     p = predictor(train, row, _resid_sd(folds))
     base = float(row["pm0"])
     return {
@@ -807,6 +907,7 @@ def forecast(
     shadow_predictor=None,
     shadow_version: str = ENSEMBLE_VERSION,
     lg: rlg.LeakCheck | None = None,
+    bars: pd.Series | None = None,
 ) -> dict:
     """Forecast the next IBJA fix at ``now``, whichever part of the day it is (see module doc).
 
@@ -846,7 +947,7 @@ def forecast(
         )
     else:
         if now >= _at(d_pm, US_CLOSE_UTC) and not demoted and not lg.violations:
-            fc = _model_forecast(full, glob, folds, d_pm, predictor, model_version, now, lg)
+            fc = _model_forecast(full, glob, folds, d_pm, predictor, model_version, now, lg, bars)
             if fc is not None:
                 out = {"active": True, **fc, "leak_guard": lg.info()}
                 if shadow_folds is not None:
@@ -858,6 +959,7 @@ def forecast(
                             d_pm,
                             shadow_predictor or predict,
                             shadow_version,
+                            bars=bars,
                         )
                     except Exception as exc:  # shadow must never take the live forecast down
                         logger.warning("nextfix shadow ensemble failed: %s", exc)
@@ -940,7 +1042,14 @@ def run(
     cstate = _load_champion(data_dir)
     full = load_ibja_full(ibja_path)
     glob = global_series(macro, data_dir / LABEL_PATH.name)
-    pairs = build_pairs(full.dropna(subset=["pm"]).reset_index(drop=True), glob)
+    try:  # the hourly bars are optional: without them only the hourly record has gaps
+        from ml import nextfix_intraday
+
+        bars = nextfix_intraday.load_bars(data_dir)
+    except Exception as exc:
+        logger.warning("hourly bars unavailable (%s); hourly record skipped", exc)
+        bars = None
+    pairs = build_pairs(full.dropna(subset=["pm"]).reset_index(drop=True), glob, bars)
     # P3 (ADR 069) is the default live model; ``cstate`` (ADR 072) says whether another champion is.
     # Its record is cheap (no networks) and rebuilt from the pairs if absent.
     p3_path = data_dir / P3_OOS_PATH.name
@@ -970,6 +1079,8 @@ def run(
         logger.warning("nextfix shadow ensemble record failed (%s); live P3 unaffected", exc)
         shadow_folds, shadow_ev = load_oos(oos_path), {"n": 0, "ready": False}
     records = {"p3": folds, "ensemble": shadow_folds, **load_variant_folds(data_dir)}
+    if cstate.get("champion") == "hourly":  # only reachable once the pool admits it (LIVE_CAPABLE)
+        records["hourly"] = load_hourly_folds(data_dir)
     cid = cstate["champion"]
     fallback = False
     if cid != "p3" and not records.get(cid):
@@ -1002,6 +1113,7 @@ def run(
         shadow_predictor=sh_predictor,
         shadow_version=sh_version,
         lg=lg,
+        bars=bars,
     )
     champion = _promotion_step(data_dir, cstate, records, now)
     if fallback:
@@ -1031,6 +1143,16 @@ def _load_champion(data_dir: Path) -> dict:
         )
         return {**promotion.empty_champion(), "unreadable": True}
     return cstate
+
+
+def load_hourly_folds(data_dir: Path) -> list[dict]:
+    """The hourly shadow record ([] when the file or the key is missing or malformed)."""
+    try:
+        data = json.loads((data_dir / P3_VARIANTS_PATH.name).read_text())
+        folds = data.get(HOURLY_KEY, {}).get("folds", []) if isinstance(data, dict) else []
+    except (OSError, ValueError, AttributeError):
+        return []
+    return folds if isinstance(folds, list) else []
 
 
 def load_variant_folds(data_dir: Path) -> dict[str, list[dict]]:
