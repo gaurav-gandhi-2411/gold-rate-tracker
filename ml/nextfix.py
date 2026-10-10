@@ -560,6 +560,14 @@ def update_variants(
     except Exception as exc:
         logger.warning("hourly shadow record failed: %s", exc)
         hf = list(old_h)
+    # Counts only (no prices): the one line a person can read in the public run log to see that
+    # the hourly shadow record is growing, since its file is encrypted.
+    logger.info(
+        "hourly shadow record: %d folds (%d forward, %d re-run)",
+        len(hf),
+        sum(1 for f in hf if f.get("retro") is False),
+        sum(1 for f in hf if f.get("retro") is True),
+    )
     payload[HOURLY_KEY] = {
         "model_version": HOURLY_VERSION,
         "forward_from": HOURLY_FORWARD_FROM,
