@@ -20,7 +20,7 @@ Commands are for bash; replace `$REPO` with `gaurav-gandhi-2411/gold-rate-tracke
 
 ## 1. Sync health and stale periods
 
-Data on master (public, no decrypting): 
+Data on master (public, no decrypting):
 - `data/cadence_metrics.json`: `price_checks.longest_gap_hours`, `open_gap_hours`,
   `median_gap_hours` over the last 7 days. The page shows "not fresh" past 8 h
   (`docs/TANISHQ_TIMED_VISITS.md`), the "Tanishq has not updated" alert (T14) is at 30 h.
