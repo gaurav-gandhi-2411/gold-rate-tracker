@@ -426,6 +426,29 @@ jobs:
             -d "bot/data-sync PR #${PR_NUM} has been open ${AGE_MIN} min without merging -- prices.json may be stale. https://github.com/${GITHUB_REPOSITORY}/pull/${PR_NUM}" \
             "https://ntfy.sh/${NTFY_TOPIC}" || true
 
+      # GitHub's cron skips runs, and a monitor that may not run is not a monitor: ci-health.yml
+      # last ran 9 h apart on 2026-10-09. Any check-price run (push, dispatch or cron) that finds it
+      # more than 2 h old starts it; its own hourly schedule stays as a fallback. Never fails the run.
+      - name: Start the CI health check if it has not run lately
+        if: always()
+        continue-on-error: true
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          LAST=$(gh api "repos/${GITHUB_REPOSITORY}/actions/workflows/ci-health.yml/runs?per_page=1" --jq '.workflow_runs[0].created_at // empty') || LAST=""
+          NOW=$(date -u +%s)
+          if [ -n "$LAST" ]; then
+            AGE=$(( NOW - $(date -u -d "$LAST" +%s) ))
+          else
+            AGE=999999
+          fi
+          if [ "$AGE" -gt 7200 ]; then
+            gh workflow run ci-health.yml --ref master
+            echo "ci-health.yml last ran ${AGE}s ago; started it"
+          else
+            echo "ci-health.yml ran ${AGE}s ago; nothing to start"
+          fi
+
       - name: Fail the run if decrypt or re-encrypt failed (ADR 060)
         if: always() && (steps.decrypt.outcome == 'failure' || steps.seal.outcome == 'failure')
         run: |
