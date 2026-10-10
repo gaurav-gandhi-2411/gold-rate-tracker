@@ -192,7 +192,10 @@ jobs:
           # commit's own check-runs, which are frequently empty ([skip ci]
           # bot commits never trigger lint.yml at all; see the module
           # comment above for how that first design was caught and fixed).
-          RUN_INFO=$(gh api "repos/${GITHUB_REPOSITORY}/actions/workflows/lint.yml/runs?branch=master&per_page=1" \
+          # Only a COMPLETED run is judged: a run still in progress has jobs with no conclusion yet,
+          # which read as "missing" and paged GG twice (2026-10-09 09:13Z, 2026-10-10 08:33Z) for a
+          # run that then finished green.
+          RUN_INFO=$(gh api "repos/${GITHUB_REPOSITORY}/actions/workflows/lint.yml/runs?branch=master&status=completed&per_page=1" \
             --jq '.workflow_runs[0] | {id, head_sha}')
           RUN_ID=$(echo "$RUN_INFO" | jq -r '.id')
           RUN_SHA=$(echo "$RUN_INFO" | jq -r '.head_sha')
