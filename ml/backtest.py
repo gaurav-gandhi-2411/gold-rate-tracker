@@ -315,8 +315,11 @@ def p3_past_errors() -> dict | None:
     from ml import nextfix
 
     try:
-        slope = float(json.loads((DATA_DIR / "calibration.json").read_text())["slope"])
-        return nextfix.past_error_series(nextfix.load_oos(nextfix.P3_OOS_PATH), slope)
+        cal = json.loads((DATA_DIR / "calibration.json").read_text())
+        now, hist = float(cal["slope"]), cal.get("slope_history") or []
+        return nextfix.past_error_series(
+            nextfix.load_oos(nextfix.P3_OOS_PATH), lambda day: nextfix.slope_on(hist, day, now)
+        )
     except Exception as exc:  # fail closed: no series rather than a wrong one
         logger.warning("p3 past-error series unavailable: %s", exc)
         return None

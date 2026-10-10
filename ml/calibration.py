@@ -750,6 +750,15 @@ def save_calibration(params: CalibrationParams, path: Path | None = None) -> Non
     p = path or CALIBRATION_JSON
     p.parent.mkdir(parents=True, exist_ok=True)
     payload = {**asdict(params), "valid": True, "schema_version": 3}
+    # The slope the page used on each past day, so the past-days chart converts every day with the
+    # slope of that day, not today's. Carried over from the file being replaced; one entry per change.
+    try:
+        history = list(json.loads(p.read_text()).get("slope_history") or []) if p.exists() else []
+    except (OSError, ValueError):
+        history = []
+    if not history or abs(history[-1]["slope"] - params.slope) > 1e-12:
+        history.append({"from": params.fit_date, "slope": params.slope})
+    payload["slope_history"] = history
     p.write_text(json.dumps(payload, indent=2) + "\n")
     logger.info("calibration: saved to %s (n=%d)", p, params.n_observations)
 
