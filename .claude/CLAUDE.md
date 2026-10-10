@@ -36,3 +36,10 @@ the session when the input is empty or never closes. It happened twice.
 - Put `timeout N` on every command that can run long, and record the PID of any background process
   you start so you can stop it by PID. Never kill by process name.
 - Before ending a session, list the background tasks and stop any you started that are still running.
+
+## Weekly routine (GG, 2026-10-10)
+
+The checklist any session runs each week without a brief is `docs/WEEKLY_ROUTINE.md`: sync health,
+timed visits, required checks and bot PRs, forward scoring, demotion and champion state, open PRs
+and worktrees, the analytics glance, and the dated checks. Run it at the start of a session after a
+gap and at least weekly; report it in the format above.
