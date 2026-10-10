@@ -30,8 +30,11 @@ def test_ci_health_keeps_its_own_schedule_and_manual_trigger() -> None:
     assert "schedule:" in CI_HEALTH and "workflow_dispatch:" in CI_HEALTH
 
 
-def test_ci_health_does_not_look_for_the_pr_only_guard_on_master() -> None:
-    # scraper-dependency-guard never runs on a push to master, so "missing" there is not a failure.
-    assert '[ "$CONTEXT" = "scraper-dependency-guard" ] && continue' in CI_HEALTH
-    loop = CI_HEALTH.split("while IFS= read -r CONTEXT", 1)[1]
-    assert loop.index("scraper-dependency-guard") < loop.index('FAILING="${FAILING}')
+def test_ci_health_derives_pr_only_contexts_instead_of_naming_them() -> None:
+    # The by-name skip (#2688) broke on the next PR-only required check; the judge now derives it.
+    assert 'scraper-dependency-guard" ] && continue' not in CI_HEALTH
+    assert "scripts/ci_health_judge.py" in CI_HEALTH
+    assert "actions/checkout" in CI_HEALTH  # the judge script is read from the repo
+    # exit 2 (cannot judge) must page and fail the run, not pass
+    after = CI_HEALTH.split("scripts/ci_health_judge.py", 1)[1]
+    assert '"$JUDGE_STATUS" -ge 2' in after and "failing closed" in after
