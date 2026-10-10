@@ -107,6 +107,11 @@ GoatCounter needs GG's login (checked 2026-10-10: the dashboard shows a login fo
 returns 403), so CC cannot read it. Say "not readable without GG" and keep the optional glance in
 `docs/FOR_GG.md`. Do not substitute a guess.
 
+If the repo secret `GOATCOUNTER_TOKEN` exists (optional item in `docs/FOR_GG.md`), dispatch
+`gh workflow run visitors-weekly.yml` after the Monday weekly run: it sends GG one private line
+(7-day total, top 3 source hosts) and prints only a status word, so CC does not read the numbers
+either. Without the secret the run says `skipped: GOATCOUNTER_TOKEN is not set`.
+
 ## 8. Dated checks coming up
 
 Announce each outcome to GG in one plain sentence with `gh workflow run notify-gg.yml -f title="..."
