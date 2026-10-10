@@ -52,7 +52,7 @@ import json
 import logging
 import math
 from dataclasses import dataclass
-from datetime import UTC, datetime
+from datetime import UTC, date, datetime, timedelta
 from pathlib import Path
 from typing import Any
 
@@ -311,7 +311,9 @@ def hourly_columns(pairs: pd.DataFrame, bars: pd.Series | None) -> pd.DataFrame:
     e1: list[Any] = []
     for d0 in pairs["d0"]:
         a = ni.value_at(bars, _at(d0, IBJA_PM_PUBLISH_UTC))
-        b = ni.value_at(bars, _at(d0, US_CLOSE_UTC))
+        # strictly before the decision moment, the rule the leak guard enforces, so an off-grid
+        # bar ending exactly at it is not used (the day is skipped) instead of stopping the record
+        b = ni.value_at(bars, _at(d0, US_CLOSE_UTC) - timedelta(seconds=1))
         if a is None or b is None or not (a[0] > 0 and b[0] > 0):
             xs.append(np.nan)
             e0.append(pd.NaT)
@@ -365,7 +367,13 @@ def build_pairs(ibja: pd.DataFrame, glob: pd.Series, bars: pd.Series | None = No
     df["x_prev"] = pd.Series(np.log(df["pm0"] / df["pmprev"]), index=df.index).fillna(0.0)
     df["basis"] = np.log(df["g0"] / df["pm0"])
     df["bdev"] = df["basis"] - df["basis"].rolling(BASIS_WINDOW, min_periods=5).mean().shift(1)
-    return hourly_columns(df.dropna(subset=["bdev"]).reset_index(drop=True), bars)
+    df = df.dropna(subset=["bdev"]).reset_index(drop=True)
+    try:
+        return hourly_columns(df, bars)
+    except Exception as exc:  # the hourly columns are shadow-only: never break the live pairs
+        logger.warning("hourly columns failed (%s); hourly record skipped this run", exc)
+        none = pd.Series(pd.NaT, index=df.index, dtype="datetime64[ns, UTC]")
+        return df.assign(x_hourly=np.nan, h_fix_end=none, h_now_end=none)
 
 
 # ── models ───────────────────────────────────────────────────────────────────────────────────────
@@ -509,7 +517,9 @@ def predict_p3_monday(
 VARIANT_PREDICTORS = {"p3_roll60": "predict_p3_roll60", "p3_monday": "predict_p3_monday"}
 
 
-def update_variants(pairs: pd.DataFrame, data_dir: Path) -> dict[str, int]:
+def update_variants(
+    pairs: pd.DataFrame, data_dir: Path, now: datetime | None = None
+) -> dict[str, int]:
     """Append resolved decision days to the ADR 071 shadow records. Never raises (shadow only)."""
     path = data_dir / P3_VARIANTS_PATH.name
     data: Any = {}
@@ -540,7 +550,12 @@ def update_variants(pairs: pd.DataFrame, data_dir: Path) -> dict[str, int]:
     old_h = load_hourly_folds(data_dir)
     try:
         hf = update_oos(
-            pairs, list(old_h), predict_hourly, forward_from=HOURLY_FORWARD_FROM, hourly=True
+            pairs,
+            list(old_h),
+            predict_hourly,
+            forward_from=HOURLY_FORWARD_FROM,
+            hourly=True,
+            as_of=now,
         )
     except Exception as exc:
         logger.warning("hourly shadow record failed: %s", exc)
@@ -596,11 +611,14 @@ def update_oos(
     forward_from: str | None = None,
     guard: rlg.LeakCheck | None = None,
     hourly: bool = False,
+    as_of: datetime | None = None,
 ) -> list[dict]:
     """Append an out-of-sample forecast for every resolved pair not yet in ``folds``.
 
     ``hourly``: the hourly model's record. A day whose hourly world move is not available (the
-    cached bars start about 60 days back) gets no fold and is not retried; for the others the two
+    cached bars start about 60 days back) gets no fold and is not retried; ``as_of`` (the run's
+    clock) marks a fold ``retro`` when its decision day is more than 3 days old, so a day whose
+    bars arrived late is never counted as a live call; for the others the two
     bar ends are also checked against the decision day's US close (``check_bar_ends``).
 
     ``guard`` (ADR 073): every new fold's inputs are checked against its decision day's US close
@@ -657,6 +675,8 @@ def update_oos(
         }
         if forward_from is not None:
             fold["retro"] = key < forward_from
+            if hourly and as_of is not None and (as_of.date() - date.fromisoformat(key)).days > 3:
+                fold["retro"] = True
         out.append(fold)
         out.sort(key=lambda f: f["d0"])
     if guard is not None:
@@ -1064,7 +1084,7 @@ def run(
     p3_ev = evaluate(folds, MODEL_VERSION)
     if not pairs.empty:
         try:  # shadow variants must never take the live forecast down (ADR 069, ADR 071)
-            update_variants(pairs, data_dir)
+            update_variants(pairs, data_dir, now)
         except Exception as exc:
             logger.warning("nextfix slope-variant shadow failed (%s); live P3 unaffected", exc)
     # Shadow: the ridge + neural-net ensemble keeps its own record and is scored beside P3.
@@ -1152,7 +1172,9 @@ def load_hourly_folds(data_dir: Path) -> list[dict]:
         folds = data.get(HOURLY_KEY, {}).get("folds", []) if isinstance(data, dict) else []
     except (OSError, ValueError, AttributeError):
         return []
-    return folds if isinstance(folds, list) else []
+    if not isinstance(folds, list):
+        return []
+    return [f for f in folds if isinstance(f, dict) and isinstance(f.get("d0"), str)]
 
 
 def load_variant_folds(data_dir: Path) -> dict[str, list[dict]]:

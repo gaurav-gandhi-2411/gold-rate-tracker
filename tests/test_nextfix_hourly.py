@@ -236,3 +236,62 @@ def test_a_live_hourly_forecast_without_bars_falls_back_to_the_hold_figure(
     (tmp_path / promotion.CHAMPION_FILE).write_text(json.dumps(state))
     out = nextfix.run(now=now, macro=macro, data_dir=tmp_path)
     assert out["forecast"].get("model_version") != nextfix.HOURLY_VERSION  # never a guess
+
+
+def test_a_bar_ending_exactly_at_the_decision_moment_skips_the_day_not_the_record(
+    tmp_path: Path,
+) -> None:
+    """Verifier defect 1: value_at accepts end == t while the guard denies end >= moment. Off-grid
+    bars (ending 22:15:00) must leave those days without an hourly move, not stop the walk."""
+    rng = np.random.default_rng(9)
+    idx = pd.date_range("2026-03-01 00:15", periods=24 * 120, freq="h", tz=UTC)  # ends at :15 + 1h
+    gold = 4200 * np.exp(np.cumsum(rng.normal(0, 0.002, len(idx))))
+    pd.DataFrame({"gold_usd": gold, "usd_inr": 96.0}, index=idx - pd.Timedelta(hours=1)).to_parquet(
+        tmp_path / "macro_intraday.parquet"
+    )
+    g = nfi.load_bars(tmp_path)
+    assert (g.index.minute == 15).all()  # every bar ends on :15, including 22:15
+    pairs = _pairs(tmp_path, g)
+    sample = pairs[pairs["d0"] >= "2026-03-10"].iloc[3]
+    close = pd.Timestamp(nextfix._at(sample["d0"], nextfix.US_CLOSE_UTC))
+    assert close in g.index  # a bar ends exactly at the decision moment
+    assert sample["h_now_end"] < close  # ...and is not the one used
+    guard = rlg.LeakCheck()
+    folds = nextfix.update_oos(
+        pairs, [], nextfix.predict_hourly, forward_from="2026-06-01", guard=guard, hourly=True
+    )
+    assert folds and not guard.violations
+
+
+def test_hourly_columns_failure_never_reaches_the_live_pairs(tmp_path: Path, monkeypatch) -> None:
+    def boom(*a, **k):
+        raise RuntimeError("x")
+
+    monkeypatch.setattr(nextfix, "hourly_columns", boom)
+    pairs = _pairs(tmp_path, _write_bars(tmp_path))
+    assert not pairs.empty and pairs["x_hourly"].isna().all()
+
+
+def test_a_fold_created_long_after_its_day_is_never_labelled_live(tmp_path: Path) -> None:
+    pairs = _pairs(tmp_path, _write_bars(tmp_path))
+    late = datetime(2026, 12, 1, tzinfo=UTC)  # far after every synthetic decision day
+    folds = nextfix.update_oos(
+        pairs, [], nextfix.predict_hourly, forward_from="2026-01-01", hourly=True, as_of=late
+    )
+    assert folds and all(f["retro"] for f in folds)
+    fresh = nextfix.update_oos(
+        pairs, [], nextfix.predict_hourly, forward_from="2026-01-01", hourly=True
+    )
+    assert any(not f["retro"] for f in fresh)  # no clock given: the forward_from rule alone
+
+
+def test_malformed_stored_hourly_folds_do_not_stop_the_other_records(tmp_path: Path) -> None:
+    _run(tmp_path, with_bars=True)
+    path = tmp_path / "nextfix_p3_variants_oos.json"
+    doc = json.loads(path.read_text())
+    doc[nextfix.HOURLY_KEY]["folds"] = [5, "x", {"no": "day"}, *doc[nextfix.HOURLY_KEY]["folds"]]
+    path.write_text(json.dumps(doc))
+    pairs = _pairs(tmp_path, nfi.load_bars(tmp_path))
+    counts = nextfix.update_variants(pairs, tmp_path)
+    assert counts["p3_roll60"] > 0 and counts["p3_monday"] > 0
+    assert all(isinstance(f, dict) and "d0" in f for f in nextfix.load_hourly_folds(tmp_path))
