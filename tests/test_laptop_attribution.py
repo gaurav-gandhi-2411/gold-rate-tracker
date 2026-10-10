@@ -134,3 +134,25 @@ def test_a_cancelled_or_failed_run_is_not_labelled_late() -> None:
         "dispatched_but_run_late"
     )
     assert la.classify_slot(slot, base, on_log, INSTALLED)["class"] == "dispatched_but_run_late"
+
+
+def test_output_and_input_paths_can_be_overridden(tmp_path: Path) -> None:
+    default = la.parse_args([])
+    assert default.out == la.OUT and default.timeliness == la.TIMELINESS
+    custom = la.parse_args(
+        ["--out", str(tmp_path / "a.json"), "--timeliness", str(tmp_path / "t.json")]
+    )
+    assert custom.out == tmp_path / "a.json" and custom.timeliness == tmp_path / "t.json"
+
+
+def test_nothing_missed_still_stamps_the_file_as_checked(tmp_path: Path, monkeypatch) -> None:
+    import json
+
+    monkeypatch.setattr(la.sys, "platform", "win32")
+    rep = tmp_path / "t.json"
+    rep.write_text(json.dumps({"tanishq_slots": {"missed_slots_ist": []}}), encoding="utf-8")
+    out = tmp_path / "a.json"
+    out.write_text(json.dumps({"generated_at": "2000-01-01T00:00:00+00:00", "slots": []}), "utf-8")
+    assert la.main(["--timeliness", str(rep), "--out", str(out)]) == 0
+    kept = json.loads(out.read_text(encoding="utf-8"))
+    assert kept["generated_at"] > "2026" and kept["slots"] == []

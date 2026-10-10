@@ -30,6 +30,7 @@ so "the task fired but the dispatcher died before logging" cannot be told apart 
 
 from __future__ import annotations
 
+import argparse
 import json
 import re
 import subprocess
@@ -203,17 +204,33 @@ def merge(existing: dict[str, Any] | None, new_rows: list[dict[str, Any]]) -> di
     return {"slots": rows, "counts": {k: v for k, v in counts.items() if v}}
 
 
+def parse_args(argv: list[str] | None) -> argparse.Namespace:
+    ap = argparse.ArgumentParser(description=__doc__.split("\n", 1)[0])
+    ap.add_argument(
+        "--timeliness", type=Path, default=TIMELINESS, help="input_timeliness_weekly.json to read"
+    )
+    ap.add_argument(
+        "--out", type=Path, default=OUT, help="attribution file to merge into and write"
+    )
+    return ap.parse_args(argv)
+
+
 def main(argv: list[str] | None = None) -> int:
+    args = parse_args(argv)
     if sys.platform != "win32":
         print("run this on the Windows laptop that hosts the visit scheduler", file=sys.stderr)
         return 2
-    rep = json.loads(TIMELINESS.read_text(encoding="utf-8"))
+    rep = json.loads(args.timeliness.read_text(encoding="utf-8"))
     missed = [
         datetime.fromisoformat(s).astimezone(IST)
         for s in (rep.get("tanishq_slots") or {}).get("missed_slots_ist", [])
     ]
     if not missed:
         print("no missed slots in the report")
+        if args.out.exists():  # nothing to add, but say the file was checked now
+            kept = json.loads(args.out.read_text(encoding="utf-8"))
+            kept["generated_at"] = datetime.now(UTC).isoformat()
+            args.out.write_text(json.dumps(kept, indent=1) + "\n", encoding="utf-8", newline="\n")
         return 0
     since = (min(missed) - timedelta(days=2)).strftime("%Y-%m-%d")
     events = collect_events(since)
@@ -233,7 +250,7 @@ def main(argv: list[str] | None = None) -> int:
         for r in (rep.get("tanishq_slots") or {}).get("per_slot", [])
     }
     rows = [classify_slot(s, events, dispatches, installed, github) for s in missed]
-    prev = json.loads(OUT.read_text(encoding="utf-8")) if OUT.exists() else None
+    prev = json.loads(args.out.read_text(encoding="utf-8")) if args.out.exists() else None
     out = {
         "schema_version": 1,
         "generated_at": datetime.now(UTC).isoformat(),
@@ -246,7 +263,7 @@ def main(argv: list[str] | None = None) -> int:
         },
         **merge(prev, rows),
     }
-    OUT.write_text(json.dumps(out, indent=1) + "\n", encoding="utf-8", newline="\n")
+    args.out.write_text(json.dumps(out, indent=1) + "\n", encoding="utf-8", newline="\n")
     print(json.dumps(out["counts"]))
     return 0
 
