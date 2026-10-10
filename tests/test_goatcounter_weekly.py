@@ -117,5 +117,4 @@ def test_basic_auth_is_tried_when_bearer_is_refused(tmp_path: Path) -> None:
     out = tmp_path / "v.txt"
     assert gw.run("tok", out, NOW, fetch=fetch) == "written"
     assert seen == ["Bearer", "Basic", "Basic"]
-    assert out.read_text(encoding="utf-8") == "Visitors in the last 7 days: 4.
-"
+    assert out.read_text(encoding="utf-8") == "Visitors in the last 7 days: 4.\n"
