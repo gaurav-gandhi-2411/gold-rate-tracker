@@ -1,5 +1,5 @@
 {
-  "backtest_run_at": "2026-10-09T20:42:07.719907+00:00",
+  "backtest_run_at": "2026-10-10T08:16:44.818499+00:00",
   "n_folds": 256,
   "n_folds_sub_30_context": 22,
   "horizon": 5,
@@ -5957,7 +5957,7 @@
     "n": 30,
     "n_in_range": 24,
     "n_retro": 28,
-    "mean_abs_err": 101.4,
+    "mean_abs_err": 101.5,
     "rows": [
       {
         "day": "2026-08-25",
@@ -5967,7 +5967,7 @@
       },
       {
         "day": "2026-08-26",
-        "err": 157.9,
+        "err": 157.8,
         "in_range": true,
         "retro": true
       },
@@ -5979,25 +5979,25 @@
       },
       {
         "day": "2026-08-28",
-        "err": 239.5,
+        "err": 239.4,
         "in_range": false,
         "retro": true
       },
       {
         "day": "2026-08-31",
-        "err": 201.3,
+        "err": 201.5,
         "in_range": false,
         "retro": true
       },
       {
         "day": "2026-09-01",
-        "err": 101.6,
+        "err": 101.7,
         "in_range": true,
         "retro": true
       },
       {
         "day": "2026-09-02",
-        "err": -246.4,
+        "err": -246.7,
         "in_range": false,
         "retro": true
       },
@@ -6009,13 +6009,13 @@
       },
       {
         "day": "2026-09-04",
-        "err": 147.4,
+        "err": 147.6,
         "in_range": true,
         "retro": true
       },
       {
         "day": "2026-09-07",
-        "err": -37.4,
+        "err": -37.5,
         "in_range": true,
         "retro": true
       },
@@ -6027,49 +6027,49 @@
       },
       {
         "day": "2026-09-09",
-        "err": 51.5,
+        "err": 51.6,
         "in_range": true,
         "retro": true
       },
       {
         "day": "2026-09-10",
-        "err": 89.9,
+        "err": 90.0,
         "in_range": true,
         "retro": true
       },
       {
         "day": "2026-09-11",
-        "err": 121.5,
+        "err": 121.6,
         "in_range": true,
         "retro": true
       },
       {
         "day": "2026-09-15",
-        "err": -120.0,
+        "err": -120.2,
         "in_range": true,
         "retro": true
       },
       {
         "day": "2026-09-16",
-        "err": 103.3,
+        "err": 103.5,
         "in_range": true,
         "retro": true
       },
       {
         "day": "2026-09-17",
-        "err": -157.9,
+        "err": -158.1,
         "in_range": false,
         "retro": true
       },
       {
         "day": "2026-09-18",
-        "err": 45.0,
+        "err": 45.1,
         "in_range": true,
         "retro": true
       },
       {
         "day": "2026-09-21",
-        "err": 83.7,
+        "err": 83.9,
         "in_range": true,
         "retro": true
       },
@@ -6081,25 +6081,25 @@
       },
       {
         "day": "2026-09-23",
-        "err": 61.4,
+        "err": 61.5,
         "in_range": true,
         "retro": true
       },
       {
         "day": "2026-09-24",
-        "err": -139.6,
+        "err": -139.8,
         "in_range": true,
         "retro": true
       },
       {
         "day": "2026-09-25",
-        "err": 421.8,
+        "err": 422.5,
         "in_range": false,
         "retro": true
       },
       {
         "day": "2026-09-28",
-        "err": -118.0,
+        "err": -118.2,
         "in_range": true,
         "retro": true
       },
