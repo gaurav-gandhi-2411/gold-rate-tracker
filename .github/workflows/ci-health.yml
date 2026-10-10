@@ -130,6 +130,8 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:
+      - uses: actions/checkout@v4
+
       - name: Check required status checks on master's most recent lint.yml run
         env:
           # Branch protection reads require repo-admin rights that neither
@@ -208,20 +210,38 @@ jobs:
 
           JOBS=$(gh api "repos/${GITHUB_REPOSITORY}/actions/runs/${RUN_ID}/jobs" --jq '.jobs')
 
+          # Judge only the required contexts that master's lint.yml runs actually produce. A context
+          # that none of the last 5 completed master runs carries (scraper-dependency-guard today)
+          # is PR-only: branch protection enforces it at merge time, and looking for it here paged
+          # GG on every run from 2026-10-10 08:33Z. Derived, not named: scripts/ci_health_judge.py
+          # (fails closed, exit 2, when it cannot judge).
+          printf '%s\n' "$REQUIRED" > "${RUNNER_TEMP}/required.txt"
+          echo "$JOBS" | jq '[.[] | {name, conclusion}]' > "${RUNNER_TEMP}/latest.json"
+          RUN_IDS=$(gh api "repos/${GITHUB_REPOSITORY}/actions/workflows/lint.yml/runs?branch=master&status=completed&per_page=5" \
+            --jq '.workflow_runs[].id' || true)
+          : > "${RUNNER_TEMP}/history.ndjson"
+          for ID in $RUN_IDS; do
+            gh api "repos/${GITHUB_REPOSITORY}/actions/runs/${ID}/jobs" --jq '[.jobs[].name]' \
+              >> "${RUNNER_TEMP}/history.ndjson" || true
+          done
+          jq -s '.' "${RUNNER_TEMP}/history.ndjson" > "${RUNNER_TEMP}/history.json" || echo '[]' > "${RUNNER_TEMP}/history.json"
+
+          set +e
+          RESULT=$(python3 scripts/ci_health_judge.py --required "${RUNNER_TEMP}/required.txt" \
+            --latest "${RUNNER_TEMP}/latest.json" --history "${RUNNER_TEMP}/history.json")
+          JUDGE_STATUS=$?
+          set -e
+          echo "$RESULT"
+          if [ "$JUDGE_STATUS" -ge 2 ]; then
+            MSG="ci-health could not judge master's required checks -- failing closed. ${RESULT}"
+            echo "::error::${MSG}"
+            page "${MSG}"
+            exit 1
+          fi
           FAILING=""
-          while IFS= read -r CONTEXT; do
-            [ -z "$CONTEXT" ] && continue
-            # PR-only context: scraper-dependency-guard runs on pull-request heads (and on bot-PR
-            # dispatches), never on a push to master, so master's lint.yml run cannot contain it.
-            # Treating it as "missing" paged GG on every run from 2026-10-10 08:33Z once it became
-            # required. Its result is enforced at merge time by branch protection itself.
-            [ "$CONTEXT" = "scraper-dependency-guard" ] && continue
-            CONCLUSION=$(echo "$JOBS" | jq -r --arg name "$CONTEXT" \
-              '[.[] | select(.name == $name)] | last | .conclusion // "missing"')
-            if [ "$CONCLUSION" != "success" ]; then
-              FAILING="${FAILING}${CONTEXT} (${CONCLUSION}), "
-            fi
-          done <<< "$REQUIRED"
+          if [ "$JUDGE_STATUS" -eq 1 ]; then
+            FAILING="$(echo "$RESULT" | sed -n 's/^FAILING: //p'), "
+          fi
 
           if [ -n "$FAILING" ]; then
             echo "::error::Required check(s) not green on master's most recent lint.yml run (${RUN_SHA}): ${FAILING}"
