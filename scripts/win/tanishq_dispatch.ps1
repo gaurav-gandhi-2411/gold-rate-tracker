@@ -76,7 +76,7 @@ Write-Log "DISPATCHED"
 # one kind of line. Nothing below can change this script's exit code.
 $SideLog = Join-Path $LogDir "side_tasks.log"
 function Write-Side([string]$Msg) {
-    Add-Content -Path $SideLog -Value ("{0} slot={1} {2}" -f (Get-Date).ToString("yyyy-MM-ddTHH:mm:sszzz"), $Slot, $Msg)
+    try { Add-Content -Path $SideLog -Value ("{0} slot={1} {2}" -f (Get-Date).ToString("yyyy-MM-ddTHH:mm:sszzz"), $Slot, $Msg) } catch { }
 }
 
 # (1) Keep the CI health monitor running. GitHub's cron skips runs, so a monitor that depends on it
@@ -120,7 +120,7 @@ try {
         if ($LASTEXITCODE -eq 0 -and $seed) { [System.IO.File]::WriteAllText($att, ($seed -join "`n"), $utf8) }
     }
     $script = Join-Path $PSScriptRoot "..\laptop_attribution.py"
-    $p = Start-Process -FilePath $py -ArgumentList @("-I", $script, "--timeliness", $rep, "--out", $att) `
+    $p = Start-Process -FilePath $py -ArgumentList @("-I", "`"$script`"", "--timeliness", "`"$rep`"", "--out", "`"$att`"") `
         -NoNewWindow -PassThru -RedirectStandardOutput (Join-Path $LogDir "attribution.out") `
         -RedirectStandardError (Join-Path $LogDir "attribution.err")
     $null = $p.Handle  # caches the handle; otherwise ExitCode of a redirected process reads back empty
