@@ -1,0 +1,50 @@
+# One private line of visitor numbers for GG, once the repo secret GOATCOUNTER_TOKEN exists.
+#
+# The repo and its run logs are public, so this workflow never prints the numbers: the script writes
+# the sentence to a file on the runner and curl sends that file to the private ntfy topic (the same
+# NTFY_TOPIC secret every other alert uses). Nothing is uploaded or committed. While the secret is
+# missing the run ends green and says so in one line (fails quietly by design).
+# Run it from the Monday routine (docs/WEEKLY_ROUTINE.md); the schedule is only a fallback.
+name: Visitors weekly
+
+on:
+  schedule:
+    - cron: "40 7 * * 1"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  visitors:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Read the weekly total and top sources
+        env:
+          GOATCOUNTER_TOKEN: ${{ secrets.GOATCOUNTER_TOKEN }}
+        run: python scripts/goatcounter_weekly.py --out "${RUNNER_TEMP}/visitors.txt"
+
+      - name: Send it to GG's private topic
+        env:
+          NTFY_TOPIC: ${{ secrets.NTFY_TOPIC }}
+        run: |
+          set -u
+          if [ ! -s "${RUNNER_TEMP}/visitors.txt" ]; then
+            echo "nothing to send"
+            exit 0
+          fi
+          if [ -z "${NTFY_TOPIC}" ]; then
+            echo "NTFY_TOPIC is not set; nothing sent"
+            exit 0
+          fi
+          code=$(curl -s -o /dev/null -w '%{http_code}' \
+            -H "Title: Gold Tracker: visitors this week" -H "Tags: bar_chart" \
+            --data-binary "@${RUNNER_TEMP}/visitors.txt" "https://ntfy.sh/${NTFY_TOPIC}")
+          echo "ntfy responded HTTP ${code}"
