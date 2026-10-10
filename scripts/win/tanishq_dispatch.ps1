@@ -56,9 +56,13 @@ if ($rec.blocked -eq $true) {
     }
 }
 
-$recent = gh run list --repo $Repo --workflow $Workflow --limit 5 --json createdAt,status | ConvertFrom-Json
+$recent = gh run list --repo $Repo --workflow $Workflow --limit 5 --json createdAt,status,conclusion | ConvertFrom-Json
 $cutoff = (Get-Date).ToUniversalTime().AddMinutes(-$MinSpacingMin)
 foreach ($r in $recent) {
+    # A run the workflow itself skipped (the GitHub cron fires and skips while Task Scheduler
+    # owns the visits) is not a visit. Counting it made a catch-up at 00:09 IST on 2026-10-11
+    # skip the missed 19:50 slot because a skipped cron run had been created 3 minutes earlier.
+    if ($r.conclusion -eq "skipped") { continue }
     $created = ([datetime]$r.createdAt).ToUniversalTime()
     if ($r.status -in @("queued", "in_progress", "waiting", "pending") -or $created -gt $cutoff) {
         Write-Log ("SKIP recent run status={0} created={1:o}" -f $r.status, $created)
