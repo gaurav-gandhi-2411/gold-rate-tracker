@@ -211,6 +211,11 @@ jobs:
           FAILING=""
           while IFS= read -r CONTEXT; do
             [ -z "$CONTEXT" ] && continue
+            # PR-only context: scraper-dependency-guard runs on pull-request heads (and on bot-PR
+            # dispatches), never on a push to master, so master's lint.yml run cannot contain it.
+            # Treating it as "missing" paged GG on every run from 2026-10-10 08:33Z once it became
+            # required. Its result is enforced at merge time by branch protection itself.
+            [ "$CONTEXT" = "scraper-dependency-guard" ] && continue
             CONCLUSION=$(echo "$JOBS" | jq -r --arg name "$CONTEXT" \
               '[.[] | select(.name == $name)] | last | .conclusion // "missing"')
             if [ "$CONCLUSION" != "success" ]; then

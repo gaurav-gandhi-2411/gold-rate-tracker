@@ -28,3 +28,10 @@ def test_check_price_starts_ci_health_when_it_is_stale() -> None:
 
 def test_ci_health_keeps_its_own_schedule_and_manual_trigger() -> None:
     assert "schedule:" in CI_HEALTH and "workflow_dispatch:" in CI_HEALTH
+
+
+def test_ci_health_does_not_look_for_the_pr_only_guard_on_master() -> None:
+    # scraper-dependency-guard never runs on a push to master, so "missing" there is not a failure.
+    assert '[ "$CONTEXT" = "scraper-dependency-guard" ] && continue' in CI_HEALTH
+    loop = CI_HEALTH.split("while IFS= read -r CONTEXT", 1)[1]
+    assert loop.index("scraper-dependency-guard") < loop.index('FAILING="${FAILING}')
