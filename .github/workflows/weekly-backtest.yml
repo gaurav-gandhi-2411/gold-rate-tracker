@@ -143,7 +143,7 @@ jobs:
       - name: Re-encrypt raw shadow files (ADR 060)
         env:
           DATA_ENC_KEY: ${{ secrets.DATA_ENC_KEY }}
-        run: python scripts/data_crypt.py encrypt data/next_day_range_shadow.json data/wait_or_buy_shadow.json data/nowcast_shadow_log.json data/weekly_range_shadow_log.json
+        run: python scripts/data_crypt.py encrypt data/next_day_range_shadow.json data/wait_or_buy_shadow.json data/nowcast_shadow_log.json data/weekly_range_shadow_log.json data/metrics_history.json
 
       # ADR 060: next_day_range_shadow, wait_or_buy_shadow, nowcast_shadow_log and
       # weekly_range_shadow_log hold raw prices (the last one's lo/hi invert to the IBJA rate).
