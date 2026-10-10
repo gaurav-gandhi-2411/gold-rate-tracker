@@ -457,3 +457,22 @@ def test_own_model_files_holding_the_ibja_series_are_sealed_by_their_producer(
     plaintext into an ignored path and the ciphertext would go stale."""
     assert logical in dc.REGISTRY
     assert logical in _workflow_encrypt_paths()[producer]
+
+
+def test_guard_summary_counts_untracked_by_design_separately(
+    repo: Path, key_env: bytes, capsys: pytest.CaptureFixture[str]
+) -> None:
+    by_design = [lp for lp in dc.REGISTRY if dc.untracked_by_design(lp)]
+    assert by_design == ["data/premium_nowcast_bars.json"]  # never tracked: nothing commits it
+    assert dc.main(["--root", str(repo), "guard"]) == 0
+    out = capsys.readouterr().out
+    assert f"{len(dc.REGISTRY)} registered, 0 migrated, 1 untracked by design, 0 problem(s)" in out
+
+
+def test_guard_fails_when_an_untracked_by_design_path_gets_tracked(repo: Path) -> None:
+    lp = "data/premium_nowcast_bars.json"
+    _put(repo, lp, b"{}")
+    _git(repo, "add", "-f", lp)
+    assert any(
+        "flagged untracked_by_design but git tracks it" in m for m in dc.guard(dc.Paths(repo))
+    )
