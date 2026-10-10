@@ -540,7 +540,7 @@ def update_variants(
         except Exception as exc:
             logger.warning("variant %s failed: %s", name, exc)
             out[name] = list(old.get(name, []))
-    payload = {
+    payload: dict[str, Any] = {
         "schema_version": 1,
         "note": "ADR 071 shadow variants of P3; one out-of-sample fold per decision day.",
         "variants": {k: sorted(v, key=lambda f: f["d0"]) for k, v in out.items()},
