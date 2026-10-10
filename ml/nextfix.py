@@ -302,10 +302,13 @@ def hourly_columns(pairs: pd.DataFrame, bars: pd.Series | None) -> pd.DataFrame:
     read the same instants."""
     from ml import nextfix_intraday as ni
 
-    pairs = pairs.assign(x_hourly=np.nan, h_fix_end=pd.NaT, h_now_end=pd.NaT)
+    none = pd.Series(pd.NaT, index=pairs.index, dtype="datetime64[ns, UTC]")
+    pairs = pairs.assign(x_hourly=np.nan, h_fix_end=none, h_now_end=none)
     if bars is None or bars.empty or pairs.empty:
         return pairs
-    xs, e0, e1 = [], [], []
+    xs: list[float] = []
+    e0: list[Any] = []
+    e1: list[Any] = []
     for d0 in pairs["d0"]:
         a = ni.value_at(bars, _at(d0, IBJA_PM_PUBLISH_UTC))
         b = ni.value_at(bars, _at(d0, US_CLOSE_UTC))
@@ -534,10 +537,7 @@ def update_variants(pairs: pd.DataFrame, data_dir: Path) -> dict[str, int]:
     }
     # The hourly model's own record (ADR 066 predictor, shadow). Kept under its own key, NOT in
     # "variants", so no scorer, status page or promotion step reads it as a registered challenger.
-    try:
-        old_h = data.get(HOURLY_KEY, {}).get("folds", []) if isinstance(data, dict) else []
-    except (NameError, AttributeError):
-        old_h = []
+    old_h = load_hourly_folds(data_dir)
     try:
         hf = update_oos(
             pairs, list(old_h), predict_hourly, forward_from=HOURLY_FORWARD_FROM, hourly=True
