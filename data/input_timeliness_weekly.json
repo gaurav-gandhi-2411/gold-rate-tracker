@@ -1,11 +1,11 @@
 {
  "schema_version": 1,
- "generated_at": "2026-10-09T20:43:23.691691+00:00",
+ "generated_at": "2026-10-10T08:17:55.475940+00:00",
  "days": 7,
  "tanishq_slots": {
   "days": 7,
-  "slots": 30,
-  "served": 14,
+  "slots": 34,
+  "served": 18,
   "missed": 16,
   "window_minutes": 45,
   "missed_slots_ist": [
@@ -184,6 +184,26 @@
     "slot_ist": "2026-10-09T19:50:00+05:30",
     "served": true,
     "class": "served"
+   },
+   {
+    "slot_ist": "2026-10-10T01:40:00+05:30",
+    "served": true,
+    "class": "served"
+   },
+   {
+    "slot_ist": "2026-10-10T07:30:00+05:30",
+    "served": true,
+    "class": "served"
+   },
+   {
+    "slot_ist": "2026-10-10T10:40:00+05:30",
+    "served": true,
+    "class": "served"
+   },
+   {
+    "slot_ist": "2026-10-10T11:10:00+05:30",
+    "served": true,
+    "class": "served"
    }
   ],
   "attribution_note": "from GitHub run data only; no_dispatch cannot tell a laptop that was off or asleep from a scheduler that did not fire or a task that did not run (only the laptop's own log knows)",
@@ -196,11 +216,11 @@
   "nights_with_model_forecast": 4,
   "minutes_after_us_close": [
    13,
+   77,
    108,
-   167,
-   194
+   167
   ],
-  "median_minutes_after_us_close": 167,
+  "median_minutes_after_us_close": 108,
   "marking": "VERIFIED"
  }
 }

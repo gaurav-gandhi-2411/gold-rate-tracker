@@ -1,8 +1,8 @@
 {
  "schema_version": 1,
- "generated_at_utc": "2026-10-09T20:43:20Z",
+ "generated_at_utc": "2026-10-10T08:17:52Z",
  "script": "scripts/build_model_scorecard.py",
- "git_sha": "2d1e93f7471785ccc4fa6a2bf9b5b703dd2d70b8",
+ "git_sha": "f3b1f1549d495d101b2d8babd3a8b3a9a69181ca",
  "script_blob_sha": "3858ff5a827aa502e70aad9887ea374d5d542e3a",
  "min_forward_n": 20,
  "nominal_coverage": 0.8,
@@ -97,7 +97,7 @@
     "marking": "VERIFIED"
    },
    "gate": {
-    "text": "direction gate ship, timing gate no ship; direction shown to users: no",
+    "text": "direction gate ship, timing gate no ship; direction shown to users: yes",
     "passes": true,
     "marking": "INFERRED"
    },
@@ -325,7 +325,7 @@
      "demoted: no",
      "since: n/a",
      "reasons recorded: none",
-     "state file last checked: 2026-10-09T20:20:50.426395+00:00",
+     "state file last checked: 2026-10-10T07:54:34.537131+00:00",
      "rules breaching now (forecast.json): none",
      "live record nextfix_p3_v1; re-promotion is never automatic (a person decides)"
     ]
@@ -632,17 +632,17 @@
    },
    "retrospective": {
     "label": "walk-forward over earlier history, NOT forward",
-    "text": "n=105: coverage 0.724 (95% 0.631-0.800) vs 0.80 promised; stratified shadow band 0.829",
+    "text": "n=106: coverage 0.726 (95% 0.635-0.802) vs 0.80 promised; stratified shadow band 0.830",
     "marking": "INFERRED"
    },
    "gate": {
-    "text": "resolvable at n: False; below 80% (p vs nominal 0.066)",
+    "text": "resolvable at n: False; below 80% (p vs nominal 0.068)",
     "passes": false,
     "marking": "INFERRED"
    },
    "verdict": "grey",
    "verdict_kind": "no_data",
-   "sentence": "No forward data: this band has no per-day ledger of issued ranges, so only the retrospective miss is known (72% inside vs 80% promised, n=105).",
+   "sentence": "No forward data: this band has no per-day ledger of issued ranges, so only the retrospective miss is known (73% inside vs 80% promised, n=106).",
    "sources": [
     "data/calibration_band_coverage.json"
    ],
@@ -1038,23 +1038,23 @@
    "forward_start": "2026-09-24",
    "forward_start_basis": "ADR 061/063 shadow_after in data/nowcast_shadow_log.json; date > this date",
    "forward": {
-    "n": 11,
-    "effective_n": 9.2,
+    "n": 12,
+    "effective_n": 10.4,
     "metric": "mean absolute error of today's rate",
     "unit": "Rs/g",
-    "model": 33.91,
-    "baseline": 47.76,
+    "model": 33.61,
+    "baseline": 44.86,
     "baseline_name": "the live estimate (M0)",
-    "diff": -13.86,
+    "diff": -11.25,
     "ci95": [
-     -43.8,
-     16.09
+     -38.82,
+     16.33
     ],
-    "p_one_sided": 0.184,
+    "p_one_sided": 0.2134,
     "p_kind": "one-sided HAC Diebold-Mariano (lag 1)",
     "bh_significant": null,
     "first_date": "2026-09-25",
-    "last_date": "2026-10-07",
+    "last_date": "2026-10-09",
     "marking": "VERIFIED",
     "extras": [
      "3 day(s) excluded: an input was published after the target (ADR 063)"
@@ -1072,7 +1072,7 @@
    },
    "verdict": "grey",
    "verdict_kind": "too_early",
-   "sentence": "Too early (n=11, need 20) to say whether the morning-rate estimate beats the live estimate (M0).",
+   "sentence": "Too early (n=12, need 20) to say whether the morning-rate estimate beats the live estimate (M0).",
    "sources": [
     "data/nowcast_shadow_log.json"
    ],
@@ -1087,23 +1087,23 @@
    "forward_start": "2026-07-19",
    "forward_start_basis": "first as_of_date in data/fusion_snapshots.parquet (every snapshot is forward)",
    "forward": {
-    "n": 71,
-    "effective_n": 70.8,
+    "n": 72,
+    "effective_n": 72.6,
     "metric": "mean absolute gap to Tanishq (same day)",
     "unit": "Rs/g",
-    "model": 42.19,
-    "baseline": 92.82,
+    "model": 40.84,
+    "baseline": 91.53,
     "baseline_name": "yesterday's Tanishq rate",
-    "diff": -50.63,
+    "diff": -50.68,
     "ci95": [
-     -75.23,
-     -26.03
+     -74.86,
+     -26.51
     ],
     "p_one_sided": 0.0,
     "p_kind": "one-sided HAC Diebold-Mariano (lag 1)",
     "bh_significant": true,
     "first_date": "2026-07-19",
-    "last_date": "2026-10-09",
+    "last_date": "2026-10-10",
     "marking": "VERIFIED",
     "extras": [
      "benchmark is the last national snapshot of the day; Tanishq is the day's last reading"
