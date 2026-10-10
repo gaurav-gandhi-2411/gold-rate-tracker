@@ -295,3 +295,21 @@ def test_malformed_stored_hourly_folds_do_not_stop_the_other_records(tmp_path: P
     counts = nextfix.update_variants(pairs, tmp_path)
     assert counts["p3_roll60"] > 0 and counts["p3_monday"] > 0
     assert all(isinstance(f, dict) and "d0" in f for f in nextfix.load_hourly_folds(tmp_path))
+
+
+def test_the_run_log_carries_the_hourly_record_counts_and_nothing_else(
+    tmp_path: Path, caplog
+) -> None:
+    import logging
+
+    with caplog.at_level(logging.INFO, logger="ml.nextfix"):
+        _run(tmp_path, with_bars=True)
+    line = next(r.getMessage() for r in caplog.records if "hourly shadow record:" in r.getMessage())
+    assert line.startswith("hourly shadow record: ") and "folds (" in line
+    assert not any(
+        ch.isalpha()
+        for ch in line.split(": ", 1)[1]
+        .replace("folds", "")
+        .replace("forward", "")
+        .replace("re-run", "")
+    )  # digits and punctuation only: no price level
