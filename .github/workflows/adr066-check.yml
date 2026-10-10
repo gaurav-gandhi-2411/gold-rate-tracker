@@ -1,0 +1,59 @@
+# Runs the pre-registered ADR 066 promotion check (scripts/check_adr066_promotion.py) on the
+# runner, where DATA_ENC_KEY is available, because the shadow log and the IBJA series it reads are
+# encrypted (ADR 060) and the person running CC cannot decrypt them.
+#
+# What it publishes: the script's console report only (per-window verdicts, pass/fail per
+# condition, change-vs-hold percentages and intervals, counts). No artifact is uploaded and nothing
+# is committed: the written report file stays in the runner's temp dir. The public repo's logs must
+# never carry decrypted data, and this console output holds only aggregates (read at the
+# 2026-10-16 check; see docs/ADR066_CHECK_HOWTO.md).
+#
+# Read-only and manual: the check never promotes anything (ADR 066, promotion is GG's decision).
+name: ADR 066 check (manual)
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: adr066-check
+  cancel-in-progress: false
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Set up Python
+        uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: "3.12"
+          cache: "pip"
+          cache-dependency-path: ml/requirements-inference.lock
+
+      - name: Install ML dependencies
+        run: |
+          pip install -q uv
+          uv pip install --system \
+            --extra-index-url https://download.pytorch.org/whl/cpu \
+            --index-strategy unsafe-best-match \
+            -r ml/requirements-inference.lock
+
+      - name: Decrypt raw data files (ADR 060)
+        uses: ./.github/actions/decrypt-data
+        with:
+          key: ${{ secrets.DATA_ENC_KEY }}
+
+      - name: Refresh the cached 1-hour bars (needed for conditions 4 and 5)
+        run: python -c "from ml import macro; macro.update_intraday_cache()"
+
+      - name: Run the ADR 066 promotion check
+        # --out-dir is outside the workspace and is never uploaded; only the console report is kept.
+        run: python scripts/check_adr066_promotion.py --out-dir "${RUNNER_TEMP}/adr066_report"
