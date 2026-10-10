@@ -387,3 +387,10 @@ def test_dispatcher_side_tasks_run_after_the_visit_and_cannot_change_the_result(
     assert "UTF8Encoding $false" in tail  # no BOM for the JSON the Python script reads
     assert "Stop-Process -Id $p.Id" in tail and "-Name" not in tail  # kill by PID only
     assert "side_tasks.log" in tail  # the dispatcher log keeps one kind of line
+
+
+def test_dispatcher_does_not_count_skipped_cron_runs_as_recent_visits():
+    ps1 = (ROOT / "scripts" / "win" / "tanishq_dispatch.ps1").read_text(encoding="utf-8")
+    assert "--json createdAt,status,conclusion" in ps1
+    guard = ps1.split("foreach ($r in $recent) {", 1)[1]
+    assert guard.index('$r.conclusion -eq "skipped"') < guard.index("SKIP recent run")
