@@ -1,5 +1,5 @@
 {
- "generated_at": "2026-10-11T10:14:51.518571Z",
+ "generated_at": "2026-10-11T14:30:00.460937Z",
  "ready": true,
  "bars_from": "2026-08-03T03:00:00Z",
  "bars_to": "2026-10-09T21:00:00Z",
@@ -16,16 +16,16 @@
    "change_beta_0.5_pct": -41.9,
    "change_beta_0.5_ci95": [
     -53.9,
-    -29.0
+    -29.1
    ],
    "dm_p_beta_0.5": 0.0,
    "change_beta_1.0_pct": -23.8,
    "change_beta_1.0_ci95": [
     -40.4,
-    -0.1
+    -0.2
    ],
-   "dm_p_beta_1.0": 0.0335,
-   "direction_hit_rate": 0.739,
+   "dm_p_beta_1.0": 0.0329,
+   "direction_hit_rate": 0.761,
    "direction_n": 46
   },
   "after_afternoon_rate": {
@@ -45,7 +45,7 @@
    "change_beta_1.0_pct": -30.3,
    "change_beta_1.0_ci95": [
     -47.3,
-    -8.0
+    -8.1
    ],
    "dm_p_beta_1.0": 0.022,
    "direction_hit_rate": 0.727,
@@ -67,8 +67,8 @@
    "dm_p_beta_0.5": 0.0,
    "change_beta_1.0_pct": -66.4,
    "change_beta_1.0_ci95": [
-    -74.2,
-    -55.0
+    -74.3,
+    -55.1
    ],
    "dm_p_beta_1.0": 0.0,
    "direction_hit_rate": 0.955,
@@ -87,7 +87,7 @@
    "change_beta_0.5_pct": -25.7,
    "change_beta_0.5_ci95": [
     -35.3,
-    -13.2
+    -13.3
    ],
    "dm_p_beta_0.5": 0.0,
    "change_beta_1.0_pct": -1.9,
@@ -95,8 +95,8 @@
     -24.6,
     24.8
    ],
-   "dm_p_beta_1.0": 0.3971,
-   "direction_hit_rate": 0.723,
+   "dm_p_beta_1.0": 0.3955,
+   "direction_hit_rate": 0.727,
    "direction_n": 249
   },
   "after_afternoon_rate": {
@@ -116,7 +116,7 @@
    "change_beta_1.0_pct": -26.3,
    "change_beta_1.0_ci95": [
     -36.2,
-    -13.4
+    -13.5
    ],
    "dm_p_beta_1.0": 0.0002,
    "direction_hit_rate": 0.722,
@@ -129,8 +129,8 @@
    "ready": true,
    "mae_beta_0.0": 111.5,
    "mae_beta_0.5": 68.4,
-   "mae_beta_1.0": 68.4,
-   "change_beta_0.5_pct": -38.6,
+   "mae_beta_1.0": 68.3,
+   "change_beta_0.5_pct": -38.7,
    "change_beta_0.5_ci95": [
     -45.9,
     -29.2
@@ -138,7 +138,7 @@
    "dm_p_beta_0.5": 0.0,
    "change_beta_1.0_pct": -38.7,
    "change_beta_1.0_ci95": [
-    -51.0,
+    -51.1,
     -20.9
    ],
    "dm_p_beta_1.0": 0.0001,
