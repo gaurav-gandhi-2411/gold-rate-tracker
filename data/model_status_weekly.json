@@ -1,6 +1,6 @@
 {
  "schema_version": 1,
- "generated_at": "2026-10-10T08:17:59.693276+00:00",
+ "generated_at": "2026-10-11T08:02:59.986195+00:00",
  "rule_sha256": "e4efabec2193950ee4bf0193b00b3f17eed8c0cf5f81da4394d13acb51fdbdfa",
  "common_start": "2026-10-07",
  "champion": "p3",
@@ -118,13 +118,13 @@
  },
  "timeliness": {
   "schema_version": 1,
-  "generated_at": "2026-10-10T08:17:55.475940+00:00",
+  "generated_at": "2026-10-11T08:02:57.647915+00:00",
   "days": 7,
   "tanishq_slots": {
    "days": 7,
-   "slots": 34,
-   "served": 18,
-   "missed": 16,
+   "slots": 40,
+   "served": 23,
+   "missed": 17,
    "window_minutes": 45,
    "missed_slots_ist": [
     "2026-10-05T01:40:00+05:30",
@@ -142,13 +142,14 @@
     "2026-10-09T07:30:00+05:30",
     "2026-10-09T10:40:00+05:30",
     "2026-10-09T11:10:00+05:30",
-    "2026-10-09T15:35:00+05:30"
+    "2026-10-09T15:35:00+05:30",
+    "2026-10-10T19:50:00+05:30"
    ],
    "classification": {
     "no_dispatch": 6,
     "dispatched_failed": 0,
     "dispatched_cancelled": 1,
-    "late": 9,
+    "late": 10,
     "dispatched_other": 0,
     "unknown": 0
    },
@@ -322,6 +323,36 @@
      "slot_ist": "2026-10-10T11:10:00+05:30",
      "served": true,
      "class": "served"
+    },
+    {
+     "slot_ist": "2026-10-10T15:35:00+05:30",
+     "served": true,
+     "class": "served"
+    },
+    {
+     "slot_ist": "2026-10-10T19:50:00+05:30",
+     "served": false,
+     "class": "late"
+    },
+    {
+     "slot_ist": "2026-10-11T01:40:00+05:30",
+     "served": true,
+     "class": "served"
+    },
+    {
+     "slot_ist": "2026-10-11T07:30:00+05:30",
+     "served": true,
+     "class": "served"
+    },
+    {
+     "slot_ist": "2026-10-11T10:40:00+05:30",
+     "served": true,
+     "class": "served"
+    },
+    {
+     "slot_ist": "2026-10-11T11:10:00+05:30",
+     "served": true,
+     "class": "served"
     }
    ],
    "attribution_note": "from GitHub run data only; no_dispatch cannot tell a laptop that was off or asleep from a scheduler that did not fire or a task that did not run (only the laptop's own log knows)",
@@ -361,6 +392,6 @@
   "demoted": false,
   "since": null,
   "reasons": [],
-  "last_checked": "2026-10-10T07:54:34.537131+00:00"
+  "last_checked": "2026-10-11T07:47:22.030555+00:00"
  }
 }
