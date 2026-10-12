@@ -1,13 +1,13 @@
 {
-  "predicted_at": "2026-10-12T14:29:55.246075+00:00",
+  "predicted_at": "2026-10-12T20:01:52.669832+00:00",
   "target_window": "5d",
   "headline": {
     "method": "hold_latest_fix_pm_to_am",
     "predicted_22k": 13765,
     "lower": 13602,
     "upper": 13928,
-    "conformal_pi_half": 244.8,
-    "naive_mae_recent_30": 134.1,
+    "conformal_pi_half": 208.4,
+    "naive_mae_recent_30": 124.5,
     "vol_context": {
       "half_width": 227,
       "half_width_raw": 226.8,
@@ -17,7 +17,7 @@
       "is_floored": false,
       "is_degraded": false,
       "floor_fraction": 0.5,
-      "static_pi_half": 413.5,
+      "static_pi_half": 407.6,
       "baseline_half_width": 295,
       "regime": "normal",
       "typical_move_5d": 122,
@@ -28,29 +28,29 @@
   "chronos_companion": {
     "status": "success",
     "lean_direction": "up",
-    "lean_strength_pct": 1.669,
-    "direction_acc_30f": 0.267,
+    "lean_strength_pct": 1.364,
+    "direction_acc_30f": 0.233,
     "direction_prob_basis": "base_rate_fallback",
     "horizon_p10": [
-      13637.23,
-      13545.31,
-      13499.27,
-      13477.49,
-      13438.3
+      13473.17,
+      13384.42,
+      13327.09,
+      13296.04,
+      13247.07
     ],
     "horizon_p50": [
-      14079.14,
-      14070.97,
-      14097.97,
-      14133.51,
-      14161.54
+      13903.94,
+      13911.0,
+      13926.89,
+      13953.44,
+      13971.19
     ],
     "horizon_p90": [
-      14551.03,
-      14629.33,
-      14734.89,
-      14813.69,
-      14891.11
+      14368.49,
+      14470.63,
+      14562.32,
+      14632.78,
+      14700.54
     ],
     "model_version": "amazon/chronos-bolt-tiny@a0e552de",
     "calibration_applied": true,
@@ -59,7 +59,7 @@
     "direction_consensus": 1.0
   },
   "driver_context": {
-    "computed_at": "2026-10-12T14:30:04.723447+00:00",
+    "computed_at": "2026-10-12T20:01:53.610331+00:00",
     "macro_staleness_days": 0.0,
     "macro_fresh": true,
     "premium_threshold_pct": 15.0,
