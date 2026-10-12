@@ -69,6 +69,9 @@ runs:
         NTFY_TOPIC: ${{ inputs.ntfy-topic }}
       run: |
         set -e
+        # One GitHub 5xx must not strand a data PR (2026-10-12): bounded retry on every
+        # network call below that is safe to repeat. Loaded first so a rebase cannot move it.
+        source "${GITHUB_WORKSPACE}/scripts/ci_retry.sh"
 
         # Push/merge as a real user account (via GH_TOKEN, set from the
         # `token` input above) rather than GITHUB_TOKEN — required so the
@@ -83,7 +86,7 @@ runs:
         # Rebase onto latest master first — master can move between this
         # job's checkout and this step, and a branch that starts behind can't
         # satisfy required-status-checks' "strict" rule even after checks pass.
-        git fetch origin master
+        ci_retry git fetch origin master
         git rebase origin/master
 
         # Guard: the data-only guarantee otherwise lives only in each calling
@@ -123,7 +126,7 @@ runs:
           exit 1
         fi
 
-        git push --force origin "HEAD:refs/heads/${BRANCH}"
+        ci_retry git push --force origin "HEAD:refs/heads/${BRANCH}"
 
         # Resolve to an explicit PR NUMBER up front and use only that from
         # here on. `gh pr view <branch>` / `gh pr merge <branch>` resolve by
@@ -136,16 +139,24 @@ runs:
         # state=MERGED on the very first check — reporting success while that
         # run's actual commit sat on the branch, never opened as a PR, never
         # merged).
-        PR_NUM=$(gh pr list --repo "${GITHUB_REPOSITORY}" --head "${BRANCH}" --state open --json number --jq '.[0].number' 2>/dev/null || echo "")
+        # A list that still fails after the retries stops the step (it used to read as "no PR"
+        # and try to create a second one).
+        PR_NUM=$(ci_retry gh pr list --repo "${GITHUB_REPOSITORY}" --head "${BRANCH}" --state open --json number --jq '.[0].number')
         if [ -z "$PR_NUM" ]; then
-          gh pr create --base master --head "${BRANCH}" --title "${PR_TITLE}" --body "${PR_BODY}"
-          PR_NUM=$(gh pr list --repo "${GITHUB_REPOSITORY}" --head "${BRANCH}" --state open --json number --jq '.[0].number')
+          # A 502 can arrive after the PR was created, so a failed create is judged by listing again.
+          ci_retry gh pr create --base master --head "${BRANCH}" --title "${PR_TITLE}" --body "${PR_BODY}" \
+            || echo "gh pr create failed; checking whether the PR exists anyway" >&2
+          PR_NUM=$(ci_retry gh pr list --repo "${GITHUB_REPOSITORY}" --head "${BRANCH}" --state open --json number --jq '.[0].number')
+          if [ -z "$PR_NUM" ]; then
+            echo "::error::no open PR for ${BRANCH} after gh pr create"
+            exit 1
+          fi
         fi
 
-        gh workflow run lint.yml --ref "${BRANCH}"
+        ci_retry gh workflow run lint.yml --ref "${BRANCH}"
         # scraper-dependency-guard is a required check; its pull_request trigger never fires for these
         # PAT-pushed branches, so dispatch it too (it forwards its result as a commit status).
-        gh workflow run scraper-dependency-guard.yml --ref "${BRANCH}" -f pr="${PR_NUM}"
+        ci_retry gh workflow run scraper-dependency-guard.yml --ref "${BRANCH}" -f pr="${PR_NUM}"
 
         ITERATIONS=$(( WAIT_MINUTES * 6 ))  # one iteration per 10s
         echo "Waiting up to ${WAIT_MINUTES} minutes for PR #${PR_NUM} (${BRANCH}) to pass checks and merge..."

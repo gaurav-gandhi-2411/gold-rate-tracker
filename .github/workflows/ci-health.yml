@@ -142,6 +142,9 @@ jobs:
           NTFY_TOPIC: ${{ secrets.NTFY_TOPIC }}
         run: |
           set -e
+          source "${GITHUB_WORKSPACE}/scripts/ci_retry.sh"
+          # this job has a 5-minute timeout: 3 attempts, 5 s base (15 s per call at most)
+          export CI_RETRY_ATTEMPTS=3 CI_RETRY_BASE=5
 
           # Read the required-contexts list live from branch protection --
           # never a hardcoded copy of "lint, pwa-js" that could silently
@@ -172,10 +175,13 @@ jobs:
             fi
           }
 
+          # stderr goes to a file, not into the response: ci_retry's progress lines and a successful
+          # call's warnings must never end up inside the JSON that jq reads below
           set +e
-          PROTECTION_RESPONSE=$(gh api "repos/${GITHUB_REPOSITORY}/branches/master/protection" 2>&1)
+          PROTECTION_RESPONSE=$(ci_retry gh api "repos/${GITHUB_REPOSITORY}/branches/master/protection" 2>"${RUNNER_TEMP}/protection.err")
           PROTECTION_STATUS=$?
           set -e
+          if [ "$PROTECTION_STATUS" -ne 0 ]; then PROTECTION_RESPONSE="${PROTECTION_RESPONSE}$(cat "${RUNNER_TEMP}/protection.err")"; fi
           if [ "$PROTECTION_STATUS" -ne 0 ]; then
             MSG="Could not read master's required status checks from branch protection (gh api exit ${PROTECTION_STATUS}) -- failing closed rather than silently skipping this run. Response: ${PROTECTION_RESPONSE}"
             echo "::error::${MSG}"
@@ -197,7 +203,7 @@ jobs:
           # Only a COMPLETED run is judged: a run still in progress has jobs with no conclusion yet,
           # which read as "missing" and paged GG twice (2026-10-09 09:13Z, 2026-10-10 08:33Z) for a
           # run that then finished green.
-          RUN_INFO=$(gh api "repos/${GITHUB_REPOSITORY}/actions/workflows/lint.yml/runs?branch=master&status=completed&per_page=1" \
+          RUN_INFO=$(ci_retry gh api "repos/${GITHUB_REPOSITORY}/actions/workflows/lint.yml/runs?branch=master&status=completed&per_page=1" \
             --jq '.workflow_runs[0] | {id, head_sha}')
           RUN_ID=$(echo "$RUN_INFO" | jq -r '.id')
           RUN_SHA=$(echo "$RUN_INFO" | jq -r '.head_sha')
@@ -208,7 +214,7 @@ jobs:
             exit 1
           fi
 
-          JOBS=$(gh api "repos/${GITHUB_REPOSITORY}/actions/runs/${RUN_ID}/jobs" --jq '.jobs')
+          JOBS=$(ci_retry gh api "repos/${GITHUB_REPOSITORY}/actions/runs/${RUN_ID}/jobs" --jq '.jobs')
 
           # Judge only the required contexts that master's lint.yml runs actually produce. A context
           # that none of the last 5 completed master runs carries (scraper-dependency-guard today)
@@ -217,11 +223,11 @@ jobs:
           # (fails closed, exit 2, when it cannot judge).
           printf '%s\n' "$REQUIRED" > "${RUNNER_TEMP}/required.txt"
           echo "$JOBS" | jq '[.[] | {name, conclusion}]' > "${RUNNER_TEMP}/latest.json"
-          RUN_IDS=$(gh api "repos/${GITHUB_REPOSITORY}/actions/workflows/lint.yml/runs?branch=master&status=completed&per_page=5" \
+          RUN_IDS=$(ci_retry gh api "repos/${GITHUB_REPOSITORY}/actions/workflows/lint.yml/runs?branch=master&status=completed&per_page=5" \
             --jq '.workflow_runs[].id' || true)
           : > "${RUNNER_TEMP}/history.ndjson"
           for ID in $RUN_IDS; do
-            gh api "repos/${GITHUB_REPOSITORY}/actions/runs/${ID}/jobs" --jq '[.jobs[].name]' \
+            ci_retry gh api "repos/${GITHUB_REPOSITORY}/actions/runs/${ID}/jobs" --jq '[.jobs[].name]' \
               >> "${RUNNER_TEMP}/history.ndjson" || true
           done
           jq -s '.' "${RUNNER_TEMP}/history.ndjson" > "${RUNNER_TEMP}/history.json" || echo '[]' > "${RUNNER_TEMP}/history.json"
