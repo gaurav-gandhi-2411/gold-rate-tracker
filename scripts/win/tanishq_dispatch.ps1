@@ -32,7 +32,15 @@ function Write-Log([string]$Msg) {
     Add-Content -Path $Log -Value $line
 }
 
+trap { Write-Log ("FAIL unexpected: {0}" -f $_.Exception.Message); exit 1 }
+
 if (-not $SideTasksOnly) {
+# Windows PowerShell 5.1 turns ANY stderr output of a native command into a terminating error
+# when $ErrorActionPreference is Stop, even with 2>$null. A failing gh call (no network right
+# after a wake) then killed this script with exit 1, no log line and no retry: the 01:40 IST
+# slot of 2026-10-12 was lost that way. The native calls below are judged by $LASTEXITCODE
+# instead, so Continue is set for them and Stop is restored after the dispatch.
+$ErrorActionPreference = "Continue"
 # After a wake from sleep the network can take a minute or two to come back.
 $online = $false
 for ($i = 0; $i -lt 10; $i++) {
@@ -47,6 +55,7 @@ if (-not $online) { Write-Log "SKIP no network/GitHub after 5 min"; exit 1 }
 $lines = gh api -H "Accept: application/vnd.github.raw" "repos/$Repo/contents/data/tanishq_scrape_outcomes.jsonl" 2>$null
 if ($LASTEXITCODE -ne 0 -or -not $lines) { Write-Log "SKIP cannot read outcomes log"; exit 1 }
 $last = @($lines | Where-Object { $_.Trim() }) | Select-Object -Last 1
+if (-not $last) { Write-Log "SKIP empty outcomes log"; exit 1 }
 try { $rec = $last | ConvertFrom-Json } catch { Write-Log "SKIP unparseable last outcome"; exit 1 }
 if ($rec.blocked -eq $true) {
     $blockedAt = ([datetime]$rec.timestamp).ToUniversalTime()
@@ -56,7 +65,9 @@ if ($rec.blocked -eq $true) {
     }
 }
 
-$recent = gh run list --repo $Repo --workflow $Workflow --limit 5 --json createdAt,status,conclusion | ConvertFrom-Json
+$recentRaw = gh run list --repo $Repo --workflow $Workflow --limit 5 --json createdAt,status,conclusion 2>$null
+if ($LASTEXITCODE -ne 0 -or -not $recentRaw) { Write-Log "SKIP cannot list recent runs"; exit 1 }
+$recent = $recentRaw | ConvertFrom-Json
 $cutoff = (Get-Date).ToUniversalTime().AddMinutes(-$MinSpacingMin)
 foreach ($r in $recent) {
     # A run the workflow itself skipped (the GitHub cron fires and skips while Task Scheduler
@@ -73,6 +84,7 @@ foreach ($r in $recent) {
 gh workflow run $Workflow --repo $Repo --ref master -f "slot_ist=$Slot"
 if ($LASTEXITCODE -ne 0) { Write-Log "FAIL gh workflow run exit=$LASTEXITCODE"; exit 1 }
 Write-Log "DISPATCHED"
+$ErrorActionPreference = "Stop"
 }
 
 # --- Side tasks. They run only AFTER the visit has been triggered, are best effort, and write to a
