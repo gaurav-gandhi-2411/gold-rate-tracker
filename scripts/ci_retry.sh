@@ -20,7 +20,7 @@
 # Only use it on commands that are safe to repeat (reads, status posts, a workflow dispatch, a push
 # of the same commit); for a create or a merge, re-check the resulting state after a failure.
 
-_CI_RETRY_TRANSIENT='HTTP 5[0-9][0-9]|HTTP 429|Server Error|Bad Gateway|Service Unavailable|Gateway Time-?out|rate limit|timed? ?out|Timeout|connection (reset|refused|closed)|(unexpected|early) EOF|TLS handshake|Could not resolve host|Temporary failure in name resolution|RPC failed|The requested URL returned error: 5[0-9][0-9]|network is unreachable|broken pipe'
+_CI_RETRY_TRANSIENT='HTTP 5[0-9][0-9]|HTTP 429|Server Error|Bad Gateway|Service Unavailable|Gateway Time-?out|rate limit|timed? ?out|Timeout|connection (reset|refused|closed)|EOF|TLS handshake|schannel|hung up unexpectedly|Failed to connect|Recv failure|connection was reset|no such host|Something went wrong|Could not resolve host|Temporary failure in name resolution|RPC failed|The requested URL returned error: 5[0-9][0-9]|network is unreachable|broken pipe'
 
 ci_retry() {
   local attempts="${CI_RETRY_ATTEMPTS:-5}" base="${CI_RETRY_BASE:-10}"
@@ -30,6 +30,7 @@ ci_retry() {
     out="$("$@" 2>"$err")" && rc=0 || rc=$?
     if [ "$rc" -eq 0 ]; then
       [ -n "$out" ] && printf '%s\n' "$out"
+      [ -s "$err" ] && cat "$err" >&2  # warnings of a successful call stay in the log
       rm -f "$err"
       return 0
     fi

@@ -175,10 +175,13 @@ jobs:
             fi
           }
 
+          # stderr goes to a file, not into the response: ci_retry's progress lines and a successful
+          # call's warnings must never end up inside the JSON that jq reads below
           set +e
-          PROTECTION_RESPONSE=$(ci_retry gh api "repos/${GITHUB_REPOSITORY}/branches/master/protection" 2>&1)
+          PROTECTION_RESPONSE=$(ci_retry gh api "repos/${GITHUB_REPOSITORY}/branches/master/protection" 2>"${RUNNER_TEMP}/protection.err")
           PROTECTION_STATUS=$?
           set -e
+          if [ "$PROTECTION_STATUS" -ne 0 ]; then PROTECTION_RESPONSE="${PROTECTION_RESPONSE}$(cat "${RUNNER_TEMP}/protection.err")"; fi
           if [ "$PROTECTION_STATUS" -ne 0 ]; then
             MSG="Could not read master's required status checks from branch protection (gh api exit ${PROTECTION_STATUS}) -- failing closed rather than silently skipping this run. Response: ${PROTECTION_RESPONSE}"
             echo "::error::${MSG}"

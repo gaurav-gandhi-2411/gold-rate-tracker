@@ -256,3 +256,42 @@ def test_each_file_that_calls_ci_retry_loads_it(rel: str) -> None:
     text = (ROOT / rel).read_text(encoding="utf-8")
     assert "ci_retry " in text
     assert "scripts/ci_retry.sh" in text
+
+
+def test_progress_lines_stay_out_of_a_captured_response(tmp_path: Path) -> None:
+    """ci-health parses the response as JSON: a recovered 502 must not put text in front of it."""
+    errf = _posix(tmp_path / "err.txt")
+    script = (
+        _use(tmp_path, 1, "gh: Bad Gateway (HTTP 502)")
+        + f'R=$(ci_retry flaky 2>"{errf}"); echo "R=[$R]"'
+    )
+    r = _run(script, tmp_path)
+    assert "R=[OK]" in r.stdout
+    assert "transient failure" in (tmp_path / "err.txt").read_text()
+
+
+def test_ci_health_does_not_merge_stderr_into_the_response() -> None:
+    text = (ROOT / ".github/workflows/ci-health.yml").read_text(encoding="utf-8")
+    assert (
+        'ci_retry gh api "repos/${GITHUB_REPOSITORY}/branches/master/protection" 2>&1' not in text
+    )
+
+
+def test_warnings_of_a_successful_call_are_kept(tmp_path: Path) -> None:
+    script = 'source "' + _posix(HELPER) + '"\nw() { echo out; echo warn >&2; }\nci_retry w'
+    r = _run(script, tmp_path)
+    assert r.stdout.strip() == "out" and "warn" in r.stderr
+
+
+@pytest.mark.parametrize(
+    "msg",
+    [
+        "fatal: the remote end hung up unexpectedly",
+        "Recv failure: Connection was reset",
+        "dial tcp: no such host",
+        "schannel: failed to receive handshake",
+    ],
+)
+def test_more_transient_shapes_are_retried(tmp_path: Path, msg: str) -> None:
+    r = _run(_use(tmp_path, 1, msg) + "ci_retry flaky", tmp_path)
+    assert r.returncode == 0 and _calls(tmp_path) == 2
