@@ -20,13 +20,17 @@ def _forward_step(text: str, anchor: str) -> str:
 
 def test_lint_status_forward_retries_and_still_fails_when_persistent() -> None:
     step = _forward_step(LINT, "Post lint + pwa-js as commit statuses on the head SHA")
-    assert "for attempt in 1 2 3 4 5" in step and "sleep $((attempt * 15))" in step
+    assert (
+        "for attempt in 1 2 3 4 5" in step and "sleep $((attempt * 15))" in step and "-lt 5" in step
+    )
     assert "return 1" in step  # five failures in a row still fail the job
     assert step.count("gh api") == 1  # only inside the retrying function, never bare
 
 
 def test_guard_status_forward_retries_and_still_fails_when_persistent() -> None:
     step = _forward_step(GUARD, "Forward the result as a commit status")
-    assert "for attempt in 1 2 3 4 5" in step and "sleep $((attempt * 15))" in step
+    assert (
+        "for attempt in 1 2 3 4 5" in step and "sleep $((attempt * 15))" in step and "-lt 5" in step
+    )
     assert "exit 1" in step and "exit 0" in step
     assert step.count("gh api") == 1

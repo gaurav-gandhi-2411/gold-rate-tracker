@@ -72,6 +72,6 @@ jobs:
               exit 0
             fi
             echo "status post failed (attempt ${attempt}/5)" >&2
-            sleep $((attempt * 15))
+            if [ "${attempt}" -lt 5 ]; then sleep $((attempt * 15)); fi
           done
           exit 1

@@ -239,7 +239,7 @@ jobs:
                 return 0
               fi
               echo "status post for $1 failed (attempt ${attempt}/5)" >&2
-              sleep $((attempt * 15))
+              if [ "${attempt}" -lt 5 ]; then sleep $((attempt * 15)); fi
             done
             return 1
           }
