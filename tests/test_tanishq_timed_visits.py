@@ -394,3 +394,14 @@ def test_dispatcher_does_not_count_skipped_cron_runs_as_recent_visits():
     assert "--json createdAt,status,conclusion" in ps1
     guard = ps1.split("foreach ($r in $recent) {", 1)[1]
     assert guard.index('$r.conclusion -eq "skipped"') < guard.index("SKIP recent run")
+
+
+def test_dispatcher_survives_a_failing_gh_call_and_always_logs():
+    # 2026-10-12 01:40 IST: PS 5.1 + $ErrorActionPreference Stop + 2>$null made the first failing
+    # gh call a terminating error: exit 1, no log line, no retry of the network wait.
+    ps1 = (ROOT / "scripts" / "win" / "tanishq_dispatch.ps1").read_text(encoding="utf-8")
+    main = ps1.split("if (-not $SideTasksOnly) {", 1)[1].split("# --- Side tasks", 1)[0]
+    assert main.index('$ErrorActionPreference = "Continue"') < main.index("gh api rate_limit")
+    assert main.rindex('$ErrorActionPreference = "Stop"') > main.index('Write-Log "DISPATCHED"')
+    assert "gh run list" in main and 'SKIP cannot list recent runs' in main
+    assert "trap {" in ps1 and "FAIL unexpected" in ps1  # an unforeseen error is logged, not silent
