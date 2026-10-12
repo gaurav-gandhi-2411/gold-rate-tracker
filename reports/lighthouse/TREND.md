@@ -10,6 +10,7 @@ CI, not a local dev machine, is the authoritative source here).
 
 | Date (UTC) | Commit | Perf (median) | CLS (median) | LCP ms (median) | TBT ms (median) |
 |---|---|---|---|---|---|
+| 2026-10-12 | `fcce116` | 0.81 | 0.0367 | 3158 | 331 |
 | 2026-10-12 | `ee75730` | 0.86 | 0.0821 | 3146 | 171 |
 | 2026-10-11 | `77bac3d` | 0.79 | 0.0367 | 3181 | 404 |
 | 2026-10-10 | `e99fb02` | 0.86 | 0.0821 | 3134 | 153 |
@@ -29,4 +30,3 @@ CI, not a local dev machine, is the authoritative source here).
 | 2026-10-04 | `f9649e4` | 0.79 | 0.0191 | 3141 | 416 |
 | 2026-10-03 | `df2e81f` | 0.82 | 0.0202 | 3157 | 336 |
 | 2026-10-02 | `bde2fcd` | 0.84 | 0.0202 | 3123 | 284 |
-| 2026-10-02 | `b0f2b7b` | 0.80 | 0.0202 | 3144 | 394 |
