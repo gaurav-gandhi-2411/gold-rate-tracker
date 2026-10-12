@@ -84,7 +84,8 @@ def cs_rule(rule: dict[str, Any] = LIVE_RULE) -> dict[str, Any]:
 def live_days(folds: list[dict]) -> list[dict]:
     """Per-day folds this model issued live, oldest first: ``retro`` is explicitly False. A fold
     with no ``retro`` flag is NOT counted (fail closed: it may be a re-run day)."""
-    return sorted((f for f in folds if f.get("retro") is False), key=lambda f: f["d0"])
+    by_day = {f["d0"]: f for f in folds if f.get("retro") is False}  # one fold per day
+    return [by_day[d] for d in sorted(by_day)]
 
 
 def loss_diff(f: dict) -> float:
@@ -102,6 +103,8 @@ def error_status(folds: list[dict], rule: dict[str, Any] = LIVE_RULE) -> dict[st
     if n == 0:
         return {**out, "reason": "no live days yet"}
     d = np.array([loss_diff(f) for f in days], dtype=float)
+    if not np.all(np.isfinite(d)):  # fail closed (rule 98a): _demotion turns this into hold
+        raise ValueError("non-finite live loss difference")
     hold = float(np.mean([abs(f["pm1"] - f["pm0"]) for f in days]))
     out["mean_diff"] = round(float(d.mean()), 2)
     out["mae_model"] = round(hold + float(d.mean()), 2)

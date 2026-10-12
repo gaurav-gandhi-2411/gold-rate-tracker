@@ -121,3 +121,16 @@ def test_t18_fires_once_a_week_and_only_when_checked_and_alerting():
 
 def test_t18_is_private_never_public():
     assert "T18" not in PUBLIC_ALLOWLIST and audience_for("T18") == "ops"
+
+
+def test_a_non_finite_live_fold_fails_closed_not_silent(tmp_path):
+    folds = _record(30, ratio=0.9, seed=0)
+    folds[5] = {**folds[5], "ret": float("nan")}
+    out = _demote(tmp_path, folds)
+    assert out["demoted"] is True and out["checked"] is False
+    assert out["reasons"][0]["rule"] == "monitor_failed"
+
+
+def test_a_repeated_day_is_counted_once():
+    folds = _record(12, ratio=0.9, seed=0)
+    assert lm.error_status(folds + folds[:5])["n_live"] == 12
