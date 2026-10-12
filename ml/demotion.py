@@ -138,12 +138,19 @@ def range_breach(hits: list[bool], p: DemotionParams) -> dict:
 
 
 def demotion_status(
-    folds: list[dict], hits: list[bool] | None = None, p: DemotionParams | None = None
+    folds: list[dict],
+    hits: list[bool] | None = None,
+    p: DemotionParams | None = None,
+    live: dict | None = None,
 ) -> dict:
     """Which rules have breached on each of the last ``persist`` daily checks (as of each).
 
     A rule demotes only when it breached on all ``persist`` most recent checks. ``folds`` and
     ``hits`` must contain only forecasts already resolved at the time of the check.
+
+    ``live`` is the result of ``ml.live_monitor.error_status`` (ADR 075): the live-only check
+    against hold over days the model issued live. It is anytime-valid, so it is NOT subject to
+    ``persist``: a breach demotes at once, like any other rule. ``None`` skips it.
     """
     p = p or DemotionParams()
     out: dict = {"params": p.__dict__, "n_folds": len(folds), "demote": {}}
@@ -157,6 +164,9 @@ def demotion_status(
     for name, fn in rules.items():
         out["demote"][name] = all(fn(i)["breach"] for i in range(p.persist))
         out[name] = fn(0)
+    if live is not None:
+        out["demote"]["live_vs_hold"] = bool(live.get("breach"))
+        out["live_vs_hold"] = live
     out["demote_any"] = any(out["demote"].values())
     return out
 

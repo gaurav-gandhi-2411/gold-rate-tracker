@@ -940,6 +940,26 @@ def main(now: datetime | None = None) -> None:
 _DIRECTION_MIN_EDGE = 0.05
 
 
+def _live_monitor_summary(lm: object) -> dict:
+    """The small public summary of ADR 075's live-only monitor (counts and flags, no prices).
+
+    ``checked`` False when the monitor did not run (an old state or a failed run): the T18
+    coverage alert then stays silent and the page is unaffected."""
+    if not isinstance(lm, dict) or not isinstance(lm.get("error"), dict):
+        return {"checked": False}
+    err, cov = lm["error"], lm.get("coverage") or {}
+    return {
+        "checked": True,
+        "rule_sha256": lm.get("rule_sha256"),
+        "n_live": err.get("n_live"),
+        "error_breach": bool(err.get("breach")),
+        "coverage_n_live": cov.get("n_live"),
+        "coverage_live": cov.get("coverage"),
+        "coverage_e_value": cov.get("e_value"),
+        "coverage_alert": bool(lm.get("coverage_alert")),
+    }
+
+
 def _next_fix_block(
     now: datetime, current_22k: int, calibration: dict, scraped_at: str | None = None
 ) -> dict:
@@ -997,6 +1017,7 @@ def _next_fix_block(
             "reasons": dm.get("reasons", []),
             "rules_breaching_now": dm.get("rules_breaching_now", []),
             "checked": bool(dm.get("checked")),
+            "live_monitor": _live_monitor_summary(dm.get("live_monitor")),  # ADR 075; T18 reads it
         }
         lgi = fc.get("leak_guard")  # ADR 073: the runtime leak guard (names and times, no rates)
         block["leak_guard"] = (

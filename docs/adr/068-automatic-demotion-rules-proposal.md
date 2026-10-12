@@ -87,7 +87,7 @@ Per rule: with floor 0.50 the **direction rule almost never fires** on a model w
 
 ## 2026-10-12: live-only check added (ADR 075)
 
-The windows above are filled mostly by re-run days until about December 2026. ADR 075 adds (once wired) a
+The windows above are filled mostly by re-run days until about December 2026. ADR 075 adds a
 fourth rule that scores only days the model issued live, against hold, with an anytime-valid test
 and a first look at 10 live days (rule `live_vs_hold`, same sticky state and alert T16), plus a
 live range-coverage alert (T18, alert only). ADR 068's own thresholds are unchanged.

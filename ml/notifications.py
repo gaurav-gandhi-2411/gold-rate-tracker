@@ -1231,6 +1231,41 @@ def _check_t17_model_promoted(
     )
 
 
+_T18_REPEAT_DAYS = 7  # a standing low coverage is reported once a week, not every cycle
+
+
+def _check_t18_live_coverage(
+    forecast: dict, state: NotificationState, now_ist: datetime
+) -> PendingAlert | None:
+    """T18 -- the live next-rate model's own 80% range is clearly missing its target on days it
+    issued live (ADR 075). ALERT ONLY: nothing is switched off by this check.
+
+    Reads forecast.json's ``next_fix.demotion.live_monitor``. At most once every
+    ``_T18_REPEAT_DAYS`` days while the check keeps firing. Private topic only (not on the public
+    allowlist), no quiet-hours bypass: it is a slow signal, not an outage.
+    """
+    lm = ((forecast.get("next_fix") or {}).get("demotion") or {}).get("live_monitor") or {}
+    if lm.get("checked") is not True or lm.get("coverage_alert") is not True:
+        return None
+    last = state.last_sent.get("T18")
+    try:
+        if last and (now_ist - datetime.fromisoformat(last)).days < _T18_REPEAT_DAYS:
+            return None
+    except (
+        TypeError,
+        ValueError,
+    ):  # a hand-edited or naive timestamp: alert rather than stay silent
+        pass
+    n, cov = lm.get("coverage_n_live"), lm.get("coverage_live")
+    title = "Gold Tracker: next-rate range is missing its target"
+    body = (
+        f"Over the {n} days the model issued live, its 80% range held {cov} of the time, "
+        "clearly below the 80% target (ADR 075). Nothing was switched off; the range is still "
+        "shown. Look at the weekly scorecard."
+    )
+    return _make_alert("T18", title, body, 3, ["information_source", "warning"], now_ist)
+
+
 def _check_t14_tanishq_silent(
     silence: TanishqSilence | None,
     state: NotificationState,
@@ -1359,6 +1394,13 @@ def check_triggers(
         t17 = None
     if t17 is not None:
         alerts.append(t17)
+    try:  # same isolation as T16/T17
+        t18 = _check_t18_live_coverage(forecast, state, now_ist)
+    except Exception:
+        logger.exception("T18 check failed; the other triggers' alerts are kept")
+        t18 = None
+    if t18 is not None:
+        alerts.append(t18)
     return alerts
 
 
