@@ -404,4 +404,5 @@ def test_dispatcher_survives_a_failing_gh_call_and_always_logs():
     assert main.index('$ErrorActionPreference = "Continue"') < main.index("gh api rate_limit")
     assert main.rindex('$ErrorActionPreference = "Stop"') > main.index('Write-Log "DISPATCHED"')
     assert "gh run list" in main and 'SKIP cannot list recent runs' in main
+    assert main.index("SKIP empty outcomes log") < main.index("ConvertFrom-Json")  # no fail-open
     assert "trap {" in ps1 and "FAIL unexpected" in ps1  # an unforeseen error is logged, not silent

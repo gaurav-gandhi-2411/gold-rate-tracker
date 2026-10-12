@@ -55,6 +55,7 @@ if (-not $online) { Write-Log "SKIP no network/GitHub after 5 min"; exit 1 }
 $lines = gh api -H "Accept: application/vnd.github.raw" "repos/$Repo/contents/data/tanishq_scrape_outcomes.jsonl" 2>$null
 if ($LASTEXITCODE -ne 0 -or -not $lines) { Write-Log "SKIP cannot read outcomes log"; exit 1 }
 $last = @($lines | Where-Object { $_.Trim() }) | Select-Object -Last 1
+if (-not $last) { Write-Log "SKIP empty outcomes log"; exit 1 }
 try { $rec = $last | ConvertFrom-Json } catch { Write-Log "SKIP unparseable last outcome"; exit 1 }
 if ($rec.blocked -eq $true) {
     $blockedAt = ([datetime]$rec.timestamp).ToUniversalTime()
