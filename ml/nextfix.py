@@ -1294,13 +1294,18 @@ def _demotion(
     already says demoted), so T16 alerts at most once a day while the monitor stays broken.
     """
     from ml import demotion as dm
+    from ml import live_monitor as lmon
 
     path = data_dir / demotion_state_file(model_version)
     iso_now = now.astimezone(UTC).isoformat()
     state: dict = {}
     try:
         state = dm.load_state(path, model_version)
-        status = dm.demotion_status(folds, ev.get("range_hits") if ev.get("ready") else None)
+        # ADR 075: the live-only check against hold (days issued live only), beside ADR 068's windows
+        live = lmon.live_status(folds)
+        status = dm.demotion_status(
+            folds, ev.get("range_hits") if ev.get("ready") else None, live=live["error"]
+        )
         keep_file = bool(state.get("unreadable"))  # never overwrite an unreadable original
         state, newly = dm.apply_status(state, status, iso_now)
         if not keep_file:
@@ -1327,7 +1332,10 @@ def _demotion(
         "newly_demoted": newly,
         "checked": True,
         "params": status["params"],
-        "rules": {k: status[k] for k in ("error", "direction", "range") if k in status},
+        "rules": {
+            k: status[k] for k in ("error", "direction", "range", "live_vs_hold") if k in status
+        },
+        "live_monitor": live,
         "rules_breaching_now": [k for k, v in status["demote"].items() if v],
     }
 

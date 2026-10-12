@@ -1,10 +1,10 @@
 # ADR 075: a live-only safety monitor beside ADR 068's demotion rules
 
-**Status:** Accepted 2026-10-12 (GG brief of 2026-10-12, item 1: "decided for GG"). The rule is
-frozen by the hash below. Built in `ml/live_monitor.py`. This change adds the module, the simulation,
-the report and this ADR and changes nothing the site shows; the next PR wires it into
-`ml.nextfix._demotion` and adds alert T18 in `ml/notifications.py` (tests there:
-`tests/test_live_monitor_wired.py`; the rule's own tests: `tests/test_live_monitor.py`). Simulation:
+**Status:** Accepted and wired 2026-10-12 (GG brief of 2026-10-12, item 1: "decided for GG"). The
+rule is frozen by the hash below. Built in `ml/live_monitor.py` (merged with its simulation in the
+previous PR), called from `ml.nextfix._demotion` and `ml.demotion.demotion_status`; alert T18 in
+`ml/notifications.py`. Tests: `tests/test_live_monitor.py` (the rule) and
+`tests/test_live_monitor_wired.py` (the wiring and T18). Simulation:
 `scripts/simulate_live_monitor.py`, run on the CI runner (`.github/workflows/live-monitor-simulation.yml`)
 because the model's record is encrypted (ADR 060). Output: `reports/live_monitor_simulation.json`
 (aggregates only), commit `0a30992c`, workflow run 38295374836.
