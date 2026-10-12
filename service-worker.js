@@ -194,7 +194,14 @@
 // 404s in the console. app.js changed.
 // 2026-10-09 (v92): the 'test on past days' chart plots the error of the estimate the page actually shows (the
 // next-rate model) instead of the older median model; caption reworded. app.js, i18n.js, index.html changed.
-const VERSION = "v92-20261009-past-days-p3";
+// 2026-10-12 (v93): install now precaches with cache: "reload". cache.add() reads through the
+// browser HTTP cache, and Pages sends max-age=600, so for ~10 min after a deploy a new worker stored
+// the OLD app.js/index.html in its fresh cache: the controllerchange reload then served stale code
+// (a returning v74 visitor hit 404s on files the old app.js still requested). Reproduced locally by
+// serving the v77 build, then the v92 build, with max-age=600. The page, scripts, styles and manifest are
+// now network-first (3 s timeout, cache as the offline fallback) so a deploy reaches the next visit.
+// service-worker.js and index.html (mobile-web-app-capable meta) changed.
+const VERSION = "v93-20261012-fresh-precache";
 const SHELL_CACHE = `gold-shell-${VERSION}`;
 
 const SHELL_FILES = [
@@ -232,8 +239,15 @@ const SHELL_FILES = [
 self.addEventListener("install", (e) => {
   e.waitUntil(
     caches.open(SHELL_CACHE).then((c) =>
-      // Don't fail install if one optional asset misses.
-      Promise.all(SHELL_FILES.map((f) => c.add(f).catch(() => null)))
+      // Don't fail install if one optional asset misses. cache: "reload" goes to the network
+      // (c.add() would be answered from the HTTP cache, which can hold the previous deploy's file).
+      Promise.all(
+        SHELL_FILES.map((f) =>
+          fetch(new Request(f, { cache: "reload" }))
+            .then((res) => (res.ok ? c.put(f, res) : null))
+            .catch(() => null)
+        )
+      )
     )
   );
   self.skipWaiting();
@@ -262,7 +276,34 @@ function isDevanagariFont(url) {
   );
 }
 
+const SHELL_NET_TIMEOUT_MS = 3000;
+
+function isShellCode(request, url) {
+  return request.mode === "navigate" || /\.(html|js|css|webmanifest)$/.test(url.pathname);
+}
+
+function networkFirstShell(e, url) {
+  const request = e.request;
+  // Keyed on origin + path: a ?utm=... visit must not add a cache entry per query string.
+  const key = url.origin + url.pathname;
+  // no-cache = always revalidate with the server (a 304 is cheap), never trust the HTTP cache.
+  const cachedOr = (res) =>
+    caches.match(key).then((cached) => cached || res);
+  const net = fetch(request, { cache: "no-cache" }).then((res) => {
+    if (!res.ok) return cachedOr(res); // a 404/5xx must not replace a working cached page
+    const copy = res.clone();
+    // waitUntil: a late write (the timeout already served the cache) must not be cut off.
+    e.waitUntil(caches.open(SHELL_CACHE).then((c) => c.put(key, copy)).catch(() => {}));
+    return res;
+  });
+  const timeout = new Promise((_, reject) => setTimeout(reject, SHELL_NET_TIMEOUT_MS));
+  return Promise.race([net, timeout]).catch(() =>
+    caches.match(key).then((cached) => cached || net)
+  );
+}
+
 self.addEventListener("fetch", (e) => {
+  if (e.request.method !== "GET") return; // POSTs and the like go straight to the network
   const url = new URL(e.request.url);
 
   if (isDataFile(url)) {
@@ -308,7 +349,15 @@ self.addEventListener("fetch", (e) => {
     return;
   }
 
-  // Cache-first for shell assets.
+  // Page, scripts, styles and manifest: network-first (revalidating), so the first visit after a
+  // deploy runs the new code instead of the previous deploy's cached copy; the cache answers only
+  // when the network fails or takes more than SHELL_NET_TIMEOUT_MS (offline / flaky PWA start).
+  if (url.origin === self.location.origin && isShellCode(e.request, url)) {
+    e.respondWith(networkFirstShell(e, url));
+    return;
+  }
+
+  // Cache-first for everything else (fonts, icons, third-party scripts).
   e.respondWith(
     caches.match(e.request).then((cached) => cached || fetch(e.request))
   );
