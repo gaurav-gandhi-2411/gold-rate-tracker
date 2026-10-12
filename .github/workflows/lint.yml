@@ -227,12 +227,24 @@ jobs:
           TARGET_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
         run: |
           set -e
+          # One GitHub 502 here (2026-10-12 12:27Z) left a bot data PR without its required statuses
+          # for two hours. Retry with a growing pause; only a persistent failure fails the job.
+          post_status() {
+            for attempt in 1 2 3 4 5; do
+              if gh api "repos/${GITHUB_REPOSITORY}/statuses/${TARGET_SHA}" \
+                -f state=success \
+                -f context="$1" \
+                -f description="Forwarded from run ${GITHUB_RUN_ID} (job result: success)" \
+                -f target_url="${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}"; then
+                return 0
+              fi
+              echo "status post for $1 failed (attempt ${attempt}/5)" >&2
+              sleep $((attempt * 15))
+            done
+            return 1
+          }
           for CTX in lint pwa-js; do
-            gh api "repos/${GITHUB_REPOSITORY}/statuses/${TARGET_SHA}" \
-              -f state=success \
-              -f context="${CTX}" \
-              -f description="Forwarded from run ${GITHUB_RUN_ID} (job result: success)" \
-              -f target_url="${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}"
+            post_status "${CTX}"
           done
 
   # Enforces service-worker.js's own CACHE INVALIDATION CONTRACT: cache-first
