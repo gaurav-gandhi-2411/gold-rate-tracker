@@ -62,6 +62,10 @@ function build(name, { version, worker, tagged }) {
   html = html.replace(TAG, (_m, pre) => (tagged ? `${pre}?v=${version}"` : `${pre}"`));
   html = html.replace("</body>", `<script>window.__HTML_BUILD__ = ${JSON.stringify(name)};</script></body>`);
   fs.writeFileSync(path.join(dir, "index.html"), html);
+  // The worker also checks how-we-know.html at install, so it carries the same tags.
+  const hwk = fs.readFileSync(path.join(dir, "how-we-know.html"), "utf8")
+    .replace(TAG, (_m, pre) => (tagged ? `${pre}?v=${version}"` : `${pre}"`));
+  fs.writeFileSync(path.join(dir, "how-we-know.html"), hwk);
   let sw = worker === "current"
     ? fs.readFileSync(path.join(ROOT, "service-worker.js"), "utf8")
     : fs.readFileSync(path.join(FIX, worker), "utf8");

@@ -78,10 +78,13 @@ def problems(repo_root: Path) -> list[str]:
 
 def rewrite(repo_root: Path, version: str) -> None:
     """Set every tag in the tagged pages to `version`, byte-preserving everything else."""
+    # Compute every page first so a failure on the second leaves the first untouched.
+    staged: list[tuple[Path, bytes]] = []
     for page in TAGGED_PAGES:
         p = repo_root / page
-        raw = p.read_bytes().decode("utf-8")
-        new = set_tags(raw, version)
+        new = set_tags(p.read_bytes().decode("utf-8"), version)
         if not refs(new):
             raise TagError(f"{page}: no local script/stylesheet references found")
-        p.write_bytes(new.encode("utf-8"))
+        staged.append((p, new.encode("utf-8")))
+    for p, data in staged:
+        p.write_bytes(data)

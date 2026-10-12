@@ -250,12 +250,14 @@ const SHELL_FILES = [
 // The page this worker cached must carry this worker's build tag, or the cache-first answers below
 // would pair that page with scripts from another build. Throwing fails the install (retried later).
 function assertCachedPageMatchesVersion(cache) {
-  return cache.match("./index.html").then((res) => (res ? res.text() : "")).then((html) => {
-    const m = /(?:src|href)="[A-Za-z0-9_.-]+\.(?:js|css)\?v=([^"&]*)"/.exec(html);
-    if (!m || m[1] !== VERSION) {
-      throw new Error("cached index.html is tagged " + (m ? m[1] : "nothing") + ", worker is " + VERSION);
-    }
-  });
+  return Promise.all(["./index.html", "./how-we-know.html"].map((page) =>
+    cache.match(page).then((res) => (res ? res.text() : "")).then((html) => {
+      const m = /(?:src|href)="[A-Za-z0-9_.-]+\.(?:js|css)\?v=([^"&]*)"/.exec(html);
+      if (!m || m[1] !== VERSION) {
+        throw new Error("cached " + page + " is tagged " + (m ? m[1] : "nothing") + ", worker is " + VERSION);
+      }
+    })
+  ));
 }
 
 self.addEventListener("install", (e) => {
