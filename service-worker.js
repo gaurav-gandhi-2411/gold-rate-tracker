@@ -20,6 +20,11 @@
 // 3. activate → evict all caches not matching current VERSION (old shell cleared).
 // 4. index.html → registration.update() on load forces an immediate SW byte-check;
 //    controllerchange listener reloads the page so new shell assets are served.
+// 5. BUILD TAGS: every local <script src>/<link href> in index.html and how-we-know.html is
+//    `name.js?v=<VERSION>`, equal to the VERSION below (scripts/shell_build_tags.py; sw-version-guard
+//    fails a PR where they differ). Legacy mode: `python scripts/bump_sw_version.py <new VERSION>` sets
+//    both; actions mode: stamp_sw_version.py stamps both. The fetch handler relies on it so a page and
+//    its scripts always come from one build.
 // Updating ONE of these without the others reintroduces stale-cache symptoms.
 // See also CURRENT_STATE.md norm #13: squash-merge commits must not carry [skip ci]
 // in the body — a [skip ci] merge skips master Lint for up to ~24h (only the daily
@@ -201,7 +206,13 @@
 // serving the v77 build, then the v92 build, with max-age=600. The page, scripts, styles and manifest are
 // now network-first (3 s timeout, cache as the offline fallback) so a deploy reaches the next visit.
 // service-worker.js and index.html (mobile-web-app-capable meta) changed.
-const VERSION = "v93-20261012-fresh-precache";
+// 2026-10-12 (v94): build tags. index.html / how-we-know.html reference every local script and stylesheet
+// as `name.js?v=<VERSION>` (scripts/shell_build_tags.py). A request tagged with THIS worker's VERSION is
+// answered from the cache this worker installed (the same build as the page that asked), so a cached page
+// can never be paired with a freshly fetched script; a request tagged with another build goes to the
+// network (that page came from a newer deploy than this worker). install fails, and is retried on the
+// next update check, if the page it just cached is not tagged with this VERSION (deploy caught mid-way).
+const VERSION = "v94-20261012-build-tags";
 const SHELL_CACHE = `gold-shell-${VERSION}`;
 
 const SHELL_FILES = [
@@ -236,6 +247,19 @@ const SHELL_FILES = [
   // visitors only).
 ];
 
+// The page this worker cached must carry this worker's build tag, or the cache-first answers below
+// would pair that page with scripts from another build. Throwing fails the install (retried later).
+function assertCachedPageMatchesVersion(cache) {
+  return Promise.all(["./index.html", "./how-we-know.html"].map((page) =>
+    cache.match(page).then((res) => (res ? res.text() : "")).then((html) => {
+      const m = /(?:src|href)="[A-Za-z0-9_.-]+\.(?:js|css)\?v=([^"&]*)"/.exec(html);
+      if (!m || m[1] !== VERSION) {
+        throw new Error("cached " + page + " is tagged " + (m ? m[1] : "nothing") + ", worker is " + VERSION);
+      }
+    })
+  ));
+}
+
 self.addEventListener("install", (e) => {
   e.waitUntil(
     caches.open(SHELL_CACHE).then((c) =>
@@ -247,7 +271,7 @@ self.addEventListener("install", (e) => {
             .then((res) => (res.ok ? c.put(f, res) : null))
             .catch(() => null)
         )
-      )
+      ).then(() => assertCachedPageMatchesVersion(c))
     )
   );
   self.skipWaiting();
@@ -280,6 +304,24 @@ const SHELL_NET_TIMEOUT_MS = 3000;
 
 function isShellCode(request, url) {
   return request.mode === "navigate" || /\.(html|js|css|webmanifest)$/.test(url.pathname);
+}
+
+function cacheFirstShell(e, url) {
+  const key = url.origin + url.pathname;
+  return caches
+    .open(SHELL_CACHE)
+    .then((c) => c.match(key))
+    .then(
+      (hit) =>
+        hit ||
+        fetch(e.request, { cache: "reload" }).then((res) => {
+          if (res.ok) {
+            const copy = res.clone();
+            e.waitUntil(caches.open(SHELL_CACHE).then((c) => c.put(key, copy)).catch(() => {}));
+          }
+          return res;
+        })
+    );
 }
 
 function networkFirstShell(e, url) {
@@ -353,7 +395,17 @@ self.addEventListener("fetch", (e) => {
   // deploy runs the new code instead of the previous deploy's cached copy; the cache answers only
   // when the network fails or takes more than SHELL_NET_TIMEOUT_MS (offline / flaky PWA start).
   if (url.origin === self.location.origin && isShellCode(e.request, url)) {
-    e.respondWith(networkFirstShell(e, url));
+    const tag = e.request.mode === "navigate" ? null : url.searchParams.get("v");
+    if (tag === VERSION) {
+      // A script/stylesheet of the build this worker installed: serve the matching cached copy.
+      e.respondWith(cacheFirstShell(e, url));
+    } else if (tag) {
+      // Tagged for another build: the page came from a newer deploy than this worker. Never answer
+      // from this worker's cache (that would pair it with the wrong build).
+      e.respondWith(fetch(e.request, { cache: "no-cache" }));
+    } else {
+      e.respondWith(networkFirstShell(e, url));
+    }
     return;
   }
 

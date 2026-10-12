@@ -69,10 +69,10 @@ async function load(browser, base, { blockAnalytics = false, flagOff = false } =
   const pageErrors = [];
   page.on("request", (r) => requests.push(r.url()));
   page.on("pageerror", (e) => pageErrors.push(String(e)));
-  if (blockAnalytics) await page.route("**/analytics.js", (r) => r.abort());
+  if (blockAnalytics) await page.route("**/analytics.js*", (r) => r.abort());
   if (flagOff) {
     const flags = fs.readFileSync(path.join(ROOT, "flags.js"), "utf8").replace("analytics: true,", "analytics: false,");
-    await page.route("**/flags.js", (r) => r.fulfill({ status: 200, contentType: "application/javascript", body: flags }));
+    await page.route("**/flags.js*", (r) => r.fulfill({ status: 200, contentType: "application/javascript", body: flags }));
   }
   await page.goto(base, { waitUntil: "networkidle" });
   await page.waitForTimeout(500);
@@ -95,7 +95,7 @@ async function run() {
     console.log("\nAs shipped (flag ON, site code gold-rate-tracker): with analytics.js vs analytics.js blocked");
     const on = await load(browser, base);
     const blocked = await load(browser, base, { blockAnalytics: true });
-    assert("analytics.js was requested", on.requests.some((u) => u.endsWith("/analytics.js")));
+    assert("analytics.js was requested", on.requests.some((u) => /\/analytics\.js(\?|$)/.test(u)));
     const beacons = on.requests.filter((u) => u.includes(BEACON_HOST));
     assert("exactly ONE request per visit goes to https://gold-rate-tracker.goatcounter.com/count",
       beacons.length === 1 && beacons.every((u) => u.startsWith(`https://${BEACON_HOST}/count?`)), JSON.stringify(beacons));

@@ -186,6 +186,8 @@ jobs:
         run: node tests/test_stale_banner_headless.js
       - name: Run the service-worker offline data-fallback test
         run: node tests/test_sw_offline_headless.js
+      - name: Run the service-worker update test (older worker -> newer deploy; offline; 3 s timeout; build skew)
+        run: node tests/test_sw_update_headless.js
       - name: Run the feature-flag leak-detection headless test
         run: node tests/test_feature_flags_headless.js
       - name: Run the analytics-off headless test (flag off = identical DOM, no beacon; item 5c)
