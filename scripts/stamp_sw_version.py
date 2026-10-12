@@ -45,6 +45,7 @@ import sys
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
+import shell_build_tags as tags
 from sw_shell_files import ShellFilesError, shell_files
 
 _VERSION_LINE = re.compile(rb'const VERSION = "[^"]*";')
@@ -72,6 +73,9 @@ def compute_version(repo_root: Path) -> str:
             content = (repo_root / path).read_bytes()
         except OSError as exc:
             raise StampError(f"could not read shell file {path!r}: {exc}") from exc
+        if path in tags.TAGGED_PAGES:
+            # The tag values are stamped FROM this hash, so they must not feed into it.
+            content = tags.normalize(content.decode("utf-8")).encode("utf-8")
         path_bytes = path.encode("utf-8")
         hasher.update(len(path_bytes).to_bytes(8, "big"))
         hasher.update(path_bytes)
@@ -99,6 +103,10 @@ def stamp(repo_root: Path, version: str) -> None:
         raise StampError(
             f'expected exactly one `const VERSION = "...";` in service-worker.js, found {count}'
         )
+    try:
+        tags.rewrite(repo_root, version)  # build tags in index.html / how-we-know.html
+    except (tags.TagError, OSError) as exc:
+        raise StampError(f"could not stamp the build tags: {exc}") from exc
     sw_path.write_bytes(new_raw)
 
 

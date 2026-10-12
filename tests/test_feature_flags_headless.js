@@ -147,7 +147,7 @@ async function run() {
 
       const ctx  = await browser.newContext();
       const page = await ctx.newPage();
-      await page.route("**/flags.js", (route) =>
+      await page.route("**/flags.js*", (route) =>
         route.fulfill({ status: 200, contentType: "application/javascript", body: leaked })
       );
       await page.goto(base, { waitUntil: "networkidle" });

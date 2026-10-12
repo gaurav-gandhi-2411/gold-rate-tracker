@@ -36,6 +36,7 @@ from dataclasses import dataclass
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
+import shell_build_tags as tags
 from sw_shell_files import ShellFilesError, shell_files
 
 VALID_MODES = ("legacy", "actions")
@@ -135,6 +136,20 @@ def main() -> int:
         precached = set(shell_files(args.repo_root))
     except ShellFilesError as exc:
         print(f"FAIL: {exc}", file=sys.stderr)
+        return 1
+
+    # Every build tag in the pages must equal VERSION in both modes (actions mode stamps the two
+    # together, so the committed pair is always equal); a mismatch would pair a page with the wrong
+    # build in the worker's cache-first answers. `python scripts/bump_sw_version.py <new>` fixes it.
+    try:
+        tag_problems = tags.problems(args.repo_root)
+    except (tags.TagError, OSError) as exc:
+        print(f"::error::build tags unreadable: {exc}", file=sys.stderr)
+        return 1
+    if tag_problems:
+        for line in tag_problems:
+            print(f"::error::{line}", file=sys.stderr)
+        print("::error::run: python scripts/bump_sw_version.py <new VERSION>", file=sys.stderr)
         return 1
 
     changed = _git_diff_name_only(args.repo_root, args.base)

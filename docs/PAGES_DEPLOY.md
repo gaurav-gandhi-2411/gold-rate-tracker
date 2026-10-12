@@ -77,9 +77,12 @@ could not be run end-to-end locally. What was verified instead:
    `_config.yml`'s exclude list, so its 6 files are — and already were, under the legacy
    build — served at the live Pages URL too. Pre-existing, out of scope for this PR.)
 4. `scripts/stamp_sw_version.py` only ever rewrites the `VERSION` line inside
-   `service-worker.js` in the build workspace, and only if `--check` is not passed — it
-   changes no other file, so it cannot itself alter which files end up in the Jekyll
-   output set.
+   `service-worker.js` and the `?v=<VERSION>` build tags on the local script/stylesheet
+   references of `index.html` and `how-we-know.html` (2026-10-12, so a page and its scripts
+   always come from one build; `scripts/shell_build_tags.py`; the hash ignores the tag
+   values), in the build workspace, and only if `--check` is not passed — it adds and
+   removes no file, so it cannot itself alter which files end up in the Jekyll output set.
+   In legacy mode a PR bumps both with `python scripts/bump_sw_version.py <new VERSION>`.
 
 Net: the Actions build's file **set** is verified identical to the legacy build's by
 construction (same config, same Jekyll semantics per GitHub's own action). The one

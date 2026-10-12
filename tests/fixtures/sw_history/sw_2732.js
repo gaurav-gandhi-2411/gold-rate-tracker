@@ -1,0 +1,364 @@
+// service-worker.js
+//
+// CACHE INVALIDATION CONTRACT (PR Ψ3A):
+// 1. VERSION must change on every deploy that changes shell assets (HTML, CSS, JS,
+//    icons). HOW it changes depends on which Pages build mode is active (repo variable
+//    PAGES_BUILD_MODE -- see docs/PAGES_DEPLOY.md for the full switch-over story):
+//      - PAGES_BUILD_MODE unset / anything other than "actions" (LEGACY, the mode in
+//        effect right now): Pages builds straight off master's committed
+//        service-worker.js, so a PR must HAND-BUMP VERSION itself in the same PR that
+//        changes a precached shell file. lint.yml's sw-version-guard job enforces this.
+//      - PAGES_BUILD_MODE == "actions" (only after GG flips Pages' source to "GitHub
+//        Actions"): .github/workflows/pages-deploy.yml stamps VERSION automatically from
+//        a sha256 of every precached shell file's exact bytes
+//        (scripts/stamp_sw_version.py), as "sh-<16 hex chars>", at build/deploy time. A
+//        PR must NEVER hand-edit the VERSION line in this mode -- that's what caused
+//        conflicting v58/v59 bumps across stacked PRs in the first place.
+//        sw-version-guard reads the same PAGES_BUILD_MODE variable and applies whichever
+//        rule is active (scripts/check_sw_version_guard.py).
+// 2. install → skipWaiting() so new SW takes control immediately without waiting.
+// 3. activate → evict all caches not matching current VERSION (old shell cleared).
+// 4. index.html → registration.update() on load forces an immediate SW byte-check;
+//    controllerchange listener reloads the page so new shell assets are served.
+// Updating ONE of these without the others reintroduces stale-cache symptoms.
+// See also CURRENT_STATE.md norm #13: squash-merge commits must not carry [skip ci]
+// in the body — a [skip ci] merge skips master Lint for up to ~24h (only the daily
+// 06:00 UTC schedule backstop in lint.yml recovers it).
+//
+// 2026-07-19: VERSION had gone unbumped since 2026-06-08 (v16-20260608-phi22)
+// across 11 merged PRs that changed index.html/app.js/style.css (#122 through
+// #237). Because this file's own bytes never changed, registration.update()
+// never detected a diff and never re-installed — any client that had this SW
+// installed anytime in that window is frozen on whichever shell snapshot was
+// live at that moment and never received a single one of those 11 shell
+// updates. Bumping VERSION now forces every such client to evict the stale
+// cache and re-fetch the current shell on next load. See lint.yml's
+// sw-version-guard job, added the same day, which now fails CI when shell
+// files change without a VERSION bump.
+// 2026-08-10 (v35): Hindi/English polish -- letter-spacing fix for broken
+// Devanagari conjuncts, Noto Serif Devanagari added for --display, "Gold
+// Tracker" header rename, copy tightening. Shell files (index.html, app.js,
+// i18n.js, style.css) all changed; bumping so every installed client
+// re-fetches instead of serving the pre-fix shell indefinitely.
+// 2026-08-11 (v36): insights + UX batch -- gram-quantity calculator, coverage%/
+// accuracy-drift promoted out of the methodology accordion, typical-weekly-
+// movement historical stat, calibration-confidence line on estimated-price
+// banners, first-visit orientation strip, share-a-snapshot. Shell files
+// (index.html, app.js, i18n.js, style.css) all changed; bumping so every
+// installed client re-fetches instead of serving the pre-batch shell
+// indefinitely.
+// 2026-08-28 (v37): app.js fix -- the estimate-tier hero render no longer
+// requires est_low/est_high to show the calibrated price. A band-suppressed
+// forecast (new possible state as of this change) used to fall through to
+// rendering the stale last-confirmed Tanishq reading as an unqualified
+// current price; now it correctly shows "≈" + current_22k with the range
+// line hidden. app.js changed; bumping so every installed client re-fetches.
+// 2026-08-28 (v38): G2 -- the estimated-price banner's confidence sentence
+// now states its actual nominal confidence level (e.g. "about 80% of the
+// time") instead of an unqualified Rs/gram number, and is driven entirely by
+// forecast.json's nominal_coverage/band_half_width rather than independently
+// recomputed from calibration.json. app.js + i18n.js (EN+HI) changed.
+//
+// 2026-09-04 (v39): R3 -- the ibja_calibrated banner now names it when
+// Tanishq confirmation itself has been silent for TIER_DEGRADED_THRESHOLD_H
+// (48h), instead of rendering identically whether Tanishq confirmed 2h ago
+// or 3 weeks ago. app.js + i18n.js (EN+HI) changed.
+// 2026-09-04 (v40): R3 -- firstVisitText/footerBody (EN+HI) no longer
+// hand-type "checked every 3 hours"; both render the real measured cadence
+// from a new data/cadence_metrics.json fetch. app.js + i18n.js changed.
+// 2026-09-03 (v41): fix(app) vol-regime and driver-context claims fail loud
+// instead of defaulting to a plausible value (audit finding (e) + two
+// siblings). app.js + i18n.js (EN+HI) changed. (Rebased onto master
+// 2026-09-05 -- see W5 in the session history for why this lands after v40
+// despite its own dated comment predating it.)
+// 2026-09-05 (v42): X1 -- the injected cadence claim now states the p90
+// worst case alongside the median (a median alone hides the tail a real
+// visitor can land on). app.js + i18n.js (EN+HI) changed.
+// 2026-09-10 (v43): AE1 -- calibration-band confidence clause now renders the
+// real walk-forward measured coverage (data/calibration_band_coverage.json),
+// never the hardcoded 80% design target. app.js + i18n.js (EN+HI) changed.
+// 2026-09-10 (v44): AE2 -- two stale/desynced hardcoded claims fixed: (1)
+// index.html's static firstVisitText/footerBody pre-hydration fallback text
+// still said "checked every 3 hours" even after i18n.js's dynamic version
+// was fixed (PR #1406) -- view-source/no-JS/crawlers/the pre-hydration
+// flash all still asserted it. (2) methAccurateP3's hardcoded "roughly 70%"
+// direction base-rate aside was a frozen 2026-06-02 one-time snapshot,
+// never sourced from any field this codebase currently tracks live.
+// index.html + i18n.js (EN+HI) changed.
+// 2026-09-21 (v45): app.js no longer fetches data/calibration.json. Nothing consumed it
+// (renderStaleBanner's `calibration` parameter was never read after G2), and _config.yml
+// excludes it from the Pages build, so every load made a request that 404'd live.
+// app.js changed; bumping so every installed client re-fetches.
+// 2026-09-21 (v46): renderChart()/renderForecastVsActual() no longer throw when the Chart.js
+// CDN request fails (a throw there blanked the hero -- render-smoke run 35511515077).
+// app.js changed; bumping so every installed client re-fetches.
+// 2026-09-21 (v47): data files are cached under a query-free key and every /data/*.json
+// is network-first. Offline, ALL data requests used to fail (the ?t= cache-buster made the
+// fallback lookup never match) and each load added a new cache entry per file. See
+// isDataFile()/the fetch handler below. service-worker.js changed; bumping so every
+// installed client re-installs and evicts the per-load entries.
+// 2026-09-21 (v48): app.js no longer defines computeTrendDescription (dead: nothing called it;
+// hard-coded English, never i18n'd). app.js changed; bumping so every installed client re-fetches.
+// 2026-09-21 (v49): Sentry is now actually initialised (real DSN, and an onload hook so init no
+// longer depends on the async bundle winning the race with app.js). app.js + index.html changed.
+// 2026-09-21 (v50): index.html no longer reloads a first-time visitor's page when the worker first
+// takes control (it flashed the price to the loading skeleton ~1s after first paint, and raced the
+// post-deploy render smoke test into a false URGENT). Only a worker REPLACING an existing one reloads.
+// 2026-09-23 (v52): the purchase calculator switches from a flat 6-25% making-charge range
+// to jewellery-type PRESETS (coins & plain chains / plain bangles & rings / intricate or
+// antique designs / custom), each showing a typical total plus a low-high range, with a
+// visible "rate used" source line and a prominent "Estimate — stores vary" disclaimer.
+// The v51 WIP commit (computePurchaseCostRange()/makingPerGram + the range-slider UI it
+// backed) never shipped separately -- this single entry covers everything that changed on
+// this branch, from master's v50 baseline. index.html + app.js + i18n.js + style.css changed.
+// 2026-09-23 (v53): U2 plain-language rework -- the methodology accordion's full technical
+// breakdown moved off the main page onto a new how-we-know.html, rendered by
+// how-we-know.js/how-we-know-strings.js from the same data files. All three are new
+// precached shell files (below). index.html + app.js + i18n.js + style.css changed too
+// (banned-jargon rewrites, accordion body replaced with a plain summary + link).
+// 2026-09-24 (v56): new flags.js -- minimal feature-flag mechanism (FEATURE_FLAGS/
+// isFeatureOn()) so future user-facing features can merge OFF by default. Loaded before
+// app.js/how-we-know.js on both pages; new precached shell file (below). index.html +
+// how-we-know.html + app.js changed too (script tag + renderFlaggedFeatures() hook).
+// 2026-09-24 (v57): p-value display fix -- how-we-know.js's Wilcoxon p-value
+// no longer renders a misleading "p = 0.0000" when it rounds to zero at 4
+// decimal places (formatPValue() in i18n.js, added same PR); renders
+// "p < 0.0001" instead. i18n.js + how-we-know.js + how-we-know-strings.js
+// (EN+HI) changed -- all three are precached shell files.
+// v58 (2026-09-25): the 5-day movement note shows the measured typical move
+// (vol_context.typical_move_5d) instead of a floored one-standard-deviation
+// figure that overstated it ~1.9x. app.js + i18n.js (EN+HI) changed.
+// 2026-09-25 (v61; v59/v60 are taken by the open #2053/#2069 branches): ADR 059 wording
+// P2-P5 (E5) -- neutral, dated Tanishq wording. app.js + i18n.js + index.html + manifest changed.
+// 2026-09-25 (v63): style.css -- main { overflow-x: clip } stops the phone page
+// scrolling 60px sideways (hero glow overflow). Shell file changed.
+// 2026-09-24 (v66): page_v2 (item 6) -- proposed five-jobs page, entirely behind
+// isFeatureOn("page_v2") + per-card flags, all still false (merge default). app.js +
+// i18n.js + style.css changed (new pure/build/render functions, new pv2* i18n keys, new
+// .pv2-* rules) -- bumping so installed clients pick up the new app.js/i18n.js/style.css
+// bytes even though nothing currently renders differently with every flag off.
+// 2026-09-25 (same PR, G6 layout pass): style.css (page_v2 grid/type tokens) + app.js
+// (page_v2 mount point) changed again -- suffix re-stamped so a client that installed
+// the earlier v58 preview shell does not keep the pre-layout-pass bytes.
+// 2026-09-25 (same PR, design-review follow-ups): app.js (F2 sentence extraction fix,
+// freshness fail-closed fix) + i18n.js (Hindi pv2* translations) changed again -- bumped
+// once more so a client that installed the layout-pass shell picks up these bytes too.
+// 2026-09-25 (merge with current master, v63-v65/v67 taken by other now-merged/open
+// branches): re-stamped to v66.
+// 2026-09-25 (v62; assigned before v63 landed on master -- see the v61 note above for
+// the same pre-assignment pattern; merge train, stacked on #2037): the weekly 'what moved
+// the price' headline words each part by its own sign (ADR 058 follow-up, #2073). app.js +
+// i18n.js (EN+HI) changed.
+// 2026-09-25 (v64; merge train, stacked on #2073): G4 -- hide any accuracy/coverage claim
+// measured more than 14 days ago (isMeasurementFresh(), i18n.js) instead of showing a stale
+// number as current. app.js + i18n.js + how-we-know.js changed -- all three are precached
+// shell files.
+// 2026-09-25 (v65; merge train, stacked on #2049): retailer takedown switch (ADR 059) --
+// app.js stops naming Tanishq (hero location line, last-confirmed line, long-silent banner
+// clause, calculator label) when prices.json holds IBJA-derived rows; new i18n key
+// heroLocationDerived (EN+HI). Inert on today's data. app.js + i18n.js changed.
+// 2026-09-25 (v67; merge train, stacked on #2053): E2 hero shows Tanishq's live listed rate
+// only when fresh + plausible, otherwise our labelled estimate (heroDisplayState), which
+// supersedes #2053's simpler heroLocation/heroLocationDerived split with full
+// takedown-awareness built in. app.js + i18n.js + index.html changed.
+// 2026-09-25 (v68; merge train, stacked on #2069): GG 4b/4c -- a Tanishq reading past 36 h
+// keeps its figure with date and time (heroTanishqOldRate replaces heroTanishqTooOld);
+// "today's change" only next to Tanishq's own latest reading; the trend chart plots
+// data/ibja_derived_prices.json labelled as our estimate (new #chart-source-note). app.js +
+// i18n.js + index.html changed.
+// 2026-10-05 (v79; analytics flag-off PR #2391, after v74 direction wording and v75 Hindi): new
+// analytics.js (item 5c, GoatCounter), merged OFF -- inert unless FEATURE_FLAGS.analytics is on
+// and ANALYTICS_SITE_CODE is set. flags.js + index.html + i18n.js changed too; analytics.js is a
+// new precached shell file (below). Nothing renders or is requested differently with the flag off.
+// 2026-10-07 (v80): Kalyan retired (PR #2420): its unused label was removed from app.js and i18n.js.
+// 2026-10-07 (v81): Hindi wording, part 1 of 3 (i18n.js: natural Hindi from docs/HINDI_GLOSSARY.md, plus the fractionOutOf10Phrase language fix). Hindi only; English unchanged.
+// 2026-10-07 (v82): Hindi wording, part 2 of 3 (i18n.js strings pinned by test_hero_display_state.js / test_driver_headline_signs.js, updated here). Hindi only; English unchanged.
+// 2026-10-07 (v83): Hindi wording, part 3 of 3 (how-we-know-strings.js). Hindi only; English unchanged.
+// 2026-10-08 (v84): how-we-know page says where the up/down chance comes from (how-we-know-strings.js,
+// how-we-know.js). English only; Hindi falls back to English.
+// 2026-10-09 (v85): visit counting ON (analytics.js site code gold-rate-tracker, flags.js analytics true,
+// i18n.js privacyNote text, footer note appears). analytics.js, flags.js and i18n.js are precached.
+// 2026-10-09 (v86): visit counting no longer stops for the legacy Do Not Track header (it silenced the site
+// owner's own Edge); Global Privacy Control is still honoured. analytics.js and i18n.js (privacyNote) changed.
+// 2026-10-09 (v87): the header line about how often prices are checked now measures real price checks (gaps
+// between successful Tanishq readings, longest wait counts a wait still going). app.js, i18n.js changed.
+// 2026-10-09 (v88): page-claims audit: the "estimate accuracy" drift block and verdict sentence are gone, how-we-know
+// quotes the next-rate range's own tested hit rate, the target shows a date not a clock time, the direction record
+// admits the days also picked the model. app.js, how-we-know.js, how-we-know-strings.js changed.
+// 2026-10-09 (v89): visit counting honours Do Not Track again (and Global Privacy Control); one count per visit
+// (the separate language and app-mode events are gone; an app launch is one distinct path); the referrer is
+// sent as origin + path. analytics.js and i18n.js (privacyNote) changed.
+// 2026-10-09 (v90): the 'test on past weeks' chart plots the estimate's daily ERROR (Rs/g, with inside/outside-range
+// marks) instead of the raw official rates; data/backtest.json is scores only. app.js, i18n.js, index.html changed.
+// 2026-10-09 (v91): the page no longer requests three encrypted research files (page_v2 is off), so there are no
+// 404s in the console. app.js changed.
+// 2026-10-09 (v92): the 'test on past days' chart plots the error of the estimate the page actually shows (the
+// next-rate model) instead of the older median model; caption reworded. app.js, i18n.js, index.html changed.
+// 2026-10-12 (v93): install now precaches with cache: "reload". cache.add() reads through the
+// browser HTTP cache, and Pages sends max-age=600, so for ~10 min after a deploy a new worker stored
+// the OLD app.js/index.html in its fresh cache: the controllerchange reload then served stale code
+// (a returning v74 visitor hit 404s on files the old app.js still requested). Reproduced locally by
+// serving the v77 build, then the v92 build, with max-age=600. The page, scripts, styles and manifest are
+// now network-first (3 s timeout, cache as the offline fallback) so a deploy reaches the next visit.
+// service-worker.js and index.html (mobile-web-app-capable meta) changed.
+const VERSION = "v93-20261012-fresh-precache";
+const SHELL_CACHE = `gold-shell-${VERSION}`;
+
+const SHELL_FILES = [
+  "./",
+  "./index.html",
+  "./style.css",
+  "./flags.js",
+  "./analytics.js",
+  "./app.js",
+  "./i18n.js",
+  "./how-we-know.html",
+  "./how-we-know.js",
+  "./how-we-know-strings.js",
+  "./manifest.webmanifest",
+  "./icons/icon-192.png",
+  "./icons/icon-512.png",
+  "./fonts/fraunces-variable-latin.woff2",
+  "./fonts/dmsans-variable-latin.woff2",
+  "./fonts/syne-variable-latin.woff2",
+  "./fonts/rupee-sign.woff2",
+  // rupee-sign.woff2 (~1.1KB, ₹ only) belongs in this unconditional tier, not
+  // the Devanagari one below it -- ₹ appears in every price display
+  // regardless of language, so every visitor needs it, same as the three
+  // Latin faces above. See style.css's Rupee Sign @font-face comment for why
+  // it exists as its own tiny face instead of just being part of one of the
+  // Latin faces.
+  // Deliberately NOT the two Devanagari fonts (Sans + Serif) — see
+  // isDevanagariFont() below. Unlike the four fonts above (needed by every
+  // visitor, so precaching them at install is correct), unconditionally
+  // precaching these would cost every English-only visitor a ~248KB fetch
+  // they'll never use. They're cached on first actual use instead (Hindi
+  // visitors only).
+];
+
+self.addEventListener("install", (e) => {
+  e.waitUntil(
+    caches.open(SHELL_CACHE).then((c) =>
+      // Don't fail install if one optional asset misses. cache: "reload" goes to the network
+      // (c.add() would be answered from the HTTP cache, which can hold the previous deploy's file).
+      Promise.all(
+        SHELL_FILES.map((f) =>
+          fetch(new Request(f, { cache: "reload" }))
+            .then((res) => (res.ok ? c.put(f, res) : null))
+            .catch(() => null)
+        )
+      )
+    )
+  );
+  self.skipWaiting();
+});
+
+self.addEventListener("activate", (e) => {
+  e.waitUntil(
+    caches.keys().then((keys) =>
+      Promise.all(keys.filter((k) => k !== SHELL_CACHE).map((k) => caches.delete(k)))
+    )
+  );
+  self.clients.claim();
+});
+
+// Every JSON file under /data/ gets network-first treatment. This used to be a hand-typed
+// list of 3 names while app.js requests 7 on every load (2026-09-21 sweep), so the other 4 fell
+// through to the cache-first branch below and had no offline fallback at all.
+function isDataFile(url) {
+  return url.pathname.includes("/data/") && url.pathname.endsWith(".json");
+}
+
+function isDevanagariFont(url) {
+  return (
+    url.pathname.endsWith("/fonts/notosans-devanagari-variable.woff2") ||
+    url.pathname.endsWith("/fonts/notoserif-devanagari-variable.woff2")
+  );
+}
+
+const SHELL_NET_TIMEOUT_MS = 3000;
+
+function isShellCode(request, url) {
+  return request.mode === "navigate" || /\.(html|js|css|webmanifest)$/.test(url.pathname);
+}
+
+function networkFirstShell(e, url) {
+  const request = e.request;
+  // Keyed on origin + path: a ?utm=... visit must not add a cache entry per query string.
+  const key = url.origin + url.pathname;
+  // no-cache = always revalidate with the server (a 304 is cheap), never trust the HTTP cache.
+  const cachedOr = (res) =>
+    caches.match(key).then((cached) => cached || res);
+  const net = fetch(request, { cache: "no-cache" }).then((res) => {
+    if (!res.ok) return cachedOr(res); // a 404/5xx must not replace a working cached page
+    const copy = res.clone();
+    // waitUntil: a late write (the timeout already served the cache) must not be cut off.
+    e.waitUntil(caches.open(SHELL_CACHE).then((c) => c.put(key, copy)).catch(() => {}));
+    return res;
+  });
+  const timeout = new Promise((_, reject) => setTimeout(reject, SHELL_NET_TIMEOUT_MS));
+  return Promise.race([net, timeout]).catch(() =>
+    caches.match(key).then((cached) => cached || net)
+  );
+}
+
+self.addEventListener("fetch", (e) => {
+  if (e.request.method !== "GET") return; // POSTs and the like go straight to the network
+  const url = new URL(e.request.url);
+
+  if (isDataFile(url)) {
+    // Network-first for all data files; fall back to cache when offline.
+    // The cache key drops the query string: app.js's loadJSON() appends ?t=<Date.now()>
+    // as a cache-buster, so keying on the full request URL stored a NEW entry per file per
+    // load (unbounded until the next VERSION bump) and made the offline fallback look up a
+    // different ?t= than any stored entry -- it never matched, so offline every data
+    // request failed. Verified in Chromium against the live origin, 2026-09-21.
+    const cacheKey = url.origin + url.pathname;
+    e.respondWith(
+      fetch(e.request)
+        .then((res) => {
+          // Only a good response may replace the offline copy: with a stable key a
+          // transient 5xx/404 would otherwise overwrite the last known-good data.
+          if (res.ok) {
+            const copy = res.clone();
+            caches.open(SHELL_CACHE).then((c) => c.put(cacheKey, copy));
+          }
+          return res;
+        })
+        .catch(() => caches.match(cacheKey))
+    );
+    return;
+  }
+
+  if (isDevanagariFont(url)) {
+    // Not in SHELL_FILES (see comment there) -- cached the first time it's
+    // actually requested instead, so only visitors who ever switch to Hindi
+    // ever store it, while repeat Hindi visits still hit cache like the rest
+    // of the shell (same "installed, habitually-checked PWA" pattern the
+    // other fonts are precached for).
+    e.respondWith(
+      caches.match(e.request).then((cached) => {
+        if (cached) return cached;
+        return fetch(e.request).then((res) => {
+          const copy = res.clone();
+          caches.open(SHELL_CACHE).then((c) => c.put(e.request, copy));
+          return res;
+        });
+      })
+    );
+    return;
+  }
+
+  // Page, scripts, styles and manifest: network-first (revalidating), so the first visit after a
+  // deploy runs the new code instead of the previous deploy's cached copy; the cache answers only
+  // when the network fails or takes more than SHELL_NET_TIMEOUT_MS (offline / flaky PWA start).
+  if (url.origin === self.location.origin && isShellCode(e.request, url)) {
+    e.respondWith(networkFirstShell(e, url));
+    return;
+  }
+
+  // Cache-first for everything else (fonts, icons, third-party scripts).
+  e.respondWith(
+    caches.match(e.request).then((cached) => cached || fetch(e.request))
+  );
+});
