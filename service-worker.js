@@ -282,23 +282,28 @@ function isShellCode(request, url) {
   return request.mode === "navigate" || /\.(html|js|css|webmanifest)$/.test(url.pathname);
 }
 
-function networkFirstShell(request) {
+function networkFirstShell(e, url) {
+  const request = e.request;
+  // Keyed on origin + path: a ?utm=... visit must not add a cache entry per query string.
+  const key = url.origin + url.pathname;
   // no-cache = always revalidate with the server (a 304 is cheap), never trust the HTTP cache.
   const cachedOr = (res) =>
-    caches.match(request, { ignoreSearch: true }).then((cached) => cached || res);
+    caches.match(key).then((cached) => cached || res);
   const net = fetch(request, { cache: "no-cache" }).then((res) => {
     if (!res.ok) return cachedOr(res); // a 404/5xx must not replace a working cached page
     const copy = res.clone();
-    caches.open(SHELL_CACHE).then((c) => c.put(request, copy)).catch(() => {});
+    // waitUntil: a late write (the timeout already served the cache) must not be cut off.
+    e.waitUntil(caches.open(SHELL_CACHE).then((c) => c.put(key, copy)).catch(() => {}));
     return res;
   });
   const timeout = new Promise((_, reject) => setTimeout(reject, SHELL_NET_TIMEOUT_MS));
   return Promise.race([net, timeout]).catch(() =>
-    caches.match(request, { ignoreSearch: true }).then((cached) => cached || net)
+    caches.match(key).then((cached) => cached || net)
   );
 }
 
 self.addEventListener("fetch", (e) => {
+  if (e.request.method !== "GET") return; // POSTs and the like go straight to the network
   const url = new URL(e.request.url);
 
   if (isDataFile(url)) {
@@ -348,7 +353,7 @@ self.addEventListener("fetch", (e) => {
   // deploy runs the new code instead of the previous deploy's cached copy; the cache answers only
   // when the network fails or takes more than SHELL_NET_TIMEOUT_MS (offline / flaky PWA start).
   if (url.origin === self.location.origin && isShellCode(e.request, url)) {
-    e.respondWith(networkFirstShell(e.request));
+    e.respondWith(networkFirstShell(e, url));
     return;
   }
 

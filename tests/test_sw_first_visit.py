@@ -26,17 +26,23 @@ def test_precache_bypasses_the_http_cache() -> None:
 
 def test_page_and_scripts_are_network_first_with_a_cache_fallback() -> None:
     handler = SW.split('addEventListener("fetch"', 1)[1]
-    assert "isShellCode(e.request, url)" in handler and "networkFirstShell" in handler
+    assert "isShellCode(e.request, url)" in handler and "networkFirstShell(e, url)" in handler
+    assert 'e.request.method !== "GET"' in handler  # only GETs are ever cached
     fn = SW.split("function networkFirstShell", 1)[1].split("self.addEventListener", 1)[0]
     assert 'cache: "no-cache"' in fn  # always revalidate, never trust max-age
     assert "SHELL_NET_TIMEOUT_MS" in fn and "caches.match(" in fn  # offline / slow -> cached shell
-    assert "if (!res.ok) return cachedOr(res)" in fn  # a 404/5xx must not replace a working page
+    assert "if (!res.ok) return cachedOr(res)" in fn
+    assert "url.origin + url.pathname" in fn and "ignoreSearch" not in fn  # no key per ?query
+    assert "e.waitUntil(" in fn  # a 404/5xx must not replace a working page
 
 
 def test_third_party_and_font_requests_stay_cache_first() -> None:
-    tail = SW.split("networkFirstShell(e.request)", 1)[1]
+    tail = SW.split("e.respondWith(networkFirstShell(e, url))", 1)[1]
     assert "caches.match(e.request).then((cached) => cached || fetch(e.request))" in tail
-    assert "url.origin === self.location.origin" in SW.split("networkFirstShell(e.request)", 1)[0]
+    assert (
+        "url.origin === self.location.origin"
+        in SW.split("e.respondWith(networkFirstShell(e, url))", 1)[0]
+    )
 
 
 def test_worker_still_takes_over_immediately_and_the_page_reloads_once() -> None:
