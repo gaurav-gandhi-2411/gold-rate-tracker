@@ -103,6 +103,7 @@ jobs:
           GH_TOKEN: ${{ secrets.CI_MERGE_PAT }}
         run: |
           set -e
+          source "${GITHUB_WORKSPACE}/scripts/ci_retry.sh"
           git config user.name "gold-rate-bot"
           git config user.email "actions@users.noreply.github.com"
           git add README.md docs/DIRECTION_SIGNAL_STATUS.md docs/MODEL_SCORECARD.md docs/MODEL_STATUS.md
@@ -118,21 +119,24 @@ jobs:
           # Same convention as bot-pr-sync/action.yml: a reusable, force-pushed
           # bot branch -- no local branch tracking needed, HEAD is pushed
           # directly to the target ref.
-          git push --force origin "HEAD:refs/heads/${BRANCH}"
+          ci_retry git push --force origin "HEAD:refs/heads/${BRANCH}"
 
           # Reuse an existing open PR from this branch if one is already
           # mid-flight (e.g. a prior trigger's auto-merge hasn't landed yet)
           # rather than creating a duplicate.
-          EXISTING_PR=$(gh pr list --repo "${GITHUB_REPOSITORY}" --head "$BRANCH" --state open --json number --jq '.[0].number' || echo "")
+          EXISTING_PR=$(ci_retry gh pr list --repo "${GITHUB_REPOSITORY}" --head "$BRANCH" --state open --json number --jq '.[0].number')
           if [ -z "$EXISTING_PR" ]; then
-            gh pr create --repo "${GITHUB_REPOSITORY}" --base master --head "$BRANCH" \
+            # a 502 can arrive after the PR was created, so a failed create is judged by listing again
+            ci_retry gh pr create --repo "${GITHUB_REPOSITORY}" --base master --head "$BRANCH" \
               --title "chore: refresh injected doc metrics" \
-              --body "Automated docs-freshness refresh -- triggered by ${{ github.event.workflow_run.name }} run ${{ github.event.workflow_run.id }}. Only README.md/docs/DIRECTION_SIGNAL_STATUS.md's already-injected <!--METRIC:...--> values change; no wording is ever touched by this workflow."
-            EXISTING_PR=$(gh pr list --repo "${GITHUB_REPOSITORY}" --head "$BRANCH" --state open --json number --jq '.[0].number')
+              --body "Automated docs-freshness refresh -- triggered by ${{ github.event.workflow_run.name }} run ${{ github.event.workflow_run.id }}. Only README.md/docs/DIRECTION_SIGNAL_STATUS.md's already-injected <!--METRIC:...--> values change; no wording is ever touched by this workflow." \
+              || echo "gh pr create failed; checking whether the PR exists anyway" >&2
+            EXISTING_PR=$(ci_retry gh pr list --repo "${GITHUB_REPOSITORY}" --head "$BRANCH" --state open --json number --jq '.[0].number')
+            [ -n "$EXISTING_PR" ] || { echo "::error::no open PR for $BRANCH after gh pr create"; exit 1; }
           fi
-          gh pr merge "$EXISTING_PR" --repo "${GITHUB_REPOSITORY}" --auto --squash
+          ci_retry gh pr merge "$EXISTING_PR" --repo "${GITHUB_REPOSITORY}" --auto --squash
           # 2026-10-02: the pull_request run this push triggers waits for manual approval
           # ("action_required", 9 times 2026-09-28..30, PR #2184 never merged), so start Lint
           # directly like bot-pr-sync does. Its post-required-check-status job sets the lint and
           # pwa-js statuses on this head commit, which is what auto-merge waits for.
-          gh workflow run lint.yml --repo "${GITHUB_REPOSITORY}" --ref "${BRANCH}"
+          ci_retry gh workflow run lint.yml --repo "${GITHUB_REPOSITORY}" --ref "${BRANCH}"

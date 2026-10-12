@@ -373,4 +373,6 @@ jobs:
         continue-on-error: true
         env:
           GH_TOKEN: ${{ github.token }}
-        run: gh workflow run check-price.yml --repo "${GITHUB_REPOSITORY}" --ref master
+        run: |
+          source "${GITHUB_WORKSPACE}/scripts/ci_retry.sh"
+          ci_retry gh workflow run check-price.yml --repo "${GITHUB_REPOSITORY}" --ref master
