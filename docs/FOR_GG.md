@@ -1,6 +1,6 @@
 # For GG: things only your account or decision can clear
 
-Kept current by CC. Last updated 2026-10-12 (CC, after #2734). The weekly one-screen model note is `docs/MODEL_STATUS.md`.
+Kept current by CC. Last updated 2026-10-12 (CC, after #2750). The weekly one-screen model note is `docs/MODEL_STATUS.md`.
 Short on purpose: one optional check and a few optional items. Nothing is blocked on GG.
 
 ## 1. One check (30 seconds; the analytics fix is live)
@@ -21,4 +21,4 @@ show as a separate path starting `/app`.)
 | 2 | Ask IBJA for written permission to publish its rate history | ADR 059: IBJA's API terms say publishing IBJA rates or history on a website needs written permission. Send IBJA a short email (the contact is on https://ibjarates.com): who you are, the product (free, no ads, plain-language gold tracker), that the page shows the latest official fix and a next-fix range built from it, and ask in writing whether this and a history chart are allowed and on what terms. The raw IBJA series is now encrypted in the repo (the metrics-history migration, #2651, is merged). |
 | 3 | The 8 contested Hindi strings | All Hindi wording is LLM consensus, not native review, and it is live. `docs/HINDI_CONTESTED.md`, "START HERE" table: the 8 strings that most need a native speaker. Reply with the choices (or "keep") and CC applies them. |
 | 4 | Visitor numbers in the weekly note | In GoatCounter: Settings > API, create a token with **read statistics permission only**, and add it as the repo secret `GOATCOUNTER_TOKEN` (Repo Settings > Secrets and variables > Actions). From then on `visitors-weekly.yml` sends you one private line each Monday: the 7-day visitor total and the top 3 sources by host name (sources seen fewer than 3 times are left out). Nothing is printed in the public run log or committed. Until the secret exists it does nothing and says so in one line. |
-| 5 | Merge a docs-only PR | https://github.com/gaurav-gandhi-2411/gold-rate-tracker/pull/2735 describes the stamped build tags in `docs/PAGES_DEPLOY.md` (#2734). It is a deploy-config path, so the merge gate blocks CC from merging it. Open the link, check the 9-line diff, click Merge (squash). Nothing depends on it. |
+| 5 | Optional: merge the stdin-interpreter guard | https://github.com/gaurav-gandhi-2411/claude-config/pull/52 (draft, claude-config). A PreToolUse hook that denies `python -`, `python - </dev/null`, heredocs and pipes into an interpreter, with 272 selftests passing. It changes CC's own guardrails, so CC does not merge it; until it is merged, CC writes scripts to files. Nothing depends on it. |
