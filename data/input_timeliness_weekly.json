@@ -1,12 +1,12 @@
 {
  "schema_version": 1,
- "generated_at": "2026-10-11T08:02:57.647915+00:00",
+ "generated_at": "2026-10-12T14:54:57.129677+00:00",
  "days": 7,
  "tanishq_slots": {
   "days": 7,
-  "slots": 40,
-  "served": 23,
-  "missed": 17,
+  "slots": 47,
+  "served": 29,
+  "missed": 18,
   "window_minutes": 45,
   "missed_slots_ist": [
    "2026-10-05T01:40:00+05:30",
@@ -25,13 +25,14 @@
    "2026-10-09T10:40:00+05:30",
    "2026-10-09T11:10:00+05:30",
    "2026-10-09T15:35:00+05:30",
-   "2026-10-10T19:50:00+05:30"
+   "2026-10-10T19:50:00+05:30",
+   "2026-10-12T01:40:00+05:30"
   ],
   "classification": {
    "no_dispatch": 6,
    "dispatched_failed": 0,
    "dispatched_cancelled": 1,
-   "late": 10,
+   "late": 11,
    "dispatched_other": 0,
    "unknown": 0
   },
@@ -233,6 +234,41 @@
    },
    {
     "slot_ist": "2026-10-11T11:10:00+05:30",
+    "served": true,
+    "class": "served"
+   },
+   {
+    "slot_ist": "2026-10-11T15:35:00+05:30",
+    "served": true,
+    "class": "served"
+   },
+   {
+    "slot_ist": "2026-10-11T19:50:00+05:30",
+    "served": true,
+    "class": "served"
+   },
+   {
+    "slot_ist": "2026-10-12T01:40:00+05:30",
+    "served": false,
+    "class": "late"
+   },
+   {
+    "slot_ist": "2026-10-12T07:30:00+05:30",
+    "served": true,
+    "class": "served"
+   },
+   {
+    "slot_ist": "2026-10-12T10:40:00+05:30",
+    "served": true,
+    "class": "served"
+   },
+   {
+    "slot_ist": "2026-10-12T11:10:00+05:30",
+    "served": true,
+    "class": "served"
+   },
+   {
+    "slot_ist": "2026-10-12T15:35:00+05:30",
     "served": true,
     "class": "served"
    }
