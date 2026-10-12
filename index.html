@@ -72,6 +72,7 @@
     <link rel="icon" href="favicon.svg" type="image/svg+xml" />
     <meta name="theme-color" content="#1A1612" />
     <link rel="apple-touch-icon" sizes="180x180" href="icons/icon-192.png" />
+    <meta name="mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
     <meta name="apple-mobile-web-app-title" content="Gold Tracker" />
@@ -623,7 +624,9 @@
           const hadController = !!navigator.serviceWorker.controller;
           navigator.serviceWorker.register("service-worker.js").then((registration) => {
             // Force SW byte-check on every page load (bypasses 24h browser SW cache).
-            registration.update();
+            // The catch matters: during a host outage update() rejects, which surfaced as an
+            // uncaught promise error (and a Sentry event) on an otherwise working cached page.
+            registration.update().catch(() => {});
 
             // D1: visibilitychange fix for iOS standalone.
             // In standalone mode the page stays loaded when backgrounded — `load`
