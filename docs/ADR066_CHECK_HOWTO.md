@@ -5,7 +5,11 @@
 `after_afternoon_rate`. `after_us_close` is the live model's window (ADR 065) and is out of scope.
 It is read-only: it never edits `ml/` or `data/`; its only write is `reports/adr066_check_<date>.json`.
 
-## Steps (venv: `C:\Users\gaura\ml-projects\grt-venv`)
+## Preferred: run it in CI (no key on a laptop)
+
+`gh workflow run adr066-check.yml --ref master`, then read the run's console. The workflow decrypts with the repository secret on the runner and prints aggregates only (never uploads decrypted data). Run it unmodified on 2026-10-16; the decision rule is in ADR 072.
+
+## Steps by hand (venv: `C:\Users\gaura\ml-projects\grt-venv`)
 
 1. `git fetch` and check out current `master` (the shadow log and backtest JSON are committed by
    the check-price bot, so they must be current). Once the ADR 060 migration has run, the shadow log
