@@ -1,5 +1,5 @@
 {
-  "predicted_at": "2026-10-12T20:01:52.669832+00:00",
+  "predicted_at": "2026-10-12T20:14:07.326220+00:00",
   "target_window": "5d",
   "headline": {
     "method": "hold_latest_fix_pm_to_am",
@@ -59,7 +59,7 @@
     "direction_consensus": 1.0
   },
   "driver_context": {
-    "computed_at": "2026-10-12T20:01:53.610331+00:00",
+    "computed_at": "2026-10-12T20:14:08.255409+00:00",
     "macro_staleness_days": 0.0,
     "macro_fresh": true,
     "premium_threshold_pct": 15.0,
@@ -169,7 +169,17 @@
       "since": null,
       "reasons": [],
       "rules_breaching_now": [],
-      "checked": true
+      "checked": true,
+      "live_monitor": {
+        "checked": true,
+        "rule_sha256": "7326ea844d7e98c597db9a725c27010e9097e9f5fe1accf5dc96bf0f985f42b1",
+        "n_live": 3,
+        "error_breach": false,
+        "coverage_n_live": 3,
+        "coverage_live": 0.333,
+        "coverage_e_value": null,
+        "coverage_alert": false
+      }
     },
     "leak_guard": {
       "checked": true,
