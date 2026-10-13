@@ -1,32 +1,32 @@
 {
- "generated_at": "2026-10-13T10:37:56.863527Z",
+ "generated_at": "2026-10-13T12:06:23.179481Z",
  "ready": true,
  "bars_from": "2026-08-04T05:00:00Z",
  "bars_to": "2026-10-13T11:00:00Z",
- "n_decisions": 1133,
+ "n_decisions": 1137,
  "scored_on_last_decision_per_fix": {
   "after_morning_rate": {
-   "n_fixes": 47,
-   "n_decisions": 47,
+   "n_fixes": 48,
+   "n_decisions": 48,
    "n_excluded_logged_after_target": 0,
    "ready": true,
-   "mae_beta_0.0": 38.2,
-   "mae_beta_0.5": 22.3,
-   "mae_beta_1.0": 29.1,
-   "change_beta_0.5_pct": -41.6,
+   "mae_beta_0.0": 37.5,
+   "mae_beta_0.5": 21.9,
+   "mae_beta_1.0": 28.7,
+   "change_beta_0.5_pct": -41.5,
    "change_beta_0.5_ci95": [
-    -54.1,
+    -54.0,
     -28.3
    ],
    "dm_p_beta_0.5": 0.0,
-   "change_beta_1.0_pct": -23.8,
+   "change_beta_1.0_pct": -23.3,
    "change_beta_1.0_ci95": [
-    -42.8,
-    -1.1
+    -41.7,
+    1.5
    ],
-   "dm_p_beta_1.0": 0.0334,
-   "direction_hit_rate": 0.761,
-   "direction_n": 46
+   "dm_p_beta_1.0": 0.0363,
+   "direction_hit_rate": 0.766,
+   "direction_n": 47
   },
   "after_afternoon_rate": {
    "n_fixes": 45,
@@ -77,27 +77,27 @@
  },
  "scored_on_every_hour": {
   "after_morning_rate": {
-   "n_fixes": 47,
-   "n_decisions": 252,
+   "n_fixes": 48,
+   "n_decisions": 256,
    "n_excluded_logged_after_target": 0,
    "ready": true,
-   "mae_beta_0.0": 38.9,
-   "mae_beta_0.5": 28.8,
-   "mae_beta_1.0": 38.2,
-   "change_beta_0.5_pct": -26.0,
+   "mae_beta_0.0": 38.4,
+   "mae_beta_0.5": 28.4,
+   "mae_beta_1.0": 37.8,
+   "change_beta_0.5_pct": -25.9,
    "change_beta_0.5_ci95": [
-    -35.9,
-    -13.5
+    -35.5,
+    -12.7
    ],
    "dm_p_beta_0.5": 0.0,
-   "change_beta_1.0_pct": -1.7,
+   "change_beta_1.0_pct": -1.4,
    "change_beta_1.0_ci95": [
-    -24.5,
-    22.0
+    -22.8,
+    25.4
    ],
-   "dm_p_beta_1.0": 0.4046,
-   "direction_hit_rate": 0.723,
-   "direction_n": 249
+   "dm_p_beta_1.0": 0.4308,
+   "direction_hit_rate": 0.727,
+   "direction_n": 253
   },
   "after_afternoon_rate": {
    "n_fixes": 45,
