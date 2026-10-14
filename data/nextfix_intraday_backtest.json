@@ -1,9 +1,9 @@
 {
- "generated_at": "2026-10-14T06:39:07.231365Z",
+ "generated_at": "2026-10-14T07:11:28.074425Z",
  "ready": true,
  "bars_from": "2026-08-05T05:00:00Z",
- "bars_to": "2026-10-14T07:00:00Z",
- "n_decisions": 1131,
+ "bars_to": "2026-10-14T08:00:00Z",
+ "n_decisions": 1132,
  "scored_on_last_decision_per_fix": {
   "after_morning_rate": {
    "n_fixes": 47,
@@ -11,21 +11,21 @@
    "n_excluded_logged_after_target": 0,
    "ready": true,
    "mae_beta_0.0": 38.1,
-   "mae_beta_0.5": 22.4,
-   "mae_beta_1.0": 29.2,
-   "change_beta_0.5_pct": -41.2,
+   "mae_beta_0.5": 22.5,
+   "mae_beta_1.0": 29.4,
+   "change_beta_0.5_pct": -41.0,
    "change_beta_0.5_ci95": [
-    -54.0,
-    -28.1
+    -53.9,
+    -27.9
    ],
    "dm_p_beta_0.5": 0.0,
-   "change_beta_1.0_pct": -23.3,
+   "change_beta_1.0_pct": -22.7,
    "change_beta_1.0_ci95": [
-    -40.0,
-    1.7
+    -39.4,
+    2.7
    ],
-   "dm_p_beta_1.0": 0.0373,
-   "direction_hit_rate": 0.739,
+   "dm_p_beta_1.0": 0.0408,
+   "direction_hit_rate": 0.761,
    "direction_n": 46
   },
   "after_afternoon_rate": {
@@ -34,20 +34,20 @@
    "n_excluded_logged_after_target": 0,
    "ready": true,
    "mae_beta_0.0": 113.9,
-   "mae_beta_0.5": 83.5,
-   "mae_beta_1.0": 80.4,
-   "change_beta_0.5_pct": -26.7,
+   "mae_beta_0.5": 82.6,
+   "mae_beta_1.0": 81.2,
+   "change_beta_0.5_pct": -27.5,
    "change_beta_0.5_ci95": [
-    -37.4,
-    -15.0
+    -38.6,
+    -15.5
    ],
    "dm_p_beta_0.5": 0.0007,
-   "change_beta_1.0_pct": -29.4,
+   "change_beta_1.0_pct": -28.7,
    "change_beta_1.0_ci95": [
-    -47.1,
+    -45.8,
     -6.4
    ],
-   "dm_p_beta_1.0": 0.0273,
+   "dm_p_beta_1.0": 0.0266,
    "direction_hit_rate": 0.711,
    "direction_n": 45
   },
@@ -57,18 +57,18 @@
    "n_excluded_logged_after_target": 0,
    "ready": true,
    "mae_beta_0.0": 113.9,
-   "mae_beta_0.5": 52.1,
-   "mae_beta_1.0": 38.4,
-   "change_beta_0.5_pct": -54.3,
+   "mae_beta_0.5": 52.2,
+   "mae_beta_1.0": 38.6,
+   "change_beta_0.5_pct": -54.2,
    "change_beta_0.5_ci95": [
-    -59.1,
-    -48.8
+    -59.0,
+    -48.7
    ],
    "dm_p_beta_0.5": 0.0,
-   "change_beta_1.0_pct": -66.3,
+   "change_beta_1.0_pct": -66.1,
    "change_beta_1.0_ci95": [
-    -74.4,
-    -55.0
+    -74.3,
+    -54.9
    ],
    "dm_p_beta_1.0": 0.0,
    "direction_hit_rate": 0.956,
@@ -82,20 +82,20 @@
    "n_excluded_logged_after_target": 0,
    "ready": true,
    "mae_beta_0.0": 38.9,
-   "mae_beta_0.5": 28.7,
-   "mae_beta_1.0": 38.1,
-   "change_beta_0.5_pct": -26.1,
+   "mae_beta_0.5": 28.8,
+   "mae_beta_1.0": 38.2,
+   "change_beta_0.5_pct": -26.0,
    "change_beta_0.5_ci95": [
-    -36.2,
-    -13.5
+    -36.1,
+    -13.1
    ],
    "dm_p_beta_0.5": 0.0,
-   "change_beta_1.0_pct": -2.0,
+   "change_beta_1.0_pct": -1.7,
    "change_beta_1.0_ci95": [
-    -23.4,
-    22.9
+    -23.0,
+    23.5
    ],
-   "dm_p_beta_1.0": 0.3854,
+   "dm_p_beta_1.0": 0.3994,
    "direction_hit_rate": 0.731,
    "direction_n": 249
   },
@@ -105,15 +105,15 @@
    "n_excluded_logged_after_target": 0,
    "ready": true,
    "mae_beta_0.0": 113.9,
-   "mae_beta_0.5": 91.5,
-   "mae_beta_1.0": 83.9,
-   "change_beta_0.5_pct": -19.7,
+   "mae_beta_0.5": 91.4,
+   "mae_beta_1.0": 84.0,
+   "change_beta_0.5_pct": -19.8,
    "change_beta_0.5_ci95": [
-    -26.1,
-    -13.0
+    -26.2,
+    -13.1
    ],
    "dm_p_beta_0.5": 0.0,
-   "change_beta_1.0_pct": -26.3,
+   "change_beta_1.0_pct": -26.2,
    "change_beta_1.0_ci95": [
     -36.4,
     -13.9
@@ -124,26 +124,26 @@
   },
   "after_us_close": {
    "n_fixes": 45,
-   "n_decisions": 429,
+   "n_decisions": 430,
    "n_excluded_logged_after_target": 0,
    "ready": true,
    "mae_beta_0.0": 108.7,
-   "mae_beta_0.5": 66.8,
-   "mae_beta_1.0": 67.5,
-   "change_beta_0.5_pct": -38.5,
+   "mae_beta_0.5": 66.3,
+   "mae_beta_1.0": 67.8,
+   "change_beta_0.5_pct": -39.0,
    "change_beta_0.5_ci95": [
-    -47.0,
-    -28.9
+    -47.5,
+    -29.2
    ],
    "dm_p_beta_0.5": 0.0,
-   "change_beta_1.0_pct": -37.9,
+   "change_beta_1.0_pct": -37.6,
    "change_beta_1.0_ci95": [
-    -51.5,
-    -19.4
+    -50.9,
+    -19.6
    ],
    "dm_p_beta_1.0": 0.0002,
    "direction_hit_rate": 0.814,
-   "direction_n": 429
+   "direction_n": 430
   }
  }
 }
