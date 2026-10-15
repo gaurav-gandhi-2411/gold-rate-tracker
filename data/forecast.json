@@ -1,11 +1,11 @@
 {
-  "predicted_at": "2026-10-15T07:52:00.344769+00:00",
+  "predicted_at": "2026-10-15T08:25:04.337258+00:00",
   "target_window": "5d",
   "headline": {
     "method": "hold_latest_fix_am_to_pm",
     "predicted_22k": 13508,
-    "lower": 13463,
-    "upper": 13553,
+    "lower": 13457,
+    "upper": 13559,
     "conformal_pi_half": 208.4,
     "naive_mae_recent_30": 124.5,
     "vol_context": {
@@ -59,7 +59,7 @@
     "direction_consensus": 1.0
   },
   "driver_context": {
-    "computed_at": "2026-10-15T07:52:01.290330+00:00",
+    "computed_at": "2026-10-15T08:25:14.189463+00:00",
     "macro_staleness_days": 0.0,
     "macro_fresh": true,
     "premium_threshold_pct": 15.0,
@@ -122,8 +122,8 @@
   "band_unavailable_reason": null,
   "model_fallback": false,
   "predicted_22k": 13508,
-  "lower": 13463,
-  "upper": 13553,
+  "lower": 13457,
+  "upper": 13559,
   "target_time": "2026-10-16T00:00:00+00:00",
   "model_status": "nextfix_headline",
   "model_version": "hold_latest_fix_am_to_pm",
@@ -132,37 +132,37 @@
     "active": true,
     "reason": null,
     "track_record": {
-      "n": 149,
-      "n_forward": 4,
+      "n": 151,
+      "n_forward": 5,
       "first_d0": "2025-07-17",
-      "last_d0": "2026-10-12",
-      "mae_model": 105.7,
-      "mae_flat": 113.7,
+      "last_d0": "2026-10-13",
+      "mae_model": 105.5,
+      "mae_flat": 113.6,
       "mae_change_pct": -7.1,
       "mae_change_ci95": [
-        -12.6,
-        -1.6
+        -12.5,
+        -1.4
       ],
-      "dm_p": 0.0263,
-      "wilcoxon_p": 0.0267,
-      "direction_accuracy": 0.6376,
+      "dm_p": 0.0246,
+      "wilcoxon_p": 0.0265,
+      "direction_accuracy": 0.6358,
       "direction_accuracy_ci95": [
-        0.557,
-        0.718
+        0.556,
+        0.709
       ],
-      "always_up_accuracy": 0.4832,
-      "direction_p_value": 0.0076,
-      "direction_ece": 0.0712,
+      "always_up_accuracy": 0.4768,
+      "direction_p_value": 0.0056,
+      "direction_ece": 0.0687,
       "direction_gate_ship": true,
-      "direction_gate_reason": "logistic beats always-up OOS: acc 0.6376>0.4832, brier 0.2238<0.5168, ECE 0.0712<=0.1, p=0.0076 over 149 folds",
+      "direction_gate_reason": "logistic beats always-up OOS: acc 0.6358>0.4768, brier 0.2239<0.5232, ECE 0.0687<=0.1, p=0.0056 over 151 folds",
       "timing_gate_ship": false,
-      "range_coverage": 0.798,
+      "range_coverage": 0.802,
       "range_coverage_ci95": [
-        0.721,
-        0.859
+        0.725,
+        0.861
       ],
-      "range_n": 129,
-      "range_mean_width_ibja": 357.8
+      "range_n": 131,
+      "range_mean_width_ibja": 356.4
     },
     "demotion": {
       "demoted": false,
@@ -173,10 +173,10 @@
       "live_monitor": {
         "checked": true,
         "rule_sha256": "7326ea844d7e98c597db9a725c27010e9097e9f5fe1accf5dc96bf0f985f42b1",
-        "n_live": 4,
+        "n_live": 5,
         "error_breach": false,
-        "coverage_n_live": 4,
-        "coverage_live": 0.5,
+        "coverage_n_live": 5,
+        "coverage_live": 0.6,
         "coverage_e_value": null,
         "coverage_alert": false
       }
@@ -199,28 +199,28 @@
     },
     "windows": {
       "am_to_pm": {
-        "n": 154,
+        "n": 156,
         "ready": true,
         "first_d0": "2025-07-17",
-        "last_d0": "2026-10-13",
-        "range_coverage": 0.799,
-        "range_coverage_ci95": [
-          0.728,
-          0.854
-        ],
-        "range_mean_width": 126.2
-      },
-      "pm_to_am": {
-        "n": 151,
-        "ready": true,
-        "first_d0": "2025-07-17",
-        "last_d0": "2026-10-13",
+        "last_d0": "2026-10-14",
         "range_coverage": 0.795,
         "range_coverage_ci95": [
-          0.723,
+          0.725,
           0.851
         ],
-        "range_mean_width": 331.6
+        "range_mean_width": 126.4
+      },
+      "pm_to_am": {
+        "n": 153,
+        "ready": true,
+        "first_d0": "2025-07-17",
+        "last_d0": "2026-10-14",
+        "range_coverage": 0.797,
+        "range_coverage_ci95": [
+          0.727,
+          0.853
+        ],
+        "range_mean_width": 331.1
       }
     },
     "mode": "after_morning_rate",
@@ -231,12 +231,12 @@
     "predicted_ibja": 13333.7,
     "target_kind": "pm",
     "range_record": {
-      "coverage": 0.799,
-      "n": 154
+      "coverage": 0.795,
+      "n": 156
     },
     "predicted_22k": 13508,
-    "lower": 13463,
-    "upper": 13553,
+    "lower": 13457,
+    "upper": 13559,
     "direction": {
       "show": false,
       "side": "unclear",
