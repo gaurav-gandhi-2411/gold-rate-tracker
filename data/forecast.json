@@ -1,5 +1,5 @@
 {
-  "predicted_at": "2026-10-15T14:37:33.327335+00:00",
+  "predicted_at": "2026-10-15T17:52:31.821672+00:00",
   "target_window": "5d",
   "headline": {
     "method": "hold_latest_fix_pm_to_am",
@@ -59,7 +59,7 @@
     "direction_consensus": 1.0
   },
   "driver_context": {
-    "computed_at": "2026-10-15T14:37:34.283140+00:00",
+    "computed_at": "2026-10-15T17:52:32.710926+00:00",
     "macro_staleness_days": 0.0,
     "macro_fresh": true,
     "premium_threshold_pct": 15.0,
