@@ -641,3 +641,18 @@ merge as an admin.
 
 GG, once: add `scraper-dependency-guard` to branch protection's required status checks (Settings >
 Branches > master > required checks). Until then the check runs and reports but does not block.
+
+## After a shutdown or sleep: one dispatch per wake (2026-10-15)
+
+Task Scheduler starts the task of every missed slot at the same moment after a wake (`StartWhenAvailable`).
+Each used to dispatch its own run and the workflow's concurrency group cancelled all but one (four
+dispatches, two cancelled, on 2026-10-14 and 2026-10-15). `scripts/win/tanishq_dispatch.ps1` now makes the
+processes of one wake take a machine-wide lock in turn. The first (the leader), if it is late, waits 20 s for
+its siblings to register, checks for a recent run and dispatches ONCE, then records the batch in
+`%LOCALAPPDATA%\gold-rate-tracker\dispatch_batch.json`. Every sibling then writes its own line to
+`tanishq_dispatch.log`, e.g. `slot=10:40 DISPATCHED (batch of 4, led by slot 07:30; covers 07:30,10:40,11:10,15:35)`,
+so the attribution still sees each slot as served and the line says which slots the single run covers. When the
+leader skips (a run is already in progress) or fails, every sibling logs the same `SKIP ...`/`FAIL ...` with the
+batch note. The run's `slot_ist` is the leader's slot; the other covered slots are still counted as missed in
+the visit metrics, which is true: one visit happened, late, for all of them.
+
