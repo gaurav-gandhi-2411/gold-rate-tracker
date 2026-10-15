@@ -73,6 +73,23 @@ runs:
         # network call below that is safe to repeat. Loaded first so a rebase cannot move it.
         source "${GITHUB_WORKSPACE}/scripts/ci_retry.sh"
 
+        # A rejected token makes every call below fail with HTTP 401, and since no PR is ever created
+        # nothing else raises an alarm: on 2026-10-14 the token expired and the price stopped refreshing
+        # for a day before anyone saw it. Say so loudly and page, once per run, then stop.
+        # Only a 401 / Bad credentials counts; any other probe failure falls through to the real steps.
+        if ! PROBE=$(ci_retry gh api user --jq .login 2>&1) && echo "$PROBE" | grep -q -E "HTTP 401|Bad credentials"; then
+          echo "::error::The token passed to bot-pr-sync was rejected by GitHub (HTTP 401 Bad credentials). It has probably expired: renew the secret behind the 'token' input (CI_MERGE_PAT). See docs/FOR_GG.md section 0."
+          if [ -n "${NTFY_TOPIC}" ]; then
+            curl -s \
+              -H "Title: Gold Tracker: data sync token rejected" \
+              -H "Priority: high" \
+              -H "Tags: warning,key" \
+              -d "bot-pr-sync (branch ${BRANCH}) was refused by GitHub with HTTP 401 Bad credentials, so no data PR can merge and the site price will go stale. The token (CI_MERGE_PAT) has probably expired. https://github.com/${GITHUB_REPOSITORY}/blob/master/docs/FOR_GG.md" \
+              "https://ntfy.sh/${NTFY_TOPIC}" || true
+          fi
+          exit 1
+        fi
+
         # Push/merge as a real user account (via GH_TOKEN, set from the
         # `token` input above) rather than GITHUB_TOKEN — required so the
         # merge itself is allowed (see the action description). As a likely
