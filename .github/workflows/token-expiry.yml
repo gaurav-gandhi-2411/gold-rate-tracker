@@ -1,0 +1,59 @@
+# Warns before a GitHub token expires and pages at once when one is rejected (scripts/check_token_expiry.py).
+#
+# Why: CI_MERGE_PAT expired on 2026-10-14; every data sync then failed with HTTP 401 and nothing paged for
+# about a day. Secrets can only be read inside a workflow, so the check lives here. It calls
+# GET /rate_limit with each token, reads only the status and the `github-authentication-token-expiration`
+# header, and never prints a token or a response body. Pages go to the private ntfy topic.
+#
+# Triggered three ways, like ci-health.yml, so one skipped GitHub cron does not hide an expiry: this daily
+# cron, a manual dispatch, and a starter step in check-price.yml that starts it when it has not run in
+# 20 hours. The "once each at 30, 14 and 7 days" memory is a small JSON file in the Actions cache.
+name: Token expiry check
+
+on:
+  schedule:
+    - cron: "43 3 * * *" # daily, off the top of the hour
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: token-expiry
+  cancel-in-progress: false
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Set up Python
+        uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: "3.12"
+
+      - name: Restore the paging state
+        uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: token-expiry-state.json
+          key: token-expiry-state-${{ github.run_id }}
+          restore-keys: token-expiry-state-
+
+      - name: Check each token's expiry
+        env:
+          CI_MERGE_PAT: ${{ secrets.CI_MERGE_PAT }}
+          CI_HEALTH_PAT: ${{ secrets.CI_HEALTH_PAT }}
+          NTFY_TOPIC: ${{ secrets.NTFY_TOPIC }}
+        run: python scripts/check_token_expiry.py --state token-expiry-state.json CI_MERGE_PAT CI_HEALTH_PAT
+
+      - name: Save the paging state
+        if: always()
+        uses: actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: token-expiry-state.json
+          key: token-expiry-state-${{ github.run_id }}

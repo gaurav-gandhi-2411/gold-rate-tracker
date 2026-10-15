@@ -461,6 +461,30 @@ jobs:
             echo "ci-health.yml ran ${AGE}s ago; nothing to start"
           fi
 
+      # A token that expires or is rejected stops every data sync (2026-10-14). token-expiry.yml checks the
+      # tokens daily on its own cron; this is a second trigger, like the ci-health one above, so one skipped
+      # GitHub cron does not hide an expiry. Never fails the run.
+      - name: Start the token expiry check if it has not run lately
+        if: always()
+        continue-on-error: true
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          source "${GITHUB_WORKSPACE}/scripts/ci_retry.sh"
+          LAST=$(ci_retry gh api "repos/${GITHUB_REPOSITORY}/actions/workflows/token-expiry.yml/runs?per_page=1" --jq '.workflow_runs[0].created_at // empty') || LAST=""
+          NOW=$(date -u +%s)
+          if [ -n "$LAST" ]; then
+            AGE=$(( NOW - $(date -u -d "$LAST" +%s) ))
+          else
+            AGE=999999
+          fi
+          if [ "$AGE" -gt 72000 ]; then
+            ci_retry gh workflow run token-expiry.yml --ref master
+            echo "token-expiry.yml last ran ${AGE}s ago; started it"
+          else
+            echo "token-expiry.yml ran ${AGE}s ago; nothing to start"
+          fi
+
       - name: Fail the run if decrypt or re-encrypt failed (ADR 060)
         if: always() && (steps.decrypt.outcome == 'failure' || steps.seal.outcome == 'failure')
         run: |
