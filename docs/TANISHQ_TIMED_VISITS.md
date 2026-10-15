@@ -655,4 +655,3 @@ so the attribution still sees each slot as served and the line says which slots 
 leader skips (a run is already in progress) or fails, every sibling logs the same `SKIP ...`/`FAIL ...` with the
 batch note. The run's `slot_ist` is the leader's slot; the other covered slots are still counted as missed in
 the visit metrics, which is true: one visit happened, late, for all of them.
-
