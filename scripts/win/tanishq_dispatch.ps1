@@ -91,25 +91,38 @@ $locked = $false
 try { $locked = $mutex.WaitOne([TimeSpan]::FromMinutes(4)) } catch [System.Threading.AbandonedMutexException] { $locked = $true }
 if (-not $locked) { Write-Log "SKIP dispatch lock busy for 4 min"; exit 1 }
 try {
-    # A sibling that already dispatched (or skipped) for this wake and listed my slot has done my visit.
+    # How late am I? The slot's most recent IST occurrence, against now. A process Task Scheduler starts a few
+    # seconds BEFORE the slot time is on time, not a day late.
+    $ist = [TimeZoneInfo]::ConvertTimeBySystemTimeZoneId((Get-Date), "India Standard Time")
+    $sched = [datetime]::ParseExact($ist.ToString("yyyy-MM-dd") + " " + $Slot, "yyyy-MM-dd HH:mm", $null)
+    if ($sched -gt $ist -and ($sched - $ist).TotalMinutes -gt 5) { $sched = $sched.AddDays(-1) }
+    $lateSec = [Math]::Max(0, ($ist - $sched).TotalSeconds)
+    $schedUtc = (Get-Date).ToUniversalTime().AddSeconds(-$lateSec)  # the slot's time as a UTC instant
+    # A sibling that already dispatched (or skipped) for this wake and listed my slot has done my visit. A FAIL
+    # is not adopted: a transient failure right after a wake should be retried by each process.
     $batch = $null
     if (Test-Path $StateFile) { try { $batch = Get-Content -Path $StateFile -Raw | ConvertFrom-Json } catch { $batch = $null } }
-    if ($batch -and (@($batch.slots) -contains $Slot) -and (([datetime]$batch.at_utc).ToUniversalTime() -ge $startUtc.AddMinutes(-1))) {
+    $covered = $false
+    $joinedLate = ""
+    if ($batch -and ("$($batch.result)" -match "^(DISPATCHED|SKIP recent run)")) {
+        $batchAt = ([datetime]$batch.at_utc).ToUniversalTime()
+        if ((@($batch.slots) -contains $Slot) -and $batchAt -ge $startUtc.AddMinutes(-1)) { $covered = $true }
+        elseif ($batch.result -eq "DISPATCHED" -and $lateSec -gt $LateAfterSec -and $batchAt -ge $startUtc.AddMinutes(-$BatchWindowMin) -and $schedUtc -le $batchAt) {
+            # a sibling that came online after the leader's settle time: the run just dispatched serves it too
+            $covered = $true
+            $joinedLate = "; joined late"
+        }
+    }
+    if ($covered) {
         $locked = $false
         $mutex.ReleaseMutex()
-        Write-Log ("{0} (batch of {1}, led by slot {2}; covers {3})" -f $batch.result, @($batch.slots).Count, $batch.leader, (@($batch.slots) -join ","))
-        if ($batch.result -match "^(FAIL|SKIP cannot)") { exit 1 }
+        Write-Log ("{0} (batch of {1}, led by slot {2}; covers {3}{4})" -f $batch.result, @($batch.slots).Count, $batch.leader, (@($batch.slots) -join ","), $joinedLate)
         if ($batch.result -ne "DISPATCHED") { exit 0 }
         $skipDispatch = $true
     } else {
         $skipDispatch = $false
     }
     if (-not $skipDispatch) {
-        # How late am I? The slot's most recent IST occurrence, against now.
-        $ist = [TimeZoneInfo]::ConvertTimeBySystemTimeZoneId((Get-Date), "India Standard Time")
-        $sched = [datetime]::ParseExact($ist.ToString("yyyy-MM-dd") + " " + $Slot, "yyyy-MM-dd HH:mm", $null)
-        if ($sched -gt $ist) { $sched = $sched.AddDays(-1) }
-        $lateSec = ($ist - $sched).TotalSeconds
         if ($lateSec -gt $LateAfterSec -and $SettleSec -gt 0) { Start-Sleep -Seconds $SettleSec }  # let siblings register
         # The slots of this wake: everything registered since two minutes before I started.
         $covers = @()
@@ -118,8 +131,11 @@ try {
             try { $pendingLines = @(Get-Content -Path $PendingFile -ErrorAction Stop); break } catch { Start-Sleep -Milliseconds 150 }
         }
         foreach ($l in $pendingLines) {
-            $parts = $l -split " "
-            if ($parts.Count -ge 2 -and ([datetime]$parts[0]).ToUniversalTime() -ge $startUtc.AddMinutes(-2)) { $covers += $parts[1] }
+            # one torn line (a power loss mid-append) must never stop a dispatch: skip what does not parse
+            try {
+                $parts = $l -split " "
+                if ($parts.Count -ge 2 -and ([datetime]$parts[0]).ToUniversalTime() -ge $startUtc.AddMinutes(-2)) { $covers += $parts[1] }
+            } catch { }
         }
         $covers = @($covers | Select-Object -Unique)
         if ($pendingLines.Count -gt 1000) { try { Set-Content -Path $PendingFile -Value @($pendingLines | Select-Object -Last 200) } catch { } }  # keep it short
