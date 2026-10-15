@@ -1,0 +1,7 @@
+{
+ "schema_version": 1,
+ "note": "Decision days whose live forecast never reached users. Each is still scored, but flagged retro, so it is not a live day for the promotion rule, the demotion windows or the live-only monitor (ADR 075). Add a day only with evidence from the commit history of data/forecast.json.",
+ "days": {
+  "2026-10-14": "P3's forecast for this decision day (mode after_us_close, target the 2026-10-15 PM fix) is published each morning; it was due about 06:57 IST on 2026-10-15. The data-sync token had expired (HTTP 401) from about 13:00 UTC on 2026-10-14 to 07:33 UTC on 2026-10-15, so it was never published; users saw the hold forecast (after_morning_rate) from 13:03 IST instead."
+ }
+}
