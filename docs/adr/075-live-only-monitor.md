@@ -109,3 +109,17 @@ Remove the `live=` argument and the `lmon.live_status` call in `ml.nextfix._demo
 then run alone); delete `_check_t18_live_coverage` and its call to stop the coverage alert. A demotion
 this check caused is cleared exactly like ADR 068's: a person sets `demoted` to false in
 `data/model_demotion_state.json` once the record has recovered.
+
+## 2026-10-15 note: a decision day whose forecast was never shown is not a live day
+
+From about 13:00 UTC on 2026-10-14 to 07:33 UTC on 2026-10-15 no data PR could merge (the sync token had
+expired, HTTP 401), so nothing was published. P3's forecast for decision day 2026-10-14 (mode
+`after_us_close`, target the 2026-10-15 PM fix) is published each morning (about 06:57 IST); that morning it
+was not, and users saw the hold forecast from 13:03 IST. A fold is built from the data when its pair
+resolves, so without a rule it would have been flagged live. `data/unpublished_decision_days.json` now lists
+such days (here 2026-10-14, with the evidence: the commit history of `data/forecast.json`); `update_oos`
+records them but flags them `retro`, so the promotion rule, the demotion windows and this monitor do not
+count them. An unreadable file fails closed (no new fold counts as live). Decision day 2026-10-13, whose
+forecast was published at 06:57 IST on 2026-10-14, resolves late (its PM fix of 2026-10-14 was stored only
+on 2026-10-15) and counts as live. The rule's numbers and hash are unchanged.
+
