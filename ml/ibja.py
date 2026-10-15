@@ -387,11 +387,45 @@ def _parse_ibja_pdf(pdf_bytes: bytes) -> pd.DataFrame:
     return pd.DataFrame(rows)
 
 
+def _fill_null_rates(existing: pd.DataFrame, pdf_rows: pd.DataFrame) -> tuple[pd.DataFrame, int]:
+    """Complete stored rows that have a null rate from the PDF's row for the same day.
+
+    A stored row can be partial: the run that wrote it came before that day's PM fix, and the run
+    that would have filled it never merged its data PR (2026-10-14: the sync token expired, so the
+    PM fix of that day was never stored). The date-only skip below would then keep that row
+    incomplete forever. Only NULL cells are filled; a value already stored is never overwritten.
+    Returns (frame, number of rows changed).
+    """
+    if existing.empty or pdf_rows.empty:
+        return existing, 0
+    existing = existing.copy()
+    changed = 0
+    rate_cols = [c for c in pdf_rows.columns if c.startswith(("am_", "pm_"))]
+    by_date = pdf_rows.set_index("date")
+    for col in rate_cols:
+        if col not in existing.columns:
+            existing[col] = float("nan")
+    touched: set[str] = set()
+    for idx, d in existing["date"].items():
+        if d not in by_date.index:
+            continue
+        src = by_date.loc[d]
+        if isinstance(src, pd.DataFrame):  # duplicated date in the PDF: take the first row
+            src = src.iloc[0]
+        for col in rate_cols:
+            if pd.isna(existing.at[idx, col]) and pd.notna(src[col]):
+                existing.at[idx, col] = src[col]
+                touched.add(d)
+    changed = len(touched)
+    return existing, changed
+
+
 def backfill_ibja_from_pdf(path: Path | None = None) -> int:
     """Fetch ibjarates.com, extract the 30-day PDF URL, download, parse, append.
 
-    Idempotent: rows whose date already exists in the parquet are skipped.
-    Returns the count of new rows appended (0 on failure or if already current).
+    Idempotent: rows whose date already exists in the parquet are skipped, except that a stored
+    row with a NULL rate is completed from the PDF (``_fill_null_rates``).
+    Returns the count of rows appended or completed (0 on failure or if already current).
     """
     time.sleep(_POLITE_DELAY)
     html = _get_with_retry({"User-Agent": _USER_AGENT})
@@ -415,22 +449,27 @@ def backfill_ibja_from_pdf(path: Path | None = None) -> int:
         return 0
 
     existing = load_ibja_parquet(path)
+    filled = 0
     if not existing.empty and "date" in existing.columns:
+        existing, filled = _fill_null_rates(existing, df_new)
         known_dates = set(existing["date"].values)
         df_new = df_new[~df_new["date"].isin(known_dates)].reset_index(drop=True)
 
-    if df_new.empty:
+    if df_new.empty and filled == 0:
         logger.info("ibja: backfill_ibja_from_pdf: no new rows (all dates already present)")
         return 0
 
     p = path or IBJA_PARQUET
     p.parent.mkdir(parents=True, exist_ok=True)
-    combined = pd.concat([existing, df_new], ignore_index=True)
+    combined = pd.concat([existing, df_new], ignore_index=True) if not df_new.empty else existing
     combined.to_parquet(p, index=False)
     logger.info(
-        "ibja: backfill_ibja_from_pdf: appended %d rows (%d total)", len(df_new), len(combined)
+        "ibja: backfill_ibja_from_pdf: appended %d rows, completed %d partial rows (%d total)",
+        len(df_new),
+        filled,
+        len(combined),
     )
-    return len(df_new)
+    return len(df_new) + filled
 
 
 if __name__ == "__main__":

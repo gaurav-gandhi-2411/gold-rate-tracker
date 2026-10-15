@@ -1,21 +1,21 @@
 {
-  "slope": 1.0131218232181343,
-  "intercept": -0.8324992098379062,
-  "fit_date": "2026-09-29",
-  "n_observations": 95,
-  "residual_std": 77.77929253995444,
-  "r_squared": 0.9760664907852125,
+  "slope": 1.0138553992778874,
+  "intercept": 0.3755766274675888,
+  "fit_date": "2026-10-15",
+  "n_observations": 105,
+  "residual_std": 75.29957957484733,
+  "r_squared": 0.9753049694216288,
   "huber_epsilon": 1.35,
   "half_life": 10.0,
-  "r_squared_oos": 0.9876519000619796,
-  "residual_std_oos": 59.47979674569695,
-  "mae_oos": 45.26073452597252,
-  "n_oos": 65,
+  "r_squared_oos": 0.9866904229608929,
+  "residual_std_oos": 57.52686284418346,
+  "mae_oos": 44.647749150149075,
+  "n_oos": 75,
   "oos_method": "expanding_window_walk_forward_recency_weighted",
   "residual_abs_quantiles": {
-    "68": 60.601736782356966,
-    "80": 73.41504744428312,
-    "90": 83.41163478064118
+    "68": 55.94628652250867,
+    "80": 69.74610873403799,
+    "90": 78.1553417370269
   },
   "valid": true,
   "schema_version": 3,
@@ -55,6 +55,10 @@
     {
       "from": "2026-09-29",
       "slope": 1.0131218232181343
+    },
+    {
+      "from": "2026-10-15",
+      "slope": 1.0138553992778874
     }
   ]
 }

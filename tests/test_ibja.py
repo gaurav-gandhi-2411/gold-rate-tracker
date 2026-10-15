@@ -456,6 +456,52 @@ def test_backfill_from_pdf_preserves_existing_rows(tmp_path, monkeypatch):
     assert "2026-04-01" in df["date"].values
 
 
+def _stub_pdf(monkeypatch, rows: pd.DataFrame) -> None:
+    monkeypatch.setattr("time.sleep", lambda _: None)
+    monkeypatch.setattr(ibja, "_get_with_retry", lambda _h: _IBJA_HTML_WITH_PDF_LINK)
+    monkeypatch.setattr(ibja, "_download_pdf_bytes", lambda _url: b"pdf")
+    monkeypatch.setattr(ibja, "_parse_ibja_pdf", lambda _b: rows)
+
+
+def test_backfill_completes_a_stored_row_whose_pm_rate_is_null(tmp_path, monkeypatch):
+    """2026-10-14: the run that wrote the AM row never merged, so the PM fix was never stored."""
+    pdf = _make_backfill_df()
+    _stub_pdf(monkeypatch, pdf)
+    p = tmp_path / "ibja.parquet"
+    pm_true = float(pdf.loc[pdf["date"] == "2026-05-18", "pm_916"].iloc[0])
+    partial = pdf[pdf["date"] == "2026-05-18"].copy()
+    partial["pm_916"] = float("nan")
+    partial["pm_999"] = float("nan")
+    partial.to_parquet(p, index=False)
+    count = ibja.backfill_ibja_from_pdf(p)
+    df = pd.read_parquet(p).set_index("date")
+    assert count == 2  # one stored row completed + the other PDF day appended
+    assert df.loc["2026-05-18", "pm_916"] == pm_true
+    assert df.loc["2026-05-18", "am_916"] == 144564.0  # untouched
+    assert ibja.backfill_ibja_from_pdf(p) == 0  # now complete: a second run changes nothing
+
+
+def test_backfill_never_overwrites_a_stored_rate(tmp_path, monkeypatch):
+    pdf = _make_backfill_df()
+    _stub_pdf(monkeypatch, pdf)
+    p = tmp_path / "ibja.parquet"
+    stored = pdf.copy()
+    stored.loc[stored["date"] == "2026-05-18", "pm_916"] = 1.0  # differs from the PDF on purpose
+    stored.to_parquet(p, index=False)
+    assert ibja.backfill_ibja_from_pdf(p) == 0
+    assert pd.read_parquet(p).set_index("date").loc["2026-05-18", "pm_916"] == 1.0
+
+
+def test_backfill_adds_a_rate_column_the_stored_file_lacks(tmp_path, monkeypatch):
+    pdf = _make_backfill_df()
+    _stub_pdf(monkeypatch, pdf)
+    p = tmp_path / "ibja.parquet"
+    pd.DataFrame([{"date": "2026-05-18", "am_916": 144564.0}]).to_parquet(p, index=False)
+    assert ibja.backfill_ibja_from_pdf(p) == 2  # 1 completed, 1 appended
+    row = pd.read_parquet(p).set_index("date").loc["2026-05-18"]
+    assert row["pm_916"] == 144489.0 and row["am_916"] == 144564.0
+
+
 # ---------------------------------------------------------------------------
 # ADR 025 — IBJA-primary business-day gap (T9/T9_ESCALATE + display backstop)
 # ---------------------------------------------------------------------------

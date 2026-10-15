@@ -128,7 +128,7 @@ def _sync_script() -> str:
     return str(action["runs"]["steps"][0]["run"])
 
 
-def _sync_stubs(tmp: Path, *, list_fails: int, dispatch_fails: int) -> str:
+def _sync_stubs(tmp: Path, *, list_fails: int, dispatch_fails: int, token: str = "good") -> str:
     log, st = _posix(tmp / "gh.log"), _posix(tmp / "state")
     return f"""
 cnt() {{ n=$(cat "{st}.$1" 2>/dev/null || echo 0); n=$((n + 1)); echo $n > "{st}.$1"; echo $n; }}
@@ -146,17 +146,21 @@ gh() {{
       n=$(cnt dispatch)
       if [ "$n" -le {dispatch_fails} ]; then echo "gh: Server Error (HTTP 502)" >&2; return 1; fi ;;
     "pr view") echo MERGED ;;
+    "api user")
+      if [ "{token}" = "bad" ]; then echo "HTTP 401: Bad credentials (https://api.github.com/user)" >&2; return 1; fi
+      echo bot-user ;;
   esac
   return 0
 }}
-export -f gh cnt
+curl() {{ echo "curl $*" >> "{log}"; return 0; }}
+export -f gh cnt curl
 """
 
 
 def _run_sync(
-    tmp: Path, *, list_fails: int, dispatch_fails: int
+    tmp: Path, *, list_fails: int, dispatch_fails: int, token: str = "good", ntfy: str = ""
 ) -> subprocess.CompletedProcess[str]:
-    script = _sync_stubs(tmp, list_fails=list_fails, dispatch_fails=dispatch_fails) + (
+    script = _sync_stubs(tmp, list_fails=list_fails, dispatch_fails=dispatch_fails, token=token) + (
         f'cd "{_posix(ROOT)}"\n' + _sync_script()
     )
     env = {
@@ -165,7 +169,7 @@ def _run_sync(
         "PR_TITLE": "t",
         "PR_BODY": "b",
         "WAIT_MINUTES": "1",
-        "NTFY_TOPIC": "",
+        "NTFY_TOPIC": ntfy,
         "GITHUB_REPOSITORY": "o/r",
         "GITHUB_WORKSPACE": str(ROOT),
         "CI_RETRY_BASE": "0",
@@ -295,3 +299,24 @@ def test_warnings_of_a_successful_call_are_kept(tmp_path: Path) -> None:
 def test_more_transient_shapes_are_retried(tmp_path: Path, msg: str) -> None:
     r = _run(_use(tmp_path, 1, msg) + "ci_retry flaky", tmp_path)
     assert r.returncode == 0 and _calls(tmp_path) == 2
+
+
+def test_sync_step_stops_loudly_and_pages_when_the_token_is_rejected(tmp_path: Path) -> None:
+    """2026-10-14: an expired token (HTTP 401) stopped every data sync for a day with no alarm."""
+    r = _run_sync(tmp_path, list_fails=0, dispatch_fails=0, token="bad", ntfy="topic")
+    log = (tmp_path / "gh.log").read_text()
+    assert r.returncode != 0
+    assert "was rejected by GitHub (HTTP 401" in r.stdout + r.stderr
+    assert log.count("curl ") == 1 and "ntfy.sh/topic" in log  # one page
+    assert "pr list" not in log and "pr create" not in log and "workflow run" not in log
+    assert "git push" not in log  # stopped before pushing anything
+
+
+def test_sync_step_without_a_ntfy_topic_still_fails_on_a_rejected_token(tmp_path: Path) -> None:
+    r = _run_sync(tmp_path, list_fails=0, dispatch_fails=0, token="bad")
+    assert r.returncode != 0 and "curl " not in (tmp_path / "gh.log").read_text()
+
+
+def test_a_good_token_probe_changes_nothing(tmp_path: Path) -> None:
+    r = _run_sync(tmp_path, list_fails=0, dispatch_fails=0, ntfy="topic")
+    assert r.returncode == 0 and "curl " not in (tmp_path / "gh.log").read_text()

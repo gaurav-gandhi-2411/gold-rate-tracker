@@ -89,6 +89,10 @@ P3_FORWARD_FROM = "2026-10-07"
 # 2026-10-16 is untouched by this record (see docs/adr/066, 'Live predictor').
 HOURLY_VERSION = "nextfix_hourly_v1"
 HOURLY_FORWARD_FROM = "2026-10-12"
+# Decision days whose live forecast never reached users (data/unpublished_decision_days.json). Such a
+# day is recorded for scoring but flagged ``retro``, so it is not a live day for the promotion rule,
+# the demotion windows or the live-only monitor (ADR 075).
+UNPUBLISHED_PATH = DATA_DIR / "unpublished_decision_days.json"
 HOURLY_KEY = "hourly_shadow"  # top-level key in P3_VARIANTS_PATH, apart from "variants"
 STATE_FILE = "model_demotion_state.json"  # ADR 068: sticky demotion state of P3 (back-compat name)
 STATE_FILE_PREFIX = "model_demotion_state__"  # ADR 072: any other model gets its own file
@@ -612,6 +616,23 @@ def _resid_sd(folds: list[dict]) -> float | None:
     return float(np.std(errs)) if len(errs) >= MIN_CONFORMAL else None
 
 
+def unpublished_days(path: Path | None = None) -> set[str] | None:
+    """Decision days whose live forecast was never shown to users, or None when the file exists but
+    cannot be read (rule 98a: then NO new fold is counted live until a person repairs it; a missing
+    file simply means no such days)."""
+    p = path or UNPUBLISHED_PATH
+    if not p.exists():
+        return set()
+    try:
+        days = json.loads(p.read_text(encoding="utf-8")).get("days", {})
+        if not isinstance(days, dict):
+            raise ValueError("'days' is not an object")
+        return {str(k) for k in days}
+    except (OSError, ValueError, AttributeError) as exc:
+        logger.error("unpublished-days file unreadable (%s); new folds will not count as live", exc)
+        return None
+
+
 def update_oos(
     pairs: pd.DataFrame,
     folds: list[dict],
@@ -646,6 +667,7 @@ def update_oos(
         known = None
     done = {f["d0"] for f in folds}
     out = list(folds)
+    unpublished = unpublished_days()  # None = unreadable: fail closed, nothing new counts as live
     resolved = pairs[pairs["d1"].notna()].reset_index(drop=True)
     try:
         clocks = rlg.PairClocks(resolved, known) if known is not None and len(resolved) else None
@@ -682,7 +704,7 @@ def update_oos(
             "vol": p.vol,
         }
         if forward_from is not None:
-            fold["retro"] = key < forward_from
+            fold["retro"] = key < forward_from or unpublished is None or key in unpublished
             if hourly and as_of is not None and (as_of.date() - date.fromisoformat(key)).days > 3:
                 fold["retro"] = True
         out.append(fold)
