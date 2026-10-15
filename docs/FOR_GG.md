@@ -1,7 +1,28 @@
 # For GG: things only your account or decision can clear
 
-Kept current by CC. Last updated 2026-10-12 (CC, after #2750). The weekly one-screen model note is `docs/MODEL_STATUS.md`.
-Short on purpose: one optional check and a few optional items. Nothing is blocked on GG.
+Kept current by CC. Last updated 2026-10-15 (CC, token expiry found). The weekly one-screen model note is `docs/MODEL_STATUS.md`.
+Short on purpose: ONE URGENT ITEM (section 0), one optional check and a few optional items.
+
+## 0. URGENT: the data-sync token is rejected, the site price stopped refreshing
+
+Since about 13:00 UTC on 2026-10-14 every data sync fails with `HTTP 401: Bad credentials`, on both the
+GitHub runner (check-price, 5 scheduled runs in a row) and the laptop runner (scrape sync). The last data
+PR merged at 07:18 UTC on 10-14, so the page price and forecast are about a day old and growing. The token
+behind it is the repository secret `CI_MERGE_PAT`. VERIFIED: the 401 and its timing. INFERRED: that it expired
+(a 90-day token created around the 2026-07-17 fix would end about now); nothing else changed.
+CC cannot fix it: the merge must come from a real user's token (branch protection blocks `github-actions[bot]`),
+and CC may not create or change secrets.
+
+1. GitHub > Settings > Developer settings > Personal access tokens > Fine-grained tokens. If the old
+   `CI_MERGE_PAT` token is listed, open it: it shows the expiry date and the exact permissions to copy. Either
+   regenerate it or make a new one.
+2. If making a new one: resource owner your account, **only** repository `gold-rate-tracker`, expiration the
+   longest you are comfortable with (put the date in your calendar). Permissions (INFERRED from what the
+   sync does; prefer copying the old token's list): Contents read and write, Pull requests read and write,
+   Actions read and write (it starts workflow runs), Metadata read.
+3. Repository > Settings > Secrets and variables > Actions > `CI_MERGE_PAT` > Update secret > paste the token.
+4. Tell CC (or just wait): the next scheduled run, or `gh workflow run check-price.yml --ref master`, merges a
+   data PR and the price refreshes. CC will confirm in a headed browser.
 
 ## 1. One check (30 seconds; the analytics fix is live)
 
