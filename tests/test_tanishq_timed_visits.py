@@ -6,6 +6,7 @@ import importlib.util
 import itertools
 import json
 import re
+import shutil
 import sys
 from datetime import UTC, datetime, timedelta
 from pathlib import Path
@@ -375,7 +376,7 @@ def test_optimise_window_returns_a_feasible_schedule():
 
 def test_dispatcher_side_tasks_run_after_the_visit_and_cannot_change_the_result():
     ps1 = (ROOT / "scripts" / "win" / "tanishq_dispatch.ps1").read_text(encoding="utf-8")
-    assert ps1.index('Write-Log "DISPATCHED"') < ps1.index("# --- Side tasks")
+    assert ps1.index('$result = "DISPATCHED"') < ps1.index("# --- Side tasks")
     tail = ps1.split("# --- Side tasks", 1)[1]
     assert "gh workflow run ci-health.yml" in tail  # second trigger for the CI health monitor
     assert "laptop_attribution.py" in tail and "$LogDir" in tail  # result stays off the checkout
@@ -402,7 +403,184 @@ def test_dispatcher_survives_a_failing_gh_call_and_always_logs():
     ps1 = (ROOT / "scripts" / "win" / "tanishq_dispatch.ps1").read_text(encoding="utf-8")
     main = ps1.split("if (-not $SideTasksOnly) {", 1)[1].split("# --- Side tasks", 1)[0]
     assert main.index('$ErrorActionPreference = "Continue"') < main.index("gh api rate_limit")
-    assert main.rindex('$ErrorActionPreference = "Stop"') > main.index('Write-Log "DISPATCHED"')
+    assert main.rindex('$ErrorActionPreference = "Stop"') > main.index('$result = "DISPATCHED"')
     assert "gh run list" in main and "SKIP cannot list recent runs" in main
     assert main.index("SKIP empty outcomes log") < main.index("ConvertFrom-Json")  # no fail-open
     assert "trap {" in ps1 and "FAIL unexpected" in ps1  # an unforeseen error is logged, not silent
+
+
+# --- one dispatch per wake (2026-10-14/15: four dispatches, two cancelled by the concurrency group) ------
+def test_dispatcher_serialises_the_slots_of_one_wake_and_logs_the_batch():
+    ps1 = (ROOT / "scripts" / "win" / "tanishq_dispatch.ps1").read_text(encoding="utf-8")
+    main = ps1.split("if (-not $SideTasksOnly) {", 1)[1].split("# --- Side tasks", 1)[0]
+    assert "System.Threading.Mutex" in main and "Global\\gold-rate-tracker-tanishq-dispatch" in main
+    assert main.index("dispatch_pending.log") < main.index(
+        "WaitOne"
+    )  # register, then take the lock
+    assert main.index("gh run list") > main.index(
+        "WaitOne"
+    )  # the recent-run check is under the lock
+    assert main.count("gh workflow run $Workflow") == 1  # one dispatch site, for the whole batch
+    assert "batch of {0}, led by slot {1}; covers {2}" in main  # the log says which slots it covers
+    assert "AbandonedMutexException" in main and "finally" in main  # a crashed holder never blocks
+    assert "-StartWhenAvailable" in (
+        ROOT / "scripts" / "win" / "register_tanishq_tasks.ps1"
+    ).read_text(encoding="utf-8")  # the reason several slots start together after a wake
+
+
+def _run_dispatchers(tmp_path, slots, run_list_json):
+    """Start one real dispatcher process per slot at the same moment, with a stub `gh` on PATH."""
+    import os
+    import subprocess
+
+    bindir = tmp_path / "bin"
+    bindir.mkdir()
+    calls = tmp_path / "gh_calls.txt"
+    (bindir / "gh.cmd").write_text(
+        "@echo off\r\n"
+        f'echo %* >> "{calls}"\r\n'
+        'if "%1"=="api" if "%2"=="rate_limit" exit /b 0\r\n'
+        'if "%1"=="api" (echo {"timestamp":"2026-01-01T00:00:00Z","outcome":"success","blocked":false}& exit /b 0)\r\n'
+        f'if "%1"=="run" (echo {run_list_json}& exit /b 0)\r\n'
+        'if "%1"=="workflow" exit /b 0\r\n'
+        "exit /b 1\r\n",
+        encoding="ascii",
+    )
+    env = {**os.environ, "LOCALAPPDATA": str(tmp_path), "PATH": f"{bindir};{os.environ['PATH']}"}
+    ps1 = str(ROOT / "scripts" / "win" / "tanishq_dispatch.ps1")
+    procs = [
+        subprocess.Popen(
+            [
+                "powershell.exe",
+                "-NoProfile",
+                "-ExecutionPolicy",
+                "Bypass",
+                "-File",
+                ps1,
+                "-Slot",
+                s,
+                "-SettleSec",
+                "20",
+                "-LateAfterSec",
+                "0",
+                "-SkipSideTasks",
+            ],
+            env=env,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            text=True,
+        )
+        for s in slots
+    ]
+    codes = [pr.wait(timeout=240) for pr in procs]
+    log = (tmp_path / "gold-rate-tracker" / "tanishq_dispatch.log").read_text(encoding="ascii")
+    ghcalls = calls.read_text(encoding="ascii") if calls.exists() else ""
+    return codes, [ln for ln in log.splitlines() if ln.strip()], ghcalls
+
+
+_WIN = sys.platform == "win32" and shutil.which("powershell.exe") is not None
+
+
+@pytest.mark.skipif(not _WIN, reason="runs the real Windows PowerShell dispatcher")
+def test_four_slots_started_together_dispatch_once_and_each_is_logged(tmp_path):
+    slots = ["07:30", "10:40", "11:10", "15:35"]
+    codes, lines, ghcalls = _run_dispatchers(tmp_path, slots, "[]")
+    assert codes == [0, 0, 0, 0]
+    assert sum(1 for c in ghcalls.splitlines() if c.startswith("workflow run")) == 1
+    assert len(lines) == 4
+    for s in slots:
+        mine = [ln for ln in lines if f"slot={s} " in ln]
+        assert len(mine) == 1 and " DISPATCHED (batch of 4, led by slot " in mine[0]
+        assert "covers " in mine[0] and all(x in mine[0].split("covers ")[1] for x in slots)
+
+
+@pytest.mark.skipif(not _WIN, reason="runs the real Windows PowerShell dispatcher")
+def test_a_single_slot_still_dispatches_once_with_the_plain_line(tmp_path):
+    codes, lines, ghcalls = _run_dispatchers(tmp_path, ["19:50"], "[]")
+    assert codes == [0] and len(lines) == 1 and lines[0].endswith("slot=19:50 DISPATCHED")
+    assert sum(1 for c in ghcalls.splitlines() if c.startswith("workflow run")) == 1
+
+
+@pytest.mark.skipif(not _WIN, reason="runs the real Windows PowerShell dispatcher")
+def test_when_a_run_is_already_in_progress_the_whole_batch_skips_and_says_so(tmp_path):
+    running = '[{"createdAt":"2026-01-01T00:00:00Z","status":"in_progress","conclusion":""}]'
+    codes, lines, ghcalls = _run_dispatchers(tmp_path, ["07:30", "10:40"], running)
+    assert codes == [0, 0] and len(lines) == 2
+    assert all(" SKIP recent run " in ln and "batch of 2" in ln for ln in lines)
+    assert not any(c.startswith("workflow run") for c in ghcalls.splitlines())
+
+
+def _run_with_pending(tmp_path, pending_text, slots, run_list_json="[]", gh_workflow_exit=0):
+    """Like _run_dispatchers, with a prepared dispatch_pending.log and a switchable workflow-run exit."""
+    import os
+    import subprocess
+
+    state = tmp_path / "gold-rate-tracker"
+    state.mkdir(parents=True, exist_ok=True)
+    if pending_text is not None:
+        (state / "dispatch_pending.log").write_bytes(pending_text)
+    bindir = tmp_path / "bin"
+    bindir.mkdir()
+    calls = tmp_path / "gh_calls.txt"
+    (bindir / "gh.cmd").write_text(
+        "@echo off\r\n"
+        f'echo %* >> "{calls}"\r\n'
+        'if "%1"=="api" if "%2"=="rate_limit" exit /b 0\r\n'
+        'if "%1"=="api" (echo {"timestamp":"2026-01-01T00:00:00Z","outcome":"success","blocked":false}& exit /b 0)\r\n'
+        f'if "%1"=="run" (echo {run_list_json}& exit /b 0)\r\n'
+        f'if "%1"=="workflow" exit /b {gh_workflow_exit}\r\n'
+        "exit /b 1\r\n",
+        encoding="ascii",
+    )
+    env = {**os.environ, "LOCALAPPDATA": str(tmp_path), "PATH": f"{bindir};{os.environ['PATH']}"}
+    ps1 = str(ROOT / "scripts" / "win" / "tanishq_dispatch.ps1")
+    procs = [
+        subprocess.Popen(
+            [
+                "powershell.exe",
+                "-NoProfile",
+                "-ExecutionPolicy",
+                "Bypass",
+                "-File",
+                ps1,
+                "-Slot",
+                s,
+                "-SettleSec",
+                "20",
+                "-LateAfterSec",
+                "0",
+                "-SkipSideTasks",
+            ],
+            env=env,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            text=True,
+        )
+        for s in slots
+    ]
+    codes = [pr.wait(timeout=240) for pr in procs]
+    log = (state / "tanishq_dispatch.log").read_text(encoding="ascii")
+    ghcalls = calls.read_text(encoding="ascii") if calls.exists() else ""
+    return codes, [ln for ln in log.splitlines() if ln.strip()], ghcalls
+
+
+@pytest.mark.skipif(not _WIN, reason="runs the real Windows PowerShell dispatcher")
+def test_a_torn_line_in_the_pending_log_never_stops_a_dispatch(tmp_path):
+    # a power loss mid-append leaves garbage; the verifier showed one bad line used to fail every later slot
+    codes, lines, ghcalls = _run_with_pending(
+        tmp_path, b"2026-10-15T08:5 garbage\r\n\x00\x00\x00\r\n", ["19:50"]
+    )
+    assert codes == [0] and lines[-1].endswith("slot=19:50 DISPATCHED")
+    assert sum(1 for c in ghcalls.splitlines() if c.startswith("workflow run")) == 1
+
+
+@pytest.mark.skipif(not _WIN, reason="runs the real Windows PowerShell dispatcher")
+def test_a_failed_dispatch_is_retried_by_each_sibling_not_copied(tmp_path):
+    # right after a wake the network is flaky: a sibling must try for itself, not adopt the leader's FAIL
+    codes, lines, ghcalls = _run_with_pending(
+        tmp_path, None, ["07:30", "10:40"], gh_workflow_exit=1
+    )
+    assert (
+        codes == [1, 1] and len(lines) == 2 and all(" FAIL gh workflow run " in ln for ln in lines)
+    )
+    assert sum(1 for c in ghcalls.splitlines() if c.startswith("workflow run")) == 2  # each tried
