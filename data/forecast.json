@@ -1,11 +1,11 @@
 {
-  "predicted_at": "2026-10-15T08:25:04.337258+00:00",
+  "predicted_at": "2026-10-15T08:34:00.329380+00:00",
   "target_window": "5d",
   "headline": {
     "method": "hold_latest_fix_am_to_pm",
-    "predicted_22k": 13508,
-    "lower": 13457,
-    "upper": 13559,
+    "predicted_22k": 13519,
+    "lower": 13468,
+    "upper": 13570,
     "conformal_pi_half": 208.4,
     "naive_mae_recent_30": 124.5,
     "vol_context": {
@@ -28,29 +28,29 @@
   "chronos_companion": {
     "status": "success",
     "lean_direction": "up",
-    "lean_strength_pct": 0.85,
+    "lean_strength_pct": 1.232,
     "direction_acc_30f": 0.233,
     "direction_prob_basis": "base_rate_fallback",
     "horizon_p10": [
-      13325.46,
-      13256.67,
-      13201.22,
-      13160.67,
-      13107.88
+      13298.3,
+      13236.84,
+      13154.72,
+      13107.43,
+      13074.58
     ],
     "horizon_p50": [
-      13759.47,
-      13795.1,
-      13814.79,
-      13828.74,
-      13840.09
+      13717.43,
+      13753.02,
+      13732.41,
+      13723.69,
+      13751.42
     ],
     "horizon_p90": [
-      14228.94,
-      14368.23,
-      14461.72,
-      14516.07,
-      14572.58
+      14188.36,
+      14309.15,
+      14341.12,
+      14359.81,
+      14433.88
     ],
     "model_version": "amazon/chronos-bolt-tiny@a0e552de",
     "calibration_applied": true,
@@ -59,7 +59,7 @@
     "direction_consensus": 1.0
   },
   "driver_context": {
-    "computed_at": "2026-10-15T08:25:14.189463+00:00",
+    "computed_at": "2026-10-15T08:34:01.243873+00:00",
     "macro_staleness_days": 0.0,
     "macro_fresh": true,
     "premium_threshold_pct": 15.0,
@@ -107,23 +107,23 @@
     "alignment": "intraday_at_fix"
   },
   "real_readings_count": 792,
-  "current_22k": 13508,
+  "current_22k": 13519,
   "scraped_at": "2026-10-14T07:05:15.028Z",
   "price_source": "ibja_calibrated",
-  "est_low": 13435,
-  "est_high": 13581,
+  "est_low": 13449,
+  "est_high": 13589,
   "ibja_asof": "2026-10-15T06:30:00+00:00",
   "fusion_sources": null,
   "band_method": "empirical_quantile",
   "nominal_coverage": 80,
   "freshness_stratum": "same_day",
-  "residual_quantile_source": "calibration.residual_abs_quantiles[80] (in_sample, fit_date=2026-09-29, n=95)",
-  "band_half_width": 73.41504744428312,
+  "residual_quantile_source": "calibration.residual_abs_quantiles[80] (in_sample, fit_date=2026-10-15, n=105)",
+  "band_half_width": 69.74610873403799,
   "band_unavailable_reason": null,
   "model_fallback": false,
-  "predicted_22k": 13508,
-  "lower": 13457,
-  "upper": 13559,
+  "predicted_22k": 13519,
+  "lower": 13468,
+  "upper": 13570,
   "target_time": "2026-10-16T00:00:00+00:00",
   "model_status": "nextfix_headline",
   "model_version": "hold_latest_fix_am_to_pm",
@@ -234,9 +234,9 @@
       "coverage": 0.795,
       "n": 156
     },
-    "predicted_22k": 13508,
-    "lower": 13457,
-    "upper": 13559,
+    "predicted_22k": 13519,
+    "lower": 13468,
+    "upper": 13570,
     "direction": {
       "show": false,
       "side": "unclear",
