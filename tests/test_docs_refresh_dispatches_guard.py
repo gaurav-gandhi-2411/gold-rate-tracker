@@ -1,0 +1,31 @@
+"""A force-pushed bot branch gets `action_required` for its pull_request guard run, so docs-refresh must
+dispatch the required scraper-dependency-guard itself, with the PR number (PR #2810 sat BLOCKED 2 h on
+2026-10-15 for lack of it)."""
+
+from __future__ import annotations
+
+from pathlib import Path
+
+import yaml
+
+ROOT = Path(__file__).resolve().parent.parent
+
+
+def _script() -> str:
+    wf = yaml.safe_load((ROOT / ".github/workflows/docs-refresh.yml").read_text(encoding="utf-8"))
+    steps = [s for j in wf["jobs"].values() for s in j["steps"] if "run" in s]
+    return next(s["run"] for s in steps if "gh workflow run lint.yml" in s["run"])
+
+
+def test_docs_refresh_dispatches_lint_and_the_required_guard_for_its_pr():
+    run = _script()
+    assert 'gh workflow run lint.yml --repo "${GITHUB_REPOSITORY}" --ref "${BRANCH}"' in run
+    guard = 'gh workflow run scraper-dependency-guard.yml --repo "${GITHUB_REPOSITORY}" --ref "${BRANCH}" -f pr="${EXISTING_PR}"'
+    assert guard in run
+    # the PR number is known (and the PR exists) before the dispatch
+    assert run.index("EXISTING_PR=$(") < run.index("scraper-dependency-guard.yml")
+
+
+def test_the_guard_workflow_accepts_a_dispatched_pr_number_and_forwards_a_status():
+    text = (ROOT / ".github/workflows/scraper-dependency-guard.yml").read_text(encoding="utf-8")
+    assert "workflow_dispatch:" in text and "pr:" in text and "statuses: write" in text
