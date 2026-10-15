@@ -122,4 +122,3 @@ records them but flags them `retro`, so the promotion rule, the demotion windows
 count them. An unreadable file fails closed (no new fold counts as live). Decision day 2026-10-13, whose
 forecast was published at 06:57 IST on 2026-10-14, resolves late (its PM fix of 2026-10-14 was stored only
 on 2026-10-15) and counts as live. The rule's numbers and hash are unchanged.
-
