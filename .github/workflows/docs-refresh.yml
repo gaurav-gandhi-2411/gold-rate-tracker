@@ -140,3 +140,9 @@ jobs:
           # directly like bot-pr-sync does. Its post-required-check-status job sets the lint and
           # pwa-js statuses on this head commit, which is what auto-merge waits for.
           ci_retry gh workflow run lint.yml --repo "${GITHUB_REPOSITORY}" --ref "${BRANCH}"
+          # scraper-dependency-guard is a REQUIRED check since 2026-10-08. Its pull_request run for a branch
+          # pushed with the PAT is auto-approved only for the first push; a later force-push of this reusable
+          # branch gets `action_required` (waits for a click), so the context never posts for that head and the
+          # PR sits BLOCKED for good (2026-10-15: PR #2810, 2 h, README metrics stale, docs-freshness red).
+          # Dispatch it with the PR number like bot-pr-sync does; its last step forwards a commit status.
+          ci_retry gh workflow run scraper-dependency-guard.yml --repo "${GITHUB_REPOSITORY}" --ref "${BRANCH}" -f pr="${EXISTING_PR}"
