@@ -42,6 +42,7 @@ def _run(
     late: int = 0,
     parent: str = "abc123",
     wait_sec: str = "",
+    cancelled_urls: str = "",
 ) -> tuple[subprocess.CompletedProcess[str], str]:
     """Run the script. `states` is the sequence of PR states, one per poll (the last repeats);
     statuses/checks are the already-filtered names the real `--jq` filters would print for `green_on`."""
@@ -78,7 +79,12 @@ gh() {{
     "workflow run") ;;
     "api repos/o/r/commits/newhead999") echo "{parent}" ;;
     "api repos/o/r/commits/{green_sha}/status?per_page=100") printf '%s\\n' "{statuses}" ;;
-    "api repos/o/r/commits/{green_sha}/check-runs?per_page=100") printf '%s\\n' "{checks}" ;;
+    "api repos/o/r/commits/{green_sha}/check-runs?per_page=100")
+      case "$*" in
+        *cancelled*) printf '%s\\n' "{cancelled_urls}" ;;
+        *) printf '%s\\n' "{checks}" ;;
+      esac ;;
+    "run rerun") ;;
     api*) ;;
   esac
   return 0
@@ -202,3 +208,30 @@ def test_a_new_head_that_is_not_a_child_of_the_verified_commit_is_never_merged(t
     )
     assert r.returncode == 1
     assert "gh pr merge" not in log
+
+
+URL = "https://github.com/o/r/actions/runs/38957199971/job/117162938955"
+
+
+def test_a_refused_merge_with_a_cancelled_required_check_run_reruns_that_run_once_per_head(
+    tmp_path,
+):
+    # PR #2864 (2026-10-16): every context green, merge refused by "base branch policy"; the cause was a
+    # CANCELLED pull_request run of scraper-dependency-guard. Two refusals, one rerun.
+    r, log = _run(tmp_path, merge_fails=2, cancelled_urls=URL)
+    assert r.returncode == 0, r.stdout + r.stderr
+    assert log.count("gh pr merge") == 3
+    assert log.count("gh run rerun 38957199971 --repo o/r") == 1
+    assert "Re-running cancelled required-check run 38957199971" in r.stdout
+    # the query only looks at the REQUIRED contexts' runs that were cancelled or timed out
+    assert '"lint","pwa-js","scraper-dependency-guard"' in log and "cancelled" in log
+
+
+def test_no_rerun_when_nothing_is_cancelled(tmp_path):
+    r, log = _run(tmp_path, merge_fails=1)
+    assert r.returncode == 0 and "gh run rerun" not in log
+
+
+def test_no_rerun_before_a_merge_was_refused(tmp_path):
+    r, log = _run(tmp_path, cancelled_urls=URL)
+    assert r.returncode == 0 and "gh run rerun" not in log

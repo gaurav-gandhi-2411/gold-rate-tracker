@@ -18,6 +18,8 @@
 #     `success` on that head, as a commit status or a check run; a merge that fails is retried on the next poll;
 #   * if master moves and the PR falls BEHIND it updates the branch, re-dispatches lint.yml and
 #     scraper-dependency-guard.yml (with the PR number) and pins to the new head;
+#   * if the merge is refused while every context is green, it re-runs any CANCELLED run of a required
+#     check once per head (a cancelled check run blocks the merge even next to a green status);
 #   * exit 0 once the PR is MERGED; exit 1, loudly (::error::), if it is CLOSED unmerged or still open after
 #     the wait, saying which contexts were missing.
 # Environment: GH_TOKEN (the merging PAT), GITHUB_REPOSITORY; optional WAIT_MINUTES, POLL_SECONDS,
@@ -56,6 +58,7 @@ green_contexts() {
 LAST_MISSING=""
 LAST_HEAD=""
 UPDATED=0
+RERAN_HEAD=""
 i=0
 while :; do # at least one poll, even with WAIT_MINUTES=0
   i=$(( i + 1 ))
@@ -121,6 +124,26 @@ ${EXPECTED}
         exit 0
       fi
       echo "Merge attempt failed (see above); will retry on the next poll."
+      # All required contexts are green yet the merge is refused: a CANCELLED run of a required check (e.g. the
+      # pull_request run of scraper-dependency-guard, cancelled by the dispatched one) keeps "the base branch
+      # policy" from being satisfied (PR #2864, 2026-10-16). Re-run such runs once per head.
+      if [ "${RERAN_HEAD}" != "${HEAD_SHA}" ]; then
+        RERAN_HEAD="${HEAD_SHA}"
+        NAMES_JSON="["
+        for ctx in ${REQUIRED_CONTEXTS}; do NAMES_JSON="${NAMES_JSON}\"${ctx}\","; done
+        NAMES_JSON="${NAMES_JSON%,}]"
+        CANCELLED_URLS="$(ci_retry gh api "repos/${GITHUB_REPOSITORY}/commits/${HEAD_SHA}/check-runs?per_page=100" \
+          --jq ".check_runs[] | select(.conclusion == \"cancelled\" or .conclusion == \"timed_out\") | select(.name as \$n | ${NAMES_JSON} | index(\$n)) | .html_url" 2>/dev/null || true)"
+        for url in ${CANCELLED_URLS}; do
+          RUN_ID="${url#*/actions/runs/}"
+          RUN_ID="${RUN_ID%%/*}"
+          case "${RUN_ID}" in
+            ''|*[!0-9]*) continue ;;
+          esac
+          echo "Re-running cancelled required-check run ${RUN_ID}"
+          gh run rerun "${RUN_ID}" --repo "${GITHUB_REPOSITORY}" || true
+        done
+      fi
     fi
   fi
 
