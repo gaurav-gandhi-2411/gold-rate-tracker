@@ -368,8 +368,12 @@ def _run_step(
     (ws / "scripts" / "bot_branch_push.sh").write_bytes(
         f'#!/usr/bin/env bash\necho "push-script $*" >> "{log.as_posix()}"\necho "{push_out}"\nexit {push_exit}\n'.encode()
     )
+    # the shared merge script is its own unit (tests/test_bot_pr_merge.py): here only that it is called
+    (ws / "scripts" / "bot_pr_merge.sh").write_bytes(
+        f'#!/usr/bin/env bash\necho "merge-script $*" >> "{log.as_posix()}"\nexit 0\n'.encode()
+    )
     stubs = f"""
-git() {{ case "$1" in diff) ;; *) echo "git $*" >> "{log.as_posix()}";; esac; return 0; }}
+git() {{ case "$1" in diff) ;; rev-parse) echo abc123;; *) echo "git $*" >> "{log.as_posix()}";; esac; return 0; }}
 gh() {{
   echo "gh $*" >> "{log.as_posix()}"
   case "$1 $2" in
@@ -421,6 +425,9 @@ def test_carry_forward_replaces_the_force_push_and_no_rebase(tmp_path: Path) -> 
     assert "push-script bot/test" in log
     assert "git push --force" not in log and "git rebase" not in log
     assert "gh pr list" in log  # the normal PR flow follows
+    assert (
+        "merge-script 4242 bot/test abc123" in log
+    )  # then the shared merge path, on the pushed commit
 
 
 def test_a_failed_queue_push_stops_the_step_before_any_pr(tmp_path: Path) -> None:

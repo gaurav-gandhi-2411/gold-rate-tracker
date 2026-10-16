@@ -1,6 +1,8 @@
 """A force-pushed bot branch gets `action_required` for its pull_request guard run, so docs-refresh must
 dispatch the required scraper-dependency-guard itself, with the PR number (PR #2810 sat BLOCKED 2 h on
-2026-10-15 for lack of it)."""
+2026-10-15 for lack of it), and must merge through the shared bot-PR merge path because GitHub's native
+auto-merge did not fire on the PRs after that (#2824, #2832, #2845: 80 min to 6.5 h with every required
+context green). The merge logic itself is tested in tests/test_bot_pr_merge.py."""
 
 from __future__ import annotations
 
@@ -31,70 +33,18 @@ def test_the_guard_workflow_accepts_a_dispatched_pr_number_and_forwards_a_status
     assert "workflow_dispatch:" in text and "pr:" in text and "statuses: write" in text
 
 
-# --- the workflow merges the PR itself once the three required contexts are green -------------------
-def _run_refresh(tmp_path, *, green: int, wait_min: str = "1"):
-    """Run the real step script with stub git/gh/date helpers; returns (result, call log)."""
-    import os
-    import shutil
-    import subprocess
-
-    bash = shutil.which("bash")
-    log = tmp_path / "calls.log"
-    merged = tmp_path / "merged"
-    script = (tmp_path / "step.sh").as_posix()
-    stubs = f"""
-git() {{ case "$1 $2" in "diff --staged") return 1;; "rev-parse HEAD") echo abc123;; esac; echo "git $*" >> "{log.as_posix()}"; return 0; }}
-sleep() {{ :; }}
-gh() {{
-  echo "gh $*" >> "{log.as_posix()}"
-  case "$1 $2" in
-    "pr list") echo 4242 ;;
-    "pr view")
-      case "$*" in
-        *headRefOid*) echo abc123 ;;
-        *) if [ -f "{merged.as_posix()}" ]; then echo MERGED; else echo OPEN; fi ;;
-      esac ;;
-    "api repos/o/r/commits/abc123/status?per_page=100") echo {green} ;;
-    "pr merge") if [ "$3" = "4242" ] && [[ "$*" == *--squash* ]] && [[ "$*" != *--auto* ]] && [[ "$*" == *"--match-head-commit abc123"* ]]; then touch "{merged.as_posix()}"; fi ;;
-  esac
-  return 0
-}}
-export -f git sleep gh
-"""
-    (tmp_path / "step.sh").write_bytes((stubs + _script()).encode("utf-8"))
-    env = {
-        **os.environ,
-        "GITHUB_REPOSITORY": "o/r",
-        "GITHUB_WORKSPACE": str(ROOT),
-        "GH_TOKEN": "x",
-        "DOCS_REFRESH_WAIT_MIN": wait_min,
-        "CI_RETRY_BASE": "0",
-    }
-    r = subprocess.run(
-        [bash, script], capture_output=True, text=True, env=env, timeout=120, cwd=ROOT
+def test_docs_refresh_merges_through_the_shared_script_with_the_commit_it_pushed():
+    run = _script()
+    call = 'bash "${GITHUB_WORKSPACE}/scripts/bot_pr_merge.sh" "$EXISTING_PR" "$BRANCH" "$(git rev-parse HEAD)"'
+    assert call in run
+    # after the push of that commit and after both dispatches
+    assert run.index("git push --force") < run.index("scripts/bot_pr_merge.sh")
+    assert run.index("scraper-dependency-guard.yml") < run.index("scripts/bot_pr_merge.sh")
+    # no private copy of the merge loop is left here
+    assert (
+        "DEADLINE" not in run
+        and 'gh pr merge "$EXISTING_PR" --repo "${GITHUB_REPOSITORY}" --squash' not in run
     )
-    return r, (log.read_text() if log.exists() else "")
-
-
-import shutil as _shutil
-
-import pytest
-
-_needs_bash = pytest.mark.skipif(_shutil.which("bash") is None, reason="bash not available")
-
-
-@_needs_bash
-def test_green_required_contexts_make_the_workflow_merge_the_pr_itself(tmp_path):
-    r, log = _run_refresh(tmp_path, green=3)
-    assert r.returncode == 0, r.stdout + r.stderr
-    assert "gh pr merge 4242 --repo o/r --squash" in log and "Merged." in r.stdout
-
-
-@_needs_bash
-def test_it_does_not_merge_while_a_required_context_is_missing_and_then_fails_loudly(tmp_path):
-    r, log = _run_refresh(tmp_path, green=2, wait_min="0")
-    assert r.returncode == 1 and "was not merged after 0 minutes" in r.stdout
-    assert "gh pr merge 4242 --repo o/r --squash" not in log
 
 
 def test_the_job_timeout_covers_the_merge_wait():

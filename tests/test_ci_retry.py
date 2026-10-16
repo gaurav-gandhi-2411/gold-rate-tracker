@@ -132,7 +132,7 @@ def _sync_stubs(tmp: Path, *, list_fails: int, dispatch_fails: int, token: str =
     log, st = _posix(tmp / "gh.log"), _posix(tmp / "state")
     return f"""
 cnt() {{ n=$(cat "{st}.$1" 2>/dev/null || echo 0); n=$((n + 1)); echo $n > "{st}.$1"; echo $n; }}
-git() {{ case "$1" in diff) ;; *) echo "git $*" >> "{log}";; esac; return 0; }}
+git() {{ case "$1" in diff) ;; rev-parse) echo abc123;; *) echo "git $*" >> "{log}";; esac; return 0; }}
 export -f git
 gh() {{
   echo "gh $*" >> "{log}"
@@ -216,15 +216,9 @@ FILES = [
     ".github/workflows/scrape-tanishq-selfhosted.yml",
     ".github/workflows/ci-health.yml",
 ]
-# Bare calls that are deliberate, each with the reason it is not wrapped.
-ALLOWED = (
-    'gh pr merge "${PR_NUM}" --squash',  # the poll loop re-attempts every 10 s for WAIT_MINUTES
-    'gh pr merge "$EXISTING_PR"',  # docs-refresh: same poll loop, re-attempted every 15 s
-    "gh pr update-branch",  # best-effort inside the poll loop (|| true)
-    'gh workflow run lint.yml --ref "${BRANCH}" || true',  # best-effort re-dispatch in the poll loop
-    'gh workflow run scraper-dependency-guard.yml --ref "${BRANCH}" -f pr="${PR_NUM}" || true',
-    'gh api "repos/${GITHUB_REPOSITORY}/commits/${CURRENT_SHA}/check-runs"',  # polled every 10 s
-)
+# Bare calls that are deliberate, each with the reason it is not wrapped. None today: the poll-and-merge
+# loop that needed them moved into scripts/bot_pr_merge.sh (tests/test_bot_pr_merge.py checks that one).
+ALLOWED: tuple[str, ...] = ()
 
 
 def _run_scripts(rel: str) -> list[str]:
