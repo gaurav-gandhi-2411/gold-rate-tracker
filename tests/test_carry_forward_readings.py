@@ -84,9 +84,14 @@ def world(tmp_path: Path) -> dict:
     seed = tmp_path / "seed"
     subprocess.run(["git", "clone", "-q", str(origin), str(seed)], check=True, capture_output=True)
     (seed / "data").mkdir()
-    _write_prices(seed, [_reading("2026-10-14T01:00:00.000Z", 13500), _reading("2026-10-14T05:00:00.000Z", 13510)])
+    _write_prices(
+        seed,
+        [_reading("2026-10-14T01:00:00.000Z", 13500), _reading("2026-10-14T05:00:00.000Z", 13510)],
+    )
     (seed / "data" / "tanishq_scrape_outcomes.jsonl").write_bytes(OUTCOMES_SEED)
-    (seed / "data" / "tanishq_selfhosted_health.json").write_text('{"consecutive_job_failures": 0}\n')
+    (seed / "data" / "tanishq_selfhosted_health.json").write_text(
+        '{"consecutive_job_failures": 0}\n'
+    )
     _git(seed, "checkout", "-q", "-b", "master")
     _git(seed, "add", "-A")
     _git(seed, "commit", "-q", "-m", "seed")
@@ -100,18 +105,26 @@ def world(tmp_path: Path) -> dict:
     return {"tmp": tmp_path, "origin": origin, "bin": bindir, "curl_log": curl_log, "n": 0}
 
 
-def _scrape(w: dict, ts: str, price: int, *, health: int = 0, clone_from: str = "master") -> subprocess.CompletedProcess:
+def _scrape(
+    w: dict, ts: str, price: int, *, health: int = 0, clone_from: str = "master"
+) -> subprocess.CompletedProcess:
     """One self-hosted run: fresh checkout of master, append a reading, commit, push the bot branch."""
     w["n"] += 1
     repo = w["tmp"] / f"run{w['n']}"
-    subprocess.run(["git", "clone", "-q", str(w["origin"]), str(repo)], check=True, capture_output=True)
+    # shallow, like the runner's actions/checkout (depth 1)
+    url = w["origin"].as_uri()
+    subprocess.run(
+        ["git", "clone", "-q", "--depth", "1", url, str(repo)], check=True, capture_output=True
+    )
     _git(repo, "checkout", "-q", clone_from)
     rows = _prices(repo)
     rows.append(_reading(ts, price))
     _write_prices(repo, rows)
     log = repo / "data" / "tanishq_scrape_outcomes.jsonl"
     log.write_bytes(log.read_bytes() + _outcome_line(ts[:19] + "Z"))
-    (repo / "data" / "tanishq_selfhosted_health.json").write_text(f'{{"consecutive_job_failures": {health}}}\n')
+    (repo / "data" / "tanishq_selfhosted_health.json").write_text(
+        f'{{"consecutive_job_failures": {health}}}\n'
+    )
     _git(repo, "add", "-A")
     _git(repo, "commit", "-q", "-m", MSG)
     env = {
@@ -144,7 +157,10 @@ def _origin_prices(w: dict, ref: str) -> list[str]:
 
 def _outcome_ts(w: dict, ref: str) -> list[str]:
     raw = subprocess.run(
-        ["git", "show", f"{ref}:data/tanishq_scrape_outcomes.jsonl"], cwd=w["origin"], capture_output=True, check=True
+        ["git", "show", f"{ref}:data/tanishq_scrape_outcomes.jsonl"],
+        cwd=w["origin"],
+        capture_output=True,
+        check=True,
     ).stdout
     return [json.loads(x)["timestamp"] for x in raw.decode().splitlines() if x.strip()]
 
@@ -181,6 +197,26 @@ def test_three_runs_during_a_blocked_sync_all_reach_master_in_order_once(world: 
     assert len(outs) == len(set(outs)) == 6
 
 
+def test_a_second_reading_is_queued_from_a_shallow_checkout_after_master_moved(world: dict) -> None:
+    """The runner's checkout is depth 1: without history the queued branch shares no merge base with a master
+    that has moved, and every later reading used to land on a rescue branch (verifier finding on #2856)."""
+    assert _scrape(world, T1, 13601).returncode == 0
+    other = world["tmp"] / "mover"
+    subprocess.run(
+        ["git", "clone", "-q", str(world["origin"]), str(other)], check=True, capture_output=True
+    )
+    (other / "data" / "unrelated.json").write_text("{}\n")
+    _git(other, "add", "-A")
+    _git(other, "commit", "-q", "-m", "an unrelated data commit lands on master")
+    _git(other, "push", "-q", "origin", "master")
+
+    r = _scrape(world, T2, 13620)
+    assert r.returncode == 0, r.stdout + r.stderr
+    base = ["2026-10-14T01:00:00.000Z", "2026-10-14T05:00:00.000Z"]
+    assert _origin_prices(world, f"refs/heads/{BRANCH}") == [*base, T1, T2]
+    assert not world["curl_log"].exists()  # nobody was paged: nothing went to a rescue branch
+
+
 def test_existing_line_ends_of_the_outcomes_log_are_not_rewritten(world: dict) -> None:
     _scrape(world, T1, 13601)
     raw = subprocess.run(
@@ -197,21 +233,36 @@ def test_a_master_that_moved_during_the_scrape_does_not_lose_the_reading(world: 
     # this run checked out master, then another reading was merged to master before it pushed
     world["n"] += 1
     repo = world["tmp"] / "late"
-    subprocess.run(["git", "clone", "-q", str(world["origin"]), str(repo)], check=True, capture_output=True)
+    subprocess.run(
+        ["git", "clone", "-q", str(world["origin"]), str(repo)], check=True, capture_output=True
+    )
     other = world["tmp"] / "other"
-    subprocess.run(["git", "clone", "-q", str(world["origin"]), str(other)], check=True, capture_output=True)
-    rows = _prices(other) + [_reading(T1, 13600)]
+    subprocess.run(
+        ["git", "clone", "-q", str(world["origin"]), str(other)], check=True, capture_output=True
+    )
+    rows = [*_prices(other), _reading(T1, 13600)]
     _write_prices(other, rows)
     _git(other, "add", "-A")
     _git(other, "commit", "-q", "-m", "other reading merged first")
     _git(other, "push", "-q", "origin", "master")
 
-    _write_prices(repo, _prices(repo) + [_reading(T2, 13620)])  # same spot in the file: a rebase would conflict
+    _write_prices(
+        repo, [*_prices(repo), _reading(T2, 13620)]
+    )  # same spot in the file: a rebase would conflict
     _git(repo, "add", "-A")
     _git(repo, "commit", "-q", "-m", MSG)
-    env = {**os.environ, **GIT_ENV, "CI_RETRY_BASE": "0", "PATH": f"{world['bin']}{os.pathsep}{os.environ['PATH']}"}
+    env = {
+        **os.environ,
+        **GIT_ENV,
+        "CI_RETRY_BASE": "0",
+        "PATH": f"{world['bin']}{os.pathsep}{os.environ['PATH']}",
+    }
     r = subprocess.run(
-        [BASH, str(ROOT / "scripts" / "bot_branch_push.sh"), BRANCH], cwd=repo, capture_output=True, text=True, env=env
+        [BASH, str(ROOT / "scripts" / "bot_branch_push.sh"), BRANCH],
+        cwd=repo,
+        capture_output=True,
+        text=True,
+        env=env,
     )
     assert r.returncode == 0, r.stdout + r.stderr
     got = _origin_prices(world, f"refs/heads/{BRANCH}")
@@ -224,10 +275,16 @@ def test_a_reading_already_on_master_pushes_nothing(world: dict) -> None:
     assert _git(world["origin"], "branch", "--list", BRANCH).strip() == ""
 
 
-def test_an_unreadable_queued_branch_is_kept_and_the_run_goes_to_a_rescue_branch_and_pages(world: dict) -> None:
+def test_an_unreadable_queued_branch_is_kept_and_the_run_goes_to_a_rescue_branch_and_pages(
+    world: dict,
+) -> None:
     assert _scrape(world, T1, 13601).returncode == 0
     bad = world["tmp"] / "corrupt"
-    subprocess.run(["git", "clone", "-q", "-b", BRANCH, str(world["origin"]), str(bad)], check=True, capture_output=True)
+    subprocess.run(
+        ["git", "clone", "-q", "-b", BRANCH, str(world["origin"]), str(bad)],
+        check=True,
+        capture_output=True,
+    )
     (bad / "data" / "prices.json").write_text("{ not json")
     _git(bad, "add", "-A")
     _git(bad, "commit", "-q", "-m", "corrupt")
@@ -246,33 +303,53 @@ def test_an_unreadable_queued_branch_is_kept_and_the_run_goes_to_a_rescue_branch
 def test_an_unexpected_changed_file_on_the_branch_is_never_dropped(world: dict) -> None:
     assert _scrape(world, T1, 13601).returncode == 0
     odd = world["tmp"] / "odd"
-    subprocess.run(["git", "clone", "-q", "-b", BRANCH, str(world["origin"]), str(odd)], check=True, capture_output=True)
+    subprocess.run(
+        ["git", "clone", "-q", "-b", BRANCH, str(world["origin"]), str(odd)],
+        check=True,
+        capture_output=True,
+    )
     (odd / "data" / "something_else.json").write_text("{}")
     _git(odd, "add", "-A")
     _git(odd, "commit", "-q", "-m", "odd")
     _git(odd, "push", "-q", "origin", f"HEAD:refs/heads/{BRANCH}")
     r = _scrape(world, T2, 13620)
     assert r.returncode == 1
-    assert _git(world["origin"], "show", f"{BRANCH}:data/something_else.json") == "{}"  # still there
+    assert (
+        _git(world["origin"], "show", f"{BRANCH}:data/something_else.json") == "{}"
+    )  # still there
     assert world["curl_log"].exists()
 
 
 def test_an_unreachable_remote_is_not_read_as_no_branch(world: dict) -> None:
     world["n"] += 1
     repo = world["tmp"] / "dead"
-    subprocess.run(["git", "clone", "-q", str(world["origin"]), str(repo)], check=True, capture_output=True)
-    _write_prices(repo, _prices(repo) + [_reading(T1, 13600)])
+    subprocess.run(
+        ["git", "clone", "-q", str(world["origin"]), str(repo)], check=True, capture_output=True
+    )
+    _write_prices(repo, [*_prices(repo), _reading(T1, 13600)])
     _git(repo, "add", "-A")
     _git(repo, "commit", "-q", "-m", MSG)
     first = _git(repo, "rev-parse", "HEAD")
     _git(repo, "remote", "set-url", "origin", str(world["tmp"] / "does-not-exist.git"))
-    env = {**os.environ, **GIT_ENV, "CI_RETRY_BASE": "0", "CI_RETRY_ATTEMPTS": "1", "NTFY_TOPIC": "topic",
-           "PATH": f"{world['bin']}{os.pathsep}{os.environ['PATH']}"}
+    env = {
+        **os.environ,
+        **GIT_ENV,
+        "CI_RETRY_BASE": "0",
+        "CI_RETRY_ATTEMPTS": "1",
+        "NTFY_TOPIC": "topic",
+        "PATH": f"{world['bin']}{os.pathsep}{os.environ['PATH']}",
+    }
     r = subprocess.run(
-        [BASH, str(ROOT / "scripts" / "bot_branch_push.sh"), BRANCH], cwd=repo, capture_output=True, text=True, env=env
+        [BASH, str(ROOT / "scripts" / "bot_branch_push.sh"), BRANCH],
+        cwd=repo,
+        capture_output=True,
+        text=True,
+        env=env,
     )
     assert r.returncode != 0
-    assert _git(repo, "rev-parse", "HEAD") == first  # nothing rebuilt or rewritten on the failure path
+    assert (
+        _git(repo, "rev-parse", "HEAD") == first
+    )  # nothing rebuilt or rewritten on the failure path
 
 
 # --- the bot-pr-sync step wires it in -------------------------------------------------------------
@@ -281,7 +358,9 @@ def _sync_script() -> str:
     return str(action["runs"]["steps"][0]["run"])
 
 
-def _run_step(tmp: Path, *, carry: str, token: str, push_exit: int, push_out: str = "") -> tuple[subprocess.CompletedProcess, str]:
+def _run_step(
+    tmp: Path, *, carry: str, token: str, push_exit: int, push_out: str = ""
+) -> tuple[subprocess.CompletedProcess, str]:
     ws = tmp / "ws"
     (ws / "scripts").mkdir(parents=True)
     shutil.copy(ROOT / "scripts" / "ci_retry.sh", ws / "scripts" / "ci_retry.sh")
@@ -350,14 +429,23 @@ def test_a_failed_queue_push_stops_the_step_before_any_pr(tmp_path: Path) -> Non
 
 
 def test_nothing_new_means_no_pr_and_success(tmp_path: Path) -> None:
-    r, log = _run_step(tmp_path, carry="true", token="good", push_exit=0, push_out="Nothing to push: every reading is already on master.")
+    r, log = _run_step(
+        tmp_path,
+        carry="true",
+        token="good",
+        push_exit=0,
+        push_out="Nothing to push: every reading is already on master.",
+    )
     assert r.returncode == 0 and "gh pr" not in log
 
 
 def test_without_carry_forward_the_old_force_push_and_rebase_are_unchanged(tmp_path: Path) -> None:
     r, log = _run_step(tmp_path, carry="false", token="good", push_exit=0)
     assert r.returncode == 0
-    assert "git push --force origin HEAD:refs/heads/bot/test" in log and "git rebase origin/master" in log
+    assert (
+        "git push --force origin HEAD:refs/heads/bot/test" in log
+        and "git rebase origin/master" in log
+    )
     assert "push-script" not in log
 
 
@@ -367,6 +455,9 @@ def test_only_the_selfhosted_tanishq_sync_turns_carry_forward_on() -> None:
         doc = yaml.safe_load(wf.read_text("utf-8"))
         for job in (doc.get("jobs") or {}).values():
             for step in job.get("steps", []):
-                if str(step.get("uses", "")).endswith("bot-pr-sync") and str((step.get("with") or {}).get("carry-forward")) == "true":
+                if (
+                    str(step.get("uses", "")).endswith("bot-pr-sync")
+                    and str((step.get("with") or {}).get("carry-forward")) == "true"
+                ):
                     on.append(wf.name)
     assert on == ["scrape-tanishq-selfhosted.yml"]

@@ -64,6 +64,14 @@ fi
 
 ci_retry git fetch origin master
 
+# The runner's checkout is shallow (depth 1). With no history, `git merge-base master <queued branch>` finds
+# nothing as soon as master has moved since the branch was built, and every second queued reading would end
+# up on a rescue branch (found by the independent verifier of #2856). Take the full history once.
+if [ "$(git rev-parse --is-shallow-repository)" = "true" ]; then
+  ci_retry git fetch --unshallow origin
+  ci_retry git fetch origin master
+fi
+
 for attempt in 1 2 3; do
   # An unreachable remote must stop the step here, not be read as "the branch does not exist".
   if ! LS="$(ci_retry git ls-remote --heads origin "refs/heads/${BRANCH}")"; then
