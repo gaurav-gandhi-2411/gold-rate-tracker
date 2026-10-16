@@ -108,3 +108,13 @@ amendment the only missing piece. Two things the amendment must settle, because 
 does not cover them: the check's windows are `after_morning_rate` and `after_afternoon_rate`, while
 the P3-style record here is the `after_us_close` window (target the next PM fix); and the beta (here
 1.0, not chosen by the check's beta rule).
+
+## Outcome of the 2026-10-16 check (final)
+
+The check ran once, unmodified (`adr066-check.yml`, run 38941136174, repository sha `2aa549f0df`, console
+aggregates only): `after_morning_rate` **too early** (6 resolved base fixes, 11 calendar days; also failing
+condition 3, shadow -60.4% vs backtest -41.3% with CI [-53.0, -27.7]); `after_afternoon_rate` **too early**
+(7 fixes, 12 days; conditions 2 to 4 passed). This ADR and `docs/ADR066_CHECK_HOWTO.md` define no re-check
+after `too early`, and re-running until a pass would be optional stopping, so this outcome is final: the
+hourly model did not join the challenger pool. Any further check is the fresh, forward-only pre-registration
+in ADR 076, which uses none of the entries read here.

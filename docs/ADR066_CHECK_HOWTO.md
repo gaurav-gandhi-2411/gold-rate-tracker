@@ -53,3 +53,9 @@ Promotion is GG's decision and, per the ADR, a separate PR. The script never pro
 change this check: the script reads `data/nextfix_intraday_shadow.json` and the cached bars, never the
 `hourly_shadow` record, and it never promotes. See ADR 066, "Live predictor built, 2026-10-10", for
 what it takes to bring the model into the challenger pool (an ADR 072 amendment).
+
+## Outcome (2026-10-16) and what happens next
+
+The check ran once on 2026-10-16 and returned `too early` for both windows. This how-to is for that one
+check; it defines no re-check, so do not run it again to see if it passes. A further check is the
+pre-registered, forward-only one in ADR 076 (first look 2026-11-16 or later, on counts only).

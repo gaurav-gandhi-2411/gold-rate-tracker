@@ -32,7 +32,7 @@ A challenger replaces the live model only if we can be confident it beats it by 
 
 ## Dates
 
-- 2026-10-16: hourly world-price check (ADR 066), exactly as written in advance.
+- 2026-10-16: hourly world-price check (ADR 066) ran once, as written: too early. Final; the next check is fixed in ADR 076 (first look 2026-11-16 or later).
 - 2026-10-22: morning-rate vs last-reading decision for the weekend estimate (ADR 063).
 
 ## Anything that fired

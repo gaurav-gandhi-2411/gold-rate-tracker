@@ -41,7 +41,7 @@ NAMES = {
 }
 # Challengers that exist in the plan but have no day-by-day record in the same format yet.
 NOT_YET = {
-    "hourly": "Hourly world-price model (own check on 2026-10-16, then it joins)",
+    "hourly": "Hourly world-price model (2026-10-16 check: too early; a fresh check is fixed in ADR 076)",
     "p3_hourly": "Live model averaged with the hourly model (joins after the hourly model does)",
 }
 
@@ -383,7 +383,7 @@ def render(s: dict[str, Any]) -> str:
     lines += _laptop_lines(s.get("laptop_attribution"))
     lines += ["", "## Dates", ""]
     lines += [
-        "- 2026-10-16: hourly world-price check (ADR 066), exactly as written in advance.",
+        "- 2026-10-16: hourly world-price check (ADR 066) ran once, as written: too early. Final; the next check is fixed in ADR 076 (first look 2026-11-16 or later).",
         "- 2026-10-22: morning-rate vs last-reading decision for the weekend estimate (ADR 063).",
     ]
     lines += ["", "## Anything that fired", ""]
