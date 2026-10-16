@@ -92,10 +92,11 @@ jobs:
     steps:
       - run: gh api "repos/r/statuses/$SHA" -f state=success -f context=scraper-dependency-guard
 """
-BOT_ACTION_OK = (
+BOT_ACTION_NO_MERGE = (
     "gh workflow run lint.yml --ref x\n"
     "gh workflow run scraper-dependency-guard.yml --ref x -f pr=1\n"
 )
+BOT_ACTION_OK = BOT_ACTION_NO_MERGE + "bash scripts/bot_pr_merge.sh 1 b sha\n"
 
 
 def _repo_copy(tmp_path, monkeypatch, extra: dict[str, str]):
@@ -113,7 +114,9 @@ def _own_pr_workflow(
     dispatches: str,
     branch: str = "bot/x",
     push: str = "git push --force origin HEAD:refs/heads/$BRANCH",
+    merge: bool = True,
 ) -> str:
+    merge_line = "bash scripts/bot_pr_merge.sh $PR $BRANCH $SHA" if merge else "echo no-merge-path"
     return f"""name: own
 on: workflow_dispatch
 jobs:
@@ -125,6 +128,7 @@ jobs:
           {push}
           gh pr create --base master --head "$BRANCH" --title t --body b
           {dispatches}
+          {merge_line}
 """
 
 
@@ -249,3 +253,94 @@ def test_bot_pr_sync_dispatching_the_guard_without_pr_is_flagged(tmp_path, monke
         "gh workflow run lint.yml\ngh workflow run scraper-dependency-guard.yml --ref x\n",
     )
     assert any("without `-f pr=`" in p for p in probs)
+
+
+# --- item 8 (2026-10-17): every bot-PR workflow merges through scripts/bot_pr_merge.sh ---------------------
+MERGE_BOT = BOT_ACTION_OK
+
+
+def _merge_script_text() -> str:
+    return (ROOT / "scripts" / "bot_pr_merge.sh").read_text(encoding="utf-8")
+
+
+def test_the_real_repo_every_bot_pr_workflow_merges_through_the_shared_script():
+    bot = rcs.BOT_ACTION.read_text(encoding="utf-8")
+    assert rcs.MERGE_SCRIPT in bot
+    assert rcs.merge_script_problems(rcs.REQUIRED) == []
+    assert rcs.bot_pr_workflow_problems(rcs.REQUIRED, bot) == []
+
+
+def test_docs_refresh_as_it_was_after_2821_and_before_2858_FAILS_the_merge_path_check():
+    """It dispatched both required checks but relied on native auto-merge: PRs sat open 80 min to 6.5 h."""
+    old = (FIXTURES / "docs-refresh.post-2821-pre-2858.yml").read_text(encoding="utf-8")
+    assert "scraper-dependency-guard.yml" in old and "bot_pr_merge" not in old
+    import tempfile
+
+    with tempfile.TemporaryDirectory() as d:
+        wfs = Path(d)
+        for f in (ROOT / ".github" / "workflows").glob("*.yml"):
+            (wfs / f.name).write_bytes(f.read_bytes())
+        (wfs / "docs-refresh.yml").write_text(old, encoding="utf-8")
+        probs = rcs.bot_pr_workflow_problems(rcs.REQUIRED, rcs.BOT_ACTION.read_text("utf-8"), wfs)
+    assert any("docs-refresh.yml" in p and "does not merge it through" in p for p in probs), probs
+    # and ONLY that: the dispatches were fine
+    assert not [p for p in probs if "docs-refresh.yml" in p and "never dispatches" in p]
+
+
+def test_an_own_pr_workflow_without_the_merge_script_is_caught_and_with_it_passes(
+    tmp_path, monkeypatch
+):
+    _repo_copy(tmp_path, monkeypatch, {"newbot.yml": _own_pr_workflow(BOTH, merge=False)})
+    probs = rcs.bot_pr_workflow_problems(REQ, MERGE_BOT, tmp_path)
+    assert len(probs) == 1 and "newbot.yml" in probs[0] and "does not merge it through" in probs[0]
+    _repo_copy(tmp_path, monkeypatch, {"newbot.yml": _own_pr_workflow(BOTH)})
+    assert rcs.bot_pr_workflow_problems(REQ, MERGE_BOT, tmp_path) == []
+
+
+def test_a_draft_pr_a_human_merges_needs_no_merge_script(tmp_path, monkeypatch):
+    draft = _own_pr_workflow(
+        "echo done",
+        branch="chore/x-${GITHUB_RUN_ID}",
+        push="git push origin HEAD:refs/heads/$BRANCH",
+        merge=False,
+    )
+    draft = draft.replace("gh pr create --base", "gh pr create --draft --base")
+    _repo_copy(tmp_path, monkeypatch, {"draft.yml": draft})
+    assert rcs.bot_pr_workflow_problems(REQ, MERGE_BOT, tmp_path) == []
+
+
+def test_a_fresh_run_id_branch_that_is_not_a_draft_still_needs_the_merge_script(
+    tmp_path, monkeypatch
+):
+    text = _own_pr_workflow(
+        "echo done",
+        branch="chore/x-${GITHUB_RUN_ID}",
+        push="git push origin HEAD:refs/heads/$BRANCH",
+        merge=False,
+    )
+    _repo_copy(tmp_path, monkeypatch, {"fresh.yml": text})
+    probs = rcs.bot_pr_workflow_problems(REQ, MERGE_BOT, tmp_path)
+    assert len(probs) == 1 and "does not merge it through" in probs[0]
+
+
+def test_bot_pr_sync_that_does_not_call_the_merge_script_is_caught(tmp_path, monkeypatch):
+    _repo_copy(tmp_path, monkeypatch, {})
+    probs = rcs.bot_pr_workflow_problems(REQ, BOT_ACTION_NO_MERGE, tmp_path)
+    assert any("bot-pr-sync does not merge through" in p for p in probs)
+
+
+def test_the_merge_script_must_pin_fail_loudly_and_wait_for_the_required_contexts():
+    good = _merge_script_text()
+    assert rcs.merge_script_problems(rcs.REQUIRED, good) == []
+    assert any(
+        "--match-head-commit" in p
+        for p in rcs.merge_script_problems(rcs.REQUIRED, good.replace("--match-head-commit", ""))
+    )
+    assert any(
+        "::error::" in p
+        for p in rcs.merge_script_problems(rcs.REQUIRED, good.replace("::error::", ""))
+    )
+    assert any(
+        "branch protection requires" in p
+        for p in rcs.merge_script_problems([*rcs.REQUIRED, "new-check"], good)
+    )

@@ -26,7 +26,14 @@ protection; `--live` reads the real list with `gh api` and fails if the two diff
      per run (name carries the run id, never force-pushed), where the first push's pull_request run fires
      by itself. Why: docs-refresh force-pushes one reusable branch; a later push's pull_request guard run
      ended `action_required` (waits for a click), so its PR sat BLOCKED for 2 h (#2810) and this control,
-     which only looked at the check's own workflow and at bot-pr-sync, stayed green (#2607 -> #2821).
+     which only looked at the check's own workflow and at bot-pr-sync, stayed green (#2607 -> #2821);
+  8. (2026-10-17, same function) EVERY such workflow also merges through the one shared merge path,
+     `scripts/bot_pr_merge.sh` (a bot-pr-sync caller through the action, a workflow with its own PR code by
+     calling the script itself). Native auto-merge does not re-trigger on statuses forwarded from dispatched
+     runs: docs-refresh PRs sat open 80 min, 4 h 53 min and 6 h 30 min with every required context green
+     (#2824, #2832, #2845). The one exemption is a DRAFT PR (`gh pr create --draft`), which a human merges
+     by design (encrypt-raw-data-migration). The script itself must pin the merge to the verified head
+     (`--match-head-commit`), fail loudly (`::error::`), and wait for exactly the REQUIRED contexts.
 
 Surface and blind spots (rule 85a): it reads workflow YAML, not GitHub's runtime behaviour; it cannot see a
 repository ruleset or an org-level required workflow; it trusts that the dispatched run's forwarded status
@@ -164,10 +171,43 @@ def _fresh_branch_per_run(run: str) -> bool:
     return bool(named) and not forced
 
 
+MERGE_SCRIPT = "scripts/bot_pr_merge.sh"
+
+
+def _human_merged_draft(run: str) -> bool:
+    return bool(re.search(r"gh pr create[^\n]*--draft\b", run))
+
+
+def merge_script_problems(required: list[str], script_text: str | None = None) -> list[str]:
+    """Item 8: the shared merge script exists, pins the head, fails loudly, waits for REQUIRED."""
+    if script_text is None:
+        path = ROOT / MERGE_SCRIPT
+        if not path.is_file():
+            return [f"{MERGE_SCRIPT} does not exist"]
+        script_text = path.read_text(encoding="utf-8")
+    out: list[str] = []
+    if "--match-head-commit" not in script_text:
+        out.append(
+            f"{MERGE_SCRIPT} does not pin the merge to the verified head (--match-head-commit)"
+        )
+    if "::error::" not in script_text:
+        out.append(f"{MERGE_SCRIPT} never fails loudly (::error::)")
+    m = re.search(r'REQUIRED_CONTEXTS="\$\{REQUIRED_CONTEXTS:-([^}]*)\}"', script_text)
+    if not m:
+        out.append(f"{MERGE_SCRIPT} has no default REQUIRED_CONTEXTS")
+    elif set(m.group(1).split()) != set(required):
+        out.append(
+            f"{MERGE_SCRIPT} waits for {sorted(set(m.group(1).split()))} but branch protection "
+            f"requires {sorted(required)}"
+        )
+    return out
+
+
 def bot_pr_workflow_problems(
     required: list[str], bot_action_text: str, workflows_dir: Path | None = None
 ) -> list[str]:
-    """Item 7: every bot-PR workflow must satisfy every required context on its PR's head."""
+    """Items 7 and 8: every bot-PR workflow satisfies every required context on its PR's head
+    and merges through the shared merge path."""
     d = workflows_dir or WORKFLOWS
     wanted: dict[str, str] = {}  # required workflow file -> a context it produces
     for ctx in required:
@@ -175,6 +215,8 @@ def bot_pr_workflow_problems(
         if found:
             wanted.setdefault(found[0].name, ctx)
     out: list[str] = []
+    if MERGE_SCRIPT not in bot_action_text:
+        out.append(f"bot-pr-sync does not merge through {MERGE_SCRIPT}")
     for name, kind in bot_pr_workflows(d).items():
         if kind == "action":
             for fname, ctx in wanted.items():
@@ -182,6 +224,11 @@ def bot_pr_workflow_problems(
                     out.append(f"{name}: calls bot-pr-sync, which never dispatches {fname} ({ctx})")
             continue
         run, _ = _step_scripts(_load(d / name))
+        if MERGE_SCRIPT not in run and not _human_merged_draft(run):
+            out.append(
+                f"{name}: creates a bot PR but does not merge it through {MERGE_SCRIPT}; native "
+                "auto-merge does not re-trigger on forwarded statuses and the PR can sit open for hours"
+            )
         if _fresh_branch_per_run(run):
             continue
         for fname, ctx in wanted.items():
@@ -231,6 +278,7 @@ def main() -> int:
     for ctx in REQUIRED:
         bad += problems_for(ctx, bot)
     bad += bot_pr_workflow_problems(REQUIRED, bot)
+    bad += merge_script_problems(REQUIRED)
     if args.live:
         live = live_required()
         # A live subset is fine (GG may have un-required one temporarily); a live context we do not

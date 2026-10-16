@@ -210,50 +210,7 @@ runs:
         # PAT-pushed branches, so dispatch it too (it forwards its result as a commit status).
         ci_retry gh workflow run scraper-dependency-guard.yml --ref "${BRANCH}" -f pr="${PR_NUM}"
 
-        ITERATIONS=$(( WAIT_MINUTES * 6 ))  # one iteration per 10s
-        echo "Waiting up to ${WAIT_MINUTES} minutes for PR #${PR_NUM} (${BRANCH}) to pass checks and merge..."
-        for i in $(seq 1 "${ITERATIONS}"); do
-          PR_STATE=$(gh pr view "${PR_NUM}" --json state --jq '.state' 2>/dev/null || echo "UNKNOWN")
-          if [ "$PR_STATE" = "MERGED" ]; then
-            echo "Merged."
-            exit 0
-          fi
-          if [ "$PR_STATE" = "CLOSED" ]; then
-            echo "PR #${PR_NUM} was closed without merging — failing loudly."
-            exit 1
-          fi
-
-          # master can also advance while we wait (another bot-sync PR
-          # merging, or a human PR) — resync and re-dispatch since the new
-          # merge-commit SHA starts with zero check runs.
-          if [ $(( i % 2 )) -eq 0 ]; then
-            MERGE_STATE=$(gh pr view "${PR_NUM}" --json mergeStateStatus --jq '.mergeStateStatus' 2>/dev/null || echo "UNKNOWN")
-            if [ "$MERGE_STATE" = "BEHIND" ]; then
-              echo "Branch fell behind master — resyncing via gh pr update-branch"
-              gh pr update-branch "${PR_NUM}" || true
-              sleep 5
-              gh workflow run lint.yml --ref "${BRANCH}" || true
-              gh workflow run scraper-dependency-guard.yml --ref "${BRANCH}" -f pr="${PR_NUM}" || true
-            fi
-          fi
-
-          CURRENT_SHA=$(gh pr view "${PR_NUM}" --json headRefOid --jq '.headRefOid' 2>/dev/null || echo "")
-          if [ -n "$CURRENT_SHA" ]; then
-            PASS_COUNT=$(gh api "repos/${GITHUB_REPOSITORY}/commits/${CURRENT_SHA}/check-runs" \
-              --jq '[.check_runs[] | select((.name=="lint" or .name=="pwa-js") and .conclusion=="success")] | length' 2>/dev/null || echo 0)
-            if [ "$PASS_COUNT" -ge 2 ]; then
-              echo "Checks green (${PASS_COUNT}) — attempting merge of PR #${PR_NUM}..."
-              if gh pr merge "${PR_NUM}" --squash; then
-                echo "Merged."
-                exit 0
-              else
-                echo "Merge attempt failed (see error above) — will retry next poll."
-              fi
-            fi
-          fi
-
-          sleep 10
-        done
-
-        echo "Timed out after ${WAIT_MINUTES} minutes waiting for PR #${PR_NUM} (${BRANCH}) to merge (checks likely failing)."
-        exit 1
+        # The one merge path for every bot PR (scripts/bot_pr_merge.sh): poll the head THIS run pushed, merge
+        # with --match-head-commit once lint, pwa-js and scraper-dependency-guard are all success, resync if
+        # master moves, fail loudly after WAIT_MINUTES. docs-refresh uses the same script.
+        bash "${GITHUB_WORKSPACE}/scripts/bot_pr_merge.sh" "${PR_NUM}" "${BRANCH}" "$(git rev-parse HEAD)"
