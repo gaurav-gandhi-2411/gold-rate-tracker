@@ -41,6 +41,15 @@ inputs:
     description: "Max minutes to wait for the PR to merge before failing"
     required: false
     default: "15"
+  carry-forward:
+    description: >
+      "true" keeps readings that are already waiting on the bot branch (scripts/bot_branch_push.sh):
+      the branch is rebuilt as master + this run's commit + the unmerged readings already on it, instead
+      of being force-pushed over. For append-only reading syncs (the self-hosted Tanishq scrape) only.
+      Also pushes this run's commit when the token is rejected, so a blocked sync queues readings
+      instead of losing them (2026-10-14/15: three readings were overwritten).
+    required: false
+    default: "false"
   ntfy-topic:
     description: >
       ntfy.sh topic to alert on if the data-only allowlist guard rejects this
@@ -67,6 +76,7 @@ runs:
         PR_BODY: ${{ inputs.pr-body }}
         WAIT_MINUTES: ${{ inputs.wait-minutes }}
         NTFY_TOPIC: ${{ inputs.ntfy-topic }}
+        CARRY_FORWARD: ${{ inputs.carry-forward }}
       run: |
         set -e
         # One GitHub 5xx must not strand a data PR (2026-10-12): bounded retry on every
@@ -87,6 +97,13 @@ runs:
               -d "bot-pr-sync (branch ${BRANCH}) was refused by GitHub with HTTP 401 Bad credentials, so no data PR can merge and the site price will go stale. The token (CI_MERGE_PAT) has probably expired. https://github.com/${GITHUB_REPOSITORY}/blob/master/docs/FOR_GG.md" \
               "https://ntfy.sh/${NTFY_TOPIC}" || true
           fi
+          # A reading must outlive a blocked sync: queue it on the bot branch (the checkout's own
+          # credentials can push a branch, only PR creation needs the PAT). The next run, or the
+          # first one after the token is renewed, carries it into master.
+          if [ "${CARRY_FORWARD}" = "true" ]; then
+            bash "${GITHUB_WORKSPACE}/scripts/bot_branch_push.sh" "${BRANCH}" \
+              || echo "::error::could not queue this run's reading on ${BRANCH} while the token is rejected"
+          fi
           exit 1
         fi
 
@@ -104,7 +121,11 @@ runs:
         # job's checkout and this step, and a branch that starts behind can't
         # satisfy required-status-checks' "strict" rule even after checks pass.
         ci_retry git fetch origin master
-        git rebase origin/master
+        # carry-forward rebuilds the commit on master itself (no rebase, so a master that moved cannot
+        # turn this run's reading into a conflict and lose it)
+        if [ "${CARRY_FORWARD}" != "true" ]; then
+          git rebase origin/master
+        fi
 
         # Guard: the data-only guarantee otherwise lives only in each calling
         # workflow's `git add <allowlist>` line (never `git add -A`) — eight
@@ -143,7 +164,21 @@ runs:
           exit 1
         fi
 
-        ci_retry git push --force origin "HEAD:refs/heads/${BRANCH}"
+        if [ "${CARRY_FORWARD}" = "true" ]; then
+          # rebuild master + this run's reading + readings already queued on the branch; exit 0 with
+          # nothing pushed means every reading is already on master, so there is no PR to wait for
+          BOT_PUSH_STATE=0
+          bash "${GITHUB_WORKSPACE}/scripts/bot_branch_push.sh" "${BRANCH}" > "${RUNNER_TEMP:-/tmp}/bot_branch_push.out" 2>&1 || BOT_PUSH_STATE=$?
+          cat "${RUNNER_TEMP:-/tmp}/bot_branch_push.out"
+          if [ "${BOT_PUSH_STATE}" -ne 0 ]; then
+            exit "${BOT_PUSH_STATE}"
+          fi
+          if grep -q "^Nothing to push" "${RUNNER_TEMP:-/tmp}/bot_branch_push.out"; then
+            exit 0
+          fi
+        else
+          ci_retry git push --force origin "HEAD:refs/heads/${BRANCH}"
+        fi
 
         # Resolve to an explicit PR NUMBER up front and use only that from
         # here on. `gh pr view <branch>` / `gh pr merge <branch>` resolve by
