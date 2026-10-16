@@ -37,8 +37,16 @@ permissions:
   actions: read # reads the cited run, its jobs and its job log
   statuses: write # forwards the result as a commit status for dispatched runs
 
+# The group carries the EVENT NAME on purpose. A docs-refresh PR fires this workflow twice for the same PR
+# number: the pull_request run (its commit has no [skip ci]) and the run docs-refresh dispatches with
+# `-f pr=`. With one shared group `cancel-in-progress` cancelled one of them, and a CANCELLED check run named
+# `scraper-dependency-guard` blocks the merge ("base branch policy prohibits the merge") even though the
+# forwarded status is `success`: PR #2864 on 2026-10-16 (cancelled pull_request run 38957199971, all three
+# required statuses green, unmergeable until the run was re-run by hand); the same cancelled-vs-dispatched
+# pattern matches the docs-refresh PRs that sat open 4 h 53 min (#2832) and 6 h 30 min (#2845). Newer runs
+# of the SAME event still cancel older ones.
 concurrency:
-  group: scraper-dependency-guard-${{ github.event.pull_request.number || inputs.pr }}
+  group: scraper-dependency-guard-${{ github.event_name }}-${{ github.event.pull_request.number || inputs.pr }}
   cancel-in-progress: true
 
 jobs:

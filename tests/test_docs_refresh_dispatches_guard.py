@@ -50,3 +50,16 @@ def test_docs_refresh_merges_through_the_shared_script_with_the_commit_it_pushed
 def test_the_job_timeout_covers_the_merge_wait():
     wf = yaml.safe_load((ROOT / ".github/workflows/docs-refresh.yml").read_text(encoding="utf-8"))
     assert wf["jobs"]["refresh"]["timeout-minutes"] >= 30
+
+
+def test_the_guard_does_not_cancel_its_own_run_for_the_other_event():
+    """PR #2864 (2026-10-16): the pull_request run and the dispatched run for one PR shared a concurrency
+    group, so one was cancelled; a cancelled `scraper-dependency-guard` check run blocks the merge even with
+    the forwarded status green."""
+    wf = yaml.safe_load(
+        (ROOT / ".github/workflows/scraper-dependency-guard.yml").read_text(encoding="utf-8")
+    )
+    group = wf["concurrency"]["group"]
+    assert "github.event_name" in group
+    assert "github.event.pull_request.number" in group and "inputs.pr" in group
+    assert wf["concurrency"]["cancel-in-progress"] is True
