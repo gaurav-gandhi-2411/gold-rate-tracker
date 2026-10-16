@@ -154,6 +154,9 @@ jobs:
           # is the evaluator weakness bot-pr-sync's header documents for statuses forwarded by a dispatched
           # run, so do what bot-pr-sync does: poll the head and merge directly (CI_MERGE_PAT). Bounded: a PR
           # that is still unmerged after the wait fails this run loudly instead of sitting there.
+          # Only trust statuses of the commit THIS run pushed (headRefOid can lag a force-push), and have the
+          # merge itself refuse any other head (--match-head-commit): review of #2858.
+          PUSHED_SHA=$(git rev-parse HEAD)
           WAIT_MIN="${DOCS_REFRESH_WAIT_MIN:-20}"
           DEADLINE=$(( $(date +%s) + WAIT_MIN * 60 ))
           while [ "$(date +%s)" -lt "$DEADLINE" ]; do
@@ -161,11 +164,11 @@ jobs:
             if [ "$PR_STATE" = "MERGED" ]; then echo "Merged."; exit 0; fi
             if [ "$PR_STATE" = "CLOSED" ]; then echo "::error::PR #${EXISTING_PR} was closed without merging"; exit 1; fi
             HEAD_SHA=$(ci_retry gh pr view "$EXISTING_PR" --repo "${GITHUB_REPOSITORY}" --json headRefOid --jq .headRefOid 2>/dev/null || echo "")
-            if [ -n "$HEAD_SHA" ]; then
-              GREEN=$(ci_retry gh api "repos/${GITHUB_REPOSITORY}/commits/${HEAD_SHA}/status" --jq '[.statuses[] | select((.context=="lint" or .context=="pwa-js" or .context=="scraper-dependency-guard") and .state=="success") | .context] | unique | length' 2>/dev/null || echo 0)
+            if [ "$HEAD_SHA" = "$PUSHED_SHA" ]; then
+              GREEN=$(ci_retry gh api "repos/${GITHUB_REPOSITORY}/commits/${HEAD_SHA}/status?per_page=100" --jq '[.statuses[] | select((.context=="lint" or .context=="pwa-js" or .context=="scraper-dependency-guard") and .state=="success") | .context] | unique | length' 2>/dev/null || echo 0)
               if [ "$GREEN" -ge 3 ]; then
                 echo "Required contexts green on ${HEAD_SHA} -- merging PR #${EXISTING_PR}"
-                if gh pr merge "$EXISTING_PR" --repo "${GITHUB_REPOSITORY}" --squash; then echo "Merged."; exit 0; fi
+                if gh pr merge "$EXISTING_PR" --repo "${GITHUB_REPOSITORY}" --squash --match-head-commit "$HEAD_SHA"; then echo "Merged."; exit 0; fi
                 echo "Merge attempt failed (see above); will retry on the next poll."
               fi
             fi

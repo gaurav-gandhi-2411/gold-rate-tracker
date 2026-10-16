@@ -43,7 +43,7 @@ def _run_refresh(tmp_path, *, green: int, wait_min: str = "1"):
     merged = tmp_path / "merged"
     script = (tmp_path / "step.sh").as_posix()
     stubs = f"""
-git() {{ case "$1 $2" in "diff --staged") return 1;; esac; echo "git $*" >> "{log.as_posix()}"; return 0; }}
+git() {{ case "$1 $2" in "diff --staged") return 1;; "rev-parse HEAD") echo abc123;; esac; echo "git $*" >> "{log.as_posix()}"; return 0; }}
 sleep() {{ :; }}
 gh() {{
   echo "gh $*" >> "{log.as_posix()}"
@@ -54,8 +54,8 @@ gh() {{
         *headRefOid*) echo abc123 ;;
         *) if [ -f "{merged.as_posix()}" ]; then echo MERGED; else echo OPEN; fi ;;
       esac ;;
-    "api repos/o/r/commits/abc123/status") echo {green} ;;
-    "pr merge") if [ "$3" = "4242" ] && [[ "$*" == *--squash* ]] && [[ "$*" != *--auto* ]]; then touch "{merged.as_posix()}"; fi ;;
+    "api repos/o/r/commits/abc123/status?per_page=100") echo {green} ;;
+    "pr merge") if [ "$3" = "4242" ] && [[ "$*" == *--squash* ]] && [[ "$*" != *--auto* ]] && [[ "$*" == *"--match-head-commit abc123"* ]]; then touch "{merged.as_posix()}"; fi ;;
   esac
   return 0
 }}
