@@ -219,6 +219,7 @@ FILES = [
 # Bare calls that are deliberate, each with the reason it is not wrapped.
 ALLOWED = (
     'gh pr merge "${PR_NUM}" --squash',  # the poll loop re-attempts every 10 s for WAIT_MINUTES
+    'gh pr merge "$EXISTING_PR"',  # docs-refresh: same poll loop, re-attempted every 15 s
     "gh pr update-branch",  # best-effort inside the poll loop (|| true)
     'gh workflow run lint.yml --ref "${BRANCH}" || true',  # best-effort re-dispatch in the poll loop
     'gh workflow run scraper-dependency-guard.yml --ref "${BRANCH}" -f pr="${PR_NUM}" || true',
