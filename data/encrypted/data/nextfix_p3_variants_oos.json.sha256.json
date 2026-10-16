@@ -1,10 +1,10 @@
 {
  "category": "raw IBJA PM fix series (pm0/pm1 per fold, ADR 071)",
  "ciphertext": "data/encrypted/data/nextfix_p3_variants_oos.json.enc",
- "ciphertext_sha256": "9af6034d714efda30e27152cd69328fe07b1f84ddb67c2375802c44603c58f99",
+ "ciphertext_sha256": "7ed87aced7100eb40ce5e19f49a9867fa87420c44d8b96aa33f0718cebd24cac",
  "format": "GRTENC v1, AES-256-GCM, scrypt",
  "key_id": "88fadeb62be0b8f4",
  "path": "data/nextfix_p3_variants_oos.json",
- "plaintext_bytes": 88010,
- "plaintext_sha256": "b0a858045830e674723f285d47a165c3663b319bbe8cc4c145e3bd73c49428ed"
+ "plaintext_bytes": 88752,
+ "plaintext_sha256": "9791bf0dcf410d4b8891850e9a20e180d9658bc38591ee5364012e74f7f98f14"
 }
