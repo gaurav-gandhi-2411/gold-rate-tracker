@@ -141,6 +141,8 @@ def _step_scripts(data: dict) -> tuple[str, list[str]]:
         for step in (job or {}).get("steps") or []:
             if not isinstance(step, dict):
                 continue
+            if str(step.get("if", "")).strip().lower() == "false":
+                continue  # a step that never runs does not count
             if "run" in step:
                 runs.append(
                     "\n".join(
@@ -172,10 +174,27 @@ def _fresh_branch_per_run(run: str) -> bool:
 
 
 MERGE_SCRIPT = "scripts/bot_pr_merge.sh"
+# An executable call: `[VAR=value ...] bash <path>/bot_pr_merge.sh PR BRANCH "$(git rev-parse HEAD)"`, not in a
+# comment, an echo or a heredoc, not followed by `|| true`, with the commit this run pushed as the third argument.
+_MERGE_CALL = re.compile(
+    r"^\s*(?:\w+=\S+\s+)*bash\s+\S*scripts/bot_pr_merge\.sh\"?\s+\S+\s+\S+\s+\"?\$\(git rev-parse HEAD\)\"?\s*$"
+)
+
+
+def _calls_merge_script(text: str) -> bool:
+    return any(
+        _MERGE_CALL.match(ln) and "|| true" not in ln
+        for ln in text.splitlines()
+        if not ln.strip().startswith("#")
+    )
 
 
 def _human_merged_draft(run: str) -> bool:
-    return bool(re.search(r"gh pr create[^\n]*--draft\b", run))
+    return any(
+        re.match(r"^\s*(?:ci_retry\s+)?gh\s+pr\s+create\b[^\n]*--draft\b", ln)
+        for ln in run.splitlines()
+        if not ln.strip().startswith("#")
+    )
 
 
 def merge_script_problems(required: list[str], script_text: str | None = None) -> list[str]:
@@ -215,7 +234,7 @@ def bot_pr_workflow_problems(
         if found:
             wanted.setdefault(found[0].name, ctx)
     out: list[str] = []
-    if MERGE_SCRIPT not in bot_action_text:
+    if not _calls_merge_script(bot_action_text):
         out.append(f"bot-pr-sync does not merge through {MERGE_SCRIPT}")
     for name, kind in bot_pr_workflows(d).items():
         if kind == "action":
@@ -224,7 +243,7 @@ def bot_pr_workflow_problems(
                     out.append(f"{name}: calls bot-pr-sync, which never dispatches {fname} ({ctx})")
             continue
         run, _ = _step_scripts(_load(d / name))
-        if MERGE_SCRIPT not in run and not _human_merged_draft(run):
+        if not _calls_merge_script(run) and not _human_merged_draft(run):
             out.append(
                 f"{name}: creates a bot PR but does not merge it through {MERGE_SCRIPT}; native "
                 "auto-merge does not re-trigger on forwarded statuses and the PR can sit open for hours"

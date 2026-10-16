@@ -39,6 +39,9 @@ def _run(
     merge_state: str = "CLEAN",
     merge_fails: int = 0,
     wait_min: str = "1",
+    late: int = 0,
+    parent: str = "abc123",
+    wait_sec: str = "",
 ) -> tuple[subprocess.CompletedProcess[str], str]:
     """Run the script. `states` is the sequence of PR states, one per poll (the last repeats);
     statuses/checks are the already-filtered names the real `--jq` filters would print for `green_on`."""
@@ -59,15 +62,21 @@ gh() {{
           n=$(cnt state); i=0
           for s in {states.replace(",", " ")}; do i=$((i + 1)); last=$s; if [ "$i" -eq "$n" ]; then echo $s; exit 0; fi; done
           echo $last ;;
-        *"--json headRefOid"*) echo "$cur" ;;
+        *"--json headRefOid"*)
+          if [ -f "{st}.pending" ]; then
+            n=$(cnt late)
+            if [ "$n" -ge 2 ]; then echo newhead999 > "{st}.head"; cur=newhead999; fi
+          fi
+          echo "$cur" ;;
         *"--json mergeStateStatus"*)
           if [ "{merge_state}" = BEHIND ] && [ ! -f "{st}.updated" ]; then echo BEHIND; else echo CLEAN; fi ;;
       esac ;;
-    "pr update-branch") touch "{st}.updated"; echo newhead999 > "{st}.head" ;;
+    "pr update-branch") touch "{st}.updated"; if [ "{late}" = 1 ]; then : > "{st}.pending"; else echo newhead999 > "{st}.head"; fi ;;
     "pr merge")
       n=$(cnt merge)
       if [ "$n" -le {merge_fails} ]; then echo "gh: merge blocked" >&2; return 1; fi ;;
     "workflow run") ;;
+    "api repos/o/r/commits/newhead999") echo "{parent}" ;;
     "api repos/o/r/commits/{green_sha}/status?per_page=100") printf '%s\\n' "{statuses}" ;;
     "api repos/o/r/commits/{green_sha}/check-runs?per_page=100") printf '%s\\n' "{checks}" ;;
     api*) ;;
@@ -86,6 +95,7 @@ export -f gh sleep cnt
         "CI_RETRY_BASE": "0",
         "POLL_SECONDS": "0",
         "WAIT_MINUTES": wait_min,
+        **({"WAIT_SECONDS": wait_sec} if wait_sec else {}),
     }
     r = subprocess.run([BASH, str(script)], capture_output=True, text=True, env=env, timeout=120)
     return r, (tmp / "calls.log").read_text() if (tmp / "calls.log").exists() else ""
@@ -162,3 +172,33 @@ def test_every_network_read_in_the_script_is_retried_and_the_merge_is_pinned():
         if re.search(r"\bgh (api|pr view)\b", ln):
             assert "ci_retry" in ln, ln
     assert "--match-head-commit" in text and "::error::" in text
+
+
+def test_an_asynchronous_branch_update_is_adopted_only_when_the_new_head_is_a_child_of_the_verified_commit(
+    tmp_path,
+):
+    # update-branch returns before the new head exists; it appears two reads later, with abc123 as its parent
+    r, log = _run(
+        tmp_path,
+        head="abc123",
+        green_on="newhead999",
+        merge_state="BEHIND",
+        late=1,
+        parent="abc123",
+    )
+    assert r.returncode == 0, r.stdout + r.stderr
+    assert "--match-head-commit newhead999" in log
+
+
+def test_a_new_head_that_is_not_a_child_of_the_verified_commit_is_never_merged(tmp_path):
+    r, log = _run(
+        tmp_path,
+        head="abc123",
+        green_on="newhead999",
+        merge_state="BEHIND",
+        late=1,
+        parent="foreign000",
+        wait_sec="3",
+    )
+    assert r.returncode == 1
+    assert "gh pr merge" not in log

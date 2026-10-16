@@ -39,7 +39,7 @@ fi
 WAIT_MINUTES="${WAIT_MINUTES:-15}"
 POLL_SECONDS="${POLL_SECONDS:-10}"
 REQUIRED_CONTEXTS="${REQUIRED_CONTEXTS:-lint pwa-js scraper-dependency-guard}"
-DEADLINE=$(( $(date +%s) + WAIT_MINUTES * 60 ))
+DEADLINE=$(( $(date +%s) + ${WAIT_SECONDS:-$(( WAIT_MINUTES * 60 ))} )) # WAIT_SECONDS: tests only
 
 echo "Waiting up to ${WAIT_MINUTES} minutes for PR #${PR_NUM} (${BRANCH}) at ${EXPECTED} to pass: ${REQUIRED_CONTEXTS}"
 
@@ -55,6 +55,7 @@ green_contexts() {
 
 LAST_MISSING=""
 LAST_HEAD=""
+UPDATED=0
 i=0
 while :; do # at least one poll, even with WAIT_MINUTES=0
   i=$(( i + 1 ))
@@ -74,6 +75,7 @@ while :; do # at least one poll, even with WAIT_MINUTES=0
     if [ "${MERGE_STATE}" = "BEHIND" ]; then
       echo "Branch fell behind master -- resyncing via gh pr update-branch"
       gh pr update-branch "${PR_NUM}" --repo "${GITHUB_REPOSITORY}" || true
+      UPDATED=1
       sleep 5
       NEW_HEAD="$(ci_retry gh pr view "${PR_NUM}" --repo "${GITHUB_REPOSITORY}" --json headRefOid --jq .headRefOid 2>/dev/null || echo "")"
       if [ -n "${NEW_HEAD}" ]; then
@@ -85,6 +87,19 @@ while :; do # at least one poll, even with WAIT_MINUTES=0
   fi
 
   HEAD_SHA="$(ci_retry gh pr view "${PR_NUM}" --repo "${GITHUB_REPOSITORY}" --json headRefOid --jq .headRefOid 2>/dev/null || echo "")"
+  # `gh pr update-branch` is asynchronous: the new head can appear after our 5 s pause. Adopt a different head
+  # only if we asked for the update AND it is a direct child of the commit we verified (independent review of
+  # #2862); a head from anywhere else stays untrusted.
+  if [ "${UPDATED}" = 1 ] && [ -n "${HEAD_SHA}" ] && [ "${HEAD_SHA}" != "${EXPECTED}" ]; then
+    PARENTS="$(ci_retry gh api "repos/${GITHUB_REPOSITORY}/commits/${HEAD_SHA}" --jq '.parents[].sha' 2>/dev/null || echo "")"
+    case "
+${PARENTS}
+" in
+      *"
+${EXPECTED}
+"*) EXPECTED="${HEAD_SHA}" ;;
+    esac
+  fi
   LAST_HEAD="${HEAD_SHA}"
   if [ -n "${HEAD_SHA}" ] && [ "${HEAD_SHA}" = "${EXPECTED}" ]; then
     GREEN="$(green_contexts "${HEAD_SHA}")"

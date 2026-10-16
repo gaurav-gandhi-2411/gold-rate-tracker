@@ -6,6 +6,8 @@ from __future__ import annotations
 import importlib.util
 from pathlib import Path
 
+import pytest
+
 ROOT = Path(__file__).resolve().parent.parent
 _spec = importlib.util.spec_from_file_location(
     "rcs", ROOT / "scripts" / "check_required_checks_skippable.py"
@@ -96,7 +98,7 @@ BOT_ACTION_NO_MERGE = (
     "gh workflow run lint.yml --ref x\n"
     "gh workflow run scraper-dependency-guard.yml --ref x -f pr=1\n"
 )
-BOT_ACTION_OK = BOT_ACTION_NO_MERGE + "bash scripts/bot_pr_merge.sh 1 b sha\n"
+BOT_ACTION_OK = BOT_ACTION_NO_MERGE + 'bash scripts/bot_pr_merge.sh 1 b "$(git rev-parse HEAD)"\n'
 
 
 def _repo_copy(tmp_path, monkeypatch, extra: dict[str, str]):
@@ -116,7 +118,11 @@ def _own_pr_workflow(
     push: str = "git push --force origin HEAD:refs/heads/$BRANCH",
     merge: bool = True,
 ) -> str:
-    merge_line = "bash scripts/bot_pr_merge.sh $PR $BRANCH $SHA" if merge else "echo no-merge-path"
+    merge_line = (
+        'bash scripts/bot_pr_merge.sh $PR $BRANCH "$(git rev-parse HEAD)"'
+        if merge
+        else "echo no-merge-path"
+    )
     return f"""name: own
 on: workflow_dispatch
 jobs:
@@ -344,3 +350,53 @@ def test_the_merge_script_must_pin_fail_loudly_and_wait_for_the_required_context
         "branch protection requires" in p
         for p in rcs.merge_script_problems([*rcs.REQUIRED, "new-check"], good)
     )
+
+
+# --- review hardening (independent review of #2862): the call must actually run, un-swallowed, on the pushed commit
+@pytest.mark.parametrize(
+    "merge_line",
+    [
+        'echo "bash scripts/bot_pr_merge.sh $PR $BRANCH $(git rev-parse HEAD)"',
+        'bash scripts/bot_pr_merge.sh $PR $BRANCH "$(git rev-parse HEAD)" || true',
+        'bash scripts/bot_pr_merge.sh $PR $BRANCH "$(git rev-parse HEAD)" # fire and forget',
+        "bash scripts/bot_pr_merge.sh $PR $BRANCH some-other-sha",
+        "# bash scripts/bot_pr_merge.sh $PR $BRANCH $(git rev-parse HEAD)",
+    ],
+)
+def test_a_merge_script_mention_that_does_not_run_on_the_pushed_commit_does_not_count(
+    tmp_path, monkeypatch, merge_line
+):
+    text = _own_pr_workflow(BOTH, merge=False).replace("echo no-merge-path", merge_line)
+    _repo_copy(tmp_path, monkeypatch, {"evade.yml": text})
+    probs = rcs.bot_pr_workflow_problems(REQ, BOT_ACTION_OK, tmp_path)
+    assert any("evade.yml" in p and "does not merge it through" in p for p in probs), merge_line
+
+
+def test_a_disabled_step_does_not_count(tmp_path, monkeypatch):
+    text = """name: off
+on: workflow_dispatch
+jobs:
+  j:
+    runs-on: ubuntu-latest
+    steps:
+      - run: gh pr create --base master --head b --title t --body b
+      - if: false
+        run: bash scripts/bot_pr_merge.sh $PR $BRANCH "$(git rev-parse HEAD)"
+"""
+    _repo_copy(tmp_path, monkeypatch, {"off.yml": text})
+    probs = rcs.bot_pr_workflow_problems(REQ, BOT_ACTION_OK, tmp_path)
+    assert any("off.yml" in p and "does not merge it through" in p for p in probs)
+
+
+def test_the_action_that_only_mentions_the_script_in_a_comment_is_caught(tmp_path, monkeypatch):
+    _repo_copy(tmp_path, monkeypatch, {})
+    only_comment = BOT_ACTION_NO_MERGE + "# the merge now lives in scripts/bot_pr_merge.sh\n"
+    probs = rcs.bot_pr_workflow_problems(REQ, only_comment, tmp_path)
+    assert any("bot-pr-sync does not merge through" in p for p in probs)
+
+
+def test_the_real_calls_match_the_executable_call_shape():
+    assert rcs._calls_merge_script(rcs.BOT_ACTION.read_text(encoding="utf-8"))
+    text = (ROOT / ".github" / "workflows" / "docs-refresh.yml").read_text(encoding="utf-8")
+    run, _ = rcs._step_scripts(rcs._load(ROOT / ".github" / "workflows" / "docs-refresh.yml"))
+    assert rcs._calls_merge_script(run), text[:0]
