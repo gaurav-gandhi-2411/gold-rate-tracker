@@ -153,6 +153,18 @@ calibration at all; the folds are never scored in (a) and (b); the look stays cl
 runs, before the look day with a large fold set; missing folds take no look and spend none; the rule is
 final.
 
+### Freeze of every other producer (implementation note, 2026-10-17; not a rule change, the hash is unchanged)
+
+Besides the check-price summary and the weekly scorecard (point 3 of Amendment 1), three more code paths
+would have scored the look period before the look: `ml.nextfix_intraday.backtest` (published in
+`data/nextfix_intraday_backtest.json`: it replays the same predictor over the cached bars, which run to
+now), and a re-run of the ADR 066 check (`run_check` scored all shadow entries, `load_backtest` all replayed
+decisions). All three now use only data up to the cut-off. `tests/test_adr076_effect_guard.py` lists, from
+the code itself (AST, imports resolved), every function that calls the hourly effect primitives or touches
+the hourly log/backtest file, and fails for any that is not classified (look, frozen with a named test, or
+no effect); against the code before this note it fails for exactly those three, and against the code before
+the first freeze (e12b00e8) also for the summary and the scorecard.
+
 ## Consequences
 
 - The hourly model and the P3+hourly average stay out of the pool until at least 2026-11-16 and only on a

@@ -203,3 +203,26 @@ def test_run_scores_only_entries_up_to_the_adr076_cutoff(tmp_path: Path, monkeyp
 
 def test_adr076_cutoff_is_the_registered_instant():
     assert nfi.ADR076_CUTOFF == "2026-10-16T17:38:00Z"
+
+
+def test_backtest_scores_only_decisions_resolved_by_the_adr076_cutoff(tmp_path: Path, monkeypatch):
+    # The cached bars run past the cut-off, so the replay also decides on the look period; scoring
+    # those would publish the look's effect early. The cut-off is moved into the synthetic data.
+    _, events = _setup(tmp_path)
+    g = nfi.load_bars(tmp_path)
+    cut = "2026-08-20T00:00:00Z"
+    monkeypatch.setattr(nfi, "ADR076_CUTOFF", cut)
+    seen: list[list[str]] = []
+    real = nfi.score
+
+    def spy(rows, key="base_at"):
+        seen.append([r["target_at"] for r in rows])
+        return real(rows, key=key)
+
+    monkeypatch.setattr(nfi, "score", spy)
+    bt = nfi.backtest(events, g)
+    assert seen and all(all(t <= cut for t in ts) for ts in seen), seen
+    assert bt["n_decisions_after_adr076_cutoff"] > 0
+    assert bt["n_decisions"] == len(seen[0])
+    monkeypatch.setattr(nfi, "ADR076_CUTOFF", "2099-01-01T00:00:00Z")
+    assert nfi.backtest(events, g)["n_decisions_after_adr076_cutoff"] == 0

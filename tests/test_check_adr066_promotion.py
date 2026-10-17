@@ -279,3 +279,44 @@ def test_backtest_rows_match_published_backtest_scores():
     rows = mod.backtest_rows(events, g)
     assert rows
     assert ni.score(rows) == ni.backtest(events, g)["scored_on_last_decision_per_fix"]
+
+
+# -- ADR 076: a re-run of this check must not score anything after the cut-off ----------------------
+
+
+def test_the_adr066_check_ignores_everything_after_the_adr076_cutoff(tmp_path, monkeypatch):
+    data = tmp_path / "data"
+    data.mkdir()
+    before = make_rows(20, seed=2)  # 2026-08-01 .. 08-20
+    after = make_rows(15, seed=5, start=datetime(2026, 10, 17, tzinfo=UTC))
+    (data / "nextfix_intraday_shadow.json").write_text(json.dumps({"entries": before + after}))
+    (data / ni.INTRADAY_FILE).write_bytes(b"x")
+    (data / mod.nextfix.IBJA_PATH.name).write_bytes(b"x")
+    rows_in = make_rows(30, seed=1)
+    decided = [{**r, "target_at": r["t"][:10] + "T11:30:00Z"} for r in rows_in]
+    late = [
+        {
+            **r,
+            "target_at": "2026-10-17T06:30:00Z",
+            "base_at": r["base_at"].replace("2026-08", "2026-10"),
+        }
+        for r in rows_in[:5]
+    ]
+    monkeypatch.setattr(mod.nextfix, "load_ibja_full", lambda p: None)
+    monkeypatch.setattr(mod.nextfix, "fix_events", lambda x: [])
+    bars = pd.Series([1.0], index=pd.DatetimeIndex(["2026-08-01"], tz="UTC"))
+    monkeypatch.setattr(mod.nextfix_intraday, "load_bars", lambda d: bars)
+    monkeypatch.setattr(mod, "backtest_rows", lambda events, g: decided + late)
+    seen: list[list[str]] = []
+    real = ni.score
+
+    def spy(rows, key="base_at"):
+        seen.append([r.get("target_at") or r["logged_at"] for r in rows])
+        return real(rows, key=key)
+
+    monkeypatch.setattr(mod.nextfix_intraday, "score", spy)
+    res = mod.run_check(data, datetime(2026, 11, 20, tzinfo=UTC))
+    assert seen and all(t <= ni.ADR076_CUTOFF for ts in seen for t in ts), seen
+    assert res["shadow_entries_loaded"] == 20  # not 35
+    assert res["windows"][WIN]["shadow"]["n_resolved_base_fixes"] == 20
+    assert res["windows"][WIN]["backtest"]["n_fixes"] == 30  # not 35

@@ -285,8 +285,16 @@ def backtest(events: list, g: pd.Series) -> dict:
                 fc["target_kind"],
             )
             if nx is not None and nx[0] > t:
-                rows.append({**fc, "t": _iso(t), "target": round(nx[3], 2)})
+                rows.append(
+                    {**fc, "t": _iso(t), "target": round(nx[3], 2), "target_at": _iso(nx[0])}
+                )
         t += timedelta(hours=1)
+    # The cached bars run to now, so the replay also covers the ADR 076 look period. Its decisions are
+    # the same predictor on the same days as the shadow entries the look will score, so their effect
+    # may not be computed or published before the look either: only decisions whose target fix was
+    # published by the cut-off are scored (the rest are counted).
+    n_all = len(rows)
+    rows = [r for r in rows if r["target_at"] <= ADR076_CUTOFF]
     by_hour = score(rows)
     for r in rows:  # also scored per hour-of-decision, to see where the edge is
         r["hour_bucket"] = r["base_at"] + "|" + r["t"]
@@ -295,6 +303,7 @@ def backtest(events: list, g: pd.Series) -> dict:
         "bars_from": _iso(g.index.min().to_pydatetime()),
         "bars_to": _iso(end),
         "n_decisions": len(rows),
+        "n_decisions_after_adr076_cutoff": n_all - len(rows),
         "scored_on_last_decision_per_fix": by_hour,
         "scored_on_every_hour": score(rows, key="hour_bucket"),
     }
