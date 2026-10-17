@@ -338,9 +338,9 @@ def test_cli_076_before_the_look_writes_counts_only(tmp_path, capsys):
 
 
 def _look_args(data: Path, out: Path) -> list[str]:
-    return ["--adr", "076", "--now", "2026-11-16T09:00:00Z", "--data-dir", str(data)] + [
-        "--out-dir",
-        str(out),
+    return [
+        *("--adr", "076", "--now", "2026-11-16T09:00:00Z"),
+        *("--data-dir", str(data), "--out-dir", str(out)),
     ]
 
 
