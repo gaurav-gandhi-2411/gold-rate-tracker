@@ -1058,6 +1058,10 @@ def _dedupe_intraday(entries: list[dict[str, Any]]) -> dict[str, list[dict[str, 
 def _intraday_rows(data_dir: Path) -> list[dict[str, Any]]:
     start = FORWARD_STARTS["intraday"]["date"]
     doc = _read_json("nextfix_intraday_shadow.json", data_dir)
+    # ADR 076: no effect (error vs holding, interval, p) may be computed or published for entries logged
+    # after the cut-off before the look day, so the row is frozen at the cut-off. A test pins this
+    # constant to ml.nextfix_intraday.ADR076_CUTOFF.
+    cutoff = "2026-10-16T17:38:00Z"
     entries = (doc or {}).get("entries") if isinstance(doc, dict) else None
     windows = [
         ("after_morning_rate", "after the morning fix"),
@@ -1066,7 +1070,11 @@ def _intraday_rows(data_dir: Path) -> list[dict[str, Any]]:
     ]
     rows = []
     groups = (
-        _dedupe_intraday([e for e in entries if e["logged_at"][:10] >= start]) if entries else {}
+        _dedupe_intraday(
+            [e for e in entries if start <= e["logged_at"][:10] and e["logged_at"] <= cutoff]
+        )
+        if entries
+        else {}
     )
     for wkey, wname in windows:
         row = base_row(
@@ -1099,6 +1107,9 @@ def _intraday_rows(data_dir: Path) -> list[dict[str, Any]]:
             row["forward"]["last_date"] = max(r["base_date"] for r in rs)
         row["forward"]["extras"].append(
             "one decision per base fix, logged before the target fix was published"
+        )
+        row["forward"]["extras"].append(
+            "frozen at 2026-10-16T17:38Z (ADR 076): later entries are scored only at the look"
         )
         summ = ((doc or {}).get("summary") or {}).get(wkey) if isinstance(doc, dict) else None
         late = summ.get("n_excluded_logged_after_target") if isinstance(summ, dict) else None

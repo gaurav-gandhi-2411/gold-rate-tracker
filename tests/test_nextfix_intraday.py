@@ -174,3 +174,32 @@ def test_entries_logged_after_their_target_fix_was_published_are_not_scored():
     assert nfi.logged_after_target(rows[1]) and not nfi.logged_after_target(rows[0])
     # rows without a target date (the every-hour backtest) are never flagged
     assert not nfi.logged_after_target({"t": "2026-08-01T00:00:00Z", "target": 1.0})
+
+
+def test_run_scores_only_entries_up_to_the_adr076_cutoff(tmp_path: Path, monkeypatch):
+    _setup(tmp_path)
+    after = {
+        "logged_at": "2026-10-17T08:00:00Z",
+        "base_at": "2026-10-17T06:30:00Z",
+        "window": "after_morning_rate",
+        "target": 1.0,
+    }
+    before = {**after, "logged_at": "2026-10-16T17:38:00Z", "base_at": "2026-10-16T06:30:00Z"}
+    (tmp_path / "nextfix_intraday_shadow.json").write_text(
+        json.dumps({"entries": [before, after]}), encoding="utf-8"
+    )
+    seen: list[list[str]] = []
+
+    def spy(rows, key="base_at"):
+        seen.append([r.get("logged_at", "") for r in rows])
+        return {}
+
+    monkeypatch.setattr(nfi, "score", spy)
+    out = nfi.run(now=datetime(2026, 8, 20, 15, 0, tzinfo=UTC), data_dir=tmp_path)
+    assert seen and all(t <= nfi.ADR076_CUTOFF for t in seen[0]), seen
+    assert "2026-10-17T08:00:00Z" not in seen[0]
+    assert out["shadow"]["n_entries_after_adr076_cutoff"] == 1
+
+
+def test_adr076_cutoff_is_the_registered_instant():
+    assert nfi.ADR076_CUTOFF == "2026-10-16T17:38:00Z"
