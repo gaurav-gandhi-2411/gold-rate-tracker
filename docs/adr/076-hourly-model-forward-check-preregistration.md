@@ -132,7 +132,7 @@ the calibration source in point 1 of Amendment 1 and nothing else.
    only set the width of the band, not any effect; (a) and (b) are scored on post-cut-off shadow entries
    alone.
 4. **Calibration size.** Before (Amendment 1, shadow only; run 38941136174): 6 and 7 fixes (morning,
-   afternoon). After: COUNTS_PENDING.
+   afternoon). After (counts-only run 39018471976, sha of the branch): 48 and 46 fixes (6 shadow + 42 ADR 066 re-run, and 7 shadow + 39 ADR 066 re-run).
 5. **Look not taken if the frozen file cannot be used.** If, on the look Monday, the file is missing or its
    SHA-256 differs from the registered one, the script takes no look and computes nothing; the same Monday
    is the look on the next run, as the look day depends on counts alone.
