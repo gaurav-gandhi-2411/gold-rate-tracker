@@ -341,7 +341,7 @@ def test_cli_076_before_the_look_writes_counts_only(tmp_path, capsys):
 def _look_args(data: Path, out: Path) -> list[str]:
     return [
         *("--adr", "076", "--now", "2026-11-16T09:00:00Z"),
-        *("--data-dir", str(data), "--out-dir", str(out)),
+        *("--data-dir", str(data), "--out-dir", str(out), "--calibration-dir", str(data)),
     ]
 
 
@@ -515,7 +515,7 @@ def test_load_folds_refuses_a_missing_edited_or_unreadable_file(tmp_path, monkey
 
 
 def test_the_committed_calibration_file_is_the_registered_one_and_has_nothing_after_the_cutoff():
-    data = _ROOT / "data"
+    data = _ROOT / "reports"
     raw = (data / mod.ADR076_CALIBRATION_FILE).read_bytes().replace(b"\r\n", b"\n")
     assert hashlib.sha256(raw).hexdigest() == mod.ADR076_CALIBRATION_SHA256
     folds = mod.load_folds(data)

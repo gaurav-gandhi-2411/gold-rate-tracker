@@ -656,10 +656,10 @@ def calibration_bytes(doc: dict) -> bytes:
     return (json.dumps(doc, indent=1, sort_keys=True) + "\n").encode("utf-8")
 
 
-def load_folds(data_dir: Path) -> list[dict] | None:
+def load_folds(calibration_dir: Path) -> list[dict] | None:
     """The frozen ADR 066 re-run fixes, or None when the file is missing, unreadable or its SHA-256 is
     not the registered one (the look is then not taken)."""
-    path = data_dir / ADR076_CALIBRATION_FILE
+    path = calibration_dir / ADR076_CALIBRATION_FILE
     try:
         raw = path.read_bytes().replace(b"\r\n", b"\n")  # a checkout with CRLF must hash the same
         if hashlib.sha256(raw).hexdigest() != ADR076_CALIBRATION_SHA256:
@@ -842,10 +842,12 @@ def evaluate_window_076(
     return out
 
 
-def run_adr076(data_dir: Path, now: datetime, opts: dict) -> dict:
+def run_adr076(
+    data_dir: Path, now: datetime, opts: dict, calibration_dir: Path | None = None
+) -> dict:
     shadow = _load_json(data_dir / nextfix_intraday.SHADOW_PATH.name)
     entries = clean_entries((shadow or {}).get("entries"))
-    folds = load_folds(data_dir)
+    folds = load_folds(calibration_dir or _REPO / "reports")
     windows = {w: evaluate_window_076(w, entries, now, opts, folds) for w in WINDOWS}
     return {
         "adr": "076",
@@ -905,7 +907,7 @@ def main_076(args: argparse.Namespace, now: datetime) -> int:
         "beta": args.beta,
         "look_not_before": args.look_not_before,
     }
-    res = run_adr076(args.data_dir, now, opts)
+    res = run_adr076(args.data_dir, now, opts, args.calibration_dir)
     args.out_dir.mkdir(parents=True, exist_ok=True)
     path = args.out_dir / f"adr076_look_{now.strftime('%Y-%m-%d')}.json"
     path.write_text(json.dumps(res, indent=1) + "\n")
@@ -941,6 +943,12 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--beta", type=float, default=ADR076_BETA)
     ap.add_argument("--look-not-before", default=ADR076_LOOK_NOT_BEFORE)
     ap.add_argument(
+        "--calibration-dir",
+        type=Path,
+        default=_REPO / "reports",
+        help="076 only: where the frozen calibration file is read from.",
+    )
+    ap.add_argument(
         "--freeze-calibration",
         type=Path,
         help="076 only, one-off: write the frozen calibration file to this path and stop (no look).",
@@ -961,6 +969,7 @@ def main(argv: list[str] | None = None) -> int:
             "beta",
             "look_not_before",
             "freeze_calibration",
+            "calibration_dir",
         )
         if getattr(args, a) != ap.get_default(a)
     ]

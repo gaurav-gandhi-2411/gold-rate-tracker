@@ -112,8 +112,8 @@ the calibration source in point 1 of Amendment 1 and nothing else.
    last decision of each base fix is a calibration fix. Beta is 1.0, as for the look; nothing is fitted.
    The cached bars are a rolling 60 days (`ml.macro.update_intraday_cache` overwrites them), so a re-run on
    the look day would no longer reproduce these fixes. They are therefore frozen now in
-   `data/adr076_calibration.json` (written by `--adr 076 --freeze-calibration`, from the manual run
-   FREEZE_RUN on the bars as of 2026-10-17), and the look reads that file and refuses it unless its SHA-256
+   `reports/adr076_calibration.json` (written by `--adr 076 --freeze-calibration`, from the manual run
+   39018200881 on the bars as of 2026-10-17, 48 morning and 46 afternoon fixes), and the look reads that file and refuses it unless its SHA-256
    is the registered one.
    Where a base fix is in both, the shadow row is used. The band recipe is the one condition 4 of ADR 066
    uses (`ml.nextfix.flat_record`): the EWMA volatility of the log errors, causal, and the 80% quantile of
