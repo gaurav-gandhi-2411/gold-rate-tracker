@@ -220,7 +220,13 @@ def load_backtest(data_dir: Path) -> dict:
         try:
             events = nextfix.fix_events(nextfix.load_ibja_full(ibja))
             g = nextfix_intraday.load_bars(data_dir)
-            rows = backtest_rows(events, g)
+            # ADR 076: the cached bars run past the cut-off; decisions whose target fix came later
+            # are the look period, so a re-run of this check does not score them.
+            rows = [
+                r
+                for r in backtest_rows(events, g)
+                if r["target_at"] <= nextfix_intraday.ADR076_CUTOFF
+            ]
             if rows:
                 return {
                     "source": "recomputed_from_cached_hourly_bars",
@@ -442,7 +448,13 @@ def evaluate_window(window: str, entries: list[dict], bt: dict) -> dict:
 def run_check(data_dir: Path, now: datetime | None = None) -> dict:
     now = now or datetime.now(UTC)
     shadow = _load_json(data_dir / nextfix_intraday.SHADOW_PATH.name)
-    entries = clean_entries((shadow or {}).get("entries"))
+    # ADR 076: entries logged after the cut-off belong to the forward-only look; this check (ADR 066,
+    # run once on 2026-10-16) reads only what existed at the cut-off, so a re-run cannot score them.
+    entries = [
+        e
+        for e in clean_entries((shadow or {}).get("entries"))
+        if str(e["logged_at"]) <= nextfix_intraday.ADR076_CUTOFF
+    ]
     bt = load_backtest(data_dir)
     files = {
         name: _sha256(data_dir / name)
