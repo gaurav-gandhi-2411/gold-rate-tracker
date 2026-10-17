@@ -490,6 +490,10 @@ ADR076_LOOK_NOT_BEFORE = "2026-11-16"
 ADR076_BOOTSTRAP_B = 10_000
 ADR076_SEED = 42
 ADR076_MIN_CALIBRATION = 5  # resolved pre-cut-off fixes needed to fix the band (as score()'s 5)
+# The ADR 066 re-run fixes are frozen in a file (the cached 1-hour bars are a rolling 60 days, so a
+# later re-run would no longer reproduce them); its SHA-256 is part of the registered rule.
+ADR076_CALIBRATION_FILE = "adr076_calibration.json"
+ADR076_CALIBRATION_SHA256 = "SHA_PENDING"
 WEEKDAY_MONDAY = 0
 
 # Frozen rule (amendment 2026-10-17): its SHA-256 is printed in the ADR and checked by a test, so a
@@ -512,7 +516,9 @@ ADR076_RULE = {
     "calibration_sources": "(1) resolved shadow fixes logged before first_entry_after; (2) ADR 066 "
     "re-run hourly decisions (ml.nextfix_intraday.forecast_at replayed on the cached bars, beta 1.0, "
     "nothing fitted), last decision per base fix, kept only when the decision time and the target fix "
-    "are both before first_entry_after and the base fix is not already a shadow fix",
+    "are both before first_entry_after and the base fix is not already a shadow fix; (2) is read from "
+    "the frozen file whose SHA-256 is calibration_file_sha256",
+    "calibration_file_sha256": ADR076_CALIBRATION_SHA256,
     "min_calibration_fixes": ADR076_MIN_CALIBRATION,
     "final": "no further amendment before the look",
 }
@@ -601,10 +607,11 @@ def calibration_counts(
     return {"n_shadow": n_shadow, "n_folds_added": n_total - n_shadow, "n_total": n_total}
 
 
-def load_folds(data_dir: Path) -> list[dict] | None:
-    """The ADR 066 re-run decisions (every hourly decision of the cached bars, with its outcome), or
-    None when they cannot be rebuilt. Decisions only: nothing is scored here (the cached bars run
-    past the cut-off, so fold_calibration_rows cuts them)."""
+def rebuild_folds(data_dir: Path) -> list[dict] | None:
+    """Rebuild the ADR 066 re-run decisions (every hourly decision of the cached bars, with its
+    outcome) from the cached bars and the IBJA fixes, or None when that is not possible. Used only to
+    write the frozen calibration file; nothing is scored here and the cached bars run past the cut-off,
+    so fold_calibration_rows cuts them."""
     parquet = data_dir / nextfix_intraday.INTRADAY_FILE
     ibja = data_dir / nextfix.IBJA_PATH.name
     if not (parquet.exists() and ibja.exists()):
@@ -615,6 +622,52 @@ def load_folds(data_dir: Path) -> list[dict] | None:
     except Exception:
         return None
     return rows or None
+
+
+def calibration_document(folds: list[dict], first_after: datetime) -> dict:
+    """The frozen calibration file: per window, the last pre-cut-off decision of each base fix, with
+    only the fields the band needs (the beta 1.0 forecast, the fix it was made for and its outcome)."""
+    key = f"beta_{ADR076_BETA}"
+    return {
+        "adr": "076",
+        "note": "ADR 066 re-run fixes that calibrate the ADR 076 range band (Amendment 2). Decision and "
+        "target fix both before the cut-off; never scored by the look.",
+        "first_entry_after": ADR076_FIRST_ENTRY_AFTER,
+        "beta": ADR076_BETA,
+        "windows": {
+            w: [
+                {
+                    "window": w,
+                    "base_at": r["base_at"],
+                    "t": r["t"],
+                    "target_at": r["target_at"],
+                    "base": r["base"],
+                    "pred": {key: r["pred"][key]},
+                    "target": r["target"],
+                }
+                for r in fold_calibration_rows(folds, w, first_after)
+            ]
+            for w in WINDOWS
+        },
+    }
+
+
+def calibration_bytes(doc: dict) -> bytes:
+    return (json.dumps(doc, indent=1, sort_keys=True) + "\n").encode("utf-8")
+
+
+def load_folds(data_dir: Path) -> list[dict] | None:
+    """The frozen ADR 066 re-run fixes, or None when the file is missing, unreadable or its SHA-256 is
+    not the registered one (the look is then not taken)."""
+    path = data_dir / ADR076_CALIBRATION_FILE
+    try:
+        raw = path.read_bytes()
+        if hashlib.sha256(raw).hexdigest() != ADR076_CALIBRATION_SHA256:
+            return None
+        doc = json.loads(raw)
+        return [r for w in WINDOWS for r in doc["windows"][w]]
+    except (OSError, ValueError, KeyError, TypeError):
+        return None
 
 
 def adr076_counts(entries: list[dict], window: str, first_after: datetime) -> dict:
@@ -807,7 +860,11 @@ def run_adr076(data_dir: Path, now: datetime, opts: dict) -> dict:
                 nextfix_intraday.INTRADAY_FILE,
             )
         },
-        "adr066_folds": {"available": folds is not None, "n_decisions": len(folds or [])},
+        "adr066_folds": {
+            "available": folds is not None,
+            "n_decisions": len(folds or []),
+            "file_sha256": ADR076_CALIBRATION_SHA256,
+        },
         "options": opts,
         "look_open": any(r["look_day"] for r in windows.values()),
         "look_rule": f"the first Monday on or after {opts['look_not_before']} on which a window "
@@ -818,7 +875,28 @@ def run_adr076(data_dir: Path, now: datetime, opts: dict) -> dict:
     }
 
 
+def freeze_calibration(args: argparse.Namespace) -> int:
+    """One-off (Amendment 2): write the frozen calibration file from the cached bars. No look, no effect."""
+    folds = rebuild_folds(args.data_dir)
+    if folds is None:
+        print("cannot rebuild the ADR 066 re-run decisions (cached bars or IBJA missing)")
+        return 1
+    first_after = _parse_t(ADR076_FIRST_ENTRY_AFTER)
+    doc = calibration_document(folds, first_after)
+    raw = calibration_bytes(doc)
+    args.freeze_calibration.parent.mkdir(parents=True, exist_ok=True)
+    args.freeze_calibration.write_bytes(raw)
+    print(f"wrote {args.freeze_calibration}  sha256 {hashlib.sha256(raw).hexdigest()}")
+    for w in WINDOWS:
+        rows = doc["windows"][w]
+        span = f"{rows[0]['base_at']} .. {rows[-1]['base_at']}" if rows else "none"
+        print(f"  {w}: {len(rows)} fixes, base fixes {span}")
+    return 0
+
+
 def main_076(args: argparse.Namespace, now: datetime) -> int:
+    if args.freeze_calibration:
+        return freeze_calibration(args)
     opts = {
         "first_entry_after": args.first_entry_after,
         "min_fixes": args.min_fixes,
@@ -832,7 +910,7 @@ def main_076(args: argparse.Namespace, now: datetime) -> int:
     path = args.out_dir / f"adr076_look_{now.strftime('%Y-%m-%d')}.json"
     path.write_text(json.dumps(res, indent=1) + "\n")
     print(f"ADR 076 forward check @ {res['run_at']}  sha {res['repo_sha'][:10]}")
-    print(f"rule hash (v2): {res['rule_hash']}")
+    print(f"rule hash (v3): {res['rule_hash']}")
     print(f"look open: {res['look_open']} ({res['look_rule']})")
     print(f"shadow entries loaded: {res['shadow_entries_loaded']}")
     for w, r in res["windows"].items():
@@ -862,6 +940,11 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--alpha", type=float, default=ADR076_ALPHA)
     ap.add_argument("--beta", type=float, default=ADR076_BETA)
     ap.add_argument("--look-not-before", default=ADR076_LOOK_NOT_BEFORE)
+    ap.add_argument(
+        "--freeze-calibration",
+        type=Path,
+        help="076 only, one-off: write the frozen calibration file to this path and stop (no look).",
+    )
     args = ap.parse_args(argv)
     now = _parse_t(args.now) if args.now else datetime.now(UTC)
     if now.tzinfo is None:
@@ -870,7 +953,15 @@ def main(argv: list[str] | None = None) -> int:
         return main_076(args, now)
     given = [
         a
-        for a in ("first_entry_after", "min_fixes", "min_days", "alpha", "beta", "look_not_before")
+        for a in (
+            "first_entry_after",
+            "min_fixes",
+            "min_days",
+            "alpha",
+            "beta",
+            "look_not_before",
+            "freeze_calibration",
+        )
         if getattr(args, a) != ap.get_default(a)
     ]
     if given:

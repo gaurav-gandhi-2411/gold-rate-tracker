@@ -13,6 +13,10 @@ name: ADR 076 look (manual)
 
 on:
   workflow_dispatch:
+    inputs:
+      freeze:
+        type: boolean
+        default: false
 
 permissions:
   contents: read
@@ -51,6 +55,23 @@ jobs:
         with:
           key: ${{ secrets.DATA_ENC_KEY }}
 
+      - name: Refresh bars (TEMPORARY freeze run)
+        if: ${{ inputs.freeze }}
+        run: python -c "from ml import macro; macro.update_intraday_cache()"
+
+      - name: Freeze (TEMPORARY freeze run)
+        if: ${{ inputs.freeze }}
+        run: python scripts/check_adr066_promotion.py --adr 076 --freeze-calibration "${RUNNER_TEMP}/adr076_calibration.json"
+
+      - name: Upload (TEMPORARY freeze run)
+        if: ${{ inputs.freeze }}
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: adr076-calibration
+          path: ${{ runner.temp }}/adr076_calibration.json
+          retention-days: 1
+
       - name: Run the ADR 076 forward look
+        if: ${{ !inputs.freeze }}
         # --out-dir is outside the workspace and is never uploaded; only the console report is kept.
         run: python scripts/check_adr066_promotion.py --adr 076 --out-dir "${RUNNER_TEMP}/adr076_report"
