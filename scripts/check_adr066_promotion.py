@@ -37,7 +37,14 @@ Scope: after_morning_rate and after_afternoon_rate only. after_us_close is the l
 (ADR 065) and is out of scope. Read-only: nothing under ml/ or data/ is touched; the only write is
 reports/adr066_check_<date>.json. Promotion itself is GG's decision and a separate PR (ADR 066).
 
+`--adr 076` runs the forward-only second look pre-registered in docs/adr/076-hourly-model-forward-check-
+preregistration.md instead (entries logged after 2026-10-16T17:38Z; counts only, no effect computed,
+until a Monday on or after 2026-11-16 on which the counts are met). Without `--adr` this script is the
+ADR 066 check, unchanged, and refuses the 076 options.
+
 Usage: python scripts/check_adr066_promotion.py [--now ISO] [--data-dir D] [--out-dir D]
+       python scripts/check_adr066_promotion.py --adr 076 [--first-entry-after ISO] [--min-fixes N]
+           [--min-days N] [--alpha A] [--beta B] [--look-not-before DATE]
 """
 
 from __future__ import annotations
@@ -455,15 +462,200 @@ def run_check(data_dir: Path, now: datetime | None = None) -> dict:
     }
 
 
+# -- ADR 076: the forward-only second look -------------------------------------------------------
+#
+# docs/adr/076-hourly-model-forward-check-preregistration.md. Entries logged strictly after the
+# cut-off only, beta fixed in advance, and NO effect size, CI or p-value is computed before the look:
+# the counts decide whether (and when) the look may run, the look runs once.
+
+ADR076_FIRST_ENTRY_AFTER = "2026-10-16T17:38:00Z"
+ADR076_MIN_FIXES = 20
+ADR076_MIN_DAYS = 28
+ADR076_ALPHA = 0.025
+ADR076_BETA = 1.0
+ADR076_LOOK_NOT_BEFORE = "2026-11-16"
+ADR076_BOOTSTRAP_B = 10_000
+ADR076_SEED = 42
+WEEKDAY_MONDAY = 0
+
+
+def forward_rows(entries: list[dict], window: str, first_after: datetime) -> list[dict]:
+    """Resolved shadow entries of one window logged strictly after the cut-off, one per base fix
+    (its latest decision), oldest first. Same resolution rule as ml.nextfix_intraday.score."""
+    return last_decision_per_fix(
+        [
+            e
+            for e in entries
+            if e["window"] == window and _parse_t(str(e["logged_at"])) > first_after
+        ],
+        window,
+    )
+
+
+def adr076_counts(entries: list[dict], window: str, first_after: datetime) -> dict:
+    """The only numbers read before the look: how many entries, days and resolved base fixes."""
+    in_win = [
+        e for e in entries if e["window"] == window and _parse_t(str(e["logged_at"])) > first_after
+    ]
+    days = sorted({str(e["logged_at"])[:10] for e in in_win})
+    span = (
+        (datetime.fromisoformat(days[-1]) - datetime.fromisoformat(days[0])).days + 1 if days else 0
+    )
+    resolved = forward_rows(entries, window, first_after)
+    return {
+        "n_entries": len(in_win),
+        "distinct_days": len(days),
+        "calendar_span_days": span,
+        "n_resolved_base_fixes": len(resolved),
+    }
+
+
+def dm_p_one_sided(err_model: np.ndarray, err_hold: np.ndarray) -> float:
+    """One-sided Diebold-Mariano p for 'the model has the lower mean absolute error'.
+
+    nextfix.diebold_mariano_p is two-sided; ADR 076 pre-registers one-sided p < alpha, so halve it
+    when the model is better and use 1 - p/2 when it is worse."""
+    p2 = nextfix.diebold_mariano_p(err_model, err_hold)
+    better = float(np.mean(np.abs(err_model) - np.abs(err_hold))) < 0
+    return p2 / 2.0 if better else 1.0 - p2 / 2.0
+
+
+def adr076_effect(rows: list[dict], window: str, beta: float, alpha: float) -> dict:
+    """Conditions a-c of ADR 076 on the forward rows. Called ONLY at the look."""
+    tgt = np.array([r["target"] for r in rows], dtype=float)
+    err = np.abs(np.array([r["pred"][f"beta_{beta}"] for r in rows], dtype=float) - tgt)
+    hold = np.abs(np.array([r["pred"]["beta_0.0"] for r in rows], dtype=float) - tgt)
+
+    def chg(ix: np.ndarray) -> float:
+        return 100.0 * (err[ix].mean() / max(hold[ix].mean(), 1e-9) - 1.0)
+
+    members = [np.array([i]) for i in range(len(rows))]  # one resolved row per base fix
+    ci = [
+        round(v, 1)
+        for v in nextfix_intraday._cluster_ci(members, chg, b=ADR076_BOOTSTRAP_B, seed=ADR076_SEED)
+    ]
+    change = round(chg(np.arange(len(rows))), 1)
+    p = round(dm_p_one_sided(err, hold), 4)
+    cov = cond4(rows, window, beta)
+    a = {"pass": bool(ci[1] < 0), "change_pct": change, "ci95": ci, "n": len(rows)}
+    b = {"pass": bool(p < alpha), "dm_p_one_sided": p, "alpha": alpha}
+    return {
+        "a_bootstrap_ci_below_0": a,
+        "b_dm_one_sided": b,
+        "c_range_coverage": cov,
+        "all_pass": bool(a["pass"] and b["pass"] and cov["pass"]),
+    }
+
+
+def evaluate_window_076(
+    window: str, entries: list[dict], now: datetime, opts: dict, look_allowed: bool
+) -> dict:
+    first_after = _parse_t(opts["first_entry_after"])
+    counts = adr076_counts(entries, window, first_after)
+    ready = (
+        counts["n_resolved_base_fixes"] >= opts["min_fixes"]
+        and counts["calendar_span_days"] >= opts["min_days"]
+    )
+    out: dict = {"window": window, "counts": counts, "counts_ready": bool(ready)}
+    text = (
+        f"{counts['n_resolved_base_fixes']}/{opts['min_fixes']} resolved base fixes, "
+        f"{counts['calendar_span_days']}/{opts['min_days']} calendar days"
+    )
+    if not look_allowed:
+        out["verdict"] = f"counts only ({text}); the look is not open: no effect computed"
+        return out
+    if not ready:
+        out["verdict"] = f"short of the counts on a look day ({text}); no effect computed"
+        return out
+    rows = forward_rows(entries, window, first_after)
+    eff = adr076_effect(rows, window, opts["beta"], opts["alpha"])
+    out["effect"] = eff
+    out["verdict"] = (
+        f"pass on beta {opts['beta']} (a, b, c all hold)"
+        if eff["all_pass"]
+        else "fail: "
+        + ", ".join(k for k, v in eff.items() if isinstance(v, dict) and not v["pass"])
+    )
+    return out
+
+
+def run_adr076(data_dir: Path, now: datetime, opts: dict) -> dict:
+    shadow = _load_json(data_dir / nextfix_intraday.SHADOW_PATH.name)
+    entries = clean_entries((shadow or {}).get("entries"))
+    open_from = datetime.fromisoformat(opts["look_not_before"]).replace(tzinfo=UTC)
+    look_allowed = now >= open_from and now.weekday() == WEEKDAY_MONDAY
+    return {
+        "adr": "076",
+        "run_at": nextfix_intraday._iso(now),
+        "repo_sha": _git_sha(),
+        "data_file_sha256": {
+            nextfix_intraday.SHADOW_PATH.name: _sha256(data_dir / nextfix_intraday.SHADOW_PATH.name)
+        },
+        "options": opts,
+        "look_open": bool(look_allowed),
+        "look_rule": f"a Monday on or after {opts['look_not_before']}; before that only counts are read",
+        "shadow_entries_loaded": len(entries),
+        "windows": {w: evaluate_window_076(w, entries, now, opts, look_allowed) for w in WINDOWS},
+        "note": NOTE_PROMOTION,
+    }
+
+
+def main_076(args: argparse.Namespace, now: datetime) -> int:
+    opts = {
+        "first_entry_after": args.first_entry_after,
+        "min_fixes": args.min_fixes,
+        "min_days": args.min_days,
+        "alpha": args.alpha,
+        "beta": args.beta,
+        "look_not_before": args.look_not_before,
+    }
+    res = run_adr076(args.data_dir, now, opts)
+    args.out_dir.mkdir(parents=True, exist_ok=True)
+    path = args.out_dir / f"adr076_look_{now.strftime('%Y-%m-%d')}.json"
+    path.write_text(json.dumps(res, indent=1) + "\n")
+    print(f"ADR 076 forward check @ {res['run_at']}  sha {res['repo_sha'][:10]}")
+    print(f"look open: {res['look_open']} ({res['look_rule']})")
+    print(f"shadow entries loaded: {res['shadow_entries_loaded']}")
+    for w, r in res["windows"].items():
+        print(f"\n[{w}] {r['verdict']}")
+        for k, v in r.get("effect", {}).items():
+            if isinstance(v, dict):
+                print(f"   {'PASS' if v['pass'] else 'FAIL'} {k}: {v}")
+    print(NOTE_PROMOTION)
+    print(f"written: {path}")
+    return 0
+
+
 def main(argv: list[str] | None = None) -> int:
     ap = argparse.ArgumentParser(description=__doc__.split("\n")[0])
     ap.add_argument("--now", help="override run time (ISO, UTC); default: now")
     ap.add_argument("--data-dir", type=Path, default=_REPO / "data")
     ap.add_argument("--out-dir", type=Path, default=_REPO / "reports")
+    ap.add_argument(
+        "--adr",
+        choices=("066", "076"),
+        default="066",
+        help="066: the first check (default, unchanged). 076: the forward-only second look.",
+    )
+    ap.add_argument("--first-entry-after", default=ADR076_FIRST_ENTRY_AFTER)
+    ap.add_argument("--min-fixes", type=int, default=ADR076_MIN_FIXES)
+    ap.add_argument("--min-days", type=int, default=ADR076_MIN_DAYS)
+    ap.add_argument("--alpha", type=float, default=ADR076_ALPHA)
+    ap.add_argument("--beta", type=float, default=ADR076_BETA)
+    ap.add_argument("--look-not-before", default=ADR076_LOOK_NOT_BEFORE)
     args = ap.parse_args(argv)
     now = _parse_t(args.now) if args.now else datetime.now(UTC)
     if now.tzinfo is None:
         now = now.replace(tzinfo=UTC)
+    if args.adr == "076":
+        return main_076(args, now)
+    given = [
+        a
+        for a in ("first_entry_after", "min_fixes", "min_days", "alpha", "beta", "look_not_before")
+        if getattr(args, a) != ap.get_default(a)
+    ]
+    if given:
+        ap.error(f"options {given} apply to --adr 076 only; the ADR 066 check takes no options")
     res = run_check(args.data_dir, now)
     args.out_dir.mkdir(parents=True, exist_ok=True)
     path = args.out_dir / f"adr066_check_{now.strftime('%Y-%m-%d')}.json"
