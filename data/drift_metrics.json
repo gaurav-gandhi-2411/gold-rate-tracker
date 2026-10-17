@@ -1,13 +1,5 @@
 [
   {
-    "ts": "2026-09-16T22:17:19.009321+00:00",
-    "target_time": "2026-09-17T00:00:00+00:00",
-    "actual_ts": "2026-09-16T21:15:50.779Z",
-    "residual": 0.0,
-    "model_version": "naive_flat_hold",
-    "baseline_mae": 253.59
-  },
-  {
     "ts": "2026-09-17T06:36:44.995174+00:00",
     "target_time": "2026-09-18T00:00:00+00:00",
     "actual_ts": "2026-09-17T05:11:30.120Z",
@@ -949,6 +941,14 @@
     "actual_ts": "2026-10-16T20:11:53.241Z",
     "residual": 0.0,
     "model_version": "hold_latest_fix_pm_to_am",
+    "baseline_mae": 245.02
+  },
+  {
+    "ts": "2026-10-17T02:12:38.421995+00:00",
+    "target_time": "2026-10-18T00:00:00+00:00",
+    "actual_ts": "2026-10-17T02:02:35.256Z",
+    "residual": 9.0,
+    "model_version": "nextfix_p3_v1",
     "baseline_mae": 245.02
   }
 ]
