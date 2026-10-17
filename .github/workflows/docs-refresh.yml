@@ -52,10 +52,22 @@ name: Docs Freshness Refresh
 # CURRENT_STATE.md norm #13.) The earlier claim here, that a failed
 # auto-merge is "self-healing ... never a blocked pipeline", was false: the
 # stale README simply stayed stale and nothing paged.
+#
+# 2026-10-17: the workflow_run trigger alone left the README stale for 2 h (docs-freshness red on an
+# unrelated PR). VERIFIED by listing the runs (gh run list, 100 each): of the successful Check Gold
+# Price runs since 2026-10-08, every `schedule` (30 of 30) and `push` (15 of 15) run was followed by a
+# docs-refresh run within 5 minutes, but only 7 of 46 `workflow_dispatch` runs were; the data syncs
+# (self-hosted Tanishq, manual dispatches) reach master through dispatched runs. So the refresh also runs
+# on a 15-minute schedule: it exits at once when nothing drifted ("No doc drift to refresh."), and a drift
+# is fixed within one tick plus the PR's own checks, inside lint.yml's 45-minute docs-freshness grace
+# window (tests/test_docs_refresh_trigger.py pins both numbers).
 on:
   workflow_run:
     workflows: ["Check Gold Price", "Weekly Backtest", "Direction Signal Eval"]
     types: [completed]
+  schedule:
+    - cron: "*/15 * * * *"
+  workflow_dispatch:
 
 permissions:
   contents: write
@@ -67,7 +79,7 @@ concurrency:
 
 jobs:
   refresh:
-    if: github.event.workflow_run.conclusion == 'success'
+    if: github.event_name != 'workflow_run' || github.event.workflow_run.conclusion == 'success'
     runs-on: ubuntu-latest
     timeout-minutes: 30
 
@@ -83,7 +95,7 @@ jobs:
           python-version: "3.12"
 
       - name: Refresh injected doc metrics
-        run: python scripts/inject_metrics.py
+        run: python scripts/inject_metrics.py --write
 
       - name: Render the model scorecard page
         # Item 2g: docs/MODEL_SCORECARD.md is a pure function of data/model_scorecard_weekly.json
@@ -129,7 +141,7 @@ jobs:
             # a 502 can arrive after the PR was created, so a failed create is judged by listing again
             ci_retry gh pr create --repo "${GITHUB_REPOSITORY}" --base master --head "$BRANCH" \
               --title "chore: refresh injected doc metrics" \
-              --body "Automated docs-freshness refresh -- triggered by ${{ github.event.workflow_run.name }} run ${{ github.event.workflow_run.id }}. Only README.md/docs/DIRECTION_SIGNAL_STATUS.md's already-injected <!--METRIC:...--> values change; no wording is ever touched by this workflow." \
+              --body "Automated docs-freshness refresh -- triggered by ${{ github.event.workflow_run.name || github.event_name }} ${{ github.event.workflow_run.id || github.run_id }}. Only README.md/docs/DIRECTION_SIGNAL_STATUS.md's already-injected <!--METRIC:...--> values change; no wording is ever touched by this workflow." \
               || echo "gh pr create failed; checking whether the PR exists anyway" >&2
             EXISTING_PR=$(ci_retry gh pr list --repo "${GITHUB_REPOSITORY}" --head "$BRANCH" --state open --json number --jq '.[0].number')
             [ -n "$EXISTING_PR" ] || { echo "::error::no open PR for $BRANCH after gh pr create"; exit 1; }

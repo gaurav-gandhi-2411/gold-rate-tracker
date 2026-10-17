@@ -327,3 +327,93 @@ def test_newest_source_age_reads_git_and_fails_closed_without_it(tmp_path, monke
     monkeypatch.setattr(subprocess, "run", run)
     assert inject_metrics.newest_source_age_minutes(text, now=1000 + 600) == pytest.approx(10.0)
     assert inject_metrics.newest_source_age_minutes("no markers here") is None
+
+
+# ── explicit modes (2026-10-17): only --write writes; --help, no argument and typos never do ─────
+
+
+def _stale_readme(tmp_path):
+    path = tmp_path / "README.md"
+    path.write_text(_marker("coverage", "pct1", stale="99.9% (stale)"), encoding="utf-8")
+    return path, path.read_bytes()
+
+
+def test_help_prints_usage_and_writes_nothing(fixture_json, tmp_path, capsys):
+    path, before = _stale_readme(tmp_path)
+    with pytest.raises(SystemExit) as exc:
+        inject_metrics.main(["--help"])
+    assert exc.value.code == 0
+    out = capsys.readouterr().out
+    assert "--write" in out and "--check" in out
+    assert path.read_bytes() == before
+
+
+def test_no_argument_is_check_and_writes_nothing(fixture_json, tmp_path, monkeypatch):
+    monkeypatch.setattr(inject_metrics, "newest_source_age_minutes", lambda text, now=None: 999.0)
+    path, before = _stale_readme(tmp_path)
+    assert inject_metrics.main([]) == 1  # drift is reported, not repaired
+    assert path.read_bytes() == before
+
+
+def test_check_writes_nothing(fixture_json, tmp_path):
+    path, before = _stale_readme(tmp_path)
+    assert inject_metrics.main(["--check"]) == 1
+    assert path.read_bytes() == before
+
+
+def test_write_is_the_only_mode_that_writes(fixture_json, tmp_path):
+    path, before = _stale_readme(tmp_path)
+    assert inject_metrics.main(["--write"]) == 0
+    assert path.read_bytes() != before
+    assert "88.5%" in path.read_text(encoding="utf-8")
+    assert inject_metrics.main(["--check"]) == 0  # and the result is what --check expects
+
+
+@pytest.mark.parametrize(
+    "argv", [["--chek"], ["write"], ["--check", "--write"], ["--write", "--grace-minutes", "45"]]
+)
+def test_a_typo_or_conflicting_flags_is_a_usage_error_that_writes_nothing(
+    fixture_json, tmp_path, argv
+):
+    path, before = _stale_readme(tmp_path)
+    with pytest.raises(SystemExit) as exc:
+        inject_metrics.main(argv)
+    assert exc.value.code == 2
+    assert path.read_bytes() == before
+
+
+def test_the_real_script_with_help_changes_no_file_of_the_repo():
+    import hashlib
+    import subprocess
+
+    root = _SCRIPT_PATH.parent.parent
+    watched = [root / "README.md", *sorted((root / "docs").glob("*.md"))]
+    digest = lambda: [hashlib.sha256(p.read_bytes()).hexdigest() for p in watched]  # noqa: E731
+    before = digest()
+    for flags in (["--help"], []):
+        run = subprocess.run(
+            [sys.executable, str(_SCRIPT_PATH), *flags],
+            cwd=root,
+            capture_output=True,
+            text=True,
+            timeout=120,
+            check=False,
+        )
+        assert run.returncode in (0, 1), run.stderr  # 1 = drift reported, never repaired
+        assert digest() == before
+
+
+@pytest.mark.parametrize(
+    ("age_minutes", "expected"),
+    [(5.0, 0), (44.9, 0), (45.1, 1), (115.0, 1)],  # 115 = the 2026-10-17 case that went red
+)
+def test_an_unrelated_pr_passes_during_fresh_drift_and_fails_once_it_is_older_than_the_grace(
+    fixture_json, tmp_path, monkeypatch, age_minutes, expected
+):
+    """docs-freshness runs the same command on every PR: drift younger than lint.yml's 45 minutes is the
+    docs-refresh lag and must not fail an unrelated PR; older drift is real staleness and must."""
+    monkeypatch.setattr(
+        inject_metrics, "newest_source_age_minutes", lambda text, now=None: age_minutes
+    )
+    _stale_readme(tmp_path)
+    assert inject_metrics.main(["--check", "--grace-minutes", "45"]) == expected
