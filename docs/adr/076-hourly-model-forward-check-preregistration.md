@@ -58,6 +58,27 @@ One further check, written down before any of its data is scored.
    merged **before** 2026-11-16 and tested on synthetic data. Until then nothing is run on the real
    entries. `docs/MODEL_STATUS.md` shows only the counts.
 
+## Implementation note (2026-10-17, before any entry is scored)
+
+`scripts/check_adr066_promotion.py --adr 076` and the manual workflow `adr076-look.yml` implement the
+decision above (tests: `tests/test_adr076_look.py`, `tests/test_adr076_look_workflow.py`, synthetic data
+only). The ADR 066 check is unchanged and refuses the 076 options. Reading the text back against the code
+showed two things it leaves open; they are recorded here so neither is decided after the data:
+
+1. **Condition c needs 40 fixes, not 20.** The range-coverage test uses the walk-forward conformal recipe
+   of `ml.nextfix.flat_record`: 20 earlier pairs to calibrate, then at least 20 scored points. A window
+   with 20 to 39 resolved fixes meets the count gate but condition c is "not evaluable", and not evaluable
+   fails (fail closed). At about one fix per window per weekday, 40 fixes arrive in roughly 8 weeks
+   (about 2026-12-14), not on 2026-11-16. GG's choice, before the first look and not CC's: keep as written
+   (a 2026-11-16 look can then only fail c, so it is effectively a count check); raise `min_fixes` to 40
+   (an ADR amendment; the option exists, the workflow would need the flag); or calibrate the band on
+   pre-cut-off entries without scoring them.
+2. **"First Monday on which a window has the counts" versus "still short at its look date".** The code
+   opens the look on any Monday on or after 2026-11-16 and computes an effect only for a window that has
+   the counts that Monday; a short window prints its counts and nothing else, so no look is spent. Whether
+   a window still short on 2026-11-16 is final (point 4) or waits for the next Monday (point 2) is not
+   settled by the text.
+
 ## Consequences
 
 - The hourly model and the P3+hourly average stay out of the pool until at least 2026-11-16 and only on a
