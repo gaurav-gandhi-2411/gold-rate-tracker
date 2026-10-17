@@ -1,8 +1,8 @@
 # ADR 076: Hourly world-price model, a second and forward-only check (pre-registration)
 
 Status: pre-registered by CC on 2026-10-17, before any data it covers is scored; accepted by GG and amended
-once by GG on 2026-10-17 (Amendment 1, rule version 2, with a frozen hash). Frozen from now on: a further
-change needs a new dated amendment and a new hash, made before the look.
+twice by GG on 2026-10-17 (Amendment 1, rule version 2; Amendment 2, rule version 3, each with a frozen
+hash). **The rule is now final: no further amendment before the look.**
 
 ## Context
 
@@ -91,13 +91,67 @@ above where they differ; everything else stands. Rule version 2.
    post-cut-off was published. Both are changed in a separate PR to count only until the look, before the
    next weekly-backtest run on 2026-10-19.
 
-Frozen rule, version 2: SHA-256 of the canonical JSON of `ADR076_RULE` in
-`scripts/check_adr066_promotion.py` (checked by `tests/test_adr076_look.py`):
+Frozen rule, version 2 (superseded by version 3 below): SHA-256 of the canonical JSON of `ADR076_RULE` in
+`scripts/check_adr066_promotion.py`:
 
 `dffcf418ecabbc08ac37bfe6760459e0084e80f5ee378954b2630f029e1f827b`
 
 Tests: c is evaluable at exactly 20 post-cut-off fixes; no effect function runs before the look day;
 calibration entries are never scored; a re-run after the look day ignores later entries.
+
+## Amendment 2 (2026-10-17, decided by GG; final; recorded before any post-cut-off effect is computed)
+
+Amendment 1 fixes condition (c)'s band on only 6 and 7 pre-cut-off resolved fixes, too few for a stable
+80% quantile. GG ruled to calibrate it on more data this check never scores. Rule version 3; it replaces
+the calibration source in point 1 of Amendment 1 and nothing else.
+
+1. **Calibration sources.** The band is fixed (never updated) from the union of (i) the resolved shadow
+   fixes logged before 2026-10-16T17:38:00Z, as in Amendment 1, and (ii) the **ADR 066 re-run decisions**:
+   `scripts/check_adr066_promotion.py` replays `ml.nextfix_intraday.forecast_at` hour by hour over the
+   cached 1-hour bars and the IBJA fixes (`backtest_rows`, the loop behind the ADR 066 backtest), and the
+   last decision of each base fix is a calibration fix. Beta is 1.0, as for the look; nothing is fitted.
+   The cached bars are a rolling 60 days (`ml.macro.update_intraday_cache` overwrites them), so a re-run on
+   the look day would no longer reproduce these fixes. They are therefore frozen now in
+   `reports/adr076_calibration.json` (written by `--adr 076 --freeze-calibration`, from the manual run
+   39018200881 on the bars as of 2026-10-17, 48 morning and 46 afternoon fixes), and the look reads that file and refuses it unless its SHA-256
+   is the registered one.
+   Where a base fix is in both, the shadow row is used. The band recipe is the one condition 4 of ADR 066
+   uses (`ml.nextfix.flat_record`): the EWMA volatility of the log errors, causal, and the 80% quantile of
+   |error| / (volatility x base); the only difference is that here the quantile is taken once on the
+   calibration fixes instead of walking forward.
+2. **Nothing from after the cut-off.** The cached bars run past the cut-off (the ADR 066 backtest file
+   ends at 2026-10-16T21:00Z), so a re-run decision counts only when both its decision time and the
+   instant its target fix was published are strictly before 2026-10-16T17:38:00Z (`target_at` is recorded
+   on each row; a row without it is dropped). A base fix that has a scored (post-cut-off) shadow decision is
+   never calibration. The decisions are replayed from the bars, so the predictor is the same code as the
+   shadow's; they were built before the cut-off and were seen by the ADR 066 check, which is why they
+   may calibrate but are never scored here.
+3. **Known limit.** The ADR 066 check has seen these decisions. Beta 1.0 was fixed in advance as the value
+   the live predictor uses, not chosen from them (in that backtest beta 0.5 had the lower MAE in the
+   morning window, 23.3 against 29.8, and the two were level in the afternoon, 79.0 against 78.2). They
+   only set the width of the band, not any effect; (a) and (b) are scored on post-cut-off shadow entries
+   alone.
+4. **Calibration size.** Before (Amendment 1, shadow only; run 38941136174): 6 and 7 fixes (morning,
+   afternoon). After (counts-only run 39018471976, sha of the branch): 48 and 46 fixes (6 shadow + 42 ADR 066 re-run, and 7 shadow + 39 ADR 066 re-run).
+5. **Look not taken if the frozen file cannot be used.** If, on the look Monday, the file is missing or its
+   SHA-256 differs from the registered one, the script takes no look and computes nothing; the same Monday
+   is the look on the next run, as the look day depends on counts alone.
+6. **The rule is final.** No further amendment before the look. Everything else (80 per cent band, Wilson
+   interval, minimum 5 calibration fixes, the one look, alpha, 20 fixes and 28 days) stands.
+
+Frozen rule, version 3: SHA-256 of the canonical JSON of `ADR076_RULE` in
+`scripts/check_adr066_promotion.py` (checked by `tests/test_adr076_look.py`):
+
+`52d9da4bb82d3e77eb25d62a60e125f89fe80cae23d3fd17a395faf0f1ffa821`
+
+It includes the SHA-256 of the frozen calibration file,
+`c8ebed4a61dc74979b53dd9c3d5f5d75a74feaa17c87cd8d32da9e7f494044e9`.
+
+Tests: the re-run fixes widen the calibration and the shadow row wins an overlap; no decision, target or
+bar from after the cut-off enters; (c) is evaluable at exactly 20 post-cut-off fixes with no shadow
+calibration at all; the folds are never scored in (a) and (b); the look stays closed, and no effect function
+runs, before the look day with a large fold set; missing folds take no look and spend none; the rule is
+final.
 
 ## Consequences
 
