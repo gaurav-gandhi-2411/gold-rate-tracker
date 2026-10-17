@@ -110,6 +110,11 @@ the calibration source in point 1 of Amendment 1 and nothing else.
    `scripts/check_adr066_promotion.py` replays `ml.nextfix_intraday.forecast_at` hour by hour over the
    cached 1-hour bars and the IBJA fixes (`backtest_rows`, the loop behind the ADR 066 backtest), and the
    last decision of each base fix is a calibration fix. Beta is 1.0, as for the look; nothing is fitted.
+   The cached bars are a rolling 60 days (`ml.macro.update_intraday_cache` overwrites them), so a re-run on
+   the look day would no longer reproduce these fixes. They are therefore frozen now in
+   `data/adr076_calibration.json` (written by `--adr 076 --freeze-calibration`, from the manual run
+   FREEZE_RUN on the bars as of 2026-10-17), and the look reads that file and refuses it unless its SHA-256
+   is the registered one.
    Where a base fix is in both, the shadow row is used. The band recipe is the one condition 4 of ADR 066
    uses (`ml.nextfix.flat_record`): the EWMA volatility of the log errors, causal, and the 80% quantile of
    |error| / (volatility x base); the only difference is that here the quantile is taken once on the
@@ -128,16 +133,19 @@ the calibration source in point 1 of Amendment 1 and nothing else.
    alone.
 4. **Calibration size.** Before (Amendment 1, shadow only; run 38941136174): 6 and 7 fixes (morning,
    afternoon). After: COUNTS_PENDING.
-5. **Look not taken if the re-run cannot be rebuilt.** If, on the look Monday, the cached bars cannot be
-   loaded, the script takes no look and computes nothing; the same Monday is the look on the next run, as
-   the look day depends on counts alone.
+5. **Look not taken if the frozen file cannot be used.** If, on the look Monday, the file is missing or its
+   SHA-256 differs from the registered one, the script takes no look and computes nothing; the same Monday
+   is the look on the next run, as the look day depends on counts alone.
 6. **The rule is final.** No further amendment before the look. Everything else (80 per cent band, Wilson
    interval, minimum 5 calibration fixes, the one look, alpha, 20 fixes and 28 days) stands.
 
 Frozen rule, version 3: SHA-256 of the canonical JSON of `ADR076_RULE` in
 `scripts/check_adr066_promotion.py` (checked by `tests/test_adr076_look.py`):
 
-`26b4f69096a5e95502562424fe6165808ed1af3fb473fe68c33ab7c1b36dbaa8`
+`52d9da4bb82d3e77eb25d62a60e125f89fe80cae23d3fd17a395faf0f1ffa821`
+
+It includes the SHA-256 of the frozen calibration file,
+`c8ebed4a61dc74979b53dd9c3d5f5d75a74feaa17c87cd8d32da9e7f494044e9`.
 
 Tests: the re-run fixes widen the calibration and the shadow row wins an overlap; no decision, target or
 bar from after the cut-off enters; (c) is evaluable at exactly 20 post-cut-off fixes with no shadow

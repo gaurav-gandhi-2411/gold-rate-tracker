@@ -493,7 +493,7 @@ ADR076_MIN_CALIBRATION = 5  # resolved pre-cut-off fixes needed to fix the band 
 # The ADR 066 re-run fixes are frozen in a file (the cached 1-hour bars are a rolling 60 days, so a
 # later re-run would no longer reproduce them); its SHA-256 is part of the registered rule.
 ADR076_CALIBRATION_FILE = "adr076_calibration.json"
-ADR076_CALIBRATION_SHA256 = "SHA_PENDING"
+ADR076_CALIBRATION_SHA256 = "c8ebed4a61dc74979b53dd9c3d5f5d75a74feaa17c87cd8d32da9e7f494044e9"
 WEEKDAY_MONDAY = 0
 
 # Frozen rule (amendment 2026-10-17): its SHA-256 is printed in the ADR and checked by a test, so a
@@ -661,7 +661,7 @@ def load_folds(data_dir: Path) -> list[dict] | None:
     not the registered one (the look is then not taken)."""
     path = data_dir / ADR076_CALIBRATION_FILE
     try:
-        raw = path.read_bytes()
+        raw = path.read_bytes().replace(b"\r\n", b"\n")  # a checkout with CRLF must hash the same
         if hashlib.sha256(raw).hexdigest() != ADR076_CALIBRATION_SHA256:
             return None
         doc = json.loads(raw)

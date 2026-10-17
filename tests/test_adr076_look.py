@@ -7,6 +7,7 @@ window meets both count gates, and (5) leave the ADR 066 check unchanged."""
 
 from __future__ import annotations
 
+import hashlib
 import importlib.util
 import json
 import sys
@@ -351,7 +352,8 @@ def test_cli_076_on_the_look_day_reports_the_effect(tmp_path, capsys, monkeypatc
     mod.main(_look_args(data, out))
     rep = json.loads((out / "adr076_look_2026-11-16.json").read_text())
     assert rep["look_open"] is True and "effect" in rep["windows"][WIN]
-    assert rep["adr066_folds"] == {"available": True, "n_decisions": 30}
+    assert rep["adr066_folds"]["available"] is True and rep["adr066_folds"]["n_decisions"] == 30
+    assert rep["adr066_folds"]["file_sha256"] == mod.ADR076_CALIBRATION_SHA256
     assert "a_bootstrap_ci_below_0" in capsys.readouterr().out
 
 
@@ -479,20 +481,97 @@ def test_the_look_missed_for_missing_folds_is_the_same_monday_on_the_next_run():
     assert first["effect"] == again["effect"]
 
 
-def test_load_folds_replays_decisions_and_scores_nothing(tmp_path, monkeypatch, no_effect):
-    data = tmp_path
-    (data / ni.INTRADAY_FILE).write_bytes(b"x")
-    (data / mod.nextfix.IBJA_PATH.name).write_text("{}")
-    sentinel = [{"window": WIN, "t": "2026-10-01T08:00:00Z", "target_at": "2026-10-01T11:30:00Z"}]
-    monkeypatch.setattr(mod.nextfix, "load_ibja_full", lambda p: "ibja")
-    monkeypatch.setattr(mod.nextfix, "fix_events", lambda x: ["events"])
-    monkeypatch.setattr(mod.nextfix_intraday, "load_bars", lambda d: "bars")
-    monkeypatch.setattr(mod, "backtest_rows", lambda events, g: sentinel)
-    assert mod.load_folds(data) == sentinel  # no_effect: score/flat_record/DM would raise
+def _frozen(tmp_path: Path, monkeypatch, rows: dict, crlf: bool = False) -> Path:
+    raw = mod.calibration_bytes({"windows": rows})
+    if crlf:
+        raw = raw.replace(b"\n", b"\r\n")
+    (tmp_path / mod.ADR076_CALIBRATION_FILE).write_bytes(raw)
+    monkeypatch.setattr(
+        mod,
+        "ADR076_CALIBRATION_SHA256",
+        hashlib.sha256(mod.calibration_bytes({"windows": rows})).hexdigest(),
+    )
+    return tmp_path
 
 
-def test_load_folds_is_none_when_the_bars_are_absent_or_unreadable(tmp_path, monkeypatch):
+def test_load_folds_reads_the_frozen_file_when_its_sha_is_the_registered_one(
+    tmp_path, monkeypatch, no_effect
+):
+    rows = {w: [{"window": w, "base_at": "2026-09-01T06:30:00Z"}] for w in mod.WINDOWS}
+    data = _frozen(tmp_path, monkeypatch, rows)
+    assert len(mod.load_folds(data)) == 2  # no_effect: nothing is scored while loading
+    assert len(mod.load_folds(_frozen(tmp_path, monkeypatch, rows, crlf=True))) == 2
+
+
+def test_load_folds_refuses_a_missing_edited_or_unreadable_file(tmp_path, monkeypatch):
     assert mod.load_folds(tmp_path) is None
+    rows = {w: [{"window": w}] for w in mod.WINDOWS}
+    data = _frozen(tmp_path, monkeypatch, rows)
+    path = data / mod.ADR076_CALIBRATION_FILE
+    path.write_bytes(path.read_bytes().replace(b"window", b"widnow", 1))  # one edit
+    assert mod.load_folds(data) is None
+    path.write_bytes(b"not json")
+    assert mod.load_folds(data) is None
+
+
+def test_the_committed_calibration_file_is_the_registered_one_and_has_nothing_after_the_cutoff():
+    data = _ROOT / "data"
+    raw = (data / mod.ADR076_CALIBRATION_FILE).read_bytes().replace(b"\r\n", b"\n")
+    assert hashlib.sha256(raw).hexdigest() == mod.ADR076_CALIBRATION_SHA256
+    folds = mod.load_folds(data)
+    assert folds, "the registered file must load"
+    cut = mod.ADR076_FIRST_ENTRY_AFTER
+    assert all(r["base_at"] < cut and r["t"] < cut and r["target_at"] < cut for r in folds)
+    for w in mod.WINDOWS:
+        ba = [r["base_at"] for r in folds if r["window"] == w]
+        assert ba == sorted(ba) and len(ba) == len(set(ba))  # one per base fix, oldest first
+    assert {w: sum(r["window"] == w for r in folds) for w in mod.WINDOWS} == {
+        "after_morning_rate": 48,
+        "after_afternoon_rate": 46,
+    }
+    assert mod.ADR076_CALIBRATION_SHA256 in (
+        _ROOT / "docs" / "adr" / "076-hourly-model-forward-check-preregistration.md"
+    ).read_text(encoding="utf-8")
+
+
+def test_the_calibration_document_cuts_the_cached_bars_at_the_cutoff():
+    ok = make_folds([0, 1, 2], start=datetime(2026, 8, 1, tzinfo=UTC))
+    late = make_folds([0, 1], start=datetime(2026, 10, 17, tzinfo=UTC))
+    straddle = [{**ok[0], "base_at": "2026-10-16T11:30:00Z", "target_at": "2026-10-17T06:30:00Z"}]
+    doc = mod.calibration_document(ok + late + straddle, CUTOFF)
+    assert len(doc["windows"][WIN]) == 3 and doc["beta"] == 1.0
+    assert set(doc["windows"][WIN][0]) == {
+        "window",
+        "base_at",
+        "t",
+        "target_at",
+        "base",
+        "pred",
+        "target",
+    }
+    assert set(doc["windows"][WIN][0]["pred"]) == {"beta_1.0"}  # nothing else is carried
+    assert mod.calibration_bytes(doc) == mod.calibration_bytes(doc)
+
+
+def test_freeze_mode_writes_the_file_and_computes_no_effect(
+    tmp_path, monkeypatch, capsys, no_effect
+):
+    monkeypatch.setattr(mod, "rebuild_folds", lambda d: make_folds(list(range(10))))
+    out = tmp_path / "f.json"
+    assert mod.main(["--adr", "076", "--freeze-calibration", str(out)]) == 0
+    doc = json.loads(out.read_text())
+    assert len(doc["windows"][WIN]) == 10
+    assert hashlib.sha256(out.read_bytes()).hexdigest() in capsys.readouterr().out
+
+
+def test_freeze_mode_fails_when_the_bars_cannot_be_rebuilt(tmp_path, monkeypatch):
+    monkeypatch.setattr(mod, "rebuild_folds", lambda d: None)
+    assert mod.main(["--adr", "076", "--freeze-calibration", str(tmp_path / "f.json")]) == 1
+    assert not (tmp_path / "f.json").exists()
+
+
+def test_rebuild_folds_is_none_when_the_bars_are_absent_or_unreadable(tmp_path, monkeypatch):
+    assert mod.rebuild_folds(tmp_path) is None
     (tmp_path / ni.INTRADAY_FILE).write_bytes(b"x")
     (tmp_path / mod.nextfix.IBJA_PATH.name).write_text("{}")
 
@@ -500,7 +579,13 @@ def test_load_folds_is_none_when_the_bars_are_absent_or_unreadable(tmp_path, mon
         raise ValueError("unreadable")
 
     monkeypatch.setattr(mod.nextfix, "load_ibja_full", boom)
-    assert mod.load_folds(tmp_path) is None
+    assert mod.rebuild_folds(tmp_path) is None
+
+
+def test_the_adr066_check_refuses_the_freeze_option():
+    with pytest.raises(SystemExit) as ei:
+        mod.main(["--freeze-calibration", "x.json"])
+    assert ei.value.code == 2
 
 
 def test_backtest_rows_carry_the_instant_their_target_fix_was_published():
