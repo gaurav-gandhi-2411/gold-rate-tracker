@@ -68,6 +68,7 @@ if str(_REPO) not in sys.path:
 from ml import nextfix, nextfix_intraday
 from ml.direction.evaluate import compute_direction_metrics
 from ml.direction.gate import decide_direction_signal
+from ml.metrics import wilson_confidence_interval
 
 WINDOWS = ("after_morning_rate", "after_afternoon_rate")
 OUT_OF_SCOPE = ("after_us_close",)
@@ -464,9 +465,13 @@ def run_check(data_dir: Path, now: datetime | None = None) -> dict:
 
 # -- ADR 076: the forward-only second look -------------------------------------------------------
 #
-# docs/adr/076-hourly-model-forward-check-preregistration.md. Entries logged strictly after the
-# cut-off only, beta fixed in advance, and NO effect size, CI or p-value is computed before the look:
-# the counts decide whether (and when) the look may run, the look runs once.
+# docs/adr/076-hourly-model-forward-check-preregistration.md, with its 2026-10-17 amendment (rule v2).
+# Entries logged strictly after the cut-off are scored; entries logged before it only calibrate the
+# range band and are never scored; beta is fixed in advance; and NO effect size, CI or p-value is
+# computed before the look. The look is the FIRST Monday on or after ADR076_LOOK_NOT_BEFORE on which a
+# window meets both count gates, counted on the entries logged before 00:00Z of that Monday. Re-running
+# the script later gives the same answer from the same entries (data logged after that Monday is
+# ignored), so a re-run is not a second look.
 
 ADR076_FIRST_ENTRY_AFTER = "2026-10-16T17:38:00Z"
 ADR076_MIN_FIXES = 20
@@ -476,7 +481,37 @@ ADR076_BETA = 1.0
 ADR076_LOOK_NOT_BEFORE = "2026-11-16"
 ADR076_BOOTSTRAP_B = 10_000
 ADR076_SEED = 42
+ADR076_MIN_CALIBRATION = 5  # resolved pre-cut-off fixes needed to fix the band (as score()'s 5)
 WEEKDAY_MONDAY = 0
+
+# Frozen rule (amendment 2026-10-17): its SHA-256 is printed in the ADR and checked by a test, so a
+# change to any registered value is a visible change of the hash.
+ADR076_RULE = {
+    "adr": "076",
+    "rule_version": 2,
+    "first_entry_after": ADR076_FIRST_ENTRY_AFTER,
+    "min_fixes": ADR076_MIN_FIXES,
+    "min_days": ADR076_MIN_DAYS,
+    "alpha": ADR076_ALPHA,
+    "beta": ADR076_BETA,
+    "bootstrap_b": ADR076_BOOTSTRAP_B,
+    "seed": ADR076_SEED,
+    "look_not_before": ADR076_LOOK_NOT_BEFORE,
+    "look_day": "first Monday on or after look_not_before on which a window meets min_fixes and "
+    "min_days on entries logged before 00:00Z of that Monday; counts only; one look",
+    "coverage": "80% volatility-scaled conformal quantile fixed on resolved entries logged before "
+    "first_entry_after (never scored); coverage scored on entries after it; Wilson 95% contains 0.80",
+    "min_calibration_fixes": ADR076_MIN_CALIBRATION,
+}
+
+
+def adr076_rule_hash() -> str:
+    canon = json.dumps(ADR076_RULE, sort_keys=True, separators=(",", ":"))
+    return hashlib.sha256(canon.encode("utf-8")).hexdigest()
+
+
+def _window_entries(entries: list[dict], window: str) -> list[dict]:
+    return [e for e in entries if e["window"] == window]
 
 
 def forward_rows(entries: list[dict], window: str, first_after: datetime) -> list[dict]:
@@ -485,29 +520,66 @@ def forward_rows(entries: list[dict], window: str, first_after: datetime) -> lis
     return last_decision_per_fix(
         [
             e
-            for e in entries
-            if e["window"] == window and _parse_t(str(e["logged_at"])) > first_after
+            for e in _window_entries(entries, window)
+            if _parse_t(str(e["logged_at"])) > first_after
         ],
         window,
     )
 
 
+def calibration_rows(entries: list[dict], window: str, first_after: datetime) -> list[dict]:
+    """Resolved entries of one window logged strictly BEFORE the cut-off, one per base fix. They only
+    fix the range band; a base fix that also has a post-cut-off decision is left out so nothing
+    scored is also used to calibrate."""
+    scored = {r["base_at"] for r in forward_rows(entries, window, first_after)}
+    before = [
+        e
+        for e in _window_entries(entries, window)
+        if _parse_t(str(e["logged_at"])) < first_after and e["base_at"] not in scored
+    ]
+    return last_decision_per_fix(before, window)
+
+
 def adr076_counts(entries: list[dict], window: str, first_after: datetime) -> dict:
     """The only numbers read before the look: how many entries, days and resolved base fixes."""
     in_win = [
-        e for e in entries if e["window"] == window and _parse_t(str(e["logged_at"])) > first_after
+        e for e in _window_entries(entries, window) if _parse_t(str(e["logged_at"])) > first_after
     ]
     days = sorted({str(e["logged_at"])[:10] for e in in_win})
     span = (
         (datetime.fromisoformat(days[-1]) - datetime.fromisoformat(days[0])).days + 1 if days else 0
     )
-    resolved = forward_rows(entries, window, first_after)
     return {
         "n_entries": len(in_win),
         "distinct_days": len(days),
         "calendar_span_days": span,
-        "n_resolved_base_fixes": len(resolved),
+        "n_resolved_base_fixes": len(forward_rows(entries, window, first_after)),
     }
+
+
+def _counts_ready(counts: dict, opts: dict) -> bool:
+    return bool(
+        counts["n_resolved_base_fixes"] >= opts["min_fixes"]
+        and counts["calendar_span_days"] >= opts["min_days"]
+    )
+
+
+def _before(entries: list[dict], cutoff: datetime) -> list[dict]:
+    return [e for e in entries if _parse_t(str(e["logged_at"])) < cutoff]
+
+
+def look_day(entries: list[dict], window: str, now: datetime, opts: dict) -> datetime | None:
+    """The first Monday (00:00Z) on or after look_not_before, not after ``now``, on which the window
+    met both count gates on the entries logged before that instant. Counts only."""
+    first_after = _parse_t(opts["first_entry_after"])
+    day = datetime.fromisoformat(opts["look_not_before"]).replace(tzinfo=UTC)
+    day += timedelta(days=(WEEKDAY_MONDAY - day.weekday()) % 7)
+    while day <= now:
+        counts = adr076_counts(_before(entries, day), window, first_after)
+        if _counts_ready(counts, opts):
+            return day
+        day += timedelta(days=7)
+    return None
 
 
 def dm_p_one_sided(err_model: np.ndarray, err_hold: np.ndarray) -> float:
@@ -520,8 +592,45 @@ def dm_p_one_sided(err_model: np.ndarray, err_hold: np.ndarray) -> float:
     return p2 / 2.0 if better else 1.0 - p2 / 2.0
 
 
-def adr076_effect(rows: list[dict], window: str, beta: float, alpha: float) -> dict:
-    """Conditions a-c of ADR 076 on the forward rows. Called ONLY at the look."""
+def cond_c_076(cal: list[dict], scored: list[dict], beta: float) -> dict:
+    """Range coverage with a band fixed on the calibration rows and scored on the forward rows.
+
+    Same volatility-scaled recipe as ml.nextfix.flat_record (EWMA vol of the log errors, causal),
+    but the 80% quantile of the scaled errors comes from the pre-cut-off rows only and is never
+    updated, so the forward entries are scored and not used to fit. Needs ADR076_MIN_CALIBRATION."""
+    if len(cal) < ADR076_MIN_CALIBRATION or not scored:
+        return {
+            "pass": False,
+            "n_calibration": len(cal),
+            "detail": f"not evaluable: {len(cal)} calibration fixes (need >= "
+            f"{ADR076_MIN_CALIBRATION}), {len(scored)} scored",
+        }
+    rows = cal + scored
+    base = np.array([float(r["pred"][f"beta_{beta}"]) for r in rows])
+    target = np.array([float(r["target"]) for r in rows])
+    vol = nextfix._ewm_vol(np.log(target / base))
+    err = np.abs(target - base)
+    n_cal = len(cal)
+    q = float(np.quantile(err[:n_cal] / (vol[:n_cal] * base[:n_cal]), nextfix.NOMINAL))
+    hits = err[n_cal:] <= q * vol[n_cal : len(rows)] * base[n_cal:]
+    k, n = int(hits.sum()), len(hits)
+    lo, hi = (round(v, 3) for v in wilson_confidence_interval(k, n))
+    return {
+        "pass": bool(lo <= nextfix.NOMINAL <= hi),
+        "n_calibration": n_cal,
+        "n_scored": n,
+        "coverage": round(k / n, 3),
+        "wilson95": [lo, hi],
+        "nominal": nextfix.NOMINAL,
+        "detail": f"coverage {round(k / n, 3)} on n={n} (band fixed on {n_cal} earlier fixes), "
+        f"Wilson95 [{lo}, {hi}] (need to contain {nextfix.NOMINAL})",
+    }
+
+
+def adr076_effect(
+    rows: list[dict], cal: list[dict], window: str, beta: float, alpha: float
+) -> dict:
+    """Conditions a-c of ADR 076. Called ONLY at the look."""
     tgt = np.array([r["target"] for r in rows], dtype=float)
     err = np.abs(np.array([r["pred"][f"beta_{beta}"] for r in rows], dtype=float) - tgt)
     hold = np.abs(np.array([r["pred"]["beta_0.0"] for r in rows], dtype=float) - tgt)
@@ -536,7 +645,7 @@ def adr076_effect(rows: list[dict], window: str, beta: float, alpha: float) -> d
     ]
     change = round(chg(np.arange(len(rows))), 1)
     p = round(dm_p_one_sided(err, hold), 4)
-    cov = cond4(rows, window, beta)
+    cov = cond_c_076(cal, rows, beta)
     a = {"pass": bool(ci[1] < 0), "change_pct": change, "ci95": ci, "n": len(rows)}
     b = {"pass": bool(p < alpha), "dm_p_one_sided": p, "alpha": alpha}
     return {
@@ -547,33 +656,33 @@ def adr076_effect(rows: list[dict], window: str, beta: float, alpha: float) -> d
     }
 
 
-def evaluate_window_076(
-    window: str, entries: list[dict], now: datetime, opts: dict, look_allowed: bool
-) -> dict:
+def evaluate_window_076(window: str, entries: list[dict], now: datetime, opts: dict) -> dict:
     first_after = _parse_t(opts["first_entry_after"])
-    counts = adr076_counts(entries, window, first_after)
-    ready = (
-        counts["n_resolved_base_fixes"] >= opts["min_fixes"]
-        and counts["calendar_span_days"] >= opts["min_days"]
-    )
-    out: dict = {"window": window, "counts": counts, "counts_ready": bool(ready)}
+    day = look_day(entries, window, now, opts)
+    as_of = day if day is not None else now
+    seen = _before(entries, as_of) if day is not None else entries
+    counts = adr076_counts(seen, window, first_after)
+    out: dict = {
+        "window": window,
+        "counts": counts,
+        "counts_ready": _counts_ready(counts, opts),
+        "look_day": day.strftime("%Y-%m-%d") if day is not None else None,
+    }
     text = (
         f"{counts['n_resolved_base_fixes']}/{opts['min_fixes']} resolved base fixes, "
         f"{counts['calendar_span_days']}/{opts['min_days']} calendar days"
     )
-    if not look_allowed:
-        out["verdict"] = f"counts only ({text}); the look is not open: no effect computed"
+    if day is None:
+        out["verdict"] = f"counts only ({text}); no look day yet: no effect computed"
         return out
-    if not ready:
-        out["verdict"] = f"short of the counts on a look day ({text}); no effect computed"
-        return out
-    rows = forward_rows(entries, window, first_after)
-    eff = adr076_effect(rows, window, opts["beta"], opts["alpha"])
+    rows = forward_rows(seen, window, first_after)
+    cal = calibration_rows(seen, window, first_after)
+    eff = adr076_effect(rows, cal, window, opts["beta"], opts["alpha"])
     out["effect"] = eff
     out["verdict"] = (
-        f"pass on beta {opts['beta']} (a, b, c all hold)"
+        f"look of {out['look_day']}: pass on beta {opts['beta']} (a, b, c all hold)"
         if eff["all_pass"]
-        else "fail: "
+        else f"look of {out['look_day']}: fail: "
         + ", ".join(k for k, v in eff.items() if isinstance(v, dict) and not v["pass"])
     )
     return out
@@ -582,20 +691,21 @@ def evaluate_window_076(
 def run_adr076(data_dir: Path, now: datetime, opts: dict) -> dict:
     shadow = _load_json(data_dir / nextfix_intraday.SHADOW_PATH.name)
     entries = clean_entries((shadow or {}).get("entries"))
-    open_from = datetime.fromisoformat(opts["look_not_before"]).replace(tzinfo=UTC)
-    look_allowed = now >= open_from and now.weekday() == WEEKDAY_MONDAY
+    windows = {w: evaluate_window_076(w, entries, now, opts) for w in WINDOWS}
     return {
         "adr": "076",
+        "rule_hash": adr076_rule_hash(),
         "run_at": nextfix_intraday._iso(now),
         "repo_sha": _git_sha(),
         "data_file_sha256": {
             nextfix_intraday.SHADOW_PATH.name: _sha256(data_dir / nextfix_intraday.SHADOW_PATH.name)
         },
         "options": opts,
-        "look_open": bool(look_allowed),
-        "look_rule": f"a Monday on or after {opts['look_not_before']}; before that only counts are read",
+        "look_open": any(r["look_day"] for r in windows.values()),
+        "look_rule": f"the first Monday on or after {opts['look_not_before']} on which a window "
+        "meets both count gates; before that only counts are read",
         "shadow_entries_loaded": len(entries),
-        "windows": {w: evaluate_window_076(w, entries, now, opts, look_allowed) for w in WINDOWS},
+        "windows": windows,
         "note": NOTE_PROMOTION,
     }
 
@@ -614,6 +724,7 @@ def main_076(args: argparse.Namespace, now: datetime) -> int:
     path = args.out_dir / f"adr076_look_{now.strftime('%Y-%m-%d')}.json"
     path.write_text(json.dumps(res, indent=1) + "\n")
     print(f"ADR 076 forward check @ {res['run_at']}  sha {res['repo_sha'][:10]}")
+    print(f"rule hash (v2): {res['rule_hash']}")
     print(f"look open: {res['look_open']} ({res['look_rule']})")
     print(f"shadow entries loaded: {res['shadow_entries_loaded']}")
     for w, r in res["windows"].items():

@@ -1,7 +1,8 @@
 # ADR 076: Hourly world-price model, a second and forward-only check (pre-registration)
 
-Status: pre-registered by CC on 2026-10-17, before any data it covers is scored. GG may amend it until
-the first scoring date; after that it is frozen.
+Status: pre-registered by CC on 2026-10-17, before any data it covers is scored; accepted by GG and amended
+once by GG on 2026-10-17 (Amendment 1, rule version 2, with a frozen hash). Frozen from now on: a further
+change needs a new dated amendment and a new hash, made before the look.
 
 ## Context
 
@@ -58,26 +59,45 @@ One further check, written down before any of its data is scored.
    merged **before** 2026-11-16 and tested on synthetic data. Until then nothing is run on the real
    entries. `docs/MODEL_STATUS.md` shows only the counts.
 
-## Implementation note (2026-10-17, before any entry is scored)
+## Amendment 1 (2026-10-17, decided by GG; recorded before any post-cut-off effect is computed)
 
-`scripts/check_adr066_promotion.py --adr 076` and the manual workflow `adr076-look.yml` implement the
-decision above (tests: `tests/test_adr076_look.py`, `tests/test_adr076_look_workflow.py`, synthetic data
-only). The ADR 066 check is unchanged and refuses the 076 options. Reading the text back against the code
-showed two things it leaves open; they are recorded here so neither is decided after the data:
+Reading the text against the code (`scripts/check_adr066_promotion.py --adr 076`, workflow
+`adr076-look.yml`) showed two gaps. GG ruled on both on 2026-10-17. This amendment replaces points 2 and 3c
+above where they differ; everything else stands. Rule version 2.
 
-1. **Condition c needs 40 fixes, not 20.** The range-coverage test uses the walk-forward conformal recipe
-   of `ml.nextfix.flat_record`: 20 earlier pairs to calibrate, then at least 20 scored points. A window
-   with 20 to 39 resolved fixes meets the count gate but condition c is "not evaluable", and not evaluable
-   fails (fail closed). At about one fix per window per weekday, 40 fixes arrive in roughly 8 weeks
-   (about 2026-12-14), not on 2026-11-16. GG's choice, before the first look and not CC's: keep as written
-   (a 2026-11-16 look can then only fail c, so it is effectively a count check); raise `min_fixes` to 40
-   (an ADR amendment; the option exists, the workflow would need the flag); or calibrate the band on
-   pre-cut-off entries without scoring them.
-2. **"First Monday on which a window has the counts" versus "still short at its look date".** The code
-   opens the look on any Monday on or after 2026-11-16 and computes an effect only for a window that has
-   the counts that Monday; a short window prints its counts and nothing else, so no look is spent. Whether
-   a window still short on 2026-11-16 is final (point 4) or waits for the next Monday (point 2) is not
-   settled by the text.
+1. **Coverage (3c) is calibrated on entries from before the cut-off.** The walk-forward recipe of
+   `ml.nextfix.flat_record` needs 20 earlier pairs and then 20 scored points, so a window with 20 to 39 resolved
+   fixes could never satisfy c. Now: the volatility-scaled 80% band is fixed from the resolved shadow
+   entries of that window logged **before** 2026-10-16T17:38:00Z (the quantile of their scaled errors, never
+   updated); coverage is scored only on resolved entries logged **after** the cut-off; c holds when the
+   Wilson 95% interval of that coverage contains 0.80. Calibration entries are never scored by this check
+   (a base fix with decisions on both sides of the cut-off counts as scored, not as calibration; an entry
+   logged exactly at the cut-off is neither). At least 5 resolved calibration fixes are needed, the same
+   floor `ml.nextfix_intraday.score` uses; with fewer, c is "not evaluable" and fails. The first check
+   found 6 and 7 resolved pre-cut-off fixes (run 38941136174), so the band is fixed on few points: this is a
+   known weakness, accepted, and the look can run at 20 post-cut-off fixes.
+2. **Exactly one look, on a fixed day.** The look is the first Monday on or after 2026-11-16 on which a
+   window meets both count gates (at least 20 resolved fixes and at least 28 calendar days, post-cut-off),
+   counted on the entries logged before 00:00Z of that Monday. The gates are counts only: nothing about an
+   effect is computed, printed or read before that Monday. A window that is short on a Monday simply waits
+   for the next one; no end date was set and none is invented here. A later run of the script uses the same
+   entries (those logged before 00:00Z of the look Monday) and returns the same answer, so a re-run is not a
+   second look.
+3. **Nothing was computed so far.** The 2026-10-16 check (run 38941136174) ran at the cut-off and used only
+   earlier entries. `adr076-look.yml` has never been dispatched. One thing did compute effects on post-cut-off
+   entries without anyone reading them: `ml.nextfix_intraday.run` (every check-price run) stores
+   `score(all entries)` in the encrypted shadow file's summary. The weekly model scorecard prints the same
+   quantities from that file but was last generated 2026-10-12 (entries up to 2026-10-09), so nothing
+   post-cut-off was published. Both are changed in a separate PR to count only until the look, before the
+   next weekly-backtest run on 2026-10-19.
+
+Frozen rule, version 2: SHA-256 of the canonical JSON of `ADR076_RULE` in
+`scripts/check_adr066_promotion.py` (checked by `tests/test_adr076_look.py`):
+
+`dffcf418ecabbc08ac37bfe6760459e0084e80f5ee378954b2630f029e1f827b`
+
+Tests: c is evaluable at exactly 20 post-cut-off fixes; no effect function runs before the look day;
+calibration entries are never scored; a re-run after the look day ignores later entries.
 
 ## Consequences
 
