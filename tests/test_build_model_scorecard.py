@@ -767,3 +767,33 @@ def test_variant_that_is_the_champion_does_not_say_nothing_ships_automatically(
     assert "already the live model" in r["sentence"]
     other = _row(bms.build_rows(tmp_path), "p3_monday")
     assert "nothing ships automatically" in other["sentence"]
+
+
+def test_intraday_rows_are_frozen_at_the_adr076_cutoff(tmp_path: Path) -> None:
+    from ml import nextfix_intraday
+
+    def entry(day: str, logged: str) -> dict:
+        return {
+            "logged_at": logged,
+            "window": "after_us_close",
+            "base_at": f"{day}T11:30:00Z",
+            "base_date": day,
+            "target": 100.0,
+            "target_kind": "am",
+            "target_date": "2026-10-30",
+            "pred": {"beta_0.0": 90.0, "beta_0.5": 95.0, "beta_1.0": 99.0},
+        }
+
+    entries = [
+        entry("2026-10-05", "2026-10-05T12:00:00Z"),
+        entry("2026-10-16", "2026-10-16T17:38:00Z"),  # at the cut-off: still scored
+        entry("2026-10-17", "2026-10-17T12:00:00Z"),  # after it: not scored, not published
+        entry("2026-10-18", "2026-10-18T12:00:00Z"),
+    ]
+    _write(tmp_path, "nextfix_intraday_shadow.json", {"entries": entries, "summary": {}})
+    row = _row(bms.build_rows(tmp_path), "intraday_after_us_close")
+    assert row["forward"]["n"] == 2
+    assert row["forward"]["last_date"] == "2026-10-16"
+    assert any("frozen at 2026-10-16T17:38Z" in x for x in row["forward"]["extras"])
+    src = Path(bms.__file__).read_text(encoding="utf-8")
+    assert f'cutoff = "{nextfix_intraday.ADR076_CUTOFF}"' in src

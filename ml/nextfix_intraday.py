@@ -44,6 +44,11 @@ INTRADAY_FILE = "macro_intraday.parquet"
 BETAS = (0.0, 0.5, 1.0)
 MAX_BAR_GAP = timedelta(hours=6)  # a reading older than this before t is no reading
 SHADOW_KEEP_DAYS = 120
+# ADR 076 (amendment 1, 2026-10-17): entries logged after this instant belong to a forward-only look
+# whose effect size, interval and p-value may not be computed before the look day (first Monday on
+# or after 2026-11-16 with the counts met). Nothing in the pipeline scores them until then; only
+# scripts/check_adr066_promotion.py --adr 076 does. Entries up to and including it are scored as before.
+ADR076_CUTOFF = "2026-10-16T17:38:00Z"
 
 
 def _iso(t: datetime) -> str:
@@ -308,7 +313,15 @@ def run(now: datetime | None = None, data_dir: Path = DATA_DIR) -> dict:
     entries = update_shadow(load_shadow(data_dir / SHADOW_PATH.name), events, g, now)
     for e in entries:
         e.setdefault("t", e["logged_at"])
-    summary = {"generated_at": _iso(now), "n_entries": len(entries), **score(entries)}
+    # Only entries up to the ADR 076 cut-off are scored here: score() computes MAE changes, CIs and
+    # Diebold-Mariano p-values, which ADR 076 forbids on later entries before the look.
+    scored = [e for e in entries if str(e["logged_at"]) <= ADR076_CUTOFF]
+    summary = {
+        "generated_at": _iso(now),
+        "n_entries": len(entries),
+        "n_entries_after_adr076_cutoff": len(entries) - len(scored),
+        **score(scored),
+    }
     save_shadow(entries, data_dir / SHADOW_PATH.name, summary)
     bt = {"generated_at": _iso(now), **backtest(events, g)}
     (data_dir / BACKTEST_PATH.name).write_text(json.dumps(bt, indent=1) + "\n")
