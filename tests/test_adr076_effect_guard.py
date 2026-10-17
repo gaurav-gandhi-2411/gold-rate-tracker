@@ -29,6 +29,9 @@ SHADOW_NAMES = {"SHADOW_PATH", "BACKTEST_PATH", "load_shadow"}
 SHADOW_FILES = ("nextfix_intraday_shadow", "nextfix_intraday_backtest")
 CUTOFF_LITERAL = "2026-10-16T17:38:00Z"
 MODULE_BODY = "<module>"
+# ADR 077: the beta 0.5 challenger. Names and literals that mark a use of it.
+BETA05_MODULE = "ml/hourly_beta05.py"
+BETA05_LITERALS = ("beta_0.5", "hourly_b05")
 
 # -- the registry: everything the enumeration finds must be here, with a reason -------------------
 
@@ -83,6 +86,21 @@ REGISTRY: dict[str, tuple[str, str, tuple[str, ...]]] = {
     f"{_CHECK}::run_adr076": (NO_EFFECT, "loads the log and the frozen file, calls the look", ()),
     f"{_INTRA}::<module>": (NO_EFFECT, "path constants of the log and the backtest file", ()),
     "scripts/data_crypt.py::<module>": (NO_EFFECT, "encryption manifest naming the log", ()),
+}
+
+# ADR 077: everything that names the beta 0.5 challenger or its forecast key. A scorer of it must be
+# added here by the PR that adds it (as the look), after the ADR 077 rule it must reproduce.
+BETA05_REGISTRY: dict[str, tuple[str, str, tuple[str, ...]]] = {
+    f"{BETA05_MODULE}::{MODULE_BODY}": (
+        NO_EFFECT,
+        "the frozen rule and the selector of eligible entries; computes no error",
+        (),
+    ),
+    f"{_CARD}::_intraday_rows": (
+        FROZEN,
+        "weekly scorecard reads beta_0.5 for entries up to the ADR 076 cut-off only",
+        ("test_intraday_rows_are_frozen_at_the_adr076_cutoff",),
+    ),
 }
 
 
@@ -202,6 +220,37 @@ class Repo:
                     if id(n) not in doc_strings and any(s in n.value for s in SHADOW_FILES):
                         found.add(qual)
         return found
+
+    def touches_beta05(self) -> set[str]:
+        """ADR 077: functions that name ml.hourly_beta05 (through any import alias) or spell its challenger
+        id or the beta 0.5 forecast key as a literal. Docstrings are prose, not uses."""
+        found = set()
+        for qual, node in self.functions():
+            rel = qual.split("::")[0]
+            from_beta05 = {
+                local for local, (m, _) in self.aliases[rel].items() if m == BETA05_MODULE
+            }
+            doc_strings = {
+                id(n.value)
+                for n in ast.walk(node)
+                if isinstance(n, ast.Expr) and isinstance(n.value, ast.Constant)
+            }
+            for n in self.own_nodes(node):
+                if (isinstance(n, ast.Name) and n.id in from_beta05 and rel != BETA05_MODULE) or (
+                    isinstance(n, ast.Constant)
+                    and isinstance(n.value, str)
+                    and id(n) not in doc_strings
+                    and any(s in n.value for s in BETA05_LITERALS)
+                ):
+                    found.add(qual)
+        return found
+
+    def importers_of(self, module_rel: str) -> set[str]:
+        return {
+            rel
+            for rel, al in self.aliases.items()
+            if rel != module_rel and any(m == module_rel for m, _ in al.values())
+        }
 
     def source_of(self, sources: dict[str, str], qual: str) -> str:
         rel, name = qual.split("::")
@@ -330,3 +379,59 @@ def test_a_new_reader_of_the_shadow_log_is_found_even_without_calling_score():
 def test_an_unrelated_score_function_is_not_mistaken_for_the_hourly_one():
     r = _repo(ml__elsewhere="def score(x):\n    return x\n\ndef k(x):\n    return score(x)\n")
     assert "ml/elsewhere.py::k" not in producers(r)
+
+
+# -- ADR 077: nothing may score or touch the beta 0.5 challenger before its own registered look ----
+
+
+def test_every_use_of_the_beta05_challenger_is_classified():
+    found = REPO.touches_beta05()
+    assert not found - BETA05_REGISTRY.keys(), (
+        "These functions name the ADR 077 challenger (ml.hourly_beta05, 'hourly_b05' or the 'beta_0.5' "
+        f"key) and are not classified: {sorted(found - BETA05_REGISTRY.keys())}"
+    )
+    assert not BETA05_REGISTRY.keys() - found, sorted(BETA05_REGISTRY.keys() - found)
+
+
+def test_a_frozen_beta05_reader_names_the_cutoff_and_a_pinning_test():
+    tests_text = "\n".join(p.read_text(encoding="utf-8") for p in TESTS.glob("test_*.py"))
+    for qual, (status, why, pinned) in BETA05_REGISTRY.items():
+        if status == FROZEN:
+            assert "ADR076_CUTOFF" in REPO.source_of(SOURCES, qual), (qual, why)
+            assert pinned and all(f"def {n}(" in tests_text for n in pinned), qual
+
+
+def test_nothing_in_the_repo_imports_the_beta05_module_so_the_live_pipeline_cannot_reach_it():
+    assert REPO.importers_of(BETA05_MODULE) == set()
+
+
+def test_the_beta05_module_computes_no_error_and_imports_nothing_numerical():
+    tree = REPO.trees[BETA05_MODULE]
+    imported = set()
+    for n in ast.walk(tree):
+        if isinstance(n, ast.Import):
+            imported |= {a.name for a in n.names}
+        elif isinstance(n, ast.ImportFrom):
+            imported.add(n.module or "")
+    assert imported <= {"__future__", "hashlib", "json", "datetime", "typing", "ml"}, imported
+    assert (
+        REPO.callers_of(set(PRIMITIVES))
+        & {f"{BETA05_MODULE}::{k}" for k in REPO.defs[BETA05_MODULE]}
+        == set()
+    )
+
+
+def test_a_new_scorer_of_beta05_is_found_by_import_alias_or_by_literal_key():
+    mod = SOURCES[BETA05_MODULE]
+    r = Repo(
+        {
+            BETA05_MODULE: mod,
+            "ml/sneaky1.py": "from ml import hourly_beta05 as h\n\ndef a(e):\n    return h.eligible(e)\n",
+            "ml/sneaky2.py": "def b(rows):\n    return [r['pred']['beta_0.5'] for r in rows]\n",
+            "ml/clean.py": "def c(rows):\n    '''beta_0.5 is only prose here'''\n    return rows\n",
+        }
+    )
+    found = r.touches_beta05()
+    assert "ml/sneaky1.py::a" in found and "ml/sneaky2.py::b" in found
+    assert "ml/clean.py::c" not in found
+    assert r.importers_of(BETA05_MODULE) == {"ml/sneaky1.py"}
