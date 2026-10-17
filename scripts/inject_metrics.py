@@ -79,12 +79,15 @@ describe a point-in-time decision, not drift with the live data. If you find
 yourself wanting a METRIC marker inside a FROZEN block, the block is
 mis-scoped -- split it, don't nest a live number inside a frozen one.
 
-Modes:
-    python scripts/inject_metrics.py            resolve and rewrite files in place
+Modes (exactly one; no argument means --check; anything else is a usage error, exit 2):
+    python scripts/inject_metrics.py --write     resolve and rewrite files in place -- the ONLY
+                                                  mode that writes
     python scripts/inject_metrics.py --check     resolve, compare, DON'T write --
+    python scripts/inject_metrics.py             (same as --check)
                                                   exit 1 if any file would change,
                                                   or if any marker can't be
                                                   resolved. Used by CI.
+    python scripts/inject_metrics.py --help      print usage, write nothing
     ... --check --grace-minutes N                a file whose only problem is value drift
                                                   is tolerated (warning, exit 0) while the
                                                   newest commit of any data file its markers
@@ -101,6 +104,7 @@ commit age cannot be read (no git history, git error) the check is strict: fail 
 
 from __future__ import annotations
 
+import argparse
 import json
 import re
 import subprocess
@@ -360,15 +364,41 @@ def target_files() -> list[Path]:
     return files
 
 
-def _grace_minutes(argv: list[str]) -> float | None:
-    if "--grace-minutes" not in argv:
-        return None
-    return float(argv[argv.index("--grace-minutes") + 1])
+def _parser() -> argparse.ArgumentParser:
+    ap = argparse.ArgumentParser(
+        prog="inject_metrics.py",
+        description="Resolve <!--METRIC:...--> markers in README.md and docs/ from data/*.json.",
+    )
+    mode = ap.add_mutually_exclusive_group()
+    mode.add_argument(
+        "--check",
+        action="store_true",
+        help="read-only: exit 1 if any file differs from a fresh resolve (the default)",
+    )
+    mode.add_argument(
+        "--write", action="store_true", help="rewrite files in place (the only mode that writes)"
+    )
+    ap.add_argument(
+        "--grace-minutes",
+        type=float,
+        default=None,
+        metavar="N",
+        help="with --check: tolerate drift while the newest data commit it reads is younger than N",
+    )
+    return ap
 
 
-def main() -> int:
-    check_mode = "--check" in sys.argv[1:]
-    grace = _grace_minutes(sys.argv[1:])
+def parse_args(argv: list[str]) -> tuple[bool, float | None]:
+    """(check_mode, grace). Parsing never touches a file: --help and usage errors exit before any."""
+    ap = _parser()
+    ns = ap.parse_args(argv)
+    if ns.write and ns.grace_minutes is not None:
+        ap.error("--grace-minutes only applies to --check")
+    return (not ns.write), ns.grace_minutes
+
+
+def main(argv: list[str] | None = None) -> int:
+    check_mode, grace = parse_args(sys.argv[1:] if argv is None else argv)
     any_errors = False
     any_changes = False
 
@@ -400,7 +430,7 @@ def main() -> int:
             if check_mode:
                 print(
                     f"FAIL: {path.relative_to(ROOT)}: committed text does not match a fresh "
-                    f"resolve — run `python scripts/inject_metrics.py` and commit the result."
+                    f"resolve — run `python scripts/inject_metrics.py --write` and commit the result."
                 )
             else:
                 path.write_text(rendered, encoding="utf-8", newline="\n")
