@@ -1,4 +1,4 @@
-"""ADR 076 (rule v2, amendment 2026-10-17): the forward-only second look of the hourly model.
+"""ADR 076 (rule v3, amendments 1 and 2, 2026-10-17): the forward-only second look of the hourly model.
 
 Synthetic data only. The look must (1) score only entries logged strictly after the cut-off, (2) use
 entries logged before it only to fix the range band, never to score, (3) compute NO effect size, CI or
@@ -14,6 +14,7 @@ from datetime import UTC, datetime, timedelta
 from pathlib import Path
 
 import numpy as np
+import pandas as pd
 import pytest
 from ml import nextfix_intraday as ni
 
@@ -90,8 +91,10 @@ def book(n_post_offsets: list[int], n_cal: int = 12, **kw) -> list[dict]:
     return mod.clean_entries(cal + post)
 
 
-def evaluate(entries: list[dict], now: datetime, opts: dict | None = None) -> dict:
-    return mod.evaluate_window_076(WIN, entries, now, opts or OPTS)
+def evaluate(
+    entries: list[dict], now: datetime, opts: dict | None = None, folds: object = ()
+) -> dict:
+    return mod.evaluate_window_076(WIN, entries, now, opts or OPTS, folds)
 
 
 @pytest.fixture
@@ -334,21 +337,196 @@ def test_cli_076_before_the_look_writes_counts_only(tmp_path, capsys):
     assert "counts only" in text and "ci95" not in text and "dm_p" not in text
 
 
-def test_cli_076_on_the_look_day_reports_the_effect(tmp_path, capsys):
+def _look_args(data: Path, out: Path) -> list[str]:
+    return ["--adr", "076", "--now", "2026-11-16T09:00:00Z", "--data-dir", str(data)] + [
+        "--out-dir",
+        str(out),
+    ]
+
+
+def test_cli_076_on_the_look_day_reports_the_effect(tmp_path, capsys, monkeypatch):
     raw = make_entries(list(range(12)), start=PRE_START, seed=3) + make_entries(OFFSETS_20, seed=4)
     data, out = _shadow(tmp_path, raw)
-    mod.main(
-        [
-            "--adr",
-            "076",
-            "--now",
-            "2026-11-16T09:00:00Z",
-            "--data-dir",
-            str(data),
-            "--out-dir",
-            str(out),
-        ]
-    )
+    monkeypatch.setattr(mod, "load_folds", lambda d: make_folds(list(range(30))))
+    mod.main(_look_args(data, out))
     rep = json.loads((out / "adr076_look_2026-11-16.json").read_text())
     assert rep["look_open"] is True and "effect" in rep["windows"][WIN]
+    assert rep["adr066_folds"] == {"available": True, "n_decisions": 30}
     assert "a_bootstrap_ci_below_0" in capsys.readouterr().out
+
+
+def test_cli_076_on_the_look_day_without_the_folds_takes_no_look(tmp_path, capsys, no_effect):
+    raw = make_entries(list(range(12)), start=PRE_START, seed=3) + make_entries(OFFSETS_20, seed=4)
+    data, out = _shadow(tmp_path, raw)  # no cached bars in the data dir
+    assert mod.main(_look_args(data, out)) == 0
+    rep = json.loads((out / "adr076_look_2026-11-16.json").read_text())
+    assert rep["look_open"] is False and rep["adr066_folds"]["available"] is False
+    assert rep["windows"][WIN]["look_due"] == "2026-11-16" and "effect" not in rep["windows"][WIN]
+    assert "NOT taken" in capsys.readouterr().out
+
+
+# -- amendment 2: the ADR 066 re-run folds join the calibration ---------------------------------------
+
+
+def make_folds(offsets: list[int], start: datetime = FIRST_DAY - timedelta(days=60), **kw) -> list:
+    """ADR 066 re-run decisions as backtest_rows() returns them (they carry target_at, not logged_at)."""
+    rows = []
+    for e in make_entries(offsets, start=start, seed=11, **kw):
+        t = datetime.fromisoformat(e["t"].replace("Z", "+00:00"))
+        rows.append(
+            {
+                **{k: v for k, v in e.items() if k not in ("logged_at", "target_date")},
+                "target_at": _iso(t.replace(hour=11, minute=30)),
+            }
+        )
+    return rows
+
+
+def test_the_folds_add_to_the_calibration_and_the_shadow_row_wins_on_an_overlap():
+    entries = book(OFFSETS_20, n_cal=6)  # 6 shadow fixes on 2026-09-20 .. 09-25
+    folds = make_folds(list(range(25)), start=PRE_START)  # 25 fixes, the first 6 are the same days
+    cal = mod.calibration_rows(entries, WIN, CUTOFF, folds)
+    shadow = mod.shadow_calibration_rows(entries, WIN, CUTOFF)
+    assert (len(shadow), len(cal)) == (6, 25)
+    kept = {r["base_at"]: r for r in cal}
+    assert all(kept[r["base_at"]] is r for r in shadow)  # the shadow row, not the fold row
+    assert [r["base_at"] for r in cal] == sorted(r["base_at"] for r in cal)
+    cc = mod.calibration_counts(entries, WIN, CUTOFF, folds)
+    assert cc == {"n_shadow": 6, "n_folds_added": 19, "n_total": 25}
+
+
+def test_no_decision_or_outcome_from_after_the_cutoff_enters_the_calibration():
+    entries = book(OFFSETS_20, n_cal=6)
+    ok = make_folds([0, 1, 2], start=datetime(2026, 8, 1, tzinfo=UTC))
+    late_decision = make_folds([0], start=datetime(2026, 10, 17, tzinfo=UTC))  # t after the cut-off
+    at_cutoff = [{**ok[0], "base_at": "2026-08-20T06:30:00Z", "t": "2026-10-16T17:38:00Z"}]
+    late_target = [  # decided before the cut-off, target published after it
+        {**ok[0], "base_at": "2026-08-21T06:30:00Z", "target_at": "2026-10-17T06:30:00Z"}
+    ]
+    no_target_time = [{k: v for k, v in ok[0].items() if k != "target_at"}]
+    no_target_time[0]["base_at"] = "2026-08-22T06:30:00Z"
+    cal = mod.calibration_rows(
+        entries, WIN, CUTOFF, ok + late_decision + at_cutoff + late_target + no_target_time
+    )
+    folds_in = [r for r in cal if r["base_at"] < "2026-09-01"]
+    assert len(folds_in) == 3 and all(
+        r["target_at"] < mod.ADR076_FIRST_ENTRY_AFTER for r in folds_in
+    )
+
+
+def test_a_scored_fix_is_never_calibration_even_if_a_fold_row_exists_for_it():
+    entries = book(OFFSETS_20, n_cal=6)
+    fwd = mod.forward_rows(entries, WIN, CUTOFF)
+    twin = {**make_folds([0])[0], "base_at": fwd[0]["base_at"]}
+    twin["t"] = "2026-10-01T08:00:00Z"
+    twin["target_at"] = "2026-10-01T11:30:00Z"
+    cal = mod.calibration_rows(entries, WIN, CUTOFF, [twin])
+    assert fwd[0]["base_at"] not in {r["base_at"] for r in cal}
+
+
+def test_condition_c_is_evaluable_at_20_fixes_with_folds_and_no_shadow_calibration():
+    entries = book(OFFSETS_20, n_cal=0)
+    folds = make_folds(list(range(40)))
+    c = evaluate(entries, LOOK_MONDAY + timedelta(hours=9), folds=folds)["effect"][
+        "c_range_coverage"
+    ]
+    assert "not evaluable" not in c["detail"]
+    assert (c["n_calibration"], c["n_scored"]) == (40, 20)
+
+
+def test_the_folds_are_not_scored_in_conditions_a_and_b():
+    entries = book(OFFSETS_20, n_cal=6)
+    r = evaluate(entries, LOOK_MONDAY + timedelta(hours=9), folds=make_folds(list(range(40))))
+    assert r["effect"]["a_bootstrap_ci_below_0"]["n"] == 20
+
+
+def test_few_calibration_fixes_without_folds_still_fail_closed():
+    entries = book(OFFSETS_20, n_cal=3)
+    c = evaluate(entries, LOOK_MONDAY + timedelta(hours=9), folds=make_folds([0]))["effect"][
+        "c_range_coverage"
+    ]
+    assert c["pass"] is False and "not evaluable" in c["detail"]  # 3 shadow + 1 fold = 4 < 5
+
+
+def test_counts_before_the_look_include_the_calibration_and_compute_no_effect(no_effect):
+    entries = book(list(range(60)), n_cal=6)
+    r = evaluate(entries, datetime(2026, 11, 9, 9, tzinfo=UTC), folds=make_folds(list(range(40))))
+    assert r["look_day"] is None and "effect" not in r
+    assert r["calibration_counts"]["n_total"] >= 40
+    assert "calibration" in r["verdict"] and "ADR 066 folds" in r["verdict"]
+
+
+def test_the_closed_look_stays_closed_with_a_large_fold_set(no_effect):
+    folds = make_folds(list(range(300)), start=datetime(2026, 1, 1, tzinfo=UTC))
+    for now in (datetime(2026, 10, 19, 9, tzinfo=UTC), datetime(2026, 11, 9, 9, tzinfo=UTC)):
+        r = evaluate(book(OFFSETS_20), now, folds=folds)
+        assert r["look_day"] is None and "effect" not in r
+
+
+def test_unavailable_folds_on_the_look_day_take_no_look_and_spend_none(no_effect):
+    r = evaluate(book(OFFSETS_20), LOOK_MONDAY + timedelta(hours=9), folds=None)
+    assert r["look_day"] is None and r["look_due"] == "2026-11-16" and "effect" not in r
+    assert "NOT taken" in r["verdict"] and "nothing computed" in r["verdict"]
+
+
+def test_the_look_missed_for_missing_folds_is_the_same_monday_on_the_next_run():
+    entries = book(OFFSETS_20)
+    folds = make_folds(list(range(40)))
+    later = datetime(2026, 11, 20, 9, tzinfo=UTC)
+    first = evaluate(entries, LOOK_MONDAY + timedelta(hours=9), folds=folds)
+    again = evaluate(entries, later, folds=folds)
+    assert first["look_day"] == again["look_day"] == "2026-11-16"
+    assert first["effect"] == again["effect"]
+
+
+def test_load_folds_replays_decisions_and_scores_nothing(tmp_path, monkeypatch, no_effect):
+    data = tmp_path
+    (data / ni.INTRADAY_FILE).write_bytes(b"x")
+    (data / mod.nextfix.IBJA_PATH.name).write_text("{}")
+    sentinel = [{"window": WIN, "t": "2026-10-01T08:00:00Z", "target_at": "2026-10-01T11:30:00Z"}]
+    monkeypatch.setattr(mod.nextfix, "load_ibja_full", lambda p: "ibja")
+    monkeypatch.setattr(mod.nextfix, "fix_events", lambda x: ["events"])
+    monkeypatch.setattr(mod.nextfix_intraday, "load_bars", lambda d: "bars")
+    monkeypatch.setattr(mod, "backtest_rows", lambda events, g: sentinel)
+    assert mod.load_folds(data) == sentinel  # no_effect: score/flat_record/DM would raise
+
+
+def test_load_folds_is_none_when_the_bars_are_absent_or_unreadable(tmp_path, monkeypatch):
+    assert mod.load_folds(tmp_path) is None
+    (tmp_path / ni.INTRADAY_FILE).write_bytes(b"x")
+    (tmp_path / mod.nextfix.IBJA_PATH.name).write_text("{}")
+
+    def boom(*a, **k):
+        raise ValueError("unreadable")
+
+    monkeypatch.setattr(mod.nextfix, "load_ibja_full", boom)
+    assert mod.load_folds(tmp_path) is None
+
+
+def test_backtest_rows_carry_the_instant_their_target_fix_was_published():
+    rng = np.random.default_rng(42)
+    events = []
+    for k in range(8):
+        d = datetime(2026, 8, 3 + k, tzinfo=UTC)
+        for kind, hh, mm in (("am", 6, 30), ("pm", 11, 30)):
+            events.append(
+                (d.replace(hour=hh, minute=mm), kind, pd.Timestamp(d.date()), 13000.0 + 10 * k)
+            )
+    idx = pd.date_range("2026-08-03 01:00", periods=8 * 24, freq="h", tz="UTC")
+    g = pd.Series(400000 * np.exp(np.cumsum(rng.normal(0, 0.002, len(idx)))), index=idx)
+    rows = mod.backtest_rows(events, g)
+    assert rows
+    assert all(_t(r["target_at"]) > _t(r["t"]) for r in rows)
+    assert all(_t(r["target_at"]) > _t(r["base_at"]) for r in rows)
+
+
+def _t(s: str) -> datetime:
+    return datetime.fromisoformat(s.replace("Z", "+00:00"))
+
+
+def test_the_rule_is_final_and_the_adr_says_so():
+    assert mod.ADR076_RULE["rule_version"] == 3 and mod.ADR076_RULE["final"]
+    adr = (_ROOT / "docs" / "adr" / "076-hourly-model-forward-check-preregistration.md").read_text(
+        encoding="utf-8"
+    )
+    assert "Amendment 2" in adr and "no further amendment" in adr.lower()
