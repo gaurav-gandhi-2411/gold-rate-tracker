@@ -382,25 +382,38 @@ def test_a_typo_or_conflicting_flags_is_a_usage_error_that_writes_nothing(
     assert path.read_bytes() == before
 
 
-def test_the_real_script_with_help_changes_no_file_of_the_repo():
-    import hashlib
+def test_the_real_script_run_as_a_process_with_help_or_no_argument_writes_nothing(
+    fixture_json, tmp_path
+):
+    """The script copied into a scratch tree (it finds its root from its own location) whose README is
+    stale: the footgun was that any call, even --help, rewrote it."""
+    import shutil
     import subprocess
 
-    root = _SCRIPT_PATH.parent.parent
-    watched = [root / "README.md", *sorted((root / "docs").glob("*.md"))]
-    digest = lambda: [hashlib.sha256(p.read_bytes()).hexdigest() for p in watched]  # noqa: E731
-    before = digest()
-    for flags in (["--help"], []):
+    (tmp_path / "scripts").mkdir()
+    script = tmp_path / "scripts" / "inject_metrics.py"
+    shutil.copy(_SCRIPT_PATH, script)
+    path, before = _stale_readme(tmp_path)
+    for flags in (["--help"], [], ["--check"], ["--chek"]):
         run = subprocess.run(
-            [sys.executable, str(_SCRIPT_PATH), *flags],
-            cwd=root,
+            [sys.executable, str(script), *flags],
+            cwd=tmp_path,
             capture_output=True,
             text=True,
             timeout=120,
             check=False,
         )
-        assert run.returncode in (0, 1), run.stderr  # 1 = drift reported, never repaired
-        assert digest() == before
+        assert run.returncode in (0, 1, 2), run.stderr
+        assert path.read_bytes() == before, flags
+    run = subprocess.run(
+        [sys.executable, str(script), "--write"],
+        cwd=tmp_path,
+        capture_output=True,
+        text=True,
+        timeout=120,
+        check=False,
+    )
+    assert run.returncode == 0 and path.read_bytes() != before
 
 
 @pytest.mark.parametrize(
