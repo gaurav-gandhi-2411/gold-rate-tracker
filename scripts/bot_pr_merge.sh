@@ -91,6 +91,25 @@ dispatch_docs_refresh() {
   return 0
 }
 
+# Same reason for generate-og-image.yml (downstream of Check Gold Price): dispatch it after a bot/data-sync PR
+# merges. The og-image PR's own branch never dispatches it, and the run commits nothing when og.png is unchanged.
+dispatch_og_image() {
+  if [ "${BRANCH}" != "${DATA_SYNC_BRANCH:-bot/data-sync}" ]; then
+    return 0
+  fi
+  echo "PR #${PR_NUM} is the data sync: dispatching generate-og-image.yml on master."
+  ci_retry gh workflow run generate-og-image.yml --repo "${GITHUB_REPOSITORY}" --ref master \
+    || echo "::warning::could not dispatch generate-og-image.yml; the next scheduled Check Gold Price run refreshes it."
+  return 0
+}
+
+# Everything that follows a merged bot PR through a workflow_run chain a bot-created run cannot start
+# (tests/test_workflow_run_chains.py enumerates the chains and requires a dispatch here for each).
+dispatch_downstream() {
+  dispatch_docs_refresh
+  dispatch_og_image
+}
+
 LAST_MISSING=""
 LAST_HEAD=""
 UPDATED=0
@@ -101,7 +120,7 @@ while :; do # at least one poll, even with WAIT_MINUTES=0
   PR_STATE="$(ci_retry gh pr view "${PR_NUM}" --repo "${GITHUB_REPOSITORY}" --json state --jq .state 2>/dev/null || echo UNKNOWN)"
   if [ "${PR_STATE}" = "MERGED" ]; then
     echo "Merged."
-    dispatch_docs_refresh
+    dispatch_downstream
     exit 0
   fi
   if [ "${PR_STATE}" = "CLOSED" ]; then
@@ -158,7 +177,7 @@ ${EXPECTED}
       echo "Required contexts green on ${HEAD_SHA} -- merging PR #${PR_NUM}"
       if gh pr merge "${PR_NUM}" --repo "${GITHUB_REPOSITORY}" --squash --match-head-commit "${HEAD_SHA}"; then
         echo "Merged."
-        dispatch_docs_refresh
+        dispatch_downstream
         exit 0
       fi
       echo "Merge attempt failed (see above); will retry on the next poll."
