@@ -1,76 +1,76 @@
 {
   "schema_version": 1,
-  "generated_at_utc": "2026-10-12T14:54:04.224589+00:00",
+  "generated_at_utc": "2026-10-18T06:48:39.001168+00:00",
   "band_source": "IBJA-calibrated tier's displayed est_low/est_high (recency-weighted empirical residual quantile, ml.calibration)",
   "nominal_pct": 80,
-  "coverage": 0.7315,
-  "n": 108,
-  "n_in_band": 79,
-  "wilson_ci_low": 0.641,
-  "wilson_ci_high": 0.8061,
-  "resolvable_at_n": false,
+  "coverage": 0.7193,
+  "n": 114,
+  "n_in_band": 82,
+  "wilson_ci_low": 0.6307,
+  "wilson_ci_high": 0.7936,
+  "resolvable_at_n": true,
   "note": "Walk-forward re-score of the band actually shown to users on the IBJA-calibrated tier (est_low/est_high) -- recomputed weekly by weekly-backtest.yml, not a one-time reading. resolvable_at_n is True only when the Wilson 95% CI does not contain nominal_pct, i.e. n is large enough to say observed coverage is statistically distinguishable from nominal, not just numerically different from it. Distinct from data/coverage_metrics.json, which scores the OTHER displayed band (headline.lower/upper).",
   "stratified_shadow": {
     "status": "shadow: NOT the displayed band. Scored weekly so out-of-sample evidence accrues.",
-    "n": 108,
+    "n": 114,
     "pooled_production": {
-      "n": 108,
-      "n_in_band": 79,
-      "coverage": 0.7315,
-      "wilson_ci_low": 0.641,
-      "wilson_ci_high": 0.8061,
-      "p_vs_nominal": 0.0909
+      "n": 114,
+      "n_in_band": 82,
+      "coverage": 0.7193,
+      "wilson_ci_low": 0.6307,
+      "wilson_ci_high": 0.7936,
+      "p_vs_nominal": 0.0351
     },
     "pooled_stratified": {
-      "n": 108,
-      "n_in_band": 90,
+      "n": 114,
+      "n_in_band": 95,
       "coverage": 0.8333,
-      "wilson_ci_low": 0.7519,
-      "wilson_ci_high": 0.8919,
-      "p_vs_nominal": 0.4701
+      "wilson_ci_low": 0.7543,
+      "wilson_ci_high": 0.8906,
+      "p_vs_nominal": 0.4142
     },
     "strata": {
       "same_day": {
-        "n": 72,
+        "n": 77,
         "production": {
-          "n": 72,
-          "n_in_band": 58,
-          "coverage": 0.8056,
-          "wilson_ci_low": 0.6997,
-          "wilson_ci_high": 0.8805,
+          "n": 77,
+          "n_in_band": 62,
+          "coverage": 0.8052,
+          "wilson_ci_low": 0.7031,
+          "wilson_ci_high": 0.8782,
           "p_vs_nominal": 1.0
         },
         "stratified": {
-          "n": 72,
-          "n_in_band": 58,
-          "coverage": 0.8056,
-          "wilson_ci_low": 0.6997,
-          "wilson_ci_high": 0.8805,
+          "n": 77,
+          "n_in_band": 62,
+          "coverage": 0.8052,
+          "wilson_ci_low": 0.7031,
+          "wilson_ci_high": 0.8782,
           "p_vs_nominal": 1.0
         },
-        "mean_half_width_production": 75.1,
-        "mean_half_width_stratified": 75.1
+        "mean_half_width_production": 74.6,
+        "mean_half_width_stratified": 74.6
       },
       "carry_forward": {
-        "n": 36,
+        "n": 37,
         "production": {
-          "n": 36,
-          "n_in_band": 21,
-          "coverage": 0.5833,
-          "wilson_ci_low": 0.422,
-          "wilson_ci_high": 0.7286,
-          "p_vs_nominal": 0.0028
+          "n": 37,
+          "n_in_band": 20,
+          "coverage": 0.5405,
+          "wilson_ci_low": 0.3838,
+          "wilson_ci_high": 0.6896,
+          "p_vs_nominal": 0.0003
         },
         "stratified": {
-          "n": 36,
-          "n_in_band": 32,
-          "coverage": 0.8889,
-          "wilson_ci_low": 0.7468,
-          "wilson_ci_high": 0.9559,
-          "p_vs_nominal": 0.2158
+          "n": 37,
+          "n_in_band": 33,
+          "coverage": 0.8919,
+          "wilson_ci_low": 0.7529,
+          "wilson_ci_high": 0.9571,
+          "p_vs_nominal": 0.2166
         },
-        "mean_half_width_production": 77.6,
-        "mean_half_width_stratified": 190.9
+        "mean_half_width_production": 77.3,
+        "mean_half_width_stratified": 188.6
       }
     },
     "carry_forward_fallback_days": 0
