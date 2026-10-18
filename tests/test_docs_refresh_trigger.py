@@ -2,9 +2,10 @@
 scripts/inject_metrics.py must name its mode.
 
 2026-10-17: the README stayed stale for about 2 h after a data sync and docs-freshness failed an unrelated PR.
-Cause: the workflow_run trigger did not fire after dispatched Check Gold Price runs (7 of 46 were followed by a
-refresh, against 45 of 45 for schedule and push runs; counted with gh run list). The refresh now also runs every
-15 minutes, which keeps the drift inside the docs-freshness grace window."""
+Cause: the workflow_run trigger did not fire after Check Gold Price runs dispatched by github-actions[bot] (0 of 85
+followed by a refresh, against 154 of 154 for schedule and push runs and 21 of 21 dispatched by the account owner;
+counted per actor with gh api). The data path now dispatches the refresh itself after merging (tests/test_bot_pr_merge.py);
+the cron is hourly and only a fallback."""
 
 from __future__ import annotations
 
@@ -15,7 +16,7 @@ import yaml
 
 ROOT = Path(__file__).resolve().parent.parent
 WORKFLOWS = ROOT / ".github" / "workflows"
-REFRESH_INTERVAL_MIN = 15
+DISPATCH_LATENCY_MIN = 15  # workflow_dispatch queue + the refresh run, padded
 PR_PIPELINE_MIN = 30  # lint takes about 12 min and the merge waits for it; padded
 
 
@@ -27,12 +28,12 @@ def _on(wf: dict) -> dict:
     return wf.get("on", wf.get(True))  # YAML 1.1 reads a bare `on` key as boolean True
 
 
-def test_docs_refresh_runs_on_a_schedule_no_slower_than_the_interval():
-    cron = _on(_refresh())["schedule"][0]["cron"]
-    minute, *rest = cron.split()
-    assert rest == ["*", "*", "*", "*"]
-    step = int(re.fullmatch(r"\*/(\d+)", minute).group(1))
-    assert step <= REFRESH_INTERVAL_MIN
+def test_docs_refresh_has_an_hourly_fallback_schedule_not_a_frequent_one():
+    """The data path dispatches the refresh itself (bot_pr_merge.sh); the cron is only the fallback."""
+    (entry,) = _on(_refresh())["schedule"]
+    minute, hour, *rest = entry["cron"].split()
+    assert rest == ["*", "*", "*"]
+    assert re.fullmatch(r"\d{1,2}", minute) and hour == "*"  # once an hour, not */N
 
 
 def test_docs_refresh_still_follows_the_data_workflows_and_can_be_dispatched():
@@ -52,10 +53,10 @@ def test_a_failed_triggering_run_is_skipped_but_schedule_and_dispatch_are_not():
     )
 
 
-def test_the_grace_window_covers_the_refresh_interval_plus_the_pr_pipeline():
+def test_the_grace_window_covers_the_dispatch_latency_plus_the_pr_pipeline():
     lint = (WORKFLOWS / "lint.yml").read_text(encoding="utf-8")
     (grace,) = re.findall(r"inject_metrics\.py --check --grace-minutes (\d+)", lint)
-    assert int(grace) >= REFRESH_INTERVAL_MIN + PR_PIPELINE_MIN
+    assert int(grace) >= DISPATCH_LATENCY_MIN + PR_PIPELINE_MIN
 
 
 def test_every_workflow_caller_of_inject_metrics_names_its_mode():

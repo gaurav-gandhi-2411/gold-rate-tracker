@@ -55,6 +55,42 @@ green_contexts() {
   } | sort -u
 }
 
+# After a merge: if the PR changed a file that an injected <!--METRIC:...--> marker reads, dispatch docs-refresh
+# on master now. Why (2026-10-18): docs-refresh's workflow_run trigger does not fire for Check Gold Price runs that
+# github-actions[bot] dispatched (0 of 85 followed, against 21 of 21 dispatched by the account owner; the data
+# syncs arrive that way), so the README stayed stale for 2 h. `workflow_dispatch` is the one event a token-made
+# run may create. Best effort: a failed dispatch only warns (the hourly cron is the fallback), and an unreadable
+# file list dispatches anyway, because docs-refresh exits at once when nothing drifted. Loop guard: the
+# docs-refresh PR's own merge never dispatches another.
+dispatch_docs_refresh() {
+  if [ "${BRANCH}" = "${DOCS_REFRESH_BRANCH:-bot/docs-refresh}" ]; then
+    echo "docs-refresh PR #${PR_NUM}: not dispatching another docs-refresh."
+    return 0
+  fi
+  local root files sources hit="" f NL
+  NL=$'\n'
+  root="$(cd "${HERE}/.." && pwd)"
+  sources="$(cd "${root}" && grep -rhoE '<!--METRIC:[^#<>]+' README.md docs 2>/dev/null | sed 's/^<!--METRIC://' | sort -u || true)"
+  files="$(ci_retry gh pr view "${PR_NUM}" --repo "${GITHUB_REPOSITORY}" --json files --jq '.files[].path' 2>/dev/null || true)"
+  if [ -z "${files}" ] || [ -z "${sources}" ]; then
+    hit="unknown"
+  else
+    for f in ${files}; do
+      case "${NL}${sources}${NL}" in
+        *"${NL}${f}${NL}"*) hit="${hit} ${f}" ;;
+      esac
+    done
+  fi
+  if [ -z "${hit}" ]; then
+    echo "PR #${PR_NUM} changed no injected metric source: not dispatching docs-refresh."
+    return 0
+  fi
+  echo "PR #${PR_NUM} changed an injected metric source (${hit# }): dispatching docs-refresh.yml on master."
+  ci_retry gh workflow run docs-refresh.yml --repo "${GITHUB_REPOSITORY}" --ref master \
+    || echo "::warning::could not dispatch docs-refresh.yml; the hourly schedule will pick the drift up."
+  return 0
+}
+
 LAST_MISSING=""
 LAST_HEAD=""
 UPDATED=0
@@ -65,6 +101,7 @@ while :; do # at least one poll, even with WAIT_MINUTES=0
   PR_STATE="$(ci_retry gh pr view "${PR_NUM}" --repo "${GITHUB_REPOSITORY}" --json state --jq .state 2>/dev/null || echo UNKNOWN)"
   if [ "${PR_STATE}" = "MERGED" ]; then
     echo "Merged."
+    dispatch_docs_refresh
     exit 0
   fi
   if [ "${PR_STATE}" = "CLOSED" ]; then
@@ -121,6 +158,7 @@ ${EXPECTED}
       echo "Required contexts green on ${HEAD_SHA} -- merging PR #${PR_NUM}"
       if gh pr merge "${PR_NUM}" --repo "${GITHUB_REPOSITORY}" --squash --match-head-commit "${HEAD_SHA}"; then
         echo "Merged."
+        dispatch_docs_refresh
         exit 0
       fi
       echo "Merge attempt failed (see above); will retry on the next poll."
