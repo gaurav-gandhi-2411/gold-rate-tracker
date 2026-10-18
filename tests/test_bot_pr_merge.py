@@ -81,7 +81,7 @@ gh() {{
       n=$(cnt merge)
       if [ "$n" -le {merge_fails} ]; then echo "gh: merge blocked" >&2; return 1; fi ;;
     "workflow run")
-      case "$*" in *docs-refresh.yml*) if [ "{1 if dispatch_fails else 0}" = 1 ]; then return 1; fi ;; esac ;;
+      case "$*" in *docs-refresh.yml*|*generate-og-image.yml*) if [ "{1 if dispatch_fails else 0}" = 1 ]; then return 1; fi ;; esac ;;
     "api repos/o/r/commits/newhead999") echo "{parent}" ;;
     "api repos/o/r/commits/{green_sha}/status?per_page=100") printf '%s\\n' "{statuses}" ;;
     "api repos/o/r/commits/{green_sha}/check-runs?per_page=100")
@@ -305,6 +305,30 @@ def test_a_pr_merged_by_someone_else_mid_wait_also_dispatches(tmp_path):
 def test_nothing_is_dispatched_when_the_pr_is_not_merged(tmp_path):
     r, log = _run(tmp_path, statuses="lint\npwa-js", wait_min="0")
     assert r.returncode == 1 and "docs-refresh.yml" not in log
+
+
+OG = "gh workflow run generate-og-image.yml --repo o/r --ref master"
+
+
+def test_the_data_sync_pr_also_dispatches_generate_og_image_after_the_merge(tmp_path):
+    r, log = _run(tmp_path, branch="bot/data-sync")
+    assert r.returncode == 0, r.stdout + r.stderr
+    assert OG in log and log.index("gh pr merge") < log.index(OG)
+
+
+@pytest.mark.parametrize(
+    "branch", ["bot/og-image", "bot/docs-refresh", "bot/tanishq-selfhosted-sync"]
+)
+def test_no_other_bot_pr_dispatches_generate_og_image(tmp_path, branch):
+    r, log = _run(tmp_path, branch=branch)
+    assert r.returncode == 0, r.stdout + r.stderr
+    assert "generate-og-image.yml" not in log
+
+
+def test_a_failed_og_dispatch_warns_but_does_not_fail_the_merge(tmp_path):
+    r, _log = _run(tmp_path, branch="bot/data-sync", dispatch_fails=True)
+    assert r.returncode == 0, r.stdout + r.stderr
+    assert "::warning::could not dispatch generate-og-image.yml" in r.stdout
 
 
 def test_nothing_is_dispatched_when_the_pr_is_closed_unmerged(tmp_path):

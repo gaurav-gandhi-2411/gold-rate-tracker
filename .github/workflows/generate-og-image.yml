@@ -10,10 +10,20 @@ name: Generate OG Image
 # schedule (typically every 7 days). Force a re-fetch on specific shares via
 # Twitter Card Validator or Facebook Sharing Debugger.
 
+# 2026-10-18: workflow_run does not fire for Check Gold Price runs that github-actions[bot] dispatched (0 of 85
+# successful ones were followed by this workflow; every schedule/push/owner-dispatched run was). So
+# scripts/bot_pr_merge.sh also dispatches this workflow after it merges a bot/data-sync PR (loop guard: this
+# workflow's own bot/og-image PR never dispatches it); it commits nothing when og.png is unchanged.
+# tests/test_workflow_run_chains.py fails a workflow_run chain that has no such dispatch path.
 on:
   workflow_run:
     workflows: ["Check Gold Price"]
     types: [completed]
+  workflow_dispatch:
+
+concurrency:
+  group: generate-og-image
+  cancel-in-progress: false
 
 permissions:
   contents: write
@@ -22,8 +32,8 @@ permissions:
 
 jobs:
   generate:
-    # Only run when the upstream workflow succeeded
-    if: ${{ github.event.workflow_run.conclusion == 'success' }}
+    # Only run when the upstream workflow succeeded (a dispatch has no upstream)
+    if: ${{ github.event_name != 'workflow_run' || github.event.workflow_run.conclusion == 'success' }}
     runs-on: ubuntu-latest
 
     steps:
