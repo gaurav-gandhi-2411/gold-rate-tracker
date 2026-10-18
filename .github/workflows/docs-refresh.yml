@@ -53,20 +53,23 @@ name: Docs Freshness Refresh
 # auto-merge is "self-healing ... never a blocked pipeline", was false: the
 # stale README simply stayed stale and nothing paged.
 #
-# 2026-10-17: the workflow_run trigger alone left the README stale for 2 h (docs-freshness red on an
-# unrelated PR). VERIFIED by listing the runs (gh run list, 100 each): of the successful Check Gold
-# Price runs since 2026-10-08, every `schedule` (30 of 30) and `push` (15 of 15) run was followed by a
-# docs-refresh run within 5 minutes, but only 7 of 46 `workflow_dispatch` runs were; the data syncs
-# (self-hosted Tanishq, manual dispatches) reach master through dispatched runs. So the refresh also runs
-# on a 15-minute schedule: it exits at once when nothing drifted ("No doc drift to refresh."), and a drift
-# is fixed within one tick plus the PR's own checks, inside lint.yml's 45-minute docs-freshness grace
-# window (tests/test_docs_refresh_trigger.py pins both numbers).
+# 2026-10-17/18: the workflow_run trigger alone left the README stale for 2 h (docs-freshness red on an
+# unrelated PR). VERIFIED by listing 260 successful Check Gold Price runs with their actor
+# (gh api .../actions/workflows/check-price.yml/runs): every run started by `schedule` (110 of 110) or `push`
+# (44 of 44) was followed by a docs-refresh run within 5 minutes, and so were the 21 `workflow_dispatch` runs
+# whose actor was the account owner, but NONE of the 85 dispatched by github-actions[bot] (the data syncs).
+# Runs created with GITHUB_TOKEN do not start workflow_run workflows. So the data path asks for the refresh
+# itself: scripts/bot_pr_merge.sh dispatches this workflow (workflow_dispatch is the one event a token may
+# create) after it merges a PR that changed a file an injected metric marker reads, and not for this
+# workflow's own PR. The hourly schedule is only the fallback (GitHub's scheduler also skipped ticks:
+# no schedule event of any workflow between 17:15Z and 20:20Z on 2026-10-17). The run exits at once when
+# nothing drifted ("No doc drift to refresh."). tests/test_docs_refresh_trigger.py pins the numbers.
 on:
   workflow_run:
     workflows: ["Check Gold Price", "Weekly Backtest", "Direction Signal Eval"]
     types: [completed]
   schedule:
-    - cron: "*/15 * * * *"
+    - cron: "17 * * * *"
   workflow_dispatch:
 
 permissions:

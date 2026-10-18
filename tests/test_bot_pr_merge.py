@@ -43,6 +43,9 @@ def _run(
     parent: str = "abc123",
     wait_sec: str = "",
     cancelled_urls: str = "",
+    files: str = "data/tanishq_scrape_success_rate.json",
+    branch: str = "bot/x",
+    dispatch_fails: bool = False,
 ) -> tuple[subprocess.CompletedProcess[str], str]:
     """Run the script. `states` is the sequence of PR states, one per poll (the last repeats);
     statuses/checks are the already-filtered names the real `--jq` filters would print for `green_on`."""
@@ -69,6 +72,7 @@ gh() {{
             if [ "$n" -ge 2 ]; then echo newhead999 > "{st}.head"; cur=newhead999; fi
           fi
           echo "$cur" ;;
+        *"--json files"*) printf '%s\\n' "{files}" ;;
         *"--json mergeStateStatus"*)
           if [ "{merge_state}" = BEHIND ] && [ ! -f "{st}.updated" ]; then echo BEHIND; else echo CLEAN; fi ;;
       esac ;;
@@ -76,7 +80,8 @@ gh() {{
     "pr merge")
       n=$(cnt merge)
       if [ "$n" -le {merge_fails} ]; then echo "gh: merge blocked" >&2; return 1; fi ;;
-    "workflow run") ;;
+    "workflow run")
+      case "$*" in *docs-refresh.yml*) if [ "{1 if dispatch_fails else 0}" = 1 ]; then return 1; fi ;; esac ;;
     "api repos/o/r/commits/newhead999") echo "{parent}" ;;
     "api repos/o/r/commits/{green_sha}/status?per_page=100") printf '%s\\n' "{statuses}" ;;
     "api repos/o/r/commits/{green_sha}/check-runs?per_page=100")
@@ -93,7 +98,7 @@ export -f gh sleep cnt
 """
     script = tmp / "run.sh"
     script.write_bytes(
-        (stubs + f'cd "{_posix(ROOT)}"\nbash "{_posix(SCRIPT)}" 7 bot/x "{pushed}"\n').encode()
+        (stubs + f'cd "{_posix(ROOT)}"\nbash "{_posix(SCRIPT)}" 7 {branch} "{pushed}"\n').encode()
     )
     env = {
         **os.environ,
@@ -235,3 +240,73 @@ def test_no_rerun_when_nothing_is_cancelled(tmp_path):
 def test_no_rerun_before_a_merge_was_refused(tmp_path):
     r, log = _run(tmp_path, cancelled_urls=URL)
     assert r.returncode == 0 and "gh run rerun" not in log
+
+
+# --- 2026-10-18: a merged data PR asks docs-refresh to run (workflow_run never fires for bot-dispatched runs) ---
+
+DISPATCH = "gh workflow run docs-refresh.yml --repo o/r --ref master"
+
+
+def _metric_sources() -> list[str]:
+    """Every file an injected marker reads, enumerated from README.md and docs/ the way the script does."""
+    pat = re.compile(r"<!--METRIC:([^#<>]+)#")
+    found: set[str] = set()
+    for p in [ROOT / "README.md", *sorted((ROOT / "docs").rglob("*.md"))]:
+        found.update(pat.findall(p.read_text(encoding="utf-8")))
+    return sorted(found)
+
+
+def test_the_enumeration_of_metric_sources_is_not_empty_and_all_under_data():
+    srcs = _metric_sources()
+    assert len(srcs) >= 5 and all(s.startswith("data/") and s.endswith(".json") for s in srcs)
+
+
+@pytest.mark.parametrize("source", _metric_sources())
+def test_a_merged_pr_that_changed_an_injected_metric_source_dispatches_docs_refresh(
+    tmp_path, source
+):
+    r, log = _run(tmp_path, files=f"scripts/x.py\n{source}")
+    assert r.returncode == 0, r.stdout + r.stderr
+    assert DISPATCH in log
+    assert log.index("gh pr merge") < log.index(DISPATCH)  # only after the merge
+
+
+def test_a_merged_pr_that_changed_no_metric_source_dispatches_nothing(tmp_path):
+    r, log = _run(tmp_path, files="app.js\ndata/gold_prices_snapshot_unrelated.json")
+    assert r.returncode == 0 and "docs-refresh.yml" not in log
+    assert "not dispatching docs-refresh" in r.stdout
+
+
+def test_the_docs_refresh_pr_itself_never_dispatches_another_refresh(tmp_path):
+    srcs = _metric_sources()
+    r, log = _run(tmp_path, branch="bot/docs-refresh", files="\n".join(srcs))
+    assert r.returncode == 0, r.stdout + r.stderr
+    assert "gh pr merge" in log and "docs-refresh.yml" not in log
+    assert "not dispatching another docs-refresh" in r.stdout
+
+
+def test_an_unreadable_file_list_still_dispatches_because_the_refresh_is_idempotent(tmp_path):
+    r, log = _run(tmp_path, files="")
+    assert r.returncode == 0 and DISPATCH in log
+
+
+def test_a_failed_dispatch_warns_but_does_not_fail_the_merge(tmp_path):
+    r, log = _run(tmp_path, dispatch_fails=True)
+    assert r.returncode == 0, r.stdout + r.stderr
+    assert "gh pr merge" in log and "::warning::could not dispatch docs-refresh.yml" in r.stdout
+
+
+def test_a_pr_merged_by_someone_else_mid_wait_also_dispatches(tmp_path):
+    r, log = _run(tmp_path, statuses="", states="OPEN,MERGED")
+    assert r.returncode == 0 and "gh pr merge" not in log
+    assert DISPATCH in log
+
+
+def test_nothing_is_dispatched_when_the_pr_is_not_merged(tmp_path):
+    r, log = _run(tmp_path, statuses="lint\npwa-js", wait_min="0")
+    assert r.returncode == 1 and "docs-refresh.yml" not in log
+
+
+def test_nothing_is_dispatched_when_the_pr_is_closed_unmerged(tmp_path):
+    r, log = _run(tmp_path, states="OPEN,CLOSED", statuses="")
+    assert r.returncode == 1 and "docs-refresh.yml" not in log
