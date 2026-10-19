@@ -1,11 +1,11 @@
 {
-  "predicted_at": "2026-10-19T11:24:43.477316+00:00",
+  "predicted_at": "2026-10-19T14:31:45.580749+00:00",
   "target_window": "5d",
   "headline": {
-    "method": "hold_latest_fix_am_to_pm",
+    "method": "hold_latest_fix_pm_to_am",
     "predicted_22k": 13610,
-    "lower": 13561,
-    "upper": 13659,
+    "lower": 13476,
+    "upper": 13744,
     "conformal_pi_half": 174.2,
     "naive_mae_recent_30": 110.5,
     "vol_context": {
@@ -47,7 +47,7 @@
     ],
     "horizon_p90": [
       14156.33,
-      14253.26,
+      14253.27,
       14309.95,
       14360.81,
       14419.97
@@ -59,7 +59,7 @@
     "direction_consensus": 1.0
   },
   "driver_context": {
-    "computed_at": "2026-10-19T11:24:44.427591+00:00",
+    "computed_at": "2026-10-19T14:31:51.925028+00:00",
     "macro_staleness_days": 0.0,
     "macro_fresh": true,
     "premium_threshold_pct": 15.0,
@@ -69,46 +69,46 @@
         "n_obs": 6,
         "t0_date": "2026-10-12",
         "t1_date": "2026-10-19",
-        "delta_pct_ibja": -1.124,
-        "delta_pct_gold_usd": 0.067,
-        "delta_pct_usdinr": -1.008,
-        "delta_pct_premium": -0.183,
+        "delta_pct_ibja": -1.44,
+        "delta_pct_gold_usd": -0.286,
+        "delta_pct_usdinr": -0.886,
+        "delta_pct_premium": -0.268,
         "total_move_rs_per_g": -155.0,
-        "gold_usd_contrib_rs_per_g": 9.2,
-        "usdinr_contrib_rs_per_g": -138.9,
-        "premium_contrib_rs_per_g": -25.3,
-        "premium_share_pct": 16.3,
+        "gold_usd_contrib_rs_per_g": -30.8,
+        "usdinr_contrib_rs_per_g": -95.4,
+        "premium_contrib_rs_per_g": -28.8,
+        "premium_share_pct": 18.6,
         "attribution_valid": false,
-        "attribution_valid_reason": "premium share 16.3% exceeds 15% threshold"
+        "attribution_valid_reason": "premium share 18.6% exceeds 15% threshold"
       },
       "30d": {
         "n_obs": 20,
         "t0_date": "2026-09-21",
         "t1_date": "2026-10-19",
-        "delta_pct_ibja": -4.626,
-        "delta_pct_gold_usd": -4.091,
-        "delta_pct_usdinr": -1.055,
-        "delta_pct_premium": 0.52,
+        "delta_pct_ibja": -4.942,
+        "delta_pct_gold_usd": -4.444,
+        "delta_pct_usdinr": -0.933,
+        "delta_pct_premium": 0.436,
         "total_move_rs_per_g": -720.0,
-        "gold_usd_contrib_rs_per_g": -636.8,
-        "usdinr_contrib_rs_per_g": -164.1,
-        "premium_contrib_rs_per_g": 81.0,
-        "premium_share_pct": 11.2,
+        "gold_usd_contrib_rs_per_g": -647.5,
+        "usdinr_contrib_rs_per_g": -136.0,
+        "premium_contrib_rs_per_g": 63.5,
+        "premium_share_pct": 8.8,
         "attribution_valid": true,
         "attribution_valid_reason": "clean \u2014 premium share within threshold"
       }
     },
     "driver_state": {
-      "usd_inr_now": 94.8,
-      "gold_usd_now": 4204.8,
-      "usd_inr_30d_pct_change": -1.05,
-      "gold_usd_30d_pct_change": -4.01
+      "usd_inr_now": 94.915,
+      "gold_usd_now": 4190.0,
+      "usd_inr_30d_pct_change": -0.93,
+      "gold_usd_30d_pct_change": -4.35
     },
     "alignment": "intraday_at_fix"
   },
-  "real_readings_count": 816,
+  "real_readings_count": 817,
   "current_22k": 13610,
-  "scraped_at": "2026-10-19T11:15:16.546Z",
+  "scraped_at": "2026-10-19T14:22:02.771Z",
   "price_source": "tanishq_scrape",
   "est_low": null,
   "est_high": null,
@@ -122,47 +122,47 @@
   "band_unavailable_reason": null,
   "model_fallback": false,
   "predicted_22k": 13610,
-  "lower": 13561,
-  "upper": 13659,
+  "lower": 13476,
+  "upper": 13744,
   "target_time": "2026-10-20T00:00:00+00:00",
   "model_status": "nextfix_headline",
-  "model_version": "hold_latest_fix_am_to_pm",
+  "model_version": "hold_latest_fix_pm_to_am",
   "warmup": false,
   "next_fix": {
     "active": true,
     "reason": null,
     "track_record": {
-      "n": 153,
-      "n_forward": 6,
+      "n": 154,
+      "n_forward": 7,
       "first_d0": "2025-07-17",
-      "last_d0": "2026-10-15",
-      "mae_model": 104.6,
-      "mae_flat": 112.4,
-      "mae_change_pct": -7.0,
+      "last_d0": "2026-10-16",
+      "mae_model": 104.1,
+      "mae_flat": 112.0,
+      "mae_change_pct": -7.1,
       "mae_change_ci95": [
-        -12.3,
-        -1.4
+        -12.4,
+        -1.5
       ],
-      "dm_p": 0.0261,
-      "wilcoxon_p": 0.0289,
-      "direction_accuracy": 0.6405,
+      "dm_p": 0.0245,
+      "wilcoxon_p": 0.0254,
+      "direction_accuracy": 0.6429,
       "direction_accuracy_ci95": [
-        0.562,
-        0.712
+        0.565,
+        0.714
       ],
-      "always_up_accuracy": 0.4771,
-      "direction_p_value": 0.0041,
-      "direction_ece": 0.0673,
+      "always_up_accuracy": 0.474,
+      "direction_p_value": 0.0029,
+      "direction_ece": 0.0698,
       "direction_gate_ship": true,
-      "direction_gate_reason": "logistic beats always-up OOS: acc 0.6405>0.4771, brier 0.2223<0.5229, ECE 0.0673<=0.1, p=0.0041 over 153 folds",
+      "direction_gate_reason": "logistic beats always-up OOS: acc 0.6429>0.4740, brier 0.2222<0.5260, ECE 0.0698<=0.1, p=0.0029 over 154 folds",
       "timing_gate_ship": false,
-      "range_coverage": 0.805,
+      "range_coverage": 0.806,
       "range_coverage_ci95": [
-        0.729,
-        0.863
+        0.731,
+        0.864
       ],
-      "range_n": 133,
-      "range_mean_width_ibja": 354.9
+      "range_n": 134,
+      "range_mean_width_ibja": 354.1
     },
     "demotion": {
       "demoted": false,
@@ -173,10 +173,10 @@
       "live_monitor": {
         "checked": true,
         "rule_sha256": "7326ea844d7e98c597db9a725c27010e9097e9f5fe1accf5dc96bf0f985f42b1",
-        "n_live": 6,
+        "n_live": 7,
         "error_breach": false,
-        "coverage_n_live": 6,
-        "coverage_live": 0.667,
+        "coverage_n_live": 7,
+        "coverage_live": 0.714,
         "coverage_e_value": null,
         "coverage_alert": false
       }
@@ -199,16 +199,16 @@
     },
     "windows": {
       "am_to_pm": {
-        "n": 158,
+        "n": 159,
         "ready": true,
         "first_d0": "2025-07-17",
-        "last_d0": "2026-10-16",
-        "range_coverage": 0.797,
+        "last_d0": "2026-10-19",
+        "range_coverage": 0.799,
         "range_coverage_ci95": [
-          0.728,
-          0.853
+          0.73,
+          0.854
         ],
-        "range_mean_width": 126.1
+        "range_mean_width": 125.9
       },
       "pm_to_am": {
         "n": 155,
@@ -223,20 +223,20 @@
         "range_mean_width": 330.4
       }
     },
-    "mode": "after_morning_rate",
-    "model_version": "hold_latest_fix_am_to_pm",
-    "base_kind": "am",
+    "mode": "after_afternoon_rate",
+    "model_version": "hold_latest_fix_pm_to_am",
+    "base_kind": "pm",
     "base_date": "2026-10-19",
-    "base_ibja": 13410.8,
-    "predicted_ibja": 13410.8,
-    "target_kind": "pm",
+    "base_ibja": 13368.5,
+    "predicted_ibja": 13368.5,
+    "target_kind": "am",
     "range_record": {
-      "coverage": 0.797,
-      "n": 158
+      "coverage": 0.8,
+      "n": 155
     },
     "predicted_22k": 13610,
-    "lower": 13561,
-    "upper": 13659,
+    "lower": 13476,
+    "upper": 13744,
     "direction": {
       "show": false,
       "side": "unclear",
