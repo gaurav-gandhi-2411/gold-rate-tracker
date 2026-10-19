@@ -102,7 +102,8 @@ def run(
     where = "total"
     scheme = schemes[0][0]
     try:
-        for i, (scheme, auth) in enumerate(schemes):
+        for i, (name, auth) in enumerate(schemes):
+            scheme = name
             headers = {"Authorization": auth, "Content-Type": "application/json"}
             try:
                 total = fetch(f"{base}/total?{query}", headers)
