@@ -40,7 +40,8 @@ Data on master (public, no decrypting):
 ## 2. Timed visits and attribution
 
 Slots (IST): 01:40, 07:30, 10:40, 11:10, 15:35, 19:50 = 20:10, 02:00, 05:10, 05:40, 10:05, 14:20 UTC.
-1. `gh run list --workflow scrape-tanishq-selfhosted.yml --limit 40 --json event,status,conclusion,createdAt`
+1. `gh run list --workflow scrape-tanishq-selfhosted.yml --created ">=YYYY-MM-DD" --limit 500 --json event,status,conclusion,createdAt`
+   with the date of your last check (a bare `--limit 40` stops after about 4 days and has hidden slots before).
    For each slot since your last check: a `workflow_dispatch` run created within about 2 minutes
    of the slot and `success` is on time. Anything else: `cancelled`, `failure`, a late dispatch or no
    dispatch. List every slot, none skipped.
@@ -51,6 +52,11 @@ Slots (IST): 01:40, 07:30, 10:40, 11:10, 15:35, 19:50 = 20:10, 02:00, 05:10, 05:
    If a session runs on another machine, or the file is older than the last slot you list, run
    `powershell -File scripts/win/tanishq_dispatch.ps1 -SideTasksOnly` (triggers no visit). The copy
    in the repo, `data/laptop_attribution.json`, is only the seed and is not refreshed any more.
+   `laptop_attribution.py` counts a dispatch within 45 minutes of the slot as on time (`WINDOW_MIN`), so such
+   slots do not appear in the file: list them from `tanishq_dispatch.log` instead. Classify a late slot from the
+   System event log (shutdown 13 / start 12 / 1074 / 6008, use `power_events`-style queries with LOCAL times in
+   `StartTime`; a UTC-kind value shifts the window by 5.5 h) and the dispatcher log; a catch-up line
+   `(batch of N, led by ...)` that produced one run is the one-dispatch-per-wake behaviour (#2816).
 3. A cancelled run: read its job steps (`gh run view <id> --json jobs`) for the cause before saying
    anything (the 2026-10-09 case was the bot-PR sync step waiting out the 25-minute timeout).
 
@@ -107,10 +113,20 @@ GoatCounter needs GG's login (checked 2026-10-10: the dashboard shows a login fo
 returns 403), so CC cannot read it. Say "not readable without GG" and keep the optional glance in
 `docs/FOR_GG.md`. Do not substitute a guess.
 
-If the repo secret `GOATCOUNTER_TOKEN` exists (optional item in `docs/FOR_GG.md`), dispatch
-`gh workflow run visitors-weekly.yml` after the Monday weekly run: it sends GG one private line
+If the repo secret `GOATCOUNTER_TOKEN` exists (`gh secret list`, names only; optional item in `docs/FOR_GG.md`),
+dispatch `gh workflow run visitors-weekly.yml` after the Monday weekly run: it sends GG one private line
 (7-day total, top 3 source hosts) and prints only a status word, so CC does not read the numbers
-either. Without the secret the run says `skipped: GOATCOUNTER_TOKEN is not set`.
+either. Without the secret do not dispatch it (it can only skip; the Monday schedule runs it anyway). Reading its
+log: the runner echoes each step's script, so a line like `echo "NTFY_TOPIC is not set; nothing sent"` in colour
+codes is source text, not output; the step's `env:` block shows `NTFY_TOPIC: ***` when the secret is wired, and
+the real output is the last line (`nothing to send` while there is no token). `tests/test_ntfy_secret_env.py`
+fails if any workflow step reads `$NTFY_TOPIC` or passes `ntfy-topic` without the secret.
+
+**Every Monday, send the weekly push** (not only on dated outcomes):
+`gh workflow run notify-gg.yml -f title="Gold Tracker: Monday update" -f message="..."` with plain words and no
+private data: P3's live record from `docs/MODEL_STATUS.md` (days scored, average miss vs holding the last rate,
+direction right, range held vs the 80% target, and "too few to judge" while n is small), whether any model is
+demoted, and the next dated checks. Confirm the run succeeds (`gh run view <id> --json conclusion`).
 
 ## 8. Dated checks coming up
 
