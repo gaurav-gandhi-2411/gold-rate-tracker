@@ -113,10 +113,10 @@ GoatCounter needs GG's login (checked 2026-10-10: the dashboard shows a login fo
 returns 403), so CC cannot read it. Say "not readable without GG" and keep the optional glance in
 `docs/FOR_GG.md`. Do not substitute a guess.
 
-If the repo secret `GOATCOUNTER_TOKEN` exists (`gh secret list`, names only; optional item in `docs/FOR_GG.md`),
-dispatch `gh workflow run visitors-weekly.yml` after the Monday weekly run: it sends GG one private line
-(7-day total, top 3 source hosts) and prints only a status word, so CC does not read the numbers
-either. Without the secret do not dispatch it (it can only skip; the Monday schedule runs it anyway). Reading its
+The repo secret `GOATCOUNTER_TOKEN` exists (checked with `gh secret list`, names only). Dispatch
+`gh workflow run visitors-weekly.yml` after the Monday weekly run: it sends GG one private line
+(7-day total, top 3 source hosts seen at least 3 times) and prints only a status word, so CC does not read the numbers
+either. If the secret is ever missing do not dispatch it (it can only skip; the Monday schedule runs it anyway). Reading its
 log: the runner echoes each step's script, so a line like `echo "NTFY_TOPIC is not set; nothing sent"` in colour
 codes is source text, not output; the step's `env:` block shows `NTFY_TOPIC: ***` when the secret is wired, and
 the real output is the last line (`nothing to send` while there is no token). `tests/test_ntfy_secret_env.py`
@@ -127,6 +127,12 @@ fails if any workflow step reads `$NTFY_TOPIC` or passes `ntfy-topic` without th
 private data: P3's live record from `docs/MODEL_STATUS.md` (days scored, average miss vs holding the last rate,
 direction right, range held vs the 80% target, and "too few to judge" while n is small), whether any model is
 demoted, and the next dated checks. Confirm the run succeeds (`gh run view <id> --json conclusion`).
+The visitor line goes with it, but never inside that message (its inputs are public and CC cannot read the
+numbers): the token exists since 2026-10-19, so dispatch `visitors-weekly.yml` right after the push and read its
+status word in the real output (`written (Bearer)` or `written (Basic)`, then `ntfy responded HTTP 200`). The
+push text just says the visitor line follows privately. A `skipped: ... HTTP 404 on total` is not a decision:
+the first dispatch on 2026-10-19 got one and the next two, minutes later, worked (cause unknown, INFERRED a new
+token not yet live), so retry once after a few minutes before changing anything.
 
 ## 8. Dated checks coming up
 
