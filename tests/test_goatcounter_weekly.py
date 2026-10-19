@@ -68,7 +68,7 @@ def test_a_refused_or_unreachable_api_is_quiet_and_never_echoes_the_token(tmp_pa
 
     refused = gw.run("SECRET-TOKEN", out, NOW, fetch=refuse)
     unreachable = gw.run("SECRET-TOKEN", out, NOW, fetch=down)
-    assert refused == "skipped: GoatCounter answered HTTP 403"
+    assert refused == "skipped: GoatCounter answered HTTP 403 on total (Basic)"
     assert unreachable.startswith("skipped: GoatCounter not reachable")
     assert "SECRET-TOKEN" not in refused + unreachable and not out.exists()
 
@@ -79,7 +79,7 @@ def test_with_a_token_it_asks_only_for_total_and_toprefs_and_writes_the_sentence
     out, seen = tmp_path / "v.txt", []
     refs = {"stats": [{"name": "https://news.example/story", "count": 5}]}
     status = gw.run("tok", out, NOW, fetch=_fetch({"total": 7}, refs, seen))
-    assert status == "written"
+    assert status == "written (Bearer)"
     assert out.read_text(encoding="utf-8") == (
         "Visitors in the last 7 days: 7. Top sources: news.example (5).\n"
     )
@@ -115,6 +115,6 @@ def test_basic_auth_is_tried_when_bearer_is_refused(tmp_path: Path) -> None:
         return {"stats": []} if "/toprefs" in url else {"total": 4}
 
     out = tmp_path / "v.txt"
-    assert gw.run("tok", out, NOW, fetch=fetch) == "written"
+    assert gw.run("tok", out, NOW, fetch=fetch) == "written (Basic)"
     assert seen == ["Bearer", "Basic", "Basic"]
     assert out.read_text(encoding="utf-8") == "Visitors in the last 7 days: 4.\n"

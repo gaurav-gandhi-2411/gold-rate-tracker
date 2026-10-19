@@ -96,9 +96,13 @@ def run(
     # The API page documents Bearer; its OpenAPI file lists only HTTP Basic (empty user, token as
     # password). Try Bearer, and on a 401/403 try Basic once before giving up.
     basic = base64.b64encode(f":{token}".encode()).decode()
-    schemes = (f"Bearer {token}", f"Basic {basic}")
+    schemes = (("Bearer", f"Bearer {token}"), ("Basic", f"Basic {basic}"))
+    # The status word names the request and scheme, never the token or any number, so a failure can be
+    # read from the public run log.
+    where = "total"
+    scheme = schemes[0][0]
     try:
-        for i, auth in enumerate(schemes):
+        for i, (scheme, auth) in enumerate(schemes):
             headers = {"Authorization": auth, "Content-Type": "application/json"}
             try:
                 total = fetch(f"{base}/total?{query}", headers)
@@ -106,13 +110,14 @@ def run(
             except urllib.error.HTTPError as err:
                 if err.code not in (401, 403) or i == len(schemes) - 1:
                     raise
+        where = "toprefs"
         refs = fetch(f"{base}/toprefs?{query}&limit=20", headers)
     except urllib.error.HTTPError as err:
-        return f"skipped: GoatCounter answered HTTP {err.code}"
+        return f"skipped: GoatCounter answered HTTP {err.code} on {where} ({scheme})"
     except (urllib.error.URLError, TimeoutError, ValueError, OSError) as err:
-        return f"skipped: GoatCounter not reachable ({type(err).__name__})"
+        return f"skipped: GoatCounter not reachable on {where} ({type(err).__name__})"
     out.write_text(summarise(total, refs) + "\n", encoding="utf-8", newline="\n")
-    return "written"
+    return f"written ({scheme})"
 
 
 def main(argv: list[str] | None = None) -> int:
