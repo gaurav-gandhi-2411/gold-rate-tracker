@@ -46,6 +46,7 @@ KNOWN_OPS: frozenset[str] = frozenset(
         "T16",  # live next-rate model switched off by its demotion rules (ADR 068)
         "T17",  # live next-rate model changed by the promotion rule or a rollback (ADR 072)
         "T18",  # live next-rate range clearly below its 80% target on live days (ADR 075)
+        "T19",  # live-only monitor reached its first look, with the verdict, once (ADR 075)
     }
 )
 
