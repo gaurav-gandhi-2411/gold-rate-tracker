@@ -236,8 +236,12 @@ def test_cli_077_before_the_look_writes_counts_only(tmp_path, capsys, no_effect)
     assert all("effect" not in w for w in written["windows"].values())
 
 
-def test_cli_077_cannot_open_the_look_with_a_faked_future_now(tmp_path, capsys, no_effect):
-    # Everything a look needs is present for 2027-01-10, but --now can never be later than the real clock.
+def test_cli_077_cannot_open_the_look_with_a_faked_future_now(
+    tmp_path, capsys, no_effect, monkeypatch
+):
+    # Everything a look needs is present for 2027-01-10, but --now can never be later than the real clock,
+    # here pinned to 2026-12-01 so the test means the same thing on any date.
+    monkeypatch.setattr(mod, "_real_now", lambda: datetime(2026, 12, 1, tzinfo=UTC))
     data = tmp_path / "data"
     data.mkdir()
     (data / ni.SHADOW_PATH.name).write_text(json.dumps({"entries": book()}), encoding="utf-8")
@@ -246,12 +250,9 @@ def test_cli_077_cannot_open_the_look_with_a_faked_future_now(tmp_path, capsys, 
     out = tmp_path / "out"
     argv = ["--adr", "077", "--now", "2027-01-10T12:00:00Z", "--data-dir", str(data)]
     rc = mod.main([*argv, "--adr076-runs", str(runs), "--out-dir", str(out)])
-    real_now = datetime.now(UTC)
-    if real_now >= LOOK_077:  # after the real look date this test cannot show the clamp
-        pytest.skip("the real clock has reached the look date")
     assert rc == 0
     written = json.loads(next(out.glob("adr077_look_*.json")).read_text(encoding="utf-8"))
-    assert written["look_open"] is False and written["run_at"] < "2026-12-14"
+    assert written["look_open"] is False and written["run_at"].startswith("2026-12-01")
 
 
 def test_missing_or_unreadable_adr076_run_list_keeps_the_look_closed(tmp_path):
@@ -275,7 +276,7 @@ def test_the_look_workflow_is_manual_read_only_and_runs_the_frozen_defaults():
     assert re.search(r"^permissions:\s*\n\s+contents: read\s*\n\s+actions: read", t, re.M)
     for forbidden in ("upload-artifact", "git push", "git commit", "gh pr", "write"):
         assert forbidden not in t, forbidden
-    assert "actions/workflows/adr076-look.yml/runs?status=success" in t
+    assert "actions/workflows/adr076-look.yml/runs?status=success&branch=master" in t
     cmd = re.search(r"run: (python scripts/check_adr066_promotion\.py[^\n]*)", t)
     flags = re.findall(r"--[a-z0-9-]+", cmd.group(1)) if cmd else []
     assert flags == ["--adr", "--adr076-runs", "--out-dir"], flags  # no --now or rule overrides

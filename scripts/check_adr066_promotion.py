@@ -1037,6 +1037,11 @@ def evaluate_window_077(
     return out
 
 
+def _real_now() -> datetime:
+    """The real clock (a function so a test can pin it)."""
+    return datetime.now(UTC)
+
+
 def load_adr076_runs(path: Path | None) -> list[datetime]:
     """Creation times of successful ADR 076 look runs, from a JSON list of ISO strings (the 077 workflow
     writes it from the GitHub API). Missing or unreadable: empty, so the look stays closed (fail closed)."""
@@ -1095,7 +1100,7 @@ def run_adr077(
 def main_077(args: argparse.Namespace, now: datetime) -> int:
     # --now may move the run EARLIER (tests, re-reading counts) but never later than the real clock:
     # a faked future date must not open the look.
-    now = min(now, datetime.now(UTC))
+    now = min(now, _real_now())
     res = run_adr077(args.data_dir, now, args.calibration_dir, args.adr076_runs)
     args.out_dir.mkdir(parents=True, exist_ok=True)
     path = args.out_dir / f"adr077_look_{now.strftime('%Y-%m-%d')}.json"

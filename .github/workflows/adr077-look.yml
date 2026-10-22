@@ -64,7 +64,7 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           source scripts/ci_retry.sh
-          ci_retry gh api "repos/${GITHUB_REPOSITORY}/actions/workflows/adr076-look.yml/runs?status=success&per_page=100" \
+          ci_retry gh api "repos/${GITHUB_REPOSITORY}/actions/workflows/adr076-look.yml/runs?status=success&branch=master&per_page=100" \
             --jq '[.workflow_runs[].created_at]' > "${RUNNER_TEMP}/adr076_runs.json"
 
       - name: Run the ADR 077 look
