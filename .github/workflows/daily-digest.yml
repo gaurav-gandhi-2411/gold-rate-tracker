@@ -1,0 +1,74 @@
+# One plain-words health digest for GG each evening while he is away (docs/AUTONOMY_SPEC.md, section 3).
+#
+# Reads only aggregates already in the repo (scripts/gg_digest.py) plus the list of PRs merged today, and
+# sends them to the private ntfy topic. The schedule is a fallback only: GitHub's cron runs late or skips,
+# so every check-price run after 14:30 UTC starts this when it has not run yet today (the ci-health pattern).
+# A second run on the same UTC day exits at the "already sent today" step, so the triggers cannot double-send.
+name: Daily digest
+
+on:
+  schedule:
+    - cron: "35 14 * * *" # 20:05 IST, fallback only
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  actions: read
+  pull-requests: read
+
+concurrency:
+  group: daily-digest
+  cancel-in-progress: false
+
+jobs:
+  digest:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Already sent today?
+        id: guard
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          source scripts/ci_retry.sh
+          TODAY=$(date -u +%Y-%m-%d)
+          N=$(ci_retry gh api "repos/${GITHUB_REPOSITORY}/actions/workflows/daily-digest.yml/runs?created=${TODAY}&status=success&per_page=50" \
+                --jq "[.workflow_runs[] | select(.id != ${GITHUB_RUN_ID})] | length") || N=0
+          echo "earlier successful runs today: ${N}"
+          if [ "${N}" -gt 0 ]; then echo "send=false" >> "$GITHUB_OUTPUT"; else echo "send=true" >> "$GITHUB_OUTPUT"; fi
+
+      - uses: actions/setup-python@v5
+        if: steps.guard.outputs.send == 'true'
+        with:
+          python-version: "3.12"
+
+      - name: Build the digest
+        if: steps.guard.outputs.send == 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          source scripts/ci_retry.sh
+          TODAY=$(date -u +%Y-%m-%d)
+          ci_retry gh pr list --repo "${GITHUB_REPOSITORY}" --state merged --search "merged:>=${TODAY}" \
+            --limit 100 --json number,title,headRefName > "${RUNNER_TEMP}/merged.json" || rm -f "${RUNNER_TEMP}/merged.json"
+          ARGS=()
+          [ -s "${RUNNER_TEMP}/merged.json" ] && ARGS=(--merged "${RUNNER_TEMP}/merged.json")
+          python scripts/gg_digest.py daily --out "${RUNNER_TEMP}/digest.txt" "${ARGS[@]}"
+
+      - name: Send it to GG's private topic
+        if: steps.guard.outputs.send == 'true'
+        env:
+          NTFY_TOPIC: ${{ secrets.NTFY_TOPIC }}
+        run: |
+          set -u
+          if [ -z "${NTFY_TOPIC}" ]; then
+            echo "::error::NTFY_TOPIC is not set; nothing sent"
+            exit 1
+          fi
+          code=$(curl -s -o /dev/null -w '%{http_code}' --retry 3 \
+            -H "Title: Gold Tracker: daily digest" -H "Tags: clipboard" \
+            --data-binary "@${RUNNER_TEMP}/digest.txt" "https://ntfy.sh/${NTFY_TOPIC}")
+          echo "ntfy responded HTTP ${code}"
+          [ "${code}" = "200" ]
