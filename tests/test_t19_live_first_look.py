@@ -62,3 +62,15 @@ def test_never_twice() -> None:
 
 def test_private_only() -> None:
     assert "T19" not in PUBLIC_ALLOWLIST and audience_for("T19") == "ops"
+
+
+def test_a_copy_held_in_the_quiet_queue_is_not_built_again() -> None:
+    # The cycle that releases the quiet-hours queue runs the checks first: a fresh T19 next to the released
+    # copy would be sent twice (last_sent is only set after a send).
+    state = notifications.NotificationState()
+    queued = notifications._check_t19_live_first_look(_fc(FIRST), state, _now())
+    assert queued is not None
+    state.queued.append(queued.to_dict())
+    assert notifications._check_t19_live_first_look(_fc(FIRST), state, _now()) is None
+    released = notifications._release_queued(state)
+    assert [a.trigger_id for a in released] == ["T19"]

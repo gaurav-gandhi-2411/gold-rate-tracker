@@ -1276,7 +1276,9 @@ def _check_t19_live_first_look(
     (docs/AUTONOMY_SPEC.md section 3). Reads the same public summary as T18. Private topic only."""
     from ml.live_monitor import LIVE_RULE
 
-    if state.last_sent.get("T19"):
+    # A copy held in the quiet-hours queue counts as pending: without this, the cycle that releases the queue
+    # would also build a fresh T19 (last_sent is only set after a send) and send it twice.
+    if state.last_sent.get("T19") or any(q.get("trigger_id") == "T19" for q in state.queued):
         return None
     lm = ((forecast.get("next_fix") or {}).get("demotion") or {}).get("live_monitor") or {}
     n = lm.get("n_live")
