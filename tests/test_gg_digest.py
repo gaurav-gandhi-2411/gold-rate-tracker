@@ -1,4 +1,4 @@
-"""scripts/gg_digest.py: GG's daily digest reads only aggregates and never fails on a missing part."""
+"""scripts/gg_digest.py: the daily digest and Monday push read only aggregates and never fail on a missing part."""
 
 from __future__ import annotations
 
@@ -120,9 +120,22 @@ def test_a_missing_file_degrades_to_unknown_and_the_rest_still_builds(tmp_path: 
     assert text.splitlines()[0].startswith("Data: fresh")
 
 
+def test_monday_note(tmp_path: Path) -> None:
+    root = _repo(tmp_path)
+    text = gd.monday(root, NOW)
+    assert "Challengers: ensemble 6 days (first look at 20); p3_roll60 PROMOTABLE." in text
+    assert "Next: 2026-10-26: Monday push and visitor line;" in text
+    assert text.endswith("Visitor line follows separately (visitors-weekly).")
+
+
+def test_past_dates_drop_out() -> None:
+    late = datetime(2026, 12, 20, tzinfo=UTC)
+    assert gd.next_dates_line(late) == "Next: none listed."
+
+
 def test_no_price_values_in_the_text(tmp_path: Path) -> None:
     root = _repo(tmp_path)
-    text = gd.daily(root, NOW, [])
+    text = gd.daily(root, NOW, []) + gd.monday(root, NOW)
     assert (
         "13," not in text and "per gram" not in text
     )  # misses in Rs. are public averages, not prices
@@ -136,7 +149,7 @@ def test_main_writes_the_file(tmp_path: Path, capsys) -> None:
 
 
 def test_workflows_guard_against_double_sends_and_have_dispatch() -> None:
-    for name in ("daily-digest.yml",):
+    for name in ("daily-digest.yml", "monday-push.yml"):
         wf = yaml.safe_load((ROOT / ".github" / "workflows" / name).read_text(encoding="utf-8"))
         on = wf.get("on", wf.get(True))
         assert "workflow_dispatch" in on and "schedule" in on
@@ -147,3 +160,4 @@ def test_workflows_guard_against_double_sends_and_have_dispatch() -> None:
         assert send["if"] == "steps.guard.outputs.send == 'true'"
     check_price = (ROOT / ".github" / "workflows" / "check-price.yml").read_text(encoding="utf-8")
     assert "start_if_not_run_today daily-digest.yml" in check_price
+    assert "start_if_not_run_today monday-push.yml" in check_price

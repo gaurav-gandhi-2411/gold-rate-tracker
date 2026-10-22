@@ -1,10 +1,11 @@
-"""scripts/gg_digest.py -- the plain-words daily digest GG gets while away.
+"""scripts/gg_digest.py -- the plain-words notes GG gets while away: the daily digest and the Monday push.
 
-It reads only aggregates the workflows already publish in the repo (data/*.json written by
+Both read only aggregates the workflows already publish in the repo (data/*.json written by
 check-price and weekly-backtest), never a raw or decrypted series, and never a price. The workflow
-(daily-digest.yml) sends the text to the private ntfy topic as a file.
+(daily-digest.yml, monday-push.yml) sends the text to the private ntfy topic as a file.
 
-    python scripts/gg_digest.py daily --out "$RUNNER_TEMP/digest.txt" [--merged merged.json] [--now ISO]
+    python scripts/gg_digest.py daily  --out "$RUNNER_TEMP/digest.txt" [--merged merged.json] [--now ISO]
+    python scripts/gg_digest.py monday --out "$RUNNER_TEMP/monday.txt" [--now ISO]
 
 Every line degrades to "unknown (<reason>)" instead of failing: a digest with a missing part is
 still worth sending, and the missing part is itself the news.
@@ -21,6 +22,14 @@ from typing import Any
 
 ROOT = Path(__file__).resolve().parent.parent
 STALE_H = 8.0  # the page shows "not fresh" past 8 h (docs/TANISHQ_TIMED_VISITS.md)
+
+# Dated checks GG asked to hear about, as (date, what). A date in the past drops out by itself.
+NEXT_DATES = (
+    ("2026-10-26", "Monday push and visitor line"),
+    ("2026-11-04", "first day a challenger can reach its first look (20 forward days)"),
+    ("2026-11-16", "ADR 076 hourly-model look (first qualifying Monday on or after)"),
+    ("2026-12-14", "ADR 077 look (first Monday on or after, after ADR 076's look)"),
+)
 
 
 def _load(path: Path) -> Any:
@@ -132,6 +141,28 @@ def parked_line(root: Path) -> str:
     return _safe(build)
 
 
+def next_dates_line(now: datetime) -> str:
+    today = now.strftime("%Y-%m-%d")
+    upcoming = [f"{d}: {w}" for d, w in NEXT_DATES if d >= today]
+    return "Next: " + ("; ".join(upcoming[:3]) if upcoming else "none listed") + "."
+
+
+def challengers_line(root: Path) -> str:
+    def build() -> str:
+        ch = _load(root / "data" / "model_status_weekly.json")["challengers"]
+        bits = []
+        for name, c in ch.items():
+            if c.get("retired"):
+                bits.append(f"{name} retired")
+            elif c.get("promotable"):
+                bits.append(f"{name} PROMOTABLE")
+            else:
+                bits.append(f"{name} {c.get('n')} days (first look at {c.get('first_look_day')})")
+        return "Challengers: " + "; ".join(bits) + "."
+
+    return _safe(build)
+
+
 def daily(root: Path, now: datetime, merged: list[dict[str, Any]] | None) -> str:
     return "\n".join(
         [
@@ -145,22 +176,37 @@ def daily(root: Path, now: datetime, merged: list[dict[str, Any]] | None) -> str
     )
 
 
+def monday(root: Path, now: datetime) -> str:
+    return "\n".join(
+        [
+            live_line(root),
+            challengers_line(root),
+            alerts_line(root),
+            next_dates_line(now),
+            "Visitor line follows separately (visitors-weekly).",
+        ]
+    )
+
+
 def main(argv: list[str] | None = None) -> int:
-    ap = argparse.ArgumentParser(description="GG's daily digest text")
-    ap.add_argument("mode", choices=("daily",))
+    ap = argparse.ArgumentParser(description="GG's daily digest / Monday push text")
+    ap.add_argument("mode", choices=("daily", "monday"))
     ap.add_argument("--out", type=Path, required=True)
     ap.add_argument("--merged", type=Path, help="JSON list of PRs merged today (gh pr list --json)")
     ap.add_argument("--now", help="ISO time instead of the clock (tests)")
     ap.add_argument("--root", type=Path, default=ROOT)
     args = ap.parse_args(argv)
     now = _parse(args.now) if args.now else datetime.now(UTC)
-    merged = None
-    if args.merged is not None:
-        try:
-            merged = _load(args.merged)
-        except (OSError, ValueError):
-            merged = None
-    text = daily(args.root, now, merged)
+    if args.mode == "daily":
+        merged = None
+        if args.merged is not None:
+            try:
+                merged = _load(args.merged)
+            except (OSError, ValueError):
+                merged = None
+        text = daily(args.root, now, merged)
+    else:
+        text = monday(args.root, now)
     args.out.write_text(text + "\n", encoding="utf-8", newline="\n")
     print(text)  # aggregates only (counts, ages, averages already public in docs/MODEL_STATUS.md)
     return 0

@@ -511,6 +511,8 @@ jobs:
             fi
           }
           if [ "$HM" -ge 1430 ]; then start_if_not_run_today daily-digest.yml; else echo "daily-digest.yml: not due before 14:30 UTC"; fi
+          # The Monday push: Mondays after 03:30 UTC (09:00 IST), same rule.
+          if [ "$(date -u +%u)" = "1" ] && [ "$HM" -ge 0330 ]; then start_if_not_run_today monday-push.yml; else echo "monday-push.yml: not due"; fi
 
       - name: Fail the run if decrypt or re-encrypt failed (ADR 060)
         if: always() && (steps.decrypt.outcome == 'failure' || steps.seal.outcome == 'failure')
