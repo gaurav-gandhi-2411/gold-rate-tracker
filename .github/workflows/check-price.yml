@@ -485,6 +485,34 @@ jobs:
             echo "token-expiry.yml ran ${AGE}s ago; nothing to start"
           fi
 
+      # GG's daily digest (after 14:30 UTC) and Monday push (Mondays after 03:30 UTC) must not depend on GitHub's
+      # cron alone (docs/AUTONOMY_SPEC.md section 3). Start each when it is due and has not run today; each
+      # workflow also refuses to send twice in one UTC day. Never fails the run.
+      - name: Start GG's daily digest or Monday push if due
+        if: always()
+        continue-on-error: true
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          source "${GITHUB_WORKSPACE}/scripts/ci_retry.sh"
+          TODAY=$(date -u +%Y-%m-%d)
+          HM=$(date -u +%H%M)
+          start_if_not_run_today() {
+            local wf="$1" n
+            n=$(ci_retry gh api "repos/${GITHUB_REPOSITORY}/actions/workflows/${wf}/runs?created=${TODAY}&per_page=50" \
+                  --jq '[.workflow_runs[] | select(.conclusion == "success" or .status != "completed")] | length') || n=""
+            if [ -z "$n" ]; then
+              echo "${wf}: could not list today's runs; not starting it"
+            elif [ "$n" -eq 0 ]; then
+              ci_retry gh workflow run "${wf}" --ref master
+              echo "${wf}: due and not run today; started it"
+            else
+              echo "${wf}: already ran or running today (${n})"
+            fi
+          }
+          if [ "$HM" -ge 1430 ]; then start_if_not_run_today daily-digest.yml; else echo "daily-digest.yml: not due before 14:30 UTC"; fi
+          if [ "$(date -u +%u)" = "1" ] && [ "$HM" -ge 0330 ]; then start_if_not_run_today monday-push.yml; else echo "monday-push.yml: not due"; fi
+
       - name: Fail the run if decrypt or re-encrypt failed (ADR 060)
         if: always() && (steps.decrypt.outcome == 'failure' || steps.seal.outcome == 'failure')
         run: |
