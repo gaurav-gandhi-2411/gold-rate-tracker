@@ -1266,6 +1266,43 @@ def _check_t18_live_coverage(
     return _make_alert("T18", title, body, 3, ["information_source", "warning"], now_ist)
 
 
+def _check_t19_live_first_look(
+    forecast: dict, state: NotificationState, now_ist: datetime
+) -> PendingAlert | None:
+    """T19 -- ONCE EVER: the live-only monitor (ADR 075) has reached its first look, with the verdict.
+
+    The monitor itself runs every cycle and T16/T18 report a breach; this only tells GG the day the
+    first look happened, so the dated check does not depend on anyone reading a log
+    (docs/AUTONOMY_SPEC.md section 3). Reads the same public summary as T18. Private topic only."""
+    from ml.live_monitor import LIVE_RULE
+
+    # A copy held in the quiet-hours queue counts as pending: without this, the cycle that releases the queue
+    # would also build a fresh T19 (last_sent is only set after a send) and send it twice.
+    if state.last_sent.get("T19") or any(q.get("trigger_id") == "T19" for q in state.queued):
+        return None
+    lm = ((forecast.get("next_fix") or {}).get("demotion") or {}).get("live_monitor") or {}
+    n = lm.get("n_live")
+    if lm.get("checked") is not True or not isinstance(n, int) or n < LIVE_RULE["first_look_days"]:
+        return None
+    error = (
+        "the live model is clearly worse than repeating the last rate: it was switched to hold"
+        if lm.get("error_breach")
+        else "the live model is not clearly worse than repeating the last rate"
+    )
+    cov = lm.get("coverage_live")
+    coverage = (
+        f"its 80% range held {cov} of the time, clearly below target (alert only)"
+        if lm.get("coverage_alert")
+        else f"its 80% range held {cov} of the time, not clearly below target"
+    )
+    title = "Gold Tracker: live monitor's first look"
+    body = (
+        f"The live-only monitor reached {n} live days, its first look (ADR 075): {error}; {coverage}. "
+        "This message is sent once."
+    )
+    return _make_alert("T19", title, body, 3, ["information_source"], now_ist)
+
+
 def _check_t14_tanishq_silent(
     silence: TanishqSilence | None,
     state: NotificationState,
@@ -1401,6 +1438,13 @@ def check_triggers(
         t18 = None
     if t18 is not None:
         alerts.append(t18)
+    try:  # same isolation as T16/T17/T18
+        t19 = _check_t19_live_first_look(forecast, state, now_ist)
+    except Exception:
+        logger.exception("T19 check failed; the other triggers' alerts are kept")
+        t19 = None
+    if t19 is not None:
+        alerts.append(t19)
     return alerts
 
 
