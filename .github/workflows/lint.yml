@@ -168,7 +168,9 @@ jobs:
   # render-smoke.yml (pinned action SHAs copied from there).
   pwa-headless:
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    # 20, not 10: 6 of the 7 non-green runs in 55 (2026-10-22) were the job timeout firing while
+    # `playwright install --with-deps` took 7.7-10.0 min (normally 0.3-0.6); the tests themselves take ~2.5.
+    timeout-minutes: 20
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
