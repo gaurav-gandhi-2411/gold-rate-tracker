@@ -1,11 +1,11 @@
 {
-  "predicted_at": "2026-10-21T22:40:52.712512+00:00",
+  "predicted_at": "2026-10-22T06:32:53.727617+00:00",
   "target_window": "5d",
   "headline": {
     "method": "nextfix_p3_v1",
-    "predicted_22k": 13372,
-    "lower": 13244,
-    "upper": 13501,
+    "predicted_22k": 13379,
+    "lower": 13251,
+    "upper": 13507,
     "conformal_pi_half": 174.2,
     "naive_mae_recent_30": 110.5,
     "vol_context": {
@@ -59,7 +59,7 @@
     "direction_consensus": 1.0
   },
   "driver_context": {
-    "computed_at": "2026-10-21T22:41:02.062522+00:00",
+    "computed_at": "2026-10-22T06:33:01.260225+00:00",
     "macro_staleness_days": 0.0,
     "macro_fresh": true,
     "premium_threshold_pct": 15.0,
@@ -116,15 +116,15 @@
   "fusion_sources": null,
   "band_method": "empirical_quantile",
   "nominal_coverage": 80,
-  "freshness_stratum": "same_day",
+  "freshness_stratum": "carry_forward",
   "residual_quantile_source": "calibration.residual_abs_quantiles[80] (in_sample, fit_date=2026-10-15, n=105)",
   "band_half_width": 69.74610873403799,
   "band_unavailable_reason": null,
   "model_fallback": false,
-  "predicted_22k": 13372,
-  "lower": 13244,
-  "upper": 13501,
-  "target_time": "2026-10-22T00:00:00+00:00",
+  "predicted_22k": 13379,
+  "lower": 13251,
+  "upper": 13507,
+  "target_time": "2026-10-23T00:00:00+00:00",
   "model_status": "nextfix_headline",
   "model_version": "nextfix_p3_v1",
   "warmup": false,
@@ -228,19 +228,19 @@
     "base_kind": "pm",
     "base_date": "2026-10-21",
     "base_ibja": 13200.0,
-    "predicted_ibja": 13189.56,
+    "predicted_ibja": 13196.12,
     "target_kind": "pm",
     "range_record": {
       "coverage": 0.8,
       "n": 135
     },
-    "predicted_22k": 13372,
-    "lower": 13244,
-    "upper": 13501,
+    "predicted_22k": 13379,
+    "lower": 13251,
+    "upper": 13507,
     "shadow_ensemble": {
       "model_version": "nextfix_ridge_mlp_v1",
-      "predicted_ibja": 13222.56,
-      "p_up": 0.548,
+      "predicted_ibja": 13230.05,
+      "p_up": 0.5743,
       "track_record": {
         "n": 155,
         "mae_model": 103.3,
@@ -249,11 +249,11 @@
         "last_d0": "2026-10-19"
       }
     },
-    "p_up": 0.4657,
+    "p_up": 0.4872,
     "direction": {
       "show": true,
       "side": "unclear",
-      "probability": 0.5343
+      "probability": 0.5128
     }
   }
 }
