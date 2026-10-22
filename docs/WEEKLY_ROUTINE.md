@@ -122,6 +122,12 @@ codes is source text, not output; the step's `env:` block shows `NTFY_TOPIC: ***
 the real output is the last line (`nothing to send` while there is no token). `tests/test_ntfy_secret_env.py`
 fails if any workflow step reads `$NTFY_TOPIC` or passes `ntfy-topic` without the secret.
 
+**Automated since 2026-10-22.** `daily-digest.yml` (#3062) sends GG a health digest every evening and
+`monday-push.yml` (#3067) sends the Monday push and then starts `visitors-weekly.yml`; check-price starts each
+when it is due (after 14:30 UTC; Mondays after 03:30 UTC) and each refuses to send twice in a UTC day. A session
+only checks that they ran (`gh run list --workflow monday-push.yml --limit 2`, real step output
+`ntfy responded HTTP 200`) and sends the push below by hand only if the workflow did not run.
+
 **Every Monday, send the weekly push** (not only on dated outcomes):
 `gh workflow run notify-gg.yml -f title="Gold Tracker: Monday update" -f message="..."` with plain words and no
 private data: P3's live record from `docs/MODEL_STATUS.md` (days scored, average miss vs holding the last rate,
@@ -141,9 +147,11 @@ Announce each outcome to GG in one plain sentence with `gh workflow run notify-g
 
 | Date | Check | How |
 |---|---|---|
-| 2026-10-16 | ADR 066 hourly check, exactly as pre-registered | `gh workflow run adr066-check.yml`, then read the console report of the run (aggregates only). Nothing else decides it. If a window is promotable, the next step is an ADR 072 amendment (GG), see the ADR 066 addendum. |
-| 2026-10-22 | ADR 063 nowcast decision, the 6 late-IBJA days excluded | Dispatch `weekly-backtest.yml` (timing rule in step 4), read the `nowcast shadow [G3 ...]` line: certified `n_same_day`, `mae_m0` vs `mae_m3`, the one-sided HAC p. The summary already excludes late-IBJA days. Apply G3's "holds" (INFERRED reading: M3 lower and p below 0.05 on certified days, n stated); if n is small, say so and prepare nothing. |
-| about 2026-11-03 | First look at the ensemble, roll60 and monday challengers under rule v7 | `docs/MODEL_STATUS.md` after a weekly run: each needs 20 forward days before the first look. |
+| about 2026-10-23 | Live-only monitor's first look (ADR 075, 10 live days; 9 on 2026-10-22) | Automatic: check-price runs it every cycle and T19 (#3060) sends GG one private message with the verdict the first time `n_live` reaches 10. Verify: `forecast.json` `next_fix.demotion.live_monitor.n_live` >= 10 and `data/notification_state.json` `last_sent.T19` set; a breach also fires T16, a coverage alert T18. |
+| 2026-10-27 | End of autonomy mode (docs/AUTONOMY_SPEC.md section 8) | Write `docs/HANDOVER_2026-10-27.md` (docs-only PR), then send GG one ntfy that it exists. No scheduled task was created (the auto-mode classifier refused it), so there is no task or lock to delete; confirm with `Get-ScheduledTask -TaskName GRT-Autonomy-Shift` (expected: not found). |
+| about 2026-11-04 | First look at the ensemble, roll60 and monday challengers under rule v7 | `docs/MODEL_STATUS.md` after a weekly run: each needs 20 forward days before the first look (`first_reachable` 2026-11-04 in `data/model_status_weekly.json`). |
+| first qualifying Monday on or after 2026-11-16 | ADR 076 look (hourly model, beta 1.0) | `gh workflow run adr076-look.yml`; before its look day it prints counts only. The look day is the first Monday on which a window has 20 resolved fixes over 28 calendar days. Final; announce the outcome. |
+| first qualifying Monday on or after 2026-12-14 | ADR 077 look (beta 0.5 challenger), after ADR 076's look | `gh workflow run adr077-look.yml` (once its PR is merged; it must merge before 2026-12-14). Counts only until a window meets 20 fixes / 28 days and ADR 076's look of it was taken; it refuses to compute anything if the frozen rule hash changed. Final; announce the outcome. |
 | 2027-01-16 | Delete the branch backup bundle `C:\Users\gaura\backups\gold-rate-tracker-branches-2026-10-18.bundle` (160.8 MB, 70 old local branches saved on 2026-10-18 before the cleanup) unless a branch was restored from it | First look for a restore: `git reflog --all` and the shell history for a `git fetch` from that path, and `grep -ril bundle` over the session reports. If any branch was restored, keep the bundle and move this date out by 3 months. If none, delete the file as its own command after listing it, then remove this row. |
 
 Add the next dated check here whenever one is created, and remove it once its outcome is reported.

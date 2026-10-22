@@ -1,6 +1,6 @@
 # For GG: things only your account or decision can clear
 
-Kept current by CC. Last updated 2026-10-19 (CC, visitor line verified end to end). The weekly one-screen model note is `docs/MODEL_STATUS.md`.
+Kept current by CC. Last updated 2026-10-23 (CC, autonomy mode shift 0). The weekly one-screen model note is `docs/MODEL_STATUS.md`.
 Short on purpose: nothing is blocked on GG. Dated token renewals are in section 0; one optional check and a few
 optional items follow.
 
@@ -47,3 +47,4 @@ show as a separate path starting `/app`.)
 | 1 | Check the Cloudflare Worker secrets for stale names | In `worker-deadman/` run `npx wrangler secret list`. The Worker's code expects `NTFY_TOPIC`, `TRIGGER_TOKEN`, `GITHUB_PR_HEALTH_PAT`, and (parked, optional) `TELEGRAM_BOT_TOKEN` and `TELEGRAM_CHAT_ID`. Delete any other name from the list. |
 | 2 | Ask IBJA for written permission to publish its rate history | ADR 059: IBJA's API terms say publishing IBJA rates or history on a website needs written permission. Send IBJA a short email (the contact is on https://ibjarates.com): who you are, the product (free, no ads, plain-language gold tracker), that the page shows the latest official fix and a next-fix range built from it, and ask in writing whether this and a history chart are allowed and on what terms. The raw IBJA series is now encrypted in the repo (the metrics-history migration, #2651, is merged). |
 | 3 | The 8 contested Hindi strings | All Hindi wording is LLM consensus, not native review, and it is live. `docs/HINDI_CONTESTED.md`, "START HERE" table: the 8 strings that most need a native speaker. Reply with the choices (or "keep") and CC applies them. |
+| 4 | Optional: scheduled Claude shifts while you are away (autonomy spec section 1.2) | On 2026-10-22 the auto-mode classifier refused writing the wrapper script that the `GRT-Autonomy-Shift` task would run (a headless `claude -p ... --permission-mode auto` shift three times a day). Per the spec this was recorded and not worked around: no task exists, and the dated items run from GitHub Actions instead (daily digest, Monday push, T19, the look workflows). Nothing is needed. If you want scheduled shifts in a future absence, start an interactive session and ask for the task yourself, so the request comes from you. |
