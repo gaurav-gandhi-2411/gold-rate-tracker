@@ -14,6 +14,7 @@ on:
 
 permissions:
   contents: read
+  actions: read
 
 jobs:
   visitors:
@@ -22,16 +23,33 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      # monday-push.yml starts this run earlier on Mondays; the fallback cron then must not send a second line.
+      - name: Already sent today? (schedule runs only)
+        id: guard
+        if: github.event_name == 'schedule'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          source scripts/ci_retry.sh
+          TODAY=$(date -u +%Y-%m-%d)
+          N=$(ci_retry gh api "repos/${GITHUB_REPOSITORY}/actions/workflows/visitors-weekly.yml/runs?created=${TODAY}&status=success&per_page=50" \
+                --jq "[.workflow_runs[] | select(.id != ${GITHUB_RUN_ID})] | length") || N=0
+          echo "earlier successful runs today: ${N}"
+          if [ "${N}" -gt 0 ]; then echo "send=false" >> "$GITHUB_OUTPUT"; fi
+
       - uses: actions/setup-python@v5
+        if: steps.guard.outputs.send != 'false'
         with:
           python-version: "3.12"
 
       - name: Read the weekly total and top sources
+        if: steps.guard.outputs.send != 'false'
         env:
           GOATCOUNTER_TOKEN: ${{ secrets.GOATCOUNTER_TOKEN }}
         run: python scripts/goatcounter_weekly.py --out "${RUNNER_TEMP}/visitors.txt"
 
       - name: Send it to GG's private topic
+        if: steps.guard.outputs.send != 'false'
         env:
           NTFY_TOPIC: ${{ secrets.NTFY_TOPIC }}
         run: |

@@ -1,0 +1,73 @@
+# The Monday push to GG (docs/WEEKLY_ROUTINE.md section 7, docs/AUTONOMY_SPEC.md section 3): P3's live record,
+# the challengers, the demotion state and the next dates, then the private visitor line (visitors-weekly).
+#
+# Reads only aggregates already in the repo (scripts/gg_digest.py). The schedule is a fallback only: every
+# check-price run on a Monday after 03:30 UTC starts this when it has not run yet that day (the ci-health
+# pattern), and a second run on the same day exits at the "already sent today" step.
+name: Monday push
+
+on:
+  schedule:
+    - cron: "35 3 * * 1" # Monday 09:05 IST, fallback only
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  actions: write # starts visitors-weekly.yml
+
+concurrency:
+  group: monday-push
+  cancel-in-progress: false
+
+jobs:
+  push:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Already sent today?
+        id: guard
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          source scripts/ci_retry.sh
+          TODAY=$(date -u +%Y-%m-%d)
+          N=$(ci_retry gh api "repos/${GITHUB_REPOSITORY}/actions/workflows/monday-push.yml/runs?created=${TODAY}&status=success&per_page=50" \
+                --jq "[.workflow_runs[] | select(.id != ${GITHUB_RUN_ID})] | length") || N=0
+          echo "earlier successful runs today: ${N}"
+          if [ "${N}" -gt 0 ]; then echo "send=false" >> "$GITHUB_OUTPUT"; else echo "send=true" >> "$GITHUB_OUTPUT"; fi
+
+      - uses: actions/setup-python@v5
+        if: steps.guard.outputs.send == 'true'
+        with:
+          python-version: "3.12"
+
+      - name: Build the Monday note
+        if: steps.guard.outputs.send == 'true'
+        run: python scripts/gg_digest.py monday --out "${RUNNER_TEMP}/monday.txt"
+
+      - name: Send it to GG's private topic
+        if: steps.guard.outputs.send == 'true'
+        env:
+          NTFY_TOPIC: ${{ secrets.NTFY_TOPIC }}
+        run: |
+          set -u
+          if [ -z "${NTFY_TOPIC}" ]; then
+            echo "::error::NTFY_TOPIC is not set; nothing sent"
+            exit 1
+          fi
+          code=$(curl -s -o /dev/null -w '%{http_code}' --retry 3 \
+            -H "Title: Gold Tracker: Monday update" -H "Tags: pencil2" \
+            --data-binary "@${RUNNER_TEMP}/monday.txt" "https://ntfy.sh/${NTFY_TOPIC}")
+          echo "ntfy responded HTTP ${code}"
+          [ "${code}" = "200" ]
+
+      - name: Start the visitor line
+        if: steps.guard.outputs.send == 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          source scripts/ci_retry.sh
+          ci_retry gh workflow run visitors-weekly.yml --repo "${GITHUB_REPOSITORY}" --ref master
+          echo "started visitors-weekly.yml"
