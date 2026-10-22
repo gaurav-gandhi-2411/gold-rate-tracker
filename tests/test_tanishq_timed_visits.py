@@ -409,6 +409,21 @@ def test_dispatcher_survives_a_failing_gh_call_and_always_logs():
     assert "trap {" in ps1 and "FAIL unexpected" in ps1  # an unforeseen error is logged, not silent
 
 
+def test_dispatcher_traces_its_phases_in_a_separate_file_the_attribution_never_reads():
+    # 2026-10-22 20:55Z: six catch-up processes after a boot registered, then ended 0xC000013A with no
+    # outcome line. The trace shows the last phase a killed process reached; it must stay out of the
+    # outcome log, which laptop_attribution.py reads line by line as outcomes.
+    ps1 = (ROOT / "scripts" / "win" / "tanishq_dispatch.ps1").read_text(encoding="utf-8")
+    assert '$Trace = Join-Path $LogDir "dispatch_trace.log"' in ps1
+    fn = ps1.split("function Write-Trace", 1)[1].split("\n}", 1)[0]
+    assert "$Trace" in fn and "$Log" not in fn.replace("$LogDir", "")
+    assert ps1.index('Write-Trace "START"') < ps1.index("trap {") < ps1.index("gh api rate_limit")
+    for phase in ('"ONLINE"', '"WAIT lock"', '"LOCK acquired', '"LEADER listing', '"DONE'):
+        assert phase in ps1, phase
+    attribution = (ROOT / "scripts" / "laptop_attribution.py").read_text(encoding="utf-8")
+    assert "dispatch_trace" not in attribution
+
+
 # --- one dispatch per wake (2026-10-14/15: four dispatches, two cancelled by the concurrency group) ------
 def test_dispatcher_serialises_the_slots_of_one_wake_and_logs_the_batch():
     ps1 = (ROOT / "scripts" / "win" / "tanishq_dispatch.ps1").read_text(encoding="utf-8")
