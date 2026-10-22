@@ -2,7 +2,9 @@
 # --adr 077) on the runner, where DATA_ENC_KEY is available, because the shadow log is encrypted (ADR 060).
 #
 # Run it ONCE, unmodified, on the first Monday on or after 2026-12-14 on which a window meets both count
-# gates and ADR 076's look of it has been taken (docs/adr/077-...). Before that, the script prints COUNTS
+# gates and ADR 076's look of it has been taken: run adr076-look.yml FIRST; this workflow reads the list of
+# its successful runs and keeps the look closed without one on or after ADR 076's look day
+# (docs/adr/077-...). Before that, the script prints COUNTS
 # ONLY and computes no effect size, interval or p-value of beta 0.5; it is safe to dispatch earlier to read
 # the counts. It refuses to compute anything if the frozen rule in ml/hourly_beta05.py no longer hashes to
 # the registered value. Its outcome on the look day is final.
@@ -19,6 +21,7 @@ on:
 
 permissions:
   contents: read
+  actions: read # lists the ADR 076 look runs
 
 concurrency:
   group: adr077-look
@@ -54,6 +57,16 @@ jobs:
         with:
           key: ${{ secrets.DATA_ENC_KEY }}
 
+      # The evidence that ADR 076's look was taken: the times of its successful runs. Without this file
+      # the script keeps the ADR 077 look closed.
+      - name: List successful ADR 076 look runs
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          source scripts/ci_retry.sh
+          ci_retry gh api "repos/${GITHUB_REPOSITORY}/actions/workflows/adr076-look.yml/runs?status=success&per_page=100" \
+            --jq '[.workflow_runs[].created_at]' > "${RUNNER_TEMP}/adr076_runs.json"
+
       - name: Run the ADR 077 look
         # --out-dir is outside the workspace and is never uploaded; only the console report is kept.
-        run: python scripts/check_adr066_promotion.py --adr 077 --out-dir "${RUNNER_TEMP}/adr077_report"
+        run: python scripts/check_adr066_promotion.py --adr 077 --adr076-runs "${RUNNER_TEMP}/adr076_runs.json" --out-dir "${RUNNER_TEMP}/adr077_report"

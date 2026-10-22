@@ -87,8 +87,16 @@ def no_effect(monkeypatch):
     monkeypatch.setattr(mod, "dm_p_one_sided", boom)
 
 
-def evaluate(entries: list[dict], now: datetime, folds_ok: bool = True) -> dict:
-    return mod.evaluate_window_077(WIN, entries, now, OPTS, folds_ok)
+RUN_076 = datetime(2026, 11, 16, 10, tzinfo=UTC)  # a successful ADR 076 look run on its look day
+
+
+def evaluate(
+    entries: list[dict],
+    now: datetime,
+    folds_ok: bool = True,
+    runs_076: tuple[datetime, ...] = (RUN_076,),
+) -> dict:
+    return mod.evaluate_window_077(WIN, entries, now, OPTS, folds_ok, runs_076)
 
 
 def test_the_options_are_the_frozen_rule_values_and_the_rule_still_hashes_to_the_adr():
@@ -118,6 +126,26 @@ def test_no_look_while_adr076_could_not_take_its_look(no_effect):
     assert r["look_day"] is None and r["adr076_look_day"] is None and "effect" not in r
 
 
+def test_no_look_without_evidence_that_the_adr076_look_was_run(no_effect):
+    # Its look day passed and its file loads, but no ADR 076 look run exists: 077 must not go first.
+    r = evaluate(book(), datetime(2026, 12, 21, 12, tzinfo=UTC), runs_076=())
+    assert r["look_day"] is None and r["adr076_look_day"] is None and "effect" not in r
+
+
+def test_an_adr076_run_before_its_look_day_is_not_the_look(no_effect):
+    early_run = (datetime(2026, 11, 10, tzinfo=UTC),)  # counts-only run, a week before its look day
+    r = evaluate(book(), datetime(2026, 12, 21, 12, tzinfo=UTC), runs_076=early_run)
+    assert r["look_day"] is None and "effect" not in r
+
+
+def test_the_look_opens_on_the_first_monday_after_the_adr076_run_when_that_run_is_late():
+    late_run = (datetime(2026, 12, 16, tzinfo=UTC),)  # ADR 076 look run only on 12-16
+    r = evaluate(book(), datetime(2026, 12, 22, tzinfo=UTC), runs_076=late_run)
+    # 12-14 already met the counts and ADR 076's look day (11-16) precedes it; the run's existence by the
+    # time of this run is what is required, so the look day stays the first qualifying Monday.
+    assert r["look_day"] == "2026-12-14"
+
+
 def test_short_counts_on_the_look_monday_compute_nothing(no_effect):
     entries = book(n_days=15)  # 15 fixes, 15 days
     r = evaluate(entries, datetime(2026, 12, 14, 12, tzinfo=UTC))
@@ -144,6 +172,26 @@ def test_only_entries_logged_strictly_after_the_registration_instant_count():
     )
     r = evaluate(before, datetime(2026, 10, 20, tzinfo=UTC))
     assert r["counts"]["n_entries"] == 1
+
+
+def test_an_entry_logged_exactly_at_the_registration_instant_never_counts():
+    at = mod.clean_entries(make_entries([REGISTERED]))
+    for e in at:
+        e["logged_at"] = e["t"] = "2026-10-18T00:00:00Z"
+    assert hb.eligible(at) == []
+    r = evaluate(at, datetime(2026, 10, 20, tzinfo=UTC))
+    assert r["counts"]["n_entries"] == 0 and r["counts"]["n_resolved_base_fixes"] == 0
+
+
+def test_an_entry_logged_exactly_at_00z_of_the_look_monday_is_not_scored():
+    early = book()
+    r = evaluate(early, datetime(2026, 12, 16, tzinfo=UTC))
+    n_before = r["effect"]["a_bootstrap_ci_below_0"]["n"]
+    at_cut = mod.clean_entries(make_entries([datetime(2026, 12, 14, tzinfo=UTC)], seed=11))
+    for e in at_cut:
+        e["logged_at"] = e["t"] = "2026-12-14T00:00:00Z"
+    r2 = evaluate(early + at_cut, datetime(2026, 12, 16, tzinfo=UTC))
+    assert r2["effect"]["a_bootstrap_ci_below_0"]["n"] == n_before
 
 
 def test_a_rerun_after_the_look_ignores_entries_logged_on_or_after_the_look_monday():
@@ -188,6 +236,32 @@ def test_cli_077_before_the_look_writes_counts_only(tmp_path, capsys, no_effect)
     assert all("effect" not in w for w in written["windows"].values())
 
 
+def test_cli_077_cannot_open_the_look_with_a_faked_future_now(tmp_path, capsys, no_effect):
+    # Everything a look needs is present for 2027-01-10, but --now can never be later than the real clock.
+    data = tmp_path / "data"
+    data.mkdir()
+    (data / ni.SHADOW_PATH.name).write_text(json.dumps({"entries": book()}), encoding="utf-8")
+    runs = tmp_path / "runs.json"
+    runs.write_text(json.dumps(["2026-11-16T10:00:00Z"]), encoding="utf-8")
+    out = tmp_path / "out"
+    argv = ["--adr", "077", "--now", "2027-01-10T12:00:00Z", "--data-dir", str(data)]
+    rc = mod.main([*argv, "--adr076-runs", str(runs), "--out-dir", str(out)])
+    real_now = datetime.now(UTC)
+    if real_now >= LOOK_077:  # after the real look date this test cannot show the clamp
+        pytest.skip("the real clock has reached the look date")
+    assert rc == 0
+    written = json.loads(next(out.glob("adr077_look_*.json")).read_text(encoding="utf-8"))
+    assert written["look_open"] is False and written["run_at"] < "2026-12-14"
+
+
+def test_missing_or_unreadable_adr076_run_list_keeps_the_look_closed(tmp_path):
+    assert mod.load_adr076_runs(None) == []
+    assert mod.load_adr076_runs(tmp_path / "absent.json") == []
+    bad = tmp_path / "bad.json"
+    bad.write_text("not json", encoding="utf-8")
+    assert mod.load_adr076_runs(bad) == []
+
+
 def test_cli_077_refuses_the_076_options(capsys):
     with pytest.raises(SystemExit):
         mod.main(["--adr", "077", "--min-fixes", "5"])
@@ -198,9 +272,11 @@ def test_the_look_workflow_is_manual_read_only_and_runs_the_frozen_defaults():
     t = (_ROOT / ".github" / "workflows" / "adr077-look.yml").read_text(encoding="utf-8")
     assert re.search(r"^on:\s*\n\s+workflow_dispatch:\s*$", t, re.M)
     assert "schedule:" not in t and "push:" not in t and "pull_request" not in t
-    assert re.search(r"^permissions:\s*\n\s+contents: read\s*$", t, re.M)
-    for forbidden in ("upload-artifact", "git push", "git commit", "gh pr", "contents: write"):
+    assert re.search(r"^permissions:\s*\n\s+contents: read\s*\n\s+actions: read", t, re.M)
+    for forbidden in ("upload-artifact", "git push", "git commit", "gh pr", "write"):
         assert forbidden not in t, forbidden
+    assert "actions/workflows/adr076-look.yml/runs?status=success" in t
     cmd = re.search(r"run: (python scripts/check_adr066_promotion\.py[^\n]*)", t)
-    assert cmd and re.findall(r"--[a-z-]+", cmd.group(1)) == ["--adr", "--out-dir"]
+    flags = re.findall(r"--[a-z0-9-]+", cmd.group(1)) if cmd else []
+    assert flags == ["--adr", "--adr076-runs", "--out-dir"], flags  # no --now or rule overrides
     assert "--adr 077" in cmd.group(1) and '"${RUNNER_TEMP}/adr077_report"' in cmd.group(1)
