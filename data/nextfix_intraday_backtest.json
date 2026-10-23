@@ -1,8 +1,8 @@
 {
- "generated_at": "2026-10-23T14:29:52.695832Z",
+ "generated_at": "2026-10-23T17:57:12.881037Z",
  "ready": true,
  "bars_from": "2026-08-14T05:00:00Z",
- "bars_to": "2026-10-23T15:00:00Z",
+ "bars_to": "2026-10-23T18:00:00Z",
  "n_decisions": 1020,
  "n_decisions_after_adr076_cutoff": 122,
  "scored_on_last_decision_per_fix": {
