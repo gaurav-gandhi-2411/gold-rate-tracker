@@ -67,7 +67,7 @@ def test_a_refused_or_unreachable_api_is_quiet_and_never_echoes_the_token(tmp_pa
         raise urllib.error.URLError("no route")
 
     refused = gw.run("SECRET-TOKEN", out, NOW, fetch=refuse)
-    unreachable = gw.run("SECRET-TOKEN", out, NOW, fetch=down)
+    unreachable = gw.run("SECRET-TOKEN", out, NOW, fetch=down, pause=lambda s: None)
     assert refused == "skipped: GoatCounter answered HTTP 403 on total (Basic)"
     assert unreachable.startswith("skipped: GoatCounter not reachable")
     assert "SECRET-TOKEN" not in refused + unreachable and not out.exists()
@@ -118,3 +118,43 @@ def test_basic_auth_is_tried_when_bearer_is_refused(tmp_path: Path) -> None:
     assert gw.run("tok", out, NOW, fetch=fetch) == "written (Basic)"
     assert seen == ["Bearer", "Basic", "Basic"]
     assert out.read_text(encoding="utf-8") == "Visitors in the last 7 days: 4.\n"
+
+
+def _flaky(fail_times: int, code: int, calls: list[str]):
+    def fetch(url: str, headers: dict[str, str]) -> dict[str, Any]:
+        calls.append(url.split("/stats/")[1].split("?")[0])
+        if len(calls) <= fail_times:
+            raise urllib.error.HTTPError(url, code, "x", {}, None)  # type: ignore[arg-type]
+        return {"stats": []} if "/toprefs" in url else {"total": 9}
+
+    return fetch
+
+
+def test_a_transient_404_is_retried_and_the_status_says_so(tmp_path: Path) -> None:
+    # 2026-10-19 and 10-22: GoatCounter answered 404 on a valid /stats/total, minutes before and after
+    # successful runs with the same token.
+    calls: list[str] = []
+    pauses: list[float] = []
+    out = tmp_path / "v.txt"
+    status = gw.run("tok", out, NOW, fetch=_flaky(1, 404, calls), pause=pauses.append)
+    assert status == "written (Bearer; retried 1)"
+    assert calls == ["total", "total", "toprefs"] and pauses == [10.0]
+    assert out.read_text(encoding="utf-8") == "Visitors in the last 7 days: 9.\n"
+
+
+def test_a_persistent_404_gives_up_after_three_attempts_quietly(tmp_path: Path) -> None:
+    calls: list[str] = []
+    out = tmp_path / "v.txt"
+    status = gw.run("tok", out, NOW, fetch=_flaky(99, 404, calls), pause=lambda s: None)
+    assert status == "skipped: GoatCounter answered HTTP 404 on total (Bearer; retried 2)"
+    assert calls == ["total"] * 3 and not out.exists()
+
+
+def test_an_auth_refusal_is_not_retried_it_switches_scheme(tmp_path: Path) -> None:
+    calls: list[str] = []
+    pauses: list[float] = []
+    status = gw.run(
+        "tok", tmp_path / "v.txt", NOW, fetch=_flaky(99, 401, calls), pause=pauses.append
+    )
+    assert status == "skipped: GoatCounter answered HTTP 401 on total (Basic)"
+    assert calls == ["total", "total"] and pauses == []
