@@ -42,6 +42,12 @@ preregistration.md instead (entries logged after 2026-10-16T17:38Z; counts only,
 until a Monday on or after 2026-11-16 on which the counts are met). Without `--adr` this script is the
 ADR 066 check, unchanged, and refuses the 076 options.
 
+`--adr 077` runs the one look at the beta 0.5 challenger pre-registered in docs/adr/077-hourly-beta-0-5-
+forward-challenger.md (entries logged after 2026-10-18T00:00Z; counts only, no effect computed, until a
+Monday on or after 2026-12-14 on which the counts are met and ADR 076's look of the window was taken). It
+takes no options: every value comes from the frozen RULE in ml/hourly_beta05.py, and nothing is computed
+if that rule no longer hashes to the registered value.
+
 Usage: python scripts/check_adr066_promotion.py [--now ISO] [--data-dir D] [--out-dir D]
        python scripts/check_adr066_promotion.py --adr 076 [--first-entry-after ISO] [--min-fixes N]
            [--min-days N] [--alpha A] [--beta B] [--look-not-before DATE]
@@ -889,6 +895,233 @@ def run_adr076(
     }
 
 
+# -- ADR 077: the one look at the beta 0.5 challenger -----------------------------------------------
+#
+# docs/adr/077-hourly-beta-0-5-forward-challenger.md. Every registered value is read from the frozen
+# RULE in ml/hourly_beta05.py, whose SHA-256 must still be the registered one or nothing is computed.
+# Entries count only when logged strictly after its REGISTERED_FROM. The look is the FIRST Monday on or
+# after 2026-12-14 on which a window meets both count gates on entries logged before 00:00Z of that
+# Monday AND ADR 076's look of that window has been taken. "Taken" needs evidence, not a date: ADR 076's
+# own look day reached on or before that Monday, its frozen calibration file loadable, AND a successful
+# run of the ADR 076 look workflow created at or after that look day (the 077 workflow passes the list of
+# successful adr076-look.yml run times; without it the look stays closed). Until then only counts are
+# read: no MAE, interval or p-value of beta 0.5. Conditions: (a) the cluster-bootstrap 95% CI of the MAE
+# change against holding the fix lies below 0, (b) one-sided DM p below 0.025. No coverage condition
+# (ADR 077 point 4). The run time can never be set later than the real clock (no look by a faked --now).
+
+
+def adr077_opts() -> dict:
+    from ml import hourly_beta05 as hb
+
+    look, cond = hb.RULE["look"], hb.RULE["conditions"]
+    return {
+        "first_entry_after": hb.REGISTERED_FROM,
+        "min_fixes": look["min_resolved_fixes_per_window"],
+        "min_days": look["min_calendar_days"],
+        "look_not_before": look["first_monday_on_or_after"],
+        "alpha": cond["alpha_per_window"],
+        "pred_key": hb.PRED_KEY,
+    }
+
+
+def adr076_look_taken_by(
+    entries: list[dict],
+    window: str,
+    day: datetime,
+    folds_ok: bool,
+    runs_076: Sequence[datetime],
+) -> str | None:
+    """ADR 076's look day for this window if it was reached on or before ``day``, could be taken (its
+    frozen calibration file loads) and WAS run (a successful ADR 076 look run at or after it); else None.
+    Counts only: calls ADR 076's look_day."""
+    if not folds_ok:
+        return None
+    d076 = look_day(entries, window, day, ADR076_RULE)
+    if d076 is None or d076 > day or not any(r >= d076 for r in runs_076):
+        return None
+    return d076.strftime("%Y-%m-%d")
+
+
+def look_day_077(
+    entries: list[dict],
+    window: str,
+    now: datetime,
+    opts: dict,
+    folds_ok: bool,
+    runs_076: Sequence[datetime],
+) -> datetime | None:
+    """The first Monday (00:00Z) on or after the registered date, not after ``now``, on which the window
+    met both count gates on eligible entries logged before that instant and ADR 076's look of the window
+    had been taken. Counts only."""
+    first_after = _parse_t(opts["first_entry_after"])
+    day = datetime.fromisoformat(opts["look_not_before"]).replace(tzinfo=UTC)
+    day += timedelta(days=(WEEKDAY_MONDAY - day.weekday()) % 7)
+    while day <= now:
+        counts = adr076_counts(_before(entries, day), window, first_after)
+        if _counts_ready(counts, opts) and adr076_look_taken_by(
+            entries, window, day, folds_ok, runs_076
+        ):
+            return day
+        day += timedelta(days=7)
+    return None
+
+
+def adr077_effect(rows: list[dict], pred_key: str, alpha: float) -> dict:
+    """Conditions a and b of ADR 077 on beta 0.5. Called ONLY at the look."""
+    tgt = np.array([r["target"] for r in rows], dtype=float)
+    err = np.abs(np.array([r["pred"][pred_key] for r in rows], dtype=float) - tgt)
+    hold = np.abs(np.array([r["pred"]["beta_0.0"] for r in rows], dtype=float) - tgt)
+
+    def chg(ix: np.ndarray) -> float:
+        return 100.0 * (err[ix].mean() / max(hold[ix].mean(), 1e-9) - 1.0)
+
+    members = [np.array([i]) for i in range(len(rows))]  # one resolved row per base fix
+    ci = [
+        round(v, 1)
+        for v in nextfix_intraday._cluster_ci(members, chg, b=ADR076_BOOTSTRAP_B, seed=ADR076_SEED)
+    ]
+    change = round(chg(np.arange(len(rows))), 1)
+    p = round(dm_p_one_sided(err, hold), 4)
+    a = {"pass": bool(ci[1] < 0), "change_pct": change, "ci95": ci, "n": len(rows)}
+    b = {"pass": bool(p < alpha), "dm_p_one_sided": p, "alpha": alpha}
+    return {
+        "a_bootstrap_ci_below_0": a,
+        "b_dm_one_sided": b,
+        "all_pass": bool(a["pass"] and b["pass"]),
+    }
+
+
+def evaluate_window_077(
+    window: str,
+    entries: list[dict],
+    now: datetime,
+    opts: dict,
+    folds_ok: bool,
+    runs_076: Sequence[datetime] = (),
+) -> dict:
+    """``entries``: the whole cleaned shadow log (ADR 076's look day is read from it); only the ones
+    logged after the registration instant are counted or scored for beta 0.5. ``runs_076``: times of
+    successful ADR 076 look runs (empty: ADR 076's look is not shown as taken, so no look)."""
+    from ml import hourly_beta05 as hb
+
+    first_after = _parse_t(opts["first_entry_after"])
+    mine = hb.eligible(entries)
+    day = look_day_077(entries, window, now, opts, folds_ok, runs_076)
+    seen = _before(mine, day) if day is not None else mine
+    counts = adr076_counts(seen, window, first_after)
+    taken = adr076_look_taken_by(entries, window, day or now, folds_ok, runs_076)
+    out: dict = {
+        "window": window,
+        "counts": counts,
+        "counts_ready": _counts_ready(counts, opts),
+        "adr076_look_day": taken,
+        "look_day": day.strftime("%Y-%m-%d") if day is not None else None,
+    }
+    text = (
+        f"{counts['n_resolved_base_fixes']}/{opts['min_fixes']} resolved base fixes, "
+        f"{counts['calendar_span_days']}/{opts['min_days']} calendar days; ADR 076 look "
+        + (f"taken {taken}" if taken else "not taken yet")
+    )
+    if day is None:
+        out["verdict"] = f"counts only ({text}); no look day yet: no effect computed"
+        return out
+    rows = forward_rows(seen, window, first_after)
+    eff = adr077_effect(rows, opts["pred_key"], opts["alpha"])
+    out["effect"] = eff
+    out["verdict"] = (
+        f"look of {out['look_day']}: pass on beta 0.5 (a and b hold)"
+        if eff["all_pass"]
+        else f"look of {out['look_day']}: fail: "
+        + ", ".join(k for k, v in eff.items() if isinstance(v, dict) and not v["pass"])
+    )
+    return out
+
+
+def _real_now() -> datetime:
+    """The real clock (a function so a test can pin it)."""
+    return datetime.now(UTC)
+
+
+def load_adr076_runs(path: Path | None) -> list[datetime]:
+    """Creation times of successful ADR 076 look runs, from a JSON list of ISO strings (the 077 workflow
+    writes it from the GitHub API). Missing or unreadable: empty, so the look stays closed (fail closed)."""
+    if path is None:
+        return []
+    try:
+        return [_parse_t(str(s)) for s in json.loads(path.read_text(encoding="utf-8"))]
+    except (OSError, ValueError, TypeError):
+        return []
+
+
+def run_adr077(
+    data_dir: Path,
+    now: datetime,
+    calibration_dir: Path | None = None,
+    adr076_runs_file: Path | None = None,
+) -> dict:
+    from ml import hourly_beta05 as hb
+
+    rule_ok = hb.rule_hash() == hb.RULE_SHA256
+    shadow = _load_json(data_dir / nextfix_intraday.SHADOW_PATH.name)
+    entries = clean_entries((shadow or {}).get("entries"))
+    folds_ok = load_folds(calibration_dir or _REPO / "reports") is not None
+    runs_076 = load_adr076_runs(adr076_runs_file)
+    opts = adr077_opts()
+    base = {
+        "adr": "077",
+        "rule_hash": hb.rule_hash(),
+        "rule_hash_registered": hb.RULE_SHA256,
+        "run_at": nextfix_intraday._iso(now),
+        "repo_sha": _git_sha(),
+        "options": opts,
+        "shadow_entries_loaded": len(entries),
+        "note": NOTE_PROMOTION,
+    }
+    if not rule_ok:  # an edited rule is not the registered one: compute nothing
+        return {
+            **base,
+            "look_open": False,
+            "windows": {},
+            "refused": "rule hash is not the registered one",
+        }
+    windows = {w: evaluate_window_077(w, entries, now, opts, folds_ok, runs_076) for w in WINDOWS}
+    return {
+        **base,
+        "look_open": any(r["look_day"] for r in windows.values()),
+        "look_rule": f"the first Monday on or after {opts['look_not_before']} on which a window meets "
+        "both count gates and ADR 076's look of it has been taken (a successful ADR 076 look run on "
+        "or after its look day); before that only counts are read",
+        "adr076_calibration_available": folds_ok,
+        "adr076_successful_runs_seen": len(runs_076),
+        "windows": windows,
+    }
+
+
+def main_077(args: argparse.Namespace, now: datetime) -> int:
+    # --now may move the run EARLIER (tests, re-reading counts) but never later than the real clock:
+    # a faked future date must not open the look.
+    now = min(now, _real_now())
+    res = run_adr077(args.data_dir, now, args.calibration_dir, args.adr076_runs)
+    args.out_dir.mkdir(parents=True, exist_ok=True)
+    path = args.out_dir / f"adr077_look_{now.strftime('%Y-%m-%d')}.json"
+    path.write_text(json.dumps(res, indent=1) + "\n")
+    print(f"ADR 077 look (beta 0.5) @ {res['run_at']}  sha {res['repo_sha'][:10]}")
+    print(f"rule hash: {res['rule_hash']} (registered {res['rule_hash_registered']})")
+    if res.get("refused"):
+        print(f"REFUSED: {res['refused']}; nothing computed")
+        return 1
+    print(f"look open: {res['look_open']} ({res['look_rule']})")
+    print(f"shadow entries loaded: {res['shadow_entries_loaded']}")
+    for w, r in res["windows"].items():
+        print(f"\n[{w}] {r['verdict']}")
+        for k, v in r.get("effect", {}).items():
+            if isinstance(v, dict):
+                print(f"   {'PASS' if v['pass'] else 'FAIL'} {k}: {v}")
+    print(NOTE_PROMOTION)
+    print(f"written: {path}")
+    return 0
+
+
 def freeze_calibration(args: argparse.Namespace) -> int:
     """One-off (Amendment 2): write the frozen calibration file from the cached bars. No look, no effect."""
     folds = rebuild_folds(args.data_dir)
@@ -944,9 +1177,10 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--out-dir", type=Path, default=_REPO / "reports")
     ap.add_argument(
         "--adr",
-        choices=("066", "076"),
+        choices=("066", "076", "077"),
         default="066",
-        help="066: the first check (default, unchanged). 076: the forward-only second look.",
+        help="066: the first check (default, unchanged). 076: the forward-only second look. "
+        "077: the one look at the beta 0.5 challenger (takes no options; the rule is frozen).",
     )
     ap.add_argument("--first-entry-after", default=ADR076_FIRST_ENTRY_AFTER)
     ap.add_argument("--min-fixes", type=int, default=ADR076_MIN_FIXES)
@@ -965,6 +1199,12 @@ def main(argv: list[str] | None = None) -> int:
         type=Path,
         help="076 only, one-off: write the frozen calibration file to this path and stop (no look).",
     )
+    ap.add_argument(
+        "--adr076-runs",
+        type=Path,
+        help="077 only: JSON list of creation times of successful ADR 076 look runs (the evidence that "
+        "ADR 076's look was taken; without it the ADR 077 look stays closed).",
+    )
     args = ap.parse_args(argv)
     now = _parse_t(args.now) if args.now else datetime.now(UTC)
     if now.tzinfo is None:
@@ -981,10 +1221,16 @@ def main(argv: list[str] | None = None) -> int:
             "beta",
             "look_not_before",
             "freeze_calibration",
+            "adr076_runs",
             "calibration_dir",
         )
         if getattr(args, a) != ap.get_default(a)
     ]
+    if args.adr == "077":
+        extra = [a for a in given if a not in ("calibration_dir", "adr076_runs")]
+        if extra:
+            ap.error(f"options {extra} apply to --adr 076 only; the ADR 077 rule is frozen")
+        return main_077(args, now)
     if given:
         ap.error(f"options {given} apply to --adr 076 only; the ADR 066 check takes no options")
     res = run_check(args.data_dir, now)

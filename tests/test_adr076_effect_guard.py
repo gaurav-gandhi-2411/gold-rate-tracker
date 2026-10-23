@@ -84,6 +84,12 @@ REGISTRY: dict[str, tuple[str, str, tuple[str, ...]]] = {
     ),
     f"{_CHECK}::adr076_effect": (LOOK, "conditions a to c of the look", ()),
     f"{_CHECK}::run_adr076": (NO_EFFECT, "loads the log and the frozen file, calls the look", ()),
+    f"{_CHECK}::adr077_effect": (LOOK, "conditions a and b of the ADR 077 look (beta 0.5)", ()),
+    f"{_CHECK}::run_adr077": (
+        NO_EFFECT,
+        "loads the log, checks the frozen ADR 077 rule hash, calls the ADR 077 look",
+        (),
+    ),
     f"{_INTRA}::<module>": (NO_EFFECT, "path constants of the log and the backtest file", ()),
     "scripts/data_crypt.py::<module>": (NO_EFFECT, "encryption manifest naming the log", ()),
 }
@@ -100,6 +106,18 @@ BETA05_REGISTRY: dict[str, tuple[str, str, tuple[str, ...]]] = {
         FROZEN,
         "weekly scorecard reads beta_0.5 for entries up to the ADR 076 cut-off only",
         ("test_intraday_rows_are_frozen_at_the_adr076_cutoff",),
+    ),
+    # The ADR 077 look (scripts/check_adr066_promotion.py --adr 077, manual workflow adr077-look.yml).
+    f"{_CHECK}::adr077_opts": (NO_EFFECT, "reads the registered values from the frozen rule", ()),
+    f"{_CHECK}::evaluate_window_077": (
+        LOOK,
+        "the ADR 077 look: counts only until its look day, then conditions a and b",
+        (),
+    ),
+    f"{_CHECK}::run_adr077": (
+        NO_EFFECT,
+        "checks the frozen rule hash and loads the log; computes nothing if the hash differs",
+        (),
     ),
 }
 
@@ -343,8 +361,30 @@ def test_the_look_effects_have_one_caller_and_come_after_every_closed_return():
 
 
 def test_cond_c_and_the_one_sided_dm_are_reachable_only_from_the_look():
-    for name in ("cond_c_076", "dm_p_one_sided"):
-        assert REPO.callers_of({(_CHECK, name)}) <= {f"{_CHECK}::adr076_effect"}, name
+    assert REPO.callers_of({(_CHECK, "cond_c_076")}) <= {f"{_CHECK}::adr076_effect"}
+    assert REPO.callers_of({(_CHECK, "dm_p_one_sided")}) <= {
+        f"{_CHECK}::adr076_effect",
+        f"{_CHECK}::adr077_effect",
+    }
+
+
+def test_the_adr077_look_effects_have_one_caller_and_come_after_the_closed_return():
+    assert REPO.callers_of({(_CHECK, "adr077_effect")}) == {f"{_CHECK}::evaluate_window_077"}
+    (fn,) = REPO.defs[_CHECK]["evaluate_window_077"]
+    calls = [
+        n.lineno
+        for n in ast.walk(fn)
+        if isinstance(n, ast.Call) and isinstance(n.func, ast.Name) and n.func.id == "adr077_effect"
+    ]
+    closed_returns = [
+        n.end_lineno
+        for n in ast.walk(fn)
+        if isinstance(n, ast.If)
+        and any(isinstance(b, ast.Return) for b in n.body)
+        and ast.unparse(n.test) == "day is None"
+    ]
+    assert len(calls) == 1 and len(closed_returns) == 1
+    assert calls[0] > closed_returns[0], (calls, closed_returns)
 
 
 # -- the enumeration itself must see a new producer (synthetic sources) ----------------------------
@@ -402,7 +442,16 @@ def test_a_frozen_beta05_reader_names_the_cutoff_and_a_pinning_test():
 
 
 def test_nothing_in_the_repo_imports_the_beta05_module_so_the_live_pipeline_cannot_reach_it():
-    assert REPO.importers_of(BETA05_MODULE) == set()
+    # Only the registered look imports it, and the look script itself is imported by nothing and run
+    # only by the manual look workflows (never by the live pipeline).
+    assert REPO.importers_of(BETA05_MODULE) == {_CHECK}
+    assert REPO.importers_of(_CHECK) == set()
+    runners = {
+        p.name
+        for p in (ROOT / ".github" / "workflows").glob("*.yml")
+        if "check_adr066_promotion.py" in p.read_text(encoding="utf-8")
+    }
+    assert runners <= {"adr066-check.yml", "adr076-look.yml", "adr077-look.yml"}, runners
 
 
 def test_the_beta05_module_computes_no_error_and_imports_nothing_numerical():
