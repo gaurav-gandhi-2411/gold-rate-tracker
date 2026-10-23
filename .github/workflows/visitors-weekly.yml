@@ -37,7 +37,7 @@ jobs:
           echo "earlier successful runs today: ${N}"
           if [ "${N}" -gt 0 ]; then echo "send=false" >> "$GITHUB_OUTPUT"; fi
 
-      - uses: actions/setup-python@v5
+      - uses: actions/setup-python@v6
         if: steps.guard.outputs.send != 'false'
         with:
           python-version: "3.12"
