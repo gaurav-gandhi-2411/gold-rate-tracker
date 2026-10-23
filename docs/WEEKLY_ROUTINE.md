@@ -57,6 +57,12 @@ Slots (IST): 01:40, 07:30, 10:40, 11:10, 15:35, 19:50 = 20:10, 02:00, 05:10, 05:
    System event log (shutdown 13 / start 12 / 1074 / 6008, use `power_events`-style queries with LOCAL times in
    `StartTime`; a UTC-kind value shifts the window by 5.5 h) and the dispatcher log; a catch-up line
    `(batch of N, led by ...)` that produced one run is the one-dispatch-per-wake behaviour (#2816).
+   Event 6008's "previous shutdown at <time>" is NOT the crash time: it is the registry value
+   `HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\Reliability\DirtyShutdownTime`, taken from Windows' last
+   periodic alive stamp, so it is only a lower bound. On 2026-10-19 it read 05:26:19Z while the dispatcher
+   still logged a dispatch at 05:40:13Z (GitHub run created 05:40:12Z); the crash lies between the last
+   dispatcher or trace line and the next boot (05:45:30Z, Kernel-Power 41). Since #3071,
+   `dispatch_trace.log` (same folder) shows the last phase each dispatcher process reached.
 3. A cancelled run: read its job steps (`gh run view <id> --json jobs`) for the cause before saying
    anything (the 2026-10-09 case was the bot-PR sync step waiting out the 25-minute timeout).
 
