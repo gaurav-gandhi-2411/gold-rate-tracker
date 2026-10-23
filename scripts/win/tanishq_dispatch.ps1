@@ -44,6 +44,15 @@ function Write-Log([string]$Msg) {
     Add-Content -Path $Log -Value $line
 }
 
+# Phase trace in its OWN file (laptop_attribution.py reads every line of $Log as an outcome, so a phase
+# line there would be misread as one). A process that is killed (no trap runs) leaves its last phase here:
+# on 2026-10-22 all six catch-up processes after a boot ended 0xC000013A and left no line at all.
+$Trace = Join-Path $LogDir "dispatch_trace.log"
+function Write-Trace([string]$Msg) {
+    try { Add-Content -Path $Trace -Value ("{0} slot={1} pid={2} {3}" -f (Get-Date).ToString("yyyy-MM-ddTHH:mm:sszzz"), $Slot, $PID, $Msg) } catch { }
+}
+Write-Trace "START"
+
 trap { Write-Log ("FAIL unexpected: {0}" -f $_.Exception.Message); exit 1 }
 
 if (-not $SideTasksOnly) {
@@ -61,6 +70,7 @@ for ($i = 0; $i -lt 10; $i++) {
     Start-Sleep -Seconds 30
 }
 if (-not $online) { Write-Log "SKIP no network/GitHub after 5 min"; exit 1 }
+Write-Trace "ONLINE"
 
 # Cool-off after a rate limit or challenge (ADR 059 / PR #2048's 429 handling). Fail closed: an
 # unreadable log means "cannot verify", so the visit is skipped.
@@ -88,7 +98,9 @@ for ($i = 0; $i -lt 20; $i++) {
 }
 $mutex = New-Object System.Threading.Mutex($false, "Global\gold-rate-tracker-tanishq-dispatch")
 $locked = $false
+Write-Trace "WAIT lock"
 try { $locked = $mutex.WaitOne([TimeSpan]::FromMinutes(4)) } catch [System.Threading.AbandonedMutexException] { $locked = $true }
+Write-Trace ("LOCK acquired={0}" -f $locked)
 if (-not $locked) { Write-Log "SKIP dispatch lock busy for 4 min"; exit 1 }
 try {
     # How late am I? The slot's most recent IST occurrence, against now. A process Task Scheduler starts a few
@@ -145,6 +157,7 @@ try {
 
         $result = $null
         $exitCode = 0
+        Write-Trace "LEADER listing recent runs"
         $recentRaw = gh run list --repo $Repo --workflow $Workflow --limit 5 --json createdAt,status,conclusion 2>$null
         if ($LASTEXITCODE -ne 0 -or -not $recentRaw) { $result = "SKIP cannot list recent runs"; $exitCode = 1 }
         else {
@@ -171,6 +184,7 @@ try {
         $state = [ordered]@{ at_utc = (Get-Date).ToUniversalTime().ToString("o"); leader = $Slot; slots = $covers; result = $result }
         try { ($state | ConvertTo-Json -Compress) | Set-Content -Path $StateFile -Encoding ASCII } catch { Write-Log ("NOTE could not write the batch state: {0}" -f $_.Exception.Message) }
         Write-Log ($result + $batchNote)
+        Write-Trace ("DONE {0}" -f $result)
         if ($exitCode -ne 0) { $locked = $false; $mutex.ReleaseMutex(); exit $exitCode }
         if ($result -ne "DISPATCHED") { $locked = $false; $mutex.ReleaseMutex(); exit 0 }
     }
