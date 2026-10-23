@@ -22,6 +22,7 @@ import argparse
 import base64
 import json
 import os
+import time
 import urllib.error
 import urllib.parse
 import urllib.request
@@ -80,16 +81,47 @@ def http_get(url: str, headers: dict[str, str]) -> dict[str, Any]:
     return body
 
 
+RETRY_CODES = frozenset({404, 429, 500, 502, 503, 504})
+RETRY_PAUSES_S = (10.0, 20.0)  # three attempts in all
+
+
+def with_retries(
+    fetch: Fetch, counter: list[int], pause: Callable[[float], None] = time.sleep
+) -> Fetch:
+    """Retry a transient answer. GoatCounter answered HTTP 404 on a valid /stats/total request for 2 of
+    the first 5 runs on 2026-10-19..22, while the next runs, minutes later, succeeded with the same token
+    and query; 401/403 are not retried (they switch the auth scheme instead)."""
+
+    def go(url: str, headers: dict[str, str]) -> dict[str, Any]:
+        for i in range(len(RETRY_PAUSES_S) + 1):
+            try:
+                return fetch(url, headers)
+            except urllib.error.HTTPError as err:
+                if err.code not in RETRY_CODES or i == len(RETRY_PAUSES_S):
+                    raise
+            except (urllib.error.URLError, TimeoutError):
+                if i == len(RETRY_PAUSES_S):
+                    raise
+            counter[0] += 1
+            pause(RETRY_PAUSES_S[i])
+        raise AssertionError("unreachable")
+
+    return go
+
+
 def run(
     token: str | None,
     out: Path,
     now: datetime | None = None,
     fetch: Fetch = http_get,
     site: str = SITE,
+    pause: Callable[[float], None] = time.sleep,
 ) -> str:
     """Write the sentence to ``out`` and return a status word; never raises on API trouble."""
     if not token:
         return "skipped: GOATCOUNTER_TOKEN is not set"
+    retries = [0]
+    fetch = with_retries(fetch, retries, pause)
     start, end = window(now or datetime.now(UTC))
     base = f"https://{site}.goatcounter.com/api/v0/stats"
     query = urllib.parse.urlencode({"start": start, "end": end})
@@ -114,11 +146,19 @@ def run(
         where = "toprefs"
         refs = fetch(f"{base}/toprefs?{query}&limit=20", headers)
     except urllib.error.HTTPError as err:
-        return f"skipped: GoatCounter answered HTTP {err.code} on {where} ({scheme})"
+        return (
+            f"skipped: GoatCounter answered HTTP {err.code} on {where} ({scheme}{_tries(retries)})"
+        )
     except (urllib.error.URLError, TimeoutError, ValueError, OSError) as err:
-        return f"skipped: GoatCounter not reachable on {where} ({type(err).__name__})"
+        return (
+            f"skipped: GoatCounter not reachable on {where} ({type(err).__name__}{_tries(retries)})"
+        )
     out.write_text(summarise(total, refs) + "\n", encoding="utf-8", newline="\n")
-    return f"written ({scheme})"
+    return f"written ({scheme}{_tries(retries)})"
+
+
+def _tries(retries: list[int]) -> str:
+    return f"; retried {retries[0]}" if retries[0] else ""
 
 
 def main(argv: list[str] | None = None) -> int:
