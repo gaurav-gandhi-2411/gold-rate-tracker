@@ -1,113 +1,113 @@
 {
  "schema_version": 1,
- "generated_at": "2026-10-18T06:49:37.730255+00:00",
+ "generated_at": "2026-10-23T00:22:13.111216+00:00",
  "rule_sha256": "e4efabec2193950ee4bf0193b00b3f17eed8c0cf5f81da4394d13acb51fdbdfa",
  "common_start": "2026-10-07",
  "champion": "p3",
  "champion_state_unreadable": false,
  "champion_history": [],
  "live": {
-  "n": 6,
+  "n": 9,
   "since": "2026-10-07",
-  "mae_model": 76.4,
-  "mae_hold": 87.9,
-  "change_pct": -13.0,
-  "direction_hit": 0.833,
-  "direction_n": 6,
+  "mae_model": 86.9,
+  "mae_hold": 96.5,
+  "change_pct": -10.0,
+  "direction_hit": 0.889,
+  "direction_n": 9,
   "coverage": 0.667,
-  "coverage_n": 6,
-  "last_day": "2026-10-15"
+  "coverage_n": 9,
+  "last_day": "2026-10-21"
  },
  "challengers": {
   "ensemble": {
    "since": "2026-10-07",
-   "n": 6,
+   "n": 9,
    "first_day": "2026-10-07",
-   "last_day": "2026-10-15",
+   "last_day": "2026-10-21",
    "first_look_day": 20,
    "looks_started": false,
    "lower_bound": null,
    "gain_estimate": null,
    "registered": "2026-10-07",
-   "days_since_registration": 5,
-   "horizon_left": 175,
+   "days_since_registration": 8,
+   "horizon_left": 172,
    "retired": false,
    "lower_bound_clears": false,
-   "mae_champion": 76.44,
-   "mae_challenger": 80.8,
-   "gain": -0.057,
-   "coverage_n": 6,
-   "coverage": 0.667,
-   "coverage_p_below": 0.34463999999999995,
+   "mae_champion": 86.88,
+   "mae_challenger": 93.58,
+   "gain": -0.0772,
+   "coverage_n": 9,
+   "coverage": 0.556,
+   "coverage_p_below": 0.08564172799999993,
    "coverage_ok": true,
-   "direction_champion": 0.8333333333333334,
-   "direction_challenger": 0.6666666666666666,
+   "direction_champion": 0.8888888888888888,
+   "direction_challenger": 0.5555555555555556,
    "direction_ok": false,
    "status": "scored",
    "live_capable": true,
    "blocked_reason": null,
    "promotable": false,
-   "first_reachable": "2026-11-04"
+   "first_reachable": "2026-11-06"
   },
   "p3_roll60": {
    "since": "2026-10-07",
-   "n": 6,
+   "n": 9,
    "first_day": "2026-10-07",
-   "last_day": "2026-10-15",
+   "last_day": "2026-10-21",
    "first_look_day": 20,
    "looks_started": false,
    "lower_bound": null,
    "gain_estimate": null,
    "registered": "2026-10-07",
-   "days_since_registration": 5,
-   "horizon_left": 175,
+   "days_since_registration": 8,
+   "horizon_left": 172,
    "retired": false,
    "lower_bound_clears": false,
-   "mae_champion": 76.44,
-   "mae_challenger": 79.2,
-   "gain": -0.0362,
-   "coverage_n": 6,
-   "coverage": 0.833,
-   "coverage_p_below": 0.7378559999999998,
+   "mae_champion": 86.88,
+   "mae_challenger": 87.89,
+   "gain": -0.0116,
+   "coverage_n": 9,
+   "coverage": 0.667,
+   "coverage_p_below": 0.26180249599999983,
    "coverage_ok": true,
-   "direction_champion": 0.8333333333333334,
-   "direction_challenger": 0.8333333333333334,
+   "direction_champion": 0.8888888888888888,
+   "direction_challenger": 0.8888888888888888,
    "direction_ok": true,
    "status": "scored",
    "live_capable": true,
    "blocked_reason": null,
    "promotable": false,
-   "first_reachable": "2026-11-04"
+   "first_reachable": "2026-11-06"
   },
   "p3_monday": {
    "since": "2026-10-07",
-   "n": 6,
+   "n": 9,
    "first_day": "2026-10-07",
-   "last_day": "2026-10-15",
+   "last_day": "2026-10-21",
    "first_look_day": 20,
    "looks_started": false,
    "lower_bound": null,
    "gain_estimate": null,
    "registered": "2026-10-07",
-   "days_since_registration": 5,
-   "horizon_left": 175,
+   "days_since_registration": 8,
+   "horizon_left": 172,
    "retired": false,
    "lower_bound_clears": false,
-   "mae_champion": 76.44,
-   "mae_challenger": 78.18,
-   "gain": -0.0228,
-   "coverage_n": 6,
+   "mae_champion": 86.88,
+   "mae_challenger": 88.09,
+   "gain": -0.0139,
+   "coverage_n": 9,
    "coverage": 0.667,
-   "coverage_p_below": 0.34463999999999995,
+   "coverage_p_below": 0.26180249599999983,
    "coverage_ok": true,
-   "direction_champion": 0.8333333333333334,
-   "direction_challenger": 0.8333333333333334,
+   "direction_champion": 0.8888888888888888,
+   "direction_challenger": 0.8888888888888888,
    "direction_ok": true,
    "status": "scored",
    "live_capable": true,
    "blocked_reason": null,
    "promotable": false,
-   "first_reachable": "2026-11-04"
+   "first_reachable": "2026-11-06"
   }
  },
  "promote": null,
@@ -118,186 +118,43 @@
  },
  "timeliness": {
   "schema_version": 1,
-  "generated_at": "2026-10-18T06:49:34.864075+00:00",
+  "generated_at": "2026-10-23T00:22:09.891302+00:00",
   "days": 7,
   "tanishq_slots": {
    "days": 7,
-   "slots": 46,
-   "served": 35,
-   "missed": 11,
+   "slots": 43,
+   "served": 25,
+   "missed": 18,
    "window_minutes": 45,
    "missed_slots_ist": [
-    "2026-10-12T01:40:00+05:30",
-    "2026-10-13T01:40:00+05:30",
-    "2026-10-14T01:40:00+05:30",
-    "2026-10-14T07:30:00+05:30",
-    "2026-10-14T10:40:00+05:30",
-    "2026-10-14T11:10:00+05:30",
-    "2026-10-14T15:35:00+05:30",
-    "2026-10-14T19:50:00+05:30",
-    "2026-10-15T01:40:00+05:30",
     "2026-10-16T15:35:00+05:30",
-    "2026-10-16T19:50:00+05:30"
+    "2026-10-16T19:50:00+05:30",
+    "2026-10-19T15:35:00+05:30",
+    "2026-10-20T15:35:00+05:30",
+    "2026-10-20T19:50:00+05:30",
+    "2026-10-21T01:40:00+05:30",
+    "2026-10-21T07:30:00+05:30",
+    "2026-10-21T10:40:00+05:30",
+    "2026-10-21T11:10:00+05:30",
+    "2026-10-21T15:35:00+05:30",
+    "2026-10-21T19:50:00+05:30",
+    "2026-10-22T01:40:00+05:30",
+    "2026-10-22T07:30:00+05:30",
+    "2026-10-22T10:40:00+05:30",
+    "2026-10-22T11:10:00+05:30",
+    "2026-10-22T15:35:00+05:30",
+    "2026-10-22T19:50:00+05:30",
+    "2026-10-23T01:40:00+05:30"
    ],
    "classification": {
-    "no_dispatch": 5,
+    "no_dispatch": 15,
     "dispatched_failed": 0,
     "dispatched_cancelled": 0,
-    "late": 6,
+    "late": 3,
     "dispatched_other": 0,
     "unknown": 0
    },
    "per_slot": [
-    {
-     "slot_ist": "2026-10-11T01:40:00+05:30",
-     "served": true,
-     "class": "served"
-    },
-    {
-     "slot_ist": "2026-10-11T07:30:00+05:30",
-     "served": true,
-     "class": "served"
-    },
-    {
-     "slot_ist": "2026-10-11T10:40:00+05:30",
-     "served": true,
-     "class": "served"
-    },
-    {
-     "slot_ist": "2026-10-11T11:10:00+05:30",
-     "served": true,
-     "class": "served"
-    },
-    {
-     "slot_ist": "2026-10-11T15:35:00+05:30",
-     "served": true,
-     "class": "served"
-    },
-    {
-     "slot_ist": "2026-10-11T19:50:00+05:30",
-     "served": true,
-     "class": "served"
-    },
-    {
-     "slot_ist": "2026-10-12T01:40:00+05:30",
-     "served": false,
-     "class": "late"
-    },
-    {
-     "slot_ist": "2026-10-12T07:30:00+05:30",
-     "served": true,
-     "class": "served"
-    },
-    {
-     "slot_ist": "2026-10-12T10:40:00+05:30",
-     "served": true,
-     "class": "served"
-    },
-    {
-     "slot_ist": "2026-10-12T11:10:00+05:30",
-     "served": true,
-     "class": "served"
-    },
-    {
-     "slot_ist": "2026-10-12T15:35:00+05:30",
-     "served": true,
-     "class": "served"
-    },
-    {
-     "slot_ist": "2026-10-12T19:50:00+05:30",
-     "served": true,
-     "class": "served"
-    },
-    {
-     "slot_ist": "2026-10-13T01:40:00+05:30",
-     "served": false,
-     "class": "late"
-    },
-    {
-     "slot_ist": "2026-10-13T07:30:00+05:30",
-     "served": true,
-     "class": "served"
-    },
-    {
-     "slot_ist": "2026-10-13T10:40:00+05:30",
-     "served": true,
-     "class": "served"
-    },
-    {
-     "slot_ist": "2026-10-13T11:10:00+05:30",
-     "served": true,
-     "class": "served"
-    },
-    {
-     "slot_ist": "2026-10-13T15:35:00+05:30",
-     "served": true,
-     "class": "served"
-    },
-    {
-     "slot_ist": "2026-10-13T19:50:00+05:30",
-     "served": true,
-     "class": "served"
-    },
-    {
-     "slot_ist": "2026-10-14T01:40:00+05:30",
-     "served": false,
-     "class": "no_dispatch"
-    },
-    {
-     "slot_ist": "2026-10-14T07:30:00+05:30",
-     "served": false,
-     "class": "late"
-    },
-    {
-     "slot_ist": "2026-10-14T10:40:00+05:30",
-     "served": false,
-     "class": "late"
-    },
-    {
-     "slot_ist": "2026-10-14T11:10:00+05:30",
-     "served": false,
-     "class": "late"
-    },
-    {
-     "slot_ist": "2026-10-14T15:35:00+05:30",
-     "served": false,
-     "class": "no_dispatch"
-    },
-    {
-     "slot_ist": "2026-10-14T19:50:00+05:30",
-     "served": false,
-     "class": "no_dispatch"
-    },
-    {
-     "slot_ist": "2026-10-15T01:40:00+05:30",
-     "served": false,
-     "class": "no_dispatch"
-    },
-    {
-     "slot_ist": "2026-10-15T07:30:00+05:30",
-     "served": true,
-     "class": "served"
-    },
-    {
-     "slot_ist": "2026-10-15T10:40:00+05:30",
-     "served": true,
-     "class": "served"
-    },
-    {
-     "slot_ist": "2026-10-15T11:10:00+05:30",
-     "served": true,
-     "class": "served"
-    },
-    {
-     "slot_ist": "2026-10-15T15:35:00+05:30",
-     "served": true,
-     "class": "served"
-    },
-    {
-     "slot_ist": "2026-10-15T19:50:00+05:30",
-     "served": true,
-     "class": "served"
-    },
     {
      "slot_ist": "2026-10-16T01:40:00+05:30",
      "served": true,
@@ -377,6 +234,141 @@
      "slot_ist": "2026-10-18T11:10:00+05:30",
      "served": true,
      "class": "served"
+    },
+    {
+     "slot_ist": "2026-10-18T15:35:00+05:30",
+     "served": true,
+     "class": "served"
+    },
+    {
+     "slot_ist": "2026-10-18T19:50:00+05:30",
+     "served": true,
+     "class": "served"
+    },
+    {
+     "slot_ist": "2026-10-19T01:40:00+05:30",
+     "served": true,
+     "class": "served"
+    },
+    {
+     "slot_ist": "2026-10-19T07:30:00+05:30",
+     "served": true,
+     "class": "served"
+    },
+    {
+     "slot_ist": "2026-10-19T10:40:00+05:30",
+     "served": true,
+     "class": "served"
+    },
+    {
+     "slot_ist": "2026-10-19T11:10:00+05:30",
+     "served": true,
+     "class": "served"
+    },
+    {
+     "slot_ist": "2026-10-19T15:35:00+05:30",
+     "served": false,
+     "class": "late"
+    },
+    {
+     "slot_ist": "2026-10-19T19:50:00+05:30",
+     "served": true,
+     "class": "served"
+    },
+    {
+     "slot_ist": "2026-10-20T01:40:00+05:30",
+     "served": true,
+     "class": "served"
+    },
+    {
+     "slot_ist": "2026-10-20T07:30:00+05:30",
+     "served": true,
+     "class": "served"
+    },
+    {
+     "slot_ist": "2026-10-20T10:40:00+05:30",
+     "served": true,
+     "class": "served"
+    },
+    {
+     "slot_ist": "2026-10-20T11:10:00+05:30",
+     "served": true,
+     "class": "served"
+    },
+    {
+     "slot_ist": "2026-10-20T15:35:00+05:30",
+     "served": false,
+     "class": "no_dispatch"
+    },
+    {
+     "slot_ist": "2026-10-20T19:50:00+05:30",
+     "served": false,
+     "class": "no_dispatch"
+    },
+    {
+     "slot_ist": "2026-10-21T01:40:00+05:30",
+     "served": false,
+     "class": "no_dispatch"
+    },
+    {
+     "slot_ist": "2026-10-21T07:30:00+05:30",
+     "served": false,
+     "class": "no_dispatch"
+    },
+    {
+     "slot_ist": "2026-10-21T10:40:00+05:30",
+     "served": false,
+     "class": "no_dispatch"
+    },
+    {
+     "slot_ist": "2026-10-21T11:10:00+05:30",
+     "served": false,
+     "class": "no_dispatch"
+    },
+    {
+     "slot_ist": "2026-10-21T15:35:00+05:30",
+     "served": false,
+     "class": "no_dispatch"
+    },
+    {
+     "slot_ist": "2026-10-21T19:50:00+05:30",
+     "served": false,
+     "class": "no_dispatch"
+    },
+    {
+     "slot_ist": "2026-10-22T01:40:00+05:30",
+     "served": false,
+     "class": "no_dispatch"
+    },
+    {
+     "slot_ist": "2026-10-22T07:30:00+05:30",
+     "served": false,
+     "class": "no_dispatch"
+    },
+    {
+     "slot_ist": "2026-10-22T10:40:00+05:30",
+     "served": false,
+     "class": "no_dispatch"
+    },
+    {
+     "slot_ist": "2026-10-22T11:10:00+05:30",
+     "served": false,
+     "class": "no_dispatch"
+    },
+    {
+     "slot_ist": "2026-10-22T15:35:00+05:30",
+     "served": false,
+     "class": "no_dispatch"
+    },
+    {
+     "slot_ist": "2026-10-22T19:50:00+05:30",
+     "served": false,
+     "class": "no_dispatch"
+    },
+    {
+     "slot_ist": "2026-10-23T01:40:00+05:30",
+     "served": false,
+     "class": "late"
     }
    ],
    "attribution_note": "from GitHub run data only; no_dispatch cannot tell a laptop that was off or asleep from a scheduler that did not fire or a task that did not run (only the laptop's own log knows)",
@@ -384,16 +376,18 @@
   },
   "overnight_window": {
    "available": true,
-   "nights": 4,
+   "nights": 6,
    "nights_without_model_forecast": 0,
-   "nights_with_model_forecast": 4,
+   "nights_with_model_forecast": 6,
    "minutes_after_us_close": [
-    31,
+    28,
+    34,
+    107,
     156,
-    193,
+    187,
     243
    ],
-   "median_minutes_after_us_close": 193,
+   "median_minutes_after_us_close": 156,
    "marking": "VERIFIED"
   }
  },
@@ -416,6 +410,6 @@
   "demoted": false,
   "since": null,
   "reasons": [],
-  "last_checked": "2026-10-18T06:32:28.877409+00:00"
+  "last_checked": "2026-10-22T23:50:43.324093+00:00"
  }
 }
