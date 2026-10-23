@@ -1,8 +1,8 @@
 {
- "generated_at": "2026-10-23T17:57:12.881037Z",
+ "generated_at": "2026-10-23T20:21:27.788463Z",
  "ready": true,
  "bars_from": "2026-08-14T05:00:00Z",
- "bars_to": "2026-10-23T18:00:00Z",
+ "bars_to": "2026-10-23T20:00:00Z",
  "n_decisions": 1020,
  "n_decisions_after_adr076_cutoff": 122,
  "scored_on_last_decision_per_fix": {
@@ -12,21 +12,21 @@
    "n_excluded_logged_after_target": 0,
    "ready": true,
    "mae_beta_0.0": 39.3,
-   "mae_beta_0.5": 23.8,
-   "mae_beta_1.0": 31.0,
-   "change_beta_0.5_pct": -39.5,
+   "mae_beta_0.5": 23.9,
+   "mae_beta_1.0": 31.3,
+   "change_beta_0.5_pct": -39.3,
    "change_beta_0.5_ci95": [
-    -52.1,
-    -25.0
+    -52.0,
+    -24.6
    ],
    "dm_p_beta_0.5": 0.0,
-   "change_beta_1.0_pct": -21.1,
+   "change_beta_1.0_pct": -20.5,
    "change_beta_1.0_ci95": [
-    -39.9,
-    6.5
+    -39.6,
+    7.3
    ],
-   "dm_p_beta_1.0": 0.0536,
-   "direction_hit_rate": 0.69,
+   "dm_p_beta_1.0": 0.0587,
+   "direction_hit_rate": 0.714,
    "direction_n": 42
   },
   "after_afternoon_rate": {
@@ -35,20 +35,20 @@
    "n_excluded_logged_after_target": 0,
    "ready": true,
    "mae_beta_0.0": 107.7,
-   "mae_beta_0.5": 78.9,
-   "mae_beta_1.0": 81.6,
-   "change_beta_0.5_pct": -26.7,
+   "mae_beta_0.5": 77.9,
+   "mae_beta_1.0": 82.5,
+   "change_beta_0.5_pct": -27.7,
    "change_beta_0.5_ci95": [
-    -38.1,
-    -14.0
+    -39.3,
+    -14.1
    ],
-   "dm_p_beta_0.5": 0.0028,
-   "change_beta_1.0_pct": -24.2,
+   "dm_p_beta_0.5": 0.0029,
+   "change_beta_1.0_pct": -23.4,
    "change_beta_1.0_ci95": [
-    -43.2,
-    0.9
+    -41.8,
+    0.8
    ],
-   "dm_p_beta_1.0": 0.1018,
+   "dm_p_beta_1.0": 0.1017,
    "direction_hit_rate": 0.732,
    "direction_n": 41
   },
@@ -58,18 +58,18 @@
    "n_excluded_logged_after_target": 0,
    "ready": true,
    "mae_beta_0.0": 107.7,
-   "mae_beta_0.5": 49.4,
-   "mae_beta_1.0": 38.0,
+   "mae_beta_0.5": 49.5,
+   "mae_beta_1.0": 38.2,
    "change_beta_0.5_pct": -54.1,
    "change_beta_0.5_ci95": [
-    -59.1,
-    -48.2
+    -59.0,
+    -48.1
    ],
    "dm_p_beta_0.5": 0.0,
-   "change_beta_1.0_pct": -64.8,
+   "change_beta_1.0_pct": -64.5,
    "change_beta_1.0_ci95": [
-    -74.1,
-    -51.3
+    -73.8,
+    -51.1
    ],
    "dm_p_beta_1.0": 0.0,
    "direction_hit_rate": 0.951,
@@ -84,19 +84,19 @@
    "ready": true,
    "mae_beta_0.0": 39.6,
    "mae_beta_0.5": 30.4,
-   "mae_beta_1.0": 34.6,
-   "change_beta_0.5_pct": -23.4,
+   "mae_beta_1.0": 34.7,
+   "change_beta_0.5_pct": -23.3,
    "change_beta_0.5_ci95": [
-    -33.3,
-    -10.6
+    -33.2,
+    -10.2
    ],
    "dm_p_beta_0.5": 0.0,
-   "change_beta_1.0_pct": -12.7,
+   "change_beta_1.0_pct": -12.5,
    "change_beta_1.0_ci95": [
-    -31.5,
-    17.7
+    -31.3,
+    18.3
    ],
-   "dm_p_beta_1.0": 0.1621,
+   "dm_p_beta_1.0": 0.1673,
    "direction_hit_rate": 0.695,
    "direction_n": 210
   },
@@ -106,20 +106,20 @@
    "n_excluded_logged_after_target": 0,
    "ready": true,
    "mae_beta_0.0": 107.7,
-   "mae_beta_0.5": 87.3,
+   "mae_beta_0.5": 87.2,
    "mae_beta_1.0": 84.2,
    "change_beta_0.5_pct": -19.0,
    "change_beta_0.5_ci95": [
-    -25.7,
+    -25.8,
     -12.0
    ],
    "dm_p_beta_0.5": 0.0003,
    "change_beta_1.0_pct": -21.8,
    "change_beta_1.0_ci95": [
-    -32.9,
-    -7.5
+    -32.8,
+    -7.4
    ],
-   "dm_p_beta_1.0": 0.0092,
+   "dm_p_beta_1.0": 0.009,
    "direction_hit_rate": 0.712,
    "direction_n": 337
   },
@@ -129,20 +129,20 @@
    "n_excluded_logged_after_target": 0,
    "ready": true,
    "mae_beta_0.0": 102.7,
-   "mae_beta_0.5": 63.9,
-   "mae_beta_1.0": 64.9,
-   "change_beta_0.5_pct": -37.8,
+   "mae_beta_0.5": 63.3,
+   "mae_beta_1.0": 65.4,
+   "change_beta_0.5_pct": -38.3,
    "change_beta_0.5_ci95": [
-    -45.5,
-    -28.3
+    -46.3,
+    -28.6
    ],
    "dm_p_beta_0.5": 0.0,
-   "change_beta_1.0_pct": -36.8,
+   "change_beta_1.0_pct": -36.3,
    "change_beta_1.0_ci95": [
-    -50.4,
-    -17.3
+    -49.6,
+    -17.2
    ],
-   "dm_p_beta_1.0": 0.0015,
+   "dm_p_beta_1.0": 0.0014,
    "direction_hit_rate": 0.826,
    "direction_n": 397
   }
