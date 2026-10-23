@@ -1,26 +1,26 @@
 {
-  "predicted_at": "2026-10-22T23:50:43.324093+00:00",
+  "predicted_at": "2026-10-23T02:15:01.867097+00:00",
   "target_window": "5d",
   "headline": {
     "method": "nextfix_p3_v1",
-    "predicted_22k": 13169,
-    "lower": 13041,
-    "upper": 13297,
-    "conformal_pi_half": 174.2,
-    "naive_mae_recent_30": 110.5,
+    "predicted_22k": 13142,
+    "lower": 13015,
+    "upper": 13270,
+    "conformal_pi_half": 146.4,
+    "naive_mae_recent_30": 93.8,
     "vol_context": {
-      "half_width": 214,
-      "half_width_raw": 214.5,
+      "half_width": 206,
+      "half_width_raw": 206.4,
       "method": "realized_20d",
       "window_days": 20,
-      "contiguous_days": 76,
+      "contiguous_days": 77,
       "is_floored": false,
       "is_degraded": false,
       "floor_fraction": 0.5,
-      "static_pi_half": 301.3,
-      "baseline_half_width": 283,
-      "regime": "normal",
-      "typical_move_5d": 175,
+      "static_pi_half": 281.9,
+      "baseline_half_width": 281,
+      "regime": "calm",
+      "typical_move_5d": 190,
       "typical_move_pairs": 29,
       "typical_move_window_days": 30
     }
@@ -59,7 +59,7 @@
     "direction_consensus": 1.0
   },
   "driver_context": {
-    "computed_at": "2026-10-22T23:50:52.329984+00:00",
+    "computed_at": "2026-10-23T02:15:08.815769+00:00",
     "macro_staleness_days": 0.0,
     "macro_fresh": true,
     "premium_threshold_pct": 15.0,
@@ -106,9 +106,9 @@
     },
     "alignment": "intraday_at_fix"
   },
-  "real_readings_count": 823,
+  "real_readings_count": 824,
   "current_22k": 13275,
-  "scraped_at": "2026-10-22T21:56:06.416Z",
+  "scraped_at": "2026-10-23T02:03:01.426Z",
   "price_source": "tanishq_scrape",
   "est_low": null,
   "est_high": null,
@@ -121,10 +121,10 @@
   "band_half_width": null,
   "band_unavailable_reason": null,
   "model_fallback": false,
-  "predicted_22k": 13169,
-  "lower": 13041,
-  "upper": 13297,
-  "target_time": "2026-10-23T00:00:00+00:00",
+  "predicted_22k": 13142,
+  "lower": 13015,
+  "upper": 13270,
+  "target_time": "2026-10-24T00:00:00+00:00",
   "model_status": "nextfix_headline",
   "model_version": "nextfix_p3_v1",
   "warmup": false,
@@ -228,19 +228,19 @@
     "base_kind": "pm",
     "base_date": "2026-10-22",
     "base_ibja": 13070.8,
-    "predicted_ibja": 12966.31,
+    "predicted_ibja": 12940.09,
     "target_kind": "pm",
     "range_record": {
       "coverage": 0.801,
       "n": 136
     },
-    "predicted_22k": 13169,
-    "lower": 13041,
-    "upper": 13297,
+    "predicted_22k": 13142,
+    "lower": 13015,
+    "upper": 13270,
     "shadow_ensemble": {
       "model_version": "nextfix_ridge_mlp_v1",
-      "predicted_ibja": 12977.1,
-      "p_up": 0.1963,
+      "predicted_ibja": 12945.89,
+      "p_up": 0.1331,
       "track_record": {
         "n": 156,
         "mae_model": 103.6,
@@ -249,11 +249,11 @@
         "last_d0": "2026-10-21"
       }
     },
-    "p_up": 0.1928,
+    "p_up": 0.1386,
     "direction": {
       "show": true,
       "side": "down",
-      "probability": 0.8072
+      "probability": 0.8614
     }
   }
 }
