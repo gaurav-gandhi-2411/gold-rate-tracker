@@ -1,10 +1,10 @@
 {
  "category": "raw Tanishq, IBJA and Yahoo Finance levels (ADR 054/059)",
  "ciphertext": "data/encrypted/data/feature_store/snapshots.parquet.enc",
- "ciphertext_sha256": "a470be0ca6656a3f0fb8beec7d7b6c5d70258e5dd2b09d53e20da5c0864dac06",
+ "ciphertext_sha256": "6a7d1a1946dac2d97bb95020fe75773c90f6b481f9539b07f045002223c29b9d",
  "format": "GRTENC v1, AES-256-GCM, scrypt",
  "key_id": "88fadeb62be0b8f4",
  "path": "data/feature_store/snapshots.parquet",
- "plaintext_bytes": 57657,
- "plaintext_sha256": "e6ca2e8a09e3bc717acd6be22dc98fc277b255722b982756cc6a3a2a767e1568"
+ "plaintext_bytes": 57660,
+ "plaintext_sha256": "f63ca74e57161b698b37f7778370f8babd33c79afbf62d11ab6973b1fb2773b9"
 }
