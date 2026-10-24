@@ -1,5 +1,5 @@
 {
-  "predicted_at": "2026-10-24T01:01:28.583642+00:00",
+  "predicted_at": "2026-10-24T02:11:11.830788+00:00",
   "target_window": "5d",
   "headline": {
     "method": "nextfix_p3_v1",
@@ -9,16 +9,16 @@
     "conformal_pi_half": 146.4,
     "naive_mae_recent_30": 93.8,
     "vol_context": {
-      "half_width": 216,
-      "half_width_raw": 216.0,
+      "half_width": 214,
+      "half_width_raw": 214.2,
       "method": "realized_20d",
       "window_days": 20,
-      "contiguous_days": 77,
+      "contiguous_days": 78,
       "is_floored": false,
       "is_degraded": false,
       "floor_fraction": 0.5,
       "static_pi_half": 281.9,
-      "baseline_half_width": 281,
+      "baseline_half_width": 279,
       "regime": "normal",
       "typical_move_5d": 190,
       "typical_move_pairs": 29,
@@ -59,7 +59,7 @@
     "direction_consensus": 1.0
   },
   "driver_context": {
-    "computed_at": "2026-10-24T01:01:37.972250+00:00",
+    "computed_at": "2026-10-24T02:11:19.304261+00:00",
     "macro_staleness_days": 0.0,
     "macro_fresh": true,
     "premium_threshold_pct": 15.0,
@@ -106,9 +106,9 @@
     },
     "alignment": "intraday_at_fix"
   },
-  "real_readings_count": 829,
+  "real_readings_count": 830,
   "current_22k": 13100,
-  "scraped_at": "2026-10-23T20:11:34.132Z",
+  "scraped_at": "2026-10-24T02:01:32.698Z",
   "price_source": "tanishq_scrape",
   "est_low": null,
   "est_high": null,
