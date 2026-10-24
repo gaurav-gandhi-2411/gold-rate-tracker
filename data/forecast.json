@@ -1,5 +1,5 @@
 {
-  "predicted_at": "2026-10-23T22:34:47.899566+00:00",
+  "predicted_at": "2026-10-24T01:01:28.583642+00:00",
   "target_window": "5d",
   "headline": {
     "method": "nextfix_p3_v1",
@@ -59,7 +59,7 @@
     "direction_consensus": 1.0
   },
   "driver_context": {
-    "computed_at": "2026-10-23T22:34:53.318347+00:00",
+    "computed_at": "2026-10-24T01:01:37.972250+00:00",
     "macro_staleness_days": 0.0,
     "macro_fresh": true,
     "premium_threshold_pct": 15.0,
@@ -124,7 +124,7 @@
   "predicted_22k": 13080,
   "lower": 12955,
   "upper": 13204,
-  "target_time": "2026-10-24T00:00:00+00:00",
+  "target_time": "2026-10-25T00:00:00+00:00",
   "model_status": "nextfix_headline",
   "model_version": "nextfix_p3_v1",
   "warmup": false,
