@@ -1,5 +1,5 @@
 {
-  "predicted_at": "2026-10-25T10:16:59.729639+00:00",
+  "predicted_at": "2026-10-25T12:44:21.826326+00:00",
   "target_window": "5d",
   "headline": {
     "method": "nextfix_p3_v1",
@@ -59,7 +59,7 @@
     "direction_consensus": 1.0
   },
   "driver_context": {
-    "computed_at": "2026-10-25T10:17:08.815850+00:00",
+    "computed_at": "2026-10-25T12:44:31.069004+00:00",
     "macro_staleness_days": 0.0,
     "macro_fresh": true,
     "premium_threshold_pct": 15.0,
@@ -70,13 +70,13 @@
         "t0_date": "2026-10-16",
         "t1_date": "2026-10-23",
         "delta_pct_ibja": -3.33,
-        "delta_pct_gold_usd": -3.836,
+        "delta_pct_gold_usd": -3.834,
         "delta_pct_usdinr": -0.021,
-        "delta_pct_premium": 0.527,
+        "delta_pct_premium": 0.525,
         "total_move_rs_per_g": -465.0,
-        "gold_usd_contrib_rs_per_g": -535.7,
+        "gold_usd_contrib_rs_per_g": -535.3,
         "usdinr_contrib_rs_per_g": -2.9,
-        "premium_contrib_rs_per_g": 73.6,
+        "premium_contrib_rs_per_g": 73.3,
         "premium_share_pct": 15.8,
         "attribution_valid": false,
         "attribution_valid_reason": "premium share 15.8% exceeds 15% threshold"
@@ -86,21 +86,21 @@
         "t0_date": "2026-09-23",
         "t1_date": "2026-10-23",
         "delta_pct_ibja": -7.077,
-        "delta_pct_gold_usd": -7.51,
+        "delta_pct_gold_usd": -7.508,
         "delta_pct_usdinr": -0.839,
-        "delta_pct_premium": 1.272,
+        "delta_pct_premium": 1.27,
         "total_move_rs_per_g": -945.0,
-        "gold_usd_contrib_rs_per_g": -1002.8,
+        "gold_usd_contrib_rs_per_g": -1002.5,
         "usdinr_contrib_rs_per_g": -112.0,
-        "premium_contrib_rs_per_g": 169.9,
-        "premium_share_pct": 18.0,
+        "premium_contrib_rs_per_g": 169.5,
+        "premium_share_pct": 17.9,
         "attribution_valid": false,
-        "attribution_valid_reason": "premium share 18.0% exceeds 15% threshold"
+        "attribution_valid_reason": "premium share 17.9% exceeds 15% threshold"
       }
     },
     "driver_state": {
       "usd_inr_now": 94.94,
-      "gold_usd_now": 4037.6,
+      "gold_usd_now": 4037.7,
       "usd_inr_30d_pct_change": -0.84,
       "gold_usd_30d_pct_change": -7.23
     },
