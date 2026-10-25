@@ -1,16 +1,14 @@
 {
  "schema_version": 1,
- "generated_at": "2026-10-23T00:22:09.891302+00:00",
+ "generated_at": "2026-10-25T07:08:15.244752+00:00",
  "days": 7,
  "tanishq_slots": {
   "days": 7,
-  "slots": 43,
-  "served": 25,
-  "missed": 18,
+  "slots": 46,
+  "served": 30,
+  "missed": 16,
   "window_minutes": 45,
   "missed_slots_ist": [
-   "2026-10-16T15:35:00+05:30",
-   "2026-10-16T19:50:00+05:30",
    "2026-10-19T15:35:00+05:30",
    "2026-10-20T15:35:00+05:30",
    "2026-10-20T19:50:00+05:30",
@@ -29,74 +27,14 @@
    "2026-10-23T01:40:00+05:30"
   ],
   "classification": {
-   "no_dispatch": 15,
+   "no_dispatch": 14,
    "dispatched_failed": 0,
    "dispatched_cancelled": 0,
-   "late": 3,
+   "late": 2,
    "dispatched_other": 0,
    "unknown": 0
   },
   "per_slot": [
-   {
-    "slot_ist": "2026-10-16T01:40:00+05:30",
-    "served": true,
-    "class": "served"
-   },
-   {
-    "slot_ist": "2026-10-16T07:30:00+05:30",
-    "served": true,
-    "class": "served"
-   },
-   {
-    "slot_ist": "2026-10-16T10:40:00+05:30",
-    "served": true,
-    "class": "served"
-   },
-   {
-    "slot_ist": "2026-10-16T11:10:00+05:30",
-    "served": true,
-    "class": "served"
-   },
-   {
-    "slot_ist": "2026-10-16T15:35:00+05:30",
-    "served": false,
-    "class": "no_dispatch"
-   },
-   {
-    "slot_ist": "2026-10-16T19:50:00+05:30",
-    "served": false,
-    "class": "late"
-   },
-   {
-    "slot_ist": "2026-10-17T01:40:00+05:30",
-    "served": true,
-    "class": "served"
-   },
-   {
-    "slot_ist": "2026-10-17T07:30:00+05:30",
-    "served": true,
-    "class": "served"
-   },
-   {
-    "slot_ist": "2026-10-17T10:40:00+05:30",
-    "served": true,
-    "class": "served"
-   },
-   {
-    "slot_ist": "2026-10-17T11:10:00+05:30",
-    "served": true,
-    "class": "served"
-   },
-   {
-    "slot_ist": "2026-10-17T15:35:00+05:30",
-    "served": true,
-    "class": "served"
-   },
-   {
-    "slot_ist": "2026-10-17T19:50:00+05:30",
-    "served": true,
-    "class": "served"
-   },
    {
     "slot_ist": "2026-10-18T01:40:00+05:30",
     "served": true,
@@ -251,6 +189,81 @@
     "slot_ist": "2026-10-23T01:40:00+05:30",
     "served": false,
     "class": "late"
+   },
+   {
+    "slot_ist": "2026-10-23T07:30:00+05:30",
+    "served": true,
+    "class": "served"
+   },
+   {
+    "slot_ist": "2026-10-23T10:40:00+05:30",
+    "served": true,
+    "class": "served"
+   },
+   {
+    "slot_ist": "2026-10-23T11:10:00+05:30",
+    "served": true,
+    "class": "served"
+   },
+   {
+    "slot_ist": "2026-10-23T15:35:00+05:30",
+    "served": true,
+    "class": "served"
+   },
+   {
+    "slot_ist": "2026-10-23T19:50:00+05:30",
+    "served": true,
+    "class": "served"
+   },
+   {
+    "slot_ist": "2026-10-24T01:40:00+05:30",
+    "served": true,
+    "class": "served"
+   },
+   {
+    "slot_ist": "2026-10-24T07:30:00+05:30",
+    "served": true,
+    "class": "served"
+   },
+   {
+    "slot_ist": "2026-10-24T10:40:00+05:30",
+    "served": true,
+    "class": "served"
+   },
+   {
+    "slot_ist": "2026-10-24T11:10:00+05:30",
+    "served": true,
+    "class": "served"
+   },
+   {
+    "slot_ist": "2026-10-24T15:35:00+05:30",
+    "served": true,
+    "class": "served"
+   },
+   {
+    "slot_ist": "2026-10-24T19:50:00+05:30",
+    "served": true,
+    "class": "served"
+   },
+   {
+    "slot_ist": "2026-10-25T01:40:00+05:30",
+    "served": true,
+    "class": "served"
+   },
+   {
+    "slot_ist": "2026-10-25T07:30:00+05:30",
+    "served": true,
+    "class": "served"
+   },
+   {
+    "slot_ist": "2026-10-25T10:40:00+05:30",
+    "served": true,
+    "class": "served"
+   },
+   {
+    "slot_ist": "2026-10-25T11:10:00+05:30",
+    "served": true,
+    "class": "served"
    }
   ],
   "attribution_note": "from GitHub run data only; no_dispatch cannot tell a laptop that was off or asleep from a scheduler that did not fire or a task that did not run (only the laptop's own log knows)",
@@ -258,18 +271,17 @@
  },
  "overnight_window": {
   "available": true,
-  "nights": 6,
+  "nights": 5,
   "nights_without_model_forecast": 0,
-  "nights_with_model_forecast": 6,
+  "nights_with_model_forecast": 5,
   "minutes_after_us_close": [
+   27,
    28,
    34,
    107,
-   156,
-   187,
-   243
+   187
   ],
-  "median_minutes_after_us_close": 156,
+  "median_minutes_after_us_close": 34,
   "marking": "VERIFIED"
  }
 }
