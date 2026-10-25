@@ -1,11 +1,11 @@
 {
-  "probed_at": "2026-10-25T20:23:09.491688+00:00",
+  "probed_at": "2026-10-25T22:01:12.167500+00:00",
   "status": "success",
   "wall_clock_ms": {
-    "pipeline_load": 4647,
-    "forecast": 13,
-    "calibration": 0,
-    "total": 4679
+    "pipeline_load": 4895,
+    "forecast": 15,
+    "calibration": 1,
+    "total": 4936
   },
   "ibja_context_days": 278,
   "ibja_last_date": "2026-10-23",
@@ -17,13 +17,13 @@
       "date": "2026-10-24",
       "p10": 12524.68,
       "p50": 12976.17,
-      "p90": 13469.78
+      "p90": 13469.77
     },
     {
       "day": 2,
       "date": "2026-10-25",
       "p10": 12452.93,
-      "p50": 13012.17,
+      "p50": 13012.16,
       "p90": 13600.67
     },
     {
