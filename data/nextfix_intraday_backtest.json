@@ -1,10 +1,10 @@
 {
- "generated_at": "2026-10-26T05:51:45.838500Z",
+ "generated_at": "2026-10-26T06:53:07.342118Z",
  "ready": true,
  "bars_from": "2026-08-17T05:00:00Z",
- "bars_to": "2026-10-26T06:00:00Z",
+ "bars_to": "2026-10-26T07:00:00Z",
  "n_decisions": 994,
- "n_decisions_after_adr076_cutoff": 122,
+ "n_decisions_after_adr076_cutoff": 141,
  "scored_on_last_decision_per_fix": {
   "after_morning_rate": {
    "n_fixes": 42,
