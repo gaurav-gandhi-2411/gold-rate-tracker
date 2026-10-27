@@ -1,10 +1,10 @@
 {
  "category": "raw IBJA history (ADR 059)",
  "ciphertext": "data/encrypted/data/ibja_rates.parquet.enc",
- "ciphertext_sha256": "457fe13a7881adfd13d49e85247e21c0ff6aec977dc5e2e95c819a2b5d835454",
+ "ciphertext_sha256": "d5d2834e74040a60a84aff4102bab1f76487100be8b46b605b99cbf20f49ac65",
  "format": "GRTENC v1, AES-256-GCM, scrypt",
  "key_id": "88fadeb62be0b8f4",
  "path": "data/ibja_rates.parquet",
- "plaintext_bytes": 29441,
- "plaintext_sha256": "24406c74a7ca96e1cc723ee916a261d8e71a5e6e1d16a3de136308ebbddeb959"
+ "plaintext_bytes": 29489,
+ "plaintext_sha256": "75592c2b4c47480e120cc49a1e8cfa1126a05adfc293617b5f076a37376bd6ed"
 }
