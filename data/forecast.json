@@ -1,11 +1,11 @@
 {
-  "predicted_at": "2026-10-27T02:13:05.619015+00:00",
+  "predicted_at": "2026-10-27T05:21:53.106865+00:00",
   "target_window": "5d",
   "headline": {
     "method": "nextfix_p3_v1",
-    "predicted_22k": 13147,
-    "lower": 13027,
-    "upper": 13268,
+    "predicted_22k": 13159,
+    "lower": 13039,
+    "upper": 13279,
     "conformal_pi_half": 135.5,
     "naive_mae_recent_30": 89.2,
     "vol_context": {
@@ -59,7 +59,7 @@
     "direction_consensus": 1.0
   },
   "driver_context": {
-    "computed_at": "2026-10-27T02:13:12.725219+00:00",
+    "computed_at": "2026-10-27T05:21:58.796357+00:00",
     "macro_staleness_days": 0.0,
     "macro_fresh": true,
     "premium_threshold_pct": 15.0,
@@ -106,9 +106,9 @@
     },
     "alignment": "intraday_at_fix"
   },
-  "real_readings_count": 848,
+  "real_readings_count": 849,
   "current_22k": 13125,
-  "scraped_at": "2026-10-27T02:01:37.519Z",
+  "scraped_at": "2026-10-27T05:11:37.001Z",
   "price_source": "tanishq_scrape",
   "est_low": null,
   "est_high": null,
@@ -121,9 +121,9 @@
   "band_half_width": null,
   "band_unavailable_reason": null,
   "model_fallback": false,
-  "predicted_22k": 13147,
-  "lower": 13027,
-  "upper": 13268,
+  "predicted_22k": 13159,
+  "lower": 13039,
+  "upper": 13279,
   "target_time": "2026-10-28T00:00:00+00:00",
   "model_status": "nextfix_headline",
   "model_version": "nextfix_p3_v1",
@@ -228,19 +228,19 @@
     "base_kind": "pm",
     "base_date": "2026-10-26",
     "base_ibja": 12980.6,
-    "predicted_ibja": 13002.67,
+    "predicted_ibja": 13014.1,
     "target_kind": "pm",
     "range_record": {
       "coverage": 0.804,
       "n": 138
     },
-    "predicted_22k": 13147,
-    "lower": 13027,
-    "upper": 13268,
+    "predicted_22k": 13159,
+    "lower": 13039,
+    "upper": 13279,
     "shadow_ensemble": {
       "model_version": "nextfix_ridge_mlp_v1",
-      "predicted_ibja": 13000.3,
-      "p_up": 0.5545,
+      "predicted_ibja": 13015.28,
+      "p_up": 0.6051,
       "track_record": {
         "n": 158,
         "mae_model": 102.7,
@@ -249,11 +249,11 @@
         "last_d0": "2026-10-23"
       }
     },
-    "p_up": 0.5744,
+    "p_up": 0.6121,
     "direction": {
       "show": true,
       "side": "up",
-      "probability": 0.5744
+      "probability": 0.6121
     }
   }
 }
