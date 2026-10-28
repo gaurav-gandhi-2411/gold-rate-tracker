@@ -86,10 +86,14 @@ def scrape_line(root: Path) -> str:
 
 def live_line(root: Path) -> str:
     def build() -> str:
-        live = _load(root / "data" / "model_status_weekly.json")["live"]
+        status = _load(root / "data" / "model_status_weekly.json")
+        live = status["live"]
         n = int(live["n"])
+        # The file is rebuilt only by the Sunday weekly backtest, so without its date the line read as
+        # stuck mid-week (10-25..10-27 said "to 2026-10-22" while the daily live monitor had moved on).
+        checked = str(status.get("generated_at") or "")[:10] or "unknown date"
         text = (
-            f"P3 live record ({n} days, to {live['last_day']}): average miss Rs.{live['mae_model']:.0f} vs "
+            f"P3 live record (weekly check of {checked}: {n} days, to {live['last_day']}): average miss Rs.{live['mae_model']:.0f} vs "
             f"Rs.{live['mae_hold']:.0f} for repeating the last rate; direction right "
             f"{round(live['direction_hit'] * live['direction_n'])} of {live['direction_n']}; range held "
             f"{round(live['coverage'] * live['coverage_n'])} of {live['coverage_n']} (target 80%)."
