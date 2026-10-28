@@ -66,6 +66,7 @@ def _repo(tmp_path: Path, last_reading: str = "2026-10-23T14:00:00Z") -> Path:
     (data / "model_status_weekly.json").write_text(
         json.dumps(
             {
+                "generated_at": "2026-10-18T06:50:00+00:00",
                 "live": LIVE,
                 "challengers": {
                     "ensemble": {"n": 6, "first_look_day": 20},
@@ -95,6 +96,8 @@ def test_daily_digest_lines(tmp_path: Path) -> None:
     lines = text.splitlines()
     assert lines[0] == "Data: fresh, last Tanishq reading 1.0 h ago; forecast 0.8 h old."
     assert lines[1] == "Scrapes (7 days): 26 of 26 succeeded."
+    # The weekly file's date is named, so a mid-week reader knows the record is not stuck.
+    assert lines[2].startswith("P3 live record (weekly check of 2026-10-18: 6 days, to 2026-10-15)")
     assert "average miss Rs.76 vs Rs.88" in lines[2] and "direction right 5 of 6" in lines[2]
     assert "range held 4 of 6 (target 80%)" in lines[2] and lines[2].endswith(
         "Too few days to judge."
@@ -118,6 +121,15 @@ def test_a_missing_file_degrades_to_unknown_and_the_rest_still_builds(tmp_path: 
     assert "unknown (FileNotFoundError)" in text
     assert "Merged today: unknown (no list)." in text
     assert text.splitlines()[0].startswith("Data: fresh")
+
+
+def test_live_line_without_a_generated_date_says_so(tmp_path: Path) -> None:
+    root = _repo(tmp_path)
+    p = root / "data" / "model_status_weekly.json"
+    d = json.loads(p.read_text(encoding="utf-8"))
+    del d["generated_at"]
+    p.write_text(json.dumps(d), encoding="utf-8")
+    assert gd.live_line(root).startswith("P3 live record (weekly check of unknown date: 6 days")
 
 
 def test_monday_note(tmp_path: Path) -> None:
