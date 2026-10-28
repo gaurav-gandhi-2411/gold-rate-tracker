@@ -1,5 +1,10 @@
 # Autonomy spec — gold-rate-tracker, 2026-10-20 to 2026-10-27
 
+> **ENDED 2026-10-27. Do not follow this spec.** It applied only while GG was away. The standing rules are
+> `.claude/CLAUDE.md`, `docs/WEEKLY_ROUTINE.md`, `docs/FOR_GG.md` and the ADRs. What happened in the window,
+> and the lessons for the next absence, are in `docs/HANDOVER_2026-10-27.md`. The text below is kept as the
+> record of what was asked.
+
 GG is unavailable from now until **2026-10-27**. This spec is the only instruction set for that period.
 Commit it to the repo as `docs/AUTONOMY_SPEC.md` in the first shift. Every later shift re-reads it.
 
