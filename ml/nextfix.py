@@ -1117,6 +1117,12 @@ def run(
             update_variants(pairs, data_dir, now)
         except Exception as exc:
             logger.warning("nextfix slope-variant shadow failed (%s); live P3 unaffected", exc)
+    try:  # ADR 074 W2: a shadow range read from P3's own record; never touches the live range
+        from ml import nextfix_w2
+
+        nextfix_w2.run(folds, data_dir, now)
+    except Exception as exc:
+        logger.warning("ADR 074 W2 band shadow failed (%s); live P3 unaffected", exc)
     # Shadow: the ridge + neural-net ensemble keeps its own record and is scored beside P3.
     oos_path = data_dir / OOS_PATH.name
     try:  # the shadow must never take the live forecast down (ADR 069)
