@@ -44,6 +44,10 @@ IST = timezone(timedelta(hours=5, minutes=30))
 TIMELINESS = ROOT / "data" / "input_timeliness_weekly.json"
 OUT = ROOT / "data" / "laptop_attribution.json"
 WINDOW_MIN = 45  # a dispatch within this many minutes of the slot counts as on time
+# How long after a slot a dispatch line for that slot still counts as its catch-up: just short of the next
+# day's own run of the same slot, so that run is never taken for a catch-up. It was 12 h, which recorded the
+# 2026-10-14 15:35 and 19:50 slots (caught up 985 and 730 min later) as "no catch-up dispatch logged".
+CATCHUP_WINDOW = timedelta(hours=23, minutes=30)
 CLASSES = (
     "before_schedule_installed",
     "laptop_off",
@@ -152,9 +156,7 @@ def classify_slot(
 ) -> dict[str, Any]:
     # ``github`` maps slot_ist -> the run class from build_timeliness_report (GitHub run data).
     hhmm = slot.strftime("%H:%M")
-    later = [
-        d for d in dispatches if d["slot"] == hhmm and slot <= d["t"] <= slot + timedelta(hours=12)
-    ]
+    later = [d for d in dispatches if d["slot"] == hhmm and slot <= d["t"] <= slot + CATCHUP_WINDOW]
     first = min(later, key=lambda d: d["t"]) if later else None
     late_min = round((first["t"] - slot).total_seconds() / 60) if first else None
     caught = (
