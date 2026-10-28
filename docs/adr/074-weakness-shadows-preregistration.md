@@ -68,3 +68,23 @@ SHA-256 of the canonical JSON of the specification below (checked by `tests/test
 ## Results
 
 None yet. Forward n at registration: 0 for all three.
+
+**W3 Step 0 (feasibility), checked 2026-10-28, five days after its 2026-10-23 date: W3 is not built.**
+The step was late because no session ran between 2026-10-23 and 2026-10-28 (`docs/HANDOVER_2026-10-27.md`).
+The hourly record cannot supply world prices with trustworthy known-at times across the weekend boundary:
+
+- The only hourly world prices are `data/macro_intraday.parquet` (1-hour GC=F and INR=X closes, `ml/macro.py`
+  `update_intraday_cache`).
+  - Every check-price run re-downloads the last 60 days from Yahoo and **overwrites** the file. It is
+    gitignored and never persisted (VERIFIED: `.gitignore` line 18; the function writes the whole frame).
+  - No bar carries the time it was fetched, so a bar's known-at time is only assumed (bar end), and a later
+    revision by Yahoo replaces the earlier value without a trace.
+  - The Sunday-open split needs exactly the bars nearest the weekend gap to be known at a stated time. That
+    is the precondition this step names, and the record does not meet it.
+- **Too short (INFERRED, arithmetic):** 60 days of bars hold about 8 Mondays. The split's two slopes need at least
+  15 resolved Mondays, so even with trustworthy times W3 would sit on its P3 fallback for months.
+- **What would make it feasible:** an append-only hourly record with a fetched-at time per bar, kept for at least
+  15 weeks. That is a data change outside this ADR. If it is ever built, W3 needs a new pre-registration with
+  forward Mondays counted from then.
+
+W1 and W2 are not built yet (no PR). Their forward days still count from their own merges.
