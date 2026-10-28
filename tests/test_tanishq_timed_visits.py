@@ -429,16 +429,24 @@ def test_every_exit_leaves_a_last_trace_line_and_start_records_time_since_boot()
     # and slot 11:10's START was lost to a sibling's write at the same instant (the error was swallowed).
     ps1 = (ROOT / "scripts" / "win" / "tanishq_dispatch.ps1").read_text(encoding="utf-8")
     log_fn = ps1.split("function Write-Log", 1)[1].split("\n}", 1)[0]
-    assert 'Write-Trace ("LOG {0}" -f $Msg)' in log_fn  # every outcome line, on every exit path, ends the trace
+    assert (
+        'Write-Trace ("LOG {0}" -f $Msg)' in log_fn
+    )  # every outcome line, on every exit path, ends the trace
     assert ps1.index("function Write-Trace") < ps1.index("function Write-Log")
     trace_fn = ps1.split("function Write-Trace", 1)[1].split("\n}", 1)[0]
     assert "for ($i = 0; $i -lt 20; $i++)" in trace_fn and "Start-Sleep -Milliseconds" in trace_fn
     assert "AppendAllText($Trace" in trace_fn
     assert "BOOT since_boot_s={0} session={1}" in ps1
     # a plain START is written before the boot-event query, which has no timeout
-    assert ps1.index('Write-Trace "START"') < ps1.index("Get-WinEvent") < ps1.index('Write-Trace ("BOOT')
+    assert (
+        ps1.index('Write-Trace "START"')
+        < ps1.index("Get-WinEvent")
+        < ps1.index('Write-Trace ("BOOT')
+    )
     head = ps1.split('Write-Trace ("BOOT', 1)[0]
-    assert "Get-CimInstance" not in head and "Id = 12" in head  # boot time from the System log, not WMI
+    assert (
+        "Get-CimInstance" not in head and "Id = 12" in head
+    )  # boot time from the System log, not WMI
     assert 'Write-Trace ("DONE' not in ps1  # replaced by the LOG mirror, which every path reaches
 
 
