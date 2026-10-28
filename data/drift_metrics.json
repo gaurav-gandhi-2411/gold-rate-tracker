@@ -1038,5 +1038,13 @@
     "residual": 0.0,
     "model_version": "hold_latest_fix_pm_to_am",
     "baseline_mae": 241.07
+  },
+  {
+    "ts": "2026-10-28T02:10:29.608040+00:00",
+    "target_time": "2026-10-28T00:00:00+00:00",
+    "actual_ts": "2026-10-28T02:01:33.129Z",
+    "residual": -39.0,
+    "model_version": "nextfix_p3_v1",
+    "baseline_mae": 241.07
   }
 ]
