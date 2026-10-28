@@ -417,7 +417,7 @@ def test_dispatcher_traces_its_phases_in_a_separate_file_the_attribution_never_r
     assert '$Trace = Join-Path $LogDir "dispatch_trace.log"' in ps1
     fn = ps1.split("function Write-Trace", 1)[1].split("\n}", 1)[0]
     assert "$Trace" in fn and "$Log" not in fn.replace("$LogDir", "")
-    assert ps1.index('Write-Trace ("START') < ps1.index("trap {") < ps1.index("gh api rate_limit")
+    assert ps1.index('Write-Trace "START"') < ps1.index("trap {") < ps1.index("gh api rate_limit")
     for phase in ('"ONLINE"', '"WAIT lock"', '"LOCK acquired', '"LEADER listing'):
         assert phase in ps1, phase
     attribution = (ROOT / "scripts" / "laptop_attribution.py").read_text(encoding="utf-8")
@@ -434,8 +434,10 @@ def test_every_exit_leaves_a_last_trace_line_and_start_records_time_since_boot()
     trace_fn = ps1.split("function Write-Trace", 1)[1].split("\n}", 1)[0]
     assert "for ($i = 0; $i -lt 20; $i++)" in trace_fn and "Start-Sleep -Milliseconds" in trace_fn
     assert "AppendAllText($Trace" in trace_fn
-    assert "START since_boot_s={0} session={1}" in ps1
-    head = ps1.split('Write-Trace ("START', 1)[0]
+    assert "BOOT since_boot_s={0} session={1}" in ps1
+    # a plain START is written before the boot-event query, which has no timeout
+    assert ps1.index('Write-Trace "START"') < ps1.index("Get-WinEvent") < ps1.index('Write-Trace ("BOOT')
+    head = ps1.split('Write-Trace ("BOOT', 1)[0]
     assert "Get-CimInstance" not in head and "Id = 12" in head  # boot time from the System log, not WMI
     assert 'Write-Trace ("DONE' not in ps1  # replaced by the LOG mirror, which every path reaches
 

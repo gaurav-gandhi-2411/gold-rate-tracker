@@ -61,7 +61,8 @@ function Write-Log([string]$Msg) {
     Write-Trace ("LOG {0}" -f $Msg)
 }
 
-# Uptime and session at START test the post-boot hypothesis for the 10-22 kill directly: on 2026-10-28 catch-ups
+Write-Trace "START"  # first, before anything that could stall (Get-WinEvent below has no timeout)
+# Time since boot and session test the post-boot hypothesis for the 10-22 kill directly: on 2026-10-28 catch-ups
 # 4, 4 and 9 min after a boot all dispatched; on 10-22 one 6 min after a boot did not. The boot time is the last
 # Kernel-General event 12 ("The operating system started"), the source the 10-22 analysis used; any failure prints "?".
 $sinceBoot = "?"
@@ -71,7 +72,7 @@ try {
 } catch { }
 $session = "?"
 try { $session = [System.Diagnostics.Process]::GetCurrentProcess().SessionId } catch { }
-Write-Trace ("START since_boot_s={0} session={1}" -f $sinceBoot, $session)
+Write-Trace ("BOOT since_boot_s={0} session={1}" -f $sinceBoot, $session)
 
 trap { Write-Log ("FAIL unexpected: {0}" -f $_.Exception.Message); exit 1 }
 
