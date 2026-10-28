@@ -418,10 +418,36 @@ def test_dispatcher_traces_its_phases_in_a_separate_file_the_attribution_never_r
     fn = ps1.split("function Write-Trace", 1)[1].split("\n}", 1)[0]
     assert "$Trace" in fn and "$Log" not in fn.replace("$LogDir", "")
     assert ps1.index('Write-Trace "START"') < ps1.index("trap {") < ps1.index("gh api rate_limit")
-    for phase in ('"ONLINE"', '"WAIT lock"', '"LOCK acquired', '"LEADER listing', '"DONE'):
+    for phase in ('"ONLINE"', '"WAIT lock"', '"LOCK acquired', '"LEADER listing'):
         assert phase in ps1, phase
     attribution = (ROOT / "scripts" / "laptop_attribution.py").read_text(encoding="utf-8")
     assert "dispatch_trace" not in attribution
+
+
+def test_every_exit_leaves_a_last_trace_line_and_start_records_time_since_boot():
+    # 2026-10-28: a follower covered by its leader exited with no final trace line (only the leader wrote DONE),
+    # and slot 11:10's START was lost to a sibling's write at the same instant (the error was swallowed).
+    ps1 = (ROOT / "scripts" / "win" / "tanishq_dispatch.ps1").read_text(encoding="utf-8")
+    log_fn = ps1.split("function Write-Log", 1)[1].split("\n}", 1)[0]
+    assert (
+        'Write-Trace ("LOG {0}" -f $Msg)' in log_fn
+    )  # every outcome line, on every exit path, ends the trace
+    assert ps1.index("function Write-Trace") < ps1.index("function Write-Log")
+    trace_fn = ps1.split("function Write-Trace", 1)[1].split("\n}", 1)[0]
+    assert "for ($i = 0; $i -lt 20; $i++)" in trace_fn and "Start-Sleep -Milliseconds" in trace_fn
+    assert "AppendAllText($Trace" in trace_fn
+    assert "BOOT since_boot_s={0} session={1}" in ps1
+    # a plain START is written before the boot-event query, which has no timeout
+    assert (
+        ps1.index('Write-Trace "START"')
+        < ps1.index("Get-WinEvent")
+        < ps1.index('Write-Trace ("BOOT')
+    )
+    head = ps1.split('Write-Trace ("BOOT', 1)[0]
+    assert (
+        "Get-CimInstance" not in head and "Id = 12" in head
+    )  # boot time from the System log, not WMI
+    assert 'Write-Trace ("DONE' not in ps1  # replaced by the LOG mirror, which every path reaches
 
 
 # --- one dispatch per wake (2026-10-14/15: four dispatches, two cancelled by the concurrency group) ------

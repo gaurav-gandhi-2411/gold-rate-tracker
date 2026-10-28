@@ -39,19 +39,40 @@ $LogDir = Join-Path $env:LOCALAPPDATA "gold-rate-tracker"
 $Log = Join-Path $LogDir "tanishq_dispatch.log"
 New-Item -ItemType Directory -Force -Path $LogDir | Out-Null
 
-function Write-Log([string]$Msg) {
-    $line = "{0} slot={1} {2}" -f (Get-Date).ToString("yyyy-MM-ddTHH:mm:sszzz"), $Slot, $Msg
-    Add-Content -Path $Log -Value $line
-}
-
 # Phase trace in its OWN file (laptop_attribution.py reads every line of $Log as an outcome, so a phase
 # line there would be misread as one). A process that is killed (no trap runs) leaves its last phase here:
 # on 2026-10-22 all six catch-up processes after a boot ended 0xC000013A and left no line at all.
 $Trace = Join-Path $LogDir "dispatch_trace.log"
 function Write-Trace([string]$Msg) {
-    try { Add-Content -Path $Trace -Value ("{0} slot={1} pid={2} {3}" -f (Get-Date).ToString("yyyy-MM-ddTHH:mm:sszzz"), $Slot, $PID, $Msg) } catch { }
+    $line = "{0} slot={1} pid={2} {3}" -f (Get-Date).ToString("yyyy-MM-ddTHH:mm:sszzz"), $Slot, $PID, $Msg
+    # Siblings of one wake write at the same instant: a sharing violation lost slot 11:10's START on 2026-10-28.
+    # Retry like the pending file; a trace write still never fails the dispatcher.
+    for ($i = 0; $i -lt 20; $i++) {
+        try { [System.IO.File]::AppendAllText($Trace, $line + [Environment]::NewLine); break } catch { Start-Sleep -Milliseconds 150 }
+    }
 }
-Write-Trace "START"
+
+# Every outcome line is mirrored to the trace as LOG, so each process's trace ends either in LOG <outcome>
+# (it finished, whichever exit it took: dispatched, covered by a sibling, or any SKIP/FAIL) or in an earlier
+# phase (it was killed there). Before 10-28 only the leader's path wrote a final (DONE) line.
+function Write-Log([string]$Msg) {
+    $line = "{0} slot={1} {2}" -f (Get-Date).ToString("yyyy-MM-ddTHH:mm:sszzz"), $Slot, $Msg
+    Add-Content -Path $Log -Value $line
+    Write-Trace ("LOG {0}" -f $Msg)
+}
+
+Write-Trace "START"  # first, before anything that could stall (Get-WinEvent below has no timeout)
+# Time since boot and session test the post-boot hypothesis for the 10-22 kill directly: on 2026-10-28 catch-ups
+# 4, 4 and 9 min after a boot all dispatched; on 10-22 one 6 min after a boot did not. The boot time is the last
+# Kernel-General event 12 ("The operating system started"), the source the 10-22 analysis used; any failure prints "?".
+$sinceBoot = "?"
+try {
+    $boot = Get-WinEvent -FilterHashtable @{ LogName = "System"; ProviderName = "Microsoft-Windows-Kernel-General"; Id = 12 } -MaxEvents 1 -ErrorAction Stop
+    $sinceBoot = [int]((Get-Date) - $boot.TimeCreated).TotalSeconds
+} catch { }
+$session = "?"
+try { $session = [System.Diagnostics.Process]::GetCurrentProcess().SessionId } catch { }
+Write-Trace ("BOOT since_boot_s={0} session={1}" -f $sinceBoot, $session)
 
 trap { Write-Log ("FAIL unexpected: {0}" -f $_.Exception.Message); exit 1 }
 
@@ -183,8 +204,7 @@ try {
         # Record the batch for the siblings still waiting for the lock, then log my own line.
         $state = [ordered]@{ at_utc = (Get-Date).ToUniversalTime().ToString("o"); leader = $Slot; slots = $covers; result = $result }
         try { ($state | ConvertTo-Json -Compress) | Set-Content -Path $StateFile -Encoding ASCII } catch { Write-Log ("NOTE could not write the batch state: {0}" -f $_.Exception.Message) }
-        Write-Log ($result + $batchNote)
-        Write-Trace ("DONE {0}" -f $result)
+        Write-Log ($result + $batchNote)  # traced as LOG; the leader's last line, like every other exit's
         if ($exitCode -ne 0) { $locked = $false; $mutex.ReleaseMutex(); exit $exitCode }
         if ($result -ne "DISPATCHED") { $locked = $false; $mutex.ReleaseMutex(); exit 0 }
     }
