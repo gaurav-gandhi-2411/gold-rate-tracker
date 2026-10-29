@@ -1,29 +1,5 @@
 [
   {
-    "ts": "2026-09-29T10:48:00.298085+00:00",
-    "target_time": "2026-09-30T00:00:00+00:00",
-    "actual_ts": "2026-09-29T08:39:19.092Z",
-    "residual": -70.0,
-    "model_version": "naive_flat_hold",
-    "baseline_mae": 248.29
-  },
-  {
-    "ts": "2026-09-29T11:14:05.368424+00:00",
-    "target_time": "2026-09-30T00:00:00+00:00",
-    "actual_ts": "2026-09-29T11:08:29.550Z",
-    "residual": 0.0,
-    "model_version": "naive_flat_hold",
-    "baseline_mae": 248.29
-  },
-  {
-    "ts": "2026-09-29T12:50:12.402750+00:00",
-    "target_time": "2026-09-30T00:00:00+00:00",
-    "actual_ts": "2026-09-29T12:44:27.262Z",
-    "residual": 0.0,
-    "model_version": "naive_flat_hold",
-    "baseline_mae": 248.29
-  },
-  {
     "ts": "2026-09-30T06:32:34.545236+00:00",
     "target_time": "2026-09-30T00:00:00+00:00",
     "actual_ts": "2026-09-30T06:27:36.736Z",
@@ -1077,6 +1053,14 @@
     "actual_ts": "2026-10-29T10:06:35.363Z",
     "residual": 20.0,
     "model_version": "nextfix_p3_v1",
+    "baseline_mae": 241.07
+  },
+  {
+    "ts": "2026-10-29T14:31:02.542987+00:00",
+    "target_time": "2026-10-30T00:00:00+00:00",
+    "actual_ts": "2026-10-29T14:21:35.958Z",
+    "residual": 0.0,
+    "model_version": "hold_latest_fix_am_to_pm",
     "baseline_mae": 241.07
   }
 ]
