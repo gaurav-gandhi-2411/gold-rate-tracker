@@ -62,6 +62,17 @@ const NOTE_RE = /<p [^>]*id="privacy-note"[^>]*>[\s\S]*?<\/p>/;
 const norm = (html) =>
   html.replace(/class="([^"]*)"/g, (_m, c) => `class="${c.split(/\s+/).sort().join(" ")}"`);
 
+// On a mismatch, name where the two pages first differ and show both sides there. The 2026-10-28
+// master failure (run 40719381434) printed only FAIL, so the flake could not be diagnosed.
+function firstDiff(a, b, context = 120) {
+  let i = 0;
+  while (i < a.length && i < b.length && a[i] === b[i]) i++;
+  const from = Math.max(0, i - context);
+  const show = (s) => JSON.stringify(s.slice(from, i + context));
+  return `lengths ${a.length} vs ${b.length}; first difference at char ${i}\n` +
+    `        A: ${show(a)}\n        B: ${show(b)}`;
+}
+
 async function load(browser, base, { blockAnalytics = false, flagOff = false } = {}) {
   const ctx = await browser.newContext({ serviceWorkers: "block" });
   const page = await ctx.newPage();
@@ -107,7 +118,7 @@ async function run() {
       !blocked.html.includes("privacy-note") && !blocked.requests.some((u) => u.includes(BEACON_HOST)));
     assert("the page is identical except for exactly the one privacy-note element",
       norm(on.html.replace(NOTE_RE, "")) === norm(blocked.html),
-      `len ${on.html.replace(NOTE_RE, "").length} vs ${blocked.html.length}`);
+      firstDiff(norm(on.html.replace(NOTE_RE, "")), norm(blocked.html)));
     assert("no cookie is set (browser cookie jar and document.cookie)",
       on.cookies.length === 0 && on.storage.cookie === "");
     assert("no localStorage or sessionStorage entry is written",
@@ -140,7 +151,8 @@ async function run() {
       !off.requests.some((u) => u.includes("/count") || u.includes(BEACON_HOST)));
     assert("no privacy note is rendered while the flag is off",
       !off.html.includes("privacy-note"));
-    assert("the flag-off DOM is identical to the analytics-blocked DOM", norm(off.html) === norm(blocked.html));
+    assert("the flag-off DOM is identical to the analytics-blocked DOM", norm(off.html) === norm(blocked.html),
+      firstDiff(norm(off.html), norm(blocked.html)));
   } finally {
     await browser.close();
     server.close();
