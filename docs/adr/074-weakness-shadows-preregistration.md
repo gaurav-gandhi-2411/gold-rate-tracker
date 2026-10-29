@@ -87,4 +87,15 @@ The hourly record cannot supply world prices with trustworthy known-at times acr
   15 weeks. That is a data change outside this ADR. If it is ever built, W3 needs a new pre-registration with
   forward Mondays counted from then.
 
-W1 and W2 are not built yet (no PR). Their forward days still count from their own merges.
+W1 is not built yet (no PR). Its forward days still count from its own merge.
+
+**W2 built 2026-10-28 (`ml/nextfix_w2.py`), shadow only.**
+- The record is `data/nextfix_w2_bandbucket_oos.json`, encrypted (ADR 060 registry).
+- **Forward days start the day after the first check-price run of the merged code.** The record writes that date into
+  itself as `forward_from` on its first run, so no day before the merge can count.
+- Only days on which P3's own fold is live (`retro` false) are recorded. Each fold holds both quantiles on the same day.
+- The point forecast is P3's. The live range is not read or changed, and a failure in W2 leaves P3's run as it was.
+- The run log shows the fold count only. Coverage and width are read only after 40 forward days, as frozen above.
+- **Context at build time (descriptive, not a W2 result):** P3's live range held the rate on 10 of 13 days, 0.769.
+  The 95% Wilson interval is [0.50, 0.92], which contains 0.80 (`data/forecast.json` at a904868b,
+  2026-10-28). Nothing yet says the live range is too narrow.

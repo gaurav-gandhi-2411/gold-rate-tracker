@@ -279,7 +279,7 @@ jobs:
         continue-on-error: true
         env:
           DATA_ENC_KEY: ${{ secrets.DATA_ENC_KEY }}
-        run: python scripts/data_crypt.py encrypt data/ibja_rates.parquet data/feature_store/snapshots.parquet data/nextfix_oos.json data/nextfix_p3_oos.json data/nextfix_p3_variants_oos.json data/nextfix_intraday_shadow.json data/metrics_history.json
+        run: python scripts/data_crypt.py encrypt data/ibja_rates.parquet data/feature_store/snapshots.parquet data/nextfix_oos.json data/nextfix_p3_oos.json data/nextfix_p3_variants_oos.json data/nextfix_w2_bandbucket_oos.json data/nextfix_intraday_shadow.json data/metrics_history.json
 
       - name: Commit updated data files
         id: commit
@@ -303,6 +303,7 @@ jobs:
           git add data/nextfix_oos.json || true
           git add data/nextfix_p3_oos.json || true
           git add data/nextfix_p3_variants_oos.json || true
+          git add data/nextfix_w2_bandbucket_oos.json || true
           git add data/nextfix_intraday_shadow.json || true
           # ADR 072: exists only after a promotion. Its own line, because one missing pathspec makes
           # git add stage NOTHING from the whole command (verified), so it cannot join the list above.
