@@ -1,11 +1,11 @@
 {
-  "predicted_at": "2026-10-28T21:17:11.035993+00:00",
+  "predicted_at": "2026-10-29T00:05:18.618966+00:00",
   "target_window": "5d",
   "headline": {
-    "method": "hold_latest_fix_pm_to_am",
-    "predicted_22k": 13245,
-    "lower": 13123,
-    "upper": 13367,
+    "method": "nextfix_p3_v1",
+    "predicted_22k": 13239,
+    "lower": 13122,
+    "upper": 13357,
     "conformal_pi_half": 135.5,
     "naive_mae_recent_30": 89.2,
     "vol_context": {
@@ -59,7 +59,7 @@
     "direction_consensus": 1.0
   },
   "driver_context": {
-    "computed_at": "2026-10-28T21:17:11.515321+00:00",
+    "computed_at": "2026-10-29T00:05:28.117082+00:00",
     "macro_staleness_days": 0.0,
     "macro_fresh": true,
     "premium_threshold_pct": 15.0,
@@ -121,12 +121,12 @@
   "band_half_width": null,
   "band_unavailable_reason": null,
   "model_fallback": false,
-  "predicted_22k": 13245,
-  "lower": 13123,
-  "upper": 13367,
-  "target_time": "2026-10-29T00:00:00+00:00",
+  "predicted_22k": 13239,
+  "lower": 13122,
+  "upper": 13357,
+  "target_time": "2026-10-30T00:00:00+00:00",
   "model_status": "nextfix_headline",
-  "model_version": "hold_latest_fix_pm_to_am",
+  "model_version": "nextfix_p3_v1",
   "warmup": false,
   "next_fix": {
     "active": true,
@@ -183,7 +183,7 @@
     },
     "leak_guard": {
       "checked": true,
-      "n_inputs": 1,
+      "n_inputs": 1325,
       "violations": []
     },
     "champion": {
@@ -223,24 +223,37 @@
         "range_mean_width": 327.8
       }
     },
-    "mode": "after_afternoon_rate",
-    "model_version": "hold_latest_fix_pm_to_am",
+    "mode": "after_us_close",
+    "model_version": "nextfix_p3_v1",
     "base_kind": "pm",
     "base_date": "2026-10-28",
     "base_ibja": 13072.0,
-    "predicted_ibja": 13072.0,
-    "target_kind": "am",
+    "predicted_ibja": 13066.52,
+    "target_kind": "pm",
     "range_record": {
-      "coverage": 0.801,
-      "n": 161
+      "coverage": 0.807,
+      "n": 140
     },
-    "predicted_22k": 13245,
-    "lower": 13123,
-    "upper": 13367,
+    "predicted_22k": 13239,
+    "lower": 13122,
+    "upper": 13357,
+    "shadow_ensemble": {
+      "model_version": "nextfix_ridge_mlp_v1",
+      "predicted_ibja": 13060.22,
+      "p_up": 0.4503,
+      "track_record": {
+        "n": 160,
+        "mae_model": 102.1,
+        "mae_flat": 111.2,
+        "mae_change_pct": -8.2,
+        "last_d0": "2026-10-27"
+      }
+    },
+    "p_up": 0.4814,
     "direction": {
-      "show": false,
+      "show": true,
       "side": "unclear",
-      "probability": null
+      "probability": 0.5186
     }
   }
 }
