@@ -120,6 +120,23 @@ def test_parse_events_maps_ids_and_power_flag() -> None:
     assert [e["kind"] for e in ev] == ["boot", "power"] and ev[1]["ac"] is True
 
 
+def test_a_catch_up_more_than_12_hours_late_is_found_but_not_the_next_days_own_run() -> None:
+    # 2026-10-14: the laptop was off; the 15:35 and 19:50 slots were caught up 985 and 730 min later (the
+    # dispatcher log), but a 12 h look-ahead recorded both as "no catch-up dispatch logged".
+    off = _ev(("2026-10-14T12:00", "shutdown"), ("2026-10-15T07:59", "boot"))
+    log = la.parse_dispatch_log(
+        "2026-10-15T08:00:00+05:30 slot=15:35 DISPATCHED\n2026-10-15T08:00:00+05:30 slot=19:50 DISPATCHED"
+    )
+    for slot, delay in (("2026-10-14T15:35", 985), ("2026-10-14T19:50", 730)):
+        row = la.classify_slot(_t(slot), off, log, INSTALLED)
+        assert row["class"] == "laptop_off" and row["dispatch_delay_min"] == delay, row
+        assert f"dispatched {delay} min after the slot" in row["detail"]
+    # the next day's own on-time run of the slot (24 h later) is never taken for a catch-up
+    next_day = la.parse_dispatch_log("2026-10-15T15:35:04+05:30 slot=15:35 DISPATCHED")
+    row = la.classify_slot(_t("2026-10-14T15:35"), off, next_day, INSTALLED)
+    assert row["dispatch_delay_min"] is None and "no catch-up dispatch logged" in row["detail"]
+
+
 def test_a_cancelled_or_failed_run_is_not_labelled_late() -> None:
     slot = _t("2026-10-06T12:00")
     base = _ev(("2026-10-06T08:00", "boot"))
