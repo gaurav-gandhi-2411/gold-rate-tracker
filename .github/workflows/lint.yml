@@ -41,12 +41,29 @@ jobs:
           python-version: "3.11"
       - run: pip install pre-commit
       - run: pre-commit run --all-files
+      # From here on, the suite tests what production runs (brief 2026-10-29): check-price's Python
+      # (3.12, the version the lock is compiled for) and its exact install command. Until then this
+      # job installed ml/requirements.txt and tested e.g. pandas 3.1.0 and torch 2.15 while
+      # production ran the lock's 3.0.6 and 2.13. pre-commit above stays on 3.11, as its mypy hook
+      # and pyproject's mypy target require. The newest allowed versions are tested by the
+      # separate, non-required `newest-allowed-versions` job below.
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: "3.12"
       - name: Install ML dependencies
-        run: pip install -q -r ml/requirements.txt
+        # Must stay identical to check-price.yml's step of the same name (tests/test_check_installed_matches_lock.py).
+        run: |
+          pip install -q uv
+          uv pip install --system \
+            --extra-index-url https://download.pytorch.org/whl/cpu \
+            --index-strategy unsafe-best-match \
+            -r ml/requirements-inference.lock
       - name: Show installed versions
-        # lint installs ml/requirements.txt, not the lock: DIFFERS marks where these tests ran on
-        # other versions than production (informational, always exits 0).
+        # Informational, always exits 0; the next step is the strict proof.
         run: python scripts/print_runtime_versions.py --lock ml/requirements-inference.lock
+      - name: Installed versions equal the lock
+        # Every lock pin installed at exactly its version (a `+cpu` local label is noted, not failed).
+        run: python scripts/check_installed_matches_lock.py
       - name: Run smoke tests
         run: pytest tests/test_inference_main.py -m smoke -v
       # Integration tests excluded here (norm #11): @pytest.mark.integration tests make
@@ -101,6 +118,28 @@ jobs:
         # is master). A metric without a committed artifact behind it can silently drift from what
         # the portfolio site shows (2026-08-05 audit). Reads .portfolio/metrics.json + `git ls-files`.
         run: python scripts/check_manifest_provenance.py
+
+  # Early warning, NOT a required check (brief 2026-10-29). The required `lint` job above tests the
+  # lock, i.e. what production runs. This job tests the newest versions ml/requirements.txt allows,
+  # so an upstream release that breaks the suite shows here (red on PRs) before anyone moves the
+  # lock to it. Branch protection does not list it, so it never blocks a merge, and ci-health
+  # judges only the required contexts, so it never pages.
+  newest-allowed-versions:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: "3.12"
+      - name: Install the newest versions ml/requirements.txt allows
+        run: pip install -q --upgrade -r ml/requirements.txt
+      - name: Show installed versions
+        run: python scripts/print_runtime_versions.py --lock ml/requirements-inference.lock
+      - name: Run full pytest suite on the newest allowed versions
+        run: |
+          pytest \
+            -m "not integration" \
+            tests/ -q
 
   # PWA pure-function JS tests (app.js logic: comparisons, dedup, good-price,
   # scrape parsing, stale-banner, trend). These existed under tests/*.js but ran
