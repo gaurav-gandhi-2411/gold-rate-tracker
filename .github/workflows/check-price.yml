@@ -120,6 +120,10 @@ jobs:
             --index-strategy unsafe-best-match \
             -r ml/requirements-inference.lock
 
+      - name: Show installed versions
+        # What actually ran, against what the lock pins (informational, always exits 0).
+        run: python scripts/print_runtime_versions.py --lock ml/requirements-inference.lock
+
       - name: Decrypt raw data files (ADR 060)
         # IBJA history and the feature store are committed only as ciphertext. continue-on-error
         # keeps the live forecast updating if this fails (tier 2 needs only today's IBJA rate and

@@ -43,6 +43,10 @@ jobs:
       - run: pre-commit run --all-files
       - name: Install ML dependencies
         run: pip install -q -r ml/requirements.txt
+      - name: Show installed versions
+        # lint installs ml/requirements.txt, not the lock: DIFFERS marks where these tests ran on
+        # other versions than production (informational, always exits 0).
+        run: python scripts/print_runtime_versions.py --lock ml/requirements-inference.lock
       - name: Run smoke tests
         run: pytest tests/test_inference_main.py -m smoke -v
       # Integration tests excluded here (norm #11): @pytest.mark.integration tests make
