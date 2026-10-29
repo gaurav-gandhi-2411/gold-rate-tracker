@@ -80,7 +80,7 @@ def main(argv: list[str] | None = None) -> int:
     names = requirement_names(args.requirements)
     names += [n for n in INDIRECT if _canon(n) not in {_canon(x) for x in names}]
     pins = lock_pins(args.lock) if args.lock else None
-    print("\n".join(report(names, pins)))  # noqa: T201 -- this script's output is the CI log line
+    print("\n".join(report(names, pins)))
     return 0
 
 
