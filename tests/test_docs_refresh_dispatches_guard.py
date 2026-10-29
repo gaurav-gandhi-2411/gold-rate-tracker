@@ -63,3 +63,30 @@ def test_the_guard_does_not_cancel_its_own_run_for_the_other_event():
     assert "github.event_name" in group
     assert "github.event.pull_request.number" in group and "inputs.pr" in group
     assert wf["concurrency"]["cancel-in-progress"] is True
+
+
+def test_a_pr_body_edit_never_shares_a_group_with_the_code_run():
+    """PR #3292 (2026-10-29): editing the body while CI ran started an `edited` run in the same group,
+    which cancelled the synchronize run on the same commit; gate 2b refused the merge until it was re-run
+    by hand. An edit run's group carries its own run id, so it can neither cancel nor be cancelled."""
+    wf = yaml.safe_load(
+        (ROOT / ".github/workflows/scraper-dependency-guard.yml").read_text(encoding="utf-8")
+    )
+    group = wf["concurrency"]["group"]
+    assert "github.event.action == 'edited' && format('-edit-{0}', github.run_id) || ''" in group
+    # the suffix follows the PR number, so code and dispatched runs keep their old group verbatim
+    base = (
+        "scraper-dependency-guard-${{ github.event_name }}-"
+        "${{ github.event.pull_request.number || inputs.pr }}"
+    )
+    assert group.startswith(base)
+
+
+def test_body_edits_still_re_run_the_guard():
+    """The proof run is cited in the PR body, so `edited` must stay a trigger: without it a scraper PR
+    would keep failing after its proof link is added."""
+    wf = yaml.safe_load(
+        (ROOT / ".github/workflows/scraper-dependency-guard.yml").read_text(encoding="utf-8")
+    )
+    types = wf[True]["pull_request"]["types"]  # PyYAML reads the `on:` key as boolean True
+    assert set(types) == {"opened", "synchronize", "reopened", "edited"}
