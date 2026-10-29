@@ -66,10 +66,24 @@ def test_main_exits_one_when_any_file_differs(tmp_path, monkeypatch):
     assert prc.main([str(tmp_path / "ok.parquet")]) == 0
 
 
+def test_an_exception_fails_the_check_and_prints_only_its_class(tmp_path, monkeypatch, capsys):
+    def boom(p, t):
+        raise ValueError("Could not convert '11912.5' with type str")
+
+    monkeypatch.setattr(prc, "check", boom)
+    assert prc.main([str(tmp_path / "ibja_rates.parquet")]) == 1
+    out = capsys.readouterr().out
+    assert "FAILED with ValueError" in out and "11912" not in out
+
+
 def _step() -> tuple[list[dict], int]:
     wf = yaml.safe_load((ROOT / ".github/workflows/check-price.yml").read_text(encoding="utf-8"))
     steps = wf["jobs"]["check"]["steps"]
-    i = next(i for i, s in enumerate(steps) if s.get("name") == "Parquet round trip with the installed pyarrow")
+    i = next(
+        i
+        for i, s in enumerate(steps)
+        if s.get("name") == "Parquet round trip with the installed pyarrow"
+    )
     return steps, i
 
 

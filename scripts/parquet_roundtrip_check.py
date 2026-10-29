@@ -51,9 +51,7 @@ def check(path: Path, tmp_dir: Path) -> tuple[bool, str]:
     before.to_parquet(out)
     after = pd.read_parquet(out)
     shape = f"{before.shape[0]} rows x {before.shape[1]} cols"
-    schema_ok = pq.read_schema(path).remove_metadata().equals(
-        pq.read_schema(out).remove_metadata()
-    )
+    schema_ok = pq.read_schema(path).remove_metadata().equals(pq.read_schema(out).remove_metadata())
     frames_ok = _frames_identical(before, after)
     if frames_ok and schema_ok:
         return True, f"{path}: {shape}, identical after write and re-read"
@@ -64,13 +62,18 @@ def check(path: Path, tmp_dir: Path) -> tuple[bool, str]:
 
 
 def main(argv: list[str]) -> int:
-    print(f"pyarrow {pa.__version__}, pandas {pd.__version__}")  # noqa: T201 -- CI log
+    print(f"pyarrow {pa.__version__}, pandas {pd.__version__}")
     ok = True
     with tempfile.TemporaryDirectory() as tmp:
         for arg in argv:
-            good, line = check(Path(arg), Path(tmp))
+            try:
+                good, line = check(Path(arg), Path(tmp))
+            except Exception as exc:
+                # The class name only: an arrow conversion error can quote a data value, and this
+                # log is public.
+                good, line = False, f"{arg}: FAILED with {type(exc).__name__}"
             ok &= good
-            print(line)  # noqa: T201 -- CI log
+            print(line)
     return 0 if ok else 1
 
 
