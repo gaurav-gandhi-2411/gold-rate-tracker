@@ -36,7 +36,7 @@ colorama==0.4.6
     #   pytest
     #   tqdm
     #   typer
-cryptography==50.0.1
+cryptography==50.0.2
     # via
     #   -r ml/requirements.txt
     #   pdfminer-six

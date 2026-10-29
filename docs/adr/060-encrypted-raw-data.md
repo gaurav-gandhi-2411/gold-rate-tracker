@@ -33,7 +33,7 @@ Public files keep only derived numbers. A number counts as derived only if it ca
 
 ### Format and cryptography (`scripts/data_crypt.py`)
 
-- **Cipher:** AES-256-GCM, from `cryptography`. It is already a pinned dependency: `cryptography>=50.0.1` in `ml/requirements.txt`, and `==50.0.1` in `ml/requirements-inference.lock`. No dependency was added. `shadow-fusion.yml` installs its own minimal set, so the same pin was added there.
+- **Cipher:** AES-256-GCM, from `cryptography`. It is already a pinned dependency: `cryptography>=50.0.1` in `ml/requirements.txt`, and `==50.0.1` in `ml/requirements-inference.lock`. No dependency was added. `shadow-fusion.yml` installs its own minimal set, so the same pin was added there. (All three moved to 50.0.2 on 2026-10-29, replacing Dependabot #2426.)
 - **File layout:** `b"GRTENC" | version 0x01 | uint32 header length | header JSON | ciphertext+tag`.
 - **Header contents:** the logical path, schema version, algorithm, KDF parameters, a random 16-byte salt, a random 96-bit nonce and the key id.
 - **Associated data:** the whole prefix, from the magic bytes through the header. The path and schema version are therefore authenticated: a ciphertext copied to another path, or any edited header byte, fails authentication.
