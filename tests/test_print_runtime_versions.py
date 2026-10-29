@@ -47,6 +47,11 @@ def test_main_always_exits_zero(tmp_path, capsys):
     assert "surely-not-installed-pkg: NOT INSTALLED" in capsys.readouterr().out
 
 
+def test_an_unreadable_input_file_still_exits_zero(tmp_path, capsys):
+    assert prv.main(["--requirements", str(tmp_path / "missing.txt")]) == 0
+    assert "could not list installed versions: FileNotFoundError" in capsys.readouterr().out
+
+
 def _steps(workflow: str, job: str) -> list[dict]:
     wf = yaml.safe_load((ROOT / ".github/workflows" / workflow).read_text(encoding="utf-8"))
     return wf["jobs"][job]["steps"]

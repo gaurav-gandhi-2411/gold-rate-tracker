@@ -77,10 +77,13 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--requirements", type=Path, default=ROOT / "ml/requirements.txt")
     ap.add_argument("--lock", type=Path, default=None)
     args = ap.parse_args(argv)
-    names = requirement_names(args.requirements)
-    names += [n for n in INDIRECT if _canon(n) not in {_canon(x) for x in names}]
-    pins = lock_pins(args.lock) if args.lock else None
-    print("\n".join(report(names, pins)))
+    try:
+        names = requirement_names(args.requirements)
+        names += [n for n in INDIRECT if _canon(n) not in {_canon(x) for x in names}]
+        pins = lock_pins(args.lock) if args.lock else None
+        print("\n".join(report(names, pins)))
+    except Exception as exc:  # informational step: never fail the production run
+        print(f"could not list installed versions: {type(exc).__name__}: {exc}")
     return 0
 
 
