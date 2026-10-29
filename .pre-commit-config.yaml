@@ -21,6 +21,10 @@ repos:
     rev: v1.11.2
     hooks:
       - id: mypy
+        # CI runs pre-commit on Python 3.11 (lint.yml) and pyproject sets mypy python_version = "3.11".
+        # Without this, a 3.12 interpreter builds the hook env and pulls numpy stubs that use the 3.12
+        # `type` statement, which mypy rejects for a 3.11 target, so mypy failed locally only.
+        language_version: python3.11
         files: ^ml/
         additional_dependencies:
           - types-pyyaml
