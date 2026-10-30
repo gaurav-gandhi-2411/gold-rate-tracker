@@ -36,6 +36,26 @@ def test_ci_health_runs_it_every_time_with_state_carried_in_the_cache():
     ]
 
 
+def test_a_simulated_run_never_reads_or_writes_the_real_incident_state():
+    # A [TEST] dispatch must not restore the real state (it would judge a made-up payload against a
+    # real open incident) nor save over it (the next real run would forget, or re-page, an incident).
+    steps = _wf()["jobs"]["check"]["steps"]
+    names = [s.get("name", "") for s in steps]
+    i = names.index("Check that what visitors see is fresh (live site JSON)")
+    restore, check, save = steps[i - 1], steps[i], steps[i + 1]
+    real_only = "(inputs.freshness_simulate || 'none') == 'none'"
+    assert real_only in restore["if"] and real_only in save["if"]
+    # schedule runs have no inputs: the `|| 'none'` default makes them real runs
+    assert check["env"]["SIMULATE"] == "${{ inputs.freshness_simulate || 'none' }}"
+    real, _, simulated = check["run"].partition("else")
+    assert 'if [ "$SIMULATE" = "none" ]' in real
+    assert "--state-in .live-freshness/state.json --state-out .live-freshness/state.json" in real
+    assert '--simulate "$SIMULATE"' in simulated and "--state" not in simulated
+    # one key per run attempt: cache keys are immutable, so a fixed key would save only once
+    assert save["with"]["key"] == "live-freshness-${{ github.run_id }}-${{ github.run_attempt }}"
+    assert "hashFiles('.live-freshness/state.json') != ''" in save["if"]
+
+
 def test_the_reliable_triggers_start_ci_health():
     # check-price's starter and the laptop's side task both start ci-health (cron is the fallback)
     cp = (ROOT / ".github/workflows/check-price.yml").read_text(encoding="utf-8")
