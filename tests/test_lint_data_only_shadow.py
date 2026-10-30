@@ -25,6 +25,7 @@ def test_the_shadow_is_the_last_step_runs_always_and_can_never_fail_the_job():
     assert shadow["name"] == SHADOW
     assert shadow["if"] == "always()"
     assert shadow["continue-on-error"] is True
+    assert shadow["timeout-minutes"] <= 5
     assert shadow["run"].rstrip().endswith("exit 0")
     assert "set +e" in shadow["run"]
     # the real result of every check above, captured after all of them ran
@@ -32,8 +33,12 @@ def test_the_shadow_is_the_last_step_runs_always_and_can_never_fail_the_job():
 
 
 def test_the_full_checks_are_unchanged_so_they_still_decide():
+    wf = yaml.safe_load((ROOT / ".github/workflows/lint.yml").read_text(encoding="utf-8"))
+    job = wf["jobs"]["lint"]
+    assert "if" not in job and "continue-on-error" not in job
+    # no condition of ANY kind on a check: a code step made conditional would let the shadow decide
     for s in _steps()[:-1]:
-        assert "scope" not in str(s.get("if", "")), s.get("name") or s.get("run")
+        assert "if" not in s, s.get("name") or s.get("run")
         assert "continue-on-error" not in s, s.get("name") or s.get("run")
     labels = " | ".join(str(s.get("name") or s.get("run") or "") for s in _steps())
     for must in (
@@ -53,6 +58,8 @@ def test_the_shadow_decides_with_masters_copy_and_logs_one_comparable_line():
     assert "git show refs/remotes/origin/master:scripts/ci_scope.py" in run
     assert "git show refs/remotes/origin/master:.github/actions/bot-pr-sync/action.yml" in run
     assert '--action "$RUNNER_TEMP/action.yml"' in run
+    # GitHub's PR file list is from the merge base (three-dot), not from master's current tip
+    assert 'git diff --name-status "refs/remotes/origin/master...$HEAD"' in run
     assert '[ "$EVENT" = "pull_request" ] && [ "$BASE_REF" = "master" ]' in run
     assert '[ "$MODE" = "data-only" ] || MODE=full' in run
     assert "python scripts/validate_data.py" in run

@@ -129,27 +129,31 @@ jobs:
       - name: Data-only path (shadow) -- what it would have decided; the checks above still decide
         if: always()
         continue-on-error: true
+        # a hung fetch or install must not hold the required job; a timeout is just a failed step
+        timeout-minutes: 5
         env:
           EVENT: ${{ github.event_name }}
           BASE_REF: ${{ github.base_ref }}
-          PR_BASE: ${{ github.event.pull_request.base.sha }}
           PR_HEAD: ${{ github.event.pull_request.head.sha }}
           REF_NAME: ${{ github.ref_name }}
           FULL_RESULT: ${{ job.status }}
         run: |
           set +e
           if [ "$EVENT" = "pull_request" ] && [ "$BASE_REF" = "master" ]; then
-            BASE="$PR_BASE"; HEAD="$PR_HEAD"
+            HEAD="$PR_HEAD"
           elif [ "$EVENT" = "workflow_dispatch" ] && [ "$REF_NAME" != "master" ]; then
-            BASE="refs/remotes/origin/master"; HEAD="$GITHUB_SHA"
+            HEAD="$GITHUB_SHA"
           else
             echo "data-only shadow: not a PR into master or a dispatched branch; nothing to record"
             exit 0
           fi
           MODE=full
           REASON="change list or master's scope script unavailable"
-          if git fetch -q --no-tags --depth=1 origin "+refs/heads/master:refs/remotes/origin/master" "$HEAD" ${PR_BASE:+"$PR_BASE"} \
-            && git diff --name-status "$BASE" "$HEAD" > "$RUNNER_TEMP/changes.txt" \
+          # Three-dot (from the merge base), like GitHub's own PR file list: a two-dot diff against a
+          # master that moved on would also list master's newer changes. No merge base within the
+          # fetched depth -> git fails -> full.
+          if git fetch -q --no-tags --depth=100 origin "+refs/heads/master:refs/remotes/origin/master" "$HEAD" \
+            && git diff --name-status "refs/remotes/origin/master...$HEAD" > "$RUNNER_TEMP/changes.txt" \
             && git show refs/remotes/origin/master:scripts/ci_scope.py > "$RUNNER_TEMP/ci_scope.py" \
             && git show refs/remotes/origin/master:.github/actions/bot-pr-sync/action.yml > "$RUNNER_TEMP/action.yml"; then
             if python "$RUNNER_TEMP/ci_scope.py" --changes "$RUNNER_TEMP/changes.txt" --action "$RUNNER_TEMP/action.yml" > "$RUNNER_TEMP/scope.txt"; then
@@ -163,10 +167,11 @@ jobs:
           python -m pip install -q -c ml/requirements-inference.lock jsonschema pytest > /dev/null 2>&1
           python scripts/validate_data.py > "$RUNNER_TEMP/validate.txt" 2>&1
           case $? in 0) VALID=pass ;; 1) VALID=fail ;; *) VALID=error ;; esac
-          tail -n 20 "$RUNNER_TEMP/validate.txt"
+          # indented, so a line from the PR's data can never be read as a `::` workflow command
+          tail -n 20 "$RUNNER_TEMP/validate.txt" | sed 's/^/  /'
           # Agreement is only meaningful where data-only would have decided: on a full-scope PR the
-          # code checks can fail for reasons validation never looks at.
-          if [ "$MODE" != "data-only" ]; then AGREE=n/a
+          # code checks can fail for reasons validation never looks at; a cancelled run decided nothing.
+          if [ "$MODE" != "data-only" ] || [ "$FULL_RESULT" = "cancelled" ]; then AGREE=n/a
           elif { [ "$VALID" = "pass" ] && [ "$FULL_RESULT" = "success" ]; } \
             || { [ "$VALID" != "pass" ] && [ "$FULL_RESULT" != "success" ]; }; then AGREE=yes
           else AGREE=no; fi
