@@ -92,9 +92,27 @@ def test_the_newest_versions_job_is_an_early_warning_that_cannot_block():
     runs = " ".join(str(s.get("run", "")) for s in job["steps"])
     assert "pip install -q --upgrade -r ml/requirements.txt" in runs
     assert "pytest" in runs and '-m "not integration"' in runs
-    # not a required context: the job name is not one of branch protection's (lint, pwa-js, ...)
-    assert job.get("name", "newest-allowed-versions") not in {
-        "lint",
-        "pwa-js",
-        "scraper-dependency-guard",
-    }
+    # not a required context: the check name GitHub reports (the job's `name`, else its key) is not
+    # one of the required contexts the repo's skippable-check guard tracks
+    import check_required_checks_skippable as skippable
+
+    reported = job.get("name", "newest-allowed-versions")
+    assert reported == "newest-allowed-versions"
+    assert reported not in skippable.REQUIRED
+    assert "continue-on-error" not in job  # it reports red when it fails; it just never blocks
+
+
+def test_a_lock_line_the_parser_would_skip_is_cannot_check(tmp_path, monkeypatch, capsys):
+    lock = tmp_path / "x.lock"
+    lock.write_text(
+        "# header\npandas==3.0.6\n    # via x\ntorch[cpu]==2.13.0\nfoo @ https://x/foo.whl\n",
+        encoding="utf-8",
+    )
+    _fake_installed(monkeypatch, {"pandas": "3.0.6"})
+    assert cim.unparsed_lines(lock) == ["torch[cpu]==2.13.0", "foo @ https://x/foo.whl"]
+    assert cim.main(["--lock", str(lock)]) == 2
+    assert "not a plain name==version pin: torch[cpu]==2.13.0" in capsys.readouterr().out
+
+
+def test_the_real_lock_has_no_line_the_check_would_skip():
+    assert cim.unparsed_lines(ROOT / "ml/requirements-inference.lock") == []

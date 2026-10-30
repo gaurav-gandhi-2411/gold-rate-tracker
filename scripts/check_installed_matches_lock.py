@@ -11,7 +11,8 @@ A local version label is ignored: check-price installs with the CPU torch index,
 That case is printed, never hidden. Packages installed but not in the lock are not judged (e.g. the
 CI image's own pip/setuptools tooling).
 
-Exit codes: 0 every pin matches; 1 at least one missing or different; 2 the lock cannot be read.
+Exit codes: 0 every pin matches; 1 at least one missing or different; 2 the lock cannot be read,
+or has a top-level line that is not a plain `name==version` pin (so it would escape the check).
 """
 
 from __future__ import annotations
@@ -24,6 +25,18 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 import print_runtime_versions as prv
 
 ROOT = Path(__file__).resolve().parent.parent
+
+
+def unparsed_lines(lock: Path) -> list[str]:
+    """Top-level lock lines that are not a plain `name==version` pin (e.g. `pkg[extra]==1`,
+    `pkg @ url`). lock_pins skips them, so without this a future recompile could drop a package
+    out of the check with nothing to show for it."""
+    return [
+        line
+        for line in lock.read_text(encoding="utf-8").splitlines()
+        if line.strip() and not line[0].isspace() and not line.startswith("#")
+        if not prv._PIN.fullmatch(line.strip())
+    ]
 
 
 def mismatches(pins: dict[str, str]) -> tuple[list[str], list[str]]:
@@ -49,8 +62,13 @@ def main(argv: list[str] | None = None) -> int:
     args = ap.parse_args(argv)
     try:
         pins = prv.lock_pins(args.lock)
+        unparsed = unparsed_lines(args.lock)
     except OSError as exc:
         print(f"CANNOT CHECK: {type(exc).__name__}: {exc}")
+        return 2
+    if unparsed:
+        for line in unparsed:
+            print(f"CANNOT CHECK: lock line is not a plain name==version pin: {line}")
         return 2
     if not pins:
         print(f"CANNOT CHECK: no pins read from {args.lock}")
