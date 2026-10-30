@@ -124,6 +124,7 @@ on:
 
 permissions:
   contents: read
+  actions: read # lists check-price's runs and their failed steps (second step)
 
 jobs:
   check:
@@ -263,3 +264,52 @@ jobs:
           fi
 
           echo "OK: all required checks (${REQUIRED}) are green on master's most recent lint.yml run (${RUN_SHA})."
+
+      # check-price's own alerts run inside check-price, so a run that stops early cannot send them.
+      # Since #3316 a failed parquet round trip stops it on purpose (before any data is written); this
+      # step is what pages GG then, and also when no run has succeeded for 9 h (any other stop).
+      # always(): it must run even when the step above found a red lint check and exited 1.
+      # The judgement is scripts/check_price_health.py (tested); it fails closed (exit 2) and pages.
+      - name: Check that check-price is still running and succeeding
+        if: always()
+        env:
+          GH_TOKEN: ${{ github.token }}
+          NTFY_TOPIC: ${{ secrets.NTFY_TOPIC }}
+        run: |
+          set -e
+          source "${GITHUB_WORKSPACE}/scripts/ci_retry.sh"
+          export CI_RETRY_ATTEMPTS=3 CI_RETRY_BASE=5
+          page() {
+            if [ -n "${NTFY_TOPIC}" ]; then
+              curl -s \
+                -H "Title: Gold Tracker: check-price stopped -- the forecast is not updating" \
+                -H "Priority: high" \
+                -H "Tags: warning,rotating_light" \
+                -d "$1" \
+                "https://ntfy.sh/${NTFY_TOPIC}" || true
+            fi
+          }
+          set +e
+          ci_retry gh api "repos/${GITHUB_REPOSITORY}/actions/workflows/check-price.yml/runs?branch=master&status=completed&per_page=30" \
+            --jq '[.workflow_runs[] | {id, conclusion, created_at}]' > "${RUNNER_TEMP}/cp_runs.json" 2>"${RUNNER_TEMP}/cp_runs.err"
+          RUNS_STATUS=$?
+          set -e
+          if [ "$RUNS_STATUS" -ne 0 ]; then echo '[]' > "${RUNNER_TEMP}/cp_runs.json"; fi
+          echo '[]' > "${RUNNER_TEMP}/cp_jobs.json"
+          NEWEST=$(jq -r '.[0].id // empty' "${RUNNER_TEMP}/cp_runs.json")
+          NEWEST_CONCLUSION=$(jq -r '.[0].conclusion // empty' "${RUNNER_TEMP}/cp_runs.json")
+          if [ -n "$NEWEST" ] && [ "$NEWEST_CONCLUSION" != "success" ]; then
+            ci_retry gh api "repos/${GITHUB_REPOSITORY}/actions/runs/${NEWEST}/jobs" --jq '[.jobs[] | {name, steps}]' \
+              > "${RUNNER_TEMP}/cp_jobs.json" 2>/dev/null || echo '[]' > "${RUNNER_TEMP}/cp_jobs.json"
+          fi
+          set +e
+          RESULT=$(python3 scripts/check_price_health.py --runs "${RUNNER_TEMP}/cp_runs.json" \
+            --jobs "${RUNNER_TEMP}/cp_jobs.json" --now "$(date -u +%Y-%m-%dT%H:%M:%SZ)")
+          STATUS=$?
+          set -e
+          echo "$RESULT"
+          if [ "$STATUS" -ne 0 ]; then
+            echo "::error::${RESULT}"
+            page "${RESULT} https://github.com/${GITHUB_REPOSITORY}/actions/workflows/check-price.yml"
+            exit 1
+          fi
