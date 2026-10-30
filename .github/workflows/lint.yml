@@ -152,9 +152,12 @@ jobs:
             && git diff --name-status "$BASE" "$HEAD" > "$RUNNER_TEMP/changes.txt" \
             && git show refs/remotes/origin/master:scripts/ci_scope.py > "$RUNNER_TEMP/ci_scope.py" \
             && git show refs/remotes/origin/master:.github/actions/bot-pr-sync/action.yml > "$RUNNER_TEMP/action.yml"; then
-            python3 "$RUNNER_TEMP/ci_scope.py" --changes "$RUNNER_TEMP/changes.txt" --action "$RUNNER_TEMP/action.yml" > "$RUNNER_TEMP/scope.txt"
-            MODE=$(sed -n 's/^mode=//p' "$RUNNER_TEMP/scope.txt")
-            REASON=$(sed -n 's/^reason: //p' "$RUNNER_TEMP/scope.txt")
+            if python "$RUNNER_TEMP/ci_scope.py" --changes "$RUNNER_TEMP/changes.txt" --action "$RUNNER_TEMP/action.yml" > "$RUNNER_TEMP/scope.txt"; then
+              MODE=$(sed -n 's/^mode=//p' "$RUNNER_TEMP/scope.txt")
+              REASON=$(sed -n 's/^reason: //p' "$RUNNER_TEMP/scope.txt")
+            else
+              REASON="master's scope script failed to run"
+            fi
           fi
           [ "$MODE" = "data-only" ] || MODE=full
           python -m pip install -q -c ml/requirements-inference.lock jsonschema pytest > /dev/null 2>&1
