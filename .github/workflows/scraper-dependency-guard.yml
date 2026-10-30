@@ -45,8 +45,14 @@ permissions:
 # required statuses green, unmergeable until the run was re-run by hand); the same cancelled-vs-dispatched
 # pattern matches the docs-refresh PRs that sat open 4 h 53 min (#2832) and 6 h 30 min (#2845). Newer runs
 # of the SAME event still cancel older ones.
+#
+# An `edited` run gets a group of its own (its run id), so it never cancels, and is never cancelled by,
+# the opened/synchronize run on the same commit. A body edit made while CI was running cancelled that run;
+# merge-gate gate 2b fails on any cancelled run of the head commit, so the PR could not merge until the
+# cancelled run was re-run by hand (PR #3292, 2026-10-29). `edited` stays in the trigger types: the proof
+# citation still has to re-run the check.
 concurrency:
-  group: scraper-dependency-guard-${{ github.event_name }}-${{ github.event.pull_request.number || inputs.pr }}
+  group: scraper-dependency-guard-${{ github.event_name }}-${{ github.event.pull_request.number || inputs.pr }}${{ github.event.action == 'edited' && format('-edit-{0}', github.run_id) || '' }}
   cancel-in-progress: true
 
 jobs:
