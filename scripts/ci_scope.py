@@ -66,13 +66,16 @@ def decide(changes: str, allow: re.Pattern[str] | None) -> tuple[str, str]:
 def main(argv: list[str] | None = None) -> int:
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawTextHelpFormatter)
     ap.add_argument("--changes", type=Path, required=True)
+    # lint.yml runs MASTER's copy of this script against master's action.yml, never the PR's own:
+    # a PR that edited either could otherwise declare itself data-only.
+    ap.add_argument("--action", type=Path, default=ACTION, help="bot-pr-sync action.yml to read")
     args = ap.parse_args(argv)
     try:
         changes = args.changes.read_text(encoding="utf-8")
     except OSError:
         mode, reason = "full", "change list unreadable"
     else:
-        mode, reason = decide(changes, allowlist_regex())
+        mode, reason = decide(changes, allowlist_regex(args.action))
     print(f"mode={mode}")
     print(f"reason: {reason}")
     return 0

@@ -60,6 +60,20 @@ def test_undecidable_input_is_full(tmp_path, capsys):
     assert "mode=full" in capsys.readouterr().out
 
 
+def test_main_reads_the_action_file_it_is_given_and_fails_closed_without_it(tmp_path, capsys):
+    ch = tmp_path / "c.txt"
+    ch.write_text(BOT_DATA_SYNC, encoding="utf-8")
+    master_copy = tmp_path / "action.yml"
+    master_copy.write_text(
+        (ROOT / ".github/actions/bot-pr-sync/action.yml").read_text(encoding="utf-8"),
+        encoding="utf-8",
+    )
+    cs.main(["--changes", str(ch), "--action", str(master_copy)])
+    assert capsys.readouterr().out.startswith("mode=data-only")
+    cs.main(["--changes", str(ch), "--action", str(tmp_path / "absent.yml")])
+    assert capsys.readouterr().out.startswith("mode=full")
+
+
 def test_main_prints_the_output_line(tmp_path, capsys):
     ch = tmp_path / "c.txt"
     ch.write_text(BOT_DATA_SYNC, encoding="utf-8")
