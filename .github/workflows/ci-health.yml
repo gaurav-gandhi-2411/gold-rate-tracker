@@ -121,6 +121,20 @@ on:
     - cron: "17 */1 * * *" # hourly, offset from the top of the hour -- same
     # anti-peak-load reasoning check-price.yml's own cron comment documents.
   workflow_dispatch:
+    inputs:
+      freshness_simulate:
+        # Proves the live-freshness page end to end on a made-up payload ([TEST] in the title);
+        # never reads or writes the real incident state.
+        description: "Live-freshness check: judge a simulated payload instead of the live site"
+        type: choice
+        options: [none, stale, fresh]
+        default: none
+
+# One run at a time: the laptop, check-price and the cron can all start this within seconds (three
+# dispatches at 2026-10-30 05:35Z), and two overlapping runs would both send the same page.
+concurrency:
+  group: ci-health
+  cancel-in-progress: false
 
 permissions:
   contents: read
@@ -313,3 +327,36 @@ jobs:
             page "${RESULT} https://github.com/${GITHUB_REPOSITORY}/actions/workflows/check-price.yml"
             exit 1
           fi
+
+      # What VISITORS see: the live site's forecast and latest Tanishq reading, not repo state, so a
+      # stop with any cause pages (2026-10-29: lint red on bot PRs only, page frozen ~19.5 h).
+      # Once per incident plus a recovery message; the incident state rides in the Actions cache.
+      # Limits and their derivation: scripts/live_freshness.py. always(): runs even if a step above
+      # found a problem and exited 1.
+      - name: Restore the live-freshness incident state
+        if: always() && (inputs.freshness_simulate || 'none') == 'none'
+        uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: .live-freshness/state.json
+          key: live-freshness-${{ github.run_id }}-${{ github.run_attempt }}
+          restore-keys: live-freshness-
+
+      - name: Check that what visitors see is fresh (live site JSON)
+        id: live_freshness
+        if: always()
+        env:
+          NTFY_TOPIC: ${{ secrets.NTFY_TOPIC }}
+          SIMULATE: ${{ inputs.freshness_simulate || 'none' }}
+        run: |
+          if [ "$SIMULATE" = "none" ]; then
+            python3 scripts/live_freshness.py --state-in .live-freshness/state.json --state-out .live-freshness/state.json
+          else
+            python3 scripts/live_freshness.py --simulate "$SIMULATE"
+          fi
+
+      - name: Save the live-freshness incident state
+        if: always() && (inputs.freshness_simulate || 'none') == 'none' && hashFiles('.live-freshness/state.json') != ''
+        uses: actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: .live-freshness/state.json
+          key: live-freshness-${{ github.run_id }}-${{ github.run_attempt }}
