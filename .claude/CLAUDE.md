@@ -37,6 +37,20 @@ the session when the input is empty or never closes. It happened twice.
   you start so you can stop it by PID. Never kill by process name.
 - Before ending a session, list the background tasks and stop any you started that are still running.
 
+## New checks that can stop production start non-blocking (GG, 2026-10-30)
+
+On 2026-10-30 a new check (#3316, the parquet round trip) failed its first real run on a false
+positive and stopped check-price twice before it was reverted (#3353). Tests on synthetic data had
+passed; the real files differed in a way the tests did not model.
+
+- Any new check that can stop a production run, block a data merge, or fail a required context
+  lands NON-BLOCKING: `continue-on-error: true`, or report-only (prints, exits 0).
+- It becomes blocking only after **5 clean real runs spanning at least 24 hours**, each with the
+  check's output read (not just a green tick), in a separate PR that cites those run IDs. A run
+  where the check was skipped or saw no real input does not count.
+- A test pins the non-blocking state, so flipping it is a visible, deliberate change.
+- Exempt: checks that only page or report and can never stop a run (they are non-blocking already).
+
 ## Weekly routine (GG, 2026-10-10)
 
 The checklist any session runs each week without a brief is `docs/WEEKLY_ROUTINE.md`: sync health,
