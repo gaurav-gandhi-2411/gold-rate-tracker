@@ -17,6 +17,6 @@ jsonschema>=4.26.0
 # Explicit minimum-version pins for transitive deps with published CVEs below
 # the version otherwise resolved (pip-audit finding, 2026-07-18).
 cryptography>=50.0.2
-pillow>=12.3.0
+pillow>=13.0.0
 setuptools>=84.2.1
 soupsieve>=2.9.2
