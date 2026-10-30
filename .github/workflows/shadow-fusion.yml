@@ -58,7 +58,7 @@ jobs:
         # none of the heavy Chronos/torch stack, only requests + pandas +
         # pyarrow. A separate, minimal install keeps this cheap and fast.
         # cryptography: already a pinned project dependency (ml/requirements*.txt), for ADR 060.
-        run: pip install -q "requests>=2.34.2" "pandas>=2.0" "pyarrow>=24.0.0" "cryptography>=50.0.2"
+        run: pip install -q "requests>=2.34.2" "pandas>=2.0" "pyarrow>=26.0.0" "cryptography>=50.0.2"
 
       - name: Decrypt raw data files (ADR 060)
         uses: ./.github/actions/decrypt-data
