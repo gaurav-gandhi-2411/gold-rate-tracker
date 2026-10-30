@@ -8,10 +8,11 @@ back (frame B), write B again (file 2). Two things must hold:
 - the data survives: A and B are identical (values, dtypes, index, column order);
 - the installed writer is stable on its own output: files 1 and 2 have the same arrow schema.
 
-The arrow schema of the ORIGINAL file is not compared with file 1. Some pipeline files are written
-with pyarrow directly, not through pandas, so their schema legitimately differs from a pandas
-rewrite (e.g. string vs large_string) while the data is identical. Comparing them stopped check-price
-on 2026-10-30 with nothing wrong (run 41045036359, reverted in #3353). That difference is printed as a
+The arrow schema of the ORIGINAL file is not compared with file 1. A file's stored schema can
+legitimately differ from a fresh rewrite while the data is identical (it was written by an older
+library version or from different in-memory dtypes, e.g. int64 vs double for an all-null-then-filled
+column). Comparing them stopped check-price on 2026-10-30 with nothing wrong (run 41045036359,
+reverted in #3353). That difference is printed as a
 note -- field names and arrow types only -- and never fails the run.
 
 check-price runs this right after decrypting and before any step writes a parquet, so a library
