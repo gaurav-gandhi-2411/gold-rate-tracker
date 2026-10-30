@@ -43,6 +43,8 @@ SITE = "https://gaurav-gandhi-2411.github.io/gold-rate-tracker"
 LIMITS_H = {"forecast": 9.0, "tanishq": 20.0}
 LABELS = {"forecast": "the forecast (predicted_at)", "tanishq": "the latest Tanishq reading"}
 RUNS_URL = "https://github.com/gaurav-gandhi-2411/gold-rate-tracker/actions"
+# Clock skew allowed before a published timestamp counts as "in the future" (runner vs. scraper).
+FUTURE_TOL = timedelta(minutes=5)
 
 
 def parse_ts(value: Any) -> datetime | None:
@@ -75,17 +77,22 @@ def decide(
     new = {k: v for k, v in state.items() if k in (*LIMITS_H, "site")}
     msgs: list[dict[str, str]] = []
     healthy = True
+    # A timestamp in the future gives a negative age and would read as fresh for as long as it stays
+    # ahead of the clock, hiding a real outage behind it, so it counts as unreadable (fail closed).
+    future = [k for k, v in values.items() if v is not None and parse_ts(v) > now + FUTURE_TOL]  # type: ignore[operator]
+    values = {k: None if k in future else v for k, v in values.items()}
     unreadable = [k for k, v in values.items() if v is None]
     if unreadable:
         healthy = False
         if not new.get("site"):
             new["site"] = now.isoformat()
+            why = " (a timestamp is in the future)" if future else ""
             msgs.append(
                 {
                     "title": "Gold Tracker: cannot read the live site's data",
                     "priority": "high",
-                    "body": f"Could not read {', '.join(LABELS[k] for k in unreadable)} from {SITE} "
-                    "-- failing closed. Visitors may be seeing a broken or stale page.",
+                    "body": f"Could not read {', '.join(LABELS[k] for k in unreadable)} from {SITE}"
+                    f"{why} -- failing closed. Visitors may be seeing a broken or stale page.",
                 }
             )
     elif new.get("site"):
@@ -196,6 +203,11 @@ def main(argv: list[str] | None = None) -> int:
                 state = json.loads(args.state_in.read_text(encoding="utf-8"))
             except (OSError, ValueError):
                 print("state unreadable; starting empty (an open incident may page once more)")
+            if not isinstance(state, dict):
+                print(
+                    "state is not an object; starting empty (an open incident may page once more)"
+                )
+                state = {}
         forecast = fetch_json(f"{SITE}/data/forecast.json")
         prices = fetch_json(f"{SITE}/data/prices.json")
 

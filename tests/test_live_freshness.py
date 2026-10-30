@@ -132,3 +132,58 @@ def test_a_failed_send_keeps_the_old_state_so_the_page_is_retried(tmp_path, monk
 def test_a_due_page_with_no_topic_fails_the_step(monkeypatch):
     monkeypatch.setenv("NTFY_TOPIC", "")
     assert lf.main(["--simulate", "stale", "--now", NOW.isoformat()]) == 1
+
+
+def test_a_future_timestamp_fails_closed_instead_of_reading_fresh():
+    # one bad row a month ahead would otherwise read "fresh" until then and hide a real outage
+    msgs, state, healthy = lf.decide({}, _values(1, -24 * 30), NOW)
+    assert not healthy and len(msgs) == 1
+    assert "cannot read" in msgs[0]["title"] and "in the future" in msgs[0]["body"]
+    assert lf.decide(state, _values(1, -24 * 30), NOW)[0] == []  # one page per incident
+    # small clock skew inside the tolerance is not an incident
+    assert lf.decide({}, _values(-0.05, 1), NOW) == ([], {}, True)
+
+
+def test_a_new_stale_value_during_an_open_incident_pages_again():
+    _, state, _ = lf.decide({}, _values(12, 1), NOW)
+    msgs, state2, _ = lf.decide(state, _values(10, 1), NOW)  # a newer but still stale forecast
+    assert len(msgs) == 1 and state2["forecast"] == _iso(10)
+
+
+def test_a_state_file_that_is_not_an_object_starts_empty_and_still_pages(tmp_path, monkeypatch):
+    monkeypatch.setattr(
+        lf,
+        "fetch_json",
+        lambda url, attempts=3: (
+            {"predicted_at": _iso(12)}
+            if url.endswith("forecast.json")
+            else [{"timestamp": _iso(1)}]
+        ),
+    )
+    sent: list[dict[str, str]] = []
+    monkeypatch.setattr(lf, "send", lambda msg, topic: sent.append(msg) or True)
+    monkeypatch.setenv("NTFY_TOPIC", "t")
+    st = tmp_path / "state.json"
+    st.write_text("[]", encoding="utf-8")
+    assert lf.main(["--state-in", str(st), "--state-out", str(st), "--now", NOW.isoformat()]) == 1
+    assert len(sent) == 1 and json.loads(st.read_text())["forecast"] == _iso(12)
+
+
+def test_a_partial_send_failure_keeps_the_old_state_so_nothing_is_lost(tmp_path, monkeypatch):
+    monkeypatch.setattr(
+        lf,
+        "fetch_json",
+        lambda url, attempts=3: (
+            {"predicted_at": _iso(12)}
+            if url.endswith("forecast.json")
+            else [{"timestamp": _iso(25)}]
+        ),
+    )
+    results = iter([True, False])
+    monkeypatch.setattr(lf, "send", lambda msg, topic: next(results))
+    monkeypatch.setenv("NTFY_TOPIC", "t")
+    st = tmp_path / "state.json"
+    assert lf.main(["--state-in", str(st), "--state-out", str(st), "--now", NOW.isoformat()]) == 1
+    # both incidents stay unrecorded, so the failed one is retried (the sent one repeats: a
+    # duplicate, never a silence)
+    assert json.loads(st.read_text()) == {}
