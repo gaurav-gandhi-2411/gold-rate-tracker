@@ -124,6 +124,57 @@ def test_fetch_failure_logs_diagnostic_context(monkeypatch, caplog):
     assert any("Silver" in r.message for r in diagnostic_records)
 
 
+# The real no-rates state, as ibjarates.com served it on Sunday 2026-11-01 (markup of today's table
+# copied verbatim, whitespace squeezed; the page's rate-history tables are left out on purpose:
+# third-party rates are not committed in plain text). The history tables after it carry purity
+# headers but no "Gold 999"-style rows, so the old parser found nothing and retried 3 times.
+_NOT_PUBLISHED_HTML = """\
+<html><body>
+<table id="TodayRatesTableDataNo" class="tableContainer ctrate"> <tr class="hdie" style="display: none;">
+<th>Purity</th> <th>AM</th> <th>PM </th> </tr> <tr> <td colspan="3" class="txt-green padd20"
+style="font-weight: 600; padding-top: 45%; text-align: center"> <span id="lbl_Message">Rates are not
+published on Central Govt. Holidays & SAT/SUN</span></td> </tr> <tr style="border-top: none">
+<td colspan="3" class="txt-green padd20" style="font-weight: 600; padding-top: 25%; color:
+transparent;">NA</td> </tr> <tr> <td colspan="3"> <a target="_blank" href="../x.pdf" class="textsmall">
+<h6> <i class="fa fa-download"></i>Previous 30 Days</h6> </a> </td> </tr> </table>
+<table><tr><th></th><th>999</th><th>995</th><th>916</th></tr>
+<tr><td>30/10/2026</td><td>1</td><td>2</td><td>3</td></tr></table>
+</body></html>
+"""
+
+
+def test_a_not_published_day_is_one_fetch_no_retries_and_no_warning(monkeypatch, caplog):
+    monkeypatch.setattr("time.sleep", lambda _: None)
+    calls = {"n": 0}
+
+    def _fake_get(_h):
+        calls["n"] += 1
+        return _NOT_PUBLISHED_HTML
+
+    monkeypatch.setattr(ibja, "_get_with_retry", _fake_get)
+    with caplog.at_level("INFO", logger="ml.ibja"):
+        assert ibja.fetch_ibja_daily() == {}
+    assert calls["n"] == 1  # retrying cannot make IBJA publish
+    assert not [r for r in caplog.records if r.levelname == "WARNING"]
+    assert any("Rates are not" in r.message and "published" in r.message for r in caplog.records)
+
+
+def test_a_notice_does_not_hide_rates_that_are_present(monkeypatch):
+    # if a page ever carries both, the rates win
+    page = _IBJA_HTML.replace("</table>", '</table><span id="lbl_Message">x</span>')
+    monkeypatch.setattr("time.sleep", lambda _: None)
+    monkeypatch.setattr(ibja, "_get_with_retry", lambda _h: page)
+    assert ibja.fetch_ibja_daily()["am_916"] == 144564.0
+
+
+def test_append_today_on_a_not_published_day_writes_nothing(monkeypatch, tmp_path):
+    monkeypatch.setattr("time.sleep", lambda _: None)
+    monkeypatch.setattr(ibja, "_get_with_retry", lambda _h: _NOT_PUBLISHED_HTML)
+    p = tmp_path / "ibja.parquet"
+    assert ibja.append_ibja_today(p) is None
+    assert not p.exists()
+
+
 # ---------------------------------------------------------------------------
 # load_ibja_parquet
 # ---------------------------------------------------------------------------
