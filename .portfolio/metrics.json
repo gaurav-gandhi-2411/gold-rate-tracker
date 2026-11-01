@@ -1,16 +1,16 @@
 {
   "version": 1,
   "project": "gold-rate-tracker",
-  "docs": "https://github.com/gaurav-gandhi-2411/gg-portfolio#autonomous-metric-refresh",
+  "docs": "https://github.com/gaurav-gandhi-2411/gg-portfolio#adding-a-future-project",
   "metrics": [
     {
       "id": "gold-rate-tracker:headline",
-      "label": "Naive baseline vs. ML model (199-fold backtest)",
-      "value": "Naive wins — ships the honest baseline, not the model",
+      "label": "Naive baseline vs. ML model (209-fold backtest)",
+      "value": "Naive wins: ships the honest baseline, not the model",
       "source_file": "data/backtest.json",
-      "source_line": 8,
-      "commit_sha": "a4d892cae3837048108c02d411adf1b13e964d73",
-      "measured_at": "2026-07-19"
+      "source_line": 3,
+      "commit_sha": "ad4216086d10a63bb93ed3107c9ccee429cb5fa0",
+      "measured_at": "2026-08-02"
     }
   ]
 }
