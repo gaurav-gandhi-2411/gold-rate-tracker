@@ -80,7 +80,9 @@ def fetch_ibja_daily() -> dict[str, float]:
     failing from GitHub Actions runner IPs specifically (works fine from
     non-CI IPs), the same failure class as Tanishq's Cloudflare block.
     Returns an empty dict (and logs a summary WARNING) only after every
-    attempt fails.
+    attempt fails, except on IBJA's "rates are not published" page (weekends,
+    holidays, before the day's first fix): that returns an empty dict after
+    one fetch, with the site's notice logged at INFO.
     """
     for attempt in range(1, _MAX_FETCH_ATTEMPTS + 1):
         try:
