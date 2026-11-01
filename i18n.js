@@ -341,7 +341,8 @@ const STRINGS = {
     // (docs/PLAIN_LANGUAGE_AUDIT.md), and a raw percentage+sample-size clause is
     // exactly the "coverage 73% (n=63...)" shape GG's spec calls out. Reworded to
     // the same floored fraction phrase as reliabilityCoverage above; the sample
-    // size (weeks measured) moves to how-we-know.html's "Band accuracy" section,
+    // size (days measured; the old "weeks" was wrong, see tests/test_band_coverage_unit.py) moves
+    // to how-we-know.html's "Band accuracy" section,
     // which reads the same calibration_band_coverage.json field.
     calibrationConfidenceAppend: ({ amount, coverage, n }) => coverage != null && n != null
       ? ` In a test on past days, the real price landed within about ₹${amount}/gram of this estimate ${fractionOutOf10Phrase(coverage, "en")}.`
