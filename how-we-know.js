@@ -289,7 +289,9 @@ function renderFullMethodology(fc, bt, drift, coverage, bandCoverage) {
             ? tHwk(nfCovA ? "methAccurateP2CoverageTested" : "methAccurateP2CoveragePct", { pct: coverPct, n: coverN })
             : tHwk("methAccurateP2CoverageUnknown"),
         })}</strong><br>
-        ${nfCovA ? tHwk("methAccurateP2Tested") : tHwk("methAccurateP2", { n: bt.naive_error_recent?.folds_window })}</p>
+        ${fc?.next_fix?.active === true
+          ? tHwk("methAccurateP2Tested")
+          : tHwk("methAccurateP2", { n: bt.naive_error_recent?.folds_window })}</p>
         ${p3Html}
         <p class="meth-text"><strong>${tHwk("methAccurateP4Strong")}</strong><br>
         ${tHwk("methAccurateP4")}</p>

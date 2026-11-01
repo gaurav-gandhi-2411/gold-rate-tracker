@@ -56,6 +56,24 @@ test("model active: the explainer describes the model's band, with no hand-typed
   assert.doesNotMatch(html, /test runs/);
 });
 
+test("hold modes (after the morning or afternoon rate): the same next-rate explainer", () => {
+  for (const mode of ["after_morning_rate", "after_afternoon_rate"]) {
+    const fc = { ...FC_MODEL, next_fix: { ...FC_MODEL.next_fix, mode } };
+    const html = render({ fc });
+    assert.match(html, /The range comes from how far the official rate has recently landed from our estimate/, mode);
+    assert.doesNotMatch(html, /test runs/, mode);
+  }
+});
+
+test("model active but no range record: no legacy 'last N test runs' paragraph for a range not shown", () => {
+  for (const range_record of [undefined, { coverage: null, n: 0 }]) {
+    const fc = { ...FC_MODEL, next_fix: { ...FC_MODEL.next_fix, range_record } };
+    const html = render({ fc });
+    assert.doesNotMatch(html, /test runs/);
+    assert.match(html, /This is a test on past days, not a live record/);
+  }
+});
+
 test("legacy range: the run count comes from backtest.json's naive_error_recent.folds_window", () => {
   const html = render({ fc: FC_LEGACY, bt: { ...BT, naive_error_recent: { folds_window: 45 } } });
   assert.match(html, /by the next check over our last 45 test runs/);
@@ -85,7 +103,7 @@ test("official rate: set twice a working day, the model estimates the next after
 
 test("Hindi: model explainer, computed count, and the twice-a-day rate", () => {
   const model = render({ fc: FC_MODEL, lang: "hi" });
-  assert.match(model, /रेंज इस पर आधारित है कि हाल में आधिकारिक भाव हमारे अनुमान से कितना दूर आया/);
+  assert.match(model, /रेंज इससे बनती है कि हाल में आधिकारिक भाव हमारे अनुमान से कितना दूर रहा; अभी भाव जितना घट-बढ़ रहा है, उसके हिसाब से रेंज बड़ी या छोटी होती है।/);
   assert.match(model, /हर कामकाजी दिन दो बार तय होता है, सुबह और दोपहर में/);
   assert.doesNotMatch(model, /दोपहर में एक बार/);
   const legacy = render({ fc: FC_LEGACY, lang: "hi", bt: { ...BT, naive_error_recent: { folds_window: 45 } } });
