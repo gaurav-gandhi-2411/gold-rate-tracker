@@ -1,5 +1,5 @@
 {
-  "predicted_at": "2026-10-31T20:25:22.061864+00:00",
+  "predicted_at": "2026-11-01T01:25:14.008388+00:00",
   "target_window": "5d",
   "headline": {
     "method": "nextfix_p3_v1",
@@ -59,7 +59,7 @@
     "direction_consensus": 1.0
   },
   "driver_context": {
-    "computed_at": "2026-10-31T20:25:31.614522+00:00",
+    "computed_at": "2026-11-01T01:25:23.070245+00:00",
     "macro_staleness_days": 0.0,
     "macro_fresh": true,
     "premium_threshold_pct": 15.0,
@@ -70,14 +70,14 @@
         "t0_date": "2026-10-23",
         "t1_date": "2026-10-30",
         "delta_pct_ibja": -1.119,
-        "delta_pct_gold_usd": -1.196,
+        "delta_pct_gold_usd": -1.198,
         "delta_pct_usdinr": 0.011,
-        "delta_pct_premium": 0.066,
+        "delta_pct_premium": 0.069,
         "total_move_rs_per_g": -330.0,
-        "gold_usd_contrib_rs_per_g": -352.6,
+        "gold_usd_contrib_rs_per_g": -353.3,
         "usdinr_contrib_rs_per_g": 3.1,
-        "premium_contrib_rs_per_g": 19.5,
-        "premium_share_pct": 5.9,
+        "premium_contrib_rs_per_g": 20.2,
+        "premium_share_pct": 6.1,
         "attribution_valid": true,
         "attribution_valid_reason": "clean \u2014 premium share within threshold"
       },
@@ -124,7 +124,7 @@
   "predicted_22k": 12665,
   "lower": 12542,
   "upper": 12788,
-  "target_time": "2026-11-01T00:00:00+00:00",
+  "target_time": "2026-11-02T00:00:00+00:00",
   "model_status": "nextfix_headline",
   "model_version": "nextfix_p3_v1",
   "warmup": false,
