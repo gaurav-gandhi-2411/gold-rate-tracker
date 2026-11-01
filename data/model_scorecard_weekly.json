@@ -1,8 +1,8 @@
 {
  "schema_version": 1,
- "generated_at_utc": "2026-10-25T07:08:12Z",
+ "generated_at_utc": "2026-11-01T08:31:55Z",
  "script": "scripts/build_model_scorecard.py",
- "git_sha": "a039c3a7b750f3b12fd623262d74126eae95eff9",
+ "git_sha": "aaefc8a822b0228918d50eae299c6ea3e7df9910",
  "script_blob_sha": "96919e6b872c34aa0c83b683706ea9ef20228de4",
  "min_forward_n": 20,
  "nominal_coverage": 0.8,
@@ -71,27 +71,27 @@
    "forward_start": "2026-10-07",
    "forward_start_basis": "ADR 069: P3 live from decision day d0 >= 2026-10-07 (ml.nextfix.P3_FORWARD_FROM; folds with retro false)",
    "forward": {
-    "n": 10,
-    "effective_n": 11.2,
+    "n": 15,
+    "effective_n": 18.9,
     "metric": "mean absolute error of the next fix",
     "unit": "Rs/g",
-    "model": 79.15,
-    "baseline": 96.64,
+    "model": 78.24,
+    "baseline": 90.61,
     "baseline_name": "holding the last fix",
-    "diff": -17.49,
+    "diff": -12.38,
     "ci95": [
-     -38.89,
-     3.91
+     -28.17,
+     3.41
     ],
-    "p_one_sided": 0.0535,
+    "p_one_sided": 0.0606,
     "p_kind": "one-sided HAC Diebold-Mariano (lag 1)",
     "bh_significant": null,
     "first_date": "2026-10-07",
-    "last_date": "2026-10-22",
+    "last_date": "2026-10-29",
     "marking": "VERIFIED",
     "extras": [
-     "direction right 9/10 moves vs always-up 2/10",
-     "forecast.json reports n_forward=10 (copied, not re-measured here)"
+     "direction right 12/15 moves vs always-up 4/15",
+     "forecast.json reports n_forward=15 (copied, not re-measured here)"
     ]
    },
    "retrospective": {
@@ -106,7 +106,7 @@
    },
    "verdict": "grey",
    "verdict_kind": "too_early",
-   "sentence": "Too early (n=10, need 20) to say whether P3 beats holding the last fix.",
+   "sentence": "Too early (n=15, need 20) to say whether P3 beats holding the last fix.",
    "sources": [
     "data/nextfix_p3_oos.json",
     "data/forecast.json",
@@ -127,39 +127,39 @@
    "forward_start": "2026-10-07",
    "forward_start_basis": "ADR 069: P3 live from decision day d0 >= 2026-10-07 (ml.nextfix.P3_FORWARD_FROM; folds with retro false)",
    "forward": {
-    "n": 11,
-    "effective_n": 22.0,
+    "n": 16,
+    "effective_n": 27.7,
     "metric": "mean absolute error of the next fix",
     "unit": "Rs/g",
-    "model": 84.0,
-    "baseline": 88.87,
+    "model": 79.83,
+    "baseline": 85.65,
     "baseline_name": "holding the last fix",
-    "diff": -4.87,
+    "diff": -5.82,
     "ci95": [
-     -20.73,
-     10.98
+     -19.46,
+     7.83
     ],
-    "p_one_sided": 0.2645,
+    "p_one_sided": 0.1964,
     "p_kind": "one-sided HAC Diebold-Mariano (lag 1)",
     "bh_significant": null,
     "first_date": "2026-10-07",
-    "last_date": "2026-10-22",
+    "last_date": "2026-10-29",
     "marking": "VERIFIED",
     "extras": [
-     "direction right 7/11 moves vs always-up 2/11",
-     "P3 vs the ensemble, same days: too early (n=10, need 20)"
+     "direction right 10/16 moves vs always-up 4/16",
+     "P3 vs the ensemble, same days: too early (n=15, need 20)"
     ],
     "paired": {
-     "n": 10,
-     "model": 79.15,
-     "baseline": 86.75,
-     "diff": -7.6,
+     "n": 15,
+     "model": 78.24,
+     "baseline": 81.39,
+     "diff": -3.15,
      "ci95": [
-      -17.38,
-      2.18
+      -11.39,
+      5.08
      ],
-     "p_one_sided": 0.0637,
-     "effective_n": 10.2,
+     "p_one_sided": 0.2272,
+     "effective_n": 13.6,
      "p_kind": "one-sided HAC Diebold-Mariano (lag 1)",
      "label": "P3 vs the ensemble",
      "min_n": 20,
@@ -178,7 +178,7 @@
    },
    "verdict": "grey",
    "verdict_kind": "too_early",
-   "sentence": "Too early (n=11, need 20) to say whether the ensemble beats holding the last fix.",
+   "sentence": "Too early (n=16, need 20) to say whether the ensemble beats holding the last fix.",
    "sources": [
     "data/nextfix_oos.json",
     "data/forecast.json",
@@ -195,38 +195,38 @@
    "forward_start": "2026-10-07",
    "forward_start_basis": "ADR 071: forward folds only (retro false), d0 >= 2026-10-07 (ml.nextfix.P3_FORWARD_FROM), compared with P3",
    "forward": {
-    "n": 10,
-    "effective_n": 19.5,
+    "n": 15,
+    "effective_n": 18.6,
     "metric": "mean absolute error of the next fix",
     "unit": "Rs/g",
-    "model": 82.17,
-    "baseline": 79.15,
+    "model": 79.75,
+    "baseline": 78.24,
     "baseline_name": "P3 (the live model)",
-    "diff": 3.02,
+    "diff": 1.52,
     "ci95": [
-     -3.94,
-     9.99
+     -5.16,
+     8.19
     ],
-    "p_one_sided": 0.8133,
+    "p_one_sided": 0.6733,
     "p_kind": "one-sided HAC Diebold-Mariano (lag 1); frozen alpha 0.025 (ADR 071)",
     "bh_significant": null,
     "first_date": "2026-10-07",
-    "last_date": "2026-10-22",
+    "last_date": "2026-10-29",
     "marking": "VERIFIED",
     "extras": [
-     "shadow: P3 on the last 60 days (ADR 071 V1) vs P3, same days: too early (n=10, need 40)"
+     "shadow: P3 on the last 60 days (ADR 071 V1) vs P3, same days: too early (n=15, need 40)"
     ],
     "paired": {
-     "n": 10,
-     "model": 82.17,
-     "baseline": 79.15,
-     "diff": 3.02,
+     "n": 15,
+     "model": 79.75,
+     "baseline": 78.24,
+     "diff": 1.52,
      "ci95": [
-      -3.94,
-      9.99
+      -5.16,
+      8.19
      ],
-     "p_one_sided": 0.8133,
-     "effective_n": 19.5,
+     "p_one_sided": 0.6733,
+     "effective_n": 18.6,
      "p_kind": "one-sided HAC Diebold-Mariano (lag 1)",
      "label": "shadow: P3 on the last 60 days (ADR 071 V1) vs P3",
      "min_n": 40,
@@ -245,7 +245,7 @@
    },
    "verdict": "grey",
    "verdict_kind": "too_early",
-   "sentence": "Too early (n=10, need 40 by ADR 071's frozen rule); P3 stays.",
+   "sentence": "Too early (n=15, need 40 by ADR 071's frozen rule); P3 stays.",
    "sources": [
     "data/nextfix_p3_variants_oos.json",
     "data/nextfix_p3_oos.json"
@@ -261,39 +261,39 @@
    "forward_start": "2026-10-07",
    "forward_start_basis": "ADR 071: forward folds only (retro false), d0 >= 2026-10-07 (ml.nextfix.P3_FORWARD_FROM), compared with P3",
    "forward": {
-    "n": 10,
-    "effective_n": 11.7,
+    "n": 15,
+    "effective_n": 15.1,
     "metric": "mean absolute error of the next fix",
     "unit": "Rs/g",
-    "model": 80.24,
-    "baseline": 79.15,
+    "model": 77.89,
+    "baseline": 78.24,
     "baseline_name": "P3 (the live model)",
-    "diff": 1.09,
+    "diff": -0.35,
     "ci95": [
-     -0.71,
-     2.89
+     -2.84,
+     2.14
     ],
-    "p_one_sided": 0.8835,
+    "p_one_sided": 0.3925,
     "p_kind": "one-sided HAC Diebold-Mariano (lag 1); frozen alpha 0.025 (ADR 071)",
     "bh_significant": null,
     "first_date": "2026-10-07",
-    "last_date": "2026-10-22",
+    "last_date": "2026-10-29",
     "marking": "VERIFIED",
     "extras": [
-     "shadow: P3 Monday slope (ADR 071 V2) vs P3, same days: too early (n=10, need 40)",
-     "Monday decisions only (reported, not used for the verdict): n=2, error 98.8 vs P3 93.4 Rs/g"
+     "shadow: P3 Monday slope (ADR 071 V2) vs P3, same days: too early (n=15, need 40)",
+     "Monday decisions only (reported, not used for the verdict): n=3, error 80.2 vs P3 81.9 Rs/g"
     ],
     "paired": {
-     "n": 10,
-     "model": 80.24,
-     "baseline": 79.15,
-     "diff": 1.09,
+     "n": 15,
+     "model": 77.89,
+     "baseline": 78.24,
+     "diff": -0.35,
      "ci95": [
-      -0.71,
-      2.89
+      -2.84,
+      2.14
      ],
-     "p_one_sided": 0.8835,
-     "effective_n": 11.7,
+     "p_one_sided": 0.3925,
+     "effective_n": 15.1,
      "p_kind": "one-sided HAC Diebold-Mariano (lag 1)",
      "label": "shadow: P3 Monday slope (ADR 071 V2) vs P3",
      "min_n": 40,
@@ -312,7 +312,7 @@
    },
    "verdict": "grey",
    "verdict_kind": "too_early",
-   "sentence": "Too early (n=10, need 40 by ADR 071's frozen rule); P3 stays.",
+   "sentence": "Too early (n=15, need 40 by ADR 071's frozen rule); P3 stays.",
    "sources": [
     "data/nextfix_p3_variants_oos.json",
     "data/nextfix_p3_oos.json"
@@ -347,7 +347,7 @@
      "demoted: no",
      "since: n/a",
      "reasons recorded: none",
-     "state file last checked: 2026-10-25T06:44:09.798513+00:00",
+     "state file last checked: 2026-11-01T07:33:32.728104+00:00",
      "rules breaching now (forecast.json): none",
      "live record nextfix_p3_v1; re-promotion is never automatic (a person decides)"
     ]
@@ -380,27 +380,27 @@
    "forward_start": "2026-10-01",
    "forward_start_basis": "promoted 2026-10-02 (ADR 064/065); forward from decision day d0 >= 2026-10-01",
    "forward": {
-    "n": 15,
+    "n": 20,
     "effective_n": null,
     "metric": "coverage of the 80% range",
     "unit": "share of days inside",
-    "model": 0.933,
+    "model": 0.9,
     "baseline": 0.8,
     "baseline_name": "the 80% it promises",
-    "diff": 0.133,
+    "diff": 0.1,
     "ci95": [
-     0.7018,
-     0.9881
+     0.699,
+     0.9721
     ],
-    "p_one_sided": 0.9648,
+    "p_one_sided": 0.9308,
     "p_kind": "exact one-sided binomial, coverage below 80% (days treated as independent)",
     "bh_significant": null,
     "first_date": "2026-10-01",
-    "last_date": "2026-10-23",
+    "last_date": "2026-10-30",
     "marking": "VERIFIED",
     "extras": [
      "effective n unavailable (hit order not exposed by ml.nextfix.flat_record)",
-     "mean range width Rs 103"
+     "mean range width Rs 98"
     ]
    },
    "retrospective": {
@@ -413,9 +413,9 @@
     "passes": null,
     "marking": "INFERRED"
    },
-   "verdict": "grey",
-   "verdict_kind": "too_early",
-   "sentence": "Too early (n=15, need 20) to judge the hold range.",
+   "verdict": "green",
+   "verdict_kind": "scored",
+   "sentence": "The hold range is hitting its 80% target within the margin of error.",
    "sources": [
     "data/ibja_rates.parquet"
    ],
@@ -430,27 +430,27 @@
    "forward_start": "2026-10-01",
    "forward_start_basis": "promoted 2026-10-02 (ADR 064/065); forward from decision day d0 >= 2026-10-01",
    "forward": {
-    "n": 14,
+    "n": 19,
     "effective_n": null,
     "metric": "coverage of the 80% range",
     "unit": "share of days inside",
-    "model": 0.857,
+    "model": 0.842,
     "baseline": 0.8,
     "baseline_name": "the 80% it promises",
-    "diff": 0.057,
+    "diff": 0.042,
     "ci95": [
-     0.6006,
-     0.9599
+     0.6243,
+     0.9448
     ],
-    "p_one_sided": 0.8021,
+    "p_one_sided": 0.7631,
     "p_kind": "exact one-sided binomial, coverage below 80% (days treated as independent)",
     "bh_significant": null,
     "first_date": "2026-10-01",
-    "last_date": "2026-10-22",
+    "last_date": "2026-10-29",
     "marking": "VERIFIED",
     "extras": [
      "effective n unavailable (hit order not exposed by ml.nextfix.flat_record)",
-     "mean range width Rs 300"
+     "mean range width Rs 286"
     ]
    },
    "retrospective": {
@@ -465,7 +465,7 @@
    },
    "verdict": "grey",
    "verdict_kind": "too_early",
-   "sentence": "Too early (n=14, need 20) to judge the hold range.",
+   "sentence": "Too early (n=19, need 20) to judge the hold range.",
    "sources": [
     "data/ibja_rates.parquet"
    ],
@@ -657,17 +657,17 @@
    },
    "retrospective": {
     "label": "walk-forward over earlier history, NOT forward",
-    "text": "n=120: coverage 0.733 (95% 0.648-0.804) vs 0.80 promised; stratified shadow band 0.842",
+    "text": "n=127: coverage 0.724 (95% 0.641-0.795) vs 0.80 promised; stratified shadow band 0.827",
     "marking": "INFERRED"
    },
    "gate": {
-    "text": "resolvable at n: False; below 80% (p vs nominal 0.086)",
+    "text": "resolvable at n: True; below 80% (p vs nominal 0.045)",
     "passes": false,
     "marking": "INFERRED"
    },
    "verdict": "grey",
    "verdict_kind": "no_data",
-   "sentence": "No forward data: this band has no per-day ledger of issued ranges, so only the retrospective miss is known (73% inside vs 80% promised, n=120).",
+   "sentence": "No forward data: this band has no per-day ledger of issued ranges, so only the retrospective miss is known (72% inside vs 80% promised, n=127).",
    "sources": [
     "data/calibration_band_coverage.json"
    ],
@@ -703,11 +703,11 @@
    },
    "retrospective": {
     "label": "walk-forward over earlier history, NOT forward",
-    "text": "n=167 folds to 2026-10-15: logistic 0.479, lightgbm 0.503 vs always-up 0.509, p=0.609",
+    "text": "n=171 folds to 2026-10-22: logistic 0.491, lightgbm 0.509 vs always-up 0.497, p=1.000",
     "marking": "INFERRED"
    },
    "gate": {
-    "text": "probability gate no ship (stays dark): not significant vs always-up: p=0.6089, acc=0.4790 vs baseline=0.5090",
+    "text": "probability gate no ship (stays dark): not significant vs always-up: p=1.0000, acc=0.4912 vs baseline=0.4971",
     "passes": false,
     "marking": "INFERRED"
    },
@@ -749,11 +749,11 @@
    },
    "retrospective": {
     "label": "walk-forward over earlier history, NOT forward",
-    "text": "n=161 folds to 2026-10-13: logistic 0.559, lightgbm 0.584 vs always-up 0.571, p=0.845",
+    "text": "n=165 folds to 2026-10-21: logistic 0.558, lightgbm 0.576 vs always-up 0.564, p=1.000",
     "marking": "INFERRED"
    },
    "gate": {
-    "text": "probability gate no ship (stays dark): not significant vs always-up: p=0.8450, acc=0.5590 vs baseline=0.5714",
+    "text": "probability gate no ship (stays dark): not significant vs always-up: p=1.0000, acc=0.5576 vs baseline=0.5636",
     "passes": false,
     "marking": "INFERRED"
    },
@@ -774,18 +774,18 @@
    "forward_start": "2026-09-24",
    "forward_start_basis": "ADR 038/042 confirmatory_after_as_of in the h2 shadow results; as_of > this date",
    "forward": {
-    "n": 15,
-    "effective_n": 12.313253012048193,
+    "n": 20,
+    "effective_n": 17.146341463414632,
     "metric": "accuracy",
     "unit": "share correct",
-    "model": 0.5333333333333333,
+    "model": 0.45,
     "baseline": 0.4,
     "baseline_name": "always predict up",
     "diff": null,
     "ci95": null,
-    "p_one_sided": 0.28068160511706186,
+    "p_one_sided": 0.39847449579346805,
     "p_kind": "as reported by the job (HAC DM)",
-    "bh_significant": null,
+    "bh_significant": false,
     "first_date": null,
     "last_date": null,
     "marking": "INFERRED",
@@ -803,9 +803,9 @@
     "passes": null,
     "marking": "INFERRED"
    },
-   "verdict": "grey",
-   "verdict_kind": "too_early",
-   "sentence": "Too early (n=15, need 20; pre-registered target 418.3229).",
+   "verdict": "amber",
+   "verdict_kind": "scored",
+   "sentence": "No reliable difference from always predict up yet; the evidence is mixed.",
    "sources": [
     "data/preregistered_h2_shadow_results.json"
    ],
@@ -820,17 +820,17 @@
    "forward_start": "2026-10-05",
    "forward_start_basis": "no promotion date exists; counted from this scorecard's first run (2026-10-05)",
    "forward": {
-    "n": 9,
-    "effective_n": 11.1,
+    "n": 14,
+    "effective_n": 14.2,
     "metric": "mean absolute error over 5 days",
     "unit": "Rs/g",
-    "model": 255.91,
-    "baseline": 127.42,
+    "model": 271.82,
+    "baseline": 149.79,
     "baseline_name": "holding the last price",
-    "diff": 128.49,
+    "diff": 122.03,
     "ci95": [
-     98.26,
-     158.71
+     93.81,
+     150.26
     ],
     "p_one_sided": 1.0,
     "p_kind": "one-sided HAC Diebold-Mariano (lag 1)",
@@ -854,7 +854,7 @@
    },
    "verdict": "grey",
    "verdict_kind": "too_early",
-   "sentence": "Too early (n=9, need 20) to say whether Chronos beats holding the last price.",
+   "sentence": "Too early (n=14, need 20) to say whether Chronos beats holding the last price.",
    "sources": [
     "data/backtest.json"
    ],
@@ -869,23 +869,23 @@
    "forward_start": "2026-09-24",
    "forward_start_basis": "ADR 043 shadow_after in data/weekly_range_shadow_log.json; as_of > this date",
    "forward": {
-    "n": 18,
-    "effective_n": 18.0,
+    "n": 23,
+    "effective_n": 23.0,
     "metric": "coverage of the 80% range",
     "unit": "share of days inside",
-    "model": 0.944,
+    "model": 0.957,
     "baseline": 0.8,
     "baseline_name": "the 80% it promises",
-    "diff": 0.144,
+    "diff": 0.157,
     "ci95": [
-     0.7424,
-     0.9901
+     0.7901,
+     0.9923
     ],
-    "p_one_sided": 0.982,
+    "p_one_sided": 0.9941,
     "p_kind": "exact one-sided binomial, coverage below 80% (days treated as independent)",
     "bh_significant": null,
     "first_date": "2026-09-25",
-    "last_date": "2026-10-22",
+    "last_date": "2026-10-29",
     "marking": "VERIFIED",
     "extras": []
    },
@@ -899,9 +899,9 @@
     "passes": null,
     "marking": "INFERRED"
    },
-   "verdict": "grey",
-   "verdict_kind": "too_early",
-   "sentence": "Too early (n=18, need 20) to judge the 1-day range.",
+   "verdict": "green",
+   "verdict_kind": "scored",
+   "sentence": "The 1-day range is hitting its 80% target within the margin of error.",
    "sources": [
     "data/weekly_range_shadow_log.json"
    ],
@@ -916,8 +916,8 @@
    "forward_start": "2026-09-24",
    "forward_start_basis": "ADR 043 shadow_after in data/weekly_range_shadow_log.json; as_of > this date",
    "forward": {
-    "n": 14,
-    "effective_n": 14.0,
+    "n": 18,
+    "effective_n": 18.0,
     "metric": "coverage of the 80% range",
     "unit": "share of days inside",
     "model": 1.0,
@@ -925,14 +925,14 @@
     "baseline_name": "the 80% it promises",
     "diff": 0.2,
     "ci95": [
-     0.7847,
+     0.8241,
      1.0
     ],
     "p_one_sided": 1.0,
     "p_kind": "exact one-sided binomial, coverage below 80% (days treated as independent)",
     "bh_significant": null,
     "first_date": "2026-09-25",
-    "last_date": "2026-10-15",
+    "last_date": "2026-10-22",
     "marking": "VERIFIED",
     "extras": []
    },
@@ -948,7 +948,7 @@
    },
    "verdict": "grey",
    "verdict_kind": "too_early",
-   "sentence": "Too early (n=14, need 20) to judge the 7-day range.",
+   "sentence": "Too early (n=18, need 20) to judge the 7-day range.",
    "sources": [
     "data/weekly_range_shadow_log.json"
    ],
@@ -963,29 +963,29 @@
    "forward_start": "2026-09-24",
    "forward_start_basis": "ADR 047 frozen_at in data/next_day_range_shadow.json; decision_date > this date",
    "forward": {
-    "n": 28,
-    "effective_n": 10.6,
+    "n": 35,
+    "effective_n": 13.9,
     "metric": "coverage of the 80% range",
     "unit": "share of days inside",
-    "model": 0.857,
+    "model": 0.886,
     "baseline": 0.8,
     "baseline_name": "the 80% it promises",
-    "diff": 0.057,
+    "diff": 0.086,
     "ci95": [
-     0.6851,
-     0.943
+     0.7405,
+     0.9546
     ],
-    "p_one_sided": 0.8398,
+    "p_one_sided": 0.9395,
     "p_kind": "exact one-sided binomial, coverage below 80% (days treated as independent)",
     "bh_significant": null,
     "first_date": "2026-09-25",
-    "last_date": "2026-10-22",
+    "last_date": "2026-10-29",
     "marking": "VERIFIED",
     "extras": [
-     "mean range width Rs 566",
-     "displayed range (baseline) coverage 22/28",
+     "mean range width Rs 559",
+     "displayed range (baseline) coverage 29/35",
      "v2 vs displayed, days only one hit: 3 vs 1 (exact McNemar one-sided p=0.312)",
-     "v2 is +79% wider than the displayed range"
+     "v2 is +86% wider than the displayed range"
     ]
    },
    "retrospective": {
@@ -1015,8 +1015,8 @@
    "forward_start": "2026-09-24",
    "forward_start_basis": "ADR 049 confirmatory_after in data/wait_or_buy_shadow.json; as_of > this date",
    "forward": {
-    "n": 18,
-    "effective_n": 14.4,
+    "n": 23,
+    "effective_n": 30.8,
     "metric": "Brier score of the lower-price chance (N=1)",
     "unit": "Brier",
     "model": 0.25,
@@ -1027,15 +1027,15 @@
      -0.01,
      0.0
     ],
-    "p_one_sided": 0.0695,
+    "p_one_sided": 0.0618,
     "p_kind": "one-sided HAC Diebold-Mariano (lag 1)",
-    "bh_significant": null,
+    "bh_significant": false,
     "first_date": "2026-09-25",
-    "last_date": "2026-10-22",
+    "last_date": "2026-10-29",
     "marking": "VERIFIED",
     "extras": [
-     "N=2: 17 scored so far",
-     "N=7: 14 scored so far"
+     "N=2: 22 scored so far",
+     "N=7: 18 scored so far"
     ]
    },
    "retrospective": {
@@ -1048,9 +1048,9 @@
     "passes": null,
     "marking": "INFERRED"
    },
-   "verdict": "grey",
-   "verdict_kind": "too_early",
-   "sentence": "Too early (n=18, need 20) to say whether the chance estimate beats a flat 50% chance.",
+   "verdict": "amber",
+   "verdict_kind": "scored",
+   "sentence": "No reliable difference from a flat 50% chance yet; the evidence is mixed.",
    "sources": [
     "data/wait_or_buy_shadow.json"
    ],
@@ -1065,26 +1065,26 @@
    "forward_start": "2026-09-24",
    "forward_start_basis": "ADR 061/063 shadow_after in data/nowcast_shadow_log.json; date > this date",
    "forward": {
-    "n": 25,
-    "effective_n": 21.3,
+    "n": 31,
+    "effective_n": 31.4,
     "metric": "mean absolute error of today's rate",
     "unit": "Rs/g",
-    "model": 30.63,
-    "baseline": 41.55,
+    "model": 38.83,
+    "baseline": 48.34,
     "baseline_name": "the live estimate (M0)",
-    "diff": -10.92,
+    "diff": -9.51,
     "ci95": [
-     -25.57,
-     3.72
+     -22.36,
+     3.33
     ],
-    "p_one_sided": 0.0725,
+    "p_one_sided": 0.0733,
     "p_kind": "one-sided HAC Diebold-Mariano (lag 1)",
     "bh_significant": false,
     "first_date": "2026-09-25",
-    "last_date": "2026-10-24",
+    "last_date": "2026-10-31",
     "marking": "VERIFIED",
     "extras": [
-     "4 day(s) excluded: an input was published after the target (ADR 063)"
+     "5 day(s) excluded: an input was published after the target (ADR 063)"
     ]
    },
    "retrospective": {
@@ -1114,23 +1114,23 @@
    "forward_start": "2026-07-19",
    "forward_start_basis": "first as_of_date in data/fusion_snapshots.parquet (every snapshot is forward)",
    "forward": {
-    "n": 86,
-    "effective_n": 88.0,
+    "n": 93,
+    "effective_n": 96.2,
     "metric": "mean absolute gap to Tanishq (same day)",
     "unit": "Rs/g",
-    "model": 39.66,
-    "baseline": 88.37,
+    "model": 39.91,
+    "baseline": 88.17,
     "baseline_name": "yesterday's Tanishq rate",
-    "diff": -48.71,
+    "diff": -48.26,
     "ci95": [
-     -70.64,
-     -26.78
+     -69.07,
+     -27.46
     ],
     "p_one_sided": 0.0,
     "p_kind": "one-sided HAC Diebold-Mariano (lag 1)",
     "bh_significant": true,
     "first_date": "2026-07-19",
-    "last_date": "2026-10-25",
+    "last_date": "2026-11-01",
     "marking": "VERIFIED",
     "extras": [
      "benchmark is the last national snapshot of the day; Tanishq is the day's last reading"
