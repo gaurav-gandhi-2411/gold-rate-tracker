@@ -21,7 +21,9 @@ SHOT = (ROOT / "scripts/screenshot-og.mjs").read_text(encoding="utf-8")
 
 def test_every_price_key_the_card_reads_exists_in_every_prices_row() -> None:
     rows = json.loads((ROOT / "data/prices.json").read_text(encoding="utf-8"))
-    read_keys = set(re.findall(r'\b[a-z]\["([^"]+)"\]', OG)) | set(re.findall(r"\.(price_\w+)", OG))
+    read_keys = set(re.findall(r'\b[a-z]\["([^"]+)"\]', OG)) | set(
+        re.findall(r"\.(price_\d+k)\b", OG)
+    )
     assert read_keys, "the card reads no price key"
     assert "price_22k" not in OG
     for key in read_keys:
@@ -44,10 +46,26 @@ def test_the_start_month_is_computed_not_typed() -> None:
     assert "prices[0].timestamp" in OG
 
 
+def test_the_card_uses_the_live_pages_rules_and_constants() -> None:
+    """The card shows the hero's figure and classifies the chart's series (app.js), so a shared link
+    and the page cannot disagree; the copied constants must match app.js."""
+    app = (ROOT / "app.js").read_text(encoding="utf-8")
+    for name in ("STALE_THRESHOLD_H", "TANISHQ_IBJA_MAX_DEVIATION"):
+        in_app = re.search(rf"^const {name} = ([0-9.]+);", app, re.M)
+        in_og = re.search(rf"const {name} = ([0-9.]+);", OG)
+        assert in_app and in_og, name
+        assert in_app.group(1) == in_og.group(1), name
+    assert app.count('DERIVED_SOURCE_PREFIX = "ibja_calibrated"') == 1
+    assert 'startsWith("ibja_calibrated")' in OG
+    assert "data/ibja_derived_prices.json" in OG
+    assert "computeVerdict(hist.rows, hist.estimate ? null : forecast)" in OG
+    assert "computeVerdict(hist.rows, hist.estimate ? null : forecast)" in app
+
+
 def test_a_card_that_failed_to_render_is_never_written_to_og_png() -> None:
-    # og.html marks a failed render, including a row without a numeric "22k" ...
+    # og.html marks a failed render: no price the page would show, or a bad trend row ...
     assert 'setAttribute("data-error"' in OG
-    assert "Number.isFinite(p22(latest))" in OG
+    assert 'throw new Error("no price the live page would show")' in OG
     # ... and the screenshot step exits before writing og.png when it sees the mark
     check = SHOT.index('getAttribute("data-error")')
     assert check < SHOT.index("page.screenshot(")
