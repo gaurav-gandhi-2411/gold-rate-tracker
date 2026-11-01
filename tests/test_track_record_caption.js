@@ -64,9 +64,9 @@ test("fail closed: a day with no retro flag is counted as a re-run, never as liv
 test("singular: one re-run day reads 'is', in English and Hindi", () => {
   const rows = [row("2026-10-20", true), row("2026-10-21", false), row("2026-10-22", false)];
   assert.match(caption(rows), /1 of these 3 days is the same method run again on past data; the other 2 are estimates/);
-  assert.match(caption(rows, "hi"), /इन 3 दिनों में से 1 दिन उसी तरीक़े को पुराने आँकड़ों पर दोबारा चलाकर निकाला गया है; बाकी 2 दिन/);
+  assert.match(caption(rows, "hi"), /इन 3 दिनों में से 1 दिन उसी तरीक़े को पुराने आँकड़ों पर दोबारा चलाकर निकाला गया है; बाक़ी 2 दिन/);
   const one = [row("2026-10-20", true), row("2026-10-21", true), row("2026-10-22", false)];
-  assert.match(caption(one, "hi"), /बाकी 1 दिन उस समय किया गया अनुमान है।/);
+  assert.match(caption(one, "hi"), /बाक़ी 1 दिन उस समय किया गया अनुमान है।/);
 });
 
 test("only the plotted days count: rows beyond the last 30 are left out", () => {
@@ -78,7 +78,7 @@ test("only the plotted days count: rows beyond the last 30 are left out", () => 
 test("Hindi: the same counts in the consensus wording", () => {
   const rows = [row("2026-10-06", true), row("2026-10-07", false), row("2026-10-14", true), row("2026-10-15", false)];
   const text = caption(rows, "hi");
-  assert.match(text, /इन 4 दिनों में से 2 दिन उसी तरीक़े को पुराने आँकड़ों पर दोबारा चलाकर निकाले गए हैं; बाकी 2 दिन उस समय किए गए अनुमान हैं।/);
+  assert.match(text, /इन 4 दिनों में से 2 दिन उसी तरीक़े को पुराने आँकड़ों पर दोबारा चलाकर निकाले गए हैं; बाक़ी 2 दिन उस समय किए गए अनुमान हैं।/);
   assert.doesNotMatch(text, /7 अक्टूबर/);
 });
 
