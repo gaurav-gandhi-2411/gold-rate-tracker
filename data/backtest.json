@@ -1,44 +1,44 @@
 {
-  "backtest_run_at": "2026-10-25T07:06:54.205928+00:00",
-  "n_folds": 266,
+  "backtest_run_at": "2026-11-01T08:30:33.218562+00:00",
+  "n_folds": 271,
   "n_folds_sub_30_context": 22,
   "horizon": 5,
   "model_version": "amazon/chronos-bolt-tiny@a0e552de",
-  "mae_5d_avg_chronos": 288.14,
-  "mae_5d_avg_naive": 241.07,
+  "mae_5d_avg_chronos": 288.36,
+  "mae_5d_avg_naive": 240.13,
   "mae_chronos_per_h": [
-    165.9,
-    229.29,
-    290.66,
-    348.26,
-    406.57
+    166.06,
+    230.47,
+    291.66,
+    348.06,
+    405.58
   ],
   "mae_naive_per_h": [
-    121.85,
-    190.29,
-    246.27,
-    298.0,
-    348.94
+    121.25,
+    189.9,
+    246.05,
+    296.67,
+    346.78
   ],
-  "dir_acc_5d_chronos": 0.4925,
+  "dir_acc_5d_chronos": 0.4871,
   "dir_acc_5d_naive": 0.5,
   "pi_coverage_80_per_h": [
-    0.9436,
-    0.9211,
-    0.9023,
-    0.8759,
-    0.8609
+    0.9446,
+    0.9225,
+    0.9004,
+    0.8782,
+    0.8635
   ],
-  "pi_coverage_80_5d_avg": 0.9008,
+  "pi_coverage_80_5d_avg": 0.9018,
   "decision_acc": {
     "n_chronos_predicted_100_drop": 41,
     "n_actual_100_drop_when_predicted": 16,
     "precision": 0.3902,
-    "n_actual_100_drops_total": 104,
-    "recall": 0.1538
+    "n_actual_100_drops_total": 109,
+    "recall": 0.1468
   },
   "peak_timing_err_days_median": 2.0,
-  "paired_diff_median": 22.51,
+  "paired_diff_median": 25.47,
   "wilcoxon_signed_rank_p": 0.0,
   "insufficient_evidence": false,
   "schema": "scores_only_v1",
@@ -47,18 +47,18 @@
     "pct": 80,
     "n": 30,
     "p_by_h": [
-      135.5,
-      165.6,
-      234.4,
-      266.2,
-      311.3
+      130.1,
+      188.8,
+      264.2,
+      301.9,
+      362.6
     ],
     "mean_by_h": [
-      89.2,
-      115.7,
-      125.1,
-      154.6,
-      181.7
+      83.7,
+      120.3,
+      147.3,
+      171.2,
+      194.6
     ]
   },
   "folds": [
@@ -6179,46 +6179,131 @@
         true
       ],
       "dir_correct_5d": false
+    },
+    {
+      "fold_id": 266,
+      "context_end_date": "2026-10-16",
+      "context_size": 274,
+      "sub_30_context": false,
+      "err_chronos_p50": [
+        136.21,
+        320.75,
+        451.24,
+        563.39,
+        573.84
+      ],
+      "mae_chronos_5d": 409.09,
+      "mae_naive_5d": 293.96,
+      "in_pi_80": [
+        true,
+        true,
+        true,
+        true,
+        true
+      ],
+      "dir_correct_5d": false
+    },
+    {
+      "fold_id": 267,
+      "context_end_date": "2026-10-19",
+      "context_size": 275,
+      "sub_30_context": false,
+      "err_chronos_p50": [
+        303.21,
+        460.99,
+        556.96,
+        544.99,
+        591.11
+      ],
+      "mae_chronos_5d": 491.45,
+      "mae_naive_5d": 332.54,
+      "in_pi_80": [
+        true,
+        true,
+        false,
+        true,
+        true
+      ],
+      "dir_correct_5d": false
+    },
+    {
+      "fold_id": 268,
+      "context_end_date": "2026-10-21",
+      "context_size": 276,
+      "sub_30_context": false,
+      "err_chronos_p50": [
+        253.65,
+        407.79,
+        391.73,
+        407.34,
+        304.0
+      ],
+      "mae_chronos_5d": 352.9,
+      "mae_naive_5d": 189.64,
+      "in_pi_80": [
+        true,
+        true,
+        true,
+        true,
+        true
+      ],
+      "dir_correct_5d": false
+    },
+    {
+      "fold_id": 269,
+      "context_end_date": "2026-10-22",
+      "context_size": 277,
+      "sub_30_context": false,
+      "err_chronos_p50": [
+        173.17,
+        218.09,
+        242.29,
+        112.14,
+        160.26
+      ],
+      "mae_chronos_5d": 181.19,
+      "mae_naive_5d": 68.96,
+      "in_pi_80": [
+        true,
+        true,
+        true,
+        true,
+        true
+      ],
+      "dir_correct_5d": false
+    },
+    {
+      "fold_id": 270,
+      "context_end_date": "2026-10-23",
+      "context_size": 278,
+      "sub_30_context": false,
+      "err_chronos_p50": [
+        -4.43,
+        57.07,
+        -80.69,
+        -58.62,
+        137.71
+      ],
+      "mae_chronos_5d": 67.7,
+      "mae_naive_5d": 65.18,
+      "in_pi_80": [
+        true,
+        true,
+        true,
+        true,
+        true
+      ],
+      "dir_correct_5d": true
     }
   ],
   "p3_past_errors": {
     "schema": "p3_past_errors_v1",
     "model_version": "nextfix_p3_v1",
     "n": 30,
-    "n_in_range": 25,
-    "n_retro": 20,
-    "mean_abs_err": 87.1,
+    "n_in_range": 24,
+    "n_retro": 15,
+    "mean_abs_err": 84.9,
     "rows": [
-      {
-        "day": "2026-09-08",
-        "err": -68.6,
-        "in_range": true,
-        "retro": true
-      },
-      {
-        "day": "2026-09-09",
-        "err": 51.6,
-        "in_range": true,
-        "retro": true
-      },
-      {
-        "day": "2026-09-10",
-        "err": 90.0,
-        "in_range": true,
-        "retro": true
-      },
-      {
-        "day": "2026-09-11",
-        "err": 121.6,
-        "in_range": true,
-        "retro": true
-      },
-      {
-        "day": "2026-09-15",
-        "err": -120.2,
-        "in_range": true,
-        "retro": true
-      },
       {
         "day": "2026-09-16",
         "err": 103.5,
@@ -6367,6 +6452,36 @@
         "day": "2026-10-22",
         "err": 9.7,
         "in_range": true,
+        "retro": false
+      },
+      {
+        "day": "2026-10-23",
+        "err": -37.3,
+        "in_range": true,
+        "retro": false
+      },
+      {
+        "day": "2026-10-26",
+        "err": 59.8,
+        "in_range": true,
+        "retro": false
+      },
+      {
+        "day": "2026-10-27",
+        "err": -79.4,
+        "in_range": true,
+        "retro": false
+      },
+      {
+        "day": "2026-10-28",
+        "err": 22.2,
+        "in_range": true,
+        "retro": false
+      },
+      {
+        "day": "2026-10-29",
+        "err": 188.5,
+        "in_range": false,
         "retro": false
       }
     ]
