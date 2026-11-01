@@ -182,7 +182,9 @@ function renderFullMethodology(fc, bt, drift, coverage, bandCoverage) {
           </div>
         </div>
         ${fc.target_time ? `<p class="meth-text" style="margin-top:8px">${tHwk("methTargetLine", { date: fmtISTDate(fc.target_time) })}</p>` : ""}
-        <p class="meth-text" style="margin-top:12px">${tHwk("methNextDayExplainer")}</p>
+        <p class="meth-text" style="margin-top:12px">${fc.next_fix?.active === true
+          ? tHwk("methNextDayExplainerNextFix")
+          : tHwk("methNextDayExplainer", { n: bt?.naive_error_recent?.folds_window })}</p>
       </div>
     `);
   }
@@ -287,7 +289,7 @@ function renderFullMethodology(fc, bt, drift, coverage, bandCoverage) {
             ? tHwk(nfCovA ? "methAccurateP2CoverageTested" : "methAccurateP2CoveragePct", { pct: coverPct, n: coverN })
             : tHwk("methAccurateP2CoverageUnknown"),
         })}</strong><br>
-        ${tHwk(nfCovA ? "methAccurateP2Tested" : "methAccurateP2")}</p>
+        ${nfCovA ? tHwk("methAccurateP2Tested") : tHwk("methAccurateP2", { n: bt.naive_error_recent?.folds_window })}</p>
         ${p3Html}
         <p class="meth-text"><strong>${tHwk("methAccurateP4Strong")}</strong><br>
         ${tHwk("methAccurateP4")}</p>

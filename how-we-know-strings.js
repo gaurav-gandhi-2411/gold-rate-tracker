@@ -48,14 +48,19 @@ const STRINGS_HWK = {
     methNextFixHoldSub: "our best guess until the world prices after it are in",
     methNextFixStrong: "For the next official rate, we use world prices",
     methNextFixP: ({ n, modelMae, flatMae, pct }) =>
-      `India's official rate is set once each afternoon, but gold and the rupee keep trading worldwide until late at night. We use that later move to estimate the next rate. Tested on ${n} days it had not seen: off by ₹${modelMae}/g on average, against ₹${flatMae}/g for "no change" (${pct}% closer). For a week or more ahead, "no change" is still the best we have.`,
+      `India's official rate is set twice each working day, in the morning and the afternoon, but gold and the rupee keep trading worldwide until late at night. After the afternoon rate, we use that later move to estimate the next afternoon rate. Tested on ${n} days it had not seen: off by ₹${modelMae}/g on average, against ₹${flatMae}/g for "no change" (${pct}% closer). For a week or more ahead, "no change" is still the best we have.`,
     methDirectionOn: "On — for the next price move only",
     methDirectionOnSub: ({ right, n, upRight }) => `Tested on ${n} past days it had not seen: right ${right} times, against ${upRight} for "gold usually rises". These are past results, not live calls, and the same days also helped us pick the model, so live results can be a little worse.`,
     methDirectionOnNote: "We show whether the next move is more likely up or down, with its chance, only while it keeps beating \"gold usually rises\" on days it has not seen — we re-check this every few hours. It is not advice to buy or sell; that would need a much stronger record.",
     methDirectionSource: "The chance comes from the same estimate that gives the price range above, not from any other model: it looks at how far world gold and the rupee have moved since India's last official rate was set, and how closely India's rate has followed those moves in the past. Other models we run in the background are never used for this number.",
     methCoversMoves: "Covers most of the usual day-to-day moves",
     methTargetLine: ({ date }) => `Target: ${date}`,
-    methNextDayExplainer: 'This is just for the next reading, not several days out — based on how much the price has typically moved by the next check over our last 30 test runs. (The "moves about ±₹X over 5 days" note on the main page is a separate, longer-range estimate.)',
+    // B2 (2026-11-01): "our last 30 test runs" was hand-typed, and it describes only the older flat
+    // range (ml/inference.py, _CONFORMAL_FOLDS; backtest.json naive_error_recent.folds_window). While
+    // the next-rate model sets the range (next_fix.active), it is ml/nextfix.py's band instead: the
+    // recent misses of the estimate shown, scaled by current volatility -- methNextDayExplainerNextFix.
+    methNextDayExplainer: ({ n } = {}) => `This is just for the next reading, not several days out — based on how much the price has typically moved by the next check over our ${Number.isInteger(n) && n > 0 ? `last ${n}` : "recent"} test runs. (The "about ₹X in 5 days" note on the main page is a separate, longer-range estimate.)`,
+    methNextDayExplainerNextFix: 'This is just for the next official rate, not several days out. The range comes from how far the official rate has recently landed from our estimate, made wider or narrower for how much prices are moving now. (The "about ₹X in 5 days" note on the main page is a separate, longer-range estimate.)',
 
     // ── Direction signal ─────────────────────────────────────────────────────────
     methDirectionHeading: "Direction signal",
@@ -77,7 +82,7 @@ const STRINGS_HWK = {
     methAccurateP2CoverageTested: ({ pct, n }) => `${pct}% of the time in a test on ${n} past days`,
     methAccurateP2Tested: "This is a test on past days, not a live record: each day's range is sized from the model's own recent misses, then checked against what the official rate turned out to be. Live results can differ, and the figure stays a test result until enough real days have passed.",
     methAccurateP2CoverageUnknown: "close to on target so far — still building a track record",
-    methAccurateP2: "It's based on just the last 30 test runs, so it's a small sample. We narrowed this range in July 2026 after realizing it had been sized for 5-day moves but only ever checked against next-day prices — so the percentage above may look better than it really is for a while, until enough checks have happened under the corrected, narrower range. We'll call it fully proven once that settles.",
+    methAccurateP2: ({ n } = {}) => `It's based on just the ${Number.isInteger(n) && n > 0 ? `last ${n}` : "most recent"} test runs, so it's a small sample. We narrowed this range in July 2026 after realizing it had been sized for 5-day moves but only ever checked against next-day prices — so the percentage above may look better than it really is for a while, until enough checks have happened under the corrected, narrower range. We'll call it fully proven once that settles.`,
     methAccurateP3Strong: "About the direction signal",
     // AE2 (audit 2026-09-10): "roughly 70%" was a hand-typed, one-time
     // snapshot (ADR 019, 2026-06-02, a specific 165-fold backtest's P(actual
@@ -146,12 +151,13 @@ const STRINGS_HWK = {
     methNextFixHoldSub: "इसके बाद के दुनिया के भाव आने तक यही हमारा सबसे अच्छा अंदाज़ा है",
     methNextFixStrong: "अगले आधिकारिक भाव के लिए हम दुनिया के भाव देखते हैं",
     methNextFixP: ({ n, modelMae, flatMae, pct }) =>
-      `भारत का आधिकारिक भाव रोज़ दोपहर में एक बार तय होता है, पर सोना और रुपया देर रात तक दुनिया भर में बिकते-ख़रीदे जाते हैं। उस बाद की चाल से हम अगले भाव का अनुमान लगाते हैं। ऐसे ${n} दिनों पर जांचा जो इसने पहले नहीं देखे थे: औसतन ₹${modelMae}/ग्राम का फ़र्क़, जबकि "कोई बदलाव नहीं" मानने पर ₹${flatMae}/ग्राम (${pct}% बेहतर)। एक हफ़्ते या उससे आगे के लिए "कोई बदलाव नहीं" ही अभी हमारे पास सबसे अच्छा अंदाज़ा है।`,
+      `भारत का आधिकारिक भाव हर कामकाजी दिन दो बार तय होता है, सुबह और दोपहर में, पर सोना और रुपया देर रात तक दुनिया भर में बिकते-ख़रीदे जाते हैं। दोपहर के भाव के बाद की उस चाल से हम अगली दोपहर के भाव का अनुमान लगाते हैं। ऐसे ${n} दिनों पर जांचा जो इसने पहले नहीं देखे थे: औसतन ₹${modelMae}/ग्राम का फ़र्क़, जबकि "कोई बदलाव नहीं" मानने पर ₹${flatMae}/ग्राम (${pct}% बेहतर)। एक हफ़्ते या उससे आगे के लिए "कोई बदलाव नहीं" ही अभी हमारे पास सबसे अच्छा अंदाज़ा है।`,
     methDirectionOn: "चालू — सिर्फ़ अगली चाल के लिए",
     methDirectionOnNote: "हम यह तभी दिखाते हैं कि अगली चाल ऊपर की ओर होने की संभावना ज़्यादा है या नीचे की, और कितनी — जब तक यह नए दिनों पर \"सोना आम तौर पर बढ़ता है\" वाले अंदाज़े से बेहतर रहता है; इसे हर कुछ घंटों में दोबारा जांचा जाता है। यह ख़रीदने या बेचने की सलाह नहीं है; उसके लिए इससे कहीं मज़बूत रिकॉर्ड चाहिए।",
     methCoversMoves: "रोज़ की ज़्यादातर आम घट-बढ़ इसमें आ जाती है",
     methTargetLine: ({ date }) => `किस दिन के लिए: ${date}`,
-    methNextDayExplainer: 'यह सिर्फ़ अगले भाव के लिए है, कई दिन आगे के लिए नहीं — हमारे पिछले 30 टेस्ट में अगली जांच तक भाव आम तौर पर कितना बदला, उस पर आधारित है। (मुख्य पेज का "5 दिनों में करीब ±₹X" वाला नोट एक अलग, लंबे समय का अनुमान है।)',
+    methNextDayExplainer: ({ n } = {}) => `यह सिर्फ़ अगले भाव के लिए है, कई दिन आगे के लिए नहीं — हमारे ${Number.isInteger(n) && n > 0 ? `पिछले ${n}` : "हाल के"} टेस्ट में अगली जांच तक भाव आम तौर पर कितना बदला, उस पर आधारित है। (मुख्य पेज का "5 दिनों में करीब ₹X" वाला नोट एक अलग, लंबे समय का अनुमान है।)`,
+    methNextDayExplainerNextFix: 'यह सिर्फ़ अगले आधिकारिक भाव के लिए है, कई दिन आगे के लिए नहीं। रेंज इस पर आधारित है कि हाल में आधिकारिक भाव हमारे अनुमान से कितना दूर आया, और अभी भाव में जितनी घट-बढ़ है उसके हिसाब से इसे बड़ा या छोटा किया जाता है। (मुख्य पेज का "5 दिनों में करीब ₹X" वाला नोट एक अलग, लंबे समय का अनुमान है।)',
 
     // ── Direction signal ─────────────────────────────────────────────────────────
     methDirectionHeading: "ऊपर या नीचे का संकेत",
@@ -168,7 +174,7 @@ const STRINGS_HWK = {
       `सोने के भाव का कुछ दिन आगे का अंदाज़ा लगाना भी मुश्किल है — हमने जितने भी मॉडल आज़माए, सब सिर्फ़ "कोई बदलाव नहीं" मान लेने से भी कमज़ोर निकले। ${span ? `${span} के बीच ` : ""}${n} अलग-अलग समय-खंडों पर टेस्ट किया गया:<br>&bull; "कोई बदलाव नहीं" मानने पर औसतन ₹${naiveMae}/ग्राम का फ़र्क़ आया<br>${chronosBullet}इसलिए हम "कोई बदलाव नहीं" वाला अंदाज़ा ही रखते हैं।`,
     methAccurateP1ChronosBullet: ({ chronosMae, maePctWorse, pValOp, pValText }) => `&bull; हमारे AI मॉडल में ₹${chronosMae}/ग्राम का फ़र्क़ आया — ${maePctWorse}% ज़्यादा ग़लत (p&thinsp;${pValOp}&thinsp;${pValText})<br>`,
     methRangeStrFallback: "मौजूदा",
-    methAccurateP2: "यह सिर्फ़ पिछले 30 टेस्ट पर आधारित है, इसलिए नमूना छोटा है। जुलाई 2026 में हमने इस रेंज को छोटा किया, क्योंकि पता चला कि इसे 5 दिन की चाल के हिसाब से बनाया गया था पर हमेशा अगले दिन के भाव से जांचा जाता था — इसलिए ऊपर का प्रतिशत कुछ समय तक असल से बेहतर दिख सकता है, जब तक सुधारी हुई, छोटी रेंज पर काफ़ी जांच न हो जाएं। जब यह टिक जाएगा, तब हम इसे पूरी तरह पक्का मानेंगे।",
+    methAccurateP2: ({ n } = {}) => `यह सिर्फ़ ${Number.isInteger(n) && n > 0 ? `पिछले ${n}` : "हाल के कुछ"} टेस्ट पर आधारित है, इसलिए नमूना छोटा है। जुलाई 2026 में हमने इस रेंज को छोटा किया, क्योंकि पता चला कि इसे 5 दिन की चाल के हिसाब से बनाया गया था पर हमेशा अगले दिन के भाव से जांचा जाता था — इसलिए ऊपर का प्रतिशत कुछ समय तक असल से बेहतर दिख सकता है, जब तक सुधारी हुई, छोटी रेंज पर काफ़ी जांच न हो जाएं। जब यह टिक जाएगा, तब हम इसे पूरी तरह पक्का मानेंगे।`,
     methAccurateP3Strong: "ऊपर-नीचे के संकेत के बारे में",
     methAccurateP3: ({ dirAllDisplay, n }) => `हमारा AI ${n} टेस्ट में ${dirAllDisplay} बार सही निकला। लेकिन सोना इतिहास में गिरने से कहीं ज़्यादा बार बढ़ा है — इसलिए बिना किसी मॉडल के हर बार सिर्फ़ "बढ़ेगा" कहने पर भी लगभग उतना ही सही निकलता। हम यहां किसी बढ़त का दावा नहीं करते। मुख्य पेज के "सस्ता / महंगा हो रहा है" वाले लेबल हाल के 7 दिन के ट्रेंड से आते हैं, इस AI से नहीं।`,
     methAccurateP4Strong: "इसमें बदलाव कब होगा",
