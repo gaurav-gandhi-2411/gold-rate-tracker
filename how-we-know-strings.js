@@ -68,8 +68,8 @@ const STRINGS_HWK = {
     // ── How accurate is this ─────────────────────────────────────────────────────
     methHowAccurateHeading: "How accurate is this?",
     methAccurateP1Strong: "We assume tomorrow's price is about the same as today's",
-    methAccurateP1: ({ n, naiveMae, chronosBullet }) =>
-      `Gold prices are hard to predict even a few days out — every model we tried did worse than simply guessing "no change." Tested over ${n} time windows from 2022–2026:<br>&bull; Guessing "no change" was off by ₹${naiveMae}/g on average<br>${chronosBullet}So "no change" is what we go with.`,
+    methAccurateP1: ({ n, naiveMae, chronosBullet, span }) =>
+      `Gold prices are hard to predict even a few days out — every model we tried did worse than simply guessing "no change." Tested over ${n} time windows${span ? ` from ${span}` : ""}:<br>&bull; Guessing "no change" was off by ₹${naiveMae}/g on average<br>${chronosBullet}So "no change" is what we go with.`,
     methAccurateP1ChronosBullet: ({ chronosMae, maePctWorse, pValOp, pValText }) => `&bull; Our AI model was off by ₹${chronosMae}/g — ${maePctWorse}% worse (p&thinsp;${pValOp}&thinsp;${pValText})<br>`,
     methRangeStrFallback: "the current range",
     methAccurateP2Strong: ({ rangeStr, coverageText }) => `Our ${rangeStr} range has been right ${coverageText}`,
@@ -110,7 +110,7 @@ const STRINGS_HWK = {
     // duplicated in how-we-know.js — see that file's own comment).
     methBandAccuracyHeading: "Band accuracy (measured)",
     methBandAccuracyText: ({ amount, pct, n, asOf }) => `In a test on past weeks, the real price landed within about ₹${amount}/gram of the displayed estimate ${pct}% of the time (n=${n} days measured, as of ${asOf}).`,
-    methBandAccuracyUnknown: "No measurement in the last 14 days — the next weekly re-check will refresh this.",
+    methBandAccuracyUnknown: ({ days }) => `No measurement in the last ${days} days — the next weekly re-check will refresh this.`,
   },
 
   hi: {
@@ -164,8 +164,8 @@ const STRINGS_HWK = {
     // ── How accurate is this ─────────────────────────────────────────────────────
     methHowAccurateHeading: "यह कितना सही है?",
     methAccurateP1Strong: "हम मानते हैं कि कल का भाव आज जैसा ही रहेगा",
-    methAccurateP1: ({ n, naiveMae, chronosBullet }) =>
-      `सोने के भाव का कुछ दिन आगे का अंदाज़ा लगाना भी मुश्किल है — हमने जितने भी मॉडल आज़माए, सब सिर्फ़ "कोई बदलाव नहीं" मान लेने से भी कमज़ोर निकले। 2022–2026 के बीच ${n} अलग-अलग समय-खंडों पर टेस्ट किया गया:<br>&bull; "कोई बदलाव नहीं" मानने पर औसतन ₹${naiveMae}/ग्राम का फ़र्क़ आया<br>${chronosBullet}इसलिए हम "कोई बदलाव नहीं" वाला अंदाज़ा ही रखते हैं।`,
+    methAccurateP1: ({ n, naiveMae, chronosBullet, span }) =>
+      `सोने के भाव का कुछ दिन आगे का अंदाज़ा लगाना भी मुश्किल है — हमने जितने भी मॉडल आज़माए, सब सिर्फ़ "कोई बदलाव नहीं" मान लेने से भी कमज़ोर निकले। ${span ? `${span} के बीच ` : ""}${n} अलग-अलग समय-खंडों पर टेस्ट किया गया:<br>&bull; "कोई बदलाव नहीं" मानने पर औसतन ₹${naiveMae}/ग्राम का फ़र्क़ आया<br>${chronosBullet}इसलिए हम "कोई बदलाव नहीं" वाला अंदाज़ा ही रखते हैं।`,
     methAccurateP1ChronosBullet: ({ chronosMae, maePctWorse, pValOp, pValText }) => `&bull; हमारे AI मॉडल में ₹${chronosMae}/ग्राम का फ़र्क़ आया — ${maePctWorse}% ज़्यादा ग़लत (p&thinsp;${pValOp}&thinsp;${pValText})<br>`,
     methRangeStrFallback: "मौजूदा",
     methAccurateP2: "यह सिर्फ़ पिछले 30 टेस्ट पर आधारित है, इसलिए नमूना छोटा है। जुलाई 2026 में हमने इस रेंज को छोटा किया, क्योंकि पता चला कि इसे 5 दिन की चाल के हिसाब से बनाया गया था पर हमेशा अगले दिन के भाव से जांचा जाता था — इसलिए ऊपर का प्रतिशत कुछ समय तक असल से बेहतर दिख सकता है, जब तक सुधारी हुई, छोटी रेंज पर काफ़ी जांच न हो जाएं। जब यह टिक जाएगा, तब हम इसे पूरी तरह पक्का मानेंगे।",
@@ -185,7 +185,7 @@ const STRINGS_HWK = {
 
     // ── Band accuracy (measured) ─────────────────────────────────────────────────
     methBandAccuracyHeading: "रेंज कितनी सही रही (नापा हुआ)",
-    methBandAccuracyUnknown: "पिछले 14 दिनों में कोई माप नहीं हुआ — अगली साप्ताहिक जांच इसे अपडेट कर देगी।",
+    methBandAccuracyUnknown: ({ days }) => `पिछले ${days} दिनों में कोई माप नहीं हुआ — अगली साप्ताहिक जांच इसे अपडेट कर देगी।`,
   },
 };
 

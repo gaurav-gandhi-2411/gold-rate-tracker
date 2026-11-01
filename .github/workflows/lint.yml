@@ -249,6 +249,7 @@ jobs:
             tests/test_feature_flags.js \
             tests/test_good_price.js \
             tests/test_hero_display_state.js \
+            tests/test_hwk_computed_numbers.js \
             tests/test_page_v2.js \
             tests/test_pvalue_format.js \
             tests/test_scrape.js \

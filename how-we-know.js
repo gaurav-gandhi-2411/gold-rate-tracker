@@ -96,6 +96,19 @@ function deriveMeasuredBandCoverage(bandCoverage, nowMs = Date.now()) {
   return { coverage: Math.round(bandCoverage.coverage * 1000) / 10, n: bandCoverage.n, asOf: bandCoverage.generated_at_utc };
 }
 
+// The calendar years the backtest's folds span ("2022–2026"), from each fold's context_end_date, so
+// the copy follows the data instead of a hand-typed range (brief B2, 2026-11-01). Null when no fold
+// carries a usable date: the sentence then drops the span rather than guess one.
+function foldYearSpan(folds) {
+  if (!Array.isArray(folds)) return null;
+  const years = folds
+    .map(f => (typeof f?.context_end_date === "string" ? Number(f.context_end_date.slice(0, 4)) : NaN))
+    .filter(y => Number.isInteger(y) && y > 1900);
+  if (years.length === 0) return null;
+  const lo = Math.min(...years), hi = Math.max(...years);
+  return lo === hi ? String(lo) : `${lo}–${hi}`;
+}
+
 // ── Data URLs (same paths app.js reads) ────────────────────────────────────────
 
 const FORECAST_URL = "data/forecast.json";
@@ -256,7 +269,7 @@ function renderFullMethodology(fc, bt, drift, coverage, bandCoverage) {
     const p1Html = btFresh ? `
         <p class="meth-text"><strong>${tHwk("methAccurateP1Strong")}</strong><br>
         ${tHwk("methAccurateP1", {
-          n, naiveMae,
+          n, naiveMae, span: foldYearSpan(bt.folds),
           chronosBullet: maePctWorse != null ? tHwk("methAccurateP1ChronosBullet", { chronosMae, maePctWorse, pValOp, pValText }) : "",
         })}</p>` : "";
     const p3Html = btFresh ? `
@@ -304,7 +317,7 @@ function renderFullMethodology(fc, bt, drift, coverage, bandCoverage) {
               n: measured.n,
               asOf: fmtIST(measured.asOf),
             })
-          : tHwk("methBandAccuracyUnknown")}</p>
+          : tHwk("methBandAccuracyUnknown", { days: CLAIM_MAX_AGE_DAYS })}</p>
       </div>
     `);
   }
