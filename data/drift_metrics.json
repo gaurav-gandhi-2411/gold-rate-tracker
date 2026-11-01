@@ -1,21 +1,5 @@
 [
   {
-    "ts": "2026-10-02T17:56:59.276264+00:00",
-    "target_time": "2026-10-03T00:00:00+00:00",
-    "actual_ts": "2026-10-02T17:51:42.071Z",
-    "residual": -2.0,
-    "model_version": "nextfix_ridge_mlp_v1",
-    "baseline_mae": 248.29
-  },
-  {
-    "ts": "2026-10-02T19:07:54.327593+00:00",
-    "target_time": "2026-10-03T00:00:00+00:00",
-    "actual_ts": "2026-10-02T18:56:24.680Z",
-    "residual": -2.0,
-    "model_version": "nextfix_ridge_mlp_v1",
-    "baseline_mae": 248.29
-  },
-  {
     "ts": "2026-10-03T06:23:48.240308+00:00",
     "target_time": "2026-10-04T00:00:00+00:00",
     "actual_ts": "2026-10-03T06:17:19.485Z",
@@ -1091,6 +1075,14 @@
     "ts": "2026-11-01T14:28:35.016782+00:00",
     "target_time": "2026-11-02T00:00:00+00:00",
     "actual_ts": "2026-11-01T14:21:31.522Z",
+    "residual": 115.0,
+    "model_version": "nextfix_p3_v1",
+    "baseline_mae": 241.07
+  },
+  {
+    "ts": "2026-11-01T20:21:24.390778+00:00",
+    "target_time": "2026-11-02T00:00:00+00:00",
+    "actual_ts": "2026-11-01T20:11:22.688Z",
     "residual": 115.0,
     "model_version": "nextfix_p3_v1",
     "baseline_mae": 241.07
