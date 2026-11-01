@@ -162,7 +162,8 @@ function renderFullMethodology(fc, bt, drift, coverage, bandCoverage) {
     const rr      = fc?.next_fix?.range_record;
     const nfCov   = fc?.next_fix?.active === true && typeof rr?.coverage === "number" && rr.n > 0;
     const covSrc  = nfCov ? { coverage: rr.coverage, n: rr.n } : coverage;
-    const covOk   = nfCov || (coverage && typeof coverage.coverage === "number" && coverage.n > 0
+    const covOk   = nfCov || (fc?.next_fix?.active !== true
+      && coverage && typeof coverage.coverage === "number" && coverage.n > 0
       && isMeasurementFresh(coverage.generated_at_utc, Date.now()));
     const timesN  = covOk ? Math.max(0, Math.min(10, Math.floor(covSrc.coverage * 10 + 1e-9))) : null;
     const times   = covOk ? fractionOutOf10Phrase(covSrc.coverage * 100) : null;
@@ -250,7 +251,8 @@ function renderFullMethodology(fc, bt, drift, coverage, bandCoverage) {
     const rrA       = fc?.next_fix?.range_record;
     const nfCovA    = fc?.next_fix?.active === true && typeof rrA?.coverage === "number" && rrA.n > 0;
     const covSrcA   = nfCovA ? { coverage: rrA.coverage, n: rrA.n } : coverage;
-    const hasCoverage = nfCovA || (coverage && typeof coverage.coverage === "number" && coverage.n > 0
+    const hasCoverage = nfCovA || (fc?.next_fix?.active !== true
+      && coverage && typeof coverage.coverage === "number" && coverage.n > 0
       && isMeasurementFresh(coverage.generated_at_utc, Date.now()));
     const coverPct = hasCoverage ? Math.round(covSrcA.coverage * 100) : null;
     const coverN   = hasCoverage ? covSrcA.n : null;

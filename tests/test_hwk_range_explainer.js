@@ -71,6 +71,10 @@ test("model active but no range record: no legacy 'last N test runs' paragraph f
     const html = render({ fc });
     assert.doesNotMatch(html, /test runs/);
     assert.match(html, /This is a test on past days, not a live record/);
+    // the flat band's 73% / 63 (COVERAGE) belongs to a different range: never quoted for this one
+    assert.doesNotMatch(html, /73%|checked 63 times|7 times out of 10/);
+    assert.match(html, /still building a track record/);
+    assert.match(html, /Range: ₹12,542 – ₹12,788/);
   }
 });
 
