@@ -2442,8 +2442,14 @@ function renderForecastVsActual(bt) {
       label: fmtDateShort(r.day + "T00:00:00Z"),
       err: r.err,
       inRange: r.in_range === true ? true : r.in_range === false ? false : null,
+      // fail closed (ml/live_monitor.py's rule): only retro === false is a day issued live
+      live: r.retro === false,
     }));
   if (pts.length < 3) { section.hidden = true; return; }
+  // B2 (2026-11-01): the caption's re-run/live split is counted from the days actually plotted.
+  const nLive = pts.filter(p => p.live).length;
+  const caption = section.querySelector(".track-record-caption");
+  if (caption) caption.textContent = t("trackRecordCaption", { retro: pts.length - nLive, live: nLive });
 
   const labels  = pts.map(p => p.label);
   const errs    = pts.map(p => p.err);
