@@ -1,10 +1,10 @@
 {
  "category": "raw GRT/Malabar/Kalyan rates (ADR 059)",
  "ciphertext": "data/encrypted/data/fusion_snapshots.parquet.enc",
- "ciphertext_sha256": "9a04f26597377743bd0f72172f9740653cba283d6de82965aba2a7c40bbf76fb",
+ "ciphertext_sha256": "6dc992ecbf36744e1f76477c9bc2e53ebcdfa7a24d3b27145346d07b0d2a33ac",
  "format": "GRTENC v1, AES-256-GCM, scrypt",
  "key_id": "88fadeb62be0b8f4",
  "path": "data/fusion_snapshots.parquet",
- "plaintext_bytes": 26958,
- "plaintext_sha256": "24866c54d801b5ae9ca8ad2e9c7468a407ae23a5514bc64acd63f390eec49b0a"
+ "plaintext_bytes": 26987,
+ "plaintext_sha256": "d6983d0cfd1e3745ff9cf19b50315be6b106f4f8fc3d6eb8fa6f90068ef552ed"
 }
