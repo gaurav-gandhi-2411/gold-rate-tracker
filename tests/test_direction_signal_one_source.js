@@ -30,7 +30,7 @@ const TRACK = {
 // show = gate passed AND promoted; the hold modes carry show false and a null probability.
 function fc({
   mode = "after_us_close", show = mode === "after_us_close", prob = 0.62, side = "up",
-  gate = true, active = true, at = FRESH, range = true,
+  gate = true, active = true, at = FRESH, range = true, demoted = false, violations = [],
 } = {}) {
   const hold = mode !== "after_us_close";
   return {
@@ -41,6 +41,8 @@ function fc({
       active,
       mode,
       track_record: { ...TRACK, direction_gate_ship: gate },
+      demotion: { demoted, reasons: demoted ? ["direction floor"] : [] },
+      leak_guard: { checked: true, n_inputs: 1, violations },
       direction: hold ? { show, side: "unclear", probability: null } : { show, side, probability: prob },
     },
   };
@@ -100,6 +102,10 @@ test("state: on only with show === true, a probability in [0, 1], a range, activ
     const inactive = s(fc({ active: false }), NOW);
     assert.equal(inactive.on, false);
     assert.equal(inactive.hold, false);
+    // ml/nextfix.py also falls back to the afternoon hold when the model is demoted or the leak
+    // guard found a violation; then the direction does not come back after the US close
+    assert.equal(s(fc({ mode: "after_afternoon_rate", demoted: true }), NOW).hold, false);
+    assert.equal(s(fc({ mode: "after_afternoon_rate", violations: ["x"] }), NOW).hold, false);
     const stale = s(fc({ mode: "after_afternoon_rate", at: STALE }), NOW);
     assert.equal(stale.on, false);
     assert.equal(stale.hold, false); // out of date is not the normal hold
@@ -127,7 +133,8 @@ test("the 2026-11-02 afternoon: Off until the US close, with the real reason and
   const main = mainPage(fc({ mode: "after_afternoon_rate" }));
   assert.equal(main.state.on, false);
   assert.doesNotMatch(main.signal, /good-price-direction"/);
-  assert.match(main.summary, /We don't guess whether prices will rise or fall next\./);
+  assert.match(main.summary, /We say whether the next official rate is more likely to be higher or lower only after the US market closes/);
+  assert.doesNotMatch(main.summary, /We don't guess/); // false: it is approved and comes back
 });
 
 test("after the US close: On on both pages, and nothing says it is off", () => {
@@ -160,6 +167,14 @@ test("out of date data: Off right now, not the hold reason", () => {
   assert.doesNotMatch(page, /Off until the US market closes/);
   // after the US close but not shown: not the hold either
   assert.match(hwk(fc({ show: false })), /Status Off right now/);
+  for (const f of [fc({ mode: "after_afternoon_rate", demoted: true }),
+    fc({ mode: "after_afternoon_rate", violations: ["x"] })]) {
+    const page = hwk(f);
+    assert.match(page, /Status Off right now/);
+    assert.match(page, /and the model is passing its regular checks/);
+    assert.doesNotMatch(page, /comes back after the next US close/);
+    assert.match(mainPage(f).summary, /We are not saying right now whether prices are more likely to rise or fall\./);
+  }
 });
 
 test("the two pages agree in every state", () => {
@@ -167,6 +182,7 @@ test("the two pages agree in every state", () => {
     fc(), fc({ mode: "after_morning_rate" }), fc({ mode: "after_afternoon_rate" }),
     fc({ active: false }), fc({ at: STALE }), fc({ gate: false, show: false }), fc({ show: false }),
     fc({ show: "true" }), fc({ show: 1 }), fc({ prob: null }), fc({ prob: 1.7 }), fc({ range: false }),
+    fc({ mode: "after_afternoon_rate", demoted: true }), fc({ mode: "after_morning_rate", violations: ["x"] }),
   ];
   for (const f of cases) {
     for (const lang of ["en", "hi"]) {
@@ -177,7 +193,15 @@ test("the two pages agree in every state", () => {
       const label = `${lang} ${JSON.stringify(f.next_fix.direction)} ${f.next_fix.mode} active=${f.next_fix.active}`;
       assert.equal(hwkOn, main.state.on, label);
       assert.equal(mainOn, main.state.on, label);
-      assert.equal(/We don't guess|हम यह अंदाज़ा नहीं लगाते/.test(main.summary), !main.state.on, label);
+      const homeHold = /only after the US market closes|सिर्फ़ अमेरिकी बाज़ार बंद होने के बाद/.test(main.summary);
+      const hwkHold = /Off until the US market closes|अमेरिकी बाज़ार बंद होने तक बंद/.test(page);
+      assert.equal(homeHold, hwkHold, label);
+      assert.equal(homeHold, main.state.hold, label);
+      const homeOff = /We don't guess|हम यह अंदाज़ा नहीं लगाते|only after the US market closes|सिर्फ़ अमेरिकी बाज़ार बंद होने के बाद|We are not saying right now|अभी हम यह नहीं बता रहे/;
+      assert.equal(homeOff.test(main.summary), !main.state.on, label);
+      // "we don't guess" only while the model's test has not passed
+      assert.equal(/We don't guess|हम यह अंदाज़ा नहीं लगाते/.test(main.summary),
+        !main.state.on && !main.state.record?.passed, label);
     }
   }
 });

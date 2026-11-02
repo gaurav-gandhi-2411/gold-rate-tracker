@@ -107,3 +107,11 @@ Round 2 (2026-11-03), the reworded strings:
 | `methDirectionRecordSub` (both variants), `methDirectionOnSub`, `methDirectionOffHold`, `methDirectionOffPaused`, `methDirectionPausedNote`, `methAccurateP3Strong`, `methAccurateP4` | both ACCEPT | draft | both noted बंद twice in `methDirectionOffHold` is clear; any rewording would add a claim |
 | `methDirectionHoldNote` | sonnet ACCEPT, opus CHANGE | यह फिर दिखेगा -> दिशा फिर दिखेगी | on a second look sonnet agreed: masculine यह points back to अनुमान, implying the estimate disappears; it is the direction that comes back |
 | `methAccurateP3` | both CHANGE, different fixes; combined, both ACCEPT | ${dirAllDisplay} बार -> ${dirAllDisplay} मौकों पर; dropped भी; किसी बढ़त का दावा नहीं करते -> यह दावा नहीं करते कि यह सिक्का उछालने से बेहतर है | sonnet: "49% बार" is unnatural and भी adds "even" the English lacks; opus: the glossary reserves बढ़त for a price rise, so it could read "we don't claim it rises" |
+
+Round 3 (2026-11-02, after the verifier's re-review: a demoted or leak-guarded model also falls back
+to the hold, and the main page still said "We don't guess"):
+
+| Key | Judges | Applied | Note |
+|---|---|---|---|
+| `methDirectionPausedNote` (adds "and the model is passing its regular checks"), `accSummaryDirectionPaused` | both ACCEPT | draft | |
+| `accSummaryDirectionHold` | sonnet ACCEPT, opus CHANGE | अगला आधिकारिक भाव ज़्यादा होने की संभावना है या कम होने की -> अगले आधिकारिक भाव के बढ़ने की संभावना ज़्यादा है या घटने की | on a second look sonnet agreed: the draft was ungrammatical (needs अगले … भाव के) and lost "more likely"; बढ़ने/घटने matches `accSummaryDirectionPaused` |

@@ -2578,9 +2578,13 @@ function renderAccuracySummary(fc, drift) {
   const driftSentence = "";
 
   // Never while the direction is shown (i18n.js directionSignalState, shared with how-we-know.html).
-  const directionOffParagraph = fc?.chronos_companion?.status === "success"
-    && !directionSignalState(fc, Date.now()).on
-    ? `<p class="meth-text">${t("accSummaryDirectionOff")}</p>`
+  // While the approved direction is off, say why, as how-we-know does: it is not "we don't guess".
+  const dirState = directionSignalState(fc, Date.now());
+  const offKey = dirState.record?.passed
+    ? (dirState.hold ? "accSummaryDirectionHold" : "accSummaryDirectionPaused")
+    : "accSummaryDirectionOff";
+  const directionOffParagraph = fc?.chronos_companion?.status === "success" && !dirState.on
+    ? `<p class="meth-text">${t(offKey)}</p>`
     : "";
 
   // XSS-safe: driftSentence/directionOffParagraph are t() catalogue literals only.

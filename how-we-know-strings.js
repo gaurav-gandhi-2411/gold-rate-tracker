@@ -83,7 +83,7 @@ const STRINGS_HWK = {
     methDirectionOffPaused: "Off right now",
     methDirectionRecordSub: (r) => _hwkRecordEn(r),
     methDirectionHoldNote: "Our estimate of the next official rate gives a direction (more likely higher or lower) only from the US market's close until India's next morning rate is set. The rest of the day the estimate is simply India's latest official rate, so there is no direction to show. It comes back after the next US close. It is never advice to buy or sell.",
-    methDirectionPausedNote: "The main page shows the direction only while our latest data is complete and up to date. Right now it is not, so no direction is shown. It is never advice to buy or sell.",
+    methDirectionPausedNote: "The main page shows the direction only while our latest data is complete and up to date and the model is passing its regular checks. Right now one of these is not the case, so no direction is shown. It is never advice to buy or sell.",
 
     // ── How accurate is this ─────────────────────────────────────────────────────
     methHowAccurateHeading: "How accurate is this?",
@@ -194,7 +194,7 @@ const STRINGS_HWK = {
     methDirectionOffPaused: "अभी बंद",
     methDirectionRecordSub: (r) => _hwkRecordHi(r),
     methDirectionHoldNote: "अगले आधिकारिक भाव का हमारा अनुमान दिशा (ज़्यादा होने या कम होने की संभावना) सिर्फ़ अमेरिकी बाज़ार बंद होने से लेकर भारत का अगला सुबह का भाव तय होने तक बताता है। दिन के बाकी समय यह अनुमान बस भारत का सबसे ताज़ा आधिकारिक भाव होता है, इसलिए दिखाने के लिए कोई दिशा नहीं होती। अगली बार अमेरिकी बाज़ार बंद होने के बाद दिशा फिर दिखेगी। यह कभी ख़रीदने या बेचने की सलाह नहीं है।",
-    methDirectionPausedNote: "मुख्य पेज दिशा तभी दिखाता है जब हमारा ताज़ा डेटा पूरा और अपडेटेड हो। अभी ऐसा नहीं है, इसलिए कोई दिशा नहीं दिखाई जा रही। यह कभी ख़रीदने या बेचने की सलाह नहीं है।",
+    methDirectionPausedNote: "मुख्य पेज दिशा तभी दिखाता है जब हमारा ताज़ा डेटा पूरा और अपडेटेड हो और मॉडल अपनी नियमित जांच में पास हो रहा हो। अभी इनमें से कोई एक बात पूरी नहीं है, इसलिए कोई दिशा नहीं दिखाई जा रही। यह कभी ख़रीदने या बेचने की सलाह नहीं है।",
 
     // ── How accurate is this ─────────────────────────────────────────────────────
     methHowAccurateHeading: "यह कितना सही है?",
