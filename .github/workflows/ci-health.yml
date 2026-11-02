@@ -151,7 +151,9 @@ permissions:
 jobs:
   check:
     runs-on: ubuntu-latest
-    timeout-minutes: 5
+    # 10, not 5: the share-card step can wait on 3 slow fetches (live_freshness.fetch_json retries)
+    # after the freshness step's own; a run cut off by the timeout pages nobody.
+    timeout-minutes: 10
     steps:
       - uses: actions/checkout@v7
 

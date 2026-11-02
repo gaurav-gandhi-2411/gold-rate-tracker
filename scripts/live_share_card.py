@@ -17,7 +17,8 @@ Checks, one incident kind each:
 - disagree:   the card's price is not the published value at the card's own as-of time, or the card is
               as of a time the published data does not have.
 - behind:     newer data of the card's kind has been published for more than BEHIND_H, so the card
-              should have been rebuilt and was not.
+              should have been rebuilt and was not (for a Tanishq card, also an estimate published
+              once the reading was past the page's 8 h switch to the estimate).
 - stale:      the card's as-of time is older than the freshness limit for its kind
               (scripts/live_freshness.py LIMITS_H: a Tanishq reading 20 h, the model's estimate 9 h).
 
@@ -81,16 +82,25 @@ REQUIRED = (
     "card_text",
     "built_at",
 )
-BROKEN_TEXT = re.compile(r"NaN|undefined|\bnull\b|Infinity|Invalid Date")
+# Letter boundaries, not \b: "₹12,825NaN" must match, "financial" must not.
+BROKEN_TEXT = re.compile(
+    r"(?<![a-z])(nan|undefined|null|infinity|invalid date)(?![a-z])", re.IGNORECASE
+)
 # Advice wording. "Not financial advice" (the footer) and "Is it a good price?" (the eyebrow) are not
-# advice; anything that tells the reader what to do with their money is.
+# advice; anything that tells the reader what to do with their money is. Word stems, so "buyers",
+# "purchasing" and "investment" count too. The card's verdicts (i18n.js verdictHeadline*) never use
+# these words; a wider net costs at most one false page, a missed one costs months (2026-05 to 11).
 ADVICE = re.compile(
-    r"\b(buy|buying|sell|selling|invest|investing|purchase)\b"
-    r"|\b(good|right|best|bad) time to\b|\bwait (for|before|to|until)\b|\bhold off\b|\bstock up\b",
+    r"\b(buy|sell|invest|purchas)\w*"
+    r"|\b(good|right|best|bad) time to\b|\bwait\b|\bhold off\b|\bstock up\b|\block in\b|\bact now\b",
     re.IGNORECASE,
 )
 PRICE_TEXT = re.compile(r"^(≈ )?\d{1,3}(,\d{2})*(,\d{3})?$|^(≈ )?\d+$")
 DERIVED_PREFIX = "ibja_calibrated"
+# og.html STALE_THRESHOLD_H (= app.js): past this age a Tanishq reading gives way to the estimate,
+# when the forecast carries one of these sources (og.html heroPrice).
+STALE_THRESHOLD_H = 8.0
+ESTIMATE_SOURCES = ("ibja_calibrated", "fusion_consensus")
 
 
 def _num(v: Any) -> bool:
@@ -142,8 +152,13 @@ def findings(card: Any, prices: Any, forecast: Any, now: datetime) -> dict[str, 
         bad.append(f"missing {', '.join(missing)}")
     if "price" not in missing and not _num(card.get("price")):
         bad.append(f"price is {card.get('price')!r}, not a number")
-    if "price_text" not in missing and not PRICE_TEXT.match(str(card["price_text"])):
-        bad.append(f"the price reads {card['price_text']!r}")
+    if "price_text" not in missing:
+        if not PRICE_TEXT.match(str(card["price_text"])):
+            bad.append(f"the price reads {card['price_text']!r}")
+        elif _num(card.get("price")):
+            drawn = int(str(card["price_text"]).removeprefix("≈ ").replace(",", ""))
+            if abs(drawn - card["price"]) >= 1:  # og.html rounds to whole rupees
+                bad.append(f"the card reads ₹{card['price_text']} but its price is {card['price']}")
     if m := BROKEN_TEXT.search(text):
         bad.append(f"the card says {m.group(0)!r}")
     if "as_of" not in missing and as_of is None:
@@ -191,6 +206,14 @@ def findings(card: Any, prices: Any, forecast: Any, now: datetime) -> dict[str, 
             for ts, v in pts["tanishq"]
             if ts > as_of and abs(v - price) / price <= TANISHQ_MAX_DEV
         ]
+    # A Tanishq card whose og run stopped: once the reading is past STALE_THRESHOLD_H the page shows
+    # the estimate instead, so an estimate published after that point is data the card missed. An
+    # estimate published sooner does not count: the page would still show the reading then, and
+    # nothing reruns og at the 8 h mark itself.
+    if kind == "tanishq" and forecast.get("price_source") in ESTIMATE_SOURCES:
+        newer += [
+            ts for ts, _ in pts["estimate"] if ts > as_of + timedelta(hours=STALE_THRESHOLD_H)
+        ]
     if newer:
         first = min(newer)
         lag_h = (now - first).total_seconds() / 3600
@@ -208,13 +231,31 @@ def findings(card: Any, prices: Any, forecast: Any, now: datetime) -> dict[str, 
     return out
 
 
+def judged(found: dict[str, str]) -> set[str]:
+    """The kinds findings() actually evaluated: it stops early on an unreadable file or a broken card,
+    so the later kinds were not checked and say nothing about whether their incidents cleared."""
+    if "unreadable" in found:
+        return {"unreadable"}
+    if "broken" in found:
+        return {"unreadable", "broken", "advice"}
+    return set(KINDS)
+
+
 def decide(
-    state: dict[str, Any], found: dict[str, str], now: datetime
+    state: dict[str, Any],
+    found: dict[str, str],
+    now: datetime,
+    evaluated: set[str] | None = None,
 ) -> tuple[list[dict[str, str]], dict[str, Any]]:
-    """(messages, new state). Pure: no I/O."""
+    """(messages, new state). Pure: no I/O. An open incident of a kind not in `evaluated` (default:
+    judged(found)) stays open with no message, as live_freshness keeps an incident it could not judge."""
+    if evaluated is None:
+        evaluated = judged(found)
     new = {k: v for k, v in state.items() if k in KINDS}
     msgs: list[dict[str, str]] = []
     for kind in KINDS:
+        if kind not in evaluated:
+            continue
         if kind in found and kind not in new:
             new[kind] = now.isoformat()
             msgs.append(

@@ -192,6 +192,112 @@ def test_simulated_runs_page_bad_with_test_titles_and_stay_quiet_on_good(
     assert "no page: the card is fine" in capsys.readouterr().out
 
 
+def test_an_unreadable_or_broken_run_does_not_recover_what_it_did_not_check() -> None:
+    # verifier F1: stale was open, then a run could not read the files; stale was never judged
+    _, state = sc.decide({}, {"stale": "x", "behind": "y"}, NOW)
+    msgs, state2 = sc.decide(state, {"unreadable": "z"}, NOW + timedelta(hours=1))
+    assert [m["priority"] for m in msgs] == ["high"] and "cannot be checked" in msgs[0]["title"]
+    assert set(state2) == {"stale", "behind", "unreadable"}
+    # a broken card stops before the age checks: stale stays open, unreadable clears
+    msgs3, state3 = sc.decide(state2, {"broken": "b"}, NOW + timedelta(hours=2))
+    titles = [m["title"] for m in msgs3]
+    assert "Gold Tracker: the share card can be checked again" in titles
+    assert "Gold Tracker: the share card is broken (NaN or a missing value)" in titles
+    assert not any("up to date" in t or "caught up" in t for t in titles)
+    assert set(state3) == {"stale", "behind", "broken"}
+    # a full, clean judgement clears them all, once each
+    msgs4, state4 = sc.decide(state3, {}, NOW + timedelta(hours=3))
+    assert len(msgs4) == 3 and state4 == {}
+
+
+def test_judged_matches_where_findings_stops() -> None:
+    prices, forecast = _data()
+    assert sc.judged(sc.findings(None, prices, forecast, NOW)) == {"unreadable"}
+    broken = sc.findings(_card(price=None), prices, forecast, NOW)
+    assert sc.judged(broken) == {"unreadable", "broken", "advice"}
+    assert sc.judged({}) == set(sc.KINDS)
+
+
+def test_nan_only_in_the_card_text_is_broken() -> None:
+    prices, forecast = _data()
+    found = sc.findings(_card(card_text="Is it a good price? ₹12,825NaN"), prices, forecast, NOW)
+    assert "broken" in found and "'NaN'" in found["broken"]
+    lower = sc.findings(_card(card_text="price nan today"), prices, forecast, NOW)
+    assert "broken" in lower
+    # "financial" contains "nan": letter boundaries keep the footer clean
+    assert sc.BROKEN_TEXT.search("Not financial advice · Rates indicative") is None
+
+
+@pytest.mark.parametrize("text", ["12,8x5", "12825.5", "₹12,825", "1,2825", "≈12,825", ""])
+def test_a_malformed_price_text_is_broken(text: str) -> None:
+    prices, forecast = _data()
+    found = sc.findings(_card(price_text=text), prices, forecast, NOW)
+    assert "broken" in found, (text, found)
+
+
+@pytest.mark.parametrize("text", ["12,825", "≈ 12,825", "12825", "1,02,825"])
+def test_a_well_formed_price_text_matches(text: str) -> None:
+    assert sc.PRICE_TEXT.match(text)
+
+
+def test_the_price_text_must_say_the_price() -> None:
+    # verifier F5: a card drawing one number and recording another is broken
+    prices, forecast = _data()
+    found = sc.findings(_card(price_text="12,852"), prices, forecast, NOW)
+    assert "broken" in found and "reads ₹12,852 but its price is 12825" in found["broken"]
+    approx = _card(price=12825.4, price_text="≈ 12,825")
+    assert "broken" not in sc.findings(approx, prices, forecast, NOW)
+
+
+@pytest.mark.parametrize(
+    "text",
+    [
+        "Buyers are back",
+        "Purchasing now makes sense",
+        "a good investment",
+        "Wait a few days",
+        "Lock in today's rate",
+        "Act now",
+        "SELL",
+    ],
+)
+def test_wider_advice_wording_pages(text: str) -> None:
+    prices, forecast = _data()
+    assert "advice" in sc.findings(_card(card_text=text), prices, forecast, NOW)
+
+
+def test_every_verdict_headline_is_not_advice() -> None:
+    i18n = (ROOT / "i18n.js").read_text(encoding="utf-8")
+    import re
+
+    heads = re.findall(r'verdictHeadline\w+: "([^"]+)"', i18n)
+    assert len(heads) >= 8
+    assert [h for h in heads if sc.ADVICE.search(h) or sc.BROKEN_TEXT.search(h)] == []
+
+
+def test_a_tanishq_card_is_behind_an_estimate_published_after_the_8h_switch() -> None:
+    # verifier F2: the og run stopped; the page moved to the IBJA estimate, the card did not
+    prices, forecast = _data(row_h=20, forecast_h=10)
+    forecast.update(price_source="ibja_calibrated", current_22k=12900)
+    del forecast["scraped_at"]
+    card = _card(as_of=_iso(20))
+    found = sc.findings(card, prices, forecast, NOW)
+    assert "behind" in found and "10.0 h" in found["behind"], found
+    # an estimate inside the 8 h window does not count: the page still showed the reading then
+    forecast["predicted_at"] = _iso(14)  # 6 h after the reading
+    assert "behind" not in sc.findings(card, prices, forecast, NOW)
+    # a Tanishq-sourced forecast never replaces the reading on the page
+    forecast.update(predicted_at=_iso(10), price_source="tanishq_scrape")
+    assert "behind" not in sc.findings(card, prices, forecast, NOW)
+
+
+def test_a_simulated_run_never_writes_state(tmp_path: Path) -> None:
+    out = tmp_path / "s.json"
+    for kind in ("bad", "good"):
+        sc.main(["--simulate", kind, "--dry-run", "--state-out", str(out)])
+        assert not out.exists()
+
+
 def test_a_failed_send_keeps_the_old_state(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
 ) -> None:
