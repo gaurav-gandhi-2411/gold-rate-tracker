@@ -1,5 +1,5 @@
 {
-  "predicted_at": "2026-11-02T15:33:52.836483+00:00",
+  "predicted_at": "2026-11-02T20:19:43.378233+00:00",
   "target_window": "5d",
   "headline": {
     "method": "hold_latest_fix_pm_to_am",
@@ -27,39 +27,39 @@
   },
   "chronos_companion": {
     "status": "success",
-    "lean_direction": "up",
-    "lean_strength_pct": 0.503,
+    "lean_direction": "down",
+    "lean_strength_pct": 0.13,
     "direction_acc_30f": 0.2,
     "direction_prob_basis": "base_rate_fallback",
     "horizon_p10": [
-      12617.53,
-      12559.04,
-      12501.7,
-      12455.85,
-      12404.22
+      12249.42,
+      12190.8,
+      12110.51,
+      12050.59,
+      11987.57
     ],
     "horizon_p50": [
-      13040.58,
-      13078.16,
-      13086.19,
-      13095.32,
-      13113.23
+      12720.55,
+      12778.61,
+      12770.68,
+      12769.62,
+      12777.42
     ],
     "horizon_p90": [
-      13510.81,
-      13632.71,
-      13697.7,
-      13741.83,
-      13809.96
+      13222.22,
+      13382.17,
+      13431.52,
+      13470.51,
+      13533.21
     ],
     "model_version": "amazon/chronos-bolt-tiny@a0e552de",
     "calibration_applied": true,
     "calibration_just_unlocked": true,
-    "majority_direction": "up",
+    "majority_direction": "down",
     "direction_consensus": 1.0
   },
   "driver_context": {
-    "computed_at": "2026-11-02T15:33:59.857818+00:00",
+    "computed_at": "2026-11-02T20:19:44.221025+00:00",
     "macro_staleness_days": 0.0,
     "macro_fresh": true,
     "premium_threshold_pct": 15.0,
@@ -106,9 +106,9 @@
     },
     "alignment": "intraday_at_fix"
   },
-  "real_readings_count": 881,
+  "real_readings_count": 882,
   "current_22k": 12825,
-  "scraped_at": "2026-11-02T15:23:43.901Z",
+  "scraped_at": "2026-11-02T20:11:56.453Z",
   "price_source": "tanishq_scrape",
   "est_low": null,
   "est_high": null,
