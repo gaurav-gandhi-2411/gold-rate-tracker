@@ -60,17 +60,55 @@ def test_only_success_and_failure_count() -> None:
         ]
     }
     assert a.conclusions(runs) == ["failure", "success"]
-    assert a.conclusions("garbage") == []
+    for garbage in ("garbage", {"message": "Not Found"}, {"workflow_runs": None}):
+        with pytest.raises(ValueError):
+            a.conclusions(garbage)
 
 
+@pytest.mark.parametrize("content", [None, "not json", '{"message": "Bad credentials"}'])
 def test_unreadable_history_fails_closed(
-    tmp_path: Path, capsys: pytest.CaptureFixture[str]
+    tmp_path: Path, capsys: pytest.CaptureFixture[str], content: str | None
 ) -> None:
-    missing = tmp_path / "none.json"
-    assert a.main(["--current", "failure", "--previous", str(missing), "--dry-run"]) == 0
-    assert "PAGE:" in capsys.readouterr().out
-    assert a.main(["--current", "success", "--previous", str(missing), "--dry-run"]) == 0
+    f = tmp_path / "runs.json"
+    if content is not None:
+        f.write_text(content, encoding="utf-8")
+    assert a.main(["--current", "failure", "--previous", str(f), "--dry-run"]) == 0
+    assert "PAGE: Gold Tracker: share card failed (run history unreadable)" in (
+        capsys.readouterr().out
+    )
+    assert a.main(["--current", "success", "--previous", str(f), "--dry-run"]) == 0
     assert "no page" in capsys.readouterr().out
+
+
+def test_send_posts_title_priority_and_body_to_the_topic(monkeypatch: pytest.MonkeyPatch) -> None:
+    seen = {}
+
+    class Resp:
+        status = 200
+
+        def __enter__(self) -> Resp:
+            return self
+
+        def __exit__(self, *exc: object) -> None:
+            return None
+
+    def fake_urlopen(req: object, timeout: int) -> Resp:
+        seen["req"] = req
+        return Resp()
+
+    monkeypatch.setattr(a.urllib.request, "urlopen", fake_urlopen)
+    msg = a.decide("failure", ["failure"])
+    assert msg is not None and a.send(msg, "topic-x") is True
+    req = seen["req"]
+    assert req.full_url == "https://ntfy.sh/topic-x" and req.get_method() == "POST"
+    assert req.headers["Title"] == msg["title"] and req.headers["Priority"] == "high"
+    assert req.data == msg["body"].encode("utf-8")
+
+    def broken(req: object, timeout: int) -> Resp:
+        raise OSError("down")
+
+    monkeypatch.setattr(a.urllib.request, "urlopen", broken)
+    assert a.send(msg, "topic-x") is False
 
 
 def test_main_reads_the_api_shape(tmp_path: Path, capsys: pytest.CaptureFixture[str]) -> None:
@@ -106,5 +144,9 @@ def test_the_workflow_runs_the_alert_on_every_outcome() -> None:
     assert "NTFY_TOPIC: ${{ secrets.NTFY_TOPIC }}" in body
     assert "select(.id != ${GITHUB_RUN_ID})" in body
     assert "scripts/og_run_alert.py --current" in body
+    # the file gh api writes is the file the script reads
+    written = re.search(r'> "(\$\{RUNNER_TEMP\}/[^"]+)"', body)
+    read = re.search(r'--previous "([^"]+)"', body)
+    assert written and read and written.group(1) == read.group(1)
     # it is the last step, so it sees every earlier step's outcome
     assert "- name:" not in body and "- uses:" not in body

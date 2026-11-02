@@ -64,9 +64,10 @@ def decide(current: str, previous: list[str]) -> dict[str, str] | None:
 
 
 def conclusions(runs: Any) -> list[str]:
-    rows = runs.get("workflow_runs", []) if isinstance(runs, dict) else runs
+    """success/failure conclusions, newest first. ValueError when `runs` is not the API's shape."""
+    rows = runs.get("workflow_runs") if isinstance(runs, dict) else runs
     if not isinstance(rows, list):
-        return []
+        raise ValueError("not a list of workflow runs")
     return [
         r["conclusion"]
         for r in rows
@@ -106,11 +107,22 @@ def main(argv: list[str] | None = None) -> int:
     try:
         previous = conclusions(json.loads(args.previous.read_text(encoding="utf-8")))
     except (OSError, ValueError):
-        # Fail closed: without the history a failure cannot be judged, so a failure pages.
+        # Fail closed: without the history a failure cannot be judged, so a failure pages, and says
+        # why it paged rather than claiming a second failure it could not see.
         print("::warning::could not read the earlier runs; judging this run alone")
-        previous = ["failure"] if current == "failure" else []
-    print(f"this run: {current}; earlier failures in a row: {streak(previous)}")
-    msg = decide(current, previous)
+        if current != "failure":
+            print("no page")
+            return 0
+        msg: dict[str, str] | None = {
+            "title": "Gold Tracker: share card failed (run history unreadable)",
+            "priority": "high",
+            "body": "generate-og-image failed, and its earlier runs could not be read to tell "
+            "whether this is a repeat, so this pages on every failure until they can. "
+            f"og.png keeps the last good card. Runs: {WORKFLOW_URL}",
+        }
+    else:
+        print(f"this run: {current}; earlier failures in a row: {streak(previous)}")
+        msg = decide(current, previous)
     if msg is None:
         print("no page")
         return 0
