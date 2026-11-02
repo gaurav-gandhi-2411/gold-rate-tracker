@@ -56,6 +56,18 @@ _PURITY_MAP: dict[str, str] = {
     "Gold 585": "585",
 }
 
+# On a day with no rates (Sat/Sun, central holidays, and so far every pre-publish fetch seen),
+# ibjarates.com serves the full page with today's table replaced by a notice in this span, e.g.
+# "Rates are not published on Central Govt. Holidays & SAT/SUN" (seen 2026-11-01). Over 90
+# check-price runs (2026-10-23..11-01) every "no recognised purity rows" failure was this state,
+# all 3 attempts failing alike; none was a transient a retry fixed. A missed publish still pages via
+# T9 (ml.notifications, >= 2 business days without a new reading).
+_NOT_PUBLISHED = re.compile(r'<span[^>]*id="lbl_Message"[^>]*>\s*([^<]{1,200}?)\s*</span>')
+
+
+class _NotPublishedError(Exception):
+    """The page says there are no rates for today; retrying cannot change that."""
+
 
 def fetch_ibja_daily() -> dict[str, float]:
     """Fetch today's IBJA AM/PM gold rates from ibjarates.com.
@@ -68,10 +80,16 @@ def fetch_ibja_daily() -> dict[str, float]:
     failing from GitHub Actions runner IPs specifically (works fine from
     non-CI IPs), the same failure class as Tanishq's Cloudflare block.
     Returns an empty dict (and logs a summary WARNING) only after every
-    attempt fails.
+    attempt fails, except on IBJA's "rates are not published" page (weekends,
+    holidays, before the day's first fix): that returns an empty dict after
+    one fetch, with the site's notice logged at INFO.
     """
     for attempt in range(1, _MAX_FETCH_ATTEMPTS + 1):
-        result = _fetch_and_parse_once(attempt)
+        try:
+            result = _fetch_and_parse_once(attempt)
+        except _NotPublishedError as notice:
+            logger.info("ibja: no rates published for today (site notice: %r)", str(notice))
+            return {}
         if result:
             return result
         if attempt < _MAX_FETCH_ATTEMPTS:
@@ -148,6 +166,9 @@ def _fetch_and_parse_once(attempt: int) -> dict[str, float]:
             logger.warning("ibja: could not parse %s row: %s", key, exc)
 
     if not result:
+        notice = _NOT_PUBLISHED.search(html)
+        if notice:
+            raise _NotPublishedError(notice.group(1))
         logger.warning(
             "ibja: no recognised purity rows parsed from table (attempt %d) body_len=%d snippet=%r",
             attempt,
@@ -258,7 +279,9 @@ def append_ibja_today(path: Path | None = None) -> bool | None:
     """
     rates = fetch_ibja_daily()
     if not rates:
-        logger.warning("ibja: no rates fetched — parquet not updated")
+        # fetch_ibja_daily already logged why: a WARNING for a real failure, INFO for a no-publish
+        # day. Paging for a missed publish is T9's job (business-day gap), not this line's.
+        logger.info("ibja: no rates fetched — parquet not updated")
         return None
 
     today = date.today().isoformat()
