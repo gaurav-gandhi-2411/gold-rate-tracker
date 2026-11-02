@@ -68,6 +68,9 @@ jobs:
       - name: Screenshot OG page
         run: node scripts/screenshot-og.mjs http://localhost:8080
 
+      # The sidecar data/og-card.json (what the card drew, for the hourly check in ci-health.yml) goes
+      # in with og.png. It carries its build time, so on its own it always differs: it is committed
+      # only with a changed og.png, or alone the first time, while master has none.
       - name: Commit og.png
         id: commit
         run: |
@@ -75,10 +78,14 @@ jobs:
           git config user.name  gold-rate-bot
           git config user.email gold-rate-bot@users.noreply.github.com
           git add og.png
+          if ! git ls-files --error-unmatch data/og-card.json > /dev/null 2>&1; then
+            git add data/og-card.json
+          fi
           if git diff --cached --quiet; then
             echo "og.png unchanged, skipping commit"
             echo "changed=false" >> "$GITHUB_OUTPUT"
           else
+            git add data/og-card.json
             git commit -m "chore: refresh OG image [skip ci]"
             echo "changed=true" >> "$GITHUB_OUTPUT"
           fi

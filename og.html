@@ -248,19 +248,19 @@
         const ageH = tanishq ? (nowMs - new Date(tanishq.timestamp).getTime()) / 3_600_000 : Infinity;
         const estimateAsOf = forecast?.predicted_at ?? null;
         if (tanishq && ageH <= STALE_THRESHOLD_H) {
-          return { price: tanishq["22k"], approx: false, label: "Tanishq's listed 22K rate", asOf: tanishq.timestamp };
+          return { kind: "tanishq", price: tanishq["22k"], approx: false, label: "Tanishq's listed 22K rate", asOf: tanishq.timestamp };
         }
         if (estimate) {
-          return { price: estimate.value, approx: true, asOf: estimateAsOf,
+          return { kind: "estimate", price: estimate.value, approx: true, asOf: estimateAsOf,
             label: estimate.source === "fusion_consensus"
               ? "Our estimate for today, based on other jewellers' listed rates"
               : "Our estimate for today, from India's official gold rate" };
         }
         if (tanishq) {
-          return { price: tanishq["22k"], approx: false, label: "Tanishq's listed 22K rate", asOf: tanishq.timestamp };
+          return { kind: "tanishq", price: tanishq["22k"], approx: false, label: "Tanishq's listed 22K rate", asOf: tanishq.timestamp };
         }
         if (derived && num(latest["22k"])) {
-          return { price: latest["22k"], approx: true, asOf: latest.timestamp,
+          return { kind: "derived", price: latest["22k"], approx: true, asOf: latest.timestamp,
             label: "Our estimate for today, from India's official gold rate" };
         }
         return null;
@@ -382,6 +382,20 @@
           document.getElementById("loading").style.display = "none";
           const card = document.getElementById("og-card");
           card.style.display = "flex";
+
+          // What was just drawn, for the sidecar data/og-card.json (screenshot-og.mjs) that the hourly
+          // share-card check (scripts/live_share_card.py) judges against the published data.
+          window.__ogCard = {
+            kind: hero.kind,
+            price: hero.price,
+            price_text: document.getElementById("og-price-num").textContent,
+            approx: hero.approx,
+            label: hero.label,
+            as_of: hero.asOf,
+            verdict: v.type,
+            verdict_text: v.text,
+            card_text: card.innerText.replace(/\s+/g, " ").trim(),
+          };
         } catch (err) {
           document.getElementById("loading").textContent = "Error: " + err.message;
           document.body.setAttribute("data-error", err.message);
