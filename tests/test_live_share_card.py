@@ -224,6 +224,8 @@ def test_nan_only_in_the_card_text_is_broken() -> None:
     assert "broken" in found and "'NaN'" in found["broken"]
     lower = sc.findings(_card(card_text="price nan today"), prices, forecast, NOW)
     assert "broken" in lower
+    for bad in ("₹Infinity", "-infinity%", "Invalid Date", "undefined", "null"):
+        assert "broken" in sc.findings(_card(card_text=bad), prices, forecast, NOW), bad
     # "financial" contains "nan": letter boundaries keep the footer clean
     assert sc.BROKEN_TEXT.search("Not financial advice · Rates indicative") is None
 
@@ -247,6 +249,10 @@ def test_the_price_text_must_say_the_price() -> None:
     assert "broken" in found and "reads ₹12,852 but its price is 12825" in found["broken"]
     approx = _card(price=12825.4, price_text="≈ 12,825")
     assert "broken" not in sc.findings(approx, prices, forecast, NOW)
+    # one rupee off is wrong: og.html rounds half away from zero, so a true card is within 0.5
+    assert "broken" in sc.findings(_card(price_text="12,826"), prices, forecast, NOW)
+    half = _card(price=12825.5, price_text="≈ 12,826")
+    assert "broken" not in sc.findings(half, prices, forecast, NOW)
 
 
 @pytest.mark.parametrize(
@@ -259,6 +265,10 @@ def test_the_price_text_must_say_the_price() -> None:
         "Lock in today's rate",
         "Act now",
         "SELL",
+        "Hold off for now",
+        "Stock up before the festival",
+        "A good time to look",
+        "The right time to act",
     ],
 )
 def test_wider_advice_wording_pages(text: str) -> None:
@@ -289,6 +299,15 @@ def test_a_tanishq_card_is_behind_an_estimate_published_after_the_8h_switch() ->
     # a Tanishq-sourced forecast never replaces the reading on the page
     forecast.update(predicted_at=_iso(10), price_source="tanishq_scrape")
     assert "behind" not in sc.findings(card, prices, forecast, NOW)
+
+
+@pytest.mark.parametrize("source", ["ibja_calibrated", "fusion_consensus"])
+def test_the_8h_switch_counts_both_estimate_sources_just_past_the_boundary(source: str) -> None:
+    prices, forecast = _data(row_h=20, forecast_h=11.5)  # estimate 8.5 h after the reading
+    forecast.update(price_source=source, current_22k=12900)
+    del forecast["scraped_at"]
+    found = sc.findings(_card(as_of=_iso(20)), prices, forecast, NOW)
+    assert "behind" in found and "11.5 h" in found["behind"], found
 
 
 def test_a_simulated_run_never_writes_state(tmp_path: Path) -> None:

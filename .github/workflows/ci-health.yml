@@ -168,7 +168,7 @@ jobs:
         run: |
           set -e
           source "${GITHUB_WORKSPACE}/scripts/ci_retry.sh"
-          # this job has a 5-minute timeout: 3 attempts, 5 s base (15 s per call at most)
+          # this job has a 10-minute timeout: 3 attempts, 5 s base (15 s per call at most)
           export CI_RETRY_ATTEMPTS=3 CI_RETRY_BASE=5
 
           # Read the required-contexts list live from branch protection --
