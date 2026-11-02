@@ -187,7 +187,23 @@ const STRINGS = {
     historyCardsAriaLabel: "Price readings",
     trackRecordAriaLabel: "How far the estimate was from the official rate each day, in a test on past days",
     trackRecordHeading: "A test on past days",
-    trackRecordCaption: "In a test on past days: how far the estimate of the next official rate was from the rate that followed, each day, in ₹ per gram. Above the line means the estimate was too high, below the line too low. A filled dot means the official rate landed inside the estimate's range; a hollow diamond means it fell outside. Days before 7 October are the same method run again on past data; later days are estimates made at the time. This is a look back, not today's estimate.",
+    // B2 (2026-11-01): the re-run/live split was a hand-typed date ("Days before 7 October"),
+    // wrong once a later day (14 October) was itself a re-run, and stale once the 30-day window
+    // moves past it. renderForecastVsActual() now passes the counts of the days on the chart
+    // (retro flag from data/backtest.json's p3_past_errors.rows); with no counts (the static
+    // data-i18n pass) the sentence names no number.
+    trackRecordCaption: ({ retro, live } = {}) => {
+      const ok = Number.isInteger(retro) && Number.isInteger(live) && retro + live > 0;
+      const split = !ok
+        ? "Some days are the same method run again on past data; the others are estimates made at the time."
+        : live === 0
+          ? `All ${retro} days are the same method run again on past data.`
+          : retro === 0
+            ? `All ${live} days are estimates made at the time.`
+            : `${retro} of these ${retro + live} days ${retro === 1 ? "is" : "are"} the same method run again on past data; `
+              + (live === 1 ? "the other one is an estimate made at the time." : `the other ${live} are estimates made at the time.`);
+      return "In a test on past days: how far the estimate of the next official rate was from the rate that followed, each day, in ₹ per gram. Above the line means the estimate was too high, below the line too low. A filled dot means the official rate landed inside the estimate's range; a hollow diamond means it fell outside. " + split + " This is a look back, not today's estimate.";
+    },
     trackRecordChartAriaLabel: "Daily gap between the estimate and the official rate in a test on past days, with marks for days inside or outside the range",
     methodologySummary: "How this works",
     // U1 audit (2026-09-23): "calibrate it to match" -> "adjust it to match" (no
@@ -781,7 +797,18 @@ const STRINGS = {
     // see reports/hindi_audit_2026-10/past_days_chart_judgments.json.
     trackRecordHeading: "बीते दिनों की जाँच",
     trackRecordAriaLabel: "बीते दिनों की जाँच में हर दिन अनुमान आधिकारिक भाव से कितना दूर था",
-    trackRecordCaption: "बीते दिनों की जाँच: अगले आधिकारिक भाव का अनुमान, उसके बाद आए भाव से हर दिन कितना दूर रहा, ₹ प्रति ग्राम में। लाइन के ऊपर का मतलब अनुमान ज़्यादा था, नीचे का मतलब कम। भरा हुआ बिंदु यानी आधिकारिक भाव अनुमान की रेंज के अंदर आया; खोखला हीरा यानी रेंज से बाहर गया। 7 अक्टूबर से पहले के दिन उसी तरीक़े को पुराने आँकड़ों पर दोबारा चलाकर निकाले गए हैं; बाद के दिन उस समय किए गए अनुमान हैं। यह पीछे मुड़कर देखना है, आज का अनुमान नहीं।",
+    trackRecordCaption: ({ retro, live } = {}) => {
+      const ok = Number.isInteger(retro) && Number.isInteger(live) && retro + live > 0;
+      const split = !ok
+        ? "कुछ दिन उसी तरीक़े को पुराने आँकड़ों पर दोबारा चलाकर निकाले गए हैं; बाक़ी दिन उस समय किए गए अनुमान हैं।"
+        : live === 0
+          ? `सभी ${retro} दिन उसी तरीक़े को पुराने आँकड़ों पर दोबारा चलाकर निकाले गए हैं।`
+          : retro === 0
+            ? `सभी ${live} दिन उस समय किए गए अनुमान हैं।`
+            : `इन ${retro + live} दिनों में से ${retro} दिन उसी तरीक़े को पुराने आँकड़ों पर दोबारा चलाकर ${retro === 1 ? "निकाला गया है" : "निकाले गए हैं"}; `
+              + (live === 1 ? "बाक़ी 1 दिन उस समय किया गया अनुमान है।" : `बाक़ी ${live} दिन उस समय किए गए अनुमान हैं।`);
+      return "बीते दिनों की जाँच: अगले आधिकारिक भाव का अनुमान, उसके बाद आए भाव से हर दिन कितना दूर रहा, ₹ प्रति ग्राम में। लाइन के ऊपर का मतलब अनुमान ज़्यादा था, नीचे का मतलब कम। भरा हुआ बिंदु यानी आधिकारिक भाव अनुमान की रेंज के अंदर आया; खोखला हीरा यानी रेंज से बाहर गया। " + split + " यह पीछे मुड़कर देखना है, आज का अनुमान नहीं।";
+    },
     trackRecordChartAriaLabel: "बीते दिनों की जाँच में अनुमान और आधिकारिक भाव का रोज़ का फ़र्क़, रेंज के अंदर या बाहर रहे दिनों के निशान के साथ",
     chartErrInRange: "आधिकारिक भाव रेंज के अंदर",
     chartErrOutRange: "आधिकारिक भाव रेंज के बाहर",
