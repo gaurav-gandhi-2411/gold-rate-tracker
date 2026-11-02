@@ -80,6 +80,34 @@ function isMeasurementFresh(isoTimestamp, nowMs = Date.now(), maxAgeDays = CLAIM
   return ageDays >= 0 && ageDays <= maxAgeDays;
 }
 
+// The one answer, for every page, to "is the direction signal on?" (GG brief, 2026-11-02).
+// how-we-know.html once said "Direction signal: On" because the next-rate model's own test passed
+// (track_record.direction_gate_ship), while the main page showed no direction and said "We don't
+// guess whether prices will rise or fall next": a passing test is a measurement, not an
+// authorization (ml/direction/gate.py). ml/inference.py publishes next_fix.direction.show = the
+// test passed AND GG's promotion record exists; that is the source of truth here.
+// on:     the main page shows the next move's direction now (next_fix active, show === true, a
+//         numeric probability, forecast.json fresh by isMeasurementFresh).
+// record: the model's test on past days it had not seen, or null: n, right, upRight (counts
+//         computed from the published accuracies) and passed (its test passed). These are
+//         re-runs on past data, never live calls.
+function directionSignalState(fc, nowMs = Date.now()) {
+  const nf = fc?.next_fix;
+  const tr = nf?.track_record;
+  const record = tr && Number.isInteger(tr.n) && tr.n > 0
+    && typeof tr.direction_accuracy === "number" && typeof tr.always_up_accuracy === "number"
+    ? {
+      n: tr.n,
+      right: Math.round(tr.direction_accuracy * tr.n),
+      upRight: Math.round(tr.always_up_accuracy * tr.n),
+      passed: tr.direction_gate_ship === true,
+    }
+    : null;
+  const on = nf?.active === true && nf.direction?.show === true
+    && typeof nf.direction.probability === "number" && isMeasurementFresh(fc?.predicted_at, nowMs);
+  return { on, record };
+}
+
 const STRINGS = {
   en: {
     // ── Static shell (index.html) ──────────────────────────────────────────────

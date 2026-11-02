@@ -84,3 +84,15 @@ Raised by one of two judges (opus) on wording that this change kept unchanged fr
 | `methNextDayExplainer`, `methNextDayExplainerNextFix` | ...a separate, longer-range estimate. | एक अलग, लंबे समय का अनुमान है। | एक अलग अनुमान है, जो आगे के ज़्यादा दिनों का है। | लंबे समय can read as "long-term" for a 5-day figure. |
 | `methAccurateP2` | ...so it's a small sample. | इसलिए नमूना छोटा है। | इसलिए नमूने कम हैं। | The glossary's small-sample row says कम नमूने (rule 1). |
 | `methNextDayExplainer`, `methNextDayExplainerNextFix` | the "about ₹X in 5 days" note | "5 दिनों में करीब ₹X" वाला नोट | (verifier) quote is a paraphrase of volNote* ("5 दिनों के अंदर ... करीब ₹Z ऊपर या नीचे गया") | Same paraphrase as the earlier approved text. |
+
+## Added 2026-11-03 (direction signal one source, branch fix/direction-signal-one-source)
+
+Seven strings: two existing English strings that had no Hindi (`methDirectionOnSub`, `methDirectionSource`), three new ones for the "tested, not shown" state, and two rewordings (`methAccurateP3`, `methAccurateP4`). Two independent judges (sonnet, opus). Every applied string had both judges' agreement; nothing contested is left.
+
+| Key | First round | Applied | Note |
+|---|---|---|---|
+| `methDirectionOffTested`, `methDirectionOffTestedNote`, `methAccurateP3`, `methAccurateP4` | both ACCEPT | draft | |
+| `methDirectionOffTestedSub` | both CHANGE, same fix | आँकड़ों -> आंकड़ों | the site's spelling (hwkPageDescription आंकड़े) |
+| `methDirectionOnSub` | sonnet ACCEPT, opus CHANGE | असल नतीजे -> आगे के नतीजे | on a second look sonnet agreed: असल नतीजे could read as "the test results were not real"; the English means live results from here on |
+| `methDirectionSource` | sonnet ACCEPT, opus CHANGE | पीछे -> पर्दे के पीछे | on a second look sonnet agreed: पीछे alone can read as "earlier"; पर्दे के पीछे is "in the background" |
+| `methAccurateP3` | opus note, not a change | draft | opus: "इस मॉडल की किसी बढ़त का दावा नहीं करते" would be slightly clearer than "हम इसके लिए किसी बढ़त का दावा नहीं करते"; judged taste, not an error |

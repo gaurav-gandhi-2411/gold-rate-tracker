@@ -69,6 +69,11 @@ const STRINGS_HWK = {
     methDirectionSub: 'no model beats "gold usually rises" yet',
     methDirectionNote: 'We test our price-direction models every week. So far, none of them beat just assuming "gold usually goes up" — so we don\'t show a chance-of-rising percentage or tell you to buy or sell. The trend labels on the main page (Getting cheaper/pricier/Steady) describe what already happened this week — they\'re not a prediction of what happens next.',
     methDirectionUnavailable: "Direction signal unavailable this cycle.",
+    // 2026-11-02: the next-rate model's test passed on past days, but the main page does not show
+    // its direction (i18n.js directionSignalState), so the status is Off and says why.
+    methDirectionOffTested: "Off — tested, not shown",
+    methDirectionOffTestedSub: ({ right, n, upRight }) => `Tested on ${n} past days it had not seen: right ${right} times, against ${upRight} for "gold usually rises". These are re-runs on past data, not calls made at the time, so we do not show it.`,
+    methDirectionOffTestedNote: "Our estimate of the next official rate also says whether it is more likely to be higher or lower. Passing a test on past days is not enough to show that: it needs a separate approval, and then it is shown only while it keeps beating \"gold usually rises\". It is never advice to buy or sell.",
 
     // ── How accurate is this ─────────────────────────────────────────────────────
     methHowAccurateHeading: "How accurate is this?",
@@ -93,9 +98,12 @@ const STRINGS_HWK = {
     // same honest point -- a naive "always guess up" strategy is a strong,
     // hard-to-beat baseline in this regime (ADR 019's actual finding) --
     // without asserting a specific number nothing currently measures.
-    methAccurateP3: ({ dirAllDisplay, n }) => `Our AI was right ${dirAllDisplay} of the time across ${n} test windows. But gold has historically risen far more often than it's fallen — so just guessing "up" every time would score close to as well, with no model needed. We don't claim any edge here. The Getting cheaper/pricier labels on the main page come from the recent 7-day trend, not from this AI.`,
+    // 2026-11-02 (GG brief): P3 is about the 5-day AI model, not the next-rate estimate's up-or-down
+    // call above it, and P4 no longer says that passing a test turns the signal on (it does not:
+    // i18n.js directionSignalState). Both render only while the signal is off.
+    methAccurateP3: ({ dirAllDisplay, n }) => `Our 5-day AI model was right ${dirAllDisplay} of the time across ${n} test windows. But gold has historically risen far more often than it's fallen — so just guessing "up" every time would score close to as well, with no model needed. We don't claim any edge for it. The Getting cheaper/pricier labels on the main page come from the recent 7-day trend, not from this AI.`,
     methAccurateP4Strong: "What would change this",
-    methAccurateP4: "If gold started moving up and down more evenly (not mostly up), or if a model started reliably beating the \"gold usually rises\" guess in testing, we'd turn this back on. We'll update this section if that happens.",
+    methAccurateP4: "If gold started moving up and down more evenly (not mostly up), or if a model kept beating the \"gold usually rises\" guess and was approved to be shown, we'd turn this on. We'll update this section if that happens.",
 
     // ── Estimate accuracy drift ──────────────────────────────────────────────────
     methDriftHeading: "Estimate accuracy — last 7 days",
@@ -166,6 +174,13 @@ const STRINGS_HWK = {
     methDirectionSub: '"सोना आम तौर पर बढ़ता है" वाले अंदाज़े को अभी कोई मॉडल मात नहीं दे पाया',
     methDirectionNote: 'हम हर हफ़्ते भाव के ऊपर-नीचे जाने का अंदाज़ा लगाने वाले अपने मॉडल जांचते हैं। अभी तक कोई भी सिर्फ़ "सोना आम तौर पर बढ़ता है" मान लेने से बेहतर नहीं निकला — इसलिए हम बढ़ने की संभावना का प्रतिशत नहीं दिखाते, और ख़रीदने-बेचने को भी नहीं कहते। मुख्य पेज के ट्रेंड लेबल (सस्ता हो रहा है / महंगा हो रहा है / स्थिर) बताते हैं कि इस हफ़्ते क्या हो चुका है — वे आगे क्या होगा, इसका अंदाज़ा नहीं हैं।',
     methDirectionUnavailable: "इस बार ऊपर-नीचे का संकेत उपलब्ध नहीं है।",
+    // 2026-11-03, LLM consensus (Sonnet + Opus, docs/HINDI_CONTESTED.md): the two "On" strings had no
+    // Hindi (the page fell back to English), and the "tested, not shown" state is new.
+    methDirectionOnSub: ({ right, n, upRight }) => `ऐसे ${n} पुराने दिनों पर जांचा जो इसने पहले नहीं देखे थे: ${right} बार सही, जबकि "सोना आम तौर पर बढ़ता है" मानने पर ${upRight} बार। ये पुराने नतीजे हैं, उस समय किए गए अंदाज़े नहीं, और इन्हीं दिनों से हमने मॉडल चुनने में भी मदद ली थी, इसलिए आगे के नतीजे थोड़े कमज़ोर हो सकते हैं।`,
+    methDirectionSource: "यह संभावना उसी अनुमान से आती है जिससे ऊपर की भाव-रेंज बनती है, किसी और मॉडल से नहीं: यह देखता है कि भारत का पिछला आधिकारिक भाव तय होने के बाद दुनिया में सोना और रुपया कितना बदले हैं, और पहले भारत का भाव ऐसी चालों के साथ कितनी नज़दीकी से चला है। हम पर्दे के पीछे जो दूसरे मॉडल चलाते हैं, उनका इस संख्या में कभी इस्तेमाल नहीं होता।",
+    methDirectionOffTested: "बंद — जांचा गया, दिखाया नहीं जाता",
+    methDirectionOffTestedSub: ({ right, n, upRight }) => `ऐसे ${n} पुराने दिनों पर जांचा जो इसने पहले नहीं देखे थे: ${right} बार सही, जबकि "सोना आम तौर पर बढ़ता है" मानने पर ${upRight} बार। ये पुराने आंकड़ों पर दोबारा चलाकर निकाले गए नतीजे हैं, उस समय किए गए अंदाज़े नहीं, इसलिए हम इसे नहीं दिखाते।`,
+    methDirectionOffTestedNote: 'अगले आधिकारिक भाव का हमारा अनुमान यह भी बताता है कि उसके ज़्यादा होने की संभावना है या कम होने की। पुराने दिनों के टेस्ट में पास होना इसे दिखाने के लिए काफ़ी नहीं है: इसके लिए अलग से मंज़ूरी चाहिए, और उसके बाद भी यह तभी तक दिखाया जाता है जब तक यह "सोना आम तौर पर बढ़ता है" वाले अंदाज़े से बेहतर रहता है। यह कभी ख़रीदने या बेचने की सलाह नहीं है।',
 
     // ── How accurate is this ─────────────────────────────────────────────────────
     methHowAccurateHeading: "यह कितना सही है?",
@@ -176,9 +191,9 @@ const STRINGS_HWK = {
     methRangeStrFallback: "मौजूदा",
     methAccurateP2: ({ n } = {}) => `यह सिर्फ़ ${Number.isInteger(n) && n > 0 ? `पिछले ${n}` : "हाल के कुछ"} टेस्ट पर आधारित है, इसलिए नमूना छोटा है। जुलाई 2026 में हमने इस रेंज को छोटा किया, क्योंकि पता चला कि इसे 5 दिन की चाल के हिसाब से बनाया गया था पर हमेशा अगले दिन के भाव से जांचा जाता था — इसलिए ऊपर का प्रतिशत कुछ समय तक असल से बेहतर दिख सकता है, जब तक सुधारी हुई, छोटी रेंज पर काफ़ी जांच न हो जाएं। जब यह टिक जाएगा, तब हम इसे पूरी तरह पक्का मानेंगे।`,
     methAccurateP3Strong: "ऊपर-नीचे के संकेत के बारे में",
-    methAccurateP3: ({ dirAllDisplay, n }) => `हमारा AI ${n} टेस्ट में ${dirAllDisplay} बार सही निकला। लेकिन सोना इतिहास में गिरने से कहीं ज़्यादा बार बढ़ा है — इसलिए बिना किसी मॉडल के हर बार सिर्फ़ "बढ़ेगा" कहने पर भी लगभग उतना ही सही निकलता। हम यहां किसी बढ़त का दावा नहीं करते। मुख्य पेज के "सस्ता / महंगा हो रहा है" वाले लेबल हाल के 7 दिन के ट्रेंड से आते हैं, इस AI से नहीं।`,
+    methAccurateP3: ({ dirAllDisplay, n }) => `हमारा 5 दिन वाला AI मॉडल ${n} टेस्ट में ${dirAllDisplay} बार सही निकला। लेकिन सोना इतिहास में गिरने से कहीं ज़्यादा बार बढ़ा है — इसलिए बिना किसी मॉडल के हर बार सिर्फ़ "बढ़ेगा" कहने पर भी लगभग उतना ही सही निकलता। हम इसके लिए किसी बढ़त का दावा नहीं करते। मुख्य पेज के "सस्ता / महंगा हो रहा है" वाले लेबल हाल के 7 दिन के ट्रेंड से आते हैं, इस AI से नहीं।`,
     methAccurateP4Strong: "इसमें बदलाव कब होगा",
-    methAccurateP4: 'अगर सोना ऊपर-नीचे ज़्यादा बराबरी से चलने लगे (ज़्यादातर बढ़ने के बजाय), या कोई मॉडल टेस्ट में "सोना आम तौर पर बढ़ता है" वाले अंदाज़े को लगातार मात देने लगे, तो हम इसे फिर चालू करेंगे। ऐसा होने पर हम यह हिस्सा अपडेट करेंगे।',
+    methAccurateP4: 'अगर सोना ऊपर-नीचे ज़्यादा बराबरी से चलने लगे (ज़्यादातर बढ़ने के बजाय), या कोई मॉडल "सोना आम तौर पर बढ़ता है" वाले अंदाज़े को लगातार मात देता रहे और उसे दिखाने की मंज़ूरी मिल जाए, तो हम इसे चालू करेंगे। ऐसा होने पर हम यह हिस्सा अपडेट करेंगे।',
 
     // ── Estimate accuracy drift ──────────────────────────────────────────────────
     methRecentError: "हाल की औसत ग़लती",

@@ -1740,10 +1740,11 @@ function renderModelSignal(fc, readings, bt, coverage, drift) {
   // next_fix.direction.show is true only while the next-fix model is active, its own
   // out-of-sample record passes the direction gate, and GG's promotion record exists.
   const nf = fc?.next_fix;
-  // Claims older than CLAIM_MAX_AGE_DAYS are hidden: next_fix's figures are as old as forecast.json.
+  // On or off: i18n.js directionSignalState, the one answer how-we-know.html uses too (it also
+  // hides claims older than CLAIM_MAX_AGE_DAYS: next_fix's figures are as old as forecast.json).
   const nfOn = nf?.active === true && hasRange && isMeasurementFresh(fc?.predicted_at, Date.now());
   let directionHtml = "";
-  if (nfOn && nf.direction?.show === true && typeof nf.direction.probability === "number") {
+  if (hasRange && directionSignalState(fc, Date.now()).on) {
     const pct = Math.round(nf.direction.probability * 100);
     const side = nf.direction.side;
     const key = side === "up" ? "directionUp" : side === "down" ? "directionDown" : "directionUnclear";
@@ -2576,7 +2577,9 @@ function renderAccuracySummary(fc, drift) {
   // reliability note above); no sentence here either.
   const driftSentence = "";
 
+  // Never while the direction is shown (i18n.js directionSignalState, shared with how-we-know.html).
   const directionOffParagraph = fc?.chronos_companion?.status === "success"
+    && !directionSignalState(fc, Date.now()).on
     ? `<p class="meth-text">${t("accSummaryDirectionOff")}</p>`
     : "";
 
