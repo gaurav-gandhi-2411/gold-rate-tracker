@@ -162,7 +162,8 @@ function renderFullMethodology(fc, bt, drift, coverage, bandCoverage) {
     const rr      = fc?.next_fix?.range_record;
     const nfCov   = fc?.next_fix?.active === true && typeof rr?.coverage === "number" && rr.n > 0;
     const covSrc  = nfCov ? { coverage: rr.coverage, n: rr.n } : coverage;
-    const covOk   = nfCov || (coverage && typeof coverage.coverage === "number" && coverage.n > 0
+    const covOk   = nfCov || (fc?.next_fix?.active !== true
+      && coverage && typeof coverage.coverage === "number" && coverage.n > 0
       && isMeasurementFresh(coverage.generated_at_utc, Date.now()));
     const timesN  = covOk ? Math.max(0, Math.min(10, Math.floor(covSrc.coverage * 10 + 1e-9))) : null;
     const times   = covOk ? fractionOutOf10Phrase(covSrc.coverage * 100) : null;
@@ -182,7 +183,9 @@ function renderFullMethodology(fc, bt, drift, coverage, bandCoverage) {
           </div>
         </div>
         ${fc.target_time ? `<p class="meth-text" style="margin-top:8px">${tHwk("methTargetLine", { date: fmtISTDate(fc.target_time) })}</p>` : ""}
-        <p class="meth-text" style="margin-top:12px">${tHwk("methNextDayExplainer")}</p>
+        <p class="meth-text" style="margin-top:12px">${fc.next_fix?.active === true
+          ? tHwk("methNextDayExplainerNextFix")
+          : tHwk("methNextDayExplainer", { n: bt?.naive_error_recent?.folds_window })}</p>
       </div>
     `);
   }
@@ -248,7 +251,8 @@ function renderFullMethodology(fc, bt, drift, coverage, bandCoverage) {
     const rrA       = fc?.next_fix?.range_record;
     const nfCovA    = fc?.next_fix?.active === true && typeof rrA?.coverage === "number" && rrA.n > 0;
     const covSrcA   = nfCovA ? { coverage: rrA.coverage, n: rrA.n } : coverage;
-    const hasCoverage = nfCovA || (coverage && typeof coverage.coverage === "number" && coverage.n > 0
+    const hasCoverage = nfCovA || (fc?.next_fix?.active !== true
+      && coverage && typeof coverage.coverage === "number" && coverage.n > 0
       && isMeasurementFresh(coverage.generated_at_utc, Date.now()));
     const coverPct = hasCoverage ? Math.round(covSrcA.coverage * 100) : null;
     const coverN   = hasCoverage ? covSrcA.n : null;
@@ -287,7 +291,9 @@ function renderFullMethodology(fc, bt, drift, coverage, bandCoverage) {
             ? tHwk(nfCovA ? "methAccurateP2CoverageTested" : "methAccurateP2CoveragePct", { pct: coverPct, n: coverN })
             : tHwk("methAccurateP2CoverageUnknown"),
         })}</strong><br>
-        ${tHwk(nfCovA ? "methAccurateP2Tested" : "methAccurateP2")}</p>
+        ${fc?.next_fix?.active === true
+          ? tHwk("methAccurateP2Tested")
+          : tHwk("methAccurateP2", { n: bt.naive_error_recent?.folds_window })}</p>
         ${p3Html}
         <p class="meth-text"><strong>${tHwk("methAccurateP4Strong")}</strong><br>
         ${tHwk("methAccurateP4")}</p>

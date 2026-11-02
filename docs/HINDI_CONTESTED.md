@@ -74,3 +74,13 @@ A native speaker is still the real review; this list is only where to look first
 | `todaysReadEyebrow` | Today's read | आज का सार | आज का हाल | majority flags (2 of 3); genuine wording choice, worth a native glance ('Today's read' -> आज का हाल) |
 | `pv2RangeOddsClause` |  A range like this has held {frac} in the past. |  ऐसा दायरा पहले {frac} सही साबित हुआ है। |  ऐसी रेंज पहले {frac} सही साबित हुई है। | majority flags (2 of 3); genuine wording choice, worth a native glance (flagged OFF page_v2 only) |
 | `appTitle` | Gold Tracker | Gold Tracker | Gold Tracker | majority flags (2 of 3); brand name, intentionally unchanged (same in English) |
+
+## Added 2026-11-01 (how-we-know range note, branch fix/hwk-range-explainer)
+
+Raised by one of two judges (opus) on wording that this change kept unchanged from the earlier consensus; the other judge (sonnet) accepted it. Not changed on one vote.
+
+| Key | English | Hindi (unchanged) | Judge suggestion | Note |
+|---|---|---|---|---|
+| `methNextDayExplainer`, `methNextDayExplainerNextFix` | ...a separate, longer-range estimate. | एक अलग, लंबे समय का अनुमान है। | एक अलग अनुमान है, जो आगे के ज़्यादा दिनों का है। | लंबे समय can read as "long-term" for a 5-day figure. |
+| `methAccurateP2` | ...so it's a small sample. | इसलिए नमूना छोटा है। | इसलिए नमूने कम हैं। | The glossary's small-sample row says कम नमूने (rule 1). |
+| `methNextDayExplainer`, `methNextDayExplainerNextFix` | the "about ₹X in 5 days" note | "5 दिनों में करीब ₹X" वाला नोट | (verifier) quote is a paraphrase of volNote* ("5 दिनों के अंदर ... करीब ₹Z ऊपर या नीचे गया") | Same paraphrase as the earlier approved text. |
