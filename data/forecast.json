@@ -1,5 +1,5 @@
 {
-  "predicted_at": "2026-11-02T00:33:37.130798+00:00",
+  "predicted_at": "2026-11-02T02:10:32.317575+00:00",
   "target_window": "5d",
   "headline": {
     "method": "nextfix_p3_v1",
@@ -9,18 +9,18 @@
     "conformal_pi_half": 135.5,
     "naive_mae_recent_30": 89.2,
     "vol_context": {
-      "half_width": 247,
-      "half_width_raw": 246.9,
+      "half_width": 243,
+      "half_width_raw": 243.3,
       "method": "realized_20d",
       "window_days": 20,
-      "contiguous_days": 86,
+      "contiguous_days": 87,
       "is_floored": false,
       "is_degraded": false,
       "floor_fraction": 0.5,
       "static_pi_half": 311.3,
-      "baseline_half_width": 272,
+      "baseline_half_width": 271,
       "regime": "normal",
-      "typical_move_5d": 142,
+      "typical_move_5d": 150,
       "typical_move_pairs": 28,
       "typical_move_window_days": 30
     }
@@ -59,7 +59,7 @@
     "direction_consensus": 1.0
   },
   "driver_context": {
-    "computed_at": "2026-11-02T00:33:45.823770+00:00",
+    "computed_at": "2026-11-02T02:10:41.055448+00:00",
     "macro_staleness_days": 0.0,
     "macro_fresh": true,
     "premium_threshold_pct": 15.0,
@@ -106,9 +106,9 @@
     },
     "alignment": "intraday_at_fix"
   },
-  "real_readings_count": 878,
+  "real_readings_count": 879,
   "current_22k": 12780,
-  "scraped_at": "2026-11-01T20:11:22.688Z",
+  "scraped_at": "2026-11-02T02:01:26.423Z",
   "price_source": "tanishq_scrape",
   "est_low": null,
   "est_high": null,
