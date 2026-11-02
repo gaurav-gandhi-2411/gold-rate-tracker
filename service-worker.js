@@ -212,7 +212,7 @@
 // can never be paired with a freshly fetched script; a request tagged with another build goes to the
 // network (that page came from a newer deploy than this worker). install fails, and is retried on the
 // next update check, if the page it just cached is not tagged with this VERSION (deploy caught mid-way).
-const VERSION = "v97-20261102-hwk-computed";
+const VERSION = "v98-20261102-range-explainer";
 const SHELL_CACHE = `gold-shell-${VERSION}`;
 
 const SHELL_FILES = [

@@ -120,7 +120,7 @@
     <link rel="preload" href="fonts/dmsans-variable-latin.woff2" as="font" type="font/woff2" crossorigin>
     <link rel="preload" href="fonts/syne-variable-latin.woff2" as="font" type="font/woff2" crossorigin>
     <link rel="preload" href="fonts/rupee-sign.woff2" as="font" type="font/woff2" crossorigin>
-    <link rel="stylesheet" href="style.css?v=v97-20261102-hwk-computed" />
+    <link rel="stylesheet" href="style.css?v=v98-20261102-range-explainer" />
   </head>
   <body>
     <div class="grain" aria-hidden="true"></div>
@@ -608,14 +608,14 @@
             onload="if (window.__onChartReady) window.__onChartReady()"></script>
     <!-- flags.js must execute before app.js (both deferred; document order preserves this) --
          renderFlaggedFeatures() reads FEATURE_FLAGS/isFeatureOn() from it. -->
-    <script src="flags.js?v=v97-20261102-hwk-computed" defer></script>
+    <script src="flags.js?v=v98-20261102-range-explainer" defer></script>
     <!-- i18n.js must execute before app.js (both deferred; document order preserves this) --
          app.js calls t()/getLang()/setLang() at its own top level (currentLang = getLang()). -->
-    <script src="i18n.js?v=v97-20261102-hwk-computed" defer></script>
-    <script src="app.js?v=v97-20261102-hwk-computed" defer></script>
+    <script src="i18n.js?v=v98-20261102-range-explainer" defer></script>
+    <script src="app.js?v=v98-20261102-range-explainer" defer></script>
     <!-- analytics.js: inert (no request, no DOM, no storage) unless FEATURE_FLAGS.analytics is on
          AND its endpoint is set. After app.js so it can never delay first render. -->
-    <script src="analytics.js?v=v97-20261102-hwk-computed" defer></script>
+    <script src="analytics.js?v=v98-20261102-range-explainer" defer></script>
     <script>
       if ("serviceWorker" in navigator) {
         window.addEventListener("load", () => {
