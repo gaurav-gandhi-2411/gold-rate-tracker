@@ -37,7 +37,15 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
+      # ref: master, not the event's commit. A workflow_run or dispatch event pins GITHUB_SHA to master
+      # as it was when the event was created; the second run of a pair (the check-price workflow_run
+      # plus bot_pr_merge.sh's dispatch) waits behind the first in the concurrency group, then rendered
+      # from that stale master and collided with the og.png the first run had just merged: 62 of the
+      # 69 failed runs in the 30 days to 2026-11-02 ("No commits between master and bot/og-image" 51,
+      # og.png rebase conflict 11). From the tip, an unchanged card commits nothing.
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: master
 
       - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
         with:
@@ -87,3 +95,17 @@ jobs:
           token: ${{ secrets.CI_MERGE_PAT }}
           wait-minutes: "10"
           ntfy-topic: ${{ secrets.NTFY_TOPIC }}
+
+      # Pages on the second failure in a row, once, and sends one recovery message
+      # (scripts/og_run_alert.py). If the run history cannot be read, a failure pages (fail closed).
+      - name: Page GG if the card keeps failing (once per incident, plus recovery)
+        if: always()
+        env:
+          GH_TOKEN: ${{ github.token }}
+          NTFY_TOPIC: ${{ secrets.NTFY_TOPIC }}
+          JOB_STATUS: ${{ job.status }}
+        run: |
+          gh api "repos/${GITHUB_REPOSITORY}/actions/workflows/generate-og-image.yml/runs?status=completed&per_page=20" \
+            --jq "{workflow_runs: [.workflow_runs[] | select(.id != ${GITHUB_RUN_ID}) | {id, conclusion}]}" \
+            > "${RUNNER_TEMP}/og_runs.json" || rm -f "${RUNNER_TEMP}/og_runs.json"
+          python3 scripts/og_run_alert.py --current "${JOB_STATUS}" --previous "${RUNNER_TEMP}/og_runs.json"
