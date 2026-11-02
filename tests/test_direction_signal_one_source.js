@@ -220,6 +220,13 @@ test("Hindi: the off reason and the record, with no English fallback in the sect
   assert.match(page, /इनमें से 16 दिनों के अंदाज़े उसी समय लगाए गए थे/);
   assert.match(page, /5 दिन वाले AI मॉडल के बारे में/);
   assert.doesNotMatch(page, /Tested on|re-runs on past data|Off until|Off right now|coin toss|5-day AI/);
+  // the main page's off line in Hindi, never the English fallback
+  const hold = mainPage(fc({ mode: "after_afternoon_rate" }), "hi").summary;
+  assert.match(hold, /अगले आधिकारिक भाव के बढ़ने की संभावना ज़्यादा है या घटने की/);
+  assert.doesNotMatch(hold, /We say whether|We don't guess/);
+  const paused = mainPage(fc({ mode: "after_afternoon_rate", demoted: true }), "hi").summary;
+  assert.match(paused, /अभी हम यह नहीं बता रहे कि भाव बढ़ने की संभावना ज़्यादा है या घटने की/);
+  assert.doesNotMatch(paused, /We are not saying/);
   const on = hwk(fc(), "hi");
   assert.match(on, /चालू — सिर्फ़ अगली चाल के लिए/);
   assert.doesNotMatch(on, /Tested on|The chance comes from|re-run days/);
