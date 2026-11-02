@@ -168,9 +168,9 @@
 
       <div class="og-body">
         <div class="og-left">
-          <div class="og-eyebrow">Should I buy today?</div>
+          <div class="og-eyebrow">Is it a good price?</div>
           <div class="og-price" id="og-price"><span class="rupee">₹</span><span id="og-price-num">—</span></div>
-          <div class="og-karat">22K gold · per gram · pan-India</div>
+          <div class="og-karat" id="og-karat">22K gold · per gram</div>
           <div class="og-verdict" id="og-verdict" data-type="unknown">
             <span class="og-verdict-icon" id="og-verdict-icon">○</span>
             <span id="og-verdict-text">—</span>
@@ -178,7 +178,7 @@
         </div>
 
         <div class="og-right">
-          <div class="og-spark-label">7-day trend</div>
+          <div class="og-spark-label" id="og-spark-label">7-day trend</div>
           <svg class="og-sparkline" id="og-sparkline"
                viewBox="0 0 340 120"
                preserveAspectRatio="none"
@@ -203,35 +203,113 @@
         ? n.toLocaleString("en-IN", { maximumFractionDigits: 0 })
         : "—";
 
+      // data/prices.json rows carry the 22K rate under "22k" (as app.js reads it). This card read
+      // `price_22k`, which no row has ever had, so it rendered ₹NaN and fell through to buy advice
+      // from its first og.png (2026-05-15) until this fix.
+      const p22 = (r) => r["22k"];
+      const num = (v) => typeof v === "number" && Number.isFinite(v);
+
+      // The card shows what the live page's hero shows, by the same rules (app.js, 2026-11-01):
+      // keep these constants and the two functions below in step with app.js.
+      const STALE_THRESHOLD_H = 8;              // app.js STALE_THRESHOLD_H
+      const TANISHQ_IBJA_MAX_DEVIATION = 0.12;  // app.js TANISHQ_IBJA_MAX_DEVIATION
+      const isDerivedReading = (r) => !!r && typeof r.source === "string" && r.source.startsWith("ibja_calibrated");
+
+      // app.js chartSeries: the series the verdict and sparkline read. The IBJA-based estimate
+      // series when it has >= 2 valid rows, else the real Tanishq rows; never the two mixed.
+      function chartSeries(readings, derived) {
+        const valid = Array.isArray(derived)
+          ? derived.filter(r => r && typeof r.timestamp === "string" && num(r["22k"]))
+          : [];
+        if (valid.length >= 2) return { rows: valid, estimate: true };
+        const latest = readings.length ? readings[readings.length - 1] : null;
+        if (isDerivedReading(latest)) return { rows: readings.filter(isDerivedReading), estimate: true };
+        return { rows: readings.filter(r => !isDerivedReading(r)), estimate: false };
+      }
+
+      // app.js heroDisplayState, reduced to the figure, whether it is an estimate, its English
+      // label (i18n.js heroLabel*) and the time it is as of.
+      function heroPrice(readings, forecast, nowMs) {
+        const latest = readings.length ? readings[readings.length - 1] : null;
+        const derived = isDerivedReading(latest);
+        const estimate = forecast
+          && (forecast.price_source === "ibja_calibrated" || forecast.price_source === "fusion_consensus")
+          && num(forecast.current_22k) ? { value: forecast.current_22k, source: forecast.price_source } : null;
+        const raw = latest && !derived && num(latest["22k"]) ? latest : null;
+        const ref = estimate ? estimate.value : (forecast && num(forecast.current_22k) ? forecast.current_22k : null);
+        const passes = (v) => ref == null || Math.abs(v - ref) / ref <= TANISHQ_IBJA_MAX_DEVIATION;
+        let tanishq = null;
+        if (raw && passes(raw["22k"])) {
+          tanishq = raw;
+        } else if (raw && !estimate && forecast && forecast.price_source === "tanishq_scrape"
+                   && forecast.scraped_at && num(forecast.current_22k)) {
+          tanishq = { "22k": forecast.current_22k, timestamp: forecast.scraped_at };
+        }
+        const ageH = tanishq ? (nowMs - new Date(tanishq.timestamp).getTime()) / 3_600_000 : Infinity;
+        const estimateAsOf = forecast?.predicted_at ?? null;
+        if (tanishq && ageH <= STALE_THRESHOLD_H) {
+          return { price: tanishq["22k"], approx: false, label: "Tanishq's listed 22K rate", asOf: tanishq.timestamp };
+        }
+        if (estimate) {
+          return { price: estimate.value, approx: true, asOf: estimateAsOf,
+            label: estimate.source === "fusion_consensus"
+              ? "Our estimate for today, based on other jewellers' listed rates"
+              : "Our estimate for today, from India's official gold rate" };
+        }
+        if (tanishq) {
+          return { price: tanishq["22k"], approx: false, label: "Tanishq's listed 22K rate", asOf: tanishq.timestamp };
+        }
+        if (derived && num(latest["22k"])) {
+          return { price: latest["22k"], approx: true, asOf: latest.timestamp,
+            label: "Our estimate for today, from India's official gold rate" };
+        }
+        return null;
+      }
+
+      // The same classification and English headlines as app.js computeVerdict / i18n.js
+      // verdictHeadline*: it describes the week, it never tells anyone to buy.
+      function istDay(iso) {
+        return new Date(new Date(iso).getTime() + 5.5 * 3600e3).toISOString().slice(0, 10);
+      }
       function computeVerdict(prices, forecast) {
-        const SLOPE_THRESHOLD = 100;
+        const SLOPE_THRESHOLD = 100; // ₹ change over 7 days to count as a trend (app.js)
         if (!prices || prices.length < 2) return { type: "unknown", icon: "○", text: "Not enough data yet" };
 
         const now = Date.now();
-        const sevenDaysAgo = now - 7 * 86400e3;
-        const recent = prices.filter(p => new Date(p.timestamp).getTime() >= sevenDaysAgo);
-        if (recent.length < 2) return { type: "flat", icon: "→", text: "Roughly flat — buy when convenient" };
+        const current = p22(prices[prices.length - 1]);
+        const within7d = prices.filter(p => now - new Date(p.timestamp).getTime() <= 7 * 86400e3);
+        const ref7d = within7d.length > 1 ? within7d[0] : prices[Math.max(0, prices.length - 5)];
+        const slope7d = current - p22(ref7d);
 
-        const oldest = recent[0].price_22k;
-        const latest = recent[recent.length - 1].price_22k;
-        const slope = latest - oldest;
+        // 30-day average of one reading per IST day (latest wins), as app.js does
+        const byDay = new Map();
+        prices.filter(p => now - new Date(p.timestamp).getTime() <= 30 * 86400e3)
+          .forEach(p => byDay.set(istDay(p.timestamp), p22(p)));
+        const daily = [...byDay.values()];
+        const avg30 = daily.length ? Math.round(daily.reduce((s, v) => s + v, 0) / daily.length) : current;
+        const vsAvg30 = current - avg30;
+        const forecastDelta = typeof forecast?.predicted_22k === "number" ? forecast.predicted_22k - current : 0;
 
-        const fcDir = forecast?.predicted_22k != null ? (forecast.predicted_22k > latest ? 1 : -1) : 0;
-        const avg30 = prices.slice(-40).reduce((s, p) => s + p.price_22k, 0) / Math.min(40, prices.length);
-
-        if (slope < -SLOPE_THRESHOLD && (fcDir < 0 || latest < avg30)) {
-          return { type: "down", icon: "↓", text: "Trending down — no rush to buy" };
+        if (slope7d < -SLOPE_THRESHOLD && (forecastDelta < 0 || vsAvg30 < 0)) {
+          return { type: "down", icon: "↓", text: "Getting cheaper this week" };
         }
-        if (slope > SLOPE_THRESHOLD && (fcDir > 0 || latest > avg30)) {
-          return { type: "up", icon: "↑", text: "Trending up — consider buying sooner" };
+        if (slope7d > SLOPE_THRESHOLD && (forecastDelta > 0 || vsAvg30 > 0)) {
+          return { type: "up", icon: "↑", text: "Getting pricier this week" };
         }
-        return { type: "flat", icon: "→", text: "Roughly flat — buy when convenient" };
+        return { type: "flat", icon: "→", text: "Steady this week" };
+      }
+
+      // An image is cached by social sites for days, so print when it was made, not "Nh ago".
+      function fmtIST(iso) {
+        return new Date(iso).toLocaleString("en-IN", {
+          timeZone: "Asia/Kolkata", day: "numeric", month: "short", hour: "2-digit", minute: "2-digit", hourCycle: "h23",
+        }) + " IST";
       }
 
       function drawSparkline(prices, type) {
         const svg = document.getElementById("og-sparkline");
         const W = 340, H = 120, PAD = 8;
-        const vals = prices.map(p => p.price_22k);
+        const vals = prices.map(p22);
         const minV = Math.min(...vals);
         const maxV = Math.max(...vals);
         const range = maxV - minV || 1;
@@ -263,36 +341,50 @@
       async function render() {
         try {
           const t = Date.now();
-          const [prices, forecast] = await Promise.all([
+          const [prices, forecast, derived] = await Promise.all([
             fetch(`data/prices.json?t=${t}`).then(r => r.json()),
             fetch(`data/forecast.json?t=${t}`).then(r => r.json()).catch(() => null),
+            fetch(`data/ibja_derived_prices.json?t=${t}`).then(r => r.json()).catch(() => null),
           ]);
           prices.sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp));
+          if (Array.isArray(derived)) derived.sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp));
+          const now = Date.now();
 
-          const latest = prices[prices.length - 1];
-          const sevenDaysAgo = Date.now() - 7 * 86400e3;
-          const spark7 = prices.filter(p => new Date(p.timestamp).getTime() >= sevenDaysAgo);
+          // Never let a broken card become og.png: screenshot-og.mjs refuses to write on data-error.
+          const hero = heroPrice(prices, forecast, now);
+          if (!hero || !num(hero.price)) throw new Error("no price the live page would show");
+          const hist = chartSeries(prices, derived);
+          const bad = hist.rows.filter(r => !num(p22(r))).length;
+          if (bad) throw new Error(`${bad} row(s) of the trend series without a numeric "22k"`);
+          const spark7 = hist.rows.filter(p => now - new Date(p.timestamp).getTime() <= 7 * 86400e3);
 
-          document.getElementById("og-price-num").textContent = fmtINR(latest.price_22k);
+          document.getElementById("og-price-num").textContent = (hero.approx ? "≈ " : "") + fmtINR(hero.price);
+          document.getElementById("og-karat").textContent = `${hero.label} · per gram`;
 
-          const v = computeVerdict(prices, forecast);
+          // As the page does: the flat-hold forecast is compared only with the series it belongs to.
+          const v = computeVerdict(hist.rows, hist.estimate ? null : forecast);
           const verdictEl = document.getElementById("og-verdict");
           verdictEl.setAttribute("data-type", v.type);
           document.getElementById("og-verdict-icon").textContent = v.icon;
           document.getElementById("og-verdict-text").textContent = v.text;
 
           if (spark7.length >= 2) drawSparkline(spark7, v.type);
+          // the page marks this series "(estimate)" too (sparkline-range); it is not Tanishq's rate
+          if (hist.estimate) document.getElementById("og-spark-label").textContent = "7-day trend (estimate)";
 
-          const age = Math.round((Date.now() - new Date(latest.timestamp).getTime()) / 3600e3);
-          document.getElementById("og-updated").textContent = `Updated ${age}h ago`;
+          if (hero.asOf) document.getElementById("og-updated").textContent = `Price as of ${fmtIST(hero.asOf)}`;
+          const since = new Date(prices[0].timestamp).toLocaleString("en-IN", {
+            timeZone: "Asia/Kolkata", month: "short", year: "numeric",
+          });
           document.getElementById("og-reading-count").textContent =
-            `${prices.length} readings since Apr 2026`;
+            `${prices.length} readings since ${since}`;
 
           document.getElementById("loading").style.display = "none";
           const card = document.getElementById("og-card");
           card.style.display = "flex";
         } catch (err) {
           document.getElementById("loading").textContent = "Error: " + err.message;
+          document.body.setAttribute("data-error", err.message);
         } finally {
           document.body.setAttribute("data-loaded", "true");
         }
