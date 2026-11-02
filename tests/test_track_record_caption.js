@@ -61,6 +61,11 @@ test("fail closed: a day with no retro flag is counted as a re-run, never as liv
   assert.match(text, /2 of these 3 days are the same method run again on past data; the other one is an estimate made at the time\./);
 });
 
+test("fail closed: a non-boolean retro flag is not live either (ml/nextfix.py publishes it the same way)", () => {
+  const text = caption([row("2026-10-20", false), row("2026-10-21", "false"), row("2026-10-22", 0)]);
+  assert.match(text, /2 of these 3 days are the same method run again on past data; the other one is an estimate made at the time\./);
+});
+
 test("singular: one re-run day reads 'is', in English and Hindi", () => {
   const rows = [row("2026-10-20", true), row("2026-10-21", false), row("2026-10-22", false)];
   assert.match(caption(rows), /1 of these 3 days is the same method run again on past data; the other 2 are estimates/);
