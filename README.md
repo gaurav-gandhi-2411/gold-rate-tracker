@@ -31,12 +31,12 @@ Want phone alerts when the price moves? They are available if you run your own c
 
 That's deliberate, not an omission. Every week the project tests whether any model can call the next move better than the simple rule "gold usually goes up, so just guess up". So far none has, with enough evidence to trust it, so the page shows nothing rather than a guess dressed up as insight ([ADR 019](docs/adr/019-direction-signal-below-base-rate.md), [ADR 020](docs/adr/020-supersede-015-consensus-degenerate.md)). Even if a model someday passes that test, it still cannot appear on the page without a separate, explicit human sign-off ([ADR 036](docs/adr/036-direction-signal-promotion-gate.md)).
 
-The latest weekly results, updated automatically:
+The latest weekly results, updated automatically (except the forecast row, a dated citation that is pinned on purpose):
 
 | Question | Honest answer | Source |
 |---|---|---|
 | Can any model call tomorrow's direction? | **No, at either timeframe tested.** Next day: <!--METRIC:data/direction_baseline.json#horizons.h1.logistic_metrics.accuracy:pct1|n=horizons.h1.n_test_folds|asof=generated_at_utc-->49.1% (n=171, as of 2026-10-26)<!--/METRIC--> right vs. <!--METRIC:data/direction_baseline.json#horizons.h1.logistic_metrics.always_up_accuracy:pct1-->49.7%<!--/METRIC--> for "always guess up". Two days out: <!--METRIC:data/direction_baseline.json#horizons.h2.logistic_metrics.accuracy:pct1|n=horizons.h2.n_test_folds|asof=generated_at_utc-->55.8% (n=165, as of 2026-10-26)<!--/METRIC--> vs. <!--METRIC:data/direction_baseline.json#horizons.h2.logistic_metrics.always_up_accuracy:pct1-->56.4%<!--/METRIC-->. Neither difference is statistically significant (two days out: p<!--METRIC:data/direction_baseline.json#horizons.h2.logistic_metrics.p_value:pval2-->= 1.00<!--/METRIC-->). Neither is shown. | [`docs/DIRECTION_SIGNAL_STATUS.md`](docs/DIRECTION_SIGNAL_STATUS.md) |
-| Does the price forecast beat "just use today's price"? | **No.** <!--FROZEN reason="SHA-pinned point-in-time citation, backtest.json @ ad42160 -- must not drift with live data"-->Naive flat-hold: ₹249/g avg error. Chronos-Bolt-Tiny: ₹292/g avg error — **17% worse**, over 209 walk-forward folds (p≈0).<!--/FROZEN--> So the page shows today's price as the headline, not a forecast. | `data/backtest.json` @ [`ad42160`](https://github.com/gaurav-gandhi-2411/gold-rate-tracker/blob/ad4216086d10a63bb93ed3107c9ccee429cb5fa0/data/backtest.json) |
+| Does the price forecast beat "just use today's price"? | **No.** In the 2 Aug 2026 backtest: <!--FROZEN reason="SHA-pinned point-in-time citation, backtest.json @ ad42160 -- must not drift with live data"-->Naive flat-hold: ₹249/g avg error. Chronos-Bolt-Tiny: ₹292/g avg error — **17% worse**, over 209 walk-forward folds (p≈0).<!--/FROZEN--> So the page shows today's price as the headline, not a forecast. | `data/backtest.json` @ [`ad42160`](https://github.com/gaurav-gandhi-2411/gold-rate-tracker/blob/ad4216086d10a63bb93ed3107c9ccee429cb5fa0/data/backtest.json) |
 | Is the headline's own "likely range" well-calibrated? | **Not yet known either way.** Since a July 2026 fix ([ADR 022](docs/adr/022-conformal-pi-horizon-fix.md)), it has contained the real price <!--METRIC:data/coverage_metrics.json#coverage:pct1|n=n|ci=wilson_ci_low,wilson_ci_high|asof=generated_at_utc|unresolved_if=resolvable_at_n-->76.3% (n=97, 95% CI [66.9%, 83.7%], as of 2026-10-25) — not yet resolvable at this sample size<!--/METRIC--> of the time against a <!--METRIC:data/coverage_metrics.json#nominal_pct:int-->80<!--/METRIC-->% target — too few days yet to say whether it's well-sized. | `data/coverage_metrics.json` |
 
 ## How it works
@@ -90,7 +90,7 @@ flowchart TD
 | `.github/workflows/` | `check-price.yml` (scheduled data refresh), `lint.yml`, `eval-direction.yml`, `weekly-backtest.yml`, `scraper-canary.yml` |
 | `docs/` | RUNBOOK, ARCHITECTURE, ADRs, CURRENT_STATE, DIRECTION_SIGNAL_STATUS |
 
-Every number in this README is injected from `data/*.json` by `scripts/inject_metrics.py` and re-checked in CI (`docs-freshness`), so it can't silently go stale — never type one by hand.
+Every number in this README is injected from `data/*.json` by `scripts/inject_metrics.py` and re-checked in CI (`docs-freshness`), so it can't silently go stale — never type one by hand. The one exception is the forecast row's backtest figures: a `FROZEN` citation of `data/backtest.json` at commit `ad42160` (2 Aug 2026), dated in the table and pinned on purpose so it does not drift with live data.
 
 ### Design decisions (ADRs)
 
