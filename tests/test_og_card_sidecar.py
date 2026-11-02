@@ -25,7 +25,8 @@ def test_every_hero_branch_names_its_kind() -> None:
     assert len(returns) == 4, returns
     kinds = [re.search(r'kind: "(\w+)"', r) for r in returns]
     assert all(kinds), returns
-    assert {k.group(1) for k in kinds if k} == {"tanishq", "estimate", "derived"}
+    # per branch, in order: fresh Tanishq, estimate, last Tanishq (no estimate), derived row
+    assert [k.group(1) for k in kinds if k] == ["tanishq", "estimate", "tanishq", "derived"]
 
 
 def test_the_card_exposes_what_it_drew() -> None:
@@ -49,6 +50,8 @@ def test_png_and_sidecar_are_written_together_or_not_at_all() -> None:
     write = SHOT.index("writeFileSync(SIDECAR")
     assert SHOT.index('getAttribute("data-error")') < refuse < shot < write
     assert "process.exit(1)" in SHOT[refuse - 200 : shot]
+    # the guard really tests the exposed value (a disabled guard would publish og.png anyway)
+    assert 'if (drawn === null || typeof drawn !== "object") {' in SHOT
     assert "built_at: new Date().toISOString()" in SHOT
 
 
@@ -62,6 +65,13 @@ def test_the_workflow_commits_the_sidecar_with_og_png() -> None:
     # first time: master has none, so it goes in alone
     assert "git ls-files --error-unmatch data/og-card.json" in run
     # afterwards: only with a changed og.png (it always differs on its own: it carries built_at)
+    # the pre-check stages og.png alone: staging the sidecar there (it always differs, it carries
+    # built_at) would open a bot PR on every run
+    precheck = run.split("if git diff --cached --quiet", 1)[0]
+    assert re.search(r"^\s*git add og\.png\s*$", precheck, re.M), precheck
+    assert precheck.count("git add data/og-card.json") == 1
+    first_time = precheck.index("git ls-files --error-unmatch")
+    assert first_time < precheck.index("git add data/og-card.json")
     changed = run.split("else", 1)[1]
     assert changed.index("git add data/og-card.json") < changed.index("git commit")
 
