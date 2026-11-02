@@ -141,10 +141,12 @@ jobs:
         # history with identical data and a stable schema? Prints names, shapes, columns and arrow
         # types only, never values. A file that is absent (decrypt failed) is skipped; the decrypt
         # step reports that itself.
-        # OBSERVE FIRST: continue-on-error until a run on real data shows every file passing. The
-        # first version stopped check-price on a false positive (2026-10-30, reverted in #3353).
-        # Removing continue-on-error is its own PR, before the pyarrow 26 bump (#3322).
-        continue-on-error: true
+        # BLOCKING since 2026-11-03: a failure stops the run before anything writes a parquet, and
+        # ci-health pages GG (scripts/check_price_health.py). It was observed first
+        # (continue-on-error) after the first version stopped check-price on a false positive
+        # (2026-10-30, reverted in #3353); it then read 5 of 5 files identical on pyarrow 25.0.1 in
+        # 10 real runs from 2026-11-01 07:33Z to 2026-11-02 15:33Z (41285205155 ... 41472725528,
+        # listed in this step's PR). Next: the pyarrow 26 bump (#3322) runs under it.
         run: >-
           python scripts/parquet_roundtrip_check.py
           data/ibja_rates.parquet
