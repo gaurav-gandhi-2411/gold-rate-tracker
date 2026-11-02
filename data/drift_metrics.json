@@ -1,53 +1,5 @@
 [
   {
-    "ts": "2026-10-03T06:23:48.240308+00:00",
-    "target_time": "2026-10-04T00:00:00+00:00",
-    "actual_ts": "2026-10-03T06:17:19.485Z",
-    "residual": -102.0,
-    "model_version": "nextfix_ridge_mlp_v1",
-    "baseline_mae": 248.29
-  },
-  {
-    "ts": "2026-10-03T06:38:03.854411+00:00",
-    "target_time": "2026-10-04T00:00:00+00:00",
-    "actual_ts": "2026-10-03T06:33:02.378Z",
-    "residual": -2.0,
-    "model_version": "nextfix_ridge_mlp_v1",
-    "baseline_mae": 248.29
-  },
-  {
-    "ts": "2026-10-03T07:26:02.809469+00:00",
-    "target_time": "2026-10-04T00:00:00+00:00",
-    "actual_ts": "2026-10-03T07:20:52.474Z",
-    "residual": -2.0,
-    "model_version": "nextfix_ridge_mlp_v1",
-    "baseline_mae": 248.29
-  },
-  {
-    "ts": "2026-10-03T10:30:31.444741+00:00",
-    "target_time": "2026-10-04T00:00:00+00:00",
-    "actual_ts": "2026-10-03T10:24:48.553Z",
-    "residual": -2.0,
-    "model_version": "nextfix_ridge_mlp_v1",
-    "baseline_mae": 248.29
-  },
-  {
-    "ts": "2026-10-03T10:43:10.918431+00:00",
-    "target_time": "2026-10-04T00:00:00+00:00",
-    "actual_ts": "2026-10-03T10:37:16.284Z",
-    "residual": -2.0,
-    "model_version": "nextfix_ridge_mlp_v1",
-    "baseline_mae": 248.29
-  },
-  {
-    "ts": "2026-10-03T14:48:47.821415+00:00",
-    "target_time": "2026-10-04T00:00:00+00:00",
-    "actual_ts": "2026-10-03T14:43:27.856Z",
-    "residual": -2.0,
-    "model_version": "nextfix_ridge_mlp_v1",
-    "baseline_mae": 248.29
-  },
-  {
     "ts": "2026-10-03T18:04:48.313317+00:00",
     "target_time": "2026-10-04T00:00:00+00:00",
     "actual_ts": "2026-10-03T17:59:04.294Z",
@@ -1101,6 +1053,14 @@
     "actual_ts": "2026-11-02T05:41:36.217Z",
     "residual": 115.0,
     "model_version": "nextfix_p3_v1",
+    "baseline_mae": 241.07
+  },
+  {
+    "ts": "2026-11-02T15:33:49.948776+00:00",
+    "target_time": "2026-11-03T00:00:00+00:00",
+    "actual_ts": "2026-11-02T15:23:43.901Z",
+    "residual": 257.0,
+    "model_version": "hold_latest_fix_am_to_pm",
     "baseline_mae": 241.07
   }
 ]
