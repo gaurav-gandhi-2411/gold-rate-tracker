@@ -1,10 +1,13 @@
 // tests/test_direction_signal_one_source.js
-// GG brief (2026-11-02): how-we-know.html said "Direction signal: On" because the next-rate model's
-// test on past days passed (next_fix.track_record.direction_gate_ship), while the main page showed
-// no direction (next_fix.direction.show was false: no promotion record) and said "We don't guess
-// whether prices will rise or fall next", and P3/P4 below it said there was no proven edge. Every
-// statement about the direction signal now comes from i18n.js directionSignalState, so the two
-// pages cannot disagree. Drives the REAL how-we-know.js and app.js renders, in English and Hindi.
+// GG brief (2026-11-02): how-we-know.html said "Direction signal: On" while P3 below it said there
+// was no edge, and the main page said "We don't guess whether prices will rise or fall next".
+// What is actually true: the next-rate model's direction is approved (data/direction_promotion_record.json,
+// 2026-10-02) and ml/inference.py publishes next_fix.direction.show === true only in
+// "after_us_close" mode (from the US close until India's next morning rate); in the two hold modes
+// the estimate is the latest official rate and has no direction. P3/P4 are about a different
+// model, the 5-day AI model. Every statement about the direction signal now comes from
+// i18n.js directionSignalState, so the two pages cannot disagree, and the off text gives the real
+// reason. Drives the REAL how-we-know.js and app.js renders, in English and Hindi.
 //
 // Run: node --test tests/test_direction_signal_one_source.js  (from repo root)
 
@@ -18,27 +21,33 @@ const NOW = Date.parse("2026-11-02T18:00:00Z");
 const FRESH = new Date(NOW - 3 * 3_600_000).toISOString();
 const STALE = new Date(NOW - 20 * 86_400_000).toISOString();
 
-// The 2026-11-02 published shape: the test passed on 163 re-run days, not shown.
+// The 2026-11-02 published record: 163 days, 16 of them calls made at the time.
 const TRACK = {
-  n: 163, mae_model: 103.2, mae_flat: 112.1, mae_change_pct: -7.9,
+  n: 163, n_forward: 16, mae_model: 103.2, mae_flat: 112.1, mae_change_pct: -7.9,
   direction_accuracy: 0.6503, always_up_accuracy: 0.4601, direction_gate_ship: true,
 };
-function fc({ show = false, prob = 0.62, side = "up", gate = true, active = true, at = FRESH } = {}) {
+// show/prob/mode as ml/inference.py publishes them: after_us_close carries a probability and
+// show = gate passed AND promoted; the hold modes carry show false and a null probability.
+function fc({
+  mode = "after_us_close", show = mode === "after_us_close", prob = 0.62, side = "up",
+  gate = true, active = true, at = FRESH, range = true,
+} = {}) {
+  const hold = mode !== "after_us_close";
   return {
     predicted_at: at,
-    headline: { predicted_22k: 12825, lower: 12700, upper: 12950 },
+    headline: range ? { predicted_22k: 12825, lower: 12700, upper: 12950 } : { predicted_22k: 12825 },
     chronos_companion: { status: "success" },
     next_fix: {
       active,
-      mode: "after_us_close",
+      mode,
       track_record: { ...TRACK, direction_gate_ship: gate },
-      direction: { show, side, probability: show ? prob : prob },
+      direction: hold ? { show, side: "unclear", probability: null } : { show, side, probability: prob },
     },
   };
 }
 const BT = {
   backtest_run_at: FRESH, mae_5d_avg_naive: 241.07, mae_5d_avg_chronos: 288.14,
-  wilcoxon_signed_rank_p: 0.0, n_folds: 266, dir_acc_5d_chronos: 0.4925,
+  wilcoxon_signed_rank_p: 0.0, n_folds: 266, dir_acc_5d_chronos: 0.4925, dir_acc_5d_naive: 0.5,
   naive_error_recent: { folds_window: 30, pct: 80, n: 30 },
 };
 
@@ -70,83 +79,124 @@ function mainPage(forecast, lang = "en") {
   }
 }
 
-test("state: a passed test alone is not on; on needs show, a probability, active and fresh", () => {
+const RECORD = { n: 163, right: 106, upRight: 75, passed: true, nForward: 16 };
+
+test("state: on only with show === true, a probability in [0, 1], a range, active and fresh", () => {
   const app = loadApp({ nowMs: NOW });
   try {
     const s = app.pure("directionSignalState");
-    assert.deepEqual(s(fc(), NOW), { on: false, record: { n: 163, right: 106, upRight: 75, passed: true } });
-    assert.equal(s(fc({ show: true }), NOW).on, true);
-    assert.equal(s(fc({ show: true, active: false }), NOW).on, false);
-    assert.equal(s(fc({ show: true, at: STALE }), NOW).on, false);
-    const noProb = fc({ show: true });
-    noProb.next_fix.direction.probability = null;
-    assert.equal(s(noProb, NOW).on, false);
-    assert.deepEqual(s(null, NOW), { on: false, record: null });
+    assert.deepEqual(s(fc(), NOW), { on: true, hold: false, record: RECORD });
+    assert.deepEqual(s(fc({ mode: "after_afternoon_rate" }), NOW), { on: false, hold: true, record: RECORD });
+    assert.equal(s(fc({ mode: "after_morning_rate" }), NOW).hold, true);
+    // gate passed, no promotion record: off, and not the hold (the model is not holding a rate)
+    assert.deepEqual(s(fc({ show: false }), NOW), { on: false, hold: false, record: RECORD });
+    assert.equal(s(fc({ show: "true" }), NOW).on, false);
+    assert.equal(s(fc({ show: 1 }), NOW).on, false);
+    for (const prob of [null, Number.NaN, Infinity, 1.7, -0.1, "0.62"]) {
+      assert.equal(s(fc({ prob }), NOW).on, false, String(prob));
+    }
+    assert.equal(s(fc({ prob: 1 }), NOW).on, true);
+    assert.equal(s(fc({ range: false }), NOW).on, false); // the main page shows it inside the range line
+    const inactive = s(fc({ active: false }), NOW);
+    assert.equal(inactive.on, false);
+    assert.equal(inactive.hold, false);
+    const stale = s(fc({ mode: "after_afternoon_rate", at: STALE }), NOW);
+    assert.equal(stale.on, false);
+    assert.equal(stale.hold, false); // out of date is not the normal hold
+    assert.deepEqual(s(null, NOW), { on: false, hold: false, record: null });
     assert.equal(s({ next_fix: { track_record: { n: 0, direction_accuracy: 0.6, always_up_accuracy: 0.5 } } }, NOW).record, null);
+    assert.equal(s({ next_fix: { track_record: { ...TRACK, direction_accuracy: Number.NaN } } }, NOW).record, null);
+    const noFwd = fc();
+    delete noFwd.next_fix.track_record.n_forward;
+    assert.equal(s(noFwd, NOW).record.nForward, null);
+    noFwd.next_fix.track_record.n_forward = 999;
+    assert.equal(s(noFwd, NOW).record.nForward, null);
   } finally {
     app.dispose();
   }
 });
 
-test("today's shape: how-we-know says Off and why, never On; the main page shows no direction", () => {
-  const page = hwk(fc());
-  assert.match(page, /Direction signal Status Off — tested, not shown/);
-  assert.match(page, /Tested on 163 past days it had not seen: right 106 times, against 75 for "gold usually rises"\. These are re-runs on past data/);
+test("the 2026-11-02 afternoon: Off until the US close, with the real reason and record", () => {
+  const page = hwk(fc({ mode: "after_afternoon_rate" }));
+  assert.match(page, /Direction signal Status Off until the US market closes/);
+  assert.match(page, /Tested on 163 past days it had not seen: right 106 times, against 75 for "gold usually rises"\. 16 of those days were calls made at the time; the rest are re-runs on past data\./);
+  assert.match(page, /only from the US market's close until India's next morning rate is set/);
   assert.doesNotMatch(page, /On — for the next price move only/);
-  // P3 is about the 5-day model and P4 no longer says a passed test turns it on
-  assert.match(page, /Our 5-day AI model was right 49% of the time across 266 test windows/);
-  assert.match(page, /We don't claim any edge for it\./);
-  assert.match(page, /kept beating the "gold usually rises" guess and was approved to be shown, we'd turn this on/);
-  assert.doesNotMatch(page, /in testing, we'd turn this back on/);
-  const main = mainPage(fc());
+  // the wrong reasons of the first draft
+  assert.doesNotMatch(page, /tested, not shown|separate approval|so we do not show it/);
+  const main = mainPage(fc({ mode: "after_afternoon_rate" }));
   assert.equal(main.state.on, false);
   assert.doesNotMatch(main.signal, /good-price-direction"/);
   assert.match(main.summary, /We don't guess whether prices will rise or fall next\./);
 });
 
-test("on: how-we-know says On, the main page shows the direction, and nothing says it is off", () => {
-  const page = hwk(fc({ show: true }));
+test("after the US close: On on both pages, and nothing says it is off", () => {
+  const page = hwk(fc());
   assert.match(page, /Direction signal Status On — for the next price move only/);
-  assert.match(page, /right 106 times, against 75/);
-  assert.doesNotMatch(page, /Off — /);
-  // P3's "no edge" and P4's "we'd turn this on" describe the off state only
-  assert.doesNotMatch(page, /We don't claim any edge/);
-  assert.doesNotMatch(page, /we'd turn this on/);
-  const main = mainPage(fc({ show: true }));
+  assert.match(page, /right 106 times, against 75 for "gold usually rises"\. 16 of those days were calls made at the time/);
+  assert.match(page, /The re-run days also helped us pick the model/);
+  assert.doesNotMatch(page, /Off until|Off right now|Off — /);
+  const main = mainPage(fc());
   assert.equal(main.state.on, true);
   assert.match(main.signal, /good-price-direction" data-side="up"/);
   assert.doesNotMatch(main.summary, /We don't guess/);
 });
 
+test("P3/P4 are about the 5-day model, compare it with a coin toss, and show in every state", () => {
+  for (const f of [fc(), fc({ mode: "after_morning_rate" })]) {
+    const page = hwk(f);
+    assert.match(page, /About the 5-day AI model/);
+    assert.match(page, /Our 5-day AI model called the direction right 49% of the time across 266 test windows; a coin toss would be right about half the time\. We don't claim any edge for it, and it is not what gives the up-or-down call in "Direction signal" above\./);
+    assert.match(page, /If the 5-day model started reliably beating a coin toss in testing/);
+    // the claim that contradicted the page's own always-up count (75 of 163)
+    assert.doesNotMatch(page, /risen far more often|close to as well|not mostly up/);
+  }
+});
+
+test("out of date data: Off right now, not the hold reason", () => {
+  const page = hwk(fc({ mode: "after_afternoon_rate", at: new Date(NOW - 20 * 86_400_000).toISOString() }));
+  assert.match(page, /Status Off right now/);
+  assert.match(page, /only while our latest data is complete and up to date/);
+  assert.doesNotMatch(page, /Off until the US market closes/);
+  // after the US close but not shown: not the hold either
+  assert.match(hwk(fc({ show: false })), /Status Off right now/);
+});
+
 test("the two pages agree in every state", () => {
   const cases = [
-    fc(), fc({ show: true }), fc({ show: true, gate: true, active: false }),
-    fc({ show: true, at: STALE }), fc({ gate: false }), fc({ show: false, gate: false }),
+    fc(), fc({ mode: "after_morning_rate" }), fc({ mode: "after_afternoon_rate" }),
+    fc({ active: false }), fc({ at: STALE }), fc({ gate: false, show: false }), fc({ show: false }),
+    fc({ show: "true" }), fc({ show: 1 }), fc({ prob: null }), fc({ prob: 1.7 }), fc({ range: false }),
   ];
   for (const f of cases) {
-    const page = hwk(f);
-    const main = mainPage(f);
-    const hwkOn = /Status On — /.test(page);
-    const mainOn = /good-price-direction"/.test(main.signal);
-    assert.equal(hwkOn, main.state.on, JSON.stringify(f.next_fix));
-    assert.equal(mainOn, main.state.on, JSON.stringify(f.next_fix));
-    assert.equal(/We don't guess/.test(main.summary), !main.state.on);
+    for (const lang of ["en", "hi"]) {
+      const page = hwk(f, lang);
+      const main = mainPage(f, lang);
+      const hwkOn = lang === "en" ? /Status On — /.test(page) : /चालू — /.test(page);
+      const mainOn = /good-price-direction"/.test(main.signal);
+      const label = `${lang} ${JSON.stringify(f.next_fix.direction)} ${f.next_fix.mode} active=${f.next_fix.active}`;
+      assert.equal(hwkOn, main.state.on, label);
+      assert.equal(mainOn, main.state.on, label);
+      assert.equal(/We don't guess|हम यह अंदाज़ा नहीं लगाते/.test(main.summary), !main.state.on, label);
+    }
   }
 });
 
 test("a test that did not pass keeps the older Off wording", () => {
-  const page = hwk(fc({ gate: false }));
+  const page = hwk(fc({ gate: false, show: false }));
   assert.match(page, /Off — not yet reliable/);
-  assert.doesNotMatch(page, /tested, not shown/);
+  assert.doesNotMatch(page, /Off until|Off right now/);
 });
 
-test("Hindi: Off with the computed counts, and no English fallback in the section", () => {
-  const page = hwk(fc(), "hi");
-  assert.match(page, /बंद — जांचा गया, दिखाया नहीं जाता/);
+test("Hindi: the off reason and the record, with no English fallback in the section", () => {
+  const page = hwk(fc({ mode: "after_afternoon_rate" }), "hi");
+  assert.match(page, /अमेरिकी बाज़ार बंद होने तक बंद/);
   assert.match(page, /163 पुराने दिनों पर जांचा/);
   assert.match(page, /106 बार सही/);
-  assert.doesNotMatch(page, /Tested on|re-runs on past data|Off — /);
-  const on = hwk(fc({ show: true }), "hi");
+  assert.match(page, /इनमें से 16 दिनों के अंदाज़े उसी समय लगाए गए थे/);
+  assert.match(page, /5 दिन वाले AI मॉडल के बारे में/);
+  assert.doesNotMatch(page, /Tested on|re-runs on past data|Off until|Off right now|coin toss|5-day AI/);
+  const on = hwk(fc(), "hi");
   assert.match(on, /चालू — सिर्फ़ अगली चाल के लिए/);
-  assert.doesNotMatch(on, /Tested on|The chance comes from/); // methDirectionOnSub / Source in Hindi
+  assert.doesNotMatch(on, /Tested on|The chance comes from|re-run days/);
 });

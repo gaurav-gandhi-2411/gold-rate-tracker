@@ -211,7 +211,7 @@ test("how-we-know: 'How accurate is this?' P1 (MAE) and P3 (direction) render wh
     coverage: { coverage: 0.73, n: 63, generated_at_utc: isoDaysAgo(5) },
   });
   assert.match(html, /We assume tomorrow's price is about the same as today's/);
-  assert.match(html, /About the direction signal/);
+  assert.match(html, /About the 5-day AI model/);
 });
 
 test("how-we-know: 'How accurate is this?' P1 and P3 are OMITTED (not shown as a stale number) when backtest_run_at is > 14 days old", () => {
@@ -221,7 +221,7 @@ test("how-we-know: 'How accurate is this?' P1 and P3 are OMITTED (not shown as a
     coverage: { coverage: 0.73, n: 63, generated_at_utc: isoDaysAgo(5) },
   });
   assert.doesNotMatch(html, /We assume tomorrow's price is about the same as today's/);
-  assert.doesNotMatch(html, /About the direction signal/);
+  assert.doesNotMatch(html, /About the 5-day AI model/);
   // P2 (coverage, independently gated/fresh here) and the static P4 explainer
   // must still render -- a stale backtest does not blank the whole section.
   assert.match(html, /range has been right/);

@@ -209,17 +209,18 @@ function renderFullMethodology(fc, bt, drift, coverage, bandCoverage) {
       </div>
     `);
   } else if (dir.record?.passed) {
-    // The 2026-11-02 state: the next-rate model's test passed on re-runs over past days, but it is
-    // not shown, so the status is Off and the numbers are named as what they are.
+    // Approved and passing, but not shown right now. Normally that is the hold modes (from India's
+    // morning rate until the US close the estimate is the latest official rate, with no
+    // direction); otherwise the data is out of date or incomplete. The status says which.
     parts.push(`
       <div class="meth-section">
         <h3 class="meth-heading">${tHwk("methDirectionHeading")}</h3>
         <div class="meth-stat">
           <div class="meth-stat-label">${tHwk("methStatusLabel")}</div>
-          <div class="meth-stat-value">${tHwk("methDirectionOffTested")}</div>
-          <div class="meth-stat-sub">${tHwk("methDirectionOffTestedSub", dir.record)}</div>
+          <div class="meth-stat-value">${tHwk(dir.hold ? "methDirectionOffHold" : "methDirectionOffPaused")}</div>
+          <div class="meth-stat-sub">${tHwk("methDirectionRecordSub", dir.record)}</div>
         </div>
-        <p class="meth-note">${tHwk("methDirectionOffTestedNote")}</p>
+        <p class="meth-note">${tHwk(dir.hold ? "methDirectionHoldNote" : "methDirectionPausedNote")}</p>
       </div>
     `);
   } else if (fc?.chronos_companion?.status === "success") {
@@ -289,15 +290,15 @@ function renderFullMethodology(fc, bt, drift, coverage, bandCoverage) {
           n, naiveMae, span: foldYearSpan(bt.folds),
           chronosBullet: maePctWorse != null ? tHwk("methAccurateP1ChronosBullet", { chronosMae, maePctWorse, pValOp, pValText }) : "",
         })}</p>` : "";
-    // P3 ("we don't claim any edge here") and P4 ("we'd turn this back on") describe the signal
-    // while it is off, so they follow the same directionSignalState as the section above; while it
-    // is on, that section says what is shown and why.
-    const p3Html = btFresh && !dir.on ? `
+    // P3 and P4 are about the 5-day AI model (data/backtest.json), a different model from the
+    // next-rate estimate's up-or-down call in the "Direction signal" section, so they say so and
+    // do not depend on whether that call is on.
+    const p3Html = btFresh ? `
         <p class="meth-text"><strong>${tHwk("methAccurateP3Strong")}</strong><br>
         ${tHwk("methAccurateP3", { dirAllDisplay, n })}</p>` : "";
-    const p4Html = !dir.on ? `
+    const p4Html = `
         <p class="meth-text"><strong>${tHwk("methAccurateP4Strong")}</strong><br>
-        ${tHwk("methAccurateP4")}</p>` : "";
+        ${tHwk("methAccurateP4")}</p>`;
 
     parts.push(`
       <div class="meth-section meth-how-good">

@@ -87,12 +87,23 @@ Raised by one of two judges (opus) on wording that this change kept unchanged fr
 
 ## Added 2026-11-03 (direction signal one source, branch fix/direction-signal-one-source)
 
-Seven strings: two existing English strings that had no Hindi (`methDirectionOnSub`, `methDirectionSource`), three new ones for the "tested, not shown" state, and two rewordings (`methAccurateP3`, `methAccurateP4`). Two independent judges (sonnet, opus). Every applied string had both judges' agreement; nothing contested is left.
+The first draft of this branch said the direction signal was "Off — tested, not shown" and needed a
+separate approval. Both were wrong: it is approved (data/direction_promotion_record.json, 2026-10-02)
+and is shown from the US close until India's next morning rate (independent verifier, 2026-11-02).
+Those three strings were dropped before merge. The strings below replace them. Two independent judges
+(sonnet, opus), two rounds; every applied string had both judges' agreement; nothing contested is left.
+
+Round 1 (2026-11-02), the strings carried over from the first draft:
 
 | Key | First round | Applied | Note |
 |---|---|---|---|
-| `methDirectionOffTested`, `methDirectionOffTestedNote`, `methAccurateP3`, `methAccurateP4` | both ACCEPT | draft | |
-| `methDirectionOffTestedSub` | both CHANGE, same fix | आँकड़ों -> आंकड़ों | the site's spelling (hwkPageDescription आंकड़े) |
-| `methDirectionOnSub` | sonnet ACCEPT, opus CHANGE | असल नतीजे -> आगे के नतीजे | on a second look sonnet agreed: असल नतीजे could read as "the test results were not real"; the English means live results from here on |
+| `methDirectionOnSub` (closing sentence) | sonnet ACCEPT, opus CHANGE | असल नतीजे -> आगे के नतीजे | on a second look sonnet agreed: असल नतीजे could read as "the test results were not real"; the English means live results from here on |
 | `methDirectionSource` | sonnet ACCEPT, opus CHANGE | पीछे -> पर्दे के पीछे | on a second look sonnet agreed: पीछे alone can read as "earlier"; पर्दे के पीछे is "in the background" |
-| `methAccurateP3` | opus note, not a change | draft | opus: "इस मॉडल की किसी बढ़त का दावा नहीं करते" would be slightly clearer than "हम इसके लिए किसी बढ़त का दावा नहीं करते"; judged taste, not an error |
+
+Round 2 (2026-11-03), the reworded strings:
+
+| Key | Judges | Applied | Note |
+|---|---|---|---|
+| `methDirectionRecordSub` (both variants), `methDirectionOnSub`, `methDirectionOffHold`, `methDirectionOffPaused`, `methDirectionPausedNote`, `methAccurateP3Strong`, `methAccurateP4` | both ACCEPT | draft | both noted बंद twice in `methDirectionOffHold` is clear; any rewording would add a claim |
+| `methDirectionHoldNote` | sonnet ACCEPT, opus CHANGE | यह फिर दिखेगा -> दिशा फिर दिखेगी | on a second look sonnet agreed: masculine यह points back to अनुमान, implying the estimate disappears; it is the direction that comes back |
+| `methAccurateP3` | both CHANGE, different fixes; combined, both ACCEPT | ${dirAllDisplay} बार -> ${dirAllDisplay} मौकों पर; dropped भी; किसी बढ़त का दावा नहीं करते -> यह दावा नहीं करते कि यह सिक्का उछालने से बेहतर है | sonnet: "49% बार" is unnatural and भी adds "even" the English lacks; opus: the glossary reserves बढ़त for a price rise, so it could read "we don't claim it rises" |

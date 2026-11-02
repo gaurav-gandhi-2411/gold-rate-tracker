@@ -81,31 +81,44 @@ function isMeasurementFresh(isoTimestamp, nowMs = Date.now(), maxAgeDays = CLAIM
 }
 
 // The one answer, for every page, to "is the direction signal on?" (GG brief, 2026-11-02).
-// how-we-know.html once said "Direction signal: On" because the next-rate model's own test passed
-// (track_record.direction_gate_ship), while the main page showed no direction and said "We don't
-// guess whether prices will rise or fall next": a passing test is a measurement, not an
-// authorization (ml/direction/gate.py). ml/inference.py publishes next_fix.direction.show = the
-// test passed AND GG's promotion record exists; that is the source of truth here.
-// on:     the main page shows the next move's direction now (next_fix active, show === true, a
-//         numeric probability, forecast.json fresh by isMeasurementFresh).
-// record: the model's test on past days it had not seen, or null: n, right, upRight (counts
-//         computed from the published accuracies) and passed (its test passed). These are
-//         re-runs on past data, never live calls.
+// The main page shows the next official rate's likely direction only while ml/inference.py
+// publishes next_fix.direction.show === true: the model's test passed AND GG's promotion record
+// exists (approved 2026-10-02) AND the model is in "after_us_close" mode, i.e. from the US close
+// until India's next morning rate. In the two hold modes ("after_morning_rate",
+// "after_afternoon_rate") the estimate is India's latest official rate held as it is, and there is
+// no direction. So the signal is approved and goes on and off about twice a day.
+// on:     the main page shows the direction now: next_fix active, show === true, a probability
+//         that is a finite number in [0, 1], a price range to show it under (app.js shows the
+//         direction inside the range line), and forecast.json fresh by isMeasurementFresh.
+// hold:   not on because the model is holding India's latest official rate (the normal off-hours
+//         state), as opposed to off for any other reason (inactive, out of date, no range).
+// record: the model's test on past days it had not seen, or null: n, right, upRight (counts from
+//         the published accuracies), passed (its test passed) and nForward (how many of the n were
+//         calls made at the time; null when not published).
 function directionSignalState(fc, nowMs = Date.now()) {
   const nf = fc?.next_fix;
   const tr = nf?.track_record;
   const record = tr && Number.isInteger(tr.n) && tr.n > 0
-    && typeof tr.direction_accuracy === "number" && typeof tr.always_up_accuracy === "number"
+    && Number.isFinite(tr.direction_accuracy) && Number.isFinite(tr.always_up_accuracy)
     ? {
       n: tr.n,
       right: Math.round(tr.direction_accuracy * tr.n),
       upRight: Math.round(tr.always_up_accuracy * tr.n),
       passed: tr.direction_gate_ship === true,
+      nForward: Number.isInteger(tr.n_forward) && tr.n_forward >= 0 && tr.n_forward <= tr.n
+        ? tr.n_forward : null,
     }
     : null;
+  const p = nf?.direction?.probability;
+  const lo = fc?.headline?.lower ?? fc?.lower;
+  const hi = fc?.headline?.upper ?? fc?.upper;
   const on = nf?.active === true && nf.direction?.show === true
-    && typeof nf.direction.probability === "number" && isMeasurementFresh(fc?.predicted_at, nowMs);
-  return { on, record };
+    && Number.isFinite(p) && p >= 0 && p <= 1
+    && typeof lo === "number" && typeof hi === "number"
+    && isMeasurementFresh(fc?.predicted_at, nowMs);
+  const hold = !on && nf?.active === true && isMeasurementFresh(fc?.predicted_at, nowMs)
+    && (nf.mode === "after_morning_rate" || nf.mode === "after_afternoon_rate");
+  return { on, hold, record };
 }
 
 const STRINGS = {
