@@ -633,7 +633,11 @@ def test_run_probe_insufficient_context_has_default_fields(tmp_path):
 
 @patch("ml.chronos_forecast.load_chronos_pipeline")
 def test_run_probe_wall_clock_sanity(mock_load, tmp_path):
-    """wall_clock_ms total must be present, >0, and < 5000 with mocked pipeline."""
+    """wall_clock_ms total must be present, a non-negative int, and < 5000 with mocked pipeline.
+
+    Not > 0: the probe truncates to whole ms, and a mocked run can finish within one tick of
+    time.monotonic() (~15.6 ms on Windows), which legitimately records 0.
+    """
     mock_load.return_value = _stub_pipeline()
     parquet_path = tmp_path / "ibja.parquet"
     calib_path = tmp_path / "calibration.json"
@@ -645,5 +649,6 @@ def test_run_probe_wall_clock_sanity(mock_load, tmp_path):
     result = cf.run_probe(parquet_path, calib_path, out_path)
 
     total_ms = result["wall_clock_ms"]["total"]
-    assert total_ms > 0
+    assert isinstance(total_ms, int)
+    assert total_ms >= 0
     assert total_ms < 5000  # generous bound for CI variability; mock should be <<100ms

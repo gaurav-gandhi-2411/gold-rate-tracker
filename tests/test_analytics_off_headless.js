@@ -59,8 +59,15 @@ function assert(label, ok, detail = "") {
 const NOTE_RE = /<p [^>]*id="privacy-note"[^>]*>[\s\S]*?<\/p>/;
 // The page animates cards in with class changes whose ORDER depends on timing (card-enter /
 // reveal-visible); compare class sets, not their order, so the check is not flaky.
+// Relative times ("21 min ago", fmtRelative's English forms in i18n.js) are computed from the clock
+// at render, so two loads a few seconds apart differ when a minute ticks over between them: the
+// five pwa-headless failures 2026-10-29..31 (e.g. lint run 41172891139: "21 min ago" vs "22 min
+// ago") were all this, not an analytics difference. Mask the value, keep everything around it.
+const REL_TIME_RE = /\b(?:just now|\d+ min ago|\d+h ago|\d+d ago)\b/g;
 const norm = (html) =>
-  html.replace(/class="([^"]*)"/g, (_m, c) => `class="${c.split(/\s+/).sort().join(" ")}"`);
+  html
+    .replace(/class="([^"]*)"/g, (_m, c) => `class="${c.split(/\s+/).sort().join(" ")}"`)
+    .replace(REL_TIME_RE, "<rel-time>");
 
 // On a mismatch, name where the two pages first differ and show both sides there. The 2026-10-28
 // master failure (run 40719381434) printed only FAIL, so the flake could not be diagnosed.
