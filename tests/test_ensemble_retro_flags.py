@@ -112,6 +112,16 @@ def test_a_day_made_unpublished_after_p3_stored_it_still_compares_the_same(monke
     assert promotion.compare(champ, filled, since=CUT, cid="ensemble") == before
     by_rule = nextfix.flag_unflagged(raw, [], CUT, {late})  # the rejected way, for contrast
     assert promotion.compare(champ, by_rule, since=CUT, cid="ensemble")["n"] == before["n"] - 1
+    # review edge: P3 itself holds the day WITHOUT a flag (rule v7 reads it as live); the
+    # ensemble's day is left unflagged too, so the comparison still keeps it
+    champ_odd = [
+        {k: v for k, v in f.items() if k != "retro"} if f["d0"] == late else f for f in champ
+    ]
+    odd = nextfix.flag_unflagged(raw, champ_odd, CUT, {late})
+    assert "retro" not in next(f for f in odd if f["d0"] == late)
+    assert promotion.compare(champ_odd, odd, since=CUT, cid="ensemble") == promotion.compare(
+        champ_odd, raw, since=CUT, cid="ensemble"
+    )
 
 
 def test_the_report_counts_only_live_capable_records_and_never_raises(monkeypatch, caplog):
