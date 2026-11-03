@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import json
 import os
+import re
 import shutil
 import subprocess
 import sys
@@ -287,3 +288,47 @@ def test_step_a_failed_run_pages_at_once_without_a_second_read(tmp_path):
     assert code == 1 and "FAILING" in out and "check-price stopped" in page
     assert not (tmp_path / "sleep.log").exists()
     assert "per_page=50" not in (tmp_path / "gh.log").read_text()
+
+
+def _queries() -> list[tuple[str, str]]:
+    """(url, jq expression) of each run-list query in the step, in order."""
+    run = _step()["run"]
+    return re.findall(r'gh api "([^"]*check-price\.yml/runs[^"]*)" \\\s*--jq \'([^\']*)\'', run)
+
+
+def test_the_second_read_is_a_different_wider_query():
+    (first_url, _), (second_url, _) = _queries()
+    assert "status=completed" in first_url and "per_page=30" in first_url
+    assert "status=" not in second_url and "per_page=50" in second_url
+    assert "branch=master" in second_url
+
+
+@pytest.mark.skipif(JQ is None, reason="needs jq (CI has it)")
+def test_the_second_reads_jq_keeps_only_completed_runs():
+    # stubbed gh never applies --jq; this runs the workflow's own expression through real jq on an
+    # API-shaped page with a run still in progress (conclusion null), which judge() cannot read
+    _, expr = _queries()[1]
+    page = {
+        "workflow_runs": [
+            {
+                "id": 3,
+                "status": "in_progress",
+                "conclusion": None,
+                "created_at": "2026-11-03T01:50:00Z",
+            },
+            {
+                "id": 2,
+                "status": "completed",
+                "conclusion": "success",
+                "created_at": "2026-11-03T00:44:32Z",
+            },
+            {"id": 1, "status": "queued", "conclusion": None, "created_at": "2026-11-03T01:55:00Z"},
+        ]
+    }
+    out = subprocess.run(
+        [JQ or "jq", expr], input=json.dumps(page), capture_output=True, text=True, timeout=30
+    )
+    assert out.returncode == 0, out.stderr
+    rows = json.loads(out.stdout)
+    assert rows == [{"id": 2, "conclusion": "success", "created_at": "2026-11-03T00:44:32Z"}]
+    assert cph.judge(rows, [], datetime(2026, 11, 3, 2, 0, tzinfo=UTC))[0] == 0
