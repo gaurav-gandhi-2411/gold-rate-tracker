@@ -617,18 +617,32 @@ def _resid_sd(folds: list[dict]) -> float | None:
 
 
 def flag_unflagged(
-    folds: list[dict], forward_from: str, unpublished: set[str] | None
+    folds: list[dict],
+    reference: list[dict],
+    forward_from: str,
+    unpublished: set[str] | None,
+    days: set[str] | None = None,
 ) -> list[dict]:
-    """Give every fold without a boolean ``retro`` the flag ``update_oos`` gives a new fold.
+    """Flag a shadow record's days exactly as the ``reference`` (P3's) record flags them.
 
-    For records written before they carried flags (the ensemble's, FOR_GG item 10). A fold that
-    already has a boolean flag is left exactly as it is.
+    For records written before they carried flags (the ensemble's, FOR_GG item 10). Re-flagged:
+    every fold without a boolean ``retro``, plus the folds whose day is in ``days`` (the days this
+    run added). Each takes the reference's stored flag for the same day, so the days both records
+    count live, the only days rule v7 compares, cannot differ from P3's even if the unpublished-days
+    file has grown since P3 stored its flag. A day the reference lacks gets ``update_oos``'s rule.
+    If the unpublished-days file is unreadable (``None``), such a day keeps its old state: a
+    missing flag stays missing (the report counts it, the next run retries) rather than being
+    written down as retro for good. Every other fold is left exactly as it is.
     """
+    ref = {r.get("d0"): r["retro"] for r in reference if isinstance(r.get("retro"), bool)}
     out = []
     for f in folds:
-        if not isinstance(f.get("retro"), bool):
-            d0 = str(f.get("d0", ""))
-            f = {**f, "retro": d0 < forward_from or unpublished is None or d0 in unpublished}
+        d0 = str(f.get("d0", ""))
+        if not isinstance(f.get("retro"), bool) or (days is not None and d0 in days):
+            if d0 in ref:
+                f = {**f, "retro": ref[d0]}
+            elif unpublished is not None:
+                f = {**f, "retro": d0 < forward_from or d0 in unpublished}
         out.append(f)
     return out
 
@@ -1172,15 +1186,18 @@ def run(
     # Shadow: the ridge + neural-net ensemble keeps its own record and is scored beside P3.
     oos_path = data_dir / OOS_PATH.name
     try:  # the shadow must never take the live forecast down (ADR 069)
-        # Explicit retro flags, by P3's own rule (FOR_GG item 10): rule v7 reads a missing flag as
-        # live, every other reader as not live. Same forward_from and unpublished days as P3, so the
-        # days both records count live (all rule v7 compares) are unchanged while P3 is champion.
-        shadow_old = flag_unflagged(load_oos(oos_path), P3_FORWARD_FROM, unpublished_days())
-        shadow_folds = (
+        # Explicit retro flags, copied from P3's record (FOR_GG item 10): rule v7 reads a missing
+        # flag as live, every other reader as not live. Copying P3's stored flag per day keeps the
+        # days both records count live (all rule v7 compares) unchanged while P3 is champion.
+        unpublished = unpublished_days()
+        shadow_old = flag_unflagged(load_oos(oos_path), folds, P3_FORWARD_FROM, unpublished)
+        shadow_new = (
             update_oos(pairs, shadow_old, forward_from=P3_FORWARD_FROM)
             if not pairs.empty
             else shadow_old
         )
+        added = {f["d0"] for f in shadow_new} - {f["d0"] for f in shadow_old}
+        shadow_folds = flag_unflagged(shadow_new, folds, P3_FORWARD_FROM, unpublished, added)
         save_oos(shadow_folds, oos_path, ENSEMBLE_VERSION)
         shadow_ev = evaluate(shadow_folds, ENSEMBLE_VERSION)
     except Exception as exc:
