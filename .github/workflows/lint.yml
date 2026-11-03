@@ -39,8 +39,6 @@ jobs:
       - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
         with:
           python-version: "3.11"
-      # Every install in a required job is pinned (brief 2026-10-30; tests/test_required_ci_installs_pinned.py):
-      # an unpinned release must not be able to change what this job runs. Bumps are deliberate PRs.
       # Data-only or full, decided once here (GG 2026-10-30). Non-blocking: a failed, timed-out or
       # undecidable scope leaves data_only unset, which reads as full. Master is fetched into a
       # private ref (refs/ci-scope/master), not origin/master, and --refmap= stops git's
@@ -92,6 +90,8 @@ jobs:
           echo "data_only=$DATA_ONLY" >> "$GITHUB_OUTPUT"
           echo "SCOPE: mode=$MODE reason=$REASON"
           exit 0
+      # Every install in a required job is pinned (brief 2026-10-30; tests/test_required_ci_installs_pinned.py):
+      # an unpinned release must not be able to change what this job runs. Bumps are deliberate PRs.
       - run: pip install pre-commit==4.7.0
       - run: pre-commit run --all-files
       # From here on, the suite tests what production runs (brief 2026-10-29): check-price's Python

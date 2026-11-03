@@ -174,7 +174,12 @@ def _pr(tmp: Path, origin: Path, change, orphan: bool = False) -> tuple[Path, st
 
 
 def _scope(
-    tmp: Path, work: Path, sha: str, event: str = "pull_request", ref: str = "1/merge"
+    tmp: Path,
+    work: Path,
+    sha: str,
+    event: str = "pull_request",
+    ref: str = "1/merge",
+    github_sha: str | None = None,
 ) -> dict[str, str]:
     out = tmp / "out.txt"
     out.write_text("", encoding="utf-8")
@@ -195,7 +200,7 @@ def _scope(
         "BASE_REF": "master" if event == "pull_request" else "",
         "PR_HEAD": sha if event == "pull_request" else "",
         "REF_NAME": ref,
-        "GITHUB_SHA": sha,
+        "GITHUB_SHA": github_sha or sha,
         "GITHUB_OUTPUT": str(out),
         "RUNNER_TEMP": str(rt),
         "GITHUB_STEP_SUMMARY": str(tmp / "s"),
@@ -268,6 +273,22 @@ def test_scope_is_from_the_merge_base_and_leaves_origin_master_alone(tmp_path):
     _git(origin, "commit", "-q", "-am", "master moves")
     assert _scope(tmp_path, work, sha)["data_only"] == "true"
     assert _git(work, "rev-parse", "refs/remotes/origin/master") == before
+
+
+@NEEDS
+@pytest.mark.parametrize("pr_data_only", [True, False])
+def test_scope_judges_the_pr_head_it_is_given_not_the_checkout(tmp_path, pr_data_only):
+    # In CI the checkout is refs/pull/N/merge (and GITHUB_SHA is that merge commit), not the PR
+    # head. Here the checkout carries the opposite kind of change to the PR head, so a diff
+    # against HEAD or GITHUB_SHA instead of PR_HEAD gives the wrong answer (verifier L1, PR A).
+    origin = _origin(tmp_path)
+    pr_file, other = ("data/a.json", "app.js") if pr_data_only else ("app.js", "data/a.json")
+    work, sha = _pr(tmp_path, origin, lambda w: _write(w, pr_file, "pr\n"))
+    _write(work, other, "checkout only\n")
+    _git(work, "commit", "-q", "-am", "checkout differs from the PR head")
+    checkout = _git(work, "rev-parse", "HEAD")
+    got = _scope(tmp_path, work, sha, github_sha=checkout)
+    assert got["data_only"] == ("true" if pr_data_only else "false"), got
 
 
 @NEEDS
