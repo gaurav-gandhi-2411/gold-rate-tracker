@@ -17,7 +17,7 @@ concurrency:
 jobs:
   backtest:
     runs-on: ubuntu-latest
-    timeout-minutes: 40 # 30 for the backtest itself + 10 headroom for the bot-pr-sync wait
+    timeout-minutes: 60 # 30 for the backtest itself + 30 for the bot-pr-sync wait
 
     steps:
       - name: Checkout repository
@@ -218,5 +218,5 @@ jobs:
           pr-title: "chore: update backtest results"
           pr-body: "Automated backtest sync from Weekly Backtest run ${{ github.run_id }}."
           token: ${{ secrets.CI_MERGE_PAT }}
-          wait-minutes: "10"
+          wait-minutes: "30" # 30 min: a contended lint took 13 min on 2026-11-01 (#3424 stuck a week); a miss here waits for the next weekly/monthly run
           ntfy-topic: ${{ secrets.NTFY_TOPIC }}
