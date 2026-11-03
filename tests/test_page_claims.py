@@ -48,4 +48,4 @@ def test_range_hit_rate_comes_from_the_range_that_is_shown() -> None:
 
 def test_direction_record_admits_the_days_also_picked_the_model() -> None:
     strings = _text("how-we-know-strings.js")
-    assert "the same days also helped us pick the model" in strings
+    assert "The re-run days also helped us pick the model" in strings

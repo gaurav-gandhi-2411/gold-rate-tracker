@@ -84,3 +84,34 @@ Raised by one of two judges (opus) on wording that this change kept unchanged fr
 | `methNextDayExplainer`, `methNextDayExplainerNextFix` | ...a separate, longer-range estimate. | एक अलग, लंबे समय का अनुमान है। | एक अलग अनुमान है, जो आगे के ज़्यादा दिनों का है। | लंबे समय can read as "long-term" for a 5-day figure. |
 | `methAccurateP2` | ...so it's a small sample. | इसलिए नमूना छोटा है। | इसलिए नमूने कम हैं। | The glossary's small-sample row says कम नमूने (rule 1). |
 | `methNextDayExplainer`, `methNextDayExplainerNextFix` | the "about ₹X in 5 days" note | "5 दिनों में करीब ₹X" वाला नोट | (verifier) quote is a paraphrase of volNote* ("5 दिनों के अंदर ... करीब ₹Z ऊपर या नीचे गया") | Same paraphrase as the earlier approved text. |
+
+## Added 2026-11-03 (direction signal one source, branch fix/direction-signal-one-source)
+
+The first draft of this branch said the direction signal was "Off — tested, not shown" and needed a
+separate approval. Both were wrong: it is approved (data/direction_promotion_record.json, 2026-10-02)
+and is shown from the US close until India's next morning rate (independent verifier, 2026-11-02).
+Those three strings were dropped before merge. The strings below replace them. Two independent judges
+(sonnet, opus), two rounds; every applied string had both judges' agreement; nothing contested is left.
+
+Round 1 (2026-11-02), the strings carried over from the first draft:
+
+| Key | First round | Applied | Note |
+|---|---|---|---|
+| `methDirectionOnSub` (closing sentence) | sonnet ACCEPT, opus CHANGE | असल नतीजे -> आगे के नतीजे | on a second look sonnet agreed: असल नतीजे could read as "the test results were not real"; the English means live results from here on |
+| `methDirectionSource` | sonnet ACCEPT, opus CHANGE | पीछे -> पर्दे के पीछे | on a second look sonnet agreed: पीछे alone can read as "earlier"; पर्दे के पीछे is "in the background" |
+
+Round 2 (2026-11-03), the reworded strings:
+
+| Key | Judges | Applied | Note |
+|---|---|---|---|
+| `methDirectionRecordSub` (both variants), `methDirectionOnSub`, `methDirectionOffHold`, `methDirectionOffPaused`, `methDirectionPausedNote`, `methAccurateP3Strong`, `methAccurateP4` | both ACCEPT | draft | both noted बंद twice in `methDirectionOffHold` is clear; any rewording would add a claim |
+| `methDirectionHoldNote` | sonnet ACCEPT, opus CHANGE | यह फिर दिखेगा -> दिशा फिर दिखेगी | on a second look sonnet agreed: masculine यह points back to अनुमान, implying the estimate disappears; it is the direction that comes back |
+| `methAccurateP3` | both CHANGE, different fixes; combined, both ACCEPT | ${dirAllDisplay} बार -> ${dirAllDisplay} मौकों पर; dropped भी; किसी बढ़त का दावा नहीं करते -> यह दावा नहीं करते कि यह सिक्का उछालने से बेहतर है | sonnet: "49% बार" is unnatural and भी adds "even" the English lacks; opus: the glossary reserves बढ़त for a price rise, so it could read "we don't claim it rises" |
+
+Round 3 (2026-11-02, after the verifier's re-review: a demoted or leak-guarded model also falls back
+to the hold, and the main page still said "We don't guess"):
+
+| Key | Judges | Applied | Note |
+|---|---|---|---|
+| `methDirectionPausedNote` (adds "and the model is passing its regular checks"), `accSummaryDirectionPaused` | both ACCEPT | draft | |
+| `accSummaryDirectionHold` | sonnet ACCEPT, opus CHANGE | अगला आधिकारिक भाव ज़्यादा होने की संभावना है या कम होने की -> अगले आधिकारिक भाव के बढ़ने की संभावना ज़्यादा है या घटने की | on a second look sonnet agreed: the draft was ungrammatical (needs अगले … भाव के) and lost "more likely"; बढ़ने/घटने matches `accSummaryDirectionPaused` |

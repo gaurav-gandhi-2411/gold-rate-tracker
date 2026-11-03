@@ -147,9 +147,9 @@ def test_the_step_runs_after_decrypt_and_before_any_other_step():
     steps, i = _step()
     assert steps[i - 1].get("id") == "decrypt"
     assert steps[i + 1]["name"] == "Fetch macro features"
-    # observe first: the step cannot stop the run until a real-data run shows every file passing
-    # (2026-10-30 false positive); turning that on is its own PR, before pyarrow 26 (#3322)
-    assert steps[i].get("continue-on-error") is True
+    # blocking since 2026-11-03, after 10 clean real runs over 32 h (CLAUDE.md: new production-
+    # stopping checks start non-blocking). Making it non-blocking again is a deliberate change here.
+    assert "continue-on-error" not in steps[i]
 
 
 def test_the_step_covers_every_encrypted_and_every_tracked_parquet():

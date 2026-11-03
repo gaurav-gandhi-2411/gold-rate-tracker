@@ -190,23 +190,37 @@ function renderFullMethodology(fc, bt, drift, coverage, bandCoverage) {
     `);
   }
 
-  // ADR 064: the next-fix model's own out-of-sample record (forecast.json next_fix.track_record).
-  const nfTr = fc?.next_fix?.track_record;
-  const nfDirOn = nfTr?.direction_gate_ship === true && typeof nfTr.direction_accuracy === "number" && nfTr.n > 0;
-  if (nfDirOn) {
+  // On or off comes from i18n.js directionSignalState, the same answer the main page uses: on only
+  // while the main page shows the direction (next_fix.direction.show, ADR 064). A passing test on
+  // past days alone (track_record.direction_gate_ship) is not "on".
+  const dir = directionSignalState(fc, Date.now());
+  const nfTr = fc?.next_fix?.track_record; // ADR 064: the next-fix model's out-of-sample record
+  if (dir.on) {
     parts.push(`
       <div class="meth-section">
         <h3 class="meth-heading">${tHwk("methDirectionHeading")}</h3>
         <div class="meth-stat">
           <div class="meth-stat-label">${tHwk("methStatusLabel")}</div>
           <div class="meth-stat-value">${tHwk("methDirectionOn")}</div>
-          <div class="meth-stat-sub">${tHwk("methDirectionOnSub", {
-            right: Math.round(nfTr.direction_accuracy * nfTr.n), n: nfTr.n,
-            upRight: Math.round(nfTr.always_up_accuracy * nfTr.n),
-          })}</div>
+          ${dir.record ? `<div class="meth-stat-sub">${tHwk("methDirectionOnSub", dir.record)}</div>` : ""}
         </div>
         <p class="meth-note">${tHwk("methDirectionOnNote")}</p>
         <p class="meth-note">${tHwk("methDirectionSource")}</p>
+      </div>
+    `);
+  } else if (dir.record?.passed) {
+    // Approved and passing, but not shown right now. Normally that is the hold modes (from India's
+    // morning rate until the US close the estimate is the latest official rate, with no
+    // direction); otherwise the data is out of date or incomplete. The status says which.
+    parts.push(`
+      <div class="meth-section">
+        <h3 class="meth-heading">${tHwk("methDirectionHeading")}</h3>
+        <div class="meth-stat">
+          <div class="meth-stat-label">${tHwk("methStatusLabel")}</div>
+          <div class="meth-stat-value">${tHwk(dir.hold ? "methDirectionOffHold" : "methDirectionOffPaused")}</div>
+          <div class="meth-stat-sub">${tHwk("methDirectionRecordSub", dir.record)}</div>
+        </div>
+        <p class="meth-note">${tHwk(dir.hold ? "methDirectionHoldNote" : "methDirectionPausedNote")}</p>
       </div>
     `);
   } else if (fc?.chronos_companion?.status === "success") {
@@ -276,9 +290,15 @@ function renderFullMethodology(fc, bt, drift, coverage, bandCoverage) {
           n, naiveMae, span: foldYearSpan(bt.folds),
           chronosBullet: maePctWorse != null ? tHwk("methAccurateP1ChronosBullet", { chronosMae, maePctWorse, pValOp, pValText }) : "",
         })}</p>` : "";
+    // P3 and P4 are about the 5-day AI model (data/backtest.json), a different model from the
+    // next-rate estimate's up-or-down call in the "Direction signal" section, so they say so and
+    // do not depend on whether that call is on.
     const p3Html = btFresh ? `
         <p class="meth-text"><strong>${tHwk("methAccurateP3Strong")}</strong><br>
         ${tHwk("methAccurateP3", { dirAllDisplay, n })}</p>` : "";
+    const p4Html = `
+        <p class="meth-text"><strong>${tHwk("methAccurateP4Strong")}</strong><br>
+        ${tHwk("methAccurateP4")}</p>`;
 
     parts.push(`
       <div class="meth-section meth-how-good">
@@ -295,8 +315,7 @@ function renderFullMethodology(fc, bt, drift, coverage, bandCoverage) {
           ? tHwk("methAccurateP2Tested")
           : tHwk("methAccurateP2", { n: bt.naive_error_recent?.folds_window })}</p>
         ${p3Html}
-        <p class="meth-text"><strong>${tHwk("methAccurateP4Strong")}</strong><br>
-        ${tHwk("methAccurateP4")}</p>
+        ${p4Html}
       </div>
     `);
   }
