@@ -41,8 +41,65 @@ jobs:
           python-version: "3.11"
       # Every install in a required job is pinned (brief 2026-10-30; tests/test_required_ci_installs_pinned.py):
       # an unpinned release must not be able to change what this job runs. Bumps are deliberate PRs.
+      # Data-only path (GG 2026-10-30; switched from shadow to deciding 2026-11-03 after 40 bot data
+      # PRs over 39 h where the scope call was right, validation agreed with the full result, and no
+      # code file was classed as data). A PR that changes only data cannot break the code, so on such
+      # a PR the code checks below still run and show, but cannot fail the job (continue-on-error);
+      # the data validation in the last step and the encryption guard decide instead. This is what
+      # would have kept data flowing on 2026-10-29 (an unpinned pandas-stubs turned mypy red and
+      # blocked every bot data PR for ~19.5 h). MASTER's copy of the scope script and of bot-pr-sync's
+      # allowlist decide, never the PR's own; anything undecidable is `full` (today's behaviour).
+      - name: Scope -- data-only or full (master's scope script; undecidable is full)
+        id: scope
+        # a hung fetch must not hold the required job; a failed step here means full checks
+        timeout-minutes: 3
+        env:
+          EVENT: ${{ github.event_name }}
+          BASE_REF: ${{ github.base_ref }}
+          PR_HEAD: ${{ github.event.pull_request.head.sha }}
+          REF_NAME: ${{ github.ref_name }}
+        run: |
+          set +e
+          MODE=full
+          REASON="not a PR into master or a dispatched branch"
+          HEAD=""
+          if [ "$EVENT" = "pull_request" ] && [ "$BASE_REF" = "master" ]; then
+            HEAD="$PR_HEAD"
+          elif [ "$EVENT" = "workflow_dispatch" ] && [ "$REF_NAME" != "master" ]; then
+            HEAD="$GITHUB_SHA"
+          fi
+          if [ -n "$HEAD" ]; then
+            REASON="change list or master's scope script unavailable"
+            # Three-dot (from the merge base), like GitHub's own PR file list: a two-dot diff against
+            # a master that moved on would also list master's newer changes. No merge base within the
+            # fetched depth -> git fails -> full.
+            if git fetch -q --no-tags --depth=100 origin "+refs/heads/master:refs/remotes/origin/master" "$HEAD" \
+              && git diff --name-status "refs/remotes/origin/master...$HEAD" > "$RUNNER_TEMP/changes.txt" \
+              && git show refs/remotes/origin/master:scripts/ci_scope.py > "$RUNNER_TEMP/ci_scope.py" \
+              && git show refs/remotes/origin/master:.github/actions/bot-pr-sync/action.yml > "$RUNNER_TEMP/action.yml"; then
+              if python "$RUNNER_TEMP/ci_scope.py" --changes "$RUNNER_TEMP/changes.txt" --action "$RUNNER_TEMP/action.yml" > "$RUNNER_TEMP/scope.txt"; then
+                MODE=$(sed -n 's/^mode=//p' "$RUNNER_TEMP/scope.txt")
+                REASON=$(sed -n 's/^reason: //p' "$RUNNER_TEMP/scope.txt")
+              else
+                REASON="master's scope script failed to run"
+              fi
+            fi
+          fi
+          [ "$MODE" = "data-only" ] || MODE=full
+          if [ "$MODE" = "data-only" ]; then DATA_ONLY=true; else DATA_ONLY=false; fi
+          echo "data_only=$DATA_ONLY" >> "$GITHUB_OUTPUT"
+          echo "SCOPE: mode=$MODE reason=$REASON"
+          {
+            echo "SCOPE: mode=$MODE reason=$REASON"
+            echo ""
+            echo "Changed files (status, path):"
+            sed 's/^/    /' "$RUNNER_TEMP/changes.txt" 2> /dev/null
+          } >> "$GITHUB_STEP_SUMMARY"
+          exit 0
       - run: pip install pre-commit==4.7.0
       - run: pre-commit run --all-files
+        id: precommit
+        continue-on-error: ${{ steps.scope.outputs.data_only == 'true' }}
       # From here on, the suite tests what production runs (brief 2026-10-29): check-price's Python
       # (3.12, the version the lock is compiled for) and its exact install command. Until then this
       # job installed ml/requirements.txt and tested e.g. pandas 3.1.0 and torch 2.15 while
@@ -53,6 +110,8 @@ jobs:
         with:
           python-version: "3.12"
       - name: Install ML dependencies
+        id: install_ml
+        continue-on-error: ${{ steps.scope.outputs.data_only == 'true' }}
         # Must stay identical to check-price.yml's step of the same name (tests/test_check_installed_matches_lock.py).
         run: |
           pip install -q uv==0.13.6
@@ -61,17 +120,25 @@ jobs:
             --index-strategy unsafe-best-match \
             -r ml/requirements-inference.lock
       - name: Show installed versions
+        id: show_versions
+        continue-on-error: ${{ steps.scope.outputs.data_only == 'true' }}
         # Informational, always exits 0; the next step is the strict proof.
         run: python scripts/print_runtime_versions.py --lock ml/requirements-inference.lock
       - name: Installed versions equal the lock
+        id: lock_equal
+        continue-on-error: ${{ steps.scope.outputs.data_only == 'true' }}
         # Every lock pin installed at exactly its version (a `+cpu` local label is noted, not failed).
         run: python scripts/check_installed_matches_lock.py
       - name: Run smoke tests
+        id: smoke
+        continue-on-error: ${{ steps.scope.outputs.data_only == 'true' }}
         run: pytest tests/test_inference_main.py -m smoke -v
       # Integration tests excluded here (norm #11): @pytest.mark.integration tests make
       # live network calls (HuggingFace model download). They run non-gating in
       # weekly-backtest.yml where the Chronos cache is warm and continue-on-error: true.
       - name: Run full pytest suite
+        id: pytest_full
+        continue-on-error: ${{ steps.scope.outputs.data_only == 'true' }}
         run: |
           pytest \
             -m "not integration" \
@@ -82,6 +149,8 @@ jobs:
         # SHA-256 manifest entry. The key-leak and tamper tests are in tests/test_data_crypt.py.
         run: python scripts/data_crypt.py guard
       - name: Check every JS test file is referenced by some workflow
+        id: js_registry
+        continue-on-error: ${{ steps.scope.outputs.data_only == 'true' }}
         # AJ2 (production audit continuation, 2026-09-11/12): mechanical
         # version of the sweep that found test_tier_degradation_visible.js
         # and test_vol_regime.js silently never running in CI for 7-8 days.
@@ -91,12 +160,16 @@ jobs:
         # stated limitations.
         run: python scripts/check_test_registry_complete.py
       - name: Check no test file has lost tests (hollow-run guard)
+        id: test_counts
+        continue-on-error: ${{ steps.scope.outputs.data_only == 'true' }}
         # AP5 (2026-09-21): a truncated test file produced a green, hollow run because the missing
         # tests were simply not collected. Fails if any file's test count falls below the committed
         # baseline (tests/test_count_baseline/, one .count file per test file) or a test file is missing/unlisted. Lowering the
         # baseline is an explicit `--update`, visible in the PR diff. Limits: see the script docstring.
         run: python scripts/check_test_counts.py
       - name: Check plain-language compliance (U1/U3, docs/PLAIN_LANGUAGE_AUDIT.md)
+        id: plain_language
+        continue-on-error: ${{ steps.scope.outputs.data_only == 'true' }}
         # Fails if a banned statistical/ML jargon term (coverage, n=, calibrated,
         # volatility, model, ...) appears in text an ordinary gold buyer would
         # actually read -- index.html, i18n.js, app.js, ml/public_copy.py,
@@ -105,8 +178,12 @@ jobs:
         # exact scope per file and its stated blind spots.
         run: python scripts/check_plain_language.py
       - name: Retailer-language guard (ADR 059 -- no judgmental wording near a retailer name)
+        id: retailer
+        continue-on-error: ${{ steps.scope.outputs.data_only == 'true' }}
         run: python scripts/check_retailer_language.py
       - name: Check for hand-typed computed claims (accuracy/coverage/error)
+        id: computed_claims
+        continue-on-error: ${{ steps.scope.outputs.data_only == 'true' }}
         # Fails if user-facing text contains a hand-typed accuracy/coverage/error
         # claim as a literal digit ("N times out of M", "right N%", "coverage N%",
         # Hindi "N में से M बार", ...) instead of a value computed from data/*.json.
@@ -116,75 +193,45 @@ jobs:
         # the ALLOWLIST mechanism for genuine non-claims.
         run: python scripts/check_computed_claims.py
       - name: Every .portfolio/metrics.json metric must have a committed artifact
+        id: provenance
+        continue-on-error: ${{ steps.scope.outputs.data_only == 'true' }}
         # Moved here from ci.yml (which triggered on `main` only, so it never ran: default branch
         # is master). A metric without a committed artifact behind it can silently drift from what
         # the portfolio site shows (2026-08-05 audit). Reads .portfolio/metrics.json + `git ls-files`.
         run: python scripts/check_manifest_provenance.py
-      # Data-only path, SHADOW (GG 2026-10-30). A PR that changes only data cannot break the code, so
-      # it could validate the data instead of running the code checks (the 2026-10-29 pandas-stubs
-      # mypy break blocked every bot data PR for ~19.5 h). Before that decides anything, this step
-      # only RECORDS what the data-only path would have decided next to the real result of the full
-      # checks above, which still decide. It never fails the job (continue-on-error, exit 0). The
-      # switch is a separate PR after >= 5 real bot data PRs over >= 24 h where the scope call was
-      # right, validation agreed with the full result and no code file was classed as data.
-      # MASTER's copy of the scope decision and of bot-pr-sync's allowlist, never the PR's own.
-      - name: Data-only path (shadow) -- what it would have decided; the checks above still decide
+      # The data-only decision (see the Scope step). On a full-scope run this only records a line; the
+      # checks above decided. On a data-only run the data must validate (schema, ranges, timestamps,
+      # encryption pairs) or this step fails the job; any code check that failed above is named here,
+      # since it no longer turns the job red on its own.
+      - name: Data-only path -- validate the data (decides on a data-only PR; records otherwise)
         if: always()
-        continue-on-error: true
-        # a hung fetch or install must not hold the required job; a timeout is just a failed step
         timeout-minutes: 5
         env:
-          EVENT: ${{ github.event_name }}
-          BASE_REF: ${{ github.base_ref }}
-          PR_HEAD: ${{ github.event.pull_request.head.sha }}
-          REF_NAME: ${{ github.ref_name }}
+          DATA_ONLY: ${{ steps.scope.outputs.data_only }}
           FULL_RESULT: ${{ job.status }}
+          STEPS: ${{ toJSON(steps) }}
         run: |
           set +e
-          if [ "$EVENT" = "pull_request" ] && [ "$BASE_REF" = "master" ]; then
-            HEAD="$PR_HEAD"
-          elif [ "$EVENT" = "workflow_dispatch" ] && [ "$REF_NAME" != "master" ]; then
-            HEAD="$GITHUB_SHA"
-          else
-            echo "data-only shadow: not a PR into master or a dispatched branch; nothing to record"
+          if [ "$DATA_ONLY" != "true" ]; then
+            echo "DATA-ONLY PATH: scope=full; the checks above decided (job so far: $FULL_RESULT)"
             exit 0
           fi
-          MODE=full
-          REASON="change list or master's scope script unavailable"
-          # Three-dot (from the merge base), like GitHub's own PR file list: a two-dot diff against a
-          # master that moved on would also list master's newer changes. No merge base within the
-          # fetched depth -> git fails -> full.
-          if git fetch -q --no-tags --depth=100 origin "+refs/heads/master:refs/remotes/origin/master" "$HEAD" \
-            && git diff --name-status "refs/remotes/origin/master...$HEAD" > "$RUNNER_TEMP/changes.txt" \
-            && git show refs/remotes/origin/master:scripts/ci_scope.py > "$RUNNER_TEMP/ci_scope.py" \
-            && git show refs/remotes/origin/master:.github/actions/bot-pr-sync/action.yml > "$RUNNER_TEMP/action.yml"; then
-            if python "$RUNNER_TEMP/ci_scope.py" --changes "$RUNNER_TEMP/changes.txt" --action "$RUNNER_TEMP/action.yml" > "$RUNNER_TEMP/scope.txt"; then
-              MODE=$(sed -n 's/^mode=//p' "$RUNNER_TEMP/scope.txt")
-              REASON=$(sed -n 's/^reason: //p' "$RUNNER_TEMP/scope.txt")
-            else
-              REASON="master's scope script failed to run"
-            fi
-          fi
-          [ "$MODE" = "data-only" ] || MODE=full
+          FAILED=$(printf '%s' "$STEPS" | python -c 'import json,sys; s=json.load(sys.stdin); print(" ".join(k for k,v in s.items() if v.get("outcome")=="failure"))')
           python -m pip install -q -c ml/requirements-inference.lock jsonschema pytest > /dev/null 2>&1
           python scripts/validate_data.py > "$RUNNER_TEMP/validate.txt" 2>&1
           case $? in 0) VALID=pass ;; 1) VALID=fail ;; *) VALID=error ;; esac
           # indented, so a line from the PR's data can never be read as a `::` workflow command
           tail -n 20 "$RUNNER_TEMP/validate.txt" | sed 's/^/  /'
-          # Agreement is only meaningful where data-only would have decided: on a full-scope PR the
-          # code checks can fail for reasons validation never looks at; a cancelled run decided nothing.
-          if [ "$MODE" != "data-only" ] || [ "$FULL_RESULT" = "cancelled" ]; then AGREE=n/a
-          elif { [ "$VALID" = "pass" ] && [ "$FULL_RESULT" = "success" ]; } \
-            || { [ "$VALID" != "pass" ] && [ "$FULL_RESULT" != "success" ]; }; then AGREE=yes
-          else AGREE=no; fi
-          LINE="DATA-ONLY SHADOW: scope=$MODE validate=$VALID full=$FULL_RESULT agree=$AGREE reason=$REASON"
+          LINE="DATA-ONLY PATH: scope=data-only validate=$VALID code_checks_failed=${FAILED:-none}"
           echo "$LINE"
-          {
-            echo "$LINE"
-            echo ""
-            echo "Changed files (status, path):"
-            sed 's/^/    /' "$RUNNER_TEMP/changes.txt" 2> /dev/null
-          } >> "$GITHUB_STEP_SUMMARY"
+          echo "$LINE" >> "$GITHUB_STEP_SUMMARY"
+          if [ -n "$FAILED" ]; then
+            echo "::warning::code checks failed on master's code (not this data PR): $FAILED. Fix them in a code PR."
+          fi
+          if [ "$VALID" != "pass" ]; then
+            echo "::error::the data did not validate ($VALID); this data PR must not merge"
+            exit 1
+          fi
           exit 0
 
   # Early warning, NOT a required check (brief 2026-10-29). The required `lint` job above tests the

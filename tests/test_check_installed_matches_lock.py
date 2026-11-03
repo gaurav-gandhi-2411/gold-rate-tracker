@@ -76,7 +76,12 @@ def test_required_lint_installs_the_lock_exactly_as_check_price_does():
     proof = steps[i + 2]
     assert proof["name"] == "Installed versions equal the lock"
     assert proof["run"].strip() == "python scripts/check_installed_matches_lock.py"
-    assert "continue-on-error" not in proof
+    # Blocking on every run that can change the code or the lock. Only on a data-only PR (which
+    # changes neither; 2026-11-03 switch, tests/test_lint_data_only_shadow.py) may it not fail the job.
+    assert proof.get("continue-on-error", False) in (
+        False,
+        "${{ steps.scope.outputs.data_only == 'true' }}",
+    )
     assert all("requirements.txt" not in str(s.get("run", "")) for s in steps)
 
 
