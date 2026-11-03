@@ -99,10 +99,13 @@ def test_every_bot_pr_reader_uses_the_helper():
         assert (ROOT / rel).read_text(encoding="utf-8").count("bot_pr_find.sh") >= n, rel
 
 
-def test_the_helper_asks_for_the_head_repository_fields():
+def test_the_helper_filters_on_the_server_by_owner_and_reads_every_page():
+    """Independent review 2026-11-03: with `gh pr list --limit 100`, 100 newer fork PRs named bot/data-sync
+    pushed the real PR out of the window and the sync stopped. GitHub's head=OWNER:BRANCH filter never
+    returns another owner's PR."""
     src = FIND.read_text(encoding="utf-8")
-    for field in ("isCrossRepository", "headRepositoryOwner", "headRepository"):
-        assert field in src
+    assert "pulls?head=${OWNER}:${BRANCH}&" in src and "--paginate" in src
+    assert ".head.repo.full_name" in src
 
 
 # --- shared stub gh -----------------------------------------------------------------------------------------
@@ -122,9 +125,12 @@ gh() {{
   echo "gh $*" >> "{log}"
   local prs; prs=$(cat "{st}.prs")
   case "$1 $2" in
-    "pr list")
-      case ",$prs," in *,fork,*) printf '9001\\t{FORK_SHA}\\t2026-11-01T00:00:00Z\\tfalse\\ttrue\\tattacker\\tr\\n' ;; esac
-      case ",$prs," in *,real,*) printf '42\\t{PUSHED}\\t{real_created}\\tfalse\\tfalse\\to\\tr\\n' ;; esac ;;
+    "api repos/o/r/pulls?head="*)
+      # rows as scripts/bot_pr_find.sh formats them: number, head, created, draft, head repository.
+      # GitHub's head=o:<branch> filter would not return the fork's PR at all; it is returned here anyway,
+      # so the helper's own check is what is tested.
+      case ",$prs," in *,fork,*) printf '9001\\t{FORK_SHA}\\t2026-11-01T00:00:00Z\\tfalse\\tattacker/r\\n' ;; esac
+      case ",$prs," in *,real,*) printf '42\\t{PUSHED}\\t{real_created}\\tfalse\\to/r\\n' ;; esac ;;
     "pr create") echo "fork,real" > "{st}.prs" ;;
     "pr view")
       case "$3 $*" in
@@ -204,10 +210,12 @@ def test_an_unreadable_list_fails_the_helper_instead_of_reading_as_none(tmp_path
 @pytest.mark.parametrize(
     "row",
     [
-        "7\\tsha\\tc\\tfalse\\tnull\\to\\tr",  # cross-repository flag missing
-        "7\\tsha\\tc\\tfalse\\tfalse\\tother\\tr",  # same flag but another owner
-        "7\\tsha\\tc\\tfalse\\tfalse\\to\\tfork-name",  # another repository name
-        "7\\tsha\\tc\\tfalse\\tfalse\\t\\t",  # owner and name missing
+        "7\\tsha\\tc\\tfalse\\tnull",  # head repository deleted (a deleted fork)
+        "7\\tsha\\tc\\tfalse\\tother/r",  # another owner
+        "7\\tsha\\tc\\tfalse\\to/fork-name",  # another repository name
+        "7\\tsha\\tc\\tfalse\\to/r-extra",  # a prefix match is not a match
+        "7\\tsha\\tc\\tfalse\\t",  # field missing
+        "7\\tsha\\tc\\to/r",  # a field missing shifts the rest: still dropped
     ],
 )
 def test_anything_short_of_this_exact_repository_is_dropped(tmp_path, row):
@@ -218,9 +226,18 @@ def test_anything_short_of_this_exact_repository_is_dropped(tmp_path, row):
 
 @NEEDS_BASH
 def test_owner_case_does_not_matter(tmp_path):
-    body = f"gh() {{ printf '7\\tsha\\tc\\tfalse\\tfalse\\tO\\tr\\n'; }}; export -f gh; {FIND_CALL}"
+    body = f"gh() {{ printf '7\\tsha\\tc\\tfalse\\tO/R\\n'; }}; export -f gh; {FIND_CALL}"
     r, _ = _run(tmp_path, body, prs="")
     assert r.stdout.split()[0] == "7"
+
+
+@NEEDS_BASH
+def test_the_query_sent_asks_github_for_this_owners_branch_only(tmp_path):
+    _, log = _run(tmp_path, FIND_CALL, prs="real")
+    assert (
+        "gh api repos/o/r/pulls?head=o:bot/data-sync&base=master&state=open&per_page=100 --paginate"
+        in log
+    )
 
 
 # --- (3) the real workflow code with a simulated fork PR named bot/data-sync ---------------------------------

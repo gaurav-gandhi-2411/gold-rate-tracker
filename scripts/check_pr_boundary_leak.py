@@ -354,7 +354,7 @@ def _recent_closed_prs(
             "--search",
             f"closed:>={cutoff}",
             "--json",
-            "number,baseRefName,headRefOid,headRefName",
+            "number,baseRefName,headRefOid,headRefName,isCrossRepository",
             "--limit",
             "1000",
         ]
@@ -363,9 +363,15 @@ def _recent_closed_prs(
         p
         for p in prs
         if p["number"] != exclude_pr
-        and not p["headRefName"].startswith("bot/")
+        and not _is_own_bot_pr(p)
         and not p["headRefName"].startswith("scratch/")
     ]
+
+
+def _is_own_bot_pr(pr: dict) -> bool:
+    """A bot PR is a `bot/` branch IN THIS REPOSITORY (2026-11-03): a fork can name its branch
+    bot/data-sync, so the name alone never earns the bot exemptions. A missing flag is not ours."""
+    return pr["headRefName"].startswith("bot/") and pr.get("isCrossRepository") is False
 
 
 def check_foreign_commits(pr_number: int, repo: str, base_ref: str) -> list[str]:
@@ -388,7 +394,15 @@ def check_foreign_commits(pr_number: int, repo: str, base_ref: str) -> list[str]
     measured and rejected (7.5% false-positive pair rate on this repo's own
     real PR history, ~1.6 false flags per real PR)."""
     pr = _gh_json(
-        ["pr", "view", str(pr_number), "--repo", repo, "--json", "headRefOid,headRefName"]
+        [
+            "pr",
+            "view",
+            str(pr_number),
+            "--repo",
+            repo,
+            "--json",
+            "headRefOid,headRefName,isCrossRepository",
+        ]
     )
     head_sha = pr["headRefOid"]
     this_patch_ids = _commit_patch_ids(base_ref, head_sha)
@@ -408,7 +422,7 @@ def check_foreign_commits(pr_number: int, repo: str, base_ref: str) -> list[str]
         ]
     )
     candidates = list(other_open_prs)
-    is_bot_pr = pr["headRefName"].startswith("bot/")
+    is_bot_pr = _is_own_bot_pr(pr)
     if not is_bot_pr:
         candidates.extend(_recent_closed_prs(repo, exclude_pr=pr_number))
 

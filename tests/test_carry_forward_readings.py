@@ -384,7 +384,7 @@ git() {{ case "$1" in diff) ;; rev-parse) echo abc123;; *) echo "git $*" >> "{lo
 gh() {{
   echo "gh $*" >> "{log.as_posix()}"
   case "$1 $2" in
-    "pr list") printf '4242\\tabc123\\tc\\tfalse\\tfalse\\to\\tr\\n' ;;  # scripts/bot_pr_find.sh's row
+    "api repos/o/r/pulls?head="*) printf '4242\\tabc123\\tc\\tfalse\\to/r\\n' ;;  # scripts/bot_pr_find.sh's row
     "pr view") echo MERGED ;;
     "api user") if [ "{token}" = "bad" ]; then echo "HTTP 401: Bad credentials" >&2; return 1; fi; echo bot ;;
   esac
@@ -431,7 +431,7 @@ def test_carry_forward_replaces_the_force_push_and_no_rebase(tmp_path: Path) -> 
     assert r.returncode == 0, r.stdout + r.stderr
     assert "push-script bot/test" in log
     assert "git push --force" not in log and "git rebase" not in log
-    assert "gh pr list" in log  # the normal PR flow follows
+    assert "pulls?head=" in log  # the normal PR flow follows
     assert (
         "merge-script 4242 bot/test abc123" in log
     )  # then the shared merge path, on the pushed commit

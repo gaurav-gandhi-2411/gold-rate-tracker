@@ -136,12 +136,12 @@ curl() {{ echo "curl $*" >> "{log}"; }}
 gh() {{
   echo "gh $*" >> "{log}"
   case "$1 $2" in
-    "pr list")
+    "api repos/o/r/pulls?head="*)
       if [ "{1 if list_fails else 0}" = 1 ]; then return 1; fi
-      # the row scripts/bot_pr_find.sh's --jq formats: number, head, created, draft, cross-repo, owner, name
-      case "$*" in *"--head {branch} "*)
-        if [ "{fork}" = true ]; then printf '3424\\t{SHA}\\t{created}\\tfalse\\ttrue\\tattacker\\tr\\n'
-        else printf '3424\\t{SHA}\\t{created}\\tfalse\\tfalse\\to\\tr\\n'; fi ;;
+      # the row scripts/bot_pr_find.sh's --jq formats: number, head, created, draft, head repository
+      case "$*" in *"head=o:{branch}&"*)
+        if [ "{fork}" = true ]; then printf '3424\\t{SHA}\\t{created}\\tfalse\\tattacker/r\\n'
+        else printf '3424\\t{SHA}\\t{created}\\tfalse\\to/r\\n'; fi ;;
       esac ;;
     "run list") if [ "{busy}" = FAIL ]; then return 1; fi; echo "{busy}" ;;
     "pr view")
@@ -211,7 +211,7 @@ def test_a_stranded_green_weekly_backtest_pr_is_merged_pinned_to_its_head(tmp_pa
 def test_every_branch_is_listed_not_only_data_sync(tmp_path):
     _, log = _sweep(tmp_path)
     for b in bot_branches.branches(ROOT):
-        assert f"--head {b} " in log, b
+        assert f"pulls?head=o:{b}&" in log, b
 
 
 @NEEDS_BASH
