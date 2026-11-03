@@ -43,5 +43,9 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.CI_MERGE_PAT }}
           NTFY_TOPIC: ${{ secrets.NTFY_TOPIC }}
-          DRY_RUN: ${{ github.event.inputs.dry_run == 'true' && '1' || '0' }}
+          # REPORT-ONLY to start (project rule, 2026-10-30): scheduled runs merge nothing and page about
+          # every stranded PR; a manual dispatch merges unless dry_run=true. Scheduled merging is switched
+          # on in a separate PR after 5 clean real runs over 24 h, each log read.
+          # tests/test_bot_pr_sweep.py pins this.
+          DRY_RUN: ${{ (github.event_name == 'schedule' || github.event.inputs.dry_run == 'true') && '1' || '0' }}
         run: bash scripts/bot_pr_sweep.sh

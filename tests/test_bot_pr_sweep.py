@@ -87,6 +87,25 @@ def test_a_workflow_that_opens_a_bot_pr_without_a_findable_branch_fails_the_list
     assert bot_branches.main(["--root", str(tmp_path)]) == 2
 
 
+def _temp_repo(root: Path) -> Path:
+    """A minimal repo whose one bot workflow is covered (main() returns 0); returns its workflows dir."""
+    wfs = root / ".github" / "workflows"
+    wfs.mkdir(parents=True)
+    action = root / ".github" / "actions" / "bot-pr-sync"
+    action.mkdir(parents=True)
+    (action / "action.yml").write_text(
+        "runs:\n  steps:\n    - run: BAD_FILES=$(git diff | grep -v -E '^(data/)' || true)\n",
+        "utf-8",
+    )
+    (wfs / "ok.yml").write_text(
+        "jobs:\n  j:\n    steps:\n      - uses: ./.github/actions/bot-pr-sync\n"
+        "        with:\n          branch: bot/ok\n",
+        "utf-8",
+    )
+    assert bot_branches.main(["--root", str(root)]) == 0
+    return wfs
+
+
 # --- the sweep, end to end with a stub gh ------------------------------------------------------------
 
 
@@ -100,10 +119,17 @@ def _sweep(
     statuses: str = ALL3,
     dry: str = "0",
     list_fails: bool = False,
+    fork: str = "false",
+    open_state: str = "OPEN",  # what `gh pr view --json state` says while unmerged
+    branch_list: str | None = None,  # replaces bot_branches.py's output (one TSV line)
 ) -> tuple[subprocess.CompletedProcess[str], str]:
     log = (tmp / "calls.log").as_posix()
     st = (tmp / "st").as_posix()
     created = _iso(age_min)
+    fake_py = ""
+    if branch_list is not None:
+        (tmp / "branches.tsv").write_text(branch_list + "\n", encoding="utf-8")
+        fake_py = f'fakepy() {{ cat "{(tmp / "branches.tsv").as_posix()}"; }}\nexport -f fakepy\n'
     stubs = f"""
 sleep() {{ :; }}
 curl() {{ echo "curl $*" >> "{log}"; }}
@@ -112,11 +138,11 @@ gh() {{
   case "$1 $2" in
     "pr list")
       if [ "{1 if list_fails else 0}" = 1 ]; then return 1; fi
-      case "$*" in *"--head {branch} "*) echo "3424 {SHA} {created}" ;; esac ;;
-    "run list") echo "{busy}" ;;
+      case "$*" in *"--head {branch} "*) echo "3424 {SHA} {created} {fork}" ;; esac ;;
+    "run list") if [ "{busy}" = FAIL ]; then return 1; fi; echo "{busy}" ;;
     "pr view")
       case "$*" in
-        *"--json state"*) if [ -f "{st}.merged" ]; then echo MERGED; else echo OPEN; fi ;;
+        *"--json state"*) if [ -f "{st}.merged" ]; then echo MERGED; else echo {open_state}; fi ;;
         *"--json headRefOid"*) echo "{SHA}" ;;
         *"--json mergeStateStatus"*) echo CLEAN ;;
         *"--json files"*) printf '%s\\n' "{files}" ;;
@@ -132,7 +158,7 @@ gh() {{
 export -f gh sleep curl
 """
     script = tmp / "run.sh"
-    script.write_bytes((stubs + f'bash "{SWEEP.as_posix()}"\n').encode())
+    script.write_bytes((stubs + fake_py + f'bash "{SWEEP.as_posix()}"\n').encode())
     env = {
         **os.environ,
         "GITHUB_REPOSITORY": "o/r",
@@ -142,7 +168,7 @@ export -f gh sleep curl
         "NOW": str(NOW),
         "DRY_RUN": dry,
         "NTFY_TOPIC": "t",
-        "PYTHON": sys.executable,
+        "PYTHON": "fakepy" if branch_list is not None else sys.executable,
     }
     r = subprocess.run(
         [BASH or "bash", str(script)], capture_output=True, text=True, env=env, timeout=180
@@ -173,9 +199,57 @@ def test_every_branch_is_listed_not_only_data_sync(tmp_path):
 
 @NEEDS_BASH
 def test_a_pr_whose_producing_run_is_still_going_is_left_to_that_run(tmp_path):
-    r, log = _sweep(tmp_path, busy="1")
+    r, log = _sweep(tmp_path, busy="1", age_min=100)
     assert r.returncode == 0 and "pr merge" not in log and "curl" not in log
     assert "a producing run is queued or running" in r.stdout
+    assert "--workflow weekly-backtest.yml --branch master" in log
+
+
+@NEEDS_BASH
+def test_a_producer_busy_for_hours_pages_but_never_merges(tmp_path):
+    # e.g. the self-hosted Tanishq runner offline: its run sits queued, the PR must not go silent
+    r, log = _sweep(tmp_path, busy="1", age_min=400)
+    assert r.returncode == 1 and "pr merge" not in log and "curl" in log
+    assert "still open past 360 min" in r.stdout
+
+
+@NEEDS_BASH
+def test_unreadable_producer_runs_page_when_old_and_never_merge(tmp_path):
+    r, log = _sweep(tmp_path, busy="FAIL")
+    assert r.returncode == 1 and "pr merge" not in log and "could not be read" in r.stdout
+
+
+@NEEDS_BASH
+def test_unreadable_producer_runs_on_a_young_pr_neither_merge_nor_page(tmp_path):
+    r, log = _sweep(tmp_path, busy="FAIL", age_min=30)
+    assert r.returncode == 0 and "pr merge" not in log and "curl" not in log
+
+
+@NEEDS_BASH
+def test_a_fork_pr_on_a_bot_branch_name_is_never_merged_and_pages(tmp_path):
+    r, log = _sweep(tmp_path, fork="true")
+    assert r.returncode == 1 and "pr merge" not in log and "comes from a fork" in r.stdout
+    assert "run list" not in log  # refused before anything else is looked at
+
+
+@NEEDS_BASH
+def test_an_invalid_allowlist_regex_blocks_the_merge(tmp_path):
+    # grep -E exits 2 on a broken pattern and prints nothing: that must not read as "no bad files"
+    r, log = _sweep(tmp_path, branch_list="bot/backtest-sync\tweekly-backtest.yml\t^(data/|og")
+    assert r.returncode == 1 and "pr merge" not in log
+    assert "not a valid regex" in r.stdout
+
+
+def test_the_file_list_includes_the_old_name_of_a_renamed_file():
+    # a rename scripts/x.py -> data/x.py deletes code from master; its old name must meet the allowlist
+    assert ".previous_filename // empty" in SWEEP.read_text(encoding="utf-8")
+
+
+@NEEDS_BASH
+def test_a_pr_closed_while_the_sweep_ran_does_not_page(tmp_path):
+    r, log = _sweep(tmp_path, statuses="lint", open_state="CLOSED")
+    assert r.returncode == 0 and "pr merge" not in log and "curl" not in log
+    assert "CLOSED by something else meanwhile" in r.stdout
 
 
 @NEEDS_BASH
@@ -207,10 +281,45 @@ def test_red_checks_on_a_pr_younger_than_the_alert_age_do_not_page_yet(tmp_path)
 
 
 @NEEDS_BASH
-def test_dry_run_merges_nothing(tmp_path):
+def test_dry_run_merges_nothing_and_still_pages_about_an_old_stranded_pr(tmp_path):
     r, log = _sweep(tmp_path, dry="1")
-    assert r.returncode == 0 and "pr merge" not in log
-    assert "DRY RUN: bot/backtest-sync #3424" in r.stdout
+    assert r.returncode == 1 and "pr merge" not in log and "curl" in log
+    assert "DRY RUN: bot/backtest-sync #3424" in r.stdout and "this run is a dry run" in r.stdout
+
+
+@NEEDS_BASH
+def test_dry_run_does_not_page_about_a_young_stranded_pr(tmp_path):
+    r, log = _sweep(tmp_path, dry="1", age_min=30)
+    assert r.returncode == 0 and "pr merge" not in log and "curl" not in log
+
+
+def test_scheduled_runs_are_report_only_until_a_separate_pr_switches_them():
+    """Project rule (2026-10-30): a new check starts non-blocking; flipping this is a deliberate PR."""
+    wf = (ROOT / ".github" / "workflows" / "bot-pr-sweep.yml").read_text(encoding="utf-8")
+    assert "github.event_name == 'schedule' || github.event.inputs.dry_run == 'true'" in wf
+
+
+def test_a_bot_pr_sync_branch_that_is_not_a_literal_fails_the_list(tmp_path):
+    wfs = _temp_repo(tmp_path)
+    (wfs / "y.yml").write_text(
+        "jobs:\n  j:\n    steps:\n      - uses: ./.github/actions/bot-pr-sync\n"
+        "        with:\n          branch: ${{ format('bot/{0}', 'new') }}\n",
+        "utf-8",
+    )
+    assert bot_branches.main(["--root", str(tmp_path)]) == 2
+
+
+def test_a_non_draft_gh_pr_create_outside_the_bot_paths_fails_the_list(tmp_path):
+    wfs = _temp_repo(tmp_path)
+    (wfs / "z.yml").write_text(
+        "jobs:\n  j:\n    steps:\n      - run: gh pr create --base master --head auto/new\n",
+        "utf-8",
+    )
+    assert bot_branches.main(["--root", str(tmp_path)]) == 2
+    (wfs / "z.yml").write_text(
+        "jobs:\n  j:\n    steps:\n      - run: gh pr create --draft --head auto/new\n", "utf-8"
+    )
+    assert bot_branches.main(["--root", str(tmp_path)]) == 0  # a person merges a draft
 
 
 @NEEDS_BASH

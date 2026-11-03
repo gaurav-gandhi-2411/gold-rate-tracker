@@ -44,7 +44,15 @@ def _git_add_paths(job: dict) -> list[str]:
 
 def branches(root: Path) -> dict[str, dict]:
     """{branch: {"workflows": [...], "allow": regex or None}}."""
+    return scan(root)[0]
+
+
+def scan(root: Path) -> tuple[dict[str, dict], list[str]]:
+    """(branches, problems). A problem is a PR-opening step whose branch is not a literal
+    bot/<name> (an expression, a variable), or a non-draft `gh pr create` that neither uses
+    bot-pr-sync nor merges through bot_pr_merge.sh: the sweep would silently miss its PRs."""
     found: dict[str, dict] = {}
+    problems: list[str] = []
     sync_allow = _action_allow(root)
 
     def add(branch: str, wf: str, allow: str | None) -> None:
@@ -58,18 +66,29 @@ def branches(root: Path) -> dict[str, dict]:
         wf = yaml.safe_load(path.read_text(encoding="utf-8")) or {}
         for job in (wf.get("jobs") or {}).values():
             for step in job.get("steps") or []:
+                run = str(step.get("run") or "")
                 if str(step.get("uses", "")).endswith("/bot-pr-sync"):
                     b = str((step.get("with") or {}).get("branch", ""))
                     if BRANCH.fullmatch(b):
                         add(b, path.name, sync_allow)
-                elif "bot_pr_merge.sh" in str(step.get("run") or ""):
+                    else:
+                        problems.append(f"{path.name}: bot-pr-sync branch {b!r} is not literal")
+                elif "bot_pr_merge.sh" in run:
                     adds = _git_add_paths(job)
                     allow = (
                         "^(" + "|".join(re.escape(p) + "$" for p in adds) + ")" if adds else None
                     )
-                    for b in sorted(set(BRANCH.findall(str(step["run"])))):
+                    names = sorted(set(BRANCH.findall(run)))
+                    if not names:
+                        problems.append(f"{path.name}: bot_pr_merge.sh with no literal bot/<name>")
+                    for b in names:
                         add(b, path.name, allow)
-    return found
+                elif re.search(r"\bgh pr create\b", run) and "--draft" not in run:
+                    # a draft is merged by a person, so the sweep has nothing to do with it
+                    problems.append(
+                        f"{path.name}: non-draft PR outside bot-pr-sync/bot_pr_merge.sh"
+                    )
+    return found, problems
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -77,9 +96,12 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--root", type=Path, default=Path(__file__).resolve().parent.parent)
     args = ap.parse_args(argv)
     try:
-        found = branches(args.root)
+        found, problems = scan(args.root)
     except (OSError, yaml.YAMLError) as exc:
         print(f"cannot read the workflows: {exc}", file=sys.stderr)
+        return 2
+    if problems:
+        print("bot PRs the sweep could not cover: " + "; ".join(problems), file=sys.stderr)
         return 2
     if not found:
         print("no bot branch found in any workflow", file=sys.stderr)
