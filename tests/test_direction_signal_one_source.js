@@ -231,3 +231,17 @@ test("Hindi: the off reason and the record, with no English fallback in the sect
   assert.match(on, /चालू — सिर्फ़ अगली चाल के लिए/);
   assert.doesNotMatch(on, /Tested on|The chance comes from|re-run days/);
 });
+
+test("Hindi: the main page's direction line itself, in every side, with no English fallback", () => {
+  const cases = [
+    [fc({ side: "up", prob: 0.62 }), /अगले आधिकारिक भाव के <strong>बढ़ने<\/strong> की संभावना ज़्यादा है \(करीब 62% संभावना\)/],
+    [fc({ side: "down", prob: 0.7 }), /अगले आधिकारिक भाव के <strong>घटने<\/strong> की संभावना ज़्यादा है \(करीब 70% संभावना\)/],
+    [fc({ side: "unclear", prob: 0.5 }), /इतना नहीं बदला कि अगले आधिकारिक भाव के बढ़ने या घटने के बारे में कुछ कहा जा सके/],
+  ];
+  for (const [f, line] of cases) {
+    const { signal } = mainPage(f, "hi");
+    assert.match(signal, line);
+    assert.match(signal, /रुपये के हिसाब से बदलता है, पर कुछ देर से। हम दुनिया के बाज़ार में सोने के भाव का अंदाज़ा नहीं लगाते।/);
+    assert.doesNotMatch(signal, /World gold prices|follows world gold|We do not predict/);
+  }
+});

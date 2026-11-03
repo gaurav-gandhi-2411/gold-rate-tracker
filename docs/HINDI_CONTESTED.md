@@ -115,3 +115,18 @@ to the hold, and the main page still said "We don't guess"):
 |---|---|---|---|
 | `methDirectionPausedNote` (adds "and the model is passing its regular checks"), `accSummaryDirectionPaused` | both ACCEPT | draft | |
 | `accSummaryDirectionHold` | sonnet ACCEPT, opus CHANGE | अगला आधिकारिक भाव ज़्यादा होने की संभावना है या कम होने की -> अगले आधिकारिक भाव के बढ़ने की संभावना ज़्यादा है या घटने की | on a second look sonnet agreed: the draft was ungrammatical (needs अगले … भाव के) and lost "more likely"; बढ़ने/घटने matches `accSummaryDirectionPaused` |
+
+Round 4 (2026-11-03, branch feat/hindi-direction-line): the main page's direction line (`directionUp`,
+`directionDown`, `directionUnclear`, `directionWhy`) had no Hindi and fell back to English. Two
+independent judges (sonnet, opus), two passes; every applied string had both judges' agreement.
+
+| Key | Judges | Applied | Note |
+|---|---|---|---|
+| `directionUp`, `directionDown` | both ACCEPT | draft: भारत का पिछला आधिकारिक भाव तय होने के बाद दुनिया के बाज़ार में सोने का भाव बदला है, इसलिए अगले आधिकारिक भाव के <strong>बढ़ने</strong> (Down: <strong>घटने</strong>) की संभावना ज़्यादा है (करीब ${pct}% संभावना)। | opening matches `accSummaryDirectionHold`; के बाद with the present perfect बदला है reads naturally, so the के बाद से fix for `directionUnclear` was not carried over (verifier nit, 2026-11-03) |
+| `directionUnclear` | both CHANGE, different fixes; combined, both ACCEPT | भारत के पिछले आधिकारिक भाव के बाद -> भारत का पिछला आधिकारिक भाव तय होने के बाद से; कि बताया जा सके कि अगला आधिकारिक भाव बढ़ेगा या घटेगा -> कि अगले आधिकारिक भाव के बढ़ने या घटने के बारे में कुछ कहा जा सके | opus: "since" needs के बाद से, and the opening should match 1 and 2; sonnet: two stacked कि and the passive were stiff |
+| `directionWhy` | both CHANGE, different fixes; combined, both ACCEPT | के हिसाब से, कुछ देर बाद चलता है -> के हिसाब से बदलता है, पर कुछ देर से; हम ख़ुद सोने के भाव का -> हम दुनिया के बाज़ार में सोने के भाव का | both: हम ख़ुद was ambiguous ("we ourselves"); sonnet: कुछ देर बाद can read as minutes; opus: बदलता है carries "follows" |
+
+Not changed on one vote: opus noted (not required) that `directionWhy`'s second sentence could be read
+as "we do not estimate today's world price", and offered हम यह अंदाज़ा नहीं लगाते कि दुनिया के बाज़ार में
+सोने का भाव आगे बढ़ेगा या घटेगा। The applied string is correct under the glossary (अंदाज़ा लगाना = to
+guess the future); a native speaker may prefer the longer form.
