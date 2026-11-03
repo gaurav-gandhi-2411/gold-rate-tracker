@@ -13,7 +13,10 @@ from pathlib import Path
 import yaml
 
 WF = Path(__file__).resolve().parent.parent / ".github" / "workflows" / "check-price.yml"
-# the scrape and ML steps before the sync: a whole check-price run took up to 16.6 min (last 60 runs)
+# Room for every step outside the sync wait. Measured over the last 60 check-price runs
+# (2026-11-03, step timestamps): before the sync median 1.1 min, max 1.4; after it max 0.13; the
+# sync step overruns its wait by at most 0.3 min. So the worst case at a 30-min wait is about
+# 32 min. 20 min of room leaves headroom for a cold install or a slow scrape.
 WORK_BEFORE_SYNC = 20
 
 
