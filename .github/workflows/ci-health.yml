@@ -129,6 +129,14 @@ on:
         type: choice
         options: [none, stale, fresh]
         default: none
+      share_card_simulate:
+        # Proves the share-card page end to end on a made-up card ([TEST] in the title): "bad" is
+        # the 2026-05 to 2026-11 card (NaN and buy advice), "good" is today's. Never reads or
+        # writes the real incident state.
+        description: "Share-card check: judge a simulated card instead of the live one"
+        type: choice
+        options: [none, bad, good]
+        default: none
 
 # One run at a time: the laptop, check-price and the cron can all start this within seconds (three
 # dispatches at 2026-10-30 05:35Z), and two overlapping runs would both send the same page.
@@ -143,7 +151,9 @@ permissions:
 jobs:
   check:
     runs-on: ubuntu-latest
-    timeout-minutes: 5
+    # 10, not 5: the share-card step can wait on 3 slow fetches (live_freshness.fetch_json retries)
+    # after the freshness step's own; a run cut off by the timeout pages nobody.
+    timeout-minutes: 10
     steps:
       - uses: actions/checkout@v7
 
@@ -158,7 +168,7 @@ jobs:
         run: |
           set -e
           source "${GITHUB_WORKSPACE}/scripts/ci_retry.sh"
-          # this job has a 5-minute timeout: 3 attempts, 5 s base (15 s per call at most)
+          # this job has a 10-minute timeout: 3 attempts, 5 s base (15 s per call at most)
           export CI_RETRY_ATTEMPTS=3 CI_RETRY_BASE=5
 
           # Read the required-contexts list live from branch protection --
@@ -360,3 +370,36 @@ jobs:
         with:
           path: .live-freshness/state.json
           key: live-freshness-${{ github.run_id }}-${{ github.run_attempt }}
+
+      # The SHARE CARD (og.png) people see when the link is shared: it showed "₹NaN" and buy advice
+      # from 2026-05-15 to 2026-11-01 with every run green. scripts/live_share_card.py judges the
+      # card's sidecar (data/og-card.json, what it drew) against the live prices and forecast:
+      # broken, advice, disagrees, behind the data, or older than the freshness limit. Once per
+      # incident plus a recovery message, state in the Actions cache like the freshness check above.
+      - name: Restore the share-card incident state
+        if: always() && (inputs.share_card_simulate || 'none') == 'none'
+        uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: .share-card/state.json
+          key: share-card-${{ github.run_id }}-${{ github.run_attempt }}
+          restore-keys: share-card-
+
+      - name: Check the published share card (og.png's sidecar against the live data)
+        id: share_card
+        if: always()
+        env:
+          NTFY_TOPIC: ${{ secrets.NTFY_TOPIC }}
+          SIMULATE: ${{ inputs.share_card_simulate || 'none' }}
+        run: |
+          if [ "$SIMULATE" = "none" ]; then
+            python3 scripts/live_share_card.py --state-in .share-card/state.json --state-out .share-card/state.json
+          else
+            python3 scripts/live_share_card.py --simulate "$SIMULATE"
+          fi
+
+      - name: Save the share-card incident state
+        if: always() && (inputs.share_card_simulate || 'none') == 'none' && hashFiles('.share-card/state.json') != ''
+        uses: actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: .share-card/state.json
+          key: share-card-${{ github.run_id }}-${{ github.run_attempt }}
