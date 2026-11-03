@@ -1,0 +1,47 @@
+name: Bot PR sweep
+
+# Merges a stranded bot PR, or pages about it, for EVERY bot branch (scripts/bot_pr_sweep.sh; the
+# branches come from the workflow files via scripts/bot_branches.py). 2026-11-01..03: weekly-backtest's
+# bot PR #3424 sat open 46 h with green checks after its sync gave up, and nothing paged: the stuck-PR
+# alert in check-price watched only bot/data-sync and the stranded-PR merge only the Tanishq branch.
+# This runs on its own hourly schedule so it does not depend on any producing workflow being healthy.
+# It merges only through scripts/bot_pr_merge.sh (every required context green on the head, squash,
+# --match-head-commit) and only files inside the branch's allowlist. It never blocks anything: a red
+# run here means a bot PR needs a person, and it has already paged.
+
+on:
+  schedule:
+    - cron: "41 * * * *" # hourly, away from ci-health (:17) and the top of the hour
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: "Only say what would be merged (true/false)"
+        required: false
+        default: "false"
+
+concurrency:
+  group: bot-pr-sweep
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+  actions: read # lists the producing workflows' runs
+
+jobs:
+  sweep:
+    runs-on: ubuntu-latest
+    # each stranded PR may wait up to MERGE_WAIT_MIN (3) in bot_pr_merge.sh; nine branches at most
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: "3.12"
+      # the version ml/requirements-inference.lock pins
+      - run: pip install -q pyyaml==6.0.3
+      - name: Merge stranded bot PRs, page about the rest
+        env:
+          GH_TOKEN: ${{ secrets.CI_MERGE_PAT }}
+          NTFY_TOPIC: ${{ secrets.NTFY_TOPIC }}
+          DRY_RUN: ${{ github.event.inputs.dry_run == 'true' && '1' || '0' }}
+        run: bash scripts/bot_pr_sweep.sh
