@@ -632,13 +632,18 @@ def flag_unflagged(
     file has grown since P3 stored its flag. A day the reference lacks gets ``update_oos``'s rule.
     If the unpublished-days file is unreadable (``None``), such a day keeps its old state: a
     missing flag stays missing (the report counts it, the next run retries) rather than being
-    written down as retro for good. Every other fold is left exactly as it is.
+    written down as retro for good. A day the reference itself holds WITHOUT a boolean flag (rule
+    v7 reads it as live) is left alone too, so the ensemble cannot drop it from the comparison.
+    Every other fold is left exactly as it is.
     """
     ref = {r.get("d0"): r["retro"] for r in reference if isinstance(r.get("retro"), bool)}
+    ref_unflagged = {r.get("d0") for r in reference if not isinstance(r.get("retro"), bool)}
     out = []
     for f in folds:
         d0 = str(f.get("d0", ""))
-        if not isinstance(f.get("retro"), bool) or (days is not None and d0 in days):
+        if d0 in ref_unflagged:
+            pass
+        elif not isinstance(f.get("retro"), bool) or (days is not None and d0 in days):
             if d0 in ref:
                 f = {**f, "retro": ref[d0]}
             elif unpublished is not None:
