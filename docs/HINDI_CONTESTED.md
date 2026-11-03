@@ -122,7 +122,7 @@ independent judges (sonnet, opus), two passes; every applied string had both jud
 
 | Key | Judges | Applied | Note |
 |---|---|---|---|
-| `directionUp`, `directionDown` | both ACCEPT | draft | opening matches `accSummaryDirectionHold` |
+| `directionUp`, `directionDown` | both ACCEPT | draft: भारत का पिछला आधिकारिक भाव तय होने के बाद दुनिया के बाज़ार में सोने का भाव बदला है, इसलिए अगले आधिकारिक भाव के <strong>बढ़ने</strong> (Down: <strong>घटने</strong>) की संभावना ज़्यादा है (करीब ${pct}% संभावना)। | opening matches `accSummaryDirectionHold`; के बाद with the present perfect बदला है reads naturally, so the के बाद से fix for `directionUnclear` was not carried over (verifier nit, 2026-11-03) |
 | `directionUnclear` | both CHANGE, different fixes; combined, both ACCEPT | भारत के पिछले आधिकारिक भाव के बाद -> भारत का पिछला आधिकारिक भाव तय होने के बाद से; कि बताया जा सके कि अगला आधिकारिक भाव बढ़ेगा या घटेगा -> कि अगले आधिकारिक भाव के बढ़ने या घटने के बारे में कुछ कहा जा सके | opus: "since" needs के बाद से, and the opening should match 1 and 2; sonnet: two stacked कि and the passive were stiff |
 | `directionWhy` | both CHANGE, different fixes; combined, both ACCEPT | के हिसाब से, कुछ देर बाद चलता है -> के हिसाब से बदलता है, पर कुछ देर से; हम ख़ुद सोने के भाव का -> हम दुनिया के बाज़ार में सोने के भाव का | both: हम ख़ुद was ambiguous ("we ourselves"); sonnet: कुछ देर बाद can read as minutes; opus: बदलता है carries "follows" |
 
