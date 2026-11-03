@@ -15,9 +15,16 @@ Any collection error blocks, and so does a pytest run that stopped early (exit s
 0 = all passed or 1 = some failed): a partial record proves nothing about the tests that never ran.
 A missing, unreadable or empty record is an ERROR, never a pass.
 
-Residual (stated, not covered): a cache filled by a test in a DIFFERENT file and read by a failing
-test in a file that neither reads data/ nor names it. Over-blocking is cheap here (the tests run on
-the pinned lock, so a code-caused failure on a data-only PR means master itself is red).
+Residuals (stated, not covered; independent review 2026-11-03):
+  * a cache filled from a DIFFERENT test file (an lru_cache, a library module that loads data at
+    import, a session-scoped fixture) read by a failing test in a file that neither reads data/
+    nor names it;
+  * a read while a conftest.py or plugin is imported (not a test file; nothing to attribute it to;
+    the repo's conftest reads no data today);
+  * native readers (pyarrow/pandas C++ parquet, os.listdir) that the "open" audit event misses,
+    covered only when the static scan names the file.
+Over-blocking is cheap here (the tests run on the pinned lock, so a code-caused failure on a
+data-only PR means master itself is red).
 
 Usage: python scripts/data_test_decision.py --reads FILE [--root DIR]
 Exit 0 = pass, 1 = a blocking failure, 2 = error (no usable record). Prints one summary line
