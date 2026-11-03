@@ -100,9 +100,23 @@ def test_the_shadow_reads_the_scope_step_and_logs_one_comparable_line():
     run = shadow["run"]
     assert "python scripts/validate_data.py" in run
     assert "pip install -q -c ml/requirements-inference.lock jsonschema pytest" in run
-    line = "DATA-ONLY SHADOW: scope=$MODE validate=$VALID full=$FULL_RESULT agree=$AGREE reason=$REASON"
+    line = (
+        "DATA-ONLY SHADOW: scope=$MODE validate=$VALID data_tests=$DTESTS full=$FULL_RESULT "
+        "agree=$AGREE reason=$REASON"
+    )
     assert line in run
     assert "GITHUB_STEP_SUMMARY" in run
+    assert 'python scripts/data_test_decision.py --reads "$RUNNER_TEMP/data_reads.json"' in run
+
+
+def test_the_full_suite_records_data_reads_only_on_a_data_only_pr():
+    # FOR_GG item 11: recording is switched on by an env var that is empty unless the scope step
+    # said data-only, so a code PR's full suite runs exactly as before
+    env = _step("Run full pytest suite")["env"]
+    assert env == {
+        "DATA_READS_OUT": "${{ steps.scope.outputs.data_only == 'true' && "
+        "format('{0}/data_reads.json', runner.temp) || '' }}"
+    }
 
 
 # --- the scope step's own bash, on a real repository ----------------------------------------------
@@ -302,33 +316,75 @@ def test_scope_dispatch_on_a_branch_applies_and_other_events_do_not(tmp_path):
         assert got["applies"] == "false" and got["data_only"] == "false", (event, got)
 
 
+DATA = {"APPLIES": "true", "DATA_ONLY": "true", "SCOPE_REASON": "all data"}
+
+
 @pytest.mark.skipif(BASH is None, reason="needs bash (CI has it)")
 @pytest.mark.parametrize(
-    ("scope_env", "valid_rc", "expect"),
+    ("scope_env", "valid_rc", "tests_rc", "full", "expect"),
     [
-        ({"APPLIES": "false", "DATA_ONLY": "false"}, 0, "nothing to record"),
+        ({"APPLIES": "false", "DATA_ONLY": "false"}, 0, 0, "success", "nothing to record"),
         (
-            {"APPLIES": "true", "DATA_ONLY": "true", "SCOPE_REASON": "all data"},
+            DATA,
             0,
-            "DATA-ONLY SHADOW: scope=data-only validate=pass full=success agree=yes reason=all data",
+            0,
+            "success",
+            "DATA-ONLY SHADOW: scope=data-only validate=pass data_tests=pass full=success "
+            "agree=yes reason=all data",
         ),
         (
-            {"APPLIES": "true", "DATA_ONLY": "true", "SCOPE_REASON": "all data"},
+            DATA,
             1,
-            "DATA-ONLY SHADOW: scope=data-only validate=fail full=success agree=no reason=all data",
+            0,
+            "success",
+            "DATA-ONLY SHADOW: scope=data-only validate=fail data_tests=pass full=success "
+            "agree=no reason=all data",
+        ),
+        # a data-reading test failed: the data-only decision fails, as the full checks did
+        (
+            DATA,
+            0,
+            1,
+            "failure",
+            "DATA-ONLY SHADOW: scope=data-only validate=pass data_tests=fail full=failure "
+            "agree=yes reason=all data",
+        ),
+        # the 2026-10-29 shape: a linter fails the full checks, the data and its tests are fine
+        (
+            DATA,
+            0,
+            0,
+            "failure",
+            "DATA-ONLY SHADOW: scope=data-only validate=pass data_tests=pass full=failure "
+            "agree=no reason=all data",
+        ),
+        # no usable record of the tests is never a pass
+        (
+            DATA,
+            0,
+            2,
+            "success",
+            "DATA-ONLY SHADOW: scope=data-only validate=pass data_tests=error full=success "
+            "agree=no reason=all data",
         ),
         # a failed or timed-out scope step leaves its outputs empty: recorded as full, never data-only
         (
             {"APPLIES": "", "DATA_ONLY": "", "SCOPE_OUTCOME": "failure"},
             0,
-            "DATA-ONLY SHADOW: scope=full validate=pass full=success agree=n/a "
+            0,
+            "success",
+            "DATA-ONLY SHADOW: scope=full validate=pass data_tests=n/a full=success agree=n/a "
             "reason=scope step did not finish (outcome: failure)",
         ),
     ],
 )
-def test_the_shadow_step_reads_the_scope_outputs(tmp_path, scope_env, valid_rc, expect):
+def test_the_shadow_step_reads_the_scope_outputs(
+    tmp_path, scope_env, valid_rc, tests_rc, full, expect
+):
     stub = (
-        f'python() {{ case "$*" in *validate_data*) return {valid_rc} ;; *) return 0 ;; esac; }}\n'
+        'python() { case "$*" in '
+        f"*validate_data*) return {valid_rc} ;; *data_test_decision*) return {tests_rc} ;; "
+        "*) return 0 ;; esac; }\n"
         "export -f python\n"
     )
     f = tmp_path / "shadow.sh"
@@ -337,7 +393,7 @@ def test_the_shadow_step_reads_the_scope_outputs(tmp_path, scope_env, valid_rc, 
         **os.environ,
         "SCOPE_REASON": "",
         "SCOPE_OUTCOME": "success",
-        "FULL_RESULT": "success",
+        "FULL_RESULT": full,
         **scope_env,
         "RUNNER_TEMP": str(tmp_path),
         "GITHUB_STEP_SUMMARY": str(tmp_path / "s"),
