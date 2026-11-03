@@ -11,6 +11,8 @@ Judged on check-price's completed runs on master, newest first (``--runs``):
     staleness rule below still catches a run of them.
   * STALE when no run has succeeded within ``--max-gap-hours`` of ``--now``. Over 100 runs from
     2026-10-18 to 10-29 the longest gap between successes was 7.87 h (median 2.46 h), so 9 h.
+    With ``--second-runs`` (a second read of the list, taken a minute later through a different
+    query), STALE stands only if that read agrees (``confirm_stale``: 2026-11-02's false page).
 
 Fails CLOSED (exit 2) on anything unreadable: no runs, or a run without a conclusion or time.
 
@@ -79,21 +81,53 @@ def judge(
     )
 
 
+def confirm_stale(first: tuple[int, str], second: tuple[int, str]) -> tuple[int, str]:
+    """A STALE verdict pages only when a second, independent read of the run list agrees.
+
+    2026-11-02 20:10Z (ci-health run 41516713417): the run list said the last success was 2026-10-31
+    05:50Z while check-price had succeeded at 15:33Z, and GG was paged "check-price stopped". The
+    same query re-run later answers correctly, so GitHub most likely served an out-of-date list (its
+    API was failing then: a push got HTTP 500 at 20:22Z). A real stop reads STALE twice. Only an OK
+    second read clears it; a STALE, FAILING or unreadable second read keeps the first verdict, so
+    this can delay a true page by one re-read, never drop it.
+    """
+    code, line = first
+    if code == 1 and line.startswith("STALE") and second[0] == 0:
+        return 0, f"STALE NOT CONFIRMED: first read said: {line} | second read says: {second[1]}"
+    return first
+
+
+def _lists(*paths: Path) -> list[list[Any]]:
+    out = [json.loads(p.read_text(encoding="utf-8")) for p in paths]
+    if not all(isinstance(x, list) for x in out):
+        raise ValueError("runs and jobs must be JSON lists")
+    return out
+
+
 def main(argv: list[str] | None = None) -> int:
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawTextHelpFormatter)
     ap.add_argument("--runs", type=Path, required=True)
     ap.add_argument("--jobs", type=Path, required=True)
     ap.add_argument("--now", required=True)
     ap.add_argument("--max-gap-hours", type=float, default=MAX_GAP_HOURS)
+    ap.add_argument(
+        "--second-runs",
+        type=Path,
+        help="a second read of the run list; a STALE verdict stands only if this agrees",
+    )
     args = ap.parse_args(argv)
     try:
-        runs = json.loads(args.runs.read_text(encoding="utf-8"))
-        jobs = json.loads(args.jobs.read_text(encoding="utf-8"))
-        if not isinstance(runs, list) or not isinstance(jobs, list):
-            raise ValueError("runs and jobs must be JSON lists")
+        runs, jobs = _lists(args.runs, args.jobs)
         code, line = judge(runs, jobs, _ts(args.now), args.max_gap_hours)
     except (OSError, ValueError, KeyError, TypeError) as exc:
         code, line = 2, f"CANNOT JUDGE: {type(exc).__name__}: {exc}"
+    if args.second_runs is not None and code == 1 and line.startswith("STALE"):
+        try:
+            (second_runs,) = _lists(args.second_runs)
+            second = judge(second_runs, jobs, _ts(args.now), args.max_gap_hours)
+        except (OSError, ValueError, KeyError, TypeError) as exc:
+            second = (2, f"CANNOT JUDGE: {type(exc).__name__}: {exc}")
+        code, line = confirm_stale((code, line), second)
     print(line)
     return code
 
