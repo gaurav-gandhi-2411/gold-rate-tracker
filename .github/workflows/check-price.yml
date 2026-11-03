@@ -81,11 +81,12 @@ jobs:
     concurrency:
       group: check-price
       cancel-in-progress: false
-    # 20min for scrape+ML steps, +15min headroom for the PR auto-merge wait
+    # 20min for scrape+ML steps, +30min headroom for the PR auto-merge wait (FOR_GG item 9:
+    # 2026-11-01 run 41287213214 gave up 51 s before its bot PR's statuses landed at 15 min)
     # (generate-og-image.yml's workflow_run trigger fires on this job's
     # completion, so it must wait for the data-sync PR to actually merge —
     # otherwise it screenshots stale data).
-    timeout-minutes: 35
+    timeout-minutes: 50
 
     steps:
       - name: Checkout repository
@@ -370,7 +371,7 @@ jobs:
           pr-title: "chore: update gold prices and forecast"
           pr-body: "Automated data sync from Check Gold Price run ${{ github.run_id }}."
           token: ${{ secrets.CI_MERGE_PAT }}
-          wait-minutes: "15"
+          wait-minutes: "30"
           ntfy-topic: ${{ secrets.NTFY_TOPIC }}
 
       - name: Merge a stranded Tanishq reading PR
