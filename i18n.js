@@ -80,6 +80,52 @@ function isMeasurementFresh(isoTimestamp, nowMs = Date.now(), maxAgeDays = CLAIM
   return ageDays >= 0 && ageDays <= maxAgeDays;
 }
 
+// The one answer, for every page, to "is the direction signal on?" (GG brief, 2026-11-02).
+// The main page shows the next official rate's likely direction only while ml/inference.py
+// publishes next_fix.direction.show === true: the model's test passed AND GG's promotion record
+// exists (approved 2026-10-02) AND the model is in "after_us_close" mode, i.e. from the US close
+// until India's next morning rate. In the two hold modes ("after_morning_rate",
+// "after_afternoon_rate") the estimate is India's latest official rate held as it is, and there is
+// no direction. So the signal is approved and goes on and off about twice a day.
+// on:     the main page shows the direction now: next_fix active, show === true, a probability
+//         that is a finite number in [0, 1], a price range to show it under (app.js shows the
+//         direction inside the range line), and forecast.json fresh by isMeasurementFresh.
+// hold:   not on because the model is holding India's latest official rate in the normal
+//         off-hours way, so the direction comes back after the next US close. Not hold when
+//         ml/nextfix.py fell back to the hold for another reason: the model demoted (ADR 068,
+//         sticky) or the leak guard found a violation. Off for any other reason (inactive, out
+//         of date, no range) is not hold either.
+// record: the model's test on past days it had not seen, or null: n, right, upRight (counts from
+//         the published accuracies), passed (its test passed) and nForward (how many of the n were
+//         calls made at the time; null when not published).
+function directionSignalState(fc, nowMs = Date.now()) {
+  const nf = fc?.next_fix;
+  const tr = nf?.track_record;
+  const record = tr && Number.isInteger(tr.n) && tr.n > 0
+    && Number.isFinite(tr.direction_accuracy) && Number.isFinite(tr.always_up_accuracy)
+    ? {
+      n: tr.n,
+      right: Math.round(tr.direction_accuracy * tr.n),
+      upRight: Math.round(tr.always_up_accuracy * tr.n),
+      passed: tr.direction_gate_ship === true,
+      nForward: Number.isInteger(tr.n_forward) && tr.n_forward >= 0 && tr.n_forward <= tr.n
+        ? tr.n_forward : null,
+    }
+    : null;
+  const p = nf?.direction?.probability;
+  const lo = fc?.headline?.lower ?? fc?.lower;
+  const hi = fc?.headline?.upper ?? fc?.upper;
+  const on = nf?.active === true && nf.direction?.show === true
+    && Number.isFinite(p) && p >= 0 && p <= 1
+    && typeof lo === "number" && typeof hi === "number"
+    && isMeasurementFresh(fc?.predicted_at, nowMs);
+  const hold = !on && nf?.active === true && isMeasurementFresh(fc?.predicted_at, nowMs)
+    && (nf.mode === "after_morning_rate" || nf.mode === "after_afternoon_rate")
+    && nf.demotion?.demoted !== true
+    && !(Array.isArray(nf.leak_guard?.violations) && nf.leak_guard.violations.length > 0);
+  return { on, hold, record };
+}
+
 const STRINGS = {
   en: {
     // ── Static shell (index.html) ──────────────────────────────────────────────
@@ -472,6 +518,10 @@ const STRINGS = {
     // "Reliability") are reused here rather than duplicated.
     accSummaryIntro: "We regularly compare our estimate with real shop prices and correct it when it drifts.",
     accSummaryDirectionOff: "We don't guess whether prices will rise or fall next.",
+    // 2026-11-02: while the approved next-rate direction is off (i18n.js directionSignalState):
+    // the normal off-hours hold, or off for another reason.
+    accSummaryDirectionHold: "We say whether the next official rate is more likely to be higher or lower only after the US market closes, until India's next morning rate is set.",
+    accSummaryDirectionPaused: "We are not saying right now whether prices are more likely to rise or fall.",
     accSummaryLinkText: "See the numbers behind this →",
 
     // ── Error / degrade paths ────────────────────────────────────────────────────
@@ -538,6 +588,9 @@ const STRINGS = {
     pageDescription: "22 कैरेट सोने का भाव — असली दुकान के भाव के क़रीब, और जब मिल सके तब Tanishq के बताए भाव से मिलाकर। देखें कि आज का भाव पिछले कुछ हफ़्तों के मुक़ाबले ऊपर है या नीचे।",
     accSummaryIntro: "हम अपने अनुमान को नियमित रूप से दुकान के असली भाव से मिलाते हैं, और भाव से दूर जाने पर उसे ठीक करते हैं।",
     accSummaryDirectionOff: "हम यह अंदाज़ा नहीं लगाते कि भाव आगे बढ़ेगा या घटेगा।",
+    // 2026-11-03, LLM consensus (docs/HINDI_CONTESTED.md)
+    accSummaryDirectionHold: "अगले आधिकारिक भाव के बढ़ने की संभावना ज़्यादा है या घटने की, यह हम सिर्फ़ अमेरिकी बाज़ार बंद होने के बाद से भारत का अगला सुबह का भाव तय होने तक बताते हैं।",
+    accSummaryDirectionPaused: "अभी हम यह नहीं बता रहे कि भाव बढ़ने की संभावना ज़्यादा है या घटने की।",
     accSummaryLinkText: "इनके पीछे के आंकड़े देखें →",
     karatToggleAriaLabel: "सोने की शुद्धता",
     perGram: "प्रति ग्राम",
