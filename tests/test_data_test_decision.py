@@ -39,10 +39,6 @@ def test_fails_reading_data():
     assert (DATA / "prices.json").read_text() == "changed"
 
 
-def test_fails_reading_nothing():
-    assert False
-
-
 def test_skipped():
     import pytest
     pytest.skip("not here")
@@ -52,6 +48,42 @@ def test_git_show_of_data():
     subprocess.run(["git", "show", "HEAD:data/prices.json"], capture_output=True)
 """
 
+# a file that never touches data/: its failure says nothing about a data-only PR
+PURE_TESTS = """
+def test_fails_reading_nothing():
+    assert False
+"""
+
+# review finding: a value loaded once and cached is read only by the FIRST test that needs it
+CACHED_TESTS = """
+import functools
+from pathlib import Path
+
+
+@functools.lru_cache
+def load():
+    return (Path(__file__).resolve().parent.parent / "da" "ta" / "prices.json").read_text()
+
+
+def test_first_loads():
+    assert load()
+
+
+def test_second_uses_the_cache_and_fails():
+    assert load() == "changed"
+"""
+
+# a module-level load: the read happens while the file is imported (collected), before any test
+IMPORT_TESTS = """
+from pathlib import Path
+
+VALUE = (Path(__file__).resolve().parent.parent / "da" "ta" / "prices.json").read_text()
+
+
+def test_fails_on_the_imported_value():
+    assert VALUE == "changed"
+"""
+
 
 @pytest.fixture
 def project(tmp_path: Path) -> Path:
@@ -59,6 +91,7 @@ def project(tmp_path: Path) -> Path:
     (tmp_path / "data" / "prices.json").write_text("{}", encoding="utf-8")
     (tmp_path / "tests").mkdir()
     (tmp_path / "tests" / "test_sample.py").write_text(PROJECT_TESTS, encoding="utf-8")
+    (tmp_path / "tests" / "test_pure.py").write_text(PURE_TESTS, encoding="utf-8")
     (tmp_path / "tests" / "conftest.py").write_text(
         "import sys\nfrom pathlib import Path\n"
         f"sys.path.insert(0, {str(ROOT / 'scripts')!r})\n"
@@ -97,6 +130,7 @@ def test_the_plugin_records_reads_and_outcomes_per_test(project: Path):
     assert t["test_skipped"]["outcome"] == "skipped"
     assert t["test_git_show_of_data"]["data_reads"][0].startswith("git:")
     assert rec["version"] == 1 and rec["collect_errors"] == [] and rec["exitstatus"] == 1
+    assert rec["collect_reads"] == {}
 
 
 def test_only_failures_in_data_reading_tests_block(project: Path):
@@ -104,10 +138,28 @@ def test_only_failures_in_data_reading_tests_block(project: Path):
     verdict, blocking, non_blocking, n_reading = dtd.decide(rec, set())
     assert verdict == "fail" and n_reading == 3  # data, failing data, git show
     assert [b.split(" ")[0].split("::")[1] for b in blocking] == ["test_fails_reading_data"]
-    assert [n.split("::")[1] for n in non_blocking] == ["test_fails_reading_nothing"]
+    assert non_blocking == ["tests/test_pure.py::test_fails_reading_nothing"]
     # a file the static scan selects blocks on any failure (reads through a child process)
-    _, blocking, non_blocking, _ = dtd.decide(rec, {"tests/test_sample.py"})
+    _, blocking, non_blocking, _ = dtd.decide(rec, {"tests/test_pure.py"})
     assert len(blocking) == 2 and non_blocking == []
+
+
+def test_a_failure_on_a_cached_read_blocks(project: Path):
+    (project / "tests" / "test_cached.py").write_text(CACHED_TESTS, encoding="utf-8")
+    rec = _run(project)
+    second = rec["tests"]["tests/test_cached.py::test_second_uses_the_cache_and_fails"]
+    assert second == {"outcome": "failed", "data_reads": []}  # the read was the first test's
+    _, blocking, non_blocking, _ = dtd.decide(rec, set())
+    assert any(b.startswith("tests/test_cached.py::test_second") for b in blocking), blocking
+    assert non_blocking == ["tests/test_pure.py::test_fails_reading_nothing"]
+
+
+def test_a_failure_on_a_value_read_at_import_blocks(project: Path):
+    (project / "tests" / "test_imported.py").write_text(IMPORT_TESTS, encoding="utf-8")
+    rec = _run(project)
+    assert rec["collect_reads"] == {"tests/test_imported.py": ["data/prices.json"]}
+    _, blocking, _, _ = dtd.decide(rec, set())
+    assert any(b.startswith("tests/test_imported.py::") for b in blocking), blocking
 
 
 def test_a_collection_error_blocks(project: Path):
@@ -115,6 +167,18 @@ def test_a_collection_error_blocks(project: Path):
     rec = _run(project)
     verdict, blocking, _, _ = dtd.decide(rec, set())
     assert verdict == "fail" and any(b.startswith("collection error:") for b in blocking)
+
+
+@pytest.mark.parametrize("status", [2, 3, 4, 5, None])
+def test_a_run_that_stopped_early_blocks_even_with_no_failure(status):
+    # review finding: an interrupted or internal-error run writes a valid but partial record
+    rec = {
+        "version": 1,
+        "exitstatus": status,
+        "tests": {"tests/test_x.py::t": {"outcome": "passed", "data_reads": ["data/a"]}},
+    }
+    verdict, blocking, _, _ = dtd.decide(rec, set())
+    assert verdict == "fail" and blocking[0].startswith("pytest stopped early")
 
 
 @pytest.mark.parametrize(
@@ -131,11 +195,16 @@ def test_the_cli_exit_codes(tmp_path: Path, capsys):
     assert dtd.main(["--reads", str(tmp_path / "missing.json")]) == 2
     rec.write_text("not json", encoding="utf-8")
     assert dtd.main(["--reads", str(rec)]) == 2
-    ok = {"version": 1, "tests": {"tests/test_x.py::t": {"outcome": "passed", "data_reads": []}}}
+    ok = {
+        "version": 1,
+        "exitstatus": 0,
+        "tests": {"tests/test_x.py::t": {"outcome": "passed", "data_reads": []}},
+    }
     rec.write_text(json.dumps(ok), encoding="utf-8")
     assert dtd.main(["--reads", str(rec)]) == 0
     bad = {
         "version": 1,
+        "exitstatus": 1,
         "tests": {"tests/test_x.py::t": {"outcome": "failed", "data_reads": ["data/a"]}},
     }
     rec.write_text(json.dumps(bad), encoding="utf-8")

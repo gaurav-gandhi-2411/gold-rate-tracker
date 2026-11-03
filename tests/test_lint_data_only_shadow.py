@@ -358,14 +358,24 @@ DATA = {"APPLIES": "true", "DATA_ONLY": "true", "SCOPE_REASON": "all data"}
             "DATA-ONLY SHADOW: scope=data-only validate=pass data_tests=pass full=failure "
             "agree=no reason=all data",
         ),
-        # no usable record of the tests is never a pass
+        # no usable record of the tests: the data-only path was never tried, so it counts neither
+        # way (review finding: the 2026-10-29 shape, a linter failing before the suite ran, would
+        # otherwise score as agreement)
         (
             DATA,
             0,
             2,
             "success",
             "DATA-ONLY SHADOW: scope=data-only validate=pass data_tests=error full=success "
-            "agree=no reason=all data",
+            "agree=n/a reason=all data",
+        ),
+        (
+            DATA,
+            0,
+            2,
+            "failure",
+            "DATA-ONLY SHADOW: scope=data-only validate=pass data_tests=error full=failure "
+            "agree=n/a reason=all data",
         ),
         # a failed or timed-out scope step leaves its outputs empty: recorded as full, never data-only
         (

@@ -4,12 +4,20 @@ GG decision 2026-11-03 (option C refined): on a PR that changes only data, the t
 committed data run after the lock install and decide; a failure in a test that never touches data
 cannot have been caused by the PR (it changed only data) and is reported, not blocking.
 
-A failed test BLOCKS when either
-  * it read data/ during this run (measured by scripts/data_reads_plugin.py), or
+A failed test BLOCKS when any of these holds:
+  * it read data/ during this run (measured by scripts/data_reads_plugin.py);
+  * any test in its FILE read data/, or the file read data/ while being imported: a value loaded
+    once and cached (lru_cache, a module-level load) is read only by the first test that needs it,
+    and a later test failing on that bad value must still block;
   * its file names data/ in its source (scripts/select_data_tests.py), which covers a test that
-    reads data/ through a child process the measurement cannot see.
-Any collection error blocks (fail closed: a test file that could not even be imported may be one
-that reads data). A missing, unreadable or empty record is an ERROR, never a pass.
+    reads data/ through a child process or a native reader the measurement cannot see.
+Any collection error blocks, and so does a pytest run that stopped early (exit status other than
+0 = all passed or 1 = some failed): a partial record proves nothing about the tests that never ran.
+A missing, unreadable or empty record is an ERROR, never a pass.
+
+Residual (stated, not covered): a cache filled by a test in a DIFFERENT file and read by a failing
+test in a file that neither reads data/ nor names it. Over-blocking is cheap here (the tests run on
+the pinned lock, so a code-caused failure on a data-only PR means master itself is red).
 
 Usage: python scripts/data_test_decision.py --reads FILE [--root DIR]
 Exit 0 = pass, 1 = a blocking failure, 2 = error (no usable record). Prints one summary line
@@ -37,6 +45,15 @@ def decide(record: dict, static_files: set[str]) -> tuple[str, list[str], list[s
         raise ValueError("no test ran")
     # a collection error stops pytest before any test runs; it blocks on its own
     blocking = [f"collection error: {n}" for n in errors]
+    status = record.get("exitstatus")
+    if status not in (0, 1):
+        blocking.append(f"pytest stopped early (exit status {status}); the record is partial")
+
+    def _file(node: str) -> str:
+        return node.split("::", 1)[0].replace("\\", "/")
+
+    reading_files = {_file(n) for n, r in tests.items() if r.get("data_reads")}
+    reading_files |= {k.replace("\\", "/") for k in (record.get("collect_reads") or {})}
     non_blocking = []
     n_reading = 0
     for node, r in sorted(tests.items()):
@@ -44,10 +61,13 @@ def decide(record: dict, static_files: set[str]) -> tuple[str, list[str], list[s
         n_reading += reads
         if r.get("outcome") != "failed":
             continue
-        named = node.split("::", 1)[0].replace("\\", "/") in static_files
-        if reads or named:
-            why = "read " + ", ".join(r["data_reads"][:2]) if reads else "names data/ in its source"
-            blocking.append(f"{node} ({why})")
+        f = _file(node)
+        if reads:
+            blocking.append(f"{node} (read {', '.join(r['data_reads'][:2])})")
+        elif f in reading_files:
+            blocking.append(f"{node} (its file read data/; a cached value may be the cause)")
+        elif f in static_files:
+            blocking.append(f"{node} (names data/ in its source)")
         else:
             non_blocking.append(node)
     return ("fail" if blocking else "pass"), blocking, non_blocking, n_reading

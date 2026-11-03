@@ -11,6 +11,7 @@ Recording only: every hook swallows its own errors, so this plugin can never fai
 It is registered by tests/conftest.py only when DATA_READS_OUT is set (the lint job sets it on
 data-only PRs); otherwise nothing here runs. Output (JSON, at DATA_READS_OUT):
   {"version": 1, "exitstatus": int, "collect_errors": [nodeid, ...],
+   "collect_reads": {test_file: [path, ...]},   # reads while that file was imported/collected
    "tests": {nodeid: {"outcome": "passed" | "failed" | "skipped", "data_reads": [path, ...]}}}
 """
 
@@ -25,6 +26,7 @@ from typing import Any
 import pytest
 
 MAX_PATHS = 5  # per test; enough to say what it read
+COLLECT = "collect::"  # key prefix for reads made while a test file is collected (imported)
 
 
 class DataReads:
@@ -63,6 +65,21 @@ class DataReads:
             got.add(path)
 
     @pytest.hookimpl(hookwrapper=True)
+    def pytest_make_collect_report(self, collector: pytest.Collector):  # type: ignore[no-untyped-def]
+        # a read while a test FILE is imported/collected (a module-level load) belongs to that file
+        prev = self.current
+        try:
+            nodeid = collector.nodeid.split("::", 1)[0]
+            if nodeid.endswith(".py"):
+                self.current = COLLECT + nodeid
+        except Exception:
+            pass
+        try:
+            yield
+        finally:
+            self.current = prev
+
+    @pytest.hookimpl(hookwrapper=True)
     def pytest_runtest_protocol(self, item: pytest.Item, nextitem: pytest.Item | None):  # type: ignore[no-untyped-def]
         self.current = item.nodeid
         try:
@@ -94,10 +111,16 @@ class DataReads:
                 n: {"outcome": o, "data_reads": sorted(self.reads.get(n, ()))}
                 for n, o in sorted(self.outcomes.items())
             }
+            collect_reads = {
+                n[len(COLLECT) :]: sorted(v)
+                for n, v in sorted(self.reads.items())
+                if n.startswith(COLLECT)
+            }
             doc = {
                 "version": 1,
                 "exitstatus": int(exitstatus),
                 "collect_errors": self.collect_errors,
+                "collect_reads": collect_reads,
                 "tests": tests,
             }
             self.out.write_text(json.dumps(doc, indent=1), encoding="utf-8")

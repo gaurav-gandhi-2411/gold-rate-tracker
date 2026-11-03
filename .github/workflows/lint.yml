@@ -219,9 +219,11 @@ jobs:
           fi
           # The data-only decision passes only when the data validates AND its tests pass. Agreement
           # is only meaningful where data-only would have decided: on a full-scope PR the code checks
-          # can fail for reasons validation never looks at; a cancelled run decided nothing.
+          # can fail for reasons validation never looks at; a cancelled run decided nothing; and with
+          # no record of the tests (data_tests=error, e.g. a linter failed before the suite ran, the
+          # 2026-10-29 shape) the data-only path was never actually tried, so it cannot count.
           if [ "$VALID" = "pass" ] && [ "$DTESTS" = "pass" ]; then DECIDE=pass; else DECIDE=fail; fi
-          if [ "$MODE" != "data-only" ] || [ "$FULL_RESULT" = "cancelled" ]; then AGREE=n/a
+          if [ "$MODE" != "data-only" ] || [ "$FULL_RESULT" = "cancelled" ] || [ "$DTESTS" = "error" ]; then AGREE=n/a
           elif { [ "$DECIDE" = "pass" ] && [ "$FULL_RESULT" = "success" ]; } \
             || { [ "$DECIDE" != "pass" ] && [ "$FULL_RESULT" != "success" ]; }; then AGREE=yes
           else AGREE=no; fi
