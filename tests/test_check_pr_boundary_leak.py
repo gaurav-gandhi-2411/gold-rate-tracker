@@ -633,7 +633,9 @@ def test_api_commit_list_keeps_single_parent_commits_only():
 # --- 2026-11-03: a fork PR named bot/<x> gets no bot exemption ---------------------------------------------
 
 
-def test_a_fork_pr_named_like_a_bot_branch_still_gets_the_closed_pr_scan():
+@pytest.mark.parametrize("cross", [{"isCrossRepository": True}, {"isCrossRepository": None}, {}])
+def test_a_fork_pr_named_like_a_bot_branch_still_gets_the_closed_pr_scan(cross):
+    """A fork, or a response without an explicit `false`, never earns the bot exemption."""
     calls = []
 
     def fake_run(args, **kwargs):
@@ -641,11 +643,7 @@ def test_a_fork_pr_named_like_a_bot_branch_still_gets_the_closed_pr_scan():
             return _proc(
                 returncode=0,
                 stdout=json.dumps(
-                    {
-                        "headRefOid": "head100",
-                        "headRefName": "bot/data-sync",
-                        "isCrossRepository": True,
-                    }
+                    {"headRefOid": "head100", "headRefName": "bot/data-sync", **cross}
                 ),
             )
         if args[:2] == ["git", "fetch"]:
