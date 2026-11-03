@@ -39,6 +39,57 @@ jobs:
       - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
         with:
           python-version: "3.11"
+      # Data-only or full, decided once here (GG 2026-10-30). Non-blocking: a failed, timed-out or
+      # undecidable scope leaves data_only unset, which reads as full. Master is fetched into a
+      # private ref (refs/ci-scope/master), not origin/master, and --refmap= stops git's
+      # opportunistic origin/master update, so the steps below see the same
+      # checkout as before. MASTER's copy of the scope script and of bot-pr-sync's allowlist,
+      # never the PR's own. tests/test_lint_data_only_shadow.py runs this script on a real repo.
+      - name: Scope -- data-only or full (master's scope script; undecidable is full)
+        id: scope
+        continue-on-error: true
+        timeout-minutes: 3
+        env:
+          EVENT: ${{ github.event_name }}
+          BASE_REF: ${{ github.base_ref }}
+          PR_HEAD: ${{ github.event.pull_request.head.sha }}
+          REF_NAME: ${{ github.ref_name }}
+        run: |
+          set +e
+          MODE=full
+          REASON="not a PR into master or a dispatched branch"
+          HEAD=""
+          if [ "$EVENT" = "pull_request" ] && [ "$BASE_REF" = "master" ]; then
+            HEAD="$PR_HEAD"
+          elif [ "$EVENT" = "workflow_dispatch" ] && [ "$REF_NAME" != "master" ]; then
+            HEAD="$GITHUB_SHA"
+          fi
+          if [ -n "$HEAD" ]; then
+            echo "applies=true" >> "$GITHUB_OUTPUT"
+            REASON="change list or master's scope script unavailable"
+            # Three-dot (from the merge base), like GitHub's own PR file list: a two-dot diff against
+            # a master that moved on would also list master's newer changes. No merge base within the
+            # fetched depth -> git fails -> full.
+            if git fetch -q --no-tags --refmap= --depth=100 origin "+refs/heads/master:refs/ci-scope/master" "$HEAD" \
+              && git diff --name-status "refs/ci-scope/master...$HEAD" > "$RUNNER_TEMP/changes.txt" \
+              && git show refs/ci-scope/master:scripts/ci_scope.py > "$RUNNER_TEMP/ci_scope.py" \
+              && git show refs/ci-scope/master:.github/actions/bot-pr-sync/action.yml > "$RUNNER_TEMP/action.yml"; then
+              if python "$RUNNER_TEMP/ci_scope.py" --changes "$RUNNER_TEMP/changes.txt" --action "$RUNNER_TEMP/action.yml" > "$RUNNER_TEMP/scope.txt"; then
+                MODE=$(sed -n 's/^mode=//p' "$RUNNER_TEMP/scope.txt")
+                REASON=$(sed -n 's/^reason: //p' "$RUNNER_TEMP/scope.txt" | head -n 1)
+              else
+                REASON="master's scope script failed to run"
+              fi
+            fi
+          else
+            echo "applies=false" >> "$GITHUB_OUTPUT"
+          fi
+          [ "$MODE" = "data-only" ] || MODE=full
+          if [ "$MODE" = "data-only" ]; then DATA_ONLY=true; else DATA_ONLY=false; fi
+          echo "reason=$REASON" >> "$GITHUB_OUTPUT"
+          echo "data_only=$DATA_ONLY" >> "$GITHUB_OUTPUT"
+          echo "SCOPE: mode=$MODE reason=$REASON"
+          exit 0
       # Every install in a required job is pinned (brief 2026-10-30; tests/test_required_ci_installs_pinned.py):
       # an unpinned release must not be able to change what this job runs. Bumps are deliberate PRs.
       - run: pip install pre-commit==4.7.0
@@ -131,41 +182,23 @@ jobs:
       - name: Data-only path (shadow) -- what it would have decided; the checks above still decide
         if: always()
         continue-on-error: true
-        # a hung fetch or install must not hold the required job; a timeout is just a failed step
+        # a hung install must not hold the required job; a timeout is just a failed step
         timeout-minutes: 5
         env:
-          EVENT: ${{ github.event_name }}
-          BASE_REF: ${{ github.base_ref }}
-          PR_HEAD: ${{ github.event.pull_request.head.sha }}
-          REF_NAME: ${{ github.ref_name }}
+          APPLIES: ${{ steps.scope.outputs.applies }}
+          DATA_ONLY: ${{ steps.scope.outputs.data_only }}
+          SCOPE_REASON: ${{ steps.scope.outputs.reason }}
+          SCOPE_OUTCOME: ${{ steps.scope.outcome }}
           FULL_RESULT: ${{ job.status }}
         run: |
           set +e
-          if [ "$EVENT" = "pull_request" ] && [ "$BASE_REF" = "master" ]; then
-            HEAD="$PR_HEAD"
-          elif [ "$EVENT" = "workflow_dispatch" ] && [ "$REF_NAME" != "master" ]; then
-            HEAD="$GITHUB_SHA"
-          else
+          if [ "$APPLIES" = "false" ]; then
             echo "data-only shadow: not a PR into master or a dispatched branch; nothing to record"
             exit 0
           fi
-          MODE=full
-          REASON="change list or master's scope script unavailable"
-          # Three-dot (from the merge base), like GitHub's own PR file list: a two-dot diff against a
-          # master that moved on would also list master's newer changes. No merge base within the
-          # fetched depth -> git fails -> full.
-          if git fetch -q --no-tags --depth=100 origin "+refs/heads/master:refs/remotes/origin/master" "$HEAD" \
-            && git diff --name-status "refs/remotes/origin/master...$HEAD" > "$RUNNER_TEMP/changes.txt" \
-            && git show refs/remotes/origin/master:scripts/ci_scope.py > "$RUNNER_TEMP/ci_scope.py" \
-            && git show refs/remotes/origin/master:.github/actions/bot-pr-sync/action.yml > "$RUNNER_TEMP/action.yml"; then
-            if python "$RUNNER_TEMP/ci_scope.py" --changes "$RUNNER_TEMP/changes.txt" --action "$RUNNER_TEMP/action.yml" > "$RUNNER_TEMP/scope.txt"; then
-              MODE=$(sed -n 's/^mode=//p' "$RUNNER_TEMP/scope.txt")
-              REASON=$(sed -n 's/^reason: //p' "$RUNNER_TEMP/scope.txt")
-            else
-              REASON="master's scope script failed to run"
-            fi
-          fi
-          [ "$MODE" = "data-only" ] || MODE=full
+          # only an explicit data_only=true from the Scope step is data-only; anything else is full
+          if [ "$DATA_ONLY" = "true" ]; then MODE=data-only; else MODE=full; fi
+          REASON="${SCOPE_REASON:-scope step did not finish (outcome: $SCOPE_OUTCOME)}"
           python -m pip install -q -c ml/requirements-inference.lock jsonschema pytest > /dev/null 2>&1
           python scripts/validate_data.py > "$RUNNER_TEMP/validate.txt" 2>&1
           case $? in 0) VALID=pass ;; 1) VALID=fail ;; *) VALID=error ;; esac
@@ -186,7 +219,6 @@ jobs:
             sed 's/^/    /' "$RUNNER_TEMP/changes.txt" 2> /dev/null
           } >> "$GITHUB_STEP_SUMMARY"
           exit 0
-
   # Early warning, NOT a required check (brief 2026-10-29). The required `lint` job above tests the
   # lock, i.e. what production runs. This job tests the newest versions ml/requirements.txt allows,
   # so an upstream release that breaks the suite shows here (red on PRs) before anyone moves the
