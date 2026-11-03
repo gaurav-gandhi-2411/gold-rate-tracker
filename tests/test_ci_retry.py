@@ -140,12 +140,13 @@ gh() {{
     "pr list")
       n=$(cnt list)
       if [ "$n" -le {list_fails} ]; then echo "gh: Bad Gateway (HTTP 502)" >&2; return 1; fi
-      if [ -f "{st}.created" ]; then echo 4242; fi ;;
+      # the row scripts/bot_pr_find.sh's --jq formats (a same-repository PR)
+      if [ -f "{st}.created" ]; then printf '4242\\tabc123\\tc\\tfalse\\tfalse\\to\\tr\\n'; fi ;;
     "pr create") touch "{st}.created" ;;
     "workflow run")
       n=$(cnt dispatch)
       if [ "$n" -le {dispatch_fails} ]; then echo "gh: Server Error (HTTP 502)" >&2; return 1; fi ;;
-    "pr view") echo MERGED ;;
+    "pr view") case "$*" in *isCrossRepository*) echo "false o r" ;; *) echo MERGED ;; esac ;;
     "api user")
       if [ "{token}" = "bad" ]; then echo "HTTP 401: Bad credentials (https://api.github.com/user)" >&2; return 1; fi
       echo bot-user ;;

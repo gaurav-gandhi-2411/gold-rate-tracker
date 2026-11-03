@@ -138,10 +138,15 @@ gh() {{
   case "$1 $2" in
     "pr list")
       if [ "{1 if list_fails else 0}" = 1 ]; then return 1; fi
-      case "$*" in *"--head {branch} "*) echo "3424 {SHA} {created} {fork}" ;; esac ;;
+      # the row scripts/bot_pr_find.sh's --jq formats: number, head, created, draft, cross-repo, owner, name
+      case "$*" in *"--head {branch} "*)
+        if [ "{fork}" = true ]; then printf '3424\\t{SHA}\\t{created}\\tfalse\\ttrue\\tattacker\\tr\\n'
+        else printf '3424\\t{SHA}\\t{created}\\tfalse\\tfalse\\to\\tr\\n'; fi ;;
+      esac ;;
     "run list") if [ "{busy}" = FAIL ]; then return 1; fi; echo "{busy}" ;;
     "pr view")
       case "$*" in
+        *"--json isCrossRepository"*) echo "false o r" ;;
         *"--json state"*) if [ -f "{st}.merged" ]; then echo MERGED; else echo {open_state}; fi ;;
         *"--json headRefOid"*) echo "{SHA}" ;;
         *"--json mergeStateStatus"*) echo CLEAN ;;
@@ -238,10 +243,11 @@ def test_unreadable_producer_runs_on_a_young_pr_neither_merge_nor_page(tmp_path)
 
 
 @NEEDS_BASH
-def test_a_fork_pr_on_a_bot_branch_name_is_never_merged_and_pages(tmp_path):
+def test_a_fork_pr_on_a_bot_branch_name_is_never_seen(tmp_path):
+    # dropped by scripts/bot_pr_find.sh: not merged, not paged (a fork must not be able to page GG hourly)
     r, log = _sweep(tmp_path, fork="true")
-    assert r.returncode == 1 and "pr merge" not in log and "comes from a fork" in r.stdout
-    assert "run list" not in log  # refused before anything else is looked at
+    assert r.returncode == 0 and "pr merge" not in log and "curl" not in log
+    assert "run list" not in log and "ignoring PR #3424" in r.stderr
 
 
 @NEEDS_BASH

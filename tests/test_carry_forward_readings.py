@@ -370,6 +370,7 @@ def _run_step(
     ws = tmp / "ws"
     (ws / "scripts").mkdir(parents=True)
     shutil.copy(ROOT / "scripts" / "ci_retry.sh", ws / "scripts" / "ci_retry.sh")
+    shutil.copy(ROOT / "scripts" / "bot_pr_find.sh", ws / "scripts" / "bot_pr_find.sh")
     log = tmp / "calls.log"
     (ws / "scripts" / "bot_branch_push.sh").write_bytes(
         f'#!/usr/bin/env bash\necho "push-script $*" >> "{log.as_posix()}"\necho "{push_out}"\nexit {push_exit}\n'.encode()
@@ -383,7 +384,7 @@ git() {{ case "$1" in diff) ;; rev-parse) echo abc123;; *) echo "git $*" >> "{lo
 gh() {{
   echo "gh $*" >> "{log.as_posix()}"
   case "$1 $2" in
-    "pr list") echo 4242 ;;
+    "pr list") printf '4242\\tabc123\\tc\\tfalse\\tfalse\\to\\tr\\n' ;;  # scripts/bot_pr_find.sh's row
     "pr view") echo MERGED ;;
     "api user") if [ "{token}" = "bad" ]; then echo "HTTP 401: Bad credentials" >&2; return 1; fi; echo bot ;;
   esac
