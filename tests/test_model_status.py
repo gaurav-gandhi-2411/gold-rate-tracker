@@ -248,3 +248,50 @@ def test_blocked_challenger_is_marked_even_before_its_first_look() -> None:
     }
     _gain, stand, verdict = mod._challenger_cells(row)
     assert verdict == "too early" and "held back until a known flaw" in stand
+
+
+def _w2_fold(d0: str) -> dict:
+    # coverage fields present on purpose: the note must never show them before 40 days
+    return {"d0": d0, "covered_w2": True, "covered_p3": False, "width_w2": 1.0, "width_p3": 2.0}
+
+
+def test_w2_line_shows_its_day_count_start_and_read_date_only(tmp_path, monkeypatch) -> None:
+    mod = _load_module()
+    monkeypatch.setattr(mod, "DATA", tmp_path)
+    _write(tmp_path, _folds(10, 0.5), _folds(10, 0.2))
+    rec = {"forward_from": "2026-10-30", "folds": [_w2_fold("2026-10-30"), _w2_fold("2026-11-02")]}
+    (tmp_path / "nextfix_w2_bandbucket_oos.json").write_text(json.dumps(rec))
+    s = mod.compute()
+    # 38 days left at 5 decision days a week: ceil(38 * 7 / 5) = 54 calendar days after 11-02
+    assert s["w2"] == {
+        "forward_from": "2026-10-30",
+        "n": 2,
+        "need": 40,
+        "earliest_read": "2026-12-26",
+    }
+    md = mod.render(s)
+    line = next(ln for ln in md.splitlines() if ln.startswith("Range test W2"))
+    assert "**2** since 2026-10-30" in line and "after 40 real days, earliest 2026-12-26" in line
+    assert "%" not in line and "Rs." not in line  # no coverage or width before 40 days
+
+
+def test_w2_with_no_forward_day_yet_counts_from_its_start(tmp_path, monkeypatch) -> None:
+    mod = _load_module()
+    monkeypatch.setattr(mod, "DATA", tmp_path)
+    _write(tmp_path, [], [])
+    (tmp_path / "nextfix_w2_bandbucket_oos.json").write_text(
+        json.dumps({"forward_from": "2026-10-30", "folds": []})
+    )
+    s = mod.compute()
+    assert s["w2"]["n"] == 0 and s["w2"]["earliest_read"] == "2026-12-25"  # 10-30 + 56 days
+
+
+def test_w2_missing_record_and_old_json_both_render(tmp_path, monkeypatch) -> None:
+    mod = _load_module()
+    monkeypatch.setattr(mod, "DATA", tmp_path)
+    _write(tmp_path, [], [])
+    s = mod.compute()
+    assert s["w2"] is None
+    assert "Range test W2" in mod.render(s) and "No record yet." in mod.render(s)
+    del s["w2"]
+    assert "appears after the next weekly update" in mod.render(s)

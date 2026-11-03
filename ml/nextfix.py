@@ -752,7 +752,10 @@ def past_error_series(folds: list[dict], slope, last: int = 30) -> dict | None:
     day, Rs/g; ``slope`` is a number or a function of the day) and
     whether the official rate landed inside the range. No price level is published and neither
     the estimate nor the official rate can be recovered from an error alone (ADR 060).
-    ``retro`` marks days re-run on past data rather than issued live. None when no day qualifies.
+    ``retro`` marks days re-run on past data rather than issued live. Only a fold flagged
+    ``retro`` False is live: a fold with no flag, or a non-boolean one, is published as a re-run
+    (fail closed, as ``evaluate``'s n_forward, ml/live_monitor.py and the page's caption read it).
+    None when no day qualifies.
     """
     rows: list[dict] = []
     for i, f in enumerate(folds):
@@ -769,7 +772,7 @@ def past_error_series(folds: list[dict], slope, last: int = 30) -> dict | None:
                 "day": f["d0"],
                 "err": round((slope(f["d0"]) if callable(slope) else slope) * err, 1),
                 "in_range": bool(abs(err) <= q * f["vol"] * f["pm0"]),
-                "retro": bool(f.get("retro", False)),
+                "retro": f.get("retro") is not False,
             }
         )
     rows = rows[-last:]

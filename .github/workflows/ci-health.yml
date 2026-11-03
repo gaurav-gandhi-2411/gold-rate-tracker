@@ -121,14 +121,39 @@ on:
     - cron: "17 */1 * * *" # hourly, offset from the top of the hour -- same
     # anti-peak-load reasoning check-price.yml's own cron comment documents.
   workflow_dispatch:
+    inputs:
+      freshness_simulate:
+        # Proves the live-freshness page end to end on a made-up payload ([TEST] in the title);
+        # never reads or writes the real incident state.
+        description: "Live-freshness check: judge a simulated payload instead of the live site"
+        type: choice
+        options: [none, stale, fresh]
+        default: none
+      share_card_simulate:
+        # Proves the share-card page end to end on a made-up card ([TEST] in the title): "bad" is
+        # the 2026-05 to 2026-11 card (NaN and buy advice), "good" is today's. Never reads or
+        # writes the real incident state.
+        description: "Share-card check: judge a simulated card instead of the live one"
+        type: choice
+        options: [none, bad, good]
+        default: none
+
+# One run at a time: the laptop, check-price and the cron can all start this within seconds (three
+# dispatches at 2026-10-30 05:35Z), and two overlapping runs would both send the same page.
+concurrency:
+  group: ci-health
+  cancel-in-progress: false
 
 permissions:
   contents: read
+  actions: read # lists check-price's runs and their failed steps (second step)
 
 jobs:
   check:
     runs-on: ubuntu-latest
-    timeout-minutes: 5
+    # 10, not 5: the share-card step can wait on 3 slow fetches (live_freshness.fetch_json retries)
+    # after the freshness step's own; a run cut off by the timeout pages nobody.
+    timeout-minutes: 10
     steps:
       - uses: actions/checkout@v7
 
@@ -143,7 +168,7 @@ jobs:
         run: |
           set -e
           source "${GITHUB_WORKSPACE}/scripts/ci_retry.sh"
-          # this job has a 5-minute timeout: 3 attempts, 5 s base (15 s per call at most)
+          # this job has a 10-minute timeout: 3 attempts, 5 s base (15 s per call at most)
           export CI_RETRY_ATTEMPTS=3 CI_RETRY_BASE=5
 
           # Read the required-contexts list live from branch protection --
@@ -263,3 +288,136 @@ jobs:
           fi
 
           echo "OK: all required checks (${REQUIRED}) are green on master's most recent lint.yml run (${RUN_SHA})."
+
+      # check-price's own alerts run inside check-price, so a run that stops early cannot send them.
+      # Since #3316 a failed parquet round trip stops it on purpose (before any data is written); this
+      # step is what pages GG then, and also when no run has succeeded for 9 h (any other stop).
+      # always(): it must run even when the step above found a red lint check and exited 1.
+      # The judgement is scripts/check_price_health.py (tested); it fails closed (exit 2) and pages.
+      - name: Check that check-price is still running and succeeding
+        if: always()
+        env:
+          GH_TOKEN: ${{ github.token }}
+          NTFY_TOPIC: ${{ secrets.NTFY_TOPIC }}
+        run: |
+          set -e
+          source "${GITHUB_WORKSPACE}/scripts/ci_retry.sh"
+          export CI_RETRY_ATTEMPTS=3 CI_RETRY_BASE=5
+          page() {
+            if [ -n "${NTFY_TOPIC}" ]; then
+              curl -s \
+                -H "Title: Gold Tracker: check-price stopped -- the forecast is not updating" \
+                -H "Priority: high" \
+                -H "Tags: warning,rotating_light" \
+                -d "$1" \
+                "https://ntfy.sh/${NTFY_TOPIC}" || true
+            fi
+          }
+          set +e
+          ci_retry gh api "repos/${GITHUB_REPOSITORY}/actions/workflows/check-price.yml/runs?branch=master&status=completed&per_page=30" \
+            --jq '[.workflow_runs[] | {id, conclusion, created_at}]' > "${RUNNER_TEMP}/cp_runs.json" 2>"${RUNNER_TEMP}/cp_runs.err"
+          RUNS_STATUS=$?
+          set -e
+          if [ "$RUNS_STATUS" -ne 0 ]; then echo '[]' > "${RUNNER_TEMP}/cp_runs.json"; fi
+          echo '[]' > "${RUNNER_TEMP}/cp_jobs.json"
+          NEWEST=$(jq -r '.[0].id // empty' "${RUNNER_TEMP}/cp_runs.json")
+          NEWEST_CONCLUSION=$(jq -r '.[0].conclusion // empty' "${RUNNER_TEMP}/cp_runs.json")
+          if [ -n "$NEWEST" ] && [ "$NEWEST_CONCLUSION" != "success" ]; then
+            ci_retry gh api "repos/${GITHUB_REPOSITORY}/actions/runs/${NEWEST}/jobs" --jq '[.jobs[] | {name, steps}]' \
+              > "${RUNNER_TEMP}/cp_jobs.json" 2>/dev/null || echo '[]' > "${RUNNER_TEMP}/cp_jobs.json"
+          fi
+          set +e
+          RESULT=$(python3 scripts/check_price_health.py --runs "${RUNNER_TEMP}/cp_runs.json" \
+            --jobs "${RUNNER_TEMP}/cp_jobs.json" --now "$(date -u +%Y-%m-%dT%H:%M:%SZ)")
+          STATUS=$?
+          set -e
+          # STALE pages only if a second read agrees: on 2026-11-02 20:10Z GitHub served an out-of-date
+          # run list (last success 10-31 when it was 15:33Z that day) and GG was paged for nothing.
+          # The second read waits a minute and drops the status filter (a different query); an
+          # unreadable second read keeps the first verdict (check_price_health.confirm_stale).
+          if [ "$STATUS" -eq 1 ] && [ "${RESULT#STALE}" != "$RESULT" ]; then
+            echo "first read: ${RESULT}"
+            echo "reading the run list again in 60 s before paging"
+            sleep 60
+            set +e
+            ci_retry gh api "repos/${GITHUB_REPOSITORY}/actions/workflows/check-price.yml/runs?branch=master&per_page=50" \
+              --jq '[.workflow_runs[] | select(.status == "completed") | {id, conclusion, created_at}]' \
+              > "${RUNNER_TEMP}/cp_runs2.json" 2>/dev/null || echo 'unreadable' > "${RUNNER_TEMP}/cp_runs2.json"
+            RESULT=$(python3 scripts/check_price_health.py --runs "${RUNNER_TEMP}/cp_runs.json" \
+              --second-runs "${RUNNER_TEMP}/cp_runs2.json" \
+              --jobs "${RUNNER_TEMP}/cp_jobs.json" --now "$(date -u +%Y-%m-%dT%H:%M:%SZ)")
+            STATUS=$?
+            set -e
+          fi
+          echo "$RESULT"
+          if [ "$STATUS" -ne 0 ]; then
+            echo "::error::${RESULT}"
+            page "${RESULT} https://github.com/${GITHUB_REPOSITORY}/actions/workflows/check-price.yml"
+            exit 1
+          fi
+
+      # What VISITORS see: the live site's forecast and latest Tanishq reading, not repo state, so a
+      # stop with any cause pages (2026-10-29: lint red on bot PRs only, page frozen ~19.5 h).
+      # Once per incident plus a recovery message; the incident state rides in the Actions cache.
+      # Limits and their derivation: scripts/live_freshness.py. always(): runs even if a step above
+      # found a problem and exited 1.
+      - name: Restore the live-freshness incident state
+        if: always() && (inputs.freshness_simulate || 'none') == 'none'
+        uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: .live-freshness/state.json
+          key: live-freshness-${{ github.run_id }}-${{ github.run_attempt }}
+          restore-keys: live-freshness-
+
+      - name: Check that what visitors see is fresh (live site JSON)
+        id: live_freshness
+        if: always()
+        env:
+          NTFY_TOPIC: ${{ secrets.NTFY_TOPIC }}
+          SIMULATE: ${{ inputs.freshness_simulate || 'none' }}
+        run: |
+          if [ "$SIMULATE" = "none" ]; then
+            python3 scripts/live_freshness.py --state-in .live-freshness/state.json --state-out .live-freshness/state.json
+          else
+            python3 scripts/live_freshness.py --simulate "$SIMULATE"
+          fi
+
+      - name: Save the live-freshness incident state
+        if: always() && (inputs.freshness_simulate || 'none') == 'none' && hashFiles('.live-freshness/state.json') != ''
+        uses: actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: .live-freshness/state.json
+          key: live-freshness-${{ github.run_id }}-${{ github.run_attempt }}
+
+      # The SHARE CARD (og.png) people see when the link is shared: it showed "₹NaN" and buy advice
+      # from 2026-05-15 to 2026-11-01 with every run green. scripts/live_share_card.py judges the
+      # card's sidecar (data/og-card.json, what it drew) against the live prices and forecast:
+      # broken, advice, disagrees, behind the data, or older than the freshness limit. Once per
+      # incident plus a recovery message, state in the Actions cache like the freshness check above.
+      - name: Restore the share-card incident state
+        if: always() && (inputs.share_card_simulate || 'none') == 'none'
+        uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: .share-card/state.json
+          key: share-card-${{ github.run_id }}-${{ github.run_attempt }}
+          restore-keys: share-card-
+
+      - name: Check the published share card (og.png's sidecar against the live data)
+        id: share_card
+        if: always()
+        env:
+          NTFY_TOPIC: ${{ secrets.NTFY_TOPIC }}
+          SIMULATE: ${{ inputs.share_card_simulate || 'none' }}
+        run: |
+          if [ "$SIMULATE" = "none" ]; then
+            python3 scripts/live_share_card.py --state-in .share-card/state.json --state-out .share-card/state.json
+          else
+            python3 scripts/live_share_card.py --simulate "$SIMULATE"
+          fi
+
+      - name: Save the share-card incident state
+        if: always() && (inputs.share_card_simulate || 'none') == 'none' && hashFiles('.share-card/state.json') != ''
+        uses: actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: .share-card/state.json
+          key: share-card-${{ github.run_id }}-${{ github.run_attempt }}

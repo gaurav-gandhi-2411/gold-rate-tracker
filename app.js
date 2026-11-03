@@ -1740,10 +1740,11 @@ function renderModelSignal(fc, readings, bt, coverage, drift) {
   // next_fix.direction.show is true only while the next-fix model is active, its own
   // out-of-sample record passes the direction gate, and GG's promotion record exists.
   const nf = fc?.next_fix;
-  // Claims older than CLAIM_MAX_AGE_DAYS are hidden: next_fix's figures are as old as forecast.json.
+  // On or off: i18n.js directionSignalState, the one answer how-we-know.html uses too (it also
+  // hides claims older than CLAIM_MAX_AGE_DAYS: next_fix's figures are as old as forecast.json).
   const nfOn = nf?.active === true && hasRange && isMeasurementFresh(fc?.predicted_at, Date.now());
   let directionHtml = "";
-  if (nfOn && nf.direction?.show === true && typeof nf.direction.probability === "number") {
+  if (hasRange && directionSignalState(fc, Date.now()).on) {
     const pct = Math.round(nf.direction.probability * 100);
     const side = nf.direction.side;
     const key = side === "up" ? "directionUp" : side === "down" ? "directionDown" : "directionUnclear";
@@ -2442,8 +2443,14 @@ function renderForecastVsActual(bt) {
       label: fmtDateShort(r.day + "T00:00:00Z"),
       err: r.err,
       inRange: r.in_range === true ? true : r.in_range === false ? false : null,
+      // fail closed (ml/live_monitor.py's rule): only retro === false is a day issued live
+      live: r.retro === false,
     }));
   if (pts.length < 3) { section.hidden = true; return; }
+  // B2 (2026-11-01): the caption's re-run/live split is counted from the days actually plotted.
+  const nLive = pts.filter(p => p.live).length;
+  const caption = section.querySelector(".track-record-caption");
+  if (caption) caption.textContent = t("trackRecordCaption", { retro: pts.length - nLive, live: nLive });
 
   const labels  = pts.map(p => p.label);
   const errs    = pts.map(p => p.err);
@@ -2570,8 +2577,14 @@ function renderAccuracySummary(fc, drift) {
   // reliability note above); no sentence here either.
   const driftSentence = "";
 
-  const directionOffParagraph = fc?.chronos_companion?.status === "success"
-    ? `<p class="meth-text">${t("accSummaryDirectionOff")}</p>`
+  // Never while the direction is shown (i18n.js directionSignalState, shared with how-we-know.html).
+  // While the approved direction is off, say why, as how-we-know does: it is not "we don't guess".
+  const dirState = directionSignalState(fc, Date.now());
+  const offKey = dirState.record?.passed
+    ? (dirState.hold ? "accSummaryDirectionHold" : "accSummaryDirectionPaused")
+    : "accSummaryDirectionOff";
+  const directionOffParagraph = fc?.chronos_companion?.status === "success" && !dirState.on
+    ? `<p class="meth-text">${t(offKey)}</p>`
     : "";
 
   // XSS-safe: driftSentence/directionOffParagraph are t() catalogue literals only.

@@ -80,6 +80,52 @@ function isMeasurementFresh(isoTimestamp, nowMs = Date.now(), maxAgeDays = CLAIM
   return ageDays >= 0 && ageDays <= maxAgeDays;
 }
 
+// The one answer, for every page, to "is the direction signal on?" (GG brief, 2026-11-02).
+// The main page shows the next official rate's likely direction only while ml/inference.py
+// publishes next_fix.direction.show === true: the model's test passed AND GG's promotion record
+// exists (approved 2026-10-02) AND the model is in "after_us_close" mode, i.e. from the US close
+// until India's next morning rate. In the two hold modes ("after_morning_rate",
+// "after_afternoon_rate") the estimate is India's latest official rate held as it is, and there is
+// no direction. So the signal is approved and goes on and off about twice a day.
+// on:     the main page shows the direction now: next_fix active, show === true, a probability
+//         that is a finite number in [0, 1], a price range to show it under (app.js shows the
+//         direction inside the range line), and forecast.json fresh by isMeasurementFresh.
+// hold:   not on because the model is holding India's latest official rate in the normal
+//         off-hours way, so the direction comes back after the next US close. Not hold when
+//         ml/nextfix.py fell back to the hold for another reason: the model demoted (ADR 068,
+//         sticky) or the leak guard found a violation. Off for any other reason (inactive, out
+//         of date, no range) is not hold either.
+// record: the model's test on past days it had not seen, or null: n, right, upRight (counts from
+//         the published accuracies), passed (its test passed) and nForward (how many of the n were
+//         calls made at the time; null when not published).
+function directionSignalState(fc, nowMs = Date.now()) {
+  const nf = fc?.next_fix;
+  const tr = nf?.track_record;
+  const record = tr && Number.isInteger(tr.n) && tr.n > 0
+    && Number.isFinite(tr.direction_accuracy) && Number.isFinite(tr.always_up_accuracy)
+    ? {
+      n: tr.n,
+      right: Math.round(tr.direction_accuracy * tr.n),
+      upRight: Math.round(tr.always_up_accuracy * tr.n),
+      passed: tr.direction_gate_ship === true,
+      nForward: Number.isInteger(tr.n_forward) && tr.n_forward >= 0 && tr.n_forward <= tr.n
+        ? tr.n_forward : null,
+    }
+    : null;
+  const p = nf?.direction?.probability;
+  const lo = fc?.headline?.lower ?? fc?.lower;
+  const hi = fc?.headline?.upper ?? fc?.upper;
+  const on = nf?.active === true && nf.direction?.show === true
+    && Number.isFinite(p) && p >= 0 && p <= 1
+    && typeof lo === "number" && typeof hi === "number"
+    && isMeasurementFresh(fc?.predicted_at, nowMs);
+  const hold = !on && nf?.active === true && isMeasurementFresh(fc?.predicted_at, nowMs)
+    && (nf.mode === "after_morning_rate" || nf.mode === "after_afternoon_rate")
+    && nf.demotion?.demoted !== true
+    && !(Array.isArray(nf.leak_guard?.violations) && nf.leak_guard.violations.length > 0);
+  return { on, hold, record };
+}
+
 const STRINGS = {
   en: {
     // ── Static shell (index.html) ──────────────────────────────────────────────
@@ -187,7 +233,23 @@ const STRINGS = {
     historyCardsAriaLabel: "Price readings",
     trackRecordAriaLabel: "How far the estimate was from the official rate each day, in a test on past days",
     trackRecordHeading: "A test on past days",
-    trackRecordCaption: "In a test on past days: how far the estimate of the next official rate was from the rate that followed, each day, in ₹ per gram. Above the line means the estimate was too high, below the line too low. A filled dot means the official rate landed inside the estimate's range; a hollow diamond means it fell outside. Days before 7 October are the same method run again on past data; later days are estimates made at the time. This is a look back, not today's estimate.",
+    // B2 (2026-11-01): the re-run/live split was a hand-typed date ("Days before 7 October"),
+    // wrong once a later day (14 October) was itself a re-run, and stale once the 30-day window
+    // moves past it. renderForecastVsActual() now passes the counts of the days on the chart
+    // (retro flag from data/backtest.json's p3_past_errors.rows); with no counts (the static
+    // data-i18n pass) the sentence names no number.
+    trackRecordCaption: ({ retro, live } = {}) => {
+      const ok = Number.isInteger(retro) && Number.isInteger(live) && retro + live > 0;
+      const split = !ok
+        ? "Some days are the same method run again on past data; the others are estimates made at the time."
+        : live === 0
+          ? `All ${retro} days are the same method run again on past data.`
+          : retro === 0
+            ? `All ${live} days are estimates made at the time.`
+            : `${retro} of these ${retro + live} days ${retro === 1 ? "is" : "are"} the same method run again on past data; `
+              + (live === 1 ? "the other one is an estimate made at the time." : `the other ${live} are estimates made at the time.`);
+      return "In a test on past days: how far the estimate of the next official rate was from the rate that followed, each day, in ₹ per gram. Above the line means the estimate was too high, below the line too low. A filled dot means the official rate landed inside the estimate's range; a hollow diamond means it fell outside. " + split + " This is a look back, not today's estimate.";
+    },
     trackRecordChartAriaLabel: "Daily gap between the estimate and the official rate in a test on past days, with marks for days inside or outside the range",
     methodologySummary: "How this works",
     // U1 audit (2026-09-23): "calibrate it to match" -> "adjust it to match" (no
@@ -341,7 +403,8 @@ const STRINGS = {
     // (docs/PLAIN_LANGUAGE_AUDIT.md), and a raw percentage+sample-size clause is
     // exactly the "coverage 73% (n=63...)" shape GG's spec calls out. Reworded to
     // the same floored fraction phrase as reliabilityCoverage above; the sample
-    // size (weeks measured) moves to how-we-know.html's "Band accuracy" section,
+    // size (days measured; the old "weeks" was wrong, see tests/test_band_coverage_unit.py) moves
+    // to how-we-know.html's "Band accuracy" section,
     // which reads the same calibration_band_coverage.json field.
     calibrationConfidenceAppend: ({ amount, coverage, n }) => coverage != null && n != null
       ? ` In a test on past days, the real price landed within about ₹${amount}/gram of this estimate ${fractionOutOf10Phrase(coverage, "en")}.`
@@ -455,6 +518,10 @@ const STRINGS = {
     // "Reliability") are reused here rather than duplicated.
     accSummaryIntro: "We regularly compare our estimate with real shop prices and correct it when it drifts.",
     accSummaryDirectionOff: "We don't guess whether prices will rise or fall next.",
+    // 2026-11-02: while the approved next-rate direction is off (i18n.js directionSignalState):
+    // the normal off-hours hold, or off for another reason.
+    accSummaryDirectionHold: "We say whether the next official rate is more likely to be higher or lower only after the US market closes, until India's next morning rate is set.",
+    accSummaryDirectionPaused: "We are not saying right now whether prices are more likely to rise or fall.",
     accSummaryLinkText: "See the numbers behind this →",
 
     // ── Error / degrade paths ────────────────────────────────────────────────────
@@ -521,6 +588,9 @@ const STRINGS = {
     pageDescription: "22 कैरेट सोने का भाव — असली दुकान के भाव के क़रीब, और जब मिल सके तब Tanishq के बताए भाव से मिलाकर। देखें कि आज का भाव पिछले कुछ हफ़्तों के मुक़ाबले ऊपर है या नीचे।",
     accSummaryIntro: "हम अपने अनुमान को नियमित रूप से दुकान के असली भाव से मिलाते हैं, और भाव से दूर जाने पर उसे ठीक करते हैं।",
     accSummaryDirectionOff: "हम यह अंदाज़ा नहीं लगाते कि भाव आगे बढ़ेगा या घटेगा।",
+    // 2026-11-03, LLM consensus (docs/HINDI_CONTESTED.md)
+    accSummaryDirectionHold: "अगले आधिकारिक भाव के बढ़ने की संभावना ज़्यादा है या घटने की, यह हम सिर्फ़ अमेरिकी बाज़ार बंद होने के बाद से भारत का अगला सुबह का भाव तय होने तक बताते हैं।",
+    accSummaryDirectionPaused: "अभी हम यह नहीं बता रहे कि भाव बढ़ने की संभावना ज़्यादा है या घटने की।",
     accSummaryLinkText: "इनके पीछे के आंकड़े देखें →",
     karatToggleAriaLabel: "सोने की शुद्धता",
     perGram: "प्रति ग्राम",
@@ -680,6 +750,11 @@ const STRINGS = {
     supportLine2At: "इस महीने के आम भाव के बराबर।",
     divergenceNote: "(इन दोनों में पूरी तरह मेल नहीं है — एक दिन गिनता है, दूसरा रुपये का असली फ़र्क़ नापता है। ऊपर की हेडलाइन के लिए हम दिनों की गिनती वाला तरीक़ा लेते हैं।)",
     goodPriceTomorrow: ({ low, high }) => `अगला भाव अपडेट: शायद <strong>₹${low}</strong> – <strong>₹${high}</strong> के बीच।`,
+    // 2026-11-03, LLM consensus (docs/HINDI_CONTESTED.md round 4); these fell back to English before
+    directionUp: ({ pct }) => `भारत का पिछला आधिकारिक भाव तय होने के बाद दुनिया के बाज़ार में सोने का भाव बदला है, इसलिए अगले आधिकारिक भाव के <strong>बढ़ने</strong> की संभावना ज़्यादा है (करीब ${pct}% संभावना)।`,
+    directionDown: ({ pct }) => `भारत का पिछला आधिकारिक भाव तय होने के बाद दुनिया के बाज़ार में सोने का भाव बदला है, इसलिए अगले आधिकारिक भाव के <strong>घटने</strong> की संभावना ज़्यादा है (करीब ${pct}% संभावना)।`,
+    directionUnclear: () => "भारत का पिछला आधिकारिक भाव तय होने के बाद से दुनिया के बाज़ार में सोने का भाव इतना नहीं बदला कि अगले आधिकारिक भाव के बढ़ने या घटने के बारे में कुछ कहा जा सके।",
+    directionWhy: () => "भारत का आधिकारिक भाव दुनिया के बाज़ार में सोने के भाव और रुपये के हिसाब से बदलता है, पर कुछ देर से। हम दुनिया के बाज़ार में सोने के भाव का अंदाज़ा नहीं लगाते।",
     volNoteElevated: ({ z }) => `हाल में सोने के भाव में आम से ज़्यादा उतार-चढ़ाव रहा है। पिछले एक महीने में 5 दिनों के अंदर भाव आम तौर पर करीब ₹${z} ऊपर या नीचे गया।`,
     volNoteCalm: ({ z }) => `हाल में सोने का भाव आम से ज़्यादा टिका रहा है। पिछले एक महीने में 5 दिनों के अंदर भाव आम तौर पर करीब ₹${z} ऊपर या नीचे गया।`,
     volNoteNormal: ({ z }) => `पिछले एक महीने में 5 दिनों के अंदर सोने का भाव आम तौर पर करीब ₹${z} ऊपर या नीचे गया — यह आम चाल के आसपास ही है।`,
@@ -780,7 +855,18 @@ const STRINGS = {
     // see reports/hindi_audit_2026-10/past_days_chart_judgments.json.
     trackRecordHeading: "बीते दिनों की जाँच",
     trackRecordAriaLabel: "बीते दिनों की जाँच में हर दिन अनुमान आधिकारिक भाव से कितना दूर था",
-    trackRecordCaption: "बीते दिनों की जाँच: अगले आधिकारिक भाव का अनुमान, उसके बाद आए भाव से हर दिन कितना दूर रहा, ₹ प्रति ग्राम में। लाइन के ऊपर का मतलब अनुमान ज़्यादा था, नीचे का मतलब कम। भरा हुआ बिंदु यानी आधिकारिक भाव अनुमान की रेंज के अंदर आया; खोखला हीरा यानी रेंज से बाहर गया। 7 अक्टूबर से पहले के दिन उसी तरीक़े को पुराने आँकड़ों पर दोबारा चलाकर निकाले गए हैं; बाद के दिन उस समय किए गए अनुमान हैं। यह पीछे मुड़कर देखना है, आज का अनुमान नहीं।",
+    trackRecordCaption: ({ retro, live } = {}) => {
+      const ok = Number.isInteger(retro) && Number.isInteger(live) && retro + live > 0;
+      const split = !ok
+        ? "कुछ दिन उसी तरीक़े को पुराने आँकड़ों पर दोबारा चलाकर निकाले गए हैं; बाक़ी दिन उस समय किए गए अनुमान हैं।"
+        : live === 0
+          ? `सभी ${retro} दिन उसी तरीक़े को पुराने आँकड़ों पर दोबारा चलाकर निकाले गए हैं।`
+          : retro === 0
+            ? `सभी ${live} दिन उस समय किए गए अनुमान हैं।`
+            : `इन ${retro + live} दिनों में से ${retro} दिन उसी तरीक़े को पुराने आँकड़ों पर दोबारा चलाकर ${retro === 1 ? "निकाला गया है" : "निकाले गए हैं"}; `
+              + (live === 1 ? "बाक़ी 1 दिन उस समय किया गया अनुमान है।" : `बाक़ी ${live} दिन उस समय किए गए अनुमान हैं।`);
+      return "बीते दिनों की जाँच: अगले आधिकारिक भाव का अनुमान, उसके बाद आए भाव से हर दिन कितना दूर रहा, ₹ प्रति ग्राम में। लाइन के ऊपर का मतलब अनुमान ज़्यादा था, नीचे का मतलब कम। भरा हुआ बिंदु यानी आधिकारिक भाव अनुमान की रेंज के अंदर आया; खोखला हीरा यानी रेंज से बाहर गया। " + split + " यह पीछे मुड़कर देखना है, आज का अनुमान नहीं।";
+    },
     trackRecordChartAriaLabel: "बीते दिनों की जाँच में अनुमान और आधिकारिक भाव का रोज़ का फ़र्क़, रेंज के अंदर या बाहर रहे दिनों के निशान के साथ",
     chartErrInRange: "आधिकारिक भाव रेंज के अंदर",
     chartErrOutRange: "आधिकारिक भाव रेंज के बाहर",

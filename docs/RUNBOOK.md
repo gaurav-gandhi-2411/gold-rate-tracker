@@ -105,16 +105,28 @@ performance. See §3.7 risks in PROGRESS.md.
 ## Regenerating the inference dependency lockfile
 
 `ml/requirements-inference.lock` pins every transitive dependency used in CI. Regenerate it
-whenever `ml/requirements.txt` changes:
+whenever `ml/requirements.txt` changes, with the command in the lock's own header, run from the
+repo root with the current lock in place:
 
 ```bash
 pip install uv
 uv pip compile ml/requirements.txt \
-  --extra-index-url https://download.pytorch.org/whl/cpu \
   --index-strategy unsafe-best-match \
   --output-file ml/requirements-inference.lock \
-  --python-version 3.12
+  --python-version 3.12 \
+  --python-platform x86_64-pc-windows-msvc
 ```
+
+- Run unchanged, this reproduces the committed lock byte for byte (verified 2026-10-29 on master
+  5921fe2d): uv keeps every pin already in the output file that still satisfies the floors.
+- To move one package (a floor bump), add `--upgrade-package <name>`; only that package and
+  whatever it forces change.
+- Do not delete the lock first: a resolve from nothing moves every pin to its newest release
+  (dozens of lines on 2026-10-29), which is not a reviewable change.
+- Do not add `--extra-index-url https://download.pytorch.org/whl/cpu` (this section's command
+  until 2026-10-29): it turns `torch==2.13.0` into `torch==2.13.0+cpu`, which is not how the lock
+  is built.
+- `tests/test_runbook_lock_command.py` fails if this command and the lock header drift apart.
 
 Commit the updated `.lock` file. The lockfile is the source of truth for `check-price.yml`;
 `ml/requirements.txt` remains the human-edited input.

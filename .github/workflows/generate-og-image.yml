@@ -37,7 +37,15 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
+      # ref: master, not the event's commit. A workflow_run or dispatch event pins GITHUB_SHA to master
+      # as it was when the event was created; the second run of a pair (the check-price workflow_run
+      # plus bot_pr_merge.sh's dispatch) waits behind the first in the concurrency group, then rendered
+      # from that stale master and collided with the og.png the first run had just merged: 62 of the
+      # 69 failed runs in the 30 days to 2026-11-02 ("No commits between master and bot/og-image" 51,
+      # og.png rebase conflict 11). From the tip, an unchanged card commits nothing.
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: master
 
       - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
         with:
@@ -60,6 +68,9 @@ jobs:
       - name: Screenshot OG page
         run: node scripts/screenshot-og.mjs http://localhost:8080
 
+      # The sidecar data/og-card.json (what the card drew, for the hourly check in ci-health.yml) goes
+      # in with og.png. It carries its build time, so on its own it always differs: it is committed
+      # only with a changed og.png, or alone the first time, while master has none.
       - name: Commit og.png
         id: commit
         run: |
@@ -67,10 +78,14 @@ jobs:
           git config user.name  gold-rate-bot
           git config user.email gold-rate-bot@users.noreply.github.com
           git add og.png
+          if ! git ls-files --error-unmatch data/og-card.json > /dev/null 2>&1; then
+            git add data/og-card.json
+          fi
           if git diff --cached --quiet; then
             echo "og.png unchanged, skipping commit"
             echo "changed=false" >> "$GITHUB_OUTPUT"
           else
+            git add data/og-card.json
             git commit -m "chore: refresh OG image [skip ci]"
             echo "changed=true" >> "$GITHUB_OUTPUT"
           fi
@@ -87,3 +102,17 @@ jobs:
           token: ${{ secrets.CI_MERGE_PAT }}
           wait-minutes: "10"
           ntfy-topic: ${{ secrets.NTFY_TOPIC }}
+
+      # Pages on the second failure in a row, once, and sends one recovery message
+      # (scripts/og_run_alert.py). If the run history cannot be read, a failure pages (fail closed).
+      - name: Page GG if the card keeps failing (once per incident, plus recovery)
+        if: always()
+        env:
+          GH_TOKEN: ${{ github.token }}
+          NTFY_TOPIC: ${{ secrets.NTFY_TOPIC }}
+          JOB_STATUS: ${{ job.status }}
+        run: |
+          gh api "repos/${GITHUB_REPOSITORY}/actions/workflows/generate-og-image.yml/runs?status=completed&per_page=20" \
+            --jq "{workflow_runs: [.workflow_runs[] | select(.id != ${GITHUB_RUN_ID}) | {id, conclusion}]}" \
+            > "${RUNNER_TEMP}/og_runs.json" || rm -f "${RUNNER_TEMP}/og_runs.json"
+          python3 scripts/og_run_alert.py --current "${JOB_STATUS}" --previous "${RUNNER_TEMP}/og_runs.json"

@@ -192,7 +192,7 @@ scipy==1.17.1
     # via
     #   lightgbm
     #   scikit-learn
-setuptools==84.0.0
+setuptools==84.2.1
     # via
     #   -r ml/requirements.txt
     #   torch

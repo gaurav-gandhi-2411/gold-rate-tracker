@@ -74,3 +74,59 @@ A native speaker is still the real review; this list is only where to look first
 | `todaysReadEyebrow` | Today's read | आज का सार | आज का हाल | majority flags (2 of 3); genuine wording choice, worth a native glance ('Today's read' -> आज का हाल) |
 | `pv2RangeOddsClause` |  A range like this has held {frac} in the past. |  ऐसा दायरा पहले {frac} सही साबित हुआ है। |  ऐसी रेंज पहले {frac} सही साबित हुई है। | majority flags (2 of 3); genuine wording choice, worth a native glance (flagged OFF page_v2 only) |
 | `appTitle` | Gold Tracker | Gold Tracker | Gold Tracker | majority flags (2 of 3); brand name, intentionally unchanged (same in English) |
+
+## Added 2026-11-01 (how-we-know range note, branch fix/hwk-range-explainer)
+
+Raised by one of two judges (opus) on wording that this change kept unchanged from the earlier consensus; the other judge (sonnet) accepted it. Not changed on one vote.
+
+| Key | English | Hindi (unchanged) | Judge suggestion | Note |
+|---|---|---|---|---|
+| `methNextDayExplainer`, `methNextDayExplainerNextFix` | ...a separate, longer-range estimate. | एक अलग, लंबे समय का अनुमान है। | एक अलग अनुमान है, जो आगे के ज़्यादा दिनों का है। | लंबे समय can read as "long-term" for a 5-day figure. |
+| `methAccurateP2` | ...so it's a small sample. | इसलिए नमूना छोटा है। | इसलिए नमूने कम हैं। | The glossary's small-sample row says कम नमूने (rule 1). |
+| `methNextDayExplainer`, `methNextDayExplainerNextFix` | the "about ₹X in 5 days" note | "5 दिनों में करीब ₹X" वाला नोट | (verifier) quote is a paraphrase of volNote* ("5 दिनों के अंदर ... करीब ₹Z ऊपर या नीचे गया") | Same paraphrase as the earlier approved text. |
+
+## Added 2026-11-03 (direction signal one source, branch fix/direction-signal-one-source)
+
+The first draft of this branch said the direction signal was "Off — tested, not shown" and needed a
+separate approval. Both were wrong: it is approved (data/direction_promotion_record.json, 2026-10-02)
+and is shown from the US close until India's next morning rate (independent verifier, 2026-11-02).
+Those three strings were dropped before merge. The strings below replace them. Two independent judges
+(sonnet, opus), two rounds; every applied string had both judges' agreement; nothing contested is left.
+
+Round 1 (2026-11-02), the strings carried over from the first draft:
+
+| Key | First round | Applied | Note |
+|---|---|---|---|
+| `methDirectionOnSub` (closing sentence) | sonnet ACCEPT, opus CHANGE | असल नतीजे -> आगे के नतीजे | on a second look sonnet agreed: असल नतीजे could read as "the test results were not real"; the English means live results from here on |
+| `methDirectionSource` | sonnet ACCEPT, opus CHANGE | पीछे -> पर्दे के पीछे | on a second look sonnet agreed: पीछे alone can read as "earlier"; पर्दे के पीछे is "in the background" |
+
+Round 2 (2026-11-03), the reworded strings:
+
+| Key | Judges | Applied | Note |
+|---|---|---|---|
+| `methDirectionRecordSub` (both variants), `methDirectionOnSub`, `methDirectionOffHold`, `methDirectionOffPaused`, `methDirectionPausedNote`, `methAccurateP3Strong`, `methAccurateP4` | both ACCEPT | draft | both noted बंद twice in `methDirectionOffHold` is clear; any rewording would add a claim |
+| `methDirectionHoldNote` | sonnet ACCEPT, opus CHANGE | यह फिर दिखेगा -> दिशा फिर दिखेगी | on a second look sonnet agreed: masculine यह points back to अनुमान, implying the estimate disappears; it is the direction that comes back |
+| `methAccurateP3` | both CHANGE, different fixes; combined, both ACCEPT | ${dirAllDisplay} बार -> ${dirAllDisplay} मौकों पर; dropped भी; किसी बढ़त का दावा नहीं करते -> यह दावा नहीं करते कि यह सिक्का उछालने से बेहतर है | sonnet: "49% बार" is unnatural and भी adds "even" the English lacks; opus: the glossary reserves बढ़त for a price rise, so it could read "we don't claim it rises" |
+
+Round 3 (2026-11-02, after the verifier's re-review: a demoted or leak-guarded model also falls back
+to the hold, and the main page still said "We don't guess"):
+
+| Key | Judges | Applied | Note |
+|---|---|---|---|
+| `methDirectionPausedNote` (adds "and the model is passing its regular checks"), `accSummaryDirectionPaused` | both ACCEPT | draft | |
+| `accSummaryDirectionHold` | sonnet ACCEPT, opus CHANGE | अगला आधिकारिक भाव ज़्यादा होने की संभावना है या कम होने की -> अगले आधिकारिक भाव के बढ़ने की संभावना ज़्यादा है या घटने की | on a second look sonnet agreed: the draft was ungrammatical (needs अगले … भाव के) and lost "more likely"; बढ़ने/घटने matches `accSummaryDirectionPaused` |
+
+Round 4 (2026-11-03, branch feat/hindi-direction-line): the main page's direction line (`directionUp`,
+`directionDown`, `directionUnclear`, `directionWhy`) had no Hindi and fell back to English. Two
+independent judges (sonnet, opus), two passes; every applied string had both judges' agreement.
+
+| Key | Judges | Applied | Note |
+|---|---|---|---|
+| `directionUp`, `directionDown` | both ACCEPT | draft: भारत का पिछला आधिकारिक भाव तय होने के बाद दुनिया के बाज़ार में सोने का भाव बदला है, इसलिए अगले आधिकारिक भाव के <strong>बढ़ने</strong> (Down: <strong>घटने</strong>) की संभावना ज़्यादा है (करीब ${pct}% संभावना)। | opening matches `accSummaryDirectionHold`; के बाद with the present perfect बदला है reads naturally, so the के बाद से fix for `directionUnclear` was not carried over (verifier nit, 2026-11-03) |
+| `directionUnclear` | both CHANGE, different fixes; combined, both ACCEPT | भारत के पिछले आधिकारिक भाव के बाद -> भारत का पिछला आधिकारिक भाव तय होने के बाद से; कि बताया जा सके कि अगला आधिकारिक भाव बढ़ेगा या घटेगा -> कि अगले आधिकारिक भाव के बढ़ने या घटने के बारे में कुछ कहा जा सके | opus: "since" needs के बाद से, and the opening should match 1 and 2; sonnet: two stacked कि and the passive were stiff |
+| `directionWhy` | both CHANGE, different fixes; combined, both ACCEPT | के हिसाब से, कुछ देर बाद चलता है -> के हिसाब से बदलता है, पर कुछ देर से; हम ख़ुद सोने के भाव का -> हम दुनिया के बाज़ार में सोने के भाव का | both: हम ख़ुद was ambiguous ("we ourselves"); sonnet: कुछ देर बाद can read as minutes; opus: बदलता है carries "follows" |
+
+Not changed on one vote: opus noted (not required) that `directionWhy`'s second sentence could be read
+as "we do not estimate today's world price", and offered हम यह अंदाज़ा नहीं लगाते कि दुनिया के बाज़ार में
+सोने का भाव आगे बढ़ेगा या घटेगा। The applied string is correct under the glossary (अंदाज़ा लगाना = to
+guess the future); a native speaker may prefer the longer form.

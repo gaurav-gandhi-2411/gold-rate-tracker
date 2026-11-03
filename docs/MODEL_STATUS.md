@@ -24,6 +24,8 @@ Only 10 days so far: too few to say whether this is good or bad.
 
 A challenger replaces the live model only if we can be confident it beats it by more than 5% (the safe estimate in the table is the lower bound of its gain, adjusted for looking every day and for three challengers), keeps its range at target and is not worse on up/down. Nothing is judged before 20 real days. A challenger that has not qualified 180 decision days (days with an official rate) after its start date is retired, not promoted.
 
+Range test W2 (ADR 074; background only, it never changes the live range): the live model's forecast with a range sized by how big the forecast move is. Its day count appears after the next weekly update.
+
 ## Were the inputs on time?
 
 - Jeweller price visits: **30 of 46** scheduled visits since the schedule began (2026-10-05) ran within 45 minutes of their time (16 did not). Of the 16 not run on time: 14 never dispatched (laptop off or scheduler idle), 2 ran late (within 6 hours, after the laptop came back). Inferred from GitHub run records only, which does not tell a laptop that was off from a scheduler that did not fire.

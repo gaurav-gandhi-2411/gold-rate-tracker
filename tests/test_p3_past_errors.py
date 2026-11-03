@@ -141,3 +141,28 @@ def test_a_refit_appends_to_the_slope_history_only_when_the_slope_changes(tmp_pa
     calibration.save_calibration(later, path)
     hist = json.loads(path.read_text())["slope_history"]
     assert hist == [{"from": "2026-09-01", "slope": 1.01}, {"from": "2026-09-05", "slope": 1.02}]
+
+
+def test_a_fold_without_a_retro_flag_is_published_as_a_re_run_never_as_live() -> None:
+    """Fail closed, as the page's caption (app.js: live only when retro === false), evaluate's
+    n_forward and ml/live_monitor.py read it. Before 2026-11-02 a missing flag published as live."""
+    folds = _folds(retro_until=0)
+    for f in folds[-3:]:
+        del f["retro"]
+    folds[-4]["retro"] = None
+    folds[-5]["retro"] = "false"  # not a boolean: not trusted either
+    rows = {r["day"]: r for r in nextfix.past_error_series(folds, 1.0, last=100)["rows"]}
+    for f in folds[-5:]:
+        assert rows[f["d0"]]["retro"] is True, f["d0"]
+    assert rows[folds[-6]["d0"]]["retro"] is False  # an explicit False is still live
+
+
+def test_the_published_live_days_match_the_scorer_s_forward_count() -> None:
+    folds = _folds(retro_until=20)
+    del folds[-1]["retro"]
+    s = nextfix.past_error_series(folds, 1.0, last=1000)
+    live_published = sum(1 for r in s["rows"] if r["retro"] is False)
+    shown = {r["day"] for r in s["rows"]}
+    live_scored = sum(1 for f in folds if f["d0"] in shown and f.get("retro") is False)
+    assert live_published == live_scored
+    assert s["n_retro"] == s["n"] - live_published

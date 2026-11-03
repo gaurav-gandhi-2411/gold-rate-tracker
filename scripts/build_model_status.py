@@ -44,6 +44,9 @@ NOT_YET = {
     "hourly": "Hourly world-price model (2026-10-16 check: too early; a fresh check is fixed in ADR 076)",
     "p3_hourly": "Live model averaged with the hourly model (joins after the hourly model does)",
 }
+# ADR 074 frozen spec `min_forward_days_w2`: W2's coverage and width are read only after this many
+# forward decision days, so the note shows its fold count and nothing else until then.
+W2_MIN_FORWARD = 40
 
 
 def _load(name: str) -> Any:
@@ -63,6 +66,24 @@ def _records() -> dict[str, list[dict]]:
     if var:
         out.update({k: v for k, v in var.get("variants", {}).items()})
     return out
+
+
+def _w2_status(rec: Any) -> dict[str, Any] | None:
+    """ADR 074 W2 (shadow range): fold count, start and earliest read date. No coverage or width:
+    the frozen spec reads those only after W2_MIN_FORWARD forward days. Every stored fold is a
+    forward day (ml/nextfix_w2.update skips retro days and days before forward_from)."""
+    if not isinstance(rec, dict) or not isinstance(rec.get("forward_from"), str):
+        return None
+    from ml import promotion as pr
+
+    folds = [f for f in rec.get("folds", []) if isinstance(f, dict) and "d0" in f]
+    last = max((f["d0"] for f in folds), default=rec["forward_from"])
+    return {
+        "forward_from": rec["forward_from"],
+        "n": len(folds),
+        "need": W2_MIN_FORWARD,
+        "earliest_read": pr.first_reachable(len(folds), W2_MIN_FORWARD, last),
+    }
 
 
 def _live_summary(folds: list[dict], since: str) -> dict[str, Any]:
@@ -163,6 +184,7 @@ def compute(now: datetime | None = None) -> dict[str, Any]:
             if cid in recs and (ac := _autocorr(recs[champ], recs[cid])) is not None
         }
     out["not_yet"] = NOT_YET
+    out["w2"] = _w2_status(_load("nextfix_w2_bandbucket_oos.json"))
     out["timeliness"] = _load("input_timeliness_weekly.json")
     att = _load("laptop_attribution.json")
     out["laptop_attribution"] = (
@@ -305,6 +327,22 @@ def _challenger_cells(r: dict[str, Any]) -> tuple[str, str, str]:
     return gain, stand, "qualifies" if r["promotable"] else "not yet"
 
 
+def _w2_line(s: dict[str, Any]) -> str:
+    head = (
+        "Range test W2 (ADR 074; background only, it never changes the live range): the live "
+        "model's forecast with a range sized by how big the forecast move is."
+    )
+    if "w2" not in s:  # a JSON written before this line existed
+        return f"{head} Its day count appears after the next weekly update."
+    w2 = s["w2"]
+    if w2 is None:
+        return f"{head} No record yet."
+    return (
+        f"{head} Real days: **{w2['n']}** since {w2['forward_from']}. Its range is judged only "
+        f"after {w2['need']} real days, earliest {w2['earliest_read']}; nothing is read before that."
+    )
+
+
 def render(s: dict[str, Any]) -> str:
     live = s.get("live", {})
     lines = [
@@ -378,6 +416,7 @@ def render(s: dict[str, Any]) -> str:
             )
     else:
         lines.append("No challenger has real days yet.")
+    lines += ["", _w2_line(s)]
     lines += ["", "## Were the inputs on time?", ""]
     lines += _timeliness_lines(s.get("timeliness"))
     lines += _laptop_lines(s.get("laptop_attribution"))
