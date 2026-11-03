@@ -331,6 +331,24 @@ jobs:
             --jobs "${RUNNER_TEMP}/cp_jobs.json" --now "$(date -u +%Y-%m-%dT%H:%M:%SZ)")
           STATUS=$?
           set -e
+          # STALE pages only if a second read agrees: on 2026-11-02 20:10Z GitHub served an out-of-date
+          # run list (last success 10-31 when it was 15:33Z that day) and GG was paged for nothing.
+          # The second read waits a minute and drops the status filter (a different query); an
+          # unreadable second read keeps the first verdict (check_price_health.confirm_stale).
+          if [ "$STATUS" -eq 1 ] && [ "${RESULT#STALE}" != "$RESULT" ]; then
+            echo "first read: ${RESULT}"
+            echo "reading the run list again in 60 s before paging"
+            sleep 60
+            set +e
+            ci_retry gh api "repos/${GITHUB_REPOSITORY}/actions/workflows/check-price.yml/runs?branch=master&per_page=50" \
+              --jq '[.workflow_runs[] | select(.status == "completed") | {id, conclusion, created_at}]' \
+              > "${RUNNER_TEMP}/cp_runs2.json" 2>/dev/null || echo 'unreadable' > "${RUNNER_TEMP}/cp_runs2.json"
+            RESULT=$(python3 scripts/check_price_health.py --runs "${RUNNER_TEMP}/cp_runs.json" \
+              --second-runs "${RUNNER_TEMP}/cp_runs2.json" \
+              --jobs "${RUNNER_TEMP}/cp_jobs.json" --now "$(date -u +%Y-%m-%dT%H:%M:%SZ)")
+            STATUS=$?
+            set -e
+          fi
           echo "$RESULT"
           if [ "$STATUS" -ne 0 ]; then
             echo "::error::${RESULT}"
