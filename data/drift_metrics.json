@@ -1,29 +1,5 @@
 [
   {
-    "ts": "2026-10-05T07:13:31.851420+00:00",
-    "target_time": "2026-10-06T00:00:00+00:00",
-    "actual_ts": "2026-10-05T07:07:16.922Z",
-    "residual": -29.0,
-    "model_version": "nextfix_ridge_mlp_v1",
-    "baseline_mae": 247.87
-  },
-  {
-    "ts": "2026-10-05T07:44:35.926926+00:00",
-    "target_time": "2026-10-06T00:00:00+00:00",
-    "actual_ts": "2026-10-05T07:34:04.605Z",
-    "residual": 0.0,
-    "model_version": "hold_latest_fix_am_to_pm",
-    "baseline_mae": 247.87
-  },
-  {
-    "ts": "2026-10-05T08:22:29.616930+00:00",
-    "target_time": "2026-10-06T00:00:00+00:00",
-    "actual_ts": "2026-10-05T08:16:28.141Z",
-    "residual": 0.0,
-    "model_version": "hold_latest_fix_am_to_pm",
-    "baseline_mae": 247.87
-  },
-  {
     "ts": "2026-10-05T10:23:56.315428+00:00",
     "target_time": "2026-10-06T00:00:00+00:00",
     "actual_ts": "2026-10-05T10:18:05.182Z",
@@ -1077,6 +1053,14 @@
     "actual_ts": "2026-11-04T06:35:23.800Z",
     "residual": 110.0,
     "model_version": "nextfix_p3_v1",
+    "baseline_mae": 239.76
+  },
+  {
+    "ts": "2026-11-04T10:19:04.885230+00:00",
+    "target_time": "2026-11-05T00:00:00+00:00",
+    "actual_ts": "2026-11-04T10:06:34.116Z",
+    "residual": 265.0,
+    "model_version": "hold_latest_fix_am_to_pm",
     "baseline_mae": 239.76
   }
 ]
