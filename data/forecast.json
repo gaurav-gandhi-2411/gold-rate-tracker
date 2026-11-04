@@ -1,5 +1,5 @@
 {
-  "predicted_at": "2026-11-04T20:19:24.491105+00:00",
+  "predicted_at": "2026-11-04T20:31:18.490375+00:00",
   "target_window": "5d",
   "headline": {
     "method": "hold_latest_fix_pm_to_am",
@@ -43,7 +43,7 @@
       13174.47,
       13169.53,
       13193.53,
-      13191.78
+      13191.79
     ],
     "horizon_p90": [
       13633.5,
@@ -59,7 +59,7 @@
     "direction_consensus": 1.0
   },
   "driver_context": {
-    "computed_at": "2026-11-04T20:19:25.037988+00:00",
+    "computed_at": "2026-11-04T20:31:19.391337+00:00",
     "macro_staleness_days": 0.0,
     "macro_fresh": true,
     "premium_threshold_pct": 15.0,
