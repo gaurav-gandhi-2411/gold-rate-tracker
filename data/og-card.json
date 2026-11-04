@@ -1,12 +1,12 @@
 {
-  "kind": "estimate",
-  "price": 12790,
-  "price_text": "≈ 12,790",
-  "approx": true,
-  "label": "Our estimate for today, from India's official gold rate",
-  "as_of": "2026-11-04T02:39:11.912052+00:00",
+  "kind": "tanishq",
+  "price": 12875,
+  "price_text": "12,875",
+  "approx": false,
+  "label": "Tanishq's listed 22K rate",
+  "as_of": "2026-11-04T06:35:23.800Z",
   "verdict": "down",
   "verdict_text": "Getting cheaper this week",
-  "card_text": "Gold Tracker gaurav-gandhi-2411.github.io/gold-rate-tracker IS IT A GOOD PRICE? ₹≈ 12,790 Our estimate for today, from India's official gold rate · per gram ↓ Getting cheaper this week 7-DAY TREND (ESTIMATE) ₹12,787 ₹13,267 Price as of 4 Nov, 08:09 IST 887 readings since Apr 2026 Not financial advice · Rates indicative",
-  "built_at": "2026-11-04T02:47:27.273Z"
+  "card_text": "Gold Tracker gaurav-gandhi-2411.github.io/gold-rate-tracker IS IT A GOOD PRICE? ₹12,875 Tanishq's listed 22K rate · per gram ↓ Getting cheaper this week 7-DAY TREND (ESTIMATE) ₹12,787 ₹13,267 Price as of 4 Nov, 12:05 IST 888 readings since Apr 2026 Not financial advice · Rates indicative",
+  "built_at": "2026-11-04T06:52:06.649Z"
 }
