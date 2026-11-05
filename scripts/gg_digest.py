@@ -34,6 +34,7 @@ from __future__ import annotations
 import argparse
 import json
 import os
+import sys
 from collections.abc import Callable
 from datetime import UTC, date, datetime, timedelta
 from pathlib import Path
@@ -62,11 +63,17 @@ def _load(path: Path) -> Any:
     return json.loads(path.read_text(encoding="utf-8"))
 
 
-def _safe(fn: Callable[[], str]) -> str:
+def _safe(fn: Callable[[], str], what: str) -> str:
+    """The line, or "<what>: not available right now." in plain words.
+
+    The exception class never reaches the push (a reader cannot act on "FileNotFoundError");
+    the cause is for the job log, so it is printed to stderr.
+    """
     try:
         return fn()
     except (OSError, ValueError, KeyError, TypeError, IndexError, ZeroDivisionError) as err:
-        return f"unknown ({type(err).__name__})"
+        print(f"gg_digest: {what} unavailable ({type(err).__name__}: {err})", file=sys.stderr)
+        return f"{what}: not available right now."
 
 
 def _parse(ts: str) -> datetime:
@@ -162,7 +169,7 @@ def rates_lines(root: Path, now: datetime) -> list[str]:
             f"18K {_inr(karat_value(h['latest'], 18))}."
         )
 
-    return [_safe(build)]
+    return [_safe(build, "Gold rate per gram")]
 
 
 # --- the daily series ------------------------------------------------------------------------------
@@ -199,7 +206,7 @@ def change_line(root: Path) -> str:
             return text + f"; vs last week ({_day_label(wd)}) {_delta(today, wv)}."
         return text + "; vs last week unknown (series too short)."
 
-    return _safe(build)
+    return _safe(build, "Change in the daily 22K benchmark rate")
 
 
 def week_line(root: Path) -> str:
@@ -214,7 +221,7 @@ def week_line(root: Path) -> str:
             f"low {_inr(lo[1])} ({_day_label(lo[0])})."
         )
 
-    return _safe(build)
+    return _safe(build, "This week's 22K benchmark high and low")
 
 
 # --- forecast and accuracy -------------------------------------------------------------------------
@@ -237,7 +244,7 @@ def next_range_line(root: Path) -> str:
             text += f" (for {_day_label(_ist(_parse(tt)).date())})"
         return text + "."
 
-    return _safe(build)
+    return _safe(build, "Next price update")
 
 
 def accuracy_line(root: Path) -> str:
@@ -246,14 +253,15 @@ def accuracy_line(root: Path) -> str:
         n = int(live["n"])
         since = datetime.strptime(live["since"], "%Y-%m-%d").date()
         held = round(live["coverage"] * live["coverage_n"])
+        as_of = _day_label(datetime.strptime(live["last_day"], "%Y-%m-%d").date())
         text = (
-            f"Model accuracy, live since {_day_label(since)}, {n} days: off by "
+            f"Model accuracy as of {as_of}, live since {_day_label(since)}, {n} days: off by "
             f"Rs.{live['mae_model']:.0f} on average vs Rs.{live['mae_hold']:.0f} for 'no change'; "
             f"range held {held} of {live['coverage_n']} days."
         )
         return text + (" Too few days to judge." if n < 20 else "")
 
-    return _safe(build)
+    return _safe(build, "Model accuracy")
 
 
 # --- system facts: job summary only, never the note ------------------------------------------------
@@ -285,7 +293,7 @@ def freshness_line(root: Path, now: datetime) -> str:
         ).total_seconds() / 3600
         return f"Data: {flag}, last Tanishq reading {age:.1f} h ago; forecast {forecast_age:.1f} h old."
 
-    return _safe(build)
+    return _safe(build, "Data freshness")
 
 
 def scrape_line(root: Path) -> str:
@@ -293,7 +301,7 @@ def scrape_line(root: Path) -> str:
         d = _load(root / "data" / "tanishq_scrape_success_rate.json")
         return f"Scrapes (7 days): {d['n_success']} of {d['n']} succeeded."
 
-    return _safe(build)
+    return _safe(build, "Scrapes (7 days)")
 
 
 def alerts_line(root: Path) -> str:
@@ -312,12 +320,12 @@ def alerts_line(root: Path) -> str:
             parts.append("live monitor not checked")
         return "Models: " + "; ".join(parts) + "."
 
-    return _safe(build)
+    return _safe(build, "Models")
 
 
 def merged_line(merged: list[dict[str, Any]] | None) -> str:
     if merged is None:
-        return "Merged today: unknown (no list)."
+        return "Merged today: not available right now."
     human = [
         m for m in merged if not str(m.get("headRefName", "")).startswith(("bot/", "dependabot/"))
     ]
@@ -335,7 +343,7 @@ def parked_line(root: Path) -> str:
         rows = [ln for ln in section.splitlines() if ln.startswith("| ") and ln[2:3].isdigit()]
         return f"Parked for GG: {len(rows)} item(s) in docs/FOR_GG.md section 2."
 
-    return _safe(build)
+    return _safe(build, "Parked for GG")
 
 
 def next_dates_line(now: datetime) -> str:
@@ -357,7 +365,7 @@ def challengers_line(root: Path) -> str:
                 bits.append(f"{name} {c.get('n')} days (first look at {c.get('first_look_day')})")
         return "Challengers: " + "; ".join(bits) + "."
 
-    return _safe(build)
+    return _safe(build, "Challengers")
 
 
 def ops_lines(root: Path, now: datetime, merged: list[dict[str, Any]] | None) -> list[str]:

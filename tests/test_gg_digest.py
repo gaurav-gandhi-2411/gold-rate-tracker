@@ -109,7 +109,7 @@ def test_daily_note_is_exactly_the_four_gold_price_lines(tmp_path: Path) -> None
         "Change in the daily 22K benchmark rate (5 Nov, Rs.13,400): "
         "vs yesterday (4 Nov) +Rs.233 (+1.8%); vs last week (29 Oct) +Rs.200 (+1.5%).",
         "Next price update: likely 22K Rs.13,254 to Rs.13,616, central estimate Rs.13,435 (for 6 Nov).",
-        "Model accuracy, live since 7 Oct, 16 days: off by Rs.81 on average vs Rs.99 for "
+        "Model accuracy as of 30 Oct, live since 7 Oct, 16 days: off by Rs.81 on average vs Rs.99 for "
         "'no change'; range held 12 of 16 days. Too few days to judge.",
     ]
 
@@ -169,9 +169,10 @@ def test_a_missing_file_degrades_to_unknown_and_the_rest_still_builds(tmp_path: 
     (root / "data" / "ibja_derived_prices.json").unlink()
     lines = gd.daily(root, NOW).splitlines()
     assert lines[0].startswith("Gold rate per gram")
-    assert lines[1] == "unknown (FileNotFoundError)"
+    assert lines[1] == "Change in the daily 22K benchmark rate: not available right now."
     assert lines[2].startswith("Next price update")
-    assert lines[3] == "unknown (FileNotFoundError)"
+    assert lines[3] == "Model accuracy: not available right now."
+    assert "Error" not in "\n".join(lines)  # plain words, never a Python exception class
 
 
 def test_ops_lines_hold_the_system_facts_for_the_job_summary(tmp_path: Path) -> None:
