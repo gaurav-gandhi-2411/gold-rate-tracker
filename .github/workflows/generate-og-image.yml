@@ -103,13 +103,13 @@ jobs:
           wait-minutes: "10"
           ntfy-topic: ${{ secrets.NTFY_TOPIC }}
 
-      # Pages on the second failure in a row, once, and sends one recovery message
-      # (scripts/og_run_alert.py). If the run history cannot be read, a failure pages (fail closed).
-      - name: Page GG if the card keeps failing (once per incident, plus recovery)
+      # Ops-log entry on the second failure in a row, once, plus one recovery entry
+      # (scripts/og_run_alert.py; no push since 2026-11-06). If the run history cannot be read, a
+      # failure is recorded (fail closed).
+      - name: Record in the ops log if the card keeps failing (once per incident, plus recovery)
         if: always()
         env:
           GH_TOKEN: ${{ github.token }}
-          NTFY_TOPIC: ${{ secrets.NTFY_TOPIC }}
           JOB_STATUS: ${{ job.status }}
         run: |
           gh api "repos/${GITHUB_REPOSITORY}/actions/workflows/generate-og-image.yml/runs?status=completed&per_page=20" \

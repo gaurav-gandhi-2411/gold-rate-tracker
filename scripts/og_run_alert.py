@@ -1,4 +1,9 @@
-"""Page GG when the share-card workflow (generate-og-image.yml) keeps failing, once per incident.
+"""Record in the ops log when the share-card workflow (generate-og-image.yml) keeps failing.
+
+A workflow that fails twice is a CI failure, not a wrong price, so since 2026-11-06 it goes to the ops
+log (scripts/ops_log.py), not ntfy. A card that is wrong or stale is still paged by live_share_card.py.
+The wording below says "page"; read it as "ops-log entry".
+
 
     python3 scripts/og_run_alert.py --current success|failure --previous runs.json [--dry-run]
 
@@ -24,9 +29,7 @@ from __future__ import annotations
 
 import argparse
 import json
-import os
 import sys
-import urllib.request
 from pathlib import Path
 from typing import Any
 
@@ -75,27 +78,6 @@ def conclusions(runs: Any) -> list[str]:
     ]
 
 
-def send(msg: dict[str, str], topic: str) -> bool:
-    req = urllib.request.Request(
-        f"https://ntfy.sh/{topic}",
-        data=msg["body"].encode("utf-8"),
-        method="POST",
-        headers={
-            "Title": msg["title"],
-            "Priority": msg["priority"],
-            "Tags": "warning,frame_with_picture"
-            if msg["priority"] == "high"
-            else "white_check_mark",
-        },
-    )
-    try:
-        with urllib.request.urlopen(req, timeout=20) as resp:
-            return 200 <= resp.status < 300
-    except Exception as exc:
-        print(f"ntfy send failed: {type(exc).__name__}")
-        return False
-
-
 def main(argv: list[str] | None = None) -> int:
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawTextHelpFormatter)
     ap.add_argument("--current", required=True, help="this run's job status")
@@ -129,11 +111,9 @@ def main(argv: list[str] | None = None) -> int:
     print(f"PAGE: {msg['title']} -- {msg['body']}")
     if args.dry_run:
         return 0
-    topic = os.environ.get("NTFY_TOPIC", "")
-    if not topic:
-        print("::error::a page is due but NTFY_TOPIC is empty")
-    elif not send(msg, topic):
-        print("::error::the share-card page could not be sent")
+    import ops_log  # scripts/ is on sys.path when this file runs as a script
+
+    ops_log.record("og_run_alert", msg["title"], msg["body"])
     return 0
 
 

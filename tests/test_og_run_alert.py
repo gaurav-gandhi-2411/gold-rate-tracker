@@ -80,35 +80,19 @@ def test_unreadable_history_fails_closed(
     assert "no page" in capsys.readouterr().out
 
 
-def test_send_posts_title_priority_and_body_to_the_topic(monkeypatch: pytest.MonkeyPatch) -> None:
-    seen = {}
-
-    class Resp:
-        status = 200
-
-        def __enter__(self) -> Resp:
-            return self
-
-        def __exit__(self, *exc: object) -> None:
-            return None
-
-    def fake_urlopen(req: object, timeout: int) -> Resp:
-        seen["req"] = req
-        return Resp()
-
-    monkeypatch.setattr(a.urllib.request, "urlopen", fake_urlopen)
-    msg = a.decide("failure", ["failure"])
-    assert msg is not None and a.send(msg, "topic-x") is True
-    req = seen["req"]
-    assert req.full_url == "https://ntfy.sh/topic-x" and req.get_method() == "POST"
-    assert req.headers["Title"] == msg["title"] and req.headers["Priority"] == "high"
-    assert req.data == msg["body"].encode("utf-8")
-
-    def broken(req: object, timeout: int) -> Resp:
-        raise OSError("down")
-
-    monkeypatch.setattr(a.urllib.request, "urlopen", broken)
-    assert a.send(msg, "topic-x") is False
+def test_a_due_entry_goes_to_the_ops_log_and_never_to_ntfy(
+    tmp_path: Path, capsys: pytest.CaptureFixture[str], monkeypatch: pytest.MonkeyPatch
+) -> None:
+    summary = tmp_path / "summary.md"
+    monkeypatch.setenv("GITHUB_STEP_SUMMARY", str(summary))
+    monkeypatch.setenv("NTFY_TOPIC", "topic-x")
+    assert not hasattr(a, "send") and not hasattr(a, "urllib")  # no ntfy path left in the module
+    f = tmp_path / "runs.json"
+    f.write_text(json.dumps([{"conclusion": "failure"}]), encoding="utf-8")
+    assert a.main(["--current", "failure", "--previous", str(f)]) == 0
+    out = capsys.readouterr().out
+    assert "::warning title=ops-alert::og_run_alert: Gold Tracker: share card failed twice" in out
+    assert "failed twice" in summary.read_text(encoding="utf-8")
 
 
 def test_main_reads_the_api_shape(tmp_path: Path, capsys: pytest.CaptureFixture[str]) -> None:
@@ -120,28 +104,18 @@ def test_main_reads_the_api_shape(tmp_path: Path, capsys: pytest.CaptureFixture[
     assert "PAGE: Gold Tracker: share card failed twice" in capsys.readouterr().out
 
 
-def test_a_due_page_without_a_topic_is_an_error(
-    tmp_path: Path, capsys: pytest.CaptureFixture[str], monkeypatch: pytest.MonkeyPatch
-) -> None:
-    monkeypatch.delenv("NTFY_TOPIC", raising=False)
-    f = tmp_path / "runs.json"
-    f.write_text(json.dumps([{"conclusion": "failure"}]), encoding="utf-8")
-    a.main(["--current", "failure", "--previous", str(f)])
-    assert "::error::a page is due but NTFY_TOPIC is empty" in capsys.readouterr().out
-
-
 def test_the_workflow_renders_from_master_tip() -> None:
     checkout = re.search(r"- uses: actions/checkout@\S+.*\n\s+with:\n\s+ref: master\n", WF)
     assert checkout, "generate-og-image must check out master's tip, not the event's commit"
 
 
 def test_the_workflow_runs_the_alert_on_every_outcome() -> None:
-    step = WF.split("- name: Page GG if the card keeps failing", 1)
+    step = WF.split("- name: Record in the ops log if the card keeps failing", 1)
     assert len(step) == 2, "alert step missing"
     body = step[1]
     assert "if: always()" in body.split("run:", 1)[0]
     assert "JOB_STATUS: ${{ job.status }}" in body
-    assert "NTFY_TOPIC: ${{ secrets.NTFY_TOPIC }}" in body
+    assert "NTFY_TOPIC" not in body  # ops log, not ntfy (2026-11-06)
     assert "select(.id != ${GITHUB_RUN_ID})" in body
     assert "scripts/og_run_alert.py --current" in body
     # the file gh api writes is the file the script reads
