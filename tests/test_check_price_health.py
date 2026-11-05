@@ -129,7 +129,8 @@ def test_ci_health_runs_the_check_even_after_its_lint_check_failed_and_pages_on_
     assert "scripts/check_price_health.py" in run
     assert "check-price.yml/runs?branch=master&status=completed" in run
     assert 'if [ "$STATUS" -ne 0 ]' in run and 'page "${RESULT}' in run
-    assert "NTFY_TOPIC" in step["env"]
+    # 2026-11-06: ops pages go to the ops log, not ntfy
+    assert "NTFY_TOPIC" not in step["env"] and "scripts/ops_log.py" in run
 
 
 def test_ci_health_may_list_runs_and_stays_on_its_hourly_schedule():
