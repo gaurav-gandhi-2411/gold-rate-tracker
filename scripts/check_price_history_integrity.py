@@ -7,7 +7,8 @@ shapes of that failure before they are published:
   (i)   MOVES: a move above MOVE_THRESHOLD_PCT between adjacent IBJA days (<= 4 calendar days
         apart) must be listed in data/price_move_explanations.json with a cause and evidence
         (a duty change, a market move confirmed by COMEX). Anything else is a splice or a basis
-        error.
+        error. The 3.0% threshold comes from real daily IBJA history: 109 adjacent-day pairs
+        2026-06-01..2026-11-05 had |move| p50 0.78%, p95 2.19%, p99 2.93%, max 3.53%.
   (ii)  REFERENCE: a deterministic sample of rows is compared with an independent landed price,
         COMEX GC=F (previous US close) / 31.1035 x USD/INR x (1 + CBIC duty) x 0.916. A ratio
         outside 1 +/- REFERENCE_TOLERANCE flags the row. Needs the network (yfinance); if the
@@ -90,6 +91,22 @@ def unexplained_moves(
             continue
         out.append({"date": day, "prev_date": prev["timestamp"][:10], "move_pct": round(pct, 2)})
     return out
+
+
+def valid_rows(rows: object) -> bool:
+    """A list of >= 2 rows, each with an ISO timestamp and a positive numeric 22k. Pure."""
+    return (
+        isinstance(rows, list)
+        and len(rows) >= 2
+        and all(
+            isinstance(r, dict)
+            and isinstance(r.get("timestamp"), str)
+            and len(r["timestamp"]) >= 10
+            and isinstance(r.get("22k"), (int, float))
+            and r["22k"] > 0
+            for r in rows
+        )
+    )
 
 
 def published_gaps(rows: list[dict], max_days: int = MAX_PUBLISHED_GAP_DAYS) -> list[dict]:
@@ -178,19 +195,28 @@ def main(argv: list[str] | None = None) -> int:
     findings = 0
     unverified = 0
 
-    explanations = json.loads((d / "price_move_explanations.json").read_text(encoding="utf-8"))[
-        "moves"
-    ]
+    # Every input read below fails closed: an unreadable or malformed file is "COULD NOT VERIFY"
+    # for the parts that need it, never "OK" and never a traceback (verifier, #3595).
+    def could_not(part: str, err: object) -> None:
+        nonlocal unverified
+        lines.append(f"{part}: COULD NOT VERIFY -- {err!s:.160}")
+        unverified += 1
+
     full: list[dict] | None = None
     try:
+        explanations = json.loads((d / "price_move_explanations.json").read_text(encoding="utf-8"))[
+            "moves"
+        ]
         import pandas as pd
 
         build = _load_builder()
         calibration = json.loads((d / "calibration.json").read_text(encoding="utf-8"))
         full = build.build_derived_prices(pd.read_parquet(d / "ibja_rates.parquet"), calibration)
-    except (OSError, ValueError, KeyError, ImportError) as err:
-        lines.append(f"(i) moves: COULD NOT VERIFY -- full IBJA history unreadable ({err!r:.120})")
-        unverified += 1
+        if not valid_rows(full):
+            raise ValueError(f"built history has {len(full)} usable row(s)")
+    except Exception as err:  # any unreadable input -> could not verify, never pass
+        could_not("(i) moves", f"{type(err).__name__}: {err}")
+        full = None
     if full is not None:
         bad = unexplained_moves(full, explanations)
         findings += len(bad)
@@ -199,34 +225,48 @@ def main(argv: list[str] | None = None) -> int:
             + ("OK" if not bad else f"{len(bad)} UNEXPLAINED: {bad}")
         )
 
-    published = json.loads((d / "ibja_derived_prices.json").read_text(encoding="utf-8"))
-    gaps = published_gaps(published)
-    findings += len(gaps)
-    lines.append(
-        f"(iii) published gaps: {len(published)} rows, max allowed {MAX_PUBLISHED_GAP_DAYS} d -- "
-        + ("OK" if not gaps else f"{len(gaps)} GAP(S): {gaps}")
-    )
+    published: list[dict] | None = None
+    try:
+        published = json.loads((d / "ibja_derived_prices.json").read_text(encoding="utf-8"))
+        if not valid_rows(published):
+            raise ValueError("published chart file is not a list of >= 2 {timestamp, 22k} rows")
+    except Exception as err:
+        could_not("(iii) published gaps", f"{type(err).__name__}: {err}")
+        published = None
+    if published is not None:
+        gaps = published_gaps(published)
+        findings += len(gaps)
+        lines.append(
+            f"(iii) published gaps: {len(published)} rows, max allowed {MAX_PUBLISHED_GAP_DAYS} d"
+            " -- " + ("OK" if not gaps else f"{len(gaps)} GAP(S): {gaps}")
+        )
 
     if args.reference:
-        series = full if full is not None else published
-        sample = sample_rows(series)
-        try:
-            gold, fx = fetch_reference(_day(sample[0]))
-            duty_rows = json.loads((d / "duty_cbic.json").read_text(encoding="utf-8"))["rows"]
-            flags, n = reference_flags(sample, gold, fx, duty_rows)
-        except Exception as err:  # any fetch/parse failure is "could not verify", never "pass"
-            lines.append(f"(ii) reference: COULD NOT VERIFY ({type(err).__name__}: {err!s:.120})")
-            unverified += 1
+        series, which = (full, "full history") if full is not None else (published, "")
+        if series is None:
+            could_not("(ii) reference", "no readable series to sample")
         else:
-            if n < len(sample) // 2:
-                lines.append(f"(ii) reference: COULD NOT VERIFY -- only {n}/{len(sample)} compared")
-                unverified += 1
-            findings += len(flags)
-            lines.append(
-                f"(ii) reference: {n} sampled rows vs COMEX x USD/INR x duty x 0.916, "
-                f"tolerance {REFERENCE_TOLERANCE:.0%} -- "
-                + ("OK" if not flags else f"{len(flags)} OUTSIDE: {flags}")
-            )
+            if not which:
+                which = "PUBLISHED FILE ONLY (full history unreadable, so recent rows only)"
+            sample = sample_rows(series)
+            try:
+                gold, fx = fetch_reference(_day(sample[0]))
+                duty_rows = json.loads((d / "duty_cbic.json").read_text(encoding="utf-8"))["rows"]
+                flags, n = reference_flags(sample, gold, fx, duty_rows)
+            except Exception as err:  # any fetch/parse failure is "could not verify", never pass
+                could_not("(ii) reference", f"{type(err).__name__}: {err}")
+            else:
+                findings += len(flags)
+                if n < len(sample) // 2:
+                    could_not("(ii) reference", f"only {n}/{len(sample)} rows had a reference")
+                else:
+                    lines.append(
+                        f"(ii) reference: {n} sampled rows of the {which} vs COMEX x USD/INR x"
+                        f" duty x 0.916, tolerance {REFERENCE_TOLERANCE:.0%} -- "
+                        + ("OK" if not flags else f"{len(flags)} OUTSIDE: {flags}")
+                    )
+                if flags and n < len(sample) // 2:
+                    lines.append(f"(ii) reference: {len(flags)} OUTSIDE: {flags}")
 
     verdict = "FINDINGS" if findings else ("COULD NOT VERIFY" if unverified else "OK")
     report = [f"price-history integrity (report-only): {verdict}", *lines]

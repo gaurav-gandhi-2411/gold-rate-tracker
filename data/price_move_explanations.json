@@ -5,13 +5,13 @@
    "date": "2025-05-12",
    "move_pct": -3.47,
    "cause": "market: international gold fell the same day (US-China tariff truce selloff)",
-   "evidence": "COMEX GC=F close 3344.0 (2025-05-09) -> 3228.0 (2025-05-12), -3.47%; USD/INR 86.08 -> 85.41. yfinance, checked 2026-11-05."
+   "evidence": "COMEX GC=F close 3344.0 (2025-05-09) -> 3228.0 (2025-05-12), -3.47%; USD/INR 86.08 -> 85.41. yfinance, checked 2026-11-05. Timing: these are US closes; IBJA's 17:00 IST fix on 12 May precedes the 12 May US close, so the check's own previous-close reference reads +0.4% for this day. That the fall was already priced by 17:00 IST is INFERRED (the truce was announced in Asian hours), not measured."
   },
   {
    "date": "2025-12-12",
    "move_pct": 3.2,
    "cause": "market: international gold rose after the previous IBJA fix, rupee weakened",
-   "evidence": "COMEX GC=F 4224.7 (2025-12-10) -> 4313.0 (2025-12-11, after the 11 Dec IBJA fix) -> 4328.3 (2025-12-12), +2.45%; USD/INR 89.79 -> 90.25, +0.5%. yfinance, checked 2026-11-05."
+   "evidence": "Partly confirmed. On the check's own previous-US-close basis: COMEX GC=F 4224.7 (2025-12-10 close, before the 11 Dec fix) -> 4313.0 (2025-12-11 close, before the 12 Dec fix), +2.09%; USD/INR 89.79 -> 90.25, +0.51%; together about +2.6% against the series' +3.2%. The 0.6 pp left is inside the reference's day-to-day timing noise (sd of the landed ratio ~1.1%). yfinance, checked 2026-11-06."
   },
   {
    "date": "2026-05-13",
@@ -23,7 +23,7 @@
    "date": "2026-06-10",
    "move_pct": -3.53,
    "cause": "market: international gold fell over two US sessions",
-   "evidence": "COMEX GC=F 4363.4 (2026-06-08) -> 4286.4 (06-09, -1.76%) -> 4133.3 (06-10, -3.57%). yfinance, checked 2026-11-05."
+   "evidence": "COMEX GC=F 4363.4 (2026-06-08) -> 4286.4 (06-09, -1.76%) -> 4133.3 (06-10, -3.57%). yfinance, checked 2026-11-05. On the check's previous-close basis the reference moved -2.1% that day. Over two days it reconciles: the series 14180 (06-09) -> 13460 (06-11) is -5.1%, COMEX 4363.4 (06-08) -> 4133.3 (06-10) is -5.3%."
   }
  ]
 }

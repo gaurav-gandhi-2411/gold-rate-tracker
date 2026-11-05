@@ -44,6 +44,9 @@ def test_committed_explanations_cover_every_move_in_the_committed_history():
     assert all({"date", "move_pct", "cause", "evidence"} <= set(e) for e in expl["moves"])
     published = json.loads((REPO / "data" / "ibja_derived_prices.json").read_text(encoding="utf-8"))
     assert chk.unexplained_moves(published, expl["moves"]) == []
+    # moved here from #3585 once check-price's rebuild landed (#3596): no gap that draws as a jump
+    assert chk.published_gaps(published) == []
+    assert published[0]["timestamp"] >= "2026-06-01"
 
 
 def test_reference_flags_a_basis_error_and_passes_the_right_basis():
@@ -94,6 +97,34 @@ def test_main_flags_an_unexplained_move_in_the_full_history(tmp_path, capsys):
     (d / "ibja_derived_prices.json").write_text(json.dumps([]))
     assert chk.main(["--data-dir", str(d)]) == 0
     assert "1 UNEXPLAINED" in capsys.readouterr().out
+
+
+def test_unreadable_or_malformed_inputs_say_could_not_verify_never_ok(tmp_path, capsys):
+    """Verifier on #3595: `{"x":1}` and `[]` printed OK; a missing explanations file crashed."""
+    d = tmp_path / "data"
+    d.mkdir()
+    for published in ('{"x": 1}', "[]", "not json"):
+        (d / "ibja_derived_prices.json").write_text(published)
+        assert chk.main(["--data-dir", str(d)]) == 0  # no explanations file either: no traceback
+        out = capsys.readouterr().out
+        assert "(iii) published gaps: COULD NOT VERIFY" in out, out
+        assert "(i) moves: COULD NOT VERIFY" in out, out
+        assert "-- OK" not in out and out.splitlines()[0].endswith("COULD NOT VERIFY")
+
+
+def test_reference_with_too_few_comparable_rows_is_not_ok(tmp_path, capsys, monkeypatch):
+    d = tmp_path / "data"
+    d.mkdir()
+    (d / "price_move_explanations.json").write_text(json.dumps({"moves": []}))
+    (d / "ibja_derived_prices.json").write_text(
+        json.dumps(_rows(*[(f"2026-06-{n:02d}", 14_000) for n in range(1, 8)]))
+    )
+    (d / "duty_cbic.json").write_text(json.dumps({"rows": []}))
+    monkeypatch.setattr(chk, "fetch_reference", lambda start: ({}, {}))  # nothing to compare
+    assert chk.main(["--data-dir", str(d), "--reference"]) == 0
+    out = capsys.readouterr().out
+    assert "(ii) reference: COULD NOT VERIFY -- only 0/" in out
+    assert "(ii) reference: 0 sampled" not in out
 
 
 def test_check_price_runs_it_non_blocking():
