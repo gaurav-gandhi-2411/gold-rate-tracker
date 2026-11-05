@@ -98,11 +98,12 @@ def test_main_prints_only_a_status_word(tmp_path: Path, capsys, monkeypatch) -> 
 def test_workflow_never_prints_uploads_or_commits_the_numbers() -> None:
     wf = (ROOT / ".github" / "workflows" / "visitors-weekly.yml").read_text(encoding="utf-8")
     assert "upload-artifact" not in wf and "git push" not in wf and "git commit" not in wf
-    assert (
-        "cat " not in wf and 'echo "$(' not in wf
-    )  # the sentence is only handed to curl as a file
-    assert "contents: read" in wf and "GOATCOUNTER_TOKEN" in wf and "NTFY_TOPIC" in wf
-    assert "--data-binary" in wf
+    assert "cat " not in wf and 'echo "$(' not in wf  # the sentence file is never read back
+    assert "contents: read" in wf and "GOATCOUNTER_TOKEN" in wf
+    # 2026-11-06: nothing is sent anywhere (ntfy is gold-price only, summaries are public): only a
+    # status word is recorded, and the owner reads GoatCounter directly
+    assert "NTFY_TOPIC" not in wf and "curl" not in wf and "--data-binary" not in wf
+    assert "status: ${WORD}" in wf and "read them in GoatCounter" in wf
 
 
 def test_basic_auth_is_tried_when_bearer_is_refused(tmp_path: Path) -> None:

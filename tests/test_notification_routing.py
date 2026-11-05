@@ -99,16 +99,37 @@ def test_send_pending_posts_a_public_message_to_the_public_topic(monkeypatch: py
     assert _send(monkeypatch, "T8_MORNING", _BOTH) == ["https://ntfy.sh/public-topic-bbbb"]
 
 
-def test_send_pending_posts_an_UNLISTED_message_to_ops_even_with_both_topics_set(
+def test_send_pending_posts_an_UNLISTED_message_nowhere_even_with_both_topics_set(
     monkeypatch: pytest.MonkeyPatch,
 ):
-    """The AQ2b proof: a constructed, unlisted message must not reach the public topic."""
-    assert _send(monkeypatch, "T99_UNLISTED", _BOTH) == ["https://ntfy.sh/ops-topic-aaaa"]
+    """The AQ2b proof, tightened 2026-11-06: an unlisted message is not POSTed to ANY topic."""
+    assert _send(monkeypatch, "T99_UNLISTED", _BOTH) == []
 
 
-def test_send_pending_posts_every_known_ops_message_to_ops(monkeypatch: pytest.MonkeyPatch):
+def test_send_pending_posts_no_known_ops_message_anywhere(monkeypatch: pytest.MonkeyPatch):
+    """ntfy carries gold-price information only: ops triggers go to the ops log, not a topic."""
     for tid in sorted(KNOWN_OPS):
-        assert _send(monkeypatch, tid, _BOTH) == ["https://ntfy.sh/ops-topic-aaaa"], tid
+        assert _send(monkeypatch, tid, _BOTH) == [], tid
+
+
+def test_ops_trigger_goes_to_the_ops_log_and_keeps_its_dedup_stamp(
+    monkeypatch: pytest.MonkeyPatch, tmp_path, capsys: pytest.CaptureFixture[str]
+):
+    summary = tmp_path / "summary.md"
+    monkeypatch.setenv("GITHUB_STEP_SUMMARY", str(summary))
+    monkeypatch.setattr(
+        notifications.urllib.request,
+        "urlopen",
+        lambda *a, **k: pytest.fail("an ops trigger must not be POSTed"),
+    )
+    alert = notifications._make_alert("T9", "IBJA stale", "no reading for 3 days", 3, ["x"], _NOW)
+    state = notifications.NotificationState()
+    sent = notifications.send_pending([alert], state, _NOW)
+    assert sent[0].success and sent[0].trigger_id == "T9"
+    assert state.last_t9_ist_date == _NOW.strftime("%Y-%m-%d")  # dedup bookkeeping still works
+    assert "T9" in state.last_sent
+    assert "::warning title=ops-alert::notifications T9: IBJA stale" in capsys.readouterr().out
+    assert "no reading for 3 days" in summary.read_text(encoding="utf-8")
 
 
 def test_send_pending_sends_nothing_when_nothing_is_configured(monkeypatch: pytest.MonkeyPatch):
