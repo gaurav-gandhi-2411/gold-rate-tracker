@@ -1,6 +1,7 @@
 # For GG: things only your account or decision can clear
 
 Kept current by CC. Last updated 2026-11-03 (CC; item 10 added; autonomy-window handover in `docs/HANDOVER_2026-10-27.md`). The weekly one-screen model note is `docs/MODEL_STATUS.md`.
+ntfy now carries gold-price information only (2026-11-06): the daily and Monday gold summaries, the site showing a wrong or stale price, items only you can fix (token expiry, data sync token rejected), and the public price alerts. Everything else is in the ops log (`python scripts/read_ops_log.py`), summarised in the weekly report; see `docs/NOTIFICATIONS.md`.
 Short on purpose: nothing is blocked on GG. Dated token renewals are in section 0; one optional check and a few
 optional items follow.
 
@@ -14,7 +15,7 @@ before anyone knew; that is what this prevents.
 
 | Token (repository secret) | Expires | Becomes active | What it does if it lapses |
 |---|---|---|---|
-| `CI_HEALTH_PAT` | **2026-12-10** | **2026-11-10** (you will also get the 30-day page) | `ci-health.yml` cannot read branch protection and pages "could not verify master's CI state" every hour. The site and the data sync keep working. |
+| `CI_HEALTH_PAT` | **2026-12-10** | **2026-11-10** (you will also get the 30-day page) | `ci-health.yml` cannot read branch protection and writes "could not verify master's CI state" to the ops log every hour (no push since 2026-11-06; the run also goes red). The site and the data sync keep working. |
 | `CI_MERGE_PAT` | 2027-10-14 | 2027-09-14 | Every data sync fails with HTTP 401: the price and forecast stop refreshing. |
 
 **Renewing `CI_HEALTH_PAT` (from 2026-11-10; it expires 2026-12-10):**
