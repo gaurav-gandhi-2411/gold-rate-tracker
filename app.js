@@ -387,6 +387,22 @@ async function load() {
  * FLAT → "Roughly flat this week"  (DEFAULT)
  *   Condition: slope within ±₹100, OR the two signals conflict.
  */
+// The latest reading dated (IST) on or before the newest reading's IST date minus 7 days: "a week
+// ago" for a week-over-week move, whatever the time of day. null if the history is shorter. Pure.
+function weekAgoReading(prices) {
+  if (!prices || prices.length < 2) return null;
+  const istDate = (iso) =>
+    new Date(new Date(iso).getTime() + 5.5 * 3600e3).toISOString().slice(0, 10);
+  const last = new Date(istDate(prices[prices.length - 1].timestamp) + "T00:00:00Z");
+  const target = new Date(last.getTime() - 7 * 86_400_000).toISOString().slice(0, 10);
+  let ref = null;
+  for (const p of prices) {
+    if (istDate(p.timestamp) <= target) ref = p;
+    else break;
+  }
+  return ref;
+}
+
 function computeVerdict(prices, forecast) {
   const SLOPE_THRESHOLD = 100; // ₹ change over 7 days to count as a trend
 
@@ -402,12 +418,14 @@ function computeVerdict(prices, forecast) {
   const now     = Date.now();
   const current = prices[prices.length - 1]["22k"];
 
-  // 7-day slope: oldest reading within the last 7 days vs current.
+  // 7-day move: current vs the price a calendar week earlier (weekAgoReading). Before
+  // 2026-11-06 this was the oldest reading inside a rolling 168 h window from now; on the daily
+  // estimate series (rows at 17:00 IST) that window had already dropped last week's row every
+  // evening, so "this week" measured 6 days (+Rs.379 shown vs +Rs.175 real on 5 Nov 2026).
   const ms7d    = 7 * 24 * 3600 * 1000;
   const within7d = prices.filter(p => now - new Date(p.timestamp).getTime() <= ms7d);
-  const ref7d    = within7d.length > 1
-    ? within7d[0]
-    : prices[Math.max(0, prices.length - 5)];
+  const ref7d    = weekAgoReading(prices)
+    ?? (within7d.length > 1 ? within7d[0] : prices[Math.max(0, prices.length - 5)]);
   const slope7d  = current - ref7d["22k"];
 
   // 30-day average over IST-day-deduped daily series — one reading per day, latest wins.

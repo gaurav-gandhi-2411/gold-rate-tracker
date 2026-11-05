@@ -278,7 +278,15 @@
         const now = Date.now();
         const current = p22(prices[prices.length - 1]);
         const within7d = prices.filter(p => now - new Date(p.timestamp).getTime() <= 7 * 86400e3);
-        const ref7d = within7d.length > 1 ? within7d[0] : prices[Math.max(0, prices.length - 5)];
+        // A calendar week before the newest reading (app.js weekAgoReading): a rolling 168 h
+        // window from now dropped last week's 17:00 IST row every evening (+379 vs +175 real).
+        const weekAgoDay = (() => {
+          const d = new Date(istDay(prices[prices.length - 1].timestamp) + "T00:00:00Z");
+          return new Date(d.getTime() - 7 * 86400e3).toISOString().slice(0, 10);
+        })();
+        const weekAgo = prices.filter(p => istDay(p.timestamp) <= weekAgoDay).pop();
+        const ref7d = weekAgo
+          ?? (within7d.length > 1 ? within7d[0] : prices[Math.max(0, prices.length - 5)]);
         const slope7d = current - p22(ref7d);
 
         // 30-day average of one reading per IST day (latest wins), as app.js does
