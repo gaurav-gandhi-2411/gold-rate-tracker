@@ -67,53 +67,96 @@ def _fake_gh(pages: dict[str, list[dict]]):
     return gh
 
 
+def _world(total_a: int = 2) -> dict[str, list[dict]]:
+    return {
+        "repos/o/r/actions/workflows/a.yml/runs?": [  # two pages of runs
+            {
+                "total_count": total_a,
+                "workflow_runs": [{"id": 1, "created_at": "2026-11-05T08:00:00Z"}],
+            },
+            {
+                "total_count": total_a,
+                "workflow_runs": [{"id": 2, "created_at": "2026-11-04T09:30:00Z"}],
+            },
+        ],
+        "repos/o/r/actions/runs/1/jobs": [
+            {"total_count": 1, "jobs": [{"id": 11, "conclusion": "failure"}]}
+        ],
+        "repos/o/r/actions/runs/2/jobs": [
+            {
+                "total_count": 2,
+                "jobs": [{"id": 21, "conclusion": "success"}, {"id": 22, "conclusion": "skipped"}],
+            }
+        ],
+        "repos/o/r/check-runs/11/annotations": [
+            [
+                {"title": "ops-alert", "message": "ci-health: red -- x"},
+                {"title": "other", "message": "noise"},
+            ]
+        ],
+        "repos/o/r/check-runs/21/annotations": [[{"title": "ops-alert", "message": "a: b -- c"}]],
+    }
+
+
 def test_collect_filters_title_paginates_and_sorts() -> None:
-    repo = "o/r"
-    gh = _fake_gh(
-        {
-            "repos/o/r/actions/runs?": [  # two pages of runs
-                {
-                    "workflow_runs": [
-                        {"id": 1, "name": "CI health", "created_at": "2026-11-05T08:00:00Z"}
-                    ]
-                },
-                {
-                    "workflow_runs": [
-                        {"id": 2, "name": "Check price", "created_at": "2026-11-04T09:30:00Z"}
-                    ]
-                },
-            ],
-            "repos/o/r/actions/runs/1/jobs": [{"jobs": [{"id": 11, "conclusion": "failure"}]}],
-            "repos/o/r/actions/runs/2/jobs": [
-                {"jobs": [{"id": 21, "conclusion": "success"}, {"id": 22, "conclusion": "skipped"}]}
-            ],
-            "repos/o/r/check-runs/11/annotations": [
-                [
-                    {"title": "ops-alert", "message": "ci-health: red -- x"},
-                    {"title": "other", "message": "noise"},
-                ]
-            ],
-            "repos/o/r/check-runs/21/annotations": [
-                [{"title": "ops-alert", "message": "a: b -- c"}]
-            ],
-        }
-    )
-    rows = read_ops_log.collect(repo, datetime(2026, 11, 1, tzinfo=UTC), gh=gh)
+    gh = _fake_gh(_world())
+    rows = read_ops_log.collect("o/r", datetime(2026, 11, 1, tzinfo=UTC), ["a.yml"], gh=gh)
     assert rows == [
-        ("2026-11-04 09:30", "Check price", "a: b -- c"),
-        ("2026-11-05 08:00", "CI health", "ci-health: red -- x"),
+        ("2026-11-04 09:30", "a.yml", "a: b -- c"),
+        ("2026-11-05 08:00", "a.yml", "ci-health: red -- x"),
     ]
     assert not any("/check-runs/22/" in c for c in gh.calls)  # skipped jobs are not read
+    assert all("/workflows/a.yml/runs" in c for c in gh.calls if "/runs?" in c)  # per workflow
+
+
+def test_a_runs_total_that_does_not_match_the_rows_read_fails_closed() -> None:
+    gh = _fake_gh(_world(total_a=2500))  # the real shape: API says 2500, hands back fewer
+    with pytest.raises(read_ops_log.OpsLogError, match=r"a\.yml: API reports 2500 runs, read 2"):
+        read_ops_log.collect("o/r", datetime(2026, 11, 1, tzinfo=UTC), ["a.yml"], gh=gh)
+
+
+def test_a_total_at_the_api_cap_fails_closed_even_if_the_counts_agree() -> None:
+    runs = [{"id": i, "created_at": "2026-11-05T08:00:00Z"} for i in range(1000)]
+    gh = _fake_gh(
+        {"repos/o/r/actions/workflows/a.yml/runs?": [{"total_count": 1000, "workflow_runs": runs}]}
+    )
+    with pytest.raises(read_ops_log.OpsLogError, match="cap 1000"):
+        read_ops_log.collect("o/r", datetime(2026, 11, 1, tzinfo=UTC), ["a.yml"], gh=gh)
+
+
+def test_emitting_workflows_are_derived_from_the_workflow_files(tmp_path: Path) -> None:
+    wf = tmp_path / ".github" / "workflows"
+    wf.mkdir(parents=True)
+    (wf / "direct.yml").write_text("run: python3 scripts/ops_log.py --source x\n", encoding="utf-8")
+    (wf / "via-action.yaml").write_text("uses: ./.github/actions/bot-pr-sync\n", encoding="utf-8")
+    (wf / "via-notify.yml").write_text("run: python -m ml.notifications\n", encoding="utf-8")
+    (wf / "quiet.yml").write_text("run: echo hi\n", encoding="utf-8")
+    assert read_ops_log.emitting_workflows(tmp_path) == [
+        "direct.yml",
+        "via-action.yaml",
+        "via-notify.yml",
+    ]
+    (wf / "direct.yml").unlink()
+    (wf / "via-action.yaml").unlink()
+    (wf / "via-notify.yml").unlink()
+    with pytest.raises(read_ops_log.OpsLogError):  # nothing found is a failure, not "no alerts"
+        read_ops_log.emitting_workflows(tmp_path)
+
+
+def test_the_real_repo_lists_the_known_emitters() -> None:
+    found = read_ops_log.emitting_workflows()
+    for name in ("check-price.yml", "ci-health.yml", "notify-gg.yml", "visitors-weekly.yml"):
+        assert name in found
+    assert "generate-og-image.yml" in found  # og_run_alert moved to the ops log
 
 
 def test_main_fails_closed_when_the_api_fails(
     monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
 ) -> None:
-    def boom(path: str) -> list[dict]:
+    def boom(*a: object, **k: object) -> list:
         raise read_ops_log.OpsLogError("gh api failed (exit 1): HTTP 401")
 
-    monkeypatch.setattr(read_ops_log, "gh_api", boom)
-    monkeypatch.setattr(read_ops_log, "collect", lambda *a, **k: boom("x"))
+    monkeypatch.setattr(read_ops_log, "collect", boom)
     assert read_ops_log.main(["--days", "3"]) == 2
     assert "FAILED" in capsys.readouterr().err
 
@@ -123,4 +166,5 @@ def test_main_prints_an_explicit_empty_result(
 ) -> None:
     monkeypatch.setattr(read_ops_log, "collect", lambda *a, **k: [])
     assert read_ops_log.main([]) == 0
-    assert "no ops-alert entries in the last 7 days" in capsys.readouterr().out
+    out = capsys.readouterr().out
+    assert "no ops-alert entries in the last 7 days" in out and "every run in the window" in out

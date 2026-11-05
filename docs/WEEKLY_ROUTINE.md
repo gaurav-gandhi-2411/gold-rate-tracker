@@ -136,8 +136,14 @@ dates) are in each run's job summary, not the phone. A session only checks that 
 (`gh run list --workflow monday-push.yml --limit 2`, real step output `ntfy responded HTTP 200`).
 
 **Every Monday, read the ops log** and put it in the weekly report: `python scripts/read_ops_log.py --days 7`
-(date, workflow, message for every `ops-alert` annotation; exit 2 with a message if the API could not be read, in
-which case say so, do not report "none"). This replaces the old pushes: a stuck bot PR, a red required check, a
+(date, workflow file, message for every `ops-alert` annotation). It reads only the workflows that can emit one
+(derived from `.github/workflows/*.y*ml`: anything using `scripts/ops_log.py`, the `bot-pr-sync` action,
+`bot_branch_push.sh` or `ml.notifications`), one `/actions/workflows/<file>/runs` query each, because the repo-wide
+runs query is capped by GitHub at 1000 results (7 days held about 2500) and would silently drop the oldest. For
+each workflow it compares the API's `total_count` with the runs it read and exits 2, naming the workflow, on any
+mismatch or at the cap (then say so in the report, do not report "none"; use a smaller `--days`). Cost: one runs
+call per 100 runs per workflow plus one jobs call per run and one annotations call per non-skipped job, so
+check-price (about 8 runs a day) dominates: expect a few hundred `gh api` calls and a couple of minutes for 7 days. This replaces the old pushes: a stuck bot PR, a red required check, a
 check-price stop, a parked branch, a worker-deadman condition now show up here, not on the phone. Anything
 needing GG's click or decision is a numbered item under WAITING ON GG in the report.
 
