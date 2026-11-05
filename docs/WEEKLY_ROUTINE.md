@@ -143,7 +143,9 @@ runs query is capped by GitHub at 1000 results (7 days held about 2500) and woul
 each workflow it compares the API's `total_count` with the runs it read and exits 2, naming the workflow, on any
 mismatch or at the cap (then say so in the report, do not report "none"; use a smaller `--days`). Cost: one runs
 call per 100 runs per workflow plus one jobs call per run and one annotations call per non-skipped job, so
-check-price (about 8 runs a day) dominates: expect a few hundred `gh api` calls and a couple of minutes for 7 days. This replaces the old pushes: a stuck bot PR, a red required check, a
+lint (about 400 runs a week) and generate-og-image dominate. Measured 2026-11-05: `--days 1` took 524 s; a 7-day
+read takes about an hour, so start it in the background with `timeout 4500` at the start of the routine (record
+its PID/task id) and read its output at the end, or read one workflow at a time with `--workflow`. This replaces the old pushes: a stuck bot PR, a red required check, a
 check-price stop, a parked branch, a worker-deadman condition now show up here, not on the phone. Anything
 needing GG's click or decision is a numbered item under WAITING ON GG in the report.
 

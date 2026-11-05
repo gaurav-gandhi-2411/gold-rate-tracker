@@ -17,8 +17,9 @@ it read: any mismatch (or a total at the 1000 cap) fails closed, naming the work
 Fails closed: if `gh` is missing, any API call fails, or a count does not match, it says what and
 exits 2. An empty list is printed only when every listed workflow was read in full.
 Cost: per workflow one runs call per 100 runs; then one jobs call per run and one annotations call
-per non-skipped job. check-price (every ~3 h plus pushes) is the bulk; expect a few hundred calls
-for 7 days and a couple of minutes.
+per non-skipped job. lint (about 400 runs a week) and generate-og-image are the bulk. Measured
+2026-11-05: `--days 1` took 524 s over 16 workflows; a 7-day read did not finish in 590 s, so expect
+about an hour. Run it in the background (`timeout 4500`), or per workflow with --workflow.
 """
 
 from __future__ import annotations
