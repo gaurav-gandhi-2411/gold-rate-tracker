@@ -1,0 +1,29 @@
+{
+ "_comment": "Every day-over-day move above scripts/check_price_history_integrity.py's MOVE_THRESHOLD_PCT between adjacent IBJA days (<= 4 calendar days apart) in the site's 22K estimate series must be listed here with its cause and evidence, or the check flags it (GG P0 2026-11-05). A move that is not a real event is a splice or basis error and must be fixed, never listed. move_pct is the series' own move; evidence quotes the independent data that confirms it.",
+ "moves": [
+  {
+   "date": "2025-05-12",
+   "move_pct": -3.47,
+   "cause": "market: international gold fell the same day (US-China tariff truce selloff)",
+   "evidence": "COMEX GC=F close 3344.0 (2025-05-09) -> 3228.0 (2025-05-12), -3.47%; USD/INR 86.08 -> 85.41. yfinance, checked 2026-11-05."
+  },
+  {
+   "date": "2025-12-12",
+   "move_pct": 3.2,
+   "cause": "market: international gold rose after the previous IBJA fix, rupee weakened",
+   "evidence": "COMEX GC=F 4224.7 (2025-12-10) -> 4313.0 (2025-12-11, after the 11 Dec IBJA fix) -> 4328.3 (2025-12-12), +2.45%; USD/INR 89.79 -> 90.25, +0.5%. yfinance, checked 2026-11-05."
+  },
+  {
+   "date": "2026-05-13",
+   "move_pct": 6.16,
+   "cause": "import duty: BCD 5% -> 10% and AIDC 1% -> 5% (total 6% -> 15%), in force 13 May 2026",
+   "evidence": "Customs notifications No. 15/2026 and 16/2026 dated 12.05.2026 (data/duty_cbic.json). COMEX GC=F flat that day (4686.7 -> 4706.7, +0.43%)."
+  },
+  {
+   "date": "2026-06-10",
+   "move_pct": -3.53,
+   "cause": "market: international gold fell over two US sessions",
+   "evidence": "COMEX GC=F 4363.4 (2026-06-08) -> 4286.4 (06-09, -1.76%) -> 4133.3 (06-10, -3.57%). yfinance, checked 2026-11-05."
+  }
+ ]
+}

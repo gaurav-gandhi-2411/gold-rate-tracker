@@ -225,6 +225,15 @@ jobs:
         continue-on-error: true
         run: python scripts/build_ibja_derived_prices.py --public-out data/ibja_derived_prices.json
 
+      - name: Price-history integrity (report-only)
+        # GG P0 2026-11-05 item 1f: unexplained day-over-day moves in the full IBJA-based
+        # history, gaps in the published chart file, and a sample vs COMEX x USD/INR x duty.
+        # REPORT-ONLY (standing rule 2026-10-30): prints and writes the job summary, exits 0.
+        # Becomes blocking only in a separate PR citing 5 clean real runs over >= 24 h.
+        continue-on-error: true
+        timeout-minutes: 5
+        run: python scripts/check_price_history_integrity.py --reference
+
       - name: Compute rolling Tanishq scrape success rate
         # H3 (session dated 2026-08-28): reads whatever data/tanishq_scrape_
         # outcomes.jsonl already is on master at checkout time (same "read
