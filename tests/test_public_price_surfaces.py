@@ -9,6 +9,7 @@
 from __future__ import annotations
 
 import importlib.util
+import itertools
 import json
 from pathlib import Path
 
@@ -117,6 +118,24 @@ def test_committed_chart_series_shape():
     assert all(set(r) == {"timestamp", "22k"} for r in rows)
     assert [r["timestamp"] for r in rows] == sorted(r["timestamp"] for r in rows)
     assert all(2_000 <= r["22k"] <= 25_000 for r in rows)  # per gram, not IBJA's per 10 g
+
+
+def test_chart_series_starts_where_the_ibja_history_turns_daily():
+    """GG P0 2026-11-05: before PUBLIC_CHART_FROM the history has 1-4 month gaps that the chart
+    drew as one-day jumps. Neither the builder nor the committed file may publish them."""
+    rows = [
+        {"timestamp": f"{d}T11:30:00.000Z", "22k": 9000}
+        for d in ("2025-08-08", "2025-11-17", "2026-05-29", "2026-06-01", "2026-06-02")
+    ]
+    assert [r["timestamp"][:10] for r in build.public_chart_rows(rows)] == [
+        "2026-06-01",
+        "2026-06-02",
+    ]
+    committed = json.loads((REPO / "data" / "ibja_derived_prices.json").read_text(encoding="utf-8"))
+    assert committed[0]["timestamp"] >= build.PUBLIC_CHART_FROM
+    days = [pd.Timestamp(r["timestamp"][:10]) for r in committed]
+    worst = max((b - a).days for a, b in itertools.pairwise(days))
+    assert worst <= 7, f"chart series has a {worst}-day gap; it would draw as a one-day move"
 
 
 @pytest.fixture(scope="module")
