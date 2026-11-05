@@ -59,9 +59,6 @@ _k("K3", "scripts/live_freshness.py", "main :: topic-env")
 _k("K3", "scripts/live_freshness.py", "main :: calls send")
 _k("K3", "scripts/live_share_card.py", "main :: topic-env")
 _k("K3", "scripts/live_share_card.py", "main :: calls send")
-_k("K3", "scripts/og_run_alert.py", "send :: ntfy-url")
-_k("K3", "scripts/og_run_alert.py", "main :: topic-env")
-_k("K3", "scripts/og_run_alert.py", "main :: calls send")
 # K3 worker-deadman: only the forecast-staleness alert reaches deliver() (checked separately below)
 _k("K3", "worker-deadman/src/index.mjs", "postToNtfy :: ntfy-url")
 _k("K3", "worker-deadman/src/index.mjs", "postAlert :: topic-env", 2)
@@ -104,7 +101,9 @@ _k("K5", "ml/notification_routing.py", "<module> :: topic-env", 2)
 def _files(root: Path) -> Iterator[Path]:
     globs = [
         ".github/workflows/*.yml",
+        ".github/workflows/*.yaml",
         ".github/actions/**/*.yml",
+        ".github/actions/**/*.yaml",
         "scripts/**/*.py",
         "scripts/**/*.sh",
         "scripts/**/*.js",
@@ -247,15 +246,53 @@ def _scan_js(path: Path, rel: str, out: Counter[tuple[str, str]]) -> None:
             out[(rel, f"{where} :: topic-env")] += 1
 
 
+# Directories the repo-wide sweep skips, each for a stated reason: tests and fixtures only ASSERT about
+# ntfy (and the worker tests contain fake ntfy URLs); docs and reports are prose; data/ and
+# reports/ are generated records; the rest is tooling or vendored.
+SWEEP_SKIP_DIRS = {
+    ".git", "node_modules", "__pycache__", ".venv", "venv", "tests", "test", "docs", "reports",
+    "data", ".pytest_cache", ".ruff_cache", ".mypy_cache", "playwright-report", "test-results",
+}  # fmt: skip
+SWEEP_SKIP_SUFFIXES = {".md", ".png", ".jpg", ".jpeg", ".gif", ".ico", ".svg", ".pdf", ".lock",
+                       ".parquet", ".bundle", ".woff", ".woff2", ".enc", ".zip"}  # fmt: skip
+SWEEP_MAX_BYTES = 1_000_000
+
+
+def _sweep(root: Path, covered: set[Path], out: Counter[tuple[str, str]]) -> None:
+    """Every other text file in the repo that mentions ntfy.sh or NTFY_TOPIC in non-comment code.
+
+    This is the net under the structured scan: a new tool at the repo root, a workflow with an
+    unusual extension, a script type the scan does not parse. Comment lines (# or //) are ignored.
+    """
+    for dirpath, dirnames, filenames in os.walk(root):
+        dirnames[:] = [d for d in dirnames if d not in SWEEP_SKIP_DIRS]
+        for name in filenames:
+            p = Path(dirpath) / name
+            if p in covered or p.suffix.lower() in SWEEP_SKIP_SUFFIXES:
+                continue
+            try:
+                if p.stat().st_size > SWEEP_MAX_BYTES:
+                    continue
+                text = p.read_text(encoding="utf-8")
+            except (OSError, UnicodeDecodeError):
+                continue  # binary or unreadable: not a text sender
+            code = [ln for ln in text.splitlines() if not ln.lstrip().startswith(("#", "//"))]
+            n = sum(len(re.findall(r"ntfy\.sh|NTFY_TOPIC", ln)) for ln in code)
+            if n:
+                out[(p.relative_to(root).as_posix(), "sweep :: ntfy-mention")] += n
+
+
 def scan(root: Path) -> Counter[tuple[str, str]]:
     """Every ntfy send shape under the scanned dirs, as {(file, identifier): count}."""
     out: Counter[tuple[str, str]] = Counter()
+    covered: set[Path] = set()
     py_hits: dict[str, Counter[str]] = {}
     py_calls: dict[str, list[tuple[str, str]]] = {}
     py_imports: dict[str, set[str]] = {}
     for p in _files(root):
         rel = p.relative_to(root).as_posix()
-        if p.suffix == ".yml":
+        covered.add(p)
+        if p.suffix in (".yml", ".yaml"):
             _scan_yaml(p, rel, out)
         elif p.suffix == ".sh":
             _scan_sh(p, rel, out)
@@ -277,6 +314,7 @@ def scan(root: Path) -> Counter[tuple[str, str]]:
             homes = wrappers.get(called, set())
             if where != called and (Path(rel).stem in homes or homes & py_imports[rel]):
                 out[(rel, f"{where} :: calls {called}")] += 1
+    _sweep(root, covered, out)
     return out
 
 
@@ -302,25 +340,71 @@ def test_the_scan_finds_the_senders_it_is_meant_to_find() -> None:
     assert "scripts/live_freshness.py" in files and ".github/workflows/daily-digest.yml" in files
 
 
-def test_every_ntfy_sender_is_on_the_keep_list() -> None:
-    found = scan(ROOT)
-    keep = _keep_counter()
-    extra = sorted(
-        f"{f} :: {ident} (x{n})"
-        for (f, ident), n in found.items()
-        if keep.get((f, ident), 0) != n and (f, ident) not in keep
-    )
-    grown = sorted(
-        f"{f} :: {ident}: found {n}, KEEP allows {keep[(f, ident)]}"
-        for (f, ident), n in found.items()
+def violations(found: Counter[tuple[str, str]], keep: Counter[tuple[str, str]]) -> list[str]:
+    """Everything wrong between a scan result and the KEEP list, as readable lines."""
+    extra = [
+        f"NOT on the KEEP list: {f} :: {ident} (x{n})"
+        for (f, ident), n in sorted(found.items())
+        if (f, ident) not in keep
+    ]
+    grown = [
+        f"send count changed: {f} :: {ident}: found {n}, KEEP allows {keep[(f, ident)]}"
+        for (f, ident), n in sorted(found.items())
         if (f, ident) in keep and n != keep[(f, ident)]
+    ]
+    stale = [
+        f"KEEP entry no longer exists (remove it): {f} :: {ident}"
+        for (f, ident) in sorted(keep)
+        if (f, ident) not in found
+    ]
+    return extra + grown + stale
+
+
+def test_every_ntfy_sender_is_on_the_keep_list() -> None:
+    bad = violations(scan(ROOT), _keep_counter())
+    assert not bad, "ntfy carries gold-price information only: " + "; ".join(bad)
+
+
+def _tmp_tree(tmp_path: Path, files: dict[str, str]) -> Path:
+    for rel, text in files.items():
+        p = tmp_path / rel
+        p.parent.mkdir(parents=True, exist_ok=True)
+        p.write_text(text, encoding="utf-8")
+    return tmp_path
+
+
+def test_a_new_yaml_extension_workflow_is_caught(tmp_path: Path) -> None:
+    """A workflow named zz.yaml (not .yml) once bypassed the scan."""
+    root = _tmp_tree(
+        tmp_path,
+        {
+            ".github/workflows/zz.yaml": "jobs:\n  j:\n    steps:\n      - name: spam\n"
+            '        run: curl -d hi "https://ntfy.sh/${NTFY_TOPIC}"\n',
+            ".github/actions/x/action.yaml": "runs:\n  using: composite\n  steps:\n"
+            '    - name: spam2\n      run: curl "https://ntfy.sh/t"\n',
+        },
     )
-    stale = sorted(f"{f} :: {ident}" for (f, ident) in keep if (f, ident) not in found)
-    assert not extra, (
-        "ntfy sender(s) NOT on the KEEP list (gold-price information only): " + "; ".join(extra)
+    found = scan(root)
+    assert (".github/workflows/zz.yaml", "step 'spam' :: ntfy-url") in found
+    assert (".github/actions/x/action.yaml", "step 'spam2' :: ntfy-url") in found
+    assert any("zz.yaml" in v for v in violations(found, Counter()))
+
+
+def test_a_root_level_tool_outside_the_scanned_dirs_is_caught(tmp_path: Path) -> None:
+    """A tools_g.py at the repo root once bypassed the scan; the repo-wide sweep catches it."""
+    root = _tmp_tree(
+        tmp_path,
+        {
+            "tools_g.py": 'import urllib.request\nurllib.request.urlopen("https://ntfy.sh/mytopic")\n',
+            "notes.sh": "# curl https://ntfy.sh/x  (a comment is ignored)\necho ok\n",
+            "docs/x.txt": "ntfy.sh is prose here and docs/ is skipped\n",
+            "tests/t.py": 'X = "ntfy.sh"\n',
+        },
     )
-    assert not grown, "KEEP sender changed its send count: " + "; ".join(grown)
-    assert not stale, "KEEP entries that no longer exist (remove them): " + "; ".join(stale)
+    found = scan(root)
+    assert ("tools_g.py", "sweep :: ntfy-mention") in found
+    assert not any(f in ("notes.sh", "docs/x.txt", "tests/t.py") for f, _ in found)
+    assert any("tools_g.py" in v for v in violations(found, Counter()))
 
 
 # ---- ml/notifications.py: the real function with a fake opener ---------------------------------
