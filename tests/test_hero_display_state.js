@@ -244,8 +244,9 @@ function renderChartWith(readings, derived, lang) {
     const note = app.element("chart-source-note");
     return {
       label: ds.label,
-      data: [...ds.data],
-      tooltip: captured.cfg.options.plugins.tooltip.callbacks.label({ parsed: { y: ds.data[ds.data.length - 1] } }),
+      // the trend chart plots {x: ms, y: price} on a time axis (GG P0 2026-11-05); prices only here
+      data: Array.from(ds.data, (p) => p.y), // Array.from: an array of this realm, not the vm's
+      tooltip: captured.cfg.options.plugins.tooltip.callbacks.label({ parsed: { y: ds.data[ds.data.length - 1].y } }),
       note: note.hidden ? null : note.textContent,
       estimate: app.run("chartIsEstimate"),
     };
