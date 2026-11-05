@@ -120,7 +120,7 @@ def test_committed_chart_series_shape():
     assert all(2_000 <= r["22k"] <= 25_000 for r in rows)  # per gram, not IBJA's per 10 g
 
 
-def test_chart_series_starts_where_the_ibja_history_turns_daily():
+def test_chart_series_starts_where_the_ibja_history_turns_daily(tmp_path):
     """GG P0 2026-11-05: before PUBLIC_CHART_FROM the history has 1-4 month gaps that the chart
     drew as one-day jumps. Neither the builder nor the committed file may publish them."""
     rows = [
@@ -128,6 +128,24 @@ def test_chart_series_starts_where_the_ibja_history_turns_daily():
         for d in ("2025-08-08", "2025-11-17", "2026-05-29", "2026-06-01", "2026-06-02")
     ]
     assert [r["timestamp"][:10] for r in build.public_chart_rows(rows)] == [
+        "2026-06-01",
+        "2026-06-02",
+    ]
+    # and the CLI path check-price runs (--public-out) applies it, not only the helper
+    data = tmp_path / "data"
+    data.mkdir()
+    pd.DataFrame(
+        {
+            "date": ["2025-11-17", "2026-06-01", "2026-06-02"],
+            "pm_916": [114000.0, 141000.0, 140000.0],
+            "pm_999": [124000.0, 154000.0, 153000.0],
+            "pm_750": [93000.0, 115000.0, 114000.0],
+        }
+    ).to_parquet(data / "ibja_rates.parquet")
+    (data / "calibration.json").write_text(json.dumps({"slope": 1.0, "intercept": 0.0}))
+    out = data / "ibja_derived_prices.json"
+    assert build.main(["--data-dir", str(data), "--public-out", str(out)]) == 0
+    assert [r["timestamp"][:10] for r in json.loads(out.read_text())] == [
         "2026-06-01",
         "2026-06-02",
     ]
