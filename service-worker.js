@@ -212,7 +212,7 @@
 // can never be paired with a freshly fetched script; a request tagged with another build goes to the
 // network (that page came from a newer deploy than this worker). install fails, and is retried on the
 // next update check, if the page it just cached is not tagged with this VERSION (deploy caught mid-way).
-const VERSION = "v100-20261103-hindi-direction-line";
+const VERSION = "v101-20261105-chart-time-axis";
 const SHELL_CACHE = `gold-shell-${VERSION}`;
 
 const SHELL_FILES = [
