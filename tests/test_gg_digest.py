@@ -101,7 +101,7 @@ def _repo(tmp_path: Path, rows: list[dict] | None = None, forecast: dict | None 
     return tmp_path
 
 
-def test_daily_note_is_exactly_the_four_gold_price_lines(tmp_path: Path) -> None:
+def test_daily_note_is_exactly_the_five_gold_price_lines(tmp_path: Path) -> None:
     lines = gd.daily(_repo(tmp_path), NOW).splitlines()
     assert lines == [
         "Gold rate per gram, Tanishq's listed rate as of 6 Nov, 01:41 IST: "
@@ -111,16 +111,89 @@ def test_daily_note_is_exactly_the_four_gold_price_lines(tmp_path: Path) -> None
         "Shop-price equivalent of the next official rate: likely 22K Rs.13,254 to Rs.13,616, central estimate Rs.13,435 (for 6 Nov).",
         "Model accuracy as of 30 Oct, live since 7 Oct, 16 days: off by Rs.81 on average vs Rs.99 for "
         "'no change'; range held 12 of 16 days. Too few days to judge.",
+        "Other models tested alongside the live one: none has reached its first look yet "
+        "(20 days needed, the furthest has 6).",
     ]
 
 
 def test_monday_note_adds_the_weeks_high_and_low(tmp_path: Path) -> None:
     lines = gd.monday(_repo(tmp_path), NOW).splitlines()
-    assert len(lines) == 5
+    assert len(lines) == 6
     assert lines[2] == "This week's 22K benchmark: high Rs.13,400 (5 Nov), low Rs.13,150 (30 Oct)."
-    assert lines[3].startswith("Shop-price equivalent of the next official rate:") and lines[
-        4
-    ].startswith("Model accuracy")
+    assert lines[3].startswith("Shop-price equivalent of the next official rate:")
+    assert lines[4].startswith("Model accuracy")
+    assert lines[5].startswith("Other models tested alongside the live one:")
+
+
+def _challengers(tmp_path: Path, challengers: dict) -> str:
+    root = _repo(tmp_path)
+    _write(
+        root,
+        "model_status_weekly.json",
+        {"generated_at": "2026-11-06T18:35:17+00:00", "live": LIVE, "challengers": challengers},
+    )
+    return gd.challengers_note(root)
+
+
+def _started(promotable: bool = False, last_day: str = "2026-11-05") -> dict:
+    return {
+        "n": 20, "first_look_day": 20, "looks_started": True, "last_day": last_day,
+        "promotable": promotable, "retired": False,
+    }  # fmt: skip
+
+
+def test_first_look_done_none_beats_the_live_model_the_live_one_stays(tmp_path: Path) -> None:
+    """The real 2026-11-06 outcome (data/model_status_weekly.json, run 42271733212): all three at
+    n = 20, lower bound did not clear for any, none promotable."""
+    note = _challengers(
+        tmp_path, {"ensemble": _started(), "p3_roll60": _started(), "p3_monday": _started()}
+    )
+    assert note == (
+        "Other models tested alongside the live one: all 3 have now had their first look "
+        "(20 days, as of 5 Nov); none beats the live model by enough to switch, so the live model stays."
+    )
+
+
+def test_a_model_that_clears_the_bar_is_named_and_left_to_a_person(tmp_path: Path) -> None:
+    note = _challengers(tmp_path, {"ensemble": _started(), "p3_roll60": _started(promotable=True)})
+    assert (
+        "the model re-fitted on the last 60 days clears the bar to replace the live model" in note
+    )
+    assert note.endswith("A person decides whether to switch.")
+    assert "the older blended model" not in note
+
+
+def test_some_started_some_not_and_retired_ones_are_left_out(tmp_path: Path) -> None:
+    waiting = {"n": 12, "first_look_day": 20, "looks_started": False, "retired": False}
+    gone = {"n": 20, "first_look_day": 20, "looks_started": True, "retired": True,
+            "last_day": "2026-11-05"}  # fmt: skip
+    note = _challengers(tmp_path, {"ensemble": _started(), "p3_roll60": waiting, "x": gone})
+    assert (
+        "1 of 2 have had their first look (as of 5 Nov)" in note
+        and "The rest need more days." in note
+    )
+
+
+def test_the_challengers_line_degrades_in_plain_words(tmp_path: Path) -> None:
+    root = _repo(tmp_path)
+    (root / "data" / "model_status_weekly.json").unlink()
+    assert gd.challengers_note(root) == (
+        "Other models tested alongside the live one: not available right now."
+    )
+
+
+def test_the_challengers_line_uses_no_jargon_in_any_outcome(tmp_path: Path) -> None:
+    outcomes = [
+        {"ensemble": _started(), "p3_roll60": _started(), "p3_monday": _started()},
+        {"ensemble": _started(promotable=True)},
+        {"ensemble": {"n": 3, "first_look_day": 20, "looks_started": False, "retired": False}},
+    ]
+    for i, challengers in enumerate(outcomes):
+        sub = tmp_path / f"case{i}"
+        sub.mkdir()
+        note = _challengers(sub, challengers)
+        for jargon in ("challenger", "ensemble", "p3", "rule v7", "promot", "adr", "first_look"):
+            assert jargon not in note.lower(), (jargon, note)
 
 
 def test_note_has_no_system_facts(tmp_path: Path) -> None:

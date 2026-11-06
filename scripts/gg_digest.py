@@ -4,9 +4,11 @@ Owner decision 2026-11-06: ntfy carries gold-price information ONLY. The earlier
 module said "never a price" (it was a health digest for GG while away); the owner now explicitly
 wants the prices, so both notes are about gold: today's 22K, 24K and 18K rates as the live site's hero
 shows them, the change vs yesterday and vs last week, the next price range the site shows, and the
-model's live accuracy in one line. Monday adds the week's high and low. Facts that are about the system
-rather than the price (freshness, scrape rate, models, parked items, merged PRs, dates) are NOT in the
-note; they go to the job summary through `ops_lines()` ($GITHUB_STEP_SUMMARY), never to ntfy.
+model's live accuracy in one line, and (owner, 2026-11-06) one plain line on whether any other model
+tested alongside the live one has beaten it at its first look (`challengers_note`: it states the
+frozen rule's outcome and never changes it). Monday adds the week's high and low. Facts that are about
+the system rather than the price (freshness, scrape rate, parked items, merged PRs, dates) are NOT in
+the note; they go to the job summary through `ops_lines()` ($GITHUB_STEP_SUMMARY), never to ntfy.
 
 Reads only files the workflows already publish in the repo (data/*.json), never a raw or decrypted
 series. The workflow (daily-digest.yml, monday-push.yml) sends the text to the private ntfy topic.
@@ -266,6 +268,53 @@ def accuracy_line(root: Path) -> str:
     return _safe(build, "Model accuracy")
 
 
+PLAIN_MODEL = {
+    "ensemble": "the older blended model",
+    "p3_roll60": "the model re-fitted on the last 60 days",
+    "p3_monday": "the model with its own Monday setting",
+}
+
+
+def challengers_note(root: Path) -> str:
+    """One plain line on the other models tested alongside the live one (rule v7, ADR 072): how many
+    have had their first look, and whether any beats the live model by enough to switch. Computed
+    from data/model_status_weekly.json only; it states the frozen rule's outcome and never changes it
+    (the file's own `promotable` flag decides, a person decides whether to switch)."""
+
+    def build() -> str:
+        items = [
+            (name, c)
+            for name, c in _load(root / "data" / "model_status_weekly.json")["challengers"].items()
+            if not c.get("retired")
+        ]
+        if not items:
+            raise ValueError("no active challengers")
+        head = "Other models tested alongside the live one:"
+        first = max(int(c["first_look_day"]) for _, c in items)
+        started = [(n, c) for n, c in items if c.get("looks_started")]
+        if not started:
+            furthest = max(int(c["n"]) for _, c in items)
+            return f"{head} none has reached its first look yet ({first} days needed, the furthest has {furthest})."
+        as_of = _day_label(
+            datetime.strptime(max(c["last_day"] for _, c in started), "%Y-%m-%d").date()
+        )
+        winners = [PLAIN_MODEL.get(n, n) for n, c in started if c.get("promotable")]
+        if winners:
+            return (
+                f"{head} first look done (as of {as_of}); {', '.join(winners)} clears the bar to "
+                "replace the live model. A person decides whether to switch."
+            )
+        stay = "none beats the live model by enough to switch, so the live model stays."
+        if len(started) == len(items):
+            return f"{head} all {len(items)} have now had their first look ({first} days, as of {as_of}); {stay}"
+        return (
+            f"{head} {len(started)} of {len(items)} have had their first look (as of {as_of}); "
+            f"{stay} The rest need more days."
+        )
+
+    return _safe(build, "Other models tested alongside the live one")
+
+
 # --- system facts: job summary only, never the note ------------------------------------------------
 
 
@@ -388,7 +437,13 @@ def ops_lines(root: Path, now: datetime, merged: list[dict[str, Any]] | None) ->
 
 def daily(root: Path, now: datetime) -> str:
     return "\n".join(
-        [*rates_lines(root, now), change_line(root), next_range_line(root), accuracy_line(root)]
+        [
+            *rates_lines(root, now),
+            change_line(root),
+            next_range_line(root),
+            accuracy_line(root),
+            challengers_note(root),
+        ]
     )
 
 
@@ -400,6 +455,7 @@ def monday(root: Path, now: datetime) -> str:
             week_line(root),
             next_range_line(root),
             accuracy_line(root),
+            challengers_note(root),
         ]
     )
 
