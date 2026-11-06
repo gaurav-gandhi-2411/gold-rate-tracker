@@ -1,76 +1,76 @@
 {
   "schema_version": 1,
-  "generated_at_utc": "2026-10-25T07:07:16.128557+00:00",
+  "generated_at_utc": "2026-11-03T07:18:13.285468+00:00",
   "band_source": "IBJA-calibrated tier's displayed est_low/est_high (recency-weighted empirical residual quantile, ml.calibration)",
   "nominal_pct": 80,
-  "coverage": 0.7333,
-  "n": 120,
-  "n_in_band": 88,
-  "wilson_ci_low": 0.6479,
-  "wilson_ci_high": 0.8043,
-  "resolvable_at_n": false,
+  "coverage": 0.7287,
+  "n": 129,
+  "n_in_band": 94,
+  "wilson_ci_low": 0.6462,
+  "wilson_ci_high": 0.798,
+  "resolvable_at_n": true,
   "note": "Walk-forward re-score of the band actually shown to users on the IBJA-calibrated tier (est_low/est_high) -- recomputed weekly by weekly-backtest.yml, not a one-time reading. resolvable_at_n is True only when the Wilson 95% CI does not contain nominal_pct, i.e. n is large enough to say observed coverage is statistically distinguishable from nominal, not just numerically different from it. Distinct from data/coverage_metrics.json, which scores the OTHER displayed band (headline.lower/upper).",
   "stratified_shadow": {
     "status": "shadow: NOT the displayed band. Scored weekly so out-of-sample evidence accrues.",
-    "n": 120,
+    "n": 129,
     "pooled_production": {
-      "n": 120,
-      "n_in_band": 88,
-      "coverage": 0.7333,
-      "wilson_ci_low": 0.6479,
-      "wilson_ci_high": 0.8043,
-      "p_vs_nominal": 0.0858
+      "n": 129,
+      "n_in_band": 94,
+      "coverage": 0.7287,
+      "wilson_ci_low": 0.6462,
+      "wilson_ci_high": 0.798,
+      "p_vs_nominal": 0.0475
     },
     "pooled_stratified": {
-      "n": 120,
-      "n_in_band": 101,
-      "coverage": 0.8417,
-      "wilson_ci_low": 0.7659,
-      "wilson_ci_high": 0.8962,
-      "p_vs_nominal": 0.304
+      "n": 129,
+      "n_in_band": 107,
+      "coverage": 0.8295,
+      "wilson_ci_low": 0.7553,
+      "wilson_ci_high": 0.8846,
+      "p_vs_nominal": 0.4426
     },
     "strata": {
       "same_day": {
-        "n": 80,
+        "n": 86,
         "production": {
-          "n": 80,
-          "n_in_band": 65,
-          "coverage": 0.8125,
-          "wilson_ci_low": 0.7134,
-          "wilson_ci_high": 0.8829,
-          "p_vs_nominal": 0.8891
+          "n": 86,
+          "n_in_band": 70,
+          "coverage": 0.814,
+          "wilson_ci_low": 0.7189,
+          "wilson_ci_high": 0.8821,
+          "p_vs_nominal": 0.8927
         },
         "stratified": {
-          "n": 80,
-          "n_in_band": 65,
-          "coverage": 0.8125,
-          "wilson_ci_low": 0.7134,
-          "wilson_ci_high": 0.8829,
-          "p_vs_nominal": 0.8891
+          "n": 86,
+          "n_in_band": 70,
+          "coverage": 0.814,
+          "wilson_ci_low": 0.7189,
+          "wilson_ci_high": 0.8821,
+          "p_vs_nominal": 0.8927
         },
-        "mean_half_width_production": 74.2,
-        "mean_half_width_stratified": 74.2
+        "mean_half_width_production": 73.2,
+        "mean_half_width_stratified": 73.2
       },
       "carry_forward": {
-        "n": 40,
+        "n": 43,
         "production": {
-          "n": 40,
-          "n_in_band": 23,
-          "coverage": 0.575,
-          "wilson_ci_low": 0.4219,
-          "wilson_ci_high": 0.7149,
-          "p_vs_nominal": 0.0011
+          "n": 43,
+          "n_in_band": 24,
+          "coverage": 0.5581,
+          "wilson_ci_low": 0.4111,
+          "wilson_ci_high": 0.6957,
+          "p_vs_nominal": 0.0003
         },
         "stratified": {
-          "n": 40,
-          "n_in_band": 36,
-          "coverage": 0.9,
-          "wilson_ci_low": 0.7695,
-          "wilson_ci_high": 0.9604,
-          "p_vs_nominal": 0.1634
+          "n": 43,
+          "n_in_band": 37,
+          "coverage": 0.8605,
+          "wilson_ci_low": 0.7274,
+          "wilson_ci_high": 0.9344,
+          "p_vs_nominal": 0.4447
         },
-        "mean_half_width_production": 76.1,
-        "mean_half_width_stratified": 181.1
+        "mean_half_width_production": 75.3,
+        "mean_half_width_stratified": 177.0
       }
     },
     "carry_forward_fallback_days": 0

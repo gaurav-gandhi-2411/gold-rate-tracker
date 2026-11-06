@@ -30,7 +30,7 @@ concurrency:
 jobs:
   evaluate:
     runs-on: ubuntu-latest
-    timeout-minutes: 25 # 15 for the eval itself + 10 headroom for the bot-pr-sync wait
+    timeout-minutes: 45 # 15 for the eval itself + 30 for the bot-pr-sync wait
 
     steps:
       - name: Checkout repository
@@ -96,5 +96,5 @@ jobs:
           pr-title: "chore: refresh direction eval results"
           pr-body: "Automated direction-eval sync from Direction Signal Eval run ${{ github.run_id }}."
           token: ${{ secrets.CI_MERGE_PAT }}
-          wait-minutes: "10"
+          wait-minutes: "30" # 30 min: a contended lint took 13 min on 2026-11-01 (#3424 stuck a week); a miss here waits for the next weekly/monthly run
           ntfy-topic: ${{ secrets.NTFY_TOPIC }}

@@ -226,7 +226,13 @@ def test_tampered_ciphertext_does_not_overwrite_existing_plaintext(
     p = dc.Paths(repo)
     dc.encrypt_one(p, IBJA, key_env)
     enc = p.enc(IBJA)
-    enc.write_bytes(enc.read_bytes()[:-1] + b"\x00")
+    # XOR, not "set the last byte to 0x00": that changed nothing whenever the random ciphertext
+    # already ended in 0x00 (about 1 run in 256), so the decrypt rightly succeeded and the test
+    # failed (seen 2026-11-03 in a full-suite run)
+    blob = enc.read_bytes()
+    tampered = blob[:-1] + bytes([blob[-1] ^ 0x01])
+    assert tampered != blob
+    enc.write_bytes(tampered)
     (repo / IBJA).write_bytes(b"local copy")
     assert _cli(repo, "decrypt", IBJA).returncode == 1
     assert (repo / IBJA).read_bytes() == b"local copy"
