@@ -65,6 +65,17 @@ def test_committed_file_is_self_consistent_and_never_overlaps_the_daily_series()
     assert "Dots are not joined" in doc["method"] or "not joined" in doc["method"]
 
 
+def test_render_is_valid_json_one_sample_per_line_and_the_committed_file_is_its_output():
+    doc = build.monthly_samples([_row("2022-01-19", 4486), _row("2022-03-10", 4916)])
+    text = build.render(doc)
+    assert json.loads(text) == doc
+    assert sum(1 for ln in text.splitlines() if ln.lstrip().startswith('{"month"')) == 2
+    committed = (REPO / "data" / "long_history_monthly.json").read_text(encoding="utf-8")
+    assert committed == build.render(json.loads(committed)), (
+        "regenerate with the builder, never hand-edit"
+    )
+
+
 def test_the_flag_that_shows_it_is_off_in_flags_js():
     flags = (REPO / "flags.js").read_text(encoding="utf-8")
     assert "long_history: false," in flags and "long_history: true" not in flags

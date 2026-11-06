@@ -89,6 +89,20 @@ def monthly_samples(rows: list[dict]) -> dict:
     }
 
 
+def render(doc: dict) -> str:
+    """The JSON text: header keys one per line, then ONE SAMPLE PER LINE (a monthly table is read
+    row by row; the default indent=1 spreads 41 samples over 330 lines). Valid JSON, stable."""
+    lines = ["{"]
+    for key, value in doc.items():
+        if key != "samples":
+            lines.append(f" {json.dumps(key)}: {json.dumps(value, ensure_ascii=False)},")
+    lines.append(' "samples": [')
+    rows = [f"  {json.dumps(s, ensure_ascii=False)}" for s in doc["samples"]]
+    lines.append(",\n".join(rows))
+    lines.extend([" ]", "}"])
+    return "\n".join(lines) + "\n"
+
+
 def main(argv: list[str] | None = None) -> int:
     ap = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     ap.add_argument("--source", type=Path, required=True, help="the pre-2026-06 chart series JSON")
@@ -101,7 +115,7 @@ def main(argv: list[str] | None = None) -> int:
         print("refusing: no month had any data", file=sys.stderr)
         return 1
     doc = {"source": f"data/ibja_derived_prices.json at commit {args.source_ref}", **doc}
-    args.out.write_text(json.dumps(doc, indent=1, ensure_ascii=False) + "\n", encoding="utf-8")
+    args.out.write_text(render(doc), encoding="utf-8")
     print(
         f"wrote {len(doc['samples'])} monthly samples from {doc['source_rows_used']} rows to {args.out}"
     )
