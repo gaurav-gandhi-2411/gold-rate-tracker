@@ -25,6 +25,7 @@ jobs:
     timeout-minutes: 10
     permissions:
       contents: write # append one line to ops_log.jsonl on the ops-log branch (scripts/ops_log.py)
+      issues: write # same as the workflow level (the canary opens an issue); a job block replaces it
     env:
       # the ops-log file append (scripts/ops_log.py) uses the workflow token, not a step's PAT
       OPS_LOG_TOKEN: ${{ github.token }}
