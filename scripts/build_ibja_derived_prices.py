@@ -50,6 +50,13 @@ DERIVED_SOURCE = "ibja_calibrated_derived"
 PUBLISH_UTC = "T11:30:00.000Z"
 # ...and its AM fix ~12:00 IST = 06:30 UTC (ml.known_at.IBJA_AM).
 AM_PUBLISH_UTC = "T06:30:00.000Z"
+# First day of the public chart series (containment, GG P0 2026-11-05). Before this date the IBJA
+# history is sampled, not daily: gaps of 1-4 months (e.g. 2025-08-08 -> 2025-11-17, 2026-01-12 ->
+# 2026-04-17). The chart's x-axis is one slot per row with no year, so each gap was drawn as a
+# one-day jump of up to +21.8% -- a false price move on the live site. From 2026-06-01 the series
+# is daily (no gap over 4 days). The values before it are correct (within 4.2% of COMEX x USD/INR x
+# duty at every one of the 287 rows); they come back only with a time axis that shows the gaps.
+PUBLIC_CHART_FROM = "2026-06-01"
 
 
 def build_derived_prices(ibja: pd.DataFrame, calibration: dict) -> list[dict]:
@@ -84,9 +91,10 @@ def build_derived_prices(ibja: pd.DataFrame, calibration: dict) -> list[dict]:
     return rows
 
 
-def public_chart_rows(rows: list[dict]) -> list[dict]:
-    """The chart series published at data/ibja_derived_prices.json: timestamp + 22K only."""
-    return [{"timestamp": r["timestamp"], "22k": r["22k"]} for r in rows]
+def public_chart_rows(rows: list[dict], since: str = PUBLIC_CHART_FROM) -> list[dict]:
+    """The chart series published at data/ibja_derived_prices.json: timestamp + 22K only,
+    from ``since`` (an ISO date) onward -- see PUBLIC_CHART_FROM."""
+    return [{"timestamp": r["timestamp"], "22k": r["22k"]} for r in rows if r["timestamp"] >= since]
 
 
 def morning_chart_row(ibja: pd.DataFrame, calibration: dict, last_pm_day: str) -> dict | None:
