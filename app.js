@@ -1368,7 +1368,9 @@ function renderHero(readings, forecast) {
   const verdict = computeVerdict(hist.rows, hist.estimate ? null : forecast);
   document.getElementById("verdict-icon").textContent    = verdict.icon;
   document.getElementById("verdict-headline").textContent = verdict.headline;
-  document.getElementById("verdict-reason").textContent  = verdict.reason;
+  // On the estimate series the week/month figures are not moves of the headline shop price: say so.
+  document.getElementById("verdict-reason").textContent  =
+    hist.estimate && verdict.type !== "unknown" ? `${verdict.reason} ${t("verdictBasisEstimate")}` : verdict.reason;
   verdictEl.dataset.type = verdict.type;
   verdictEl.hidden       = false;
 
@@ -1563,8 +1565,13 @@ function renderSparkline(readings, estimate = false) {
   const svgEl   = document.getElementById("sparkline");
   const rangeEl = document.getElementById("sparkline-range");
 
+  // The same week the verdict above it measures (weekAgoReading): a rolling 168 h window from now
+  // started a day later every evening on the daily estimate series (verifier on #3597).
   const now  = Date.now();
-  const pts  = dedupeByISTDay(readings.filter(r => now - new Date(r.timestamp).getTime() <= 7 * 86400e3));
+  const from = weekAgoReading(readings);
+  const pts  = dedupeByISTDay(from
+    ? readings.filter(r => r.timestamp >= from.timestamp)
+    : readings.filter(r => now - new Date(r.timestamp).getTime() <= 7 * 86400e3));
   if (pts.length < 2) { wrap.hidden = true; return; }
 
   const prices = pts.map(p => p["22k"]);
@@ -1600,6 +1607,17 @@ function renderSparkline(readings, estimate = false) {
 
   rangeEl.textContent = t(estimate ? "sparklineRangeEstimate" : "sparklineRange", { min: fmtINR(min22k), max: fmtINR(max22k) });
   wrap.hidden = false;
+}
+
+// The basis line under the comparison cards: empty unless the cards are measured on the IBJA-based
+// estimate, then names it with its newest price and IST day. Pure apart from t()/currentLang.
+// heroIsShop: the headline shows a Tanishq (shop) price; only then does the line add "not the shop
+// price at the top" (when the headline is itself the estimate, that clause would be false).
+function comparisonBasisNote(hist, heroIsShop = false) {
+  if (!hist || !hist.estimate || !hist.rows.length) return "";
+  const last = hist.rows[hist.rows.length - 1];
+  const args = { price: fmtINR(karatValue(last)), date: fmtDateShort(last.timestamp) };
+  return t(heroIsShop ? "cmpBasisEstimate" : "cmpBasisEstimateOnly", args);
 }
 
 function renderComparisons(readings) {
@@ -1652,6 +1670,16 @@ function renderComparisons(readings) {
     lowVal.textContent        = `+₹${fmtINR(cmp.vsLow)}`;
     lowSub.textContent        = t("cmpAboveLowest");
     lowCard.dataset.sentiment = cmp.vsLow < 300 ? "neutral" : "caution";
+  }
+
+  // GG 2026-11-06: say which series the cards measure, with its own latest price and day, so a
+  // +Rs.367 is not read as a move of the (different) shop price in the headline.
+  const basisEl = document.getElementById("cmp-basis-note");
+  if (basisEl) {
+    const heroKind = heroDisplayState(readings, lastForecast).kind;
+    const note = comparisonBasisNote(hist, heroKind === "tanishq_live" || heroKind === "tanishq_last_only");
+    basisEl.textContent = note;
+    basisEl.hidden = !note;
   }
 
   section.hidden = false;

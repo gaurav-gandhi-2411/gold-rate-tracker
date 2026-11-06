@@ -26,7 +26,7 @@ Where each figure comes from (it mirrors app.js, which is the authority):
   * changes and the week's high/low: data/ibja_derived_prices.json, one row per IST day, so every
     comparison is within one series (mixing Tanishq with IBJA gave false moves, app.js E1).
   * next range: forecast.json headline.lower/upper, falling back to lower/upper (what the page shows
-    as "Next price update").
+    as "Shop-price equivalent of the next official rate").
 """
 
 from __future__ import annotations
@@ -235,7 +235,9 @@ def next_range_line(root: Path) -> str:
         hi = hl.get("upper", fc.get("upper"))
         if not isinstance(lo, (int, float)) or not isinstance(hi, (int, float)):
             raise ValueError("no range")
-        text = f"Next price update: likely 22K {_inr(lo)} to {_inr(hi)}"
+        text = (
+            f"Shop-price equivalent of the next official rate: likely 22K {_inr(lo)} to {_inr(hi)}"
+        )
         target = hl.get("predicted_22k", fc.get("predicted_22k"))
         if isinstance(target, (int, float)):
             text += f", central estimate {_inr(target)}"
@@ -244,7 +246,7 @@ def next_range_line(root: Path) -> str:
             text += f" (for {_day_label(_ist(_parse(tt)).date())})"
         return text + "."
 
-    return _safe(build, "Next price update")
+    return _safe(build, "Shop-price equivalent of the next official rate")
 
 
 def accuracy_line(root: Path) -> str:
