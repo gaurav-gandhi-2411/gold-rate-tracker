@@ -33,9 +33,7 @@ MSG="$(git log -1 --format=%B "${MINE}")"
 RESCUE="${BRANCH}-rescue-${GITHUB_RUN_ID:-$(date -u +%Y%m%dT%H%M%SZ)}"
 
 page() {
-  # ops log (job summary + ops-alert annotation + ops-log file), NOT the phone: ntfy is gold-price
-  # information only. The self-hosted Windows runner has no python, and the old
-  # `python3 ... || true` dropped the record there without a trace: use the bash version then.
+  # ops log, NOT the phone (ntfy is gold-price information only); no python on the self-hosted runner
   local py="${OPS_LOG_PYTHON:-python3}"
   if "${py}" -c 'import sys' >/dev/null 2>&1; then
     "${py}" "${HERE}/ops_log.py" --source "bot_branch_push" \
