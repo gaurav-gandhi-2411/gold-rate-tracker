@@ -616,6 +616,68 @@ def _resid_sd(folds: list[dict]) -> float | None:
     return float(np.std(errs)) if len(errs) >= MIN_CONFORMAL else None
 
 
+def flag_unflagged(
+    folds: list[dict],
+    reference: list[dict],
+    forward_from: str,
+    unpublished: set[str] | None,
+    days: set[str] | None = None,
+) -> list[dict]:
+    """Flag a shadow record's days exactly as the ``reference`` (P3's) record flags them.
+
+    For records written before they carried flags (the ensemble's, FOR_GG item 10). Re-flagged:
+    every fold without a boolean ``retro``, plus the folds whose day is in ``days`` (the days this
+    run added). Each takes the reference's stored flag for the same day, so the days both records
+    count live, the only days rule v7 compares, cannot differ from P3's even if the unpublished-days
+    file has grown since P3 stored its flag. A day the reference lacks gets ``update_oos``'s rule.
+    If the unpublished-days file is unreadable (``None``), such a day keeps its old state: a
+    missing flag stays missing (the report counts it, the next run retries) rather than being
+    written down as retro for good. A day the reference itself holds WITHOUT a boolean flag (rule
+    v7 reads it as live) is left alone too, so the ensemble cannot drop it from the comparison.
+    Every other fold is left exactly as it is.
+    """
+    ref = {r.get("d0"): r["retro"] for r in reference if isinstance(r.get("retro"), bool)}
+    ref_unflagged = {r.get("d0") for r in reference if not isinstance(r.get("retro"), bool)}
+    out = []
+    for f in folds:
+        d0 = str(f.get("d0", ""))
+        if d0 in ref_unflagged:
+            pass
+        elif not isinstance(f.get("retro"), bool) or (days is not None and d0 in days):
+            if d0 in ref:
+                f = {**f, "retro": ref[d0]}
+            elif unpublished is not None:
+                f = {**f, "retro": d0 < forward_from or d0 in unpublished}
+        out.append(f)
+    return out
+
+
+def report_unflagged(records: dict[str, list[dict]]) -> dict[str, int]:
+    """Count, per live-capable record, the days with no boolean ``retro`` flag, and log it.
+
+    REPORT-ONLY (never raises, never blocks): rule v7's ``forward_days`` reads a missing flag as
+    live, every other reader as not live, so a nonzero count means two readers disagree on a day.
+    It may become a hard check only after 5 clean real runs over 24 h (.claude/CLAUDE.md).
+    """
+    try:
+        from ml.promotion import LIVE_CAPABLE  # inside: promotion imports this module lazily
+
+        missing = {
+            k: n
+            for k, v in records.items()
+            if k in LIVE_CAPABLE
+            and (n := sum(1 for f in v if not isinstance(f.get("retro"), bool)))
+        }
+        if missing:
+            logger.warning("RETRO FLAGS MISSING (report-only): days without a flag %s", missing)
+        else:
+            logger.info("RETRO FLAGS: every live-capable record's days carry an explicit flag")
+        return missing
+    except Exception as exc:  # report-only: a failure here must never touch the run
+        logger.warning("retro-flag report failed (%s); report-only, run unaffected", exc)
+        return {}
+
+
 def unpublished_days(path: Path | None = None) -> set[str] | None:
     """Decision days whose live forecast was never shown to users, or None when the file exists but
     cannot be read (rule 98a: then NO new fold is counted live until a person repairs it; a missing
@@ -1129,9 +1191,18 @@ def run(
     # Shadow: the ridge + neural-net ensemble keeps its own record and is scored beside P3.
     oos_path = data_dir / OOS_PATH.name
     try:  # the shadow must never take the live forecast down (ADR 069)
-        shadow_folds = (
-            update_oos(pairs, load_oos(oos_path)) if not pairs.empty else load_oos(oos_path)
+        # Explicit retro flags, copied from P3's record (FOR_GG item 10): rule v7 reads a missing
+        # flag as live, every other reader as not live. Copying P3's stored flag per day keeps the
+        # days both records count live (all rule v7 compares) unchanged while P3 is champion.
+        unpublished = unpublished_days()
+        shadow_old = flag_unflagged(load_oos(oos_path), folds, P3_FORWARD_FROM, unpublished)
+        shadow_new = (
+            update_oos(pairs, shadow_old, forward_from=P3_FORWARD_FROM)
+            if not pairs.empty
+            else shadow_old
         )
+        added = {f["d0"] for f in shadow_new} - {f["d0"] for f in shadow_old}
+        shadow_folds = flag_unflagged(shadow_new, folds, P3_FORWARD_FROM, unpublished, added)
         save_oos(shadow_folds, oos_path, ENSEMBLE_VERSION)
         shadow_ev = evaluate(shadow_folds, ENSEMBLE_VERSION)
     except Exception as exc:
@@ -1140,6 +1211,7 @@ def run(
     records = {"p3": folds, "ensemble": shadow_folds, **load_variant_folds(data_dir)}
     if cstate.get("champion") == "hourly":  # only reachable once the pool admits it (LIVE_CAPABLE)
         records["hourly"] = load_hourly_folds(data_dir)
+    report_unflagged(records)
     cid = cstate["champion"]
     fallback = False
     if cid != "p3" and not records.get(cid):

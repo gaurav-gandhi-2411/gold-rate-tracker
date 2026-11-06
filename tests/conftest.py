@@ -16,6 +16,28 @@ if sys.platform == "win32":
 import pytest
 
 
+def pytest_configure(config):
+    """FOR_GG item 11: record which tests read data/, only when DATA_READS_OUT is set (the lint
+    job sets it on data-only PRs). Recording only; a failure to register is a printed warning."""
+    out = os.environ.get("DATA_READS_OUT")
+    if not out:
+        return
+    try:
+        from pathlib import Path
+
+        root = Path(__file__).resolve().parent.parent
+        sys.path.insert(0, str(root / "scripts"))
+        try:
+            import data_reads_plugin
+        finally:
+            sys.path.remove(str(root / "scripts"))
+        config.pluginmanager.register(
+            data_reads_plugin.DataReads(root, Path(out)), "data_reads_plugin"
+        )
+    except Exception as exc:
+        print(f"data_reads_plugin not registered ({exc}); recording off", file=sys.stderr)
+
+
 @pytest.fixture(autouse=True)
 def _polite_http_no_real_sleep():
     """ADR 059: the retailer HTTP policy keeps per-host state and really sleeps
