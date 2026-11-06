@@ -135,8 +135,12 @@ refuses to send twice in a UTC day. Their system facts (freshness, scrape rate, 
 dates) are in each run's job summary, not the phone. A session only checks that they ran
 (`gh run list --workflow monday-push.yml --limit 2`, real step output `ntfy responded HTTP 200`).
 
-**Every Monday, read the ops log** and put it in the weekly report: `python scripts/read_ops_log.py --days 7`
-(date, workflow file, message for every `ops-alert` annotation). It reads only the workflows that can emit one
+**Every Monday, read the ops log** and put it in the weekly report: `python scripts/read_ops_log.py --days 7`.
+Since 2026-11-06 this is instant: every sender appends one JSON line to `ops_log.jsonl` on the `ops-log` branch as
+it runs, and the reader fetches that file in one `gh api` call (date, workflow, `source: title -- body`). The file only covers the time since the senders started appending, so for a window that
+reaches back before that, add `--from-annotations`. If the file cannot be read for any reason other than "does
+not exist yet" the command exits 2: say so in the report, never report "none". `--from-annotations` forces the old
+slow walk, kept as a fallback (and for entries older than the file): it reads only the workflows that can emit one
 (derived from `.github/workflows/*.y*ml`: anything using `scripts/ops_log.py`, the `bot-pr-sync` action,
 `bot_branch_push.sh` or `ml.notifications`), one `/actions/workflows/<file>/runs` query each, because the repo-wide
 runs query is capped by GitHub at 1000 results (7 days held about 2500) and would silently drop the oldest. For

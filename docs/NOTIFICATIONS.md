@@ -27,9 +27,13 @@ Tanishq-silence, PR trigger health, merged-unchecked and heartbeat channels.
 
 ### Ops log
 
-`scripts/ops_log.py` appends a section to the job summary and prints
-`::warning title=ops-alert::<source>: <title> -- <body>`. Read the last week across all runs with
-`python scripts/read_ops_log.py [--days 7]` (it reads each emitting workflow separately, checks the API's run
+`scripts/ops_log.py` appends a section to the job summary, prints
+`::warning title=ops-alert::<source>: <title> -- <body>` and appends ONE JSON line
+(`ts, source, title, body` (one line, at most 500 characters)`, workflow, run_id, run_url`) to `ops_log.jsonl` on the
+orphan branch `ops-log` (created on first write; contents API with the workflow token, up to 5 retries on a sha
+conflict, lines older than 120 days pruned; a failed append prints one warning and never fails the run; commits are
+`[skip ci]` and no workflow triggers on that branch). Read the last week with
+`python scripts/read_ops_log.py [--days 7]`: one API call. The older path, `--from-annotations`, reads each emitting workflow separately, checks the API's run
 count against the rows read, and fails with a message, never prints a partial list, if `gh`, the API or a count fails;
 see `docs/WEEKLY_ROUTINE.md` for the call cost). The weekly report is where the owner sees these. The repo is public: nothing
 in an ops-log body may be a secret or a visitor count.
