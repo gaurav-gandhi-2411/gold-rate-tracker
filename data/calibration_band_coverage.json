@@ -1,76 +1,76 @@
 {
   "schema_version": 1,
-  "generated_at_utc": "2026-11-03T07:18:13.285468+00:00",
+  "generated_at_utc": "2026-11-06T18:34:11.204388+00:00",
   "band_source": "IBJA-calibrated tier's displayed est_low/est_high (recency-weighted empirical residual quantile, ml.calibration)",
   "nominal_pct": 80,
-  "coverage": 0.7287,
-  "n": 129,
-  "n_in_band": 94,
-  "wilson_ci_low": 0.6462,
-  "wilson_ci_high": 0.798,
+  "coverage": 0.7273,
+  "n": 132,
+  "n_in_band": 96,
+  "wilson_ci_low": 0.6457,
+  "wilson_ci_high": 0.796,
   "resolvable_at_n": true,
   "note": "Walk-forward re-score of the band actually shown to users on the IBJA-calibrated tier (est_low/est_high) -- recomputed weekly by weekly-backtest.yml, not a one-time reading. resolvable_at_n is True only when the Wilson 95% CI does not contain nominal_pct, i.e. n is large enough to say observed coverage is statistically distinguishable from nominal, not just numerically different from it. Distinct from data/coverage_metrics.json, which scores the OTHER displayed band (headline.lower/upper).",
   "stratified_shadow": {
     "status": "shadow: NOT the displayed band. Scored weekly so out-of-sample evidence accrues.",
-    "n": 129,
+    "n": 132,
     "pooled_production": {
-      "n": 129,
-      "n_in_band": 94,
-      "coverage": 0.7287,
-      "wilson_ci_low": 0.6462,
-      "wilson_ci_high": 0.798,
-      "p_vs_nominal": 0.0475
+      "n": 132,
+      "n_in_band": 96,
+      "coverage": 0.7273,
+      "wilson_ci_low": 0.6457,
+      "wilson_ci_high": 0.796,
+      "p_vs_nominal": 0.0492
     },
     "pooled_stratified": {
-      "n": 129,
-      "n_in_band": 107,
-      "coverage": 0.8295,
-      "wilson_ci_low": 0.7553,
-      "wilson_ci_high": 0.8846,
-      "p_vs_nominal": 0.4426
+      "n": 132,
+      "n_in_band": 109,
+      "coverage": 0.8258,
+      "wilson_ci_low": 0.7521,
+      "wilson_ci_high": 0.881,
+      "p_vs_nominal": 0.5147
     },
     "strata": {
       "same_day": {
-        "n": 86,
+        "n": 90,
         "production": {
-          "n": 86,
-          "n_in_band": 70,
-          "coverage": 0.814,
-          "wilson_ci_low": 0.7189,
-          "wilson_ci_high": 0.8821,
-          "p_vs_nominal": 0.8927
+          "n": 90,
+          "n_in_band": 73,
+          "coverage": 0.8111,
+          "wilson_ci_low": 0.7182,
+          "wilson_ci_high": 0.8786,
+          "p_vs_nominal": 0.8954
         },
         "stratified": {
-          "n": 86,
-          "n_in_band": 70,
-          "coverage": 0.814,
-          "wilson_ci_low": 0.7189,
-          "wilson_ci_high": 0.8821,
-          "p_vs_nominal": 0.8927
+          "n": 90,
+          "n_in_band": 73,
+          "coverage": 0.8111,
+          "wilson_ci_low": 0.7182,
+          "wilson_ci_high": 0.8786,
+          "p_vs_nominal": 0.8954
         },
-        "mean_half_width_production": 73.2,
-        "mean_half_width_stratified": 73.2
+        "mean_half_width_production": 72.6,
+        "mean_half_width_stratified": 72.6
       },
       "carry_forward": {
-        "n": 43,
+        "n": 42,
         "production": {
-          "n": 43,
-          "n_in_band": 24,
-          "coverage": 0.5581,
-          "wilson_ci_low": 0.4111,
-          "wilson_ci_high": 0.6957,
+          "n": 42,
+          "n_in_band": 23,
+          "coverage": 0.5476,
+          "wilson_ci_low": 0.3995,
+          "wilson_ci_high": 0.6878,
           "p_vs_nominal": 0.0003
         },
         "stratified": {
-          "n": 43,
-          "n_in_band": 37,
-          "coverage": 0.8605,
-          "wilson_ci_low": 0.7274,
-          "wilson_ci_high": 0.9344,
-          "p_vs_nominal": 0.4447
+          "n": 42,
+          "n_in_band": 36,
+          "coverage": 0.8571,
+          "wilson_ci_low": 0.7216,
+          "wilson_ci_high": 0.9328,
+          "p_vs_nominal": 0.4426
         },
-        "mean_half_width_production": 75.3,
-        "mean_half_width_stratified": 177.0
+        "mean_half_width_production": 75.7,
+        "mean_half_width_stratified": 177.3
       }
     },
     "carry_forward_fallback_days": 0

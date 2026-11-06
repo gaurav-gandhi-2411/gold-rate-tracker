@@ -1,41 +1,41 @@
 {
-  "backtest_run_at": "2026-11-03T07:17:52.403231+00:00",
-  "n_folds": 272,
+  "backtest_run_at": "2026-11-06T18:33:49.829651+00:00",
+  "n_folds": 276,
   "n_folds_sub_30_context": 22,
   "horizon": 5,
   "model_version": "amazon/chronos-bolt-tiny@a0e552de",
-  "mae_5d_avg_chronos": 287.81,
-  "mae_5d_avg_naive": 239.76,
+  "mae_5d_avg_chronos": 287.29,
+  "mae_5d_avg_naive": 239.73,
   "mae_chronos_per_h": [
-    165.66,
-    229.8,
-    290.72,
-    347.32,
-    405.55
+    165.85,
+    230.49,
+    290.87,
+    347.2,
+    402.02
   ],
   "mae_naive_per_h": [
-    120.9,
-    189.54,
-    245.33,
-    296.14,
-    346.9
+    121.29,
+    190.33,
+    246.02,
+    296.4,
+    344.6
   ],
-  "dir_acc_5d_chronos": 0.4853,
+  "dir_acc_5d_chronos": 0.4855,
   "dir_acc_5d_naive": 0.5,
   "pi_coverage_80_per_h": [
-    0.9449,
-    0.9228,
-    0.9007,
-    0.8787,
-    0.864
+    0.9457,
+    0.9203,
+    0.9022,
+    0.8804,
+    0.8659
   ],
-  "pi_coverage_80_5d_avg": 0.9022,
+  "pi_coverage_80_5d_avg": 0.9029,
   "decision_acc": {
     "n_chronos_predicted_100_drop": 41,
     "n_actual_100_drop_when_predicted": 16,
     "precision": 0.3902,
-    "n_actual_100_drops_total": 110,
-    "recall": 0.1455
+    "n_actual_100_drops_total": 114,
+    "recall": 0.1404
   },
   "peak_timing_err_days_median": 2.0,
   "paired_diff_median": 24.22,
@@ -47,18 +47,18 @@
     "pct": 80,
     "n": 30,
     "p_by_h": [
-      130.1,
-      188.8,
-      264.2,
-      301.9,
+      146.4,
+      226.7,
+      315.0,
+      366.0,
       378.9
     ],
     "mean_by_h": [
-      84.0,
-      118.6,
-      141.1,
-      172.9,
-      202.3
+      90.3,
+      135.5,
+      165.4,
+      196.8,
+      217.0
     ]
   },
   "folds": [
@@ -6317,40 +6317,108 @@
         true
       ],
       "dir_correct_5d": false
+    },
+    {
+      "fold_id": 272,
+      "context_end_date": "2026-10-27",
+      "context_size": 280,
+      "sub_30_context": false,
+      "err_chronos_p50": [
+        -91.43,
+        -51.91,
+        118.53,
+        355.92,
+        386.95
+      ],
+      "mae_chronos_5d": 200.95,
+      "mae_naive_5d": 205.56,
+      "in_pi_80": [
+        true,
+        true,
+        true,
+        true,
+        true
+      ],
+      "dir_correct_5d": false
+    },
+    {
+      "fold_id": 273,
+      "context_end_date": "2026-10-28",
+      "context_size": 281,
+      "sub_30_context": false,
+      "err_chronos_p50": [
+        95.61,
+        268.35,
+        492.98,
+        525.79,
+        192.4
+      ],
+      "mae_chronos_5d": 315.03,
+      "mae_naive_5d": 265.38,
+      "in_pi_80": [
+        true,
+        true,
+        true,
+        true,
+        true
+      ],
+      "dir_correct_5d": false
+    },
+    {
+      "fold_id": 274,
+      "context_end_date": "2026-10-29",
+      "context_size": 282,
+      "sub_30_context": false,
+      "err_chronos_p50": [
+        280.14,
+        505.43,
+        513.26,
+        174.64,
+        -30.38
+      ],
+      "mae_chronos_5d": 300.77,
+      "mae_naive_5d": 258.3,
+      "in_pi_80": [
+        true,
+        false,
+        true,
+        true,
+        true
+      ],
+      "dir_correct_5d": true
+    },
+    {
+      "fold_id": 275,
+      "context_end_date": "2026-10-30",
+      "context_size": 283,
+      "sub_30_context": false,
+      "err_chronos_p50": [
+        249.52,
+        283.54,
+        -79.14,
+        -299.75,
+        -36.9
+      ],
+      "mae_chronos_5d": 189.77,
+      "mae_naive_5d": 220.38,
+      "in_pi_80": [
+        true,
+        true,
+        true,
+        true,
+        true
+      ],
+      "dir_correct_5d": true
     }
   ],
   "p3_past_errors": {
     "schema": "p3_past_errors_v1",
     "model_version": "nextfix_p3_v1",
     "n": 30,
-    "n_in_range": 24,
-    "n_retro": 14,
-    "mean_abs_err": 85.4,
+    "n_in_range": 23,
+    "n_retro": 10,
+    "mean_abs_err": 104.0,
     "rows": [
-      {
-        "day": "2026-09-17",
-        "err": -158.1,
-        "in_range": false,
-        "retro": true
-      },
-      {
-        "day": "2026-09-18",
-        "err": 45.1,
-        "in_range": true,
-        "retro": true
-      },
-      {
-        "day": "2026-09-21",
-        "err": 83.9,
-        "in_range": true,
-        "retro": true
-      },
-      {
-        "day": "2026-09-22",
-        "err": -7.8,
-        "in_range": true,
-        "retro": true
-      },
       {
         "day": "2026-09-23",
         "err": 61.5,
@@ -6505,6 +6573,30 @@
         "day": "2026-10-30",
         "err": 118.3,
         "in_range": true,
+        "retro": false
+      },
+      {
+        "day": "2026-11-02",
+        "err": 49.6,
+        "in_range": true,
+        "retro": false
+      },
+      {
+        "day": "2026-11-03",
+        "err": -407.7,
+        "in_range": false,
+        "retro": false
+      },
+      {
+        "day": "2026-11-04",
+        "err": -118.5,
+        "in_range": true,
+        "retro": false
+      },
+      {
+        "day": "2026-11-05",
+        "err": 275.4,
+        "in_range": false,
         "retro": false
       }
     ]
