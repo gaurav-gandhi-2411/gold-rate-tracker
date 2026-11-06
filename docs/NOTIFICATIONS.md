@@ -34,6 +34,28 @@ count against the rows read, and fails with a message, never prints a partial li
 see `docs/WEEKLY_ROUTINE.md` for the call cost). The weekly report is where the owner sees these. The repo is public: nothing
 in an ops-log body may be a secret or a visitor count.
 
+#### Ops-log file: how it is written, and what it does not cover
+
+Every sender also appends one JSON line to `ops_log.jsonl` on the orphan branch `ops-log`
+(`scripts/ops_log.py`; the pure-bash twin `scripts/ops_log_fallback.sh` for the self-hosted Windows
+runner). Limits and residuals, stated so nobody has to rediscover them:
+
+- Budget: the whole append (every `gh` call and backoff) stops after 25 s with one warning line, so a hung
+  network cannot outlast the calling job. `source` and `title` are cut at 200 characters, `body` at 500.
+  Lines older than 120 days are pruned; above about 800 KB the oldest lines are dropped down to about 700 KB
+  (the contents API serves JSON up to 1 MB). The bash twin has the age prune but not the size cap.
+- The bash twin cannot create the `ops-log` branch: if it is missing it prints a warning and writes nothing.
+  The Python writers on the hosted runners create it on their first write. It sends the payload on stdin
+  (a Windows command line holds only about 32K characters).
+- The bot-PR sweep and the self-hosted scrape path write with the bot PAT (`CI_MERGE_PAT`, the
+  `bot-pr-sync` action's own token), not the workflow token.
+- A job-level `permissions:` block replaces the workflow-level one. The four jobs that gained
+  `contents: write` therefore repeat their workflow's other scopes (`tests/test_ops_log_file.py` fails if a
+  job block drops or lowers one).
+- `scraper-canary.yml` also runs on `pull_request`, so a same-repository PR runs that PR's code with a
+  `contents: write` token. Only collaborators can open one (GitHub downgrades the token of a fork PR to
+  read-only), and the writer is skipped on `pull_request` events anyway.
+
 Written 2026-09-21 (AQ2). Code: `ml/notification_routing.py` (routing), `ml/public_copy.py` (public
 copy). Tests: `tests/test_notification_routing.py`.
 
