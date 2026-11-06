@@ -66,7 +66,7 @@ const STRINGS_HWK = {
     // the next-rate model sets the range (next_fix.active), it is ml/nextfix.py's band instead: the
     // recent misses of the estimate shown, scaled by current volatility -- methNextDayExplainerNextFix.
     methNextDayExplainer: ({ n } = {}) => `This is just for the next reading, not several days out — based on how much the price has typically moved by the next check over our ${Number.isInteger(n) && n > 0 ? `last ${n}` : "recent"} test runs. (The "about ₹X in 5 days" note on the main page is a separate, longer-range estimate.)`,
-    methNextDayExplainerNextFix: 'This is just for the next official rate, not several days out. The range comes from how far the official rate has recently landed from our estimate, made wider or narrower for how much prices are moving now. (The "about ₹X in 5 days" note on the main page is a separate, longer-range estimate.)',
+    methNextDayExplainerNextFix: 'This is just for the next official rate, shown at the shop-price level (the official rate itself is lower, because shops price above it), not several days out. The range comes from how far the official rate has recently landed from our estimate, made wider or narrower for how much prices are moving now. (The "about ₹X in 5 days" note on the main page is a separate, longer-range estimate.)',
 
     // ── Direction signal ─────────────────────────────────────────────────────────
     methDirectionHeading: "Direction signal",
@@ -89,7 +89,7 @@ const STRINGS_HWK = {
     methHowAccurateHeading: "How accurate is this?",
     methAccurateP1Strong: "We assume tomorrow's price is about the same as today's",
     methAccurateP1: ({ n, naiveMae, chronosBullet, span }) =>
-      `Gold prices are hard to predict even a few days out — every model we tried did worse than simply guessing "no change." Tested over ${n} time windows${span ? ` from ${span}` : ""}:<br>&bull; Guessing "no change" was off by ₹${naiveMae}/g on average<br>${chronosBullet}So "no change" is what we go with.`,
+      `For 5 days ahead, gold prices are hard to predict — the AI model we tested for 5 days ahead did worse than simply guessing "no change." Tested over ${n} time windows${span ? ` from ${span}` : ""}:<br>&bull; Guessing "no change" was off by ₹${naiveMae}/g on average<br>${chronosBullet}So for 5 days ahead, "no change" is what we go with.`,
     methAccurateP1ChronosBullet: ({ chronosMae, maePctWorse, pValOp, pValText }) => `&bull; Our AI model was off by ₹${chronosMae}/g — ${maePctWorse}% worse (p&thinsp;${pValOp}&thinsp;${pValText})<br>`,
     methRangeStrFallback: "the current range",
     methAccurateP2Strong: ({ rangeStr, coverageText }) => `Our ${rangeStr} range has been right ${coverageText}`,
@@ -176,7 +176,7 @@ const STRINGS_HWK = {
     methCoversMoves: "रोज़ की ज़्यादातर आम घट-बढ़ इसमें आ जाती है",
     methTargetLine: ({ date }) => `किस दिन के लिए: ${date}`,
     methNextDayExplainer: ({ n } = {}) => `यह सिर्फ़ अगले भाव के लिए है, कई दिन आगे के लिए नहीं — हमारे ${Number.isInteger(n) && n > 0 ? `पिछले ${n}` : "हाल के"} टेस्ट में अगली जांच तक भाव आम तौर पर कितना बदला, उस पर आधारित है। (मुख्य पेज का "5 दिनों में करीब ₹X" वाला नोट एक अलग, लंबे समय का अनुमान है।)`,
-    methNextDayExplainerNextFix: 'यह सिर्फ़ अगले आधिकारिक भाव के लिए है, कई दिन आगे के लिए नहीं। रेंज इससे बनती है कि हाल में आधिकारिक भाव हमारे अनुमान से कितना दूर रहा; अभी भाव जितना घट-बढ़ रहा है, उसके हिसाब से रेंज बड़ी या छोटी होती है। (मुख्य पेज का "5 दिनों में करीब ₹X" वाला नोट एक अलग, लंबे समय का अनुमान है।)',
+    methNextDayExplainerNextFix: 'यह सिर्फ़ अगले आधिकारिक भाव के लिए है, दुकान के भाव के स्तर पर दिखाया गया (आधिकारिक भाव ख़ुद इससे कम होता है, क्योंकि दुकानें उससे ऊपर भाव रखती हैं), कई दिन आगे के लिए नहीं। रेंज इससे बनती है कि हाल में आधिकारिक भाव हमारे अनुमान से कितना दूर रहा; अभी भाव जितना घट-बढ़ रहा है, उसके हिसाब से रेंज बड़ी या छोटी होती है। (मुख्य पेज का "5 दिनों में करीब ₹X" वाला नोट एक अलग, लंबे समय का अनुमान है।)',
 
     // ── Direction signal ─────────────────────────────────────────────────────────
     methDirectionHeading: "ऊपर या नीचे का संकेत",
@@ -200,7 +200,7 @@ const STRINGS_HWK = {
     methHowAccurateHeading: "यह कितना सही है?",
     methAccurateP1Strong: "हम मानते हैं कि कल का भाव आज जैसा ही रहेगा",
     methAccurateP1: ({ n, naiveMae, chronosBullet, span }) =>
-      `सोने के भाव का कुछ दिन आगे का अंदाज़ा लगाना भी मुश्किल है — हमने जितने भी मॉडल आज़माए, सब सिर्फ़ "कोई बदलाव नहीं" मान लेने से भी कमज़ोर निकले। ${span ? `${span} के बीच ` : ""}${n} अलग-अलग समय-खंडों पर टेस्ट किया गया:<br>&bull; "कोई बदलाव नहीं" मानने पर औसतन ₹${naiveMae}/ग्राम का फ़र्क़ आया<br>${chronosBullet}इसलिए हम "कोई बदलाव नहीं" वाला अंदाज़ा ही रखते हैं।`,
+      `5 दिन आगे के सोने के भाव का अंदाज़ा लगाना मुश्किल है — 5 दिन आगे के लिए जिस AI मॉडल को हमने जांचा, वह सिर्फ़ "कोई बदलाव नहीं" मान लेने से भी कमज़ोर निकला। ${span ? `${span} के बीच ` : ""}${n} अलग-अलग समय-खंडों पर टेस्ट किया गया:<br>&bull; "कोई बदलाव नहीं" मानने पर औसतन ₹${naiveMae}/ग्राम का फ़र्क़ आया<br>${chronosBullet}इसलिए 5 दिन आगे के लिए हम "कोई बदलाव नहीं" वाला अंदाज़ा ही रखते हैं।`,
     methAccurateP1ChronosBullet: ({ chronosMae, maePctWorse, pValOp, pValText }) => `&bull; हमारे AI मॉडल में ₹${chronosMae}/ग्राम का फ़र्क़ आया — ${maePctWorse}% ज़्यादा ग़लत (p&thinsp;${pValOp}&thinsp;${pValText})<br>`,
     methRangeStrFallback: "मौजूदा",
     methAccurateP2: ({ n } = {}) => `यह सिर्फ़ ${Number.isInteger(n) && n > 0 ? `पिछले ${n}` : "हाल के कुछ"} टेस्ट पर आधारित है, इसलिए नमूना छोटा है। जुलाई 2026 में हमने इस रेंज को छोटा किया, क्योंकि पता चला कि इसे 5 दिन की चाल के हिसाब से बनाया गया था पर हमेशा अगले दिन के भाव से जांचा जाता था — इसलिए ऊपर का प्रतिशत कुछ समय तक असल से बेहतर दिख सकता है, जब तक सुधारी हुई, छोटी रेंज पर काफ़ी जांच न हो जाएं। जब यह टिक जाएगा, तब हम इसे पूरी तरह पक्का मानेंगे।`,
