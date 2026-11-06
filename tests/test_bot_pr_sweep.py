@@ -167,7 +167,7 @@ export -f gh sleep curl
         "WAIT_SECONDS": "1",  # bot_pr_merge.sh's tests-only deadline: a red PR gives up at once
         "NOW": str(NOW),
         "DRY_RUN": dry,
-        "NTFY_TOPIC": "t",
+        "OPS_LOG_PYTHON": sys.executable,  # the stubbed PYTHON may be a shell function
         "PYTHON": "fakepy" if branch_list is not None else sys.executable,
     }
     r = subprocess.run(
@@ -178,6 +178,18 @@ export -f gh sleep curl
 
 NEEDS_BASH = pytest.mark.skipif(BASH is None, reason="bash not available")
 
+# a "page" is an ops-log entry now (ntfy carries gold-price information only, 2026-11-06)
+ANNOTATION = "::warning title=ops-alert::bot-pr-sweep: bot PR stuck unmerged -- "
+
+
+def _paged(r: subprocess.CompletedProcess[str], log: str) -> bool:
+    """One ops-log annotation on stdout, and no curl (so no ntfy) was invoked."""
+    return r.stdout.count(ANNOTATION) >= 1 and "curl" not in log
+
+
+def _quiet(r: subprocess.CompletedProcess[str], log: str) -> bool:
+    return ANNOTATION not in r.stdout and "curl" not in log
+
 
 @NEEDS_BASH
 def test_a_stranded_green_weekly_backtest_pr_is_merged_pinned_to_its_head(tmp_path):
@@ -187,7 +199,7 @@ def test_a_stranded_green_weekly_backtest_pr_is_merged_pinned_to_its_head(tmp_pa
     assert f"gh pr merge 3424 --repo o/r --squash --match-head-commit {SHA}" in log
     assert f"api repos/o/r/commits/{SHA}/status?per_page=100" in log
     assert "MERGED stranded bot/backtest-sync PR #3424." in r.stdout
-    assert "curl" not in log  # merged: nothing to page about
+    assert _quiet(r, log)  # merged: nothing to page about
 
 
 @NEEDS_BASH
@@ -200,7 +212,7 @@ def test_every_branch_is_listed_not_only_data_sync(tmp_path):
 @NEEDS_BASH
 def test_a_pr_whose_producing_run_is_still_going_is_left_to_that_run(tmp_path):
     r, log = _sweep(tmp_path, busy="1", age_min=100)
-    assert r.returncode == 0 and "pr merge" not in log and "curl" not in log
+    assert r.returncode == 0 and "pr merge" not in log and _quiet(r, log)
     assert "a producing run is queued or running" in r.stdout
     assert "--workflow weekly-backtest.yml --branch master" in log
 
@@ -209,7 +221,7 @@ def test_a_pr_whose_producing_run_is_still_going_is_left_to_that_run(tmp_path):
 def test_a_producer_busy_for_hours_pages_but_never_merges(tmp_path):
     # e.g. the self-hosted Tanishq runner offline: its run sits queued, the PR must not go silent
     r, log = _sweep(tmp_path, busy="1", age_min=400)
-    assert r.returncode == 1 and "pr merge" not in log and "curl" in log
+    assert r.returncode == 1 and "pr merge" not in log and _paged(r, log)
     assert "still open past 360 min" in r.stdout
 
 
@@ -222,7 +234,7 @@ def test_unreadable_producer_runs_page_when_old_and_never_merge(tmp_path):
 @NEEDS_BASH
 def test_unreadable_producer_runs_on_a_young_pr_neither_merge_nor_page(tmp_path):
     r, log = _sweep(tmp_path, busy="FAIL", age_min=30)
-    assert r.returncode == 0 and "pr merge" not in log and "curl" not in log
+    assert r.returncode == 0 and "pr merge" not in log and _quiet(r, log)
 
 
 @NEEDS_BASH
@@ -248,7 +260,7 @@ def test_the_file_list_includes_the_old_name_of_a_renamed_file():
 @NEEDS_BASH
 def test_a_pr_closed_while_the_sweep_ran_does_not_page(tmp_path):
     r, log = _sweep(tmp_path, statuses="lint", open_state="CLOSED")
-    assert r.returncode == 0 and "pr merge" not in log and "curl" not in log
+    assert r.returncode == 0 and "pr merge" not in log and _quiet(r, log)
     assert "CLOSED by something else meanwhile" in r.stdout
 
 
@@ -263,34 +275,34 @@ def test_a_pr_touching_code_is_never_merged_and_pages(tmp_path):
     r, log = _sweep(tmp_path, files="data/backtest.json\nscripts/evil.py")
     assert r.returncode == 1 and "pr merge" not in log
     assert "scripts/evil.py" in r.stdout and "PAGE: bot/backtest-sync PR #3424" in r.stdout
-    assert "curl" in log and "ntfy.sh/t" in log
+    assert _paged(r, log)
 
 
 @NEEDS_BASH
 def test_red_required_checks_never_merge_and_page_when_old(tmp_path):
     r, log = _sweep(tmp_path, statuses="lint\npwa-js")  # scraper-dependency-guard missing
     assert r.returncode == 1 and "pr merge" not in log
-    assert "the merge path did not merge it" in r.stdout and "curl" in log
+    assert "the merge path did not merge it" in r.stdout and _paged(r, log)
 
 
 @NEEDS_BASH
 def test_red_checks_on_a_pr_younger_than_the_alert_age_do_not_page_yet(tmp_path):
     r, log = _sweep(tmp_path, statuses="lint", age_min=30)
-    assert r.returncode == 0 and "pr merge" not in log and "curl" not in log
+    assert r.returncode == 0 and "pr merge" not in log and _quiet(r, log)
     assert "pages at 60 min" in r.stdout
 
 
 @NEEDS_BASH
 def test_dry_run_merges_nothing_and_still_pages_about_an_old_stranded_pr(tmp_path):
     r, log = _sweep(tmp_path, dry="1")
-    assert r.returncode == 1 and "pr merge" not in log and "curl" in log
+    assert r.returncode == 1 and "pr merge" not in log and _paged(r, log)
     assert "DRY RUN: bot/backtest-sync #3424" in r.stdout and "this run is a dry run" in r.stdout
 
 
 @NEEDS_BASH
 def test_dry_run_does_not_page_about_a_young_stranded_pr(tmp_path):
     r, log = _sweep(tmp_path, dry="1", age_min=30)
-    assert r.returncode == 0 and "pr merge" not in log and "curl" not in log
+    assert r.returncode == 0 and "pr merge" not in log and _quiet(r, log)
 
 
 def test_scheduled_runs_are_report_only_until_a_separate_pr_switches_them():
@@ -326,3 +338,15 @@ def test_a_non_draft_gh_pr_create_outside_the_bot_paths_fails_the_list(tmp_path)
 def test_an_unreadable_pr_list_pages_instead_of_reading_as_none(tmp_path):
     r, log = _sweep(tmp_path, list_fails=True)
     assert r.returncode == 1 and "could not list open" in r.stdout and "pr merge" not in log
+
+
+def test_the_sweep_script_and_workflow_never_touch_ntfy():
+    for path in ("scripts/bot_pr_sweep.sh", ".github/workflows/bot-pr-sweep.yml"):
+        text = (ROOT / path).read_text(encoding="utf-8")
+        assert "ntfy" not in text.lower().replace("ntfy carries", "") and "NTFY" not in text, path
+        assert "curl" not in text, path
+
+
+def test_the_sweep_records_through_ops_log_py():
+    text = SWEEP.read_text(encoding="utf-8")
+    assert '"${HERE}/ops_log.py" --source bot-pr-sweep' in text

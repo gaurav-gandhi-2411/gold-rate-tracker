@@ -1,13 +1,14 @@
 name: Bot PR sweep
 
-# Merges a stranded bot PR, or pages about it, for EVERY bot branch (scripts/bot_pr_sweep.sh; the
+# Merges a stranded bot PR, or records it in the ops log (no push), for EVERY bot branch (scripts/bot_pr_sweep.sh; the
 # branches come from the workflow files via scripts/bot_branches.py). 2026-11-01..03: weekly-backtest's
 # bot PR #3424 sat open 46 h with green checks after its sync gave up, and nothing paged: the stuck-PR
 # alert in check-price watched only bot/data-sync and the stranded-PR merge only the Tanishq branch.
 # This runs on its own hourly schedule so it does not depend on any producing workflow being healthy.
 # It merges only through scripts/bot_pr_merge.sh (every required context green on the head, squash,
 # --match-head-commit) and only files inside the branch's allowlist. It never blocks anything: a red
-# run here means a bot PR needs a person, and it has already paged.
+# run here means a bot PR needs a person, and it has already written an ops-log entry (ntfy carries
+# gold-price information only, so nothing is pushed to the phone).
 
 on:
   schedule:
@@ -39,12 +40,11 @@ jobs:
           python-version: "3.12"
       # the version ml/requirements-inference.lock pins
       - run: pip install -q pyyaml==6.0.3
-      - name: Merge stranded bot PRs, page about the rest
+      - name: Merge stranded bot PRs, record the rest in the ops log
         env:
           GH_TOKEN: ${{ secrets.CI_MERGE_PAT }}
-          NTFY_TOPIC: ${{ secrets.NTFY_TOPIC }}
-          # REPORT-ONLY to start (project rule, 2026-10-30): scheduled runs merge nothing and page about
-          # every stranded PR; a manual dispatch merges unless dry_run=true. Scheduled merging is switched
+          # REPORT-ONLY to start (project rule, 2026-10-30): scheduled runs merge nothing and report
+          # every stranded PR in the ops log; a manual dispatch merges unless dry_run=true. Scheduled merging is switched
           # on in a separate PR after 5 clean real runs over 24 h, each log read.
           # tests/test_bot_pr_sweep.py pins this.
           DRY_RUN: ${{ (github.event_name == 'schedule' || github.event.inputs.dry_run == 'true') && '1' || '0' }}

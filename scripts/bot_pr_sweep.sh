@@ -21,8 +21,11 @@
 # DRY_RUN=1 merges nothing and says what it would merge; a stranded PR past ALERT_AGE_MIN still pages, so
 # the alert is complete while the merge half is in its report-only period.
 #
-# Environment: GH_TOKEN (the merging PAT), GITHUB_REPOSITORY; optional NTFY_TOPIC, MIN_AGE_MIN (20),
-# ALERT_AGE_MIN (60), BUSY_ALERT_MIN (360), MERGE_WAIT_MIN (3), DRY_RUN, NOW (epoch seconds; tests only).
+# Environment: GH_TOKEN (the merging PAT), GITHUB_REPOSITORY; optional MIN_AGE_MIN (20),
+# ALERT_AGE_MIN (60), BUSY_ALERT_MIN (360), MERGE_WAIT_MIN (3), DRY_RUN, NOW (epoch seconds; tests only),
+# OPS_LOG_PYTHON (the python that runs scripts/ops_log.py; default PYTHON, then python3).
+# A "page" goes to the ops log (scripts/ops_log.py: job summary + ops-alert annotation), never to the
+# phone: ntfy carries gold-price information only (owner decision 2026-11-06).
 # tests/test_bot_pr_sweep.py runs this file with a stub gh.
 
 set -uo pipefail
@@ -44,10 +47,8 @@ page() {
   STUCK=1
   echo "PAGE: $1"
   echo "::error::$1"
-  if [ -n "${NTFY_TOPIC:-}" ]; then
-    curl -s -H "Title: Gold Tracker: bot PR stuck unmerged" -H "Priority: high" -H "Tags: warning" \
-      -d "$1" "https://ntfy.sh/${NTFY_TOPIC}" > /dev/null || true
-  fi
+  "${OPS_LOG_PYTHON:-$PY}" "${HERE}/ops_log.py" --source bot-pr-sweep \
+    --title "bot PR stuck unmerged" --body "$1" < /dev/null || true
 }
 
 if ! LIST=$("$PY" "${HERE}/bot_branches.py"); then
