@@ -366,7 +366,14 @@
           const hist = chartSeries(prices, derived);
           const bad = hist.rows.filter(r => !num(p22(r))).length;
           if (bad) throw new Error(`${bad} row(s) of the trend series without a numeric "22k"`);
-          const spark7 = hist.rows.filter(p => now - new Date(p.timestamp).getTime() <= 7 * 86400e3);
+          // The verdict's week (a calendar week before the newest row, app.js weekAgoReading), not
+          // a rolling 168 h from now, which started a day later every evening.
+          const lastRow = hist.rows[hist.rows.length - 1];
+          const weekFromDay = lastRow ? new Date(new Date(istDay(lastRow.timestamp) + "T00:00:00Z").getTime() - 7 * 86400e3).toISOString().slice(0, 10) : null;
+          const weekFrom = weekFromDay ? hist.rows.filter(p => istDay(p.timestamp) <= weekFromDay).pop() : null;
+          const spark7 = weekFrom
+            ? hist.rows.filter(p => p.timestamp >= weekFrom.timestamp)
+            : hist.rows.filter(p => now - new Date(p.timestamp).getTime() <= 7 * 86400e3);
 
           document.getElementById("og-price-num").textContent = (hero.approx ? "≈ " : "") + fmtINR(hero.price);
           document.getElementById("og-karat").textContent = `${hero.label} · per gram`;

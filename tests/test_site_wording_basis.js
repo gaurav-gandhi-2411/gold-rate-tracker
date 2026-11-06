@@ -22,11 +22,14 @@ const EST = { estimate: true, rows: [{ timestamp: "2026-11-04T11:30:00.000Z", "2
 
 test("basis line: names the estimate with its own newest price and day (EN, HI)", () => {
   setLang("en");
-  const en = note(EST);
+  const en = note(EST, true);
   assert.match(en, /daily estimate from India's official gold rate \(₹13,400 on 5 Nov\)/);
   assert.match(en, /not the shop price at the top/);
+  // when the headline is itself the estimate, "not the shop price at the top" would be false
+  assert.doesNotMatch(note(EST, false), /shop price/);
+  assert.match(note(EST, false), /₹13,400 on 5 Nov/);
   setLang("hi");
-  const hi = note(EST);
+  const hi = note(EST, true);
   assert.match(hi, /आधिकारिक सोने के भाव से बने हमारे रोज़ के अनुमान/);
   assert.match(hi, /₹13,400/);
   setLang("en");

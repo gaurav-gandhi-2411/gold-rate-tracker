@@ -311,6 +311,7 @@ const STRINGS = {
     // GG 2026-11-06: the cards and the week/month line are measured on the estimate series, which
     // can differ from the shop price in the headline. Say which series, with its own price and day.
     cmpBasisEstimate: ({ price, date }) => `Compared using our daily estimate from India's official gold rate (₹${price} on ${date}), not the shop price at the top.`,
+    cmpBasisEstimateOnly: ({ price, date }) => `Compared using our daily estimate from India's official gold rate (₹${price} on ${date}).`,
     verdictBasisEstimate: "Measured on our daily estimate from India's official gold rate.",
 
     // ── Today's read (composeTodaysRead) ───────────────────────────────────────
@@ -728,6 +729,7 @@ const STRINGS = {
     cmpLowestPrice: "इस महीने का सबसे कम भाव",
     cmpAboveLowest: "इस महीने के सबसे कम भाव से ऊपर",
     cmpBasisEstimate: ({ price, date }) => `यह तुलना भारत के आधिकारिक सोने के भाव से बने हमारे रोज़ के अनुमान (${date} को ₹${price}) पर है, ऊपर दिखाए दुकान के भाव पर नहीं।`,
+    cmpBasisEstimateOnly: ({ price, date }) => `यह तुलना भारत के आधिकारिक सोने के भाव से बने हमारे रोज़ के अनुमान (${date} को ₹${price}) पर है।`,
     verdictBasisEstimate: "भारत के आधिकारिक सोने के भाव से बने हमारे रोज़ के अनुमान पर मापा गया।",
 
     // ── Today's read (composeTodaysRead) ───────────────────────────────────────
