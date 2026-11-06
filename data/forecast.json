@@ -1,11 +1,11 @@
 {
-  "predicted_at": "2026-11-06T00:17:06.891679+00:00",
+  "predicted_at": "2026-11-06T00:26:24.339352+00:00",
   "target_window": "5d",
   "headline": {
     "method": "nextfix_p3_v1",
-    "predicted_22k": 13459,
-    "lower": 13284,
-    "upper": 13633,
+    "predicted_22k": 13463,
+    "lower": 13289,
+    "upper": 13638,
     "conformal_pi_half": 130.1,
     "naive_mae_recent_30": 84.0,
     "vol_context": {
@@ -35,7 +35,7 @@
       13105.19,
       12964.82,
       12891.05,
-      12834.27,
+      12834.26,
       12766.69
     ],
     "horizon_p50": [
@@ -59,7 +59,7 @@
     "direction_consensus": 1.0
   },
   "driver_context": {
-    "computed_at": "2026-11-06T00:17:14.186610+00:00",
+    "computed_at": "2026-11-06T00:26:32.887637+00:00",
     "macro_staleness_days": 0.0,
     "macro_fresh": true,
     "premium_threshold_pct": 15.0,
@@ -121,9 +121,9 @@
   "band_half_width": null,
   "band_unavailable_reason": null,
   "model_fallback": false,
-  "predicted_22k": 13459,
-  "lower": 13284,
-  "upper": 13633,
+  "predicted_22k": 13463,
+  "lower": 13289,
+  "upper": 13638,
   "target_time": "2026-11-07T00:00:00+00:00",
   "model_status": "nextfix_headline",
   "model_version": "nextfix_p3_v1",
@@ -228,19 +228,19 @@
     "base_kind": "pm",
     "base_date": "2026-11-05",
     "base_ibja": 13202.2,
-    "predicted_ibja": 13225.4,
+    "predicted_ibja": 13230.28,
     "target_kind": "pm",
     "range_record": {
       "coverage": 0.801,
       "n": 146
     },
-    "predicted_22k": 13459,
-    "lower": 13284,
-    "upper": 13633,
+    "predicted_22k": 13463,
+    "lower": 13289,
+    "upper": 13638,
     "shadow_ensemble": {
       "model_version": "nextfix_ridge_mlp_v1",
-      "predicted_ibja": 13198.68,
-      "p_up": 0.4842,
+      "predicted_ibja": 13205.03,
+      "p_up": 0.5048,
       "track_record": {
         "n": 166,
         "mae_model": 104.2,
@@ -249,11 +249,11 @@
         "last_d0": "2026-11-04"
       }
     },
-    "p_up": 0.5714,
+    "p_up": 0.5861,
     "direction": {
       "show": true,
       "side": "up",
-      "probability": 0.5714
+      "probability": 0.5861
     }
   }
 }
