@@ -10,9 +10,8 @@ a red check, a parked branch, a visitor-count run) is recorded here instead:
   2. prints `::warning title=ops-alert::<source>: <title> -- <body on one line>`, a workflow
      annotation (the fallback record: scripts/read_ops_log.py --from-annotations walks them);
   3. inside GitHub Actions, appends ONE JSON line to `ops_log.jsonl` on the orphan branch `ops-log`
-     through the contents API, so the weekly read is one API call. A failure here prints a one-line
-     warning and nothing else. Lines older than 120 days are pruned on each write. Skipped on
-     pull_request events, outside Actions, and when OPS_LOG_NO_FILE is set (tests).
+     (contents API), so the weekly read is one API call. A failure prints one warning, nothing else.
+     Skipped on pull_request events, outside Actions, and when OPS_LOG_NO_FILE is set (tests).
 
 The repo is PUBLIC and so is every job summary and annotation: never put a secret, a token, a topic
 name or a visitor count in `body`.
@@ -129,11 +128,7 @@ def prune(lines: list[str], now: datetime, days: int = RETENTION_DAYS) -> list[s
 
 
 def cap_size(lines: list[str]) -> list[str]:
-    """Over FILE_CAP_BYTES, drop the OLDEST lines (by position) until under FILE_TARGET_BYTES.
-
-    Lines are appended in time order, so position is age; the last line (the new entry) is never
-    dropped. An unparseable line goes only when it is also among the oldest by position.
-    """
+    """Over FILE_CAP_BYTES, drop the oldest lines (by position) down to FILE_TARGET_BYTES; keep the last."""
     size = sum(len(x.encode("utf-8")) + 1 for x in lines)
     if size <= FILE_CAP_BYTES:
         return lines
@@ -218,10 +213,8 @@ def append_entry(
 ) -> None:
     """Append `entry` (one JSON line) to ops_log.jsonl on the ops-log branch; raises on failure.
 
-    Read the current file and sha, prune, PUT with that sha; on a 409/422 sha conflict (another
-    writer got in first) read again and retry, up to MAX_TRIES with jittered backoff. The whole
-    append, every gh call and every backoff included, must finish within `deadline_s`: each gh
-    call gets min(60, time left) as its timeout and no call starts once the budget is spent.
+    Read file and sha, prune, PUT with that sha; on a 409/422 conflict read again and retry (MAX_TRIES,
+    jittered backoff). Everything, backoff included, must finish within `deadline_s`.
     """
     when = datetime.now(UTC) if now is None else now
     end = clock() + deadline_s
