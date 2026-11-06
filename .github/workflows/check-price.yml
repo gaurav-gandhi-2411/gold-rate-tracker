@@ -400,11 +400,13 @@ jobs:
         run: |
           set -euo pipefail
           source "${GITHUB_WORKSPACE}/scripts/ci_retry.sh"
-          PR=$(ci_retry gh pr list --repo "${GITHUB_REPOSITORY}" --head bot/tanishq-selfhosted-sync --state open \
-            --json number,headRefOid,createdAt --jq '.[0] // empty')
+          # only a PR from THIS repository (scripts/bot_pr_find.sh): the merge below uses the SHA read
+          # here, so a fork PR named bot/tanishq-selfhosted-sync must never be found at all
+          PR=$(bash "${GITHUB_WORKSPACE}/scripts/bot_pr_find.sh" bot/tanishq-selfhosted-sync)
+          PR="${PR%%$'\n'*}"
           if [ -z "$PR" ]; then echo "No open Tanishq sync PR."; exit 0; fi
-          NUM=$(echo "$PR" | jq -r .number); SHA=$(echo "$PR" | jq -r .headRefOid)
-          AGE_MIN=$(( ( $(date +%s) - $(date -d "$(echo "$PR" | jq -r .createdAt)" +%s) ) / 60 ))
+          read -r NUM SHA CREATED _ <<< "$PR"
+          AGE_MIN=$(( ( $(date +%s) - $(date -d "$CREATED" +%s) ) / 60 ))
           if [ "$AGE_MIN" -lt 30 ]; then echo "PR #$NUM is ${AGE_MIN} min old; its own job may still merge it."; exit 0; fi
           FILES=$(ci_retry gh api "repos/${GITHUB_REPOSITORY}/pulls/${NUM}/files" --jq '.[].filename')
           for f in $FILES; do
@@ -446,16 +448,17 @@ jobs:
         run: |
           source "${GITHUB_WORKSPACE}/scripts/ci_retry.sh"
           # a list that still fails after the retries is said out loud, not read as "no PR"
-          PR_JSON=$(ci_retry gh pr list --repo "${GITHUB_REPOSITORY}" --head bot/data-sync --state open --json number,createdAt --jq '.[0]') || {
+          # only a PR from THIS repository (scripts/bot_pr_find.sh); a fork PR is not a stuck bot PR
+          PR_ROW=$(bash "${GITHUB_WORKSPACE}/scripts/bot_pr_find.sh" bot/data-sync) || {
             echo "::warning::could not list bot/data-sync PRs after retries; the stuck-PR check did not run"
             exit 0
           }
-          if [ -z "$PR_JSON" ] || [ "$PR_JSON" = "null" ]; then
+          PR_ROW="${PR_ROW%%$'\n'*}"
+          if [ -z "$PR_ROW" ]; then
             echo "No open bot/data-sync PR — nothing to check."
             exit 0
           fi
-          PR_NUM=$(echo "$PR_JSON" | jq -r '.number')
-          CREATED_AT=$(echo "$PR_JSON" | jq -r '.createdAt')
+          read -r PR_NUM _ CREATED_AT _ <<< "$PR_ROW"
           AGE_MIN=$(( ($(date -u +%s) - $(date -u -d "$CREATED_AT" +%s)) / 60 ))
           echo "bot/data-sync PR #${PR_NUM} has been open for ${AGE_MIN} minutes."
           if [ "$AGE_MIN" -le 30 ]; then

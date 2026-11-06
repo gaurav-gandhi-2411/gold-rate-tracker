@@ -136,12 +136,17 @@ curl() {{ echo "curl $*" >> "{log}"; }}
 gh() {{
   echo "gh $*" >> "{log}"
   case "$1 $2" in
-    "pr list")
+    "api repos/o/r/pulls?head="*)
       if [ "{1 if list_fails else 0}" = 1 ]; then return 1; fi
-      case "$*" in *"--head {branch} "*) echo "3424 {SHA} {created} {fork}" ;; esac ;;
+      # the row scripts/bot_pr_find.sh's --jq formats: number, head, created, draft, head repository
+      case "$*" in *"head=o:{branch}&"*)
+        if [ "{fork}" = true ]; then printf '3424\\t{SHA}\\t{created}\\tfalse\\tattacker/r\\n'
+        else printf '3424\\t{SHA}\\t{created}\\tfalse\\to/r\\n'; fi ;;
+      esac ;;
     "run list") if [ "{busy}" = FAIL ]; then return 1; fi; echo "{busy}" ;;
     "pr view")
       case "$*" in
+        *"--json isCrossRepository"*) echo "false o r" ;;
         *"--json state"*) if [ -f "{st}.merged" ]; then echo MERGED; else echo {open_state}; fi ;;
         *"--json headRefOid"*) echo "{SHA}" ;;
         *"--json mergeStateStatus"*) echo CLEAN ;;
@@ -206,7 +211,7 @@ def test_a_stranded_green_weekly_backtest_pr_is_merged_pinned_to_its_head(tmp_pa
 def test_every_branch_is_listed_not_only_data_sync(tmp_path):
     _, log = _sweep(tmp_path)
     for b in bot_branches.branches(ROOT):
-        assert f"--head {b} " in log, b
+        assert f"pulls?head=o:{b}&" in log, b
 
 
 @NEEDS_BASH
@@ -238,10 +243,11 @@ def test_unreadable_producer_runs_on_a_young_pr_neither_merge_nor_page(tmp_path)
 
 
 @NEEDS_BASH
-def test_a_fork_pr_on_a_bot_branch_name_is_never_merged_and_pages(tmp_path):
+def test_a_fork_pr_on_a_bot_branch_name_is_never_seen(tmp_path):
+    # dropped by scripts/bot_pr_find.sh: not merged, not paged (a fork must not be able to page GG hourly)
     r, log = _sweep(tmp_path, fork="true")
-    assert r.returncode == 1 and "pr merge" not in log and "comes from a fork" in r.stdout
-    assert "run list" not in log  # refused before anything else is looked at
+    assert r.returncode == 0 and "pr merge" not in log and "curl" not in log
+    assert "run list" not in log and "ignoring PR #3424" in r.stderr
 
 
 @NEEDS_BASH

@@ -10,11 +10,12 @@
 # workflow files, so a new bot workflow is covered without editing anything here):
 #   * an open, non-draft PR into master is STRANDED when it is at least MIN_AGE_MIN old and no run of the
 #     workflow(s) that produce its branch is queued or running on master (that run's own sync has ended);
-#   * a stranded PR from this repository (never a fork) whose files, old names of renamed files included,
+#   * only PRs whose head is THIS repository are ever seen (scripts/bot_pr_find.sh drops fork PRs);
+#   * a stranded PR whose files, old names of renamed files included,
 #     all match its branch's allowed-files pattern is merged through the ONE bot merge path,
 #     scripts/bot_pr_merge.sh, pinned to the head read here: it needs every required context green on that
 #     head and merges with --match-head-commit (a PR that is behind is updated first);
-#   * a PR it could not merge (fork, files outside the allowlist, invalid allowlist, required checks not
+#   * a PR it could not merge (files outside the allowlist, invalid allowlist, required checks not
 #     green, merge refused, anything unreadable) that is at least ALERT_AGE_MIN old pages and makes the
 #     run red; so does a PR whose producer has looked busy for BUSY_ALERT_MIN, or whose producer's runs
 #     cannot be read (it is never merged then: a run might be about to push).
@@ -60,24 +61,19 @@ LIST=$(printf '%s\n' "$LIST" | tr -d '\r') # a CRLF from Python on Windows would
 
 while IFS=$'\t' read -r BRANCH WORKFLOWS ALLOW; do
   [ -n "$BRANCH" ] || continue
-  if ! PRS=$(ci_retry gh pr list --repo "$R" --head "$BRANCH" --base master --state open \
-      --json number,headRefOid,createdAt,isDraft,isCrossRepository \
-      --jq '.[] | select(.isDraft | not) | "\(.number) \(.headRefOid) \(.createdAt) \(.isCrossRepository)"' \
-      < /dev/null); then
+  # only PRs whose head is THIS repository (scripts/bot_pr_find.sh): a fork can name its branch
+  # bot/data-sync, and the merge below pins to the SHA read here, so a fork PR must never be found
+  if ! PRS=$(bash "${HERE}/bot_pr_find.sh" "$BRANCH" < /dev/null); then
     page "bot PR sweep could not list open ${BRANCH} PRs; that branch was not checked."
     continue
   fi
   if [ -z "$PRS" ]; then echo "${BRANCH}: no open PR."; continue; fi
 
-  while read -r NUM SHA CREATED FORK; do
+  while read -r NUM SHA CREATED DRAFT; do
     [ -n "$NUM" ] || continue
+    [ "$DRAFT" = false ] || continue # a draft is a person's to merge
     URL="https://github.com/${R}/pull/${NUM}"
     AGE=$(( (NOW - $(date -u -d "$CREATED" +%s)) / 60 ))
-    if [ "$FORK" != false ]; then
-      # a fork can name its branch bot/data-sync; only a branch in this repository is a bot's
-      page "${BRANCH} PR #${NUM} comes from a fork (isCrossRepository=${FORK}); never merged by the sweep. ${URL}"
-      continue
-    fi
     if [ "$AGE" -lt "$MIN_AGE_MIN" ]; then
       echo "${BRANCH} #${NUM}: ${AGE} min old; its own run may still merge it."
       continue

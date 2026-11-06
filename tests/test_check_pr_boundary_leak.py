@@ -266,7 +266,13 @@ def test_foreign_commits_skips_closed_pr_scan_for_bot_branch():
         if args[:3] == ["gh", "pr", "view"] and args[3] == "100":
             return _proc(
                 returncode=0,
-                stdout=json.dumps({"headRefOid": "head100", "headRefName": "bot/data-sync"}),
+                stdout=json.dumps(
+                    {
+                        "headRefOid": "head100",
+                        "headRefName": "bot/data-sync",
+                        "isCrossRepository": False,
+                    }
+                ),
             )
         if args[:2] == ["git", "fetch"]:
             return _proc(returncode=0)
@@ -299,6 +305,7 @@ def test_recent_closed_prs_excludes_bot_branches_and_self():
                             "baseRefName": "master",
                             "headRefOid": "sha1",
                             "headRefName": "bot/data-sync",
+                            "isCrossRepository": False,
                         },
                         {
                             "number": 2,
@@ -621,3 +628,63 @@ def test_api_commit_list_keeps_single_parent_commits_only():
         assert mod._pr_commits_via_api(916, "owner/repo") == ["c1"]
     api_call = next(a for a in seen if a[:2] == ["gh", "api"])
     assert "select((.parents | length) == 1)" in api_call[api_call.index("--jq") + 1]
+
+
+# --- 2026-11-03: a fork PR named bot/<x> gets no bot exemption ---------------------------------------------
+
+
+@pytest.mark.parametrize("cross", [{"isCrossRepository": True}, {"isCrossRepository": None}, {}])
+def test_a_fork_pr_named_like_a_bot_branch_still_gets_the_closed_pr_scan(cross):
+    """A fork, or a response without an explicit `false`, never earns the bot exemption."""
+    calls = []
+
+    def fake_run(args, **kwargs):
+        if args[:3] == ["gh", "pr", "view"] and args[3] == "100":
+            return _proc(
+                returncode=0,
+                stdout=json.dumps(
+                    {"headRefOid": "head100", "headRefName": "bot/data-sync", **cross}
+                ),
+            )
+        if args[:2] == ["git", "fetch"]:
+            return _proc(returncode=0)
+        if args[:2] == ["git", "log"]:
+            return _proc(returncode=0, stdout="commitA\n")
+        if args[:2] == ["git", "show"]:
+            return _proc(returncode=0, stdout="diff")
+        if args[:2] == ["git", "patch-id"]:
+            return _proc(returncode=0, stdout="pid sha\n")
+        if args[:3] == ["gh", "pr", "list"]:
+            calls.append("closed" if "closed" in args else "open")
+            return _proc(returncode=0, stdout=json.dumps([]))
+        raise AssertionError(f"unexpected call: {args}")
+
+    with patch("subprocess.run", side_effect=fake_run):
+        mod.check_foreign_commits(100, "owner/repo", "master")
+    assert "closed" in calls
+
+
+def test_a_closed_fork_pr_named_like_a_bot_branch_is_still_compared():
+    def fake_run(args, **kwargs):
+        if args[:3] == ["gh", "pr", "list"]:
+            rows = [
+                {
+                    "number": 1,
+                    "baseRefName": "master",
+                    "headRefOid": "s1",
+                    "headRefName": "bot/data-sync",
+                    "isCrossRepository": True,
+                },
+                {
+                    "number": 3,
+                    "baseRefName": "master",
+                    "headRefOid": "s3",
+                    "headRefName": "bot/og-image",
+                },  # flag missing: not ours either
+            ]
+            return _proc(returncode=0, stdout=json.dumps(rows))
+        raise AssertionError(f"unexpected call: {args}")
+
+    with patch("subprocess.run", side_effect=fake_run):
+        result = mod._recent_closed_prs("owner/repo", exclude_pr=100)
+    assert [p["number"] for p in result] == [1, 3]

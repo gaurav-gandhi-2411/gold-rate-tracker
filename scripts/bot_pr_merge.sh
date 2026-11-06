@@ -38,6 +38,20 @@ if [ -z "${EXPECTED}" ]; then
   exit 2
 fi
 
+# Only a PR whose head is THIS repository is ever merged here (2026-11-03). Callers find bot PRs through
+# scripts/bot_pr_find.sh, which already drops fork PRs; this is the second layer, at the merge itself, because a
+# caller that pins to the SHA it read from the PR (the stranded-PR sweep) gets no protection from
+# --match-head-commit against a fork. Unreadable counts as a fork.
+HEAD_REPO="$(ci_retry gh pr view "${PR_NUM}" --repo "${GITHUB_REPOSITORY}" \
+  --json isCrossRepository,headRepositoryOwner,headRepository \
+  --jq '[.isCrossRepository, .headRepositoryOwner.login, .headRepository.name] | map(tostring) | join(" ")' \
+  2>/dev/null || echo unreadable)"
+lower() { printf '%s' "$1" | tr '[:upper:]' '[:lower:]'; }
+if [ "$(lower "${HEAD_REPO}")" != "false $(lower "${GITHUB_REPOSITORY%%/*}") $(lower "${GITHUB_REPOSITORY#*/}")" ]; then
+  echo "::error::bot_pr_merge: PR #${PR_NUM}'s head is not ${GITHUB_REPOSITORY} (cross-repository, owner, name: ${HEAD_REPO}); refusing to merge."
+  exit 1
+fi
+
 WAIT_MINUTES="${WAIT_MINUTES:-15}"
 POLL_SECONDS="${POLL_SECONDS:-10}"
 REQUIRED_CONTEXTS="${REQUIRED_CONTEXTS:-lint pwa-js scraper-dependency-guard}"

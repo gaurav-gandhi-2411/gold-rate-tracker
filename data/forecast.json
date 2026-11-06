@@ -1,13 +1,13 @@
 {
-  "predicted_at": "2026-11-06T14:32:18.361465+00:00",
+  "predicted_at": "2026-11-06T20:22:18.990092+00:00",
   "target_window": "5d",
   "headline": {
     "method": "hold_latest_fix_pm_to_am",
     "predicted_22k": 13190,
     "lower": 12990,
     "upper": 13390,
-    "conformal_pi_half": 130.1,
-    "naive_mae_recent_30": 84.0,
+    "conformal_pi_half": 146.4,
+    "naive_mae_recent_30": 90.3,
     "vol_context": {
       "half_width": 363,
       "half_width_raw": 362.6,
@@ -29,7 +29,7 @@
     "status": "success",
     "lean_direction": "up",
     "lean_strength_pct": 0.704,
-    "direction_acc_30f": 0.2,
+    "direction_acc_30f": 0.167,
     "direction_prob_basis": "base_rate_fallback",
     "horizon_p10": [
       12920.65,
@@ -59,7 +59,7 @@
     "direction_consensus": 1.0
   },
   "driver_context": {
-    "computed_at": "2026-11-06T14:32:19.294015+00:00",
+    "computed_at": "2026-11-06T20:22:19.628297+00:00",
     "macro_staleness_days": 0.0,
     "macro_fresh": true,
     "premium_threshold_pct": 15.0,
@@ -86,13 +86,13 @@
         "t0_date": "2026-10-07",
         "t1_date": "2026-11-06",
         "delta_pct_ibja": -4.368,
-        "delta_pct_gold_usd": -1.689,
+        "delta_pct_gold_usd": -1.692,
         "delta_pct_usdinr": -3.005,
-        "delta_pct_premium": 0.327,
+        "delta_pct_premium": 0.329,
         "total_move_rs_per_g": -565.0,
-        "gold_usd_contrib_rs_per_g": -218.5,
+        "gold_usd_contrib_rs_per_g": -218.8,
         "usdinr_contrib_rs_per_g": -388.7,
-        "premium_contrib_rs_per_g": 42.2,
+        "premium_contrib_rs_per_g": 42.6,
         "premium_share_pct": 7.5,
         "attribution_valid": true,
         "attribution_valid_reason": "clean \u2014 premium share within threshold"
@@ -106,9 +106,9 @@
     },
     "alignment": "intraday_at_fix"
   },
-  "real_readings_count": 900,
+  "real_readings_count": 901,
   "current_22k": 13190,
-  "scraped_at": "2026-11-06T14:21:46.165Z",
+  "scraped_at": "2026-11-06T20:11:29.268Z",
   "price_source": "tanishq_scrape",
   "est_low": null,
   "est_high": null,
