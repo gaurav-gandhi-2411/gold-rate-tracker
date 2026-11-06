@@ -6,7 +6,8 @@ readings were destroyed. scripts/bot_branch_push.sh (with scripts/carry_forward_
 the branch as master + this run's reading + the readings already queued on it.
 
 These tests run the REAL scripts (bash, node, git) against a local bare repository standing in for GitHub;
-only `curl` (the ntfy page) is a stub. The 401 / wiring tests run the bot-pr-sync step with stub gh/git.
+only `curl` (must never be called: ntfy is gold-price information only) and `python3` (the
+test interpreter, for scripts/ops_log.py) are stubs. The 401 / wiring tests run the bot-pr-sync step with stub gh/git.
 """
 
 from __future__ import annotations
@@ -15,6 +16,7 @@ import json
 import os
 import shutil
 import subprocess
+import sys
 from pathlib import Path
 
 import pytest
@@ -102,6 +104,9 @@ def world(tmp_path: Path) -> dict:
     stub = bindir / "curl"
     stub.write_bytes(f'#!/bin/sh\necho "curl $*" >> "{curl_log.as_posix()}"\n'.encode())
     stub.chmod(0o755)
+    py = bindir / "python3"
+    py.write_bytes(f'#!/bin/sh\nexec "{Path(sys.executable).as_posix()}" "$@"\n'.encode())
+    py.chmod(0o755)
     return {"tmp": tmp_path, "origin": origin, "bin": bindir, "curl_log": curl_log, "n": 0}
 
 
@@ -297,7 +302,8 @@ def test_an_unreadable_queued_branch_is_kept_and_the_run_goes_to_a_rescue_branch
     assert _git(world["origin"], "rev-parse", f"refs/heads/{BRANCH}").strip() == tip  # untouched
     rescue = f"{BRANCH}-rescue-{1000 + world['n']}"
     assert T2 in _origin_prices(world, f"refs/heads/{rescue}")  # this run's reading is kept
-    assert "ntfy.sh/topic" in world["curl_log"].read_text()  # and GG is paged
+    assert "ops-alert" in r.stdout  # recorded in the ops log
+    assert not world["curl_log"].exists()  # and NOT sent to ntfy
 
 
 def test_an_unexpected_changed_file_on_the_branch_is_never_dropped(world: dict) -> None:
@@ -317,7 +323,7 @@ def test_an_unexpected_changed_file_on_the_branch_is_never_dropped(world: dict) 
     assert (
         _git(world["origin"], "show", f"{BRANCH}:data/something_else.json") == "{}"
     )  # still there
-    assert world["curl_log"].exists()
+    assert "ops-alert" in r.stdout and not world["curl_log"].exists()
 
 
 def test_an_unreachable_remote_is_not_read_as_no_branch(world: dict) -> None:

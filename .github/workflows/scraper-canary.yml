@@ -119,19 +119,14 @@ jobs:
         if: failure() && steps.canary.outcome == 'failure'
         continue-on-error: true
         env:
-          NTFY_TOPIC: ${{ secrets.NTFY_TOPIC }}
           RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           REPO: ${{ github.repository }}
         run: |
-          # ntfy alert — ASCII-only headers
-          [ -z "${NTFY_TOPIC}" ] && echo "NTFY_TOPIC not set — skipping ntfy alert." || \
-          curl -s \
-            -H "Title: Gold Tracker: Scraper DOM broken" \
-            -H "Priority: urgent" \
-            -H "Tags: rotating_light" \
-            -d "Tanishq DOM canary failed with a non-Cloudflare error -- the selector or page structure likely changed. Check: ${RUN_URL}" \
-            "https://ntfy.sh/${NTFY_TOPIC}" || true
+          # No ntfy push since 2026-11-06 (gold-price information only): the GitHub issue below is
+          # the alert, and the ops log records it too.
+          python3 scripts/ops_log.py --source "scraper-canary" --title "Scraper DOM broken" \
+            --body "Tanishq DOM canary failed with a non-Cloudflare error -- the selector or page structure likely changed. Check: ${RUN_URL}" || true
 
           # Open a GitHub issue so it doesn't get lost
           gh issue create \

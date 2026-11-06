@@ -6,8 +6,10 @@ read-statistics permission only) and writes ONE short sentence to the file given
 the weekly visitor total and the top referrer HOSTS with counts.
 
 Rules this keeps (the repo and its run logs are public):
-  * nothing is printed except a status word; the sentence goes to ``--out`` only, and the workflow
-    (visitors-weekly.yml) sends it straight to the private ntfy topic;
+  * nothing is printed except a status word; the sentence goes to ``--out`` only. Since 2026-11-06
+    the workflow (visitors-weekly.yml) does NOT send it anywhere (ntfy is gold-price information
+    only, and job summaries are public): it records the status word, and the owner reads the numbers
+    in GoatCounter itself;
   * only host names of referrers, never full URLs or paths; a referrer seen fewer than
     ``MIN_COUNT`` times is left out; no per-visit data, paths, places, browsers or devices are read;
   * it FAILS QUIETLY: no token, a refused token or an unreachable API each print one status line and

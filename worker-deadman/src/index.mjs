@@ -469,135 +469,26 @@ export async function runCheck(env, fetchImpl, nowMs) {
     await env.DEADMAN_STATE.put(KV_STATE_KEY, JSON.stringify(nextState));
   }
 
-  // Q4 (audit 2026-09-03): independent second channel -- forecast.json's
-  // predicted_at can stay perfectly fresh (IBJA-calibrated fallback) for
-  // weeks while Tanishq confirmation (scraped_at) goes silent; T12 cannot
-  // detect this (fires only when the runner is online and jobs are
-  // genuinely failing, not when it's offline) and nothing on the page
-  // tells users Tanishq confirmation has stopped. Own KV state key so its
-  // dedup/reminder timing is entirely independent of the channel above.
-  //
-  // Deliberately skipped entirely on a fetch failure (`failure` truthy):
-  // the channel above already sends one "could not verify the site"
-  // alert for that same root cause (one fetch serves both channels) --
-  // firing a second, near-identical "could not verify Tanishq" alert on
-  // top of it would be redundant noise for a single underlying problem,
-  // not two independent findings.
-  let tanishqCurrent = { level: "ok", ageHours: null, reason: null };
-  let tanishqSend = false;
-  if (!failure) {
-    // R2c: only worth fetching once we're already at/past WARN territory --
-    // no point spending a request confirming runner health when scraped_at
-    // is fresh anyway. classifyTanishqSilence itself also gates on
-    // ageHours >= TANISHQ_WARN_HOURS before using this value, so fetching
-    // it earlier would just be wasted.
-    const provisional = classifyTanishqSilence(scrapedAtIso, nowMs);
-    const healthUpdatedAtIso =
-      provisional.level === "ok" ? null : await fetchHealthUpdatedAt(fetchImpl);
-    tanishqCurrent = healthUpdatedAtIso
-      ? classifyTanishqSilence(scrapedAtIso, nowMs, healthUpdatedAtIso)
-      : provisional;
-    const previousTanishqState = await loadState(env, KV_TANISHQ_STATE_KEY);
-    const {
-      send: sendResult,
-      alert: tanishqAlert,
-      nextState: nextTanishqState,
-    } = decideTanishqAction(tanishqCurrent, previousTanishqState, nowMs);
-    const tanishqDelivered = sendResult && tanishqAlert ? await deliver(tanishqAlert) : true;
-    tanishqSend = sendResult && tanishqDelivered;
+  // OWNER DECISION 2026-11-06: ntfy carries gold-price information only. Of this Worker's channels
+  // only the forecast-staleness alert above (deliver(alert)) still sends: the site showing a stale
+  // price is a gold-price problem. The Tanishq-silence, PR-trigger-health, merged-unchecked and
+  // heartbeat channels no longer send anything (their classifiers and dedup helpers stay in
+  // deadman.mjs / pr_trigger_health.mjs, unit-tested, in case a channel is ever re-enabled on
+  // purpose; tests/test_ntfy_keep_list.py pins that postAlert is reached only from the staleness
+  // path). Tanishq silence is still reported in the response (level/age) from scraped_at alone.
+  // The ops-side view of these conditions is ml/notifications.py T14 -> the ops log.
+  const tanishqCurrent = failure
+    ? { level: "ok", ageHours: null, reason: null }
+    : classifyTanishqSilence(scrapedAtIso, nowMs);
+  const tanishqSend = false;
 
-    if (env.DEADMAN_STATE && tanishqDelivered) {
-      await env.DEADMAN_STATE.put(KV_TANISHQ_STATE_KEY, JSON.stringify(nextTanishqState));
-    }
-  }
-
-  // AI2: PR-trigger-health channel -- entirely independent of the price-
-  // staleness/Tanishq channels above (different data source, different
-  // failure mode, own KV key). Skipped gracefully, not paged about, when
-  // GITHUB_PR_HEALTH_PAT isn't configured -- matches this file's existing
-  // NTFY_TOPIC/DEADMAN_STATE-optional pattern: a missing secret means the
-  // feature isn't deployed yet, not a live failure to alert on. Once the
-  // secret DOES exist, a fetch that fails pages honestly (rule 98a) rather
-  // than silently skipping, matching every other channel in this file.
-  let prTriggerHealthSent = false;
-  let prTriggerHealthStaleCount = 0;
-  if (env.GITHUB_PR_HEALTH_PAT) {
-    const { openPrs, failure: prFetchFailure } = await fetchOpenPrTriggerHealth(
-      fetchImpl,
-      env.GITHUB_PR_HEALTH_PAT,
-    );
-    if (prFetchFailure) {
-      prTriggerHealthSent = await deliver(buildPrTriggerHealthFetchFailureAlert(prFetchFailure));
-    } else {
-      const stalePrs = classifyPrTriggerHealth(openPrs, nowMs);
-      prTriggerHealthStaleCount = stalePrs.length;
-      const previousPrState = await loadState(env, KV_PR_TRIGGER_HEALTH_KEY);
-      const { send: prSend, alertPrs, nextState: nextPrState } = decidePrTriggerHealthAction(
-        stalePrs,
-        previousPrState,
-        nowMs,
-      );
-      const prDelivered = prSend && alertPrs.length > 0 ? await deliver(buildPrTriggerHealthAlert(alertPrs)) : true;
-      prTriggerHealthSent = prSend && alertPrs.length > 0 && prDelivered;
-      if (env.DEADMAN_STATE && prDelivered) {
-        await env.DEADMAN_STATE.put(KV_PR_TRIGGER_HEALTH_KEY, JSON.stringify(nextPrState));
-      }
-    }
-  }
-
-  // AL3a: merged-unchecked scan -- the open-PR channel above cannot see a PR that merges
-  // before its head commit is PR_TRIGGER_STALE_MINUTES old (#1539 merged 5.2 min after its
-  // last push). Same secret (Pull requests/Contents/Checks read), own KV key, own dedup.
-  let mergedUncheckedSent = false;
-  let mergedUncheckedCount = 0;
-  if (env.GITHUB_PR_HEALTH_PAT) {
-    const verified = (await loadState(env, KV_MERGED_VERIFIED_KEY)) || {};
-    const { mergedPrs, failure: mergedFetchFailure, verifiedNext } = await fetchRecentlyMergedPrs(
-      fetchImpl,
-      env.GITHUB_PR_HEALTH_PAT,
-      nowMs,
-      verified,
-    );
-    if (mergedFetchFailure) {
-      mergedUncheckedSent = await deliver(buildMergedUncheckedFetchFailureAlert(mergedFetchFailure));
-    } else {
-      // Verification is independent of whether an alert is delivered: a PR seen passing stays passed.
-      if (env.DEADMAN_STATE) {
-        await env.DEADMAN_STATE.put(KV_MERGED_VERIFIED_KEY, JSON.stringify(verifiedNext));
-      }
-      const flagged = classifyMergedUnchecked(mergedPrs, nowMs);
-      mergedUncheckedCount = flagged.length;
-      const previousMergedState = await loadState(env, KV_MERGED_UNCHECKED_KEY);
-      const { send: mergedSend, alertPrs: mergedAlertPrs, nextState: nextMergedState } =
-        decideMergedUncheckedAction(flagged, previousMergedState, nowMs);
-      const mergedDelivered = mergedSend ? await deliver(buildMergedUncheckedAlert(mergedAlertPrs)) : true;
-      mergedUncheckedSent = mergedSend && mergedDelivered;
-      if (env.DEADMAN_STATE && mergedDelivered) {
-        await env.DEADMAN_STATE.put(KV_MERGED_UNCHECKED_KEY, JSON.stringify(nextMergedState));
-      }
-    }
-  }
-
-  // G4a: independent of whatever staleness alert may have just fired --
-  // the heartbeat's job is confirming the SWITCH ITSELF ran today, not
-  // reporting site staleness (decideAction's job, above).
-  let heartbeatSent = false;
-  if (env.DEADMAN_STATE) {
-    const lastHeartbeatDateIst = await env.DEADMAN_STATE.get(KV_HEARTBEAT_KEY);
-    const { send: dueToday, todayIst } = shouldSendHeartbeat(lastHeartbeatDateIst, nowMs);
-    if (dueToday) {
-      const hbDelivered = await deliver(
-        buildHeartbeatAlert(current.level, current.ageHours, tanishqCurrent.level, tanishqCurrent.ageHours),
-      );
-      // Recorded only on a confirmed delivery: a heartbeat that never arrived must be retried on the
-      // next tick, not marked done for the day (the KV date said 2026-09-21 was sent while the phone
-      // showed nothing).
-      if (hbDelivered) {
-        await env.DEADMAN_STATE.put(KV_HEARTBEAT_KEY, todayIst);
-        heartbeatSent = true;
-      }
-    }
-  }
+  // AI2 / AL3a / G4a (PR-trigger health, merged-unchecked scan, daily heartbeat): stopped sending
+  // 2026-11-06, see the owner-decision note above. No fetch, no KV write, no delivery.
+  const prTriggerHealthSent = false;
+  const prTriggerHealthStaleCount = 0;
+  const mergedUncheckedSent = false;
+  const mergedUncheckedCount = 0;
+  const heartbeatSent = false;
 
   // Delivery evidence: what THIS run attempted, plus the last attempt persisted across runs, so a
   // silent notification path is visible in ?trigger=1 instead of hiding behind `sent: true`.

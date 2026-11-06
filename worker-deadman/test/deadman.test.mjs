@@ -199,9 +199,8 @@ test("runCheck: stale payload (past ESCALATE_THRESHOLD_HOURS) fires an ESCALATE 
 
   assert.equal(result.level, "escalate");
   assert.equal(result.sent, true);
-  // 2, not 1: the ESCALATE alert AND the once-per-day heartbeat (G4a) --
-  // this is also the first run of the IST day against a fresh KV.
-  assert.equal(ntfyCalls.length, 2);
+  // 1: only the forecast-staleness alert. The daily heartbeat (G4a) no longer sends (2026-11-06).
+  assert.equal(ntfyCalls.length, 1);
   const escalateCall = ntfyCalls.find((c) => c.opts.headers.Priority === "5");
   assert.ok(escalateCall, "expected one ntfy call with Priority 5 (ESCALATE)");
   assert.equal(escalateCall.url, "https://ntfy.sh/test-gold-topic");
@@ -314,11 +313,10 @@ test("runCheck: repeated ESCALATE runs inside the reminder window only alert onc
   const env = { NTFY_TOPIC: "test-gold-topic", DEADMAN_STATE: fakeKv() };
   await runCheck(env, fetchImpl, NOW);
   const second = await runCheck(env, fetchImpl, NOW + 20 * 60 * 1000); // 20 min later
-  // 2, not 1: the first run's ESCALATE + its once-per-day heartbeat (G4a).
-  // The second run (same IST day, inside the reminder window) adds neither.
-  assert.equal(ntfyCount, 2);
+  // 1: the first run's ESCALATE only (no heartbeat since 2026-11-06).
+  // The second run, inside the reminder window, adds nothing.
+  assert.equal(ntfyCount, 1);
   assert.equal(second.sent, false);
-  assert.equal(second.heartbeatSent, false);
 });
 
 test("runCheck: HTTP failure on the public URL is unverifiable, still alerts (fail closed, not silently ok)", async () => {
@@ -334,9 +332,8 @@ test("runCheck: HTTP failure on the public URL is unverifiable, still alerts (fa
   const result = await runCheck(env, fetchImpl, NOW);
   assert.equal(result.level, "unverifiable");
   assert.equal(result.sent, true);
-  // 2, not 1: the unverifiable alert AND the once-per-day heartbeat (G4a) --
-  // a fresh KV means this is also the first run of the IST day.
-  assert.equal(ntfyCalls.length, 2);
+  // 1: the unverifiable alert (the site price cannot be confirmed); no heartbeat since 2026-11-06.
+  assert.equal(ntfyCalls.length, 1);
 });
 
 test("runCheck: missing NTFY_TOPIC skips cleanly instead of throwing", async () => {
@@ -398,66 +395,6 @@ test("buildHeartbeatAlert: lowest priority, states current level and age", () =>
   assert.equal(alert.priority, 1);
   assert.match(alert.body, /1\.2h/);
   assert.match(alert.body, /ok/);
-});
-
-test("runCheck: sends a heartbeat on first run of the day, independent of staleness state", async () => {
-  const ntfyCalls = [];
-  const fetchImpl = async (url) => {
-    if (url.includes("forecast.json")) {
-      return { ok: true, json: async () => ({ predicted_at: isoHoursAgo(0.5), scraped_at: isoHoursAgo(0.5) }) }; // fresh -- no staleness alert
-    }
-    ntfyCalls.push(url);
-    return { ok: true };
-  };
-  const env = { NTFY_TOPIC: "test-gold-topic", DEADMAN_STATE: fakeKv() };
-  const result = await runCheck(env, fetchImpl, NOW);
-
-  assert.equal(result.sent, false); // no staleness alert -- forecast is fresh
-  assert.equal(result.heartbeatSent, true); // but the heartbeat still fires
-  assert.equal(ntfyCalls.length, 1);
-});
-
-test("runCheck: does not re-send the heartbeat twice on the same IST day", async () => {
-  let ntfyCount = 0;
-  const fetchImpl = async (url) => {
-    if (url.includes("forecast.json")) {
-      return { ok: true, json: async () => ({ predicted_at: isoHoursAgo(0.5), scraped_at: isoHoursAgo(0.5) }) };
-    }
-    ntfyCount += 1;
-    return { ok: true };
-  };
-  const env = { NTFY_TOPIC: "test-gold-topic", DEADMAN_STATE: fakeKv() };
-  await runCheck(env, fetchImpl, NOW);
-  const second = await runCheck(env, fetchImpl, NOW + 20 * 60 * 1000); // 20 min later, same IST day
-  assert.equal(ntfyCount, 1);
-  assert.equal(second.heartbeatSent, false);
-});
-
-test("runCheck: heartbeat and a real ESCALATE alert can both fire in the same run", async () => {
-  let ntfyCount = 0;
-  const priorities = [];
-  const fetchImpl = async (url, opts) => {
-    if (url.includes("forecast.json")) {
-      return {
-        ok: true,
-        json: async () => ({
-          predicted_at: isoHoursAgo(ESCALATE_THRESHOLD_HOURS + 1),
-          scraped_at: isoHoursAgo(0.5),
-        }),
-      };
-    }
-    ntfyCount += 1;
-    priorities.push(opts.headers.Priority);
-    return { ok: true };
-  };
-  const env = { NTFY_TOPIC: "test-gold-topic", DEADMAN_STATE: fakeKv() };
-  const result = await runCheck(env, fetchImpl, NOW);
-
-  assert.equal(result.sent, true); // ESCALATE
-  assert.equal(result.heartbeatSent, true); // AND the heartbeat
-  assert.equal(ntfyCount, 2);
-  assert.ok(priorities.includes("5")); // ESCALATE
-  assert.ok(priorities.includes("1")); // heartbeat
 });
 
 // --- Q4 (audit 2026-09-03): Tanishq-silence channel ---
@@ -566,30 +503,6 @@ test("runCheck: fetches the health file only once scraped_at is already in WARN 
   assert.equal(healthFetched, false); // scraped_at fresh -- no reason to spend the request
 });
 
-test("runCheck: corroborated offline escalates even though scraped_at alone would still be WARN", async () => {
-  const ntfyBodies = [];
-  const fetchImpl = async (url, opts) => {
-    if (url.includes("forecast.json")) {
-      return {
-        ok: true,
-        json: async () => ({
-          predicted_at: isoHoursAgo(0.2),
-          scraped_at: isoHoursAgo(TANISHQ_WARN_HOURS + 2), // WARN range, NOT past ESCALATE (72h) alone
-        }),
-      };
-    }
-    if (url.includes("tanishq_selfhosted_health.json")) {
-      return { ok: true, json: async () => ({ last_updated_utc: isoHoursAgo(RUNNER_CONFIRMED_OFFLINE_HOURS + 1) }) };
-    }
-    ntfyBodies.push(opts.body);
-    return { ok: true };
-  };
-  const env = { NTFY_TOPIC: "test-gold-topic", DEADMAN_STATE: fakeKv() };
-  const result = await runCheck(env, fetchImpl, NOW);
-  assert.equal(result.tanishqLevel, "escalate");
-  assert.ok(ntfyBodies.some((b) => b.includes("corroborated")));
-});
-
 test("buildTanishqAlert: escalate names the runner as the likely cause", () => {
   const a = buildTanishqAlert("escalate", 80, null);
   assert.equal(a.priority, 5);
@@ -624,34 +537,6 @@ test("decideTanishqAction: recovering to ok sends a distinct (non-forecast) reco
   assert.match(alert.title, /Tanishq confirmation resumed/);
 });
 
-test("runCheck: scraped_at far in the past fires a Tanishq-silence alert, independent of a fresh predicted_at", () => {
-  const ntfyBodies = [];
-  const fetchImpl = async (url, opts) => {
-    if (url.includes("forecast.json")) {
-      // predicted_at fresh (IBJA-calibrated fallback keeping it alive) --
-      // exactly the scenario Q4 exists for: forecast looks fine, Tanishq
-      // confirmation has actually been silent for days.
-      return {
-        ok: true,
-        json: async () => ({ predicted_at: isoHoursAgo(0.2), scraped_at: isoHoursAgo(100) }),
-      };
-    }
-    if (url.includes("tanishq_selfhosted_health.json")) {
-      return { ok: false, status: 404 }; // unavailable -- 100h already clears plain ESCALATE (72h) regardless
-    }
-    ntfyBodies.push(opts.body);
-    return { ok: true };
-  };
-  const env = { NTFY_TOPIC: "test-gold-topic", DEADMAN_STATE: fakeKv() };
-  return runCheck(env, fetchImpl, NOW).then((result) => {
-    assert.equal(result.level, "ok"); // forecast-staleness channel: fine
-    assert.equal(result.sent, false);
-    assert.equal(result.tanishqLevel, "escalate"); // Tanishq channel: not fine
-    assert.equal(result.tanishqSent, true);
-    assert.ok(ntfyBodies.some((b) => b.includes("Tanishq")));
-  });
-});
-
 test("runCheck: a single fetch failure does not double-alert (one root cause, one alert)", async () => {
   let ntfyCount = 0;
   const fetchImpl = async (url) => {
@@ -671,29 +556,36 @@ test("runCheck: a single fetch failure does not double-alert (one root cause, on
   const result = await runCheck(env, fetchImpl, NOW);
   assert.equal(result.level, "unverifiable");
   assert.equal(result.tanishqSent, false); // Tanishq channel skipped, not a second "unverifiable" alert
-  // 2, not 3: the one "unverifiable" alert AND the once-per-day heartbeat --
-  // NOT a second near-identical "could not verify Tanishq" alert for the
-  // same underlying fetch failure.
-  assert.equal(ntfyCount, 2);
+  // 1: the one "unverifiable" alert, NOT a second near-identical "could not verify Tanishq" alert
+  // for the same underlying fetch failure (and no heartbeat since 2026-11-06).
+  assert.equal(ntfyCount, 1);
 });
 
-test("runCheck: heartbeat body states the Tanishq channel too", async () => {
-  const ntfyCalls = [];
+// OWNER DECISION 2026-11-06: ntfy carries gold-price information only. The Tanishq-silence,
+// PR-trigger-health, merged-unchecked and heartbeat channels no longer send (or even fetch).
+test("runCheck: the Tanishq, PR-health, merged-unchecked and heartbeat channels never send or fetch", async () => {
+  const seen = [];
   const fetchImpl = async (url, opts) => {
+    seen.push(url);
     if (url.includes("forecast.json")) {
-      return {
-        ok: true,
-        json: async () => ({ predicted_at: isoHoursAgo(0.2), scraped_at: isoHoursAgo(2) }),
-      };
+      // fresh price forecast, but Tanishq silent for 30 h: the old Tanishq channel would have paged
+      return { ok: true, json: async () => ({ predicted_at: isoHoursAgo(0.5), scraped_at: isoHoursAgo(30) }) };
     }
-    ntfyCalls.push(opts);
-    return { ok: true };
+    throw new Error(`a removed channel fetched or sent: ${url}`);
   };
-  const env = { NTFY_TOPIC: "test-gold-topic", DEADMAN_STATE: fakeKv() };
-  await runCheck(env, fetchImpl, NOW);
-  const heartbeat = ntfyCalls.find((c) => c.headers.Priority === "1");
-  assert.ok(heartbeat);
-  assert.match(heartbeat.body, /Tanishq confirmation/);
+  const env = {
+    NTFY_TOPIC: "test-gold-topic",
+    GITHUB_PR_HEALTH_PAT: "pat", // would have enabled the PR-health and merged-unchecked scans
+    DEADMAN_STATE: fakeKv(), // fresh KV: the heartbeat would have been due
+  };
+  const result = await runCheck(env, fetchImpl, NOW);
+  assert.equal(result.level, "ok");
+  assert.equal(result.tanishqSent, false);
+  assert.equal(result.heartbeatSent, false);
+  assert.equal(result.prTriggerHealthSent, false);
+  assert.equal(result.mergedUncheckedSent, false);
+  assert.equal(result.ntfy.attempted, 0);
+  assert.equal(seen.length, 1); // forecast.json only
 });
 
 // AI2: integration tests for the PR-trigger-health channel, proving the
@@ -733,30 +625,6 @@ function isoMinutesAgo(sha) {
   return new Date(NOW - minutes * 60_000).toISOString();
 }
 
-test("runCheck: PR trigger-health channel pages when a real stale PR is present", async () => {
-  const ntfyCalls = [];
-  const fetchImpl = async (url, opts) => {
-    const inner = githubApiFetch({
-      openPrs: [{ number: 1539, head: { ref: "fix/thing", sha: "age60" } }],
-      checkRunsBySha: {},
-    });
-    const resp = await inner(url, opts);
-    if (url.includes("ntfy.sh")) ntfyCalls.push(opts);
-    return resp;
-  };
-  const env = {
-    NTFY_TOPIC: "test-gold-topic",
-    DEADMAN_STATE: fakeKv(),
-    GITHUB_PR_HEALTH_PAT: "fake-token",
-  };
-  const result = await runCheck(env, fetchImpl, NOW);
-  assert.equal(result.prTriggerHealthSent, true);
-  assert.equal(result.prTriggerHealthStaleCount, 1);
-  const prAlert = ntfyCalls.find((c) => c.headers.Title.includes("required checks never started"));
-  assert.ok(prAlert);
-  assert.match(prAlert.body, /#1539/);
-});
-
 test("runCheck: PR trigger-health channel does not page for a fresh PR with no check-run yet", async () => {
   const ntfyCalls = [];
   const fetchImpl = async (url, opts) => {
@@ -790,71 +658,9 @@ test("runCheck: PR trigger-health channel is skipped (not paged) when GITHUB_PR_
   assert.equal(githubApiCalled, false);
 });
 
-test("runCheck: PR trigger-health channel fails closed (pages honestly) on a GitHub API error, not silent", async () => {
-  const ntfyCalls = [];
-  const fetchImpl = async (url, opts) => {
-    const inner = githubApiFetch({ openPrs: [], checkRunsBySha: {}, failOn: "pulls" });
-    const resp = await inner(url, opts);
-    if (url.includes("ntfy.sh")) ntfyCalls.push(opts);
-    return resp;
-  };
-  const env = {
-    NTFY_TOPIC: "test-gold-topic",
-    DEADMAN_STATE: fakeKv(),
-    GITHUB_PR_HEALTH_PAT: "fake-token",
-  };
-  const result = await runCheck(env, fetchImpl, NOW);
-  assert.equal(result.prTriggerHealthSent, true);
-  const failureAlert = ntfyCalls.find((c) => c.headers.Title.includes("could not verify"));
-  assert.ok(failureAlert);
-  assert.match(failureAlert.body, /403/);
-  assert.match(failureAlert.body, /failing closed/);
-});
-
 // 2026-09-21: bot/ is no longer excluded (see fetchOpenPrTriggerHealth's comment) -- this test used
 // to assert that it was, which encoded the assumption that bot PRs always merge within minutes;
 // bot/docs-refresh sat open with zero check-runs for 10 days (#1578) and was skipped by construction.
-test("runCheck: PR trigger-health channel skips scratch/ branches but NOT bot/ ones", async () => {
-  const ntfyCalls = [];
-  const fetchImpl = async (url, opts) => {
-    const inner = githubApiFetch({
-      openPrs: [
-        { number: 1, head: { ref: "bot/data-sync", sha: "age60" } },
-        { number: 2, head: { ref: "scratch/proof", sha: "age60" } },
-      ],
-      checkRunsBySha: {},
-    });
-    const resp = await inner(url, opts);
-    if (url.includes("ntfy.sh")) ntfyCalls.push(opts);
-    return resp;
-  };
-  const env = {
-    NTFY_TOPIC: "test-gold-topic",
-    DEADMAN_STATE: fakeKv(),
-    GITHUB_PR_HEALTH_PAT: "fake-token",
-  };
-  const result = await runCheck(env, fetchImpl, NOW);
-  // Only the bot/ PR counts (60 min old, no check-run); the scratch/ PR is still skipped.
-  assert.equal(result.prTriggerHealthSent, true);
-  assert.equal(result.prTriggerHealthStaleCount, 1);
-});
-
-test("runCheck: PR trigger-health channel does not re-alert on the same stale PR within the dedup window", async () => {
-  const state = fakeKv();
-  const fetchImplFactory = () =>
-    githubApiFetch({
-      openPrs: [{ number: 1539, head: { ref: "fix/thing", sha: "age60" } }],
-      checkRunsBySha: {},
-    });
-  const env = { NTFY_TOPIC: "test-gold-topic", DEADMAN_STATE: state, GITHUB_PR_HEALTH_PAT: "fake-token" };
-
-  const first = await runCheck(env, fetchImplFactory(), NOW);
-  assert.equal(first.prTriggerHealthSent, true);
-
-  const second = await runCheck(env, fetchImplFactory(), NOW + 10 * 60_000); // 10 min later, well within 6h reminder window
-  assert.equal(second.prTriggerHealthSent, false);
-});
-
 // ---------------------------------------------------------------------------
 // S2 (audit continuation, 2026-09-23): the manual HTTP trigger used to run the
 // full check for ANY unauthenticated request. These pin the fix -- a shared

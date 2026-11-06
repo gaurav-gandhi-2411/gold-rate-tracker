@@ -14,11 +14,11 @@
 #   * the push is `--force-with-lease` against the branch tip the rebuild started from; if someone pushed in
 #     between, it starts again (3 tries);
 #   * anything it cannot carry (an unparseable file, an unexpected changed file, no node) is NEVER dropped:
-#     this run's commit goes to a separate rescue branch, the existing branch is left untouched, GG is paged
-#     (ntfy) and the step fails;
+#     this run's commit goes to a separate rescue branch, the existing branch is left untouched, the ops log
+#     (scripts/ops_log.py) records it and the step fails;
 #   * if nothing is new relative to master (the reading is already there) it pushes nothing and exits 0.
 #
-# Environment: NTFY_TOPIC (optional, pages on rescue/failure), GITHUB_RUN_ID (names the rescue branch),
+# Environment: GITHUB_RUN_ID (names the rescue branch),
 # GITHUB_REPOSITORY (link in the page). Run from the repository root with the run's commit as HEAD.
 
 set -euo pipefail
@@ -32,15 +32,10 @@ MSG="$(git log -1 --format=%B "${MINE}")"
 RESCUE="${BRANCH}-rescue-${GITHUB_RUN_ID:-$(date -u +%Y%m%dT%H%M%SZ)}"
 
 page() {
-  # public ntfy path, plain words only; best effort
-  if [ -n "${NTFY_TOPIC:-}" ]; then
-    curl -s \
-      -H "Title: Gold Tracker: a Tanishq reading needed rescuing" \
-      -H "Priority: high" \
-      -H "Tags: warning,floppy_disk" \
-      -d "$1 https://github.com/${GITHUB_REPOSITORY:-}/branches" \
-      "https://ntfy.sh/${NTFY_TOPIC}" || true
-  fi
+  # ops log (job summary + ops-alert annotation), NOT the phone: ntfy is gold-price information only
+  python3 "${HERE}/ops_log.py" --source "bot_branch_push" \
+    --title "a Tanishq reading needed rescuing" \
+    --body "$1 https://github.com/${GITHUB_REPOSITORY:-}/branches" || true
 }
 
 rescue() {

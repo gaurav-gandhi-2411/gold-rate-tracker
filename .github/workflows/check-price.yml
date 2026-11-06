@@ -81,11 +81,12 @@ jobs:
     concurrency:
       group: check-price
       cancel-in-progress: false
-    # 20min for scrape+ML steps, +15min headroom for the PR auto-merge wait
+    # 20min for scrape+ML steps, +30min headroom for the PR auto-merge wait (FOR_GG item 9:
+    # 2026-11-01 run 41287213214 gave up 51 s before its bot PR's statuses landed at 15 min)
     # (generate-og-image.yml's workflow_run trigger fires on this job's
     # completion, so it must wait for the data-sync PR to actually merge —
     # otherwise it screenshots stale data).
-    timeout-minutes: 35
+    timeout-minutes: 50
 
     steps:
       - name: Checkout repository
@@ -199,7 +200,6 @@ jobs:
       - name: Check forecast drift
         continue-on-error: true
         env:
-          NTFY_TOPIC: ${{ secrets.NTFY_TOPIC }}
           DRIFT_THRESHOLD: "1.5"
         run: python -m ml.drift
 
@@ -224,6 +224,15 @@ jobs:
         # after this run's IBJA append + calibration refit; never touches prices.json.
         continue-on-error: true
         run: python scripts/build_ibja_derived_prices.py --public-out data/ibja_derived_prices.json
+
+      - name: Price-history integrity (report-only)
+        # GG P0 2026-11-05 item 1f: unexplained day-over-day moves in the full IBJA-based
+        # history, gaps in the published chart file, and a sample vs COMEX x USD/INR x duty.
+        # REPORT-ONLY (standing rule 2026-10-30): prints and writes the job summary, exits 0.
+        # Becomes blocking only in a separate PR citing 5 clean real runs over >= 24 h.
+        continue-on-error: true
+        timeout-minutes: 5
+        run: python scripts/check_price_history_integrity.py --reference
 
       - name: Compute rolling Tanishq scrape success rate
         # H3 (session dated 2026-08-28): reads whatever data/tanishq_scrape_
@@ -370,7 +379,7 @@ jobs:
           pr-title: "chore: update gold prices and forecast"
           pr-body: "Automated data sync from Check Gold Price run ${{ github.run_id }}."
           token: ${{ secrets.CI_MERGE_PAT }}
-          wait-minutes: "15"
+          wait-minutes: "30"
           ntfy-topic: ${{ secrets.NTFY_TOPIC }}
 
       - name: Merge a stranded Tanishq reading PR
@@ -431,7 +440,6 @@ jobs:
         continue-on-error: true
         env:
           GH_TOKEN: ${{ github.token }}
-          NTFY_TOPIC: ${{ secrets.NTFY_TOPIC }}
         run: |
           source "${GITHUB_WORKSPACE}/scripts/ci_retry.sh"
           # a list that still fails after the retries is said out loud, not read as "no PR"
@@ -450,16 +458,10 @@ jobs:
           if [ "$AGE_MIN" -le 30 ]; then
             exit 0
           fi
-          if [ -z "${NTFY_TOPIC}" ]; then
-            echo "NTFY_TOPIC not set — skipping ntfy alert."
-            exit 0
-          fi
-          curl -s \
-            -H "Title: Gold Tracker: bot PR stuck unmerged" \
-            -H "Priority: high" \
-            -H "Tags: warning" \
-            -d "bot/data-sync PR #${PR_NUM} has been open ${AGE_MIN} min without merging -- prices.json may be stale. https://github.com/${GITHUB_REPOSITORY}/pull/${PR_NUM}" \
-            "https://ntfy.sh/${NTFY_TOPIC}" || true
+          # ops log, not the phone: ntfy carries gold-price information only (2026-11-06)
+          python3 scripts/ops_log.py --source "check-price" \
+            --title "bot PR stuck unmerged" \
+            --body "bot/data-sync PR #${PR_NUM} has been open ${AGE_MIN} min without merging -- prices.json may be stale. https://github.com/${GITHUB_REPOSITORY}/pull/${PR_NUM}"
 
       # GitHub's cron skips runs, and a monitor that may not run is not a monitor: ci-health.yml
       # last ran 9 h apart on 2026-10-09. Any check-price run (push, dispatch or cron) that finds it

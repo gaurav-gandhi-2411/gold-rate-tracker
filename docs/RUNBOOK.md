@@ -200,6 +200,10 @@ sustained Cloudflare block and does **not** raise an alert on its own — only I
 itself (the primary source) failing does. You may receive ntfy.sh alerts with the
 following titles. Here is what each means and what to do.
 
+**Since 2026-11-06 ntfy carries gold-price information only** (see `docs/NOTIFICATIONS.md`). The IBJA, DOM, bot-PR,
+ci-health and Worker rows below are no longer pushed: they appear in the ops log
+(`python scripts/read_ops_log.py`) as `ops-alert` annotations with the same meaning, and the run still goes red.
+
 | Alert title | Meaning | Action |
 |---|---|---|
 | `Gold Tracker: IBJA data stale (Nd)` (T9) | No valid IBJA reading in >= 2 business days (weekends never count) | Check `ibjarates.com` reachability and the "Append IBJA rates" step in the last CI run |

@@ -1,5 +1,39 @@
 # Notifications: two audiences, two topics
 
+## Policy since 2026-11-06: ntfy carries gold-price information only
+
+Owner decision. Anything about the system's own health goes to the **ops log**, not the phone. The
+tables below are the 2026-09-21 inventory and are kept as history: every row marked OPS is now an
+ops-log entry (see "Ops log" below), except the K3 and K4 rows named here.
+
+What may still reach ntfy (enforced by `tests/test_ntfy_keep_list.py`, which enumerates every sender
+and fails on an unlisted one):
+
+| Key | What | Where |
+|---|---|---|
+| K1 | Daily gold-price summary (22K/24K/18K, change, next range, live accuracy) | `daily-digest.yml`, `scripts/gg_digest.py` |
+| K2 | Monday summary (the same plus the week's high and low) | `monday-push.yml`, `scripts/gg_digest.py` |
+| K3 | The site shows a wrong or stale price (or does not render) | `scripts/live_freshness.py`, `scripts/live_share_card.py` (`ci-health.yml`), `render-smoke.yml`, worker-deadman forecast staleness |
+| K4 | Only the owner can fix it: token expiry, data sync token rejected (HTTP 401) | `scripts/check_token_expiry.py`, `.github/actions/bot-pr-sync` |
+| K5 | Public subscriber price alerts T1, T2, T3, T4, T8_MORNING, T8_EVENING, T15 | `ml/notifications.py` |
+
+Stopped (now ops log): the share-card workflow failing twice and its recovery (`scripts/og_run_alert.py`; a card that is
+wrong or stale is still K3 via `live_share_card.py`), bot PR stuck, bot-pr-sync allowlist rejection, bot_branch_push rescue, the three
+ci-health "could not verify" / "required check red" / "check-price stopped" pages, the weekly cadence
+digest, visitors-weekly (status word only; the owner reads GoatCounter directly), `notify-gg.yml`,
+scraper-canary's push (its GitHub issue stays), ops triggers T5, T6, T7, T9, T9_ESCALATE, T10-T14,
+T16-T19 (still evaluated, still deduplicated; recorded instead of POSTed), and worker-deadman's
+Tanishq-silence, PR trigger health, merged-unchecked and heartbeat channels.
+
+### Ops log
+
+`scripts/ops_log.py` appends a section to the job summary and prints
+`::warning title=ops-alert::<source>: <title> -- <body>`. Read the last week across all runs with
+`python scripts/read_ops_log.py [--days 7]` (it reads each emitting workflow separately, checks the API's run
+count against the rows read, and fails with a message, never prints a partial list, if `gh`, the API or a count fails;
+see `docs/WEEKLY_ROUTINE.md` for the call cost). The weekly report is where the owner sees these. The repo is public: nothing
+in an ops-log body may be a secret or a visitor count.
+
 Written 2026-09-21 (AQ2). Code: `ml/notification_routing.py` (routing), `ml/public_copy.py` (public
 copy). Tests: `tests/test_notification_routing.py`.
 

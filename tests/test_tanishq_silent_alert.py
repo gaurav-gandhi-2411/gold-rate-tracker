@@ -91,7 +91,7 @@ def test_sunday_hours_are_excluded_exactly():
     assert nm._hours_excluding_sundays(TUE_10, TUE_10) == 0.0
 
 
-def test_dedupe_once_per_ist_day_via_send_and_quiet_hours_stamp(monkeypatch):
+def test_dedupe_once_per_ist_day_via_send_and_quiet_hours_stamp(monkeypatch, capsys):
     prices = [row(TUE_10)]
     now = TUE_10 + timedelta(hours=31)  # Wed 17:00 IST
     state = nm.NotificationState()
@@ -116,7 +116,8 @@ def test_dedupe_once_per_ist_day_via_send_and_quiet_hours_stamp(monkeypatch):
     monkeypatch.setenv("NTFY_TOPIC_PUBLIC", "public-topic-under-test")
     sent = nm.send_pending([alert], state, now)
     assert [s.success for s in sent] == [True]
-    assert captured[0].full_url.endswith("/ops-topic-under-test")  # OPS, never public
+    assert captured == []  # ops trigger: recorded in the ops log, never POSTed (2026-11-06)
+    assert "ops-alert::notifications T14" in capsys.readouterr().out
     assert state.last_t14_ist_date == "2026-09-23"
     # Every later check-price run the same IST day: no re-alert.
     for h in (1, 3, 6):
@@ -158,11 +159,29 @@ def test_t14_routes_to_ops():
     assert audience_for("T14") == OPS
 
 
-def test_runner_offline_path_fires_on_github_side_end_to_end(tmp_path, monkeypatch):
+def _pin_clock(monkeypatch, hour_ist: int) -> datetime:
+    """Pin ml.notifications' clock to a Wednesday at hour_ist:15 IST (main() reads the real one)."""
+    pinned = datetime(2026, 11, 4, hour_ist, 15, tzinfo=IST)
+
+    class _Pinned(datetime):
+        @classmethod
+        def now(cls, tz=None):
+            return pinned.astimezone(tz) if tz else pinned.replace(tzinfo=None)
+
+    monkeypatch.setattr(nm, "datetime", _Pinned)
+    return pinned
+
+
+# 10:15 IST is inside the T8 morning window, 16:15 between the windows, 19:15 inside the evening one.
+@pytest.mark.parametrize("hour_ist", [10, 16, 19])
+def test_runner_offline_path_fires_on_github_side_end_to_end(
+    tmp_path, monkeypatch, capsys, hour_ist
+):
     """The self-hosted runner is off: it recorded no failure (T12 stays silent), prices.json
     just stopped growing. main() -- exactly what check-price.yml runs on ubuntu-latest --
-    still sends T14 to the OPS topic. urlopen is patched: nothing leaves the machine."""
-    now = datetime.now(IST)
+    records T14 in the ops log and POSTs nothing to the ops topic, at any time of day.
+    urlopen is patched: nothing leaves the machine."""
+    now = _pin_clock(monkeypatch, hour_ist)
     last = now - timedelta(hours=100)  # >= 76 h excluding at most one Sunday
     (tmp_path / "prices.json").write_text(json.dumps([row(last)]), encoding="utf-8")
     for name in ("forecast.json", "chronos_probe.json", "backtest.json", "calibration.json"):
@@ -198,14 +217,19 @@ def test_runner_offline_path_fires_on_github_side_end_to_end(tmp_path, monkeypat
     monkeypatch.setattr(sys, "argv", ["ml.notifications", "--state-path", str(state_path)])
 
     nm.main()
-    t14_reqs = [r for r in captured if "Tanishq has not updated" in r.headers["Title"]]
-    assert len(t14_reqs) == 1
-    assert t14_reqs[0].full_url.endswith("/ops-topic-under-test")
-    assert not [r for r in captured if "self-hosted runner failing" in r.headers["Title"]]
-    # Second run the same day (next check-price tick): deduped.
-    captured.clear()
-    nm.main()
+    out = capsys.readouterr().out
+    assert out.count("ops-alert::notifications T14") == 1  # recorded in the ops log
+    assert "ops-alert::notifications T12" not in out
+    # T14 is an ops trigger: never POSTed. main() reads the REAL clock, so inside the T8 digest
+    # windows (08:00-13:59 and 18:00-21:59 IST) it also sends the public price digest, which is
+    # legitimate. `captured == []` was wrong and failed master's lint (and so every data-sync PR)
+    # for about 8 h of each day from 2026-11-06 04:51Z: assert on topic and title instead.
+    assert [r for r in captured if r.full_url.endswith("/ops-topic-under-test")] == []
     assert not [r for r in captured if "Tanishq has not updated" in r.headers["Title"]]
+    assert all(r.full_url.endswith("/public-topic-under-test") for r in captured)
+    # Second run the same day (next check-price tick): deduped.
+    nm.main()
+    assert "ops-alert::notifications T14" not in capsys.readouterr().out
 
 
 def test_check_price_runs_notifications_on_a_github_hosted_runner():

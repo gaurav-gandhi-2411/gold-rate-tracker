@@ -120,36 +120,43 @@ returns 403), so CC cannot read it. Say "not readable without GG" and keep the o
 `docs/FOR_GG.md`. Do not substitute a guess.
 
 The repo secret `GOATCOUNTER_TOKEN` exists (checked with `gh secret list`, names only). Dispatch
-`gh workflow run visitors-weekly.yml` after the Monday weekly run: it sends GG one private line
-(7-day total, top 3 source hosts seen at least 3 times) and prints only a status word, so CC does not read the numbers
-either. If the secret is ever missing do not dispatch it (it can only skip; the Monday schedule runs it anyway). Reading its
-log: the runner echoes each step's script, so a line like `echo "NTFY_TOPIC is not set; nothing sent"` in colour
-codes is source text, not output; the step's `env:` block shows `NTFY_TOPIC: ***` when the secret is wired, and
-the real output is the last line (`nothing to send` while there is no token). `tests/test_ntfy_secret_env.py`
-fails if any workflow step reads `$NTFY_TOPIC` or passes `ntfy-topic` without the secret.
+`gh workflow run visitors-weekly.yml` after the Monday weekly run. Since 2026-11-06 it sends NOTHING (ntfy carries
+gold-price information only, and this repo's job summaries are public): it only records a status word
+(`counted`, or `skipped: reason` which also goes to the ops log) and says the owner reads the visitor numbers in
+GoatCounter directly. CC never reads or reports the numbers. If the secret is ever missing do not dispatch it (it
+can only skip; the Monday schedule runs it anyway). `tests/test_ntfy_secret_env.py` fails if any workflow step reads
+`$NTFY_TOPIC` or passes `ntfy-topic` without the secret; `tests/test_ntfy_keep_list.py` fails if anything other
+than the listed gold-price and owner-only senders can reach ntfy.
 
-**Automated since 2026-10-22.** `daily-digest.yml` (#3062) sends GG a health digest every evening and
-`monday-push.yml` (#3067) sends the Monday push and then starts `visitors-weekly.yml`; check-price starts each
-when it is due (after 14:30 UTC; Mondays after 03:30 UTC) and each refuses to send twice in a UTC day. A session
-only checks that they ran (`gh run list --workflow monday-push.yml --limit 2`, real step output
-`ntfy responded HTTP 200`) and sends the push below by hand only if the workflow did not run.
+**Automated.** `daily-digest.yml` sends GG the daily gold-price summary every evening and `monday-push.yml` sends
+the Monday gold-price summary (rates, change, range, live accuracy, and the week's high and low) and then starts
+`visitors-weekly.yml`; check-price starts each when it is due (after 14:30 UTC; Mondays after 03:30 UTC) and each
+refuses to send twice in a UTC day. Their system facts (freshness, scrape rate, models, merged PRs, parked items,
+dates) are in each run's job summary, not the phone. A session only checks that they ran
+(`gh run list --workflow monday-push.yml --limit 2`, real step output `ntfy responded HTTP 200`).
 
-**Every Monday, send the weekly push** (not only on dated outcomes):
-`gh workflow run notify-gg.yml -f title="Gold Tracker: Monday update" -f message="..."` with plain words and no
-private data: P3's live record from `docs/MODEL_STATUS.md` (days scored, average miss vs holding the last rate,
-direction right, range held vs the 80% target, and "too few to judge" while n is small), whether any model is
-demoted, and the next dated checks. Confirm the run succeeds (`gh run view <id> --json conclusion`).
-The visitor line goes with it, but never inside that message (its inputs are public and CC cannot read the
-numbers): the token exists since 2026-10-19, so dispatch `visitors-weekly.yml` right after the push and read its
-status word in the real output (`written (Bearer)` or `written (Basic)`, then `ntfy responded HTTP 200`). The
-push text just says the visitor line follows privately. A `skipped: ... HTTP 404 on total` is not a decision:
-the first dispatch on 2026-10-19 got one and the next two, minutes later, worked (cause unknown, INFERRED a new
-token not yet live), so retry once after a few minutes before changing anything.
+**Every Monday, read the ops log** and put it in the weekly report: `python scripts/read_ops_log.py --days 7`
+(date, workflow file, message for every `ops-alert` annotation). It reads only the workflows that can emit one
+(derived from `.github/workflows/*.y*ml`: anything using `scripts/ops_log.py`, the `bot-pr-sync` action,
+`bot_branch_push.sh` or `ml.notifications`), one `/actions/workflows/<file>/runs` query each, because the repo-wide
+runs query is capped by GitHub at 1000 results (7 days held about 2500) and would silently drop the oldest. For
+each workflow it compares the API's `total_count` with the runs it read and exits 2, naming the workflow, on any
+mismatch or at the cap (then say so in the report, do not report "none"; use a smaller `--days`). Cost: one runs
+call per 100 runs per workflow plus one jobs call per run and one annotations call per non-skipped job, so
+lint (about 400 runs a week) and generate-og-image dominate. Measured 2026-11-05: `--days 1` took 524 s; a 7-day
+read takes about an hour, so start it in the background with `timeout 4500` at the start of the routine (record
+its PID/task id) and read its output at the end, or read one workflow at a time with `--workflow`. This replaces the old pushes: a stuck bot PR, a red required check, a
+check-price stop, a parked branch, a worker-deadman condition now show up here, not on the phone. Anything
+needing GG's click or decision is a numbered item under WAITING ON GG in the report.
+
+**Dated outcomes and PRs that need GG's click** are no longer pushed. Record them with
+`gh workflow run notify-gg.yml -f title="..." -f message="..."` (plain words, public input: no secrets, no prices
+needed; it writes one ops-log entry and sends no push) and list them in the weekly report.
 
 ## 8. Dated checks coming up
 
-Announce each outcome to GG in one plain sentence with `gh workflow run notify-gg.yml -f title="..."
--f message="..."` (a public input: no secrets, no prices).
+Record each outcome in one plain sentence with `gh workflow run notify-gg.yml -f title="..."
+-f message="..."` (a public input: no secrets; it writes an ops-log entry, no push) and put it in the weekly report.
 
 | Date | Check | How |
 |---|---|---|

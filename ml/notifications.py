@@ -10,6 +10,7 @@ Usage:
 
 from __future__ import annotations
 
+import importlib.util
 import json
 import logging
 import os
@@ -22,7 +23,7 @@ from zoneinfo import ZoneInfo
 
 from ml import public_copy, retailers
 from ml.ibja import compute_ibja_gap_business_days
-from ml.notification_routing import resolve_topic
+from ml.notification_routing import PUBLIC_ALLOWLIST, resolve_topic
 
 ROOT = Path(__file__).resolve().parent.parent
 DATA_DIR = ROOT / "data"
@@ -1448,22 +1449,96 @@ def check_triggers(
     return alerts
 
 
+def _record_ops(alert: PendingAlert) -> bool:
+    """Write an ops trigger to the ops log (job summary + annotation) instead of ntfy.
+
+    Owner decision 2026-11-06: ntfy carries gold-price information only. Loaded by path from
+    scripts/ops_log.py (scripts/ is not a package; ml/ must not import from it by name). Returns
+    True when recorded, so the caller keeps the same dedup bookkeeping a send used to give.
+    """
+    try:
+        path = ROOT / "scripts" / "ops_log.py"
+        spec = importlib.util.spec_from_file_location("grt_ops_log", path)
+        if spec is None or spec.loader is None:
+            raise ImportError(f"cannot load {path}")
+        module = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(module)
+        module.record(f"notifications {alert.trigger_id}", alert.title, alert.body)
+    except Exception as exc:  # the alert must still count as handled; say why on stdout
+        logger.warning("ops log write failed for %s: %s", alert.trigger_id, exc)
+        print(f"ops-alert (log write failed) {alert.trigger_id}: {alert.title} -- {alert.body}")
+    return True
+
+
+def _stamp_sent(
+    alert: PendingAlert, state: NotificationState, now_ist: datetime, success: bool
+) -> str:
+    """Record a delivered (or ops-logged) alert in the state; return its sent_at timestamp."""
+    sent_at = datetime.now(UTC).isoformat()
+    if success:
+        state.last_sent[alert.trigger_id] = sent_at
+        state.sent_today.append({"trigger_id": alert.trigger_id, "sent_at": sent_at})
+        if alert.trigger_id == "T5":
+            state.last_t5_ist_date = now_ist.strftime("%Y-%m-%d")
+        if alert.trigger_id == "T6":
+            state.last_t6_fired_date_ist = now_ist.strftime("%Y-%m-%d")
+        if alert.trigger_id == "T4":
+            state.last_t4_fired_ist_date = now_ist.strftime("%Y-%m-%d")
+        if alert.trigger_id == "T7":
+            state.last_t7_fired_ist_date = now_ist.strftime("%Y-%m-%d")
+        if alert.trigger_id == "T8_MORNING":
+            state.last_t8_morning_ist_date = now_ist.strftime("%Y-%m-%d")
+        if alert.trigger_id == "T8_EVENING":
+            state.last_t8_evening_ist_date = now_ist.strftime("%Y-%m-%d")
+        if alert.trigger_id == "T9":
+            state.last_t9_ist_date = now_ist.strftime("%Y-%m-%d")
+        if alert.trigger_id == "T9_ESCALATE":
+            state.last_t9_escalate_ist_date = now_ist.strftime("%Y-%m-%d")
+        if alert.trigger_id == "T10":
+            state.last_t10_ist_date = now_ist.strftime("%Y-%m-%d")
+        if alert.trigger_id == "T11":
+            state.last_t11_ist_date = now_ist.strftime("%Y-%m-%d")
+        if alert.trigger_id == "T12":
+            state.last_t12_ist_date = now_ist.strftime("%Y-%m-%d")
+        if alert.trigger_id == "T13":
+            state.last_t13_ist_date = now_ist.strftime("%Y-%m-%d")
+        if alert.trigger_id == "T14":
+            state.last_t14_ist_date = now_ist.strftime("%Y-%m-%d")
+        logger.info("Sent %s: %s", alert.trigger_id, alert.title)
+    else:
+        logger.warning("Failed to send %s", alert.trigger_id)
+    return sent_at
+
+
 def send_pending(
     alerts: list[PendingAlert],
     state: NotificationState,
     now_ist: datetime,
 ) -> list[SentAlert]:
-    """Send alerts via ntfy.sh; update state.last_sent / sent_today / last_t5_ist_date.
+    """Send price alerts via ntfy.sh; record ops alerts in the ops log; update the state stamps.
 
-    Topic per alert comes from ml.notification_routing: PUBLIC only for an allowlisted trigger id and
-    only when the public-topic secret is set; everything else (and PUBLIC with none) goes to
-    NTFY_TOPIC. Skips silently if the resolved topic is unset.
+    Only trigger ids in ml.notification_routing.PUBLIC_ALLOWLIST (gold-price messages) are ever
+    POSTed; the topic comes from ml.notification_routing (PUBLIC topic when its secret is set, else
+    NTFY_TOPIC; skipped silently if unset). Every other trigger (T5-T7, T9-T14, T16-T19) is written
+    to the ops log instead and counts as handled, so its dedup stamps keep working.
     Titles must be ASCII-only (ntfy header limitation — uses Rs. not the rupee symbol).
     """
     sent: list[SentAlert] = []
     _prune_sent_today(state)
 
     for alert in alerts:
+        if alert.trigger_id not in PUBLIC_ALLOWLIST:
+            success = _record_ops(alert)
+            ops_sent_at = _stamp_sent(alert, state, now_ist, success)
+            sent.append(
+                SentAlert(
+                    trigger_id=alert.trigger_id,
+                    sent_at=ops_sent_at,
+                    title=alert.title,
+                    success=success,
+                )
+            )
+            continue
         audience, topic = resolve_topic(alert.trigger_id, os.environ)
         if not topic:
             logger.info("no topic configured — skipping %s (%s)", alert.trigger_id, alert.title)
@@ -1490,40 +1565,7 @@ def send_pending(
         except Exception as exc:
             logger.warning("ntfy send failed for %s: %s", alert.trigger_id, exc)
 
-        sent_at = datetime.now(UTC).isoformat()
-        if success:
-            state.last_sent[alert.trigger_id] = sent_at
-            state.sent_today.append({"trigger_id": alert.trigger_id, "sent_at": sent_at})
-            if alert.trigger_id == "T5":
-                state.last_t5_ist_date = now_ist.strftime("%Y-%m-%d")
-            if alert.trigger_id == "T6":
-                state.last_t6_fired_date_ist = now_ist.strftime("%Y-%m-%d")
-            if alert.trigger_id == "T4":
-                state.last_t4_fired_ist_date = now_ist.strftime("%Y-%m-%d")
-            if alert.trigger_id == "T7":
-                state.last_t7_fired_ist_date = now_ist.strftime("%Y-%m-%d")
-            if alert.trigger_id == "T8_MORNING":
-                state.last_t8_morning_ist_date = now_ist.strftime("%Y-%m-%d")
-            if alert.trigger_id == "T8_EVENING":
-                state.last_t8_evening_ist_date = now_ist.strftime("%Y-%m-%d")
-            if alert.trigger_id == "T9":
-                state.last_t9_ist_date = now_ist.strftime("%Y-%m-%d")
-            if alert.trigger_id == "T9_ESCALATE":
-                state.last_t9_escalate_ist_date = now_ist.strftime("%Y-%m-%d")
-            if alert.trigger_id == "T10":
-                state.last_t10_ist_date = now_ist.strftime("%Y-%m-%d")
-            if alert.trigger_id == "T11":
-                state.last_t11_ist_date = now_ist.strftime("%Y-%m-%d")
-            if alert.trigger_id == "T12":
-                state.last_t12_ist_date = now_ist.strftime("%Y-%m-%d")
-            if alert.trigger_id == "T13":
-                state.last_t13_ist_date = now_ist.strftime("%Y-%m-%d")
-            if alert.trigger_id == "T14":
-                state.last_t14_ist_date = now_ist.strftime("%Y-%m-%d")
-            logger.info("Sent %s: %s", alert.trigger_id, alert.title)
-        else:
-            logger.warning("Failed to send %s", alert.trigger_id)
-
+        sent_at = _stamp_sent(alert, state, now_ist, success)
         sent.append(
             SentAlert(
                 trigger_id=alert.trigger_id,
