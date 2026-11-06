@@ -182,12 +182,14 @@ runs:
         # merged).
         # A list that still fails after the retries stops the step (it used to read as "no PR"
         # and try to create a second one).
-        PR_NUM=$(ci_retry gh pr list --repo "${GITHUB_REPOSITORY}" --head "${BRANCH}" --state open --json number --jq '.[0].number')
+        # Only a PR from THIS repository counts (scripts/bot_pr_find.sh): a fork PR with the same branch
+        # name must never be taken for this sync's PR.
+        PR_NUM=$(bash "${GITHUB_WORKSPACE}/scripts/bot_pr_find.sh" "${BRANCH}" --first-number)
         if [ -z "$PR_NUM" ]; then
           # A 502 can arrive after the PR was created, so a failed create is judged by listing again.
           ci_retry gh pr create --base master --head "${BRANCH}" --title "${PR_TITLE}" --body "${PR_BODY}" \
             || echo "gh pr create failed; checking whether the PR exists anyway" >&2
-          PR_NUM=$(ci_retry gh pr list --repo "${GITHUB_REPOSITORY}" --head "${BRANCH}" --state open --json number --jq '.[0].number')
+          PR_NUM=$(bash "${GITHUB_WORKSPACE}/scripts/bot_pr_find.sh" "${BRANCH}" --first-number)
           if [ -z "$PR_NUM" ]; then
             echo "::error::no open PR for ${BRANCH} after gh pr create"
             exit 1

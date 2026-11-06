@@ -137,15 +137,16 @@ export -f git
 gh() {{
   echo "gh $*" >> "{log}"
   case "$1 $2" in
-    "pr list")
+    "api repos/o/r/pulls?head="*)
       n=$(cnt list)
       if [ "$n" -le {list_fails} ]; then echo "gh: Bad Gateway (HTTP 502)" >&2; return 1; fi
-      if [ -f "{st}.created" ]; then echo 4242; fi ;;
+      # the row scripts/bot_pr_find.sh's --jq formats (a same-repository PR)
+      if [ -f "{st}.created" ]; then printf '4242\\tabc123\\tc\\tfalse\\to/r\\n'; fi ;;
     "pr create") touch "{st}.created" ;;
     "workflow run")
       n=$(cnt dispatch)
       if [ "$n" -le {dispatch_fails} ]; then echo "gh: Server Error (HTTP 502)" >&2; return 1; fi ;;
-    "pr view") echo MERGED ;;
+    "pr view") case "$*" in *isCrossRepository*) echo "false o r" ;; *) echo MERGED ;; esac ;;
     "api user")
       if [ "{token}" = "bad" ]; then echo "HTTP 401: Bad credentials (https://api.github.com/user)" >&2; return 1; fi
       echo bot-user ;;
@@ -200,7 +201,7 @@ def test_sync_step_fails_closed_when_the_list_never_recovers(tmp_path: Path) -> 
     assert r.returncode != 0
     assert "gh pr create" not in log  # never opens a second PR on a failed listing
     assert "workflow run" not in log
-    assert log.count("gh pr list") == 5
+    assert log.count("pulls?head=") == 5
 
 
 # --- where the workflows use it: no bare network call on the bot-PR and data paths ----------------
@@ -303,7 +304,7 @@ def test_sync_step_stops_loudly_and_pages_when_the_token_is_rejected(tmp_path: P
     assert r.returncode != 0
     assert "was rejected by GitHub (HTTP 401" in r.stdout + r.stderr
     assert log.count("curl ") == 1 and "ntfy.sh/topic" in log  # one page
-    assert "pr list" not in log and "pr create" not in log and "workflow run" not in log
+    assert "pulls?head=" not in log and "pr create" not in log and "workflow run" not in log
     assert "git push" not in log  # stopped before pushing anything
 
 
