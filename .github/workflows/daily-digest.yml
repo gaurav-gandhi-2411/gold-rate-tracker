@@ -1,7 +1,8 @@
-# One plain-words health digest for GG each evening while he is away (docs/AUTONOMY_SPEC.md, section 3).
+# One plain-words gold-price summary for GG each evening: today's 22K/24K/18K rates, the change, the next
+# range and the model's live accuracy (owner decision 2026-11-06: ntfy carries gold-price information only).
 #
-# Reads only aggregates already in the repo (scripts/gg_digest.py) plus the list of PRs merged today, and
-# sends them to the private ntfy topic. The schedule is a fallback only: GitHub's cron runs late or skips,
+# Reads only files already in the repo (scripts/gg_digest.py) and sends the note to the private ntfy topic.
+# System facts (freshness, scrape rate, models, merged PRs, parked items) go to the job summary instead. The schedule is a fallback only: GitHub's cron runs late or skips,
 # so every check-price run after 14:30 UTC starts this when it has not run yet today (the ci-health pattern).
 # A second run on the same UTC day exits at the "already sent today" step, so the triggers cannot double-send.
 name: Daily digest
@@ -44,7 +45,7 @@ jobs:
         with:
           python-version: "3.12"
 
-      - name: Build the digest
+      - name: Build the note (system facts go to the job summary)
         if: steps.guard.outputs.send == 'true'
         env:
           GH_TOKEN: ${{ github.token }}
@@ -57,7 +58,7 @@ jobs:
           [ -s "${RUNNER_TEMP}/merged.json" ] && ARGS=(--merged "${RUNNER_TEMP}/merged.json")
           python scripts/gg_digest.py daily --out "${RUNNER_TEMP}/digest.txt" "${ARGS[@]}"
 
-      - name: Send it to GG's private topic
+      - name: Send the gold-price note to GG's private topic
         if: steps.guard.outputs.send == 'true'
         env:
           NTFY_TOPIC: ${{ secrets.NTFY_TOPIC }}
@@ -68,7 +69,7 @@ jobs:
             exit 1
           fi
           code=$(curl -s -o /dev/null -w '%{http_code}' --retry 3 \
-            -H "Title: Gold Tracker: daily digest" -H "Tags: clipboard" \
+            -H "Title: Gold Tracker: today's gold rate" -H "Tags: moneybag" \
             --data-binary "@${RUNNER_TEMP}/digest.txt" "https://ntfy.sh/${NTFY_TOPIC}")
           echo "ntfy responded HTTP ${code}"
           [ "${code}" = "200" ]

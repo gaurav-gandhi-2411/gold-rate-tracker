@@ -54,7 +54,12 @@ existing ntfy topic on TWO independent channels:
    and 0/month respectively in the same 30-day sample) — see the
    constants' own comments in `src/deadman.mjs` for the full arithmetic.
 
-It also posts a low-priority **daily heartbeat** — stating BOTH channels'
+**Since 2026-11-06 only the forecast-staleness alert sends** (owner decision: ntfy is gold-price information only).
+The Tanishq-silence, PR trigger-health, merged-unchecked and heartbeat channels described below no longer send,
+fetch or write KV state; their classifiers stay in the source and tests. The deployed Worker keeps the old behaviour
+until `npx wrangler deploy` is run from this directory by hand (there is no deploy workflow).
+
+It also posts a low-priority **daily heartbeat** (stopped, see above) — stating BOTH channels'
 current level/age — so its own silence is informative (G4a): without it, no
 ntfy message could ever distinguish "the site is fine" from "the switch
 itself died" (Cloudflare account issue, quota exhaustion, a bad deploy). One

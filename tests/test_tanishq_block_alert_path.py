@@ -6,8 +6,8 @@ The chain, each link exercised for real here (no notification is sent):
    step's `outcome` is "failure"; the health step's bash (executed below, verbatim from the
    workflow) increments data/tanishq_selfhosted_health.json's consecutive_job_failures.
 3. ml.notifications reads that record and fires T12 at >= 3 consecutive failures.
-4. ml.notification_routing sends T12 to the OPS topic (NTFY_TOPIC) -- GG, never the public
-   topic. send_pending is driven with urlopen patched, so the request is captured, not sent.
+4. Since 2026-11-06 (ntfy is gold-price information only) T12 is NOT POSTed to any topic: send_pending
+   records it in the ops log (scripts/ops_log.py annotation). urlopen is patched to fail the test if called.
 
 Also pins the takedown fix: a deliberate takedown (switch enabled=false) must not count as a
 failure (it would otherwise raise a false T12 every day), while a switch/config error still does.
@@ -98,7 +98,7 @@ def workdir(tmp_path: Path) -> Path:
     return tmp_path
 
 
-def test_three_blocked_runs_reach_ops_via_t12_without_sending(workdir: Path, monkeypatch):
+def test_three_blocked_runs_reach_ops_via_t12_without_sending(workdir: Path, monkeypatch, capsys):
     counts = [_run_cycle(workdir, "failure", "true") for _ in range(3)]
     assert counts == [1, 2, 3]
 
@@ -136,10 +136,12 @@ def test_three_blocked_runs_reach_ops_via_t12_without_sending(workdir: Path, mon
     monkeypatch.setattr(notifications.urllib.request, "urlopen", fake_urlopen)
     monkeypatch.setenv("NTFY_TOPIC", "ops-topic-under-test")
     monkeypatch.setenv("NTFY_TOPIC_PUBLIC", "public-topic-under-test")
-    send_pending(t12, NotificationState(), NOW_IST)
-    assert len(captured) == 1
-    assert captured[0].full_url.endswith("/ops-topic-under-test")
-    assert "Tanishq" in captured[0].headers["Title"]
+    state = NotificationState()
+    send_pending(t12, state, NOW_IST)
+    assert captured == []  # nothing is POSTed to ntfy
+    out = capsys.readouterr().out
+    assert "::warning title=ops-alert::notifications T12:" in out and "Tanishq" in out
+    assert state.last_t12_ist_date == NOW_IST.strftime("%Y-%m-%d")  # dedup bookkeeping still works
 
 
 def test_success_resets_the_count(workdir: Path):

@@ -200,7 +200,6 @@ jobs:
       - name: Check forecast drift
         continue-on-error: true
         env:
-          NTFY_TOPIC: ${{ secrets.NTFY_TOPIC }}
           DRIFT_THRESHOLD: "1.5"
         run: python -m ml.drift
 
@@ -432,7 +431,6 @@ jobs:
         continue-on-error: true
         env:
           GH_TOKEN: ${{ github.token }}
-          NTFY_TOPIC: ${{ secrets.NTFY_TOPIC }}
         run: |
           source "${GITHUB_WORKSPACE}/scripts/ci_retry.sh"
           # a list that still fails after the retries is said out loud, not read as "no PR"
@@ -451,16 +449,10 @@ jobs:
           if [ "$AGE_MIN" -le 30 ]; then
             exit 0
           fi
-          if [ -z "${NTFY_TOPIC}" ]; then
-            echo "NTFY_TOPIC not set — skipping ntfy alert."
-            exit 0
-          fi
-          curl -s \
-            -H "Title: Gold Tracker: bot PR stuck unmerged" \
-            -H "Priority: high" \
-            -H "Tags: warning" \
-            -d "bot/data-sync PR #${PR_NUM} has been open ${AGE_MIN} min without merging -- prices.json may be stale. https://github.com/${GITHUB_REPOSITORY}/pull/${PR_NUM}" \
-            "https://ntfy.sh/${NTFY_TOPIC}" || true
+          # ops log, not the phone: ntfy carries gold-price information only (2026-11-06)
+          python3 scripts/ops_log.py --source "check-price" \
+            --title "bot PR stuck unmerged" \
+            --body "bot/data-sync PR #${PR_NUM} has been open ${AGE_MIN} min without merging -- prices.json may be stale. https://github.com/${GITHUB_REPOSITORY}/pull/${PR_NUM}"
 
       # GitHub's cron skips runs, and a monitor that may not run is not a monitor: ci-health.yml
       # last ran 9 h apart on 2026-10-09. Any check-price run (push, dispatch or cron) that finds it

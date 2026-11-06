@@ -164,7 +164,6 @@ jobs:
           # CI_HEALTH_PAT is a fine-grained PAT provisioned specifically for
           # this, with Administration: read, repo-scoped -- verified live.
           GH_TOKEN: ${{ secrets.CI_HEALTH_PAT }}
-          NTFY_TOPIC: ${{ secrets.NTFY_TOPIC }}
         run: |
           set -e
           source "${GITHUB_WORKSPACE}/scripts/ci_retry.sh"
@@ -189,15 +188,11 @@ jobs:
           # too, not just the "found a real red check" branch. Silence on
           # the inability to verify is the exact failure shape this whole
           # workflow exists to close (rule 98a); it can't exempt itself.
+          # Since 2026-11-06 it writes to the ops log (job summary + ops-alert annotation), not the
+          # phone: ntfy carries gold-price information only. The step still fails red.
           page() {
-            if [ -n "${NTFY_TOPIC}" ]; then
-              curl -s \
-                -H "Title: Gold Tracker: ci-health.yml could not verify master's CI state" \
-                -H "Priority: high" \
-                -H "Tags: warning,rotating_light" \
-                -d "$1" \
-                "https://ntfy.sh/${NTFY_TOPIC}" || true
-            fi
+            python3 scripts/ops_log.py --source "ci-health" \
+              --title "could not verify master's CI state" --body "$1" || true
           }
 
           # stderr goes to a file, not into the response: ci_retry's progress lines and a successful
@@ -276,14 +271,9 @@ jobs:
 
           if [ -n "$FAILING" ]; then
             echo "::error::Required check(s) not green on master's most recent lint.yml run (${RUN_SHA}): ${FAILING}"
-            if [ -n "${NTFY_TOPIC}" ]; then
-              curl -s \
-                -H "Title: Gold Tracker: required CI check red on master" \
-                -H "Priority: high" \
-                -H "Tags: warning,rotating_light" \
-                -d "Required status check(s) not green on master's most recent lint.yml run (${RUN_SHA}): ${FAILING}Every open PR's own required check is blocked until this is fixed. https://github.com/${GITHUB_REPOSITORY}/actions/runs/${RUN_ID}" \
-                "https://ntfy.sh/${NTFY_TOPIC}" || true
-            fi
+            python3 scripts/ops_log.py --source "ci-health" \
+              --title "required CI check red on master" \
+              --body "Required status check(s) not green on master's most recent lint.yml run (${RUN_SHA}): ${FAILING}Every open PR's own required check is blocked until this is fixed. https://github.com/${GITHUB_REPOSITORY}/actions/runs/${RUN_ID}" || true
             exit 1
           fi
 
@@ -298,20 +288,14 @@ jobs:
         if: always()
         env:
           GH_TOKEN: ${{ github.token }}
-          NTFY_TOPIC: ${{ secrets.NTFY_TOPIC }}
         run: |
           set -e
           source "${GITHUB_WORKSPACE}/scripts/ci_retry.sh"
           export CI_RETRY_ATTEMPTS=3 CI_RETRY_BASE=5
+          # ops log, not the phone (2026-11-06): ntfy carries gold-price information only
           page() {
-            if [ -n "${NTFY_TOPIC}" ]; then
-              curl -s \
-                -H "Title: Gold Tracker: check-price stopped -- the forecast is not updating" \
-                -H "Priority: high" \
-                -H "Tags: warning,rotating_light" \
-                -d "$1" \
-                "https://ntfy.sh/${NTFY_TOPIC}" || true
-            fi
+            python3 scripts/ops_log.py --source "ci-health" \
+              --title "check-price stopped -- the forecast is not updating" --body "$1" || true
           }
           set +e
           ci_retry gh api "repos/${GITHUB_REPOSITORY}/actions/workflows/check-price.yml/runs?branch=master&status=completed&per_page=30" \

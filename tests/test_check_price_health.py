@@ -129,7 +129,8 @@ def test_ci_health_runs_the_check_even_after_its_lint_check_failed_and_pages_on_
     assert "scripts/check_price_health.py" in run
     assert "check-price.yml/runs?branch=master&status=completed" in run
     assert 'if [ "$STATUS" -ne 0 ]' in run and 'page "${RESULT}' in run
-    assert "NTFY_TOPIC" in step["env"]
+    # 2026-11-06: ops pages go to the ops log, not ntfy
+    assert "NTFY_TOPIC" not in step["env"] and "scripts/ops_log.py" in run
 
 
 def test_ci_health_may_list_runs_and_stays_on_its_hourly_schedule():
@@ -252,7 +253,7 @@ def test_step_a_stale_first_read_that_a_second_read_contradicts_does_not_page(tm
     second = [_run(2, "success", _recent(4.6)), *first]
     code, out, page = _step_run(tmp_path, first, second)
     assert code == 0, out
-    assert "STALE NOT CONFIRMED" in out and page == ""
+    assert "STALE NOT CONFIRMED" in out and page == "" and "ops-alert" not in out
     assert (tmp_path / "sleep.log").read_text().strip() == "sleep 60"
 
 
@@ -261,21 +262,22 @@ def test_step_a_real_stop_still_pages(tmp_path):
     first = [_run(1, "success", _recent(12))]
     code, out, page = _step_run(tmp_path, first, first)
     assert code == 1 and "STALE: no successful check-price run" in out
-    assert "check-price stopped" in page
+    # 2026-11-06: the page is an ops-log annotation on stdout (ops_log.py), never a curl to ntfy
+    assert page == "" and "::warning title=ops-alert::ci-health: check-price stopped" in out
 
 
 @pytest.mark.skipif(BASH is None or JQ is None, reason="needs bash and jq (CI has both)")
 def test_step_an_unreadable_second_read_still_pages(tmp_path):
     first = [_run(1, "success", _recent(12))]
     code, out, page = _step_run(tmp_path, first, None)
-    assert code == 1 and "check-price stopped" in page
+    assert code == 1 and page == "" and "ops-alert::ci-health: check-price stopped" in out
     assert "STALE: no successful check-price run" in out and "NOT CONFIRMED" not in out
 
 
 @pytest.mark.skipif(BASH is None or JQ is None, reason="needs bash and jq (CI has both)")
 def test_step_a_healthy_list_reads_once_and_never_sleeps(tmp_path):
     code, out, page = _step_run(tmp_path, [_run(1, "success", _recent(1))], None)
-    assert code == 0 and out.startswith("OK") and page == ""
+    assert code == 0 and out.startswith("OK") and page == "" and "ops-alert" not in out
     assert not (tmp_path / "sleep.log").exists()
     assert "per_page=50" not in (tmp_path / "gh.log").read_text()
 
@@ -285,7 +287,8 @@ def test_step_a_failed_run_pages_at_once_without_a_second_read(tmp_path):
     # a failed round trip is a real stop: no minute's wait, no re-read
     first = [_run(2, "failure", _recent(0.5)), _run(1, "success", _recent(3))]
     code, out, page = _step_run(tmp_path, first, None)
-    assert code == 1 and "FAILING" in out and "check-price stopped" in page
+    assert code == 1 and "FAILING" in out and page == ""
+    assert "ops-alert::ci-health: check-price stopped" in out
     assert not (tmp_path / "sleep.log").exists()
     assert "per_page=50" not in (tmp_path / "gh.log").read_text()
 
