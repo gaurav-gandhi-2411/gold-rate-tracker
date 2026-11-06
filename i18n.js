@@ -475,6 +475,12 @@ const STRINGS = {
     chartEstimateLabel: ({ k = 22 } = {}) => `${k}K estimate (₹/g)`,
     chartEstimateTooltip: ({ value, k = 22 }) => `${k}K estimate: ≈ ₹${value}`,
     chartNoteEstimate: "Estimate from India's official daily gold rate",
+    // Long-term view (flag long_history, OFF). The counts in the note come from the data file.
+    longHistoryLabel: "Monthly sample",
+    longHistoryTooltip: ({ value, n, min, max, k = 22 }) => n === 1
+      ? `${k}K estimate: ≈ ₹${value} (the only official-rate day we have this month)`
+      : `${k}K estimate: ≈ ₹${value}, the middle of ${n} official-rate days (₹${min} – ₹${max})`,
+    longHistoryNote: ({ without, total }) => `Before June 2026 we only have scattered official-rate days, not daily ones. Each dot is the middle value of the days we have in that month (tap or hover to see how many). ${without} of the ${total} months have no data and so no dot. Dots are not joined. From June 2026 the line is daily.`,
     chartNoteTanishq: "Tanishq's listed rate",
     chartWhatHappened: "Actual price",
     chartFlatHoldEstimate: "Our estimate",
@@ -847,6 +853,11 @@ const STRINGS = {
     chartEstimateLabel: ({ k = 22 } = {}) => `${k} कैरेट अनुमान (₹/ग्राम)`,
     chartEstimateTooltip: ({ value, k = 22 }) => `${k} कैरेट अनुमान: ≈ ₹${value}`,
     chartNoteEstimate: "भारत के आधिकारिक रोज़ के भाव से निकाला अनुमान",
+    longHistoryLabel: "महीने का नमूना",
+    longHistoryTooltip: ({ value, n, min, max, k = 22 }) => n === 1
+      ? `${k} कैरेट अनुमान: ≈ ₹${value} (इस महीने का हमारे पास आधिकारिक भाव वाला सिर्फ़ एक दिन)`
+      : `${k} कैरेट अनुमान: ≈ ₹${value}, आधिकारिक भाव वाले ${n} दिनों का बीच का भाव (₹${min} – ₹${max})`,
+    longHistoryNote: ({ without, total }) => `जून 2026 से पहले हमारे पास रोज़ के नहीं, बिखरे हुए आधिकारिक भाव वाले दिन ही हैं। हर बिंदु उस महीने के हमारे पास मौजूद दिनों का बीच का भाव है (कितने दिन, यह देखने के लिए छूएँ या ऊपर रखें)। ${total} में से ${without} महीनों का कोई डेटा नहीं है, इसलिए उनका बिंदु नहीं है। बिंदु आपस में जुड़े नहीं हैं। जून 2026 से रेखा रोज़ की है।`,
     chartNoteTanishq: "Tanishq का बताया भाव",
     chartWhatHappened: "असली भाव",
     chartFlatHoldEstimate: "हमारा अनुमान",

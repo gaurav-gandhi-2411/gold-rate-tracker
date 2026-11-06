@@ -35,6 +35,7 @@ const COVERAGE_URL  = "data/coverage_metrics.json";
 // per IBJA publishing day (scripts/build_ibja_derived_prices.py --public-out). An estimate,
 // never a retailer observation; see chartSeries().
 const DERIVED_PRICES_URL = "data/ibja_derived_prices.json";
+const LONG_HISTORY_URL   = "data/long_history_monthly.json"; // flag long_history (OFF): monthly samples
 const CADENCE_URL   = "data/cadence_metrics.json"; // R2: measured price-check interval (price_checks block), see ml/cadence_metrics.py
 // AE1 (audit 2026-09-10): walk-forward MEASURED coverage of the IBJA-calibrated
 // tier's actual displayed band, see ml.calibration.save_calibration_band_coverage.
@@ -296,6 +297,7 @@ let currentRange     = "30";   // tracks active chart tab for refreshData()
 let pwaHelpDismissed = false; // D5: set true when user taps ✕; survives re-renders
 let chartPinnedIndex  = null;  // index of tapped chart point; null = no callout
 let derivedSeries     = null;  // data/ibja_derived_prices.json rows (GG 4c); null until loaded
+let longHistory       = null;  // data/long_history_monthly.json (only fetched when flag long_history is on)
 let chartIsEstimate   = false; // what the chart currently plots (drives the ≈ in its callout)
 let trackRecordChart  = null;  // Chart.js instance for forecast-vs-actual section
 let displayedPrice    = null;  // Φ16-4: last rendered hero price; drives number tick
@@ -2149,6 +2151,38 @@ function chartSeries(readings, derived) {
   return { rows: readings.filter(r => !isDerivedReading(r)), estimate: false };
 }
 
+// ── Long-term view (flag long_history, OFF) ─────────────────────────────────────────────────
+// The flag guard never throws: flags.js is a separate script, and a missing isFeatureOn must read
+// as OFF, not break the chart.
+function longHistoryOn() {
+  return typeof isFeatureOn === "function" && isFeatureOn("long_history");
+}
+
+// The monthly dots of data/long_history_monthly.json as chart points in the chosen karat: only
+// samples strictly before the daily series starts (never overlapping it), only well-formed ones,
+// oldest first. Pure. Each point: { x: ms, y: price, n, min, max, month }. A malformed document
+// yields [] (the view then simply is not shown).
+function longHistoryDots(doc, firstDailyMs, karat = currentKarat) {
+  const samples = doc && Array.isArray(doc.samples) ? doc.samples : [];
+  const out = [];
+  for (const s of samples) {
+    const x = s && typeof s.timestamp === "string" ? Date.parse(s.timestamp) : NaN;
+    if (!Number.isFinite(x) || x >= firstDailyMs) continue;
+    if (!Number.isFinite(s["22k"]) || !Number.isInteger(s.n) || s.n < 1) continue;
+    const at = (v) => karatValue({ "22k": v }, karat);
+    out.push({ x, y: at(s["22k"]), n: s.n, min: at(s.min), max: at(s.max), month: String(s.month ?? "") });
+  }
+  return out.sort((a, b) => a.x - b.x);
+}
+
+// "Mar 2023" / "मार्च 2023" for a dot's month, in the page language (UTC: the dot is placed mid-month).
+function fmtMonthYear(ms) {
+  const locale = currentLang === "hi" ? "hi-IN" : "en-IN";
+  return new Intl.DateTimeFormat(locale, {
+    timeZone: "UTC", month: "short", year: "numeric", numberingSystem: "latn",
+  }).format(new Date(ms));
+}
+
 // GG 3d (2026-09-26): every multi-day history reader -- the hero verdict and sparkline, the
 // comparison cards, the history table and the good-price signals -- takes its rows from the same
 // series the trend chart plots (chartSeries above). Two reasons: they keep working once #2075
@@ -2252,8 +2286,21 @@ function renderChart(readings, range) {
   const labels   = chartPts.map(r => fmtDateShort(r.timestamp, true));
   const data22   = chartPts.map(r => karatValue(r));
   const points   = chartPts.map((r, i) => ({ x: Date.parse(r.timestamp), y: data22[i] }));
-  const tickYear = spansYears(chartPts.map(r => r.timestamp));
   const lastIdx  = data22.length - 1;
+
+  // Long-term view (flag long_history, OFF): on "All", the estimate series only, add the monthly
+  // samples that precede the daily series as unjoined dots. Flag off or any other range: no dots,
+  // and every option below is exactly what it was.
+  const dots = (longHistoryOn() && range === "all" && series.estimate && points.length)
+    ? longHistoryDots(longHistory, points[0].x, currentKarat) : [];
+  const tickYear = spansYears([...chartPts.map(r => r.timestamp), ...dots.map(d => d.x)]);
+  const lhNote = document.getElementById("chart-long-history-note");
+  if (lhNote) {
+    const total = longHistory && Number.isInteger(longHistory.months_total) ? longHistory.months_total : 0;
+    const have  = longHistory && Number.isInteger(longHistory.months_with_data) ? longHistory.months_with_data : 0;
+    lhNote.textContent = dots.length ? t("longHistoryNote", { without: Math.max(total - have, 0), total }) : "";
+    lhNote.hidden = !dots.length;
+  }
 
   const colors    = getChartColors();
   const goldLine  = colors.gold;
@@ -2293,15 +2340,32 @@ function renderChart(readings, range) {
         pointBorderWidth: 0,
         tension: 0,
         spanGaps: CHART_MAX_JOIN_MS, // a number: points further apart than this are not joined
-      }],
+      }, ...(dots.length ? [{
+        // Monthly samples: hollow dots, never joined (showLine false), no fill. Dataset index 1, so
+        // the tap callout (dataset 0) and everything keyed to it is untouched.
+        label: t("longHistoryLabel"),
+        data: dots,
+        showLine: false,
+        borderColor: goldLine,
+        backgroundColor: "transparent",
+        pointStyle: "circle",
+        pointRadius: 3.5,
+        pointHoverRadius: 5,
+        pointBorderWidth: 1.5,
+        pointBackgroundColor: "transparent",
+        pointBorderColor: goldLine,
+      }] : [])],
     },
     options: {
       responsive: true,
       maintainAspectRatio: false,
-      interaction: { mode: "index", intersect: false },
+      // "index" pairs points of one dataset by position; with a second, shorter dataset on the same
+      // time axis the nearest point in x is the meaningful one.
+      interaction: dots.length ? { mode: "nearest", axis: "x", intersect: false } : { mode: "index", intersect: false },
       onClick: (event, elements) => {
-        if (elements.length > 0) {
-          const idx = elements[0].index;
+        const el = elements.find((e) => e.datasetIndex === 0); // the callout belongs to the daily line
+        if (el) {
+          const idx = el.index;
           chartPinnedIndex = (chartPinnedIndex === idx) ? null : idx;
         } else {
           chartPinnedIndex = null;
@@ -2321,8 +2385,19 @@ function renderChart(readings, range) {
           bodyColor: "#F5EDE0",
           padding: 12,
           callbacks: {
-            title: (items) => (items.length ? labels[items[0].dataIndex] : ""),
-            label: (c) => t(series.estimate ? "chartEstimateTooltip" : "chart22kTooltip", { value: fmtINR(c.parsed.y), k: currentKarat }),
+            title: (items) => {
+              if (!items.length) return "";
+              const it = items[0];
+              return it.datasetIndex === 1 && dots[it.dataIndex]
+                ? fmtMonthYear(dots[it.dataIndex].x) : labels[it.dataIndex];
+            },
+            label: (c) => {
+              const d = c.datasetIndex === 1 ? dots[c.dataIndex] : null;
+              if (d) {
+                return t("longHistoryTooltip", { value: fmtINR(d.y), n: d.n, min: fmtINR(d.min), max: fmtINR(d.max), k: currentKarat });
+              }
+              return t(series.estimate ? "chartEstimateTooltip" : "chart22kTooltip", { value: fmtINR(c.parsed.y), k: currentKarat });
+            },
           },
         },
         phi8cCallout: {},
@@ -2330,7 +2405,7 @@ function renderChart(readings, range) {
       scales: {
         x: {
           type:   "linear",
-          min:    points.length ? points[0].x : undefined,
+          min:    points.length ? Math.min(points[0].x, ...(dots.length ? [dots[0].x] : [])) : undefined,
           max:    points.length ? points[lastIdx].x : undefined,
           ticks:  {
             color: axisColor, maxTicksLimit: 5, autoSkip: true, font: { family: "DM Sans", size: 11 },
@@ -3043,6 +3118,7 @@ async function refreshData() {
     const fc    = await fcPromise;
     const derived = await derivedPromise;
     if (derived) derivedSeries = derived; // keep the last good series on a failed re-fetch
+    // longHistory is static (history before 2026-06 is closed): loaded once at init, not on refresh.
     allReadings  = fresh;
     lastForecast = fc;
     renderFreshness(allReadings, fc);
@@ -3650,6 +3726,8 @@ function applyLanguage(lang) {
   const coveragePromise = loadJSON(COVERAGE_URL);
   const cadencePromise = loadJSON(CADENCE_URL);
   const derivedPromise = loadJSON(DERIVED_PRICES_URL).catch(() => null); // GG 4c chart series
+  // Flag long_history (OFF): the monthly samples are requested only when the flag is on.
+  const longHistoryPromise = longHistoryOn() ? loadJSON(LONG_HISTORY_URL).catch(() => null) : Promise.resolve(null);
   const bandCoveragePromise = loadJSON(CALIBRATION_BAND_COVERAGE_URL); // AE1: measured band coverage
   // page_v2 (item 6, flagged OFF) -- none of these five files exist on master yet; each
   // pre-catches to null exactly like fcPromise above, so a 404 never surfaces as a Sentry
@@ -3730,6 +3808,7 @@ function applyLanguage(lang) {
   // the same series as the chart (historyRows, GG 3d).
   renderFreshness(allReadings);
   derivedSeries = await derivedPromise;
+  longHistory   = await longHistoryPromise;
   renderComparisons(allReadings);
   renderHistory(allReadings);
   renderChart(allReadings, "30");
