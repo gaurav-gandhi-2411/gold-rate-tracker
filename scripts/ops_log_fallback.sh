@@ -3,17 +3,12 @@
 #
 # Source it, then:   ops_log_fallback SOURCE TITLE BODY
 #
-# Why: scripts/bot_branch_push.sh runs on the self-hosted Windows runner (scrape-tanishq-selfhosted.yml)
-# where no python is installed (that workflow's own comment: "no python3/jq assumed present"), so its
-# `python3 scripts/ops_log.py ... || true` silently dropped every record. This does the same three
-# things as scripts/ops_log.py record(), with only bash, awk, sed, date, base64 and gh (gh has its own
-# --jq, so no jq is needed):
-#   1. the `::warning title=ops-alert::...` annotation on stdout;
-#   2. a section appended to $GITHUB_STEP_SUMMARY;
-#   3. one JSON line appended to ops_log.jsonl on the `ops-log` branch (best effort, up to 5 tries on a
-#      sha conflict). Unlike scripts/ops_log.py it does not create the branch: if it is missing it
-#      prints a warning (the python writers on the hosted runners create it).
-# Never fails the caller: every error becomes a one-line warning. Needs GH_TOKEN for step 3.
+# Why: scripts/bot_branch_push.sh runs on the self-hosted Windows runner, which has no python, so its
+# `python3 scripts/ops_log.py ... || true` silently dropped every record. Same three things as
+# ops_log.py record(), with only bash, awk, sed, date, base64 and gh (its own --jq, no jq):
+#   1. the `::warning title=ops-alert::...` annotation; 2. a section in $GITHUB_STEP_SUMMARY;
+#   3. one JSON line appended to ops_log.jsonl on `ops-log` (5 tries on a sha conflict; the payload
+#      goes on stdin; it never creates the branch, it warns). Never fails the caller. Needs GH_TOKEN.
 # Environment: GITHUB_ACTIONS, GITHUB_REPOSITORY, GITHUB_RUN_ID, GITHUB_WORKFLOW, GITHUB_SERVER_URL,
 # OPS_LOG_NO_FILE (skip step 3), OPS_LOG_RETRY_BASE (seconds, default 1; tests set 0).
 
