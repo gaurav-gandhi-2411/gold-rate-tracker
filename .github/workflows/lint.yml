@@ -123,6 +123,11 @@ jobs:
       # live network calls (HuggingFace model download). They run non-gating in
       # weekly-backtest.yml where the Chronos cache is warm and continue-on-error: true.
       - name: Run full pytest suite
+        # FOR_GG item 11: on a data-only PR only, record which tests read data/ (tests/conftest.py
+        # registers scripts/data_reads_plugin.py when this is set; recording only, it changes no
+        # outcome). Empty on every other run, so code PRs run exactly as before.
+        env:
+          DATA_READS_OUT: ${{ steps.scope.outputs.data_only == 'true' && format('{0}/data_reads.json', runner.temp) || '' }}
         run: |
           pytest \
             -m "not integration" \
@@ -204,13 +209,25 @@ jobs:
           case $? in 0) VALID=pass ;; 1) VALID=fail ;; *) VALID=error ;; esac
           # indented, so a line from the PR's data can never be read as a `::` workflow command
           tail -n 20 "$RUNNER_TEMP/validate.txt" | sed 's/^/  /'
-          # Agreement is only meaningful where data-only would have decided: on a full-scope PR the
-          # code checks can fail for reasons validation never looks at; a cancelled run decided nothing.
-          if [ "$MODE" != "data-only" ] || [ "$FULL_RESULT" = "cancelled" ]; then AGREE=n/a
-          elif { [ "$VALID" = "pass" ] && [ "$FULL_RESULT" = "success" ]; } \
-            || { [ "$VALID" != "pass" ] && [ "$FULL_RESULT" != "success" ]; }; then AGREE=yes
+          # FOR_GG item 11 (option C): the tests that read data/ would decide a data-only PR. Which
+          # tests failed, and whether each read data/, comes from the full suite's record above.
+          DTESTS=n/a
+          if [ "$MODE" = "data-only" ]; then
+            python scripts/data_test_decision.py --reads "$RUNNER_TEMP/data_reads.json" > "$RUNNER_TEMP/data_tests.txt" 2>&1
+            case $? in 0) DTESTS=pass ;; 1) DTESTS=fail ;; *) DTESTS=error ;; esac
+            head -n 40 "$RUNNER_TEMP/data_tests.txt" | sed 's/^/  /'
+          fi
+          # The data-only decision passes only when the data validates AND its tests pass. Agreement
+          # is only meaningful where data-only would have decided: on a full-scope PR the code checks
+          # can fail for reasons validation never looks at; a cancelled run decided nothing; and with
+          # no record of the tests (data_tests=error, e.g. a linter failed before the suite ran, the
+          # 2026-10-29 shape) the data-only path was never actually tried, so it cannot count.
+          if [ "$VALID" = "pass" ] && [ "$DTESTS" = "pass" ]; then DECIDE=pass; else DECIDE=fail; fi
+          if [ "$MODE" != "data-only" ] || [ "$FULL_RESULT" = "cancelled" ] || [ "$DTESTS" = "error" ]; then AGREE=n/a
+          elif { [ "$DECIDE" = "pass" ] && [ "$FULL_RESULT" = "success" ]; } \
+            || { [ "$DECIDE" != "pass" ] && [ "$FULL_RESULT" != "success" ]; }; then AGREE=yes
           else AGREE=no; fi
-          LINE="DATA-ONLY SHADOW: scope=$MODE validate=$VALID full=$FULL_RESULT agree=$AGREE reason=$REASON"
+          LINE="DATA-ONLY SHADOW: scope=$MODE validate=$VALID data_tests=$DTESTS full=$FULL_RESULT agree=$AGREE reason=$REASON"
           echo "$LINE"
           {
             echo "$LINE"

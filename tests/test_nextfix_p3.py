@@ -131,7 +131,9 @@ def test_run_keeps_two_separate_records_and_scores_both(tmp_path: Path):
     ens = nextfix.load_oos(tmp_path / "nextfix_oos.json")
     assert [f["d0"] for f in p3] == [f["d0"] for f in ens]
     assert p3 != ens
-    assert all("retro" in f for f in p3) and all("retro" not in f for f in ens)
+    # FOR_GG item 10: the ensemble's days carry explicit flags by P3's own rule, so they match P3's
+    assert all(isinstance(f.get("retro"), bool) for f in p3 + ens)
+    assert [f["retro"] for f in p3] == [f["retro"] for f in ens]
     assert out["forecast"]["model_version"] == nextfix.MODEL_VERSION
 
 
