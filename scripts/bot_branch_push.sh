@@ -26,16 +26,25 @@ set -euo pipefail
 BRANCH="${1:?usage: bot_branch_push.sh BRANCH}"
 HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 source "${HERE}/ci_retry.sh"
+source "${HERE}/ops_log_fallback.sh"
 
 MINE="$(git rev-parse HEAD)"
 MSG="$(git log -1 --format=%B "${MINE}")"
 RESCUE="${BRANCH}-rescue-${GITHUB_RUN_ID:-$(date -u +%Y%m%dT%H%M%SZ)}"
 
 page() {
-  # ops log (job summary + ops-alert annotation), NOT the phone: ntfy is gold-price information only
-  python3 "${HERE}/ops_log.py" --source "bot_branch_push" \
-    --title "a Tanishq reading needed rescuing" \
-    --body "$1 https://github.com/${GITHUB_REPOSITORY:-}/branches" || true
+  # ops log (job summary + ops-alert annotation + ops-log file), NOT the phone: ntfy is gold-price
+  # information only. The self-hosted Windows runner has no python, and the old
+  # `python3 ... || true` dropped the record there without a trace: use the bash version then.
+  local py="${OPS_LOG_PYTHON:-python3}"
+  if "${py}" -c 'import sys' >/dev/null 2>&1; then
+    "${py}" "${HERE}/ops_log.py" --source "bot_branch_push" \
+      --title "a Tanishq reading needed rescuing" \
+      --body "$1 https://github.com/${GITHUB_REPOSITORY:-}/branches" || true
+  else
+    ops_log_fallback "bot_branch_push" "a Tanishq reading needed rescuing" \
+      "$1 https://github.com/${GITHUB_REPOSITORY:-}/branches" || true
+  fi
 }
 
 rescue() {
