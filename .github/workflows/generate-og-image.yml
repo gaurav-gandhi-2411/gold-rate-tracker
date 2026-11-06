@@ -35,6 +35,9 @@ jobs:
     # Only run when the upstream workflow succeeded (a dispatch has no upstream)
     if: ${{ github.event_name != 'workflow_run' || github.event.workflow_run.conclusion == 'success' }}
     runs-on: ubuntu-latest
+    env:
+      # the ops-log file append (scripts/ops_log.py) uses the workflow token, not a step's PAT
+      OPS_LOG_TOKEN: ${{ github.token }}
 
     steps:
       # ref: master, not the event's commit. A workflow_run or dispatch event pins GITHUB_SHA to master
