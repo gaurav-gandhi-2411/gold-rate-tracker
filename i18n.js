@@ -761,7 +761,7 @@ const STRINGS = {
     supportLine2Above: ({ amount }) => `इस महीने के आम भाव से ₹${amount} ज़्यादा।`,
     supportLine2At: "इस महीने के आम भाव के बराबर।",
     divergenceNote: "(इन दोनों में पूरी तरह मेल नहीं है — एक दिन गिनता है, दूसरा रुपये का असली फ़र्क़ नापता है। ऊपर की हेडलाइन के लिए हम दिनों की गिनती वाला तरीक़ा लेते हैं।)",
-    goodPriceTomorrow: ({ low, high }) => `अगले आधिकारिक भाव के बराबर दुकान का भाव: शायद <strong>₹${low}</strong> – <strong>₹${high}</strong> के बीच।`,
+    goodPriceTomorrow: ({ low, high }) => `अगले आधिकारिक भाव के अनुरूप दुकान का भाव: शायद <strong>₹${low}</strong> – <strong>₹${high}</strong> के बीच।`,
     // 2026-11-03, LLM consensus (docs/HINDI_CONTESTED.md round 4); these fell back to English before
     directionUp: ({ pct }) => `भारत का पिछला आधिकारिक भाव तय होने के बाद दुनिया के बाज़ार में सोने का भाव बदला है, इसलिए अगले आधिकारिक भाव के <strong>बढ़ने</strong> की संभावना ज़्यादा है (करीब ${pct}% संभावना)।`,
     directionDown: ({ pct }) => `भारत का पिछला आधिकारिक भाव तय होने के बाद दुनिया के बाज़ार में सोने का भाव बदला है, इसलिए अगले आधिकारिक भाव के <strong>घटने</strong> की संभावना ज़्यादा है (करीब ${pct}% संभावना)।`,

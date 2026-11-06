@@ -56,6 +56,8 @@ test("the range is labelled as the shop-price equivalent of the next official ra
   assert.match(t("goodPriceTomorrow", { low: "13,254", high: "13,616" }),
     /^Shop-price equivalent of the next official rate: likely/);
   setLang("hi");
-  assert.match(t("goodPriceTomorrow", { low: "13,254", high: "13,616" }), /^अगले आधिकारिक भाव के बराबर दुकान का भाव/);
+  assert.match(t("goodPriceTomorrow", { low: "13,254", high: "13,616" }), /^अगले आधिकारिक भाव के अनुरूप दुकान का भाव/);
+  // "के बराबर" (equal to) read as "the shop price equals the official rate": the opposite (verifier)
+  assert.doesNotMatch(t("goodPriceTomorrow", { low: "1", high: "2" }), /बराबर/);
   setLang("en");
 });
