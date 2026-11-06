@@ -48,6 +48,16 @@ test("year span follows the data: folds starting in 2023 say 2023, not a hand-ty
   assert.doesNotMatch(html, /2022/);
 });
 
+test("the 5-day accuracy claim is scoped to 5 days ahead and to the one model tested (EN, HI)", () => {
+  const en = render({ bt: { ...BT_BASE, folds: folds("2022-03-15", "2026-10-15") } });
+  assert.match(en, /For 5 days ahead, gold prices are hard to predict — the AI model we tested/);
+  assert.match(en, /So for 5 days ahead, "no change" is what we go with\./);
+  assert.doesNotMatch(en, /every model we tried/);
+  const hi = render({ lang: "hi", bt: { ...BT_BASE, folds: [] } });
+  assert.match(hi, /5 दिन आगे के लिए जिस AI मॉडल को हमने जांचा/);
+  assert.doesNotMatch(hi, /जितने भी मॉडल/);
+});
+
 test("year span: all folds in one year prints that year alone", () => {
   const html = render({ bt: { ...BT_BASE, folds: folds("2026-01-05", "2026-10-15") } });
   assert.match(html, /time windows from 2026:/);
@@ -65,7 +75,8 @@ test("year span, Hindi: the same computed span, wording otherwise unchanged", ()
   const html = render({ lang: "hi", bt: { ...BT_BASE, folds: folds("2022-03-15", "2026-10-15") } });
   assert.match(html, /2022–2026 के बीच 266 अलग-अलग समय-खंडों पर टेस्ट किया गया/);
   const none = render({ lang: "hi", bt: { ...BT_BASE, folds: [] } });
-  assert.match(none, /निकले। 266 अलग-अलग समय-खंडों पर/);
+  // singular since 2026-11-06: one AI model was tested for 5 days ahead, not "every model"
+  assert.match(none, /निकला। 266 अलग-अलग समय-खंडों पर/);
   assert.doesNotMatch(none, /के बीच 266/);
 });
 

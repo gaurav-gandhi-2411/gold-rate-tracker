@@ -545,7 +545,7 @@ test("direction line: hidden unless inference says show, and when the model is i
 test("next price update: label, and a held-fix window quotes its own coverage with no direction line", () => {
   const html = renderCard({ active: true, mode: "after_morning_rate", direction: { show: false, side: "unclear", probability: null },
     track_record: TRACK, range_record: { coverage: 0.79, n: 148 } });
-  assert.match(html, /Next price update: likely <strong>₹13,601<\/strong>/);
+  assert.match(html, /Shop-price equivalent of the next official rate: likely <strong>₹13,601<\/strong>/);
   assert.ok(!/good-price-direction/.test(html));
   assert.match(html, /about 7 times out of 10/);
 });

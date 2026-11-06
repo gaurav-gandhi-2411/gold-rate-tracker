@@ -1368,7 +1368,9 @@ function renderHero(readings, forecast) {
   const verdict = computeVerdict(hist.rows, hist.estimate ? null : forecast);
   document.getElementById("verdict-icon").textContent    = verdict.icon;
   document.getElementById("verdict-headline").textContent = verdict.headline;
-  document.getElementById("verdict-reason").textContent  = verdict.reason;
+  // On the estimate series the week/month figures are not moves of the headline shop price: say so.
+  document.getElementById("verdict-reason").textContent  =
+    hist.estimate && verdict.type !== "unknown" ? `${verdict.reason} ${t("verdictBasisEstimate")}` : verdict.reason;
   verdictEl.dataset.type = verdict.type;
   verdictEl.hidden       = false;
 
@@ -1602,6 +1604,14 @@ function renderSparkline(readings, estimate = false) {
   wrap.hidden = false;
 }
 
+// The basis line under the comparison cards: empty unless the cards are measured on the IBJA-based
+// estimate, then names it with its newest price and IST day. Pure apart from t()/currentLang.
+function comparisonBasisNote(hist) {
+  if (!hist || !hist.estimate || !hist.rows.length) return "";
+  const last = hist.rows[hist.rows.length - 1];
+  return t("cmpBasisEstimate", { price: fmtINR(karatValue(last)), date: fmtDateShort(last.timestamp) });
+}
+
 function renderComparisons(readings) {
   const section = document.getElementById("comparison-section");
   const hist    = historyRows(readings);
@@ -1652,6 +1662,15 @@ function renderComparisons(readings) {
     lowVal.textContent        = `+₹${fmtINR(cmp.vsLow)}`;
     lowSub.textContent        = t("cmpAboveLowest");
     lowCard.dataset.sentiment = cmp.vsLow < 300 ? "neutral" : "caution";
+  }
+
+  // GG 2026-11-06: say which series the cards measure, with its own latest price and day, so a
+  // +Rs.367 is not read as a move of the (different) shop price in the headline.
+  const basisEl = document.getElementById("cmp-basis-note");
+  if (basisEl) {
+    const note = comparisonBasisNote(hist);
+    basisEl.textContent = note;
+    basisEl.hidden = !note;
   }
 
   section.hidden = false;

@@ -308,6 +308,10 @@ const STRINGS = {
     cmpAtLow: "at low",
     cmpLowestPrice: "this month's lowest price",
     cmpAboveLowest: "above this month's lowest",
+    // GG 2026-11-06: the cards and the week/month line are measured on the estimate series, which
+    // can differ from the shop price in the headline. Say which series, with its own price and day.
+    cmpBasisEstimate: ({ price, date }) => `Compared using our daily estimate from India's official gold rate (₹${price} on ${date}), not the shop price at the top.`,
+    verdictBasisEstimate: "Measured on our daily estimate from India's official gold rate.",
 
     // ── Today's read (composeTodaysRead) ───────────────────────────────────────
     readNoSignals: "We don't have enough price history yet to say much about today — check back once a few more readings come in.",
@@ -331,15 +335,19 @@ const STRINGS = {
     supportLine1BelowMid: "A bit below the usual price this month.",
     supportLine1Mid: "Right around the middle for this month.",
     supportLine1High: "Pricier than most days this month.",
-    proofLineCheaper: ({ days, total }) => `Cheaper than ${days} of the last ${total} days.`,
-    proofLinePricier: ({ days, total }) => `Pricier than ${days} of the last ${total} days.`,
+    // The total is official-rate (IBJA publishing) days inside the last 30 calendar days, not
+    // calendar days (GG 2026-11-06).
+    proofLineCheaper: ({ days, total }) => `Cheaper than on ${days} of the ${total} official-rate days in the past month.`,
+    proofLinePricier: ({ days, total }) => `Pricier than on ${days} of the ${total} official-rate days in the past month.`,
     dataSuffNote: ({ n }) => `Only ${n} distinct days in the window — treat as indicative.`,
     supportLine2Below: ({ amount }) => `₹${amount} below the usual price for the month.`,
     supportLine2Above: ({ amount }) => `₹${amount} above the usual price for the month.`,
     supportLine2At: "Right at the usual price for the month.",
     divergenceNote: "(These two don't quite agree — one counts days, the other measures the actual rupee gap. We go with the day-count for the headline above.)",
     // ADR 065: the range is for the next official-rate update (it changes twice each working day).
-    goodPriceTomorrow: ({ low, high }) => `Next price update: likely <strong>₹${low}</strong> – <strong>₹${high}</strong>.`,
+    // The range is the next official (IBJA) rate translated to the shop-price level, not the
+    // official rate itself and not a promise of the shop's next update (GG 2026-11-06).
+    goodPriceTomorrow: ({ low, high }) => `Shop-price equivalent of the next official rate: likely <strong>₹${low}</strong> – <strong>₹${high}</strong>.`,
     // ADR 064: the next move's direction, only when inference's next_fix.direction.show is true.
     directionUp: ({ pct }) => `World gold prices have moved since India's last official rate was set, so the next official rate is more likely to be <strong>higher</strong> (about ${pct}% chance).`,
     directionDown: ({ pct }) => `World gold prices have moved since India's last official rate was set, so the next official rate is more likely to be <strong>lower</strong> (about ${pct}% chance).`,
@@ -719,6 +727,8 @@ const STRINGS = {
     cmpAtLow: "सबसे कम पर",
     cmpLowestPrice: "इस महीने का सबसे कम भाव",
     cmpAboveLowest: "इस महीने के सबसे कम भाव से ऊपर",
+    cmpBasisEstimate: ({ price, date }) => `यह तुलना भारत के आधिकारिक सोने के भाव से बने हमारे रोज़ के अनुमान (${date} को ₹${price}) पर है, ऊपर दिखाए दुकान के भाव पर नहीं।`,
+    verdictBasisEstimate: "भारत के आधिकारिक सोने के भाव से बने हमारे रोज़ के अनुमान पर मापा गया।",
 
     // ── Today's read (composeTodaysRead) ───────────────────────────────────────
     readNoSignals: "आज के बारे में कुछ कहने लायक़ पुराना भाव अभी हमारे पास नहीं है — कुछ और भाव दर्ज होने के बाद फिर देखें।",
@@ -742,14 +752,14 @@ const STRINGS = {
     supportLine1BelowMid: "इस महीने के आम भाव से थोड़ा कम।",
     supportLine1Mid: "इस महीने के बीच के भाव के आसपास।",
     supportLine1High: "इस महीने के ज़्यादातर दिनों से महंगा।",
-    proofLineCheaper: ({ days, total }) => `पिछले ${total} में से ${days} दिनों के भाव से सस्ता।`,
-    proofLinePricier: ({ days, total }) => `पिछले ${total} में से ${days} दिनों के भाव से महंगा।`,
+    proofLineCheaper: ({ days, total }) => `पिछले एक महीने के ${total} आधिकारिक भाव वाले दिनों में से ${days} दिनों से सस्ता।`,
+    proofLinePricier: ({ days, total }) => `पिछले एक महीने के ${total} आधिकारिक भाव वाले दिनों में से ${days} दिनों से महंगा।`,
     dataSuffNote: ({ n }) => `इसमें सिर्फ़ ${n} अलग-अलग दिन हैं — इसे मोटा अंदाज़ा ही समझें।`,
     supportLine2Below: ({ amount }) => `इस महीने के आम भाव से ₹${amount} कम।`,
     supportLine2Above: ({ amount }) => `इस महीने के आम भाव से ₹${amount} ज़्यादा।`,
     supportLine2At: "इस महीने के आम भाव के बराबर।",
     divergenceNote: "(इन दोनों में पूरी तरह मेल नहीं है — एक दिन गिनता है, दूसरा रुपये का असली फ़र्क़ नापता है। ऊपर की हेडलाइन के लिए हम दिनों की गिनती वाला तरीक़ा लेते हैं।)",
-    goodPriceTomorrow: ({ low, high }) => `अगला भाव अपडेट: शायद <strong>₹${low}</strong> – <strong>₹${high}</strong> के बीच।`,
+    goodPriceTomorrow: ({ low, high }) => `अगले आधिकारिक भाव के बराबर दुकान का भाव: शायद <strong>₹${low}</strong> – <strong>₹${high}</strong> के बीच।`,
     // 2026-11-03, LLM consensus (docs/HINDI_CONTESTED.md round 4); these fell back to English before
     directionUp: ({ pct }) => `भारत का पिछला आधिकारिक भाव तय होने के बाद दुनिया के बाज़ार में सोने का भाव बदला है, इसलिए अगले आधिकारिक भाव के <strong>बढ़ने</strong> की संभावना ज़्यादा है (करीब ${pct}% संभावना)।`,
     directionDown: ({ pct }) => `भारत का पिछला आधिकारिक भाव तय होने के बाद दुनिया के बाज़ार में सोने का भाव बदला है, इसलिए अगले आधिकारिक भाव के <strong>घटने</strong> की संभावना ज़्यादा है (करीब ${pct}% संभावना)।`,
