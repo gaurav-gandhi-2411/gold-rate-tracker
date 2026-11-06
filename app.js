@@ -264,12 +264,31 @@ function dedupReadings(readings) {
   return groups;
 }
 
-function fmtDateShort(iso) {
+// withYear (GG P0 2026-11-05): any list of dates that spans two calendar years must say which
+// year each date is in -- "19 Jan, 13 Sept, 17 Jul" on a multi-year chart read as one year.
+function fmtDateShort(iso, withYear = false) {
   const locale = currentLang === "hi" ? "hi-IN" : "en-IN";
   return new Intl.DateTimeFormat(locale, {
     timeZone: "Asia/Kolkata", day: "numeric", month: "short", numberingSystem: "latn",
+    ...(withYear ? { year: "numeric" } : {}),
   }).format(new Date(iso));
 }
+
+// True when the timestamps (ISO strings or ms) fall in more than one IST calendar year. Pure.
+function spansYears(times) {
+  const years = new Set(times.map((x) =>
+    new Date(x).toLocaleDateString("en-CA", { timeZone: "Asia/Kolkata" }).slice(0, 4)));
+  return years.size > 1;
+}
+
+// Trend-chart x-axis tick (GG P0 2026-11-05): the axis is time-proportional, so a tick is a ms
+// value, not a row. The year is shown whenever the plotted points span two calendar years.
+function chartTickLabel(ms, withYear) {
+  return fmtDateShort(new Date(ms).toISOString(), withYear);
+}
+// Points further apart than this are not joined by the line: a straight segment across a gap
+// reads as a price path nobody observed. IBJA's longest normal break is a 4-day holiday weekend.
+const CHART_MAX_JOIN_MS = 7 * 86_400_000;
 
 let chart            = null;
 let allReadings      = [];
@@ -387,6 +406,22 @@ async function load() {
  * FLAT → "Roughly flat this week"  (DEFAULT)
  *   Condition: slope within ±₹100, OR the two signals conflict.
  */
+// The latest reading dated (IST) on or before the newest reading's IST date minus 7 days: "a week
+// ago" for a week-over-week move, whatever the time of day. null if the history is shorter. Pure.
+function weekAgoReading(prices) {
+  if (!prices || prices.length < 2) return null;
+  const istDate = (iso) =>
+    new Date(new Date(iso).getTime() + 5.5 * 3600e3).toISOString().slice(0, 10);
+  const last = new Date(istDate(prices[prices.length - 1].timestamp) + "T00:00:00Z");
+  const target = new Date(last.getTime() - 7 * 86_400_000).toISOString().slice(0, 10);
+  let ref = null;
+  for (const p of prices) {
+    if (istDate(p.timestamp) <= target) ref = p;
+    else break;
+  }
+  return ref;
+}
+
 function computeVerdict(prices, forecast) {
   const SLOPE_THRESHOLD = 100; // ₹ change over 7 days to count as a trend
 
@@ -402,12 +437,14 @@ function computeVerdict(prices, forecast) {
   const now     = Date.now();
   const current = prices[prices.length - 1]["22k"];
 
-  // 7-day slope: oldest reading within the last 7 days vs current.
+  // 7-day move: current vs the price a calendar week earlier (weekAgoReading). Before
+  // 2026-11-06 this was the oldest reading inside a rolling 168 h window from now; on the daily
+  // estimate series (rows at 17:00 IST) that window had already dropped last week's row every
+  // evening, so "this week" measured 6 days (+Rs.379 shown vs +Rs.175 real on 5 Nov 2026).
   const ms7d    = 7 * 24 * 3600 * 1000;
   const within7d = prices.filter(p => now - new Date(p.timestamp).getTime() <= ms7d);
-  const ref7d    = within7d.length > 1
-    ? within7d[0]
-    : prices[Math.max(0, prices.length - 5)];
+  const ref7d    = weekAgoReading(prices)
+    ?? (within7d.length > 1 ? within7d[0] : prices[Math.max(0, prices.length - 5)]);
   const slope7d  = current - ref7d["22k"];
 
   // 30-day average over IST-day-deduped daily series — one reading per day, latest wins.
@@ -2020,7 +2057,9 @@ const CALLOUT_PLUGIN = {
     const { ctx, chartArea } = ch;
     const x = dp.x;
     const label = ch.data.labels[chartPinnedIndex] || "";
-    const value = ch.data.datasets[0].data[chartPinnedIndex];
+    // Trend-chart points are {x: ms, y: price} (time axis); other charts may pass bare numbers.
+    const pt    = ch.data.datasets[0].data[chartPinnedIndex];
+    const value = typeof pt === "object" && pt !== null ? pt.y : pt;
     ctx.save();
     ctx.strokeStyle = "rgba(224,155,46,0.50)";
     ctx.lineWidth   = 1;
@@ -2207,8 +2246,13 @@ function renderChart(readings, range) {
   // Connects real daily prices with a clean straight line; no stepped plateaus,
   // no fill, no doubled boundary dots. Matches the clean daily-line look of Tanishq.
   const chartPts = dedupeByISTDay(filtered);
-  const labels   = chartPts.map(r => fmtDateShort(r.timestamp));
+  // GG P0 2026-11-05: the x-axis is time, not one slot per row. On a slot-per-row axis a
+  // three-month gap in the series sat one slot wide and looked like a one-day jump. labels are
+  // the full dates (with year) for the tooltip and the tap callout only.
+  const labels   = chartPts.map(r => fmtDateShort(r.timestamp, true));
   const data22   = chartPts.map(r => karatValue(r));
+  const points   = chartPts.map((r, i) => ({ x: Date.parse(r.timestamp), y: data22[i] }));
+  const tickYear = spansYears(chartPts.map(r => r.timestamp));
   const lastIdx  = data22.length - 1;
 
   const colors    = getChartColors();
@@ -2225,7 +2269,7 @@ function renderChart(readings, range) {
       labels,
       datasets: [{
         label: t(series.estimate ? "chartEstimateLabel" : "chart22kLabel", { k: currentKarat }),
-        data: data22,
+        data: points,
         borderColor: goldLine,
         // Gradient fill under the line (gold fading to transparent) instead
         // of a flat/no fill -- Chart.js calls this per-render since chartArea
@@ -2248,7 +2292,7 @@ function renderChart(readings, range) {
         pointBackgroundColor: goldLine,
         pointBorderWidth: 0,
         tension: 0,
-        spanGaps: true,
+        spanGaps: CHART_MAX_JOIN_MS, // a number: points further apart than this are not joined
       }],
     },
     options: {
@@ -2277,6 +2321,7 @@ function renderChart(readings, range) {
           bodyColor: "#F5EDE0",
           padding: 12,
           callbacks: {
+            title: (items) => (items.length ? labels[items[0].dataIndex] : ""),
             label: (c) => t(series.estimate ? "chartEstimateTooltip" : "chart22kTooltip", { value: fmtINR(c.parsed.y), k: currentKarat }),
           },
         },
@@ -2284,7 +2329,13 @@ function renderChart(readings, range) {
       },
       scales: {
         x: {
-          ticks:  { color: axisColor, maxTicksLimit: 5, autoSkip: true, font: { family: "DM Sans", size: 11 } },
+          type:   "linear",
+          min:    points.length ? points[0].x : undefined,
+          max:    points.length ? points[lastIdx].x : undefined,
+          ticks:  {
+            color: axisColor, maxTicksLimit: 5, autoSkip: true, font: { family: "DM Sans", size: 11 },
+            callback: (v) => chartTickLabel(v, tickYear),
+          },
           grid:   { color: "transparent" },
           border: { color: gridColor },
         },
@@ -2332,6 +2383,9 @@ function renderHistory(readings) {
 
   const allGroups = dedupReadings([...readings].reverse());
   const groups    = allGroups.slice(0, 50);
+  // Year on every date once the shown rows span two calendar years (GG P0 2026-11-05).
+  const withYear  = spansYears(groups.flatMap(g => [g.reading.timestamp, g.endTimestamp]));
+  const fmtDay    = (iso) => fmtDateShort(iso, withYear);
 
   // Shared truncation point for BOTH the desktop table and the mobile card
   // list -- one "Show N more" button drives both in lockstep (CSS decides
@@ -2355,11 +2409,11 @@ function renderHistory(readings) {
       // g.reading.timestamp = NEWEST reading in run; g.endTimestamp = OLDEST (first occurrence).
       let whenCell;
       if (g.count === 1) {
-        whenCell = fmtDateShort(g.reading.timestamp);
+        whenCell = fmtDay(g.reading.timestamp);
       } else if (i === 0) {
-        whenCell = t("historySince", { date: fmtDateShort(g.endTimestamp) });
+        whenCell = t("historySince", { date: fmtDay(g.endTimestamp) });
       } else {
-        whenCell = t("historyRange", { from: fmtDateShort(g.endTimestamp), to: fmtDateShort(g.reading.timestamp) });
+        whenCell = t("historyRange", { from: fmtDay(g.endTimestamp), to: fmtDay(g.reading.timestamp) });
       }
       return `<tr>
         <td>${whenCell}</td>
@@ -2382,11 +2436,11 @@ function renderHistory(readings) {
       }
       let timeLabel;
       if (g.count === 1) {
-        timeLabel = fmtDateShort(g.reading.timestamp);
+        timeLabel = fmtDay(g.reading.timestamp);
       } else if (absIdx === 0) {
-        timeLabel = t("historySince", { date: fmtDateShort(g.endTimestamp) });
+        timeLabel = t("historySince", { date: fmtDay(g.endTimestamp) });
       } else {
-        timeLabel = t("historyRangeCard", { from: fmtDateShort(g.endTimestamp), to: fmtDateShort(g.reading.timestamp) });
+        timeLabel = t("historyRangeCard", { from: fmtDay(g.endTimestamp), to: fmtDay(g.reading.timestamp) });
       }
       return `<li class="history-card">
         <span class="hcard-time">${timeLabel}</span>

@@ -275,6 +275,7 @@ jobs:
             tests/test_calculator.js \
             tests/test_calibration_confidence.js \
             tests/test_chart_cdn_resilience.js \
+            tests/test_chart_year_labels.js \
             tests/test_claim_freshness.js \
             tests/test_comparisons.js \
             tests/test_dedup.js \
@@ -293,6 +294,7 @@ jobs:
             tests/test_tier_degradation_visible.js \
             tests/test_vol_regime.js \
             tests/test_driver_headline_signs.js \
+            tests/test_verdict_week_window.js \
             scraper/test_retailer_enabled.mjs
       - name: Run dead-man's-switch Worker tests
         # Code-quality gate only -- this does NOT wire the switch's own
