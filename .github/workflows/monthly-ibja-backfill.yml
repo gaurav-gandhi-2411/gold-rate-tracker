@@ -21,7 +21,7 @@ concurrency:
 jobs:
   backfill:
     runs-on: ubuntu-latest
-    timeout-minutes: 20 # 10 for the backfill itself + 10 headroom for the bot-pr-sync wait
+    timeout-minutes: 40 # 10 for the backfill itself + 30 for the bot-pr-sync wait
 
     steps:
       - name: Checkout repository
@@ -86,5 +86,5 @@ jobs:
           pr-title: "chore: monthly IBJA PDF backfill"
           pr-body: "Automated IBJA backfill sync from Monthly IBJA PDF Backfill run ${{ github.run_id }}."
           token: ${{ secrets.CI_MERGE_PAT }}
-          wait-minutes: "10"
+          wait-minutes: "30" # 30 min: a contended lint took 13 min on 2026-11-01 (#3424 stuck a week); a miss here waits for the next weekly/monthly run
           ntfy-topic: ${{ secrets.NTFY_TOPIC }}
