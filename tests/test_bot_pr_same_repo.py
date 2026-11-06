@@ -120,6 +120,7 @@ def _stub(tmp: Path, *, prs: str, real_created: str = "2026-11-03T00:00:00Z") ->
     return f"""
 sleep() {{ :; }}
 curl() {{ echo "curl $*" >> "{log}"; }}
+python3() {{ echo "python3 $*" >> "{log}"; }}
 git() {{ case "$1" in rev-parse) echo {PUSHED} ;; *) echo "git $*" >> "{log}" ;; esac; }}
 gh() {{
   echo "gh $*" >> "{log}"
@@ -152,7 +153,7 @@ gh() {{
   esac
   return 0
 }}
-export -f gh git sleep curl
+export -f gh git sleep curl python3
 """
 
 
@@ -339,5 +340,7 @@ def test_check_price_stuck_pr_alert_still_pages_about_the_real_pr(tmp_path):
     run = _step("check-price.yml", "bot/data-sync PR #${PR_NUM} has been open")
     r, log = _run(tmp_path, run, prs="fork,real", real_created="2026-11-01T00:00:00Z")
     assert r.returncode == 0, r.stdout + r.stderr
-    page = log.split("curl", 1)[-1]
-    assert "curl" in log and "bot/data-sync PR #42 has been open" in page and "9001" not in page
+    # the page is an ops-log entry since #3602 (ntfy carries gold-price information only): no curl
+    page = log.split("python3 scripts/ops_log.py", 1)[-1]
+    assert "python3 scripts/ops_log.py" in log and "curl" not in log
+    assert "bot/data-sync PR #42 has been open" in page and "9001" not in page
