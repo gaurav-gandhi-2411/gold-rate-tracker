@@ -159,11 +159,29 @@ def test_t14_routes_to_ops():
     assert audience_for("T14") == OPS
 
 
-def test_runner_offline_path_fires_on_github_side_end_to_end(tmp_path, monkeypatch, capsys):
+def _pin_clock(monkeypatch, hour_ist: int) -> datetime:
+    """Pin ml.notifications' clock to a Wednesday at hour_ist:15 IST (main() reads the real one)."""
+    pinned = datetime(2026, 11, 4, hour_ist, 15, tzinfo=IST)
+
+    class _Pinned(datetime):
+        @classmethod
+        def now(cls, tz=None):
+            return pinned.astimezone(tz) if tz else pinned.replace(tzinfo=None)
+
+    monkeypatch.setattr(nm, "datetime", _Pinned)
+    return pinned
+
+
+# 10:15 IST is inside the T8 morning window, 16:15 between the windows, 19:15 inside the evening one.
+@pytest.mark.parametrize("hour_ist", [10, 16, 19])
+def test_runner_offline_path_fires_on_github_side_end_to_end(
+    tmp_path, monkeypatch, capsys, hour_ist
+):
     """The self-hosted runner is off: it recorded no failure (T12 stays silent), prices.json
     just stopped growing. main() -- exactly what check-price.yml runs on ubuntu-latest --
-    still sends T14 to the OPS topic. urlopen is patched: nothing leaves the machine."""
-    now = datetime.now(IST)
+    records T14 in the ops log and POSTs nothing to the ops topic, at any time of day.
+    urlopen is patched: nothing leaves the machine."""
+    now = _pin_clock(monkeypatch, hour_ist)
     last = now - timedelta(hours=100)  # >= 76 h excluding at most one Sunday
     (tmp_path / "prices.json").write_text(json.dumps([row(last)]), encoding="utf-8")
     for name in ("forecast.json", "chronos_probe.json", "backtest.json", "calibration.json"):
@@ -202,7 +220,13 @@ def test_runner_offline_path_fires_on_github_side_end_to_end(tmp_path, monkeypat
     out = capsys.readouterr().out
     assert out.count("ops-alert::notifications T14") == 1  # recorded in the ops log
     assert "ops-alert::notifications T12" not in out
-    assert captured == []  # and nothing POSTed to ntfy (2026-11-06)
+    # T14 is an ops trigger: never POSTed. main() reads the REAL clock, so inside the T8 digest
+    # windows (08:00-13:59 and 18:00-21:59 IST) it also sends the public price digest, which is
+    # legitimate. `captured == []` was wrong and failed master's lint (and so every data-sync PR)
+    # for about 8 h of each day from 2026-11-06 04:51Z: assert on topic and title instead.
+    assert [r for r in captured if r.full_url.endswith("/ops-topic-under-test")] == []
+    assert not [r for r in captured if "Tanishq has not updated" in r.headers["Title"]]
+    assert all(r.full_url.endswith("/public-topic-under-test") for r in captured)
     # Second run the same day (next check-price tick): deduped.
     nm.main()
     assert "ops-alert::notifications T14" not in capsys.readouterr().out
