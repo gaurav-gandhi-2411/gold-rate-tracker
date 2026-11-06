@@ -1,10 +1,10 @@
 {
  "category": "raw Tanishq current/next-day prices",
  "ciphertext": "data/encrypted/data/next_day_range_shadow.json.enc",
- "ciphertext_sha256": "d32541712989cc5a3806d38c7b0c24ccc8d61dc423c477be60e1df68e268b7e5",
+ "ciphertext_sha256": "961c91d26027391decb06b46c68529dd164bbcb90a71aadd7699b6bb688437b9",
  "format": "GRTENC v1, AES-256-GCM, scrypt",
  "key_id": "88fadeb62be0b8f4",
  "path": "data/next_day_range_shadow.json",
- "plaintext_bytes": 44400,
- "plaintext_sha256": "e7be8f3ed2060367791c1b76d6b2ccf6af0b39431e570a8965c21118738d3682"
+ "plaintext_bytes": 45917,
+ "plaintext_sha256": "b28192ed715d86be4e753c9c4e78d9265dcb6bc670b23bd3eb3e404213ecb06c"
 }
