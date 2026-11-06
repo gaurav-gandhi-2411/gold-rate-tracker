@@ -68,6 +68,107 @@ def test_no_workflow_action_or_script_looks_up_a_pr_by_branch_except_through_the
     assert not bad, f"PR lookups by branch outside scripts/bot_pr_find.sh: {bad}"
 
 
+# --- (1b) any PR LISTING outside the helper, in every language and directory --------------------------------
+# The scan above finds lookups BY BRANCH NAME. The owner asked for more: a test that enumerates every
+# lookup and fails if one lacks the same-repository filter, so a future "list all PRs and act on the
+# first" fails too. Any listing or search of PRs outside scripts/bot_pr_find.sh must be on this list,
+# with the reason it cannot act on a fork PR. PRs found BY NUMBER (a PR the same run created or the
+# helper returned) are not listings and are not matched.
+LIST_SHAPES = [
+    re.compile(r"\bgh\s+pr\s+list\b"),
+    re.compile(r"[\"']pr[\"']\s*,\s*[\"']list[\"']"),  # a Python argv list, which may span lines
+    re.compile(r"pulls\?"),  # a REST/JS listing endpoint (pulls/<number> is by number)
+    re.compile(r"\bsearch/(issues|pulls)\b"),
+    re.compile(r"--search\b[^\n]*\bhead:"),
+]
+LIST_SUFFIXES = {".yml", ".yaml", ".sh", ".py", ".ps1", ".mjs", ".js"}
+LIST_BASES = (".github", "scripts", "ml", "scraper", "worker-deadman/src")
+ALLOWED_LISTINGS = {
+    ".github/workflows/daily-digest.yml": (
+        1,
+        "merged PRs only, read-only: the text of the digest's job summary; a merge needs a human first",
+    ),
+    "scripts/gg_digest.py": (1, "argparse help text naming the command, not a call"),
+    "scripts/check_pr_boundary_leak.py": (
+        3,
+        "three read-only comparisons (closed PRs of the last N days, open PRs, open PRs labelled "
+        "boundary-gated), deliberately unfiltered: fork PRs are valid comparison candidates. They "
+        "only build the check's own error messages (the worst outcome is a false flag, fail-safe); "
+        "none merges, closes, labels or comments, and its bot exemptions need isCrossRepository == false",
+    ),
+    "worker-deadman/src/index.mjs": (
+        2,
+        "dead code: fetchOpenPrTriggerHealth/fetchRecentlyMergedPrs are never called since #3602 "
+        "stopped those channels; at most they could feed an alert, never act on a PR",
+    ),
+}
+
+
+def listings_outside_the_helper(text: str) -> int:
+    """Count PR listing/search shapes in non-comment text (whole file, so a multi-line argv counts)."""
+    code = "\n".join(
+        ln for ln in text.splitlines() if not ln.lstrip().startswith(("#", "//", "*", "/*"))
+    )
+    code = re.sub(r"\\\r?\n\s*", " ", code)
+    return sum(len(p.findall(code)) for p in LIST_SHAPES)
+
+
+def _listing_files() -> list[Path]:
+    out = []
+    for rel in LIST_BASES:
+        base = ROOT / rel
+        if base.exists():
+            out += [
+                p
+                for p in base.rglob("*")
+                if p.is_file()
+                and p.suffix in LIST_SUFFIXES
+                and "node_modules" not in p.parts
+                and p.resolve() != FIND.resolve()
+            ]
+    return out
+
+
+def test_every_pr_listing_outside_the_helper_is_justified_and_nothing_else_lists_prs():
+    found = {}
+    for p in _listing_files():
+        n = listings_outside_the_helper(p.read_text(encoding="utf-8", errors="replace"))
+        if n:
+            found[p.relative_to(ROOT).as_posix()] = n
+    unexpected = {f: n for f, n in found.items() if f not in ALLOWED_LISTINGS}
+    grown = {f: n for f, n in found.items() if f in ALLOWED_LISTINGS and n > ALLOWED_LISTINGS[f][0]}
+    assert not unexpected and not grown, (
+        "a PR listing outside scripts/bot_pr_find.sh that is not on ALLOWED_LISTINGS "
+        f"(route it through the helper, or justify it there): new={unexpected} grown={grown}"
+    )
+    gone = [f for f in ALLOWED_LISTINGS if f not in found]
+    assert not gone, f"ALLOWED_LISTINGS entries that no longer match anything (remove them): {gone}"
+
+
+@pytest.mark.parametrize(
+    "text",
+    [
+        'gh pr list --repo "$R" --state open --json number,headRefName',
+        'subprocess.run(["gh", "pr", "list", "--state", "open"])',
+        'run(["gh",\n     "pr",\n     "list"])',
+        'gh api "repos/$R/pulls?state=open&per_page=100"',
+        "fetch(`https://api.github.com/repos/${R}/pulls?state=open`)",
+        'gh api "search/issues?q=repo:o/r+is:pr+head:bot/data-sync"',
+        'gh pr list --search "head:bot/data-sync"',
+    ],
+)
+def test_the_listing_scanner_catches_each_shape(text):
+    assert listings_outside_the_helper(text), text
+
+
+def test_the_listing_scanner_ignores_lookups_by_number_and_comments():
+    assert not listings_outside_the_helper(
+        'gh pr view "$NUM" --json state\ngh api "repos/$R/pulls/${NUM}/files"\n'
+        "# gh pr list --head bot/data-sync is the old pitfall\n"
+        "// pulls?state=open in a comment\n"
+    )
+
+
 @pytest.mark.parametrize(
     "line",
     [
