@@ -1,10 +1,10 @@
 {
  "category": "lo/hi are IBJA level x exp(scale x q): the IBJA rate is exactly recoverable",
  "ciphertext": "data/encrypted/data/weekly_range_shadow_log.json.enc",
- "ciphertext_sha256": "dd33aafa06fa585d46118c09ac3f1d5d0c3a18b7fcd088990effe4625bd32485",
+ "ciphertext_sha256": "5cdc123bd2cdeb2fb6459f331504c196949e134e3191595950ac85a74650a6d8",
  "format": "GRTENC v1, AES-256-GCM, scrypt",
  "key_id": "88fadeb62be0b8f4",
  "path": "data/weekly_range_shadow_log.json",
- "plaintext_bytes": 27535,
- "plaintext_sha256": "01fa079f3340ee4596eeaf206d1f5e0f78e5ecb87b76d7d4d375a79e38091bad"
+ "plaintext_bytes": 31991,
+ "plaintext_sha256": "e3301998650959d0e20714d92996c3fd25866305622f05e852dfe41566d58d92"
 }

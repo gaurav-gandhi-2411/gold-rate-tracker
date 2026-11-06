@@ -108,7 +108,7 @@ def test_daily_note_is_exactly_the_four_gold_price_lines(tmp_path: Path) -> None
         "22K Rs.13,435, 24K Rs.14,656, 18K Rs.10,992.",
         "Change in the daily 22K benchmark rate (5 Nov, Rs.13,400): "
         "vs yesterday (4 Nov) +Rs.233 (+1.8%); vs last week (29 Oct) +Rs.200 (+1.5%).",
-        "Next price update: likely 22K Rs.13,254 to Rs.13,616, central estimate Rs.13,435 (for 6 Nov).",
+        "Shop-price equivalent of the next official rate: likely 22K Rs.13,254 to Rs.13,616, central estimate Rs.13,435 (for 6 Nov).",
         "Model accuracy as of 30 Oct, live since 7 Oct, 16 days: off by Rs.81 on average vs Rs.99 for "
         "'no change'; range held 12 of 16 days. Too few days to judge.",
     ]
@@ -118,7 +118,9 @@ def test_monday_note_adds_the_weeks_high_and_low(tmp_path: Path) -> None:
     lines = gd.monday(_repo(tmp_path), NOW).splitlines()
     assert len(lines) == 5
     assert lines[2] == "This week's 22K benchmark: high Rs.13,400 (5 Nov), low Rs.13,150 (30 Oct)."
-    assert lines[3].startswith("Next price update:") and lines[4].startswith("Model accuracy")
+    assert lines[3].startswith("Shop-price equivalent of the next official rate:") and lines[
+        4
+    ].startswith("Model accuracy")
 
 
 def test_note_has_no_system_facts(tmp_path: Path) -> None:
@@ -170,7 +172,7 @@ def test_a_missing_file_degrades_to_unknown_and_the_rest_still_builds(tmp_path: 
     lines = gd.daily(root, NOW).splitlines()
     assert lines[0].startswith("Gold rate per gram")
     assert lines[1] == "Change in the daily 22K benchmark rate: not available right now."
-    assert lines[2].startswith("Next price update")
+    assert lines[2].startswith("Shop-price equivalent of the next official rate")
     assert lines[3] == "Model accuracy: not available right now."
     assert "Error" not in "\n".join(lines)  # plain words, never a Python exception class
 
