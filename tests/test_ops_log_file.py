@@ -44,6 +44,7 @@ class FakeGh:
         self.conflicts = conflicts  # PUTs to refuse with 409 (another writer got in first)
         self.sha_n = 1
         self.calls: list[list[str]] = []
+        self.timeouts: list[float] = []
         self.commit_messages: list[str] = []
         self.orphan_parents: list | None = None
         self.always_fail: str | None = None  # stderr to return for every PUT
@@ -51,8 +52,11 @@ class FakeGh:
     def _sha(self) -> str:
         return f"sha{self.sha_n}"
 
-    def __call__(self, args: list[str], stdin: str | None = None) -> tuple[int, str, str]:
+    def __call__(
+        self, args: list[str], stdin: str | None = None, timeout: float = 60
+    ) -> tuple[int, str, str]:
         self.calls.append(args)
+        self.timeouts.append(timeout)
         path = next(a for a in args if a.startswith("repos/"))
         method = args[args.index("-X") + 1] if "-X" in args else "GET"
         body = json.loads(stdin) if stdin else {}
@@ -325,25 +329,21 @@ def test_page_without_python_prints_the_annotation_and_writes_the_summary(tmp_pa
     assert "### ops-alert: a Tanishq reading needed rescuing" in summary
 
 
-@pytest.mark.skipif(BASH is None, reason="bash is needed")
-def test_bash_fallback_appends_one_json_line_through_gh(tmp_path: Path) -> None:
-    """A stub gh serves ops_log.jsonl and records the PUT; the pushed content is valid JSON lines."""
+def _run_fallback(tmp_path: Path, store_text: str) -> tuple[dict, list[int]]:
+    """Run ops_log_fallback with a stub gh; return the PUT payload (from stdin) and arg lengths."""
     store = tmp_path / "store.jsonl"
-    old = (datetime.now(UTC) - timedelta(days=200)).strftime("%Y-%m-%dT%H:%M:%SZ")
-    keep = datetime.now(UTC).strftime("%Y-%m-%dT%H:%M:%SZ")
-    store.write_text(
-        f'{{"ts": "{old}", "title": "ancient"}}\n{{"ts": "{keep}", "title": "recent"}}\n',
-        encoding="utf-8",
-    )
-    putlog = tmp_path / "put.log"
+    store.write_text(store_text, encoding="utf-8")
+    payload = tmp_path / "put.payload"
+    arglens = tmp_path / "arglens.log"
     bindir = tmp_path / "bin"
     bindir.mkdir()
     gh = bindir / "gh"
     gh.write_bytes(
         (
             "#!/bin/sh\n"
+            f'for a in "$@"; do echo "${{#a}}" >> "{arglens.as_posix()}"; done\n'
             'case "$*" in\n'
-            f'  *"-X PUT"*) echo "$*" >> "{putlog.as_posix()}"; exit 0 ;;\n'
+            f'  *"-X PUT"*) cat > "{payload.as_posix()}"; exit 0 ;;\n'
             f'  *Accept*) cat "{store.as_posix()}" ;;\n'
             "  *) echo sha1 ;;\n"
             "esac\n"
@@ -366,14 +366,172 @@ def test_bash_fallback_appends_one_json_line_through_gh(tmp_path: Path) -> None:
     )
     env.pop("OPS_LOG_NO_FILE")
     proc = subprocess.run(
-        [BASH, str(script)], capture_output=True, text=True, env=env, timeout=60, check=False
+        [BASH, str(script)], capture_output=True, text=True, env=env, timeout=120, check=False
     )
     assert proc.returncode == 0, proc.stderr
-    put = putlog.read_text(encoding="utf-8")
-    assert "-f branch=ops-log" in put and "-f sha=sha1" in put and "[skip ci]" in put
-    content = put.split("-f content=")[1].split(" ")[0]
-    rows = [json.loads(x) for x in base64.b64decode(content).decode().splitlines()]
+    lens = [int(x) for x in arglens.read_text(encoding="utf-8").split()]
+    return json.loads(payload.read_text(encoding="utf-8")), lens
+
+
+@pytest.mark.skipif(BASH is None, reason="bash is needed")
+def test_bash_fallback_appends_one_json_line_through_gh_stdin(tmp_path: Path) -> None:
+    old = (datetime.now(UTC) - timedelta(days=200)).strftime("%Y-%m-%dT%H:%M:%SZ")
+    keep = datetime.now(UTC).strftime("%Y-%m-%dT%H:%M:%SZ")
+    store = f'{{"ts": "{old}", "title": "ancient"}}\n{{"ts": "{keep}", "title": "recent"}}\n'
+    payload, _ = _run_fallback(tmp_path, store)
+    assert payload["branch"] == "ops-log" and payload["sha"] == "sha1"
+    assert payload["message"] == "ops-log: src: a title [skip ci]"
+    rows = [json.loads(x) for x in base64.b64decode(payload["content"]).decode().splitlines()]
     assert [r["title"] for r in rows] == ["recent", "a title"]  # the 200-day line was pruned
     assert rows[1]["body"] == 'say "hi" \\ ok' and rows[1]["run_url"].endswith(
         "/o/r/actions/runs/7"
     )
+
+
+@pytest.mark.skipif(BASH is None, reason="bash is needed")
+def test_bash_fallback_with_a_100kb_file_passes_nothing_large_as_an_argument(
+    tmp_path: Path,
+) -> None:
+    """A Windows command line holds ~32K characters: the file must travel on stdin only."""
+    keep = datetime.now(UTC).strftime("%Y-%m-%dT%H:%M:%SZ")
+    lines = [f'{{"ts": "{keep}", "title": "line {n}", "pad": "{"x" * 80}"}}' for n in range(1300)]
+    store = "\n".join(lines) + "\n"
+    assert len(store) > 100_000
+    payload, arglens = _run_fallback(tmp_path, store)
+    assert max(arglens) < 1000, f"an argument of {max(arglens)} characters was passed to gh"
+    rows = base64.b64decode(payload["content"]).decode().splitlines()
+    assert len(rows) == 1301 and json.loads(rows[-1])["title"] == "a title"
+    assert len(payload["content"]) > 100_000  # the big content went through stdin
+
+
+# --- deadline, caps ----------------------------------------------------------------------------
+
+
+class _Clock:
+    def __init__(self) -> None:
+        self.t = 0.0
+
+    def __call__(self) -> float:
+        return self.t
+
+
+def test_a_hanging_network_is_cut_off_by_the_overall_deadline() -> None:
+    clock = _Clock()
+    seen: list[float] = []
+
+    def hang(
+        args: list[str], stdin: str | None = None, timeout: float = 60
+    ) -> tuple[int, str, str]:
+        seen.append(timeout)
+        clock.t += timeout  # the call uses its whole timeout, like a hung connection
+        return 127, "", "could not run gh (TimeoutExpired)"
+
+    with pytest.raises(ops_log.OpsLogWriteError, match="deadline of 25s exceeded"):
+        ops_log.append_entry(_entry(), "o/r", "m", hang, _no_sleep, NOW, clock=clock)
+    assert seen[0] == 25 and sum(seen) <= 25  # each call gets min(60, time left)
+    assert len(seen) == 1  # the first hang spent the whole budget; nothing else started
+
+
+def test_the_deadline_also_bounds_the_backoff_between_tries() -> None:
+    clock = _Clock()
+    fake = FakeGh(text="", conflicts=99)
+
+    def slow_sleep(sec: float) -> None:
+        clock.t += sec + 9  # a backoff that overruns
+
+    with pytest.raises(ops_log.OpsLogWriteError, match="deadline"):
+        ops_log.append_entry(_entry(), "o/r", "m", fake, slow_sleep, NOW, clock=clock)
+    assert sum(1 for c in fake.calls if "PUT" in c) < ops_log.MAX_TRIES
+    assert all(t <= 25 for t in fake.timeouts)
+
+
+def test_record_prints_one_warning_when_the_deadline_is_hit() -> None:
+    def hang(
+        args: list[str], stdin: str | None = None, timeout: float = 60
+    ) -> tuple[int, str, str]:
+        return 127, "", "could not run gh (TimeoutExpired)"
+
+    out = io.StringIO()
+    ops_log.record("s", "t", "b", environ=ENV, stream=out, gh=hang)
+    assert out.getvalue().count("ops_log: warning") == 1
+
+
+def test_source_and_title_are_capped_like_body() -> None:
+    e = json.loads(ops_log.entry_json("s" * 500, "t" * 500, "b", ENV, NOW))
+    assert len(e["source"]) == 200 and len(e["title"]) == 200
+
+
+def test_size_cap_drops_the_oldest_lines_down_to_the_target() -> None:
+    lines = [
+        json.dumps({"ts": f"2026-11-{n % 28 + 1:02d}T00:00:00Z", "n": n, "p": "x" * 950})
+        for n in range(900)
+    ]  # about 900 KB
+    out = ops_log.cap_size(lines)
+    size = sum(len(x.encode()) + 1 for x in out)
+    assert ops_log.FILE_TARGET_BYTES - 2000 < size <= ops_log.FILE_TARGET_BYTES
+    assert out == lines[len(lines) - len(out) :]  # a suffix: only the oldest by position went
+    assert out[-1] == lines[-1]
+
+
+def test_size_cap_leaves_a_small_file_alone_and_keeps_an_unparseable_recent_line() -> None:
+    small = ['{"ts": "2026-11-01T00:00:00Z"}', "garbage"]
+    assert ops_log.cap_size(small) == small
+    big = ["garbage-oldest"] + [json.dumps({"ts": "2026-11-01T00:00:00Z", "p": "x" * 950})] * 900
+    out = ops_log.cap_size(big)
+    assert "garbage-oldest" not in out  # oldest by position goes first, parseable or not
+
+
+def test_append_applies_the_size_cap() -> None:
+    old = [json.dumps({"ts": "2026-11-05T00:00:00Z", "p": "x" * 950}) for _ in range(900)]
+    fake = FakeGh(text="\n".join(old) + "\n")
+    ops_log.append_entry(_entry("newest"), "o/r", "m", fake, _no_sleep, NOW)
+    assert len(fake.text.encode()) <= ops_log.FILE_TARGET_BYTES + 1000
+    assert _lines(fake)[-1]["title"] == "newest"
+
+
+# --- a job-level permissions block replaces the workflow's: it must keep every scope ------------
+
+_RANK = {"none": 0, "read": 1, "write": 2}
+
+
+def _scope_gaps(wf: dict, job: dict) -> list[str]:
+    """Scopes the workflow grants that this job's own block drops or lowers (empty = fine)."""
+    top, own = wf.get("permissions"), job.get("permissions")
+    if own is None or not isinstance(top, dict) or not isinstance(own, dict):
+        return []
+    return [
+        f"{scope}: {level} -> {own.get(scope, 'none')}"
+        for scope, level in top.items()
+        if _RANK[str(own.get(scope, "none"))] < _RANK[str(level)]
+    ]
+
+
+@pytest.mark.parametrize(
+    "top,own,gaps",
+    [
+        ({"contents": "read", "issues": "write"}, {"contents": "write", "issues": "write"}, []),
+        ({"contents": "read", "issues": "write"}, {"contents": "write"}, ["issues: write -> none"]),
+        ({"contents": "read", "actions": "read"}, {"contents": "write"}, ["actions: read -> none"]),
+        ({"contents": "write"}, {"contents": "read"}, ["contents: write -> read"]),
+        ({"contents": "read"}, {"contents": "write", "issues": "write"}, []),  # extra is fine
+        ({"contents": "read", "actions": "read"}, {"contents": "read", "actions": "write"}, []),
+    ],
+)
+def test_the_scope_check_catches_a_dropped_or_lowered_scope(
+    top: dict, own: dict, gaps: list[str]
+) -> None:
+    assert _scope_gaps({"permissions": top}, {"permissions": own}) == gaps
+
+
+def test_a_job_without_its_own_block_is_not_checked() -> None:
+    assert _scope_gaps({"permissions": {"contents": "read"}}, {}) == []
+
+
+def test_every_recording_jobs_permissions_block_keeps_the_workflow_level_scopes() -> None:
+    # recording jobs only: lint.yml's post-required-check-status narrows its own scopes on purpose
+    bad = [
+        f"{name}:{jid} {_scope_gaps(wf, job)}"
+        for name, jid, wf, job in _recording_jobs()
+        if _scope_gaps(wf, job)
+    ]
+    assert not bad, f"a job permissions block replaced the workflow's and dropped scopes: {bad}"

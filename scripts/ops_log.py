@@ -41,11 +41,16 @@ OPS_BRANCH = "ops-log"
 OPS_FILE = "ops_log.jsonl"
 RETENTION_DAYS = 120
 MAX_BODY = 500
-MAX_TRIES = 5  # conflict retries; the whole append stays within a few seconds of backoff
+MAX_FIELD = 200  # source and title
+MAX_TRIES = 5  # conflict retries
+DEADLINE_S = 25.0  # overall budget for one append: a hung network must not outlast the job (notify-gg: 3 min)
+GH_CALL_TIMEOUT_S = 60.0
+FILE_CAP_BYTES = 800_000  # the contents API serves JSON up to 1 MB; stay clear of it
+FILE_TARGET_BYTES = 700_000  # once over the cap, drop the oldest lines down to this
 _NOT_RETRYABLE = re.compile(r"HTTP (401|403)")
 
-# (args, stdin text or None) -> (returncode, stdout, stderr)
-GhFn = Callable[[list[str], str | None], tuple[int, str, str]]
+# (args, stdin text or None[, timeout seconds]) -> (returncode, stdout, stderr)
+GhFn = Callable[..., tuple[int, str, str]]
 
 
 class OpsLogWriteError(RuntimeError):
@@ -69,7 +74,9 @@ def summary_section(source: str, title: str, body: str) -> str:
     return f"### ops-alert: {one_line(title)}\n\nsource: `{one_line(source)}`\n\n{body.strip()}\n\n"
 
 
-def run_gh(args: list[str], stdin: str | None = None) -> tuple[int, str, str]:
+def run_gh(
+    args: list[str], stdin: str | None = None, timeout: float = GH_CALL_TIMEOUT_S
+) -> tuple[int, str, str]:
     """Run `gh api ...` and return (returncode, stdout, stderr); a missing gh is rc 127."""
     env = dict(os.environ)
     if env.get("OPS_LOG_TOKEN"):  # the workflow token, even when a step's GH_TOKEN is a read PAT
@@ -81,7 +88,7 @@ def run_gh(args: list[str], stdin: str | None = None) -> tuple[int, str, str]:
             input=stdin,
             capture_output=True,
             text=True,
-            timeout=60,
+            timeout=timeout,
             check=False,
         )
     except (OSError, subprocess.TimeoutExpired) as exc:
@@ -96,8 +103,8 @@ def entry_json(source: str, title: str, body: str, env: Mapping[str, str], now: 
     server = env.get("GITHUB_SERVER_URL", "https://github.com")
     entry = {
         "ts": now.strftime("%Y-%m-%dT%H:%M:%SZ"),
-        "source": one_line(source),
-        "title": one_line(title),
+        "source": one_line(source)[:MAX_FIELD],
+        "title": one_line(title)[:MAX_FIELD],
         "body": one_line(body)[:MAX_BODY],
         "workflow": env.get("GITHUB_WORKFLOW", ""),
         "run_id": run_id,
@@ -119,6 +126,22 @@ def prune(lines: list[str], now: datetime, days: int = RETENTION_DAYS) -> list[s
         if not isinstance(ts, str) or ts >= cutoff:
             kept.append(line)
     return kept
+
+
+def cap_size(lines: list[str]) -> list[str]:
+    """Over FILE_CAP_BYTES, drop the OLDEST lines (by position) until under FILE_TARGET_BYTES.
+
+    Lines are appended in time order, so position is age; the last line (the new entry) is never
+    dropped. An unparseable line goes only when it is also among the oldest by position.
+    """
+    size = sum(len(x.encode("utf-8")) + 1 for x in lines)
+    if size <= FILE_CAP_BYTES:
+        return lines
+    start = 0
+    while size > FILE_TARGET_BYTES and start < len(lines) - 1:
+        size -= len(lines[start].encode("utf-8")) + 1
+        start += 1
+    return lines[start:]
 
 
 def _is_missing(stderr: str) -> bool:
@@ -190,21 +213,40 @@ def append_entry(
     gh: GhFn = run_gh,
     sleep: Callable[[float], None] = time.sleep,
     now: datetime | None = None,
+    clock: Callable[[], float] = time.monotonic,
+    deadline_s: float = DEADLINE_S,
 ) -> None:
     """Append `entry` (one JSON line) to ops_log.jsonl on the ops-log branch; raises on failure.
 
     Read the current file and sha, prune, PUT with that sha; on a 409/422 sha conflict (another
-    writer got in first) read again and retry, up to MAX_TRIES with jittered backoff.
+    writer got in first) read again and retry, up to MAX_TRIES with jittered backoff. The whole
+    append, every gh call and every backoff included, must finish within `deadline_s`: each gh
+    call gets min(60, time left) as its timeout and no call starts once the budget is spent.
     """
     when = datetime.now(UTC) if now is None else now
+    end = clock() + deadline_s
+
+    def remaining() -> float:
+        left = end - clock()
+        if left <= 0:
+            raise OpsLogWriteError(f"deadline of {deadline_s:g}s exceeded")
+        return left
+
+    def call(args: list[str], stdin: str | None = None) -> tuple[int, str, str]:
+        result = gh(args, stdin, timeout=min(GH_CALL_TIMEOUT_S, remaining()))
+        if result[0] != 0 and clock() >= end:  # a failure that used up the budget is the deadline
+            raise OpsLogWriteError(f"deadline of {deadline_s:g}s exceeded")
+        return result
+
     last = "no attempt made"
     for attempt in range(1, MAX_TRIES + 1):
-        current = read_remote(repo, gh)
+        remaining()
+        current = read_remote(repo, call)
         old = current[1].splitlines() if current else []
-        text = "\n".join([*prune(old, when), entry]) + "\n"
-        if current is None and not _ref_exists(repo, gh):
+        text = "\n".join(cap_size([*prune(old, when), entry])) + "\n"
+        if current is None and not _ref_exists(repo, call):
             try:
-                _create_branch(repo, text, message, gh)
+                _create_branch(repo, text, message, call)
                 return
             except OpsLogWriteError as exc:  # another writer may have created it: go round again
                 last = str(exc)
@@ -217,14 +259,14 @@ def append_entry(
             if current is not None:
                 payload["sha"] = current[0]
             args = ["-X", "PUT", f"repos/{repo}/contents/{OPS_FILE}", "--input", "-"]
-            rc, _, err = gh(args, json.dumps(payload))
+            rc, _, err = call(args, json.dumps(payload))
             if rc == 0:
                 return
             last = err.strip()[:200]
             if _NOT_RETRYABLE.search(err):
                 break
         if attempt < MAX_TRIES:
-            sleep(random.uniform(0.5, 1.5) * attempt)
+            sleep(min(random.uniform(0.5, 1.5) * attempt, remaining()))
     raise OpsLogWriteError(f"gave up after {MAX_TRIES} tries: {last}")
 
 

@@ -54,7 +54,7 @@ _ops_file_append() {
   # scoped to each gh call below: the caller's own GH_TOKEN (the bot PAT) must stay as it was
   local GH_TOKEN="${token}"
   export GH_TOKEN
-  local path="repos/${repo}/contents/ops_log.jsonl" ts cutoff entry run_id run_url attempt sha old new b64
+  local path="repos/${repo}/contents/ops_log.jsonl" ts cutoff entry run_id run_url attempt sha old new b64 msg
   ts="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
   cutoff="$(date -u -d '120 days ago' +%Y-%m-%dT%H:%M:%SZ 2>/dev/null || echo "")"
   run_id="${GITHUB_RUN_ID:-}"
@@ -77,8 +77,12 @@ _ops_file_append() {
     fi
     new="$(printf '%s\n%s\n' "${old}" "${entry}" | sed '/^$/d')"
     b64="$(printf '%s\n' "${new}" | base64 | tr -d '\n')"
-    if gh api -X PUT "${path}" -f message="ops-log: ${source}: ${title} [skip ci]" \
-      -f content="${b64}" -f branch=ops-log -f sha="${sha}" >/dev/null 2>&1; then
+    # The payload goes in on stdin: the whole file is in it, and a Windows command line holds only
+    # about 32K characters, so `-f content=...` would fail once the file passed ~24 KB. printf is a
+    # bash builtin, so the large value never crosses an exec boundary as an argument either.
+    msg="$(_ops_json_escape "ops-log: ${source}: ${title}")"
+    if printf '{"message": "%s [skip ci]", "content": "%s", "branch": "ops-log", "sha": "%s"}' \
+      "${msg:0:200}" "${b64}" "${sha}" | gh api -X PUT "${path}" --input - >/dev/null 2>&1; then
       return 0
     fi
     sleep "$(( (RANDOM % 3 + 1) * attempt * ${OPS_LOG_RETRY_BASE:-1} ))" 2>/dev/null || true
