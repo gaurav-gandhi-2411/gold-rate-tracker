@@ -48,7 +48,6 @@ FILE_CAP_BYTES = 800_000  # the contents API serves JSON up to 1 MB; stay clear 
 FILE_TARGET_BYTES = 700_000  # once over the cap, drop the oldest lines down to this
 _NOT_RETRYABLE = re.compile(r"HTTP (401|403)")
 
-# (args, stdin text or None[, timeout seconds]) -> (returncode, stdout, stderr)
 GhFn = Callable[..., tuple[int, str, str]]
 
 
@@ -227,7 +226,9 @@ def append_entry(
 
     def call(args: list[str], stdin: str | None = None) -> tuple[int, str, str]:
         result = gh(args, stdin, timeout=min(GH_CALL_TIMEOUT_S, remaining()))
-        if result[0] != 0 and clock() >= end:  # a failure that used up the budget is the deadline
+        if (
+            result[0] != 0 and clock() >= end
+        ):  # deliberately redundant with remaining(): the hung call itself spent the budget
             raise OpsLogWriteError(f"deadline of {deadline_s:g}s exceeded")
         return result
 
