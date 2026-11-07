@@ -226,9 +226,7 @@ def append_entry(
 
     def call(args: list[str], stdin: str | None = None) -> tuple[int, str, str]:
         result = gh(args, stdin, timeout=min(GH_CALL_TIMEOUT_S, remaining()))
-        if (
-            result[0] != 0 and clock() >= end
-        ):  # deliberately redundant with remaining(): the hung call itself spent the budget
+        if result[0] != 0 and clock() >= end:  # redundant with remaining() on purpose
             raise OpsLogWriteError(f"deadline of {deadline_s:g}s exceeded")
         return result
 
