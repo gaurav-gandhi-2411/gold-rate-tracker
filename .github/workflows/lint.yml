@@ -300,6 +300,7 @@ jobs:
             tests/test_direction_signal_one_source.js \
             tests/test_feature_flags.js \
             tests/test_good_price.js \
+            tests/test_long_history.js \
             tests/test_hwk_range_explainer.js \
             tests/test_hero_display_state.js \
             tests/test_hwk_computed_numbers.js \
