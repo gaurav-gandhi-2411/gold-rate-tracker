@@ -292,6 +292,9 @@ def _bash_env(tmp_path: Path, **extra: str) -> dict[str, str]:
     summary = tmp_path / "summary.md"
     return {
         **os.environ,
+        # a PR run of CI sets GITHUB_EVENT_NAME=pull_request, and the fallback (correctly) skips on
+        # that event: the tests would inherit it and never reach the stub gh (failed PR #3636 CI)
+        "GITHUB_EVENT_NAME": "push",
         "OPS_LOG_PYTHON": "no-such-python-here",  # models a runner with no python3 on PATH
         "OPS_LOG_NO_FILE": "1",
         "GITHUB_STEP_SUMMARY": str(summary),
