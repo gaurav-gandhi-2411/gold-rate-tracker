@@ -153,13 +153,15 @@ def test_the_steps_that_ran_before_the_switch_still_run_unconditionally_on_a_ful
         assert "timeout-minutes" not in _step(label) or label == SCOPE, label
 
 
-def test_only_the_scope_and_record_steps_may_be_non_blocking_and_the_job_has_no_condition():
+def test_only_scope_record_and_data_tests_may_be_non_blocking_and_the_job_has_no_condition():
+    # DATA_TESTS is report-only until 5 clean real runs over >= 24 h (standing rule, 2026-10-30);
+    # flipping it is a separate PR that edits test_the_data_test_step_is_report_only below.
     wf = yaml.safe_load((ROOT / ".github/workflows/lint.yml").read_text(encoding="utf-8"))
     job = wf["jobs"]["lint"]
     assert "if" not in job and "continue-on-error" not in job
     for s in _steps():
-        if _label(s) in (SCOPE, RECORD):
-            assert s["continue-on-error"] is True
+        if _label(s) in (SCOPE, RECORD, DATA_TESTS):
+            assert s["continue-on-error"] is True, _label(s)
         else:
             assert "continue-on-error" not in s, _label(s)
     assert _step(RECORD)["if"] == "always()"
@@ -338,6 +340,29 @@ def test_the_record_step_cannot_decide_it_is_non_blocking_and_exits_zero():
     s = _step(RECORD)
     assert s["continue-on-error"] is True and s["timeout-minutes"] <= 5
     assert s["run"].rstrip().endswith("exit 0") and "set +e" in s["run"]
+
+
+def test_the_data_test_step_is_report_only():
+    assert _step(DATA_TESTS)["continue-on-error"] is True
+
+
+@needs_bash
+def test_the_record_step_warns_when_a_data_only_run_has_failing_data_tests(tmp_path):
+    base = {
+        "APPLIES": "true",
+        "SCOPE_REASON": "all data",
+        "SCOPE_OUTCOME": "success",
+        "VALIDATE": "success",
+        "RESULT": "success",
+        "GITHUB_STEP_SUMMARY": str(tmp_path / "s"),
+    }
+    run = _step(RECORD)["run"]
+    bad = _run_bash(tmp_path, run, {**base, "DATA_ONLY": "true", "DATA_TESTS": "failure"})
+    assert "::warning title=data-only-tests::" in bad.stdout, bad.stdout
+    ok = _run_bash(tmp_path, run, {**base, "DATA_ONLY": "true", "DATA_TESTS": "success"})
+    assert "::warning" not in ok.stdout, ok.stdout
+    full = _run_bash(tmp_path, run, {**base, "DATA_ONLY": "false", "DATA_TESTS": "skipped"})
+    assert "::warning" not in full.stdout, full.stdout
 
 
 # --- the workflow reads the committed measurement -----------------------------------------------------

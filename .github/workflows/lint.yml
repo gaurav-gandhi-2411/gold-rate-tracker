@@ -148,6 +148,11 @@ jobs:
       - name: Run the tests that read data/ (data-only PR; selection fails closed to the full suite)
         id: data_tests
         if: steps.scope.outputs.data_only == 'true'
+        # REPORT-ONLY until 5 clean real runs spanning >= 24 h (.claude/CLAUDE.md, 2026-10-30): this
+        # selection was never measured by the shadow, so a false positive here must not stop a data
+        # merge. The record step below warns when it does not succeed. Blocking = a separate PR that
+        # cites the run IDs and edits the pinning test deliberately.
+        continue-on-error: true
         # Selection = scripts/select_data_tests.py (static scan of tests/) UNION the committed
         # tests/data_reading_tests.txt (files measured reading data/ by scripts/data_reads_plugin.py).
         # No usable selection (script error, empty list) runs the FULL suite instead, never nothing.
@@ -240,6 +245,9 @@ jobs:
           REASON="${SCOPE_REASON:-scope step did not finish (outcome: $SCOPE_OUTCOME)}"
           LINE="DATA-ONLY DECISION: scope=$MODE validate=$VALIDATE data_tests=$DATA_TESTS result=$RESULT reason=$REASON"
           echo "$LINE"
+          if [ "$MODE" = "data-only" ] && [ "$DATA_TESTS" != "success" ]; then
+            echo "::warning title=data-only-tests::data-reading tests did not pass (outcome: $DATA_TESTS); report-only, read the step log"
+          fi
           {
             echo "$LINE"
             echo ""
