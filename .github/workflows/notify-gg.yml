@@ -22,6 +22,10 @@ jobs:
   notify:
     runs-on: ubuntu-latest
     timeout-minutes: 3
+    permissions:
+      contents: write # append one line to ops_log.jsonl on the ops-log branch (scripts/ops_log.py)
+    env:
+      OPS_LOG_TOKEN: ${{ github.token }}
     steps:
       - uses: actions/checkout@v7
 

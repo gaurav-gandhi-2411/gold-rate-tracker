@@ -16,6 +16,12 @@ if sys.platform == "win32":
 import pytest
 
 
+@pytest.fixture(autouse=True)
+def _no_ops_log_file_writes(monkeypatch):
+    """scripts/ops_log.py appends to a branch of the real repo inside Actions; never from a test."""
+    monkeypatch.setenv("OPS_LOG_NO_FILE", "1")
+
+
 def pytest_configure(config):
     """FOR_GG item 11: record which tests read data/, only when DATA_READS_OUT is set (the lint
     job sets it on data-only PRs). Recording only; a failure to register is a printed warning."""

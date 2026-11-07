@@ -23,6 +23,11 @@ jobs:
   canary:
     runs-on: ubuntu-latest
     timeout-minutes: 10
+    permissions:
+      contents: write # append one line to ops_log.jsonl on the ops-log branch (scripts/ops_log.py)
+      issues: write # same as the workflow level (the canary opens an issue); a job block replaces it
+    env:
+      OPS_LOG_TOKEN: ${{ github.token }}
 
     steps:
       - name: Checkout repository

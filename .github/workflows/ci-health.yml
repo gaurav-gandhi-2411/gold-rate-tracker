@@ -154,6 +154,11 @@ jobs:
     # 10, not 5: the share-card step can wait on 3 slow fetches (live_freshness.fetch_json retries)
     # after the freshness step's own; a run cut off by the timeout pages nobody.
     timeout-minutes: 10
+    permissions:
+      contents: write # append one line to ops_log.jsonl on the ops-log branch (scripts/ops_log.py)
+      actions: read # same as the workflow level (lists check-price's runs); a job block replaces it
+    env:
+      OPS_LOG_TOKEN: ${{ github.token }}
     steps:
       - uses: actions/checkout@v7
 
