@@ -979,6 +979,50 @@ Nothing to configure in this repo until the domain is purchased.
 
 ---
 
+## What runs on a data-only PR (GG decision 2026-10-30, option C; live from the switch PR)
+
+On 2026-10-29 an unpinned pandas-stubs release turned mypy red on master's code, and because the
+required `lint` job ran every code check on bot data PRs too, no data reached the site for ~19.5 h.
+A PR that changes only data cannot break the code, so the `lint` job now decides such a PR by the
+data and by the proof that the lock installs, not by the code linters.
+
+Which PRs: the job's `Scope` step (id `scope`) computes `data_only` from MASTER's
+`scripts/ci_scope.py` and master's bot-pr-sync allowlist, never the PR's own copies. Only an explicit
+`true` is data-only. A missing, failed, timed-out or false output reads as FULL: every step runs.
+
+| | Steps of the `lint` job |
+|---|---|
+| Always (both paths) | checkout, setup-python 3.11 and 3.12, Scope, `Install ML dependencies` (the pinned lock), `Show installed versions`, `Installed versions equal the lock`, `Check raw data stays encrypted (ADR 060)`, the decision record |
+| Data-only PR only | `scripts/validate_data.py` (fails the job unless it passes), then the tests that read `data/` (**report-only**, see below) |
+| Skipped on a data-only PR | `pip install pre-commit`, `pre-commit run --all-files`, smoke tests, the full pytest suite, JS test registry, hollow-run (test count) guard, plain-language, retailer-language, computed-claims, metrics provenance |
+
+`tests/test_lint_data_only_switch.py` holds this table, evaluates every step's `if:`, and fails if a
+step is added to the job without being classified (so a new check cannot be silently skipped on data PRs).
+The other required contexts (`pwa-js`, `scraper-dependency-guard`) and every other job are unchanged.
+
+The data-reading tests are selected at run time by `scripts/select_data_tests.py --measured
+tests/data_reading_tests.txt`: the static scan of `tests/` (a test file whose source names `data/`, a
+`DATA_DIR`-style constant, or a module constant that points into `data/`) UNION the committed list of
+files measured reading `data/` by `scripts/data_reads_plugin.py` (a listed file that no longer exists is
+dropped). If no selection can be computed (script error, unreadable or empty result) the step runs the
+FULL suite instead, never nothing. Known blind spots, stated: a NEW test file that reads `data/` only
+through a module's default path is in neither list until the measurement is refreshed (the static scan
+alone missed 6 of the 31 reading files in the 2026-11-03 measurement); a test that reads `data/`
+through a child process is seen only by the static scan. **The data-reading test step is report-only
+(`continue-on-error: true`) until 5 clean real data-only runs spanning at least 24 hours** (standing
+rule, 2026-10-30; its selection was never measured by the shadow): a failure there prints a
+`::warning title=data-only-tests::` in the decision record and does not stop a data sync. Making it
+blocking is a separate PR citing those run IDs and editing `test_the_data_test_step_is_report_only`.
+Until then `validate_data.py`, the lock proof and the raw-data guard are what decide. Refresh the measurement:
+`DATA_READS_OUT=/tmp/r.json pytest -m "not integration" tests/`, then list the test files whose
+`data_reads` is non-empty (or that appear in `collect_reads`) in `tests/data_reading_tests.txt`.
+
+Every run prints one line, `DATA-ONLY DECISION: scope=... validate=... data_tests=... result=...`
+(the old `DATA-ONLY SHADOW:` line, which compared against a full run, no longer exists: a data-only run
+no longer has a full run to compare with).
+
+Rollback: revert the switch PR. That restores the shadow step and runs every code check on every PR.
+
 ## Known constraints
 
 - ~~MLflow runs locally only (port 5001). CI inference is CPU-only via ONNX; no tracking in CI.~~ **Retired (ADR 009).** MLflow and ONNX runtime removed with the neural models.

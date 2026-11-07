@@ -107,12 +107,36 @@ def select(root: Path) -> list[str]:
     return out
 
 
+def select_with_measured(root: Path, measured: Path) -> list[str]:
+    """The static selection UNION the committed list of files measured reading data/.
+
+    The data-only lint path no longer runs the full suite, so the run-time measurement
+    (scripts/data_reads_plugin.py) is not available there; the last measurement is committed as
+    `measured` (one test path per line, `#` comments and blank lines ignored). A listed file that
+    no longer exists is dropped (a deleted test must not fail every data PR). An unreadable list
+    raises OSError (exit 2: the caller runs the full suite); it is never read as empty.
+    """
+    chosen = set(select(root))
+    for line in measured.read_text(encoding="utf-8").splitlines():
+        path = line.split("#", 1)[0].strip().replace("\\", "/")
+        if path and (root / path).is_file():
+            chosen.add(path)
+    return sorted(chosen)
+
+
 def main(argv: list[str] | None = None) -> int:
     ap = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     ap.add_argument("--root", type=Path, default=Path(__file__).resolve().parent.parent)
+    ap.add_argument(
+        "--measured",
+        type=Path,
+        help="also select every existing test file listed in this committed measurement",
+    )
     args = ap.parse_args(argv)
     try:
-        chosen = select(args.root)
+        chosen = (
+            select_with_measured(args.root, args.measured) if args.measured else select(args.root)
+        )
     except (OSError, UnicodeDecodeError) as exc:
         print(f"cannot read the tests ({exc}); run the full suite", file=sys.stderr)
         return 2
