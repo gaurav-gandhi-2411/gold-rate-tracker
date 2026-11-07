@@ -149,8 +149,10 @@ def collect(
     return sorted(found)
 
 
-def read_file(repo: str, since: datetime, gh: ops_log.GhFn = ops_log.run_gh) -> list[str] | None:
-    """Formatted rows from ops_log.jsonl newer than `since`; None if the file does not exist yet.
+def read_file(
+    repo: str, since: datetime, gh: ops_log.GhFn = ops_log.run_gh
+) -> tuple[list[str], str | None] | None:
+    """(rows newer than `since`, ts of the file's first entry); None if the file does not exist yet.
 
     Raises OpsLogError on any read failure other than "does not exist". A line that is not valid
     JSON is listed raw (marked), never dropped.
@@ -163,6 +165,7 @@ def read_file(repo: str, since: datetime, gh: ops_log.GhFn = ops_log.run_gh) -> 
         return None
     stamp = since.strftime("%Y-%m-%dT%H:%M:%SZ")
     rows: list[tuple[str, str]] = []
+    first: str | None = None
     for line in got[1].splitlines():
         if not line.strip():
             continue
@@ -172,10 +175,16 @@ def read_file(repo: str, since: datetime, gh: ops_log.GhFn = ops_log.run_gh) -> 
         except (ValueError, KeyError, TypeError):
             rows.append(("", f"(unparseable line) {line[:300]}"))
             continue
+        first = ts if first is None or ts < first else first
         if ts >= stamp:
             text = f"{e.get('source', '')}: {e.get('title', '')} -- {e.get('body', '')}"
             rows.append((ts, f"{ts[:16].replace('T', ' ')}  {e.get('workflow', '')}  {text}"))
-    return [r for _, r in sorted(rows)]
+    return [r for _, r in sorted(rows)], first
+
+
+def _now() -> datetime:
+    """The clock (a seam: tests pin it)."""
+    return datetime.now(UTC)
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -190,20 +199,26 @@ def main(argv: list[str] | None = None) -> int:
         "--from-annotations", action="store_true", help="walk run annotations (slow fallback)"
     )
     args = ap.parse_args(argv)
-    since = datetime.now(UTC) - timedelta(days=args.days)
+    since = _now() - timedelta(days=args.days)
     if not args.from_annotations:
         try:
-            lines = read_file(args.repo, since)
+            got = read_file(args.repo, since)
         except OpsLogError as exc:
             print(f"read_ops_log: FAILED, cannot read the ops-log file: {exc}", file=sys.stderr)
             return 2
-        if lines is not None:
+        if got is not None:
+            lines, first = got
             scope = f"ops_log.jsonl on the {ops_log.OPS_BRANCH} branch, one read"
             print(f"ops log: {len(lines)} entries in the last {args.days} days (UTC; {scope})")
+            if first is None or first > since.strftime("%Y-%m-%dT%H:%M:%SZ"):
+                print(
+                    f"NOTE: the file begins at {first or 'no entry yet'}: earlier days in this window "
+                    "are not in it and need --from-annotations"
+                )
             for line in lines:
                 print(line)
             return 0
-        print("read_ops_log: no ops-log file yet, falling back to the annotation walk")
+        print("no ops-log file yet, falling back to the annotation walk")
     try:
         workflows = [w for w in emitting_workflows() if re.search(re.escape(args.workflow), w)]
         if not workflows:

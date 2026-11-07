@@ -157,7 +157,7 @@ def test_main_fails_closed_when_the_api_fails(
         raise read_ops_log.OpsLogError("gh api failed (exit 1): HTTP 401")
 
     monkeypatch.setattr(read_ops_log, "collect", boom)
-    assert read_ops_log.main(["--days", "3"]) == 2
+    assert read_ops_log.main(["--from-annotations", "--days", "3"]) == 2
     assert "FAILED" in capsys.readouterr().err
 
 
@@ -165,6 +165,6 @@ def test_main_prints_an_explicit_empty_result(
     monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
 ) -> None:
     monkeypatch.setattr(read_ops_log, "collect", lambda *a, **k: [])
-    assert read_ops_log.main([]) == 0
+    assert read_ops_log.main(["--from-annotations"]) == 0
     out = capsys.readouterr().out
     assert "no ops-alert entries in the last 7 days" in out and "every run in the window" in out
