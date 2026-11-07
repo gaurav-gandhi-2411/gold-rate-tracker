@@ -11,7 +11,7 @@ and fails on an unlisted one):
 
 | Key | What | Where |
 |---|---|---|
-| K1 | Daily gold-price summary (22K/24K/18K, change, next range, live accuracy) | `daily-digest.yml`, `scripts/gg_digest.py` |
+| K1 | Daily gold-price summary (22K/24K/18K, change, next range, live accuracy, one line on whether another model has beaten the live one) | `daily-digest.yml`, `scripts/gg_digest.py` |
 | K2 | Monday summary (the same plus the week's high and low) | `monday-push.yml`, `scripts/gg_digest.py` |
 | K3 | The site shows a wrong or stale price (or does not render) | `scripts/live_freshness.py`, `scripts/live_share_card.py` (`ci-health.yml`), `render-smoke.yml`, worker-deadman forecast staleness |
 | K4 | Only the owner can fix it: token expiry, data sync token rejected (HTTP 401) | `scripts/check_token_expiry.py`, `.github/actions/bot-pr-sync` |
