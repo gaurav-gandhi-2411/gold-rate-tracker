@@ -21,5 +21,7 @@ scan over-selects (a file that only names a data constant as a string, such as
 reads no data). The data-reading test step is REPORT-ONLY (`continue-on-error`) until 5 clean real
 runs over >= 24 h, so a flaky or time-dependent test there shows a warning and does not block a data
 sync; once it is made blocking, such a test can block a sync until it is fixed or master is repaired.
-The first gap is silent (a check that does not run); the second is loud (a warning now, a blocked sync
+Also not run on a data-only PR (they live only in pre-commit): the gitleaks secret scan and the
+10 MB large-file check; no other workflow scans data files for secrets, so those files rely on being
+bot-generated (found by the PR review, 2026-11-07). The first gap is silent (a check that does not run); the second is loud (a warning now, a blocked sync
 after the flip).
