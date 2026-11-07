@@ -87,6 +87,8 @@ jobs:
     # completion, so it must wait for the data-sync PR to actually merge —
     # otherwise it screenshots stale data).
     timeout-minutes: 50
+    env:
+      OPS_LOG_TOKEN: ${{ github.token }}
 
     steps:
       - name: Checkout repository

@@ -34,6 +34,15 @@ count against the rows read, and fails with a message, never prints a partial li
 see `docs/WEEKLY_ROUTINE.md` for the call cost). The weekly report is where the owner sees these. The repo is public: nothing
 in an ops-log body may be a secret or a visitor count.
 
+#### Ops-log file: limits and residuals
+
+Every sender also appends one JSON line to `ops_log.jsonl` on the orphan branch `ops-log` (`scripts/ops_log.py`; `scripts/ops_log_fallback.sh` is the bash twin for the self-hosted runner).
+
+- The append stops after 25 s with one warning; `source`/`title` are cut at 200 characters, `body` at 500; lines older than 120 days go; above about 800 KB the oldest go (the bash twin has no size cap and cannot create the branch).
+- The bot-PR sweep and the self-hosted path write with the bot PAT (`CI_MERGE_PAT`).
+- A job-level `permissions:` block replaces the workflow's, so the jobs that gained `contents: write` repeat the other scopes (tested).
+- `scraper-canary.yml` also runs on `pull_request`: a same-repository PR runs its code with a `contents: write` token (collaborators only; fork tokens are read-only; the writer skips PR events anyway).
+
 Written 2026-09-21 (AQ2). Code: `ml/notification_routing.py` (routing), `ml/public_copy.py` (public
 copy). Tests: `tests/test_notification_routing.py`.
 
