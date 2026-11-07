@@ -36,7 +36,6 @@ jobs:
     if: ${{ github.event_name != 'workflow_run' || github.event.workflow_run.conclusion == 'success' }}
     runs-on: ubuntu-latest
     env:
-      # the ops-log file append (scripts/ops_log.py) uses the workflow token, not a step's PAT
       OPS_LOG_TOKEN: ${{ github.token }}
 
     steps:
