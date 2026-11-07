@@ -136,20 +136,18 @@ dates) are in each run's job summary, not the phone. A session only checks that 
 (`gh run list --workflow monday-push.yml --limit 2`, real step output `ntfy responded HTTP 200`).
 
 **Every Monday, read the ops log** and put it in the weekly report: `python scripts/read_ops_log.py --days 7`.
-Since 2026-11-06 this is instant: every sender appends one JSON line to `ops_log.jsonl` on the `ops-log` branch as
-it runs, and the reader fetches that file in one `gh api` call (date, workflow, `source: title -- body`). The file only covers the time since the senders started appending, so for a window that
-reaches back before that, add `--from-annotations`. If the file cannot be read for any reason other than "does
-not exist yet" the command exits 2: say so in the report, never report "none". `--from-annotations` forces the old
-slow walk, kept as a fallback (and for entries older than the file): it reads only the workflows that can emit one
-(derived from `.github/workflows/*.y*ml`: anything using `scripts/ops_log.py`, the `bot-pr-sync` action,
-`bot_branch_push.sh` or `ml.notifications`), one `/actions/workflows/<file>/runs` query each, because the repo-wide
-runs query is capped by GitHub at 1000 results (7 days held about 2500) and would silently drop the oldest. For
-each workflow it compares the API's `total_count` with the runs it read and exits 2, naming the workflow, on any
-mismatch or at the cap (then say so in the report, do not report "none"; use a smaller `--days`). Cost: one runs
-call per 100 runs per workflow plus one jobs call per run and one annotations call per non-skipped job, so
-lint (about 400 runs a week) and generate-og-image dominate. Measured 2026-11-05: `--days 1` took 524 s; a 7-day
-read takes about an hour, so start it in the background with `timeout 4500` at the start of the routine (record
-its PID/task id) and read its output at the end, or read one workflow at a time with `--workflow`. This replaces the old pushes: a stuck bot PR, a red required check, a
+It is one `gh api` call (under a second): every ops sender appends a JSON line to `ops_log.jsonl` on the `ops-log`
+branch as it runs, and the reader prints the last N days oldest first (UTC date, workflow, `source: title -- body`).
+First-week caveat: the file only covers the time since the writer went live (2026-11-07 00:36Z), so while the
+window reaches back before that the command prints `NOTE: the file begins at <ts>` and the list is NOT complete
+for the earlier days: add `--from-annotations` for those (say so in the report). A line that is not valid JSON is
+listed raw and marked. If the file does not exist yet it says so and runs the annotation walk; any other read
+failure exits 2 (say so in the report, never report "none"). `--from-annotations` forces the old walk, which reads
+each workflow that can emit an ops-alert (derived from `.github/workflows/*.y*ml`) through its runs, jobs and
+annotations, checks the API's `total_count` against the rows read and exits 2 naming the workflow on a mismatch
+or at the 1000-run cap. Only that walk is slow (measured 2026-11-05: `--days 1` took 524 s over all workflows;
+a 7-day read about an hour, so start it in the background with `timeout 4500`); with `--workflow <name>` it is
+seconds for a quiet workflow. This replaces the old pushes: a stuck bot PR, a red required check, a
 check-price stop, a parked branch, a worker-deadman condition now show up here, not on the phone. Anything
 needing GG's click or decision is a numbered item under WAITING ON GG in the report.
 
