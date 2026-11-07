@@ -3,12 +3,9 @@
 #
 # Source it, then:   ops_log_fallback SOURCE TITLE BODY
 #
-# Why: scripts/bot_branch_push.sh runs on the self-hosted Windows runner, which has no python, so its
-# `python3 scripts/ops_log.py ... || true` silently dropped every record. Same three things as
-# ops_log.py record(), with only bash, awk, sed, date, base64 and gh (its own --jq, no jq):
-#   1. the `::warning title=ops-alert::...` annotation; 2. a section in $GITHUB_STEP_SUMMARY;
-#   3. one JSON line appended to ops_log.jsonl on `ops-log` (5 tries on a sha conflict; the payload
-#      goes on stdin; it never creates the branch, it warns). Never fails the caller. Needs GH_TOKEN.
+# Why: the self-hosted Windows runner has no python, so `python3 scripts/ops_log.py || true` dropped
+# every record. Same three things as record(): annotation, job summary, one JSON line on `ops-log`
+# (payload on stdin; never creates the branch). Only bash, awk, sed, date, base64, gh. Never fails.
 # Environment: GITHUB_ACTIONS, GITHUB_REPOSITORY, GITHUB_RUN_ID, GITHUB_WORKFLOW, GITHUB_SERVER_URL,
 # OPS_LOG_NO_FILE (skip step 3), OPS_LOG_RETRY_BASE (seconds, default 1; tests set 0).
 
@@ -35,7 +32,7 @@ ops_log_fallback() {
 }
 
 _ops_file_append() {
-  local source="$1" title="$2" body="$3"
+  local source="${1:0:200}" title="${2:0:200}" body="${3:0:500}" # cut the RAW text, never the escaped one
   local repo="${GITHUB_REPOSITORY:-}"
   if [ -n "${OPS_LOG_NO_FILE:-}" ] || [ "${GITHUB_ACTIONS:-}" != "true" ] || [ -z "${repo}" ] \
     || [ "${GITHUB_EVENT_NAME:-}" = "pull_request" ]; then
@@ -55,7 +52,7 @@ _ops_file_append() {
   run_id="${GITHUB_RUN_ID:-}"
   run_url=""
   [ -n "${run_id}" ] && run_url="${GITHUB_SERVER_URL:-https://github.com}/${repo}/actions/runs/${run_id}"
-  entry="{\"ts\": \"${ts}\", \"source\": \"$(_ops_json_escape "${source}")\", \"title\": \"$(_ops_json_escape "${title}")\", \"body\": \"$(_ops_json_escape "${body:0:500}")\", \"workflow\": \"$(_ops_json_escape "${GITHUB_WORKFLOW:-}")\", \"run_id\": \"${run_id}\", \"run_url\": \"${run_url}\"}"
+  entry="{\"ts\": \"${ts}\", \"source\": \"$(_ops_json_escape "${source}")\", \"title\": \"$(_ops_json_escape "${title}")\", \"body\": \"$(_ops_json_escape "${body}")\", \"workflow\": \"$(_ops_json_escape "${GITHUB_WORKFLOW:-}")\", \"run_id\": \"${run_id}\", \"run_url\": \"${run_url}\"}"
   for attempt in 1 2 3 4 5; do
     if ! sha="$(gh api "${path}?ref=ops-log" --jq .sha 2>/dev/null)" || [ -z "${sha}" ]; then
       echo "ops_log: warning: ops-log branch or file not readable, the ops-log file was not written"
@@ -77,7 +74,7 @@ _ops_file_append() {
     # bash builtin, so the large value never crosses an exec boundary as an argument either.
     msg="$(_ops_json_escape "ops-log: ${source}: ${title}")"
     if printf '{"message": "%s [skip ci]", "content": "%s", "branch": "ops-log", "sha": "%s"}' \
-      "${msg:0:200}" "${b64}" "${sha}" | gh api -X PUT "${path}" --input - >/dev/null 2>&1; then
+      "${msg}" "${b64}" "${sha}" | gh api -X PUT "${path}" --input - >/dev/null 2>&1; then
       return 0
     fi
     sleep "$(( (RANDOM % 3 + 1) * attempt * ${OPS_LOG_RETRY_BASE:-1} ))" 2>/dev/null || true

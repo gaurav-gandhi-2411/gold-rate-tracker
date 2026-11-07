@@ -11,6 +11,7 @@ import base64
 import io
 import json
 import os
+import shlex
 import shutil
 import subprocess
 import sys
@@ -329,7 +330,12 @@ def test_page_without_python_prints_the_annotation_and_writes_the_summary(tmp_pa
     assert "### ops-alert: a Tanishq reading needed rescuing" in summary
 
 
-def _run_fallback(tmp_path: Path, store_text: str) -> tuple[dict, list[int]]:
+def _run_fallback(
+    tmp_path: Path,
+    store_text: str,
+    title: str = "a title",
+    body: str = 'say "hi" \\ ok',
+) -> tuple[dict, list[int]]:
     """Run ops_log_fallback with a stub gh; return the PUT payload (from stdin) and arg lengths."""
     store = tmp_path / "store.jsonl"
     store.write_text(store_text, encoding="utf-8")
@@ -353,7 +359,7 @@ def _run_fallback(tmp_path: Path, store_text: str) -> tuple[dict, list[int]]:
     script = tmp_path / "append.sh"
     fallback = (ROOT / "scripts" / "ops_log_fallback.sh").as_posix()
     script.write_text(
-        f'source "{fallback}"\nops_log_fallback src "a title" "say \\"hi\\" \\\\ ok"\n',
+        f'source "{fallback}"\nops_log_fallback src {shlex.quote(title)} {shlex.quote(body)}\n',
         encoding="utf-8",
     )
     env = _bash_env(
@@ -535,3 +541,16 @@ def test_every_recording_jobs_permissions_block_keeps_the_workflow_level_scopes(
         if _scope_gaps(wf, job)
     ]
     assert not bad, f"a job permissions block replaced the workflow's and dropped scopes: {bad}"
+
+
+@pytest.mark.skipif(BASH is None, reason="bash is needed")
+@pytest.mark.parametrize("pad", [150, 183, 184, 185, 186, 197, 198, 199, 250])
+@pytest.mark.parametrize("tail", ['""""', "\\\\\\\\", '\\"\\"'])
+def test_bash_fallback_never_cuts_an_escape_in_half(tmp_path: Path, pad: int, tail: str) -> None:
+    """The cut happens on the raw text, so however the escapes fall the payload is valid JSON."""
+    title = "a" * pad + tail
+    payload, _ = _run_fallback(tmp_path, "", title=title, body=title * 4)
+    assert payload["message"] == f"ops-log: src: {title[:200]} [skip ci]"
+    row = json.loads(base64.b64decode(payload["content"]).decode().splitlines()[-1])
+    assert row["title"] == title[:200] and len(row["source"]) <= 200
+    assert row["body"] == (title * 4)[:500]
