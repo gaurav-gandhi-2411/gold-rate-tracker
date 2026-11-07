@@ -18,6 +18,8 @@ On a data-only PR the required `lint` job runs only the tests that read `data/`:
 `data/` through a module's default path is in neither until the measurement is refreshed; the static
 scan over-selects (a file that only names a data constant as a string, such as
 `tests/test_tanishq_silent_alert.py`, which redirects those constants to a temp dir, is selected and
-reads no data), and every selected test blocks, so a flaky or time-dependent test in the set can
-block a data sync until it is fixed or master is repaired. The first is a silent gap (a check that
-does not run); the second is loud (a blocked sync, cleared by repairing the test).
+reads no data). The data-reading test step is REPORT-ONLY (`continue-on-error`) until 5 clean real
+runs over >= 24 h, so a flaky or time-dependent test there shows a warning and does not block a data
+sync; once it is made blocking, such a test can block a sync until it is fixed or master is repaired.
+The first gap is silent (a check that does not run); the second is loud (a warning now, a blocked sync
+after the flip).
