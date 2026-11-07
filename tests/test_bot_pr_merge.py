@@ -46,6 +46,7 @@ def _run(
     files: str = "data/tanishq_scrape_success_rate.json",
     branch: str = "bot/x",
     dispatch_fails: bool = False,
+    head_repo: str = "false o r",  # isCrossRepository, head owner, head repo name
 ) -> tuple[subprocess.CompletedProcess[str], str]:
     """Run the script. `states` is the sequence of PR states, one per poll (the last repeats);
     statuses/checks are the already-filtered names the real `--jq` filters would print for `green_on`."""
@@ -62,6 +63,7 @@ gh() {{
   case "$1 $2" in
     "pr view")
       case "$*" in
+        *"--json isCrossRepository"*) echo "{head_repo}" ;;
         *"--json state"*)
           n=$(cnt state); i=0
           for s in {states.replace(",", " ")}; do i=$((i + 1)); last=$s; if [ "$i" -eq "$n" ]; then echo $s; exit 0; fi; done
@@ -334,3 +336,40 @@ def test_a_failed_og_dispatch_warns_but_does_not_fail_the_merge(tmp_path):
 def test_nothing_is_dispatched_when_the_pr_is_closed_unmerged(tmp_path):
     r, log = _run(tmp_path, states="OPEN,CLOSED", statuses="")
     assert r.returncode == 1 and "docs-refresh.yml" not in log
+
+
+# --- 2026-11-03: a fork PR is never merged, whatever head it has -----------------------------------------------
+
+
+@pytest.mark.parametrize(
+    "head_repo",
+    [
+        "true attacker gold-rate-tracker",  # a fork PR named bot/data-sync
+        "false attacker r",  # owner differs even if the flag says same-repo
+        "false o other",  # repository name differs
+        "unreadable",  # the lookup failed: counts as a fork
+        "null o r",  # field missing
+    ],
+)
+def test_a_pr_whose_head_is_not_this_repository_is_never_merged(tmp_path, head_repo):
+    # even with every required context green on a head equal to the pinned SHA
+    r, log = _run(tmp_path, head_repo=head_repo, branch="bot/data-sync")
+    assert r.returncode == 1 and "gh pr merge" not in log, r.stdout + r.stderr
+    assert "refusing to merge" in r.stdout
+
+
+def test_owner_and_name_compare_case_insensitively(tmp_path):
+    r, log = _run(tmp_path, head_repo="false O R")
+    assert (
+        r.returncode == 0 and "gh pr merge 7 --repo o/r --squash --match-head-commit abc123" in log
+    )
+
+
+def test_without_the_repository_check_match_head_commit_alone_still_refuses_a_different_head(
+    tmp_path,
+):
+    """The sync path (bot-pr-sync passes the SHA it pushed): a fork PR's head is the fork's commit, so the
+    pinned merge never happens. This held before 2026-11-03; the sweep and the Tanishq stranded merge pin to
+    the SHA they read from the PR, which is why the repository check above exists."""
+    r, log = _run(tmp_path, pushed="abc123", head="f0f0f0fork", wait_sec="1")
+    assert r.returncode == 1 and "gh pr merge" not in log

@@ -1,279 +1,188 @@
 {
  "schema_version": 1,
- "generated_at": "2026-11-03T07:19:19.765650+00:00",
+ "generated_at": "2026-11-06T18:35:17.499907+00:00",
  "rule_sha256": "e4efabec2193950ee4bf0193b00b3f17eed8c0cf5f81da4394d13acb51fdbdfa",
  "common_start": "2026-10-07",
  "champion": "p3",
  "champion_state_unreadable": false,
  "champion_history": [],
  "live": {
-  "n": 16,
+  "n": 20,
   "since": "2026-10-07",
-  "mae_model": 80.6,
-  "mae_hold": 99.3,
-  "change_pct": -18.8,
-  "direction_hit": 0.812,
-  "direction_n": 16,
-  "coverage": 0.75,
-  "coverage_n": 16,
-  "last_day": "2026-10-30"
+  "mae_model": 106.4,
+  "mae_hold": 121.9,
+  "change_pct": -12.7,
+  "direction_hit": 0.75,
+  "direction_n": 20,
+  "coverage": 0.7,
+  "coverage_n": 20,
+  "last_day": "2026-11-05"
  },
  "challengers": {
   "ensemble": {
    "since": "2026-10-07",
-   "n": 16,
+   "n": 20,
    "first_day": "2026-10-07",
-   "last_day": "2026-10-30",
+   "last_day": "2026-11-05",
    "first_look_day": 20,
-   "looks_started": false,
-   "lower_bound": null,
-   "gain_estimate": null,
+   "looks_started": true,
+   "lower_bound": -0.2244,
+   "gain_estimate": -0.0419,
    "registered": "2026-10-07",
-   "days_since_registration": 15,
-   "horizon_left": 165,
+   "days_since_registration": 19,
+   "horizon_left": 161,
    "retired": false,
    "lower_bound_clears": false,
-   "mae_champion": 80.64,
-   "mae_challenger": 84.49,
-   "gain": -0.0478,
-   "coverage_n": 16,
-   "coverage": 0.625,
-   "coverage_p_below": 0.08168788848148473,
-   "coverage_ok": true,
-   "direction_champion": 0.8125,
-   "direction_challenger": 0.625,
+   "mae_champion": 106.43,
+   "mae_challenger": 110.9,
+   "gain": -0.0419,
+   "coverage_n": 20,
+   "coverage": 0.6,
+   "coverage_p_below": 0.0321426630808751,
+   "coverage_ok": false,
+   "direction_champion": 0.75,
+   "direction_challenger": 0.65,
    "direction_ok": false,
    "status": "scored",
    "live_capable": true,
    "blocked_reason": null,
    "promotable": false,
-   "first_reachable": "2026-11-05"
+   "first_reachable": null
   },
   "p3_roll60": {
    "since": "2026-10-07",
-   "n": 16,
+   "n": 20,
    "first_day": "2026-10-07",
-   "last_day": "2026-10-30",
+   "last_day": "2026-11-05",
    "first_look_day": 20,
-   "looks_started": false,
-   "lower_bound": null,
-   "gain_estimate": null,
+   "looks_started": true,
+   "lower_bound": -0.2672,
+   "gain_estimate": 0.0139,
    "registered": "2026-10-07",
-   "days_since_registration": 15,
-   "horizon_left": 165,
+   "days_since_registration": 19,
+   "horizon_left": 161,
    "retired": false,
    "lower_bound_clears": false,
-   "mae_champion": 80.64,
-   "mae_challenger": 78.29,
-   "gain": 0.0292,
-   "coverage_n": 16,
-   "coverage": 0.75,
-   "coverage_p_below": 0.4018656744898559,
+   "mae_champion": 106.43,
+   "mae_challenger": 104.96,
+   "gain": 0.0139,
+   "coverage_n": 20,
+   "coverage": 0.7,
+   "coverage_p_below": 0.19579221454045043,
    "coverage_ok": true,
-   "direction_champion": 0.8125,
-   "direction_challenger": 0.8125,
+   "direction_champion": 0.75,
+   "direction_challenger": 0.75,
    "direction_ok": true,
    "status": "scored",
    "live_capable": true,
    "blocked_reason": null,
    "promotable": false,
-   "first_reachable": "2026-11-05"
+   "first_reachable": null
   },
   "p3_monday": {
    "since": "2026-10-07",
-   "n": 16,
+   "n": 20,
    "first_day": "2026-10-07",
-   "last_day": "2026-10-30",
+   "last_day": "2026-11-05",
    "first_look_day": 20,
-   "looks_started": false,
-   "lower_bound": null,
-   "gain_estimate": null,
+   "looks_started": true,
+   "lower_bound": -0.0843,
+   "gain_estimate": 0.0148,
    "registered": "2026-10-07",
-   "days_since_registration": 15,
-   "horizon_left": 165,
+   "days_since_registration": 19,
+   "horizon_left": 161,
    "retired": false,
    "lower_bound_clears": false,
-   "mae_champion": 80.64,
-   "mae_challenger": 80.31,
-   "gain": 0.004,
-   "coverage_n": 16,
-   "coverage": 0.75,
-   "coverage_p_below": 0.4018656744898559,
+   "mae_champion": 106.43,
+   "mae_challenger": 104.86,
+   "gain": 0.0148,
+   "coverage_n": 20,
+   "coverage": 0.7,
+   "coverage_p_below": 0.19579221454045043,
    "coverage_ok": true,
-   "direction_champion": 0.8125,
-   "direction_challenger": 0.8125,
+   "direction_champion": 0.75,
+   "direction_challenger": 0.75,
    "direction_ok": true,
    "status": "scored",
    "live_capable": true,
    "blocked_reason": null,
    "promotable": false,
-   "first_reachable": "2026-11-05"
+   "first_reachable": null
   }
  },
  "promote": null,
- "autocorr": {},
+ "autocorr": {
+  "ensemble": {
+   "n": 20,
+   "lags": [
+    -0.005,
+    -0.091,
+    -0.236,
+    -0.097
+   ],
+   "high": false
+  },
+  "p3_roll60": {
+   "n": 20,
+   "lags": [
+    -0.304,
+    -0.152,
+    0.336,
+    -0.342
+   ],
+   "high": false
+  },
+  "p3_monday": {
+   "n": 20,
+   "lags": [
+    -0.227,
+    0.012,
+    -0.18,
+    -0.065
+   ],
+   "high": false
+  }
+ },
  "not_yet": {
   "hourly": "Hourly world-price model (2026-10-16 check: too early; a fresh check is fixed in ADR 076)",
   "p3_hourly": "Live model averaged with the hourly model (joins after the hourly model does)"
  },
  "w2": {
   "forward_from": "2026-10-30",
-  "n": 1,
+  "n": 5,
   "need": 40,
   "earliest_read": "2026-12-24"
  },
  "timeliness": {
   "schema_version": 1,
-  "generated_at": "2026-11-03T07:19:12.505725+00:00",
+  "generated_at": "2026-11-06T18:35:11.280866+00:00",
   "days": 7,
   "tanishq_slots": {
    "days": 7,
-   "slots": 46,
-   "served": 35,
-   "missed": 11,
+   "slots": 42,
+   "served": 33,
+   "missed": 9,
    "window_minutes": 45,
    "missed_slots_ist": [
-    "2026-10-28T10:40:00+05:30",
-    "2026-10-28T11:10:00+05:30",
-    "2026-10-28T15:35:00+05:30",
-    "2026-10-28T19:50:00+05:30",
-    "2026-10-30T01:40:00+05:30",
-    "2026-10-30T07:30:00+05:30",
-    "2026-10-30T11:10:00+05:30",
-    "2026-10-30T15:35:00+05:30",
     "2026-10-31T19:50:00+05:30",
     "2026-11-02T15:35:00+05:30",
-    "2026-11-02T19:50:00+05:30"
+    "2026-11-02T19:50:00+05:30",
+    "2026-11-04T01:40:00+05:30",
+    "2026-11-04T07:30:00+05:30",
+    "2026-11-04T10:40:00+05:30",
+    "2026-11-04T11:10:00+05:30",
+    "2026-11-05T19:50:00+05:30",
+    "2026-11-06T11:10:00+05:30"
    ],
    "classification": {
     "no_dispatch": 1,
     "dispatched_failed": 0,
     "dispatched_cancelled": 0,
-    "late": 10,
+    "late": 8,
     "dispatched_other": 0,
     "unknown": 0
    },
    "per_slot": [
-    {
-     "slot_ist": "2026-10-27T01:40:00+05:30",
-     "served": true,
-     "class": "served"
-    },
-    {
-     "slot_ist": "2026-10-27T07:30:00+05:30",
-     "served": true,
-     "class": "served"
-    },
-    {
-     "slot_ist": "2026-10-27T10:40:00+05:30",
-     "served": true,
-     "class": "served"
-    },
-    {
-     "slot_ist": "2026-10-27T11:10:00+05:30",
-     "served": true,
-     "class": "served"
-    },
-    {
-     "slot_ist": "2026-10-27T15:35:00+05:30",
-     "served": true,
-     "class": "served"
-    },
-    {
-     "slot_ist": "2026-10-27T19:50:00+05:30",
-     "served": true,
-     "class": "served"
-    },
-    {
-     "slot_ist": "2026-10-28T01:40:00+05:30",
-     "served": true,
-     "class": "served"
-    },
-    {
-     "slot_ist": "2026-10-28T07:30:00+05:30",
-     "served": true,
-     "class": "served"
-    },
-    {
-     "slot_ist": "2026-10-28T10:40:00+05:30",
-     "served": false,
-     "class": "late"
-    },
-    {
-     "slot_ist": "2026-10-28T11:10:00+05:30",
-     "served": false,
-     "class": "late"
-    },
-    {
-     "slot_ist": "2026-10-28T15:35:00+05:30",
-     "served": false,
-     "class": "late"
-    },
-    {
-     "slot_ist": "2026-10-28T19:50:00+05:30",
-     "served": false,
-     "class": "late"
-    },
-    {
-     "slot_ist": "2026-10-29T01:40:00+05:30",
-     "served": true,
-     "class": "served"
-    },
-    {
-     "slot_ist": "2026-10-29T07:30:00+05:30",
-     "served": true,
-     "class": "served"
-    },
-    {
-     "slot_ist": "2026-10-29T10:40:00+05:30",
-     "served": true,
-     "class": "served"
-    },
-    {
-     "slot_ist": "2026-10-29T11:10:00+05:30",
-     "served": true,
-     "class": "served"
-    },
-    {
-     "slot_ist": "2026-10-29T15:35:00+05:30",
-     "served": true,
-     "class": "served"
-    },
-    {
-     "slot_ist": "2026-10-29T19:50:00+05:30",
-     "served": true,
-     "class": "served"
-    },
-    {
-     "slot_ist": "2026-10-30T01:40:00+05:30",
-     "served": false,
-     "class": "no_dispatch"
-    },
-    {
-     "slot_ist": "2026-10-30T07:30:00+05:30",
-     "served": false,
-     "class": "late"
-    },
-    {
-     "slot_ist": "2026-10-30T10:40:00+05:30",
-     "served": true,
-     "class": "served"
-    },
-    {
-     "slot_ist": "2026-10-30T11:10:00+05:30",
-     "served": false,
-     "class": "late"
-    },
-    {
-     "slot_ist": "2026-10-30T15:35:00+05:30",
-     "served": false,
-     "class": "late"
-    },
-    {
-     "slot_ist": "2026-10-30T19:50:00+05:30",
-     "served": true,
-     "class": "served"
-    },
     {
      "slot_ist": "2026-10-31T01:40:00+05:30",
      "served": true,
@@ -383,6 +292,106 @@
      "slot_ist": "2026-11-03T11:10:00+05:30",
      "served": true,
      "class": "served"
+    },
+    {
+     "slot_ist": "2026-11-03T15:35:00+05:30",
+     "served": true,
+     "class": "served"
+    },
+    {
+     "slot_ist": "2026-11-03T19:50:00+05:30",
+     "served": true,
+     "class": "served"
+    },
+    {
+     "slot_ist": "2026-11-04T01:40:00+05:30",
+     "served": false,
+     "class": "no_dispatch"
+    },
+    {
+     "slot_ist": "2026-11-04T07:30:00+05:30",
+     "served": false,
+     "class": "late"
+    },
+    {
+     "slot_ist": "2026-11-04T10:40:00+05:30",
+     "served": false,
+     "class": "late"
+    },
+    {
+     "slot_ist": "2026-11-04T11:10:00+05:30",
+     "served": false,
+     "class": "late"
+    },
+    {
+     "slot_ist": "2026-11-04T15:35:00+05:30",
+     "served": true,
+     "class": "served"
+    },
+    {
+     "slot_ist": "2026-11-04T19:50:00+05:30",
+     "served": true,
+     "class": "served"
+    },
+    {
+     "slot_ist": "2026-11-05T01:40:00+05:30",
+     "served": true,
+     "class": "served"
+    },
+    {
+     "slot_ist": "2026-11-05T07:30:00+05:30",
+     "served": true,
+     "class": "served"
+    },
+    {
+     "slot_ist": "2026-11-05T10:40:00+05:30",
+     "served": true,
+     "class": "served"
+    },
+    {
+     "slot_ist": "2026-11-05T11:10:00+05:30",
+     "served": true,
+     "class": "served"
+    },
+    {
+     "slot_ist": "2026-11-05T15:35:00+05:30",
+     "served": true,
+     "class": "served"
+    },
+    {
+     "slot_ist": "2026-11-05T19:50:00+05:30",
+     "served": false,
+     "class": "late"
+    },
+    {
+     "slot_ist": "2026-11-06T01:40:00+05:30",
+     "served": true,
+     "class": "served"
+    },
+    {
+     "slot_ist": "2026-11-06T07:30:00+05:30",
+     "served": true,
+     "class": "served"
+    },
+    {
+     "slot_ist": "2026-11-06T10:40:00+05:30",
+     "served": true,
+     "class": "served"
+    },
+    {
+     "slot_ist": "2026-11-06T11:10:00+05:30",
+     "served": false,
+     "class": "late"
+    },
+    {
+     "slot_ist": "2026-11-06T15:35:00+05:30",
+     "served": true,
+     "class": "served"
+    },
+    {
+     "slot_ist": "2026-11-06T19:50:00+05:30",
+     "served": true,
+     "class": "served"
     }
    ],
    "attribution_note": "from GitHub run data only; no_dispatch cannot tell a laptop that was off or asleep from a scheduler that did not fire or a task that did not run (only the laptop's own log knows)",
@@ -390,16 +399,17 @@
   },
   "overnight_window": {
    "available": true,
-   "nights": 4,
+   "nights": 5,
    "nights_without_model_forecast": 0,
-   "nights_with_model_forecast": 4,
+   "nights_with_model_forecast": 5,
    "minutes_after_us_close": [
-    61,
     63,
-    119,
-    120
+    120,
+    127,
+    245,
+    272
    ],
-   "median_minutes_after_us_close": 119,
+   "median_minutes_after_us_close": 127,
    "marking": "VERIFIED"
   }
  },
@@ -422,6 +432,6 @@
   "demoted": false,
   "since": null,
   "reasons": [],
-  "last_checked": "2026-11-03T05:47:15.580415+00:00"
+  "last_checked": "2026-11-06T14:32:18.361465+00:00"
  }
 }

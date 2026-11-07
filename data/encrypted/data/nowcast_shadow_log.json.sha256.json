@@ -1,10 +1,10 @@
 {
  "category": "raw Tanishq daily truth",
  "ciphertext": "data/encrypted/data/nowcast_shadow_log.json.enc",
- "ciphertext_sha256": "7a24264fc271b29ca9a182a001102a6b856a1f663b3476c1f0355af7273fe970",
+ "ciphertext_sha256": "009f1e3ea609158b522aa34deb089832e28739b68ae92b02bc3bd87507cecfd6",
  "format": "GRTENC v1, AES-256-GCM, scrypt",
  "key_id": "88fadeb62be0b8f4",
  "path": "data/nowcast_shadow_log.json",
- "plaintext_bytes": 24450,
- "plaintext_sha256": "bc268ba65ed5773a953f4d5de63f78b4b5f5c0f3548bf9b14e7fbc338094490e"
+ "plaintext_bytes": 26331,
+ "plaintext_sha256": "f86df9d54d49231d0030e1d75231aa9615aa5ac1ad8a4b198db500136e227d37"
 }
