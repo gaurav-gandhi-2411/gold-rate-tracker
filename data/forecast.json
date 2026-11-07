@@ -1,11 +1,11 @@
 {
-  "predicted_at": "2026-11-06T23:32:40.883457+00:00",
+  "predicted_at": "2026-11-07T00:36:07.323612+00:00",
   "target_window": "5d",
   "headline": {
     "method": "nextfix_p3_v1",
-    "predicted_22k": 13139,
-    "lower": 12960,
-    "upper": 13317,
+    "predicted_22k": 13159,
+    "lower": 12981,
+    "upper": 13338,
     "conformal_pi_half": 146.4,
     "naive_mae_recent_30": 90.3,
     "vol_context": {
@@ -59,7 +59,7 @@
     "direction_consensus": 1.0
   },
   "driver_context": {
-    "computed_at": "2026-11-06T23:32:46.371607+00:00",
+    "computed_at": "2026-11-07T00:36:12.839094+00:00",
     "macro_staleness_days": 0.0,
     "macro_fresh": true,
     "premium_threshold_pct": 15.0,
@@ -121,10 +121,10 @@
   "band_half_width": null,
   "band_unavailable_reason": null,
   "model_fallback": false,
-  "predicted_22k": 13139,
-  "lower": 12960,
-  "upper": 13317,
-  "target_time": "2026-11-07T00:00:00+00:00",
+  "predicted_22k": 13159,
+  "lower": 12981,
+  "upper": 13338,
+  "target_time": "2026-11-08T00:00:00+00:00",
   "model_status": "nextfix_headline",
   "model_version": "nextfix_p3_v1",
   "warmup": false,
@@ -228,19 +228,19 @@
     "base_kind": "pm",
     "base_date": "2026-11-06",
     "base_ibja": 12957.0,
-    "predicted_ibja": 12906.42,
+    "predicted_ibja": 12926.75,
     "target_kind": "pm",
     "range_record": {
       "coverage": 0.796,
       "n": 147
     },
-    "predicted_22k": 13139,
-    "lower": 12960,
-    "upper": 13317,
+    "predicted_22k": 13159,
+    "lower": 12981,
+    "upper": 13338,
     "shadow_ensemble": {
       "model_version": "nextfix_ridge_mlp_v1",
-      "predicted_ibja": 12946.26,
-      "p_up": 0.4345,
+      "predicted_ibja": 12968.96,
+      "p_up": 0.5132,
       "track_record": {
         "n": 167,
         "mae_model": 105.0,
@@ -249,11 +249,11 @@
         "last_d0": "2026-11-05"
       }
     },
-    "p_up": 0.3467,
+    "p_up": 0.4069,
     "direction": {
       "show": true,
       "side": "down",
-      "probability": 0.6533
+      "probability": 0.5931
     }
   }
 }
