@@ -1,6 +1,6 @@
 # Model status
 
-Updated 2026-11-06. Computed from real forecast days only; no backtest figure appears here. Rule: ADR 072 (frozen, hash `e4efabec2193`).
+Updated 2026-11-08. Computed from real forecast days only; no backtest figure appears here. Rule: ADR 072 (frozen, hash `e4efabec2193`).
 
 ## What is live and how it is doing
 
@@ -32,7 +32,7 @@ Range test W2 (ADR 074; background only, it never changes the live range): the l
 
 ## Were the inputs on time?
 
-- Jeweller price visits: **33 of 42** scheduled visits since the schedule began (2026-10-05) ran within 45 minutes of their time (9 did not). Of the 9 not run on time: 1 never dispatched (laptop off or scheduler idle), 8 ran late (within 6 hours, after the laptop came back). Inferred from GitHub run records only, which does not tell a laptop that was off from a scheduler that did not fire.
+- Jeweller price visits: **32 of 46** scheduled visits since the schedule began (2026-10-05) ran within 45 minutes of their time (14 did not). Of the 14 not run on time: 7 never dispatched (laptop off or scheduler idle), 7 ran late (within 6 hours, after the laptop came back). Inferred from GitHub run records only, which does not tell a laptop that was off from a scheduler that did not fire.
 - Overnight model forecast: published on **5 of 5** nights, typically 127 minutes after the US gold close.
 - Why those 16 visits were missed (from the laptop's own records, checked 2026-10-09): 4 were before the timed visits were set up on 2026-10-05; 11 happened while the laptop was shut down; 1 were requested on time but the run was cancelled before it finished. A laptop that is shut down cannot run a visit; the dispatcher also catches up once when the laptop is back, which records one late reading, not the missed ones.
 
@@ -43,5 +43,5 @@ Range test W2 (ADR 074; background only, it never changes the live range): the l
 
 ## Anything that fired
 
-- Automatic fallback has not triggered (last checked 2026-11-06).
+- Automatic fallback has not triggered (last checked 2026-11-08).
 - Live model changes: none.
