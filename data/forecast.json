@@ -1,11 +1,11 @@
 {
-  "predicted_at": "2026-11-12T10:13:03.955078+00:00",
+  "predicted_at": "2026-11-12T13:10:14.707139+00:00",
   "target_window": "5d",
   "headline": {
-    "method": "hold_latest_fix_am_to_pm",
+    "method": "naive_flat_hold",
     "predicted_22k": 12865,
-    "lower": 12818,
-    "upper": 12912,
+    "lower": 12719,
+    "upper": 13011,
     "conformal_pi_half": 146.4,
     "naive_mae_recent_30": 90.3,
     "vol_context": {
@@ -47,7 +47,7 @@
     ],
     "horizon_p90": [
       14108.71,
-      14039.17,
+      14039.18,
       14027.45,
       14106.79,
       14184.36
@@ -59,7 +59,7 @@
     "direction_consensus": 1.0
   },
   "driver_context": {
-    "computed_at": "2026-11-12T10:13:12.522715+00:00",
+    "computed_at": "2026-11-12T13:10:15.166051+00:00",
     "macro_staleness_days": 0.0,
     "macro_fresh": true,
     "premium_threshold_pct": 15.0,
@@ -69,15 +69,15 @@
         "n_obs": 5,
         "t0_date": "2026-11-05",
         "t1_date": "2026-11-12",
-        "delta_pct_ibja": -4.133,
-        "delta_pct_gold_usd": -3.799,
-        "delta_pct_usdinr": -0.776,
-        "delta_pct_premium": 0.442,
+        "delta_pct_ibja": -4.569,
+        "delta_pct_gold_usd": -4.451,
+        "delta_pct_usdinr": -0.461,
+        "delta_pct_premium": 0.344,
         "total_move_rs_per_g": -570.0,
-        "gold_usd_contrib_rs_per_g": -523.9,
-        "usdinr_contrib_rs_per_g": -107.0,
-        "premium_contrib_rs_per_g": 60.9,
-        "premium_share_pct": 10.7,
+        "gold_usd_contrib_rs_per_g": -555.3,
+        "usdinr_contrib_rs_per_g": -57.6,
+        "premium_contrib_rs_per_g": 42.9,
+        "premium_share_pct": 7.5,
         "attribution_valid": true,
         "attribution_valid_reason": "clean \u2014 premium share within threshold"
       },
@@ -85,24 +85,24 @@
         "n_obs": 21,
         "t0_date": "2026-10-13",
         "t1_date": "2026-11-12",
-        "delta_pct_ibja": -6.524,
-        "delta_pct_gold_usd": -5.383,
-        "delta_pct_usdinr": -1.624,
-        "delta_pct_premium": 0.483,
+        "delta_pct_ibja": -6.96,
+        "delta_pct_gold_usd": -6.035,
+        "delta_pct_usdinr": -1.31,
+        "delta_pct_premium": 0.385,
         "total_move_rs_per_g": -865.0,
-        "gold_usd_contrib_rs_per_g": -713.7,
-        "usdinr_contrib_rs_per_g": -215.3,
-        "premium_contrib_rs_per_g": 64.1,
-        "premium_share_pct": 7.4,
+        "gold_usd_contrib_rs_per_g": -750.1,
+        "usdinr_contrib_rs_per_g": -162.8,
+        "premium_contrib_rs_per_g": 47.9,
+        "premium_share_pct": 5.5,
         "attribution_valid": true,
         "attribution_valid_reason": "clean \u2014 premium share within threshold"
       }
     },
     "driver_state": {
-      "usd_inr_now": 93.745,
-      "gold_usd_now": 3985.1,
-      "usd_inr_30d_pct_change": -1.61,
-      "gold_usd_30d_pct_change": -5.24
+      "usd_inr_now": 94.04,
+      "gold_usd_now": 3959.2,
+      "usd_inr_30d_pct_change": -1.3,
+      "gold_usd_30d_pct_change": -5.86
     },
     "alignment": "intraday_at_fix"
   },
@@ -122,125 +122,14 @@
   "band_unavailable_reason": null,
   "model_fallback": false,
   "predicted_22k": 12865,
-  "lower": 12818,
-  "upper": 12912,
+  "lower": 12719,
+  "upper": 13011,
   "target_time": "2026-11-13T00:00:00+00:00",
-  "model_status": "nextfix_headline",
-  "model_version": "hold_latest_fix_am_to_pm",
+  "model_status": "naive_headline",
+  "model_version": "naive_flat_hold",
   "warmup": false,
   "next_fix": {
-    "active": true,
-    "reason": null,
-    "track_record": {
-      "n": 169,
-      "n_forward": 22,
-      "first_d0": "2025-07-17",
-      "last_d0": "2026-11-10",
-      "mae_model": 257.2,
-      "mae_flat": 266.0,
-      "mae_change_pct": -3.3,
-      "mae_change_ci95": [
-        -11.0,
-        -0.9
-      ],
-      "dm_p": 0.0077,
-      "wilcoxon_p": 0.0172,
-      "direction_accuracy": 0.645,
-      "direction_accuracy_ci95": [
-        0.574,
-        0.716
-      ],
-      "always_up_accuracy": 0.4675,
-      "direction_p_value": 0.0012,
-      "direction_ece": 0.0693,
-      "direction_gate_ship": true,
-      "direction_gate_reason": "logistic beats always-up OOS: acc 0.6450>0.4675, brier nan<0.5325, ECE 0.0693<=0.1, p=0.0012 over 169 folds",
-      "timing_gate_ship": false,
-      "range_coverage": 0.785,
-      "range_coverage_ci95": [
-        0.713,
-        0.844
-      ],
-      "range_n": 149,
-      "range_mean_width_ibja": 343.1
-    },
-    "demotion": {
-      "demoted": false,
-      "since": null,
-      "reasons": [],
-      "rules_breaching_now": [],
-      "checked": true,
-      "live_monitor": {
-        "checked": true,
-        "rule_sha256": "7326ea844d7e98c597db9a725c27010e9097e9f5fe1accf5dc96bf0f985f42b1",
-        "n_live": 22,
-        "error_breach": false,
-        "coverage_n_live": 22,
-        "coverage_live": 0.636,
-        "coverage_e_value": 3.525,
-        "coverage_alert": false
-      }
-    },
-    "leak_guard": {
-      "checked": true,
-      "n_inputs": 1,
-      "violations": []
-    },
-    "champion": {
-      "id": "p3",
-      "since": null,
-      "promoted_now": false,
-      "unreadable": false,
-      "pinned": false,
-      "fallback": null,
-      "effective_id": null,
-      "history_len": 0,
-      "last_change": null
-    },
-    "windows": {
-      "am_to_pm": {
-        "n": 174,
-        "ready": true,
-        "first_d0": "2025-07-17",
-        "last_d0": "2026-11-11",
-        "range_coverage": 0.793,
-        "range_coverage_ci95": [
-          0.727,
-          0.847
-        ],
-        "range_mean_width": 122.4
-      },
-      "pm_to_am": {
-        "n": 171,
-        "ready": true,
-        "first_d0": "2025-07-17",
-        "last_d0": "2026-11-11",
-        "range_coverage": 0.772,
-        "range_coverage_ci95": [
-          0.703,
-          0.828
-        ],
-        "range_mean_width": 324.5
-      }
-    },
-    "mode": "after_morning_rate",
-    "model_version": "hold_latest_fix_am_to_pm",
-    "base_kind": "am",
-    "base_date": "2026-11-12",
-    "base_ibja": 12667.7,
-    "predicted_ibja": 12667.7,
-    "target_kind": "pm",
-    "range_record": {
-      "coverage": 0.793,
-      "n": 174
-    },
-    "predicted_22k": 12865,
-    "lower": 12818,
-    "upper": 12912,
-    "direction": {
-      "show": false,
-      "side": "unclear",
-      "probability": null
-    }
+    "active": false,
+    "reason": "error: ZeroDivisionError"
   }
 }
