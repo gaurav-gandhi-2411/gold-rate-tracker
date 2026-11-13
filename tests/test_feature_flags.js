@@ -28,7 +28,8 @@ function loadFlags({ hostname = "gaurav-gandhi-2411.github.io", search = "" } = 
 
 // Flags that were deliberately switched on and shipped on. Adding a name here is a conscious,
 // reviewed act: every other flag must still default off.
-const SHIPPED_ON = new Set(["analytics"]); // visit counting, switched on 2026-10-09
+// visit counting, switched on 2026-10-09; long_history (monthly samples on the All range), GG 2026-11-13
+const SHIPPED_ON = new Set(["analytics", "long_history"]);
 
 test("FEATURE_FLAGS: every declared flag defaults to false unless it is on the shipped-on list", () => {
   const ctx = loadFlags();
