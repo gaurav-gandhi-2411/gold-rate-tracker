@@ -34,6 +34,7 @@ import numpy as np
 import pandas as pd
 
 from ml import nextfix
+from ml.data_sanity import positive_or_nan
 
 logger = logging.getLogger(__name__)
 
@@ -63,7 +64,7 @@ def load_bars(data_dir: Path = DATA_DIR) -> pd.Series:
     bars = pd.read_parquet(path)
     idx = pd.DatetimeIndex(pd.to_datetime(bars.index))
     idx = idx.tz_localize("UTC") if idx.tz is None else idx.tz_convert("UTC")
-    g = (bars["gold_usd"] * bars["usd_inr"]).astype(float)
+    g = positive_or_nan(bars["gold_usd"]) * positive_or_nan(bars["usd_inr"])
     g.index = idx + pd.Timedelta(hours=1)
     return g.dropna().sort_index()
 
@@ -99,6 +100,8 @@ def forecast_at(events: list, g: pd.Series, t: datetime) -> dict | None:
     t_b, kind, d, base = past[-1]
     at_fix, at_now = value_at(g, t_b), value_at(g, t)
     if at_fix is None or at_now is None:
+        return None
+    if not (at_fix[0] > 0 and at_now[0] > 0 and base > 0):  # never divide by a non-positive value
         return None
     x = math.log(at_now[0] / at_fix[0])
     return {
