@@ -41,6 +41,7 @@ from ml.calibration import (
     _recency_weights,
     _weighted_percentile,
 )
+from ml.data_sanity import sanitize_ibja
 
 
 def _wilson_ci(successes: int, n: int, z: float = 1.96) -> tuple[float, float]:
@@ -66,7 +67,7 @@ def _build_scoring_set(
     y = same_day["tanishq_22k"].to_numpy()
     same_day_dates = pd.to_datetime(same_day["date"]).to_numpy()
 
-    ibja_sorted = ibja_df[["date", "pm_916"]].dropna(subset=["pm_916"]).copy()
+    ibja_sorted = sanitize_ibja(ibja_df)[["date", "pm_916"]].dropna(subset=["pm_916"])
     ibja_sorted["date_dt"] = pd.to_datetime(ibja_sorted["date"])
     ibja_sorted["ibja_per_g"] = ibja_sorted["pm_916"] / 10.0
     ibja_sorted = ibja_sorted.sort_values("date_dt")

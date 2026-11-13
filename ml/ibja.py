@@ -215,7 +215,7 @@ def latest_ibja_date(path: Path | None = None) -> date | None:
         df = load_ibja_parquet(path)
         if df.empty or "pm_916" not in df.columns:
             return None
-        valid = df[df["pm_916"].notna()]
+        valid = df[df["pm_916"] > 0]  # NaN and 0 both mean "no PM fix"
         if valid.empty:
             return None
         return pd.to_datetime(valid["date"]).max().date()

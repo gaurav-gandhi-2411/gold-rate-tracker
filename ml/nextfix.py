@@ -60,6 +60,7 @@ import numpy as np
 import pandas as pd
 
 from ml import runtime_leak_guard as rlg
+from ml.data_sanity import positive_or_nan, sanitize_ibja
 
 logger = logging.getLogger(__name__)
 
@@ -143,7 +144,7 @@ MLP_EPOCHS = 300
 
 def load_ibja(path: Path = IBJA_PATH) -> pd.DataFrame:
     """IBJA rates with a PM fix, in Rs./g of 22K (pm_916 is per 10 g), sorted by date."""
-    df = pd.read_parquet(path)
+    df = sanitize_ibja(pd.read_parquet(path))  # a 0 rate is no rate (-> NaN, then dropped)
     df["date"] = pd.to_datetime(df["date"]).dt.tz_localize(None).dt.normalize()
     df = df.dropna(subset=["pm_916"]).sort_values("date").reset_index(drop=True)
     df["pm"] = df["pm_916"] / 10.0
@@ -159,13 +160,13 @@ def global_series(macro: pd.DataFrame | None = None, label_path: Path = LABEL_PA
     """
     parts: list[pd.Series] = []
     if label_path.exists():
-        lb = pd.read_parquet(label_path)["raw_pre_duty"].dropna()
+        lb = positive_or_nan(pd.read_parquet(label_path)["raw_pre_duty"]).dropna()
         idx = pd.DatetimeIndex(lb.index)
         idx = idx.tz_localize(None) if idx.tz is not None else idx
         lb.index = idx.normalize()
         parts.append(lb.astype(float))
     if macro is not None and {"gold_usd", "usd_inr"} <= set(macro.columns):
-        m = (macro["gold_usd"] * macro["usd_inr"]).dropna().astype(float)
+        m = (positive_or_nan(macro["gold_usd"]) * positive_or_nan(macro["usd_inr"])).dropna()
         idx = pd.DatetimeIndex(m.index)
         idx = idx.tz_localize(None) if idx.tz is not None else idx
         m.index = idx.normalize()
@@ -196,7 +197,7 @@ def global_series(macro: pd.DataFrame | None = None, label_path: Path = LABEL_PA
 
 def load_ibja_full(path: Path = IBJA_PATH) -> pd.DataFrame:
     """Every IBJA day, AM and PM in Rs./g of 22K (a day may have an AM fix and no PM fix yet)."""
-    df = pd.read_parquet(path)
+    df = sanitize_ibja(pd.read_parquet(path))  # a 0 rate is no rate (-> NaN)
     df["date"] = pd.to_datetime(df["date"]).dt.tz_localize(None).dt.normalize()
     df = df.sort_values("date").drop_duplicates("date", keep="last").reset_index(drop=True)
     df["pm"] = df["pm_916"] / 10.0
