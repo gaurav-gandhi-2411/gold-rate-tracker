@@ -123,8 +123,8 @@ test("longHistoryDots: drops overlap with the daily series and malformed rows; k
   assert.deepEqual(longHistoryDots({ samples: "no" }, first), []);
 });
 
-test("the flag stays OFF in flags.js (flipping it is GG's decision and needs a SW VERSION bump)", () => {
+test("the flag is ON in flags.js (GG's decision 2026-11-13; changing it needs a SW VERSION bump)", () => {
   const flags = fs.readFileSync(new URL("../flags.js", import.meta.url), "utf8");
-  assert.match(flags, /^\s*long_history:\s*false,/m);
-  assert.doesNotMatch(flags, /long_history:\s*true/);
+  assert.match(flags, /^\s*long_history:\s*true,/m);
+  assert.doesNotMatch(flags, /long_history:\s*false/);
 });
