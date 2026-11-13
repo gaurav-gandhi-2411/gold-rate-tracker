@@ -23,6 +23,7 @@ Usage:
 from __future__ import annotations
 
 import logging
+import math
 import re
 import time
 from datetime import UTC, date, datetime, timedelta
@@ -159,11 +160,18 @@ def _fetch_and_parse_once(attempt: int) -> dict[str, float]:
         if key not in _PURITY_MAP:
             continue
         suffix = _PURITY_MAP[key]
-        try:
-            result[f"am_{suffix}"] = float(str(row[am_col]).replace(",", ""))
-            result[f"pm_{suffix}"] = float(str(row[pm_col]).replace(",", ""))
-        except (ValueError, TypeError) as exc:
-            logger.warning("ibja: could not parse %s row: %s", key, exc)
+        # AM and PM are parsed one at a time: a PM cell that is not a number yet ('---') must not
+        # drop the AM fix that is already published.
+        for name, cell in ((f"am_{suffix}", row[am_col]), (f"pm_{suffix}", row[pm_col])):
+            try:
+                value = float(str(cell).replace(",", ""))
+            except (ValueError, TypeError) as exc:
+                logger.warning("ibja: could not parse %s %s: %s", key, name, exc)
+                continue
+            if is_rate(value):
+                result[name] = value
+            else:  # a 0 (or negative) is no rate: stored as missing so the real fix can fill it
+                logger.info("ibja: %s is %r on the page; stored as missing", name, value)
 
     if not result:
         notice = _NOT_PUBLISHED.search(html)
@@ -176,6 +184,11 @@ def _fetch_and_parse_once(attempt: int) -> dict[str, float]:
             snippet,
         )
     return result
+
+
+def is_rate(value: object) -> bool:
+    """True for a real rate: a finite number above zero. 0 and NaN both mean "no fix yet"."""
+    return isinstance(value, int | float) and math.isfinite(value) and value > 0
 
 
 def _get_with_retry(headers: dict[str, str]) -> str | None:
@@ -293,11 +306,12 @@ def append_ibja_today(path: Path | None = None) -> bool | None:
         new_pm = rates.get("pm_916")
         if "pm_916" in existing.columns:
             existing_pm_series = existing.loc[existing["date"] == today, "pm_916"]
-            existing_pm_null = existing_pm_series.empty or pd.isna(existing_pm_series.iloc[0])
+            # a stored 0 is as missing as NaN: it was written before the PM fix was published
+            existing_pm_null = existing_pm_series.empty or not is_rate(existing_pm_series.iloc[0])
         else:
             existing_pm_null = True  # column absent → treat as null
 
-        if new_pm is not None and not pd.isna(new_pm) and existing_pm_null:
+        if is_rate(new_pm) and existing_pm_null:
             # Upsert: write all rates from the fresh fetch into the existing row,
             # adding new columns (e.g. pm_916) if they weren't present before.
             for col, val in rates.items():
@@ -407,7 +421,10 @@ def _parse_ibja_pdf(pdf_bytes: bytes) -> pd.DataFrame:
         logger.warning("ibja: pdfplumber failed: %s", exc)
         return pd.DataFrame()
 
-    return pd.DataFrame(rows)
+    frame = pd.DataFrame(rows)
+    rate_cols = [c for c in frame.columns if c.startswith(("am_", "pm_"))]
+    frame[rate_cols] = frame[rate_cols].where(frame[rate_cols] > 0)  # a 0 or negative is no rate
+    return frame
 
 
 def _fill_null_rates(existing: pd.DataFrame, pdf_rows: pd.DataFrame) -> tuple[pd.DataFrame, int]:
@@ -436,7 +453,7 @@ def _fill_null_rates(existing: pd.DataFrame, pdf_rows: pd.DataFrame) -> tuple[pd
         if isinstance(src, pd.DataFrame):  # duplicated date in the PDF: take the first row
             src = src.iloc[0]
         for col in rate_cols:
-            if pd.isna(existing.at[idx, col]) and pd.notna(src[col]):
+            if not is_rate(existing.at[idx, col]) and is_rate(src[col]):  # a stored 0 is no rate
                 existing.at[idx, col] = src[col]
                 touched.add(d)
     changed = len(touched)
