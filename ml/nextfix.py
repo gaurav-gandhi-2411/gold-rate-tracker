@@ -592,23 +592,59 @@ def _day(ts: pd.Timestamp) -> str:
     return ts.strftime("%Y-%m-%d")
 
 
+def fold_is_valid(f: dict) -> bool:
+    """A stored fold must carry real prices: ``pm0``/``pm1`` finite and > 0 and ``ret`` finite.
+
+    A fold written while a rate was stored as 0 (an unpublished fix) has ``pm0 == 0``; every reader
+    then divides by ``vol * pm0`` and the live forecast fails on every run (2026-11-12). Only keys
+    that are present are checked, so older folds without a key keep their old behaviour."""
+    for key in ("pm0", "pm1"):
+        if key in f and not (
+            isinstance(f[key], int | float) and math.isfinite(f[key]) and f[key] > 0
+        ):
+            return False
+    return not ("ret" in f and not (isinstance(f["ret"], int | float) and math.isfinite(f["ret"])))
+
+
+# Folds set aside by load_oos, per file, so save_oos keeps them in the file under
+# "quarantined_invalid" (audit trail: nothing is deleted, readers just never see them as forecasts).
+_QUARANTINED: dict[str, list[dict]] = {}
+
+
 def load_oos(path: Path = OOS_PATH) -> list[dict]:
     try:
         data = json.loads(path.read_text())
     except (OSError, ValueError):
         return []
-    return list(data.get("folds", [])) if isinstance(data, dict) else []
+    if not isinstance(data, dict):
+        return []
+    folds = list(data.get("folds", []))
+    bad = [f for f in folds if not fold_is_valid(f)]
+    prior = [f for f in data.get("quarantined_invalid", []) if isinstance(f, dict)]
+    if bad:
+        logger.warning(
+            "%s: %d fold(s) with a non-positive or non-finite price set aside (days: %s); "
+            "kept under quarantined_invalid",
+            path.name,
+            len(bad),
+            ", ".join(str(f.get("d0")) for f in bad),
+        )
+    if bad or prior:
+        _QUARANTINED[str(path)] = prior + [f for f in bad if f not in prior]
+    return [f for f in folds if fold_is_valid(f)]
 
 
 def save_oos(
     folds: list[dict], path: Path = OOS_PATH, model_version: str = ENSEMBLE_VERSION
 ) -> None:
-    payload = {
+    payload: dict[str, Any] = {
         "schema_version": 1,
         "model_version": model_version,
         "note": "One out-of-sample forecast per IBJA day, trained only on fixes known before it.",
-        "folds": sorted(folds, key=lambda f: f["d0"]),
+        "folds": sorted((f for f in folds if fold_is_valid(f)), key=lambda f: f["d0"]),
     }
+    if _QUARANTINED.get(str(path)):
+        payload["quarantined_invalid"] = _QUARANTINED[str(path)]
     path.write_text(json.dumps(payload, indent=1) + "\n")
 
 
@@ -788,7 +824,7 @@ def conformal_q(folds: list[dict]) -> float | None:
     scores = [
         abs(f["pm1"] - f["pm0"] * math.exp(f["ret"])) / (f["vol"] * f["pm0"])
         for f in recent
-        if f["vol"] > 0
+        if f["vol"] > 0 and f["pm0"] > 0  # a 0 price is no forecast (see fold_is_valid)
     ]
     return float(np.quantile(scores, NOMINAL)) if len(scores) >= MIN_CONFORMAL else None
 
