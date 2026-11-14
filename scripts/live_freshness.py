@@ -68,6 +68,7 @@ Stdlib only: ci-health runs it on the runner's own python3 with nothing installe
 from __future__ import annotations
 
 import argparse
+import copy
 import json
 import os
 import sys
@@ -165,7 +166,12 @@ def decide(
     in signals that go bad later without paging, closes with one recovery page after RECOVERY_CHECKS
     fully fresh checks spanning RECOVERY_H hours. healthy is False while it is open.
     `model` is model_pause(forecast), or None when it was not judged (forecast unreadable)."""
-    new: dict[str, Any] = {k: v for k, v in state.items() if k in ("incident", "model_since")}
+    # deep copy: the incident is edited in place below (last_paged_at, joiners), and main() keeps the
+    # caller's state when a send fails so the page is retried; a shallow copy shared the dict and
+    # lost the 24 h re-page when ntfy was down (verifier R1)
+    new: dict[str, Any] = copy.deepcopy(
+        {k: v for k, v in state.items() if k in ("incident", "model_since")}
+    )
     inc = new.get("incident") if isinstance(new.get("incident"), dict) else None
     legacy = [k for k in (*LIMITS_H, "site") if state.get(k)]  # state of the per-signal version
     if inc is None and legacy:  # an incident already paged under the old scheme: adopt it quietly

@@ -363,6 +363,25 @@ def test_a_failed_send_keeps_the_old_state_so_the_page_is_retried(tmp_path, monk
     assert json.loads(st.read_text()) == {}
 
 
+def test_a_failed_24h_repage_is_retried_by_the_next_run(tmp_path, monkeypatch):
+    # verifier R1: decide() edited the caller's incident in place, so main() kept an already-advanced
+    # state on a failed send and the re-page was never retried
+    sent: list[dict[str, str]] = []
+    site = _Site(monkeypatch, sent)
+    site.forecast = _fc(True, predicted_at=_iso(12))
+    site.prices = [{"timestamp": _iso(1)}]
+    st = tmp_path / "state.json"
+    assert _run(st, NOW) == 1 and len(sent) == 1  # the open page
+    opened = json.loads(st.read_text())["incident"]["last_paged_at"]
+    monkeypatch.setattr(lf, "send", lambda msg, topic: False)
+    assert _run(st, _later(25)) == 1  # a re-page is due, ntfy is down
+    assert json.loads(st.read_text())["incident"]["last_paged_at"] == opened  # not advanced
+    monkeypatch.setattr(lf, "send", lambda msg, topic: sent.append(msg) or True)
+    assert _run(st, _later(25.5)) == 1
+    assert len(sent) == 2 and "still stale" in sent[1]["title"]  # retried and delivered
+    assert json.loads(st.read_text())["incident"]["last_paged_at"] != opened
+
+
 def test_a_due_page_with_no_topic_fails_the_step(monkeypatch):
     monkeypatch.setattr(lf, "send", lambda msg, topic: True)
     monkeypatch.setenv("NTFY_TOPIC", "")
