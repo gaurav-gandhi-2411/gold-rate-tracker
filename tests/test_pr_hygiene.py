@@ -22,6 +22,13 @@ import pr_hygiene as ph
 KB = 1024
 
 
+@pytest.fixture(autouse=True)
+def _not_in_actions(monkeypatch):
+    # CI sets GITHUB_ACTIONS=true, which makes the script append a ::warning line; the tests that
+    # read the last line must not inherit it (the same trap as GITHUB_EVENT_NAME in #3636).
+    monkeypatch.delenv("GITHUB_ACTIONS", raising=False)
+
+
 def _changes(tmp_path: Path, text: str) -> Path:
     p = tmp_path / "changes.txt"
     p.write_bytes(text.encode("utf-8"))
