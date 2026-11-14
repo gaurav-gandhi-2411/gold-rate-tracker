@@ -217,6 +217,7 @@ ci-health and Worker rows below are no longer pushed: they appear in the ops log
 |---|---|---|
 | `Gold Tracker: visitors see stale data -- <signals>` | The live forecast is over 9 h old, the latest Tanishq reading over 20 h old, or there has been **no model forecast for over 9 h** (`next_fix.active` is not true: the page shows a plain "no change" range). The title lists every signal bad at that moment | Check check-price, bot PRs and Pages; for "no model forecast", read `data/forecast.json` `next_fix.reason` and `next_fix.down_since` (the start of the pause) and fix inference. A hold window (`hold_latest_fix_*` with `next_fix.active` true) is normal and never pages |
 | `Gold Tracker: cannot read the live site's data` | The site's JSON could not be read (fails closed) | Check Pages and the site |
+| `Gold Tracker: still stale after N h -- <signals>` | The incident is still open and something is still bad a day after its last page; sent at most once every 24 h | Same as the first page: it did not fix itself |
 | `Gold Tracker: live site data is fresh again` | ONE recovery page: every signal fresh for at least 2 checks over at least 1 h | None |
 
 A signal that goes bad while the incident is open does not page again (it is listed in the recovery

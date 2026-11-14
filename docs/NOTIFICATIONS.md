@@ -39,8 +39,12 @@ flapped around its edge. Now `scripts/live_freshness.py` keeps ONE site-level in
   advice, disagree) still page.
 - **Recovery**: one page, only after everything has been fresh for at least 2 checks in a row over at
   least 1 hour. A signal going bad again inside that window continues the same incident silently.
-- Replay result: old 18 pushes, new 6 (2 per incident, 3 incidents). The paused model forecast of
-  11-12/13 was invisible to the old monitor (0 pushes) and is now one of the 3.
+- **Still open after a day**: while something is still bad, one "still stale after N h" page every 24 h
+  (at most one push a day), listing what is bad then. A damaged incident record in the state counts as
+  no incident: if the site is stale it pages once like a first run.
+- Replay result: old 18 pushes, new 8 (an open and a recovery for each of 3 incidents, plus one
+  "still stale" page in each of the two long ones, 53.6 h and 39.6 h; none in the 21.8 h one). The
+  paused model forecast of 11-12/13 was invisible to the old monitor (0 pushes) and is now one of the 3.
 
 The model forecast is "paused" when `next_fix.active` in `forecast.json` is not the boolean true
 (holding the latest fix is the model working, never a page). `ml/inference.py` writes
