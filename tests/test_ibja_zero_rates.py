@@ -37,6 +37,7 @@ def _page(am: str, pm: str) -> str:
 def _pinned(monkeypatch):
     monkeypatch.setattr("time.sleep", lambda _: None)
     monkeypatch.setattr(ibja, "date", _FakeDate)
+    monkeypatch.setattr(ibja, "datetime", _FakeNow)  # fetched_at stamps read the clock too
 
 
 @pytest.mark.parametrize(
@@ -129,3 +130,110 @@ def test_the_pdf_backfill_does_not_copy_a_zero_over_a_missing_value():
     pdf = pd.DataFrame([{"date": "2026-11-11", "am_916": 100.0, "pm_916": 0.0}])
     out, changed = ibja._fill_null_rates(stored, pdf)
     assert changed == 0 and pd.isna(out.iloc[0]["pm_916"])
+
+
+@pytest.mark.parametrize(
+    ("make", "expected"),
+    [
+        (lambda np: np.float64(144490.0), True),
+        (lambda np: np.float32(144490.0), True),
+        (lambda np: np.int64(144490), True),  # an int-typed parquet column is still a rate
+        (lambda np: np.int32(5), True),
+        (lambda np: np.int64(0), False),
+        (lambda np: np.float32(0.0), False),
+        (lambda np: np.float64("nan"), False),
+        (lambda np: np.bool_(True), False),
+        (lambda np: True, False),
+    ],
+)
+def test_is_rate_accepts_every_numpy_number_type(make, expected):
+    import numpy as np
+
+    assert ibja.is_rate(make(np)) is expected
+    assert ibja.is_rate(pd.NA) is False
+
+
+def test_an_int_typed_stored_rate_is_not_overwritten_or_rewritten(tmp_path, monkeypatch):
+    # an int64 pm_916 column read back from parquet must count as a stored rate, not as missing
+    p = tmp_path / "ibja.parquet"
+    pd.DataFrame(
+        [{"date": "2026-11-12", "fetched_at": "x", "am_916": 144564, "pm_916": 144000}]
+    ).to_parquet(p, index=False)
+    assert str(pd.read_parquet(p)["pm_916"].dtype).startswith("int")
+    monkeypatch.setattr(ibja, "_get_with_retry", lambda _h: _page("144564", "144490"))
+    assert ibja.append_ibja_today(p) is False
+    assert pd.read_parquet(p).iloc[0]["pm_916"] == 144000
+    pdf = pd.DataFrame([{"date": "2026-11-12", "am_916": 999.0, "pm_916": 555.0}])
+    out, changed = ibja._fill_null_rates(pd.read_parquet(p), pdf)
+    assert changed == 0 and out.iloc[0]["pm_916"] == 144000
+
+
+class _FakeNow:
+    @classmethod
+    def now(cls, tz=None):
+        from datetime import datetime
+
+        return datetime(2026, 11, 14, 6, 0, tzinfo=tz)
+
+
+def _fake_pdfplumber(monkeypatch, table_rows):
+    """A pdfplumber stand-in whose one page has the given table (header + units + data rows)."""
+    import sys
+    import types
+
+    class _Page:
+        def extract_tables(self):
+            return [[["Date"] * 13, ["units"] * 13, *table_rows]]
+
+    class _Pdf:
+        def __init__(self):
+            self.pages = [_Page()]
+
+        def __enter__(self):
+            return self
+
+        def __exit__(self, *a):
+            return False
+
+    mod = types.ModuleType("pdfplumber")
+    mod.open = lambda _b: _Pdf()
+    monkeypatch.setitem(sys.modules, "pdfplumber", mod)
+    monkeypatch.setattr(ibja, "datetime", _FakeNow)
+
+
+def _pdf_row(day, am916, pm916):
+    # Date, 999 AM/PM, 995 AM/PM, 916 AM/PM, 750 AM/PM, 585 AM/PM, silver AM/PM
+    cells = [
+        "1000",
+        "1000",
+        "990",
+        "990",
+        str(am916),
+        str(pm916),
+        "750",
+        "750",
+        "585",
+        "585",
+        "1",
+        "1",
+    ]
+    return [day, *cells]
+
+
+def test_the_pdf_parse_stores_a_zero_rate_as_missing(monkeypatch):
+    _fake_pdfplumber(
+        monkeypatch,
+        [_pdf_row("11-Nov-26", "144000", "0"), _pdf_row("12-Nov-26", "144500", "144490")],
+    )
+    frame = ibja._parse_ibja_pdf(b"%PDF-fake")
+    by = frame.set_index("date")
+    assert pd.isna(by.loc["2026-11-11", "pm_916"]) and by.loc["2026-11-11", "am_916"] == 144000.0
+    assert by.loc["2026-11-12", "pm_916"] == 144490.0
+    rates = frame[[c for c in frame.columns if c.startswith(("am_", "pm_"))]].to_numpy(dtype=float)
+    # every stored rate is positive or NaN (pandas 3 stack() keeps NaN, the lock's pandas; 2.x drops it)
+    assert ((rates > 0) | (rates != rates)).all()
+
+
+def test_the_pdf_parse_of_no_rows_is_an_empty_frame_not_an_error(monkeypatch):
+    _fake_pdfplumber(monkeypatch, [])
+    assert ibja._parse_ibja_pdf(b"%PDF-fake").empty

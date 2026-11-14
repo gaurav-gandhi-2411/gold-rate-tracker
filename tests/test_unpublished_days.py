@@ -45,11 +45,16 @@ def _write(tmp_path: Path, days: dict) -> Path:
     return p
 
 
-def test_the_committed_file_names_2026_10_14_with_its_evidence():
+def test_the_committed_file_names_each_day_with_its_evidence():
     data = json.loads((ROOT / "data/unpublished_decision_days.json").read_text(encoding="utf-8"))
-    assert set(data["days"]) == {"2026-10-14"}
+    expected = {"2026-10-14", "2026-11-10", "2026-11-11", "2026-11-12"}
+    assert set(data["days"]) == expected
     assert "never" in data["days"]["2026-10-14"] and "401" in data["days"]["2026-10-14"]
-    assert nextfix.unpublished_days() == {"2026-10-14"}
+    for day in ("2026-11-10", "2026-11-11", "2026-11-12"):  # the 2026-11 zero-rate outage
+        text = data["days"][day]
+        assert "never" in text or "no P3 forecast was published" in text, day
+        assert ("after_us_close" in text and "ZeroDivisionError" in text) or "Rs.0" in text, day
+    assert nextfix.unpublished_days() == expected
 
 
 def test_missing_file_means_no_unpublished_days(tmp_path):

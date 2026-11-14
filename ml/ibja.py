@@ -24,6 +24,7 @@ from __future__ import annotations
 
 import logging
 import math
+import numbers
 import re
 import time
 from datetime import UTC, date, datetime, timedelta
@@ -187,8 +188,14 @@ def _fetch_and_parse_once(attempt: int) -> dict[str, float]:
 
 
 def is_rate(value: object) -> bool:
-    """True for a real rate: a finite number above zero. 0 and NaN both mean "no fix yet"."""
-    return isinstance(value, int | float) and math.isfinite(value) and value > 0
+    """True for a real rate: a finite number above zero. 0 and NaN both mean "no fix yet".
+
+    Any real number counts, including numpy integers and float32 (a parquet column can come back as
+    int64): an int-typed stored rate is a rate, not a missing one. bool and pd.NA are not rates."""
+    if not isinstance(value, numbers.Real) or isinstance(value, bool):
+        return False
+    as_float = float(value)  # numpy ints and float32 compare as plain floats; typed for mypy
+    return math.isfinite(as_float) and as_float > 0
 
 
 def _get_with_retry(headers: dict[str, str]) -> str | None:
