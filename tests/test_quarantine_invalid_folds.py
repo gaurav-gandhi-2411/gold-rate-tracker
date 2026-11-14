@@ -96,6 +96,31 @@ def test_evaluate_runs_on_the_loaded_record_that_had_a_zero_price_fold(tmp_path)
     assert math.isfinite(ev["mae_model"])
 
 
+def test_save_on_a_path_never_loaded_keeps_the_audit_entries_already_in_the_file(tmp_path):
+    # verifier on #3784: a save without a load (or under another Path spelling) dropped the key
+    d = tmp_path / "data"
+    (d / "sub").mkdir(parents=True)
+    path = d / "oos.json"
+    bad = _fold(11, pm0=0.0)
+    path.write_text(
+        json.dumps({"schema_version": 1, "folds": _good(22), "quarantined_invalid": [bad]}),
+        encoding="utf-8",
+    )
+    spelled_differently = d / "sub" / ".." / "oos.json"
+    nextfix.save_oos(_good(22), spelled_differently, nextfix.MODEL_VERSION)  # no load_oos first
+    assert json.loads(path.read_text(encoding="utf-8"))["quarantined_invalid"] == [bad]
+
+
+def test_save_records_an_invalid_fold_it_is_handed_instead_of_dropping_it_silently(tmp_path):
+    path = tmp_path / "oos.json"
+    bad = _fold(12, pm0=0.0)
+    nextfix.save_oos([*_good(22), bad], path, nextfix.MODEL_VERSION)
+    saved = json.loads(path.read_text(encoding="utf-8"))
+    assert len(saved["folds"]) == 22 and saved["quarantined_invalid"] == [bad]
+    nextfix.save_oos([*_good(22), bad], path, nextfix.MODEL_VERSION)  # twice: no duplicate
+    assert json.loads(path.read_text(encoding="utf-8"))["quarantined_invalid"] == [bad]
+
+
 def test_a_clean_record_round_trips_unchanged_and_gains_no_quarantine_key(tmp_path):
     path = tmp_path / "oos.json"
     nextfix.save_oos(_good(22), path, nextfix.MODEL_VERSION)

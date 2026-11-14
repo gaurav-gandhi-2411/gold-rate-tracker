@@ -637,14 +637,28 @@ def load_oos(path: Path = OOS_PATH) -> list[dict]:
 def save_oos(
     folds: list[dict], path: Path = OOS_PATH, model_version: str = ENSEMBLE_VERSION
 ) -> None:
+    # The audit trail is the union of: what this process set aside on load, what the file already
+    # holds (a path never loaded here, or spelled differently, must not drop it), and any invalid fold
+    # handed in now. Nothing is deleted; every entry is kept once.
+    kept: list[dict] = list(_QUARANTINED.get(str(path), []))
+    try:
+        on_disk = json.loads(path.read_text()).get("quarantined_invalid", [])
+        kept = [f for f in on_disk if isinstance(f, dict)] + kept
+    except (OSError, ValueError, AttributeError):
+        pass
+    kept += [f for f in folds if not fold_is_valid(f)]
+    quarantine: list[dict] = []
+    for f in kept:
+        if f not in quarantine:
+            quarantine.append(f)
     payload: dict[str, Any] = {
         "schema_version": 1,
         "model_version": model_version,
         "note": "One out-of-sample forecast per IBJA day, trained only on fixes known before it.",
         "folds": sorted((f for f in folds if fold_is_valid(f)), key=lambda f: f["d0"]),
     }
-    if _QUARANTINED.get(str(path)):
-        payload["quarantined_invalid"] = _QUARANTINED[str(path)]
+    if quarantine:
+        payload["quarantined_invalid"] = quarantine
     path.write_text(json.dumps(payload, indent=1) + "\n")
 
 
