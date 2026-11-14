@@ -1,10 +1,10 @@
 {
  "category": "raw Kalyan rates and invertible markups",
  "ciphertext": "data/encrypted/data/shadow_fusion_output.json.enc",
- "ciphertext_sha256": "e3df218e455929ebc678c0629c9c45c43c5d043a74aa99db1c1a9d687fd579d7",
+ "ciphertext_sha256": "31967d7affe0325b527461265ba750339a1d26bb85ec3c2fc3a9700483698b9e",
  "format": "GRTENC v1, AES-256-GCM, scrypt",
  "key_id": "88fadeb62be0b8f4",
  "path": "data/shadow_fusion_output.json",
  "plaintext_bytes": 425,
- "plaintext_sha256": "b55e265ee4839e148d0ddf1a1c470fdc66bd39b7c0c08328b0f71b2a6959be0d"
+ "plaintext_sha256": "be7b4cb92e6b9f4bfb28764ecfbdc66c2c787b1ceadd8d39ee580b340053e159"
 }
