@@ -55,6 +55,18 @@ def test_a_simulated_run_never_reads_or_writes_the_real_incident_state():
     assert "hashFiles('.share-card/state.json') != ''" in save["if"]
 
 
+def test_the_card_check_reads_the_freshness_state_written_by_the_step_before_it():
+    steps = _wf()["jobs"]["check"]["steps"]
+    names = [s.get("name", "") for s in steps]
+    fresh = names.index("Save the live-freshness incident state")
+    assert fresh < names.index(CHECK)  # the freshness check has already written its state
+    _, check, _ = _steps()
+    real, _, simulated = check["run"].partition("else")
+    # the same path live_freshness writes (a test in test_live_freshness_wiring pins it)
+    assert "--freshness-state .live-freshness/state.json" in real
+    assert "--freshness-state" not in simulated
+
+
 def test_it_runs_after_the_freshness_check_and_never_before_it():
     # A share-card failure must not keep the freshness check (the older, broader alarm) from running.
     steps = _wf()["jobs"]["check"]["steps"]

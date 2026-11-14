@@ -1,0 +1,550 @@
+{
+ "about": "46 real ci-health runs, 2026-11-07..14: the time each ran, the timestamps the live site showed, the share-card finding kinds, and the page titles actually sent (numbers replaced by N). Prices stripped. model_active/model_down_since come from the committed history of data/forecast.json (the monitor did not record them).",
+ "runs": [
+  {
+   "run_id": 42326971402,
+   "event": "workflow_dispatch",
+   "now": "2026-11-07T02:00:26Z",
+   "forecast": "2026-11-07T00:42:10.072682+00:00",
+   "tanishq": "2026-11-06T20:11:29.268Z",
+   "model_active": true,
+   "model_down_since": null,
+   "card_kinds": [],
+   "pages": []
+  },
+  {
+   "run_id": 42331419324,
+   "event": "schedule",
+   "now": "2026-11-07T02:53:42Z",
+   "forecast": "2026-11-07T02:19:08.583521+00:00",
+   "tanishq": "2026-11-07T02:01:28.633Z",
+   "model_active": true,
+   "model_down_since": null,
+   "card_kinds": [],
+   "pages": []
+  },
+  {
+   "run_id": 42341564592,
+   "event": "workflow_dispatch",
+   "now": "2026-11-07T05:10:25Z",
+   "forecast": "2026-11-07T02:19:08.583521+00:00",
+   "tanishq": "2026-11-07T02:01:28.633Z",
+   "model_active": true,
+   "model_down_since": null,
+   "card_kinds": [],
+   "pages": []
+  },
+  {
+   "run_id": 42363485822,
+   "event": "schedule",
+   "now": "2026-11-07T10:20:07Z",
+   "forecast": "2026-11-07T05:48:19.877957+00:00",
+   "tanishq": "2026-11-07T05:41:10.372Z",
+   "model_active": true,
+   "model_down_since": null,
+   "card_kinds": [],
+   "pages": []
+  },
+  {
+   "run_id": 42393439335,
+   "event": "schedule",
+   "now": "2026-11-07T16:52:23Z",
+   "forecast": "2026-11-07T11:16:38.124259+00:00",
+   "tanishq": "2026-11-07T05:41:10.372Z",
+   "model_active": true,
+   "model_down_since": null,
+   "card_kinds": [],
+   "pages": []
+  },
+  {
+   "run_id": 42413397856,
+   "event": "schedule",
+   "now": "2026-11-07T20:56:08Z",
+   "forecast": "2026-11-07T18:14:52.043530+00:00",
+   "tanishq": "2026-11-07T05:41:10.372Z",
+   "model_active": true,
+   "model_down_since": null,
+   "card_kinds": [],
+   "pages": []
+  },
+  {
+   "run_id": 42423372062,
+   "event": "workflow_dispatch",
+   "now": "2026-11-07T23:02:35Z",
+   "forecast": "2026-11-07T18:14:52.043530+00:00",
+   "tanishq": "2026-11-07T05:41:10.372Z",
+   "model_active": true,
+   "model_down_since": null,
+   "card_kinds": [],
+   "pages": []
+  },
+  {
+   "run_id": 42430967482,
+   "event": "schedule",
+   "now": "2026-11-08T00:42:36Z",
+   "forecast": "2026-11-07T22:56:50.863754+00:00",
+   "tanishq": "2026-11-07T05:41:10.372Z",
+   "model_active": true,
+   "model_down_since": null,
+   "card_kinds": [],
+   "pages": []
+  },
+  {
+   "run_id": 42458780800,
+   "event": "schedule",
+   "now": "2026-11-08T07:26:24Z",
+   "forecast": "2026-11-07T22:56:50.863754+00:00",
+   "tanishq": "2026-11-07T05:41:10.372Z",
+   "model_active": true,
+   "model_down_since": null,
+   "card_kinds": [],
+   "pages": [
+    "Gold Tracker: visitors see stale data -- tanishq is N h old"
+   ]
+  },
+  {
+   "run_id": 42494075337,
+   "event": "schedule",
+   "now": "2026-11-08T15:18:02Z",
+   "forecast": "2026-11-08T07:54:31.853243+00:00",
+   "tanishq": "2026-11-07T05:41:10.372Z",
+   "model_active": true,
+   "model_down_since": null,
+   "card_kinds": [],
+   "pages": []
+  },
+  {
+   "run_id": 42520481032,
+   "event": "schedule",
+   "now": "2026-11-08T20:30:57Z",
+   "forecast": "2026-11-08T16:46:35.081488+00:00",
+   "tanishq": "2026-11-07T05:41:10.372Z",
+   "model_active": true,
+   "model_down_since": null,
+   "card_kinds": [],
+   "pages": []
+  },
+  {
+   "run_id": 42533872542,
+   "event": "workflow_dispatch",
+   "now": "2026-11-08T23:10:43Z",
+   "forecast": "2026-11-08T16:46:35.081488+00:00",
+   "tanishq": "2026-11-07T05:41:10.372Z",
+   "model_active": true,
+   "model_down_since": null,
+   "card_kinds": [],
+   "pages": []
+  },
+  {
+   "run_id": 42542924638,
+   "event": "schedule",
+   "now": "2026-11-09T00:57:16Z",
+   "forecast": "2026-11-08T23:04:42.130931+00:00",
+   "tanishq": "2026-11-07T05:41:10.372Z",
+   "model_active": true,
+   "model_down_since": null,
+   "card_kinds": [],
+   "pages": []
+  },
+  {
+   "run_id": 42583039207,
+   "event": "schedule",
+   "now": "2026-11-09T08:02:02Z",
+   "forecast": "2026-11-08T23:04:42.130931+00:00",
+   "tanishq": "2026-11-07T05:41:10.372Z",
+   "model_active": true,
+   "model_down_since": null,
+   "card_kinds": [],
+   "pages": []
+  },
+  {
+   "run_id": 42677798985,
+   "event": "schedule",
+   "now": "2026-11-09T18:53:01Z",
+   "forecast": "2026-11-09T08:37:39.105807+00:00",
+   "tanishq": "2026-11-07T05:41:10.372Z",
+   "model_active": true,
+   "model_down_since": null,
+   "card_kinds": [
+    "stale"
+   ],
+   "pages": [
+    "Gold Tracker: visitors see stale data -- forecast is N h old",
+    "Gold Tracker: the share card is out of date"
+   ]
+  },
+  {
+   "run_id": 42699105166,
+   "event": "workflow_dispatch",
+   "now": "2026-11-09T21:05:27Z",
+   "forecast": "2026-11-09T08:37:39.105807+00:00",
+   "tanishq": "2026-11-07T05:41:10.372Z",
+   "model_active": true,
+   "model_down_since": null,
+   "card_kinds": [
+    "stale"
+   ],
+   "pages": []
+  },
+  {
+   "run_id": 42741051467,
+   "event": "schedule",
+   "now": "2026-11-10T02:12:08Z",
+   "forecast": "2026-11-09T21:01:17.305683+00:00",
+   "tanishq": "2026-11-07T05:41:10.372Z",
+   "model_active": true,
+   "model_down_since": null,
+   "card_kinds": [],
+   "pages": [
+    "Gold Tracker: forecast fresh again",
+    "Gold Tracker: the share card is up to date again"
+   ]
+  },
+  {
+   "run_id": 42755500215,
+   "event": "workflow_dispatch",
+   "now": "2026-11-10T04:23:12Z",
+   "forecast": "2026-11-09T21:01:17.305683+00:00",
+   "tanishq": "2026-11-07T05:41:10.372Z",
+   "model_active": true,
+   "model_down_since": null,
+   "card_kinds": [],
+   "pages": []
+  },
+  {
+   "run_id": 42794884199,
+   "event": "schedule",
+   "now": "2026-11-10T09:56:40Z",
+   "forecast": "2026-11-10T06:14:28.833696+00:00",
+   "tanishq": "2026-11-10T06:06:39.040Z",
+   "model_active": true,
+   "model_down_since": null,
+   "card_kinds": [],
+   "pages": [
+    "Gold Tracker: tanishq fresh again"
+   ]
+  },
+  {
+   "run_id": 42820759882,
+   "event": "workflow_dispatch",
+   "now": "2026-11-10T13:01:50Z",
+   "forecast": "2026-11-10T06:14:28.833696+00:00",
+   "tanishq": "2026-11-10T11:32:40.665Z",
+   "model_active": true,
+   "model_down_since": null,
+   "card_kinds": [],
+   "pages": []
+  },
+  {
+   "run_id": 42869654278,
+   "event": "schedule",
+   "now": "2026-11-10T17:54:24Z",
+   "forecast": "2026-11-10T06:14:28.833696+00:00",
+   "tanishq": "2026-11-10T14:21:47.775Z",
+   "model_active": true,
+   "model_down_since": null,
+   "card_kinds": [],
+   "pages": [
+    "Gold Tracker: visitors see stale data -- forecast is N h old"
+   ]
+  },
+  {
+   "run_id": 42897356691,
+   "event": "workflow_dispatch",
+   "now": "2026-11-10T20:39:15Z",
+   "forecast": "2026-11-10T06:14:28.833696+00:00",
+   "tanishq": "2026-11-10T14:21:47.775Z",
+   "model_active": true,
+   "model_down_since": null,
+   "card_kinds": [],
+   "pages": []
+  },
+  {
+   "run_id": 42923478246,
+   "event": "schedule",
+   "now": "2026-11-10T23:27:27Z",
+   "forecast": "2026-11-10T06:14:28.833696+00:00",
+   "tanishq": "2026-11-10T14:21:47.775Z",
+   "model_active": true,
+   "model_down_since": null,
+   "card_kinds": [],
+   "pages": []
+  },
+  {
+   "run_id": 42947771358,
+   "event": "workflow_dispatch",
+   "now": "2026-11-11T02:42:08Z",
+   "forecast": "2026-11-10T06:14:28.833696+00:00",
+   "tanishq": "2026-11-10T14:21:47.775Z",
+   "model_active": true,
+   "model_down_since": null,
+   "card_kinds": [],
+   "pages": []
+  },
+  {
+   "run_id": 42973349726,
+   "event": "schedule",
+   "now": "2026-11-11T06:34:32Z",
+   "forecast": "2026-11-10T06:14:28.833696+00:00",
+   "tanishq": "2026-11-10T14:21:47.775Z",
+   "model_active": true,
+   "model_down_since": null,
+   "card_kinds": [],
+   "pages": []
+  },
+  {
+   "run_id": 43018065054,
+   "event": "workflow_dispatch",
+   "now": "2026-11-11T12:10:52Z",
+   "forecast": "2026-11-10T06:14:28.833696+00:00",
+   "tanishq": "2026-11-10T14:21:47.775Z",
+   "model_active": true,
+   "model_down_since": null,
+   "card_kinds": [
+    "stale"
+   ],
+   "pages": [
+    "Gold Tracker: visitors see stale data -- tanishq is N h old",
+    "Gold Tracker: the share card is out of date"
+   ]
+  },
+  {
+   "run_id": 43046997615,
+   "event": "schedule",
+   "now": "2026-11-11T15:18:30Z",
+   "forecast": "2026-11-11T12:04:58.374745+00:00",
+   "tanishq": "2026-11-10T14:21:47.775Z",
+   "model_active": true,
+   "model_down_since": null,
+   "card_kinds": [],
+   "pages": [
+    "Gold Tracker: forecast fresh again",
+    "Gold Tracker: the share card is up to date again"
+   ]
+  },
+  {
+   "run_id": 43114190012,
+   "event": "schedule",
+   "now": "2026-11-11T22:44:13Z",
+   "forecast": "2026-11-11T15:36:37.316127+00:00",
+   "tanishq": "2026-11-11T15:29:22.858Z",
+   "model_active": true,
+   "model_down_since": null,
+   "card_kinds": [
+    "stale"
+   ],
+   "pages": [
+    "Gold Tracker: tanishq fresh again",
+    "Gold Tracker: the share card is out of date"
+   ]
+  },
+  {
+   "run_id": 43147805441,
+   "event": "workflow_dispatch",
+   "now": "2026-11-12T03:23:05Z",
+   "forecast": "2026-11-11T15:36:37.316127+00:00",
+   "tanishq": "2026-11-11T15:29:22.858Z",
+   "model_active": true,
+   "model_down_since": null,
+   "card_kinds": [
+    "behind",
+    "stale"
+   ],
+   "pages": [
+    "Gold Tracker: visitors see stale data -- forecast is N h old",
+    "Gold Tracker: the share card was not rebuilt after new data"
+   ]
+  },
+  {
+   "run_id": 43150914591,
+   "event": "schedule",
+   "now": "2026-11-12T03:51:15Z",
+   "forecast": "2026-11-12T03:18:13.525223+00:00",
+   "tanishq": "2026-11-11T15:29:22.858Z",
+   "model_active": false,
+   "model_down_since": "2026-11-12T03:18:13.525223+00:00",
+   "card_kinds": [],
+   "pages": [
+    "Gold Tracker: forecast fresh again",
+    "Gold Tracker: the share card has caught up with the data",
+    "Gold Tracker: the share card is up to date again"
+   ]
+  },
+  {
+   "run_id": 43191585371,
+   "event": "workflow_dispatch",
+   "now": "2026-11-12T09:27:27Z",
+   "forecast": "2026-11-12T03:18:13.525223+00:00",
+   "tanishq": "2026-11-11T15:29:22.858Z",
+   "model_active": false,
+   "model_down_since": "2026-11-12T03:18:13.525223+00:00",
+   "card_kinds": [],
+   "pages": []
+  },
+  {
+   "run_id": 43191591184,
+   "event": "workflow_dispatch",
+   "now": "2026-11-12T09:27:46Z",
+   "forecast": "2026-11-12T03:18:13.525223+00:00",
+   "tanishq": "2026-11-11T15:29:22.858Z",
+   "model_active": false,
+   "model_down_since": "2026-11-12T03:18:13.525223+00:00",
+   "card_kinds": [],
+   "pages": []
+  },
+  {
+   "run_id": 43221337413,
+   "event": "schedule",
+   "now": "2026-11-12T12:49:03Z",
+   "forecast": "2026-11-12T10:13:03.955078+00:00",
+   "tanishq": "2026-11-12T10:06:39.040Z",
+   "model_active": true,
+   "model_down_since": null,
+   "card_kinds": [],
+   "pages": []
+  },
+  {
+   "run_id": 43297574891,
+   "event": "workflow_dispatch",
+   "now": "2026-11-12T20:10:31Z",
+   "forecast": "2026-11-12T14:29:21.339290+00:00",
+   "tanishq": "2026-11-12T14:21:43.928Z",
+   "model_active": false,
+   "model_down_since": "2026-11-12T13:10:14.707139+00:00",
+   "card_kinds": [],
+   "pages": []
+  },
+  {
+   "run_id": 43304501648,
+   "event": "schedule",
+   "now": "2026-11-12T20:52:11Z",
+   "forecast": "2026-11-12T20:18:03.844907+00:00",
+   "tanishq": "2026-11-12T20:11:34.647Z",
+   "model_active": false,
+   "model_down_since": "2026-11-12T13:10:14.707139+00:00",
+   "card_kinds": [],
+   "pages": []
+  },
+  {
+   "run_id": 43348055336,
+   "event": "schedule",
+   "now": "2026-11-13T01:52:31Z",
+   "forecast": "2026-11-12T21:02:34.474984+00:00",
+   "tanishq": "2026-11-12T20:11:34.647Z",
+   "model_active": false,
+   "model_down_since": "2026-11-12T13:10:14.707139+00:00",
+   "card_kinds": [],
+   "pages": []
+  },
+  {
+   "run_id": 43370223185,
+   "event": "workflow_dispatch",
+   "now": "2026-11-13T05:10:30Z",
+   "forecast": "2026-11-13T02:52:11.632063+00:00",
+   "tanishq": "2026-11-13T02:01:29.652Z",
+   "model_active": false,
+   "model_down_since": "2026-11-12T13:10:14.707139+00:00",
+   "card_kinds": [],
+   "pages": []
+  },
+  {
+   "run_id": 43402851089,
+   "event": "schedule",
+   "now": "2026-11-13T09:37:38Z",
+   "forecast": "2026-11-13T05:50:34.642482+00:00",
+   "tanishq": "2026-11-13T05:43:24.737Z",
+   "model_active": false,
+   "model_down_since": "2026-11-12T13:10:14.707139+00:00",
+   "card_kinds": [],
+   "pages": []
+  },
+  {
+   "run_id": 43426892467,
+   "event": "workflow_dispatch",
+   "now": "2026-11-13T12:38:43Z",
+   "forecast": "2026-11-13T10:13:08.756563+00:00",
+   "tanishq": "2026-11-13T10:06:37.469Z",
+   "model_active": false,
+   "model_down_since": "2026-11-12T13:10:14.707139+00:00",
+   "card_kinds": [],
+   "pages": []
+  },
+  {
+   "run_id": 43476368830,
+   "event": "schedule",
+   "now": "2026-11-13T17:48:23Z",
+   "forecast": "2026-11-13T14:28:27.591671+00:00",
+   "tanishq": "2026-11-13T14:21:41.744Z",
+   "model_active": false,
+   "model_down_since": "2026-11-12T13:10:14.707139+00:00",
+   "card_kinds": [],
+   "pages": []
+  },
+  {
+   "run_id": 43499027428,
+   "event": "workflow_dispatch",
+   "now": "2026-11-13T20:10:30Z",
+   "forecast": "2026-11-13T14:28:27.591671+00:00",
+   "tanishq": "2026-11-13T14:21:41.744Z",
+   "model_active": false,
+   "model_down_since": "2026-11-12T13:10:14.707139+00:00",
+   "card_kinds": [],
+   "pages": []
+  },
+  {
+   "run_id": 43517546878,
+   "event": "workflow_dispatch",
+   "now": "2026-11-13T22:14:08Z",
+   "forecast": "2026-11-13T21:54:07.766256+00:00",
+   "tanishq": "2026-11-13T20:11:32.348Z",
+   "model_active": true,
+   "model_down_since": null,
+   "card_kinds": [],
+   "pages": []
+  },
+  {
+   "run_id": 43528467816,
+   "event": "schedule",
+   "now": "2026-11-13T23:37:35Z",
+   "forecast": "2026-11-13T22:10:01.330820+00:00",
+   "tanishq": "2026-11-13T20:11:32.348Z",
+   "model_active": true,
+   "model_down_since": null,
+   "card_kinds": [],
+   "pages": []
+  },
+  {
+   "run_id": 43543817100,
+   "event": "workflow_dispatch",
+   "now": "2026-11-14T02:00:24Z",
+   "forecast": "2026-11-14T01:19:44.633420+00:00",
+   "tanishq": "2026-11-13T20:11:32.348Z",
+   "model_active": true,
+   "model_down_since": null,
+   "card_kinds": [],
+   "pages": []
+  },
+  {
+   "run_id": 43560203068,
+   "event": "workflow_dispatch",
+   "now": "2026-11-14T05:10:26Z",
+   "forecast": "2026-11-14T02:42:07.343085+00:00",
+   "tanishq": "2026-11-14T02:01:27.742Z",
+   "model_active": true,
+   "model_down_since": null,
+   "card_kinds": [],
+   "pages": []
+  },
+  {
+   "run_id": 43566879293,
+   "event": "schedule",
+   "now": "2026-11-14T06:33:15Z",
+   "forecast": "2026-11-14T05:48:21.856838+00:00",
+   "tanishq": "2026-11-14T05:41:09.837Z",
+   "model_active": true,
+   "model_down_since": null,
+   "card_kinds": [],
+   "pages": []
+  }
+ ]
+}

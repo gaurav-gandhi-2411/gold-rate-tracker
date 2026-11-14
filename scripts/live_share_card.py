@@ -35,6 +35,12 @@ each open kind and when it opened. A page when a kind opens, one recovery messag
 nothing in between. With no state (first run, cache evicted) an open incident pages once more: a
 duplicate is acceptable, a missed page is not.
 
+Exception, 2026-11-14: `behind` and `stale` are consequences of a stale-data outage, which
+scripts/live_freshness.py already pages as ONE site incident (GG was paged 18 times in 2026-11-07..13
+for 3 outages, 8 of them from here). With --freshness-state pointing at that script's state file,
+those two kinds are silent while its incident is open; unreadable, broken, advice and disagree are
+the card's own defects and page as before. An unreadable state file means "no incident": it pages.
+
 Exit codes: 0 the card is fine; 1 an incident is open (the step shows red while it lasts).
 Stdlib only: ci-health runs it on the runner's own python3 with nothing installed.
 """
@@ -61,6 +67,10 @@ STALE_H = {
     "estimate": LIMITS_H["forecast"],
 }
 KINDS = ("unreadable", "broken", "advice", "disagree", "behind", "stale")
+# Pure consequences of a site-wide stale-data outage (the card could not be newer than the data):
+# the site incident of scripts/live_freshness.py already paged for it. The other kinds are the
+# card's own defects and page as before.
+CONSEQUENCE_KINDS = ("behind", "stale")
 # Page titles: what is wrong, then what it is now that it has cleared.
 TITLES = {
     "unreadable": ("cannot be checked (site data unreadable)", "can be checked again"),
@@ -246,11 +256,17 @@ def decide(
     found: dict[str, str],
     now: datetime,
     evaluated: set[str] | None = None,
+    site_incident: bool = False,
 ) -> tuple[list[dict[str, str]], dict[str, Any]]:
     """(messages, new state). Pure: no I/O. An open incident of a kind not in `evaluated` (default:
-    judged(found)) stays open with no message, as live_freshness keeps an incident it could not judge."""
+    judged(found)) stays open with no message, as live_freshness keeps an incident it could not judge.
+    While a site incident is open (`site_incident`), the kinds in CONSEQUENCE_KINDS are not
+    evaluated: no page to open them, and none to recover one opened earlier (it is judged again
+    once the site incident is over)."""
     if evaluated is None:
         evaluated = judged(found)
+    if site_incident:
+        evaluated = evaluated - set(CONSEQUENCE_KINDS)
     new = {k: v for k, v in state.items() if k in KINDS}
     msgs: list[dict[str, str]] = []
     for kind in KINDS:
@@ -277,6 +293,18 @@ def decide(
                 }
             )
     return msgs, new
+
+
+def site_incident_open(path: Path | None) -> bool:
+    """True when live_freshness's state file at `path` holds an open site incident. A missing or
+    unreadable file is False: the card then pages for itself, never silence."""
+    if path is None or not path.exists():
+        return False
+    try:
+        state = json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        return False
+    return isinstance(state, dict) and isinstance(state.get("incident"), dict)
 
 
 def simulated(kind: str, now: datetime) -> tuple[Any, Any, Any]:
@@ -312,6 +340,12 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--state-out", type=Path)
     ap.add_argument("--now", help="ISO time (tests); default: the clock")
     ap.add_argument(
+        "--freshness-state",
+        type=Path,
+        help="scripts/live_freshness.py's state file: while it holds an open incident, behind and "
+        "stale are not paged",
+    )
+    ap.add_argument(
         "--simulate", choices=["bad", "good"], help="judge a made-up card; titles get [TEST]"
     )
     ap.add_argument("--dry-run", action="store_true", help="print the messages, send nothing")
@@ -338,7 +372,13 @@ def main(argv: list[str] | None = None) -> int:
         forecast = fetch_json(f"{SITE}/data/forecast.json")
 
     found = findings(card, prices, forecast, now)
-    msgs, new_state = decide(state, found, now)
+    site_incident = not args.simulate and site_incident_open(args.freshness_state)
+    msgs, new_state = decide(state, found, now, site_incident=site_incident)
+    if site_incident:
+        held = [k for k in found if k in CONSEQUENCE_KINDS]
+        if held:
+            print(f"site incident open: not paging for {', '.join(held)} (same outage)")
+        found = {k: v for k, v in found.items() if k not in CONSEQUENCE_KINDS}
     if isinstance(card, dict):
         print(
             f"card: {card.get('kind')} ₹{card.get('price')} as of {card.get('as_of')}, "

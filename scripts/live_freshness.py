@@ -1,4 +1,4 @@
-"""Page GG when what VISITORS see is stale: the live site's forecast and its latest Tanishq reading.
+"""Page GG when what VISITORS see is stale: forecast, model forecast, Tanishq reading.
 
     python3 scripts/live_freshness.py --state-in S --state-out S [--simulate stale|fresh] [--dry-run]
 
@@ -16,14 +16,49 @@ data/prices.json):
   are routine (20 of them over 14 h in 60 days); the 8 gaps over 20 h were all outages (CF blocks,
   the 10-06 and 10-14 stops, the 10-20 laptop overheat).
 
-Once per incident: an incident is identified by the stale value itself (the predicted_at or the
-reading timestamp that is too old), kept in a small state file the workflow carries between runs in
-the Actions cache. A page goes out when an incident opens, one recovery message when the value is
-fresh again, and nothing in between. If the site cannot be read, that is its own incident (fails
-closed: a page, never silence). With no state (first run, cache evicted) an open incident pages
-again once: a duplicate is acceptable, a missed page is not.
+- NO MODEL FORECAST for longer than 9 h. forecast.json's next_fix block is the model; "paused" is
+  next_fix.active not being the boolean true (2026-11-12 13:10Z to 11-13 21:54Z it was false on
+  every run, the page showed a plain "no change" range, and nothing paged: the 9 h forecast limit
+  above does not see it because forecast.json kept updating). Holding the latest fix (headline
+  method hold_latest_fix_*) is the model working with next_fix.active true, never a page.
+  Measured on origin/master b187caea, every commit of data/forecast.json since 2026-09-14
+  (495 commits; the next_fix block exists only since 2026-10-02: 387 of them, 372 with active true,
+  of which 142 are hold windows, 15 with active false, all from the 2026-11-12/13 ZeroDivisionError):
+    * 371 gaps between consecutive active-true forecasts; the 362 that are at or under the 9 h
+      freshness limit have a longest of 8.96 h (p99 8.37 h). The 9 gaps over 9 h are the 4 outages
+      above plus 5 in 11-08..13 (9.6 h, 12.4 h, 29.8 h, 18.0 h and 35.7 h).
+    * paused streaks (first active-false forecast to the next active-true one): 2, of 6.3 h (a one-run
+      blip on 11-12 03:18Z that healed by itself on the next cron) and 32.7 h (11-12 13:10Z to 11-13
+      21:54Z, the incident). Before 11-12 the model was never paused.
+  The limit is 9 h: the longest normal gap between forecasts, so a pause that outlasts it is not one
+  missed cron but at least three runs in a row without a model forecast. The 6.3 h blip stays quiet
+  (a 6 h limit would have paged it); the real 32.7 h incident pages 9 h after it began, not 32.7 h.
+  Since when: ml/inference.py writes next_fix.down_since (the start of the streak). When the key is
+  absent (a forecast.json from before it existed) this uses the first time it saw the pause, kept in
+  the state, else the forecast's own predicted_at.
 
-Exit codes: 0 everything fresh; 1 something stale or unreadable (the step shows red while it lasts).
+One page per INCIDENT, not per signal (2026-11-07..13: GG got 18 pushes for 3 outages; each signal and
+each share-card kind was its own incident with its own open and its own recovery page, and the 9 h
+limit flapped: forecast gaps of 9-12 h recurred on 11-09, 11-10, 11-11 and 11-12, each a new page).
+The state file (carried in the Actions cache) holds ONE site-level incident: when it opened and
+every signal that has gone bad since (forecast, tanishq, model, site). A page goes out when the
+incident opens, listing every bad signal; a signal that goes bad while it is open joins it with no
+page; and ONE recovery message goes out when ALL signals have been fresh for at least 2 checks in a
+row AND at least 1 h. A signal going bad again inside that window silently continues the same
+incident. Why 2 checks and 1 h (tests/test_live_freshness_replay.py replays the real 46 runs of
+2026-11-07..14): a single fresh check was followed by a stale one on 11-11 (run at 22:44Z fresh,
+03:23Z stale), which with 1 check would be a recovery plus a new incident; checks normally run
+about 3 h apart, but two ran 28 min apart on 11-12 (a schedule run and a dispatch) and two 19 s
+apart, which must not count as two independent checks, hence the 1 h floor.
+If the site cannot be read, that is a signal too (fails closed: a page, never silence). With no
+state (first run, cache evicted) an open incident pages again once: a duplicate is acceptable, a
+missed page is not.
+
+scripts/live_share_card.py reads this state file (--freshness-state) and stays silent about its
+"behind" and "stale" kinds while the incident is open: they are consequences of the same outage.
+
+Exit codes: 0 everything fresh; 1 an incident is open (the step shows red while it lasts, including
+the hysteresis wait) or a page could not be sent.
 Stdlib only: ci-health runs it on the runner's own python3 with nothing installed.
 """
 
@@ -41,6 +76,11 @@ from typing import Any
 
 SITE = "https://gaurav-gandhi-2411.github.io/gold-rate-tracker"
 LIMITS_H = {"forecast": 9.0, "tanishq": 20.0}
+# No model forecast (next_fix.active not true) for longer than this: derived in the docstring.
+MODEL_PAUSED_H = 9.0
+# An incident closes only after this many consecutive fully fresh checks spanning this many hours.
+RECOVERY_CHECKS = 2
+RECOVERY_H = 1.0
 LABELS = {"forecast": "the forecast (predicted_at)", "tanishq": "the latest Tanishq reading"}
 RUNS_URL = "https://github.com/gaurav-gandhi-2411/gold-rate-tracker/actions"
 # Clock skew allowed before a published timestamp counts as "in the future" (runner vs. scraper).
@@ -70,68 +110,128 @@ def latest_values(forecast: Any, prices: Any) -> dict[str, str | None]:
     return out
 
 
+def model_pause(forecast: Any) -> tuple[bool, str | None] | None:
+    """(paused, down_since) from forecast.json's next_fix block, None when forecast is unreadable.
+
+    Paused is next_fix.active not being the boolean true (a missing block, "true" the string and
+    false all count). Holding the latest fix is active true, so never paused. down_since is the
+    block's own key (ml/inference.py) when it parses, else None: the caller falls back."""
+    if not isinstance(forecast, dict):
+        return None
+    nf = forecast.get("next_fix")
+    nf = nf if isinstance(nf, dict) else {}
+    if nf.get("active") is True:
+        return False, None
+    since = nf.get("down_since")
+    return True, since if parse_ts(since) else None
+
+
+def _short(key: str, age_h: float) -> str:
+    return {
+        "forecast": f"forecast is {age_h:.1f} h old",
+        "tanishq": f"tanishq is {age_h:.1f} h old",
+        "model": f"no model forecast for {age_h:.1f} h",
+        "site": "site data unreadable",
+    }[key]
+
+
 def decide(
-    state: dict[str, Any], values: dict[str, str | None], now: datetime
+    state: dict[str, Any],
+    values: dict[str, str | None],
+    now: datetime,
+    model: tuple[bool, str | None] | None = None,
 ) -> tuple[list[dict[str, str]], dict[str, Any], bool]:
-    """(messages to send, new state, healthy). Pure: no I/O."""
-    new = {k: v for k, v in state.items() if k in (*LIMITS_H, "site")}
-    msgs: list[dict[str, str]] = []
-    healthy = True
+    """(messages to send, new state, healthy). Pure: no I/O.
+
+    ONE site-level incident (state["incident"]): opens with one page listing every bad signal, takes
+    in signals that go bad later without paging, closes with one recovery page after RECOVERY_CHECKS
+    fully fresh checks spanning RECOVERY_H hours. healthy is False while it is open.
+    `model` is model_pause(forecast), or None when it was not judged (forecast unreadable)."""
+    new: dict[str, Any] = {k: v for k, v in state.items() if k in ("incident", "model_since")}
+    inc = new.get("incident") if isinstance(new.get("incident"), dict) else None
+    legacy = [k for k in (*LIMITS_H, "site") if state.get(k)]  # state of the per-signal version
+    if inc is None and legacy:  # an incident already paged under the old scheme: adopt it quietly
+        inc = {"opened_at": now.isoformat(), "signals": {k: str(state[k]) for k in legacy}}
     # A timestamp in the future gives a negative age and would read as fresh for as long as it stays
     # ahead of the clock, hiding a real outage behind it, so it counts as unreadable (fail closed).
     future = [k for k, v in values.items() if v is not None and parse_ts(v) > now + FUTURE_TOL]  # type: ignore[operator]
     values = {k: None if k in future else v for k, v in values.items()}
     unreadable = [k for k, v in values.items() if v is None]
+    bad: dict[str, str] = {}  # signal -> short phrase for the title
+    detail: dict[str, str] = {}  # signal -> sentence for the body
     if unreadable:
-        healthy = False
-        if not new.get("site"):
-            new["site"] = now.isoformat()
-            why = " (a timestamp is in the future)" if future else ""
-            msgs.append(
-                {
-                    "title": "Gold Tracker: cannot read the live site's data",
-                    "priority": "high",
-                    "body": f"Could not read {', '.join(LABELS[k] for k in unreadable)} from {SITE}"
-                    f"{why} -- failing closed. Visitors may be seeing a broken or stale page.",
-                }
-            )
-    elif new.get("site"):
-        msgs.append(
-            {
-                "title": "Gold Tracker: live site data readable again",
-                "priority": "default",
-                "body": f"{SITE} data reads again (unreadable since {new.pop('site')}).",
-            }
+        why = " (a timestamp is in the future)" if future else ""
+        bad["site"] = _short("site", 0)
+        detail["site"] = (
+            f"Could not read {', '.join(LABELS[k] for k in unreadable)} from {SITE}{why} "
+            "-- failing closed. Visitors may be seeing a broken or stale page."
         )
     for key, limit in LIMITS_H.items():
         value = values.get(key)
         if value is None:
-            continue  # judged as unreadable above; keep any open incident as it is
+            continue  # judged as unreadable above
         age_h = (now - parse_ts(value)).total_seconds() / 3600  # type: ignore[operator]
         if age_h > limit:
-            healthy = False
-            if new.get(key) != value:
-                new[key] = value
+            bad[key] = _short(key, age_h)
+            detail[key] = (
+                f"The live page's {LABELS[key]} is {value}, {age_h:.1f} h old (limit {limit:g} h). "
+                "Nothing new has reached the site since then."
+            )
+    if model is not None and model[0]:
+        since = model[1] or new.get("model_since") or values.get("forecast")
+        if since and parse_ts(since):
+            new["model_since"] = since
+            age_h = (now - parse_ts(since)).total_seconds() / 3600  # type: ignore[operator]
+            if age_h > MODEL_PAUSED_H:
+                bad["model"] = _short("model", age_h)
+                detail["model"] = (
+                    f"The live forecast has had no model forecast since {since} ({age_h:.1f} h, "
+                    f"limit {MODEL_PAUSED_H:g} h): the page shows a plain 'no change' range."
+                )
+    elif model is not None:  # active again: the streak is over (an unjudged run keeps it)
+        new.pop("model_since", None)
+    if inc is not None and not isinstance(inc.get("signals"), dict):
+        inc["signals"] = {}  # a damaged state file must not crash the monitor
+    msgs: list[dict[str, str]] = []
+    if bad and inc is None:
+        inc = {"opened_at": now.isoformat(), "signals": {k: now.isoformat() for k in bad}}
+        only_site = set(bad) == {"site"}
+        msgs.append(
+            {
+                "title": "Gold Tracker: cannot read the live site's data"
+                if only_site
+                else "Gold Tracker: visitors see stale data -- " + "; ".join(bad.values()),
+                "priority": "high",
+                "body": " ".join(detail.values())
+                + f" Check check-price, bot PRs and Pages: {RUNS_URL}",
+            }
+        )
+    elif inc is not None:
+        if bad:
+            for k in bad:  # joins the open incident: no new page
+                inc["signals"].setdefault(k, now.isoformat())
+            inc.pop("fresh_checks", None)
+            inc.pop("fresh_since", None)
+        else:
+            inc["fresh_checks"] = int(inc.get("fresh_checks", 0)) + 1
+            inc.setdefault("fresh_since", now.isoformat())
+            waited_h = (now - parse_ts(inc["fresh_since"])).total_seconds() / 3600  # type: ignore[operator]
+            if inc["fresh_checks"] >= RECOVERY_CHECKS and waited_h >= RECOVERY_H:
                 msgs.append(
                     {
-                        "title": f"Gold Tracker: visitors see stale data -- {key} is {age_h:.1f} h old",
-                        "priority": "high",
-                        "body": f"The live page's {LABELS[key]} is {value}, {age_h:.1f} h old "
-                        f"(limit {limit:g} h). Nothing new has reached the site since then. "
-                        f"Check check-price, bot PRs and Pages: {RUNS_URL}",
+                        "title": "Gold Tracker: live site data is fresh again",
+                        "priority": "default",
+                        "body": f"Recovered: everything the live site shows has been fresh for "
+                        f"{inc['fresh_checks']} checks over {waited_h:.1f} h. The incident opened "
+                        f"{inc['opened_at']} and covered {', '.join(inc['signals'])}.",
                     }
                 )
-        elif new.get(key):
-            opened = new.pop(key)
-            msgs.append(
-                {
-                    "title": f"Gold Tracker: {key} fresh again",
-                    "priority": "default",
-                    "body": f"The live page's {LABELS[key]} is {value} ({age_h:.1f} h old) -- "
-                    f"recovered (stale value was {opened}).",
-                }
-            )
-    return msgs, new, healthy
+                inc = None
+    if inc is None:
+        new.pop("incident", None)
+    else:
+        new["incident"] = inc
+    return msgs, new, inc is None
 
 
 def simulated(kind: str, now: datetime) -> tuple[Any, Any]:
@@ -140,7 +240,8 @@ def simulated(kind: str, now: datetime) -> tuple[Any, Any]:
         f, t = now - timedelta(hours=12), now - timedelta(hours=30)
     else:
         f, t = now - timedelta(hours=1), now - timedelta(hours=2)
-    return {"predicted_at": f.isoformat()}, [{"timestamp": t.isoformat(), "22k": 0}]
+    forecast = {"predicted_at": f.isoformat(), "next_fix": {"active": True}}
+    return forecast, [{"timestamp": t.isoformat(), "22k": 0}]
 
 
 def fetch_json(url: str, attempts: int = 3) -> Any:
@@ -212,9 +313,11 @@ def main(argv: list[str] | None = None) -> int:
         prices = fetch_json(f"{SITE}/data/prices.json")
 
     values = latest_values(forecast, prices)
-    msgs, new_state, healthy = decide(state, values, now)
+    model = model_pause(forecast)
+    msgs, new_state, healthy = decide(state, values, now, model)
     for key in LIMITS_H:
         print(f"{key}: {values[key]} (limit {LIMITS_H[key]:g} h)")
+    print(f"model: {'paused' if model and model[0] else 'active' if model else 'unreadable'}")
     topic = os.environ.get("NTFY_TOPIC", "")
     sent_ok = True
     for msg in msgs:
@@ -229,7 +332,7 @@ def main(argv: list[str] | None = None) -> int:
         elif not send(msg, topic):
             sent_ok = False
     if not msgs:
-        print("no page: " + ("all fresh" if healthy else "incident already paged"))
+        print("no page: " + ("all fresh" if healthy else "incident already paged, or recovering"))
     if args.state_out and not args.simulate:
         if not sent_ok:
             new_state = state  # keep the old state so the next run tries the page again

@@ -383,6 +383,8 @@ jobs:
       # card's sidecar (data/og-card.json, what it drew) against the live prices and forecast:
       # broken, advice, disagrees, behind the data, or older than the freshness limit. Once per
       # incident plus a recovery message, state in the Actions cache like the freshness check above.
+      # While the freshness check holds an open incident (its state file, read from above) the
+      # card's behind/stale kinds stay silent: they are the same outage, not a second incident.
       - name: Restore the share-card incident state
         if: always() && (inputs.share_card_simulate || 'none') == 'none'
         uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
@@ -399,7 +401,7 @@ jobs:
           SIMULATE: ${{ inputs.share_card_simulate || 'none' }}
         run: |
           if [ "$SIMULATE" = "none" ]; then
-            python3 scripts/live_share_card.py --state-in .share-card/state.json --state-out .share-card/state.json
+            python3 scripts/live_share_card.py --state-in .share-card/state.json --state-out .share-card/state.json --freshness-state .live-freshness/state.json
           else
             python3 scripts/live_share_card.py --simulate "$SIMULATE"
           fi
