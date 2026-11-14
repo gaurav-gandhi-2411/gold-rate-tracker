@@ -19,7 +19,9 @@ shapes of that failure before they are published:
 BLOCKING since the flip PR (2026-11-14; it started report-only per .claude/CLAUDE.md, 2026-10-30,
 and had 39 clean real runs of 40 check-price runs 2026-11-07..13). With --strict it exits 1 only
 on a finding that means the PUBLISHED series is wrong: a gap in the chart file (iii) or a basis
-error against the reference (ii). It deliberately does NOT block on (i) an unexplained move (a real
+error against the reference (ii), the latter only when at least MIN_BLOCKING_REFERENCE_FLAGS (3)
+sampled rows are outside the tolerance AND at least half the sample had a reference (one bad
+yfinance tick or a truncated response must not stop the sync). It deliberately does NOT block on (i) an unexplained move (a real
 >3% market day would then stop the site's data until someone listed it; four such days happened
 since 2025) or on "could not verify" (the reference needs the network). Those are printed, written
 to the job summary and recorded in the ops log. Without --strict it always exits 0.
@@ -52,6 +54,7 @@ ADJACENT_MAX_DAYS = 4  # IBJA's longest normal break: a weekend plus a holiday
 # 9.2%) or a per-10 g / per-gram mix-up.
 REFERENCE_TOLERANCE = 0.06
 REFERENCE_SAMPLE = 40
+MIN_BLOCKING_REFERENCE_FLAGS = 3  # --strict blocks on (ii) only from this many rows outside
 MAX_PUBLISHED_GAP_DAYS = 7
 TROY_OZ_G = 31.1035
 PURITY_22K = 0.916
@@ -268,7 +271,10 @@ def main(argv: list[str] | None = None) -> int:
                 could_not("(ii) reference", f"{type(err).__name__}: {err}")
             else:
                 findings += len(flags)
-                blocking += len(flags)
+                # A basis error (24K vs 22K, per-10g vs per-gram) shifts MANY rows; one bad
+                # yfinance tick flags one. Block only on a systematic pattern with real coverage.
+                if n >= len(sample) // 2 and len(flags) >= MIN_BLOCKING_REFERENCE_FLAGS:
+                    blocking += len(flags)
                 if n < len(sample) // 2:
                     could_not("(ii) reference", f"only {n}/{len(sample)} rows had a reference")
                 else:

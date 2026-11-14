@@ -189,7 +189,33 @@ def test_strict_blocks_on_a_reference_basis_error(tmp_path, monkeypatch):
     (d / "duty_cbic.json").write_text(json.dumps({"rows": []}))
     monkeypatch.setattr(chk, "fetch_reference", lambda start: ({}, {}))
     monkeypatch.setattr(
-        chk, "reference_flags", lambda sample, gold, fx, duty: (["row"], len(sample))
+        chk, "reference_flags", lambda sample, gold, fx, duty: (["a", "b", "c"], len(sample))
     )
     assert chk.main(["--data-dir", str(d), "--reference", "--strict"]) == 1
     assert chk.main(["--data-dir", str(d), "--reference"]) == 0
+
+
+def test_strict_does_not_block_on_one_or_two_reference_flags(tmp_path, monkeypatch):
+    # one bad yfinance tick flags one row; a real basis error shifts many
+    d = tmp_path / "data"
+    _data_with_unexplained_move(d)
+    (d / "duty_cbic.json").write_text(json.dumps({"rows": []}))
+    monkeypatch.setattr(chk, "fetch_reference", lambda start: ({}, {}))
+    for flags in (["a"], ["a", "b"]):
+        monkeypatch.setattr(
+            chk, "reference_flags", lambda sample, gold, fx, duty, f=flags: (f, len(sample))
+        )
+        assert chk.main(["--data-dir", str(d), "--reference", "--strict"]) == 0
+
+
+def test_strict_does_not_block_on_flags_when_under_half_the_sample_had_a_reference(
+    tmp_path, monkeypatch
+):
+    d = tmp_path / "data"
+    _data_with_unexplained_move(d)
+    (d / "duty_cbic.json").write_text(json.dumps({"rows": []}))
+    monkeypatch.setattr(chk, "fetch_reference", lambda start: ({}, {}))
+    monkeypatch.setattr(
+        chk, "reference_flags", lambda sample, gold, fx, duty: (["a", "b", "c", "d"], 0)
+    )  # the sample here has 2 rows, so 0 with a reference is under half
+    assert chk.main(["--data-dir", str(d), "--reference", "--strict"]) == 0

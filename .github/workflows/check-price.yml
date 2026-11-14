@@ -232,7 +232,8 @@ jobs:
         # history, gaps in the published chart file, and a sample vs COMEX x USD/INR x duty.
         # BLOCKING since 2026-11-14 (standing rule 2026-10-30: it ran report-only first; 39 clean
         # real runs of 40 check-price runs 2026-11-07..13 cite the flip). --strict fails this step
-        # ONLY on a gap in the chart file or a basis error against the reference. Unexplained
+        # ONLY on a gap in the chart file or a basis error against the reference (3 or more sampled
+        # rows outside tolerance with at least half the sample covered: one bad tick never). Unexplained
         # moves and "could not verify" (the reference needs the network) go to the ops log, they
         # never stop the data sync. tests/test_price_history_integrity.py pins this state.
         timeout-minutes: 5
