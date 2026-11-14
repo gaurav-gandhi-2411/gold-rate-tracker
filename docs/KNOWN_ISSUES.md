@@ -21,7 +21,11 @@ scan over-selects (a file that only names a data constant as a string, such as
 reads no data). The data-reading test step is REPORT-ONLY (`continue-on-error`) until 5 clean real
 runs over >= 24 h, so a flaky or time-dependent test there shows a warning and does not block a data
 sync; once it is made blocking, such a test can block a sync until it is fixed or master is repaired.
-Also not run on a data-only PR (they live only in pre-commit): the gitleaks secret scan and the
-10 MB large-file check; no other workflow scans data files for secrets, so those files rely on being
-bot-generated (found by the PR review, 2026-11-07). The first gap is silent (a check that does not run); the second is loud (a warning now, a blocked sync
-after the flip).
+The gitleaks secret scan and the 10 MB large-file check live in pre-commit, which a data-only PR
+skips (found by the PR review, 2026-11-07). They now run on data-only and full PRs through
+`scripts/pr_hygiene.py` (GG 2c, 2026-11-13), REPORT-ONLY until 5 clean real runs over >= 24 h
+(docs/RUNBOOK.md, 'What runs on a data-only PR'); until the flip a finding warns and does not block.
+Found while building it: the pre-commit gitleaks hook's entry is `--staged`, and a CI checkout has
+nothing staged, so that hook scanned nothing in CI even on full PRs; the new step scans the PR's
+own commits instead. The first gap was silent (a check that does not run); the second is loud (a
+warning now, a blocked sync after the flip).
