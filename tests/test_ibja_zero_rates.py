@@ -237,3 +237,65 @@ def test_the_pdf_parse_stores_a_zero_rate_as_missing(monkeypatch):
 def test_the_pdf_parse_of_no_rows_is_an_empty_frame_not_an_error(monkeypatch):
     _fake_pdfplumber(monkeypatch, [])
     assert ibja._parse_ibja_pdf(b"%PDF-fake").empty
+
+
+def test_a_dash_in_one_pdf_cell_keeps_the_row_and_only_that_cell_is_missing(monkeypatch):
+    # 2026-11-14 backfill log: "could not parse row for 10-Nov-26: could not convert ... '-'" dropped
+    # the whole row, so that day could never be completed or corrected from the PDF
+    row = _pdf_row("10-Nov-26", "144000", "-")
+    row[10] = "-"  # also the 585 PM cell
+    _fake_pdfplumber(monkeypatch, [row, ["11-Nov-26", *["-"] * 12]])
+    frame = ibja._parse_ibja_pdf(b"%PDF-fake")
+    by = frame.set_index("date")
+    assert list(by.index) == ["2026-11-10"]  # an all-published-nothing row is skipped, not stored
+    assert by.loc["2026-11-10", "am_916"] == 144000.0 and pd.isna(by.loc["2026-11-10", "pm_916"])
+    assert by.loc["2026-11-10", "am_999"] == 1000.0 and pd.isna(by.loc["2026-11-10", "pm_585"])
+
+
+def test_null_non_rates_sets_only_zero_and_negative_cells_to_missing():
+    df = pd.DataFrame(
+        [
+            {"date": "d1", "am_916": 100.0, "pm_916": 0.0, "am_999": float("nan")},
+            {"date": "d2", "am_916": -3.0, "pm_916": 101.0, "am_999": 5.0},
+        ]
+    )
+    out, changed = ibja._null_non_rates(df)
+    assert changed == 2
+    assert (
+        out.loc[0, "am_916"] == 100.0
+        and pd.isna(out.loc[0, "pm_916"])
+        and pd.isna(out.loc[0, "am_999"])
+    )
+    assert (
+        pd.isna(out.loc[1, "am_916"])
+        and out.loc[1, "pm_916"] == 101.0
+        and out.loc[1, "am_999"] == 5.0
+    )
+    assert df.loc[0, "pm_916"] == 0.0  # the input frame is not modified
+
+
+def test_backfill_cleans_a_stored_zero_even_when_the_pdf_has_no_value_for_it(monkeypatch, tmp_path):
+    # the real shape: IBJA published no PM fix on 2026-11-10 ('-' in the PDF), the page showed 0 and
+    # that 0 was stored; the PDF cannot fill it, but it must stop being a 0
+    p = tmp_path / "ibja.parquet"
+    pd.DataFrame(
+        [
+            {"date": "2026-11-10", "fetched_at": "x", "am_916": 144000.0, "pm_916": 0.0},
+            {"date": "2026-11-12", "fetched_at": "x", "am_916": 144500.0, "pm_916": 144490.0},
+        ]
+    ).to_parquet(p, index=False)
+    pdf = pd.DataFrame(
+        [
+            {"date": "2026-11-10", "am_916": 144000.0, "pm_916": float("nan")},
+            {"date": "2026-11-12", "am_916": 999.0, "pm_916": 555.0},
+        ]
+    )
+    monkeypatch.setattr(ibja, "_get_with_retry", lambda _h: "<html></html>")
+    monkeypatch.setattr(ibja, "_extract_pdf_url", lambda _html: "https://example.test/x.pdf")
+    monkeypatch.setattr(ibja, "_download_pdf_bytes", lambda _url: b"pdf")
+    monkeypatch.setattr(ibja, "_parse_ibja_pdf", lambda _b: pdf)
+    assert ibja.backfill_ibja_from_pdf(p) >= 1
+    by = pd.read_parquet(p).set_index("date")
+    assert pd.isna(by.loc["2026-11-10", "pm_916"]) and by.loc["2026-11-10", "am_916"] == 144000.0
+    assert by.loc["2026-11-12", "pm_916"] == 144490.0  # a stored rate is never overwritten
+    assert ibja.backfill_ibja_from_pdf(p) == 0  # idempotent: nothing left to change
