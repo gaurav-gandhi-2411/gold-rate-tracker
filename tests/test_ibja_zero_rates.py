@@ -229,7 +229,9 @@ def test_the_pdf_parse_stores_a_zero_rate_as_missing(monkeypatch):
     by = frame.set_index("date")
     assert pd.isna(by.loc["2026-11-11", "pm_916"]) and by.loc["2026-11-11", "am_916"] == 144000.0
     assert by.loc["2026-11-12", "pm_916"] == 144490.0
-    assert (frame[[c for c in frame.columns if c.startswith(("am_", "pm_"))]].stack() > 0).all()
+    rates = frame[[c for c in frame.columns if c.startswith(("am_", "pm_"))]].to_numpy(dtype=float)
+    # every stored rate is positive or NaN (pandas 3 stack() keeps NaN, the lock's pandas; 2.x drops it)
+    assert ((rates > 0) | (rates != rates)).all()
 
 
 def test_the_pdf_parse_of_no_rows_is_an_empty_frame_not_an_error(monkeypatch):
