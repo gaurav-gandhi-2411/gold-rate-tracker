@@ -1,0 +1,18 @@
+# gitleaks config (v8.30). Reviewed allowlist, see docs/SECRET_SCAN_TRIAGE.md for the evidence.
+# Policy: path + rule only. Never put a secret value or a pattern of one in this file.
+# tests/test_secret_scan_allowlist.py enforces the shape of every entry below.
+
+title = "gold-rate-tracker gitleaks config"
+
+[extend]
+useDefault = true
+
+[[allowlists]]
+description = "Hindi audit reports hold i18n string keys in a field named key; every value also appears in the served app source (app.js, i18n.js, index.html). See docs/SECRET_SCAN_TRIAGE.md#hindi-audit-i18n-keys"
+targetRules = ["generic-api-key"]
+paths = ['''^reports/hindi_audit_2026-10/(inventory_before|inventory_after|items)\.json$''']
+
+[[allowlists]]
+description = "Analysis script assigns a structured schedule label (not random) to a variable named rec_key; the label is also a key in the committed analysis report. See docs/SECRET_SCAN_TRIAGE.md#tanishq-analysis-label"
+targetRules = ["generic-api-key"]
+paths = ['''^scripts/analysis_tanishq_update_times\.py$''']
