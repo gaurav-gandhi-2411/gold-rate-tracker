@@ -35,6 +35,7 @@ This flag is visible in forecast.json — no silent swap (norm #8).
 from __future__ import annotations
 
 import contextlib
+import itertools
 import math
 from typing import TypedDict
 
@@ -139,10 +140,9 @@ def _recent_contiguous_run(daily: list[dict]) -> list[dict]:
 
 
 def _log_returns(prices_rs: list[float]) -> list[float]:
-    """Daily log returns; empty if fewer than 2 prices."""
-    if len(prices_rs) < 2:
-        return []
-    return [math.log(prices_rs[i] / prices_rs[i - 1]) for i in range(1, len(prices_rs))]
+    """Daily log returns; empty if fewer than 2 prices. A pair with a non-positive price is skipped
+    (a 0 is no price; math.log would raise and take the whole forecast run down, 2026-11-13)."""
+    return [math.log(b / a) for a, b in itertools.pairwise(prices_rs) if a > 0 and b > 0]
 
 
 def _std(values: list[float]) -> float:

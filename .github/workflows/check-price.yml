@@ -209,6 +209,15 @@ jobs:
         continue-on-error: true
         run: python -m ml.inference
 
+      - name: Next-fix health (ops log only; never fails the run)
+        # 2026-11-12: the live model was down ~32 h and nothing said so (Run inference is
+        # continue-on-error and a failed next_fix block only writes active=false into forecast.json).
+        # Records one ops-log entry (no push) when next_fix.active is not true. Exits 0 always.
+        if: always()
+        continue-on-error: true
+        timeout-minutes: 2
+        run: python scripts/check_next_fix_active.py
+
       - name: Next-fix hourly shadow (ADR 066)
         # Shadow only: logs hourly world-price forecasts of the next IBJA fix and replays the cached
         # 60 days of 1-hour bars. Never touches forecast.json; reads macro_intraday.parquet written
