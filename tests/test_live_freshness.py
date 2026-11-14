@@ -167,9 +167,86 @@ def test_a_state_of_the_old_per_signal_version_is_adopted_without_a_page():
     assert "forecast" not in state  # the legacy keys are gone
 
 
-def test_a_damaged_incident_in_state_does_not_crash():
-    msgs, state, healthy = lf.decide({"incident": {"opened_at": "x"}}, _values(1, 1), NOW)
-    assert msgs == [] and not healthy and state["incident"]["fresh_checks"] == 1
+def _good_incident() -> dict:
+    return {"opened_at": _iso(5), "last_paged_at": _iso(5), "signals": {"forecast": _iso(5)}}
+
+
+DAMAGED = [
+    {"opened_at": "x", "signals": {}},  # unparseable opened_at
+    {"signals": {}},  # missing opened_at
+    {"opened_at": _iso(5)},  # missing signals
+    {"opened_at": _iso(5), "signals": []},  # signals of the wrong type
+    {"opened_at": _iso(5), "signals": {}, "fresh_since": "junk"},
+    {"opened_at": _iso(5), "signals": {}, "fresh_checks": "two"},
+    {"opened_at": _iso(5), "signals": {}, "fresh_checks": True},
+    {"opened_at": _iso(5), "signals": {}, "last_paged_at": "junk"},
+]
+
+
+@pytest.mark.parametrize("damaged", DAMAGED)
+def test_a_damaged_incident_with_a_stale_site_pages_like_a_first_run(damaged):
+    msgs, state, healthy = lf.decide({"incident": damaged}, _values(12, 1), NOW)
+    assert len(msgs) == 1 and "forecast is 12.0 h old" in msgs[0]["title"] and not healthy
+    assert lf.decide(state, _values(12, 1), _later(1))[0] == []  # and then it is a normal incident
+
+
+@pytest.mark.parametrize("damaged", DAMAGED)
+def test_a_damaged_incident_with_a_fresh_site_is_dropped_quietly(damaged):
+    assert lf.decide({"incident": damaged}, _values(1, 1), NOW) == ([], {}, True)
+
+
+def test_a_good_incident_is_not_mistaken_for_a_damaged_one():
+    assert lf._valid_incident(_good_incident())
+    msgs, state, _ = lf.decide({"incident": _good_incident()}, _values(12, 1), NOW)
+    assert msgs == [] and state["incident"]["opened_at"] == _iso(5)  # kept, not re-opened
+
+
+# --- the 24 h re-page ----------------------------------------------------------------------------
+
+
+def test_a_long_incident_pages_again_once_a_day_and_the_recovery_stays_one():
+    sent: list[str] = []
+    state: dict = {}
+    for hours in range(0, 60, 3):  # forecast frozen for the whole span, a check every 3 h
+        now = _later(hours)
+        msgs, state, healthy = lf.decide(
+            state, {"forecast": _iso(12, NOW), "tanishq": _iso(1, now)}, now
+        )
+        assert not healthy
+        sent += [m["title"] for m in msgs]
+        if hours == 21:
+            assert len(sent) == 1  # 21 h in: only the opening page
+    # opens at 0 h, "still stale" at 24 h and 48 h: at most one push a day
+    assert len(sent) == 3 and sent[1].startswith("Gold Tracker: still stale after 24 h --")
+    assert sent[2].startswith("Gold Tracker: still stale after 48 h --")
+    assert "forecast is" in sent[1]
+    for hours in (60, 63):  # fresh: still ONE recovery
+        now = _later(hours)
+        msgs, state, healthy = lf.decide(state, _fresh_values(now), now)
+        sent += [m["title"] for m in msgs]
+    assert sent[-1] == "Gold Tracker: live site data is fresh again" and sent.count(sent[-1]) == 1
+    assert state == {}
+
+
+def test_a_signal_joining_a_long_incident_is_listed_by_the_next_daily_page_only():
+    _, state, _ = lf.decide({}, _values(12, 1), NOW)
+    t1 = _later(10)
+    msgs, state, _ = lf.decide(state, {"forecast": _iso(22, t1), "tanishq": _iso(25, t1)}, t1)
+    assert msgs == []  # joins silently
+    t2 = _later(24)
+    msgs, state, _ = lf.decide(state, {"forecast": _iso(36, t2), "tanishq": _iso(39, t2)}, t2)
+    assert len(msgs) == 1 and "forecast" in msgs[0]["title"] and "tanishq" in msgs[0]["title"]
+
+
+def test_the_repage_clock_is_not_reset_by_a_fresh_check_and_a_fresh_wait_does_not_repage():
+    _, state, _ = lf.decide({}, _values(12, 1), NOW)
+    t1 = _later(25)  # a day later but fresh: waiting out the recovery window, no re-page
+    msgs, state, healthy = lf.decide(state, _fresh_values(t1), t1)
+    assert msgs == [] and not healthy
+    t2 = _later(26)  # stale again: the 24 h are long past, so this one re-pages
+    msgs, state, _ = lf.decide(state, {"forecast": _iso(10, t2), "tanishq": _iso(1, t2)}, t2)
+    assert len(msgs) == 1 and msgs[0]["title"].startswith("Gold Tracker: still stale")
+    assert state["incident"]["last_paged_at"] == t2.isoformat()
 
 
 # --- the model forecast ------------------------------------------------------------------------

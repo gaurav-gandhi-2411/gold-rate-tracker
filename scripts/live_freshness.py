@@ -45,7 +45,10 @@ every signal that has gone bad since (forecast, tanishq, model, site). A page go
 incident opens, listing every bad signal; a signal that goes bad while it is open joins it with no
 page; and ONE recovery message goes out when ALL signals have been fresh for at least 2 checks in a
 row AND at least 1 h. A signal going bad again inside that window silently continues the same
-incident. Why 2 checks and 1 h (tests/test_live_freshness_replay.py replays the real 46 runs of
+incident. A long incident is not silent for good: while it stays open and something is still bad,
+ONE "still stale after N h" page goes out every 24 h (state: last_paged_at), so at most one push a
+day. A damaged incident record in the state (unparseable time, non-numeric count) counts as no
+incident: if the site is stale it pages once like a first run. Why 2 checks and 1 h (tests/test_live_freshness_replay.py replays the real 46 runs of
 2026-11-07..14): a single fresh check was followed by a stale one on 11-11 (run at 22:44Z fresh,
 03:23Z stale), which with 1 check would be a recovery plus a new incident; checks normally run
 about 3 h apart, but two ran 28 min apart on 11-12 (a schedule run and a dispatch) and two 19 s
@@ -81,6 +84,8 @@ MODEL_PAUSED_H = 9.0
 # An incident closes only after this many consecutive fully fresh checks spanning this many hours.
 RECOVERY_CHECKS = 2
 RECOVERY_H = 1.0
+# While an incident stays open it pages again this often: at most one push a day.
+REPAGE_H = 24.0
 LABELS = {"forecast": "the forecast (predicted_at)", "tanishq": "the latest Tanishq reading"}
 RUNS_URL = "https://github.com/gaurav-gandhi-2411/gold-rate-tracker/actions"
 # Clock skew allowed before a published timestamp counts as "in the future" (runner vs. scraper).
@@ -135,6 +140,19 @@ def _short(key: str, age_h: float) -> str:
     }[key]
 
 
+def _valid_incident(inc: dict[str, Any]) -> bool:
+    """True when every field decide() reads from a stored incident is usable."""
+    checks = inc.get("fresh_checks", 0)
+    return (
+        isinstance(inc.get("signals"), dict)
+        and parse_ts(inc.get("opened_at")) is not None
+        and (inc.get("last_paged_at") is None or parse_ts(inc["last_paged_at"]) is not None)
+        and (inc.get("fresh_since") is None or parse_ts(inc["fresh_since"]) is not None)
+        and isinstance(checks, int)
+        and not isinstance(checks, bool)
+    )
+
+
 def decide(
     state: dict[str, Any],
     values: dict[str, str | None],
@@ -151,7 +169,11 @@ def decide(
     inc = new.get("incident") if isinstance(new.get("incident"), dict) else None
     legacy = [k for k in (*LIMITS_H, "site") if state.get(k)]  # state of the per-signal version
     if inc is None and legacy:  # an incident already paged under the old scheme: adopt it quietly
-        inc = {"opened_at": now.isoformat(), "signals": {k: str(state[k]) for k in legacy}}
+        inc = {
+            "opened_at": now.isoformat(),
+            "last_paged_at": now.isoformat(),
+            "signals": {k: str(state[k]) for k in legacy},
+        }
     # A timestamp in the future gives a negative age and would read as fresh for as long as it stays
     # ahead of the clock, hiding a real outage behind it, so it counts as unreadable (fail closed).
     future = [k for k, v in values.items() if v is not None and parse_ts(v) > now + FUTURE_TOL]  # type: ignore[operator]
@@ -190,11 +212,18 @@ def decide(
                 )
     elif model is not None:  # active again: the streak is over (an unjudged run keeps it)
         new.pop("model_since", None)
-    if inc is not None and not isinstance(inc.get("signals"), dict):
-        inc["signals"] = {}  # a damaged state file must not crash the monitor
+    if inc is not None and not _valid_incident(inc):
+        # Damaged state is no incident, never a silently wrong one: if the site is stale this opens
+        # a new incident and pages like a first run (a duplicate, never a silence); if it is fresh
+        # the damaged record is dropped.
+        inc = None
     msgs: list[dict[str, str]] = []
     if bad and inc is None:
-        inc = {"opened_at": now.isoformat(), "signals": {k: now.isoformat() for k in bad}}
+        inc = {
+            "opened_at": now.isoformat(),
+            "last_paged_at": now.isoformat(),
+            "signals": {k: now.isoformat() for k in bad},
+        }
         only_site = set(bad) == {"site"}
         msgs.append(
             {
@@ -212,6 +241,22 @@ def decide(
                 inc["signals"].setdefault(k, now.isoformat())
             inc.pop("fresh_checks", None)
             inc.pop("fresh_since", None)
+            # A long incident must not go silent for good: one "still stale" page per REPAGE_H.
+            last = parse_ts(inc.get("last_paged_at")) or parse_ts(inc["opened_at"])
+            held_h = (now - last).total_seconds() / 3600  # type: ignore[operator]
+            if held_h >= REPAGE_H:
+                inc["last_paged_at"] = now.isoformat()
+                opened_h = (now - parse_ts(inc["opened_at"])).total_seconds() / 3600  # type: ignore[operator]
+                msgs.append(
+                    {
+                        "title": f"Gold Tracker: still stale after {opened_h:.0f} h -- "
+                        + "; ".join(bad.values()),
+                        "priority": "high",
+                        "body": f"The incident opened {inc['opened_at']} is still open "
+                        + " ".join(detail.values())
+                        + f" Check check-price, bot PRs and Pages: {RUNS_URL}",
+                    }
+                )
         else:
             inc["fresh_checks"] = int(inc.get("fresh_checks", 0)) + 1
             inc.setdefault("fresh_since", now.isoformat())

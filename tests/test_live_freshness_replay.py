@@ -215,22 +215,28 @@ def test_new_logic_pages_once_per_incident_plus_one_recovery(tmp_path: Path) -> 
     opens = [i for i, run in enumerate(new) if any("visitors see stale data" in t for t in run)]
     recov = [i for i, run in enumerate(new) if any("is fresh again" in t for t in run)]
     assert not any(t.startswith(SHARE_CARD) for run in new for t in run)  # all consequences
-    assert sum(len(run) for run in new) == 2 * len(incidents) == 6
+    again = [i for i, run in enumerate(new) if any("still stale" in t for t in run)]
+    assert sum(len(run) for run in new) == 2 * len(incidents) + len(again) == 8
     per_incident = []
     for a, b in incidents:
         o = [i for i in opens if a <= i <= b]
         r = [i for i in recov if a <= i <= b]
-        assert len(o) == 1 and len(r) == 1, (a, b, o, r)
+        s = [i for i in again if a <= i <= b]
+        assert len(o) == 1 and len(r) == 1, (a, b, o, r)  # still ONE open and ONE recovery
         assert o[0] >= a and r[0] == b  # opens inside the incident, recovers when it closes
-        per_incident.append((RUNS[a]["now"], sum(len(x) for x in old[a : b + 1]), 2))
-    # old pushes vs new pushes per real incident (the old monitor never saw the paused model: 0)
-    assert [(p[1], p[2]) for p in per_incident] == [(6, 2), (12, 2), (0, 2)]
+        # the 24 h re-page: at most one, and only once the incident is 24 h past its last page
+        assert all((_t(RUNS[i]) - _t(RUNS[o[0]])).total_seconds() / 3600 >= lf.REPAGE_H for i in s)
+        per_incident.append((sum(len(x) for x in old[a : b + 1]), 2 + len(s)))
+    # old pushes vs new pushes per real incident (the old monitor never saw the paused model: 0).
+    # The two long incidents (53.6 h and 39.6 h from first stale run to recovery run) each get one
+    # "still stale" page after 24 h; the 21.8 h one does not.
+    assert per_incident == [(6, 3), (12, 3), (0, 2)]
     assert sum(len(x) for x in old) == 18
 
 
 def test_a_run_that_changes_nothing_sends_nothing_new(tmp_path: Path) -> None:
     new = _replay_new(tmp_path)
-    assert sum(1 for run in new if run) == 6  # 6 of 46 runs push, against 10 before
+    assert sum(1 for run in new if run) == 8  # 8 of 46 runs push, against 10 before
 
 
 def test_the_hysteresis_numbers_are_what_stops_the_flapping(
@@ -238,10 +244,10 @@ def test_the_hysteresis_numbers_are_what_stops_the_flapping(
 ) -> None:
     """With a single fresh check and no wait the same replay pages more: the 11-11 22:44Z all-fresh
     run was followed by a stale one at 03:23Z."""
-    assert sum(len(x) for x in _replay_new(tmp_path)) == 6
+    assert sum(len(x) for x in _replay_new(tmp_path)) == 8
     monkeypatch.setattr(lf, "RECOVERY_CHECKS", 1)
     monkeypatch.setattr(lf, "RECOVERY_H", 0.0)
-    assert sum(len(x) for x in _replay_new(tmp_path)) > 6
+    assert sum(len(x) for x in _replay_new(tmp_path)) > 8
 
 
 def test_check_spacing_in_the_replay_is_why_the_floor_is_an_hour() -> None:
