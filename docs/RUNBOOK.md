@@ -1026,6 +1026,29 @@ no longer has a full run to compare with).
 
 Rollback: revert the switch PR. That restores the shadow step and runs every code check on every PR.
 
+## Clock guard (report-only; added 2026-11-14)
+
+Why: on 2026-11-06 `lint` was red about 9 h because a test called `ml.notifications.main()`, which reads the
+real clock, and inside the T8 digest windows (08:00-13:59 and 18:00-21:59 IST) `main()` really sends a digest.
+`tests/clock_guard.py` records every test that reaches a real `datetime.now()` / `utcnow()` / `today()` /
+`date.today()` in an `ml.*` or `scripts.*` module without pinning it.
+
+- **Mode**: `MODE = "report"` in `tests/clock_guard.py`. It never fails a test. The pytest output ends with a
+  "clock guard (report-only)" table (module, number of tests, example) and, under GitHub Actions, one
+  `::warning title=clock-guard::` line. `tests/test_clock_guard.py` pins `MODE == "report"`.
+- **Reading the report**: an empty section means every unpinned read is on the allowlist. A row is a NEW,
+  unreviewed read. Ask: can the test outcome differ by hour, weekday or date? Yes: pin it. No: add
+  `tests/test_file.py ml.module  # one-line reason` to `tests/clock_guard_allowlist.txt`.
+- **Pinning a test**: `monkeypatch.setattr(module, "datetime", FixedDatetime)` (a `datetime` subclass whose
+  `now` returns a fixed aware instant), or patch the module's `_now()` helper, or pass `now=` when the function
+  takes it. Any of these keeps the guard class from being reached, so nothing is recorded.
+- **Finding window-dependent tests**: `python scripts/clock_sweep.py <test files>` runs them at fixed instants
+  (weekday and Sunday, both T8 windows, month-end, year-end) and lists tests whose outcome differs.
+- **Limits**: it cannot see `time.time()`, subprocess clocks, clock reads inside test files or third-party code.
+- **Flip rule** (`.claude/CLAUDE.md`, new checks start non-blocking): `MODE` becomes `"fail"` only in a separate
+  PR that cites 5 clean real runs spanning at least 24 h, each with the report read. The flip also needs the
+  `pytest_terminal_summary` hook in `tests/conftest.py` to turn `should_fail` into a failed session.
+
 ## Known constraints
 
 - ~~MLflow runs locally only (port 5001). CI inference is CPU-only via ONNX; no tracking in CI.~~ **Retired (ADR 009).** MLflow and ONNX runtime removed with the neural models.

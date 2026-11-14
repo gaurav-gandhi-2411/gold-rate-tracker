@@ -1,0 +1,56 @@
+# Reviewed unpinned clock reads (tests/clock_guard.py). One entry per line: <test file> <module>  # reason.
+# Reviewed 2026-11-14 from a full-suite measurement (848 reads, 297 tests, 16 modules, 35 test files) plus
+# scripts/clock_sweep.py over those 35 files at 8 fixed instants (weekday and Sunday, both T8 windows,
+# month-end, year-end): no test passed at one instant and failed at another for a time-window reason.
+# The only differences were sweep artifacts (a test builds its own timestamps from the REAL clock while the
+# module sees the fixed one), which cannot differ in a real run where both clocks agree.
+# An entry hides every test of that file for that module: when you add a test that decides on the hour or
+# date, pin its clock instead of relying on this file.
+tests/test_calibration.py ml.calibration  # reads the clock only to stamp or date a record the test compares against the same clock; outcome independent of hour/date in the sweep
+tests/test_calibration_integration.py ml.notifications  # alert checks take an explicit now_ist or compare timestamps made in the same test; outcome did not vary across the sweep instants
+tests/test_calibration_unlock_chain.py ml.calibration  # reads the clock only to stamp or date a record the test compares against the same clock; outcome independent of hour/date in the sweep
+tests/test_calibration_unlock_chain.py ml.drivers  # reads the clock only to stamp or date a record the test compares against the same clock; outcome independent of hour/date in the sweep
+tests/test_calibration_unlock_chain.py ml.inference  # reads the clock only to stamp or date a record the test compares against the same clock; outcome independent of hour/date in the sweep
+tests/test_calibration_unlock_chain.py ml.notifications  # alert checks take an explicit now_ist or compare timestamps made in the same test; outcome did not vary across the sweep instants
+tests/test_champion_alerts.py ml.notifications  # alert checks take an explicit now_ist or compare timestamps made in the same test; outcome did not vary across the sweep instants
+tests/test_champion_alerts.py ml.promotion  # reads the clock only to stamp or date a record the test compares against the same clock; outcome independent of hour/date in the sweep
+tests/test_champion_switch.py ml.promotion  # reads the clock only to stamp or date a record the test compares against the same clock; outcome independent of hour/date in the sweep
+tests/test_chronos_forecast.py ml.chronos_forecast  # reads the clock only to stamp or date a record the test compares against the same clock; outcome independent of hour/date in the sweep
+tests/test_degradation_chain.py ml.drivers  # reads the clock only to stamp or date a record the test compares against the same clock; outcome independent of hour/date in the sweep
+tests/test_degradation_chain.py ml.notifications  # alert checks take an explicit now_ist or compare timestamps made in the same test; outcome did not vary across the sweep instants
+tests/test_demotion_wired.py ml.notifications  # alert checks take an explicit now_ist or compare timestamps made in the same test; outcome did not vary across the sweep instants
+tests/test_direction_harness.py ml.direction.evaluate  # reads the clock only to stamp or date a record the test compares against the same clock; outcome independent of hour/date in the sweep
+tests/test_drift.py ml.drift  # reads the clock only to stamp or date a record the test compares against the same clock; outcome independent of hour/date in the sweep
+tests/test_drivers.py ml.drivers  # reads the clock only to stamp or date a record the test compares against the same clock; outcome independent of hour/date in the sweep
+tests/test_feature_store.py ml.feature_store_backfill  # reads the clock only to stamp or date a record the test compares against the same clock; outcome independent of hour/date in the sweep
+tests/test_ibja.py ml.ibja  # reads the clock only to stamp or date a record the test compares against the same clock; outcome independent of hour/date in the sweep
+tests/test_inference_h5_fallback.py ml.calibration  # reads the clock only to stamp or date a record the test compares against the same clock; outcome independent of hour/date in the sweep
+tests/test_inference_h5_fallback.py ml.drivers  # reads the clock only to stamp or date a record the test compares against the same clock; outcome independent of hour/date in the sweep
+tests/test_inference_h5_fallback.py ml.inference  # reads the clock only to stamp or date a record the test compares against the same clock; outcome independent of hour/date in the sweep
+tests/test_inference_main.py ml.drivers  # reads the clock only to stamp or date a record the test compares against the same clock; outcome independent of hour/date in the sweep
+tests/test_inference_main.py ml.inference  # reads the clock only to stamp or date a record the test compares against the same clock; outcome independent of hour/date in the sweep
+tests/test_metrics.py ml.metrics  # reads the clock only to stamp or date a record the test compares against the same clock; outcome independent of hour/date in the sweep
+tests/test_nonpositive_rate_inputs.py ml.drivers  # reads the clock only to stamp or date a record the test compares against the same clock; outcome independent of hour/date in the sweep
+tests/test_notification_routing.py ml.notifications  # alert checks take an explicit now_ist or compare timestamps made in the same test; outcome did not vary across the sweep instants
+tests/test_notifications.py ml.notifications  # alert checks take an explicit now_ist or compare timestamps made in the same test; outcome did not vary across the sweep instants
+tests/test_pipeline_integration.py ml.calibration  # reads the clock only to stamp or date a record the test compares against the same clock; outcome independent of hour/date in the sweep
+tests/test_pipeline_integration.py ml.drivers  # reads the clock only to stamp or date a record the test compares against the same clock; outcome independent of hour/date in the sweep
+tests/test_pipeline_integration.py ml.inference  # reads the clock only to stamp or date a record the test compares against the same clock; outcome independent of hour/date in the sweep
+tests/test_pipeline_integration.py ml.notifications  # alert checks take an explicit now_ist or compare timestamps made in the same test; outcome did not vary across the sweep instants
+tests/test_polite_http.py ml.sources.grt  # reads the clock only to stamp or date a record the test compares against the same clock; outcome independent of hour/date in the sweep
+tests/test_preregistration.py ml.direction.preregistration  # reads the clock only to stamp or date a record the test compares against the same clock; outcome independent of hour/date in the sweep
+tests/test_price_drop_alerts.py ml.notifications  # alert checks take an explicit now_ist or compare timestamps made in the same test; outcome did not vary across the sweep instants
+tests/test_promotion.py ml.promotion  # reads the clock only to stamp or date a record the test compares against the same clock; outcome independent of hour/date in the sweep
+tests/test_retailer_takedown.py ml.drivers  # reads the clock only to stamp or date a record the test compares against the same clock; outcome independent of hour/date in the sweep
+tests/test_schema_contracts.py ml.drivers  # reads the clock only to stamp or date a record the test compares against the same clock; outcome independent of hour/date in the sweep
+tests/test_schema_contracts.py ml.inference  # reads the clock only to stamp or date a record the test compares against the same clock; outcome independent of hour/date in the sweep
+tests/test_shadow_fusion.py ml.shadow_fusion  # reads the clock only to stamp or date a record the test compares against the same clock; outcome independent of hour/date in the sweep
+tests/test_sources_base.py ml.sources.base  # reads the clock only to stamp or date a record the test compares against the same clock; outcome independent of hour/date in the sweep
+tests/test_sources_grt.py ml.sources.grt  # reads the clock only to stamp or date a record the test compares against the same clock; outcome independent of hour/date in the sweep
+tests/test_sources_ibja.py ml.sources.base  # reads the clock only to stamp or date a record the test compares against the same clock; outcome independent of hour/date in the sweep
+tests/test_sources_malabar.py ml.sources.base  # reads the clock only to stamp or date a record the test compares against the same clock; outcome independent of hour/date in the sweep
+tests/test_sources_malabar.py ml.sources.malabar  # reads the clock only to stamp or date a record the test compares against the same clock; outcome independent of hour/date in the sweep
+tests/test_stratified_band.py ml.calibration  # reads the clock only to stamp or date a record the test compares against the same clock; outcome independent of hour/date in the sweep
+tests/test_t19_live_first_look.py ml.notifications  # alert checks take an explicit now_ist or compare timestamps made in the same test; outcome did not vary across the sweep instants
+tests/test_tanishq_block_alert_path.py ml.notifications  # alert checks take an explicit now_ist or compare timestamps made in the same test; outcome did not vary across the sweep instants
+tests/test_tanishq_silent_alert.py ml.notifications  # alert checks take an explicit now_ist or compare timestamps made in the same test; outcome did not vary across the sweep instants
