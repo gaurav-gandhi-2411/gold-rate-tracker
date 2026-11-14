@@ -98,8 +98,18 @@ def _run(args: list[str]) -> subprocess.CompletedProcess[str]:
     )
 
 
+ESCAPE_REFUSAL = "terminal escape sequences"  # newer gh refuses a response carrying them
+
+
 def _gh_text(args: list[str]) -> str:
     result = _run(["gh", *args])
+    if result.returncode != 0 and ESCAPE_REFUSAL in result.stderr and args[:1] == ["api"]:
+        # The self-hosted Windows runner's job log carries ANSI escapes; gh on the hosted runner
+        # (newer than the one this was written against) refuses the response unless told it is
+        # fine, and the guard then failed closed for every scraper dependency PR (2026-11-14).
+        # The log is only searched for plain-text markers, so allowing the bytes is safe. A gh that
+        # does not know the flag fails the retry and still raises: fail closed.
+        result = _run(["gh", *args, "--allow-escape-sequence"])
     if result.returncode != 0:
         raise GuardError(
             f"gh {' '.join(args)} failed (exit {result.returncode}): {result.stderr.strip()}"
