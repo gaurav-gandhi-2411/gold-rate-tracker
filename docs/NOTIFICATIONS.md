@@ -11,9 +11,9 @@ and fails on an unlisted one):
 
 | Key | What | Where |
 |---|---|---|
-| K1 | Daily gold-price summary (22K/24K/18K, change, next range, live accuracy, one line on whether another model has beaten the live one) | `daily-digest.yml`, `scripts/gg_digest.py` |
+| K1 | Daily gold-price summary (22K/24K/18K, change, next range, live accuracy, one line on whether another model has beaten the live one, and one plain sentence only when the price forecast is paused or has stopped updating) | `daily-digest.yml`, `scripts/gg_digest.py` |
 | K2 | Monday summary (the same plus the week's high and low) | `monday-push.yml`, `scripts/gg_digest.py` |
-| K3 | The site shows a wrong or stale price (or does not render) | `scripts/live_freshness.py`, `scripts/live_share_card.py` (`ci-health.yml`), `render-smoke.yml`, worker-deadman forecast staleness |
+| K3 | The site shows a wrong or stale price, has no model forecast for too long (or does not render) | `scripts/live_freshness.py`, `scripts/live_share_card.py` (`ci-health.yml`), `render-smoke.yml`, worker-deadman forecast staleness |
 | K4 | Only the owner can fix it: token expiry, data sync token rejected (HTTP 401) | `scripts/check_token_expiry.py`, `.github/actions/bot-pr-sync` |
 | K5 | Public subscriber price alerts T1, T2, T3, T4, T8_MORNING, T8_EVENING, T15 | `ml/notifications.py` |
 
@@ -24,6 +24,30 @@ digest, visitors-weekly (status word only; the owner reads GoatCounter directly)
 scraper-canary's push (its GitHub issue stays), ops triggers T5, T6, T7, T9, T9_ESCALATE, T10-T14,
 T16-T19 (still evaluated, still deduplicated; recorded instead of POSTed), and worker-deadman's
 Tanishq-silence, PR trigger health, merged-unchecked and heartbeat channels.
+
+### K3: one page per incident, plus one recovery (2026-11-14)
+
+From 2026-11-07 to 2026-11-13 GG got 18 pushes for 3 outages (replayed from the 46 real runs in
+`tests/fixtures/ci_health_replay_2026-11.json`): every signal (forecast, Tanishq) and every share-card
+kind was its own incident with its own open page and its own recovery page, and the 9 h forecast limit
+flapped around its edge. Now `scripts/live_freshness.py` keeps ONE site-level incident:
+
+- **Open**: one page listing every bad signal (stale forecast, stale Tanishq reading, no model
+  forecast for more than 9 h, unreadable site data).
+- **While open**: a signal that goes bad joins the incident with no page. The share-card monitor stays
+  silent for its `behind` and `stale` kinds (same outage); its own defects (unreadable, broken,
+  advice, disagree) still page.
+- **Recovery**: one page, only after everything has been fresh for at least 2 checks in a row over at
+  least 1 hour. A signal going bad again inside that window continues the same incident silently.
+- Replay result: old 18 pushes, new 6 (2 per incident, 3 incidents). The paused model forecast of
+  11-12/13 was invisible to the old monitor (0 pushes) and is now one of the 3.
+
+The model forecast is "paused" when `next_fix.active` in `forecast.json` is not the boolean true
+(holding the latest fix is the model working, never a page). `ml/inference.py` writes
+`next_fix.down_since` (the start of the streak) while it is down. The daily and Monday summaries add one
+plain sentence, with since when, whenever the forecast is paused or `forecast.json` has stopped updating
+(older than 9 h), and nothing when all is well. Limits and the numbers they come from are in the
+docstring of `scripts/live_freshness.py`.
 
 ### Ops log
 
