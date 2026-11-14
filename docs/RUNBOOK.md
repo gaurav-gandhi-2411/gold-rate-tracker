@@ -994,7 +994,7 @@ Which PRs: the job's `Scope` step (id `scope`) computes `data_only` from MASTER'
 |---|---|
 | Always (both paths) | checkout, setup-python 3.11 and 3.12, Scope, `Install ML dependencies` (the pinned lock), `Show installed versions`, `Installed versions equal the lock`, `Check raw data stays encrypted (ADR 060)`, the decision record |
 | Always on a PR / dispatched branch, **report-only** | `PR hygiene: secret scan + large files` (`scripts/pr_hygiene.py`; runs on data-only and full PRs, not on push or schedule) |
-| Data-only PR only | `scripts/validate_data.py` (fails the job unless it passes), then the tests that read `data/` (**report-only**, see below) |
+| Data-only PR only | `scripts/validate_data.py` (fails the job unless it passes), then the tests that read `data/` (**blocking** since 2026-11-14, see below) |
 | Skipped on a data-only PR | `pip install pre-commit`, `pre-commit run --all-files`, smoke tests, the full pytest suite, JS test registry, hollow-run (test count) guard, plain-language, retailer-language, computed-claims, metrics provenance |
 
 `tests/test_lint_data_only_switch.py` holds this table, evaluates every step's `if:`, and fails if a
@@ -1009,12 +1009,14 @@ dropped). If no selection can be computed (script error, unreadable or empty res
 FULL suite instead, never nothing. Known blind spots, stated: a NEW test file that reads `data/` only
 through a module's default path is in neither list until the measurement is refreshed (the static scan
 alone missed 6 of the 31 reading files in the 2026-11-03 measurement); a test that reads `data/`
-through a child process is seen only by the static scan. **The data-reading test step is report-only
-(`continue-on-error: true`) until 5 clean real data-only runs spanning at least 24 hours** (standing
-rule, 2026-10-30; its selection was never measured by the shadow): a failure there prints a
-`::warning title=data-only-tests::` in the decision record and does not stop a data sync. Making it
-blocking is a separate PR citing those run IDs and editing `test_the_data_test_step_is_report_only`.
-Until then `validate_data.py`, the lock proof and the raw-data guard are what decide. Refresh the measurement:
+through a child process is seen only by the static scan. **The data-reading test step has been
+BLOCKING since 2026-11-14 (GG decision 2b).** It ran report-only first (standing rule, 2026-10-30):
+101 clean data-only runs between 2026-11-07 and 2026-11-13 (`data_tests=success` in each decision
+line, 2 other data-only runs failed at `validate_data.py`, correctly: one was a probe, one a real
+Rs.0 forecast), 0 false positives; the clock guard found no selected test that depends on the hour or
+date. A failing selected test now fails the lint job (and so blocks the data sync); the decision record
+still prints a `::warning title=data-only-tests::`. Fix the test or the data, never the selection.
+`test_the_data_test_step_is_blocking` pins it. Refresh the measurement:
 `DATA_READS_OUT=/tmp/r.json pytest -m "not integration" tests/`, then list the test files whose
 `data_reads` is non-empty (or that appear in `collect_reads`) in `tests/data_reading_tests.txt`.
 

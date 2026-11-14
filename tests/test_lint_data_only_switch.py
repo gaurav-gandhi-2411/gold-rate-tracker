@@ -157,14 +157,14 @@ def test_the_steps_that_ran_before_the_switch_still_run_unconditionally_on_a_ful
         assert "timeout-minutes" not in _step(label) or label == SCOPE, label
 
 
-def test_only_scope_record_data_tests_and_hygiene_may_be_non_blocking_and_the_job_has_no_condition():
-    # DATA_TESTS is report-only until 5 clean real runs over >= 24 h (standing rule, 2026-10-30);
-    # flipping it is a separate PR that edits test_the_data_test_step_is_report_only below.
+def test_only_scope_record_and_hygiene_may_be_non_blocking_and_the_job_has_no_condition():
+    # DATA_TESTS became blocking on 2026-11-14 (GG 2b, after 101 clean real runs); HYGIENE is still
+    # report-only until its own flip PR (5 clean real runs over >= 24 h, standing rule 2026-10-30).
     wf = yaml.safe_load((ROOT / ".github/workflows/lint.yml").read_text(encoding="utf-8"))
     job = wf["jobs"]["lint"]
     assert "if" not in job and "continue-on-error" not in job
     for s in _steps():
-        if _label(s) in (SCOPE, RECORD, DATA_TESTS, HYGIENE):
+        if _label(s) in (SCOPE, RECORD, HYGIENE):
             assert s["continue-on-error"] is True, _label(s)
         else:
             assert "continue-on-error" not in s, _label(s)
@@ -346,8 +346,11 @@ def test_the_record_step_cannot_decide_it_is_non_blocking_and_exits_zero():
     assert s["run"].rstrip().endswith("exit 0") and "set +e" in s["run"]
 
 
-def test_the_data_test_step_is_report_only():
-    assert _step(DATA_TESTS)["continue-on-error"] is True
+def test_the_data_test_step_is_blocking():
+    # flipped from report-only on 2026-11-14 (GG 2b); a failing selected test fails the lint job
+    s = _step(DATA_TESTS)
+    assert "continue-on-error" not in s and s["id"] == "data_tests"
+    assert s["if"] == "steps.scope.outputs.data_only == 'true'"
 
 
 def test_the_pr_hygiene_step_is_report_only_and_runs_on_data_only_and_full_prs():

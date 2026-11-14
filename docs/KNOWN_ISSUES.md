@@ -18,9 +18,9 @@ On a data-only PR the required `lint` job runs only the tests that read `data/`:
 `data/` through a module's default path is in neither until the measurement is refreshed; the static
 scan over-selects (a file that only names a data constant as a string, such as
 `tests/test_tanishq_silent_alert.py`, which redirects those constants to a temp dir, is selected and
-reads no data). The data-reading test step is REPORT-ONLY (`continue-on-error`) until 5 clean real
-runs over >= 24 h, so a flaky or time-dependent test there shows a warning and does not block a data
-sync; once it is made blocking, such a test can block a sync until it is fixed or master is repaired.
+reads no data). The data-reading test step has been BLOCKING since 2026-11-14 (101 clean real runs
+first), so a flaky or time-dependent test in the selected set can block a data sync until it is fixed
+or master is repaired (the clock guard found none that depends on the hour or date).
 The gitleaks secret scan and the 10 MB large-file check live in pre-commit, which a data-only PR
 skips (found by the PR review, 2026-11-07). They now run on data-only and full PRs through
 `scripts/pr_hygiene.py` (GG 2c, 2026-11-13), REPORT-ONLY until 5 clean real runs over >= 24 h
