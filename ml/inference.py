@@ -864,7 +864,10 @@ def main(now: datetime | None = None) -> None:
     # The fix the displayed price reflects: the estimate tiers carry it in ibja_asof; a Tanishq
     # reading reflects the latest fix published before it was read.
     price_read_at = ibja_asof if price_source != "tanishq_scrape" and ibja_asof else scraped_at
+    previous_forecast = _load_json(DATA_DIR / "forecast.json")  # read before step 7 overwrites it
     next_fix = _next_fix_block(now, current_22k, calibration, price_read_at)
+    if next_fix.get("active") is not True:
+        next_fix["down_since"] = _down_since(previous_forecast, now)
     if next_fix.get("active"):
         predicted_22k = next_fix["predicted_22k"]
         lower = next_fix["lower"]
@@ -988,6 +991,26 @@ def _live_monitor_summary(lm: object) -> dict:
         "coverage_e_value": cov.get("e_value"),
         "coverage_alert": bool(lm.get("coverage_alert")),
     }
+
+
+def _down_since(previous: object, now: datetime) -> str:
+    """When the next-fix model went down (ISO UTC): the previous forecast's ``down_since`` while it
+    was down too, else its own ``predicted_at`` if it was down without that key (written before the
+    key existed), else ``now``. Fails soft: an unreadable previous forecast means ``now``.
+
+    scripts/live_freshness.py pages when the model has been down longer than a limit, and the daily
+    summary says since when; both need the start of the streak, not of the latest run.
+    """
+    try:
+        nf = previous.get("next_fix") if isinstance(previous, dict) else None
+        if isinstance(nf, dict) and nf.get("active") is not True:
+            for stamp in (nf.get("down_since"), previous.get("predicted_at")):  # type: ignore[union-attr]
+                if isinstance(stamp, str) and stamp:
+                    datetime.fromisoformat(stamp.replace("Z", "+00:00"))
+                    return stamp
+    except (ValueError, TypeError, AttributeError):
+        pass
+    return now.isoformat()
 
 
 def _next_fix_block(
