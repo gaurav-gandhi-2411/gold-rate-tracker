@@ -92,8 +92,15 @@ jobs:
           exit 0
       # Every install in a required job is pinned (brief 2026-10-30; tests/test_required_ci_installs_pinned.py):
       # an unpinned release must not be able to change what this job runs. Bumps are deliberate PRs.
+      # CODE-ONLY steps below carry `if: ... data_only != 'true'`: they run on every run except one
+      # the Scope step explicitly called data-only (GG 2026-10-30, option C; docs/RUNBOOK.md, "What
+      # runs on a data-only PR"). A missing, failed or false scope output reads as full, so
+      # undecidable means everything runs. tests/test_lint_data_only_switch.py classifies every step
+      # of this job as always / code-only / data-only and fails on an unclassified one.
       - run: pip install pre-commit==4.7.0
+        if: steps.scope.outputs.data_only != 'true'
       - run: pre-commit run --all-files
+        if: steps.scope.outputs.data_only != 'true'
       # From here on, the suite tests what production runs (brief 2026-10-29): check-price's Python
       # (3.12, the version the lock is compiled for) and its exact install command. Until then this
       # job installed ml/requirements.txt and tested e.g. pandas 3.1.0 and torch 2.15 while
@@ -118,26 +125,57 @@ jobs:
         # Every lock pin installed at exactly its version (a `+cpu` local label is noted, not failed).
         run: python scripts/check_installed_matches_lock.py
       - name: Run smoke tests
+        if: steps.scope.outputs.data_only != 'true'
         run: pytest tests/test_inference_main.py -m smoke -v
       # Integration tests excluded here (norm #11): @pytest.mark.integration tests make
       # live network calls (HuggingFace model download). They run non-gating in
       # weekly-backtest.yml where the Chronos cache is warm and continue-on-error: true.
       - name: Run full pytest suite
-        # FOR_GG item 11: on a data-only PR only, record which tests read data/ (tests/conftest.py
-        # registers scripts/data_reads_plugin.py when this is set; recording only, it changes no
-        # outcome). Empty on every other run, so code PRs run exactly as before.
-        env:
-          DATA_READS_OUT: ${{ steps.scope.outputs.data_only == 'true' && format('{0}/data_reads.json', runner.temp) || '' }}
+        # Every non-data-only run (code PRs, pushes, the daily schedule, a failed or undecidable scope)
+        # runs the whole suite exactly as before.
+        if: steps.scope.outputs.data_only != 'true'
         run: |
           pytest \
             -m "not integration" \
             tests/ -v
+      # Data-only PR (Scope said so), GG 2026-10-30 option C: the code cannot have changed, so the
+      # deciding checks are the lock install and version proof above, this data validation, the
+      # data-reading tests below, and the raw-data guard after them. Each fails the job.
+      - name: Validate the data (scripts/validate_data.py) -- decides a data-only PR
+        id: validate
+        if: steps.scope.outputs.data_only == 'true'
+        run: python scripts/validate_data.py
+      - name: Run the tests that read data/ (data-only PR; selection fails closed to the full suite)
+        id: data_tests
+        if: steps.scope.outputs.data_only == 'true'
+        # REPORT-ONLY until 5 clean real runs spanning >= 24 h (.claude/CLAUDE.md, 2026-10-30): this
+        # selection was never measured by the shadow, so a false positive here must not stop a data
+        # merge. The record step below warns when it does not succeed. Blocking = a separate PR that
+        # cites the run IDs and edits the pinning test deliberately.
+        continue-on-error: true
+        # Selection = scripts/select_data_tests.py (static scan of tests/) UNION the committed
+        # tests/data_reading_tests.txt (files measured reading data/ by scripts/data_reads_plugin.py).
+        # No usable selection (script error, empty list) runs the FULL suite instead, never nothing.
+        # Known blind spot: a NEW test file that reads data/ only through a module's default path is
+        # in neither list until the measurement is refreshed (docs/RUNBOOK.md).
+        run: |
+          set +e
+          SEL="$RUNNER_TEMP/data_test_files.txt"
+          if python scripts/select_data_tests.py --measured tests/data_reading_tests.txt > "$SEL" && [ -s "$SEL" ]; then
+            mapfile -t FILES < <(tr -d '\r' < "$SEL")
+            echo "DATA TESTS: running ${#FILES[@]} selected test files"
+            pytest -m "not integration" "${FILES[@]}" -v
+          else
+            echo "DATA TESTS: selection failed; running the FULL suite (fail closed)"
+            pytest -m "not integration" tests/ -v
+          fi
       - name: Check raw data stays encrypted (ADR 060)
         # No key needed. Fails if a registered raw-data path is tracked as plaintext once it has
         # ciphertext, is not gitignored, or if any data/encrypted/ file does not match its public
         # SHA-256 manifest entry. The key-leak and tamper tests are in tests/test_data_crypt.py.
         run: python scripts/data_crypt.py guard
       - name: Check every JS test file is referenced by some workflow
+        if: steps.scope.outputs.data_only != 'true'
         # AJ2 (production audit continuation, 2026-09-11/12): mechanical
         # version of the sweep that found test_tier_degradation_visible.js
         # and test_vol_regime.js silently never running in CI for 7-8 days.
@@ -147,12 +185,14 @@ jobs:
         # stated limitations.
         run: python scripts/check_test_registry_complete.py
       - name: Check no test file has lost tests (hollow-run guard)
+        if: steps.scope.outputs.data_only != 'true'
         # AP5 (2026-09-21): a truncated test file produced a green, hollow run because the missing
         # tests were simply not collected. Fails if any file's test count falls below the committed
         # baseline (tests/test_count_baseline/, one .count file per test file) or a test file is missing/unlisted. Lowering the
         # baseline is an explicit `--update`, visible in the PR diff. Limits: see the script docstring.
         run: python scripts/check_test_counts.py
       - name: Check plain-language compliance (U1/U3, docs/PLAIN_LANGUAGE_AUDIT.md)
+        if: steps.scope.outputs.data_only != 'true'
         # Fails if a banned statistical/ML jargon term (coverage, n=, calibrated,
         # volatility, model, ...) appears in text an ordinary gold buyer would
         # actually read -- index.html, i18n.js, app.js, ml/public_copy.py,
@@ -161,8 +201,10 @@ jobs:
         # exact scope per file and its stated blind spots.
         run: python scripts/check_plain_language.py
       - name: Retailer-language guard (ADR 059 -- no judgmental wording near a retailer name)
+        if: steps.scope.outputs.data_only != 'true'
         run: python scripts/check_retailer_language.py
       - name: Check for hand-typed computed claims (accuracy/coverage/error)
+        if: steps.scope.outputs.data_only != 'true'
         # Fails if user-facing text contains a hand-typed accuracy/coverage/error
         # claim as a literal digit ("N times out of M", "right N%", "coverage N%",
         # Hindi "N में से M बार", ...) instead of a value computed from data/*.json.
@@ -172,63 +214,40 @@ jobs:
         # the ALLOWLIST mechanism for genuine non-claims.
         run: python scripts/check_computed_claims.py
       - name: Every .portfolio/metrics.json metric must have a committed artifact
+        if: steps.scope.outputs.data_only != 'true'
         # Moved here from ci.yml (which triggered on `main` only, so it never ran: default branch
         # is master). A metric without a committed artifact behind it can silently drift from what
         # the portfolio site shows (2026-08-05 audit). Reads .portfolio/metrics.json + `git ls-files`.
         run: python scripts/check_manifest_provenance.py
-      # Data-only path, SHADOW (GG 2026-10-30). A PR that changes only data cannot break the code, so
-      # it could validate the data instead of running the code checks (the 2026-10-29 pandas-stubs
-      # mypy break blocked every bot data PR for ~19.5 h). Before that decides anything, this step
-      # only RECORDS what the data-only path would have decided next to the real result of the full
-      # checks above, which still decide. It never fails the job (continue-on-error, exit 0). The
-      # switch is a separate PR after >= 5 real bot data PRs over >= 24 h where the scope call was
-      # right, validation agreed with the full result and no code file was classed as data.
-      # MASTER's copy of the scope decision and of bot-pr-sync's allowlist, never the PR's own.
-      - name: Data-only path (shadow) -- what it would have decided; the checks above still decide
+      # One comparable line per run, so the data-only path stays measurable after the switch. Records
+      # only (continue-on-error, exit 0): the deciding steps above are what fail the job. `scope=full`
+      # lines show validate=skipped data_tests=skipped.
+      - name: Data-only path (decision record) -- one line per run; records, never decides
         if: always()
         continue-on-error: true
-        # a hung install must not hold the required job; a timeout is just a failed step
-        timeout-minutes: 5
+        timeout-minutes: 2
         env:
           APPLIES: ${{ steps.scope.outputs.applies }}
           DATA_ONLY: ${{ steps.scope.outputs.data_only }}
           SCOPE_REASON: ${{ steps.scope.outputs.reason }}
           SCOPE_OUTCOME: ${{ steps.scope.outcome }}
-          FULL_RESULT: ${{ job.status }}
+          VALIDATE: ${{ steps.validate.outcome }}
+          DATA_TESTS: ${{ steps.data_tests.outcome }}
+          RESULT: ${{ job.status }}
         run: |
           set +e
           if [ "$APPLIES" = "false" ]; then
-            echo "data-only shadow: not a PR into master or a dispatched branch; nothing to record"
+            echo "data-only record: not a PR into master or a dispatched branch; nothing to record"
             exit 0
           fi
           # only an explicit data_only=true from the Scope step is data-only; anything else is full
           if [ "$DATA_ONLY" = "true" ]; then MODE=data-only; else MODE=full; fi
           REASON="${SCOPE_REASON:-scope step did not finish (outcome: $SCOPE_OUTCOME)}"
-          python -m pip install -q -c ml/requirements-inference.lock jsonschema pytest > /dev/null 2>&1
-          python scripts/validate_data.py > "$RUNNER_TEMP/validate.txt" 2>&1
-          case $? in 0) VALID=pass ;; 1) VALID=fail ;; *) VALID=error ;; esac
-          # indented, so a line from the PR's data can never be read as a `::` workflow command
-          tail -n 20 "$RUNNER_TEMP/validate.txt" | sed 's/^/  /'
-          # FOR_GG item 11 (option C): the tests that read data/ would decide a data-only PR. Which
-          # tests failed, and whether each read data/, comes from the full suite's record above.
-          DTESTS=n/a
-          if [ "$MODE" = "data-only" ]; then
-            python scripts/data_test_decision.py --reads "$RUNNER_TEMP/data_reads.json" > "$RUNNER_TEMP/data_tests.txt" 2>&1
-            case $? in 0) DTESTS=pass ;; 1) DTESTS=fail ;; *) DTESTS=error ;; esac
-            head -n 40 "$RUNNER_TEMP/data_tests.txt" | sed 's/^/  /'
-          fi
-          # The data-only decision passes only when the data validates AND its tests pass. Agreement
-          # is only meaningful where data-only would have decided: on a full-scope PR the code checks
-          # can fail for reasons validation never looks at; a cancelled run decided nothing; and with
-          # no record of the tests (data_tests=error, e.g. a linter failed before the suite ran, the
-          # 2026-10-29 shape) the data-only path was never actually tried, so it cannot count.
-          if [ "$VALID" = "pass" ] && [ "$DTESTS" = "pass" ]; then DECIDE=pass; else DECIDE=fail; fi
-          if [ "$MODE" != "data-only" ] || [ "$FULL_RESULT" = "cancelled" ] || [ "$DTESTS" = "error" ]; then AGREE=n/a
-          elif { [ "$DECIDE" = "pass" ] && [ "$FULL_RESULT" = "success" ]; } \
-            || { [ "$DECIDE" != "pass" ] && [ "$FULL_RESULT" != "success" ]; }; then AGREE=yes
-          else AGREE=no; fi
-          LINE="DATA-ONLY SHADOW: scope=$MODE validate=$VALID data_tests=$DTESTS full=$FULL_RESULT agree=$AGREE reason=$REASON"
+          LINE="DATA-ONLY DECISION: scope=$MODE validate=$VALIDATE data_tests=$DATA_TESTS result=$RESULT reason=$REASON"
           echo "$LINE"
+          if [ "$MODE" = "data-only" ] && [ "$DATA_TESTS" != "success" ]; then
+            echo "::warning title=data-only-tests::data-reading tests did not pass (outcome: $DATA_TESTS); report-only, read the step log"
+          fi
           {
             echo "$LINE"
             echo ""

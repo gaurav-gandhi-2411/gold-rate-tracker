@@ -60,6 +60,7 @@ import numpy as np
 import pandas as pd
 
 from ml import runtime_leak_guard as rlg
+from ml.data_sanity import positive_or_nan, sanitize_ibja
 
 logger = logging.getLogger(__name__)
 
@@ -143,7 +144,7 @@ MLP_EPOCHS = 300
 
 def load_ibja(path: Path = IBJA_PATH) -> pd.DataFrame:
     """IBJA rates with a PM fix, in Rs./g of 22K (pm_916 is per 10 g), sorted by date."""
-    df = pd.read_parquet(path)
+    df = sanitize_ibja(pd.read_parquet(path))  # a 0 rate is no rate (-> NaN, then dropped)
     df["date"] = pd.to_datetime(df["date"]).dt.tz_localize(None).dt.normalize()
     df = df.dropna(subset=["pm_916"]).sort_values("date").reset_index(drop=True)
     df["pm"] = df["pm_916"] / 10.0
@@ -159,13 +160,13 @@ def global_series(macro: pd.DataFrame | None = None, label_path: Path = LABEL_PA
     """
     parts: list[pd.Series] = []
     if label_path.exists():
-        lb = pd.read_parquet(label_path)["raw_pre_duty"].dropna()
+        lb = positive_or_nan(pd.read_parquet(label_path)["raw_pre_duty"]).dropna()
         idx = pd.DatetimeIndex(lb.index)
         idx = idx.tz_localize(None) if idx.tz is not None else idx
         lb.index = idx.normalize()
         parts.append(lb.astype(float))
     if macro is not None and {"gold_usd", "usd_inr"} <= set(macro.columns):
-        m = (macro["gold_usd"] * macro["usd_inr"]).dropna().astype(float)
+        m = (positive_or_nan(macro["gold_usd"]) * positive_or_nan(macro["usd_inr"])).dropna()
         idx = pd.DatetimeIndex(m.index)
         idx = idx.tz_localize(None) if idx.tz is not None else idx
         m.index = idx.normalize()
@@ -196,7 +197,7 @@ def global_series(macro: pd.DataFrame | None = None, label_path: Path = LABEL_PA
 
 def load_ibja_full(path: Path = IBJA_PATH) -> pd.DataFrame:
     """Every IBJA day, AM and PM in Rs./g of 22K (a day may have an AM fix and no PM fix yet)."""
-    df = pd.read_parquet(path)
+    df = sanitize_ibja(pd.read_parquet(path))  # a 0 rate is no rate (-> NaN)
     df["date"] = pd.to_datetime(df["date"]).dt.tz_localize(None).dt.normalize()
     df = df.sort_values("date").drop_duplicates("date", keep="last").reset_index(drop=True)
     df["pm"] = df["pm_916"] / 10.0
@@ -591,23 +592,59 @@ def _day(ts: pd.Timestamp) -> str:
     return ts.strftime("%Y-%m-%d")
 
 
+def fold_is_valid(f: dict) -> bool:
+    """A stored fold must carry real prices: ``pm0``/``pm1`` finite and > 0 and ``ret`` finite.
+
+    A fold written while a rate was stored as 0 (an unpublished fix) has ``pm0 == 0``; every reader
+    then divides by ``vol * pm0`` and the live forecast fails on every run (2026-11-12). Only keys
+    that are present are checked, so older folds without a key keep their old behaviour."""
+    for key in ("pm0", "pm1"):
+        if key in f and not (
+            isinstance(f[key], int | float) and math.isfinite(f[key]) and f[key] > 0
+        ):
+            return False
+    return not ("ret" in f and not (isinstance(f["ret"], int | float) and math.isfinite(f["ret"])))
+
+
+# Folds set aside by load_oos, per file, so save_oos keeps them in the file under
+# "quarantined_invalid" (audit trail: nothing is deleted, readers just never see them as forecasts).
+_QUARANTINED: dict[str, list[dict]] = {}
+
+
 def load_oos(path: Path = OOS_PATH) -> list[dict]:
     try:
         data = json.loads(path.read_text())
     except (OSError, ValueError):
         return []
-    return list(data.get("folds", [])) if isinstance(data, dict) else []
+    if not isinstance(data, dict):
+        return []
+    folds = list(data.get("folds", []))
+    bad = [f for f in folds if not fold_is_valid(f)]
+    prior = [f for f in data.get("quarantined_invalid", []) if isinstance(f, dict)]
+    if bad:
+        logger.warning(
+            "%s: %d fold(s) with a non-positive or non-finite price set aside (days: %s); "
+            "kept under quarantined_invalid",
+            path.name,
+            len(bad),
+            ", ".join(str(f.get("d0")) for f in bad),
+        )
+    if bad or prior:
+        _QUARANTINED[str(path)] = prior + [f for f in bad if f not in prior]
+    return [f for f in folds if fold_is_valid(f)]
 
 
 def save_oos(
     folds: list[dict], path: Path = OOS_PATH, model_version: str = ENSEMBLE_VERSION
 ) -> None:
-    payload = {
+    payload: dict[str, Any] = {
         "schema_version": 1,
         "model_version": model_version,
         "note": "One out-of-sample forecast per IBJA day, trained only on fixes known before it.",
-        "folds": sorted(folds, key=lambda f: f["d0"]),
+        "folds": sorted((f for f in folds if fold_is_valid(f)), key=lambda f: f["d0"]),
     }
+    if _QUARANTINED.get(str(path)):
+        payload["quarantined_invalid"] = _QUARANTINED[str(path)]
     path.write_text(json.dumps(payload, indent=1) + "\n")
 
 
@@ -787,7 +824,7 @@ def conformal_q(folds: list[dict]) -> float | None:
     scores = [
         abs(f["pm1"] - f["pm0"] * math.exp(f["ret"])) / (f["vol"] * f["pm0"])
         for f in recent
-        if f["vol"] > 0
+        if f["vol"] > 0 and f["pm0"] > 0  # a 0 price is no forecast (see fold_is_valid)
     ]
     return float(np.quantile(scores, NOMINAL)) if len(scores) >= MIN_CONFORMAL else None
 

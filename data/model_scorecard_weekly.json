@@ -1,8 +1,8 @@
 {
  "schema_version": 1,
- "generated_at_utc": "2026-11-06T18:35:08Z",
+ "generated_at_utc": "2026-11-08T08:20:14Z",
  "script": "scripts/build_model_scorecard.py",
- "git_sha": "c3cbf73abc319deab1075eacc6406285344f68ca",
+ "git_sha": "0554e6f9dd939284b642b30b5841e8855a7c0001",
  "script_blob_sha": "96919e6b872c34aa0c83b683706ea9ef20228de4",
  "min_forward_n": 20,
  "nominal_coverage": 0.8,
@@ -100,7 +100,7 @@
     "marking": "VERIFIED"
    },
    "gate": {
-    "text": "direction gate ship, timing gate no ship; direction shown to users: no",
+    "text": "direction gate ship, timing gate no ship; direction shown to users: yes",
     "passes": true,
     "marking": "INFERRED"
    },
@@ -347,7 +347,7 @@
      "demoted: no",
      "since: n/a",
      "reasons recorded: none",
-     "state file last checked: 2026-11-06T14:32:18.361465+00:00",
+     "state file last checked: 2026-11-08T07:54:31.853243+00:00",
      "rules breaching now (forecast.json): none",
      "live record nextfix_p3_v1; re-promotion is never automatic (a person decides)"
     ]
@@ -657,17 +657,17 @@
    },
    "retrospective": {
     "label": "walk-forward over earlier history, NOT forward",
-    "text": "n=132: coverage 0.727 (95% 0.646-0.796) vs 0.80 promised; stratified shadow band 0.826",
+    "text": "n=133: coverage 0.729 (95% 0.648-0.798) vs 0.80 promised; stratified shadow band 0.827",
     "marking": "INFERRED"
    },
    "gate": {
-    "text": "resolvable at n: True; below 80% (p vs nominal 0.049)",
+    "text": "resolvable at n: True; below 80% (p vs nominal 0.050)",
     "passes": false,
     "marking": "INFERRED"
    },
    "verdict": "grey",
    "verdict_kind": "no_data",
-   "sentence": "No forward data: this band has no per-day ledger of issued ranges, so only the retrospective miss is known (73% inside vs 80% promised, n=132).",
+   "sentence": "No forward data: this band has no per-day ledger of issued ranges, so only the retrospective miss is known (73% inside vs 80% promised, n=133).",
    "sources": [
     "data/calibration_band_coverage.json"
    ],
@@ -1065,23 +1065,23 @@
    "forward_start": "2026-09-24",
    "forward_start_basis": "ADR 061/063 shadow_after in data/nowcast_shadow_log.json; date > this date",
    "forward": {
-    "n": 36,
-    "effective_n": 32.4,
+    "n": 38,
+    "effective_n": 33.3,
     "metric": "mean absolute error of today's rate",
     "unit": "Rs/g",
-    "model": 44.39,
-    "baseline": 52.91,
+    "model": 45.36,
+    "baseline": 51.85,
     "baseline_name": "the live estimate (M0)",
-    "diff": -8.53,
+    "diff": -6.5,
     "ci95": [
-     -21.31,
-     4.26
+     -19.12,
+     6.13
     ],
-    "p_one_sided": 0.0958,
+    "p_one_sided": 0.157,
     "p_kind": "one-sided HAC Diebold-Mariano (lag 1)",
     "bh_significant": false,
     "first_date": "2026-09-25",
-    "last_date": "2026-11-05",
+    "last_date": "2026-11-07",
     "marking": "VERIFIED",
     "extras": [
      "5 day(s) excluded: an input was published after the target (ADR 063)"
@@ -1114,23 +1114,23 @@
    "forward_start": "2026-07-19",
    "forward_start_basis": "first as_of_date in data/fusion_snapshots.parquet (every snapshot is forward)",
    "forward": {
-    "n": 98,
-    "effective_n": 97.7,
+    "n": 99,
+    "effective_n": 97.1,
     "metric": "mean absolute gap to Tanishq (same day)",
     "unit": "Rs/g",
-    "model": 41.64,
-    "baseline": 92.86,
+    "model": 39.93,
+    "baseline": 91.92,
     "baseline_name": "yesterday's Tanishq rate",
-    "diff": -51.21,
+    "diff": -51.99,
     "ci95": [
-     -72.3,
-     -30.13
+     -73.32,
+     -30.65
     ],
     "p_one_sided": 0.0,
     "p_kind": "one-sided HAC Diebold-Mariano (lag 1)",
     "bh_significant": true,
     "first_date": "2026-07-19",
-    "last_date": "2026-11-06",
+    "last_date": "2026-11-07",
     "marking": "VERIFIED",
     "extras": [
      "benchmark is the last national snapshot of the day; Tanishq is the day's last reading"

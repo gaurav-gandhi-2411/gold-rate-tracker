@@ -1,0 +1,38 @@
+# Test files MEASURED reading data/ (scripts/data_reads_plugin.py, full suite, one per line).
+# The data-only lint path runs these UNION the static scan (scripts/select_data_tests.py).
+# Measured 2026-11-07 on the tip of the switch PR: DATA_READS_OUT=r.json pytest -m "not integration" tests/
+# (3295 passed, 13 skipped; Windows, so a test that skips there is missing: widen, never narrow).
+# Refresh: list every file with a non-empty data_reads (or in collect_reads); see docs/RUNBOOK.md.
+tests/test_cadence_metrics.py
+tests/test_calibration_unlock_chain.py
+tests/test_carry_forward_readings.py
+tests/test_champion_switch.py
+tests/test_ci_scope_and_validate_data.py
+tests/test_comex_daily.py
+tests/test_config_sweep.py
+tests/test_degradation_chain.py
+tests/test_demotion_wired.py
+tests/test_direction_gate.py
+tests/test_drift.py
+tests/test_duty_and_calendar.py
+tests/test_feature_store.py
+tests/test_inference_h5_fallback.py
+tests/test_inference_main.py
+tests/test_leak_guard_replays.py
+tests/test_live_share_card.py
+tests/test_long_history_samples.py
+tests/test_macro.py
+tests/test_nextfix.py
+tests/test_nextfix_hourly.py
+tests/test_nextfix_p3.py
+tests/test_nextfix_w2.py
+tests/test_og_card.py
+tests/test_p3_past_errors.py
+tests/test_p3_variants.py
+tests/test_pipeline_integration.py
+tests/test_price_history_integrity.py
+tests/test_public_price_surfaces.py
+tests/test_retailer_takedown.py
+tests/test_runtime_leak_guard.py
+tests/test_schema_contracts.py
+tests/test_unpublished_days.py

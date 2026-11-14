@@ -26,6 +26,8 @@ import pandas as pd
 from sklearn.linear_model import HuberRegressor, LinearRegression
 from sklearn.metrics import r2_score
 
+from ml.data_sanity import sanitize_ibja
+
 ROOT = Path(__file__).resolve().parent.parent
 DATA_DIR = ROOT / "data"
 CALIBRATION_JSON = DATA_DIR / "calibration.json"
@@ -165,7 +167,7 @@ def _merge_overlap(ibja_df: pd.DataFrame, tanishq_df: pd.DataFrame) -> pd.DataFr
     """Align ibja_df/tanishq_df on date, oldest-first. Shared by fit_calibration
     and walk_forward_validate so both see identical ordering (walk-forward
     validity depends on it)."""
-    ibja = ibja_df[["date", "pm_916"]].copy()
+    ibja = sanitize_ibja(ibja_df)[["date", "pm_916"]].dropna(subset=["pm_916"])
     ibja["ibja_per_g"] = ibja["pm_916"] / 10.0
 
     tanishq = tanishq_df[["date", "22k"]].copy()
@@ -379,7 +381,7 @@ def evaluate_empirical_band_coverage(
     y = same_day["tanishq_22k"].to_numpy()
     same_day_dates = pd.to_datetime(same_day["date"]).to_numpy()
 
-    ibja_sorted = ibja_df[["date", "pm_916"]].dropna(subset=["pm_916"]).copy()
+    ibja_sorted = sanitize_ibja(ibja_df)[["date", "pm_916"]].dropna(subset=["pm_916"])
     ibja_sorted["date_dt"] = pd.to_datetime(ibja_sorted["date"])
     ibja_sorted["ibja_per_g"] = ibja_sorted["pm_916"] / 10.0
     ibja_sorted = ibja_sorted.sort_values("date_dt")
@@ -471,7 +473,7 @@ def evaluate_stratified_band_coverage(
     y = same_day["tanishq_22k"].to_numpy()
     same_day_dates = pd.to_datetime(same_day["date"]).to_numpy()
 
-    ibja_sorted = ibja_df[["date", "pm_916"]].dropna(subset=["pm_916"]).copy()
+    ibja_sorted = sanitize_ibja(ibja_df)[["date", "pm_916"]].dropna(subset=["pm_916"])
     ibja_sorted["date_dt"] = pd.to_datetime(ibja_sorted["date"])
     ibja_sorted["ibja_per_g"] = ibja_sorted["pm_916"] / 10.0
     ibja_sorted = ibja_sorted.sort_values("date_dt")

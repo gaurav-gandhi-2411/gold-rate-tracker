@@ -20,6 +20,8 @@ from pathlib import Path
 
 import pandas as pd
 
+from ml.data_sanity import sanitize_ibja
+
 ROOT = Path(__file__).resolve().parent.parent
 DATA_DIR = ROOT / "data"
 CHRONOS_PROBE_JSON = DATA_DIR / "chronos_probe.json"
@@ -188,7 +190,7 @@ def run_probe(
         _write_probe(probe, out_path)
         return probe
 
-    ibja_df = pd.read_parquet(ibja_path)
+    ibja_df = sanitize_ibja(pd.read_parquet(ibja_path))
     if ibja_df.empty or "pm_916" not in ibja_df.columns:
         probe["status"] = "insufficient_context"
         _write_probe(probe, out_path)

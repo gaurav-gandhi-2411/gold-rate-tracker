@@ -29,6 +29,7 @@ from ml.chronos_forecast import (
     forecast_ibja,
     load_chronos_pipeline,
 )
+from ml.data_sanity import sanitize_ibja
 from ml.known_at import ibja_known_at
 from ml.leak_guard import KnownInput, assert_known_before
 from ml.metrics import (
@@ -56,7 +57,7 @@ logger = logging.getLogger(__name__)
 
 def load_ibja_series(parquet_path: Path = IBJA_PARQUET) -> pd.Series:
     """Load IBJA-916-PM daily series as INR/g, sorted ascending, non-null."""
-    df = pd.read_parquet(parquet_path)
+    df = sanitize_ibja(pd.read_parquet(parquet_path))
     df = df.sort_values("date").dropna(subset=["pm_916"])
     return df.set_index("date")["pm_916"] / 10.0
 
