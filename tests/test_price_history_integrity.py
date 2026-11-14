@@ -127,12 +127,69 @@ def test_reference_with_too_few_comparable_rows_is_not_ok(tmp_path, capsys, monk
     assert "(ii) reference: 0 sampled" not in out
 
 
-def test_check_price_runs_it_non_blocking():
-    """Standing rule (2026-10-30): a new check starts non-blocking. Flipping it is a separate PR
-    citing 5 clean real runs over >= 24 h."""
+def test_check_price_runs_it_blocking_on_gaps_and_basis_errors():
+    """Flipped from report-only on 2026-11-14 after 39 clean real runs (standing rule 2026-10-30).
+    The step must fail the job (no continue-on-error) and run with --strict; what --strict fails on
+    is pinned by the main() tests below."""
     wf = yaml.safe_load((REPO / ".github" / "workflows" / "check-price.yml").read_text("utf-8"))
     steps = [s for j in wf["jobs"].values() for s in j.get("steps", [])]
     mine = [s for s in steps if "check_price_history_integrity.py" in str(s.get("run", ""))]
     assert len(mine) == 1
-    assert mine[0].get("continue-on-error") is True
-    assert "--strict" not in mine[0]["run"]
+    assert "continue-on-error" not in mine[0]
+    assert "--strict" in mine[0]["run"] and "--reference" in mine[0]["run"]
+
+
+def _data_with_unexplained_move(d: Path) -> None:
+    d.mkdir()
+    pd.DataFrame(
+        {
+            "date": ["2026-09-23", "2026-09-24"],
+            "pm_916": [141000.0, 131000.0],
+            "pm_999": [154000.0, 143000.0],
+            "pm_750": [115000.0, 107000.0],
+        }
+    ).to_parquet(d / "ibja_rates.parquet")
+    (d / "calibration.json").write_text(json.dumps({"slope": 1.0, "intercept": 0.0}))
+    (d / "price_move_explanations.json").write_text(json.dumps({"moves": []}))
+    published = _rows(*[(f"2026-09-{n:02d}", 13_000 + n) for n in range(1, 25)])
+    (d / "ibja_derived_prices.json").write_text(json.dumps(published))
+
+
+def test_strict_does_not_block_on_an_unexplained_move_alone(tmp_path, capsys):
+    # a real >3% market day must not stop the data sync; it goes to the ops log instead
+    d = tmp_path / "data"
+    _data_with_unexplained_move(d)
+    assert chk.main(["--data-dir", str(d), "--strict"]) == 0
+    out = capsys.readouterr().out
+    assert "1 UNEXPLAINED" in out and "GAP(S)" not in out
+
+
+def test_strict_does_not_block_on_could_not_verify_alone(tmp_path, capsys):
+    d = tmp_path / "data"
+    d.mkdir()
+    (d / "ibja_derived_prices.json").write_text("not json")
+    assert chk.main(["--data-dir", str(d), "--strict"]) == 0
+    assert "COULD NOT VERIFY" in capsys.readouterr().out
+
+
+def test_strict_blocks_on_a_gap_in_the_published_chart_file(tmp_path):
+    d = tmp_path / "data"
+    d.mkdir()
+    (d / "price_move_explanations.json").write_text(json.dumps({"moves": []}))
+    (d / "ibja_derived_prices.json").write_text(
+        json.dumps(_rows(("2025-08-08", 9385), ("2025-11-17", 11428)))
+    )
+    assert chk.main(["--data-dir", str(d), "--strict"]) == 1
+    assert chk.main(["--data-dir", str(d)]) == 0  # without --strict it never fails the run
+
+
+def test_strict_blocks_on_a_reference_basis_error(tmp_path, monkeypatch):
+    d = tmp_path / "data"
+    _data_with_unexplained_move(d)
+    (d / "duty_cbic.json").write_text(json.dumps({"rows": []}))
+    monkeypatch.setattr(chk, "fetch_reference", lambda start: ({}, {}))
+    monkeypatch.setattr(
+        chk, "reference_flags", lambda sample, gold, fx, duty: (["row"], len(sample))
+    )
+    assert chk.main(["--data-dir", str(d), "--reference", "--strict"]) == 1
+    assert chk.main(["--data-dir", str(d), "--reference"]) == 0

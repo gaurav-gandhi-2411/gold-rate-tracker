@@ -16,9 +16,13 @@ shapes of that failure before they are published:
   (iii) GAPS: the published chart file (data/ibja_derived_prices.json) must not contain a gap
         longer than MAX_PUBLISHED_GAP_DAYS (scripts/build_ibja_derived_prices.PUBLIC_CHART_FROM).
 
-REPORT-ONLY (.claude/CLAUDE.md, 2026-10-30: a new check that can stop a production run starts
-non-blocking). It prints, writes the job summary and exits 0. --strict (exit 1 on a finding or
-on "could not verify") is for the later blocking PR, after 5 clean real runs over >= 24 h.
+BLOCKING since the flip PR (2026-11-14; it started report-only per .claude/CLAUDE.md, 2026-10-30,
+and had 39 clean real runs of 40 check-price runs 2026-11-07..13). With --strict it exits 1 only
+on a finding that means the PUBLISHED series is wrong: a gap in the chart file (iii) or a basis
+error against the reference (ii). It deliberately does NOT block on (i) an unexplained move (a real
+>3% market day would then stop the site's data until someone listed it; four such days happened
+since 2025) or on "could not verify" (the reference needs the network). Those are printed, written
+to the job summary and recorded in the ops log. Without --strict it always exits 0.
 
     python scripts/check_price_history_integrity.py [--data-dir data] [--reference] [--strict]
 """
@@ -188,11 +192,17 @@ def main(argv: list[str] | None = None) -> int:
     ap = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     ap.add_argument("--data-dir", type=Path, default=ROOT / "data")
     ap.add_argument("--reference", action="store_true", help="also run (ii), needs the network")
-    ap.add_argument("--strict", action="store_true", help="exit 1 on any finding (not yet used)")
+    ap.add_argument(
+        "--strict",
+        action="store_true",
+        help="exit 1 on a gap in the chart file or a reference basis error (not on moves or "
+        "'could not verify'; see the module docstring)",
+    )
     args = ap.parse_args(argv)
     d = args.data_dir
     lines: list[str] = []
     findings = 0
+    blocking = 0  # findings that mean the published series is wrong: gaps (iii), basis errors (ii)
     unverified = 0
 
     # Every input read below fails closed: an unreadable or malformed file is "COULD NOT VERIFY"
@@ -236,6 +246,7 @@ def main(argv: list[str] | None = None) -> int:
     if published is not None:
         gaps = published_gaps(published)
         findings += len(gaps)
+        blocking += len(gaps)
         lines.append(
             f"(iii) published gaps: {len(published)} rows, max allowed {MAX_PUBLISHED_GAP_DAYS} d"
             " -- " + ("OK" if not gaps else f"{len(gaps)} GAP(S): {gaps}")
@@ -257,6 +268,7 @@ def main(argv: list[str] | None = None) -> int:
                 could_not("(ii) reference", f"{type(err).__name__}: {err}")
             else:
                 findings += len(flags)
+                blocking += len(flags)
                 if n < len(sample) // 2:
                     could_not("(ii) reference", f"only {n}/{len(sample)} rows had a reference")
                 else:
@@ -269,16 +281,29 @@ def main(argv: list[str] | None = None) -> int:
                     lines.append(f"(ii) reference: {len(flags)} OUTSIDE: {flags}")
 
     verdict = "FINDINGS" if findings else ("COULD NOT VERIFY" if unverified else "OK")
-    report = [f"price-history integrity (report-only): {verdict}", *lines]
+    mode = "blocking on gaps and basis errors" if args.strict else "report-only"
+    report = [f"price-history integrity ({mode}): {verdict}", *lines]
     print("\n".join(report))
     summary = os.environ.get("GITHUB_STEP_SUMMARY")
     if summary:
         with open(summary, "a", encoding="utf-8") as fh:
-            fh.write("### Price-history integrity (report-only)\n\n")
+            fh.write(f"### Price-history integrity ({mode})\n\n")
             fh.write("\n".join(f"- {x}" for x in report) + "\n")
-    if args.strict and (findings or unverified):
-        return 1
-    return 0
+    if args.strict and (findings or unverified) and not blocking:
+        # not blocking, but someone should look: the ops log carries it (never the phone)
+        _tell_ops(f"{verdict}: " + " | ".join(x for x in lines if "-- OK" not in x))
+    return 1 if args.strict and blocking else 0
+
+
+def _tell_ops(body: str) -> None:
+    """Best effort: one ops-log entry; never raises, never changes the exit code."""
+    try:
+        sys.path.insert(0, str(Path(__file__).resolve().parent))
+        import ops_log
+
+        ops_log.record("price-history-integrity", "price history needs a look", body[:480])
+    except Exception as err:  # the check's verdict must not depend on logging
+        print(f"ops_log: warning: {err!s:.120}")
 
 
 if __name__ == "__main__":
