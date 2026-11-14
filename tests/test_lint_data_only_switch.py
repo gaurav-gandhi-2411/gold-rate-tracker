@@ -34,6 +34,7 @@ VALIDATE = "Validate the data (scripts/validate_data.py) -- decides a data-only 
 DATA_TESTS = (
     "Run the tests that read data/ (data-only PR; selection fails closed to the full suite)"
 )
+HYGIENE = "PR hygiene: secret scan + large files (report-only until 5 clean real runs over >= 24 h)"
 
 # Run on every run, data-only or not.
 ALWAYS = {
@@ -45,6 +46,7 @@ ALWAYS = {
     "Show installed versions",
     "Installed versions equal the lock",
     "Check raw data stays encrypted (ADR 060)",
+    HYGIENE,  # always-type, but gated by its own `if` (a PR into master or a dispatched branch)
     RECORD,
 }
 # Skipped on a data-only run (the code cannot have changed); run on every other run.
@@ -92,6 +94,8 @@ def _runs(step: dict, data_only: str) -> bool:
     cond = step.get("if")
     if cond is None or cond == "always()":
         return True
+    if cond == "steps.scope.outputs.applies == 'true'":
+        return True  # modelled with applies=true: the PR and dispatched-branch runs this table is about
     if cond == "steps.scope.outputs.data_only != 'true'":
         return data_only != "true"
     if cond == "steps.scope.outputs.data_only == 'true'":
@@ -153,14 +157,14 @@ def test_the_steps_that_ran_before_the_switch_still_run_unconditionally_on_a_ful
         assert "timeout-minutes" not in _step(label) or label == SCOPE, label
 
 
-def test_only_scope_record_and_data_tests_may_be_non_blocking_and_the_job_has_no_condition():
+def test_only_scope_record_data_tests_and_hygiene_may_be_non_blocking_and_the_job_has_no_condition():
     # DATA_TESTS is report-only until 5 clean real runs over >= 24 h (standing rule, 2026-10-30);
     # flipping it is a separate PR that edits test_the_data_test_step_is_report_only below.
     wf = yaml.safe_load((ROOT / ".github/workflows/lint.yml").read_text(encoding="utf-8"))
     job = wf["jobs"]["lint"]
     assert "if" not in job and "continue-on-error" not in job
     for s in _steps():
-        if _label(s) in (SCOPE, RECORD, DATA_TESTS):
+        if _label(s) in (SCOPE, RECORD, DATA_TESTS, HYGIENE):
             assert s["continue-on-error"] is True, _label(s)
         else:
             assert "continue-on-error" not in s, _label(s)
@@ -344,6 +348,18 @@ def test_the_record_step_cannot_decide_it_is_non_blocking_and_exits_zero():
 
 def test_the_data_test_step_is_report_only():
     assert _step(DATA_TESTS)["continue-on-error"] is True
+
+
+def test_the_pr_hygiene_step_is_report_only_and_runs_on_data_only_and_full_prs():
+    # GG 2c (2026-11-13). Flipping it to blocking is a separate PR citing 5 clean real runs over
+    # >= 24 h (.claude/CLAUDE.md, 2026-10-30) that edits this test deliberately.
+    s = _step(HYGIENE)
+    assert s["continue-on-error"] is True
+    assert s["timeout-minutes"] <= 8
+    assert s["if"] == "steps.scope.outputs.applies == 'true'"  # not push / schedule
+    # no data_only condition: it runs on both data-only and full PRs
+    assert _runs(s, "true") and _runs(s, "false")
+    assert "data_only" not in s["if"]
 
 
 @needs_bash
