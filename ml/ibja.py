@@ -366,6 +366,42 @@ def _download_pdf_bytes(url: str) -> bytes | None:
         return None
 
 
+# PDF column index of each stored rate (0=Date, 11 and 12 are silver and ignored).
+_PDF_COLUMNS = {
+    "am_999": 1,
+    "pm_999": 2,
+    "am_995": 3,
+    "pm_995": 4,
+    "am_916": 5,
+    "pm_916": 6,
+    "am_750": 7,
+    "pm_750": 8,
+    "am_585": 9,
+    "pm_585": 10,
+}
+
+
+def _pdf_cell(row: list, idx: int) -> float:
+    """One PDF table cell as a rate, or NaN when it is blank, '-' or not a number."""
+    try:
+        return float(str(row[idx]).replace(",", "").strip())
+    except (ValueError, TypeError, IndexError):
+        return float("nan")
+
+
+def _null_non_rates(df: pd.DataFrame) -> tuple[pd.DataFrame, int]:
+    """Set every stored rate cell that is 0 or negative to NaN (never touches a positive or NaN
+    cell). Returns (frame, number of cells changed): a stored 0 is no rate, and the PDF may not
+    have a value to replace it with (IBJA published nothing for that fix)."""
+    out = df.copy()
+    changed = 0
+    for col in [c for c in out.columns if c.startswith(("am_", "pm_"))]:
+        bad = out[col].notna() & ~(out[col] > 0)
+        changed += int(bad.sum())
+        out.loc[bad, col] = float("nan")
+    return out, changed
+
+
 def _parse_ibja_pdf(pdf_bytes: bytes) -> pd.DataFrame:
     """Parse ibjarates.com 30-day PDF bytes into ibja_rates schema rows.
 
@@ -405,25 +441,14 @@ def _parse_ibja_pdf(pdf_bytes: bytes) -> pd.DataFrame:
                     except (ValueError, TypeError):
                         logger.warning("ibja: PDF: could not parse date '%s'", row[0])
                         continue
-                    try:
-                        rows.append(
-                            {
-                                "date": date_iso,
-                                "fetched_at": now_utc,
-                                "am_999": float(am_val.replace(",", "")),
-                                "pm_999": float(str(row[2]).replace(",", "")),
-                                "am_995": float(str(row[3]).replace(",", "")),
-                                "pm_995": float(str(row[4]).replace(",", "")),
-                                "am_916": float(str(row[5]).replace(",", "")),
-                                "pm_916": float(str(row[6]).replace(",", "")),
-                                "am_750": float(str(row[7]).replace(",", "")),
-                                "pm_750": float(str(row[8]).replace(",", "")),
-                                "am_585": float(str(row[9]).replace(",", "")),
-                                "pm_585": float(str(row[10]).replace(",", "")),
-                            }
-                        )
-                    except (ValueError, TypeError, IndexError) as exc:
-                        logger.warning("ibja: PDF: could not parse row for %s: %s", row[0], exc)
+                    # One cell at a time: a '-' (a fix IBJA did not publish, e.g. the PM fix of
+                    # 2026-11-10) is a missing rate for THAT cell only; it used to drop the whole row,
+                    # so the backfill could never complete or correct that day.
+                    cells = {name: _pdf_cell(row, idx) for name, idx in _PDF_COLUMNS.items()}
+                    if not any(v == v for v in cells.values()):  # all NaN: nothing was published
+                        logger.warning("ibja: PDF: no rate published in the row for %s", row[0])
+                        continue
+                    rows.append({"date": date_iso, "fetched_at": now_utc, **cells})
     except Exception as exc:
         logger.warning("ibja: pdfplumber failed: %s", exc)
         return pd.DataFrame()
@@ -497,12 +522,18 @@ def backfill_ibja_from_pdf(path: Path | None = None) -> int:
 
     existing = load_ibja_parquet(path)
     filled = 0
+    cleaned = 0
     if not existing.empty and "date" in existing.columns:
+        existing, cleaned = _null_non_rates(existing)  # a stored 0 -> missing, then fillable
+        if cleaned:
+            logger.info(
+                "ibja: backfill_ibja_from_pdf: %d stored rate cell(s) of 0 set to missing", cleaned
+            )
         existing, filled = _fill_null_rates(existing, df_new)
         known_dates = set(existing["date"].values)
         df_new = df_new[~df_new["date"].isin(known_dates)].reset_index(drop=True)
 
-    if df_new.empty and filled == 0:
+    if df_new.empty and filled == 0 and cleaned == 0:
         logger.info("ibja: backfill_ibja_from_pdf: no new rows (all dates already present)")
         return 0
 
@@ -511,12 +542,14 @@ def backfill_ibja_from_pdf(path: Path | None = None) -> int:
     combined = pd.concat([existing, df_new], ignore_index=True) if not df_new.empty else existing
     combined.to_parquet(p, index=False)
     logger.info(
-        "ibja: backfill_ibja_from_pdf: appended %d rows, completed %d partial rows (%d total)",
+        "ibja: backfill_ibja_from_pdf: appended %d rows, completed %d partial rows, "
+        "cleaned %d zero cell(s) (%d total)",
         len(df_new),
         filled,
+        cleaned,
         len(combined),
     )
-    return len(df_new) + filled
+    return len(df_new) + filled + cleaned
 
 
 if __name__ == "__main__":
