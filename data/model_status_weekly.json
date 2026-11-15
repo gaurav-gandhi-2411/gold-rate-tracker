@@ -1,47 +1,47 @@
 {
  "schema_version": 1,
- "generated_at": "2026-11-08T08:20:23.021231+00:00",
+ "generated_at": "2026-11-15T08:39:11.846345+00:00",
  "rule_sha256": "e4efabec2193950ee4bf0193b00b3f17eed8c0cf5f81da4394d13acb51fdbdfa",
  "common_start": "2026-10-07",
  "champion": "p3",
  "champion_state_unreadable": false,
  "champion_history": [],
  "live": {
-  "n": 20,
+  "n": 22,
   "since": "2026-10-07",
-  "mae_model": 106.4,
-  "mae_hold": 121.9,
-  "change_pct": -12.7,
-  "direction_hit": 0.75,
-  "direction_n": 20,
-  "coverage": 0.7,
-  "coverage_n": 20,
-  "last_day": "2026-11-05"
+  "mae_model": 110.7,
+  "mae_hold": 130.8,
+  "change_pct": -15.3,
+  "direction_hit": 0.773,
+  "direction_n": 22,
+  "coverage": 0.682,
+  "coverage_n": 22,
+  "last_day": "2026-11-12"
  },
  "challengers": {
   "ensemble": {
    "since": "2026-10-07",
-   "n": 20,
+   "n": 22,
    "first_day": "2026-10-07",
-   "last_day": "2026-11-05",
+   "last_day": "2026-11-12",
    "first_look_day": 20,
    "looks_started": true,
-   "lower_bound": -0.2244,
-   "gain_estimate": -0.0419,
+   "lower_bound": -0.1999,
+   "gain_estimate": -0.0398,
    "registered": "2026-10-07",
-   "days_since_registration": 19,
-   "horizon_left": 161,
+   "days_since_registration": 21,
+   "horizon_left": 159,
    "retired": false,
    "lower_bound_clears": false,
-   "mae_champion": 106.43,
-   "mae_challenger": 110.9,
-   "gain": -0.0419,
-   "coverage_n": 20,
-   "coverage": 0.6,
-   "coverage_p_below": 0.0321426630808751,
+   "mae_champion": 110.75,
+   "mae_challenger": 115.16,
+   "gain": -0.0398,
+   "coverage_n": 22,
+   "coverage": 0.591,
+   "coverage_p_below": 0.020141695973839583,
    "coverage_ok": false,
-   "direction_champion": 0.75,
-   "direction_challenger": 0.65,
+   "direction_champion": 0.7727272727272727,
+   "direction_challenger": 0.6818181818181818,
    "direction_ok": false,
    "status": "scored",
    "live_capable": true,
@@ -51,27 +51,27 @@
   },
   "p3_roll60": {
    "since": "2026-10-07",
-   "n": 20,
+   "n": 22,
    "first_day": "2026-10-07",
-   "last_day": "2026-11-05",
+   "last_day": "2026-11-12",
    "first_look_day": 20,
    "looks_started": true,
-   "lower_bound": -0.2672,
-   "gain_estimate": 0.0139,
+   "lower_bound": -0.2286,
+   "gain_estimate": 0.032,
    "registered": "2026-10-07",
-   "days_since_registration": 19,
-   "horizon_left": 161,
+   "days_since_registration": 21,
+   "horizon_left": 159,
    "retired": false,
    "lower_bound_clears": false,
-   "mae_champion": 106.43,
-   "mae_challenger": 104.96,
-   "gain": 0.0139,
-   "coverage_n": 20,
-   "coverage": 0.7,
-   "coverage_p_below": 0.19579221454045043,
+   "mae_champion": 110.75,
+   "mae_challenger": 107.2,
+   "gain": 0.032,
+   "coverage_n": 22,
+   "coverage": 0.682,
+   "coverage_p_below": 0.13295078677997352,
    "coverage_ok": true,
-   "direction_champion": 0.75,
-   "direction_challenger": 0.75,
+   "direction_champion": 0.7727272727272727,
+   "direction_challenger": 0.7727272727272727,
    "direction_ok": true,
    "status": "scored",
    "live_capable": true,
@@ -81,27 +81,27 @@
   },
   "p3_monday": {
    "since": "2026-10-07",
-   "n": 20,
+   "n": 22,
    "first_day": "2026-10-07",
-   "last_day": "2026-11-05",
+   "last_day": "2026-11-12",
    "first_look_day": 20,
    "looks_started": true,
-   "lower_bound": -0.0843,
-   "gain_estimate": 0.0148,
+   "lower_bound": -0.0743,
+   "gain_estimate": 0.0129,
    "registered": "2026-10-07",
-   "days_since_registration": 19,
-   "horizon_left": 161,
+   "days_since_registration": 21,
+   "horizon_left": 159,
    "retired": false,
    "lower_bound_clears": false,
-   "mae_champion": 106.43,
-   "mae_challenger": 104.86,
-   "gain": 0.0148,
-   "coverage_n": 20,
-   "coverage": 0.7,
-   "coverage_p_below": 0.19579221454045043,
+   "mae_champion": 110.75,
+   "mae_challenger": 109.32,
+   "gain": 0.0129,
+   "coverage_n": 22,
+   "coverage": 0.682,
+   "coverage_p_below": 0.13295078677997352,
    "coverage_ok": true,
-   "direction_champion": 0.75,
-   "direction_challenger": 0.75,
+   "direction_champion": 0.7727272727272727,
+   "direction_challenger": 0.7727272727272727,
    "direction_ok": true,
    "status": "scored",
    "live_capable": true,
@@ -113,32 +113,32 @@
  "promote": null,
  "autocorr": {
   "ensemble": {
-   "n": 20,
+   "n": 22,
    "lags": [
-    -0.005,
-    -0.091,
-    -0.236,
-    -0.097
+    0.009,
+    -0.181,
+    -0.155,
+    -0.112
    ],
    "high": false
   },
   "p3_roll60": {
-   "n": 20,
+   "n": 22,
    "lags": [
-    -0.304,
-    -0.152,
-    0.336,
-    -0.342
+    -0.264,
+    -0.2,
+    0.414,
+    -0.402
    ],
-   "high": false
+   "high": true
   },
   "p3_monday": {
-   "n": 20,
+   "n": 22,
    "lags": [
-    -0.227,
-    0.012,
-    -0.18,
-    -0.065
+    -0.174,
+    0.019,
+    -0.09,
+    -0.197
    ],
    "high": false
   }
@@ -149,38 +149,54 @@
  },
  "w2": {
   "forward_from": "2026-10-30",
-  "n": 5,
+  "n": 7,
   "need": 40,
-  "earliest_read": "2026-12-24"
+  "earliest_read": "2026-12-29"
  },
  "timeliness": {
   "schema_version": 1,
-  "generated_at": "2026-11-08T08:20:17.702808+00:00",
+  "generated_at": "2026-11-15T08:39:06.223234+00:00",
   "days": 7,
   "tanishq_slots": {
    "days": 7,
    "slots": 46,
-   "served": 32,
-   "missed": 14,
+   "served": 16,
+   "missed": 30,
    "window_minutes": 45,
    "missed_slots_ist": [
-    "2026-11-02T15:35:00+05:30",
-    "2026-11-02T19:50:00+05:30",
-    "2026-11-04T01:40:00+05:30",
-    "2026-11-04T07:30:00+05:30",
-    "2026-11-04T10:40:00+05:30",
-    "2026-11-04T11:10:00+05:30",
-    "2026-11-05T19:50:00+05:30",
-    "2026-11-06T11:10:00+05:30",
-    "2026-11-07T15:35:00+05:30",
-    "2026-11-07T19:50:00+05:30",
     "2026-11-08T01:40:00+05:30",
     "2026-11-08T07:30:00+05:30",
     "2026-11-08T10:40:00+05:30",
-    "2026-11-08T11:10:00+05:30"
+    "2026-11-08T11:10:00+05:30",
+    "2026-11-08T15:35:00+05:30",
+    "2026-11-08T19:50:00+05:30",
+    "2026-11-09T01:40:00+05:30",
+    "2026-11-09T07:30:00+05:30",
+    "2026-11-09T10:40:00+05:30",
+    "2026-11-09T11:10:00+05:30",
+    "2026-11-09T15:35:00+05:30",
+    "2026-11-09T19:50:00+05:30",
+    "2026-11-10T01:40:00+05:30",
+    "2026-11-10T07:30:00+05:30",
+    "2026-11-10T10:40:00+05:30",
+    "2026-11-10T15:35:00+05:30",
+    "2026-11-11T01:40:00+05:30",
+    "2026-11-11T07:30:00+05:30",
+    "2026-11-11T10:40:00+05:30",
+    "2026-11-11T11:10:00+05:30",
+    "2026-11-11T15:35:00+05:30",
+    "2026-11-11T19:50:00+05:30",
+    "2026-11-12T01:40:00+05:30",
+    "2026-11-12T07:30:00+05:30",
+    "2026-11-12T10:40:00+05:30",
+    "2026-11-12T11:10:00+05:30",
+    "2026-11-15T01:40:00+05:30",
+    "2026-11-15T07:30:00+05:30",
+    "2026-11-15T10:40:00+05:30",
+    "2026-11-15T11:10:00+05:30"
    ],
    "classification": {
-    "no_dispatch": 7,
+    "no_dispatch": 23,
     "dispatched_failed": 0,
     "dispatched_cancelled": 0,
     "late": 7,
@@ -188,216 +204,6 @@
     "unknown": 0
    },
    "per_slot": [
-    {
-     "slot_ist": "2026-11-01T01:40:00+05:30",
-     "served": true,
-     "class": "served"
-    },
-    {
-     "slot_ist": "2026-11-01T07:30:00+05:30",
-     "served": true,
-     "class": "served"
-    },
-    {
-     "slot_ist": "2026-11-01T10:40:00+05:30",
-     "served": true,
-     "class": "served"
-    },
-    {
-     "slot_ist": "2026-11-01T11:10:00+05:30",
-     "served": true,
-     "class": "served"
-    },
-    {
-     "slot_ist": "2026-11-01T15:35:00+05:30",
-     "served": true,
-     "class": "served"
-    },
-    {
-     "slot_ist": "2026-11-01T19:50:00+05:30",
-     "served": true,
-     "class": "served"
-    },
-    {
-     "slot_ist": "2026-11-02T01:40:00+05:30",
-     "served": true,
-     "class": "served"
-    },
-    {
-     "slot_ist": "2026-11-02T07:30:00+05:30",
-     "served": true,
-     "class": "served"
-    },
-    {
-     "slot_ist": "2026-11-02T10:40:00+05:30",
-     "served": true,
-     "class": "served"
-    },
-    {
-     "slot_ist": "2026-11-02T11:10:00+05:30",
-     "served": true,
-     "class": "served"
-    },
-    {
-     "slot_ist": "2026-11-02T15:35:00+05:30",
-     "served": false,
-     "class": "late"
-    },
-    {
-     "slot_ist": "2026-11-02T19:50:00+05:30",
-     "served": false,
-     "class": "late"
-    },
-    {
-     "slot_ist": "2026-11-03T01:40:00+05:30",
-     "served": true,
-     "class": "served"
-    },
-    {
-     "slot_ist": "2026-11-03T07:30:00+05:30",
-     "served": true,
-     "class": "served"
-    },
-    {
-     "slot_ist": "2026-11-03T10:40:00+05:30",
-     "served": true,
-     "class": "served"
-    },
-    {
-     "slot_ist": "2026-11-03T11:10:00+05:30",
-     "served": true,
-     "class": "served"
-    },
-    {
-     "slot_ist": "2026-11-03T15:35:00+05:30",
-     "served": true,
-     "class": "served"
-    },
-    {
-     "slot_ist": "2026-11-03T19:50:00+05:30",
-     "served": true,
-     "class": "served"
-    },
-    {
-     "slot_ist": "2026-11-04T01:40:00+05:30",
-     "served": false,
-     "class": "no_dispatch"
-    },
-    {
-     "slot_ist": "2026-11-04T07:30:00+05:30",
-     "served": false,
-     "class": "late"
-    },
-    {
-     "slot_ist": "2026-11-04T10:40:00+05:30",
-     "served": false,
-     "class": "late"
-    },
-    {
-     "slot_ist": "2026-11-04T11:10:00+05:30",
-     "served": false,
-     "class": "late"
-    },
-    {
-     "slot_ist": "2026-11-04T15:35:00+05:30",
-     "served": true,
-     "class": "served"
-    },
-    {
-     "slot_ist": "2026-11-04T19:50:00+05:30",
-     "served": true,
-     "class": "served"
-    },
-    {
-     "slot_ist": "2026-11-05T01:40:00+05:30",
-     "served": true,
-     "class": "served"
-    },
-    {
-     "slot_ist": "2026-11-05T07:30:00+05:30",
-     "served": true,
-     "class": "served"
-    },
-    {
-     "slot_ist": "2026-11-05T10:40:00+05:30",
-     "served": true,
-     "class": "served"
-    },
-    {
-     "slot_ist": "2026-11-05T11:10:00+05:30",
-     "served": true,
-     "class": "served"
-    },
-    {
-     "slot_ist": "2026-11-05T15:35:00+05:30",
-     "served": true,
-     "class": "served"
-    },
-    {
-     "slot_ist": "2026-11-05T19:50:00+05:30",
-     "served": false,
-     "class": "late"
-    },
-    {
-     "slot_ist": "2026-11-06T01:40:00+05:30",
-     "served": true,
-     "class": "served"
-    },
-    {
-     "slot_ist": "2026-11-06T07:30:00+05:30",
-     "served": true,
-     "class": "served"
-    },
-    {
-     "slot_ist": "2026-11-06T10:40:00+05:30",
-     "served": true,
-     "class": "served"
-    },
-    {
-     "slot_ist": "2026-11-06T11:10:00+05:30",
-     "served": false,
-     "class": "late"
-    },
-    {
-     "slot_ist": "2026-11-06T15:35:00+05:30",
-     "served": true,
-     "class": "served"
-    },
-    {
-     "slot_ist": "2026-11-06T19:50:00+05:30",
-     "served": true,
-     "class": "served"
-    },
-    {
-     "slot_ist": "2026-11-07T01:40:00+05:30",
-     "served": true,
-     "class": "served"
-    },
-    {
-     "slot_ist": "2026-11-07T07:30:00+05:30",
-     "served": true,
-     "class": "served"
-    },
-    {
-     "slot_ist": "2026-11-07T10:40:00+05:30",
-     "served": true,
-     "class": "served"
-    },
-    {
-     "slot_ist": "2026-11-07T11:10:00+05:30",
-     "served": true,
-     "class": "served"
-    },
-    {
-     "slot_ist": "2026-11-07T15:35:00+05:30",
-     "served": false,
-     "class": "no_dispatch"
-    },
-    {
-     "slot_ist": "2026-11-07T19:50:00+05:30",
-     "served": false,
-     "class": "no_dispatch"
-    },
     {
      "slot_ist": "2026-11-08T01:40:00+05:30",
      "served": false,
@@ -417,6 +223,216 @@
      "slot_ist": "2026-11-08T11:10:00+05:30",
      "served": false,
      "class": "no_dispatch"
+    },
+    {
+     "slot_ist": "2026-11-08T15:35:00+05:30",
+     "served": false,
+     "class": "no_dispatch"
+    },
+    {
+     "slot_ist": "2026-11-08T19:50:00+05:30",
+     "served": false,
+     "class": "no_dispatch"
+    },
+    {
+     "slot_ist": "2026-11-09T01:40:00+05:30",
+     "served": false,
+     "class": "no_dispatch"
+    },
+    {
+     "slot_ist": "2026-11-09T07:30:00+05:30",
+     "served": false,
+     "class": "no_dispatch"
+    },
+    {
+     "slot_ist": "2026-11-09T10:40:00+05:30",
+     "served": false,
+     "class": "no_dispatch"
+    },
+    {
+     "slot_ist": "2026-11-09T11:10:00+05:30",
+     "served": false,
+     "class": "no_dispatch"
+    },
+    {
+     "slot_ist": "2026-11-09T15:35:00+05:30",
+     "served": false,
+     "class": "no_dispatch"
+    },
+    {
+     "slot_ist": "2026-11-09T19:50:00+05:30",
+     "served": false,
+     "class": "no_dispatch"
+    },
+    {
+     "slot_ist": "2026-11-10T01:40:00+05:30",
+     "served": false,
+     "class": "no_dispatch"
+    },
+    {
+     "slot_ist": "2026-11-10T07:30:00+05:30",
+     "served": false,
+     "class": "late"
+    },
+    {
+     "slot_ist": "2026-11-10T10:40:00+05:30",
+     "served": false,
+     "class": "late"
+    },
+    {
+     "slot_ist": "2026-11-10T11:10:00+05:30",
+     "served": true,
+     "class": "served"
+    },
+    {
+     "slot_ist": "2026-11-10T15:35:00+05:30",
+     "served": false,
+     "class": "late"
+    },
+    {
+     "slot_ist": "2026-11-10T19:50:00+05:30",
+     "served": true,
+     "class": "served"
+    },
+    {
+     "slot_ist": "2026-11-11T01:40:00+05:30",
+     "served": false,
+     "class": "no_dispatch"
+    },
+    {
+     "slot_ist": "2026-11-11T07:30:00+05:30",
+     "served": false,
+     "class": "no_dispatch"
+    },
+    {
+     "slot_ist": "2026-11-11T10:40:00+05:30",
+     "served": false,
+     "class": "no_dispatch"
+    },
+    {
+     "slot_ist": "2026-11-11T11:10:00+05:30",
+     "served": false,
+     "class": "no_dispatch"
+    },
+    {
+     "slot_ist": "2026-11-11T15:35:00+05:30",
+     "served": false,
+     "class": "late"
+    },
+    {
+     "slot_ist": "2026-11-11T19:50:00+05:30",
+     "served": false,
+     "class": "late"
+    },
+    {
+     "slot_ist": "2026-11-12T01:40:00+05:30",
+     "served": false,
+     "class": "no_dispatch"
+    },
+    {
+     "slot_ist": "2026-11-12T07:30:00+05:30",
+     "served": false,
+     "class": "no_dispatch"
+    },
+    {
+     "slot_ist": "2026-11-12T10:40:00+05:30",
+     "served": false,
+     "class": "late"
+    },
+    {
+     "slot_ist": "2026-11-12T11:10:00+05:30",
+     "served": false,
+     "class": "late"
+    },
+    {
+     "slot_ist": "2026-11-12T15:35:00+05:30",
+     "served": true,
+     "class": "served"
+    },
+    {
+     "slot_ist": "2026-11-12T19:50:00+05:30",
+     "served": true,
+     "class": "served"
+    },
+    {
+     "slot_ist": "2026-11-13T01:40:00+05:30",
+     "served": true,
+     "class": "served"
+    },
+    {
+     "slot_ist": "2026-11-13T07:30:00+05:30",
+     "served": true,
+     "class": "served"
+    },
+    {
+     "slot_ist": "2026-11-13T10:40:00+05:30",
+     "served": true,
+     "class": "served"
+    },
+    {
+     "slot_ist": "2026-11-13T11:10:00+05:30",
+     "served": true,
+     "class": "served"
+    },
+    {
+     "slot_ist": "2026-11-13T15:35:00+05:30",
+     "served": true,
+     "class": "served"
+    },
+    {
+     "slot_ist": "2026-11-13T19:50:00+05:30",
+     "served": true,
+     "class": "served"
+    },
+    {
+     "slot_ist": "2026-11-14T01:40:00+05:30",
+     "served": true,
+     "class": "served"
+    },
+    {
+     "slot_ist": "2026-11-14T07:30:00+05:30",
+     "served": true,
+     "class": "served"
+    },
+    {
+     "slot_ist": "2026-11-14T10:40:00+05:30",
+     "served": true,
+     "class": "served"
+    },
+    {
+     "slot_ist": "2026-11-14T11:10:00+05:30",
+     "served": true,
+     "class": "served"
+    },
+    {
+     "slot_ist": "2026-11-14T15:35:00+05:30",
+     "served": true,
+     "class": "served"
+    },
+    {
+     "slot_ist": "2026-11-14T19:50:00+05:30",
+     "served": true,
+     "class": "served"
+    },
+    {
+     "slot_ist": "2026-11-15T01:40:00+05:30",
+     "served": false,
+     "class": "no_dispatch"
+    },
+    {
+     "slot_ist": "2026-11-15T07:30:00+05:30",
+     "served": false,
+     "class": "no_dispatch"
+    },
+    {
+     "slot_ist": "2026-11-15T10:40:00+05:30",
+     "served": false,
+     "class": "no_dispatch"
+    },
+    {
+     "slot_ist": "2026-11-15T11:10:00+05:30",
+     "served": false,
+     "class": "no_dispatch"
     }
    ],
    "attribution_note": "from GitHub run data only; no_dispatch cannot tell a laptop that was off or asleep from a scheduler that did not fire or a task that did not run (only the laptop's own log knows)",
@@ -424,17 +440,14 @@
   },
   "overnight_window": {
    "available": true,
-   "nights": 5,
-   "nights_without_model_forecast": 0,
-   "nights_with_model_forecast": 5,
+   "nights": 4,
+   "nights_without_model_forecast": 2,
+   "nights_with_model_forecast": 2,
    "minutes_after_us_close": [
-    86,
-    120,
-    127,
-    245,
-    272
+    189,
+    368
    ],
-   "median_minutes_after_us_close": 127,
+   "median_minutes_after_us_close": 368,
    "marking": "VERIFIED"
   }
  },
@@ -457,6 +470,6 @@
   "demoted": false,
   "since": null,
   "reasons": [],
-  "last_checked": "2026-11-08T07:54:31.853243+00:00"
+  "last_checked": "2026-11-15T08:23:44.396455+00:00"
  }
 }
