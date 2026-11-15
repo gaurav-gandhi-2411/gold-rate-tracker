@@ -17,9 +17,8 @@ Output: one machine-greppable line
   PR-HYGIENE: secret_scan=<ok|FOUND n|could-not-verify|skipped> large_files=<ok|n over limit|
   could-not-verify> mode=<report|enforce>
 
-MODE is 'report' (exit 0 always) until 5 clean real runs spanning >= 24 h (.claude/CLAUDE.md,
-2026-10-30); flipping it to 'enforce' (exit 1 unless both checks are ok or skipped) is a separate
-PR that edits tests/test_pr_hygiene.py deliberately.
+MODE is 'enforce' since 2026-11-15: exit 1 unless both checks are ok or skipped. It was 'report'
+(exit 0 always) until 5 clean real runs spanning >= 24 h (.claude/CLAUDE.md, 2026-10-30).
 
 Limits: only commits in the range are scanned (history before it is not); a path git prints with
 non-ASCII characters is unquoted from git's C-style form; a file that is in the change list but
@@ -36,13 +35,19 @@ import sys
 import tempfile
 from pathlib import Path
 
-MODE = "report"  # flip to "enforce" only in a PR that cites 5 clean real runs over >= 24 h
+MODE = "enforce"  # flipped 2026-11-15 after 5 clean real runs over >= 24 h (see the flip PR)
 DEFAULT_MAX_KB = 10240  # matches the check-added-large-files hook (--maxkb=10240)
 DEFAULT_TIMEOUT_S = 300
 OK = "ok"
 COULD_NOT_VERIFY = "could-not-verify"
 SKIPPED = "skipped"
 _SIZED_STATUSES = ("A", "M", "R", "C")  # added, modified, renamed, copied; D/T/U/X are not sized
+
+
+def _printable(text: str) -> str:
+    """Replace control characters (a path can carry ESC or newlines) so a finding cannot forge
+    a workflow command or a second log line."""
+    return "".join(c if c.isprintable() else "?" for c in text)
 
 
 def _unquote(path: str) -> str:
@@ -175,7 +180,7 @@ def main(argv: list[str] | None = None, mode: str | None = None) -> int:
     else:
         secret, secret_findings = run_gitleaks(args.gitleaks, args.rev_range, root, args.timeout)
     for f in secret_findings + large_findings:
-        print(f)
+        print(_printable(f))
     print(f"PR-HYGIENE: secret_scan={secret} large_files={large} mode={mode}")
     clean = secret in (OK, SKIPPED) and large == OK
     if (secret != OK or large != OK) and os.environ.get("GITHUB_ACTIONS") == "true":

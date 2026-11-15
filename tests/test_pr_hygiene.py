@@ -164,10 +164,13 @@ def test_gitleaks_exit_1_is_found_with_rule_file_line_and_no_secret(
     ]
     assert not any("REAL-SECRET-VALUE" in f for f in findings)
     ch = _changes(tmp_path, "")
-    ph.main(["--changes", str(ch), "--range", "b..h", "--gitleaks", fake, "--root", str(tmp_path)])
+    rc = ph.main(
+        ["--changes", str(ch), "--range", "b..h", "--gitleaks", fake, "--root", str(tmp_path)]
+    )
     out = capsys.readouterr().out
     assert "REAL-SECRET-VALUE" not in out and "SECRET-IN-STDOUT" not in out
-    assert "PR-HYGIENE: secret_scan=FOUND 2 large_files=ok mode=report" in out
+    assert "PR-HYGIENE: secret_scan=FOUND 2 large_files=ok mode=enforce" in out
+    assert rc == 1  # enforce: a finding fails the step
 
 
 def test_gitleaks_exit_1_with_an_unreadable_report_is_still_found(tmp_path, fake, monkeypatch):
@@ -193,8 +196,21 @@ def test_gitleaks_missing_binary_is_could_not_verify_and_no_binary_is_skipped(tm
 
 
 # --- mode, exit code, output line ---------------------------------------------------------------
-def test_mode_is_pinned_to_report_until_the_flip_pr():
-    assert ph.MODE == "report"
+def test_mode_is_enforce_after_the_flip_pr():
+    assert ph.MODE == "enforce"
+
+
+def test_a_finding_with_control_characters_is_printed_sanitised(
+    tmp_path, capsys, fake, monkeypatch
+):
+    monkeypatch.setenv(
+        "FAKE_REPORT",
+        '[{"RuleID": "r", "File": "a\\u001b[31m\\nb", "StartLine": 1}]',
+    )
+    monkeypatch.setenv("FAKE_RC", "1")
+    rc, out = _run(tmp_path, capsys, "--gitleaks", fake, "--range", "a..b")
+    assert rc == 1 and "\x1b" not in out
+    assert "file=a?[31m?b" in out
 
 
 def _run(tmp_path: Path, capsys, *extra: str, mode: str | None = None) -> tuple[int, str]:
@@ -205,7 +221,7 @@ def _run(tmp_path: Path, capsys, *extra: str, mode: str | None = None) -> tuple[
 
 
 def test_report_mode_exits_0_even_with_findings_and_enforce_exits_1(tmp_path, capsys):
-    rc, out = _run(tmp_path, capsys, "--max-kb", "1")
+    rc, out = _run(tmp_path, capsys, "--max-kb", "1", mode="report")
     assert rc == 0
     assert "PR-HYGIENE: secret_scan=skipped large_files=1 over limit mode=report" in out
     rc, out = _run(tmp_path, capsys, "--max-kb", "1", mode="enforce")
@@ -226,7 +242,7 @@ def test_enforce_exits_0_when_clean_and_1_when_could_not_verify(
 
 def test_a_scan_with_a_binary_but_no_range_is_could_not_verify(tmp_path, capsys, fake):
     rc, out = _run(tmp_path, capsys, "--gitleaks", fake)
-    assert rc == 0 and "secret_scan=could-not-verify" in out
+    assert rc == 1 and "secret_scan=could-not-verify" in out  # enforce: unverifiable fails
 
 
 def test_the_summary_line_format_is_greppable(tmp_path, capsys):
@@ -264,7 +280,19 @@ def test_the_workflow_downloads_the_pinned_release_and_verifies_the_committed_ch
     run = _hygiene_run()
     assert "releases/download/v${V}/" in run and "V=8.30.1" in run
     assert "latest" not in run and "| sh" not in run and "| bash" not in run
-    assert run.index("sha256sum -c") < run.index("tar -xzf") < run.index("pr_hygiene.py")
+    assert (
+        run.index("sha256sum -c")
+        < run.index("tar -xzf")
+        < run.index('python "$RUNNER_TEMP/pr_hygiene_master.py')
+    )
+    # the checker, checksum and allowlist come from master, never the PR under test
+    for name in ("pr_hygiene.py", "pr_hygiene_gitleaks.sha256", ".gitleaks.toml"):
+        assert (
+            f"git show refs/ci-scope/master:{'scripts/' if name != '.gitleaks.toml' else ''}{name}"
+            in run
+        )
+    assert "GITLEAKS_CONFIG=" in run and "python scripts/pr_hygiene.py" not in run
+    assert run.rstrip().endswith("exit $?")  # the checker's exit code decides the step
     # a failed download/verification must not leave a runnable binary path
     assert 'BIN=""' in run and run.index('BIN=""') < run.index('BIN="$D/gitleaks"')
 
