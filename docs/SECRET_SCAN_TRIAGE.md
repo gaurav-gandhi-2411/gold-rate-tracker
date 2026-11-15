@@ -181,23 +181,8 @@ the same full-history scan reports 0 findings over the same 4243 commits.
 
 - Only refs present in this clone were scanned (89 local branches, 160 remote-tracking refs, a stash and 3
   tmp refs at scan time). Pull-request refs (`refs/pull/*`) and forks were not scanned.
-- Binary files are not scanned (text scan). Before ADR 060 the raw-data parquet files were committed
-  in plaintext; they hold market rates, not credentials, and nothing here reads inside them.
-- Commits not scanned, accounted for (re-measured 2026-11-14 on a clone that had grown to 5357
-  non-merge commits; gitleaks then reported 4261 scanned). gitleaks reads `git log -p -U0` and scans
-  ADDED lines only, so a merge commit (no patch), a binary-only commit and a deletion-only commit give it
-  nothing to read (its own debug note: "smaller than expected due to commits with no additions"). Count
-  of the 5357 non-merge commits (script `no_addition_commits.py`, hunks and added lines parsed from the
-  patch stream): 4258 have at least one added line, 3 are empty commits (gitleaks counts them as
-  scanned: 4258 + 3 = 4261), 1085 change only binary files (encrypted `*.enc` and parquet: ciphertext by
-  design, and a secret cannot be read from a binary blob by a text scan), and **11 are deletion-only**
-  (text hunks, zero added lines, so they cannot introduce a secret): `14a6ac8da9`, `a1df67bfc1`
-  (2026-10-30), `d690af26c5` (2026-10-08), `d4bdae4cb0`, `90d0c3b67f` (2026-10-07), `89ffa2cc47`
-  (2026-10-05), `b7307886fa`, `6c72cfec36` (2026-09-26), `f8658c9a06` (2026-09-25), `3c03c8fb9f`
-  (2026-05-14), `1b15472b15` (2026-05-11). 4261 + 1085 + 11 = 5357. The earlier "9 unaccounted" (4252
-  text-change commits against 4243 scanned, 2026-11-14) was these deletion-only commits, counted as text
-  changes by `git log --numstat` but with nothing added. The 372 merge commits carry no patch of their
-  own (`git rev-list --all --merges --count`).
+- gitleaks reported 4243 commits scanned while `git rev-list --all --count` reports 5712 in this
+  clone. The difference was not investigated.
 - This is a public repo: anything that was ever pushed is already published, and rewriting history
   does not un-publish it. A real credential would need rotation, not deletion.
 - `--redact` was used, so the report holds no values; classification re-read the values in memory.
