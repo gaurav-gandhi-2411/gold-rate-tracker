@@ -395,3 +395,58 @@ def test_paginated_files_across_pages(world: World) -> None:
     ]
     ok, _ = _result(world)
     assert not ok  # the guarded file on page 2 is seen
+
+
+# --- gh refuses a log response with terminal escape sequences (2026-11-14) -----------------------
+
+
+class _Proc:
+    def __init__(self, rc: int, out: str = "", err: str = "") -> None:
+        self.returncode, self.stdout, self.stderr = rc, out, err
+
+
+def test_gh_text_retries_an_api_call_once_with_the_escape_flag(monkeypatch: pytest.MonkeyPatch):
+    calls: list[list[str]] = []
+
+    def fake_run(args: list[str]) -> _Proc:
+        calls.append(args)
+        if "--allow-escape-sequence" in args:
+            return _Proc(0, "log text")
+        return _Proc(
+            1, "", "the response contains terminal escape sequences; pass --allow-escape-sequence"
+        )
+
+    monkeypatch.setattr(mod, "_run", fake_run)
+    assert mod._gh_text(["api", "repos/x/y/actions/jobs/1/logs"]) == "log text"
+    assert len(calls) == 2 and calls[1][-1] == "--allow-escape-sequence"
+
+
+def test_gh_text_does_not_retry_other_failures_or_non_api_commands(monkeypatch: pytest.MonkeyPatch):
+    calls: list[list[str]] = []
+
+    def fake_run(args: list[str]) -> _Proc:
+        calls.append(args)
+        return _Proc(1, "", "HTTP 404")
+
+    monkeypatch.setattr(mod, "_run", fake_run)
+    with pytest.raises(mod.GuardError):
+        mod._gh_text(["api", "repos/x/y/actions/jobs/1/logs"])
+    assert len(calls) == 1
+    calls.clear()
+
+    def escape_run(args: list[str]) -> _Proc:
+        calls.append(args)
+        return _Proc(1, "", "terminal escape sequences")
+
+    monkeypatch.setattr(mod, "_run", escape_run)
+    with pytest.raises(mod.GuardError):
+        mod._gh_text(["run", "view", "1"])  # not an api call: no retry
+    assert len(calls) == 1
+
+
+def test_gh_text_still_fails_closed_when_the_retry_also_fails(monkeypatch: pytest.MonkeyPatch):
+    monkeypatch.setattr(
+        mod, "_run", lambda args: _Proc(1, "", "terminal escape sequences; unknown flag")
+    )
+    with pytest.raises(mod.GuardError):
+        mod._gh_text(["api", "repos/x/y/actions/jobs/1/logs"])
