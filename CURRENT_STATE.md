@@ -103,7 +103,7 @@ gold-rate-tracker/
 │   └── fixtures/                ← Real PDF, HTML samples
 ├── .github/workflows/
 │   ├── check-price.yml          ← LOAD-BEARING 4h production loop
-│   ├── lint.yml                 ← ruff + ruff-format + mypy + full pytest (a data-only PR: lock install + data validation + data-reading tests (report-only), docs/RUNBOOK.md)
+│   ├── lint.yml                 ← ruff + ruff-format + mypy + full pytest (a data-only PR: lock install + data validation + data-reading tests (blocking), docs/RUNBOOK.md)
 │   ├── weekly-backtest.yml
 │   ├── monthly-ibja-backfill.yml
 │   ├── generate-og-image.yml

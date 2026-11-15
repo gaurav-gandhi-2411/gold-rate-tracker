@@ -1,5 +1,17 @@
 # For GG: things only your account or decision can clear
 
+## DO FIRST: renew `CI_HEALTH_PAT` (active since 2026-11-10; it EXPIRES 2026-12-10, 26 days from 2026-11-14)
+
+Last read by `token-expiry.yml` on 2026-11-13 11:30Z: `CI_HEALTH_PAT: OK, expires 2026-12-10 (27 days left)`; `CI_MERGE_PAT: OK, expires 2027-10-14 (335 days left)` (VERIFIED, run 43417624735). You also get a push at 30, 14 and 7 days before expiry. If it lapses nothing user-visible breaks: `ci-health` just cannot read branch protection and writes "could not verify master's CI state" to the ops log every hour.
+
+Exact steps (5 minutes, any day from now to 2026-12-09; the sooner the fewer reminders):
+1. Open https://github.com/settings/personal-access-tokens (GitHub > Settings > Developer settings > Personal access tokens > **Fine-grained tokens**). Click the token named `CI_HEALTH_PAT`, then **Regenerate token** (keeps its permissions; pick the longest expiration you are comfortable with). If you make a new token instead: resource owner = your account, **Only select repositories** = `gold-rate-tracker`, repository permissions **Administration: Read-only** and **Metadata: Read-only**, nothing else.
+2. Copy the new token (it is shown once).
+3. Open https://github.com/gaurav-gandhi-2411/gold-rate-tracker/settings/secrets/actions, click the pencil on `CI_HEALTH_PAT`, paste, **Update secret**.
+4. Check: run `gh workflow run token-expiry.yml --ref master` (or tell CC to), then read its log: `CI_HEALTH_PAT: OK, expires <the new date>`.
+
+`CI_MERGE_PAT` is the one that matters if it lapses (every data sync fails with HTTP 401 and the price stops refreshing): it expires 2027-10-14; the steps are in section 0 below. Never paste a token into a chat, an issue, a PR or a file.
+
 Kept current by CC. Last updated 2026-11-06 (CC; items 9 and 10 applied at GG's go: check-price sync waits 30 min; the ensemble's days copy P3's flags; autonomy-window handover in `docs/HANDOVER_2026-10-27.md`). The weekly one-screen model note is `docs/MODEL_STATUS.md`.
 ntfy now carries gold-price information only (2026-11-06): the daily and Monday gold summaries, the site showing a wrong or stale price, items only you can fix (token expiry, data sync token rejected), and the public price alerts. Everything else is in the ops log (`python scripts/read_ops_log.py`), summarised in the weekly report; see `docs/NOTIFICATIONS.md`.
 Short on purpose: nothing is blocked on GG. Dated token renewals are in section 0; one optional check and a few

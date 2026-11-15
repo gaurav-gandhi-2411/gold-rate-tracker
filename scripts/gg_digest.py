@@ -36,6 +36,7 @@ from __future__ import annotations
 import argparse
 import json
 import os
+import subprocess
 import sys
 from collections.abc import Callable
 from datetime import UTC, date, datetime, timedelta
@@ -47,6 +48,9 @@ IST_OFFSET = timedelta(hours=5, minutes=30)
 STALE_H = (
     8.0  # app.js STALE_THRESHOLD_H; also the page's "not fresh" line (docs/TANISHQ_TIMED_VISITS.md)
 )
+# A forecast.json older than this has stopped updating: scripts/live_freshness.py LIMITS_H["forecast"]
+# (derived there from 60 days of history; a test pins the two equal).
+FORECAST_STALE_H = 9.0
 TANISHQ_IBJA_MAX_DEVIATION = 0.12  # app.js, mirrors ml/inference.py
 DERIVED_SOURCE_PREFIX = "ibja_calibrated"  # app.js: price rows with this source are not Tanishq's
 ESTIMATE_SOURCES = ("ibja_calibrated", "fusion_consensus")
@@ -96,6 +100,12 @@ def _signed(v: float) -> str:
 
 def _day_label(d: date) -> str:
     return f"{d.day} {d.strftime('%b')}"
+
+
+def _stamp(ts: datetime) -> str:
+    """ "12 Nov, 18:40 IST", as the rate line writes its time."""
+    when = _ist(ts)
+    return f"{when.day} {when.strftime('%b')}, {when:%H:%M} IST"
 
 
 # --- the hero figure -------------------------------------------------------------------------------
@@ -249,6 +259,73 @@ def next_range_line(root: Path) -> str:
         return text + "."
 
     return _safe(build, "Shop-price equivalent of the next official rate")
+
+
+def _inactive_streak_start(root: Path) -> str | None:
+    """When the forecast's current run of no-model forecasts began, read from the history of
+    data/forecast.json (newest first, at most 40 commits), for a forecast.json written before
+    next_fix.down_since existed. None when git cannot say (a shallow checkout sees one commit)."""
+
+    def git(*args: str) -> str:
+        done = subprocess.run(
+            ["git", "-C", str(root), *args],
+            capture_output=True,
+            text=True,
+            timeout=20,
+            check=True,
+        )
+        return done.stdout
+
+    try:
+        start = None
+        for sha in git("log", "-n", "40", "--format=%H", "--", "data/forecast.json").split():
+            fc = json.loads(git("show", f"{sha}:data/forecast.json"))
+            nf = fc.get("next_fix")
+            if not isinstance(nf, dict) or nf.get("active") is True:
+                break
+            start = fc["predicted_at"]
+        return start if isinstance(start, str) else None
+    except (OSError, ValueError, KeyError, TypeError, AttributeError, subprocess.SubprocessError):
+        return None
+
+
+def model_pause_lines(root: Path, now: datetime) -> list[str]:
+    """One plain sentence when the site is not showing the model's forecast, else nothing.
+
+    Two cases, both gold-price information (the range above is then a plain "no change" range or
+    an old one): next_fix.active is not true (paused), or forecast.json has stopped updating
+    (predicted_at older than FORECAST_STALE_H: inference refuses to write a non-positive figure, so
+    the file keeps ageing). Says since when. Silent when all is well and when the forecast cannot be
+    read (the range line above already says so)."""
+    try:
+        fc = _load(root / "data" / "forecast.json")
+        predicted = _parse(fc["predicted_at"])
+        nf = fc.get("next_fix")
+        nf = nf if isinstance(nf, dict) else {}
+        if nf.get("active") is True:
+            if (now - predicted).total_seconds() / 3600 <= FORECAST_STALE_H:
+                return []
+            return [
+                f"The price forecast has not updated since {_stamp(predicted)}, "
+                "so the range above may be out of date."
+            ]
+        try:
+            since = _parse(nf["down_since"])
+        except (KeyError, ValueError, TypeError, AttributeError):  # the key is absent or damaged
+            try:
+                since = _parse(_inactive_streak_start(root))  # type: ignore[arg-type]
+            except (ValueError, TypeError, AttributeError):
+                since = predicted  # the earliest no-model forecast this file shows
+    except (OSError, ValueError, KeyError, TypeError, AttributeError) as err:
+        print(
+            f"gg_digest: model pause check unavailable ({type(err).__name__}: {err})",
+            file=sys.stderr,
+        )
+        return []
+    return [
+        f"The price forecast has been paused since {_stamp(since)}: "
+        "the range above is a plain 'no change' range, not a forecast."
+    ]
 
 
 def accuracy_line(root: Path) -> str:
@@ -441,6 +518,7 @@ def daily(root: Path, now: datetime) -> str:
             *rates_lines(root, now),
             change_line(root),
             next_range_line(root),
+            *model_pause_lines(root, now),
             accuracy_line(root),
             challengers_note(root),
         ]
@@ -454,6 +532,7 @@ def monday(root: Path, now: datetime) -> str:
             change_line(root),
             week_line(root),
             next_range_line(root),
+            *model_pause_lines(root, now),
             accuracy_line(root),
             challengers_note(root),
         ]

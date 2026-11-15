@@ -1,12 +1,12 @@
 {
   "kind": "estimate",
-  "price": 13151,
-  "price_text": "≈ 13,151",
+  "price": 12626,
+  "price_text": "≈ 12,626",
   "approx": true,
   "label": "Our estimate for today, from India's official gold rate",
-  "as_of": "2026-11-09T08:37:39.105807+00:00",
-  "verdict": "flat",
-  "verdict_text": "Steady this week",
-  "card_text": "Gold Tracker gaurav-gandhi-2411.github.io/gold-rate-tracker TODAY'S RATE AND THIS WEEK'S TREND ₹≈ 13,151 Our estimate for today, from India's official gold rate · per gram → Steady this week 7-DAY TREND (ESTIMATE) ₹12,787 ₹13,400 Price as of 9 Nov, 14:07 IST 904 readings since Apr 2026 Not financial advice · Rates indicative",
-  "built_at": "2026-11-09T08:41:57.916Z"
+  "as_of": "2026-11-15T08:23:44.396455+00:00",
+  "verdict": "down",
+  "verdict_text": "Getting cheaper this week",
+  "card_text": "Gold Tracker gaurav-gandhi-2411.github.io/gold-rate-tracker TODAY'S RATE AND THIS WEEK'S TREND ₹≈ 12,626 Our estimate for today, from India's official gold rate · per gram ↓ Getting cheaper this week 7-DAY TREND (ESTIMATE) ₹12,626 ₹13,151 Price as of 15 Nov, 13:53 IST 923 readings since Apr 2026 Not financial advice · Rates indicative",
+  "built_at": "2026-11-15T08:29:01.604Z"
 }

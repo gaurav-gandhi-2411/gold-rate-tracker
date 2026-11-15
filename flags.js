@@ -20,10 +20,10 @@ const FEATURE_FLAGS = Object.freeze({
   event_watch: false,
   page_v2: false,
   analytics: true, // analytics.js (item 5c): ON 2026-10-09 with site code gold-rate-tracker
-  // Long-term view (GG 2026-11-06, prepared OFF for GG's decision): the chart's "All" range also
-  // shows 2022 - May 2026 as monthly samples (unjoined dots, data/long_history_monthly.json).
-  // Preview locally with ?ff=long_history on localhost. Flipping it also needs a SW VERSION bump.
-  long_history: false,
+  // Long-term view (GG 2026-11-06; turned ON by GG's decision 2026-11-13): the chart's "All" range
+  // also shows 2022 - May 2026 as monthly samples (unjoined dots, data/long_history_monthly.json).
+  // Turning it off again needs a SW VERSION bump.
+  long_history: true,
 });
 
 // Returns true only if:

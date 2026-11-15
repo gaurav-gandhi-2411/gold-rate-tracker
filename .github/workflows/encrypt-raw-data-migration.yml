@@ -52,7 +52,7 @@ jobs:
           python-version: "3.12"
 
       - name: Install cryptography (the version ml/requirements-inference.lock pins)
-        run: pip install -q "cryptography==50.0.1"
+        run: pip install -q "cryptography==50.0.2"
 
       - name: Mask key forms
         env:

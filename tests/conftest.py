@@ -61,3 +61,23 @@ def _polite_http_no_real_sleep():
     yield slept
     policy.sleep = original_sleep
     policy.reset()
+
+
+# Clock guard (report-only, see tests/clock_guard.py): records unpinned real-clock reads.
+from tests import clock_guard as _clock_guard
+
+_CLOCK_GUARD = _clock_guard.ClockGuard()
+
+
+@pytest.fixture(autouse=True)
+def _clock_guard_track(request):
+    _CLOCK_GUARD.begin_test(request.node.nodeid)
+    yield
+
+
+def pytest_terminal_summary(terminalreporter):
+    lines, _ = _CLOCK_GUARD.finish(_clock_guard.MODE)
+    if lines:
+        terminalreporter.section("clock guard (report-only)")
+        for line in lines:
+            terminalreporter.write_line(line)
