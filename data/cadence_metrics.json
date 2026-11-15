@@ -3,17 +3,17 @@
   "n": 49,
   "median_gap_hours": 1.9519444444444445,
   "p90_gap_hours": 7.6311111111111165,
-  "as_of": "2026-11-15T10:13:17+00:00",
+  "as_of": "2026-11-15T14:29:21+00:00",
   "price_checks": {
     "window_days": 7,
     "readings": 24,
     "n": 23,
     "median_gap_hours": 4.251388888888889,
     "longest_gap_hours": 25.126666666666665,
-    "open_gap_hours": 0.1368079786111111,
+    "open_gap_hours": 3.0336273866666663,
     "as_of": "2026-11-15T14:21:08+00:00",
     "source": "successful readings in data/tanishq_scrape_outcomes.jsonl"
   },
   "schema_version": 2,
-  "generated_at_utc": "2026-11-15T14:29:20.508723+00:00"
+  "generated_at_utc": "2026-11-15T17:23:09.058592+00:00"
 }
