@@ -395,3 +395,72 @@ def test_paginated_files_across_pages(world: World) -> None:
     ]
     ok, _ = _result(world)
     assert not ok  # the guarded file on page 2 is seen
+
+
+# --- gh refuses a log response with terminal escape sequences (2026-11-14) -----------------------
+
+
+class _Proc:
+    def __init__(self, rc: int, out: str = "", err: str = "") -> None:
+        self.returncode, self.stdout, self.stderr = rc, out, err
+
+
+def test_gh_text_retries_an_api_call_once_with_the_escape_flag(monkeypatch: pytest.MonkeyPatch):
+    calls: list[list[str]] = []
+
+    def fake_run(args: list[str]) -> _Proc:
+        calls.append(args)
+        if mod.ESCAPE_FLAG in args:
+            return _Proc(0, "log text")
+        return _Proc(1, "", "the response contains terminal escape sequences")
+
+    monkeypatch.setattr(mod, "_run", fake_run)
+    assert mod._gh_text(["api", "repos/x/y/actions/jobs/1/logs"]) == "log text"
+    assert len(calls) == 2 and calls[1][-1] == mod.ESCAPE_FLAG
+
+
+def test_escape_flag_is_one_the_installed_gh_api_knows():
+    """The mocks above cannot tell a wrong flag spelling from a right one (#3824 shipped one)."""
+    import shutil
+    import subprocess
+
+    gh = shutil.which("gh")
+    if gh is None:
+        pytest.skip("gh not installed")
+    helptext = subprocess.run(
+        [gh, "api", "--help"], capture_output=True, text=True, encoding="utf-8", check=False
+    ).stdout
+    if "escape" not in helptext:
+        pytest.skip("this gh predates the escape-sequence refusal, so it has no such flag")
+    assert mod.ESCAPE_FLAG in helptext
+
+
+def test_gh_text_does_not_retry_other_failures_or_non_api_commands(monkeypatch: pytest.MonkeyPatch):
+    calls: list[list[str]] = []
+
+    def fake_run(args: list[str]) -> _Proc:
+        calls.append(args)
+        return _Proc(1, "", "HTTP 404")
+
+    monkeypatch.setattr(mod, "_run", fake_run)
+    with pytest.raises(mod.GuardError):
+        mod._gh_text(["api", "repos/x/y/actions/jobs/1/logs"])
+    assert len(calls) == 1
+    calls.clear()
+
+    def escape_run(args: list[str]) -> _Proc:
+        calls.append(args)
+        return _Proc(1, "", "terminal escape sequences")
+
+    monkeypatch.setattr(mod, "_run", escape_run)
+    with pytest.raises(mod.GuardError):
+        mod._gh_text(["run", "view", "1"])  # not an api call: no retry
+    assert len(calls) == 1
+
+
+def test_gh_text_still_fails_closed_when_the_retry_also_fails(monkeypatch: pytest.MonkeyPatch):
+    monkeypatch.setattr(
+        mod, "_run", lambda args: _Proc(1, "", "terminal escape sequences; unknown flag")
+    )
+    with pytest.raises(mod.GuardError):
+        mod._gh_text(["api", "repos/x/y/actions/jobs/1/logs"])
