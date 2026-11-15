@@ -1,6 +1,6 @@
 {
  "schema_version": 1,
- "generated_at": "2026-11-15T08:39:11.846345+00:00",
+ "generated_at": "2026-11-15T09:18:22.570408+00:00",
  "rule_sha256": "e4efabec2193950ee4bf0193b00b3f17eed8c0cf5f81da4394d13acb51fdbdfa",
  "common_start": "2026-10-07",
  "champion": "p3",
@@ -155,7 +155,7 @@
  },
  "timeliness": {
   "schema_version": 1,
-  "generated_at": "2026-11-15T08:39:06.223234+00:00",
+  "generated_at": "2026-11-15T09:18:17.716280+00:00",
   "days": 7,
   "tanishq_slots": {
    "days": 7,
@@ -196,10 +196,10 @@
     "2026-11-15T11:10:00+05:30"
    ],
    "classification": {
-    "no_dispatch": 23,
+    "no_dispatch": 21,
     "dispatched_failed": 0,
     "dispatched_cancelled": 0,
-    "late": 7,
+    "late": 9,
     "dispatched_other": 0,
     "unknown": 0
    },
@@ -427,12 +427,12 @@
     {
      "slot_ist": "2026-11-15T10:40:00+05:30",
      "served": false,
-     "class": "no_dispatch"
+     "class": "late"
     },
     {
      "slot_ist": "2026-11-15T11:10:00+05:30",
      "served": false,
-     "class": "no_dispatch"
+     "class": "late"
     }
    ],
    "attribution_note": "from GitHub run data only; no_dispatch cannot tell a laptop that was off or asleep from a scheduler that did not fire or a task that did not run (only the laptop's own log knows)",
@@ -470,6 +470,6 @@
   "demoted": false,
   "since": null,
   "reasons": [],
-  "last_checked": "2026-11-15T08:23:44.396455+00:00"
+  "last_checked": "2026-11-15T09:01:32.746263+00:00"
  }
 }
