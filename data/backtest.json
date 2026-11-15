@@ -1,44 +1,44 @@
 {
-  "backtest_run_at": "2026-11-08T08:18:58.218865+00:00",
-  "n_folds": 276,
+  "backtest_run_at": "2026-11-15T09:17:30.563645+00:00",
+  "n_folds": 279,
   "n_folds_sub_30_context": 22,
   "horizon": 5,
   "model_version": "amazon/chronos-bolt-tiny@a0e552de",
-  "mae_5d_avg_chronos": 287.29,
-  "mae_5d_avg_naive": 239.73,
+  "mae_5d_avg_chronos": 287.65,
+  "mae_5d_avg_naive": 240.35,
   "mae_chronos_per_h": [
-    165.85,
-    230.49,
-    290.87,
-    347.2,
-    402.02
+    166.59,
+    231.72,
+    291.73,
+    347.32,
+    400.9
   ],
   "mae_naive_per_h": [
-    121.29,
-    190.33,
-    246.02,
-    296.4,
-    344.6
+    122.14,
+    191.83,
+    247.14,
+    296.78,
+    343.85
   ],
-  "dir_acc_5d_chronos": 0.4855,
+  "dir_acc_5d_chronos": 0.4803,
   "dir_acc_5d_naive": 0.5,
   "pi_coverage_80_per_h": [
-    0.9457,
-    0.9203,
-    0.9022,
-    0.8804,
-    0.8659
+    0.9462,
+    0.9176,
+    0.9032,
+    0.8817,
+    0.8674
   ],
-  "pi_coverage_80_5d_avg": 0.9029,
+  "pi_coverage_80_5d_avg": 0.9032,
   "decision_acc": {
     "n_chronos_predicted_100_drop": 41,
     "n_actual_100_drop_when_predicted": 16,
     "precision": 0.3902,
-    "n_actual_100_drops_total": 114,
-    "recall": 0.1404
+    "n_actual_100_drops_total": 115,
+    "recall": 0.1391
   },
   "peak_timing_err_days_median": 2.0,
-  "paired_diff_median": 24.22,
+  "paired_diff_median": 23.6,
   "wilcoxon_signed_rank_p": 0.0,
   "insufficient_evidence": false,
   "schema": "scores_only_v1",
@@ -47,18 +47,18 @@
     "pct": 80,
     "n": 30,
     "p_by_h": [
-      146.4,
-      226.7,
-      315.0,
+      164.4,
+      245.9,
+      357.9,
       366.0,
       378.9
     ],
     "mean_by_h": [
-      90.3,
-      135.5,
-      165.4,
-      196.8,
-      217.0
+      99.8,
+      155.1,
+      186.6,
+      216.7,
+      219.9
     ]
   },
   "folds": [
@@ -2508,7 +2508,7 @@
       "err_chronos_p50": [
         100.78,
         112.04,
-        113.65,
+        113.66,
         36.81,
         -47.06
       ],
@@ -2624,10 +2624,10 @@
         9.68,
         -67.83,
         127.19,
-        190.73,
+        190.74,
         178.99
       ],
-      "mae_chronos_5d": 114.88,
+      "mae_chronos_5d": 114.89,
       "mae_naive_5d": 59.04,
       "in_pi_80": [
         true,
@@ -3038,7 +3038,7 @@
         102.99,
         70.32,
         -70.36,
-        -170.71,
+        -170.7,
         -156.83
       ],
       "mae_chronos_5d": 114.24,
@@ -3085,7 +3085,7 @@
         -9.37,
         64.66,
         17.72,
-        -186.45
+        -186.46
       ],
       "mae_chronos_5d": 68.29,
       "mae_naive_5d": 295.1,
@@ -3129,7 +3129,7 @@
       "err_chronos_p50": [
         286.17,
         265.48,
-        125.85,
+        125.84,
         262.23,
         254.72
       ],
@@ -3151,7 +3151,7 @@
       "sub_30_context": false,
       "err_chronos_p50": [
         126.26,
-        -43.87,
+        -43.86,
         127.55,
         115.97,
         171.29
@@ -3175,7 +3175,7 @@
       "err_chronos_p50": [
         -20.53,
         119.17,
-        130.59,
+        130.58,
         179.53,
         122.07
       ],
@@ -3244,7 +3244,7 @@
       "err_chronos_p50": [
         -11.19,
         -65.67,
-        -13.84,
+        -13.85,
         29.15,
         55.85
       ],
@@ -3265,10 +3265,10 @@
       "context_size": 147,
       "sub_30_context": false,
       "err_chronos_p50": [
-        -154.15,
+        -154.16,
         -109.25,
         -51.13,
-        -24.78,
+        -24.79,
         -78.23
       ],
       "mae_chronos_5d": 83.51,
@@ -3289,12 +3289,12 @@
       "sub_30_context": false,
       "err_chronos_p50": [
         17.98,
-        69.6,
+        69.59,
         111.92,
         48.13,
         -303.25
       ],
-      "mae_chronos_5d": 110.18,
+      "mae_chronos_5d": 110.17,
       "mae_naive_5d": 107.7,
       "in_pi_80": [
         true,
@@ -3334,7 +3334,7 @@
       "context_size": 150,
       "sub_30_context": false,
       "err_chronos_p50": [
-        6.69,
+        6.7,
         -69.09,
         -437.09,
         -448.25,
@@ -3657,7 +3657,7 @@
       "sub_30_context": false,
       "err_chronos_p50": [
         104.79,
-        -46.04,
+        -46.05,
         213.32,
         302.61,
         85.18
@@ -3795,7 +3795,7 @@
       "sub_30_context": false,
       "err_chronos_p50": [
         -40.86,
-        71.25,
+        71.24,
         -8.55,
         -842.85,
         -858.23
@@ -3840,11 +3840,11 @@
       "context_size": 172,
       "sub_30_context": false,
       "err_chronos_p50": [
-        -158.6,
+        -158.61,
         -1002.15,
         -1040.01,
         -772.52,
-        -717.17
+        -717.16
       ],
       "mae_chronos_5d": 738.09,
       "mae_naive_5d": 694.42,
@@ -3886,7 +3886,7 @@
       "context_size": 174,
       "sub_30_context": false,
       "err_chronos_p50": [
-        449.22,
+        449.23,
         645.26,
         723.03,
         971.9,
@@ -3957,7 +3957,7 @@
       "err_chronos_p50": [
         523.31,
         454.75,
-        629.72,
+        629.71,
         609.5,
         859.07
       ],
@@ -4024,7 +4024,7 @@
       "context_size": 180,
       "sub_30_context": false,
       "err_chronos_p50": [
-        -18.34,
+        -18.33,
         246.85,
         558.7,
         473.73,
@@ -4327,7 +4327,7 @@
         490.71,
         676.5,
         525.71,
-        551.66
+        551.67
       ],
       "mae_chronos_5d": 497.78,
       "mae_naive_5d": 490.92,
@@ -4418,10 +4418,10 @@
         17.96,
         -28.5,
         -186.71,
-        -516.9,
+        -516.91,
         -426.15
       ],
-      "mae_chronos_5d": 235.24,
+      "mae_chronos_5d": 235.25,
       "mae_naive_5d": 201.72,
       "in_pi_80": [
         true,
@@ -4553,11 +4553,11 @@
       "context_size": 203,
       "sub_30_context": false,
       "err_chronos_p50": [
-        367.14,
+        367.15,
         310.85,
-        415.07,
+        415.08,
         536.36,
-        553.41
+        553.42
       ],
       "mae_chronos_5d": 436.57,
       "mae_naive_5d": 127.7,
@@ -4624,7 +4624,7 @@
       "err_chronos_p50": [
         190.56,
         212.97,
-        205.97,
+        205.98,
         231.02,
         277.02
       ],
@@ -4669,7 +4669,7 @@
       "sub_30_context": false,
       "err_chronos_p50": [
         103.69,
-        116.81,
+        116.8,
         150.03,
         47.24,
         -11.74
@@ -4740,10 +4740,10 @@
         43.55,
         -38.9,
         -219.0,
-        -145.72,
-        -45.56
+        -145.71,
+        -45.55
       ],
-      "mae_chronos_5d": 98.55,
+      "mae_chronos_5d": 98.54,
       "mae_naive_5d": 242.96,
       "in_pi_80": [
         true,
@@ -4785,7 +4785,7 @@
       "err_chronos_p50": [
         66.63,
         106.17,
-        208.77,
+        208.76,
         173.62,
         393.37
       ],
@@ -4807,7 +4807,7 @@
       "sub_30_context": false,
       "err_chronos_p50": [
         275.71,
-        313.73,
+        313.72,
         288.86,
         524.73,
         525.78
@@ -4856,9 +4856,9 @@
         271.82,
         286.54,
         209.98,
-        301.23
+        301.22
       ],
-      "mae_chronos_5d": 231.67,
+      "mae_chronos_5d": 231.66,
       "mae_naive_5d": 92.48,
       "in_pi_80": [
         true,
@@ -4921,13 +4921,13 @@
       "context_size": 219,
       "sub_30_context": false,
       "err_chronos_p50": [
-        -25.44,
+        -25.45,
         68.65,
         139.05,
         125.39,
         -96.49
       ],
-      "mae_chronos_5d": 91.0,
+      "mae_chronos_5d": 91.01,
       "mae_naive_5d": 113.1,
       "in_pi_80": [
         true,
@@ -4968,7 +4968,7 @@
       "sub_30_context": false,
       "err_chronos_p50": [
         192.48,
-        163.58,
+        163.59,
         -89.13,
         -325.62,
         -403.29
@@ -5544,7 +5544,7 @@
       "err_chronos_p50": [
         337.4,
         335.41,
-        345.86,
+        345.85,
         408.85,
         577.39
       ],
@@ -6235,7 +6235,7 @@
         253.65,
         407.79,
         391.73,
-        407.34,
+        407.35,
         304.0
       ],
       "mae_chronos_5d": 352.9,
@@ -6409,28 +6409,85 @@
         true
       ],
       "dir_correct_5d": true
+    },
+    {
+      "fold_id": 276,
+      "context_end_date": "2026-11-02",
+      "context_size": 284,
+      "sub_30_context": false,
+      "err_chronos_p50": [
+        -68.8,
+        -382.19,
+        -619.61,
+        -375.45,
+        -289.97
+      ],
+      "mae_chronos_5d": 347.2,
+      "mae_naive_5d": 323.6,
+      "in_pi_80": [
+        true,
+        true,
+        true,
+        true,
+        true
+      ],
+      "dir_correct_5d": false
+    },
+    {
+      "fold_id": 277,
+      "context_end_date": "2026-11-03",
+      "context_size": 285,
+      "sub_30_context": false,
+      "err_chronos_p50": [
+        -441.67,
+        -630.34,
+        -395.21,
+        -312.95,
+        -47.55
+      ],
+      "mae_chronos_5d": 365.54,
+      "mae_naive_5d": 322.72,
+      "in_pi_80": [
+        true,
+        false,
+        true,
+        true,
+        true
+      ],
+      "dir_correct_5d": false
+    },
+    {
+      "fold_id": 278,
+      "context_end_date": "2026-11-04",
+      "context_size": 286,
+      "sub_30_context": false,
+      "err_chronos_p50": [
+        -193.54,
+        23.44,
+        96.37,
+        386.62,
+        557.4
+      ],
+      "mae_chronos_5d": 251.47,
+      "mae_naive_5d": 246.22,
+      "in_pi_80": [
+        true,
+        true,
+        true,
+        true,
+        true
+      ],
+      "dir_correct_5d": false
     }
   ],
   "p3_past_errors": {
     "schema": "p3_past_errors_v1",
     "model_version": "nextfix_p3_v1",
     "n": 30,
-    "n_in_range": 23,
-    "n_retro": 10,
-    "mean_abs_err": 104.0,
+    "n_in_range": 22,
+    "n_retro": 8,
+    "mean_abs_err": 107.7,
     "rows": [
-      {
-        "day": "2026-09-23",
-        "err": 61.5,
-        "in_range": true,
-        "retro": true
-      },
-      {
-        "day": "2026-09-24",
-        "err": -139.8,
-        "in_range": true,
-        "retro": true
-      },
       {
         "day": "2026-09-25",
         "err": 422.5,
@@ -6597,6 +6654,18 @@
         "day": "2026-11-05",
         "err": 275.4,
         "in_range": false,
+        "retro": false
+      },
+      {
+        "day": "2026-11-11",
+        "err": 244.4,
+        "in_range": false,
+        "retro": false
+      },
+      {
+        "day": "2026-11-12",
+        "err": 68.0,
+        "in_range": true,
         "retro": false
       }
     ]

@@ -34,7 +34,7 @@ VALIDATE = "Validate the data (scripts/validate_data.py) -- decides a data-only 
 DATA_TESTS = (
     "Run the tests that read data/ (data-only PR; selection fails closed to the full suite)"
 )
-HYGIENE = "PR hygiene: secret scan + large files (report-only until 5 clean real runs over >= 24 h)"
+HYGIENE = "PR hygiene: secret scan + large files (blocking)"
 
 # Run on every run, data-only or not.
 ALWAYS = {
@@ -157,14 +157,14 @@ def test_the_steps_that_ran_before_the_switch_still_run_unconditionally_on_a_ful
         assert "timeout-minutes" not in _step(label) or label == SCOPE, label
 
 
-def test_only_scope_record_and_hygiene_may_be_non_blocking_and_the_job_has_no_condition():
-    # DATA_TESTS became blocking on 2026-11-14 (GG 2b, after 101 clean real runs); HYGIENE is still
-    # report-only until its own flip PR (5 clean real runs over >= 24 h, standing rule 2026-10-30).
+def test_only_scope_and_record_may_be_non_blocking_and_the_job_has_no_condition():
+    # DATA_TESTS became blocking on 2026-11-14 (GG 2b, after 101 clean real runs); HYGIENE on
+    # 2026-11-15 (5 clean real runs over >= 24 h, standing rule 2026-10-30).
     wf = yaml.safe_load((ROOT / ".github/workflows/lint.yml").read_text(encoding="utf-8"))
     job = wf["jobs"]["lint"]
     assert "if" not in job and "continue-on-error" not in job
     for s in _steps():
-        if _label(s) in (SCOPE, RECORD, HYGIENE):
+        if _label(s) in (SCOPE, RECORD):
             assert s["continue-on-error"] is True, _label(s)
         else:
             assert "continue-on-error" not in s, _label(s)
@@ -353,11 +353,10 @@ def test_the_data_test_step_is_blocking():
     assert s["if"] == "steps.scope.outputs.data_only == 'true'"
 
 
-def test_the_pr_hygiene_step_is_report_only_and_runs_on_data_only_and_full_prs():
-    # GG 2c (2026-11-13). Flipping it to blocking is a separate PR citing 5 clean real runs over
-    # >= 24 h (.claude/CLAUDE.md, 2026-10-30) that edits this test deliberately.
+def test_the_pr_hygiene_step_is_blocking_and_runs_on_data_only_and_full_prs():
+    # GG 2c (2026-11-13); blocking since 2026-11-15 (flip PR cites the 5 clean real runs).
     s = _step(HYGIENE)
-    assert s["continue-on-error"] is True
+    assert "continue-on-error" not in s
     assert s["timeout-minutes"] <= 8
     assert s["if"] == "steps.scope.outputs.applies == 'true'"  # not push / schedule
     # no data_only condition: it runs on both data-only and full PRs

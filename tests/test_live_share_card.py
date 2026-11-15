@@ -326,3 +326,75 @@ def test_a_failed_send_keeps_the_old_state(
     out = tmp_path / "s.json"
     assert sc.main(["--state-out", str(out)]) == 1
     assert json.loads(out.read_text(encoding="utf-8")) == {}
+
+
+# --- a site-wide stale-data incident owns behind and stale ----------------------------------------
+
+
+@pytest.fixture
+def _hermetic_env(monkeypatch: pytest.MonkeyPatch) -> None:
+    # CI sets these and has broken tests twice; nothing here may reach ntfy.
+    for name in ("GITHUB_ACTIONS", "GITHUB_EVENT_NAME", "NTFY_TOPIC"):
+        monkeypatch.delenv(name, raising=False)
+    monkeypatch.setattr(
+        sc, "send", lambda msg, topic: (_ for _ in ()).throw(AssertionError("sent to ntfy"))
+    )
+
+
+def test_behind_and_stale_are_silent_while_a_site_incident_is_open() -> None:
+    found = {"behind": "x", "stale": "y"}
+    assert sc.decide({}, found, NOW, site_incident=True) == ([], {})
+    assert sc.decide({}, found, NOW)[0] != []  # without a site incident they page, as before
+
+
+@pytest.mark.parametrize("own", ["unreadable", "broken", "advice", "disagree"])
+def test_the_cards_own_defects_still_page_during_a_site_incident(own: str) -> None:
+    msgs, state = sc.decide({}, {own: "x", "stale": "y"}, NOW, site_incident=True)
+    assert len(msgs) == 1 and sc.TITLES[own][0] in msgs[0]["title"] and set(state) == {own}
+
+
+def test_an_open_card_incident_is_kept_silently_during_a_site_incident() -> None:
+    state = {"stale": _iso(30)}  # opened before the site incident
+    msgs, new = sc.decide(state, {}, NOW, site_incident=True)  # would read as recovered otherwise
+    assert msgs == [] and new == state
+    msgs, new = sc.decide(state, {}, NOW)  # once the site incident is over it is judged again
+    assert len(msgs) == 1 and new == {}
+
+
+def test_site_incident_open_reads_only_an_open_incident(tmp_path: Path) -> None:
+    f = tmp_path / "s.json"
+    assert sc.site_incident_open(None) is False and sc.site_incident_open(f) is False
+    f.write_text("not json", encoding="utf-8")
+    assert sc.site_incident_open(f) is False  # unreadable: the card pages for itself
+    f.write_text("[]", encoding="utf-8")
+    assert sc.site_incident_open(f) is False
+    f.write_text(json.dumps({"model_since": "x"}), encoding="utf-8")
+    assert sc.site_incident_open(f) is False
+    f.write_text(json.dumps({"incident": {"opened_at": "x", "signals": {}}}), encoding="utf-8")
+    assert sc.site_incident_open(f) is True
+
+
+def test_main_silences_a_stale_card_during_a_site_incident_but_not_a_broken_one(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, _hermetic_env: None
+) -> None:
+    sent: list[dict[str, str]] = []
+    prices, forecast = _data(row_h=25, forecast_h=24)
+    card = _card(as_of=_iso(25))  # a Tanishq card 25 h old: stale (20 h limit)
+    payloads = {"og-card.json": card, "prices.json": prices, "forecast.json": forecast}
+    monkeypatch.setattr(
+        sc, "fetch_json", lambda url, *a: next(v for k, v in payloads.items() if url.endswith(k))
+    )
+    monkeypatch.setattr(sc, "send", lambda msg, topic: sent.append(msg) or True)
+    monkeypatch.setenv("NTFY_TOPIC", "t")
+    fresh = tmp_path / "fresh.json"
+    fresh.write_text(json.dumps({"incident": {"opened_at": "x", "signals": {"forecast": "x"}}}))
+    st = tmp_path / "state.json"
+    args = ["--state-in", str(st), "--state-out", str(st), "--now", NOW.isoformat()]
+    assert sc.main([*args, "--freshness-state", str(fresh)]) == 0 and sent == []
+    card["card_text"] += " buy now"  # its own defect: pages even with the site incident open
+    assert sc.main([*args, "--freshness-state", str(fresh)]) == 1
+    assert [m["title"] for m in sent] == ["Gold Tracker: the share card gives buy/sell advice"]
+    assert set(json.loads(st.read_text())) == {"advice"}
+    del card["card_text"]  # broken: still pages (a different kind, never silenced)
+    assert sc.main([*args, "--freshness-state", str(fresh)]) == 1
+    assert "is broken" in sent[1]["title"]  # (and the advice incident, no longer judged, closes)

@@ -130,7 +130,7 @@ pdfplumber==0.11.10
     # via -r ml/requirements.txt
 peewee==4.0.5
     # via yfinance
-pillow==12.3.0
+pillow==13.0.0
     # via
     #   -r ml/requirements.txt
     #   pdfplumber

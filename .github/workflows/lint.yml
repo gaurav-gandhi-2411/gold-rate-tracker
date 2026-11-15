@@ -176,13 +176,14 @@ jobs:
       # GG decision 2c (2026-11-13): gitleaks and the 10 MB check no longer run on a data-only PR (no
       # pre-commit there), and the pre-commit gitleaks hook scans nothing in CI anyway (its entry is
       # `--staged`, a CI checkout has nothing staged). This scans the PR's own commits instead.
-      # REPORT-ONLY until 5 clean real runs spanning >= 24 h (.claude/CLAUDE.md, 2026-10-30); the
-      # flip is a separate PR that cites the run IDs and edits tests/test_pr_hygiene.py. The gitleaks
-      # binary is the pinned release, SHA-256-checked against the value committed in
-      # scripts/pr_hygiene_gitleaks.sha256 BEFORE it runs; a failed check never runs it.
-      - name: "PR hygiene: secret scan + large files (report-only until 5 clean real runs over >= 24 h)"
+      # BLOCKING since 2026-11-15 (5 clean real runs over >= 24 h, flip PR cites the run IDs). The
+      # checker, its checksum file and the gitleaks allowlist all come from MASTER (the private
+      # refs/ci-scope/master ref), never from the PR under test, so a PR cannot weaken the scan
+      # that judges it; a change to them is checked by the NEXT PR. A missing master copy is a
+      # failure, not a skip. The gitleaks binary is the pinned release, SHA-256-checked against the
+      # value committed in scripts/pr_hygiene_gitleaks.sha256 BEFORE it runs.
+      - name: "PR hygiene: secret scan + large files (blocking)"
         if: steps.scope.outputs.applies == 'true'
-        continue-on-error: true
         timeout-minutes: 8
         env:
           EVENT: ${{ github.event_name }}
@@ -195,18 +196,25 @@ jobs:
           V=8.30.1
           D="$RUNNER_TEMP/gitleaks"
           mkdir -p "$D"
+          if ! git show refs/ci-scope/master:scripts/pr_hygiene.py > "$RUNNER_TEMP/pr_hygiene_master.py" \
+            || ! git show refs/ci-scope/master:scripts/pr_hygiene_gitleaks.sha256 > "$D/gitleaks.sha256" \
+            || ! git show refs/ci-scope/master:.gitleaks.toml > "$RUNNER_TEMP/gitleaks_master.toml"; then
+            echo "::error::PR-HYGIENE: could not read master's checker, checksum or allowlist; failing closed"
+            exit 1
+          fi
+          export GITLEAKS_CONFIG="$RUNNER_TEMP/gitleaks_master.toml"
           BIN=""
           if curl -fsSL --retry 3 --max-time 120 -o "$D/gitleaks_${V}_linux_x64.tar.gz" "https://github.com/gitleaks/gitleaks/releases/download/v${V}/gitleaks_${V}_linux_x64.tar.gz" \
-            && (cd "$D" && sha256sum -c "$GITHUB_WORKSPACE/scripts/pr_hygiene_gitleaks.sha256") \
+            && (cd "$D" && sha256sum -c gitleaks.sha256) \
             && tar -xzf "$D/gitleaks_${V}_linux_x64.tar.gz" -C "$D" gitleaks; then
             BIN="$D/gitleaks"
           else
             echo "PR-HYGIENE: gitleaks download or checksum failed; the scan is not run"
           fi
           # a requested scan that has no verified binary must read could-not-verify, never skipped
-          python scripts/pr_hygiene.py --changes "$RUNNER_TEMP/changes.txt" \
+          python "$RUNNER_TEMP/pr_hygiene_master.py" --changes "$RUNNER_TEMP/changes.txt" \
             --range "refs/ci-scope/master..$HEAD" --gitleaks "${BIN:-/nonexistent/gitleaks}" --max-kb 10240
-          exit 0
+          exit $?
       - name: Check every JS test file is referenced by some workflow
         if: steps.scope.outputs.data_only != 'true'
         # AJ2 (production audit continuation, 2026-09-11/12): mechanical
@@ -334,7 +342,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
           node-version: "20"
       - name: Run PWA pure-function tests
@@ -393,7 +401,7 @@ jobs:
     timeout-minutes: 20
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
           node-version: "20"
           cache: "npm"
@@ -618,7 +626,7 @@ jobs:
         run: |
           pip install -q pip-audit==2.10.1
           pip-audit -r ml/requirements-inference.lock
-      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
           node-version: "20"
       - name: npm audit (scraper)

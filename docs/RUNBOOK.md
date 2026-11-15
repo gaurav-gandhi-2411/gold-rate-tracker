@@ -210,6 +210,23 @@ ci-health and Worker rows below are no longer pushed: they appear in the ops log
 | `Gold Tracker: SUSTAINED IBJA outage (Nd)` (T9_ESCALATE) | Same gap >= 4 business days — a sustained, not transient, IBJA outage | Same as above, treat as urgent; the site has nothing fresher than a multi-day-old estimate |
 | `Gold Tracker: Scraper DOM broken` | Weekly canary failed against the live Tanishq page | DOM may have changed *or* Tanishq's runner-IP block is active — check `data/prices.json` for a run of missed entries before assuming the selector broke (see [Manual scraper re-run](#manual-scraper-re-run)) |
 
+**Pages about what visitors see (still pushed, K3): one page per incident, plus one recovery.**
+`scripts/live_freshness.py` (ci-health) holds ONE site-level incident, not one per signal:
+
+| Alert title | Meaning | Action |
+|---|---|---|
+| `Gold Tracker: visitors see stale data -- <signals>` | The live forecast is over 9 h old, the latest Tanishq reading over 20 h old, or there has been **no model forecast for over 9 h** (`next_fix.active` is not true: the page shows a plain "no change" range). The title lists every signal bad at that moment | Check check-price, bot PRs and Pages; for "no model forecast", read `data/forecast.json` `next_fix.reason` and `next_fix.down_since` (the start of the pause) and fix inference. A hold window (`hold_latest_fix_*` with `next_fix.active` true) is normal and never pages |
+| `Gold Tracker: cannot read the live site's data` | The site's JSON could not be read (fails closed) | Check Pages and the site |
+| `Gold Tracker: still stale after N h -- <signals>` | The incident is still open and something is still bad a day after its last page; sent at most once every 24 h | Same as the first page: it did not fix itself |
+| `Gold Tracker: live site data is fresh again` | ONE recovery page: every signal fresh for at least 2 checks over at least 1 h | None |
+
+A signal that goes bad while the incident is open does not page again (it is listed in the recovery
+page), a signal that goes bad again inside the recovery window continues the same incident, and the
+share card's `behind`/`stale` pages stay silent during it. The daily and Monday summaries also say
+so in one plain sentence ("The price forecast has been paused since ..." or "... has not updated
+since ...") when the forecast is paused or has stopped updating, and add nothing otherwise. Limits and
+their derivation: the docstring of `scripts/live_freshness.py`.
+
 A Tanishq-only scrape miss shows up as a `::warning` run annotation in the
 "Flag scrape miss" CI step (visible in the Actions run summary) — informational
 only, never a paging alert.
@@ -1028,16 +1045,17 @@ no longer has a full run to compare with).
 
 Rollback: revert the switch PR. That restores the shadow step and runs every code check on every PR.
 
-## Clock guard (report-only; added 2026-11-14)
+## Clock guard (blocking since 2026-11-15; added 2026-11-14)
 
 Why: on 2026-11-06 `lint` was red about 9 h because a test called `ml.notifications.main()`, which reads the
 real clock, and inside the T8 digest windows (08:00-13:59 and 18:00-21:59 IST) `main()` really sends a digest.
 `tests/clock_guard.py` records every test that reaches a real `datetime.now()` / `utcnow()` / `today()` /
 `date.today()` in an `ml.*` or `scripts.*` module without pinning it.
 
-- **Mode**: `MODE = "report"` in `tests/clock_guard.py`. It never fails a test. The pytest output ends with a
-  "clock guard (report-only)" table (module, number of tests, example) and, under GitHub Actions, one
-  `::warning title=clock-guard::` line. `tests/test_clock_guard.py` pins `MODE == "report"`.
+- **Mode**: `MODE = "fail"` in `tests/clock_guard.py` since 2026-11-15 (it was report-only before). A new
+  unreviewed unpinned read makes the pytest session exit 1 (`pytest_sessionfinish` in `tests/conftest.py`). The
+  output ends with a "clock guard (fail)" table (module, number of tests, example) and, under GitHub Actions,
+  one `::warning title=clock-guard::` line. `tests/test_clock_guard.py` pins `MODE == "fail"`.
 - **Reading the report**: an empty section means every unpinned read is on the allowlist. A row is a NEW,
   unreviewed read. Ask: can the test outcome differ by hour, weekday or date? Yes: pin it. No: add
   `tests/test_file.py ml.module  # one-line reason` to `tests/clock_guard_allowlist.txt`.

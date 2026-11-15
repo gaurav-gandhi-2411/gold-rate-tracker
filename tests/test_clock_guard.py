@@ -34,9 +34,9 @@ def _module(guard: clock_guard.ClockGuard, name: str = "ml.synthetic_clock_mod")
     return mod
 
 
-def test_mode_is_report() -> None:
-    """Flipping to 'fail' must be a visible, deliberate change (RUNBOOK 'Clock guard')."""
-    assert clock_guard.MODE == "report"
+def test_mode_is_fail() -> None:
+    """Flipped to 'fail' on 2026-11-15 (RUNBOOK 'Clock guard'); going back must be deliberate."""
+    assert clock_guard.MODE == "fail"
 
 
 def test_unpinned_read_is_flagged_in_fail_mode() -> None:
@@ -82,8 +82,10 @@ def test_report_mode_never_fails_even_with_reads() -> None:
     mod = _module(guard)
     guard.current = "tests/test_x.py::test_d"
     mod.unpinned()
-    lines, should_fail = guard.finish(clock_guard.MODE, allow=set())
+    lines, should_fail = guard.finish("report", allow=set())
     assert lines and should_fail is False
+    lines, should_fail = guard.finish(clock_guard.MODE, allow=set())
+    assert lines and should_fail is True  # the shipped mode fails on an unreviewed read
 
 
 def test_guard_does_not_change_behaviour() -> None:
@@ -121,4 +123,9 @@ def test_guard_in_report_mode_does_not_touch_data_only_selection() -> None:
     assert "tests/test_clock_guard.py" not in selected
     measured = (ROOT / "tests" / "data_reading_tests.txt").read_text(encoding="utf-8")
     assert "test_clock_guard" not in measured
-    assert clock_guard.MODE == "report"  # in report mode finish() can never fail a session
+
+
+def test_conftest_turns_a_should_fail_into_a_failing_session() -> None:
+    """Proven end to end 2026-11-15 with a planted unpinned read (pytest exit 1, was 0 in report mode)."""
+    src = (ROOT / "tests" / "conftest.py").read_text(encoding="utf-8")
+    assert "def pytest_sessionfinish" in src and "session.exitstatus = 1" in src
