@@ -63,7 +63,7 @@ def _polite_http_no_real_sleep():
     policy.reset()
 
 
-# Clock guard (report-only, see tests/clock_guard.py): records unpinned real-clock reads.
+# Clock guard (fail mode, see tests/clock_guard.py): records unpinned real-clock reads.
 from tests import clock_guard as _clock_guard
 
 _CLOCK_GUARD = _clock_guard.ClockGuard()
@@ -75,9 +75,16 @@ def _clock_guard_track(request):
     yield
 
 
+def pytest_sessionfinish(session, exitstatus):
+    # 'fail' mode: an unreviewed unpinned clock read fails the run (a run already failing keeps its code)
+    _, should_fail = _CLOCK_GUARD.finish(_clock_guard.MODE)
+    if should_fail and exitstatus == 0:
+        session.exitstatus = 1
+
+
 def pytest_terminal_summary(terminalreporter):
     lines, _ = _CLOCK_GUARD.finish(_clock_guard.MODE)
     if lines:
-        terminalreporter.section("clock guard (report-only)")
+        terminalreporter.section(f"clock guard ({_clock_guard.MODE})")
         for line in lines:
             terminalreporter.write_line(line)
