@@ -4,9 +4,11 @@ from __future__ import annotations
 
 import importlib.util
 import json
+import subprocess
 from datetime import UTC, datetime
 from pathlib import Path
 
+import pytest
 import yaml
 
 ROOT = Path(__file__).resolve().parent.parent
@@ -70,6 +72,7 @@ def _repo(tmp_path: Path, rows: list[dict] | None = None, forecast: dict | None 
             "target_time": "2026-11-06T00:00:00+00:00",
             "headline": {"predicted_22k": 13435, "lower": 13254, "upper": 13616},
             "next_fix": {
+                "active": True,  # the model is live: the daily note then adds nothing about it
                 "champion": {"id": "p3"},
                 "demotion": {"live_monitor": {"checked": True, "n_live": 19}},
             },
@@ -274,6 +277,120 @@ def test_main_writes_the_note_and_puts_system_facts_in_the_summary(
     note = out.read_text(encoding="utf-8")
     assert note.startswith("Gold rate per gram") and "Parked" not in note
     assert "Parked for GG" in summary.read_text(encoding="utf-8")
+
+
+def _forecast_with(next_fix: dict | None, predicted_at: str = "2026-11-05T20:48:15+00:00") -> dict:
+    fc = {
+        "predicted_at": predicted_at,
+        "current_22k": 13435,
+        "price_source": "tanishq_scrape",
+        "scraped_at": "2026-11-05T20:11:32.160Z",
+        "target_time": "2026-11-06T00:00:00+00:00",
+        "headline": {"predicted_22k": 13435, "lower": 13254, "upper": 13616},
+    }
+    if next_fix is not None:
+        fc["next_fix"] = next_fix
+    return fc
+
+
+PAUSED = (
+    "The price forecast has been paused since 5 Nov, 13:10 IST: "
+    "the range above is a plain 'no change' range, not a forecast."
+)
+
+
+def test_a_paused_forecast_is_one_plain_sentence_with_since_when(tmp_path: Path) -> None:
+    fc = _forecast_with(
+        {"active": False, "reason": "error: X", "down_since": "2026-11-05T07:40:00Z"}
+    )
+    lines = gd.daily(_repo(tmp_path, forecast=fc), NOW).splitlines()
+    assert len(lines) == 6 and lines[3] == PAUSED  # right under the range it qualifies
+    assert lines[2].startswith("Shop-price equivalent")
+
+
+def test_a_working_forecast_adds_nothing_including_a_hold_window(tmp_path: Path) -> None:
+    # holding the latest fix is the model working: next_fix.active is true, headline method "hold_..."
+    fc = _forecast_with({"active": True, "mode": "after_morning_rate"})
+    fc["headline"]["method"] = "hold_latest_fix_am_to_pm"
+    root = _repo(tmp_path, forecast=fc)
+    assert gd.model_pause_lines(root, NOW) == []
+    assert len(gd.daily(root, NOW).splitlines()) == 5
+
+
+@pytest.mark.parametrize("next_fix", [None, {"active": "true"}, {}, {"active": False}])
+def test_anything_but_the_boolean_true_counts_as_paused(tmp_path: Path, next_fix) -> None:
+    root = _repo(tmp_path, forecast=_forecast_with(next_fix))
+    (line,) = gd.model_pause_lines(root, NOW)
+    # no down_since, not a git checkout: the file's own predicted_at is the earliest it can say
+    assert line.startswith("The price forecast has been paused since 6 Nov, 02:18 IST:")
+
+
+def test_a_forecast_that_stopped_updating_says_so_with_the_last_update(tmp_path: Path) -> None:
+    # inference refused to write a non-positive forecast, so forecast.json keeps ageing with the
+    # last run's next_fix.active still true
+    fc = _forecast_with({"active": True}, predicted_at="2026-11-05T10:00:00+00:00")
+    root = _repo(tmp_path, forecast=fc)  # NOW is 11 h later
+    assert gd.model_pause_lines(root, NOW) == [
+        "The price forecast has not updated since 5 Nov, 15:30 IST, "
+        "so the range above may be out of date."
+    ]
+    fresh = datetime(2026, 11, 5, 18, 50, tzinfo=UTC)  # 8.8 h after predicted_at: normal
+    assert gd.model_pause_lines(root, fresh) == []
+
+
+def test_the_stale_limit_is_the_one_the_freshness_alarm_uses(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.syspath_prepend(str(ROOT / "scripts"))
+    import live_freshness
+
+    assert live_freshness.LIMITS_H["forecast"] == gd.FORECAST_STALE_H
+
+
+def test_the_monday_note_says_it_too_and_an_unreadable_forecast_adds_nothing(
+    tmp_path: Path,
+) -> None:
+    fc = _forecast_with({"active": False, "down_since": "2026-11-05T07:40:00Z"})
+    root = _repo(tmp_path, forecast=fc)
+    assert PAUSED in gd.monday(root, NOW).splitlines()
+    (root / "data" / "forecast.json").write_text("{not json", encoding="utf-8")
+    assert gd.model_pause_lines(root, NOW) == []
+    assert "Error" not in gd.daily(root, NOW)
+
+
+def test_the_streak_start_is_read_from_history_when_the_key_is_absent(tmp_path: Path) -> None:
+    root = tmp_path / "repo"
+    (root / "data").mkdir(parents=True)
+    git = ["git", "-C", str(root), "-c", "user.name=t", "-c", "user.email=t@example.invalid"]
+
+    def commit(next_fix: dict, predicted_at: str) -> None:
+        path = root / "data" / "forecast.json"
+        path.write_text(json.dumps(_forecast_with(next_fix, predicted_at)), encoding="utf-8")
+        subprocess.run([*git, "add", "data/forecast.json"], check=True, capture_output=True)
+        subprocess.run(
+            [*git, "commit", "-q", "-m", "t", "--no-gpg-sign"], check=True, capture_output=True
+        )
+
+    subprocess.run(["git", "-C", str(root), "init", "-q"], check=True, capture_output=True)
+    commit({"active": True}, "2026-11-05T04:00:00+00:00")
+    commit({"active": False}, "2026-11-05T07:40:00+00:00")  # the first paused forecast
+    commit({"active": False}, "2026-11-05T14:00:00+00:00")
+    (line,) = gd.model_pause_lines(root, NOW)
+    assert "paused since 5 Nov, 13:10 IST" in line  # 07:40Z, not the latest 14:00Z
+
+
+def test_the_pause_sentences_use_none_of_the_banned_jargon(tmp_path: Path) -> None:
+    spec = importlib.util.spec_from_file_location(
+        "check_plain_language", ROOT / "scripts" / "check_plain_language.py"
+    )
+    cpl = importlib.util.module_from_spec(spec)
+    assert spec.loader is not None
+    spec.loader.exec_module(cpl)
+    stale = gd.model_pause_lines(
+        _repo(tmp_path, forecast=_forecast_with({"active": True}, "2026-11-05T10:00:00+00:00")), NOW
+    )
+    for text in [PAUSED, *stale]:
+        assert [n for n, rx in cpl.BANNED_TERMS if rx.search(text)] == [], text
 
 
 def test_workflows_guard_against_double_sends_and_have_dispatch() -> None:

@@ -58,6 +58,8 @@ from pathlib import Path
 import numpy as np
 import pandas as pd
 
+from ml.data_sanity import positive_or_nan, sanitize_ibja
+
 ROOT = Path(__file__).resolve().parent.parent
 DATA_DIR = ROOT / "data"
 
@@ -111,7 +113,7 @@ def _load_ibja(data_dir: Path) -> pd.DataFrame:
     path = data_dir / "ibja_rates.parquet"
     if not path.exists():
         return pd.DataFrame()
-    ibja = pd.read_parquet(path)
+    ibja = sanitize_ibja(pd.read_parquet(path))
     ibja["date_parsed"] = pd.to_datetime(ibja["date"])
     ibja = ibja.set_index("date_parsed").sort_index()
     # Prefer PM rate (more representative closing fix); fall back to AM. Record which fix the
@@ -167,7 +169,7 @@ def _load_macro(data_dir: Path) -> pd.DataFrame:
     macro = pd.read_parquet(path)
     macro.index = pd.to_datetime(macro.index, utc=True)
     macro.index = macro.index.tz_localize(None)
-    return macro[["gold_usd", "usd_inr"]].dropna(subset=["gold_usd", "usd_inr"])
+    return positive_or_nan(macro[["gold_usd", "usd_inr"]]).dropna(subset=["gold_usd", "usd_inr"])
 
 
 def _load_intraday(data_dir: Path) -> pd.DataFrame:
@@ -182,7 +184,7 @@ def _load_intraday(data_dir: Path) -> pd.DataFrame:
         return pd.DataFrame()
     idx = pd.DatetimeIndex(pd.to_datetime(bars.index))
     bars.index = idx.tz_localize("UTC") if idx.tz is None else idx.tz_convert("UTC")
-    return bars[["gold_usd", "usd_inr"]].sort_index()
+    return positive_or_nan(bars[["gold_usd", "usd_inr"]]).sort_index()
 
 
 def _fix_instants(ibja: pd.DataFrame) -> pd.DataFrame:

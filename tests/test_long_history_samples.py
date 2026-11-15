@@ -76,6 +76,7 @@ def test_render_is_valid_json_one_sample_per_line_and_the_committed_file_is_its_
     )
 
 
-def test_the_flag_that_shows_it_is_off_in_flags_js():
+def test_the_flag_that_shows_it_is_on_in_flags_js():
+    # GG's decision 2026-11-13; the SW VERSION bump travels with the flip
     flags = (REPO / "flags.js").read_text(encoding="utf-8")
-    assert "long_history: false," in flags and "long_history: true" not in flags
+    assert "long_history: true," in flags and "long_history: false" not in flags

@@ -993,7 +993,8 @@ Which PRs: the job's `Scope` step (id `scope`) computes `data_only` from MASTER'
 | | Steps of the `lint` job |
 |---|---|
 | Always (both paths) | checkout, setup-python 3.11 and 3.12, Scope, `Install ML dependencies` (the pinned lock), `Show installed versions`, `Installed versions equal the lock`, `Check raw data stays encrypted (ADR 060)`, the decision record |
-| Data-only PR only | `scripts/validate_data.py` (fails the job unless it passes), then the tests that read `data/` (**report-only**, see below) |
+| Always on a PR / dispatched branch, **report-only** | `PR hygiene: secret scan + large files` (`scripts/pr_hygiene.py`; runs on data-only and full PRs, not on push or schedule) |
+| Data-only PR only | `scripts/validate_data.py` (fails the job unless it passes), then the tests that read `data/` (**blocking** since 2026-11-14, see below) |
 | Skipped on a data-only PR | `pip install pre-commit`, `pre-commit run --all-files`, smoke tests, the full pytest suite, JS test registry, hollow-run (test count) guard, plain-language, retailer-language, computed-claims, metrics provenance |
 
 `tests/test_lint_data_only_switch.py` holds this table, evaluates every step's `if:`, and fails if a
@@ -1008,20 +1009,47 @@ dropped). If no selection can be computed (script error, unreadable or empty res
 FULL suite instead, never nothing. Known blind spots, stated: a NEW test file that reads `data/` only
 through a module's default path is in neither list until the measurement is refreshed (the static scan
 alone missed 6 of the 31 reading files in the 2026-11-03 measurement); a test that reads `data/`
-through a child process is seen only by the static scan. **The data-reading test step is report-only
-(`continue-on-error: true`) until 5 clean real data-only runs spanning at least 24 hours** (standing
-rule, 2026-10-30; its selection was never measured by the shadow): a failure there prints a
-`::warning title=data-only-tests::` in the decision record and does not stop a data sync. Making it
-blocking is a separate PR citing those run IDs and editing `test_the_data_test_step_is_report_only`.
-Until then `validate_data.py`, the lock proof and the raw-data guard are what decide. Refresh the measurement:
+through a child process is seen only by the static scan. **The data-reading test step has been
+BLOCKING since 2026-11-14 (GG decision 2b).** It ran report-only first (standing rule, 2026-10-30):
+101 clean data-only runs between 2026-11-07 and 2026-11-13 (`data_tests=success` in each decision
+line, 2 other data-only runs failed at `validate_data.py`, correctly: one was a probe, one a real
+Rs.0 forecast), 0 false positives; the clock guard found no selected test that depends on the hour or
+date. A failing selected test now fails the lint job (and so blocks the data sync); the decision record
+still prints a `::warning title=data-only-tests::`. Fix the test or the data, never the selection.
+`test_the_data_test_step_is_blocking` pins it. Refresh the measurement:
 `DATA_READS_OUT=/tmp/r.json pytest -m "not integration" tests/`, then list the test files whose
 `data_reads` is non-empty (or that appear in `collect_reads`) in `tests/data_reading_tests.txt`.
+
+**Secret scan and the 10 MB check (GG 2c, 2026-11-13).** A data-only PR skips `pre-commit run --all-files`, which stopped two hooks running on it: gitleaks and `check-added-large-files` (`--maxkb=10240`). A finding while fixing that: the pre-commit gitleaks hook's entry is `gitleaks git --pre-commit --redact --staged --verbose`, and a CI checkout has nothing staged, so even on full PRs that hook scanned nothing in CI. The `PR hygiene` step now runs `scripts/pr_hygiene.py` on both kinds of PR (and on a dispatched branch): the pinned gitleaks v8.30.1 (SHA-256 of the tarball committed in `scripts/pr_hygiene_gitleaks.sha256`, verified before the binary runs) over the PR's own commits (`refs/ci-scope/master..<head>`), and a size check of every added, modified or renamed file in the Scope step's change list. It prints one line, `PR-HYGIENE: secret_scan=<ok|FOUND n|could-not-verify|skipped> large_files=<ok|n over limit|could-not-verify> mode=report`; a failed download, checksum, timeout or unreadable change list reads could-not-verify, never ok, and a `::warning title=pr-hygiene::` is printed for anything not ok. **It is REPORT-ONLY (`continue-on-error: true`, `MODE = 'report'`) until 5 clean real runs spanning at least 24 hours**, each with the line read (a skipped or could-not-verify run does not count); the flip is a separate PR that cites the run IDs and edits `tests/test_pr_hygiene.py` and `tests/test_lint_data_only_switch.py` deliberately. Limits: only commits in the range are scanned, so history before the PR is not re-scanned; the step runs the PR's own copy of the script (unlike Scope, which uses master's), which matters when it becomes blocking; the check-added-large-files hook still runs on full PRs through pre-commit as well. Bump gitleaks by changing the version, the checksum file and the pre-commit `rev` together (`tests/test_pr_hygiene.py` checks they agree).
 
 Every run prints one line, `DATA-ONLY DECISION: scope=... validate=... data_tests=... result=...`
 (the old `DATA-ONLY SHADOW:` line, which compared against a full run, no longer exists: a data-only run
 no longer has a full run to compare with).
 
 Rollback: revert the switch PR. That restores the shadow step and runs every code check on every PR.
+
+## Clock guard (report-only; added 2026-11-14)
+
+Why: on 2026-11-06 `lint` was red about 9 h because a test called `ml.notifications.main()`, which reads the
+real clock, and inside the T8 digest windows (08:00-13:59 and 18:00-21:59 IST) `main()` really sends a digest.
+`tests/clock_guard.py` records every test that reaches a real `datetime.now()` / `utcnow()` / `today()` /
+`date.today()` in an `ml.*` or `scripts.*` module without pinning it.
+
+- **Mode**: `MODE = "report"` in `tests/clock_guard.py`. It never fails a test. The pytest output ends with a
+  "clock guard (report-only)" table (module, number of tests, example) and, under GitHub Actions, one
+  `::warning title=clock-guard::` line. `tests/test_clock_guard.py` pins `MODE == "report"`.
+- **Reading the report**: an empty section means every unpinned read is on the allowlist. A row is a NEW,
+  unreviewed read. Ask: can the test outcome differ by hour, weekday or date? Yes: pin it. No: add
+  `tests/test_file.py ml.module  # one-line reason` to `tests/clock_guard_allowlist.txt`.
+- **Pinning a test**: `monkeypatch.setattr(module, "datetime", FixedDatetime)` (a `datetime` subclass whose
+  `now` returns a fixed aware instant), or patch the module's `_now()` helper, or pass `now=` when the function
+  takes it. Any of these keeps the guard class from being reached, so nothing is recorded.
+- **Finding window-dependent tests**: `python scripts/clock_sweep.py <test files>` runs them at fixed instants
+  (weekday and Sunday, both T8 windows, month-end, year-end) and lists tests whose outcome differs.
+- **Limits**: it cannot see `time.time()`, subprocess clocks, clock reads inside test files or third-party code.
+- **Flip rule** (`.claude/CLAUDE.md`, new checks start non-blocking): `MODE` becomes `"fail"` only in a separate
+  PR that cites 5 clean real runs spanning at least 24 h, each with the report read. The flip also needs the
+  `pytest_terminal_summary` hook in `tests/conftest.py` to turn `should_fail` into a failed session.
 
 ## Known constraints
 

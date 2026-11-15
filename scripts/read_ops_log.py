@@ -1,8 +1,17 @@
-"""List the ops-log entries (scripts/ops_log.py annotations) from the last N days.
+"""List the ops-log entries (scripts/ops_log.py) from the last N days.
 
-    python scripts/read_ops_log.py [--days 7] [--repo owner/name] [--workflow file-substring]
+    python scripts/read_ops_log.py [--days 7] [--repo owner/name] [--from-annotations]
+                                   [--workflow file-substring]
 
-Only workflows that can emit an ops-alert are read. They are derived from the workflow files: any
+Default: ONE `gh api` call reads ops_log.jsonl from the `ops-log` branch (every sender appends a line
+there as it runs, see scripts/ops_log.py) and prints the entries of the last N days. If the branch or
+the file does not exist yet it says so and falls back to the annotation walk below. Any other failure
+to read it (auth, network, a bad response) exits 2: a list that might be incomplete is never printed.
+The file only holds entries written since the senders started appending to it, so a window reaching
+back before that needs `--from-annotations`, which forces the old walk.
+
+The annotation walk (the fallback, about an hour for 7 days) reads only workflows that can emit an
+ops-alert. They are derived from the workflow files: any
 .github/workflows/*.yml|*.yaml that mentions ops_log.py, the bot-pr-sync composite action,
 bot_branch_push.sh or ml.notifications (the last two reach ops_log.py indirectly).
 
@@ -32,6 +41,8 @@ import sys
 from collections.abc import Callable
 from datetime import UTC, datetime, timedelta
 from pathlib import Path
+
+import ops_log
 
 DEFAULT_REPO = "gaurav-gandhi-2411/gold-rate-tracker"
 ANNOTATION_TITLE = "ops-alert"
@@ -138,6 +149,44 @@ def collect(
     return sorted(found)
 
 
+def read_file(
+    repo: str, since: datetime, gh: ops_log.GhFn = ops_log.run_gh
+) -> tuple[list[str], str | None] | None:
+    """(rows newer than `since`, ts of the file's first entry); None if the file does not exist yet.
+
+    Raises OpsLogError on any read failure other than "does not exist". A line that is not valid
+    JSON is listed raw (marked), never dropped.
+    """
+    try:
+        got = ops_log.read_remote(repo, gh)
+    except ops_log.OpsLogWriteError as exc:
+        raise OpsLogError(str(exc)) from exc
+    if got is None:
+        return None
+    stamp = since.strftime("%Y-%m-%dT%H:%M:%SZ")
+    rows: list[tuple[str, str]] = []
+    first: str | None = None
+    for line in got[1].splitlines():
+        if not line.strip():
+            continue
+        try:
+            e = json.loads(line)
+            ts = str(e["ts"])
+        except (ValueError, KeyError, TypeError):
+            rows.append(("", f"(unparseable line) {line[:300]}"))
+            continue
+        first = ts if first is None or ts < first else first
+        if ts >= stamp:
+            text = f"{e.get('source', '')}: {e.get('title', '')} -- {e.get('body', '')}"
+            rows.append((ts, f"{ts[:16].replace('T', ' ')}  {e.get('workflow', '')}  {text}"))
+    return [r for _, r in sorted(rows)], first
+
+
+def _now() -> datetime:
+    """The clock (a seam: tests pin it)."""
+    return datetime.now(UTC)
+
+
 def main(argv: list[str] | None = None) -> int:
     """CLI entry. Exit 0 listing printed, 2 if the API could not be read in full."""
     ap = argparse.ArgumentParser(
@@ -146,8 +195,30 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--days", type=int, default=7)
     ap.add_argument("--repo", default=DEFAULT_REPO)
     ap.add_argument("--workflow", default="", help="only workflow files containing this text")
+    ap.add_argument(
+        "--from-annotations", action="store_true", help="walk run annotations (slow fallback)"
+    )
     args = ap.parse_args(argv)
-    since = datetime.now(UTC) - timedelta(days=args.days)
+    since = _now() - timedelta(days=args.days)
+    if not args.from_annotations:
+        try:
+            got = read_file(args.repo, since)
+        except OpsLogError as exc:
+            print(f"read_ops_log: FAILED, cannot read the ops-log file: {exc}", file=sys.stderr)
+            return 2
+        if got is not None:
+            lines, first = got
+            scope = f"ops_log.jsonl on the {ops_log.OPS_BRANCH} branch, one read"
+            print(f"ops log: {len(lines)} entries in the last {args.days} days (UTC; {scope})")
+            if first is None or first > since.strftime("%Y-%m-%dT%H:%M:%SZ"):
+                print(
+                    f"NOTE: the file begins at {first or 'no entry yet'}: earlier days in this window "
+                    "are not in it and need --from-annotations"
+                )
+            for line in lines:
+                print(line)
+            return 0
+        print("no ops-log file yet, falling back to the annotation walk")
     try:
         workflows = [w for w in emitting_workflows() if re.search(re.escape(args.workflow), w)]
         if not workflows:

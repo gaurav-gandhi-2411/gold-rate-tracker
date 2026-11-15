@@ -36,6 +36,7 @@ from pathlib import Path
 import numpy as np
 
 from ml.calibration import NOMINAL_COVERAGE_PCT
+from ml.data_sanity import sanitize_ibja
 from ml.drivers import compute_driver_attribution
 from ml.notifications import NotificationState
 from ml.volatility import compute_vol_context
@@ -95,6 +96,26 @@ class RetailerDisabledNoSourceError(RuntimeError):
     fusion tier both failed this cycle. The last-resort tier would display the last
     Tanishq reading, which a takedown forbids -- fail loudly instead, so the workflow
     step fails and the site keeps its previous (non-Tanishq) forecast.json."""
+
+
+class NonPositiveForecastError(RuntimeError):
+    """A price in the forecast about to be written is <= 0 (or not a number). Raised before the
+    write so the previous forecast.json stays in place and the workflow step fails: a bad run must
+    never publish Rs.0."""
+
+
+def _assert_positive_forecast(**values: float | int | None) -> None:
+    """Raise NonPositiveForecastError unless every given (non-None) value is finite and > 0."""
+    bad = {
+        k: v
+        for k, v in values.items()
+        if v is not None and not (np.isfinite(float(v)) and float(v) > 0)
+    }
+    if bad:
+        raise NonPositiveForecastError(
+            f"refusing to write forecast.json with non-positive value(s) {bad}; "
+            "previous forecast.json left unchanged"
+        )
 
 
 def _load_json(path: Path) -> dict | list | None:
@@ -331,7 +352,7 @@ def _try_ibja_calibrated(
 
             from ml.calibration import fit_calibration
 
-            fallback_ibja_df = pd.read_parquet(data_dir / "ibja_rates.parquet")
+            fallback_ibja_df = sanitize_ibja(pd.read_parquet(data_dir / "ibja_rates.parquet"))
             fallback_prices_raw = json.loads((data_dir / "prices.json").read_text())
             fallback_rows = [
                 {"date": r["timestamp"][:10], "22k": float(r["22k"])}
@@ -379,7 +400,7 @@ def _try_ibja_calibrated(
         import pandas as pd  # local import — pandas not needed on the cold path
 
         parquet_path = data_dir / "ibja_rates.parquet"
-        ibja_df = pd.read_parquet(parquet_path)
+        ibja_df = sanitize_ibja(pd.read_parquet(parquet_path))  # a 0 rate is no rate
         valid_rows = ibja_df[ibja_df["pm_916"].notna()].sort_values("date")
         if valid_rows.empty:
             logger.warning("_try_ibja_calibrated: no non-null pm_916 rows — skipping")
@@ -429,6 +450,11 @@ def _try_ibja_calibrated(
     # above) -- never emit a bounded range next to nominal_coverage=None.
     ibja_per_g = pm_916 / 10.0
     ibja_calibrated_22k = round(slope * ibja_per_g + intercept)
+    if ibja_calibrated_22k <= 0:  # never let a degenerate fit/rate become the displayed price
+        logger.warning(
+            "_try_ibja_calibrated: non-positive estimate Rs.%d - skipping", ibja_calibrated_22k
+        )
+        return None
     est_low = round(ibja_calibrated_22k - band_half_width) if band_half_width is not None else None
     est_high = round(ibja_calibrated_22k + band_half_width) if band_half_width is not None else None
     ibja_asof_iso = ibja_asof_dt.isoformat()
@@ -770,6 +796,7 @@ def main(now: datetime | None = None) -> None:
             "upper": None,
             "target_time": target_time.isoformat(),
         }
+        _assert_positive_forecast(current_22k=current_22k, predicted_22k=current_22k)
         DATA_DIR.mkdir(exist_ok=True)
         (DATA_DIR / "forecast.json").write_text(json.dumps(result, indent=2) + "\n")
         return
@@ -837,7 +864,10 @@ def main(now: datetime | None = None) -> None:
     # The fix the displayed price reflects: the estimate tiers carry it in ibja_asof; a Tanishq
     # reading reflects the latest fix published before it was read.
     price_read_at = ibja_asof if price_source != "tanishq_scrape" and ibja_asof else scraped_at
+    previous_forecast = _load_json(DATA_DIR / "forecast.json")  # read before step 7 overwrites it
     next_fix = _next_fix_block(now, current_22k, calibration, price_read_at)
+    if next_fix.get("active") is not True:
+        next_fix["down_since"] = _down_since(previous_forecast, now)
     if next_fix.get("active"):
         predicted_22k = next_fix["predicted_22k"]
         lower = next_fix["lower"]
@@ -924,6 +954,9 @@ def main(now: datetime | None = None) -> None:
         "next_fix": next_fix,
     }
 
+    _assert_positive_forecast(
+        current_22k=current_22k, predicted_22k=predicted_22k, lower=lower, upper=upper
+    )
     DATA_DIR.mkdir(exist_ok=True)
     (DATA_DIR / "forecast.json").write_text(json.dumps(result, indent=2) + "\n")
     logger.info(
@@ -958,6 +991,26 @@ def _live_monitor_summary(lm: object) -> dict:
         "coverage_e_value": cov.get("e_value"),
         "coverage_alert": bool(lm.get("coverage_alert")),
     }
+
+
+def _down_since(previous: object, now: datetime) -> str:
+    """When the next-fix model went down (ISO UTC): the previous forecast's ``down_since`` while it
+    was down too, else its own ``predicted_at`` if it was down without that key (written before the
+    key existed), else ``now``. Fails soft: an unreadable previous forecast means ``now``.
+
+    scripts/live_freshness.py pages when the model has been down longer than a limit, and the daily
+    summary says since when; both need the start of the streak, not of the latest run.
+    """
+    try:
+        nf = previous.get("next_fix") if isinstance(previous, dict) else None
+        if isinstance(nf, dict) and nf.get("active") is not True:
+            for stamp in (nf.get("down_since"), previous.get("predicted_at")):  # type: ignore[union-attr]
+                if isinstance(stamp, str) and stamp:
+                    datetime.fromisoformat(stamp.replace("Z", "+00:00"))
+                    return stamp
+    except (ValueError, TypeError, AttributeError):
+        pass
+    return now.isoformat()
 
 
 def _next_fix_block(
@@ -1105,7 +1158,7 @@ def _next_fix_block(
         )
         return block
     except Exception as exc:
-        logger.warning("next_fix: failed (%s); headline stays flat-hold", exc)
+        logger.warning("next_fix: failed (%s); headline stays flat-hold", exc, exc_info=True)
         return {"active": False, "reason": f"error: {type(exc).__name__}"}
 
 
