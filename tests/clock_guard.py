@@ -28,9 +28,9 @@ test files themselves, by third-party code, or inside a child process (subproces
 through ``from ml.x import datetime`` re-exports; a module imported only inside a test body is
 swapped from the next test on, not the current one.
 
-MODE is 'report': never fails a test. Flip to 'fail' only per the rule in docs/RUNBOOK.md
-('Clock guard'): 5 clean real runs spanning >= 24 h, in a separate PR. tests/test_clock_guard.py
-pins this constant.
+MODE is 'fail' since 2026-11-15: an unreviewed unpinned read makes the pytest session exit non-zero
+(it was 'report' until 5 clean real runs spanning >= 24 h, docs/RUNBOOK.md 'Clock guard').
+tests/test_clock_guard.py pins this constant.
 """
 
 from __future__ import annotations
@@ -43,7 +43,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from types import ModuleType
 
-MODE = "report"
+MODE = "fail"  # flipped 2026-11-15 after 5 clean real runs over >= 24 h (flip PR)
 PREFIXES = ("ml.", "scripts.")
 ALLOWLIST_FILE = Path(__file__).with_name("clock_guard_allowlist.txt")
 

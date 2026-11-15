@@ -1045,16 +1045,17 @@ no longer has a full run to compare with).
 
 Rollback: revert the switch PR. That restores the shadow step and runs every code check on every PR.
 
-## Clock guard (report-only; added 2026-11-14)
+## Clock guard (blocking since 2026-11-15; added 2026-11-14)
 
 Why: on 2026-11-06 `lint` was red about 9 h because a test called `ml.notifications.main()`, which reads the
 real clock, and inside the T8 digest windows (08:00-13:59 and 18:00-21:59 IST) `main()` really sends a digest.
 `tests/clock_guard.py` records every test that reaches a real `datetime.now()` / `utcnow()` / `today()` /
 `date.today()` in an `ml.*` or `scripts.*` module without pinning it.
 
-- **Mode**: `MODE = "report"` in `tests/clock_guard.py`. It never fails a test. The pytest output ends with a
-  "clock guard (report-only)" table (module, number of tests, example) and, under GitHub Actions, one
-  `::warning title=clock-guard::` line. `tests/test_clock_guard.py` pins `MODE == "report"`.
+- **Mode**: `MODE = "fail"` in `tests/clock_guard.py` since 2026-11-15 (it was report-only before). A new
+  unreviewed unpinned read makes the pytest session exit 1 (`pytest_sessionfinish` in `tests/conftest.py`). The
+  output ends with a "clock guard (fail)" table (module, number of tests, example) and, under GitHub Actions,
+  one `::warning title=clock-guard::` line. `tests/test_clock_guard.py` pins `MODE == "fail"`.
 - **Reading the report**: an empty section means every unpinned read is on the allowlist. A row is a NEW,
   unreviewed read. Ask: can the test outcome differ by hour, weekday or date? Yes: pin it. No: add
   `tests/test_file.py ml.module  # one-line reason` to `tests/clock_guard_allowlist.txt`.
