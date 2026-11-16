@@ -119,7 +119,7 @@ packaging==26.2
     #   huggingface-hub
     #   pytest
     #   transformers
-pandas==3.0.6
+pandas==3.1.1
     # via
     #   -r ml/requirements.txt
     #   chronos-forecasting
