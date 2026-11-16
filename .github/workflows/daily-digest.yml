@@ -25,6 +25,10 @@ jobs:
   digest:
     runs-on: ubuntu-latest
     timeout-minutes: 5
+    permissions:
+      contents: write # the heartbeat appends one line to ops_log.jsonl on the ops-log branch only
+      actions: read
+      pull-requests: read
     steps:
       - uses: actions/checkout@v7
 
@@ -57,6 +61,16 @@ jobs:
           ARGS=()
           [ -s "${RUNNER_TEMP}/merged.json" ] && ARGS=(--merged "${RUNNER_TEMP}/merged.json")
           python scripts/gg_digest.py daily --out "${RUNNER_TEMP}/digest.txt" "${ARGS[@]}"
+
+      - name: Ops-log heartbeat (one alive line a day; says plainly if the log was silent over 48 h)
+        # Job summary and annotation only, never ntfy (gold-price only). Never fails the run.
+        if: steps.guard.outputs.send == 'true'
+        continue-on-error: true
+        timeout-minutes: 2
+        env:
+          OPS_LOG_TOKEN: ${{ github.token }}
+          GH_TOKEN: ${{ github.token }}
+        run: python scripts/ops_heartbeat.py
 
       - name: Send the gold-price note to GG's private topic
         if: steps.guard.outputs.send == 'true'
