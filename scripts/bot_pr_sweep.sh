@@ -124,6 +124,11 @@ while IFS=$'\t' read -r BRANCH WORKFLOWS ALLOW; do
         echo "${BRANCH} #${NUM}: stranded ${AGE} min after its run ended; merging through bot_pr_merge.sh at ${SHA}."
         if WAIT_MINUTES="$MERGE_WAIT_MIN" bash "${HERE}/bot_pr_merge.sh" "$NUM" "$BRANCH" "$SHA" < /dev/null; then
           echo "MERGED stranded ${BRANCH} PR #${NUM}."
+          # a merge is an event worth a line in the ops log too (not a page: STUCK stays 0)
+          "${OPS_LOG_PYTHON:-$PY}" "${HERE}/ops_log.py" --source bot-pr-sweep \
+            --title "stranded bot PR merged" \
+            --body "${BRANCH} PR #${NUM} was stranded ${AGE} min after its run ended and was merged at head ${SHA}. ${URL}" \
+            < /dev/null || true
           continue
         fi
         STATE=$(ci_retry gh pr view "$NUM" --repo "$R" --json state --jq .state < /dev/null) || STATE=unknown

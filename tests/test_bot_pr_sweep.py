@@ -205,6 +205,9 @@ def test_a_stranded_green_weekly_backtest_pr_is_merged_pinned_to_its_head(tmp_pa
     assert f"api repos/o/r/commits/{SHA}/status?per_page=100" in log
     assert "MERGED stranded bot/backtest-sync PR #3424." in r.stdout
     assert _quiet(r, log)  # merged: nothing to page about
+    # ... but the merge itself is recorded in the ops log (2026-11-16), as an event and not a page
+    assert "::warning title=ops-alert::bot-pr-sweep: stranded bot PR merged -- " in r.stdout
+    assert f"merged at head {SHA}" in r.stdout
 
 
 @NEEDS_BASH
