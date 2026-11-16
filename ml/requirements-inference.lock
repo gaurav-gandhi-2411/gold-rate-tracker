@@ -152,7 +152,7 @@ pygments==2.20.0
     #   rich
 pypdfium2==5.12.1
     # via pdfplumber
-pytest==9.1.1
+pytest==9.2.0
     # via -r ml/requirements.txt
 python-dateutil==2.9.0.post0
     # via pandas
