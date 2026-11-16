@@ -350,8 +350,12 @@ jobs:
       # Once per incident plus a recovery message; the incident state rides in the Actions cache.
       # Limits and their derivation: scripts/live_freshness.py. always(): runs even if a step above
       # found a problem and exited 1.
+      # A [TEST] dispatch (either simulate input) touches NO real alarm state and runs ONLY its own
+      # simulated check: before 2026-11-17 a freshness simulation still ran the share-card check for
+      # real (restore, judge without the freshness incident file, page, save) and vice versa.
+      # tests/test_simulate_isolation.py evaluates these conditions for every input combination.
       - name: Restore the live-freshness incident state
-        if: always() && (inputs.freshness_simulate || 'none') == 'none'
+        if: always() && (inputs.freshness_simulate || 'none') == 'none' && (inputs.share_card_simulate || 'none') == 'none'
         uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
           path: .live-freshness/state.json
@@ -360,7 +364,7 @@ jobs:
 
       - name: Check that what visitors see is fresh (live site JSON)
         id: live_freshness
-        if: always()
+        if: always() && ((inputs.freshness_simulate || 'none') != 'none' || (inputs.share_card_simulate || 'none') == 'none')
         env:
           NTFY_TOPIC: ${{ secrets.NTFY_TOPIC }}
           SIMULATE: ${{ inputs.freshness_simulate || 'none' }}
@@ -372,7 +376,7 @@ jobs:
           fi
 
       - name: Save the live-freshness incident state
-        if: always() && (inputs.freshness_simulate || 'none') == 'none' && hashFiles('.live-freshness/state.json') != ''
+        if: always() && (inputs.freshness_simulate || 'none') == 'none' && (inputs.share_card_simulate || 'none') == 'none' && hashFiles('.live-freshness/state.json') != ''
         uses: actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
           path: .live-freshness/state.json
@@ -386,7 +390,7 @@ jobs:
       # While the freshness check holds an open incident (its state file, read from above) the
       # card's behind/stale kinds stay silent: they are the same outage, not a second incident.
       - name: Restore the share-card incident state
-        if: always() && (inputs.share_card_simulate || 'none') == 'none'
+        if: always() && (inputs.freshness_simulate || 'none') == 'none' && (inputs.share_card_simulate || 'none') == 'none'
         uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
           path: .share-card/state.json
@@ -395,7 +399,7 @@ jobs:
 
       - name: Check the published share card (og.png's sidecar against the live data)
         id: share_card
-        if: always()
+        if: always() && ((inputs.share_card_simulate || 'none') != 'none' || (inputs.freshness_simulate || 'none') == 'none')
         env:
           NTFY_TOPIC: ${{ secrets.NTFY_TOPIC }}
           SIMULATE: ${{ inputs.share_card_simulate || 'none' }}
@@ -407,7 +411,7 @@ jobs:
           fi
 
       - name: Save the share-card incident state
-        if: always() && (inputs.share_card_simulate || 'none') == 'none' && hashFiles('.share-card/state.json') != ''
+        if: always() && (inputs.freshness_simulate || 'none') == 'none' && (inputs.share_card_simulate || 'none') == 'none' && hashFiles('.share-card/state.json') != ''
         uses: actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
           path: .share-card/state.json
