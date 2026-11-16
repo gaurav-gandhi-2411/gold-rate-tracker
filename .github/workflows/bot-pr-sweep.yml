@@ -43,9 +43,12 @@ jobs:
       - name: Merge stranded bot PRs, record the rest in the ops log
         env:
           GH_TOKEN: ${{ secrets.CI_MERGE_PAT }}
-          # REPORT-ONLY to start (project rule, 2026-10-30): scheduled runs merge nothing and report
-          # every stranded PR in the ops log; a manual dispatch merges unless dry_run=true. Scheduled merging is switched
-          # on in a separate PR after 5 clean real runs over 24 h, each log read.
+          # REAL MERGING since 2026-11-16 (project rule 2026-10-30, 5 clean real runs with real input).
+          # Stranded PRs are too rare for 5 natural runs (one in 34 scheduled runs, 11-06..11-15), so the rule was
+          # met by a STAGED proof: run 43865342183 (workflow_dispatch, dry_run=false) merged a staged same-repo
+          # PR (#3906, merge commit f1a08870, pinned with --match-head-commit, ops-log line 3d1e8bc8) and refused
+          # a not-green one (#3907). The 34 report-only scheduled runs before it: 33 green, one the designed
+          # page for #3716 (six logs read in full). Only a manual dispatch with dry_run=true is report-only now.
           # tests/test_bot_pr_sweep.py pins this.
-          DRY_RUN: ${{ (github.event_name == 'schedule' || github.event.inputs.dry_run == 'true') && '1' || '0' }}
+          DRY_RUN: ${{ github.event.inputs.dry_run == 'true' && '1' || '0' }}
         run: bash scripts/bot_pr_sweep.sh
