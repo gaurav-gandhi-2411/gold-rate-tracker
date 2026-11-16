@@ -1,6 +1,6 @@
 # Closeout plan: from today to maintenance mode
 
-Written 2026-11-14 (CC); status updated 2026-11-15. Whoever runs the weekly routine (`docs/WEEKLY_ROUTINE.md`) owns this file.
+Written 2026-11-14 (CC); status updated 2026-11-16. Whoever runs the weekly routine (`docs/WEEKLY_ROUTINE.md`) owns this file.
 Every number is measured (source named) or marked INFERRED. Update the table when an item moves.
 
 ## 1. Definition of done: "maintenance mode"
@@ -28,10 +28,11 @@ Owner: **CC** (a Claude Code session), **GG**, or **calendar** (nothing to do un
 | 4 | Secret scan + 10 MB check on every PR | CC | done | #3812 allowlist (GG), #3862 flip (2026-11-15): 65 clean runs, first clean 2026-11-14 01:31Z. The step now runs master's checker, checksum and allowlist, so a PR cannot weaken the scan that judges it |
 | 5 | Price-history integrity blocking on gaps and basis errors | CC | done | #3788 (39 clean of 40 check-price runs). Moves and could-not-verify go to the ops log, never block |
 | 6 | Ops-log reader (weekly read in seconds) | CC | done | #3793; verified live (8 entries in 7 days) |
+| 6b | Ops-log gap 2026-11-12..16 and a daily heartbeat | CC | done | No entry after 2026-11-12 03:18Z. All 104 sender runs since then (check-price 46, ci-health 36, bot-pr-sweep 17, scraper-canary 4, visitors-weekly 1) were scanned: 0 `ops-alert` annotations, 0 write-failure lines, and all 25 check-price runs after #3801 report `next-fix health: OK`; the forecast outage predates #3801. The quiet was real, but quiet and a broken writer looked the same. #3904 (heartbeat + 48 h silence note in the digest job summary, never ntfy) and #3905 (the sweep logs a merge). Writer proven live: the sweep's ops-log commit 3d1e8bc8 (2026-11-16 12:21Z). The first heartbeat line appears on the first digest run after #3904 merged. Not proven by a new write: the scraper-canary, visitors-weekly and Windows-runner (`ops_log_fallback.sh`) senders |
 | 7 | Long-term monthly-sample chart | CC | done | #3782, live, SW v105 (flag ON; EN and HI verified in a headed browser; screenshots in `reports/screenshots/long-history-on/`) |
-| 8 | Dependabot floors, one a day | CC | 15 min each | Done: pillow (#3832, replaces #3224), actions #2789, scraper npm #2471 (needed #3824 and #3848: the guard's gh retry used a misspelt flag). Left, one a day from 2026-11-16: pandas #3691, pytest #3492, yfinance #3690, soupsieve #3689, pyarrow |
+| 8 | Dependabot floors, one a day | CC | 15 min each | Done: pillow (#3832, replaces #3224), actions #2789, scraper npm #2471 (needed #3824 and #3848: the guard's gh retry used a misspelt flag), pandas 3.1.1 (#3884, 2026-11-16, replaces #3691; 5 check-price runs after it succeeded), pytest 9.2.0 (#3908, 2026-11-16, replaces #3492). Left: yfinance #3690 on 2026-11-17. `gh pr list --state open --author app/dependabot` on 2026-11-16 lists only #3690: soupsieve #3689 and a pyarrow PR are no longer open |
 | 9 | Alert when `next_fix.active=false`, one page per incident, model-paused sentence in the daily summary | CC | done | #3821 and #3831 (2026-11-15; replay of 46 real ci-health runs: 18 old pushes vs 8 new). Verify live on the first real incident |
-| 10 | ADR 076 look (hourly model), first Monday both gates hold, exactly as frozen, one look | CC | 20 min | Counts 2026-11-14 (run 43567000172): after_morning_rate 14/20 fixes, 26/28 days; after_afternoon_rate 17/20, 29/28. Mon 2026-11-16 will not qualify; first look likely Mon 2026-11-23 (INFERRED) |
+| 10 | ADR 076 look (hourly model), first Monday both gates hold, exactly as frozen, one look | CC | 20 min | Counts 2026-11-14 (run 43567000172): after_morning_rate 14/20 fixes, 26/28 days; after_afternoon_rate 17/20, 29/28. Mon 2026-11-16 (run 43777935024): unchanged, 14/20 and 17/20, no look taken; first look likely Mon 2026-11-23 (INFERRED) |
 | 11 | ADR 077 look, after ADR 076's | CC | 20 min | on or after 2026-12-14 |
 | 12 | W2 range read | CC | 20 min | about 2026-12-25 (earliest 2026-12-24 per `MODEL_STATUS.md`) |
 | 13 | Delete the branch backup bundle `C:\Users\gaura\backups\gold-rate-tracker-branches-2026-10-18.bundle` unless a branch was restored from it | CC proposes, GG confirms | 5 min | 2027-01-16 |
@@ -39,14 +40,16 @@ Owner: **CC** (a Claude Code session), **GG**, or **calendar** (nothing to do un
 | 15 | Housekeeping: stale branches and stashes | CC | done | 4 stashes dropped and 15 local branches deleted on GG's decision 2026-11-14 (kept in the verified bundle / saved patches); the orphan queued check-price run completed |
 | 16 | Renew `CI_HEALTH_PAT` | GG | 5 min | by 2026-12-09 (expires 2026-12-10); exact steps at the top of `docs/FOR_GG.md` |
 | 17 | Renew `CI_MERGE_PAT` | GG | 5 min | active 2027-09-14, expires 2027-10-14 |
-| 18 | IBJA zero cells | CC | done | #3822: backfill cleaned 5 stored zero cells (run 43696244586, 2026-11-15); a second run found nothing more. The 10-Nov row is `-` in IBJA's own PDF, so it stays missing rather than zero; where the first zero came from is NOT established (public logs inconclusive) |
+| 18 | IBJA zero cells | CC | done | #3822: backfill cleaned 5 stored zero cells (run 43696244586, 2026-11-15); a second run found nothing more. The 10-Nov row is `-` in IBJA's own PDF, so it stays missing rather than zero; where the first zero came from is NOT established (public logs inconclusive). Confirmed on the stored data 2026-11-16 (#3875, run 43777837656, counts only): 300 rows, 0 zero cells, 9 null cells in each `pm_*` column and none in `am_*`, all five `pm_*` cells of 2026-11-10 null. Standing rule "zero cells == 0" runs weekly (`ibja-store-counts.yml`, listed in `docs/WEEKLY_ROUTINE.md` section 1) |
+| 19 | Real-tool contract test: every gh/git/jq flag our scripts use exists in the installed tool | CC | done | #3877 (CI run 43748167854: gh, git, jq parametrizations passed). 0 defects beyond #3824's in the enumerated surface; commands built from variables are not seen (stated in the test) |
+| 20 | Bot-PR sweep switches from report-only to real merging | CC | done when #3911 merges | Natural input too rare (1 stranded PR in 34 scheduled runs). Staged proof, run 43865342183 (2026-11-16): merged staged PR #3906 (merge commit f1a08870, `--match-head-commit`, ops-log line 3d1e8bc8), refused not-green #3907. The 5-clean-runs rule was met by that staged proof. A fork-named PR refusal is proven by stub tests only |
 
 ## 3. Honest estimate
 
-- **Engineering left: the Dependabot floors, one a day (about 5 sessions of 15 minutes)**; every flip and fix above has landed.
-- **Calendar: earliest 2026-11-20, realistic 2026-11-20 to 2026-11-27** (the last floor lands about 11-20; slips if a floor PR needs a fix).
-- **Then 14 clean days** of the definition: **declared done about 2026-12-04 to 2026-12-11** (INFERRED; assumes no new P0).
-- **Dated tail**, one short session each: 2026-11-16 (ADR 076 counts, not expected to qualify), about 2026-11-23 (ADR 076 look), 2026-12-14 (ADR 077), about 2026-12-25 (W2), 2027-01-16 (bundle deletion).
+- **Engineering left (2026-11-16): the yfinance floor #3690 on 2026-11-17 (15 minutes) and the merge of #3911.** Every other flip and fix above has landed.
+- **Calendar: engineering closed 2026-11-17 if the yfinance floor lands then** (earlier estimate was 11-20; only one floor was left once soupsieve and pyarrow had no open PR). Slips a day for each day it does not.
+- **Then 14 clean days** of the definition: the count starts 2026-11-18, so **declared done about 2026-12-02** (INFERRED; assumes no new P0 and no new Dependabot PR older than 7 days).
+- **Dated tail**, one short session each: 2026-11-16 (ADR 076 counts: did not qualify), about 2026-11-23 (ADR 076 look), 2026-12-14 (ADR 077), about 2026-12-25 (W2), 2027-01-16 (bundle deletion).
 - The biggest risk is another silent outage like 2026-11-12: item 9 now pages once per incident.
 
 ## 4. What GG does periodically, and what happens if nothing is done
