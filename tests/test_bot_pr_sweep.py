@@ -314,10 +314,16 @@ def test_dry_run_does_not_page_about_a_young_stranded_pr(tmp_path):
     assert r.returncode == 0 and "pr merge" not in log and _quiet(r, log)
 
 
-def test_scheduled_runs_are_report_only_until_a_separate_pr_switches_them():
-    """Project rule (2026-10-30): a new check starts non-blocking; flipping this is a deliberate PR."""
+def test_scheduled_runs_merge_for_real_and_only_a_dry_run_input_is_report_only():
+    """Switched 2026-11-16 by a separate PR citing the staged proof (run 43865342183).
+
+    Project rule (2026-10-30): a new check starts non-blocking; flipping is a deliberate PR. A schedule
+    event must no longer be forced into DRY_RUN; only an explicit dry_run=true input is report-only.
+    """
     wf = (ROOT / ".github" / "workflows" / "bot-pr-sweep.yml").read_text(encoding="utf-8")
-    assert "github.event_name == 'schedule' || github.event.inputs.dry_run == 'true'" in wf
+    assert "DRY_RUN: ${{ github.event.inputs.dry_run == 'true' && '1' || '0' }}" in wf
+    assert "github.event_name == 'schedule'" not in wf.split("DRY_RUN:")[1].splitlines()[0]
+    assert "43865342183" in wf  # the proof this switch cites stays on record next to the flag
 
 
 def test_a_bot_pr_sync_branch_that_is_not_a_literal_fails_the_list(tmp_path):
