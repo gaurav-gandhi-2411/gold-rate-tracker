@@ -36,6 +36,19 @@ Data on master (public, no decrypting):
   lists runs per day; a day with 0 is the finding. `event` shows who started it (`schedule` or
   `workflow_dispatch`).
 - Stale periods this week: compare the longest gap above with the previous week's note.
+- IBJA store counts (standing data rule, 2026-11-16: **zero cells == 0**). The IBJA store is
+  encrypted, so lint cannot read it; `ibja-store-counts.yml` decrypts it on CI and prints
+  aggregates only (rows, zero cells, null cells by column, and the `pm_*` cells of one date).
+  It runs Mondays 06:40Z and exits 1 on any zero, negative or non-finite stored rate. Read the
+  latest run: `gh run list --workflow ibja-store-counts.yml --limit 2`, then
+  `gh run view <id> --log | grep IBJA-STORE`. Flag: `zero_cells` above 0, or no run this week.
+  Dispatch any date: `gh workflow run ibja-store-counts.yml --ref master -f date=YYYY-MM-DD`.
+  Baseline 2026-11-16 (run 43777837656): 300 rows, 0 zero cells, 9 null cells in each `pm_*`
+  column and none in `am_*`.
+- Ops-log heartbeat (2026-11-16): `daily-digest.yml` writes one `heartbeat: alive` line a day and
+  says plainly in its job summary when the ops log has been silent over 48 h. Flag: a digest run
+  whose summary says `OPS LOG SILENT` or `OPS LOG UNREADABLE`, or a warning `heartbeat write NOT
+  confirmed`. The ops log is read with `python scripts/read_ops_log.py --days 7`.
 
 ## 2. Timed visits and attribution
 
