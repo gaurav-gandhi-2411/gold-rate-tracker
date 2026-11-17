@@ -2,18 +2,18 @@
   "window_days": 7,
   "n": 56,
   "median_gap_hours": 2.383611111111111,
-  "p90_gap_hours": 5.989027777777778,
-  "as_of": "2026-11-16T14:26:58+00:00",
+  "p90_gap_hours": 5.839861111111111,
+  "as_of": "2026-11-16T20:16:52+00:00",
   "price_checks": {
     "window_days": 7,
-    "readings": 31,
-    "n": 30,
-    "median_gap_hours": 4.251527777777778,
+    "readings": 32,
+    "n": 31,
+    "median_gap_hours": 4.251666666666667,
     "longest_gap_hours": 25.126666666666665,
-    "open_gap_hours": 0.09565392888888889,
-    "as_of": "2026-11-16T20:11:06+00:00",
+    "open_gap_hours": 0.09637572777777778,
+    "as_of": "2026-11-17T02:01:30+00:00",
     "source": "successful readings in data/tanishq_scrape_outcomes.jsonl"
   },
   "schema_version": 2,
-  "generated_at_utc": "2026-11-16T20:16:50.354144+00:00"
+  "generated_at_utc": "2026-11-17T02:07:16.952620+00:00"
 }
