@@ -1,11 +1,11 @@
 {
-  "predicted_at": "2026-11-17T05:47:07.657492+00:00",
+  "predicted_at": "2026-11-17T10:13:28.083887+00:00",
   "target_window": "5d",
   "headline": {
-    "method": "nextfix_p3_v1",
-    "predicted_22k": 12498,
-    "lower": 12322,
-    "upper": 12675,
+    "method": "hold_latest_fix_am_to_pm",
+    "predicted_22k": 12520,
+    "lower": 12472,
+    "upper": 12568,
     "conformal_pi_half": 164.4,
     "naive_mae_recent_30": 99.8,
     "vol_context": {
@@ -34,7 +34,7 @@
     "horizon_p10": [
       12137.97,
       12058.47,
-      11977.1,
+      11977.11,
       11927.7,
       11893.41
     ],
@@ -49,7 +49,7 @@
       13014.86,
       13122.07,
       13147.22,
-      13169.49,
+      13169.48,
       13246.14
     ],
     "model_version": "amazon/chronos-bolt-tiny@a0e552de",
@@ -59,56 +59,56 @@
     "direction_consensus": 1.0
   },
   "driver_context": {
-    "computed_at": "2026-11-17T05:47:16.859591+00:00",
+    "computed_at": "2026-11-17T10:13:28.994195+00:00",
     "macro_staleness_days": 0.0,
     "macro_fresh": true,
     "premium_threshold_pct": 15.0,
     "timing_convention": "IBJA fix (PM 17:00 IST, else AM 12:00 IST) split against GC=F x INR=X 1-hour bars that closed by that fix (ADR 058)",
     "windows": {
       "7d": {
-        "n_obs": 5,
+        "n_obs": 6,
         "t0_date": "2026-11-10",
-        "t1_date": "2026-11-16",
-        "delta_pct_ibja": -5.373,
-        "delta_pct_gold_usd": -6.396,
-        "delta_pct_usdinr": 0.005,
-        "delta_pct_premium": 1.018,
+        "t1_date": "2026-11-17",
+        "delta_pct_ibja": -5.783,
+        "delta_pct_gold_usd": -6.202,
+        "delta_pct_usdinr": -0.459,
+        "delta_pct_premium": 0.879,
         "total_move_rs_per_g": -740.0,
-        "gold_usd_contrib_rs_per_g": -880.9,
-        "usdinr_contrib_rs_per_g": 0.7,
-        "premium_contrib_rs_per_g": 140.2,
-        "premium_share_pct": 19.0,
+        "gold_usd_contrib_rs_per_g": -793.7,
+        "usdinr_contrib_rs_per_g": -58.8,
+        "premium_contrib_rs_per_g": 112.5,
+        "premium_share_pct": 15.2,
         "attribution_valid": false,
-        "attribution_valid_reason": "premium share 19.0% exceeds 15% threshold"
+        "attribution_valid_reason": "premium share 15.2% exceeds 15% threshold"
       },
       "30d": {
-        "n_obs": 19,
+        "n_obs": 20,
         "t0_date": "2026-10-19",
-        "t1_date": "2026-11-16",
-        "delta_pct_ibja": -7.817,
-        "delta_pct_gold_usd": -7.787,
-        "delta_pct_usdinr": -1.051,
-        "delta_pct_premium": 1.021,
+        "t1_date": "2026-11-17",
+        "delta_pct_ibja": -8.227,
+        "delta_pct_gold_usd": -7.594,
+        "delta_pct_usdinr": -1.515,
+        "delta_pct_premium": 0.882,
         "total_move_rs_per_g": -1055.0,
-        "gold_usd_contrib_rs_per_g": -1051.0,
-        "usdinr_contrib_rs_per_g": -141.9,
-        "premium_contrib_rs_per_g": 137.9,
-        "premium_share_pct": 13.1,
+        "gold_usd_contrib_rs_per_g": -973.8,
+        "usdinr_contrib_rs_per_g": -194.3,
+        "premium_contrib_rs_per_g": 113.1,
+        "premium_share_pct": 10.7,
         "attribution_valid": true,
         "attribution_valid_reason": "clean \u2014 premium share within threshold"
       }
     },
     "driver_state": {
-      "usd_inr_now": 93.923,
-      "gold_usd_now": 3876.1,
-      "usd_inr_30d_pct_change": -1.05,
-      "gold_usd_30d_pct_change": -7.49
+      "usd_inr_now": 93.488,
+      "gold_usd_now": 3883.6,
+      "usd_inr_30d_pct_change": -1.5,
+      "gold_usd_30d_pct_change": -7.31
     },
     "alignment": "intraday_at_fix"
   },
-  "real_readings_count": 938,
+  "real_readings_count": 939,
   "current_22k": 12520,
-  "scraped_at": "2026-11-17T05:41:04.404Z",
+  "scraped_at": "2026-11-17T10:06:24.477Z",
   "price_source": "tanishq_scrape",
   "est_low": null,
   "est_high": null,
@@ -121,12 +121,12 @@
   "band_half_width": null,
   "band_unavailable_reason": null,
   "model_fallback": false,
-  "predicted_22k": 12498,
-  "lower": 12322,
-  "upper": 12675,
+  "predicted_22k": 12520,
+  "lower": 12472,
+  "upper": 12568,
   "target_time": "2026-11-18T00:00:00+00:00",
   "model_status": "nextfix_headline",
-  "model_version": "nextfix_p3_v1",
+  "model_version": "hold_latest_fix_am_to_pm",
   "warmup": false,
   "next_fix": {
     "active": true,
@@ -183,7 +183,7 @@
     },
     "leak_guard": {
       "checked": true,
-      "n_inputs": 1385,
+      "n_inputs": 1,
       "violations": []
     },
     "champion": {
@@ -211,49 +211,36 @@
         "range_mean_width": 122.0
       },
       "pm_to_am": {
-        "n": 172,
+        "n": 173,
         "ready": true,
         "first_d0": "2025-07-17",
-        "last_d0": "2026-11-13",
-        "range_coverage": 0.779,
+        "last_d0": "2026-11-16",
+        "range_coverage": 0.78,
         "range_coverage_ci95": [
-          0.711,
-          0.835
+          0.713,
+          0.836
         ],
-        "range_mean_width": 327.2
+        "range_mean_width": 327.7
       }
     },
-    "mode": "after_us_close",
-    "model_version": "nextfix_p3_v1",
-    "base_kind": "pm",
-    "base_date": "2026-11-16",
-    "base_ibja": 12363.3,
-    "predicted_ibja": 12341.96,
+    "mode": "after_morning_rate",
+    "model_version": "hold_latest_fix_am_to_pm",
+    "base_kind": "am",
+    "base_date": "2026-11-17",
+    "base_ibja": 12312.7,
+    "predicted_ibja": 12312.7,
     "target_kind": "pm",
     "range_record": {
-      "coverage": 0.793,
-      "n": 150
+      "coverage": 0.79,
+      "n": 176
     },
-    "predicted_22k": 12498,
-    "lower": 12322,
-    "upper": 12675,
-    "shadow_ensemble": {
-      "model_version": "nextfix_ridge_mlp_v1",
-      "predicted_ibja": 12353.67,
-      "p_up": 0.4463,
-      "track_record": {
-        "n": 170,
-        "mae_model": 105.6,
-        "mae_flat": 115.5,
-        "mae_change_pct": -8.5,
-        "last_d0": "2026-11-13"
-      }
-    },
-    "p_up": 0.4328,
+    "predicted_22k": 12520,
+    "lower": 12472,
+    "upper": 12568,
     "direction": {
-      "show": true,
-      "side": "down",
-      "probability": 0.5672
+      "show": false,
+      "side": "unclear",
+      "probability": null
     }
   }
 }
