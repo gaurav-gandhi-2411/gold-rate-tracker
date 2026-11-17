@@ -1,13 +1,5 @@
 [
   {
-    "ts": "2026-10-18T05:50:43.039414+00:00",
-    "target_time": "2026-10-19T00:00:00+00:00",
-    "actual_ts": "2026-10-18T05:41:01.432Z",
-    "residual": 14.0,
-    "model_version": "nextfix_p3_v1",
-    "baseline_mae": 245.02
-  },
-  {
     "ts": "2026-10-18T10:18:37.780386+00:00",
     "target_time": "2026-10-19T00:00:00+00:00",
     "actual_ts": "2026-10-18T10:07:31.809Z",
@@ -996,6 +988,14 @@
     "target_time": "2026-11-18T00:00:00+00:00",
     "actual_ts": "2026-11-17T05:41:04.404Z",
     "residual": -48.0,
+    "model_version": "nextfix_p3_v1",
+    "baseline_mae": 240.35
+  },
+  {
+    "ts": "2026-11-17T10:13:24.749883+00:00",
+    "target_time": "2026-11-18T00:00:00+00:00",
+    "actual_ts": "2026-11-17T10:06:24.477Z",
+    "residual": 22.0,
     "model_version": "nextfix_p3_v1",
     "baseline_mae": 240.35
   }
