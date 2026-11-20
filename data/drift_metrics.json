@@ -998,5 +998,13 @@
     "residual": 99.0,
     "model_version": "nextfix_p3_v1",
     "baseline_mae": 240.35
+  },
+  {
+    "ts": "2026-11-20T05:18:42.211411+00:00",
+    "target_time": "2026-11-21T00:00:00+00:00",
+    "actual_ts": "2026-11-20T05:11:29.161Z",
+    "residual": 161.0,
+    "model_version": "nextfix_p3_v1",
+    "baseline_mae": 240.35
   }
 ]
