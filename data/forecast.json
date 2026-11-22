@@ -1,13 +1,13 @@
 {
-  "predicted_at": "2026-11-22T08:43:46.332265+00:00",
+  "predicted_at": "2026-11-22T18:00:01.464988+00:00",
   "target_window": "5d",
   "headline": {
     "method": "nextfix_p3_v1",
     "predicted_22k": 12010,
     "lower": 11822,
     "upper": 12198,
-    "conformal_pi_half": 164.4,
-    "naive_mae_recent_30": 99.8,
+    "conformal_pi_half": 178.3,
+    "naive_mae_recent_30": 104.4,
     "vol_context": {
       "half_width": 381,
       "half_width_raw": 381.2,
@@ -17,7 +17,7 @@
       "is_floored": false,
       "is_degraded": false,
       "floor_fraction": 0.5,
-      "static_pi_half": 378.9,
+      "static_pi_half": 417.1,
       "baseline_half_width": 278,
       "regime": "elevated",
       "typical_move_5d": 395,
@@ -59,7 +59,7 @@
     "direction_consensus": 1.0
   },
   "driver_context": {
-    "computed_at": "2026-11-22T08:43:51.972481+00:00",
+    "computed_at": "2026-11-22T18:00:09.221842+00:00",
     "macro_staleness_days": 0.0,
     "macro_fresh": true,
     "premium_threshold_pct": 15.0,
