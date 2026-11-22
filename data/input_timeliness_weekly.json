@@ -1,264 +1,38 @@
 {
  "schema_version": 1,
- "generated_at": "2026-11-15T09:18:17.716280+00:00",
+ "generated_at": "2026-11-22T09:04:47.058983+00:00",
  "days": 7,
  "tanishq_slots": {
   "days": 7,
   "slots": 46,
-  "served": 16,
-  "missed": 30,
+  "served": 32,
+  "missed": 14,
   "window_minutes": 45,
   "missed_slots_ist": [
-   "2026-11-08T01:40:00+05:30",
-   "2026-11-08T07:30:00+05:30",
-   "2026-11-08T10:40:00+05:30",
-   "2026-11-08T11:10:00+05:30",
-   "2026-11-08T15:35:00+05:30",
-   "2026-11-08T19:50:00+05:30",
-   "2026-11-09T01:40:00+05:30",
-   "2026-11-09T07:30:00+05:30",
-   "2026-11-09T10:40:00+05:30",
-   "2026-11-09T11:10:00+05:30",
-   "2026-11-09T15:35:00+05:30",
-   "2026-11-09T19:50:00+05:30",
-   "2026-11-10T01:40:00+05:30",
-   "2026-11-10T07:30:00+05:30",
-   "2026-11-10T10:40:00+05:30",
-   "2026-11-10T15:35:00+05:30",
-   "2026-11-11T01:40:00+05:30",
-   "2026-11-11T07:30:00+05:30",
-   "2026-11-11T10:40:00+05:30",
-   "2026-11-11T11:10:00+05:30",
-   "2026-11-11T15:35:00+05:30",
-   "2026-11-11T19:50:00+05:30",
-   "2026-11-12T01:40:00+05:30",
-   "2026-11-12T07:30:00+05:30",
-   "2026-11-12T10:40:00+05:30",
-   "2026-11-12T11:10:00+05:30",
    "2026-11-15T01:40:00+05:30",
    "2026-11-15T07:30:00+05:30",
    "2026-11-15T10:40:00+05:30",
-   "2026-11-15T11:10:00+05:30"
+   "2026-11-15T11:10:00+05:30",
+   "2026-11-18T01:40:00+05:30",
+   "2026-11-18T07:30:00+05:30",
+   "2026-11-18T10:40:00+05:30",
+   "2026-11-18T11:10:00+05:30",
+   "2026-11-18T19:50:00+05:30",
+   "2026-11-19T15:35:00+05:30",
+   "2026-11-22T01:40:00+05:30",
+   "2026-11-22T07:30:00+05:30",
+   "2026-11-22T10:40:00+05:30",
+   "2026-11-22T11:10:00+05:30"
   ],
   "classification": {
-   "no_dispatch": 21,
+   "no_dispatch": 8,
    "dispatched_failed": 0,
    "dispatched_cancelled": 0,
-   "late": 9,
+   "late": 6,
    "dispatched_other": 0,
    "unknown": 0
   },
   "per_slot": [
-   {
-    "slot_ist": "2026-11-08T01:40:00+05:30",
-    "served": false,
-    "class": "no_dispatch"
-   },
-   {
-    "slot_ist": "2026-11-08T07:30:00+05:30",
-    "served": false,
-    "class": "no_dispatch"
-   },
-   {
-    "slot_ist": "2026-11-08T10:40:00+05:30",
-    "served": false,
-    "class": "no_dispatch"
-   },
-   {
-    "slot_ist": "2026-11-08T11:10:00+05:30",
-    "served": false,
-    "class": "no_dispatch"
-   },
-   {
-    "slot_ist": "2026-11-08T15:35:00+05:30",
-    "served": false,
-    "class": "no_dispatch"
-   },
-   {
-    "slot_ist": "2026-11-08T19:50:00+05:30",
-    "served": false,
-    "class": "no_dispatch"
-   },
-   {
-    "slot_ist": "2026-11-09T01:40:00+05:30",
-    "served": false,
-    "class": "no_dispatch"
-   },
-   {
-    "slot_ist": "2026-11-09T07:30:00+05:30",
-    "served": false,
-    "class": "no_dispatch"
-   },
-   {
-    "slot_ist": "2026-11-09T10:40:00+05:30",
-    "served": false,
-    "class": "no_dispatch"
-   },
-   {
-    "slot_ist": "2026-11-09T11:10:00+05:30",
-    "served": false,
-    "class": "no_dispatch"
-   },
-   {
-    "slot_ist": "2026-11-09T15:35:00+05:30",
-    "served": false,
-    "class": "no_dispatch"
-   },
-   {
-    "slot_ist": "2026-11-09T19:50:00+05:30",
-    "served": false,
-    "class": "no_dispatch"
-   },
-   {
-    "slot_ist": "2026-11-10T01:40:00+05:30",
-    "served": false,
-    "class": "no_dispatch"
-   },
-   {
-    "slot_ist": "2026-11-10T07:30:00+05:30",
-    "served": false,
-    "class": "late"
-   },
-   {
-    "slot_ist": "2026-11-10T10:40:00+05:30",
-    "served": false,
-    "class": "late"
-   },
-   {
-    "slot_ist": "2026-11-10T11:10:00+05:30",
-    "served": true,
-    "class": "served"
-   },
-   {
-    "slot_ist": "2026-11-10T15:35:00+05:30",
-    "served": false,
-    "class": "late"
-   },
-   {
-    "slot_ist": "2026-11-10T19:50:00+05:30",
-    "served": true,
-    "class": "served"
-   },
-   {
-    "slot_ist": "2026-11-11T01:40:00+05:30",
-    "served": false,
-    "class": "no_dispatch"
-   },
-   {
-    "slot_ist": "2026-11-11T07:30:00+05:30",
-    "served": false,
-    "class": "no_dispatch"
-   },
-   {
-    "slot_ist": "2026-11-11T10:40:00+05:30",
-    "served": false,
-    "class": "no_dispatch"
-   },
-   {
-    "slot_ist": "2026-11-11T11:10:00+05:30",
-    "served": false,
-    "class": "no_dispatch"
-   },
-   {
-    "slot_ist": "2026-11-11T15:35:00+05:30",
-    "served": false,
-    "class": "late"
-   },
-   {
-    "slot_ist": "2026-11-11T19:50:00+05:30",
-    "served": false,
-    "class": "late"
-   },
-   {
-    "slot_ist": "2026-11-12T01:40:00+05:30",
-    "served": false,
-    "class": "no_dispatch"
-   },
-   {
-    "slot_ist": "2026-11-12T07:30:00+05:30",
-    "served": false,
-    "class": "no_dispatch"
-   },
-   {
-    "slot_ist": "2026-11-12T10:40:00+05:30",
-    "served": false,
-    "class": "late"
-   },
-   {
-    "slot_ist": "2026-11-12T11:10:00+05:30",
-    "served": false,
-    "class": "late"
-   },
-   {
-    "slot_ist": "2026-11-12T15:35:00+05:30",
-    "served": true,
-    "class": "served"
-   },
-   {
-    "slot_ist": "2026-11-12T19:50:00+05:30",
-    "served": true,
-    "class": "served"
-   },
-   {
-    "slot_ist": "2026-11-13T01:40:00+05:30",
-    "served": true,
-    "class": "served"
-   },
-   {
-    "slot_ist": "2026-11-13T07:30:00+05:30",
-    "served": true,
-    "class": "served"
-   },
-   {
-    "slot_ist": "2026-11-13T10:40:00+05:30",
-    "served": true,
-    "class": "served"
-   },
-   {
-    "slot_ist": "2026-11-13T11:10:00+05:30",
-    "served": true,
-    "class": "served"
-   },
-   {
-    "slot_ist": "2026-11-13T15:35:00+05:30",
-    "served": true,
-    "class": "served"
-   },
-   {
-    "slot_ist": "2026-11-13T19:50:00+05:30",
-    "served": true,
-    "class": "served"
-   },
-   {
-    "slot_ist": "2026-11-14T01:40:00+05:30",
-    "served": true,
-    "class": "served"
-   },
-   {
-    "slot_ist": "2026-11-14T07:30:00+05:30",
-    "served": true,
-    "class": "served"
-   },
-   {
-    "slot_ist": "2026-11-14T10:40:00+05:30",
-    "served": true,
-    "class": "served"
-   },
-   {
-    "slot_ist": "2026-11-14T11:10:00+05:30",
-    "served": true,
-    "class": "served"
-   },
-   {
-    "slot_ist": "2026-11-14T15:35:00+05:30",
-    "served": true,
-    "class": "served"
-   },
-   {
-    "slot_ist": "2026-11-14T19:50:00+05:30",
-    "served": true,
-    "class": "served"
-   },
    {
     "slot_ist": "2026-11-15T01:40:00+05:30",
     "served": false,
@@ -278,6 +52,216 @@
     "slot_ist": "2026-11-15T11:10:00+05:30",
     "served": false,
     "class": "late"
+   },
+   {
+    "slot_ist": "2026-11-15T15:35:00+05:30",
+    "served": true,
+    "class": "served"
+   },
+   {
+    "slot_ist": "2026-11-15T19:50:00+05:30",
+    "served": true,
+    "class": "served"
+   },
+   {
+    "slot_ist": "2026-11-16T01:40:00+05:30",
+    "served": true,
+    "class": "served"
+   },
+   {
+    "slot_ist": "2026-11-16T07:30:00+05:30",
+    "served": true,
+    "class": "served"
+   },
+   {
+    "slot_ist": "2026-11-16T10:40:00+05:30",
+    "served": true,
+    "class": "served"
+   },
+   {
+    "slot_ist": "2026-11-16T11:10:00+05:30",
+    "served": true,
+    "class": "served"
+   },
+   {
+    "slot_ist": "2026-11-16T15:35:00+05:30",
+    "served": true,
+    "class": "served"
+   },
+   {
+    "slot_ist": "2026-11-16T19:50:00+05:30",
+    "served": true,
+    "class": "served"
+   },
+   {
+    "slot_ist": "2026-11-17T01:40:00+05:30",
+    "served": true,
+    "class": "served"
+   },
+   {
+    "slot_ist": "2026-11-17T07:30:00+05:30",
+    "served": true,
+    "class": "served"
+   },
+   {
+    "slot_ist": "2026-11-17T10:40:00+05:30",
+    "served": true,
+    "class": "served"
+   },
+   {
+    "slot_ist": "2026-11-17T11:10:00+05:30",
+    "served": true,
+    "class": "served"
+   },
+   {
+    "slot_ist": "2026-11-17T15:35:00+05:30",
+    "served": true,
+    "class": "served"
+   },
+   {
+    "slot_ist": "2026-11-17T19:50:00+05:30",
+    "served": true,
+    "class": "served"
+   },
+   {
+    "slot_ist": "2026-11-18T01:40:00+05:30",
+    "served": false,
+    "class": "no_dispatch"
+   },
+   {
+    "slot_ist": "2026-11-18T07:30:00+05:30",
+    "served": false,
+    "class": "no_dispatch"
+   },
+   {
+    "slot_ist": "2026-11-18T10:40:00+05:30",
+    "served": false,
+    "class": "late"
+   },
+   {
+    "slot_ist": "2026-11-18T11:10:00+05:30",
+    "served": false,
+    "class": "late"
+   },
+   {
+    "slot_ist": "2026-11-18T15:35:00+05:30",
+    "served": true,
+    "class": "served"
+   },
+   {
+    "slot_ist": "2026-11-18T19:50:00+05:30",
+    "served": false,
+    "class": "late"
+   },
+   {
+    "slot_ist": "2026-11-19T01:40:00+05:30",
+    "served": true,
+    "class": "served"
+   },
+   {
+    "slot_ist": "2026-11-19T07:30:00+05:30",
+    "served": true,
+    "class": "served"
+   },
+   {
+    "slot_ist": "2026-11-19T10:40:00+05:30",
+    "served": true,
+    "class": "served"
+   },
+   {
+    "slot_ist": "2026-11-19T11:10:00+05:30",
+    "served": true,
+    "class": "served"
+   },
+   {
+    "slot_ist": "2026-11-19T15:35:00+05:30",
+    "served": false,
+    "class": "late"
+   },
+   {
+    "slot_ist": "2026-11-19T19:50:00+05:30",
+    "served": true,
+    "class": "served"
+   },
+   {
+    "slot_ist": "2026-11-20T01:40:00+05:30",
+    "served": true,
+    "class": "served"
+   },
+   {
+    "slot_ist": "2026-11-20T07:30:00+05:30",
+    "served": true,
+    "class": "served"
+   },
+   {
+    "slot_ist": "2026-11-20T10:40:00+05:30",
+    "served": true,
+    "class": "served"
+   },
+   {
+    "slot_ist": "2026-11-20T11:10:00+05:30",
+    "served": true,
+    "class": "served"
+   },
+   {
+    "slot_ist": "2026-11-20T15:35:00+05:30",
+    "served": true,
+    "class": "served"
+   },
+   {
+    "slot_ist": "2026-11-20T19:50:00+05:30",
+    "served": true,
+    "class": "served"
+   },
+   {
+    "slot_ist": "2026-11-21T01:40:00+05:30",
+    "served": true,
+    "class": "served"
+   },
+   {
+    "slot_ist": "2026-11-21T07:30:00+05:30",
+    "served": true,
+    "class": "served"
+   },
+   {
+    "slot_ist": "2026-11-21T10:40:00+05:30",
+    "served": true,
+    "class": "served"
+   },
+   {
+    "slot_ist": "2026-11-21T11:10:00+05:30",
+    "served": true,
+    "class": "served"
+   },
+   {
+    "slot_ist": "2026-11-21T15:35:00+05:30",
+    "served": true,
+    "class": "served"
+   },
+   {
+    "slot_ist": "2026-11-21T19:50:00+05:30",
+    "served": true,
+    "class": "served"
+   },
+   {
+    "slot_ist": "2026-11-22T01:40:00+05:30",
+    "served": false,
+    "class": "no_dispatch"
+   },
+   {
+    "slot_ist": "2026-11-22T07:30:00+05:30",
+    "served": false,
+    "class": "no_dispatch"
+   },
+   {
+    "slot_ist": "2026-11-22T10:40:00+05:30",
+    "served": false,
+    "class": "no_dispatch"
+   },
+   {
+    "slot_ist": "2026-11-22T11:10:00+05:30",
+    "served": false,
+    "class": "no_dispatch"
    }
   ],
   "attribution_note": "from GitHub run data only; no_dispatch cannot tell a laptop that was off or asleep from a scheduler that did not fire or a task that did not run (only the laptop's own log knows)",
@@ -285,14 +269,17 @@
  },
  "overnight_window": {
   "available": true,
-  "nights": 4,
-  "nights_without_model_forecast": 2,
-  "nights_with_model_forecast": 2,
+  "nights": 5,
+  "nights_without_model_forecast": 0,
+  "nights_with_model_forecast": 5,
   "minutes_after_us_close": [
-   189,
-   368
+   60,
+   166,
+   221,
+   236,
+   238
   ],
-  "median_minutes_after_us_close": 368,
+  "median_minutes_after_us_close": 221,
   "marking": "VERIFIED"
  }
 }
