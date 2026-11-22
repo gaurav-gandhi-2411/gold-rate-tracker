@@ -1,10 +1,10 @@
 {
  "category": "raw IBJA prices per entry",
  "ciphertext": "data/encrypted/data/wait_or_buy_shadow.json.enc",
- "ciphertext_sha256": "8afc5a6b95b4b3af47d57be946da4bc151afb7b62db80ff5f3d6d4cd06cf9313",
+ "ciphertext_sha256": "5ba758906ebb354f1c630934ec818876cbf6e858cf8479283a75e0492d50c9ac",
  "format": "GRTENC v1, AES-256-GCM, scrypt",
  "key_id": "88fadeb62be0b8f4",
  "path": "data/wait_or_buy_shadow.json",
- "plaintext_bytes": 167746,
- "plaintext_sha256": "0e2e31470752fe97bdb68020bfd1449f8ccf6a74f8709eeff86877d46f66e32d"
+ "plaintext_bytes": 186546,
+ "plaintext_sha256": "a47a96ad37a81206542ddff610b26027f728cd5cee3deb7b07301053b984e004"
 }
