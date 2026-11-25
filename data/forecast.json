@@ -1,5 +1,5 @@
 {
-  "predicted_at": "2026-11-25T14:01:31.290168+00:00",
+  "predicted_at": "2026-11-25T14:52:14.153442+00:00",
   "target_window": "5d",
   "headline": {
     "method": "hold_latest_fix_pm_to_am",
@@ -28,29 +28,29 @@
   "chronos_companion": {
     "status": "success",
     "lean_direction": "down",
-    "lean_strength_pct": 0.918,
+    "lean_strength_pct": 2.297,
     "direction_acc_30f": 0.167,
     "direction_prob_basis": "base_rate_fallback",
     "horizon_p10": [
-      11506.84,
-      11414.59,
-      11304.83,
-      11210.32,
-      11143.55
+      10287.57,
+      10225.89,
+      10116.55,
+      10010.39,
+      9956.21
     ],
     "horizon_p50": [
-      11968.4,
-      11993.48,
-      11949.59,
-      11901.26,
-      11897.68
+      10943.92,
+      11048.72,
+      11038.02,
+      10993.54,
+      11010.67
     ],
     "horizon_p90": [
-      12462.65,
-      12584.22,
-      12597.34,
-      12579.53,
-      12628.28
+      11643.96,
+      11888.89,
+      11952.37,
+      11949.47,
+      12033.69
     ],
     "model_version": "amazon/chronos-bolt-tiny@a0e552de",
     "calibration_applied": true,
@@ -59,7 +59,7 @@
     "direction_consensus": 1.0
   },
   "driver_context": {
-    "computed_at": "2026-11-25T14:01:32.009171+00:00",
+    "computed_at": "2026-11-25T14:52:15.112178+00:00",
     "macro_staleness_days": 0.0,
     "macro_fresh": true,
     "premium_threshold_pct": 15.0,
@@ -70,14 +70,14 @@
         "t0_date": "2026-11-18",
         "t1_date": "2026-11-25",
         "delta_pct_ibja": -8.034,
-        "delta_pct_gold_usd": -5.875,
+        "delta_pct_gold_usd": -5.869,
         "delta_pct_usdinr": -1.314,
-        "delta_pct_premium": -0.845,
+        "delta_pct_premium": -0.85,
         "total_move_rs_per_g": -915.0,
-        "gold_usd_contrib_rs_per_g": -669.1,
+        "gold_usd_contrib_rs_per_g": -668.5,
         "usdinr_contrib_rs_per_g": -149.7,
-        "premium_contrib_rs_per_g": -96.3,
-        "premium_share_pct": 10.5,
+        "premium_contrib_rs_per_g": -96.9,
+        "premium_share_pct": 10.6,
         "attribution_valid": true,
         "attribution_valid_reason": "clean \u2014 premium share within threshold"
       },
