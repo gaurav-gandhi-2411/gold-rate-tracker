@@ -207,6 +207,13 @@ jobs:
           PROTECTION_STATUS=$?
           set -e
           if [ "$PROTECTION_STATUS" -ne 0 ]; then PROTECTION_RESPONSE="${PROTECTION_RESPONSE}$(cat "${RUNNER_TEMP}/protection.err")"; fi
+          # A REJECTED token (expired or revoked, HTTP 401) is one cause only GG can fix: say so once
+          # (scripts/ci_health_token_rejected.py: one ops-log entry per 7 days) and let the checks
+          # below run, instead of failing every run of the day. Anything else still fails closed.
+          if [ "$PROTECTION_STATUS" -ne 0 ] && printf '%s' "$PROTECTION_RESPONSE" | grep -q -E "HTTP 401|Bad credentials"; then
+            python3 scripts/ci_health_token_rejected.py || true
+            exit 0
+          fi
           if [ "$PROTECTION_STATUS" -ne 0 ]; then
             MSG="Could not read master's required status checks from branch protection (gh api exit ${PROTECTION_STATUS}) -- failing closed rather than silently skipping this run. Response: ${PROTECTION_RESPONSE}"
             echo "::error::${MSG}"
