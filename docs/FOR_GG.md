@@ -2,7 +2,7 @@
 
 ## DO FIRST: renew `CI_HEALTH_PAT` (active since 2026-11-10; it EXPIRES 2026-12-10, 26 days from 2026-11-14)
 
-Last read by `token-expiry.yml` on 2026-11-13 11:30Z: `CI_HEALTH_PAT: OK, expires 2026-12-10 (27 days left)`; `CI_MERGE_PAT: OK, expires 2027-10-14 (335 days left)` (VERIFIED, run 43417624735). You also get a push at 30, 14 and 7 days before expiry. If it lapses nothing user-visible breaks: `ci-health` just cannot read branch protection and writes "could not verify master's CI state" to the ops log every hour.
+Last read by `token-expiry.yml` on 2026-11-13 11:30Z: `CI_HEALTH_PAT: OK, expires 2026-12-10 (27 days left)`; `CI_MERGE_PAT: OK, expires 2027-10-14 (335 days left)` (VERIFIED, run 43417624735). You also get a push at 30, 14 and 7 days before expiry. If it lapses nothing user-visible breaks: prices, the forecast, bot syncs and the freshness alarm do not use it. Only `ci-health`'s read of master's required-check list stops; since 2026-11-25 (#4084) that says so once in the ops log ("CI_HEALTH_PAT was rejected", at most one entry per 7 days) instead of failing every run, and `token-expiry.yml` pages your phone at most once a day.
 
 Exact steps (5 minutes, any day from now to 2026-12-09; the sooner the fewer reminders):
 1. Open https://github.com/settings/personal-access-tokens (GitHub > Settings > Developer settings > Personal access tokens > **Fine-grained tokens**). Click the token named `CI_HEALTH_PAT`, then **Regenerate token** (keeps its permissions; pick the longest expiration you are comfortable with). If you make a new token instead: resource owner = your account, **Only select repositories** = `gold-rate-tracker`, repository permissions **Administration: Read-only** and **Metadata: Read-only**, nothing else.
@@ -16,6 +16,11 @@ Kept current by CC. Last updated 2026-11-06 (CC; items 9 and 10 applied at GG's 
 ntfy now carries gold-price information only (2026-11-06): the daily and Monday gold summaries, the site showing a wrong or stale price, items only you can fix (token expiry, data sync token rejected), and the public price alerts. Everything else is in the ops log (`python scripts/read_ops_log.py`), summarised in the weekly report; see `docs/NOTIFICATIONS.md`.
 Short on purpose: nothing is blocked on GG. Dated token renewals are in section 0; one optional check and a few
 optional items follow.
+
+## Decisions waiting for you (2026-11-25; nothing breaks while they wait)
+
+1. **ADR 076 look: the afternoon window passed.** Run 45653839030 (2026-11-25, unmodified, look day 2026-11-23): `after_afternoon_rate` passes on beta 1.0: change -22.6%, bootstrap 95% CI [-35.7, -6.3], n = 21, DM one-sided p = 0.0045, coverage 0.857 (Wilson 95% [0.654, 0.95]). Per ADR 076 point 4 the window is *eligible for an ADR 072 amendment, which is your decision* (new rule hash; the `after_us_close` question from ADR 066 must be settled there). CC did NOT promote anything and cannot. The morning window has no look yet (17 of 20 fixes). Recommendation: read the run's report (aggregates only) and decide whether to open the ADR 072 amendment; the look is final and cannot be re-run for a different answer. Deviation recorded: the look was due on Monday 2026-11-23 and was dispatched two days late (the workflow is manual); the script scores only entries logged before 00:00Z of that Monday, so the answer is the one a Monday run would have given.
+2. **Two real price moves have no explanation on file** (-4.59% on 2026-11-20 and -3.4% on 2026-11-23, both inside a -9% week). `data/price_move_explanations.json` needs a cause and evidence for each; CC will not invent them. They no longer block data merges (#4082). Optional, any time.
 
 ## 0. Dated token renewals (nothing to do until the date shown)
 
