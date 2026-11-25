@@ -4,10 +4,12 @@ from __future__ import annotations
 
 import importlib.util
 import json
+import warnings
 from datetime import date
 from pathlib import Path
 
 import pandas as pd
+import pytest
 import yaml
 
 REPO = Path(__file__).resolve().parent.parent
@@ -39,14 +41,45 @@ def test_gap_steps_are_not_day_moves_but_published_gaps_are_flagged():
     assert chk.published_gaps(rows) == [{"from": "2025-08-08", "to": "2025-11-17", "days": 101}]
 
 
-def test_committed_explanations_cover_every_move_in_the_committed_history():
+def test_committed_explanations_are_well_formed_and_an_unexplained_move_never_fails_a_data_pr():
+    """Unexplained moves are REPORTED, never blocking (scripts/check_price_history_integrity.py header).
+
+    2026-11-20 and 2026-11-23: this test used to assert `unexplained_moves(...) == []`. A real market
+    day beyond 3% (-4.59% on 11-20, -3.4% on 11-23) then failed lint on every data PR, so bot/data-sync
+    could not merge and the live page stayed stale for about 16 h and about 21 h. The script's own
+    design says a real >3% day must not stop the site's data until someone lists it. check-price still
+    records the move in the ops log ("price history needs a look"); this test only warns.
+    """
     expl = json.loads((REPO / "data" / "price_move_explanations.json").read_text(encoding="utf-8"))
     assert all({"date", "move_pct", "cause", "evidence"} <= set(e) for e in expl["moves"])
     published = json.loads((REPO / "data" / "ibja_derived_prices.json").read_text(encoding="utf-8"))
-    assert chk.unexplained_moves(published, expl["moves"]) == []
+    unexplained = chk.unexplained_moves(published, expl["moves"])
+    if unexplained:
+        warnings.warn(
+            f"{len(unexplained)} price move(s) have no entry in data/price_move_explanations.json: "
+            f"{[m['date'] for m in unexplained]} (reported in the ops log, not blocking)",
+            stacklevel=1,
+        )
     # moved here from #3585 once check-price's rebuild landed (#3596): no gap that draws as a jump
     assert chk.published_gaps(published) == []
     assert published[0]["timestamp"] >= "2026-06-01"
+
+
+def test_a_fresh_real_market_move_in_the_committed_data_warns_and_passes(tmp_path, monkeypatch):
+    """The 2026-11-20 case, replayed on a temp tree: a -4.59% day with no explanation must not fail."""
+    data = tmp_path / "data"
+    data.mkdir()
+    days = [date(2026, 11, d) for d in range(1, 20)]
+    rows = _rows(*[(d.isoformat(), 12000) for d in days], ("2026-11-20", 11449))  # 12000 -> -4.59%
+    (data / "ibja_derived_prices.json").write_text(json.dumps(rows), encoding="utf-8")
+    explained = {"date": "2026-06-10", "move_pct": -3.53, "cause": "c", "evidence": "e"}
+    (data / "price_move_explanations.json").write_text(
+        json.dumps({"moves": [explained]}), encoding="utf-8"
+    )
+    assert chk.unexplained_moves(rows, [explained]), "the move must really be unexplained here"
+    monkeypatch.setitem(globals(), "REPO", tmp_path)  # the test above reads REPO/data
+    with pytest.warns(UserWarning, match="no entry in data/price_move_explanations.json"):
+        test_committed_explanations_are_well_formed_and_an_unexplained_move_never_fails_a_data_pr()
 
 
 def test_reference_flags_a_basis_error_and_passes_the_right_basis():
