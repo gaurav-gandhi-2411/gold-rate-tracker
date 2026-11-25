@@ -12,13 +12,13 @@ attrs==26.1.0
     #   referencing
 beautifulsoup4==4.14.3
     # via yfinance
-certifi==2026.4.22
+certifi==2026.11.20
     # via
     #   curl-cffi
     #   httpcore
     #   httpx
     #   requests
-cffi==2.0.0
+cffi==2.1.1
     # via
     #   cryptography
     #   curl-cffi
@@ -40,7 +40,7 @@ cryptography==50.0.2
     # via
     #   -r ml/requirements.txt
     #   pdfminer-six
-curl-cffi==0.15.0
+curl-cffi==0.17.0
     # via yfinance
 einops==0.8.2
     # via chronos-forecasting
@@ -94,8 +94,6 @@ mdurl==0.1.2
     # via markdown-it-py
 mpmath==1.3.0
     # via sympy
-multitasking==0.0.13
-    # via yfinance
 narwhals==2.24.0
     # via
     #   lightgbm
@@ -175,9 +173,7 @@ requests==2.34.2
     #   -r ml/requirements.txt
     #   yfinance
 rich==15.0.0
-    # via
-    #   curl-cffi
-    #   typer
+    # via typer
 rpds-py==2026.5.1
     # via
     #   jsonschema
@@ -235,5 +231,5 @@ urllib3==2.7.0
     # via requests
 websockets==16.0
     # via yfinance
-yfinance==1.7.0
+yfinance==1.8.0
     # via -r ml/requirements.txt
